@@ -1,0 +1,108 @@
+# 助手ライフ「時間帯のひとこと」8人 × 6時間帯 × 2本(ココロ3・2026-11-11・ナカヨシ20の依頼)
+# 1行 = 1本。「助手id 時間帯 表情 台詞」。時間帯: late(深夜)/morning(朝)/noon(昼)/afternoon(午後)/evening(夕方)/night(夜)
+# 表情は normal happy wink surprise troubled angry crying excited の8つだけ。穴({name} など)は使わない・1人のときのひとこと
+# 口調の要点は PLAN.md「すり合わせ」。ソラシドは「ぜ」なし・あつは どの文も「笑」か記号で終える
+
+mua late normal まぢ眠い…でも夜ふかしってなんか特別ぢゃんｗ
+mua late wink みんな寝てる時間にこっそり起きてる、たのしー🌙
+mua morning happy おはよー！ 今日もいい日になる気しかしないｗ
+mua morning excited 朝ごはんまぢ最高ぢゃん、テンション上がるー🍞
+mua noon happy お昼なに食べよー、迷う時間もたのしいぢゃんｗ
+mua noon wink おなかすいたー！ おやつの時間まで待てないんだけどｗ
+mua afternoon normal ちょっとだけ昼寝したいなー…まぢでｗ
+mua afternoon excited 午後もいっくよー！ まだまだ遊べるぢゃん✨
+mua evening happy 夕焼けやばｗ 写真とっとこ♪
+mua evening wink 空がオレンジでまぢきれい、今日もいい日だったなー
+mua night normal 今日もいっぱい遊んだー！ ちょっと眠くなってきたｗ
+mua night happy 夜風きもちいー、のんびりするの好きぢゃん🌙
+
+kiki late normal 夜ふかしは、ちょっとだけでつ。ねむいでつ…
+kiki late troubled とても静かで、少しだけ心細いでつね
+kiki morning happy おはようございまつ。今日も一日がんばりまつ♪
+kiki morning normal 朝の空気が気持ちよくて、背すじがのびまつ
+kiki noon happy お昼の時間でつ。おなかがすいてきまつね
+kiki noon wink 今日のお昼は、ちょっと楽しみなことがありまつ♪
+kiki afternoon normal 午後もこつこつ、ゆっくり進めまつ
+kiki afternoon happy ひなたぼっこ、ぽかぽかして気持ちいいでつ♪
+kiki evening happy 夕日がきれいでつね♪♪ 一緒に見られて、うれしいでつ
+kiki evening normal 空の色がだんだん変わっていくの、見ていたいでつ
+kiki night normal 今日も一日おつかれさまでつ。ゆっくり休みまつ
+kiki night happy 星がきれいに見えまつ。いい夜でつね
+
+momosuke late troubled ねむい…でもまだ起きてたいー…
+momosuke late excited 夜の静けさ、ライブ前みたいでドキドキする！！
+momosuke morning excited おはよう！！ 今日もももがんばる！！
+momosuke morning happy 朝イチの発声練習♡ あーあーあー♪
+momosuke noon happy お昼ごはん食べたら元気百倍だよ！！
+momosuke noon wink もものお昼のおやつ、とっておきなの♡
+momosuke afternoon excited 午後もレッスンがんばる！！ 目指せセンター♡
+momosuke afternoon happy 歌ってたら時間があっという間w たのしい！！
+momosuke evening excited 夕日バックのもも、映えまくってない？w
+momosuke evening wink ももの影、夕方だとスタイルよく見えるw
+momosuke night happy 今日もいっぱい練習した！！ えらい♡
+momosuke night normal おふろで歌うのが日課なの、いい声出るんだよw
+
+dra late normal 夜中は静かだな。せんべいの音がよく響くな
+dra late troubled 眠れなくて、おで、ちょっと目がさえてるな
+dra morning happy おはよう。朝のお茶はしみるな、えへへ
+dra morning normal 今日もゆっくり行くか。急ぐと損するからな
+dra noon happy せんべいとお茶の時間だな。これが一番だな
+dra noon wink おで、お昼前から腹の虫が鳴いてるな、えへへ
+dra afternoon normal 昼寝したいが、ここは我慢だな…たぶんな
+dra afternoon happy 日だまりが気持ちいいな。膝までぽかぽかするな
+dra evening happy 夕日を見てると、膝までぽかぽかしてくるな
+dra evening normal 一日あっという間だったな。いい一日だったな
+dra night normal 夜はお茶をゆっくり飲むのがいいな
+dra night happy 今日もよく動いたな。おで、深く眠れそうだな、えへへ
+
+atsu late normal 眠いけど目がさえてる、深夜テンション笑
+atsu late troubled こんな時間まで起きてたのバレたらやばい笑
+atsu morning excited 朝からやる気満々、今日いける笑
+atsu morning happy 起きたらすぐ体動かしたくなる、朝練いくか笑
+atsu noon happy 昼メシは気合い入れていくか笑
+atsu noon excited 腹へったー！ 何食べるー！
+atsu afternoon happy 午後もがっつり動くぞ笑
+atsu afternoon wink ちょっと休憩、ベンチで伸びてる笑
+atsu evening happy 夕日やば笑 今日もいっぱい動いたー笑
+atsu evening wink 夕焼け見てたら、明日もやれる気がしてきた笑
+atsu night normal 今日もよく動いたわ、もう動けない笑
+atsu night happy 風呂入ったら即寝れる気がする笑
+
+kyuko late normal 深夜のカード研究って、なんか捗るんだよねぇ笑
+kyuko late troubled ほい…もう寝なきゃなんだけど、あと1戦だけぇ
+kyuko morning normal ほい、おはよう。朝はまず頭を起こさなきゃねぇ笑
+kyuko morning happy 今日の作戦、朝のうちに立てとこっかぁ
+kyuko noon happy お昼食べながらデッキ回しを考えるのが好きでさぁ笑
+kyuko noon wink 昼休みはカードの組み替えタイムっしょw
+kyuko afternoon normal 眠くなる時間だけど、頭は回してるよぉ笑
+kyuko afternoon happy ほい、いい組み方思いついたかもぉ
+kyuko evening happy 夕焼け、ちょっとだけ見てこ。きれいだなぁ
+kyuko evening wink 夕日見ながら次の一手を考えるの、いいよねぇ笑
+kyuko night normal ほい、今日はここまで。明日の作戦は寝て決めよぉ
+kyuko night happy 今日もいい勝負ができたぁ。満足笑
+
+sorashido late normal 数字が二重に見えてきた。そろそろ限界かも
+sorashido late troubled 今日は早く寝よう。……あと1列だけやったら
+sorashido morning normal 朝か。表の続きを見るの、ちょっと楽しみだな
+sorashido morning happy 今日はいい天気だな。窓あけて風を入れよう
+sorashido noon normal お昼か。ごはん食べながら数字を見ちゃう笑
+sorashido noon wink 昼に食べる定食、今日は何にしよう
+sorashido afternoon normal あと少しで区切りがつくな。もうひと踏ん張りだ
+sorashido afternoon happy いい感じに計算が合った。気分がいいな笑
+sorashido evening happy 夕日、きれいだな。明日もがんばれそう
+sorashido evening normal 空の色が変わっていくのを見ると、一日が終わる感じがするな
+sorashido night normal 今日の分の表は、ここまでにしておこう
+sorashido night happy 星がきれいだな。少し歩いたら寝よう
+
+erubin late normal 夜遅いね。もう少ししたら休もうかな
+erubin late happy 静かな夜も嫌いじゃないよ。落ち着くからね
+erubin morning happy おはよう。朝の空気、すがすがしいね
+erubin morning normal 今日はどんな一日になるかな。楽しみだね
+erubin noon happy お昼の日ざし、あったかいね。ひなたぼっこしたくなるよ
+erubin noon wink ごはんを食べたら、ちょっと散歩しようかな☺️
+erubin afternoon normal 午後はゆっくりした時間が流れるね
+erubin afternoon happy 庭の花が、きれいに咲いてたよ。見るとほっとするね
+erubin evening happy 夕日、きれいだね☺️ 見てるとほっとするな
+erubin evening wink 空がいい色だね。写真に撮っておこうかな
+erubin night normal 今日も一日おつかれさま。ゆっくり休もうね
+erubin night happy 夜風が心地よいね。寝る前に少し外に出ようかな

@@ -207,3 +207,41 @@ visitfurn atsu erubin item=record | atsu happy {c}の部屋、レコードある
 visitfurn momosuke sorashido item=nyacushion | momosuke excited {c}、ニャーのクッション使ってる！！ | sorashido normal 座り心地の計算、満点だったんです | momosuke wink 計算しなくても、かわいいでいいの♡
 visitfurn kyuko momosuke item=starpic | kyuko normal {c}の部屋に、星空の絵があるねぇ | momosuke happy ライブの背景みたいでしょ！！ | kyuko happy たしかに、ステージっぽいねぇ笑
 visitfurn dra kiki item=sofa | dra happy {c}の部屋のソファ、ふかふかだな | kiki wink 座ってもいいでつけど、寝ないでくださいね | dra troubled ……努力はするぞ
+
+# 家具8種類(2026-11-11 ココロ2・docs/progress/assistant-life/furn8-lines.json から。ヘヤヅクリ2が入れた。窓辺の花は windowflower)
+furn atsu item=clock like=mid | happy ふりこ時計ね！ いいじゃん、ありがと笑
+furn atsu item=map like=mid | happy 冒険の地図！ 次のクエスト、これで決めよ笑
+furn atsu item=guitar like=like | excited ギター！？ まじで？ {name}、わかってるじゃん！ 最高！
+furn atsu item=tv like=mid | happy レトロテレビね！ 味があっていいね笑
+furn atsu item=windowflower like=bad | troubled 花かー…世話できるかな笑 でも気持ちはうれしいよ！
+furn atsu item=fishbowl like=mid | happy 金魚ばちね！ 見てると落ち着くかも笑
+furn atsu item=pendant like=mid | happy ペンダントライト、いいね！ 作戦会議がはかどる笑
+furn atsu item=garland like=mid | happy ガーランド！ パーティの拠点っぽくていいじゃん笑
+furnuse atsu item=guitar | ギターで一曲弾き中笑
+furn kyuko item=clock like=mid | happy ふりこ時計だぁ。ありがとん笑
+furn kyuko item=map like=mid | happy 冒険の地図かぁ。見てるだけで楽しいねぇ
+furn kyuko item=guitar like=mid | happy ギターだ！ ちょっと弾いてみたいなぁ。ありがとん笑
+furn kyuko item=tv like=mid | happy レトロテレビ、いい形してるねぇw ありがとぉ
+furn kyuko item=windowflower like=mid | happy 窓辺の花、いいねぇ。水やり忘れないようにするよぉ
+furn kyuko item=fishbowl like=like | excited 金魚ばち！ え、すごくうれしい…ずっと見てられるよぉ🥺
+furn kyuko item=pendant like=mid | happy ペンダントライト、落ち着く明るさだねぇ。ありがとん笑
+furn kyuko item=garland like=mid | happy ガーランドかぁ。部屋が楽しそうになったねぇw
+furnuse kyuko item=fishbowl | 金魚をながめ中だよぉ
+furn sorashido item=clock like=mid | happy ふりこ時計ですか。振れる回数、数えたくなりますね笑
+furn sorashido item=map like=like | excited 冒険の地図・・・！ でーじうれしいです！ 道のり、ぜんぶ計算します笑
+furn sorashido item=guitar like=mid | happy ギターですか。三線と合わせてみたいですね笑
+furn sorashido item=tv like=mid | happy レトロテレビ、ありがとうございます。仕組みが気になりますね笑
+furn sorashido item=windowflower like=mid | happy 窓辺の花、ありがとうございます。水やりの日、表にしておきます
+furn sorashido item=fishbowl like=mid | happy 金魚ばちですか。泳ぐ道すじ、つい目で追っちゃいますね笑
+furn sorashido item=pendant like=mid | happy ペンダントライト、ありがとうございます。夜の計算がはかどります
+furn sorashido item=garland like=mid | happy ガーランドですか。旗の数、もう数えました笑
+furnuse sorashido item=map | 地図で道のりを計算中
+furn erubin item=clock like=mid | happy ふりこ時計か。音が落ち着くね。ありがとう
+furn erubin item=map like=mid | happy 冒険の地図だね。旅をしていたころを思い出すかな
+furn erubin item=guitar like=mid | happy ギターか。みんなが集まったときに弾けるといいね
+furn erubin item=tv like=mid | happy レトロテレビ、いい味だね。ありがとう
+furn erubin item=windowflower like=mid | happy 窓辺の花、きれいだね。大事に育てるよ
+furn erubin item=fishbowl like=mid | happy 金魚ばちか。見ていると気持ちがゆるむね
+furn erubin item=pendant like=like | excited ペンダントライト！ うれしいな。{name}さん、部屋がやさしくなるね
+furn erubin item=garland like=bad | troubled ガーランドか…俺には少しにぎやかかな。でも気持ちはうれしいよ
+furnuse erubin item=pendant | 灯りの下でひと息中

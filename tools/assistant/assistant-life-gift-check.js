@@ -170,13 +170,13 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
   // ⑨ 家具(段階B・2026-11-08)
   {
     const FURN = G('ASSISTANT_LIFE_FURNITURE'), FL = G('ASSISTANT_LIFE_FURN_LIKES');
-    check('⑨ 家具は12種類・置き場所は天井・壁・床・持ち物の id は furn_<key>', FURN.length === 12 && FURN.every(f => ['ceil', 'wall', 'floor'].includes(f.slot) && f.itemId === `furn_${f.key}`) && new Set(FURN.map(f => f.key)).size === 12);
+    check('⑨ 家具は20種類・置き場所は天井・壁・床・持ち物の id は furn_<key>', FURN.length === 20 && FURN.every(f => ['ceil', 'wall', 'floor'].includes(f.slot) && f.itemId === `furn_${f.key}`) && new Set(FURN.map(f => f.key)).size === 20);
     const fitem = (id) => ITEMS.find(x => x.id === id), foff = (id) => OFFERS.find(o => o.itemId === id);
-    const PLANF = { sofa: 1200, bear: 600, plant: 500, record: 1000, nyacushion: 700, starpic: 800, trophy: 900, bookshelf: 700, heartmirror: 700, lantern: 700, mirrorball: 1000, windbell: 400 };
+    const PLANF = { sofa: 1200, bear: 600, plant: 500, record: 1000, nyacushion: 700, starpic: 800, trophy: 900, bookshelf: 700, heartmirror: 700, lantern: 700, mirrorball: 1000, windbell: 400, clock: 900, map: 800, guitar: 1100, tv: 1200, windowflower: 500, fishbowl: 600, pendant: 700, garland: 400 };
     const badF = FURN.filter(f => !fitem(f.itemId) || fitem(f.itemId).shop !== false || !foff(f.itemId) || foff(f.itemId).cost !== PLANF[f.key] || foff(f.itemId).releaseFlag !== 'assistantLifeFurniture' || foff(f.itemId).name !== fitem(f.itemId).name);
-    check('⑨ 12種類とも持ち物と交換所(案の値段・公開の印 assistantLifeFurniture の後ろ)にある', !badF.length, badF.map(f => f.key).join(','));
-    const OKF = { mua: 'bear heartmirror mirrorball/bookshelf', kiki: 'plant bookshelf windbell/mirrorball', momosuke: 'record heartmirror mirrorball/plant', dra: 'sofa bear nyacushion/trophy',
-      atsu: 'sofa record trophy/heartmirror', kyuko: 'nyacushion starpic bookshelf/mirrorball', sorashido: 'starpic trophy lantern/bear', erubin: 'plant lantern windbell/mirrorball' };
+    check('⑨ 20種類とも持ち物と交換所(案の値段・公開の印 assistantLifeFurniture の後ろ)にある', !badF.length, badF.map(f => f.key).join(','));
+    const OKF = { mua: 'bear heartmirror mirrorball windowflower/bookshelf', kiki: 'plant bookshelf windbell clock/mirrorball tv', momosuke: 'record heartmirror mirrorball guitar/plant', dra: 'sofa bear nyacushion tv/trophy clock',
+      atsu: 'sofa record trophy guitar/heartmirror windowflower', kyuko: 'nyacushion starpic bookshelf fishbowl/mirrorball', sorashido: 'starpic trophy lantern map/bear', erubin: 'plant lantern windbell pendant/mirrorball garland' };
     const dF = IDS.filter(id => `${FL[id].like.join(' ')}/${FL[id].bad.join(' ')}` !== OKF[id]);
     check('⑨ 家具の好みは社長の OK の表と同じ', !dF.length, dF.join(','));
     check('⑨ 仲良し度: ふつう +80・好き +120・苦手 +40', G("assistantLifeFurnAmount('atsu', 'plant')") === 80 && G("assistantLifeFurnAmount('atsu', 'sofa')") === 120 && G("assistantLifeFurnAmount('atsu', 'heartmirror')") === 40 && G('ASSISTANT_BOND_ACTIONS').lifeFurn.amount >= 120);
@@ -202,7 +202,7 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
     check('⑨ 贈ると部屋に置き・好みが分かり・仲良し度(lifeFurn)・ひとこと(届いた台詞)', t && t.like === 'like' && t.amount === 120 && added.includes('kiki:lifeFurn:120') && mem.mh_assistant_life_room_v1.kiki.put.floor === 'plant'
       && G("assistantLifeGiftShownLike('kiki', 'plant')") === 'like' && t.lines.length >= 1 && t.lines.every(l => l.who === 'kiki' && !/\{item\}/.test(l.t)), JSON.stringify({ like: t && t.like, amount: t && t.amount, added, room: mem.mh_assistant_life_room_v1 }).slice(0, 200));
     const told = await G('assistantLifeGiftOnBondLevel')('sorashido', 3, () => 0.99);
-    check('⑨ 家具が開いていれば、好きな家具も教えてくれる(候補に入る)', ['starpic', 'trophy', 'lantern', 'onigiri', 'puzzle', 'sleeve'].includes(told) && !!G('assistantLifeGiftHintLine')('sorashido', 'lantern'));
+    check('⑨ 家具が開いていれば、好きな家具も教えてくれる(候補に入る)', ['starpic', 'trophy', 'lantern', 'map', 'onigiri', 'puzzle', 'sleeve'].includes(told) && !!G('assistantLifeGiftHintLine')('sorashido', 'lantern'));
     flags.assistantLifeFurniture = false;
     check('⑨ 印が偽なら家具は贈れない', (await G('assistantLifeFurnGive')('kiki', 'windbell')) === null);
     const sd2 = fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8');

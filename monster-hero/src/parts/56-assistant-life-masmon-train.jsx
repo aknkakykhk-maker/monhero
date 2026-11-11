@@ -275,11 +275,12 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
   const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
   const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1; // 練習の相手がいないときの伸び(56-assistant-life-masmon-cheer.jsx・印が偽なら 1)
   const g = {};
   const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
   const up = (k, lo, hi) => {
     const cur = me.m[k] || 0;
-    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
   };
   // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)
