@@ -249,6 +249,10 @@
       "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
     },
     {
+      "file": "51-home-screen-guide.jsx",
+      "role": "「ホーム画面に追加」の案内(iPhone の Safari だけ・データ引き継ぎとセット・mh_home_screen_guide_v1)"
+    },
+    {
       "file": "52-mission-daily-line.jsx",
       "role": "ミッション: 助手の1日1行の案内(中継役 mission-daily-line・決まった台詞・mh_mission_daily_line_v1)"
     },
