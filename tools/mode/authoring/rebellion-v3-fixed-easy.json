@@ -4,10 +4,17 @@
  "trackId": "rebellion",
  "difficulty": "EASY",
  "candidateVersion": "v3",
- "chartRevision": 33,
+ "chartRevision": 38,
  "laneCount": 6,
  "develop": {
   "bars": [
+   24,
+   50,
+   68,
+   70,
+   74,
+   75,
+   80,
    89,
    90,
    91,
@@ -40,6 +47,7 @@
    144,
    145,
    146,
+   148,
    175,
    176,
    177,
@@ -84,6 +92,117 @@
    "layer_follow": 1
   },
   "fired": {}
+ },
+ "chorus": {
+  "found": true,
+  "sections": [
+   {
+    "startBar": 42,
+    "endBarExclusive": 59,
+    "startMs": 54104,
+    "endMs": 75189,
+    "score": 0.86
+   },
+   {
+    "startBar": 89,
+    "endBarExclusive": 103,
+    "startMs": 112398,
+    "endMs": 129762,
+    "score": 0.913
+   },
+   {
+    "startBar": 103,
+    "endBarExclusive": 107,
+    "startMs": 129762,
+    "endMs": 134724,
+    "score": 0.779
+   },
+   {
+    "startBar": 155,
+    "endBarExclusive": 175,
+    "startMs": 194259,
+    "endMs": 219065,
+    "score": 0.987
+   },
+   {
+    "startBar": 183,
+    "endBarExclusive": 200,
+    "startMs": 228987,
+    "endMs": 250073,
+    "score": 0.894
+   }
+  ],
+  "tameBars": [
+   41,
+   88,
+   154,
+   182
+  ]
+ },
+ "motifs": {
+  "bars": 12,
+  "list": [
+   [
+    46,
+    30,
+    1
+   ],
+   [
+    47,
+    31,
+    1
+   ],
+   [
+    68,
+    38,
+    1
+   ],
+   [
+    69,
+    39,
+    1
+   ],
+   [
+    71,
+    41,
+    1
+   ],
+   [
+    72,
+    42,
+    1
+   ],
+   [
+    73,
+    28,
+    2
+   ],
+   [
+    74,
+    29,
+    2
+   ],
+   [
+    150,
+    89,
+    -1
+   ],
+   [
+    151,
+    90,
+    -1
+   ],
+   [
+    153,
+    148,
+    2
+   ],
+   [
+    154,
+    149,
+    2
+   ]
+  ]
  },
  "status": "draft",
  "reviewRequired": true,
@@ -178,12 +297,12 @@
   }
  },
  "level": 1,
- "noteCount": 430,
+ "noteCount": 427,
  "typeCounts": {
-  "TAP": 407,
+  "TAP": 404,
   "HOLD": 23
  },
- "densityPerSecond": 1.72,
+ "densityPerSecond": 1.71,
  "shapes": [
   {
    "fromGrid": 8,
@@ -203,39 +322,39 @@
   },
   {
    "fromGrid": 28,
-   "toGrid": 48,
-   "length": 4,
-   "pattern": "stair_down",
+   "toGrid": 34,
+   "length": 2,
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
     5,
-    4,
-    3,
-    2
+    5
    ],
    "heights": [
     null,
-    null,
-    1,
     null
    ],
-   "motifKey": "4|6,6,8|???",
+   "motifKey": "2|6|?",
    "motifSource": null,
    "role": "intro"
   },
   {
-   "fromGrid": 64,
+   "fromGrid": 48,
    "toGrid": 64,
-   "length": 1,
-   "pattern": null,
+   "length": 3,
+   "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    1
+    3,
+    4,
+    5
    ],
    "heights": [
+    null,
+    0.67,
     null
    ],
-   "motifKey": "1||",
+   "motifKey": "3|8,8|??",
    "motifSource": null,
    "role": "intro"
   },
@@ -243,11 +362,11 @@
    "fromGrid": 74,
    "toGrid": 80,
    "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "pattern": "trill",
+   "mirrored": true,
    "lanes": [
-    0,
-    0
+    4,
+    3
    ],
    "heights": [
     0.87,
@@ -261,12 +380,12 @@
    "fromGrid": 92,
    "toGrid": 108,
    "length": 3,
-   "pattern": "stair_up",
-   "mirrored": false,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
-    1,
     2,
-    3
+    3,
+    4
    ],
    "heights": [
     0.33,
@@ -284,10 +403,10 @@
    "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
+    3,
     4,
-    5,
-    4,
-    5
+    3,
+    4
    ],
    "heights": [
     0.44,
@@ -306,7 +425,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    4
+    5
    ],
    "heights": [
     null
@@ -319,12 +438,12 @@
    "fromGrid": 172,
    "toGrid": 182,
    "length": 3,
-   "pattern": "fold_up",
+   "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
     3,
     4,
-    3
+    5
    ],
    "heights": [
     0,
@@ -339,17 +458,17 @@
    "fromGrid": 194,
    "toGrid": 240,
    "length": 8,
-   "pattern": "stair_down_long",
+   "pattern": "stair_up_long",
    "mirrored": false,
    "lanes": [
-    5,
-    4,
-    3,
-    2,
     1,
     2,
     3,
-    4
+    4,
+    5,
+    4,
+    3,
+    2
    ],
    "heights": [
     0.07,
@@ -372,7 +491,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    5
+    1
    ],
    "heights": [
     null
@@ -388,7 +507,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    4
+    0
    ],
    "heights": [
     0
@@ -404,8 +523,8 @@
    "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    4,
-    5
+    1,
+    2
    ],
    "heights": [
     0.13,
@@ -422,7 +541,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    4
+    3
    ],
    "heights": [
     0.07
@@ -433,21 +552,19 @@
   },
   {
    "fromGrid": 334,
-   "toGrid": 340,
-   "length": 3,
+   "toGrid": 336,
+   "length": 2,
    "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    4,
-    5,
+    3,
     4
    ],
    "heights": [
     0.45,
-    0.45,
-    0.43
+    0.45
    ],
-   "motifKey": "3|2,4|==",
+   "motifKey": "2|2|=",
    "motifSource": null,
    "role": "body"
   },
@@ -468,18 +585,20 @@
    "role": "body"
   },
   {
-   "fromGrid": 382,
+   "fromGrid": 376,
    "toGrid": 382,
-   "length": 1,
-   "pattern": null,
+   "length": 2,
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    5
+    4,
+    4
    ],
    "heights": [
+    0.43,
     0.62
    ],
-   "motifKey": "1||",
+   "motifKey": "2|6|+",
    "motifSource": null,
    "role": "body"
   },
@@ -506,54 +625,54 @@
    "role": "body"
   },
   {
-   "fromGrid": 440,
+   "fromGrid": 444,
    "toGrid": 452,
-   "length": 4,
+   "length": 3,
    "pattern": "stair_down",
    "mirrored": false,
    "lanes": [
     4,
     3,
-    2,
-    1
+    2
    ],
    "heights": [
-    0.62,
     0.54,
     null,
     0.86
    ],
-   "motifKey": "4|4,4,4|-??",
+   "motifKey": "3|4,4|??",
    "motifSource": null,
    "role": "body"
   },
   {
-   "fromGrid": 472,
+   "fromGrid": 464,
    "toGrid": 480,
-   "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "length": 3,
+   "pattern": "stair_up",
+   "mirrored": true,
    "lanes": [
-    0,
+    2,
+    1,
     0
    ],
    "heights": [
+    0.45,
     null,
     0.3
    ],
-   "motifKey": "2|8|?",
-   "motifSource": null,
+   "motifKey": "3|8,8|??",
+   "motifSource": 48,
    "role": "body"
   },
   {
    "fromGrid": 492,
    "toGrid": 496,
    "length": 2,
-   "pattern": "stair_down_long",
+   "pattern": "stair_up_long",
    "mirrored": true,
    "lanes": [
     2,
-    1
+    3
    ],
    "heights": [
     null,
@@ -568,12 +687,12 @@
    "fromGrid": 508,
    "toGrid": 518,
    "length": 3,
-   "pattern": "stair_up",
-   "mirrored": false,
+   "pattern": "fold_up",
+   "mirrored": true,
    "lanes": [
-    2,
-    3,
-    4
+    5,
+    4,
+    5
    ],
    "heights": [
     0.64,
@@ -585,15 +704,31 @@
    "role": "body"
   },
   {
+   "fromGrid": 528,
+   "toGrid": 528,
+   "length": 1,
+   "pattern": null,
+   "mirrored": false,
+   "lanes": [
+    4
+   ],
+   "heights": [
+    0.62
+   ],
+   "motifKey": "1||",
+   "motifSource": null,
+   "role": "body"
+  },
+  {
    "fromGrid": 540,
    "toGrid": 552,
    "length": 3,
-   "pattern": "fold_up",
+   "pattern": "stair_down",
    "mirrored": false,
    "lanes": [
-    4,
-    5,
-    4
+    3,
+    2,
+    1
    ],
    "heights": [
     0.62,
@@ -608,12 +743,12 @@
    "fromGrid": 564,
    "toGrid": 580,
    "length": 3,
-   "pattern": "stair_down",
+   "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    5,
-    4,
-    3
+    0,
+    1,
+    2
    ],
    "heights": [
     0.44,
@@ -628,11 +763,11 @@
    "fromGrid": 602,
    "toGrid": 608,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    2,
-    2
+    3,
+    4
    ],
    "heights": [
     null,
@@ -646,11 +781,11 @@
    "fromGrid": 620,
    "toGrid": 624,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    1,
-    2
+    5,
+    5
    ],
    "heights": [
     null,
@@ -661,18 +796,20 @@
    "role": "body"
   },
   {
-   "fromGrid": 640,
+   "fromGrid": 634,
    "toGrid": 640,
-   "length": 1,
-   "pattern": null,
-   "mirrored": false,
+   "length": 2,
+   "pattern": "trill",
+   "mirrored": true,
    "lanes": [
-    3
+    5,
+    4
    ],
    "heights": [
+    0.9,
     0.67
    ],
-   "motifKey": "1||",
+   "motifKey": "2|6|-",
    "motifSource": null,
    "role": "body"
   },
@@ -697,35 +834,34 @@
   },
   {
    "fromGrid": 670,
-   "toGrid": 682,
-   "length": 4,
-   "pattern": "fold_up",
-   "mirrored": false,
+   "toGrid": 680,
+   "length": 3,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
     1,
     2,
-    3,
-    2
+    3
    ],
    "heights": [
     null,
     0.63,
-    0.89,
-    0.88
+    0.89
    ],
-   "motifKey": "4|6,4,2|?+=",
+   "motifKey": "3|6,4|?+",
    "motifSource": null,
    "role": "body"
   },
   {
    "fromGrid": 700,
    "toGrid": 716,
-   "length": 4,
+   "length": 5,
    "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
+    2,
     3,
-    4,
+    2,
     3,
     4
    ],
@@ -733,9 +869,10 @@
     0.86,
     0.95,
     null,
+    0.94,
     1
    ],
-   "motifKey": "4|4,4,8|+??",
+   "motifKey": "5|4,4,6,2|+??+",
    "motifSource": null,
    "role": "climax"
   },
@@ -743,13 +880,13 @@
    "fromGrid": 724,
    "toGrid": 734,
    "length": 4,
-   "pattern": "stair_down",
+   "pattern": "fold_down",
    "mirrored": false,
    "lanes": [
+    5,
+    4,
     3,
-    2,
-    1,
-    0
+    4
    ],
    "heights": [
     0.96,
@@ -762,24 +899,22 @@
    "role": "climax"
   },
   {
-   "fromGrid": 742,
+   "fromGrid": 748,
    "toGrid": 760,
-   "length": 4,
+   "length": 3,
    "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    0,
-    1,
     2,
-    3
+    3,
+    4
    ],
    "heights": [
-    0.39,
     0.77,
     0.86,
     null
    ],
-   "motifKey": "4|6,4,8|++?",
+   "motifKey": "3|4,8|+?",
    "motifSource": null,
    "role": "climax"
   },
@@ -787,14 +922,14 @@
    "fromGrid": 780,
    "toGrid": 800,
    "length": 5,
-   "pattern": "fold_up",
-   "mirrored": false,
+   "pattern": "echo_up",
+   "mirrored": true,
    "lanes": [
-    3,
-    4,
-    5,
-    4,
-    3
+    2,
+    1,
+    2,
+    1,
+    0
    ],
    "heights": [
     0.6,
@@ -811,11 +946,11 @@
    "fromGrid": 804,
    "toGrid": 806,
    "length": 2,
-   "pattern": "trill",
-   "mirrored": true,
+   "pattern": "jack",
+   "mirrored": false,
    "lanes": [
-    4,
-    3
+    0,
+    0
    ],
    "heights": [
     0.81,
@@ -829,10 +964,10 @@
    "fromGrid": 816,
    "toGrid": 822,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    1,
+    0,
     1
    ],
    "heights": [
@@ -844,24 +979,22 @@
    "role": "climax"
   },
   {
-   "fromGrid": 830,
+   "fromGrid": 838,
    "toGrid": 846,
-   "length": 4,
-   "pattern": "stair_up",
-   "mirrored": false,
+   "length": 3,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
-    0,
     1,
     2,
     3
    ],
    "heights": [
-    0.43,
     0.63,
     0.63,
     0.81
    ],
-   "motifKey": "4|8,2,6|+=+",
+   "motifKey": "3|2,6|=+",
    "motifSource": null,
    "role": "climax"
   },
@@ -869,11 +1002,11 @@
    "fromGrid": 866,
    "toGrid": 874,
    "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "pattern": "trill",
+   "mirrored": true,
    "lanes": [
     2,
-    2
+    1
    ],
    "heights": [
     0.67,
@@ -890,7 +1023,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    1
+    0
    ],
    "heights": [
     0.43
@@ -928,11 +1061,11 @@
    "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    0,
     1,
     2,
     3,
-    4
+    4,
+    5
    ],
    "heights": [
     null,
@@ -947,21 +1080,23 @@
   },
   {
    "fromGrid": 938,
-   "toGrid": 948,
-   "length": 3,
-   "pattern": "fold_up",
-   "mirrored": false,
+   "toGrid": 952,
+   "length": 4,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
+    2,
+    3,
     4,
-    5,
-    4
+    5
    ],
    "heights": [
     0.39,
     0.81,
-    0.82
+    0.82,
+    0.86
    ],
-   "motifKey": "3|6,4|+=",
+   "motifKey": "4|6,4,4|+==",
    "motifSource": null,
    "role": "climax"
   },
@@ -969,13 +1104,13 @@
    "fromGrid": 982,
    "toGrid": 994,
    "length": 4,
-   "pattern": "stair_down",
+   "pattern": "fold_up",
    "mirrored": false,
    "lanes": [
     3,
-    2,
-    1,
-    0
+    4,
+    5,
+    4
    ],
    "heights": [
     0.45,
@@ -991,11 +1126,11 @@
    "fromGrid": 1004,
    "toGrid": 1006,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    0,
-    0
+    3,
+    4
    ],
    "heights": [
     0.21,
@@ -1008,20 +1143,18 @@
   {
    "fromGrid": 1016,
    "toGrid": 1024,
-   "length": 3,
-   "pattern": "trill",
+   "length": 2,
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    0,
-    1,
-    0
+    3,
+    3
    ],
    "heights": [
     0.08,
-    0.07,
     0.07
    ],
-   "motifKey": "3|6,2|==",
+   "motifKey": "2|8|=",
    "motifSource": null,
    "role": "body"
   },
@@ -1029,13 +1162,13 @@
    "fromGrid": 1040,
    "toGrid": 1064,
    "length": 4,
-   "pattern": "stair_up",
+   "pattern": "fold_up",
    "mirrored": false,
    "lanes": [
-    0,
-    1,
-    2,
-    3
+    3,
+    4,
+    5,
+    4
    ],
    "heights": [
     0.45,
@@ -1051,10 +1184,10 @@
    "fromGrid": 1074,
    "toGrid": 1076,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    4,
+    5,
     5
    ],
    "heights": [
@@ -1069,30 +1202,31 @@
    "fromGrid": 1088,
    "toGrid": 1088,
    "length": 1,
-   "pattern": null,
-   "mirrored": false,
+   "pattern": "trill",
+   "mirrored": true,
    "lanes": [
-    5
+    0
    ],
    "heights": [
     null
    ],
    "motifKey": "1||",
    "motifSource": null,
-   "role": "body"
+   "role": "body",
+   "phraseCopyOf": 602
   },
   {
    "fromGrid": 1100,
    "toGrid": 1128,
    "length": 5,
-   "pattern": "fold_up",
+   "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
+    0,
+    1,
     2,
     3,
-    4,
-    3,
-    2
+    4
    ],
    "heights": [
     0.86,
@@ -1109,13 +1243,13 @@
    "fromGrid": 1144,
    "toGrid": 1160,
    "length": 4,
-   "pattern": "plateau_up",
+   "pattern": "stair_down",
    "mirrored": false,
    "lanes": [
-    1,
-    1,
+    3,
+    3,
     2,
-    2
+    1
    ],
    "heights": [
     null,
@@ -1125,33 +1259,35 @@
    ],
    "motifKey": "4|6,6,4|?=?",
    "motifSource": null,
-   "role": "body"
+   "role": "body",
+   "phraseCopyOf": 670
   },
   {
    "fromGrid": 1172,
    "toGrid": 1172,
    "length": 1,
-   "pattern": null,
-   "mirrored": false,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
-    3
+    1
    ],
    "heights": [
     null
    ],
    "motifKey": "1||",
    "motifSource": null,
-   "role": "body"
+   "role": "body",
+   "phraseCopyOf": 444
   },
   {
    "fromGrid": 1184,
    "toGrid": 1192,
    "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "pattern": "stair_up",
+   "mirrored": true,
    "lanes": [
     4,
-    4
+    3
    ],
    "heights": [
     0.96,
@@ -1159,22 +1295,23 @@
    ],
    "motifKey": "2|8|-",
    "motifSource": null,
-   "role": "body"
+   "role": "body",
+   "phraseCopyOf": 464
   },
   {
    "fromGrid": 1204,
    "toGrid": 1244,
    "length": 7,
-   "pattern": "stair_up_long",
+   "pattern": "fold_up",
    "mirrored": false,
    "lanes": [
-    1,
     2,
     3,
     4,
     5,
     4,
-    3
+    3,
+    2
    ],
    "heights": [
     0.65,
@@ -1196,10 +1333,10 @@
    "pattern": "echo_down",
    "mirrored": false,
    "lanes": [
-    2,
     1,
-    2,
-    1
+    0,
+    1,
+    0
    ],
    "heights": [
     null,
@@ -1218,8 +1355,8 @@
    "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    2,
-    3
+    1,
+    2
    ],
    "heights": [
     1,
@@ -1236,7 +1373,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    2
+    1
    ],
    "heights": [
     0.68
@@ -1249,8 +1386,8 @@
    "fromGrid": 1314,
    "toGrid": 1320,
    "length": 3,
-   "pattern": "fold_up",
-   "mirrored": true,
+   "pattern": "stair_down",
+   "mirrored": false,
    "lanes": [
     3,
     3,
@@ -1268,27 +1405,44 @@
   },
   {
    "fromGrid": 1336,
-   "toGrid": 1364,
-   "length": 6,
+   "toGrid": 1348,
+   "length": 4,
    "pattern": "echo_up",
    "mirrored": true,
    "lanes": [
-    1,
-    1,
-    1,
     2,
-    1,
-    2
+    2,
+    2,
+    3
    ],
    "heights": [
     null,
     null,
     0.67,
-    null,
+    null
+   ],
+   "motifKey": "4|6,2,4|???",
+   "motifSource": null,
+   "role": "body",
+   "phraseCopyOf": 700
+  },
+  {
+   "fromGrid": 1354,
+   "toGrid": 1364,
+   "length": 3,
+   "pattern": "echo_up",
+   "mirrored": false,
+   "lanes": [
+    3,
+    4,
+    5
+   ],
+   "heights": [
+    0.64,
     0.66,
     0.76
    ],
-   "motifKey": "6|6,2,4,8,8|????+",
+   "motifKey": "3|2,8|=+",
    "motifSource": null,
    "role": "body",
    "phraseCopyOf": 700
@@ -1297,13 +1451,13 @@
    "fromGrid": 1368,
    "toGrid": 1380,
    "length": 4,
-   "pattern": "stair_down",
-   "mirrored": false,
+   "pattern": "fold_down",
+   "mirrored": true,
    "lanes": [
+    1,
     2,
     1,
-    0,
-    0
+    1
    ],
    "heights": [
     0.62,
@@ -1320,11 +1474,11 @@
    "fromGrid": 1384,
    "toGrid": 1388,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
     0,
-    1
+    0
    ],
    "heights": [
     0.63,
@@ -1338,11 +1492,11 @@
    "fromGrid": 1396,
    "toGrid": 1400,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
     0,
-    0
+    1
    ],
    "heights": [
     0.59,
@@ -1356,10 +1510,10 @@
    "fromGrid": 1420,
    "toGrid": 1420,
    "length": 1,
-   "pattern": "fold_up",
-   "mirrored": true,
+   "pattern": "echo_up",
+   "mirrored": false,
    "lanes": [
-    2
+    3
    ],
    "heights": [
     0.46
@@ -1371,21 +1525,34 @@
   },
   {
    "fromGrid": 1432,
-   "toGrid": 1442,
-   "length": 3,
+   "toGrid": 1432,
+   "length": 1,
    "pattern": "stair_down",
    "mirrored": true,
    "lanes": [
-    3,
-    4,
-    5
+    3
    ],
    "heights": [
-    null,
-    0.63,
+    null
+   ],
+   "motifKey": "1||",
+   "motifSource": null,
+   "role": "climax",
+   "phraseCopyOf": 670
+  },
+  {
+   "fromGrid": 1442,
+   "toGrid": 1442,
+   "length": 1,
+   "pattern": null,
+   "mirrored": false,
+   "lanes": [
+    4
+   ],
+   "heights": [
     0.86
    ],
-   "motifKey": "3|6,4|?+",
+   "motifKey": "1||",
    "motifSource": null,
    "role": "climax"
   },
@@ -1396,9 +1563,9 @@
    "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
+    2,
     3,
-    4,
-    4
+    3
    ],
    "heights": [
     null,
@@ -1414,11 +1581,11 @@
    "fromGrid": 1466,
    "toGrid": 1472,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    3,
-    4
+    2,
+    2
    ],
    "heights": [
     0.62,
@@ -1432,13 +1599,13 @@
    "fromGrid": 1476,
    "toGrid": 1492,
    "length": 4,
-   "pattern": "stair_down",
+   "pattern": "fold_down",
    "mirrored": true,
    "lanes": [
+    1,
     2,
     3,
-    4,
-    5
+    2
    ],
    "heights": [
     0.67,
@@ -1457,10 +1624,10 @@
    "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    1,
     2,
     3,
-    3
+    4,
+    4
    ],
    "heights": [
     0.22,
@@ -1471,7 +1638,7 @@
    "motifKey": "4|4,4,4|=++",
    "motifSource": null,
    "role": "climax",
-   "phraseCopyOf": 742
+   "phraseCopyOf": 748
   },
   {
    "fromGrid": 1520,
@@ -1480,10 +1647,10 @@
    "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    1,
     2,
     3,
-    4
+    4,
+    5
    ],
    "heights": [
     0.62,
@@ -1497,38 +1664,23 @@
   },
   {
    "fromGrid": 1540,
-   "toGrid": 1544,
-   "length": 2,
-   "pattern": "fold_up",
-   "mirrored": false,
+   "toGrid": 1556,
+   "length": 4,
+   "pattern": "echo_up",
+   "mirrored": true,
    "lanes": [
-    4,
-    5
+    1,
+    2,
+    0,
+    0
    ],
    "heights": [
     0.77,
-    0.81
-   ],
-   "motifKey": "2|4|+",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 780
-  },
-  {
-   "fromGrid": 1552,
-   "toGrid": 1556,
-   "length": 2,
-   "pattern": "fold_up",
-   "mirrored": true,
-   "lanes": [
-    2,
-    1
-   ],
-   "heights": [
+    0.81,
     0.58,
     0.4
    ],
-   "motifKey": "2|4|-",
+   "motifKey": "4|4,8,4|+--",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 780
@@ -1537,7 +1689,7 @@
    "fromGrid": 1558,
    "toGrid": 1558,
    "length": 1,
-   "pattern": "fallback",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
     0
@@ -1547,16 +1699,17 @@
    ],
    "motifKey": "1||",
    "motifSource": null,
-   "role": "climax"
+   "role": "climax",
+   "phraseCopyOf": 804
   },
   {
    "fromGrid": 1568,
    "toGrid": 1574,
    "length": 3,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    1,
+    0,
     1,
     1
    ],
@@ -1574,8 +1727,8 @@
    "fromGrid": 1592,
    "toGrid": 1592,
    "length": 1,
-   "pattern": "stair_up",
-   "mirrored": false,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
     2
    ],
@@ -1585,7 +1738,7 @@
    "motifKey": "1||",
    "motifSource": null,
    "role": "climax",
-   "phraseCopyOf": 830
+   "phraseCopyOf": 838
   },
   {
    "fromGrid": 1616,
@@ -1594,8 +1747,8 @@
    "pattern": "trill",
    "mirrored": true,
    "lanes": [
-    3,
-    2
+    1,
+    0
    ],
    "heights": [
     0.44,
@@ -1627,8 +1780,8 @@
    "fromGrid": 1652,
    "toGrid": 1656,
    "length": 2,
-   "pattern": "fold_up",
-   "mirrored": false,
+   "pattern": "stair_down",
+   "mirrored": true,
    "lanes": [
     2,
     3
@@ -1649,10 +1802,10 @@
    "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
+    2,
+    2,
     3,
-    3,
-    4,
-    3,
+    2,
     3,
     4
    ],
@@ -1671,33 +1824,36 @@
   },
   {
    "fromGrid": 1710,
-   "toGrid": 1716,
-   "length": 2,
-   "pattern": "trill",
-   "mirrored": false,
+   "toGrid": 1720,
+   "length": 3,
+   "pattern": "fold_down",
+   "mirrored": true,
    "lanes": [
-    4,
-    5
+    1,
+    1,
+    0
    ],
    "heights": [
     0.85,
-    null
+    null,
+    0.99
    ],
-   "motifKey": "2|6|?",
+   "motifKey": "3|6,4|??",
    "motifSource": null,
-   "role": "climax"
+   "role": "climax",
+   "phraseCopyOf": 724
   },
   {
    "fromGrid": 1736,
    "toGrid": 1758,
    "length": 4,
-   "pattern": "bounce",
+   "pattern": "plateau_up",
    "mirrored": false,
    "lanes": [
-    3,
-    4,
-    3,
-    2
+    0,
+    0,
+    1,
+    1
    ],
    "heights": [
     null,
@@ -1710,22 +1866,22 @@
    "role": "body"
   },
   {
-   "fromGrid": 1784,
+   "fromGrid": 1776,
    "toGrid": 1792,
    "length": 3,
-   "pattern": "trill",
-   "mirrored": false,
+   "pattern": "jack",
+   "mirrored": true,
    "lanes": [
-    0,
-    1,
-    0
+    2,
+    2,
+    2
    ],
    "heights": [
-    0,
+    0.13,
     0,
     0
    ],
-   "motifKey": "3|6,2|==",
+   "motifKey": "3|8,8|-=",
    "motifSource": null,
    "role": "body",
    "phraseCopyOf": 1016
@@ -1734,13 +1890,13 @@
    "fromGrid": 1816,
    "toGrid": 1828,
    "length": 4,
-   "pattern": "stair_up",
+   "pattern": "fold_up",
    "mirrored": true,
    "lanes": [
-    4,
-    4,
-    3,
-    3
+    1,
+    1,
+    0,
+    0
    ],
    "heights": [
     null,
@@ -1755,26 +1911,38 @@
   },
   {
    "fromGrid": 1844,
-   "toGrid": 1860,
-   "length": 4,
-   "pattern": "stair_up",
-   "mirrored": true,
+   "toGrid": 1844,
+   "length": 1,
+   "pattern": "stair_down",
+   "mirrored": false,
    "lanes": [
-    3,
-    2,
-    2,
     2
    ],
    "heights": [
-    null,
-    null,
+    null
+   ],
+   "motifKey": "1||",
+   "motifSource": null,
+   "role": "body",
+   "phraseCopyOf": 92
+  },
+  {
+   "fromGrid": 1856,
+   "toGrid": 1860,
+   "length": 2,
+   "pattern": "trill",
+   "mirrored": false,
+   "lanes": [
+    3,
+    4
+   ],
+   "heights": [
     0,
     0
    ],
-   "motifKey": "4|8,4,4|??=",
+   "motifKey": "2|4|=",
    "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 92
+   "role": "body"
   },
   {
    "fromGrid": 1872,
@@ -1783,9 +1951,9 @@
    "pattern": "echo_up",
    "mirrored": true,
    "lanes": [
-    0,
     1,
-    0
+    2,
+    1
    ],
    "heights": [
     null,
@@ -1794,19 +1962,19 @@
    ],
    "motifKey": "3|4,4|??",
    "motifSource": null,
-   "role": "climax",
+   "role": "body",
    "phraseCopyOf": 120
   },
   {
    "fromGrid": 1892,
    "toGrid": 1908,
    "length": 4,
-   "pattern": "plateau_up",
+   "pattern": "bounce",
    "mirrored": false,
    "lanes": [
-    0,
-    0,
-    1,
+    2,
+    3,
+    2,
     1
    ],
    "heights": [
@@ -1817,86 +1985,62 @@
    ],
    "motifKey": "4|4,8,4|???",
    "motifSource": null,
-   "role": "climax"
+   "role": "body"
   },
   {
    "fromGrid": 1920,
-   "toGrid": 1924,
-   "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
-   "lanes": [
-    0,
-    0
-   ],
-   "heights": [
-    0.3,
-    null
-   ],
-   "motifKey": "2|4|?",
-   "motifSource": null,
-   "role": "climax"
-  },
-  {
-   "fromGrid": 1940,
-   "toGrid": 1948,
+   "toGrid": 1926,
    "length": 3,
-   "pattern": "stair_down_long",
+   "pattern": "stair_up",
    "mirrored": true,
    "lanes": [
     1,
     1,
+    0
+   ],
+   "heights": [
+    0.3,
+    null,
+    null
+   ],
+   "motifKey": "3|4,2|??",
+   "motifSource": null,
+   "role": "body",
+   "phraseCopyOf": 172
+  },
+  {
+   "fromGrid": 1940,
+   "toGrid": 1988,
+   "length": 10,
+   "pattern": "stair_up_long",
+   "mirrored": false,
+   "lanes": [
+    2,
+    2,
+    3,
+    5,
+    5,
+    4,
+    3,
+    3,
+    2,
     2
    ],
    "heights": [
     0.07,
     0.07,
-    0.3
-   ],
-   "motifKey": "3|2,6|=+",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 194
-  },
-  {
-   "fromGrid": 1960,
-   "toGrid": 1964,
-   "length": 2,
-   "pattern": "trill",
-   "mirrored": false,
-   "lanes": [
-    3,
-    4
-   ],
-   "heights": [
     0.3,
-    0.3
-   ],
-   "motifKey": "2|4|=",
-   "motifSource": null,
-   "role": "climax"
-  },
-  {
-   "fromGrid": 1976,
-   "toGrid": 1988,
-   "length": 4,
-   "pattern": "stair_down_long",
-   "mirrored": true,
-   "lanes": [
-    2,
-    2,
-    1,
-    1
-   ],
-   "heights": [
+    0.3,
+    0.3,
+    0.22,
     null,
     0.45,
     0.21,
     null
    ],
-   "motifKey": "4|4,4,4|?-?",
+   "motifKey": "10|2,6,12,4,8,4,4,4,4|=+==-??-?",
    "motifSource": null,
-   "role": "climax",
+   "role": "body",
    "phraseCopyOf": 194
   },
   {
@@ -1915,7 +2059,7 @@
    ],
    "motifKey": "2|8|-",
    "motifSource": null,
-   "role": "climax"
+   "role": "body"
   },
   {
    "fromGrid": 2020,
@@ -1933,7 +2077,7 @@
    ],
    "motifKey": "2|4|+",
    "motifSource": null,
-   "role": "climax"
+   "role": "body"
   },
   {
    "fromGrid": 2036,
@@ -1942,8 +2086,8 @@
    "pattern": "trill",
    "mirrored": true,
    "lanes": [
-    1,
-    0
+    4,
+    3
    ],
    "heights": [
     0.07,
@@ -1951,18 +2095,18 @@
    ],
    "motifKey": "2|4|?",
    "motifSource": null,
-   "role": "climax",
+   "role": "body",
    "phraseCopyOf": 292
   },
   {
    "fromGrid": 2052,
    "toGrid": 2056,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    0,
-    1
+    2,
+    2
    ],
    "heights": [
     0.08,
@@ -1970,54 +2114,42 @@
    ],
    "motifKey": "2|4|+",
    "motifSource": null,
-   "role": "climax"
+   "role": "body"
   },
   {
    "fromGrid": 2068,
-   "toGrid": 2068,
-   "length": 1,
-   "pattern": "fold_up",
-   "mirrored": false,
-   "lanes": [
-    4
-   ],
-   "heights": [
-    0.53
-   ],
-   "motifKey": "1||",
-   "motifSource": null,
-   "role": "body",
-   "phraseCopyOf": 938
-  },
-  {
-   "fromGrid": 2078,
    "toGrid": 2084,
-   "length": 2,
-   "pattern": "jack",
+   "length": 4,
+   "pattern": "stair_down",
    "mirrored": false,
    "lanes": [
-    5,
-    5
+    1,
+    0,
+    0,
+    0
    ],
    "heights": [
+    0.53,
+    0.44,
     0.38,
     0.3
    ],
-   "motifKey": "2|6|-",
+   "motifKey": "4|4,6,6|---",
    "motifSource": null,
-   "role": "body"
+   "role": "body",
+   "phraseCopyOf": 938
   },
   {
    "fromGrid": 2096,
    "toGrid": 2112,
    "length": 4,
    "pattern": "stair_up",
-   "mirrored": true,
+   "mirrored": false,
    "lanes": [
-    4,
-    3,
+    1,
     2,
-    1
+    3,
+    4
    ],
    "heights": [
     0.31,
@@ -2026,17 +2158,17 @@
     0.5
    ],
    "motifKey": "4|8,2,6|+=+",
-   "motifSource": 830,
+   "motifSource": null,
    "role": "body"
   },
   {
    "fromGrid": 2124,
    "toGrid": 2124,
    "length": 1,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    0
+    3
    ],
    "heights": [
     0.32
@@ -2047,32 +2179,31 @@
    "phraseCopyOf": 1004
   },
   {
-   "fromGrid": 2140,
+   "fromGrid": 2144,
    "toGrid": 2144,
-   "length": 2,
-   "pattern": "trill",
+   "length": 1,
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    0,
-    1
+    3
    ],
    "heights": [
-    0.42,
     0.36
    ],
-   "motifKey": "2|4|-",
+   "motifKey": "1||",
    "motifSource": null,
-   "role": "body"
+   "role": "body",
+   "phraseCopyOf": 1016
   },
   {
    "fromGrid": 2162,
    "toGrid": 2168,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    2,
-    3
+    4,
+    4
    ],
    "heights": [
     0.67,
@@ -2086,10 +2217,10 @@
    "fromGrid": 2178,
    "toGrid": 2184,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    4,
+    5,
     5
    ],
    "heights": [
@@ -2104,7 +2235,7 @@
    "fromGrid": 2196,
    "toGrid": 2196,
    "length": 1,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
     5
@@ -2139,38 +2270,23 @@
   },
   {
    "fromGrid": 2224,
-   "toGrid": 2232,
-   "length": 2,
-   "pattern": "fold_up",
+   "toGrid": 2248,
+   "length": 4,
+   "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
+    1,
+    2,
     3,
     4
    ],
    "heights": [
     0.82,
-    0.95
-   ],
-   "motifKey": "2|8|+",
-   "motifSource": null,
-   "role": "body",
-   "phraseCopyOf": 1100
-  },
-  {
-   "fromGrid": 2240,
-   "toGrid": 2248,
-   "length": 2,
-   "pattern": "fold_up",
-   "mirrored": true,
-   "lanes": [
-    2,
-    3
-   ],
-   "heights": [
+    0.95,
     0.68,
     0.95
    ],
-   "motifKey": "2|8|+",
+   "motifKey": "4|8,8,8|+-+",
    "motifSource": null,
    "role": "body",
    "phraseCopyOf": 1100
@@ -2179,11 +2295,11 @@
    "fromGrid": 2260,
    "toGrid": 2264,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    2,
-    2
+    3,
+    4
    ],
    "heights": [
     0.85,
@@ -2197,11 +2313,11 @@
    "fromGrid": 2284,
    "toGrid": 2288,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    3,
-    4
+    5,
+    5
    ],
    "heights": [
     1,
@@ -2215,11 +2331,11 @@
    "fromGrid": 2304,
    "toGrid": 2312,
    "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "pattern": "stair_up",
+   "mirrored": true,
    "lanes": [
     4,
-    4
+    3
    ],
    "heights": [
     1,
@@ -2234,11 +2350,11 @@
    "fromGrid": 2320,
    "toGrid": 2328,
    "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "pattern": "trill",
+   "mirrored": true,
    "lanes": [
-    5,
-    5
+    4,
+    3
    ],
    "heights": [
     0.75,
@@ -2252,11 +2368,11 @@
    "fromGrid": 2344,
    "toGrid": 2348,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    5,
-    5
+    2,
+    3
    ],
    "heights": [
     0.61,
@@ -2268,7 +2384,7 @@
   },
   {
    "fromGrid": 2360,
-   "toGrid": 2376,
+   "toGrid": 2380,
    "length": 4,
    "pattern": "echo_down",
    "mirrored": false,
@@ -2280,29 +2396,27 @@
    ],
    "heights": [
     0.54,
-    null,
     0.43,
-    0.34
+    0.34,
+    0.13
    ],
-   "motifKey": "4|2,6,8|??-",
+   "motifKey": "4|8,8,4|---",
    "motifSource": null,
    "role": "body"
   },
   {
-   "fromGrid": 2390,
+   "fromGrid": 2392,
    "toGrid": 2392,
-   "length": 2,
-   "pattern": "trill",
+   "length": 1,
+   "pattern": null,
    "mirrored": false,
    "lanes": [
-    3,
-    4
+    5
    ],
    "heights": [
-    null,
     null
    ],
-   "motifKey": "2|2|?",
+   "motifKey": "1||",
    "motifSource": null,
    "role": "body"
   },
@@ -2310,10 +2424,10 @@
    "fromGrid": 2404,
    "toGrid": 2408,
    "length": 2,
-   "pattern": "trill",
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    4,
+    5,
     5
    ],
    "heights": [
@@ -2344,78 +2458,61 @@
   },
   {
    "fromGrid": 2436,
-   "toGrid": 2450,
+   "toGrid": 2448,
    "length": 3,
    "pattern": "bounce",
    "mirrored": false,
    "lanes": [
+    3,
     4,
-    5,
-    4
+    3
    ],
    "heights": [
     0.69,
     0.67,
     0.67
    ],
-   "motifKey": "3|8,6|==",
+   "motifKey": "3|8,4|==",
    "motifSource": null,
    "role": "body"
   },
   {
-   "fromGrid": 2468,
-   "toGrid": 2472,
-   "length": 2,
-   "pattern": "trill",
-   "mirrored": true,
-   "lanes": [
-    5,
-    4
-   ],
-   "heights": [
-    0.82,
-    0.54
-   ],
-   "motifKey": "2|4|-",
-   "motifSource": null,
-   "role": "body"
-  },
-  {
-   "fromGrid": 2480,
+   "fromGrid": 2472,
    "toGrid": 2488,
-   "length": 3,
-   "pattern": "fold_up",
+   "length": 4,
+   "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
-    2,
-    2,
-    3
+    0,
+    1,
+    0,
+    1
    ],
    "heights": [
+    0.54,
     0.66,
     0.63,
     0.89
    ],
-   "motifKey": "3|4,4|=+",
+   "motifKey": "4|8,4,4|+=+",
    "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 670
+   "role": "body"
   },
   {
    "fromGrid": 2500,
-   "toGrid": 2540,
+   "toGrid": 2536,
    "length": 8,
    "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
-    3,
-    3,
-    4,
-    3,
-    4,
+    2,
+    2,
     3,
     2,
-    1
+    4,
+    5,
+    5,
+    4
    ],
    "heights": [
     0.63,
@@ -2427,72 +2524,75 @@
     null,
     null
    ],
-   "motifKey": "8|8,4,4,8,8,4,4|=??????",
+   "motifKey": "8|8,4,4,8,2,6,4|=??????",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 700
   },
   {
-   "fromGrid": 2542,
-   "toGrid": 2560,
+   "fromGrid": 2540,
+   "toGrid": 2556,
    "length": 4,
-   "pattern": "stair_down",
-   "mirrored": false,
+   "pattern": "fold_down",
+   "mirrored": true,
    "lanes": [
-    0,
+    2,
     1,
-    1,
-    2
+    2,
+    3
    ],
    "heights": [
     null,
+    null,
     0.44,
-    0.72,
-    null
+    0.72
    ],
-   "motifKey": "4|6,8,4|?+?",
+   "motifKey": "4|2,6,8|??+",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 724
   },
   {
-   "fromGrid": 2564,
-   "toGrid": 2580,
+   "fromGrid": 2560,
+   "toGrid": 2576,
    "length": 4,
    "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    2,
     3,
     4,
-    5
+    4,
+    4
    ],
    "heights": [
+    null,
     0.72,
     0.94,
-    null,
-    0.9
+    null
    ],
-   "motifKey": "4|4,8,4|+??",
+   "motifKey": "4|4,4,8|?+?",
    "motifSource": null,
-   "role": "climax"
+   "role": "climax",
+   "phraseCopyOf": 748
   },
   {
-   "fromGrid": 2588,
+   "fromGrid": 2580,
    "toGrid": 2614,
-   "length": 7,
-   "pattern": "fold_up",
-   "mirrored": false,
+   "length": 8,
+   "pattern": "echo_up",
+   "mirrored": true,
    "lanes": [
-    3,
-    4,
-    5,
-    4,
-    3,
-    4,
-    3
+    2,
+    2,
+    1,
+    2,
+    1,
+    0,
+    0,
+    0
    ],
    "heights": [
+    0.9,
     null,
     1,
     1,
@@ -2501,49 +2601,32 @@
     1,
     0.72
    ],
-   "motifKey": "7|8,4,4,4,4,2|?==??-",
+   "motifKey": "8|8,8,4,4,4,4,2|??==??-",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 780
   },
   {
    "fromGrid": 2624,
-   "toGrid": 2640,
-   "length": 4,
-   "pattern": "jack",
-   "mirrored": true,
+   "toGrid": 2648,
+   "length": 5,
+   "pattern": "echo_down",
+   "mirrored": false,
    "lanes": [
-    4,
-    4,
-    4,
-    4
+    2,
+    1,
+    2,
+    1,
+    0
    ],
    "heights": [
     0.8,
     null,
-    null,
-    0.59
-   ],
-   "motifKey": "4|6,2,8|???",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 816
-  },
-  {
-   "fromGrid": 2644,
-   "toGrid": 2648,
-   "length": 2,
-   "pattern": "trill",
-   "mirrored": false,
-   "lanes": [
-    4,
-    5
-   ],
-   "heights": [
+    0.59,
     null,
     0.58
    ],
-   "motifKey": "2|4|?",
+   "motifKey": "5|8,8,4,4|????",
    "motifSource": null,
    "role": "climax"
   },
@@ -2554,7 +2637,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    5
+    1
    ],
    "heights": [
     0.67
@@ -2567,13 +2650,13 @@
    "fromGrid": 2672,
    "toGrid": 2692,
    "length": 4,
-   "pattern": "stair_up",
+   "pattern": "fold_up",
    "mirrored": false,
    "lanes": [
+    0,
+    1,
     2,
-    3,
-    4,
-    5
+    1
    ],
    "heights": [
     0.43,
@@ -2615,8 +2698,8 @@
    "pattern": "stair_up",
    "mirrored": true,
    "lanes": [
-    5,
-    4
+    4,
+    3
    ],
    "heights": [
     0.47,
@@ -2634,8 +2717,8 @@
    "pattern": "stair_up",
    "mirrored": false,
    "lanes": [
-    2,
-    3
+    3,
+    4
    ],
    "heights": [
     0.49,
@@ -2653,11 +2736,11 @@
    "pattern": "stair_up",
    "mirrored": true,
    "lanes": [
+    0,
     1,
-    1,
-    1,
-    1,
-    0
+    2,
+    3,
+    2
    ],
    "heights": [
     0.49,
@@ -2675,13 +2758,13 @@
    "fromGrid": 2776,
    "toGrid": 2792,
    "length": 4,
-   "pattern": "stair_down",
+   "pattern": "fold_up",
    "mirrored": false,
    "lanes": [
     3,
     3,
     3,
-    2
+    4
    ],
    "heights": [
     1,
@@ -2698,11 +2781,11 @@
    "fromGrid": 2796,
    "toGrid": 2800,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    0,
-    0
+    3,
+    4
    ],
    "heights": [
     0.61,
@@ -2719,7 +2802,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    1
+    5
    ],
    "heights": [
     0.57
@@ -2735,8 +2818,8 @@
    "pattern": "jack",
    "mirrored": true,
    "lanes": [
-    0,
-    0
+    5,
+    5
    ],
    "heights": [
     0.47,
@@ -2753,7 +2836,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    4
+    0
    ],
    "heights": [
     0.48
@@ -2770,7 +2853,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    5
+    0
    ],
    "heights": [
     0.66
@@ -2786,7 +2869,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    5
+    0
    ],
    "heights": [
     0.35
@@ -2802,7 +2885,7 @@
    "pattern": null,
    "mirrored": false,
    "lanes": [
-    4
+    3
    ],
    "heights": [
     null
@@ -2814,33 +2897,28 @@
   },
   {
    "fromGrid": 2904,
-   "toGrid": 2918,
-   "length": 4,
-   "pattern": "trill",
+   "toGrid": 2912,
+   "length": 2,
+   "pattern": "jack",
    "mirrored": false,
    "lanes": [
-    5,
-    5,
     4,
     4
    ],
    "heights": [
     0.47,
-    null,
-    null,
     null
    ],
-   "motifKey": "4|8,4,2|???",
+   "motifKey": "2|8|?",
    "motifSource": null,
-   "role": "body",
-   "phraseCopyOf": 334
+   "role": "body"
   },
   {
    "fromGrid": 2930,
    "toGrid": 2936,
    "length": 3,
-   "pattern": "fold_up",
-   "mirrored": true,
+   "pattern": "stair_down",
+   "mirrored": false,
    "lanes": [
     3,
     3,
@@ -2863,8 +2941,8 @@
    "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    3,
-    4
+    1,
+    2
    ],
    "heights": [
     0.67,
@@ -2876,15 +2954,12 @@
   },
   {
    "fromGrid": 2960,
-   "toGrid": 2988,
-   "length": 7,
+   "toGrid": 2972,
+   "length": 4,
    "pattern": "echo_up",
-   "mirrored": false,
+   "mirrored": true,
    "lanes": [
-    4,
-    3,
-    4,
-    3,
+    2,
     3,
     2,
     1
@@ -2893,113 +2968,111 @@
     0.49,
     null,
     null,
-    0.71,
-    0.72,
-    0.66,
-    0.48
+    null
    ],
-   "motifKey": "7|4,8,4,4,4,4|???=--",
+   "motifKey": "4|4,6,2|???",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 700
   },
   {
-   "fromGrid": 2992,
-   "toGrid": 3024,
-   "length": 7,
-   "pattern": "stair_up",
-   "mirrored": true,
-   "lanes": [
-    5,
-    5,
-    4,
-    3,
-    3,
-    2,
-    2
-   ],
-   "heights": [
-    0.82,
-    null,
-    null,
-    0.71,
-    null,
-    0.58,
-    0.71
-   ],
-   "motifKey": "7|6,6,4,4,4,8|?????+",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 742
-  },
-  {
-   "fromGrid": 3044,
-   "toGrid": 3056,
+   "fromGrid": 2976,
+   "toGrid": 2988,
    "length": 4,
-   "pattern": "fold_up",
+   "pattern": "fold_down",
    "mirrored": false,
    "lanes": [
-    4,
+    5,
     5,
     4,
     3
    ],
    "heights": [
+    0.71,
+    0.72,
+    0.66,
+    0.48
+   ],
+   "motifKey": "4|4,4,4|=--",
+   "motifSource": null,
+   "role": "climax",
+   "phraseCopyOf": 724
+  },
+  {
+   "fromGrid": 2992,
+   "toGrid": 3008,
+   "length": 4,
+   "pattern": "stair_up",
+   "mirrored": true,
+   "lanes": [
+    3,
+    3,
+    3,
+    2
+   ],
+   "heights": [
+    0.82,
+    0.34,
+    null,
+    0.71
+   ],
+   "motifKey": "4|8,4,4|-??",
+   "motifSource": null,
+   "role": "climax",
+   "phraseCopyOf": 748
+  },
+  {
+   "fromGrid": 3012,
+   "toGrid": 3024,
+   "length": 3,
+   "pattern": "fold_up",
+   "mirrored": true,
+   "lanes": [
+    1,
+    0,
+    1
+   ],
+   "heights": [
+    null,
+    0.58,
+    0.71
+   ],
+   "motifKey": "3|4,8|?+",
+   "motifSource": null,
+   "role": "climax"
+  },
+  {
+   "fromGrid": 3040,
+   "toGrid": 3062,
+   "length": 7,
+   "pattern": "echo_up",
+   "mirrored": false,
+   "lanes": [
+    4,
+    4,
+    3,
+    4,
+    5,
+    5,
+    5
+   ],
+   "heights": [
+    0.9,
     0.9,
     0.9,
     0.87,
-    0.91
+    0.91,
+    null,
+    null
    ],
-   "motifKey": "4|4,4,4|===",
+   "motifKey": "7|4,4,4,4,4,2|====??",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 780
   },
   {
-   "fromGrid": 3060,
-   "toGrid": 3062,
-   "length": 2,
-   "pattern": "trill",
-   "mirrored": false,
-   "lanes": [
-    1,
-    2
-   ],
-   "heights": [
-    null,
-    null
-   ],
-   "motifKey": "2|2|?",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 804
-  },
-  {
    "fromGrid": 3072,
-   "toGrid": 3088,
-   "length": 4,
-   "pattern": "jack",
-   "mirrored": true,
-   "lanes": [
-    4,
-    4,
-    4,
-    4
-   ],
-   "heights": [
-    0.9,
-    0.69,
-    null,
-    0.48
-   ],
-   "motifKey": "4|6,2,8|-??",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 816
-  },
-  {
-   "fromGrid": 3092,
-   "toGrid": 3096,
+   "toGrid": 3078,
    "length": 2,
    "pattern": "trill",
    "mirrored": true,
@@ -3008,24 +3081,45 @@
     4
    ],
    "heights": [
+    0.9,
+    0.69
+   ],
+   "motifKey": "2|6|-",
+   "motifSource": null,
+   "role": "climax",
+   "phraseCopyOf": 816
+  },
+  {
+   "fromGrid": 3088,
+   "toGrid": 3096,
+   "length": 3,
+   "pattern": "stair_down",
+   "mirrored": true,
+   "lanes": [
+    3,
+    4,
+    5
+   ],
+   "heights": [
+    0.48,
     null,
     null
    ],
-   "motifKey": "2|4|?",
-   "motifSource": 2644,
+   "motifKey": "3|4,4|??",
+   "motifSource": 444,
    "role": "climax"
   },
   {
    "fromGrid": 3116,
    "toGrid": 3134,
    "length": 4,
-   "pattern": "plateau_up",
+   "pattern": "bounce",
    "mirrored": false,
    "lanes": [
+    3,
     4,
-    4,
-    5,
-    5
+    3,
+    2
    ],
    "heights": [
     null,
@@ -3038,66 +3132,49 @@
    "role": "climax"
   },
   {
-   "fromGrid": 3138,
-   "toGrid": 3168,
-   "length": 8,
+   "fromGrid": 3144,
+   "toGrid": 3174,
+   "length": 9,
    "pattern": "echo_up",
    "mirrored": false,
    "lanes": [
     4,
     4,
+    5,
+    5,
+    5,
     4,
-    5,
-    5,
-    5,
-    5,
-    5
+    3,
+    2,
+    1
    ],
    "heights": [
-    null,
     null,
     null,
     null,
     0.45,
     0.71,
     null,
-    0.72
+    0.72,
+    0.67,
+    0.67
    ],
-   "motifKey": "8|6,6,4,2,4,4,4|????+??",
+   "motifKey": "9|6,4,2,4,4,4,4,2|???+??-=",
    "motifSource": null,
    "role": "climax",
    "phraseCopyOf": 894
   },
   {
-   "fromGrid": 3172,
-   "toGrid": 3174,
-   "length": 2,
-   "pattern": "stair_up",
-   "mirrored": true,
-   "lanes": [
-    3,
-    2
-   ],
-   "heights": [
-    0.67,
-    0.67
-   ],
-   "motifKey": "2|2|=",
-   "motifSource": null,
-   "role": "climax",
-   "phraseCopyOf": 908
-  },
-  {
    "fromGrid": 3184,
    "toGrid": 3194,
    "length": 4,
-   "pattern": "stair_down",
+   "pattern": "fold_up",
    "mirrored": false,
    "lanes": [
-    3,
-    2,
+    0,
     1,
-    0
+    2,
+    1
    ],
    "heights": [
     0.67,
@@ -3111,30 +3188,29 @@
   },
   {
    "fromGrid": 3208,
-   "toGrid": 3210,
-   "length": 2,
-   "pattern": "jack",
-   "mirrored": false,
+   "toGrid": 3208,
+   "length": 1,
+   "pattern": null,
+   "mirrored": true,
    "lanes": [
-    0,
-    0
+    1
    ],
    "heights": [
-    null,
     null
    ],
-   "motifKey": "2|2|?",
+   "motifKey": "1||",
    "motifSource": null,
-   "role": "outro"
+   "role": "outro",
+   "phraseCopyOf": 8
   },
   {
    "fromGrid": 3224,
    "toGrid": 3232,
    "length": 2,
-   "pattern": "jack",
+   "pattern": "trill",
    "mirrored": false,
    "lanes": [
-    1,
+    0,
     1
    ],
    "heights": [
@@ -3150,8 +3226,8 @@
   {
    "type": "TAP",
    "grid": 8,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.16,
    "sourcePeakOffsetMs": -6.66,
@@ -3160,8 +3236,8 @@
   {
    "type": "TAP",
    "grid": 28,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 4,
+   "subLane": 9,
    "subLaneWidth": 3,
    "sourceStrength": 0.2,
    "sourcePeakOffsetMs": -29.04,
@@ -3170,8 +3246,8 @@
   {
    "type": "TAP",
    "grid": 34,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 9.9,
@@ -3179,19 +3255,9 @@
   },
   {
    "type": "TAP",
-   "grid": 40,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 6,
-   "sourceStrength": 0.38,
-   "sourcePeakOffsetMs": -15.04,
-   "sourceCharacter": "FULL"
-  },
-  {
-   "type": "TAP",
    "grid": 48,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": -10.94,
@@ -3199,9 +3265,19 @@
   },
   {
    "type": "TAP",
+   "grid": 56,
+   "lane": 3,
+   "subLane": 6,
+   "subLaneWidth": 6,
+   "sourceStrength": 0.47,
+   "sourcePeakOffsetMs": 17.15,
+   "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
    "grid": 64,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.42,
    "sourcePeakOffsetMs": 37.25,
@@ -3210,8 +3286,8 @@
   {
    "type": "TAP",
    "grid": 74,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.35,
    "sourcePeakOffsetMs": -1.64,
@@ -3220,8 +3296,8 @@
   {
    "type": "TAP",
    "grid": 80,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.27,
    "sourcePeakOffsetMs": -2.57,
@@ -3230,8 +3306,8 @@
   {
    "type": "TAP",
    "grid": 92,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.46,
    "sourcePeakOffsetMs": -12.42,
@@ -3240,8 +3316,8 @@
   {
    "type": "TAP",
    "grid": 100,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.53,
    "sourcePeakOffsetMs": -8.34,
@@ -3250,8 +3326,8 @@
   {
    "type": "TAP",
    "grid": 108,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.28,
    "sourcePeakOffsetMs": 27.75,
@@ -3260,8 +3336,8 @@
   {
    "type": "TAP",
    "grid": 120,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.41,
    "sourcePeakOffsetMs": -6.1,
@@ -3270,8 +3346,8 @@
   {
    "type": "TAP",
    "grid": 128,
-   "lane": 4,
-   "subLane": 9,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 3,
    "sourceStrength": 0.29,
    "sourcePeakOffsetMs": 5.99,
@@ -3280,8 +3356,8 @@
   {
    "type": "TAP",
    "grid": 132,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.3,
    "sourcePeakOffsetMs": 16.04,
@@ -3290,8 +3366,8 @@
   {
    "type": "TAP",
    "grid": 136,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": 10.08,
@@ -3330,8 +3406,8 @@
   {
    "type": "TAP",
    "grid": 182,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": 23.14,
@@ -3340,8 +3416,8 @@
   {
    "type": "TAP",
    "grid": 194,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.54,
    "sourcePeakOffsetMs": -9.84,
@@ -3350,8 +3426,8 @@
   {
    "type": "TAP",
    "grid": 198,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": -15.51,
@@ -3370,8 +3446,8 @@
   {
    "type": "TAP",
    "grid": 212,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.36,
    "sourcePeakOffsetMs": 12.68,
@@ -3380,8 +3456,8 @@
   {
    "type": "TAP",
    "grid": 220,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.55,
    "sourcePeakOffsetMs": 9.35,
@@ -3390,8 +3466,8 @@
   {
    "type": "TAP",
    "grid": 228,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.67,
    "sourcePeakOffsetMs": 22,
@@ -3410,8 +3486,8 @@
   {
    "type": "TAP",
    "grid": 240,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": 20.88,
@@ -3420,8 +3496,8 @@
   {
    "type": "HOLD",
    "grid": 256,
-   "lane": 4,
-   "subLane": 9,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 3,
    "sourceStrength": 0.58,
    "sourcePeakOffsetMs": -17.94,
@@ -3490,16 +3566,6 @@
   },
   {
    "type": "TAP",
-   "grid": 340,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.27,
-   "sourcePeakOffsetMs": 6.7,
-   "sourceCharacter": "BODY"
-  },
-  {
-   "type": "TAP",
    "grid": 360,
    "lane": 3,
    "subLane": 6,
@@ -3507,6 +3573,16 @@
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": 2.05,
    "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
+   "grid": 376,
+   "lane": 4,
+   "subLane": 8,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.46,
+   "sourcePeakOffsetMs": 26.41,
+   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",
@@ -3560,19 +3636,9 @@
   },
   {
    "type": "TAP",
-   "grid": 440,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.49,
-   "sourcePeakOffsetMs": -14.49,
-   "sourceCharacter": "BODY"
-  },
-  {
-   "type": "TAP",
    "grid": 444,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.32,
    "sourcePeakOffsetMs": -36.85,
@@ -3581,8 +3647,8 @@
   {
    "type": "TAP",
    "grid": 448,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.31,
    "sourcePeakOffsetMs": -3.29,
@@ -3591,12 +3657,22 @@
   {
    "type": "TAP",
    "grid": 452,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": 6.33,
    "sourceCharacter": "PUNCH"
+  },
+  {
+   "type": "TAP",
+   "grid": 464,
+   "lane": 1,
+   "subLane": 2,
+   "subLaneWidth": 6,
+   "sourceStrength": 0.96,
+   "sourcePeakOffsetMs": -36.7,
+   "sourceCharacter": "FULL"
   },
   {
    "type": "TAP",
@@ -3643,8 +3719,8 @@
   {
    "type": "TAP",
    "grid": 496,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.63,
    "sourcePeakOffsetMs": -16.09,
@@ -3653,8 +3729,8 @@
   {
    "type": "TAP",
    "grid": 508,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -3.56,
@@ -3663,8 +3739,8 @@
   {
    "type": "TAP",
    "grid": 512,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -18.03,
@@ -3673,8 +3749,8 @@
   {
    "type": "TAP",
    "grid": 518,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": 12.23,
@@ -3682,9 +3758,19 @@
   },
   {
    "type": "TAP",
+   "grid": 528,
+   "lane": 1,
+   "subLane": 2,
+   "subLaneWidth": 6,
+   "sourceStrength": 0.45,
+   "sourcePeakOffsetMs": 12.02,
+   "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
    "grid": 540,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": 0.55,
@@ -3693,8 +3779,8 @@
   {
    "type": "TAP",
    "grid": 544,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.49,
    "sourcePeakOffsetMs": -13.93,
@@ -3703,8 +3789,8 @@
   {
    "type": "TAP",
    "grid": 552,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.5,
    "sourcePeakOffsetMs": -34.33,
@@ -3713,8 +3799,8 @@
   {
    "type": "TAP",
    "grid": 564,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": 28.25,
@@ -3723,8 +3809,8 @@
   {
    "type": "TAP",
    "grid": 572,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.56,
    "sourcePeakOffsetMs": 16.58,
@@ -3733,8 +3819,8 @@
   {
    "type": "HOLD",
    "grid": 580,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 3,
    "sourceStrength": 0.55,
    "sourcePeakOffsetMs": 20.93,
@@ -3744,8 +3830,8 @@
   {
    "type": "TAP",
    "grid": 602,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.55,
    "sourcePeakOffsetMs": 36.86,
@@ -3754,8 +3840,8 @@
   {
    "type": "TAP",
    "grid": 608,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -27.95,
@@ -3764,8 +3850,8 @@
   {
    "type": "TAP",
    "grid": 620,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 19.84,
@@ -3774,8 +3860,8 @@
   {
    "type": "TAP",
    "grid": 624,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.38,
    "sourcePeakOffsetMs": -17.33,
@@ -3783,9 +3869,19 @@
   },
   {
    "type": "TAP",
+   "grid": 634,
+   "lane": 4,
+   "subLane": 8,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.45,
+   "sourcePeakOffsetMs": -14.26,
+   "sourceCharacter": "BODY"
+  },
+  {
+   "type": "TAP",
    "grid": 640,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.12,
    "sourcePeakOffsetMs": 17.98,
@@ -3844,19 +3940,9 @@
   },
   {
    "type": "TAP",
-   "grid": 682,
-   "lane": 1,
-   "subLane": 2,
-   "subLaneWidth": 6,
-   "sourceStrength": 0.4,
-   "sourcePeakOffsetMs": 35.83,
-   "sourceCharacter": "FULL"
-  },
-  {
-   "type": "TAP",
    "grid": 700,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.32,
    "sourcePeakOffsetMs": -3.11,
@@ -3865,8 +3951,8 @@
   {
    "type": "TAP",
    "grid": 704,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.32,
    "sourcePeakOffsetMs": 16.1,
@@ -3875,11 +3961,21 @@
   {
    "type": "TAP",
    "grid": 708,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.3,
    "sourcePeakOffsetMs": -5.2,
+   "sourceCharacter": "PUNCH"
+  },
+  {
+   "type": "TAP",
+   "grid": 714,
+   "lane": 2,
+   "subLane": 5,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.55,
+   "sourcePeakOffsetMs": -28.76,
    "sourceCharacter": "PUNCH"
   },
   {
@@ -3895,8 +3991,8 @@
   {
    "type": "TAP",
    "grid": 724,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.5,
    "sourcePeakOffsetMs": -25.37,
@@ -3905,8 +4001,8 @@
   {
    "type": "TAP",
    "grid": 728,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.38,
    "sourcePeakOffsetMs": -22.4,
@@ -3915,8 +4011,8 @@
   {
    "type": "TAP",
    "grid": 732,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.36,
    "sourcePeakOffsetMs": 20.81,
@@ -3925,8 +4021,8 @@
   {
    "type": "TAP",
    "grid": 734,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": -5.97,
@@ -3934,19 +4030,9 @@
   },
   {
    "type": "TAP",
-   "grid": 742,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.25,
-   "sourcePeakOffsetMs": 7.95,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
    "grid": 748,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 8.55,
@@ -3955,8 +4041,8 @@
   {
    "type": "TAP",
    "grid": 752,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 27.92,
@@ -3965,8 +4051,8 @@
   {
    "type": "HOLD",
    "grid": 760,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.7,
    "sourcePeakOffsetMs": -14.2,
@@ -3976,8 +4062,8 @@
   {
    "type": "TAP",
    "grid": 780,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.9,
    "sourcePeakOffsetMs": -6.79,
@@ -3986,8 +4072,8 @@
   {
    "type": "TAP",
    "grid": 788,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.64,
    "sourcePeakOffsetMs": -0.63,
@@ -3996,8 +4082,8 @@
   {
    "type": "TAP",
    "grid": 792,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.69,
    "sourcePeakOffsetMs": 10.46,
@@ -4006,8 +4092,8 @@
   {
    "type": "TAP",
    "grid": 796,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.75,
    "sourcePeakOffsetMs": 21.54,
@@ -4021,8 +4107,7 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.61,
    "sourcePeakOffsetMs": 24.62,
-   "sourceCharacter": "PUNCH",
-   "chord": true
+   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",
@@ -4032,13 +4117,14 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.61,
    "sourcePeakOffsetMs": 24.62,
-   "sourceCharacter": "PUNCH"
+   "sourceCharacter": "PUNCH",
+   "chord": true
   },
   {
    "type": "TAP",
    "grid": 804,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.67,
    "sourcePeakOffsetMs": 27.7,
@@ -4047,8 +4133,8 @@
   {
    "type": "TAP",
    "grid": 806,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": 9.24,
@@ -4058,7 +4144,7 @@
    "type": "TAP",
    "grid": 816,
    "lane": 0,
-   "subLane": 1,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.59,
    "sourcePeakOffsetMs": 28.93,
@@ -4076,16 +4162,6 @@
   },
   {
    "type": "TAP",
-   "grid": 830,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.38,
-   "sourcePeakOffsetMs": -4.3,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
    "grid": 838,
    "lane": 0,
    "subLane": 1,
@@ -4097,8 +4173,8 @@
   {
    "type": "TAP",
    "grid": 840,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.3,
    "sourcePeakOffsetMs": -24.62,
@@ -4107,8 +4183,8 @@
   {
    "type": "TAP",
    "grid": 846,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.42,
    "sourcePeakOffsetMs": 0,
@@ -4117,8 +4193,8 @@
   {
    "type": "TAP",
    "grid": 866,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.27,
    "sourcePeakOffsetMs": 23.38,
@@ -4128,7 +4204,7 @@
    "type": "TAP",
    "grid": 874,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.29,
    "sourcePeakOffsetMs": 21.41,
@@ -4138,18 +4214,46 @@
    "type": "HOLD",
    "grid": 876,
    "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 4,
+   "subLane": 0,
+   "subLaneWidth": 6,
    "sourceStrength": 0.35,
    "sourcePeakOffsetMs": -21.14,
    "sourceCharacter": "PUNCH",
-   "durationGrids": 16
+   "durationGrids": 16,
+   "holdPoints": [
+    {
+     "grid": 876,
+     "subLane": 0,
+     "subLaneWidth": 6
+    },
+    {
+     "grid": 880,
+     "subLane": 0,
+     "subLaneWidth": 6
+    },
+    {
+     "grid": 884,
+     "subLane": 0,
+     "subLaneWidth": 4
+    },
+    {
+     "grid": 888,
+     "subLane": 0,
+     "subLaneWidth": 4
+    },
+    {
+     "grid": 892,
+     "subLane": 1,
+     "subLaneWidth": 3
+    }
+   ],
+   "holdTaper": "close"
   },
   {
    "type": "TAP",
    "grid": 894,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.66,
    "sourcePeakOffsetMs": -12.2,
@@ -4159,7 +4263,7 @@
    "type": "TAP",
    "grid": 898,
    "lane": 0,
-   "subLane": 1,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.8,
    "sourcePeakOffsetMs": -17.32,
@@ -4168,8 +4272,8 @@
   {
    "type": "TAP",
    "grid": 902,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.6,
    "sourcePeakOffsetMs": -14.45,
@@ -4178,8 +4282,8 @@
   {
    "type": "TAP",
    "grid": 904,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.4,
    "sourcePeakOffsetMs": -25.25,
@@ -4188,8 +4292,8 @@
   {
    "type": "TAP",
    "grid": 908,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": -22.37,
@@ -4198,8 +4302,8 @@
   {
    "type": "TAP",
    "grid": 910,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": -0.69,
@@ -4208,8 +4312,8 @@
   {
    "type": "TAP",
    "grid": 916,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.56,
    "sourcePeakOffsetMs": -8.37,
@@ -4229,8 +4333,8 @@
   {
    "type": "HOLD",
    "grid": 926,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 18.83,
@@ -4240,8 +4344,8 @@
   {
    "type": "TAP",
    "grid": 938,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.99,
    "sourcePeakOffsetMs": 26.9,
@@ -4250,8 +4354,8 @@
   {
    "type": "TAP",
    "grid": 944,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.28,
    "sourcePeakOffsetMs": 25.47,
@@ -4268,6 +4372,17 @@
    "sourceCharacter": "PUNCH"
   },
   {
+   "type": "HOLD",
+   "grid": 952,
+   "lane": 4,
+   "subLane": 8,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.33,
+   "sourcePeakOffsetMs": 20.89,
+   "sourceCharacter": "BODY",
+   "durationGrids": 16
+  },
+  {
    "type": "TAP",
    "grid": 982,
    "lane": 2,
@@ -4280,8 +4395,8 @@
   {
    "type": "TAP",
    "grid": 984,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.3,
    "sourcePeakOffsetMs": -5.41,
@@ -4290,8 +4405,8 @@
   {
    "type": "TAP",
    "grid": 988,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.55,
    "sourcePeakOffsetMs": 4.29,
@@ -4300,8 +4415,8 @@
   {
    "type": "TAP",
    "grid": 994,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -21.08,
@@ -4310,8 +4425,8 @@
   {
    "type": "TAP",
    "grid": 1004,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -21.12,
@@ -4320,8 +4435,8 @@
   {
    "type": "TAP",
    "grid": 1006,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.5,
    "sourcePeakOffsetMs": 23.28,
@@ -4330,8 +4445,8 @@
   {
    "type": "TAP",
    "grid": 1016,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.85,
    "sourcePeakOffsetMs": 6.23,
@@ -4339,19 +4454,9 @@
   },
   {
    "type": "TAP",
-   "grid": 1022,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 6,
-   "sourceStrength": 0.39,
-   "sourcePeakOffsetMs": -27.82,
-   "sourceCharacter": "FULL"
-  },
-  {
-   "type": "TAP",
    "grid": 1024,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.28,
    "sourcePeakOffsetMs": 16.58,
@@ -4360,8 +4465,8 @@
   {
    "type": "TAP",
    "grid": 1040,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.31,
    "sourcePeakOffsetMs": -34.52,
@@ -4370,8 +4475,8 @@
   {
    "type": "TAP",
    "grid": 1048,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.65,
    "sourcePeakOffsetMs": -24.35,
@@ -4380,8 +4485,8 @@
   {
    "type": "TAP",
    "grid": 1056,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.35,
    "sourcePeakOffsetMs": -13.99,
@@ -4390,8 +4495,8 @@
   {
    "type": "TAP",
    "grid": 1064,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.65,
    "sourcePeakOffsetMs": -11.63,
@@ -4400,8 +4505,8 @@
   {
    "type": "TAP",
    "grid": 1074,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -20.87,
@@ -4420,8 +4525,8 @@
   {
    "type": "TAP",
    "grid": 1088,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.3,
    "sourcePeakOffsetMs": -21.03,
@@ -4430,8 +4535,8 @@
   {
    "type": "TAP",
    "grid": 1100,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.85,
    "sourcePeakOffsetMs": -1.73,
@@ -4440,8 +4545,8 @@
   {
    "type": "TAP",
    "grid": 1104,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": -8.64,
@@ -4450,12 +4555,23 @@
   {
    "type": "TAP",
    "grid": 1112,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 6,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 3,
    "sourceStrength": 0.35,
    "sourcePeakOffsetMs": 9.56,
    "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
+   "grid": 1112,
+   "lane": 4,
+   "subLane": 9,
+   "subLaneWidth": 3,
+   "sourceStrength": 0.35,
+   "sourcePeakOffsetMs": 9.56,
+   "sourceCharacter": "FULL",
+   "chord": true
   },
   {
    "type": "TAP",
@@ -4470,8 +4586,8 @@
   {
    "type": "TAP",
    "grid": 1128,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.77,
    "sourcePeakOffsetMs": -2.05,
@@ -4480,8 +4596,8 @@
   {
    "type": "TAP",
    "grid": 1144,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.49,
    "sourcePeakOffsetMs": 11.53,
@@ -4490,8 +4606,8 @@
   {
    "type": "TAP",
    "grid": 1150,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": -38.34,
@@ -4510,8 +4626,8 @@
   {
    "type": "HOLD",
    "grid": 1160,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 3,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -14.77,
@@ -4520,22 +4636,22 @@
    "holdPoints": [
     {
      "grid": 1160,
-     "subLane": 4,
+     "subLane": 2,
      "subLaneWidth": 3
     },
     {
      "grid": 1163,
-     "subLane": 3,
+     "subLane": 1,
      "subLaneWidth": 4
     },
     {
      "grid": 1167,
-     "subLane": 3,
+     "subLane": 1,
      "subLaneWidth": 4
     },
     {
      "grid": 1170,
-     "subLane": 2,
+     "subLane": 0,
      "subLaneWidth": 6
     }
    ],
@@ -4565,18 +4681,19 @@
   {
    "type": "TAP",
    "grid": 1192,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 6,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 12,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 4.64,
-   "sourceCharacter": "FULL"
+   "sourceCharacter": "FULL",
+   "sectionAccent": true
   },
   {
    "type": "TAP",
    "grid": 1204,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 0.71,
@@ -4585,8 +4702,8 @@
   {
    "type": "TAP",
    "grid": 1208,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 10.06,
@@ -4595,8 +4712,8 @@
   {
    "type": "TAP",
    "grid": 1216,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 4.75,
@@ -4636,8 +4753,8 @@
   {
    "type": "TAP",
    "grid": 1244,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -1.82,
@@ -4646,8 +4763,8 @@
   {
    "type": "TAP",
    "grid": 1256,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.81,
    "sourcePeakOffsetMs": -5.79,
@@ -4657,7 +4774,7 @@
    "type": "TAP",
    "grid": 1260,
    "lane": 0,
-   "subLane": 1,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -4.37,
@@ -4666,8 +4783,8 @@
   {
    "type": "TAP",
    "grid": 1268,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -9.27,
@@ -4686,8 +4803,8 @@
   {
    "type": "TAP",
    "grid": 1280,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -4.62,
@@ -4696,8 +4813,8 @@
   {
    "type": "TAP",
    "grid": 1284,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 4.93,
@@ -4748,8 +4865,8 @@
   {
    "type": "TAP",
    "grid": 1336,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": -7.86,
@@ -4758,8 +4875,8 @@
   {
    "type": "TAP",
    "grid": 1342,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.7,
    "sourcePeakOffsetMs": -9.96,
@@ -4768,8 +4885,8 @@
   {
    "type": "TAP",
    "grid": 1344,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": 10.5,
@@ -4778,8 +4895,8 @@
   {
    "type": "TAP",
    "grid": 1348,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.74,
    "sourcePeakOffsetMs": 11.76,
@@ -4787,9 +4904,19 @@
   },
   {
    "type": "TAP",
+   "grid": 1354,
+   "lane": 2,
+   "subLane": 5,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.51,
+   "sourcePeakOffsetMs": -14.19,
+   "sourceCharacter": "BODY"
+  },
+  {
+   "type": "TAP",
    "grid": 1356,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": -1.57,
@@ -4798,8 +4925,8 @@
   {
    "type": "TAP",
    "grid": 1364,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.82,
    "sourcePeakOffsetMs": 0.96,
@@ -4819,8 +4946,8 @@
   {
    "type": "TAP",
    "grid": 1372,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.77,
    "sourcePeakOffsetMs": 3.47,
@@ -4870,8 +4997,8 @@
   {
    "type": "TAP",
    "grid": 1388,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.43,
    "sourcePeakOffsetMs": 0.47,
@@ -4901,8 +5028,8 @@
   {
    "type": "HOLD",
    "grid": 1400,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.85,
    "sourcePeakOffsetMs": -20.87,
@@ -4912,8 +5039,8 @@
   {
    "type": "HOLD",
    "grid": 1420,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.81,
    "sourcePeakOffsetMs": -8.44,
@@ -4922,22 +5049,22 @@
    "holdPoints": [
     {
      "grid": 1420,
-     "subLane": 2,
+     "subLane": 4,
      "subLaneWidth": 6
     },
     {
      "grid": 1423,
-     "subLane": 3,
+     "subLane": 5,
      "subLaneWidth": 4
     },
     {
      "grid": 1427,
-     "subLane": 3,
+     "subLane": 5,
      "subLaneWidth": 4
     },
     {
      "grid": 1430,
-     "subLane": 2,
+     "subLane": 4,
      "subLaneWidth": 6
     }
    ],
@@ -4946,8 +5073,8 @@
   {
    "type": "TAP",
    "grid": 1432,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.82,
    "sourcePeakOffsetMs": -13.77,
@@ -4955,49 +5082,19 @@
   },
   {
    "type": "TAP",
-   "grid": 1438,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 12,
-   "sourceStrength": 1,
-   "sourcePeakOffsetMs": -16.45,
-   "sourceCharacter": "FULL",
-   "sectionAccent": true
-  },
-  {
-   "type": "HOLD",
    "grid": 1442,
    "lane": 3,
    "subLane": 6,
-   "subLaneWidth": 3,
+   "subLaneWidth": 6,
    "sourceStrength": 0.57,
    "sourcePeakOffsetMs": -15.55,
-   "sourceCharacter": "FULL",
-   "durationGrids": 9,
-   "holdPoints": [
-    {
-     "grid": 1442,
-     "subLane": 6,
-     "subLaneWidth": 3
-    },
-    {
-     "grid": 1447,
-     "subLane": 5,
-     "subLaneWidth": 4
-    },
-    {
-     "grid": 1451,
-     "subLane": 4,
-     "subLaneWidth": 6
-    }
-   ],
-   "holdTaper": "open"
+   "sourceCharacter": "FULL"
   },
   {
    "type": "TAP",
    "grid": 1452,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": -33.34,
@@ -5006,8 +5103,8 @@
   {
    "type": "TAP",
    "grid": 1456,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -9.01,
@@ -5016,8 +5113,8 @@
   {
    "type": "TAP",
    "grid": 1464,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.47,
    "sourcePeakOffsetMs": -7.72,
@@ -5026,8 +5123,8 @@
   {
    "type": "TAP",
    "grid": 1466,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.29,
    "sourcePeakOffsetMs": -19.39,
@@ -5036,8 +5133,8 @@
   {
    "type": "TAP",
    "grid": 1472,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": 1.57,
@@ -5046,8 +5143,8 @@
   {
    "type": "TAP",
    "grid": 1476,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.46,
    "sourcePeakOffsetMs": 2.22,
@@ -5056,8 +5153,8 @@
   {
    "type": "TAP",
    "grid": 1484,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.73,
    "sourcePeakOffsetMs": -4.49,
@@ -5066,8 +5163,8 @@
   {
    "type": "TAP",
    "grid": 1486,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 15.83,
@@ -5076,8 +5173,8 @@
   {
    "type": "TAP",
    "grid": 1492,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.67,
    "sourcePeakOffsetMs": -3.2,
@@ -5086,8 +5183,8 @@
   {
    "type": "TAP",
    "grid": 1500,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.49,
    "sourcePeakOffsetMs": 6.09,
@@ -5096,8 +5193,8 @@
   {
    "type": "TAP",
    "grid": 1504,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.35,
    "sourcePeakOffsetMs": -9.27,
@@ -5106,8 +5203,8 @@
   {
    "type": "TAP",
    "grid": 1508,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.78,
    "sourcePeakOffsetMs": -0.63,
@@ -5116,8 +5213,8 @@
   {
    "type": "TAP",
    "grid": 1512,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.72,
    "sourcePeakOffsetMs": 0.02,
@@ -5126,8 +5223,8 @@
   {
    "type": "TAP",
    "grid": 1520,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 8.89,
@@ -5136,8 +5233,8 @@
   {
    "type": "TAP",
    "grid": 1524,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.8,
    "sourcePeakOffsetMs": -6.84,
@@ -5146,8 +5243,8 @@
   {
    "type": "TAP",
    "grid": 1532,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 1.7,
@@ -5172,8 +5269,7 @@
    "subLaneWidth": 3,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 2.23,
-   "sourceCharacter": "FULL",
-   "chord": true
+   "sourceCharacter": "FULL"
   },
   {
    "type": "TAP",
@@ -5183,25 +5279,15 @@
    "subLaneWidth": 3,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 2.23,
-   "sourceCharacter": "FULL"
-  },
-  {
-   "type": "TAP",
-   "grid": 1544,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 3,
-   "sourceStrength": 1,
-   "sourcePeakOffsetMs": 2.5,
    "sourceCharacter": "FULL",
    "chord": true
   },
   {
    "type": "TAP",
    "grid": 1544,
-   "lane": 4,
-   "subLane": 9,
-   "subLaneWidth": 3,
+   "lane": 1,
+   "subLane": 2,
+   "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 2.5,
    "sourceCharacter": "FULL"
@@ -5209,8 +5295,8 @@
   {
    "type": "TAP",
    "grid": 1552,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -4.97,
@@ -5220,7 +5306,7 @@
    "type": "TAP",
    "grid": 1556,
    "lane": 0,
-   "subLane": 1,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 3.29,
@@ -5230,7 +5316,7 @@
    "type": "TAP",
    "grid": 1558,
    "lane": 0,
-   "subLane": 1,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -24.58,
@@ -5240,7 +5326,7 @@
    "type": "TAP",
    "grid": 1568,
    "lane": 0,
-   "subLane": 1,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 4.09,
@@ -5269,8 +5355,8 @@
   {
    "type": "HOLD",
    "grid": 1592,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -17.31,
@@ -5291,8 +5377,8 @@
   {
    "type": "TAP",
    "grid": 1618,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": 14.27,
@@ -5302,7 +5388,7 @@
    "type": "TAP",
    "grid": 1628,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": 11.78,
@@ -5342,8 +5428,8 @@
   {
    "type": "TAP",
    "grid": 1672,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.78,
    "sourcePeakOffsetMs": 10.96,
@@ -5352,8 +5438,8 @@
   {
    "type": "TAP",
    "grid": 1676,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.67,
    "sourcePeakOffsetMs": 19.65,
@@ -5362,8 +5448,8 @@
   {
    "type": "TAP",
    "grid": 1680,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.64,
    "sourcePeakOffsetMs": 12.33,
@@ -5372,8 +5458,8 @@
   {
    "type": "TAP",
    "grid": 1684,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.81,
    "sourcePeakOffsetMs": 13.01,
@@ -5432,8 +5518,8 @@
   {
    "type": "TAP",
    "grid": 1710,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.43,
    "sourcePeakOffsetMs": -10.19,
@@ -5442,8 +5528,8 @@
   {
    "type": "TAP",
    "grid": 1716,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.78,
    "sourcePeakOffsetMs": 20.01,
@@ -5451,9 +5537,19 @@
   },
   {
    "type": "TAP",
+   "grid": 1720,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 4,
+   "sourceStrength": 1,
+   "sourcePeakOffsetMs": 21.47,
+   "sourceCharacter": "PUNCH"
+  },
+  {
+   "type": "TAP",
    "grid": 1736,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -4.68,
@@ -5462,8 +5558,8 @@
   {
    "type": "TAP",
    "grid": 1744,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.32,
    "sourcePeakOffsetMs": 22.25,
@@ -5472,8 +5568,8 @@
   {
    "type": "TAP",
    "grid": 1752,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.46,
    "sourcePeakOffsetMs": -6.82,
@@ -5482,8 +5578,8 @@
   {
    "type": "HOLD",
    "grid": 1758,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": -16.63,
@@ -5492,27 +5588,27 @@
    "holdPoints": [
     {
      "grid": 1758,
-     "subLane": 2,
+     "subLane": 0,
      "subLaneWidth": 6
     },
     {
      "grid": 1762,
-     "subLane": 2,
+     "subLane": 0,
      "subLaneWidth": 6
     },
     {
      "grid": 1765,
-     "subLane": 3,
+     "subLane": 1,
      "subLaneWidth": 4
     },
     {
      "grid": 1769,
-     "subLane": 3,
+     "subLane": 1,
      "subLaneWidth": 4
     },
     {
      "grid": 1772,
-     "subLane": 4,
+     "subLane": 2,
      "subLaneWidth": 3
     }
    ],
@@ -5520,9 +5616,19 @@
   },
   {
    "type": "TAP",
+   "grid": 1776,
+   "lane": 1,
+   "subLane": 3,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.98,
+   "sourcePeakOffsetMs": 2.35,
+   "sourceCharacter": "BODY"
+  },
+  {
+   "type": "TAP",
    "grid": 1784,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.7,
    "sourcePeakOffsetMs": 14.19,
@@ -5530,19 +5636,9 @@
   },
   {
    "type": "TAP",
-   "grid": 1790,
-   "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.32,
-   "sourcePeakOffsetMs": 21.07,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
    "grid": 1792,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -13.96,
@@ -5551,18 +5647,19 @@
   {
    "type": "TAP",
    "grid": 1816,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 6,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 12,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -2.43,
-   "sourceCharacter": "FULL"
+   "sourceCharacter": "FULL",
+   "sectionAccent": true
   },
   {
    "type": "TAP",
    "grid": 1820,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.54,
    "sourcePeakOffsetMs": -0.51,
@@ -5571,8 +5668,8 @@
   {
    "type": "TAP",
    "grid": 1824,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 9.41,
@@ -5581,8 +5678,8 @@
   {
    "type": "HOLD",
    "grid": 1828,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 11.34,
@@ -5592,8 +5689,8 @@
   {
    "type": "TAP",
    "grid": 1844,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 11.96,
@@ -5601,19 +5698,9 @@
   },
   {
    "type": "TAP",
-   "grid": 1852,
-   "lane": 1,
-   "subLane": 3,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.62,
-   "sourcePeakOffsetMs": 8.88,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
    "grid": 1856,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 11.34,
@@ -5622,8 +5709,8 @@
   {
    "type": "TAP",
    "grid": 1860,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 13.81,
@@ -5633,7 +5720,7 @@
    "type": "TAP",
    "grid": 1872,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 5.19,
@@ -5642,8 +5729,8 @@
   {
    "type": "TAP",
    "grid": 1876,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.64,
    "sourcePeakOffsetMs": 7.66,
@@ -5653,7 +5740,7 @@
    "type": "TAP",
    "grid": 1880,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.73,
    "sourcePeakOffsetMs": -5.89,
@@ -5662,8 +5749,8 @@
   {
    "type": "TAP",
    "grid": 1892,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 1.5,
@@ -5672,8 +5759,8 @@
   {
    "type": "TAP",
    "grid": 1896,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -4.04,
@@ -5682,8 +5769,8 @@
   {
    "type": "TAP",
    "grid": 1904,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 1.27,
@@ -5703,7 +5790,7 @@
    "type": "TAP",
    "grid": 1920,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": 13.75,
@@ -5721,9 +5808,19 @@
   },
   {
    "type": "TAP",
-   "grid": 1940,
+   "grid": 1926,
    "lane": 0,
    "subLane": 0,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.26,
+   "sourcePeakOffsetMs": -1.56,
+   "sourceCharacter": "PUNCH"
+  },
+  {
+   "type": "TAP",
+   "grid": 1940,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": -10.65,
@@ -5732,8 +5829,8 @@
   {
    "type": "TAP",
    "grid": 1942,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -13.09,
@@ -5742,8 +5839,8 @@
   {
    "type": "TAP",
    "grid": 1948,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": 11.59,
@@ -5753,8 +5850,8 @@
   {
    "type": "TAP",
    "grid": 1960,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": 4.95,
@@ -5763,8 +5860,8 @@
   {
    "type": "TAP",
    "grid": 1964,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": 0.07,
@@ -5772,9 +5869,19 @@
   },
   {
    "type": "TAP",
+   "grid": 1972,
+   "lane": 3,
+   "subLane": 6,
+   "subLaneWidth": 6,
+   "sourceStrength": 0.34,
+   "sourcePeakOffsetMs": -17.08,
+   "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
    "grid": 1976,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.59,
    "sourcePeakOffsetMs": 3.28,
@@ -5804,8 +5911,8 @@
   {
    "type": "TAP",
    "grid": 1984,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.43,
    "sourcePeakOffsetMs": -13.47,
@@ -5814,8 +5921,8 @@
   {
    "type": "TAP",
    "grid": 1988,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -1.6,
@@ -5875,8 +5982,8 @@
   {
    "type": "TAP",
    "grid": 2036,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": -10.68,
@@ -5885,8 +5992,8 @@
   {
    "type": "TAP",
    "grid": 2040,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -6.36,
@@ -5895,8 +6002,8 @@
   {
    "type": "TAP",
    "grid": 2052,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.46,
    "sourcePeakOffsetMs": 14.59,
@@ -5905,8 +6012,8 @@
   {
    "type": "TAP",
    "grid": 2056,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.56,
    "sourcePeakOffsetMs": 2.9,
@@ -5915,8 +6022,8 @@
   {
    "type": "TAP",
    "grid": 2068,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": -0.14,
@@ -5924,9 +6031,19 @@
   },
   {
    "type": "TAP",
+   "grid": 2072,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.51,
+   "sourcePeakOffsetMs": -11.83,
+   "sourceCharacter": "BODY"
+  },
+  {
+   "type": "TAP",
    "grid": 2078,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": -25.95,
@@ -5935,8 +6052,8 @@
   {
    "type": "TAP",
    "grid": 2084,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.49,
    "sourcePeakOffsetMs": 17.12,
@@ -5945,8 +6062,8 @@
   {
    "type": "TAP",
    "grid": 2096,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.42,
    "sourcePeakOffsetMs": -1.93,
@@ -5955,8 +6072,8 @@
   {
    "type": "TAP",
    "grid": 2104,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.67,
    "sourcePeakOffsetMs": -11.46,
@@ -5965,8 +6082,8 @@
   {
    "type": "TAP",
    "grid": 2106,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 10.62,
@@ -5975,8 +6092,8 @@
   {
    "type": "TAP",
    "grid": 2112,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.67,
    "sourcePeakOffsetMs": -12.63,
@@ -5985,29 +6102,42 @@
   {
    "type": "HOLD",
    "grid": 2124,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": -34.41,
    "sourceCharacter": "FULL",
-   "durationGrids": 10
-  },
-  {
-   "type": "TAP",
-   "grid": 2140,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 6,
-   "sourceStrength": 0.93,
-   "sourcePeakOffsetMs": -36.76,
-   "sourceCharacter": "FULL"
+   "durationGrids": 10,
+   "holdPoints": [
+    {
+     "grid": 2124,
+     "subLane": 4,
+     "subLaneWidth": 6
+    },
+    {
+     "grid": 2127,
+     "subLane": 5,
+     "subLaneWidth": 4
+    },
+    {
+     "grid": 2131,
+     "subLane": 5,
+     "subLaneWidth": 4
+    },
+    {
+     "grid": 2134,
+     "subLane": 4,
+     "subLaneWidth": 6
+    }
+   ],
+   "holdTaper": "pinch"
   },
   {
    "type": "TAP",
    "grid": 2144,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.6,
    "sourcePeakOffsetMs": -25.34,
@@ -6016,8 +6146,8 @@
   {
    "type": "TAP",
    "grid": 2162,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": -6,
@@ -6026,8 +6156,8 @@
   {
    "type": "TAP",
    "grid": 2168,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.78,
    "sourcePeakOffsetMs": 3.12,
@@ -6036,8 +6166,8 @@
   {
    "type": "TAP",
    "grid": 2178,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.31,
    "sourcePeakOffsetMs": 7.65,
@@ -6096,8 +6226,8 @@
   {
    "type": "TAP",
    "grid": 2224,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.42,
    "sourcePeakOffsetMs": 18.86,
@@ -6106,8 +6236,8 @@
   {
    "type": "TAP",
    "grid": 2232,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -14.25,
@@ -6116,8 +6246,8 @@
   {
    "type": "TAP",
    "grid": 2240,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 3,
    "sourceStrength": 0.18,
    "sourcePeakOffsetMs": 32.66,
@@ -6126,8 +6256,8 @@
   {
    "type": "TAP",
    "grid": 2248,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.25,
    "sourcePeakOffsetMs": -0.43,
@@ -6136,8 +6266,8 @@
   {
    "type": "TAP",
    "grid": 2260,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.36,
    "sourcePeakOffsetMs": -6.06,
@@ -6146,8 +6276,8 @@
   {
    "type": "HOLD",
    "grid": 2264,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": 21.39,
@@ -6157,8 +6287,8 @@
   {
    "type": "TAP",
    "grid": 2284,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": 22.66,
@@ -6167,8 +6297,8 @@
   {
    "type": "HOLD",
    "grid": 2288,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.42,
    "sourcePeakOffsetMs": 26.11,
@@ -6188,8 +6318,8 @@
   {
    "type": "TAP",
    "grid": 2312,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 3.48,
@@ -6208,8 +6338,8 @@
   {
    "type": "TAP",
    "grid": 2328,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": 4.77,
@@ -6218,8 +6348,8 @@
   {
    "type": "TAP",
    "grid": 2344,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.46,
    "sourcePeakOffsetMs": 5.46,
@@ -6228,8 +6358,8 @@
   {
    "type": "TAP",
    "grid": 2348,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.84,
    "sourcePeakOffsetMs": 26.38,
@@ -6243,16 +6373,6 @@
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -9.57,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 2362,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.47,
-   "sourcePeakOffsetMs": 20.42,
    "sourceCharacter": "PUNCH"
   },
   {
@@ -6277,13 +6397,13 @@
   },
   {
    "type": "TAP",
-   "grid": 2390,
-   "lane": 2,
-   "subLane": 5,
+   "grid": 2380,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
-   "sourceStrength": 0.39,
-   "sourcePeakOffsetMs": 8.32,
-   "sourceCharacter": "BODY"
+   "sourceStrength": 0.48,
+   "sourcePeakOffsetMs": -29.64,
+   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",
@@ -6298,8 +6418,8 @@
   {
    "type": "TAP",
    "grid": 2404,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": 18.28,
@@ -6338,8 +6458,8 @@
   {
    "type": "TAP",
    "grid": 2436,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": 9.09,
@@ -6357,58 +6477,20 @@
   },
   {
    "type": "HOLD",
-   "grid": 2450,
-   "lane": 4,
-   "subLane": 8,
-   "subLaneWidth": 3,
-   "sourceStrength": 0.99,
-   "sourcePeakOffsetMs": -30.4,
-   "sourceCharacter": "FULL",
-   "durationGrids": 16,
-   "holdPoints": [
-    {
-     "grid": 2450,
-     "subLane": 8,
-     "subLaneWidth": 3
-    },
-    {
-     "grid": 2454,
-     "subLane": 7,
-     "subLaneWidth": 4
-    },
-    {
-     "grid": 2458,
-     "subLane": 7,
-     "subLaneWidth": 4
-    },
-    {
-     "grid": 2462,
-     "subLane": 6,
-     "subLaneWidth": 6
-    },
-    {
-     "grid": 2466,
-     "subLane": 6,
-     "subLaneWidth": 6
-    }
-   ],
-   "holdTaper": "open"
-  },
-  {
-   "type": "TAP",
-   "grid": 2468,
-   "lane": 4,
-   "subLane": 8,
+   "grid": 2448,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
-   "sourceStrength": 0.63,
-   "sourcePeakOffsetMs": 6.7,
-   "sourceCharacter": "BODY"
+   "sourceStrength": 0.32,
+   "sourcePeakOffsetMs": -3.8,
+   "sourceCharacter": "PUNCH",
+   "durationGrids": 16
   },
   {
    "type": "TAP",
    "grid": 2472,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.47,
    "sourcePeakOffsetMs": -6.04,
@@ -6417,8 +6499,8 @@
   {
    "type": "TAP",
    "grid": 2480,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.5,
    "sourcePeakOffsetMs": 9.81,
@@ -6427,8 +6509,8 @@
   {
    "type": "TAP",
    "grid": 2484,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.31,
    "sourcePeakOffsetMs": 5.51,
@@ -6437,8 +6519,8 @@
   {
    "type": "TAP",
    "grid": 2488,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.48,
    "sourcePeakOffsetMs": 0.61,
@@ -6447,8 +6529,8 @@
   {
    "type": "TAP",
    "grid": 2500,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.38,
    "sourcePeakOffsetMs": 2.72,
@@ -6457,8 +6539,8 @@
   {
    "type": "TAP",
    "grid": 2508,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.28,
    "sourcePeakOffsetMs": -6.55,
@@ -6467,8 +6549,8 @@
   {
    "type": "TAP",
    "grid": 2512,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.31,
    "sourcePeakOffsetMs": 4.82,
@@ -6477,8 +6559,8 @@
   {
    "type": "TAP",
    "grid": 2516,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": 8.19,
@@ -6496,9 +6578,19 @@
   },
   {
    "type": "TAP",
+   "grid": 2526,
+   "lane": 3,
+   "subLane": 6,
+   "subLaneWidth": 6,
+   "sourceStrength": 0.4,
+   "sourcePeakOffsetMs": -3.39,
+   "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
    "grid": 2532,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 4,
+   "subLane": 9,
    "subLaneWidth": 3,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": -2.34,
@@ -6507,8 +6599,8 @@
   {
    "type": "TAP",
    "grid": 2536,
-   "lane": 1,
-   "subLane": 2,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -14.98,
@@ -6517,8 +6609,8 @@
   {
    "type": "TAP",
    "grid": 2540,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -27.61,
@@ -6528,7 +6620,7 @@
    "type": "TAP",
    "grid": 2542,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": -21.92,
@@ -6537,8 +6629,8 @@
   {
    "type": "TAP",
    "grid": 2548,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -20.87,
@@ -6547,8 +6639,8 @@
   {
    "type": "TAP",
    "grid": 2556,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": -14.48,
@@ -6557,8 +6649,8 @@
   {
    "type": "TAP",
    "grid": 2560,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": 12.65,
@@ -6567,8 +6659,8 @@
   {
    "type": "TAP",
    "grid": 2564,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.47,
    "sourcePeakOffsetMs": 7.77,
@@ -6577,8 +6669,8 @@
   {
    "type": "TAP",
    "grid": 2568,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": 18.88,
@@ -6597,8 +6689,8 @@
   {
    "type": "TAP",
    "grid": 2580,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.85,
    "sourcePeakOffsetMs": 20.24,
@@ -6607,8 +6699,8 @@
   {
    "type": "TAP",
    "grid": 2588,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.6,
    "sourcePeakOffsetMs": 18.48,
@@ -6618,8 +6710,8 @@
   {
    "type": "TAP",
    "grid": 2596,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.55,
    "sourcePeakOffsetMs": 16.72,
@@ -6628,8 +6720,8 @@
   {
    "type": "TAP",
    "grid": 2600,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.75,
    "sourcePeakOffsetMs": 3.84,
@@ -6638,8 +6730,8 @@
   {
    "type": "TAP",
    "grid": 2604,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": -1.05,
@@ -6648,8 +6740,8 @@
   {
    "type": "TAP",
    "grid": 2608,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": 2.07,
@@ -6658,8 +6750,8 @@
   {
    "type": "TAP",
    "grid": 2612,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.63,
    "sourcePeakOffsetMs": -2.8,
@@ -6668,8 +6760,8 @@
   {
    "type": "TAP",
    "grid": 2614,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": -5.24,
@@ -6678,8 +6770,8 @@
   {
    "type": "TAP",
    "grid": 2624,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.57,
    "sourcePeakOffsetMs": -1.63,
@@ -6687,19 +6779,9 @@
   },
   {
    "type": "TAP",
-   "grid": 2630,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.31,
-   "sourcePeakOffsetMs": -9.07,
-   "sourceCharacter": "BODY"
-  },
-  {
-   "type": "TAP",
    "grid": 2632,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.63,
    "sourcePeakOffsetMs": -3.55,
@@ -6708,8 +6790,8 @@
   {
    "type": "TAP",
    "grid": 2640,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.96,
    "sourcePeakOffsetMs": 10.52,
@@ -6718,8 +6800,8 @@
   {
    "type": "TAP",
    "grid": 2644,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.93,
    "sourcePeakOffsetMs": 5.57,
@@ -6728,8 +6810,8 @@
   {
    "type": "HOLD",
    "grid": 2648,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 3,
    "sourceStrength": 0.94,
    "sourcePeakOffsetMs": 8.61,
@@ -6738,17 +6820,17 @@
    "holdPoints": [
     {
      "grid": 2648,
-     "subLane": 8,
+     "subLane": 2,
      "subLaneWidth": 3
     },
     {
      "grid": 2653,
-     "subLane": 6,
+     "subLane": 0,
      "subLaneWidth": 6
     },
     {
      "grid": 2657,
-     "subLane": 8,
+     "subLane": 2,
      "subLaneWidth": 3
     }
    ],
@@ -6757,8 +6839,8 @@
   {
    "type": "TAP",
    "grid": 2662,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.37,
    "sourcePeakOffsetMs": -0.76,
@@ -6767,8 +6849,8 @@
   {
    "type": "TAP",
    "grid": 2672,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 2.84,
@@ -6777,8 +6859,8 @@
   {
    "type": "TAP",
    "grid": 2680,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.73,
    "sourcePeakOffsetMs": -7.11,
@@ -6792,8 +6874,7 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.54,
    "sourcePeakOffsetMs": 11.59,
-   "sourceCharacter": "PUNCH",
-   "chord": true
+   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",
@@ -6803,13 +6884,14 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.54,
    "sourcePeakOffsetMs": 11.59,
-   "sourceCharacter": "PUNCH"
+   "sourceCharacter": "PUNCH",
+   "chord": true
   },
   {
    "type": "TAP",
    "grid": 2692,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": 9.02,
@@ -6818,8 +6900,8 @@
   {
    "type": "TAP",
    "grid": 2698,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": 17.08,
@@ -6828,8 +6910,8 @@
   {
    "type": "TAP",
    "grid": 2702,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.38,
    "sourcePeakOffsetMs": -20.41,
@@ -6838,8 +6920,8 @@
   {
    "type": "TAP",
    "grid": 2708,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.84,
    "sourcePeakOffsetMs": -4.15,
@@ -6848,8 +6930,8 @@
   {
    "type": "TAP",
    "grid": 2710,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.31,
    "sourcePeakOffsetMs": -14.98,
@@ -6858,8 +6940,8 @@
   {
    "type": "TAP",
    "grid": 2716,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 1.27,
@@ -6868,8 +6950,8 @@
   {
    "type": "TAP",
    "grid": 2718,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.4,
    "sourcePeakOffsetMs": -17.57,
@@ -6878,8 +6960,8 @@
   {
    "type": "TAP",
    "grid": 2724,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 6.69,
@@ -6898,8 +6980,8 @@
   {
    "type": "TAP",
    "grid": 2734,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -14.73,
@@ -6908,8 +6990,8 @@
   {
    "type": "TAP",
    "grid": 2736,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 6,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": -9.37,
@@ -6918,8 +7000,8 @@
   {
    "type": "TAP",
    "grid": 2742,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -25.3,
@@ -6938,8 +7020,8 @@
   {
    "type": "HOLD",
    "grid": 2752,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.91,
    "sourcePeakOffsetMs": 2.32,
@@ -6949,8 +7031,8 @@
   {
    "type": "TAP",
    "grid": 2776,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.72,
    "sourcePeakOffsetMs": -10.44,
@@ -6959,8 +7041,8 @@
   {
    "type": "TAP",
    "grid": 2784,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.71,
    "sourcePeakOffsetMs": -12.03,
@@ -6969,8 +7051,8 @@
   {
    "type": "TAP",
    "grid": 2790,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.41,
    "sourcePeakOffsetMs": -19.22,
@@ -6989,8 +7071,8 @@
   {
    "type": "TAP",
    "grid": 2796,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -2.41,
@@ -6999,8 +7081,8 @@
   {
    "type": "HOLD",
    "grid": 2800,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.88,
    "sourcePeakOffsetMs": 0.79,
@@ -7009,27 +7091,27 @@
    "holdPoints": [
     {
      "grid": 2800,
-     "subLane": 0,
+     "subLane": 6,
      "subLaneWidth": 6
     },
     {
      "grid": 2804,
-     "subLane": 0,
+     "subLane": 6,
      "subLaneWidth": 6
     },
     {
      "grid": 2807,
-     "subLane": 0,
+     "subLane": 8,
      "subLaneWidth": 4
     },
     {
      "grid": 2811,
-     "subLane": 0,
+     "subLane": 8,
      "subLaneWidth": 4
     },
     {
      "grid": 2814,
-     "subLane": 1,
+     "subLane": 9,
      "subLaneWidth": 3
     }
    ],
@@ -7038,8 +7120,8 @@
   {
    "type": "TAP",
    "grid": 2820,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.76,
    "sourcePeakOffsetMs": 23.71,
@@ -7048,8 +7130,8 @@
   {
    "type": "TAP",
    "grid": 2832,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.17,
    "sourcePeakOffsetMs": 23.63,
@@ -7058,8 +7140,8 @@
   {
    "type": "TAP",
    "grid": 2840,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.82,
    "sourcePeakOffsetMs": -26.96,
@@ -7078,8 +7160,8 @@
   {
    "type": "TAP",
    "grid": 2864,
-   "lane": 4,
-   "subLane": 9,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 3,
    "sourceStrength": 0.59,
    "sourcePeakOffsetMs": 13.26,
@@ -7088,8 +7170,8 @@
   {
    "type": "HOLD",
    "grid": 2878,
-   "lane": 4,
-   "subLane": 9,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 3,
    "sourceStrength": 0.45,
    "sourcePeakOffsetMs": -13.19,
@@ -7125,26 +7207,6 @@
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": 38.53,
    "sourceCharacter": "BODY"
-  },
-  {
-   "type": "TAP",
-   "grid": 2916,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 3,
-   "sourceStrength": 0.59,
-   "sourcePeakOffsetMs": 9.32,
-   "sourceCharacter": "LIGHT"
-  },
-  {
-   "type": "TAP",
-   "grid": 2918,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 3,
-   "sourceStrength": 0.26,
-   "sourcePeakOffsetMs": 14.72,
-   "sourceCharacter": "LIGHT"
   },
   {
    "type": "TAP",
@@ -7199,8 +7261,8 @@
   {
    "type": "TAP",
    "grid": 2960,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.55,
    "sourcePeakOffsetMs": 6.93,
@@ -7209,12 +7271,22 @@
   {
    "type": "TAP",
    "grid": 2964,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.48,
    "sourcePeakOffsetMs": 25.51,
    "sourceCharacter": "PUNCH"
+  },
+  {
+   "type": "TAP",
+   "grid": 2970,
+   "lane": 1,
+   "subLane": 3,
+   "subLaneWidth": 4,
+   "sourceStrength": 0.31,
+   "sourcePeakOffsetMs": -6.61,
+   "sourceCharacter": "BODY"
   },
   {
    "type": "TAP",
@@ -7229,8 +7301,8 @@
   {
    "type": "TAP",
    "grid": 2976,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.75,
    "sourcePeakOffsetMs": 9.27,
@@ -7239,8 +7311,8 @@
   {
    "type": "TAP",
    "grid": 2980,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 3.86,
@@ -7249,8 +7321,8 @@
   {
    "type": "TAP",
    "grid": 2984,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.48,
    "sourcePeakOffsetMs": -1.56,
@@ -7280,8 +7352,8 @@
   {
    "type": "TAP",
    "grid": 2992,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.95,
    "sourcePeakOffsetMs": 3.62,
@@ -7289,19 +7361,19 @@
   },
   {
    "type": "TAP",
-   "grid": 2998,
-   "lane": 4,
-   "subLane": 8,
+   "grid": 3000,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
-   "sourceStrength": 0.34,
-   "sourcePeakOffsetMs": -20.67,
-   "sourceCharacter": "BODY"
+   "sourceStrength": 0.7,
+   "sourcePeakOffsetMs": 8.78,
+   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",
    "grid": 3004,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.89,
    "sourcePeakOffsetMs": 3.46,
@@ -7310,8 +7382,8 @@
   {
    "type": "TAP",
    "grid": 3008,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.69,
    "sourcePeakOffsetMs": 6.45,
@@ -7330,8 +7402,8 @@
   {
    "type": "TAP",
    "grid": 3016,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.61,
    "sourcePeakOffsetMs": -3.55,
@@ -7340,13 +7412,23 @@
   {
    "type": "HOLD",
    "grid": 3024,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.92,
    "sourcePeakOffsetMs": 2.43,
    "sourceCharacter": "PUNCH",
    "durationGrids": 14
+  },
+  {
+   "type": "TAP",
+   "grid": 3040,
+   "lane": 3,
+   "subLane": 7,
+   "subLaneWidth": 4,
+   "sourceStrength": 1,
+   "sourcePeakOffsetMs": -1.59,
+   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",
@@ -7361,8 +7443,8 @@
   {
    "type": "TAP",
    "grid": 3048,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.62,
    "sourcePeakOffsetMs": 4.41,
@@ -7381,8 +7463,8 @@
   {
    "type": "TAP",
    "grid": 3056,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.46,
    "sourcePeakOffsetMs": -5.87,
@@ -7391,8 +7473,8 @@
   {
    "type": "TAP",
    "grid": 3060,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.3,
    "sourcePeakOffsetMs": -10.87,
@@ -7401,8 +7483,8 @@
   {
    "type": "TAP",
    "grid": 3062,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -5.37,
@@ -7411,8 +7493,8 @@
   {
    "type": "TAP",
    "grid": 3072,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.5,
    "sourcePeakOffsetMs": -1.61,
@@ -7430,19 +7512,9 @@
   },
   {
    "type": "TAP",
-   "grid": 3080,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.79,
-   "sourcePeakOffsetMs": -2.94,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
    "grid": 3088,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.56,
    "sourcePeakOffsetMs": -4.29,
@@ -7451,8 +7523,8 @@
   {
    "type": "TAP",
    "grid": 3092,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.94,
    "sourcePeakOffsetMs": -8.95,
@@ -7471,8 +7543,8 @@
   {
    "type": "TAP",
    "grid": 3116,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 5,
    "subLaneWidth": 4,
    "sourceStrength": 0.76,
    "sourcePeakOffsetMs": -12.97,
@@ -7481,8 +7553,8 @@
   {
    "type": "TAP",
    "grid": 3124,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -14.32,
@@ -7491,8 +7563,8 @@
   {
    "type": "TAP",
    "grid": 3128,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.6,
    "sourcePeakOffsetMs": -10.98,
@@ -7501,21 +7573,11 @@
   {
    "type": "TAP",
    "grid": 3134,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.53,
    "sourcePeakOffsetMs": -34.16,
-   "sourceCharacter": "FULL"
-  },
-  {
-   "type": "TAP",
-   "grid": 3138,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 6,
-   "sourceStrength": 0.52,
-   "sourcePeakOffsetMs": -23.62,
    "sourceCharacter": "FULL"
   },
   {
@@ -7541,8 +7603,8 @@
   {
    "type": "TAP",
    "grid": 3154,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.54,
    "sourcePeakOffsetMs": -29.45,
@@ -7551,8 +7613,8 @@
   {
    "type": "TAP",
    "grid": 3156,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 6,
    "sourceStrength": 0.39,
    "sourcePeakOffsetMs": -24.18,
@@ -7561,8 +7623,8 @@
   {
    "type": "TAP",
    "grid": 3160,
-   "lane": 3,
-   "subLane": 7,
+   "lane": 4,
+   "subLane": 8,
    "subLaneWidth": 4,
    "sourceStrength": 0.43,
    "sourcePeakOffsetMs": -21.63,
@@ -7571,8 +7633,8 @@
   {
    "type": "TAP",
    "grid": 3164,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 3,
+   "subLane": 7,
    "subLaneWidth": 4,
    "sourceStrength": 0.5,
    "sourcePeakOffsetMs": -35.09,
@@ -7581,8 +7643,8 @@
   {
    "type": "TAP",
    "grid": 3168,
-   "lane": 3,
-   "subLane": 6,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 6,
    "sourceStrength": 0.41,
    "sourcePeakOffsetMs": -24.55,
@@ -7591,8 +7653,8 @@
   {
    "type": "TAP",
    "grid": 3172,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.77,
    "sourcePeakOffsetMs": -30.01,
@@ -7611,8 +7673,8 @@
   {
    "type": "TAP",
    "grid": 3184,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 0,
+   "subLane": 0,
    "subLaneWidth": 4,
    "sourceStrength": 0.54,
    "sourcePeakOffsetMs": -38.38,
@@ -7621,8 +7683,8 @@
   {
    "type": "TAP",
    "grid": 3186,
-   "lane": 1,
-   "subLane": 3,
+   "lane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -17.11,
@@ -7631,8 +7693,8 @@
   {
    "type": "TAP",
    "grid": 3192,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 6,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": -1.29,
@@ -7642,7 +7704,7 @@
    "type": "TAP",
    "grid": 3194,
    "lane": 0,
-   "subLane": 0,
+   "subLane": 1,
    "subLaneWidth": 4,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": -12.02,
@@ -7656,16 +7718,6 @@
    "subLaneWidth": 6,
    "sourceStrength": 0.59,
    "sourcePeakOffsetMs": -24.74,
-   "sourceCharacter": "FULL"
-  },
-  {
-   "type": "TAP",
-   "grid": 3210,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 6,
-   "sourceStrength": 0.33,
-   "sourcePeakOffsetMs": -35.77,
    "sourceCharacter": "FULL"
   },
   {
@@ -7690,19 +7742,19 @@
   }
  ],
  "splice": {
-  "count": 4,
+  "count": 8,
   "choice": {
-   "A": 3,
+   "A": 0,
    "B": 0,
-   "C": 0,
-   "D": 3,
-   "E": 0,
+   "C": 4,
+   "D": 6,
+   "E": 1,
    "F": 0,
    "G": 0,
    "H": 0,
    "I": 0
   },
-  "gate": "品質の6軸の合計 567.0→567.0"
+  "gate": "品質の6軸の合計 568.0→568.0"
  },
  "step7": {
   "source": "v3",
@@ -7714,8 +7766,8 @@
    "reach": 0,
    "hardJumps": 0,
    "overSteps": 0,
-   "spread": 105,
-   "cost": 105
+   "spread": 87,
+   "cost": 87
   },
   "after": {
    "impossible": 0,
@@ -7723,8 +7775,8 @@
    "reach": 0,
    "hardJumps": 0,
    "overSteps": 0,
-   "spread": 105,
-   "cost": 105
+   "spread": 87,
+   "cost": 87
   },
   "weights": {
    "impossible": 10000,
@@ -7736,5 +7788,9 @@
    "maxPasses": 8
   },
   "fixes": []
+ },
+ "handFinish": {
+  "mode": "smooth",
+  "moved": 4
  }
 }

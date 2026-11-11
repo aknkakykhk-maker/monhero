@@ -121,7 +121,7 @@ const make = ({ on = true, rows = ROWS2, place = 'battle', abs = 1000 } = {}) =>
   const { T } = make();
   check('⑦ 数字は社長の答えのまま(熟練+1・💗+5・1日3回・一人×0.5)', T.AMGC_NUM.mastery === 1 && T.AMGC_NUM.bond === 5 && T.AMGC_NUM.perDay === 3 && T.AMGC_NUM.soloMult === 0.5);
   check('⑦ assistants.js の lifeCheer は +5・1日15', /lifeCheer:\s*\{\s*amount:5,\s*dailyMax:15,/.test(read('monster-hero/data/assistants.js')));
-  check('⑦ 公開の印 assistantMasmonCheer は偽(社長の「この文で」の前)', /assistantMasmonCheer: false,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
+  check('⑦ 公開の印 assistantMasmonCheer は真(社長の「この文で」・ミハリ3 OK)', /assistantMasmonCheer: true,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
 }
 
 console.log(ng ? `\n${ng} 件 NG` : '\nすべてOK');
