@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0c507e551e1aeee8
+// generated-sha256: 320235398c83568c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -17,6 +17,7 @@ const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 //   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
 //   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
 //   rot  … 自前の画面の回転(🔄 横)を切り替えた
+//   vv   … ページのずれ・拡大を見つけて戻した(s=倍率 y=ページのスクロール o=見えている範囲のずれ。MH_PAGE_OFFSET_GUARD・2026-11-11)
 //   play … 演奏が始まった・終わった
 // 演奏ごとの診断(rhythm_touch_diagnostics の stats)にも、その演奏のあいだの出来事を短く足す(stats.scr・足すだけ)。
 // 名前・ブリーダーID・セーブデータは入れない。判定・スコア・保存には一切関わらない。読めない・壊れていれば空から始める
@@ -53,16 +54,68 @@ const MH_SCREEN_TRAIL=(()=>{
 // このゲームはページそのものをスクロールさせない作り(#root が overflow:hidden・画面の中の箱だけがスクロールする)なので、
 // 画面の大きさが変わった・visualViewport が動いた・入力欄から離れた・全画面が終わった ときに、0でなければ0へ戻す。
 // 文字を入力している間(キーボードが出ている間)は戻さない(入力欄が隠れないように)。フォーカスが外れたあとで戻す。
-(()=>{
-  if(typeof window==='undefined'||typeof document==='undefined')return;
+// 【2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」→ 見張りが届いていなかった所を足す】
+//   ① ページが拡大されたとき(iPhone は user-scalable=no を無視する)は、window.scrollY は0のまま visualViewport だけがずれる。
+//      それまでは scrollY しか見ていなかったので気づけなかった。visualViewport の位置・倍率も見る。
+//      拡大そのものは index.html の touch-action と、下の gesturestart で止める。残っていた拡大は viewport の書き直しで戻す。
+//   ② 見るきっかけに、起動のとき・ほかのアプリから戻ったとき(pageshow / visibilitychange)を足す。
+//   ③ ずれを見つけたら、画面の出来事の記録(MH_SCREEN_TRAIL の vv)に残す(次に起きたとき、何がずれていたかが分かる)。
+//   ④ 拡大が解けたら resize を1回鳴らして、拡大中に測られた画面の大きさ(🔄横の器・押した点の直し)を測り直させる。
+// 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
+const MH_PAGE_OFFSET_GUARD=(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
   const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+  // いまのずれ。どれも0(倍率は1)が正しい
+  const state=()=>{
+    const vv=window.visualViewport||null;
+    const se=document.scrollingElement||document.documentElement;
+    return {
+      sx:num(window.scrollX)||num(se&&se.scrollLeft)||num(document.body&&document.body.scrollLeft),
+      sy:num(window.scrollY)||num(se&&se.scrollTop)||num(document.body&&document.body.scrollTop),
+      ox:vv?num(vv.offsetLeft):0,oy:vv?num(vv.offsetTop):0,
+      scale:vv&&Number.isFinite(Number(vv.scale))&&Number(vv.scale)>0?Number(vv.scale):1,
+    };
+  };
+  const zoomed=st=>Math.abs(st.scale-1)>0.01;
+  const moved=st=>Math.abs(st.sx)>=1||Math.abs(st.sy)>=1||Math.abs(st.ox)>=1||Math.abs(st.oy)>=1;
+  let lastTrailAt=0,zoomFixes=0,zoomFixAt=0,wasBig=false;
+  // 拡大が解けたら、画面の大きさを測り直させる(resize を1回鳴らす)。
+  // iPhone は拡大している間、window.innerWidth / innerHeight が「見えている範囲」の小ささで返る。そのあいだに測った大きさ
+  // (🔄横で回した器・押した点の直し RHYTHM_VIEW_ROTATION が持つ)は、拡大が解けても resize が来ないので小さいまま残り、
+  // 器と押した点がその分ずれる。回す仕組みは resize を合図に測り直すので、端末が回ったときと同じ道を通す。
+  // 拡大→解けた、の切り替わりの1回だけ鳴らす(鳴らした resize でここへ戻ってきても、もう wasBig は倒れている)
+  const remeasure=()=>setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(_){}},0);
+  // 残っている拡大を戻す。viewport の中身を一度書き直すと、ブラウザが initial-scale(1.0)へ合わせ直す。
+  // 戻らない端末で繰り返さないよう、3秒に1回・続けて3回まで(倍率が1に戻ったら数え直す)
+  const unzoom=()=>{
+    const now=Date.now();
+    if(zoomFixes>=3||now-zoomFixAt<3000)return;
+    const meta=document.querySelector('meta[name="viewport"]');
+    const content=meta&&meta.getAttribute('content');
+    if(!content)return;
+    zoomFixes++;zoomFixAt=now;
+    meta.setAttribute('content',content+', minimum-scale=1.0');
+    setTimeout(()=>{try{meta.setAttribute('content',content);}catch(_){}},50);
+  };
   const reset=()=>{
     if(editing())return;
     try{
-      if(window.scrollX||window.scrollY)window.scrollTo(0,0);
-      for(const el of [document.scrollingElement,document.documentElement,document.body]){
-        if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+      const st=state();
+      const bad=moved(st),big=zoomed(st);
+      if(big)wasBig=true;
+      else{zoomFixes=0;if(wasBig){wasBig=false;remeasure();}}
+      if(!bad&&!big)return;
+      const now=Date.now();
+      if(now-lastTrailAt>5000&&typeof MH_SCREEN_TRAIL!=='undefined'){lastTrailAt=now;MH_SCREEN_TRAIL.push('vv',`s${Math.round(st.scale*100)/100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);}
+      if(bad){
+        // scrollY が0でも visualViewport だけがずれていることがあるので、0でも呼ぶ
+        window.scrollTo(0,0);
+        for(const el of [document.scrollingElement,document.documentElement,document.body]){
+          if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;}
+        }
       }
+      if(big)unzoom();
     }catch(_){}
   };
   // iOS は大きさや位置を少し遅れて直すことがあるので、すぐ・少しあと・もう少しあとの3回見る
@@ -80,6 +133,18 @@ const MH_SCREEN_TRAIL=(()=>{
   // 動画の全画面が終わったとき(iPhone の動画は webkitendfullscreen。泡立たないので document の捕まえる段で受ける)
   ['fullscreenchange','webkitfullscreenchange'].forEach(type=>document.addEventListener(type,soon));
   document.addEventListener('webkitendfullscreen',soon,true);
+  // 起動のとき・ほかのアプリや通知から戻ったとき(2026-11-11)
+  window.addEventListener('load',soon,passive);
+  window.addEventListener('pageshow',soon,passive);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')soon();});
+  soon();
+  // ボタンなどを押したとき(click)にも1回だけ見る。きっかけの合図が何も来ないままずれていても、次のひと押しで戻る。
+  // 演奏エリアは click が出ない(自前で touch を止めている)ので、演奏中は動かない。ずれていなければ数を読むだけ
+  document.addEventListener('click',reset,{capture:true,passive:true});
+  // 2本指の拡大を、どの画面でも始めさせない(Safari だけにある合図。touch-action を知らない古い iOS のため)。
+  // 演奏中は 30-rhythm-play.jsx が同じことをしている(回数も数えている)。重ねて止めても変わらない
+  ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));
+  return {state,check:soon};
 })();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
@@ -6762,6 +6827,7 @@ const Audio_ = (() => {
   // そこで、se.* は印が立っているあいだ何もしない口にし、カードの画面は印を見ない fgSe.* から鳴らす。
   // 音量の保存値・seBus には触らない(手で変えた音量は上書きしない)。
   const setBackgroundSeQuiet = (on) => { backgroundSeQuiet = !!on; };
+  const isBackgroundSeQuiet = () => backgroundSeQuiet; // 検査が「裏のバトルの音を止めているか」を見る口(ゲームの動きは変えない)
   const fgSe = {
     trainingDice: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t=Tone.now(); const n=new Tone.NoiseSynth({noise:{type:'brown'},envelope:{attack:.001,decay:.22,sustain:0},volume:-15}).connect(seBus); n.triggerAttackRelease('8n',t); setTimeout(()=>{try{n.dispose();}catch(e){}},500); },
     trainingDecide: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(seBus); s.triggerAttackRelease('C6','16n'); setTimeout(()=>{try{s.dispose();}catch(e){}},300); },
@@ -6850,7 +6916,7 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -9573,6 +9639,10 @@ const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 // 本オープン(上)を真にしたあとは、予告のお話は HOME では流さない(回想には残る)。日にちが決まって社長が「予告を出す」と言うまで偽
 // 2026-11-08 社長「この文で」(本オープンは 11/9 10:00)
 const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
+// 裏クイックを、ゲームのどこにいても回す(2026-11-11 社長。台帳「クイックの裏周回を、ゲームを開いたら自動で始まり、どの画面でも裏で回る形にする。M/B管理と神殿では休む」)。
+//   偽にすると、今までどおり モンヒロビート・MFバトルカード・助手ライフ の上でだけ回る(HOME へ戻ると周回は終わる)。
+//   方針と決めごとは docs/progress/quick-run-anywhere/PLAN.md
+const QUICK_RUN_ANYWHERE_RELEASE = true;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
@@ -9625,7 +9695,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
+  assistantMasmonTrain: false, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。社長の答え(TRAIN-PLAN.md の ❶〜❻)と第①段階の受け口がそろうまで偽
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
+  assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
   assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
@@ -14644,6 +14716,62 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
   const actions=evaluateEnemyActions(ent,currentDist,state),total=actions.reduce((sum,a)=>sum+(a.available?a.weight:0),0);
   return actions.map(a=>({...a,probability:a.available&&total>0?a.weight/total:0}));
 };
+// ===== タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料「行動選択、距離、スキルの組み合わせ、難易度ごとの戦術を改善」)=====
+// ★本番では使わない。デバッグ設定の「敵の作戦AI(試作)」を選んだデバッグ戦のときだけ通す。
+//   社長が決めるまで、本番の強さ・ランキング対象のモードは chooseEnemyAction(決まった重みのくじ)のまま。
+// ★守ること: ①予告してから動く(選ぶのは今までどおり1ターン前。移動先も予告に出した値だけを使う)
+//   ②狙い(ヘイト)は変えない。画面の「狙われる確率◯%」と食い違わないように、ここは「何をするか」と「どこへ動くか」だけ
+//   ③どの手にも対抗手段がある、を崩さない(技の倍率・本数は変えない。重みだけを動かす)
+// 段: 0 いまのまま / 1 間合いを読む / 2 状況を読む / 3 技をつなぐ(上の段は下の段を全部含む)
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
+  Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
+  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'}),
+  Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
+  Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'}),
+]);
+// ai … { level, pressure:[4](敵がその間合いにいるときの味方の攻めの強さ), aliveSlots:[], lowCount, maxDef, lastType }
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others=[0,1,2,3].filter(d=>d!==currentDist);
+  return others.reduce((a,b)=>((pressure[b]||0)<(pressure[a]||0)?b:a),others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state={}, ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  const defs=Array.isArray(state.definitions)?state.definitions:[];
+  if(level<1||state.charging||state.piercing||!ent)return defs;
+  const pressure=Array.isArray(ai.pressure)&&ai.pressure.length===4?ai.pressure.map(v=>Math.max(0,Number(v)||0)):[0,0,0,0];
+  const best=tacticsEnemyAiBestDist(currentDist,pressure);
+  const ratio=pressure[best]>0?pressure[currentDist]/pressure[best]:1;
+  const maxHp=Math.max(0,Number(ent.maxHp)||0), hpR=maxHp>0?Math.max(0,Number(ent.hp)||0)/maxHp:1;
+  const alive=Array.isArray(ai.aliveSlots)?ai.aliveSlots:[];
+  const top=Math.max(0,...pressure);
+  return defs.map(def=>{
+    let w=def.weight;
+    if(def.type==='MOVE')w=ratio<=1?0:(ratio>=1.15?w*3:w);
+    if(level>=2){
+      if(def.type==='WAIT')w=0;
+      if(def.type==='REGEN'&&hpR<0.5)w*=3;
+      if(def.type==='ROAR')w=hpR<0.35?0:((hpR>0.7&&!(Number(state.roarStacks)>0))?w*2:w);
+      if(def.variant==='allout')w=alive.length<=1?w*0.3:w*(alive.length/2);
+      if(def.variant==='sweep')w=alive.includes(currentDist)?(pressure[currentDist]>=top*0.95?w*2:w):0;
+    }
+    if(level>=3){
+      if(def.type==='CHARGE'&&ai.lastType==='ROAR')w*=4;
+      if(def.type==='CHARGE'&&(Number(ai.lowCount)||0)>=1)w*=2;
+      if(def.type==='PIERCE_CHARGE'&&(Number(ai.maxDef)||0)>=300)w*=2;
+    }
+    return w===def.weight?def:{...def,weight:w};
+  });
+};
+const chooseTacticsEnemyActionAi = (ent,currentDist,random=Math.random,state={},ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  if(level<1)return chooseEnemyAction(ent,currentDist,random,state);
+  const intent=chooseEnemyAction(ent,currentDist,random,{...state,definitions:tacticsEnemyAiDefinitions(ent,currentDist,state,ai)});
+  if(intent&&intent.type==='MOVE'&&Array.isArray(ai.pressure)){
+    const targetDist=tacticsEnemyAiBestDist(currentDist,ai.pressure);
+    return {...intent,targetDist,label:`移動: ${RANGE_LABELS[targetDist]}`};
+  }
+  return intent;
+};
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
@@ -15449,6 +15577,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   }
   return hits;
 };
+// そのカードを使ったあと、同じターンの次のカードが攻撃を始める敵の距離。距離撃(range_atk)は敵を指定の距離へ動かすので、
+// あとのカードは動かしたあとの距離で計算する。実処理(processTurn)と予測(previewLocalBoosts・aiCopyPredictedDmg)が同じここを通る
+const attackDistanceAfterCard = (card, dist) => (card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist);
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
@@ -27799,6 +27930,19 @@ const tacticsTargetName = (units, slotIndex) => {
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 // copy を渡すと、コピーも単体攻撃の狙いの候補になる。当たったら targetCopy: true(targetSlot は付けない。枠の番号と混ぜない)
+// 敵の作戦AI(試作)が見る「その間合いにいると味方からどれだけ攻められるか」。
+// 立っている子の攻撃 × 枠と敵の間合いの差の倍率(1.5/1.3/1.1/0.9・与ダメの式と同じ)× (1 + その枠の間合いの補正)。
+// slotBonus[i] … 枠 i の「WAVE 報酬の間合いボーナス + そこに立つ子の適性」(distTotalBonus と同じ値)
+const TACTICS_ENEMY_AI_DIST_MULT = Object.freeze([1.5,1.3,1.1,0.9]);
+const tacticsEnemyPressure = (units, slotBonus=[0,0,0,0]) => [0,1,2,3].map(d => {
+  let sum=0;
+  tacticsAliveSlots(units).forEach(i => {
+    const u=normalizeTacticsUnit(units[i]);
+    if(!u)return;
+    sum+=Math.max(0,Number(u.atk)||0)*TACTICS_ENEMY_AI_DIST_MULT[Math.abs(i-d)]*(1+(Number((slotBonus||[])[i])||0));
+  });
+  return sum;
+});
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
@@ -38645,6 +38789,9 @@ const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data
 // 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
 //   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
+// 裏クイックをどこでも回しているあいだ(左下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
+//   (2026-11-11 社長「ホームにいなくても出るときがある」。HOME へ戻ったときにまとめて出す)
+const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;      // 文の一行の札(読む時間をとる)
 const GROWTH_FX_ITEM_MS = 3400;
@@ -38681,7 +38828,9 @@ const growthFxPush = (ev) => {
     // 同じ値の Lvアップが続いたら(貯めているあいだに2つ上がったなど)、新しいほうへまとめる(from は古いほうのまま)
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
-    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    // ★出している最中のもの(先頭)にもまとめる。先頭を外していたため、一気に上がると同じ Lvアップが2回出ていた(2026-11-11 社長「一気に上がるときに2回表示される」)。
+    //   まとめた先頭はそのまま描き直され、「Lv.元 → Lv.いま」になる(id は変えないので、閉じるまで1枚のまま)
+    const prev = mergeKey ? sheets.find((s) => s.tier === 'level' && s.key === mergeKey) : null;
     // セッションLv は、助手ごとに「Lv.◯ → ◯」の1行へまとめ直す(行を足し重ねない。2026-11-08 社長「一気に上がったときは…まとめて出す」)
     if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), { tier, key: mergeKey });
     else if (prev) Object.assign(prev, { ...ev, tier, key: mergeKey, levelFrom: prev.levelFrom, gains: [...(prev.gains || []), ...(ev.gains || [])] });
@@ -38994,9 +39143,11 @@ const ensureGrowthFxCss = () => {
 
 // いま出してよいか(画面と、画面の上に出ているもの)。tools/ui/growth-fx-check.js が確かめる
 //   all … 札も含めて出す / sheet … 真ん中のカード・Lvアップも出す
+//   level … Lvアップの全面も出す(裏クイックをどこでも回しているあいだは HOME だけ)
 const growthFxVisible = (screen, domHold = {}) => {
   const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
-  return { all, sheet: all && !domHold.sheet };
+  const sheet = all && !domHold.sheet;
+  return { all, sheet, level: sheet && !(domHold.quickAnywhere && screen !== 'HOME') };
 };
 // 軽さ: 端末の「動きを減らす」と最軽量は minimal、標準・軽めは reduced、豪華は full
 const growthFxLevelOf = (load) => {
@@ -39121,12 +39272,15 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
   // 押すと先へ: 演出中 → 最後の形 → 閉じる(開いた直後の押し間違いでは閉じない)
   const next = () => { if (Date.now() - opened.current < 250) return; if (!done) setDone(true); else onClose(); };
   const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
-  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  // 一気に2つ以上上がったときは「Lv.元 → Lv.いま」を出す(2026-11-11 社長「元のレベルとどこまで上がったかを見せて」)
+  const jumpFrom = growthFxNum(sheet.levelFrom), jumpTo = growthFxNum(sheet.levelTo);
+  const jump = jumpFrom > 0 && jumpTo - jumpFrom >= 2;
+  const label = jump ? `${k.label}が Lv.${jumpFrom} から Lv.${jumpTo} に上がりました` : `${k.label}が Lv.${sheet.levelTo} に上がりました`;
   if (level === 'minimal') {
     return (
       <div className="mh-gfx-sheet level-mini mh-gfx-minimal" data-growth-fx-sheet="level" data-growth-fx-kind={sheet.kind} role="dialog" aria-label={label}
         style={{ '--gc': k.color, background: '#0b102699' }} onClick={onClose}>
-        <div className="mh-gfx-band"><span className="big">{cardIconNode(k.icon, 20)} {k.label} Lv.{sheet.levelTo}</span>
+        <div className="mh-gfx-band"><span className="big">{cardIconNode(k.icon, 20)} {k.label} {jump ? `Lv.${jumpFrom} → ` : ''}Lv.{sheet.levelTo}</span>
           <small>{sheet.sub}{gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''}</small><small>押すと閉じる</small></div>
       </div>
     );
@@ -39154,6 +39308,7 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
             <div className="mh-gfx-ring" aria-hidden="true"/>
           </div>
           <div className="ttl">{sheet.title || `${k.label} UP!`}</div>
+          {jump && <div className="sub" data-growth-fx-level-jump><b>Lv.{jumpFrom} → Lv.{jumpTo}</b></div>}
           {sheet.sub && <div className="sub">{sheet.sub}</div>}
         </div>
         {gains.length > 0 && <ul className="mh-gfx-gains" aria-label="新しく開いたもの">
@@ -39293,7 +39448,7 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
 // 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
 const GrowthFxLayer = ({ screen, load }) => {
   const [, setTick] = useState(0);
-  const [domHold, setDomHold] = useState({ all: false, sheet: false });
+  const [domHold, setDomHold] = useState({ all: false, sheet: false, quickAnywhere: false });
   useEffect(() => { ensureGrowthFxCss(); return growthFxSubscribe(() => setTick(t => t + 1)); }, []);
   const small = GROWTH_FX_STORE.small, sheets = GROWTH_FX_STORE.sheets;
   const pending = small.length + sheets.length;
@@ -39303,7 +39458,8 @@ const GrowthFxLayer = ({ screen, load }) => {
     const check = () => {
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
-      setDomHold(prev => (prev.all === all && prev.sheet === sheet ? prev : { all, sheet }));
+      const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
+      setDomHold(prev => (prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : { all, sheet, quickAnywhere }));
     };
     check();
     const t = setInterval(check, 600);
@@ -39314,7 +39470,8 @@ const GrowthFxLayer = ({ screen, load }) => {
   const holdAll = !vis.all;
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? sheets[0] : null;
+  // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
+  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
@@ -49262,7 +49419,7 @@ function BattleScreen({
     const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
     const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
@@ -49273,18 +49430,24 @@ function BattleScreen({
       guardHits = tacticsGuardHits(own.cards, hits);
     } else {
       // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
-      let flat = 0, mult = 0;
+      let flat = 0, mult = 0, guardCards = 0;
       const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         const card = hand[idx];
         const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         const w = guardCardWeight(card);
         if (!(w > 0)) return;
+        guardCards += 1;
         const effect = cardEffectMultiplier(card, halved);
         flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
         mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
       });
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
+      // ★シールドが割れたあとの連撃必殺技(INFERNO系のデュラハン・ムー。extremeLayerRushHits)は、実処理と同じ受け方で出す:
+      //   そのターンのガードが1枚なら1発ぶんだけ止まり、2枚以上で全部止まる。ここを1発扱いのままにすると、
+      //   ガード1枚で「ほぼ止まる」と出るのに、実際は残りの発がそのまま通る(2026-11-11 バトルの監査)
+      const layerRushHits = enemyIntent.type === 'SPECIAL' ? extremeLayerRushHits(infernoShellRule, wave, infernoShellView?.broken) : 1;
+      if (layerRushHits > 1) { hits = layerRushHits; guardHits = guardCards >= TACTICS_RUSH_GUARD_CARDS ? hits : 1; }
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     // 大樹の加護を選んでいれば、ガードのあとの通る量へ使ったターンぶんを掛ける(実処理の applyImmediateTakenReduction と同じ順)。
@@ -50090,7 +50253,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved,b.dist); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -50140,7 +50303,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
+                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved,boosts.forPending.dist); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -50330,7 +50493,7 @@ function BattleScreen({
                 const pendingCounter=makeCardHalveCounter();
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
-                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
+                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater,slotBoosts.forPending.dist);
                 previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i,isSecondOrLater);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
@@ -50343,7 +50506,7 @@ function BattleScreen({
                   const halved=slotCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
+                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved,b.dist);
                     previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i,halved);
                   }
                 });
@@ -61823,7 +61986,8 @@ const quickGuidePick = (ctx) => {
     case 'RHYTHM_DEMO_HOME':
       return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
     case 'RHYTHM_MODE_SELECT':
-      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+      // 裏クイックをどこでも回すとき(2026-11-11)は、左上がふつうの「←」になる(出ても周回は続く)ので、「⏹ 終了」の案内は出さない
+      return c.backgroundRun === true && !(typeof QUICK_RUN_ANYWHERE_RELEASE !== 'undefined' && QUICK_RUN_ANYWHERE_RELEASE) && not('g3c') ? 'g3c' : null;
     case 'HOME':
       return nudge ? 'nudgeHome' : null;
     default:
@@ -67929,7 +68093,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
 const assistantMasmonAskLine = (aid, replies, kind) => (kind !== 'ng' && kind !== 'think' && replies && replies[kind]) || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10; // 2026-11-09 社長「1日の制限は10に増やして」(前は3)
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
-  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
+  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/命中を鍛えて/休ませて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
   hero: '勇者モンについて自由に書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？/プラントに変えてみたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)',
@@ -67978,6 +68142,9 @@ const assistantMasmonAskJudge = (aid, r, lv) => {
     const bad = (p.dislikeMon || []).some(x => x.monster === r.monster || (x.lineage && x.lineage === lin) || (x.monster && lin && assistantMasmonLineage(x.monster) === lin));
     const good = (p.likeMon || []).some(x => x.monster === r.monster || (x.lineage && x.lineage === lin)) || (p.team || []).some(x => x.monster === r.monster);
     taste = bad ? 'hate' : good ? 'like' : 'mid';
+  } else if (r.kind === 'train') { // 育成の相談: 「休ませて」はいつも受ける。鍛える能力は、自分の育成方針に合えば好き
+    if (r.train === 'rest' || r.train === 'auto') taste = 'like';
+    else { const row = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).find(x => x.slot === r.slot0); taste = row && typeof AMG_POLICY !== 'undefined' && (AMG_POLICY[assistantMasmonGrowKind(row.grow)] || []).includes(r.train) ? 'like' : 'mid'; }
   } else if (r.kind === 'grow') { // 自分の編成でよく使う育て方は好き。それ以外はふつう(仲良し度 Lv2 から受ける)
     taste = (p.team || []).some(x => assistantMasmonGrowKind(x.grow) === r.grow) ? 'like' : 'mid';
   } else if (r.kind === 'hero') {
@@ -68018,6 +68185,11 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     const next = assistantMasmonSetNick(st, aid, t.slot, r.name);
     assistantMasmonSave(withMine(next));
     return { changed: true, what: `名前を「${r.name}」に` };
+  }
+  if (r.kind === 'train' && t && outcome === 'yes' && typeof amgAdvise === 'function') { // 育成の相談(育成基盤・公開の印 assistantMasmonGrow)
+    if (!amgAdvise(aid, t.slot, r.train)) return { changed: false, what: '' };
+    const label = (AMG_STATS.find(x => x[0] === r.train) || [])[1];
+    return { changed: true, what: r.train === 'rest' ? '次の育成はお休みに' : r.train === 'auto' ? '育成をおまかせに' : `しばらく${label}を鍛える` };
   }
   if (r.kind === 'grow' && t && outcome === 'yes' && ASSISTANT_MASMON_GROW_KINDS.includes(r.grow)) {
     const row = assistantMasmonRowsOf(st, aid).find(x => x.slot === t.slot);
@@ -68150,17 +68322,17 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
     let res = null;
-    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, history, ctx: assistantMasmonAskCtx(aid, from, t, lv) }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
+    try { const r = await fetch(ASSISTANT_CHAT_URL, { method: 'POST', headers: SB_HEADERS, signal: controller.signal, body: JSON.stringify({ kind: 'masmon_suggest', breederId: bid, a: aid, from, text: body, history, ctx: { ...assistantMasmonAskCtx(aid, from, t, lv), ...(t && typeof amgOn === 'function' && amgOn() ? { train: true } : {}) } }) }); res = r.ok ? await r.json() : null; } finally { clearTimeout(timer); }
     if (!res || res.ok !== true || !res.result) { record('fail'); return { res: 'fail', note: res && res.kind === 'tired' ? '今日はもう返事ができないみたいです。また明日、提案してみてください' : 'いまは返事ができませんでした。少し時間をおいて試してみてください' }; }
     const r = res.result;
     // 開いた所と違うものは当てない(例: 勇者モンの所から色を言われた)。くわしい画面からは名前と色だけ
     // どこから開いても、言われたことに合わせて受ける(2026-11-09 社長「とにかくもっと自由度」)。そのマスモンが要るもの(名前・色・入れ替え)だけ、マスモンが分かるときに限る
-    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : [])];
+    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : []), ...(t && typeof amgOn === 'function' && amgOn() ? ['train'] : [])];
     // 変えることが読み取れない・ここでは変えられないものでも、エラーにせず助手がふつうに返事をする(何も変えない・回数は減らない)
     // 名前として通さない言葉だった(2026-11-09 社長「全然聞いてくれない」): 「分からない」にせず、その助手の口調で付けられないと言う(回数は減らない)
     if (r.kind === 'none' && r.blocked === 'name') { const ng = assistantMasmonAskLine(aid, r.replies, 'ng'); record('no', '', false, ng); return { res: 'no', line: ng, note: 'その言葉は名前に使えません。ほかの名前なら提案できます(回数は減りません)' }; }
     if (r.kind === 'none' || !fits.includes(r.kind)) { const talk = assistantMasmonAskLine(aid, r.replies, 'talk'); record('none', '', false, talk); return { res: 'none', line: talk, note: '' }; }
-    const outcome = assistantMasmonAskJudge(aid, r, lv);
+    const outcome = assistantMasmonAskJudge(aid, t ? { ...r, slot0: t.slot } : r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
     const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? (outcome === 'yes' ? 'yes' : 'some') : 'think');
@@ -68540,7 +68712,8 @@ function AssistantMasmonDots({ t }) {
     </span>);
 }
 
-function AssistantMasmonRow({ t, land = false, onOpen = null }) {
+function AssistantMasmonRow({ t, land = false, onOpen = null, aid = '', amg = null }) {
+  const ge = aid && typeof amgOn === 'function' && amgOn() ? amgEntryOf(aid, t, amg || AMG_STORE.state) : null; // 育成基盤: 6能力の小さいゲージ
   const m = assistantMasmonMon(t.monster);
   const st = assistantMasmonStats(t);
   if (!m || !st) return null;
@@ -68553,15 +68726,18 @@ function AssistantMasmonRow({ t, land = false, onOpen = null }) {
           ? <><p className="flex flex-wrap gap-x-1 text-[10.5px] font-bold leading-tight text-slate-300"><span className="break-all">{m.name}</span><span className="whitespace-nowrap">・ Lv.{t.lv}</span></p><p className="text-[10px]"><AssistantMasmonDots t={t}/></p></>
           : <p className="truncate text-[10.5px] font-bold text-slate-300">{m.name} ・ Lv.{t.lv} <AssistantMasmonDots t={t}/></p>}
         <p className="text-[11px] font-black leading-tight text-amber-200">📈 {t.grow}</p>
+        {ge ? <div className="mt-0.5"><AmgStatBars e={ge} small cols={land ? 1 : 2}/></div> : (
         <div className={`mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => (
             <div key={k} className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-300"><span className="w-[34px] shrink-0">{label}</span><span className="mhm-bar"><i style={{ width: `${Math.round(st[k] * 100)}%` }}/></span></div>))}
-        </div>
+        </div>)}
       </div>
     </button>);
 }
 
 function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null; // 育成基盤(公開の印 assistantMasmonGrow)
+  React.useEffect(() => { if (typeof amgTick === 'function') void amgTick(id); }, [id]);
   const [tab, setTab] = React.useState('mons');
   const [detail, setDetail] = React.useState(null); // 押したマスモン(詳細画面)
   const save = useAssistantMasmonSave();
@@ -68610,7 +68786,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   if (tab === 'mons') {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
       {p.v2 && <AssistantMasmonStyleRow who={who}/>}
       {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
@@ -68783,6 +68959,8 @@ const assistantMasmonSkills = (t) => {
 // マスモンの詳細(見るだけ。プレイヤーのマスモン詳細に近い形)
 function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null }) {
   const m = assistantMasmonMon(t.monster), st = assistantMasmonStats(t);
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  const ge = typeof amgOn === 'function' && amgOn() ? amgEntryOf(who.id, t, amgSt || AMG_STORE.state) : null; // 育成基盤(公開の印 assistantMasmonGrow)
   if (!m || !st) return null;
   const n = assistantMasmonRegions(t.monster);
   const cols = ((t.dye && t.dye.colors) || []).slice(0, n || 5);
@@ -68792,6 +68970,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
   const role = t.lead ? (p && p.v2 ? '勇者モン' : '先頭') : t.bench ? '控え' : '編成';
   const pic = <AssistantMasmonPic t={t} size={land ? 190 : 210}/>;
   const info = (<>
+    {ge ? <AmgGrowCard who={who} t={t} e={ge} kindText={ASSISTANT_MASMON_GROW_TEXT[kind] || ''} growMine={t.growMine}/> : (<>
     <div className="mhm-card" data-assistant-masmon-detail-stats>
       <p className="text-[10px] font-black text-slate-400">能力</p>
       <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
@@ -68802,6 +68981,7 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
       {t.growMine && <p className="text-[10.5px] font-bold text-sky-200" data-assistant-masmon-grow-mine>🌱 育て方: {t.growMine.kind}({t.growMine.day ? `${t.growMine.day.slice(5).replace('-', '/')} ` : ''}あなたの提案)</p>}
       {ASSISTANT_MASMON_GROW_TEXT[kind] && <p className="text-[10.5px] font-bold text-slate-300">{ASSISTANT_MASMON_GROW_TEXT[kind]}</p>}
     </div>
+    </>)}
     <div className="mhm-card mt-2" data-assistant-masmon-detail-skills>
       <p className="text-[10px] font-black text-slate-400">技(育つと増える)</p>
       <p className="mt-0.5 text-[11.5px] font-bold leading-relaxed text-white" style={{ wordBreak: 'auto-phrase' }}>{skills.join(' ・ ')}</p>
@@ -69096,6 +69276,897 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
+
+// ---- part: 56-assistant-life-masmon-grow.jsx ----
+// 助手のマスモンの育成基盤(社長の仕様書 docs/progress/assistant-peer/ASSISTANT-MASMON-AUTOBATTLE-SPEC-v1.md の第①段階・2026-11-11 キズナ4)
+//   6能力(ライフ・ちから・かしこさ・命中・回避・丈夫さ)・疲労・ストレス・1日3回(朝・昼・夜)の自主育成。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md
+//   保存は新しいキー mh_assistant_masmon_grow_v1 だけ(mh_assistant_life_masmon_v1 は読むだけ・書き換えない)。公開の印 RELEASE_FLAGS.assistantMasmonGrow が真のときだけ動く
+//   同じ種(ブリーダーの種・助手・枠:種類・回)なら同じ結果になる(第④段階でサーバが確かめられる形)
+const ASSISTANT_MASMON_GROW_KEY = 'mh_assistant_masmon_grow_v1';
+const AMG_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
+const AMG_KEYS = AMG_STATS.map(x => x[0]);
+const AMG_MAX = 999; // 仕様書 §2 の仮案
+// 種族ごとの適性(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)。案: docs/progress/assistant-peer/masmon-grow/aptitude-draft.jpg(社長が見て決める)
+// 種族ごとの伸びやすさ(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)と初めの値。2026-11-11 社長「モンスターファームを参考に」:
+//   モンスターファーム2の種族ランクと純血の初期値(appmedia.jp の MF2 攻略 wiki の種族ページ)。◇=近い血統の値・※=モンヒロ独自(MF2 に無い)・★=オリジナルの独自の素質(剣士モッチー・パンドラ・エイキ。社長 11-11)。表は docs/progress/assistant-peer/masmon-grow/aptitude-mf2.json
+const AMG_APT = Object.freeze({
+  Mocchi: 'CCCBBB',
+  Suezo: 'DCABDD',
+  Golem: 'CACEEA',
+  Tiger: 'DDBABE',
+  Ham: 'CAECAE',
+  Pixie: 'EDABBE',
+  Mia: 'DCABBE',
+  Pandora: 'DBAABE',
+  Monol: 'DCCDEA',
+  Oboro: 'BECCDD',
+  Plant: 'AECCDE',
+  Zan: 'EBEAAE',
+  Eiki: 'DADBBE',
+  KenshiMocchi: 'DAEACE',
+  Mitarashi: 'CBBBCB',
+  Ark: 'CCCDCB',
+  Iblis: 'DCCDCC',
+  Snegurochka: 'CEBABD',
+  Undine: 'CEBABD',
+  Yaobikuni: 'CEBABD',
+  Yggdrasil: 'AECDEA',
+  MelWhip: 'ADCCEA',
+  Melody: 'AECBEA',
+  Kuromy: 'BACBDB',
+  Ghost: 'EEBBBE',
+  Spooky: 'EEBBBE',
+  Illumine: 'EEBCAE',
+  Dreamy: 'DEBCAD',
+  Kyubi: 'CCAACD',
+  Orihime: 'CDAACC',
+});
+const AMG_INIT = Object.freeze({
+  Mocchi: [110, 100, 120, 140, 150, 130],
+  Suezo: [80, 120, 170, 130, 90, 100],
+  Golem: [100, 220, 110, 70, 60, 160],
+  Tiger: [80, 90, 130, 160, 140, 70],
+  Ham: [50, 130, 70, 100, 140, 40],
+  Pixie: [50, 80, 170, 150, 140, 60],
+  Mia: [94, 104, 204, 124, 94, 94],
+  Pandora: [85, 135, 224, 150, 94, 50],
+  Monol: [110, 130, 140, 100, 10, 220],
+  Oboro: [140, 50, 120, 110, 100, 80],
+  Plant: [160, 40, 120, 110, 100, 70],
+  Zan: [60, 135, 60, 160, 160, 60],
+  Eiki: [85, 170, 85, 140, 135, 55],
+  KenshiMocchi: [85, 170, 60, 170, 110, 55],
+  Mitarashi: [100, 110, 140, 150, 120, 160],
+  Ark: [110, 110, 110, 85, 110, 135],
+  Iblis: [85, 110, 110, 85, 110, 110],
+  Snegurochka: [50, 10, 150, 110, 100, 60],
+  Undine: [50, 10, 150, 110, 100, 60],
+  Yaobikuni: [50, 10, 150, 110, 100, 60],
+  Yggdrasil: [160, 60, 110, 85, 60, 160],
+  MelWhip: [160, 85, 110, 110, 60, 160],
+  Melody: [160, 60, 110, 135, 60, 160],
+  Kuromy: [135, 160, 110, 135, 85, 135],
+  Ghost: [100, 90, 120, 140, 150, 80],
+  Spooky: [100, 90, 120, 140, 150, 80],
+  Illumine: [60, 60, 135, 110, 160, 60],
+  Dreamy: [85, 60, 135, 110, 160, 85],
+  Kyubi: [110, 110, 160, 160, 110, 85],
+  Orihime: [110, 85, 160, 160, 110, 110],
+});
+const AMG_APT_MULT = Object.freeze({ A: 1.3, B: 1.15, C: 1, D: 0.85, E: 0.7 });
+const amgAptOf = (monster) => { const s = AMG_APT[monster] || 'CCCCCC'; const o = {}; AMG_KEYS.forEach((k, i) => { o[k] = AMG_APT_MULT[s[i]] ? s[i] : 'C'; }); return o; };
+// 訓練(仕様書 §4 の表の名前)
+const AMG_LIGHT = Object.freeze({ life: '走り込み', pow: '腕立て', wise: '勉強', hit: '的当て', eva: 'ステップ', tough: '受け身' });
+const AMG_HEAVY = Object.freeze({ life: '長距離走', pow: '重量上げ', wise: '高度研究', hit: '高速射撃', eva: '障害物回避', tough: '耐久特訓' });
+const AMG_SPECIAL = Object.freeze({ real: '実戦訓練', joint: '合同訓練', focus: '集中訓練', weak: '弱点克服' });
+const AMG_SUB = Object.freeze({ life: 'tough', pow: 'life', wise: 'hit', hit: 'eva', eva: 'hit', tough: 'life' }); // 重トレの副能力
+// 育成方針(いまの「攻撃型」などの型)で伸ばしたい能力(社長 11-11「型は育成方針として残す」)
+const AMG_POLICY = Object.freeze({ '攻撃型': ['pow', 'hit'], '防御型': ['tough', 'eva'], 'ライフ型': ['life'], 'ガッツ型': ['wise'], 'すばやさ型': ['eva', 'hit'] });
+// 助手の性格の傾向(仕様書 §7 の仮の傾向)。heavy=重トレの多さ・special=特殊訓練の多さ・rest=休ませる疲労の目安・like=好んで伸ばす能力
+const AMG_TRAIT = Object.freeze({
+  mua: { name: '積極型', heavy: 0.6, special: 0.15, rest: 65, like: ['pow'] },
+  kiki: { name: '分析型', heavy: 0.4, special: 0.15, rest: 60, like: [] },
+  momosuke: { name: '安定型', heavy: 0.25, special: 0.1, rest: 45, like: ['life'] },
+  dra: { name: '大胆型', heavy: 0.55, special: 0.25, rest: 70, like: ['pow'] },
+  atsu: { name: 'バランス型', heavy: 0.4, special: 0.15, rest: 60, like: [] },
+  kyuko: { name: '研究型', heavy: 0.35, special: 0.2, rest: 55, like: ['wise'] },
+  sorashido: { name: '柔軟型', heavy: 0.4, special: 0.3, rest: 60, like: [] },
+  erubin: { name: '防御型', heavy: 0.35, special: 0.15, rest: 55, like: ['tough', 'eva'] },
+});
+const AMG_DAY_CAP = 15; // 1体1日の伸びの合計の上限(仕様書 §8。仮。11-11 試算で 40 では30日で上限近くまで届いたので下げた)
+// 関わるほど強くなる(2026-11-11 社長「人が手を加えれば加えるほど強くなる。何もしていない人より強くなるように」)。数字はここだけ
+const AMG_CARE = Object.freeze({
+  viewCap: 20, viewMult: 1.1, // その日にプレイヤーが様子を見に来たマスモン: 1日の上限 15→20・伸び 1.1倍
+  pickMult: 1.3, pickFail: 0.5, picksPerDay: 3, // 自分で訓練を指定した回: 伸び 1.3倍・失敗しにくい(半分)。指定は助手1人につき1日3回まで
+  askMult: 1.1, // 相談(鍛えて)で頼んだ能力を伸ばした回: 1.1倍
+  ranchMult: 1.2, // M/B管理に助手がいるあいだにプレイヤーがトレーニングした(ナカヨシ9の受け口・1日1回): 次の回の伸び 1.2倍(2026-11-11 社長)
+});
+const AMG_LV_MAX = 99; // Lv は育成の経験(訓練で上がる・社長 11-11)
+const amgLvNeed = (lv) => 10 + lv; // 次の Lv までの経験
+const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0 });
+const AMG_CATCH_UP = 6; // 閉じていた分をまとめて決める回数の上限(2日分)
+const AMG_LOG = 21;
+const AMG_PERIOD_NAME = Object.freeze(['朝', '昼', '夜']);
+// 回の番号: 朝(4:00〜)・昼(12:00〜)・夜(18:00〜)。日本時間で数える。日 = 朝4時で切り替え
+const amgSlotOf = (now = Date.now()) => { const t = Number(now) + 9 * 3600000 - 4 * 3600000; const day = Math.floor(t / 86400000); const h = (t - day * 86400000) / 3600000; return day * 3 + (h < 8 ? 0 : h < 14 ? 1 : 2); };
+const amgSlotDay = (slot) => Math.floor(slot / 3);
+const amgClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const amgNum = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? amgClamp(Math.round(Number(v)), lo, hi) : d);
+const amgMonKey = (slot, monster) => `${slot}:${monster}`;
+const normalizeAssistantMasmonGrow = (raw) => {
+  const out = { v: 1, mons: {}, done: {}, focus: {}, rest: {}, care: {}, plan: {}, boost: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const okAid = (aid) => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+  if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
+    if (!okAid(aid) || !ms || typeof ms !== 'object') continue;
+    const one = {};
+    for (const [key, e] of Object.entries(ms).slice(-64)) { // 新しい方を残す(入れ替えをくり返しても、足したばかりのマスモンの育成を落とさない・ミハリ 11-11)
+      if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.st || typeof e.st !== 'object') continue;
+      const st = {}; for (const k of AMG_KEYS) st[k] = amgNum(e.st[k], 0, 0, AMG_MAX);
+      const ind = {}; for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
+      const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && typeof x.a === 'string').slice(-AMG_LOG)
+        .map(x => ({ s: x.s, a: x.a.slice(0, 12), k: AMG_KEYS.includes(x.k) ? x.k : '', g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])), ...(x.f ? { f: 1 } : {}), ...(x.p ? { p: 1 } : {}), ...(x.r ? { r: 1 } : {}) }));
+      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999) };
+    }
+    out.mons[aid] = one;
+  }
+  if (raw.done && typeof raw.done === 'object') for (const [aid, s] of Object.entries(raw.done)) if (okAid(aid) && Number.isInteger(s) && s > 0) out.done[aid] = s;
+  if (raw.focus && typeof raw.focus === 'object') for (const [aid, f] of Object.entries(raw.focus)) {
+    if (!okAid(aid) || !f || typeof f !== 'object') continue;
+    const o = {}; for (const [sl, x] of Object.entries(f)) { const n = Number(sl); if (Number.isInteger(n) && n >= 1 && n <= 8 && x && AMG_KEYS.includes(x.k) && Number.isInteger(x.until)) o[n] = { k: x.k, until: x.until }; }
+    out.focus[aid] = o;
+  }
+  if (raw.rest && typeof raw.rest === 'object') for (const [aid, f] of Object.entries(raw.rest)) {
+    if (!okAid(aid) || !f || typeof f !== 'object') continue;
+    const o = {}; for (const [sl, x] of Object.entries(f)) { const n = Number(sl); if (Number.isInteger(n) && n >= 1 && n <= 8 && x === true) o[n] = true; }
+    out.rest[aid] = o;
+  }
+  // 関わり: { [助手]: { d: 日, view: { [枠]: true }, picks: その日に指定した回数 } }/指定した訓練: { [助手]: { [枠]: { s: 回, a, k } } }
+  if (raw.care && typeof raw.care === 'object') for (const [aid, c] of Object.entries(raw.care)) {
+    if (!okAid(aid) || !c || typeof c !== 'object') continue;
+    const view = {}; for (const [sl, x] of Object.entries(c.view && typeof c.view === 'object' ? c.view : {})) { const n = Number(sl); if (Number.isInteger(n) && n >= 1 && n <= 8 && x === true) view[n] = true; }
+    out.care[aid] = { d: amgNum(c.d, 0, 0, 1e7), view, picks: amgNum(c.picks, 0, 0, 99) };
+  }
+  const ACTS = ['light', 'heavy', 'real', 'joint', 'focus', 'weak', 'rest', 'play'];
+  if (raw.plan && typeof raw.plan === 'object') for (const [aid, p] of Object.entries(raw.plan)) {
+    if (!okAid(aid) || !p || typeof p !== 'object') continue;
+    const o = {}; for (const [sl, x] of Object.entries(p)) { const n = Number(sl); if (Number.isInteger(n) && n >= 1 && n <= 8 && x && Number.isInteger(x.s) && ACTS.includes(x.a) && (!x.k || AMG_KEYS.includes(x.k))) o[n] = { s: x.s, a: x.a, k: x.k || '' }; }
+    out.plan[aid] = o;
+  }
+  if (raw.boost && typeof raw.boost === 'object') for (const [aid, b] of Object.entries(raw.boost)) if (okAid(aid) && b && Number.isInteger(b.d) && Number.isInteger(b.s)) out.boost[aid] = { d: b.d, s: b.s };
+  return out;
+};
+// 初めの値(一度だけ・2026-11-11 社長「初期ステータスも独自に。モンスターファームを参考に」): 種族の初期値(AMG_INIT)に、小さな個体差と Lv の上乗せ
+const AMG_INIT_VAR = 0.1; // 個体差(±10%)
+const AMG_INIT_LV_BONUS = 3; // 今の Lv × 3 を、育成方針(型)の能力だけに上乗せ(社長 11-11 案C。Lv25 なら +75)。0 にすれば上乗せなし
+const AMG_INIT_FLOOR = 50; // 初めの値の下限(MF2 は 10 などの低い値もある。社長 11-11「下限を50にする」)
+const amgInitial = (row, rnd) => {
+  const base = AMG_INIT[row.monster] || [110, 110, 110, 110, 110, 110]; const lv = Number.isFinite(row.lv) ? row.lv : 10;
+  const pol = AMG_POLICY[String(row.grow || '').split('(')[0]] || [];
+  const st = {}; AMG_KEYS.forEach((k, i) => { st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + (pol.includes(k) ? lv * AMG_INIT_LV_BONUS : 0)), Math.max(1, AMG_INIT_FLOOR), AMG_MAX); });
+  const ind = {}; for (const k of AMG_KEYS) { const r = rnd(); ind[k] = r < 0.2 ? -1 : r > 0.8 ? 1 : 0; } // 伸びの個体差(迎えたとき1回だけ・仕様書 §3)
+  return { st, fat: 0, str: 0, ind, log: [], src: 'init_v1', dg: { d: 0, n: 0 }, lv: amgClamp(Math.round(lv), 1, AMG_LV_MAX), xp: 0 };
+};
+const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+// 1回分の行動を選ぶ(仕様書 §8: 能力・適性・疲労・ストレス・性格・助言から)
+const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
+  if (restReq) return { a: 'rest' };
+  if (e.fat >= T.rest) return { a: 'rest' };
+  if (e.str >= 50) return { a: 'play' };
+  const apt = amgAptOf(row.monster);
+  const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
+  // 伸ばしたい能力: 相談で頼まれた能力 → なければ、方針・性格の好み・適性に比べて低い能力に点を付けて選ぶ
+  let k = focusK && AMG_KEYS.includes(focusK) ? focusK : '';
+  if (!k) {
+    let best = -1;
+    for (const key of AMG_KEYS) {
+      const want = (pol.includes(key) ? 2 : 0) + (T.like.includes(key) ? 0.8 : 0);
+      const gap = 1 - e.st[key] / (AMG_MAX * (AMG_APT_MULT[apt[key]] / 1.3)); // 伸びしろ
+      const sc = want + gap * 2 + rnd() * 0.9;
+      if (sc > best) { best = sc; k = key; }
+    }
+  }
+  const r = rnd();
+  if (r < T.special) {
+    const kinds = ['real', 'focus', 'weak', 'joint'];
+    const sp = kinds[Math.floor(rnd() * kinds.length)];
+    const weakest = AMG_KEYS.reduce((a, b) => (e.st[b] / AMG_APT_MULT[apt[b]] < e.st[a] / AMG_APT_MULT[apt[a]] ? b : a), AMG_KEYS[0]);
+    return { a: sp, k: sp === 'weak' ? weakest : k };
+  }
+  return { a: r < T.special + T.heavy && e.fat < 40 ? 'heavy' : 'light', k };
+};
+// 1回分を当てる(仕様書 §4 の仮案の数字・§5 の疲労とストレス)
+const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
+  const apt = amgAptOf(row.monster); const g = {}; let fail = false;
+  const day = amgSlotDay(slot);
+  const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
+  const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
+  const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  const add = (k, lo, hi) => {
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
+    if (n <= 0) return;
+    e.st[k] += n; g[k] = (g[k] || 0) + n; e.dg = { d: day, n: (e.dg.d === day ? e.dg.n : 0) + n };
+  };
+  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  if (act.a === 'rest') { e.fat = amgClamp(e.fat - 30, 0, 100); e.str = amgClamp(e.str - 5, 0, 100); }
+  else if (act.a === 'play') { e.fat = amgClamp(e.fat - 10, 0, 100); e.str = amgClamp(e.str - 15, 0, 100); }
+  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100); }
+  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100); }
+  else { // 特殊訓練
+    fail = rnd() < failChance(0.03);
+    const others = AMG_KEYS.filter(k => k !== act.k); const sub = others[Math.floor(rnd() * others.length)];
+    add(act.k, 4, 9); add(sub, 2, 5);
+    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+  }
+  // 経験と Lv(訓練をすると上がる)
+  e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
+  while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) { e.xp -= amgLvNeed(e.lv); e.lv += 1; }
+  e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}), ...(care.ranch ? { r: 1 } : {}) }].slice(-AMG_LOG);
+  return e;
+};
+// まだの回をまとめて決める。rows = その助手のいまのマスモン(assistantMasmonRowsOf)。初めての助手は、今の回から数える(さかのぼって育てない)
+const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
+  const mons = { ...(state.mons[aid] || {}) }; let changed = false;
+  for (const row of rows) {
+    const key = amgMonKey(row.slot, row.monster);
+    if (!mons[key] && typeof assistantMasmonRng === 'function') { mons[key] = amgInitial(row, assistantMasmonRng(`${seed}|${aid}|grow-init|${key}`)); changed = true; }
+  }
+  const last = state.done[aid];
+  // 端末の時刻を先へ進めて開いたあと戻した(最後の回がいまより6回以上先): その回は育てず、いまの回に置き直す(実時刻が追いつくまで止まらないように・ミハリ 11-11)
+  const reset = Number.isInteger(last) && last > nowSlot + AMG_CATCH_UP;
+  let from = reset ? nowSlot + 1 : Number.isInteger(last) ? last + 1 : nowSlot; // 初めては今の回だけ
+  from = Math.max(from, nowSlot - AMG_CATCH_UP + 1);
+  const focus = { ...(state.focus[aid] || {}) }; const rest = { ...(state.rest[aid] || {}) }; const plan = { ...(state.plan[aid] || {}) };
+  const care = state.care[aid] || { d: -1, view: {}, picks: 0 };
+  for (let s = from; s <= nowSlot; s++) {
+    for (const row of rows) {
+      const key = amgMonKey(row.slot, row.monster); const e0 = mons[key]; if (!e0) continue;
+      const e = { ...e0, st: { ...e0.st }, dg: { ...e0.dg } };
+      const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
+      const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
+      const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
+      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      if (!pl && f && act.k === f) act.asked = true;
+      if (rest[row.slot]) delete rest[row.slot];
+      if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
+      mons[key] = amgDo(aid, e, row, rnd, s, act, { viewed: care.d === amgSlotDay(s) && !!care.view[row.slot], ranch: !!(state.boost[aid] && state.boost[aid].s === s) });
+    }
+    changed = true;
+  }
+  if (!changed && !reset && (state.done[aid] === nowSlot || (Number.isInteger(last) && last > nowSlot))) return state; // 何も変わらないときは同じものを返す(書き直さない)
+  return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
+};
+const amgActName = (x) => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, subs: new Set(),
+  set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
+  load() { // 読み込みは1回だけ(2か所から同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_GROW_KEY, null, false) : null; } catch (_) {}
+      this.loaded = true; this.set(normalizeAssistantMasmonGrow(raw)); return this.state;
+    })();
+    return this._p;
+  } };
+const amgOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonGrow === true;
+// 保存を読み込む前には書かない(空の既定値で上書きして、それまでの育成を消さない・2026-11-11 ミハリ)
+const amgSave = (next) => { if (!AMG_STORE.loaded) return false; AMG_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_GROW_KEY, next, false); } catch (_) {} return true; };
+// 立ち上がったら早めに読み込んでおく(M/B管理の受け口などが、画面を開く前に呼ばれても書けるように)
+try { setTimeout(() => { try { if (amgOn()) void AMG_STORE.load(); } catch (_) {} }, 0); } catch (_) {}
+// 助手のマスモンを開いたときに呼ぶ(まだの回をまとめて決める)。印が偽のあいだは何もしない
+const amgTick = async (aid, now = Date.now()) => {
+  if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
+  await ASSISTANT_MASMON_STORE.load(); await AMG_STORE.load();
+  const ms = ASSISTANT_MASMON_STORE.state; if (!ms.seed) return null;
+  const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
+  if (!rows.length) return null;
+  const next = amgCatchUp(AMG_STORE.state, aid, rows, ms.seed, amgSlotOf(now));
+  if (next !== AMG_STORE.state) amgSave(next);
+  return next;
+};
+// 様子を見に来た(くわしい画面を開いた)。その日のそのマスモンは、上限と伸びが上がる
+const amgView = (aid, slot, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
+  const st = AMG_STORE.state; const d = amgSlotDay(amgSlotOf(now));
+  const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : { d, view: {}, picks: 0 };
+  if (c.view[slot]) return false;
+  amgSave({ ...st, care: { ...st.care, [aid]: { ...c, view: { ...c.view, [slot]: true } } } });
+  return true;
+};
+const amgPicksLeft = (aid, now = Date.now(), st = AMG_STORE.state) => { const d = amgSlotDay(amgSlotOf(now)); const c = st.care[aid]; return AMG_CARE.picksPerDay - (c && c.d === d ? c.picks : 0); };
+// 次の回の訓練を自分で決める(社長 11-11「自分で指定も出来るし任せる事もできる」)。act = { a: 'light'|'heavy'|'rest'|'play', k }
+const amgPick = (aid, slot, act, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
+  const st = AMG_STORE.state; const s = amgSlotOf(now) + 1; const d = amgSlotDay(amgSlotOf(now));
+  if (!act || !['light', 'heavy', 'rest', 'play'].includes(act.a) || ((act.a === 'light' || act.a === 'heavy') && !AMG_KEYS.includes(act.k))) return false;
+  const e = (st.mons[aid] || {})[Object.keys(st.mons[aid] || {}).find(k => k.startsWith(`${slot}:`)) || ''];
+  if (e && act.k && e.st[act.k] >= AMG_MAX) return false; // 上限に届いた能力は指定しない
+  const had = st.plan[aid] && st.plan[aid][slot] && st.plan[aid][slot].s === s;
+  if (!had && amgPicksLeft(aid, now) <= 0) return false;
+  const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : { d, view: {}, picks: 0 };
+  amgSave({ ...st, plan: { ...st.plan, [aid]: { ...(st.plan[aid] || {}), [slot]: { s, a: act.a, k: act.k || '' } } }, care: { ...st.care, [aid]: { ...c, picks: c.picks + (had ? 0 : 1) } } });
+  return true;
+};
+// 外から呼ぶ受け口(ナカヨシ9・2026-11-11 社長): M/B管理(ranch)に助手がいるあいだにプレイヤーがトレーニングした。
+//   その日1回だけ受け付け、その助手のマスモン全員の「次の育成の回」の伸びを AMG_CARE.ranchMult 倍にする。受け付けたら true(もう受けた日・印が偽なら false)
+const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
+  if (!amgOn() || !AMG_STORE.loaded || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || (opts && opts.source && opts.source !== 'ranch')) return false;
+  const st = AMG_STORE.state; const s = amgSlotOf(now); const d = amgSlotDay(s);
+  if (st.boost[aid] && st.boost[aid].d === d) return false;
+  amgSave({ ...st, boost: { ...st.boost, [aid]: { d, s: s + 1 } } });
+  return true;
+};
+const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
+// 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
+const amgAdvise = (aid, slot, what, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
+  const st = AMG_STORE.state; const s = amgSlotOf(now);
+  if (what === 'rest') { amgSave({ ...st, rest: { ...st.rest, [aid]: { ...(st.rest[aid] || {}), [slot]: true } } }); return true; }
+  if (what === 'auto') { const f = { ...(st.focus[aid] || {}) }; delete f[slot]; amgSave({ ...st, focus: { ...st.focus, [aid]: f } }); return true; }
+  if (!AMG_KEYS.includes(what)) return false;
+  amgSave({ ...st, focus: { ...st.focus, [aid]: { ...(st.focus[aid] || {}), [slot]: { k: what, until: s + 9 } } } });
+  return true;
+};
+// ---------- 画面(公開の印が真のときだけ出す) ----------
+const useAmgState = () => {
+  const [st, setSt] = React.useState(AMG_STORE.state);
+  React.useEffect(() => { AMG_STORE.subs.add(setSt); return () => { AMG_STORE.subs.delete(setSt); }; }, []);
+  return st;
+};
+function AmgStatBars({ e, small = false, cols = 2 }) {
+  return (
+    <div className={`grid gap-x-3 ${small ? 'gap-y-0.5' : 'gap-y-1'} ${cols === 1 ? 'grid-cols-1' : 'grid-cols-2'}`} data-amg-stats>
+      {AMG_STATS.map(([k, label]) => (
+        <div key={k} className={`flex items-center gap-1.5 font-bold ${small ? 'text-[9.5px] text-slate-300' : 'text-[10.5px] text-slate-200'}`}>
+          <span className={`${small ? 'w-[40px]' : 'w-[48px]'} shrink-0 whitespace-nowrap`}>{label}</span>
+          <span className="mhm-bar"><i style={{ width: `${Math.round(e.st[k] / AMG_MAX * 100)}%` }}/></span>
+          {!small && <b className="w-[28px] shrink-0 text-right text-amber-200" data-amg-stat={k}>{e.st[k]}</b>}
+        </div>))}
+    </div>);
+}
+// くわしい画面の能力の札(6能力・疲労・ストレス・今日の育成)
+// 次の回の訓練を自分で決める欄(社長 11-11「自分で指定も出来るし任せる事もできる」)
+const AMG_PICK_OPTIONS = Object.freeze([
+  ...AMG_KEYS.map(k => ({ v: `light:${k}`, label: `軽トレ ${AMG_LIGHT[k]}(${(AMG_STATS.find(x => x[0] === k) || [])[1]})` })),
+  ...AMG_KEYS.map(k => ({ v: `heavy:${k}`, label: `重トレ ${AMG_HEAVY[k]}(${(AMG_STATS.find(x => x[0] === k) || [])[1]})` })),
+  { v: 'rest:', label: '休養' }, { v: 'play:', label: '遊び' },
+]);
+function AmgPickRow({ who, t, e, st }) {
+  const next = amgSlotOf() + 1;
+  const pl = st.plan[who.id] && st.plan[who.id][t.slot] && st.plan[who.id][t.slot].s === next ? st.plan[who.id][t.slot] : null;
+  const [v, setV] = React.useState(pl ? `${pl.a}:${pl.k}` : `light:${AMG_KEYS.reduce((a, b) => (e.st[b] < e.st[a] ? b : a))}`);
+  const left = amgPicksLeft(who.id, Date.now(), st);
+  const pick = () => { const [a, k] = v.split(':'); amgPick(who.id, t.slot, { a, k }); };
+  const auto = () => { const p = { ...(st.plan[who.id] || {}) }; delete p[t.slot]; amgSave({ ...st, plan: { ...st.plan, [who.id]: p } }); };
+  return (
+    <div className="mt-1.5 rounded-xl border border-white/10 p-2" data-amg-pick>
+      <p className="text-[10px] font-black text-slate-400">🗓 次の回({AMG_PERIOD_NAME[next % 3]})の育成 ・ 自分で決める(今日あと{Math.max(0, left)}回)か、{who.name}に任せる</p>
+      {pl ? <p className="mt-0.5 text-[11px] font-bold text-sky-200" data-amg-pick-now>あなたが決めた: {amgActName(pl)}(よく伸びて、失敗しにくい) <button type="button" className="ml-1 underline" onClick={auto} data-amg-pick-auto>{who.name}に任せる</button></p>
+        : <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <select className="min-w-0 flex-1 rounded-lg bg-slate-800 px-2 py-1 text-[11px] font-bold text-white" value={v} onChange={(ev) => setV(ev.target.value)} data-amg-pick-select>
+            {AMG_PICK_OPTIONS.map(o => <option key={o.v} value={o.v} disabled={!!o.v.split(':')[1] && e.st[o.v.split(':')[1]] >= AMG_MAX}>{o.label}</option>)}
+          </select>
+          <button type="button" className="mhl-btn px-3 text-[11px]" disabled={left <= 0} onClick={pick} data-amg-pick-go>決める</button>
+        </div>}
+    </div>);
+}
+function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
+  const amgSt = useAmgState();
+  React.useEffect(() => { if (amgOn()) amgView(who.id, t.slot); }, [who.id, t.slot]); // 様子を見に来た(その日は伸びやすい)
+  const today = amgSlotDay(amgSlotOf());
+  const logs = e.log.filter(x => amgSlotDay(x.s) === today);
+  const T = AMG_TRAIT[who.id] || null;
+  return (
+    <div className="mhm-card" data-assistant-masmon-detail-stats data-amg-card>
+      <p className="text-[10px] font-black text-slate-400">能力(6つ・上限{AMG_MAX})</p>
+      <div className="mt-1"><AmgStatBars e={e}/></div>
+      <div className="mt-1.5 grid grid-cols-2 gap-x-3">
+        <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[48px] shrink-0">疲労</span><span className="mhm-bar"><i style={{ width: `${e.fat}%`, background: 'linear-gradient(90deg,#fb7185,#f97316)' }}/></span><b className="w-[24px] text-right text-amber-200" data-amg-fat>{e.fat}</b></div>
+        <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[48px] shrink-0">ストレス</span><span className="mhm-bar"><i style={{ width: `${e.str}%`, background: 'linear-gradient(90deg,#60a5fa,#a78bfa)' }}/></span><b className="w-[24px] text-right text-amber-200" data-amg-str>{e.str}</b></div>
+      </div>
+      <p className="mt-1.5 text-[11px] font-bold text-amber-200">📈 育成方針: {t.grow} ・ 育成 Lv.{e.lv}<small className="ml-1 text-[9.5px] text-slate-400">(次まで {amgLvNeed(e.lv) - e.xp})</small></p>
+      {growMine && <p className="text-[10.5px] font-bold text-sky-200" data-assistant-masmon-grow-mine>🌱 育て方: {growMine.kind}({growMine.day ? `${growMine.day.slice(5).replace('-', '/')} ` : ''}あなたの提案)</p>}
+      {kindText && <p className="text-[10.5px] font-bold text-slate-300">{kindText}</p>}
+      <p className="mt-1.5 text-[10px] font-black text-slate-400">今日の育成({who.name}{T ? `・${T.name}` : ''})</p>
+      {logs.length ? logs.map(x => (
+        <p key={x.s} className="text-[11px] font-bold text-slate-100" data-amg-log={x.a}>{['🌅', '☀', '🌙'][x.s % 3]} {AMG_PERIOD_NAME[x.s % 3]} {amgActName(x)}{x.p ? '(あなたが決めた)' : ''}{x.r ? '(M/B管理でいっしょにトレーニング)' : ''}{x.f ? '(うまくいかなかった)' : ''} {Object.entries(x.g).map(([k, n]) => `${(AMG_STATS.find(s => s[0] === k) || [])[1]} +${n}`).join('・')}{x.a === 'rest' ? '(疲れがとれた)' : x.a === 'play' ? '(気分転換)' : ''}</p>))
+        : <p className="text-[10.5px] font-bold text-slate-400">まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に{who.name}が育てます)</p>}
+      {(amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot]) && <p className="mt-1 text-[10px] font-bold text-pink-200" data-amg-viewed>👀 今日は様子を見に来たので、いつもより伸びやすい</p>}
+      <AmgPickRow who={who} t={t} e={e} st={amgSt}/>
+    </div>);
+}
+
+// ---- part: 56-assistant-life-masmon-train.jsx ----
+// 助手のマスモンの修行と助手の成長(社長の仕様書 docs/progress/assistant-peer/ASSISTANT-MASMON-AUTOBATTLE-SPEC-v1.md の第②段階・2026-11-11 シュギョウ)
+//   修行6系統・技の習得と熟練(技表 monster-hero/data/assistant-masmon-techs.js・モンスターファームのような技)・助手のブリーダー能力・助手からの相談・日常の出来事
+//   案は docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md・社長の答えは台帳 2026-11-11
+//   修行は、助手の生活で「モンヒロバトル」にいた回にする(社長「モンバトにいるときにしよう」「MB管理とモンバトは別」。場所は助手ライフ担当ナカヨシ9が生活に足す)
+//   保存は新しいキー mh_assistant_masmon_train_v1 だけ(mh_assistant_masmon_grow_v1・mh_assistant_life_masmon_v1 は読むだけ)
+//   公開の印 RELEASE_FLAGS.assistantMasmonTrain が偽のあいだは、受け口はすべて「何もしない」を返す(第①段階の結果を1つも変えない)
+//   乱数は自分の種(ブリーダーの種・助手・枠:種類・回)から作り、第①段階の乱数の列を引かない(同じ種なら同じ結果)
+const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
+// 修行の6系統(仕様書 §6)。stat=少し伸びる能力・aim=磨くもの
+const AMGT_KINDS = Object.freeze({
+  pow: { name: 'ちから修行', act: '岩割り', stat: 'pow', aim: 'ちから技' },
+  wise: { name: 'かしこさ修行', act: '瞑想', stat: 'wise', aim: 'かしこさ技' },
+  hit: { name: '命中修行', act: '一点突き', stat: 'hit', aim: '当てにくい技' },
+  eva: { name: '回避修行', act: '見切り', stat: 'eva', aim: '間合いの判断' },
+  tough: { name: '防御修行', act: '受け止め', stat: 'tough', aim: 'ガード' },
+  real: { name: '実戦修行', act: '手合わせ', stat: 'life', aim: '交代の判断と全部の技' },
+});
+const AMGT_KIND_KEYS = Object.keys(AMGT_KINDS);
+// 技のほかに磨くもの(0〜100)。guard=ガード・dist=間合いの判断・swap=交代の判断
+const AMGT_SENSE = Object.freeze([['guard', 'ガード'], ['dist', '間合いの判断'], ['swap', '交代の判断']]);
+const AMGT_SENSE_KEYS = AMGT_SENSE.map(x => x[0]);
+const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'], [25, '慣れ'], [0, '見習い']]);
+const amgtRankOf = (v) => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
+// 数字(社長 11-11: 修行の伸びはふつう)。数字はここだけ
+const AMGT_NUM = Object.freeze({
+  gain: [4, 8], // 修行1回の熟練(主)
+  realAll: [1, 2], // 実戦修行で、覚えている全部の技に足す分
+  stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
+  fat: 12, str: 2, // 疲労・ストレス
+  perDay: 2, // 1日の修行の回数の上限(案)
+  fatStop: 45, // これ以上疲れていたら修行に行かない(訓練側が休ませる)
+  goAt: 0.4, // モンヒロバトルにいた回に修行へ行く起こりやすさに足す分(性格の p に足す)
+  initPerLv: 0.3, initMax: 30, // 覚えている技の熟練の初めの値 = 育成 Lv × 0.3(最大30)
+  askMult: 1.1, // 相談に答えて頼んだ系統の修行の伸び
+});
+// 熟練100のときの補正(対戦の中だけ・社長 11-11「中」)。対戦の計算はタタカイの戦闘の芯が持つ。ここは画面の説明用の写し
+const AMGT_BONUS = Object.freeze({ hit: 0.06, guts: 0.15, guard: 0.08 });
+// 助手のブリーダー能力(仕様書 §7)
+const AMGT_BR = Object.freeze([['know', '育成知識'], ['lead', '指導力'], ['obs', '観察力'], ['tac', '戦術力'], ['trust', '信頼構築'], ['exp', '育成経験']]);
+const AMGT_BR_KEYS = AMGT_BR.map(x => x[0]);
+// 性格の初めの傾向(仕様書 §7 の仮の傾向。並びは AMGT_BR_KEYS)
+const AMGT_BR_INIT = Object.freeze({
+  mua: [25, 40, 20, 30, 35, 20], // 積極型
+  kiki: [40, 25, 40, 35, 20, 20], // 分析型
+  momosuke: [30, 25, 40, 20, 40, 20], // 安定型
+  dra: [20, 40, 15, 40, 30, 20], // 大胆型
+  atsu: [30, 30, 30, 30, 30, 20], // バランス型
+  kyuko: [45, 25, 35, 30, 20, 20], // 研究型
+  sorashido: [30, 30, 30, 35, 35, 20], // 柔軟型
+  erubin: [35, 25, 35, 25, 35, 20], // 防御型
+});
+// 修行に行きやすさと、好んで選ぶ系統
+const AMGT_TRAIT = Object.freeze({
+  mua: { p: 0.4, like: ['pow', 'real'] }, kiki: { p: 0.4, like: ['wise', 'eva'] }, momosuke: { p: 0.3, like: ['tough'] },
+  dra: { p: 0.45, like: ['pow', 'real'] }, atsu: { p: 0.35, like: [] }, kyuko: { p: 0.5, like: ['wise', 'hit'] },
+  sorashido: { p: 0.4, like: ['eva', 'real'] }, erubin: { p: 0.35, like: ['tough', 'eva'] },
+});
+// ブリーダー能力の効き目(能力100のとき・社長 11-11「大きく」: 伸び×1.20・失敗とストレスの軽減も合わせて)
+const AMGT_BR_EFFECT = Object.freeze({ lead: 0.20, know: 0.60, trust: 0.60, obs: 10 });
+const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, 'はじめたて']]);
+const amgtBrRankOf = (v) => (AMGT_BR_RANKS.find(r => v >= r[0]) || AMGT_BR_RANKS[AMGT_BR_RANKS.length - 1])[1];
+// 行動ごとに経験が入るブリーダー能力
+const AMGT_BR_XP = Object.freeze({
+  light: ['lead'], heavy: ['lead'], real: ['tac', 'lead'], joint: ['trust', 'lead'], focus: ['lead'], weak: ['know'],
+  rest: ['obs'], play: ['obs', 'trust'], shugyo: ['know', 'tac'], fail: ['know'], ask: ['trust'],
+});
+const AMGT_LOG = 21;
+const AMGT_EV = 30;
+const AMGT_AT = 12; // モンヒロバトルにいた回の記録の数
+const AMGT_PLACE = 'battle'; // 修行する生活の場所の id(ナカヨシ9が ASSISTANT_LIFE_PLACES に足す・言葉は「モンヒロバトル」)
+const AMGT_PLACE_NAME = 'モンヒロバトル';
+const amgtSlotDay = (slot) => Math.floor(slot / 3);
+// 第①段階と同じ回の番号(朝4:00・昼12:00・夜18:00。日本時間)
+const amgtSlotOf = (now = Date.now()) => { const t = Number(now) + 9 * 3600000 - 4 * 3600000; const day = Math.floor(t / 86400000); const h = (t - day * 86400000) / 3600000; return day * 3 + (h < 8 ? 0 : h < 14 ? 1 : 2); };
+const amgtClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const amgtNum = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? amgtClamp(Math.round(Number(v)), lo, hi) : d);
+const amgtOkAid = (aid) => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+const amgtRngOf = (text) => {
+  if (typeof assistantMasmonRng === 'function') return assistantMasmonRng(text);
+  let h = 2166136261; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  let x = h >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+};
+const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+// 技表
+const amgtTechsOf = (monster) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : []);
+const amgtTechIdOk = (id) => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+
+const normalizeAssistantMasmonTrain = (raw) => {
+  const out = { v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
+    if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
+    const one = {};
+    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+      if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
+      const m = {};
+      for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
+      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG)
+        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: x.l } : {}), ...(x.f ? { f: 1 } : {}) }));
+      one[key] = { m, learn, day: { d: amgtNum(e.day && e.day.d, -1, -1, 1e7), n: amgtNum(e.day && e.day.n, 0, 0, 9) }, log, src: 'init_v1' };
+    }
+    out.mons[aid] = one;
+  }
+  if (raw.br && typeof raw.br === 'object') for (const [aid, b] of Object.entries(raw.br)) {
+    if (!amgtOkAid(aid) || !b || typeof b !== 'object' || !b.ab || typeof b.ab !== 'object') continue;
+    const ab = {}; const xp = {};
+    for (const k of AMGT_BR_KEYS) { ab[k] = amgtNum(b.ab[k], 20, 0, 100); xp[k] = Number.isFinite(Number(b.xp && b.xp[k])) ? amgtClamp(Math.round(Number(b.xp[k]) * 2) / 2, 0, 999) : 0; }
+    out.br[aid] = { ab, xp, src: 'init_v1' };
+  }
+  if (raw.ask && typeof raw.ask === 'object') for (const [aid, a] of Object.entries(raw.ask)) {
+    if (!amgtOkAid(aid) || !a || typeof a !== 'object' || !Number.isInteger(a.d)) continue;
+    const o = { d: a.d, q: typeof a.q === 'string' ? a.q.slice(0, 12) : '', slot: amgtNum(a.slot, 1, 1, 8) };
+    if (typeof a.a === 'string') o.a = a.a.slice(0, 12);
+    if (Number.isInteger(a.until)) o.until = a.until;
+    out.ask[aid] = o;
+  }
+  if (raw.ev && typeof raw.ev === 'object') for (const [aid, list] of Object.entries(raw.ev)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.ev[aid] = list.filter(x => x && Number.isInteger(x.s) && typeof x.t === 'string').slice(-AMGT_EV).map(x => ({ s: x.s, t: x.t.slice(0, 12), x: typeof x.x === 'string' ? x.x.slice(0, 60) : '' }));
+  }
+  if (raw.at && typeof raw.at === 'object') for (const [aid, list] of Object.entries(raw.at)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.at[aid] = [...new Set(list.filter(n => Number.isInteger(n) && n > 0))].sort((a, b) => a - b).slice(-AMGT_AT);
+  }
+  return out;
+};
+// 技を覚える条件を満たすか(st = 第①段階の6能力・me = 修行の入れ物)
+const amgtCanLearn = (t, st, me) => {
+  if (!t || !t.learn) return false;
+  if (t.learn.start) return true;
+  for (const [k, v] of Object.entries(t.learn.st || {})) if (!st || !(Number(st[k]) >= v)) return false;
+  for (const [id, v] of Object.entries(t.learn.need || {})) if (!me || !me.learn.includes(id) || !((me.m[id] || 0) >= v)) return false;
+  return true;
+};
+// 初めの値(一度だけ): 初めからの技と、いまの能力で条件を満たしている技(先に磨く技の要らないもの)を覚えている。熟練は育成 Lv から
+const amgtInitMon = (monster, lv, st) => {
+  const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
+  const learn = amgtTechsOf(monster).filter(t => t.learn && (t.learn.start || (!t.learn.need && amgtCanLearn(t, st, null)))).map(t => t.id);
+  const m = {}; for (const k of AMGT_SENSE_KEYS) m[k] = base; for (const id of learn) m[id] = base;
+  return { m, learn, day: { d: -1, n: 0 }, log: [], src: 'init_v1' };
+};
+const amgtInitBreeder = (aid) => {
+  const a = AMGT_BR_INIT[aid] || AMGT_BR_INIT.atsu; const ab = {}; const xp = {};
+  AMGT_BR_KEYS.forEach((k, i) => { ab[k] = a[i]; xp[k] = 0; });
+  return { ab, xp, src: 'init_v1' };
+};
+// ブリーダー能力に経験を足す(高いほど上がりにくい・苦手も少しずつ伸びる)。天井は 60 + 育成経験×0.4
+const amgtBrNeed = (v) => 4 + Math.floor(v / 8);
+const amgtBrCap = (br, k) => (k === 'exp' ? 100 : Math.min(100, 60 + Math.floor(br.ab.exp * 0.4)));
+const amgtBrGain = (br, kinds, onUp) => {
+  for (const k of [...kinds, 'exp']) {
+    br.xp[k] = (br.xp[k] || 0) + (k === 'exp' ? 0.5 : 1);
+    while (br.ab[k] < amgtBrCap(br, k) && br.xp[k] >= amgtBrNeed(br.ab[k])) {
+      br.xp[k] -= amgtBrNeed(br.ab[k]); const before = br.ab[k]; br.ab[k] += 1;
+      if (onUp && [40, 60, 80].some(n => before < n && br.ab[k] >= n)) onUp(k, br.ab[k]);
+    }
+  }
+  return br;
+};
+// 修行の系統を選ぶ(相談の答え → 性格の好み・熟練の低い所・覚えられそうな技)
+const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
+  if (askK && AMGT_KINDS[askK]) return askK;
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  const learned = techs.filter(t => me.learn.includes(t.id));
+  const lowOf = (k) => {
+    if (k === 'eva') return me.m.dist; if (k === 'tough') return me.m.guard; if (k === 'real') return me.m.swap;
+    const list = k === 'hit' ? learned : learned.filter(t => t.kind === k);
+    return list.length ? Math.min(...list.map(t => me.m[t.id] || 0)) : 100;
+  };
+  let best = ''; let sc = -1;
+  for (const k of AMGT_KIND_KEYS) {
+    const canNew = techs.some(t => !me.learn.includes(t.id) && t.learn && t.learn.by === k && amgtCanLearn(t, st, me)) ? 0.9 : 0;
+    const s = (T.like.includes(k) ? 0.7 : 0) + (1 - lowOf(k) / 100) * 1.5 + canNew + rnd() * 0.8;
+    if (s > sc) { sc = s; best = k; }
+  }
+  return best;
+};
+
+// ---------- 店(保存) ----------
+const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
+  set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
+  async load() {
+    if (this.loaded) return this.state;
+    let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null; } catch (_) {}
+    this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
+  } };
+const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
+// 保存を読み込む前は書かない(空の既定値で前の記録を上書きしない・ミハリ 11-11)
+const amgtSave = (next) => {
+  if (!AMGT_STORE.loaded) return false;
+  AMGT_STORE.set(next);
+  if (AMGT_STORE.dirty) return; AMGT_STORE.dirty = true;
+  Promise.resolve().then(() => { AMGT_STORE.dirty = false; try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_TRAIN_KEY, AMGT_STORE.state, false); } catch (_) {} });
+  return true;
+};
+// 印が真なら、起動してすぐ読み込みを始める(第①段階の育成の回より先にそろえる)
+if (typeof window !== 'undefined') setTimeout(() => { try { if (amgtOn()) AMGT_STORE.load(); } catch (_) {} }, 0);
+const amgtSeed = () => (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed) || '';
+const amgtKeyOf = (row) => `${row.slot}:${row.monster}`;
+// 状態を1つ写して、助手・マスモンの入れ物を(無ければ一度だけ)作る
+const amgtEnsure = (st, aid, row, e) => {
+  const key = amgtKeyOf(row);
+  const mons = { ...(st.mons[aid] || {}) };
+  const me0 = mons[key] || amgtInitMon(row.monster, e && e.lv, e && e.st);
+  const me = { ...me0, m: { ...me0.m }, learn: [...me0.learn], day: { ...me0.day }, log: [...me0.log] };
+  mons[key] = me;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = { ab: { ...br0.ab }, xp: { ...br0.xp }, src: 'init_v1' };
+  return { next: { ...st, mons: { ...st.mons, [aid]: mons }, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } }, me, br };
+};
+const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { s, t, x: String(x || '').slice(0, 60) }].slice(-AMGT_EV); };
+
+// ---------- 修行の場所: 助手の生活でモンヒロバトルにいた回を覚えておく ----------
+// 生活の1つの時間(life.abs = 日×6+区切り)が、第①段階のどの回に当たるか(始めと終わり)
+const amgtLifeSlotsToGrow = (abs) => {
+  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
+  if (!S || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 6); const s = S[abs - day * 6]; if (!s) return [];
+  const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
+  return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
+};
+// 生活の居場所が決まったときに呼ぶ(助手ライフの受け口 amgtOnLifeSlot・または画面を開いたときに今の生活を読む)
+const amgtNoteLife = (life) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !life || !Number.isInteger(life.abs)) return false;
+  const ids = [...(life.groups || []).filter(g => g && g.place === AMGT_PLACE).flatMap(g => g.ids || []), ...Object.entries(life.solo || {}).filter(([, s]) => s && s.place === AMGT_PLACE).map(([id]) => id)].filter(amgtOkAid);
+  if (!ids.length) return false;
+  const slots = amgtLifeSlotsToGrow(life.abs); if (!slots.length) return false;
+  const st = AMGT_STORE.state; let changed = false; const at = { ...st.at };
+  for (const id of ids) {
+    const cur = at[id] || []; const add = slots.filter(n => !cur.includes(n));
+    if (add.length) { at[id] = [...cur, ...add].sort((a, b) => a - b).slice(-AMGT_AT); changed = true; }
+  }
+  if (changed) amgtSave({ ...st, at });
+  return changed;
+};
+const amgtOnLifeSlot = (life) => { try { return amgtNoteLife(life); } catch (_) { return false; } };
+const amgtWasAtPlace = (aid, slot, st = AMGT_STORE.state) => {
+  if (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) amgtNoteLife(ASSISTANT_LIFE_STORE.state.life);
+  return ((AMGT_STORE.state.at || st.at)[aid] || []).includes(slot);
+};
+
+// ---------- 第①段階(キズナ4)からの受け口。印が偽なら何もしない ----------
+// 1回分の行動を修行にするか。修行なら { a:'shugyo', k:系統 }、しないなら null。第①段階の rnd は引かない
+const amgtChoose = (aid, e, row, _rnd, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !row || !e || !Number.isInteger(slot)) return null;
+  if (e.fat >= AMGT_NUM.fatStop || e.str >= 50) return null;
+  if (!amgtWasAtPlace(aid, slot)) return null;
+  const st = AMGT_STORE.state;
+  const me = (st.mons[aid] || {})[amgtKeyOf(row)] || amgtInitMon(row.monster, e.lv, e.st);
+  const day = amgtSlotDay(slot);
+  if (me.day.d === day && me.day.n >= AMGT_NUM.perDay) return null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-pick|${amgtKeyOf(row)}|${slot}`);
+  const ask = st.ask[aid];
+  const askK = ask && ask.q === 'next' && ask.a && ask.slot === row.slot && Number.isInteger(ask.until) && ask.until >= slot ? ask.a : '';
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  if (!askK && rnd() >= T.p + AMGT_NUM.goAt) return null;
+  return { a: 'shugyo', k: amgtPickKind(aid, me, amgtTechsOf(row.monster), e.st, rnd, askK), asked: !!askK };
+};
+// 修行を当てる。add(k, lo, hi) は第①段階の伸び(1日の上限・適性・個体差・関わり込み)。failChance(extra) は第①段階の失敗の起きやすさ
+const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
+  const K = AMGT_KINDS[act.k];
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const { next, me, br } = amgtEnsure(AMGT_STORE.state, aid, row, e);
+  const techs = amgtTechsOf(row.monster);
+  const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
+  const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
+  const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const g = {};
+  const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
+  const up = (k, lo, hi) => {
+    const cur = me.m[k] || 0;
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
+  };
+  // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)
+  let learned = '';
+  if (!fail) {
+    const t = techs.find(x => !me.learn.includes(x.id) && x.learn && x.learn.by === act.k && amgtCanLearn(x, e.st, me));
+    if (t) { me.learn = [...me.learn, t.id]; me.m[t.id] = me.m[t.id] || 0; learned = t.id; amgtPushEv(next, aid, slot, 'learn', `${amgtKeyOf(row)}|${t.name}`); }
+  }
+  // 2) 熟練を磨く
+  const known = techs.filter(t => me.learn.includes(t.id));
+  const lowest = (list) => list.slice().sort((a, b) => (me.m[a.id] || 0) - (me.m[b.id] || 0) || a.id.localeCompare(b.id))[0];
+  let main = '';
+  if (act.k === 'eva') main = 'dist'; else if (act.k === 'tough') main = 'guard'; else if (act.k === 'real') main = 'swap';
+  else if (learned) main = learned;
+  else {
+    const pool = act.k === 'hit' ? known.slice().sort((a, b) => a.hit - b.hit).slice(0, 2) : known.filter(t => t.kind === act.k);
+    const t = lowest(pool.length ? pool : known); main = t ? t.id : 'swap';
+  }
+  up(main, AMGT_NUM.gain[0], AMGT_NUM.gain[1]);
+  if (act.k === 'real') for (const t of known) up(t.id, AMGT_NUM.realAll[0], AMGT_NUM.realAll[1]);
+  if (typeof add === 'function') add(K.stat, AMGT_NUM.stat[0], AMGT_NUM.stat[1]);
+  e.fat = amgtClamp(e.fat + AMGT_NUM.fat, 0, 100);
+  e.str = amgtClamp(e.str + Math.round((AMGT_NUM.str + (fail ? 5 : 0)) * amgtStressMult(aid)), 0, 100);
+  const day = amgtSlotDay(slot);
+  me.day = { d: day, n: (me.day.d === day ? me.day.n : 0) + 1 };
+  me.log = [...me.log, { s: slot, k: act.k, g, ...(learned ? { l: learned } : {}), ...(fail ? { f: 1 } : {}) }].slice(-AMGT_LOG);
+  amgtPushEv(next, aid, slot, 'shugyo', `${amgtKeyOf(row)}|${act.k}`);
+  amgtBrGain(br, AMGT_BR_XP.shugyo.concat(fail ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, slot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  e.shugyo = { k: act.k, g, ...(learned ? { l: learned } : {}), ...(fail ? { f: 1 } : {}) };
+  return e;
+};
+// 訓練・休養などのあと(修行以外)。ブリーダー能力に経験
+const amgtAfterAct = (aid, act, failed, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || act.a === 'shugyo' || !amgtOkAid(aid)) return;
+  const st = AMGT_STORE.state; const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = { ab: { ...br0.ab }, xp: { ...br0.xp }, src: 'init_v1' };
+  const next = { ...st, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } };
+  amgtBrGain(br, (AMGT_BR_XP[act.a] || []).concat(failed ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, Number.isInteger(slot) ? slot : 0, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+};
+const amgtBr = (aid) => (AMGT_STORE.state.br[aid] || amgtInitBreeder(aid)).ab;
+// 掛け算(印が偽なら全部 1)
+const amgtLeadMult = (aid) => (amgtOn() ? 1 + amgtBr(aid).lead / 100 * AMGT_BR_EFFECT.lead : 1);
+const amgtFailMult = (aid) => (amgtOn() ? 1 - amgtBr(aid).know / 100 * AMGT_BR_EFFECT.know : 1);
+const amgtStressMult = (aid) => (amgtOn() ? 1 - amgtBr(aid).trust / 100 * AMGT_BR_EFFECT.trust : 1);
+// 観察力: 休ませる疲労の目安を、ちょうどよい所(55)へ寄せる(観察力100で最大10寄る)
+const amgtRestAt = (aid, base) => {
+  if (!amgtOn() || !Number.isFinite(base)) return base;
+  const pull = Math.round(amgtBr(aid).obs / 100 * AMGT_BR_EFFECT.obs);
+  return base > 55 ? Math.max(55, base - pull) : Math.min(55, base + pull);
+};
+const amgtActName = (x) => (x && x.a === 'shugyo' && AMGT_KINDS[x.k] ? `${AMGT_PLACE_NAME}で${AMGT_KINDS[x.k].act}(${AMGT_KINDS[x.k].name})` : '');
+
+// ---------- 第③段階(タタカイ)へ渡すもの ----------
+const amgtEntryOf = (aid, t, st = AMGT_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgtKeyOf(t)] : null) || null;
+// 1体: { techs:[覚えた技の id], mastery:{ [技id]・guard・dist・swap: 0〜100 } }。入れ物が無ければ初めの値(初めからの技だけ)
+const amgtBattleOf = (aid, t, lv, st = AMGT_STORE.state) => {
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(t && t.monster, lv, null);
+  return { techs: [...me.learn], mastery: { ...me.m } };
+};
+// チームの戦術経験 = ブリーダーの戦術力×0.8 + 出るマスモンの間合い・交代の判断の平均×0.2
+const amgtTacticsOf = (aid, rows, st = AMGT_STORE.state) => {
+  const br = (st.br[aid] || amgtInitBreeder(aid)).ab;
+  const list = (Array.isArray(rows) ? rows : []).map(t => amgtEntryOf(aid, t, st)).filter(Boolean);
+  const avg = list.length ? list.reduce((a, me) => a + (me.m.dist + me.m.swap) / 2, 0) / list.length : 0;
+  return amgtClamp(Math.round(br.tac * 0.8 + avg * 0.2), 0, 100);
+};
+
+// ---------- 助手からの相談(1日1回まで) ----------
+// その日の相談を決める(同じ日・同じ種なら同じ相談)。rows=いまのマスモン・growOf=第①段階の入れ物を引く関数
+const amgtAskOf = (aid, rows, day, growOf, st = AMGT_STORE.state) => {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const done = st.ask[aid] && st.ask[aid].d === day ? st.ask[aid] : null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-ask|${day}`);
+  const t = rows[Math.floor(rnd() * rows.length)];
+  const g = typeof growOf === 'function' ? growOf(t) : null;
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(t.monster, g ? g.lv : t.lv, g ? g.st : null);
+  const techs = amgtTechsOf(t.monster);
+  const near = techs.find(x => !me.learn.includes(x.id) && x.learn && !x.learn.start && amgtCanLearn(x, g ? g.st : null, me));
+  let q = 'next';
+  if (g && g.fat >= 50) q = 'rest';
+  else if (near && rnd() < 0.6) q = 'learn';
+  const opts = q === 'rest' ? ['rest', 'more']
+    : q === 'learn' ? [near.learn.by, near.learn.by === 'real' ? 'hit' : 'real']
+      : AMGT_KIND_KEYS.map(k => [k, rnd()]).sort((a, b) => a[1] - b[1]).slice(0, 3).map(x => x[0]);
+  return { q, slot: t.slot, row: t, opts, tech: near ? near.name : '', answered: done ? done.a : '' };
+};
+// 相談に答える。修行の系統なら3日間(9回)その系統を優先・その修行は ×1.1。「休ませて」は第①段階の相談へ渡す
+const amgtAnswer = (aid, ask, choice, nowSlot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
+  const day = amgtSlotDay(nowSlot);
+  const st = AMGT_STORE.state;
+  if (st.ask[aid] && st.ask[aid].d === day && st.ask[aid].a) return false;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = { ab: { ...br0.ab }, xp: { ...br0.xp }, src: 'init_v1' };
+  const next = { ...st, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } };
+  const kind = AMGT_KINDS[choice] ? choice : '';
+  next.ask = { ...st.ask, [aid]: { d: day, q: kind ? 'next' : ask.q, slot: ask.slot, a: choice, ...(kind ? { until: nowSlot + 9 } : {}) } };
+  if (choice === 'rest' && !(typeof amgAdvise === 'function' && amgAdvise(aid, ask.slot, 'rest') !== false)) return false; // 休ませる相談が受けられなかったら、答えも残さない
+  amgtPushEv(next, aid, nowSlot, 'ask', `${ask.slot}|${choice}`);
+  amgtBrGain(br, AMGT_BR_XP.ask, (k, v) => amgtPushEv(next, aid, nowSlot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  return true;
+};
+
+// 部屋の「🐾 ◯◯のマスモン」の行に出す一言(助手ライフ担当ナカヨシ9が行に載せる)。印が偽・何も無いときは null
+//   いまモンヒロバトルにいる → 修行中/今日の相談にまだ答えていない → 相談/今日修行した → 回数
+const amgtRoomLine = (aid, now = Date.now()) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !amgtOkAid(aid)) return null;
+  const life = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state ? ASSISTANT_LIFE_STORE.state.life : null;
+  const here = life && typeof assistantLifeSlotAt === 'function' && life.abs === assistantLifeSlotAt(now).abs
+    && ((life.groups || []).some(g => g && g.place === AMGT_PLACE && (g.ids || []).includes(aid)) || ((life.solo || {})[aid] && life.solo[aid].place === AMGT_PLACE));
+  if (here) return `いま${AMGT_PLACE_NAME}で修行中`;
+  const st = AMGT_STORE.state; const day = amgtSlotDay(amgtSlotOf(now));
+  const ask = st.ask[aid];
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid) : [];
+  if (rows.length && !(ask && ask.d === day && ask.a)) return '修行の相談があるみたい';
+  const n = Object.values(st.mons[aid] || {}).reduce((a, me) => a + (me.day.d === day ? me.day.n : 0), 0);
+  return n ? `今日は${AMGT_PLACE_NAME}で${n}回修行した` : null;
+};
+
+// ---------- 画面(公開の印が真のときだけ出す。置き場所は助手ライフ担当ナカヨシ9の形に合わせる) ----------
+const AMGT_ASK_TEXT = Object.freeze({ // 仮の文(公開の前に社長の「この文で」をもらう)
+  next: (n) => `${n}、次はどの修行がいいかな?`,
+  rest: (n) => `${n}、ちょっと疲れてるみたい。休ませた方がいいかな?`,
+  learn: (n, tech) => `${n}、もうすぐ「${tech}」を覚えられそう! どの修行がいいと思う?`,
+});
+const AMGT_OPT_TEXT = Object.freeze({ rest: '休ませよう', more: 'もう少しがんばろう' });
+const AMGT_DIST = '零近中遠';
+const useAmgtState = () => {
+  const [st, setSt] = React.useState(AMGT_STORE.state);
+  React.useEffect(() => { AMGT_STORE.subs.add(setSt); if (!AMGT_STORE.loaded) AMGT_STORE.load(); return () => { AMGT_STORE.subs.delete(setSt); }; }, []);
+  return st;
+};
+const amgtEvText = (x, rowsByKey) => {
+  const [a, b, c] = String(x.x || '').split('|');
+  const nm = (k) => (rowsByKey[k] && rowsByKey[k].nick) || 'マスモン';
+  if (x.t === 'shugyo') return AMGT_KINDS[b] ? `${nm(a)}が${AMGT_PLACE_NAME}で${AMGT_KINDS[b].act}をした` : '';
+  if (x.t === 'rank') return `${nm(a)}の「${b}」が「${c}」になった`;
+  if (x.t === 'learn') return `${nm(a)}が「${b}」を覚えた!`;
+  if (x.t === 'breeder') return `ブリーダーの${(AMGT_BR.find(m => m[0] === a) || [])[1] || ''}が上がった`;
+  if (x.t === 'ask') return '相談に答えてもらった';
+  return '';
+};
+// ブリーダー能力の6つのゲージ(数字なし・段の名前だけ)
+function AmgtBreederBars({ who, st }) {
+  const ab = (st.br[who.id] || amgtInitBreeder(who.id)).ab;
+  return (
+    <div className="mhm-card" data-amgt-breeder>
+      <p className="text-[10px] font-black text-slate-400">{who.name}のブリーダーの腕</p>
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
+        {AMGT_BR.map(([k, label]) => (
+          <div key={k} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-200">
+            <span className="w-[52px] shrink-0 whitespace-nowrap">{label}</span>
+            <span className="mhm-bar"><i style={{ width: `${ab[k]}%`, background: 'linear-gradient(90deg,#34d399,#22d3ee)' }}/></span>
+            <b className="w-[52px] shrink-0 text-right text-[9.5px] text-emerald-200" data-amgt-br={k}>{amgtBrRankOf(ab[k])}</b>
+          </div>))}
+      </div>
+    </div>);
+}
+// くわしい画面の修行の札(技・熟練・相談・出来事)。e = 第①段階の入れ物
+function AmgtCard({ who, t, e }) {
+  const st = useAmgtState();
+  if (!amgtOn() || !who || !t) return null;
+  const me = amgtEntryOf(who.id, t, st) || amgtInitMon(t.monster, e && e.lv, e && e.st);
+  const nowSlot = amgtSlotOf();
+  const day = amgtSlotDay(nowSlot);
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, who.id) : [t];
+  const growOf = (r) => (typeof amgEntryOf === 'function' ? amgEntryOf(who.id, r) : null);
+  const ask = amgtAskOf(who.id, rows, day, growOf, st);
+  const rowsByKey = Object.fromEntries(rows.map(r => [amgtKeyOf(r), r]));
+  const evs = (st.ev[who.id] || []).filter(x => amgtSlotDay(x.s) === day).map(x => amgtEvText(x, rowsByKey)).filter(Boolean).slice(-6);
+  const techs = amgtTechsOf(t.monster);
+  return (
+    <div className="mt-2 space-y-2" data-amgt-card>
+      <div className="mhm-card">
+        <p className="text-[10px] font-black text-slate-400">⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)</p>
+        <div className="mt-1 grid grid-cols-1 gap-y-0.5">
+          {techs.map(x => {
+            const has = me.learn.includes(x.id);
+            return (
+              <div key={x.id} className={`flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
+                <span className={`w-[96px] shrink-0 truncate ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`}>{has ? x.name : '???'}</span>
+                <span className="w-[46px] shrink-0 whitespace-nowrap text-[9px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
+                <span className="mhm-bar"><i style={{ width: `${has ? me.m[x.id] || 0 : 0}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></span>
+                <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
+              </div>);
+          })}
+          {AMGT_SENSE.map(([k, label]) => (
+            <div key={k} className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
+              <span className="w-[148px] shrink-0 truncate">{label}</span>
+              <span className="mhm-bar"><i style={{ width: `${me.m[k] || 0}%`, background: 'linear-gradient(90deg,#a78bfa,#f472b6)' }}/></span>
+              <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
+            </div>))}
+        </div>
+      </div>
+      {ask && ask.slot === t.slot && (
+        <div className="mhm-card" data-amgt-ask={ask.q}>
+          <p className="text-[11px] font-bold text-pink-100">💬 {who.name}「{AMGT_ASK_TEXT[ask.q](t.nick || 'マスモン', ask.tech)}」</p>
+          {ask.answered
+            ? <p className="mt-1 text-[10.5px] font-bold text-sky-200" data-amgt-ask-done>あなたの答え: {AMGT_KINDS[ask.answered] ? AMGT_KINDS[ask.answered].name : AMGT_OPT_TEXT[ask.answered]}</p>
+            : <div className="mt-1 flex flex-wrap gap-1.5">
+              {ask.opts.map(o => <button key={o} type="button" className="mhl-btn px-3 text-[11px]" onClick={() => amgtAnswer(who.id, ask, o, nowSlot)} data-amgt-ask-opt={o}>{AMGT_KINDS[o] ? AMGT_KINDS[o].name : AMGT_OPT_TEXT[o]}</button>)}
+            </div>}
+        </div>)}
+      {evs.length > 0 && (
+        <div className="mhm-card" data-amgt-events>
+          <p className="text-[10px] font-black text-slate-400">今日の出来事</p>
+          {evs.map((s, i) => <p key={i} className="text-[10.5px] font-bold text-slate-100">・{s}</p>)}
+        </div>)}
+      <AmgtBreederBars who={who} st={st}/>
+    </div>);
+}
 
 // ---- part: 56-assistant-life-friend.jsx ----
 // ===== 助手ライフ: フレンドの家との行き来(2026-11-08 社長・助手部オトズレ) =====
@@ -92137,8 +93208,29 @@ function MonsterHeroGame() {
   const assistantLifeExitingRef = useRef(false);
   const gameStateNowRef = useRef('HOME');
   const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || (assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state));
-  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード・助手ライフ)
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
+  // ===== 裏クイックを、ゲームのどこにいても回す(2026-11-11 社長・docs/progress/quick-run-anywhere/PLAN.md) =====
+  // quickAnywhereRunRef … いまのランが「どこにいても裏で回してよいクイック∞周回」か。∞を立てたとき(startQuickRunFromRhythm・∞の切り替え・再開)に立て、
+  //   ランを捨てたとき(clearRunStage)に落とす。負けてもランが残るあいだは立てたまま
+  //   (負けた直後に予約済みの段階の切り替えが着地しても、HOME などからバトルの画面へ飛ばさないため)
+  const quickAnywhereRunRef = useRef(false);
+  const offscreenEffectRef = useRef(null); // 裏で回しているあいだに立った演出(下の effect)。表へ移っても出さない
+  const quickAnywhereSeQuietRef = useRef(false); // 裏のバトルの効果音を止めているか(ボタンの音を fgSe で鳴らすため)
+  // 進め続ける画面。ここに無い画面(M/B管理・神殿・トレーニング・デバッグ・これから足す画面)では「休む」=進めないだけで、出たら続きから。
+  //   モンヒロビート・MFバトルカードは今までどおりそれぞれの決まりで回す(演奏中の配り方を崩さない)
+  const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  // ほかのバトルの入口。開いたら裏クイックを締めて(そこまでの報酬を確定して)から入る(社長 B「ほかのバトルを始めたら締めて報酬を確定」)
+  const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT',
+    'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
+  // その画面が「裏クイックがランの画面の外で回っている」状態か(休む画面も含む。段階が進んでも画面をバトルへ飛ばさない)
+  const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current
+    && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
+  // 締めている途中(止める・ほかのバトルの入口)。このあいだの returnToHome はふつうどおりランを終わらせる
+  const quickAnywhereEndingRef = useRef(false);
+  // いま HOME へ戻る・画面を出るときに、ランを終わらせず回し続けるか(ランの画面の外にいて、締めている途中でないとき)
+  const quickAnywhereKeepsRun = () => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !quickAnywhereEndingRef.current
+    && !assistantLifeSettlingRef.current && !!runStageRef.current && !RUN_STAGE_SCREENS.includes(gameStateNowRef.current);
+  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード・助手ライフ・裏クイックの回っている画面)
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state) || isQuickAnywhereScreen(state);
   // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
   const runBackgroundAllowedRef = useRef(false);
   // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
@@ -92753,7 +93845,9 @@ function MonsterHeroGame() {
   const [bigShake, setBigShake] = useState(false);
   const triggerShake = useCallback((big=false) => {
     setScreenShake(false); setBigShake(false);
-    requestAnimationFrame(() => { setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
+    // ★裏で回しているあいだ(バトルの画面を見ていない)は揺らさない。揺れを立てたまま表の画面へ移ると、移った瞬間に1コマ揺れていた
+    //   (2026-11-11 社長「裏クイックがない所に戻ったときに、一瞬だけ画面揺れとか」)。描く側の !runBackgroundAllowed だけでは移る瞬間を止められない
+    requestAnimationFrame(() => { if (runBackgroundAllowedRef.current) return; setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
   }, []);
   // 波紋の一覧は TapRippleLayer だけが持つ(波紋が出たり消えたりするたびに、ここを丸ごと描き直さない)
   const rippleSpawnRef = useRef(null);
@@ -94019,9 +95113,10 @@ function MonsterHeroGame() {
       left -= cost;
       if (card.type === 'guard' || card.type === 'weak_guard') return;
       const b = boostsForCardDamage(run, card, false);
-      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale), b.combo, copy.srcSlot, false);
       const boost = localBoostFromCard(card);
-      if (boost) run = { oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      if (boost) run = { ...run, oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      run = { ...run, dist: attackDistanceAfterCard(card, run.dist) };
     });
     return total;
   };
@@ -94558,7 +95653,9 @@ function MonsterHeroGame() {
     // 裏の周回を回したまま閉じたら、締め終わるまで「裏で回してよい」のままにする(締めは下の effect)
     const fn = (st) => {
       const open = !!(st && st.open);
-      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      //   ★裏クイックをどこでも回すときは締めない(閉じても HOME で回り続ける。2026-11-11 社長)。「止める」の札で止めたときだけ締める
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)
+        && !(QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current)) assistantLifeExitingRef.current = true;
       assistantLifeOpenRef.current = open;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       setAssistantLifeOpenNow(open);
@@ -95564,6 +96661,10 @@ function MonsterHeroGame() {
   // デバッグ戦で選んでいるモードと難易度(画面に出す選択。極限は実際の difficulty が 'Normal' になるので別に持つ)
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
+  // タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料)。0 = いまのまま。デバッグ戦の中だけで効く(保存しない)
+  const [debugEnemyAiLevel, setDebugEnemyAiLevel] = useState(0);
+  const debugEnemyAiLevelRef = useRef(0);
+  useEffect(()=>{debugEnemyAiLevelRef.current=debugEnemyAiLevel;},[debugEnemyAiLevel]);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   // デバッグ戦で自分で選んだパーティー(編成の入れ物と同じ書き方: 'masu:<id>' か モンスターid)。空なら、いつもの編成のまま
   const [debugPartyIds, setDebugPartyIds] = useState([]);
@@ -97074,8 +98175,14 @@ function MonsterHeroGame() {
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   // 助手ライフを開いたまま裏で周回してよい状態か。クイックの∞周回だけ(モンビー・カードと同じ)
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
-  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフを開いている間はそのまま進める
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
+  // 裏クイックが、ランの画面の外(HOME・M/B管理など)で回っているか。休む画面も含む(段階が進んでも画面を切り替えない)
+  const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
+  // そのうち、進めてよい画面にいるか(QUICK_RUN_ANYWHERE_RUN_SCREENS)。休む画面では進めないだけで、出たら続きから
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen
+    && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフ・裏クイックの回っている画面ではそのまま進める。
+  //   ★「いまバトルの画面を見ていない」の1つの値。揺れ・暗幕・負けの全面・効果音などの「見せない」はこれで決める(画面ごとに条件を並べない)
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   // ★advanceRunStage は setTimeout や await の後から呼ばれる。
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
@@ -97085,6 +98192,9 @@ function MonsterHeroGame() {
   //   ここだけだと「画面を切り替えてから次の描画まで」のあいだ古い値が残り、
   //   モンビーから戻った直後に段階だけ進んで進行不能になる(2026-09-14)。
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  // 裏で回しているあいだに立った演出(effect)は、表の画面へ移ったあとも出さない(移った瞬間の1コマも。2026-11-11 社長「一瞬だけバトルの演出が起こる」)。
+  //   描くときに「裏で立ったものと同じか」で見るので、表へ移った最初の描画でも出ない。表で新しく立った演出はふつうに出る
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
   // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
@@ -97095,9 +98205,10 @@ function MonsterHeroGame() {
     if (!runBackgroundAllowedRef.current) setGameState(stage);
   };
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
-  const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
+  // 印を落としたら、画面を切り替えてよいかの控えもその場で入れ直す(次の描画を待たない。2026-09-14 の型)
+  const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -98510,7 +99621,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen || quickAnywhereScreenOpen;
     // ★次に鳴る曲も読んでおく。AUTO中の「直前の曲を続ける」で下のreturnへ入る場面でも
     //   読んでおきたいので、鳴らす処理より先に呼ぶ
     bgmPreloadKeys(gameState, wave).forEach((next) => Audio_.preloadBGM(next));
@@ -98541,7 +99652,10 @@ function MonsterHeroGame() {
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   // 助手ライフの上で裏の周回を回しているあいだも、バトルの音は鳴らさない(BGM は助手ライフの曲のまま。2026-11-08)
-  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeBackgroundRun) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
+  // ★助手ライフは「回しているあいだ(∞が入っている)」ではなく「ランが残っているあいだ」で見る。∞は負けた瞬間に切れるので、
+  //   負けた最後のターンの音(敵の必殺技など)が助手ライフの上でそのまま鳴っていた(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)
+  const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
+  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
@@ -98553,7 +99667,9 @@ function MonsterHeroGame() {
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
-  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen); }, [cardScreenOpen]);
+  // 裏クイックが HOME などで回っているあいだも同じ(裏のバトルの音だけ止める。ボタンの音は下の「全ボタンのタップ」が fgSe で鳴らす。2026-11-11)
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen]);
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
   // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
@@ -98932,7 +100048,8 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = (e) => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) Audio_.se.tap();
+      // 裏クイックが回っている画面では裏のバトルの効果音を止めているので、ボタンの音は止めない側(fgSe)で鳴らす
+      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -102996,7 +104113,8 @@ function MonsterHeroGame() {
     const toDebug = cardOrigin === 'debug';
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null); setCardOrigin('home');
-    if (runStageRef.current != null) {
+    // 裏クイックをどこでも回すときは、締めずにそのまま出る(出た先でも回り続ける。2026-11-11 社長)
+    if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
       cardExitingRunRef.current = true;
       try { if (cardQuickRunLive()) await handleGiveUp({ silent: true }); } catch (_) {}
@@ -104394,6 +105512,9 @@ function MonsterHeroGame() {
   };
 
   const returnToHome = () => {
+    // 裏クイックを HOME でも回すとき(2026-11-11 社長 A「HOME でも回す」)。ランの画面の外から HOME へ戻るだけなら、ランは終わらせない。
+    //   締めるとき(止める・ほかのバトルの入口)は quickAnywhereEndingRef を立ててから呼ぶので、ここは通らない
+    if (quickAnywhereKeepsRun()) { setGameState('HOME'); return; }
     stopAllAuto();
     // ★まず世代を進める。この行より先で中身を空にするので、
     //   いま進んでいるターンの演出はここで止まり、空になった状態を触らない
@@ -104806,6 +105927,8 @@ function MonsterHeroGame() {
   //   returnToHome を通らないぶん周回が宙ぶらりんのまま残る。
   // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
   const exitRhythmSongSelect = async () => {
+    // 裏クイックをどこでも回すときは、締めずに HOME へ(HOME でも回り続ける。負けて止まっていたら、HOME で数秒おいて始め直す。2026-11-11 社長)
+    if (quickAnywhereKeepsRun()) { setGameState('HOME'); return; }
     if (rhythmBackgroundRun) {
       if (rhythmExitingRunRef.current) return;
       rhythmExitingRunRef.current = true;
@@ -104867,6 +105990,132 @@ function MonsterHeroGame() {
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     });
   }, [assistantLifeOpenNow]);
+  // ===== 裏クイックを、ゲームのどこにいても回す(2026-11-11 社長・docs/progress/quick-run-anywhere/PLAN.md) =====
+  // 締める: 助手ライフの「止める」(settleAssistantLifeRun)と同じく、報酬を入れて(リザルトは見せない)から片付ける。見ている画面はそのまま。
+  //   使うのは、帯の「止める」と、ほかのバトルの入口を開いたとき(社長 B「ほかのバトルを始めたら締めて報酬を確定」)
+  // 帯の詳細の窓(押すと開く)
+  const [quickAnywhereDetail, setQuickAnywhereDetail] = useState(false);
+  useEffect(() => { if (!quickAnywhereScreenOpen) setQuickAnywhereDetail(false); }, [quickAnywhereScreenOpen]);
+  // どの画面からも見える小さな帯(左下)。画面の高さを取らない(fixed)。助手ライフ・モンヒロビート・カードの上では、それぞれの帯があるので出さない
+  const renderQuickAnywhereStrip = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const paused = !finished && !resting && !quickAnywhereBackgroundRun;
+    const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
+    const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
+    const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
+    // 帯は小さく(HOME の「モンヒロバトル」の左の空きに収まる幅)。WAVE・報酬・説明は押して開く詳細へ
+    const label = finished ? (quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止')
+      : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
+    const info = { wave, loops: quickRunProgress.loops, finished, catchingUp: false, reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+      canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing, canResume: finished && quickRunResumable };
+    const closeDetail = () => setQuickAnywhereDetail(false);
+    return (<>
+      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
+        className={`fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
+        style={{ left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))', bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))', minHeight: 30 }}>
+        {label}
+      </button>
+      {quickAnywhereDetail && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-start p-2" onClick={closeDetail} style={{ paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))', paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))' }}>
+          <div data-quick-anywhere-detail role="dialog" aria-label="裏クイックのようす" onClick={(e) => e.stopPropagation()}
+            className="w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60">
+            <div className="flex items-center justify-between gap-2">
+              <b className="text-[13px] font-black text-fuchsia-100">🔁 裏クイック{diffLabel ? `(${diffLabel})` : ''}</b>
+              <button type="button" onClick={closeDetail} className="min-h-[32px] rounded-full border border-white/25 px-2.5 text-[11px] font-black">閉じる</button>
+            </div>
+            <p className="mt-1.5 text-[12px] font-bold leading-snug">{finished ? info.reason : `WAVE ${wave}/10・${quickRunProgress.loops}周目`}</p>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-200">ここまで ダイヤ+{gold.toLocaleString()}・経験値+{xp.toLocaleString()}</p>
+            <p className="mt-1.5 text-[11px] leading-snug text-slate-300">{resting ? 'M/B管理・神殿などにいるあいだは休みます。出ると続きから進みます。' : 'ゲームのどこにいても、AUTO設定の編成でクイックの周回が裏で進みます。M/B管理・神殿にいるあいだは休み、ほかのバトルを始めると、それまでの報酬を受け取って終わります。'}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {finished
+                ? <RhythmQuickRunPill info={info} onRestart={() => { closeDetail(); return startQuickRunFromRhythm(); }} onResume={() => { closeDetail(); return resumeQuickRunFromRhythm(); }} widthClass="min-w-0 flex-1"/>
+                : <button type="button" data-quick-anywhere-watch onClick={() => { closeDetail(); returnToBackgroundRun(); }} className="min-h-[34px] flex-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-3 text-[12px] font-black text-white active:scale-[.97]">⚔ バトルを見る</button>}
+              {!finished && <button type="button" data-quick-anywhere-stop onClick={() => { closeDetail(); void settleQuickAnywhereRun(); }} className="min-h-[34px] rounded-full border border-white/30 bg-slate-800/90 px-3 text-[12px] font-black text-slate-100 active:scale-[.97]">⏹ 止める</button>}
+            </div>
+          </div>
+        </div>
+      )}
+    </>);
+  };
+  // 締めているあいだは画面の操作を受け付けない(下の幕)。報酬を待つあいだにバトルの入口から新しいバトルを始めると、
+  //   締め終わりの returnToHome がその新しいランまで片付けてしまうため(2026-11-11 ミハリ)
+  const [quickAnywhereSettling, setQuickAnywhereSettling] = useState(false);
+  const settleQuickAnywhereRun = async () => {
+    if (quickAnywhereEndingRef.current || !runStageRef.current) return;
+    quickAnywhereEndingRef.current = true;
+    setQuickAnywhereSettling(true);
+    try {
+      const running = isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({ silent: true });
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });
+      }
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      quickAnywhereEndingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setQuickAnywhereSettling(false);
+    }
+  };
+  // ほかのバトルの入口を開いたら締める(その周までの報酬を確定)。「動いているバトルは常に1つ」(QUICK_RHYTHM_LINK.md §13)の作りのまま
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
+    if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    void settleQuickAnywhereRun();
+  }, [gameState]);
+  // 自動で始める(条件はモンヒロビート・助手ライフの自動開始と同じ: AUTO設定のクイックがそろっていて、自動開始が入、その難易度をクリア済み)。
+  //   始めるのは「ゲームを開いたとき」と「ほかのバトル(入口を含む)から、回す画面へ戻ってきたとき」だけ。
+  //   帯の「止める」で止めたあとは、回す画面を行き来しても始め直さない(次にゲームを開くか、ほかのバトルから戻ったら、また始まる)
+  const quickAnywhereTryStart = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!repeatTemplateFromAutoSettings()) return false;
+    return startQuickRunFromRhythm();
+  };
+  const quickAnywhereTryStartRef = useRef(null);
+  quickAnywhereTryStartRef.current = quickAnywhereTryStart;
+  const quickAnywhereBootTriedRef = useRef(false);
+  const quickAnywherePrevScreenRef = useRef('HOME');
+  useEffect(() => {
+    const prev = quickAnywherePrevScreenRef.current;
+    quickAnywherePrevScreenRef.current = gameState;
+    if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    const boot = !quickAnywhereBootTriedRef.current;
+    const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
+    if (!boot && !fromBattle) return undefined;
+    quickAnywhereBootTriedRef.current = true;
+    // 起動直後は、読み込んだ記録・マスモン・AUTO設定が画面へ行き渡るのを少し待つ(待つあいだに画面を移っても、回す画面にいれば始める)
+    const timer = setTimeout(() => { if (quickAnywhereTryStartRef.current) quickAnywhereTryStartRef.current(); }, boot ? 1500 : 300);
+    return () => clearTimeout(timer);
+  }, [gameState, bootPhase]);
+  // 負けたら数秒おいて1周目から始め直す(モンヒロビート・助手ライフと同じ。回す画面にいて、自動開始が入のときだけ)
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryAnywhere = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);   // 目印を「どこでも回す」の始め直しとして分ける(SCREEN_EFFECTS_MAP)
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   // 助手ライフへ渡す、裏の周回のようす(cardQuickRunView と同じ作り)。周回をしていなくて、始められもしないときは null
   //   canStart … AUTO設定のクイック周回がそろっていて、勝負のついていない挑戦が無いとき(札の「始める」を出す)。
   //   開いたら自動で始めるのは、下の「助手ライフを開いたら自動で∞周回を始める」(AUTO設定の自動開始スイッチが ON のとき)
@@ -104891,7 +106140,7 @@ function MonsterHeroGame() {
     const detailRun = view.info ? view : null;
     return (<>
       {lifeQuickDetail && <CardQuickRunDetail quickRun={detailRun} autoReady={autoQuickRunConfigured(autoSettings)} autoDifficulty={autoDifficulty} todayLoops={null} onClose={() => setLifeQuickDetail(false)}
-        note="助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"/>}
+        note={QUICK_RUN_ANYWHERE_RELEASE?"AUTO設定の編成でクイックの周回が裏で進みます。助手ライフを閉じても、HOMEなどで回り続けます。「止める」を押すと、それまでの報酬を受け取って周回を終えます。":"助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"}/>}
       <div data-life-quick-run={view.live ? 'live' : 'stopped'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
         {lifeLoseNote && !view.live
           ? <span data-life-quick-run-lose={lifeLoseNote} role="status" className="min-h-[32px] min-w-0 flex-1 truncate rounded-full border border-rose-300/50 bg-rose-950/80 px-2.5 text-[11px] font-black leading-[30px] text-rose-100">😢 {lifeLoseNote === 'retry' ? '負けちゃった…始め直すよ' : '負けちゃった…'}</span>
@@ -104945,8 +106194,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const scripted = battleScenarioIntent(scenario, battleScenarioIntentIndexRef.current, ent, currentDist);
       if (scripted) { battleScenarioIntentIndexRef.current += 1; return scripted; }
     }
+    // 敵の作戦AI(試作): デバッグ戦で段を選んだときだけ tacticsAi が入ってくる(tacticsEnemyAiState)。ふだんは今までどおりのくじ
+    const ai = extraState && extraState.tacticsAi;
+    if (ai && ai.level > 0) return chooseTacticsEnemyActionAi(ent,currentDist,Math.random,{...enemyActionStateFrom(lastIntent), ...extraState},{...ai,lastType:lastIntent?.type||null});
     return chooseEnemyAction(ent,currentDist,Math.random,{...enemyActionStateFrom(lastIntent), ...(extraState||{})});
   }, []);
+  // 敵の作戦AI(試作)へ渡す「いまの盤面」。★デバッグ戦(debugBattleRef)のタクティクスで段を選んだときだけ中身を返す。
+  //   本番・ランキング対象の戦いでは必ず空(= chooseEnemyAction のまま)。狙い(ヘイト)はここでは変えない
+  const tacticsEnemyAiState = () => {
+    const level = debugEnemyAiLevelRef.current;
+    if (!debugBattleRef.current || !isTacticsMode(runMode) || !(level > 0)) return {};
+    const units = tacticsUnitsRef.current || [];
+    const alive = tacticsAliveSlots(units);
+    const us = alive.map(i => normalizeTacticsUnit(units[i])).filter(Boolean);
+    return {tacticsAi:{level,
+      pressure:tacticsEnemyPressure(units,[0,1,2,3].map(i=>distTotalBonus(i))),
+      aliveSlots:alive,
+      lowCount:us.filter(u=>u.hp<u.maxHp*0.4).length,
+      maxDef:Math.max(0,...us.map(u=>Number(u.def)||0))}};
+  };
 
   // 敵の行動を1つ繰り上げる。
   // 「移動の吹き出し」で先に見せた行動は enemyNextIntent に入っているので、
@@ -104967,7 +106233,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
+    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current,...tacticsEnemyAiState()});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
     stepTacticsHate(runMode); // ヘイト(試作): このターンのぶんを足してから狙う
@@ -105925,26 +107191,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
   // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
   // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
+  // ★dist … そのカードが攻撃を始めるときの敵の距離。距離撃(range_atk)を先に置くと、実処理(processTurn の attackDistance)は
+  //   あとのカードを「動かしたあとの距離」で計算する。予測もここで同じ距離を積んで getDmg へ渡す
+  //   (渡していなかったころは、距離撃のあとに置いたカードの予測が、動かす前の距離のままだった。2026-11-11 バトルの監査)
+  //   あつの挑発(stun_atsu)だけは、実処理が getDmg へ距離を渡していない(ターンの始めの距離のまま)ので、予測も動かす前の距離で出す
+  const previewAttackStartDist = (card, dist) => (card?.subType==='stun_atsu' ? enemyDist : dist);
   const previewLocalBoosts = (excludeIdx=null) => {
-    let oryo=0, dmgMod=0, combo=0;
+    let oryo=0, dmgMod=0, combo=0, dist=enemyDist;
     const counter=makeHalveCounter();
     const perCard={};
     selectedCards.forEach(idx=>{
       const card=hand[idx];
       const slotIdx=cardAssignments[idx]!=null?cardAssignments[idx]:null;
       const halved=counter.peek(card,slotIdx);
-      perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
+      perCard[idx]={...boostsForCardDamage({oryo,dmgMod,combo},card,halved), dist:previewAttackStartDist(card,dist)};
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
       if(idx===excludeIdx) return;
       if(!card) return;
       const effMul=cardEffectMultiplier(card,halved);
       const boost=localBoostFromCard(card);
       if(boost){ oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
+      dist=attackDistanceAfterCard(card,dist);
       counter.take(card,slotIdx);
     });
     const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
     const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
-    return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
+    return { perCard, final:{oryo,dmgMod,combo,dist}, forPending:{...boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved), dist:previewAttackStartDist(pendingCard,dist)} };
   };
   // 固有技のオリジナル強化の「〇〇特攻」を見るための、いまの戦いの様子。予測と実際のダメージ(どちらも getDmg)が同じ値を使う
   const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist=enemyDist) => {
@@ -106013,7 +107285,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       distanceBrokenDmg=applyUltimateDistanceBreak(turnPressedDmg,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg,specialRuleDifficulty,'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, wave, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]); // wave は適性(タクティクス)と段階の特殊ルールが読む
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -106032,7 +107304,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo,kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,false)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode, wave, turnCount]); // wave・turnCount は楔の上限(kusabiCapAt)が読む
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -107749,7 +109021,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   2発目以降だけ技ごとの動きが見つからず、更新前の通常モーションに戻る(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる」)
         const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
         for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
-        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
+        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=attackDistanceAfterCard(card,attackDistance); }
         // ★トリックスタート(ゴースト・スプーキー): 攻撃が当たったら、その技で払った消費ガッツの半分を回復する。
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
@@ -108195,7 +109467,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hand, slots:autoSlots, cardLimit, strategy:autoSettings.strategy,
       getCardGuts, cardNeedsMonster, slotMaxUses, ...tacticsAutoOptions,
     });
-    if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0
+    // ★見ている画面(gameState)ではなく、ランの段階(runStage)で見る。裏で回しているとき(HOME・モンヒロビートなど)は gameState が BATTLE にならず、
+    //   ガッツ切れで緊急回復できずに「出せるカードが無い」として周回が理由なしで止まっていた(2026-11-11 どこでも回すの確かめで見つけた)
+    if(lacksOnlyGuts&&autoBattleRef.current&&(gameState==='BATTLE'||runStage==='BATTLE')&&enemy&&enemy.hp>0&&hp>0
         &&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();
     return null;
   };
@@ -108231,6 +109505,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(!next)setEcoModeSafe('off');
     // モンビーで見せる進捗を数えはじめる(∞にしたときだけ。切ったときの印は周回を止める側で付ける)
     if(next)beginQuickRunProgress();
+    if(next)quickAnywhereRunRef.current=QUICK_RUN_ANYWHERE_RELEASE; // ∞にしたクイックは、ほかの画面へ移っても裏で回る(2026-11-11)
   };
   // モンビーから∞周回を始める(docs/spec/QUICK_RHYTHM_LINK.md PR6)。
   // 編成は repeatTemplateForNewRun() ＝「1周目に自分で組んだ編成」→ 無ければAUTO設定の事前設定。
@@ -108273,8 +109548,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);
+    // ★ランを作る前に「どこでも回す周回」の印を立てる。作る途中の段階の切り替えで、HOME などからバトルの画面へ飛ばさないため
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     const result = startRunFromRepeatTemplate(template); // 中で stopAutoBattle を通る
-    if (!result.ok) { stopAllAuto(); clearQuickRunProgress(); return false; }
+    if (!result.ok) { quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); stopAllAuto(); clearQuickRunProgress(); return false; }
     autoBattleRef.current = true;
     setAutoBattle(true);
     setAutoTurnCycle(n => n + 1);
@@ -108294,6 +109572,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (runResultFinishedRef.current) return false;      // 勝負がついている(続きが無い)
     if (!isQuickMode(runMode)) return false;
     if (!storageReadyForRun()) return false;             // 端末へ書けないなら続けない
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
     // 止まったときに「次周を始めている最中」の印が残っていることがある。
     // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
     autoRepeatStartingRef.current = false;
@@ -109007,7 +110286,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     tacticsRoarStacksRef.current=0;
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
+    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current,...tacticsEnemyAiState()});
     resetTacticsHate(runMode); // ヘイト(試作)は WAVE ごとに0から
     // AIコピーは WAVE の終わりで消える(2026-10-27 社長の答え)。★最初の狙いを決める前に消す
     //   (あとで消すと、新しい WAVE の1ターン目の予告が前の WAVE のコピーを狙ったまま出る・2026-10-28 本番の報告)
@@ -111555,11 +112834,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
-      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {/* 暗幕はランの画面を見ているときだけ。周回を締めて表の画面へ移った瞬間に、省エネを切るより先に1コマ暗くなっていた(2026-11-11 社長「一瞬だけ…」) */}{ultraEcoSession&&!runBackgroundAllowed&&gameState===runStage&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!runBackgroundAllowed&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* MFバトルカードの予告の小窓(HOME の「近日公開」の札から。84 の CardBattleTeaser) */}
         {gameState==='HOME'&&cardTeaserOpen&&<CardBattleTeaser onClose={()=>setCardTeaserOpen(false)}/>}
@@ -111831,7 +113110,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビート・助手ライフを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯や、助手ライフの周回の札から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">{QUICK_RUN_ANYWHERE_RELEASE?'ゲーム・モンヒロビート・助手ライフを開いたら自動で始める':'モンヒロビート・助手ライフを開いたら自動で始める'}</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯や、助手ライフの周回の札から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings data-auto-settings-section="breakthrough" className={`${SCREEN_PANEL_CLASS} space-y-3`}>
                 <div><h3 className="text-[13px] font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-400">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2">
@@ -113457,7 +114736,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }}
           modeSelect={gameState==='RHYTHM_MODE_SELECT'?{
             multi:RELEASE_FLAGS.rhythmMulti===true,
-            onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun, exiting:rhythmExitingRun,
+            // 裏クイックをどこでも回すときは、左上をふつうの「←」にする(出ても周回は続く。止めるのは左下の帯。2026-11-11)
+            onExit:exitRhythmSongSelect, backgroundRun:rhythmBackgroundRun&&!QUICK_RUN_ANYWHERE_RELEASE, exiting:rhythmExitingRun,
             onSolo:()=>setGameState('RHYTHM_DEMO_HOME'),
             onHelp:()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');},
             onMonsters:()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');},
@@ -113758,6 +115038,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section data-debug-battle-difficulties><div className="text-[10px] text-slate-500 font-black mb-2">2. 難易度</div><div className="grid grid-cols-3 gap-2">{debugBattleDifficultyIds(debugBattleModeId).map(key=>{const setting=debugBattleDifficultySetting(key);const selected=debugBattleDifficultyId===key;return <button key={key} type="button" data-debug-battle-difficulty={key} aria-pressed={selected} onClick={()=>selectDebugBattle(debugBattleModeId,key)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${selected?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle({bg:'#475569',text:'#cbd5e1',...setting},selected)}>{setting.label||key}</button>;})}</div></section>
               <section data-debug-battle-enemies><div className="text-[10px] text-slate-500 font-black mb-2">3. 敵<small className="ml-1 font-bold text-slate-600">（その敵が出てくるWAVEとして戦う）</small></div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(debugBattleModeId).map(({key,wave:debugWave,enemy:debugEnemy})=><button key={key} type="button" data-debug-battle-enemy={key} aria-pressed={debugEnemyKey===key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><small className="block text-[8px] opacity-70">WAVE {debugWave}</small>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">4. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              {isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode)&&<section data-debug-enemy-ai><div className="text-[10px] text-slate-500 font-black mb-2">4-2. 敵の作戦AI<small className="ml-1 font-bold text-slate-600">（試作・デバッグ戦だけ。本番の敵はいまのまま）</small></div><div className="grid grid-cols-2 gap-2">{TACTICS_ENEMY_AI_LEVELS.map(lv=><button key={lv.id} type="button" data-debug-enemy-ai-option={lv.id} aria-pressed={debugEnemyAiLevel===lv.id} onClick={()=>setDebugEnemyAiLevel(lv.id)} className={`min-h-[52px] px-3 py-1.5 rounded-xl text-left font-black ${debugEnemyAiLevel===lv.id?'bg-amber-800 border-2 border-amber-300 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="block text-[11px]">{lv.id}. {lv.label}</span><small className="block text-[8px] opacity-75 leading-tight">{lv.note}</small></button>)}</div></section>}
               <section data-debug-party>
                 <div className="text-[10px] text-slate-500 font-black mb-2">5. パーティー<small className="ml-1 font-bold text-slate-600">（選んだ順。1番目が勇者モン・4体まで）</small></div>
                 {(()=>{
@@ -113780,7 +115061,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })()}
               </section>
               {/* ★開始の関数をそのまま onClick へ渡すと、押したときのイベントが「極限か」の引数へ入ってしまう */}
-              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">6. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
+              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">6. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}{isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode)&&debugEnemyAiLevel>0?` / 敵AI ${debugEnemyAiLevel}`:''}</small></button>
             </div>
           </main>
         )}
@@ -117696,7 +118977,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       )}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
+      {hp<=0&&!debugBattle&&!runBackgroundAllowed&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -117705,7 +118986,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         />
       )}
 
-      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
+      {gaveUp&&!debugBattle&&!runBackgroundAllowed&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -117735,7 +119016,11 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         ?<RaidJackIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} enemyName={enemy?.name} title={battleModeInfo(runMode).short} tier={enemy?.raidJackPumpkin?1:(Number(String(enemy?.raidJackTier||'').slice(1))||1)} friendly={enemy?.raidJackPumpkin===true}/>
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
-      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {renderQuickAnywhereStrip()}
+      {quickAnywhereSettling && <div data-quick-anywhere-settling role="status" className="fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+        <span className="rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100">🔁 裏クイックの報酬を受け取っています…</span>
+      </div>}
+      {effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(<div data-battle-effect-overlay className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>

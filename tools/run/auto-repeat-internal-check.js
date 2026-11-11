@@ -57,7 +57,9 @@ for(const token of [
   "if(hp<=0)stopAllAuto('defeat');",
   "else if(gaveUp)stopAllAuto('retire');",
   "else if(gameState==='PICK_HERO')stopAllAuto('manual');",
-  'const returnToHome = () => {\n    stopAllAuto()',
+  // 2026-11-11: 裏クイックをどこでも回すとき、ランの画面の外から HOME へ戻るだけならランを終わらせない(その1行のあとで止める)
+  "const returnToHome = () => {\n    // 裏クイックを HOME でも回すとき",
+  "    if (quickAnywhereKeepsRun()) { setGameState('HOME'); return; }\n    stopAllAuto();",
   // あきらめるは理由つき(帯に「途中でやめた」と出す)。
   // ★引数は足せる(2026-09-13に silent を足した)ので、宣言を丸ごと固定で書かない。
   //   見たいのは「あきらめるが stopAllAuto('retire') を通ること」。
