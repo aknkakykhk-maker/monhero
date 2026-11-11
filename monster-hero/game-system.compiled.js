@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 000d650202fd97d0
+// source-sha256: ef06909622fa2403
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86,24 +86,87 @@ const MH_SCREEN_TRAIL = (() => {
     compact
   };
 })();
-(() => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+const MH_PAGE_OFFSET_GUARD = (() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return {
+    state: () => null,
+    check: () => {}
+  };
   const editing = () => {
     const el = document.activeElement;
     if (!el) return false;
     const tag = String(el.tagName || '').toUpperCase();
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
   };
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const state = () => {
+    const vv = window.visualViewport || null;
+    const se = document.scrollingElement || document.documentElement;
+    return {
+      sx: num(window.scrollX) || num(se && se.scrollLeft) || num(document.body && document.body.scrollLeft),
+      sy: num(window.scrollY) || num(se && se.scrollTop) || num(document.body && document.body.scrollTop),
+      ox: vv ? num(vv.offsetLeft) : 0,
+      oy: vv ? num(vv.offsetTop) : 0,
+      scale: vv && Number.isFinite(Number(vv.scale)) && Number(vv.scale) > 0 ? Number(vv.scale) : 1
+    };
+  };
+  const zoomed = st => Math.abs(st.scale - 1) > 0.01;
+  const moved = st => Math.abs(st.sx) >= 1 || Math.abs(st.sy) >= 1 || Math.abs(st.ox) >= 1 || Math.abs(st.oy) >= 1;
+  let lastTrailAt = 0,
+    zoomFixes = 0,
+    zoomFixAt = 0,
+    wasBig = false;
+  const remeasure = () => setTimeout(() => {
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (_) {}
+  }, 0);
+  const unzoom = () => {
+    const now = Date.now();
+    if (zoomFixes >= 3 || now - zoomFixAt < 3000) return;
+    const meta = document.querySelector('meta[name="viewport"]');
+    const content = meta && meta.getAttribute('content');
+    if (!content) return;
+    zoomFixes++;
+    zoomFixAt = now;
+    meta.setAttribute('content', content + ', minimum-scale=1.0');
+    setTimeout(() => {
+      try {
+        meta.setAttribute('content', content);
+      } catch (_) {}
+    }, 50);
+  };
   const reset = () => {
     if (editing()) return;
     try {
-      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
-      for (const el of [document.scrollingElement, document.documentElement, document.body]) {
-        if (el && (el.scrollTop || el.scrollLeft)) {
-          el.scrollTop = 0;
-          el.scrollLeft = 0;
+      const st = state();
+      const bad = moved(st),
+        big = zoomed(st);
+      if (big) wasBig = true;else {
+        zoomFixes = 0;
+        if (wasBig) {
+          wasBig = false;
+          remeasure();
         }
       }
+      if (!bad && !big) return;
+      const now = Date.now();
+      if (now - lastTrailAt > 5000 && typeof MH_SCREEN_TRAIL !== 'undefined') {
+        lastTrailAt = now;
+        MH_SCREEN_TRAIL.push('vv', `s${Math.round(st.scale * 100) / 100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);
+      }
+      if (bad) {
+        window.scrollTo(0, 0);
+        for (const el of [document.scrollingElement, document.documentElement, document.body]) {
+          if (el && (el.scrollTop || el.scrollLeft)) {
+            el.scrollTop = 0;
+            el.scrollLeft = 0;
+          }
+        }
+      }
+      if (big) unzoom();
     } catch (_) {}
   };
   let timers = [];
@@ -125,6 +188,25 @@ const MH_SCREEN_TRAIL = (() => {
   }, 60), true);
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(type => document.addEventListener(type, soon));
   document.addEventListener('webkitendfullscreen', soon, true);
+  window.addEventListener('load', soon, passive);
+  window.addEventListener('pageshow', soon, passive);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') soon();
+  });
+  soon();
+  document.addEventListener('click', reset, {
+    capture: true,
+    passive: true
+  });
+  ['gesturestart', 'gesturechange'].forEach(type => document.addEventListener(type, e => {
+    if (e.cancelable) e.preventDefault();
+  }, {
+    passive: false
+  }));
+  return {
+    state,
+    check: soon
+  };
 })();
 const _LI = {};
 const _ICON_PATHS = {
@@ -8897,6 +8979,7 @@ const Audio_ = (() => {
   const setBackgroundSeQuiet = on => {
     backgroundSeQuiet = !!on;
   };
+  const isBackgroundSeQuiet = () => backgroundSeQuiet;
   const fgSe = {
     trainingDice: async () => {
       if (!enabled) return;
@@ -9795,6 +9878,7 @@ const Audio_ = (() => {
     }
   };
   return {
+    isBackgroundSeQuiet,
     setVideoHold,
     setStoryEndFade,
     setStoryOpenFade,
@@ -13721,6 +13805,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RHYTHM_GRAND_OPEN_RELEASE = true;
 const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
+const QUICK_RUN_ANYWHERE_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
@@ -13741,6 +13826,7 @@ const RELEASE_FLAGS = {
   assistantLifeFriend: true,
   assistantMasmonTrain: false,
   assistantMasmonSuggest: true,
+  assistantMasmonGrow: true,
   assistantMasmonNamesApi: true,
   assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
@@ -21105,6 +21191,76 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
     ...a,
     probability: a.available && total > 0 ? a.weight / total : 0
   }));
+};
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([Object.freeze({
+  id: 0,
+  label: 'いまのまま',
+  note: '決まった重みのくじ(本番と同じ)'
+}), Object.freeze({
+  id: 1,
+  label: '間合いを読む',
+  note: '移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'
+}), Object.freeze({
+  id: 2,
+  label: '状況を読む',
+  note: '様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'
+}), Object.freeze({
+  id: 3,
+  label: '技をつなぐ',
+  note: '咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'
+})]);
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others = [0, 1, 2, 3].filter(d => d !== currentDist);
+  return others.reduce((a, b) => (pressure[b] || 0) < (pressure[a] || 0) ? b : a, others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state = {}, ai = {}) => {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(ai.level) || 0)));
+  const defs = Array.isArray(state.definitions) ? state.definitions : [];
+  if (level < 1 || state.charging || state.piercing || !ent) return defs;
+  const pressure = Array.isArray(ai.pressure) && ai.pressure.length === 4 ? ai.pressure.map(v => Math.max(0, Number(v) || 0)) : [0, 0, 0, 0];
+  const best = tacticsEnemyAiBestDist(currentDist, pressure);
+  const ratio = pressure[best] > 0 ? pressure[currentDist] / pressure[best] : 1;
+  const maxHp = Math.max(0, Number(ent.maxHp) || 0),
+    hpR = maxHp > 0 ? Math.max(0, Number(ent.hp) || 0) / maxHp : 1;
+  const alive = Array.isArray(ai.aliveSlots) ? ai.aliveSlots : [];
+  const top = Math.max(0, ...pressure);
+  return defs.map(def => {
+    let w = def.weight;
+    if (def.type === 'MOVE') w = ratio <= 1 ? 0 : ratio >= 1.15 ? w * 3 : w;
+    if (level >= 2) {
+      if (def.type === 'WAIT') w = 0;
+      if (def.type === 'REGEN' && hpR < 0.5) w *= 3;
+      if (def.type === 'ROAR') w = hpR < 0.35 ? 0 : hpR > 0.7 && !(Number(state.roarStacks) > 0) ? w * 2 : w;
+      if (def.variant === 'allout') w = alive.length <= 1 ? w * 0.3 : w * (alive.length / 2);
+      if (def.variant === 'sweep') w = alive.includes(currentDist) ? pressure[currentDist] >= top * 0.95 ? w * 2 : w : 0;
+    }
+    if (level >= 3) {
+      if (def.type === 'CHARGE' && ai.lastType === 'ROAR') w *= 4;
+      if (def.type === 'CHARGE' && (Number(ai.lowCount) || 0) >= 1) w *= 2;
+      if (def.type === 'PIERCE_CHARGE' && (Number(ai.maxDef) || 0) >= 300) w *= 2;
+    }
+    return w === def.weight ? def : {
+      ...def,
+      weight: w
+    };
+  });
+};
+const chooseTacticsEnemyActionAi = (ent, currentDist, random = Math.random, state = {}, ai = {}) => {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(ai.level) || 0)));
+  if (level < 1) return chooseEnemyAction(ent, currentDist, random, state);
+  const intent = chooseEnemyAction(ent, currentDist, random, {
+    ...state,
+    definitions: tacticsEnemyAiDefinitions(ent, currentDist, state, ai)
+  });
+  if (intent && intent.type === 'MOVE' && Array.isArray(ai.pressure)) {
+    const targetDist = tacticsEnemyAiBestDist(currentDist, ai.pressure);
+    return {
+      ...intent,
+      targetDist,
+      label: `移動: ${RANGE_LABELS[targetDist]}`
+    };
+  }
+  return intent;
 };
 const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'PIERCE_CHARGE' ? '貫通撃の構えをとっている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '攻撃力を上げている' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
 const enemyActionDisplayName = (ent, def) => {
@@ -46104,6 +46260,16 @@ const tacticsTargetName = (units, slotIndex) => {
   return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目のモンスター`;
 };
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
+const TACTICS_ENEMY_AI_DIST_MULT = Object.freeze([1.5, 1.3, 1.1, 0.9]);
+const tacticsEnemyPressure = (units, slotBonus = [0, 0, 0, 0]) => [0, 1, 2, 3].map(d => {
+  let sum = 0;
+  tacticsAliveSlots(units).forEach(i => {
+    const u = normalizeTacticsUnit(units[i]);
+    if (!u) return;
+    sum += Math.max(0, Number(u.atk) || 0) * TACTICS_ENEMY_AI_DIST_MULT[Math.abs(i - d)] * (1 + (Number((slotBonus || [])[i]) || 0));
+  });
+  return sum;
+});
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return {
@@ -62516,6 +62682,7 @@ const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
+const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;
 const GROWTH_FX_ITEM_MS = 3400;
@@ -62577,7 +62744,7 @@ const growthFxPush = ev => {
   } else {
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
-    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    const prev = mergeKey ? sheets.find(s => s.tier === 'level' && s.key === mergeKey) : null;
     if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), {
       tier,
       key: mergeKey
@@ -63025,9 +63192,11 @@ const ensureGrowthFxCss = () => {
 };
 const growthFxVisible = (screen, domHold = {}) => {
   const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
+  const sheet = all && !domHold.sheet;
   return {
     all,
-    sheet: all && !domHold.sheet
+    sheet,
+    level: sheet && !(domHold.quickAnywhere && screen !== 'HOME')
   };
 };
 const growthFxLevelOf = load => {
@@ -63301,7 +63470,10 @@ const GrowthFxLevelUp = ({
     if (!done) setDone(true);else onClose();
   };
   const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
-  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  const jumpFrom = growthFxNum(sheet.levelFrom),
+    jumpTo = growthFxNum(sheet.levelTo);
+  const jump = jumpFrom > 0 && jumpTo - jumpFrom >= 2;
+  const label = jump ? `${k.label}が Lv.${jumpFrom} から Lv.${jumpTo} に上がりました` : `${k.label}が Lv.${sheet.levelTo} に上がりました`;
   if (level === 'minimal') {
     return React.createElement("div", {
       className: "mh-gfx-sheet level-mini mh-gfx-minimal",
@@ -63318,7 +63490,7 @@ const GrowthFxLevelUp = ({
       className: "mh-gfx-band"
     }, React.createElement("span", {
       className: "big"
-    }, cardIconNode(k.icon, 20), " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+    }, cardIconNode(k.icon, 20), " ", k.label, " ", jump ? `Lv.${jumpFrom} → ` : '', "Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
   }
   const conf = level === 'full' ? Array.from({
     length: 24
@@ -63410,7 +63582,10 @@ const GrowthFxLevelUp = ({
     "aria-hidden": "true"
   })), React.createElement("div", {
     className: "ttl"
-  }, sheet.title || `${k.label} UP!`), sheet.sub && React.createElement("div", {
+  }, sheet.title || `${k.label} UP!`), jump && React.createElement("div", {
+    className: "sub",
+    "data-growth-fx-level-jump": true
+  }, React.createElement("b", null, "Lv.", jumpFrom, " → Lv.", jumpTo)), sheet.sub && React.createElement("div", {
     className: "sub"
   }, sheet.sub)), gains.length > 0 && React.createElement("ul", {
     className: "mh-gfx-gains",
@@ -63645,7 +63820,8 @@ const GrowthFxLayer = ({
   const [, setTick] = useState(0);
   const [domHold, setDomHold] = useState({
     all: false,
-    sheet: false
+    sheet: false,
+    quickAnywhere: false
   });
   useEffect(() => {
     ensureGrowthFxCss();
@@ -63659,9 +63835,11 @@ const GrowthFxLayer = ({
     const check = () => {
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
-      setDomHold(prev => prev.all === all && prev.sheet === sheet ? prev : {
+      const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : {
         all,
-        sheet
+        sheet,
+        quickAnywhere
       });
     };
     check();
@@ -63673,7 +63851,7 @@ const GrowthFxLayer = ({
   const holdAll = !vis.all;
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? sheets[0] : null;
+  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
@@ -103310,7 +103488,7 @@ const quickGuidePick = ctx => {
     case 'RHYTHM_DEMO_HOME':
       return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
     case 'RHYTHM_MODE_SELECT':
-      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+      return c.backgroundRun === true && !(typeof QUICK_RUN_ANYWHERE_RELEASE !== 'undefined' && QUICK_RUN_ANYWHERE_RELEASE) && not('g3c') ? 'g3c' : null;
     case 'HOME':
       return nudge ? 'nudgeHome' : null;
     default:
@@ -128153,7 +128331,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
 const assistantMasmonAskLine = (aid, replies, kind) => kind !== 'ng' && kind !== 'think' && replies && replies[kind] || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
-  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
+  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/命中を鍛えて/休ませて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
   hero: '勇者モンについて自由に書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？/プラントに変えてみたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)'
@@ -128262,6 +128440,11 @@ const assistantMasmonAskJudge = (aid, r, lv) => {
     const bad = (p.dislikeMon || []).some(x => x.monster === r.monster || x.lineage && x.lineage === lin || x.monster && lin && assistantMasmonLineage(x.monster) === lin);
     const good = (p.likeMon || []).some(x => x.monster === r.monster || x.lineage && x.lineage === lin) || (p.team || []).some(x => x.monster === r.monster);
     taste = bad ? 'hate' : good ? 'like' : 'mid';
+  } else if (r.kind === 'train') {
+    if (r.train === 'rest' || r.train === 'auto') taste = 'like';else {
+      const row = assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).find(x => x.slot === r.slot0);
+      taste = row && typeof AMG_POLICY !== 'undefined' && (AMG_POLICY[assistantMasmonGrowKind(row.grow)] || []).includes(r.train) ? 'like' : 'mid';
+    }
   } else if (r.kind === 'grow') {
     taste = (p.team || []).some(x => assistantMasmonGrowKind(x.grow) === r.grow) ? 'like' : 'mid';
   } else if (r.kind === 'hero') {
@@ -128364,6 +128547,17 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     return {
       changed: true,
       what: `名前を「${r.name}」に`
+    };
+  }
+  if (r.kind === 'train' && t && outcome === 'yes' && typeof amgAdvise === 'function') {
+    if (!amgAdvise(aid, t.slot, r.train)) return {
+      changed: false,
+      what: ''
+    };
+    const label = (AMG_STATS.find(x => x[0] === r.train) || [])[1];
+    return {
+      changed: true,
+      what: r.train === 'rest' ? '次の育成はお休みに' : r.train === 'auto' ? '育成をおまかせに' : `しばらく${label}を鍛える`
     };
   }
   if (r.kind === 'grow' && t && outcome === 'yes' && ASSISTANT_MASMON_GROW_KINDS.includes(r.grow)) {
@@ -128801,7 +128995,12 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
           from,
           text: body,
           history,
-          ctx: assistantMasmonAskCtx(aid, from, t, lv)
+          ctx: {
+            ...assistantMasmonAskCtx(aid, from, t, lv),
+            ...(t && typeof amgOn === 'function' && amgOn() ? {
+              train: true
+            } : {})
+          }
         })
       });
       res = r.ok ? await r.json() : null;
@@ -128816,7 +129015,7 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
       };
     }
     const r = res.result;
-    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : [])];
+    const fits = ['welcome', 'hero', 'deck', 'nameStyle', 'nameStyleOff', 'colorStyle', 'colorStyleOff', ...(t ? ['name', 'color', 'grow', 'swap'] : []), ...(t && typeof amgOn === 'function' && amgOn() ? ['train'] : [])];
     if (r.kind === 'none' && r.blocked === 'name') {
       const ng = assistantMasmonAskLine(aid, r.replies, 'ng');
       record('no', '', false, ng);
@@ -128835,7 +129034,10 @@ const assistantMasmonAsk = async (aid, from, text, t = null) => {
         note: ''
       };
     }
-    const outcome = assistantMasmonAskJudge(aid, r, lv);
+    const outcome = assistantMasmonAskJudge(aid, t ? {
+      ...r,
+      slot0: t.slot
+    } : r, lv);
     const done = assistantMasmonAskApply(aid, r, outcome, t);
     const res2 = outcome === 'no' ? 'no' : done.changed ? outcome : 'some';
     const line = assistantMasmonAskLine(aid, r.replies, outcome === 'no' ? 'no' : done.changed ? outcome === 'yes' ? 'yes' : 'some' : 'think');
@@ -129784,8 +129986,11 @@ function AssistantMasmonDots({
 function AssistantMasmonRow({
   t,
   land = false,
-  onOpen = null
+  onOpen = null,
+  aid = '',
+  amg = null
 }) {
+  const ge = aid && typeof amgOn === 'function' && amgOn() ? amgEntryOf(aid, t, amg || AMG_STORE.state) : null;
   const m = assistantMasmonMon(t.monster);
   const st = assistantMasmonStats(t);
   if (!m || !st) return null;
@@ -129823,7 +130028,13 @@ function AssistantMasmonRow({
     t: t
   })), React.createElement("p", {
     className: "text-[11px] font-black leading-tight text-amber-200"
-  }, "📈 ", t.grow), React.createElement("div", {
+  }, "📈 ", t.grow), ge ? React.createElement("div", {
+    className: "mt-0.5"
+  }, React.createElement(AmgStatBars, {
+    e: ge,
+    small: true,
+    cols: land ? 1 : 2
+  })) : React.createElement("div", {
     className: `mt-0.5 grid gap-x-3 gap-y-0.5 ${land ? 'grid-cols-1' : 'grid-cols-2'}`
   }, ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => React.createElement("div", {
     key: k,
@@ -129844,6 +130055,10 @@ function AssistantMasmonSheet({
   onClose,
   bondLv = null
 }) {
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  React.useEffect(() => {
+    if (typeof amgTick === 'function') void amgTick(id);
+  }, [id]);
   const [tab, setTab] = React.useState('mons');
   const [detail, setDetail] = React.useState(null);
   const save = useAssistantMasmonSave();
@@ -129920,7 +130135,9 @@ function AssistantMasmonSheet({
       key: t.monster,
       t: t,
       land: land,
-      onOpen: setDetail
+      onOpen: setDetail,
+      aid: id,
+      amg: amgSt
     })), waiting.map(t => React.createElement(AssistantMasmonWaitCard, {
       key: t.monster,
       t: t,
@@ -130356,6 +130573,8 @@ function AssistantMasmonDetail({
 }) {
   const m = assistantMasmonMon(t.monster),
     st = assistantMasmonStats(t);
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  const ge = typeof amgOn === 'function' && amgOn() ? amgEntryOf(who.id, t, amgSt || AMG_STORE.state) : null;
   if (!m || !st) return null;
   const n = assistantMasmonRegions(t.monster);
   const cols = (t.dye && t.dye.colors || []).slice(0, n || 5);
@@ -130367,7 +130586,13 @@ function AssistantMasmonDetail({
     t: t,
     size: land ? 190 : 210
   });
-  const info = React.createElement(React.Fragment, null, React.createElement("div", {
+  const info = React.createElement(React.Fragment, null, ge ? React.createElement(AmgGrowCard, {
+    who: who,
+    t: t,
+    e: ge,
+    kindText: ASSISTANT_MASMON_GROW_TEXT[kind] || '',
+    growMine: t.growMine
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mhm-card",
     "data-assistant-masmon-detail-stats": true
   }, React.createElement("p", {
@@ -130392,7 +130617,7 @@ function AssistantMasmonDetail({
     "data-assistant-masmon-grow-mine": true
   }, "🌱 育て方: ", t.growMine.kind, "(", t.growMine.day ? `${t.growMine.day.slice(5).replace('-', '/')} ` : '', "あなたの提案)"), ASSISTANT_MASMON_GROW_TEXT[kind] && React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-300"
-  }, ASSISTANT_MASMON_GROW_TEXT[kind])), React.createElement("div", {
+  }, ASSISTANT_MASMON_GROW_TEXT[kind]))), React.createElement("div", {
     className: "mhm-card mt-2",
     "data-assistant-masmon-detail-skills": true
   }, React.createElement("p", {
@@ -130963,6 +131188,936 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
+const ASSISTANT_MASMON_GROW_KEY = 'mh_assistant_masmon_grow_v1';
+const AMG_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
+const AMG_KEYS = AMG_STATS.map(x => x[0]);
+const AMG_MAX = 999;
+const AMG_APT = Object.freeze({
+  Mocchi: 'CCCBBB',
+  Suezo: 'DCABDD',
+  Golem: 'CACEEA',
+  Tiger: 'DDBABE',
+  Ham: 'CAECAE',
+  Pixie: 'EDABBE',
+  Mia: 'DCABBE',
+  Pandora: 'DBAABE',
+  Monol: 'DCCDEA',
+  Oboro: 'BECCDD',
+  Plant: 'AECCDE',
+  Zan: 'EBEAAE',
+  Eiki: 'DADBBE',
+  KenshiMocchi: 'DAEACE',
+  Mitarashi: 'CBBBCB',
+  Ark: 'CCCDCB',
+  Iblis: 'DCCDCC',
+  Snegurochka: 'CEBABD',
+  Undine: 'CEBABD',
+  Yaobikuni: 'CEBABD',
+  Yggdrasil: 'AECDEA',
+  MelWhip: 'ADCCEA',
+  Melody: 'AECBEA',
+  Kuromy: 'BACBDB',
+  Ghost: 'EEBBBE',
+  Spooky: 'EEBBBE',
+  Illumine: 'EEBCAE',
+  Dreamy: 'DEBCAD',
+  Kyubi: 'CCAACD',
+  Orihime: 'CDAACC'
+});
+const AMG_INIT = Object.freeze({
+  Mocchi: [110, 100, 120, 140, 150, 130],
+  Suezo: [80, 120, 170, 130, 90, 100],
+  Golem: [100, 220, 110, 70, 60, 160],
+  Tiger: [80, 90, 130, 160, 140, 70],
+  Ham: [50, 130, 70, 100, 140, 40],
+  Pixie: [50, 80, 170, 150, 140, 60],
+  Mia: [94, 104, 204, 124, 94, 94],
+  Pandora: [85, 135, 224, 150, 94, 50],
+  Monol: [110, 130, 140, 100, 10, 220],
+  Oboro: [140, 50, 120, 110, 100, 80],
+  Plant: [160, 40, 120, 110, 100, 70],
+  Zan: [60, 135, 60, 160, 160, 60],
+  Eiki: [85, 170, 85, 140, 135, 55],
+  KenshiMocchi: [85, 170, 60, 170, 110, 55],
+  Mitarashi: [100, 110, 140, 150, 120, 160],
+  Ark: [110, 110, 110, 85, 110, 135],
+  Iblis: [85, 110, 110, 85, 110, 110],
+  Snegurochka: [50, 10, 150, 110, 100, 60],
+  Undine: [50, 10, 150, 110, 100, 60],
+  Yaobikuni: [50, 10, 150, 110, 100, 60],
+  Yggdrasil: [160, 60, 110, 85, 60, 160],
+  MelWhip: [160, 85, 110, 110, 60, 160],
+  Melody: [160, 60, 110, 135, 60, 160],
+  Kuromy: [135, 160, 110, 135, 85, 135],
+  Ghost: [100, 90, 120, 140, 150, 80],
+  Spooky: [100, 90, 120, 140, 150, 80],
+  Illumine: [60, 60, 135, 110, 160, 60],
+  Dreamy: [85, 60, 135, 110, 160, 85],
+  Kyubi: [110, 110, 160, 160, 110, 85],
+  Orihime: [110, 85, 160, 160, 110, 110]
+});
+const AMG_APT_MULT = Object.freeze({
+  A: 1.3,
+  B: 1.15,
+  C: 1,
+  D: 0.85,
+  E: 0.7
+});
+const amgAptOf = monster => {
+  const s = AMG_APT[monster] || 'CCCCCC';
+  const o = {};
+  AMG_KEYS.forEach((k, i) => {
+    o[k] = AMG_APT_MULT[s[i]] ? s[i] : 'C';
+  });
+  return o;
+};
+const AMG_LIGHT = Object.freeze({
+  life: '走り込み',
+  pow: '腕立て',
+  wise: '勉強',
+  hit: '的当て',
+  eva: 'ステップ',
+  tough: '受け身'
+});
+const AMG_HEAVY = Object.freeze({
+  life: '長距離走',
+  pow: '重量上げ',
+  wise: '高度研究',
+  hit: '高速射撃',
+  eva: '障害物回避',
+  tough: '耐久特訓'
+});
+const AMG_SPECIAL = Object.freeze({
+  real: '実戦訓練',
+  joint: '合同訓練',
+  focus: '集中訓練',
+  weak: '弱点克服'
+});
+const AMG_SUB = Object.freeze({
+  life: 'tough',
+  pow: 'life',
+  wise: 'hit',
+  hit: 'eva',
+  eva: 'hit',
+  tough: 'life'
+});
+const AMG_POLICY = Object.freeze({
+  '攻撃型': ['pow', 'hit'],
+  '防御型': ['tough', 'eva'],
+  'ライフ型': ['life'],
+  'ガッツ型': ['wise'],
+  'すばやさ型': ['eva', 'hit']
+});
+const AMG_TRAIT = Object.freeze({
+  mua: {
+    name: '積極型',
+    heavy: 0.6,
+    special: 0.15,
+    rest: 65,
+    like: ['pow']
+  },
+  kiki: {
+    name: '分析型',
+    heavy: 0.4,
+    special: 0.15,
+    rest: 60,
+    like: []
+  },
+  momosuke: {
+    name: '安定型',
+    heavy: 0.25,
+    special: 0.1,
+    rest: 45,
+    like: ['life']
+  },
+  dra: {
+    name: '大胆型',
+    heavy: 0.55,
+    special: 0.25,
+    rest: 70,
+    like: ['pow']
+  },
+  atsu: {
+    name: 'バランス型',
+    heavy: 0.4,
+    special: 0.15,
+    rest: 60,
+    like: []
+  },
+  kyuko: {
+    name: '研究型',
+    heavy: 0.35,
+    special: 0.2,
+    rest: 55,
+    like: ['wise']
+  },
+  sorashido: {
+    name: '柔軟型',
+    heavy: 0.4,
+    special: 0.3,
+    rest: 60,
+    like: []
+  },
+  erubin: {
+    name: '防御型',
+    heavy: 0.35,
+    special: 0.15,
+    rest: 55,
+    like: ['tough', 'eva']
+  }
+});
+const AMG_DAY_CAP = 15;
+const AMG_CARE = Object.freeze({
+  viewCap: 20,
+  viewMult: 1.1,
+  pickMult: 1.3,
+  pickFail: 0.5,
+  picksPerDay: 3,
+  askMult: 1.1,
+  ranchMult: 1.2
+});
+const AMG_LV_MAX = 99;
+const amgLvNeed = lv => 10 + lv;
+const AMG_XP = Object.freeze({
+  light: 1,
+  heavy: 2,
+  real: 3,
+  joint: 2,
+  focus: 2,
+  weak: 2,
+  rest: 0,
+  play: 0
+});
+const AMG_CATCH_UP = 6;
+const AMG_LOG = 21;
+const AMG_PERIOD_NAME = Object.freeze(['朝', '昼', '夜']);
+const amgSlotOf = (now = Date.now()) => {
+  const t = Number(now) + 9 * 3600000 - 4 * 3600000;
+  const day = Math.floor(t / 86400000);
+  const h = (t - day * 86400000) / 3600000;
+  return day * 3 + (h < 8 ? 0 : h < 14 ? 1 : 2);
+};
+const amgSlotDay = slot => Math.floor(slot / 3);
+const amgClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const amgNum = (v, d, lo, hi) => Number.isFinite(Number(v)) ? amgClamp(Math.round(Number(v)), lo, hi) : d;
+const amgMonKey = (slot, monster) => `${slot}:${monster}`;
+const normalizeAssistantMasmonGrow = raw => {
+  const out = {
+    v: 1,
+    mons: {},
+    done: {},
+    focus: {},
+    rest: {},
+    care: {},
+    plan: {},
+    boost: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const okAid = aid => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+  if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
+    if (!okAid(aid) || !ms || typeof ms !== 'object') continue;
+    const one = {};
+    for (const [key, e] of Object.entries(ms).slice(-64)) {
+      if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.st || typeof e.st !== 'object') continue;
+      const st = {};
+      for (const k of AMG_KEYS) st[k] = amgNum(e.st[k], 0, 0, AMG_MAX);
+      const ind = {};
+      for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
+      const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && typeof x.a === 'string').slice(-AMG_LOG).map(x => ({
+        s: x.s,
+        a: x.a.slice(0, 12),
+        k: AMG_KEYS.includes(x.k) ? x.k : '',
+        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])),
+        ...(x.f ? {
+          f: 1
+        } : {}),
+        ...(x.p ? {
+          p: 1
+        } : {}),
+        ...(x.r ? {
+          r: 1
+        } : {})
+      }));
+      one[key] = {
+        st,
+        fat: amgNum(e.fat, 0, 0, 100),
+        str: amgNum(e.str, 0, 0, 100),
+        ind,
+        log,
+        src: 'init_v1',
+        dg: {
+          d: amgNum(e.dg && e.dg.d, 0, 0, 1e7),
+          n: amgNum(e.dg && e.dg.n, 0, 0, 999)
+        },
+        lv: amgNum(e.lv, 1, 1, AMG_LV_MAX),
+        xp: amgNum(e.xp, 0, 0, 9999)
+      };
+    }
+    out.mons[aid] = one;
+  }
+  if (raw.done && typeof raw.done === 'object') for (const [aid, s] of Object.entries(raw.done)) if (okAid(aid) && Number.isInteger(s) && s > 0) out.done[aid] = s;
+  if (raw.focus && typeof raw.focus === 'object') for (const [aid, f] of Object.entries(raw.focus)) {
+    if (!okAid(aid) || !f || typeof f !== 'object') continue;
+    const o = {};
+    for (const [sl, x] of Object.entries(f)) {
+      const n = Number(sl);
+      if (Number.isInteger(n) && n >= 1 && n <= 8 && x && AMG_KEYS.includes(x.k) && Number.isInteger(x.until)) o[n] = {
+        k: x.k,
+        until: x.until
+      };
+    }
+    out.focus[aid] = o;
+  }
+  if (raw.rest && typeof raw.rest === 'object') for (const [aid, f] of Object.entries(raw.rest)) {
+    if (!okAid(aid) || !f || typeof f !== 'object') continue;
+    const o = {};
+    for (const [sl, x] of Object.entries(f)) {
+      const n = Number(sl);
+      if (Number.isInteger(n) && n >= 1 && n <= 8 && x === true) o[n] = true;
+    }
+    out.rest[aid] = o;
+  }
+  if (raw.care && typeof raw.care === 'object') for (const [aid, c] of Object.entries(raw.care)) {
+    if (!okAid(aid) || !c || typeof c !== 'object') continue;
+    const view = {};
+    for (const [sl, x] of Object.entries(c.view && typeof c.view === 'object' ? c.view : {})) {
+      const n = Number(sl);
+      if (Number.isInteger(n) && n >= 1 && n <= 8 && x === true) view[n] = true;
+    }
+    out.care[aid] = {
+      d: amgNum(c.d, 0, 0, 1e7),
+      view,
+      picks: amgNum(c.picks, 0, 0, 99)
+    };
+  }
+  const ACTS = ['light', 'heavy', 'real', 'joint', 'focus', 'weak', 'rest', 'play'];
+  if (raw.plan && typeof raw.plan === 'object') for (const [aid, p] of Object.entries(raw.plan)) {
+    if (!okAid(aid) || !p || typeof p !== 'object') continue;
+    const o = {};
+    for (const [sl, x] of Object.entries(p)) {
+      const n = Number(sl);
+      if (Number.isInteger(n) && n >= 1 && n <= 8 && x && Number.isInteger(x.s) && ACTS.includes(x.a) && (!x.k || AMG_KEYS.includes(x.k))) o[n] = {
+        s: x.s,
+        a: x.a,
+        k: x.k || ''
+      };
+    }
+    out.plan[aid] = o;
+  }
+  if (raw.boost && typeof raw.boost === 'object') for (const [aid, b] of Object.entries(raw.boost)) if (okAid(aid) && b && Number.isInteger(b.d) && Number.isInteger(b.s)) out.boost[aid] = {
+    d: b.d,
+    s: b.s
+  };
+  return out;
+};
+const AMG_INIT_VAR = 0.1;
+const AMG_INIT_LV_BONUS = 3;
+const AMG_INIT_FLOOR = 50;
+const amgInitial = (row, rnd) => {
+  const base = AMG_INIT[row.monster] || [110, 110, 110, 110, 110, 110];
+  const lv = Number.isFinite(row.lv) ? row.lv : 10;
+  const pol = AMG_POLICY[String(row.grow || '').split('(')[0]] || [];
+  const st = {};
+  AMG_KEYS.forEach((k, i) => {
+    st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + (pol.includes(k) ? lv * AMG_INIT_LV_BONUS : 0)), Math.max(1, AMG_INIT_FLOOR), AMG_MAX);
+  });
+  const ind = {};
+  for (const k of AMG_KEYS) {
+    const r = rnd();
+    ind[k] = r < 0.2 ? -1 : r > 0.8 ? 1 : 0;
+  }
+  return {
+    st,
+    fat: 0,
+    str: 0,
+    ind,
+    log: [],
+    src: 'init_v1',
+    dg: {
+      d: 0,
+      n: 0
+    },
+    lv: amgClamp(Math.round(lv), 1, AMG_LV_MAX),
+    xp: 0
+  };
+};
+const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
+  if (restReq) return {
+    a: 'rest'
+  };
+  if (e.fat >= T.rest) return {
+    a: 'rest'
+  };
+  if (e.str >= 50) return {
+    a: 'play'
+  };
+  const apt = amgAptOf(row.monster);
+  const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
+  let k = focusK && AMG_KEYS.includes(focusK) ? focusK : '';
+  if (!k) {
+    let best = -1;
+    for (const key of AMG_KEYS) {
+      const want = (pol.includes(key) ? 2 : 0) + (T.like.includes(key) ? 0.8 : 0);
+      const gap = 1 - e.st[key] / (AMG_MAX * (AMG_APT_MULT[apt[key]] / 1.3));
+      const sc = want + gap * 2 + rnd() * 0.9;
+      if (sc > best) {
+        best = sc;
+        k = key;
+      }
+    }
+  }
+  const r = rnd();
+  if (r < T.special) {
+    const kinds = ['real', 'focus', 'weak', 'joint'];
+    const sp = kinds[Math.floor(rnd() * kinds.length)];
+    const weakest = AMG_KEYS.reduce((a, b) => e.st[b] / AMG_APT_MULT[apt[b]] < e.st[a] / AMG_APT_MULT[apt[a]] ? b : a, AMG_KEYS[0]);
+    return {
+      a: sp,
+      k: sp === 'weak' ? weakest : k
+    };
+  }
+  return {
+    a: r < T.special + T.heavy && e.fat < 40 ? 'heavy' : 'light',
+    k
+  };
+};
+const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
+  const apt = amgAptOf(row.monster);
+  const g = {};
+  let fail = false;
+  const day = amgSlotDay(slot);
+  const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
+  const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
+  const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  const add = (k, lo, hi) => {
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
+    if (n <= 0) return;
+    e.st[k] += n;
+    g[k] = (g[k] || 0) + n;
+    e.dg = {
+      d: day,
+      n: (e.dg.d === day ? e.dg.n : 0) + n
+    };
+  };
+  const failChance = extra => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  if (act.a === 'rest') {
+    e.fat = amgClamp(e.fat - 30, 0, 100);
+    e.str = amgClamp(e.str - 5, 0, 100);
+  } else if (act.a === 'play') {
+    e.fat = amgClamp(e.fat - 10, 0, 100);
+    e.str = amgClamp(e.str - 15, 0, 100);
+  } else if (act.a === 'light') {
+    fail = rnd() < failChance(0);
+    add(act.k, 3, 6);
+    e.fat = amgClamp(e.fat + 5, 0, 100);
+    e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100);
+  } else if (act.a === 'heavy') {
+    fail = rnd() < failChance(0.05);
+    add(act.k, 7, 12);
+    add(AMG_SUB[act.k], 1, 3);
+    e.fat = amgClamp(e.fat + 14, 0, 100);
+    e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100);
+  } else {
+    fail = rnd() < failChance(0.03);
+    const others = AMG_KEYS.filter(k => k !== act.k);
+    const sub = others[Math.floor(rnd() * others.length)];
+    add(act.k, 4, 9);
+    add(sub, 2, 5);
+    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100);
+    e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+  }
+  e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0);
+  e.lv = e.lv || 1;
+  while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) {
+    e.xp -= amgLvNeed(e.lv);
+    e.lv += 1;
+  }
+  e.log = [...e.log, {
+    s: slot,
+    a: act.a,
+    k: act.k || '',
+    g,
+    ...(fail ? {
+      f: 1
+    } : {}),
+    ...(act.picked ? {
+      p: 1
+    } : {}),
+    ...(care.ranch ? {
+      r: 1
+    } : {})
+  }].slice(-AMG_LOG);
+  return e;
+};
+const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
+  const mons = {
+    ...(state.mons[aid] || {})
+  };
+  let changed = false;
+  for (const row of rows) {
+    const key = amgMonKey(row.slot, row.monster);
+    if (!mons[key] && typeof assistantMasmonRng === 'function') {
+      mons[key] = amgInitial(row, assistantMasmonRng(`${seed}|${aid}|grow-init|${key}`));
+      changed = true;
+    }
+  }
+  const last = state.done[aid];
+  const reset = Number.isInteger(last) && last > nowSlot + AMG_CATCH_UP;
+  let from = reset ? nowSlot + 1 : Number.isInteger(last) ? last + 1 : nowSlot;
+  from = Math.max(from, nowSlot - AMG_CATCH_UP + 1);
+  const focus = {
+    ...(state.focus[aid] || {})
+  };
+  const rest = {
+    ...(state.rest[aid] || {})
+  };
+  const plan = {
+    ...(state.plan[aid] || {})
+  };
+  const care = state.care[aid] || {
+    d: -1,
+    view: {},
+    picks: 0
+  };
+  for (let s = from; s <= nowSlot; s++) {
+    for (const row of rows) {
+      const key = amgMonKey(row.slot, row.monster);
+      const e0 = mons[key];
+      if (!e0) continue;
+      const e = {
+        ...e0,
+        st: {
+          ...e0.st
+        },
+        dg: {
+          ...e0.dg
+        }
+      };
+      const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
+      const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
+      const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
+      const act = pl ? {
+        a: pl.a,
+        k: pl.k,
+        picked: true
+      } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      if (!pl && f && act.k === f) act.asked = true;
+      if (rest[row.slot]) delete rest[row.slot];
+      if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
+      mons[key] = amgDo(aid, e, row, rnd, s, act, {
+        viewed: care.d === amgSlotDay(s) && !!care.view[row.slot],
+        ranch: !!(state.boost[aid] && state.boost[aid].s === s)
+      });
+    }
+    changed = true;
+  }
+  if (!changed && !reset && (state.done[aid] === nowSlot || Number.isInteger(last) && last > nowSlot)) return state;
+  return {
+    ...state,
+    mons: {
+      ...state.mons,
+      [aid]: mons
+    },
+    done: {
+      ...state.done,
+      [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0)
+    },
+    focus: {
+      ...state.focus,
+      [aid]: focus
+    },
+    rest: {
+      ...state.rest,
+      [aid]: rest
+    },
+    plan: {
+      ...state.plan,
+      [aid]: plan
+    }
+  };
+};
+const amgActName = x => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const AMG_STORE = {
+  state: normalizeAssistantMasmonGrow(null),
+  loaded: false,
+  subs: new Set(),
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_GROW_KEY, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(normalizeAssistantMasmonGrow(raw));
+      return this.state;
+    })();
+    return this._p;
+  }
+};
+const amgOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonGrow === true;
+const amgSave = next => {
+  if (!AMG_STORE.loaded) return false;
+  AMG_STORE.set(next);
+  try {
+    if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_GROW_KEY, next, false);
+  } catch (_) {}
+  return true;
+};
+try {
+  setTimeout(() => {
+    try {
+      if (amgOn()) void AMG_STORE.load();
+    } catch (_) {}
+  }, 0);
+} catch (_) {}
+const amgTick = async (aid, now = Date.now()) => {
+  if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
+  await ASSISTANT_MASMON_STORE.load();
+  await AMG_STORE.load();
+  const ms = ASSISTANT_MASMON_STORE.state;
+  if (!ms.seed) return null;
+  const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
+  if (!rows.length) return null;
+  const next = amgCatchUp(AMG_STORE.state, aid, rows, ms.seed, amgSlotOf(now));
+  if (next !== AMG_STORE.state) amgSave(next);
+  return next;
+};
+const amgView = (aid, slot, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
+  const st = AMG_STORE.state;
+  const d = amgSlotDay(amgSlotOf(now));
+  const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : {
+    d,
+    view: {},
+    picks: 0
+  };
+  if (c.view[slot]) return false;
+  amgSave({
+    ...st,
+    care: {
+      ...st.care,
+      [aid]: {
+        ...c,
+        view: {
+          ...c.view,
+          [slot]: true
+        }
+      }
+    }
+  });
+  return true;
+};
+const amgPicksLeft = (aid, now = Date.now(), st = AMG_STORE.state) => {
+  const d = amgSlotDay(amgSlotOf(now));
+  const c = st.care[aid];
+  return AMG_CARE.picksPerDay - (c && c.d === d ? c.picks : 0);
+};
+const amgPick = (aid, slot, act, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
+  const st = AMG_STORE.state;
+  const s = amgSlotOf(now) + 1;
+  const d = amgSlotDay(amgSlotOf(now));
+  if (!act || !['light', 'heavy', 'rest', 'play'].includes(act.a) || (act.a === 'light' || act.a === 'heavy') && !AMG_KEYS.includes(act.k)) return false;
+  const e = (st.mons[aid] || {})[Object.keys(st.mons[aid] || {}).find(k => k.startsWith(`${slot}:`)) || ''];
+  if (e && act.k && e.st[act.k] >= AMG_MAX) return false;
+  const had = st.plan[aid] && st.plan[aid][slot] && st.plan[aid][slot].s === s;
+  if (!had && amgPicksLeft(aid, now) <= 0) return false;
+  const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : {
+    d,
+    view: {},
+    picks: 0
+  };
+  amgSave({
+    ...st,
+    plan: {
+      ...st.plan,
+      [aid]: {
+        ...(st.plan[aid] || {}),
+        [slot]: {
+          s,
+          a: act.a,
+          k: act.k || ''
+        }
+      }
+    },
+    care: {
+      ...st.care,
+      [aid]: {
+        ...c,
+        picks: c.picks + (had ? 0 : 1)
+      }
+    }
+  });
+  return true;
+};
+const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
+  if (!amgOn() || !AMG_STORE.loaded || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || opts && opts.source && opts.source !== 'ranch') return false;
+  const st = AMG_STORE.state;
+  const s = amgSlotOf(now);
+  const d = amgSlotDay(s);
+  if (st.boost[aid] && st.boost[aid].d === d) return false;
+  amgSave({
+    ...st,
+    boost: {
+      ...st.boost,
+      [aid]: {
+        d,
+        s: s + 1
+      }
+    }
+  });
+  return true;
+};
+const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
+const amgAdvise = (aid, slot, what, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
+  const st = AMG_STORE.state;
+  const s = amgSlotOf(now);
+  if (what === 'rest') {
+    amgSave({
+      ...st,
+      rest: {
+        ...st.rest,
+        [aid]: {
+          ...(st.rest[aid] || {}),
+          [slot]: true
+        }
+      }
+    });
+    return true;
+  }
+  if (what === 'auto') {
+    const f = {
+      ...(st.focus[aid] || {})
+    };
+    delete f[slot];
+    amgSave({
+      ...st,
+      focus: {
+        ...st.focus,
+        [aid]: f
+      }
+    });
+    return true;
+  }
+  if (!AMG_KEYS.includes(what)) return false;
+  amgSave({
+    ...st,
+    focus: {
+      ...st.focus,
+      [aid]: {
+        ...(st.focus[aid] || {}),
+        [slot]: {
+          k: what,
+          until: s + 9
+        }
+      }
+    }
+  });
+  return true;
+};
+const useAmgState = () => {
+  const [st, setSt] = React.useState(AMG_STORE.state);
+  React.useEffect(() => {
+    AMG_STORE.subs.add(setSt);
+    return () => {
+      AMG_STORE.subs.delete(setSt);
+    };
+  }, []);
+  return st;
+};
+function AmgStatBars({
+  e,
+  small = false,
+  cols = 2
+}) {
+  return React.createElement("div", {
+    className: `grid gap-x-3 ${small ? 'gap-y-0.5' : 'gap-y-1'} ${cols === 1 ? 'grid-cols-1' : 'grid-cols-2'}`,
+    "data-amg-stats": true
+  }, AMG_STATS.map(([k, label]) => React.createElement("div", {
+    key: k,
+    className: `flex items-center gap-1.5 font-bold ${small ? 'text-[9.5px] text-slate-300' : 'text-[10.5px] text-slate-200'}`
+  }, React.createElement("span", {
+    className: `${small ? 'w-[40px]' : 'w-[48px]'} shrink-0 whitespace-nowrap`
+  }, label), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(e.st[k] / AMG_MAX * 100)}%`
+    }
+  })), !small && React.createElement("b", {
+    className: "w-[28px] shrink-0 text-right text-amber-200",
+    "data-amg-stat": k
+  }, e.st[k]))));
+}
+const AMG_PICK_OPTIONS = Object.freeze([...AMG_KEYS.map(k => ({
+  v: `light:${k}`,
+  label: `軽トレ ${AMG_LIGHT[k]}(${(AMG_STATS.find(x => x[0] === k) || [])[1]})`
+})), ...AMG_KEYS.map(k => ({
+  v: `heavy:${k}`,
+  label: `重トレ ${AMG_HEAVY[k]}(${(AMG_STATS.find(x => x[0] === k) || [])[1]})`
+})), {
+  v: 'rest:',
+  label: '休養'
+}, {
+  v: 'play:',
+  label: '遊び'
+}]);
+function AmgPickRow({
+  who,
+  t,
+  e,
+  st
+}) {
+  const next = amgSlotOf() + 1;
+  const pl = st.plan[who.id] && st.plan[who.id][t.slot] && st.plan[who.id][t.slot].s === next ? st.plan[who.id][t.slot] : null;
+  const [v, setV] = React.useState(pl ? `${pl.a}:${pl.k}` : `light:${AMG_KEYS.reduce((a, b) => e.st[b] < e.st[a] ? b : a)}`);
+  const left = amgPicksLeft(who.id, Date.now(), st);
+  const pick = () => {
+    const [a, k] = v.split(':');
+    amgPick(who.id, t.slot, {
+      a,
+      k
+    });
+  };
+  const auto = () => {
+    const p = {
+      ...(st.plan[who.id] || {})
+    };
+    delete p[t.slot];
+    amgSave({
+      ...st,
+      plan: {
+        ...st.plan,
+        [who.id]: p
+      }
+    });
+  };
+  return React.createElement("div", {
+    className: "mt-1.5 rounded-xl border border-white/10 p-2",
+    "data-amg-pick": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "🗓 次の回(", AMG_PERIOD_NAME[next % 3], ")の育成 ・ 自分で決める(今日あと", Math.max(0, left), "回)か、", who.name, "に任せる"), pl ? React.createElement("p", {
+    className: "mt-0.5 text-[11px] font-bold text-sky-200",
+    "data-amg-pick-now": true
+  }, "あなたが決めた: ", amgActName(pl), "(よく伸びて、失敗しにくい) ", React.createElement("button", {
+    type: "button",
+    className: "ml-1 underline",
+    onClick: auto,
+    "data-amg-pick-auto": true
+  }, who.name, "に任せる")) : React.createElement("div", {
+    className: "mt-1 flex flex-wrap items-center gap-1.5"
+  }, React.createElement("select", {
+    className: "min-w-0 flex-1 rounded-lg bg-slate-800 px-2 py-1 text-[11px] font-bold text-white",
+    value: v,
+    onChange: ev => setV(ev.target.value),
+    "data-amg-pick-select": true
+  }, AMG_PICK_OPTIONS.map(o => React.createElement("option", {
+    key: o.v,
+    value: o.v,
+    disabled: !!o.v.split(':')[1] && e.st[o.v.split(':')[1]] >= AMG_MAX
+  }, o.label))), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn px-3 text-[11px]",
+    disabled: left <= 0,
+    onClick: pick,
+    "data-amg-pick-go": true
+  }, "決める")));
+}
+function AmgGrowCard({
+  who,
+  t,
+  e,
+  kindText = '',
+  growMine = null
+}) {
+  const amgSt = useAmgState();
+  React.useEffect(() => {
+    if (amgOn()) amgView(who.id, t.slot);
+  }, [who.id, t.slot]);
+  const today = amgSlotDay(amgSlotOf());
+  const logs = e.log.filter(x => amgSlotDay(x.s) === today);
+  const T = AMG_TRAIT[who.id] || null;
+  return React.createElement("div", {
+    className: "mhm-card",
+    "data-assistant-masmon-detail-stats": true,
+    "data-amg-card": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "能力(6つ・上限", AMG_MAX, ")"), React.createElement("div", {
+    className: "mt-1"
+  }, React.createElement(AmgStatBars, {
+    e: e
+  })), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-x-3"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[48px] shrink-0"
+  }, "疲労"), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${e.fat}%`,
+      background: 'linear-gradient(90deg,#fb7185,#f97316)'
+    }
+  })), React.createElement("b", {
+    className: "w-[24px] text-right text-amber-200",
+    "data-amg-fat": true
+  }, e.fat)), React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[48px] shrink-0"
+  }, "ストレス"), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${e.str}%`,
+      background: 'linear-gradient(90deg,#60a5fa,#a78bfa)'
+    }
+  })), React.createElement("b", {
+    className: "w-[24px] text-right text-amber-200",
+    "data-amg-str": true
+  }, e.str))), React.createElement("p", {
+    className: "mt-1.5 text-[11px] font-bold text-amber-200"
+  }, "📈 育成方針: ", t.grow, " ・ 育成 Lv.", e.lv, React.createElement("small", {
+    className: "ml-1 text-[9.5px] text-slate-400"
+  }, "(次まで ", amgLvNeed(e.lv) - e.xp, ")")), growMine && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-sky-200",
+    "data-assistant-masmon-grow-mine": true
+  }, "🌱 育て方: ", growMine.kind, "(", growMine.day ? `${growMine.day.slice(5).replace('-', '/')} ` : '', "あなたの提案)"), kindText && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, kindText), React.createElement("p", {
+    className: "mt-1.5 text-[10px] font-black text-slate-400"
+  }, "今日の育成(", who.name, T ? `・${T.name}` : '', ")"), logs.length ? logs.map(x => React.createElement("p", {
+    key: x.s,
+    className: "text-[11px] font-bold text-slate-100",
+    "data-amg-log": x.a
+  }, ['🌅', '☀', '🌙'][x.s % 3], " ", AMG_PERIOD_NAME[x.s % 3], " ", amgActName(x), x.p ? '(あなたが決めた)' : '', x.r ? '(M/B管理でいっしょにトレーニング)' : '', x.f ? '(うまくいかなかった)' : '', " ", Object.entries(x.g).map(([k, n]) => `${(AMG_STATS.find(s => s[0] === k) || [])[1]} +${n}`).join('・'), x.a === 'rest' ? '(疲れがとれた)' : x.a === 'play' ? '(気分転換)' : '')) : React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-400"
+  }, "まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に", who.name, "が育てます)"), amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot] && React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-pink-200",
+    "data-amg-viewed": true
+  }, "👀 今日は様子を見に来たので、いつもより伸びやすい"), React.createElement(AmgPickRow, {
+    who: who,
+    t: t,
+    e: e,
+    st: amgSt
+  }));
+}
 const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
 const AMGT_KINDS = Object.freeze({
   pow: {
@@ -175127,7 +176282,15 @@ function MonsterHeroGame() {
   const assistantLifeExitingRef = useRef(false);
   const gameStateNowRef = useRef('HOME');
   const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
+  const quickAnywhereRunRef = useRef(false);
+  const offscreenEffectRef = useRef(null);
+  const quickAnywhereSeQuietRef = useRef(false);
+  const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
+  const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
+  const quickAnywhereEndingRef = useRef(false);
+  const quickAnywhereKeepsRun = () => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !quickAnywhereEndingRef.current && !assistantLifeSettlingRef.current && !!runStageRef.current && !RUN_STAGE_SCREENS.includes(gameStateNowRef.current);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state) || isQuickAnywhereScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -175781,6 +176944,7 @@ function MonsterHeroGame() {
     setScreenShake(false);
     setBigShake(false);
     requestAnimationFrame(() => {
+      if (runBackgroundAllowedRef.current) return;
       setScreenShake(true);
       setBigShake(big);
       setTimeout(() => {
@@ -177738,7 +178902,7 @@ function MonsterHeroGame() {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
     const fn = st => {
       const open = !!(st && st.open);
-      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current) && !(QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current)) assistantLifeExitingRef.current = true;
       assistantLifeOpenRef.current = open;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       setAssistantLifeOpenNow(open);
@@ -178761,6 +179925,11 @@ function MonsterHeroGame() {
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
+  const [debugEnemyAiLevel, setDebugEnemyAiLevel] = useState(0);
+  const debugEnemyAiLevelRef = useRef(0);
+  useEffect(() => {
+    debugEnemyAiLevelRef.current = debugEnemyAiLevel;
+  }, [debugEnemyAiLevel]);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugPartyIds, setDebugPartyIds] = useState([]);
   const [debugOutcome, setDebugOutcome] = useState(null);
@@ -180417,8 +181586,11 @@ function MonsterHeroGame() {
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
+  const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
     setRunStage(stage);
@@ -180426,9 +181598,11 @@ function MonsterHeroGame() {
   };
   const clearRunStage = () => {
     runStageRef.current = null;
+    quickAnywhereRunRef.current = false;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -181667,7 +182841,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen || quickAnywhereScreenOpen;
     bgmPreloadKeys(gameState, wave).forEach(next => Audio_.preloadBGM(next));
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
@@ -181690,9 +182864,10 @@ function MonsterHeroGame() {
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
+  const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -181701,8 +182876,9 @@ function MonsterHeroGame() {
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   useEffect(() => {
-    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
-  }, [cardScreenOpen]);
+    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen);
+  }, [cardScreenOpen, quickAnywhereScreenOpen]);
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
@@ -182100,7 +183276,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = e => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) Audio_.se.tap();
+      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -187611,7 +188787,7 @@ function MonsterHeroGame() {
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null);
     setCardOrigin('home');
-    if (runStageRef.current != null) {
+    if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
       cardExitingRunRef.current = true;
       try {
@@ -189230,6 +190406,10 @@ function MonsterHeroGame() {
     window.alert('アップデート通知テストを未読へ戻しました。');
   };
   const returnToHome = () => {
+    if (quickAnywhereKeepsRun()) {
+      setGameState('HOME');
+      return;
+    }
     stopAllAuto();
     abandonRunAnimations();
     clearRunStage();
@@ -189884,6 +191064,10 @@ function MonsterHeroGame() {
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
   const exitRhythmSongSelect = async () => {
+    if (quickAnywhereKeepsRun()) {
+      setGameState('HOME');
+      return;
+    }
     if (rhythmBackgroundRun) {
       if (rhythmExitingRunRef.current) return;
       rhythmExitingRunRef.current = true;
@@ -189940,6 +191124,188 @@ function MonsterHeroGame() {
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     });
   }, [assistantLifeOpenNow]);
+  const [quickAnywhereDetail, setQuickAnywhereDetail] = useState(false);
+  useEffect(() => {
+    if (!quickAnywhereScreenOpen) setQuickAnywhereDetail(false);
+  }, [quickAnywhereScreenOpen]);
+  const renderQuickAnywhereStrip = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const paused = !finished && !resting && !quickAnywhereBackgroundRun;
+    const pending = finished ? {
+      xp: 0,
+      gold: 0
+    } : quickRunPendingRewards();
+    const gold = Math.floor(quickRunProgress.gold + pending.gold),
+      xp = Math.floor(quickRunProgress.xp + pending.xp);
+    const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
+    const label = finished ? quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止' : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
+    const info = {
+      wave,
+      loops: quickRunProgress.loops,
+      finished,
+      catchingUp: false,
+      reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+      canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(),
+      processing: resultProcessing,
+      canResume: finished && quickRunResumable
+    };
+    const closeDetail = () => setQuickAnywhereDetail(false);
+    return React.createElement(React.Fragment, null, React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere": state,
+      "data-wave": wave,
+      "data-loops": quickRunProgress.loops,
+      "data-screen": gameState,
+      "data-stage": runStage || "",
+      "aria-label": `裏クイック ${label}。押すと詳しく`,
+      onClick: () => setQuickAnywhereDetail(v => !v),
+      className: `fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
+      style: {
+        left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))',
+        bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))',
+        minHeight: 30
+      }
+    }, label), quickAnywhereDetail && React.createElement("div", {
+      className: "fixed inset-0 z-[90] flex items-end justify-start p-2",
+      onClick: closeDetail,
+      style: {
+        paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))',
+        paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))'
+      }
+    }, React.createElement("div", {
+      "data-quick-anywhere-detail": true,
+      role: "dialog",
+      "aria-label": "裏クイックのようす",
+      onClick: e => e.stopPropagation(),
+      className: "w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, React.createElement("b", {
+      className: "text-[13px] font-black text-fuchsia-100"
+    }, "🔁 裏クイック", diffLabel ? `(${diffLabel})` : ''), React.createElement("button", {
+      type: "button",
+      onClick: closeDetail,
+      className: "min-h-[32px] rounded-full border border-white/25 px-2.5 text-[11px] font-black"
+    }, "閉じる")), React.createElement("p", {
+      className: "mt-1.5 text-[12px] font-bold leading-snug"
+    }, finished ? info.reason : `WAVE ${wave}/10・${quickRunProgress.loops}周目`), React.createElement("p", {
+      className: "mt-1 text-[12px] font-bold leading-snug text-slate-200"
+    }, "ここまで ダイヤ+", gold.toLocaleString(), "・経験値+", xp.toLocaleString()), React.createElement("p", {
+      className: "mt-1.5 text-[11px] leading-snug text-slate-300"
+    }, resting ? 'M/B管理・神殿などにいるあいだは休みます。出ると続きから進みます。' : 'ゲームのどこにいても、AUTO設定の編成でクイックの周回が裏で進みます。M/B管理・神殿にいるあいだは休み、ほかのバトルを始めると、それまでの報酬を受け取って終わります。'), React.createElement("div", {
+      className: "mt-2 flex flex-wrap items-center gap-1.5"
+    }, finished ? React.createElement(RhythmQuickRunPill, {
+      info: info,
+      onRestart: () => {
+        closeDetail();
+        return startQuickRunFromRhythm();
+      },
+      onResume: () => {
+        closeDetail();
+        return resumeQuickRunFromRhythm();
+      },
+      widthClass: "min-w-0 flex-1"
+    }) : React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere-watch": true,
+      onClick: () => {
+        closeDetail();
+        returnToBackgroundRun();
+      },
+      className: "min-h-[34px] flex-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-3 text-[12px] font-black text-white active:scale-[.97]"
+    }, "⚔ バトルを見る"), !finished && React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere-stop": true,
+      onClick: () => {
+        closeDetail();
+        void settleQuickAnywhereRun();
+      },
+      className: "min-h-[34px] rounded-full border border-white/30 bg-slate-800/90 px-3 text-[12px] font-black text-slate-100 active:scale-[.97]"
+    }, "⏹ 止める")))));
+  };
+  const [quickAnywhereSettling, setQuickAnywhereSettling] = useState(false);
+  const settleQuickAnywhereRun = async () => {
+    if (quickAnywhereEndingRef.current || !runStageRef.current) return;
+    quickAnywhereEndingRef.current = true;
+    setQuickAnywhereSettling(true);
+    try {
+      const running = isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({
+        silent: true
+      });
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)),
+          gold = Math.max(0, Math.floor(Number(before.gold) || 0)),
+          xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({
+          tier: 'small',
+          kind: 'quick',
+          key: `quick:${Date.now()}`,
+          gain: 1,
+          text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}`
+        });
+      }
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      quickAnywhereEndingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setQuickAnywhereSettling(false);
+    }
+  };
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
+    if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    void settleQuickAnywhereRun();
+  }, [gameState]);
+  const quickAnywhereTryStart = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!repeatTemplateFromAutoSettings()) return false;
+    return startQuickRunFromRhythm();
+  };
+  const quickAnywhereTryStartRef = useRef(null);
+  quickAnywhereTryStartRef.current = quickAnywhereTryStart;
+  const quickAnywhereBootTriedRef = useRef(false);
+  const quickAnywherePrevScreenRef = useRef('HOME');
+  useEffect(() => {
+    const prev = quickAnywherePrevScreenRef.current;
+    quickAnywherePrevScreenRef.current = gameState;
+    if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    const boot = !quickAnywhereBootTriedRef.current;
+    const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
+    if (!boot && !fromBattle) return undefined;
+    quickAnywhereBootTriedRef.current = true;
+    const timer = setTimeout(() => {
+      if (quickAnywhereTryStartRef.current) quickAnywhereTryStartRef.current();
+    }, boot ? 1500 : 300);
+    return () => clearTimeout(timer);
+  }, [gameState, bootPhase]);
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryAnywhere = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const assistantLifeQuickRunView = () => {
     if (!assistantLifeOpenNow) return null;
     const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
@@ -189977,7 +191343,7 @@ function MonsterHeroGame() {
       autoDifficulty: autoDifficulty,
       todayLoops: null,
       onClose: () => setLifeQuickDetail(false),
-      note: "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
+      note: QUICK_RUN_ANYWHERE_RELEASE ? "AUTO設定の編成でクイックの周回が裏で進みます。助手ライフを閉じても、HOMEなどで回り続けます。「止める」を押すと、それまでの報酬を受け取って周回を終えます。" : "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
     }), React.createElement("div", {
       "data-life-quick-run": view.live ? 'live' : 'stopped',
       className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
@@ -190059,11 +191425,35 @@ function MonsterHeroGame() {
         return scripted;
       }
     }
+    const ai = extraState && extraState.tacticsAi;
+    if (ai && ai.level > 0) return chooseTacticsEnemyActionAi(ent, currentDist, Math.random, {
+      ...enemyActionStateFrom(lastIntent),
+      ...extraState
+    }, {
+      ...ai,
+      lastType: lastIntent?.type || null
+    });
     return chooseEnemyAction(ent, currentDist, Math.random, {
       ...enemyActionStateFrom(lastIntent),
       ...(extraState || {})
     });
   }, []);
+  const tacticsEnemyAiState = () => {
+    const level = debugEnemyAiLevelRef.current;
+    if (!debugBattleRef.current || !isTacticsMode(runMode) || !(level > 0)) return {};
+    const units = tacticsUnitsRef.current || [];
+    const alive = tacticsAliveSlots(units);
+    const us = alive.map(i => normalizeTacticsUnit(units[i])).filter(Boolean);
+    return {
+      tacticsAi: {
+        level,
+        pressure: tacticsEnemyPressure(units, [0, 1, 2, 3].map(i => distTotalBonus(i))),
+        aliveSlots: alive,
+        lowCount: us.filter(u => u.hp < u.maxHp * 0.4).length,
+        maxDef: Math.max(0, ...us.map(u => Number(u.def) || 0))
+      }
+    };
+  };
   const advanceEnemyIntents = (executedIntent, distAfterExecuted, performed = true) => {
     const effective = performed ? executedIntent : null;
     let reserved = enemyNextIntentRef.current;
@@ -190072,7 +191462,8 @@ function MonsterHeroGame() {
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     const actionState = () => ({
       definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty, enemy?.actionCount),
-      roarStacks: tacticsRoarStacksRef.current
+      roarStacks: tacticsRoarStacksRef.current,
+      ...tacticsEnemyAiState()
     });
     stepTacticsHate(runMode);
     const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
@@ -193969,7 +195360,7 @@ function MonsterHeroGame() {
       slotMaxUses,
       ...tacticsAutoOptions
     });
-    if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
+    if (lacksOnlyGuts && autoBattleRef.current && (gameState === 'BATTLE' || runStage === 'BATTLE') && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
     return null;
   };
   const setAutoBattleEnabled = enabled => {
@@ -194001,6 +195392,7 @@ function MonsterHeroGame() {
     if (next) setAutoBattleEnabled(true);
     if (!next) setEcoModeSafe('off');
     if (next) beginQuickRunProgress();
+    if (next) quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
   };
   const runResultFinished = hp <= 0 || gaveUp;
   const runResultFinishedRef = useRef(false);
@@ -194021,8 +195413,12 @@ function MonsterHeroGame() {
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     const result = startRunFromRepeatTemplate(template);
     if (!result.ok) {
+      quickAnywhereRunRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       stopAllAuto();
       clearQuickRunProgress();
       return false;
@@ -194038,6 +195434,7 @@ function MonsterHeroGame() {
     if (runResultFinishedRef.current) return false;
     if (!isQuickMode(runMode)) return false;
     if (!storageReadyForRun()) return false;
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
     autoRepeatStartingRef.current = false;
     autoRepeatRef.current = true;
     setAutoRepeat(true);
@@ -194766,7 +196163,8 @@ function MonsterHeroGame() {
     setEnemyLastIntent(null);
     const actionState = () => ({
       definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id, newEnemy?.difficulty, newEnemy?.actionCount),
-      roarStacks: tacticsRoarStacksRef.current
+      roarStacks: tacticsRoarStacksRef.current,
+      ...tacticsEnemyAiState()
     });
     resetTacticsHate(runMode);
     commitAiCopy(null);
@@ -199183,7 +200581,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !runBackgroundAllowed && gameState === runStage && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -199192,7 +200590,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && battleFxSettings.shake !== 'OFF' ? {
+      style: screenShake && !ecoBattleView && !runBackgroundAllowed && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && cardTeaserOpen && React.createElement(CardBattleTeaser, {
@@ -200040,7 +201438,7 @@ function MonsterHeroGame() {
         }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), React.createElement("div", null, React.createElement("div", {
         className: "text-[11px] font-black text-slate-300 mb-1.5"
-      }, "モンヒロビート・助手ライフを開いたら自動で始める"), React.createElement("button", {
+      }, QUICK_RUN_ANYWHERE_RELEASE ? 'ゲーム・モンヒロビート・助手ライフを開いたら自動で始める' : 'モンヒロビート・助手ライフを開いたら自動で始める'), React.createElement("button", {
         type: "button",
         "data-auto-quick-run-autostart": true,
         "aria-pressed": draftAutoSettings.quickRun?.autoStart === true,
@@ -203753,7 +205151,7 @@ function MonsterHeroGame() {
       modeSelect: gameState === 'RHYTHM_MODE_SELECT' ? {
         multi: RELEASE_FLAGS.rhythmMulti === true,
         onExit: exitRhythmSongSelect,
-        backgroundRun: rhythmBackgroundRun,
+        backgroundRun: rhythmBackgroundRun && !QUICK_RUN_ANYWHERE_RELEASE,
         exiting: rhythmExitingRun,
         onSolo: () => setGameState('RHYTHM_DEMO_HOME'),
         onHelp: () => {
@@ -204545,7 +205943,26 @@ function MonsterHeroGame() {
       className: "block"
     }, "🛠 デバッグ最強モン"), React.createElement("small", {
       className: "block text-[8px] opacity-80"
-    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), React.createElement("section", {
+    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode) && React.createElement("section", {
+      "data-debug-enemy-ai": true
+    }, React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-black mb-2"
+    }, "4-2. 敵の作戦AI", React.createElement("small", {
+      className: "ml-1 font-bold text-slate-600"
+    }, "（試作・デバッグ戦だけ。本番の敵はいまのまま）")), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, TACTICS_ENEMY_AI_LEVELS.map(lv => React.createElement("button", {
+      key: lv.id,
+      type: "button",
+      "data-debug-enemy-ai-option": lv.id,
+      "aria-pressed": debugEnemyAiLevel === lv.id,
+      onClick: () => setDebugEnemyAiLevel(lv.id),
+      className: `min-h-[52px] px-3 py-1.5 rounded-xl text-left font-black ${debugEnemyAiLevel === lv.id ? 'bg-amber-800 border-2 border-amber-300 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+    }, React.createElement("span", {
+      className: "block text-[11px]"
+    }, lv.id, ". ", lv.label), React.createElement("small", {
+      className: "block text-[8px] opacity-75 leading-tight"
+    }, lv.note))))), React.createElement("section", {
       "data-debug-party": true
     }, React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
@@ -204604,7 +206021,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
     }, "6. デバッグ戦開始", React.createElement("small", {
       className: "block text-[9px] font-bold opacity-70"
-    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId)))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
+    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId, isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode) && debugEnemyAiLevel > 0 ? ` / 敵AI ${debugEnemyAiLevel}` : '')))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -212559,7 +213976,7 @@ function MonsterHeroGame() {
       speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
       speciesChallengeSaveRunRef: speciesChallengeSaveRunRef,
       speciesChallengeBattleRunRef: speciesChallengeBattleRunRef
-    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GameOverScreen, {
+    }), hp <= 0 && !debugBattle && !runBackgroundAllowed && React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -212569,7 +213986,7 @@ function MonsterHeroGame() {
       runMode: runMode,
       runResultActionOnce: runResultActionOnce,
       score: score
-    }), gaveUp && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GaveUpScreen, {
+    }), gaveUp && !debugBattle && !runBackgroundAllowed && React.createElement(GaveUpScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -212614,7 +214031,18 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), effect && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), quickAnywhereSettling && React.createElement("div", {
+      "data-quick-anywhere-settling": true,
+      role: "status",
+      className: "fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24",
+      onClickCapture: e => {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, React.createElement("span", {
+      className: "rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100"
+    }, "🔁 裏クイックの報酬を受け取っています…")), effect && !runBackgroundAllowed && effect !== offscreenEffectRef.current && React.createElement("div", {
+      "data-battle-effect-overlay": true,
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',

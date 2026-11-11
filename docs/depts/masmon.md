@@ -14,8 +14,12 @@ node tools/ctx.js brief               いまの状態
 ## 受け持つファイル
 
 - `monster-hero/src/parts/56-assistant-life-masmon.jsx`
+- `monster-hero/src/parts/56-assistant-life-masmon-*.jsx`
 - `monster-hero/src/parts/56-assistant-masmon-battle-view.jsx`
+- `monster-hero/data/assistant-masmon-battle.js`
+- `monster-hero/data/assistant-masmon-techs.js`
 - `tools/assistant/assistant-masmon-*`
+- `tools/masmon-battle/*`
 
 ## 入口の関数
 
