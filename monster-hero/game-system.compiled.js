@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cbbce3f1247d257e
+// source-sha256: 315de16dec5c10ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117061,7 +117061,10 @@ function AssistantLifeDailyCard({
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, plan ? done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと「${plan.title}」` : `${castPlace}で、${castNames}が「${plan.title}」` : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
+  }, plan ? done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : React.createElement(React.Fragment, null, plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`, React.createElement("span", {
+    className: "inline-block",
+    "data-assistant-life-daily-title": true
+  }, "「", plan.title, "」")) : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
     className: "block text-[11px] text-emerald-300"
   }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
     className: "block text-[11px] text-pink-200"

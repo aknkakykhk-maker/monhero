@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 43f29a251216f6ba
+// generated-sha256: 85a492820ce686fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68135,7 +68135,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>
           {plan
-            ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと「${plan.title}」` : `${castPlace}で、${castNames}が「${plan.title}」`)
+            ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : <>{plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`}<span className="inline-block" data-assistant-life-daily-title>「{plan.title}」</span></>)
             : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
           {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}

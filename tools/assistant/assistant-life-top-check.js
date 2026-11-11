@@ -1,5 +1,5 @@
 // 助手ライフを開いた最初の家の場面とできごとの場面(2026-11-11 社長 案A・ナカヨシ20・docs/progress/assistant-life/top-scene/PLAN.md)を、実際に開いて確かめる
-//   公開の印(assistantLifeTopHouse・assistantLifeDailyScene)はページの中だけで真にし、場面の台詞は確かめ用の見本を入れる(本番の台詞はココロの後任が書く)
+//   公開の印(assistantLifeTopHouse・assistantLifeDailyScene)はページの中だけで真にする。場面の台詞は本物(無いときだけ確かめ用の見本を入れる)
 //   ① 家の断面図が得の帯より上にあり、4部屋×2段・下の家の絵と「みんなの今」の一覧は出ない ② 出かけ先の丸と1行・できごとに出る人の部屋に ❗
 //   ③ 得の帯は「⏰ いま」だけで、「📅 今日・🌱 次のごほうび」は ▼ で開く ④ できごと: 見に行く → 掛け合い → 2択 → 返事。見た時間帯が mh_assistant_life_daily_v1 に入り、2人の 💗 が +4
 //   ⑤ 印が偽なら今までどおり(家の絵は下・「聞く ▶」) ⑥ 押せる所は44px以上・横にはみ出さない ⑦ ページのエラーが出ない
@@ -44,7 +44,7 @@ const SAMPLE = (() => {
     await toHome(page); await waitFaces(page); await finishTalk(page);
     await page.evaluate(({ m, on, sample }) => {
       RELEASE_FLAGS.assistantLifeTopHouse = on; RELEASE_FLAGS.assistantLifeDailyScene = on;
-      if (on) { ASSISTANT_LIFE_DAILY_TALKS.scenes.splice(0, ASSISTANT_LIFE_DAILY_TALKS.scenes.length, ...sample.scenes); }
+      if (on && !ASSISTANT_LIFE_DAILY_TALKS.scenes.length) { ASSISTANT_LIFE_DAILY_TALKS.scenes.splice(0, ASSISTANT_LIFE_DAILY_TALKS.scenes.length, ...sample.scenes); }
       const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: m.groups, solo: m.solo, watched: [] } });
     }, { m: MIX, on, sample: SAMPLE });
     await page.waitForTimeout(800); await finishTalk(page);
