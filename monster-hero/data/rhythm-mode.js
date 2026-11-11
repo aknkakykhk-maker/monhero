@@ -1671,6 +1671,90 @@ const rhythmScrollEarlyTouches=(changes,notes,travelMs,groups)=>{
   RHYTHM_SCROLL.points=keep.points;RHYTHM_SCROLL.back=keep.back;RHYTHM_SCROLL.sufMin=keep.sufMin;RHYTHM_SCROLL.groups=keep.groups;RHYTHM_SCROLL.lerp=keep.lerp;
   return out;
 };
+// ── 変動の口(2026-11-11 ヘンドウ・新曲 LAMIA から)──
+// 公開中の3曲(Sheriruth・Grievous Lady・Evans)は速さの表を曲ごとに手で書いていた(止まる間に叩くノーツへ組を付けるのも手書き)。
+// 新しい曲は「曲の時刻と長さ」で演出を並べるだけにする。表(scrollChanges)と組(scrollGroups・ノーツの scrollGroup)はここで作る。
+//   const LAMIA_SCROLL_FX=[{at:'1:23.450',kind:'stop',len:450},{at:'1:30.000',kind:'back',len:800,amount:.15}, …];
+//   EXPERT:rhythmScrollFxChart(mhChart(…),LAMIA_SCROLL_FX)
+// kind(書き方の中身は上の「速さの表」の説明のとおり):
+//   stop     len の間、止まる(次に叩くノーツは組1でふつうに流れて来る)
+//   back     len の間に、道の amount 割だけ奥へ戻って、また戻ってくる(行って戻る・Evans 84秒)
+//   backHold len の間に、道の amount 割だけ奥へ戻ったまま(このあとに stop・rush を続けて書く・Grievous Lady)
+//   rush     len の間に、道の奥の端(reach・既定.97)から一気に来る(止まりのすぐ後に置く)
+//   ease     len の間に、速さを from(既定1)から to へだんだん変える(to は終わってからの速さ。曲の終わりで止めるときも 0 ではなく 0.1)
+//   speed    at から速さを to にする(段差)
+// 共通: resume … 演出の終わりの速さ(既定1。ease・speed は to のまま)/hold:true … 終わりの区切りを書かない(次の演出へそのままつなぐ)
+//       quiet:true … 演出の最中に判定のあるノーツを置かない(Grievous Lady の「演出の最中は来ない」)/group:false … 組を付けない
+// ★止まる・戻る間と、その後で「判定より前に一度判定線へ触れてしまう」ノーツ(Evans の 84.687秒がそう)は、組1(ふつうの速さ)へ自動で移す。
+//   それでも残るときは rhythm-scroll-fx-check.js が止める。書かない曲は今までとまったく同じ
+const RHYTHM_SCROLL_FX_GROUP=1;
+const RHYTHM_SCROLL_FX_GROUPS=Object.freeze({[RHYTHM_SCROLL_FX_GROUP]:Object.freeze([Object.freeze([0,1])])});
+// 見張りに使うノーツ速度1〜12の道の時間(28-rhythm-shared.jsx の RHYTHM_NOTE_TRAVEL_MS_POINTS と同じ。rhythm-scroll-fx-check.js が見張る)。
+// 早触れは速度で出たり出なかったりする(行って戻るの行きは、ふつうの速さから折り返すので一瞬前へ進む)ので全部見る
+const RHYTHM_SCROLL_FX_PROBE_TRAVEL=Object.freeze([7000,6000,5000,4000,3000,2150,1680,1300,1020,800,630,500]);
+// '1:23.450' や 83450 をミリ秒にする。読めないときは NaN
+const rhythmScrollFxMs=v=>{
+  if(typeof v==='number')return v;
+  const m=/^\s*(?:(\d+):)?(\d+(?:\.\d+)?)\s*$/.exec(String(v??''));
+  return m?Math.round(((Number(m[1])||0)*60+Number(m[2]))*1000):NaN;
+};
+// 演出の並び → {changes,windows,quiet}。windows は組を付ける区間、quiet はノーツを置かない区間
+const rhythmScrollFxBuild=fx=>{
+  const items=(Array.isArray(fx)?fx:[]).map(f=>({...f,at:rhythmScrollFxMs(f&&f.at),len:Math.max(0,Number(f&&f.len)||0)}))
+    .filter(f=>Number.isFinite(f.at)).sort((a,b)=>a.at-b.at);
+  const changes=[],windows=[],quiet=[];
+  for(const f of items){
+    const a=f.at,b=f.at+f.len,resume=Number.isFinite(Number(f.resume))?Number(f.resume):1;
+    const amount=Number(f.amount)>0?Number(f.amount):.15;
+    let rows=[];
+    if(f.kind==='stop')rows=[[a,0]];
+    else if(f.kind==='back')rows=[[a,'GLIDE',-amount,.5],[a+f.len/2,'GLIDE',amount,.5]];
+    else if(f.kind==='backHold')rows=[[a,'GLIDE',-amount,.5]];
+    else if(f.kind==='rush')rows=[[a,'RUSH',Number(f.reach)>0?Number(f.reach):RHYTHM_SCROLL_RUSH_REACH]];
+    else if(f.kind==='ease'){const to=Number(f.to);if(!Number.isFinite(to)||to<0)continue;
+      rows=[[a,'LERP',Number.isFinite(Number(f.from))?Number(f.from):1]];if(!f.hold)rows.push([b,to]);}
+    else if(f.kind==='speed'){const to=Number(f.to);if(!Number.isFinite(to)||to<0)continue;rows=[[a,to]];}
+    else continue;
+    if(f.kind!=='ease'&&f.kind!=='speed'&&!f.hold&&f.len>0)rows.push([b,resume]);
+    changes.push(...rows);
+    if(f.quiet)quiet.push([a,b]);
+    else if(f.group!==false&&(f.kind==='stop'||f.kind==='back'||f.kind==='backHold'))windows.push([a,b]);
+  }
+  return {changes:changes.sort((x,y)=>x[0]-y[0]),windows,quiet};
+};
+// 共有の表(RHYTHM_SCROLL)を使わずに、譜面1つの位置 S(t,組) を返す関数を作る(マルチ観戦のレーンが使う。演奏中の画面の表を上書きしないため)。
+// 表の無い譜面は null(呼ぶ側は今までどおり時刻をそのまま使う)。travelMs … その画面の道を流れる時間
+const rhythmScrollLocal=(chart,travelMs)=>{
+  if(!chart||!Array.isArray(chart.scrollChanges)||!chart.scrollChanges.length)return null;
+  const main=rhythmScrollBuild(chart.scrollChanges,travelMs).points,groups={};
+  if(chart.scrollGroups&&typeof chart.scrollGroups==='object')for(const [k,v] of Object.entries(chart.scrollGroups))groups[k]=rhythmScrollBuild(v,travelMs).points;
+  return (t,g)=>{
+    const points=(g!=null&&groups[g])||main,x=Number(t);
+    if(!points||!(x>points[0].t))return x;
+    let lo=0,hi=points.length-1;
+    while(lo<hi){const mid=(lo+hi+1)>>1;if(points[mid].t<=x)lo=mid;else hi=mid-1;}
+    return rhythmScrollSegAt(points,lo,x-points[lo].t);
+  };
+};
+// 譜面に演出を付ける。fx が空なら譜面をそのまま返す
+const rhythmScrollFxChart=(chart,fx)=>{
+  if(!chart||!Array.isArray(fx)||!fx.length)return chart;
+  const {changes,windows,quiet}=rhythmScrollFxBuild(fx);
+  if(!changes.length)return chart;
+  const span=note=>{const a=Number(note.timeMs);return [a,Math.max(a,Number(note.endTimeMs)||a)];};
+  const hits=(list,note)=>{const [a,b]=span(note);return list.some(([s,e])=>a<=e&&b>=s);};
+  let notes=chart.notes.filter(note=>!hits(quiet,note))
+    .map(note=>hits(windows,note)?{...note,scrollGroup:RHYTHM_SCROLL_FX_GROUP}:note);
+  // 判定より前に判定線へ触れてしまうノーツを組1へ移す(移すと周りが変わらないので、1回で足りる。念のため3回まで)
+  for(let round=0;round<3;round++){
+    const early=new Set();
+    for(const travel of RHYTHM_SCROLL_FX_PROBE_TRAVEL)for(const n of rhythmScrollEarlyTouches(changes,notes,travel,RHYTHM_SCROLL_FX_GROUPS))early.add(n);
+    if(!early.size)break;
+    notes=notes.map(note=>early.has(note)?{...note,scrollGroup:RHYTHM_SCROLL_FX_GROUP}:note);
+  }
+  const {level,durationMs,laneCount,notes:_n,totalNotes:_t,scrollChanges:_c,scrollGroups:_g,...rest}=chart;
+  return mhChart(level,notes.map(note=>Object.freeze(note)),durationMs,laneCount,{...rest,scrollChanges:Object.freeze(changes.map(r=>Object.freeze(r))),scrollGroups:RHYTHM_SCROLL_FX_GROUPS,scrollFx:Object.freeze(fx.slice())});
+};
 // 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
 // ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
 // 色は演奏を始めるときに、空中の段の色(rhythmSkyTheme().fx)で上書きする(金はモンスターノーツと同じ系統なので使わない)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 783c4c0ea6b159da
+// generated-sha256: 2438c6e63ff8a771
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57656,6 +57656,9 @@ function RhythmWatchLane({ chart }) {
     const notes = chart.notes;
     const lanes = Math.max(1, Math.min(8, Number(chart.laneCount) || 5));
     let raf = 0; let last = 0; let alive = true;
+    // 流れの速さが変わる曲(止まる・戻る)は、演奏している人と同じ見え方にする(2026-11-11 社長が選択・ヘンドウ)。
+    // 演奏中の画面の共有の表は使わず、この譜面だけの表で位置を出す。表の無い曲は今までどおり時刻をそのまま使う
+    const scrollAt = typeof rhythmScrollLocal === 'function' ? rhythmScrollLocal(chart, RHYTHM_WATCH_LANE_SPAN_MS) : null;
     const firstFrom = (t) => { let lo = 0; let hi = notes.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].timeMs < t) lo = mid + 1; else hi = mid; } return lo; };
     const frame = (stamp) => {
       if (!alive) return;
@@ -57677,20 +57680,25 @@ function RhythmWatchLane({ chart }) {
       ctx.strokeStyle = 'rgba(148,163,184,.18)'; ctx.lineWidth = 1;
       for (let i = 1; i < lanes; i += 1) { ctx.beginPath(); ctx.moveTo(i * lw, 0); ctx.lineTo(i * lw, h); ctx.stroke(); }
       ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, hitY); ctx.lineTo(w, hitY); ctx.stroke();
-      const yOf = (t) => hitY - ((t - now) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY;
+      const yOf = scrollAt
+        ? (t, g) => hitY - ((scrollAt(t, g) - scrollAt(now, g)) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY
+        : (t) => hitY - ((t - now) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY;
+      // 止まっている間は、時刻では先のノーツも道の上に見える。表のある曲は先まで見て、道の外のノーツは描かない
+      const horizon = now + RHYTHM_WATCH_LANE_SPAN_MS * (scrollAt ? 4 : 1);
       let shown = null;
       for (let i = firstFrom(now - 4000); i < notes.length; i += 1) {
         const n = notes[i];
-        if (n.timeMs > now + RHYTHM_WATCH_LANE_SPAN_MS) break;
+        if (n.timeMs > horizon) break;
         const end = Number(n.endTimeMs) > n.timeMs ? Number(n.endTimeMs) : n.timeMs;
         if (end < now - 400) continue;
         const code = jm && jm.has(i) ? jm.get(i) : -1;
         const x = Math.max(0, Math.min(lanes - 1, Number(n.lane) || 0)) * lw + lw * 0.1; const nw = lw * 0.8;
-        const y = yOf(n.timeMs);
+        const y = yOf(n.timeMs, n.scrollGroup);
+        if (scrollAt && y < -12 && (end <= n.timeMs || yOf(end, n.scrollGroup) < -12)) continue;
         const passed = n.timeMs < now - 80;
         ctx.globalAlpha = code >= 0 ? (passed ? 0.25 : 0.9) : (passed ? 0.3 : 1);
         ctx.fillStyle = code >= 0 ? RHYTHM_WATCH_JUDGMENT_VIEW[code].color : (RHYTHM_WATCH_LANE_COLORS[n.type] || '#38bdf8');
-        if (end > n.timeMs) { const yEnd = yOf(end); ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd)); }
+        if (end > n.timeMs) { const yEnd = yOf(end, n.scrollGroup); ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd)); }
         ctx.fillRect(x, y - 6, nw, 12);
         ctx.globalAlpha = 1;
         // 叩いた瞬間の光(判定の色)
