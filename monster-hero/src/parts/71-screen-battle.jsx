@@ -1718,8 +1718,13 @@ function BattleScreen({
   // 攻撃する子から敵までのずれ(24-battle-fx.jsx の measureAttackAim)。
   // ★描画の前(レイアウト直後)に測るので、最初のコマから敵の向きへ飛ぶ。見た目だけに使う
   const [attackAim, setAttackAim] = useState(null);
+  // ★1回の攻撃(タメ→本技の2段目)で1度だけ測る。位置は自分の transform を含めず測るので、2段目でも同じ値。攻撃が終われば(null)測り直せる
+  const aimMeasuredSlotRef = React.useRef(null);
   React.useLayoutEffect(()=>{
-    if(!attackAnim||ecoBattleView) return;
+    if(!attackAnim){ aimMeasuredSlotRef.current=null; return; }
+    if(ecoBattleView) return;
+    if(aimMeasuredSlotRef.current===attackAnim.slotIndex) return;
+    aimMeasuredSlotRef.current=attackAnim.slotIndex;
     const aim=measureAttackAim(attackAnim.slotIndex);
     setAttackAim(prev=>(prev&&aim&&prev.slotIndex===aim.slotIndex&&prev.dx===aim.dx&&prev.dy===aim.dy)?prev:aim);
   },[attackAnim,ecoBattleView]);

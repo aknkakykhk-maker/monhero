@@ -118,6 +118,13 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const oldT = await (async () => { const o = await open(v, false); await o.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
       const r = await o.evaluate(async () => ({ a: await assistantLifeTemplePerk(), saved: localStorage.getItem('mh_assistant_life_perks_v1') })); await o.close(); return r; })();
     check('⑧ 旧UIの人にも神殿で仲良し度が上がり、新しいキーが書かれる(全員に入れる)', oldT.a === 'kyuko' && /kyuko/.test(oldT.saved || ''), JSON.stringify(oldT));
+    // ⑨ マーケットの得: 助手が market にいれば、帯に「🛍」の行が出る(開発部の assistantMarketPerkToday が値を返すとき)
+    await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, atsu: { doing: 'idle', place: 'market' } } } }); });
+    await page.waitForTimeout(5200);
+    const mk = await page.evaluate(() => ({ who: assistantLifeMarketWho(), perk: ASSISTANT_LIFE_LINKS.marketPerkToday ? ASSISTANT_LIFE_LINKS.marketPerkToday() : 'なし', row: !!document.querySelector('[data-assistant-life-now-perk="market"]'), more: !!document.querySelector('[data-assistant-life-now-perks-more]'), keys: [...document.querySelectorAll('[data-assistant-life-now-perk]')].map(x => x.getAttribute('data-assistant-life-now-perk')) }));
+    check('⑨ 助手がマーケットにいるとき assistantLifeMarketWho が助手を返す', mk.who === 'atsu', JSON.stringify(mk));
+    check('⑨ 場所の判定 assistantLifePerkAt が帯と同じ(神殿は受け取り済みなので無し・マーケットは助手がいてできるときだけ)', await page.evaluate(() => assistantLifePerkAt('temple') === false && assistantLifePerkAt('ranch') === false && assistantLifePerkAt('market') === !!(ASSISTANT_LIFE_LINKS.marketPerkToday && (p => p && !p.used)(ASSISTANT_LIFE_LINKS.marketPerkToday()))));
+    check('⑨ マーケットのおすすめが出せるとき、帯に🛍の行(3行を超えるときは「ほか」の中)', !mk.perk || mk.perk === 'なし' || mk.perk.used || mk.row || mk.more, JSON.stringify(mk));
     check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
     check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
     const gone = await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; return !!l; });
