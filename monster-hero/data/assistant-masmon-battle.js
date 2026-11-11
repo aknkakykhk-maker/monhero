@@ -165,15 +165,17 @@
 
   // 助手のマスモンの並び(mh_assistant_life_masmon_v1 の行: monster・nick・lv)と育成の入れ物
   // (mh_assistant_masmon_grow_v1 の amgEntryOf の戻り: st・lv)と修行の入れ物(mh_assistant_masmon_train_v1 の
-  // amgtEntryOf の戻り: m=熟練・learn=覚えた技)から、対戦の1体を作る。入れ物が無ければ既定値
+  // amgtEntryOf の戻り: m=熟練・learn=覚えた技。amgtBattleOf の { techs, mastery } でもよい)から、対戦の1体を作る。入れ物が無ければ既定値
   const unitFromGrow = (row, entry, train) => {
     const r = row && typeof row === 'object' ? row : {};
     const e = entry && typeof entry === 'object' ? entry : null;
     const t = train && typeof train === 'object' ? train : null;
-    const learn = t && t.learn;
+    // 修行の入れ物 { m, learn } でも、受け渡し amgtBattleOf の { techs, mastery } でもよい
+    const learn = t && (Array.isArray(t.techs) ? t.techs : t.learn);
     const techs = Array.isArray(learn) ? learn : (learn && typeof learn === 'object' ? Object.keys(learn).filter(k => learn[k]) : undefined);
+    const mastery = t && (t.mastery && typeof t.mastery === 'object' ? t.mastery : (t.m && typeof t.m === 'object' ? t.m : undefined));
     return { species: r.monster, name: r.nick, lv: e && e.lv != null ? e.lv : r.lv, stats: e ? e.st : null,
-      techs, mastery: t && t.m && typeof t.m === 'object' ? t.m : undefined };
+      techs, mastery: mastery || undefined };
   };
 
   // ── 入力の正規化(壊れた値は既定値で補う) ──

@@ -274,6 +274,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const def = I.buildMoves(catalog, 'Golem', null, {}).map(m => m.key);
   check('⑪ 覚えた技の記録が無ければ、はじめの技(learn.start)だけ(無い種は全部)',
     starts.length ? JSON.stringify(def) === JSON.stringify(starts) : def.length === golem.length, def.join('・'));
+  const n3 = I.normalizeUnit(engine.unitFromGrow({ monster: 'Golem', nick: 'ごろ' }, null, { techs: [t0.id], mastery: { [t0.id]: 40 } }), catalog);
+  check('⑪ 修行の受け渡し amgtBattleOf の { techs, mastery } もそのまま受ける', n3.techs.length === 1 && n3.techs[0] === t0.id && n3.mastery[t0.id] === 40);
   const mv = I.buildMoves(catalog, 'Golem', n.techs, n.mastery);
   const raw = I.buildMoves(catalog, 'Golem', golem.map(t => t.id), {});
   const m0 = mv.find(m => m.key === t0.id), r0 = raw.find(m => m.key === t0.id);
