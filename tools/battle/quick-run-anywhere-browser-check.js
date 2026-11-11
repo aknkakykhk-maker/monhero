@@ -125,7 +125,10 @@ const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }, 
       await goHome();
       const before = await state();
       await clickText(re); await page.waitForTimeout(800); await closePopups();
-      w = await watch(9000); // WAVE10 のボス・周の切り替わりに重なっても進みが見える長さ
+      // 進むまで最長30秒待つ(WAVE10 のボスは長い。進みが見えたらすぐ次へ)
+      let jumpedAny = false;
+      for (let k = 0; k < 6; k++) { w = await watch(5000); if (w.jumped) jumpedAny = true; if (w.s.loops !== before.loops || w.maxWave !== before.wave) break; }
+      w.jumped = jumpedAny;
       await shot(`2-${name}`);
       const progressed = (w.s.loops > before.loops) || (w.s.loops === before.loops && w.maxWave > before.wave) || w.s.loops < before.loops;
       check(`② ${name} でも帯が見えて周回が進む・バトルへ飛ばない`, w.s.strip === 'live' && w.s.screen === name && progressed && !w.jumped, JSON.stringify({ before: [before.loops, before.wave], after: [w.s.loops, w.s.wave], screen: w.s.screen, strip: w.s.strip, jumped: w.jumped }));
@@ -144,7 +147,8 @@ const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }, 
       await shot(`3-${name}`);
       check(`③ ${name} では休む(進まない・バトルへ飛ばない)`, w.s.strip === 'resting' && w.s.screen === name && w.s.loops === a.loops && w.s.wave === a.wave && !w.jumped, JSON.stringify({ a: [a.strip, a.loops, a.wave, a.screen], b: [w.s.strip, w.s.loops, w.s.wave], jumped: w.jumped }));
       await goHome();
-      w = await watch(4000);
+      // 進むまで最長30秒待つ(WAVE10 のボスは長い)
+      for (let k = 0; k < 6; k++) { w = await watch(5000); if (w.s.loops > a.loops || w.maxWave > a.wave) break; }
       check(`③ ${name} から出ると続きから進む`, w.s.strip === 'live' && w.s.loops >= a.loops && (w.maxWave > a.wave || w.s.loops > a.loops), JSON.stringify({ a: [a.loops, a.wave], b: [w.s.loops, w.maxWave] }));
     }
     // ⑥ 帯の詳細と「止める」
