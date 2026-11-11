@@ -399,7 +399,7 @@ function AmgPickRow({ who, t, e, st }) {
 function AmgpPickMoved({ who }) {
   return (
     <div className="mt-1.5 rounded-xl border border-white/10 p-2" data-amg-pick-moved>
-      <p className="text-[10.5px] font-bold text-slate-300">🗓 訓練の予定は「📒 育成ノート」で組めます(計画して育てる子・次の回だけ変える)</p>
+      <p className="text-[10.5px] font-bold text-slate-300">🗓 訓練の予定は「📒 育成ノート」で組めます(計画して育てるマスモン・次の回だけ変える)</p>
       {typeof assistantMasmonNoteOpen === 'function' && <button type="button" className="mt-1 min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black" onClick={() => assistantMasmonNoteOpen(who && who.id)} data-amg-pick-note>📒 育成ノートを開く</button>}
     </div>);
 }

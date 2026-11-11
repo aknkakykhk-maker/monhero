@@ -300,7 +300,7 @@ function AssistantMasmonNoteBand({ land = false }) {
     <button type="button" onClick={() => assistantMasmonNoteOpen()} data-amgp-band className={`mx-3 ${land ? 'mb-1' : 'mb-2'} flex min-h-[44px] w-[calc(100%-24px)] items-center gap-2 rounded-2xl border border-emerald-300/60 bg-slate-950/85 px-3 py-1.5 text-left text-white active:scale-[.98]`}>
       <span className="text-[20px]" aria-hidden="true">📒</span>
       <span className="min-w-0 flex-1"><b className="block text-[13px] font-black text-emerald-200">育成ノート</b>
-        <span className="block text-[11px] font-bold text-slate-200">計画中 {st.picks.length}/{sg.cap}体{hurt ? ` ・ 休んでいる子 ${hurt}体` : ''}</span></span>
+        <span className="block text-[11px] font-bold text-slate-200">計画中 {st.picks.length}/{sg.cap}体{hurt ? ` ・ 休んでいるマスモン ${hurt}体` : ''}</span></span>
       <span className="text-[11px] font-black text-emerald-200" aria-hidden="true">▶</span>
     </button>);
 }
@@ -428,9 +428,9 @@ function AmgpMine({ onClose, aid = null, land = false }) {
       <div className="rounded-2xl border border-amber-300/50 bg-slate-950 p-2" data-amgp-stage={sg.lv}>
         <p className="text-[12px] font-black text-amber-200">📒 ノートの段 {sg.lv} ・ 計画で育てた日 {st.days}{sg.next !== null ? `/${sg.next}` : ''}</p>
         <span className="mt-1 block h-2 overflow-hidden rounded bg-slate-700"><i className="block h-full bg-amber-300" style={{ width: `${sg.next === null ? 100 : Math.min(100, st.days / sg.next * 100)}%` }}/></span>
-        <p className="mt-1 text-[10.5px] font-bold text-slate-300">{sg.next === null ? '最後の段です。5体まで計画して育てられます' : `あと${toNext}日で段${sg.lv + 1} → 計画できる子が${sg.lv + 1}体に(計画の子が予定で育った日を、1体ごとに数えます)`}</p>
+        <p className="mt-1 text-[10.5px] font-bold text-slate-300">{sg.next === null ? '最後の段です。5体まで計画して育てられます' : `あと${toNext}日で段${sg.lv + 1} → 計画できるマスモンが${sg.lv + 1}体に(計画のマスモンが予定で育った日を、1体ごとに数えます)`}</p>
       </div>
-      <p className="mt-3 text-[12px] font-black text-emerald-200">📌 計画して育てる子({picked.length}/{sg.cap})</p>
+      <p className="mt-3 text-[12px] font-black text-emerald-200">📌 計画して育てるマスモン({picked.length}/{sg.cap})</p>
       {picked.map(x => card(x, true))}
       {Array.from({ length: Math.max(0, AMGP_MAX - Math.max(sg.cap, picked.length)) }).slice(0, 1).map((_, i) => <p key={i} className="mt-1.5 rounded-2xl border-2 border-dashed border-white/20 p-2 text-center text-[11px] font-bold text-slate-400" data-amgp-locked>🔒 {sg.cap + 1}体目は段{sg.cap + 1}で(あと{toNext}日)</p>)}
       {picked.length < sg.cap && <p className="mt-1 text-[10.5px] font-bold text-slate-300">下の一覧の「📌 計画して育てる」で選べます(いつでも外せます)</p>}
@@ -441,7 +441,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
       {others.map(x => card(x, false))}
       {!all.length && <p className="mt-3 text-[11.5px] font-bold text-slate-300">まだ育成している助手のマスモンがいません</p>}
     </>);
-  } else if (tab === 'plan') body = cur && picked.includes(cur) ? <AmgpPlanTab x={cur} nameOf={nameOf} pickSel={pickSel(cur)}/> : <p className="mt-4 text-[12px] font-bold text-slate-300" data-amgp-plan-empty>「一覧」で計画して育てる子を選ぶと、ここで朝・昼・夜の予定を組めます</p>;
+  } else if (tab === 'plan') body = cur && picked.includes(cur) ? <AmgpPlanTab x={cur} nameOf={nameOf} pickSel={pickSel(cur)}/> : <p className="mt-4 text-[12px] font-bold text-slate-300" data-amgp-plan-empty>「一覧」で計画して育てるマスモンを選ぶと、ここで朝・昼・夜の予定を組めます</p>;
   else if (tab === 'log') body = cur ? <AmgpLogTab x={cur} nameOf={nameOf} pickSel={pickSel(cur)}/> : <p className="mt-4 text-[12px] font-bold text-slate-300">記録はまだありません</p>;
   else if (tab === 'train') {
     const who = cur && typeof assistantById === 'function' ? assistantById(cur.aid) : null;
@@ -511,7 +511,7 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
         <span className="rounded-lg bg-slate-700 py-1">はじめ<br/>{d.startFat}/{d.startStr}</span>
         {d.f.map((f, p) => <span key={p} className={`rounded-lg py-1 ${f && (f.fat >= 70 || f.str >= 70) ? 'bg-rose-700' : f && (f.fat >= 60 || f.str >= 60) ? 'bg-amber-700' : 'bg-slate-700'}`}>{AMG_PERIOD_NAME[p]}<br/>{f ? `${f.fat}/${f.str}` : '—'}</span>)}
       </div>
-      <p className="mt-1 text-[10px] font-bold text-slate-400">疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画の子は自動では休みません</p>
+      <p className="mt-1 text-[10px] font-bold text-slate-400">疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休みません</p>
       <div className="mt-2 flex flex-wrap gap-1.5" data-amgp-copy>
         <button type="button" onClick={() => amgpCopyDay(x.key, wd, 'all')} className="min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black">📄 この日を毎日に</button>
         <button type="button" onClick={() => amgpCopyDay(x.key, wd, 'weekday')} className="min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black">🗓 平日(月〜金)ぜんぶに</button>
