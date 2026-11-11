@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 497e8c1c8cb5865c
+// generated-sha256: 00f59672f1fff86e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68128,7 +68128,8 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   const who = cast ? cast.ids[0] : list[slot.i % list.length];
   const sceneKey = assistantLifeDailySceneOf(slotDef.from);
   const plan = typeof onScene === 'function' && assistantLifeDailySceneOn() ? assistantLifeDailyPlan(cast, sceneKey, day, slot.i) : null;
-  const sayLine = assistantLifeDailySay(who, sceneKey, day);
+  // 助手ごとのひとことは場面の印と一緒に出す(印が偽なら今までの1行のまま。2026-11-11 ミハリ3)
+  const sayLine = assistantLifeDailySceneOn() ? assistantLifeDailySay(who, sceneKey, day) : null;
   const castNames = plan ? plan.ids.map(nameOf).join('と') : nameOf(who);
   const castPlace = cast && cast.place && cast.place !== 'home' ? assistantLifePlaceShow(cast.place) : '家';
   const leftH = (() => { const s = slotDef; const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return s ? Math.max(1, s.to - h) : 1; })();

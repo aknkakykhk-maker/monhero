@@ -112,6 +112,11 @@ const SAMPLE = (() => {
     const o = await old.evaluate(() => { const h = document.querySelector('[data-assistant-life-house]'), b = document.querySelector('[data-assistant-life-benefit]');
       return { top: !!document.querySelector('[data-assistant-life-top-house],[data-assistant-life-top-strip],[data-assistant-life-benefit-fold]'), below: !!h && !!b && h.getBoundingClientRect().top > b.getBoundingClientRect().top, listen: !!document.querySelector('[data-assistant-life-daily-listen]') }; });
     check(`${T}⑤ 印が偽なら今までどおり(家の絵は下・「聞く ▶」)`, !o.top && o.below && o.listen, JSON.stringify(o));
+    if (o.listen) {
+      await old.locator('[data-assistant-life-daily-listen]').click(); await old.waitForTimeout(600);
+      const said = await old.evaluate(() => { const t = (document.querySelector('[data-assistant-life-daily]') || {}).textContent || ''; return { t: t.slice(0, 80), same: Object.values(ASSISTANT_LIFE_DAILY_SCENES).some(x => t.includes(x.say)) }; });
+      check(`${T}⑤ 印が偽なら「聞く ▶」の返事は今までの1行のまま(助手ごとの新しい台詞は出ない)`, said.same, JSON.stringify(said));
+    }
     await old.close();
   }
   check('⑦ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
