@@ -45,6 +45,7 @@ const CHANGELOG = [
       '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.10 ／ EXPERT Lv.19 ／ MASTER Lv.29 ／ HELL Lv.37 です。',
       '【short ver.】ノーツ数は 121 ／ 139 ／ 190 ／ 228 ／ 319 ／ 310 です。',
     ],
+    gallery:[{ image:'images/song-art/saudade-short.jpg?v=5b73267eda1a', caption:'short ver. のジャケット' }],
     assistantNotice:{ id:'update_notice_saudade_v1', type:'content' },
   },
   {
