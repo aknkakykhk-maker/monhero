@@ -120,7 +120,7 @@ const PC='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120';
 }
 // 4. 本体のつなぎ
 check('取りこぼしの回収は、ゲームが直前に本当に止まったときだけ長くする',/const rhythmMissReclaimMs=\(\)=>RHYTHM_INPUT_MATCH_WINDOW_MS\+\(rhythmTouchFixOn\('inputAgeCap'\)&&RHYTHM_TIMING_DIAG\.recentStall\(RHYTHM_RECLAIM_WIDE_WINDOW_MS\)\?RHYTHM_INPUT_AGE_CAP_WIDE_MS:RHYTHM_INPUT_AGE_MAX_MS\);/.test(runtime)&&/const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs\(\);/.test(play));
-check('曲の時計の止まったコマを、コマごとに数える',/RHYTHM_TIMING_DIAG\.frame\(songTimeMs\)/.test(play));
+check('曲の時計の止まったコマを、コマごとに、元の時計で数える',/RHYTHM_TIMING_DIAG\.frame\(songTimeMs,typeof run\.audio\.rawSongTimeMs==='function'\?run\.audio\.rawSongTimeMs\(\):null\)/.test(play)&&/rawSongTimeMs:\(\)=>rawSongTimeSeconds\(\)\*1000/.test(audio));
 check('演奏の始めに数え直し、端末の音の事情を入れる',/RHYTHM_TIMING_DIAG\.reset\(\);RHYTHM_TIMING_DIAG\.meta\(audio\.info\?\.\(\)\);RHYTHM_TOUCH_BRIDGE\.reset\(\)/.test(play));
 check('診断の行へ timing を入れる',/timing:RHYTHM_TIMING_DIAG\.snapshot\(\)/.test(play));
 check('演奏の始めに、ゲームが記録から直し方の入れ切りを決める',/rhythmTouchFixAutoSet\(rhythmTouchFixAutoFrom\(await storeGet\(RHYTHM_TOUCH_DIAG_KEY,\[\]\)\)\)/.test(play));
@@ -140,6 +140,63 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   const calm=mk('ios',12,{ageHist:[300,0,0,0,0,0],ageCapped:0,frames:5000,stalls:5,hidden:0,pen:0});
   check('報告ツール: 問題のない記録では何も疑わない',d.timingLines(d.timingSummary(calm)).every(l=>l.level!=='found'));
   check('報告ツール: 記録が少ないあいだは判定しない',d.timingLines(d.timingSummary(mk('ios',3,{ageHist:[1,0,0,0,0,0],frames:10,stalls:0}))).some(l=>l.level==='wait'));
+}
+
+// 6. 同期の総点検(2026-11-11)
+//   本番の記録で、曲の時計の直し(smoothSongClock)が入ったり切れたりをくり返していた(入れている間は、なめらかにした後の時計で止まりを数えるので 0 になり、自分で切れる)。
+//   遅れて届いた入力の時刻を信じてよいかを決める数と、自分の touchstart なしに見えた指の内訳も足した。どれも判定には使わない
+{
+  const o=makeContext(IPHONE);o.RHYTHM_TIMING_DIAG.reset();
+  // 元の時計は 100,100,120,120,140… と2コマに1回止まる。画面の時計はなめらかに進む
+  [[100,100],[108,100],[116,120],[124,120],[132,140],[140,140]].forEach(([shown,raw])=>o.RHYTHM_TIMING_DIAG.frame(shown,raw));
+  const s=o.RHYTHM_TIMING_DIAG.snapshot();
+  check('止まったコマは元の時計で数える(なめらかにした時計を渡しても 0 にならない)',s.frames===6&&s.stalls===3&&s.stallsShown===0,JSON.stringify({frames:s.frames,stalls:s.stalls,shown:s.stallsShown}));
+  // 直しを入れた回の記録だけが20曲たまっても、自分で切れない
+  const onRows=Array.from({length:20},()=>({stats:{timing:{frames:5000,stalls:Math.round(5000*s.stalls/s.frames)}}}));
+  check('直しを入れた回の記録だけになっても、入れ切りの決めは「入れる」のまま(くり返さない)',o.rhythmTouchFixAutoFrom(onRows).smoothSongClock===true);
+  o.RHYTHM_TIMING_DIAG.reset();[100,100,108].forEach(v=>o.RHYTHM_TIMING_DIAG.frame(v));
+  check('元の時計を渡さない呼び方は今までどおり',o.RHYTHM_TIMING_DIAG.snapshot().stalls===1&&o.RHYTHM_TIMING_DIAG.snapshot().stallsShown===1);
+  // 遅れて届いた入力で取れた単押し
+  o.rhythmInputAgeResetFloor();o.RHYTHM_TIMING_DIAG.reset();
+  o.clock.now=1010;check('ふつうの入力の補正は今までどおり',o.rhythmInputAgeMs(1000,1010)===10);
+  o.RHYTHM_TIMING_DIAG.bias(-20);
+  o.clock.now=5000;o.RHYTHM_TIMING_DIAG.frame(1);o.clock.now=5005;
+  check('遅れて届いた入力(200ms・コマは来ていた)の補正も今までどおり 80ms',o.rhythmInputAgeMs(4805,5005)===80);
+  o.RHYTHM_TIMING_DIAG.bias(95);
+  o.clock.now=5100;o.RHYTHM_TIMING_DIAG.bias(-25);
+  const t=o.RHYTHM_TIMING_DIAG.snapshot();
+  check('遅れた入力で取れた単押しは別に数え、合図の時刻まで戻したときのずれも残す',t.lateN===1&&t.lateActMs===95&&t.lateFullMs===-25&&t.lateExMs===120,JSON.stringify({n:t.lateN,act:t.lateActMs,full:t.lateFullMs,ex:t.lateExMs}));
+  check('ふだんのずれ(biasMs)には混ぜない',t.biasN===2&&t.biasMs===-20,JSON.stringify({n:t.biasN,ms:t.biasMs}));
+  o.clock.now=6010;o.rhythmInputAgeMs(6000,6010);o.RHYTHM_TIMING_DIAG.bias(-30);
+  check('次のふつうの入力では消える',o.RHYTHM_TIMING_DIAG.snapshot().lateN===1&&o.RHYTHM_TIMING_DIAG.snapshot().biasN===3);
+  check('診断の大きさは小さいまま',JSON.stringify(o.RHYTHM_TIMING_DIAG.snapshot()).length<480,String(JSON.stringify(o.RHYTHM_TIMING_DIAG.snapshot()).length));
+  // 突き合わせの足した数
+  const bridgeBlock=pick(/const RHYTHM_TOUCH_BRIDGE_WAIT_MS=45;[\s\S]*?const RHYTHM_TOUCH_BRIDGE=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/);
+  const bctx={};vm.createContext(bctx);vm.runInContext(`${bridgeBlock}\nthis.B=RHYTHM_TOUCH_BRIDGE;`,bctx);const B=bctx.B;
+  B.touchStart(1,100,700,1000,1005,5,{edgePx:10,live:1});B.touchStart(2,200,400,1000,1120,120,{edgePx:200,live:2});B.touchStart(3,200,400,1000,1400,400,{edgePx:30,live:2});
+  let b=B.snapshot();
+  check('遅れて届いた touchstart の分布・ふちからの近さ・ほかの指の有無を数える',JSON.stringify(b.lateHist)==='[0,1,0,1]'&&JSON.stringify(b.edgeAll)==='[1,1,0,1]'&&JSON.stringify(b.edgeLate)==='[0,1,0,1]'&&b.multiAll===2&&b.multiLate===2&&b.lateDelivery===2,JSON.stringify(b));
+  B.reset();B.lateStart({id:7,type:'touchmove',stamp:2000,back:false});B.lateStart({id:8,type:'touchstart',stamp:2000,back:false});B.lateStart({id:9,type:'touchend',stamp:2000,back:true,guarded:true});
+  check('自分の touchstart なしに見えた指の内訳を数える(lateStart の数え方は今までどおり)',(b=B.snapshot()).lateStart===2&&b.lsByMove===1&&b.lsByStart===1&&b.lsBack===1&&b.lsBackGuard===1&&b.lsByEnd===0,JSON.stringify(b));
+  check('あとから届いた自分の touchstart は数え直さず、時刻の差を残す',B.lateFollow(7,1950)===true&&B.lateFollow(7,1950)===false&&B.lateFollow(99,1)===false&&(b=B.snapshot()).lsFollow===1&&b.lsFollowEarlier===1&&b.lsFollowMaxMs===50,JSON.stringify(b));
+  check('足した数を入れても、突き合わせの数は小さい',JSON.stringify(B.snapshot()).length<520,String(JSON.stringify(B.snapshot()).length));
+  // 演奏画面のつなぎ
+  check('離しの合図なしに消えた指が戻っても、iPhone では新しく押した扱いにしない',/const ownStart=e\.type==='touchstart'&&Array\.from\(e\.changedTouches\|\|\[\]\)\.some\(t=>t\.identifier===touch\.identifier\);/.test(play)&&/guarded=back&&rhythmTouchPlatform\(\)==='ios'/.test(play)&&/if\(guarded\)\{RHYTHM_INPUT_REC\.event\('back',\{key:inputKey\}\);return;\}/.test(play));
+  check('消えた指を覚えるのは、自分の離しの合図が無かったときだけ',/if\(!ownEnd\)\{current\.droppedNoEnd=current\.droppedNoEnd\|\|new Map\(\);/.test(play));
+  check('戻ったと見る長さは 1.5秒',/const RHYTHM_TOUCH_BACK_MS=1500;/.test(runtime));
+  // 報告ツール
+  const d=require('./rhythm-touch-diag.js');
+  const row=(dev,fixes,timing,extra={})=>({platform:'ios',device_key:dev,song_id:'haruka',note_count:300,created_at:new Date().toISOString(),stats:{touchStarts:300,fixes,timing,...extra}});
+  const flap=[...Array.from({length:5},()=>row('a',['smoothSongClock'],{frames:5000,stalls:0})),...Array.from({length:4},()=>row('a',[],{frames:5000,stalls:400}))];
+  check('報告ツール: 入ったり切れたりしている端末を見つける',d.syncLines(d.syncSummary(flap)).some(l=>/入ったり切れたり/.test(l)&&/1台/.test(l)));
+  const steady=Array.from({length:9},()=>row('a',['smoothSongClock'],{frames:5000,stalls:400,stallsShown:2}));
+  check('報告ツール: 入れたままの端末は疑わず、画面の時計の止まりで効き目を見る',d.syncLines(d.syncSummary(steady)).every(l=>!/入ったり切れたり/.test(l))&&d.syncLines(d.syncSummary(steady)).some(l=>/^◎/.test(l)&&/画面に出している時計/.test(l)));
+  const trust=Array.from({length:6},()=>row('a',[],{frames:5000,stalls:0,biasN:200,biasMs:-30,lateN:6,lateActMs:60,lateFullMs:-28,lateExMs:90},{lateHist:[1,2,2,1],edgeAll:[10,10,10,270],edgeLate:[3,2,0,1],multiAll:60,multiLate:5,lateDelivery:6}));
+  const tl=d.syncLines(d.syncSummary(trust));
+  check('報告ツール: 合図の時刻まで戻したほうがふだんのずれに近ければ「時刻は本当」と出す',tl.some(l=>/合図の時刻は本当に指の触れた時刻/.test(l)),tl.join(' | ').slice(0,200));
+  check('報告ツール: 遅れがふちに寄っていれば出す',tl.some(l=>/^●/.test(l)&&/ふち/.test(l)));
+  const stale=Array.from({length:6},()=>row('a',[],{frames:5000,stalls:0,biasN:200,biasMs:-30,lateN:6,lateActMs:-27,lateFullMs:-120,lateExMs:90},{lateHist:[0,0,0,0]}));
+  check('報告ツール: いまの判定のほうが近ければ「時刻だけ古い」と出す',d.syncLines(d.syncSummary(stale)).some(l=>/合図の時刻だけ古い/.test(l)));
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

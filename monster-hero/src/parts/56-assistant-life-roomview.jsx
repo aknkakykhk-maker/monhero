@@ -125,19 +125,32 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
 // 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
 //   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
-//   描くのは目を開いた絵の きき・ももすけ・あつ だけ(みゅあ・きゅうこ・ソラシド・えるびんは元から目を閉じた絵、ドラは眼鏡)。
+//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡、えるびんは社長「そのままでいい」)。
+//   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)の絵の表も持つ。
+//   ベッドだけでなく、家の部屋の顔・場面の立ち絵・地図の全身(寝ている姿が出る所すべて)に重ねる
 //   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
 const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
   kiki: { ang: -3, line: '#4a2030', eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']] },
   momosuke: { ang: -17, line: '#5a3a28', eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']] },
   atsu: { ang: -27, line: '#3a1f2a', eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']] },
+  mua: { ang: 8, line: '#5a3a2a', eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']] },
+  kyuko: { ang: -10, line: '#4a2418', eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']] },
+});
+// 顔アイコン(face の ◯◯_normal の絵)の目。測り方は全身と同じ(目盛りつきで切り出して手で読んだ・2026-11-11)
+const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
+  mua: { ang: 10, line: '#5a3a2a', eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']] },
+  kiki: { ang: -2, line: '#4a2030', eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']] },
+  momosuke: { ang: -19, line: '#5a3a28', eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']] },
+  atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
+  kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
-  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const isFace = /\/face\//.test(String(src || ''));
+  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
   if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}`;
+  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
   return (
     <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
       <defs><filter id={fid} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={Math.max(0.6, w * 0.006)}/></filter></defs>

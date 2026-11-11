@@ -75,6 +75,8 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
         <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
+        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top: -b.t * ih, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}

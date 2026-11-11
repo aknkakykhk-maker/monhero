@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8aa5ab68c4ab38b8
+// source-sha256: 768f1a8920314dca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8549,6 +8549,7 @@ const Audio_ = (() => {
         },
         started: () => playing,
         songTimeMs: () => songTimeSeconds() * 1000,
+        rawSongTimeMs: () => rawSongTimeSeconds() * 1000,
         info: () => ({
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
@@ -42160,7 +42161,7 @@ const RhythmTapTest = ({
       const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
-      RHYTHM_TIMING_DIAG.frame(songTimeMs);
+      RHYTHM_TIMING_DIAG.frame(songTimeMs, typeof run.audio.rawSongTimeMs === 'function' ? run.audio.rawSongTimeMs() : null);
       const RHYTHM_MISS_RECLAIM_MS = rhythmMissReclaimMs();
       const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
@@ -43652,8 +43653,15 @@ const RhythmTapTest = ({
       if (!playing()) return;
       const now = nowMs();
       RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length || 0);
+      const vw = typeof window !== 'undefined' ? Number(window.innerWidth) || 0 : 0,
+        vh = typeof window !== 'undefined' ? Number(window.innerHeight) || 0 : 0,
+        live = e.touches?.length || 0;
       Array.from(e.changedTouches || []).forEach(t => {
-        if (inArea(t.target)) RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp);
+        if (!inArea(t.target) || RHYTHM_TOUCH_BRIDGE.lateFollow(t.identifier, e.timeStamp)) return;
+        RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp, {
+          edgePx: vw > 0 && vh > 0 ? Math.max(0, Math.min(t.clientX, vw - t.clientX, t.clientY, vh - t.clientY)) : NaN,
+          live
+        });
       });
       sweep();
     };
@@ -43822,10 +43830,27 @@ const RhythmTapTest = ({
           return;
         }
         current.activeTouchInputs.add(inputKey);
-        if (e.type !== 'touchstart') {
-          RHYTHM_TOUCH_BRIDGE.lateStart();
-          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
-          RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
+        const ownStart = e.type === 'touchstart' && Array.from(e.changedTouches || []).some(t => t.identifier === touch.identifier);
+        if (!ownStart) {
+          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            droppedAt = current.droppedNoEnd?.get(inputKey),
+            back = droppedAt !== undefined && nowPerf - droppedAt <= RHYTHM_TOUCH_BACK_MS,
+            guarded = back && rhythmTouchPlatform() === 'ios';
+          current.droppedNoEnd?.delete(inputKey);
+          RHYTHM_TOUCH_BRIDGE.lateStart({
+            id: touch.identifier,
+            type: e.type,
+            stamp: e.timeStamp,
+            back,
+            guarded
+          });
+          if (guarded) {
+            RHYTHM_INPUT_REC.event('back', {
+              key: inputKey
+            });
+            return;
+          }
+          if (!back && e.type !== 'touchstart') RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
         }
         if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
@@ -43875,6 +43900,15 @@ const RhythmTapTest = ({
             }, RHYTHM_MISSING_TOUCH_CONFIRM_MS);
           }
           return;
+        }
+        if (!ownEnd) {
+          current.droppedNoEnd = current.droppedNoEnd || new Map();
+          if (current.droppedNoEnd.size > 32) current.droppedNoEnd.clear();
+          current.droppedNoEnd.set(inputKey, performance.now());
+        } else {
+          current.droppedNoEnd?.delete(inputKey);
+          const m = /^touch:(-?\d+)$/.exec(String(inputKey));
+          if (m) RHYTHM_TOUCH_BRIDGE.forgetTouch(Number(m[1]));
         }
         current.missingHeld?.delete(inputKey);
         current.activeTouchInputs.delete(inputKey);
@@ -107357,12 +107391,27 @@ function AssistantLifeRoom({
     return who ? React.createElement("span", {
       key: pid,
       className: state.lonely && pid === id ? 'lonely' : state.after ? 'after' : '',
-      "data-assistant-life-room-face": pid
+      "data-assistant-life-room-face": pid,
+      style: {
+        position: 'relative'
+      }
     }, React.createElement(AssistantFace, {
       who: who,
       size: Math.round(Math.min(40, h * .44)),
       accent: who.accent
-    })) : null;
+    }), met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => {
+      const sz = Math.round(Math.min(40, h * .44)) - 4;
+      return React.createElement(AssistantLifeSleepEyes, {
+        pid: pid,
+        src: assistantFaceSrc(who, null),
+        w: sz,
+        h: sz,
+        style: {
+          left: 2,
+          top: 2
+        }
+      });
+    })()) : null;
   })), ppl && state.bub && React.createElement("span", {
     className: "bb",
     "data-assistant-life-room-bub": true,
@@ -108381,6 +108430,17 @@ function AssistantLifeStands({
         opacity: 0,
         height: '50%',
         filter
+      }
+    }), zz && p && typeof AssistantLifeSleepEyes === 'function' && React.createElement(AssistantLifeSleepEyes, {
+      pid: x.pid,
+      src: x.src,
+      w: p.width,
+      h: p.height,
+      style: {
+        left: p.left,
+        top: p.top,
+        filter,
+        zIndex: 1
       }
     }), zz && p && React.createElement("span", {
       className: "absolute text-[34px]",
@@ -109936,6 +109996,16 @@ function AssistantLifeMapFig({
       left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
     }
+  }), sleep && typeof AssistantLifeSleepEyes === 'function' && React.createElement(AssistantLifeSleepEyes, {
+    pid: who && who.id,
+    src: src,
+    w: iw,
+    h: ih,
+    style: {
+      left: w / 2 - cx,
+      top: -b.t * ih,
+      filter: 'brightness(.62) saturate(.7)'
+    }
   })), sleep && React.createElement("span", {
     className: "absolute right-0 top-0 text-[10px]",
     "aria-hidden": "true"
@@ -110915,6 +110985,43 @@ const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
     ang: -27,
     line: '#3a1f2a',
     eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']]
+  },
+  mua: {
+    ang: 8,
+    line: '#5a3a2a',
+    eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']]
+  },
+  kyuko: {
+    ang: -10,
+    line: '#4a2418',
+    eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']]
+  }
+});
+const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
+  mua: {
+    ang: 10,
+    line: '#5a3a2a',
+    eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']]
+  },
+  kiki: {
+    ang: -2,
+    line: '#4a2030',
+    eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']]
+  },
+  momosuke: {
+    ang: -19,
+    line: '#5a3a28',
+    eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']]
+  },
+  atsu: {
+    ang: -30,
+    line: '#3a1f2a',
+    eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']]
+  },
+  kyuko: {
+    ang: -11,
+    line: '#4a2418',
+    eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
 function AssistantLifeSleepEyes({
@@ -110924,10 +111031,11 @@ function AssistantLifeSleepEyes({
   h,
   style
 }) {
-  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const isFace = /\/face\//.test(String(src || ''));
+  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}`;
+  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
   return React.createElement("svg", {
     "data-assistant-life-roomview-sleep-eyes": pid,
     width: w,
