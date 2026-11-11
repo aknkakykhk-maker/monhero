@@ -1638,6 +1638,34 @@
     "EASY": 0.2
    },
    "hellDensity": 1.6
+  },
+  "saudade": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-saudade.mp3",
+   "chartRevision": 39,
+   "audioSha256": "463d9176b94f7f399866d61287193d73c46d1f252841ae57cb93dcdb7350eb30",
+   "durationMs": 263236,
+   "analyzedTiming": {
+    "bpm": 120.091,
+    "beatZeroMs": 119.2,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "saudade_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-saudade-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "3491f3c33de42d924470786bd8a508814c1353edd8fcc01526bb0639ce677f83",
+   "durationMs": 95556,
+   "analyzedTiming": {
+    "bpm": 120.091,
+    "beatZeroMs": 149.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

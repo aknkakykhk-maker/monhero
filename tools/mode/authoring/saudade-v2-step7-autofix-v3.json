@@ -1,0 +1,176 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step7-autofix",
+ "trackId": "saudade",
+ "source": "v3",
+ "sourceLabel": "V3 生成",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 150,
+  "restrikeLimitMs": 105,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
+ },
+ "weights": {
+  "impossible": 10000,
+  "reach": 10000,
+  "strained": 100,
+  "hardJump": 120,
+  "laneSpread": 1,
+  "move": 3,
+  "maxPasses": 8
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 258,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 66,
+    "cost": 66
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 66,
+    "cost": 66
+   },
+   "fixes": []
+  },
+  "NORMAL": {
+   "noteCount": 291,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 66,
+    "cost": 66
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 66,
+    "cost": 66
+   },
+   "fixes": []
+  },
+  "HARD": {
+   "noteCount": 400,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 95,
+    "cost": 95
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 95,
+    "cost": 95
+   },
+   "fixes": []
+  },
+  "EXPERT": {
+   "noteCount": 482,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 3,
+    "reach": 0,
+    "hardJumps": 10,
+    "overSteps": 0,
+    "spread": 105,
+    "cost": 1605
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 3,
+    "reach": 0,
+    "hardJumps": 9,
+    "overSteps": 0,
+    "spread": 104,
+    "cost": 1484
+   },
+   "fixes": [
+    {
+     "grid": 676,
+     "bar": 42,
+     "timeMs": 84555,
+     "type": "TAP",
+     "move": "サブレーン8→0",
+     "pass": 1,
+     "costBefore": 1605,
+     "costAfter": 1484,
+     "impossibleAfter": 0,
+     "strainedAfter": 3
+    }
+   ]
+  },
+  "MASTER": {
+   "noteCount": 559,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 8,
+    "reach": 0,
+    "hardJumps": 12,
+    "overSteps": 0,
+    "spread": 112,
+    "cost": 2352
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 7,
+    "reach": 0,
+    "hardJumps": 11,
+    "overSteps": 0,
+    "spread": 112,
+    "cost": 2132
+   },
+   "fixes": [
+    {
+     "grid": 1918,
+     "bar": 119,
+     "timeMs": 239688,
+     "type": "TAP",
+     "move": "サブレーン10→6",
+     "pass": 1,
+     "costBefore": 2352,
+     "costAfter": 2132,
+     "impossibleAfter": 0,
+     "strainedAfter": 7
+    }
+   ]
+  }
+ }
+}
