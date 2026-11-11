@@ -257,6 +257,8 @@
 | `mh_onboarding_step` | string or null | はじめての設定の途中段階(完了で `null`) |
 | `mh_tutorial_seen_v1` | boolean / `false` | 村の案内(チュートリアル)を見たか |
 | `mh_battle_tutorial_seen_v1` | boolean / `false` | バトルのれんしゅうを見たか |
+| `mh_battle_tutorial_first_v1` | object / `{done:false, at:0, hints:{system:false, mode:false, difficulty:false}}` | はじめの1戦を通したか・選ぶ画面3つのひとこと案内を見たか(2026-11-11 分割。読むときは `normalizeBattleTutorialFirst`) |
+| `mh_battle_tutorial_more_v1` | object / `{offered:false, done:false, declined:false}` | つづきのれんしゅうの誘いを出したか・通したか・あとでにしたか(読むときは `normalizeBattleTutorialMore`) |
 | `mh_battle_tutorial_guide_shown_v1` | boolean / `false` | バトルのれんしゅうへの誘導を出したか |
 | `mh_rhythm_tutorial_seen_v1` | boolean / `false` | モンビーの練習を見たか |
 | `mh_daily_masu_advice_date_v1` | string | 助手の「今日のマスモン助言」を出した日 |

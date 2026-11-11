@@ -12017,7 +12017,7 @@ function MonsterHeroGame() {
     setTutorialStep(null);
     // 最初のあいさつを読み終えたら、名前とアイコンを決めるプロフィール画面へ進む
     if (kind === 'intro') { setGameState('PROFILE'); return; }
-    if (kind === 'battleGuide') return;
+    if (kind === 'battleGuide' || kind === 'battleMore') return;
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
     // 最後まで読んだときだけ、そのまま「あそびかた練習」(演奏画面で叩いて覚える)へ入る。
@@ -12188,6 +12188,52 @@ function MonsterHeroGame() {
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
 
+  // ===== つづきのれんしゅうの誘い(2026-11-11 社長 1=A) =====
+  // はじめの1戦を終えた人が、はじめての本番のバトル(れんしゅう・デバッグでない)を1回終えて HOME に戻ったとき、一度だけ誘う。
+  // 誘ったら mh_battle_tutorial_more_v1.offered を立てて、二度と出さない。れんしゅうを全部見た人(seen)には出さない
+  const realBattlePlayedRef = useRef(false);
+  useEffect(() => {
+    if (runStage === 'BATTLE' && !debugBattleRef.current && battleTutorialStep == null) realBattlePlayedRef.current = true;
+  }, [runStage, battleTutorialStep]);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || runStage !== null || !realBattlePlayedRef.current || tutorialStep != null || battleTutorialStep != null) return;
+    realBattlePlayedRef.current = false;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first, more] = await Promise.all([
+          storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+          storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false),
+          storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false),
+        ]);
+        const f = normalizeBattleTutorialFirst(first), m = normalizeBattleTutorialMore(more);
+        if (cancelled || seen === true || !f.done || m.offered) return;
+        await storeSet(BATTLE_TUTORIAL_MORE_KEY, { ...m, offered: true }, false);
+        if (!cancelled) { setTutorialKind('battleMore'); setTutorialStep(0); }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [bootPhase, gameState, runStage, tutorialStep, battleTutorialStep]);
+  // ===== 入口3画面の一言(2026-11-11 社長 2=A) =====
+  // バトルの仕組み・モード・難易度をえらぶ画面を、ふだん(れんしゅう以外で)初めて開いたとき、一度だけ下に出す。
+  // れんしゅうを全部見た人(seen)には出さない。出したら mh_battle_tutorial_first_v1.hints に書く(同じ画面で二度出さない)
+  const [battleSelectHint, setBattleSelectHint] = useState(null);
+  useEffect(() => {
+    const key = gameState === 'BATTLE_SYSTEM_SELECT' ? 'system' : gameState === 'BATTLE_MODE_SELECT' ? 'mode' : gameState === 'BATTLE_DIFFICULTY_SELECT' ? 'difficulty' : null;
+    if (!key) { setBattleSelectHint(null); return undefined; }
+    if (battleTutorialStep != null || typeof BATTLE_SELECT_HINTS === 'undefined' || !BATTLE_SELECT_HINTS[key]) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first] = await Promise.all([storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false)]);
+        const f = normalizeBattleTutorialFirst(first);
+        if (cancelled || seen === true || f.hints[key]) return;
+        await storeSet(BATTLE_TUTORIAL_FIRST_KEY, { ...f, hints: { ...f.hints, [key]: true } }, false);
+        if (!cancelled) setBattleSelectHint(key);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, battleTutorialStep]);
   // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
   // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
   useEffect(() => {
@@ -17356,13 +17402,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 'tactics'(タクティクスバトルのれんしゅう。公開前なのでデバッグからだけ)。
   // ★どの台本かで「どのモードで走らせるか」「どの台本データを使うか」が決まる。
   //   3つの対応をここ1か所にまとめて、入口が増えても取り違えないようにする
-  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];
+  // 'first'(はじめの1戦・21手)と 'more'(つづきのれんしゅう・勇者えらびから)は 2026-11-11 に足した(docs/progress/first-30min/BATTLE-TUTORIAL-SPLIT.md)
+  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics', 'first', 'more'];
   const battleTutorialVariantOf = (variant) => (BATTLE_TUTORIAL_VARIANTS.includes(variant) ? variant : 'v2');
   const battleTutorialModeOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
     ? BATTLE_MODE_TACTICS : BATTLE_MODE_CHALLENGE);
   const battleTutorialScenarioOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
     ? ((typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS) || null)
-    : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
+    : battleTutorialVariantOf(variant) === 'first'
+      ? ((typeof BATTLE_TUTORIAL_SCENARIO_FIRST !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_FIRST) || null)
+      : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     stopAllAuto();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
@@ -17397,6 +17446,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★v2とタクティクスは「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
     //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
     //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
+    // つづきのれんしゅうは入口の3画面を飛ばして、勇者えらびから始める(はじめの1戦で通った所なので)
+    if (battleTutorialVariantOf(variant) === 'more') {
+      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      advanceRunStage('PICK_HERO');
+      return;
+    }
     if (variant !== 'v1') {
       setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
@@ -17431,6 +17486,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
   const endBattleTutorial = async (completed = false) => {
     const back = battleTutorialReturn;
+    const endedVariant = battleTutorialVariant;
     // 台本を外す。以降のバトルはふだんどおりの抽選に戻る
     battleScenarioRef.current = null;
     battleScenarioIntentIndexRef.current = 0;
@@ -17448,13 +17504,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setBattleTutorialVariant('v2');
     // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
     // デバッグのお試し再生で、通常プレイの既読状態を書き換えないようにする
-    if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
+    // はじめの1戦を終えたら新しい印(mh_battle_tutorial_first_v1)だけ。「れんしゅうを全部見た」(seen)は、つづき・全部通しを終えたときだけ立てる(意味は変えない)
+    if (completed && back === 'HOME') {
+      try {
+        if (endedVariant === 'first') {
+          const cur = normalizeBattleTutorialFirst(await storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false));
+          await storeSet(BATTLE_TUTORIAL_FIRST_KEY, { ...cur, done: true, at: cur.at || Date.now() }, false);
+        } else {
+          await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);
+          if (endedVariant === 'more') {
+            const cur = normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false));
+            await storeSet(BATTLE_TUTORIAL_MORE_KEY, { ...cur, offered: true, done: true }, false);
+          }
+        }
+      } catch {}
+    }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') { returnToHome(); return; }
     setGameState(back || 'DEBUG_SETTINGS');
   };
   const battleTutorialSteps = (battleTutorialVariant === 'v1'
     ? (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)
+    : battleTutorialVariant === 'first'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_FIRST !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_FIRST)
+    : battleTutorialVariant === 'more'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_MORE !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_MORE)
     : battleTutorialVariant === 'tactics'
       ? (typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS)
       : (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)) || [];
@@ -25083,12 +25157,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         />
       )}
 
+      {battleSelectHint&&battleTutorialStep==null&&typeof BATTLE_SELECT_HINTS!=='undefined'&&BATTLE_SELECT_HINTS[battleSelectHint]&&activeAssistant&&(
+        <div data-battle-select-hint={battleSelectHint} className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pointer-events-none" style={{paddingBottom:'max(12px, env(safe-area-inset-bottom))'}}>
+          <div className="pointer-events-auto w-full max-w-md rounded-2xl border-2 bg-slate-950/95 p-3 shadow-2xl" style={{borderColor:activeAssistant.accent}}>
+            <div className="flex items-start gap-2">
+              <img src={assistantFaceSrc(activeAssistant,'happy')} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover"/>
+              <div className="min-w-0 flex-1">
+                <span className="block text-[10px] font-black tracking-widest" style={{color:activeAssistant.accent}}>{activeAssistant.name}</span>
+                <span className="block text-[12px] font-bold leading-relaxed text-white" style={JA_WRAP_STYLE}>{jaWrap(BATTLE_SELECT_HINTS[battleSelectHint])}</span>
+              </div>
+            </div>
+            <button type="button" data-battle-select-hint-close onClick={()=>setBattleSelectHint(null)} className="mt-2 min-h-[40px] w-full rounded-xl text-[12px] font-black text-black active:scale-[.98]" style={{backgroundColor:activeAssistant.accent}}>わかった！</button>
+          </div>
+        </div>
+      )}
       {tutorialStep!=null&&(()=>{
         const intro=tutorialKind==='intro';
+        const battleMore=tutorialKind==='battleMore';
+        // つづきの誘いは、はじめての案内と同じ見た目(スキップなし・次へ)で出す
         const battleGuide=tutorialKind==='battleGuide';
+        const guideLook=battleGuide||battleMore;
         const rhythm=tutorialKind==='rhythm';
         const pages=(rhythm
           ? ((typeof assistantRhythmTutorialPages==='function'&&assistantRhythmTutorialPages(selectedAssistantId))||[])
+          : battleMore
+          ? ((typeof assistantBattleMorePages==='function'&&assistantBattleMorePages(selectedAssistantId))||[])
           : battleGuide
           ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
           : intro
@@ -25104,7 +25197,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="w-full max-w-md flex flex-col items-center">
             <div className="w-full flex justify-between items-center mb-2">
               <span className="text-[10px] font-black tracking-widest" style={{color:who.accent}}>{tutorialStep+1} / {pages.length}</span>
-              {!battleGuide&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
+              {!guideLook&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
             </div>
             <div className="w-full flex items-end gap-3">
               <AssistantFace who={who} size={104} accent={who.accent} expression={page.e}/>
@@ -25125,22 +25218,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 案内の最後のページ(offer:'battle')では、そのままバトルの練習へ入れる。
                 断ってもヘルプの「バトルのれんしゅう」からいつでも始められる */}
             {page.offer==='battle'&&(
-              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
+              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME','first'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
             )}
             {page.offer==='battleGuide'&&(
               <div className="w-full grid grid-cols-1 gap-2 mt-3">
-                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
+                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','first'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
                 <button onClick={()=>setTutorialStep(v=>v+1)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
+              </div>
+            )}
+            {page.offer==='battleMore'&&(
+              <div className="w-full grid grid-cols-1 gap-2 mt-3" data-battle-more-offer>
+                <button data-battle-more-start onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','more'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>つづきのれんしゅうをやる</button>
+                <button data-battle-more-later onClick={()=>{ void (async()=>{ try{ const cur=normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY,null,false)); await storeSet(BATTLE_TUTORIAL_MORE_KEY,{...cur,offered:true,declined:true},false); }catch{} })(); setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
               </div>
             )}
             {page.declined&&(
               <button onClick={()=>finishTutorial(false)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>わかった！</button>
             )}
-            {!battleGuide&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
+            {!guideLook&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">戻る</button>
               <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}</button>
             </div>}
-            {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
+            {guideLook&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
           </div>
         </div>);
       })()}
@@ -25316,7 +25415,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 )}
                 {topic.launch==='battleTutorial'&&(
-                  <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
+                  <div className="space-y-2" data-battle-tutorial-launch>
+                    <button data-battle-tutorial-launch-first onClick={()=>startBattleTutorial('HOME','first')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 はじめの1戦(カードを出して勝つまで)</button>
+                    <button data-battle-tutorial-launch-more onClick={()=>startBattleTutorial('HOME','more')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 つづきのれんしゅう(バトルのいろいろな仕組み)</button>
+                    <button data-battle-tutorial-launch-all onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95">🎓 れんしゅうを最初から全部通す</button>
+                  </div>
                 )}
                 <div className="pt-1 flex gap-2">
                   <button onClick={()=>setHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
