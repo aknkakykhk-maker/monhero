@@ -1405,7 +1405,7 @@ function AssistantMasmonWishRow({ who, onAsk }) {
     </div>);
 }
 
-const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
+const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好み']]);
 
 function AssistantMasmonPic({ t, size }) {
   const m = assistantMasmonMon(t.monster);
