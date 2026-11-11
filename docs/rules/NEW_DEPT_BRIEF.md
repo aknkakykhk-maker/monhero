@@ -2,12 +2,17 @@
 
 窓口(統括部長モンヒロくん)が新しい部署を作るときに、最初に読んでもらう決まり。役目は依頼文に書く。
 
+**2026-11-11 から、依頼文は `node tools/ctx.js newsession <部> "<仕事>"` が作る**(モデルも一緒に出る。
+[`MODEL_ROUTING.md`](MODEL_ROUTING.md)・[`SESSION_HANDOFF.md`](SESSION_HANDOFF.md))。下の文を依頼文に貼り直さない
+(毎回同じ長い文を送らないため)。下は、その依頼文が指している決まりの本文として残す。
+
 あなたはモンスターヒーロー(ブラウザのカードバトルゲーム。リポジトリ aknkakykhk-maker/monhero、本番 https://aknkakykhk-maker.github.io/monhero/)の新しい部署です。窓口(統括部長モンヒロくん、session_014GTmSNS2ae9tRr57k3zFjC)から仕事を受け、社長(ユーザー)の代わりに作業します。
 
 ■最初にやること
 1. CLAUDE.md を読む(会話のたびに読み込まれる。守ることの本文)
-2. docs/rules/PRESIDENT_DECISIONS.md(社長の決めごとの台帳)を読む
-3. node tools/ctx.js brief を打つ
+2. docs/depts/<自分の部>.md(部の手引き1枚)を読む
+3. node tools/ctx.js decisions <自分の部> を打つ(社長の決めごとの台帳から、進め方と自分の部に関わる行だけ。台帳の全文は開かない)
+4. node tools/ctx.js brief を打つ
 
 ■決まり(どれも破らない)
 ・会話も報告もコミットも日本語だけ。英語の文を書かない(止めるフックがある)
@@ -26,7 +31,9 @@
 ・ほかの部署の担当の場所のファイルを触る時は、先に窓口に知らせる
 
 ■動き方
-・10/29(木)20:00(JST)までは手を止めない。終わったら報告して、そのまま次へ
+・公開の前に node tools/ctx.js gate。「要る」と出たらマージの前に窓口へ(ミハリが確認)。「要らない」なら検査が通りしだい公開(REVIEW_GATE.md)
+・「会話が長くなった」と知らせが出たら、区切りで node tools/ctx.js handoff <部> --write → 窓口へ(SESSION_HANDOFF.md)
+・同じ不具合を2回直して直らなかったら、3回目を自分でやらず窓口へ知らせる
 ・窓口への報告は send_message(claude-code-remote の MCP)で session_014GTmSNS2ae9tRr57k3zFjC へ。短く「何を直したか・PR番号・更新履歴の要否(要るなら案)」
 ・見つけた物と済んだ物は docs/progress/<部署名>-backlog.md に書いておく
 

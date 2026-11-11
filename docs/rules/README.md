@@ -27,6 +27,21 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | [`CALL_NAMES.md`](CALL_NAMES.md) | ⑤・⑥ | 助手・マスモンの台詞でプレイヤーや助手を呼ぶとき(`{name}`・`{c}` の決まり・呼び方の一覧) |
 | [`NEW_DEPT_BRIEF.md`](NEW_DEPT_BRIEF.md) | — | 新しい部署を作るとき・新しい部署になったとき(共通の申し送り) |
 | [`ORGANIZATION.md`](ORGANIZATION.md) | — | だれ(どの部署・部長)に仕事を頼むか・報告するかを確かめるとき(組織図) |
+| [`MODEL_ROUTING.md`](MODEL_ROUTING.md) | ⑪ | 新しい会話を作るとき(仕事の種類 → モデルの表・要所のモデルを呼ぶ条件・実例) |
+| [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) | ⑪ | 会話が長くなったとき(区切りの目安・引き継ぎメモの型・新しい会話の依頼文の型) |
+| [`REVIEW_GATE.md`](REVIEW_GATE.md) | ⑪ | 公開の前(ミハリの確認が要る変更・要らない変更。判定は `node tools/ctx.js gate`) |
+| [`EDGE_REDEPLOY.md`](EDGE_REDEPLOY.md) | ⑪ | Edge Function(assistant-chat)を配り直すとき(送るのは数行。窓口が打つもの) |
+
+## 部署別の手引き(2026-11-11)
+
+部ごとの話(受け持つファイル・入口の関数・回す検査・関係する決まり)は [`docs/depts/`](../depts/README.md) に部ごとに1枚。
+新しい会話は CLAUDE.md のあと**自分の部の1枚だけ**読む。正本は `tools/team/depts.json`
+(`node tools/team/dept-guide.js --write` で作り直す。`rules-index-check.js` が実在と食い違いを見張る)。
+社長の決めごとの台帳は300KBを超えたので、`node tools/ctx.js decisions <部>` で「進め方」と自分の部に関わる行だけ読む。
+
+2026-11-11 にルートの CLAUDE.md を 16.5KB → 14.5KB にした(⑪ を足したうえで)。移した先: ⑥-2〜⑥-4・⑩-2 の一言は
+「最初に打つもの」の箇条書きと部の手引きへ、①〜④・⑦・⑨・⑩ の言い回しの重なりは [`FLOW.md`](FLOW.md)・
+[`SAVE_DATA_RULES.md`](SAVE_DATA_RULES.md)・[`CONTEXT_BUDGET.md`](CONTEXT_BUDGET.md)・[`SCOPE.md`](SCOPE.md) に本文がある。決まりは消していない。
 
 ## 節の置き場所(2026-10-09 にルートから移したもの)
 
