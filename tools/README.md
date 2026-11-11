@@ -350,6 +350,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 
 `node mode/rhythm-glow-road-width-check.js` は、押したサブレーンの光(指の位置で光る台形)が、横向きの「道の幅」(ふつう・細い)に合わせて切り直されることを確認する(2026-10-07・横向きでだけ光が押した位置からずれていた)。
 
+`node mode/rhythm-sync-audit-check.js` は、同期の総点検(2026-11-11)で入れた守りと診断を、実際に曲を流して確かめる(iPhone では、離しの合図なしに指の一覧から消えて戻っただけの指を入力にしない・Android は今までどおり・曲の時計の止まりは直し方を入れていても元の時計で数える)。資料は `docs/spec/RHYTHM_TOUCH_DIAG.md`「同期の総点検」。
+
 `node mode/rhythm-timing-diag-check.js` は、実機でしか分からないことの診断(`stats.timing`)と、直し方の切り替え(`inputAgeCap` / `smoothSongClock` / `autoPauseOnHidden`・既定はすべて切ってある・この端末だけで入れる上書き `mh_rhythm_fix_override_v1`)が崩れていないかを確認する(2026-10-07)。報告ツール `rhythm-touch-diag.js --report` の「タイミングの診断」も見張る。
 
 `node mode/rhythm-frame-diag-check.js` は、演奏中の1コマの重さをタッチの診断の行へ足す仕組み(`stats.frame`・2026-10-11)を見張る。足すだけ・約200バイト・frame の無い古い行を読んでも壊れない・送り先は今までどおり、を確かめる。
