@@ -172,7 +172,7 @@ const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return { a: 'rest' };
-  if (e.fat >= T.rest) return { a: 'rest' };
+  if (e.fat >= (typeof amgtRestAt === 'function' ? amgtRestAt(aid, T.rest) : T.rest)) return { a: 'rest' }; // 修行(第②段階)の観察力で目安が55へ寄る。印が偽ならそのまま
   if (e.str >= 50) return { a: 'play' };
   // 修行の回(第②段階の受け口・シュギョウ)。修行の印が偽なら null を返し、rnd も引かない
   if (typeof amgtChoose === 'function') { const x = amgtChoose(aid, e, row, rnd, slot); if (x) return x; }
@@ -236,6 +236,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
   while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) { e.xp -= amgLvNeed(e.lv); e.lv += 1; }
   e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}), ...(care.ranch ? { r: 1 } : {}) }].slice(-AMG_LOG);
+  if (act.a !== 'shugyo' && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot); // 修行(第②段階)の助手の腕に経験。印が偽なら何もしない
   return e;
 };
 // まだの回をまとめて決める。rows = その助手のいまのマスモン(assistantMasmonRowsOf)。初めての助手は、今の回から数える(さかのぼって育てない)
