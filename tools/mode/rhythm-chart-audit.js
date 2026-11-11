@@ -53,6 +53,8 @@ const audit=()=>{
       rows.push({songId:song.songId,old:grandfathered(song.songId),name:`${song.displayName||song.songId}${/_short$/.test(song.songId)&&!/short/i.test(song.displayName||'')?' short':''}`,difficulty:d,shown:Number.isFinite(lv)?lv:m.level,m,chart:L.charts[d],audio:L.audio,event:inEvent.has(song.songId)});}
     const lad=R.ladderOf(by);for(const l of lad){if(l.to==='HELL')continue;const r=rows.find(x=>x.songId===song.songId&&x.difficulty===l.to);if(r&&(l.peakRatio<1||l.notesRatio<1.03))r.inversion=`${l.from}→${l.to}: ノーツ数 ×${l.notesRatio}・最密4秒 ×${l.peakRatio}`;}
   }
+  // 同じ表示名の曲(リミックス・short ver. など)は、songId を添えて見分ける
+  {const ids=new Map();for(const r of rows){const x=ids.get(r.name)||new Set();x.add(r.songId);ids.set(r.name,x);}for(const r of rows)if(ids.get(r.name).size>1)r.name=`${r.name}(${r.songId})`;}
   // (2) 体感の数字 → Lv. の当てはめ
   //   地上の5難易度と HELL は別々に当てはめる(HELL の Lv. は空中の難しさを足して測るので、地上と同じ式に乗らない)
   let w=null;

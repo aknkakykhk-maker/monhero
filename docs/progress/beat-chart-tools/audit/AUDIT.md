@@ -19,15 +19,17 @@
 
 | 曲 | 難易度ごとの数 |
 | --- | --- |
-| SIX ÉTERNEL | EXPERT 21・MASTER 19・EXPERT 12・MASTER 14 |
-| Stay With Me | EXPERT 23・MASTER 13・EXPERT 19・MASTER 15 |
-| 綺季一閃 | EXPERT 22・MASTER 24・EXPERT 36・MASTER 24 |
-| Crazy Party Night | EXPERT 6・MASTER 5・EXPERT 17・MASTER 10 |
 | Grievous Lady | HARD 2・EXPERT 6・MASTER 7 |
 | MF × ICHIKA MIX | EXPERT 10・MASTER 8 |
 | Monster Hero | EXPERT 11・MASTER 10 |
 | Monster Hero -Another- | EXPERT 8・MASTER 12 |
+| SIX ÉTERNEL(six_eternel_beat) | EXPERT 21・MASTER 19 |
+| SIX ÉTERNEL(six_eternel_remix) | EXPERT 12・MASTER 14 |
+| Stay With Me(stay_with_me) | EXPERT 23・MASTER 13 |
+| 綺季一閃(kiki_issen) | EXPERT 22・MASTER 24 |
 | Close To Your Heart | EXPERT 4・MASTER 2 |
+| 綺季一閃(eiki_boss_remix) | EXPERT 36・MASTER 24 |
+| Stay With Me(pandora_boss_remix) | EXPERT 19・MASTER 15 |
 | デュラハンテーマ | EXPERT 5・MASTER 4 |
 | 呪われた騎士の時計仕掛け | EXPERT 6・MASTER 4 |
 | 4U ～ひたすら～ | EXPERT 2・MASTER 1 |
@@ -43,6 +45,8 @@
 | ハルカ | EXPERT 15・MASTER 10 |
 | Stay With Me short | EXPERT 38・MASTER 31 |
 | 綺季一閃 short | EXPERT 35・MASTER 27 |
+| Crazy Party Night(crazy_party_night) | EXPERT 6・MASTER 5 |
+| Crazy Party Night(crazy_party_night_full) | EXPERT 17・MASTER 10 |
 | Emerald Rush | EXPERT 19・MASTER 19 |
 | Wrath of the Thorn King | EXPERT 9・MASTER 5 |
 | Monster | EXPERT 13・MASTER 16 |
@@ -62,14 +66,14 @@
 | Sheriruth | HELL | 11 | 1:16.4 1:19.1 1:23.8 1:24.0 1:48.3 |
 | Altar of the World Tree, Beneath the White Night short | MASTER | 5 | 0:53.8 0:57.1 1:32.4 2:09.7 2:16.5 |
 | Evans | MASTER | 5 | 0:20.9 0:22.4 1:15.0 1:28.7 1:32.3 |
-| Stay With Me | MASTER | 4 | 1:29.7 3:05.0 3:05.7 3:47.6 |
+| Stay With Me(stay_with_me) | MASTER | 4 | 1:29.7 3:05.0 3:05.7 3:47.6 |
 | Sheriruth | MASTER | 4 | 1:48.4 1:51.0 1:51.2 2:10.7 |
 | light player short | MASTER | 4 | 0:29.7 1:35.3 2:18.5 2:19.1 |
 | Stay With Me short | MASTER | 3 | 0:38.7 0:42.3 2:28.9 |
 | light player short | EXPERT | 3 | 1:22.2 2:24.1 2:28.9 |
 | MF × ICHIKA MIX | MASTER | 2 | 1:26.3 2:02.9 |
 | Monster Hero | MASTER | 2 | 1:09.3 2:07.7 |
-| SIX ÉTERNEL | MASTER | 2 | 1:43.2 2:11.7 |
+| SIX ÉTERNEL(six_eternel_beat) | MASTER | 2 | 1:43.2 2:11.7 |
 | The City Beneath the Comets | EXPERT | 2 | 0:35.6 0:37.6 |
 | FREEDOM DiVE↓ | MASTER | 2 | 0:42.5 0:57.3 |
 | 綺季一閃 short | MASTER | 2 | 1:35.8 2:29.6 |
@@ -83,10 +87,10 @@
 | Rebellion short | EXPERT | 2 | 0:45.4 2:03.9 |
 | Monster Hero | EXPERT | 1 | 1:50.2 |
 | Monster Hero -Another- | EXPERT | 1 | 1:10.6 |
-| SIX ÉTERNEL | MASTER | 1 | 2:15.9 |
-| 綺季一閃 | EXPERT | 1 | 2:29.9 |
-| 綺季一閃 | MASTER | 1 | 2:08.1 |
-| Stay With Me | MASTER | 1 | 0:53.5 |
+| SIX ÉTERNEL(six_eternel_remix) | MASTER | 1 | 2:15.9 |
+| 綺季一閃(kiki_issen) | EXPERT | 1 | 2:29.9 |
+| 綺季一閃(eiki_boss_remix) | MASTER | 1 | 2:08.1 |
+| Stay With Me(pandora_boss_remix) | MASTER | 1 | 0:53.5 |
 | 呪われた騎士の時計仕掛け | HELL | 1 | 1:25.8 |
 | crossing field | EXPERT | 1 | 1:01.8 |
 | もう一つの世界へ | MASTER | 1 | 0:18.6 |
@@ -95,8 +99,8 @@
 | FREEDOM DiVE↓ | EXPERT | 1 | 2:00.7 |
 | ハルカ | MASTER | 1 | 1:04.9 |
 | 綺季一閃 short | EXPERT | 1 | 0:47.6 |
-| Crazy Party Night | EXPERT | 1 | 1:01.4 |
-| Crazy Party Night | MASTER | 1 | 4:00.4 |
+| Crazy Party Night(crazy_party_night) | EXPERT | 1 | 1:01.4 |
+| Crazy Party Night(crazy_party_night_full) | MASTER | 1 | 4:00.4 |
 | Emerald Rush | HARD | 1 | 1:50.2 |
 | Monster | HELL | 1 | 0:11.6 |
 
@@ -127,7 +131,7 @@
 | Altar of the World Tree, Beneath the White Night short | HELL | 53 | 交差/100 11.8(帯 〜9.82) |
 | SAD SONG short | HARD | 16 | 交差/100 0.5(帯 〜0.425) |
 | Sheriruth | EXPERT | 33 | 跳びの割合 0.141(帯 〜0.066) |
-| Stay With Me | HELL | 31 | 交差/100 10.1(帯 〜9.82)・届きにくい/100 15(帯 〜13.99) |
+| Stay With Me(stay_with_me) | HELL | 31 | 交差/100 10.1(帯 〜9.82)・届きにくい/100 15(帯 〜13.99) |
 | Sheriruth | HARD | 22 | 跳びの割合 0.121(帯 〜0.074) |
 | Emerald Rush | EXPERT | 18 | 届きにくい/100 8.5(帯 〜7.925) |
 | 4U ～ひたすら～ | NORMAL | 7 | 跳びの割合 0.083(帯 〜0.058) |
@@ -138,7 +142,7 @@
 | トリコ | MASTER | 17 | 跳びの割合 0.179(帯 〜0.166) |
 | The City Beneath the Comets | HELL | 49 | 届きにくい/100 14.2(帯 〜13.99) |
 | FREEDOM DiVE↓ | HARD | 26 | 届きにくい/100 3.8(帯 〜3.725) |
-| Stay With Me | NORMAL | 7 | 跳びの割合 0.059(帯 〜0.058) |
+| Stay With Me(stay_with_me) | NORMAL | 7 | 跳びの割合 0.059(帯 〜0.058) |
 | 戦場の疾風 | HARD | 15 | 跳びの割合 0.076(帯 〜0.074) |
 | 魔窟の旋律 | EXPERT | 22 | 跳びの割合 0.068(帯 〜0.066) |
 
@@ -175,7 +179,7 @@
 
 | 曲 | 中身 |
 | --- | --- |
-| Stay With Me | HARD→EXPERT: ノーツ数 ×1.21・最密4秒 ×0.94 |
+| Stay With Me(pandora_boss_remix) | HARD→EXPERT: ノーツ数 ×1.21・最密4秒 ×0.94 |
 | トリコ | EASY→NORMAL: ノーツ数 ×1.09・最密4秒 ×0.89 |
 | 魔窟の旋律 | EXPERT→MASTER: ノーツ数 ×1.02・最密4秒 ×1.04 |
 
@@ -194,7 +198,7 @@
 | 月が満ちる前に | 17.6 | EXPERT: 押せない 1 / MASTER: 押せない 2 / HELL: 表示が高い(表示 65・見込み 59.4) |
 | Monster Hero | 17.1 | EXPERT: 押せない 1 / MASTER: 押せない 2 / HELL: 表示が低い(表示 44・見込み 49.1) |
 | ANiMA | 17 | EXPERT: 押せない 2 / MASTER: 押せない 1・表示が高い(表示 44・見込み 39) |
-| Stay With Me | 16.5 | NORMAL: 跳びの割合 0.059(帯 〜0.058) / MASTER: 押せない 4 / HELL: 交差/100 10.1(帯 〜9.82)・届きにくい/100 15(帯 〜13.99) |
+| Stay With Me(stay_with_me) | 16.5 | NORMAL: 跳びの割合 0.059(帯 〜0.058) / MASTER: 押せない 4 / HELL: 交差/100 10.1(帯 〜9.82)・届きにくい/100 15(帯 〜13.99) |
 | Stay With Me short | 14.8 | EASY: 跳びの割合 0.026(帯 〜0) / HARD: 交差/100 0.5(帯 〜0.425)・届きにくい/100 4.5(帯 〜3.725) / EXPERT: 届きにくい/100 8.4(帯 〜7.925) / MASTER: 押せない 3・届きにくい/100 10.2(帯 〜9.45) |
 | The City Beneath the Comets | 14.8 | EXPERT: 押せない 2・交差/100 6(帯 〜3.975) / MASTER: 押せない 1・交差/100 7.1(帯 〜6.825) / HELL: 届きにくい/100 14.2(帯 〜13.99) |
 | 月が満ちる前に short | 14.4 | MASTER: 押せない 2 / HELL: 表示が高い(表示 65・見込み 58.6) |
@@ -204,13 +208,13 @@
 | Toward the Stars, Paradise or Truth short | 12 | EXPERT: 押せない 1 / MASTER: 押せない 2 |
 | Rebellion short | 10.4 | EXPERT: 押せない 2 / MASTER: 跳びの割合 0.307(帯 〜0.166) / HELL: 跳びの割合 0.236(帯 〜0.137) |
 | Rebellion | 10.4 | EASY: 跳びの割合 0.023(帯 〜0) / HARD: 押せない 1 / EXPERT: 押せない 1 / MASTER: 跳びの割合 0.282(帯 〜0.166) / HELL: 跳びの割合 0.234(帯 〜0.137) |
-| Stay With Me | 10 | EXPERT: 段の逆転(HARD→EXPERT: ノーツ数 ×1.21・最密4秒 ×0.94) / MASTER: 押せない 1 |
+| Stay With Me(pandora_boss_remix) | 10 | EXPERT: 段の逆転(HARD→EXPERT: ノーツ数 ×1.21・最密4秒 ×0.94) / MASTER: 押せない 1 |
 | Monster Hero -Another- | 9.6 | EXPERT: 押せない 1 / HELL: 表示が低い(表示 35・見込み 40.6) |
 | SAD SONG short | 9.5 | HARD: 交差/100 0.5(帯 〜0.425) / EXPERT: 押せない 1・交差/100 4.5(帯 〜3.975) / MASTER: 押せない 1 |
 | もう一つの世界へ | 9.2 | MASTER: 押せない 1 / HELL: 表示が低い(表示 37・見込み 42.2) |
 | Grievous Lady | 9.1 | MASTER: 表示が高い(表示 50・見込み 40.9) |
 | MF × ICHIKA MIX | 8 | MASTER: 押せない 2 |
-| SIX ÉTERNEL | 8 | MASTER: 押せない 2 |
+| SIX ÉTERNEL(six_eternel_beat) | 8 | MASTER: 押せない 2 |
 | ROSE | 8 | MASTER: 押せない 1 / HELL: 押せない 1 |
 | light player | 8 | MASTER: 押せない 2 |
 | トリコ | 7.4 | NORMAL: 段の逆転(EASY→NORMAL: ノーツ数 ×1.09・最密4秒 ×0.89) / HARD: 跳びの割合 0.2(帯 〜0.074) / MASTER: 跳びの割合 0.179(帯 〜0.166) |
@@ -222,15 +226,15 @@
 | Journey | 5.3 | EXPERT: 表示が低い(表示 23・見込み 28.3) |
 | Emerald Rush | 4.4 | HARD: 押せない 1 / EXPERT: 届きにくい/100 8.5(帯 〜7.925) |
 | Monster | 4.2 | NORMAL: 跳びの割合 0.077(帯 〜0.058) / HELL: 押せない 1 |
-| SIX ÉTERNEL | 4 | MASTER: 押せない 1 |
-| 綺季一閃 | 4 | EXPERT: 押せない 1 |
-| 綺季一閃 | 4 | MASTER: 押せない 1 |
+| SIX ÉTERNEL(six_eternel_remix) | 4 | MASTER: 押せない 1 |
+| 綺季一閃(kiki_issen) | 4 | EXPERT: 押せない 1 |
+| 綺季一閃(eiki_boss_remix) | 4 | MASTER: 押せない 1 |
 | 呪われた騎士の時計仕掛け | 4 | HELL: 押せない 1 |
 | crossing field | 4 | EXPERT: 押せない 1 |
 | 戦場の疾風 | 4 | HARD: 跳びの割合 0.076(帯 〜0.074) / EXPERT: 押せない 1 |
 | ハルカ | 4 | MASTER: 押せない 1 |
-| Crazy Party Night | 4 | EXPERT: 押せない 1 |
-| Crazy Party Night | 4 | MASTER: 押せない 1 |
+| Crazy Party Night(crazy_party_night) | 4 | EXPERT: 押せない 1 |
+| Crazy Party Night(crazy_party_night_full) | 4 | MASTER: 押せない 1 |
 | Monster short | 4 | HELL: 押せない 1 |
 | 4U ～ひたすら～ | 0.3 | NORMAL: 跳びの割合 0.083(帯 〜0.058) |
 | 風がそよぐ場所 | 0 | 気になる所なし |

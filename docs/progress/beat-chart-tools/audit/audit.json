@@ -23,10 +23,10 @@
    "gap": 1.1,
    "nearMedian": 7,
    "near": [
-    "Stay With Me NORMAL Lv.7",
+    "Stay With Me(stay_with_me) NORMAL Lv.7",
     "Stay With Me short EASY Lv.7",
-    "SIX ÉTERNEL EASY Lv.6",
-    "Stay With Me EASY Lv.6",
+    "SIX ÉTERNEL(six_eternel_remix) EASY Lv.6",
+    "Stay With Me(pandora_boss_remix) EASY Lv.6",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8"
    ],
    "score": 0,
@@ -56,7 +56,7 @@
     "Altar of the World Tree, Beneath the White Night NORMAL Lv.9",
     "Monster Hero EASY Lv.8",
     "綺季一閃 short EASY Lv.9",
-    "綺季一閃 NORMAL Lv.9"
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9"
    ],
    "score": 0,
    "odd": [],
@@ -81,9 +81,9 @@
    "gap": 0.2,
    "nearMedian": 13,
    "near": [
-    "Stay With Me EXPERT Lv.17",
+    "Stay With Me(pandora_boss_remix) EXPERT Lv.17",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13",
-    "Stay With Me HARD Lv.11",
+    "Stay With Me(pandora_boss_remix) HARD Lv.11",
     "Emerald Rush HARD Lv.11",
     "Monster Hero -Another- HARD Lv.13"
    ],
@@ -113,8 +113,8 @@
     "SAD SONG EXPERT Lv.21",
     "Monster Hero -Another- EXPERT Lv.19",
     "Stay With Me short HARD Lv.16",
-    "SIX ÉTERNEL EXPERT Lv.17",
-    "Stay With Me MASTER Lv.20"
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
+    "Stay With Me(stay_with_me) MASTER Lv.20"
    ],
    "score": 0,
    "odd": [],
@@ -170,7 +170,7 @@
    "gap": -0.6,
    "nearMedian": 35,
    "near": [
-    "Stay With Me HELL Lv.33",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33",
     "Nothing Without You HELL Lv.37",
     "Emerald Rush HELL Lv.36",
     "綺季一閃 short HELL Lv.33",
@@ -288,7 +288,7 @@
    "near": [
     "Altar of the World Tree, Beneath the White Night EXPERT Lv.20",
     "呪われた騎士の時計仕掛け MASTER Lv.25",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "Rebellion EXPERT Lv.25",
     "ヒューマノイド NORMAL Lv.19"
    ],
@@ -318,7 +318,7 @@
    "nearMedian": 27,
    "near": [
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
-    "綺季一閃 MASTER Lv.27",
+    "綺季一閃(eiki_boss_remix) MASTER Lv.27",
     "light player short MASTER Lv.27",
     "ANiMA EXPERT Lv.26",
     "Evans EXPERT Lv.27"
@@ -380,7 +380,7 @@
     "SAD SONG EASY Lv.8",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8",
     "Altar of the World Tree, Beneath the White Night short EASY Lv.8",
-    "SIX ÉTERNEL NORMAL Lv.8",
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8",
     "SAD SONG short EASY Lv.8"
    ],
    "score": 0,
@@ -410,7 +410,7 @@
     "Stay With Me short NORMAL Lv.10",
     "Altar of the World Tree, Beneath the White Night short NORMAL Lv.9",
     "MF × ICHIKA MIX NORMAL Lv.10",
-    "綺季一閃 NORMAL Lv.10"
+    "綺季一閃(kiki_issen) NORMAL Lv.10"
    ],
    "score": 0,
    "odd": [],
@@ -439,7 +439,7 @@
     "Altar of the World Tree, Beneath the White Night short HARD Lv.14",
     "SAD SONG short HARD Lv.16",
     "MF × ICHIKA MIX HARD Lv.13",
-    "SIX ÉTERNEL EXPERT Lv.17"
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17"
    ],
    "score": 0,
    "odd": [],
@@ -464,10 +464,10 @@
    "gap": -1.5,
    "nearMedian": 20,
    "near": [
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "SAD SONG EXPERT Lv.21",
-    "SIX ÉTERNEL EXPERT Lv.17",
-    "Stay With Me MASTER Lv.20",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
+    "Stay With Me(stay_with_me) MASTER Lv.20",
     "MF × ICHIKA MIX EXPERT Lv.18"
    ],
    "score": 4,
@@ -497,7 +497,7 @@
    "near": [
     "Altar of the World Tree, Beneath the White Night short EXPERT Lv.20",
     "綺季一閃 short EXPERT Lv.21",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
     "SAD SONG EXPERT Lv.21"
    ],
@@ -526,7 +526,7 @@
    "near": [
     "Altar of the World Tree, Beneath the White Night HELL Lv.46",
     "Toward the Stars, Paradise or Truth short HELL Lv.42",
-    "Stay With Me HELL Lv.33",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33",
     "Emerald Rush HELL Lv.36",
     "Evans HELL Lv.51"
    ],
@@ -556,7 +556,7 @@
     "トリコ MASTER Lv.17",
     "4U ～ひたすら～ EXPERT Lv.16",
     "Close To Your Heart HARD Lv.11",
-    "Crazy Party Night HARD Lv.11",
+    "Crazy Party Night(crazy_party_night) HARD Lv.11",
     "Monster HARD Lv.10"
    ],
    "score": 0,
@@ -585,8 +585,8 @@
     "only my railgun HARD Lv.14",
     "デュラハンテーマ HARD Lv.13",
     "戦場の疾風 HARD Lv.15",
-    "Crazy Party Night HARD Lv.11",
-    "Crazy Party Night HARD Lv.14"
+    "Crazy Party Night(crazy_party_night) HARD Lv.11",
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14"
    ],
    "score": 0,
    "odd": [],
@@ -732,7 +732,7 @@
     "Stay With Me short EASY Lv.7",
     "呪われた騎士の時計仕掛け EASY Lv.7",
     "MF × ICHIKA MIX EASY Lv.7",
-    "Stay With Me NORMAL Lv.7",
+    "Stay With Me(stay_with_me) NORMAL Lv.7",
     "Emerald Rush NORMAL Lv.7"
    ],
    "score": 0,
@@ -848,7 +848,7 @@
     "Altar of the World Tree, Beneath the White Night short EXPERT Lv.20",
     "綺季一閃 short EXPERT Lv.21",
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
-    "綺季一閃 EXPERT Lv.20",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20",
     "Monster Hero -Another- EXPERT Lv.19"
    ],
    "score": 4,
@@ -878,9 +878,9 @@
    "near": [
     "SAD SONG short HELL Lv.34",
     "SAD SONG HELL Lv.33",
-    "綺季一閃 HELL Lv.41",
-    "綺季一閃 HELL Lv.41",
-    "Stay With Me HELL Lv.31"
+    "綺季一閃(eiki_boss_remix) HELL Lv.41",
+    "綺季一閃(kiki_issen) HELL Lv.41",
+    "Stay With Me(stay_with_me) HELL Lv.31"
    ],
    "score": 0,
    "odd": [],
@@ -908,7 +908,7 @@
     "Stay With Me short EASY Lv.7",
     "呪われた騎士の時計仕掛け EASY Lv.7",
     "4U ～ひたすら～ EASY Lv.6",
-    "SIX ÉTERNEL EASY Lv.6",
+    "SIX ÉTERNEL(six_eternel_remix) EASY Lv.6",
     "Against My Own Shadow EASY Lv.7"
    ],
    "score": 0,
@@ -936,8 +936,8 @@
    "near": [
     "MF × ICHIKA MIX EASY Lv.7",
     "Stay With Me short EASY Lv.7",
-    "SIX ÉTERNEL EASY Lv.6",
-    "Stay With Me EASY Lv.6",
+    "SIX ÉTERNEL(six_eternel_remix) EASY Lv.6",
+    "Stay With Me(pandora_boss_remix) EASY Lv.6",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8"
    ],
    "score": 0,
@@ -965,10 +965,10 @@
    "gap": 0.8,
    "nearMedian": 11,
    "near": [
-    "Stay With Me HARD Lv.11",
+    "Stay With Me(pandora_boss_remix) HARD Lv.11",
     "MF × ICHIKA MIX HARD Lv.13",
     "Emerald Rush HARD Lv.11",
-    "Stay With Me EXPERT Lv.17",
+    "Stay With Me(pandora_boss_remix) EXPERT Lv.17",
     "Wrath of the Thorn King HARD Lv.9"
    ],
    "score": 0,
@@ -1024,7 +1024,7 @@
    "nearMedian": 19,
    "near": [
     "Altar of the World Tree, Beneath the White Night EXPERT Lv.20",
-    "SIX ÉTERNEL EXPERT Lv.17",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
     "Monster Hero -Another- EXPERT Lv.19",
     "Stay With Me short HARD Lv.16",
     "呪われた騎士の時計仕掛け MASTER Lv.25"
@@ -1054,10 +1054,10 @@
    "gap": 1.6,
    "nearMedian": 34,
    "near": [
-    "SIX ÉTERNEL HELL Lv.32",
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
     "SAD SONG short HELL Lv.34",
     "SAD SONG HELL Lv.33",
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(kiki_issen) HELL Lv.41",
     "Altar of the World Tree, Beneath the White Night short HELL Lv.53"
    ],
    "score": 0.5,
@@ -1086,8 +1086,8 @@
    "gap": 0.3,
    "nearMedian": 8,
    "near": [
-    "Stay With Me NORMAL Lv.8",
-    "綺季一閃 EASY Lv.7",
+    "Stay With Me(pandora_boss_remix) NORMAL Lv.8",
+    "綺季一閃(eiki_boss_remix) EASY Lv.7",
     "呪われた騎士の時計仕掛け NORMAL Lv.8",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8",
     "綺季一閃 short EASY Lv.9"
@@ -1118,7 +1118,7 @@
     "綺季一閃 short NORMAL Lv.10",
     "Monster Hero -Another- NORMAL Lv.9",
     "戦場の疾風 NORMAL Lv.9",
-    "綺季一閃 NORMAL Lv.9",
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9",
     "綺季一閃 short EASY Lv.9"
    ],
    "score": 0,
@@ -1145,7 +1145,7 @@
    "nearMedian": 16,
    "near": [
     "綺季一閃 short HARD Lv.16",
-    "SIX ÉTERNEL EXPERT Lv.17",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13",
     "Monster Hero -Another- HARD Lv.13",
     "Stay With Me short HARD Lv.16"
@@ -1173,11 +1173,11 @@
    "gap": -1.1,
    "nearMedian": 24,
    "near": [
-    "綺季一閃 EXPERT Lv.20",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20",
     "綺季一閃 short EXPERT Lv.21",
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
-    "Stay With Me MASTER Lv.24",
-    "綺季一閃 MASTER Lv.27"
+    "Stay With Me(pandora_boss_remix) MASTER Lv.24",
+    "綺季一閃(eiki_boss_remix) MASTER Lv.27"
    ],
    "score": 4,
    "odd": [
@@ -1236,7 +1236,7 @@
     "デュラハンテーマ HELL Lv.51",
     "The City Beneath the Comets HELL Lv.49",
     "Altar of the World Tree, Beneath the White Night short HELL Lv.53",
-    "SIX ÉTERNEL HELL Lv.32",
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
     "SAD SONG HELL Lv.33"
    ],
    "score": 0,
@@ -1349,10 +1349,10 @@
    "gap": 3.7,
    "nearMedian": 8,
    "near": [
-    "Crazy Party Night NORMAL Lv.8",
-    "Crazy Party Night NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night) NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night_full) NORMAL Lv.8",
     "Close To Your Heart NORMAL Lv.8",
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night) EASY Lv.7",
     "only my railgun EASY Lv.7"
    ],
    "score": 0,
@@ -1438,7 +1438,7 @@
    "near": [
     "Journey EASY Lv.7",
     "Monster short NORMAL Lv.7",
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night_full) EASY Lv.7",
     "Wrath of the Thorn King NORMAL Lv.7",
     "Monster NORMAL Lv.7"
    ],
@@ -1465,11 +1465,11 @@
    "gap": 0.8,
    "nearMedian": 7,
    "near": [
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night) EASY Lv.7",
     "only my railgun EASY Lv.7",
     "トリコ HARD Lv.8",
-    "Crazy Party Night NORMAL Lv.8",
-    "Crazy Party Night EASY Lv.7"
+    "Crazy Party Night(crazy_party_night_full) NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night_full) EASY Lv.7"
    ],
    "score": 0,
    "odd": [],
@@ -1494,8 +1494,8 @@
    "gap": -1.6,
    "nearMedian": 16,
    "near": [
-    "Crazy Party Night HARD Lv.11",
-    "SIX ÉTERNEL EASY Lv.10",
+    "Crazy Party Night(crazy_party_night) HARD Lv.11",
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10",
     "トリコ MASTER Lv.17",
     "4U ～ひたすら～ EXPERT Lv.16",
     "Monster short EXPERT Lv.16"
@@ -1525,7 +1525,7 @@
    "near": [
     "Monster short MASTER Lv.22",
     "ROSE EXPERT Lv.17",
-    "Crazy Party Night EXPERT Lv.19",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19",
     "4U ～ひたすら～ MASTER Lv.22",
     "Journey HARD Lv.15"
    ],
@@ -1553,9 +1553,9 @@
    "nearMedian": 21,
    "near": [
     "戦場の疾風 EXPERT Lv.19",
-    "Crazy Party Night EXPERT Lv.19",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19",
     "only my railgun EXPERT Lv.21",
-    "Crazy Party Night MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
     "Monster MASTER Lv.24"
    ],
    "score": 5.3,
@@ -1581,10 +1581,10 @@
    "gap": -1.2,
    "nearMedian": 39,
    "near": [
-    "Crazy Party Night HELL Lv.39",
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39",
     "ROSE short HELL Lv.43",
     "戦場の疾風 HELL Lv.36",
-    "Crazy Party Night HELL Lv.40",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
     "Monster HELL Lv.32"
    ],
    "score": 0,
@@ -1612,9 +1612,9 @@
    "near": [
     "呪われた騎士の時計仕掛け NORMAL Lv.8",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8",
-    "綺季一閃 EASY Lv.8",
+    "綺季一閃(kiki_issen) EASY Lv.8",
     "Emerald Rush NORMAL Lv.7",
-    "SIX ÉTERNEL NORMAL Lv.8"
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8"
    ],
    "score": 0,
    "odd": [],
@@ -1697,10 +1697,10 @@
    "gap": -2.6,
    "nearMedian": 23,
    "near": [
-    "綺季一閃 EXPERT Lv.23",
+    "綺季一閃(kiki_issen) EXPERT Lv.23",
     "綺季一閃 short EXPERT Lv.21",
-    "Stay With Me MASTER Lv.24",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "Stay With Me(pandora_boss_remix) MASTER Lv.24",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "呪われた騎士の時計仕掛け MASTER Lv.25"
    ],
    "score": 0,
@@ -1727,9 +1727,9 @@
    "nearMedian": 24,
    "near": [
     "綺季一閃 short EXPERT Lv.21",
-    "綺季一閃 EXPERT Lv.23",
+    "綺季一閃(kiki_issen) EXPERT Lv.23",
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
-    "Stay With Me MASTER Lv.24",
+    "Stay With Me(pandora_boss_remix) MASTER Lv.24",
     "Monster Hero MASTER Lv.26"
    ],
    "score": 4,
@@ -1759,7 +1759,7 @@
    "near": [
     "SAD SONG HELL Lv.33",
     "Monster Hero -Another- HELL Lv.35",
-    "SIX ÉTERNEL HELL Lv.32",
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
     "Altar of the World Tree, Beneath the White Night HELL Lv.46",
     "BLACK SHOUT HELL Lv.61"
    ],
@@ -1786,9 +1786,9 @@
    "gap": 0.1,
    "nearMedian": 7,
    "near": [
-    "Stay With Me NORMAL Lv.7",
+    "Stay With Me(stay_with_me) NORMAL Lv.7",
     "MF × ICHIKA MIX EASY Lv.7",
-    "綺季一閃 EASY Lv.7",
+    "綺季一閃(eiki_boss_remix) EASY Lv.7",
     "Toward the Stars, Paradise or Truth short EASY Lv.7",
     "Against My Own Shadow NORMAL Lv.9"
    ],
@@ -1815,8 +1815,8 @@
    "gap": -0.5,
    "nearMedian": 8,
    "near": [
-    "綺季一閃 EASY Lv.8",
-    "綺季一閃 EASY Lv.7",
+    "綺季一閃(kiki_issen) EASY Lv.8",
+    "綺季一閃(eiki_boss_remix) EASY Lv.7",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8",
     "呪われた騎士の時計仕掛け NORMAL Lv.8",
     "Monster Hero -Another- EASY Lv.8"
@@ -1846,7 +1846,7 @@
    "near": [
     "Emerald Rush HARD Lv.11",
     "MF × ICHIKA MIX HARD Lv.13",
-    "Stay With Me HARD Lv.11",
+    "Stay With Me(stay_with_me) HARD Lv.11",
     "Monster Hero -Another- HARD Lv.13",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13"
    ],
@@ -1904,10 +1904,10 @@
    "gap": 1.8,
    "nearMedian": 22,
    "near": [
-    "綺季一閃 EXPERT Lv.20",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20",
     "呪われた騎士の時計仕掛け MASTER Lv.25",
     "綺季一閃 short EXPERT Lv.21",
-    "綺季一閃 EXPERT Lv.23",
+    "綺季一閃(kiki_issen) EXPERT Lv.23",
     "Against My Own Shadow EXPERT Lv.22"
    ],
    "score": 4,
@@ -1968,7 +1968,7 @@
     "Emerald Rush NORMAL Lv.7",
     "戦場の疾風 EASY Lv.7",
     "呪われた騎士の時計仕掛け NORMAL Lv.8",
-    "SIX ÉTERNEL NORMAL Lv.8"
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8"
    ],
    "score": 0,
    "odd": [],
@@ -1997,7 +1997,7 @@
     "Altar of the World Tree, Beneath the White Night short NORMAL Lv.9",
     "魔窟の旋律 EASY Lv.8",
     "戦場の疾風 NORMAL Lv.9",
-    "綺季一閃 NORMAL Lv.9"
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9"
    ],
    "score": 0,
    "odd": [],
@@ -2024,8 +2024,8 @@
    "near": [
     "only my railgun HARD Lv.14",
     "ヒューマノイド EASY Lv.12",
-    "SIX ÉTERNEL NORMAL Lv.13",
-    "SIX ÉTERNEL HARD Lv.13",
+    "SIX ÉTERNEL(six_eternel_beat) NORMAL Lv.13",
+    "SIX ÉTERNEL(six_eternel_remix) HARD Lv.13",
     "呪われた騎士の時計仕掛け EXPERT Lv.17"
    ],
    "score": 0,
@@ -2052,10 +2052,10 @@
    "nearMedian": 19,
    "near": [
     "魔窟の旋律 HARD Lv.17",
-    "Crazy Party Night MASTER Lv.23",
+    "Crazy Party Night(crazy_party_night) MASTER Lv.23",
     "Altar of the World Tree, Beneath the White Night EXPERT Lv.20",
-    "SIX ÉTERNEL EXPERT Lv.17",
-    "Crazy Party Night EXPERT Lv.19"
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19"
    ],
    "score": 0,
    "odd": [],
@@ -2081,7 +2081,7 @@
    "nearMedian": 24,
    "near": [
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "ヒューマノイド HARD Lv.25",
     "BLACK SHOUT EXPERT Lv.24",
     "crossing field MASTER Lv.26"
@@ -2109,10 +2109,10 @@
    "gap": 1.4,
    "nearMedian": 49,
    "near": [
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(kiki_issen) HELL Lv.41",
     "The City Beneath the Comets HELL Lv.49",
     "ビッグブリッヂの死闘 HELL Lv.53",
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(eiki_boss_remix) HELL Lv.41",
     "Altar of the World Tree, Beneath the White Night short HELL Lv.53"
    ],
    "score": 0,
@@ -2140,7 +2140,7 @@
    "near": [
     "4U ～ひたすら～ NORMAL Lv.7",
     "Wrath of the Thorn King NORMAL Lv.7",
-    "SIX ÉTERNEL EASY Lv.6",
+    "SIX ÉTERNEL(six_eternel_remix) EASY Lv.6",
     "Toward the Stars, Paradise or Truth short EASY Lv.7",
     "Against My Own Shadow NORMAL Lv.9"
    ],
@@ -2167,11 +2167,11 @@
    "gap": 1.1,
    "nearMedian": 8,
    "near": [
-    "綺季一閃 EASY Lv.7",
+    "綺季一閃(eiki_boss_remix) EASY Lv.7",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8",
     "Emerald Rush NORMAL Lv.7",
-    "綺季一閃 EASY Lv.8",
-    "SIX ÉTERNEL NORMAL Lv.8"
+    "綺季一閃(kiki_issen) EASY Lv.8",
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8"
    ],
    "score": 0,
    "odd": [],
@@ -2198,7 +2198,7 @@
    "near": [
     "4U ～ひたすら～ EXPERT Lv.16",
     "Toward the Stars, Paradise or Truth short HARD Lv.13",
-    "SIX ÉTERNEL HARD Lv.13",
+    "SIX ÉTERNEL(six_eternel_remix) HARD Lv.13",
     "Against My Own Shadow HARD Lv.12",
     "Emerald Rush HARD Lv.11"
    ],
@@ -2226,7 +2226,7 @@
    "nearMedian": 14,
    "near": [
     "ヒューマノイド EASY Lv.12",
-    "Stay With Me EXPERT Lv.17",
+    "Stay With Me(pandora_boss_remix) EXPERT Lv.17",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13",
     "Wrath of the Thorn King MASTER Lv.22",
     "Altar of the World Tree, Beneath the White Night short HARD Lv.14"
@@ -2255,9 +2255,9 @@
    "nearMedian": 20,
    "near": [
     "Altar of the World Tree, Beneath the White Night EXPERT Lv.20",
-    "Stay With Me MASTER Lv.24",
+    "Stay With Me(pandora_boss_remix) MASTER Lv.24",
     "ヒューマノイド NORMAL Lv.19",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "Monster Hero EXPERT Lv.19"
    ],
    "score": 0,
@@ -2374,8 +2374,8 @@
    "gap": -3.3,
    "nearMedian": 7,
    "near": [
-    "Crazy Party Night EASY Lv.7",
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night) EASY Lv.7",
+    "Crazy Party Night(crazy_party_night_full) EASY Lv.7",
     "Journey EASY Lv.7",
     "Close To Your Heart EASY Lv.6",
     "Close To Your Heart NORMAL Lv.8"
@@ -2434,7 +2434,7 @@
    "gap": 1.4,
    "nearMedian": 11,
    "near": [
-    "SIX ÉTERNEL EASY Lv.10",
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10",
     "Close To Your Heart HARD Lv.11",
     "Monster HARD Lv.10",
     "4U ～ひたすら～ EXPERT Lv.16",
@@ -2558,7 +2558,7 @@
     "Against My Own Shadow HARD Lv.12",
     "Wrath of the Thorn King HARD Lv.9",
     "トリコ MASTER Lv.17",
-    "SIX ÉTERNEL EASY Lv.10"
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10"
    ],
    "score": 0,
    "odd": [],
@@ -2584,7 +2584,7 @@
    "nearMedian": 11,
    "near": [
     "呪われた騎士の時計仕掛け HARD Lv.11",
-    "SIX ÉTERNEL EASY Lv.10",
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10",
     "Monster short EXPERT Lv.16",
     "Close To Your Heart HARD Lv.11",
     "トリコ MASTER Lv.17"
@@ -2615,8 +2615,8 @@
     "Close To Your Heart EXPERT Lv.21",
     "Wrath of the Thorn King MASTER Lv.22",
     "Monster short MASTER Lv.22",
-    "綺季一閃 HARD Lv.16",
-    "Crazy Party Night EXPERT Lv.19"
+    "綺季一閃(eiki_boss_remix) HARD Lv.16",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19"
    ],
    "score": 0,
    "odd": [],
@@ -3370,9 +3370,9 @@
    "gap": -0.6,
    "nearMedian": 8,
    "near": [
-    "Crazy Party Night NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night_full) NORMAL Lv.8",
     "only my railgun EASY Lv.7",
-    "Crazy Party Night NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night) NORMAL Lv.8",
     "呪われた騎士の時計仕掛け NORMAL Lv.8",
     "デュラハンテーマ EASY Lv.7"
    ],
@@ -3428,11 +3428,11 @@
    "gap": -1.8,
    "nearMedian": 14,
    "near": [
-    "SIX ÉTERNEL NORMAL Lv.13",
+    "SIX ÉTERNEL(six_eternel_beat) NORMAL Lv.13",
     "Journey HARD Lv.15",
     "Monster short MASTER Lv.22",
     "デュラハンテーマ HARD Lv.13",
-    "Crazy Party Night HARD Lv.14"
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14"
    ],
    "score": 0,
    "odd": [
@@ -3460,10 +3460,10 @@
    "nearMedian": 24,
    "near": [
     "Close To Your Heart MASTER Lv.28",
-    "Crazy Party Night MASTER Lv.25",
-    "Crazy Party Night EXPERT Lv.19",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19",
     "Monster MASTER Lv.24",
-    "Crazy Party Night MASTER Lv.23"
+    "Crazy Party Night(crazy_party_night) MASTER Lv.23"
    ],
    "score": 4,
    "odd": [
@@ -3493,7 +3493,7 @@
     "ROSE short MASTER Lv.33",
     "ROSE MASTER Lv.30",
     "Journey EXPERT Lv.23",
-    "Crazy Party Night MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
     "Close To Your Heart MASTER Lv.28"
    ],
    "score": 0,
@@ -3520,7 +3520,7 @@
    "nearMedian": 37,
    "near": [
     "Close To Your Heart HELL Lv.37",
-    "Crazy Party Night HELL Lv.39",
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39",
     "ROSE short HELL Lv.43",
     "Monster HELL Lv.32",
     "4U ～ひたすら～ HELL Lv.31"
@@ -3550,7 +3550,7 @@
    "near": [
     "only my railgun NORMAL Lv.9",
     "デュラハンテーマ NORMAL Lv.9",
-    "綺季一閃 NORMAL Lv.9",
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9",
     "Monster short HARD Lv.9",
     "戦場の疾風 EASY Lv.7"
    ],
@@ -3607,7 +3607,7 @@
    "nearMedian": 17,
    "near": [
     "デュラハンテーマ EXPERT Lv.17",
-    "SIX ÉTERNEL EXPERT Lv.17",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
     "綺季一閃 short HARD Lv.16",
     "呪われた騎士の時計仕掛け EXPERT Lv.17",
     "Wrath of the Thorn King MASTER Lv.22"
@@ -3700,7 +3700,7 @@
     "呪われた騎士の時計仕掛け HELL Lv.36",
     "綺季一閃 short HELL Lv.33",
     "only my railgun HELL Lv.34",
-    "Stay With Me HELL Lv.33",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33",
     "Against My Own Shadow HELL Lv.41"
    ],
    "score": 0,
@@ -3849,7 +3849,7 @@
     "BLACK SHOUT MASTER Lv.33",
     "ヒューマノイド EXPERT Lv.31",
     "ハルカ MASTER Lv.33",
-    "綺季一閃 MASTER Lv.33"
+    "綺季一閃(kiki_issen) MASTER Lv.33"
    ],
    "score": 4.2,
    "odd": [
@@ -3877,7 +3877,7 @@
    "gap": 0.6,
    "nearMedian": 51,
    "near": [
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(kiki_issen) HELL Lv.41",
     "デュラハンテーマ HELL Lv.51",
     "Altar of the World Tree, Beneath the White Night short HELL Lv.53",
     "Rising Hope HELL Lv.48",
@@ -4035,7 +4035,7 @@
    "nearMedian": 34,
    "near": [
     "ANiMA MASTER Lv.44",
-    "SIX ÉTERNEL MASTER Lv.39",
+    "SIX ÉTERNEL(six_eternel_beat) MASTER Lv.39",
     "ビッグブリッヂの死闘 MASTER Lv.34",
     "月が満ちる前に MASTER Lv.34",
     "月が満ちる前に short MASTER Lv.33"
@@ -4068,7 +4068,7 @@
     "light player HELL Lv.54",
     "light player short HELL Lv.52",
     "月が満ちる前に HELL Lv.65",
-    "SIX ÉTERNEL HELL Lv.52",
+    "SIX ÉTERNEL(six_eternel_beat) HELL Lv.52",
     "ANiMA HELL Lv.51"
    ],
    "score": 0,
@@ -4127,7 +4127,7 @@
     "戦場の疾風 NORMAL Lv.9",
     "魔窟の旋律 EASY Lv.8",
     "Monster short HARD Lv.9",
-    "綺季一閃 NORMAL Lv.9"
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9"
    ],
    "score": 0,
    "odd": [],
@@ -4152,11 +4152,11 @@
    "gap": 1.7,
    "nearMedian": 13,
    "near": [
-    "SIX ÉTERNEL NORMAL Lv.13",
+    "SIX ÉTERNEL(six_eternel_beat) NORMAL Lv.13",
     "デュラハンテーマ HARD Lv.13",
-    "SIX ÉTERNEL EASY Lv.10",
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10",
     "4U ～ひたすら～ EXPERT Lv.16",
-    "Crazy Party Night HARD Lv.11"
+    "Crazy Party Night(crazy_party_night) HARD Lv.11"
    ],
    "score": 0,
    "odd": [],
@@ -4184,8 +4184,8 @@
     "Close To Your Heart MASTER Lv.28",
     "戦場の疾風 HARD Lv.15",
     "戦場の疾風 EXPERT Lv.19",
-    "Crazy Party Night MASTER Lv.23",
-    "SIX ÉTERNEL NORMAL Lv.13"
+    "Crazy Party Night(crazy_party_night) MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_beat) NORMAL Lv.13"
    ],
    "score": 0,
    "odd": [],
@@ -4210,9 +4210,9 @@
    "gap": 5.7,
    "nearMedian": 23,
    "near": [
-    "Crazy Party Night MASTER Lv.23",
+    "Crazy Party Night(crazy_party_night) MASTER Lv.23",
     "戦場の疾風 EXPERT Lv.19",
-    "Crazy Party Night MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
     "デュラハンテーマ EXPERT Lv.17",
     "Close To Your Heart MASTER Lv.28"
    ],
@@ -4792,11 +4792,11 @@
    "gap": 1.4,
    "nearMedian": 7,
    "near": [
-    "SIX ÉTERNEL EASY Lv.6",
-    "Stay With Me NORMAL Lv.7",
+    "SIX ÉTERNEL(six_eternel_remix) EASY Lv.6",
+    "Stay With Me(stay_with_me) NORMAL Lv.7",
     "MF × ICHIKA MIX EASY Lv.7",
     "呪われた騎士の時計仕掛け EASY Lv.7",
-    "Stay With Me EASY Lv.6"
+    "Stay With Me(stay_with_me) EASY Lv.6"
    ],
    "score": 0.3,
    "odd": [
@@ -4852,11 +4852,11 @@
    "gap": -1.4,
    "nearMedian": 16,
    "near": [
-    "綺季一閃 HARD Lv.15",
+    "綺季一閃(kiki_issen) HARD Lv.15",
     "Monster Hero -Another- HARD Lv.13",
     "綺季一閃 short HARD Lv.16",
     "MF × ICHIKA MIX EXPERT Lv.18",
-    "SIX ÉTERNEL EXPERT Lv.17"
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17"
    ],
    "score": 1.8,
    "odd": [
@@ -4950,8 +4950,8 @@
     "SAD SONG HELL Lv.33",
     "SAD SONG short HELL Lv.34",
     "MF × ICHIKA MIX HELL Lv.26",
-    "SIX ÉTERNEL HELL Lv.32",
-    "Stay With Me HELL Lv.33"
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33"
    ],
    "score": 0,
    "odd": [],
@@ -4976,7 +4976,7 @@
    "gap": 0.2,
    "nearMedian": 9,
    "near": [
-    "綺季一閃 NORMAL Lv.9",
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9",
     "Altar of the World Tree, Beneath the White Night NORMAL Lv.9",
     "Toward the Stars, Paradise or Truth short NORMAL Lv.8",
     "MF × ICHIKA MIX NORMAL Lv.10",
@@ -5005,7 +5005,7 @@
    "gap": -1.2,
    "nearMedian": 9,
    "near": [
-    "綺季一閃 NORMAL Lv.10",
+    "綺季一閃(kiki_issen) NORMAL Lv.10",
     "戦場の疾風 NORMAL Lv.9",
     "Monster Hero NORMAL Lv.10",
     "Monster Hero -Another- NORMAL Lv.9",
@@ -5034,8 +5034,8 @@
    "gap": -3.7,
    "nearMedian": 17,
    "near": [
-    "綺季一閃 HARD Lv.15",
-    "SIX ÉTERNEL EXPERT Lv.17",
+    "綺季一閃(kiki_issen) HARD Lv.15",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
     "魔窟の旋律 HARD Lv.17",
     "4U ～ひたすら～ MASTER Lv.22",
     "Stay With Me short HARD Lv.16"
@@ -5063,11 +5063,11 @@
    "gap": -3.8,
    "nearMedian": 22,
    "near": [
-    "綺季一閃 EXPERT Lv.20",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20",
     "Altar of the World Tree, Beneath the White Night short EXPERT Lv.20",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "Against My Own Shadow EXPERT Lv.22",
-    "綺季一閃 MASTER Lv.27"
+    "綺季一閃(eiki_boss_remix) MASTER Lv.27"
    ],
    "score": 4,
    "odd": [
@@ -5098,7 +5098,7 @@
     "ヒューマノイド HARD Lv.25",
     "Altar of the World Tree, Beneath the White Night MASTER Lv.24",
     "魔窟の旋律 MASTER Lv.27",
-    "綺季一閃 EXPERT Lv.20"
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20"
    ],
    "score": 8,
    "odd": [
@@ -5127,7 +5127,7 @@
    "near": [
     "魔窟の旋律 HELL Lv.35",
     "呪われた騎士の時計仕掛け HELL Lv.36",
-    "Stay With Me HELL Lv.33",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33",
     "only my railgun HELL Lv.34",
     "もう一つの世界へ HELL Lv.37"
    ],
@@ -5154,7 +5154,7 @@
    "gap": 0.9,
    "nearMedian": 7,
    "near": [
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night_full) EASY Lv.7",
     "トリコ HARD Lv.8",
     "Journey EASY Lv.7",
     "Close To Your Heart NORMAL Lv.8",
@@ -5183,7 +5183,7 @@
    "gap": -1,
    "nearMedian": 8,
    "near": [
-    "Crazy Party Night NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night_full) NORMAL Lv.8",
     "戦場の疾風 EASY Lv.7",
     "Close To Your Heart NORMAL Lv.8",
     "only my railgun EASY Lv.7",
@@ -5213,7 +5213,7 @@
    "nearMedian": 16,
    "near": [
     "Close To Your Heart HARD Lv.11",
-    "SIX ÉTERNEL EASY Lv.10",
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10",
     "Monster short EXPERT Lv.16",
     "トリコ MASTER Lv.17",
     "4U ～ひたすら～ EXPERT Lv.16"
@@ -5243,8 +5243,8 @@
    "near": [
     "Close To Your Heart EXPERT Lv.21",
     "ROSE EXPERT Lv.17",
-    "SIX ÉTERNEL NORMAL Lv.13",
-    "Crazy Party Night EXPERT Lv.19",
+    "SIX ÉTERNEL(six_eternel_beat) NORMAL Lv.13",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19",
     "Monster short MASTER Lv.22"
    ],
    "score": 4,
@@ -5272,8 +5272,8 @@
    "gap": 0.7,
    "nearMedian": 19,
    "near": [
-    "Crazy Party Night MASTER Lv.25",
-    "Crazy Party Night EXPERT Lv.19",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19",
     "デュラハンテーマ EXPERT Lv.17",
     "戦場の疾風 EXPERT Lv.19",
     "only my railgun MASTER Lv.29"
@@ -5302,7 +5302,7 @@
    "nearMedian": 37,
    "near": [
     "ROSE short HELL Lv.43",
-    "Crazy Party Night HELL Lv.39",
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39",
     "Close To Your Heart HELL Lv.37",
     "戦場の疾風 HELL Lv.36",
     "Monster HELL Lv.32"
@@ -5331,7 +5331,7 @@
    "nearMedian": 7,
    "near": [
     "Journey EASY Lv.7",
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night) EASY Lv.7",
     "トリコ HARD Lv.8",
     "Close To Your Heart EASY Lv.6",
     "Monster short NORMAL Lv.7"
@@ -5359,7 +5359,7 @@
    "gap": -0.5,
    "nearMedian": 8,
    "near": [
-    "Crazy Party Night NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night) NORMAL Lv.8",
     "戦場の疾風 EASY Lv.7",
     "Close To Your Heart NORMAL Lv.8",
     "only my railgun EASY Lv.7",
@@ -5392,7 +5392,7 @@
     "ROSE short EXPERT Lv.17",
     "Monster short MASTER Lv.22",
     "Monster short EXPERT Lv.16",
-    "Crazy Party Night HARD Lv.11"
+    "Crazy Party Night(crazy_party_night) HARD Lv.11"
    ],
    "score": 0,
    "odd": [],
@@ -5419,7 +5419,7 @@
    "near": [
     "Close To Your Heart EXPERT Lv.21",
     "戦場の疾風 EXPERT Lv.19",
-    "Crazy Party Night MASTER Lv.23",
+    "Crazy Party Night(crazy_party_night) MASTER Lv.23",
     "4U ～ひたすら～ MASTER Lv.22",
     "Close To Your Heart MASTER Lv.28"
    ],
@@ -5447,7 +5447,7 @@
    "nearMedian": 28,
    "near": [
     "戦場の疾風 EXPERT Lv.19",
-    "Crazy Party Night MASTER Lv.23",
+    "Crazy Party Night(crazy_party_night) MASTER Lv.23",
     "ROSE short MASTER Lv.33",
     "Close To Your Heart MASTER Lv.28",
     "only my railgun MASTER Lv.29"
@@ -5479,7 +5479,7 @@
    "near": [
     "ROSE short HELL Lv.43",
     "Close To Your Heart HELL Lv.37",
-    "Crazy Party Night HELL Lv.40",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
     "戦場の疾風 HELL Lv.36",
     "Monster HELL Lv.32"
    ],
@@ -5510,7 +5510,7 @@
     "風がそよぐ場所 HARD Lv.7",
     "ROSE short NORMAL Lv.6",
     "Journey EASY Lv.7",
-    "Crazy Party Night EASY Lv.7"
+    "Crazy Party Night(crazy_party_night_full) EASY Lv.7"
    ],
    "score": 0,
    "odd": [],
@@ -5536,7 +5536,7 @@
    "nearMedian": 7,
    "near": [
     "呪われた騎士の時計仕掛け NORMAL Lv.8",
-    "綺季一閃 EASY Lv.7",
+    "綺季一閃(eiki_boss_remix) EASY Lv.7",
     "デュラハンテーマ EASY Lv.7",
     "Against My Own Shadow NORMAL Lv.9",
     "only my railgun EASY Lv.7"
@@ -5564,10 +5564,10 @@
    "gap": -1.8,
    "nearMedian": 13,
    "near": [
-    "Stay With Me HARD Lv.11",
+    "Stay With Me(pandora_boss_remix) HARD Lv.11",
     "MF × ICHIKA MIX HARD Lv.13",
     "呪われた騎士の時計仕掛け HARD Lv.11",
-    "Stay With Me EXPERT Lv.17",
+    "Stay With Me(pandora_boss_remix) EXPERT Lv.17",
     "Monster EXPERT Lv.17"
    ],
    "score": 4,
@@ -5596,7 +5596,7 @@
    "nearMedian": 18,
    "near": [
     "MF × ICHIKA MIX EXPERT Lv.18",
-    "Stay With Me EXPERT Lv.16",
+    "Stay With Me(stay_with_me) EXPERT Lv.16",
     "MF × ICHIKA MIX MASTER Lv.23",
     "Wrath of the Thorn King EXPERT Lv.16",
     "SAD SONG EXPERT Lv.21"
@@ -5657,7 +5657,7 @@
    "near": [
     "Altar of the World Tree, Beneath the White Night HELL Lv.46",
     "Monster Hero -Another- HELL Lv.35",
-    "Stay With Me HELL Lv.33",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33",
     "Toward the Stars, Paradise or Truth short HELL Lv.42",
     "Evans HELL Lv.51"
    ],
@@ -5772,7 +5772,7 @@
    "nearMedian": 14,
    "near": [
     "Monster EXPERT Lv.17",
-    "Stay With Me HARD Lv.11",
+    "Stay With Me(pandora_boss_remix) HARD Lv.11",
     "Emerald Rush HARD Lv.11",
     "Altar of the World Tree, Beneath the White Night short HARD Lv.14",
     "Stay With Me short HARD Lv.16"
@@ -5920,7 +5920,7 @@
    "near": [
     "4U ～ひたすら～ HARD Lv.10",
     "トリコ MASTER Lv.17",
-    "SIX ÉTERNEL EASY Lv.10",
+    "SIX ÉTERNEL(six_eternel_beat) EASY Lv.10",
     "Close To Your Heart HARD Lv.11",
     "Against My Own Shadow HARD Lv.12"
    ],
@@ -5977,10 +5977,10 @@
    "nearMedian": 19,
    "near": [
     "戦場の疾風 EXPERT Lv.19",
-    "Crazy Party Night EXPERT Lv.19",
+    "Crazy Party Night(crazy_party_night_full) EXPERT Lv.19",
     "Close To Your Heart MASTER Lv.28",
     "4U ～ひたすら～ MASTER Lv.22",
-    "綺季一閃 HARD Lv.16"
+    "綺季一閃(eiki_boss_remix) HARD Lv.16"
    ],
    "score": 0,
    "odd": [],
@@ -6009,7 +6009,7 @@
     "Close To Your Heart HELL Lv.37",
     "戦場の疾風 HELL Lv.36",
     "4U ～ひたすら～ HELL Lv.31",
-    "Crazy Party Night HELL Lv.39"
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39"
    ],
    "score": 4,
    "odd": [
@@ -6127,7 +6127,7 @@
     "4U ～ひたすら～ EXPERT Lv.16",
     "Close To Your Heart HARD Lv.11",
     "トリコ MASTER Lv.17",
-    "Crazy Party Night HARD Lv.11"
+    "Crazy Party Night(crazy_party_night) HARD Lv.11"
    ],
    "score": 0,
    "odd": [],
@@ -6155,7 +6155,7 @@
     "Journey HARD Lv.15",
     "Wrath of the Thorn King MASTER Lv.22",
     "ROSE short EXPERT Lv.17",
-    "Crazy Party Night HARD Lv.14",
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14",
     "Close To Your Heart EXPERT Lv.21"
    ],
    "score": 0,
@@ -6390,9 +6390,9 @@
    "gap": 0.7,
    "nearMedian": 7,
    "near": [
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night_full) EASY Lv.7",
     "Close To Your Heart EASY Lv.6",
-    "Crazy Party Night EASY Lv.7",
+    "Crazy Party Night(crazy_party_night) EASY Lv.7",
     "トリコ HARD Lv.8",
     "Monster short NORMAL Lv.7"
    ],
@@ -6448,7 +6448,7 @@
    "gap": -2.3,
    "nearMedian": 21,
    "near": [
-    "Crazy Party Night HARD Lv.14",
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14",
     "Monster short MASTER Lv.22",
     "ROSE short EXPERT Lv.17",
     "Close To Your Heart EXPERT Lv.21",
@@ -6478,7 +6478,7 @@
    "nearMedian": 29,
    "near": [
     "戦場の疾風 MASTER Lv.27",
-    "Crazy Party Night MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
     "ROSE MASTER Lv.30",
     "ROSE short MASTER Lv.33",
     "only my railgun MASTER Lv.29"
@@ -6537,8 +6537,8 @@
    "near": [
     "ROSE HELL Lv.45",
     "ROSE short HELL Lv.43",
-    "Crazy Party Night HELL Lv.39",
-    "Crazy Party Night HELL Lv.40",
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
     "Against My Own Shadow HELL Lv.41"
    ],
    "score": 0,
@@ -6565,8 +6565,8 @@
    "nearMedian": 9,
    "near": [
     "Journey NORMAL Lv.10",
-    "Crazy Party Night NORMAL Lv.8",
-    "Crazy Party Night NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night) NORMAL Lv.8",
+    "Crazy Party Night(crazy_party_night_full) NORMAL Lv.8",
     "Monster short HARD Lv.9",
     "風がそよぐ場所 EXPERT Lv.11"
    ],
@@ -6780,7 +6780,7 @@
     "Journey HARD Lv.15",
     "The City Beneath the Comets NORMAL Lv.12",
     "Evans NORMAL Lv.11",
-    "Crazy Party Night HARD Lv.14"
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14"
    ],
    "score": 0,
    "odd": [],
@@ -6981,8 +6981,8 @@
    "near": [
     "綺季一閃 short EXPERT Lv.21",
     "Toward the Stars, Paradise or Truth short EXPERT Lv.17",
-    "Stay With Me MASTER Lv.24",
-    "綺季一閃 EXPERT Lv.20",
+    "Stay With Me(pandora_boss_remix) MASTER Lv.24",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20",
     "呪われた騎士の時計仕掛け MASTER Lv.25"
    ],
    "score": 0,
@@ -7010,7 +7010,7 @@
    "near": [
     "魔窟の旋律 MASTER Lv.27",
     "魔窟の旋律 EXPERT Lv.22",
-    "綺季一閃 MASTER Lv.27",
+    "綺季一閃(eiki_boss_remix) MASTER Lv.27",
     "SAD SONG short EXPERT Lv.24",
     "綺季一閃 short EXPERT Lv.21"
    ],
@@ -7186,7 +7186,7 @@
     "戦場の疾風 MASTER Lv.27",
     "Journey EXPERT Lv.23",
     "Toward the Stars, Paradise or Truth short MASTER Lv.37",
-    "Crazy Party Night MASTER Lv.25"
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25"
    ],
    "score": 4,
    "odd": [
@@ -7215,9 +7215,9 @@
    "near": [
     "Journey HELL Lv.43",
     "ROSE short HELL Lv.43",
-    "Crazy Party Night HELL Lv.40",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
     "Against My Own Shadow HELL Lv.41",
-    "Crazy Party Night HELL Lv.39"
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39"
    ],
    "score": 4,
    "odd": [
@@ -7333,7 +7333,7 @@
    "near": [
     "Journey HARD Lv.15",
     "Monster short MASTER Lv.22",
-    "Crazy Party Night HARD Lv.14",
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14",
     "ROSE EXPERT Lv.17",
     "Close To Your Heart EXPERT Lv.21"
    ],
@@ -7362,7 +7362,7 @@
    "near": [
     "ROSE MASTER Lv.30",
     "戦場の疾風 MASTER Lv.27",
-    "Crazy Party Night MASTER Lv.25",
+    "Crazy Party Night(crazy_party_night_full) MASTER Lv.25",
     "戦場の疾風 EXPERT Lv.19",
     "Journey EXPERT Lv.23"
    ],
@@ -7389,9 +7389,9 @@
    "gap": 1.5,
    "nearMedian": 37,
    "near": [
-    "Crazy Party Night HELL Lv.39",
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39",
     "Close To Your Heart HELL Lv.37",
-    "Crazy Party Night HELL Lv.40",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
     "戦場の疾風 HELL Lv.36",
     "Monster HELL Lv.32"
    ],
@@ -7421,7 +7421,7 @@
     "Monster Hero -Another- EASY Lv.8",
     "Altar of the World Tree, Beneath the White Night EASY Lv.8",
     "Altar of the World Tree, Beneath the White Night short EASY Lv.8",
-    "SIX ÉTERNEL NORMAL Lv.8",
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8",
     "SAD SONG short EASY Lv.8"
    ],
    "score": 0,
@@ -7478,7 +7478,7 @@
    "near": [
     "Monster Hero HARD Lv.15",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13",
-    "SIX ÉTERNEL HARD Lv.13",
+    "SIX ÉTERNEL(six_eternel_remix) HARD Lv.13",
     "ヒューマノイド EASY Lv.12",
     "もう一つの世界へ HARD Lv.14"
    ],
@@ -7507,7 +7507,7 @@
    "near": [
     "MF × ICHIKA MIX MASTER Lv.23",
     "Altar of the World Tree, Beneath the White Night short EXPERT Lv.20",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "Monster Hero -Another- EXPERT Lv.19",
     "MF × ICHIKA MIX EXPERT Lv.18"
    ],
@@ -7568,10 +7568,10 @@
    "nearMedian": 41,
    "near": [
     "SAD SONG short HELL Lv.34",
-    "SIX ÉTERNEL HELL Lv.32",
-    "綺季一閃 HELL Lv.41",
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
+    "綺季一閃(eiki_boss_remix) HELL Lv.41",
     "crossing field HELL Lv.46",
-    "綺季一閃 HELL Lv.41"
+    "綺季一閃(kiki_issen) HELL Lv.41"
    ],
    "score": 0,
    "odd": [],
@@ -7598,7 +7598,7 @@
    "near": [
     "Altar of the World Tree, Beneath the White Night short EASY Lv.8",
     "SAD SONG EASY Lv.8",
-    "SIX ÉTERNEL NORMAL Lv.8",
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8",
     "SAD SONG NORMAL Lv.9",
     "crossing field EASY Lv.9"
    ],
@@ -7655,7 +7655,7 @@
    "nearMedian": 14,
    "near": [
     "Altar of the World Tree, Beneath the White Night short HARD Lv.14",
-    "SIX ÉTERNEL EXPERT Lv.17",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
     "Monster Hero -Another- HARD Lv.13",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13",
     "もう一つの世界へ EXPERT Lv.18"
@@ -7748,11 +7748,11 @@
    "gap": -4.6,
    "nearMedian": 32,
    "near": [
-    "SIX ÉTERNEL HELL Lv.32",
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
     "SAD SONG HELL Lv.33",
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(eiki_boss_remix) HELL Lv.41",
     "Stay With Me short HELL Lv.26",
-    "Stay With Me HELL Lv.31"
+    "Stay With Me(stay_with_me) HELL Lv.31"
    ],
    "score": 0,
    "odd": [],
@@ -7807,8 +7807,8 @@
    "nearMedian": 9,
    "near": [
     "綺季一閃 short EASY Lv.9",
-    "綺季一閃 NORMAL Lv.9",
-    "綺季一閃 EASY Lv.8",
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9",
+    "綺季一閃(kiki_issen) EASY Lv.8",
     "Journey NORMAL Lv.10",
     "Monster short HARD Lv.9"
    ],
@@ -7839,7 +7839,7 @@
     "呪われた騎士の時計仕掛け HARD Lv.11",
     "4U ～ひたすら～ EXPERT Lv.16",
     "Against My Own Shadow HARD Lv.12",
-    "Crazy Party Night HARD Lv.14"
+    "Crazy Party Night(crazy_party_night_full) HARD Lv.14"
    ],
    "score": 0,
    "odd": [],
@@ -7866,9 +7866,9 @@
    "near": [
     "Against My Own Shadow EXPERT Lv.22",
     "呪われた騎士の時計仕掛け MASTER Lv.25",
-    "Stay With Me MASTER Lv.24",
-    "Stay With Me MASTER Lv.20",
-    "綺季一閃 EXPERT Lv.20"
+    "Stay With Me(pandora_boss_remix) MASTER Lv.24",
+    "Stay With Me(stay_with_me) MASTER Lv.20",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20"
    ],
    "score": 4,
    "odd": [
@@ -7928,7 +7928,7 @@
    "near": [
     "Altar of the World Tree, Beneath the White Night HELL Lv.46",
     "Monster Hero -Another- HELL Lv.35",
-    "Stay With Me HELL Lv.33",
+    "Stay With Me(pandora_boss_remix) HELL Lv.33",
     "Evans HELL Lv.51",
     "Nothing Without You HELL Lv.37"
    ],
@@ -8934,7 +8934,7 @@
     "light player short MASTER Lv.27",
     "BLACK SHOUT EXPERT Lv.24",
     "禁断のレジスタンス EXPERT Lv.22",
-    "SIX ÉTERNEL MASTER Lv.23"
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23"
    ],
    "score": 4,
    "odd": [
@@ -8995,7 +8995,7 @@
     "Sheriruth HELL Lv.48",
     "Rebellion short HELL Lv.49",
     "Journey HELL Lv.43",
-    "Crazy Party Night HELL Lv.40",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
     "ROSE HELL Lv.45"
    ],
    "score": 1,
@@ -9174,8 +9174,8 @@
    "near": [
     "Rebellion HELL Lv.48",
     "Sheriruth HELL Lv.48",
-    "Crazy Party Night HELL Lv.40",
-    "Crazy Party Night HELL Lv.39",
+    "Crazy Party Night(crazy_party_night) HELL Lv.40",
+    "Crazy Party Night(crazy_party_night_full) HELL Lv.39",
     "ROSE short HELL Lv.43"
    ],
    "score": 1,
@@ -9204,10 +9204,10 @@
    "nearMedian": 8,
    "near": [
     "Monster Hero -Another- EASY Lv.8",
-    "SIX ÉTERNEL NORMAL Lv.8",
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8",
     "SAD SONG EASY Lv.8",
     "Altar of the World Tree, Beneath the White Night short EASY Lv.8",
-    "綺季一閃 EASY Lv.7"
+    "綺季一閃(eiki_boss_remix) EASY Lv.7"
    ],
    "score": 0,
    "odd": [],
@@ -9233,7 +9233,7 @@
    "nearMedian": 9,
    "near": [
     "Stay With Me short NORMAL Lv.10",
-    "綺季一閃 NORMAL Lv.9",
+    "綺季一閃(eiki_boss_remix) NORMAL Lv.9",
     "MF × ICHIKA MIX NORMAL Lv.10",
     "綺季一閃 short EASY Lv.9",
     "Monster Hero -Another- NORMAL Lv.9"
@@ -9292,9 +9292,9 @@
    "near": [
     "ヒューマノイド NORMAL Lv.19",
     "呪われた騎士の時計仕掛け MASTER Lv.25",
-    "Stay With Me MASTER Lv.20",
+    "Stay With Me(stay_with_me) MASTER Lv.20",
     "Monster Hero EXPERT Lv.19",
-    "SIX ÉTERNEL EXPERT Lv.17"
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17"
    ],
    "score": 3,
    "odd": [
@@ -9321,11 +9321,11 @@
    "gap": -2.8,
    "nearMedian": 23,
    "near": [
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "綺季一閃 short EXPERT Lv.21",
-    "綺季一閃 EXPERT Lv.23",
-    "綺季一閃 MASTER Lv.27",
-    "綺季一閃 EXPERT Lv.20"
+    "綺季一閃(kiki_issen) EXPERT Lv.23",
+    "綺季一閃(eiki_boss_remix) MASTER Lv.27",
+    "綺季一閃(eiki_boss_remix) EXPERT Lv.20"
    ],
    "score": 0,
    "odd": [],
@@ -9381,7 +9381,7 @@
    "gap": 0.5,
    "nearMedian": 8,
    "near": [
-    "SIX ÉTERNEL NORMAL Lv.8",
+    "SIX ÉTERNEL(six_eternel_remix) NORMAL Lv.8",
     "SAD SONG EASY Lv.8",
     "Monster Hero -Another- EASY Lv.8",
     "SAD SONG short EASY Lv.8",
@@ -9441,9 +9441,9 @@
    "near": [
     "SAD SONG short HARD Lv.16",
     "Monster Hero -Another- HARD Lv.13",
-    "SIX ÉTERNEL EXPERT Lv.17",
+    "SIX ÉTERNEL(six_eternel_remix) EXPERT Lv.17",
     "Altar of the World Tree, Beneath the White Night HARD Lv.13",
-    "Stay With Me EXPERT Lv.17"
+    "Stay With Me(pandora_boss_remix) EXPERT Lv.17"
    ],
    "score": 0,
    "odd": [],
@@ -9468,7 +9468,7 @@
    "gap": -2.8,
    "nearMedian": 22,
    "near": [
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "綺季一閃 short EXPERT Lv.21",
     "Monster Hero -Another- MASTER Lv.26",
     "SAD SONG EXPERT Lv.21",
@@ -9528,11 +9528,11 @@
    "gap": 4.4,
    "nearMedian": 41,
    "near": [
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(kiki_issen) HELL Lv.41",
     "The City Beneath the Comets HELL Lv.49",
     "デュラハンテーマ HELL Lv.51",
-    "SIX ÉTERNEL HELL Lv.32",
-    "Stay With Me HELL Lv.31"
+    "SIX ÉTERNEL(six_eternel_remix) HELL Lv.32",
+    "Stay With Me(stay_with_me) HELL Lv.31"
    ],
    "score": 1,
    "odd": [
@@ -9738,7 +9738,7 @@
    "nearMedian": 13,
    "near": [
     "デュラハンテーマ HARD Lv.13",
-    "SIX ÉTERNEL HARD Lv.13",
+    "SIX ÉTERNEL(six_eternel_remix) HARD Lv.13",
     "呪われた騎士の時計仕掛け EXPERT Lv.17",
     "SAD SONG HARD Lv.13",
     "only my railgun HARD Lv.14"
@@ -9772,7 +9772,7 @@
     "Altar of the World Tree, Beneath the White Night EXPERT Lv.20",
     "呪われた騎士の時計仕掛け MASTER Lv.25",
     "Monster Hero EXPERT Lv.19",
-    "SIX ÉTERNEL MASTER Lv.23",
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23",
     "デュラハンテーマ EXPERT Lv.17"
    ],
    "score": 47,
@@ -9805,7 +9805,7 @@
     "デュラハンテーマ MASTER Lv.25",
     "SAD SONG EXPERT Lv.21",
     "SAD SONG MASTER Lv.29",
-    "SIX ÉTERNEL MASTER Lv.23"
+    "SIX ÉTERNEL(six_eternel_remix) MASTER Lv.23"
    ],
    "score": 8.1,
    "odd": [
@@ -9903,7 +9903,7 @@
     "Altar of the World Tree, Beneath the White Night short HELL Lv.53",
     "The City Beneath the Comets HELL Lv.49",
     "デュラハンテーマ HELL Lv.51",
-    "綺季一閃 HELL Lv.41",
+    "綺季一閃(kiki_issen) HELL Lv.41",
     "ビッグブリッヂの死闘 HELL Lv.53"
    ],
    "score": 3.8,
