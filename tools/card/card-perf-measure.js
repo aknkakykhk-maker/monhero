@@ -199,7 +199,7 @@ function summary(name, rows) {
     s('mh_inherited_unique_level_compensation_v1', true); s('mh_inherited_unique_level_compensation_pending_v1', false);
     s('mh_card_auto_intro_seen_v1', true);
   });
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   await page.addInitScript(PROBE);
   const closePops = async () => {
     for (let i = 0; i < 8; i++) {

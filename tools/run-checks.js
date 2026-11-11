@@ -130,6 +130,8 @@ const FORCE_CHECKS = [
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
   // ページの拡大・見えている範囲のずれ(押した所と反応する所がずれる)。index.html の touch-action と 10-core.jsx の見張り(2026-11-11)
   { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx)$|^tools\/boot\/page-zoom-guard-check\.js$/, checks: ['boot/page-zoom-guard-check.js'], why: 'ページが拡大されない・ずれを見張りが見つけるか' },
+  // ブラウザらしい動き(左端スワイプの戻る・長押しの吹き出し・文字の選択・箱の中の連続タップ拡大)を出さない仕組み(2026-11-11)
+  { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx|src\/parts\/60-app\.jsx)$|^tools\/boot\/browser-gesture-guard-check\.js$/, checks: ['boot/browser-gesture-guard-check.js'], why: 'ホーム画面のアプリで戻るの履歴を足さない・長押しや選択が出ない' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
   { re: /^monster-hero\/src\/parts\/(10-core|22-enemy-and-bond-entries|32-tactics-units|60-app|71-screen-battle)\.jsx$/,

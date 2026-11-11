@@ -25,9 +25,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const files = fs.readdirSync(PARTS).filter((f) => /^(8[2-9]|9\d)-.*\.jsx$/.test(f)).sort();
 const noPad = [], seeThrough = [];
 for (const f of files) {
-  fs.readFileSync(path.join(PARTS, f), 'utf8').split('\n').forEach((l, i) => {
+  const lines = fs.readFileSync(path.join(PARTS, f), 'utf8').split('\n');
+  lines.forEach((l, i) => {
     if (!/className=(?:"|\{`)fixed inset-0/.test(l) || /aria-hidden|pointer-events-none/.test(l)) return;
-    if (!/cardSafePad\(|safe-area-inset/.test(l)) noPad.push(`${f}:${i + 1}`);
+    // 余白は同じタグの次の行の style に書くこともある(無効試合の窓 CardPvpVoidDialog など)。タグの終わり(行末の「>」)まで、最大4行を見る
+    let tag = l;
+    for (let k = i + 1; k < Math.min(lines.length, i + 5) && !/>\s*$/.test(tag); k++) tag += `\n${lines[k]}`;
+    if (!/cardSafePad\(|safe-area-inset/.test(tag)) noPad.push(`${f}:${i + 1}`);
     if (/fixed inset-0[^"`]*flex-col[^"`]*bg-slate-950\/95/.test(l)) seeThrough.push(`${f}:${i + 1}`);
   });
 }
