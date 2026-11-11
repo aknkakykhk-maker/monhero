@@ -1,0 +1,86 @@
+{
+ "atsu_normal.PNG": {
+  "s": 1.70139,
+  "rDeg": 0.19,
+  "tx": 26.9,
+  "ty": -3.6
+ },
+ "face/atsu_normal.PNG": {
+  "s": 0.8399,
+  "rDeg": 0.17,
+  "tx": -59.46,
+  "ty": -4.98
+ },
+ "kiki_normal.PNG": {
+  "s": 2.00526,
+  "rDeg": 4.15,
+  "tx": 520.9,
+  "ty": -1
+ },
+ "face/kiki_normal.PNG": {
+  "s": 0.84664,
+  "rDeg": 3.64,
+  "tx": 19.08,
+  "ty": -66.96
+ },
+ "halloween/kiki_normal.PNG": {
+  "s": 1.87775,
+  "rDeg": 2.13,
+  "tx": 166.8,
+  "ty": -12.6
+ },
+ "halloween/face/kiki_normal.PNG": {
+  "s": 0.75895,
+  "rDeg": 1.99,
+  "tx": -21.6,
+  "ty": -30.69
+ },
+ "kyuko_normal.PNG": {
+  "s": 1.10165,
+  "rDeg": 1.61,
+  "tx": 6.3,
+  "ty": -0.5
+ },
+ "face/kyuko_normal.PNG": {
+  "s": 0.93931,
+  "rDeg": 1.87,
+  "tx": -27.54,
+  "ty": -18.03
+ },
+ "myua_normal.PNG": {
+  "s": 1.57855,
+  "rDeg": -2.85,
+  "tx": 303.3,
+  "ty": 49.7
+ },
+ "face/myua_normal.PNG": {
+  "s": 0.88623,
+  "rDeg": -3.448,
+  "tx": -125,
+  "ty": -35.9
+ },
+ "card-master/myua_normal.PNG": {
+  "s": 2.11507,
+  "rDeg": 0.52,
+  "tx": -65.4,
+  "ty": -178.4
+ },
+ "card-master/face/myua_normal.PNG": {
+  "s": 0.76823,
+  "rDeg": 4.386,
+  "tx": -25.82,
+  "ty": -41.55
+ },
+ "halloween/myua_normal.PNG": {
+  "s": 1.92363,
+  "rDeg": -0.11,
+  "tx": -32.2,
+  "ty": -53.1
+ },
+ "halloween/face/myua_normal.PNG": {
+  "s": 0.9034,
+  "rDeg": -1.638,
+  "tx": -80.68,
+  "ty": -70.07
+ }
+}
