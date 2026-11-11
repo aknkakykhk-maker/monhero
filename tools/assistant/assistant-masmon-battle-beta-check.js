@@ -35,8 +35,8 @@ check('書く保存のキーは mh_assistant_masmon_battle_v1 だけ(ブリー�
 check('育成・修行・マスモンの保存に書かない(set を呼ばない)', !/(AMG_STORE|AMGT_STORE|ASSISTANT_MASMON_STORE)\.set\(|amgSave\(|amgtSave\(/.test(code));
 check('通信を直に書かない(サーバはタイセンの口だけ)', !/supabase|fetch\(/.test(code));
 const pvpCalls = (t) => t.split(/masmonPvp(?:Register|Challenge|Friends|Ratings|Unregister)\(/).length - 1;
-check('サーバの口を呼ぶのは、印 assistantMasmonBattlePvp の後ろ(フレンドの欄・ランキング)だけ',
-  /const ambbPvpOn = \(\) => ambbOn\(\) && [^\n]*assistantMasmonBattlePvp === true/.test(code) && /const pvp = ambbPvpOn\(\) && !preview;/.test(code)
+check('サーバの口を呼ぶのは、印 assistantMasmonBattlePvp の後ろ(フレンドの欄・ランキング)か、デバッグの「フレンド対戦を試す」だけ',
+  /const ambbPvpOn = \(\) => ambbOn\(\) && [^\n]*assistantMasmonBattlePvp === true/.test(code) && /const pvp = \(ambbPvpOn\(\) && !preview\) \|\| \(!!tryPvp && /.test(code) && /const tryPvp = o\.from === 'debug' && o\.tryPvp === true/.test(code)
   && /const srcNow = pvp \?/.test(code) && /srcNow === 'friend' && <AmbbFriendPanel/.test(code) && /phase === 'rank' && pvp\)/.test(code)
   && pvpCalls(code) > 0 && pvpCalls(code) === pvpCalls(code.slice(code.indexOf('function AmbbFriendPanel'))));
 check('計算に手を入れていない', !/_internal/.test(code));

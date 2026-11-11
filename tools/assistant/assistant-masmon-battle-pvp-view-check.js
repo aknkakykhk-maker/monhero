@@ -172,6 +172,21 @@ const routeServer = async (page) => {
     await page.waitForTimeout(1500);
     check('鍵が合わない(locked)とき、サポートへの案内が出る', await page.evaluate(() => /お問い合わせ\(サポート\)/.test(document.querySelector('[data-ambb-friend]')?.textContent || '')));
     await shot('5-locked');
+    // ⑤ デバッグの「フレンド対戦を試す」: 印が偽でも、この起動のあいだだけフレンド対戦を出す・この端末の保存はしない
+    await page.evaluate(() => { AMBB_HOST.set(null); RELEASE_FLAGS.assistantMasmonBattleBeta = false; RELEASE_FLAGS.assistantMasmonBattlePvp = false; });
+    lockMode = false; calls.post.length = 0;
+    const saveBefore = await page.evaluate(() => localStorage.getItem('mh_assistant_masmon_battle_v1'));
+    check('デバッグ以外からは開かない(印が偽)', await page.evaluate(() => assistantMasmonBattleOpen({ assistantId: 'mua', from: 'room', tryPvp: true }) === false && RELEASE_FLAGS.assistantMasmonBattlePvp === false));
+    await page.evaluate(() => assistantMasmonBattleOpen({ from: 'debug', tryPvp: true }));
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-friend-opt]'), { timeout: 20000 }).catch(() => {});
+    check('デバッグの「試す」: フレンドの欄と、本物のサーバに残る旨の案内が出る', await page.evaluate(() => !!document.querySelector('[data-ambb-src="friend"]') && /本物のサーバに登録・記録されます/.test(document.querySelector('[data-ambb-prep]').textContent)));
+    await clickSel('[data-ambb-challenge]');
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch]'), { timeout: 20000 }).catch(() => {});
+    await clickSel('[data-ambb-skip]');
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-pvp-result]'), { timeout: 20000 }).catch(() => {});
+    check('デバッグの「試す」: 登録→挑む→振り返りまで進む', calls.post.join(',') === 'register,challenge' && await page.evaluate(() => !!document.querySelector('[data-ambb-pvp-result]')), calls.post.join(','));
+    check('デバッグの「試す」: この端末の保存(mh_assistant_masmon_battle_v1)は変わらない', (await page.evaluate(() => localStorage.getItem('mh_assistant_masmon_battle_v1'))) === saveBefore);
+    await shot('6-debug-try');
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('検査が最後まで進む', false, String(e && e.message || e).slice(0, 200));

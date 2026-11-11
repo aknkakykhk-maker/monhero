@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e973c8bc2378c40
+// source-sha256: 630680ba79eae021
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139287,11 +139287,14 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   const o = opts && typeof opts === 'object' ? opts : {};
   const preview = !ambbOn();
   if (preview && o.from !== 'debug') return false;
+  const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
+  if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
   AMBB_HOST.set({
     assistantId: typeof o.assistantId === 'string' ? o.assistantId : '',
     from: typeof o.from === 'string' ? o.from : 'room',
     foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '',
     preview,
+    tryPvp,
     at: Date.now()
   });
   return true;
@@ -139377,6 +139380,7 @@ function AssistantMasmonBattleBeta({
   assistantId,
   foeAssistantId,
   preview,
+  tryPvp,
   onClose
 }) {
   const save = useAmbbSave();
@@ -139551,7 +139555,7 @@ function AssistantMasmonBattleBeta({
       }
     }));
   };
-  const pvp = ambbPvpOn() && !preview;
+  const pvp = ambbPvpOn() && !preview || !!tryPvp && typeof masmonPvpChallenge === 'function';
   const srcNow = pvp ? src || (foes.length ? 'local' : 'friend') : 'local';
   const startPvp = (m, foe) => {
     if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
@@ -139938,7 +139942,7 @@ function AssistantMasmonBattleBeta({
         textAlign: 'center',
         marginTop: 8
       }
-    }, "公開前の確かめです。戦績も設定も保存しません。"));
+    }, "公開前の確かめです。戦績も設定も保存しません。", tryPvp ? 'フレンド対戦は本物のサーバに登録・記録されます。' : ''));
   } else if (phase === 'rank' && pvp) {
     body = React.createElement(AmbbRanking, {
       me: me,
@@ -214673,6 +214677,17 @@ function MonsterHeroGame() {
       onClick: () => {
         if (typeof assistantMasmonBattleOpen === 'function') assistantMasmonBattleOpen({
           from: 'debug'
+        });
+      }
+    }), React.createElement(DebugMenuRow, {
+      "data-debug-masmon-battle-pvp-try": true,
+      icon: "👥",
+      label: "助手マスモンのフレンド対戦を試す(本物のサーバ)",
+      desc: "この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)",
+      onClick: () => {
+        if (typeof assistantMasmonBattleOpen === 'function') assistantMasmonBattleOpen({
+          from: 'debug',
+          tryPvp: true
         });
       }
     })), React.createElement(DebugMenuGroup, {
