@@ -111,6 +111,30 @@ check('戦いの終わり・画面の切り替え・ページを離れるとき�
   && /window\.addEventListener\('pagehide', flushAssistantCardUses\)/.test(app));
 check('画面用の回数は毎回更新する(勝ちの結果画面で古くならない・ミハリ3)', /assistantCardUsesRef\.current = r\.uses; setAssistantCardUses\(r\.uses\);/.test(app));
 check('解放したときはその場で書く', /if \(r\.stateChanged\) \{ saveAssistantPartner\(r\.state\); flushAssistantCardUses\(\); \}/.test(app));
+// 古いバックアップを戻す道(2026-11-11 Fable の確認): 先に助手を選んで earn になった端末へ、印の無い古いバックアップを戻しても助手を失わない
+{
+  const backup = read('monster-hero/data/mhsave-backup.js');
+  const sites = (app.match(/if \(!keys\.includes\('mh_assistant_partner_v1'\)\) window\.localStorage\.setItem\('mh_assistant_partner_v1', JSON\.stringify\(\{ v:1, mode:'all', first:null, unlocked:\[\], noticed:\[\] \}\)\);/g) || []).length;
+  check('戻す処理(コード・ファイル)は、印が無いバックアップなら「今の人」を書く(60-app の2か所)', sites === 2, `${sites}か所`);
+  check('戻す処理(.mhsave の補助)も同じ', /if \(keys\.indexOf\('mh_assistant_partner_v1'\) < 0\) window\.localStorage\.setItem\('mh_assistant_partner_v1', JSON\.stringify\(\{ v:1, mode:'all', first:null, unlocked:\[\], noticed:\[\] \}\)\);/.test(backup));
+  // 動かして確かめる: .mhsave の補助を、偽の window で動かす
+  const store = new Map([['mh_assistant_partner_v1', JSON.stringify({ v: 1, mode: 'earn', first: 'kiki', unlocked: ['kiki'], noticed: [] })]]);
+  const fakeWin = { localStorage: { setItem: (k, v) => store.set(k, String(v)), getItem: (k) => store.get(k) ?? null, key: () => null, length: 0 }, location: { reload() {} } };
+  const doc = { querySelector: () => null, createElement: () => ({ setAttribute() {}, appendChild() {}, style: {}, addEventListener() {} }), body: { appendChild() {} }, addEventListener() {}, querySelectorAll: () => [], documentElement: {}, readyState: 'loading' };
+  const bctx = { window: fakeWin, document: doc, MutationObserver: class { observe() {} }, Array, setTimeout: () => 0, btoa: (s) => Buffer.from(s, 'binary').toString('base64'), atob: (s) => Buffer.from(s, 'base64').toString('binary'), unescape, escape, encodeURIComponent, decodeURIComponent, console: { error() {} } };
+  vm.createContext(bctx);
+  let ran = false;
+  try {
+    const src2 = backup.replace(/function restoreValue\(modal, value\)\{/, 'globalThis.__restore = restoreValue; function restoreValue(modal, value){');
+    vm.runInContext(src2, bctx);
+    const oldBackup = Buffer.from(unescape(encodeURIComponent(JSON.stringify({ mh_onboarded: 'true', mh_assistant_selected_v1: '"mua"' }))), 'binary').toString('base64');
+    if (typeof bctx.__restore === 'function') { bctx.__restore({ querySelector: () => ({ textContent: '', style: {} }) }, oldBackup); ran = true; }
+  } catch (e) { /* 動かせなければ下で NG */ }
+  const after = P.normalizeAssistantPartner(JSON.parse(store.get('mh_assistant_partner_v1') || 'null'));
+  check('古いバックアップを戻すと、先に選んだ earn が「今の人(全員が助手)」に替わる', ran && after.mode === 'all' && [...released].every(id => P.assistantPartnerAllowed(after, id)), `動いた: ${ran} / mode: ${after.mode}`);
+  const withKey = P.normalizeAssistantPartner({ v: 1, mode: 'earn', first: 'mua', unlocked: ['mua'] });
+  check('印のあるバックアップ(はじめての人が取ったもの)は、そのまま earn で戻る(書き換えない)', withKey.mode === 'earn');
+}
 // ③ 公開前の助手の決まりと混ぜない
 check('判定はお話・公開の決まり(assistantUnlockedBy)を先に通す', /if \(typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy\(id, seenStoryIds\)\) return false;\n  return assistantPartnerAllowed\(state, id\);/.test(src));
 check('公開の印の判定を書き換えていない', /const assistantReleased = \(assistantId\) => \{/.test(read('monster-hero/data/assistants.js')));
