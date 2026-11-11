@@ -91,12 +91,15 @@
 | `mh_assistant_life_friend_known_v1` | object | 顔なじみの回数 `{ '自分の助手|フレンドのID|相手の助手': 回数 }`(300組まで)。数字は増えるだけで、ほかの値は変えない |
 | `mh_assistant_life_friend_intro_v1` | boolean | 「🏘 フレンド」のはじめての案内を見たか |
 | `mh_assistant_life_friend_activity_v1` | object[] / `[]` | フレンドに見せる「最近」のうち、モンヒロビートで遊んだ曲名(2026-11-08)。`[{ k:'beat', x:曲名(30字), at }]` を新しい順に6つまで。公開中の曲だけ・スコアなどは残さない。設定 `act` が切なら送らない(端末の中には残る) |
+| `mh_assistant_life_friend_bond_v1` | object | フレンドごとの友情とスタンプ(2026-11-11) `{ day(朝4時区切り), houses(今日スタンプをもらった軒数), f: { フレンドのID: { st(スタンプの数・増えるだけ), t:{talk,find,note}(今日した3つ), done(今日のスタンプ), liked(今日送ったすてきの場所・3つまで), in(来てくれた日・12日ぶん), snap(前に来たときの家具・マスモン・最近の控え) } } }`(100人まで)。日が変わると今日の分だけ戻す |
+| `mh_assistant_life_friend_fav_v1` | object | お気に入りの棚(2026-11-11) `{ on(フレンドに見せる), a(好きな助手), m:{aid,mo}(自慢のマスモン), s(好きな曲・30字), fn(集めた家具の数を見せる) }` |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
 | `mh_story_tactics_types_seen_v1` | boolean | 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」を本編で見たか(飛ばしても立つ・2026-10-18)。ヘイトとタイプの公開のあと、タクティクスバトルの導入のお話を見た人の最初の HOME で1回流す。回想・デバッグから見たぶんは立てない |
 | `mh_story_card_battle_seen_v1` | boolean | お話「MFバトルカード ～物置の古い箱～」を本編で見たか(飛ばしても立つ・2026-10-24)。MFバトルカードの公開(`RELEASE_FLAGS.cardBattle`)のあとの最初の HOME で1回流す。立っていると HOME に MFバトルカードの入口が出る。true 以外(無い・壊れた値)は「まだ」。回想・デバッグから見たぶんは立てない |
 | `mh_story_one_at_a_time_v1` | boolean | はじめて遊ぶ人の印(2026-10-27)。はじめての案内を通る人にだけ起動時に true を書き、消さない。true の人は HOME に着くたびにお話を1本だけ流し、残りは HOME を離れて戻ったときに1本ずつ流す。前から遊んでいる人には書かない(無い・false なら今までどおり続けて流す) |
+| `mh_first_battle_done_v1` | boolean | はじめて遊ぶ人が最初の本番のバトルを終えた印(2026-11-11)。はじめての人(`mh_story_one_at_a_time_v1` が true)だけに、本番のバトルから HOME へ戻ったときに true を書き、消さない。付くまでイベントのお話を自動では流さない。すでにクリア記録のある人は読み込み時に終えた扱い |
 | `mh_help_new_seen_v1` | string[] | ヘルプの🆕(2026-10-18)。開いたことのあるトピックの id(`added` を持つ項目だけ・新しい200件まで)。無い・壊れている = まだ何も開いていない(載せてから14日の項目に🆕が出る) |
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
@@ -117,10 +120,13 @@
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_presence_show_v1` | boolean / `true` | 「いまの状態をフレンドに見せる」(2026-11-08)。`false` のときは friend_profiles の place を 'other'(ログイン中)にし、オート周回中・操作なしの分(records.au・records.im)も送らない |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
+| `mh_pending_room_link_v1` | object / `null` | 招待リンク(`?beatRoom=` / `?cardRoom=`)で開いたときの部屋 `{kind, code, at}`。URLの引数は読んだらすぐ消し、ここへ預けて、起動の流れ・はじめての案内が済んだHOMEで部屋へ入ったら消す。3時間たつと捨てる(`mhNormalizeRoomLink` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
 | `mh_card_chat_prefs_v1` | object / `cardChatNormalizePrefs` | MFバトルカードのマルチと観戦のコメントの設定 `{ free, flow }`(自由文を出すか・観戦のコメントを流すか。2026-10-30・91-card-battle-multi.jsx)。無い・壊れているときはどちらも true。コメントの本文は保存しない |
+| `mh_multi_stamps_v1` | object / `normalizeMultiStamps` | マルチのスタンプ(モンヒロビート・MFバトルカード)の持ち物とよく使う枠 `{ v:1, owned:[買った品のid], slots:[{ f:顔, w:言葉 }|null] }`(2026-11-11・39-multi-stamp.jsx)。無い・壊れているときは、はじめの8つ。ビートP交換所で買うときはビートPと同じ取引で保存 |
+| `mh_multi_stamp_prefs_v1` | object / `normalizeMultiStampPrefs` | マルチのスタンプの設定 `{ pic }`(届いたスタンプを絵で出すか。2026-11-11)。無い・壊れているときは絵で出す |
 | `mh_card_pvp_history_v1` | array / `cardPvpNormalizeHistory` | MFバトルカードのマルチ対戦の履歴(2026-10-27・92-card-pvp-history.jsx)。新しい30試合まで `[{ match, at, room, outcome, reason, turns, verify, foe:{ bid, name, icon, frame, deckName }, foeDeck:{ monsters, cards }|null, foeSeen:[使われた札], myDeck:{ name, monsters, cards }, rating:{ before, after }|null }]`。相手のデッキは封を開けて「合っている」試合だけ。壊れた行は捨てる。端末の中だけ(Supabase に送らない) |
 | `mh_card_pvp_fix_20261108_v1` | object `{ at, undone, matches }` | 2026-11-08 マルチが不具合で止まった試合の投了の負けを、`mh_card_record_v1` の `pvp.lose` から1回だけ戻した印(92 の `cardPvpFix20261108Once`・社長の決定)。当てはまる試合が履歴に無い端末も印だけ書く。印があれば二度と当てない。記録と同じ取引で書く |
 | `mh_card_replays_v1` | object / `cardReplayNormalize` | MFバトルカードの過去の対戦を見る(リプレイ)の記録 `{ v:1, list:[{ v:1, id(試合の番号), kind:'pvp'|'cpu', at, rules(ルールの版), first, names, foe:{ name, icon, frame, deckName, who }, outcome, reason, decks:[自分, 相手], seeds:[自分, 相手], acts:[[by, 手], …], prints(1手ごとの場の指紋4文字ずつ), fav, turn(最後の番。2026-10-27 に足した項目・無ければ null), level(助手と対戦の難易度。2026-10-27 に足した項目・無ければ null) }] }`(新しい順)。新しい50試合まで・お気に入り10まで(消さない)・合わせて約750KBまで(2026-10-27 に10試合・3つ・150KBから増やした。キーは同じ)。localStorage へは直に書き、いっぱいのときはゲーム全体の保存の失敗に数えず、128KBの空きが残るまで古い試合(★以外)から消す。それでも入らなければその試合だけ残さない。端末の中だけ(送らない)。壊れた1件は捨て、知らない値は既定で補う。マルチは確かめ(`cardPvpVerify`)が通った試合だけ書く。なぞり直して手が当たらない・指紋が合わない所で止め「ここまでしか見られません」(2026-10-27・93-card-replay.jsx) |
@@ -256,6 +262,8 @@
 | `mh_onboarding_step` | string or null | はじめての設定の途中段階(完了で `null`) |
 | `mh_tutorial_seen_v1` | boolean / `false` | 村の案内(チュートリアル)を見たか |
 | `mh_battle_tutorial_seen_v1` | boolean / `false` | バトルのれんしゅうを見たか |
+| `mh_battle_tutorial_first_v1` | object / `{done:false, at:0, hints:{system:false, mode:false, difficulty:false}}` | はじめの1戦を通したか・選ぶ画面3つのひとこと案内を見たか(2026-11-11 分割。読むときは `normalizeBattleTutorialFirst`) |
+| `mh_battle_tutorial_more_v1` | object / `{offered:false, done:false, declined:false}` | つづきのれんしゅうの誘いを出したか・通したか・あとでにしたか(読むときは `normalizeBattleTutorialMore`) |
 | `mh_battle_tutorial_guide_shown_v1` | boolean / `false` | バトルのれんしゅうへの誘導を出したか |
 | `mh_rhythm_tutorial_seen_v1` | boolean / `false` | モンビーの練習を見たか |
 | `mh_daily_masu_advice_date_v1` | string | 助手の「今日のマスモン助言」を出した日 |

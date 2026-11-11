@@ -204,6 +204,10 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-multi-stamp.jsx",
+      "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -426,6 +430,10 @@
     {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
+    },
+    {
+      "file": "56-assistant-life-friend-bond.jsx",
+      "role": "助手ライフのフレンドの家の「行く意味・来てもらう意味」(友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳・来ている印)。56-assistant-life-friend.jsx が差しこむ。公開の印 assistantLifeFriendBond の後ろ。保存は mh_assistant_life_friend_bond_v1・_fav_v1 の新しいキーだけ。表は assistant_life_friend_likes(足すだけ)"
     },
     {
       "file": "82-card-battle-core.jsx",

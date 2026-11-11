@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dab5f242ceced826
+// generated-sha256: 2bd1ac4b9faa00b6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9706,6 +9706,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
+  assistantLifeFriendBond: false, // フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳(56-assistant-life-friend-bond)。社長の「この文で」と表(assistant_life_friend_likes)のあとで真に
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
@@ -10147,6 +10148,8 @@ const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
 // はじめて遊ぶ人の印(2026-10-27 社長「はじめて遊ぶ人のお話は、続けて流すのを1本まで」)。はじめての案内を通る人にだけ true を書く。
 // true の人は、HOME に着くたびにお話を1本だけ流す(残りは HOME を離れて戻ったときに1本ずつ)。前から遊んでいる人には付けない
 const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
+// はじめて遊ぶ人が、最初の本番のバトルを終えたときの印(新しいキー・一度付いたら消さない)。付くまでイベントのお話は自動で流さない(2026-11-11 案3)
+const FIRST_BATTLE_DONE_KEY = 'mh_first_battle_done_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
@@ -13474,6 +13477,20 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// れんしゅうを「はじめの1戦」と「つづき」に分けた(2026-11-11)。新しいキーを足すだけ(上の2つの意味は変えない)
+//   mh_battle_tutorial_first_v1 { done(はじめの1戦を最後まで), at, hints:{ system, mode, difficulty }(入口3画面の一言を出した) }
+//   mh_battle_tutorial_more_v1  { offered(つづきに誘った), done(つづきを最後まで), declined(誘いを断った) }
+const BATTLE_TUTORIAL_FIRST_KEY = 'mh_battle_tutorial_first_v1';
+const BATTLE_TUTORIAL_MORE_KEY = 'mh_battle_tutorial_more_v1';
+const normalizeBattleTutorialFirst = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const h = r.hints && typeof r.hints === 'object' && !Array.isArray(r.hints) ? r.hints : {};
+  return { done: r.done === true, at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0, hints: { system: h.system === true, mode: h.mode === true, difficulty: h.difficulty === true } };
+};
+const normalizeBattleTutorialMore = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return { offered: r.offered === true, done: r.done === true, declined: r.declined === true };
+};
 // モンビー(モンヒロビート)のチュートリアルを見たかどうか。既存のキーには触らず新しく足す。
 // 値が無い既存セーブは「まだ見ていない」として扱うので、後方互換のまま初回案内が出る。
 const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
@@ -34934,9 +34951,9 @@ const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
 const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
 const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
   h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
-  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
-  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
-  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  w: ['🗺 助手の町', '🗺 助手ライフで町を見ている'],
+  f: ['🤝 助手のきずな', '🤝 助手ライフで助手どうしのきずなを見ている'],
+  i: ['🎁 助手への贈り物', '🎁 助手ライフで贈る道具を選んでいる'],
   p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
   v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている'],
 });
@@ -36805,6 +36822,450 @@ const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
 const sbFetchBeatRankMine = (breederId) => sbFetchPlayerRankMine('beat', breederId);
 const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 
+// ---- part: 39-multi-stamp.jsx ----
+// ---- マルチのスタンプ(モンヒロビートのマルチ・MFバトルカードのマルチ。2026-11-11 社長「チャットのほかにスタンプがほしい」) ----
+// 決めごと(台帳 2026-11-11 の2行・案 docs/progress/multi-stamp/PLAN.md):
+//   ・スタンプ = 顔 × 言葉。顔(助手の顔・モンスターの顔・あとで足す新しい絵)と言葉を自分で組み合わせ、「よく使う枠」に並べる
+//   ・はじめは助手8顔(1人1表情)× 言葉8。ほかはビートP交換所の「スタンプ」で買い足す(値段は下の表1か所)
+//   ・送るのは、いまのチャットの知らせに顔の番号(sf)と言葉の番号(sw)を足すだけ。古い版・知らない番号の人には言葉だけが出る
+//   ・相手は、その顔や言葉を持っていなくても絵で見える(持っているかは送る側だけが確かめる)
+//   ・続けて送るのは2秒に1回・同じスタンプは続けて3回まで。受け取る側も1人2秒に1個だけ出す
+//   ・モンヒロビートの演奏中は出さない(演奏中に届いた知らせは今までどおり溜めて、結果画面で吹き出しに出る)
+// 保存(新しいキーだけ。既存のキーは触らない):
+//   mh_multi_stamps_v1 { v:1, owned:[買った品の id], slots:[{ f, w }] }(無い・壊れているときは、はじめの形)
+//   mh_multi_stamp_prefs_v1 { pic:絵で出すか }(切ると届いたスタンプを言葉だけで出す)
+// ★番号(顔・言葉・品の id)は一度出したら変えない・消さない。足すときは後ろへ
+
+const MULTI_STAMP_KEY = 'mh_multi_stamps_v1';
+const MULTI_STAMP_PREFS_KEY = 'mh_multi_stamp_prefs_v1';
+const MULTI_STAMP_SEND_GAP_MS = 2000;
+const MULTI_STAMP_SAME_MAX = 3;
+const MULTI_STAMP_RECV_GAP_MS = 2000;
+const MULTI_STAMP_SLOT_BASE = 8;
+const MULTI_STAMP_SLOT_STEP = 4;
+const MULTI_STAMP_SLOT_BUY_MAX = 2; // 8 → 12 → 16
+// 助手(この並び)と表情。はじめに使えるのは各助手の happy
+const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
+const MULTI_STAMP_EXPRESSIONS = Object.freeze(['happy', 'excited', 'wink', 'surprise', 'troubled', 'crying', 'angry', 'normal']);
+const MULTI_STAMP_START_EXPRESSION = 'happy';
+// 言葉。id は変えない。pack … どの言葉パックで増えるか(base ははじめから)
+const MULTI_STAMP_WORDS = Object.freeze([
+  { id: 'w01', pack: 'base', text: 'よろしく！' }, { id: 'w02', pack: 'base', text: 'ナイス！' }, { id: 'w03', pack: 'base', text: 'すごい！' },
+  { id: 'w04', pack: 'base', text: 'ありがとう！' }, { id: 'w05', pack: 'base', text: '待って！' }, { id: 'w06', pack: 'base', text: 'ドンマイ…' },
+  { id: 'w07', pack: 'base', text: 'もう1回！' }, { id: 'w08', pack: 'base', text: 'またね！' },
+  { id: 'g01', pack: 'greet', text: 'おつかれ！' }, { id: 'g02', pack: 'greet', text: 'GG！' }, { id: 'g03', pack: 'greet', text: 'がんばろ！' },
+  { id: 'g04', pack: 'greet', text: '準備OK！' }, { id: 'g05', pack: 'greet', text: 'はじめまして！' }, { id: 'g06', pack: 'greet', text: 'おかえり！' },
+  { id: 'g07', pack: 'greet', text: 'ただいま！' }, { id: 'g08', pack: 'greet', text: 'おはよう！' }, { id: 'g09', pack: 'greet', text: 'おやすみ！' },
+  { id: 'g10', pack: 'greet', text: 'ごめんね！' },
+  { id: 'f01', pack: 'feel', text: '天才！' }, { id: 'f02', pack: 'feel', text: 'くやしい！' }, { id: 'f03', pack: 'feel', text: '強すぎ！' },
+  { id: 'f04', pack: 'feel', text: 'ほっとした…' }, { id: 'f05', pack: 'feel', text: 'うれしい！' }, { id: 'f06', pack: 'feel', text: 'びっくり！' },
+  { id: 'f07', pack: 'feel', text: 'やったー！' }, { id: 'f08', pack: 'feel', text: 'たのしい！' }, { id: 'f09', pack: 'feel', text: 'えっ…' },
+  { id: 'f10', pack: 'feel', text: 'さすが！' },
+  { id: 'b01', pack: 'beat', text: 'いい曲！' }, { id: 'b02', pack: 'beat', text: 'FC！' }, { id: 'b03', pack: 'beat', text: 'もう1曲！' },
+  { id: 'b04', pack: 'beat', text: '次いこう！' }, { id: 'b05', pack: 'beat', text: 'この曲好き！' }, { id: 'b06', pack: 'beat', text: 'むずかしい…' },
+  { id: 'b07', pack: 'beat', text: 'HELLいく？' }, { id: 'b08', pack: 'beat', text: 'おまかせで！' }, { id: 'b09', pack: 'beat', text: 'ノーツ多い！' },
+  { id: 'b10', pack: 'beat', text: 'ノリノリ！' },
+  { id: 'c01', pack: 'card', text: '考え中…' }, { id: 'c02', pack: 'card', text: 'いい手！' }, { id: 'c03', pack: 'card', text: '引きが強い！' },
+  { id: 'c04', pack: 'card', text: '逆転だ！' }, { id: 'c05', pack: 'card', text: '守りが固い！' }, { id: 'c06', pack: 'card', text: '切り札！' },
+  { id: 'c07', pack: 'card', text: 'もう1戦！' }, { id: 'c08', pack: 'card', text: '計算どおり！' }, { id: 'c09', pack: 'card', text: 'あぶなかった…' },
+  { id: 'c10', pack: 'card', text: 'ナイス判断！' },
+]);
+const MULTI_STAMP_WORD_PACKS = Object.freeze([
+  { pack: 'greet', name: 'あいさつ' }, { pack: 'feel', name: '気持ち' }, { pack: 'beat', name: 'モンヒロビート' }, { pack: 'card', name: 'MFバトルカード' },
+]);
+// モンスターの顔は5体ずつのセット(この並びは変えない。新しいモンスターは新しいセットとして後ろへ)
+const MULTI_STAMP_MONSTER_SETS = Object.freeze([
+  ['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Ham'],
+  ['Pixie', 'Mia', 'Pandora', 'Monol', 'Oboro'],
+  ['Plant', 'Zan', 'Eiki', 'KenshiMocchi', 'Mitarashi'],
+  ['Ark', 'Iblis', 'Snegurochka', 'Undine', 'Yaobikuni'],
+  ['Yggdrasil', 'MelWhip', 'Melody', 'Kuromy', 'Ghost'],
+  ['Spooky', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime'],
+]);
+// 値段(ビートP)。ここ1か所で変える。社長 2026-11-11「値段は倍(全部そろえて 8,000P)」:
+//   表情セット 400×8人(まとめては1人300)= 3,200 / モンスター 400×6セット = 2,400 / 言葉 300×4パック = 1,200 / 枠 600×2回 = 1,200 → 合計 8,000
+const MULTI_STAMP_PRICE = Object.freeze({ face: 400, faceAllPer: 300, monster: 400, words: 300, slot: 600 });
+
+const multiStampAssistant = (id) => (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS.find((a) => a && a.id === id) : null) || null;
+const multiStampMonster = (id) => { try { const m = ALL_PLAYER_MONSTERS[id]; return m && (m.faceIconUrl || m.iconUrl) ? m : null; } catch (_) { return null; } };
+// 顔の id: 'a.<助手>.<表情>' / 'm.<モンスター>'。着替えの絵は使わない(送る人と見る人で同じ絵にするため)
+const multiStampFaceSrc = (fid) => {
+  const s = String(fid || '');
+  let m = /^a\.([a-z]+)\.([a-z]+)$/.exec(s);
+  if (m) {
+    const who = multiStampAssistant(m[1]);
+    if (!who || !who.imagePrefix || !who.imageDir || !MULTI_STAMP_EXPRESSIONS.includes(m[2]) || !MULTI_STAMP_ASSISTANT_IDS.includes(m[1])) return null;
+    return `${who.imageDir}/face/${who.imagePrefix}_${m[2]}.PNG`;
+  }
+  m = /^m\.([A-Za-z]+)$/.exec(s);
+  if (m && MULTI_STAMP_MONSTER_SETS.some((set) => set.includes(m[1]))) { const mon = multiStampMonster(m[1]); return mon ? (mon.faceIconUrl || mon.iconUrl) : null; }
+  return null;
+};
+const multiStampFaceName = (fid) => {
+  const s = String(fid || '');
+  const a = /^a\.([a-z]+)\./.exec(s); if (a) { const who = multiStampAssistant(a[1]); return who ? who.name : ''; }
+  const m = /^m\.([A-Za-z]+)$/.exec(s); if (m) { const mon = multiStampMonster(m[1]); return mon ? mon.name : ''; }
+  return '';
+};
+const multiStampWord = (wid) => MULTI_STAMP_WORDS.find((w) => w.id === wid) || null;
+// 受け取った番号を確かめる(知らない番号は null。古い版から来た・まだ無い顔は言葉だけで出す)
+const multiStampCleanFace = (v) => (typeof v === 'string' && v.length <= 40 && multiStampFaceSrc(v) ? v : null);
+const multiStampCleanWord = (v) => (typeof v === 'string' && multiStampWord(v) ? v : null);
+
+// 売り場の品(id は変えない)
+const MULTI_STAMP_SHOP_OFFERS = Object.freeze([
+  ...MULTI_STAMP_ASSISTANT_IDS.map((id) => ({ id: `stamp_face_${id}`, kind: 'stamp', group: 'face', assistantId: id })),
+  { id: 'stamp_face_all', kind: 'stamp', group: 'faceAll' },
+  ...MULTI_STAMP_MONSTER_SETS.map((set, i) => ({ id: `stamp_mon_${i + 1}`, kind: 'stamp', group: 'monster', monsters: set })),
+  ...MULTI_STAMP_WORD_PACKS.map((p) => ({ id: `stamp_words_${p.pack}`, kind: 'stamp', group: 'words', pack: p.pack })),
+  { id: 'stamp_slot', kind: 'stamp', group: 'slot' },
+]);
+const multiStampOffer = (id) => MULTI_STAMP_SHOP_OFFERS.find((o) => o.id === id) || null;
+
+// ---- 保存の形 ----
+const multiStampDefaultSlots = () => MULTI_STAMP_ASSISTANT_IDS.map((id, i) => ({ f: `a.${id}.${MULTI_STAMP_START_EXPRESSION}`, w: MULTI_STAMP_WORDS[i].id }));
+const multiStampOwnsFace = (owned, fid) => {
+  const s = String(fid || '');
+  const a = /^a\.([a-z]+)\.([a-z]+)$/.exec(s);
+  if (a) return MULTI_STAMP_ASSISTANT_IDS.includes(a[1]) && MULTI_STAMP_EXPRESSIONS.includes(a[2]) && (a[2] === MULTI_STAMP_START_EXPRESSION || owned.includes(`stamp_face_${a[1]}`));
+  const m = /^m\.([A-Za-z]+)$/.exec(s);
+  if (m) return MULTI_STAMP_MONSTER_SETS.some((set, i) => set.includes(m[1]) && owned.includes(`stamp_mon_${i + 1}`)) && !!multiStampMonster(m[1]);
+  return false;
+};
+const multiStampOwnsWord = (owned, wid) => { const w = multiStampWord(wid); return !!w && (w.pack === 'base' || owned.includes(`stamp_words_${w.pack}`)); };
+const multiStampSlotMax = (owned) => MULTI_STAMP_SLOT_BASE + MULTI_STAMP_SLOT_STEP * Math.min(MULTI_STAMP_SLOT_BUY_MAX, owned.filter((x) => x === 'stamp_slot').length);
+const normalizeMultiStamps = (raw) => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+  const owned = (o && Array.isArray(o.owned) ? o.owned : []).filter((x) => typeof x === 'string' && multiStampOffer(x) && x !== 'stamp_face_all').slice(0, 60);
+  // 枠の品だけは同じ id を何回か持つ。ほかは1つにそろえる
+  const ownedClean = [...new Set(owned.filter((x) => x !== 'stamp_slot')), ...owned.filter((x) => x === 'stamp_slot').slice(0, MULTI_STAMP_SLOT_BUY_MAX)];
+  const max = multiStampSlotMax(ownedClean);
+  const slots = o && Array.isArray(o.slots)
+    ? o.slots.slice(0, max).map((x) => (x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) ? { f: x.f, w: x.w } : null))
+    : multiStampDefaultSlots();
+  while (slots.length < max) slots.push(null);
+  return { owned: ownedClean, slots };
+};
+const multiStampToStore = (st) => ({ v: 1, owned: st.owned.slice(), slots: st.slots.map((x) => (x ? { f: x.f, w: x.w } : null)) });
+const normalizeMultiStampPrefs = (v) => ({ pic: !(v && typeof v === 'object' && v.pic === false) });
+// 品の値段(持っている・買えないときは null)。8人まとめては、まだ持っていない助手1人につき 400P
+const multiStampOfferCost = (offer, st) => {
+  if (!offer) return null;
+  const owned = st.owned;
+  if (offer.group === 'faceAll') { const miss = MULTI_STAMP_ASSISTANT_IDS.filter((id) => !owned.includes(`stamp_face_${id}`)).length; return miss > 0 ? miss * MULTI_STAMP_PRICE.faceAllPer : null; }
+  if (offer.group === 'slot') return owned.filter((x) => x === 'stamp_slot').length < MULTI_STAMP_SLOT_BUY_MAX ? MULTI_STAMP_PRICE.slot : null;
+  if (owned.includes(offer.id)) return null;
+  if (offer.group === 'monster' && !offer.monsters.some((id) => multiStampMonster(id))) return null;
+  return offer.group === 'face' ? MULTI_STAMP_PRICE.face : offer.group === 'monster' ? MULTI_STAMP_PRICE.monster : offer.group === 'words' ? MULTI_STAMP_PRICE.words : null;
+};
+const multiStampApplyOffer = (offer, st) => {
+  const add = offer.group === 'faceAll' ? MULTI_STAMP_ASSISTANT_IDS.map((id) => `stamp_face_${id}`).filter((id) => !st.owned.includes(id)) : [offer.id];
+  return normalizeMultiStamps({ owned: [...st.owned, ...add], slots: st.slots });
+};
+const multiStampOfferLabel = (offer) => {
+  if (!offer) return { name: '', desc: '' };
+  if (offer.group === 'face') { const who = multiStampAssistant(offer.assistantId); return { name: `${who ? who.name : ''}の表情`, desc: '顔が7つ増えます' }; }
+  if (offer.group === 'faceAll') return { name: '助手みんなの表情', desc: '8人ぶんまとめて(持っていない人の分だけ)' };
+  if (offer.group === 'monster') { const names = offer.monsters.map((id) => multiStampMonster(id)).filter(Boolean).map((m) => m.name); return { name: `${names[0] || ''}たちの顔`, desc: names.join('・') }; }
+  if (offer.group === 'words') { const p = MULTI_STAMP_WORD_PACKS.find((x) => x.pack === offer.pack); const ws = MULTI_STAMP_WORDS.filter((w) => w.pack === offer.pack); return { name: `言葉「${p ? p.name : ''}」`, desc: `${ws.slice(0, 2).map((w) => w.text).join('・')}ほか${ws.length - 2}語` }; }
+  if (offer.group === 'slot') return { name: 'よく使う枠+4', desc: `最大${MULTI_STAMP_SLOT_BASE + MULTI_STAMP_SLOT_STEP * MULTI_STAMP_SLOT_BUY_MAX}枠まで` };
+  return { name: '', desc: '' };
+};
+const multiStampOfferIcons = (offer) => {
+  if (!offer) return [];
+  if (offer.group === 'face') return ['wink', 'surprise', 'crying'].map((e) => multiStampFaceSrc(`a.${offer.assistantId}.${e}`)).filter(Boolean);
+  if (offer.group === 'faceAll') return ['mua', 'kiki', 'dra'].map((id) => multiStampFaceSrc(`a.${id}.wink`)).filter(Boolean);
+  if (offer.group === 'monster') return offer.monsters.slice(0, 3).map((id) => multiStampFaceSrc(`m.${id}`)).filter(Boolean);
+  return [];
+};
+
+// ---- いまの持ち物・設定・送る間隔(React の外。ビートの部屋とカードの対戦で同じものを見る) ----
+const MULTI_STAMP = (() => {
+  const listeners = new Set();
+  let st = normalizeMultiStamps(null);
+  let prefs = normalizeMultiStampPrefs(null);
+  let loaded = false;
+  let sentAt = 0;
+  let lastKey = '';
+  let sameCount = 0;
+  const recvAt = new Map();
+  const emit = () => listeners.forEach((fn) => { try { fn(st); } catch (_) { /* 画面の都合で落ちても続ける */ } });
+  const load = () => {
+    if (loaded || typeof storeGet !== 'function') return;
+    loaded = true;
+    Promise.all([storeGet(MULTI_STAMP_KEY, null, false), storeGet(MULTI_STAMP_PREFS_KEY, null, false)])
+      .then(([raw, p]) => { st = normalizeMultiStamps(raw); prefs = normalizeMultiStampPrefs(p); emit(); }).catch(() => {});
+  };
+  return {
+    get: () => { load(); return st; },
+    prefs: () => { load(); return prefs; },
+    subscribe: (fn) => { load(); listeners.add(fn); return () => listeners.delete(fn); },
+    reload: () => { loaded = false; load(); },
+    // 買ったあと(交換の保存が済んだ値)をそのまま使う
+    replace: (next) => { st = normalizeMultiStamps(multiStampToStore(next)); emit(); },
+    setSlot: (i, slot) => {
+      if (!Number.isInteger(i) || i < 0 || i >= st.slots.length) return false;
+      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w))) return false;
+      const slots = st.slots.slice(); slots[i] = slot ? { f: slot.f, w: slot.w } : null;
+      st = { ...st, slots };
+      try { void storeSet(MULTI_STAMP_KEY, multiStampToStore(st), false); } catch (_) { /* 保存できなくても、その場では使える */ }
+      emit();
+      return true;
+    },
+    move: (i, d) => {
+      const j = i + d;
+      if (!Number.isInteger(i) || j < 0 || j >= st.slots.length || i < 0 || i >= st.slots.length) return false;
+      const slots = st.slots.slice(); [slots[i], slots[j]] = [slots[j], slots[i]];
+      st = { ...st, slots };
+      try { void storeSet(MULTI_STAMP_KEY, multiStampToStore(st), false); } catch (_) { /* 同上 */ }
+      emit();
+      return true;
+    },
+    setPic: (on) => { prefs = { pic: !!on }; try { void storeSet(MULTI_STAMP_PREFS_KEY, prefs, false); } catch (_) { /* 同上 */ } emit(); },
+    // 送れるか(2秒に1回・同じのは続けて3回まで)。{ ok, why }
+    check: (slot) => {
+      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w)) return { ok: false, why: '' };
+      if (Date.now() - sentAt < MULTI_STAMP_SEND_GAP_MS) return { ok: false, why: '少しあけてから送ってね' };
+      if (lastKey === `${slot.f}|${slot.w}` && sameCount >= MULTI_STAMP_SAME_MAX) return { ok: false, why: '同じスタンプは続けて3回までです' };
+      return { ok: true, why: '' };
+    },
+    sent: (slot) => { const k = `${slot.f}|${slot.w}`; sameCount = k === lastKey ? sameCount + 1 : 1; lastKey = k; sentAt = Date.now(); },
+    // 受け取ったスタンプを出してよいか(1人2秒に1個)
+    accept: (who) => { const k = String(who || ''); const now = Date.now(); if (now - (recvAt.get(k) || 0) < MULTI_STAMP_RECV_GAP_MS) return false; recvAt.set(k, now); if (recvAt.size > 50) recvAt.clear(); return true; },
+  };
+})();
+
+// ビートP交換所の「スタンプ」の品を買う(本体の exchangeRhythmEventPoints から呼ぶ)。
+// ★保存されている値を読み直してから計算し、ビートPとスタンプを1つの取引で保存する(失敗したら両方戻す)
+const multiStampExchange = async (offerLike) => {
+  const offer = multiStampOffer(offerLike && offerLike.id);
+  if (!offer) return { ok: false, reason: 'unknown' };
+  const beforePoints = await loadRhythmEventPoints();
+  const stored = await storeGet(MULTI_STAMP_KEY, null, false);
+  const cur = normalizeMultiStamps(stored);
+  const cost = multiStampOfferCost(offer, cur);
+  if (cost === null) return { ok: false, reason: 'owned' };
+  if (!(beforePoints >= cost)) return { ok: false, reason: 'points' };
+  const next = multiStampApplyOffer(offer, cur);
+  const nextPoints = beforePoints - cost;
+  const saved = await saveStoredValuesOrRollback([
+    { key: RHYTHM_EVENT_POINTS_KEY, before: beforePoints, next: nextPoints },
+    { key: MULTI_STAMP_KEY, before: stored, next: multiStampToStore(next) },
+  ], storeGet, storeSet);
+  if (!saved) return { ok: false, reason: 'save' };
+  MULTI_STAMP.replace(next);
+  return { ok: true, eventPoints: nextPoints, cost };
+};
+
+// ---- 画面の部品 ----
+const useMultiStamp = () => {
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => MULTI_STAMP.subscribe(() => setTick((n) => n + 1)), []);
+  return MULTI_STAMP.get();
+};
+// 1つのスタンプ(顔+言葉)。size … 絵の大きさ(px)。絵で出さない設定・知らない顔のときは言葉だけ
+function MultiStampView({ f, w, text = '', size = 64, className = '', forcePic = false }) {
+  const word = multiStampWord(w);
+  const label = word ? word.text : text;
+  const src = (forcePic || MULTI_STAMP.prefs().pic) ? multiStampFaceSrc(f) : null;
+  if (!src) return <span data-multi-stamp-text className={className}>{label}</span>;
+  return (
+    <span data-multi-stamp={`${f}|${w}`} className={`inline-flex flex-col items-center rounded-2xl bg-white p-1 text-slate-900 shadow ${className}`} style={{ width: size + 8 }}>
+      <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="block rounded-xl object-cover" style={{ width: size, height: size }} />
+      <b className="mt-0.5 block max-w-full truncate text-center text-[11px] font-black leading-tight">{label}</b>
+    </span>
+  );
+}
+// チャットの板の「よく使う」(押すとすぐ送る)。onSend({ f, w, text }) が送れたら true を返す
+// 列の数はクラスで決める(横向きで増やせるように)。wide … 横向き・回転のときは8列
+const MULTI_STAMP_COLS = Object.freeze({ 4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6', 8: 'grid-cols-8' });
+function MultiStampPalette({ onSend, onEdit = null, cols = 4, wide = false, className = '' }) {
+  const st = useMultiStamp();
+  const [flash, setFlash] = React.useState(null);
+  const [why, setWhy] = React.useState('');
+  const press = (slot, i) => {
+    const r = MULTI_STAMP.check(slot);
+    if (!r.ok) { setWhy(r.why); setFlash({ i, ok: false }); return; }
+    const word = multiStampWord(slot.w);
+    const ok = onSend({ f: slot.f, w: slot.w, text: word ? word.text : '' }) !== false;
+    if (ok) MULTI_STAMP.sent(slot);
+    setWhy(ok ? '' : 'いまは送れません');
+    setFlash({ i, ok });
+  };
+  React.useEffect(() => { if (!flash) return undefined; const t = setTimeout(() => setFlash(null), 900); return () => clearTimeout(t); }, [flash]);
+  const list = st.slots.map((s, i) => ({ s, i })).filter((x) => x.s);
+  return (
+    <div data-multi-stamp-palette className={className}>
+      <div className={`grid gap-1.5 ${MULTI_STAMP_COLS[cols] || 'grid-cols-4'} ${wide ? 'landscape:grid-cols-8 [[data-mh-view-rotation=true]_&]:grid-cols-8' : ''}`}>
+        {list.map(({ s, i }) => {
+          const word = multiStampWord(s.w);
+          const src = multiStampFaceSrc(s.f);
+          const hit = flash && flash.i === i;
+          return (
+            <button key={i} type="button" data-multi-stamp-send={i} onClick={() => press(s, i)}
+              className={`relative min-w-0 rounded-xl border p-1 text-center active:scale-95 ${hit ? (flash.ok ? 'border-emerald-300 bg-emerald-500/20' : 'border-amber-300 bg-amber-500/15') : 'border-white/15 bg-white/10'}`}>
+              {src && <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-lg object-cover" />}
+              <b className="mt-0.5 block truncate text-[11px] font-black leading-tight text-white">{hit && flash.ok ? '✓ 送信' : (word ? word.text : '')}</b>
+            </button>
+          );
+        })}
+        {onEdit && (
+          <button type="button" data-multi-stamp-edit-open onClick={onEdit}
+            className="flex min-h-[64px] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-cyan-300/60 bg-cyan-500/10 text-[11px] font-black text-cyan-100 active:scale-95">
+            <span className="text-lg leading-none">✏️</span><span className="mt-1 whitespace-nowrap">並べる・作る</span>
+          </button>
+        )}
+      </div>
+      {why && <p data-multi-stamp-why className="mt-1 text-[11px] font-black text-amber-300">{why}</p>}
+    </div>
+  );
+}
+// マイスタンプ(よく使う枠に並べる・顔×言葉で作る)。onShop … 買い足す売り場へ(無ければボタンを出さない)
+function MultiStampEditor({ onClose, onShop = null }) {
+  const st = useMultiStamp();
+  const prefs = MULTI_STAMP.prefs();
+  const [sel, setSel] = React.useState(0);
+  const cur = st.slots[sel] || null;
+  const [tab, setTab] = React.useState(() => (cur && /^m\./.test(cur.f) ? 'monster' : 'assistant'));
+  const [who, setWho] = React.useState(() => { const a = cur && /^a\.([a-z]+)\./.exec(cur.f); return a ? a[1] : MULTI_STAMP_ASSISTANT_IDS[0]; });
+  const [face, setFace] = React.useState(cur ? cur.f : `a.${MULTI_STAMP_ASSISTANT_IDS[0]}.${MULTI_STAMP_START_EXPRESSION}`);
+  const [word, setWord] = React.useState(cur ? cur.w : MULTI_STAMP_WORDS[0].id);
+  const [lockNote, setLockNote] = React.useState('');
+  const pickSlot = (i) => {
+    setSel(i); setLockNote('');
+    const s = st.slots[i];
+    if (s) { setFace(s.f); setWord(s.w); const a = /^a\.([a-z]+)\./.exec(s.f); if (a) { setTab('assistant'); setWho(a[1]); } else setTab('monster'); }
+  };
+  const faces = tab === 'assistant'
+    ? MULTI_STAMP_EXPRESSIONS.map((e) => `a.${who}.${e}`)
+    : MULTI_STAMP_MONSTER_SETS.flat().filter((id) => multiStampMonster(id)).map((id) => `m.${id}`);
+  const lockedBuy = (what) => setLockNote(`${what}は、ビートP交換所の「スタンプ」で買えます`);
+  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word);
+  const max = st.slots.length;
+  return (
+    <div data-multi-stamp-editor className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 landscape:items-center" onClick={onClose}>
+      <div className="flex max-h-[96dvh] [[data-mh-view-rotation=true]_&]:max-h-[94vw] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center gap-2 px-3 pb-1 pt-2">
+          <b className="flex-1 text-[15px] text-cyan-100">😊 マイスタンプ</b>
+          {onShop && <button type="button" data-multi-stamp-shop onClick={onShop} className="min-h-[36px] rounded-xl bg-slate-800 px-2.5 text-[12px] font-black text-amber-100">🛒 買い足す</button>}
+          <button type="button" data-multi-stamp-editor-close onClick={onClose} className="min-h-[36px] rounded-xl bg-slate-800 px-2.5 text-[12px] font-black text-slate-200">✕ 閉じる</button>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 landscape:flex-row landscape:overflow-hidden">
+          <div data-multi-stamp-editor-left className="flex min-w-0 flex-col gap-2 landscape:min-h-0 landscape:w-[46%] landscape:shrink-0 landscape:overflow-y-auto">
+            <section className="rounded-xl border border-slate-700 bg-slate-900 p-2">
+              <p className="mb-1.5 flex items-center gap-1 text-[12px] font-black">⭐ よく使う<small className="text-[11px] text-slate-400">(並べた順にチャットへ出ます・{st.slots.filter(Boolean).length}/{max}枠)</small></p>
+              <div className="grid grid-cols-4 gap-1.5 landscape:grid-cols-5">
+                {st.slots.map((s, i) => (
+                  <button key={i} type="button" data-multi-stamp-slot={i} aria-pressed={sel === i} onClick={() => pickSlot(i)}
+                    className={`relative min-w-0 rounded-xl border p-1 text-center ${sel === i ? 'border-cyan-300 bg-cyan-500/15 ring-2 ring-cyan-300/40' : s ? 'border-white/15 bg-white/10' : 'border-dashed border-slate-600 bg-transparent'}`}>
+                    <span className="absolute left-1 top-0.5 text-[10px] font-black text-cyan-200">{i + 1}</span>
+                    {s ? <>
+                      <img src={multiStampFaceSrc(s.f) || undefined} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-lg object-cover" />
+                      <b className="mt-0.5 block truncate text-[10.5px] font-black leading-tight">{(multiStampWord(s.w) || {}).text}</b>
+                    </> : <span className="flex aspect-[4/5] items-center justify-center text-xl text-slate-500">＋</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 flex gap-1.5">
+                <button type="button" data-multi-stamp-move="-1" disabled={sel <= 0} onClick={() => { if (MULTI_STAMP.move(sel, -1)) setSel(sel - 1); }} className="min-h-[36px] flex-1 rounded-lg bg-slate-800 text-[12px] font-black disabled:opacity-40">◀ 前へ</button>
+                <button type="button" data-multi-stamp-move="1" disabled={sel >= max - 1} onClick={() => { if (MULTI_STAMP.move(sel, 1)) setSel(sel + 1); }} className="min-h-[36px] flex-1 rounded-lg bg-slate-800 text-[12px] font-black disabled:opacity-40">後ろへ ▶</button>
+                <button type="button" data-multi-stamp-clear disabled={!cur} onClick={() => MULTI_STAMP.setSlot(sel, null)} className="min-h-[36px] flex-1 rounded-lg bg-slate-800 text-[12px] font-black text-rose-200 disabled:opacity-40">外す</button>
+              </div>
+            </section>
+            <section data-multi-stamp-preview className="flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2 landscape:order-first">
+              <MultiStampView f={face} w={word} size={76} forcePic />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <button type="button" data-multi-stamp-put disabled={!canPut} onClick={() => MULTI_STAMP.setSlot(sel, { f: face, w: word })}
+                  className="min-h-[44px] rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-2 text-[13px] font-black disabled:opacity-40">⭐ {sel + 1}番に入れる</button>
+                {lockNote && <p data-multi-stamp-lock-note className="text-[11px] font-black leading-snug text-amber-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>🔒 {lockNote}</p>}
+              </div>
+            </section>
+            <button type="button" data-multi-stamp-pic aria-pressed={prefs.pic} onClick={() => MULTI_STAMP.setPic(!prefs.pic)}
+              className={`min-h-[38px] rounded-xl px-2 text-[12px] font-black ${prefs.pic ? 'bg-emerald-600 text-white' : 'border border-white/15 bg-slate-800 text-slate-300'}`}>
+              届いたスタンプを絵で出す {prefs.pic ? 'ON' : 'OFF(言葉だけ)'}
+            </button>
+          </div>
+          <section data-multi-stamp-editor-right className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 p-2 landscape:min-h-0 landscape:overflow-y-auto">
+            <p className="mb-1.5 text-[12px] font-black">✏️ {sel + 1}番を作る:顔 × 言葉</p>
+            <div className="mb-1.5 grid grid-cols-2 gap-1">
+              {[['assistant', '助手'], ['monster', 'モンスター']].map(([k, label]) => (
+                <button key={k} type="button" data-multi-stamp-tab={k} aria-pressed={tab === k} onClick={() => setTab(k)}
+                  className={`min-h-[34px] rounded-lg text-[12px] font-black ${tab === k ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>{label}</button>
+              ))}
+            </div>
+            {tab === 'assistant' && (
+              <div className="mb-1.5 grid grid-cols-8 gap-1">
+                {MULTI_STAMP_ASSISTANT_IDS.map((id) => (
+                  <button key={id} type="button" data-multi-stamp-who={id} aria-pressed={who === id} aria-label={multiStampFaceName(`a.${id}.normal`)} onClick={() => setWho(id)}
+                    className={`min-w-0 rounded-lg p-0.5 ${who === id ? 'bg-cyan-600' : 'bg-slate-800'}`}>
+                    <img src={multiStampFaceSrc(`a.${id}.${MULTI_STAMP_START_EXPRESSION}`) || undefined} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mb-2 grid grid-cols-8 gap-1">
+              {faces.map((fid) => {
+                const own = multiStampOwnsFace(st.owned, fid);
+                return (
+                  <button key={fid} type="button" data-multi-stamp-face={fid} aria-pressed={face === fid} onClick={() => { if (own) { setFace(fid); setLockNote(''); } else lockedBuy(tab === 'assistant' ? 'この表情' : 'このモンスターの顔'); }}
+                    className={`relative min-w-0 rounded-lg border ${face === fid ? 'border-cyan-300 ring-2 ring-cyan-300/40' : 'border-white/10'} bg-white/5`}>
+                    <img src={multiStampFaceSrc(fid) || undefined} alt="" draggable={false} loading="lazy" decoding="async" className={`block aspect-square w-full rounded-lg object-cover ${own ? '' : 'opacity-30'}`} />
+                    {!own && <span aria-hidden="true" className="absolute right-0.5 top-0 text-[11px]">🔒</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {MULTI_STAMP_WORDS.map((wd) => {
+                const own = multiStampOwnsWord(st.owned, wd.id);
+                return (
+                  <button key={wd.id} type="button" data-multi-stamp-word={wd.id} aria-pressed={word === wd.id} onClick={() => { if (own) { setWord(wd.id); setLockNote(''); } else lockedBuy('この言葉'); }}
+                    className={`min-h-[34px] whitespace-nowrap rounded-full px-2.5 text-[12px] font-black ${word === wd.id ? 'bg-cyan-600 text-white' : own ? 'bg-slate-800 text-slate-100' : 'bg-slate-800/60 text-slate-500'}`}>
+                    {own ? '' : '🔒'}{wd.text}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ビートP交換所の「スタンプ」の売り場(55-screen-breeder-market.jsx の一覧の中に置く)。
+// 買う処理は本体の交換(onExchange = exchangeRhythmEventPoints → multiStampExchange)。持っている品は「所持済み」
+function MultiStampShopList({ points = 0, busy = false, disabled = false, openSheet, onExchange, onZoomIcon = null }) {
+  const st = useMultiStamp();
+  const [edit, setEdit] = React.useState(false);
+  return <>
+    <button type="button" data-multi-stamp-shop-edit onClick={() => setEdit(true)}
+      className="col-span-full min-h-[44px] rounded-xl border border-cyan-300/50 bg-cyan-500/15 px-3 text-[13px] font-black text-cyan-100 active:scale-95">
+      😊 マイスタンプを開く(並べる・作る)
+    </button>
+    <p data-multi-stamp-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      顔と言葉を組み合わせて、マルチのチャットで送れます。買った顔・言葉は、相手が持っていなくても絵で見えます
+    </p>
+    {MULTI_STAMP_SHOP_OFFERS.map((offer) => {
+      const cost = multiStampOfferCost(offer, st);
+      if (offer.group === 'monster' && !offer.monsters.some((id) => multiStampMonster(id))) return null;
+      const label = multiStampOfferLabel(offer);
+      const icons = multiStampOfferIcons(offer);
+      const owned = cost === null;
+      const shownCost = owned ? (offer.group === 'faceAll' ? MULTI_STAMP_PRICE.faceAllPer * MULTI_STAMP_ASSISTANT_IDS.length : offer.group === 'slot' ? MULTI_STAMP_PRICE.slot : (offer.group === 'face' ? MULTI_STAMP_PRICE.face : offer.group === 'monster' ? MULTI_STAMP_PRICE.monster : MULTI_STAMP_PRICE.words)) : cost;
+      const item = { id: offer.id, name: label.name, emoji: offer.group === 'slot' ? '⭐' : offer.group === 'words' ? '💬' : '😊', icon: icons[0] || undefined, type: 'stamp', currency: 'beatPoint', cost: shownCost, desc: label.desc };
+      return <MarketProductCard key={offer.id} dataAttrs={{ 'data-multi-stamp-offer': offer.id }}
+        item={item} owned={owned} comingSoon={false}
+        canBuy={!owned && points >= shownCost && !busy}
+        disabled={disabled}
+        onZoom={() => onZoomIcon && icons[0] && onZoomIcon(item)}
+        onBuy={() => openSheet({ item, confirm: () => (onExchange ? onExchange(offer, 1) : false) })}
+        middle={<span data-multi-stamp-offer-desc className="block px-1 text-center text-[10px] font-bold leading-tight text-slate-300" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(label.desc) : label.desc}</span>}
+      />;
+    })}
+    {edit && <MultiStampEditor onClose={() => setEdit(false)} />}
+  </>;
+}
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -37318,7 +37779,7 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
         if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
         // 送り仮名(「来|て」「強|く」)の手前・小さい字の手前・閉じる記号の手前では分けない
         if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
-        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～・]/.test(s[p] || '')) continue;
         if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
         // くっついた言葉(「振り|直す」「受け取り|忘れ」「押し|切る」)の、送り仮名と次の漢字のあいだでは分けない
         if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
@@ -39284,8 +39745,10 @@ const growthFxPeerItem = ({ pair, itemId, pointsBefore, pointsAfter, levelBefore
   const rows = [];
   if (gain > 0) rows.push({ kind: 'friend', label: '2人の友情Lv', levelFrom: levelBefore, levelTo: levelAfter,
     pctFrom: growthFxPeerPct(pointsBefore), pctTo: growthFxPeerPct(pointsAfter), gain });
-  const each = Array.isArray(playerGains) && playerGains.length === 2 && playerGains[0] !== playerGains[1];
-  if (each) pair.forEach((id, i) => { if (growthFxNum(playerGains[i]) > 0) rows.push({ kind: 'bond', label: `あなたとの仲良し度(${growthFxAssistantName(id)})`, pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGains[i]) }); });
+  // 好みが渡っていれば、1人ずつの行にして好みを字で出す(2026-11-11 社長 案5 A「結果の札に好み」。顔の表情だけだと、好みが分かったことに気づけない)
+  const likeWord = (i) => { const l = Array.isArray(likes) ? likes[i] : null; return l === 'like' ? '・💗 好き！' : l === 'bad' ? '・💧 苦手…' : l === 'mid' ? '・ふつう' : ''; };
+  const each = Array.isArray(playerGains) && playerGains.length === 2 && (playerGains[0] !== playerGains[1] || (Array.isArray(likes) && likes.length === 2));
+  if (each) pair.forEach((id, i) => { if (growthFxNum(playerGains[i]) > 0) rows.push({ kind: 'bond', label: `仲良し度(${growthFxAssistantName(id)}${likeWord(i)})`, pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGains[i]) }); });
   else if (growthFxNum(playerGain) > 0) rows.push({ kind: 'bond', label: 'あなたとの仲良し度(2人とも)', pctFrom: 0, pctTo: 100, gain: growthFxNum(playerGain) });
   const faceOf = (i) => { const l = Array.isArray(likes) ? likes[i] : null; return l === 'bad' ? 'troubled' : l === 'like' ? 'excited' : l === 'mid' ? 'happy' : (reaction === 'dislike' ? 'troubled' : reaction === 'like' ? 'excited' : 'happy'); };
   const face = (id) => growthFxAssistantFace(id, faceOf(pair.indexOf(id)));
@@ -40865,7 +41328,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'stamp',label:'スタンプ'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -41015,10 +41478,10 @@ function BreederMarketScreen({
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
-            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
-            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'アイコン・フレームが買える(Pはレベルアップで獲得)',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'プシュケー・勇者の証と交換',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'円盤石・アシストなどと交換',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
             ...(cardShop?[{key:'card',emoji:'🃏',label:'MFバトルカード',titleLines:['MFバトル','カード'],value:`🎟️${compactCount(cardShop.point)}`,hint:'ビートPでパックなど',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
@@ -41218,6 +41681,8 @@ function BreederMarketScreen({
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
+          {/* マルチのスタンプ(2026-11-11 社長「いっぱい作って、カスタマイズできるようにしたい」「ビートPで買い足す」)。品と値段は 39-multi-stamp.jsx の表 */}
+          {eventTab==='stamp'&&<MultiStampShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
           {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
               服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
           {eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
@@ -54177,6 +54642,10 @@ const rhythmMultiCleanMessage = (raw) => {
     out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
     out.text = rhythmMultiText(raw.text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
     out.cid = rhythmMultiText(raw.cid, 40);
+    // スタンプ(2026-11-11 で足した項目。顔 sf・言葉 sw の番号。古い版は送らない・知らない番号は捨てて言葉だけ出す)
+    const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
+    const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
+    if (sf && sw) { out.sf = sf; out.sw = sw; }
     return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
@@ -54769,8 +55238,10 @@ const RHYTHM_MULTI = (() => {
     if (msg.t === 'bye') { delete s.members[msg.id]; emit(); return; }
     if (msg.t === 'chat') {
       // 同じ発言(cid)は2度出さない。覚えておくのは直近だけ(保存はしない)
-      if (!s.chat.some((c) => c.cid === msg.cid)) {
-        s.chat.push({ cid: msg.cid, id: msg.id, name: msg.name, text: msg.text, at: Date.now() });
+      // スタンプは1人2秒に1個まで出す(それより早く届いた分は出さない。自分の分は部屋からの返りなので数えない)
+      const stampOk = !msg.sf || msg.id === s.selfId || MULTI_STAMP.accept(msg.id);
+      if (stampOk && !s.chat.some((c) => c.cid === msg.cid)) {
+        s.chat.push({ cid: msg.cid, id: msg.id, name: msg.name, text: msg.text, at: Date.now(), ...(msg.sf ? { sf: msg.sf, sw: msg.sw } : {}) });
         if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
         cpuReplyTo(msg);
       }
@@ -55134,13 +55605,14 @@ const RHYTHM_MULTI = (() => {
       else if (growth.sproutNew) cpuSay(x, 'sproutNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
     },
     // 部屋のチャット。自分の発言も部屋からの返りで表示する(=相手にも届いたと分かる)。続けて送るのは受けない
-    sendChat(text) {
+    sendChat(text, stamp = null) {
       if (!s || !socket) return false;
       const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
       const me = selfMember();
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
-      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}` });
+      const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
+      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
     },
     hasReported(round) { const me = selfMember(); return !!(me && me.res && me.res.startId === round); },
     // 自分が選んだ難易度(演奏の結果へ添える)
@@ -55221,6 +55693,10 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
     return ok;
   };
   const submit = () => { if (send(chatText)) setChatText(''); };
+  // スタンプ(2026-11-11)。ひとことの欄と切り替える。どちらを開いていたかは、その場だけ覚える
+  const [stampOpen, setStampOpen] = React.useState(false);
+  const [stampEdit, setStampEdit] = React.useState(false);
+  const sendStamp = (x) => { const ok = RHYTHM_MULTI.sendChat(x.text, { f: x.f, w: x.w }); setWaitNote(false); return ok; };
   const memberOf = (id) => members.find((m) => m.id === id) || null;
   const [askOpen, setAskOpen] = React.useState(() => rhythmMultiAskOpenLoad());
   const toggleAsk = () => setAskOpen((v) => { const next = !v; rhythmMultiAskOpenSave(next); return next; });
@@ -55250,7 +55726,9 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
                 : <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs">🎵</span>)}
               <span className={`flex min-w-0 max-w-[80%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
                 {!mine && <b className="max-w-full truncate text-[10px] text-amber-200">{c.name}</b>}
-                <span className={`break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`}>{c.text}</span>
+                {c.sf
+                  ? <MultiStampView f={c.sf} w={c.sw} text={c.text} size={72} className={MULTI_STAMP.prefs().pic ? '' : `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`} />
+                  : <span className={`break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`}>{c.text}</span>}
               </span>
             </li>
           );
@@ -55258,7 +55736,25 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </ul>
       {/* 「マスモンに聞く」札と定型文。縦は高さを抑えて中だけ上下にすべらせ、横向きは1行で横にすべらせる
           (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
+      <div data-rhythm-multi-chat-mode className="mt-2 grid shrink-0 grid-cols-2 gap-1 landscape:hidden [[data-mh-view-rotation=true]_&]:hidden">
+        <button type="button" data-rhythm-multi-chat-mode-btn="text" aria-pressed={!stampOpen} onClick={() => setStampOpen(false)}
+          className={`min-h-[34px] rounded-lg text-[12px] font-black ${!stampOpen ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>💬 ひとこと</button>
+        <button type="button" data-rhythm-multi-chat-mode-btn="stamp" aria-pressed={stampOpen} onClick={() => setStampOpen(true)}
+          className={`min-h-[34px] rounded-lg text-[12px] font-black ${stampOpen ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>😊 スタンプ</button>
+      </div>
+      {stampOpen && (
+        <div data-rhythm-multi-chat-stamps className="mt-2 max-h-[13.5rem] shrink-0 overflow-y-auto landscape:max-h-[9.5rem] [[data-mh-view-rotation=true]_&]:max-h-[9.5rem]">
+          {/* 横向きは切り替えの段を置かない(発言の一覧の高さを残す)。ここから「ひとこと」へ戻る */}
+          <button type="button" data-rhythm-multi-chat-mode-chip="text" onClick={() => setStampOpen(false)}
+            className="mb-1.5 hidden min-h-[30px] rounded-full border border-cyan-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-cyan-100 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">💬 ひとことへ</button>
+          <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={5} />
+        </div>
+      )}
+      {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
+      {!stampOpen && <>
       <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]">
+        <button type="button" data-rhythm-multi-chat-mode-chip="stamp" onClick={() => setStampOpen(true)}
+          className="hidden min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-cyan-300/60 bg-cyan-600 px-2.5 text-[11px] font-black text-white active:scale-95 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">😊 スタンプ</button>
         {askName && (
           <div data-rhythm-buddy-ask={askOpen ? 'open' : 'closed'} className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap">
             {/* 2026-11-07 社長「みゅあにきくみたいなやつは閉じたりできるようにしたい」。はじめは畳み、押すと開く。開いたかどうかは端末に覚える */}
@@ -55279,6 +55775,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           className="min-h-[46px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
         <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
       </form>
+      </>}
     </section>
   );
 }
@@ -55313,8 +55810,21 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 
 // カードの上の吹き出し(発言してから少しのあいだだけ)。
 // 席のカードの中に収める(2026-11-07 社長のスクショ: 横・🔄横で吹き出しが席の下の曲の一覧に重なっていた)。2行まで・字は縦横で同じ大きさ
-function RhythmMultiChatBubble({ text }) {
-  if (!text) return null;
+// スタンプ(2026-11-11)は text が { text, sf, sw }。絵で出さない設定のときは言葉だけ
+const rhythmMultiBubbleStamp = (text) => (text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null);
+const rhythmMultiBubbleText = (text) => (text && typeof text === 'object' ? text.text : text);
+function RhythmMultiChatBubble({ text: raw }) {
+  if (!raw) return null;
+  const stamp = rhythmMultiBubbleStamp(raw);
+  const text = rhythmMultiBubbleText(raw);
+  if (stamp) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
+      <span className="flex max-h-full max-w-full flex-col items-center rounded-xl bg-white p-0.5 shadow-lg">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="block aspect-square min-h-0 w-14 max-w-full shrink rounded-lg object-cover" />
+        <b className="block max-w-full truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+      </span>
+    </span>
+  );
   return (
     <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
       <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
@@ -55325,8 +55835,19 @@ function RhythmMultiChatBubble({ text }) {
 // 結果画面の吹き出し(2026-11-07 社長「モンビーマルチで結果画面で喋ったときも吹き出しだして」)。
 // カードの中に重ねると「👑 MVP」の札を隠し、カードの枠で切れて吹き出しに見えなかった。カードの外の上へ出し、しっぽをカードへ向ける。
 // 置き場所は結果画面の一覧(ul)の上の余白。カードと同じ5列に並べるので、だれの発言か分かる
-function RhythmMultiResultBubble({ text }) {
-  if (!text) return null;
+function RhythmMultiResultBubble({ text: raw }) {
+  if (!raw) return null;
+  const stamp = rhythmMultiBubbleStamp(raw);
+  const text = rhythmMultiBubbleText(raw);
+  if (stamp) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+      <span className="relative flex max-w-full flex-col items-center rounded-xl border-2 border-sky-300 bg-white p-0.5 shadow-[0_2px_10px_rgba(0,0,0,.5)]">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="block h-12 w-12 rounded-lg object-cover landscape:h-10 landscape:w-10" />
+        <b className="block max-w-full truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+        <i aria-hidden="true" className="absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white" />
+      </span>
+    </span>
+  );
   return (
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
       <span className="relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs" style={JA_WRAP_STYLE}>
@@ -55600,6 +56121,43 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
 //   承認済みのフレンドからの3分以内の招待だけ(今のモードえらびと同じ決まり)。部屋に入っているあいだは出さない。
 //   「入る」は、受けた招待を rhythmMultiPendingInvite に置いて onAccept(モンヒロビートのマルチを開く)を呼ぶ。開いた画面がそれを読んで入る
 let rhythmMultiPendingInvite = null;
+// ゲームの外へ送る「部屋に入れるリンク」(2026-11-11 社長「マルチ関係でゲーム外に招待する機能があるけどうまく機能してない？」)。
+//   ビート: ?beatRoom=コード / カード: ?cardRoom=コード。開いたときは 60-app が引数を読んで消し、新しいキー(MH_ROOM_LINK_KEY)に
+//   預けて、起動の流れ・はじめての案内が済んだHOMEで部屋へ入る。リンクを送る・読む道具はここに1か所だけ置く(カードの 91 もここを使う)
+const MH_ROOM_LINK_KEY = 'mh_pending_room_link_v1';
+const MH_ROOM_LINK_PARAMS = Object.freeze({ beat: 'beatRoom', card: 'cardRoom' });
+const MH_ROOM_LINK_TTL_MS = 3 * 60 * 60 * 1000;
+const MH_PRODUCTION_URL = 'https://aknkakykhk-maker.github.io/monhero/';
+const mhRoomLinkUrl = (kind, code) => {
+  const param = MH_ROOM_LINK_PARAMS[kind];
+  const c = rhythmMultiNormalizeCode(code);
+  if (!param || !c) return '';
+  let base = MH_PRODUCTION_URL;
+  try { if (typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)) base = `${window.location.origin}${window.location.pathname}`; } catch (_) { /* 本番のURLを使う */ }
+  return `${base}?${param}=${encodeURIComponent(c)}`;
+};
+const mhRoomLinkFromSearch = (search) => {
+  const text = String(search || '');
+  for (const kind of Object.keys(MH_ROOM_LINK_PARAMS)) {
+    const m = text.match(new RegExp(`[?&]${MH_ROOM_LINK_PARAMS[kind]}=([^&#]*)`));
+    if (!m) continue;
+    let raw = m[1];
+    try { raw = decodeURIComponent(raw); } catch (_) { continue; }
+    const code = rhythmMultiNormalizeCode(raw);
+    if (code) return { kind, code };
+  }
+  return null;
+};
+// 預けた値の読み直し。壊れている・古い(3時間より前)・未来の時刻なら null
+const mhNormalizeRoomLink = (v, now = Date.now()) => {
+  if (!v || typeof v !== 'object' || !MH_ROOM_LINK_PARAMS[v.kind]) return null;
+  const code = rhythmMultiNormalizeCode(v.code);
+  const at = Number(v.at);
+  if (!code || !Number.isFinite(at) || at > now + 60000 || now - at > MH_ROOM_LINK_TTL_MS) return null;
+  return { kind: v.kind, code, at };
+};
+// リンクから来た人をビートのマルチへ入れる: 受けた招待と同じ入り口(HOME の「入る」と同じ)に預ける
+const mhBeatRoomLinkRequest = (code) => { rhythmMultiPendingInvite = { roomCode: rhythmMultiNormalizeCode(code), link: true }; };
 // 自分で抜けた部屋(RHYTHM_MULTI.leave が書く)。10分のあいだだけ「↩ さっきの部屋に戻る」を出す
 let rhythmMultiLastRoom = null;
 const RHYTHM_MULTI_REJOIN_MS = 10 * 60 * 1000;
@@ -56427,7 +56985,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     for (let k = chatList.length - 1; k >= 0; k--) {
       const c = chatList[k];
       if (now - (c.at || 0) > RHYTHM_MULTI_CHAT_BUBBLE_MS) return '';
-      if (c.id === id) return c.text;
+      // スタンプは { text, sf, sw } で渡す(吹き出しが絵で出す)
+      if (c.id === id) return c.sf ? { text: c.text, sf: c.sf, sw: c.sw } : c.text;
     }
     return '';
   };
@@ -56733,8 +57292,21 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const pending = rhythmMultiPendingInvite;
     if (!pending) return;
     rhythmMultiPendingInvite = null;
-    if (!RHYTHM_MULTI.view()) joinFromInvite(pending);
+    if (!RHYTHM_MULTI.view()) { joinFromInvite(pending); if (pending.link) setLinkWatch(pending.roomCode); }
   }, []);
+  // リンクから入った部屋に、数秒たってもだれもいない・つながらないときは、分かる言葉で知らせる(閉じた・期限切れの部屋へも入れてしまうため)
+  const [linkWatch, setLinkWatch] = React.useState('');
+  React.useEffect(() => {
+    if (!linkWatch) return undefined;
+    const timer = setTimeout(() => {
+      setLinkWatch('');
+      const v = RHYTHM_MULTI.view();
+      if (!v || v.code !== linkWatch || v.full) return;
+      if (v.status !== 'open') { setMessage('部屋へつなげませんでした。電波のよい所で、もう一度リンクを開いてください'); return; }
+      if (v.members.filter((m) => !m.cpu).length <= 1) setMessage('この部屋にはだれもいませんでした。もう閉じたか、期限が切れたようです。送ってくれた人に、新しいリンクをもらってください');
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [linkWatch]);
   // 助手ライフから「モンビーへ誘う」で開いたとき。部屋に入っていなければ、自分だけのプライベートの部屋を作る(呼ぶのは入れてから)
   React.useEffect(() => {
     if (typeof rhythmAssistSessionPeekInvite !== 'function' || !rhythmAssistSessionPeekInvite() || RHYTHM_MULTI.view()) return;
@@ -56890,9 +57462,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     if (modeSelect) { if (inRoom && onRoomEntered) onRoomEntered(); return; }
     if (!inRoom && !searching && onBack) onBack();
   }, [inRoom, !!searching]);
+  // 「フレンドに送る」: 押すとゲームが開いてこの部屋に入れるリンクを送る(2026-11-11)。コードも添える(ホーム画面のアプリでは、コードを打って入れる)
   const shareCode = async () => {
     if (!view) return;
-    const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
+    const url = mhRoomLinkUrl('beat', view.code);
+    const text = `モンヒロビートの「みんなでライブ」で一緒に遊ぼう! 部屋コード: ${view.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
     try {
       if (navigator.share) await navigator.share({ text });
       else if (navigator.clipboard) await navigator.clipboard.writeText(text);
@@ -62372,7 +62946,7 @@ function AssistantPeerPhoto({ pair, photo, open }) {
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
     </div>);
 }
-function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null }) {
+function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null, onGivePair = null }) {
   const st = useAssistantPeerState();
   // 助手ライフの道具10種類と「買って贈る」(2026-11-08)。部品はいつもあるので、フックは毎回同じ順で呼ばれる
   const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
@@ -62428,9 +63002,15 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
             <div data-assistant-peer-actions className="mt-3">
               <p className="mb-1 text-[11px] font-black text-amber-200">2人にしてあげる</p>
               {useMsg && <p data-assistant-peer-use-msg className="mb-1 rounded-lg bg-slate-800 px-2 py-1 text-[10.5px] font-bold text-slate-200">{useMsg}</p>}
-              <div className="grid grid-cols-2 gap-1.5">
+              {/* 2026-11-11 社長 案6 A: 助手ライフの中では、押すとすぐ贈るのをやめて、贈る窓をこの2人で開く(上がる量・好み・回数を見てから贈る。入口を1つの形に) */}
+              {lifeOn && typeof onGivePair === 'function'
+                ? <button type="button" data-assistant-peer-give-sheet onClick={() => onGivePair(pair)} className="min-h-[48px] w-full rounded-xl border border-amber-300/70 bg-amber-400/20 px-3 py-1 text-left active:scale-[.98]">
+                    <span className="block text-[13px] font-black text-amber-100">🎁 この2人に贈る</span>
+                    <span className="block text-[11px] font-bold text-slate-300">道具を選ぶ窓が開きます(今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(st, giftSt) : 0}回)</span>
+                  </button>
+                : <div className="grid grid-cols-2 gap-1.5">
                 {kinds.map(itemBtn)}
-              </div>
+              </div>}
               <button type="button" data-assistant-peer-play={playing ? 'on' : 'off'} onClick={() => assistantPeerSetPlayPair(playing ? null : pair)}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 px-2 py-1 text-left active:scale-[.98]">
                 <span className="block text-[11px] font-black text-sky-100">{playing ? '🎮 遊びに連れていく(いま連れています。押すとやめます)' : '🎮 遊びに連れていく'}</span>
@@ -62461,7 +63041,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
 
 // ---------- プロフィールの関係図(Lv3 から線が出る) ----------
 // 会った助手を円に並べ、Lv3 以上のペアを線で結ぶ(太さ・色が Lv で変わる)。下に今日のペアと全部のペアの Lv。行を押すと思い出アルバム
-function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null, v2 = false }) {
+function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null, v2 = false, onGivePair = null }) {
   const st = useAssistantPeerState();
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
@@ -62540,6 +63120,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
           </button>)}
       </div>
       {albumPair && <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); if (onReplay) onReplay(t); }}
+        onGivePair={onGivePair ? (p) => { setAlbumPair(null); onGivePair(p); } : null}
         peerItems={peerItems} onUseItem={onUseItem ? async (kind, pair) => { const talk = await onUseItem(kind, pair); if (talk) { setAlbumPair(null); if (onReplay) onReplay(talk); } return talk; } : null}/>}
     </div>
   );
@@ -62911,21 +63492,21 @@ const ASSISTANT_LIFE_PLACES = Object.freeze({
 //   w … したいことの重み / slot … 時間ごとに重みへ掛ける数 / solo … ひとりが好きな時間 / caring … さみしそうな助手のそばへ行きやすい
 //   clingy … ごろごろ・昼寝をしていても、だれかに来てほしい(来ないとさみしくなる)
 const ASSISTANT_LIFE_PREFS = Object.freeze({
-  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0, battle: 1 },
+  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0, battle: 3 },
                slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き' },
-  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 1.5 },
+  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 4.5 },
                slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり' },
-  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 1.5 },
+  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 4.5 },
                slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
-  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 0.5 },
+  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 1.5 },
                slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, clingy: true, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
-  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 3 },
+  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 9 },
                slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い' },
-  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 1 },
+  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 3 },
                slot: { afternoon: { read: 3, cards: 1.5 } }, solo: ['afternoon'], note: '午後は図書室でひとりの時間。カードの研究も好き' },
-  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 2 },
-               slot: { night: { cards: 2 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
-  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 3 },
+  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 6 },
+               slot: { night: { cards: 2, battle: 0.5 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
+  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 9 },
                slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
 // 1人ずつの生活のリズム(2026-11-07 社長「夜は家に帰る人が増えたり夜ふかしとか性格によって変えてもいい」)。
@@ -65350,44 +65931,31 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
       {lifeStatusList}
     </div>);
+  // 道具の一覧(2026-11-11 オクリモノ4・案7: 行は 56-assistant-life-gifts.jsx の AssistantLifeItemRow。1つの道具を2行に・説明は下の「？」に畳む)
   const itemsBody = (
       <div className="px-3 pb-3 pt-1" data-assistant-life-items>
-        <p className="inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-amber-200">🎒 2人に贈る道具 <span className="text-[10.5px] text-slate-200">今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0}回</span></p>
-        {typeof AssistantLifeGiftExplain === 'function' && <div className="mt-1.5"><AssistantLifeGiftExplain/></div>}
-        {itemInfos.map(x => (
-          <div key={x.kind} data-assistant-life-item={x.kind} className="mt-2 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-slate-900/85 p-2">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]" aria-hidden="true">{x.emoji}</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個{usedOf(x.kind) && haveOf(x.kind) > 0 ? ' ・ 今日は贈れない' : ''}</span></p>
-              <p className="text-[10.5px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="whitespace-nowrap text-orange-300">🤝 友情Lv {assistantLifeItemRange(x).peer}</span>・<span className="whitespace-nowrap text-pink-200">💗 仲良し度 {assistantLifeItemRange(x).player}</span><span className="whitespace-nowrap text-slate-400">(好みで変わる)</span></p>
-              {soloOn && <p className="text-[10px] leading-snug text-slate-400" data-assistant-life-item-solo-amt>1人に贈ると: <span className="whitespace-nowrap text-pink-200">💗 仲良し度 {assistantLifeItemRange(x).player}</span><span className="whitespace-nowrap">(友情Lv は上がらない)</span></p>}
-            </div>
+        <p className="inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-amber-200">🤝 2人に贈る道具 <span className="text-[11px] text-slate-200">今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0}回</span></p>
+        {typeof AssistantLifeItemRow === 'function' && itemInfos.map(x => (
+          <AssistantLifeItemRow key={x.kind} x={x} have={haveOf(x.kind)} used={usedOf(x.kind)} action={<>
             {haveOf(x.kind) <= 0 && (canGive && buyTarget(false) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x)
-              ? <button type="button" data-assistant-life-item-buy={x.kind} onClick={() => openBuy(x.kind, false)} className="min-h-[32px] shrink-0 rounded-xl border border-violet-300/80 bg-violet-600 px-2 text-[10.5px] font-black leading-tight text-white active:scale-[.97]">🛒 {x.cost}P<br/>で買って贈る</button>
-              : typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>)}
-          </div>))}
+              ? <button type="button" data-assistant-life-item-buy={x.kind} onClick={() => openBuy(x.kind, false)} className="min-h-[44px] shrink-0 rounded-xl border border-violet-300/80 bg-violet-600 px-2 text-[11px] font-black leading-tight text-white active:scale-[.97]">🛒 {x.cost}P<br/>で買って贈る</button>
+              : typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>)}</>}/>))}
         {soloOn && soloInfos.length > 0 && (<>
-          <p className="mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200" data-assistant-life-items-solo>💗 1人に贈る道具 <span className="text-[10.5px] text-slate-200">今日あと {soloLeft}回</span></p>
-          {soloInfos.map(x => { const g = assistantLifeGiftOf(x.kind); const lo = Math.round(g.player * assistantLifeGiftMult('bad')), hi = Math.round(g.player * assistantLifeGiftMult('like')); return (
-            <div key={x.kind} data-assistant-life-item={x.kind} className="mt-2 flex items-center gap-2 rounded-2xl border border-pink-300/30 bg-slate-900/85 p-2">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]" aria-hidden="true">{x.emoji}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-black text-white">{x.name} <span className="text-[10px] text-slate-400">持っている {haveOf(x.kind)}個</span></p>
-                <p className="text-[10.5px] leading-snug text-slate-300">{x.what.split('。')[0]}。<span className="whitespace-nowrap text-pink-200">💗 仲良し度 +{lo}〜{hi}</span><span className="whitespace-nowrap text-slate-400">(好みで変わる)</span></p>
-              </div>
+          <p className="mt-3 inline-block rounded-xl bg-slate-950/85 px-2 py-0.5 text-[13px] font-black text-pink-200" data-assistant-life-items-solo>💗 1人に贈る道具 <span className="text-[11px] text-slate-200">今日あと {soloLeft}回</span></p>
+          {soloOn && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-snug text-slate-200">上の10種類も1人に贈れます(上がるのは仲良し度だけ)。下の4種類は1人用です</p>}
+          {typeof AssistantLifeItemRow === 'function' && soloInfos.map(x => (
+            <AssistantLifeItemRow key={x.kind} x={x} solo have={haveOf(x.kind)} used={typeof assistantLifeSoloReason === 'function' && haveOf(x.kind) > 0 && !!assistantLifeSoloReason(x.kind, peerSt, 1)} action={<>
               {haveOf(x.kind) <= 0 && (buyTarget(true) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x)
-                ? <button type="button" data-assistant-life-item-buy={x.kind} onClick={() => openBuy(x.kind, true)} className="min-h-[32px] shrink-0 rounded-xl border border-violet-300/80 bg-violet-600 px-2 text-[10.5px] font-black leading-tight text-white active:scale-[.97]">🛒 {x.cost}P<br/>で買って贈る</button>
-                : typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>)}
-            </div>); })}
+              ? <button type="button" data-assistant-life-item-buy={x.kind} onClick={() => openBuy(x.kind, true)} className="min-h-[44px] shrink-0 rounded-xl border border-violet-300/80 bg-violet-600 px-2 text-[11px] font-black leading-tight text-white active:scale-[.97]">🛒 {x.cost}P<br/>で買って贈る</button>
+              : typeof AssistantLifeShopButton === 'function' && <AssistantLifeShopButton tab="item" small label={`🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`}/>)}</>}/>))}
         </>)}
-        {/* 言葉の途中で折らない(「部/屋」と割れていた・2026-11-08 ミハリ) */}
-        <p className="mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>手に入れる: モンヒロビートの「ビートP交換所」({itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・')})。贈る: 部屋や場面の「🎁 贈る」{soloOn ? '(2人に・その助手だけに)' : ''}。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます</p>
+        {typeof AssistantLifeItemsHelp === 'function' && <AssistantLifeItemsHelp solo={soloOn}/>}
         {typeof AssistantLifeShopButton === 'function' && <div className="mt-2"><AssistantLifeShopButton tab="item"/></div>}
       </div>);
   const tabBody = tab === 'house' ? houseView
     : tab === 'where' ? null // 地図は画面いっぱい(下の whereView)
     : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? <AssistantLifeFriendPage life={life}/>
-    : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{uiV2 && typeof AssistantLifeRewardRoad === 'function' && <AssistantLifeRewardRoad ids={ids} peerSt={peerSt} nameOf={nameOf} onRoom={setRoomId}/>}{uiV2 && typeof AssistantLifeIntroduceCard === 'function' && <AssistantLifeIntroduceCard ids={ids} life={life}/>}{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem} v2={uiV2}/>}</div>)
+    : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{uiV2 && typeof AssistantLifeRewardRoad === 'function' && <AssistantLifeRewardRoad ids={ids} peerSt={peerSt} nameOf={nameOf} onRoom={setRoomId}/>}{uiV2 && typeof AssistantLifeIntroduceCard === 'function' && <AssistantLifeIntroduceCard ids={ids} life={life}/>}{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem} v2={uiV2} onGivePair={canGive ? (pair) => openGive(pair) : null}/>}</div>)
     : itemsBody;
   return (
     <div className="mhl-root" style={{ zIndex: 9000 }} data-assistant-life-screen data-assistant-life-look={look} data-assistant-life-land={land ? '1' : '0'}>
@@ -65764,9 +66332,13 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
     return () => { clearTimeout(t); if (img) img.removeEventListener('load', place); };
   });
   const sceneStyle = { position: 'relative', flex: 'none', width: home.w, height: home.h, margin: '0 auto', ...home.vars };
+  // 得の印(2026-11-11 ナカヨシ12の改善案5。判定は「いま行くと得なこと」と同じ assistantLifePerkAt。ナカヨシ10が main に入れるまでは出さない)
+  const PERK_WORD = { studio: '券なし', cardroom: '×1.5' };
+  const perkOf = (place) => { try { return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true; } catch (_) { return false; } };
+  const perkMark = (place) => (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} className="pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow">{PERK_WORD[place] || '得'}</i> : null);
   const facBtn = (place, cls, aria, inner) => {
     const n = (at[place] || []).length;
-    return <button key={place} type="button" className={`mh-home-facility ${cls}`} aria-label={`${aria}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={place} data-assistant-life-map-empty={n ? '0' : '1'} style={n ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet(place)}>{inner}</button>;
+    return <button key={place} type="button" className={`mh-home-facility ${cls}`} aria-label={`${aria}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={place} data-assistant-life-map-empty={n ? '0' : '1'} style={n ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet(place)}>{inner}{perkMark(place)}</button>;
   };
   const cardN = (at.cardroom || []).length;
   const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
@@ -65808,24 +66380,24 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           {spent && <p className="text-[10.5px] font-bold text-amber-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-sheet-next>{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から'}</p>}
         </div>
         <div className="flex shrink-0 flex-col gap-1">
-          {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { setSheet(null); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 px-2 py-1 text-[11px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
-          {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { setSheet(null); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95">🃏 対戦する</button>}
+          {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { setSheet(null); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
+          {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { setSheet(null); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🃏 対戦する</button>}
           {place === 'battle' && (() => { // 助手のマスモン対戦β(ミセカタ2・マスモン部の口。口が無い・印が偽で null のときは出さない・2026-11-11)
             let info = null; try { info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { info = null; }
             if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
-            return <button type="button" disabled={!!info.disabled} title={info.disabled ? (info.why || '') : (info.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { setSheet(null); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2 py-1 text-[11px] font-black text-white active:scale-95 disabled:opacity-50">{info.label || '⚔ マスモンで対戦(β)'}</button>;
+            return <button type="button" disabled={!!info.disabled} title={info.disabled ? (info.why || '') : (info.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { setSheet(null); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50">{info.label || '⚔ マスモンで対戦(β)'}</button>;
           })()}
-          {typeof onView === 'function' && <button type="button" data-assistant-life-map-act="view" onClick={() => onView(id)} className="rounded-xl border border-sky-300/60 px-2 py-1 text-[11px] font-black text-sky-100 active:scale-95">💬 詳細を見る</button>}
-          <button type="button" data-assistant-life-map-act="room" onClick={() => { setSheet(null); onPick(id); }} className="rounded-xl border border-pink-300/60 px-2 py-1 text-[11px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
+          {typeof onView === 'function' && <button type="button" data-assistant-life-map-act="view" onClick={() => onView(id)} className="rounded-xl border border-sky-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-sky-100 active:scale-95">💬 詳細を見る</button>}
+          <button type="button" data-assistant-life-map-act="room" onClick={() => { setSheet(null); onPick(id); }} className="rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
         </div>
       </div>);
   };
   return (
     <div className="absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]" data-assistant-life-where data-assistant-life-map-art={art}>
       <style>{`.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
-.mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;padding:4px 9px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
+.mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`}</style>
       {/* 地図の枠は少なくとも画面の高さ。HOME の場面が画面より低い端末(上下に帯がある iPhone など)で、
           下の一覧の見出しが地図の下にのぞいて切れて見えていた(2026-11-09 社長「画面バグってる」) */}
@@ -65841,7 +66413,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           {facBtn('home', 'life', '助手ライフ みんなの家', <span><span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>🏡</span><b className="mh-home-facility-label">助手ライフ<small>みんなの家</small></b></span>)}
           {facBtn('studio', 'rhythm', 'モンヒロビート', <span>🎵 モンヒロビート</span>)}
         </nav>
-        <button type="button" className={home.card} aria-label={`MFバトルカード(${cardN ? `${cardN}人` : 'だれもいない'})`} data-assistant-life-map-place="cardroom" data-assistant-life-map-empty={cardN ? '0' : '1'} style={cardN ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet('cardroom')}><span>🃏 MFバトルカード</span></button>
+        <button type="button" className={home.card} aria-label={`MFバトルカード(${cardN ? `${cardN}人` : 'だれもいない'})`} data-assistant-life-map-place="cardroom" data-assistant-life-map-empty={cardN ? '0' : '1'} style={cardN ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet('cardroom')}><span>🃏 MFバトルカード</span>{perkMark('cardroom')}</button>
         {/* HOME に札の無い町の場所 */}
         {ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => { const n = (at[p] || []).length; return (
           <button key={p} type="button" className="mhl-map-town" style={{ visibility: 'hidden', left: 0, top: 0 }} aria-label={`${assistantLifePlaceShow(p)}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={p} data-assistant-life-map-town data-assistant-life-map-empty={n ? '0' : '1'} onClick={() => setSheet(p)}>
@@ -67659,17 +68231,17 @@ const assistantLifeGiftAmounts = (kindOrKey, pair) => {
   };
 };
 // 画面に出す友情Lv の量。分かっている人はその倍率、分からない人は苦手〜好きの幅で、2人の平均の いちばん少ない〜多い
-const assistantLifeGiftPeerShown = (g, shownLikes) => {
-  const opts = shownLikes.map(s => (s === 'unknown' ? ['bad', 'like'] : [s]).map(assistantLifeGiftMult));
+//   (2026-11-11 社長 案3 A: 幅「+8〜23」はやめ、分からない人は「ふつう」で数えた1つの数で出す。好みは数から分からないまま。opts.range で前の幅)
+const assistantLifeGiftPeerShown = (g, shownLikes, o = null) => {
+  const opts = shownLikes.map(s => (s === 'unknown' ? (o && o.range ? ['bad', 'like'] : ['mid']) : [s]).map(assistantLifeGiftMult));
   const lo = Math.round(g.peer * (Math.min(...opts[0]) + Math.min(...opts[1])) / 2), hi = Math.round(g.peer * (Math.max(...opts[0]) + Math.max(...opts[1])) / 2);
   return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
 };
-// 道具の欄に出す量(だれに贈るか決まる前なので、苦手〜好きの幅)。贈るシートの幅と同じ数
+// 道具の欄に出す量(だれに贈るか決まる前なので「ふつう」の量を1つ。2026-11-11 社長 案3 A。好きなら多め・苦手なら少なめ、は横の字で言う)
 const assistantLifeItemRange = (info) => {
   const g = info && assistantLifeGiftOf(info.kind);
   if (!g) return { peer: '', player: '' };
-  return { peer: `+${Math.round(g.peer * assistantLifeGiftMult('bad'))}〜${Math.round(g.peer * assistantLifeGiftMult('like'))}`,
-    player: `+${Math.round(g.player * assistantLifeGiftMult('bad'))}〜${Math.round(g.player * assistantLifeGiftMult('like'))}` };
+  return { peer: `+${g.peer}`, player: `+${g.player}` };
 };
 
 // ---------- 保存(3つのキー) ----------
@@ -68051,7 +68623,7 @@ const assistantLifeGiftGainsFor = (kind, pair, nameOf, st = ASSISTANT_LIFE_GIFT_
   const g = assistantLifeGiftOf(kind), amt = g && assistantLifeGiftAmounts(kind, pair);
   if (!amt) return [];
   const shown = pair.map(id => assistantLifeGiftShownLike(id, g.key, st));
-  return [...pair.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`}` })),
+  return [...pair.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${shown[i] === 'unknown' ? `+${g.player}(好みで変わる)` : `+${amt.player[i]}`}` })),
     { text: `🤝 2人の友情Lv ${assistantLifeGiftPeerShown(g, shown)}`, cls: 'text-orange-300' }];
 };
 const assistantLifeBuyLabel = (item) => `🛒 ${item.cost}P で買って贈る`;
@@ -68123,6 +68695,32 @@ function AssistantLifeGiftRules({ solo = false }) {
     </div>);
 }
 
+// 道具の一覧の1行(2026-11-11 社長「贈るやつも見た目とか分かりにくい」・案7: 1つの道具に4行あった説明を「名前・持っている数/上がる物」の2行に)
+// x … assistantLifeItemInfo の形 / solo … 1人用の道具 / have … 持っている数 / used … 今日はもう贈った / action … 右のボタン
+function AssistantLifeItemRow({ x, solo = false, have = 0, used = false, action = null }) {
+  const g = assistantLifeGiftOf(x.kind);
+  if (!g) return null;
+  return (
+    <div data-assistant-life-item={x.kind} className={`mt-1.5 flex items-center gap-2 rounded-2xl border bg-slate-900/85 px-2 py-1.5 ${solo ? 'border-pink-300/30' : 'border-amber-300/30'}`}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{x.name} <span className={`whitespace-nowrap text-[11px] ${used ? 'text-slate-400' : have > 0 ? 'text-amber-200' : 'text-slate-400'}`}>{used && have > 0 ? '今日は済み' : `持ち ${have}`}</span></p>
+        <p className="text-[11px] font-bold leading-snug">{!solo && <><span className="whitespace-nowrap text-orange-300">🤝 友情Lv +{g.peer}</span><span className="text-slate-300">・</span></>}<span className="whitespace-nowrap text-pink-200" data-assistant-life-item-solo-amt={solo ? '' : undefined}>💗 仲良し度 +{g.player}</span></p>
+      </div>
+      {action}
+    </div>);
+}
+// 道具の一覧の下の説明(畳む)。押すと 友情Lv・仲良し度の説明と、回数・同じ道具・好みのきまり
+function AssistantLifeItemsHelp({ solo = false }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="mt-1.5" data-assistant-life-items-help>
+      <p className="rounded-xl bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>数は「ふつう」のときの量。<wbr/>💗好きな物は多め・<wbr/>💧苦手な物は少なめ(好みは贈ると分かる)。<wbr/>道具はビートP交換所で手に入ります</p>
+      <button type="button" data-assistant-life-items-help-toggle aria-expanded={open} onClick={() => setOpen(v => !v)} className="mt-1.5 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-950/85 px-3 text-left text-[12px] font-black text-slate-100 active:scale-[.98]"><span>？ 友情Lv・仲良し度と、贈るきまり</span><span>{open ? '▲' : '▼'}</span></button>
+      {open && <div className="mt-1"><AssistantLifeGiftExplain compact/><AssistantLifeGiftRules solo={solo}/></div>}
+    </div>);
+}
+
 // 2人に贈るシート(道具10種類・2人の好み・上がる量)。56-assistant-life.jsx・56-assistant-life-house.jsx の両方から開く
 // give … { ids(一緒にいる助手), pair(2人に贈るとき), solo(1人に贈るときの助手), kind }。1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)は印 assistantLifeSolo の後ろ
 function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, onGive }) {
@@ -68156,8 +68754,10 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const shown = people.map(id => (lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid'));
   const soloRange = [Math.round(info.player * assistantLifeGiftMult('bad')), Math.round(info.player * assistantLifeGiftMult('like'))];
   const tagCls = { like: 'bg-pink-600 text-white', mid: 'bg-slate-600 text-white', bad: 'bg-cyan-700 text-white', unknown: 'bg-slate-700 text-slate-200' };
-  const playerText = (i) => (soloWho ? (shown[i] === 'unknown' ? `+${soloRange[0]}〜${soloRange[1]}` : `+${assistantLifeSoloAmount(soloWho, info.key)}`)
-    : !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`);
+  // 好みが分からない人は「ふつう」の量を1つ出し、横に(好みで変わる)(2026-11-11 社長 案3 A)
+  const playerText = (i) => (soloWho ? (shown[i] === 'unknown' ? `+${info.player}` : `+${assistantLifeSoloAmount(soloWho, info.key)}`)
+    : !amt ? '' : shown[i] === 'unknown' ? `+${info.player}` : `+${amt.player[i]}`);
+  const vary = (i) => (lifeOn && shown[i] === 'unknown' ? '(好みで変わる)' : '');
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   // 数字の重み(好みが分からない人は幅のまま。隠れた好みが数字から分からないようにする)
   const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
@@ -68166,7 +68766,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
     if (soloWho) { const n = assistantLifeSoloAmount(soloWho, info.key); const [lo, hi] = shown[i] === 'unknown' ? soloRange : [n, n]; return assistantLifeWeightOf(assistantLifeBondPointsOf(soloWho), lo, hi, bondLv, 'need'); }
     if (!amt) return null; const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
     return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need'); };
-  const peerNums = String(peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
+  const peerNums = String(amt && lifeOn ? assistantLifeGiftPeerShown(info, shown, { range: true }) : peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
   const peerW = amt && hint && peerNums.length ? assistantLifeWeightOf(hint.pts, peerNums[0], peerNums[peerNums.length - 1], peerLv, 'min') : null;
   // ---- 見せ方(2026-11-11 社長「贈るやつも見た目とか分かりにくい仕様だから、全体的にそのへんも見直して」。きまり・量・保存は変えていない) ----
   // 回数は「2人に」「1人に」の2本を並べて出す/説明ときまりは「？」に畳む/道具の札に 持っている数・値段・今日は済み を出す
@@ -68236,14 +68836,14 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
               <div className="flex items-center gap-2">
                 <span className="min-w-0 shrink truncate font-black text-white">{nameOf(id)}</span>
                 {lifeOn && <span className={`shrink-0 rounded-full px-1.5 text-[11px] font-black ${tagCls[shown[i]]}`}>{shown[i] === 'unknown' ? '好み ？' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]}</span>}
-                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 <b className="text-[14px] text-white">{playerText(i)}</b></span>
+                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 <b className="text-[14px] text-white">{playerText(i)}</b>{vary(i) && <span className="text-[10.5px] font-bold text-slate-300">{vary(i)}</span>}</span>
               </div>
               {lifeOn && <AssistantLifeGiftWeight w={playerW(i)} tone="player" kind={`player-${id}`} gainText={(() => { const w = playerW(i); return w && !w.max ? assistantLifeBondLvGain(w.next) : ''; })()}/>}
             </div>))}
           {!soloWho && <div className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-peer>
             <div className="flex items-center gap-2">
               <span className="min-w-0 truncate font-black text-white">{pair.length === 2 ? pair.map(nameOf).join('と') : '2人'}</span>
-              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv <b className="text-[14px] text-white">{peerText}</b>{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
+              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv <b className="text-[14px] text-white">{peerText}</b>{anyUnknown && <span className="text-[10.5px] font-bold text-slate-300">(好みで変わる)</span>}{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
             </div>
             {lifeOn && <AssistantLifeGiftWeight w={peerW} tone="peer" kind="peer" gainText={peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''}/>}
           </div>}
@@ -68266,7 +68866,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
         </div>
       </div>
       {buying && <AssistantLifeBuyConfirm item={info} to={soloWho ? nameOf(soloWho) : pair.map(nameOf).join('と')} onClose={() => setBuying(false)}
-        gains={[...people.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${playerText(i)}` })), ...(!soloWho ? [{ text: `🤝 2人の友情Lv ${peerText}`, cls: 'text-orange-300' }] : [])]}
+        gains={[...people.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${playerText(i)}${vary(i)}` })), ...(!soloWho ? [{ text: `🤝 2人の友情Lv ${peerText}${anyUnknown ? '(好みで変わる)' : ''}`, cls: 'text-orange-300' }] : [])]}
         check={reasonOf} give={() => onGive({ bought: info })}/>}
     </div>);
 }
@@ -68587,7 +69187,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   // まだ持っていない家具(買ってそのまま贈れる。同じ家具は1人に1つなので、贈った家具は出さない)
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
   const furnGainText = (k) => { const s = shown(k); if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
-    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${Math.round(base * assistantLifeGiftMult('bad'))}〜${Math.round(base * assistantLifeGiftMult('like'))}`; };
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${base}(好みで変わる)`; };
   const shown = (k) => assistantLifeGiftShownLike(id, k, st);
   const give = async (k, bought = false) => {
     if (busy) return; setBusy(true);
@@ -72063,9 +72663,10 @@ const ALF_TABLE_HOUSES = 'assistant_life_friend_houses';
 const ALF_TABLE_VISITS = 'assistant_life_friend_visits';
 const ALF_IDS = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 // 1日の上限(朝4時の区切り)。thin=間引く(送り出し量が分かるまでの最初の形)
+// look(プレイヤーの置き手紙)は合計の上限なし(999 は「数えない」の意味)。同じフレンドへは1日1通(st.looked と表の一意の決まり)。2026-11-11 社長「置き手紙はフレンドごとの回数制限にして」「上限はなしで1人1通」
 const ALF_LIMITS = Object.freeze({
-  on:   Object.freeze({ go: 3, come: 2, look: 3, readMs: 30 * 60000, sendMs: 10 * 60000 }),
-  thin: Object.freeze({ go: 1, come: 0, look: 1, readMs: 30 * 60000, sendMs: 60 * 60000 }),
+  on:   Object.freeze({ go: 3, come: 2, look: 999, readMs: 30 * 60000, sendMs: 10 * 60000 }),
+  thin: Object.freeze({ go: 1, come: 0, look: 999, readMs: 30 * 60000, sendMs: 60 * 60000 }),
 });
 const ALF_BEAT_P = Object.freeze({ go: 100, look: 50, dayMax: 300 });
 const ALF_FRESH_DAYS = Object.freeze({ go: 14, look: 14, come: 7 });
@@ -72291,7 +72892,8 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     const k = raw.mn && typeof raw.mn === 'object' ? Number(raw.mn[id]) : NaN;
     if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
   }
-  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn };
+  const fv = typeof albNormalizeFavShare === 'function' ? albNormalizeFavShare(raw.fv) : null; // お気に入りの棚(56-assistant-life-friend-bond)
+  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn, ...(fv ? { fv } : {}) };
 };
 // 相手の控えを読むとき(知らない id・種類・長い値は捨てる)
 const assistantLifeFriendNormalizeHouse = (raw) => {
@@ -72458,7 +73060,7 @@ const alfFetchVisits = async (force = false) => {
     const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,note,note_to,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
     const visits = (Array.isArray(rows) ? rows : []).map(r => (r && Number.isFinite(r.id) && ['go', 'come', 'player'].includes(r.kind) && alfSafeOther(r.visitor_id) && alfSafeOther(r.host_id) ? {
       id: r.id, kind: r.kind, visitor: r.visitor_id, host: r.host_id, day: String(r.day || '').slice(0, 10),
-      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [], word: alfInt(r.word, 0, ALF_WORDS - 1),
+      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [], word: r.word === 12 ? 12 : alfInt(r.word, 0, ALF_WORDS - 1),
       thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1), at: Date.parse(r.created_at) || 0,
       note: typeof r.note === 'string' ? alfNoteShow(r.note) : '', noteTo: alfValidId(r.note_to) ? r.note_to : null } : null)).filter(Boolean);
     _alfVisitsAt = Date.now();
@@ -72509,7 +73111,7 @@ const alfPublish = async (life, metIds, now = Date.now(), { force = false } = {}
   try {
     await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: { breeder_id: self, open: settings.open, house } });
     alfSaveSt({ ...alfToday(), sentAt: now, sentSig: sig });
-    void alfPublishMore(self, settings.show ? alfFitMasmon({ ...alfBuildMore(house.ids), ...(settings.act ? { ac: _alfActCache || [] } : {}) }, alfMasmonShare(house.ids)) : {});
+    void alfPublishMore(self, settings.show ? alfFitMasmon({ ...alfBuildMore(house.ids), ...(settings.act ? { ac: _alfActCache || [] } : {}), ...(() => { const fv = typeof albFavShare === 'function' ? albFavShare(house.ids) : null; return fv ? { fv } : {}; })() }, alfMasmonShare(house.ids)) : {});
     return true;
   } catch { return false; }
 };
@@ -72604,7 +73206,8 @@ let _alfGiftSender = null;
 const assistantLifeFriendSetGiftSender = (fn) => { _alfGiftSender = typeof fn === 'function' ? fn : null; };
 const alfGiveBeatP = async (kind, giftId, st) => {
   const want = ALF_BEAT_P[kind] || 0;
-  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  // 1日300Pまでの上限は、助手が持ち帰るおみやげ(go)だけ。置き手紙(look)は1通ごとに 50(2026-11-11 社長)
+  const amount = kind === 'look' ? want : Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
   if (!amount || !_alfGiftSender) return 0;
   let ok = false;
   try { ok = await _alfGiftSender({ id: giftId, title: kind === 'look' ? 'フレンドの家へ遊びに行ったおみやげ' : '助手のフレンドの家のおみやげ', source: 'assistantLifeFriend', rewards: [{ type: 'beatPoint', amount }] }); } catch { ok = false; }
@@ -72642,6 +73245,8 @@ const assistantLifeFriendSeeCome = async (i) => {
   const c = st.came[i];
   if (!c || c.seen) return null;
   if (c.mine) alfBond([c.mine], 'friendWelcome');
+  // 迎えた来客のぶんの友情スタンプ(1人1日1個・56-assistant-life-friend-bond)
+  if (typeof albIncoming === 'function' && typeof albLoad === 'function') { try { await albLoad(); albIncoming([[c.host, st.day || alfDay()]]); } catch {} }
   const came = st.came.map((x, j) => (j === i ? { ...x, seen: true } : x));
   alfSaveSt({ ...st, came });
   if (c.mine) alfAddKnown([`${c.mine}|${c.host}|${c.aid}`]);
@@ -72720,7 +73325,8 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
   const nc = alfNoteCheck(note);
   if (!nc.ok) return { ok: false, reason: nc.reason };
-  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
+  if (word === ALF_WORD_FREE && !nc.text) return { ok: false, reason: '言葉を書くか、下の一言を選んでください' };
+  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
   if (!r.ok) return { ok: false, reason: r.reason };
   // ミッションの「フレンドの家へ行く」と「助手とふれあう」(2026-11-08)
   if (typeof missionNotify === 'function') { missionNotify('friendVisit'); missionNotify('assistantTouch'); }
@@ -72730,7 +73336,7 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   const marked = { ...cur, look: cur.look + 1, looked: { ...cur.looked, [hostId]: 1 }, photos };
   alfSaveSt(marked);
   const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
-  if (got) { const now2 = alfToday(); alfSaveSt({ ...now2, beatP: now2.beatP + got }); }
+  // 置き手紙のビートPは、助手のおみやげの1日300Pの数(st.beatP)には入れない
     return { ok: true, beatP: got, photo: firstHere };
 };
 
@@ -72865,6 +73471,9 @@ const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー�
 const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
 const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
 // 置き手紙の決まった一言(番号は表に残す。0〜11)とお礼(0〜5)
+// 自由に書いた言葉だけの置き手紙(決まった一言なし)の番号(2026-11-11 社長「自由文でどうやって返すの？決定がない？」)。表は word 0〜31 を通す
+const ALF_WORD_FREE = 12;
+const alfWordQuote = (w) => (w === ALF_WORD_FREE ? '' : `「${ALF_WORD_TEXTS[w] || ''}」`);
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
@@ -73065,6 +73674,8 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [bondOpen, setBondOpen] = React.useState(false); // 友情のシート(56-assistant-life-friend-bond・印が偽なら出ない)
+  const bondMark = (task) => { if (typeof albMark === 'function') void albMark(friend.id, task); };
   const [selfName, setSelfName] = React.useState('');
   React.useEffect(() => { let alive = true; (async () => { try { const n = typeof storeGet === 'function' ? await storeGet('mh_breeder_name', '') : ''; if (alive && typeof n === 'string' && n && n !== '名無しのブリーダー') setSelfName(n.slice(0, 10)); } catch {} })(); return () => { alive = false; }; }, []);
   const { w: vw, h: vh } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : { w: 390, h: 844 }; // 🔄横では回した器の幅・高さ
@@ -73093,13 +73704,14 @@ function AlfFriendHouseView({ friend, onClose }) {
     const text = byDoing && Math.random() < 0.6 ? byDoing : alfPickOne([lines(aid)[0], ...vl(aid).greet]);
     setRoomId(aid); setTalk({ aid, step: 0, text: alfFill(text, { h: friend.name, who: aid, name: visitor }) });
   };
-  const reply = (i) => { if (!talk) return; setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
+  const reply = (i) => { if (!talk) return; bondMark('talk'); setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
   const leave = async (word) => {
     const to = leaving || null;
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name, note: noteText, noteTo: to });
     if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); return; }
     setLeaving(null); setRoomId(null); setTalk(null); setNoteText('');
-    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+    if (r && r.ok) bondMark('note');
+    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
   // 置き手紙の1行(押す前に、何が届くか・今日できるかが分かるように)
   const noteLine = done ? done
@@ -73133,11 +73745,12 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>);
   const tiles = (
     <div data-alf-visit-acts>
+      {typeof AlfBondBar === 'function' && <AlfBondBar friend={friend} more={more} compact={land} onOpen={() => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(true); }}/>}
       <p className="mb-1 text-[10px] font-black text-slate-200">この家でできること</p>
       <div className="grid grid-cols-3 gap-1.5">
         <button type="button" className="mhl-tile mhl-call" disabled={!home.length} data-alf-visit-act="talk" onClick={() => home[0] && greet(home[0])}><i>💬</i><b>話す</b><small>{home.length ? `家にいる ${home.length}人` : 'いまはだれも'}</small></button>
-        <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => setRoomId(h.ids[0] || null)}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
-        <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'}</small></button>
+        <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => { setRoomId(h.ids[0] || null); if (h.ids[0]) bondMark('find'); }}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
+        <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'}</small></button>
       </div>
       <p className="mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100" data-alf-visit-note={done ? 'done' : can}>{noteLine}</p>
       <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、{friend.name}さんの助手の仲良し度は変わりません。</p>
@@ -73149,7 +73762,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>) : null;
   const houseView = (
     <div className="relative pt-1" style={{ paddingInline: pad }} data-alf-visit-house>
-      <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={(id) => { setTalk(null); setLeaving(null); setRoomId(id); }}
+      <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={(id) => { setTalk(null); setLeaving(null); setRoomId(id); bondMark('find'); }}
         diary={{ items: [...diaryItems].reverse().map(d => ({ t: d.t, text: d.x })) }} pop={false} onBoard={() => setBoardOpen(true)} hname={`🏡 ${friend.name}さんの家`} other={otherPut}/>
     </div>);
   // 大きな部屋に渡すもの: いる助手・寝ている・留守の札・贈られた家具・写したマスモン・話しかけたときの吹き出し
@@ -73227,8 +73840,8 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alf-visit-words>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={() => setLeaving(null)}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
-        <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙の一言をえらぶ{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
-        <p className="text-[10.5px] font-bold text-slate-200">一言を押すと{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
+        <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙を残す{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
+        <p className="text-[10.5px] font-bold text-slate-200">一言を選ぶか、自由に書いて送ると、{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
         <label className="mt-2 block text-[10.5px] font-bold text-slate-200" htmlFor="alf-note-free">✏️ ひとこと(自由・{ALF_NOTE_MAX}字まで・なくてもよい)</label>
         <div className="mt-1 flex items-center gap-1.5">
           <input id="alf-note-free" type="text" data-alf-note-free value={noteText} maxLength={ALF_NOTE_MAX} autoComplete="off" spellCheck={false}
@@ -73237,7 +73850,9 @@ function AlfFriendHouseView({ friend, onClose }) {
           <span className="shrink-0 text-[10px] text-slate-400">{[...noteText].length}/{ALF_NOTE_MAX}</span>
         </div>
         {(() => { const c = alfNoteCheck(noteText); const warn = noteWarn || (!c.ok ? c.reason : ''); return warn ? <p className="mt-1 text-[10.5px] font-bold text-rose-300" data-alf-note-warn>⚠️ {warn}</p> : <p className="mt-1 text-[10px] text-slate-400">連絡先・住所・本名などは書けません。悪い言葉は●になります。{friend.name}さんは自由文を見ないようにもできます。</p>; })()}
-        <div className="mt-2 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
+        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => leave(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
+        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'}</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
         <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
       </div>
     </div>) : null;
@@ -73271,6 +73886,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         {sheet}
         {words}
         {diarySheet}
+        {bondOpen && typeof AlfBondSheet === 'function' && <AlfBondSheet friend={friend} more={more} land={land} onClose={() => setBondOpen(false)} onRoom={(id) => { setBondOpen(false); setRoomId(id); bondMark('find'); }}/>}
       </div>
     </div>);
 }
@@ -73350,8 +73966,9 @@ function AssistantLifeFriendPage({ life }) {
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
-        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
+        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}通</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
+      {!alfEmpty && typeof AlfGuestBook === 'function' && <AlfGuestBook s={s} card={card} sec={sec} onVisit={setVisit}/>}
       <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes style={hideIfEmpty}>
         {notes.length ? notes.slice(0, 12).map(n => (
@@ -73359,8 +73976,8 @@ function AssistantLifeFriendPage({ life }) {
             <p className="text-[11px] leading-snug text-slate-100">
               <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
               {n.dir === 'away' ? <><span className="whitespace-nowrap">{n.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{n.name}さんの家へ</span>遊びに行っていた</>
-                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}「{ALF_WORD_TEXTS[n.word]}」{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
-                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た「{ALF_WORD_TEXTS[n.word]}」</>}
+                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
+                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
             </p>
             {n.dir === 'in' && n.note ? (s.settings.noteShow && !s.settings.noteOff.includes(n.who)
               ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-note-text>✏️ {n.note}</p>
@@ -73377,7 +73994,7 @@ function AssistantLifeFriendPage({ life }) {
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-100">{f.name}さんの家{been ? ' 📷' : ''}</p>
+              <p className="truncate text-[12px] font-black text-slate-100">{f.name}さんの家{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
               <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
                 return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
               {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
@@ -73398,6 +74015,7 @@ function AssistantLifeFriendPage({ life }) {
             <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
           </div>))}
       </div>
+      {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
         {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
@@ -73419,6 +74037,11 @@ const assistantLifeFriendDecorateRooms = (rooms) => {
     if (!o || !rooms[id]) continue;
     rooms[id] = { tag: [`🏘 ${o.name}さんの家へ`, o.ids.length > 1 ? `${o.ids.length}人で 遊びに` : 'ひとりで 遊びに', o.ids.length > 1 ? assistantLifeGroupNames(o.ids, 4) : null] };
   }
+  // 来ている最中の来客(迎えるまで): 会っている助手の部屋の札(56-assistant-life-friend-bond の印が真のときだけ)
+  if (typeof albEnabled === 'function' && albEnabled()) for (const c of (ALF_STORE.state.st.came || [])) {
+    if (!c || c.seen || !c.mine || !rooms[c.mine] || assistantLifeFriendAwayOf(c.mine)) continue;
+    rooms[c.mine] = { ...rooms[c.mine], tag: [`🚪 ${c.name}さんの${assistantLifeName(c.aid)}が来ている`, 'いっしょに おしゃべり', null] };
+  }
   return rooms;
 };
 // HOME: 施設「🏡 助手ライフ」の札の右上に「🏘 n」(札の字にかからないよう、札の角の外側に半分出す)。
@@ -73428,7 +74051,7 @@ function AssistantLifeFriendHomeBadge({ rect }) {
   const s = useAssistantLifeFriendState();
   const [toast, setToast] = React.useState('');
   const lastRef = React.useRef(null);
-  React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); })(); }, []);
+  React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); if (typeof albCountIncoming === 'function') { try { await albCountIncoming(); } catch {} } })(); }, []);
   const n = alfEnabled() && s.loaded && s.mode && s.mode !== 'off' ? assistantLifeFriendUnseen(s) : 0;
   React.useEffect(() => {
     if (lastRef.current != null && n > lastRef.current) {
@@ -73442,11 +74065,392 @@ function AssistantLifeFriendHomeBadge({ rect }) {
     lastRef.current = n;
     return undefined;
   }, [n]);
-  if (!n && !toast) return null;
+  // 来ている最中の印(迎えるまで出す・56-assistant-life-friend-bond の印が真のときだけ)
+  const here = typeof albEnabled === 'function' && albEnabled() && s.loaded && s.mode && s.mode !== 'off' ? (s.st.came || []).find(c => c && !c.seen) : null;
+  if (!n && !toast && !here) return null;
   return (<>
     {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: rect.x + rect.w - 14, top: rect.y - 8 }}>🏘 {n}</span>}
     {toast && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg" data-alf-toast
       style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
+    {!toast && here && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-amber-300/80 bg-amber-100 px-2.5 text-[11px] font-black leading-[20px] text-amber-950 shadow-lg" data-alb-here
+      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>🚪 {here.name}さんの{assistantLifeName(here.aid)}が来ています</div>}
+  </>);
+}
+
+// ---- part: 56-assistant-life-friend-bond.jsx ----
+// 助手ライフ: フレンドの家の「行く意味・来てもらう意味」(2026-11-11 社長「機能が少なすぎる。もっといろいろ見せれるようにして意味も持たせたい」
+//   「フレンドが遊びに来たときを分かりやすくと、意味をもっと持たせたい」・案 docs/progress/assistant-peer/FRIEND-HOUSE-MORE-PLAN.md の A+B+C と来たとき)
+//   A 友情とスタンプ … フレンドごとの友情Lv。その家で3つ(話す・部屋を見る・置き手紙)すると今日のスタンプ1個(1軒1日1個・1日3軒)。
+//                      相手(か相手の助手)が来てくれた日にも1個(1人1日1個)。節目は見た目の札(呼び名)だけ。家具・ビートPは付けない
+//   B 今日の見どころ・すてき … 前に来たときの控えを端末に覚えて、増えた家具・マスモン・遊んだ物に NEW。「💗 すてき」は決まった場所の印だけを送る(自由文なし・1軒1日3つ)
+//   C お気に入りの棚 … 持ち主が選んだ物(好きな助手・自慢のマスモン・好きな曲・集めた家具の数)を、くわしい控え(more.fv)に載せる
+//   来たとき … HOME の印「🚪 来ています」・部屋の札・「📖 お客さん帳」(だれが・いつ・何をしたか・返しに行く)
+// 公開の印 assistantLifeFriendBond の後ろ(偽なら何も出さず・送らず・保存しない)。保存は新しいキーだけ(今の mh_assistant_life_friend_v1 は形を変えない)。
+// 表は assistant_life_friend_likes(足すだけ・docs/sql/assistant-life/FRIEND_LIKES_ADD.sql)。無いあいだ「すてき」は出さない。
+
+const ALB_KEY = 'mh_assistant_life_friend_bond_v1';
+const ALB_FAV_KEY = 'mh_assistant_life_friend_fav_v1';
+const ALB_TABLE_LIKES = 'assistant_life_friend_likes';
+const ALB_MAX = Object.freeze({ houses: 3, likes: 3, friends: 100 });
+// 友情Lv に要るスタンプの数(Lv1〜Lv10)と呼び名(見た目の札)
+const ALB_STEPS = Object.freeze([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
+const ALB_TITLES = Object.freeze(['はじめまして', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', 'なかよし', '大のなかよし', 'いつもの人', '親友', '大親友', '心の友', 'かけがえのない友']);
+const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '部屋を見る'], ['note', '✉️', '置き手紙']]);
+const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
+const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
+
+const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
+const albLv = (st) => ALB_STEPS.filter(n => st >= n).length;
+const albTitle = (st) => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
+const albNext = (st) => { const lv = albLv(st); return lv >= ALB_STEPS.length ? null : { need: ALB_STEPS[lv] - st, from: lv ? ALB_STEPS[lv - 1] : 0, to: ALB_STEPS[lv] }; };
+
+// ---------- 保存(無い・壊れているときは既定値) ----------
+const albNormalizeSnap = (v) => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const fu = {}; const ms = {};
+  for (const id of ALF_IDS) {
+    const a = v.fu && typeof v.fu === 'object' ? v.fu[id] : null; if (typeof a === 'string') fu[id] = a.slice(0, 200);
+    const b = v.ms && typeof v.ms === 'object' ? v.ms[id] : null; if (Array.isArray(b)) ms[id] = b.filter(x => typeof x === 'string').map(x => x.slice(0, 60)).slice(0, 8);
+  }
+  return { fu, ms, ac: Number.isFinite(v.ac) ? v.ac : 0 };
+};
+const albDefaultOne = () => ({ st: 0, t: { talk: false, find: false, note: false }, done: false, liked: [], in: [], snap: null });
+const normalizeAssistantLifeFriendBond = (v) => {
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const src = o.f && typeof o.f === 'object' && !Array.isArray(o.f) ? o.f : {};
+  const f = {};
+  for (const id of Object.keys(src).slice(0, ALB_MAX.friends)) {
+    const x = src[id];
+    if (!alfSafeOther(id) || !x || typeof x !== 'object') continue;
+    const t = x.t && typeof x.t === 'object' ? x.t : {};
+    f[id] = {
+      st: alfInt(x.st, 0, 9999), t: { talk: t.talk === true, find: t.find === true, note: t.note === true }, done: x.done === true,
+      liked: (Array.isArray(x.liked) ? x.liked : []).filter(s => typeof s === 'string' && ALB_SPOT_RE.test(s)).slice(0, ALB_MAX.likes),
+      in: (Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(-12),
+      snap: albNormalizeSnap(x.snap),
+    };
+  }
+  return { v: 1, day: typeof o.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.day) ? o.day : null, houses: alfInt(o.houses, 0, 9), f };
+};
+const normalizeAssistantLifeFriendFav = (v) => {
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return { v: 1, on: o.on !== false, a: alfValidId(o.a) ? o.a : null,
+    m: o.m && typeof o.m === 'object' && alfValidId(o.m.aid) && typeof o.m.mo === 'string' && o.m.mo ? { aid: o.m.aid, mo: o.m.mo.slice(0, 40) } : null,
+    s: typeof o.s === 'string' && o.s.trim() ? alfStr(o.s.trim(), 30) : null, fn: o.fn !== false };
+};
+// 朝4時の区切りで、今日の3つ・今日のスタンプ・今日のすてきを戻す(スタンプの数 st と控え snap は残す)
+const albRoll = (b, day) => (b.day === day ? b : { ...b, day, houses: 0, f: Object.fromEntries(Object.entries(b.f).map(([k, x]) => [k, { ...x, t: { talk: false, find: false, note: false }, done: false, liked: [] }])) });
+let _albLoading = null;
+const albLoad = () => {
+  if (ALF_STORE.state.bond) return Promise.resolve(ALF_STORE.state.bond);
+  if (!_albLoading) _albLoading = (async () => {
+    const [a, b] = await Promise.all([ALB_KEY, ALB_FAV_KEY].map(k => storeGet(k, null, false).catch(() => null)));
+    ALF_STORE.set({ bond: albRoll(normalizeAssistantLifeFriendBond(a), alfDay()), fav: normalizeAssistantLifeFriendFav(b) });
+    return ALF_STORE.state.bond;
+  })();
+  return _albLoading;
+};
+const albSave = (bond) => { ALF_STORE.set({ bond }); try { storeSet(ALB_KEY, bond, false); } catch {} };
+const albSaveFav = (patch) => { const fav = normalizeAssistantLifeFriendFav({ ...(ALF_STORE.state.fav || {}), ...patch }); ALF_STORE.set({ fav }); try { storeSet(ALB_FAV_KEY, fav, false); } catch {} };
+const albCur = () => { const b = ALF_STORE.state.bond; if (!b) return null; const r = albRoll(b, alfDay()); if (r !== b) albSave(r); return r; };
+const albOne = (b, id) => (b && b.f[id]) || albDefaultOne();
+
+// ---------- A 友情とスタンプ ----------
+// その家で1つした(talk / find / note)。3つそろうと今日のスタンプ1個(1軒1日1個・1日 ALB_MAX.houses 軒)
+const albMark = async (fid, task) => {
+  if (!albEnabled() || !alfSafeOther(fid) || !ALB_TASKS.some(t => t[0] === task)) return null;
+  await albLoad();
+  const b = albCur(); if (!b) return null;
+  const x = albOne(b, fid);
+  if (x.t[task]) return null;
+  const t = { ...x.t, [task]: true };
+  let nx = { ...x, t }; let stamp = false;
+  if (!x.done && t.talk && t.find && t.note && b.houses < ALB_MAX.houses) { nx = { ...nx, st: Math.min(9999, x.st + 1), done: true }; stamp = true; }
+  albSave({ ...b, houses: b.houses + (stamp ? 1 : 0), f: { ...b.f, [fid]: nx } });
+  if (stamp) ALF_STORE.set({ bondFlash: { id: fid, lvUp: albLv(nx.st) > albLv(x.st) ? albLv(nx.st) : 0, at: Date.now() } });
+  return { stamp };
+};
+// 来てくれた日のスタンプ(1人1日1個)。行き来の表の行(相手が書いた go / player)と、迎えた来客(come)から数える
+const albIncoming = (pairs) => {
+  if (!albEnabled()) return [];
+  const b0 = albCur(); if (!b0) return [];
+  let b = b0; const gained = [];
+  for (const [fid, day] of pairs) {
+    if (!alfSafeOther(fid) || typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    const x = albOne(b, fid);
+    if (x.in.includes(day)) continue;
+    b = { ...b, f: { ...b.f, [fid]: { ...x, st: Math.min(9999, x.st + 1), in: [...x.in, day].slice(-12) } } };
+    gained.push(fid);
+  }
+  if (b !== b0) albSave(b);
+  return gained;
+};
+const albCountIncoming = async (s = ALF_STORE.state) => {
+  if (!albEnabled() || !s.selfId) return [];
+  await albLoad();
+  const names = new Set((s.roster || []).map(f => f.id)); const muted = new Set(s.settings.muted);
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+};
+
+// ---------- B 今日の見どころ・すてき ----------
+const albPutOf = (h, more, id) => (more && more.fu && more.fu[id] ? more.fu[id].p : (h.r[id] && h.r[id].fu) || {});
+const albSnapOf = (h, more) => {
+  const fu = {}; const ms = {};
+  for (const id of h.ids) {
+    const p = albPutOf(h, more, id) || {};
+    fu[id] = ['c', 'w', 'f'].map(k => p[k] || '').join(',');
+    ms[id] = (more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []).map(t => `${t.mo}|${t.n || ''}`.slice(0, 60));
+  }
+  return { fu, ms, ac: more && more.ac && more.ac[0] ? more.ac[0].at : 0 };
+};
+// 見どころ(多くて4つ)。snap が無い(はじめて)ときは、その家の目立つ物を出す
+const albSpots = (h, more, snap) => {
+  const out = []; const first = !snap;
+  for (const id of h.ids) {
+    const p = albPutOf(h, more, id) || {}; const prev = snap ? String(snap.fu[id] || ',,').split(',') : [];
+    ['c', 'w', 'f'].forEach((k, i) => {
+      const f = p[k] && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(p[k]) : null;
+      if (!f) return;
+      const isNew = !!snap && prev[i] !== p[k];
+      if (isNew || first) out.push({ spot: `f:${id}:${k}`, room: id, icon: f.emoji, text: `${assistantLifeName(id)}の部屋に「${f.name}」`, isNew, w: isNew ? 3 : 1 });
+    });
+    const team = more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []; const prevM = snap ? new Set(snap.ms[id] || []) : null;
+    for (const t of team) {
+      const isNew = !!prevM && !prevM.has(`${t.mo}|${t.n || ''}`.slice(0, 60));
+      if (!(isNew || (first && t.l))) continue;
+      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null;
+      out.push({ spot: `m:${id}`, room: id, icon: '🐾', text: `${assistantLifeName(id)}のマスモン「${t.n || (m && m.name) || 'マスモン'}」`, isNew, w: isNew ? 3 : 1 });
+    }
+  }
+  const a = more && more.ac && more.ac[0];
+  if (a && (!snap || a.at > snap.ac)) out.push({ spot: 'h', room: null, icon: ALF_ACT_ICON[a.k] || '✨', text: a.x, isNew: !!snap, w: 2 });
+  const seen = new Set();
+  return out.sort((x, y) => y.w - x.w).filter(x => (seen.has(x.spot) ? false : (seen.add(x.spot), true))).slice(0, 4);
+};
+const albSaveSnap = (fid, h, more) => {
+  if (!albEnabled() || !alfSafeOther(fid) || !h) return;
+  const b = albCur(); if (!b) return;
+  albSave({ ...b, f: { ...b.f, [fid]: { ...albOne(b, fid), snap: albSnapOf(h, more) } } });
+};
+// 「すてき」を送る(場所の印だけ。表でも 1軒1日3つ・フレンドか を見る)。{ ok, reason }
+let _albLikesMissing = false; let _albLikesAt = 0;
+const albSendLike = async (hostId, spot) => {
+  if (!albEnabled() || _albLikesMissing || !alfSafeOther(hostId) || !ALB_SPOT_RE.test(spot)) return { ok: false, reason: '「すてき」は、いま準備中です' };
+  await albLoad();
+  const b = albCur(); const x = albOne(b, hostId);
+  if (x.liked.includes(spot)) return { ok: true, reason: '' };
+  if (x.liked.length >= ALB_MAX.likes) return { ok: false, reason: `この家への「すてき」は1日${ALB_MAX.likes}つまでです(朝4時に戻ります)` };
+  const self = await alfSelf();
+  if (!self) return { ok: false, reason: '通信がうまくいきませんでした(時間をおいてもう一度)' };
+  try {
+    await alfRequest(ALB_TABLE_LIKES, { method: 'POST', prefer: 'return=minimal', soft: true, body: { visitor_id: self, host_id: hostId, day: alfDay(), spot } });
+  } catch (e) {
+    if (e && e.missing) { _albLikesMissing = true; ALF_STORE.set({ likesOff: true }); return { ok: false, reason: '「すてき」は、いま準備中です' }; }
+    if (!((e && e.status === 409) || /23505|duplicate/.test(String((e && e.body) || '')))) return { ok: false, reason: alfRefusalText(e).replace(/置き手紙を残せませんでした/, '「すてき」を送れませんでした') };
+  }
+  const b2 = albCur(); const x2 = albOne(b2, hostId);
+  albSave({ ...b2, f: { ...b2.f, [hostId]: { ...x2, liked: [...new Set([...x2.liked, spot])].slice(0, ALB_MAX.likes) } } });
+  return { ok: true, reason: '' };
+};
+// 自分の家に届いた「すてき」(7日ぶん)
+const albFetchLikes = async (force = false) => {
+  if (!albEnabled() || _albLikesMissing || _alfUnavailable) return;
+  const mode = await alfLoadMode(); if (mode === 'off') return;
+  const self = await alfSelf(); if (!self) return;
+  if (!force && Date.now() - _albLikesAt < alfLimits().readMs) return;
+  try {
+    const rows = await alfRequest(`${ALB_TABLE_LIKES}?select=id,visitor_id,host_id,day,spot,created_at&host_id=eq.${self}&day=gte.${alfDayShift(alfDay(), -7)}&order=created_at.desc&limit=60`, { soft: true });
+    _albLikesAt = Date.now();
+    ALF_STORE.set({ likesIn: (Array.isArray(rows) ? rows : []).map(r => (r && Number.isFinite(r.id) && alfSafeOther(r.visitor_id) && typeof r.spot === 'string' && ALB_SPOT_RE.test(r.spot)
+      ? { id: r.id, visitor: r.visitor_id, day: String(r.day || '').slice(0, 10), spot: r.spot, at: Date.parse(r.created_at) || 0 } : null)).filter(Boolean) });
+  } catch (e) { if (e && e.missing) { _albLikesMissing = true; ALF_STORE.set({ likesOff: true }); } }
+};
+// 届いた「すてき」の場所を、自分の家の言葉にする
+const albSpotText = (spot) => {
+  if (spot === 'h') return 'この家';
+  const p = String(spot).split(':');
+  if (!alfValidId(p[1])) return 'この家';
+  if (p[0] === 'm') return `${assistantLifeName(p[1])}のマスモン`;
+  let f = null;
+  try { const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(p[1]) : null; const key = room && room.put ? room.put[{ c: 'ceil', w: 'wall', f: 'floor' }[p[2]]] : null; f = key && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null; } catch {}
+  return `${assistantLifeName(p[1])}の部屋の${f ? `「${f.name}」` : `${ALB_SLOT_NAME[p[2]] || ''}の家具`}`;
+};
+
+// ---------- C お気に入りの棚 ----------
+// 控えに載せる形 { a, m:{aid,mo,n,c}, s, fn }。見せない・何も選んでいないときは null
+const albFavShare = (ids) => {
+  const fav = ALF_STORE.state.fav;
+  if (!albEnabled() || !fav || !fav.on) return null;
+  const own = (ids || []).filter(alfValidId); const out = {};
+  if (fav.a && own.includes(fav.a)) out.a = fav.a;
+  if (fav.m && own.includes(fav.m.aid)) { const t = (alfMasmonShare([fav.m.aid])[fav.m.aid] || []).find(x => x.mo === fav.m.mo); if (t) out.m = { aid: fav.m.aid, mo: t.mo, n: t.n, c: t.c }; }
+  if (fav.s) out.s = fav.s;
+  if (fav.fn) {
+    const keys = new Set();
+    for (const id of own) { try { const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id) : null; if (!room) continue; for (const k of Object.values(room.put || {})) if (typeof k === 'string') keys.add(k); for (const k of (room.kept || [])) if (typeof k === 'string') keys.add(k); } catch {} }
+    if (keys.size) out.fn = Math.min(999, keys.size);
+  }
+  return Object.keys(out).length ? out : null;
+};
+// 相手の棚を読むとき(知らない id・種類・長い値は捨てる。曲名は置き手紙と同じ見張りを通す)
+const albNormalizeFavShare = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out = {};
+  if (alfValidId(raw.a)) out.a = raw.a;
+  const m = raw.m;
+  if (m && typeof m === 'object' && alfValidId(m.aid) && typeof m.mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.mo])
+    out.m = { aid: m.aid, mo: m.mo, n: typeof m.n === 'string' ? alfNoteShow(m.n.slice(0, 16)) : '', c: (Array.isArray(m.c) ? m.c : []).slice(0, 5).map(x => (typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null)) };
+  if (typeof raw.s === 'string') { const s = alfNoteShow(raw.s.replace(/[{}<>]/g, '').slice(0, 30)); if (s) out.s = s; }
+  if (Number.isInteger(raw.fn) && raw.fn > 0 && raw.fn <= 999) out.fn = raw.fn;
+  return Object.keys(out).length ? out : null;
+};
+
+// ---------- 画面の部品 ----------
+function AlfBondChip({ id, always = false }) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => { if (albEnabled()) void albLoad(); }, []);
+  if (!albEnabled() || !s.bond) return null;
+  const st = albOne(s.bond, id).st;
+  if (!st && !always) return null;
+  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🤝 Lv{albLv(st)} {albTitle(st)}</span>;
+}
+function AlfFavShelf({ fv }) {
+  if (!fv) return null;
+  const mon = fv.m && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(fv.m.mo) : null;
+  const cell = (k, icon, label, value) => <div key={k} className="min-w-0 flex-1 rounded-xl border border-amber-200/40 bg-slate-800/80 px-1 py-1 text-center" data-alb-fav={k}><p className="text-[16px] leading-none">{icon}</p><p className="mt-0.5 whitespace-nowrap text-[9.5px] font-bold text-slate-300">{label}</p><p className="truncate text-[11px] font-black text-amber-100">{value}</p></div>;
+  return (
+    <div className="mt-1 flex gap-1" data-alb-shelf>
+      {fv.a ? cell('a', '💛', '好きな助手', assistantLifeName(fv.a)) : null}
+      {fv.m ? cell('m', '🐾', '自慢のマスモン', fv.m.n || (mon && mon.name) || 'マスモン') : null}
+      {fv.s ? cell('s', '🎵', '好きな曲', fv.s) : null}
+      {fv.fn ? cell('fn', '🪑', '集めた家具', `${fv.fn}種`) : null}
+    </div>);
+}
+// 訪ねた家の「友情」の帯(押すとくわしいシート)。この部品が閉じるときに、今日見た控えを覚える(次に来たときの NEW の元)
+function AlfBondBar({ friend, more, onOpen, compact = false }) {
+  const s = useAssistantLifeFriendState();
+  const keep = React.useRef({ h: friend.house, more });
+  keep.current = { h: friend.house, more };
+  React.useEffect(() => { if (!albEnabled()) return undefined; void albLoad(); return () => { try { albSaveSnap(friend.id, keep.current.h, keep.current.more); } catch {} }; }, [friend.id]);
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const left = ALB_TASKS.filter(t => !x.t[t[0]]).length;
+  const fresh = albSpots(friend.house, more, x.snap).filter(p => p.isNew).length;
+  const full = !x.done && s.bond.houses >= ALB_MAX.houses;
+  return (
+    <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-1 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
+      <span className="min-w-0 flex-1">
+        <b className="block truncate text-[11.5px] font-black text-pink-100" data-alb-bar-title>🤝 友情Lv{albLv(x.st)}「{albTitle(x.st)}」{compact ? (x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`) + (fresh ? ` ・ ✨${fresh}` : '') : ''}</b>
+        <small className={`truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`} data-alb-bar-sub>{x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`}{fresh ? ` ・ ✨ 見どころ ${fresh}` : ''}</small>
+      </span>
+      <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-5 w-5' : 'h-6 w-6'} items-center justify-center rounded-full text-[12px] not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
+      <span className="shrink-0 text-[12px] font-black text-pink-200">›</span>
+    </button>);
+}
+function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
+  const s = useAssistantLifeFriendState();
+  const [msg, setMsg] = React.useState('');
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const nx = albNext(x.st);
+  const spots = albSpots(friend.house, more, x.snap);
+  const likeOk = !s.likesOff && !_albLikesMissing;
+  const like = async (spot) => { const r = await albSendLike(friend.id, spot); setMsg(r.ok ? `💗 ${friend.name}さんに「すてき」が届きます` : `⚠️ ${r.reason}`); };
+  const fv = more && more.fv ? more.fv : null;
+  return (
+    <div className="absolute inset-0" style={{ zIndex: 31 }} data-alb-sheet>
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={onClose}/>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
+        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🤝 {friend.name}さんとの友情 Lv{albLv(x.st)}</p>
+        <p className="text-[11px] font-bold text-slate-200">「{albTitle(x.st)}」 ・ スタンプ {x.st}個{nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''}</p>
+        <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
+        <p className="mt-2.5 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
+        <div className="mt-1 grid grid-cols-3 gap-1" data-alb-tasks>{ALB_TASKS.map(([k, icon, label]) => <div key={k} className={`rounded-xl px-1 py-1.5 text-center text-[11px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`}>{icon} {label}{x.t[k] ? ' ✔' : ''}</div>)}</div>
+        <p className="mt-1 text-[10px] leading-snug text-slate-300">この家で3つすると、今日のスタンプが1個たまります(1軒につき1日1個・1日{ALB_MAX.houses}軒まで)。{friend.name}さんにも、あなたが来た日に1個たまります。</p>
+        <p className="mt-2.5 text-[12px] font-black text-amber-200">✨ {x.snap ? '今日の見どころ(前に来たときから)' : 'この家の見どころ'}</p>
+        <div data-alb-spots>
+          {spots.length ? spots.map(p => (
+            <div key={p.spot} className="mt-1 flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-2 py-1" data-alb-spot={p.spot}>
+              <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" disabled={!p.room} onClick={() => p.room && onRoom(p.room)}>
+                <span className="text-[15px]">{p.icon}</span><span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100">{p.text}</span>
+                {p.isNew ? <span className="shrink-0 rounded-full bg-amber-300 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-950">NEW</span> : null}
+              </button>
+              {likeOk ? <button type="button" className="shrink-0 rounded-lg border border-pink-300/70 px-1.5 py-0.5 text-[11px] font-black text-pink-100 disabled:opacity-40" data-alb-like={p.spot} disabled={x.liked.includes(p.spot) || x.liked.length >= ALB_MAX.likes} onClick={() => like(p.spot)}>{x.liked.includes(p.spot) ? '💗 送った' : '💗 すてき'}</button> : null}
+            </div>)) : <p className="mt-1 text-[11px] text-slate-300" data-alb-spots-none>前に来たときから、変わった所はまだありません。部屋を見て回れます。</p>}
+        </div>
+        {likeOk ? <p className="mt-1 text-[10px] leading-snug text-slate-300">「💗 すてき」を押すと、どこを気に入ったかが{friend.name}さんに届きます(1軒につき1日{ALB_MAX.likes}つ・今日 {x.liked.length}/{ALB_MAX.likes})。</p> : null}
+        {msg ? <p className="mt-1 text-[11px] font-bold text-pink-100" data-alb-msg>{msg}</p> : null}
+        {fv ? <><p className="mt-2.5 text-[12px] font-black text-amber-200">🏆 {friend.name}さんのお気に入りの棚</p><AlfFavShelf fv={fv}/></> : null}
+        <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={onClose}>閉じる</button>
+      </div>
+    </div>);
+}
+// 「🏘 フレンド」のページ: 📖 お客さん帳(今週、だれが・いつ・何をしたか。返しに行く)
+function AlfGuestBook({ s, card, sec, onVisit }) {
+  React.useEffect(() => { if (albEnabled()) void (async () => { await albLoad(); await albCountIncoming(); await albFetchLikes(); })(); }, [s.visits]);
+  if (!albEnabled() || !s.bond) return null;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const notes = assistantLifeFriendNotes(s).filter(n => n.dir === 'in');
+  const likes = (s.likesIn || []).filter(l => names[l.visitor] && !s.settings.muted.includes(l.visitor));
+  const ids = [...new Set([...notes.map(n => n.who), ...likes.map(l => l.visitor)])];
+  const houses = alfOpenHouses('look');
+  const today = alfDay();
+  return (<>
+    <p className={sec}>📖 お客さん帳(この7日)</p>
+    <div className={card} data-alb-guests>
+      {ids.length ? ids.slice(0, 8).map(id => {
+        const mine = notes.filter(n => n.who === id); const lk = likes.filter(l => l.visitor === id);
+        const last = Math.max(0, ...mine.map(n => n.at), ...lk.map(l => l.at));
+        const days = new Set([...mine.map(n => n.day), ...lk.map(l => l.day)]).size;
+        const did = [];
+        const talked = [...new Set(mine.filter(n => n.kind === 'player').flatMap(n => n.ids))];
+        if (mine.some(n => n.kind === 'player')) did.push(talked.length ? `${talked.map(assistantLifeName).join('・')}と話した` : '家を見て回った');
+        const came = [...new Set(mine.filter(n => n.kind === 'go').flatMap(n => n.ids))];
+        if (came.length) did.push(`${came.map(assistantLifeName).join('・')}が遊びに来た`);
+        if (mine.some(n => n.kind === 'player')) did.push('置き手紙');
+        for (const l of lk.slice(0, 2)) did.push(`${albSpotText(l.spot)}に💗すてき`);
+        const x = albOne(s.bond, id); const house = houses.find(h => h.id === id);
+        return (
+          <div key={id} className="border-b border-slate-700/60 py-1 last:border-0" data-alb-guest={id}>
+            <div className="flex items-center gap-1.5">
+              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん<AlfBondChip id={id} always/></p>
+              <span className="shrink-0 whitespace-nowrap text-[10px] text-slate-400">{alfAgoText(last)}・{days}日</span>
+              {house ? <button type="button" className="shrink-0 rounded-xl bg-orange-400 px-2 py-1 text-[10.5px] font-black text-slate-950" data-alb-return={id} onClick={() => onVisit(house)}>🚶 返しに行く</button> : null}
+            </div>
+            <p className="text-[10.5px] leading-snug text-slate-300">{did.map((t, i) => <span key={i} className="whitespace-nowrap">{i ? '・' : ''}{t}</span>)}{x.in.includes(today) ? <span className="whitespace-nowrap font-black text-pink-200">・🤝 スタンプ +1</span> : null}</p>
+          </div>); })
+        : <p className="text-[11px] text-slate-400" data-alb-guests-none>この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。</p>}
+      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人との友情スタンプが1個たまります(1人につき1日1個)。</p>
+    </div>
+  </>);
+}
+// 「🏘 フレンド」のページ: 🏆 お気に入りの棚(フレンドに見せる物を選ぶ)
+function AlfFavEditor({ s, card, sec }) {
+  const [songs, setSongs] = React.useState([]);
+  React.useEffect(() => { let alive = true; if (albEnabled()) void (async () => { await albLoad(); try { const a = normalizeAlfActivity(await storeGet(ALF_ACT_KEY, [])); if (alive) setSongs(a.map(x => x.x)); } catch {} })(); return () => { alive = false; }; }, []);
+  if (!albEnabled() || !s.fav) return null;
+  const fav = s.fav;
+  const own = ALF_IDS.filter(id => { try { return typeof assistantLifeRoomOf !== 'function' || !!assistantLifeRoomOf(id); } catch { return false; } });
+  const team = alfMasmonShare(own);
+  const mons = own.flatMap(id => (team[id] || []).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null; return { v: `${id}|${t.mo}`, label: `${t.n || (m && m.name) || 'マスモン'}(${assistantLifeName(id)})` }; }));
+  const songList = [...new Set([...(fav.s ? [fav.s] : []), ...songs])];
+  const sel = 'mt-0.5 w-full rounded-lg border border-slate-500 bg-slate-800 px-1.5 py-1 text-[11.5px] text-slate-100';
+  const row = (k, label, value, opts, onChange) => (
+    <label className="mt-1 block text-[10.5px] font-bold text-slate-300" data-alb-fav-row={k}>{label}
+      <select className={sel} value={value} onChange={e => onChange(e.target.value)}><option value="">えらばない</option>{opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}</select>
+    </label>);
+  return (<>
+    <p className={sec}>🏆 お気に入りの棚</p>
+    <div className={card} data-alb-fav-editor>
+      <label className="flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>訪ねてきたフレンドに見せる</span><input type="checkbox" checked={fav.on} data-alb-fav-on onChange={e => albSaveFav({ on: e.target.checked })}/></label>
+      {fav.on ? <>
+        {row('a', '💛 好きな助手', fav.a || '', own.map(id => ({ v: id, label: assistantLifeName(id) })), v => albSaveFav({ a: v || null }))}
+        {row('m', '🐾 自慢のマスモン', fav.m ? `${fav.m.aid}|${fav.m.mo}` : '', mons, v => { const [aid, mo] = String(v).split('|'); albSaveFav({ m: v ? { aid, mo } : null }); })}
+        {row('s', '🎵 好きな曲(最近モンヒロビートで遊んだ曲から)', fav.s || '', songList.map(x => ({ v: x, label: x })), v => albSaveFav({ s: v || null }))}
+        <label className="mt-1.5 flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>🪑 集めた家具の数を見せる</span><input type="checkbox" checked={fav.fn} data-alb-fav-fn onChange={e => albSaveFav({ fn: e.target.checked })}/></label>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
+      </> : null}
+    </div>
   </>);
 }
 
@@ -87701,9 +88705,13 @@ const cardPvpCleanMessage = (raw) => {
       rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
   // ひとこと: 定型(i … 番号)か、自由文(x … 30字まで。2026-10-30 で足した項目。古い版は x を知らないので捨てる)
+  // スタンプ(2026-11-11 で足した項目): 顔 sf・言葉 sw の番号を添える。古い版はこれを知らないので、i か x の言葉だけを出す
   if (raw.t === 'chat') {
-    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x } : null; }
-    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i };
+    const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
+    const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
+    const st = sf && sw ? { sf, sw } : {};
+    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x, ...st } : null; }
+    const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i, ...st };
   }
   // 観戦の人のコメント(ホストが観戦の通り道で受け取り、相手へ渡す。v … 観戦の人の印・n … 名前)
   if (raw.t === 'wsay') { const x = cardChatClean(raw.x); return x ? { t: 'wsay', from, v: typeof raw.v === 'string' ? raw.v.slice(0, 40) : '', n: rhythmMultiText(raw.n, CARD_PVP_NAME_MAX) || 'ブリーダー', x, sp: raw.sp === true } : null; }
@@ -88305,10 +89313,12 @@ const CARD_PVP = (() => {
     if (msg.t === 'again') { if (s.phase === 'over' && !s.foeGone) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); emit(); } return; }
     if (msg.t === 'chat') {
       if (!inGame()) return;
-      const stamp = msg.x === undefined;
-      const text = stamp ? CARD_PVP_STAMPS[msg.i] : msg.x;
-      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)
-      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe' }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
+      // 絵のスタンプは定型と同じ扱い(自由文を出さない設定でも出す)。1人2秒に1個まで
+      if (msg.sf && !MULTI_STAMP.accept('foe')) return;
+      const stamp = msg.x === undefined || !!msg.sf;
+      const text = msg.x === undefined ? CARD_PVP_STAMPS[msg.i] : msg.x;
+      if (isHost()) cardPvpWatchHost().say({ p: 1, x: text, sp: stamp }); // 観戦の人にも見せる(全員に見える。2026-10-30 社長)。観戦の人には言葉で届く
+      if (CARD_CHAT.add({ key: 'foe', name: (s.foe && s.foe.name) || 'あいて', text, stamp, kind: 'foe', ...(msg.sf ? { sf: msg.sf, sw: msg.sw } : {}) }) && s.phase === 'playing' && board && board.onChat) board.onChat(cardChatMask(cardChatClean(text)));
       return;
     }
     if (msg.t === 'wsay') { if (inGame()) CARD_CHAT.add({ key: `v:${msg.v}`, name: msg.n, text: msg.x, stamp: msg.sp, kind: 'watch' }); return; }
@@ -88492,6 +89502,17 @@ const CARD_PVP = (() => {
       if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
       s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i });
       if (isHost()) cardPvpWatchHost().say({ p: 0, x: CARD_PVP_STAMPS[i], sp: true });
+      return true;
+    },
+    // 絵のスタンプ(2026-11-11)。言葉が定型と同じなら番号 i で、ちがえば言葉 x で送り、顔と言葉の番号を添える(古い版には言葉だけが出る)
+    stamp: (x) => {
+      if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
+      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      if (!text) return false;
+      const i = CARD_PVP_STAMPS.indexOf(text);
+      s = { ...s, chatAt: Date.now() };
+      send({ t: 'chat', ...(i >= 0 ? { i } : { x: text }), sf: x.f, sw: x.w });
+      if (isHost()) cardPvpWatchHost().say({ p: 0, x: text, sp: true });
       return true;
     },
     // 自由文のコメント(CardChatPanel が CARD_CHAT.check を通してから呼ぶ)。観戦の人にも見せる
@@ -88689,6 +89710,17 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
     return () => { alive = false; clearInterval(t); };
   }, [inviteOpen, roster]);
   const invited = room.invited || {}; // 送った招待(部屋の側に覚えておく。入口を閉じても、上の帯と「部屋を出る」で使う)
+  const [linkShared, setLinkShared] = useState(false);   // 招待リンクを送った直後の「コピーした!」
+  const shareRoomLink = async () => {
+    const url = mhRoomLinkUrl('card', room.code);
+    const text = `MFバトルカードで対戦しよう! 部屋の合言葉: ${room.code}${url ? `\n下のリンクを押すと、この部屋に入れるよ\n${url}` : ''}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setLinkShared(true);
+      setTimeout(() => setLinkShared(false), 2000);
+    } catch (_) { /* 共有をやめたときは何もしない */ }
+  };
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const sentRows = useCardPvpSentRows(room);           // 送った招待の、表の今のようす(断られたかを見る)
   // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
@@ -88987,6 +90019,9 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
             <p className="text-[13px] font-bold text-sky-100">合言葉</p>
             <p data-card-pvp-room className="my-1 text-[40px] font-black tracking-[.3em] text-white">{room.code}</p>
+            {room.phase === 'waiting' && !room.foe && !room.guest && (
+              <button type="button" data-card-pvp-share className={`${btn} mb-1 border border-sky-300/50 bg-sky-800 text-white`} onClick={() => { Audio_.fgSe.tap(); void shareRoomLink(); }}>{linkShared ? 'コピーした!' : 'リンクをフレンドに送る'}</button>
+            )}
             <p className="text-[13px] font-bold text-slate-200">{room.phase === 'connecting' ? 'つないでいます…' : room.foe ? (room.foe.aw ? `${room.foe.name}さんが部屋に戻るのを待っています…` : `${room.foe.name}さんが来ました。始めます…`) : room.guest ? '部屋に入っています…' : 'この合言葉をフレンドに伝えて、待っています…'}</p>
             {/* 自分の部屋は、開いたままほかの画面へ出られる(2026-10-30 ソランド・ビートの #4204 と同じ案A)。相手が来たら上の帯(CardMultiAwayBar)で知らせる */}
             {room.phase === 'waiting' && !room.foe && !room.guest && onStepAway && (<>
@@ -89214,7 +90249,7 @@ const CARD_CHAT = (() => {
       const text = cardChatMask(cardChatClean(e.text));
       if (!text || s.muted.has(e.key)) return false;
       if (!e.stamp && e.kind !== 'me' && !prefs.free) return false;
-      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now() };
+      const row = { id: s.seq + 1, key: String(e.key || ''), name: cardChatMask(cardChatClean(e.name, CARD_PVP_NAME_MAX)) || 'ブリーダー', text, stamp: !!e.stamp, kind: e.kind || 'watch', at: Date.now(), ...(e.sf && e.sw ? { sf: e.sf, sw: e.sw } : {}) };
       s = { ...s, seq: row.id, list: [...s.list, row].slice(-CARD_CHAT_LOG_MAX) };
       emit();
       return true;
@@ -89301,6 +90336,14 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
     setWhy('');
     if (!stamp) setText('');
   };
+  // 絵のスタンプ(2026-11-11)。対戦中だけ送れる(観戦の人は言葉の定型だけ)。1試合の回数には数えない(定型と同じ)
+  const [stampEdit, setStampEdit] = useState(false);
+  const sendStamp = (x) => {
+    if (!CARD_PVP.stamp(x)) { setWhy('いまは送れません'); return false; }
+    CARD_CHAT.add({ key: 'me', name: 'あなた', text: x.text, stamp: true, kind: 'me', sf: x.f, sw: x.w });
+    setWhy('');
+    return true;
+  };
   const left = Math.max(0, (CARD_CHAT_LIMIT[mode] || 20) - c.sent);
   const tone = (k) => (k === 'me' ? 'text-sky-200' : k === 'watch' ? 'text-violet-300' : 'text-amber-200');
   const toggle = (k, on) => (
@@ -89322,13 +90365,15 @@ const CardChatPanel = ({ mode = 'pvp', onClose }) => {
               <div key={x.id}>
                 <button type="button" data-card-chat-line={x.kind} onClick={() => setPick(x.kind === 'me' ? null : (pick === x.id ? null : x.id))}
                   className="block w-full border-b border-white/5 py-1 text-left text-[13px] leading-snug" style={JA_WRAP_STYLE}>
-                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.text}
+                  <b className={`mr-1.5 text-[11px] ${tone(x.kind)}`}>{x.name}{x.kind === 'watch' ? '(観戦)' : ''}</b>{x.sf ? <MultiStampView f={x.sf} w={x.sw} text={x.text} size={56} className="align-middle" /> : x.text}
                 </button>
                 {pick === x.id && <button type="button" data-card-chat-mute={x.key} onClick={() => { CARD_CHAT.mute(x.key); setPick(null); }}
                   className="my-1 min-h-[34px] w-full rounded-lg border border-rose-300/50 bg-rose-500/15 text-[12px] font-black text-rose-100">🔇 {x.name}さんのコメントを消す(この{mode === 'watch' ? '観戦' : '試合'}のあいだ)</button>}
               </div>
             ))}
         </div>
+        {mode === 'pvp' && <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={6} className="mb-2 max-h-[24vh] overflow-y-auto" />}
+        {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
         <div className="mb-2 grid grid-cols-3 gap-1">
           {CARD_PVP_STAMPS.map((t, i) => <button key={t} type="button" data-card-chat-stamp={i} onClick={() => send(t, i)} className="min-h-[36px] rounded-lg bg-white/10 px-1 text-[12px] font-bold active:scale-[.97]">{t}</button>)}
         </div>
@@ -95298,6 +96343,9 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  // 助手えらび(はじめての人)。選んだ助手と、くわしい紹介を開いている助手(2026-11-11 案9。顔と一言を1行ずつ並べ、紹介はタップで開く)
+  const [assistantPickSel, setAssistantPickSel] = useState(null);
+  const [assistantPickOpen, setAssistantPickOpen] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
@@ -100697,6 +101745,22 @@ function MonsterHeroGame() {
   // はじめて遊ぶ人は、HOME に着くたびにお話を1本だけ(STORY_ONE_AT_A_TIME_KEY)。この HOME でもう流したかを覚え、HOME を離れたら戻す
   const [storyOneAtATime, setStoryOneAtATime] = useState(false);
   const storyShownThisHomeRef = useRef(false);
+  // 最初の本番のバトルを終えたか。既定は真(前から遊んでいる人・読み込み前は何も変えない)。はじめての人で印がまだ無いときだけ偽にする
+  const [firstBattleDone, setFirstBattleDone] = useState(true);
+  const realBattleSeenRef = useRef(false);
+  // すでに本番でクリアした記録がある人は、終えた扱い(お話を止めたままにしない)
+  useEffect(() => {
+    if (firstBattleDone) return;
+    if (Object.values(clearCounts || {}).some(n => (Number(n) || 0) > 0)) setFirstBattleDone(true);
+  }, [clearCounts, firstBattleDone]);
+  useEffect(() => {
+    if (gameState === 'BATTLE' && battleTutorialStep == null) { realBattleSeenRef.current = true; return; }
+    if (gameState === 'HOME' && realBattleSeenRef.current && !firstBattleDone) {
+      realBattleSeenRef.current = false;
+      setFirstBattleDone(true);
+      (async () => { try { await storeSet(FIRST_BATTLE_DONE_KEY, true, false); } catch {} })();
+    }
+  }, [gameState, battleTutorialStep, firstBattleDone]);
   useEffect(() => { if (gameState !== 'HOME') storyShownThisHomeRef.current = false; }, [gameState]);
   // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
   // ほかの案内が出ていないHOMEへ来たところで、フレンド画面を開いて申請の確認を出す。公開前・はじめての設定の前は何もしない
@@ -100785,6 +101849,46 @@ function MonsterHeroGame() {
     setPendingFriendCode('');
     openFriends({ code: pendingFriendCode });
   }, [pendingFriendCode, friendsActive, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
+  // 部屋の招待リンク(?beatRoom=コード / ?cardRoom=コード・2026-11-11)。引数は読んだらすぐURLから消し(履歴に残さない・二度入らない)、
+  // 新しいキー(MH_ROOM_LINK_KEY)に預ける。入るのは、起動の流れ・はじめての案内が済んだHOMEに着いてから(?friend= と同じ条件)。
+  // はじめての人は、最初の案内(チュートリアルなど)が全部済むまで預かったまま待つ。3時間たったら捨てる
+  const [pendingRoomLink, setPendingRoomLink] = useState(null);
+  const [roomLinkNotice, setRoomLinkNotice] = useState('');   // リンクの部屋に入れなかったときの一言(閉じるまで出す)
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    let alive = true;
+    (async () => {
+      let link = null;
+      try { link = mhRoomLinkFromSearch(window.location.search); } catch (error) { link = null; }
+      if (link) {
+        try {
+          const url = new URL(window.location.href);
+          Object.values(MH_ROOM_LINK_PARAMS).forEach((name) => url.searchParams.delete(name));
+          window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+        } catch (error) { /* URLを直せなくても、部屋には入れる */ }
+        link = { ...link, at: Date.now() };
+        try { await storeSet(MH_ROOM_LINK_KEY, link, false); } catch (error) { /* 預けられなくても、この起動のうちは入れる */ }
+      } else {
+        link = mhNormalizeRoomLink(await storeGet(MH_ROOM_LINK_KEY, null, false));
+      }
+      if (alive && link) setPendingRoomLink(link);
+    })();
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (!pendingRoomLink || pendingFriendCode) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
+      && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length === 0)) return;
+    const link = pendingRoomLink;
+    setPendingRoomLink(null);
+    void storeSet(MH_ROOM_LINK_KEY, null, false);
+    if (!mhNormalizeRoomLink(link)) return;
+    if (link.kind === 'beat') { mhBeatRoomLinkRequest(link.code); void openRhythmDemo({ to: 'RHYTHM_MULTI' }); }
+    else if (link.kind === 'card') {
+      if (cardBattleEntryVisible && cardPvpOpen()) { CARD_PVP_JOIN.request(link.code); setCardOrigin('home'); setGameState('CARD_TOP'); }
+      else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう一度リンクを開いてください');
+    }
+  }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
   // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
   const rhythmEventStoryStartedRef = useRef([]);
@@ -100808,6 +101912,9 @@ function MonsterHeroGame() {
       && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     // ★はじめて遊ぶ人は、続けて流すのを1本まで(2026-10-27 社長)。並んだお話は消さずに待たせ、HOME を離れて戻ったときに流す
     if (storyOneAtATime && storyShownThisHomeRef.current) return;
+    // 案3: はじめての人は、最初の本番のバトルを終えるまで自動では流さない(HOME の札・回想からは見られる)。案6: ワンポイントアドバイスの窓が出ているあいだも待つ
+    if (storyOneAtATime && !firstBattleDone) return;
+    if (dailyMasuAdvice) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     storyShownThisHomeRef.current = true;
@@ -100819,7 +101926,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime, firstBattleDone, dailyMasuAdvice]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -102609,6 +103716,10 @@ function MonsterHeroGame() {
         let oneAtATime = (await storeGet(STORY_ONE_AT_A_TIME_KEY, false, false)) === true;
         if (!everOnboarded && !oneAtATime) { await storeSet(STORY_ONE_AT_A_TIME_KEY, true, false); oneAtATime = true; }
         setStoryOneAtATime(oneAtATime);
+        // 案3: はじめての人で、最初の本番のバトルがまだなら偽。すでにクリアの記録がある人は終えた扱い(閉じ込めない)
+        if (oneAtATime && (await storeGet(FIRST_BATTLE_DONE_KEY, false, false)) !== true) {
+          setFirstBattleDone(false);
+        }
       } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
@@ -104467,6 +105578,20 @@ function MonsterHeroGame() {
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    // マルチのスタンプ(2026-11-11)。ビートPとスタンプの持ち物(mh_multi_stamps_v1)を1つの取引で保存する(39-multi-stamp.jsx)
+    if (offer?.kind==='stamp') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await multiStampExchange(offer);
+        if (r.ok) { setRhythmEventPoints(r.eventPoints); saveMissionProgress('market'); }
+        else setMarketExchangeError(r.reason==='points'?'ビートPが足りません。':r.reason==='owned'?'このスタンプはもう持っています。':'交換を保存できませんでした。ビートPと所持品は変更していません。');
+        return r;
+      } catch {
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+        return { ok:false, reason:'save' };
+      } finally { marketPurchaseProcessingRef.current = false; }
+    }
     // 優待パス還元の3つは、画面から来た値段を使わず、いつもの品物と保存されている印から決め直す(2026-11-05・画面の値が古くても通さない)
     if (offer && LEGEND_BREEDER_PASS_OFFERS[offer.id]) {
       const base = RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.id === offer.id) || offer;
@@ -107100,7 +108225,7 @@ function MonsterHeroGame() {
     const pages = tutorialKind === 'rhythm'
       ? ((typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current)) || [])
       : tutorialKind === 'tour'
-      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [])
+      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current, storyOneAtATime && !firstBattleDone)) || [])
       : [];
     return pages[tutorialStep]?.spot || null;
   })();
@@ -107133,7 +108258,7 @@ function MonsterHeroGame() {
     setTutorialStep(null);
     // 最初のあいさつを読み終えたら、名前とアイコンを決めるプロフィール画面へ進む
     if (kind === 'intro') { setGameState('PROFILE'); return; }
-    if (kind === 'battleGuide') return;
+    if (kind === 'battleGuide' || kind === 'battleMore') return;
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
     // 最後まで読んだときだけ、そのまま「あそびかた練習」(演奏画面で叩いて覚える)へ入る。
@@ -107304,12 +108429,58 @@ function MonsterHeroGame() {
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
 
+  // ===== つづきのれんしゅうの誘い(2026-11-11 社長 1=A) =====
+  // はじめの1戦を終えた人が、はじめての本番のバトル(れんしゅう・デバッグでない)を1回終えて HOME に戻ったとき、一度だけ誘う。
+  // 誘ったら mh_battle_tutorial_more_v1.offered を立てて、二度と出さない。れんしゅうを全部見た人(seen)には出さない
+  const realBattlePlayedRef = useRef(false);
+  useEffect(() => {
+    if (runStage === 'BATTLE' && !debugBattleRef.current && battleTutorialStep == null) realBattlePlayedRef.current = true;
+  }, [runStage, battleTutorialStep]);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || runStage !== null || !realBattlePlayedRef.current || tutorialStep != null || battleTutorialStep != null) return;
+    realBattlePlayedRef.current = false;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first, more] = await Promise.all([
+          storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+          storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false),
+          storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false),
+        ]);
+        const f = normalizeBattleTutorialFirst(first), m = normalizeBattleTutorialMore(more);
+        if (cancelled || seen === true || !f.done || m.offered) return;
+        await storeSet(BATTLE_TUTORIAL_MORE_KEY, { ...m, offered: true }, false);
+        if (!cancelled) { setTutorialKind('battleMore'); setTutorialStep(0); }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [bootPhase, gameState, runStage, tutorialStep, battleTutorialStep]);
+  // ===== 入口3画面の一言(2026-11-11 社長 2=A) =====
+  // バトルの仕組み・モード・難易度をえらぶ画面を、ふだん(れんしゅう以外で)初めて開いたとき、一度だけ下に出す。
+  // れんしゅうを全部見た人(seen)には出さない。出したら mh_battle_tutorial_first_v1.hints に書く(同じ画面で二度出さない)
+  const [battleSelectHint, setBattleSelectHint] = useState(null);
+  useEffect(() => {
+    const key = gameState === 'BATTLE_SYSTEM_SELECT' ? 'system' : gameState === 'BATTLE_MODE_SELECT' ? 'mode' : gameState === 'BATTLE_DIFFICULTY_SELECT' ? 'difficulty' : null;
+    if (!key) { setBattleSelectHint(null); return undefined; }
+    if (battleTutorialStep != null || typeof BATTLE_SELECT_HINTS === 'undefined' || !BATTLE_SELECT_HINTS[key]) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first] = await Promise.all([storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false)]);
+        const f = normalizeBattleTutorialFirst(first);
+        if (cancelled || seen === true || f.hints[key]) return;
+        await storeSet(BATTLE_TUTORIAL_FIRST_KEY, { ...f, hints: { ...f.hints, [key]: true } }, false);
+        if (!cancelled) setBattleSelectHint(key);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, battleTutorialStep]);
   // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
   // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
   useEffect(() => {
     if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded ||
         tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || inheritedUniqueCompensation ||
-        dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
+        dailyMasuAdvice || eventReplay || dailyMasuAdviceCheckedRef.current) return;
     dailyMasuAdviceCheckedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -107334,7 +108505,7 @@ function MonsterHeroGame() {
       if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true, shortcut: quickClearTotal >= DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS });
     })();
     return () => { cancelled = true; };
-  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, eventReplay, masuMons.length]);
 
   // モンヒロバトルの入口で仕組みを選んだとき(2026-09-20 ユーザー指示)。
   // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
@@ -112472,13 +113643,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 'tactics'(タクティクスバトルのれんしゅう。公開前なのでデバッグからだけ)。
   // ★どの台本かで「どのモードで走らせるか」「どの台本データを使うか」が決まる。
   //   3つの対応をここ1か所にまとめて、入口が増えても取り違えないようにする
-  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];
+  // 'first'(はじめの1戦・21手)と 'more'(つづきのれんしゅう・勇者えらびから)は 2026-11-11 に足した(docs/progress/first-30min/BATTLE-TUTORIAL-SPLIT.md)
+  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics', 'first', 'more'];
   const battleTutorialVariantOf = (variant) => (BATTLE_TUTORIAL_VARIANTS.includes(variant) ? variant : 'v2');
   const battleTutorialModeOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
     ? BATTLE_MODE_TACTICS : BATTLE_MODE_CHALLENGE);
   const battleTutorialScenarioOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
     ? ((typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS) || null)
-    : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
+    : battleTutorialVariantOf(variant) === 'first'
+      ? ((typeof BATTLE_TUTORIAL_SCENARIO_FIRST !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_FIRST) || null)
+      : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     stopAllAuto();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
@@ -112513,6 +113687,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★v2とタクティクスは「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
     //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
     //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
+    // つづきのれんしゅうは入口の3画面を飛ばして、勇者えらびから始める(はじめの1戦で通った所なので)
+    if (battleTutorialVariantOf(variant) === 'more') {
+      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      advanceRunStage('PICK_HERO');
+      return;
+    }
     if (variant !== 'v1') {
       setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
@@ -112547,6 +113727,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
   const endBattleTutorial = async (completed = false) => {
     const back = battleTutorialReturn;
+    const endedVariant = battleTutorialVariant;
     // 台本を外す。以降のバトルはふだんどおりの抽選に戻る
     battleScenarioRef.current = null;
     battleScenarioIntentIndexRef.current = 0;
@@ -112564,13 +113745,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setBattleTutorialVariant('v2');
     // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
     // デバッグのお試し再生で、通常プレイの既読状態を書き換えないようにする
-    if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
+    // はじめの1戦を終えたら新しい印(mh_battle_tutorial_first_v1)だけ。「れんしゅうを全部見た」(seen)は、つづき・全部通しを終えたときだけ立てる(意味は変えない)
+    if (completed && back === 'HOME') {
+      try {
+        if (endedVariant === 'first') {
+          const cur = normalizeBattleTutorialFirst(await storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false));
+          await storeSet(BATTLE_TUTORIAL_FIRST_KEY, { ...cur, done: true, at: cur.at || Date.now() }, false);
+        } else {
+          await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);
+          if (endedVariant === 'more') {
+            const cur = normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false));
+            await storeSet(BATTLE_TUTORIAL_MORE_KEY, { ...cur, offered: true, done: true }, false);
+          }
+        }
+      } catch {}
+    }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') { returnToHome(); return; }
     setGameState(back || 'DEBUG_SETTINGS');
   };
   const battleTutorialSteps = (battleTutorialVariant === 'v1'
     ? (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)
+    : battleTutorialVariant === 'first'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_FIRST !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_FIRST)
+    : battleTutorialVariant === 'more'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_MORE !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_MORE)
     : battleTutorialVariant === 'tactics'
       ? (typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS)
       : (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)) || [];
@@ -117248,6 +118447,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {renderCardQuickRunStrip()}
         {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
         {/* MFバトルカードのマルチ: 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(91 の CardMultiAwayBar・2026-10-30。ビートの帯と同じ形) */}
+        {roomLinkNotice&&(<div className="pointer-events-none fixed inset-x-0 top-0 z-[99000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"><div data-room-link-notice role="alert" className="pointer-events-auto w-full max-w-md rounded-2xl border-2 border-sky-400 bg-slate-900/95 p-3 shadow-2xl"><p className="text-[13px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(roomLinkNotice)}</p><button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[14px] font-black text-white" onClick={()=>setRoomLinkNotice('')}>とじる</button></div></div>)}
         <CardMultiAwayBar busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onReturn={()=>{CARD_PVP_BACK.request();if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} sessionTickets={ownedItemCount(ownedItems,RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseSessionTicket={consumeBuddyTicket} onRefundSessionTicket={refundBuddyTicket} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
@@ -117447,30 +118647,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='ASSISTANT_SELECT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
             {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
-            <div className="shrink-0 text-center mb-3" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
+            <div className="shrink-0 text-center mb-2" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
-              <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
+              <p className="text-[10px] text-slate-300 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。</p>
+              <span data-assistant-pick-later className="mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950">あとからいつでも変えられます</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
-                {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
-                {assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(
-                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
-                    aria-label={`${who.name}を選ぶ`}
-                    className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
-                    style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
-                    <AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>
-                    <span className="text-[13px] font-black text-white">{who.name}</span>
-                    <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
-                    <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この助手にする</span>
-                  </button>
-                ))}
-              </div>
-              <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
-                3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
-              </p>
-            </div>
+            {(()=>{
+              const list=assistantsUnlockedFrom(rhythmEventStorySeen);
+              const pickId=(list.some(w=>w.id===assistantPickSel)?assistantPickSel:null)||(list.some(w=>w.id===selectedAssistantId)?selectedAssistantId:null)||(list[0]&&list[0].id);
+              const pick=list.find(w=>w.id===pickId)||list[0];
+              return <>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="w-full max-w-md mx-auto flex flex-col gap-2 pb-2">
+                    {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
+                    {list.map(who=>{const on=who.id===pickId;const open=assistantPickOpen===who.id;return(
+                      <div key={who.id} className="rounded-2xl"
+                        style={{border:`2px solid ${on?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:on?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
+                        <div className="flex items-center gap-3 px-3 py-2">
+                          <button type="button" aria-label={`${who.name}を選ぶ`} aria-pressed={on} onClick={()=>setAssistantPickSel(who.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[.98]">
+                            <AssistantFace who={who} size={56} accent={who.accent} expression="happy"/>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[14px] font-black text-white">{who.name}</span>
+                              <span className="mt-0.5 block text-[11px] font-black leading-tight" style={{color:who.accent}}>{who.tagline||''}</span>
+                            </span>
+                          </button>
+                          <button type="button" aria-label={`${who.name}のくわしい紹介`} aria-expanded={open} onClick={()=>setAssistantPickOpen(open?null:who.id)} className="shrink-0 min-h-[44px] px-1 text-[11px] font-black text-slate-300 active:scale-95">くわしく{open?'▲':'›'}</button>
+                        </div>
+                        {open&&<div data-assistant-pick-intro className="px-3 pb-3 text-[11px] leading-snug text-slate-200">{who.intro||''}</div>}
+                      </div>);})}
+                  </div>
+                  <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
+                    仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
+                  </p>
+                </div>
+                {pick&&<div className="shrink-0 w-full max-w-md mx-auto pt-1" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
+                  <div className="mb-1 text-center text-[11px] font-black text-slate-300">{pick.name}を選んでいます</div>
+                  <button type="button" data-assistant-pick-confirm onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                    className="min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]" style={{backgroundColor:pick.accent}}>この助手にする</button>
+                </div>}
+              </>;
+            })()}
           </div>
         )}
 
@@ -119302,6 +120518,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <ScrollMoreList data-reward-receipt-list moreText={`全${rewardReceipt.rewards.length}件・窓の中を下へ送ると続きが見られます`} className="mt-3 max-h-[46vh] grid grid-cols-1 gap-1.5 overflow-y-auto landscape:grid-cols-2">
             {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white landscape:px-2 landscape:py-1.5 landscape:text-[11px] landscape:leading-tight">{giftRewardText(reward)}</div>)}
           </ScrollMoreList>
+          {storyOneAtATime&&rewardReceipt.rewards.some(r=>r&&r.type==='diamond')&&<div data-reward-receipt-hint className="mt-2 rounded-lg bg-cyan-900/40 px-2 py-1.5 text-center text-[11px] font-bold leading-snug text-cyan-100">💎 ダイヤは、HOMEの「マーケット」のダイヤショップで使えます</div>}
           {rewardReceipt.count>1&&<div className="mt-2 text-center text-[10px] font-bold text-slate-400">{rewardReceipt.count}件をまとめて受け取りました</div>}
           <div className="mt-3"><ModalCloseButton onClick={()=>setRewardReceipt(null)}/></div>
         </ModalFrame>
@@ -120199,17 +121416,36 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         />
       )}
 
+      {battleSelectHint&&battleTutorialStep==null&&typeof BATTLE_SELECT_HINTS!=='undefined'&&BATTLE_SELECT_HINTS[battleSelectHint]&&activeAssistant&&(
+        <div data-battle-select-hint={battleSelectHint} className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pointer-events-none" style={{paddingBottom:'max(12px, env(safe-area-inset-bottom))'}}>
+          <div className="pointer-events-auto w-full max-w-md rounded-2xl border-2 bg-slate-950/95 p-3 shadow-2xl" style={{borderColor:activeAssistant.accent}}>
+            <div className="flex items-start gap-2">
+              <img src={assistantFaceSrc(activeAssistant,'happy')} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover"/>
+              <div className="min-w-0 flex-1">
+                <span className="block text-[10px] font-black tracking-widest" style={{color:activeAssistant.accent}}>{activeAssistant.name}</span>
+                <span className="block text-[12px] font-bold leading-relaxed text-white" style={JA_WRAP_STYLE}>{jaWrap(BATTLE_SELECT_HINTS[battleSelectHint])}</span>
+              </div>
+            </div>
+            <button type="button" data-battle-select-hint-close onClick={()=>setBattleSelectHint(null)} className="mt-2 min-h-[40px] w-full rounded-xl text-[12px] font-black text-black active:scale-[.98]" style={{backgroundColor:activeAssistant.accent}}>わかった！</button>
+          </div>
+        </div>
+      )}
       {tutorialStep!=null&&(()=>{
         const intro=tutorialKind==='intro';
+        const battleMore=tutorialKind==='battleMore';
+        // つづきの誘いは、はじめての案内と同じ見た目(スキップなし・次へ)で出す
         const battleGuide=tutorialKind==='battleGuide';
+        const guideLook=battleGuide||battleMore;
         const rhythm=tutorialKind==='rhythm';
         const pages=(rhythm
           ? ((typeof assistantRhythmTutorialPages==='function'&&assistantRhythmTutorialPages(selectedAssistantId))||[])
+          : battleMore
+          ? ((typeof assistantBattleMorePages==='function'&&assistantBattleMorePages(selectedAssistantId))||[])
           : battleGuide
-          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
+          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[])
           : intro
           ? ((typeof assistantIntroPages==='function'&&assistantIntroPages(selectedAssistantId))||[])
-          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId))||[]));
+          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
         if(!page) return null;
         const who=activeAssistant;
@@ -120220,7 +121456,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="w-full max-w-md flex flex-col items-center">
             <div className="w-full flex justify-between items-center mb-2">
               <span className="text-[10px] font-black tracking-widest" style={{color:who.accent}}>{tutorialStep+1} / {pages.length}</span>
-              {!battleGuide&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
+              {!guideLook&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
             </div>
             <div className="w-full flex items-end gap-3">
               <AssistantFace who={who} size={104} accent={who.accent} expression={page.e}/>
@@ -120241,22 +121477,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 案内の最後のページ(offer:'battle')では、そのままバトルの練習へ入れる。
                 断ってもヘルプの「バトルのれんしゅう」からいつでも始められる */}
             {page.offer==='battle'&&(
-              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
+              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME','first'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
             )}
             {page.offer==='battleGuide'&&(
               <div className="w-full grid grid-cols-1 gap-2 mt-3">
-                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
+                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','first'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
                 <button onClick={()=>setTutorialStep(v=>v+1)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
+              </div>
+            )}
+            {page.offer==='battleMore'&&(
+              <div className="w-full grid grid-cols-1 gap-2 mt-3" data-battle-more-offer>
+                <button data-battle-more-start onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','more'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>つづきのれんしゅうをやる</button>
+                <button data-battle-more-later onClick={()=>{ void (async()=>{ try{ const cur=normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY,null,false)); await storeSet(BATTLE_TUTORIAL_MORE_KEY,{...cur,offered:true,declined:true},false); }catch{} })(); setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
               </div>
             )}
             {page.declined&&(
               <button onClick={()=>finishTutorial(false)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>わかった！</button>
             )}
-            {!battleGuide&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
+            {!guideLook&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">戻る</button>
               <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}</button>
             </div>}
-            {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
+            {guideLook&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
           </div>
         </div>);
       })()}
@@ -120432,7 +121674,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 )}
                 {topic.launch==='battleTutorial'&&(
-                  <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
+                  <div className="space-y-2" data-battle-tutorial-launch>
+                    <button data-battle-tutorial-launch-first onClick={()=>startBattleTutorial('HOME','first')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 はじめの1戦(カードを出して勝つまで)</button>
+                    <button data-battle-tutorial-launch-more onClick={()=>startBattleTutorial('HOME','more')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 つづきのれんしゅう(バトルのいろいろな仕組み)</button>
+                    <button data-battle-tutorial-launch-all onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95">🎓 れんしゅうを最初から全部通す</button>
+                  </div>
                 )}
                 <div className="pt-1 flex gap-2">
                   <button onClick={()=>setHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>

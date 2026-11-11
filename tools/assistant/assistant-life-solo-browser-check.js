@@ -149,7 +149,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       // ⑦ 道具タブ・交換所
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-      check('⑦ 道具タブに「💗 1人に贈る道具」と4種類・10種類の行に「1人に贈ると」', /1人に贈る道具/.test(items) && /手書きの手紙/.test(items) && /小さなおまもり/.test(items) && (await page.locator('[data-assistant-life-item-solo-amt]').count()) === 10);
+      check('⑦ 道具の一覧に「💗 1人に贈る道具」と4種類・「上の10種類も1人に贈れます」', /1人に贈る道具/.test(items) && /手書きの手紙/.test(items) && /小さなおまもり/.test(items) && /上の10種類も1人に贈れます/.test(items) && (await page.locator('[data-assistant-life-item-solo-amt]').count()) === 4);
       if (SHOTS) { await page.locator('[data-assistant-life-items-solo]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, 'tate-6-items.png') }); }
       await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"]').last().click(); await page.waitForTimeout(900);
       const shop = await page.locator('[data-event-point-shop]').innerText().catch(() => '');
