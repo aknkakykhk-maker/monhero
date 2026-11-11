@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "id": "5a0e08f95d56",
+  "id": "abcf63dcf6c8",
   "packs": {"beat":{"bytes":138961302,"count":105},"battle":{"bytes":140233240,"count":832},"card":{"bytes":37779758,"count":1048},"all":{"bytes":316974300,"count":1985},"core":{"bytes":20548463,"count":23}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
@@ -1990,7 +1990,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"314842c050e0","size":303343,"pack":"core"},
+    "tailwind.css": {"v":"94e6b35e0d49","size":303343,"pack":"core"},
     "data/images/images-ally.js": {"v":"4c0cc620fa70","size":73532,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2010,6 +2010,6 @@
     "data/assistants.js": {"v":"a64dbe7f6a4f","size":2142723,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"4bcc8e3c74ef","size":10296822,"pack":"core"}
+    "game-system.compiled.js": {"v":"dd5cfd4b52d1","size":10296822,"pack":"core"}
   }
 }

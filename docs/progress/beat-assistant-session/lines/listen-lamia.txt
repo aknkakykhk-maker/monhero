@@ -1,8 +1,8 @@
-listen:lamia | mua excited 0:34から一気にいちばん強くなるの！ ここまぢでアガる♪
+listen:lamia | mua excited 0:32から一気にいちばん強くなるの！ ここまぢでアガる♪
 listen:lamia | kiki normal 最初の静かなところから少しずつ大きくなるの、きれいでつ
-listen:lamia | momosuke excited 0:58でもう一回いちばん強くなるの！！ 最高潮だよ♡
-listen:lamia | dra troubled BPM199でLv.50だぞ。速すぎて、おでの冒険も駆け足だな
-listen:lamia | atsu happy 2:10から静かに締めていくとこ、余韻あっていいよね笑
-listen:lamia | kyuko happy 1:39でいったん落として、1:49でもう一回上げるのがいいんだよね〜
-listen:lamia | sorashido normal BPM199で769ノーツ、Lv.50。強く打つ音が56%です・・・！
-listen:lamia | erubin normal 1:03で少し落ち着く所、ひと息つけるね
+listen:lamia | momosuke excited 0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡
+listen:lamia | dra troubled BPM199でLv.51だぞ。速すぎて、おでの冒険も駆け足だな
+listen:lamia | atsu happy 2:08から静かに締めていくとこ、余韻あっていいよね笑
+listen:lamia | kyuko happy 1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜
+listen:lamia | sorashido normal BPM199で797ノーツ、Lv.51。強く打つ音が56%です・・・！
+listen:lamia | erubin normal 1:00で少し落ち着く所、ひと息つけるね
