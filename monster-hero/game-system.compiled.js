@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 662682cc848a9711
+// source-sha256: 018b67bd098b1ed9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40088,7 +40088,17 @@ const rhythmNoteIsSky = note => rhythmNoteSkyHeight(note) > 0 || rhythmSlideHasS
 const RHYTHM_PLAY_WATCH = {
   hud: null,
   songId: '',
-  timeMs: 0
+  timeMs: 0,
+  frames: 0,
+  jd: null
+};
+const RHYTHM_PLAY_WATCH_CODES = {
+  MARVELOUS: 0,
+  EXCELLENT: 1,
+  GREAT: 2,
+  GOOD: 3,
+  BAD: 4,
+  MISS: 5
 };
 const rhythmCreateHud = () => {
   let state = rhythmHudInitial();
@@ -41084,6 +41094,7 @@ const RhythmTapTest = ({
     RHYTHM_PLAY_WATCH.timeMs = 0;
     return () => {
       if (RHYTHM_PLAY_WATCH.hud === hud) {
+        RHYTHM_PLAY_WATCH.jd = null;
         RHYTHM_PLAY_WATCH.hud = null;
         RHYTHM_PLAY_WATCH.songId = '';
         RHYTHM_PLAY_WATCH.timeMs = 0;
@@ -42003,6 +42014,10 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused || note.done) return;
     comboTicksRef.current(note, judgment);
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
+    {
+      const jd = RHYTHM_PLAY_WATCH.jd;
+      if (jd !== null) jd.push(note.index, RHYTHM_PLAY_WATCH_CODES[judgment] ?? 5);
+    }
     RHYTHM_INPUT_REC.event(judgment === 'MISS' ? 'miss' : 'hit', {
       note: note.index,
       j: judgment,
@@ -43196,6 +43211,7 @@ const RhythmTapTest = ({
       }
       const timeEl = songTimeRef.current;
       RHYTHM_PLAY_WATCH.timeMs = songTimeMs;
+      RHYTHM_PLAY_WATCH.frames++;
       if (timeEl) {
         const shownMs = Math.max(0, Math.min(playEndTimeMs, songTimeMs)),
           second = Math.floor(shownMs / 1000);
@@ -92163,9 +92179,20 @@ const RHYTHM_MULTI = (() => {
     const now = Date.now();
     return Object.keys(s.watchers).filter(id => s.watchers[id].until > now);
   };
+  let watchLite = false;
+  let watchLowCount = 0;
+  let watchFrames = -1;
+  let watchFramesAt = 0;
+  const watchJdOff = () => {
+    if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = null;
+  };
   const watchStop = () => {
     if (watchTimer) clearInterval(watchTimer);
     watchTimer = null;
+    watchJdOff();
+    watchLite = false;
+    watchLowCount = 0;
+    watchFrames = -1;
   };
   const watchAdStop = () => {
     if (watchAdTimer) {
@@ -92204,12 +92231,33 @@ const RHYTHM_MULTI = (() => {
       at: now
     };
     if (h.counts) msg.k = RHYTHM_MULTI_JUDGMENT_IDS.map(id => rhythmMultiInt(h.counts[id], 100000));
+    if (watch && typeof watch.frames === 'number') {
+      if (watchFrames >= 0 && now > watchFramesAt) {
+        const fps = (watch.frames - watchFrames) * 1000 / (now - watchFramesAt);
+        watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
+        if (watchLowCount >= 2) watchLite = true;
+      }
+      watchFrames = watch.frames;
+      watchFramesAt = now;
+    }
+    if (watchLite) {
+      watchJdOff();
+      msg.lt = 1;
+    } else if (watch && Array.isArray(watch.jd)) {
+      const jd = watch.jd;
+      if (jd.length > 240) jd.splice(0, jd.length - 240);
+      if (jd.length) msg.j = jd.splice(0, jd.length);
+    }
     if (fin === true) msg.fin = 1;
     socket.send(msg);
   };
   const watchSync = () => {
     const focused = !!s && !!s.live && !s.live.done && watchersNow().some(id => s.watchers[id].f === s.selfId);
     if (focused && !watchTimer) {
+      watchLite = false;
+      watchLowCount = 0;
+      watchFrames = -1;
+      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = [];
       watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS);
       watchSend();
     } else if (!focused && watchTimer) watchStop();
@@ -92986,6 +93034,7 @@ const RHYTHM_MULTI = (() => {
       if (watchFeed) watchFeed(raw);
       return;
     }
+    if (raw && raw.t === 'res' && watchFeed) watchFeed(raw);
     const playingNow = selfMember();
     if (playingNow && playingNow.playing) {
       s.queue.push(raw);
@@ -93759,6 +93808,7 @@ const RHYTHM_WATCH = (() => {
       if (st.round !== round) {
         st.round = round;
         st.rows = {};
+        st.judged = {};
       }
       st.songId = rhythmMultiText(raw.sg, 60);
       st.people = people;
@@ -93801,9 +93851,41 @@ const RHYTHM_WATCH = (() => {
       if (Array.isArray(raw.k)) row.k = RHYTHM_MULTI_JUDGMENT_IDS.map((_, i) => intOf(raw.k[i], 100000));
       row.prevK = prev.k || null;
       row.at = now;
+      row.pAt = raw.p != null ? now : prev.pAt || 0;
+      row.lt = raw.lt === 1;
+      if (Array.isArray(raw.j)) {
+        const jm = st.judged[id] || (st.judged[id] = new Map());
+        for (let i = 0; i + 1 < raw.j.length && i < 240; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
+      }
       st.rows[id] = row;
       st.lastPg = now;
-      if (st.people.every(x => st.rows[x.id] && st.rows[x.id].fin)) st.phase = 'ended';
+      if (st.people.every(x => st.rows[x.id] && st.rows[x.id].fin)) {
+        st.phase = 'ended';
+        st.endedAt = now;
+      }
+      emit();
+      return;
+    }
+    if (raw.t === 'res') {
+      const id = rhythmMultiText(raw.id, 40);
+      const r = raw.res && typeof raw.res === 'object' ? raw.res : null;
+      if (!r || rhythmMultiText(r.startId, 40) !== st.round || !st.people.some(x => x.id === id)) return;
+      const prev = st.rows[id] || {};
+      st.rows[id] = {
+        ...prev,
+        s: intOf(r.score, RHYTHM_MULTI_LIVE_SCORE_MAX),
+        c: prev.c || 0,
+        p: prev.p || 0,
+        l: prev.l == null ? null : prev.l,
+        k: prev.k || null,
+        fin: true,
+        at: now
+      };
+      st.lastPg = now;
+      if (st.people.every(x => st.rows[x.id] && st.rows[x.id].fin)) {
+        st.phase = 'ended';
+        st.endedAt = now;
+      }
       emit();
       return;
     }
@@ -93821,7 +93903,7 @@ const RHYTHM_WATCH = (() => {
       };
       st.heard = true;
       const ph = m.room && m.room.phase;
-      if (ph && ph !== 'playing' && (st.phase === 'connecting' || st.phase === 'none' || st.phase === 'playing' && now - st.lastPg > 8000 || st.phase === 'ended')) {
+      if (ph && ph !== 'playing' && (st.phase === 'connecting' || st.phase === 'none' || st.phase === 'playing' && now - st.lastPg > 8000 || st.phase === 'ended' && now - (st.endedAt || 0) > 8000)) {
         st.phase = 'waiting';
       }
       emit();
@@ -93839,6 +93921,7 @@ const RHYTHM_WATCH = (() => {
       st.songId = m.songId;
       st.people = people;
       st.rows = {};
+      st.judged = {};
       st.phase = 'playing';
       st.lastPg = now;
       if (!people.some(x => x.id === st.focus)) st.focus = people[0].id;
@@ -93852,6 +93935,7 @@ const RHYTHM_WATCH = (() => {
     const since = now - st.openedAt;
     if (st.phase === 'playing' && now - st.lastPg > 20000) {
       st.phase = 'ended';
+      st.endedAt = now;
       emit();
     }
     if (st.phase === 'connecting' && since > 12000) {
@@ -93890,6 +93974,7 @@ const RHYTHM_WATCH = (() => {
         rows: {},
         focus: '',
         members: {},
+        judged: {},
         openedAt: now,
         lastPing: 0,
         lastPg: 0,
@@ -96220,6 +96305,132 @@ const useRhythmWatchView = () => {
   React.useEffect(() => RHYTHM_WATCH.on(bump), []);
   return RHYTHM_WATCH.view();
 };
+const RHYTHM_WATCH_LANE_COLORS = Object.freeze({
+  TAP: '#38bdf8',
+  HOLD: '#34d399',
+  FLICK: '#f472b6',
+  SLIDE: '#a78bfa'
+});
+const RHYTHM_WATCH_LANE_SPAN_MS = 1800;
+const RHYTHM_WATCH_LANE_DELAY_MS = 1500;
+const rhythmWatchChartOf = (songs, songId, diffId) => {
+  const song = (songs || []).find(x => x.songId === songId);
+  const chart = song && song.difficulties ? song.difficulties[diffId] : null;
+  return chart && Array.isArray(chart.notes) && chart.notes.length ? chart : null;
+};
+function RhythmWatchLane({
+  chart
+}) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const cv = ref.current;
+    if (!cv || !chart) return undefined;
+    const ctx = cv.getContext('2d');
+    const notes = chart.notes;
+    const lanes = Math.max(1, Math.min(8, Number(chart.laneCount) || 5));
+    let raf = 0;
+    let last = 0;
+    let alive = true;
+    const firstFrom = t => {
+      let lo = 0;
+      let hi = notes.length;
+      while (lo < hi) {
+        const mid = lo + hi >> 1;
+        if (notes[mid].timeMs < t) lo = mid + 1;else hi = mid;
+      }
+      return lo;
+    };
+    const frame = stamp => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      if (stamp - last < 33) return;
+      last = stamp;
+      const v = RHYTHM_WATCH.view();
+      if (!v || !ctx) return;
+      const row = v.rows[v.focus];
+      const w = cv.clientWidth;
+      const h = cv.clientHeight;
+      if (!(w > 0 && h > 0)) return;
+      const dpr = Math.min(2, typeof window !== 'undefined' && window.devicePixelRatio || 1);
+      if (cv.width !== Math.round(w * dpr)) {
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const hitY = h * 0.84;
+      const lw = w / lanes;
+      const now = (row && row.pAt ? row.p + (Date.now() - row.pAt) : 0) - RHYTHM_WATCH_LANE_DELAY_MS;
+      const jm = v.judged[v.focus] || null;
+      ctx.strokeStyle = 'rgba(148,163,184,.18)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < lanes; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * lw, 0);
+        ctx.lineTo(i * lw, h);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, hitY);
+      ctx.lineTo(w, hitY);
+      ctx.stroke();
+      const yOf = t => hitY - (t - now) / RHYTHM_WATCH_LANE_SPAN_MS * hitY;
+      let shown = null;
+      for (let i = firstFrom(now - 4000); i < notes.length; i += 1) {
+        const n = notes[i];
+        if (n.timeMs > now + RHYTHM_WATCH_LANE_SPAN_MS) break;
+        const end = Number(n.endTimeMs) > n.timeMs ? Number(n.endTimeMs) : n.timeMs;
+        if (end < now - 400) continue;
+        const code = jm && jm.has(i) ? jm.get(i) : -1;
+        const x = Math.max(0, Math.min(lanes - 1, Number(n.lane) || 0)) * lw + lw * 0.1;
+        const nw = lw * 0.8;
+        const y = yOf(n.timeMs);
+        const passed = n.timeMs < now - 80;
+        ctx.globalAlpha = code >= 0 ? passed ? 0.25 : 0.9 : passed ? 0.3 : 1;
+        ctx.fillStyle = code >= 0 ? RHYTHM_WATCH_JUDGMENT_VIEW[code].color : RHYTHM_WATCH_LANE_COLORS[n.type] || '#38bdf8';
+        if (end > n.timeMs) {
+          const yEnd = yOf(end);
+          ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd));
+        }
+        ctx.fillRect(x, y - 6, nw, 12);
+        ctx.globalAlpha = 1;
+        if (code >= 0 && Math.abs(n.timeMs - now) < 250) {
+          ctx.globalAlpha = 1 - Math.abs(n.timeMs - now) / 250;
+          ctx.fillStyle = RHYTHM_WATCH_JUDGMENT_VIEW[code].color;
+          ctx.beginPath();
+          ctx.arc(x + nw / 2, hitY, lw * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        if (code >= 0 && n.timeMs <= now && now - n.timeMs < 700) shown = {
+          code,
+          age: now - n.timeMs
+        };
+      }
+      ctx.globalAlpha = 1;
+      if (shown) {
+        ctx.globalAlpha = 1 - shown.age / 700;
+        ctx.fillStyle = RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].color;
+        ctx.font = 'italic 900 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].short, w / 2, hitY - h * 0.18);
+        ctx.globalAlpha = 1;
+      }
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+    };
+  }, [chart]);
+  return React.createElement("canvas", {
+    ref: ref,
+    "data-rhythm-watch-lane": true,
+    className: "absolute inset-0 h-full w-full"
+  });
+}
 function RhythmWatchScreen({
   songs = [],
   resolveIconUrl = null
@@ -96261,7 +96472,9 @@ function RhythmWatchScreen({
   const songName = song && typeof rhythmSongFullName === 'function' ? rhythmSongFullName(song) : '';
   const playing = v.phase === 'playing' || v.phase === 'ended';
   const rank = playing ? v.people.slice().sort((a, b) => (v.rows[b.id] ? v.rows[b.id].s : -1) - (v.rows[a.id] ? v.rows[a.id].s : -1)) : [];
-  const total = song ? Number(song.playDurationMs) || 0 : 0;
+  const chartOf = rhythmWatchChartOf(songs, v.songId, (v.people.find(x => x.id === v.focus) || {}).diff);
+  const total = chartOf && Number(chartOf.durationMs) > 0 ? Number(chartOf.durationMs) : song ? Number(song.playDurationMs) || 0 : 0;
+  const lite = !!(focusRow && focusRow.lt);
   const pos = focusRow ? focusRow.p : 0;
   const lifeMax = typeof RHYTHM_LIFE_MAX === 'number' ? RHYTHM_LIFE_MAX : 1000;
   const who = v.people.find(x => x.id === v.focus);
@@ -96358,8 +96571,14 @@ function RhythmWatchScreen({
   }, focusRow ? focusRow.c : 0, React.createElement("small", {
     className: "ml-1 text-[10px] not-italic"
   }, "COMBO"))), React.createElement("div", {
-    className: "relative min-h-[84px] max-h-[240px] flex-1 overflow-hidden rounded-xl bg-slate-950/80"
-  }, React.createElement("div", {
+    className: "relative min-h-[84px] flex-1 overflow-hidden rounded-xl bg-slate-950/80"
+  }, chartOf && !lite && React.createElement(RhythmWatchLane, {
+    chart: chartOf
+  }), lite && React.createElement("p", {
+    "data-rhythm-watch-lite": true,
+    className: "absolute inset-x-2 top-2 text-center text-[11px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), React.createElement("div", {
     className: "absolute inset-x-0 bottom-1 flex flex-col-reverse items-center gap-0.5"
   }, flow.map(f => React.createElement("b", {
     key: f.key,
@@ -96369,7 +96588,7 @@ function RhythmWatchScreen({
       animation: 'mhWatchPop 2.4s ease-out forwards'
     }
   }, f.text)))), React.createElement("div", {
-    className: "grid grid-cols-3 gap-1"
+    className: "grid grid-cols-3 gap-1 landscape:grid-cols-6"
   }, RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => React.createElement("div", {
     key: j.id,
     "data-rhythm-watch-count": j.id,

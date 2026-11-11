@@ -489,7 +489,10 @@ const RHYTHM_MULTI = (() => {
     const now = Date.now();
     return Object.keys(s.watchers).filter((id) => s.watchers[id].until > now);
   };
-  const watchStop = () => { if (watchTimer) clearInterval(watchTimer); watchTimer = null; };
+  // 譜面を送る(判定の束 j)は、見られている1人だけ。端末が重い(フレームが40枚/秒を切る状態が2秒続く)ときは、数字だけに落とす
+  let watchLite = false; let watchLowCount = 0; let watchFrames = -1; let watchFramesAt = 0;
+  const watchJdOff = () => { if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = null; };
+  const watchStop = () => { if (watchTimer) clearInterval(watchTimer); watchTimer = null; watchJdOff(); watchLite = false; watchLowCount = 0; watchFrames = -1; };
   const watchAdStop = () => {
     if (watchAdTimer) { clearTimeout(watchAdTimer); clearInterval(watchAdTimer); }
     watchAdTimer = null;
@@ -510,12 +513,32 @@ const RHYTHM_MULTI = (() => {
       p: rhythmMultiInt(watch.timeMs, 36e5), l: rhythmMultiInt(h.life, 100000), at: now,
     };
     if (h.counts) msg.k = RHYTHM_MULTI_JUDGMENT_IDS.map((id) => rhythmMultiInt(h.counts[id], 100000));
+    // 端末の重さ: 1秒でフレームが何枚進んだか。40枚/秒を切る状態が2回続いたら、譜面は送らず数字だけにする(その回の終わりまで)
+    if (watch && typeof watch.frames === 'number') {
+      if (watchFrames >= 0 && now > watchFramesAt) {
+        const fps = (watch.frames - watchFrames) * 1000 / (now - watchFramesAt);
+        watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
+        if (watchLowCount >= 2) watchLite = true;
+      }
+      watchFrames = watch.frames; watchFramesAt = now;
+    }
+    if (watchLite) { watchJdOff(); msg.lt = 1; }
+    else if (watch && Array.isArray(watch.jd)) {
+      // ためた判定をまとめて1通に(ノーツ番号と判定の番号が交互に並ぶ。多すぎるときは新しい側だけ)
+      const jd = watch.jd;
+      if (jd.length > 240) jd.splice(0, jd.length - 240);
+      if (jd.length) msg.j = jd.splice(0, jd.length);
+    }
     if (fin === true) msg.fin = 1;
     socket.send(msg);
   };
   const watchSync = () => {
     const focused = !!s && !!s.live && !s.live.done && watchersNow().some((id) => s.watchers[id].f === s.selfId);
-    if (focused && !watchTimer) { watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS); watchSend(); }
+    if (focused && !watchTimer) {
+      watchLite = false; watchLowCount = 0; watchFrames = -1;
+      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = [];   // ここから、判定を1件ずつためる(見られている間だけ)
+      watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS); watchSend();
+    }
     else if (!focused && watchTimer) watchStop();
   };
   // 観戦の人の「見ています」(wt)。演奏中でも pg と同じく先頭で受けて、印を1つ立てるだけ(部屋の画面の更新はしない)。
@@ -973,6 +996,7 @@ const RHYTHM_MULTI = (() => {
     // 観戦の知らせ: 見ている人の wt は先頭で受けて印を立てるだけ。演奏している人から返る wi は、観戦の画面(待機中のメンバー)へ渡す
     if (raw && raw.t === 'wt') { watchHear(raw); return; }
     if (raw && raw.t === 'wi') { if (watchFeed) watchFeed(raw); return; }
+    if (raw && raw.t === 'res' && watchFeed) watchFeed(raw);   // 結果(res)も観戦の画面へ。ふつうの処理はこのまま続ける
     // 演奏中は、届いた知らせを処理せずに溜めておく(演奏の判定と描画に一切割り込ませない)。
     // 演奏が終わったら reportResult がまとめて処理する。溜めすぎないよう古いものから捨てる
     const playingNow = selfMember();
@@ -1414,7 +1438,7 @@ const RHYTHM_WATCH = (() => {
         frame: rhythmMultiText(x && x.f, 40), diff: rhythmMultiText(x && x.d, 20),
       })).filter((x) => x.id);
       if (!round || !people.length) return;
-      if (st.round !== round) { st.round = round; st.rows = {}; }
+      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; }
       st.songId = rhythmMultiText(raw.sg, 60); st.people = people;
       if (!st.focus || !people.some((x) => x.id === st.focus)) { st.focus = people[0].id; ping(); }
       st.phase = 'playing'; st.lastPg = now;
@@ -1435,9 +1459,25 @@ const RHYTHM_WATCH = (() => {
       if (raw.p != null) row.p = intOf(raw.p, 36e5);
       if (raw.l != null) row.l = intOf(raw.l, 100000);
       if (Array.isArray(raw.k)) row.k = RHYTHM_MULTI_JUDGMENT_IDS.map((_, i) => intOf(raw.k[i], 100000));
-      row.prevK = prev.k || null; row.at = now;
+      row.prevK = prev.k || null; row.at = now; row.pAt = raw.p != null ? now : (prev.pAt || 0); row.lt = raw.lt === 1;
+      // 譜面: ためた判定(ノーツ番号, 判定の番号, …)を、その人の判定の表に入れる。数は上限で切る
+      if (Array.isArray(raw.j)) {
+        const jm = st.judged[id] || (st.judged[id] = new Map());
+        for (let i = 0; i + 1 < raw.j.length && i < 240; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
+      }
       st.rows[id] = row; st.lastPg = now;
-      if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) st.phase = 'ended';
+      if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
+      emit();
+      return;
+    }
+    if (raw.t === 'res') {
+      // だれかの演奏が終わった(結果は全員が送る)。見られていない人も「終わった」と分かる
+      const id = rhythmMultiText(raw.id, 40); const r = raw.res && typeof raw.res === 'object' ? raw.res : null;
+      if (!r || rhythmMultiText(r.startId, 40) !== st.round || !st.people.some((x) => x.id === id)) return;
+      const prev = st.rows[id] || {};
+      st.rows[id] = { ...prev, s: intOf(r.score, RHYTHM_MULTI_LIVE_SCORE_MAX), c: prev.c || 0, p: prev.p || 0, l: prev.l == null ? null : prev.l, k: prev.k || null, fin: true, at: now };
+      st.lastPg = now;
+      if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
       emit();
       return;
     }
@@ -1448,7 +1488,7 @@ const RHYTHM_WATCH = (() => {
       st.members[m.id] = { id: m.id, name: m.name, icon: m.icon, frame: m.frame, diff: m.diff, cpu: m.cpu === true };
       st.heard = true;
       const ph = m.room && m.room.phase;
-      if (ph && ph !== 'playing' && (st.phase === 'connecting' || st.phase === 'none' || (st.phase === 'playing' && now - st.lastPg > 8000) || st.phase === 'ended')) { st.phase = 'waiting'; }
+      if (ph && ph !== 'playing' && (st.phase === 'connecting' || st.phase === 'none' || (st.phase === 'playing' && now - st.lastPg > 8000) || (st.phase === 'ended' && now - (st.endedAt || 0) > 8000))) { st.phase = 'waiting'; }
       emit();
       return;
     }
@@ -1457,7 +1497,7 @@ const RHYTHM_WATCH = (() => {
       if (!m) return;
       const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
-      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.phase = 'playing'; st.lastPg = now;
+      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.phase = 'playing'; st.lastPg = now;
       if (!people.some((x) => x.id === st.focus)) st.focus = people[0].id;
       ping(); emit();
     }
@@ -1466,7 +1506,7 @@ const RHYTHM_WATCH = (() => {
     if (!st) return;
     const now = Date.now();
     const since = now - st.openedAt;
-    if (st.phase === 'playing' && now - st.lastPg > 20000) { st.phase = 'ended'; emit(); }
+    if (st.phase === 'playing' && now - st.lastPg > 20000) { st.phase = 'ended'; st.endedAt = now; emit(); }
     if (st.phase === 'connecting' && since > 12000) {
       if (st.quiet) { api.stop(); return; }   // 待機中の人が、見られる演奏が無いまま。静かにやめる
       st.phase = st.heard ? 'waiting' : 'none'; emit();
@@ -1486,7 +1526,7 @@ const RHYTHM_WATCH = (() => {
       const v = RHYTHM_MULTI.view();
       if (member && !(v && v.code === c)) return false;
       const now = Date.now();
-      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
+      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);
       else {
         sock = rhythmMultiOpenSocket({ topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + c, onOpen: () => ping(), onMessage: feed, onClose: () => {} });
@@ -2868,6 +2908,81 @@ const useRhythmWatchView = () => {
   React.useEffect(() => RHYTHM_WATCH.on(bump), []);
   return RHYTHM_WATCH.view();
 };
+// 見られている人の譜面(ノーツが流れる様子と判定)。見る側の端末だけで描く(30枚/秒・canvas 1枚)。
+//   ノーツは譜面のデータ(見る側の端末にも入っている)から、曲の位置は1秒ごとの pg の p から合わせる。判定は演奏している人が束 j で送ってくる。
+//   判定が届くまでの遅れ(送るのは1秒ごと)を吸収するため、1.5秒遅らせて流す。ミラー譜面で遊んでいる人は、レーンが左右逆に見える
+const RHYTHM_WATCH_LANE_COLORS = Object.freeze({ TAP: '#38bdf8', HOLD: '#34d399', FLICK: '#f472b6', SLIDE: '#a78bfa' });
+const RHYTHM_WATCH_LANE_SPAN_MS = 1800;
+const RHYTHM_WATCH_LANE_DELAY_MS = 1500;
+const rhythmWatchChartOf = (songs, songId, diffId) => {
+  const song = (songs || []).find((x) => x.songId === songId);
+  const chart = song && song.difficulties ? song.difficulties[diffId] : null;
+  return chart && Array.isArray(chart.notes) && chart.notes.length ? chart : null;
+};
+function RhythmWatchLane({ chart }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const cv = ref.current;
+    if (!cv || !chart) return undefined;
+    const ctx = cv.getContext('2d');
+    const notes = chart.notes;
+    const lanes = Math.max(1, Math.min(8, Number(chart.laneCount) || 5));
+    let raf = 0; let last = 0; let alive = true;
+    const firstFrom = (t) => { let lo = 0; let hi = notes.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].timeMs < t) lo = mid + 1; else hi = mid; } return lo; };
+    const frame = (stamp) => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      if (stamp - last < 33) return;
+      last = stamp;
+      const v = RHYTHM_WATCH.view();
+      if (!v || !ctx) return;
+      const row = v.rows[v.focus];
+      const w = cv.clientWidth; const h = cv.clientHeight;
+      if (!(w > 0 && h > 0)) return;
+      const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+      if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const hitY = h * 0.84; const lw = w / lanes;
+      const now = (row && row.pAt ? row.p + (Date.now() - row.pAt) : 0) - RHYTHM_WATCH_LANE_DELAY_MS;
+      const jm = v.judged[v.focus] || null;
+      ctx.strokeStyle = 'rgba(148,163,184,.18)'; ctx.lineWidth = 1;
+      for (let i = 1; i < lanes; i += 1) { ctx.beginPath(); ctx.moveTo(i * lw, 0); ctx.lineTo(i * lw, h); ctx.stroke(); }
+      ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, hitY); ctx.lineTo(w, hitY); ctx.stroke();
+      const yOf = (t) => hitY - ((t - now) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY;
+      let shown = null;
+      for (let i = firstFrom(now - 4000); i < notes.length; i += 1) {
+        const n = notes[i];
+        if (n.timeMs > now + RHYTHM_WATCH_LANE_SPAN_MS) break;
+        const end = Number(n.endTimeMs) > n.timeMs ? Number(n.endTimeMs) : n.timeMs;
+        if (end < now - 400) continue;
+        const code = jm && jm.has(i) ? jm.get(i) : -1;
+        const x = Math.max(0, Math.min(lanes - 1, Number(n.lane) || 0)) * lw + lw * 0.1; const nw = lw * 0.8;
+        const y = yOf(n.timeMs);
+        const passed = n.timeMs < now - 80;
+        ctx.globalAlpha = code >= 0 ? (passed ? 0.25 : 0.9) : (passed ? 0.3 : 1);
+        ctx.fillStyle = code >= 0 ? RHYTHM_WATCH_JUDGMENT_VIEW[code].color : (RHYTHM_WATCH_LANE_COLORS[n.type] || '#38bdf8');
+        if (end > n.timeMs) { const yEnd = yOf(end); ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd)); }
+        ctx.fillRect(x, y - 6, nw, 12);
+        ctx.globalAlpha = 1;
+        // 叩いた瞬間の光(判定の色)
+        if (code >= 0 && Math.abs(n.timeMs - now) < 250) {
+          ctx.globalAlpha = 1 - Math.abs(n.timeMs - now) / 250; ctx.fillStyle = RHYTHM_WATCH_JUDGMENT_VIEW[code].color;
+          ctx.beginPath(); ctx.arc(x + nw / 2, hitY, lw * 0.45, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+        }
+        if (code >= 0 && n.timeMs <= now && now - n.timeMs < 700) shown = { code, age: now - n.timeMs };
+      }
+      ctx.globalAlpha = 1;
+      if (shown) {
+        ctx.globalAlpha = 1 - shown.age / 700; ctx.fillStyle = RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].color;
+        ctx.font = 'italic 900 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].short, w / 2, hitY - h * 0.18); ctx.globalAlpha = 1;
+      }
+    };
+    raf = requestAnimationFrame(frame);
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, [chart]);
+  return <canvas ref={ref} data-rhythm-watch-lane className="absolute inset-0 h-full w-full" />;
+}
 function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const v = useRhythmWatchView();
   const [flow, setFlow] = React.useState([]);
@@ -2893,7 +3008,9 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const songName = song && typeof rhythmSongFullName === 'function' ? rhythmSongFullName(song) : '';
   const playing = v.phase === 'playing' || v.phase === 'ended';
   const rank = playing ? v.people.slice().sort((a, b) => ((v.rows[b.id] ? v.rows[b.id].s : -1) - (v.rows[a.id] ? v.rows[a.id].s : -1))) : [];
-  const total = song ? Number(song.playDurationMs) || 0 : 0;
+  const chartOf = rhythmWatchChartOf(songs, v.songId, (v.people.find((x) => x.id === v.focus) || {}).diff);
+  const total = chartOf && Number(chartOf.durationMs) > 0 ? Number(chartOf.durationMs) : (song ? Number(song.playDurationMs) || 0 : 0);
+  const lite = !!(focusRow && focusRow.lt);
   const pos = focusRow ? focusRow.p : 0;
   const lifeMax = typeof RHYTHM_LIFE_MAX === 'number' ? RHYTHM_LIFE_MAX : 1000;
   const who = v.people.find((x) => x.id === v.focus);
@@ -2946,12 +3063,14 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
           <section data-rhythm-watch-detail className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
             <div className="flex items-center gap-2">{icon(who, 28)}<b className="min-w-0 flex-1 truncate text-[13px] font-black text-cyan-200">{who ? `${who.name} さん` : ''}{who && who.diff ? ` ・ ${who.diff}` : ''}</b>
               <span className="text-[22px] font-black italic tabular-nums text-amber-300">{focusRow ? focusRow.c : 0}<small className="ml-1 text-[10px] not-italic">COMBO</small></span></div>
-            <div className="relative min-h-[84px] max-h-[240px] flex-1 overflow-hidden rounded-xl bg-slate-950/80">
+            <div className="relative min-h-[84px] flex-1 overflow-hidden rounded-xl bg-slate-950/80">
+              {chartOf && !lite && <RhythmWatchLane chart={chartOf} />}
+              {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-2 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
               <div className="absolute inset-x-0 bottom-1 flex flex-col-reverse items-center gap-0.5">
                 {flow.map((f) => <b key={f.key} className="text-[15px] font-black italic" style={{ color: f.color, animation: 'mhWatchPop 2.4s ease-out forwards' }}>{f.text}</b>)}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-3 gap-1 landscape:grid-cols-6">
               {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (
                 <div key={j.id} data-rhythm-watch-count={j.id} className="rounded-lg bg-slate-950/80 px-1 py-1 text-center">
                   <small className="block text-[9px] font-black" style={{ color: j.color }}>{j.short}</small>

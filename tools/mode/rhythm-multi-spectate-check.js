@@ -70,12 +70,14 @@ const FAKE_WS = () => {
 };
 
 
-const PLAYERS = 2;
+const PLAYERS = Math.max(2, Math.min(5, Number(process.env.MH_PLAYERS) || 2));   // 演奏する人の数(重さの測定は5人で)
+const PORTRAIT = process.env.MH_PORTRAIT === '1';        // 縦画面で測る
+const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 };
 (async () => {
   const server = await serve();
   const PORT = server.address().port;
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
-  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: SHOT_DIR ? 2 : 1 });
+  const context = await browser.newContext({ viewport: VIEW, isMobile: true, hasTouch: true, deviceScaleFactor: SHOT_DIR ? 2 : 1 });
   await context.addInitScript(FAKE_WS);
   const errors = [];
   const open = async (name, icon) => {
@@ -93,7 +95,7 @@ const PLAYERS = 2;
     await page.waitForFunction(() => document.body && document.body.innerText.includes('TAP TO START'), null, { timeout: 60000 });
     await page.getByText('TAP TO START').click();
     await page.waitForTimeout(2500);
-    await page.mouse.click(422, 195);
+    await page.mouse.click(VIEW.width / 2, VIEW.height / 2);
     await page.waitForTimeout(3000);
     // お知らせ・ギフトなどの吹き出しは閉じ続ける
     await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]') || [...d.querySelectorAll('button')].find((x) => /受け取|閉じる|とじる|OK|はじめる|わかった|^次へ|あとで|見た/.test(x.innerText)); if (b) b.click(); }, 250); });
@@ -117,8 +119,10 @@ const PLAYERS = 2;
   }), ms);
   try {
     const A = await open('あかね', 'Mocchi'); const B = await open('いぶき', 'Suezo');
+    const extra = [];
+    for (let i = 2; i < PLAYERS; i += 1) extra.push(await open(['おと', 'かな', 'きら'][i - 2], ['Hare', 'Tiger', 'Pixie'][i - 2]));
     const W = await open('うみ', 'Pixie'); const L = await open('えま', 'Tiger');
-    const pages = [A, B];
+    const pages = [A, B, ...extra];
     // フリーマッチの部屋(演奏中の部屋が観戦の一覧に出るのは、フリーの部屋だけ)
     for (const p of pages) await p.locator('[data-rhythm-multi-free]').click();
     await A.locator('[data-rhythm-multi-free-create]').click();
@@ -126,17 +130,20 @@ const PLAYERS = 2;
     const code = (await A.locator('[data-rhythm-multi-room-code]').innerText()).trim();
     await B.locator('[data-rhythm-multi-free-list-open]').click();
     await B.getByRole('button', { name: '入る', exact: true }).first().click({ timeout: 20000 });
+    for (const p of extra) { await p.locator('[data-rhythm-multi-free-list-open]').click(); await p.getByRole('button', { name: '入る', exact: true }).first().click({ timeout: 20000 }); }
     for (let i = 0; i < 40; i += 1) {
       if ((await A.locator('[data-rhythm-multi-ready]').count()) && (await B.locator('[data-rhythm-multi-ready]').count())) break;
       for (const p of pages) { if (await p.locator('[data-rhythm-multi-omakase]').count()) await p.locator('[data-rhythm-multi-omakase]').click().catch(() => {}); }
       if (await A.locator('[data-rhythm-demo-start]').count()) await A.locator('[data-rhythm-demo-start]').click().catch(() => {});
       await A.waitForTimeout(1500);
     }
-    for (const p of pages) { await p.bringToFront(); await p.waitForTimeout(600); await p.locator('[data-rhythm-multi-ready]').click({ timeout: 60000 }); }
+    if (process.env.MH_DEBUG) { for (const p of pages) { const st = await p.evaluate(() => { const v = RHYTHM_MULTI.view(); const b = document.querySelector('[data-rhythm-multi-ready]'); return { n: v && v.members.length, ph: v && v.room.phase, dis: b && b.disabled, txt: b && b.innerText }; }); console.log('  (準備前)', JSON.stringify(st)); } }
+    for (const p of pages) { await p.bringToFront(); await p.waitForTimeout(600); await p.locator('[data-rhythm-multi-ready]').click({ timeout: 4000 }).catch(() => {}); }   // 全員の準備が早く済むと自動で始まるので、押せなくなった人は押さない
     for (const p of pages) await p.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
     for (const p of pages) await p.waitForFunction(() => typeof RHYTHM_PLAY_WATCH !== 'undefined' && !!RHYTHM_PLAY_WATCH.hud, null, { timeout: 15000 });
     const idA = await A.evaluate(() => RHYTHM_MULTI.view().selfId); const idB = await B.evaluate(() => RHYTHM_MULTI.view().selfId);
     await setHud(A, 412880, 128, [90, 20, 8, 2, 0, 1], 880, 61000); await setHud(B, 371450, 96, [70, 22, 10, 3, 1, 2], 760, 60500);
+    for (let i = 0; i < extra.length; i += 1) await setHud(extra[i], 300000 - i * 40000, 60 - i * 10, [50, 20, 12, 4, 2, 3], 700, 60000);
     // ---- 観戦なしの間のフレームの間隔と送る量 ----
     const pgBefore = await sent(A, 'pg');
     await A.bringToFront();
@@ -145,6 +152,7 @@ const PLAYERS = 2;
     const pgNoWatch = (await sent(A, 'pg')) - pgBefore;
     check('観戦の人がいないあいだ、あかね は今までどおり(3秒ごと・値が変わらなければ送らない。6秒で3通以下)', pgNoWatch <= 3, `${pgNoWatch}通`);
     check('観戦の人がいないあいだ、見られる印は立たない', (await A.evaluate(() => RHYTHM_MULTI.watcherCount())) === 0);
+    check('観戦の人がいないあいだ、判定をためない(演奏のループは何もしない)', (await A.evaluate(() => RHYTHM_PLAY_WATCH.jd)) === null);
 
     // ---- 外から見る(うみ。部屋のメンバーではない) ----
     // フリーマッチの窓を開くと、演奏中の部屋が「観戦」の一覧に出る(演奏の人が4秒後から10秒ごとに知らせる)
@@ -153,7 +161,7 @@ const PLAYERS = 2;
     check('フリーの部屋は、演奏中になると観戦の一覧に出る', true);
     await W.locator(`[data-rhythm-watch-open="${code}"]`).click();
     await W.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="playing"]', { timeout: 20000 });
-    await W.waitForFunction(() => document.querySelectorAll('[data-rhythm-watch-row]').length === 2, null, { timeout: 10000 });
+    await W.waitForFunction((n) => document.querySelectorAll('[data-rhythm-watch-row]').length === n, PLAYERS, { timeout: 10000 });
     check('外から見ると、観戦の画面に2人ぶんの行が出る', true);
     await W.evaluate((id) => RHYTHM_WATCH.focus(id), idA);
     await W.waitForTimeout(1500);
@@ -169,11 +177,11 @@ const PLAYERS = 2;
     const wantFocus = detail.focus;
     const focusIsA = wantFocus === idA;
     const wantK = focusIsA ? [90, 20, 8, 2, 0, 1] : [70, 22, 10, 3, 1, 2];
-    check('順位はスコアの高い順(あかね 412,880 が1位)', /1.*あかね.*412,880.*128/.test(detail.rows[0] || '') && /2.*いぶき.*371,450.*96/.test(detail.rows[1] || ''), JSON.stringify(detail.rows));
+    if (PLAYERS === 2) check('順位はスコアの高い順(あかね 412,880 が1位)', /1.*あかね.*412,880.*128/.test(detail.rows[0] || '') && /2.*いぶき.*371,450.*96/.test(detail.rows[1] || ''), JSON.stringify(detail.rows));
     check('選んだ人の判定の数が出る(MARVELOUS〜MISS)', JSON.stringify(detail.counts.map(Number)) === JSON.stringify(wantK), JSON.stringify(detail.counts));
     check('ライフのゲージが出る', /%/.test(detail.life) && parseFloat(detail.life) > 0, detail.life);
     // メンバーに数えない・hb を送らない
-    check('観戦の人は部屋のメンバーに入らない(あかね の部屋は2人のまま)', (await A.evaluate(() => RHYTHM_MULTI.view().members.length)) === 2);
+    check('観戦の人は部屋のメンバーに入らない(あかね の部屋は演奏の人数のまま)', (await A.evaluate(() => RHYTHM_MULTI.view().members.length)) === PLAYERS);
     check('観戦の人は hb を送らない', (await sent(W, 'hb')) === 0 && (await sent(W, 'wt')) >= 1);
     // 見られている人だけが1秒ごとに送る
     const focusPage = focusIsA ? A : B; const otherPage = focusIsA ? B : A;
@@ -193,6 +201,37 @@ const PLAYERS = 2;
     await W.waitForFunction((k) => { const c = [...document.querySelectorAll('[data-rhythm-watch-count] b')].map((x) => Number(x.textContent)); return JSON.stringify(c) === JSON.stringify(k); }, focusIsA ? [70, 22, 10, 3, 1, 2] : [90, 20, 8, 2, 0, 1], { timeout: 8000 })
       .then(() => check('別の人の名前を押すと、その人の判定に切り替わる', true), () => check('別の人の名前を押すと、その人の判定に切り替わる', false));
     check('切り替えたら、前の人は1秒ごとをやめる', await (async () => { await W.waitForTimeout(4500); const x0 = await sent(focusPage, 'pg'); await W.waitForTimeout(3500); return (await sent(focusPage, 'pg')) - x0 <= 2; })());
+    // ---- 譜面(判定の束 j): 見られている人だけ、判定をためて、1秒ごとにまとめて送る ----
+    await W.evaluate((id) => RHYTHM_WATCH.focus(id), idA);
+    await W.waitForTimeout(2500);
+    check('見られている人(あかね)だけ判定をためる(いぶき は何もしない)', (await A.evaluate(() => Array.isArray(RHYTHM_PLAY_WATCH.jd))) && (await B.evaluate(() => RHYTHM_PLAY_WATCH.jd)) === null);
+    const playPos = await A.evaluate(() => RHYTHM_PLAY_WATCH.timeMs);
+    console.log(`  (演奏の位置 ${playPos}ms)`);
+    const chartInfo = await W.evaluate((pos) => { const v = RHYTHM_WATCH.view(); const song = RHYTHM_SONGS.find((x) => x.songId === v.songId); const who = v.people.find((x) => x.id === v.focus); const ch = song && song.difficulties[who.diff]; if (!ch) return null; const idx = []; ch.notes.forEach((n, i) => { if (n.timeMs > pos + 3000 && n.timeMs < pos + 6500) idx.push(i); }); return { n: ch.notes.length, idx, dur: ch.durationMs }; }, playPos);
+    console.log(`  (譜面 ${chartInfo && chartInfo.n}音・${chartInfo && chartInfo.dur}ms)`);
+    check('観戦の画面が、その曲・その難易度の譜面を持っている', !!chartInfo && chartInfo.n > 0 && chartInfo.idx.length >= 2, JSON.stringify(chartInfo && { n: chartInfo.n, near: chartInfo.idx.length }));
+    check('譜面の絵(canvas)が出る', (await W.locator('[data-rhythm-watch-lane]').count()) === 1);
+    if (chartInfo && chartInfo.idx.length) {
+      // 演奏のループが判定のたびにやること(配列へ2つ push)を、ここで同じようにやる
+      await A.evaluate((idx) => { idx.forEach((i, k) => { if (RHYTHM_PLAY_WATCH.jd !== null) RHYTHM_PLAY_WATCH.jd.push(i, k % 3); }); }, chartInfo.idx);
+      await W.waitForFunction((idx) => { const m = RHYTHM_WATCH.view().judged[RHYTHM_WATCH.view().focus]; return m && idx.every((i) => m.has(i)); }, chartInfo.idx, { timeout: 6000 })
+        .then(() => check('ためた判定が、1秒以内の束で観戦の人に届く(ノーツ番号と判定が合う)', true), () => check('ためた判定が、1秒以内の束で観戦の人に届く', false));
+      const got = await W.evaluate(() => { const m = RHYTHM_WATCH.view().judged[RHYTHM_WATCH.view().focus]; return [...m.entries()].slice(0, 3); });
+      const mine = await W.evaluate((idx) => { const m = RHYTHM_WATCH.view().judged[RHYTHM_WATCH.view().focus]; return idx.map((i) => m.get(i)); }, chartInfo.idx);
+      check('届いた判定の中身が合う(ノーツ番号ごとの判定)', mine.every((c, k) => c === k % 3), JSON.stringify(mine));
+      check('判定を送ったあと、たまりは小さいまま(1秒ごとに空になる)', (await A.evaluate(() => RHYTHM_PLAY_WATCH.jd.length)) < 40);
+    }
+    if (SHOT_DIR) { await W.waitForTimeout(700); await W.screenshot({ path: path.join(SHOT_DIR, 'watch-lane-landscape.png') }); }
+    // ---- 重い端末: フレームが40枚/秒を切る状態が2秒続くと、譜面は送らず数字だけにする ----
+    await B.evaluate(() => { Object.defineProperty(RHYTHM_PLAY_WATCH, 'frames', { get: () => 5, set: () => {}, configurable: true }); });
+    await W.evaluate((id) => RHYTHM_WATCH.focus(id), idB);
+    await W.waitForSelector('[data-rhythm-watch-lite]', { timeout: 9000 })
+      .then(() => check('重い端末の人を見ているときは「数字だけ」の案内が出て、譜面は出ない', true), () => check('重い端末の人を見ているときは「数字だけ」の案内が出る', false));
+    await B.waitForFunction(() => RHYTHM_PLAY_WATCH.jd === null, null, { timeout: 4000 }).catch(() => {});
+    check('重い端末は、判定をためるのをやめる', (await B.evaluate(() => RHYTHM_PLAY_WATCH.jd)) === null, String(await B.evaluate(() => JSON.stringify(RHYTHM_PLAY_WATCH.jd))));
+    check('重くても、数字(順位・判定の数・ライフ)は届き続ける', (await W.evaluate(() => document.querySelector('[data-rhythm-watch-count="MARVELOUS"] b').textContent)) !== '-');
+    await W.evaluate((id) => RHYTHM_WATCH.focus(id), idA);
+    await W.waitForTimeout(1500);
     if (SHOT_DIR) {
       await W.screenshot({ path: path.join(SHOT_DIR, 'watch-landscape.png') });
       await W.setViewportSize({ width: 390, height: 844 }); await W.waitForTimeout(700);
@@ -233,15 +272,16 @@ const PLAYERS = 2;
       for (const [label, key] of [['観戦なし(3回)', 'off'], ['観戦あり(3回・1秒ごと)', 'on']]) console.log(`  | ${label} | ${range(rows[key], 'over', 0)} | ${range(rows[key], 'js', 2)}ms | ${range(rows[key], 'style', 2)}ms | ${range(rows[key], 'layout', 2)}ms |`);
       await W.evaluate(([id]) => RHYTHM_WATCH.focus(id), [idA]);
     }
+    console.log(`  (ここまでの演奏の位置 ${await A.evaluate(() => RHYTHM_PLAY_WATCH.timeMs)}ms)`);
     // ---- 後から入った待機中のメンバー(えま)にも見える ----
     await L.locator('[data-rhythm-mode-private-open]').click();
     await L.locator('[data-rhythm-multi-code-input]').fill(code);
     await L.locator('[data-rhythm-multi-join]').click();
     await L.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="playing"]', { timeout: 25000 })
       .then(() => check('演奏中の部屋へ後から入ると、待機のあいだ、その演奏が見える', true), () => check('演奏中の部屋へ後から入ると、待機のあいだ、その演奏が見える', false));
-    check('待機のメンバーが入っても、演奏中の部屋は2人のまま(待機の人は演奏の人数に入らない)', (await A.evaluate(() => RHYTHM_MULTI.view().room.participants.length)) === 2);
+    check('待機のメンバーが入っても、演奏中の部屋は演奏の人数のまま(待機の人は演奏の人数に入らない)', (await A.evaluate(() => RHYTHM_MULTI.view().room.participants.length)) === PLAYERS);
     const rows3 = await L.evaluate(() => document.querySelectorAll('[data-rhythm-watch-row]').length);
-    check('待機のメンバーにも順位が出る', rows3 === 2, `${rows3}行`);
+    check('待機のメンバーにも順位が出る', rows3 === PLAYERS, `${rows3}行`);
     // 見ている人が2人になっても、見られている人は1秒ごとのまま増えない(1人が1通で、みんなに届く)
     // ---- 観戦の人数は10人まで ----
     await B.evaluate(() => { const topic = window.__topic; const ch = new BroadcastChannel(`fake-ws:${topic}`); for (let i = 0; i < 14; i += 1) ch.postMessage({ t: 'wt', id: `wx${i}`, f: '' }); });

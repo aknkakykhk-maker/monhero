@@ -85,4 +85,4 @@
 
 ## 観戦を足したときの重さ(2026-11-11)
 
-観戦(見られている1人だけ1秒ごとに pg を送る)を足しても、上と同じ測り方(CPU 1/4)で、JS・スタイル再計算・レイアウトに差は見えなかった。表と詳細は `docs/progress/beat-multi-spectate/PLAN.md`。観戦がいないときの送り方と札の見え方は今のまま(`rhythm-multi-live-board-check.js` は全部通る)。
+観戦(見られている1人だけ、1秒ごとに pg と判定の束を送る)を足しても、上と同じ測り方(CPU 1/4・5人)で、JS・スタイル再計算・レイアウトの幅は重なった(横の1フレームの JS は平均 +0.08ms、縦は差なし)。表と詳細は `docs/progress/beat-multi-spectate/PLAN.md`。観戦がいないときの送り方と札の見え方は今のまま(`rhythm-multi-live-board-check.js` は全部通る)。
