@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45ca8689d45134b3
+// source-sha256: 1eb9f7acebe8d9a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96558,6 +96558,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
 .mhbs-dot.on{width:16px;background:linear-gradient(90deg,#f0abfc,#a78bfa)}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+/* MFバトルカードをはじめて開いたとき、最初に押す所だけ光らせる縁(84-screen-card-battle.jsx。一度きり) */
+.mhcard-first-glow{filter:drop-shadow(0 0 4px #fde047) drop-shadow(0 0 10px rgba(253,224,71,.8));animation:mhcardFirstGlow 1.3s ease-in-out infinite}
+@keyframes mhcardFirstGlow{0%,100%{filter:drop-shadow(0 0 3px #fde047) drop-shadow(0 0 6px rgba(253,224,71,.5))}50%{filter:drop-shadow(0 0 6px #fff7b0) drop-shadow(0 0 16px rgba(253,224,71,1))}}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
 .mhmv-badge{animation:mhmvPop .5s cubic-bezier(.2,1.4,.4,1) both}
@@ -96575,7 +96578,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
 .mhms-stage[data-mhms-rest] :is(.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float),.mhms-stage[data-mhms-rest] .mhms-card::after{animation-play-state:paused!important}
 .mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
-@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
+@media (prefers-reduced-motion:reduce){.mhcard-first-glow{animation:none}.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: {
@@ -166983,6 +166986,32 @@ const CardBattleScreen = ({
     setShareGuide(false);
     void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {});
   };
+  const CARD_FIRST_GLOW_KEY = 'mh_card_first_glow_v1';
+  const [firstGlow, setFirstGlow] = useState(false);
+  useEffect(() => {
+    if (screen !== 'CARD_TOP' || view !== 'top' || !save || !save.starter || !save.tutorial || !save.tutorial.done && !save.tutorial.skipped) {
+      setFirstGlow(false);
+      return undefined;
+    }
+    const rec = save.record || {};
+    const played = ['win', 'lose', 'surrender'].reduce((n, k) => n + (Number(rec.cpu && rec.cpu[k]) || 0), 0) + ['win', 'lose'].reduce((n, k) => n + (Number(rec.pvp && rec.pvp[k]) || 0), 0);
+    if (played > 0) {
+      setFirstGlow(false);
+      return undefined;
+    }
+    let alive = true;
+    storeGet(CARD_FIRST_GLOW_KEY, null, false).then(v => {
+      if (alive) setFirstGlow(v !== true);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [screen, view, !!save, !!(save && save.starter), !!(save && save.tutorial && (save.tutorial.done || save.tutorial.skipped)), save && save.record]);
+  const closeFirstGlow = () => {
+    if (!firstGlow) return;
+    setFirstGlow(false);
+    void storeSet(CARD_FIRST_GLOW_KEY, true).catch(() => {});
+  };
   const [startLevel, setStartLevel] = useState('last');
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -170016,7 +170045,10 @@ const CardBattleScreen = ({
     ico: '⚔️',
     grad: 'from-orange-200 via-orange-400 to-rose-500',
     disabled: !activeDeck,
-    onClick: go('mode')
+    onClick: () => {
+      closeFirstGlow();
+      go('mode')();
+    }
   }, {
     key: 'decks',
     attr: {
@@ -170193,32 +170225,46 @@ const CardBattleScreen = ({
     className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`,
     style: JA_LABEL_STYLE,
     title: notice
-  }, jaWrap(notice)), React.createElement("div", {
+  }, jaWrap(notice)), firstGlow && React.createElement("p", {
+    "data-card-first-glow-note": true,
+    className: "text-center text-[12px] font-black text-yellow-200",
+    style: JA_LABEL_STYLE
+  }, "まずはここ！コンピューターと対戦してみよう ▼"), React.createElement("div", {
     "data-card-top-cards": true,
     className: "grid grid-cols-2 gap-2"
-  }, bigCards.map((c, idx) => React.createElement("button", _extends({
-    key: c.key,
-    type: "button"
-  }, c.attr, {
-    disabled: !!c.disabled,
-    onClick: c.onClick,
-    className: `mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`,
-    style: {
-      animationDelay: `${0.05 + idx * 0.06}s`
-    }
-  }), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "mhms-mark"
-  }, c.mark), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden"
-  }, c.ico), React.createElement("span", {
-    className: "relative min-w-0"
-  }, React.createElement("b", {
-    className: "block text-[18px] font-black italic leading-tight"
-  }, c.label), React.createElement("small", {
-    className: "block text-[10px] font-black leading-tight text-slate-900/80"
-  }, c.sub))))), React.createElement("div", {
+  }, bigCards.map((c, idx) => {
+    const glow = firstGlow && c.key === 'cpu';
+    const btn = React.createElement("button", _extends({
+      type: "button"
+    }, c.attr, glow ? {
+      'data-card-first-glow': ''
+    } : {}, {
+      disabled: !!c.disabled,
+      onClick: c.onClick,
+      className: `${glow ? 'w-full ' : ''}mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`,
+      style: {
+        animationDelay: `${0.05 + idx * 0.06}s`
+      }
+    }), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, c.mark), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden"
+    }, c.ico), React.createElement("span", {
+      className: "relative min-w-0"
+    }, React.createElement("b", {
+      className: "block text-[18px] font-black italic leading-tight"
+    }, c.label), React.createElement("small", {
+      className: "block text-[10px] font-black leading-tight text-slate-900/80"
+    }, c.sub)));
+    return glow ? React.createElement("div", {
+      key: c.key,
+      className: "mhcard-first-glow flex"
+    }, btn) : React.createElement(React.Fragment, {
+      key: c.key
+    }, btn);
+  })), React.createElement("div", {
     "data-card-top-shortcuts": true,
     className: "mhms-in grid grid-cols-4 gap-1.5",
     style: {
