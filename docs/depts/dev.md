@@ -79,6 +79,7 @@ node tools/ctx.js brief               いまの状態
 
 - P/60-app.jsx(2MB超)・P/70-bootstrap.jsx は全部の部が通る場所。開かずに node tools/ctx.js read <名前> で切り出す。ほかの部の場所を触るときは先に窓口へ
 - P/25-storage.jsx・P/26-supabase.jsx は保存データとランキングの土台。変えたら ミハリ確認が要る
+- はじめての人だけに書く印(!wasOnboarded の分岐・finishOnboarding)を足したら、復元で片づける一覧 MH_FIRST_TIMER_MARK_KEYS(data/mhsave-backup.js)にも足す。見張り: node tools/boot/restore-first-timer-marks-check.js
 - デバッグ専用の変更は更新履歴にもヘルプにも載せない
 
 ## 資料(要る節だけ `node tools/ctx.js doc <ファイル> <見出し>`)

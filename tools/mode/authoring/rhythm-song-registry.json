@@ -1614,6 +1614,30 @@
     "MASTER": 0.3,
     "HELL": 0.3
    }
+  },
+  "lamia": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-lamia.mp3",
+   "chartRevision": 39,
+   "audioSha256": "faaab8302652fb054e43a22b916680c454732bcd432e18fd6d574e1162b8e9a5",
+   "durationMs": 143491,
+   "analyzedTiming": {
+    "bpm": 199.03,
+    "beatZeroMs": 155.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "extreme",
+   "chartIntensityByDifficulty": {
+    "HARD": "strong",
+    "EXPERT": "mild"
+   },
+   "sustainScale": {
+    "MASTER": 0.3,
+    "EASY": 0.2
+   },
+   "hellDensity": 1.6
   }
  }
 }
