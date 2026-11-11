@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a61605a8ba36ece7
+// generated-sha256: ea95f874c8e47a1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65773,6 +65773,11 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         <div className="flex shrink-0 flex-col gap-1">
           {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { setSheet(null); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 px-2 py-1 text-[11px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
           {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { setSheet(null); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95">🃏 対戦する</button>}
+          {place === 'battle' && (() => { // 助手のマスモン対戦β(ミセカタ2・マスモン部の口。口が無い・印が偽で null のときは出さない・2026-11-11)
+            let info = null; try { info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { info = null; }
+            if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
+            return <button type="button" disabled={!!info.disabled} title={info.disabled ? (info.why || '') : (info.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { setSheet(null); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2 py-1 text-[11px] font-black text-white active:scale-95 disabled:opacity-50">{info.label || '⚔ マスモンで対戦(β)'}</button>;
+          })()}
           {typeof onView === 'function' && <button type="button" data-assistant-life-map-act="view" onClick={() => onView(id)} className="rounded-xl border border-sky-300/60 px-2 py-1 text-[11px] font-black text-sky-100 active:scale-95">💬 詳細を見る</button>}
           <button type="button" data-assistant-life-map-act="room" onClick={() => { setSheet(null); onPick(id); }} className="rounded-xl border border-pink-300/60 px-2 py-1 text-[11px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
         </div>
