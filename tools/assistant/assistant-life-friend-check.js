@@ -336,6 +336,19 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     const small = G('alfFitMasmon')({ v: 1, fu: {}, dy: [] }, { mua: [one(0), one(1)] });
     check('⑱ 入るときは削らない(全員の色をそのまま)', small.ms.mua.length === 2 && small.ms.mua[1].c.length === 5 && !small.mn, JSON.stringify(small).slice(0, 120)); }
 
+  // ⑲ 家具20種類の並び l(2026-11-11): 1人20個×8人でも6000字に収まる・並び l は最後まで残る(奥の家具から減る)・入るときは削らない
+  { const lay = (n) => Array.from({ length: n }, (_, i) => ['plant', 512, 634, 100, 0, 0, 0, 100, 100, 0, i]);
+    const one = () => ({ mo: 'Golem', n: 'あいうえお', c: Array(5).fill('custom:359:100:100@100'), l: 0 });
+    const ms = {}; for (const id of IDS) ms[id] = Array.from({ length: 4 }, one);
+    const fu = {}; for (const id of IDS) fu[id] = { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: Array(3).fill('plant'), l: lay(20) };
+    const base = { v: 1, fu, dy: Array(8).fill({ t: '10:10', x: 'あ'.repeat(40) }), ac: Array(3).fill({ k: 'beat', x: 'あ'.repeat(30), at: Date.now() }) };
+    const fit = G('alfFitMasmon')(base, ms); const t = JSON.stringify(fit); const chars = t.length + (t.match(/[:,]/g) || []).length;
+    const left = IDS.map(id => (fit.fu[id].l || []).length);
+    check('⑲ 20個×8人でも 6000字に収まる', chars <= 6000, `${chars}字 l=${left.join(',')} dy=${fit.dy.length} ms=${fit.ms ? fit.ms.mua.length : 0}`);
+    check('⑲ 並び l は日記・マスモンの色より後に削り、1人8個は残す(今日あったことは先に0件)・奥(z小)の家具から減る', fit.dy.length === 0 && Math.min(...left) >= 8 && IDS.every(id => (fit.fu[id].l || []).every(a => a[10] >= 20 - (fit.fu[id].l || []).length)), `l=${left.join(',')}`);
+    const small = G('alfFitMasmon')({ v: 1, fu: { mua: { p: {}, k: [], l: lay(20) } }, dy: [] }, null);
+    check('⑲ 入るときは並び l を削らない', small.fu.mua.l.length === 20); }
+
   // ⑧ 公開の印
   const rel = fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
   check('⑧ 公開の印 assistantLifeFriend がある(真/偽どちらでも、偽なら通信しないことを下で見る)', /\n\s*assistantLifeFriend:\s*(true|false),/.test(rel));

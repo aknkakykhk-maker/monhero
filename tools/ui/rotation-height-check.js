@@ -30,6 +30,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 const REVIEWED = {
   // ② vh で高さを決めている窓
   '24-sorashido-copy-view.jsx|94dvh|1': 'outside ソラシドのAIコピー(バトルの中だけ)',
+  '56-assistant-life-masmon-ranch.jsx|92dvh|1': 'outside M/B管理で助手のマスモンにチケットを使う窓(助手ライフの地図と M/B管理の画面だけ。モンヒロビートの外)',
   '56-screen-profile.jsx|58vh|1': 'outside プロフィールの仲良し度のごほうびの一覧(gameState が PROFILE のときだけ。モンヒロビートの外)',
   '60-app.jsx|86vh|1': 'outside バトルのモードの説明(バトルのモードえらび)',
   '60-app.jsx|75vh|1': 'outside バトルの技えらび',

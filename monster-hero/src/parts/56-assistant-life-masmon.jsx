@@ -157,8 +157,9 @@ const normalizeAssistantMasmonMine = (raw) => {
 };
 const assistantMasmonMineOf = (st, aid) => (st && st.mine && st.mine[aid]) || { names: {}, parts: {}, hero: 0, wish: '', deck: null, former: {} };
 const normalizeAssistantMasmonSave = (raw) => {
-  const out = { v: 1, welcomed: {}, seed: '', made: {}, named: false, noticed: {}, dyes: {}, draw: normalizeAssistantMasmonDraw(null), pick: {}, pickNameDay: '', renamed2: {}, asked: [], mine: {} };
+  const out = { v: 1, welcomed: {}, seed: '', made: {}, named: false, noticed: {}, dyes: {}, draw: normalizeAssistantMasmonDraw(null), pick: {}, pickNameDay: '', renamed2: {}, asked: [], mine: {}, nickFix1: false };
   if (raw && typeof raw === 'object') {
+    out.nickFix1 = raw.nickFix1 === true; // 種類名になった迎えた子の名前を、助手が紹介した名前に戻した印(一度だけ・2026-11-11)
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
@@ -627,7 +628,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
   const mon = assistantMasmonMon(best.c.t.monster);
   return { slot, monster: best.c.t.monster, nick: typeof best.c.t.nick === 'string' && best.c.t.nick ? best.c.t.nick : (mon && mon.name) || best.c.t.monster,
     lv: Math.max(1, Math.min(30, 4 + Math.round(ctx.lv * 0.9) + Math.round((rnd() - 0.5) * 4))), grow, why: ASSISTANT_MASMON_PICK_REASON[reason], role, welcome: assistantMasmonWelcomeLv(slot),
-    colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd), ai: false, reason, at: day };
+    colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd), ai: !!(typeof best.c.t.nick === 'string' && best.c.t.nick), reason, at: day }; // 表に名前がある子は、迎えるときに助手がその名前で紹介するので名前済み(あとから AI で付け直さない・2026-11-11 社長「助手がその名前を紹介してきた」)
 };
 // まだの枠のうち、仲良し度が届いた枠を、その場で選んで迎える(pick に書く・1回だけ)。迎えた行の配列を返す(場面は最後の1体)
 const assistantMasmonWelcomeDue = async (aid, bondLv) => {
@@ -714,14 +715,45 @@ const assistantMasmonEnsureMade = async () => {
     const next = st.seed ? assistantMasmonDyeEnsure(st, day) : st;
     if (next !== st) { ASSISTANT_MASMON_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false); } catch (_) {} }
   } catch (_) {}
+  try { const st = ASSISTANT_MASMON_STORE.state; const next = assistantMasmonNickFix1(st); if (next !== st) { ASSISTANT_MASMON_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false); } catch (_) {} } } catch (_) {}
   void assistantMasmonAskNames();
+};
+// 種類名か(どのモンスターの名前とも同じなら真)
+const assistantMasmonIsMonName = (n) => { try { return typeof ALL_PLAYER_MONSTERS !== 'undefined' && Object.values(ALL_PLAYER_MONSTERS).some(m => m && m.name === n); } catch (_) { return false; } };
+// 一度だけの直し(印 nickFix1): 迎えたときに助手が表の名前(例: センくん)で紹介したのに、そのあとの AI の名前付けで種類名(エイキ)になった子を、表の名前に戻す。
+//   戻すのは「いまの名前が種類名そのもの」で「プレイヤーが提案で名前を変えていない」迎えた枠(pick)だけ。表に名前が無い・同じ助手のほかの子と重なるときは戻さない(あとで AI が付ける)
+const assistantMasmonNickFix1 = (st) => {
+  if (!st || st.nickFix1 || !st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V) return st;
+  const pick = { ...(st.pick || {}) };
+  for (const aid of Object.keys(pick)) {
+    const base = assistantMasmonBasePlanOf(aid); if (!base || !pick[aid]) continue;
+    const pool = assistantMasmonDrawPool(aid, base); const all = [...pool.likes, ...pool.more, ...pool.rest];
+    const mine = assistantMasmonMineOf(st, aid); const pk = { ...pick[aid] };
+    for (const k of Object.keys(pk)) {
+      const t = pk[k]; const mon = assistantMasmonMon(t.monster);
+      if (!mon || t.nick !== mon.name || (mine.names[t.slot] || []).length) continue;
+      const src = all.find(x => x.monster === t.monster && typeof x.nick === 'string' && x.nick);
+      if (!src || assistantMasmonRowsOf({ ...st, pick: { ...pick, [aid]: pk } }, aid).some(y => y.nick === src.nick)) continue;
+      pk[k] = { ...t, nick: src.nick, ai: true };
+    }
+    pick[aid] = pk;
+  }
+  return { ...st, pick, nickFix1: true };
 };
 // 名前を Claude API で(assistant-chat の kind:'masmon_names')。印 assistantMasmonNamesApi が偽・失敗のときは表の名前のまま
 //   迎えたマスモン(勇者モン・draw で迎えた枠・pick)のうち、AI の名前がまだのものだけをまとめて1回。失敗・上限のときはその日はもう試さない(pickNameDay)
 //   2026-11-08 社長「名前を変えてないのがあった」: 前は1回付けたら(draw.named)二度と試さなかったので、6〜8体目(受け口が5体までだった間)や
 //   言葉の決まりで落ちた名前が表のままだった。いまは「まだのものだけ」を次に開いたときに付け直し、付け直したら1行だけ知らせる(renamed2)
-let _assistantMasmonNamesBusy = false;
+//   2026-11-11 社長「名前を付けたのにエイキのまま」: 起動時の名付けが走っているあいだに迎えた子は、頼みが 'skip' で捨てられ、その日は名前が付かなかった。
+//   走っている最中に頼まれたら覚えておき、終わったあともう1回だけ回す(新しく迎えた子もその場で名前が付く)
+let _assistantMasmonNamesBusy = false, _assistantMasmonNamesAgain = false;
 const assistantMasmonAskNames = async () => {
+  if (_assistantMasmonNamesBusy) { _assistantMasmonNamesAgain = true; return 'skip'; }
+  const r = await assistantMasmonAskNamesOnce();
+  if (_assistantMasmonNamesAgain) { _assistantMasmonNamesAgain = false; if (r !== 'failed' && r !== 'tired') return assistantMasmonAskNamesOnce(); } // 失敗・上限の日はその日はもう試さない(前のまま)
+  return r;
+};
+const assistantMasmonAskNamesOnce = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
@@ -745,7 +777,7 @@ const assistantMasmonAskNames = async () => {
       const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
       const used = new Set(assistantMasmonRowsOf(cur, a).filter(t => t.ai).map(t => t.nick));
       let changed = false;
-      const name = (t) => { if (t.ai) return t; const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : ''; const styled = !!assistantMasmonMineOf(cur, a).nameStyle; const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n); if (!ok) return t; used.add(n); changed = true; return { ...t, nick: n, ai: true }; };
+      const name = (t) => { if (t.ai) return t; const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : ''; const styled = !!assistantMasmonMineOf(cur, a).nameStyle; const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n) && !assistantMasmonIsMonName(n); /* 種類名そのもの(例: エイキ)は名前にしない */ if (!ok) return t; used.add(n); changed = true; return { ...t, nick: n, ai: true }; };
       const pk = pick[a] ? { ...pick[a] } : null;
       const w = cur.draw.welcomed[a] || {};
       made[a] = made[a].map(t => (pk && pk[t.slot]) || !(t.slot === 1 || w[t.monster]) ? t : name(t));
@@ -986,6 +1018,7 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(p), roles: {}, slots: { [t.slot]: nu.colors } }];
     assistantMasmonSave(withMine({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [t.slot]: nu } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) } }));
     if (!r.name) void assistantMasmonAskNames();
+    try { if (typeof amgTick === 'function') void amgTick(aid); } catch (_) {} // 入れ替えた子の育成(6能力)もその場で作る
     return { changed: true, what: `${row.nick}を${monName(r.monster)}に入れ替え` };
   }
   if (r.kind === 'hero' && outcome === 'yes') {
@@ -1173,6 +1206,16 @@ const assistantMasmonWelcomeLine = (aid, t) => {
 const assistantMasmonAll = (p) => [...assistantMasmonTeam(p), ...assistantMasmonBench(p)];
 const assistantMasmonMon = (mid) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[mid]) || null;
 const assistantMasmonLineage = (mid) => { try { const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null; const m = l && l.main; return (m && typeof m === 'object' ? m.id : m) || null; } catch (_) { return null; } };
+// 種族(血統)の行に出す代表の絵(2026-11-11 社長「ゴースト種の所に絵が無い」): 血統の代表(monId)。いなければその血統が主のいちばん初めのモンスター。どちらも無ければ null(🧬のまま)
+const assistantMasmonLineageRep = (lin) => {
+  try {
+    if (!lin || typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+    const id = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].monId : '';
+    if (id && ALL_PLAYER_MONSTERS[id]) return ALL_PLAYER_MONSTERS[id];
+    const k = Object.keys(ALL_PLAYER_MONSTERS).find(m => assistantMasmonLineage(m) === lin);
+    return k ? ALL_PLAYER_MONSTERS[k] : null;
+  } catch (_) { return null; }
+};
 const assistantMasmonLineageName = (lin) => (typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].name : '');
 // 好き・苦手の1行の表示名(血統なら「○○種」)
 const assistantMasmonTasteName = (x) => {
@@ -1473,6 +1516,8 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
       if (p0 && p0.v2) {
         // まだの枠は、迎えるその時に1体を選ぶ(2026-11-08 社長「迎えるときに決める」)
         const got = await assistantMasmonWelcomeDue(id, lv);
+        // 迎えた子の育成(6能力)もその場で作る(2026-11-11 社長: 新しく来たエイキだけ「ライフ・攻撃・防御・ガッツ」の古い棒だった。開いた瞬間にしか作っていなかった)
+        if (got.length && typeof amgTick === 'function') { try { await amgTick(id); } catch (_) {} }
         if (got.length && alive) setWelcome(got[got.length - 1]);
       } else {
         const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
@@ -1583,7 +1628,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
       if (!name) return null;
-      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : x.lineage ? assistantMasmonLineageRep(x.lineage) : null;
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return (
         <div key={`${kind}-${x.monster || x.lineage}`} className="flex items-center gap-2 py-1" data-assistant-masmon-taste={`${kind}:${x.monster || x.lineage}`}>
