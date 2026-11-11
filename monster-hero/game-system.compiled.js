@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 948a1470b4bc8c98
+// source-sha256: 0c06b3948a3b8870
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -213,6 +213,34 @@ const MH_PAGE_OFFSET_GUARD = (() => {
   return {
     state,
     check: soon
+  };
+})();
+function mhIsIosHomeScreenApp() {
+  try {
+    return typeof window !== 'undefined' && !!window.navigator && window.navigator.standalone === true;
+  } catch (_) {
+    return false;
+  }
+}
+const MH_TOUCH_MENU_GUARD = (() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+  let lastTouch = false;
+  document.addEventListener('pointerdown', e => {
+    lastTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  }, {
+    capture: true,
+    passive: true
+  });
+  document.addEventListener('contextmenu', e => {
+    const t = e.target;
+    if (t && typeof t.closest === 'function' && t.closest('input,textarea,[contenteditable]:not([contenteditable="false"]),.select-text')) return;
+    const byFinger = e.pointerType === 'touch' || e.pointerType === 'pen' || !e.pointerType && lastTouch;
+    if (byFinger && e.cancelable) e.preventDefault();
+  }, {
+    capture: true
+  });
+  return {
+    byFinger: () => lastTouch
   };
 })();
 const _LI = {};
@@ -80673,7 +80701,8 @@ function HomeScreen({
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
       ranch: onOpenManagement,
       temple: onOpenTemple,
-      market: onOpenMarket
+      market: onOpenMarket,
+      battle: onOpenBattle
     };
   });
   const homeSceneRef = React.useRef(null);
@@ -111677,6 +111706,7 @@ function AssistantLifeRoom({
   }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
     id: id,
     put: other ? other.put || {} : null,
+    layoutItems: other && Array.isArray(other.layout) ? other.layout : null,
     w: w,
     h: h,
     faces: ppl ? ppl.length : 0,
@@ -112114,6 +112144,14 @@ function AssistantLifeRoomSheet({
     } : null;
   }).filter(Boolean) : [];
   const rvTeam = typeof assistantLifeRoomMasmons === 'function' ? assistantLifeRoomMasmons(id, life) : [];
+  const allTeamN = (() => {
+    try {
+      const t = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+      return Array.isArray(t) ? t.length : 0;
+    } catch (_) {
+      return 0;
+    }
+  })();
   const rvAct = (k, label, cls, fn, dis = false) => React.createElement("button", {
     key: k,
     type: "button",
@@ -112127,7 +112165,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-dock": true
   }, rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet), rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => onChat ? onChat(id, null) : toSheet(), !onChat && !home), rvAct('give', '🎁 贈る', 'bg-pink-600', () => {
     if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]);else if (w && w.group && canGive) onGive(w.group);else toSheet();
-  }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${rvTeam.length || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
+  }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${allTeamN || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
   const rvSheetW = land && typeof window !== 'undefined' && window.innerWidth < 760 ? '50%' : '42%';
   const rvScene = typeof AssistantLifeRoomScene === 'function' ? React.createElement(AssistantLifeRoomScene, {
     id: id,
@@ -112251,7 +112289,7 @@ function AssistantLifeRoomSheet({
   }), !hotBeat && beatRow, !hotCard && cardRow, React.createElement(AssistantLifeDoRow, {
     k: "masmon",
     icon: "🐾",
-    label: `${who.name}のマスモン${rvTeam.length ? ` ${rvTeam.length}体` : ''}`,
+    label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`,
     sub: "育ち方・編成を見る",
     on: onMasmon ? () => onMasmon(id) : null,
     why: "まだ見られません"
@@ -113591,6 +113629,8 @@ function AssistantLifeHouse({
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
   });
+  const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
+  const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
   const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
@@ -113642,9 +113682,9 @@ function AssistantLifeHouse({
       }
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
+  }, React.createElement("em", null, uiV2 ? giveLeftAll : soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
     "data-assistant-life-today-gain": "give"
-  }, !uiV2 ? `道具 ${itemsHave}個` : (soloOn ? itemsLeft + soloLeft : itemsLeft) <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
+  }, !uiV2 ? `道具 ${itemsHave}個` : giveLeftAll <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -113861,7 +113901,9 @@ function AssistantLifeHouse({
     },
     watchNow: unwatched.length,
     watchDone: (life.watched || []).length > 0,
-    giveLeft: soloOn ? itemsLeft + soloLeft : itemsLeft,
+    giveLeft: giveLeftAll,
+    giveGroupLeft: groupLeft,
+    giveSoloLeft: soloOn ? soloLeft : null,
     onWatch: () => {
       if (unwatched[0]) watch(unwatched[0]);
     },
@@ -114703,6 +114745,7 @@ function AssistantLifeTownMap({
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
+  const [cheerMsg, setCheerMsg] = React.useState(null);
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
@@ -114934,7 +114977,7 @@ function AssistantLifeTownMap({
   };
   const PERK_WORD = {
     studio: '券なし',
-    cardroom: '×1.5'
+    cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}`
   };
   const perkOf = place => {
     try {
@@ -115051,9 +115094,42 @@ function AssistantLifeTownMap({
     const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
     const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
+    let ti = null;
+    if (place === 'battle') {
+      try {
+        ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+      } catch (_) {
+        ti = null;
+      }
+    }
+    let bi = null;
+    if (place === 'battle') {
+      try {
+        bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+      } catch (_) {
+        bi = null;
+      }
+    }
+    const battleBtn = bi && React.createElement("button", {
+      type: "button",
+      disabled: !!bi.disabled,
+      title: bi.disabled ? bi.why || '' : bi.sub || '',
+      "data-assistant-life-map-act": "masmon-battle",
+      onClick: () => {
+        setSheet(null);
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'place'
+          });
+        } catch (_) {}
+      },
+      className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
+    }, bi.label || '⚔ マスモンで対戦(β)');
+    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
     return React.createElement("div", {
       key: id,
-      className: `mt-2 flex items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
+      className: `mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
       "data-assistant-life-map-sheet-selected": initialAssistantId === id ? "1" : undefined,
       "data-assistant-life-map-sheet-who": id,
       "data-assistant-life-map-sheet-at": place
@@ -115075,7 +115151,13 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-sheet-spent": true
     }, "済 ごほうび済み")), React.createElement("p", {
       className: "text-[10.5px] font-bold text-slate-300"
-    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), spent && React.createElement("p", {
+    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), tiLine && React.createElement("p", {
+      className: "text-[10.5px] font-bold text-emerald-200",
+      style: {
+        wordBreak: 'auto-phrase'
+      },
+      "data-assistant-life-map-train-line": id
+    }, tiLine), spent && React.createElement("p", {
       className: "text-[10.5px] font-bold text-amber-200",
       style: {
         wordBreak: 'auto-phrase'
@@ -115109,31 +115191,7 @@ function AssistantLifeTownMap({
         onCard(id);
       },
       className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95"
-    }, "🃏 対戦する"), place === 'battle' && (() => {
-      let info = null;
-      try {
-        info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
-      } catch (_) {
-        info = null;
-      }
-      if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
-      return React.createElement("button", {
-        type: "button",
-        disabled: !!info.disabled,
-        title: info.disabled ? info.why || '' : info.sub || '',
-        "data-assistant-life-map-act": "masmon-battle",
-        onClick: () => {
-          setSheet(null);
-          try {
-            assistantMasmonBattleOpen({
-              assistantId: id,
-              from: 'place'
-            });
-          } catch (_) {}
-        },
-        className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
-      }, info.label || '⚔ マスモンで対戦(β)');
-    })(), typeof onView === 'function' && React.createElement("button", {
+    }, "🃏 対戦する"), place === 'battle' && !ti && battleBtn, typeof onView === 'function' && React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "view",
       onClick: () => onView(id),
@@ -115146,13 +115204,57 @@ function AssistantLifeTownMap({
         onPick(id);
       },
       className: "rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95"
-    }, "🏡 部屋へ ›")));
+    }, "🏡 部屋へ ›")), ti && React.createElement("div", {
+      className: "grid w-full gap-1",
+      style: {
+        gridTemplateColumns: battleBtn ? '1fr 1fr 1fr' : '1fr 1fr'
+      },
+      "data-assistant-life-map-train-acts": id
+    }, React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "train-watch",
+      onClick: () => {
+        try {
+          assistantMasmonTrainWatchOpen(id);
+        } catch (_) {}
+      },
+      className: "rounded-xl bg-sky-700 min-h-[44px] px-1 py-1 text-[12px] font-black text-white active:scale-95"
+    }, "👀 修行を見る"), React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "cheer",
+      disabled: !ti.canCheer,
+      title: ti.why || '',
+      onClick: () => {
+        let r = null;
+        try {
+          r = assistantMasmonCheer(id);
+        } catch (_) {
+          r = null;
+        }
+        setCheerMsg(r && r.ok ? {
+          id,
+          text: `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}`
+        } : {
+          id,
+          text: r && r.why || ti.why || ''
+        });
+      },
+      className: "rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50"
+    }, "📣 応援する", React.createElement("span", {
+      className: "block text-[10px] font-bold"
+    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), ti && !ti.canCheer && ti.why && React.createElement("p", {
+      className: "w-full text-[10.5px] font-bold text-slate-300",
+      "data-assistant-life-map-cheer-why": id
+    }, ti.why), cheerMsg && cheerMsg.id === id && cheerMsg.text && React.createElement("p", {
+      className: "w-full rounded-lg bg-emerald-900/70 px-2 py-1 text-[11px] font-black text-emerald-100",
+      "data-assistant-life-map-cheer-msg": id
+    }, cheerMsg.text));
   };
   return React.createElement("div", {
     className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
     "data-assistant-life-where": true,
     "data-assistant-life-map-art": art
-  }, React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+  }, typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
@@ -115314,7 +115416,9 @@ function AssistantLifeTownMap({
     "data-assistant-life-map-sheet-home": true
   }, ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
-  }, ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+  }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, "MFバトルカードの研究をしている助手。いる助手と対戦すると、", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true
   }, "いまはだれもいません"), typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
@@ -116703,6 +116807,24 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     go: typeof go.temple === 'function' ? go.temple : null
   });
   try {
+    const bt = typeof amgtRoomLine === 'function' ? assistantLifeAtPlace(life, ids, 'battle').filter(id => {
+      let t = null;
+      try {
+        t = amgtRoomLine(id);
+      } catch (_) {
+        t = null;
+      }
+      return typeof t === 'string' && t.indexOf('いま') === 0;
+    }) : [];
+    if (bt.length) rows.push({
+      k: 'battle',
+      place: 'battle',
+      icon: '⚔',
+      text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`,
+      go: typeof go.battle === 'function' ? go.battle : null
+    });
+  } catch (_) {}
+  try {
     const mk = assistantLifeAtPlace(life, ids, 'market');
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
     if (pk && !pk.used && pk.itemName) rows.push({
@@ -117752,6 +117874,8 @@ function AssistantLifeBenefitBoard({
   watchNow = 0,
   watchDone = false,
   giveLeft = 0,
+  giveGroupLeft = null,
+  giveSoloLeft = null,
   onWatch = null,
   onGive = null,
   onRoad = null,
@@ -117774,7 +117898,7 @@ function AssistantLifeBenefitBoard({
     }
   })();
   const todayClick = watchNow > 0 && onWatch ? onWatch : giveLeft > 0 && onGive ? onGive : null;
-  const todayParts = [watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し', giveLeft > 0 ? `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み'];
+  const todayParts = [watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し', giveLeft > 0 ? Number.isFinite(giveGroupLeft) && Number.isFinite(giveSoloLeft) ? `🎁 贈る 2人に${giveGroupLeft}・1人に${giveSoloLeft}回` : `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み'];
   const shown = more ? rows : rows.slice(0, 1);
   return React.createElement("section", {
     className: `mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`,
@@ -131506,11 +131630,11 @@ function AssistantLifeGiftLikesRow({
     "aria-expanded": showAll
   }, React.createElement("span", {
     className: "shrink-0"
-  }, "🎁 好きなもの"), compact && React.createElement("span", {
+  }, "🎁 贈り物の好み"), compact && React.createElement("span", {
     className: "min-w-0 truncate text-[11px]"
   }, liked.length ? liked.map(g => g.emoji).join('') : ''), React.createElement("span", {
     className: "ml-auto shrink-0 text-[10px] font-bold text-slate-400"
-  }, "分かった ", known, "/", gifts.length, compact ? showAll ? ' ▲' : ' ▼' : '')), hint && React.createElement("button", {
+  }, gifts.length, "種類のうち ", known, " 分かった", compact ? showAll ? ' ▲' : ' ▼' : '')), hint && React.createElement("button", {
     type: "button",
     "data-assistant-life-gift-told": told.key,
     onClick: () => assistantLifeGiftToldSeen(id),
@@ -145153,9 +145277,13 @@ const alfBuildMore = ids => {
       const p = {};
       for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
       const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
-      if (Object.keys(p).length || k.length) fu[id] = {
+      const l = typeof assistantLifeLayoutPack === 'function' ? assistantLifeLayoutPack(id) : null;
+      if (Object.keys(p).length || k.length || l) fu[id] = {
         p,
-        k
+        k,
+        ...(l ? {
+          l
+        } : {})
       };
     } catch {}
   }
@@ -145190,9 +145318,39 @@ const alfMoreChars = o => {
   const t = JSON.stringify(o);
   return t.length + (t.match(/[:,]/g) || []).length;
 };
+const alfTrimLayout = (more, floor = 0) => {
+  const fu = {};
+  for (const [id, x] of Object.entries(more.fu || {})) fu[id] = x;
+  const total = () => alfMoreChars({
+    ...more,
+    fu
+  });
+  for (let guard = 0; guard < 200; guard++) {
+    if (total() <= ALF_MORE_FIT) break;
+    let best = null;
+    for (const [id, x] of Object.entries(fu)) if (Array.isArray(x.l) && x.l.length && x.l.length > floor && (!best || x.l.length > fu[best].l.length)) best = id;
+    if (!best) break;
+    const l = fu[best].l;
+    let lo = 0;
+    for (let i = 1; i < l.length; i++) if ((l[i][10] || 0) < (l[lo][10] || 0)) lo = i;
+    const rest = l.filter((_, i) => i !== lo);
+    const {
+      l: _drop,
+      ...keep
+    } = fu[best];
+    fu[best] = rest.length ? {
+      ...keep,
+      l: rest
+    } : keep;
+  }
+  return {
+    ...more,
+    fu
+  };
+};
 const alfFitMasmon = (more, ms) => {
-  if (!ms || !Object.keys(ms).length) return more;
-  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+  const withMs = (base, n, allColor) => {
+    if (!ms || !Object.keys(ms).length) return base;
     const cut = {};
     const mn = {};
     for (const [id, list] of Object.entries(ms)) {
@@ -145202,16 +145360,32 @@ const alfFitMasmon = (more, ms) => {
       });
       if (list.length > n) mn[id] = list.length;
     }
-    const next = {
-      ...more,
+    return {
+      ...base,
       ms: cut,
       ...(Object.keys(mn).length ? {
         mn
       } : {})
     };
-    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
+  };
+  const dyOf = n => ({
+    ...more,
+    dy: (more.dy || []).slice(0, n)
+  });
+  const ok = o => alfMoreChars(o) <= ALF_MORE_FIT;
+  let next = withMs(more, 8, true);
+  if (ok(next)) return next;
+  next = withMs(more, 8, false);
+  if (ok(next)) return next;
+  for (const n of [4, 0]) {
+    next = withMs(dyOf(n), 8, false);
+    if (ok(next)) return next;
   }
-  return more;
+  for (const n of [8, 4, 2, 1]) {
+    next = alfTrimLayout(withMs(dyOf(0), n, false), 8);
+    if (ok(next)) return next;
+  }
+  return alfTrimLayout(withMs(dyOf(0), 1, false));
 };
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
 const ALF_ACT_MAX = 6;
@@ -145319,7 +145493,12 @@ const assistantLifeFriendNormalizeMore = raw => {
       if (f && f.slot === sl) p[k] = f.key;
     }
     const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
-    fu[id] = {
+    const l = (Array.isArray(x.l) ? x.l : []).slice(0, 20).filter(a => Array.isArray(a) && a.length === 11 && furn.some(y => y.key === a[0]) && a.slice(1).every(v => Number.isFinite(v)));
+    fu[id] = l.length ? {
+      p,
+      k,
+      l
+    } : {
       p,
       k
     };
@@ -147078,7 +147257,13 @@ function AlfFriendHouseView({
     const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
     return f ? `${f.emoji} ${f.name}` : null;
   };
+  const layoutOf = id => {
+    const l = more && more.fu[id] && Array.isArray(more.fu[id].l) && typeof assistantLifeLayoutUnpack === 'function' ? assistantLifeLayoutUnpack(more.fu[id].l) : null;
+    return l && l.length ? l : null;
+  };
   const furnNames = id => {
+    const lay = layoutOf(id);
+    if (lay && lay.length) return [...new Set(lay.map(it => fname(it.k)).filter(Boolean))];
     const fu = putOf(id);
     return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
   };
@@ -147103,7 +147288,8 @@ function AlfFriendHouseView({
         ceil: more.fu[id].p.c || null,
         wall: more.fu[id].p.w || null,
         floor: more.fu[id].p.f || null
-      }
+      },
+      layout: layoutOf(id)
     };
     return o;
   })();
@@ -147291,6 +147477,7 @@ function AlfFriendHouseView({
     } : null,
     team: rvTeam,
     furn: rvFurn,
+    layoutItems: layoutOf(roomId),
     bubble: talk && talk.aid === roomId ? talk.text : '',
     title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
     sub: `🏘 ${friend.name}さんの家`,
@@ -194839,6 +195026,7 @@ function MonsterHeroGame() {
   gameStateForBackRef.current = gameState;
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (mhIsIosHomeScreenApp()) return;
     let armed = false;
     const arm = () => {
       try {
