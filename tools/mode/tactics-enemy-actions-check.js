@@ -315,7 +315,7 @@ check('返すのは味方の増減を確定させてから',
 check('確率で出た反射でも撃破を確定できる',
   has('if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;'));
 check('避けた子・反射した子がいるときは「無傷！」を出さない',
-  has("if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null) addPopup('無傷！'"));
+  has("if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null&&!absorbedName) addPopup('無傷！'"));
 
 // --- 勇者特性は「その札を出した／狙われた、その子の能力」(2026-09-20 ユーザー提案) ---
 // ★被弾側(もち肌・中二病・俊足・反射・吸収)と攻撃側(怪力・魔力開放・禁忌解錠の+50%)は
@@ -390,14 +390,16 @@ check('抽選は1回だけ・その表を引く',
 check('中二病の回数は、持っている子が狙われたときだけ減らす',
   has("const chuuniAimed = !isTacticsMode(runMode) ? (mainHero?.id==='Ark'||mainHero?.id==='Iblis')")
     && has("      : (aimedSlots||[]).some(i=>{const id=tacticsUnitsRef.current[i]?.id;return id==='Ark'||id==='Iblis';});")
-    && has("if (chuuniAimed && getWaveBuff('chuuniDmgCutUses')<2) {"));
+    // 回数を減らすのは、カットした攻撃を実際に受けたときだけ(2026-11-11。回避・反射・吸収で当たらなかった攻撃では減らさない)
+    && has("if (chuuniCutUsed || !chuuniAimed || !(getWaveBuff('chuuniDmgCutUses')<2)) return;")
+    && has("{ const hitId=tacticsUnitsRef.current[slotIdx]?.id; if(hitId==='Ark'||hitId==='Iblis') useChuuniCut(); }"));
 check('避ける／返す／吸うのは表を引いた本人',
   has('const evadedSlot=isEvasion?pickDefenseSlot():null;')
     && has('const reflectedSlot=isReflect?pickDefenseSlot():null;')
-    && has('const absorbSlot=isTacticsMode(runMode)?pickDefenseSlot():null;'));
+    && has('const absorbedSlot=isAbsorb?pickDefenseSlot():null;')); // 吸収も、狙われた1体だけが個別処理の中で吸う(2026-11-11)
 check('氷海の支配者は、持っている子ごとに敵と同じ距離かを見る',
   has('const iceExtraRateAt=(slotIdx)=>{')
-    && has('const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDist);')
+    && has('const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDistAfterTurn);') // 距離撃で動かしたあとの距離で見る(2026-11-11)
     && has('const extra=iceExtraRateAt(slotIdx);'));
 check('全員へ配る自動回復には氷海ぶんを混ぜない',
   has('tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));
