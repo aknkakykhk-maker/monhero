@@ -69,7 +69,9 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
     await toHome(page); await waitFaces(page);
     return page;
   };
-  const openHouse = async (page) => { for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(400); };
+  // 開いた直後の重いあいだは HOME の札がまだ出ていないことがある(2026-11-11 ミハリの見回りで1回だけ時間切れ)。
+  // 決まった回数で諦めず、札が出るまで待ってから押し、部屋の札が出るまで待つ
+  const openHouse = async (page) => { await page.locator('[data-home-assistant-life]').first().waitFor({ state: 'visible', timeout: 60000 }); for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } } await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.locator('[data-assistant-life-room]').first().waitFor({ state: 'visible', timeout: 30000 }); };
   const groupRoom = (page) => page.evaluate(() => { try { const gs = (ASSISTANT_LIFE_STORE.state.life.groups || []).filter(g => g.ids.length === 2); const g = gs.find(x => !document.querySelector(`[data-assistant-life-room="${x.ids[0]}"] [data-assistant-life-rel]`)) || gs[0]; return g ? g.ids[0] : null; } catch { return null; } });
   const openPairSheet = async (page, id) => { await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300); await page.locator('[data-assistant-life-room-act="give"]').click(); await page.waitForTimeout(400); };
   const points = (page) => page.evaluate(() => Number(JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0')));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87f5f48bdc25473b
+// source-sha256: 303f65bd2336f9c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8549,6 +8549,7 @@ const Audio_ = (() => {
         },
         started: () => playing,
         songTimeMs: () => songTimeSeconds() * 1000,
+        rawSongTimeMs: () => rawSongTimeSeconds() * 1000,
         info: () => ({
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
@@ -42230,7 +42231,7 @@ const RhythmTapTest = ({
       const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
-      RHYTHM_TIMING_DIAG.frame(songTimeMs);
+      RHYTHM_TIMING_DIAG.frame(songTimeMs, typeof run.audio.rawSongTimeMs === 'function' ? run.audio.rawSongTimeMs() : null);
       const RHYTHM_MISS_RECLAIM_MS = rhythmMissReclaimMs();
       const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
@@ -43722,8 +43723,15 @@ const RhythmTapTest = ({
       if (!playing()) return;
       const now = nowMs();
       RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length || 0);
+      const vw = typeof window !== 'undefined' ? Number(window.innerWidth) || 0 : 0,
+        vh = typeof window !== 'undefined' ? Number(window.innerHeight) || 0 : 0,
+        live = e.touches?.length || 0;
       Array.from(e.changedTouches || []).forEach(t => {
-        if (inArea(t.target)) RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp);
+        if (!inArea(t.target) || RHYTHM_TOUCH_BRIDGE.lateFollow(t.identifier, e.timeStamp)) return;
+        RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp, {
+          edgePx: vw > 0 && vh > 0 ? Math.max(0, Math.min(t.clientX, vw - t.clientX, t.clientY, vh - t.clientY)) : NaN,
+          live
+        });
       });
       sweep();
     };
@@ -43892,10 +43900,27 @@ const RhythmTapTest = ({
           return;
         }
         current.activeTouchInputs.add(inputKey);
-        if (e.type !== 'touchstart') {
-          RHYTHM_TOUCH_BRIDGE.lateStart();
-          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
-          RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
+        const ownStart = e.type === 'touchstart' && Array.from(e.changedTouches || []).some(t => t.identifier === touch.identifier);
+        if (!ownStart) {
+          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            droppedAt = current.droppedNoEnd?.get(inputKey),
+            back = droppedAt !== undefined && nowPerf - droppedAt <= RHYTHM_TOUCH_BACK_MS,
+            guarded = back && rhythmTouchPlatform() === 'ios';
+          current.droppedNoEnd?.delete(inputKey);
+          RHYTHM_TOUCH_BRIDGE.lateStart({
+            id: touch.identifier,
+            type: e.type,
+            stamp: e.timeStamp,
+            back,
+            guarded
+          });
+          if (guarded) {
+            RHYTHM_INPUT_REC.event('back', {
+              key: inputKey
+            });
+            return;
+          }
+          if (!back && e.type !== 'touchstart') RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
         }
         if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
@@ -43945,6 +43970,15 @@ const RhythmTapTest = ({
             }, RHYTHM_MISSING_TOUCH_CONFIRM_MS);
           }
           return;
+        }
+        if (!ownEnd) {
+          current.droppedNoEnd = current.droppedNoEnd || new Map();
+          if (current.droppedNoEnd.size > 32) current.droppedNoEnd.clear();
+          current.droppedNoEnd.set(inputKey, performance.now());
+        } else {
+          current.droppedNoEnd?.delete(inputKey);
+          const m = /^touch:(-?\d+)$/.exec(String(inputKey));
+          if (m) RHYTHM_TOUCH_BRIDGE.forgetTouch(Number(m[1]));
         }
         current.missingHeld?.delete(inputKey);
         current.activeTouchInputs.delete(inputKey);
@@ -107826,7 +107860,7 @@ function AssistantLifeRoomSheet({
     onClick: fn,
     className: `rounded-xl px-1 py-2 min-h-[44px] text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`
   }, label);
-  const rvDock = land ? null : React.createElement("div", {
+  const rvDock = land || uiV2 ? null : React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5",
     "data-assistant-life-roomview-dock": true
   }, rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet), rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => onChat ? onChat(id, null) : toSheet(), !onChat && !home), rvAct('give', '🎁 贈る', 'bg-pink-600', () => {
@@ -107850,6 +107884,123 @@ function AssistantLifeRoomSheet({
     dock: rvDock,
     padLeft: 78
   }) : null;
+  const followCard = follow && onChat && React.createElement("div", {
+    className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
+    "data-assistant-life-room-follow": follow.kind
+  }, React.createElement("p", {
+    className: `${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${who.name}「${follow.text}」`)), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-pink-500",
+    "data-assistant-life-room-follow-chat": true,
+    onClick: () => onChat(id, follow)
+  }, "💬 おしゃべりする"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-slate-700",
+    "data-assistant-life-room-follow-bye": true,
+    onClick: () => onFollowDone && onFollowDone()
+  }, "またね")));
+  const cardSpent = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) ? assistantLifeCardSpent(id) : null;
+  const canCardNow = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id);
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && !!onGiveFurn;
+  const beatRow = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement(AssistantLifeDoRow, {
+    k: "beat",
+    icon: "🎵",
+    label: asleep ? '起こしてモンヒロビートに誘う' : atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う',
+    sub: atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)',
+    gain: atBeat && beatFree ? '券なし' : '',
+    on: () => onBeat(id)
+  });
+  const cardRow = canCardNow && React.createElement(AssistantLifeDoRow, {
+    k: cardSpent ? 'card-spent' : 'card',
+    icon: "🃏",
+    label: "MFバトルカードで対戦する",
+    sub: "カード部屋にいる助手と対戦すると、ごほうびアップ",
+    gain: "ごほうび 1.5倍",
+    on: () => onCard(id),
+    disabled: !!cardSpent,
+    why: cardSpent ? typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました' : ''
+  });
+  const hotBeat = !!(atBeat && beatFree && !asleep),
+    hotCard = !!(canCardNow && !cardSpent);
+  const doList = uiV2 && typeof AssistantLifeDoRow === 'function' ? React.createElement("div", {
+    "data-assistant-life-room-do-list": true
+  }, typeof AssistantLifeBondRoad === 'function' && React.createElement(AssistantLifeBondRoad, {
+    id: id,
+    points: typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null,
+    level: lv,
+    land: land
+  }), React.createElement("p", {
+    className: "mt-3 text-[12px] font-black text-amber-200"
+  }, who.name, "とできること"), follow && onChat && followCard, hotCard && cardRow, hotBeat && beatRow, onChat && !follow && React.createElement(AssistantLifeDoRow, {
+    k: "chat",
+    icon: asleep ? '💤' : '💬',
+    label: asleep ? '起こしておしゃべりする' : 'おしゃべりする',
+    sub: "話すと仲良し度が少し上がる(1日の上限あり)",
+    gain: "💗 +",
+    on: () => onChat(id, null)
+  }), soloOn && React.createElement(AssistantLifeDoRow, {
+    k: "give-solo",
+    icon: "🎁",
+    label: w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`,
+    sub: "好きなものは 1.5倍・苦手なものは半分",
+    gain: "💗 +",
+    on: () => onGiveSolo(id, w && w.group ? w.group.ids : [id]),
+    disabled: !canGiveSolo,
+    why: "今日はもう贈れません"
+  }), w && w.group && React.createElement(AssistantLifeDoRow, {
+    k: "give",
+    icon: "🎁",
+    label: soloOn ? `${w.group.ids.length}人に贈る` : '贈る',
+    sub: "一緒にいる組に贈る",
+    gain: React.createElement(React.Fragment, null, "🤝 友情Lv +", React.createElement("br", null), "💗 +"),
+    on: () => onGive(w.group),
+    disabled: !canGive,
+    why: "今日はもう贈れません"
+  }), w && w.group ? React.createElement(AssistantLifeDoRow, {
+    k: "watch",
+    icon: "👀",
+    label: home ? '見守る' : '見守りに行く',
+    sub: "組のおしゃべりを見る(同じ組は時間帯に1回)",
+    gain: React.createElement(React.Fragment, null, "🤝 友情Lv +", React.createElement("br", null), "💗 +"),
+    on: () => onWatch(w.group),
+    disabled: !canWatch,
+    why: "この時間帯はもう見守りました"
+  }) : React.createElement(AssistantLifeDoRow, {
+    k: "peek",
+    icon: "👀",
+    label: "ようすを見る",
+    sub: "ひとりごとや、あなたへのひとこと(時間帯に1回)",
+    on: () => onPeek(id),
+    disabled: !canWatch,
+    why: "この時間帯はもう見ました"
+  }), (!w || !w.group || soloOn) && React.createElement(AssistantLifeDoRow, {
+    k: "invite",
+    icon: "📣",
+    label: asleep ? 'そっと声をかける' : '声をかける',
+    sub: "さみしそうなときは、次の時間にだれかのところへ行く",
+    on: () => onInvite(id),
+    disabled: !!(w && w.reason === 'distance'),
+    why: "いまは遠くにいて声が届きません"
+  }), !hotBeat && beatRow, !hotCard && cardRow, React.createElement(AssistantLifeDoRow, {
+    k: "masmon",
+    icon: "🐾",
+    label: `${who.name}のマスモン${rvTeam.length ? ` ${rvTeam.length}体` : ''}`,
+    sub: "育ち方・編成を見る",
+    on: onMasmon ? () => onMasmon(id) : null,
+    why: "まだ見られません"
+  }), furnOn && React.createElement(AssistantLifeDoRow, {
+    k: "furn",
+    icon: "🪑",
+    label: "部屋の家具",
+    sub: `置いてある家具 ${rvFurn.length}個`,
+    on: () => setFurnOpen(true)
+  }), React.createElement("p", {
+    className: "mt-3 text-[11px] font-black text-slate-300"
+  }, "くわしく")) : null;
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -107877,7 +108028,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-scroll": true
   }, !land && rvScene && React.createElement("div", {
     style: {
-      height: 'min(calc(100% - 52px), max(470px, 132vw))'
+      height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
     }
   }, rvScene), React.createElement("div", {
     ref: sheetRef,
@@ -107896,9 +108047,9 @@ function AssistantLifeRoomSheet({
       maxHeight: 'none',
       zIndex: 1
     }
-  }, React.createElement("p", {
+  }, !uiV2 && React.createElement("p", {
     className: "mhl-en"
-  }, "ROOM · ", String(who.id).toUpperCase()), React.createElement("p", {
+  }, "ROOM · ", String(who.id).toUpperCase()), !uiV2 && React.createElement("p", {
     className: "text-[21px] font-black"
   }, who.name, "の部屋"), React.createElement("p", {
     className: "mt-1 max-w-[62%] text-[12px] font-bold",
@@ -107932,9 +108083,9 @@ function AssistantLifeRoomSheet({
     state: roomState,
     peerSt: peerSt,
     onMediate: onMediate
-  }), React.createElement("div", {
-    className: land ? 'mt-2' : 'mt-8'
-  }, lv != null && React.createElement("div", {
+  }), doList, React.createElement("div", {
+    className: uiV2 ? 'mt-1' : land ? 'mt-2' : 'mt-8'
+  }, lv != null && !uiV2 && React.createElement("div", {
     className: "mhl-row"
   }, React.createElement("span", {
     className: "k"
@@ -107979,7 +108130,7 @@ function AssistantLifeRoomSheet({
   }, "まだありません"))), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-1.5",
     "data-assistant-life-room-acts": true,
-    style: land ? {
+    style: land && !uiV2 ? {
       position: 'sticky',
       bottom: -10,
       zIndex: 6,
@@ -107989,25 +108140,7 @@ function AssistantLifeRoomSheet({
       marginBottom: -4,
       boxShadow: '0 -14px 12px #0b1020'
     } : undefined
-  }, follow && onChat && React.createElement("div", {
-    className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
-    "data-assistant-life-room-follow": follow.kind
-  }, React.createElement("p", {
-    className: `${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`,
-    style: JA_WRAP_STYLE
-  }, jaWrap(`${who.name}「${follow.text}」`)), React.createElement("div", {
-    className: "mt-1.5 grid grid-cols-2 gap-1.5"
-  }, React.createElement("button", {
-    type: "button",
-    className: "mhl-btn bg-pink-500",
-    "data-assistant-life-room-follow-chat": true,
-    onClick: () => onChat(id, follow)
-  }, "💬 おしゃべりする"), React.createElement("button", {
-    type: "button",
-    className: "mhl-btn bg-slate-700",
-    "data-assistant-life-room-follow-bye": true,
-    onClick: () => onFollowDone && onFollowDone()
-  }, "またね"))), w && w.group ? React.createElement("button", {
+  }, !uiV2 && followCard, !uiV2 && React.createElement(React.Fragment, null, w && w.group ? React.createElement("button", {
     type: "button",
     className: "mhl-btn mhl-watch",
     "data-assistant-life-room-act": "watch",
@@ -108070,7 +108203,7 @@ function AssistantLifeRoomSheet({
     onClick: () => onCard(id)
   }, "🃏 カード部屋で対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ"))), React.createElement("button", {
+  }, "ごほうびアップ")))), React.createElement("button", {
     type: "button",
     "data-assistant-life-room-close": true,
     "data-mhl-sheet-close": true,
@@ -111580,6 +111713,95 @@ function AssistantLifeRoomScene({
       paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
     }
   }, dock));
+}
+function AssistantLifeBondRoad({
+  id,
+  points = null,
+  level = null,
+  land = false
+}) {
+  const pts = Number.isFinite(points) ? points : null;
+  const lv = pts != null && typeof assistantBondLevel === 'function' ? assistantBondLevel(pts) : level;
+  if (lv == null) return null;
+  const next = pts != null && typeof assistantBondNext === 'function' ? assistantBondNext(pts) : null;
+  const from = pts != null && typeof assistantBondStage === 'function' ? assistantBondStage(pts).need || 0 : 0;
+  const pct = next ? Math.max(0, Math.min(100, Math.round((pts - from) / Math.max(1, next.need - from) * 100))) : 100;
+  let opens = [];
+  if (next && typeof assistantBondRewardRows === 'function') {
+    try {
+      const row = (assistantBondRewardRows(id) || []).find(r => r.level === next.level);
+      if (row) {
+        if (row.title) opens.push(`「${row.title}」の話し方`);
+        if (row.callStyle) opens.push('呼び方の相談');
+        if (row.frames && row.frames.length) opens.push('飾り枠');
+        opens = opens.concat((row.rewards || []).slice(0, 2));
+      }
+    } catch (_) {
+      opens = [];
+    }
+  }
+  return React.createElement("div", {
+    className: `rounded-2xl border border-pink-300/70 bg-pink-950/60 px-3 py-2 ${land ? 'mt-1.5' : 'mt-2'}`,
+    "data-assistant-life-bond-road": lv
+  }, React.createElement("p", {
+    className: "flex items-baseline gap-2 text-[13px] font-black text-pink-50"
+  }, "💗 仲良し度 ", React.createElement("b", {
+    className: "text-[16px]"
+  }, "Lv", lv), next && React.createElement("span", {
+    className: "ml-auto text-[11.5px] font-bold text-pink-200",
+    "data-assistant-life-bond-road-remain": next.remain
+  }, "あと ", next.remain, " で Lv", next.level), !next && React.createElement("span", {
+    className: "ml-auto text-[11.5px] font-bold text-pink-200"
+  }, "いちばん上まで来ました")), React.createElement("div", {
+    className: "mt-1 h-2 overflow-hidden rounded-full bg-white/15"
+  }, React.createElement("i", {
+    className: "block h-full rounded-full bg-pink-400",
+    style: {
+      width: `${pct}%`
+    }
+  })), next && opens.length > 0 && React.createElement("p", {
+    className: "mt-1 text-[11.5px] font-bold leading-snug text-pink-100",
+    style: {
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-life-bond-road-opens": true
+  }, "Lv", next.level, " で: ", opens.join('・')));
+}
+function AssistantLifeDoRow({
+  k,
+  icon,
+  label,
+  sub = '',
+  gain = '',
+  on = null,
+  disabled = false,
+  why = '',
+  tone = ''
+}) {
+  const off = disabled || typeof on !== 'function';
+  return React.createElement("button", {
+    type: "button",
+    "data-assistant-life-room-act": k,
+    "data-assistant-life-room-do": k,
+    disabled: off,
+    onClick: off ? undefined : on,
+    className: `mt-1.5 flex w-full min-h-[48px] items-center gap-2.5 rounded-2xl border px-3 py-2 text-left active:scale-[.98] ${off ? 'border-white/10 bg-white/5 opacity-55' : `border-white/20 bg-white/10 ${tone}`}`
+  }, React.createElement("span", {
+    className: "w-7 shrink-0 text-center text-[22px] leading-none",
+    "aria-hidden": "true"
+  }, icon), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[14px] leading-tight text-white"
+  }, label), (off && why ? why : sub) && React.createElement("small", {
+    className: "block text-[11.5px] font-bold leading-snug text-slate-300",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, off && why ? why : sub)), gain && !off && React.createElement("span", {
+    className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
+    "data-assistant-life-room-do-gain": true
+  }, gain));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
