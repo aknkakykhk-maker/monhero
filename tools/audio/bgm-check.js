@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // BGM(audio/のmp3)が実際に鳴っているかを、実ブラウザのWeb Audioそのもので確認する。
 //
 //   python3 tools/serve.py   でリポジトリのルートを配信した状態で
