@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f60019dd406d6249
+// generated-sha256: 264ec0fab7695acc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,6 +151,27 @@ const MH_PAGE_OFFSET_GUARD=(()=>{
   // 演奏中は 30-rhythm-play.jsx が同じことをしている(回数も数えている)。重ねて止めても変わらない
   ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));
   return {state,check:soon};
+})();
+// iPhone(iPad)のホーム画面から開いているか。navigator.standalone は iPhone・iPad の Safari にだけあり、ホーム画面のアプリで true になる。
+// Android のホーム画面のアプリは false(本体の「戻る」があるので、履歴の扱いを変えない)
+function mhIsIosHomeScreenApp(){
+  try{return typeof window!=='undefined'&&!!window.navigator&&window.navigator.standalone===true;}catch(_){return false;}
+}
+// 指で長押ししたときのメニュー(Android の「画像を保存」「リンクを開く」など)を出さない(2026-11-11 社長「ブラウザのような挙動がある」)。
+// iPhone の吹き出しは index.html の -webkit-touch-callout で止めている。こちらは Android 向け。
+// 止めるのは指(ペン)で押したときだけ。パソコンの右クリックと、文字の入力欄・select-text の所ではそのまま出す。
+// 押した道具を覚えるだけ(数を読んで1つ書くだけ)で、演奏の判定・スコアには関わらない
+const MH_TOUCH_MENU_GUARD=(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return null;
+  let lastTouch=false;
+  document.addEventListener('pointerdown',e=>{lastTouch=e.pointerType==='touch'||e.pointerType==='pen';},{capture:true,passive:true});
+  document.addEventListener('contextmenu',e=>{
+    const t=e.target;
+    if(t&&typeof t.closest==='function'&&t.closest('input,textarea,[contenteditable]:not([contenteditable="false"]),.select-text'))return;
+    const byFinger=e.pointerType==='touch'||e.pointerType==='pen'||(!e.pointerType&&lastTouch);
+    if(byFinger&&e.cancelable)e.preventDefault();
+  },{capture:true});
+  return {byFinger:()=>lastTouch};
 })();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
@@ -105000,8 +105021,13 @@ function MonsterHeroGame() {
   // 保存データには触らない(履歴の目印を足すだけ)
   const gameStateForBackRef = useRef(gameState);
   gameStateForBackRef.current = gameState;
+  // 【2026-11-11 社長「ホームに追加しても、ブラウザのような挙動がある」】iPhone のホーム画面から開いたとき(navigator.standalone)は履歴を足さない。
+  // iPhone は履歴があると、ホーム画面のアプリでも左端からのスワイプで「戻る」が効き、前の画面の写しが横から出てくる(ブラウザの動き)。
+  // ホーム画面のアプリにはブラウザの戻るボタンが無いので、履歴が無ければゲームの外へ出ることもない。
+  // Android のホーム画面は残す(本体の「戻る」は履歴が無いとアプリを閉じるので、今までどおり画面の戻るにする)。Safari・Chrome で遊ぶ人も今のまま
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (mhIsIosHomeScreenApp()) return;
     let armed = false;
     const arm = () => { try { window.history.pushState({ mhBack:1 }, '', window.location.href); armed = true; } catch (error) { armed = false; } };
     const onPop = () => {

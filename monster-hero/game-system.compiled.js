@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c2a474aee173d63
+// source-sha256: baf3e605f06ba9f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -213,6 +213,34 @@ const MH_PAGE_OFFSET_GUARD = (() => {
   return {
     state,
     check: soon
+  };
+})();
+function mhIsIosHomeScreenApp() {
+  try {
+    return typeof window !== 'undefined' && !!window.navigator && window.navigator.standalone === true;
+  } catch (_) {
+    return false;
+  }
+}
+const MH_TOUCH_MENU_GUARD = (() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+  let lastTouch = false;
+  document.addEventListener('pointerdown', e => {
+    lastTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  }, {
+    capture: true,
+    passive: true
+  });
+  document.addEventListener('contextmenu', e => {
+    const t = e.target;
+    if (t && typeof t.closest === 'function' && t.closest('input,textarea,[contenteditable]:not([contenteditable="false"]),.select-text')) return;
+    const byFinger = e.pointerType === 'touch' || e.pointerType === 'pen' || !e.pointerType && lastTouch;
+    if (byFinger && e.cancelable) e.preventDefault();
+  }, {
+    capture: true
+  });
+  return {
+    byFinger: () => lastTouch
   };
 })();
 const _LI = {};
@@ -193690,6 +193718,7 @@ function MonsterHeroGame() {
   gameStateForBackRef.current = gameState;
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (mhIsIosHomeScreenApp()) return;
     let armed = false;
     const arm = () => {
       try {
