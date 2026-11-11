@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c47239d1c203ce1e
+// generated-sha256: 55c10d7d6092c280
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55947,13 +55947,15 @@ const RHYTHM_MODE_SELECT_CSS = `
 // ももすけ・ドラの絵は正方形で、ももすけは右端に別の絵のかけらが入っている。顔の位置(cx, cy・絵の幅と高さに対する割合)を
 // 枠の真ん中(横)・top(縦)に合わせ、枠の幅の zoom 倍に広げて、かけらを枠の外へ出す
 // (高さで合わせると、縦画面の縦長の枠で大きくなりすぎて耳が切れた)
+// 表に無い助手(みゅあ・きき・ソラシド・えるびん・着替えの絵)は、枠いっぱいに広げて切り出す。縦長の絵(高さ÷幅 1.1 より大きい)は、あふれる分をほぼ下へ逃がす(--mhms-y 0.03)。
+//   横・横小・🔄横で ソラシド・えるびんの頭のてっぺん、ハロウィンのみゅあの帽子が切れていた(2026-11-11)
 // show … 枠の背が低いときも、絵の高さのうち少なくともこの割合は枠に入れる(2026-10-26 社長「小さいスマホで立ち絵が頭だけ」)。
 //   絵の幅は「いつもの幅(zoom)」と「絵の高さ×show が枠の高さに収まる幅」の小さいほう。枠が十分に高ければ今までと同じ見え方
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
-  // ももすけは表情ごとに体の位置が違い、かけらも左(angry・happy)と右(crying・wink)にある。
-  // 透明でない部分を数えて決めた体の真ん中(cxBy)へ合わせ、体の幅だけが入る 1.5 倍に広げる(2026-10-03)
-  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42, show: 0.55,
-    cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
+  // ももすけ: いまの絵(512×512・体は真ん中・耳が左右の端まで)に合わせた(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+  //   前は、右や左の端に別の絵のかけらが入っていた古い絵に合わせて 1.5倍に広げ、表情ごとに横へずらしていた(cxBy)。絵を差し替えたあともその寄せ方が残り、
+  //   耳が上で切れ(14〜24%)、横・横小・🔄横では顔だけの大写しになっていた。きゅうこと同じ置き方(絵の上端を枠の上から 2%・幅は枠いっぱい)にする
+  momosuke: { zoom: 1, cx: 0.5, cy: 0, top: 0.02, show: 0.8 },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4, show: 0.75 },
   // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上・頭に王冠)。絵の上端(王冠のてっぺん)を枠の上から3%に置き、頭の中心(絵の幅の48%)を真ん中へ。
   // 社長「左肩切れてるように見える」→ 引いて下と左右をぼかした形 →「もっとアップにして切れてる感じ無くしたほうがいい」で、
@@ -56046,7 +56048,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
           <div className="mhms-float pointer-events-none absolute inset-0">
             {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
               ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
-              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
+              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
       )}
@@ -62046,15 +62048,34 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
 
 // ---------- 思い出アルバム(ペアごと) ----------
 // ツーショット写真(ASSISTANT_PEER_PHOTOS の段ごとに1枚。2人の立ち絵を並べて作る)と、見た掛け合いの一覧。押すと見返せる
+//   2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」: それまでは絵を枠の 56%×170% に object-cover で入れていて、
+//   絵ごとの余白のちがいで 2人の顔が重なり・横が切れ(最大33%)、顔だけの絵のドラは枠より大きくなって下が切れていた。
+//   場面の立ち絵と同じ表と決まり(assistantLifeStandFace・assistantLifeStandBox・assistantLifeStandRule)で、2人の顔を同じ大きさ・同じ高さで左右に並べる:
+//   頭(てっぺんから顎)が写真の高さの 45%・頭のてっぺんは上から 24%(うさ耳・王冠が入る)・2人の体の真ん中は左右 27% と 73%。置き場所は写真の大きさに対する割合で持つ(写真の大きさが変わっても同じ見え方)
+const ASSISTANT_PEER_PHOTO_W = 400, ASSISTANT_PEER_PHOTO_H = 300;
 function AssistantPeerPhoto({ pair, photo, open }) {
   const [a, b] = pair.map(id => assistantById(id));
+  const srcs = open ? [assistantFullImage(a, photo.e[0]), assistantFullImage(b, photo.e[1])] : [];
+  const canFit = typeof assistantLifeStandBox === 'function' && typeof assistantLifeStandRule === 'function' && typeof assistantLifeStandFace === 'function';
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (canFit && typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; if (canFit && srcs.length) Promise.all(srcs.map(s => assistantLifeStandBox(s))).then(l => { if (alive) setBoxes(l); }); return () => { alive = false; }; }, [key]);
+  const W = ASSISTANT_PEER_PHOTO_W, H = ASSISTANT_PEER_PHOTO_H;
+  const fit = (i) => {
+    if (!canFit || !boxes[i]) return null;
+    const r = assistantLifeStandRule({ face: assistantLifeStandFace(pair[i], srcs[i]), box: boxes[i], F: (H * 0.45) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * 0.24, cx: W * (i ? 0.73 : 0.27) });
+    return r ? { left: `${(r.left / W) * 100}%`, top: `${(r.top / H) * 100}%`, width: `${(r.width / W) * 100}%`, height: `${(r.height / H) * 100}%`, maxWidth: 'none' } : null;
+  };
+  const stand = (i) => { const f = fit(i);
+    return f ? <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" draggable={false} className="absolute" style={f}/>
+      : <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" className={`absolute ${i ? 'right-[-2%]' : 'left-[-2%]'} top-[6%] h-[170%] w-[56%]`} style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>; };
   return (
     <div data-assistant-peer-photo={photo.lv} data-assistant-peer-photo-open={open ? '1' : '0'}
       className="relative overflow-hidden rounded-xl border-2" style={{ aspectRatio: '4 / 3', borderColor: open ? '#fcd34d' : 'rgba(255,255,255,.12)', background: open ? `linear-gradient(135deg, ${a.accent}55, ${b.accent}55)` : 'rgba(15,23,42,.8)' }}>
       {open ? (<>
         {/* 立ち絵の上のほう(顔から胸まで)を寄りで並べる */}
-        <img src={assistantFullImage(a, photo.e[0])} alt="" loading="lazy" decoding="async" className="absolute left-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
-        <img src={assistantFullImage(b, photo.e[1])} alt="" loading="lazy" decoding="async" className="absolute right-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
+        {stand(0)}
+        {stand(1)}
         <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100">{assistantPeerPhotoTitle(photo)}</span>
       </>) : (
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
@@ -64537,10 +64558,24 @@ const ASSISTANT_LIFE_STAND_EC = 0.1639;
 //   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
 const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
 const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
+// 着替えの絵の顔の点(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+//   それまで着替えの絵にも ふだんの服の点を当てていて、帽子や羽のぶん顔が小さく・ずれて出ていた(相手と顔の大きさが 1.4倍ちがった)。
+//   キーは絵の置き場所の名前(助手の絵のフォルダの中の、服ごとのフォルダ名)。測り方は上の表と同じ(見えている体の上を0・下を1。top は帽子・耳・頭布の飾りを除いた頭のてっぺん)。
+//   above … 頭のてっぺんの上を、顔の何個ぶんまで見せるか(魔女の帽子・大きなうさ耳が切れないように。無ければ ASSISTANT_LIFE_STAND_CUT.above)
+//   m は、同じ助手の ふだんの服の m に「目から顎」の長さの比を掛けたもの(同じ顔なので、頬の幅も同じ比で変わる)。測り絵: docs/progress/assistant-art/
+const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
+  halloween: { mua: { top: 0.2, eye: 0.358, chin: 0.433, m: 0.557, above: 0.85 }, kiki: { top: 0.217, eye: 0.412, chin: 0.498, m: 0.54, above: 0.95 }, momosuke: { top: 0.065, eye: 0.39, chin: 0.508, m: 0.846 } },
+  'card-master': { mua: { top: 0.09, eye: 0.22, chin: 0.295, m: 0.55 } },
+  sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
+});
+// 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
+const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  const outfit = own ? assistantLifeStandOutfitOf(src) : null;
+  if (outfit) return (ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit] && ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit][pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
   return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
 // 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
@@ -64553,7 +64588,7 @@ const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
   const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
   const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
   const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
-  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const frameTop = topY - (face.above || ASSISTANT_LIFE_STAND_CUT.above) * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
   const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
   const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
   return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
@@ -65289,17 +65324,23 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
   const b = box || { t: 0, b: 1, l: 0, r: 1, ar: 0.6 };
-  const ih = h / Math.max(0.2, b.b - b.t), iw = ih * (b.ar || 0.6);
+  // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
+  //   顔だけの絵=ドラ が 11px と 2.8倍ちがい、羽や耳のある絵は左右も切れていた)。場面の立ち絵と同じ表(assistantLifeStandFace)と決まり(assistantLifeStandRule)を使う:
+  //   頭(てっぺんから顎)が箱の高さの半分・頭のてっぺんは上から 25%(うさ耳が入る。魔女の帽子・大きな耳の着替え=above のある絵は 38% まで下げる)・胸から下は箱の下でぼかして消す。測れないうちは今までの出し方
+  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
+  const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
   const cx = ((b.l + b.r) / 2) * iw;
+  const top = rule ? rule.top : -b.t * ih;
   const mask = 'linear-gradient(#000 74%,transparent)';
   // 印(💤・ごほうび済み)は、下をぼかした絵の外側に重ねる(ぼかしに消されない)
   return (
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
-        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
         {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
-        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top: -b.t * ih, filter: 'brightness(.62) saturate(.7)' }}/>}
+        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
@@ -78346,6 +78387,9 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
 const CARD_VS_CSS = `
 /* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
 @media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
+/* 背の低い横の画面(568×320 など)では、相手の立ち絵とモンスターの絵・ひとことの字を少し小さくして高さに収める(ひとことが4〜5行・今日のデッキの名前が2段になると、
+   相手の欄が画面より高くなり、名前の字が上で切れていた。2026-11-11 助手の立ち絵の見直し) */
+@media (orientation: landscape) and (max-height: 360px) { [data-card-vs] { --mh-vs-foe-h: 26vh; --mh-vs-mon-h: 16vh; } [data-card-vs] [data-card-vs-line] { font-size: 11px; line-height: 1.25; padding-top: 3px; padding-bottom: 3px; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -78455,7 +78499,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
           <div className="flex w-full max-w-[420px] items-end gap-2">
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)' }}>
               {who
-                ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
+                // 助手の立ち絵は、相手えらび・結果と同じ部品で収める(顔の大きさを助手どうしでそろえる。2026-11-11)。部品がまだ無いときだけ今までの収め方
+                ? (typeof CardAssistantArt === 'function'
+                  ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
+                  : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
                 : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
@@ -82287,6 +82334,14 @@ const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
+// 絵の場所から、その助手の顔の点(頭のてっぺん・目・顎・顔の大きさ)を引く。助手の絵でなければ null。着替えの絵は着替えの行(56-assistant-life-house.jsx の表)
+const cardArtFaceBySrc = (src) => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS) || typeof assistantLifeStandFace !== 'function') return null;
+  const m = /\/([a-z]+)_[a-z]+\.png$/i.exec(src.split('?')[0]);
+  const who = m ? ASSISTANTS.find((x) => x && x.imagePrefix === m[1]) : null;
+  if (!who || /\/(face|temp)\//.test(src)) return null;
+  try { return assistantLifeStandFace(who.id, src); } catch (_) { return null; }
+};
 // knownBox … 測ってある輪郭(cardArtKnownBox)。渡さなくても、標準の服の絵なら絵の場所から引く(cardArtKnownBoxBySrc)。あれば canvas で調べずに使う
 // 枠の大きさが決まったとき・変わったとき(画面の向き・大きさ)も ResizeObserver で合わせ直す(最初に 0 だと合わせないままだった)
 const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = null }) => {
@@ -82316,10 +82371,25 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
     const sc = Math.min(H / box.h, W / box.w);
+    // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+    //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
+    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 18% に置く。
+    //   羽・肩は枠の外へ出てよい(顔は切らない)。今までの収め方より小さくなる絵(ソラシド・えるびん・きゅうこ)と、顔だけの絵(ドラ)は今までどおり
+    const face = cardArtFaceBySrc(src);
+    if (face && !face.head && typeof assistantLifeStandRule === 'function') {
+      const lb = { t: box.y / box.nh, b: (box.y + box.h) / box.nh, l: box.x / box.nw, r: (box.x + box.w) / box.nw, ar: box.nw / box.nh };
+      const U = Math.min(H * 0.44, W * 0.95);
+      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
+      if (r && r.width > box.nw * sc * 1.02) {
+        const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
+        const visW = (lb.r - lb.l) * r.width;
+        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+      }
+    }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };
   })();
   return (
-    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
+    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} data-card-art-by-face={fit && fit.byFace ? '1' : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
       {fit
         ? <img src={src} alt={alt} draggable={false} className="absolute max-w-none" style={{ width: `${fit.width}px`, left: `${fit.left}px`, top: `${fit.top}px` }}/>
         : <img src={src} alt={alt} draggable={false} className="h-full w-full object-contain object-bottom"/>}
