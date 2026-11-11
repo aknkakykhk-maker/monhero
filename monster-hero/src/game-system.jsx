@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6ac70721c1662ff1
+// generated-sha256: 1d2ae429bcde91ab
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69657,10 +69657,8 @@ const ambwDraftTechs = (mons) => {
 };
 
 const ambwTechTable = () => {
-  // 本番の技表(data/assistant-masmon-techs.js)は const で置かれ、window には載らない。まだ main に無いあいだも動くよう、
-  // 名前を直接は書かず「あれば読む」形にしている(技表が index.html で読まれるようになったら、直接の参照へ直してよい)
-  let real = null;
-  try { real = new Function("return typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null")(); } catch (e) { real = null; }
+  // 本番の技表(data/assistant-masmon-techs.js・シュギョウ)は const で置かれ、window には載らないので typeof で見る
+  const real = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
   if (real && typeof real === 'object' && real.species) return real;
   return ambwDraftTechs(ALL_PLAYER_MONSTERS);
 };

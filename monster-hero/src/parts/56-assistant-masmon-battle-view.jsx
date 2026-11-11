@@ -56,10 +56,8 @@ const ambwDraftTechs = (mons) => {
 };
 
 const ambwTechTable = () => {
-  // 本番の技表(data/assistant-masmon-techs.js)は const で置かれ、window には載らない。まだ main に無いあいだも動くよう、
-  // 名前を直接は書かず「あれば読む」形にしている(技表が index.html で読まれるようになったら、直接の参照へ直してよい)
-  let real = null;
-  try { real = new Function("return typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null")(); } catch (e) { real = null; }
+  // 本番の技表(data/assistant-masmon-techs.js・シュギョウ)は const で置かれ、window には載らないので typeof で見る
+  const real = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
   if (real && typeof real === 'object' && real.species) return real;
   return ambwDraftTechs(ALL_PLAYER_MONSTERS);
 };

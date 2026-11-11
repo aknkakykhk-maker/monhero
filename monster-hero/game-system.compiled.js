@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 16acf09826915fcc
+// source-sha256: 19deb7d27b19ddb7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131950,12 +131950,7 @@ const ambwDraftTechs = mons => {
   };
 };
 const ambwTechTable = () => {
-  let real = null;
-  try {
-    real = new Function("return typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null")();
-  } catch (e) {
-    real = null;
-  }
+  const real = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
   if (real && typeof real === 'object' && real.species) return real;
   return ambwDraftTechs(ALL_PLAYER_MONSTERS);
 };
