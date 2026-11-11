@@ -103,7 +103,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
         put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
         put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
       }, icon);
-      await ctx.addInitScript(eventStorySeed());
+      await ctx.addInitScript(eventStorySeed()); await ctx.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await ctx.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await ctx.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
       await ctx.addInitScript(FAKE_WS);
       return ctx;
     };
@@ -113,7 +113,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+      await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
       for (let i = 0; i < 6; i++) {
         const b = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
         if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
@@ -127,7 +127,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
       await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
     const starter = async (page, kit) => {

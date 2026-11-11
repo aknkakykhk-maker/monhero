@@ -137,6 +137,16 @@ const slotAbs = () => G('assistantLifeSlotAt()').abs;
     const src = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life.jsx'), 'utf8');
     check('⑥ assistantLifeNow は印が真のときだけ予定を読む(typeof で確かめる)', /assistantLifePlanOn === 'function' && assistantLifePlanOn\(\)\) \{ try \{ await ASSISTANT_LIFE_PLAN_STORE\.load\(\)/.test(src) && /typeof assistantLifePlanOnDecide === 'function' \? assistantLifePlanOnDecide\(decided0, cur\.salt\) : decided0/.test(src));
   }
+  // ⑧ 助手の解放(まだ助手でない「町の人」にはお願いできない。2026-11-11 Fable の留意)
+  {
+    G('var assistantPartnerOkNow = (id) => id !== "erubin";');
+    check('⑧ 町の人には決められない・部屋の行も出ない', G(`assistantLifePlanSet(${cur + 2}, 'erubin', 'cafe')`) === false && G('assistantLifePlanRowInfo("erubin")') === null && G(`assistantLifePlanSet(${cur + 2}, 'mua', 'cafe')`) === true);
+    G(`ASSISTANT_LIFE_PLAN_STORE.set({ data: { ...ASSISTANT_LIFE_PLAN_STORE.state.data, plan: { ...ASSISTANT_LIFE_PLAN_STORE.state.data.plan, ${cur + 3}: { erubin: 'cardroom' } } } })`);
+    const d = G('assistantLifeDecide')({ abs: cur + 3, members: IDS, salt: 'p' });
+    const r = G('assistantLifePlanOnDecide')(d, 'p');
+    check('⑧ 町の人の予定(前に保存されていたもの)は当てはめない', JSON.stringify(r) === JSON.stringify(d));
+    G('assistantPartnerOkNow = undefined;');
+  }
   // ⑦ 返事の台詞
   {
     const L = G('ASSISTANT_LIFE_PLAN_LINES');

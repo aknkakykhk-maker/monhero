@@ -134,9 +134,10 @@ const check = (name, ok, extra) => {
       === (3000 > core.INITIAL_TOTAL_CAP + grow));
     const anc = { [`0:${SPEC[0]}`]: { first_day: today, first_stats: st(300), first_total: 1800, first_lv: 10 } };
     const plus = (n) => ({ ...st(300), pow: 300 + n });
-    check('D 同じ日: +20 は通る・+21 ははじく', P(t1(plus(20)), anc).length === 0 && P(t1(plus(21)), anc).length > 0);
-    check('D 3日後: +80(=20×4) は通る・+81 ははじく', P(t1(plus(80)), anc, null, '2026-11-23').length === 0 && P(t1(plus(81)), anc, null, '2026-11-23').length > 0);
-    check('D 合計も見る(6能力を少しずつ上げて合計で超える)', P(t1({ life: 304, pow: 304, wise: 304, hit: 304, eva: 304, tough: 301 }), anc).some((p) => p.what === 'total'));
+    const C = core.DAILY_GROWTH_CAP; // 1日の成長上限(2026-11-11 20→40: M/B管理のチケットの分)
+    check(`D 同じ日: +${C} は通る・+${C + 1} ははじく`, P(t1(plus(C)), anc).length === 0 && P(t1(plus(C + 1)), anc).length > 0);
+    check(`D 3日後: +${C * 4}(=${C}×4) は通る・+${C * 4 + 1} ははじく`, P(t1(plus(C * 4)), anc, null, '2026-11-23').length === 0 && P(t1(plus(C * 4 + 1)), anc, null, '2026-11-23').length > 0);
+    check('D 合計も見る(6能力を少しずつ上げて合計で超える)', P(t1((() => { const a = 300 + Math.ceil((C + 1) / 5); return { life: a, pow: a, wise: a, hit: a, eva: a, tough: 300 }; })()), anc).some((p) => p.what === 'total'));
     check('D Lv は初めて登録した値から1日2つまで(同じ日に +2 は通る・+3 ははじく)', P(t1(st(300), 12), anc).length === 0 && P(t1(st(300), 13), anc).some((p) => p.what === 'lv'));
     check('D 育てた Lv(31 以上)も日数に見合えば通る(5日後は初めの10から22まで・初めての登録なら 30+2×日数)', P(t1(st(300), 22), anc, null, '2026-11-25').length === 0
       && P(t1(st(300), 23), anc, null, '2026-11-25').some((p) => p.what === 'lv') && P(t1(st(300), 40)).length === 0);
@@ -168,8 +169,8 @@ const check = (name, ok, extra) => {
     check('F 鍵がちがうと登録できない', r.status === 403 && r.json.error === 'locked');
     r = await reg('alice', KEY_A, 'nobody', team3());
     check('F 知らない助手ははじく', r.status === 400 && r.json.error === 'assistant');
-    r = await reg('alice', KEY_A, 'mua', team3({ stats: { ...st(300), pow: 340 } }));
-    check('F 同じ日に +40 した登録ははじく(上限の見張り)', r.status === 422 && r.json.error === 'over_cap');
+    r = await reg('alice', KEY_A, 'mua', team3({ stats: { ...st(300), pow: 300 + core.DAILY_GROWTH_CAP + 1 } }));
+    check(`F 同じ日に +${core.DAILY_GROWTH_CAP + 1} した登録ははじく(上限の見張り)`, r.status === 422 && r.json.error === 'over_cap');
     r = await reg('alice', KEY_A, 'mua', team3({ stats: { ...st(300), pow: 340 } }), T0 + 86400000);
     check('F 次の日なら +40 まで通る', r.status === 200);
     await reg('bob', KEY_B, 'erubin', team3({ stats: st(280) }));
