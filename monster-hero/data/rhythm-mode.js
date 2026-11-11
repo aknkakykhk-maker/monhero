@@ -45624,7 +45624,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'',
     bgmTrackId:'melo_saudade',
     // 2026-11-11 追加。サウダージ(通常版・約4分23秒。ジャケットは夕日の海辺のイラスト)
-    artwork:'images/song-art/saudade.jpg',
+    artwork:'images/song-art/saudade.jpg?v=2fb12cbdc60a',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,saudadeCharts[id]||emptyRhythmChart()
     ])))
@@ -45635,7 +45635,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'short ver.',
     bgmTrackId:'melo_saudade_short',
     // 2026-11-11 追加。サウダージの短い版(約1分36秒。ジャケットは写真)
-    artwork:'images/song-art/saudade-short.jpg',
+    artwork:'images/song-art/saudade-short.jpg?v=5b73267eda1a',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,saudadeShortCharts[id]||emptyRhythmChart()
     ])))

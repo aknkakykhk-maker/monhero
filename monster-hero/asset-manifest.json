@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "90079eec18be",
-  "packs": {"beat":{"bytes":138961302,"count":105},"battle":{"bytes":140233240,"count":832},"card":{"bytes":37779758,"count":1048},"all":{"bytes":316974300,"count":1985},"core":{"bytes":20550096,"count":23}},
+  "id": "b64316e58967",
+  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":140233240,"count":832},"card":{"bytes":37779758,"count":1048},"all":{"bytes":322794782,"count":1989},"core":{"bytes":20660394,"count":23}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -71,6 +71,8 @@
     "audio/bgm-rose.mp3": {"v":"1a030e41df75","size":2644009,"pack":"beat"},
     "audio/bgm-sad-song-short.mp3": {"v":"2ff39f50eddd","size":989280,"pack":"beat"},
     "audio/bgm-sad-song.mp3": {"v":"47d16979bb90","size":2622672,"pack":"beat"},
+    "audio/bgm-saudade-short.mp3": {"v":"3491f3c33de4","size":1528894,"pack":"beat"},
+    "audio/bgm-saudade.mp3": {"v":"463d9176b94f","size":4211774,"pack":"beat"},
     "audio/bgm-senjou-no-shippuu.mp3": {"v":"dfcd5d833fec","size":2323165,"pack":"beat"},
     "audio/bgm-sheriruth-proto.mp3": {"v":"a6f3c4e66746","size":409581,"pack":"beat"},
     "audio/bgm-sheriruth.mp3": {"v":"5044be9b5c0d","size":2160431,"pack":"beat"},
@@ -1926,6 +1928,8 @@
     "images/song-art/rising-hope.jpg": {"v":"4c1e106d0e39","size":56296,"pack":"beat"},
     "images/song-art/rose.jpg": {"v":"c877115de5a6","size":79633,"pack":"beat"},
     "images/song-art/sad-song.jpg": {"v":"cc2bf8ddee1c","size":53804,"pack":"beat"},
+    "images/song-art/saudade-short.jpg": {"v":"5b73267eda1a","size":29230,"pack":"beat"},
+    "images/song-art/saudade.jpg": {"v":"2fb12cbdc60a","size":50584,"pack":"beat"},
     "images/song-art/senjou-no-shippuu.jpg": {"v":"50e3ed20ee08","size":73672,"pack":"beat"},
     "images/song-art/sheriruth.jpg": {"v":"4302be7eca16","size":73641,"pack":"beat"},
     "images/song-art/six-eternel-ai-wa-hitotsu-janai.jpg": {"v":"e71044bbd526","size":51765,"pack":"beat"},
@@ -1990,7 +1994,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"81041585cec0","size":303343,"pack":"core"},
+    "tailwind.css": {"v":"2500e352037f","size":303343,"pack":"core"},
     "data/images/images-ally.js": {"v":"46d82de4f245","size":74437,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -1998,18 +2002,18 @@
     "data/breeder.js": {"v":"2ffa6b506e50","size":139965,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"fb17af4e4399","size":4544886,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"1456adf6871b","size":4652769,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"d117637f89dd","size":96273,"pack":"core"},
-    "data/changelog.js": {"v":"94ee4f82c93c","size":1684800,"pack":"core"},
+    "data/changelog.js": {"v":"c1e67fb3248f","size":1685917,"pack":"core"},
     "data/help.js": {"v":"f056b8d420bd","size":791766,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"a64dbe7f6a4f","size":2142723,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"2614094acc2f","size":10296860,"pack":"core"}
+    "game-system.compiled.js": {"v":"a6c1b477ce17","size":10298158,"pack":"core"}
   }
 }
