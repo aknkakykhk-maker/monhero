@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87fe31324ccae24e
+// source-sha256: 7e41bc967828da61
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -71,12 +71,18 @@ const MH_SCREEN_TRAIL = (() => {
       document.addEventListener('webglcontextlost', () => push('gl', 'lost'), true);
       document.addEventListener('webglcontextrestored', () => push('gl', 'restored'), true);
       let last = 0;
-      const tick = now => {
-        if (last > 0 && now - last > 1000 && document.visibilityState === 'visible') push('gap', Math.round(now - last));
+      document.addEventListener('visibilitychange', () => {
+        last = 0;
+      });
+      setInterval(() => {
+        const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+        if (document.visibilityState !== 'visible') {
+          last = 0;
+          return;
+        }
+        if (last > 0 && now - last > 1000) push('gap', Math.round(now - last));
         last = now;
-        window.requestAnimationFrame(tick);
-      };
-      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(tick);
+      }, 500);
     } catch (_) {}
   }
   return {
@@ -22469,6 +22475,24 @@ const buildAttackHits = ({
   return hits;
 };
 const attackDistanceAfterCard = (card, dist) => card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist;
+const shuffledCopy = (list, random = Math.random) => {
+  const out = Array.isArray(list) ? [...list] : [];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+const waveDamageAtDefeat = (live, stale, lastBlow) => {
+  const legacy = (Number(stale) || 0) + (Number(lastBlow) || 0);
+  const now = Number(live);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+};
+const waveDistDamageAtDefeat = (live, stale, lastBlow) => [0, 1, 2, 3].map(i => {
+  const legacy = (Number(stale?.[i]) || 0) + (Number(lastBlow?.[i]) || 0);
+  const now = Number(live?.[i]);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+});
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
   const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);
@@ -46775,6 +46799,28 @@ const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
     perHit
   } = splitTacticsGuardedHit(incoming, hits, guardHits);
   const amounts = splitTacticsGuardedAmounts(incoming, hits, guard, guardHits);
+  if (covered >= amounts.length && through > 0) {
+    const value = Math.max(0, tacticsSafeInt(guard, 0));
+    const lastHit = perHit + through;
+    const taken = amounts.reduce((sum, v) => sum + v, 0);
+    return taken > 0 ? {
+      taken,
+      saved: 0,
+      guarded: guarded + through,
+      through: 0,
+      covered,
+      amounts,
+      blocked: value >= perHit
+    } : {
+      taken: 0,
+      saved: value - lastHit,
+      guarded: guarded + through,
+      through: 0,
+      covered,
+      amounts,
+      blocked: true
+    };
+  }
   const left = Math.max(0, tacticsSafeInt(guard, 0)) - perHit;
   if (left < 0) return {
     taken: -left * covered + through,
@@ -82509,6 +82555,7 @@ function BattleScreen({
   liteBattleView,
   mainHero,
   openHelp,
+  ownedTeachings,
   ownedUniques,
   pendingCard,
   pendingCardGuts,
@@ -83211,9 +83258,15 @@ function BattleScreen({
       const card = hand[idx];
       const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
       const halved = counter.take(card, owner);
+      if (card?.subType === 'watch_erubin') {
+        const owned = (ownedTeachings || []).find(ot => ot.id === card.id);
+        const conf = ERUBIN_TIERS[Math.min(owned ? owned.evoLevel : 0, ERUBIN_TIERS.length - 1)];
+        mult *= Math.max(0.1, 1 - conf.cut * cardEffectMultiplier(card, halved));
+        return;
+      }
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
+      mult *= lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
@@ -125938,22 +125991,53 @@ function AssistantLifeRoomFurn({
     const run = () => {
       if (measure.current) measure.current();
     };
-    const t = setInterval(run, 700);
+    let t = 0,
+      left = 0;
+    const settle = () => {
+      left = 6;
+      if (!t) t = setInterval(() => {
+        run();
+        if (--left <= 0) {
+          clearInterval(t);
+          t = 0;
+        }
+      }, 700);
+    };
+    settle();
     const roomEl = marker.current && marker.current.parentElement;
     let raf = 0;
-    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => {
+    const soon = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(run);
+      settle();
+    };
+    const notPet = m => {
+      const el = m.target && (m.target.nodeType === 1 ? m.target : m.target.parentElement);
+      return !(el && el.closest && el.closest('.mhm-pet'));
+    };
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(list => {
+      if (list.some(notPet)) soon();
     }) : null;
     if (mo) mo.observe(roomEl, {
       childList: true,
       subtree: true,
       characterData: true
     });
+    const ro = roomEl && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(soon) : null;
+    if (ro) {
+      ro.observe(roomEl);
+      for (const el of roomEl.querySelectorAll('[data-assistant-life-room-bub]')) ro.observe(el);
+    }
+    const fonts = typeof document !== 'undefined' && document.fonts && document.fonts.addEventListener ? document.fonts : null;
+    if (fonts) fonts.addEventListener('loadingdone', soon);
+    window.addEventListener('resize', soon);
     return () => {
-      clearInterval(t);
+      if (t) clearInterval(t);
       cancelAnimationFrame(raf);
       if (mo) mo.disconnect();
+      if (ro) ro.disconnect();
+      if (fonts) fonts.removeEventListener('loadingdone', soon);
+      window.removeEventListener('resize', soon);
     };
   }, [on]);
   if (!on) return null;
@@ -131318,11 +131402,12 @@ function AssistantMasmonRoomPet({
     style: {
       ...ASSISTANT_MASMON_PET_STYLE,
       ...(show ? {
-        left: at.x,
+        left: 0,
         top: plan.y,
         width: size,
         height: size,
-        transition: at.moving ? `left ${at.ms}ms linear` : 'none'
+        transform: `translateX(${at.x}px)`,
+        transition: at.moving ? `transform ${at.ms}ms linear` : 'none'
       } : {
         left: 0,
         top: 0,
@@ -133263,6 +133348,934 @@ function AmgtCard({
     who: who,
     st: st
   }));
+}
+const AMBW_ENGINE_SRC = 'data/assistant-masmon-battle.js';
+const AMBW_DIST = ['零', '近', '中', '遠'];
+const AMBW_STAT_JP = Object.freeze({
+  life: 'ライフ',
+  pow: 'ちから',
+  wise: 'かしこさ',
+  hit: '命中',
+  eva: '回避',
+  tough: '丈夫さ'
+});
+const AMBW_DIFFS = Object.freeze([-20, -10, 0, 5, 10, 20, 30]);
+const AMBW_SPEEDS = Object.freeze([{
+  id: 'x1',
+  label: '×1',
+  ms: 1100
+}, {
+  id: 'x2',
+  label: '×2',
+  ms: 560
+}, {
+  id: 'x4',
+  label: '×4',
+  ms: 260
+}, {
+  id: 'hl',
+  label: '★ 見せ場だけ',
+  ms: 1300
+}]);
+const AMBW_BALANCE_NOTE = Object.freeze({
+  A: 'ふつう',
+  B: 'ゆるめ(能力の差が効きにくい)',
+  C: '強め(能力の差が効きやすい)'
+});
+const AMBW_DEFAULT = Object.freeze({
+  A: {
+    assistant: 'kiki',
+    species: ['Golem', 'Eiki', 'Ghost']
+  },
+  B: {
+    assistant: 'mua',
+    species: ['Golem', 'Eiki', 'Ghost']
+  }
+});
+let ambwLoading = null;
+const ambwLoadEngine = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(null);
+  if (window.ASSISTANT_MASMON_BATTLE) return Promise.resolve(window.ASSISTANT_MASMON_BATTLE);
+  if (!ambwLoading) {
+    ambwLoading = new Promise(res => {
+      const s = document.createElement('script');
+      s.src = AMBW_ENGINE_SRC;
+      s.onload = () => res(window.ASSISTANT_MASMON_BATTLE || null);
+      s.onerror = () => {
+        ambwLoading = null;
+        res(null);
+      };
+      document.head.appendChild(s);
+    });
+  }
+  return ambwLoading;
+};
+const ambwDraftTechs = mons => {
+  const G = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
+  const species = {};
+  for (const id of Object.keys(mons).sort()) {
+    const apt = (mons[id].distAptitude || ['C', 'C', 'C', 'C']).map(g => G.indexOf(g));
+    let best = 0;
+    apt.forEach((v, i) => {
+      if (v > apt[best]) best = i;
+    });
+    const near = best === 0 ? 1 : best === 3 ? 2 : apt[best - 1] >= apt[best + 1] ? best - 1 : best + 1;
+    const bigKind = best <= 1 ? 'pow' : 'wise';
+    const other = bigKind === 'pow' ? 'wise' : 'pow';
+    const k = id.toLowerCase();
+    species[id] = [{
+      id: `${k}_01`,
+      name: '仮・軽打',
+      kind: 'pow',
+      dist: [0, 1],
+      power: 12,
+      hit: 8,
+      guts: 12,
+      crit: 5,
+      gd: 3,
+      learn: {
+        start: true
+      }
+    }, {
+      id: `${k}_02`,
+      name: '仮・遠撃',
+      kind: 'wise',
+      dist: [2, 3],
+      power: 14,
+      hit: 4,
+      guts: 16,
+      crit: 5,
+      gd: 5,
+      learn: {
+        start: true
+      }
+    }, {
+      id: `${k}_03`,
+      name: '仮・大技',
+      kind: bigKind,
+      dist: [best],
+      power: 34,
+      hit: -14,
+      guts: 42,
+      crit: 12,
+      gd: 8
+    }, {
+      id: `${k}_04`,
+      name: '仮・ガッツ崩し',
+      kind: other,
+      dist: [Math.min(best, near), Math.max(best, near)],
+      power: 10,
+      hit: 2,
+      guts: 22,
+      crit: 5,
+      gd: 28
+    }, {
+      id: `${k}_05`,
+      name: '仮・会心',
+      kind: 'pow',
+      dist: [1, 2],
+      power: 18,
+      hit: 16,
+      guts: 24,
+      crit: 22,
+      gd: 5
+    }];
+  }
+  return {
+    version: 0,
+    draft: true,
+    species
+  };
+};
+const ambwTechTable = () => {
+  const real = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
+  if (real && typeof real === 'object' && real.species) return real;
+  return ambwDraftTechs(ALL_PLAYER_MONSTERS);
+};
+const ambwStatsOf = (engine, speciesId, total) => {
+  const rnd = engine.makeRng('ambw-shape-' + speciesId);
+  const w = engine.STAT_KEYS.map(() => 0.55 + rnd());
+  const sum = w.reduce((a, b) => a + b, 0);
+  const out = {};
+  engine.STAT_KEYS.forEach((k, i) => {
+    out[k] = Math.max(1, Math.min(engine.STAT_MAX || 999, Math.round(total * w[i] / sum)));
+  });
+  return out;
+};
+const ambwTeamOf = (engine, side, size, total, catalog, allTechs) => ({
+  assistantId: side.assistant,
+  tactics: 40,
+  members: side.species.slice(0, size).map(sp => ({
+    species: sp,
+    name: ALL_PLAYER_MONSTERS[sp] && ALL_PLAYER_MONSTERS[sp].name || sp,
+    lv: 30,
+    stats: ambwStatsOf(engine, sp, total),
+    ...(allTechs && catalog && catalog.species[sp] && Array.isArray(catalog.species[sp].techs) ? {
+      techs: catalog.species[sp].techs.map(t => t.id)
+    } : {})
+  }))
+});
+const ambwFramesOf = log => {
+  const st = log[0] || {};
+  const cur = {
+    hp: {
+      A: (st.aHp || []).slice(),
+      B: (st.bHp || []).slice()
+    },
+    g: {
+      A: 50,
+      B: 50
+    },
+    act: {
+      A: 0,
+      B: 0
+    },
+    d: st.d || 0,
+    r: 0
+  };
+  return log.map(e => {
+    cur.d = Number.isFinite(e.d) ? e.d : cur.d;
+    cur.r = Number.isFinite(e.r) ? e.r : cur.r;
+    if ((e.ev === 'enter' || e.ev === 'swap') && e.side) cur.act[e.side] = e.i;
+    if (Number.isFinite(e.ga)) cur.g.A = e.ga;else if (e.side === 'A' && Number.isFinite(e.guts)) cur.g.A = e.guts;
+    if (Number.isFinite(e.gb)) cur.g.B = e.gb;else if (e.side === 'B' && Number.isFinite(e.guts)) cur.g.B = e.guts;
+    if (e.ev === 'tech' && e.side) {
+      const foe = e.side === 'A' ? 'B' : 'A';
+      const ti = Number.isFinite(e.ti) ? e.ti : cur.act[foe];
+      if (Number.isFinite(e.foeHp)) cur.hp[foe][ti] = e.foeHp;
+      if (!Number.isFinite(e.ga) && Number.isFinite(e.foeGuts)) cur.g[foe] = e.foeGuts;
+    }
+    return {
+      hp: {
+        A: cur.hp.A.slice(),
+        B: cur.hp.B.slice()
+      },
+      g: {
+        A: cur.g.A,
+        B: cur.g.B
+      },
+      act: {
+        A: cur.act.A,
+        B: cur.act.B
+      },
+      d: cur.d,
+      r: cur.r
+    };
+  });
+};
+const ambwIsHighlight = (e, maxHp) => {
+  if (!e) return false;
+  if (e.ev === 'ko' || e.ev === 'swap' || e.ev === 'end' || e.ev === 'start') return true;
+  if (e.ev !== 'tech') return false;
+  if (e.crit) return true;
+  const foe = e.side === 'A' ? 'B' : 'A';
+  const mx = Math.max(...(maxHp[foe] || [1]), 1);
+  if (e.hit && e.dmg >= mx * 0.3) return true;
+  return false;
+};
+const AMBW_CSS = `
+.ambw{position:fixed;inset:0;z-index:9000;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
+.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+.ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
+.ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
+.ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}
+.ambw-card.me{border-color:#f472b6aa}.ambw-card.foe{border-color:#38bdf8aa}
+.ambw-row{display:flex;align-items:center;gap:8px}
+.ambw-face{width:36px;height:36px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff3;background:#312e5a;flex-shrink:0}
+.ambw-small{font-size:11px;color:#cbd5e1;line-height:1.5}
+.ambw-bench{display:flex;gap:4px}.ambw-bn{width:32px}.ambw-bn img{display:block;width:32px;height:30px;object-fit:contain;background:#0f172a;border-radius:7px}
+.ambw-bn i{display:block;height:3px;border-radius:3px;background:#34d399;margin-top:2px}.ambw-bn.dead img{filter:grayscale(1) brightness(.45)}
+.ambw-mn{font-size:13px;width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw-bar{height:10px;border-radius:9px;background:#334155;overflow:hidden}.ambw-bar i{display:block;height:100%;background:linear-gradient(90deg,#34d399,#a3e635);transition:width .35s}
+.ambw-bar.low i{background:linear-gradient(90deg,#fb7185,#f97316)}.ambw-bar.pt i{background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.ambw-gbar{height:6px;border-radius:6px;background:#334155;margin-top:4px;position:relative;overflow:hidden}.ambw-gbar i{display:block;height:100%;background:linear-gradient(90deg,#fde047,#facc15);transition:width .35s}
+.ambw-gbar u{position:absolute;top:0;width:1px;height:100%;background:#0f172a}
+.ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
+.ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
+.ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
+.ambw-dist{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
+.ambw-dist span{font-size:11px;font-weight:900;color:#94a3b8;background:#0f172a;border-radius:6px;padding:1px 10px}.ambw-dist .cur{background:#fde047;color:#422006}
+.ambw-stage{position:absolute;z-index:2;left:0;right:0;bottom:30px;display:flex;justify-content:center;align-items:flex-end}
+.ambw-gap{transition:width .4s}
+.ambw-f{position:relative;text-align:center;width:92px}.ambw-f img{width:88px;height:88px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 6px 4px #0008)}
+.ambw-f em{font-style:normal;font-size:10.5px;font-weight:900;background:#0009;border-radius:6px;padding:0 6px;white-space:nowrap}
+.ambw-f.down img{filter:grayscale(1) brightness(.5);transform:rotate(80deg) translateY(10px)}
+.ambw-flip{transform:scaleX(-1)}
+@keyframes ambwLungeA{0%{transform:translateX(0)}35%{transform:translateX(26px)}100%{transform:translateX(0)}}
+@keyframes ambwLungeB{0%{transform:translateX(0)}35%{transform:translateX(-26px)}100%{transform:translateX(0)}}
+@keyframes ambwShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px) rotate(-5deg)}45%{transform:translateX(7px) rotate(5deg)}70%{transform:translateX(-4px)}}
+@keyframes ambwPop{0%{opacity:0;transform:translateY(12px) scale(.6) rotate(-8deg)}25%{opacity:1;transform:translateY(-6px) scale(1.2) rotate(-8deg)}100%{opacity:1;transform:translateY(-14px) scale(1) rotate(-8deg)}}
+@keyframes ambwCut{0%{opacity:0;transform:translateX(-40px) skewX(-10deg)}100%{opacity:1;transform:translateX(0) skewX(-10deg)}}
+@keyframes ambwFlash{0%{filter:drop-shadow(0 0 14px #f87171) brightness(1.7)}100%{filter:drop-shadow(0 6px 4px #0008)}}
+.ambw-lungeA{animation:ambwLungeA .42s ease-out}.ambw-lungeB{animation:ambwLungeB .42s ease-out}
+.ambw-hit{animation:ambwShake .45s ease-out}.ambw-hit img{animation:ambwFlash .5s ease-out}
+.ambw-dmg{position:absolute;z-index:3;top:-30px;left:50%;margin-left:-60px;width:120px;text-align:center;font-size:27px;font-weight:900;color:#fde047;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;line-height:.95;animation:ambwPop .5s ease-out both;pointer-events:none}
+.ambw-dmg small{display:block;font-size:12px;color:#fff;margin-bottom:3px}.ambw-dmg.miss{color:#cbd5e1;font-size:19px;text-shadow:0 2px 0 #0f172a}
+.ambw-cut{position:absolute;z-index:1;top:8px;left:-6px;right:36px;padding:3px 18px;background:linear-gradient(90deg,#a855f7,#6366f1 70%,#6366f100);animation:ambwCut .22s ease-out both}
+.ambw-cut.pow{background:linear-gradient(90deg,#f97316,#ef4444 70%,#ef444400)}.ambw-cut.B{left:36px;right:-6px;text-align:right;background:linear-gradient(270deg,#0ea5e9,#2563eb 70%,#2563eb00)}
+.ambw-cut.etc{background:linear-gradient(90deg,#475569,#334155 70%,#33415500)}
+.ambw-cut b{display:block;font-size:17px;letter-spacing:.04em;text-shadow:0 2px 0 #0006;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ambw-cut small{font-size:10px;font-weight:900}
+.ambw-bubble{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.5;flex:1}
+.ambw-log p{margin:2px 0;font-size:11px;color:#cbd5e1;padding-left:6px;border-left:3px solid #64748b}.ambw-log p.A{border-color:#f472b6}.ambw-log p.B{border-color:#38bdf8}.ambw-log p small{color:#64748b;margin-right:4px}
+.ambw-seek{height:8px;border-radius:6px;background:#334155;margin-top:12px;position:relative}.ambw-seek i{display:block;height:100%;border-radius:6px;background:#f472b6}
+.ambw-seek button{position:absolute;top:-9px;margin-left:-9px;width:18px;height:22px;font-size:11px;color:#7dd3fc;background:none;border:0;padding:0}.ambw-seek button.A{color:#f9a8d4}
+.ambw-ctl{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:10px;flex-wrap:wrap}
+.ambw-btn,.ambw-btn2,.ambw-sp{border-radius:999px;padding:8px 13px;font-weight:900;font-size:12px;white-space:nowrap;border:0;color:#fff;min-height:36px}
+.ambw-btn{background:linear-gradient(90deg,#f472b6,#fb923c)}.ambw-btn2{background:#334155}
+.ambw-sp{background:#1e293b;border:1px solid #475569;color:#94a3b8}.ambw-sp.on{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-tabs{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.ambw-tabs button{flex:1;text-align:center;font-size:12px;font-weight:900;padding:7px 4px;border-radius:10px;background:#1e293b;color:#94a3b8;border:1px solid #475569;white-space:nowrap;min-height:34px}
+.ambw-tabs button.on{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-sel{width:100%;background:#0f172a;color:#fff;border:1px solid #475569;border-radius:9px;padding:6px 4px;font-size:12px;font-weight:800;min-height:34px}
+.ambw-slot{flex:1;min-width:0;text-align:center}.ambw-slot img{width:54px;height:54px;object-fit:contain;display:block;margin:0 auto 3px}
+.ambw-res{text-align:center;margin-top:8px}.ambw-res b{display:block;font-size:30px;letter-spacing:.08em;color:#fde047}.ambw-res span{display:block;font-size:12px;color:#e2e8f0}
+.ambw-tbl{width:100%;border-collapse:collapse;font-size:12px;font-weight:800}.ambw-tbl td{padding:4px 3px;border-bottom:1px solid #fff1;text-align:right}.ambw-tbl td:first-child{text-align:left}
+.ambw-tbl .A{color:#f9a8d4}.ambw-tbl .B{color:#7dd3fc}.ambw-tbl tr.cur td{background:#fde04718}
+.ambw-k{display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0}.ambw-k span:first-child{width:150px;white-space:nowrap}.ambw-k b{width:46px;text-align:right;color:#fcd34d}.ambw-k .ambw-bar{flex:1}
+`;
+function AmbwPanel({
+  side,
+  team,
+  frame,
+  maxHp,
+  moves,
+  lastMove,
+  mine
+}) {
+  const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
+  const style = (window.ASSISTANT_MASMON_BATTLE.STYLES[team.assistantId] || {}).label || '';
+  const i = frame.act[side];
+  const hp = Math.max(0, frame.hp[side][i] || 0),
+    mx = maxHp[side][i] || 1,
+    g = frame.g[side];
+  const list = moves && moves[i] || [];
+  return React.createElement("div", {
+    className: `ambw-card ${mine ? 'me' : 'foe'}`,
+    "data-ambw-panel": side
+  }, React.createElement("div", {
+    className: "ambw-row"
+  }, React.createElement("img", {
+    className: "ambw-face",
+    src: assistantFaceSrc(who, 'normal'),
+    alt: ""
+  }), React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    className: "ambw-small"
+  }, mine ? '手前' : '奥'), React.createElement("b", {
+    style: {
+      fontSize: 14
+    }
+  }, who.name, " ", React.createElement("small", {
+    style: {
+      fontSize: 10.5,
+      color: '#cbd5e1'
+    }
+  }, style))), React.createElement("div", {
+    className: "ambw-bench"
+  }, team.members.map((m, j) => j === i ? null : React.createElement("div", {
+    key: j,
+    className: `ambw-bn ${frame.hp[side][j] <= 0 ? 'dead' : ''}`
+  }, React.createElement("img", {
+    src: ALL_PLAYER_MONSTERS[m.species].imgUrl,
+    alt: ""
+  }), React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.round(frame.hp[side][j] / (maxHp[side][j] || 1) * 100))}%`
+    }
+  }))))), React.createElement("div", {
+    className: "ambw-row",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("b", {
+    className: "ambw-mn"
+  }, team.members[i].name), React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, React.createElement("div", {
+    className: `ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(hp / mx * 100)}%`
+    }
+  })), React.createElement("div", {
+    className: "ambw-gbar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.min(100, g))}%`
+    }
+  }), [25, 50, 75].map(x => React.createElement("u", {
+    key: x,
+    style: {
+      left: `${x}%`
+    }
+  })))), React.createElement("div", {
+    className: "ambw-num"
+  }, React.createElement("span", {
+    "data-ambw-hp": side
+  }, hp), React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("em", null, "ガッツ ", Math.round(g)))), React.createElement("div", {
+    className: "ambw-chips"
+  }, list.map(mv => {
+    const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d),
+      ok = g >= mv.guts;
+    const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
+    return React.createElement("span", {
+      key: mv.id,
+      className: `ambw-chip ${cls}`
+    }, mv.kind === 'pow' ? '💪' : '🧠', mv.name, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
+  })));
+}
+function AssistantMasmonBattleWatch({
+  onClose
+}) {
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [size, setSize] = useState(3);
+  const [sideA, setSideA] = useState(AMBW_DEFAULT.A);
+  const [sideB, setSideB] = useState(AMBW_DEFAULT.B);
+  const [diff, setDiff] = useState(0);
+  const [balance, setBalance] = useState('A');
+  const [allTechs, setAllTechs] = useState(true);
+  const [seedNo, setSeedNo] = useState(1);
+  const [speed, setSpeed] = useState('x1');
+  const [phase, setPhase] = useState('setup');
+  const [battle, setBattle] = useState(null);
+  const [pos, setPos] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [compare, setCompare] = useState(null);
+  const rootRef = useRef(null);
+  useEffect(() => {
+    if (rootRef.current) rootRef.current.scrollTop = 0;
+  }, [phase]);
+  useEffect(() => {
+    let alive = true;
+    if (!engine) ambwLoadEngine().then(e => {
+      if (!alive) return;
+      if (e) setEngine(e);else setLoadFailed(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const ready = !!(engine && engine.BALANCE && typeof engine.simulate === 'function');
+  const catalog = useMemo(() => {
+    if (!ready) return null;
+    try {
+      return engine.buildCatalog({
+        ALL_PLAYER_MONSTERS,
+        ASSISTANT_MASMON_TECHS: ambwTechTable()
+      });
+    } catch (e) {
+      return null;
+    }
+  }, [ready]);
+  const speciesIds = useMemo(() => catalog ? Object.keys(catalog.species) : Object.keys(ALL_PLAYER_MONSTERS), [catalog]);
+  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id]), [ready]);
+  const BASE_TOTAL = 1800;
+  const teamsNow = () => ({
+    teamA: ambwTeamOf(engine, sideA, size, Math.round(BASE_TOTAL * (1 + diff / 100)), catalog, allTechs),
+    teamB: ambwTeamOf(engine, sideB, size, BASE_TOTAL, catalog, allTechs)
+  });
+  const seedOf = n => `watch-${n}`;
+  const start = (n = seedNo, bal = balance) => {
+    if (!ready || !catalog) return;
+    const {
+      teamA,
+      teamB
+    } = teamsNow();
+    const r = engine.simulate({
+      seed: seedOf(n),
+      catalog,
+      teamA,
+      teamB,
+      balance: bal,
+      trace: true
+    });
+    const st = r.log[0] || {};
+    setBattle({
+      r,
+      frames: ambwFramesOf(r.log),
+      teamA,
+      teamB,
+      maxHp: {
+        A: st.aHp || [],
+        B: st.bHp || []
+      },
+      moves: {
+        A: st.aMoves || [],
+        B: st.bMoves || []
+      },
+      balance: bal,
+      seedNo: n
+    });
+    setPos(0);
+    setPaused(false);
+    setCompare(null);
+    setPhase('watch');
+  };
+  useEffect(() => {
+    if (phase !== 'watch' || !battle || paused) return undefined;
+    const log = battle.r.log;
+    if (pos >= log.length - 1) {
+      const t = setTimeout(() => setPhase('result'), 900);
+      return () => clearTimeout(t);
+    }
+    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let next = pos + 1;
+      if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
+      setPos(next);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [phase, battle, pos, paused, speed]);
+  useEffect(() => {
+    if (phase !== 'result' || !battle || compare) return undefined;
+    const t = setTimeout(() => {
+      const N = 100,
+        out = {};
+      for (const b of ['A', 'B', 'C']) {
+        const same = engine.simulate({
+          seed: seedOf(battle.seedNo),
+          catalog,
+          teamA: battle.teamA,
+          teamB: battle.teamB,
+          balance: b
+        });
+        let w = 0;
+        for (let k = 0; k < N; k++) if (engine.simulate({
+          seed: `cmp-${k}`,
+          catalog,
+          teamA: battle.teamA,
+          teamB: battle.teamB,
+          balance: b
+        }).winner === 'A') w++;
+        out[b] = {
+          same: same.winner,
+          rounds: same.rounds,
+          rate: Math.round(w / N * 100)
+        };
+      }
+      setCompare(out);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [phase, battle, compare]);
+  const nameOf = id => (ASSISTANT_LIST.find(a => a.id === id) || {}).name || id;
+  const setSpecies = (which, idx, sp) => {
+    const set = which === 'A' ? setSideA : setSideB;
+    set(s => ({
+      ...s,
+      species: s.species.map((x, j) => j === idx ? sp : x)
+    }));
+  };
+  const sideEditor = (which, side, set) => {
+    const total = which === 'A' ? Math.round(BASE_TOTAL * (1 + diff / 100)) : BASE_TOTAL;
+    return React.createElement("div", {
+      className: `ambw-card ${which === 'A' ? 'me' : 'foe'}`,
+      "data-ambw-side": which
+    }, React.createElement("div", {
+      className: "ambw-row"
+    }, React.createElement("img", {
+      className: "ambw-face",
+      src: assistantFaceSrc(ASSISTANT_LIST.find(a => a.id === side.assistant) || ASSISTANT_LIST[0], 'normal'),
+      alt: ""
+    }), React.createElement("div", {
+      style: {
+        flex: 1
+      }
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, which === 'A' ? '手前の助手' : '奥の助手', "・能力の合計 ", total), React.createElement("select", {
+      className: "ambw-sel",
+      "data-ambw-assistant": which,
+      value: side.assistant,
+      onChange: e => set(s => ({
+        ...s,
+        assistant: e.target.value
+      }))
+    }, assistants.map(a => React.createElement("option", {
+      key: a.id,
+      value: a.id
+    }, a.name, "(", engine.STYLES[a.id].label, ")"))))), React.createElement("div", {
+      className: "ambw-row",
+      style: {
+        marginTop: 8,
+        alignItems: 'flex-start'
+      }
+    }, side.species.slice(0, size).map((sp, j) => React.createElement("div", {
+      key: j,
+      className: "ambw-slot"
+    }, React.createElement("img", {
+      src: ALL_PLAYER_MONSTERS[sp].imgUrl,
+      alt: ""
+    }), React.createElement("select", {
+      className: "ambw-sel",
+      "data-ambw-species": `${which}${j}`,
+      value: sp,
+      onChange: e => setSpecies(which, j, e.target.value)
+    }, speciesIds.map(id => React.createElement("option", {
+      key: id,
+      value: id
+    }, ALL_PLAYER_MONSTERS[id].name)))))));
+  };
+  let body = null;
+  if (!ready || !catalog) {
+    body = React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("p", {
+      className: "ambw-small"
+    }, loadFailed || engine && !engine.BALANCE || ready && !catalog ? '対戦の計算を読み込めませんでした(計算の第2版がまだ入っていないか、通信が切れています)。' : '対戦の計算を読み込んでいます…'));
+  } else if (phase === 'setup') {
+    body = React.createElement("div", {
+      "data-ambw-setup": true
+    }, React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "対戦の形"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, [1, 2, 3].map(n => React.createElement("button", {
+      key: n,
+      "data-ambw-size": n,
+      className: size === n ? 'on' : '',
+      onClick: () => setSize(n)
+    }, n, " VS ", n)))), sideEditor('B', sideB, setSideB), sideEditor('A', sideA, setSideA), React.createElement("div", {
+      className: "ambw-ctl",
+      style: {
+        marginTop: 6
+      }
+    }, React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-mirror": true,
+      onClick: () => setSideA(s => ({
+        ...s,
+        species: sideB.species.slice()
+      }))
+    }, "手前を奥と同じ種族にそろえる")), React.createElement("p", {
+      className: "ambw-small",
+      style: {
+        textAlign: 'center'
+      }
+    }, "同じ種族どうしなら、能力の形も同じになり、能力の差だけを見比べられます。"), React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "能力の差(手前の能力の合計を、奥よりどれだけ多くするか)"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, AMBW_DIFFS.map(d => React.createElement("button", {
+      key: d,
+      "data-ambw-diff": d,
+      className: diff === d ? 'on' : '',
+      onClick: () => setDiff(d)
+    }, d > 0 ? `+${d}%` : d === 0 ? '同じ' : `${d}%`))), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "能力の差の効き方"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, ['A', 'B', 'C'].map(b => React.createElement("button", {
+      key: b,
+      "data-ambw-balance": b,
+      className: balance === b ? 'on' : '',
+      onClick: () => setBalance(b)
+    }, b))), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 4
+      }
+    }, balance, ": ", AMBW_BALANCE_NOTE[balance]), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "使う技"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, React.createElement("button", {
+      "data-ambw-techs": "all",
+      className: allTechs ? 'on' : '',
+      onClick: () => setAllTechs(true)
+    }, "全部の技"), React.createElement("button", {
+      "data-ambw-techs": "start",
+      className: !allTechs ? 'on' : '',
+      onClick: () => setAllTechs(false)
+    }, "最初の技だけ")), React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "速さ"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, AMBW_SPEEDS.map(s => React.createElement("button", {
+      key: s.id,
+      className: speed === s.id ? 'on' : '',
+      onClick: () => setSpeed(s.id)
+    }, s.label)))), React.createElement("div", {
+      className: "ambw-ctl"
+    }, React.createElement("button", {
+      className: "ambw-btn",
+      "data-ambw-start": true,
+      onClick: () => start()
+    }, "⚔ 対戦を見る(試合 ", seedNo, ")"), React.createElement("button", {
+      className: "ambw-btn2",
+      onClick: () => setSeedNo(n => n + 1)
+    }, "🎲 別の試合にする")), React.createElement("p", {
+      className: "ambw-small",
+      style: {
+        textAlign: 'center',
+        marginTop: 8
+      }
+    }, "同じ設定・同じ試合の番号なら、何度見ても同じ結果になります。何も保存しません。"));
+  } else if (battle) {
+    const log = battle.r.log,
+      e = log[pos] || {},
+      f = battle.frames[pos] || battle.frames[0];
+    const ended = phase === 'result';
+    const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
+    const who = (side, i) => (mem(side, i) || {}).name || '';
+    const WHY = engine.WHY || {};
+    const lineOf = x => {
+      if (!x || !x.side) return '';
+      const n = who(x.side, x.i);
+      if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
+      if (x.ev === 'charge') return `${n}は ガッツをためた`;
+      if (x.ev === 'guard') return `${n}は 身を守った`;
+      if (x.ev === 'swap') return `交代! ${who(x.side, x.from)} → ${n}`;
+      if (x.ev === 'ko') return `${x.name} は たおれた`;
+      if (x.ev === 'enter') return `${n} が出た`;
+      return '';
+    };
+    const recent = [];
+    for (let k = pos - 1; k >= 1 && recent.length < 3; k--) {
+      const t = lineOf(log[k]);
+      if (t) recent.unshift({
+        k,
+        t,
+        side: log[k].side,
+        r: log[k].r
+      });
+    }
+    const gap = [6, 44, 92, 146][f.d] || 44;
+    const foeSide = e.side === 'A' ? 'B' : 'A';
+    const actor = e.side ? ASSISTANT_LIST.find(a => a.id === (e.side === 'A' ? battle.teamA : battle.teamB).assistantId) || ASSISTANT_LIST[0] : null;
+    const fighter = side => {
+      const i = f.act[side],
+        m = mem(side, i),
+        down = f.hp[side][i] <= 0;
+      const acting = e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : '';
+      const hurt = e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : '';
+      return React.createElement("div", {
+        key: `${side}-${pos}`,
+        className: `ambw-f ${down ? 'down' : ''} ${acting} ${hurt}`
+      }, React.createElement("img", {
+        className: side === 'A' ? 'ambw-flip' : '',
+        src: ALL_PLAYER_MONSTERS[m.species].imgUrl,
+        alt: ""
+      }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
+        className: "ambw-dmg"
+      }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
+        className: "ambw-dmg miss"
+      }, "はずれ")));
+    };
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
+    const kos = log.map((x, k) => x.ev === 'ko' ? {
+      k,
+      side: x.side
+    } : null).filter(Boolean);
+    const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
+    const tech = side => log.filter(x => x.ev === 'tech' && x.side === side);
+    const stat = side => {
+      const t = tech(side);
+      return {
+        n: t.length,
+        hit: t.filter(x => x.hit).length,
+        crit: t.filter(x => x.crit).length,
+        dmg: t.reduce((a, x) => a + (x.dmg || 0), 0)
+      };
+    };
+    const sa = stat('A'),
+      sb = stat('B');
+    body = React.createElement("div", {
+      "data-ambw-watch": true,
+      "data-ambw-pos": pos,
+      "data-ambw-phase": phase
+    }, ended && React.createElement("div", {
+      "data-ambw-result": true
+    }, React.createElement("div", {
+      className: "ambw-res"
+    }, React.createElement("b", null, winName ? `${winName} の勝ち!` : '引き分け'), React.createElement("span", null, battle.r.winner === 'A' ? '手前' : battle.r.winner === 'B' ? '奥' : '', "・", battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着', "・効き方 ", battle.balance, "・試合 ", battle.seedNo)), React.createElement("div", {
+      className: "ambw-card"
+    }, React.createElement("table", {
+      className: "ambw-tbl"
+    }, React.createElement("tbody", null, React.createElement("tr", null, React.createElement("td", null, "この1戦"), React.createElement("td", {
+      className: "A"
+    }, "手前 ", nameOf(battle.teamA.assistantId)), React.createElement("td", {
+      className: "B"
+    }, "奥 ", nameOf(battle.teamB.assistantId))), React.createElement("tr", null, React.createElement("td", null, "技が当たった"), React.createElement("td", {
+      className: "A"
+    }, sa.hit, "/", sa.n), React.createElement("td", {
+      className: "B"
+    }, sb.hit, "/", sb.n)), React.createElement("tr", null, React.createElement("td", null, "会心"), React.createElement("td", {
+      className: "A"
+    }, sa.crit, "回"), React.createElement("td", {
+      className: "B"
+    }, sb.crit, "回")), React.createElement("tr", null, React.createElement("td", null, "与えたダメージ"), React.createElement("td", {
+      className: "A"
+    }, sa.dmg), React.createElement("td", {
+      className: "B"
+    }, sb.dmg))))), React.createElement("div", {
+      className: "ambw-card",
+      "data-ambw-compare": true
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "効き方の見比べ(同じ編成・能力の差 ", diff > 0 ? `+${diff}%` : diff === 0 ? 'なし' : `${diff}%`, ")"), !compare ? React.createElement("p", {
+      className: "ambw-small"
+    }, "計算しています…") : ['A', 'B', 'C'].map(b => React.createElement("div", {
+      key: b,
+      className: "ambw-k"
+    }, React.createElement("span", null, b, ": この試合は ", compare[b].same === 'draw' ? '引き分け' : compare[b].same === 'A' ? '手前の勝ち' : '奥の勝ち'), React.createElement("div", {
+      className: "ambw-bar pt"
+    }, React.createElement("i", {
+      style: {
+        width: `${compare[b].rate}%`
+      }
+    })), React.createElement("b", null, compare[b].rate, "%"))), React.createElement("div", {
+      className: "ambw-small"
+    }, "右の数字は、同じ編成で100戦したときに手前が勝つ割合"), React.createElement("div", {
+      className: "ambw-tabs"
+    }, ['A', 'B', 'C'].map(b => React.createElement("button", {
+      key: b,
+      className: battle.balance === b ? 'on' : '',
+      onClick: () => {
+        setBalance(b);
+        start(battle.seedNo, b);
+      }
+    }, "同じ試合を ", b, " で見る")))), React.createElement("div", {
+      className: "ambw-ctl"
+    }, React.createElement("button", {
+      className: "ambw-btn",
+      onClick: () => start(battle.seedNo, battle.balance)
+    }, "▶ もう一度見る"), React.createElement("button", {
+      className: "ambw-btn2",
+      onClick: () => {
+        const n = battle.seedNo + 1;
+        setSeedNo(n);
+        start(n, battle.balance);
+      }
+    }, "🎲 次の試合"), React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-back": true,
+      onClick: () => setPhase('setup')
+    }, "⚙ 設定へ"))), React.createElement(AmbwPanel, {
+      side: "B",
+      team: battle.teamB,
+      frame: f,
+      maxHp: battle.maxHp,
+      moves: battle.moves.B,
+      lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
+      mine: false
+    }), React.createElement("div", {
+      className: "ambw-ring"
+    }, React.createElement("div", {
+      className: "ambw-stage"
+    }, fighter('A'), React.createElement("div", {
+      className: "ambw-gap",
+      style: {
+        width: gap
+      }
+    }), fighter('B')), React.createElement("div", {
+      className: "ambw-dist"
+    }, AMBW_DIST.map((n, d) => React.createElement("span", {
+      key: d,
+      className: d === f.d ? 'cur' : ''
+    }, n))), cutText && e.ev !== 'end' && React.createElement("div", {
+      key: `cut-${pos}`,
+      className: `ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`
+    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), React.createElement(AmbwPanel, {
+      side: "A",
+      team: battle.teamA,
+      frame: f,
+      maxHp: battle.maxHp,
+      moves: battle.moves.A,
+      lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
+      mine: true
+    }), !ended && React.createElement("div", {
+      className: "ambw-card ambw-log"
+    }, recent.map(x => React.createElement("p", {
+      key: x.k,
+      className: x.side
+    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && WHY[e.why] && React.createElement("div", {
+      className: "ambw-row",
+      style: {
+        marginTop: 6
+      }
+    }, React.createElement("img", {
+      className: "ambw-face",
+      src: assistantFaceSrc(actor, 'normal'),
+      alt: ""
+    }), React.createElement("div", {
+      className: "ambw-bubble"
+    }, actor.name, "「", WHY[e.why], "」"))), React.createElement("div", {
+      className: "ambw-seek"
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(pos / Math.max(1, log.length - 1) * 100)}%`
+      }
+    }), kos.map(x => React.createElement("button", {
+      key: x.k,
+      className: x.side,
+      style: {
+        left: `${x.k / Math.max(1, log.length - 1) * 100}%`
+      },
+      onClick: () => {
+        setPos(x.k);
+        setPaused(true);
+        setPhase('watch');
+      }
+    }, "✖"))), !ended && React.createElement("div", {
+      className: "ambw-ctl"
+    }, React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-pause": true,
+      onClick: () => setPaused(p => !p)
+    }, paused ? '▶' : '⏸'), AMBW_SPEEDS.map(s => React.createElement("button", {
+      key: s.id,
+      className: `ambw-sp ${speed === s.id ? 'on' : ''}`,
+      "data-ambw-speed": s.id,
+      onClick: () => {
+        setSpeed(s.id);
+        setPaused(false);
+      }
+    }, s.label)), React.createElement("button", {
+      className: "ambw-btn2",
+      "data-ambw-skip": true,
+      onClick: () => {
+        setPos(log.length - 1);
+        setPhase('result');
+      }
+    }, "⏭ 結果へ")));
+  }
+  return React.createElement("div", {
+    className: "ambw",
+    "data-ambw-root": true,
+    ref: rootRef
+  }, React.createElement("style", null, AMBW_CSS), React.createElement("div", {
+    className: "ambw-in"
+  }, React.createElement("div", {
+    className: "ambw-top"
+  }, React.createElement("button", {
+    className: "ambw-btn2",
+    "data-ambw-close": true,
+    onClick: phase === 'setup' || !battle ? onClose : () => setPhase('setup')
+  }, "← ", phase === 'setup' || !battle ? 'もどる' : '設定へ'), React.createElement("span", null, "⚔ 助手マスモンの対戦(観戦の試作)"), React.createElement("b", null, phase !== 'setup' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '試作')), body));
 }
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
@@ -139706,8 +140719,18 @@ const cardAiFavoriteCandidates = (db, who, lead = null) => {
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
   const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
-  const base = Object.values(db.monsters).find(x => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
-  return base ? Number(base.wave) || 1 : 4;
+  const t = cardAiBaseWaveTable(db);
+  return t.has(sp) ? t.get(sp) : 4;
+};
+const CARD_AI_BASE_WAVE = new WeakMap();
+const cardAiBaseWaveTable = db => {
+  const mons = db.monsters;
+  const hit = CARD_AI_BASE_WAVE.get(mons);
+  if (hit) return hit;
+  const t = new Map();
+  for (const x of Object.values(mons)) if (!x.variant && String(x.wave) !== 'hybrid' && !t.has(x.species)) t.set(x.species, Number(x.wave) || 1);
+  CARD_AI_BASE_WAVE.set(mons, t);
+  return t;
 };
 const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
   const habit = cardAiDeckHabit(who, levelId);
@@ -149293,11 +150316,25 @@ const CardFitLabel = ({
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    const over = v => {
+      el.style.fontSize = `${v}px`;
+      return el.scrollWidth > el.clientWidth + 0.5;
+    };
     const fit = () => {
       let s = max;
-      el.style.fontSize = `${s}px`;
-      while (s > min && el.scrollWidth > el.clientWidth + 0.5) {
-        s -= 0.5;
+      if (over(max)) {
+        const steps = Math.ceil((max - min) * 2);
+        let lo = 1,
+          hi = steps,
+          best = steps;
+        while (lo <= hi) {
+          const k = lo + hi >> 1;
+          if (!over(max - k * 0.5) || k === steps) {
+            best = Math.min(best, k);
+            hi = k - 1;
+          } else lo = k + 1;
+        }
+        s = max - best * 0.5;
         el.style.fontSize = `${s}px`;
       }
       setSize(s);
@@ -177302,6 +178339,13 @@ function MonsterHeroGame() {
   const [enemyAttackFx, setEnemyAttackFx] = useState(null);
   const [currentWaveDamage, setCurrentWaveDamage] = useState(0);
   const [waveDistDamage, setWaveDistDamage] = useState([0, 0, 0, 0]);
+  const currentWaveDamageRef = useRef(0);
+  currentWaveDamageRef.current = currentWaveDamage;
+  const waveDistDamageRef = useRef([0, 0, 0, 0]);
+  waveDistDamageRef.current = waveDistDamage;
+  const addCurrentWaveDamageLive = amount => {
+    currentWaveDamageRef.current = (Number(currentWaveDamageRef.current) || 0) + (Number(amount) || 0);
+  };
   const [distDmgBonus, setDistDmgBonus] = useState([0, 0, 0, 0]);
   const [distAptPct, setDistAptPct] = useState([0, 0, 0, 0]);
   const tacticsSlotApt = slotIdx => {
@@ -177743,6 +178787,7 @@ function MonsterHeroGame() {
     const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemyShellPool(enemy));
     for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total);
+    addCurrentWaveDamageLive(ca.total);
     raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - (ca.total - shellAbsorbed));
     enemyRevivedHpRef.current = null;
@@ -178700,6 +179745,7 @@ function MonsterHeroGame() {
   const [assistantCallnameAsk, setAssistantCallnameAskState] = useState({});
   const [callnameToast, setCallnameToast] = useState(null);
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
+  const [masmonBattleWatchOpen, setMasmonBattleWatchOpen] = useState(false);
   const [assistantChatWith, setAssistantChatWith] = useState(null);
   const [peerReplay, setPeerReplay] = useState(null);
   const assistantDailyLinesAskedRef = useRef('');
@@ -191872,7 +192918,7 @@ function MonsterHeroGame() {
       combo: base.combo + (boost.combo || 0) * effMul
     };
   };
-  const previewAttackStartDist = (card, dist) => card?.subType === 'stun_atsu' ? enemyDist : dist;
+  const previewAttackStartDist = (card, dist) => dist;
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
@@ -192057,7 +193103,7 @@ function MonsterHeroGame() {
       key: Date.now()
     });
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
-    const totalWaveDamage = currentWaveDamage + damage;
+    const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
     const turnMult = Math.max(1.0, 2.0 - (20 - remainingTurns) * 0.05);
@@ -192078,7 +193124,7 @@ function MonsterHeroGame() {
     const rawRoundScore = (totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier;
     const finalRoundScore = shrinkBattleScore(rawRoundScore);
     setScore(s => s + finalRoundScore);
-    const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
+    const finalDistDamage = waveDistDamageAtDefeat(waveDistDamageRef.current, waveDistDamage, distDamage);
     const normalGainedDistBonus = finalDistDamage.map(d => d * DIST_BONUS_PER_DAMAGE);
     const gainedDistBonus = finalDistDamage.map(d => applyDistanceEnhancement(d * DIST_BONUS_PER_DAMAGE, specialRuleDifficulty, wave));
     const newDistBonus = distDmgBonus.map((b, i) => b + gainedDistBonus[i]);
@@ -192330,10 +193376,13 @@ function MonsterHeroGame() {
           const id = tacticsUnitsRef.current[i]?.id;
           return id === 'Ark' || id === 'Iblis';
         });
-        if (chuuniAimed && getWaveBuff('chuuniDmgCutUses') < 2) {
+        let chuuniCutUsed = false;
+        const useChuuniCut = () => {
+          if (chuuniCutUsed || !chuuniAimed || !(getWaveBuff('chuuniDmgCutUses') < 2)) return;
+          chuuniCutUsed = true;
           addWaveBuff('chuuniDmgCutUses', 1);
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
-        }
+        };
         const forcedReflect = getTurnBuff('reflect', false);
         const kageroEvade = !forcedReflect && defenseHeroId === KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
         if (kageroEvade) {
@@ -192396,6 +193445,7 @@ function MonsterHeroGame() {
             addPopup(`反射 ${reflectDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
             const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectDmg);
             setCurrentWaveDamage(p => p + reflectDmg);
+            addCurrentWaveDamageLive(reflectDmg);
             raidJackDamageRef.current += Number(reflectDmg) || 0;
             setEnemy(prev => prev ? {
               ...prev,
@@ -192407,29 +193457,10 @@ function MonsterHeroGame() {
               damage: reflectDmg
             })) return;
           }
-        } else if (isAbsorb) {
+        } else if (isAbsorb && !isTacticsMode(runMode)) {
           addPopup("吸収！", 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
-          const absorbSlot = isTacticsMode(runMode) ? pickDefenseSlot() : null;
-          if (isTacticsMode(runMode)) {
-            let units = tacticsUnitsRef.current,
-              hpGain = 0,
-              gutsGain = 0;
-            if (absorbSlot != null) {
-              const gain = applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, absorbSlot), absorbSlot);
-              const guts = Math.floor(gain * 0.1);
-              hpGain = gain;
-              gutsGain = guts;
-              units = recoverTacticsGutsAt(healTacticsAt(units, absorbSlot, gain), absorbSlot, guts);
-            }
-            currentHp = commitTacticsUnits(units);
-            if (absorbSlot != null && (hpGain > 0 || gutsGain > 0)) mergeTacticsSlotFx({
-              [absorbSlot]: hpGain
-            }, {
-              [absorbSlot]: gutsGain
-            });
-            if (hpGain <= 0) addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
-          } else {
+          {
             const hpGain = incomingDmg;
             const gutsGain = Math.floor(incomingDmg * 0.1);
             addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
@@ -192443,7 +193474,7 @@ function MonsterHeroGame() {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
         } else if (isTacticsMode(runMode)) {
-          tookEnemyAttack = true;
+          let tacticsReceived = false;
           const targets = tacticsTargetsNow(intent, actingEnemyDist);
           const copyNow = aiCopyRef.current;
           const copyHit = EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(copyNow, turnCount) && tacticsIntentHitsAiCopy(intent, copyNow);
@@ -192457,6 +193488,7 @@ function MonsterHeroGame() {
             pushBattleLog(`${tacticsAiCopyName(copyNow)}に${fdC}ダメージ`, 'enemy');
             if (afterC) commitAiCopy(afterC);else clearAiCopy('倒されて消えた');
             if (!targets.length) await battleWait(600);
+            tookEnemyAttack = !!copyHit;
           }
           const coverSlot = tacticsCoverSlotNow();
           if (coverSlot != null && targets.length) {
@@ -192473,8 +193505,10 @@ function MonsterHeroGame() {
             let coveredHits = 0;
             const evadedSlot = isEvasion ? pickDefenseSlot() : null;
             const reflectedSlot = isReflect ? pickDefenseSlot() : null;
+            const absorbedSlot = isAbsorb ? pickDefenseSlot() : null;
             let evadedName = '',
               reflectedName = '',
+              absorbedName = '',
               reflectBack = 0;
             let units = tacticsUnitsRef.current,
               dealt = 0,
@@ -192521,6 +193555,22 @@ function MonsterHeroGame() {
                   reflect: true
                 };
                 return;
+              }
+              if (slotIdx === absorbedSlot) {
+                const gain = applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx);
+                const gutsGain = Math.floor(gain * 0.1);
+                units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, gain), slotIdx, gutsGain);
+                absorbedName = tacticsTargetName(units, slotIdx);
+                slotFx[slotIdx] = {
+                  heal: gain,
+                  guts: gutsGain
+                };
+                return;
+              }
+              tacticsReceived = true;
+              {
+                const hitId = tacticsUnitsRef.current[slotIdx]?.id;
+                if (hitId === 'Ark' || hitId === 'Iblis') useChuuniCut();
               }
               const own = slotGuards[slotIdx] || {
                 flat: 0,
@@ -192607,6 +193657,11 @@ function MonsterHeroGame() {
               addPopup(`反射！ ${reflectedName}`, 'hero', 'text-purple-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
             }
+            if (absorbedSlot != null && absorbedName) {
+              addPopup(`吸収！ ${absorbedName}`, 'hero', 'text-emerald-400 font-black text-xl drop-shadow-lg');
+              await battleWait(600);
+            }
+            if (tacticsReceived) tookEnemyAttack = true;
             if (rushHits > 1) {
               const coverText = coveredHits > 0 && throughTotal > 0 ? ` ガードは${coveredHits}ヒットぶん` : coveredHits > 0 ? ` ガード ${coveredHits}ヒットぶんで受け止めた` : '';
               addPopup(`連撃 ${rushHits}ヒット！${coverText}`, 'enemy', 'text-orange-300 font-black text-lg drop-shadow-md');
@@ -192631,12 +193686,13 @@ function MonsterHeroGame() {
               addPopup(`合計 ${dealt}`, 'hero', 'text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]', `味方は 合計 ${dealt.toLocaleString()} ダメージを受けた`);
               await battleWait(400);
             }
-            if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
+            if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null && !absorbedName) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             if (reflectBack > 0) {
               addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
               const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectBack);
               setCurrentWaveDamage(p => p + reflectBack);
+              addCurrentWaveDamageLive(reflectBack);
               raidJackDamageRef.current += Number(reflectBack) || 0;
               setEnemy(prev => prev ? {
                 ...prev,
@@ -192651,6 +193707,7 @@ function MonsterHeroGame() {
           }
         } else if (guardValue > 0) {
           tookEnemyAttack = true;
+          useChuuniCut();
           const rushHits = intent.type === 'SPECIAL' ? extremeLayerRushHits(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave, enemyLiveRef.current?.shellBroken) : 1;
           const guardCards = Object.values(immediateEffects.guardBySlot || {}).reduce((sum, e) => sum + Math.max(0, Number(e?.cards) || 0), 0);
           const rushGuard = rushHits > 1 ? resolveTacticsGuardedHit(incomingBeforeTurnReduction, rushHits, guardValue, guardCards >= TACTICS_RUSH_GUARD_CARDS ? rushHits : 1) : null;
@@ -192681,6 +193738,7 @@ function MonsterHeroGame() {
           }
         } else {
           tookEnemyAttack = true;
+          useChuuniCut();
           addPopup(`-${incomingDmg}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
           triggerShake();
           const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
@@ -192708,12 +193766,13 @@ function MonsterHeroGame() {
     }
     const autoHpRecoveryRate = getPermaBuff('autoHpRecovery', 0.1);
     const currentAutoGutsRecovery = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
-    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
+    const enemyDistAfterTurn = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
+    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDistAfterTurn);
     const soulAdjustedGutsRecoveryRate = Math.max(0, gutsRecoveryRate) * soulBattleParty.autoGutsMultiplier;
     const baseGutsRecoveryRate = Math.max(0, currentAutoGutsRecovery) * soulBattleParty.autoGutsMultiplier;
     const iceExtraRateAt = slotIdx => {
       const id = tacticsUnitsRef.current[slotIdx]?.id;
-      const withIce = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, id, iceLockActive, slotIdx, enemyDist);
+      const withIce = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, id, iceLockActive, slotIdx, enemyDistAfterTurn);
       return Math.max(0, withIce - Math.max(0, currentAutoGutsRecovery)) * soulBattleParty.autoGutsMultiplier;
     };
     const regen = tacticsRegen(autoHpRecoveryRate + (isTacticsMode(runMode) ? tacticsExPartyBuffNow().hpAdd : 0), isTacticsMode(runMode) ? baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd : soulAdjustedGutsRecoveryRate);
@@ -192768,7 +193827,7 @@ function MonsterHeroGame() {
     if (timeStopSlot == null) tickOrihimeEx();
     if (timeStopSlot == null) tickReikonAll();
     {
-      const lifeSourceTurn = turnCount + 1;
+      const lifeSourceTurn = timeStopSlot == null ? turnCount + 1 : 0;
       let lifeSourceGain = 0;
       if (isTacticsMode(runMode)) {
         tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
@@ -193748,7 +194807,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul) * copyDmgScale);
+          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false, attackDistance) * effMul) * copyDmgScale);
           const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           const stunHits = buildAttackHits({
             d,
@@ -193760,10 +194819,11 @@ function MonsterHeroGame() {
             critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
             kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
-            rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
+            rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, stunMon?.id).critAdd + kyubiAttackAt(slotIdx, stunMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
+            hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
             exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, [...kusabiCombosAt(slotIdx, stunMon?.id, card), kyubiAttackAt(slotIdx, stunMon?.id, card).combo, kyubiAttackAt(slotIdx, stunMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
@@ -194241,13 +195301,16 @@ function MonsterHeroGame() {
               addPopup(`🎻 与ダメ +${Math.round(guardFx.atkStack * n * 100)}%`, 'hero', 'text-fuchsia-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
             }
             if (isTacticsMode(runMode)) {
-              immediateTakenMultBySlot[slotIdx] = guardMult;
+              {
+                const cur = Number(immediateTakenMultBySlot[slotIdx]);
+                immediateTakenMultBySlot[slotIdx] = (Number.isFinite(cur) && cur > 0 ? cur : 1) * guardMult;
+              }
               writeNextTurnBuffs(p => ({
                 ...p,
                 bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, 'takenDamageMult', tacticsSlotRate(p.bySlot, slotIdx, 'takenDamageMult', 1.0) * guardMult)
               }));
             } else {
-              immediateTakenMult = guardMult;
+              immediateTakenMult *= guardMult;
               writeNextTurnBuffs(p => {
                 const cur = Number(p.takenDamageMult);
                 return {
@@ -194537,6 +195600,7 @@ function MonsterHeroGame() {
         }
         aiCopyHitRef.current = false;
         setCurrentWaveDamage(p => p + totalDmg);
+        addCurrentWaveDamageLive(totalDmg);
         raidJackDamageRef.current += Number(totalDmg) || 0;
         const turnDistDmg = [0, 0, 0, 0];
         for (const h of attackHits) {
@@ -194549,6 +195613,7 @@ function MonsterHeroGame() {
           for (let k = 0; k < 4; k++) n[k] = (n[k] || 0) + turnDistDmg[k];
           return n;
         });
+        waveDistDamageRef.current = [0, 1, 2, 3].map(k => (Number(waveDistDamageRef.current?.[k]) || 0) + turnDistDmg[k]);
         if (tacticsHateOnFor(runMode)) tacticsHateDealtRef.current = tacticsHateDealtRef.current.map((v, k) => v + turnDistDmg[k]);
         if (multiHit) {
           await battleWait(150);
@@ -194585,7 +195650,7 @@ function MonsterHeroGame() {
       for (let i = 0; i < count; i++) {
         if (nextDeck.length === 0) {
           if (nextGraveyard.length === 0) break;
-          nextDeck = [...nextGraveyard].sort(() => Math.random() - 0.5);
+          nextDeck = shuffledCopy(nextGraveyard);
           nextGraveyard = [];
         }
         if (nextDeck.length > 0) nextHand.push(nextDeck.pop());
@@ -195293,7 +196358,7 @@ function MonsterHeroGame() {
     });
     const scenario = battleScenarioRef.current;
     if (scenario && typeof orderDeckForScenario === 'function') return orderDeckForScenario(scenario, pool);
-    return pool.sort(() => Math.random() - 0.5);
+    return shuffledCopy(pool);
   };
   const applyUniqueChoiceForSlot = (slotIdx, key) => {
     const mon = slots[slotIdx];
@@ -200024,6 +201089,8 @@ function MonsterHeroGame() {
         setCardOrigin('home');
         setGameState('CARD_TOP');
       }
+    }), masmonBattleWatchOpen && typeof AssistantMasmonBattleWatch === 'function' && React.createElement(AssistantMasmonBattleWatch, {
+      onClose: () => setMasmonBattleWatchOpen(false)
     }), assistantChatOpen && activeAssistant && (() => {
       const chatWho = assistantChatWith && ASSISTANT_LIST.find(a => a.id === assistantChatWith.id) || activeAssistant;
       const id = chatWho.id;
@@ -205464,6 +206531,12 @@ function MonsterHeroGame() {
         selectDebugBattle(debugBattleModeId, debugBattleDifficultyId);
         setGameState('DEBUG_BATTLE_SETUP');
       }
+    }), React.createElement(DebugMenuRow, {
+      "data-debug-masmon-battle-watch": true,
+      icon: "🐾",
+      label: "助手マスモンの対戦を見る(試作)",
+      desc: "助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません",
+      onClick: () => setMasmonBattleWatchOpen(true)
     })), React.createElement(DebugMenuGroup, {
       id: "monster-look",
       title: "🧬 モンスターの見た目",
@@ -209889,6 +210962,7 @@ function MonsterHeroGame() {
       pendingCard: pendingCard,
       pendingCardGuts: pendingCardGuts,
       popups: popups,
+      ownedTeachings: ownedTeachings,
       previewLocalBoosts: previewLocalBoosts,
       processTurn: processTurn,
       quickRhythmIntroVisible: quickRhythmIntroVisible,

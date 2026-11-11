@@ -1088,7 +1088,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && (app.match(/tacticsTargetsNow\(intent,actingEnemyDist\)/g) || []).length === 3);
   check('片手盾の剣士モッチーはソードスキルが出ない・二刀流は連撃が2回ぶん(実処理・予測の両方)',
     (app.match(/swordSkill:tacticsExStyleAt\(slotIdx\)!=='shield'/g) || []).length === 2
-    && (app.match(/hitRepeat:tacticsExStyleAt\(slotIdx\)==='dual'\?TACTICS_EX_DUAL_HIT_REPEAT:1/g) || []).length === 2
+    && (app.match(/hitRepeat:tacticsExStyleAt\(slotIdx\)==='dual'\?TACTICS_EX_DUAL_HIT_REPEAT:1/g) || []).length === 3 // 実処理・予測・あつの挑発(2026-11-11)
     && /card\.monId==='KenshiMocchi'&&tacticsExStyleAt\(slotIdx\)==='shield'/.test(app)
     && /if \(swordSkill && isUniqueOf\('KenshiMocchi'\)\)/.test(source));
   // 定義の取り方は、ジャックのレイドバトルでEXの回数を2回にする包み(raidExDefOf)を通る形になった(2026-10)
