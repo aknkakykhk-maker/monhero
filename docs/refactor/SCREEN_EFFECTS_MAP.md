@@ -176,6 +176,8 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setShuffleStopped(true); }, RHYTHM_MULTI_SHUFFLE_MS - 800` | screen | 止める | シャッフル演出を止める(音ゲーのマルチ) |
 | `RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS` | progress | 投げっぱなし | シャッフルを見せた印を付ける。止めると同じ演出がまた出る |
 | `setCopied(false), 2000` | progress | 投げっぱなし | 「コピーしました」の表示を戻す。止めると出たまま |
+| `root.classList.add('mhms-idle'), RHYTHM_MODE_SELECT_IDLE_MS` | screen | 止める | モードえらびの飾りを、10秒放置したら止める(音ゲーのマルチ・見た目だけ。後片付けで外す) |
+| `setLoginBonusGuideClear(true), 700` | 対象外 | 止める | 助手の案内とバトルのれんしゅうが終わって0.7秒たってから、ログインボーナスの窓を出してよいことにする(アプリ全体の条件で、画面に紐づかない。後片付けで外す) |
 | `if (reduce || from === to) { setValue(to); return undefined; }` | screen | 止める | 数字のカウントアップ演出(画面を離れたら止める) |
 | `const raidTotals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id)` | 対象外 | await | HOMEの見回りで、ジャックの段階の合計を取る通信の時間切れ(4秒で null を返して今回は出さない) |
 | `const done = totals && totals.a && totals.a[prep.tierIndex + 1]` | 対象外 | await | レイド画面の段階の合計を取る通信の時間切れ(4秒で null を返す)。同じ形の行が3つあるので、目印は次の行(段の数え方が違う) |
