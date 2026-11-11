@@ -145,6 +145,27 @@ const MH_PAGE_OFFSET_GUARD=(()=>{
   ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));
   return {state,check:soon};
 })();
+// iPhone(iPad)のホーム画面から開いているか。navigator.standalone は iPhone・iPad の Safari にだけあり、ホーム画面のアプリで true になる。
+// Android のホーム画面のアプリは false(本体の「戻る」があるので、履歴の扱いを変えない)
+function mhIsIosHomeScreenApp(){
+  try{return typeof window!=='undefined'&&!!window.navigator&&window.navigator.standalone===true;}catch(_){return false;}
+}
+// 指で長押ししたときのメニュー(Android の「画像を保存」「リンクを開く」など)を出さない(2026-11-11 社長「ブラウザのような挙動がある」)。
+// iPhone の吹き出しは index.html の -webkit-touch-callout で止めている。こちらは Android 向け。
+// 止めるのは指(ペン)で押したときだけ。パソコンの右クリックと、文字の入力欄・select-text の所ではそのまま出す。
+// 押した道具を覚えるだけ(数を読んで1つ書くだけ)で、演奏の判定・スコアには関わらない
+const MH_TOUCH_MENU_GUARD=(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return null;
+  let lastTouch=false;
+  document.addEventListener('pointerdown',e=>{lastTouch=e.pointerType==='touch'||e.pointerType==='pen';},{capture:true,passive:true});
+  document.addEventListener('contextmenu',e=>{
+    const t=e.target;
+    if(t&&typeof t.closest==='function'&&t.closest('input,textarea,[contenteditable]:not([contenteditable="false"]),.select-text'))return;
+    const byFinger=e.pointerType==='touch'||e.pointerType==='pen'||(!e.pointerType&&lastTouch);
+    if(byFinger&&e.cancelable)e.preventDefault();
+  },{capture:true});
+  return {byFinger:()=>lastTouch};
+})();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
 // lucide公式のSVGパス(strokeベース)。無いものは汎用ドットにフォールバック
