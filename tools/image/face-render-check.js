@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // 顔アイコンが実ブラウザで正しくデコード・描画されるかを確認する。
 // アイコン選択画面と同じレイアウト(4列・aspect-square・角丸16px・object-contain)を

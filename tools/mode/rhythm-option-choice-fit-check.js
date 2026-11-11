@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // モンヒロビートのオプションの選択肢(data-rhythm-option-choice)の字が、縦の iPhone の幅で切れていないかを見る(2026-11-07)。
 //
 //   python3 tools/serve.py を起動した状態で  node tools/mode/rhythm-option-choice-fit-check.js

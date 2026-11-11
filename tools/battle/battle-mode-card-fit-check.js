@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // モード選択のカード(BATTLE_MODE_SELECT)が、いちばん小さい端末でも崩れずに読めるかを実ブラウザで測る。
 //
