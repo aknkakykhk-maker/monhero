@@ -9,7 +9,8 @@
 // 【なぜあるか】
 // どの仕事も同じ高いモデルで動かしていた(文言の直しも原因不明の不具合も)。仕事の種類で分ける決まりを、
 // 覚えておくのではなく引けるようにする(2026-11-11 社長「トークンを無駄に使わない仕組み」案B・C)。
-// 迷ったら上のモデルではなく「既定」(小さな直し)に落ちる。壊すと戻せない所の語は必ず design 以上へ上げる。
+// 安いモデルは「それで問題ないと分かっている仕事」だけ。迷ったら上のモデル(同点は高いほう・語が当たらなければ設計のモデル)。
+// 壊すと戻せない所の語は必ず design 以上へ上げる。
 'use strict';
 const { loadRouting } = require('./lib');
 
@@ -33,9 +34,10 @@ function pick(text, { failed = 0, kind } = {}) {
   if (tool && tool.hits.length) return { kind: byId.tool, why: `語: ${tool.hits.join('・')}` };
   const guard = ALWAYS_DESIGN.filter(w => t.includes(w));
   if (guard.length) return { kind: byId.design, why: `壊すと戻せない所の語: ${guard.join('・')}` };
-  // 上のモデルほど「語が多く当たったとき」だけ選ぶ。同点なら安いほう(表の並びが安い順)
-  const best = score.filter(s => !['final', 'tool'].includes(s.k.id)).sort((a, b) => b.hits.length - a.hits.length)[0];
-  if (!best.hits.length) return { kind: byId[R['既定']], why: '当たる語が無いので既定' };
+  // 安いモデルは「品質が落ちないと分かっている仕事」だけ(2026-11-11 社長「弱いモデルを使うのは、それでも問題ないときね」)。
+  // 迷ったら上: 同点なら高いほう(表は安い順に並んでいる)。当たる語が無い=分からない仕事なので、既定は設計のモデル
+  const best = score.map((s, i) => ({ ...s, i })).filter(s => !['final', 'tool'].includes(s.k.id)).sort((a, b) => (b.hits.length - a.hits.length) || (b.i - a.i))[0];
+  if (!best.hits.length) return { kind: byId[R['既定']], why: '当たる語が無い(分からない仕事)ので、迷ったら上のモデル' };
   return { kind: best.k, why: `語: ${best.hits.join('・')}` };
 }
 
@@ -57,7 +59,7 @@ function main() {
   console.log(`種類: ${r.kind['名前']}(${r.kind.id})`);
   console.log(`モデル: ${r.kind.model}`);
   console.log(`理由: ${r.why} / ${r.kind['いつ']}`);
-  if (!['final', 'tool'].includes(r.kind.id)) console.log('上げる条件: 同じ不具合を2回直して直らない → --failed 2(claude-fable-5-2)。新機能の公開前の最終確認 → --kind final');
+  if (!['final', 'tool'].includes(r.kind.id)) console.log('上げる条件: 判断や設計が要る・結果がおかしい → --kind design(claude-opus-5-5)。2回やって直らない → --failed 2(claude-fable-5-2)。迷ったら上');
 }
 
 if (require.main === module) main();
