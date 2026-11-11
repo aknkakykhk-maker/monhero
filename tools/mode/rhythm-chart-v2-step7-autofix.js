@@ -438,7 +438,12 @@ for(const difficulty of DIFFICULTIES){
     const existing=JSON.parse(fs.readFileSync(path.join(__dirname,'rhythm-held-band-existing.json'),'utf8')).tracks||[];
     if(!existing.includes(trackId)){
       const {fixHeldBandOnGrid}=require('./rhythm-chart-hand-rules.js'),lanes=LANE_COUNT*2;
-      const a=fixHeldBandOnGrid(notes,{lanes,keepWidth:true,canRemove:()=>false}),b=a.left?fixHeldBandOnGrid(notes,{lanes,canRemove:()=>false}):{moved:0,mirrored:0,left:0};
+      // 動かした先で「押せない・帯に指が入らない」が増えるなら、ここでは動かさずに元へ戻す(このあとの手の仕上げ rhythm-chart-flow-fix.js が、押せるかどうかも見ながら帯の外へ出す)
+      const keep=notes.map(n=>[n.subLane,n.subLaneWidth,n.lane]),base=evaluate(notes);
+      let a=fixHeldBandOnGrid(notes,{lanes,keepWidth:true,canRemove:()=>false}),b=a.left?fixHeldBandOnGrid(notes,{lanes,canRemove:()=>false}):{moved:0,mirrored:0,left:0};
+      const now=evaluate(notes);
+      if(now.impossible>base.impossible||now.reach>base.reach){notes.forEach((n,i)=>{[n.subLane,n.subLaneWidth,n.lane]=keep[i];});a={moved:0,mirrored:0,left:0};b={moved:0,mirrored:0,left:0};
+        heldBandNote='    押さえている帯の中へ戻ったノーツ: 動かすと押せない所が増えるので、ここでは動かさない(手の仕上げが直す)';}
       if(a.moved||a.mirrored||b.moved||b.mirrored||b.left)heldBandNote=`    押さえている帯の中へ戻ったノーツ: 帯の外へ${a.moved+b.moved}個・左右を写す${a.mirrored+b.mirrored}個`+(b.left?`・直せず${b.left}個(検査が止める)`:'');
     }
   }
