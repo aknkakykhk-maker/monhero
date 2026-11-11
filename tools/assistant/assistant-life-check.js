@@ -562,6 +562,18 @@ if (process.argv.includes('--stats')) {
   const keys = [...new Set(writes)];
   check('⑦ 書くのは mh_assistant_life_v1・mh_assistant_life_play_v1・mh_assistant_peer_seen14_v1 だけ', keys.every(k => ['mh_assistant_life_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_seen14_v1'].includes(k)), keys.join(', '));
 
+  // ⑨ 移動12回(台帳 #5304・#5328): 見守る1回ぶんの友情・仲良し度は約75%(四捨五入・1より小さくしない)/フレンドの外出は1回ごと半分
+  {
+    const f = G('assistantLifeSlotGainOf');
+    check('⑨ 1回ぶん約75%: 8→6・5→4・3→2・2→2・1→1・数でない→null', f(8) === 6 && f(5) === 4 && f(3) === 2 && f(2) === 2 && f(1) === 1 && f(null) === null && f(NaN) === null);
+    const sL = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life.jsx'), 'utf8');
+    const w = sL.slice(sL.indexOf('const assistantLifeWatch = async'), sL.indexOf('// ---------- 画面「助手たちの今」'));
+    check('⑨ 見守るの友情は pg()(約75%)で上げる(掛け合い・ミニイベント・仲直り)', /assistantPeerGain\(a, b, 'talk', pg\('talk'\)\)/.test(w) && /'event', pg\('event'\)\)/.test(w) && /'makeup', pg\('makeup'\)\)/.test(w));
+    check('⑨ 見守るの仲良し度は bg()(約75%)で上げる', /assistantPeerAddPlayerBond\(talk\.pair, 'peerEvent', bg\('peerEvent'\)\)/.test(w) && /assistantPeerAddPlayerBond\(assistantPeerMembers\(talk\), bk, bg\(bk\)\)/.test(w) && /'peerMakeup', bg\('peerMakeup'\)\)/.test(w));
+    const sF = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-friend.jsx'), 'utf8');
+    check('⑨ フレンドの外出は1回ごと半分(ALF_SLOT12_CHANCE = 0.5 を確率に掛ける)', /const ALF_SLOT12_CHANCE = 0\.5;/.test(sF) && /\* ALF_SLOT12_CHANCE;/.test(sF));
+  }
+
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();

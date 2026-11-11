@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ca6e7d3c461fd92
+// source-sha256: 3ac2055d2a26c98e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104554,11 +104554,11 @@ const assistantPeerPlayerCall = who => {
     return 'あなた';
   }
 };
-const assistantPeerAddPlayerBond = (ids, action) => {
+const assistantPeerAddPlayerBond = (ids, action, amount = null) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
   for (const id of [...new Set(ids || [])]) {
     try {
-      assistantPeerPlayerBondAdder(id, action);
+      if (Number.isFinite(amount)) assistantPeerPlayerBondAdder(id, action, amount);else assistantPeerPlayerBondAdder(id, action);
     } catch {}
   }
 };
@@ -106939,6 +106939,8 @@ const ASSISTANT_LIFE_STREAK_BONUS = Object.freeze([{
   points: 5
 }]);
 const ASSISTANT_LIFE_RECENT_SLOTS = 24;
+const ASSISTANT_LIFE_SLOT_GAIN_RATE = 0.75;
+const assistantLifeSlotGainOf = amount => Number.isFinite(amount) && amount > 0 ? Math.max(1, Math.round(amount * ASSISTANT_LIFE_SLOT_GAIN_RATE)) : null;
 const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true;
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => typeof jstDayKey4 === 'function' ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
@@ -108118,10 +108120,12 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
     });
   } catch {}
   if (talk.kind === 'quarrel') return talk;
+  const pg = act => assistantLifeSlotGainOf(typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[act] ? ASSISTANT_PEER_BOND_ACTIONS[act].amount : null);
+  const bg = act => assistantLifeSlotGainOf(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[act] ? ASSISTANT_BOND_ACTIONS[act].amount : null);
   if (talk.kind === 'makeup') {
     if (assistantPeerMakeupDone(talk)) {
-      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup');
-      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup');
+      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup', pg('makeup'));
+      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup', bg('peerMakeup'));
     }
     try {
       assistantPeerAlbumAdd(talk);
@@ -108132,12 +108136,13 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
     assistantPeerAlbumAdd(talk);
   } catch {}
   if (talk.kind === 'event') {
-    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event');
-    assistantPeerAddPlayerBond(talk.pair, 'peerEvent');
+    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event', pg('event'));
+    assistantPeerAddPlayerBond(talk.pair, 'peerEvent', bg('peerEvent'));
     return talk;
   }
-  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
-  assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
+  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk', pg('talk'));
+  const bk = talk.kind === 'trio' ? 'peerTrio' : 'peerTalk';
+  assistantPeerAddPlayerBond(assistantPeerMembers(talk), bk, bg(bk));
   return talk;
 };
 const assistantLifeOpenScreen = () => {
@@ -110677,7 +110682,7 @@ function AssistantLifeRoomSheet({
     icon: "🃏",
     label: "MFバトルカードで対戦する",
     sub: "カード部屋にいる助手と対戦すると、ごほうびアップ",
-    gain: "ごほうび 1.5倍",
+    gain: `ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
     on: () => onCard(id),
     disabled: !!cardSpent,
     why: cardSpent ? typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました' : ''
@@ -115003,7 +115008,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'card',
       place: 'cardroom',
       icon: '🃏',
-      text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`,
+      text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
       go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null
     });
   } catch (_) {}
@@ -115871,7 +115876,7 @@ function AssistantLifeFirstGuide({
   }), React.createElement(Item, {
     n: "3",
     head: "🎮 ほかの遊びも得に",
-    text: " なる(モンヒロビートは券なし・カードはごほうび1.5倍)"
+    text: ` なる(モンヒロビートは券なし・カードはごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'})`
   })), React.createElement("p", {
     className: "mt-1.5 text-[11.5px] font-bold text-amber-100"
   }, "まずは 光っている「👀 見守る」を押してみよう"), React.createElement("div", {
@@ -140666,6 +140671,7 @@ const alfEnsureHouse = async ({
     force: true
   });
 };
+const ALF_SLOT12_CHANCE = 0.5;
 const assistantLifeFriendPickOuting = ({
   life,
   ids,
@@ -140689,7 +140695,7 @@ const assistantLifeFriendPickOuting = ({
   if (!cand.length) return null;
   const rand = assistantLifeRng(`${salt}|friend|${abs}|${cand.join(',')}`);
   const social = cand.reduce((t, id) => t + (ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].social || 0.5), 0) / cand.length;
-  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1);
+  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1) * ALF_SLOT12_CHANCE;
   if (rand() >= chance) return null;
   const muted = new Set(settings.muted || []);
   const went = st.went || {};
@@ -148616,7 +148622,8 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null), mult = 1)
   if (outcome === 'win') n = level.loops;else if (outcome === 'lose') n = Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));else if (outcome === 'surrender') n = Math.min(loseFull, Math.round(facts.kos * loseFull / 3));
   return cardLifeUpApply(n, mult);
 };
-const CARD_LIFE_UP_MULT = 1.5;
+const CARD_LIFE_UP_MULT = 1.375;
+const CARD_LIFE_UP_LABEL = '1.375倍';
 const cardLifeUpApply = (n, mult = 1) => {
   const v = Number.isFinite(n) ? n : 0;
   return Number.isFinite(mult) && mult > 1 && v > 0 ? Math.round(v * mult) : v;
@@ -156246,10 +156253,8 @@ const cardLifeRewardLeft = (id, now = Date.now()) => {
 const cardLifeRewardSpent = (id, now = Date.now()) => {
   const s = cardLifeSlotNow(now);
   if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
-  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
-  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
   return {
-    next: nx && Number.isFinite(nx.from) ? nx.from : null
+    next: Number.isFinite(s.to) ? s.to % 24 : null
   };
 };
 const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
@@ -162787,7 +162792,7 @@ const CardBattleScreen = ({
       style: JA_LABEL_STYLE
     }, lifeUpFoes.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
       className: "text-[12px] text-white"
-    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
+    }, jaWrap(`この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が ${CARD_LIFE_UP_LABEL}`))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
       key: x.id,
       "data-card-foe-life-spent": x.id,
       className: `text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`
@@ -163083,7 +163088,7 @@ const CardBattleScreen = ({
       style: JA_LABEL_STYLE
     }, React.createElement("p", null, jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)), React.createElement("p", {
       className: "text-[12px] text-white"
-    }, jaWrap(`ビートP・カードランクの経験値・クイック周回 1.5倍(${cardResultPlain(r)} → ${r.got})`))), React.createElement("div", {
+    }, jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}(${cardResultPlain(r)} → ${r.got})`))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, cardBattleLevelLabel(result.level, result.share), "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)), cardResultCut(r) && React.createElement("div", {
       "data-card-result-cut": true,
@@ -176485,7 +176490,7 @@ const cardLevelAfter = (prev, {
     label: outcome === 'win' ? '勝ち' : '負け',
     xp: base0
   }, ...(base > base0 ? [{
-    label: 'カード部屋の助手と対戦(1.5倍)',
+    label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`,
     xp: base - base0
   }] : []), ...(first ? [{
     label: 'その日はじめての勝ち',

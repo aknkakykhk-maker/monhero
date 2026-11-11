@@ -511,6 +511,7 @@ const alfEnsureHouse = async ({ force = false } = {}) => {
 // ---------- 行き来の決め方(端末で数える。表の側でも同じ上限を数える) ----------
 // 家にいて手が空いている助手から、ときどきフレンドの家へ行く人を選ぶ(純粋な関数。検査が直接呼ぶ)
 //   上限: みんなで1日 go 回(on 3・thin 1)/同じ家1日1回/1回に1〜2人/寝ている・けんか中・距離をおいている助手は行かない/深夜は行かない
+const ALF_SLOT12_CHANCE = 0.5;
 const assistantLifeFriendPickOuting = ({ life, ids, houses, st, settings, mode, pendingIds = [], abs, salt = '' }) => {
   if (!life || mode === 'off' || !settings || !settings.open) return null;
   const lim = ALF_LIMITS[mode === 'on' ? 'on' : 'thin'];
@@ -524,7 +525,8 @@ const assistantLifeFriendPickOuting = ({ life, ids, houses, st, settings, mode, 
   if (!cand.length) return null;
   const rand = assistantLifeRng(`${salt}|friend|${abs}|${cand.join(',')}`);
   const social = cand.reduce((t, id) => t + ((ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].social) || 0.5), 0) / cand.length;
-  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1);
+  // 移動が1日12回になったので、1回ごとの確率は前の半分(1日に出かける回数はいまと同じ。台帳 #5328)
+  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1) * ALF_SLOT12_CHANCE;
   if (rand() >= chance) return null;
   const muted = new Set(settings.muted || []);
   const went = st.went || {};
