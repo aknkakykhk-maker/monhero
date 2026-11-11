@@ -34,6 +34,9 @@ check('保存のキーは mh_assistant_masmon_battle_v1 だけ', keys.length > 0
 check('育成・修行・マスモンの保存に書かない(set を呼ばない)', !/(AMG_STORE|AMGT_STORE|ASSISTANT_MASMON_STORE)\.set\(|amgSave\(|amgtSave\(/.test(code));
 check('サーバ・ランキングへ送らない', !/supabase|fetch\(|masmonPvp/.test(code));
 check('計算に手を入れていない', !/_internal/.test(code));
+check('作戦は名前で渡す(team.plan・team.swapPace)・style の数値の上書きはしない', /plan: ambbPlanOf\(engine, plan\), swapPace: ambbSwapOf\(engine, swap\)/.test(code) && !/[{,]\s*style:/.test(code));
+const engineSrc = read('monster-hero/data/assistant-masmon-battle.js');
+check('画面の作戦の名前は、計算の表にあるものだけ', ['attack', 'guard', 'range', 'big'].every(k => new RegExp(`\\b${k}:\\s*Object\\.freeze`).test(engineSrc)) && ['early', 'late'].every(k => new RegExp(`\\b${k}:\\s*Object\\.freeze`).test(engineSrc)));
 check('入れ物は 60-app に1つ・デバッグの入口は1つ', app.split('<AssistantMasmonBattleHost/>').length === 2 && app.split('data-debug-masmon-battle-beta').length === 2);
 check('更新履歴・ヘルプにはまだ載せていない(公開前)', !/マスモンで対戦/.test(read('monster-hero/data/changelog.js')) && !/マスモンで対戦/.test(read('monster-hero/data/help.js')));
 

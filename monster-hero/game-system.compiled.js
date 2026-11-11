@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d3df3a94e0ddc93
+// source-sha256: 56f633a75980b22c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -137105,7 +137105,7 @@ function AssistantMasmonBattleWatch({
     }
   }, [ready]);
   const speciesIds = useMemo(() => catalog ? Object.keys(catalog.species) : Object.keys(ALL_PLAYER_MONSTERS), [catalog]);
-  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id]), [ready]);
+  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id] && (typeof assistantReleased !== 'function' || assistantReleased(a.id))), [ready]);
   const BASE_TOTAL = 1800;
   const teamsNow = () => ({
     teamA: ambwTeamOf(engine, sideA, size, Math.round(BASE_TOTAL * (1 + diff / 100)), catalog, allTechs),
@@ -137610,58 +137610,33 @@ const AMBB_V = 1;
 const AMBB_PLANS = Object.freeze([{
   id: 'omakase',
   label: 'おまかせ',
-  note: '助手の考えどおり',
-  mul: {}
+  note: '助手の考えどおり'
 }, {
   id: 'attack',
   label: 'ガンガン攻める',
-  note: '攻めを強く・守りは少なめ',
-  mul: {
-    aggr: 1.25,
-    caution: 0.8,
-    thrift: 0.85,
-    gamble: 1.2
-  }
+  note: '攻めを強く・守りは少なめ'
 }, {
   id: 'guard',
   label: 'じっくり守る',
-  note: 'ガードとガッツの節約を多めに',
-  mul: {
-    aggr: 0.85,
-    caution: 1.3,
-    thrift: 1.2,
-    gamble: 0.8
-  }
+  note: 'ガードとガッツの節約を多めに'
 }, {
   id: 'range',
   label: '間合いを取る',
-  note: '得意な距離へ動く',
-  mul: {
-    mobility: 1.35,
-    thrift: 1.05
-  }
+  note: '得意な距離へ動く'
 }, {
   id: 'big',
   label: '大技ねらい',
-  note: '威力の大きい技を好む',
-  mul: {
-    gamble: 1.45,
-    aggr: 1.1,
-    thrift: 0.8
-  }
+  note: '威力の大きい技を好む'
 }]);
 const AMBB_SWAPS = Object.freeze([{
   id: 'omakase',
-  label: 'おまかせ',
-  mul: null
+  label: 'おまかせ'
 }, {
   id: 'early',
-  label: '早めに替える',
-  mul: 1.5
+  label: '早めに替える'
 }, {
   id: 'late',
-  label: 'ねばる',
-  mul: 0.55
+  label: 'ねばる'
 }]);
 const AMBB_TIERS = Object.freeze([{
   id: 'bronze',
@@ -137788,15 +137763,8 @@ const useAmbbSave = () => {
   }, []);
   return AMBB_STORE.state;
 };
-const ambbStyleOf = (engine, aid, planId, swapId) => {
-  const base = engine && engine.STYLES && (engine.STYLES[aid] || engine.STYLES.atsu) || {};
-  const plan = AMBB_PLANS.find(p => p.id === planId) || AMBB_PLANS[0];
-  const sw = AMBB_SWAPS.find(p => p.id === swapId) || AMBB_SWAPS[0];
-  const out = {};
-  for (const [k, f] of Object.entries(plan.mul)) if (Number.isFinite(base[k])) out[k] = Math.max(0.4, Math.min(1.8, base[k] * f));
-  if (sw.mul && Number.isFinite(base.swap)) out.swap = Math.max(0.3, Math.min(2, base.swap * sw.mul));
-  return Object.keys(out).length ? out : undefined;
-};
+const ambbPlanOf = (engine, planId) => planId !== 'omakase' && engine && engine.PLANS && engine.PLANS[planId] ? planId : undefined;
+const ambbSwapOf = (engine, swapId) => swapId !== 'omakase' && engine && engine.SWAP_PACES && engine.SWAP_PACES[swapId] ? swapId : undefined;
 const ambbRowKey = t => `${t.slot}:${t.monster}`;
 const ambbRowsOf = aid => {
   try {
@@ -137828,7 +137796,7 @@ const ambbTacticsOf = (aid, rows) => {
     return 40;
   }
 };
-const ambbAssistantsWithRows = () => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST : []).filter(a => ambbRowsOf(a.id).length > 0);
+const ambbAssistantsWithRows = () => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST : []).filter(a => (typeof assistantReleased !== 'function' || assistantReleased(a.id)) && ambbRowsOf(a.id).length > 0);
 const AMBB_HOST = {
   open: null,
   subs: new Set(),
@@ -137865,7 +137833,7 @@ const assistantMasmonBattleRowInfo = assistantId => {
     ...base,
     sub: 'マスモンを迎えると対戦できます',
     disabled: true,
-    why: 'no_masmon'
+    why: 'マスモンを迎えると対戦できます'
   };
   const rec = AMBB_STORE.state.rec[assistantId];
   let gain = 0;
@@ -138050,7 +138018,8 @@ function AssistantMasmonBattleBeta({
     const teamA = {
       assistantId: meId,
       tactics: ambbTacticsOf(meId, chosen.map(u => u.row)),
-      style: ambbStyleOf(engine, meId, plan, swap),
+      plan: ambbPlanOf(engine, plan),
+      swapPace: ambbSwapOf(engine, swap),
       members: chosen.map(u => u.unit)
     };
     const fb = foeTeam();
@@ -190688,7 +190657,7 @@ function MonsterHeroGame() {
       fill: t => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederNameRef.current)
     }) : null;
     ASSISTANT_LIFE_LINKS.chatWith = on ? (id, opts = {}) => {
-      if (!ASSISTANT_LIST.some(a => a.id === id)) return;
+      if (!ASSISTANT_LIST.some(a => a.id === id && (typeof assistantReleased !== 'function' || assistantReleased(a.id)))) return;
       const f = opts && opts.follow;
       const fill = (line, vars = {}) => String(line || '').replace(/\{call\}/g, vars.call || '').replace(/\{name\}/g, callOf(id));
       let opening = null;

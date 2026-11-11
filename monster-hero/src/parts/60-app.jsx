@@ -9105,7 +9105,7 @@ function MonsterHeroGame() {
       fill: (t) => assistantFillCallTemplate(assistantGenderCallOf(t, id), breederNameRef.current),
     }) : null;
     ASSISTANT_LIFE_LINKS.chatWith = on ? (id, opts = {}) => {
-      if (!ASSISTANT_LIST.some(a => a.id === id)) return;
+      if (!ASSISTANT_LIST.some(a => a.id === id && (typeof assistantReleased !== 'function' || assistantReleased(a.id)))) return;
       const f = opts && opts.follow;
       const fill = (line, vars = {}) => String(line || '').replace(/\{call\}/g, vars.call || '').replace(/\{name\}/g, callOf(id));
       let opening = null;

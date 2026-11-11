@@ -11,18 +11,18 @@
 // 作戦・交代の早さの数字: docs/progress/assistant-peer/masmon-battle/beta/STYLE-PLAN.md
 const ASSISTANT_MASMON_BATTLE_KEY = 'mh_assistant_masmon_battle_v1';
 const AMBB_V = 1;
-// 作戦: その助手の型(STYLES)× 倍率。おまかせは上書きなし
+// 作戦・交代の早さ: 名前だけを計算へ渡す(team.plan・team.swapPace)。倍率は計算側の表 ASSISTANT_MASMON_BATTLE.PLANS・SWAP_PACES(タタカイ #5286)。おまかせは渡さない
 const AMBB_PLANS = Object.freeze([
-  { id: 'omakase', label: 'おまかせ', note: '助手の考えどおり', mul: {} },
-  { id: 'attack', label: 'ガンガン攻める', note: '攻めを強く・守りは少なめ', mul: { aggr: 1.25, caution: 0.8, thrift: 0.85, gamble: 1.2 } },
-  { id: 'guard', label: 'じっくり守る', note: 'ガードとガッツの節約を多めに', mul: { aggr: 0.85, caution: 1.3, thrift: 1.2, gamble: 0.8 } },
-  { id: 'range', label: '間合いを取る', note: '得意な距離へ動く', mul: { mobility: 1.35, thrift: 1.05 } },
-  { id: 'big', label: '大技ねらい', note: '威力の大きい技を好む', mul: { gamble: 1.45, aggr: 1.1, thrift: 0.8 } },
+  { id: 'omakase', label: 'おまかせ', note: '助手の考えどおり' },
+  { id: 'attack', label: 'ガンガン攻める', note: '攻めを強く・守りは少なめ' },
+  { id: 'guard', label: 'じっくり守る', note: 'ガードとガッツの節約を多めに' },
+  { id: 'range', label: '間合いを取る', note: '得意な距離へ動く' },
+  { id: 'big', label: '大技ねらい', note: '威力の大きい技を好む' },
 ]);
 const AMBB_SWAPS = Object.freeze([
-  { id: 'omakase', label: 'おまかせ', mul: null },
-  { id: 'early', label: '早めに替える', mul: 1.5 },
-  { id: 'late', label: 'ねばる', mul: 0.55 },
+  { id: 'omakase', label: 'おまかせ' },
+  { id: 'early', label: '早めに替える' },
+  { id: 'late', label: 'ねばる' },
 ]);
 // ランキングの段(台帳 2026-11-11・はじめ 1500)。その2で rating から出す
 const AMBB_TIERS = Object.freeze([
@@ -86,16 +86,10 @@ const useAmbbSave = () => {
   return AMBB_STORE.state;
 };
 
-// ---------- 作戦の上書き ----------
-const ambbStyleOf = (engine, aid, planId, swapId) => {
-  const base = (engine && engine.STYLES && (engine.STYLES[aid] || engine.STYLES.atsu)) || {};
-  const plan = AMBB_PLANS.find(p => p.id === planId) || AMBB_PLANS[0];
-  const sw = AMBB_SWAPS.find(p => p.id === swapId) || AMBB_SWAPS[0];
-  const out = {};
-  for (const [k, f] of Object.entries(plan.mul)) if (Number.isFinite(base[k])) out[k] = Math.max(0.4, Math.min(1.8, base[k] * f));
-  if (sw.mul && Number.isFinite(base.swap)) out.swap = Math.max(0.3, Math.min(2, base.swap * sw.mul));
-  return Object.keys(out).length ? out : undefined;
-};
+// ---------- 作戦の名前を計算へ ----------
+// 計算の表に無い名前は渡さない(おまかせ・ふつうと同じ)
+const ambbPlanOf = (engine, planId) => (planId !== 'omakase' && engine && engine.PLANS && engine.PLANS[planId] ? planId : undefined);
+const ambbSwapOf = (engine, swapId) => (swapId !== 'omakase' && engine && engine.SWAP_PACES && engine.SWAP_PACES[swapId] ? swapId : undefined);
 
 // ---------- 助手のマスモンを対戦の1体にする ----------
 const ambbRowKey = (t) => `${t.slot}:${t.monster}`;
@@ -111,7 +105,7 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map((row) => {
 });
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
 // 助手ライフの順番のまま、マスモンを持っている助手
-const ambbAssistantsWithRows = () => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST : []).filter(a => ambbRowsOf(a.id).length > 0);
+const ambbAssistantsWithRows = () => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST : []).filter(a => (typeof assistantReleased !== 'function' || assistantReleased(a.id)) && ambbRowsOf(a.id).length > 0);
 
 // ---------- 口(助手ライフの部屋・居場所「モンヒロバトル」から呼ぶ) ----------
 const AMBB_HOST = { open: null, subs: new Set(), set(v) { this.open = v; this.subs.forEach(f => { try { f(v); } catch (_) {} }); } };
@@ -128,7 +122,7 @@ const assistantMasmonBattleRowInfo = (assistantId) => {
   if (!ambbOn()) return null;
   const rows = ambbRowsOf(assistantId);
   const base = { label: '⚔ マスモンで対戦(β)', gain: 0 };
-  if (!rows.length) return { ...base, sub: 'マスモンを迎えると対戦できます', disabled: true, why: 'no_masmon' };
+  if (!rows.length) return { ...base, sub: 'マスモンを迎えると対戦できます', disabled: true, why: 'マスモンを迎えると対戦できます' };
   const rec = AMBB_STORE.state.rec[assistantId];
   let gain = 0;
   try { if (typeof amgCareGainOf === 'function' && typeof amgEntryOf === 'function') for (const t of rows) gain += amgCareGainOf(amgEntryOf(assistantId, t)).total; } catch (_) {}
@@ -249,7 +243,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
   const start = () => {
     if (!ready || !catalog || !chosen.length) return;
     const plan = modeNow === 'auto' ? 'omakase' : sel.plan, swap = modeNow === 'auto' ? 'omakase' : sel.swap;
-    const teamA = { assistantId: meId, tactics: ambbTacticsOf(meId, chosen.map(u => u.row)), style: ambbStyleOf(engine, meId, plan, swap), members: chosen.map(u => u.unit) };
+    const teamA = { assistantId: meId, tactics: ambbTacticsOf(meId, chosen.map(u => u.row)), plan: ambbPlanOf(engine, plan), swapPace: ambbSwapOf(engine, swap), members: chosen.map(u => u.unit) };
     const fb = foeTeam();
     const teamB = { assistantId: fb.assistantId, tactics: fb.tactics, members: fb.members };
     const seed = `ambb-${meId}-${fb.assistantId}-${Date.now()}`;
