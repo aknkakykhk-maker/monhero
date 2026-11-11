@@ -152,7 +152,7 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-room-act="furn"]').click(); await page.waitForTimeout(400);
       const toBuy = await page.locator('[data-assistant-life-furn-buy]').count();
-      check('⑧ 家具のシートに「まだ持っていない家具」(12種類)', toBuy === 12, String(toBuy));
+      check('⑧ 家具のシートに「まだ持っていない家具」(20種類)', toBuy === 20, String(toBuy));
       if (SHOTS) { await page.locator('[data-assistant-life-furn-tobuy]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, 'tate-4-furn.png') }); }
       await page.locator('[data-assistant-life-furn-buy="plant"]').click(); await page.waitForTimeout(400);
       const conf3 = await page.locator('[data-assistant-life-buy-confirm]').innerText().catch(() => '');
