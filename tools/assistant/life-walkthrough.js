@@ -67,7 +67,8 @@ const measure = () => {
   const NAV = /^(←|✕|×|閉じる|とじる|もどる|戻る|閉じる ✕)$/;
   const GAIN = /💗|🤝|仲良し|友情|×\s?\d|\d(\.\d)?倍|券なし|[+＋]\s?\d|ダイヤ|💎|経験値|ごほうび|もらえ|上が|割引|アップ|1割/;
   const taps = [...rootEl.querySelectorAll('button,a[href],[role="button"],[role="tab"],input,select')].map(el => {
-    let r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return null;
+    // ラベルの中のチェックは、ラベルの行ごと押せるので行の大きさで測る
+    let r = (el.matches('input') && el.closest('label') ? el.closest('label') : el).getBoundingClientRect(); if (r.width < 1 || r.height < 1) return null;
     // 送れる入れ物の中で切れている分は数えない(下のタブの後ろへ送られた行を「重なり」にしない)。見えている分の箱にする
     { let t = r.top, b = r.bottom, l = r.left, rt = r.right;
       for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p); if (/(auto|scroll|hidden)/.test(o.overflowY + o.overflowX)) { const q = p.getBoundingClientRect(); t = Math.max(t, q.top); b = Math.min(b, q.bottom); l = Math.max(l, q.left); rt = Math.min(rt, q.right); } }

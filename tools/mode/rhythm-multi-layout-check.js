@@ -203,12 +203,15 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     await A.locator('[data-rhythm-mode-toggle-art]').click();
     await A.locator('[data-rhythm-mode-toggle-comment]').click();
     check('もう一度オンにすると、絵もコメントも戻る', (await has('[data-rhythm-mode-assistant-art-box]')) && (await has('[data-rhythm-mode-assistant-line]')));
-    // ももすけの絵は、表情ごとに体の真ん中へ合わせて広げる(かけらを枠の外へ出す)(幅は --mhms-w に入る。小さい画面では cqh で広げる・2026-10-26)
+    // ももすけの絵は、耳まで枠に入れて出す(2026-11-11 助手の立ち絵の見直し)。
+    //   前は、端に別の絵のかけらが入っていた古い絵に合わせて 150% に広げ、表情ごとに横へずらしていた。絵を差し替えたあともその寄せ方が残り、
+    //   耳が上で切れ、横の画面では顔だけの大写しになっていた。いまの絵(体は真ん中・かけら無し)は、枠の幅いっぱいまで・絵の上端を枠の中に置く
     const art = await A.evaluate(() => {
-      const img = document.querySelector('[data-rhythm-mode-assistant-art]');
-      return img ? { src: img.getAttribute('src') || '', style: img.getAttribute('style') || '' } : null;
+      const img = document.querySelector('[data-rhythm-mode-assistant-art]'); const box = document.querySelector('[data-rhythm-mode-assistant-art-box]');
+      if (!img || !box) return null; const r = img.getBoundingClientRect(), b = box.getBoundingClientRect();
+      return { src: img.getAttribute('src') || '', style: img.getAttribute('style') || '', top: Math.round(r.top - b.top), w: Math.round(r.width), boxW: Math.round(b.width) };
     });
-    check('モードえらび: ももすけの立ち絵は、表情ごとの切り出し位置で広げて出す', !!art && /momosuke_/.test(art.src) && /translate\(-\d/.test(art.style) && /(?:^|[ ;])(?:width|--mhms-w): 150%/.test(art.style),
+    check('モードえらび: ももすけの立ち絵は、耳まで枠に入る(広げすぎない・上で切れない)', !!art && /momosuke_/.test(art.src) && art.top >= -8 && art.w <= art.boxW + 2 && /(?:^|[ ;])--mhms-w: 100%/.test(art.style),
       art ? `${art.src.split('/').pop()} ${art.style.slice(0, 60)}` : '絵が無い');
 
     // ===== ①-2 選曲の画面の「マスモンを呼ぶ」(マスモンを持っている部屋主で) =====
