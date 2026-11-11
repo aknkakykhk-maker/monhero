@@ -67,7 +67,8 @@ const measure = () => {
   const NAV = /^(←|✕|×|閉じる|とじる|もどる|戻る|閉じる ✕)$/;
   const GAIN = /💗|🤝|仲良し|友情|×\s?\d|\d(\.\d)?倍|券なし|[+＋]\s?\d|ダイヤ|💎|経験値|ごほうび|もらえ|上が|割引|アップ|1割/;
   const taps = [...rootEl.querySelectorAll('button,a[href],[role="button"],[role="tab"],input,select')].map(el => {
-    const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return null;
+    // ラベルの中のチェックは、ラベルの行ごと押せるので行の大きさで測る
+    const r = (el.matches('input') && el.closest('label') ? el.closest('label') : el).getBoundingClientRect(); if (r.width < 1 || r.height < 1) return null;
     const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' && !el.disabled) return null;
     const cx = (Math.max(0, r.left) + Math.min(W, r.right)) / 2, cy = (Math.max(0, r.top) + Math.min(H, r.bottom)) / 2;
     if (!(r.bottom > 0 && r.top < H && r.right > 0 && r.left < W) || !seen(el, cx, cy)) return null;
