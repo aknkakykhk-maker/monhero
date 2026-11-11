@@ -4045,6 +4045,22 @@ const createAnimationStyle = () => {
       [data-tactics-look] [data-em-idle]:not([data-enemy-skill]):not([data-enemy-hurt]) > span > img { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
+    /* 手ごたえ(2026-11-11 社長が選んだ形。部品は 24-battle-hit-feel.jsx・資料は docs/progress/battle-feel/)。動かすのは transform と opacity だけ */
+    /* 敵に出るダメージの数字: 大きく出て、縮んで止まる(連撃で2列のときは控えめ)。そのあとの弾み(animate-bounce)は今までどおり */
+    @keyframes mhFeelNumPop { 0% { opacity: 1; transform: scale(var(--feel-from, 1.6)); } 55% { opacity: 1; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup]:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup].animate-bounce:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both, bounce 1s 180ms infinite; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup-grid="2"] [data-enemy-popup] { --feel-from: 1.3; }
+    /* 当たりの間: CSS のアニメーションだけを一瞬止める(ゲームの時計は止めない。付け外しは 24-battle-hit-feel.jsx) */
+    #root[data-feel-stop] *, #root[data-feel-stop] *::before, #root[data-feel-stop] *::after { animation-play-state: paused !important; }
+    /* 効果の札の種類(案C): 何が起きたかを色の縁と印で知らせる。文と出る場所・時間は今までどおり */
+    [data-feel-kind] { border-width: 2px; }
+    [data-feel-kind]::before { margin-right: .3em; }
+    [data-feel-kind="reflect"] { border-color: #d8b4fe; } [data-feel-kind="reflect"]::before { content: "↩"; color: #d8b4fe; }
+    [data-feel-kind="absorb"] { border-color: #86efac; } [data-feel-kind="absorb"]::before { content: "♥"; color: #86efac; }
+    [data-feel-kind="evade"] { border-color: #bae6fd; } [data-feel-kind="evade"]::before { content: "≫"; color: #bae6fd; }
+    [data-feel-kind="crit"] { border-color: #fde047; } [data-feel-kind="crit"]::before { content: "★"; color: #fde047; }
+    [data-feel-kind="defeat"] { border-color: #fca5a5; } [data-feel-kind="defeat"]::before { content: "✕"; color: #fca5a5; }
     @keyframes tacticsPopupRise {
       0% { opacity: 0; transform: translateY(6px) scale(0.92); }
       100% { opacity: 1; transform: translateY(0) scale(1); }

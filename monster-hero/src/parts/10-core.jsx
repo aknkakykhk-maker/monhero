@@ -38,7 +38,10 @@ const MH_SCREEN_TRAIL=(()=>{
       //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
       document.addEventListener('visibilitychange',()=>{last=0;});
-      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -270,6 +273,9 @@ const normalizeBattleFxSettings = (value) => {
     resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
     countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
     endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
+    // 当たりの間(2026-11-11 社長「当たりの間は入れる・設定で切れる・はじめは入」)。攻撃が当たった瞬間に、画面の動きを一瞬だけ止める。
+    // ★足す前に保存した人(hitStop が無い)は ON(入れる)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    hitStop: v.hitStop === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -294,6 +300,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'hitStop', title:'当たりの間',
+    desc:'攻撃が当たった瞬間に、画面の動きをほんの一瞬だけ止めて、当たった手ごたえを出します。会心の一撃と、敵を倒したときは少し長く止まります。バトルの速さを上げているときは、そのぶん短くなります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'入れる', note:'当たった手ごたえが出る' }, { id:'OFF', label:'入れない', note:'止めずに流す' }] },
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
