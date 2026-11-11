@@ -579,6 +579,8 @@ const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
 // はじめて遊ぶ人の印(2026-10-27 社長「はじめて遊ぶ人のお話は、続けて流すのを1本まで」)。はじめての案内を通る人にだけ true を書く。
 // true の人は、HOME に着くたびにお話を1本だけ流す(残りは HOME を離れて戻ったときに1本ずつ)。前から遊んでいる人には付けない
 const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
+// はじめて遊ぶ人が、最初の本番のバトルを終えたときの印(新しいキー・一度付いたら消さない)。付くまでイベントのお話は自動で流さない(2026-11-11 案3)
+const FIRST_BATTLE_DONE_KEY = 'mh_first_battle_done_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)

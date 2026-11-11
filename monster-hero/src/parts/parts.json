@@ -204,6 +204,10 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-multi-stamp.jsx",
+      "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -394,6 +398,10 @@
     {
       "file": "56-assistant-life-ux.jsx",
       "role": "助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)の新UIだけの部品: 部屋の「その助手とできること」1列(AssistantLifeDoRow)と仲良し度の道のり(AssistantLifeBondRoad)。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-guide.jsx",
+      "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },
     {
       "file": "56-assistant-life-rel.jsx",
