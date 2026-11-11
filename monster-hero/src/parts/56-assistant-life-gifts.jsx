@@ -954,17 +954,29 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null 
     setMoved(prev => (JSON.stringify(next) === JSON.stringify(prev) ? prev : next));
   };
   React.useLayoutEffect(() => { if (measure.current) measure.current(); });
-  // 吹き出しの字があとから読み込まれて大きさが変わることがあるので、ときどき測り直す
-  //   部屋の中身(吹き出し・顔・札)が変わったときは、次のコマですぐ測り直す
+  // 吹き出しの字があとから読み込まれて大きさが変わることがあるので、しばらく測り直す
+  //   部屋の中身(吹き出し・顔・札)が変わったときは、次のコマですぐ測り直し、そこからまたしばらく測り直す
+  //   (2026-11-11 カルク: もとは 0.7秒ごとにずっと測っていた。部屋の数だけ回り、止まっている画面でも配置を読み直し続けて重かった。
+  //    中身が変わった・部屋や吹き出しの大きさが変わった・字が読み込まれたときだけにする。動きが落ち着いたあとは測らない)
   React.useEffect(() => {
     if (!on) return undefined;
     const run = () => { if (measure.current) measure.current(); };
-    const t = setInterval(run, 700);
+    let t = 0, left = 0;
+    const settle = () => { left = 6; if (!t) t = setInterval(() => { run(); if (--left <= 0) { clearInterval(t); t = 0; } }, 700); };
+    settle();
     const roomEl = marker.current && marker.current.parentElement;
     let raf = 0;
-    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); }) : null;
+    const soon = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); settle(); };
+    // 部屋を歩くマスモン(.mhm-pet)の書き換えは家具の避け先に関係しないので数えない(歩くたびに測り直し続けないように)
+    const notPet = (m) => { const el = m.target && (m.target.nodeType === 1 ? m.target : m.target.parentElement); return !(el && el.closest && el.closest('.mhm-pet')); };
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver((list) => { if (list.some(notPet)) soon(); }) : null;
     if (mo) mo.observe(roomEl, { childList: true, subtree: true, characterData: true });
-    return () => { clearInterval(t); cancelAnimationFrame(raf); if (mo) mo.disconnect(); };
+    const ro = roomEl && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(soon) : null;
+    if (ro) { ro.observe(roomEl); for (const el of roomEl.querySelectorAll('[data-assistant-life-room-bub]')) ro.observe(el); }
+    const fonts = typeof document !== 'undefined' && document.fonts && document.fonts.addEventListener ? document.fonts : null;
+    if (fonts) fonts.addEventListener('loadingdone', soon);
+    window.addEventListener('resize', soon);
+    return () => { if (t) clearInterval(t); cancelAnimationFrame(raf); if (mo) mo.disconnect(); if (ro) ro.disconnect(); if (fonts) fonts.removeEventListener('loadingdone', soon); window.removeEventListener('resize', soon); };
   }, [on]);
   if (!on) return null;
   return (<><span ref={marker} hidden/>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {

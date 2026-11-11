@@ -58,7 +58,7 @@ const STUN = { type: 'buff', subType: 'stun_atsu', isBreeder: true };
   check('1枚目の距離撃は、いまの距離(遠)で計算する', p.perCard[0].dist === 3, `dist=${p.perCard[0].dist}`);
   check('距離撃のあとの攻撃は、動かしたあとの距離(零)で計算する', p.perCard[1].dist === 0, `dist=${p.perCard[1].dist}`);
   check('2枚目の距離撃は、1枚目が動かしたあとの距離(零)から始める', p.perCard[2].dist === 0, `dist=${p.perCard[2].dist}`);
-  check('あつの挑発だけは実処理と同じく、ターンの始めの距離で計算する', p.perCard[3].dist === 3, `dist=${p.perCard[3].dist}`);
+  check('あつの挑発も、ほかの攻撃と同じく動かしたあとの距離(中)で計算する', p.perCard[3].dist === 2, `dist=${p.perCard[3].dist}`);
   check('置く前のカード(保留)は、選んだカードを全部使ったあとの距離(中)で計算する', p.forPending.dist === 2 && p.final.dist === 2, `dist=${p.forPending.dist}`);
   check('補正(おりょう・被ダメ・連撃)の入れ物は今までどおり', p.perCard[1].oryo === 0 && p.perCard[1].dmgMod === 0 && p.perCard[1].combo === 0);
 }
@@ -79,7 +79,7 @@ check('枠ごとの予測(置く前のカード)が距離を渡す', source.incl
 check('枠ごとの予測(置いたカード)が距離を渡す', source.includes('getDmg(card,i,s,b.oryo,b.dmgMod,halved,b.dist)'));
 check('AIコピーの予測が、味方のカードのあとの距離から始めて自分の距離撃でも進める',
   source.includes('getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale)') && source.includes('run = { ...run, dist: attackDistanceAfterCard(card, run.dist) };'));
-// あつの挑発の実処理(stunMon)は距離を渡さない(ターンの始めの距離のまま)。予測は previewAttackStartDist がそれに合わせている
+check('あつの挑発の実処理も、その時点の距離を getDmg へ渡す', source.includes('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false,attackDistance)'));
 const previewCalls = (source.match(/getDmg\((?:card|pendingCardObj),(?:slotIdx|i),[^;]*?\);/g) || []).filter(c => !/attackStartDist|stunMon/.test(c));
 check(`予測の getDmg は4か所とも距離つき(${previewCalls.length}か所)`, previewCalls.length === 4 && previewCalls.every(c => /\.dist\)/.test(c)), previewCalls.filter(c => !/\.dist\)/.test(c)).join(' / '));
 

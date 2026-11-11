@@ -1119,6 +1119,29 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
 // そのカードを使ったあと、同じターンの次のカードが攻撃を始める敵の距離。距離撃(range_atk)は敵を指定の距離へ動かすので、
 // あとのカードは動かしたあとの距離で計算する。実処理(processTurn)と予測(previewLocalBoosts・aiCopyPredictedDmg)が同じここを通る
 const attackDistanceAfterCard = (card, dist) => (card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist);
+// かたよりのない混ぜ方(フィッシャー・イェーツ)。元の配列は変えず、混ぜた写しを返す。山札を作るとき・捨て札を山札へ戻すときに使う。
+// sort(()=>Math.random()-0.5) は並びにかたよりが出る(元の並びに近い順が出やすい)ので使わない(2026-11-11 バトルの監査)
+const shuffledCopy = (list, random = Math.random) => {
+  const out = Array.isArray(list) ? [...list] : [];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+// 敵を倒した瞬間の「このWAVEに与えたダメージ」。live は、ターンの途中で足したぶんまで入った「いまの値」(今回の一撃も足し済み)。
+// stale はターンの始めの値(state)、lastBlow は今回の一撃。ふつうは live をそのまま使う。
+// live が「ターンの始め＋今回の一撃」より小さいことは無いはずだが、もしそうなら前の数え方(stale+lastBlow)を下回らないようにする
+const waveDamageAtDefeat = (live, stale, lastBlow) => {
+  const legacy = (Number(stale) || 0) + (Number(lastBlow) || 0);
+  const now = Number(live);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+};
+const waveDistDamageAtDefeat = (live, stale, lastBlow) => [0, 1, 2, 3].map(i => {
+  const legacy = (Number(stale?.[i]) || 0) + (Number(lastBlow?.[i]) || 0);
+  const now = Number(live?.[i]);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+});
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
