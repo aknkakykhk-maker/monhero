@@ -16132,7 +16132,7 @@ const ASSISTANT_QUICK_GUIDE_LINES = {
 };
 
 // ===== ASSISTANT_LIFE_TALKS ここから(tools で生成・手で直さない) =====
-// 元: docs/progress/assistant-peer/lines/(kotoba-life.txt・tsumugi.txt)。取り込み: node tools/assistant/life-talks-import.js
+// 元: docs/progress/assistant-peer/lines/(kotoba-life.txt・tsumugi.txt・kotoba-battle.txt)。取り込み: node tools/assistant/life-talks-import.js
 const ASSISTANT_LIFE_TALKS = Object.freeze([
   { id:'life-solo-dra-001', kind:'solo', who:'dra', keys:{ place:'home', mood:'happy' }, line:'scene', lines:[
     { who:'dra', e:'happy', t:'せんべいとお茶。これが最強の組み合わせだな' },
@@ -22260,6 +22260,78 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'kyuko', e:'normal', t:'3人だと、いろんな組み合わせで試せるねぇ' },
     { who:'atsu', e:'happy', t:'いいね！ 俺は全部攻めで出るから笑' },
     { who:'kyuko', e:'wink', t:'ほい！ じゃあ守りは、もう1人に任せよっか笑' },
+  ] },
+  { id:'life-solo-mua-050', kind:'solo', who:'mua', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'mua', e:'happy', t:'モンヒロバトルのとこ、今日もにぎやかぢゃん✨' },
+  ] },
+  { id:'life-solo-mua-051', kind:'solo', who:'mua', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'mua', e:'excited', t:'モッチー連れてくると、テンション上がるー！' },
+  ] },
+  { id:'life-solo-mua-052', kind:'solo', who:'mua', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'mua', e:'happy', t:'勝っても負けても楽しーのが、バトルのいいとこぢゃん♪' },
+  ] },
+  { id:'life-solo-kiki-058', kind:'solo', who:'kiki', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'kiki', e:'normal', t:'今日はモンヒロバトルで、ゴーレムの調子を見ていまつ' },
+  ] },
+  { id:'life-solo-kiki-059', kind:'solo', who:'kiki', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'kiki', e:'wink', t:'ちからに振った編成が、うまく回るか試しますね' },
+  ] },
+  { id:'life-solo-kiki-060', kind:'solo', who:'kiki', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'kiki', e:'happy', t:'焦らず一戦ずつ、でつ。攻めるときは大胆に行きまつ♪' },
+  ] },
+  { id:'life-solo-momosuke-047', kind:'solo', who:'momosuke', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'momosuke', e:'excited', t:'モンヒロバトル、もものメタルナーが一番かわいく勝つ！！' },
+  ] },
+  { id:'life-solo-momosuke-048', kind:'solo', who:'momosuke', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'momosuke', e:'wink', t:'ここで勝つとこ、だれかに見ててほしいなw' },
+  ] },
+  { id:'life-solo-momosuke-049', kind:'solo', who:'momosuke', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'momosuke', e:'happy', t:'負けてもへこまないもん！ 次はもっとかっこよく決める♡' },
+  ] },
+  { id:'life-solo-dra-060', kind:'solo', who:'dra', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'dra', e:'normal', t:'モンヒロバトルか。グジラ連れて、のんびり一戦いくか' },
+  ] },
+  { id:'life-solo-dra-061', kind:'solo', who:'dra', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'dra', e:'happy', t:'ここ来ると、ついつい長居しちまうな。えへへ' },
+  ] },
+  { id:'life-solo-dra-062', kind:'solo', who:'dra', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'dra', e:'normal', t:'勝ったら昼寝するか。負けても昼寝だけどな、くさ' },
+  ] },
+  { id:'life-solo-atsu-054', kind:'solo', who:'atsu', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'atsu', e:'excited', t:'モンヒロバトル、今日もドラゴン連れて全力でいく！' },
+  ] },
+  { id:'life-solo-atsu-055', kind:'solo', who:'atsu', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'atsu', e:'normal', t:'とりあえず一戦、てかもう三戦目だわ笑' },
+  ] },
+  { id:'life-solo-atsu-056', kind:'solo', who:'atsu', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'atsu', e:'happy', t:'勝っても負けても、強くなってる感じがいいんだよな笑' },
+  ] },
+  { id:'life-solo-kyuko-071', kind:'solo', who:'kyuko', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'kyuko', e:'normal', t:'ほい、モンヒロバトルの編成を見直し中ぇ。決め手は相性ねぇ' },
+  ] },
+  { id:'life-solo-kyuko-072', kind:'solo', who:'kyuko', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'kyuko', e:'wink', t:'ニャーを出す順番を変えてみたよ。試してみるねぇ' },
+  ] },
+  { id:'life-solo-kyuko-073', kind:'solo', who:'kyuko', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'kyuko', e:'happy', t:'勝った負けたより、なんで勝てたかが大事なんだよねぇ笑' },
+  ] },
+  { id:'life-solo-sorashido-049', kind:'solo', who:'sorashido', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'sorashido', e:'excited', t:'うぉぉぉ！ モンヒロバトル、今日の相手も強そうだぜ・・・！' },
+  ] },
+  { id:'life-solo-sorashido-050', kind:'solo', who:'sorashido', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'sorashido', e:'happy', t:'出す順番と相性、計算は完璧だ笑' },
+  ] },
+  { id:'life-solo-sorashido-051', kind:'solo', who:'sorashido', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'sorashido', e:'excited', t:'負けてもデータは残る。次は表を直して勝つぜ！' },
+  ] },
+  { id:'life-solo-erubin-050', kind:'solo', who:'erubin', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'erubin', e:'normal', t:'モンヒロバトルは、デュラハンの調子を確かめるのにいいね' },
+  ] },
+  { id:'life-solo-erubin-051', kind:'solo', who:'erubin', keys:{ place:'battle' }, line:'scene', lines:[
+    { who:'erubin', e:'happy', t:'ひとつずつ丁寧に、相手の動きを見ていこうかな' },
+  ] },
+  { id:'life-solo-erubin-052', kind:'solo', who:'erubin', keys:{ place:'battle' }, line:'feel', lines:[
+    { who:'erubin', e:'normal', t:'勝ち負けより、しっかり戦えたかが大事だしね' },
   ] },
 ]);
 // ===== ASSISTANT_LIFE_TALKS ここまで =====

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9e0a9ac6967f830
+// source-sha256: 56a349ad71dcda1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104782,6 +104782,12 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
     te: '本を読んで',
     group: false,
     places: ['library']
+  },
+  battle: {
+    label: 'バトル',
+    te: 'バトルして',
+    group: true,
+    places: ['battle']
   }
 });
 const ASSISTANT_LIFE_PLACES = Object.freeze({
@@ -104794,7 +104800,8 @@ const ASSISTANT_LIFE_PLACES = Object.freeze({
   library: '図書室',
   market: 'マーケット',
   hill: 'ひなたの丘',
-  garden: '中庭'
+  garden: '中庭',
+  battle: 'モンヒロバトル'
 });
 const ASSISTANT_LIFE_PREFS = Object.freeze({
   mua: {
@@ -104808,7 +104815,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 3,
       idle: 1,
       sleep: 1,
-      read: 0
+      read: 0,
+      battle: 1
     },
     slot: {
       noon: {
@@ -104831,7 +104839,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 2,
       idle: 2,
       sleep: 1,
-      read: 1
+      read: 1,
+      battle: 1.5
     },
     slot: {
       morning: {
@@ -104854,7 +104863,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 2,
       idle: 1,
       sleep: 1,
-      read: 0
+      read: 0,
+      battle: 1.5
     },
     slot: {
       evening: {
@@ -104877,7 +104887,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 1,
       idle: 2,
       sleep: 4,
-      read: 0
+      read: 0,
+      battle: 0.5
     },
     slot: {
       noon: {
@@ -104901,7 +104912,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 1,
       idle: 1,
       sleep: 1,
-      read: 0
+      read: 0,
+      battle: 3
     },
     slot: {
       morning: {
@@ -104924,7 +104936,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 1,
       idle: 1,
       sleep: 1,
-      read: 3
+      read: 3,
+      battle: 1
     },
     slot: {
       afternoon: {
@@ -104946,7 +104959,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 1,
       idle: 1,
       sleep: 1,
-      read: 1
+      read: 1,
+      battle: 2
     },
     slot: {
       night: {
@@ -104969,7 +104983,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       walk: 3,
       idle: 1,
       sleep: 1,
-      read: 1
+      read: 1,
+      battle: 3
     },
     slot: {
       morning: {
@@ -105255,7 +105270,8 @@ const ASSISTANT_LIFE_MOOD_MOD = Object.freeze({
     w: {
       practice: 2,
       training: 2,
-      cards: 1.3
+      cards: 1.3,
+      battle: 1.5
     }
   }
 });
@@ -105799,6 +105815,11 @@ const assistantLifeNow = async ({
   if (typeof assistantLifeDiaryOnSlot === 'function') {
     try {
       assistantLifeDiaryOnSlot(life, slot, now);
+    } catch {}
+  }
+  if (typeof amgtOnLifeSlot === 'function') {
+    try {
+      amgtOnLifeSlot(life, slot, now);
     } catch {}
   }
   if (typeof assistantLifeFriendOnSlot === 'function') {
@@ -107107,13 +107128,15 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
   market: '🛍️',
   hill: '🌄',
   garden: '🌷',
-  temple: '✨'
+  temple: '✨',
+  battle: '⚔️'
 });
 const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
   studio: 'モンヒロビート',
   cardroom: 'MFバトルカード',
   ranch: 'M/B管理',
   temple: '神殿',
+  battle: 'モンヒロバトル',
   home: 'みんなの家'
 });
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
@@ -107123,6 +107146,7 @@ const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({
   ranch: 'management',
   market: 'market',
   temple: 'temple',
+  battle: 'battle',
   home: 'life'
 });
 const assistantLifeFacilityOf = entry => entry && ASSISTANT_LIFE_SPOT_FAC[entry.place] || 'life';
@@ -108147,6 +108171,15 @@ const assistantLifeAtCard = id => {
     return false;
   }
 };
+const assistantLifeAtBattle = id => {
+  try {
+    const w = assistantLifeWhereOf(assistantLifeCurrent(), id);
+    return !!(w && w.doing === 'battle' && w.place === 'battle');
+  } catch (_) {
+    return false;
+  }
+};
+const assistantLifeBattleIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBattle);
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 const assistantLifeHostOf = ids => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
 const ASSISTANT_LIFE_DIARY_KEY = 'mh_assistant_life_diary_v1';
@@ -111077,6 +111110,7 @@ const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
   management: 'main.mh-home-scene .mh-home-facility.management',
   temple: 'main.mh-home-scene .mh-home-facility.temple',
   market: 'main.mh-home-scene .mh-home-facility.market',
+  battle: 'main.mh-home-scene .mh-home-facility.battle',
   life: 'main.mh-home-scene .mh-home-facility.life'
 });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
@@ -111219,7 +111253,7 @@ function AssistantLifeHomeFaces({
     rect: rects.life
   }));
 }
-const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
   classic: {
@@ -111253,7 +111287,8 @@ const ASSISTANT_LIFE_DOING_ICON = Object.freeze({
   walk: '🚶',
   idle: '💭',
   sleep: '💤',
-  read: '📖'
+  read: '📖',
+  battle: '⚔️'
 });
 const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
@@ -111261,6 +111296,7 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   cardroom: 'MFバトルカードの研究をしている助手。いる助手と対戦すると、ごほうびが上がります',
   ranch: 'M/B管理でモンスターを育てている助手',
   temple: '神殿にいる助手',
+  battle: 'モンヒロバトルで戦っている助手。いる助手は、マスモンを連れて修行をしています',
   market: 'マーケットにいる助手',
   library: '図書室で本を読んだり、カードを研究したりしている助手',
   cafe: 'おやつ屋さんでおやつを食べている助手',
@@ -111272,6 +111308,7 @@ const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({
   management: 'M/B管理',
   temple: '神殿',
   market: 'マーケット',
+  battle: 'モンヒロバトル',
   life: '助手ライフ',
   rhythm: 'モンヒロビート',
   card: 'MFバトルカード'
@@ -111830,7 +111867,9 @@ function AssistantLifeTownMap({
     size: 18
   }), "神殿")), facBtn('market', 'market', 'マーケット', React.createElement("span", null, React.createElement(ShoppingBag, {
     size: 17
-  }), "マーケット")), facBtn('home', 'life', '助手ライフ みんなの家', React.createElement("span", null, React.createElement("span", {
+  }), "マーケット")), facBtn('battle', 'battle', 'モンヒロバトル', React.createElement("span", null, React.createElement(Sword, {
+    size: 25
+  }), "モンヒロバトル")), facBtn('home', 'life', '助手ライフ みんなの家', React.createElement("span", null, React.createElement("span", {
     "aria-hidden": "true",
     style: {
       fontSize: 16,
@@ -111912,7 +111951,7 @@ function AssistantLifeTownMap({
   }, "📃 一覧 ↓")), React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
     style: {
-      bottom: 'calc(10px + env(safe-area-inset-bottom))'
+      bottom: land ? 68 : 'calc(68px + env(safe-area-inset-bottom))'
     },
     "data-assistant-life-map-hint": true
   }, "場所を押すと、いる助手とできること"))), list && React.createElement("div", {
@@ -137286,7 +137325,8 @@ const ALF_DOING_ROOM = Object.freeze({
   walk: '散歩中',
   idle: 'のんびり中',
   sleep: 'おやすみ中',
-  read: '読書中'
+  read: '読書中',
+  battle: 'バトル中'
 });
 const alfFill = (text, {
   f = '',
