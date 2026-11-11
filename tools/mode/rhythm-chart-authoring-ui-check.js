@@ -81,7 +81,7 @@ ok('補正はtime/end/slidePointsを同じmsだけ移動',offsetUi.includes('end
 ok('判定ラインは初回と再プレイで共通のDOM表示を使用',game.includes('data-rhythm-judgment-line')&&!lane.includes('data-rhythm-svg-judgment')&&!lane.includes('data-rhythm-svg-ready'));
 ok('判定ラインのGaussianBlurを廃止',!lane.includes('feGaussianBlur')&&!lane.includes('rhythmLaneSvgJudgeGlow'));
 ok('ノーツ親の重いdrop-shadowをSVGレイヤー側で解除',lane.includes('[data-rhythm-note]{z-index:4}')&&lane.includes('[data-rhythm-note]{filter:none!important}'));
-ok('プレイ中はレーン全体を再検索しない',lane.includes('currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected')&&lane.includes("dataset.rhythmPlayActive=currentArea?'true':'false'"));
+ok('プレイ中はレーン全体を再検索しない',lane.includes('currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected')&&(lane.includes("dataset.rhythmPlayActive=currentArea?'true':'false'")||(lane.includes("const active = currentArea ? 'true' : 'false';")&&lane.includes('dataset.rhythmPlayActive = active'))));
 ok('座標校正もプレイ中の全体再検索を避ける',calibration.includes('currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected')&&calibration.includes('scheduleGuide(area)'));
 ok('デバッグUI遅延ロード監視は読込後にdisconnect',calibration.includes('loaderObserver?.disconnect()')&&calibration.includes('loaderObserver=null'));
 ok('前回フリーズ対策を維持',calibration.includes('if(toggle.textContent!==label)toggle.textContent=label')&&!calibration.includes("toggle.textContent=enabled?'座標校正 ON':'座標校正';"));

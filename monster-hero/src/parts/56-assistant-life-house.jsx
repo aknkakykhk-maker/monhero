@@ -236,7 +236,8 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 // chatWith(id, { asleep, follow }) … その助手とのおしゃべりを、助手ライフの上に開く(本体 60-app.jsx が入れる・2026-11-08 社長 ❼〜❿ 助手部ココロ)
 // chatFollowLine(id) … 声をかけたあとの続きのカードのひとこと { kind:'ask'|'offer'|'plain', text, value? }(呼び方の話の日・社長 ❾)
 //   公開の印 assistantCallname が偽のあいだは null のまま(部屋に「おしゃべりする」も続きのカードも出ない)
-const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null };
+// goPlace … HOME が入れておく { ranch, temple, market } の開き方(「いま行くと得なこと」から施設へ行く。HOME の札と同じ動き)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null, goPlace: null, masmonTrainBoost: null, marketPerkToday: null };
 // いまカード部屋にいる助手(段階2の読むだけの口 assistantLifeCardIds。無い・こわれているときはだれもいない)
 const assistantLifeHouseCardIds = () => {
   try { const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : []; return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
@@ -752,10 +753,24 @@ const ASSISTANT_LIFE_STAND_EC = 0.1639;
 //   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
 const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
 const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
+// 着替えの絵の顔の点(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+//   それまで着替えの絵にも ふだんの服の点を当てていて、帽子や羽のぶん顔が小さく・ずれて出ていた(相手と顔の大きさが 1.4倍ちがった)。
+//   キーは絵の置き場所の名前(助手の絵のフォルダの中の、服ごとのフォルダ名)。測り方は上の表と同じ(見えている体の上を0・下を1。top は帽子・耳・頭布の飾りを除いた頭のてっぺん)。
+//   above … 頭のてっぺんの上を、顔の何個ぶんまで見せるか(魔女の帽子・大きなうさ耳が切れないように。無ければ ASSISTANT_LIFE_STAND_CUT.above)
+//   m は、同じ助手の ふだんの服の m に「目から顎」の長さの比を掛けたもの(同じ顔なので、頬の幅も同じ比で変わる)。測り絵: docs/progress/assistant-art/
+const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
+  halloween: { mua: { top: 0.2, eye: 0.358, chin: 0.433, m: 0.557, above: 0.85 }, kiki: { top: 0.217, eye: 0.412, chin: 0.498, m: 0.54, above: 0.95 }, momosuke: { top: 0.065, eye: 0.39, chin: 0.508, m: 0.846 } },
+  'card-master': { mua: { top: 0.09, eye: 0.22, chin: 0.295, m: 0.55 } },
+  sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
+});
+// 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
+const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  const outfit = own ? assistantLifeStandOutfitOf(src) : null;
+  if (outfit) return (ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit] && ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit][pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
   return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
 // 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
@@ -768,7 +783,7 @@ const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
   const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
   const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
   const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
-  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const frameTop = topY - (face.above || ASSISTANT_LIFE_STAND_CUT.above) * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
   const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
   const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
   return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
@@ -891,14 +906,18 @@ const assistantLifeViewSize = () => {
   const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
   return rot ? { w: window.innerHeight, h: window.innerWidth, rot: true } : { w: window.innerWidth, h: window.innerHeight, rot: false };
 };
-// 大きさが変わったら描き直す。🔄横の切り替えは resize が来ないので、0.5秒ごとにも見る
+// 大きさが変わったら描き直す。resize・orientationchange と 🔄横の切り替えの知らせで測り、iPhone が回転のあと大きさを
+// 遅れて直す分は 0.1・0.3・0.8秒あとにも測り直す(2026-11-11 カルク: もとは 0.5秒ごとにずっと見ていた。🔄横の切り替えも resize を鳴らす)
 const useAssistantLifeViewSize = () => {
   const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
     const f = () => setSize(prev => { const n = assistantLifeViewSize(); return (n.w === prev.w && n.h === prev.h && n.rot === prev.rot) ? prev : n; });
-    window.addEventListener('resize', f); window.addEventListener('orientationchange', f);
-    const id = setInterval(f, 500);
-    return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); clearInterval(id); };
+    let ts = [];
+    const g = () => { f(); ts.forEach(clearTimeout); ts = [100, 300, 800].map(ms => setTimeout(f, ms)); };
+    window.addEventListener('resize', g); window.addEventListener('orientationchange', g);
+    const off = typeof RHYTHM_VIEW_ROTATION === 'object' && RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.subscribe === 'function' ? RHYTHM_VIEW_ROTATION.subscribe(g) : null;
+    f();
+    return () => { window.removeEventListener('resize', g); window.removeEventListener('orientationchange', g); if (off) off(); ts.forEach(clearTimeout); };
   }, []);
   return size;
 };
@@ -1214,6 +1233,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   ) : null;
   const houseView = (
     <div className="relative pt-1">
+      {uiV2 && typeof AssistantLifeNowPerks === 'function' && <AssistantLifeNowPerks life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}/>}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
       {lifeStatusList}

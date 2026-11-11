@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4bddf05514b3ae46
+// generated-sha256: 392e2d0629f8d74e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -45,7 +45,10 @@ const MH_SCREEN_TRAIL=(()=>{
       //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
       document.addEventListener('visibilitychange',()=>{last=0;});
-      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -39134,10 +39137,10 @@ const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
     face: growthFxAssistantFace(assistantId, 'excited'), gains });
 };
 // マスモンに絆経験値のアイテムを使った(60-app.jsx の useBondXpTickets から)
-const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after }) => {
+const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after, note = '' }) => {
   if (!before || !after || !(growthFxNum(gain) > 0)) return;
   const pct = (info) => growthFxPct((growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext))) * 100);
-  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`,
+  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`, sub: note ? String(note) : undefined,
     faces: image ? [image] : [], faceRound: true,
     rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
 };
@@ -39478,6 +39481,7 @@ const GrowthFxItemCard = ({ sheet, level, onClose }) => {
         {(sheet.faces || []).length > 0 && <div className="faces">{sheet.faces.map((src, i) => <img key={i} src={src} alt="" className={sheet.faceRound ? 'round' : ''} style={{ animationDelay: `${0.4 + i * 0.15}s` }}/>)}</div>}
         <div className="ttl">{sheet.title}{reaction && <span className={`tag ${reaction}`}>{reaction === 'like' ? '大好き！' : 'ちょっと苦手…'}</span>}</div>
         {sheet.item && <div className="itm">{sheet.item}</div>}
+        {sheet.sub && <div className="itm" data-growth-fx-note>{sheet.sub}</div>}
         {(sheet.rows || []).map((row, i) => {
           const rk = growthFxKind(row.kind);
           const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
@@ -43935,6 +43939,7 @@ function MasuInheritedUniqueCompensation({
 function MasuRebirthAnimation({
   rebirthAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
 
       const starList=breakthroughStars(rebirthAnimation.masu.rebirthCount||1);
       const finalBreak=isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
@@ -43953,6 +43958,7 @@ function MasuRebirthAnimation({
 function MasuTranscendAnimation({
   transcendAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-transcend-animation" role="status" aria-live="polite">
       <div className="mh-transcend-converge" aria-hidden="true"><i style={{'--i':0}}/><i style={{'--i':1}}/><i style={{'--i':2}}/><i style={{'--i':3}}/><i style={{'--i':4}}/><i style={{'--i':5}}/><i style={{'--i':6}}/><i style={{'--i':7}}/></div>
@@ -43972,6 +43978,7 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
   // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
   const a = soulRankAnimation;
@@ -44008,6 +44015,7 @@ function MasuSoulRankAnimation({
 function MasuReincarnateAnimation({
   reincarnateAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-reincarnation-animation" role="status" aria-live="polite">
       {/* 層の順番はCSSのz-indexで決めている(放射光0 → 本体1 → 粒2 → 輪3 → 閃光5 → 文字6)。
@@ -44034,6 +44042,7 @@ function MasuReincarnateAnimation({
 function MasuDonationAnimation({
   donationAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>
   );
@@ -45091,6 +45100,7 @@ function MasuFusionScreen({
   setFusionSubId, setFusionSubIds, setMasuMonDetail, lockedMasuIds=[],
   fusionInheritSkillKeys={}, setFusionInheritSkillKeys=()=>{},
 }) {
+  React.useEffect(()=>{ if(fusionResultData&&typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[!!fusionResultData]); // 助手ライフ: 合体を終えたとき、神殿にいる助手との仲良し度(1日1回)
 
       // 戻り先(TEMPLE)の指定は本体に残す。この画面は「閉じる」とだけ言う
       const closeFusion = onClose;
@@ -47303,6 +47313,8 @@ function HomeScreen({
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket}; });
   const homeSceneRef=React.useRef(null);
   const [homeSceneWide,setHomeSceneWide]=React.useState(false);
   React.useEffect(()=>{
@@ -56089,13 +56101,15 @@ const RHYTHM_MODE_SELECT_CSS = `
 // ももすけ・ドラの絵は正方形で、ももすけは右端に別の絵のかけらが入っている。顔の位置(cx, cy・絵の幅と高さに対する割合)を
 // 枠の真ん中(横)・top(縦)に合わせ、枠の幅の zoom 倍に広げて、かけらを枠の外へ出す
 // (高さで合わせると、縦画面の縦長の枠で大きくなりすぎて耳が切れた)
+// 表に無い助手(みゅあ・きき・ソラシド・えるびん・着替えの絵)は、枠いっぱいに広げて切り出す。縦長の絵(高さ÷幅 1.1 より大きい)は、あふれる分をほぼ下へ逃がす(--mhms-y 0.03)。
+//   横・横小・🔄横で ソラシド・えるびんの頭のてっぺん、ハロウィンのみゅあの帽子が切れていた(2026-11-11)
 // show … 枠の背が低いときも、絵の高さのうち少なくともこの割合は枠に入れる(2026-10-26 社長「小さいスマホで立ち絵が頭だけ」)。
 //   絵の幅は「いつもの幅(zoom)」と「絵の高さ×show が枠の高さに収まる幅」の小さいほう。枠が十分に高ければ今までと同じ見え方
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
-  // ももすけは表情ごとに体の位置が違い、かけらも左(angry・happy)と右(crying・wink)にある。
-  // 透明でない部分を数えて決めた体の真ん中(cxBy)へ合わせ、体の幅だけが入る 1.5 倍に広げる(2026-10-03)
-  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42, show: 0.55,
-    cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
+  // ももすけ: いまの絵(512×512・体は真ん中・耳が左右の端まで)に合わせた(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+  //   前は、右や左の端に別の絵のかけらが入っていた古い絵に合わせて 1.5倍に広げ、表情ごとに横へずらしていた(cxBy)。絵を差し替えたあともその寄せ方が残り、
+  //   耳が上で切れ(14〜24%)、横・横小・🔄横では顔だけの大写しになっていた。きゅうこと同じ置き方(絵の上端を枠の上から 2%・幅は枠いっぱい)にする
+  momosuke: { zoom: 1, cx: 0.5, cy: 0, top: 0.02, show: 0.8 },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4, show: 0.75 },
   // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上・頭に王冠)。絵の上端(王冠のてっぺん)を枠の上から3%に置き、頭の中心(絵の幅の48%)を真ん中へ。
   // 社長「左肩切れてるように見える」→ 引いて下と左右をぼかした形 →「もっとアップにして切れてる感じ無くしたほうがいい」で、
@@ -56188,7 +56202,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
           <div className="mhms-float pointer-events-none absolute inset-0">
             {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
               ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
-              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
+              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
       )}
@@ -62188,15 +62202,34 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
 
 // ---------- 思い出アルバム(ペアごと) ----------
 // ツーショット写真(ASSISTANT_PEER_PHOTOS の段ごとに1枚。2人の立ち絵を並べて作る)と、見た掛け合いの一覧。押すと見返せる
+//   2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」: それまでは絵を枠の 56%×170% に object-cover で入れていて、
+//   絵ごとの余白のちがいで 2人の顔が重なり・横が切れ(最大33%)、顔だけの絵のドラは枠より大きくなって下が切れていた。
+//   場面の立ち絵と同じ表と決まり(assistantLifeStandFace・assistantLifeStandBox・assistantLifeStandRule)で、2人の顔を同じ大きさ・同じ高さで左右に並べる:
+//   頭(てっぺんから顎)が写真の高さの 45%・頭のてっぺんは上から 24%(うさ耳・王冠が入る)・2人の体の真ん中は左右 27% と 73%。置き場所は写真の大きさに対する割合で持つ(写真の大きさが変わっても同じ見え方)
+const ASSISTANT_PEER_PHOTO_W = 400, ASSISTANT_PEER_PHOTO_H = 300;
 function AssistantPeerPhoto({ pair, photo, open }) {
   const [a, b] = pair.map(id => assistantById(id));
+  const srcs = open ? [assistantFullImage(a, photo.e[0]), assistantFullImage(b, photo.e[1])] : [];
+  const canFit = typeof assistantLifeStandBox === 'function' && typeof assistantLifeStandRule === 'function' && typeof assistantLifeStandFace === 'function';
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (canFit && typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; if (canFit && srcs.length) Promise.all(srcs.map(s => assistantLifeStandBox(s))).then(l => { if (alive) setBoxes(l); }); return () => { alive = false; }; }, [key]);
+  const W = ASSISTANT_PEER_PHOTO_W, H = ASSISTANT_PEER_PHOTO_H;
+  const fit = (i) => {
+    if (!canFit || !boxes[i]) return null;
+    const r = assistantLifeStandRule({ face: assistantLifeStandFace(pair[i], srcs[i]), box: boxes[i], F: (H * 0.45) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * 0.24, cx: W * (i ? 0.73 : 0.27) });
+    return r ? { left: `${(r.left / W) * 100}%`, top: `${(r.top / H) * 100}%`, width: `${(r.width / W) * 100}%`, height: `${(r.height / H) * 100}%`, maxWidth: 'none' } : null;
+  };
+  const stand = (i) => { const f = fit(i);
+    return f ? <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" draggable={false} className="absolute" style={f}/>
+      : <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" className={`absolute ${i ? 'right-[-2%]' : 'left-[-2%]'} top-[6%] h-[170%] w-[56%]`} style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>; };
   return (
     <div data-assistant-peer-photo={photo.lv} data-assistant-peer-photo-open={open ? '1' : '0'}
       className="relative overflow-hidden rounded-xl border-2" style={{ aspectRatio: '4 / 3', borderColor: open ? '#fcd34d' : 'rgba(255,255,255,.12)', background: open ? `linear-gradient(135deg, ${a.accent}55, ${b.accent}55)` : 'rgba(15,23,42,.8)' }}>
       {open ? (<>
         {/* 立ち絵の上のほう(顔から胸まで)を寄りで並べる */}
-        <img src={assistantFullImage(a, photo.e[0])} alt="" loading="lazy" decoding="async" className="absolute left-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
-        <img src={assistantFullImage(b, photo.e[1])} alt="" loading="lazy" decoding="async" className="absolute right-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
+        {stand(0)}
+        {stand(1)}
         <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100">{assistantPeerPhotoTitle(photo)}</span>
       </>) : (
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
@@ -64162,7 +64195,8 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 // chatWith(id, { asleep, follow }) … その助手とのおしゃべりを、助手ライフの上に開く(本体 60-app.jsx が入れる・2026-11-08 社長 ❼〜❿ 助手部ココロ)
 // chatFollowLine(id) … 声をかけたあとの続きのカードのひとこと { kind:'ask'|'offer'|'plain', text, value? }(呼び方の話の日・社長 ❾)
 //   公開の印 assistantCallname が偽のあいだは null のまま(部屋に「おしゃべりする」も続きのカードも出ない)
-const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null };
+// goPlace … HOME が入れておく { ranch, temple, market } の開き方(「いま行くと得なこと」から施設へ行く。HOME の札と同じ動き)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null, goPlace: null, masmonTrainBoost: null, marketPerkToday: null };
 // いまカード部屋にいる助手(段階2の読むだけの口 assistantLifeCardIds。無い・こわれているときはだれもいない)
 const assistantLifeHouseCardIds = () => {
   try { const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : []; return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
@@ -64678,10 +64712,24 @@ const ASSISTANT_LIFE_STAND_EC = 0.1639;
 //   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
 const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
 const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
+// 着替えの絵の顔の点(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+//   それまで着替えの絵にも ふだんの服の点を当てていて、帽子や羽のぶん顔が小さく・ずれて出ていた(相手と顔の大きさが 1.4倍ちがった)。
+//   キーは絵の置き場所の名前(助手の絵のフォルダの中の、服ごとのフォルダ名)。測り方は上の表と同じ(見えている体の上を0・下を1。top は帽子・耳・頭布の飾りを除いた頭のてっぺん)。
+//   above … 頭のてっぺんの上を、顔の何個ぶんまで見せるか(魔女の帽子・大きなうさ耳が切れないように。無ければ ASSISTANT_LIFE_STAND_CUT.above)
+//   m は、同じ助手の ふだんの服の m に「目から顎」の長さの比を掛けたもの(同じ顔なので、頬の幅も同じ比で変わる)。測り絵: docs/progress/assistant-art/
+const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
+  halloween: { mua: { top: 0.2, eye: 0.358, chin: 0.433, m: 0.557, above: 0.85 }, kiki: { top: 0.217, eye: 0.412, chin: 0.498, m: 0.54, above: 0.95 }, momosuke: { top: 0.065, eye: 0.39, chin: 0.508, m: 0.846 } },
+  'card-master': { mua: { top: 0.09, eye: 0.22, chin: 0.295, m: 0.55 } },
+  sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
+});
+// 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
+const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  const outfit = own ? assistantLifeStandOutfitOf(src) : null;
+  if (outfit) return (ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit] && ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit][pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
   return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
 // 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
@@ -64694,7 +64742,7 @@ const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
   const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
   const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
   const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
-  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const frameTop = topY - (face.above || ASSISTANT_LIFE_STAND_CUT.above) * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
   const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
   const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
   return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
@@ -64817,14 +64865,18 @@ const assistantLifeViewSize = () => {
   const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
   return rot ? { w: window.innerHeight, h: window.innerWidth, rot: true } : { w: window.innerWidth, h: window.innerHeight, rot: false };
 };
-// 大きさが変わったら描き直す。🔄横の切り替えは resize が来ないので、0.5秒ごとにも見る
+// 大きさが変わったら描き直す。resize・orientationchange と 🔄横の切り替えの知らせで測り、iPhone が回転のあと大きさを
+// 遅れて直す分は 0.1・0.3・0.8秒あとにも測り直す(2026-11-11 カルク: もとは 0.5秒ごとにずっと見ていた。🔄横の切り替えも resize を鳴らす)
 const useAssistantLifeViewSize = () => {
   const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
     const f = () => setSize(prev => { const n = assistantLifeViewSize(); return (n.w === prev.w && n.h === prev.h && n.rot === prev.rot) ? prev : n; });
-    window.addEventListener('resize', f); window.addEventListener('orientationchange', f);
-    const id = setInterval(f, 500);
-    return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); clearInterval(id); };
+    let ts = [];
+    const g = () => { f(); ts.forEach(clearTimeout); ts = [100, 300, 800].map(ms => setTimeout(f, ms)); };
+    window.addEventListener('resize', g); window.addEventListener('orientationchange', g);
+    const off = typeof RHYTHM_VIEW_ROTATION === 'object' && RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.subscribe === 'function' ? RHYTHM_VIEW_ROTATION.subscribe(g) : null;
+    f();
+    return () => { window.removeEventListener('resize', g); window.removeEventListener('orientationchange', g); if (off) off(); ts.forEach(clearTimeout); };
   }, []);
   return size;
 };
@@ -65140,6 +65192,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   ) : null;
   const houseView = (
     <div className="relative pt-1">
+      {uiV2 && typeof AssistantLifeNowPerks === 'function' && <AssistantLifeNowPerks life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}/>}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
       {lifeStatusList}
@@ -65425,17 +65478,23 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
   const b = box || { t: 0, b: 1, l: 0, r: 1, ar: 0.6 };
-  const ih = h / Math.max(0.2, b.b - b.t), iw = ih * (b.ar || 0.6);
+  // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
+  //   顔だけの絵=ドラ が 11px と 2.8倍ちがい、羽や耳のある絵は左右も切れていた)。場面の立ち絵と同じ表(assistantLifeStandFace)と決まり(assistantLifeStandRule)を使う:
+  //   頭(てっぺんから顎)が箱の高さの半分・頭のてっぺんは上から 25%(うさ耳が入る。魔女の帽子・大きな耳の着替え=above のある絵は 38% まで下げる)・胸から下は箱の下でぼかして消す。測れないうちは今までの出し方
+  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
+  const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
   const cx = ((b.l + b.r) / 2) * iw;
+  const top = rule ? rule.top : -b.t * ih;
   const mask = 'linear-gradient(#000 74%,transparent)';
   // 印(💤・ごほうび済み)は、下をぼかした絵の外側に重ねる(ぼかしに消されない)
   return (
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
-        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
         {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
-        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top: -b.t * ih, filter: 'brightness(.62) saturate(.7)' }}/>}
+        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
@@ -66060,6 +66119,119 @@ function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, di
       </span>
       {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
     </button>);
+}
+
+// ===== STEP2: 「✨ いま行くと得なこと」と施設の得(2026-11-11 社長) =====
+//   どれも助手がその場所にいるあいだだけ・上限つき・ランキングに効かない。新しく保存するのは「神殿でその日もう受け取ったか」だけ
+const ASSISTANT_LIFE_PERK_KEY = 'mh_assistant_life_perks_v1'; // { day: 'YYYY-MM-DD'(朝4時区切り), temple: 受け取った助手のid('' = まだ) }
+const ASSISTANT_LIFE_PERK_STORE = {
+  loaded: false, p: null, state: { day: '', temple: '' },
+  async load() { if (this.loaded) return this.state; if (!this.p) this.p = Promise.resolve(storeGet(ASSISTANT_LIFE_PERK_KEY, null, false)).then(v => { this.state = assistantLifePerkNormalize(v); this.loaded = true; return this.state; }).catch(() => { this.loaded = true; return this.state; }); return this.p; },
+};
+// 保存値が無い・壊れているときは「まだ受け取っていない」
+const assistantLifePerkNormalize = (v) => ({ day: v && typeof v.day === 'string' ? v.day : '', temple: v && typeof v.temple === 'string' ? v.temple : '' });
+const assistantLifePerkDay = () => (typeof assistantPeerDayKey === 'function' ? assistantPeerDayKey() : '');
+const assistantLifeTempleDone = () => { const s = ASSISTANT_LIFE_PERK_STORE.state; return !!s.temple && s.day === assistantLifePerkDay(); };
+// 神殿・M/B管理・マーケットの得は、新UIでも旧UIでも全員に入る(2026-11-11 社長。帯「いま行くと得なこと」を見るのは新UIだけ)
+const ASSISTANT_LIFE_TEMPLE_BOND = 30; // 神殿で操作を終えたときの仲良し度(assistants.js の lifeTemple。1日1回)
+
+// その場所にいて起きている助手(出会っている人だけ)
+const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  return !!w && w.place === place && w.doing !== 'sleep';
+});
+
+// 神殿の得: 合体・転生などの操作を終えたとき(62-screen-masu-temple.jsx・66-screen-masu-fusion.jsx から1行で呼ぶ)、temple にいる助手の仲良し度を少し。1日1回
+const assistantLifeTemplePerk = async () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    await ASSISTANT_LIFE_PERK_STORE.load();
+    if (assistantLifeTempleDone()) return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const who = assistantLifeAtPlace(assistantLifeCurrent(), ids, 'temple')[0];
+    if (!who) return null;
+    const next = { day: assistantLifePerkDay(), temple: who };
+    ASSISTANT_LIFE_PERK_STORE.state = next; // 先に印を付ける(二重に上げない)
+    try { storeSet(ASSISTANT_LIFE_PERK_KEY, next, false); } catch (_) {}
+    if (typeof assistantLifeAddBondWithFx === 'function') assistantLifeAddBondWithFx(who, 'lifeTemple', ASSISTANT_LIFE_TEMPLE_BOND);
+    return who;
+  } catch (_) { return null; }
+};
+
+// M/B管理の得: トレーニングチケットを使ったとき(60-app.jsx の useBondXpTickets から)、ranch にいる助手のマスモンの育ちが伸びる。
+//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口 ASSISTANT_LIFE_LINKS.masmonTrainBoost(キズナ4が assistantMasmonTrainBoost を入れる)(1日1回は向こうで数える)。無ければ何もしない。
+//   返り値: 演出に足す一文('' = 何も起きなかった)
+const assistantLifeRanchPerk = () => {
+  try {
+    const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const names = [];
+    for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
+      let ok = false; try { ok = boost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; }
+      if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
+    }
+    return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
+  } catch (_) { return ''; }
+};
+
+// マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
+//   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
+const assistantLifeMarketWho = () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
+  } catch (_) { return null; }
+};
+
+// 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
+const assistantLifePerkRows = (life, ids, nameOf) => {
+  const rows = [];
+  if (!life) return rows;
+  const nm = (list) => list.map(nameOf).join('・');
+  const L = typeof ASSISTANT_LIFE_LINKS !== 'undefined' ? ASSISTANT_LIFE_LINKS : {};
+  const go = L.goPlace || {};
+  try {
+    const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } }) : [];
+    if (beat.length) rows.push({ k: 'beat', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
+  } catch (_) {}
+  try {
+    const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
+    if (card.length) rows.push({ k: 'card', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+  } catch (_) {}
+  const temple = assistantLifeAtPlace(life, ids, 'temple');
+  if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
+  // 🛍 マーケット: 助手がいるあいだ、おすすめ品1つが1割引き(1日1回)。開発部が ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday と入れる。それが { itemName, discountedCost, used } を返す
+  try {
+    const mk = assistantLifeAtPlace(life, ids, 'market');
+    const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
+    if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
+  } catch (_) {}
+  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
+  if (ranch.length) rows.push({ k: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
+  return rows;
+};
+
+// 家のいちばん上の帯。3行まで+「ほか◯件」。行を押すとその施設へ(onGo で画面を閉じてから呼ぶ)
+function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
+  const rows = assistantLifePerkRows(life, ids, nameOf);
+  const [more, setMore] = React.useState(false);
+  if (!rows.length) return null;
+  const shown = more ? rows : rows.slice(0, 3);
+  const rest = rows.length - shown.length;
+  return (
+    <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2 text-white`} data-assistant-life-now-perks={rows.length}>
+      <p className="text-[13px] font-black text-amber-200">✨ いま行くと得なこと</p>
+      {shown.map(r => (
+        <button key={r.k} type="button" data-assistant-life-now-perk={r.k} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
+          className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-60">
+          <span className="w-6 shrink-0 text-center text-[20px] leading-none" aria-hidden="true">{r.icon}</span>
+          <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-snug" style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
+          {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
+        </button>))}
+      {rest > 0 && <button type="button" data-assistant-life-now-perks-more className="mt-1 min-h-[36px] w-full text-right text-[11.5px] font-black text-amber-200" onClick={() => setMore(true)}>ほか {rest} 件 ▼</button>}
+    </section>);
 }
 
 // ===== STEP3: タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。道具は「🎁 贈る」の中、引き合わせるは「きずな」へ =====
@@ -78369,6 +78541,9 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
 const CARD_VS_CSS = `
 /* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
 @media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
+/* 背の低い横の画面(568×320 など)では、相手の立ち絵とモンスターの絵・ひとことの字を少し小さくして高さに収める(ひとことが4〜5行・今日のデッキの名前が2段になると、
+   相手の欄が画面より高くなり、名前の字が上で切れていた。2026-11-11 助手の立ち絵の見直し) */
+@media (orientation: landscape) and (max-height: 360px) { [data-card-vs] { --mh-vs-foe-h: 26vh; --mh-vs-mon-h: 16vh; } [data-card-vs] [data-card-vs-line] { font-size: 11px; line-height: 1.25; padding-top: 3px; padding-bottom: 3px; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -78478,7 +78653,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
           <div className="flex w-full max-w-[420px] items-end gap-2">
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)' }}>
               {who
-                ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
+                // 助手の立ち絵は、相手えらび・結果と同じ部品で収める(顔の大きさを助手どうしでそろえる。2026-11-11)。部品がまだ無いときだけ今までの収め方
+                ? (typeof CardAssistantArt === 'function'
+                  ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
+                  : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
                 : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
@@ -82310,6 +82488,14 @@ const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
+// 絵の場所から、その助手の顔の点(頭のてっぺん・目・顎・顔の大きさ)を引く。助手の絵でなければ null。着替えの絵は着替えの行(56-assistant-life-house.jsx の表)
+const cardArtFaceBySrc = (src) => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS) || typeof assistantLifeStandFace !== 'function') return null;
+  const m = /\/([a-z]+)_[a-z]+\.png$/i.exec(src.split('?')[0]);
+  const who = m ? ASSISTANTS.find((x) => x && x.imagePrefix === m[1]) : null;
+  if (!who || /\/(face|temp)\//.test(src)) return null;
+  try { return assistantLifeStandFace(who.id, src); } catch (_) { return null; }
+};
 // knownBox … 測ってある輪郭(cardArtKnownBox)。渡さなくても、標準の服の絵なら絵の場所から引く(cardArtKnownBoxBySrc)。あれば canvas で調べずに使う
 // 枠の大きさが決まったとき・変わったとき(画面の向き・大きさ)も ResizeObserver で合わせ直す(最初に 0 だと合わせないままだった)
 const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = null }) => {
@@ -82339,10 +82525,25 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
     const sc = Math.min(H / box.h, W / box.w);
+    // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+    //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
+    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 18% に置く。
+    //   羽・肩は枠の外へ出てよい(顔は切らない)。今までの収め方より小さくなる絵(ソラシド・えるびん・きゅうこ)と、顔だけの絵(ドラ)は今までどおり
+    const face = cardArtFaceBySrc(src);
+    if (face && !face.head && typeof assistantLifeStandRule === 'function') {
+      const lb = { t: box.y / box.nh, b: (box.y + box.h) / box.nh, l: box.x / box.nw, r: (box.x + box.w) / box.nw, ar: box.nw / box.nh };
+      const U = Math.min(H * 0.44, W * 0.95);
+      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
+      if (r && r.width > box.nw * sc * 1.02) {
+        const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
+        const visW = (lb.r - lb.l) * r.width;
+        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+      }
+    }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };
   })();
   return (
-    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
+    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} data-card-art-by-face={fit && fit.byFace ? '1' : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
       {fit
         ? <img src={src} alt={alt} draggable={false} className="absolute max-w-none" style={{ width: `${fit.width}px`, left: `${fit.left}px`, top: `${fit.top}px` }}/>
         : <img src={src} alt={alt} draggable={false} className="h-full w-full object-contain object-bottom"/>}
@@ -96833,6 +97034,18 @@ function MonsterHeroGame() {
   // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  // ログインボーナスの窓は、助手の案内(村の案内・れんしゅうの誘い)とバトルのれんしゅうが終わってから出す(2026-11-11 社長・最初の30分の改善案1)。
+  // はじめての人は、名前を決めた直後にこの窓が出たまま案内が始まり、案内が指す建物も、れんしゅうの「押してみて」で光る所も
+  // 窓の下に隠れて進めなくなっていた(tools/boot/first-30min-walk.js の [隠れ])。
+  // 案内から次の案内へ移る一瞬に窓がちらつかないよう、案内が終わって少し(0.7秒)たってから出す。
+  // 受け取りそのもの(ギフトボックスへ送る)は今までどおりで、変えるのは窓を出す時機だけ。案内が出ない人には何も変わらない
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) { setLoginBonusGuideClear(false); return undefined; }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -104404,11 +104617,13 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    // 助手ライフ: M/B管理にいる助手のマスモンも少し育つ(プレイヤーの経験値は増やさない)
+    const ranchNote = typeof assistantLifeRanchPerk === 'function' ? assistantLifeRanchPerk() : '';
     // 使った瞬間の演出(見た目だけ)
     if (typeof growthFxMasuBondItem === 'function') {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       growthFxMasuBondItem({ masuName: masu.name, image: base && base.iconUrl, itemName: item.name, itemEmoji: item.emoji, count: n, gain: result.xpGain,
-        before: result.before, after: result.after });
+        before: result.before, after: result.after, note: ranchNote });
     }
     return result;
   };
@@ -114177,7 +114392,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
             報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
             (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
-        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&!loginBonusGuideBusy&&loginBonusGuideClear&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(()=>{
           /* 行き先が名前だけでは分からなかったので、デバッグ画面の DebugMenuRow と同じ

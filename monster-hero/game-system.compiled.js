@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20c0fc4b60187a68
+// source-sha256: 57b99073a61f80f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74,7 +74,7 @@ const MH_SCREEN_TRAIL = (() => {
       document.addEventListener('visibilitychange', () => {
         last = 0;
       });
-      setInterval(() => {
+      const gapWatch = setInterval(() => {
         const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
         if (document.visibilityState !== 'visible') {
           last = 0;
@@ -83,6 +83,7 @@ const MH_SCREEN_TRAIL = (() => {
         if (last > 0 && now - last > 1000) push('gap', Math.round(now - last));
         last = now;
       }, 500);
+      if (gapWatch && typeof gapWatch.unref === 'function') gapWatch.unref();
     } catch (_) {}
   }
   return {
@@ -63213,7 +63214,8 @@ const growthFxMasuBondItem = ({
   count,
   gain,
   before,
-  after
+  after,
+  note = ''
 }) => {
   if (!before || !after || !(growthFxNum(gain) > 0)) return;
   const pct = info => growthFxPct(growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext)) * 100);
@@ -63222,6 +63224,7 @@ const growthFxMasuBondItem = ({
     kind: 'star',
     title: `${masuName} に ${itemName}！`,
     item: `${itemEmoji || ''} ${itemName} ×${count}`,
+    sub: note ? String(note) : undefined,
     faces: image ? [image] : [],
     faceRound: true,
     rows: [{
@@ -63745,7 +63748,10 @@ const GrowthFxItemCard = ({
     className: `tag ${reaction}`
   }, reaction === 'like' ? '大好き！' : 'ちょっと苦手…')), sheet.item && React.createElement("div", {
     className: "itm"
-  }, sheet.item), (sheet.rows || []).map((row, i) => {
+  }, sheet.item), sheet.sub && React.createElement("div", {
+    className: "itm",
+    "data-growth-fx-note": true
+  }, sheet.sub), (sheet.rows || []).map((row, i) => {
     const rk = growthFxKind(row.kind);
     const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
     return React.createElement("div", {
@@ -71751,6 +71757,9 @@ function MasuInheritedUniqueCompensation({
 function MasuRebirthAnimation({
   rebirthAnimation
 }) {
+  React.useEffect(() => {
+    if (typeof assistantLifeTemplePerk === 'function') void assistantLifeTemplePerk();
+  }, []);
   const starList = breakthroughStars(rebirthAnimation.masu.rebirthCount || 1);
   const finalBreak = isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
   return React.createElement("div", {
@@ -71783,6 +71792,9 @@ function MasuRebirthAnimation({
 function MasuTranscendAnimation({
   transcendAnimation
 }) {
+  React.useEffect(() => {
+    if (typeof assistantLifeTemplePerk === 'function') void assistantLifeTemplePerk();
+  }, []);
   return React.createElement("div", {
     className: "mh-transcend-animation",
     role: "status",
@@ -71860,6 +71872,9 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation
 }) {
+  React.useEffect(() => {
+    if (typeof assistantLifeTemplePerk === 'function') void assistantLifeTemplePerk();
+  }, []);
   const a = soulRankAnimation;
   const reduced = prefersReducedMotion();
   const [cap, setCap] = useState(a.fromLevelCap);
@@ -71941,6 +71956,9 @@ function MasuSoulRankAnimation({
 function MasuReincarnateAnimation({
   reincarnateAnimation
 }) {
+  React.useEffect(() => {
+    if (typeof assistantLifeTemplePerk === 'function') void assistantLifeTemplePerk();
+  }, []);
   return React.createElement("div", {
     className: "mh-reincarnation-animation",
     role: "status",
@@ -72006,6 +72024,9 @@ function MasuReincarnateAnimation({
 function MasuDonationAnimation({
   donationAnimation
 }) {
+  React.useEffect(() => {
+    if (typeof assistantLifeTemplePerk === 'function') void assistantLifeTemplePerk();
+  }, []);
   return React.createElement("div", {
     className: "mh-donation-animation",
     role: "status",
@@ -74577,6 +74598,9 @@ function MasuFusionScreen({
   fusionInheritSkillKeys = {},
   setFusionInheritSkillKeys = () => {}
 }) {
+  React.useEffect(() => {
+    if (fusionResultData && typeof assistantLifeTemplePerk === 'function') void assistantLifeTemplePerk();
+  }, [!!fusionResultData]);
   const closeFusion = onClose;
   const fusedBorder = masu => (masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
   const FUSION_SORT_OPTIONS = [{
@@ -78917,6 +78941,13 @@ function HomeScreen({
   cardTourVisible = false,
   onOpenCardTour = null
 }) {
+  React.useEffect(() => {
+    if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
+      ranch: onOpenManagement,
+      temple: onOpenTemple,
+      market: onOpenMarket
+    };
+  });
   const homeSceneRef = React.useRef(null);
   const [homeSceneWide, setHomeSceneWide] = React.useState(false);
   React.useEffect(() => {
@@ -93805,21 +93836,11 @@ const RHYTHM_MODE_SELECT_CSS = `
 `;
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: {
-    zoom: 1.5,
+    zoom: 1,
     cx: 0.5,
-    cy: 0.48,
-    top: 0.42,
-    show: 0.55,
-    cxBy: {
-      angry: 0.545,
-      happy: 0.545,
-      crying: 0.44,
-      wink: 0.46,
-      excited: 0.38,
-      surprise: 0.38,
-      normal: 0.645,
-      troubled: 0.655
-    }
+    cy: 0,
+    top: 0.02,
+    show: 0.8
   },
   dra: {
     zoom: 0.85,
@@ -94069,6 +94090,9 @@ function ModeSelectAssistantPanel({
     onLoad: onArtLoad,
     className: "mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]",
     style: {
+      ...(artRatio && artRatio > 1.1 ? {
+        '--mhms-y': 0.03
+      } : null),
       '--mhms-w': '100%',
       '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px',
       '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW),
@@ -103777,12 +103801,70 @@ function AssistantPeerTalk({
     className: "h-7 w-7 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95"
   }, "×"))));
 }
+const ASSISTANT_PEER_PHOTO_W = 400,
+  ASSISTANT_PEER_PHOTO_H = 300;
 function AssistantPeerPhoto({
   pair,
   photo,
   open
 }) {
   const [a, b] = pair.map(id => assistantById(id));
+  const srcs = open ? [assistantFullImage(a, photo.e[0]), assistantFullImage(b, photo.e[1])] : [];
+  const canFit = typeof assistantLifeStandBox === 'function' && typeof assistantLifeStandRule === 'function' && typeof assistantLifeStandFace === 'function';
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => canFit && typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null));
+  const key = srcs.join('|');
+  React.useEffect(() => {
+    let alive = true;
+    if (canFit && srcs.length) Promise.all(srcs.map(s => assistantLifeStandBox(s))).then(l => {
+      if (alive) setBoxes(l);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+  const W = ASSISTANT_PEER_PHOTO_W,
+    H = ASSISTANT_PEER_PHOTO_H;
+  const fit = i => {
+    if (!canFit || !boxes[i]) return null;
+    const r = assistantLifeStandRule({
+      face: assistantLifeStandFace(pair[i], srcs[i]),
+      box: boxes[i],
+      F: H * 0.45 / ASSISTANT_LIFE_STAND_FACE_LEN,
+      topY: H * 0.24,
+      cx: W * (i ? 0.73 : 0.27)
+    });
+    return r ? {
+      left: `${r.left / W * 100}%`,
+      top: `${r.top / H * 100}%`,
+      width: `${r.width / W * 100}%`,
+      height: `${r.height / H * 100}%`,
+      maxWidth: 'none'
+    } : null;
+  };
+  const stand = i => {
+    const f = fit(i);
+    return f ? React.createElement("img", {
+      key: i,
+      src: srcs[i],
+      alt: "",
+      loading: "lazy",
+      decoding: "async",
+      draggable: false,
+      className: "absolute",
+      style: f
+    }) : React.createElement("img", {
+      key: i,
+      src: srcs[i],
+      alt: "",
+      loading: "lazy",
+      decoding: "async",
+      className: `absolute ${i ? 'right-[-2%]' : 'left-[-2%]'} top-[6%] h-[170%] w-[56%]`,
+      style: {
+        objectFit: 'cover',
+        objectPosition: '50% 0%'
+      }
+    });
+  };
   return React.createElement("div", {
     "data-assistant-peer-photo": photo.lv,
     "data-assistant-peer-photo-open": open ? '1' : '0',
@@ -103792,27 +103874,7 @@ function AssistantPeerPhoto({
       borderColor: open ? '#fcd34d' : 'rgba(255,255,255,.12)',
       background: open ? `linear-gradient(135deg, ${a.accent}55, ${b.accent}55)` : 'rgba(15,23,42,.8)'
     }
-  }, open ? React.createElement(React.Fragment, null, React.createElement("img", {
-    src: assistantFullImage(a, photo.e[0]),
-    alt: "",
-    loading: "lazy",
-    decoding: "async",
-    className: "absolute left-[-2%] top-[6%] h-[170%] w-[56%]",
-    style: {
-      objectFit: 'cover',
-      objectPosition: '50% 0%'
-    }
-  }), React.createElement("img", {
-    src: assistantFullImage(b, photo.e[1]),
-    alt: "",
-    loading: "lazy",
-    decoding: "async",
-    className: "absolute right-[-2%] top-[6%] h-[170%] w-[56%]",
-    style: {
-      objectFit: 'cover',
-      objectPosition: '50% 0%'
-    }
-  }), React.createElement("span", {
+  }, open ? React.createElement(React.Fragment, null, stand(0), stand(1), React.createElement("span", {
     className: "absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100"
   }, assistantPeerPhotoTitle(photo))) : React.createElement("span", {
     className: "absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"
@@ -108192,7 +108254,10 @@ const ASSISTANT_LIFE_LINKS = {
   beatInvite: null,
   cardInvite: null,
   chatWith: null,
-  chatFollowLine: null
+  chatFollowLine: null,
+  goPlace: null,
+  masmonTrainBoost: null,
+  marketPerkToday: null
 };
 const assistantLifeHouseCardIds = () => {
   try {
@@ -109380,9 +109445,60 @@ const ASSISTANT_LIFE_STAND_CUT = Object.freeze({
   below: 1.8,
   fade: 0.45
 });
+const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
+  halloween: {
+    mua: {
+      top: 0.2,
+      eye: 0.358,
+      chin: 0.433,
+      m: 0.557,
+      above: 0.85
+    },
+    kiki: {
+      top: 0.217,
+      eye: 0.412,
+      chin: 0.498,
+      m: 0.54,
+      above: 0.95
+    },
+    momosuke: {
+      top: 0.065,
+      eye: 0.39,
+      chin: 0.508,
+      m: 0.846
+    }
+  },
+  'card-master': {
+    mua: {
+      top: 0.09,
+      eye: 0.22,
+      chin: 0.295,
+      m: 0.55
+    }
+  },
+  sekiyuou: {
+    erubin: {
+      top: 0.02,
+      eye: 0.225,
+      chin: 0.47,
+      m: 1.25
+    }
+  }
+});
+const assistantLifeStandOutfitOf = src => {
+  const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || ''));
+  return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null;
+};
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  const outfit = own ? assistantLifeStandOutfitOf(src) : null;
+  if (outfit) return ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit] && ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit][pid] || {
+    top: 0.05,
+    eye: 0.33,
+    chin: 0.47,
+    m: 1
+  };
   return own && ASSISTANT_LIFE_STAND_FACE[pid] || {
     top: 0.05,
     eye: 0.33,
@@ -109405,7 +109521,7 @@ const assistantLifeStandRule = ({
   const visTop = topY - (face.top || 0) * vh,
     imgTop = visTop - box.t * ih;
   const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
-  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U,
+  const frameTop = topY - (face.above || ASSISTANT_LIFE_STAND_CUT.above) * U,
     frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
   const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
   const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
@@ -109754,13 +109870,21 @@ const useAssistantLifeViewSize = () => {
       const n = assistantLifeViewSize();
       return n.w === prev.w && n.h === prev.h && n.rot === prev.rot ? prev : n;
     });
-    window.addEventListener('resize', f);
-    window.addEventListener('orientationchange', f);
-    const id = setInterval(f, 500);
+    let ts = [];
+    const g = () => {
+      f();
+      ts.forEach(clearTimeout);
+      ts = [100, 300, 800].map(ms => setTimeout(f, ms));
+    };
+    window.addEventListener('resize', g);
+    window.addEventListener('orientationchange', g);
+    const off = typeof RHYTHM_VIEW_ROTATION === 'object' && RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.subscribe === 'function' ? RHYTHM_VIEW_ROTATION.subscribe(g) : null;
+    f();
     return () => {
-      window.removeEventListener('resize', f);
-      window.removeEventListener('orientationchange', f);
-      clearInterval(id);
+      window.removeEventListener('resize', g);
+      window.removeEventListener('orientationchange', g);
+      if (off) off();
+      ts.forEach(clearTimeout);
     };
   }, []);
   return size;
@@ -110423,7 +110547,18 @@ function AssistantLifeHouse({
   }))) : null;
   const houseView = React.createElement("div", {
     className: "relative pt-1"
-  }, React.createElement("div", {
+  }, uiV2 && typeof AssistantLifeNowPerks === 'function' && React.createElement(AssistantLifeNowPerks, {
+    life: life,
+    ids: ids,
+    nameOf: nameOf,
+    land: land,
+    onGo: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    }
+  }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
     style: {
       paddingInline: pad
@@ -111168,10 +111303,19 @@ function AssistantLifeMapFig({
     r: 1,
     ar: 0.6
   };
-  const ih = h / Math.max(0.2, b.b - b.t),
-    iw = ih * (b.ar || 0.6);
+  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
+    face,
+    box,
+    F: h * 0.5 / ASSISTANT_LIFE_STAND_FACE_LEN,
+    topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)),
+    cx: 0
+  }) : null;
+  const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t),
+    iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
   const cx = (b.l + b.r) / 2 * iw;
+  const top = rule ? rule.top : -b.t * ih;
   const mask = 'linear-gradient(#000 74%,transparent)';
   return React.createElement("span", {
     className: "relative block shrink-0",
@@ -111196,7 +111340,7 @@ function AssistantLifeMapFig({
       width: iw,
       maxWidth: 'none',
       objectFit: 'contain',
-      top: -b.t * ih,
+      top,
       left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
     }
@@ -111207,7 +111351,7 @@ function AssistantLifeMapFig({
     h: ih,
     style: {
       left: w / 2 - cx,
-      top: -b.t * ih,
+      top,
       filter: 'brightness(.62) saturate(.7)'
     }
   })), sleep && React.createElement("span", {
@@ -113007,6 +113151,194 @@ function AssistantLifeDoRow({
     className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
     "data-assistant-life-room-do-gain": true
   }, gain));
+}
+const ASSISTANT_LIFE_PERK_KEY = 'mh_assistant_life_perks_v1';
+const ASSISTANT_LIFE_PERK_STORE = {
+  loaded: false,
+  p: null,
+  state: {
+    day: '',
+    temple: ''
+  },
+  async load() {
+    if (this.loaded) return this.state;
+    if (!this.p) this.p = Promise.resolve(storeGet(ASSISTANT_LIFE_PERK_KEY, null, false)).then(v => {
+      this.state = assistantLifePerkNormalize(v);
+      this.loaded = true;
+      return this.state;
+    }).catch(() => {
+      this.loaded = true;
+      return this.state;
+    });
+    return this.p;
+  }
+};
+const assistantLifePerkNormalize = v => ({
+  day: v && typeof v.day === 'string' ? v.day : '',
+  temple: v && typeof v.temple === 'string' ? v.temple : ''
+});
+const assistantLifePerkDay = () => typeof assistantPeerDayKey === 'function' ? assistantPeerDayKey() : '';
+const assistantLifeTempleDone = () => {
+  const s = ASSISTANT_LIFE_PERK_STORE.state;
+  return !!s.temple && s.day === assistantLifePerkDay();
+};
+const ASSISTANT_LIFE_TEMPLE_BOND = 30;
+const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  return !!w && w.place === place && w.doing !== 'sleep';
+});
+const assistantLifeTemplePerk = async () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    await ASSISTANT_LIFE_PERK_STORE.load();
+    if (assistantLifeTempleDone()) return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const who = assistantLifeAtPlace(assistantLifeCurrent(), ids, 'temple')[0];
+    if (!who) return null;
+    const next = {
+      day: assistantLifePerkDay(),
+      temple: who
+    };
+    ASSISTANT_LIFE_PERK_STORE.state = next;
+    try {
+      storeSet(ASSISTANT_LIFE_PERK_KEY, next, false);
+    } catch (_) {}
+    if (typeof assistantLifeAddBondWithFx === 'function') assistantLifeAddBondWithFx(who, 'lifeTemple', ASSISTANT_LIFE_TEMPLE_BOND);
+    return who;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantLifeRanchPerk = () => {
+  try {
+    const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const names = [];
+    for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
+      let ok = false;
+      try {
+        ok = boost(id, {
+          source: 'ranch'
+        }) === true;
+      } catch (_) {
+        ok = false;
+      }
+      if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
+    }
+    return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
+  } catch (_) {
+    return '';
+  }
+};
+const assistantLifeMarketWho = () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantLifePerkRows = (life, ids, nameOf) => {
+  const rows = [];
+  if (!life) return rows;
+  const nm = list => list.map(nameOf).join('・');
+  const L = typeof ASSISTANT_LIFE_LINKS !== 'undefined' ? ASSISTANT_LIFE_LINKS : {};
+  const go = L.goPlace || {};
+  try {
+    const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => {
+      try {
+        return rhythmAssistSessionVisitFree(id) === true;
+      } catch (_) {
+        return false;
+      }
+    }) : [];
+    if (beat.length) rows.push({
+      k: 'beat',
+      icon: '🎵',
+      text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`,
+      go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null
+    });
+  } catch (_) {}
+  try {
+    const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
+    if (card.length) rows.push({
+      k: 'card',
+      icon: '🃏',
+      text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`,
+      go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null
+    });
+  } catch (_) {}
+  const temple = assistantLifeAtPlace(life, ids, 'temple');
+  if (temple.length && !assistantLifeTempleDone()) rows.push({
+    k: 'temple',
+    icon: '✨',
+    text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`,
+    go: typeof go.temple === 'function' ? go.temple : null
+  });
+  try {
+    const mk = assistantLifeAtPlace(life, ids, 'market');
+    const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
+    if (pk && !pk.used && pk.itemName) rows.push({
+      k: 'market',
+      icon: '🛍',
+      text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`,
+      go: typeof go.market === 'function' ? go.market : null
+    });
+  } catch (_) {}
+  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
+  if (ranch.length) rows.push({
+    k: 'ranch',
+    icon: '🥚',
+    text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`,
+    go: typeof go.ranch === 'function' ? go.ranch : null
+  });
+  return rows;
+};
+function AssistantLifeNowPerks({
+  life,
+  ids,
+  nameOf,
+  onGo,
+  land = false
+}) {
+  const rows = assistantLifePerkRows(life, ids, nameOf);
+  const [more, setMore] = React.useState(false);
+  if (!rows.length) return null;
+  const shown = more ? rows : rows.slice(0, 3);
+  const rest = rows.length - shown.length;
+  return React.createElement("section", {
+    className: `mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2 text-white`,
+    "data-assistant-life-now-perks": rows.length
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200"
+  }, "✨ いま行くと得なこと"), shown.map(r => React.createElement("button", {
+    key: r.k,
+    type: "button",
+    "data-assistant-life-now-perk": r.k,
+    disabled: typeof r.go !== 'function',
+    onClick: () => {
+      if (typeof r.go === 'function') onGo(r.go);
+    },
+    className: "mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-60"
+  }, React.createElement("span", {
+    className: "w-6 shrink-0 text-center text-[20px] leading-none",
+    "aria-hidden": "true"
+  }, r.icon), React.createElement("span", {
+    className: "min-w-0 flex-1 text-[12.5px] font-bold leading-snug",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, r.text), typeof r.go === 'function' && React.createElement("span", {
+    className: "shrink-0 text-[11px] font-black text-amber-200",
+    "aria-hidden": "true"
+  }, "▶"))), rest > 0 && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-now-perks-more": true,
+    className: "mt-1 min-h-[36px] w-full text-right text-[11.5px] font-black text-amber-200",
+    onClick: () => setMore(true)
+  }, "ほか ", rest, " 件 ▼"));
 }
 const ASSISTANT_LIFE_UI_V2_DEFAULT = false;
 function assistantLifeUiV2Of(saved) {
@@ -147562,6 +147894,9 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
 const CARD_VS_CSS = `
 /* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
 @media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
+/* 背の低い横の画面(568×320 など)では、相手の立ち絵とモンスターの絵・ひとことの字を少し小さくして高さに収める(ひとことが4〜5行・今日のデッキの名前が2段になると、
+   相手の欄が画面より高くなり、名前の字が上で切れていた。2026-11-11 助手の立ち絵の見直し) */
+@media (orientation: landscape) and (max-height: 360px) { [data-card-vs] { --mh-vs-foe-h: 26vh; --mh-vs-mon-h: 16vh; } [data-card-vs] [data-card-vs-line] { font-size: 11px; line-height: 1.25; padding-top: 3px; padding-bottom: 3px; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -147808,7 +148143,17 @@ const CardVsIntro = ({
     style: {
       width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)'
     }
-  }, who ? React.createElement(CardVsArt, {
+  }, who ? typeof CardAssistantArt === 'function' ? React.createElement("div", {
+    "data-card-vs-foe-art": true,
+    className: "w-full"
+  }, React.createElement(CardAssistantArt, {
+    src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
+    alt: who.name,
+    className: "w-full",
+    style: {
+      aspectRatio: '3 / 4'
+    }
+  })) : React.createElement(CardVsArt, {
     "data-card-vs-foe-art": true,
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
@@ -154095,6 +154440,17 @@ const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
+const cardArtFaceBySrc = src => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS) || typeof assistantLifeStandFace !== 'function') return null;
+  const m = /\/([a-z]+)_[a-z]+\.png$/i.exec(src.split('?')[0]);
+  const who = m ? ASSISTANTS.find(x => x && x.imagePrefix === m[1]) : null;
+  if (!who || /\/(face|temp)\//.test(src)) return null;
+  try {
+    return assistantLifeStandFace(who.id, src);
+  } catch (_) {
+    return null;
+  }
+};
 const CardAssistantArt = ({
   src,
   alt,
@@ -154142,6 +154498,36 @@ const CardAssistantArt = ({
       H = size.h;
     if (!box || !W || !H) return null;
     const sc = Math.min(H / box.h, W / box.w);
+    const face = cardArtFaceBySrc(src);
+    if (face && !face.head && typeof assistantLifeStandRule === 'function') {
+      const lb = {
+        t: box.y / box.nh,
+        b: (box.y + box.h) / box.nh,
+        l: box.x / box.nw,
+        r: (box.x + box.w) / box.nw,
+        ar: box.nw / box.nh
+      };
+      const U = Math.min(H * 0.44, W * 0.95);
+      const r = assistantLifeStandRule({
+        face,
+        box: lb,
+        F: U / ASSISTANT_LIFE_STAND_FACE_LEN,
+        topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)),
+        cx: W / 2
+      });
+      if (r && r.width > box.nw * sc * 1.02) {
+        const dy = Math.max(0, H - r.visBottom);
+        const visW = (lb.r - lb.l) * r.width;
+        return {
+          width: r.width,
+          left: r.left,
+          top: r.top + dy,
+          artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)),
+          artW: Math.round(Math.min(W, visW)),
+          byFace: true
+        };
+      }
+    }
     return {
       width: box.nw * sc,
       left: W / 2 - (box.x + box.w / 2) * sc,
@@ -154156,6 +154542,7 @@ const CardAssistantArt = ({
     "data-card-art-known": box && box.known ? '1' : undefined,
     "data-card-art-h": fit ? fit.artH : undefined,
     "data-card-art-w": fit ? fit.artW : undefined,
+    "data-card-art-by-face": fit && fit.byFace ? '1' : undefined,
     className: `relative shrink-0 overflow-hidden ${className}`,
     style: style || undefined
   }, fit ? React.createElement("img", {
@@ -180143,6 +180530,16 @@ function MonsterHeroGame() {
   const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) {
+      setLoginBonusGuideClear(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT);
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -188334,6 +188731,7 @@ function MonsterHeroGame() {
       return next;
     });
     Audio_.se.levelUp();
+    const ranchNote = typeof assistantLifeRanchPerk === 'function' ? assistantLifeRanchPerk() : '';
     if (typeof growthFxMasuBondItem === 'function') {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       growthFxMasuBondItem({
@@ -188344,7 +188742,8 @@ function MonsterHeroGame() {
         count: n,
         gain: result.xpGain,
         before: result.before,
-        after: result.after
+        after: result.after,
+        note: ranchNote
       });
     }
     return result;
@@ -202373,7 +202772,7 @@ function MonsterHeroGame() {
     }, "ログインボーナス")), renderLoginBonusList(loginBonusTodayDay), React.createElement("button", {
       onClick: () => setShowLoginBonusList(false),
       className: "w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]"
-    }, "閉じる"))), loginBonusPopup && onboarded && !onboardingPreview && React.createElement("div", {
+    }, "閉じる"))), loginBonusPopup && onboarded && !onboardingPreview && !loginBonusGuideBusy && loginBonusGuideClear && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 60000,
