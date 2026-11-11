@@ -43,6 +43,11 @@
       "pure": true
     },
     {
+      "file": "18-assistant-partner.jsx",
+      "role": "助手の解放(これから始める人はアシストカードを40回使うと助手になる)の判定と、いまの値の入口",
+      "pure": true
+    },
+    {
       "file": "18-points-and-auto.jsx",
       "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
       "pure": true
@@ -278,6 +283,10 @@
     {
       "file": "59-screen-masu-mons.jsx",
       "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
+    },
+    {
+      "file": "59-assistant-partner-fx.jsx",
+      "role": "画面: 助手の解放の演出(カードが満ちる→影→立ち絵と一言→できるようになったこと)。見た目だけで保存に触らない"
     },
     {
       "file": "61-screen-masu-regen-donation.jsx",

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e973c8bc2378c40
+// source-sha256: 910a4103b4c1163a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13859,6 +13859,7 @@ const RELEASE_FLAGS = {
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
+  assistantPartnerUnlock: false,
   cardBattle: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
@@ -16150,6 +16151,184 @@ const beatRankAfter = (prev, {
     seeds
   };
 };
+const ASSISTANT_PARTNER_KEY = 'mh_assistant_partner_v1';
+const ASSISTANT_CARD_USES_KEY = 'mh_assistant_card_uses_v1';
+const ASSISTANT_PARTNER_NEED = 40;
+const assistantPartnerIdOk = id => typeof id === 'string' && id.length > 0 && id.length <= 40;
+const assistantPartnerIdList = value => {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const id of value) if (assistantPartnerIdOk(id) && !out.includes(id)) out.push(id);
+  return out;
+};
+const normalizeAssistantPartner = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const mode = src.mode === 'all' || src.mode === 'earn' ? src.mode : null;
+  const first = assistantPartnerIdOk(src.first) ? src.first : null;
+  const unlocked = assistantPartnerIdList(src.unlocked);
+  if (mode === 'earn' && first && !unlocked.includes(first)) unlocked.unshift(first);
+  return {
+    v: 1,
+    mode,
+    first,
+    unlocked,
+    noticed: assistantPartnerIdList(src.noticed)
+  };
+};
+const normalizeAssistantCardUses = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = {};
+  for (const [id, n] of Object.entries(src)) {
+    const v = Number(n);
+    if (assistantPartnerIdOk(id) && Number.isFinite(v) && v > 0) out[id] = Math.min(Math.floor(v), 1e9);
+  }
+  return out;
+};
+const assistantPartnerJudgeExisting = (state, {
+  wasOnboarded = false,
+  hasAssistant = false
+} = {}) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode) return {
+    state: s,
+    changed: false
+  };
+  if (!wasOnboarded && !hasAssistant) return {
+    state: s,
+    changed: false
+  };
+  return {
+    state: {
+      ...s,
+      mode: 'all'
+    },
+    changed: true
+  };
+};
+const assistantPartnerStartEarn = (state, firstId) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode || !assistantPartnerIdOk(firstId)) return {
+    state: s,
+    changed: false
+  };
+  return {
+    state: {
+      ...s,
+      mode: 'earn',
+      first: firstId,
+      unlocked: [firstId]
+    },
+    changed: true
+  };
+};
+const assistantPartnerAllowed = (state, id) => {
+  const s = normalizeAssistantPartner(state);
+  return s.mode !== 'earn' || s.unlocked.includes(id);
+};
+const assistantPartnerCountUse = (uses, state, id) => {
+  const u = normalizeAssistantCardUses(uses);
+  const s = normalizeAssistantPartner(state);
+  if (!assistantPartnerIdOk(id)) return {
+    uses: u,
+    state: s,
+    unlockedId: null,
+    stateChanged: false
+  };
+  const nextUses = {
+    ...u,
+    [id]: (u[id] || 0) + 1
+  };
+  if (s.mode === 'earn' && !s.unlocked.includes(id) && nextUses[id] >= ASSISTANT_PARTNER_NEED) {
+    return {
+      uses: nextUses,
+      state: {
+        ...s,
+        unlocked: [...s.unlocked, id]
+      },
+      unlockedId: id,
+      stateChanged: true
+    };
+  }
+  return {
+    uses: nextUses,
+    state: s,
+    unlockedId: null,
+    stateChanged: false
+  };
+};
+const assistantPartnerPendingNotice = (state, isOk = () => true) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode !== 'earn') return null;
+  return s.unlocked.find(id => id !== s.first && !s.noticed.includes(id) && isOk(id)) || null;
+};
+const assistantPartnerMarkNoticed = (state, id) => {
+  const s = normalizeAssistantPartner(state);
+  if (!assistantPartnerIdOk(id) || s.noticed.includes(id)) return {
+    state: s,
+    changed: false
+  };
+  return {
+    state: {
+      ...s,
+      noticed: [...s.noticed, id]
+    },
+    changed: true
+  };
+};
+const assistantPartnerAtsuJoinReady = (state, uses) => {
+  const s = normalizeAssistantPartner(state);
+  return s.mode === 'earn' && (normalizeAssistantCardUses(uses).atsu || 0) >= ASSISTANT_PARTNER_NEED;
+};
+let assistantPartnerNowState = normalizeAssistantPartner(null);
+let assistantPartnerNowUses = {};
+let assistantPartnerNowSeen = [];
+let assistantPartnerNowOwned = [];
+const assistantPartnerSetNow = ({
+  state,
+  uses,
+  seenStoryIds,
+  ownedCards
+} = {}) => {
+  if (state !== undefined) assistantPartnerNowState = normalizeAssistantPartner(state);
+  if (uses !== undefined) assistantPartnerNowUses = normalizeAssistantCardUses(uses);
+  if (seenStoryIds !== undefined) assistantPartnerNowSeen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
+  if (ownedCards !== undefined) assistantPartnerNowOwned = Array.isArray(ownedCards) ? ownedCards : [];
+};
+const assistantPartnerOkWith = (state, seenStoryIds, id) => {
+  if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, seenStoryIds)) return false;
+  return assistantPartnerAllowed(state, id);
+};
+const assistantPartnerOkNow = id => assistantPartnerOkWith(assistantPartnerNowState, assistantPartnerNowSeen, id);
+const assistantPartnerLockedNow = id => assistantPartnerNowState.mode === 'earn' && !assistantPartnerAllowed(assistantPartnerNowState, id);
+const assistantPartnerEarnNow = () => assistantPartnerNowState.mode === 'earn';
+const assistantPartnerCardName = id => {
+  const list = typeof TEACHING_CARDS !== 'undefined' && Array.isArray(TEACHING_CARDS) ? TEACHING_CARDS : [];
+  const card = list.find(c => c && c.id === id);
+  return card ? card.baseName : '';
+};
+const assistantPartnerProgressNow = id => ({
+  count: Math.min(assistantPartnerNowUses[id] || 0, ASSISTANT_PARTNER_NEED),
+  need: ASSISTANT_PARTNER_NEED,
+  cardName: assistantPartnerCardName(id),
+  cardOwned: assistantPartnerNowOwned.includes(id),
+  unlocked: assistantPartnerAllowed(assistantPartnerNowState, id)
+});
+const assistantPartnerIdsNow = () => {
+  const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+  return list.map(a => a && a.id).filter(id => assistantPartnerIdOk(id) && assistantPartnerOkNow(id));
+};
+const ASSISTANT_PARTNER_UNLOCK_LINES = Object.freeze({
+  mua: 'えっ、みゅあのカードいっぱい使ってくれてたの！？ まぢうれしい(｡ ˘_˘)ｳﾝｳﾝ これからは隣でいっしょにいこ！',
+  kiki: 'ききのカード、たくさん使ってくれてたんでつね (´ー`*)ウンウン 今日からは助手として、いっしょに火力で押していきましょ',
+  momosuke: 'ずっとももすけのカード使ってくれてたの、知ってたよ♡ これからは、もっと近くで応援させて！',
+  dra: 'おでのカード、何回も使ってくれたな。今度は、おでが隣で手伝う番だ',
+  atsu: 'あつの挑発、めっちゃ使ってくれてたじゃん笑 そこまでされたら、助手やるしかないでしょ！',
+  kyuko: 'きゅうこのカード、こんなに使ってくれてたんだねぇ😭 うれしい…今日から、ちゃんと隣にいるからね',
+  sorashido: 'ソラシドの自動化、かなり回してもらってましたね笑 なるほど了解です、ここからは助手として手伝います！',
+  erubin: '俺のカード、ずっと使ってくれてたんだね。ありがとう。これからは、隣でゆっくり見守るよ'
+});
+const assistantPartnerUnlockLine = id => ASSISTANT_PARTNER_UNLOCK_LINES[id] || 'これからは、助手としてよろしくね';
+const ASSISTANT_PARTNER_UNLOCK_EFFECTS = Object.freeze(['助手として選べる', '助手ライフで話す・贈る・部屋に入れる', '仲良し度が貯まる(ごほうびも届く)', '助手のマスモンを迎えられる']);
 const STAT_POINT_GAIN = {
   hp: 10,
   atk: 3,
@@ -66952,6 +67131,7 @@ function ItemInventoryScreen({
     className: "shrink-0 w-[84px] min-h-[44px] rounded-xl bg-teal-600 text-[12px] font-black text-white active:scale-95"
   }, "使う"))))));
 }
+const marketPartnerRibbon = cardId => cardId && typeof assistantPartnerLockedNow === 'function' && assistantPartnerLockedNow(cardId) && typeof ASSISTANTS !== 'undefined' && ASSISTANTS.some(a => a && a.id === cardId) ? '🤝 使うと助手になります' : null;
 const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack', 'data-card-shop-starter', 'data-card-shop-disc', 'data-card-shop-assist'];
 const cardShopScrollMemo = {
   pending: false,
@@ -67382,7 +67562,7 @@ function BreederMarketScreen({
       key: item.id
     }, showBase && React.createElement(MarketProductCard, {
       previewIcon: previewIcon,
-      ribbon: item.perk ? '🛍 助手のおすすめ 1割引き' : null,
+      ribbon: item.perk ? '🛍 助手のおすすめ 1割引き' : marketPartnerRibbon(item.type === 'assist' ? item.id : null),
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked || giftLocked,
@@ -67756,6 +67936,7 @@ function BreederMarketScreen({
         dataAttrs: {
           'data-card-shop-assist': offer.id
         },
+        ribbon: marketPartnerRibbon(offer.cardId),
         item: item,
         owned: owned,
         comingSoon: false,
@@ -67903,6 +68084,7 @@ function BreederMarketScreen({
       dataAttrs: {
         'data-event-point-assist': offer.id
       },
+      ribbon: marketPartnerRibbon(offer.cardId),
       item: item,
       owned: owned,
       comingSoon: false,
@@ -71589,6 +71771,192 @@ function MasuMonsScreen({
       }));
     }));
   })()));
+}
+const ASSISTANT_PARTNER_FX_CSS = `
+@keyframes mhPartnerGlow{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes mhPartnerFill{0%{width:70%}100%{width:100%}}
+@keyframes mhPartnerSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@keyframes mhPartnerRise{0%{transform:translateY(18px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes mhPartnerSil{0%{filter:brightness(0) drop-shadow(0 0 22px var(--mh-pc));opacity:0;transform:scale(.9)}100%{filter:brightness(0) drop-shadow(0 0 22px var(--mh-pc));opacity:1;transform:scale(1)}}
+.mh-partner-rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.12) 0 6deg,transparent 6deg 18deg);animation:mhPartnerSpin 18s linear infinite}
+@media (prefers-reduced-motion: reduce){.mh-partner-rays{animation:none}}
+`;
+function AssistantPartnerUnlockFx({
+  who,
+  cardName = '',
+  need = 40,
+  line = '',
+  effects = [],
+  onChoose,
+  onLater
+}) {
+  const reduce = (() => {
+    try {
+      return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch {
+      return false;
+    }
+  })();
+  const [step, setStep] = useState(reduce ? 2 : 0);
+  useEffect(() => {
+    if (step >= 2) return undefined;
+    const t = setTimeout(() => setStep(s => Math.min(s + 1, 2)), 800);
+    return () => clearTimeout(t);
+  }, [step]);
+  if (!who) return null;
+  const accent = who.accent || '#38bdf8';
+  const name = who.name || '';
+  const next = () => setStep(s => s < 2 ? 2 : s === 2 ? 3 : s);
+  const stand = expr => typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
+  const face = typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : '';
+  return React.createElement("div", {
+    "data-assistant-partner-fx": who.id,
+    "data-step": step,
+    onClick: step < 3 ? next : undefined,
+    className: "fixed inset-0 overflow-hidden select-none",
+    style: {
+      zIndex: 90500,
+      backgroundColor: '#05060f',
+      '--mh-pc': accent
+    }
+  }, React.createElement("style", null, ASSISTANT_PARTNER_FX_CSS), step >= 1 && step <= 2 && React.createElement("div", {
+    className: "mh-partner-rays",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    "aria-hidden": "true",
+    className: "absolute inset-0",
+    style: {
+      background: `radial-gradient(circle at 50% 45%, ${accent} 0, transparent 58%)`,
+      opacity: step === 1 ? .9 : step === 3 ? .35 : .55
+    }
+  }), React.createElement("div", {
+    className: "absolute inset-0 flex items-center justify-center",
+    style: {
+      padding: 'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))'
+    }
+  }, step === 0 && React.createElement("div", {
+    className: "flex flex-col landscape:flex-row items-center gap-6",
+    style: {
+      animation: 'mhPartnerGlow .4s ease-out'
+    }
+  }, React.createElement("div", {
+    className: "w-[150px] h-[210px] rounded-2xl flex flex-col items-center justify-center gap-2",
+    style: {
+      background: 'linear-gradient(160deg,#1e3a8a,#0f172a)',
+      border: `3px solid ${accent}`,
+      boxShadow: `0 0 30px ${accent}`
+    }
+  }, React.createElement("img", {
+    src: face,
+    alt: "",
+    className: "w-[92px] h-[92px] rounded-full object-cover border-[3px] border-white"
+  }), React.createElement("b", {
+    className: "text-[13px] font-black text-white text-center px-2"
+  }, cardName)), React.createElement("div", {
+    className: "text-center"
+  }, React.createElement("div", {
+    className: "text-[34px] font-black tabular-nums",
+    style: {
+      color: '#fde047',
+      textShadow: '0 0 14px #facc15'
+    }
+  }, need, " / ", need), React.createElement("div", {
+    className: "w-[220px] h-2.5 rounded-full bg-slate-800 overflow-hidden mx-auto my-1.5"
+  }, React.createElement("div", {
+    className: "h-full rounded-full",
+    style: {
+      background: 'linear-gradient(90deg,#38bdf8,#fde047)',
+      animation: 'mhPartnerFill .7s ease-out forwards'
+    }
+  })), React.createElement("div", {
+    className: "text-[12px] text-slate-300"
+  }, "モンヒロバトルで使った回数"))), step === 1 && React.createElement("img", {
+    src: stand('normal'),
+    alt: "",
+    className: "max-h-[78vh] max-w-[80vw] object-contain",
+    style: {
+      animation: 'mhPartnerSil .8s ease-out forwards'
+    }
+  }), step === 2 && React.createElement("div", {
+    className: "flex flex-col landscape:flex-row items-center justify-center gap-2 landscape:gap-6 w-full h-full"
+  }, React.createElement("img", {
+    src: stand('happy'),
+    alt: "",
+    className: "object-contain max-h-[56vh] landscape:max-h-[92vh] max-w-[90vw] landscape:max-w-[45vw]",
+    style: {
+      animation: 'mhPartnerRise .5s ease-out',
+      filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))'
+    }
+  }), React.createElement("div", {
+    className: "max-w-[360px] landscape:max-w-[420px] w-full",
+    style: {
+      animation: 'mhPartnerRise .6s ease-out'
+    }
+  }, React.createElement("div", {
+    className: "text-[12px] font-black text-center",
+    style: {
+      color: '#fde047',
+      letterSpacing: '.25em'
+    }
+  }, "NEW PARTNER"), React.createElement("div", {
+    className: "text-[24px] font-black text-white text-center whitespace-nowrap my-1"
+  }, name, "が助手になりました！"), React.createElement("div", {
+    "data-assistant-partner-line": true,
+    className: "rounded-2xl px-3 py-2.5 text-[13px] leading-relaxed text-slate-100",
+    style: {
+      background: 'rgba(15,23,42,.9)',
+      border: `2px solid ${accent}`
+    }
+  }, React.createElement("b", {
+    style: {
+      color: accent
+    }
+  }, name), "「", line, "」"), React.createElement("div", {
+    className: "text-[11px] text-slate-400 text-center mt-2"
+  }, "画面を押して次へ"))), step === 3 && React.createElement("div", {
+    className: "flex flex-col landscape:flex-row items-center justify-center gap-3 landscape:gap-6 w-full h-full",
+    style: {
+      animation: 'mhPartnerRise .4s ease-out'
+    }
+  }, React.createElement("img", {
+    src: stand('wink'),
+    alt: "",
+    className: "object-contain max-h-[38vh] landscape:max-h-[90vh] max-w-[80vw] landscape:max-w-[40vw]",
+    style: {
+      filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))'
+    }
+  }), React.createElement("div", {
+    className: "w-full max-w-[380px] landscape:max-w-[420px]"
+  }, React.createElement("div", {
+    className: "text-[19px] font-black text-white text-center mb-2"
+  }, name, "とできるようになったこと"), React.createElement("div", {
+    className: "flex flex-col gap-1.5"
+  }, effects.map(e => React.createElement("div", {
+    key: e,
+    className: "flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[12.5px] font-bold text-slate-100 border border-slate-700",
+    style: {
+      background: 'rgba(15,23,42,.8)'
+    }
+  }, React.createElement("b", {
+    className: "text-green-400"
+  }, "✓"), e))), React.createElement("div", {
+    className: "flex gap-2 mt-3"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-partner-choose": true,
+    onClick: onChoose,
+    className: "flex-[1.3] min-h-[46px] rounded-2xl font-black text-[14px] text-white active:scale-[.98]",
+    style: {
+      background: 'linear-gradient(#ec4899,#be185d)'
+    }
+  }, name, "を助手にする"), React.createElement("button", {
+    type: "button",
+    "data-assistant-partner-later": true,
+    onClick: onLater,
+    className: "flex-1 min-h-[46px] rounded-2xl font-black text-[14px] text-slate-300 bg-slate-800 border border-slate-600 active:scale-[.98]"
+  }, "あとで")), React.createElement("div", {
+    className: "text-[11px] text-slate-400 text-center mt-1.5"
+  }, "あとでも、HOME の助手アイコンからいつでも変えられます")))));
 }
 function MasuRegenerationScreen({
   MONSTER_CARD_CLASS,
@@ -187098,6 +187466,10 @@ function MonsterHeroGame() {
   const [missionTab, setMissionTab] = useState('daily');
   const missionClaimingRef = useRef(false);
   const [selectedAssistantId, setSelectedAssistantId] = useState(() => normalizeAssistantId(null));
+  const [assistantPartner, setAssistantPartner] = useState(() => normalizeAssistantPartner(null));
+  const [assistantCardUses, setAssistantCardUses] = useState({});
+  const assistantPartnerRef = useRef(normalizeAssistantPartner(null));
+  const assistantCardUsesRef = useRef({});
   const selectedAssistantIdRef = useRef(normalizeAssistantId(null));
   const [assistantChosen, setAssistantChosen] = useState(true);
   const [kikiIntroStep, setKikiIntroStep] = useState(null);
@@ -190260,6 +190632,42 @@ function MonsterHeroGame() {
   const [cardShopState, setCardShopState] = useState(null);
   const [cardPackOpen, setCardPackOpen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
+  assistantPartnerSetNow({
+    state: assistantPartner,
+    uses: assistantCardUses,
+    seenStoryIds: Array.isArray(rhythmEventStorySeen) ? rhythmEventStorySeen : [],
+    ownedCards: unlockedTeachingIds
+  });
+  const assistantPartnerRunUsesRef = useRef({});
+  const assistantPartnerRunUnlockedRef = useRef([]);
+  const assistantIsPartner = id => assistantPartnerOkWith(assistantPartnerRef.current, rhythmEventStorySeenRef.current, id);
+  const saveAssistantPartner = next => {
+    assistantPartnerRef.current = next;
+    setAssistantPartner(next);
+    void storeSet(ASSISTANT_PARTNER_KEY, next, false).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
+  };
+  const countAssistantCardUse = assistantId => {
+    const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
+    if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = {
+      ...assistantPartnerRunUsesRef.current,
+      [assistantId]: true
+    };
+    if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
+    assistantCardUsesRef.current = r.uses;
+    setAssistantCardUses(r.uses);
+    void storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
+    if (r.stateChanged) saveAssistantPartner(r.state);
+  };
+  useEffect(() => {
+    if (gameState === 'HOME') {
+      assistantPartnerRunUsesRef.current = {};
+      assistantPartnerRunUnlockedRef.current = [];
+    }
+  }, [gameState]);
+  const startAssistantPartnerEarn = firstId => {
+    const r = assistantPartnerStartEarn(assistantPartnerRef.current, firstId);
+    if (r.changed) saveAssistantPartner(r.state);
+  };
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   const [storyOneAtATime, setStoryOneAtATime] = useState(false);
   const storyShownThisHomeRef = useRef(false);
@@ -190537,11 +190945,11 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
-    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    if (assistantPartner.mode === 'earn' ? !assistantPartnerAtsuJoinReady(assistantPartner, assistantCardUses) : !assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
-  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  }, [rhythmEventStorySeen, assistantBonds, assistantPartner, assistantCardUses, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setKyukoJoinSeenForShop === 'function') setKyukoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID));
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantKyuko) return;
@@ -192159,6 +192567,21 @@ function MonsterHeroGame() {
         await storeSet('mh_onboarded', wasOnboarded, false);
       }
       const everOnboarded = wasOnboarded === true;
+      try {
+        const partnerRaw = await storeGet(ASSISTANT_PARTNER_KEY, null, false);
+        const judged = assistantPartnerJudgeExisting(partnerRaw, {
+          wasOnboarded: everOnboarded,
+          hasAssistant: savedAssistant != null
+        });
+        if (judged.changed) await storeSet(ASSISTANT_PARTNER_KEY, judged.state, false);
+        const usesLoaded = normalizeAssistantCardUses(await storeGet(ASSISTANT_CARD_USES_KEY, {}, false));
+        assistantPartnerRef.current = judged.state;
+        assistantCardUsesRef.current = usesLoaded;
+        setAssistantPartner(judged.state);
+        setAssistantCardUses(usesLoaded);
+      } catch (error) {
+        console.error('[assistant-partner] load failed:', error && error.message ? error.message : error);
+      }
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
@@ -193359,7 +193782,7 @@ function MonsterHeroGame() {
       await runGiftWrite(async () => {
         do {
           assistantBondRewardAgainRef.current = false;
-          const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current) ? 0 : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
+          const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current) || !assistantPartnerAllowed(assistantPartnerRef.current, who.id) ? 0 : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
           const savedGifts = await storeGet('mh_gifts', [], false);
           const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
           const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
@@ -193395,10 +193818,11 @@ function MonsterHeroGame() {
   }, [onboardingPreview]);
   useEffect(() => {
     if (dataLoaded) void deliverAssistantBondRewards();
-  }, [dataLoaded, deliverAssistantBondRewards, rhythmEventStorySeen]);
+  }, [dataLoaded, deliverAssistantBondRewards, rhythmEventStorySeen, assistantPartner]);
   const addAssistantBondFor = useCallback((assistantId, actionKey, amount = null) => {
     const id = normalizeAssistantId(assistantId);
     if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, rhythmEventStorySeenRef.current)) return;
+    if (!assistantPartnerAllowed(assistantPartnerRef.current, id)) return;
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
     const before = assistantBondLevelOf(current.points);
     const result = gainAssistantBond(current, actionKey, Date.now(), amount);
@@ -197027,6 +197451,44 @@ function MonsterHeroGame() {
       setDonationProcessing(false);
     }
   };
+  const assistantPartnerRunNode = () => {
+    if (debugBattle || assistantPartner.mode !== 'earn') return null;
+    const ids = Object.keys(assistantPartnerRunUsesRef.current || {});
+    if (!ids.length) return null;
+    const need = ASSISTANT_PARTNER_NEED;
+    const rows = ids.map(id => ({
+      id,
+      who: ASSISTANT_LIST.find(w => w.id === id),
+      n: Math.min(assistantCardUses[id] || 0, need),
+      done: assistantPartnerAllowed(assistantPartner, id)
+    })).filter(r => r.who && (r.done ? assistantPartner.first !== r.id && assistantPartnerRunUnlockedRef.current.includes(r.id) : true));
+    if (!rows.length) return null;
+    return React.createElement("div", {
+      "data-assistant-partner-run": true,
+      className: "w-full max-w-xs mx-auto mt-1.5 flex flex-col gap-1 shrink-0"
+    }, rows.map(r => React.createElement("div", {
+      key: r.id,
+      className: "rounded-xl border border-cyan-300/30 bg-slate-900/80 px-2.5 py-1 text-left"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2 text-[10.5px] font-black text-slate-100"
+    }, React.createElement("span", {
+      className: "truncate"
+    }, "🤝 「", assistantPartnerCardName(r.id), "」"), React.createElement("span", {
+      className: "tabular-nums shrink-0",
+      style: {
+        color: r.done ? '#fde047' : '#a5f3fc'
+      }
+    }, r.done ? `${r.who.name}が助手になりました！` : `${r.n} / ${need}`)), !r.done && React.createElement("div", {
+      className: "h-1 rounded-full bg-slate-800 overflow-hidden mt-0.5"
+    }, React.createElement("div", {
+      className: "h-full rounded-full",
+      style: {
+        width: `${Math.round(r.n / need * 100)}%`,
+        background: 'linear-gradient(90deg,#38bdf8,#a78bfa)'
+      }
+    })))));
+  };
+  const masuRegisterWithPartnerNode = () => React.createElement(React.Fragment, null, masuRegisterButtonNode(), assistantPartnerRunNode());
   const masuRegisterButtonNode = () => {
     if (debugBattle || mainHero?.debugOnly) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
@@ -202772,6 +203234,10 @@ function MonsterHeroGame() {
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
       const isBreeder = isAssistCard(card);
+      if (!entry.aiCopy && isBreeder && !debugBattleRef.current) {
+        const partnerCardId = assistantIdOfAssistCard(card.id);
+        if (partnerCardId) countAssistantCardUse(partnerCardId);
+      }
       if (!entry.aiCopy) {
         if (isBreeder && !debugBattleRef.current) {
           const cardAssistant = assistantIdOfAssistCard(card.id);
@@ -215919,7 +216385,10 @@ function MonsterHeroGame() {
     }, "冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。"), React.createElement("span", {
       "data-assistant-pick-later": true,
       className: "mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950"
-    }, "あとからいつでも変えられます")), (() => {
+    }, "あとからいつでも変えられます"), assistantPartner.mode !== 'all' && RELEASE_FLAGS.assistantPartnerUnlock === true && React.createElement("p", {
+      "data-assistant-pick-partner-note": true,
+      className: "text-[10px] text-cyan-200 mt-1.5 leading-tight"
+    }, "ほかの助手は、モンヒロバトルでその助手のアシストカードを使うと、助手として選べるようになります。")), (() => {
       const list = assistantsUnlockedFrom(rhythmEventStorySeen);
       const pickId = (list.some(w => w.id === assistantPickSel) ? assistantPickSel : null) || (list.some(w => w.id === selectedAssistantId) ? selectedAssistantId : null) || list[0] && list[0].id;
       const pick = list.find(w => w.id === pickId) || list[0];
@@ -215982,6 +216451,7 @@ function MonsterHeroGame() {
         type: "button",
         "data-assistant-pick-confirm": true,
         onClick: () => {
+          if (!onboardingPreview && RELEASE_FLAGS.assistantPartnerUnlock === true) startAssistantPartnerEarn(pick.id);
           chooseAssistant(pick.id);
           markKikiIntroSeen();
           markMomosukeIntroSeen();
@@ -216068,7 +216538,7 @@ function MonsterHeroGame() {
         mode: mode || BATTLE_MODE_SPECIES_CHALLENGE
       }),
       rhythmHistoryCount: rhythmHistoryCount,
-      unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag),
+      unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => (who.id !== 'momosuke' || momosukeIntroSeenFlag) && assistantPartnerAllowed(assistantPartner, who.id)),
       onReplayPeerTalk: talk => setPeerReplay(talk),
       peerItems: typeof assistantLifeGiftCounts === 'function' ? assistantLifeGiftCounts(ownedItems) : {
         gift: ownedItemCount(ownedItems, 'peer_gift'),
@@ -217823,7 +218293,27 @@ function MonsterHeroGame() {
     }, "仲良し度の呼び方に戻す")) : React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showAssistantPicker && React.createElement("div", {
+    }, "閉じる"))), (() => {
+      if (onboardingPreview || !dataLoaded || bootPhase !== 'GAME' || gameState !== 'HOME' || eventReplay || rhythmEventStoryPending || rhythmHellGuide || showAssistantPicker) return null;
+      const id = assistantPartnerPendingNotice(assistantPartner, x => assistantPartnerOkWith(assistantPartner, rhythmEventStorySeen, x));
+      const who = id ? ASSISTANT_LIST.find(w => w.id === id) : null;
+      if (!who || typeof AssistantPartnerUnlockFx !== 'function') return null;
+      const done = choose => {
+        const r = assistantPartnerMarkNoticed(assistantPartnerRef.current, who.id);
+        if (r.changed) saveAssistantPartner(r.state);
+        if (choose) chooseAssistant(who.id);
+      };
+      return React.createElement(AssistantPartnerUnlockFx, {
+        key: who.id,
+        who: who,
+        cardName: assistantPartnerCardName(who.id),
+        need: ASSISTANT_PARTNER_NEED,
+        line: assistantPartnerUnlockLine(who.id),
+        effects: ASSISTANT_PARTNER_UNLOCK_EFFECTS,
+        onChoose: () => done(true),
+        onLater: () => done(false)
+      });
+    })(), showAssistantPicker && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
@@ -217837,7 +218327,10 @@ function MonsterHeroGame() {
       className: "text-base font-black text-white mb-1 text-center"
     }, "いっしょに遊ぶ助手"), React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。"), React.createElement("div", {
+    }, "いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。"), assistantPartner.mode === 'earn' && React.createElement("p", {
+      "data-assistant-partner-note": true,
+      className: "text-[9px] text-cyan-200 text-center -mt-2 mb-3 leading-tight"
+    }, "モンヒロバトルで助手のアシストカードを", ASSISTANT_PARTNER_NEED, "回使うと、その助手を選べるようになります(オートも数えます)。"), React.createElement("div", {
       className: "space-y-2 mb-3"
     }, ASSISTANT_LIST.filter(who => assistantReleased(who.id)).map(who => {
       const active = who.id === selectedAssistantId;
@@ -217857,6 +218350,46 @@ function MonsterHeroGame() {
       }, "？？？"), React.createElement("small", {
         className: "block text-[9px] text-slate-500 leading-tight"
       }, who.id === 'atsu' ? '助手たちともっと仲良くなると、会えるかもしれません。' : assistantUnlockStoryId(who.id) ? 'イベントの話を最後まで見ると選べるようになります。' : 'HOMEでの出会いを見ると選べるようになります。')));
+      if (!assistantPartnerAllowed(assistantPartner, who.id)) {
+        const need = ASSISTANT_PARTNER_NEED;
+        const n = Math.min(assistantCardUses[who.id] || 0, need);
+        const cardName = assistantPartnerCardName(who.id);
+        const owned = Array.isArray(unlockedTeachingIds) && unlockedTeachingIds.includes(who.id);
+        return React.createElement("div", {
+          key: who.id,
+          "data-assistant-partner-locked": who.id,
+          className: "w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60"
+        }, React.createElement("span", {
+          className: "shrink-0",
+          style: {
+            opacity: .6,
+            filter: 'saturate(.35)'
+          }
+        }, React.createElement(AssistantFace, {
+          who: who,
+          size: 52,
+          accent: "#64748b",
+          expression: "normal"
+        })), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("b", {
+          className: "block text-[12px] font-black text-slate-300"
+        }, who.name, React.createElement("span", {
+          className: "ml-1 rounded-full bg-slate-700 px-1.5 py-0.5 text-[8.5px] text-slate-200 align-middle"
+        }, "まだ助手ではありません")), React.createElement("small", {
+          className: "block text-[9px] text-slate-400 leading-tight mt-0.5"
+        }, owned ? React.createElement(React.Fragment, null, "「", cardName, "」をモンヒロバトルで使った回数 ", React.createElement("b", {
+          className: "text-slate-200 tabular-nums"
+        }, n, " / ", need)) : React.createElement(React.Fragment, null, "「", cardName, "」を手に入れて、モンヒロバトルで", need, "回使うと選べます")), owned && React.createElement("span", {
+          className: "block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"
+        }, React.createElement("span", {
+          className: "block h-full rounded-full",
+          style: {
+            width: `${Math.round(n / need * 100)}%`,
+            background: 'linear-gradient(90deg,#38bdf8,#a78bfa)'
+          }
+        }))));
+      }
       return React.createElement("button", {
         key: who.id,
         type: "button",
@@ -222665,7 +223198,7 @@ function MonsterHeroGame() {
     }, "ヘルプへ戻る")))), gameState === 'CHAMPION' && React.createElement(ChampionScreen, {
       autoRepeat: autoRepeat,
       finalRewardSummary: finalRewardSummary,
-      masuRegisterButtonNode: masuRegisterButtonNode,
+      masuRegisterButtonNode: masuRegisterWithPartnerNode,
       openSpeciesChallengeSelection: openSpeciesChallengeSelection,
       resultActionPending: resultActionPending,
       resultProcessing: resultProcessing,
@@ -222685,7 +223218,7 @@ function MonsterHeroGame() {
     }), hp <= 0 && !debugBattle && !runBackgroundAllowed && React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
-      masuRegisterButtonNode: masuRegisterButtonNode,
+      masuRegisterButtonNode: masuRegisterWithPartnerNode,
       resultActionPending: resultActionPending,
       returnToHome: returnToHome,
       runHighlights: runHighlights,
@@ -222695,7 +223228,7 @@ function MonsterHeroGame() {
     }), gaveUp && !debugBattle && !runBackgroundAllowed && React.createElement(GaveUpScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
-      masuRegisterButtonNode: masuRegisterButtonNode,
+      masuRegisterButtonNode: masuRegisterWithPartnerNode,
       resultActionPending: resultActionPending,
       returnToHome: returnToHome,
       runMode: runMode,
