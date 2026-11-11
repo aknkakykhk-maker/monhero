@@ -22500,6 +22500,10 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
 ]);
 // ===== ASSISTANT_LIFE_TALKS ここまで =====
 
+// ===== ASSISTANT_LIFE_DAILY_TALKS ここから(tools/assistant/life-daily-import.js で生成・手で直さない) =====
+const ASSISTANT_LIFE_DAILY_TALKS = {"lines":{},"scenes":[],"rares":[]};
+// ===== ASSISTANT_LIFE_DAILY_TALKS ここまで =====
+
 // ===== ASSISTANT_PEER_REWRITES ここから(tools で生成・手で直さない) =====
 // 元: docs/progress/assistant-peer/lines/tsumugi-rewrite.txt。作り直し: node tools/assistant/peer-rewrite-table.js
 // 公開の印 assistantLife が真のときだけ使う(今の文は上の ASSISTANT_PEER_TALKS などに残したまま。id は変えない)
@@ -24350,6 +24354,3 @@ const ASSISTANT_PEER_REACTION_REWRITES = Object.freeze({
   sorashido: { token:{ e:'happy', t:'友情のしるし・・・でーじうれしいです・・・！ {c}、ありがとうございます' } },
 });
 // ===== ASSISTANT_PEER_REWRITES ここまで =====
-// ===== ASSISTANT_LIFE_DAILY_TALKS ここから(tools/assistant/life-daily-import.js で生成・手で直さない) =====
-const ASSISTANT_LIFE_DAILY_TALKS = {"lines":{},"scenes":[],"rares":[]};
-// ===== ASSISTANT_LIFE_DAILY_TALKS ここまで =====
