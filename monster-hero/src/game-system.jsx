@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a24cd1d81f4eb00
+// generated-sha256: ad7330aca33da852
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14655,7 +14655,7 @@ const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
   Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
   Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'}),
   Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
-  Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った子がいれば必殺技・ガードの厚い相手に貫通の構え'}),
+  Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'}),
 ]);
 // ai … { level, pressure:[4](敵がその間合いにいるときの味方の攻めの強さ), aliveSlots:[], lowCount, maxDef, lastType }
 const tacticsEnemyAiBestDist = (currentDist, pressure) => {
