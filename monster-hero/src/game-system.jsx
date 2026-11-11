@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ee84312051d569e3
+// generated-sha256: 6836c5b16bf602ea
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38982,10 +38982,10 @@ const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
     face: growthFxAssistantFace(assistantId, 'excited'), gains });
 };
 // マスモンに絆経験値のアイテムを使った(60-app.jsx の useBondXpTickets から)
-const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after }) => {
+const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after, note = '' }) => {
   if (!before || !after || !(growthFxNum(gain) > 0)) return;
   const pct = (info) => growthFxPct((growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext))) * 100);
-  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`,
+  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`, sub: note ? String(note) : undefined,
     faces: image ? [image] : [], faceRound: true,
     rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
 };
@@ -39326,6 +39326,7 @@ const GrowthFxItemCard = ({ sheet, level, onClose }) => {
         {(sheet.faces || []).length > 0 && <div className="faces">{sheet.faces.map((src, i) => <img key={i} src={src} alt="" className={sheet.faceRound ? 'round' : ''} style={{ animationDelay: `${0.4 + i * 0.15}s` }}/>)}</div>}
         <div className="ttl">{sheet.title}{reaction && <span className={`tag ${reaction}`}>{reaction === 'like' ? '大好き！' : 'ちょっと苦手…'}</span>}</div>
         {sheet.item && <div className="itm">{sheet.item}</div>}
+        {sheet.sub && <div className="itm" data-growth-fx-note>{sheet.sub}</div>}
         {(sheet.rows || []).map((row, i) => {
           const rk = growthFxKind(row.kind);
           const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
@@ -43783,6 +43784,7 @@ function MasuInheritedUniqueCompensation({
 function MasuRebirthAnimation({
   rebirthAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
 
       const starList=breakthroughStars(rebirthAnimation.masu.rebirthCount||1);
       const finalBreak=isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
@@ -43801,6 +43803,7 @@ function MasuRebirthAnimation({
 function MasuTranscendAnimation({
   transcendAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-transcend-animation" role="status" aria-live="polite">
       <div className="mh-transcend-converge" aria-hidden="true"><i style={{'--i':0}}/><i style={{'--i':1}}/><i style={{'--i':2}}/><i style={{'--i':3}}/><i style={{'--i':4}}/><i style={{'--i':5}}/><i style={{'--i':6}}/><i style={{'--i':7}}/></div>
@@ -43820,6 +43823,7 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
   // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
   const a = soulRankAnimation;
@@ -43856,6 +43860,7 @@ function MasuSoulRankAnimation({
 function MasuReincarnateAnimation({
   reincarnateAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-reincarnation-animation" role="status" aria-live="polite">
       {/* 層の順番はCSSのz-indexで決めている(放射光0 → 本体1 → 粒2 → 輪3 → 閃光5 → 文字6)。
@@ -43882,6 +43887,7 @@ function MasuReincarnateAnimation({
 function MasuDonationAnimation({
   donationAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>
   );
@@ -44939,6 +44945,7 @@ function MasuFusionScreen({
   setFusionSubId, setFusionSubIds, setMasuMonDetail, lockedMasuIds=[],
   fusionInheritSkillKeys={}, setFusionInheritSkillKeys=()=>{},
 }) {
+  React.useEffect(()=>{ if(fusionResultData&&typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[!!fusionResultData]); // 助手ライフ: 合体を終えたとき、神殿にいる助手との仲良し度(1日1回)
 
       // 戻り先(TEMPLE)の指定は本体に残す。この画面は「閉じる」とだけ言う
       const closeFusion = onClose;
@@ -47151,6 +47158,8 @@ function HomeScreen({
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket}; });
   const homeSceneRef=React.useRef(null);
   const [homeSceneWide,setHomeSceneWide]=React.useState(false);
   React.useEffect(()=>{
@@ -64008,7 +64017,8 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 // chatWith(id, { asleep, follow }) … その助手とのおしゃべりを、助手ライフの上に開く(本体 60-app.jsx が入れる・2026-11-08 社長 ❼〜❿ 助手部ココロ)
 // chatFollowLine(id) … 声をかけたあとの続きのカードのひとこと { kind:'ask'|'offer'|'plain', text, value? }(呼び方の話の日・社長 ❾)
 //   公開の印 assistantCallname が偽のあいだは null のまま(部屋に「おしゃべりする」も続きのカードも出ない)
-const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null };
+// goPlace … HOME が入れておく { ranch, temple, market } の開き方(「いま行くと得なこと」から施設へ行く。HOME の札と同じ動き)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null, goPlace: null, masmonTrainBoost: null, marketPerkToday: null };
 // いまカード部屋にいる助手(段階2の読むだけの口 assistantLifeCardIds。無い・こわれているときはだれもいない)
 const assistantLifeHouseCardIds = () => {
   try { const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : []; return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
@@ -64990,6 +65000,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   ) : null;
   const houseView = (
     <div className="relative pt-1">
+      {uiV2 && typeof AssistantLifeNowPerks === 'function' && <AssistantLifeNowPerks life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}/>}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
       {lifeStatusList}
@@ -65910,6 +65921,119 @@ function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, di
       </span>
       {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
     </button>);
+}
+
+// ===== STEP2: 「✨ いま行くと得なこと」と施設の得(2026-11-11 社長) =====
+//   どれも助手がその場所にいるあいだだけ・上限つき・ランキングに効かない。新しく保存するのは「神殿でその日もう受け取ったか」だけ
+const ASSISTANT_LIFE_PERK_KEY = 'mh_assistant_life_perks_v1'; // { day: 'YYYY-MM-DD'(朝4時区切り), temple: 受け取った助手のid('' = まだ) }
+const ASSISTANT_LIFE_PERK_STORE = {
+  loaded: false, p: null, state: { day: '', temple: '' },
+  async load() { if (this.loaded) return this.state; if (!this.p) this.p = Promise.resolve(storeGet(ASSISTANT_LIFE_PERK_KEY, null, false)).then(v => { this.state = assistantLifePerkNormalize(v); this.loaded = true; return this.state; }).catch(() => { this.loaded = true; return this.state; }); return this.p; },
+};
+// 保存値が無い・壊れているときは「まだ受け取っていない」
+const assistantLifePerkNormalize = (v) => ({ day: v && typeof v.day === 'string' ? v.day : '', temple: v && typeof v.temple === 'string' ? v.temple : '' });
+const assistantLifePerkDay = () => (typeof assistantPeerDayKey === 'function' ? assistantPeerDayKey() : '');
+const assistantLifeTempleDone = () => { const s = ASSISTANT_LIFE_PERK_STORE.state; return !!s.temple && s.day === assistantLifePerkDay(); };
+// 神殿・M/B管理・マーケットの得は、新UIでも旧UIでも全員に入る(2026-11-11 社長。帯「いま行くと得なこと」を見るのは新UIだけ)
+const ASSISTANT_LIFE_TEMPLE_BOND = 30; // 神殿で操作を終えたときの仲良し度(assistants.js の lifeTemple。1日1回)
+
+// その場所にいて起きている助手(出会っている人だけ)
+const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  return !!w && w.place === place && w.doing !== 'sleep';
+});
+
+// 神殿の得: 合体・転生などの操作を終えたとき(62-screen-masu-temple.jsx・66-screen-masu-fusion.jsx から1行で呼ぶ)、temple にいる助手の仲良し度を少し。1日1回
+const assistantLifeTemplePerk = async () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    await ASSISTANT_LIFE_PERK_STORE.load();
+    if (assistantLifeTempleDone()) return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const who = assistantLifeAtPlace(assistantLifeCurrent(), ids, 'temple')[0];
+    if (!who) return null;
+    const next = { day: assistantLifePerkDay(), temple: who };
+    ASSISTANT_LIFE_PERK_STORE.state = next; // 先に印を付ける(二重に上げない)
+    try { storeSet(ASSISTANT_LIFE_PERK_KEY, next, false); } catch (_) {}
+    if (typeof assistantLifeAddBondWithFx === 'function') assistantLifeAddBondWithFx(who, 'lifeTemple', ASSISTANT_LIFE_TEMPLE_BOND);
+    return who;
+  } catch (_) { return null; }
+};
+
+// M/B管理の得: トレーニングチケットを使ったとき(60-app.jsx の useBondXpTickets から)、ranch にいる助手のマスモンの育ちが伸びる。
+//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口 ASSISTANT_LIFE_LINKS.masmonTrainBoost(キズナ4が assistantMasmonTrainBoost を入れる)(1日1回は向こうで数える)。無ければ何もしない。
+//   返り値: 演出に足す一文('' = 何も起きなかった)
+const assistantLifeRanchPerk = () => {
+  try {
+    const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const names = [];
+    for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
+      let ok = false; try { ok = boost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; }
+      if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
+    }
+    return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
+  } catch (_) { return ''; }
+};
+
+// マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
+//   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
+const assistantLifeMarketWho = () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
+  } catch (_) { return null; }
+};
+
+// 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
+const assistantLifePerkRows = (life, ids, nameOf) => {
+  const rows = [];
+  if (!life) return rows;
+  const nm = (list) => list.map(nameOf).join('・');
+  const L = typeof ASSISTANT_LIFE_LINKS !== 'undefined' ? ASSISTANT_LIFE_LINKS : {};
+  const go = L.goPlace || {};
+  try {
+    const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } }) : [];
+    if (beat.length) rows.push({ k: 'beat', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
+  } catch (_) {}
+  try {
+    const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
+    if (card.length) rows.push({ k: 'card', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+  } catch (_) {}
+  const temple = assistantLifeAtPlace(life, ids, 'temple');
+  if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
+  // 🛍 マーケット: 助手がいるあいだ、おすすめ品1つが1割引き(1日1回)。開発部が ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday と入れる。それが { itemName, discountedCost, used } を返す
+  try {
+    const mk = assistantLifeAtPlace(life, ids, 'market');
+    const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
+    if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
+  } catch (_) {}
+  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
+  if (ranch.length) rows.push({ k: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
+  return rows;
+};
+
+// 家のいちばん上の帯。3行まで+「ほか◯件」。行を押すとその施設へ(onGo で画面を閉じてから呼ぶ)
+function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
+  const rows = assistantLifePerkRows(life, ids, nameOf);
+  const [more, setMore] = React.useState(false);
+  if (!rows.length) return null;
+  const shown = more ? rows : rows.slice(0, 3);
+  const rest = rows.length - shown.length;
+  return (
+    <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2 text-white`} data-assistant-life-now-perks={rows.length}>
+      <p className="text-[13px] font-black text-amber-200">✨ いま行くと得なこと</p>
+      {shown.map(r => (
+        <button key={r.k} type="button" data-assistant-life-now-perk={r.k} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
+          className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-60">
+          <span className="w-6 shrink-0 text-center text-[20px] leading-none" aria-hidden="true">{r.icon}</span>
+          <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-snug" style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
+          {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
+        </button>))}
+      {rest > 0 && <button type="button" data-assistant-life-now-perks-more className="mt-1 min-h-[36px] w-full text-right text-[11.5px] font-black text-amber-200" onClick={() => setMore(true)}>ほか {rest} 件 ▼</button>}
+    </section>);
 }
 
 // ===== STEP3: タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。道具は「🎁 贈る」の中、引き合わせるは「きずな」へ =====
@@ -104254,11 +104378,13 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    // 助手ライフ: M/B管理にいる助手のマスモンも少し育つ(プレイヤーの経験値は増やさない)
+    const ranchNote = typeof assistantLifeRanchPerk === 'function' ? assistantLifeRanchPerk() : '';
     // 使った瞬間の演出(見た目だけ)
     if (typeof growthFxMasuBondItem === 'function') {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       growthFxMasuBondItem({ masuName: masu.name, image: base && base.iconUrl, itemName: item.name, itemEmoji: item.emoji, count: n, gain: result.xpGain,
-        before: result.before, after: result.after });
+        before: result.before, after: result.after, note: ranchNote });
     }
     return result;
   };
