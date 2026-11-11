@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 624810a16662caf9
+// source-sha256: 57f88502a8eeeaec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107105,7 +107105,8 @@ const ASSISTANT_LIFE_LINKS = {
   chatWith: null,
   chatFollowLine: null,
   goPlace: null,
-  masmonTrainBoost: null
+  masmonTrainBoost: null,
+  marketPerkToday: null
 };
 const assistantLifeHouseCardIds = () => {
   try {
@@ -111839,6 +111840,15 @@ const assistantLifeRanchPerk = () => {
     return '';
   }
 };
+const assistantLifeMarketWho = () => {
+  try {
+    if (!assistantLifeUiV2On() || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
+  } catch (_) {
+    return null;
+  }
+};
 const assistantLifePerkRows = (life, ids, nameOf) => {
   const rows = [];
   if (!life) return rows;
@@ -111876,6 +111886,16 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`,
     go: typeof go.temple === 'function' ? go.temple : null
   });
+  try {
+    const mk = assistantLifeAtPlace(life, ids, 'market');
+    const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
+    if (pk && !pk.used && pk.itemName) rows.push({
+      k: 'market',
+      icon: '🛍',
+      text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`,
+      go: typeof go.market === 'function' ? go.market : null
+    });
+  } catch (_) {}
   const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
   if (ranch.length) rows.push({
     k: 'ranch',
