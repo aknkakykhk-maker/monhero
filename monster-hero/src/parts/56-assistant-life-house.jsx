@@ -684,6 +684,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           <div className="mhl-row"><span className="k">🤝 友情Lv</span><span className="flex flex-wrap gap-x-3 text-[11px]">{friends.map(f => <span key={f.id}>{assistantLifeName(f.id)} <b className={f.lv >= 5 ? 'text-pink-300' : f.lv >= 3 ? 'text-amber-300' : ''}>Lv{f.lv}</b></span>)}</span></div>
           {typeof AssistantLifeGiftLikesRow === 'function' && <AssistantLifeGiftLikesRow id={id} compact={land}/>}
           {typeof AssistantMasmonRoomRow === 'function' && <AssistantMasmonRoomRow id={id} onOpen={onMasmon}/>}
+          {typeof AssistantMasmonNoteRoomLink === 'function' && <AssistantMasmonNoteRoomLink id={id}/>}
           {/* 1人に贈ったチェキ(❸A)。その助手ひとりの1枚 */}
           {soloOn && typeof AssistantLifeChekiRow === 'function' && <AssistantLifeChekiRow pair={[id]}/>}
           {sess && <div className="mhl-row" data-assistant-life-room-session-row><span className="k">🎵 セッション</span><b>セッションLv{sess.level}</b><span className="ml-auto text-[10px] text-slate-300">一緒に {sess.lives}回</span></div>}
@@ -1303,6 +1304,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         onWatch={() => { if (unwatched[0]) watch(unwatched[0]); }} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }} onRoad={() => setTab('friends')} onGuide={() => setGuideOpen(true)}/>}
       {uiV2 && !topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
       {uiV2 && typeof AssistantLifePlanBand === 'function' && <AssistantLifePlanBand ids={ids} land={land}/>}
+      {typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札(キズナ・印 assistantMasmonPlan が偽なら何も出さない) */}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       {/* トップの家を出すときは、下の家の絵と「みんなの今」の一覧は出さない(同じものが上にある。2026-11-11 社長「部屋の列は外す」) */}
       {!topOn && <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>}
@@ -1391,6 +1393,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
           land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
+        {typeof AssistantMasmonNoteHost === 'function' && <AssistantMasmonNoteHost land={land}/>}
         {masmonId && typeof AssistantMasmonSheet === 'function' && <AssistantMasmonSheet id={masmonId} land={land} bondLv={typeof bondLevelOf === 'function' ? bondLevelOf(masmonId) : null} onClose={() => setMasmonId(null)}/>}
         {typeof AssistantLifeTownPersonCard === 'function' && <AssistantLifeTownPersonCard life={life} land={land}/>}
         {boardOpen && (
