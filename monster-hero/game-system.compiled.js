@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 31094d5f8fba7eac
+// source-sha256: 3f8d77ee599d8702
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -182,6 +182,10 @@ const MH_PAGE_OFFSET_GUARD = (() => {
     if (document.visibilityState === 'visible') soon();
   });
   soon();
+  document.addEventListener('click', reset, {
+    capture: true,
+    passive: true
+  });
   ['gesturestart', 'gesturechange'].forEach(type => document.addEventListener(type, e => {
     if (e.cancelable) e.preventDefault();
   }, {

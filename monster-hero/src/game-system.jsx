@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da4ac009383c657b
+// generated-sha256: f2fbf8d2cd40c5b0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60,7 +60,7 @@ const MH_SCREEN_TRAIL=(()=>{
 //      拡大そのものは index.html の touch-action と、下の gesturestart で止める。残っていた拡大は viewport の書き直しで戻す。
 //   ② 見るきっかけに、起動のとき・ほかのアプリから戻ったとき(pageshow / visibilitychange)を足す。
 //   ③ ずれを見つけたら、画面の出来事の記録(MH_SCREEN_TRAIL の vv)に残す(次に起きたとき、何がずれていたかが分かる)。
-// 見るのは出来事のあった時だけ(毎コマ・毎タップでは見ない)。演奏の判定・スコアには関わらない。
+// 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
 const MH_PAGE_OFFSET_GUARD=(()=>{
   if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
   const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
@@ -130,6 +130,9 @@ const MH_PAGE_OFFSET_GUARD=(()=>{
   window.addEventListener('pageshow',soon,passive);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')soon();});
   soon();
+  // ボタンなどを押したとき(click)にも1回だけ見る。きっかけの合図が何も来ないままずれていても、次のひと押しで戻る。
+  // 演奏エリアは click が出ない(自前で touch を止めている)ので、演奏中は動かない。ずれていなければ数を読むだけ
+  document.addEventListener('click',reset,{capture:true,passive:true});
   // 2本指の拡大を、どの画面でも始めさせない(Safari だけにある合図。touch-action を知らない古い iOS のため)。
   // 演奏中は 30-rhythm-play.jsx が同じことをしている(回数も数えている)。重ねて止めても変わらない
   ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));

@@ -25,7 +25,8 @@ ok('index.html がページの拡大を止めている(touch-action: pan-x pan-y
 ok('見張りは visualViewport の位置と倍率も見る',/vv\.offsetTop/.test(guard)&&/vv\.offsetLeft/.test(guard)&&/vv\.scale/.test(guard));
 ok('見張りは起動のとき・戻ってきたときにも見る',["'load'","'pageshow'","'visibilitychange'"].every(k=>guard.includes(k)));
 ok('見張りは入力中は戻さない',/const reset=\(\)=>\{\s*if\(editing\(\)\)return;/.test(guard));
-ok('見張りは毎タップ・毎コマでは動かない',!/touchstart|pointerdown|requestAnimationFrame/.test(guard));
+ok('見張りは演奏中のタッチ・毎コマでは動かない',!/touchstart|touchmove|pointerdown|pointermove|requestAnimationFrame/.test(guard));
+ok('見張りは押したとき(click)にも見る',/document\.addEventListener\('click',reset,\{capture:true,passive:true\}\)/.test(guard));
 ok('2本指の合図(gesturestart)をどの画面でも止める',/\['gesturestart','gesturechange'\]\.forEach\(type=>document\.addEventListener\(type,e=>\{if\(e\.cancelable\)e\.preventDefault\(\);\},\{passive:false\}\)\)/.test(guard));
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.ico':'image/x-icon'};
 // iPhone のまね: viewport の拡大の縛りを外す。/old/ から始まる道は、直す前の形(touch-action も無い)
@@ -110,8 +111,36 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
       ok('③ 窓を閉じたあとの画面で広げても拡大されない',same(s),show(s));
       const trail=await page.evaluate(()=>{try{return JSON.parse(localStorage.getItem('mh_screen_trail_v1')||'[]');}catch(_){return [];}});
       ok('  ずれていないときは、記録を増やさない',!trail.some(x=>x&&x.k==='vv'));
+      // 合図が何も来ないままページがずれていても、次のひと押しで戻る(どの画面のボタンでも同じ道)
+      const healed=await page.evaluate(async()=>{
+        const spacer=document.createElement('div');spacer.style.cssText='height:400px';document.body.appendChild(spacer);
+        const prev=document.documentElement.style.overflow;document.documentElement.style.overflow='visible';
+        window.scrollTo(0,120);
+        await new Promise(r=>setTimeout(r,900));   // スクロールの合図で動く見張りが済むのを待つ
+        window.scrollTo(0,120);const before=Math.round(window.scrollY);
+        document.body.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        const after=Math.round(window.scrollY);
+        spacer.remove();document.documentElement.style.overflow=prev;
+        return {before,after};
+      });
+      ok('⑤ ページがずれていても、次のひと押し(click)で0へ戻る',healed.before>0&&healed.after===0,`${healed.before} → ${healed.after}`);
       const ta=await page.evaluate(()=>{const el=document.createElement('div');el.style.touchAction='none';document.getElementById('root').appendChild(el);const v=getComputedStyle(el).touchAction;el.remove();return v;});
       ok('④ touch-action:none の所はそのまま',ta==='none',ta);
+      await ctx.close();
+    }
+    // 横向き(本体を横に持った形)でも同じ
+    {
+      const ctx=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:1});
+      const page=await ctx.newPage();
+      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
+      await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
+      const cdp=await ctx.newCDPSession(page);
+      const pts=d=>[{x:422-d,y:200,id:1},{x:422+d,y:200,id:2}];
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:pts(20)});
+      for(let d=30;d<=80;d+=10){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:pts(d)});await page.waitForTimeout(16);}
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(350);
+      const sc=await page.evaluate(()=>Math.round(visualViewport.scale*100)/100);
+      ok('③ 横向きの画面で広げても拡大されない',sc===1,`倍率 ${sc}`);
       await ctx.close();
     }
   }catch(error){
