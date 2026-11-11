@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 23a9d06206f10fe9
+// source-sha256: bbc64fe6dfab9693
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19279,7 +19279,7 @@ const assistantMarketPerkMarkUsed = async () => {
   } catch {}
 };
 const assistantMarketPerkToday = () => {
-  if (typeof assistantLifeMarketWho !== 'function' || !assistantLifeMarketWho()) return null;
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
   const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
   if (!item) return null;
   if (!assistantMarketPerkState.loaded) {

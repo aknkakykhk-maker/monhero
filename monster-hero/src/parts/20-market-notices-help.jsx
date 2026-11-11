@@ -413,7 +413,7 @@ const assistantMarketPerkMarkUsed = async () => {
 // 助手がいまマーケットにいて、今日のおすすめ品があるときだけ { itemId, itemName, discountedCost, used } を返す(無ければ null)。
 // 保存の読み込みが済むまでは null(まだ「使ったか」が分からないので出さない)。助手ライフの帯が ASSISTANT_LIFE_LINKS.marketPerkToday 経由で呼ぶ
 const assistantMarketPerkToday = () => {
-  if (typeof assistantLifeMarketWho !== 'function' || !assistantLifeMarketWho()) return null;
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
   const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
   if (!item) return null;
   if (!assistantMarketPerkState.loaded) { void assistantMarketPerkLoad(); return null; }

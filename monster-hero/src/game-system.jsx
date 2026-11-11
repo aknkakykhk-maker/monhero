@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bbb13e3957b40aaf
+// generated-sha256: 9aa4f39b0b89effc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13256,7 +13256,7 @@ const assistantMarketPerkMarkUsed = async () => {
 // 助手がいまマーケットにいて、今日のおすすめ品があるときだけ { itemId, itemName, discountedCost, used } を返す(無ければ null)。
 // 保存の読み込みが済むまでは null(まだ「使ったか」が分からないので出さない)。助手ライフの帯が ASSISTANT_LIFE_LINKS.marketPerkToday 経由で呼ぶ
 const assistantMarketPerkToday = () => {
-  if (typeof assistantLifeMarketWho !== 'function' || !assistantLifeMarketWho()) return null;
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
   const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
   if (!item) return null;
   if (!assistantMarketPerkState.loaded) { void assistantMarketPerkLoad(); return null; }
