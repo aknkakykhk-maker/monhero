@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e228fd423b98b70
+// generated-sha256: fa162344eb4845dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9707,7 +9707,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
-  assistantLifeFriendBond: false, // フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳(56-assistant-life-friend-bond)。社長の「この文で」と表(assistant_life_friend_likes)のあとで真に
+  assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
@@ -41384,6 +41384,9 @@ function BreederMarketScreen({
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
   const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
+  // 助手ライフの道具・家具の札には、印と上がる物の段を出す(段の高さは同じ一覧の札でそろえる)
+  const lifeNoteOf = (offer)=>typeof assistantLifeShopNoteOf==='function'?assistantLifeShopNoteOf(offer.itemId):null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer=>!!lifeNoteOf(offer));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -41667,9 +41670,14 @@ function BreederMarketScreen({
               <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
               <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
             </>:null;
+            const lifeNoteDef=offer.legendPass?null:lifeNoteOf(offer);
+            const lifeNote=lifeNoteDef?<>
+              <span data-market-life-mark className={`whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone==='f'?'bg-emerald-200 text-emerald-950':lifeNoteDef.tone==='p'?'bg-pink-300 text-pink-950':'bg-amber-400 text-slate-900'}`}>{lifeNoteDef.mark}</span>
+              {lifeNoteDef.lines.map((t,i)=><span key={i} className={`whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i===1&&lifeNoteDef.tone!=='a'?'text-slate-400':'text-amber-200'}`}>{t}</span>)}
+            </>:null;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id,...(/^peer_/.test(String(offer.itemId||''))?{'data-event-point-life-gift':offer.itemId}:{})}}
               item={item} owned={false} comingSoon={false}
-              noteSlot={legendPassSlot} note={passNote}
+              noteSlot={noteSlotOn} note={passNote||lifeNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}
@@ -52752,6 +52760,33 @@ function MasuAutoEnhanceScreen({
 //
 // 一覧と中身は同じ画面で切り替える(selected が null なら一覧)。
 // 画面(gameState)を2つに分けると、戻るたびに一覧を組み直すことになるため。
+// 終わったイベントの横長の告知画像。押すと大きく見られる(2026-11-11)。画像の無い回・読めなかったときは何も出さない。
+// 表示専用。保存も報酬も触らない
+function RhythmHistoryBanner({ event }) {
+  const src = rhythmEventBanner(event);
+  const [failed, setFailed] = useState(false);
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => { setFailed(false); setZoom(false); }, [src]);
+  if (!src || failed) return null;
+  const name = event && event.name ? event.name : 'イベント';
+  return (
+    <>
+      <button type="button" data-rhythm-history-banner onClick={() => setZoom(true)} aria-label={`${name}の画像を大きく見る`}
+        className="relative mb-2 block w-full overflow-hidden rounded-2xl border border-fuchsia-300/30 active:scale-[.98]">
+        <img src={src} alt={`${name}の告知`} onError={() => setFailed(true)} loading="lazy" decoding="async" className="block w-full landscape:max-h-[45vh] landscape:object-contain landscape:bg-black/40"/>
+        <span aria-hidden="true" className="absolute bottom-1 right-1 rounded-lg bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-white">🔍 大きく見る</span>
+      </button>
+      {zoom && (
+        <div data-rhythm-history-banner-zoom role="dialog" aria-label={`${name}の画像`} onClick={() => setZoom(false)}
+          className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-2 bg-black/85 p-3">
+          <img src={src} alt={`${name}の告知`} className="max-h-[80%] max-w-full rounded-xl object-contain"/>
+          <button type="button" data-rhythm-history-banner-close onClick={() => setZoom(false)}
+            className="min-h-[44px] rounded-xl bg-white/15 px-6 text-xs font-black text-white">閉じる</button>
+        </div>
+      )}
+    </>
+  );
+}
 function RhythmHistoryScreen({
   entries, selected, board, divisionId, rankingBreederIcon,
   onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
@@ -52850,6 +52885,7 @@ function RhythmHistoryScreen({
         )}
         {selected&&(
           <>
+            {selected.kind==='limited'&&<RhythmHistoryBanner event={selected.event}/>}
             <div className="mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3">
               <div className="flex items-center gap-2">
                 <span className="rounded-lg bg-slate-800 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-400">終了</span>
@@ -68253,6 +68289,22 @@ const assistantLifeGiftOf = (kindOrKey) => {
   const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === g.itemId) || {};
   return { ...g, solo: assistantLifeIsSoloOnly(g.key), name: item.name || offer.name || '', emoji: item.emoji || offer.emoji || '🎁', cost: Number.isFinite(offer.cost) ? offer.cost : null };
 };
+// 交換所の札の段(2026-11-11 社長「この形で」・止め絵 gift-walkthrough/shop-note-still)。持ち物の id(peer_・solo_・furn_)から、印と上がる物を返す(道具でも家具でもなければ null)
+// 見せ方だけ。量は贈る窓と同じ数(好みで変わる前の「ふつう」)
+const assistantLifeShopNoteOf = (itemId) => {
+  const id = String(itemId || '');
+  if (/^furn_/.test(id)) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
+    if (!f) return null;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return { tone: 'f', mark: '🪑 家具', lines: [`💗 +${base}`, '初回だけ'] };
+  }
+  const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
+  if (!g) return null;
+  return assistantLifeIsSoloOnly(g.key)
+    ? { tone: 'p', mark: '💗 1人に', lines: [`💗 +${g.player}`, '1人用'] }
+    : { tone: 'a', mark: '🤝 2人に', lines: [`友情Lv +${g.peer}`, `💗 +${g.player}`] };
+};
 // 持っている数(60-app の ownedItems から)。{ [kind]: 数 }
 const assistantLifeGiftCounts = (ownedItems) => {
   const o = {};
@@ -68886,7 +68938,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden" aria-hidden="true">{info.emoji}</span>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-black text-white"><span data-assistant-life-give-name>{info.name}</span> <span className={`whitespace-nowrap text-[11px] ${have > 0 ? 'text-amber-200' : 'text-violet-300'}`} data-assistant-life-give-have={have}>{have > 0 ? `持っている ${have}個` : '持っていない'}</span>{info.cost != null && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400"> ビートP交換所 {info.cost}P</span>}</p>
-            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{info.what}</p>
+            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what}</p>
           </div>
         </div>
         <div className="mt-1.5 space-y-1 text-[12px]">
@@ -73207,7 +73259,11 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   const o = opts && typeof opts === 'object' ? opts : {};
   const preview = !ambbOn();
   if (preview && o.from !== 'debug') return false;
-  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, at: Date.now() });
+  // デバッグからだけ: 本物のサーバでフレンド対戦を1回通す(窓口の確かめ・2026-11-11)。
+  //   タイセンの口は印 assistantMasmonBattlePvp を見るので、この起動のあいだだけ印を真にする(読み込み直すと偽に戻る・保存しない)
+  const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
+  if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
+  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, tryPvp, at: Date.now() });
   return true;
 };
 // 「できること」の1行。印が偽なら null(ボタンを出さない)
@@ -73255,7 +73311,7 @@ const AMBB_CSS = `
 .ambb-if{padding:8px;border-radius:12px;background:rgba(96,165,250,.14);margin-top:6px}
 `;
 
-function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClose }) {
+function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
   const save = useAmbbSave();
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -73346,7 +73402,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.assistantId } } }));
   };
 
-  const pvp = ambbPvpOn() && !preview;
+  // 確かめ(印が偽)ではフレンド対戦を出さない。デバッグの「フレンド対戦を試す」だけは出す(この端末の保存はしないまま)
+  const pvp = (ambbPvpOn() && !preview) || (!!tryPvp && typeof masmonPvpChallenge === 'function');
   const srcNow = pvp ? (src || (foes.length ? 'local' : 'friend')) : 'local';
   // フレンド対戦: サーバが回した試合(種と編成)を同じ計算で見返す。勝ち負けはサーバの返りが正本
   const startPvp = (m, foe) => {
@@ -73488,7 +73545,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
           {srcNow === 'local' && <button className="ambw-btn" data-ambb-start disabled={!foeId} onClick={start}>⚔ 対戦する</button>}
           <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
         </div>
-        {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。</p>}
+        {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。{tryPvp ? 'フレンド対戦は本物のサーバに登録・記録されます。' : ''}</p>}
       </div>
     );
   } else if (phase === 'rank' && pvp) {
@@ -74884,7 +74941,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const tiles = (
     <div data-alf-visit-acts>
       {typeof AlfBondBar === 'function' && <AlfBondBar friend={friend} more={more} compact={land} onOpen={() => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(true); }}/>}
-      <p className="mb-1 text-[10px] font-black text-slate-200">この家でできること</p>
+      {!(land && typeof albEnabled === 'function' && albEnabled()) && <p className="mb-1 text-[10px] font-black text-slate-200">この家でできること</p>}
       <div className="grid grid-cols-3 gap-1.5">
         <button type="button" className="mhl-tile mhl-call" disabled={!home.length} data-alf-visit-act="talk" onClick={() => home[0] && greet(home[0])}><i>💬</i><b>話す</b><small>{home.length ? `家にいる ${home.length}人` : 'いまはだれも'}</small></button>
         <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => { setRoomId(h.ids[0] || null); if (h.ids[0]) bondMark('find'); }}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
@@ -75237,6 +75294,8 @@ const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '�
 const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
 const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
 
+// 来てくれた日のスタンプは「公開の時」から数える(2026-11-11 社長「公開の日から数える」)。これより前に書かれた表の行はスタンプにしない
+const ALB_START = { at: Date.parse('2026-11-11T21:09:00+09:00') };
 const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
 const albLv = (st) => ALB_STEPS.filter(n => st >= n).length;
 const albTitle = (st) => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
@@ -75264,7 +75323,7 @@ const normalizeAssistantLifeFriendBond = (v) => {
     f[id] = {
       st: alfInt(x.st, 0, 9999), t: { talk: t.talk === true, find: t.find === true, note: t.note === true }, done: x.done === true,
       liked: (Array.isArray(x.liked) ? x.liked : []).filter(s => typeof s === 'string' && ALB_SPOT_RE.test(s)).slice(0, ALB_MAX.likes),
-      in: (Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(-12),
+      in: [...new Set((Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-12),
       snap: albNormalizeSnap(x.snap),
     };
   }
@@ -75317,7 +75376,7 @@ const albIncoming = (pairs) => {
     if (!alfSafeOther(fid) || typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
     const x = albOne(b, fid);
     if (x.in.includes(day)) continue;
-    b = { ...b, f: { ...b.f, [fid]: { ...x, st: Math.min(9999, x.st + 1), in: [...x.in, day].slice(-12) } } };
+    b = { ...b, f: { ...b.f, [fid]: { ...x, st: Math.min(9999, x.st + 1), in: [...new Set([...x.in, day])].sort().slice(-12) } } }; // 昇順で持つ(表の行は新しい順で届く。足した順のまま切ると、まだ読む7日の中の日が落ちて数え直しになる)
     gained.push(fid);
   }
   if (b !== b0) albSave(b);
@@ -75327,7 +75386,7 @@ const albCountIncoming = async (s = ALF_STORE.state) => {
   if (!albEnabled() || !s.selfId) return [];
   await albLoad();
   const names = new Set((s.roster || []).map(f => f.id)); const muted = new Set(s.settings.muted);
-  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && v.at >= ALB_START.at && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
 };
 
 // ---------- B 今日の見どころ・すてき ----------
@@ -75476,12 +75535,12 @@ function AlfBondBar({ friend, more, onOpen, compact = false }) {
   const fresh = albSpots(friend.house, more, x.snap).filter(p => p.isNew).length;
   const full = !x.done && s.bond.houses >= ALB_MAX.houses;
   return (
-    <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-1 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
+    <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-0.5 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
       <span className="min-w-0 flex-1">
-        <b className="block truncate text-[11.5px] font-black text-pink-100" data-alb-bar-title>🤝 友情Lv{albLv(x.st)}「{albTitle(x.st)}」{compact ? (x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`) + (fresh ? ` ・ ✨${fresh}` : '') : ''}</b>
+        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🤝 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🤝 友情Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
         <small className={`truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`} data-alb-bar-sub>{x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`}{fresh ? ` ・ ✨ 見どころ ${fresh}` : ''}</small>
       </span>
-      <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-5 w-5' : 'h-6 w-6'} items-center justify-center rounded-full text-[12px] not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
+      <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-4 w-4 text-[10px]' : 'h-6 w-6 text-[12px]'} items-center justify-center rounded-full not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
       <span className="shrink-0 text-[12px] font-black text-pink-200">›</span>
     </button>);
 }
@@ -75498,12 +75557,12 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
   return (
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alb-sheet>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={onClose}/>
-      <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 14, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
         <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🤝 {friend.name}さんとの友情 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200">「{albTitle(x.st)}」 ・ スタンプ {x.st}個{nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''}</p>
         <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2.5 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
-        <div className="mt-1 grid grid-cols-3 gap-1" data-alb-tasks>{ALB_TASKS.map(([k, icon, label]) => <div key={k} className={`rounded-xl px-1 py-1.5 text-center text-[11px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`}>{icon} {label}{x.t[k] ? ' ✔' : ''}</div>)}</div>
+        <div className="mt-1 grid grid-cols-3 gap-1" data-alb-tasks>{ALB_TASKS.map(([k, icon, label]) => <div key={k} className={`whitespace-nowrap rounded-xl px-0.5 py-1.5 text-center text-[10.5px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`}>{icon} {label}{x.t[k] ? ' ✔' : ''}</div>)}</div>
         <p className="mt-1 text-[10px] leading-snug text-slate-300">この家で3つすると、今日のスタンプが1個たまります(1軒につき1日1個・1日{ALB_MAX.houses}軒まで)。{friend.name}さんにも、あなたが来た日に1個たまります。</p>
         <p className="mt-2.5 text-[12px] font-black text-amber-200">✨ {x.snap ? '今日の見どころ(前に来たときから)' : 'この家の見どころ'}</p>
         <div data-alb-spots>
@@ -75829,6 +75888,9 @@ const masmonPvpFriends = async () => {
 //         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
 //         toGutsOnHit ダメージを与えたらガッツへ(ひのこ) / safeOnHit 当てた子は次の自分の番までダメージ0(陽炎) / gutsFromDiscard(n) 当てたら捨て札からランダムに n 枚をガッツへ(なめろう) /
 //         nextOwnCost(n,kinds) 当てた子が次に使うその種類の技のガッツ −n(天河天翔・重ねない・KO で消える。mons[].costDown) /
+//         costUpOnHit(n) 当てた子は、次の相手のターン、ちから技・かしこさ技の払うガッツ +n(アクアウェイブ・クリスタルレイン。重ねず大きいほう。mons[].costUp) /
+//         costUpAll(n) 特殊: 次の相手のターン、水中にいない相手全員のちから技・かしこさ技の払うガッツ +n(アクアドーム。水中かはそのターンに見る。players[].costUpAll)
+//         ★水牢2つは足し合わせる(当てた +1 とアクアドームの +2 で +3)。払うガッツの計算は cardActionCost の1か所(cardCostUpOf)
 //         守り: toGutsAfterUse 使ったら捨て札でなくガッツへ(九重神眼) / 特殊: gutsFromDiscardNow(n) 捨て札からランダムに n 枚をガッツへ(霊魂操作)
 //         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
 //         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
@@ -76036,6 +76098,17 @@ const cardTakeFromHand = (st, p, idxs) => {
   return taken;
 };
 
+// 水牢(ウンディーネ 2026-11-11): その子がそのターンに出すちから技・かしこさ技に足すガッツ。
+//   mons[].costUp … 当てられた子だけ(アクアウェイブ・クリスタルレイン)/ players[].costUpAll … 水中にいない子全員(アクアドーム。水中かはそのターンで見る)
+const cardCostUpOf = (st, p, mi, turn) => {
+  const me = st && st.players && st.players[p];
+  const mon = me && Number.isInteger(mi) && mi >= 0 ? me.mons[mi] : null;
+  if (!mon || mon.ko) return 0;
+  const T = Number.isFinite(turn) ? turn : st.turn;
+  const one = mon.costUp && mon.costUp.turn === T ? Number(mon.costUp.n) || 0 : 0;
+  const all = me.costUpAll && me.costUpAll.turn === T && cardMonType(mon, T) !== 'water' ? Number(me.costUpAll.n) || 0 : 0;
+  return one + all;
+};
 // 攻撃の総ガッツ(付ける札も含む)。技のぶん(組の札も)に、付けた札の「ガッツ-n・半分・0」と友情の証を効かせてから、付けた札のぶんを足す
 const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map((i) => cardOf(db, hand[i])).filter(Boolean);
@@ -76051,7 +76124,9 @@ const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   if (att.some((c) => cardHasEff(c, 'attachCostHalf'))) main = Math.ceil(main / 2);
   att.forEach((c) => { const e = cardEff(c, 'attachCost'); if (e) main -= e.n; });
   if (att.some((c) => cardHasEff(c, 'attachFree'))) main = 0;
-  return cardFieldCostOf(st, Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0));
+  // 水牢: ちから技・かしこさ技を出すときだけ +n(特殊・防御・回避・ブリーダーのカードは増えない)
+  const up = core[0] && (core[0].kind === 'pow' || core[0].kind === 'int') && core[0].user !== 'breeder' && st ? cardCostUpOf(st, p, mi) : 0;
+  return cardFieldCostOf(st, Math.max(0, main) + up + att.reduce((s, c) => s + (c.guts || 0), 0));
 };
 // 付けた札の効き目をまとめる(ダメージ +n・×n と、守りの縛り)。攻撃を出すときとコンピューターの見積もりで同じものを使う
 const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
@@ -76625,6 +76700,13 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
+    // 水牢(アクアウェイブ・クリスタルレイン): 当てた子は、次の相手のターン、ちから技・かしこさ技の払うガッツ +n(重ねがけは大きいほう)
+    const cu = cardEff(main, 'costUpOnHit');
+    if (cu && t.p !== pd.attacker && !target.ko && target.life > 0) {
+      const prev = target.costUp && target.costUp.turn === st.turn + 1 ? target.costUp.n : 0;
+      target.costUp = { turn: st.turn + 1, n: Math.max(prev, cu.n) };
+      cardLog(st, `${target.name}は次のターン、ちから技・かしこさ技のガッツ+${target.costUp.n}`);
+    }
     // なめろう(キュービ): 相手のガッツを減らしたあと、自分の捨て札からランダムに n 枚をガッツへ(相手が減少を無効にしても行う・1回の攻撃で1度だけ)
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
@@ -76726,6 +76808,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'unlimitedAttacks' && self) { self.unlimited = st.turn; cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`); }
     if (e.t === 'breederUnlimited') { st.breederFree = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`); }
     if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`); }
+    // アクアドーム: 次の相手のターン、水中にいない相手全員のちから技・かしこさ技 +n(重ねがけは大きいほう)
+    if (e.t === 'costUpAll') { const prev = opp.costUpAll && opp.costUpAll.turn === st.turn + 1 ? opp.costUpAll.n : 0; opp.costUpAll = { turn: st.turn + 1, n: Math.max(prev, e.n) }; cardLog(st, `次のターン、${opp.name}の水中にいないモンスターは、ちから技・かしこさ技のガッツ+${opp.costUpAll.n}`); }
     if (e.t === 'stunAllEnemies') { opp.mons.forEach((m) => { if (!m.ko) m.stunTurn = st.turn + 1; }); cardLog(st, '相手のモンスターは全員、次のターン攻撃できない'); }
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
     if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次のターンを飛ばす`); }
@@ -77089,7 +77173,12 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0; // 純血のスピード
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
   // 払うのは「そのとき払うガッツ」(全体カードで変わる)。集中を付けた技には、払うガッツが0の守りは出せない
-  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts); };
+  // 「2以上のガッツを使う技」を回避する札(潜る・見切りなど)は、攻める子が払う数(水牢込み・使える子でいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null)).filter((x) => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
+  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
   const unseen = [...opp.hand, ...opp.deck];
@@ -77191,6 +77280,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'liftTarget') score += 0.3;
       if (e.t === 'taunt') score += 0.9 * habit.disrupt;
       if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter((m) => !m.ko).length * 1.0;
+      // アクアドーム(ウンディーネ): 相手のガッツが2〜4のときだけ使う(設計書の測定でいちばん良かった仮の値。少ないと高くしても意味が薄く、多いと払えてしまう)
+      if (e.t === 'costUpAll') { const op = st.players[cardOther(p)]; const g = op.guts.length; const nw = op.mons.filter((m) => !m.ko && cardMonType(m, st.turn + 1) !== 'water').length; score += g >= 2 && g <= 4 ? nw * 0.9 * habit.disrupt : -1.5; }
       // もう「次のターン攻撃できない」印が付いている子に重ねても効き目が無い(2026-10-27 見回り: EXPERT・MASTER で1試合に約0.3回)
       if (e.t === 'stunTarget' && tmon) score += tmon.stunTurn > st.turn ? -3 : 0.8 + (tmon.life / Math.max(1, tmon.max)) * 0.6;
       if (e.t === 'skipTurn') score += 3;
@@ -77254,6 +77345,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts; // この札がガッツに戻る
         if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6); // 次の自分のターンまでダメージ0
         const gfd = cardEff(main, 'gutsFromDiscard'); if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts; // 捨て札からガッツ
+        if (cardHasEff(main, 'costUpOnHit')) score += (1 - ev) * (tm.costUp && tm.costUp.turn === st.turn + 1 ? 0 : 0.5) * habit.disrupt; // 水牢: 次のターンの技が重くなる(もう付いていれば効き目なし)
         if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3); // 次のかしこさ技が軽くなる
       }
     });
@@ -77934,6 +78026,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'breederUnlimited') v += 0.4;
       if (e.t === 'taunt') v += 0.6 * habit.disrupt;
       if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'costUpAll') v += 0.6; // アクアドーム
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
@@ -77971,6 +78064,7 @@ const cardAiCardValue = (card, habit) => {
   if (eff('safeOnHit')) dmg += 0.8;    // 陽炎: 当てたら次の自分のターンまでダメージ0
   const gfd = cardEff(card, 'gutsFromDiscard'); if (gfd) dmg += 0.4 * gfd.n; // なめろう: 捨て札からガッツ
   if (eff('nextOwnCost')) dmg += 0.6;  // 天河天翔: 次のかしこさ技が軽くなる
+  if (eff('costUpOnHit')) dmg += 0.5;  // 水牢(アクアウェイブ・クリスタルレイン): 当てた子の次のターンの技が重くなる
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
@@ -80589,15 +80683,16 @@ const CARD_AI_FACE_NOISE = Object.freeze({
 // 決めた振り分け(2026-11-08 自動で探した結果。EXPERT・MASTER で、どの顔もその助手の今の勝率に近い物。docs/progress/card-ai-faces/README.md の強さの表)
 //   探し方: 蛇行6通り+混ぜた割り当てから始め、2つの組の種を1つずつ入れかえて、いちばんずれの小さい物を残した(作業場所の道具。1組60戦)
 //   使う前に、決まり(重なり4割まで・主役2体以上ちがう)と、カードの種と合っているかを確かめる。合わなければ、下の手順で探し直す
+// ウンディーネ(2026-11-11)は、キュービを入れた組に足した(どの組でも主役・仲間に選ばれず、4つのデッキの3体は足す前と同じ。card-undine-check が見張る)
 const CARD_AI_FACE_LAYOUTS = Object.freeze({
-  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
-  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
-  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
-  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
-  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
-  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
-  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
-  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'undine', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
+  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'undine', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
+  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'undine', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'undine', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
+  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'undine', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'undine', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
+  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
 });
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
@@ -81868,7 +81963,7 @@ const CARD_RULE_PAGES = Object.freeze([
 //
 // 1パックの中身(どの弾も同じ): 8枚・300ビートP(5パックまとめて 1,350)。技などの枠7・モンスターの枠1(最後にめくる)
 // 技などの枠: その弾の「準備中でない」カード(その弾の種族の技・配った全モンスター/ブリーダーのカード)から同じ確率で1枚
-// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04))、そのレア度のモンスターから同じ確率で1枚
+// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04)とウンディーネ・スネグーラチカ(2026-11-11))、そのレア度のモンスターから同じ確率で1枚
 //   (「まだ持っていない種族を2倍」は社長の決めでなくした。混血はキラの無い通常のモンスターとして通常に入る)
 // 天井: その弾のパックでキラも別絵キラも出ないまま7パック開けたら、8パック目のモンスターの枠はキラ以上(弾ごとに数える)
 // だぶり(自動でビートPへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血も 50
@@ -81886,7 +81981,8 @@ const CARD_PACKS = Object.freeze([
   { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
   // ミーア(C-069・ピクシー×？？？)・スプーキー(C-070・ゴースト×？？？)は、メインの種族の弾(第2弾・第4弾)ではなく第8弾に入れる(2026-11-04 社長。
   //   第8弾の袋の絵に描かれているため)。hybrids は「この混血はこの弾」の指名(元の番号。キラ・別絵キラも同じ弾)
-  { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], hybrids: ['C-069', 'C-070'], color: '#ec4899' },
+  // ウンディーネ(とスネグーラチカ。メインがウンディーネなので指名なしで第8弾)は 2026-11-11 に足した(社長「第8弾に追加」)
+  { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora', 'undine'], hybrids: ['C-069', 'C-070'], color: '#ec4899' },
 ].map((p) => Object.freeze({
   ...p, hybrids: Object.freeze(p.hybrids || []), name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
   rarity: Object.freeze((p.no <= 3 || p.no === 5 || p.no === 7 || p.no === 8) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 }), pity: true,
@@ -82600,8 +82696,8 @@ const cardBgmOf = (v) => {
 const cardBgmRandomOne = () => { const all = cardBgmAllTracks(); return all.length ? all[Math.floor(Math.random() * all.length)] : null; };
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
-// キュービ(2026-11-04 新血統)はモンヒロにいる子なので、本編の立ち絵(ALL_PLAYER_MONSTERS.Kyubi)
-const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost', kyubi: 'Kyubi' });
+// キュービ(2026-11-04 新血統)・ウンディーネ(2026-11-11)はモンヒロにいるモンスターなので、本編の立ち絵(ALL_PLAYER_MONSTERS.Kyubi・Undine)
+const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost', kyubi: 'Kyubi', undine: 'Undine' });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
   gali: typeof MF_GALI_IMG !== 'undefined' ? MF_GALI_IMG : null,
@@ -82787,6 +82883,10 @@ const cardMonStatuses = (st, p, m) => {
   else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({ key: 'water', short: '水中', left: left(mon.waterUntil), text: '持ちょうが水中', tone: 'type', pill: true });
   (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
   if (mon.cocoon) out.push({ key: 'cocoon', short: 'まゆ', left: '', text: '羽化のほかのカードは出せない', tone: 'down', pill: true });
+  // 水牢(ウンディーネ 2026-11-11): この子の番(今か次)に、ちから技・かしこさ技のガッツが増える
+  const cuT = T + (st.active === p ? 0 : 1);
+  const cu = typeof cardCostUpOf === 'function' ? cardCostUpOf(st, p, m, cuT) : 0;
+  if (cu > 0) out.push({ key: 'costUp', short: `水牢+${cu}`, left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は、ちから技・かしこさ技の消費ガッツが+${cu}`, tone: 'down', pill: true });
   if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は攻撃できない`, tone: 'down', pill: false });
   return out;
 };
@@ -84368,7 +84468,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    // 払う数は、水牢・天河天翔・全体カードなどを入れた「いま払う数」(使える子のうちいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(c, m) ? mi : -1)).filter((mi) => mi >= 0);
+    const need = users.length ? Math.min(...users.map((mi) => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
@@ -92076,7 +92179,7 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
 //   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
 //   9 → 10: ガッツの段から攻撃に戻る手(backToAttack)を足した(2026-10-27 社長)
-const CARD_REPLAY_RULES = 11; // 11: 捨て札からガッツ(なめろう・霊魂操作)を、2台で同じ札を選ぶ形に(2026-11-08。マルチが止まった直し)/ 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
+const CARD_REPLAY_RULES = 12; // 12: ウンディーネの水牢(costUpOnHit・costUpAll。払うガッツが変わる・2026-11-11)/ 11: 捨て札からガッツ(なめろう・霊魂操作)を、2台で同じ札を選ぶ形に(2026-11-08。マルチが止まった直し)/ 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -119661,6 +119764,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
                   <DebugMenuRow data-debug-masmon-battle-watch icon="🐾" label="助手マスモンの対戦を見る(試作)" desc="助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません" onClick={()=>setMasmonBattleWatchOpen(true)}/>
                   <DebugMenuRow data-debug-masmon-battle-beta icon="⚔" label="助手マスモンの対戦 β(公開前の確かめ)" desc="じゅんび→観戦→振り返り→ランキングを本物のマスモンで。印が偽のあいだは何も保存しません" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug'});}}/>
+                  <DebugMenuRow data-debug-masmon-battle-pvp-try icon="👥" label="助手マスモンのフレンド対戦を試す(本物のサーバ)" desc="この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug',tryPvp:true});}}/>
               </DebugMenuGroup>
 
               <DebugMenuGroup id="monster-look" title="🧬 モンスターの見た目" desc="育成マーク(転生・限界突破・超越)・模様・プロフィールの顔アイコン">
