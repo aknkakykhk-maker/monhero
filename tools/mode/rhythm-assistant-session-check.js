@@ -140,8 +140,10 @@ check('助手のスコアをランキングへ送らない(助手の計算の部
 {
   const APP = P('60-app.jsx');
   // 演奏画面には「読むだけの窓」を置くだけ。窓へ書くのは hud・曲・時刻だけで、演奏画面の中では窓を読まない
-  const writes = PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+(?:===|=)/g) || [];
-  const reads = (PLAY.match(/RHYTHM_PLAY_WATCH\.[a-zA-Z]+/g) || []).length;
+  // jd・frames は、マルチの観戦(2026-11-11)のために足した「見られているあいだだけ判定の番号をためる配列」と「フレームの数」。
+  //   演奏画面は書き足すだけで、判定・スコアには使わない(読むのは送る側 77 の watchSend だけ)。数から外す
+  const writes = PLAY.match(/RHYTHM_PLAY_WATCH\.(?!jd\b|frames\b)[a-zA-Z]+(?:===|=)/g) || [];
+  const reads = (PLAY.match(/RHYTHM_PLAY_WATCH\.(?!jd\b|frames\b)[a-zA-Z]+/g) || []).length;
   check('演奏画面は窓(RHYTHM_PLAY_WATCH)に書くだけで、判定・スコアに使わない', writes.length >= 4 && writes.every((w) => /\.(hud|songId|timeMs)=/.test(w) || /===/.test(w)) && reads === writes.length, `${reads}か所`);
   check('顔とひとことは演奏画面の外(60-app)から、マルチで印が立っているときだけ重ねる', /gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)&&<RhythmAssistSessionPlayFace /.test(APP));
   check('ビートP の上乗せは、セッションLv とデュオの両方(rhythmAssistSessionRewardBonusNow)', /assistBonus=rhythmPlay\.from==='multi'&&rhythmAssistSessionEnabled\(\)\?rhythmAssistSessionRewardBonusNow\(\):0/.test(APP));

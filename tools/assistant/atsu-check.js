@@ -116,7 +116,7 @@ check('見たかどうかは既存の「見終えたお話の id」の並びで�
   /RHYTHM_EVENT_STORY_IDS = \[[^\]]*ATSU_JOIN_STORY_ID[,\]]/.test(app) && /atsuJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(ATSU_JOIN_STORY_ID\)/.test(app)
   && !/mh_[a-z_]*atsu[a-z_]*_seen/.test(app + rel));
 check('お話を流すのは、公開の印と仲良し度の条件がそろったときだけ',
-  /EVENT_REPLAY_RELEASE_FLAGS\.assistantAtsu\) return;[\s\S]{0,200}rhythmEventStorySeen\.includes\(ATSU_JOIN_STORY_ID\)[\s\S]{0,200}assistantAtsuUnlockReady\(/.test(app));
+  /EVENT_REPLAY_RELEASE_FLAGS\.assistantAtsu\) return;[\s\S]{0,200}rhythmEventStorySeen\.includes\(ATSU_JOIN_STORY_ID\)[\s\S]{0,400}assistantAtsuUnlockReady\(/.test(app));
 
 // ---- 公開前 ----
 const flagOn = /assistantAtsu:\s*true/.test(rel);

@@ -341,7 +341,7 @@ node tools/mode/rhythm-chart-review.js --track <track_id> --picture docs/progres
 2. `RHYTHM_HELL_CHARTS` に `<songId>:<name>HellChart` を足す(曲えらびに HELL が出る)。
    `RHYTHM_PROTO_SONGS` に `<songId>_hell_debug` の枠を足す(`rhythm-hell-mix.js --write` がこの枠で Lv. を測る)
 3. `tools/mode/rhythm-hell-mix.js` の `SONGS` に1行(`marker`・`zero`=拍の頭・`beat`=1拍のms・`levelRe`・`source:'audio'`・
-   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
+   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`・**`precision:true`**=空中を曲の盛り上がりで回し、速い持ち替えを下ろす・2026-11-11)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
 4. `variant` を 0〜3 で比べ、**モンスター4個・水平クロス0・帯の中0**を満たすうち、横持ちの「交差」「届きにくい」が少ないものを選ぶ
    (ROSE は激しさ中間で、全編 1・short 3)。**歯ごたえ(`chartIntensity`・`challengeFactor`)を変えたら比べ直す**(同じ variant でもモンスターが4個から2個に減った)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 

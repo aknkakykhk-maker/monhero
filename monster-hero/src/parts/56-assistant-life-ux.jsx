@@ -116,7 +116,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   } catch (_) {}
   try {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
-    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', place: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
@@ -172,7 +172,9 @@ let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
 function assistantLifeUiV2Tabs() {
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+  // 📖 紹介(助手紹介・56-assistant-life-profile.jsx)は公開の印 assistantLifeProfile が真のときだけ。きずなの次(2026-11-11 社長 Q6 A)
+  const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
 }
 
 // 引き合わせる(「きずな」の上)。2人を選ぶと、次の時間に一緒に過ごしやすくなる。決まりは今までと同じ(assistantLifeNudge('introduce'))

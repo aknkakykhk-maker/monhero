@@ -17,8 +17,8 @@ const SIZES = [
   { id: 'y844', name: '横 844×390', w: 844, h: 390, land: true }, { id: 'y667', name: '横 667×375', w: 667, h: 375, land: true },
 ];
 const MIX = { groups: [{ ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }], solo: { mua: { doing: 'idle', place: 'home' }, atsu: { doing: 'idle', place: 'home' }, kiki: { doing: 'read', place: 'library' }, dra: { doing: 'sleep', place: 'home' }, momosuke: { doing: 'practice', place: 'studio' }, kyuko: { doing: 'read', place: 'library' } } };
-const ALL = ['sofa', 'bear', 'plant', 'record', 'nyacushion', 'starpic', 'trophy', 'bookshelf', 'heartmirror', 'lantern', 'mirrorball', 'windbell'];
-// みゅあ: 今の置き方は 天井=ミラーボール・壁=ハートの鏡・床=くま、ほかは押し入れ(12種類ぜんぶ贈ってある)
+const ALL = ['sofa', 'bear', 'plant', 'record', 'nyacushion', 'starpic', 'trophy', 'bookshelf', 'heartmirror', 'lantern', 'mirrorball', 'windbell', 'clock', 'map', 'guitar', 'tv', 'windowflower', 'fishbowl', 'pendant', 'garland'];
+// みゅあ: 今の置き方は 天井=ミラーボール・壁=ハートの鏡・床=くま、ほかは押し入れ(20種類ぜんぶ贈ってある)
 const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'bear' }, kept: ALL.filter(k => !['mirrorball', 'heartmirror', 'bear'].includes(k)), got: Object.fromEntries(ALL.map(k => [k, '2026-11-08'])) } };
 
 (async () => {
@@ -125,7 +125,7 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     await page.locator('[data-assistant-life-layout-omakase]').click(); await page.waitForTimeout(400);
     const s5 = await layoutOf(page); const ks = s5.lay.mua.items.map(it => it.k);
     const line = await page.locator('[data-assistant-life-layout-line]').count();
-    check(`${T}みゅあにおまかせ: 苦手(本棚)はしまう・11個置く・主役はくま・ひとこと`, !ks.includes('bookshelf') && ks.length === 11 && ks[0] === 'bear' && line > 0, `${ks.length}個 ${ks.slice(0, 3).join(',')} ひとこと=${line}`);
+    check(`${T}みゅあにおまかせ: 苦手(本棚)はしまう・19個置く・主役はくま・ひとこと`, !ks.includes('bookshelf') && ks.length === 19 && ks[0] === 'bear' && line > 0, `${ks.length}個 ${ks.slice(0, 3).join(',')} ひとこと=${line}`);
     check(`${T}おまかせのあとも道具と家具が画面の中`, (await inside(page)).length === 0, (await inside(page)).slice(0, 3).join(' / '));
     await shot(page, `${v.id}-omakase`);
     // もとに戻す → 開いたときの並び
@@ -136,7 +136,7 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     await page.locator('[data-assistant-life-layout-omakase]').click(); await page.waitForTimeout(200);
     await page.locator('[data-assistant-life-layout-done]').click(); await page.waitForTimeout(500);
     const seen = await page.locator('[data-assistant-life-roomview="mua"] [data-assistant-life-layout-item]').count();
-    check(`${T}できた → ふだんの大きな部屋に11個`, seen === 11, `${seen}個`);
+    check(`${T}できた → ふだんの大きな部屋に19個`, seen === 19, `${seen}個`);
     await shot(page, `${v.id}-room-after`);
     // 家具のシート(新しい置き方): 「入れかえる」は無く、しまう → 押し入れ、置く → 部屋へ。模様替えを開かなくても出し入れできる
     await page.locator(v.land ? '[data-assistant-life-room-act="furn"], [data-assistant-life-do="furn"]' : '[data-assistant-life-roomview-act="furn"]').first().click(); await page.waitForTimeout(400);
@@ -147,13 +147,13 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     const sB = await layoutOf(page); const putBear = sB.lay.mua.items.some(it => it.k === 'bear');
     await page.locator('[data-assistant-life-furn-put="bookshelf"]').click(); await page.waitForTimeout(250);
     const sC = await layoutOf(page);
-    check(`${T}家具のシート: 「入れかえる」が無い・しまう/置くで並びが変わる・12個ぜんぶ置ける`, swapN === 0 && keptBear && putBear && sC.lay.mua.items.length === 12, `入れかえる=${swapN} しまう=${keptBear} 置く=${putBear} ${sC.lay.mua.items.length}個`);
+    check(`${T}家具のシート: 「入れかえる」が無い・しまう/置くで並びが変わる・20個ぜんぶ置ける`, swapN === 0 && keptBear && putBear && sC.lay.mua.items.length === 20, `入れかえる=${swapN} しまう=${keptBear} 置く=${putBear} ${sC.lay.mua.items.length}個`);
     await page.locator('[data-assistant-life-furn-close]').click(); await page.waitForTimeout(300);
     // 家の一覧の小さな部屋: 同じ並びが部屋の中に出る・顔や吹き出しより後ろ(z-index 0)・押せない
     await page.locator('[data-assistant-life-roomview-close]').click().catch(() => {}); await page.waitForTimeout(500);
     const mini = await page.evaluate(() => { const els = [...document.querySelectorAll('[data-assistant-life-room-furn^="mua:layout:"]')]; const room = els[0] && els[0].parentElement.getBoundingClientRect();
       return { n: els.length, z: els.every(e => getComputedStyle(e).zIndex === '0' && getComputedStyle(e).pointerEvents === 'none'), inside: els.every(e => { const r = e.getBoundingClientRect(); const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; return cx >= room.left && cx <= room.right && cy >= room.top && cy <= room.bottom; }) }; });
-    check(`${T}家の一覧の小さな部屋に同じ並び(12個・部屋の中・顔や吹き出しの後ろ)`, mini.n === 12 && mini.z && mini.inside, JSON.stringify(mini));
+    check(`${T}家の一覧の小さな部屋に同じ並び(20個・部屋の中・顔や吹き出しの後ろ)`, mini.n === 20 && mini.z && mini.inside, JSON.stringify(mini));
     const s7 = await layoutOf(page);
     check(`${T}今のキー mh_assistant_life_room_v1 は最後まで変わらない`, JSON.stringify(s7.room) === JSON.stringify(ROOM));
     await page.close();
