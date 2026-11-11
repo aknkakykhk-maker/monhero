@@ -94,7 +94,12 @@ const veteranBackup = { mh_onboarded: 'true', mh_breeder_name: '"テスト"', mh
 {
   const oldBackup = { mh_breeder_name: '"昔の人"', mh_breeder_icon: '"mocchi"' };
   const { r } = restore(freshDevice, oldBackup);
+  const old2 = restore({ ...freshDevice, mh_onboarded: 'false' }, oldBackup);
   ok('③ 印の無い古いバックアップは、名前とアイコンが決まっていれば前から遊んでいる人', r.veteran === true && r.cleared.length > 0);
+  ok('③ その道のときだけ、新しい端末の mh_onboarded=false を true にする(次の起動で印を書き戻さない・Fable の留意1)', old2.store.get('mh_onboarded') === 'true');
+  ok('③ mh_onboarded のあるバックアップは、バックアップの値のまま', restore({ ...freshDevice, mh_onboarded: 'false' }, veteranBackup).store.get('mh_onboarded') === 'true'
+    && restore({ ...freshDevice, mh_onboarded: 'true' }, { mh_onboarded: 'false', mh_breeder_name: '"a"', mh_breeder_icon: '"b"' }).store.get('mh_onboarded') === 'false');
+  ok('③ 前から遊んでいる端末へ古いバックアップを戻すときは mh_onboarded に触らない', restore({ mh_onboarded: 'false' }, oldBackup).store.get('mh_onboarded') === 'false');
   const noProfile = { mh_breeder_name: '"名無しのブリーダー"', mh_breeder_icon: '"mocchi"' };
   ok('③ 名前が決まっていない古いバックアップは消さない', restore(freshDevice, noProfile).r.cleared.length === 0);
 }

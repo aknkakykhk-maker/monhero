@@ -83,15 +83,20 @@ def label_keep(m, min_frac=0.03):
     return keep[lab]
 
 
-def clean(path):
-    im = np.array(Image.open(path).convert('RGBA')).astype(np.float32)
+def clean(path, min_frac=0.03, arr=None):
+    im = (np.array(Image.open(path).convert('RGBA')) if arr is None else arr).astype(np.float32)
+    h0, w0 = im.shape[:2]
+    # 4の倍数に足りない分は透明で足す(4分の1の大きさで塊を数えるため)
+    ph, pw = (-h0) % 4, (-w0) % 4
+    if ph or pw:
+        im = np.pad(im, ((0, ph), (0, pw), (0, 0)), constant_values=0)
     rgb, a = im[..., :3], im[..., 3]
     # 1) 薄い半透明(光のぼかし・もや)を落とす。残すのは体の本体(アルファ 170 以上)と、その縁
     core = a >= 170
     # 2) 小さな点を落とす: 4分の1の大きさで数え、体から離れた小さな塊を消す
     sm = core[::4, ::4] | core[1::4, 1::4] | core[2::4, 2::4] | core[3::4, 3::4]
     sm = dil(sm, 2)
-    keep_s = label_keep(sm, 0.03)
+    keep_s = label_keep(sm, min_frac)
     keep = np.kron(keep_s, np.ones((4, 4), bool))[:core.shape[0], :core.shape[1]]
     keep = dil(keep, 6)  # 縁の細かい所を落とさない
     a2 = np.where(keep & (a >= 40), a, 0)
@@ -117,7 +122,7 @@ def clean(path):
     rim = (a2 > 0) & ~solid
     col = np.where(rim[..., None], col, rgb)
     out = np.dstack([np.clip(col, 0, 255), a2]).astype(np.uint8)
-    return Image.fromarray(out, 'RGBA')
+    return Image.fromarray(out[:h0, :w0], 'RGBA')
 
 
 def fit(im):
