@@ -341,8 +341,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // ⑧ 2人にあげる道具(家の「🎒 道具」)
     await page.locator('[data-assistant-life-icon="items"]').click().catch(() => {}); await page.waitForTimeout(250);
     const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、贈るシートと同じ幅(好みで変わる)で出る(2026-11-08 ミハリ)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+15〜45/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
-    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+8〜23/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、「ふつう」のときの数で出る(2026-11-08 ミハリ・2026-11-11 社長 案3 A)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+30/.test(itemsText) && /ふつう/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
+    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持ち 2/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
     await toWhere(page);
     const giveBtn = page.locator('[data-assistant-life-give]').first();
     if (await giveBtn.count()) {
