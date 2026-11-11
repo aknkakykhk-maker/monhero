@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: df0b28495c597324
+// generated-sha256: 46821f09aefd49fb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73258,7 +73258,11 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   const o = opts && typeof opts === 'object' ? opts : {};
   const preview = !ambbOn();
   if (preview && o.from !== 'debug') return false;
-  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, at: Date.now() });
+  // デバッグからだけ: 本物のサーバでフレンド対戦を1回通す(窓口の確かめ・2026-11-11)。
+  //   タイセンの口は印 assistantMasmonBattlePvp を見るので、この起動のあいだだけ印を真にする(読み込み直すと偽に戻る・保存しない)
+  const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
+  if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
+  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, tryPvp, at: Date.now() });
   return true;
 };
 // 「できること」の1行。印が偽なら null(ボタンを出さない)
@@ -73306,7 +73310,7 @@ const AMBB_CSS = `
 .ambb-if{padding:8px;border-radius:12px;background:rgba(96,165,250,.14);margin-top:6px}
 `;
 
-function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClose }) {
+function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
   const save = useAmbbSave();
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -73397,7 +73401,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.assistantId } } }));
   };
 
-  const pvp = ambbPvpOn() && !preview;
+  // 確かめ(印が偽)ではフレンド対戦を出さない。デバッグの「フレンド対戦を試す」だけは出す(この端末の保存はしないまま)
+  const pvp = (ambbPvpOn() && !preview) || (!!tryPvp && typeof masmonPvpChallenge === 'function');
   const srcNow = pvp ? (src || (foes.length ? 'local' : 'friend')) : 'local';
   // フレンド対戦: サーバが回した試合(種と編成)を同じ計算で見返す。勝ち負けはサーバの返りが正本
   const startPvp = (m, foe) => {
@@ -73539,7 +73544,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
           {srcNow === 'local' && <button className="ambw-btn" data-ambb-start disabled={!foeId} onClick={start}>⚔ 対戦する</button>}
           <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
         </div>
-        {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。</p>}
+        {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。{tryPvp ? 'フレンド対戦は本物のサーバに登録・記録されます。' : ''}</p>}
       </div>
     );
   } else if (phase === 'rank' && pvp) {
@@ -119756,6 +119761,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
                   <DebugMenuRow data-debug-masmon-battle-watch icon="🐾" label="助手マスモンの対戦を見る(試作)" desc="助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません" onClick={()=>setMasmonBattleWatchOpen(true)}/>
                   <DebugMenuRow data-debug-masmon-battle-beta icon="⚔" label="助手マスモンの対戦 β(公開前の確かめ)" desc="じゅんび→観戦→振り返り→ランキングを本物のマスモンで。印が偽のあいだは何も保存しません" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug'});}}/>
+                  <DebugMenuRow data-debug-masmon-battle-pvp-try icon="👥" label="助手マスモンのフレンド対戦を試す(本物のサーバ)" desc="この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug',tryPvp:true});}}/>
               </DebugMenuGroup>
 
               <DebugMenuGroup id="monster-look" title="🧬 モンスターの見た目" desc="育成マーク(転生・限界突破・超越)・模様・プロフィールの顔アイコン">
