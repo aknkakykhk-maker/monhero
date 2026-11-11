@@ -10,6 +10,7 @@
 //   ・見られているのは1人だけ。その人だけが1秒ごとに送り、ほかの人は今までの3秒ごとのまま。見ている人がいなければ今までと同じ
 //   ・1部屋10人まで。観戦を許さない設定にすると、外の人には見せない
 //   ・演奏している端末の、観戦あり/なしのフレームの間隔(重くなっていないかの目安)
+//   MH_MEASURE=1 は札の測定と同じ測り方(CPU 1/4・9秒×観戦なし/あり3回ずつ(曲の長さに収まる回数))の表を出す。2分かかって曲が終わるので、そのあとの確認(待機のメンバー・10人・終わり)は出ない。測定のときだけ使う
 // ★外へはつながない(rhythm-multi-live-board-check.js と同じ偽の WebSocket + BroadcastChannel)。
 const http = require('http');
 const path = require('path');
@@ -111,7 +112,7 @@ const PLAYERS = 2;
   // フレームの間隔(演奏している端末の重さの目安)。ms 間 requestAnimationFrame の間隔を集める
   const frames = (p, ms) => p.evaluate((dur) => new Promise((resolve) => {
     const gaps = []; let last = performance.now(); const end = last + dur;
-    const step = (t) => { gaps.push(t - last); last = t; if (t < end) requestAnimationFrame(step); else { gaps.sort((a, b) => a - b); const sum = gaps.reduce((x, y) => x + y, 0); resolve({ n: gaps.length, mean: sum / gaps.length, p95: gaps[Math.floor(gaps.length * 0.95)], max: gaps[gaps.length - 1] }); } };
+    const step = (t) => { gaps.push(t - last); last = t; if (t < end) requestAnimationFrame(step); else { gaps.sort((a, b) => a - b); const sum = gaps.reduce((x, y) => x + y, 0); resolve({ n: gaps.length, mean: sum / gaps.length, p95: gaps[Math.floor(gaps.length * 0.95)], max: gaps[gaps.length - 1], over: gaps.filter((g) => g > 33.3).length }); } };
     requestAnimationFrame(step);
   }), ms);
   try {
@@ -206,6 +207,32 @@ const PLAYERS = 2;
     }
     await W.setViewportSize({ width: 844, height: 390 });
 
+    // ---- 札の測定(docs/progress/beat-multi-live-score/PLAN.md「本物で測った重さ」)と同じ測り方: 自分のページだけ CPU 1/4・15秒。
+    //      観戦なし/ありを交互に4回ずつ。MH_MEASURE=1 のときだけ(2分かかる) ----
+    if (process.env.MH_MEASURE) {
+      const cdp = await context.newCDPSession(A);
+      await cdp.send('Performance.enable');
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      const metric = async () => { const { metrics } = await cdp.send('Performance.getMetrics'); const o = {}; metrics.forEach((x) => { o[x.name] = x.value; }); return o; };
+      const rows = { off: [], on: [] };
+      await A.bringToFront();
+      for (let round = 0; round < 3; round += 1) {
+        for (const mode of ['off', 'on']) {
+          await W.evaluate(([id]) => RHYTHM_WATCH.focus(id), [mode === 'on' ? idA : idB]);
+          await A.waitForTimeout(2500);
+          const m0 = await metric();
+          const f = await frames(A, 9000);
+          const m1 = await metric();
+          rows[mode].push({ over: f.over, js: (m1.ScriptDuration - m0.ScriptDuration) / f.n * 1000, style: (m1.RecalcStyleDuration - m0.RecalcStyleDuration) / f.n * 1000, layout: (m1.LayoutDuration - m0.LayoutDuration) / f.n * 1000 });
+        }
+      }
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+      for (const key of ['off', 'on']) console.log(`  ${key}: ${rows[key].map((x) => `[超${x.over} JS${x.js.toFixed(2)} 式${x.style.toFixed(2)} 配${x.layout.toFixed(2)}]`).join(' ')}`);
+      const range = (list, key, d) => `${Math.min(...list.map((x) => x[key])).toFixed(d)}〜${Math.max(...list.map((x) => x[key])).toFixed(d)}`;
+      console.log('  | | 33.3ms を超えたフレーム | 1フレームの JS | スタイル再計算 | レイアウト |');
+      for (const [label, key] of [['観戦なし(3回)', 'off'], ['観戦あり(3回・1秒ごと)', 'on']]) console.log(`  | ${label} | ${range(rows[key], 'over', 0)} | ${range(rows[key], 'js', 2)}ms | ${range(rows[key], 'style', 2)}ms | ${range(rows[key], 'layout', 2)}ms |`);
+      await W.evaluate(([id]) => RHYTHM_WATCH.focus(id), [idA]);
+    }
     // ---- 後から入った待機中のメンバー(えま)にも見える ----
     await L.locator('[data-rhythm-mode-private-open]').click();
     await L.locator('[data-rhythm-multi-code-input]').fill(code);
