@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 831e5017a2c10397
+// generated-sha256: 665ce8a6d9aac926
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69262,7 +69262,10 @@ const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, su
     this.loaded = true; this.set(normalizeAssistantMasmonGrow(raw)); return this.state;
   } };
 const amgOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonGrow === true;
-const amgSave = (next) => { AMG_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_GROW_KEY, next, false); } catch (_) {} };
+// 保存を読み込む前には書かない(空の既定値で上書きして、それまでの育成を消さない・2026-11-11 ミハリ)
+const amgSave = (next) => { if (!AMG_STORE.loaded) return false; AMG_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_GROW_KEY, next, false); } catch (_) {} return true; };
+// 立ち上がったら早めに読み込んでおく(M/B管理の受け口などが、画面を開く前に呼ばれても書けるように)
+try { setTimeout(() => { try { if (amgOn()) void AMG_STORE.load(); } catch (_) {} }, 0); } catch (_) {}
 // 助手のマスモンを開いたときに呼ぶ(まだの回をまとめて決める)。印が偽のあいだは何もしない
 const amgTick = async (aid, now = Date.now()) => {
   if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
@@ -69276,6 +69279,7 @@ const amgTick = async (aid, now = Date.now()) => {
 };
 // 様子を見に来た(くわしい画面を開いた)。その日のそのマスモンは、上限と伸びが上がる
 const amgView = (aid, slot, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
   const st = AMG_STORE.state; const d = amgSlotDay(amgSlotOf(now));
   const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : { d, view: {}, picks: 0 };
   if (c.view[slot]) return false;
@@ -69285,6 +69289,7 @@ const amgView = (aid, slot, now = Date.now()) => {
 const amgPicksLeft = (aid, now = Date.now(), st = AMG_STORE.state) => { const d = amgSlotDay(amgSlotOf(now)); const c = st.care[aid]; return AMG_CARE.picksPerDay - (c && c.d === d ? c.picks : 0); };
 // 次の回の訓練を自分で決める(社長 11-11「自分で指定も出来るし任せる事もできる」)。act = { a: 'light'|'heavy'|'rest'|'play', k }
 const amgPick = (aid, slot, act, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
   const st = AMG_STORE.state; const s = amgSlotOf(now) + 1; const d = amgSlotDay(amgSlotOf(now));
   if (!act || !['light', 'heavy', 'rest', 'play'].includes(act.a) || ((act.a === 'light' || act.a === 'heavy') && !AMG_KEYS.includes(act.k))) return false;
   const e = (st.mons[aid] || {})[Object.keys(st.mons[aid] || {}).find(k => k.startsWith(`${slot}:`)) || ''];
@@ -69298,7 +69303,7 @@ const amgPick = (aid, slot, act, now = Date.now()) => {
 // 外から呼ぶ受け口(ナカヨシ9・2026-11-11 社長): M/B管理(ranch)に助手がいるあいだにプレイヤーがトレーニングした。
 //   その日1回だけ受け付け、その助手のマスモン全員の「次の育成の回」の伸びを AMG_CARE.ranchMult 倍にする。受け付けたら true(もう受けた日・印が偽なら false)
 const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
-  if (!amgOn() || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || (opts && opts.source && opts.source !== 'ranch')) return false;
+  if (!amgOn() || !AMG_STORE.loaded || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || (opts && opts.source && opts.source !== 'ranch')) return false;
   const st = AMG_STORE.state; const s = amgSlotOf(now); const d = amgSlotDay(s);
   if (st.boost[aid] && st.boost[aid].d === d) return false;
   amgSave({ ...st, boost: { ...st.boost, [aid]: { d, s: s + 1 } } });
@@ -69307,6 +69312,7 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 // 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
   const st = AMG_STORE.state; const s = amgSlotOf(now);
   if (what === 'rest') { amgSave({ ...st, rest: { ...st.rest, [aid]: { ...(st.rest[aid] || {}), [slot]: true } } }); return true; }
   if (what === 'auto') { const f = { ...(st.focus[aid] || {}) }; delete f[slot]; amgSave({ ...st, focus: { ...st.focus, [aid]: f } }); return true; }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 198ddb93253ebf79
+// source-sha256: 13001d75d2850dc9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131281,11 +131281,20 @@ const AMG_STORE = {
 };
 const amgOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonGrow === true;
 const amgSave = next => {
+  if (!AMG_STORE.loaded) return false;
   AMG_STORE.set(next);
   try {
     if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_GROW_KEY, next, false);
   } catch (_) {}
+  return true;
 };
+try {
+  setTimeout(() => {
+    try {
+      if (amgOn()) void AMG_STORE.load();
+    } catch (_) {}
+  }, 0);
+} catch (_) {}
 const amgTick = async (aid, now = Date.now()) => {
   if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
   await ASSISTANT_MASMON_STORE.load();
@@ -131299,6 +131308,7 @@ const amgTick = async (aid, now = Date.now()) => {
   return next;
 };
 const amgView = (aid, slot, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
   const st = AMG_STORE.state;
   const d = amgSlotDay(amgSlotOf(now));
   const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : {
@@ -131328,6 +131338,7 @@ const amgPicksLeft = (aid, now = Date.now(), st = AMG_STORE.state) => {
   return AMG_CARE.picksPerDay - (c && c.d === d ? c.picks : 0);
 };
 const amgPick = (aid, slot, act, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
   const st = AMG_STORE.state;
   const s = amgSlotOf(now) + 1;
   const d = amgSlotDay(amgSlotOf(now));
@@ -131365,7 +131376,7 @@ const amgPick = (aid, slot, act, now = Date.now()) => {
   return true;
 };
 const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
-  if (!amgOn() || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || opts && opts.source && opts.source !== 'ranch') return false;
+  if (!amgOn() || !AMG_STORE.loaded || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || opts && opts.source && opts.source !== 'ranch') return false;
   const st = AMG_STORE.state;
   const s = amgSlotOf(now);
   const d = amgSlotDay(s);
@@ -131384,6 +131395,7 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 };
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
+  if (!AMG_STORE.loaded) return false;
   const st = AMG_STORE.state;
   const s = amgSlotOf(now);
   if (what === 'rest') {

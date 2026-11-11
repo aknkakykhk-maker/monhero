@@ -22,6 +22,14 @@ vm.runInContext([
   'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf, amgView, amgPick, amgPicksLeft, AMG_CARE, assistantMasmonTrainBoost };',
 ].join('\n'), ctx);
 const T = ctx.T;
+// ⓪ 保存を読み込む前に書かない(ミハリ 11-11: 空の既定値で上書きして育成を消さない)
+{
+  const writes = []; ctx.storeSet = (k, v) => writes.push(k);
+  T.AMG_STORE.loaded = false;
+  const r = [T.assistantMasmonTrainBoost('kiki', { source: 'ranch' }), T.amgView('kiki', 1), T.amgPick('kiki', 1, { a: 'rest' }), T.amgAdvise('kiki', 1, 'hit')];
+  check('⓪ 読み込む前は、受け口・見に来た・指定・相談のどれも書かない(false)', r.every(x => x === false) && writes.length === 0, `${r} / 書いた ${writes.length}`);
+  T.AMG_STORE.loaded = true; delete ctx.storeSet;
+}
 const rows = [{ slot: 1, monster: 'Golem', nick: 'ごろべえ', lv: 25, grow: '攻撃型(ちからに振る)' }, { slot: 2, monster: 'Pixie', nick: 'ぴく', lv: 12, grow: 'すばやさ型' }];
 const start = T.amgSlotOf(Date.UTC(2026, 10, 11, 0, 0)); // 9:00 JST = 朝
 const fresh = () => T.normalizeAssistantMasmonGrow(null);
