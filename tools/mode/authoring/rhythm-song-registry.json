@@ -1385,6 +1385,20 @@
     "MASTER": 0.3,
     "HELL": 0.3
    }
+  },
+  "lamia": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-lamia.mp3",
+   "chartRevision": 39,
+   "audioSha256": "f0105abb3aa0608fde7965ca232d39e3d23141a81eac4ea13ca90a1354303efd",
+   "durationMs": 145894,
+   "analyzedTiming": {
+    "bpm": 199.03,
+    "beatZeroMs": 1350,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

@@ -23,6 +23,8 @@
 // <monster-hero-v3-*-notes> マーカーの内側だけで、書き込む前後で他が変わっていないことを確かめる。
 'use strict';
 const {tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
+const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
+const {playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
 const fs=require('fs');
 const path=require('path');
 const {spawnSync}=require('child_process');
@@ -115,9 +117,14 @@ const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs+warp.at(grid));
 if(warp.active)console.log(`テンポの揺れに合わせて時刻を書く(${warp.version==='curve'?'Rev.28 の拍のずれの曲線':warp.version==='splice'?'Rev.26 のつなぎ目':'Rev.21'}): ${warp.reason}`);
 // 鳴っている場所の格子。Rev.21 の揺れに合わせる曲では、生成器と同じく打点から揺れを引いて格子に乗せ直した所も数える
 // (揺れの分だけ隣の格子へ移る打点がある。2026-09-29、これを数えずに SIX ÉTERNEL Remix(ビート版)を止めていた)
+// Rev.17 の低音の遅れも同じ(2026-11-11 LAMIA)。生成器は低音の強い一発を遅れの分だけ早めて格子へ置き直すので、その格子も数える
+// (遅れが16分の半分を超える曲では隣の格子へ移る。数えないと、音に合わせて置いたノーツを「鳴っていない」と止めていた)
+const chartLowLagMs=(()=>{const tuning=playTuningForRevision(charts[DIFFICULTIES[0]].chartRevision);return tuning.lowLagFactor>0?lowLagOf(audio,{beatZeroMs:timing.beatZeroMs,gridMs}).lagMs*tuning.lowLagFactor:0;})();
 const onsetGrids=new Set(audio.onsets.flatMap(onset=>{
-  if(!warp.active)return [onset.grid];
-  return [onset.grid,Math.round((onset.timeMs-warp.at(onset.grid)-timing.beatZeroMs)/gridMs)];
+  const grids=[onset.grid];
+  if(warp.active)grids.push(Math.round((onset.timeMs-warp.at(onset.grid)-timing.beatZeroMs)/gridMs));
+  if(chartLowLagMs&&isLowHit(onset))grids.push(Math.round((onset.timeMs-chartLowLagMs-timing.beatZeroMs)/gridMs));
+  return grids;
 }));
 
 // --- 音源解析の警告 ---
