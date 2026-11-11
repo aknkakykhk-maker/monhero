@@ -49,6 +49,11 @@ function BreederMarketScreen({
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
   const [sheetPending,setSheetPending]=useState(false);
+  // 助手がマーケットにいるときの「今日のおすすめ品1割引き」(20-market-notices-help.jsx の assistantMarketPerkToday)。
+  // 保存の読み込みが済んだら描き直す。割引き中の品は cost を9割にした写しに差し替え、画面の値段も買う処理の値段もそれを読む
+  const [perkTick,setPerkTick]=useState(0);
+  React.useEffect(()=>{ let alive=true; Promise.resolve(assistantMarketPerkLoad()).then(()=>{ if(alive) setPerkTick(n=>n+1); }); return ()=>{ alive=false; }; },[]);
+  const perkToday=(()=>{ void perkTick; const p=assistantMarketPerkToday(); return p&&!p.used?p:null; })();
   // 円盤石を買えたときの「円盤石から再生」の演出(DiscRebirthFx)。{ monsterId, discIcon }
   const [rebirth,setRebirth]=useState(null);
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
@@ -108,7 +113,8 @@ function BreederMarketScreen({
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false)
+    .map(item=>perkToday&&item.id===perkToday.itemId?{...item,cost:perkToday.discountedCost,perk:true,perkBaseCost:item.cost}:item);
   // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
   const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
@@ -218,6 +224,8 @@ function BreederMarketScreen({
       if(result===true||result?.ok){
         // 円盤石なら、買えたあとに「円盤石から再生」を出す(円盤石は1体1回なので、その子を初めて手に入れたときだけ)
         if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        // 割引き中の品を買えたら、今日の1割引きは使用済み(買えたときだけ。買えなかったら残る)
+        if(sheet.item&&sheet.item.perk){ await assistantMarketPerkMarkUsed(); setPerkTick(n=>n+1); }
         setSheet(null);
       }
     } finally { sheetBusyRef.current = false; setSheetPending(false); }
@@ -245,10 +253,10 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':null}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
+          onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
