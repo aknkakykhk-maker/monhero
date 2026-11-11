@@ -218,8 +218,8 @@ function AssistantLifeRoomLayoutMini({ id, w, h }) {
 }
 
 // ----- 模様替えの画面 -----
-// scene … AssistantLifeRoomScene へそのまま渡す中身(people・team・look など)。onClose … 閉じる
-function AssistantLifeRoomEditor({ id, land = false, scene = {}, onClose }) {
+// room … AssistantLifeRoomScene へそのまま渡す中身(people・team・look など)。onClose … 閉じる
+function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
   const st = useAssistantLifeLayoutState();
   const giftSt = useAssistantLifeGiftState();
   const who = assistantById(id);
@@ -289,7 +289,7 @@ function AssistantLifeRoomEditor({ id, land = false, scene = {}, onClose }) {
   return (
     <div className={`absolute inset-0 flex ${land ? 'flex-row' : 'flex-col'} bg-slate-950`} style={{ zIndex: 34 }} data-assistant-life-layout-editor={id}>
       <div className="relative min-h-0 min-w-0 flex-1">
-        <AssistantLifeRoomScene {...scene} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub="家具をつまんで好きな所へ。下の道具で大きさ・向き・色" bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
+        <AssistantLifeRoomScene {...room} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub="家具をつまんで好きな所へ。下の道具で大きさ・向き・色" bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
           layoutWho={id} layoutEdit={{ items: cur, sel, onSelect: (k) => { setSel(k); setColorOpen(false); },
             onMove: (k, x, y) => setItems(cur.map(it => (it.k === k ? { ...it, x, y } : it))), onDrop: () => { if (items) commit(items); } }}/>
         {/* おまかせのひとこと(助手が留守でも出す) */}

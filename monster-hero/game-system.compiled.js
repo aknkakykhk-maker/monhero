@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 011fd40d10555c89
+// source-sha256: 80a0446253d03a0f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108407,7 +108407,7 @@ function AssistantLifeRoomSheet({
     id: id,
     land: land,
     onClose: () => setLayoutOpen(false),
-    scene: {
+    room: {
       look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
       people,
       sleepIds,
@@ -126509,7 +126509,7 @@ function AssistantLifeRoomLayoutMini({
 function AssistantLifeRoomEditor({
   id,
   land = false,
-  scene = {},
+  room = {},
   onClose
 }) {
   const st = useAssistantLifeLayoutState();
@@ -126685,7 +126685,7 @@ function AssistantLifeRoomEditor({
     "data-assistant-life-layout-editor": id
   }, React.createElement("div", {
     className: "relative min-h-0 min-w-0 flex-1"
-  }, React.createElement(AssistantLifeRoomScene, _extends({}, scene, {
+  }, React.createElement(AssistantLifeRoomScene, _extends({}, room, {
     id: id,
     land: land,
     title: `${who.name}の部屋の模様替え`,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 64b80ca8a4408bd6
+// generated-sha256: 8f3e3d8b88c21d41
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64119,7 +64119,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {furnOpen && typeof AssistantLifeFurnSheet === 'function' && <AssistantLifeFurnSheet id={id} furnItems={furnItems || {}} onGiveFurn={onGiveFurn} land={land}
         onClose={() => setFurnOpen(false)} onTalk={(talk, text) => { setFurnOpen(false); if (onFurnTalk) onFurnTalk(talk, text); }} onLayout={layoutOn ? () => { setFurnOpen(false); setLayoutOpen(true); } : null}/>}
       {layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && <AssistantLifeRoomEditor id={id} land={land} onClose={() => setLayoutOpen(false)}
-        scene={{ look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon', people, sleepIds, away, team: rvTeam }}/>}
+        room={{ look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon', people, sleepIds, away, team: rvTeam }}/>}
     </div>);
 }
 
@@ -67585,8 +67585,8 @@ function AssistantLifeRoomLayoutMini({ id, w, h }) {
 }
 
 // ----- 模様替えの画面 -----
-// scene … AssistantLifeRoomScene へそのまま渡す中身(people・team・look など)。onClose … 閉じる
-function AssistantLifeRoomEditor({ id, land = false, scene = {}, onClose }) {
+// room … AssistantLifeRoomScene へそのまま渡す中身(people・team・look など)。onClose … 閉じる
+function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
   const st = useAssistantLifeLayoutState();
   const giftSt = useAssistantLifeGiftState();
   const who = assistantById(id);
@@ -67656,7 +67656,7 @@ function AssistantLifeRoomEditor({ id, land = false, scene = {}, onClose }) {
   return (
     <div className={`absolute inset-0 flex ${land ? 'flex-row' : 'flex-col'} bg-slate-950`} style={{ zIndex: 34 }} data-assistant-life-layout-editor={id}>
       <div className="relative min-h-0 min-w-0 flex-1">
-        <AssistantLifeRoomScene {...scene} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub="家具をつまんで好きな所へ。下の道具で大きさ・向き・色" bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
+        <AssistantLifeRoomScene {...room} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub="家具をつまんで好きな所へ。下の道具で大きさ・向き・色" bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
           layoutWho={id} layoutEdit={{ items: cur, sel, onSelect: (k) => { setSel(k); setColorOpen(false); },
             onMove: (k, x, y) => setItems(cur.map(it => (it.k === k ? { ...it, x, y } : it))), onDrop: () => { if (items) commit(items); } }}/>
         {/* おまかせのひとこと(助手が留守でも出す) */}
