@@ -37,8 +37,6 @@ HELL と新曲の5難易度の道具が直し、同じ検査が止める(前か�
 **参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13)。上の難易度を下の難易度の写し+割増しで作らない。
 HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける(新しい HELL は `precision:true`)。本文: `CHART_ENGINE.md`
 
-**流れの速さが変わる譜面(止まる・戻る)は、表を手で書かず `rhythmScrollFxChart` を通す**(2026-11-11)。本文: `CHART_ENGINE.md`「流れの速さが変わる譜面」
-
 **作ったら点検**: `rhythm-chart-review.js`。新曲の EXPERT・MASTER は交差を減らし山場は残す(曲ごとは `handFinish`)。本文: `CHART_ENGINE.md`「作った譜面の点検と仕上げ」
 
 > ⚠️ 譜面もゲーム本体も変わらない強化は、**更新履歴とヘルプへ載せない**(プレイヤーには何も
