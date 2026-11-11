@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fd20eb004534d25
+// source-sha256: 3ae6413e2eca28e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114171,7 +114171,10 @@ function AssistantLifeHouse({
       className: "block text-[14px] text-white"
     }, nameOf(id)), React.createElement("small", {
       className: `block text-[11.5px] font-bold leading-snug ${lonely ? 'text-pink-200' : 'text-slate-300'}`
-    }, lonely ? '💭 さみしそう・' : '', cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている')), lonely && React.createElement("span", {
+    }, (() => {
+      const doing = cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている';
+      return lonely ? `💭 さみしそう・声をかけよう(${doing})` : doing;
+    })())), lonely && React.createElement("span", {
       className: "shrink-0 text-right text-[11px] font-black leading-tight text-amber-200"
     }, "🤝 友情Lv", React.createElement("br", null), "のきっかけ"), React.createElement("span", {
       className: "shrink-0 text-slate-400",
