@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 395d209e2995f91b
+// generated-sha256: e84804c447f5ae56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76053,7 +76053,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       </>);
   };
   return (
-    <div className="ambw-root" style={{ position: 'absolute', inset: 0, zIndex: 30, overflowY: 'auto', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
+    <div className="ambw-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
       <style>{AMBW_CSS}</style>
       <div className="ambw-row" style={{ marginBottom: 8 }}>
         <button className="ambw-btn2" data-amgc-close onClick={onClose}>← 戻る</button>

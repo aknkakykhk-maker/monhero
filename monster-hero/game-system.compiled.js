@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57bd30f62ab9495c
+// source-sha256: 4b9d6a39d742cc03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -144903,10 +144903,12 @@ function AssistantMasmonTrainWatch({
   return React.createElement("div", {
     className: "ambw-root",
     style: {
-      position: 'absolute',
+      position: 'fixed',
       inset: 0,
-      zIndex: 30,
+      zIndex: 9000,
       overflowY: 'auto',
+      background: 'linear-gradient(180deg,#221a44,#141026 40%)',
+      color: '#fff',
       padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))'
     },
     "data-amgc-watch": true
