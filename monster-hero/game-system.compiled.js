@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c61a4452e970008
+// source-sha256: 008824269bb827f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13892,7 +13892,7 @@ const RELEASE_FLAGS = {
   assistantSorashido: true,
   assistantErubin: true,
   assistantLifeProfile: true,
-  assistantPartnerUnlock: false,
+  assistantPartnerUnlock: true,
   cardBattle: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
@@ -197711,6 +197711,13 @@ function MonsterHeroGame() {
         return;
       }
       keys.forEach(k => window.localStorage.setItem(k, data[k]));
+      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
+        v: 1,
+        mode: 'all',
+        first: null,
+        unlocked: [],
+        noticed: []
+      }));
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch {
@@ -197801,6 +197808,13 @@ function MonsterHeroGame() {
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
           keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
+            v: 1,
+            mode: 'all',
+            first: null,
+            unlocked: [],
+            noticed: []
+          }));
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch {
@@ -222779,7 +222793,7 @@ function MonsterHeroGame() {
         }, "まだ助手ではありません")), React.createElement("small", {
           className: "block text-[9px] text-slate-400 leading-tight mt-0.5"
         }, owned ? React.createElement(React.Fragment, null, "「", cardName, "」をモンヒロバトルで使った回数 ", React.createElement("b", {
-          className: "text-slate-200 tabular-nums"
+          className: "text-slate-200 tabular-nums whitespace-nowrap"
         }, n, " / ", need)) : React.createElement(React.Fragment, null, "「", cardName, "」を手に入れて、モンヒロバトルで", need, "回使うと選べます")), owned && React.createElement("span", {
           className: "block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"
         }, React.createElement("span", {
