@@ -204,7 +204,8 @@ async function walk(browser, base, orient) {
   const pick = await scene('助手えらび');
   readChars += pick.text.length;
   if (pick.text.length > 600) note('長い', '助手えらび', `最初の画面で読む字が${pick.text.length}字ある(助手${pick.reach.length}人ぶんの紹介)`);
-  await tap(/^みゅあ$/);
+  // 2026-11-11 案9: 行を押して選び、下の「この助手にする」で決める(はじめから みゅあ が選ばれている)
+  await tap(/^この助手にする$/);
 
   // ---- 3. 名前とアイコン ----
   await until(() => /はじめての設定/.test(document.body.innerText), 10000, '名前とアイコン');
