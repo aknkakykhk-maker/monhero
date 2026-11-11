@@ -51,7 +51,7 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     await page.waitForTimeout(500);
     return page;
   };
-  const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(shotDir, `real-${name}.png`) }); };
+  const shot = async (page, name) => { if (SHOTS && /^(t390|y844)-/.test(name)) await page.screenshot({ path: path.join(shotDir, `real-${name}.png`) }); };
   const layoutOf = (page) => page.evaluate(async () => ({ lay: await storeGet('mh_assistant_life_room_layout_v1', null, false), flag: await storeGet('mh_assistant_life_room_layout_migrated_v1', null, false), room: await storeGet('mh_assistant_life_room_v1', null, false) }));
   const inside = (page) => page.evaluate(() => { const ng = []; const ed = document.querySelector('[data-assistant-life-layout-editor]'); if (!ed) return ['模様替えの画面が無い'];
     for (const b of ed.querySelectorAll('[data-assistant-life-layout-panel] button')) { const r = b.getBoundingClientRect(); if (r.width && (r.bottom > innerHeight + 1 || r.top < -1)) ng.push(`道具が画面の外: ${b.textContent || b.getAttribute('aria-label')}`); }
