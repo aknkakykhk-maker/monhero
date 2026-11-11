@@ -143,7 +143,8 @@ const alfBuildMore = (ids) => {
       if (!room) continue;
       const p = {}; for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
       const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
-      if (Object.keys(p).length || k.length) fu[id] = { p, k };
+      const l = typeof assistantLifeLayoutPack === 'function' ? assistantLifeLayoutPack(id) : null;
+      if (Object.keys(p).length || k.length || l) fu[id] = { p, k, ...(l ? { l } : {}) };
     } catch {}
   }
   const dy = alfDiaryShare(8);
@@ -168,18 +169,39 @@ const alfMasmonShare = (ids) => {
 };
 // jsonb の文字の形は「": "」「, 」と空白が入るので、区切りの数だけ足して見積もる(多めに見る)
 const alfMoreChars = (o) => { const t = JSON.stringify(o); return t.length + (t.match(/[:,]/g) || []).length; };
+// 切り詰める順(2026-11-11 家具が20種類になり、並び l が増えたぶん): ①勇者モン以外のマスモンの色 → ②今日あったこと 8→4→0件 →
+//   ③家具の並び l を、いちばん多い助手から奥(z の小さい)の家具の順に、1人8個まで減らす → ④マスモンの数 8→4→2→1 → ⑤それでも入らなければ並び l をさらに減らす
+const alfTrimLayout = (more, floor = 0) => {
+  const fu = {}; for (const [id, x] of Object.entries(more.fu || {})) fu[id] = x;
+  const total = () => alfMoreChars({ ...more, fu });
+  for (let guard = 0; guard < 200; guard++) {
+    if (total() <= ALF_MORE_FIT) break;
+    let best = null; for (const [id, x] of Object.entries(fu)) if (Array.isArray(x.l) && x.l.length && x.l.length > floor && (!best || x.l.length > fu[best].l.length)) best = id;
+    if (!best) break;
+    const l = fu[best].l; let lo = 0; for (let i = 1; i < l.length; i++) if ((l[i][10] || 0) < (l[lo][10] || 0)) lo = i;
+    const rest = l.filter((_, i) => i !== lo);
+    const { l: _drop, ...keep } = fu[best]; fu[best] = rest.length ? { ...keep, l: rest } : keep;
+  }
+  return { ...more, fu };
+};
 const alfFitMasmon = (more, ms) => {
-  if (!ms || !Object.keys(ms).length) return more;
-  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+  const withMs = (base, n, allColor) => {
+    if (!ms || !Object.keys(ms).length) return base;
     const cut = {}; const mn = {};
     for (const [id, list] of Object.entries(ms)) {
       cut[id] = list.slice(0, n).map(t => (allColor || t.l ? t : { ...t, c: [] }));
       if (list.length > n) mn[id] = list.length;
     }
-    const next = { ...more, ms: cut, ...(Object.keys(mn).length ? { mn } : {}) };
-    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
-  }
-  return more;
+    return { ...base, ms: cut, ...(Object.keys(mn).length ? { mn } : {}) };
+  };
+  const dyOf = (n) => ({ ...more, dy: (more.dy || []).slice(0, n) });
+  const ok = (o) => alfMoreChars(o) <= ALF_MORE_FIT;
+  let next = withMs(more, 8, true); if (ok(next)) return next;
+  next = withMs(more, 8, false); if (ok(next)) return next;
+  for (const n of [4, 0]) { next = withMs(dyOf(n), 8, false); if (ok(next)) return next; }
+  // 並びは1人8個までは先に減らす。それでも入らなければマスモンの数を減らし、最後に並びをさらに減らす
+  for (const n of [8, 4, 2, 1]) { next = alfTrimLayout(withMs(dyOf(0), n, false), 8); if (ok(next)) return next; }
+  return alfTrimLayout(withMs(dyOf(0), 1, false));
 };
 // ---------- フレンドの最近(2026-11-08 社長「フレンドで相手の行動見えるバリエーションも増やして」・FRIEND-ACTIVITY-PLAN.md) ----------
 // 端末の記録から組み立てる(曲名・勝ったこと・迎えたマスモンの種類・置いた家具だけ。スコア・数・相手の名前は入れない)。
@@ -232,7 +254,9 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     if (!x || typeof x !== 'object') continue;
     const p = {}; for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) { const f = x.p && furn.find(y => y.key === x.p[k]); if (f && f.slot === sl) p[k] = f.key; }
     const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
-    fu[id] = { p, k };
+    // 並び l(模様替え): [[k,x,y,s,r,f,h,l,g,a,z],…]を20個まで。知らない家具・数でない値は捨てる(描くときは assistantLifeLayoutUnpack がもう一度整える)
+    const l = (Array.isArray(x.l) ? x.l : []).slice(0, 20).filter(a => Array.isArray(a) && a.length === 11 && furn.some(y => y.key === a[0]) && a.slice(1).every(v => Number.isFinite(v)));
+    fu[id] = l.length ? { p, k, l } : { p, k };
   }
   const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 8).map(d => (d && typeof d.x === 'string' ? { t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '', x: d.x.replace(/[{}<>]/g, '').slice(0, 40) } : null)).filter(d => d && d.x);
   // マスモン: 実装済みのモンスターだけ・名前は16字まで(置き手紙と同じ見張り)・色は決まった形だけ(ほかは元の色)
@@ -1082,12 +1106,14 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 家具: くわしい控えがあればそれ、無ければ今の控え
   const putOf = (id) => (more && more.fu[id] ? more.fu[id].p : (h.r[id] && h.r[id].fu) || null);
   const fname = (k) => { const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null; return f ? `${f.emoji} ${f.name}` : null; };
-  const furnNames = (id) => { const fu = putOf(id); return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : []; };
+  // 並び l があれば、そこに置いてある家具すべて(手前の物が後ろ)。無ければ今までの天井・壁・床
+  const layoutOf = (id) => { const l = more && more.fu[id] && Array.isArray(more.fu[id].l) && typeof assistantLifeLayoutUnpack === 'function' ? assistantLifeLayoutUnpack(more.fu[id].l) : null; return l && l.length ? l : null; };
+  const furnNames = (id) => { const lay = layoutOf(id); if (lay && lay.length) return [...new Set(lay.map(it => fname(it.k)).filter(Boolean))]; const fu = putOf(id); return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : []; };
   const keptNames = (id) => (more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : []);
   // その人の助手のマスモン(写し)。写しが無い(古い版の人・控えが読めない)ときは出さない(見ている人のマスモンは出さない)
   const masmonOf = (id) => (more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null; return m ? { monster: t.mo, nick: t.n || m.name, name: m.name, lead: !!t.l, dye: { colors: t.c } } : null; }).filter(Boolean);
   const masmonMore = (id) => (more && more.mn && more.mn[id] ? Math.max(0, more.mn[id] - masmonOf(id).length) : 0);
-  const otherPut = (() => { const o = alfFurnPutOf(h); if (more) for (const id of Object.keys(more.fu)) o[id] = { put: { ceil: more.fu[id].p.c || null, wall: more.fu[id].p.w || null, floor: more.fu[id].p.f || null } }; return o; })();
+  const otherPut = (() => { const o = alfFurnPutOf(h); if (more) for (const id of Object.keys(more.fu)) o[id] = { put: { ceil: more.fu[id].p.c || null, wall: more.fu[id].p.w || null, floor: more.fu[id].p.f || null }, layout: layoutOf(id) }; return o; })();
   // 掲示板: 助手の今日(dy)と、その人の最近の遊び(ac)を混ぜる(最近は先に。時刻は「今日 10:10」などの形)
   const actItems = more && more.ac ? more.ac.map(a => ({ t: alfAgoText(a.at).replace(/^今日 /, ''), x: `${ALF_ACT_ICON[a.k] || '✨'} ${a.x}`, act: a.k })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : (h.dy || []))].slice(0, 10);
@@ -1139,7 +1165,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>);
   const rvScene = rvOk && roomId && r0 ? (
     <AssistantLifeRoomScene id={roomId} look={look} land={land} people={roomState === 'out' ? [] : [roomId]} sleepIds={roomState === 'sleep' ? [roomId] : []}
-      away={roomState === 'out' ? { title: rvPlace, sub: 'いまは家にいない' } : null} team={rvTeam} furn={rvFurn}
+      away={roomState === 'out' ? { title: rvPlace, sub: 'いまは家にいない' } : null} team={rvTeam} furn={rvFurn} layoutItems={layoutOf(roomId)}
       bubble={talk && talk.aid === roomId ? talk.text : ''} title={`${alfTheirLabel(friend.name, roomId)}の部屋`} sub={`🏘 ${friend.name}さんの家`}
       onPerson={roomState === 'home' ? () => { greet(roomId); setTimeout(rvToSheet, 60); } : () => rvToSheet()} dock={rvDock} padLeft={78}/>) : null;
   const rvSheetW = land && vw < 760 ? '50%' : '42%';

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: facd983f9eac0e9a
+// source-sha256: 3f1e5e1c2084c859
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110226,6 +110226,7 @@ function AssistantLifeRoom({
   }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
     id: id,
     put: other ? other.put || {} : null,
+    layoutItems: other && Array.isArray(other.layout) ? other.layout : null,
     w: w,
     h: h,
     faces: ppl ? ppl.length : 0,
@@ -140911,9 +140912,13 @@ const alfBuildMore = ids => {
       const p = {};
       for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
       const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
-      if (Object.keys(p).length || k.length) fu[id] = {
+      const l = typeof assistantLifeLayoutPack === 'function' ? assistantLifeLayoutPack(id) : null;
+      if (Object.keys(p).length || k.length || l) fu[id] = {
         p,
-        k
+        k,
+        ...(l ? {
+          l
+        } : {})
       };
     } catch {}
   }
@@ -140948,9 +140953,39 @@ const alfMoreChars = o => {
   const t = JSON.stringify(o);
   return t.length + (t.match(/[:,]/g) || []).length;
 };
+const alfTrimLayout = (more, floor = 0) => {
+  const fu = {};
+  for (const [id, x] of Object.entries(more.fu || {})) fu[id] = x;
+  const total = () => alfMoreChars({
+    ...more,
+    fu
+  });
+  for (let guard = 0; guard < 200; guard++) {
+    if (total() <= ALF_MORE_FIT) break;
+    let best = null;
+    for (const [id, x] of Object.entries(fu)) if (Array.isArray(x.l) && x.l.length && x.l.length > floor && (!best || x.l.length > fu[best].l.length)) best = id;
+    if (!best) break;
+    const l = fu[best].l;
+    let lo = 0;
+    for (let i = 1; i < l.length; i++) if ((l[i][10] || 0) < (l[lo][10] || 0)) lo = i;
+    const rest = l.filter((_, i) => i !== lo);
+    const {
+      l: _drop,
+      ...keep
+    } = fu[best];
+    fu[best] = rest.length ? {
+      ...keep,
+      l: rest
+    } : keep;
+  }
+  return {
+    ...more,
+    fu
+  };
+};
 const alfFitMasmon = (more, ms) => {
-  if (!ms || !Object.keys(ms).length) return more;
-  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+  const withMs = (base, n, allColor) => {
+    if (!ms || !Object.keys(ms).length) return base;
     const cut = {};
     const mn = {};
     for (const [id, list] of Object.entries(ms)) {
@@ -140960,16 +140995,32 @@ const alfFitMasmon = (more, ms) => {
       });
       if (list.length > n) mn[id] = list.length;
     }
-    const next = {
-      ...more,
+    return {
+      ...base,
       ms: cut,
       ...(Object.keys(mn).length ? {
         mn
       } : {})
     };
-    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
+  };
+  const dyOf = n => ({
+    ...more,
+    dy: (more.dy || []).slice(0, n)
+  });
+  const ok = o => alfMoreChars(o) <= ALF_MORE_FIT;
+  let next = withMs(more, 8, true);
+  if (ok(next)) return next;
+  next = withMs(more, 8, false);
+  if (ok(next)) return next;
+  for (const n of [4, 0]) {
+    next = withMs(dyOf(n), 8, false);
+    if (ok(next)) return next;
   }
-  return more;
+  for (const n of [8, 4, 2, 1]) {
+    next = alfTrimLayout(withMs(dyOf(0), n, false), 8);
+    if (ok(next)) return next;
+  }
+  return alfTrimLayout(withMs(dyOf(0), 1, false));
 };
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
 const ALF_ACT_MAX = 6;
@@ -141077,7 +141128,12 @@ const assistantLifeFriendNormalizeMore = raw => {
       if (f && f.slot === sl) p[k] = f.key;
     }
     const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
-    fu[id] = {
+    const l = (Array.isArray(x.l) ? x.l : []).slice(0, 20).filter(a => Array.isArray(a) && a.length === 11 && furn.some(y => y.key === a[0]) && a.slice(1).every(v => Number.isFinite(v)));
+    fu[id] = l.length ? {
+      p,
+      k,
+      l
+    } : {
       p,
       k
     };
@@ -142835,7 +142891,13 @@ function AlfFriendHouseView({
     const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
     return f ? `${f.emoji} ${f.name}` : null;
   };
+  const layoutOf = id => {
+    const l = more && more.fu[id] && Array.isArray(more.fu[id].l) && typeof assistantLifeLayoutUnpack === 'function' ? assistantLifeLayoutUnpack(more.fu[id].l) : null;
+    return l && l.length ? l : null;
+  };
   const furnNames = id => {
+    const lay = layoutOf(id);
+    if (lay && lay.length) return [...new Set(lay.map(it => fname(it.k)).filter(Boolean))];
     const fu = putOf(id);
     return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
   };
@@ -142860,7 +142922,8 @@ function AlfFriendHouseView({
         ceil: more.fu[id].p.c || null,
         wall: more.fu[id].p.w || null,
         floor: more.fu[id].p.f || null
-      }
+      },
+      layout: layoutOf(id)
     };
     return o;
   })();
@@ -143048,6 +143111,7 @@ function AlfFriendHouseView({
     } : null,
     team: rvTeam,
     furn: rvFurn,
+    layoutItems: layoutOf(roomId),
     bubble: talk && talk.aid === roomId ? talk.text : '',
     title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
     sub: `🏘 ${friend.name}さんの家`,
