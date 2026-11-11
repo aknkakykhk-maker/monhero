@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3859c9c0bff91c2d
+// source-sha256: 8326e2f3a3efdb27
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -141800,6 +141800,337 @@ function AlfFavEditor({
     className: "mt-1 text-[10px] leading-snug text-slate-400"
   }, "選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
 }
+const MASMON_PVP_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/masmon-pvp`;
+const MASMON_PVP_KEY = 'mh_masmon_pvp_owner_key_v1';
+const MASMON_PVP_TIMEOUT_MS = 12000;
+const MASMON_PVP_CHALLENGE_DAILY = 20;
+const MASMON_PVP_REASON_TEXT = Object.freeze({
+  off: 'フレンド対戦は準備中です',
+  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  no_id: 'この端末ではまだ登録できません',
+  locked: 'この登録は別の端末で作られています',
+  over_cap: '育った量が、日数から考えられる上限を超えています',
+  team: '編成の中に、登録できないところがあります',
+  no_entry: '先に自分の助手の編成を登録してね',
+  no_opponent: 'その助手の編成は、まだ登録されていません',
+  not_friend: 'フレンドどうしだけが対戦できます',
+  size_short: '編成の体数が足りません',
+  limit: '今日の対戦はここまで。また明日ね',
+  self: '自分とは対戦できません'
+});
+const masmonPvpReasonText = reason => MASMON_PVP_REASON_TEXT[reason] || MASMON_PVP_REASON_TEXT.server;
+const masmonPvpOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantMasmonBattlePvp === true;
+const masmonPvpSafeId = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : null;
+const masmonPvpOwnerKey = async (create = false) => {
+  let key = null;
+  try {
+    key = await storeGet(MASMON_PVP_KEY, null, false);
+  } catch (_) {
+    key = null;
+  }
+  if (typeof key === 'string' && /^[0-9a-f]{48}$/.test(key)) return key;
+  if (!create) return null;
+  try {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const made = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (!(await storeSet(MASMON_PVP_KEY, made, false))) return null;
+    return made;
+  } catch (_) {
+    return null;
+  }
+};
+const masmonPvpSelf = async createKey => {
+  const owner = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  const key = owner ? await masmonPvpOwnerKey(createKey) : null;
+  return owner && key ? {
+    owner,
+    key
+  } : null;
+};
+const masmonPvpPost = async body => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), MASMON_PVP_TIMEOUT_MS) : null;
+  try {
+    const r = await fetch(MASMON_PVP_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: ac ? ac.signal : undefined
+    });
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (_) {
+      j = null;
+    }
+    if (j && j.ok) return j;
+    const e = j && typeof j.error === 'string' ? j.error : r.status >= 500 ? 'server' : 'network';
+    return {
+      ok: false,
+      reason: MASMON_PVP_REASON_TEXT[e] ? e : 'server',
+      detail: j && (j.detail || j.problems) || null
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const masmonPvpRead = async path => {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers: SB_HEADERS,
+      cache: 'no-store'
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j) ? j : null;
+  } catch (_) {
+    return null;
+  }
+};
+const masmonPvpRegister = async ({
+  assistantId,
+  size,
+  members,
+  plan,
+  swapPace,
+  tactics,
+  userName,
+  icon
+} = {}) => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(true);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const n = Math.max(1, Math.min(3, Number.isInteger(size) ? size : 3));
+  const list = (Array.isArray(members) ? members : []).slice(0, n);
+  const team = {
+    tactics: Number.isInteger(tactics) ? Math.max(0, Math.min(100, tactics)) : 0,
+    members: list
+  };
+  if (typeof plan === 'string' && plan) team.plan = plan;
+  if (typeof swapPace === 'string' && swapPace) team.swapPace = swapPace;
+  const r = await masmonPvpPost({
+    action: 'register',
+    owner: me.owner,
+    key: me.key,
+    assistant: assistantId,
+    name: typeof userName === 'string' ? userName : '',
+    icon: typeof icon === 'string' ? icon : null,
+    team
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason,
+    detail: r.detail
+  };
+};
+const masmonPvpUnregister = async ({
+  assistantId
+} = {}) => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: false,
+    reason: 'no_entry'
+  };
+  const r = await masmonPvpPost({
+    action: 'unregister',
+    owner: me.owner,
+    key: me.key,
+    assistant: assistantId
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const masmonPvpEntriesOf = async ownerIds => {
+  const ids = (Array.isArray(ownerIds) ? ownerIds : []).map(masmonPvpSafeId).filter(Boolean).slice(0, 100);
+  if (!ids.length) return [];
+  const rows = await masmonPvpRead(`masmon_pvp_entries?select=owner_id,assistant_id,user_name,icon,team,team_total,updated_at&active=eq.true&owner_id=in.(${ids.join(',')})&order=updated_at.desc`);
+  return rows || [];
+};
+const masmonPvpChallenge = async ({
+  assistantId,
+  friendId,
+  friendAssistantId,
+  kind = 'raw',
+  size = 3
+} = {}) => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: false,
+    reason: 'no_entry'
+  };
+  const fid = masmonPvpSafeId(friendId);
+  if (!fid) return {
+    ok: false,
+    reason: 'no_opponent'
+  };
+  let oppAssistant = typeof friendAssistantId === 'string' ? friendAssistantId : null;
+  if (!oppAssistant) {
+    const rows = await masmonPvpEntriesOf([fid]);
+    if (!rows.length) return {
+      ok: false,
+      reason: 'no_opponent'
+    };
+    oppAssistant = rows[0].assistant_id;
+  }
+  const r = await masmonPvpPost({
+    action: 'challenge',
+    owner: me.owner,
+    key: me.key,
+    assistant: assistantId,
+    opp_owner: fid,
+    opp_assistant: oppAssistant,
+    division: kind === 'fair' ? 'fair' : 'raw',
+    size
+  });
+  if (!r.ok) return {
+    ok: false,
+    reason: r.reason
+  };
+  const m = r.match || {};
+  return {
+    ok: true,
+    id: m.id,
+    seed: m.seed,
+    teamA: m.teamA,
+    teamB: m.teamB,
+    engineVersion: m.version,
+    techsVersion: m.techVersion,
+    balance: m.balance,
+    winner: m.winner,
+    reason: m.reason,
+    rounds: m.rounds,
+    digest: m.digest,
+    kind: m.division,
+    size: m.size,
+    rated: !!m.rated,
+    rating: m.a || null,
+    oppRating: m.b || null,
+    remaining: m.remaining
+  };
+};
+const masmonPvpRatings = async ({
+  kind = 'raw',
+  limit = 50,
+  week = null
+} = {}) => {
+  const div = kind === 'fair' ? 'fair' : 'raw';
+  const lim = Math.max(1, Math.min(200, Number(limit) || 50));
+  const weekly = typeof week === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(week);
+  const rows = weekly ? await masmonPvpRead(`masmon_pvp_weekly?select=owner_id,assistant_id,points,wins,losses,draws&division=eq.${div}&week=eq.${week}&order=points.desc&limit=${lim}`) : await masmonPvpRead(`masmon_pvp_ratings?select=owner_id,assistant_id,user_name,icon,rating,wins,losses,draws&division=eq.${div}&order=rating.desc,matches.desc&limit=${lim}`);
+  if (!rows) return {
+    ok: false,
+    reason: 'network',
+    rows: [],
+    mine: null
+  };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  const entries = await masmonPvpEntriesOf(rows.map(r => r.owner_id));
+  const teamOf = (o, a) => {
+    const e = entries.find(x => x.owner_id === o && x.assistant_id === a);
+    return e && e.team && Array.isArray(e.team.members) ? e.team.members.map(u => u.species) : [];
+  };
+  const nameOf = (o, a, r) => r.user_name || (entries.find(x => x.owner_id === o && x.assistant_id === a) || {}).user_name || '名無しのブリーダー';
+  const list = rows.map((r, i) => ({
+    rank: i + 1,
+    name: nameOf(r.owner_id, r.assistant_id, r),
+    icon: r.icon ?? null,
+    assistantId: r.assistant_id,
+    rating: weekly ? r.points : r.rating,
+    win: r.wins,
+    lose: r.losses,
+    draw: r.draws,
+    members: teamOf(r.owner_id, r.assistant_id),
+    me: !!self && r.owner_id === self
+  }));
+  return {
+    ok: true,
+    rows: list,
+    mine: list.filter(r => r.me)
+  };
+};
+const masmonPvpFriends = async () => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off',
+    friends: [],
+    remaining: 0
+  };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  if (!self || typeof sbFetchFriendRoster !== 'function') return {
+    ok: false,
+    reason: 'no_id',
+    friends: [],
+    remaining: 0
+  };
+  let roster = [];
+  try {
+    roster = await sbFetchFriendRoster(self);
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network',
+      friends: [],
+      remaining: 0
+    };
+  }
+  const entries = await masmonPvpEntriesOf(roster.map(f => f.otherId));
+  const day = new Date(Date.now() + 9 * 3600000 - 4 * 3600000).toISOString().slice(0, 10);
+  const mine = await masmonPvpRead(`masmon_pvp_matches?select=id&a_owner=eq.${self}&day=eq.${day}&limit=100`);
+  const remaining = Math.max(0, MASMON_PVP_CHALLENGE_DAILY - (mine ? mine.length : 0));
+  const friends = roster.map(f => ({
+    friendId: f.otherId,
+    name: f.userName,
+    icon: f.icon ?? null,
+    profileFrame: f.profileFrame || null,
+    assistants: entries.filter(e => e.owner_id === f.otherId).map(e => ({
+      assistantId: e.assistant_id,
+      members: e.team && Array.isArray(e.team.members) ? e.team.members.map(u => ({
+        species: u.species,
+        name: u.name,
+        lv: u.lv
+      })) : [],
+      total: e.team_total,
+      updatedAt: Date.parse(e.updated_at) || 0
+    }))
+  })).map(f => ({
+    ...f,
+    registered: f.assistants.length > 0
+  }));
+  return {
+    ok: true,
+    friends,
+    remaining
+  };
+};
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
 const CARD_BATTLE_SETUP_GUTS_MAX = 2;
