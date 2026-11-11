@@ -1,0 +1,521 @@
+{
+ "persona": "thumb",
+ "seed": "3",
+ "travel": "0.5",
+ "results": {
+  "toriko_hell_debug": {
+   "counts": {
+    "MARVELOUS": 173,
+    "GREAT": 2,
+    "EXCELLENT": 12
+   },
+   "notes": 187
+  },
+  "kaze_ga_soyogu_hell_debug": {
+   "counts": {
+    "MARVELOUS": 178,
+    "GREAT": 1,
+    "EXCELLENT": 14
+   },
+   "notes": 193
+  },
+  "sad_song_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 265,
+    "EXCELLENT": 28,
+    "GREAT": 2,
+    "MISS": 1
+   },
+   "notes": 296
+  },
+  "crossing_field_hell_debug": {
+   "counts": {
+    "MARVELOUS": 344,
+    "EXCELLENT": 32,
+    "GREAT": 6,
+    "MISS": 3
+   },
+   "notes": 385
+  },
+  "only_my_railgun_hell_debug": {
+   "counts": {
+    "MARVELOUS": 259,
+    "EXCELLENT": 22,
+    "MISS": 1
+   },
+   "notes": 282
+  },
+  "rising_hope_hell_debug": {
+   "counts": {
+    "MARVELOUS": 390,
+    "EXCELLENT": 45,
+    "GREAT": 2,
+    "MISS": 2
+   },
+   "notes": 439
+  },
+  "crazy_party_night_hell_debug": {
+   "counts": {
+    "MARVELOUS": 322,
+    "GREAT": 3,
+    "EXCELLENT": 37,
+    "MISS": 1
+   },
+   "notes": 363
+  },
+  "wrath_of_the_thorn_king_hell_debug": {
+   "counts": {
+    "MARVELOUS": 228,
+    "GREAT": 1,
+    "EXCELLENT": 24
+   },
+   "notes": 253
+  },
+  "haruka_hell_debug": {
+   "counts": {
+    "MARVELOUS": 442,
+    "EXCELLENT": 35,
+    "GREAT": 10,
+    "GOOD": 1,
+    "MISS": 4
+   },
+   "notes": 492
+  },
+  "humanoid_hell_debug": {
+   "counts": {
+    "MARVELOUS": 556,
+    "MISS": 4,
+    "EXCELLENT": 52,
+    "GREAT": 3
+   },
+   "notes": 615
+  },
+  "evans_hell_debug": {
+   "counts": {
+    "MARVELOUS": 421,
+    "EXCELLENT": 37,
+    "MISS": 2,
+    "GREAT": 2
+   },
+   "notes": 462
+  },
+  "black_shout_hell_debug": {
+   "counts": {
+    "MARVELOUS": 468,
+    "GREAT": 5,
+    "EXCELLENT": 33,
+    "MISS": 2
+   },
+   "notes": 508
+  },
+  "monster_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 300,
+    "GREAT": 2,
+    "EXCELLENT": 15
+   },
+   "notes": 317
+  },
+  "tsuki_ga_michiru_mae_ni_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 487,
+    "EXCELLENT": 55,
+    "MISS": 7,
+    "GREAT": 10,
+    "GOOD": 3
+   },
+   "notes": 562
+  },
+  "anima_hell_debug": {
+   "counts": {
+    "EXCELLENT": 37,
+    "MARVELOUS": 474,
+    "GREAT": 7,
+    "GOOD": 1,
+    "MISS": 3
+   },
+   "notes": 522
+  },
+  "rose_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 385,
+    "GREAT": 2,
+    "EXCELLENT": 46,
+    "MISS": 1
+   },
+   "notes": 434
+  },
+  "against_my_own_shadow_hell_debug": {
+   "counts": {
+    "MARVELOUS": 388,
+    "EXCELLENT": 42,
+    "GREAT": 5,
+    "MISS": 2
+   },
+   "notes": 437
+  },
+  "4u_hitasura_hell_debug": {
+   "counts": {
+    "MARVELOUS": 332,
+    "GREAT": 2,
+    "EXCELLENT": 22
+   },
+   "notes": 356
+  },
+  "close_to_your_heart_hell_debug": {
+   "counts": {
+    "MARVELOUS": 393,
+    "MISS": 1,
+    "EXCELLENT": 30,
+    "GREAT": 1
+   },
+   "notes": 425
+  },
+  "dullahan_clockwork_hell_debug": {
+   "counts": {
+    "MARVELOUS": 387,
+    "GREAT": 7,
+    "EXCELLENT": 26,
+    "MISS": 1
+   },
+   "notes": 421
+  },
+  "dullahan_hell_debug": {
+   "counts": {
+    "MARVELOUS": 495,
+    "GREAT": 7,
+    "EXCELLENT": 39,
+    "MISS": 1,
+    "GOOD": 1
+   },
+   "notes": 543
+  },
+  "sheriruth_hell_debug": {
+   "counts": {
+    "MARVELOUS": 568,
+    "GREAT": 1,
+    "EXCELLENT": 52,
+    "MISS": 1,
+    "GOOD": 2
+   },
+   "notes": 624
+  },
+  "toward_the_stars_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 491,
+    "EXCELLENT": 51,
+    "GREAT": 6
+   },
+   "notes": 548
+  },
+  "altar_world_tree_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 511,
+    "EXCELLENT": 57,
+    "MISS": 1,
+    "GREAT": 1
+   },
+   "notes": 570
+  },
+  "grievous_lady_hell": {
+   "counts": {
+    "MARVELOUS": 572,
+    "EXCELLENT": 52,
+    "GREAT": 7,
+    "MISS": 3
+   },
+   "notes": 634
+  },
+  "mf_ichika_mix_hell_debug": {
+   "counts": {
+    "MARVELOUS": 350,
+    "EXCELLENT": 23
+   },
+   "notes": 373
+  },
+  "big_bridge_no_shitou_hell_debug": {
+   "counts": {
+    "MARVELOUS": 650,
+    "EXCELLENT": 49,
+    "GREAT": 13,
+    "MISS": 2
+   },
+   "notes": 714
+  },
+  "freedom_dive_hell_debug": {
+   "counts": {
+    "MARVELOUS": 694,
+    "EXCELLENT": 69,
+    "MISS": 6,
+    "GREAT": 9,
+    "GOOD": 3,
+    "BAD": 1
+   },
+   "notes": 782
+  },
+  "emerald_rush_hell_debug": {
+   "counts": {
+    "MARVELOUS": 444,
+    "EXCELLENT": 32,
+    "MISS": 1,
+    "GREAT": 3,
+    "GOOD": 1,
+    "BAD": 1
+   },
+   "notes": 482
+  },
+  "makutsu_no_senritsu_hell_debug": {
+   "counts": {
+    "MARVELOUS": 438,
+    "GREAT": 3,
+    "EXCELLENT": 36
+   },
+   "notes": 477
+  },
+  "light_player_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 600,
+    "EXCELLENT": 63,
+    "GREAT": 10,
+    "MISS": 5
+   },
+   "notes": 678
+  },
+  "six_eternel_remix_hell_debug": {
+   "counts": {
+    "MARVELOUS": 468,
+    "GREAT": 6,
+    "EXCELLENT": 50
+   },
+   "notes": 524
+  },
+  "rebellion_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 639,
+    "EXCELLENT": 75,
+    "GREAT": 5,
+    "MISS": 1
+   },
+   "notes": 720
+  },
+  "monster_hero_hell_debug": {
+   "counts": {
+    "MARVELOUS": 599,
+    "EXCELLENT": 49,
+    "GREAT": 2,
+    "MISS": 2
+   },
+   "notes": 652
+  },
+  "monster_hero_another_hell_debug": {
+   "counts": {
+    "MARVELOUS": 524,
+    "GREAT": 4,
+    "EXCELLENT": 56,
+    "MISS": 2
+   },
+   "notes": 586
+  },
+  "six_eternel_beat_hell_debug": {
+   "counts": {
+    "MARVELOUS": 724,
+    "EXCELLENT": 63,
+    "MISS": 9,
+    "BAD": 1,
+    "GREAT": 5,
+    "GOOD": 2
+   },
+   "notes": 804
+  },
+  "the_city_beneath_the_comets_hell_debug": {
+   "counts": {
+    "MARVELOUS": 606,
+    "EXCELLENT": 45,
+    "GREAT": 3,
+    "MISS": 1
+   },
+   "notes": 655
+  },
+  "kindan_no_resistance_hell_debug": {
+   "counts": {
+    "MARVELOUS": 697,
+    "EXCELLENT": 56,
+    "GOOD": 1,
+    "MISS": 2,
+    "GREAT": 6
+   },
+   "notes": 762
+  },
+  "journey_hell_debug": {
+   "counts": {
+    "MARVELOUS": 631,
+    "EXCELLENT": 69,
+    "GREAT": 5,
+    "GOOD": 1
+   },
+   "notes": 706
+  },
+  "rose_hell_debug": {
+   "counts": {
+    "MARVELOUS": 575,
+    "GREAT": 4,
+    "EXCELLENT": 55,
+    "MISS": 1,
+    "BAD": 1,
+    "GOOD": 2
+   },
+   "notes": 638
+  },
+  "stay_with_me_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 438,
+    "EXCELLENT": 29,
+    "GREAT": 1,
+    "MISS": 2
+   },
+   "notes": 470
+  },
+  "nothing_without_you_hell_debug": {
+   "counts": {
+    "MARVELOUS": 651,
+    "GREAT": 6,
+    "EXCELLENT": 69,
+    "BAD": 1,
+    "MISS": 2
+   },
+   "notes": 729
+  },
+  "senjou_no_shippuu_hell_debug": {
+   "counts": {
+    "MARVELOUS": 584,
+    "GREAT": 5,
+    "EXCELLENT": 53,
+    "MISS": 2
+   },
+   "notes": 644
+  },
+  "kiki_issen_short_hell_debug": {
+   "counts": {
+    "MARVELOUS": 554,
+    "GREAT": 1,
+    "EXCELLENT": 34
+   },
+   "notes": 589
+  },
+  "pandora_boss_remix_hell_debug": {
+   "counts": {
+    "MARVELOUS": 595,
+    "EXCELLENT": 37,
+    "MISS": 1
+   },
+   "notes": 633
+  },
+  "eiki_boss_remix_hell_debug": {
+   "counts": {
+    "MARVELOUS": 732,
+    "GREAT": 4,
+    "EXCELLENT": 75,
+    "GOOD": 1
+   },
+   "notes": 812
+  },
+  "sad_song_hell_debug": {
+   "counts": {
+    "MARVELOUS": 722,
+    "GREAT": 2,
+    "EXCELLENT": 47,
+    "GOOD": 1,
+    "MISS": 2
+   },
+   "notes": 774
+  },
+  "mou_hitotsu_no_sekai_e_hell_debug": {
+   "counts": {
+    "MARVELOUS": 828,
+    "GREAT": 2,
+    "EXCELLENT": 55,
+    "GOOD": 1,
+    "MISS": 1
+   },
+   "notes": 887
+  },
+  "crazy_party_night_full_hell_debug": {
+   "counts": {
+    "MARVELOUS": 844,
+    "GREAT": 4,
+    "EXCELLENT": 84,
+    "MISS": 3,
+    "GOOD": 1
+   },
+   "notes": 936
+  },
+  "rebellion_hell_debug": {
+   "counts": {
+    "MARVELOUS": 1044,
+    "EXCELLENT": 111,
+    "GREAT": 8,
+    "MISS": 3,
+    "GOOD": 2
+   },
+   "notes": 1168
+  },
+  "kiki_issen_hell_debug": {
+   "counts": {
+    "MARVELOUS": 888,
+    "MISS": 2,
+    "GREAT": 8,
+    "EXCELLENT": 79,
+    "GOOD": 2
+   },
+   "notes": 979
+  },
+  "monster_hell_debug": {
+   "counts": {
+    "MARVELOUS": 735,
+    "GREAT": 1,
+    "EXCELLENT": 69,
+    "MISS": 1
+   },
+   "notes": 806
+  },
+  "light_player_hell_debug": {
+   "counts": {
+    "MARVELOUS": 1103,
+    "EXCELLENT": 125,
+    "GREAT": 16,
+    "MISS": 3,
+    "GOOD": 2
+   },
+   "notes": 1249
+  },
+  "stay_with_me_hell_debug": {
+   "counts": {
+    "MARVELOUS": 758,
+    "GREAT": 5,
+    "EXCELLENT": 65,
+    "MISS": 1
+   },
+   "notes": 829
+  },
+  "tsuki_ga_michiru_mae_ni_hell_debug": {
+   "counts": {
+    "MARVELOUS": 1253,
+    "GREAT": 14,
+    "EXCELLENT": 145,
+    "GOOD": 2,
+    "MISS": 5
+   },
+   "notes": 1419
+  },
+  "altar_world_tree_hell_debug": {
+   "counts": {
+    "MARVELOUS": 1406,
+    "EXCELLENT": 137,
+    "GREAT": 5,
+    "MISS": 2,
+    "GOOD": 1
+   },
+   "notes": 1551
+  }
+ }
+}
