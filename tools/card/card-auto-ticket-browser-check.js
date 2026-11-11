@@ -59,7 +59,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
         s('mh_inherited_unique_level_compensation_v1', true); s('mh_inherited_unique_level_compensation_pending_v1', false);
         s('mh_owned_items', { session_ticket: 7 });
       });
-      await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
+      await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
       // 縦横ボタンで回した横(🔄横)。対戦の終わりで戻るので、見る前に毎回回し直す(遊ぶ人も結果の画面で押し直す)
       const reRot = async () => { if (!rot) return; if ((await page.evaluate(() => RHYTHM_VIEW_ROTATION.get())) === 0) { await page.evaluate(() => applyScreenOrientation('landscape')); await page.waitForTimeout(900); } };
       // はみ出し・切れ: 要素の箱が画面の中か、字が箱からあふれていないか
