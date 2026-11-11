@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0fd8c6ebbca24a05
+// generated-sha256: ad2eebd49448ef8c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9706,6 +9706,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
+  assistantLifeFriendBond: false, // フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳(56-assistant-life-friend-bond)。社長の「この文で」と表(assistant_life_friend_likes)のあとで真に
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
@@ -34950,9 +34951,9 @@ const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
 const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
 const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
   h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
-  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
-  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
-  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  w: ['🗺 助手の町', '🗺 助手ライフで町を見ている'],
+  f: ['🤝 助手のきずな', '🤝 助手ライフで助手どうしのきずなを見ている'],
+  i: ['🎁 助手への贈り物', '🎁 助手ライフで贈る道具を選んでいる'],
   p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
   v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている'],
 });
@@ -37778,7 +37779,7 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
         if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
         // 送り仮名(「来|て」「強|く」)の手前・小さい字の手前・閉じる記号の手前では分けない
         if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
-        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～・]/.test(s[p] || '')) continue;
         if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
         // くっついた言葉(「振り|直す」「受け取り|忘れ」「押し|切る」)の、送り仮名と次の漢字のあいだでは分けない
         if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
@@ -72475,9 +72476,10 @@ const ALF_TABLE_HOUSES = 'assistant_life_friend_houses';
 const ALF_TABLE_VISITS = 'assistant_life_friend_visits';
 const ALF_IDS = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 // 1日の上限(朝4時の区切り)。thin=間引く(送り出し量が分かるまでの最初の形)
+// look(プレイヤーの置き手紙)は合計の上限なし(999 は「数えない」の意味)。同じフレンドへは1日1通(st.looked と表の一意の決まり)。2026-11-11 社長「置き手紙はフレンドごとの回数制限にして」「上限はなしで1人1通」
 const ALF_LIMITS = Object.freeze({
-  on:   Object.freeze({ go: 3, come: 2, look: 3, readMs: 30 * 60000, sendMs: 10 * 60000 }),
-  thin: Object.freeze({ go: 1, come: 0, look: 1, readMs: 30 * 60000, sendMs: 60 * 60000 }),
+  on:   Object.freeze({ go: 3, come: 2, look: 999, readMs: 30 * 60000, sendMs: 10 * 60000 }),
+  thin: Object.freeze({ go: 1, come: 0, look: 999, readMs: 30 * 60000, sendMs: 60 * 60000 }),
 });
 const ALF_BEAT_P = Object.freeze({ go: 100, look: 50, dayMax: 300 });
 const ALF_FRESH_DAYS = Object.freeze({ go: 14, look: 14, come: 7 });
@@ -72703,7 +72705,8 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     const k = raw.mn && typeof raw.mn === 'object' ? Number(raw.mn[id]) : NaN;
     if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
   }
-  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn };
+  const fv = typeof albNormalizeFavShare === 'function' ? albNormalizeFavShare(raw.fv) : null; // お気に入りの棚(56-assistant-life-friend-bond)
+  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn, ...(fv ? { fv } : {}) };
 };
 // 相手の控えを読むとき(知らない id・種類・長い値は捨てる)
 const assistantLifeFriendNormalizeHouse = (raw) => {
@@ -72870,7 +72873,7 @@ const alfFetchVisits = async (force = false) => {
     const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,note,note_to,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
     const visits = (Array.isArray(rows) ? rows : []).map(r => (r && Number.isFinite(r.id) && ['go', 'come', 'player'].includes(r.kind) && alfSafeOther(r.visitor_id) && alfSafeOther(r.host_id) ? {
       id: r.id, kind: r.kind, visitor: r.visitor_id, host: r.host_id, day: String(r.day || '').slice(0, 10),
-      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [], word: alfInt(r.word, 0, ALF_WORDS - 1),
+      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [], word: r.word === 12 ? 12 : alfInt(r.word, 0, ALF_WORDS - 1),
       thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1), at: Date.parse(r.created_at) || 0,
       note: typeof r.note === 'string' ? alfNoteShow(r.note) : '', noteTo: alfValidId(r.note_to) ? r.note_to : null } : null)).filter(Boolean);
     _alfVisitsAt = Date.now();
@@ -72921,7 +72924,7 @@ const alfPublish = async (life, metIds, now = Date.now(), { force = false } = {}
   try {
     await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: { breeder_id: self, open: settings.open, house } });
     alfSaveSt({ ...alfToday(), sentAt: now, sentSig: sig });
-    void alfPublishMore(self, settings.show ? alfFitMasmon({ ...alfBuildMore(house.ids), ...(settings.act ? { ac: _alfActCache || [] } : {}) }, alfMasmonShare(house.ids)) : {});
+    void alfPublishMore(self, settings.show ? alfFitMasmon({ ...alfBuildMore(house.ids), ...(settings.act ? { ac: _alfActCache || [] } : {}), ...(() => { const fv = typeof albFavShare === 'function' ? albFavShare(house.ids) : null; return fv ? { fv } : {}; })() }, alfMasmonShare(house.ids)) : {});
     return true;
   } catch { return false; }
 };
@@ -73016,7 +73019,8 @@ let _alfGiftSender = null;
 const assistantLifeFriendSetGiftSender = (fn) => { _alfGiftSender = typeof fn === 'function' ? fn : null; };
 const alfGiveBeatP = async (kind, giftId, st) => {
   const want = ALF_BEAT_P[kind] || 0;
-  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  // 1日300Pまでの上限は、助手が持ち帰るおみやげ(go)だけ。置き手紙(look)は1通ごとに 50(2026-11-11 社長)
+  const amount = kind === 'look' ? want : Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
   if (!amount || !_alfGiftSender) return 0;
   let ok = false;
   try { ok = await _alfGiftSender({ id: giftId, title: kind === 'look' ? 'フレンドの家へ遊びに行ったおみやげ' : '助手のフレンドの家のおみやげ', source: 'assistantLifeFriend', rewards: [{ type: 'beatPoint', amount }] }); } catch { ok = false; }
@@ -73054,6 +73058,8 @@ const assistantLifeFriendSeeCome = async (i) => {
   const c = st.came[i];
   if (!c || c.seen) return null;
   if (c.mine) alfBond([c.mine], 'friendWelcome');
+  // 迎えた来客のぶんの友情スタンプ(1人1日1個・56-assistant-life-friend-bond)
+  if (typeof albIncoming === 'function' && typeof albLoad === 'function') { try { await albLoad(); albIncoming([[c.host, st.day || alfDay()]]); } catch {} }
   const came = st.came.map((x, j) => (j === i ? { ...x, seen: true } : x));
   alfSaveSt({ ...st, came });
   if (c.mine) alfAddKnown([`${c.mine}|${c.host}|${c.aid}`]);
@@ -73132,7 +73138,8 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
   const nc = alfNoteCheck(note);
   if (!nc.ok) return { ok: false, reason: nc.reason };
-  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
+  if (word === ALF_WORD_FREE && !nc.text) return { ok: false, reason: '言葉を書くか、下の一言を選んでください' };
+  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
   if (!r.ok) return { ok: false, reason: r.reason };
   // ミッションの「フレンドの家へ行く」と「助手とふれあう」(2026-11-08)
   if (typeof missionNotify === 'function') { missionNotify('friendVisit'); missionNotify('assistantTouch'); }
@@ -73142,7 +73149,7 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   const marked = { ...cur, look: cur.look + 1, looked: { ...cur.looked, [hostId]: 1 }, photos };
   alfSaveSt(marked);
   const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
-  if (got) { const now2 = alfToday(); alfSaveSt({ ...now2, beatP: now2.beatP + got }); }
+  // 置き手紙のビートPは、助手のおみやげの1日300Pの数(st.beatP)には入れない
     return { ok: true, beatP: got, photo: firstHere };
 };
 
@@ -73277,6 +73284,9 @@ const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー�
 const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
 const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
 // 置き手紙の決まった一言(番号は表に残す。0〜11)とお礼(0〜5)
+// 自由に書いた言葉だけの置き手紙(決まった一言なし)の番号(2026-11-11 社長「自由文でどうやって返すの？決定がない？」)。表は word 0〜31 を通す
+const ALF_WORD_FREE = 12;
+const alfWordQuote = (w) => (w === ALF_WORD_FREE ? '' : `「${ALF_WORD_TEXTS[w] || ''}」`);
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
@@ -73477,6 +73487,8 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [bondOpen, setBondOpen] = React.useState(false); // 友情のシート(56-assistant-life-friend-bond・印が偽なら出ない)
+  const bondMark = (task) => { if (typeof albMark === 'function') void albMark(friend.id, task); };
   const [selfName, setSelfName] = React.useState('');
   React.useEffect(() => { let alive = true; (async () => { try { const n = typeof storeGet === 'function' ? await storeGet('mh_breeder_name', '') : ''; if (alive && typeof n === 'string' && n && n !== '名無しのブリーダー') setSelfName(n.slice(0, 10)); } catch {} })(); return () => { alive = false; }; }, []);
   const { w: vw, h: vh } = typeof useAssistantLifeViewSize === 'function' ? useAssistantLifeViewSize() : { w: 390, h: 844 }; // 🔄横では回した器の幅・高さ
@@ -73505,13 +73517,14 @@ function AlfFriendHouseView({ friend, onClose }) {
     const text = byDoing && Math.random() < 0.6 ? byDoing : alfPickOne([lines(aid)[0], ...vl(aid).greet]);
     setRoomId(aid); setTalk({ aid, step: 0, text: alfFill(text, { h: friend.name, who: aid, name: visitor }) });
   };
-  const reply = (i) => { if (!talk) return; setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
+  const reply = (i) => { if (!talk) return; bondMark('talk'); setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
   const leave = async (word) => {
     const to = leaving || null;
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name, note: noteText, noteTo: to });
     if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); return; }
     setLeaving(null); setRoomId(null); setTalk(null); setNoteText('');
-    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+    if (r && r.ok) bondMark('note');
+    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
   // 置き手紙の1行(押す前に、何が届くか・今日できるかが分かるように)
   const noteLine = done ? done
@@ -73545,11 +73558,12 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>);
   const tiles = (
     <div data-alf-visit-acts>
+      {typeof AlfBondBar === 'function' && <AlfBondBar friend={friend} more={more} compact={land} onOpen={() => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(true); }}/>}
       <p className="mb-1 text-[10px] font-black text-slate-200">この家でできること</p>
       <div className="grid grid-cols-3 gap-1.5">
         <button type="button" className="mhl-tile mhl-call" disabled={!home.length} data-alf-visit-act="talk" onClick={() => home[0] && greet(home[0])}><i>💬</i><b>話す</b><small>{home.length ? `家にいる ${home.length}人` : 'いまはだれも'}</small></button>
-        <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => setRoomId(h.ids[0] || null)}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
-        <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'}</small></button>
+        <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => { setRoomId(h.ids[0] || null); if (h.ids[0]) bondMark('find'); }}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
+        <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'}</small></button>
       </div>
       <p className="mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100" data-alf-visit-note={done ? 'done' : can}>{noteLine}</p>
       <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、{friend.name}さんの助手の仲良し度は変わりません。</p>
@@ -73561,7 +73575,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>) : null;
   const houseView = (
     <div className="relative pt-1" style={{ paddingInline: pad }} data-alf-visit-house>
-      <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={(id) => { setTalk(null); setLeaving(null); setRoomId(id); }}
+      <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={(id) => { setTalk(null); setLeaving(null); setRoomId(id); bondMark('find'); }}
         diary={{ items: [...diaryItems].reverse().map(d => ({ t: d.t, text: d.x })) }} pop={false} onBoard={() => setBoardOpen(true)} hname={`🏡 ${friend.name}さんの家`} other={otherPut}/>
     </div>);
   // 大きな部屋に渡すもの: いる助手・寝ている・留守の札・贈られた家具・写したマスモン・話しかけたときの吹き出し
@@ -73639,8 +73653,8 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alf-visit-words>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={() => setLeaving(null)}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
-        <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙の一言をえらぶ{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
-        <p className="text-[10.5px] font-bold text-slate-200">一言を押すと{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
+        <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙を残す{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
+        <p className="text-[10.5px] font-bold text-slate-200">一言を選ぶか、自由に書いて送ると、{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
         <label className="mt-2 block text-[10.5px] font-bold text-slate-200" htmlFor="alf-note-free">✏️ ひとこと(自由・{ALF_NOTE_MAX}字まで・なくてもよい)</label>
         <div className="mt-1 flex items-center gap-1.5">
           <input id="alf-note-free" type="text" data-alf-note-free value={noteText} maxLength={ALF_NOTE_MAX} autoComplete="off" spellCheck={false}
@@ -73649,7 +73663,9 @@ function AlfFriendHouseView({ friend, onClose }) {
           <span className="shrink-0 text-[10px] text-slate-400">{[...noteText].length}/{ALF_NOTE_MAX}</span>
         </div>
         {(() => { const c = alfNoteCheck(noteText); const warn = noteWarn || (!c.ok ? c.reason : ''); return warn ? <p className="mt-1 text-[10.5px] font-bold text-rose-300" data-alf-note-warn>⚠️ {warn}</p> : <p className="mt-1 text-[10px] text-slate-400">連絡先・住所・本名などは書けません。悪い言葉は●になります。{friend.name}さんは自由文を見ないようにもできます。</p>; })()}
-        <div className="mt-2 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
+        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => leave(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
+        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'}</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
         <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
       </div>
     </div>) : null;
@@ -73683,6 +73699,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         {sheet}
         {words}
         {diarySheet}
+        {bondOpen && typeof AlfBondSheet === 'function' && <AlfBondSheet friend={friend} more={more} land={land} onClose={() => setBondOpen(false)} onRoom={(id) => { setBondOpen(false); setRoomId(id); bondMark('find'); }}/>}
       </div>
     </div>);
 }
@@ -73762,8 +73779,9 @@ function AssistantLifeFriendPage({ life }) {
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
-        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
+        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}通</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
+      {!alfEmpty && typeof AlfGuestBook === 'function' && <AlfGuestBook s={s} card={card} sec={sec} onVisit={setVisit}/>}
       <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes style={hideIfEmpty}>
         {notes.length ? notes.slice(0, 12).map(n => (
@@ -73771,8 +73789,8 @@ function AssistantLifeFriendPage({ life }) {
             <p className="text-[11px] leading-snug text-slate-100">
               <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
               {n.dir === 'away' ? <><span className="whitespace-nowrap">{n.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{n.name}さんの家へ</span>遊びに行っていた</>
-                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}「{ALF_WORD_TEXTS[n.word]}」{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
-                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た「{ALF_WORD_TEXTS[n.word]}」</>}
+                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
+                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
             </p>
             {n.dir === 'in' && n.note ? (s.settings.noteShow && !s.settings.noteOff.includes(n.who)
               ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-note-text>✏️ {n.note}</p>
@@ -73789,7 +73807,7 @@ function AssistantLifeFriendPage({ life }) {
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-100">{f.name}さんの家{been ? ' 📷' : ''}</p>
+              <p className="truncate text-[12px] font-black text-slate-100">{f.name}さんの家{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
               <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
                 return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
               {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
@@ -73810,6 +73828,7 @@ function AssistantLifeFriendPage({ life }) {
             <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
           </div>))}
       </div>
+      {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
         {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
@@ -73831,6 +73850,11 @@ const assistantLifeFriendDecorateRooms = (rooms) => {
     if (!o || !rooms[id]) continue;
     rooms[id] = { tag: [`🏘 ${o.name}さんの家へ`, o.ids.length > 1 ? `${o.ids.length}人で 遊びに` : 'ひとりで 遊びに', o.ids.length > 1 ? assistantLifeGroupNames(o.ids, 4) : null] };
   }
+  // 来ている最中の来客(迎えるまで): 会っている助手の部屋の札(56-assistant-life-friend-bond の印が真のときだけ)
+  if (typeof albEnabled === 'function' && albEnabled()) for (const c of (ALF_STORE.state.st.came || [])) {
+    if (!c || c.seen || !c.mine || !rooms[c.mine] || assistantLifeFriendAwayOf(c.mine)) continue;
+    rooms[c.mine] = { ...rooms[c.mine], tag: [`🚪 ${c.name}さんの${assistantLifeName(c.aid)}が来ている`, 'いっしょに おしゃべり', null] };
+  }
   return rooms;
 };
 // HOME: 施設「🏡 助手ライフ」の札の右上に「🏘 n」(札の字にかからないよう、札の角の外側に半分出す)。
@@ -73840,7 +73864,7 @@ function AssistantLifeFriendHomeBadge({ rect }) {
   const s = useAssistantLifeFriendState();
   const [toast, setToast] = React.useState('');
   const lastRef = React.useRef(null);
-  React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); })(); }, []);
+  React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); if (typeof albCountIncoming === 'function') { try { await albCountIncoming(); } catch {} } })(); }, []);
   const n = alfEnabled() && s.loaded && s.mode && s.mode !== 'off' ? assistantLifeFriendUnseen(s) : 0;
   React.useEffect(() => {
     if (lastRef.current != null && n > lastRef.current) {
@@ -73854,11 +73878,392 @@ function AssistantLifeFriendHomeBadge({ rect }) {
     lastRef.current = n;
     return undefined;
   }, [n]);
-  if (!n && !toast) return null;
+  // 来ている最中の印(迎えるまで出す・56-assistant-life-friend-bond の印が真のときだけ)
+  const here = typeof albEnabled === 'function' && albEnabled() && s.loaded && s.mode && s.mode !== 'off' ? (s.st.came || []).find(c => c && !c.seen) : null;
+  if (!n && !toast && !here) return null;
   return (<>
     {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: rect.x + rect.w - 14, top: rect.y - 8 }}>🏘 {n}</span>}
     {toast && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg" data-alf-toast
       style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
+    {!toast && here && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-amber-300/80 bg-amber-100 px-2.5 text-[11px] font-black leading-[20px] text-amber-950 shadow-lg" data-alb-here
+      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>🚪 {here.name}さんの{assistantLifeName(here.aid)}が来ています</div>}
+  </>);
+}
+
+// ---- part: 56-assistant-life-friend-bond.jsx ----
+// 助手ライフ: フレンドの家の「行く意味・来てもらう意味」(2026-11-11 社長「機能が少なすぎる。もっといろいろ見せれるようにして意味も持たせたい」
+//   「フレンドが遊びに来たときを分かりやすくと、意味をもっと持たせたい」・案 docs/progress/assistant-peer/FRIEND-HOUSE-MORE-PLAN.md の A+B+C と来たとき)
+//   A 友情とスタンプ … フレンドごとの友情Lv。その家で3つ(話す・部屋を見る・置き手紙)すると今日のスタンプ1個(1軒1日1個・1日3軒)。
+//                      相手(か相手の助手)が来てくれた日にも1個(1人1日1個)。節目は見た目の札(呼び名)だけ。家具・ビートPは付けない
+//   B 今日の見どころ・すてき … 前に来たときの控えを端末に覚えて、増えた家具・マスモン・遊んだ物に NEW。「💗 すてき」は決まった場所の印だけを送る(自由文なし・1軒1日3つ)
+//   C お気に入りの棚 … 持ち主が選んだ物(好きな助手・自慢のマスモン・好きな曲・集めた家具の数)を、くわしい控え(more.fv)に載せる
+//   来たとき … HOME の印「🚪 来ています」・部屋の札・「📖 お客さん帳」(だれが・いつ・何をしたか・返しに行く)
+// 公開の印 assistantLifeFriendBond の後ろ(偽なら何も出さず・送らず・保存しない)。保存は新しいキーだけ(今の mh_assistant_life_friend_v1 は形を変えない)。
+// 表は assistant_life_friend_likes(足すだけ・docs/sql/assistant-life/FRIEND_LIKES_ADD.sql)。無いあいだ「すてき」は出さない。
+
+const ALB_KEY = 'mh_assistant_life_friend_bond_v1';
+const ALB_FAV_KEY = 'mh_assistant_life_friend_fav_v1';
+const ALB_TABLE_LIKES = 'assistant_life_friend_likes';
+const ALB_MAX = Object.freeze({ houses: 3, likes: 3, friends: 100 });
+// 友情Lv に要るスタンプの数(Lv1〜Lv10)と呼び名(見た目の札)
+const ALB_STEPS = Object.freeze([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
+const ALB_TITLES = Object.freeze(['はじめまして', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', 'なかよし', '大のなかよし', 'いつもの人', '親友', '大親友', '心の友', 'かけがえのない友']);
+const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '部屋を見る'], ['note', '✉️', '置き手紙']]);
+const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
+const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
+
+const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
+const albLv = (st) => ALB_STEPS.filter(n => st >= n).length;
+const albTitle = (st) => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
+const albNext = (st) => { const lv = albLv(st); return lv >= ALB_STEPS.length ? null : { need: ALB_STEPS[lv] - st, from: lv ? ALB_STEPS[lv - 1] : 0, to: ALB_STEPS[lv] }; };
+
+// ---------- 保存(無い・壊れているときは既定値) ----------
+const albNormalizeSnap = (v) => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const fu = {}; const ms = {};
+  for (const id of ALF_IDS) {
+    const a = v.fu && typeof v.fu === 'object' ? v.fu[id] : null; if (typeof a === 'string') fu[id] = a.slice(0, 200);
+    const b = v.ms && typeof v.ms === 'object' ? v.ms[id] : null; if (Array.isArray(b)) ms[id] = b.filter(x => typeof x === 'string').map(x => x.slice(0, 60)).slice(0, 8);
+  }
+  return { fu, ms, ac: Number.isFinite(v.ac) ? v.ac : 0 };
+};
+const albDefaultOne = () => ({ st: 0, t: { talk: false, find: false, note: false }, done: false, liked: [], in: [], snap: null });
+const normalizeAssistantLifeFriendBond = (v) => {
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const src = o.f && typeof o.f === 'object' && !Array.isArray(o.f) ? o.f : {};
+  const f = {};
+  for (const id of Object.keys(src).slice(0, ALB_MAX.friends)) {
+    const x = src[id];
+    if (!alfSafeOther(id) || !x || typeof x !== 'object') continue;
+    const t = x.t && typeof x.t === 'object' ? x.t : {};
+    f[id] = {
+      st: alfInt(x.st, 0, 9999), t: { talk: t.talk === true, find: t.find === true, note: t.note === true }, done: x.done === true,
+      liked: (Array.isArray(x.liked) ? x.liked : []).filter(s => typeof s === 'string' && ALB_SPOT_RE.test(s)).slice(0, ALB_MAX.likes),
+      in: (Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(-12),
+      snap: albNormalizeSnap(x.snap),
+    };
+  }
+  return { v: 1, day: typeof o.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.day) ? o.day : null, houses: alfInt(o.houses, 0, 9), f };
+};
+const normalizeAssistantLifeFriendFav = (v) => {
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return { v: 1, on: o.on !== false, a: alfValidId(o.a) ? o.a : null,
+    m: o.m && typeof o.m === 'object' && alfValidId(o.m.aid) && typeof o.m.mo === 'string' && o.m.mo ? { aid: o.m.aid, mo: o.m.mo.slice(0, 40) } : null,
+    s: typeof o.s === 'string' && o.s.trim() ? alfStr(o.s.trim(), 30) : null, fn: o.fn !== false };
+};
+// 朝4時の区切りで、今日の3つ・今日のスタンプ・今日のすてきを戻す(スタンプの数 st と控え snap は残す)
+const albRoll = (b, day) => (b.day === day ? b : { ...b, day, houses: 0, f: Object.fromEntries(Object.entries(b.f).map(([k, x]) => [k, { ...x, t: { talk: false, find: false, note: false }, done: false, liked: [] }])) });
+let _albLoading = null;
+const albLoad = () => {
+  if (ALF_STORE.state.bond) return Promise.resolve(ALF_STORE.state.bond);
+  if (!_albLoading) _albLoading = (async () => {
+    const [a, b] = await Promise.all([ALB_KEY, ALB_FAV_KEY].map(k => storeGet(k, null, false).catch(() => null)));
+    ALF_STORE.set({ bond: albRoll(normalizeAssistantLifeFriendBond(a), alfDay()), fav: normalizeAssistantLifeFriendFav(b) });
+    return ALF_STORE.state.bond;
+  })();
+  return _albLoading;
+};
+const albSave = (bond) => { ALF_STORE.set({ bond }); try { storeSet(ALB_KEY, bond, false); } catch {} };
+const albSaveFav = (patch) => { const fav = normalizeAssistantLifeFriendFav({ ...(ALF_STORE.state.fav || {}), ...patch }); ALF_STORE.set({ fav }); try { storeSet(ALB_FAV_KEY, fav, false); } catch {} };
+const albCur = () => { const b = ALF_STORE.state.bond; if (!b) return null; const r = albRoll(b, alfDay()); if (r !== b) albSave(r); return r; };
+const albOne = (b, id) => (b && b.f[id]) || albDefaultOne();
+
+// ---------- A 友情とスタンプ ----------
+// その家で1つした(talk / find / note)。3つそろうと今日のスタンプ1個(1軒1日1個・1日 ALB_MAX.houses 軒)
+const albMark = async (fid, task) => {
+  if (!albEnabled() || !alfSafeOther(fid) || !ALB_TASKS.some(t => t[0] === task)) return null;
+  await albLoad();
+  const b = albCur(); if (!b) return null;
+  const x = albOne(b, fid);
+  if (x.t[task]) return null;
+  const t = { ...x.t, [task]: true };
+  let nx = { ...x, t }; let stamp = false;
+  if (!x.done && t.talk && t.find && t.note && b.houses < ALB_MAX.houses) { nx = { ...nx, st: Math.min(9999, x.st + 1), done: true }; stamp = true; }
+  albSave({ ...b, houses: b.houses + (stamp ? 1 : 0), f: { ...b.f, [fid]: nx } });
+  if (stamp) ALF_STORE.set({ bondFlash: { id: fid, lvUp: albLv(nx.st) > albLv(x.st) ? albLv(nx.st) : 0, at: Date.now() } });
+  return { stamp };
+};
+// 来てくれた日のスタンプ(1人1日1個)。行き来の表の行(相手が書いた go / player)と、迎えた来客(come)から数える
+const albIncoming = (pairs) => {
+  if (!albEnabled()) return [];
+  const b0 = albCur(); if (!b0) return [];
+  let b = b0; const gained = [];
+  for (const [fid, day] of pairs) {
+    if (!alfSafeOther(fid) || typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    const x = albOne(b, fid);
+    if (x.in.includes(day)) continue;
+    b = { ...b, f: { ...b.f, [fid]: { ...x, st: Math.min(9999, x.st + 1), in: [...x.in, day].slice(-12) } } };
+    gained.push(fid);
+  }
+  if (b !== b0) albSave(b);
+  return gained;
+};
+const albCountIncoming = async (s = ALF_STORE.state) => {
+  if (!albEnabled() || !s.selfId) return [];
+  await albLoad();
+  const names = new Set((s.roster || []).map(f => f.id)); const muted = new Set(s.settings.muted);
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+};
+
+// ---------- B 今日の見どころ・すてき ----------
+const albPutOf = (h, more, id) => (more && more.fu && more.fu[id] ? more.fu[id].p : (h.r[id] && h.r[id].fu) || {});
+const albSnapOf = (h, more) => {
+  const fu = {}; const ms = {};
+  for (const id of h.ids) {
+    const p = albPutOf(h, more, id) || {};
+    fu[id] = ['c', 'w', 'f'].map(k => p[k] || '').join(',');
+    ms[id] = (more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []).map(t => `${t.mo}|${t.n || ''}`.slice(0, 60));
+  }
+  return { fu, ms, ac: more && more.ac && more.ac[0] ? more.ac[0].at : 0 };
+};
+// 見どころ(多くて4つ)。snap が無い(はじめて)ときは、その家の目立つ物を出す
+const albSpots = (h, more, snap) => {
+  const out = []; const first = !snap;
+  for (const id of h.ids) {
+    const p = albPutOf(h, more, id) || {}; const prev = snap ? String(snap.fu[id] || ',,').split(',') : [];
+    ['c', 'w', 'f'].forEach((k, i) => {
+      const f = p[k] && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(p[k]) : null;
+      if (!f) return;
+      const isNew = !!snap && prev[i] !== p[k];
+      if (isNew || first) out.push({ spot: `f:${id}:${k}`, room: id, icon: f.emoji, text: `${assistantLifeName(id)}の部屋に「${f.name}」`, isNew, w: isNew ? 3 : 1 });
+    });
+    const team = more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []; const prevM = snap ? new Set(snap.ms[id] || []) : null;
+    for (const t of team) {
+      const isNew = !!prevM && !prevM.has(`${t.mo}|${t.n || ''}`.slice(0, 60));
+      if (!(isNew || (first && t.l))) continue;
+      const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null;
+      out.push({ spot: `m:${id}`, room: id, icon: '🐾', text: `${assistantLifeName(id)}のマスモン「${t.n || (m && m.name) || 'マスモン'}」`, isNew, w: isNew ? 3 : 1 });
+    }
+  }
+  const a = more && more.ac && more.ac[0];
+  if (a && (!snap || a.at > snap.ac)) out.push({ spot: 'h', room: null, icon: ALF_ACT_ICON[a.k] || '✨', text: a.x, isNew: !!snap, w: 2 });
+  const seen = new Set();
+  return out.sort((x, y) => y.w - x.w).filter(x => (seen.has(x.spot) ? false : (seen.add(x.spot), true))).slice(0, 4);
+};
+const albSaveSnap = (fid, h, more) => {
+  if (!albEnabled() || !alfSafeOther(fid) || !h) return;
+  const b = albCur(); if (!b) return;
+  albSave({ ...b, f: { ...b.f, [fid]: { ...albOne(b, fid), snap: albSnapOf(h, more) } } });
+};
+// 「すてき」を送る(場所の印だけ。表でも 1軒1日3つ・フレンドか を見る)。{ ok, reason }
+let _albLikesMissing = false; let _albLikesAt = 0;
+const albSendLike = async (hostId, spot) => {
+  if (!albEnabled() || _albLikesMissing || !alfSafeOther(hostId) || !ALB_SPOT_RE.test(spot)) return { ok: false, reason: '「すてき」は、いま準備中です' };
+  await albLoad();
+  const b = albCur(); const x = albOne(b, hostId);
+  if (x.liked.includes(spot)) return { ok: true, reason: '' };
+  if (x.liked.length >= ALB_MAX.likes) return { ok: false, reason: `この家への「すてき」は1日${ALB_MAX.likes}つまでです(朝4時に戻ります)` };
+  const self = await alfSelf();
+  if (!self) return { ok: false, reason: '通信がうまくいきませんでした(時間をおいてもう一度)' };
+  try {
+    await alfRequest(ALB_TABLE_LIKES, { method: 'POST', prefer: 'return=minimal', soft: true, body: { visitor_id: self, host_id: hostId, day: alfDay(), spot } });
+  } catch (e) {
+    if (e && e.missing) { _albLikesMissing = true; ALF_STORE.set({ likesOff: true }); return { ok: false, reason: '「すてき」は、いま準備中です' }; }
+    if (!((e && e.status === 409) || /23505|duplicate/.test(String((e && e.body) || '')))) return { ok: false, reason: alfRefusalText(e).replace(/置き手紙を残せませんでした/, '「すてき」を送れませんでした') };
+  }
+  const b2 = albCur(); const x2 = albOne(b2, hostId);
+  albSave({ ...b2, f: { ...b2.f, [hostId]: { ...x2, liked: [...new Set([...x2.liked, spot])].slice(0, ALB_MAX.likes) } } });
+  return { ok: true, reason: '' };
+};
+// 自分の家に届いた「すてき」(7日ぶん)
+const albFetchLikes = async (force = false) => {
+  if (!albEnabled() || _albLikesMissing || _alfUnavailable) return;
+  const mode = await alfLoadMode(); if (mode === 'off') return;
+  const self = await alfSelf(); if (!self) return;
+  if (!force && Date.now() - _albLikesAt < alfLimits().readMs) return;
+  try {
+    const rows = await alfRequest(`${ALB_TABLE_LIKES}?select=id,visitor_id,host_id,day,spot,created_at&host_id=eq.${self}&day=gte.${alfDayShift(alfDay(), -7)}&order=created_at.desc&limit=60`, { soft: true });
+    _albLikesAt = Date.now();
+    ALF_STORE.set({ likesIn: (Array.isArray(rows) ? rows : []).map(r => (r && Number.isFinite(r.id) && alfSafeOther(r.visitor_id) && typeof r.spot === 'string' && ALB_SPOT_RE.test(r.spot)
+      ? { id: r.id, visitor: r.visitor_id, day: String(r.day || '').slice(0, 10), spot: r.spot, at: Date.parse(r.created_at) || 0 } : null)).filter(Boolean) });
+  } catch (e) { if (e && e.missing) { _albLikesMissing = true; ALF_STORE.set({ likesOff: true }); } }
+};
+// 届いた「すてき」の場所を、自分の家の言葉にする
+const albSpotText = (spot) => {
+  if (spot === 'h') return 'この家';
+  const p = String(spot).split(':');
+  if (!alfValidId(p[1])) return 'この家';
+  if (p[0] === 'm') return `${assistantLifeName(p[1])}のマスモン`;
+  let f = null;
+  try { const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(p[1]) : null; const key = room && room.put ? room.put[{ c: 'ceil', w: 'wall', f: 'floor' }[p[2]]] : null; f = key && typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null; } catch {}
+  return `${assistantLifeName(p[1])}の部屋の${f ? `「${f.name}」` : `${ALB_SLOT_NAME[p[2]] || ''}の家具`}`;
+};
+
+// ---------- C お気に入りの棚 ----------
+// 控えに載せる形 { a, m:{aid,mo,n,c}, s, fn }。見せない・何も選んでいないときは null
+const albFavShare = (ids) => {
+  const fav = ALF_STORE.state.fav;
+  if (!albEnabled() || !fav || !fav.on) return null;
+  const own = (ids || []).filter(alfValidId); const out = {};
+  if (fav.a && own.includes(fav.a)) out.a = fav.a;
+  if (fav.m && own.includes(fav.m.aid)) { const t = (alfMasmonShare([fav.m.aid])[fav.m.aid] || []).find(x => x.mo === fav.m.mo); if (t) out.m = { aid: fav.m.aid, mo: t.mo, n: t.n, c: t.c }; }
+  if (fav.s) out.s = fav.s;
+  if (fav.fn) {
+    const keys = new Set();
+    for (const id of own) { try { const room = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(id) : null; if (!room) continue; for (const k of Object.values(room.put || {})) if (typeof k === 'string') keys.add(k); for (const k of (room.kept || [])) if (typeof k === 'string') keys.add(k); } catch {} }
+    if (keys.size) out.fn = Math.min(999, keys.size);
+  }
+  return Object.keys(out).length ? out : null;
+};
+// 相手の棚を読むとき(知らない id・種類・長い値は捨てる。曲名は置き手紙と同じ見張りを通す)
+const albNormalizeFavShare = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out = {};
+  if (alfValidId(raw.a)) out.a = raw.a;
+  const m = raw.m;
+  if (m && typeof m === 'object' && alfValidId(m.aid) && typeof m.mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.mo])
+    out.m = { aid: m.aid, mo: m.mo, n: typeof m.n === 'string' ? alfNoteShow(m.n.slice(0, 16)) : '', c: (Array.isArray(m.c) ? m.c : []).slice(0, 5).map(x => (typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null)) };
+  if (typeof raw.s === 'string') { const s = alfNoteShow(raw.s.replace(/[{}<>]/g, '').slice(0, 30)); if (s) out.s = s; }
+  if (Number.isInteger(raw.fn) && raw.fn > 0 && raw.fn <= 999) out.fn = raw.fn;
+  return Object.keys(out).length ? out : null;
+};
+
+// ---------- 画面の部品 ----------
+function AlfBondChip({ id, always = false }) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => { if (albEnabled()) void albLoad(); }, []);
+  if (!albEnabled() || !s.bond) return null;
+  const st = albOne(s.bond, id).st;
+  if (!st && !always) return null;
+  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🤝 Lv{albLv(st)} {albTitle(st)}</span>;
+}
+function AlfFavShelf({ fv }) {
+  if (!fv) return null;
+  const mon = fv.m && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(fv.m.mo) : null;
+  const cell = (k, icon, label, value) => <div key={k} className="min-w-0 flex-1 rounded-xl border border-amber-200/40 bg-slate-800/80 px-1 py-1 text-center" data-alb-fav={k}><p className="text-[16px] leading-none">{icon}</p><p className="mt-0.5 whitespace-nowrap text-[9.5px] font-bold text-slate-300">{label}</p><p className="truncate text-[11px] font-black text-amber-100">{value}</p></div>;
+  return (
+    <div className="mt-1 flex gap-1" data-alb-shelf>
+      {fv.a ? cell('a', '💛', '好きな助手', assistantLifeName(fv.a)) : null}
+      {fv.m ? cell('m', '🐾', '自慢のマスモン', fv.m.n || (mon && mon.name) || 'マスモン') : null}
+      {fv.s ? cell('s', '🎵', '好きな曲', fv.s) : null}
+      {fv.fn ? cell('fn', '🪑', '集めた家具', `${fv.fn}種`) : null}
+    </div>);
+}
+// 訪ねた家の「友情」の帯(押すとくわしいシート)。この部品が閉じるときに、今日見た控えを覚える(次に来たときの NEW の元)
+function AlfBondBar({ friend, more, onOpen, compact = false }) {
+  const s = useAssistantLifeFriendState();
+  const keep = React.useRef({ h: friend.house, more });
+  keep.current = { h: friend.house, more };
+  React.useEffect(() => { if (!albEnabled()) return undefined; void albLoad(); return () => { try { albSaveSnap(friend.id, keep.current.h, keep.current.more); } catch {} }; }, [friend.id]);
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const left = ALB_TASKS.filter(t => !x.t[t[0]]).length;
+  const fresh = albSpots(friend.house, more, x.snap).filter(p => p.isNew).length;
+  const full = !x.done && s.bond.houses >= ALB_MAX.houses;
+  return (
+    <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-1 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
+      <span className="min-w-0 flex-1">
+        <b className="block truncate text-[11.5px] font-black text-pink-100" data-alb-bar-title>🤝 友情Lv{albLv(x.st)}「{albTitle(x.st)}」{compact ? (x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`) + (fresh ? ` ・ ✨${fresh}` : '') : ''}</b>
+        <small className={`truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`} data-alb-bar-sub>{x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`}{fresh ? ` ・ ✨ 見どころ ${fresh}` : ''}</small>
+      </span>
+      <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-5 w-5' : 'h-6 w-6'} items-center justify-center rounded-full text-[12px] not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
+      <span className="shrink-0 text-[12px] font-black text-pink-200">›</span>
+    </button>);
+}
+function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
+  const s = useAssistantLifeFriendState();
+  const [msg, setMsg] = React.useState('');
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const nx = albNext(x.st);
+  const spots = albSpots(friend.house, more, x.snap);
+  const likeOk = !s.likesOff && !_albLikesMissing;
+  const like = async (spot) => { const r = await albSendLike(friend.id, spot); setMsg(r.ok ? `💗 ${friend.name}さんに「すてき」が届きます` : `⚠️ ${r.reason}`); };
+  const fv = more && more.fv ? more.fv : null;
+  return (
+    <div className="absolute inset-0" style={{ zIndex: 31 }} data-alb-sheet>
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={onClose}/>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
+        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🤝 {friend.name}さんとの友情 Lv{albLv(x.st)}</p>
+        <p className="text-[11px] font-bold text-slate-200">「{albTitle(x.st)}」 ・ スタンプ {x.st}個{nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''}</p>
+        <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
+        <p className="mt-2.5 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
+        <div className="mt-1 grid grid-cols-3 gap-1" data-alb-tasks>{ALB_TASKS.map(([k, icon, label]) => <div key={k} className={`rounded-xl px-1 py-1.5 text-center text-[11px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`}>{icon} {label}{x.t[k] ? ' ✔' : ''}</div>)}</div>
+        <p className="mt-1 text-[10px] leading-snug text-slate-300">この家で3つすると、今日のスタンプが1個たまります(1軒につき1日1個・1日{ALB_MAX.houses}軒まで)。{friend.name}さんにも、あなたが来た日に1個たまります。</p>
+        <p className="mt-2.5 text-[12px] font-black text-amber-200">✨ {x.snap ? '今日の見どころ(前に来たときから)' : 'この家の見どころ'}</p>
+        <div data-alb-spots>
+          {spots.length ? spots.map(p => (
+            <div key={p.spot} className="mt-1 flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-2 py-1" data-alb-spot={p.spot}>
+              <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" disabled={!p.room} onClick={() => p.room && onRoom(p.room)}>
+                <span className="text-[15px]">{p.icon}</span><span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100">{p.text}</span>
+                {p.isNew ? <span className="shrink-0 rounded-full bg-amber-300 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-950">NEW</span> : null}
+              </button>
+              {likeOk ? <button type="button" className="shrink-0 rounded-lg border border-pink-300/70 px-1.5 py-0.5 text-[11px] font-black text-pink-100 disabled:opacity-40" data-alb-like={p.spot} disabled={x.liked.includes(p.spot) || x.liked.length >= ALB_MAX.likes} onClick={() => like(p.spot)}>{x.liked.includes(p.spot) ? '💗 送った' : '💗 すてき'}</button> : null}
+            </div>)) : <p className="mt-1 text-[11px] text-slate-300" data-alb-spots-none>前に来たときから、変わった所はまだありません。部屋を見て回れます。</p>}
+        </div>
+        {likeOk ? <p className="mt-1 text-[10px] leading-snug text-slate-300">「💗 すてき」を押すと、どこを気に入ったかが{friend.name}さんに届きます(1軒につき1日{ALB_MAX.likes}つ・今日 {x.liked.length}/{ALB_MAX.likes})。</p> : null}
+        {msg ? <p className="mt-1 text-[11px] font-bold text-pink-100" data-alb-msg>{msg}</p> : null}
+        {fv ? <><p className="mt-2.5 text-[12px] font-black text-amber-200">🏆 {friend.name}さんのお気に入りの棚</p><AlfFavShelf fv={fv}/></> : null}
+        <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={onClose}>閉じる</button>
+      </div>
+    </div>);
+}
+// 「🏘 フレンド」のページ: 📖 お客さん帳(今週、だれが・いつ・何をしたか。返しに行く)
+function AlfGuestBook({ s, card, sec, onVisit }) {
+  React.useEffect(() => { if (albEnabled()) void (async () => { await albLoad(); await albCountIncoming(); await albFetchLikes(); })(); }, [s.visits]);
+  if (!albEnabled() || !s.bond) return null;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const notes = assistantLifeFriendNotes(s).filter(n => n.dir === 'in');
+  const likes = (s.likesIn || []).filter(l => names[l.visitor] && !s.settings.muted.includes(l.visitor));
+  const ids = [...new Set([...notes.map(n => n.who), ...likes.map(l => l.visitor)])];
+  const houses = alfOpenHouses('look');
+  const today = alfDay();
+  return (<>
+    <p className={sec}>📖 お客さん帳(この7日)</p>
+    <div className={card} data-alb-guests>
+      {ids.length ? ids.slice(0, 8).map(id => {
+        const mine = notes.filter(n => n.who === id); const lk = likes.filter(l => l.visitor === id);
+        const last = Math.max(0, ...mine.map(n => n.at), ...lk.map(l => l.at));
+        const days = new Set([...mine.map(n => n.day), ...lk.map(l => l.day)]).size;
+        const did = [];
+        const talked = [...new Set(mine.filter(n => n.kind === 'player').flatMap(n => n.ids))];
+        if (mine.some(n => n.kind === 'player')) did.push(talked.length ? `${talked.map(assistantLifeName).join('・')}と話した` : '家を見て回った');
+        const came = [...new Set(mine.filter(n => n.kind === 'go').flatMap(n => n.ids))];
+        if (came.length) did.push(`${came.map(assistantLifeName).join('・')}が遊びに来た`);
+        if (mine.some(n => n.kind === 'player')) did.push('置き手紙');
+        for (const l of lk.slice(0, 2)) did.push(`${albSpotText(l.spot)}に💗すてき`);
+        const x = albOne(s.bond, id); const house = houses.find(h => h.id === id);
+        return (
+          <div key={id} className="border-b border-slate-700/60 py-1 last:border-0" data-alb-guest={id}>
+            <div className="flex items-center gap-1.5">
+              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん<AlfBondChip id={id} always/></p>
+              <span className="shrink-0 whitespace-nowrap text-[10px] text-slate-400">{alfAgoText(last)}・{days}日</span>
+              {house ? <button type="button" className="shrink-0 rounded-xl bg-orange-400 px-2 py-1 text-[10.5px] font-black text-slate-950" data-alb-return={id} onClick={() => onVisit(house)}>🚶 返しに行く</button> : null}
+            </div>
+            <p className="text-[10.5px] leading-snug text-slate-300">{did.map((t, i) => <span key={i} className="whitespace-nowrap">{i ? '・' : ''}{t}</span>)}{x.in.includes(today) ? <span className="whitespace-nowrap font-black text-pink-200">・🤝 スタンプ +1</span> : null}</p>
+          </div>); })
+        : <p className="text-[11px] text-slate-400" data-alb-guests-none>この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。</p>}
+      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人との友情スタンプが1個たまります(1人につき1日1個)。</p>
+    </div>
+  </>);
+}
+// 「🏘 フレンド」のページ: 🏆 お気に入りの棚(フレンドに見せる物を選ぶ)
+function AlfFavEditor({ s, card, sec }) {
+  const [songs, setSongs] = React.useState([]);
+  React.useEffect(() => { let alive = true; if (albEnabled()) void (async () => { await albLoad(); try { const a = normalizeAlfActivity(await storeGet(ALF_ACT_KEY, [])); if (alive) setSongs(a.map(x => x.x)); } catch {} })(); return () => { alive = false; }; }, []);
+  if (!albEnabled() || !s.fav) return null;
+  const fav = s.fav;
+  const own = ALF_IDS.filter(id => { try { return typeof assistantLifeRoomOf !== 'function' || !!assistantLifeRoomOf(id); } catch { return false; } });
+  const team = alfMasmonShare(own);
+  const mons = own.flatMap(id => (team[id] || []).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null; return { v: `${id}|${t.mo}`, label: `${t.n || (m && m.name) || 'マスモン'}(${assistantLifeName(id)})` }; }));
+  const songList = [...new Set([...(fav.s ? [fav.s] : []), ...songs])];
+  const sel = 'mt-0.5 w-full rounded-lg border border-slate-500 bg-slate-800 px-1.5 py-1 text-[11.5px] text-slate-100';
+  const row = (k, label, value, opts, onChange) => (
+    <label className="mt-1 block text-[10.5px] font-bold text-slate-300" data-alb-fav-row={k}>{label}
+      <select className={sel} value={value} onChange={e => onChange(e.target.value)}><option value="">えらばない</option>{opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}</select>
+    </label>);
+  return (<>
+    <p className={sec}>🏆 お気に入りの棚</p>
+    <div className={card} data-alb-fav-editor>
+      <label className="flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>訪ねてきたフレンドに見せる</span><input type="checkbox" checked={fav.on} data-alb-fav-on onChange={e => albSaveFav({ on: e.target.checked })}/></label>
+      {fav.on ? <>
+        {row('a', '💛 好きな助手', fav.a || '', own.map(id => ({ v: id, label: assistantLifeName(id) })), v => albSaveFav({ a: v || null }))}
+        {row('m', '🐾 自慢のマスモン', fav.m ? `${fav.m.aid}|${fav.m.mo}` : '', mons, v => { const [aid, mo] = String(v).split('|'); albSaveFav({ m: v ? { aid, mo } : null }); })}
+        {row('s', '🎵 好きな曲(最近モンヒロビートで遊んだ曲から)', fav.s || '', songList.map(x => ({ v: x, label: x })), v => albSaveFav({ s: v || null }))}
+        <label className="mt-1.5 flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>🪑 集めた家具の数を見せる</span><input type="checkbox" checked={fav.fn} data-alb-fav-fn onChange={e => albSaveFav({ fn: e.target.checked })}/></label>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
+      </> : null}
+    </div>
   </>);
 }
 
@@ -95737,6 +96142,9 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  // 助手えらび(はじめての人)。選んだ助手と、くわしい紹介を開いている助手(2026-11-11 案9。顔と一言を1行ずつ並べ、紹介はタップで開く)
+  const [assistantPickSel, setAssistantPickSel] = useState(null);
+  const [assistantPickOpen, setAssistantPickOpen] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
@@ -107568,7 +107976,7 @@ function MonsterHeroGame() {
     const pages = tutorialKind === 'rhythm'
       ? ((typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current)) || [])
       : tutorialKind === 'tour'
-      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [])
+      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current, storyOneAtATime && !firstBattleDone)) || [])
       : [];
     return pages[tutorialStep]?.spot || null;
   })();
@@ -117989,30 +118397,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='ASSISTANT_SELECT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
             {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
-            <div className="shrink-0 text-center mb-3" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
+            <div className="shrink-0 text-center mb-2" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
-              <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
+              <p className="text-[10px] text-slate-300 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。</p>
+              <span data-assistant-pick-later className="mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950">あとからいつでも変えられます</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
-                {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
-                {assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(
-                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
-                    aria-label={`${who.name}を選ぶ`}
-                    className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
-                    style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
-                    <AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>
-                    <span className="text-[13px] font-black text-white">{who.name}</span>
-                    <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
-                    <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この助手にする</span>
-                  </button>
-                ))}
-              </div>
-              <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
-                3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
-              </p>
-            </div>
+            {(()=>{
+              const list=assistantsUnlockedFrom(rhythmEventStorySeen);
+              const pickId=(list.some(w=>w.id===assistantPickSel)?assistantPickSel:null)||(list.some(w=>w.id===selectedAssistantId)?selectedAssistantId:null)||(list[0]&&list[0].id);
+              const pick=list.find(w=>w.id===pickId)||list[0];
+              return <>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="w-full max-w-md mx-auto flex flex-col gap-2 pb-2">
+                    {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
+                    {list.map(who=>{const on=who.id===pickId;const open=assistantPickOpen===who.id;return(
+                      <div key={who.id} className="rounded-2xl"
+                        style={{border:`2px solid ${on?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:on?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
+                        <div className="flex items-center gap-3 px-3 py-2">
+                          <button type="button" aria-label={`${who.name}を選ぶ`} aria-pressed={on} onClick={()=>setAssistantPickSel(who.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[.98]">
+                            <AssistantFace who={who} size={56} accent={who.accent} expression="happy"/>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[14px] font-black text-white">{who.name}</span>
+                              <span className="mt-0.5 block text-[11px] font-black leading-tight" style={{color:who.accent}}>{who.tagline||''}</span>
+                            </span>
+                          </button>
+                          <button type="button" aria-label={`${who.name}のくわしい紹介`} aria-expanded={open} onClick={()=>setAssistantPickOpen(open?null:who.id)} className="shrink-0 min-h-[44px] px-1 text-[11px] font-black text-slate-300 active:scale-95">くわしく{open?'▲':'›'}</button>
+                        </div>
+                        {open&&<div data-assistant-pick-intro className="px-3 pb-3 text-[11px] leading-snug text-slate-200">{who.intro||''}</div>}
+                      </div>);})}
+                  </div>
+                  <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
+                    仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
+                  </p>
+                </div>
+                {pick&&<div className="shrink-0 w-full max-w-md mx-auto pt-1" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
+                  <div className="mb-1 text-center text-[11px] font-black text-slate-300">{pick.name}を選んでいます</div>
+                  <button type="button" data-assistant-pick-confirm onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                    className="min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]" style={{backgroundColor:pick.accent}}>この助手にする</button>
+                </div>}
+              </>;
+            })()}
           </div>
         )}
 
@@ -120768,10 +121192,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : battleMore
           ? ((typeof assistantBattleMorePages==='function'&&assistantBattleMorePages(selectedAssistantId))||[])
           : battleGuide
-          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
+          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[])
           : intro
           ? ((typeof assistantIntroPages==='function'&&assistantIntroPages(selectedAssistantId))||[])
-          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId))||[]));
+          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
         if(!page) return null;
         const who=activeAssistant;

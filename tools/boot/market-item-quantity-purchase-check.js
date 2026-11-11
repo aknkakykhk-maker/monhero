@@ -25,13 +25,13 @@ const check = (name, ok, detail = '') => {
 
 // --- ① 画面側のトリガー条件 ---
 // 2026-09-28「ショップの作りを全部統一して」から、価格タップはどの品でも確認の窓(MarketPurchaseSheet)を開く。
-// 数を選べるのは type:'item' 全体(円盤石・アシスト・アイコンは1つずつ)。窓は画面(BreederMarketScreen)が持ち、
+// 数を選べるのは type:'item' 全体(円盤石・アシスト・アイコンは1つずつ。助手のおすすめの1割引き中の品だけ、1個ずつ・2026-11-11)。窓は画面(BreederMarketScreen)が持ち、
 // 本体の buyMarketItem は買えたら true を返す。窓はそれを見て閉じる
 check('価格タップで個数選択シートを開く対象が type:\'item\' 全体になっている',
-  source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),")
+  source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),")
   && source.includes("onBuy={buyMarketItem}"));
 check('購入できたら窓を閉じる(どの品でも)',
-  /if\(result===true\|\|result\?\.ok\)\{[\s\S]{0,300}?setSheet\(null\);/.test(source)
+  /if\(result===true\|\|result\?\.ok\)\{[\s\S]{0,700}?setSheet\(null\);/.test(source)
   && /const buyMarketItem = async[\s\S]*?saveMissionProgress\('market'\);\n    return true;/.test(source));
 
 // --- ② 個数選択シートの通貨切り替え ---

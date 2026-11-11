@@ -56,7 +56,7 @@ const AssistantFace = ({ who, size }) => React.createElement('img', {
 });
 
 const transformed = babel.transformSync(
-  'const Screen = ({ gameState, ASSISTANT_LIST, selectedAssistantId, chooseAssistant, markKikiIntroSeen, setGameState, setTutorialKind, setTutorialStep, AssistantFace, onboardingPreview, assistantsUnlockedFrom, rhythmEventStorySeen }) => (<>\n'
+  'const Screen = ({ assistantPickSel, setAssistantPickSel, assistantPickOpen, setAssistantPickOpen, gameState, ASSISTANT_LIST, selectedAssistantId, chooseAssistant, markKikiIntroSeen, setGameState, setTutorialKind, setTutorialStep, AssistantFace, onboardingPreview, assistantsUnlockedFrom, rhythmEventStorySeen }) => (<>\n'
   + jsx + '\n</>);\nmodule.exports = { Screen };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'assistant-select-render-check.jsx' },
 );
@@ -68,6 +68,7 @@ const noop = () => {};
 const picked = [];
 const render = (seenStoryIds) => ReactDOMServer.renderToStaticMarkup(React.createElement(Screen, {
   gameState: 'ASSISTANT_SELECT',
+  assistantPickSel: null, setAssistantPickSel: noop, assistantPickOpen: null, setAssistantPickOpen: noop,
   ASSISTANT_LIST: ASSISTANTS,
   selectedAssistantId: 'mua',
   chooseAssistant: (id) => picked.push(id),
@@ -98,16 +99,18 @@ check('会話を見終えると並ぶ', ASSISTANTS.every(w => textUnlocked.inclu
   ASSISTANTS.map(w => w.name).join(', '));
 check('公開の印が立つまでの助手は、会話を見終えても並ばない', HIDDEN_ASSISTANTS.every(w => !htmlUnlocked.includes(`aria-label="${w.name}を選ぶ"`)),
   HIDDEN_ASSISTANTS.map(w => w.name).join(', ') || '(いない)');
-check('助手ごとの紹介文が出る',
+check('助手ごとの一言が出る',
   ASSISTANTS.every(w => !w.tagline || textUnlocked.includes(w.tagline)));
 check('助手ごとの顔アイコンが出る',
   ASSISTANTS.every(w => htmlUnlocked.includes(`data-face="${w.id}"`)));
 check('全員ぶんの選ぶボタンがある',
   ASSISTANTS.every(w => htmlUnlocked.includes(`aria-label="${w.name}を選ぶ"`)));
-check('あとから変えられることが書いてある', /あとからプロフィールでいつでも変えられます/.test(text));
+check('あとから変えられることが目立つ札で書いてある', /あとからいつでも変えられます/.test(text) && html.includes('data-assistant-pick-later'));
+check('くわしい紹介は、はじめは閉じている(顔と一言だけ)', !html.includes('data-assistant-pick-intro'));
+check('決めるボタン(この助手にする)が1つある', (html.match(/data-assistant-pick-confirm/g) || []).length === 1 && />この助手にする</.test(html));
 check('仲良し度が別々なことが書いてある', /助手ごとに別々/.test(text));
-// 縦画面で見切れないよう、カードは2列に並べてスクロールできること
-check('スマホの縦画面向けに2列で並べる', /grid-cols-2/.test(html));
+// 縦画面で見切れないよう、1人1行で並べてスクロールできること(2026-11-11 案9)
+check('1人1行で並べる', /flex flex-col gap-2/.test(html));
 check('はみ出す場合はスクロールできる', /overflow-y-auto/.test(html));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
