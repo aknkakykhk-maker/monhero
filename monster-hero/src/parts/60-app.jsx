@@ -8741,6 +8741,14 @@ function MonsterHeroGame() {
     if (!r || !r.ok) setMarketExchangeError('');
     return r;
   }); });
+  // 助手ライフの「7日で道具1個」(56-assistant-life-ux.jsx・2026-11-11)。持ち物へ足して保存できたときだけ true
+  useEffect(() => { if (typeof assistantLifeDailySetGranter === 'function') assistantLifeDailySetGranter(async (itemId) => {
+    if (typeof itemId !== 'string' || !itemId) return false;
+    const nextItems = { ...ownedItemsRef.current, [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1 };
+    try { if ((await storeSet('mh_owned_items', nextItems, false)) === false) return false; } catch { return false; }
+    ownedItemsRef.current = nextItems; setOwnedItems(nextItems);
+    return true;
+  }); }, []);
   useEffect(() => { if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener((tab) => { setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item'); setMarketExchangeError(''); setGameState('BREEDER_MARKET'); }); }, []);
   // 助手ライフのフレンドの家のおみやげ(ビートP)をギフトで届ける(2026-11-08・56-assistant-life-friend.jsx)。
   //   id は「日付+家」で1つに決まるので、同じおみやげは二度届かない(grantGiftOnce)。1日300Pまでは向こうで数える
