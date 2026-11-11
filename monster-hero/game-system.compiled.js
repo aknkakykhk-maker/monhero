@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 630680ba79eae021
+// source-sha256: e348674a1ad39808
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114132,58 +114132,18 @@ const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({
   erubin: ['#e2e8f0', '#94a3b8']
 });
 const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
-  kiki: {
-    ang: -3,
-    line: '#4a2030',
-    eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']]
-  },
-  momosuke: {
-    ang: -17,
-    line: '#5a3a28',
-    eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']]
-  },
-  atsu: {
-    ang: -27,
-    line: '#3a1f2a',
-    eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']]
-  },
-  mua: {
-    ang: 8,
-    line: '#5a3a2a',
-    eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']]
-  },
-  kyuko: {
-    ang: -10,
-    line: '#4a2418',
-    eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']]
-  }
+  mua: true,
+  kiki: true,
+  momosuke: true,
+  atsu: true,
+  kyuko: true
 });
 const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
-  mua: {
-    ang: 10,
-    line: '#5a3a2a',
-    eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']]
-  },
-  kiki: {
-    ang: -2,
-    line: '#4a2030',
-    eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']]
-  },
-  momosuke: {
-    ang: -19,
-    line: '#5a3a28',
-    eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']]
-  },
-  atsu: {
-    ang: -30,
-    line: '#3a1f2a',
-    eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']]
-  },
-  kyuko: {
-    ang: -11,
-    line: '#4a2418',
-    eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
-  }
+  mua: true,
+  kiki: true,
+  momosuke: true,
+  atsu: true,
+  kyuko: true
 });
 function AssistantLifeSleepEyes({
   pid,
@@ -114193,70 +114153,27 @@ function AssistantLifeSleepEyes({
   style
 }) {
   const isFace = /\/face\//.test(String(src || ''));
-  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
+  const has = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
-  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
-  return React.createElement("svg", {
+  if (!has || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  const closed = `${who.imageDir}/sleep/${isFace ? 'face/' : ''}${who.imagePrefix}_normal.PNG`;
+  const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+  return React.createElement("img", {
     "data-assistant-life-roomview-sleep-eyes": pid,
-    width: w,
-    height: h,
-    viewBox: `0 0 ${w} ${h}`,
+    src: closed,
+    alt: "",
+    "aria-hidden": "true",
+    draggable: false,
     style: {
       position: 'absolute',
-      overflow: 'visible',
+      width: w,
+      height: h,
+      maxWidth: 'none',
       pointerEvents: 'none',
-      ...style
+      ...style,
+      filter
     }
-  }, React.createElement("defs", null, React.createElement("filter", {
-    id: fid,
-    x: "-50%",
-    y: "-50%",
-    width: "200%",
-    height: "200%"
-  }, React.createElement("feGaussianBlur", {
-    stdDeviation: Math.max(0.6, w * 0.006)
-  }))), def.eyes.map(([fx, fy, fw, fh, skin], i) => {
-    const cx = fx * w,
-      cy = fy * h,
-      ew = fw * w,
-      eh = fh * h;
-    const outer = i === 0 ? -1 : 1;
-    const lw = Math.max(1.1, eh * 0.11);
-    const lid = `M${cx - ew * 0.5},${cy} Q${cx},${cy + eh * 0.42} ${cx + ew * 0.5},${cy}`;
-    const ox = cx + outer * ew * 0.42,
-      oy = cy + eh * 0.08;
-    return React.createElement("g", {
-      key: i,
-      transform: `rotate(${def.ang} ${cx} ${cy})`
-    }, React.createElement("ellipse", {
-      cx: cx,
-      cy: cy + eh * 0.04,
-      rx: ew * 0.6,
-      ry: eh * 0.62,
-      fill: skin,
-      filter: `url(#${fid})`
-    }), React.createElement("ellipse", {
-      cx: cx,
-      cy: cy + eh * 0.04,
-      rx: ew * 0.54,
-      ry: eh * 0.54,
-      fill: skin
-    }), React.createElement("path", {
-      d: lid,
-      fill: "none",
-      stroke: def.line,
-      strokeWidth: lw,
-      strokeLinecap: "round"
-    }), [0, 1, 2].map(k => React.createElement("path", {
-      key: k,
-      d: `M${ox - outer * k * ew * 0.12},${oy + k * eh * 0.07} l${outer * ew * (0.14 - k * 0.02)},${eh * (0.16 + k * 0.03)}`,
-      fill: "none",
-      stroke: def.line,
-      strokeWidth: lw * 0.8,
-      strokeLinecap: "round"
-    })));
-  }));
+  });
 }
 function AssistantLifeRoomBed({
   id,

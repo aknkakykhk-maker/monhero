@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 353f3d1a826de4b1
+// generated-sha256: 148160f77157a187
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66668,50 +66668,25 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 //   頭は立ち絵から「頭のてっぺんの少し上〜顎の少し下」だけを切り出して倒す(目の下で切らない)。首から下は掛け布団の下
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
 // 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
-//   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
 //   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡、えるびんは社長「そのままでいい」)。
-//   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)の絵の表も持つ。
+//   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)も持つ。
 //   ベッドだけでなく、家の部屋の顔・場面の立ち絵・地図の全身(寝ている姿が出る所すべて)に重ねる
-//   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
-const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
-  kiki: { ang: -3, line: '#4a2030', eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']] },
-  momosuke: { ang: -17, line: '#5a3a28', eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']] },
-  atsu: { ang: -27, line: '#3a1f2a', eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']] },
-  mua: { ang: 8, line: '#5a3a2a', eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']] },
-  kyuko: { ang: -10, line: '#4a2418', eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']] },
-});
-// 顔アイコン(face の ◯◯_normal の絵)の目。測り方は全身と同じ(目盛りつきで切り出して手で読んだ・2026-11-11)
-const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
-  mua: { ang: 10, line: '#5a3a2a', eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']] },
-  kiki: { ang: -2, line: '#4a2030', eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']] },
-  momosuke: { ang: -19, line: '#5a3a28', eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']] },
-  atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
-  kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
-});
+//   2026-11-11 社長「寝顔で目を瞑ってるやつが変な感じ(きき・ももすけが特に)」→ 案A: SVG の楕円とまぶたの線(小さく出すと線が太り、色むら・前髪の消えが出た)をやめ、
+//   道具(tools/assistant/life-sleep-eyes-make.js)で作った「閉じ目の重ね絵」を、元の絵と同じ位置・大きさで重ねる。
+//   重ね絵は助手の絵のフォルダ(imageDir)の sleep/(全身)と sleep/face/(顔)に ◯◯_normal.PNG の名前で置く。目の位置の表も道具の側にある
+const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({ mua: true, kiki: true, momosuke: true, atsu: true, kyuko: true });
+const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({ mua: true, kiki: true, momosuke: true, atsu: true, kyuko: true });
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
   const isFace = /\/face\//.test(String(src || ''));
-  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
+  const has = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
-  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
-  return (
-    <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
-      <defs><filter id={fid} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={Math.max(0.6, w * 0.006)}/></filter></defs>
-      {def.eyes.map(([fx, fy, fw, fh, skin], i) => {
-        const cx = fx * w, cy = fy * h, ew = fw * w, eh = fh * h;
-        const outer = i === 0 ? -1 : 1; // 外側(見て左の目は左・右の目は右)
-        const lw = Math.max(1.1, eh * 0.11);
-        const lid = `M${cx - ew * 0.5},${cy} Q${cx},${cy + eh * 0.42} ${cx + ew * 0.5},${cy}`;
-        const ox = cx + outer * ew * 0.42, oy = cy + eh * 0.08;
-        return (
-          <g key={i} transform={`rotate(${def.ang} ${cx} ${cy})`}>
-            <ellipse cx={cx} cy={cy + eh * 0.04} rx={ew * 0.6} ry={eh * 0.62} fill={skin} filter={`url(#${fid})`}/>
-            <ellipse cx={cx} cy={cy + eh * 0.04} rx={ew * 0.54} ry={eh * 0.54} fill={skin}/>
-            <path d={lid} fill="none" stroke={def.line} strokeWidth={lw} strokeLinecap="round"/>
-            {[0, 1, 2].map(k => <path key={k} d={`M${ox - outer * k * ew * 0.12},${oy + k * eh * 0.07} l${outer * ew * (0.14 - k * 0.02)},${eh * (0.16 + k * 0.03)}`} fill="none" stroke={def.line} strokeWidth={lw * 0.8} strokeLinecap="round"/>)}
-          </g>); })}
-    </svg>);
+  if (!has || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  const closed = `${who.imageDir}/sleep/${isFace ? 'face/' : ''}${who.imagePrefix}_normal.PNG`;
+  // 立ち絵の影(drop-shadow)は重ね絵には付けない(目の形のまわりに暗い輪が出る)。明るさ・色の重ねは同じにする
+  const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+  return <img data-assistant-life-roomview-sleep-eyes={pid} src={closed} alt="" aria-hidden="true" draggable={false}
+    style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...style, filter }}/>;
 }
 
 function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
