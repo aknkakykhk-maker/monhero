@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e03f615d6d53d12
+// source-sha256: fbcae9e42dc65026
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112804,7 +112804,9 @@ function AssistantLifeStands({
   });
   const srcs = ids.map(pid => {
     const who = assistantById(pid);
-    return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null;
+    if (!who) return null;
+    const s = assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy');
+    return sleepIds.includes(pid) && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(pid, s) : s;
   });
   const [boxes, setBoxes] = React.useState(() => srcs.map(s => s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null));
   const key = srcs.join('|');
@@ -114619,7 +114621,8 @@ function AssistantLifeMapFig({
   sleep,
   spent = false
 }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'),
+    src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => {
     let alive = true;
@@ -115852,7 +115855,22 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
-const ASSISTANT_LIFE_SLEEP_FACES = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG']));
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG']));
+function assistantLifeSleepArt(pid, src) {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const s0 = String(src || '').replace(/[?#].*$/, ''),
+    dir = who && who.imageDir ? `${who.imageDir}/` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
+  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+}
+const assistantLifeSleepSrc = (pid, src) => {
+  const a = assistantLifeSleepArt(pid, src);
+  if (a) return a;
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : null;
+  const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
+  return f || src;
+};
 function AssistantLifeSleepEyes({
   pid,
   src,
@@ -115860,16 +115878,14 @@ function AssistantLifeSleepEyes({
   h,
   style
 }) {
+  if (/_sleep\.PNG/i.test(String(src || ''))) return null;
   {
-    const who0 = typeof assistantById === 'function' ? assistantById(pid) : null;
-    const s0 = String(src || '').replace(/[?#].*$/, ''),
-      dir = who0 && who0.imageDir ? `${who0.imageDir}/` : null;
-    const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
-    if (rel && ASSISTANT_LIFE_SLEEP_FACES.has(rel)) {
+    const art = assistantLifeSleepArt(pid, src);
+    if (art) {
       const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
       return React.createElement("img", {
         "data-assistant-life-roomview-sleep-eyes": pid,
-        src: `${dir}sleep/${rel}`,
+        src: art,
         alt: "",
         "aria-hidden": "true",
         draggable: false,
@@ -115973,7 +115989,7 @@ function AssistantLifeRoomBed({
   const items = sleepers.map(pid => {
     const a = assistantById(pid);
     if (!a) return null;
-    const src = assistantFullImage(a, 'normal');
+    const src = assistantLifeSleepSrc(pid, assistantFullImage(a, 'normal'));
     return {
       pid,
       who: a,
