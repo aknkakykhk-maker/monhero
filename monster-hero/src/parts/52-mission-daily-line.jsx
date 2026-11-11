@@ -32,7 +32,7 @@ const MISSION_DAILY_LINE_FALLBACK = Object.freeze({
   dra:       '今日は{day}曜日だな。{task}と、{reward}がもらえるからな。えへへ',
   atsu:      '今日は{day}曜日！ とりあえず{task}と{reward}もらえるよ笑',
   kyuko:     'ほい！ 今日は{day}曜日ぃ。{task}と{reward}もらえるよ〜',
-  sorashido: 'うぉぉぉ！ 今日は{day}曜日だぜ・・・！ {task}と{reward}がもらえるぜ笑',
+  sorashido: '今日は{day}曜日ですねー！ {task}と{reward}がもらえます笑',
   erubin:    '今日は{day}曜日だね。{task}と、{reward}がもらえるよ。無理しない程度にね',
 });
 // 報酬を文の中で読む形(「ビートP150」「カードパック券1枚」)。数はゲームの表のまま
