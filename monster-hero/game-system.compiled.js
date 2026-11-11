@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 965386e1bae9cf0a
+// source-sha256: d4c86da7edb17b86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173678,6 +173678,58 @@ const cardAssistantDeckSummary = (who, styleId) => {
     return null;
   }
 };
+const cardAssistantDeckShareOf = (aid, face) => {
+  try {
+    if (!cardDeckIsFace(face) || typeof CARD_AI_FACES === 'undefined' || !CARD_AI_FACES[aid]) return null;
+    const s = cardAssistantDeckSummary(aid, face);
+    if (!s) return null;
+    return {
+      face,
+      name: s.name || '',
+      line: s.line || '',
+      monsters: s.monsters.map(m => m.no),
+      ace: s.ace ? s.ace.name : '',
+      cards: Object.keys(s.count).map(no => [no, s.count[no]])
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const cardAssistantDeckSummaryOfShare = deck => {
+  try {
+    if (!deck || typeof deck !== 'object' || typeof CARD_BATTLE_DATA === 'undefined' || !Array.isArray(deck.monsters) || !Array.isArray(deck.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const face = cardDeckIsFace(deck.face) ? deck.face : 'oshi';
+    const monsters = deck.monsters.slice(0, 3).map(no => cardMonsterOf(db, no)).filter(Boolean);
+    const count = {};
+    deck.cards.slice(0, 60).forEach(e => {
+      const n = Array.isArray(e) ? Math.floor(Number(e[1])) : 0;
+      if (Array.isArray(e) && typeof e[0] === 'string' && n >= 1 && n <= 20 && cardOf(db, e[0])) count[e[0]] = (count[e[0]] || 0) + n;
+    });
+    const uniq = Object.keys(count).map(no => cardOf(db, no));
+    if (!monsters.length || !uniq.length) return null;
+    const byGuts = (a, b) => (b.guts || 0) - (a.guts || 0) || (b.damage || 0) - (a.damage || 0) || (a.no < b.no ? -1 : 1);
+    const aceName = typeof deck.ace === 'string' ? deck.ace : '';
+    const ace = uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts).find(c => !aceName || c.name === aceName) || uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter(c => kinds.includes(c.kind)).sort(byGuts)]).filter(g => g[1].length);
+    return {
+      styleId: face,
+      monsters,
+      count,
+      ace,
+      groups,
+      total: Object.values(count).reduce((x, y) => x + y, 0),
+      name: typeof deck.name === 'string' && deck.name ? deck.name.slice(0, 20) : null,
+      line: typeof deck.line === 'string' && deck.line ? deck.line.slice(0, 60) : null,
+      at: null,
+      side: null,
+      past: false,
+      period: ''
+    };
+  } catch (_) {
+    return null;
+  }
+};
 const cardAssistantDeckAtText = at => {
   if (!Number.isFinite(at) || at <= 0) return '';
   const t = new Date(at);
@@ -173686,11 +173738,12 @@ const cardAssistantDeckAtText = at => {
 function CardAssistantDeckView({
   who,
   styleId,
-  land = false
+  land = false,
+  deck = null
 }) {
   const [detail, setDetail] = React.useState(null);
   if (!cardAssistantDeckViewOn()) return null;
-  const s = cardAssistantDeckSummary(who, styleId);
+  const s = deck ? cardAssistantDeckSummaryOfShare(deck) : cardAssistantDeckSummary(who, styleId);
   const a = typeof assistantById === 'function' ? assistantById(who) : null;
   if (!s) return React.createElement("div", {
     className: "mhm-card",
