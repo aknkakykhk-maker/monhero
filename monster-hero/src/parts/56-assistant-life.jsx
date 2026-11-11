@@ -521,7 +521,7 @@ const assistantLifeNote = async (kind, { pair = null, ids = null, now = Date.now
   const abs = assistantLifeSlotAt(now).abs;
   const ids2 = ids || (pair ? String(pair).split('-') : []);
   const rec = { kind, abs, pair: pair || (ids2.length === 2 ? assistantLifePairKey(ids2[0], ids2[1]) : null), ids: ids2 };
-  ASSISTANT_LIFE_STORE.set({ life: { ...life, recent: [...life.recent, rec].slice(-40) } });
+  ASSISTANT_LIFE_STORE.set({ life: { ...life, recent: [...life.recent, rec].slice(-80) } }); // 12区切りで覚える幅が2倍になったので、読む側(80)とそろえる
   assistantLifeSaveLife();
 };
 // 誘って遊んだ(家からの誘い・セッション・会いに行く)。生活のリズムが少しずつ変わる

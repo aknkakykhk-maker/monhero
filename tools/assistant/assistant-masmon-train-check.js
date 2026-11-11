@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 助手のマスモンの修行と助手の成長(56-assistant-life-masmon-train.jsx・社長の仕様書の第②段階)と技表(data/assistant-masmon-techs.js)を、画面なしで確かめる。
-//   技表の形と幅/印が偽なら何もしない/初めの値は一度だけ/同じ種なら同じ結果/修行はモンヒロバトルにいた回だけ・1日2回まで/熟練は0〜100で下がらない/
+//   技表の形と幅/印が偽なら何もしない/初めの値は一度だけ/同じ種なら同じ結果/修行はモンヒロバトルにいた回だけ・1日3回まで/熟練は0〜100で下がらない/
 //   技の習得は条件どおり/ブリーダー能力の天井と効き目の幅/相談は1日1回/保存の正規化/第③段階へ渡す形
 //   第①段階(育成)の受け口は、ここでは小さな代わり(drive)で回す。--sim で 30・90・180 日の伸びを表に出す
 const fs = require('fs');
@@ -134,7 +134,7 @@ const drive = (T, aid, days, opt = {}) => {
   check('② 熟練の初めの値は育成 Lv×0.3(最大30)', g.m.golem_01 === 9 && p.m.pixie_01 === 4 && T.amgtInitMon('Golem', 99, null).m.guard === 30);
 }
 
-// ③ 同じ種なら同じ結果・モンヒロバトルにいた回だけ・1日2回まで・下がらない・上限
+// ③ 同じ種なら同じ結果・モンヒロバトルにいた回だけ・1日3回まで・下がらない・上限
 {
   const a = make(true); const b = make(true);
   const ra = drive(a.T, 'kyuko', 60); drive(b.T, 'kyuko', 60);
@@ -145,7 +145,7 @@ const drive = (T, aid, days, opt = {}) => {
   const z = make(true); const rz = drive(z.T, 'kyuko', 30, { atRate: 0 });
   check('③ モンヒロバトルにいなかったら修行しない', Object.keys(rz.per).length === 0);
   const over = Object.entries(ra.per).filter(([k]) => k !== 'outside').some(([, d]) => Object.values(d).some(n => n > a.T.AMGT_NUM.perDay));
-  check('③ 修行は1日2回まで', !over);
+  check(`③ 修行は1日${a.T.AMGT_NUM.perDay}回まで(2026-11-11 社長: 3回)`, !over && a.T.AMGT_NUM.perDay === 3);
   const days = Object.entries(ra.per).filter(([k, d]) => k !== 'outside' && d[1]).length;
   check('③ 修行はほどよく起きる(1体あたり60日のうち3割〜9割の日)', days >= 18 && days <= 54, `${days}日`);
   const ms = Object.values(a.T.AMGT_STORE.state.mons.kyuko);

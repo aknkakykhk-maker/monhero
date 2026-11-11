@@ -27,7 +27,7 @@ const AMGT_NUM = Object.freeze({
   realAll: [1, 1], // 実戦修行で、覚えている全部の技に足す分(移動12回で [1, 2] → [1, 1])
   stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
   fat: 12, str: 2, // 疲労・ストレス
-  perDay: 2, // 1日の修行の回数の上限(案)
+  perDay: 3, // 1日の修行の回数の上限(2026-11-11 社長: 移動12回に合わせて 2 → 3。1回の伸びは約75%のまま)
   fatStop: 45, // これ以上疲れていたら修行に行かない(訓練側が休ませる)
   goAt: 0.4, // モンヒロバトルにいた回に修行へ行く起こりやすさに足す分(性格の p に足す)
   initPerLv: 0.3, initMax: 30, // 覚えている技の熟練の初めの値 = 育成 Lv × 0.3(最大30)
@@ -275,11 +275,12 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
   const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
   const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1; // 練習の相手がいないときの伸び(56-assistant-life-masmon-cheer.jsx・印が偽なら 1)
   const g = {};
   const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
   const up = (k, lo, hi) => {
     const cur = me.m[k] || 0;
-    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
   };
   // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)

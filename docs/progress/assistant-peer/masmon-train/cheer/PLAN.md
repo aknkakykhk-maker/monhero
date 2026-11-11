@@ -54,3 +54,13 @@
 
 - ナカヨシ11(`56-assistant-life-map.jsx`): `place === 'battle'` の行に、シュギョウの口 `assistantMasmonTrainRowInfo(id)` → `{ today, canCheer, left, next }` と `AssistantMasmonTrainWatch`・`assistantMasmonCheer(id)` を置いてもらう(ボタンの並びは上の1)。シュギョウが触るのは `56-assistant-life-masmon-train.jsx`(+新しい部品のファイル)・`data/assistants.js` の `lifeCheer` 1行
 - 12回の移動が main に入ったら、`--rate=<実測>` で試算を出し直す(まだ main に入っていない。`ASSISTANT_LIFE_SLOTS` は6つのまま)
+
+## 6. 社長の答え(2026-11-11 窓口経由)と作ったもの
+
+- 応援: 推奨どおり「1回 熟練+1・💗+5・1日3回」/練習の相手: フレンドのマスモン → 自分の別のマスモン → 一人(一人は修行の伸び ×0.5。社長が選択・部の推奨は ×0.7)/修行を見る: 応援と同じ得(見ると応援を合わせて1日3回・移動1回に1回。見終えたら自動で入る)
+- 本体: `monster-hero/src/parts/56-assistant-life-masmon-cheer.jsx`(公開の印 `assistantMasmonCheer` は偽)。保存は新しいキー `mh_assistant_masmon_cheer_v1`(上の3.の「修行のキーに足す」はやめて分けた)
+- 修行のファイルには一人の掛け算 `amgcSparMult` を呼ぶ1行だけ。💗 は `data/assistants.js` の `lifeCheer`
+- 「フレンド」は 👀 で見たときに `masmonPvpFriends` で登録編成を見つけた日から7日(修行は通信せずに回るため)
+- 地図の窓(ナカヨシ19): `assistantMasmonTrainRowInfo(id)`・`assistantMasmonCheer(id)`・`assistantMasmonTrainWatchOpen(id)`、地図の根元に `<AssistantMasmonTrainWatchHost/>` を1つ
+- 検査: `node tools/assistant/assistant-masmon-cheer-check.js`
+- 一人のときの見る画面は、同じマスモンを暗くした「影」を相手に見せる(前のシュギョウの案・新しい絵なし)
