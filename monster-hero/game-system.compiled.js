@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 727304affad50c62
+// source-sha256: 7510560f75952f99
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -178050,6 +178050,16 @@ function MonsterHeroGame() {
   const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) {
+      setLoginBonusGuideClear(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT);
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -200254,7 +200264,7 @@ function MonsterHeroGame() {
     }, "ログインボーナス")), renderLoginBonusList(loginBonusTodayDay), React.createElement("button", {
       onClick: () => setShowLoginBonusList(false),
       className: "w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]"
-    }, "閉じる"))), loginBonusPopup && onboarded && !onboardingPreview && React.createElement("div", {
+    }, "閉じる"))), loginBonusPopup && onboarded && !onboardingPreview && !loginBonusGuideBusy && loginBonusGuideClear && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 60000,
