@@ -518,12 +518,26 @@ function AssistantLifeBuyConfirm({ item, to, gains = [], check, give, onClose })
     </div>);
 }
 
-// 友情Lv・仲良し度の短い説明(道具の一覧の上と贈るシート)
-function AssistantLifeGiftExplain({ compact = false }) {
+// 道具の上がる量を、数字の幅ではなく「小・中・大」で(2026-11-11 社長「助手ライフはとにかくわかりづらさが強い」・改善案7)。
+//   好みで変わる前のふつうの量で決める。数字は行を押すと開く詳しい所に残す(効き目は変えない)
+//   友情Lv: 15まで 小・20 中・25から 大/仲良し度: 25まで 小・35まで 中・40から 大
+const assistantLifeGiftSizeWord = (kind, v) => {
+  const n = Number(v) || 0;
+  return kind === 'peer' ? (n <= 15 ? '小' : n <= 20 ? '中' : '大') : (n <= 25 ? '小' : n <= 35 ? '中' : '大');
+};
+// 友情Lv・仲良し度の短い説明(道具の一覧の上と贈るシート)。はじめは1行の「？」に畳み、押すと開く(改善案7)
+function AssistantLifeGiftExplain({ compact = false, open: openAtFirst = false }) {
+  const [open, setOpen] = React.useState(!!openAtFirst);
   return (
-    <div data-assistant-life-gift-explain className={`rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[10px]' : 'text-[10.5px]'}`} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
-      <p><b className="text-orange-300">🤝 友情Lv</b><span className="text-slate-200">=贈った2人の助手どうしの仲。<wbr/>上がると2人の掛け合いや特別なお話が増える</span></p>
-      <p><b className="text-pink-200">💗 仲良し度</b><span className="text-slate-200">=あなたとその助手の仲。<wbr/>上がると呼び方や会話が変わり、ごほうびが届く</span></p>
+    <div data-assistant-life-gift-explain={open ? 'open' : 'fold'} className={`rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[10px]' : 'text-[10.5px]'}`} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      <button type="button" data-assistant-life-gift-explain-toggle aria-expanded={open} onClick={(ev) => { ev.stopPropagation(); setOpen(v => !v); }}
+        className="flex min-h-[36px] w-full items-center gap-1 text-left font-black text-slate-200">
+        <span className="text-orange-300">🤝 友情Lv</span>・<span className="text-pink-200">💗 仲良し度</span>って？<span className="ml-auto shrink-0 rounded-full bg-slate-700 px-1.5 text-[10px] text-slate-200">{open ? '閉じる ▲' : '？'}</span>
+      </button>
+      {open && <>
+        <p><b className="text-orange-300">🤝 友情Lv</b><span className="text-slate-200">=贈った2人の助手どうしの仲。<wbr/>上がると2人の掛け合いや特別なお話が増える</span></p>
+        <p><b className="text-pink-200">💗 仲良し度</b><span className="text-slate-200">=あなたとその助手の仲。<wbr/>上がると呼び方や会話が変わり、ごほうびが届く</span></p>
+      </>}
     </div>);
 }
 
@@ -600,10 +614,13 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
                 className={`relative min-h-[54px] rounded-xl border px-0.5 pb-0.5 pt-1 text-center active:scale-[.97] ${on ? 'border-amber-300 bg-amber-400/20' : 'border-white/10 bg-slate-800/60'} ${n <= 0 ? 'opacity-50' : ''}`}>
                 <span className="block text-[20px] leading-none" aria-hidden="true">{x.emoji}</span>
                 <span className="mt-0.5 block text-[9.5px] font-black leading-[1.15] text-white" style={{ wordBreak: 'keep-all', minHeight: '2.3em' }} data-assistant-life-give-kind-name>{assistantLifeGiftWrapName(x).map((w, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{w}</React.Fragment>)}</span>
-                <span className="block text-[9px] font-black leading-tight text-slate-300">{lifeOn && people.length ? ls.map(mark).map(m => m || '・').join(' ') : ''}</span>
+                {/* 好みは分かっている所だけ印(💗💧・)。まだの所は「?」を並べず、下に1回だけ「好みは贈ると分かる」(2026-11-11 改善案7) */}
+                <span className="block text-[9px] font-black leading-tight text-slate-300" style={{ minHeight: '1em' }}>{lifeOn && people.length && ls.some(v => v !== 'unknown') ? ls.map(v => (v === 'unknown' ? '' : mark(v) || '・')).join(' ') : ''}</span>
                 <em className="absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200">×{n}</em>
               </button>); })}
         </div>
+        {lifeOn && people.length > 0 && gifts.some(x => people.some(id => assistantLifeGiftShownLike(id, x.key, st) === 'unknown')) && (
+          <p data-assistant-life-give-like-hint className="mt-1 text-[11px] font-bold text-slate-300">好み(💗好き・💧苦手)は、贈ると分かります</p>)}
         <div className="mt-2 flex items-center gap-2">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden" aria-hidden="true">{info.emoji}</span>
           <div className="min-w-0 flex-1">
@@ -629,7 +646,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
             {lifeOn && <AssistantLifeGiftWeight w={peerW} tone="peer" kind="peer" gainText={peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''}/>}
           </div>}
         </div>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
         {buyable && <p data-assistant-life-give-buy-hint className="mt-1.5 rounded-xl bg-violet-500/15 px-2 py-1 text-[11px] font-black leading-snug text-violet-100">持っていない道具も、ここで買ってそのまま贈れます(所持ビートP {Number.isFinite(beatP) ? beatP.toLocaleString() : '…'})</p>}
         {reason && !buyable && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
         {lifeOn && have <= 0 && !buyable && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}

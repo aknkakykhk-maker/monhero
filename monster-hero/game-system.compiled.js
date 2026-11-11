@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55a47e3a8a07127c
+// source-sha256: 88cc8215c0feaf24
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108952,6 +108952,8 @@ function AssistantLifeHouse({
   const followAfterRef = React.useRef(null);
   const [note, setNote] = React.useState('');
   const [give, setGive] = React.useState(null);
+  const [itemOpen, setItemOpen] = React.useState(null);
+  const [itemHelp, setItemHelp] = React.useState(false);
   const [masmonId, setMasmonId] = React.useState(null);
   const [intro, setIntro] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
@@ -109524,28 +109526,41 @@ function AssistantLifeHouse({
   }, React.createElement("span", {
     className: "grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]",
     "aria-hidden": "true"
-  }, x.emoji), React.createElement("div", {
-    className: "min-w-0 flex-1"
+  }, x.emoji), React.createElement("button", {
+    type: "button",
+    className: "min-w-0 flex-1 text-left",
+    "data-assistant-life-item-more": x.kind,
+    "aria-expanded": itemOpen === x.kind,
+    onClick: () => setItemOpen(v => v === x.kind ? null : x.kind)
   }, React.createElement("p", {
-    className: "text-[12px] font-black text-white"
+    className: "text-[12.5px] font-black text-white"
   }, x.name, " ", React.createElement("span", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[11px] text-slate-300"
   }, "持っている ", haveOf(x.kind), "個", usedOf(x.kind) && haveOf(x.kind) > 0 ? ' ・ 今日は贈れない' : '')), React.createElement("p", {
-    className: "text-[10.5px] leading-snug text-slate-300"
-  }, x.what.split('。')[0], "。", React.createElement("span", {
+    className: "text-[12px] font-black leading-snug",
+    "data-assistant-life-item-size": x.kind
+  }, React.createElement("span", {
+    className: "text-orange-300"
+  }, "🤝 ", assistantLifeGiftSizeWord('peer', x.peerAmt)), "・", React.createElement("span", {
+    className: "text-pink-200"
+  }, "💗 ", assistantLifeGiftSizeWord('player', x.playerAmt)), React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "(好みで増える)", itemOpen === x.kind ? ' ▲' : ' ▼')), itemOpen === x.kind && React.createElement("div", {
+    className: "mt-0.5 text-[11px] leading-snug text-slate-300",
+    "data-assistant-life-item-detail": x.kind
+  }, React.createElement("p", null, x.what), React.createElement("p", null, React.createElement("span", {
     className: "whitespace-nowrap text-orange-300"
   }, "🤝 友情Lv ", assistantLifeItemRange(x).peer), "・", React.createElement("span", {
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
     className: "whitespace-nowrap text-slate-400"
-  }, "(好みで変わる)")), soloOn && React.createElement("p", {
-    className: "text-[10px] leading-snug text-slate-400",
+  }, "(苦手〜好き)")), soloOn && React.createElement("p", {
     "data-assistant-life-item-solo-amt": true
   }, "1人に贈ると: ", React.createElement("span", {
     className: "whitespace-nowrap text-pink-200"
   }, "💗 仲良し度 ", assistantLifeItemRange(x).player), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "(友情Lv は上がらない)"))), haveOf(x.kind) <= 0 && (canGive && buyTarget(false) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
+  }, "(友情Lv は上がらない)")))), haveOf(x.kind) <= 0 && (canGive && buyTarget(false) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
     type: "button",
     "data-assistant-life-item-buy": x.kind,
     onClick: () => openBuy(x.kind, false),
@@ -109570,19 +109585,31 @@ function AssistantLifeHouse({
     }, React.createElement("span", {
       className: "grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-[26px]",
       "aria-hidden": "true"
-    }, x.emoji), React.createElement("div", {
-      className: "min-w-0 flex-1"
+    }, x.emoji), React.createElement("button", {
+      type: "button",
+      className: "min-w-0 flex-1 text-left",
+      "data-assistant-life-item-more": x.kind,
+      "aria-expanded": itemOpen === x.kind,
+      onClick: () => setItemOpen(v => v === x.kind ? null : x.kind)
     }, React.createElement("p", {
-      className: "text-[12px] font-black text-white"
+      className: "text-[12.5px] font-black text-white"
     }, x.name, " ", React.createElement("span", {
-      className: "text-[10px] text-slate-400"
+      className: "text-[11px] text-slate-300"
     }, "持っている ", haveOf(x.kind), "個")), React.createElement("p", {
-      className: "text-[10.5px] leading-snug text-slate-300"
-    }, x.what.split('。')[0], "。", React.createElement("span", {
+      className: "text-[12px] font-black leading-snug",
+      "data-assistant-life-item-size": x.kind
+    }, React.createElement("span", {
+      className: "text-pink-200"
+    }, "💗 ", assistantLifeGiftSizeWord('player', g.player)), React.createElement("span", {
+      className: "text-[11px] font-bold text-slate-300"
+    }, "(好みで増える)", itemOpen === x.kind ? ' ▲' : ' ▼')), itemOpen === x.kind && React.createElement("div", {
+      className: "mt-0.5 text-[11px] leading-snug text-slate-300",
+      "data-assistant-life-item-detail": x.kind
+    }, React.createElement("p", null, x.what), React.createElement("p", null, React.createElement("span", {
       className: "whitespace-nowrap text-pink-200"
     }, "💗 仲良し度 +", lo, "〜", hi), React.createElement("span", {
       className: "whitespace-nowrap text-slate-400"
-    }, "(好みで変わる)"))), haveOf(x.kind) <= 0 && (buyTarget(true) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
+    }, "(苦手〜好き)")))), haveOf(x.kind) <= 0 && (buyTarget(true) && typeof assistantLifeCanBuy === 'function' && assistantLifeCanBuy(x) ? React.createElement("button", {
       type: "button",
       "data-assistant-life-item-buy": x.kind,
       onClick: () => openBuy(x.kind, true),
@@ -109592,12 +109619,23 @@ function AssistantLifeHouse({
       small: true,
       label: `🛒 ${x.cost != null ? `${x.cost}P` : '交換所'}`
     })));
-  })), React.createElement("p", {
-    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] leading-snug text-slate-200",
+  })), React.createElement("div", {
+    className: "mt-2 rounded-xl bg-slate-950/85 px-2 py-1 text-slate-200",
+    "data-assistant-life-items-help": itemHelp ? 'open' : 'fold'
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-items-help-toggle": true,
+    "aria-expanded": itemHelp,
+    onClick: () => setItemHelp(v => !v),
+    className: "flex min-h-[40px] w-full items-center text-left text-[12px] font-black"
+  }, "🎒 道具の手に入れ方・贈り方", React.createElement("span", {
+    className: "ml-auto rounded-full bg-slate-700 px-1.5 text-[10px]"
+  }, itemHelp ? '閉じる ▲' : '？')), itemHelp && React.createElement("p", {
+    className: "pb-0.5 text-[11px] leading-snug",
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます"), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
+  }, "手に入れる: モンヒロビートの「ビートP交換所」(", itemInfos.map(x => `${x.emoji}${x.cost != null ? `${x.cost}P` : ''}`).join('・'), ")。贈る: 部屋や場面の「🎁 贈る」", soloOn ? '(2人に・その助手だけに)' : '', "。好きな物なら多め・苦手な物なら少なめに上がり、好みは贈ると分かります。同じ道具は1日1回・合わせて1日3回。声をかける・見守るは無料です。次の段まであと何点・この道具で段の何割進むかは、「🎁 贈る」で2人を選ぶと出ます")), typeof AssistantLifeShopButton === 'function' && React.createElement("div", {
     className: "mt-2"
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
@@ -124905,17 +124943,38 @@ function AssistantLifeBuyConfirm({
     className: "min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
   }, busy ? '…' : '🛒 買って贈る'))));
 }
+const assistantLifeGiftSizeWord = (kind, v) => {
+  const n = Number(v) || 0;
+  return kind === 'peer' ? n <= 15 ? '小' : n <= 20 ? '中' : '大' : n <= 25 ? '小' : n <= 35 ? '中' : '大';
+};
 function AssistantLifeGiftExplain({
-  compact = false
+  compact = false,
+  open: openAtFirst = false
 }) {
+  const [open, setOpen] = React.useState(!!openAtFirst);
   return React.createElement("div", {
-    "data-assistant-life-gift-explain": true,
+    "data-assistant-life-gift-explain": open ? 'open' : 'fold',
     className: `rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[10px]' : 'text-[10.5px]'}`,
     style: {
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, React.createElement("p", null, React.createElement("b", {
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-gift-explain-toggle": true,
+    "aria-expanded": open,
+    onClick: ev => {
+      ev.stopPropagation();
+      setOpen(v => !v);
+    },
+    className: "flex min-h-[36px] w-full items-center gap-1 text-left font-black text-slate-200"
+  }, React.createElement("span", {
+    className: "text-orange-300"
+  }, "🤝 友情Lv"), "・", React.createElement("span", {
+    className: "text-pink-200"
+  }, "💗 仲良し度"), "って？", React.createElement("span", {
+    className: "ml-auto shrink-0 rounded-full bg-slate-700 px-1.5 text-[10px] text-slate-200"
+  }, open ? '閉じる ▲' : '？')), open && React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", {
     className: "text-orange-300"
   }, "🤝 友情Lv"), React.createElement("span", {
     className: "text-slate-200"
@@ -124923,7 +124982,7 @@ function AssistantLifeGiftExplain({
     className: "text-pink-200"
   }, "💗 仲良し度"), React.createElement("span", {
     className: "text-slate-200"
-  }, "=あなたとその助手の仲。", React.createElement("wbr", null), "上がると呼び方や会話が変わり、ごほうびが届く")));
+  }, "=あなたとその助手の仲。", React.createElement("wbr", null), "上がると呼び方や会話が変わり、ごほうびが届く"))));
 }
 function AssistantLifeGiftSheet({
   give,
@@ -125070,11 +125129,17 @@ function AssistantLifeGiftSheet({
     }, assistantLifeGiftWrapName(x).map((w, i) => React.createElement(React.Fragment, {
       key: i
     }, i > 0 && React.createElement("wbr", null), w))), React.createElement("span", {
-      className: "block text-[9px] font-black leading-tight text-slate-300"
-    }, lifeOn && people.length ? ls.map(mark).map(m => m || '・').join(' ') : ''), React.createElement("em", {
+      className: "block text-[9px] font-black leading-tight text-slate-300",
+      style: {
+        minHeight: '1em'
+      }
+    }, lifeOn && people.length && ls.some(v => v !== 'unknown') ? ls.map(v => v === 'unknown' ? '' : mark(v) || '・').join(' ') : ''), React.createElement("em", {
       className: "absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200"
     }, "×", n));
-  })), React.createElement("div", {
+  })), lifeOn && people.length > 0 && gifts.some(x => people.some(id => assistantLifeGiftShownLike(id, x.key, st) === 'unknown')) && React.createElement("p", {
+    "data-assistant-life-give-like-hint": true,
+    className: "mt-1 text-[11px] font-bold text-slate-300"
+  }, "好み(💗好き・💧苦手)は、贈ると分かります"), React.createElement("div", {
     className: "mt-2 flex items-center gap-2"
   }, React.createElement("span", {
     className: "grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden",
@@ -125124,7 +125189,7 @@ function AssistantLifeGiftSheet({
     gainText: peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''
   }))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden"
-  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), buyable && React.createElement("p", {
+  }, soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)', "・持っている ", have, "個", info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''), buyable && React.createElement("p", {
     "data-assistant-life-give-buy-hint": true,
     className: "mt-1.5 rounded-xl bg-violet-500/15 px-2 py-1 text-[11px] font-black leading-snug text-violet-100"
   }, "持っていない道具も、ここで買ってそのまま贈れます(所持ビートP ", Number.isFinite(beatP) ? beatP.toLocaleString() : '…', ")"), reason && !buyable && React.createElement("p", {
