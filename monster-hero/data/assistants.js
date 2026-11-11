@@ -12839,6 +12839,12 @@ const ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS = {
 };
 const assistantBattleGuidePages = (assistantId) =>
   ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS[assistantId] || ASSISTANT_BATTLE_TUTORIAL_GUIDE;
+// つづきのれんしゅうの誘い(2026-11-11)。はじめての本番のバトルを1回終えて HOME に戻ったとき、一度だけ出す
+const ASSISTANT_BATTLE_TUTORIAL_MORE_OFFER = [
+  { e:'happy', title:'つづきのれんしゅう', t:'はじめてのバトル、おつかれさま！ 必殺技・アシストカード・距離技・技変更みたいな、バトルのいろいろな仕組みも覚えとく？ もう1戦するだけだよ♪', offer:'battleMore' },
+  { e:'wink', title:'いつでもできるよ', t:'わかった！ ヘルプの「バトルのれんしゅう」から、いつでもつづきをやれるからね♪', declined:true },
+];
+const assistantBattleMorePages = () => ASSISTANT_BATTLE_TUTORIAL_MORE_OFFER;
 
 // ---------- バトルチュートリアル(操作しながら覚える) ----------
 // 専用の画面は作らず、ふだんのバトル画面の上にみゅあの吹き出しとハイライトを重ねて進める。
@@ -13013,6 +13019,50 @@ const ASSISTANT_BATTLE_TUTORIAL_V2 = [
   ...ASSISTANT_BATTLE_TUTORIAL_BODY,
   ...ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2,
 ];
+
+// ---------- はじめの1戦・つづき(2026-11-11 社長 PLAN.md 表の2番・docs/progress/first-30min/BATTLE-TUTORIAL-SPLIT.md) ----------
+// はじめての人のれんしゅうを「はじめの1戦」(カードを出して勝つまで・21手)と「つづき」(勇者えらびから・今の本体としめくくり)に分ける。
+// 手の中身(画面 at・待ち方 wait・光らせる所 spot・使わせるカード need)は今の手をそのまま使い、文だけを短くまとめ直す。
+// 今の80手の通し(ASSISTANT_BATTLE_TUTORIAL_V2)は、ヘルプから選べるまま残す
+const battleTutorialStepOf = (id, over = {}) => {
+  const base = [...ASSISTANT_BATTLE_TUTORIAL_INTRO_V2, ...ASSISTANT_BATTLE_TUTORIAL_BODY, ...ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2].find(x => x.id === id);
+  return { ...(base || {}), ...over };
+};
+const ASSISTANT_BATTLE_TUTORIAL_FIRST = [
+  battleTutorialStepOf('intro',        { id:'f_intro',   title:'はじめの1戦', t:'{name}、実際に1回たたかってみよ！ あたしが横で見てるね♪' }),
+  battleTutorialStepOf('systemPick',   { id:'f_system',  title:'まずはクラシック', t:'いちばん上のクラシックバトルを押してね♪ 基本のバトルだよ。' }),
+  battleTutorialStepOf('modePick',     { id:'f_mode',    title:'チャレンジで', t:'チャレンジの「難易度を選ぶ」を押してね♪' }),
+  battleTutorialStepOf('start',        { id:'f_start',   title:'ビギナーで挑戦', t:'いちばんやさしいビギナーにしてあるよ。「この難易度で挑戦」を押してね！' }),
+  battleTutorialStepOf('hero',         { id:'f_hero',    title:'主役をえらぶ', t:'主役になるのが勇者モン。押して、出てきた画面で「決定」だよ♪' }),
+  battleTutorialStepOf('slot',         { id:'f_slot',    title:'立つ距離', t:'次は立つ距離。敵と同じ距離だと大ダメージなんだ！ 光ってる枠を押してね。' }),
+  battleTutorialStepOf('teaching',     { id:'f_teach',   title:'助っ人カード', t:'バトル中に使える助っ人カードを1つ持っていくよ。押してね♪' }),
+  battleTutorialStepOf('battle',       { id:'f_battle',  title:'バトル開始！', t:'いよいよ本番！ 1ターンずつ進めていくよ♪' }),
+  battleTutorialStepOf('actionTalk',   { id:'f_cards',   title:'カード → ACTION', spot:['cards','action'], t:'下のカードを選んで、右下の「ACTION」を押すと1ターン進むよ。' }),
+  battleTutorialStepOf('intentTalk',   { id:'f_intent' }),
+  battleTutorialStepOf('guardDo',      { id:'f_guard',   title:'ガードで受けよう', t:'ガードカードを選んで ACTION！ ダメージがぐっと減るよ。' }),
+  battleTutorialStepOf('guardSeen',    { id:'f_guardSeen' }),
+  battleTutorialStepOf('atkReady',     { id:'f_atkTalk', title:'次は攻撃', t:'今は敵と同じ距離。この状態の攻撃がいちばんよく効くよ！' }),
+  battleTutorialStepOf('atkDo',        { id:'f_atk' }),
+  battleTutorialStepOf('atkSeen',      { id:'f_atkSeen', t:'敵のライフがぐっと減ったね。距離がそろってると威力が全然ちがうんだ♪' }),
+  battleTutorialStepOf('uniqueTalk',   { id:'f_uniqueTalk' }),
+  battleTutorialStepOf('act',          { id:'f_finish' }),
+  battleTutorialStepOf('clear',        { id:'f_clear' }),
+  battleTutorialStepOf('clearNext',    { id:'f_clearNext' }),
+  battleTutorialStepOf('reward',       { id:'f_reward',  title:'強くなろう', t:'クリアのたびに3つから1つ強化をえらべるよ。好きなのを押してね♪' }),
+  { id:'f_end', at:'*', e:'happy', title:'はじめの1戦、ばっちり！', t:'これでバトルの流れはばっちり！ くわしいことは、あとで「つづきのれんしゅう」で教えるね。いってらっしゃい{name}！', wait:'end' },
+];
+// つづきのれんしゅう: 勇者えらびから始め、今の本体(必殺技・アシスト・緊急回復・距離技・技変更・固有技)と、しめくくりを通す
+const ASSISTANT_BATTLE_TUTORIAL_MORE = [
+  { id:'m_intro', at:'PICK_HERO', e:'happy', title:'つづきのれんしゅう', t:'今日はバトルのいろいろな仕組みを、もう1戦しながら覚えよ♪', wait:'next' },
+  ...ASSISTANT_BATTLE_TUTORIAL_BODY,
+  ...ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2,
+];
+// 入口の3画面を、ふだん初めて開いたときの一言(れんしゅうから移した説明・3行まで)
+const BATTLE_SELECT_HINTS = Object.freeze({
+  system: 'クラシックは基本の10WAVE、タクティクスは1体ずつライフを持つ読み合い、クイックは1周が速い育成むけ。「詳しいルール」でくわしく読めるよ♪',
+  mode: 'チャレンジはスコアに挑む基本、種族チャレンジはひとつの種族だけ、プロはベースモンだけで挑むモード。上のタブでランキングも見られるよ。',
+  difficulty: '左右にスワイプして難易度をえらぶよ。難しいほど報酬の倍率も上がるんだ♪',
+});
 
 // ---------- タクティクスバトルのれんしゅう(2026-09-21 ユーザー依頼・デバッグからだけ) ----------
 // タクティクスは公開前なので、この台本はデバッグ設定からしか開けない。
@@ -13257,6 +13307,24 @@ const BATTLE_TUTORIAL_SCENARIO = {
     { type:'WAIT' },                // 6ターン目 … 距離技で引き戻す
     { type:'WAIT' },                // 7ターン目 … 通常攻撃
     { type:'WAIT' },                // 8ターン目以降 … 技変更 → 固有技でトドメ
+  ],
+};
+// はじめの1戦の台本(2026-11-11)。ガード → 攻撃 → 固有技でトドメ の3ターン。数字は tools/battle/battle-scenario-check.js が検算する
+//   (ガード+攻撃では倒れず・固有技で必ず倒れる・こちらは倒れない・ガッツが足りる)
+const BATTLE_TUTORIAL_SCENARIO_FIRST = {
+  heroId: 'Mocchi',
+  slotIndex: 1,
+  teachingId: 'oryo',
+  enemyKey: 'Dino',
+  enemyDist: 1,
+  enemyHp: 450,          // 会心の攻撃1回(約315)では落ちず、攻撃+固有技(約672)で必ず落ちる量
+  enemyAtk: 300,
+  hand: ['guard', 'atk', 'guard', 'teaching', 'atk'],
+  draw: ['unique', 'guard', 'atk'],
+  intents: [
+    { type:'ATTACK' },   // 1ターン目 … 攻撃予告 → ガードで受ける
+    { type:'WAIT' },     // 2ターン目 … 攻撃
+    { type:'WAIT' },     // 3ターン目以降 … 固有技でトドメ
   ],
 };
 // タクティクスバトルのれんしゅう用の台本(2026-09-21・デバッグからだけ)。

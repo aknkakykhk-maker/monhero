@@ -275,6 +275,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               ))}
             </div>
           </div>)}
+        {/* 助手ライフの画面(新しい画面/前の画面)。部品は 56-assistant-life-ux.jsx */}
+        {typeof AssistantLifeUiSettingRow === 'function' && <AssistantLifeUiSettingRow/>}
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
           <div className="text-center text-[10px] font-mono text-slate-400">BUILD {BUILD_DATE}</div>

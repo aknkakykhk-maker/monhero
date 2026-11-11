@@ -154,7 +154,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'stamp',label:'スタンプ'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -304,10 +304,10 @@ function BreederMarketScreen({
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
-            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
-            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'アイコン・フレームが買える(Pはレベルアップで獲得)',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'プシュケー・勇者の証と交換',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'円盤石・アシストなどと交換',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
             ...(cardShop?[{key:'card',emoji:'🃏',label:'MFバトルカード',titleLines:['MFバトル','カード'],value:`🎟️${compactCount(cardShop.point)}`,hint:'ビートPでパックなど',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
@@ -507,6 +507,8 @@ function BreederMarketScreen({
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
+          {/* マルチのスタンプ(2026-11-11 社長「いっぱい作って、カスタマイズできるようにしたい」「ビートPで買い足す」)。品と値段は 39-multi-stamp.jsx の表 */}
+          {eventTab==='stamp'&&<MultiStampShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
           {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
               服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
           {eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer=>offer.available!==false).map(offer=>{
