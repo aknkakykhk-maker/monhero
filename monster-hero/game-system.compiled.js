@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 68936f78ab6ed5b8
+// source-sha256: 3c762f81503e7eea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118446,6 +118446,35 @@ const assistantLifeProfileRhythm = id => {
   const h = n => Number.isFinite(n) ? `${n}時` : '';
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
+const ASSISTANT_FULLBODY_ART = Object.freeze({
+  atsu: 'atsu',
+  kiki: 'kiki',
+  'kiki:halloween': 'kiki_halloween',
+  kyuko: 'kyuko',
+  momosuke: 'momosuke',
+  'momosuke:halloween': 'momosuke_halloween',
+  mua: 'mua',
+  'mua:halloween': 'mua_halloween',
+  'mua:card-master': 'mua_card-master',
+  sorashido: 'sorashido',
+  erubin: 'erubin',
+  'erubin:sekiyuou': 'erubin_sekiyuou'
+});
+const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({});
+const assistantLifeProfileFullBody = (who, expression = 'happy') => {
+  if (!who || !who.id) return null;
+  let outfit = '';
+  try {
+    const c = typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null;
+    if (c && c.imageDir) outfit = String(c.imageDir).split('/').pop();
+  } catch (_) {
+    outfit = '';
+  }
+  const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
+  if (!name) return null;
+  const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
+  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
+};
 function AssistantLifeProfileStand({
   who,
   head = 0.32,
@@ -118488,6 +118517,29 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
+  const fullSrc = assistantLifeProfileFullBody(who);
+  if (fullSrc) {
+    return React.createElement("div", {
+      ref: boxRef,
+      className: "pointer-events-none absolute inset-0 overflow-hidden",
+      "data-assistant-life-profile-stand": who.id,
+      "data-assistant-life-profile-fullbody": fullSrc
+    }, React.createElement("img", {
+      src: fullSrc,
+      alt: who.name,
+      draggable: false,
+      className: "absolute",
+      style: {
+        left: 0,
+        right: 0,
+        bottom: '2%',
+        width: '100%',
+        height: '96%',
+        objectFit: 'contain',
+        objectPosition: 'center bottom'
+      }
+    }));
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({

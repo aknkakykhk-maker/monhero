@@ -16,7 +16,9 @@ from PIL import Image
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SRC = os.path.join(ROOT, 'tools/art-sources/assistant-fullbody/received-v1')
 OUT = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
-# キー → 受け取った絵。キーは「助手id」か「助手id:服の名前」
+# キー → 受け取った絵。キーは「助手id」か「助手id:服の名前」。
+#   表情の絵(8表情: angry・crying・excited・happy・normal・surprise・troubled・wink)が届いたら、キーの後ろに @表情 を付けて足す
+#   (例 'atsu@happy': '…')。書き出し先は atsu__happy.png。表情の絵が無い表情は、表情なしの絵(atsu.png)を出す
 ART = {
     'atsu': 'atsu_transparent_fixed.png',
     'kiki': 'kiki_transparent_fixed.png',
@@ -28,6 +30,8 @@ ART = {
     'mua:halloween': 'msg3-blonde-halloween-witch.png',
     'mua:card-master': 'msg4-blonde-blue-cape.png',
     'sorashido': 'msg6-kimono-boy.png',
+    'erubin': 'msg7-curly-man-casual.png',
+    'erubin:sekiyuou': 'msg8-curly-man-robe.png',
 }
 OUT_W, OUT_H = 512, 768
 MARGIN = 6  # 切り詰めのあとの余白(出力の画素)
@@ -140,7 +144,7 @@ def main():
     tiles = []
     for key, f in ART.items():
         im = fit(clean(os.path.join(SRC, f)))
-        name = key.replace(':', '_') + '.png'
+        name = key.replace('@', '__').replace(':', '_') + '.png'
         q = quant(im)
         q.save(os.path.join(OUT, name), optimize=True)
         back = q.convert('RGBA')

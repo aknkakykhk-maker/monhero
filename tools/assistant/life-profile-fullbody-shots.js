@@ -53,7 +53,7 @@ const shotDir = OUTDIR;
     return page;
   };
   const CASES = [['atsu'], ['kiki'], ['kiki', 'kiki_halloween_2026', 'halloween'], ['kyuko'], ['momosuke'], ['momosuke', 'momosuke_halloween_2026', 'halloween'],
-    ['mua'], ['mua', 'mua_halloween_2026', 'halloween'], ['mua', 'mua_card_master_v1', 'card-master'], ['sorashido'], ['dra'], ['erubin']];
+    ['mua'], ['mua', 'mua_halloween_2026', 'halloween'], ['mua', 'mua_card_master_v1', 'card-master'], ['sorashido'], ['dra'], ['erubin'], ['erubin', 'erubin_sekiyuou_v1', 'sekiyuou']];
   fs.mkdirSync(shotDir, { recursive: true });
   try {
     for (const v of [{ name: '縦', w: 390, h: 844, tag: 'tate' }, { name: '横', w: 844, h: 390, tag: 'yoko' }]) {
