@@ -21,7 +21,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 2;           // 計算を変えたら上げる(サーバの試合の行に残る。2 = 技を MF のように一新)
+  const VERSION = 3;           // 計算を変えたら上げる(サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
   const DIST_NAMES = ['零', '近', '中', '遠'];
@@ -91,15 +91,35 @@
     sorashido: Object.freeze({ label: '柔軟型', aggr: 1.05, caution: 1.0, thrift: 1.0, mobility: 1.3, swap: 1.4, gamble: 1.0, read: 5 }),
     erubin:    Object.freeze({ label: '防御型', aggr: 0.8, caution: 1.5, thrift: 1.15, mobility: 0.95, swap: 1.0, gamble: 0.8, read: 5 }),
   });
-  const styleOf = (assistantId, override) => {
+  // 作戦と交代の早さ(2026-11-11 社長「自分で決める」に 作戦・交代の早さ。数字はミセカタ2の案・鏡の対戦で勝率 47〜52%)。
+  // 端末からは名前だけ受け、倍率は計算側の表で掛ける(フレンド対戦でサーバが同じ計算をし、数値の改ざんを通さない)
+  const PLANS = Object.freeze({
+    attack: Object.freeze({ label: '攻める', mul: Object.freeze({ aggr: 1.25, caution: 0.8, thrift: 0.85, gamble: 1.2 }) }),
+    guard:  Object.freeze({ label: '守る',   mul: Object.freeze({ aggr: 0.85, caution: 1.3, thrift: 1.2, gamble: 0.8 }) }),
+    range:  Object.freeze({ label: '間合い', mul: Object.freeze({ mobility: 1.35, thrift: 1.05 }) }),
+    big:    Object.freeze({ label: '大技',   mul: Object.freeze({ gamble: 1.45, aggr: 1.1, thrift: 0.8 }) }),
+  });
+  const SWAP_PACES = Object.freeze({
+    early: Object.freeze({ label: '早め',   mul: Object.freeze({ swap: 1.5 }) }),
+    late:  Object.freeze({ label: 'ねばる', mul: Object.freeze({ swap: 0.55 }) }),
+  });
+  // 重みの範囲(作戦・上書きのあとに切る)。read(読み)は 0〜30
+  const STYLE_RANGE = Object.freeze({ swap: [0.3, 2.0], read: [0, 30], other: [0.4, 1.8] });
+  const styleOf = (assistantId, override, plan, swapPace) => {
     const base = STYLES[assistantId] || STYLES.atsu;
+    const pm = (PLANS[plan] && PLANS[plan].mul) || {};
+    const sm = (SWAP_PACES[swapPace] && SWAP_PACES[swapPace].mul) || {};
     const out = {};
     for (const k of Object.keys(STYLE_BASE)) {
       const o = override && Number.isFinite(Number(override[k])) ? Number(override[k]) : null;
-      out[k] = o != null ? o : (Number.isFinite(base[k]) ? base[k] : STYLE_BASE[k]);
+      let v = o != null ? o : (Number.isFinite(base[k]) ? base[k] : STYLE_BASE[k]);
+      v = v * (pm[k] || 1) * (sm[k] || 1);
+      const [lo, hi] = STYLE_RANGE[k] || STYLE_RANGE.other;
+      out[k] = clamp(v, lo, hi);
     }
     return out;
   };
+
 
   // ── 技表の写し(画面の変数から一度だけ作る。JSON にしてサーバへ持っていける) ──
   //   ASSISTANT_MASMON_TECHS = { version, species: { [種]: [ { id, name, kind:'pow'|'wise', dist:[0..3], power, hit, guts, crit, gd } ] } }
@@ -203,7 +223,9 @@
     return {
       assistantId: typeof src.assistantId === 'string' ? src.assistantId : 'atsu',
       tactics: toInt(src.tactics, 0, 100, 0),
-      style: styleOf(src.assistantId, src.style),
+      plan: PLANS[src.plan] ? src.plan : null,
+      swapPace: SWAP_PACES[src.swapPace] ? src.swapPace : null,
+      style: styleOf(src.assistantId, src.style, src.plan, src.swapPace),
       members: list,
     };
   };
@@ -385,7 +407,7 @@
     const mkTeam = (t) => {
       const nt = normalizeTeam(t, catalog);
       return {
-        assistantId: nt.assistantId, tactics: nt.tactics, style: nt.style, active: 0,
+        assistantId: nt.assistantId, tactics: nt.tactics, plan: nt.plan, swapPace: nt.swapPace, style: nt.style, active: 0,
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: catalog.species[m.species].apt,
@@ -439,7 +461,8 @@
     };
 
     const movesOf = (side) => state.teams[side].units.map(x => x.moves.map(m => ({ id: m.key, name: m.name, kind: m.kind, guts: m.guts, dist: m.dist })));
-    push({ ev: 'start', v: VERSION, balance, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
+    push({ ev: 'start', v: VERSION, balance,
+      plan: { A: state.teams.A.plan, B: state.teams.B.plan }, swapPace: { A: state.teams.A.swapPace, B: state.teams.B.swapPace }, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
       aMoves: movesOf('A'), bMoves: movesOf('B'),
       aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp) });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
@@ -545,7 +568,7 @@
 
   const api = Object.freeze({
     VERSION, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,
-    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE,
+    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, buildCatalog, simulate, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',

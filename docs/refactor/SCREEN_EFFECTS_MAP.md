@@ -196,9 +196,13 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => { Audio_.se.crit(); triggerShake(true); }, Math.round(ms * 0.28))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の2つめの効果音と揺れ |
 | `setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の3つめの効果音 |
 | `hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms)` | progress | 止める | ハムのカウンターの演出を見せ終えて、待っている攻撃を進める(`await` の resolve)。止めると攻撃が止まったままになる |
-| `}, QUICK_RUN_AUTO_RETRY_MS);` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
+| `setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | MFバトルカードの中で、クイックの自動周回(カードのオプション)が負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | 助手ライフを開いたまま回しているクイックの自動周回(AUTO設定の自動開始)が負けたあと、少し待って1周目から始め直す(2026-11-08)。effect の後始末で `clearTimeout` |
+| `timers = list.map((ms) => setTimeout(place, ms))` | screen | 止める | モンヒロビートのマルチ(77)で、遅れて出る中身に合わせて札を置き直す(見た目だけ)。次に呼ばれたとき・片づけで `clearTimeout` |
+| `setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | 裏クイックをどこでも回すとき(2026-11-11)、HOME などで負けたあと、少し待って1周目から始め直す(画面は変えない)。effect の後始末で `clearTimeout` |
+| `quickAnywhereTryStartRef.current(); }, boot ? 1500 : 300)` | progress | 止める | 裏クイックをどこでも回すとき(2026-11-11)、ゲームを開いたとき・ほかのバトルから戻ったときに、少し待って自動で始める(画面は変えない)。effect の後始末で `clearTimeout` |
+| `lifeLoseTimerRef.current = setTimeout(` | screen | ref | 助手ライフの帯の「😢 負けちゃった」の札を、始め直すまでの間だけ出して消す(見た目だけ)。新しい周回が始まった・閉じたときは ref から `clearTimeout` |
 | `const t = setTimeout(() => setOpen(false), 2500)` | screen | 止める | 小さな説明の吹き出しを2.5秒で閉じる(41-screen-ui.jsx)。後始末で `clearTimeout` |
 | `setTimeout(place, 120)` | screen | 止める | HOMEの置き場所を測り直す(1回目・69-screen-home.jsx) |
 | `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |

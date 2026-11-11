@@ -804,7 +804,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
   dra: { yes: 'おう、そうしてみるぞ。えへへ', some: 'ちょっとだけ変えてみたぞ', no: 'それはちょっとなあ…ごめんな', talk: 'ん？どうしたいのか、もうちょい教えてくれ', ng: 'その言葉は名前にできないぞ…別のにしてくれ', think: 'ちょっと考えとくぞ' },
   atsu: { yes: 'いいね、そうしてみるわ笑', some: 'ちょっとだけ取り入れてみたわ笑', no: 'それはちょっと違うかな笑 ごめんね(｡-人-｡)', talk: 'ん？どうしたいか教えて笑', ng: 'その名前は付けられないんだわ笑 別のにしよ', think: 'ちょっと考えとくわ笑' },
   kyuko: { yes: 'ほい、そうしてみるよぉ笑', some: 'ちょっとだけ変えてみたよぉ笑', no: 'それはちょっとなぁ…ごめんねぇ笑', talk: 'ん〜？どうしたいか教えてよぉ笑', ng: 'その名前は付けられないんだよぉ笑 別のにしよぉ', think: 'ちょっと考えとくよぉ笑' },
-  sorashido: { yes: '了解・・・！そうしてみるぜ笑', some: '少しだけ取り入れてみたぜ・・・！', no: 'それは計算に合わないぜ・・・ごめんな', talk: 'どうしたいか、もう少し教えてくれ・・・！', ng: 'その言葉は名前に使えないぜ・・・別の名前にしてくれ笑', think: '少し考えておくぜ・・・！' },
+  sorashido: { yes: 'なるほど了解です！ そうしてみます笑', some: '少しだけ取り入れてみました・・・！', no: 'それは計算に合わないんです・・・すみません', talk: 'どうしたいか、もう少し教えてください・・・！', ng: 'その言葉は名前に使えないんです・・・別の名前でお願いします笑', think: '少し考えておきますね・・・！' },
   erubin: { yes: 'うん、そうしてみるね笑', some: 'ちょっとだけ取り入れてみたよ笑', no: 'それはちょっと…ごめんね🤔', talk: 'どうしたいか、もうちょっと教えてね🤔', ng: 'その名前は付けられないみたい…別のにしよ🤔', think: 'ちょっと考えとくね🤔' },
 });
 // ng(名前として通さない言葉)・think(受けたが今回は変えない)は、AI の返事を使わず用意した台詞だけ
@@ -1150,7 +1150,7 @@ const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
   dra: 'おう、{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てていくからな',
   atsu: '{name}！ 新しい仲間が来た笑 {mon}の「{nick}」、よろしく頼む！',
   kyuko: 'ほい、{name}。新しいマスモン迎えたよ〜。{mon}の「{nick}」、仲良くしてねぇ',
-  sorashido: 'うぉぉぉ！{name}、新しい仲間だぜ・・・！ {mon}の「{nick}」、表にも足しとくな笑',
+  sorashido: '{name}、新しい仲間が来ましたよー！ {mon}の「{nick}」、表にも足しておきますね笑',
   erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。仲良くしてくれるとうれしいな',
 });
 // 名前を付け直したあとの1回だけ(同じくコトバ・ツムギ。社長の「この文で」待ち)
@@ -1161,7 +1161,7 @@ const ASSISTANT_MASMON_RENAMED_LINES = Object.freeze({
   dra: '{name}、マスモンたちに新しい名前を付けたぞ。見てやってくれ',
   atsu: '{name}、マスモンたちに新しい名前付けた笑 見てって！',
   kyuko: 'ほい、{name}。マスモンたちに新しい名前付けたよ〜。見てみてねぇ',
-  sorashido: '{name}、マスモンたちに新しい名前を付けたぜ・・・！ 見てくれ笑',
+  sorashido: '{name}、マスモンたちに新しい名前を付けました・・・！ 見てください笑',
   erubin: '{name}、マスモンたちに新しい名前を付けたんだ。見てくれるかな',
 });
 const assistantMasmonRenamedLine = (aid) => { const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(aid) : 'あなた'; return String(ASSISTANT_MASMON_RENAMED_LINES[aid] || '{name}、マスモンたちに新しい名前を付けたよ').split('{name}').join(call); };
