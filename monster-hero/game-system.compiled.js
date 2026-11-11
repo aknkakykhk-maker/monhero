@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c2a474aee173d63
+// source-sha256: c245e679253c1c8a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113554,6 +113554,8 @@ function AssistantLifeHouse({
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
   });
+  const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
+  const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
   const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
@@ -113605,9 +113607,9 @@ function AssistantLifeHouse({
       }
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
+  }, React.createElement("em", null, uiV2 ? giveLeftAll : soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
     "data-assistant-life-today-gain": "give"
-  }, !uiV2 ? `道具 ${itemsHave}個` : (soloOn ? itemsLeft + soloLeft : itemsLeft) <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
+  }, !uiV2 ? `道具 ${itemsHave}個` : giveLeftAll <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -113824,7 +113826,9 @@ function AssistantLifeHouse({
     },
     watchNow: unwatched.length,
     watchDone: (life.watched || []).length > 0,
-    giveLeft: soloOn ? itemsLeft + soloLeft : itemsLeft,
+    giveLeft: giveLeftAll,
+    giveGroupLeft: groupLeft,
+    giveSoloLeft: soloOn ? soloLeft : null,
     onWatch: () => {
       if (unwatched[0]) watch(unwatched[0]);
     },
@@ -114888,7 +114892,7 @@ function AssistantLifeTownMap({
   };
   const PERK_WORD = {
     studio: '券なし',
-    cardroom: '×1.5'
+    cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}`
   };
   const perkOf = place => {
     try {
@@ -115244,7 +115248,9 @@ function AssistantLifeTownMap({
     "data-assistant-life-map-sheet-home": true
   }, ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
-  }, ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+  }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, "MFバトルカードの研究をしている助手。いる助手と対戦すると、", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true
   }, "いまはだれもいません"), sheetTown.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
@@ -117660,6 +117666,8 @@ function AssistantLifeBenefitBoard({
   watchNow = 0,
   watchDone = false,
   giveLeft = 0,
+  giveGroupLeft = null,
+  giveSoloLeft = null,
   onWatch = null,
   onGive = null,
   onRoad = null,
@@ -117682,7 +117690,7 @@ function AssistantLifeBenefitBoard({
     }
   })();
   const todayClick = watchNow > 0 && onWatch ? onWatch : giveLeft > 0 && onGive ? onGive : null;
-  const todayParts = [watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し', giveLeft > 0 ? `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み'];
+  const todayParts = [watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し', giveLeft > 0 ? Number.isFinite(giveGroupLeft) && Number.isFinite(giveSoloLeft) ? `🎁 贈る 2人に${giveGroupLeft}・1人に${giveSoloLeft}回` : `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み'];
   const shown = more ? rows : rows.slice(0, 1);
   return React.createElement("section", {
     className: `mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`,
@@ -131194,11 +131202,11 @@ function AssistantLifeGiftLikesRow({
     "aria-expanded": showAll
   }, React.createElement("span", {
     className: "shrink-0"
-  }, "🎁 好きなもの"), compact && React.createElement("span", {
+  }, "🎁 贈り物の好み"), compact && React.createElement("span", {
     className: "min-w-0 truncate text-[11px]"
   }, liked.length ? liked.map(g => g.emoji).join('') : ''), React.createElement("span", {
     className: "ml-auto shrink-0 text-[10px] font-bold text-slate-400"
-  }, "分かった ", known, "/", gifts.length, compact ? showAll ? ' ▲' : ' ▼' : '')), hint && React.createElement("button", {
+  }, gifts.length, "種類のうち ", known, " 分かった", compact ? showAll ? ' ▲' : ' ▼' : '')), hint && React.createElement("button", {
     type: "button",
     "data-assistant-life-gift-told": told.key,
     onClick: () => assistantLifeGiftToldSeen(id),

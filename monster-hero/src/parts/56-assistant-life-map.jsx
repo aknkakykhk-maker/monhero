@@ -200,7 +200,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   });
   const sceneStyle = { position: 'relative', flex: 'none', width: home.w, height: home.h, margin: '0 auto', ...home.vars };
   // 得の印(2026-11-11 ナカヨシ12の改善案5。判定は「いま行くと得なこと」と同じ assistantLifePerkAt。ナカヨシ10が main に入れるまでは出さない)
-  const PERK_WORD = { studio: '券なし', cardroom: '×1.5' };
+  const PERK_WORD = { studio: '券なし', cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}` }; // カードの倍率は部屋・帯・カード画面と同じ字(2026-11-11 ミヤスサ点検 ③ 地図だけ ×1.5 だった)
   const perkOf = (place) => { try { return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true; } catch (_) { return false; } };
   const perkMark = (place) => (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} className="pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow">{PERK_WORD[place] || '得'}</i> : null);
   const facBtn = (place, cls, aria, inner) => {
@@ -308,7 +308,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <p className="mhl-en">WHERE · {String(sheetPlace).toUpperCase()}</p>
             <p className="text-[18px] font-black" data-assistant-life-map-sheet-title>{assistantLifeMapSpotWord(sheetPlace)}</p>
             <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
-            <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100">{ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]}</p>
+            <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100">{sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? <>MFバトルカードの研究をしている助手。いる助手と対戦すると、<span className="whitespace-nowrap">ごほうび {CARD_LIFE_UP_LABEL}</span></> : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]}</p>
             {sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : <p className="mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300" data-assistant-life-map-sheet-none>いまはだれもいません</p>}
             {/* 家の札には、町の場所にいる助手も並べる(HOME の「助手ライフ」の札の下の顔と同じ顔ぶれになる) */}
             {sheetTown.length > 0 && (<>
