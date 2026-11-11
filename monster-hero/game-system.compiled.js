@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 910a4103b4c1163a
+// source-sha256: a4394b33537b13f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -71798,11 +71798,7 @@ function AssistantPartnerUnlockFx({
     }
   })();
   const [step, setStep] = useState(reduce ? 2 : 0);
-  useEffect(() => {
-    if (step >= 2) return undefined;
-    const t = setTimeout(() => setStep(s => Math.min(s + 1, 2)), 800);
-    return () => clearTimeout(t);
-  }, [step]);
+  const advance = from => () => setStep(s => s === from ? from + 1 : s);
   if (!who) return null;
   const accent = who.accent || '#38bdf8';
   const name = who.name || '';
@@ -71837,7 +71833,10 @@ function AssistantPartnerUnlockFx({
   }, step === 0 && React.createElement("div", {
     className: "flex flex-col landscape:flex-row items-center gap-6",
     style: {
-      animation: 'mhPartnerGlow .4s ease-out'
+      animation: 'mhPartnerGlow .8s ease-out'
+    },
+    onAnimationEnd: e => {
+      if (e.target === e.currentTarget) advance(0)();
     }
   }, React.createElement("div", {
     className: "w-[150px] h-[210px] rounded-2xl flex flex-col items-center justify-center gap-2",
@@ -71873,16 +71872,17 @@ function AssistantPartnerUnlockFx({
   }, "モンヒロバトルで使った回数"))), step === 1 && React.createElement("img", {
     src: stand('normal'),
     alt: "",
-    className: "max-h-[78vh] max-w-[80vw] object-contain",
+    className: "h-[72%] max-w-[85%] object-contain",
     style: {
       animation: 'mhPartnerSil .8s ease-out forwards'
-    }
+    },
+    onAnimationEnd: advance(1)
   }), step === 2 && React.createElement("div", {
     className: "flex flex-col landscape:flex-row items-center justify-center gap-2 landscape:gap-6 w-full h-full"
   }, React.createElement("img", {
     src: stand('happy'),
     alt: "",
-    className: "object-contain max-h-[56vh] landscape:max-h-[92vh] max-w-[90vw] landscape:max-w-[45vw]",
+    className: "object-contain max-h-[56%] landscape:max-h-[92%] max-w-[90%] landscape:max-w-[45%] min-h-0",
     style: {
       animation: 'mhPartnerRise .5s ease-out',
       filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))'
@@ -71921,7 +71921,7 @@ function AssistantPartnerUnlockFx({
   }, React.createElement("img", {
     src: stand('wink'),
     alt: "",
-    className: "object-contain max-h-[38vh] landscape:max-h-[90vh] max-w-[80vw] landscape:max-w-[40vw]",
+    className: "object-contain max-h-[38%] landscape:max-h-[90%] max-w-[80%] landscape:max-w-[40%] min-h-0",
     style: {
       filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))'
     }
@@ -190644,19 +190644,23 @@ function MonsterHeroGame() {
   const saveAssistantPartner = next => {
     assistantPartnerRef.current = next;
     setAssistantPartner(next);
-    void storeSet(ASSISTANT_PARTNER_KEY, next, false).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
+    void Promise.resolve().then(() => storeSet(ASSISTANT_PARTNER_KEY, next, false)).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
   };
   const countAssistantCardUse = assistantId => {
-    const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
-    if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = {
-      ...assistantPartnerRunUsesRef.current,
-      [assistantId]: true
-    };
-    if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
-    assistantCardUsesRef.current = r.uses;
-    setAssistantCardUses(r.uses);
-    void storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
-    if (r.stateChanged) saveAssistantPartner(r.state);
+    try {
+      const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
+      if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = {
+        ...assistantPartnerRunUsesRef.current,
+        [assistantId]: true
+      };
+      if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
+      assistantCardUsesRef.current = r.uses;
+      setAssistantCardUses(r.uses);
+      void Promise.resolve().then(() => storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false)).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
+      if (r.stateChanged) saveAssistantPartner(r.state);
+    } catch (error) {
+      console.error('[assistant-partner] count failed:', error && error.message ? error.message : error);
+    }
   };
   useEffect(() => {
     if (gameState === 'HOME') {

@@ -15,11 +15,8 @@ const ASSISTANT_PARTNER_FX_CSS = `
 function AssistantPartnerUnlockFx({ who, cardName = '', need = 40, line = '', effects = [], onChoose, onLater }) {
   const reduce = (() => { try { return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } })();
   const [step, setStep] = useState(reduce ? 2 : 0);
-  useEffect(() => {
-    if (step >= 2) return undefined;
-    const t = setTimeout(() => setStep(s => Math.min(s + 1, 2)), 800);
-    return () => clearTimeout(t);
-  }, [step]);
+  // 1・2コマ目は、それぞれのアニメ(約0.8秒)が終わったら次へ(タイマーは使わない。画面を離れれば一緒に消える)
+  const advance = (from) => () => setStep(s => (s === from ? from + 1 : s));
   if (!who) return null;
   const accent = who.accent || '#38bdf8';
   const name = who.name || '';
@@ -34,7 +31,7 @@ function AssistantPartnerUnlockFx({ who, cardName = '', need = 40, line = '', ef
       <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 45%, ${accent} 0, transparent 58%)`, opacity: step === 1 ? .9 : step === 3 ? .35 : .55 }}/>
       <div className="absolute inset-0 flex items-center justify-center" style={{ padding: 'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))' }}>
         {step === 0 && (
-          <div className="flex flex-col landscape:flex-row items-center gap-6" style={{ animation: 'mhPartnerGlow .4s ease-out' }}>
+          <div className="flex flex-col landscape:flex-row items-center gap-6" style={{ animation: 'mhPartnerGlow .8s ease-out' }} onAnimationEnd={(e) => { if (e.target === e.currentTarget) advance(0)(); }}>
             <div className="w-[150px] h-[210px] rounded-2xl flex flex-col items-center justify-center gap-2" style={{ background: 'linear-gradient(160deg,#1e3a8a,#0f172a)', border: `3px solid ${accent}`, boxShadow: `0 0 30px ${accent}` }}>
               <img src={face} alt="" className="w-[92px] h-[92px] rounded-full object-cover border-[3px] border-white"/>
               <b className="text-[13px] font-black text-white text-center px-2">{cardName}</b>
@@ -46,10 +43,10 @@ function AssistantPartnerUnlockFx({ who, cardName = '', need = 40, line = '', ef
             </div>
           </div>
         )}
-        {step === 1 && <img src={stand('normal')} alt="" className="max-h-[78vh] max-w-[80vw] object-contain" style={{ animation: 'mhPartnerSil .8s ease-out forwards' }}/>}
+        {step === 1 && <img src={stand('normal')} alt="" className="h-[72%] max-w-[85%] object-contain" style={{ animation: 'mhPartnerSil .8s ease-out forwards' }} onAnimationEnd={advance(1)}/>}
         {step === 2 && (
           <div className="flex flex-col landscape:flex-row items-center justify-center gap-2 landscape:gap-6 w-full h-full">
-            <img src={stand('happy')} alt="" className="object-contain max-h-[56vh] landscape:max-h-[92vh] max-w-[90vw] landscape:max-w-[45vw]" style={{ animation: 'mhPartnerRise .5s ease-out', filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
+            <img src={stand('happy')} alt="" className="object-contain max-h-[56%] landscape:max-h-[92%] max-w-[90%] landscape:max-w-[45%] min-h-0" style={{ animation: 'mhPartnerRise .5s ease-out', filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
             <div className="max-w-[360px] landscape:max-w-[420px] w-full" style={{ animation: 'mhPartnerRise .6s ease-out' }}>
               <div className="text-[12px] font-black text-center" style={{ color: '#fde047', letterSpacing: '.25em' }}>NEW PARTNER</div>
               <div className="text-[24px] font-black text-white text-center whitespace-nowrap my-1">{name}が助手になりました！</div>
@@ -62,7 +59,7 @@ function AssistantPartnerUnlockFx({ who, cardName = '', need = 40, line = '', ef
         )}
         {step === 3 && (
           <div className="flex flex-col landscape:flex-row items-center justify-center gap-3 landscape:gap-6 w-full h-full" style={{ animation: 'mhPartnerRise .4s ease-out' }}>
-            <img src={stand('wink')} alt="" className="object-contain max-h-[38vh] landscape:max-h-[90vh] max-w-[80vw] landscape:max-w-[40vw]" style={{ filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
+            <img src={stand('wink')} alt="" className="object-contain max-h-[38%] landscape:max-h-[90%] max-w-[80%] landscape:max-w-[40%] min-h-0" style={{ filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
             <div className="w-full max-w-[380px] landscape:max-w-[420px]">
               <div className="text-[19px] font-black text-white text-center mb-2">{name}とできるようになったこと</div>
               <div className="flex flex-col gap-1.5">

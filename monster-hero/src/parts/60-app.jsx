@@ -5589,16 +5589,19 @@ function MonsterHeroGame() {
   // 助手の解放の保存。ref を先に変えてから書く(続けて呼ばれても取りこぼさない)
   const saveAssistantPartner = (next) => {
     assistantPartnerRef.current = next; setAssistantPartner(next);
-    void storeSet(ASSISTANT_PARTNER_KEY, next, false).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
+    void Promise.resolve().then(() => storeSet(ASSISTANT_PARTNER_KEY, next, false)).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
   };
   // モンヒロバトルで助手のアシストカードを1回切った(プレイヤーが切った分だけ。AIコピー・デバッグ戦は呼ぶ側で除く)
   const countAssistantCardUse = (assistantId) => {
-    const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
-    if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = { ...assistantPartnerRunUsesRef.current, [assistantId]: true };
-    if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
-    assistantCardUsesRef.current = r.uses; setAssistantCardUses(r.uses);
-    void storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
-    if (r.stateChanged) saveAssistantPartner(r.state);
+    // 戦闘を止めない(数えるのに失敗しても、例外は外へ出さない。ジン 2026-11-11)
+    try {
+      const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
+      if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = { ...assistantPartnerRunUsesRef.current, [assistantId]: true };
+      if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
+      assistantCardUsesRef.current = r.uses; setAssistantCardUses(r.uses);
+      void Promise.resolve().then(() => storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false)).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
+      if (r.stateChanged) saveAssistantPartner(r.state);
+    } catch (error) { console.error('[assistant-partner] count failed:', error && error.message ? error.message : error); }
   };
   useEffect(() => { if (gameState === 'HOME') { assistantPartnerRunUsesRef.current = {}; assistantPartnerRunUnlockedRef.current = []; } }, [gameState]);
   // はじめての人が最初の助手を決めた(判定ずみなら何もしない)

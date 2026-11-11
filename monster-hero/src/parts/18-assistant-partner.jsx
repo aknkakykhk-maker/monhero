@@ -129,7 +129,7 @@ const assistantPartnerIdsNow = () => {
   return list.map(a => a && a.id).filter(id => assistantPartnerIdOk(id) && assistantPartnerOkNow(id));
 };
 
-// 解放の演出の一言(仮。社長の「この文で」のあと差し替える)
+// 解放の演出の一言(2026-11-11 社長「この形・この文で」)
 const ASSISTANT_PARTNER_UNLOCK_LINES = Object.freeze({
   mua: 'えっ、みゅあのカードいっぱい使ってくれてたの！？ まぢうれしい(｡ ˘_˘)ｳﾝｳﾝ これからは隣でいっしょにいこ！',
   kiki: 'ききのカード、たくさん使ってくれてたんでつね (´ー`*)ウンウン 今日からは助手として、いっしょに火力で押していきましょ',
