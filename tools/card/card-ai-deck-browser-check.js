@@ -102,7 +102,7 @@ const run = async (browser, mode, scene, errors) => {
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 90000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 40000 });
-    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 40000 });
+    await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 40000 });
     await page.waitForTimeout(2500); await dismiss();
   };
   const flagUp = () => page.evaluate(() => { if (typeof RELEASE_FLAGS !== 'undefined') RELEASE_FLAGS.cardGrowStyle = window.__aiDeckFlag === true; }); // eslint-disable-line no-undef
