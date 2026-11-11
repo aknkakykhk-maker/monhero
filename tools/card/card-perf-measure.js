@@ -215,6 +215,10 @@ function summary(name, rows) {
     if (await t.count()) await t.first().click(); else await page.locator('[data-card-top="result"] button').first().click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
   };
+  // PERF_SHOTS=<フォルダ>: 1回目の対戦・行き来で、カードの部屋・相手えらび・対戦・結果の止め絵を撮る(崩れていないかを見せる用)
+  const SHOTS = process.env.PERF_SHOTS || '';
+  const tag = `${VW}x${VH}`;
+  const snap = async (name, i) => { if (!SHOTS || i !== 1) return; fs.mkdirSync(SHOTS, { recursive: true }); await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOTS, `${tag}-${name}.png`) }).catch(() => {}); };
   const battles = [], loops = [];
   try {
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
@@ -242,6 +246,7 @@ function summary(name, rows) {
     // ① フリー対戦(ほかのブリーダーとオートで。AI どうし・×4)を続ける
     for (let i = 1; i <= N_BATTLES; i++) {
       await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
+      await snap('1-card-top', i);
       if (i === 1) await profStart(cdp);
       await mark('mode'); await page.locator('[data-card-cpu]').click();
       await page.getByRole('button', { name: 'わかった' }).click({ timeout: 1500 }).catch(() => {});
@@ -259,6 +264,7 @@ function summary(name, rows) {
         if (sp === null || sp === '4') { if (sp === null && (await page.locator('[data-card-auto-speed="4"]').count())) await page.locator('[data-card-auto-speed="4"]').click().catch(() => {}); break; }
         await page.locator('[data-card-auto-speed-cycle]').click().catch(() => {}); await page.waitForTimeout(100);
       }
+      await page.waitForTimeout(SHOTS && i === 1 ? 4000 : 0); await snap('3-battle', i);
       // PERF_HOLD=1(試し): 対戦の画面の絵への参照をページが持ち続けたら、読み直しが消えるか
       if (process.env.PERF_HOLD) await page.evaluate(() => { const h = window.__hold || (window.__hold = new Map()); clearInterval(window.__holdT); window.__holdT = setInterval(() => { for (const im of document.querySelectorAll('[data-card-battle] img')) if (!h.has(im.src)) { const x = new Image(); x.src = im.src; h.set(im.src, x); } }, 200); });
       // PERF_FRAMES=1(調べもの): まんなかの欄の scrollHeight を読んだ回数と、コマの数を数える(1コマに何回測っているか)
@@ -337,6 +343,7 @@ function summary(name, rows) {
       if (i === 1) await profStop(cdp, '対戦1回目(相手えらび〜結果)');
       await page.waitForTimeout(1500);
       await closePops();
+      await snap('4-result', i);
       const r = { ...(await measure(page, cdp, `battle${i}`)), sec };
       battles.push(r);
       console.log(`対戦${i}(${sec}秒): layout ${r.layoutN}回 ${r.layoutMs}ms style ${r.styleMs}ms script ${r.scriptMs}ms task ${r.taskMs}ms heap ${r.heapMB}MB nodes ${r.nodes} dom ${r.domLive} listen ${r.listeners} interval ${r.intervals} raf ${r.raf} img ${r.resImgUrls}/${r.resImgs} ${r.resImgKB}KB long ${r.longN}件 ${r.longMs}ms max${r.longMax} loaf ${r.loafN}件 max${r.loafMax}`);
@@ -356,6 +363,7 @@ function summary(name, rows) {
       const foes = await page.locator('[data-card-foe]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-foe')));
       await page.locator(`[data-card-foe="${foes[i % foes.length]}"]`).click();
       await page.waitForTimeout(300);
+      await snap('2-foe', i);
       await page.locator('[data-card-start]').click();
       await page.locator('[data-card-deck-pick-go]').click();
       await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
