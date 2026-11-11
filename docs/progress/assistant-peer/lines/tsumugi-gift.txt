@@ -209,13 +209,13 @@ visitfurn kyuko momosuke item=starpic | kyuko normal {c}の部屋に、星空の
 visitfurn dra kiki item=sofa | dra happy {c}の部屋のソファ、ふかふかだな | kiki wink 座ってもいいでつけど、寝ないでくださいね | dra troubled ……努力はするぞ
 
 # 家具8種類(2026-11-11 ココロ2・docs/progress/assistant-life/furn8-lines.json から。ヘヤヅクリ2が入れた。窓辺の花は windowflower)
-furn atsu item=clock like=mid | happy ふりこ時計ね。いいじゃん、ありがと笑
+furn atsu item=clock like=mid | happy ふりこ時計ね！ いいじゃん、ありがと笑
 furn atsu item=map like=mid | happy 冒険の地図！ 次のクエスト、これで決めよ笑
 furn atsu item=guitar like=like | excited ギター！？ まじで？ {name}、わかってるじゃん！ 最高！
-furn atsu item=tv like=mid | happy レトロテレビね。味があっていいね笑
+furn atsu item=tv like=mid | happy レトロテレビね！ 味があっていいね笑
 furn atsu item=windowflower like=bad | troubled 花かー…世話できるかな笑 でも気持ちはうれしいよ！
-furn atsu item=fishbowl like=mid | happy 金魚ばちね。見てると落ち着くかも笑
-furn atsu item=pendant like=mid | happy ペンダントライト、いいね。作戦会議がはかどる笑
+furn atsu item=fishbowl like=mid | happy 金魚ばちね！ 見てると落ち着くかも笑
+furn atsu item=pendant like=mid | happy ペンダントライト、いいね！ 作戦会議がはかどる笑
 furn atsu item=garland like=mid | happy ガーランド！ パーティの拠点っぽくていいじゃん笑
 furnuse atsu item=guitar | ギターで一曲弾き中笑
 furn kyuko item=clock like=mid | happy ふりこ時計だぁ。ありがとん笑
