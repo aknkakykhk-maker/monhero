@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c09a1d67278c7f6
+// source-sha256: 2644c5932c2f52c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105630,11 +105630,11 @@ const assistantPeerPlayerCall = who => {
     return 'あなた';
   }
 };
-const assistantPeerAddPlayerBond = (ids, action) => {
+const assistantPeerAddPlayerBond = (ids, action, amount = null) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
   for (const id of [...new Set(ids || [])]) {
     try {
-      assistantPeerPlayerBondAdder(id, action);
+      if (Number.isFinite(amount)) assistantPeerPlayerBondAdder(id, action, amount);else assistantPeerPlayerBondAdder(id, action);
     } catch {}
   }
 };
@@ -108014,30 +108014,44 @@ const ASSISTANT_LIFE_STREAK_BONUS = Object.freeze([{
   days: 3,
   points: 5
 }]);
-const ASSISTANT_LIFE_RECENT_SLOTS = 12;
+const ASSISTANT_LIFE_RECENT_SLOTS = 24;
+const ASSISTANT_LIFE_SLOT_GAIN_RATE = 0.75;
+const assistantLifeSlotGainOf = amount => Number.isFinite(amount) && amount > 0 ? Math.max(1, Math.round(amount * ASSISTANT_LIFE_SLOT_GAIN_RATE)) : null;
 const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true;
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => typeof jstDayKey4 === 'function' ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
+const ASSISTANT_LIFE_PER_DAY = 12;
+const assistantLifeSixIndexOfHour = h => Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
+const assistantLifeSlotBuild = (day, j, hourForV1) => {
+  const i = assistantLifeSixIndexOfHour(j * 2 + 1);
+  const six = ASSISTANT_LIFE_SLOTS[i];
+  return {
+    abs: day * ASSISTANT_LIFE_PER_DAY + j,
+    j,
+    i,
+    id: six.id,
+    label: six.label,
+    from: j * 2,
+    to: j * 2 + 2,
+    absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1)
+  };
+};
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
   const day = Math.floor(t / 86400000);
   const h = new Date(t).getUTCHours();
-  const i = Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
-  return {
-    abs: day * 6 + i,
-    i,
-    id: ASSISTANT_LIFE_SLOTS[i].id,
-    label: ASSISTANT_LIFE_SLOTS[i].label
-  };
+  return assistantLifeSlotBuild(day, Math.floor(h / 2), h);
 };
 const assistantLifeSlotOfAbs = abs => {
-  const i = (Math.floor(Number(abs) || 0) % 6 + 6) % 6;
-  return {
-    abs: Math.floor(Number(abs) || 0),
-    i,
-    id: ASSISTANT_LIFE_SLOTS[i].id,
-    label: ASSISTANT_LIFE_SLOTS[i].label
-  };
+  const a = Math.floor(Number(abs) || 0);
+  const j = (a % ASSISTANT_LIFE_PER_DAY + ASSISTANT_LIFE_PER_DAY) % ASSISTANT_LIFE_PER_DAY;
+  return assistantLifeSlotBuild(Math.floor((a - j) / ASSISTANT_LIFE_PER_DAY), j, j * 2);
+};
+const assistantLifeAbsV1ToV2 = abs => {
+  const a = Math.floor(Number(abs));
+  if (!Number.isFinite(a)) return null;
+  const i = (a % 6 + 6) % 6;
+  return Math.floor((a - i) / 6) * ASSISTANT_LIFE_PER_DAY + Math.floor(ASSISTANT_LIFE_SLOTS[i].from / 2);
 };
 const assistantLifeHash = str => {
   let h = 1779033703 ^ str.length;
@@ -108092,13 +108106,13 @@ const assistantLifeDecide = ({
   const ids = [...new Set((members || []).filter(id => ASSISTANT_LIFE_PREFS[id]))].sort();
   const rand = assistantLifeRng(`${salt}|${slot.abs}|${ids.join(',')}`);
   const gap = prev && Number.isFinite(prev.abs) ? slot.abs - prev.abs : Infinity;
-  const inertia = gap === 1 ? 3 : gap >= 2 && gap <= 6 ? 1.5 : 0;
+  const inertia = gap === 1 ? 3 : gap >= 2 && gap <= 12 ? 1.5 : 0;
   const tierI = assistantLifeTierIndex(tier);
   const near = (r, n) => Number.isFinite(r.abs) && slot.abs - r.abs >= 0 && slot.abs - r.abs <= n;
   const recentOf = (kind, pred, n = ASSISTANT_LIFE_RECENT_SLOTS) => (recent || []).some(r => r && r.kind === kind && near(r, n) && pred(r));
   const hasPair = (r, a, b) => r.pair === assistantLifePairKey(a, b);
   const quarrelNow = (a, b) => {
-    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 3));
+    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 6));
     if (!qs.length) return false;
     const last = Math.max(...qs.map(r => r.abs));
     return !(recent || []).some(r => r && r.kind === 'makeup' && hasPair(r, a, b) && r.abs >= last);
@@ -108110,7 +108124,7 @@ const assistantLifeDecide = ({
     for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) o.push(assistantLifePairKey(g.ids[i], g.ids[j]));
     return o;
   }) : []);
-  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 2 ? prev.lonely : []);
+  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 4 ? prev.lonely : []);
   const moods = {};
   for (const id of ids) {
     const w = {
@@ -108367,15 +108381,21 @@ const normalizeAssistantLife = v => {
     }
     if (!ASSISTANT_LIFE_DOINGS[s.doing].places.includes(s.place)) s.place = ASSISTANT_LIFE_DOINGS[s.doing].places[0];
   }
-  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).slice(-40) : [];
-  const nudgeList = x => Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
+  const old = o.v !== 2;
+  const absOf = x => old ? assistantLifeAbsV1ToV2(x) : Math.floor(x);
+  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).map(r => ({
+    ...r,
+    abs: absOf(r.abs)
+  })).slice(-80) : [];
+  const nudgeList = x => old ? [] : Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
   const nudges = {
     invite: nudgeList(o.nudges && o.nudges.invite).filter(n => ok(n.id)),
     introduce: nudgeList(o.nudges && o.nudges.introduce).filter(n => typeof n.pair === 'string')
   };
   return {
+    v: 2,
     salt: typeof o.salt === 'string' && o.salt ? o.salt : '',
-    abs: Number.isFinite(o.abs) ? o.abs : null,
+    abs: Number.isFinite(o.abs) ? absOf(o.abs) : null,
     slot: typeof o.slot === 'string' ? o.slot : null,
     moods,
     groups,
@@ -108529,7 +108549,7 @@ const assistantLifeNote = async (kind, {
   ASSISTANT_LIFE_STORE.set({
     life: {
       ...life,
-      recent: [...life.recent, rec].slice(-40)
+      recent: [...life.recent, rec].slice(-80)
     }
   });
   assistantLifeSaveLife();
@@ -108789,7 +108809,7 @@ const assistantLifeAirOf = (life, a, b) => {
   const rs = (life && life.recent || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
   const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
   const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
-  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 12) return 'makeup';
   if (lastQ > -Infinity && lastQ > lastM) return 'after';
   return 'normal';
 };
@@ -109176,10 +109196,12 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
     });
   } catch {}
   if (talk.kind === 'quarrel') return talk;
+  const pg = act => assistantLifeSlotGainOf(typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[act] ? ASSISTANT_PEER_BOND_ACTIONS[act].amount : null);
+  const bg = act => assistantLifeSlotGainOf(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[act] ? ASSISTANT_BOND_ACTIONS[act].amount : null);
   if (talk.kind === 'makeup') {
     if (assistantPeerMakeupDone(talk)) {
-      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup');
-      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup');
+      await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup', pg('makeup'));
+      assistantPeerAddPlayerBond(talk.pair, 'peerMakeup', bg('peerMakeup'));
     }
     try {
       assistantPeerAlbumAdd(talk);
@@ -109190,12 +109212,13 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
     assistantPeerAlbumAdd(talk);
   } catch {}
   if (talk.kind === 'event') {
-    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event');
-    assistantPeerAddPlayerBond(talk.pair, 'peerEvent');
+    await assistantPeerGain(talk.pair[0], talk.pair[1], 'event', pg('event'));
+    assistantPeerAddPlayerBond(talk.pair, 'peerEvent', bg('peerEvent'));
     return talk;
   }
-  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
-  assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
+  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk', pg('talk'));
+  const bk = talk.kind === 'trio' ? 'peerTrio' : 'peerTalk';
+  assistantPeerAddPlayerBond(assistantPeerMembers(talk), bk, bg(bk));
   return talk;
 };
 const assistantLifeOpenScreen = () => {
@@ -109220,13 +109243,13 @@ const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({
 const assistantLifeNextSlotText = (now = Date.now()) => {
   const cur = assistantLifeSlotAt(now);
   const h = new Date(Number(now) + 9 * 3600000);
-  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const slot = cur;
   const mins = Math.max(1, slot.to * 60 - (h.getUTCHours() * 60 + h.getUTCMinutes()));
   const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
   return `あと${t}でみんなが動きます`;
 };
 const assistantLifeSlotRange = id => {
-  const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
+  const s = id && typeof id === 'object' ? id : ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
   return s ? `${s.from}〜${s.to % 24}時` : '';
 };
 const useAssistantLifeNow = metIds => {
@@ -109471,7 +109494,7 @@ function AssistantLifeScreenBody({
     className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
   }, "助手ライフ"), React.createElement("span", {
     className: "text-right text-[10px] font-bold leading-tight text-slate-400"
-  }, "いまは", assistantLifeSlotRange(slot.id), "の過ごし方", React.createElement("br", null), React.createElement("span", {
+  }, "いまは", assistantLifeSlotRange(slot), "の過ごし方", React.createElement("br", null), React.createElement("span", {
     "data-assistant-life-next-slot": true,
     className: "text-slate-300"
   }, assistantLifeNextSlotText())), React.createElement("button", {
@@ -111631,7 +111654,7 @@ function AssistantLifeRoomSheet({
     }
   })();
   const asleep = !!(w && w.doing === 'sleep');
-  const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
+  const slotDef = Number.isFinite(slot.to) ? slot : ASSISTANT_LIFE_SLOTS[slot.i];
   const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
   const groupText = w && w.group ? '' : ' ・ ひとり';
   const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
@@ -111738,7 +111761,7 @@ function AssistantLifeRoomSheet({
     icon: "🃏",
     label: "MFバトルカードで対戦する",
     sub: "カード部屋にいる助手と対戦すると、ごほうびアップ",
-    gain: "ごほうび 1.5倍",
+    gain: `ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
     on: () => onCard(id),
     disabled: !!cardSpent,
     why: cardSpent ? typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました' : ''
@@ -116109,7 +116132,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'card',
       place: 'cardroom',
       icon: '🃏',
-      text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`,
+      text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
       go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null
     });
   } catch (_) {}
@@ -116977,7 +117000,7 @@ function AssistantLifeFirstGuide({
   }), React.createElement(Item, {
     n: "3",
     head: "🎮 ほかの遊びも得に",
-    text: " なる(モンヒロビートは券なし・カードはごほうび1.5倍)"
+    text: ` なる(モンヒロビートは券なし・カードはごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'})`
   })), React.createElement("p", {
     className: "mt-1.5 text-[11.5px] font-bold text-amber-100"
   }, "まずは 光っている「👀 見守る」を押してみよう"), React.createElement("div", {
@@ -138320,12 +138343,12 @@ const AMGT_SENSE_KEYS = AMGT_SENSE.map(x => x[0]);
 const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'], [25, '慣れ'], [0, '見習い']]);
 const amgtRankOf = v => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
 const AMGT_NUM = Object.freeze({
-  gain: [4, 8],
-  realAll: [1, 2],
+  gain: [3, 6],
+  realAll: [1, 1],
   stat: [2, 4],
   fat: 12,
   str: 2,
-  perDay: 2,
+  perDay: 3,
   fatStop: 45,
   goAt: 0.4,
   initPerLv: 0.3,
@@ -138700,12 +138723,10 @@ const amgtPushEv = (next, aid, s, t, x) => {
   }].slice(-AMGT_EV);
 };
 const amgtLifeSlotsToGrow = abs => {
-  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
-  if (!S || !Number.isInteger(abs)) return [];
-  const n = S.length || 6;
-  const day = Math.floor(abs / n);
-  const s = S[abs - day * n];
-  if (!s) return [];
+  if (typeof assistantLifeSlotOfAbs !== 'function' || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 12);
+  const s = assistantLifeSlotOfAbs(abs);
+  if (!s || !Number.isFinite(s.from)) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000;
   const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
@@ -143286,6 +143307,7 @@ const alfEnsureHouse = async ({
     force: true
   });
 };
+const ALF_SLOT12_CHANCE = 0.5;
 const assistantLifeFriendPickOuting = ({
   life,
   ids,
@@ -143309,7 +143331,7 @@ const assistantLifeFriendPickOuting = ({
   if (!cand.length) return null;
   const rand = assistantLifeRng(`${salt}|friend|${abs}|${cand.join(',')}`);
   const social = cand.reduce((t, id) => t + (ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].social || 0.5), 0) / cand.length;
-  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1);
+  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1) * ALF_SLOT12_CHANCE;
   if (rand() >= chance) return null;
   const muted = new Set(settings.muted || []);
   const went = st.went || {};
@@ -151279,7 +151301,8 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null), mult = 1)
   if (outcome === 'win') n = level.loops;else if (outcome === 'lose') n = Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));else if (outcome === 'surrender') n = Math.min(loseFull, Math.round(facts.kos * loseFull / 3));
   return cardLifeUpApply(n, mult);
 };
-const CARD_LIFE_UP_MULT = 1.5;
+const CARD_LIFE_UP_MULT = 1.375;
+const CARD_LIFE_UP_LABEL = '1.375倍';
 const cardLifeUpApply = (n, mult = 1) => {
   const v = Number.isFinite(n) ? n : 0;
   return Number.isFinite(mult) && mult > 1 && v > 0 ? Math.round(v * mult) : v;
@@ -158920,10 +158943,8 @@ const cardLifeRewardLeft = (id, now = Date.now()) => {
 const cardLifeRewardSpent = (id, now = Date.now()) => {
   const s = cardLifeSlotNow(now);
   if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
-  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
-  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
   return {
-    next: nx && Number.isFinite(nx.from) ? nx.from : null
+    next: Number.isFinite(s.to) ? s.to % 24 : null
   };
 };
 const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
@@ -165463,7 +165484,7 @@ const CardBattleScreen = ({
       style: JA_LABEL_STYLE
     }, lifeUpFoes.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map(x => x.name).join('・')}`)), React.createElement("p", {
       className: "text-[12px] text-white"
-    }, jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍'))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
+    }, jaWrap(`この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が ${CARD_LIFE_UP_LABEL}`))), lifeFoes.filter(x => lifeSpent[x.id]).map(x => React.createElement("p", {
       key: x.id,
       "data-card-foe-life-spent": x.id,
       className: `text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`
@@ -165759,7 +165780,7 @@ const CardBattleScreen = ({
       style: JA_LABEL_STYLE
     }, React.createElement("p", null, jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)), React.createElement("p", {
       className: "text-[12px] text-white"
-    }, jaWrap(`ビートP・カードランクの経験値・クイック周回 1.5倍(${cardResultPlain(r)} → ${r.got})`))), React.createElement("div", {
+    }, jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}(${cardResultPlain(r)} → ${r.got})`))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, cardBattleLevelLabel(result.level, result.share), "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)), cardResultCut(r) && React.createElement("div", {
       "data-card-result-cut": true,
@@ -179161,7 +179182,7 @@ const cardLevelAfter = (prev, {
     label: outcome === 'win' ? '勝ち' : '負け',
     xp: base0
   }, ...(base > base0 ? [{
-    label: 'カード部屋の助手と対戦(1.5倍)',
+    label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`,
     xp: base - base0
   }] : []), ...(first ? [{
     label: 'その日はじめての勝ち',

@@ -188,7 +188,7 @@ function AssistantLifeFirstGuide({ land = false, canWatch = false, onClose, onWa
       <ol className="mt-1.5 space-y-1.5">
         <Item n="1" head="👀 見守る・🎁 贈る・💬 おしゃべり" text=" で、助手たちと過ごす"/>
         <Item n="2" head="💗 仲良くなるとごほうび" text=" が届く(ダイヤ・飾り枠・話し方・マスモン)"/>
-        <Item n="3" head="🎮 ほかの遊びも得に" text=" なる(モンヒロビートは券なし・カードはごほうび1.5倍)"/>
+        <Item n="3" head="🎮 ほかの遊びも得に" text={` なる(モンヒロビートは券なし・カードはごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'})`}/>
       </ol>
       <p className="mt-1.5 text-[11.5px] font-bold text-amber-100">まずは 光っている「👀 見守る」を押してみよう</p>
       <div className="mt-1.5 flex gap-1.5">

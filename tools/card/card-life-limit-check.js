@@ -5,7 +5,7 @@
 // 見ているもの
 //   A 保存の読み方: 無い・壊れている・形が違う・時間帯が違う → まだ使っていない。数は整数・0より大きいものだけ
 //   B 1回足す: 同じ時間帯なら足し、違う時間帯なら数え直して1。保存のほうが新しい時間帯なら書かない(新しい時間帯の数を上書きしない)
-//   C 使い切ったか: 1回使ったら使い切り。時間帯が変わると戻る。「次は◯時から」は次の時間帯の始まり(夜21時の次は0時)
+//   C 使い切ったか: 1回使ったら使い切り。区切り(2時間ごと)が変わると戻る。「次は◯時から」は次の区切りの始まり(22〜24時の次は0時)
 //   D 書き方(84): 始めた時点で決める(cardLifeRewardLeft)・時間帯も始めた時点(lifeSlot)・数えるのは 1.5倍で本当に増えた試合だけ・結果と同じ取引で書く
 //   E 56: HOME の顔に「済」の印(2026-11-08 社長「HOMEも地図も出す」)・部屋のボタンを灰色にするのは、カード部の口(cardLifeRewardSpent)を typeof で確かめて読む
 const fs = require('fs');
@@ -23,9 +23,9 @@ const a = s84.indexOf('const CARD_LIFE_REWARD_KEY = ');
 const b = s84.indexOf('// 育つ助手の型を使うか');
 check('84 に回数の部分がある', a > 0 && b > a);
 
-// 時間帯の口(56 の assistantLifeSlotAt と同じ形)。now は「通しの番号 × 4時間」で決める簡単なもの
+// 時間帯の口(56 の assistantLifeSlotAt と同じ形)。now は「通しの番号」= 12区切り(2時間ずつ。2026-11-11 移動12回)で決める簡単なもの
 const SLOTS = [{ from: 0 }, { from: 5 }, { from: 10 }, { from: 14 }, { from: 18 }, { from: 21 }];
-const ctx = vm.createContext({ ASSISTANT_LIFE_SLOTS: SLOTS, assistantLifeSlotAt: (now) => ({ abs: Math.floor(now), i: ((Math.floor(now) % 6) + 6) % 6 }),
+const ctx = vm.createContext({ ASSISTANT_LIFE_SLOTS: SLOTS, assistantLifeSlotAt: (now) => { const j = ((Math.floor(now) % 12) + 12) % 12; return { abs: Math.floor(now), j, i: Math.max(0, SLOTS.findIndex((s, k) => j * 2 + 1 >= s.from && (k === SLOTS.length - 1 || j * 2 + 1 < SLOTS[k + 1].from))), from: j * 2, to: j * 2 + 2 }; },
   store: {}, storeGet: async function (k, d) { return k in this.store ? JSON.parse(JSON.stringify(this.store[k])) : d; } });
 ctx.storeGet = ctx.storeGet.bind(ctx);
 vm.runInContext(`${s84.slice(a, b)}\nthis.E = { CARD_LIFE_REWARD_KEY, CARD_LIFE_REWARD_MAX, cardLifeRewardNorm, cardLifeRewardAfter, CARD_LIFE_REWARD_MEM, cardLifeRewardLeft, cardLifeRewardSpent, cardLifeSpentText, cardLifeRewardEntry, cardLifeRewardLoad };`, ctx);
@@ -57,10 +57,10 @@ const E = ctx.E;
   E.CARD_LIFE_REWARD_MEM.raw = { slot: 10, used: { sorashido: 1 } };
   const sp = E.cardLifeRewardSpent('sorashido', 10);
   check('C 1回使ったら使い切り(ほかの助手はまだ)', !E.cardLifeRewardLeft('sorashido', 10) && sp && E.cardLifeRewardLeft('erubin', 10), JSON.stringify(sp));
-  check('C 「次は◯時から」は次の時間帯の始まり(10 は夕方の並び → 21時)', sp && sp.next === 21 && E.cardLifeSpentText(sp, 'ソラシド') === '🃏 ソラシドのごほうびアップは使い切りました…次は21時から', E.cardLifeSpentText(sp, 'ソラシド'));
-  check('C 部屋のボタンの言い方(名前なし)', E.cardLifeSpentText(sp) === '🃏 ごほうびアップは使い切りました…次は21時から');
+  check('C 「次は◯時から」は次の区切りの始まり(10 = 20〜22時 → 22時)', sp && sp.next === 22 && E.cardLifeSpentText(sp, 'ソラシド') === '🃏 ソラシドのごほうびアップは使い切りました…次は22時から', E.cardLifeSpentText(sp, 'ソラシド'));
+  check('C 部屋のボタンの言い方(名前なし)', E.cardLifeSpentText(sp) === '🃏 ごほうびアップは使い切りました…次は22時から');
   E.CARD_LIFE_REWARD_MEM.raw = { slot: 11, used: { sorashido: 1 } };
-  check('C 夜21時の次は0時', (E.cardLifeRewardSpent('sorashido', 11) || {}).next === 0);
+  check('C 22〜24時の次は0時', (E.cardLifeRewardSpent('sorashido', 11) || {}).next === 0);
   check('C 時間帯が変わると戻る', E.cardLifeRewardLeft('sorashido', 12) && E.cardLifeRewardSpent('sorashido', 12) === null);
   ctx.store = { mh_card_life_reward_v1: { slot: 12, used: { atsu: 1 } } };
   await E.cardLifeRewardLoad();

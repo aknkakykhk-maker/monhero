@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>今日の予定表 見本</title>
+<style>
+:root{--bg:#0b1220;--card:#0f172aee;--line:#ffffff26;--amber:#fcd34d;--pink:#f9a8d4;--em:#6ee7b7;--sky:#7dd3fc}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff;background:#1e293b}
+body{background:linear-gradient(#334155,#0f172a)}
+.dim{position:fixed;inset:0;background:#0009}
+.win{position:fixed;left:8px;right:8px;top:50%;transform:translateY(-50%);background:var(--card);border:2px solid var(--amber);border-radius:18px;padding:10px;max-height:calc(100% - 16px);overflow:hidden;display:flex;flex-direction:column}
+h2{margin:0;font-size:16px;font-weight:900;color:var(--amber);display:flex;align-items:center;gap:6px}
+h2 .x{margin-left:auto;width:44px;height:36px;border-radius:12px;background:#ffffff1a;display:grid;place-items:center;font-size:18px}
+.lead{font-size:11.5px;font-weight:700;color:#cbd5e1;margin:4px 2px 8px;line-height:1.45}
+.who{display:flex;gap:4px;overflow:hidden;margin-bottom:6px}
+.who b{flex:1;min-width:0;height:52px;white-space:nowrap;letter-spacing:-.06em;font-size:9px!important;border-radius:12px;background:#ffffff10;border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px}
+.who b.on{border-color:var(--pink);background:#831843aa}
+.who img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#fff3}
+.rows{overflow:auto;display:flex;flex-direction:column;gap:4px}
+.r{display:flex;align-items:center;gap:6px;min-height:44px;border-radius:12px;background:#ffffff0d;border:1px solid var(--line);padding:3px 6px}
+.r .t{width:64px;flex-shrink:0;font-size:11px;font-weight:900;color:var(--sky);line-height:1.2}
+.r .t small{display:block;color:#94a3b8;font-size:10px}
+.r .p{flex:1;font-size:13px;font-weight:800}
+.r .p small{display:block;font-size:10.5px;color:var(--em);font-weight:700}
+.r.now{border-color:var(--amber);background:#78350f88}
+.r.past{opacity:.5}
+.tag{font-size:10px;font-weight:900;border-radius:999px;padding:1px 6px;margin-left:4px}
+.g{background:var(--amber);color:#1e293b}.m{background:#ffffff26;color:#e2e8f0}.ok{background:#065f46;color:#a7f3d0}.no{background:#4c1d95;color:#ddd6fe}
+.btn{flex-shrink:0;min-height:44px;min-width:44px;border-radius:12px;background:var(--amber);color:#1e293b;font-weight:900;font-size:11.5px;padding:0 8px;display:grid;place-items:center}
+.btn.ghost{background:#ffffff1a;color:#e2e8f0}
+.foot{display:flex;gap:6px;margin-top:8px}.foot .btn{flex:1}
+/* 横の表 */
+table{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fixed}
+th{font-size:10.5px;color:var(--sky);font-weight:900;height:24px}
+th small{color:#94a3b8;font-size:9.5px;margin-left:3px}
+th.nm{width:74px}
+td{height:28px;border-radius:9px;background:#ffffff0d;border:1px solid var(--line);font-size:11px;font-weight:800;text-align:center;line-height:1.1;padding:0 2px;white-space:nowrap;overflow:hidden}
+td.nm{background:none;border:0;text-align:left;display:flex;align-items:center;gap:4px;height:28px}
+td.nm img{width:22px;height:22px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#fff3}
+td.pin{background:#1e3a8a;border-color:var(--sky)}
+td.om{color:#94a3b8;font-weight:700}
+td.zz{color:#64748b}
+.pager{display:flex;gap:6px;align-items:center;font-size:11px;color:#cbd5e1;font-weight:800}
+/* 入口 */
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#0f172af2;border-top:2px solid var(--amber);border-radius:18px 18px 0 0;padding:10px}
+.cap{position:fixed;left:8px;right:8px;font-size:12px;font-weight:900;color:#1e293b;background:#fde68a;border-radius:10px;padding:4px 8px}
+.bandmini{margin:6px 0;border:1px dashed var(--amber);border-radius:12px;padding:6px 8px;font-size:12px;font-weight:800;color:var(--amber);display:flex;align-items:center;gap:6px;min-height:44px}
+</style></head><body>
+<div id="app"></div>
+<script>
+const IMG='../../../../monster-hero/images/assistant/face/';
+const F=id=>IMG+(id==='mua'?'myua':id)+'_normal.PNG';
+const NM={mua:'みゅあ',kiki:'きき',momosuke:'ももすけ',dra:'ドラ',atsu:'あつ',kyuko:'きゅうこ',sorashido:'ソラシド',erubin:'えるびん'};
+const IDS=Object.keys(NM);
+// 12区切り(2時間ずつ)。名前は6つの時間帯のまま
+const SL=[[0,'深夜'],[2,'深夜'],[4,'朝'],[6,'朝'],[8,'朝'],[10,'昼'],[12,'昼'],[14,'午後'],[16,'午後'],[18,'夕方'],[20,'夜'],[22,'夜']];
+const v=new URLSearchParams(location.search).get('v')||'tate';
+const now=7; // いま 14〜16時(午後)
+const app=document.getElementById('app');
+const plan={mua:{8:'🃏 カード部屋',10:'⛲ 広場'},kiki:{9:'⚔ モンヒロバトル'},sorashido:{8:'🃏 カード部屋',9:'🃏 カード部屋'},momosuke:{9:'🎵 練習スタジオ'}};
+const res={mua:{7:'ok'},kiki:{7:'no'}};
+if(v==='tate'){
+  const id='mua';
+  const rows=[];
+  for(let j=4;j<12;j++){
+    const [h,n]=SL[j];const p=plan[id]&&plan[id][j];
+    const cls=j<now?'past':j===now?'now':'';
+    let body,btn;
+    if(j<now){body=`<span class="p">🍰 おやつ屋さん<span class="tag ok">✓ 行った</span></span>`;btn='';}
+    else if(j===now){body=`<span class="p">🍰 おやつ屋さん<span class="tag ok">✓ お願いどおり</span><small>いまここ・あと50分で次の移動</small></span>`;btn='';}
+    else if(p){body=`<span class="p">📍 ${p}${p.includes('カード')?'<span class="tag g">得</span>':''}<small>${p.includes('カード')?'対戦すると ごほうび1.375倍':'お願い済み'}</small></span>`;btn=`<span class="btn ghost">変える</span>`;}
+    else{body=`<span class="p" style="color:#94a3b8">おまかせ<small style="color:#94a3b8">みゅあが自分で決める</small></span>`;btn=`<span class="btn">📍 決める</span>`;}
+    rows.push(`<div class="r ${cls}"><span class="t">${h}〜${(h+2)%24}時<small>${n}</small></span>${body}${btn}</div>`);
+  }
+  app.innerHTML=`<div class="dim"></div><div class="win"><h2>📅 今日の予定表<span class="x">✕</span></h2>
+  <p class="lead">次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。</p>
+  <div class="who">${IDS.map(x=>`<b class="${x==='mua'?'on':''}"><img src="${F(x)}">${NM[x]}</b>`).join('')}</div>
+  <div class="rows">${rows.join('')}</div>
+  <div class="foot"><span class="btn ghost">みゅあを ぜんぶおまかせに</span></div>
+  <p class="lead" style="margin:6px 2px 0">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約80%)</p></div>`;
+}else if(v==='yoko'){
+  const cols=[];for(let j=now+1;j<Math.min(12,now+7);j++)cols.push(j);
+  app.innerHTML=`<div class="dim"></div><div class="win" style="left:10px;right:10px;padding:6px 10px"><h2 style="height:36px">📅 今日の予定表 <span class="lead" style="margin:0 0 0 6px">いま 午後(14〜16時)・次の移動 16時。マスを押して行き先をお願い</span><span class="x">✕</span></h2>
+  <table><tr><th class="nm"></th>${cols.map(j=>`<th>${SL[j][0]}〜${(SL[j][0]+2)%24}時<small>${SL[j][1]}</small></th>`).join('')}</tr>
+  ${IDS.map(id=>`<tr><td class="nm"><img src="${F(id)}">${NM[id]}</td>${cols.map(j=>{const p=plan[id]&&plan[id][j];return p?`<td class="pin">📍${p.replace(/^\S+ /,'')}</td>`:(id==='dra'&&j>=11?'<td class="zz">💤</td>':'<td class="om">おまかせ</td>');}).join('')}</tr>`).join('')}
+  </table>
+  <div class="pager" style="margin-top:4px">🌀 きき は 14時の回、気分で図書室へ(押すと一言)<span style="margin-left:auto" class="btn ghost">◀ ▶ ほかの回</span></div></div>`;
+}else{
+  app.innerHTML=`<div class="cap" style="top:8px">入口① 町の地図: 場所を押した窓(カード部屋)</div>
+  <div class="win" style="top:44px;transform:none;max-height:none"><h2>🃏 カード部屋<span class="x">✕</span></h2>
+  <div class="r"><img src="${F('sorashido')}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:50% 20%"><span class="p">ソラシド<small>カード研究中・対戦すると ごほうび1.375倍</small></span><span class="btn">部屋へ</span></div>
+  <div class="r" style="margin-top:6px;border-style:dashed"><span class="p">📍 次の移動(16時)で、ここへ来てもらう<small>助手を選ぶ → たいてい来てくれます</small></span><span class="btn">選ぶ</span></div></div>
+  <div class="cap" style="top:262px">入口② 助手の部屋の「できること」</div>
+  <div class="win" style="top:298px;transform:none;max-height:none"><h2>みゅあの部屋</h2>
+  <div class="r"><span class="p">🎁 みゅあに贈る</span><span class="btn ghost">▶</span></div>
+  <div class="r" style="margin-top:4px"><span class="p">🐾 マスモン</span><span class="btn ghost">▶</span></div>
+  <div class="r" style="margin-top:4px;border-color:var(--amber)"><span class="p">📅 次の行き先を決める<small>16時から: おまかせ</small></span><span class="btn">決める</span></div></div>
+  <div class="cap" style="top:548px">入口③ 家・町の上の小さな1行(予定表を開く)</div>
+  <div class="bandmini" style="position:fixed;left:8px;right:8px;top:582px;background:#0f172af2">📅 今日の予定表 <span style="color:#cbd5e1;font-size:11px">あと4回の移動が「おまかせ」</span><span class="btn" style="margin-left:auto">開く</span></div>`;
+}
+</script></body></html>
