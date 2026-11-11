@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 630680ba79eae021
+// source-sha256: 8e1aae2f0be242d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -145307,6 +145307,15 @@ const cardTakeFromHand = (st, p, idxs) => {
   sorted.forEach(i => me.hand.splice(i, 1));
   return taken;
 };
+const cardCostUpOf = (st, p, mi, turn) => {
+  const me = st && st.players && st.players[p];
+  const mon = me && Number.isInteger(mi) && mi >= 0 ? me.mons[mi] : null;
+  if (!mon || mon.ko) return 0;
+  const T = Number.isFinite(turn) ? turn : st.turn;
+  const one = mon.costUp && mon.costUp.turn === T ? Number(mon.costUp.n) || 0 : 0;
+  const all = me.costUpAll && me.costUpAll.turn === T && cardMonType(mon, T) !== 'water' ? Number(me.costUpAll.n) || 0 : 0;
+  return one + all;
+};
 const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map(i => cardOf(db, hand[i])).filter(Boolean);
   const att = cards.filter(c => cardHasEff(c, 'attach'));
@@ -145323,7 +145332,8 @@ const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
     if (e) main -= e.n;
   });
   if (att.some(c => cardHasEff(c, 'attachFree'))) main = 0;
-  return cardFieldCostOf(st, Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0));
+  const up = core[0] && (core[0].kind === 'pow' || core[0].kind === 'int') && core[0].user !== 'breeder' && st ? cardCostUpOf(st, p, mi) : 0;
+  return cardFieldCostOf(st, Math.max(0, main) + up + att.reduce((s, c) => s + (c.guts || 0), 0));
 };
 const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
 const cardAttachMods = cards => {
@@ -146221,6 +146231,15 @@ const cardResolveTarget = (db, st) => {
       target.stunTurn = st.turn + 1;
       cardLog(st, `${target.name}は次のターン攻撃できない`);
     }
+    const cu = cardEff(main, 'costUpOnHit');
+    if (cu && t.p !== pd.attacker && !target.ko && target.life > 0) {
+      const prev = target.costUp && target.costUp.turn === st.turn + 1 ? target.costUp.n : 0;
+      target.costUp = {
+        turn: st.turn + 1,
+        n: Math.max(prev, cu.n)
+      };
+      cardLog(st, `${target.name}は次のターン、ちから技・かしこさ技のガッツ+${target.costUp.n}`);
+    }
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) {
       pd.gutsFromDiscardDone = true;
@@ -146430,6 +146449,14 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
         turn: st.turn + 1
       }];
       cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`);
+    }
+    if (e.t === 'costUpAll') {
+      const prev = opp.costUpAll && opp.costUpAll.turn === st.turn + 1 ? opp.costUpAll.n : 0;
+      opp.costUpAll = {
+        turn: st.turn + 1,
+        n: Math.max(prev, e.n)
+      };
+      cardLog(st, `次のターン、${opp.name}の水中にいないモンスターは、ちから技・かしこさ技のガッツ+${opp.costUpAll.n}`);
     }
     if (e.t === 'stunAllEnemies') {
       opp.mons.forEach(m => {
@@ -147163,11 +147190,15 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   const tmon = opp.mons[target.m];
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0;
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0;
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => !m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null).filter(x => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
     const cost = c ? cardGuardCost(st, c) : 99;
-    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts);
+    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts);
   };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
@@ -147287,6 +147318,12 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'liftTarget') score += 0.3;
       if (e.t === 'taunt') score += 0.9 * habit.disrupt;
       if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter(m => !m.ko).length * 1.0;
+      if (e.t === 'costUpAll') {
+        const op = st.players[cardOther(p)];
+        const g = op.guts.length;
+        const nw = op.mons.filter(m => !m.ko && cardMonType(m, st.turn + 1) !== 'water').length;
+        score += g >= 2 && g <= 4 ? nw * 0.9 * habit.disrupt : -1.5;
+      }
       if (e.t === 'stunTarget' && tmon) score += tmon.stunTurn > st.turn ? -3 : 0.8 + tmon.life / Math.max(1, tmon.max) * 0.6;
       if (e.t === 'skipTurn') score += 3;
       if (e.t === 'rage' && mine) score += Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && (c.kind === 'pow' || c.kind === 'int') && cardUsableBy(c, mine)).map(c => c.damage || 0)) * 0.35 - 0.6;
@@ -147353,6 +147390,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6);
         const gfd = cardEff(main, 'gutsFromDiscard');
         if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts;
+        if (cardHasEff(main, 'costUpOnHit')) score += (1 - ev) * (tm.costUp && tm.costUp.turn === st.turn + 1 ? 0 : 0.5) * habit.disrupt;
         if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3);
       }
     });
@@ -148298,6 +148336,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'breederUnlimited') v += 0.4;
       if (e.t === 'taunt') v += 0.6 * habit.disrupt;
       if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'costUpAll') v += 0.6;
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
@@ -148336,6 +148375,7 @@ const cardAiCardValue = (card, habit) => {
   const gfd = cardEff(card, 'gutsFromDiscard');
   if (gfd) dmg += 0.4 * gfd.n;
   if (eff('nextOwnCost')) dmg += 0.6;
+  if (eff('costUpOnHit')) dmg += 0.5;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit');
@@ -152999,7 +153039,7 @@ const CARD_AI_FACE_NOISE = Object.freeze({
 const CARD_AI_FACE_LAYOUTS = Object.freeze({
   mua: {
     oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'],
-    suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'],
+    suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'undine', 'ghost', 'gali', 'colorpandora', 'plant'],
     sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'],
     free: {
       oshi: 0,
@@ -153011,7 +153051,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   kiki: {
     oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'],
     suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'],
-    sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'],
+    sugao: ['hare', 'dino', 'naga', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'plant'],
     free: {
       oshi: 1,
       suki: 0,
@@ -153021,7 +153061,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   },
   momosuke: {
     oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'],
-    suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'],
+    suki: ['tiger', 'centaur', 'kyubi', 'undine', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'],
     sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'],
     free: {
       oshi: 0,
@@ -153032,7 +153072,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   },
   dra: {
     oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'],
-    suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'],
+    suki: ['dragon', 'durahan', 'dino', 'kyubi', 'undine', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'],
     sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'],
     free: {
       oshi: 1,
@@ -153044,7 +153084,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   atsu: {
     oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'],
     suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'],
-    sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'],
+    sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'undine', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'],
     free: {
       oshi: 0,
       suki: 0,
@@ -153055,7 +153095,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   kyuko: {
     oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'],
     suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'],
-    sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'],
+    sugao: ['tiger', 'metalner', 'kyubi', 'undine', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'],
     free: {
       oshi: 1,
       suki: 1,
@@ -153065,7 +153105,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   },
   sorashido: {
     oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'],
-    suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'],
+    suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'undine', 'worm', 'arrowhead', 'monol'],
     sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'],
     free: {
       oshi: 1,
@@ -153077,7 +153117,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   erubin: {
     oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'],
     suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'],
-    sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'],
+    sugao: ['tiger', 'henger', 'worm', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'ghost'],
     free: {
       oshi: 1,
       suki: 0,
@@ -155102,7 +155142,7 @@ const CARD_PACKS = Object.freeze([{
 }, {
   id: 'p8',
   no: 8,
-  species: ['arrowhead', 'centaur', 'colorpandora'],
+  species: ['arrowhead', 'centaur', 'colorpandora', 'undine'],
   hybrids: ['C-069', 'C-070'],
   color: '#ec4899'
 }].map(p => Object.freeze({
@@ -156377,7 +156417,8 @@ const CARD_SPECIES_ART = Object.freeze({
   monol: 'Monol',
   plant: 'Plant',
   ghost: 'Ghost',
-  kyubi: 'Kyubi'
+  kyubi: 'Kyubi',
+  undine: 'Undine'
 });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
@@ -156696,6 +156737,16 @@ const cardMonStatuses = (st, p, m) => {
     short: 'まゆ',
     left: '',
     text: '羽化のほかのカードは出せない',
+    tone: 'down',
+    pill: true
+  });
+  const cuT = T + (st.active === p ? 0 : 1);
+  const cu = typeof cardCostUpOf === 'function' ? cardCostUpOf(st, p, m, cuT) : 0;
+  if (cu > 0) out.push({
+    key: 'costUp',
+    short: `水牢+${cu}`,
+    left: st.active === p ? '今' : '次',
+    text: `${st.active === p ? 'このターン' : '次のターン'}は、ちから技・かしこさ技の消費ガッツが+${cu}`,
     tone: 'down',
     pill: true
   });
@@ -159170,7 +159221,9 @@ const CardBattleBoard = ({
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => !m.ko && cardUsableBy(c, m) ? mi : -1).filter(mi => mi >= 0);
+    const need = users.length ? Math.min(...users.map(mi => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
@@ -173788,7 +173841,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 11;
+const CARD_REPLAY_RULES = 12;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
