@@ -86,3 +86,27 @@
 - 公開前の助手(公開の印が立っていない)は、どの案でも数にも入れない(名前・絵・人数で分からないようにする)
 - **A(推奨) 点線の「？」で並べ、「会った助手 6/8」と数を出す**。押しても開かない。公開済みの助手だけなのでネタバレにならず、会う目当てになる
 - B 会っている助手だけ並べる(数も出さない)
+
+## 本体(2026-11-11・ナカヨシ18)
+
+- 部品 `monster-hero/src/parts/56-assistant-life-profile.jsx`(一覧 `AssistantLifeProfilePage`・1人ずつ `AssistantLifeProfileSheet`)。公開の印 `assistantLifeProfile`(いまは偽)
+- つないだ所: `56-assistant-life-ux.jsx` の `assistantLifeUiV2Tabs()`(きずなの次に「📖 紹介」。新UIのタブは4つ→5つ)/`56-assistant-life-house.jsx` の `tabBody` と見出しの英字(PROFILE)
+- 保存: 新しいキー `mh_assistant_life_profile_seen_v1` だけ(NEW の印。docs/spec/SAVE_DATA.md に記載)。ほかは読むだけ
+- 検査: `node tools/assistant/life-profile-browser-check.js`(`--shots` で下の止め絵)
+- 本物の止め絵(きき・Lv8・好みを4つ知っている人): [`real/`](real/)
+  - 一覧 `list-tate.jpg`・`list-yoko.jpg`/会っていない助手がいる形 `list-tate-unmet.jpg`・`list-yoko-unmet.jpg`
+  - 紹介 `sheet-tate.jpg`・`sheet-tate-bond.jpg`・`sheet-tate-voice.jpg`・`sheet-yoko.jpg`
+
+### 更新履歴・ヘルプの文案(社長の「この文で」待ち)
+
+更新履歴 題「助手ライフに「📖 紹介」が加わりました」
+1. 助手ライフの下のタブに「📖 紹介」が加わりました。会った助手が並び、選ぶとその助手のことが分かります。
+2. 立ち絵とひとこと、性格や生活のリズム、いまの仲良し度・呼び方・推し・マスモンを1枚で見られます。
+3. 好きなもの・苦手なものは、贈って分かったものだけが出ます。まだのものは「？」で、助手の話がヒントになります。
+4. 「台詞を聞く」では、表情つきの台詞を何度でも見返せます。仲良し度が上がると、聞ける台詞が増えます。
+5. 好みが分かったり台詞が増えたりした助手には「NEW」が付きます。
+
+ヘルプ(助手ライフの節に1項目)「📖 紹介」
+- 下のタブの「📖 紹介」で、会った助手の紹介が見られます。まだ会っていない助手は「？」で、お話で出会うと開きます。
+- 好きなもの・苦手なものは、道具や家具を贈ると分かってここに残ります。
+- 「台詞を聞く」は、仲良し度が上がるほど聞ける台詞が増えます(ボイスはありません)。

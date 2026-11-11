@@ -43,6 +43,11 @@
       "pure": true
     },
     {
+      "file": "18-assistant-partner.jsx",
+      "role": "助手の解放(これから始める人はアシストカードを40回使うと助手になる)の判定と、いまの値の入口",
+      "pure": true
+    },
+    {
       "file": "18-points-and-auto.jsx",
       "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
       "pure": true
@@ -280,6 +285,10 @@
       "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
     },
     {
+      "file": "59-assistant-partner-fx.jsx",
+      "role": "画面: 助手の解放の演出(カードが満ちる→影→立ち絵と一言→できるようになったこと)。見た目だけで保存に触らない"
+    },
+    {
       "file": "61-screen-masu-regen-donation.jsx",
       "role": "画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と、その確認・結果)"
     },
@@ -402,6 +411,10 @@
     {
       "file": "56-assistant-life-guide.jsx",
       "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
+    },
+    {
+      "file": "56-assistant-life-profile.jsx",
+      "role": "助手紹介(2026-11-11 社長・docs/progress/assistant-life/profile/PLAN.md): 助手ライフの下のタブ「📖 紹介」の一覧(AssistantLifeProfilePage)と1人ずつの紹介(AssistantLifeProfileSheet)。人となり・好き苦手(贈って分かったものだけ)・きずな・台詞の試し聞き。公開の印 assistantLifeProfile の後ろ。データは読むだけで、保存は NEW の印の新しいキー mh_assistant_life_profile_seen_v1 だけ"
     },
     {
       "file": "56-assistant-life-rel.jsx",

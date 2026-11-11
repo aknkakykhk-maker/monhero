@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 325a58348ac08df5
+// generated-sha256: 7bc2fa1605bdaea9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9704,6 +9704,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLifeRoomEdit: true, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 社長「この形で進める」「この文で」・ミハリ最終確認 OK(56-assistant-life-roomedit.jsx)
   // 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)。台詞・止め絵・更新履歴の「この文で」・ミハリの確認のあとで真にする
   assistantLifeSolo: true, // 2026-11-08 社長「この文で公開」
+  assistantLifeTopHouse: false, // 助手ライフを開いた最初に家の断面図(8部屋を横4×2段)・出かけ先の丸・得の帯の「今日・次」を▼にたたむ。2026-11-11 社長「この形で」(案A)。ミハリ確認の前は偽(56-assistant-life-house.jsx)
+  assistantLifeDailyScene: false, // できごとを小さな場面に(2人の掛け合い→2択→返事・ときどき珍しいできごと)。台詞(LINES-SPEC.md)が入るまで偽(56-assistant-life-ux.jsx)
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
@@ -9711,8 +9713,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
-  assistantMasmonBattleBeta: false, // 2026-11-11 助手マスモンの対戦 β その1(端末の中の対戦・ミセカタ2)。止め絵と更新履歴・ヘルプに社長の「この文で」が出て、窓口の最終確認が済んだら真
-  assistantMasmonBattlePvp: false, // 2026-11-11 助手マスモンの対戦 β その2(フレンド対戦+ランキング)。タイセンの表と関数が本番に入り、サーバ検証がそろってから真
+  assistantMasmonBattleBeta: true, // 2026-11-11 助手マスモンの対戦 β その1(端末の中の対戦・ミセカタ2)。社長「この文で」・ミハリと Fable の最終確認のあと真にした(本番の関数の通しは省く・社長の決め)
+  assistantMasmonBattlePvp: true, // 2026-11-11 助手マスモンの対戦 β その2(フレンド対戦+ランキング)。タイセンの表と関数(masmon-pvp)が本番に入ったあと真にした(本番の通しは省く・社長の決め 2026-11-11)
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonCheer: false, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。更新履歴とヘルプに社長の「この文で」が出て、地図の窓の口(ナカヨシ19)が入ってから真
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
@@ -9727,6 +9729,13 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantSorashido: true,
   // えるびん(8人目・2026-11-05)。社長が出来上がりを確かめて「オッケー」を出すまで偽のまま(お話・選ぶ画面・おしゃべりに出ない)
   assistantErubin: true,
+  // 助手紹介(2026-11-11 社長・ナカヨシ18。56-assistant-life-profile.jsx)。ミハリの確認と窓口の最終確認が済んで、社長が「公開」と言ったら真にする。偽のあいだは助手ライフの下のタブに「📖 紹介」が出ない
+  assistantLifeProfile: true, // 2026-11-11 社長「この文で」・ミハリ3と最終確認 OK で公開
+  // 助手の解放(2026-11-11 社長・設計 docs/progress/assistant-unlock/DESIGN.md・18-assistant-partner.jsx)。
+  //   偽のあいだは、はじめての人も今までどおり全員を選べる(助手えらびで mode:'earn' を書かない・案内の文も出さない)。
+  //   すでに遊んでいる人の「全員が助手」(mode:'all')の一度きりの判定は、偽のあいだも書く(公開の前から遊んでいた人を守る)。
+  //   ミハリの確認と Fable の最終確認のあと、窓口が真にする
+  assistantPartnerUnlock: false,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -11194,6 +11203,158 @@ const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarve
   }
   return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints, seeds };
 };
+
+// ---- part: 18-assistant-partner.jsx ----
+// ==================== 助手の解放(アシストカードを使った回数で助手になる) ====================
+// 2026-11-11 社長「これから始める人はアシカの助手を使った回数で解放されるようにしようか。最初は好きな助手を選べて
+//   あとは解放条件を満たしたら助手として使えるようになる。これなら存在はするからイベント的にも違和感がないはず」
+// 決め(台帳 2026-11-11・設計 docs/progress/assistant-unlock/DESIGN.md):
+//   ・40回(オート・クイックも数える・AIコピーとデバッグ戦は数えない)
+//   ・すでに遊んでいる人は今のまま全員が助手(一度きりの判定。mode:'all' を書いたら二度と判定し直さない)
+//   ・これから始める人は最初に1人選び(mode:'earn')、ほかはカードを40回使うと助手になる(解放は戻さない)
+//   ・まだ助手でない助手は「町の人」: 町・お話・掛け合いには出るが、話す・贈る・部屋・きずな・マスモンは押せない
+// ★公開前の助手を隠す決まり(assistantReleased・unreleased-assistant-hidden)とは混ぜない。そちらが先に止める。
+// ★お話で出会う助手(あつ等)の「お話を見たか」(assistantUnlockedBy)も今のまま。これはその上に重ねる段。
+// 保存は新しいキー2つだけ(既存の mh_* の意味は変えない)。ここは純粋な計算だけ(保存・画面は呼ぶ側)。
+
+const ASSISTANT_PARTNER_KEY = 'mh_assistant_partner_v1';
+const ASSISTANT_CARD_USES_KEY = 'mh_assistant_card_uses_v1';
+// 助手になるまでに使う回数(社長 2026-11-11「40回」)。変えるのはここだけ
+const ASSISTANT_PARTNER_NEED = 40;
+
+const assistantPartnerIdOk = (id) => typeof id === 'string' && id.length > 0 && id.length <= 40;
+const assistantPartnerIdList = (value) => {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const id of value) if (assistantPartnerIdOk(id) && !out.includes(id)) out.push(id);
+  return out;
+};
+// 保存値 → いつも同じ形。壊れた値・無い値は「まだ判定していない」(mode:null)
+const normalizeAssistantPartner = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const mode = src.mode === 'all' || src.mode === 'earn' ? src.mode : null;
+  const first = assistantPartnerIdOk(src.first) ? src.first : null;
+  const unlocked = assistantPartnerIdList(src.unlocked);
+  if (mode === 'earn' && first && !unlocked.includes(first)) unlocked.unshift(first);
+  return { v: 1, mode, first, unlocked, noticed: assistantPartnerIdList(src.noticed) };
+};
+// 使った回数 { 助手id: 回数 }。数でない・負・無限は落とす
+const normalizeAssistantCardUses = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = {};
+  for (const [id, n] of Object.entries(src)) {
+    const v = Number(n);
+    if (assistantPartnerIdOk(id) && Number.isFinite(v) && v > 0) out[id] = Math.min(Math.floor(v), 1e9);
+  }
+  return out;
+};
+
+// すでに遊んでいる人の一度きりの判定。まだ判定していなくて、プロフィールを決め終えた・助手を選んだことがある人は 'all'。
+// 返り値 changed が真のときだけ保存する(判定ずみなら何もしない=二重に判定しない)
+const assistantPartnerJudgeExisting = (state, { wasOnboarded = false, hasAssistant = false } = {}) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode) return { state: s, changed: false };
+  if (!wasOnboarded && !hasAssistant) return { state: s, changed: false };
+  return { state: { ...s, mode: 'all' }, changed: true };
+};
+// はじめての人が最初の助手を決めたとき。判定ずみなら何もしない
+const assistantPartnerStartEarn = (state, firstId) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode || !assistantPartnerIdOk(firstId)) return { state: s, changed: false };
+  return { state: { ...s, mode: 'earn', first: firstId, unlocked: [firstId] }, changed: true };
+};
+// この段だけで見た「助手として関われるか」。'earn' の人は解放した助手だけ。まだ判定していない人(助手えらびの前)は全員
+const assistantPartnerAllowed = (state, id) => {
+  const s = normalizeAssistantPartner(state);
+  return s.mode !== 'earn' || s.unlocked.includes(id);
+};
+// カードを1回使った。回数を足し、'earn' の人で40回に届いたら解放する(足すだけ・消さない)
+const assistantPartnerCountUse = (uses, state, id) => {
+  const u = normalizeAssistantCardUses(uses);
+  const s = normalizeAssistantPartner(state);
+  if (!assistantPartnerIdOk(id)) return { uses: u, state: s, unlockedId: null, stateChanged: false };
+  const nextUses = { ...u, [id]: (u[id] || 0) + 1 };
+  if (s.mode === 'earn' && !s.unlocked.includes(id) && nextUses[id] >= ASSISTANT_PARTNER_NEED) {
+    return { uses: nextUses, state: { ...s, unlocked: [...s.unlocked, id] }, unlockedId: id, stateChanged: true };
+  }
+  return { uses: nextUses, state: s, unlockedId: null, stateChanged: false };
+};
+// まだ見せていない解放の演出(最初に選んだ助手は出さない)。isOk で「いま本当に助手か」(お話の条件も)を確かめる
+const assistantPartnerPendingNotice = (state, isOk = () => true) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode !== 'earn') return null;
+  return s.unlocked.find(id => id !== s.first && !s.noticed.includes(id) && isOk(id)) || null;
+};
+const assistantPartnerMarkNoticed = (state, id) => {
+  const s = normalizeAssistantPartner(state);
+  if (!assistantPartnerIdOk(id) || s.noticed.includes(id)) return { state: s, changed: false };
+  return { state: { ...s, noticed: [...s.noticed, id] }, changed: true };
+};
+// はじめての人のあつの加入のお話は、あつの挑発を40回で流れる(社長 2026-11-11 C)
+const assistantPartnerAtsuJoinReady = (state, uses) => {
+  const s = normalizeAssistantPartner(state);
+  return s.mode === 'earn' && (normalizeAssistantCardUses(uses).atsu || 0) >= ASSISTANT_PARTNER_NEED;
+};
+
+// ---- いまの値(画面の部品から読む入口) ----
+// 本体(60-app.jsx)が読み込み・変化のたびに assistantPartnerSetNow で知らせる。ほかの部(助手ライフ・贈る・マスモン・おしゃべり)は
+//   assistantPartnerOkNow(id) / assistantPartnerProgressNow(id) / assistantPartnerIdsNow() だけを使う(保存は読まない)
+let assistantPartnerNowState = normalizeAssistantPartner(null);
+let assistantPartnerNowUses = {};
+let assistantPartnerNowSeen = [];
+let assistantPartnerNowOwned = [];
+const assistantPartnerSetNow = ({ state, uses, seenStoryIds, ownedCards } = {}) => {
+  if (state !== undefined) assistantPartnerNowState = normalizeAssistantPartner(state);
+  if (uses !== undefined) assistantPartnerNowUses = normalizeAssistantCardUses(uses);
+  if (seenStoryIds !== undefined) assistantPartnerNowSeen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
+  if (ownedCards !== undefined) assistantPartnerNowOwned = Array.isArray(ownedCards) ? ownedCards : [];
+};
+// 「助手か」= 公開ずみ・お話の条件(今のまま)・この段(解放したか)のすべて
+const assistantPartnerOkWith = (state, seenStoryIds, id) => {
+  if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, seenStoryIds)) return false;
+  return assistantPartnerAllowed(state, id);
+};
+const assistantPartnerOkNow = (id) => assistantPartnerOkWith(assistantPartnerNowState, assistantPartnerNowSeen, id);
+// 町の人として出すか(会っているが、まだ助手でない)。今の人・判定前の人は常に偽
+const assistantPartnerLockedNow = (id) => assistantPartnerNowState.mode === 'earn' && !assistantPartnerAllowed(assistantPartnerNowState, id);
+const assistantPartnerEarnNow = () => assistantPartnerNowState.mode === 'earn';
+const assistantPartnerCardName = (id) => {
+  const list = typeof TEACHING_CARDS !== 'undefined' && Array.isArray(TEACHING_CARDS) ? TEACHING_CARDS : [];
+  const card = list.find(c => c && c.id === id);
+  return card ? card.baseName : '';
+};
+// 「あと何回」の案内用。cardOwned … そのカードを持っているか(持っていなければ「ショップで手に入る」と案内する)
+const assistantPartnerProgressNow = (id) => ({
+  count: Math.min(assistantPartnerNowUses[id] || 0, ASSISTANT_PARTNER_NEED),
+  need: ASSISTANT_PARTNER_NEED,
+  cardName: assistantPartnerCardName(id),
+  cardOwned: assistantPartnerNowOwned.includes(id),
+  unlocked: assistantPartnerAllowed(assistantPartnerNowState, id),
+});
+const assistantPartnerIdsNow = () => {
+  const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+  return list.map(a => a && a.id).filter(id => assistantPartnerIdOk(id) && assistantPartnerOkNow(id));
+};
+
+// 解放の演出の一言(2026-11-11 社長「この形・この文で」)
+const ASSISTANT_PARTNER_UNLOCK_LINES = Object.freeze({
+  mua: 'えっ、みゅあのカードいっぱい使ってくれてたの！？ まぢうれしい(｡ ˘_˘)ｳﾝｳﾝ これからは隣でいっしょにいこ！',
+  kiki: 'ききのカード、たくさん使ってくれてたんでつね (´ー`*)ウンウン 今日からは助手として、いっしょに火力で押していきましょ',
+  momosuke: 'ずっとももすけのカード使ってくれてたの、知ってたよ♡ これからは、もっと近くで応援させて！',
+  dra: 'おでのカード、何回も使ってくれたな。今度は、おでが隣で手伝う番だ',
+  atsu: 'あつの挑発、めっちゃ使ってくれてたじゃん笑 そこまでされたら、助手やるしかないでしょ！',
+  kyuko: 'きゅうこのカード、こんなに使ってくれてたんだねぇ😭 うれしい…今日から、ちゃんと隣にいるからね',
+  sorashido: 'ソラシドの自動化、かなり回してもらってましたね笑 なるほど了解です、ここからは助手として手伝います！',
+  erubin: '俺のカード、ずっと使ってくれてたんだね。ありがとう。これからは、隣でゆっくり見守るよ',
+});
+const assistantPartnerUnlockLine = (id) => ASSISTANT_PARTNER_UNLOCK_LINES[id] || 'これからは、助手としてよろしくね';
+// 解放されてできるようになること(演出の4コマ目)
+const ASSISTANT_PARTNER_UNLOCK_EFFECTS = Object.freeze([
+  '助手として選べる',
+  '助手ライフで話す・贈る・部屋に入れる',
+  '仲良し度が貯まる(ごほうびも届く)',
+  '助手のマスモンを迎えられる',
+]);
 
 // ---- part: 18-points-and-auto.jsx ----
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
@@ -41242,6 +41403,9 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 // MFバトルカードの売り場で、パック・スターターを買って開ける画面へ行き、戻ったときの位置(2026-10-30 社長「パックを買って戻ったら上に戻される」)。
 // 開ける画面へ行くとこの画面ごと消える(state も消える)ので、画面の外の変数に覚える。保存はしない(遊んでいる間だけ)。
 // 覚え方はフレンドの一覧(#4313)と同じ: 押す前のスクロールの位置と、押した物(行の目印)。戻ったら位置を戻し、押した物が見えなければ真ん中へ寄せる
+// 助手の解放(2026-11-11)。これから始める人で、まだ助手でない助手のアシストカードの札に「使うと助手になります」を1行(18-assistant-partner.jsx)
+const marketPartnerRibbon = (cardId) => (cardId && typeof assistantPartnerLockedNow === 'function' && assistantPartnerLockedNow(cardId)
+  && typeof ASSISTANTS !== 'undefined' && ASSISTANTS.some(a => a && a.id === cardId)) ? '🤝 使うと助手になります' : null;
 const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack','data-card-shop-starter','data-card-shop-disc','data-card-shop-assist'];
 const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
@@ -41470,7 +41634,7 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':null}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
@@ -41632,7 +41796,7 @@ function BreederMarketScreen({
                 const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
                 const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'cardPoint', cost:offer.cost };
                 const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}}
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
                   item={item} owned={owned} comingSoon={false}
                   canBuy={!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
@@ -41719,7 +41883,7 @@ function BreederMarketScreen({
             const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
             const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'beatPoint', cost:offer.cost };
             const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}}
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
               item={item} owned={owned} comingSoon={false}
               canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
@@ -44159,6 +44323,87 @@ function MasuMonsScreen({
           })()}
         </div>
       </div>
+  );
+}
+
+// ---- part: 59-assistant-partner-fx.jsx ----
+// ==================== 助手の解放の演出(2026-11-11 社長「解放されたときの専用演出も作って」) ====================
+// 止め絵: docs/progress/assistant-unlock/fx-portrait.jpg・fx-landscape.jpg(4コマ)
+//   1 カードが満ちる(約0.8秒) → 2 カードが光に割れ、影が現れる(約0.8秒) → 3 立ち絵と一言(押すまで待つ) → 4 できるようになったことと「助手にする/あとで」
+// 出すかどうか・見たことの保存は 60-app.jsx(assistantPartnerPendingNotice / assistantPartnerMarkNoticed)。ここは見た目だけで保存に触らない。
+// 押せば前のコマを飛ばせる(1・2コマ目は押すと3コマ目へ)。動きを減らす設定の人は1・2コマ目を出さない
+const ASSISTANT_PARTNER_FX_CSS = `
+@keyframes mhPartnerGlow{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes mhPartnerFill{0%{width:70%}100%{width:100%}}
+@keyframes mhPartnerSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@keyframes mhPartnerRise{0%{transform:translateY(18px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes mhPartnerSil{0%{filter:brightness(0) drop-shadow(0 0 22px var(--mh-pc));opacity:0;transform:scale(.9)}100%{filter:brightness(0) drop-shadow(0 0 22px var(--mh-pc));opacity:1;transform:scale(1)}}
+.mh-partner-rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.12) 0 6deg,transparent 6deg 18deg);animation:mhPartnerSpin 18s linear infinite}
+@media (prefers-reduced-motion: reduce){.mh-partner-rays{animation:none}}
+`;
+function AssistantPartnerUnlockFx({ who, cardName = '', need = 40, line = '', effects = [], onChoose, onLater }) {
+  const reduce = (() => { try { return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } })();
+  const [step, setStep] = useState(reduce ? 2 : 0);
+  // 1・2コマ目は、それぞれのアニメ(約0.8秒)が終わったら次へ(タイマーは使わない。画面を離れれば一緒に消える)
+  const advance = (from) => () => setStep(s => (s === from ? from + 1 : s));
+  if (!who) return null;
+  const accent = who.accent || '#38bdf8';
+  const name = who.name || '';
+  const next = () => setStep(s => (s < 2 ? 2 : s === 2 ? 3 : s));
+  const stand = (expr) => (typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '');
+  const face = typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : '';
+  return (
+    <div data-assistant-partner-fx={who.id} data-step={step} onClick={step < 3 ? next : undefined}
+      className="fixed inset-0 overflow-hidden select-none" style={{ zIndex: 90500, backgroundColor: '#05060f', '--mh-pc': accent }}>
+      <style>{ASSISTANT_PARTNER_FX_CSS}</style>
+      {step >= 1 && step <= 2 && <div className="mh-partner-rays" aria-hidden="true"/>}
+      <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 45%, ${accent} 0, transparent 58%)`, opacity: step === 1 ? .9 : step === 3 ? .35 : .55 }}/>
+      <div className="absolute inset-0 flex items-center justify-center" style={{ padding: 'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))' }}>
+        {step === 0 && (
+          <div className="flex flex-col landscape:flex-row items-center gap-6" style={{ animation: 'mhPartnerGlow .8s ease-out' }} onAnimationEnd={(e) => { if (e.target === e.currentTarget) advance(0)(); }}>
+            <div className="w-[150px] h-[210px] rounded-2xl flex flex-col items-center justify-center gap-2" style={{ background: 'linear-gradient(160deg,#1e3a8a,#0f172a)', border: `3px solid ${accent}`, boxShadow: `0 0 30px ${accent}` }}>
+              <img src={face} alt="" className="w-[92px] h-[92px] rounded-full object-cover border-[3px] border-white"/>
+              <b className="text-[13px] font-black text-white text-center px-2">{cardName}</b>
+            </div>
+            <div className="text-center">
+              <div className="text-[34px] font-black tabular-nums" style={{ color: '#fde047', textShadow: '0 0 14px #facc15' }}>{need} / {need}</div>
+              <div className="w-[220px] h-2.5 rounded-full bg-slate-800 overflow-hidden mx-auto my-1.5"><div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg,#38bdf8,#fde047)', animation: 'mhPartnerFill .7s ease-out forwards' }}/></div>
+              <div className="text-[12px] text-slate-300">モンヒロバトルで使った回数</div>
+            </div>
+          </div>
+        )}
+        {step === 1 && <img src={stand('normal')} alt="" className="h-[72%] max-w-[85%] object-contain" style={{ animation: 'mhPartnerSil .8s ease-out forwards' }} onAnimationEnd={advance(1)}/>}
+        {step === 2 && (
+          <div className="flex flex-col landscape:flex-row items-center justify-center gap-2 landscape:gap-6 w-full h-full">
+            <img src={stand('happy')} alt="" className="object-contain max-h-[56%] landscape:max-h-[92%] max-w-[90%] landscape:max-w-[45%] min-h-0" style={{ animation: 'mhPartnerRise .5s ease-out', filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
+            <div className="max-w-[360px] landscape:max-w-[420px] w-full" style={{ animation: 'mhPartnerRise .6s ease-out' }}>
+              <div className="text-[12px] font-black text-center" style={{ color: '#fde047', letterSpacing: '.25em' }}>NEW PARTNER</div>
+              <div className="text-[24px] font-black text-white text-center whitespace-nowrap my-1">{name}が助手になりました！</div>
+              <div data-assistant-partner-line className="rounded-2xl px-3 py-2.5 text-[13px] leading-relaxed text-slate-100" style={{ background: 'rgba(15,23,42,.9)', border: `2px solid ${accent}` }}>
+                <b style={{ color: accent }}>{name}</b>「{line}」
+              </div>
+              <div className="text-[11px] text-slate-400 text-center mt-2">画面を押して次へ</div>
+            </div>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="flex flex-col landscape:flex-row items-center justify-center gap-3 landscape:gap-6 w-full h-full" style={{ animation: 'mhPartnerRise .4s ease-out' }}>
+            <img src={stand('wink')} alt="" className="object-contain max-h-[38%] landscape:max-h-[90%] max-w-[80%] landscape:max-w-[40%] min-h-0" style={{ filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
+            <div className="w-full max-w-[380px] landscape:max-w-[420px]">
+              <div className="text-[19px] font-black text-white text-center mb-2">{name}とできるようになったこと</div>
+              <div className="flex flex-col gap-1.5">
+                {effects.map(e => <div key={e} className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[12.5px] font-bold text-slate-100 border border-slate-700" style={{ background: 'rgba(15,23,42,.8)' }}><b className="text-green-400">✓</b>{e}</div>)}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button type="button" data-assistant-partner-choose onClick={onChoose} className="flex-[1.3] min-h-[46px] rounded-2xl font-black text-[14px] text-white active:scale-[.98]" style={{ background: 'linear-gradient(#ec4899,#be185d)' }}>{name}を助手にする</button>
+                <button type="button" data-assistant-partner-later onClick={onLater} className="flex-1 min-h-[46px] rounded-2xl font-black text-[14px] text-slate-300 bg-slate-800 border border-slate-600 active:scale-[.98]">あとで</button>
+              </div>
+              <div className="text-[11px] text-slate-400 text-center mt-1.5">あとでも、HOME の助手アイコンからいつでも変えられます</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -54923,13 +55168,16 @@ const RHYTHM_MULTI = (() => {
   // スコア・コンボ・判定の数・ライフ・曲の位置を読んで pg に足して送る。観戦の人がいなければ何もしない(印を読むだけ)。
   // 観戦の人は部屋のメンバーではない(hb を送らない。5人の枠・結果・報酬・ランキングに入らない)
   let watchTimer = null; let watchAdTimer = null; let watchAdSocket = null; let watchFeed = null;
-  let watchAllow = true; let watchAllowLoaded = false;
+  let watchAllow = true; let watchAllowLoaded = false; let watchAllowPromise = null;
+  // 保存の読み込みは1回。画面のつまみの表示を、読み終えてから合わせられるよう Promise を返す
   const loadWatchAllow = () => {
-    if (watchAllowLoaded) return;
+    if (watchAllowLoaded) return watchAllowPromise;
     watchAllowLoaded = true;
-    Promise.resolve().then(() => storeGet(RHYTHM_WATCH_KEY, null)).then((saved) => {
+    watchAllowPromise = Promise.resolve().then(() => storeGet(RHYTHM_WATCH_KEY, null)).then((saved) => {
       watchAllow = !(saved && typeof saved === 'object' && saved.allow === false);
-    }).catch(() => {});
+      return watchAllow;
+    }).catch(() => watchAllow);
+    return watchAllowPromise;
   };
   const watchersNow = () => {
     if (!s || !s.watchers) return [];
@@ -54963,8 +55211,10 @@ const RHYTHM_MULTI = (() => {
     // 端末の重さ: 1秒でフレームが何枚進んだか。40枚/秒を切る状態が2回続いたら、譜面は送らず数字だけにする(その回の終わりまで)
     if (watch && typeof watch.frames === 'number') {
       if (watchFrames >= 0 && now > watchFramesAt) {
-        const fps = (watch.frames - watchFrames) * 1000 / (now - watchFramesAt);
-        watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
+        const moved = watch.frames - watchFrames;
+        const fps = moved * 1000 / (now - watchFramesAt);
+        // フレームが1枚も進んでいない間(曲の紹介・読み込み・ポーズ)は、重い端末とは数えない
+        if (moved > 0) watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
         if (watchLowCount >= 2) watchLite = true;
       }
       watchFrames = watch.frames; watchFramesAt = now;
@@ -54996,6 +55246,7 @@ const RHYTHM_MULTI = (() => {
     if (!id || id === s.selfId) return;
     if (!watchAllow && !s.members[id]) return;   // 観戦を許していない部屋でも、部屋のメンバー(待機中の人)には見せる
     const now = Date.now();
+    Object.keys(s.watchers).forEach((wid) => { if (s.watchers[wid].until <= now) delete s.watchers[wid]; });   // 期限が切れた人は消してから数える(戻ってきた人も10人の数え直しを通る)
     let w = s.watchers[id];
     if (!w) {
       if (watchersNow().length >= RHYTHM_WATCH_MAX) { if (s.live && !s.live.done) socket.send({ t: 'wi', id: s.selfId, to: id, full: 1 }); return; }
@@ -55006,16 +55257,19 @@ const RHYTHM_MULTI = (() => {
     w.f = rhythmMultiText(raw.f, 40);
     if (s.live && !s.live.done && now - w.repliedAt >= 4000) {
       w.repliedAt = now;
+      // 顔ぶれ(pt)は、その人への最初の1回と、回が変わったときだけ。ふだんの返事は曲と自分の点だけ(量を減らす)
+      const sendPt = w.ptRound !== s.live.round;
+      w.ptRound = s.live.round;
       // 値が変わらないあいだ pg は送らないので、新しく見に来た人が全員の点を知れるよう、自分のいまの点も添える
       const watchGlobal = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const nowHud = watchGlobal && watchGlobal.hud ? watchGlobal.hud.get() : null;
       socket.send({
         t: 'wi', id: s.selfId, to: id, r: s.live.round, sg: s.room.songId,
         ...(nowHud ? { sc: rhythmMultiInt(nowHud.score, RHYTHM_MULTI_LIVE_SCORE_MAX), cb: rhythmMultiInt(nowHud.combo, RHYTHM_MULTI_LIVE_COMBO_MAX) } : {}),
-        pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map((pid) => {
+        ...(sendPt ? { pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map((pid) => {
           const m = s.members[pid] || {};
           return { i: pid, n: rhythmMultiText(m.name, 12), a: rhythmMultiText(m.icon, 60), f: rhythmMultiText(m.frame, 40), d: rhythmMultiText(m.diff, 20) };
-        }),
+        }) } : {}),
       });
     }
     watchSync();
@@ -55548,6 +55802,7 @@ const RHYTHM_MULTI = (() => {
     onLive(fn) { liveListeners.add(fn); return () => liveListeners.delete(fn); },
     // 観戦(2026-11-11)。観戦を許すか(部屋の上の帯のつまみ)。保存は新しいキー(RHYTHM_WATCH_KEY)だけ
     watchAllowed() { return watchAllow; },
+    loadWatchAllow() { return loadWatchAllow(); },
     setWatchAllow(v) {
       watchAllow = v !== false;
       try { void storeSet(RHYTHM_WATCH_KEY, { allow: watchAllow }); } catch (_) { /* 保存できなくても、この起動のうちは効く */ }
@@ -55884,14 +56139,17 @@ const RHYTHM_WATCH = (() => {
         id: rhythmMultiText(x && x.i, 40), name: rhythmMultiText(x && x.n, 12) || '名無しのブリーダー', icon: rhythmMultiText(x && x.a, 60),
         frame: rhythmMultiText(x && x.f, 40), diff: rhythmMultiText(x && x.d, 20),
       })).filter((x) => x.id);
-      if (!round || !people.length) return;
+      if (!round) return;
+      // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
+      if (!people.length && !(st.round === round && st.people.length)) return;
       if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; }
-      st.songId = rhythmMultiText(raw.sg, 60); st.people = people;
-      if (!st.focus || !people.some((x) => x.id === st.focus)) { st.focus = people[0].id; ping(); }
+      st.songId = rhythmMultiText(raw.sg, 60);
+      if (people.length) st.people = people;
+      if (!st.focus || !st.people.some((x) => x.id === st.focus)) { st.focus = st.people[0].id; ping(); }
       st.phase = 'playing'; st.lastPg = now;
       // 送ってきた人のいまの点(新しく見に来た人でも全員の行が出るように)
       const from = rhythmMultiText(raw.id, 40);
-      if (raw.sc != null && people.some((x) => x.id === from)) {
+      if (raw.sc != null && st.people.some((x) => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = { ...prev, s: intOf(raw.sc, RHYTHM_MULTI_LIVE_SCORE_MAX), c: intOf(raw.cb, RHYTHM_MULTI_LIVE_COMBO_MAX), p: prev.p || 0, l: prev.l == null ? null : prev.l, k: prev.k || null, at: prev.at || now };
       }
@@ -57587,6 +57845,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   }, [view && view.code, view && view.room.phase, view && view.room.round]);
   React.useEffect(() => () => { RHYTHM_WATCH.stop(); }, []);
   const [watchAllowUi, setWatchAllowUi] = React.useState(() => RHYTHM_MULTI.watchAllowed());
+  // 保存の読み込みが済んだら、つまみの表示を保存に合わせる(読み込みは部屋に入るまで遅れるので)
+  React.useEffect(() => { let alive = true; Promise.resolve(RHYTHM_MULTI.loadWatchAllow()).then((v) => { if (alive && typeof v === 'boolean') setWatchAllowUi(v); }); return () => { alive = false; }; }, []);
   const toggleWatchAllow = () => { const next = !watchAllowUi; RHYTHM_MULTI.setWatchAllow(next); setWatchAllowUi(next); };
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -63017,9 +63277,10 @@ const assistantPeerSetPlayerBondAdder = (fn) => { assistantPeerPlayerBondAdder =
 let assistantPeerPlayerCaller = null;
 const assistantPeerSetPlayerCaller = (fn) => { assistantPeerPlayerCaller = typeof fn === 'function' ? fn : null; };
 const assistantPeerPlayerCall = (who) => { try { const c = assistantPeerPlayerCaller ? assistantPeerPlayerCaller(who) : ''; return c || 'あなた'; } catch { return 'あなた'; } };
-const assistantPeerAddPlayerBond = (ids, action) => {
+// amount … 1回ぶんを呼ぶ側が決めるとき(助手ライフの見守るは約75%。行動の1回ぶんは超えない)。null は今までどおり
+const assistantPeerAddPlayerBond = (ids, action, amount = null) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
-  for (const id of [...new Set(ids || [])]) { try { assistantPeerPlayerBondAdder(id, action); } catch {} }
+  for (const id of [...new Set(ids || [])]) { try { if (Number.isFinite(amount)) assistantPeerPlayerBondAdder(id, action, amount); else assistantPeerPlayerBondAdder(id, action); } catch {} }
 };
 
 // ---------- その日の出来事(台本の when) ----------
@@ -64259,8 +64520,13 @@ const ASSISTANT_LIFE_PLAY_POINTS = Object.freeze({
 });
 // 続けて遊んだ日数の上乗せ(その日の始まりのにぎわい)
 const ASSISTANT_LIFE_STREAK_BONUS = Object.freeze([{ days: 7, points: 10 }, { days: 3, points: 5 }]);
-// 最近のできごとを覚えておく時間の数(6つで1日)
-const ASSISTANT_LIFE_RECENT_SLOTS = 12;
+// 最近のできごとを覚えておく時間の数(12区切りで1日。前は6つで1日・12=2日ぶんだった)
+const ASSISTANT_LIFE_RECENT_SLOTS = 24;
+
+// 移動が1日6回→12回になったぶん、時間帯ごとに戻る得の1回ぶんを約75%にする(台帳 #5304・#5328。1日に取れる量はいまの約1.5倍)
+//   四捨五入し、1より小さくはしない(1・2 の小さい点はそのまま残る)。数でないときは null(呼ぶ側は今までどおりの量)
+const ASSISTANT_LIFE_SLOT_GAIN_RATE = 0.75;
+const assistantLifeSlotGainOf = (amount) => (Number.isFinite(amount) && amount > 0 ? Math.max(1, Math.round(amount * ASSISTANT_LIFE_SLOT_GAIN_RATE)) : null);
 
 const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true;
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
@@ -64268,16 +64534,34 @@ const assistantLifeDayKey = (now = Date.now()) => (typeof jstDayKey4 === 'functi
 
 // ---------- 時間 ----------
 // abs … 通しの番号(日本時間の暦の日 × 6 + 時間の並び)。1つ進むと次の時間
+// 12区切り(2026-11-11 社長: 移動を1日6回→12回。2時間ずつ均等)。傾向を引く名前(id・label・i)は、区切りの真ん中の時刻が入る6つ(上の ASSISTANT_LIFE_SLOTS)のまま。
+//   abs … 通しの番号(日本時間の暦の日 × 12 + j)。j は 0〜11(0 は 0〜2時)。1つ進むと2時間あと
+//   absV1 … 前の数え方(日 × 6 + 6つの並び)。前の版の保存(abs)を読み替えるときと、6を前提にした他の部との橋渡し用
+//   from・to … この区切りの時刻(2時間)。i・id・label … 傾向の名前(深夜・朝・昼・午後・夕方・夜)
+const ASSISTANT_LIFE_PER_DAY = 12;
+const assistantLifeSixIndexOfHour = (h) => Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
+const assistantLifeSlotBuild = (day, j, hourForV1) => {
+  const i = assistantLifeSixIndexOfHour(j * 2 + 1); // 区切りの真ん中(1時・3時・5時…)がどの6つに入るか
+  const six = ASSISTANT_LIFE_SLOTS[i];
+  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
+};
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
   const day = Math.floor(t / 86400000);
   const h = new Date(t).getUTCHours();
-  const i = Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
-  return { abs: day * 6 + i, i, id: ASSISTANT_LIFE_SLOTS[i].id, label: ASSISTANT_LIFE_SLOTS[i].label };
+  return assistantLifeSlotBuild(day, Math.floor(h / 2), h);
 };
 const assistantLifeSlotOfAbs = (abs) => {
-  const i = ((Math.floor(Number(abs) || 0) % 6) + 6) % 6;
-  return { abs: Math.floor(Number(abs) || 0), i, id: ASSISTANT_LIFE_SLOTS[i].id, label: ASSISTANT_LIFE_SLOTS[i].label };
+  const a = Math.floor(Number(abs) || 0);
+  const j = ((a % ASSISTANT_LIFE_PER_DAY) + ASSISTANT_LIFE_PER_DAY) % ASSISTANT_LIFE_PER_DAY;
+  return assistantLifeSlotBuild(Math.floor((a - j) / ASSISTANT_LIFE_PER_DAY), j, j * 2);
+};
+// 前の数え方の abs(日 × 6 + i)→ 12区切りの abs。その区切りの始まりの時刻が入る 2時間の区切りへ(例: 朝 5〜10時 → 4〜6時の区切り)。二重に変換しないよう、保存側が印(v:2)を持つ
+const assistantLifeAbsV1ToV2 = (abs) => {
+  const a = Math.floor(Number(abs));
+  if (!Number.isFinite(a)) return null;
+  const i = ((a % 6) + 6) % 6;
+  return Math.floor((a - i) / 6) * ASSISTANT_LIFE_PER_DAY + Math.floor(ASSISTANT_LIFE_SLOTS[i].from / 2);
 };
 
 // ---------- 決まった乱数(同じ時間・同じ端末なら同じ結果) ----------
@@ -64317,14 +64601,14 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
   const ids = [...new Set((members || []).filter(id => ASSISTANT_LIFE_PREFS[id]))].sort();
   const rand = assistantLifeRng(`${salt}|${slot.abs}|${ids.join(',')}`);
   const gap = prev && Number.isFinite(prev.abs) ? slot.abs - prev.abs : Infinity;
-  const inertia = gap === 1 ? 3 : (gap >= 2 && gap <= 6 ? 1.5 : 0);
+  const inertia = gap === 1 ? 3 : (gap >= 2 && gap <= 12 ? 1.5 : 0); // 12区切り: 前の幅(2〜6回)を2倍に
   const tierI = assistantLifeTierIndex(tier);
   const near = (r, n) => Number.isFinite(r.abs) && slot.abs - r.abs >= 0 && slot.abs - r.abs <= n;
   const recentOf = (kind, pred, n = ASSISTANT_LIFE_RECENT_SLOTS) => (recent || []).some(r => r && r.kind === kind && near(r, n) && pred(r));
   const hasPair = (r, a, b) => r.pair === assistantLifePairKey(a, b);
   // 言い合いのあと3つの時間は距離をおく(そのあと仲直りしていれば終わり)
   const quarrelNow = (a, b) => {
-    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 3));
+    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 6)); // 言い合いのあと6つの区切り(前は3つの時間)
     if (!qs.length) return false;
     const last = Math.max(...qs.map(r => r.abs));
     return !(recent || []).some(r => r && r.kind === 'makeup' && hasPair(r, a, b) && r.abs >= last);
@@ -64332,7 +64616,7 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
   const invited = new Set((nudges.invite || []).filter(n => n && n.abs === slot.abs).map(n => n.id));
   const introduced = (nudges.introduce || []).filter(n => n && n.abs === slot.abs).map(n => n.pair);
   const prevPairs = new Set(gap === 1 && prev && Array.isArray(prev.groups) ? prev.groups.flatMap(g => { const o = []; for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) o.push(assistantLifePairKey(g.ids[i], g.ids[j])); return o; }) : []);
-  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 2 ? prev.lonely : []);
+  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 4 ? prev.lonely : []); // 12区切り: 前は1〜2回
 
   // 1. 気分
   const moods = {};
@@ -64517,10 +64801,13 @@ const normalizeAssistantLife = (v) => {
     if (s.doing === 'sleep') { if (s.reason === 'lonely') s.reason = 'mypace'; moods[id] = 'sleepy'; }
     if (!ASSISTANT_LIFE_DOINGS[s.doing].places.includes(s.place)) s.place = ASSISTANT_LIFE_DOINGS[s.doing].places[0];
   }
-  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).slice(-40) : [];
-  const nudgeList = (x) => Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
+  // 前の数え方(印 v が 2 でない)の保存は、abs を12区切りへ読み替える(一度だけ。返す値には v:2 を付ける)。前の声かけ(次の1回ぶんだけ)は捨てる
+  const old = o.v !== 2;
+  const absOf = (x) => (old ? assistantLifeAbsV1ToV2(x) : Math.floor(x));
+  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).map(r => ({ ...r, abs: absOf(r.abs) })).slice(-80) : [];
+  const nudgeList = (x) => (old ? [] : Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : []);
   const nudges = { invite: nudgeList(o.nudges && o.nudges.invite).filter(n => ok(n.id)), introduce: nudgeList(o.nudges && o.nudges.introduce).filter(n => typeof n.pair === 'string') };
-  return { salt: typeof o.salt === 'string' && o.salt ? o.salt : '', abs: Number.isFinite(o.abs) ? o.abs : null, slot: typeof o.slot === 'string' ? o.slot : null,
+  return { v: 2, salt: typeof o.salt === 'string' && o.salt ? o.salt : '', abs: Number.isFinite(o.abs) ? absOf(o.abs) : null, slot: typeof o.slot === 'string' ? o.slot : null,
     moods, groups, solo, lonely: Array.isArray(o.lonely) ? o.lonely.filter(id => ok(id) && !(solo[id] && solo[id].doing === 'sleep')) : [], recent, nudges,
     watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : [] };
 };
@@ -64586,7 +64873,7 @@ const assistantLifeNote = async (kind, { pair = null, ids = null, now = Date.now
   const abs = assistantLifeSlotAt(now).abs;
   const ids2 = ids || (pair ? String(pair).split('-') : []);
   const rec = { kind, abs, pair: pair || (ids2.length === 2 ? assistantLifePairKey(ids2[0], ids2[1]) : null), ids: ids2 };
-  ASSISTANT_LIFE_STORE.set({ life: { ...life, recent: [...life.recent, rec].slice(-40) } });
+  ASSISTANT_LIFE_STORE.set({ life: { ...life, recent: [...life.recent, rec].slice(-80) } }); // 12区切りで覚える幅が2倍になったので、読む側(80)とそろえる
   assistantLifeSaveLife();
 };
 // 誘って遊んだ(家からの誘い・セッション・会いに行く)。生活のリズムが少しずつ変わる
@@ -64726,7 +65013,7 @@ const assistantLifeTalkSet = () => {
 };
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])]; // 原因つきのけんか(rel.jsx)も
 // 思い出アルバムに入るもの(2人・3人)
-const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
+const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeDailyAlbumTalks === 'function' ? assistantLifeDailyAlbumTalks() : []), ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
 // 台本の穴 {place}・{doing}・{doing_te}。いまの様子(talk.ctx)→ 台本の鍵 → していることの場所 の順で決める
 const assistantLifeFillHoles = (text, talk) => {
   const c = (talk && talk.ctx) || {};
@@ -64764,7 +65051,7 @@ const assistantLifeAirOf = (life, a, b) => {
   const rs = ((life && life.recent) || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
   const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
   const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
-  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 12) return 'makeup'; // 12区切り: 前は6回
   if (lastQ > -Infinity && lastQ > lastM) return 'after';
   return 'normal';
 };
@@ -65001,15 +65288,19 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   try { assistantPeerMarkShown(talk, { scene: 'life', special: false, now }); } catch {}
   // 言い合いは何も増やさない(2人はしばらく距離をおく。また一緒になったときの仲直りで増える)
   if (talk.kind === 'quarrel') return talk;
+  // 移動が1日12回になったので、見守る1回ぶんの友情・仲良し度は約75%(台帳 #5304・#5328。1日の上限はそのまま)
+  const pg = (act) => assistantLifeSlotGainOf(typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[act] ? ASSISTANT_PEER_BOND_ACTIONS[act].amount : null);
+  const bg = (act) => assistantLifeSlotGainOf(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[act] ? ASSISTANT_BOND_ACTIONS[act].amount : null);
   if (talk.kind === 'makeup') {
-    if (assistantPeerMakeupDone(talk)) { await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup'); assistantPeerAddPlayerBond(talk.pair, 'peerMakeup'); }
+    if (assistantPeerMakeupDone(talk)) { await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup', pg('makeup')); assistantPeerAddPlayerBond(talk.pair, 'peerMakeup', bg('peerMakeup')); }
     try { assistantPeerAlbumAdd(talk); } catch {}
     return talk;
   }
   try { assistantPeerAlbumAdd(talk); } catch {}
-  if (talk.kind === 'event') { await assistantPeerGain(talk.pair[0], talk.pair[1], 'event'); assistantPeerAddPlayerBond(talk.pair, 'peerEvent'); return talk; }
-  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
-  assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
+  if (talk.kind === 'event') { await assistantPeerGain(talk.pair[0], talk.pair[1], 'event', pg('event')); assistantPeerAddPlayerBond(talk.pair, 'peerEvent', bg('peerEvent')); return talk; }
+  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk', pg('talk'));
+  const bk = talk.kind === 'trio' ? 'peerTrio' : 'peerTalk';
+  assistantPeerAddPlayerBond(assistantPeerMembers(talk), bk, bg(bk));
   return talk;
 };
 
@@ -65028,13 +65319,13 @@ const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({ lonely: 'さみしそう', m
 const assistantLifeNextSlotText = (now = Date.now()) => {
   const cur = assistantLifeSlotAt(now);
   const h = new Date(Number(now) + 9 * 3600000);
-  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const slot = cur; // 12区切り: 次の移動は2時間ごと(cur.to)
   const mins = Math.max(1, (slot.to * 60) - (h.getUTCHours() * 60 + h.getUTCMinutes()));
   const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
   // 次の区切りの名前(夕方・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
   return `あと${t}でみんなが動きます`;
 };
-const assistantLifeSlotRange = (id) => { const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.from}〜${s.to % 24}時` : ''; }; // 区切りの名前(午後・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
+const assistantLifeSlotRange = (id) => { const s = id && typeof id === 'object' ? id : ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.from}〜${s.to % 24}時` : ''; }; // 区切りの名前(午後・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
 
 // 様子を、いまの時間に合わせて読む(画面と帯で使う)
 const useAssistantLifeNow = (metIds) => {
@@ -65173,7 +65464,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
       <div className={embedded ? 'w-full' : 'flex h-full w-full max-w-md flex-col bg-slate-950'} style={embedded ? undefined : { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {!embedded && <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
           <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手ライフ</p>
-          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot.id)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
+          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
           <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
         </div>}
         <div className={embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'}>
@@ -65704,7 +65995,11 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
 `;
 
-function AssistantLifeHouseStyle() { return <style>{ASSISTANT_LIFE_HOUSE_CSS}</style>; }
+// 開いたトップの家(grid4)は、縦でも部屋の中を横の決まりで描く(横の決まりの行を写して、印だけ data-assistant-life-grid4 に替える)
+const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]')
+  + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:9.5px;line-height:11px;max-height:22px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}'
+  + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
+function AssistantLifeHouseStyle() { return <style>{ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS}</style>; }
 // 名前の並び(「ドラ・ソラシド・えるびん」)。折り返すときは名前の途中で折らない(2026-11-07 社長「文字列も気をつけて」)
 function AssistantLifeNames({ text }) {
   const parts = String(text || '').split('・');
@@ -65776,16 +66071,19 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
           <b>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">{other ? 'まだいない' : 'まだ会っていない'}</span>}
+      {met && state && state.ev && <span className="evm" data-assistant-life-room-ev={id} aria-label="いま、できごとがあります">❗</span>}
     </button>);
 }
 
 // 家(縦: 4階×2部屋 / 横: 2段×4部屋)。部屋・居間・屋根裏の位置は注文書 HOUSE-ART-ORDER.md と同じ並び
 // hname・other … よその家(フレンドの家)を描くとき。other は { [助手]: { put } }(56-assistant-life-friend.jsx)
-function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary, pop, onBoard, life = null, peerSt = null, hname = '🏡 助手の家', other = null, v2 = false }) {
+// grid4 … 開いたトップに置くとき(2026-11-11 社長 案A 家の断面図)。縦でも横と同じ 4部屋×2段にして、画面の上に収める(部屋の中の札は横の決まりで描く)
+function AssistantLifeHouseArt({ width, land: landIn, look, rooms, metSet, onOpen, diary, pop, onBoard, life = null, peerSt = null, hname = '🏡 助手の家', other = null, v2 = false, grid4 = false }) {
+  const g4 = grid4 && !landIn, land = landIn || g4;
   const wall = 6, cols = land ? 4 : 2, rows = land ? 2 : 4;
   const rw = (width - wall * (cols + 1)) / cols;
-  const rh = land ? Math.round(rw * 0.74) : Math.round(rw * 0.5);
-  const lh = land ? 62 : 78, roofH = land ? 44 : 64;
+  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.round(rw * 0.74) : Math.round(rw * 0.5);
+  const lh = land ? 62 : 78, roofH = g4 ? 40 : land ? 44 : 64;
   const bodyH = wall + rows * (rh + wall) + lh + wall, ly = wall + rows * (rh + wall);
   const night = look === 'night';
   const items = (diary.items || []).slice(-3).reverse();
@@ -65801,7 +66099,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
   });
   const restN = Math.max(0, total - Math.min(shownN, items.length));
   return (
-    <div className={`mhl-house${pop ? ' mhl-pop' : ''}`} data-assistant-life-house style={{ width, height: roofH + bodyH }}>
+    <div className={`mhl-house${pop ? ' mhl-pop' : ''}`} data-assistant-life-house data-assistant-life-grid4={g4 ? '1' : '0'} style={{ width, height: roofH + bodyH }}>
       <div className="mhl-chim" style={{ left: width * .72, top: roofH * .05, height: roofH * .6 }}/>
       <div className="mhl-roof" style={{ height: roofH }}/>
       {/* 屋根裏の🔒は、何か分からないので出さない(屋根裏ができたら出す。2026-11-07 ミハリ L11) */}
@@ -65897,7 +66195,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   // モンヒロビートに出かけているあいだは券なし(ビート部の rhythmAssistSessionVisitFree が正本。無ければ券なしと書かない)
   const beatFree = !!atBeat && typeof rhythmAssistSessionVisitFree === 'function' && (() => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } })();
   const asleep = !!(w && w.doing === 'sleep'); // 寝ている助手には、起こすと分かる言葉にする(2026-11-07 ミハリ L1)
-  const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
+  const slotDef = Number.isFinite(slot.to) ? slot : ASSISTANT_LIFE_SLOTS[slot.i]; // 12区切り: 次の移動までの時刻は区切り(slot.to)
   const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
   const groupText = w && w.group ? '' : ' ・ ひとり';
   const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
@@ -65943,7 +66241,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const canCardNow = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id);
   const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && !!onGiveFurn;
   const beatRow = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <AssistantLifeDoRow k="beat" icon="🎵" label={asleep ? '起こしてモンヒロビートに誘う' : atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う'} sub={atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)'} gain={atBeat && beatFree ? '券なし' : ''} on={() => onBeat(id)}/>;
-  const cardRow = canCardNow && <AssistantLifeDoRow k={cardSpent ? 'card-spent' : 'card'} icon="🃏" label="MFバトルカードで対戦する" sub="カード部屋にいる助手と対戦すると、ごほうびアップ" gain="ごほうび 1.5倍" on={() => onCard(id)} disabled={!!cardSpent} why={cardSpent ? (typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました') : ''}/>;
+  const cardRow = canCardNow && <AssistantLifeDoRow k={cardSpent ? 'card-spent' : 'card'} icon="🃏" label="MFバトルカードで対戦する" sub="カード部屋にいる助手と対戦すると、ごほうびアップ" gain={`ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`} on={() => onCard(id)} disabled={!!cardSpent} why={cardSpent ? (typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました') : ''}/>;
   // その場所ならではの得がある行(カード部屋での対戦・ビートで券なし)は、いちばん上に
   const hotBeat = !!(atBeat && beatFree && !asleep), hotCard = !!(canCardNow && !cardSpent);
   const doList = uiV2 && typeof AssistantLifeDoRow === 'function' ? (
@@ -66317,6 +66615,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   }, [tab, roomId, uiV2]);
   React.useEffect(() => () => { if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot(''); }, []);
   const [scene, setScene] = React.useState(null);
+  const [dailyScene, setDailyScene] = React.useState(null); // できごとの場面(2026-11-11 案A)。閉じたら札を作り直す(dailyKey)
+  const [dailyKey, setDailyKey] = React.useState(0);
   // 声をかけたあとの続きのカード(2026-11-08 社長 ❼A)。掛け合いが閉じたら、同じ部屋のシートを開き直して出す
   const [follow, setFollow] = React.useState(null);
   const followAfterRef = React.useRef(null);
@@ -66364,7 +66664,18 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const tier = assistantLifeTierOf(play.points);
   const next = ASSISTANT_LIFE_TIERS[assistantLifeTierIndex(tier) + 1] || null;
   const watchLeft = assistantLifeWatchLeft(st.play, day);
-  const rooms = assistantLifeRoomsOf(life, ids);
+  const rooms0 = assistantLifeRoomsOf(life, ids);
+  // 開いたトップの家(2026-11-11 社長 案A): 家の断面図を一番上へ・できごとに出ている人の部屋に ❗(まだ見ていない時間帯だけ)
+  const topOn = uiV2 && typeof assistantLifeTopHouseOn === 'function' && assistantLifeTopHouseOn();
+  const evIds = (() => {
+    if (!topOn || typeof assistantLifeDailyWho !== 'function') return [];
+    try {
+      const sl = assistantLifeSlotAt(); const ds = ASSISTANT_LIFE_DAILY_STORE.state;
+      if (ds.day === assistantLifePerkDay() && ds.heard.includes(sl.id)) return [];
+      const c = assistantLifeDailyWho(life, ids, sl.i); return c ? c.ids : [];
+    } catch (_) { return []; }
+  })();
+  const rooms = evIds.length ? Object.fromEntries(Object.entries(rooms0).map(([k, v]) => [k, v && evIds.includes(k) ? { ...v, ev: true } : v])) : rooms0;
   const nameOf = assistantLifeName;
   const close = () => { setScene(null); assistantLifeCloseScreen(); };
   // 新UIだけ: サブ画面では家へ戻り、家では従来どおり助手ライフを閉じる。
@@ -66533,7 +66844,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="flex flex-wrap items-start gap-x-2">
         <button type="button" data-assistant-life-close onClick={uiV2 ? backFromUiV2 : close} aria-label={uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる'} className={uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[19px] text-slate-100 active:bg-white/10' : 'h-9 w-8 shrink-0 text-[19px] text-slate-100'}>←</button>
         {/* 英字の小見出しは狭い横(🔄横 667)で縮んで省略する(時計の札を押し出さない・2026-11-08 ミハリ) */}
-        <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* 新UI/旧UIの切替は設定の「助手ライフの画面」へ(2026-11-11 社長。AssistantLifeUiSettingRow) */}
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
@@ -66579,13 +66890,17 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const houseView = (
     <div className="relative pt-1">
       {uiV2 && typeof AssistantLifeFirstGuide === 'function' && (guideSeen === false || guideOpen) && <AssistantLifeFirstGuide land={land} canWatch={!!unwatched.length} onClose={markGuideSeen} onWatch={() => { markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}/>}
-      {uiV2 && typeof AssistantLifeBenefitBoard === 'function' && <AssistantLifeBenefitBoard life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}
+      {topOn && <div className="mb-1 flex justify-center" data-assistant-life-top-house><AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2 grid4/></div>}
+      {topOn && typeof AssistantLifeTopStrip === 'function' && <AssistantLifeTopStrip life={life} ids={ids} evIds={evIds} onPlace={(p, id) => { setMapFocusPlace(ASSISTANT_LIFE_MAP_ORDER.includes(p) ? p : 'home'); setMapFocusAssistantId(id); setTab('where'); }}/>}
+      {topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
+      {uiV2 && typeof AssistantLifeBenefitBoard === 'function' && <AssistantLifeBenefitBoard fold={topOn} life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}
         watchNow={unwatched.length} watchDone={(life.watched || []).length > 0} giveLeft={soloOn ? itemsLeft + soloLeft : itemsLeft}
         onWatch={() => { if (unwatched[0]) watch(unwatched[0]); }} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }} onRoad={() => setTab('friends')} onGuide={() => setGuideOpen(true)}/>}
-      {uiV2 && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard ids={ids} nameOf={nameOf} land={land}/>}
+      {uiV2 && !topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
-      <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
-      {lifeStatusList}
+      {/* トップの家を出すときは、下の家の絵と「みんなの今」の一覧は出さない(同じものが上にある。2026-11-11 社長「部屋の列は外す」) */}
+      {!topOn && <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>}
+      {!topOn && lifeStatusList}
     </div>);
   // 道具の一覧(2026-11-11 オクリモノ4・案7: 行は 56-assistant-life-gifts.jsx の AssistantLifeItemRow。1つの道具を2行に・説明は下の「？」に畳む)
   const itemsBody = (
@@ -66611,6 +66926,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const tabBody = tab === 'house' ? houseView
     : tab === 'where' ? null // 地図は画面いっぱい(下の whereView)
     : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? <AssistantLifeFriendPage life={life}/>
+    : tab === 'profile' && typeof AssistantLifeProfilePage === 'function' ? <AssistantLifeProfilePage metIds={metIds} bondLevelOf={bondLevelOf} land={land} onMasmon={setMasmonId}/> // 📖 紹介(56-assistant-life-profile.jsx)
     : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{uiV2 && typeof AssistantLifeRewardRoad === 'function' && <AssistantLifeRewardRoad ids={ids} peerSt={peerSt} nameOf={nameOf} onRoom={setRoomId}/>}{uiV2 && typeof AssistantLifeIntroduceCard === 'function' && <AssistantLifeIntroduceCard ids={ids} life={life}/>}{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem} v2={uiV2} onGivePair={canGive ? (pair) => openGive(pair) : null}/>}</div>)
     : itemsBody;
   return (
@@ -66679,6 +66995,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             </div>
           </div>)}
         {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} canGive={canGive && itemsLeft > 0} onClose={() => { setScene(null); showFollow(); }} onGive={openGive}/>}
+        {dailyScene && typeof AssistantLifeDailySceneView === 'function' && <AssistantLifeDailySceneView plan={dailyScene.plan} place={dailyScene.place} look={look} slotId={dailyScene.slotId} slotLabel={dailyScene.slotLabel} onClose={() => { setDailyScene(null); setDailyKey(k => k + 1); }}/>}
         {intro && (
           <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">
             {intro === 'long' && <div className="absolute inset-0 grid place-items-center" style={{ animation: 'mhlFade .3s ease-in .9s both' }}>
@@ -67583,7 +67900,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   } catch (_) {}
   try {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
-    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', place: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
@@ -67639,7 +67956,9 @@ let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
 function assistantLifeUiV2Tabs() {
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+  // 📖 紹介(助手紹介・56-assistant-life-profile.jsx)は公開の印 assistantLifeProfile が真のときだけ。きずなの次(2026-11-11 社長 Q6 A)
+  const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
 }
 
 // 引き合わせる(「きずな」の上)。2人を選ぶと、次の時間に一緒に過ごしやすくなる。決まりは今までと同じ(assistantLifeNudge('introduce'))
@@ -67789,7 +68108,8 @@ const assistantLifeDailyListen = async (slotId) => {
   return { added: true, got };
 };
 
-function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
+// life・onScene … 場面の印が真のとき、いま一緒にいる2人の場面を開く(家が AssistantLifeDailySceneView を重ねる)。偽なら今までどおり1人の話を聞く
+function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScene = null }) {
   const [st, setSt] = React.useState(() => ASSISTANT_LIFE_DAILY_STORE.state);
   const [said, setSaid] = React.useState('');
   const [got, setGot] = React.useState(false);
@@ -67804,7 +68124,13 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
   const done = st.day === day && st.heard.includes(slot.id);
-  const who = list[slot.i % list.length];
+  const cast = assistantLifeDailyWho(life, list, slot.i);
+  const who = cast ? cast.ids[0] : list[slot.i % list.length];
+  const sceneKey = assistantLifeDailySceneOf(slotDef.from);
+  const plan = typeof onScene === 'function' && assistantLifeDailySceneOn() ? assistantLifeDailyPlan(cast, sceneKey, day, slot.i) : null;
+  const sayLine = assistantLifeDailySay(who, sceneKey, day);
+  const castNames = plan ? plan.ids.map(nameOf).join('と') : nameOf(who);
+  const castPlace = cast && cast.place && cast.place !== 'home' ? assistantLifePlaceShow(cast.place) : '家';
   const leftH = (() => { const s = slotDef; const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return s ? Math.max(1, s.to - h) : 1; })();
   const n = st.days.length;
   const listen = async () => {
@@ -67812,7 +68138,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
     setBusy(true);
     const r = await assistantLifeDailyListen(slot.id);
     setSt({ ...ASSISTANT_LIFE_DAILY_STORE.state });
-    setSaid(`${nameOf(who)}「${scene.say}」`);
+    setSaid(`${nameOf(who)}「${sayLine ? assistantLifeDailyText(sayLine, [who]) : scene.say}」`);
     setGot(!!r.got);
     setBusy(false);
   };
@@ -67823,11 +68149,15 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>
-          {said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
-          {!done && <span className="block text-[11px] text-emerald-300">→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)</span>}
+          {plan
+            ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : <>{plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`}<span className="inline-block" data-assistant-life-daily-title>「{plan.title}」</span></>)
+            : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
+          {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
-        {!done && <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>}
+        {!done && (plan
+          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotDef.label })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
+          : <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>)}
       </div>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1" data-assistant-life-daily-stamps={n}>
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">🧺 7日で1個</span>
@@ -67840,6 +68170,186 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
         </span>
       </div>
     </section>);
+}
+
+// ===== 開いたトップの家の場面・できごとの小さな場面(2026-11-11 社長 案A・ナカヨシ20・docs/progress/assistant-life/top-scene/PLAN.md) =====
+//   公開の印: RELEASE_FLAGS.assistantLifeTopHouse(家の断面図を上へ・出かけ先の丸・得の帯をたたむ)/assistantLifeDailyScene(できごとを場面に。台詞が入るまで偽)
+//   台詞は ASSISTANT_LIFE_DAILY_TALKS(data/assistants.js。tools/assistant/life-daily-import.js が docs/progress/assistant-life/top-scene/*.txt から作る)
+//   保存は今の mh_assistant_life_daily_v1 だけ(場面を最後まで見たら「聞いた」に数える)。新しいキーは足さない
+const assistantLifeTopHouseOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeTopHouse === true;
+const assistantLifeDailyData = () => (typeof ASSISTANT_LIFE_DAILY_TALKS !== 'undefined' && ASSISTANT_LIFE_DAILY_TALKS && typeof ASSISTANT_LIFE_DAILY_TALKS === 'object' ? ASSISTANT_LIFE_DAILY_TALKS : null);
+const assistantLifeDailySceneOn = () => {
+  if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof RELEASE_FLAGS === 'undefined' || RELEASE_FLAGS.assistantLifeDailyScene !== true) return false;
+  const D = assistantLifeDailyData();
+  return !!D && Array.isArray(D.scenes) && D.scenes.length > 0;
+};
+const ASSISTANT_LIFE_DAILY_RARE_PCT = 5; // 珍しいできごとが出る割合(2人でいる時間帯ごとに 5%・1日6回でおよそ3日に1回)
+const ASSISTANT_LIFE_DAILY_BOND = Object.freeze({ scene: 4, rare: 8 }); // 見たときの 💗(出てきた人それぞれ。1日 +12 まで=ASSISTANT_BOND_ACTIONS.lifeDaily)
+const assistantLifeDailyHash = (s) => { let h = 7; for (const c of String(s)) h = (h * 31 + c.codePointAt(0)) >>> 0; return h; };
+
+// できごとに出る人: 場面の印が真なら、いま同じ場所にいる2人を時間帯ごとに1組。いなければ1人(今までの選び方)
+// 解放前の助手(町の人)は出さない(カイホウの assistantPartnerOkNow。まだ main に無いときは全員)
+const assistantLifeTopOk = (id) => { try { return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(id) !== false : true; } catch (_) { return true; } };
+const assistantLifeDailyWho = (life, ids, slotI) => {
+  const list = (Array.isArray(ids) ? ids : []).filter(assistantLifeTopOk);
+  if (!list.length) return null;
+  const whereOf = (id) => { try { return life && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null; } catch (_) { return null; } };
+  if (assistantLifeDailySceneOn()) {
+    const pairs = [], seen = new Set();
+    for (const id of list) {
+      const w = whereOf(id);
+      const g = w && w.group && Array.isArray(w.group.ids) ? w.group.ids.filter(x => list.includes(x)) : [];
+      if (g.length < 2 || w.doing === 'sleep') continue;
+      const key = [...g].sort().join('-');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pairs.push({ ids: g.slice(0, 2), place: w.place });
+    }
+    if (pairs.length) return pairs[slotI % pairs.length];
+  }
+  const one = list[slotI % list.length];
+  const w = whereOf(one);
+  return { ids: [one], place: w ? w.place : 'home' };
+};
+// その助手の時間帯のひとこと(取り込んだ台詞があれば。無ければ null で、今までの1行を使う)
+const assistantLifeDailySay = (who, sceneKey, day) => {
+  const D = assistantLifeDailyData();
+  const l = D && D.lines && D.lines[who] && Array.isArray(D.lines[who][sceneKey]) ? D.lines[who][sceneKey] : [];
+  return l.length ? l[assistantLifeDailyHash(`${day}-${who}`) % l.length] : null;
+};
+// 見せる場面を決める(日・時間帯・人で決まる。同じ時間帯に開き直しても同じ場面)
+const assistantLifeDailyPlan = (cast, sceneKey, day, slotI) => {
+  const D = assistantLifeDailyData();
+  if (!D || !cast || !cast.ids || !cast.ids.length) return null;
+  const [a, b] = cast.ids;
+  const has = (parts, id, roles) => !!(parts && parts[id] && roles.every(r => parts[id][r] && parts[id][r].t));
+  if (b) {
+    const rares = (Array.isArray(D.rares) ? D.rares : []).filter(r => Array.isArray(r.slots) && r.slots.includes(sceneKey) && has(r.parts, a, ['open']) && has(r.parts, b, ['back']));
+    if (rares.length && assistantLifeDailyHash(`${day}-${slotI}-rare`) % 100 < ASSISTANT_LIFE_DAILY_RARE_PCT) {
+      const r = rares[assistantLifeDailyHash(`${day}-${slotI}`) % rares.length];
+      return { kind: 'rare', id: r.id, title: r.title, ids: [a, b], lines: [{ who: a, ...r.parts[a].open }, { who: b, ...r.parts[b].back }], choices: [] };
+    }
+  }
+  const scenes = (Array.isArray(D.scenes) ? D.scenes : []).filter(s => s.slot === sceneKey && Array.isArray(s.choices) && s.choices.length === 2 && has(s.parts, a, ['open', 'r1', 'r2']) && (!b || has(s.parts, b, ['back'])));
+  if (!scenes.length) return null;
+  const s = scenes[assistantLifeDailyHash(`${day}-${slotI}-${a}`) % scenes.length];
+  const lines = [{ who: a, ...s.parts[a].open }];
+  if (b) lines.push({ who: b, ...s.parts[b].back });
+  return { kind: 'scene', id: s.id, title: s.title, ids: b ? [a, b] : [a], lines, choices: s.choices.map((label, i) => ({ label, reply: { who: a, ...s.parts[a][i ? 'r2' : 'r1'] } })) };
+};
+// 台詞の穴: {name} = プレイヤーの呼び方/{c} = 相手の助手の呼び方
+const assistantLifeDailyText = (line, ids) => {
+  const partner = (ids || []).find(x => x !== line.who) || line.who;
+  const name = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(line.who) : 'あなた';
+  const call = typeof assistantPeerCall === 'function' ? (() => { try { return assistantPeerCall(line.who, partner); } catch (_) { return assistantLifeName(partner); } })() : assistantLifeName(partner);
+  return String(line.t || '').replace(/\{name\}/g, name).replace(/\{c\}/g, call);
+};
+// 珍しいできごとの思い出アルバムの1枚(2人の組ごと。アルバムは 56-assistant-peer.jsx の形のまま入れる)
+const assistantLifeDailyRareTalk = (rareId, a, b) => {
+  const D = assistantLifeDailyData();
+  const r = D && Array.isArray(D.rares) ? D.rares.find(x => x.id === rareId) : null;
+  const [x, y] = [a, b].sort();
+  if (!r || !r.parts || !r.parts[x] || !r.parts[y] || !r.parts[x].open || !r.parts[y].back) return null;
+  return { id: `daily-rare-${r.id}-${x}-${y}`, kind: 'pair', pair: [x, y], title: r.title, lines: [{ who: x, ...r.parts[x].open }, { who: y, ...r.parts[y].back }] };
+};
+// アルバムが見返すときに引く一覧(56-assistant-life.jsx の assistantLifeAlbumTalks に足す)
+const assistantLifeDailyAlbumTalks = () => {
+  const D = assistantLifeDailyData();
+  if (!D || !Array.isArray(D.rares) || !assistantLifeDailySceneOn()) return [];
+  const out = [];
+  const ids = ASSISTANT_LIFE_HOUSE_ORDER;
+  for (const r of D.rares) for (let i = 0; i < ids.length; i += 1) for (let j = i + 1; j < ids.length; j += 1) {
+    const t = assistantLifeDailyRareTalk(r.id, ids[i], ids[j]);
+    if (t) out.push(t);
+  }
+  return out;
+};
+// 場面を見終わったとき: 「聞いた」に数える(ミッション・🧺 7日)/初めてなら 💗 を出てきた人へ/珍しいできごとはアルバムへ
+const assistantLifeDailyFinish = async (plan, slotId) => {
+  const r = await assistantLifeDailyListen(slotId);
+  let bond = 0;
+  if (r.added && plan) {
+    bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
+    if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+      for (const id of plan.ids) { try { assistantPeerPlayerBondAdder(id, 'lifeDaily', bond); } catch (_) {} }
+    }
+    if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') { const t = assistantLifeDailyRareTalk(plan.id, plan.ids[0], plan.ids[1]); if (t) { try { assistantPeerAlbumAdd(t); } catch (_) {} } }
+  }
+  return { added: r.added, got: r.got, bond };
+};
+
+// できごとの場面(家の上に重ねる。外枠は見守るの場面 .mhl-scene と同じ)
+function AssistantLifeDailySceneView({ plan, place, look, slotLabel, slotId, onClose }) {
+  const [step, setStep] = React.useState(0);
+  const [pick, setPick] = React.useState(null);
+  const [res, setRes] = React.useState(null);
+  const busy = React.useRef(false);
+  const hasChoice = plan.kind === 'scene' && plan.choices.length > 0;
+  const atEnd = step >= plan.lines.length - 1;
+  const phase = !atEnd ? 'talk' : hasChoice && pick == null ? 'choice' : 'done';
+  const finish = async () => { if (busy.current) return; busy.current = true; setRes(await assistantLifeDailyFinish(plan, slotId)); };
+  React.useEffect(() => { if (phase === 'done') void finish(); }, [phase]);
+  const shown = [...plan.lines.slice(0, step + 1), ...(pick != null ? [plan.choices[pick].reply] : [])];
+  const bg = place && place !== 'home' && typeof assistantLifeSceneBg === 'function' ? assistantLifeSceneBg(place, look) : null;
+  const placeName = !place || place === 'home' ? '家' : assistantLifePlaceShow(place);
+  return (
+    <div className="mhl-scene" data-assistant-life-daily-scene={plan.kind} data-assistant-life-daily-scene-id={plan.id} data-assistant-life-daily-phase={phase}>
+      {bg ? <div className="bg" style={{ backgroundImage: `url(${bg.src})`, backgroundPosition: bg.pos || 'center', backgroundSize: bg.zoom ? '260%' : 'cover', filter: bg.zoom ? 'blur(2px)' : undefined }}/>
+        : <div className="bg" style={{ background: 'linear-gradient(#3b2a5a,#a0584a)' }}/>}
+      {bg && bg.tint && typeof ASSISTANT_LIFE_TINT !== 'undefined' && <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 35%,rgba(10,6,30,.85) 78%)' }}/>
+      {typeof AssistantLifeStands === 'function' && <AssistantLifeStands ids={plan.ids}/>}
+      <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
+        <button type="button" data-assistant-life-daily-scene-back onClick={onClose} aria-label="家へ戻る" className="h-11 w-11 rounded-full bg-black/50 text-[18px] text-white">←</button>
+        <p className="rounded-full bg-black/60 px-3 py-1 text-[12px] font-black text-amber-100">{plan.kind === 'rare' ? `✨ めずらしいできごと「${plan.title}」` : `${slotLabel}のできごと ・ ${placeName}`}</p>
+      </div>
+      <div className="absolute inset-x-3 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-slate-950/90 p-2 text-white" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))', maxHeight: '52%' }}
+        role="button" tabIndex={0} data-assistant-life-daily-talk onClick={() => { if (phase === 'talk') setStep(v => v + 1); }}>
+        {shown.map((l, i) => { const who = assistantById(l.who); return (
+          <div key={i} className="mb-1 flex items-start gap-1.5" data-assistant-life-daily-line={i}>
+            {who && typeof AssistantFace === 'function' && <AssistantFace who={who} size={30} accent={who.accent} expression={l.e || 'normal'}/>}
+            <p className="min-w-0 flex-1 rounded-xl bg-white px-2 py-1 text-[12.5px] font-bold leading-snug text-slate-900" style={{ wordBreak: 'auto-phrase' }}><b className="mr-1" style={{ color: (who && who.accent) || '#be185d' }}>{assistantLifeName(l.who)}</b>「{assistantLifeDailyText(l, plan.ids)}」</p>
+          </div>); })}
+        {phase === 'talk' && <p className="text-center text-[11px] font-bold text-slate-400">▼ タップで続き</p>}
+        {phase === 'choice' && <div className="mt-1 grid grid-cols-2 gap-1.5" data-assistant-life-daily-choices>
+          {plan.choices.map((c, i) => <button key={i} type="button" data-assistant-life-daily-choice={i} onClick={(ev) => { ev.stopPropagation(); setPick(i); }}
+            className="min-h-[44px] rounded-xl px-2 text-[12px] font-black text-white active:scale-95" style={{ background: 'linear-gradient(90deg,#f59e0b,#f43f5e)', wordBreak: 'auto-phrase' }}>{c.label}</button>)}
+        </div>}
+        {phase === 'done' && <div data-assistant-life-daily-result>
+          {res && <p className="mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700">{res.added
+            ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ')
+            : 'この時間帯のできごとは見ました'}</p>}
+          <button type="button" data-assistant-life-daily-scene-close onClick={(ev) => { ev.stopPropagation(); onClose(); }} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12px] font-black">🏡 家へ戻る</button>
+        </div>}
+      </div>
+    </div>);
+}
+
+// 出かけ先の丸(家の断面図の下)。同じ場所にいる人をまとめ、押すと町の地図のその場所へ。最後に1行「家に◯人・おでかけ◯人・次に動くのは◯時」
+function AssistantLifeTopStrip({ life, ids, evIds = [], onPlace }) {
+  const list = (Array.isArray(ids) ? ids : []).filter(assistantLifeTopOk);
+  const groups = {}; let home = 0;
+  for (const id of list) {
+    let w = null; try { w = assistantLifeWhereOf(life, id); } catch (_) { w = null; }
+    const place = w ? w.place : 'home';
+    if (place === 'home') { home += 1; continue; }
+    (groups[place] = groups[place] || []).push(id);
+  }
+  const places = Object.keys(groups);
+  let next = null;
+  try { const s = assistantLifeSlotAt(); const d = ASSISTANT_LIFE_SLOTS[s.i]; next = d && Number.isFinite(d.to) ? d.to % 24 : null; } catch (_) { next = null; }
+  return (
+    <div className="mx-3 mb-1.5 text-white" data-assistant-life-top-strip>
+      {places.length > 0 && <div className="flex gap-1 overflow-x-auto overscroll-contain pb-0.5" style={{ scrollbarWidth: 'none' }}>
+        {places.map(p => { const ev = groups[p].some(id => evIds.includes(id)); return (
+          <button key={p} type="button" data-assistant-life-top-place={p} onClick={() => onPlace && onPlace(p, groups[p][0])}
+            className={`flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-slate-950/85 py-0.5 pl-1 pr-2 text-[11.5px] font-black active:scale-95 ${ev ? 'border-2 border-amber-300 text-amber-100' : 'border border-white/15'}`}>
+            <span className="flex -space-x-1.5">{groups[p].slice(0, 3).map(id => { const who = assistantById(id); return who && typeof AssistantFace === 'function' ? <AssistantFace key={id} who={who} size={24} accent={who.accent}/> : null; })}</span>
+            <span>{ASSISTANT_LIFE_PLACE_ICON[p] || '🚶'} {assistantLifePlaceShow(p)}{ev ? ' ❗' : ''}</span>
+          </button>); })}
+      </div>}
+      <p className="mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100" data-assistant-life-top-sum>家に{home}人 ・ おでかけ{list.length - home}人{next != null ? ` ・ 次にみんなが動くのは ${next}:00` : ''}</p>
+    </div>);
 }
 
 // ---- part: 56-assistant-life-guide.jsx ----
@@ -67935,8 +68445,10 @@ function AssistantLifeBenefitLine({ k, tag, children, sub = '', onClick = null, 
     : <div data-assistant-life-benefit-row={k} className="mt-1 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1">{inner}</div>;
 }
 
-function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watchNow = 0, watchDone = false, giveLeft = 0, onWatch = null, onGive = null, onRoad = null, onGuide = null }) {
+// fold … 開いたトップの家の場面の下に置くとき(2026-11-11 社長「今日・次のごほうびは▼でたたむ」)。⏰ いまの1行だけ出し、📅 今日・🌱 次のごほうびは ▼ で開く
+function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watchNow = 0, watchDone = false, giveLeft = 0, onWatch = null, onGive = null, onRoad = null, onGuide = null, fold = false, below = null }) {
   const [more, setMore] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
   const rows = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : [];
   const first = rows[0] || null;
   const rest = rows.length - 1;
@@ -67967,12 +68479,17 @@ function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watc
             {rest > 0 && !more && <button type="button" data-assistant-life-now-perks-more className="min-h-[44px] w-full text-right text-[11.5px] font-black text-amber-200" onClick={() => setMore(true)}>ほか {rest} 件 ▼</button>}
           </div>
         : <AssistantLifeBenefitLine k="now" tag="⏰ いま" land={land}>いまは特別な得はありません{slotTo != null ? `(助手が動く ${slotTo}時に変わります)` : ''}</AssistantLifeBenefitLine>}
+      {fold && <button type="button" data-assistant-life-benefit-fold={open ? 'open' : 'closed'} aria-expanded={open} onClick={() => setOpen(v => !v)} className="min-h-[44px] w-full text-right text-[11.5px] font-black text-amber-200">📅 今日 ・ 🌱 次のごほうび {open ? '▲' : '▼'}</button>}
+      {(!fold || open) && <>
       {/* 📅 今日(あと何回 → 何が上がる) */}
       <AssistantLifeBenefitLine k="today" tag="📅 今日" land={land} onClick={todayClick} sub="→ 🤝 友情Lv・💗 仲良し度が上がる">{todayParts.join(' ・ ')}</AssistantLifeBenefitLine>
       {/* 🌱 次のごほうび(いちばん近い1つ) */}
       {near
         ? <AssistantLifeBenefitLine k="next" tag="🌱 次の ごほうび" land={land} onClick={onRoad} sub={near.opens.length ? `→ ${near.opens.join('・')}` : ''}>{nameOf(near.id)}の 💗 仲良し度 Lv{near.nextLv} まで <b className="text-amber-200">あと {near.remain}</b></AssistantLifeBenefitLine>
         : <AssistantLifeBenefitLine k="next" tag="🌱 次の ごほうび" land={land} onClick={onRoad}>見守る・贈る・おしゃべりで 💗 仲良し度が上がると、ごほうびが届きます</AssistantLifeBenefitLine>}
+      </>}
+      {/* 帯の下に足す1行(ナカヨシ19の「📅 今日の予定表」など。たたんでも残す) */}
+      {below}
     </section>);
 }
 
@@ -68033,7 +68550,7 @@ function AssistantLifeFirstGuide({ land = false, canWatch = false, onClose, onWa
       <ol className="mt-1.5 space-y-1.5">
         <Item n="1" head="👀 見守る・🎁 贈る・💬 おしゃべり" text=" で、助手たちと過ごす"/>
         <Item n="2" head="💗 仲良くなるとごほうび" text=" が届く(ダイヤ・飾り枠・話し方・マスモン)"/>
-        <Item n="3" head="🎮 ほかの遊びも得に" text=" なる(モンヒロビートは券なし・カードはごほうび1.5倍)"/>
+        <Item n="3" head="🎮 ほかの遊びも得に" text={` なる(モンヒロビートは券なし・カードはごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'})`}/>
       </ol>
       <p className="mt-1.5 text-[11.5px] font-bold text-amber-100">まずは 光っている「👀 見守る」を押してみよう</p>
       <div className="mt-1.5 flex gap-1.5">
@@ -68041,6 +68558,357 @@ function AssistantLifeFirstGuide({ land = false, canWatch = false, onClose, onWa
         <button type="button" data-assistant-life-guide-close onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]">わかった</button>
       </div>
     </section>);
+}
+
+// ---- part: 56-assistant-life-profile.jsx ----
+// ===== 助手紹介(2026-11-11 社長「どっかに助手のキャラ紹介ページもほしいね」・docs/progress/assistant-life/profile/PLAN.md) =====
+//   助手ライフの下のタブ「📖 紹介」→ 助手の一覧(図鑑のように並ぶ)→ 選ぶとその助手の紹介が開く。
+//   紹介に出すもの: ①立ち絵・名前・一言紹介・ひとこと ②人となり(性格・生活・いまの話し方)・好きなもの・苦手なもの
+//                   ③仲良し度・呼び方・推し・マスモン ④台詞の試し聞き(文字+表情。ボイスはまだ無い)
+//   社長の答え: 好き・苦手は贈って分かったものだけ(まだは「？」+ヒント)/台詞は仲良し度で増える/会っていない助手は開けない(点線の「？」で並べ「会った助手 6/8」)/
+//               公開前の助手(公開の印が立っていない)は名前・絵・人数のどれにも出さない/好みが分かった・台詞が増えた助手に NEW
+//   データはどれも今あるものを読むだけ(ASSISTANTS の intro・tagline・greeting/ASSISTANT_LIFE_RHYTHM/仲良し度の段/贈り物と家具の好み/マスモンの表/台詞)。
+//   保存は NEW の印のための新しいキー1つだけ(mh_assistant_life_profile_seen_v1 = { [助手id]: { n: 見た時点の数 } })。既存のキーには書かない
+//   公開の印 assistantLifeProfile が真になるまで、タブも出ない
+
+const ASSISTANT_LIFE_PROFILE_SEEN_KEY = 'mh_assistant_life_profile_seen_v1';
+const assistantLifeProfileOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled()
+  && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeProfile === true;
+
+// 一覧に並べる助手(公開の印を通す。公開前の助手は数にも入れない)
+const assistantLifeProfileRoster = () => (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : []).filter(w => w && typeof assistantReleased === 'function' && assistantReleased(w.id));
+
+// 「見た」の数の保存を読む。壊れた値は捨てる(無い助手はまだ見ていない扱い)
+const normalizeAssistantLifeProfileSeen = (v) => {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const [id, x] of Object.entries(v)) {
+    const n = x && typeof x === 'object' ? Number(x.n) : NaN;
+    if (typeof id === 'string' && id.length <= 24 && Number.isFinite(n) && n >= 0) out[id] = { n: Math.floor(n) };
+  }
+  return out;
+};
+
+// 仲良し度(点・Lv・段の名前・次まで)。カード部の口と同じ写し(_assistantLifeCardBonds・56-assistant-life-masmon.jsx)を読む
+const assistantLifeProfileBond = (id, levelOf) => {
+  let points = 0;
+  try {
+    const b = typeof _assistantLifeCardBonds !== 'undefined' && _assistantLifeCardBonds ? _assistantLifeCardBonds[id] : null;
+    const p = typeof normalizeAssistantBond === 'function' ? normalizeAssistantBond(b).points : 0;
+    points = Number.isFinite(p) ? p : 0;
+  } catch (_) { points = 0; }
+  let lv = typeof assistantBondLevel === 'function' ? assistantBondLevel(points) : 1;
+  const fromProp = typeof levelOf === 'function' ? Number(levelOf(id)) : NaN;
+  if (Number.isFinite(fromProp) && fromProp > lv) lv = fromProp; // 写しがまだ届いていないとき(開いた直後)は画面の値に合わせる
+  let stage = null;
+  try { stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, id) : null; } catch (_) { stage = null; }
+  const next = typeof assistantBondNext === 'function' ? assistantBondNext(points) : null;
+  const cur = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : []).find(s => s.level === lv);
+  const rate = next && cur && next.need > cur.need ? Math.max(0, Math.min(1, (points - cur.need) / (next.need - cur.need))) : 1;
+  return { lv, title: (stage && stage.title) || '', tone: (stage && stage.tone) || '', next: next && next.level > lv ? next : null, rate };
+};
+
+// プレイヤーの呼び方({name} を埋める)
+const assistantLifeProfileCall = (id) => { try { return typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(id) : 'あなた'; } catch (_) { return 'あなた'; } };
+
+// 持ち物の名前と絵(道具)
+const assistantLifeProfileItem = (key) => {
+  const def = typeof assistantLifeAnyGiftDef === 'function' ? assistantLifeAnyGiftDef(key) : null;
+  if (!def) return null;
+  const item = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).find(x => x && x.id === def.itemId) || {};
+  return { key, name: item.name || '', emoji: item.emoji || '🎁' };
+};
+
+// 好き・苦手の行。分かったかどうかは贈った記録(mh_assistant_life_likes_v1)を読むだけ
+const assistantLifeProfileLikes = (id, giftSt) => {
+  const known = (k) => typeof assistantLifeGiftKnown === 'function' && assistantLifeGiftKnown(id, k, giftSt);
+  const rows = [];
+  const push = (label, likes, of) => {
+    if (!likes) return;
+    const cells = [...(likes.like || []).map(k => ({ k, like: true })), ...(likes.bad || []).map(k => ({ k, like: false }))]
+      .map(c => { const shown = known(c.k); const it = shown ? of(c.k) : null; return { ...c, shown: !!(shown && it), it }; });
+    if (cells.length) rows.push({ label, cells });
+  };
+  push('道具', typeof ASSISTANT_LIFE_GIFT_LIKES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LIKES[id] : null, assistantLifeProfileItem);
+  if (typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn()) push('1人に', typeof ASSISTANT_LIFE_SOLO_LIKES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LIKES[id] : null, assistantLifeProfileItem);
+  if (typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled()) push('家具', typeof ASSISTANT_LIFE_FURN_LIKES !== 'undefined' ? ASSISTANT_LIFE_FURN_LIKES[id] : null, (k) => (typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null));
+  const cells = rows.flatMap(r => r.cells);
+  // ヒント: まだ分かっていない「好き」のうち、助手の話(ASSISTANT_LIFE_GIFT_HINT_LINES)があるものを1つ
+  const hints = typeof ASSISTANT_LIFE_GIFT_HINT_LINES !== 'undefined' && ASSISTANT_LIFE_GIFT_HINT_LINES[id] ? ASSISTANT_LIFE_GIFT_HINT_LINES[id] : {};
+  const hintCell = cells.find(c => c.like && !c.shown && hints[c.k] && typeof hints[c.k].t === 'string');
+  // モンスター(マスモンの表の好き・苦手。贈る仕組みが無いので最初から出す)
+  const plan = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(id) : null;
+  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾' } : null; };
+  const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
+  const monBad = plan && Array.isArray(plan.dislikeMon) ? plan.dislikeMon.map(monOf).filter(Boolean) : [];
+  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad };
+};
+
+// 台詞の最初に聞ける Lv(bond が無い行は Lv1 から)
+const assistantLifeProfileMinBond = (line) => {
+  const b = line && line.bond;
+  if (Array.isArray(b)) return Number.isFinite(b[0]) ? b[0] : 1;
+  return Number.isFinite(b) ? b : 1;
+};
+// 試し聞きの台詞(種類ごと)。open … いま聞ける行、lockedAt … 次に増えるLv、lockedN … その先にある数
+const assistantLifeProfileVoices = (id, lv, giftSt) => {
+  const call = assistantLifeProfileCall(id);
+  const fill = (t, extra = {}) => {
+    let s = String(t || '').replace(/\{name\}/g, call);
+    for (const [k, v] of Object.entries(extra)) s = s.split(`{${k}}`).join(v);
+    return /[{}]/.test(s) ? '' : s; // 埋められない穴(相手の名前・場所など)の行は出さない
+  };
+  const groups = [];
+  // あいさつ(HOME のひとこと。仲良し度の段で増える)
+  try {
+    const def = typeof ASSISTANT_SCENES !== 'undefined' ? ASSISTANT_SCENES.home : null;
+    const list = def && typeof filterAssistantLines === 'function' ? filterAssistantLines(def.lines || [], id) : [];
+    const all = list.map(l => ({ e: l.e, t: fill(l.t), min: assistantLifeProfileMinBond(l) })).filter(l => l.t);
+    const seen = new Set();
+    const uniq = all.filter(l => (seen.has(l.t) ? false : (seen.add(l.t), true)));
+    const open = uniq.filter(l => l.min <= lv);
+    const later = uniq.filter(l => l.min > lv);
+    const at = later.length ? Math.min(...later.map(l => l.min)) : null;
+    if (uniq.length) groups.push({ key: 'home', label: 'あいさつ', open, lockedAt: at, lockedN: later.length });
+  } catch (_) {}
+  // 贈ったとき(好みが分かった道具の台詞だけ)
+  try {
+    const out = [];
+    const add = (table) => {
+      const mine = table && table[id] ? table[id] : {};
+      for (const [k, rows] of Object.entries(mine)) {
+        if (!(typeof assistantLifeGiftKnown === 'function' && assistantLifeGiftKnown(id, k, giftSt))) continue;
+        const it = assistantLifeProfileItem(k);
+        for (const r of Array.isArray(rows) ? rows : []) { const t = fill(r && r.t, { item: it ? it.name : '' }); if (t) out.push({ e: r.e, t }); }
+      }
+    };
+    add(typeof ASSISTANT_LIFE_GIFT_LINES !== 'undefined' ? ASSISTANT_LIFE_GIFT_LINES : null);
+    if (typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn()) add(typeof ASSISTANT_LIFE_SOLO_LINES !== 'undefined' ? ASSISTANT_LIFE_SOLO_LINES : null);
+    groups.push({ key: 'gift', label: '贈ったとき', open: out, lockedAt: null, lockedN: 0, emptyNote: '贈ると、ここで聞けるようになります' });
+  } catch (_) {}
+  // 寝言
+  try {
+    const talks = typeof ASSISTANT_LIFE_SLEEP_TALKS !== 'undefined' ? ASSISTANT_LIFE_SLEEP_TALKS : [];
+    const mine = talks.filter(x => x && x.who === id && x.line === 'talk' && Array.isArray(x.lines) && x.lines[0])
+      .map(x => ({ e: x.lines[0].e, t: fill(x.lines[0].t), min: Number.isFinite(x.lv) ? x.lv : 1 })).filter(l => l.t);
+    const open = mine.filter(l => l.min <= lv), later = mine.filter(l => l.min > lv);
+    if (mine.length) groups.push({ key: 'sleep', label: '寝言', open, lockedAt: later.length ? Math.min(...later.map(l => l.min)) : null, lockedN: later.length });
+  } catch (_) {}
+  return groups;
+};
+
+// NEW の印に使う数(分かった好みの数+聞ける台詞の数)
+const assistantLifeProfileCount = (id, lv, giftSt) => {
+  try {
+    const likes = assistantLifeProfileLikes(id, giftSt);
+    const voices = assistantLifeProfileVoices(id, lv, giftSt);
+    return likes.known + voices.reduce((a, g) => a + g.open.length, 0);
+  } catch (_) { return 0; }
+};
+
+// 生活のリズム(寝る・起きる時刻)
+const assistantLifeProfileRhythm = (id) => {
+  const r = typeof ASSISTANT_LIFE_RHYTHM !== 'undefined' ? ASSISTANT_LIFE_RHYTHM[id] : null;
+  if (!r) return '';
+  const h = (n) => (Number.isFinite(n) ? `${n}時` : '');
+  return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
+};
+
+// 一覧(タブ「📖 紹介」の中身)
+function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null }) {
+  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const [seen, setSeen] = React.useState(null); // 読めるまで null(NEW を出さない)
+  const [openId, setOpenId] = React.useState(null);
+  const boxRef = React.useRef(null);
+  const roster = assistantLifeProfileRoster();
+  const met = new Set(Array.isArray(metIds) ? metIds : []);
+  const metList = roster.filter(w => met.has(w.id));
+  const counts = {};
+  for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
+  React.useEffect(() => {
+    let alive = true;
+    Promise.resolve(typeof storeGet === 'function' ? storeGet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, null, false) : null)
+      .then(v => { if (alive) setSeen(normalizeAssistantLifeProfileSeen(v)); }).catch(() => { if (alive) setSeen({}); });
+    return () => { alive = false; };
+  }, []);
+  const save = (next) => { setSeen(next); try { if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false); } catch (_) {} };
+  // はじめて一覧を開いたとき(まだ記録の無い助手)は、いまの数を控えるだけ(全員に NEW が付かないように)
+  // 贈った記録が読み終わるまでは数を控えない・NEW も出さない(読む前の少ない数を控えると、あとで全員に NEW が付く・2026-11-11 最終確認の留意)
+  const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
+  React.useEffect(() => {
+    if (!seen || !giftReady) return;
+    const miss = metList.filter(w => !seen[w.id]);
+    if (!miss.length) return;
+    const next = { ...seen };
+    for (const w of miss) next[w.id] = { n: counts[w.id] || 0 };
+    save(next);
+  }, [seen, giftReady, metList.map(w => w.id).join(',')]);
+  const isNew = (id) => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  const open = (id) => {
+    if (!met.has(id)) return;
+    if (seen && giftReady) save({ ...seen, [id]: { n: counts[id] || 0 } });
+    setOpenId(id);
+  };
+  const face = land ? 48 : 60;
+  return (
+    <div ref={boxRef} className="px-3 pb-3 pt-1" data-assistant-life-profile-list>
+      <div className="mb-2 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[16px] font-black text-white">📖 助手紹介</p>
+          <p className="text-[11px] font-bold text-indigo-200">選ぶと、その助手のことが分かります</p>
+        </div>
+        <span data-assistant-life-profile-count={`${metList.length}/${roster.length}`} className="shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100">会った助手 {metList.length}/{roster.length}</span>
+      </div>
+      <div className={`grid gap-2 ${land ? 'grid-cols-4' : 'grid-cols-2'}`}>
+        {roster.map(w => {
+          if (!met.has(w.id)) return (
+            <div key={w.id} data-assistant-life-profile-card="unmet" aria-label="まだ会っていない助手" className="rounded-2xl border-2 border-slate-600 bg-slate-950/70 p-2">
+              <div className="flex items-center justify-center rounded-full border-2 border-dashed border-slate-500 font-black text-slate-500" style={{ width: face, height: face, fontSize: face / 2 }}>？</div>
+              <p className="mt-1 text-[15px] font-black text-slate-400">？？？</p>
+              <p className="text-[11px] font-bold text-slate-400">まだ会っていません</p>
+            </div>);
+          const b = assistantLifeProfileBond(w.id, bondLevelOf);
+          return (
+            <button key={w.id} type="button" data-assistant-life-profile-card={w.id} onClick={() => open(w.id)} aria-label={`${w.name}の紹介を見る`}
+              className="relative overflow-hidden rounded-2xl border-2 bg-slate-900/85 p-2 text-left active:scale-[.98]" style={{ borderColor: w.accent, backgroundImage: `linear-gradient(160deg, ${w.accent}44, transparent 65%)` }}>
+              {isNew(w.id) && <span data-assistant-life-profile-new className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950">NEW</span>}
+              {typeof AssistantFace === 'function' && <AssistantFace who={w} size={face} accent={w.accent} expression="happy"/>}
+              <p className="mt-1 text-[15px] font-black text-white">{w.name}</p>
+              <p className="text-[10.5px] font-bold leading-snug text-slate-200" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
+              <span className="mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 Lv{b.lv}</span>
+            </button>);
+        })}
+      </div>
+      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-300">💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</p>
+      {/* 紹介は家の画面のいちばん外の枠(data-assistant-life-screen)へ描く。見出しやタブの下に潜らないように(🔄横でも同じ枠の中) */}
+      {openId && (() => {
+        const sheet = <AssistantLifeProfileSheet id={openId} bondLevelOf={bondLevelOf} land={land} giftSt={giftSt} onMasmon={onMasmon} onClose={() => setOpenId(null)}/>;
+        const host = boxRef.current && boxRef.current.closest ? boxRef.current.closest('[data-assistant-life-screen]') : null;
+        return host && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(sheet, host) : sheet;
+      })()}
+    </div>);
+}
+
+// 1人ずつの紹介(一覧の上にかぶせる)
+function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftSt = null, onMasmon = null, onClose }) {
+  const who = typeof assistantById === 'function' ? assistantById(id) : null;
+  const [vKey, setVKey] = React.useState('home');
+  const [vIdx, setVIdx] = React.useState(0);
+  const scrollRef = React.useRef(null);
+  const refs = { who: React.useRef(null), likes: React.useRef(null), bond: React.useRef(null), voice: React.useRef(null) };
+  if (!who) return null;
+  const b = assistantLifeProfileBond(id, bondLevelOf);
+  const likes = assistantLifeProfileLikes(id, giftSt);
+  const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
+  const vg = voices.find(g => g.key === vKey) || voices[0] || null;
+  const vLine = vg && vg.open.length ? vg.open[vIdx % vg.open.length] : null;
+  const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+  const teamShow = [...team.filter(t => t.lead), ...team.filter(t => !t.lead)].slice(0, 3);
+  const mat = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(id) : null;
+  const oshi = mat && mat.core && typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[mat.core] ? MONSTER_LINEAGES[mat.core] : null;
+  const oshiMon = oshi && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(oshi.monId) : null;
+  const call = assistantLifeProfileCall(id);
+  const greeting = String(who.greeting || '').replace(/\{name\}/g, call);
+  const jump = (k) => { try { const box = scrollRef.current, el = refs[k].current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
+  const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
+  const h3 = 'mb-1.5 flex items-center justify-between gap-2 text-[13.5px] font-black text-white';
+  const jw = (t) => (typeof t === 'string' && typeof jaWrap === 'function' ? jaWrap(t) : t); // 言葉の途中で折れないように
+  const kv = (k, v) => (<div className="grid gap-x-3 py-0.5 text-[12px] leading-relaxed" style={{ gridTemplateColumns: 'max-content 1fr' }}><span className="whitespace-nowrap font-bold text-slate-400">{k}</span><span className="font-bold text-slate-100" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(v)}</span></div>);
+  const chip = (c, i) => (
+    <span key={i} data-assistant-life-profile-like={c.shown ? (c.like ? 'like' : 'bad') : 'unknown'}
+      className={`inline-flex items-center gap-1 rounded-xl border px-2 py-1 text-[11.5px] font-black ${!c.shown ? 'border-dashed border-slate-600 text-slate-500' : c.like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`}>
+      {c.like ? '💗' : '💧'} {c.shown ? `${c.it.emoji} ${c.it.name}` : '？'}</span>);
+  const monChip = (m, like) => (
+    <span key={`${like}-${m.id}`} className={`inline-flex items-center gap-1 rounded-xl border px-1.5 py-1 text-[11.5px] font-black ${like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`}>
+      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}</span>);
+  const hero = (
+    <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
+      {typeof assistantFullImage === 'function' && <img src={assistantFullImage(who, 'happy')} alt={who.name} className="pointer-events-none absolute bottom-0 object-contain object-bottom" style={land ? { right: -10, height: '86%', width: '62%' } : { right: -30, height: '112%', width: '68%' }}/>}
+      <div className="absolute left-3.5 z-[2]" style={{ top: land ? 56 : 14, width: land ? 150 : 210 }}>
+        <p className="text-[28px] font-black leading-tight text-white" style={{ textShadow: '0 2px 6px #000' }}>{who.name}</p>
+        <p className="text-[12.5px] font-black leading-snug" style={{ color: who.accent, textShadow: '0 1px 3px #000', ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline}</p>
+        <span className="mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white">💗 Lv{b.lv} {b.title}</span>
+      </div>
+      {greeting && <div data-assistant-life-profile-greeting className="absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg" style={{ borderColor: who.accent, width: land ? 170 : 205 }}>
+        <span className="block text-[10px] font-black" style={{ color: who.accent }}>ひとこと</span><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(greeting)}</span></div>}
+    </div>);
+  const jumps = (
+    <div className="flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2" data-assistant-life-profile-jump>
+      {[['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']].map(([k, l]) => (
+        <button key={k} type="button" onClick={() => jump(k)} className="min-h-[36px] flex-1 rounded-xl border border-white/10 bg-slate-800 text-[11.5px] font-black text-slate-100 active:scale-95">{l}</button>))}
+    </div>);
+  const secWho = (
+    <div ref={refs.who} className={card} data-assistant-life-profile-sec="who">
+      <p className={h3}>{who.emoji || '🌟'} 人となり</p>
+      {who.intro && kv('性格', who.intro)}
+      {assistantLifeProfileRhythm(id) && kv('生活', assistantLifeProfileRhythm(id))}
+      {b.tone && kv('話し方(いま)', b.tone)}
+    </div>);
+  const secLikes = (
+    <div ref={refs.likes} className={card} data-assistant-life-profile-sec="likes">
+      <p className={h3}><span className="whitespace-nowrap">{land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'}</span>{likes.total > 0 && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">分かったもの {likes.known}/{likes.total}</em>}</p>
+      {likes.rows.map(r => (
+        <div key={r.label} className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">{r.label}</span>{r.cells.map(chip)}</div>))}
+      {(likes.monLike.length > 0 || likes.monBad.length > 0) && (
+        <div className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">モンスター</span>{likes.monLike.map(m => monChip(m, true))}{likes.monBad.map(m => monChip(m, false))}</div>)}
+      {likes.hint && <p data-assistant-life-profile-hint className="mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200">💭 {who.name}の話から:「{String(likes.hint.t).replace(/\{name\}/g, call)}」</p>}
+      {likes.total > 0 && <p className="mt-1 text-[10.5px] font-bold text-slate-400">？は贈ると分かります。分かった好みはここに残ります。</p>}
+    </div>);
+  const secBond = (
+    <div ref={refs.bond} className={card} data-assistant-life-profile-sec="bond">
+      <p className={h3}>🤝 いまのきずな</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2"><span className="whitespace-nowrap text-[14px] font-black text-white">💗 仲良し度 Lv{b.lv} <span className="text-[11px] text-pink-200">{b.title}</span></span>{b.next && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400">あと {b.next.remain} で Lv{b.next.level}</span>}</div>
+      <div className="my-1.5 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full rounded-full bg-gradient-to-r from-pink-400 to-rose-500" style={{ width: `${Math.round(b.rate * 100)}%` }}/></div>
+      {kv('呼び方', call)}
+      {oshi && kv('推し', <span className="inline-flex items-center gap-1">{oshiMon && (oshiMon.faceIconUrl || oshiMon.iconUrl) ? <img src={oshiMon.faceIconUrl || oshiMon.iconUrl} alt="" className="h-5 w-5 rounded-md object-contain"/> : null}{oshi.name}種</span>)}
+      {teamShow.length > 0 && <>
+        <p className="mb-1 mt-2 text-[11px] font-bold text-slate-400">マスモン{team.length > teamShow.length ? `(${team.length}体のうち${teamShow.length}体)` : ''}</p>
+        <div className="flex gap-1.5">{teamShow.map((t, i) => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null; return (
+          <div key={i} className={`flex-1 rounded-xl border bg-slate-950/80 px-1 py-1.5 text-center ${t.lead ? 'border-amber-300' : 'border-white/10'}`}>
+            {m && (m.faceIconUrl || m.iconUrl) ? <img src={m.faceIconUrl || m.iconUrl} alt="" className="mx-auto h-10 w-10 rounded-lg object-contain"/> : <span className="block text-[24px]">{(m && m.emoji) || '🐾'}</span>}
+            <b className="block truncate text-[11px] text-white">{t.nick || (m && m.name) || ''}</b><span className="text-[10px] font-bold text-slate-300">{t.lead ? '👑 勇者モン' : (m && m.name) || ''}</span>
+          </div>); })}</div>
+        {onMasmon && <button type="button" data-assistant-life-profile-masmon onClick={() => { onClose(); onMasmon(id); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12.5px] font-black text-white active:scale-[.98]">🐾 マスモンをくわしく見る ›</button>}
+      </>}
+    </div>);
+  const secVoice = (
+    <div ref={refs.voice} className={card} data-assistant-life-profile-sec="voice">
+      <p className={h3}><span>🔊 台詞を聞く</span>{vg && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">聞ける台詞 {voices.reduce((a, g) => a + g.open.length, 0)}</em>}</p>
+      <div className="flex items-start gap-2">
+        {typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={who} size={52} accent={who.accent} expression={(vLine && vLine.e) || 'happy'}/></span>}
+        <p data-assistant-life-profile-voice-line className="min-h-[52px] flex-1 rounded-2xl bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800"><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(vLine ? vLine.t : (vg && vg.emptyNote) || 'まだ聞ける台詞がありません')}</span></p>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {voices.map(g => (
+          <button key={g.key} type="button" data-assistant-life-profile-voice-tab={g.key} aria-pressed={vg && vg.key === g.key} onClick={() => { setVKey(g.key); setVIdx(0); }}
+            className={`min-h-[34px] rounded-full border px-2.5 text-[11px] font-black ${vg && vg.key === g.key ? 'text-white' : 'border-white/10 bg-slate-950/80 text-slate-200'}`} style={vg && vg.key === g.key ? { borderColor: who.accent, backgroundColor: `${who.accent}33` } : undefined}>{g.label} {g.open.length}</button>))}
+        {vg && vg.lockedAt && <span data-assistant-life-profile-voice-lock className="inline-flex min-h-[34px] items-center rounded-full border border-white/10 bg-slate-950/80 px-2.5 text-[11px] font-black text-slate-500">🔒 Lv{vg.lockedAt} から あと{vg.lockedN}</span>}
+      </div>
+      <button type="button" data-assistant-life-profile-voice-next disabled={!vg || vg.open.length < 2} onClick={() => setVIdx(i => i + 1)} className="mt-2 min-h-[44px] w-full rounded-xl text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40" style={{ backgroundColor: who.accent }}>▶ もう1つ聞く</button>
+      <p className="mt-1.5 text-[10.5px] font-bold leading-snug text-slate-400">表情つきで台詞が出ます(ボイスはまだありません)。仲良し度が上がると、聞ける台詞が増えます。</p>
+    </div>);
+  const top = (
+    <div className="flex items-center gap-2 border-b border-white/10 bg-slate-950 px-3 py-2" style={{ paddingTop: land ? 8 : 'calc(8px + env(safe-area-inset-top))' }}>
+      <button type="button" data-assistant-life-profile-close onClick={onClose} className="min-h-[44px] shrink-0 rounded-xl border border-white/15 bg-slate-800 px-3 text-[13px] font-black text-white active:scale-95">← 一覧へ</button>
+      <p className="min-w-0 truncate text-[17px] font-black text-white">{who.name}のこと</p>
+    </div>);
+  return (
+    <div className="absolute inset-0 z-[60] flex bg-slate-950" data-assistant-life-profile={id} role="dialog" aria-label={`${who.name}の紹介`} style={land ? { flexDirection: 'row' } : { flexDirection: 'column' }}>
+      {land ? <>
+        <div className="relative h-full w-[34%] max-w-[320px] shrink-0">{hero}
+          <button type="button" data-assistant-life-profile-close onClick={onClose} className="absolute left-2 top-2 z-[3] min-h-[44px] rounded-xl border border-white/15 bg-slate-800/90 px-3 text-[13px] font-black text-white active:scale-95">← 一覧へ</button></div>
+        <div className="flex min-w-0 flex-1 flex-col">{jumps}
+          <div ref={scrollRef} className="mh-scroll relative min-h-0 flex-1 overflow-y-auto p-2.5"><div className="grid grid-cols-2 items-start gap-2.5"><div className="flex flex-col gap-2.5">{secWho}{secLikes}</div><div className="flex flex-col gap-2.5">{secBond}{secVoice}</div></div></div>
+        </div>
+      </> : <>
+        {top}
+        <div ref={scrollRef} className="mh-scroll relative min-h-0 flex-1 overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          {hero}
+          <div className="sticky top-0 z-[3]">{jumps}</div>
+          <div className="flex flex-col gap-2.5 p-3">{secWho}{secLikes}{secBond}{secVoice}</div>
+        </div>
+      </>}
+    </div>);
 }
 
 // ---- part: 56-assistant-life-rel.jsx ----
@@ -72749,11 +73617,11 @@ const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'
 const amgtRankOf = (v) => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
 // 数字(社長 11-11: 修行の伸びはふつう)。数字はここだけ
 const AMGT_NUM = Object.freeze({
-  gain: [4, 8], // 修行1回の熟練(主)
-  realAll: [1, 2], // 実戦修行で、覚えている全部の技に足す分
+  gain: [3, 6], // 修行1回の熟練(主)。移動12回で約75%(前は [4, 8]。シュギョウ2の試算・台帳 #5328)
+  realAll: [1, 1], // 実戦修行で、覚えている全部の技に足す分(移動12回で [1, 2] → [1, 1])
   stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
   fat: 12, str: 2, // 疲労・ストレス
-  perDay: 2, // 1日の修行の回数の上限(案)
+  perDay: 3, // 1日の修行の回数の上限(2026-11-11 社長: 移動12回に合わせて 2 → 3。1回の伸びは約75%のまま)
   fatStop: 45, // これ以上疲れていたら修行に行かない(訓練側が休ませる)
   goAt: 0.4, // モンヒロバトルにいた回に修行へ行く起こりやすさに足す分(性格の p に足す)
   initPerLv: 0.3, initMax: 30, // 覚えている技の熟練の初めの値 = 育成 Lv × 0.3(最大30)
@@ -72942,12 +73810,11 @@ const amgtEnsure = (st, aid, row, e) => {
 const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { s, t, x: String(x || '').slice(0, 60) }].slice(-AMGT_EV); };
 
 // ---------- 修行の場所: 助手の生活でモンヒロバトルにいた回を覚えておく ----------
-// 生活の1つの時間(life.abs = 日×6+区切り)が、第①段階のどの回に当たるか(始めと終わり)
+// 生活の1つの時間(life.abs = 日×12+区切り。2時間ずつ)が、第①段階のどの回に当たるか(始めと終わり)
 const amgtLifeSlotsToGrow = (abs) => {
-  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
-  if (!S || !Number.isInteger(abs)) return [];
-  const n = S.length || 6; // 1日の区切りの数は生活の表から読む(6回→12回に変わっても合う)
-  const day = Math.floor(abs / n); const s = S[abs - day * n]; if (!s) return [];
+  // 12区切り(2026-11-11 ナカヨシ11。abs = 日×12+j・2時間ずつ)。区切りの時刻は assistantLifeSlotOfAbs の from・to
+  if (typeof assistantLifeSlotOfAbs !== 'function' || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 12); const s = assistantLifeSlotOfAbs(abs); if (!s || !Number.isFinite(s.from)) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
 };
@@ -75191,6 +76058,7 @@ const alfEnsureHouse = async ({ force = false } = {}) => {
 // ---------- 行き来の決め方(端末で数える。表の側でも同じ上限を数える) ----------
 // 家にいて手が空いている助手から、ときどきフレンドの家へ行く人を選ぶ(純粋な関数。検査が直接呼ぶ)
 //   上限: みんなで1日 go 回(on 3・thin 1)/同じ家1日1回/1回に1〜2人/寝ている・けんか中・距離をおいている助手は行かない/深夜は行かない
+const ALF_SLOT12_CHANCE = 0.5;
 const assistantLifeFriendPickOuting = ({ life, ids, houses, st, settings, mode, pendingIds = [], abs, salt = '' }) => {
   if (!life || mode === 'off' || !settings || !settings.open) return null;
   const lim = ALF_LIMITS[mode === 'on' ? 'on' : 'thin'];
@@ -75204,7 +76072,8 @@ const assistantLifeFriendPickOuting = ({ life, ids, houses, st, settings, mode, 
   if (!cand.length) return null;
   const rand = assistantLifeRng(`${salt}|friend|${abs}|${cand.join(',')}`);
   const social = cand.reduce((t, id) => t + ((ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].social) || 0.5), 0) / cand.length;
-  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1);
+  // 移動が1日12回になったので、1回ごとの確率は前の半分(1日に出かける回数はいまと同じ。台帳 #5328)
+  const chance = Math.min(0.6, 0.15 + 0.3 * social) * (life.slot === 'night' ? 0.7 : 1) * ALF_SLOT12_CHANCE;
   if (rand() >= chance) return null;
   const muted = new Set(settings.muted || []);
   const went = st.went || {};
@@ -79715,7 +80584,9 @@ const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null), mult = 1)
 };
 // 助手ライフ: カード部屋にいる助手と対戦すると、ごほうび(ビートP・カードランクの経験値・クイック周回)が 1.5倍(2026-11-07 社長・案A)
 //   手で遊んだ助手と対戦だけ。その日はじめての勝ちの +50・+30 は倍にしない。0 は 0 のまま
-const CARD_LIFE_UP_MULT = 1.5;
+//   2026-11-11 移動が1日12回になったので、上乗せを +0.5 → +0.375(×1.375。1日に取れる量はいまの約1.5倍。台帳 #5304・#5328)
+const CARD_LIFE_UP_MULT = 1.375;
+const CARD_LIFE_UP_LABEL = '1.375倍'; // 画面に出す倍率の字(帯・結果・ヘルプと同じ)
 const cardLifeUpApply = (n, mult = 1) => {
   const v = Number.isFinite(n) ? n : 0;
   return Number.isFinite(mult) && mult > 1 && v > 0 ? Math.round(v * mult) : v;
@@ -84071,9 +84942,8 @@ const cardLifeRewardLeft = (id, now = Date.now()) => {
 const cardLifeRewardSpent = (id, now = Date.now()) => {
   const s = cardLifeSlotNow(now);
   if (!s || typeof id !== 'string' || !id || cardLifeRewardLeft(id, now)) return null;
-  const list = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS : null;
-  const nx = list && list.length ? list[(s.i + 1) % list.length] : null;
-  return { next: nx && Number.isFinite(nx.from) ? nx.from : null };
+  // 移動は2時間ごと(12区切り)。次の区切りの始まり = いまの区切りの終わり
+  return { next: Number.isFinite(s.to) ? s.to % 24 : null };
 };
 // 使い切ったときの言い方(部屋のボタン・相手えらびの帯で同じ。社長 Q2 A)
 const cardLifeSpentText = (sp, name = '') => `🃏 ${name ? `${name}の` : ''}ごほうびアップは使い切りました…次は${sp && Number.isFinite(sp.next) ? `${sp.next}時` : '次の時間'}から`;
@@ -87718,7 +88588,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {lifeFoes.length > 0 && <div data-card-foe-life-band={lifeUpFoes.length ? 'up' : 'spent'} className={`rounded-xl border-2 px-2.5 py-1.5 text-[13px] font-black leading-snug ${lifeUpFoes.length ? 'border-amber-300 bg-amber-950/80 text-amber-200' : 'border-slate-500 bg-slate-800/90 text-slate-200'}`} style={JA_LABEL_STYLE}>
             {lifeUpFoes.length > 0 && <>
               <p>{jaWrap(`🃏 いまカード部屋にいる助手: ${lifeUpFoes.map((x) => x.name).join('・')}`)}</p>
-              <p className="text-[12px] text-white">{jaWrap('この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が 1.5倍')}</p>
+              <p className="text-[12px] text-white">{jaWrap(`この助手と対戦すると、ビートP・カードランクの経験値・クイック周回が ${CARD_LIFE_UP_LABEL}`)}</p>
             </>}
             {lifeFoes.filter((x) => lifeSpent[x.id]).map((x) => <p key={x.id} data-card-foe-life-spent={x.id} className={`text-[12px] text-slate-300 ${lifeUpFoes.length ? 'mt-0.5' : ''}`}>{jaWrap(cardLifeSpentText(lifeSpent[x.id], x.name))}</p>)}
           </div>}
@@ -87849,7 +88719,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {/* カード部屋にいた助手と対戦した(助手ライフ・2026-11-07 社長)。1.5倍で増えたときだけ出す */}
             {cardResultLifeUp(r) && <div data-card-result-life-up className="my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
               <p>{jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)}</p>
-              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 1.5倍(${cardResultPlain(r)} → ${r.got})`)}</p>
+              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}(${cardResultPlain(r)} → ${r.got})`)}</p>
             </div>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
@@ -95046,7 +95916,7 @@ const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = fals
   const sameDay = cur.day === today;
   const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
-  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: 'カード部屋の助手と対戦(1.5倍)', xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
@@ -100931,6 +101801,11 @@ function MonsterHeroGame() {
   const missionClaimingRef = useRef(false);
   // いま一緒に遊んでいる助手。保存が無い既存プレイヤーは「みゅあ」のまま変わらない
   const [selectedAssistantId, setSelectedAssistantId] = useState(() => normalizeAssistantId(null));
+  // 助手の解放(18-assistant-partner.jsx)。mh_assistant_partner_v1 と mh_assistant_card_uses_v1。続けて書いても取りこぼさないよう ref も持つ
+  const [assistantPartner, setAssistantPartner] = useState(() => normalizeAssistantPartner(null));
+  const [assistantCardUses, setAssistantCardUses] = useState({});
+  const assistantPartnerRef = useRef(normalizeAssistantPartner(null));
+  const assistantCardUsesRef = useRef({});
   const selectedAssistantIdRef = useRef(normalizeAssistantId(null));
   // 助手選択の画面を出すかどうか(はじめて遊ぶ人にだけ、名前を決めるより前に出す)
   const [assistantChosen, setAssistantChosen] = useState(true);
@@ -104077,6 +104952,62 @@ function MonsterHeroGame() {
   const [cardShopState, setCardShopState] = useState(null); // { point, starter, shop }(売り場に出す分だけ。保存の正本は mh_card_*)
   const [cardPackOpen, setCardPackOpen] = useState(null);   // パックを開ける画面に渡す結果 { packId, packs, dupPoint, cost }
   const rhythmEventStorySeenRef = useRef(null);
+  // 助手の解放: ほかの部(助手ライフ・贈る・マスモン・おしゃべり)が assistantPartnerOkNow(id) で読む「いまの値」を、描くたびに知らせる(値を写すだけ)
+  assistantPartnerSetNow({ state: assistantPartner, uses: assistantCardUses, seenStoryIds: Array.isArray(rhythmEventStorySeen) ? rhythmEventStorySeen : [], ownedCards: unlockedTeachingIds });
+  // 結果画面の進み具合に出す、この戦いで使った「まだ助手でない助手」と、この戦いで解放した助手(HOME に戻ると空にする)
+  const assistantPartnerRunUsesRef = useRef({});
+  const assistantPartnerRunUnlockedRef = useRef([]);
+  // この助手は「助手」か(公開ずみ・お話の条件・解放したか)。続けて呼ばれても新しい値で判定するよう ref から読む
+  const assistantIsPartner = (id) => assistantPartnerOkWith(assistantPartnerRef.current, rhythmEventStorySeenRef.current, id);
+  // 助手の解放の保存。ref を先に変えてから書く(続けて呼ばれても取りこぼさない)
+  const saveAssistantPartner = (next) => {
+    assistantPartnerRef.current = next; setAssistantPartner(next);
+    void Promise.resolve().then(() => storeSet(ASSISTANT_PARTNER_KEY, next, false)).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
+  };
+  // モンヒロバトルで助手のアシストカードを1回切った(プレイヤーが切った分だけ。AIコピー・デバッグ戦は呼ぶ側で除く)
+  // 使った回数の保存は、戦いの終わりにまとめて書く(2026-11-11 窓口・ミハリ3: クイック周回で切るたびに書かない)。
+  //   途中で落ちても数え漏れが1戦ぶんを超えないよう、戦いの終わり・画面が替わったとき・ページを離れるとき・まだ書いていない回数が
+  //   ASSISTANT_CARD_USES_FLUSH_EVERY に届いたときに書く。解放(mode の unlocked が増える)はその場ですぐ書く(取りこぼさない)
+  const ASSISTANT_CARD_USES_FLUSH_EVERY = 20;
+  const assistantCardUsesDirtyRef = useRef(0);
+  const flushAssistantCardUses = () => {
+    if (!assistantCardUsesDirtyRef.current) return;
+    assistantCardUsesDirtyRef.current = 0;
+    const uses = assistantCardUsesRef.current;
+    setAssistantCardUses(uses);
+    void Promise.resolve().then(() => storeSet(ASSISTANT_CARD_USES_KEY, uses, false)).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
+  };
+  // モンヒロバトルで助手のアシストカードを1回切った(プレイヤーが切った分だけ。AIコピー・デバッグ戦は呼ぶ側で除く)
+  const countAssistantCardUse = (assistantId) => {
+    // 戦闘を止めない(数えるのに失敗しても、例外は外へ出さない。ジン 2026-11-11)
+    try {
+      const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
+      if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = { ...assistantPartnerRunUsesRef.current, [assistantId]: true };
+      if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
+      // 画面用の値は毎回更新する(結果画面の進み具合・あつのお話の条件が読む。軽い)。重い保存だけをまとめる
+      assistantCardUsesRef.current = r.uses; setAssistantCardUses(r.uses);
+      assistantCardUsesDirtyRef.current += 1;
+      if (r.stateChanged) { saveAssistantPartner(r.state); flushAssistantCardUses(); }
+      else if (assistantCardUsesDirtyRef.current >= ASSISTANT_CARD_USES_FLUSH_EVERY) flushAssistantCardUses();
+    } catch (error) { console.error('[assistant-partner] count failed:', error && error.message ? error.message : error); }
+  };
+  // 画面が替わったとき・戦いの終わり(負け・リタイアは gameState が変わらないので hp と gaveUp も見る)にまとめて書く
+  //   勝ちの結果(WAVE_RESULT・REWARD_PICK・CHAMPION)は runStage で切り替わるので、runStage も見る(数え漏れを1戦ぶんまでにする)
+  useEffect(() => { flushAssistantCardUses(); }, [gameState, runStage, hp <= 0, gaveUp]);
+  // ページを離れる・裏へ回るときも書く(閉じても数え漏れを残さない)
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onHide = () => { if (document.visibilityState === 'hidden') flushAssistantCardUses(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flushAssistantCardUses);
+    return () => { document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', flushAssistantCardUses); };
+  }, []);
+  useEffect(() => { if (gameState === 'HOME') { assistantPartnerRunUsesRef.current = {}; assistantPartnerRunUnlockedRef.current = []; } }, [gameState]);
+  // はじめての人が最初の助手を決めた(判定ずみなら何もしない)
+  const startAssistantPartnerEarn = (firstId) => {
+    const r = assistantPartnerStartEarn(assistantPartnerRef.current, firstId);
+    if (r.changed) saveAssistantPartner(r.state);
+  };
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   // はじめて遊ぶ人は、HOME に着くたびにお話を1本だけ(STORY_ONE_AT_A_TIME_KEY)。この HOME でもう流したかを覚え、HOME を離れたら戻す
   const [storyOneAtATime, setStoryOneAtATime] = useState(false);
@@ -104321,11 +105252,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
-    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    // これから始める人(助手の解放・mode:'earn')は、あつの挑発を40回使ったら流れる(2026-11-11 社長 C)。今の人は仲良し度のまま
+    if (assistantPartner.mode === 'earn' ? !assistantPartnerAtsuJoinReady(assistantPartner, assistantCardUses)
+      : !assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
-  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  }, [rhythmEventStorySeen, assistantBonds, assistantPartner, assistantCardUses, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // きゅうこの加入のお話(2026-10-22 社長の決定)。きゅうこは最初から選べるので、公開のあとの最初の HOME でだれにでも1回だけ流す。
   // 見たかどうかはあつと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。見たらマーケットにカード「きゅうこ」が並ぶ(data/breeder.js の kyukoCardOnSale)。
   // 公開の印 assistantKyuko が偽なら何もしない
@@ -106062,6 +106995,16 @@ function MonsterHeroGame() {
       // 下の行で「名前かアイコンが欠けている既存プレイヤー」も未完了へ戻すが、
       // その人はもう一度はじめての設定を通るだけで、新規ではない(配ってはいけない)
       const everOnboarded = wasOnboarded === true;
+      // 助手の解放(2026-11-11・18-assistant-partner.jsx)。すでに遊んでいる人(プロフィールを決め終えた・助手を選んだことがある)は
+      //   一度だけ「今のまま全員が助手」(mode:'all')を書く。判定ずみなら読むだけ(二重に判定しない)。はじめての人は助手えらびで決める
+      try {
+        const partnerRaw = await storeGet(ASSISTANT_PARTNER_KEY, null, false);
+        const judged = assistantPartnerJudgeExisting(partnerRaw, { wasOnboarded: everOnboarded, hasAssistant: savedAssistant != null });
+        if (judged.changed) await storeSet(ASSISTANT_PARTNER_KEY, judged.state, false);
+        const usesLoaded = normalizeAssistantCardUses(await storeGet(ASSISTANT_CARD_USES_KEY, {}, false));
+        assistantPartnerRef.current = judged.state; assistantCardUsesRef.current = usesLoaded;
+        setAssistantPartner(judged.state); setAssistantCardUses(usesLoaded);
+      } catch (error) { console.error('[assistant-partner] load failed:', error && error.message ? error.message : error); }
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
@@ -107200,7 +108143,7 @@ function MonsterHeroGame() {
         // ★まだ解放していない助手(あつ・ドラ)のごほうびは、解放するまで届けない(届ける計算のときだけLv0とみなす。
         //   保存してある仲良し度はそのまま残すので、加入のお話を見たら、その時点のLvまでのごほうびがまとめて届く)
         const levels = Object.fromEntries(ASSISTANT_LIST.map(who =>
-          [who.id, (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current)) ? 0
+          [who.id, ((typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current)) || !assistantPartnerAllowed(assistantPartnerRef.current, who.id)) ? 0
             : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
         const savedGifts = await storeGet('mh_gifts', [], false);
         const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
@@ -107221,7 +108164,7 @@ function MonsterHeroGame() {
     } finally { assistantBondRewardRunningRef.current = false; }
   }, [onboardingPreview]);
   // 加入のお話を見て助手を解放したとき(rhythmEventStorySeen が変わったとき)も、待たせていたごほうびを届ける
-  useEffect(() => { if (dataLoaded) void deliverAssistantBondRewards(); }, [dataLoaded, deliverAssistantBondRewards, rhythmEventStorySeen]);
+  useEffect(() => { if (dataLoaded) void deliverAssistantBondRewards(); }, [dataLoaded, deliverAssistantBondRewards, rhythmEventStorySeen, assistantPartner]);
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
   // 指定した助手の仲良し度を、行動に応じて増やす。上限に達していれば何も起きない。
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
@@ -107234,6 +108177,8 @@ function MonsterHeroGame() {
     //   カード「あつの挑発」は加入より前から持てるので、カード本人へ入れる道(assistantCardUse)から貯まっていた。
     //   条件のない助手(みゅあ・きき・もも・きゅうこ)はそのまま。すでに貯まった値は消さない・書き換えない(CLAUDE.md ⑦)
     if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, rhythmEventStorySeenRef.current)) return;
+    // 町の人(助手の解放・まだ助手でない)も増やさない
+    if (!assistantPartnerAllowed(assistantPartnerRef.current, id)) return;
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
     const before = assistantBondLevelOf(current.points);
     const result = gainAssistantBond(current, actionKey, Date.now(), amount);
@@ -109427,6 +110372,31 @@ function MonsterHeroGame() {
   // ラン終了画面: 今回のランで勇者モンに選んでいた(まだマスモン化していない)モンスター種を、
   // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
   // ラン終了画面(CHAMPION/敗北/リタイア)共通: マスモン登録ボタン・登録済み表示
+  // 助手の解放(2026-11-11): 結果画面(勝ち・負け・リタイア)に、この戦いで使った「まだ助手でない助手」のカードの進み具合を1行ずつ。
+  //   画面の部品(68)は変えず、マスモン登録の案内の下に足す(masuRegisterWithPartnerNode)。数えた助手は HOME に戻ると空にする
+  const assistantPartnerRunNode = () => {
+    if (debugBattle || assistantPartner.mode !== 'earn') return null;
+    const ids = Object.keys(assistantPartnerRunUsesRef.current || {});
+    if (!ids.length) return null;
+    const need = ASSISTANT_PARTNER_NEED;
+    const rows = ids.map(id => ({ id, who: ASSISTANT_LIST.find(w => w.id === id), n: Math.min(assistantCardUses[id] || 0, need), done: assistantPartnerAllowed(assistantPartner, id) }))
+      .filter(r => r.who && (r.done ? assistantPartner.first !== r.id && assistantPartnerRunUnlockedRef.current.includes(r.id) : true));
+    if (!rows.length) return null;
+    return (
+      <div data-assistant-partner-run className="w-full max-w-xs mx-auto mt-1.5 flex flex-col gap-1 shrink-0">
+        {rows.map(r => (
+          <div key={r.id} className="rounded-xl border border-cyan-300/30 bg-slate-900/80 px-2.5 py-1 text-left">
+            <div className="flex items-center justify-between gap-2 text-[10.5px] font-black text-slate-100">
+              <span className="truncate">🤝 「{assistantPartnerCardName(r.id)}」</span>
+              <span className="tabular-nums shrink-0" style={{ color: r.done ? '#fde047' : '#a5f3fc' }}>{r.done ? `${r.who.name}が助手になりました！` : `${r.n} / ${need}`}</span>
+            </div>
+            {!r.done && <div className="h-1 rounded-full bg-slate-800 overflow-hidden mt-0.5"><div className="h-full rounded-full" style={{ width: `${Math.round(r.n / need * 100)}%`, background: 'linear-gradient(90deg,#38bdf8,#a78bfa)' }}/></div>}
+          </div>
+        ))}
+      </div>
+    );
+  };
+  const masuRegisterWithPartnerNode = () => <>{masuRegisterButtonNode()}{assistantPartnerRunNode()}</>;
   const masuRegisterButtonNode = () => {
     if (debugBattle || mainHero?.debugOnly) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
@@ -114269,6 +115239,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       // AIコピーが使ったアシカは仲良し度に数えない(プレイヤーが切った札ではない)
+      // 助手の解放: カード本人の使った回数(40回で助手に)
+      if(!entry.aiCopy&&isBreeder&&!debugBattleRef.current){ const partnerCardId=assistantIdOfAssistCard(card.id); if(partnerCardId) countAssistantCardUse(partnerCardId); }
       if(!entry.aiCopy){ if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); } }
       // ★AIコピーの札は、帯・ログ・ダメージの数字に出す名前を「〜のコピー」にする(元の子が動いたと取り違えないように。2026-10-27 部長)
       const actorName=(si)=>entry.aiCopy?tacticsAiCopyName(aiCopyRef.current):battleActorName(si);
@@ -121024,6 +121996,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
               <p className="text-[10px] text-slate-300 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。</p>
               <span data-assistant-pick-later className="mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950">あとからいつでも変えられます</span>
+              {/* 助手の解放(2026-11-11)。これから始める人は、ほかの助手をカードを使って迎える */}
+              {assistantPartner.mode!=='all'&&RELEASE_FLAGS.assistantPartnerUnlock===true&&<p data-assistant-pick-partner-note className="text-[10px] text-cyan-200 mt-1.5 leading-tight">ほかの助手は、モンヒロバトルでその助手のアシストカードを使うと、助手として選べるようになります。</p>}
             </div>
             {(()=>{
               const list=assistantsUnlockedFrom(rhythmEventStorySeen);
@@ -121055,7 +122029,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 {pick&&<div className="shrink-0 w-full max-w-md mx-auto pt-1" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
                   <div className="mb-1 text-center text-[11px] font-black text-slate-300">{pick.name}を選んでいます</div>
-                  <button type="button" data-assistant-pick-confirm onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                  <button type="button" data-assistant-pick-confirm onClick={()=>{if(!onboardingPreview&&RELEASE_FLAGS.assistantPartnerUnlock===true)startAssistantPartnerEarn(pick.id);chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
                     className="min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]" style={{backgroundColor:pick.accent}}>この助手にする</button>
                 </div>}
               </>;
@@ -121118,7 +122092,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             rhythmHistoryCount={rhythmHistoryCount}
             /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
                ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>(who.id!=='momosuke'||momosukeIntroSeenFlag)&&assistantPartnerAllowed(assistantPartner,who.id))}
             onReplayPeerTalk={(talk)=>setPeerReplay(talk)}
             peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}
             onUsePeerItem={useAssistantPeerItem}
@@ -122107,11 +123081,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* プロフィールからの助手変更。仲良し度も呼び方も助手ごとに分けてあるので、
             切り替えても、もう片方のぶんは何も失われない */}
+        {/* 助手の解放の演出(2026-11-11・59-assistant-partner-fx.jsx)。解放した戦いのあと、HOME に戻ったときに1人ずつ。
+            ほかのお話・小窓が出ているあいだは待つ。閉じたら見た印(noticed)を書き、二度出さない */}
+        {(()=>{
+          if(onboardingPreview||!dataLoaded||bootPhase!=='GAME'||gameState!=='HOME'||eventReplay||rhythmEventStoryPending||rhythmHellGuide||showAssistantPicker) return null;
+          const id=assistantPartnerPendingNotice(assistantPartner,(x)=>assistantPartnerOkWith(assistantPartner,rhythmEventStorySeen,x));
+          const who=id?ASSISTANT_LIST.find(w=>w.id===id):null;
+          if(!who||typeof AssistantPartnerUnlockFx!=='function') return null;
+          const done=(choose)=>{const r=assistantPartnerMarkNoticed(assistantPartnerRef.current,who.id);if(r.changed)saveAssistantPartner(r.state);if(choose)chooseAssistant(who.id);};
+          return <AssistantPartnerUnlockFx key={who.id} who={who} cardName={assistantPartnerCardName(who.id)} need={ASSISTANT_PARTNER_NEED}
+            line={assistantPartnerUnlockLine(who.id)} effects={ASSISTANT_PARTNER_UNLOCK_EFFECTS} onChoose={()=>done(true)} onLater={()=>done(false)}/>;
+        })()}
         {showAssistantPicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
               <h3 className="text-base font-black text-white mb-1 text-center">いっしょに遊ぶ助手</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。</p>
+              {assistantPartner.mode==='earn'&&<p data-assistant-partner-note className="text-[9px] text-cyan-200 text-center -mt-2 mb-3 leading-tight">モンヒロバトルで助手のアシストカードを{ASSISTANT_PARTNER_NEED}回使うと、その助手を選べるようになります(オートも数えます)。</p>}
               <div className="space-y-2 mb-3">
                 {/* 公開の印が立つまでの助手(あつ)は、鍵つきの「？？？」としても出さない(assistantReleased) */}
                 {ASSISTANT_LIST.filter(who=>assistantReleased(who.id)).map(who=>{
@@ -122132,6 +123118,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       </span>
                     </div>
                   );
+                  // これから始める人の、まだ助手でない助手(2026-11-11 助手の解放)。顔と「あと何回」を出し、押しても選ばない
+                  if(!assistantPartnerAllowed(assistantPartner,who.id)){
+                    const need=ASSISTANT_PARTNER_NEED;const n=Math.min(assistantCardUses[who.id]||0,need);const cardName=assistantPartnerCardName(who.id);
+                    const owned=Array.isArray(unlockedTeachingIds)&&unlockedTeachingIds.includes(who.id);
+                    return(
+                      <div key={who.id} data-assistant-partner-locked={who.id} className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60">
+                        <span className="shrink-0" style={{opacity:.6,filter:'saturate(.35)'}}><AssistantFace who={who} size={52} accent="#64748b" expression="normal"/></span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block text-[12px] font-black text-slate-300">{who.name}<span className="ml-1 rounded-full bg-slate-700 px-1.5 py-0.5 text-[8.5px] text-slate-200 align-middle">まだ助手ではありません</span></b>
+                          <small className="block text-[9px] text-slate-400 leading-tight mt-0.5">{owned?<>「{cardName}」をモンヒロバトルで使った回数 <b className="text-slate-200 tabular-nums">{n} / {need}</b></>:<>「{cardName}」を手に入れて、モンヒロバトルで{need}回使うと選べます</>}</small>
+                          {owned&&<span className="block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"><span className="block h-full rounded-full" style={{width:`${Math.round(n/need*100)}%`,background:'linear-gradient(90deg,#38bdf8,#a78bfa)'}}/></span>}
+                        </span>
+                      </div>
+                    );
+                  }
                   return(
                     <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);setShowAssistantPicker(false);}} aria-pressed={active}
                       className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97]"
@@ -124591,7 +125592,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {gameState==='CHAMPION'&&(
         <ChampionScreen
           autoRepeat={autoRepeat} finalRewardSummary={finalRewardSummary}
-          masuRegisterButtonNode={masuRegisterButtonNode}
+          masuRegisterButtonNode={masuRegisterWithPartnerNode}
           openSpeciesChallengeSelection={openSpeciesChallengeSelection}
           resultActionPending={resultActionPending} resultProcessing={resultProcessing}
           returnToHome={returnToHome} runHighlights={runHighlights} runMode={runMode}
@@ -124610,7 +125611,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {hp<=0&&!debugBattle&&!runBackgroundAllowed&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
-          masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
+          masuRegisterButtonNode={masuRegisterWithPartnerNode} resultActionPending={resultActionPending}
           returnToHome={returnToHome} runHighlights={runHighlights} runMode={runMode}
           runResultActionOnce={runResultActionOnce} score={score}
         />
@@ -124619,7 +125620,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {gaveUp&&!debugBattle&&!runBackgroundAllowed&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
-          masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
+          masuRegisterButtonNode={masuRegisterWithPartnerNode} resultActionPending={resultActionPending}
           returnToHome={returnToHome} runMode={runMode} runResultActionOnce={runResultActionOnce}
           score={score}
         />
