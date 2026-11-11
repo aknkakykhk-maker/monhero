@@ -12,6 +12,7 @@
 //   ⑦ 純粋な計算(Math.random・Date・window・localStorage・document・Math.exp/log/pow/sin/cos を使わない)
 //   ⑧ 技表(ASSISTANT_MASMON_TECHS。無ければ仮の draft-techs.js)の形: 数字は MF2 の幅の中・技 id は種の中で一意・
 //      どの種もどの距離にも届く技がある・ちから技とかしこさ技の両方がある・距離撃の名前を使わない・既存の技の表を計算で使わない
+//   ⑬ 能力の差の効き方のつまみ(A=いまのまま/B=ゆるめ/C=強め): A は結果を変えない・記録に残る・B<A<C の順
 //   ⑪ 育成・修行の入れ物(st・Lv 1〜99・覚えた技・熟練)から1体を作れる/熟練で命中・ガッツ消費・ガードが「中」の分だけ変わる
 //   ⑨ 壊れた入力(能力が文字・範囲外・種類が無い)は既定値で補う
 //   ⑩ 好き嫌い・疲労・ストレスは入力に取らない(渡しても結果が変わらない)
@@ -284,6 +285,32 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < 8 || v.regen > 12).map(([k, v]) => `${k}:${v.regen}`);
   const vals = new Set(Object.values(catalog.species).map(v => v.regen));
   check('⑫ 種ごとのガッツのたまる速さは 8〜12(既存の baseGuts から)・種でちがう', !bad.length && vals.size >= 3, bad.join(' ') || [...vals].sort().join('・'));
+}
+
+// ⑬ 能力の差の効き方のつまみ(A/B/C。社長が観戦してから決める)
+{
+  const rng = engine.makeRng('chk-bal');
+  let sameA = 0, okLog = 0, w = { A: 0, B: 0, C: 0 };
+  const M = 600;
+  for (let i = 0; i < M; i++) {
+    const strong = { assistantId: 'atsu', tactics: 50, members: team(rng, 3, { total: 1980 }) };
+    const weak = { assistantId: 'atsu', tactics: 50, members: team(rng, 3, { total: 1800 }) };
+    const sf = i % 2 === 0;
+    const base = { seed: `bal-${i}`, catalog, teamA: sf ? strong : weak, teamB: sf ? weak : strong };
+    const r0 = engine.simulate(base);
+    const rA = engine.simulate(Object.assign({}, base, { balance: 'A' }));
+    const rX = engine.simulate(Object.assign({}, base, { balance: 'へんな値' }));
+    if (r0.digest === rA.digest && rX.digest === rA.digest) sameA++;
+    for (const b of ['A', 'B', 'C']) {
+      const r = b === 'A' ? rA : engine.simulate(Object.assign({}, base, { balance: b }));
+      if (r.balance === b && r.log[0].balance === b && r.log[0].v === engine.VERSION) okLog++;
+      if (r.winner === (sf ? 'A' : 'B')) w[b]++;
+    }
+  }
+  check('⑬ つまみ A は渡さないときと同じ結果・知らない値は A', sameA === M, `${sameA}/${M}`);
+  check('⑬ つまみと計算の版が結果と記録に残る', okLog === M * 3, `${okLog}/${M * 3}`);
+  check('⑬ 能力の合計が多い側の勝率が B < A < C の順(B はゆるめ・C は強め)', w.B < w.A && w.A < w.C,
+    ['A', 'B', 'C'].map(b => `${b} ${(w[b] / M * 100).toFixed(1)}%`).join(' / '));
 }
 
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');

@@ -41,6 +41,10 @@
   const MASTERY_HIT_MAX = 0.06;    // 熟練100で命中 +6%
   const MASTERY_GUTS_CUT = 0.15;   // 熟練100でガッツ消費 −15%(四捨五入)
   const MASTERY_GUARD_ADD = 0.08;  // ガードの熟練100で受けるダメージがさらに −8%
+  // 能力の差の効き方のつまみ(2026-11-11 社長「実際バトルをしてほしい。それを観戦できるようにしたい」。決めるのは観戦してから)。
+  //   1体ごとの6能力の合計と、出る全員の平均の合計との差を k 倍にする(6能力の配分=個性はそのまま)。
+  //   A=いまのまま(合計+10%の側が約8割勝つ)/B=差を半分に(約7割)/C=差を1.5倍に(約9割)
+  const BALANCE = Object.freeze({ A: 1, B: 0.5, C: 1.5 });
   // 技の数字の幅(MF2 の技の幅。docs/spec/ASSISTANT_MASMON_BATTLE.md「MF との対応」)。外れた値は切る
   const TECH_LIMITS = Object.freeze({ power: [1, 70], hit: [-25, 22], guts: [5, 60], crit: [0, 30], gd: [0, 45] });
 
@@ -389,6 +393,23 @@
     return { teams: { A: mkTeam(inp.teamA), B: mkTeam(inp.teamB) }, dist: DIST_START, round: 0 };
   };
 
+  // 能力の差の効き方: 1体ごとの合計の差を k 倍(A は何もしない=結果は変わらない)
+  const applyBalance = (state, k) => {
+    if (k === 1) return;
+    const all = [...state.teams.A.units, ...state.teams.B.units];
+    const sum = (u) => STAT_KEYS.reduce((t, key) => t + u.stats[key], 0);
+    const avg = all.reduce((t, u) => t + sum(u), 0) / all.length;
+    for (const u of all) {
+      const tot = sum(u);
+      if (tot <= 0) continue;
+      const f = (avg + (tot - avg) * k) / tot;
+      const st = {};
+      for (const key of STAT_KEYS) st[key] = clamp(Math.round(u.stats[key] * f), 0, STAT_MAX);
+      u.stats = st;
+      u.maxHp = maxHpOf(st); u.hp = u.maxHp;
+    }
+  };
+
   // ── 本体 ──
   const simulate = (input) => {
     const inp = input && typeof input === 'object' ? input : {};
@@ -397,6 +418,8 @@
     const rng = makeRng(inp.seed);
     const roundLimit = toInt(inp.roundLimit, 1, 1000, ROUND_LIMIT);
     const state = setupState(inp, catalog);
+    const balance = BALANCE[inp.balance] != null ? inp.balance : 'A';
+    applyBalance(state, BALANCE[balance]);
     state.dist = 1 + Math.floor(rng() * 2);
     const ctx = { state, rng, trace: !!inp.trace, lastCands: null };
     const log = [];
@@ -408,7 +431,7 @@
       log.push(row);
     };
 
-    push({ ev: 'start', a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
+    push({ ev: 'start', v: VERSION, balance, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
       aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp) });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
@@ -505,7 +528,7 @@
     push({ ev: 'end', winner, reason });
     const final = {};
     for (const side of ['A', 'B']) final[side] = state.teams[side].units.map(x => ({ name: x.name, hp: x.hp, maxHp: x.maxHp, guts: x.guts }));
-    return { version: VERSION, winner, reason, rounds: state.round, log, final, digest: digestOf(log) };
+    return { version: VERSION, balance, winner, reason, rounds: state.round, log, final, digest: digestOf(log) };
   };
 
   // 結果の指紋(同じ種・同じ編成なら同じ値。端末とサーバの突き合わせ用)
@@ -513,7 +536,7 @@
 
   const api = Object.freeze({
     VERSION, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,
-    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD,
+    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE,
     LV_MAX, buildCatalog, simulate, unitFromGrow, makeRng, hashSeed,
     // 検査用(計算の部品)
     _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),

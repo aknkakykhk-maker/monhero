@@ -15,11 +15,12 @@
 
 ```js
 const catalog = ASSISTANT_MASMON_BATTLE.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS }); // 技表の写し(JSON にできる)
-ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, roundLimit?, trace? })
+ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, balance?, roundLimit?, trace? })
 // team = { assistantId:'mua'…'erubin', tactics:0〜100(戦術経験), members:[1体, …](1〜3体) }
 // 1体 = { species, name, lv:1〜99, stats:{ life, pow, wise, hit, eva, tough }(0〜999),
 //         techs:['技id', …](覚えている技。無ければ技表の learn.start の技), mastery:{ [技id]:0〜100, guard, dist, swap } }
-// → { version, winner:'A'|'B'|'draw', reason:'wipe'|'judge', rounds, log:[1手ずつ], final, digest }
+// balance = 'A'|'B'|'C'(能力の差の効き方。省くと A)
+// → { version, balance, winner:'A'|'B'|'draw', reason:'wipe'|'judge', rounds, log:[1手ずつ], final, digest }
 ```
 
 - 育成(キズナ4・`mh_assistant_masmon_grow_v1`)と修行(シュギョウ・`mh_assistant_masmon_train_v1`)からは
@@ -56,6 +57,34 @@ ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, roundLimit?, tra
 - **順番** 毎ラウンド、場の2体が1手ずつ。先に動くのは「回避 + 命中÷2 + 種の揺れ」が高い方
 - **交代** 手番を使う。出てきてから自分の手番2回は交代しない(行ったり来たりを防ぐ)。倒れたら相性の良い1体が出る
 - **決着** 全滅で負け。150 ラウンドで決まらなければ判定(残りライフの割合)。同じなら引き分け
+
+## 能力の差の効き方のつまみ(A/B/C)
+
+社長「実際バトルをしてほしい。それを観戦できるようにしたい」→ 観戦してから決める。それまでは **A**。
+1体ごとの6能力の合計と、出る全員の平均の差を k 倍にしてから計算する(配分=個性はそのまま。ライフも作り直す)。
+
+| | k | 合計+10%の側の勝率(3対3) |
+| --- | --- | --- |
+| A(いま) | 1(何もしない) | 約85% |
+| B ゆるめ | 0.5 | 約68% |
+| C 強め | 1.5 | 約94% |
+
+記録の最初の行(`ev:'start'`)と結果に `balance` と計算の版 `v` が残る。
+
+## 記録(log)の形(観戦の画面が読む)
+
+| ev | 中身 |
+| --- | --- |
+| `start` | `v`(計算の版)・`balance`・`a`/`b`(名前の並び)・`aHp`/`bHp`(最大ライフ) |
+| `enter` | `side`・`i`(何体目)・`name`・`guts`(倒れたあとに出たとき) |
+| `tech` | `side`・`i`・`move`(技 id)・`name`・`kind`・`hit`・`crit`・`dmg`・`guarded`・`guts`(撃ったあと)・`foeHp`・`gd`・`foeGuts` |
+| `move` | `side`・`i`・`step`(−1 近づく/+1 離れる)・`to`(新しい距離)・`guts` |
+| `guard`・`charge` | `side`・`i`・`guts` |
+| `swap` | `side`・`from`・`i`・`name`・`guts` |
+| `ko` | `side`・`i`・`name` |
+| `judge`・`end` | 判定の点・`winner`・`reason` |
+
+どの行にも `r`(ラウンド)と `d`(その時の距離)。`trace:true` なら手の行に `cands`(AI が付けた点)。
 
 ## 助手の AI
 
