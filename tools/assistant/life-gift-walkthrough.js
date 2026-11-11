@@ -90,10 +90,13 @@ const measure = () => {
       try { if (back) await back(); } catch {}
       await page.waitForTimeout(350);
     };
-    const closeSheets = async () => { for (let i = 0; i < 4; i++) { const b = page.locator('[data-assistant-life-buy-cancel]:visible, [data-assistant-life-furn-close]:visible, [data-mhl-sheet-close]:visible').last(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(300); } };
+    const closeSheets = async () => { for (let i = 0; i < 5; i++) { const b = page.locator('[data-assistant-life-buy-cancel]:visible, [data-assistant-life-furn-close]:visible, [data-mhl-sheet-close]:visible').last(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(300); } };
     const closeRoom = async () => { for (let i = 0; i < 3 && await page.locator('[data-assistant-life-roomview-close]').count(); i++) { await click('[data-assistant-life-roomview-close]').catch(() => {}); await page.waitForTimeout(350); } };
     const openRoom = async (id) => { if (!(await page.locator('[data-assistant-life-roomview-close]').count())) await click(`[data-assistant-life-room="${id}"]`); await page.waitForTimeout(400); };
-    const openGive = () => click('[data-assistant-life-today-act="give"]');
+    // 家の「🎁 贈る」→ 相手を選ぶシート(STEP3・2026-11-11)→ 押せる最初の組(なければ最初のひとり)。相手を選ぶシートが無い版では、そのまま贈る窓が開く
+    const openPick = () => click('[data-assistant-life-today-act="give"]');
+    const openGive = async () => { await openPick(); await page.waitForTimeout(350); if (!(await page.locator('[data-assistant-life-gift-sheet]').count())) return;
+      const b = page.locator('[data-assistant-life-give-who-pair]:enabled, [data-assistant-life-give-who-solo]:enabled').first(); await b.click({ timeout: 3000 }); await page.waitForTimeout(300); };
     // 贈ったあとは場面の画面(おやつ屋さん など)に移る。下の「家へ戻る」で家へ
     const toHouse = async () => { for (let i = 0; i < 3; i++) { const b = page.locator('[data-assistant-life-scene-back]:visible').first(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); } };
     try {
@@ -105,6 +108,7 @@ const measure = () => {
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
       await snap('01-home', '家(贈るの入口)');
       for (let i = 0; i < 4; i++) { const b = page.locator('[data-assistant-life-item-intro-close]:visible, [data-assistant-life-screen] button:visible:text-matches("^(わかった！?|OK|はじめる|とじる)$")').first(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); }
+      await step('01b-give-who', '贈る(相手を選ぶ)', openPick, closeSheets);
       await step('02-give-pair', '贈る窓(2人に・開いてすぐ)', openGive);
       await step('03-give-unowned', '贈る窓(持っていない道具を選ぶ)', () => click('[data-assistant-life-give-kind="tea"]'));
       // ビートPが足りないときは「買って贈る」が押せない(足りないことは窓に出る)ので、確かめの窓は押せるときだけ
@@ -128,8 +132,11 @@ const measure = () => {
       await step('15-room-solo', '部屋(家にひとり・あつ)の贈るの行', async () => { await openRoom('atsu'); await page.locator('[data-assistant-life-room-act="give-solo"]').first().scrollIntoViewIfNeeded().catch(() => {}); }, closeRoom);
       await step('16-friends', '友情(きずな)', () => click('[data-assistant-life-icon="friends"]'));
       await step('17-album', '友情 → 組を押す(思い出アルバム・2人にしてあげる)', async () => { await click('[data-assistant-peer-row]'); await page.locator('[data-assistant-peer-use]').first().waitFor({ timeout: 4000 }); await page.locator('[data-assistant-peer-use]').last().scrollIntoViewIfNeeded(); }, () => click('[data-assistant-peer-album-close]'));
-      await step('18-items-top', '道具タブ(上)', () => click('[data-assistant-life-icon="items"]'));
-      await step('19-items-bottom', '道具タブ(いちばん下)', () => page.evaluate(() => { const el = document.querySelector('[data-assistant-life-items]'); for (let p = el; p; p = p.parentElement) if (p.scrollHeight > p.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(p).overflowY)) { p.scrollTop = p.scrollHeight; break; } }));
+      // 道具の一覧: 新しいUIでは「🎁 贈る」のシートの中の「📦 道具の一覧」。道具タブが残っている版ではタブ
+      const openItems = async () => { if (await page.locator('[data-assistant-life-icon="items"]:visible').count()) { await click('[data-assistant-life-icon="items"]'); return; }
+        await click('[data-assistant-life-icon="house"]').catch(() => {}); await openPick(); await click('[data-assistant-life-gift-items-toggle]'); await page.locator('[data-assistant-life-items]').first().scrollIntoViewIfNeeded(); };
+      await step('18-items-top', '道具の一覧(上)', openItems);
+      await step('19-items-bottom', '道具の一覧(いちばん下)', () => page.evaluate(() => { const el = document.querySelector('[data-assistant-life-items]'); for (let p = el; p; p = p.parentElement) if (p.scrollHeight > p.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(p).overflowY)) { p.scrollTop = p.scrollHeight; break; } }));
       await step('20-shop-item', '交換所(道具の段)', async () => { await page.locator('[data-assistant-life-shop="item"]').last().click({ timeout: 3000 }); await page.waitForTimeout(1200); });
     } catch (e) { lost.push(`${T} 通しの途中で止まった(${String(e.message || e).split('\n')[0].slice(0, 80)})`); }
     await ctx.close();
