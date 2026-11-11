@@ -71,15 +71,31 @@ const SAMPLE = (() => {
         rooms: top ? top.querySelectorAll('[data-assistant-life-room]').length : 0, status: !!document.querySelector('[data-assistant-life-v2-status]'),
         places: [...document.querySelectorAll('[data-assistant-life-top-place]')].map(x => x.getAttribute('data-assistant-life-top-place')),
         sum: (document.querySelector('[data-assistant-life-top-sum]') || {}).textContent || '',
+        next: `${assistantLifeSlotAt().to % 24}:00`,
         ev: [...document.querySelectorAll('[data-assistant-life-room-ev]')].map(x => x.getAttribute('data-assistant-life-room-ev')),
         today: !!document.querySelector('[data-assistant-life-benefit-row="today"],[data-assistant-life-benefit-line="today"]'), fold: (document.querySelector('[data-assistant-life-benefit-fold]') || {}).getAttribute?.('data-assistant-life-benefit-fold') || '' };
     });
     check(`${T}① 家の断面図が得の帯より上・4部屋×2段・8部屋・家は1つ・「みんなの今」の一覧は出ない`, a.top && a.above && a.grid4 === (v.w < v.h ? 1 : 0) && a.houses === 1 && a.rooms === 8 && !a.status, JSON.stringify({ top: a.top, above: a.above, grid4: a.grid4, houses: a.houses, rooms: a.rooms, status: a.status }));
-    check(`${T}② 出かけ先の丸(丘・カード部屋・おやつ屋さん・スタジオ)と1行・できごとの2人に ❗`, ['hill', 'cardroom', 'cafe', 'studio'].every(p => a.places.includes(p)) && /家に2人 ・ おでかけ6人/.test(a.sum) && a.ev.length === 2, JSON.stringify({ places: a.places, sum: a.sum, ev: a.ev }));
+    check(`${T}② 出かけ先の丸(丘・カード部屋・おやつ屋さん・スタジオ)と1行・できごとの2人に ❗`, ['hill', 'cardroom', 'cafe', 'studio'].every(p => a.places.includes(p)) && /家に2人 ・ おでかけ6人/.test(a.sum) && a.sum.includes(`次にみんなが動くのは ${a.next}`) && a.ev.length === 2, JSON.stringify({ places: a.places, sum: a.sum, next: a.next, ev: a.ev }));
     check(`${T}③ 得の帯は「今日・次」をたたむ`, a.fold === 'closed', JSON.stringify({ fold: a.fold }));
     const l1 = await layout(page);
     check(`${T}⑥ 押せる所は44px以上・はみ出さない(トップ)`, l1.small.length === 0 && l1.over === 0, JSON.stringify(l1));
     await shot(page, v, '1-top');
+    // ⑧ 見やすさ(2026-11-11 ミヤスサの点検 上位5): 家の最初の画面の長さ・下の札にかぶらない・横でも家が最初に見える
+    const m = await page.evaluate(() => {
+      const body = document.querySelector('[data-assistant-life-screen] .mhl-body'), bar = body && body.nextElementSibling, top = document.querySelector('[data-assistant-life-top-house]');
+      if (!body || !bar || !top) return null;
+      const screens = +(body.scrollHeight / body.clientHeight).toFixed(2);
+      const topVis = top.getBoundingClientRect().top < body.getBoundingClientRect().bottom - 80;
+      body.scrollTop = body.scrollHeight;
+      const kids = [...body.querySelectorAll('[data-assistant-life-benefit],[data-assistant-life-daily],[data-assistant-life-top-strip]')];
+      const lastBottom = Math.max(...kids.map(x => x.getBoundingClientRect().bottom));
+      const br = bar.getBoundingClientRect(), bb = body.getBoundingClientRect();
+      const barTop = br.top >= bb.bottom - 2 ? br.top : Infinity; // 横は下の札が右の列(横並び)なので、かぶりは見ない
+      body.scrollTop = 0;
+      return { screens, topVis, lastBottom: Math.round(lastBottom), barTop: Number.isFinite(barTop) ? Math.round(barTop) : 'side' };
+    });
+    check(`${T}⑧ 家の画面は2画面まで・いちばん下の札が下の固定の札にかぶらない・家が最初に見える`, !!m && m.screens <= 2 && (m.barTop === 'side' || m.lastBottom <= m.barTop + 1) && m.topVis, JSON.stringify(m));
     await page.locator('[data-assistant-life-benefit-fold]').click(); await page.waitForTimeout(300);
     check(`${T}③ ▼ で「今日・次のごほうび」が開く`, (await page.locator('[data-assistant-life-benefit-fold="open"]').count()) === 1);
     await page.locator('[data-assistant-life-benefit-fold]').click(); await page.waitForTimeout(300);

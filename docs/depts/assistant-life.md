@@ -26,6 +26,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/44-time-of-day.jsx`
 - `tools/assistant/life-*`
 - `tools/assistant/peer-*`
+- `monster-hero/src/parts/56-assistant-life-plan.jsx`
 
 ## 入口の関数
 
