@@ -1,6 +1,6 @@
 # 助手の解放: 更新履歴・ヘルプの文案(社長の「この文で」待ち)
 
-まだ本体(changelog.js・help.js)には入れていない。公開の印 `assistantPartnerUnlock` を真にするのと同じ PR で入れる。
+社長の決め(2026-11-11): 更新履歴・助手の告知は載せない。ヘルプの note は下の文そのまま「この文で」。#5408 で help.js に入れた(印 assistantPartnerUnlock が真になるまで出ない)。
 
 ## 1. 更新履歴
 
