@@ -213,11 +213,11 @@ const amgtEnsure = (st, aid, row, e) => {
 const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { s, t, x: String(x || '').slice(0, 60) }].slice(-AMGT_EV); };
 
 // ---------- 修行の場所: 助手の生活でモンヒロバトルにいた回を覚えておく ----------
-// 生活の1つの時間(life.abs = 日×6+区切り)が、第①段階のどの回に当たるか(始めと終わり)
+// 生活の1つの時間(life.abs = 日×12+区切り。2時間ずつ)が、第①段階のどの回に当たるか(始めと終わり)
 const amgtLifeSlotsToGrow = (abs) => {
-  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
-  if (!S || !Number.isInteger(abs)) return [];
-  const day = Math.floor(abs / 6); const s = S[abs - day * 6]; if (!s) return [];
+  // 12区切り(2026-11-11 ナカヨシ11。abs = 日×12+j・2時間ずつ)。区切りの時刻は assistantLifeSlotOfAbs の from・to
+  if (typeof assistantLifeSlotOfAbs !== 'function' || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 12); const s = assistantLifeSlotOfAbs(abs); if (!s || !Number.isFinite(s.from)) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
 };

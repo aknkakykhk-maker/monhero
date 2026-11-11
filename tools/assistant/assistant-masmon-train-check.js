@@ -11,7 +11,10 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const all = read('monster-hero/src/parts/56-assistant-life-masmon-train.jsx');
 const body = all.slice(0, all.indexOf('// ---------- 画面'));
 const techsSrc = read('monster-hero/data/assistant-masmon-techs.js');
-const lifeSlots = read('monster-hero/src/parts/56-assistant-life.jsx').match(/^const ASSISTANT_LIFE_SLOTS = [\s\S]*?^\]\);/m)[0];
+const lifeSlots = read('monster-hero/src/parts/56-assistant-life.jsx').match(/^const ASSISTANT_LIFE_SLOTS = [\s\S]*?^\]\);/m)[0]
+// 12区切り(2026-11-11 ナカヨシ11): 区切りの時刻を返す関数も一緒に読む
+const lifeSlots12 = read('monster-hero/src/parts/56-assistant-life.jsx').match(/^const ASSISTANT_LIFE_PER_DAY[\s\S]*?^const assistantLifeAbsV1ToV2 = [\s\S]*?^};/m)[0];
+
 let ng = 0;
 const check = (label, ok, info = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${info ? ` — ${info}` : ''}`); if (!ok) ng++; };
 const make = (on, seed = 'seed-1') => {
@@ -19,7 +22,7 @@ const make = (on, seed = 'seed-1') => {
   const ctx = { console, Promise, RELEASE_FLAGS: { assistantMasmonTrain: on }, ASSISTANT_MASMON_STORE: { state: { seed } },
     storeSet: (k, v) => { saved[k] = JSON.parse(JSON.stringify(v)); }, storeGet: async (k, d) => (k in saved ? saved[k] : d) };
   vm.createContext(ctx);
-  vm.runInContext(`${techsSrc}\n${lifeSlots}\n${body}\nthis.T = { ASSISTANT_MASMON_TECHS, AMGT_STORE, AMGT_NUM, AMGT_KINDS, AMGT_SENSE_KEYS, AMGT_BR_KEYS, AMGT_BR_INIT, normalizeAssistantMasmonTrain, amgtChoose, amgtDo, amgtAfterAct, amgtLeadMult, amgtFailMult, amgtStressMult, amgtRestAt, amgtAskOf, amgtAnswer, amgtBattleOf, amgtTacticsOf, amgtEntryOf, amgtInitMon, amgtActName, amgtBrCap, amgtNoteLife, amgtSlotOf, amgtCanLearn, amgtTechsOf, amgtRoomLine };`, ctx);
+  vm.runInContext(`${techsSrc}\n${lifeSlots}\n${lifeSlots12}\n${body}\nthis.T = { ASSISTANT_MASMON_TECHS, AMGT_STORE, AMGT_NUM, AMGT_KINDS, AMGT_SENSE_KEYS, AMGT_BR_KEYS, AMGT_BR_INIT, normalizeAssistantMasmonTrain, amgtChoose, amgtDo, amgtAfterAct, amgtLeadMult, amgtFailMult, amgtStressMult, amgtRestAt, amgtAskOf, amgtAnswer, amgtBattleOf, amgtTacticsOf, amgtEntryOf, amgtInitMon, amgtActName, amgtBrCap, amgtNoteLife, amgtSlotOf, amgtCanLearn, amgtTechsOf, amgtRoomLine };`, ctx);
   ctx.T.AMGT_STORE.loaded = true;
   return { T: ctx.T, saved, ctx };
 };
@@ -194,12 +197,14 @@ const drive = (T, aid, days, opt = {}) => {
 // ⑦ 生活の居場所 → 修行できる回
 {
   const { T } = make(true);
-  const now = Date.UTC(2026, 10, 11, 1, 0); // 10:00 JST = 生活の「昼」(10〜14時)・育成の「朝」(4〜12時)と「昼」(12時〜)
-  const day = Math.floor((now + 9 * 3600000) / 86400000); const abs = day * 6 + 2;
+  const now = Date.UTC(2026, 10, 11, 1, 0); // 10:00 JST。生活の区切りは2時間(10〜12時)→ 育成の「朝」(4〜12時)に入る
+  const day = Math.floor((now + 9 * 3600000) / 86400000); const abs = day * 12 + 5;
   T.amgtNoteLife({ abs, groups: [{ ids: ['kiki', 'mua'], place: 'battle', doing: 'training' }], solo: { dra: { place: 'cafe' } } });
   const at = T.AMGT_STORE.state.at;
-  const want = [T.amgtSlotOf(now), T.amgtSlotOf(now + 3 * 3600000)];
-  check('⑦ モンヒロバトルにいた助手の回を覚える(生活の1区切りが育成の2回にまたがる)', JSON.stringify(at.kiki) === JSON.stringify(want) && JSON.stringify(at.mua) === JSON.stringify(want) && !at.dra, JSON.stringify(at));
+  const want = [T.amgtSlotOf(now)];
+  check('⑦ モンヒロバトルにいた助手の回を覚える(生活の2時間の区切りが、育成の回のどれに当たるか)', JSON.stringify(at.kiki) === JSON.stringify(want) && JSON.stringify(at.mua) === JSON.stringify(want) && !at.dra, JSON.stringify(at));
+  T.amgtNoteLife({ abs: day * 12 + 6, groups: [{ ids: ['atsu', 'erubin'], place: 'battle', doing: 'training' }], solo: {} }); // 12〜14時 → 育成の「昼」
+  check('⑦ 12〜14時の区切りは、育成の次の回(昼)に当たる', JSON.stringify(T.AMGT_STORE.state.at.atsu) === JSON.stringify([T.amgtSlotOf(now + 2 * 3600000)]) && T.amgtSlotOf(now + 2 * 3600000) !== T.amgtSlotOf(now), JSON.stringify(T.AMGT_STORE.state.at.atsu));
 }
 
 // ⑦-2 部屋の行の一言
@@ -208,7 +213,7 @@ const drive = (T, aid, days, opt = {}) => {
   check('⑦ 印が偽なら部屋の一言は出さない', off.T.amgtRoomLine('kiki') === null);
   const { T, ctx } = make(true);
   const now = Date.UTC(2026, 10, 11, 1, 0);
-  ctx.assistantLifeSlotAt = (t) => ({ abs: Math.floor((t + 9 * 3600000) / 86400000) * 6 + 2 });
+  ctx.assistantLifeSlotAt = (t) => ({ abs: Math.floor((t + 9 * 3600000) / 86400000) * 12 + 5 });
   ctx.ASSISTANT_LIFE_STORE = { state: { life: { abs: ctx.assistantLifeSlotAt(now).abs, groups: [], solo: { kiki: { place: 'battle' } } } } };
   check('⑦ いまモンヒロバトルにいる助手は「修行中」', T.amgtRoomLine('kiki', now) === 'いまモンヒロバトルで修行中');
   check('⑦ いない助手でマスモンもいなければ何も出さない', T.amgtRoomLine('mua', now) === null);

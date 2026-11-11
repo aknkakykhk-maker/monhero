@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd1e2acc88913a65
+// source-sha256: 5b92f7678562eedd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106924,30 +106924,42 @@ const ASSISTANT_LIFE_STREAK_BONUS = Object.freeze([{
   days: 3,
   points: 5
 }]);
-const ASSISTANT_LIFE_RECENT_SLOTS = 12;
+const ASSISTANT_LIFE_RECENT_SLOTS = 24;
 const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true;
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => typeof jstDayKey4 === 'function' ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
+const ASSISTANT_LIFE_PER_DAY = 12;
+const assistantLifeSixIndexOfHour = h => Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
+const assistantLifeSlotBuild = (day, j, hourForV1) => {
+  const i = assistantLifeSixIndexOfHour(j * 2 + 1);
+  const six = ASSISTANT_LIFE_SLOTS[i];
+  return {
+    abs: day * ASSISTANT_LIFE_PER_DAY + j,
+    j,
+    i,
+    id: six.id,
+    label: six.label,
+    from: j * 2,
+    to: j * 2 + 2,
+    absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1)
+  };
+};
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
   const day = Math.floor(t / 86400000);
   const h = new Date(t).getUTCHours();
-  const i = Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
-  return {
-    abs: day * 6 + i,
-    i,
-    id: ASSISTANT_LIFE_SLOTS[i].id,
-    label: ASSISTANT_LIFE_SLOTS[i].label
-  };
+  return assistantLifeSlotBuild(day, Math.floor(h / 2), h);
 };
 const assistantLifeSlotOfAbs = abs => {
-  const i = (Math.floor(Number(abs) || 0) % 6 + 6) % 6;
-  return {
-    abs: Math.floor(Number(abs) || 0),
-    i,
-    id: ASSISTANT_LIFE_SLOTS[i].id,
-    label: ASSISTANT_LIFE_SLOTS[i].label
-  };
+  const a = Math.floor(Number(abs) || 0);
+  const j = (a % ASSISTANT_LIFE_PER_DAY + ASSISTANT_LIFE_PER_DAY) % ASSISTANT_LIFE_PER_DAY;
+  return assistantLifeSlotBuild(Math.floor((a - j) / ASSISTANT_LIFE_PER_DAY), j, j * 2);
+};
+const assistantLifeAbsV1ToV2 = abs => {
+  const a = Math.floor(Number(abs));
+  if (!Number.isFinite(a)) return null;
+  const i = (a % 6 + 6) % 6;
+  return Math.floor((a - i) / 6) * ASSISTANT_LIFE_PER_DAY + Math.floor(ASSISTANT_LIFE_SLOTS[i].from / 2);
 };
 const assistantLifeHash = str => {
   let h = 1779033703 ^ str.length;
@@ -107002,13 +107014,13 @@ const assistantLifeDecide = ({
   const ids = [...new Set((members || []).filter(id => ASSISTANT_LIFE_PREFS[id]))].sort();
   const rand = assistantLifeRng(`${salt}|${slot.abs}|${ids.join(',')}`);
   const gap = prev && Number.isFinite(prev.abs) ? slot.abs - prev.abs : Infinity;
-  const inertia = gap === 1 ? 3 : gap >= 2 && gap <= 6 ? 1.5 : 0;
+  const inertia = gap === 1 ? 3 : gap >= 2 && gap <= 12 ? 1.5 : 0;
   const tierI = assistantLifeTierIndex(tier);
   const near = (r, n) => Number.isFinite(r.abs) && slot.abs - r.abs >= 0 && slot.abs - r.abs <= n;
   const recentOf = (kind, pred, n = ASSISTANT_LIFE_RECENT_SLOTS) => (recent || []).some(r => r && r.kind === kind && near(r, n) && pred(r));
   const hasPair = (r, a, b) => r.pair === assistantLifePairKey(a, b);
   const quarrelNow = (a, b) => {
-    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 3));
+    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 6));
     if (!qs.length) return false;
     const last = Math.max(...qs.map(r => r.abs));
     return !(recent || []).some(r => r && r.kind === 'makeup' && hasPair(r, a, b) && r.abs >= last);
@@ -107020,7 +107032,7 @@ const assistantLifeDecide = ({
     for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) o.push(assistantLifePairKey(g.ids[i], g.ids[j]));
     return o;
   }) : []);
-  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 2 ? prev.lonely : []);
+  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 4 ? prev.lonely : []);
   const moods = {};
   for (const id of ids) {
     const w = {
@@ -107277,15 +107289,21 @@ const normalizeAssistantLife = v => {
     }
     if (!ASSISTANT_LIFE_DOINGS[s.doing].places.includes(s.place)) s.place = ASSISTANT_LIFE_DOINGS[s.doing].places[0];
   }
-  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).slice(-40) : [];
-  const nudgeList = x => Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
+  const old = o.v !== 2;
+  const absOf = x => old ? assistantLifeAbsV1ToV2(x) : Math.floor(x);
+  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).map(r => ({
+    ...r,
+    abs: absOf(r.abs)
+  })).slice(-80) : [];
+  const nudgeList = x => old ? [] : Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
   const nudges = {
     invite: nudgeList(o.nudges && o.nudges.invite).filter(n => ok(n.id)),
     introduce: nudgeList(o.nudges && o.nudges.introduce).filter(n => typeof n.pair === 'string')
   };
   return {
+    v: 2,
     salt: typeof o.salt === 'string' && o.salt ? o.salt : '',
-    abs: Number.isFinite(o.abs) ? o.abs : null,
+    abs: Number.isFinite(o.abs) ? absOf(o.abs) : null,
     slot: typeof o.slot === 'string' ? o.slot : null,
     moods,
     groups,
@@ -107699,7 +107717,7 @@ const assistantLifeAirOf = (life, a, b) => {
   const rs = (life && life.recent || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
   const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
   const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
-  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 12) return 'makeup';
   if (lastQ > -Infinity && lastQ > lastM) return 'after';
   return 'normal';
 };
@@ -108130,13 +108148,13 @@ const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({
 const assistantLifeNextSlotText = (now = Date.now()) => {
   const cur = assistantLifeSlotAt(now);
   const h = new Date(Number(now) + 9 * 3600000);
-  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const slot = cur;
   const mins = Math.max(1, slot.to * 60 - (h.getUTCHours() * 60 + h.getUTCMinutes()));
   const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
   return `あと${t}でみんなが動きます`;
 };
 const assistantLifeSlotRange = id => {
-  const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
+  const s = id && typeof id === 'object' ? id : ASSISTANT_LIFE_SLOTS.find(x => x.id === id);
   return s ? `${s.from}〜${s.to % 24}時` : '';
 };
 const useAssistantLifeNow = metIds => {
@@ -108381,7 +108399,7 @@ function AssistantLifeScreenBody({
     className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
   }, "助手ライフ"), React.createElement("span", {
     className: "text-right text-[10px] font-bold leading-tight text-slate-400"
-  }, "いまは", assistantLifeSlotRange(slot.id), "の過ごし方", React.createElement("br", null), React.createElement("span", {
+  }, "いまは", assistantLifeSlotRange(slot), "の過ごし方", React.createElement("br", null), React.createElement("span", {
     "data-assistant-life-next-slot": true,
     className: "text-slate-300"
   }, assistantLifeNextSlotText())), React.createElement("button", {
@@ -110539,7 +110557,7 @@ function AssistantLifeRoomSheet({
     }
   })();
   const asleep = !!(w && w.doing === 'sleep');
-  const slotDef = ASSISTANT_LIFE_SLOTS[slot.i];
+  const slotDef = Number.isFinite(slot.to) ? slot : ASSISTANT_LIFE_SLOTS[slot.i];
   const groupNames = w && w.group ? assistantLifeGroupNames(w.group.ids, 8) : null;
   const groupText = w && w.group ? '' : ' ・ ひとり';
   const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
@@ -136684,11 +136702,10 @@ const amgtPushEv = (next, aid, s, t, x) => {
   }].slice(-AMGT_EV);
 };
 const amgtLifeSlotsToGrow = abs => {
-  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
-  if (!S || !Number.isInteger(abs)) return [];
-  const day = Math.floor(abs / 6);
-  const s = S[abs - day * 6];
-  if (!s) return [];
+  if (typeof assistantLifeSlotOfAbs !== 'function' || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 12);
+  const s = assistantLifeSlotOfAbs(abs);
+  if (!s || !Number.isFinite(s.from)) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000;
   const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
