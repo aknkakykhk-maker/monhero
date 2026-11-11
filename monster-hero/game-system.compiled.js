@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abe417610c5aa0a1
+// source-sha256: e5b27944ea889cf3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89302,6 +89302,51 @@ function MasuAutoEnhanceScreen({
     className: "w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2"
   }, "完了")));
 }
+function RhythmHistoryBanner({
+  event
+}) {
+  const src = rhythmEventBanner(event);
+  const [failed, setFailed] = useState(false);
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+    setZoom(false);
+  }, [src]);
+  if (!src || failed) return null;
+  const name = event && event.name ? event.name : 'イベント';
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-rhythm-history-banner": true,
+    onClick: () => setZoom(true),
+    "aria-label": `${name}の画像を大きく見る`,
+    className: "relative mb-2 block w-full overflow-hidden rounded-2xl border border-fuchsia-300/30 active:scale-[.98]"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${name}の告知`,
+    onError: () => setFailed(true),
+    loading: "lazy",
+    decoding: "async",
+    className: "block w-full"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute bottom-1 right-1 rounded-lg bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-white"
+  }, "🔍 大きく見る")), zoom && React.createElement("div", {
+    "data-rhythm-history-banner-zoom": true,
+    role: "dialog",
+    "aria-label": `${name}の画像`,
+    onClick: () => setZoom(false),
+    className: "fixed inset-0 z-[300] flex flex-col items-center justify-center gap-2 bg-black/85 p-3"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${name}の告知`,
+    className: "max-h-[80%] max-w-full rounded-xl object-contain"
+  }), React.createElement("button", {
+    type: "button",
+    "data-rhythm-history-banner-close": true,
+    onClick: () => setZoom(false),
+    className: "min-h-[44px] rounded-xl bg-white/15 px-6 text-xs font-black text-white"
+  }, "閉じる")));
+}
 function RhythmHistoryScreen({
   entries,
   selected,
@@ -89431,7 +89476,9 @@ function RhythmHistoryScreen({
   }, "対象曲 ", entry.event?.songIds?.length || 0, "曲")), React.createElement(ChevronRight, {
     size: 16,
     className: "shrink-0 text-slate-500"
-  })))))), selected && React.createElement(React.Fragment, null, React.createElement("div", {
+  })))))), selected && React.createElement(React.Fragment, null, selected.kind === 'limited' && React.createElement(RhythmHistoryBanner, {
+    event: selected.event
+  }), React.createElement("div", {
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3"
   }, React.createElement("div", {
     className: "flex items-center gap-2"
