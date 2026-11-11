@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5a83d2280a072fa
+// source-sha256: 9c06053dcf14cf57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -183467,6 +183467,7 @@ function MonsterHeroGame() {
     });
   }, [pendingFriendCode, friendsActive, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   const [pendingRoomLink, setPendingRoomLink] = useState(null);
+  const [roomLinkNotice, setRoomLinkNotice] = useState('');
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     let alive = true;
@@ -183487,7 +183488,9 @@ function MonsterHeroGame() {
           ...link,
           at: Date.now()
         };
-        await storeSet(MH_ROOM_LINK_KEY, link, false);
+        try {
+          await storeSet(MH_ROOM_LINK_KEY, link, false);
+        } catch (error) {}
       } else {
         link = mhNormalizeRoomLink(await storeGet(MH_ROOM_LINK_KEY, null, false));
       }
@@ -183509,10 +183512,12 @@ function MonsterHeroGame() {
       void openRhythmDemo({
         to: 'RHYTHM_MULTI'
       });
-    } else if (link.kind === 'card' && cardBattleEntryVisible && cardPvpOpen()) {
-      CARD_PVP_JOIN.request(link.code);
-      setCardOrigin('home');
-      setGameState('CARD_TOP');
+    } else if (link.kind === 'card') {
+      if (cardBattleEntryVisible && cardPvpOpen()) {
+        CARD_PVP_JOIN.request(link.code);
+        setCardOrigin('home');
+        setGameState('CARD_TOP');
+      } else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう一度リンクを開いてください');
     }
   }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   const rhythmEventStoryStartedRef = useRef([]);
@@ -207895,7 +207900,20 @@ function MonsterHeroGame() {
       accent: 'indigo',
       readOnly: true,
       label: `${raidJackDetailMon.name}の詳細`
-    })), renderCardQuickRunStrip(), React.createElement(CardMultiAwayBar, {
+    })), renderCardQuickRunStrip(), roomLinkNotice && React.createElement("div", {
+      className: "pointer-events-none fixed inset-x-0 top-0 z-[99000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
+    }, React.createElement("div", {
+      "data-room-link-notice": true,
+      role: "alert",
+      className: "pointer-events-auto w-full max-w-md rounded-2xl border-2 border-sky-400 bg-slate-900/95 p-3 shadow-2xl"
+    }, React.createElement("p", {
+      className: "text-[13px] font-black leading-snug text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(roomLinkNotice)), React.createElement("button", {
+      type: "button",
+      className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[14px] font-black text-white",
+      onClick: () => setRoomLinkNotice('')
+    }, "とじる"))), React.createElement(CardMultiAwayBar, {
       busy: CARD_PVP_NOTICE_BUSY.includes(gameState),
       onReturn: () => {
         CARD_PVP_BACK.request();

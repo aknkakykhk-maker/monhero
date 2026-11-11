@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 53b8eafcf1c24f02
+// generated-sha256: 56dc3b84640e8643
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -100058,6 +100058,7 @@ function MonsterHeroGame() {
   // 新しいキー(MH_ROOM_LINK_KEY)に預ける。入るのは、起動の流れ・はじめての案内が済んだHOMEに着いてから(?friend= と同じ条件)。
   // はじめての人は、最初の案内(チュートリアルなど)が全部済むまで預かったまま待つ。3時間たったら捨てる
   const [pendingRoomLink, setPendingRoomLink] = useState(null);
+  const [roomLinkNotice, setRoomLinkNotice] = useState('');   // リンクの部屋に入れなかったときの一言(閉じるまで出す)
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     let alive = true;
@@ -100071,7 +100072,7 @@ function MonsterHeroGame() {
           window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
         } catch (error) { /* URLを直せなくても、部屋には入れる */ }
         link = { ...link, at: Date.now() };
-        await storeSet(MH_ROOM_LINK_KEY, link, false);
+        try { await storeSet(MH_ROOM_LINK_KEY, link, false); } catch (error) { /* 預けられなくても、この起動のうちは入れる */ }
       } else {
         link = mhNormalizeRoomLink(await storeGet(MH_ROOM_LINK_KEY, null, false));
       }
@@ -100088,7 +100089,10 @@ function MonsterHeroGame() {
     void storeSet(MH_ROOM_LINK_KEY, null, false);
     if (!mhNormalizeRoomLink(link)) return;
     if (link.kind === 'beat') { mhBeatRoomLinkRequest(link.code); void openRhythmDemo({ to: 'RHYTHM_MULTI' }); }
-    else if (link.kind === 'card' && cardBattleEntryVisible && cardPvpOpen()) { CARD_PVP_JOIN.request(link.code); setCardOrigin('home'); setGameState('CARD_TOP'); }
+    else if (link.kind === 'card') {
+      if (cardBattleEntryVisible && cardPvpOpen()) { CARD_PVP_JOIN.request(link.code); setCardOrigin('home'); setGameState('CARD_TOP'); }
+      else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう一度リンクを開いてください');
+    }
   }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
   // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
@@ -116522,6 +116526,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {renderCardQuickRunStrip()}
         {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
         {/* MFバトルカードのマルチ: 招待の部屋を開いたまま、ほかの画面にいるあいだの帯(91 の CardMultiAwayBar・2026-10-30。ビートの帯と同じ形) */}
+        {roomLinkNotice&&(<div className="pointer-events-none fixed inset-x-0 top-0 z-[99000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"><div data-room-link-notice role="alert" className="pointer-events-auto w-full max-w-md rounded-2xl border-2 border-sky-400 bg-slate-900/95 p-3 shadow-2xl"><p className="text-[13px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(roomLinkNotice)}</p><button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[14px] font-black text-white" onClick={()=>setRoomLinkNotice('')}>とじる</button></div></div>)}
         <CardMultiAwayBar busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onReturn={()=>{CARD_PVP_BACK.request();if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} sessionTickets={ownedItemCount(ownedItems,RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseSessionTicket={consumeBuddyTicket} onRefundSessionTicket={refundBuddyTicket} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
