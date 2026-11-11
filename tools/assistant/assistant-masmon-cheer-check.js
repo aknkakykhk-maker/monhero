@@ -69,6 +69,12 @@ const make = ({ on = true, rows = ROWS2, place = 'battle', abs = 1000 } = {}) =>
   const none = make({ rows: [] });
   check('③ マスモンがいなければ RowInfo は null', none.T.assistantMasmonTrainRowInfo('kiki', NOW) === null);
 }
+// ③' 解放前の助手(カイホウ assistantPartnerOkNow が false)
+{
+  const { T, ctx } = make();
+  ctx.assistantPartnerOkNow = (id) => id !== 'kiki';
+  check("③' 解放前の助手は RowInfo が null・応援できない", T.assistantMasmonTrainRowInfo('kiki', NOW) === null && T.assistantMasmonCheer('kiki', 'cheer', NOW).ok === false);
+}
 // ④ 熟練は100で止まる
 {
   const { T } = make();

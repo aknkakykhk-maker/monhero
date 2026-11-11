@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 710f06952d7b6fb4
+// source-sha256: 0bbe1a0fffbd0ea7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140734,6 +140734,13 @@ const amgcRowsOf = aid => {
     return [];
   }
 };
+const amgcPartnerOk = aid => {
+  try {
+    return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(aid) !== false : true;
+  } catch (_) {
+    return true;
+  }
+};
 const amgcLife = () => typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life || null;
 const amgcAtBattle = (aid, life = amgcLife()) => {
   try {
@@ -140784,7 +140791,7 @@ const amgcLastShugyo = (aid, now = Date.now()) => {
 };
 const amgcTechName = (monster, id) => (AMGT_SENSE.find(x => x[0] === id) || [])[1] || (amgtTechsOf(monster).find(t => t.id === id) || {}).name || '';
 const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
-  if (!amgcOn() || !amgcOkAid(aid)) return null;
+  if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid)) return null;
   const rows = amgcRowsOf(aid);
   if (!rows.length) return null;
   const last = amgcLastShugyo(aid, now);
@@ -140907,7 +140914,7 @@ const AMGC_HOST = {
   }
 };
 const assistantMasmonTrainWatchOpen = aid => {
-  if (!amgcOn() || !amgcOkAid(aid) || !amgcRowsOf(aid).length) return false;
+  if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid) || !amgcRowsOf(aid).length) return false;
   AMGC_HOST.set({
     assistantId: aid,
     at: Date.now()

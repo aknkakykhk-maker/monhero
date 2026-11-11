@@ -50,6 +50,8 @@ const amgcToday = (now = Date.now()) => amgtSlotDay(amgtSlotOf(now));
 const amgcRowsOf = (aid) => {
   try { return typeof assistantMasmonRowsOf === 'function' && typeof ASSISTANT_MASMON_STORE !== 'undefined' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).filter(t => t && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[t.monster]) : []; } catch (_) { return []; }
 };
+// 解放前の助手には関われない(カイホウ assistantPartnerOkNow。無いあいだ・今の人は常に関われる)
+const amgcPartnerOk = (aid) => { try { return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(aid) !== false : true; } catch (_) { return true; } };
 const amgcLife = () => (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) || null;
 const amgcAtBattle = (aid, life = amgcLife()) => {
   try { const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, aid) : null; return !!(w && w.place === AMGT_PLACE); } catch (_) { return false; }
@@ -88,7 +90,7 @@ const amgcTechName = (monster, id) => ((AMGT_SENSE.find(x => x[0] === id) || [])
 // ---------- 地図の窓の1行(ナカヨシ19が place==='battle' の行で呼ぶ) ----------
 // 印が偽・マスモンがいない → null(ボタンも「きょうの修行」の行も出さない)
 const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
-  if (!amgcOn() || !amgcOkAid(aid)) return null;
+  if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid)) return null;
   const rows = amgcRowsOf(aid); if (!rows.length) return null;
   const last = amgcLastShugyo(aid, now);
   let today = null;
@@ -131,7 +133,7 @@ const assistantMasmonCheer = (aid, via = 'cheer', now = Date.now()) => {
 
 // ---------- 👀 修行を見る(練習試合を短く。保存しない・得は応援と同じで1回) ----------
 const AMGC_HOST = { open: null, subs: new Set(), set(v) { this.open = v; this.subs.forEach(f => { try { f(v); } catch (_) {} }); } };
-const assistantMasmonTrainWatchOpen = (aid) => { if (!amgcOn() || !amgcOkAid(aid) || !amgcRowsOf(aid).length) return false; AMGC_HOST.set({ assistantId: aid, at: Date.now() }); return true; };
+const assistantMasmonTrainWatchOpen = (aid) => { if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid) || !amgcRowsOf(aid).length) return false; AMGC_HOST.set({ assistantId: aid, at: Date.now() }); return true; };
 // 地図の中に1つだけ置く入れ物(ナカヨシ19)
 function AssistantMasmonTrainWatchHost() {
   const [open, setOpen] = useState(AMGC_HOST.open);
