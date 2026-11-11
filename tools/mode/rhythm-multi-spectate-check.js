@@ -230,16 +230,6 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     await B.waitForFunction(() => RHYTHM_PLAY_WATCH.jd === null, null, { timeout: 4000 }).catch(() => {});
     check('重い端末は、判定をためるのをやめる', (await B.evaluate(() => RHYTHM_PLAY_WATCH.jd)) === null, String(await B.evaluate(() => JSON.stringify(RHYTHM_PLAY_WATCH.jd))));
     check('重くても、数字(順位・判定の数・ライフ)は届き続ける', (await W.evaluate(() => document.querySelector('[data-rhythm-watch-count="MARVELOUS"] b').textContent)) !== '-');
-    // ---- 観戦を許さない人は、観戦の画面に名前・順位・スコアも出ない(行ごと外れる)。許すに戻すと戻る ----
-    await W.evaluate((id) => RHYTHM_WATCH.focus(id), idA);
-    await B.evaluate(() => RHYTHM_MULTI.setWatchAllow(false));
-    await W.waitForFunction((id) => !RHYTHM_WATCH.view().people.some((x) => x.id === id) && !document.querySelector(`[data-rhythm-watch-row="${id}"]`), idB, { timeout: 6000 })
-      .then(() => check('観戦を許さなくした人は、観戦の画面から行ごと外れる(名前・順位・スコアも出ない)', true), () => check('観戦を許さなくした人は、観戦の画面から行ごと外れる', false));
-    await W.waitForTimeout(3500);
-    check('外れたあと、その人の知らせ(3秒ごとの pg)が来ても、行は戻らない', (await W.locator(`[data-rhythm-watch-row="${idB}"]`).count()) === 0);
-    await B.evaluate(() => RHYTHM_MULTI.setWatchAllow(true));
-    await W.waitForSelector(`[data-rhythm-watch-row="${idB}"]`, { timeout: 9000 })
-      .then(() => check('観戦を許すに戻すと、行が戻る', true), () => check('観戦を許すに戻すと、行が戻る', false));
     await W.evaluate((id) => RHYTHM_WATCH.focus(id), idA);
     await W.waitForTimeout(1500);
     if (SHOT_DIR) {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 27f790e3fc5b0cea
+// source-sha256: be8b88e2b2ab6978
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91930,7 +91930,6 @@ const rhythmMultiCleanMessage = raw => {
     out.diff = rhythmMultiText(raw.diff, 20);
     out.playing = raw.playing === true;
     out.open = raw.open === true;
-    out.wa = raw.wa === 0 ? 0 : 1;
     out.mode = RHYTHM_MULTI_MODES.includes(raw.mode) ? raw.mode : 'private';
     if (raw.res && typeof raw.res === 'object') out.res = rhythmMultiCleanResult(raw.res);
     if (raw.room) out.room = rhythmMultiCleanRoom(raw.room);
@@ -92340,16 +92339,6 @@ const RHYTHM_MULTI = (() => {
       watchSend();
     } else if (!focused && watchTimer) watchStop();
   };
-  const watchAllowedBy = pid => pid === s.selfId ? watchAllow : !(s.members[pid] && s.members[pid].wa === 0);
-  const woHear = raw => {
-    if (!s) return;
-    const id = rhythmMultiText(raw.id, 40);
-    if (id && id !== s.selfId && s.members[id]) s.members[id].wa = raw.on === 1 ? 1 : 0;
-    Object.keys(s.watchers).forEach(wid => {
-      s.watchers[wid].ptRound = '';
-      s.watchers[wid].repliedAt = 0;
-    });
-  };
   const watchHear = raw => {
     if (!s || !socket || !s.live || s.live.done) return;
     const id = rhythmMultiText(raw.id, 40).replace(/[^A-Za-z0-9_-]/g, '');
@@ -92397,7 +92386,7 @@ const RHYTHM_MULTI = (() => {
           cb: rhythmMultiInt(nowHud.combo, RHYTHM_MULTI_LIVE_COMBO_MAX)
         } : {}),
         ...(sendPt ? {
-          pt: s.live.ids.filter(watchAllowedBy).slice(0, RHYTHM_MULTI_ROOM_MAX).map(pid => {
+          pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map(pid => {
             const m = s.members[pid] || {};
             return {
               i: pid,
@@ -92415,7 +92404,7 @@ const RHYTHM_MULTI = (() => {
   const watchAdStart = () => {
     watchAdStop();
     if (!s || !s.live || s.mode !== 'free' || !watchAllow) return;
-    const first = s.live.ids.filter(watchAllowedBy).sort()[0];
+    const first = s.live.ids.slice().sort()[0];
     if (first !== s.selfId) return;
     const code = s.code;
     watchAdTimer = setTimeout(() => {
@@ -92430,7 +92419,7 @@ const RHYTHM_MULTI = (() => {
         watchAdSocket.send({
           t: 'wroom',
           code: s.code,
-          n: Math.max(1, s.live.ids.filter(watchAllowedBy).length),
+          n: s.live.ids.length,
           hn: me.name,
           hi: me.icon,
           hr: me.level,
@@ -92482,10 +92471,7 @@ const RHYTHM_MULTI = (() => {
       open: me.open,
       mode: s.mode,
       res: me.res || undefined,
-      room: isHostNow() ? roomPayload() : undefined,
-      ...(watchAllow ? {} : {
-        wa: 0
-      })
+      room: isHostNow() ? roomPayload() : undefined
     });
     sendCpuHb();
   };
@@ -93132,11 +93118,6 @@ const RHYTHM_MULTI = (() => {
       if (watchFeed) watchFeed(raw);
       return;
     }
-    if (raw && raw.t === 'wo') {
-      woHear(raw);
-      if (watchFeed) watchFeed(raw);
-      return;
-    }
     if (raw && raw.t === 'res' && watchFeed) watchFeed(raw);
     const playingNow = selfMember();
     if (playingNow && playingNow.playing) {
@@ -93210,7 +93191,6 @@ const RHYTHM_MULTI = (() => {
         diff: msg.diff,
         playing: msg.playing,
         open: msg.open,
-        wa: msg.wa,
         res: msg.res || prev.res,
         seen: Date.now(),
         cpu: msg.cpu,
@@ -93364,13 +93344,6 @@ const RHYTHM_MULTI = (() => {
           allow: watchAllow
         });
       } catch (_) {}
-      if (s && socket) socket.send({
-        t: 'wo',
-        id: s.selfId,
-        ...(watchAllow ? {
-          on: 1
-        } : {})
-      });
       if (!watchAllow && s) {
         Object.keys(s.watchers).forEach(id => {
           if (!s.members[id]) delete s.watchers[id];
@@ -94004,26 +93977,6 @@ const RHYTHM_WATCH = (() => {
       emit();
       return;
     }
-    if (raw.t === 'wo') {
-      const id = rhythmMultiText(raw.id, 40);
-      if (st.members[id]) st.members[id].hidden = raw.on !== 1;
-      if (raw.on === 1) {
-        st.round && ping();
-        return;
-      }
-      if (!st.people.some(x => x.id === id)) return;
-      st.people = st.people.filter(x => x.id !== id);
-      delete st.rows[id];
-      if (st.judged) delete st.judged[id];
-      if (st.focus === id) st.focus = st.people.length ? st.people[0].id : '';
-      if (!st.people.length) {
-        st.phase = 'ended';
-        st.endedAt = now;
-      } else if (!st.people.some(x => x.id === st.focus)) st.focus = st.people[0].id;
-      ping();
-      emit();
-      return;
-    }
     if (st.member) return;
     if (raw.t === 'hb') {
       const m = rhythmMultiCleanMessage(raw);
@@ -94034,8 +93987,7 @@ const RHYTHM_WATCH = (() => {
         icon: m.icon,
         frame: m.frame,
         diff: m.diff,
-        cpu: m.cpu === true,
-        hidden: m.wa === 0
+        cpu: m.cpu === true
       };
       st.heard = true;
       const ph = m.room && m.room.phase;
@@ -94048,7 +94000,7 @@ const RHYTHM_WATCH = (() => {
     if (raw.t === 'start') {
       const m = rhythmMultiCleanMessage(raw);
       if (!m) return;
-      const people = m.participants.map(id => st.members[id]).filter(x => x && !x.cpu && !x.hidden);
+      const people = m.participants.map(id => st.members[id]).filter(x => x && !x.cpu);
       if (!people.length) {
         ping();
         return;
