@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2515fbfed3a95837
+// source-sha256: 0819d95039de3436
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -133366,9 +133366,11 @@ const normalizeAssistantMasmonSave = raw => {
     pickNameDay: '',
     renamed2: {},
     asked: [],
-    mine: {}
+    mine: {},
+    nickFix1: false
   };
   if (raw && typeof raw === 'object') {
+    out.nickFix1 = raw.nickFix1 === true;
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
@@ -134412,7 +134414,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
     role,
     welcome: assistantMasmonWelcomeLv(slot),
     colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd),
-    ai: false,
+    ai: !!(typeof best.c.t.nick === 'string' && best.c.t.nick),
     reason,
     at: day
   };
@@ -134576,7 +134578,64 @@ const assistantMasmonEnsureMade = async () => {
       } catch (_) {}
     }
   } catch (_) {}
+  try {
+    const st = ASSISTANT_MASMON_STORE.state;
+    const next = assistantMasmonNickFix1(st);
+    if (next !== st) {
+      ASSISTANT_MASMON_STORE.set(next);
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+      } catch (_) {}
+    }
+  } catch (_) {}
   void assistantMasmonAskNames();
+};
+const assistantMasmonIsMonName = n => {
+  try {
+    return typeof ALL_PLAYER_MONSTERS !== 'undefined' && Object.values(ALL_PLAYER_MONSTERS).some(m => m && m.name === n);
+  } catch (_) {
+    return false;
+  }
+};
+const assistantMasmonNickFix1 = st => {
+  if (!st || st.nickFix1 || !st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V) return st;
+  const pick = {
+    ...(st.pick || {})
+  };
+  for (const aid of Object.keys(pick)) {
+    const base = assistantMasmonBasePlanOf(aid);
+    if (!base || !pick[aid]) continue;
+    const pool = assistantMasmonDrawPool(aid, base);
+    const all = [...pool.likes, ...pool.more, ...pool.rest];
+    const mine = assistantMasmonMineOf(st, aid);
+    const pk = {
+      ...pick[aid]
+    };
+    for (const k of Object.keys(pk)) {
+      const t = pk[k];
+      const mon = assistantMasmonMon(t.monster);
+      if (!mon || t.nick !== mon.name || (mine.names[t.slot] || []).length) continue;
+      const src = all.find(x => x.monster === t.monster && typeof x.nick === 'string' && x.nick);
+      if (!src || assistantMasmonRowsOf({
+        ...st,
+        pick: {
+          ...pick,
+          [aid]: pk
+        }
+      }, aid).some(y => y.nick === src.nick)) continue;
+      pk[k] = {
+        ...t,
+        nick: src.nick,
+        ai: true
+      };
+    }
+    pick[aid] = pk;
+  }
+  return {
+    ...st,
+    pick,
+    nickFix1: true
+  };
 };
 let _assistantMasmonNamesBusy = false,
   _assistantMasmonNamesAgain = false;
@@ -134676,7 +134735,7 @@ const assistantMasmonAskNamesOnce = async () => {
         if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
         const styled = !!assistantMasmonMineOf(cur, a).nameStyle;
-        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n);
+        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n) && !assistantMasmonIsMonName(n);
         if (!ok) return t;
         used.add(n);
         changed = true;
