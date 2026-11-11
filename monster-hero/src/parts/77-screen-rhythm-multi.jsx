@@ -278,6 +278,10 @@ const rhythmMultiCleanMessage = (raw) => {
     out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
     out.text = rhythmMultiText(raw.text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
     out.cid = rhythmMultiText(raw.cid, 40);
+    // スタンプ(2026-11-11 で足した項目。顔 sf・言葉 sw の番号。古い版は送らない・知らない番号は捨てて言葉だけ出す)
+    const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
+    const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
+    if (sf && sw) { out.sf = sf; out.sw = sw; }
     return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
@@ -870,8 +874,10 @@ const RHYTHM_MULTI = (() => {
     if (msg.t === 'bye') { delete s.members[msg.id]; emit(); return; }
     if (msg.t === 'chat') {
       // 同じ発言(cid)は2度出さない。覚えておくのは直近だけ(保存はしない)
-      if (!s.chat.some((c) => c.cid === msg.cid)) {
-        s.chat.push({ cid: msg.cid, id: msg.id, name: msg.name, text: msg.text, at: Date.now() });
+      // スタンプは1人2秒に1個まで出す(それより早く届いた分は出さない。自分の分は部屋からの返りなので数えない)
+      const stampOk = !msg.sf || msg.id === s.selfId || MULTI_STAMP.accept(msg.id);
+      if (stampOk && !s.chat.some((c) => c.cid === msg.cid)) {
+        s.chat.push({ cid: msg.cid, id: msg.id, name: msg.name, text: msg.text, at: Date.now(), ...(msg.sf ? { sf: msg.sf, sw: msg.sw } : {}) });
         if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
         cpuReplyTo(msg);
       }
@@ -1235,13 +1241,14 @@ const RHYTHM_MULTI = (() => {
       else if (growth.sproutNew) cpuSay(x, 'sproutNew', { who: ownerName() }, { extraDelay: growth.levelUp > 0 ? 3000 : 800, skipGap: true });
     },
     // 部屋のチャット。自分の発言も部屋からの返りで表示する(=相手にも届いたと分かる)。続けて送るのは受けない
-    sendChat(text) {
+    sendChat(text, stamp = null) {
       if (!s || !socket) return false;
       const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
       const me = selfMember();
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
-      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}` });
+      const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
+      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
     },
     hasReported(round) { const me = selfMember(); return !!(me && me.res && me.res.startId === round); },
     // 自分が選んだ難易度(演奏の結果へ添える)
@@ -1322,6 +1329,10 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
     return ok;
   };
   const submit = () => { if (send(chatText)) setChatText(''); };
+  // スタンプ(2026-11-11)。ひとことの欄と切り替える。どちらを開いていたかは、その場だけ覚える
+  const [stampOpen, setStampOpen] = React.useState(false);
+  const [stampEdit, setStampEdit] = React.useState(false);
+  const sendStamp = (x) => { const ok = RHYTHM_MULTI.sendChat(x.text, { f: x.f, w: x.w }); setWaitNote(false); return ok; };
   const memberOf = (id) => members.find((m) => m.id === id) || null;
   const [askOpen, setAskOpen] = React.useState(() => rhythmMultiAskOpenLoad());
   const toggleAsk = () => setAskOpen((v) => { const next = !v; rhythmMultiAskOpenSave(next); return next; });
@@ -1351,7 +1362,9 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
                 : <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs">🎵</span>)}
               <span className={`flex min-w-0 max-w-[80%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
                 {!mine && <b className="max-w-full truncate text-[10px] text-amber-200">{c.name}</b>}
-                <span className={`break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`}>{c.text}</span>
+                {c.sf
+                  ? <MultiStampView f={c.sf} w={c.sw} text={c.text} size={72} className={MULTI_STAMP.prefs().pic ? '' : `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`} />
+                  : <span className={`break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`}>{c.text}</span>}
               </span>
             </li>
           );
@@ -1359,7 +1372,25 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </ul>
       {/* 「マスモンに聞く」札と定型文。縦は高さを抑えて中だけ上下にすべらせ、横向きは1行で横にすべらせる
           (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
+      <div data-rhythm-multi-chat-mode className="mt-2 grid shrink-0 grid-cols-2 gap-1 landscape:hidden [[data-mh-view-rotation=true]_&]:hidden">
+        <button type="button" data-rhythm-multi-chat-mode-btn="text" aria-pressed={!stampOpen} onClick={() => setStampOpen(false)}
+          className={`min-h-[34px] rounded-lg text-[12px] font-black ${!stampOpen ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>💬 ひとこと</button>
+        <button type="button" data-rhythm-multi-chat-mode-btn="stamp" aria-pressed={stampOpen} onClick={() => setStampOpen(true)}
+          className={`min-h-[34px] rounded-lg text-[12px] font-black ${stampOpen ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>😊 スタンプ</button>
+      </div>
+      {stampOpen && (
+        <div data-rhythm-multi-chat-stamps className="mt-2 max-h-[13.5rem] shrink-0 overflow-y-auto landscape:max-h-[9.5rem] [[data-mh-view-rotation=true]_&]:max-h-[9.5rem]">
+          {/* 横向きは切り替えの段を置かない(発言の一覧の高さを残す)。ここから「ひとこと」へ戻る */}
+          <button type="button" data-rhythm-multi-chat-mode-chip="text" onClick={() => setStampOpen(false)}
+            className="mb-1.5 hidden min-h-[30px] rounded-full border border-cyan-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-cyan-100 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">💬 ひとことへ</button>
+          <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={5} />
+        </div>
+      )}
+      {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
+      {!stampOpen && <>
       <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]">
+        <button type="button" data-rhythm-multi-chat-mode-chip="stamp" onClick={() => setStampOpen(true)}
+          className="hidden min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-cyan-300/60 bg-cyan-600 px-2.5 text-[11px] font-black text-white active:scale-95 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">😊 スタンプ</button>
         {askName && (
           <div data-rhythm-buddy-ask={askOpen ? 'open' : 'closed'} className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap">
             {/* 2026-11-07 社長「みゅあにきくみたいなやつは閉じたりできるようにしたい」。はじめは畳み、押すと開く。開いたかどうかは端末に覚える */}
@@ -1380,6 +1411,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
           className="min-h-[46px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
         <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[46px] shrink-0 rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
       </form>
+      </>}
     </section>
   );
 }
@@ -1414,8 +1446,21 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 
 // カードの上の吹き出し(発言してから少しのあいだだけ)。
 // 席のカードの中に収める(2026-11-07 社長のスクショ: 横・🔄横で吹き出しが席の下の曲の一覧に重なっていた)。2行まで・字は縦横で同じ大きさ
-function RhythmMultiChatBubble({ text }) {
-  if (!text) return null;
+// スタンプ(2026-11-11)は text が { text, sf, sw }。絵で出さない設定のときは言葉だけ
+const rhythmMultiBubbleStamp = (text) => (text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null);
+const rhythmMultiBubbleText = (text) => (text && typeof text === 'object' ? text.text : text);
+function RhythmMultiChatBubble({ text: raw }) {
+  if (!raw) return null;
+  const stamp = rhythmMultiBubbleStamp(raw);
+  const text = rhythmMultiBubbleText(raw);
+  if (stamp) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
+      <span className="flex max-h-full max-w-full flex-col items-center rounded-xl bg-white p-0.5 shadow-lg">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="block aspect-square min-h-0 w-14 max-w-full shrink rounded-lg object-cover" />
+        <b className="block max-w-full truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+      </span>
+    </span>
+  );
   return (
     <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
       <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
@@ -1426,8 +1471,19 @@ function RhythmMultiChatBubble({ text }) {
 // 結果画面の吹き出し(2026-11-07 社長「モンビーマルチで結果画面で喋ったときも吹き出しだして」)。
 // カードの中に重ねると「👑 MVP」の札を隠し、カードの枠で切れて吹き出しに見えなかった。カードの外の上へ出し、しっぽをカードへ向ける。
 // 置き場所は結果画面の一覧(ul)の上の余白。カードと同じ5列に並べるので、だれの発言か分かる
-function RhythmMultiResultBubble({ text }) {
-  if (!text) return null;
+function RhythmMultiResultBubble({ text: raw }) {
+  if (!raw) return null;
+  const stamp = rhythmMultiBubbleStamp(raw);
+  const text = rhythmMultiBubbleText(raw);
+  if (stamp) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+      <span className="relative flex max-w-full flex-col items-center rounded-xl border-2 border-sky-300 bg-white p-0.5 shadow-[0_2px_10px_rgba(0,0,0,.5)]">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="block h-12 w-12 rounded-lg object-cover landscape:h-10 landscape:w-10" />
+        <b className="block max-w-full truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+        <i aria-hidden="true" className="absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white" />
+      </span>
+    </span>
+  );
   return (
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
       <span className="relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs" style={JA_WRAP_STYLE}>
@@ -2297,6 +2353,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
 @keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+.mhms-stage[data-mhms-rest] :is(.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float),.mhms-stage[data-mhms-rest] .mhms-card::after{animation-play-state:paused!important}
 .mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
@@ -2334,8 +2391,29 @@ const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([
   { left: '12%', top: '18%', delay: '0s' }, { left: '34%', top: '9%', delay: '-.9s' }, { left: '57%', top: '22%', delay: '-1.8s' },
   { left: '76%', top: '12%', delay: '-.4s' }, { left: '88%', top: '34%', delay: '-2.2s' }, { left: '48%', top: '40%', delay: '-1.3s' },
 ]);
+// 窓(お知らせなど)が上に重なっている間・画面(タブ)を離れている間は、飾りの動きを止める(見た目は変わらない)。
+// 0.5秒ごとに見るだけ。画面を離れたら止め、タイマーは unref(Node の検査で残らないように)
+function useMhmsRestWhenHidden(ref) {
+  React.useEffect(() => {
+    const stage = ref.current && ref.current.closest ? ref.current.closest('.mhms-stage') : null;
+    if (!stage || typeof document === 'undefined') return undefined;
+    const check = () => {
+      let rest = false;
+      try { rest = !!document.hidden || !!document.querySelector('[aria-modal="true"],[role="dialog"]'); } catch (e) { rest = false; }
+      if (rest) { if (!stage.hasAttribute('data-mhms-rest')) stage.setAttribute('data-mhms-rest', ''); }
+      else if (stage.hasAttribute('data-mhms-rest')) stage.removeAttribute('data-mhms-rest');
+    };
+    check();
+    const t = setInterval(check, 500);
+    if (t && typeof t.unref === 'function') t.unref();
+    document.addEventListener('visibilitychange', check);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', check); if (stage.hasAttribute('data-mhms-rest')) stage.removeAttribute('data-mhms-rest'); };
+  }, []);
+}
 const RHYTHM_MODE_SELECT_IDLE_MS = 10000;
 function RhythmModeSelectStage({ notes = true }) {
+  const fxRef = React.useRef(null);
+  useMhmsRestWhenHidden(fxRef);
   // 10秒さわらなければ飾りを止める(置きっぱなしのときの電池と熱のため)。印を付け外しするだけで、画面は描き直さない
   React.useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
@@ -2348,7 +2426,7 @@ function RhythmModeSelectStage({ notes = true }) {
     return () => { clearTimeout(timer); events.forEach(name => window.removeEventListener(name, wake, { capture: true })); root.classList.remove('mhms-idle'); };
   }, []);
   return (
-    <div className="mhms-fx" aria-hidden="true">
+    <div className="mhms-fx" aria-hidden="true" ref={fxRef}>
       <span className="mhms-beam b1" /><span className="mhms-beam b2" /><span className="mhms-beam b3" />
       <span className="mhms-floor" />
       {RHYTHM_MODE_SELECT_SPARKS.map((sp, i) => <span key={`s${i}`} className="mhms-spark" style={{ left: sp.left, top: sp.top, animationDelay: sp.delay }} />)}
@@ -2506,7 +2584,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     for (let k = chatList.length - 1; k >= 0; k--) {
       const c = chatList[k];
       if (now - (c.at || 0) > RHYTHM_MULTI_CHAT_BUBBLE_MS) return '';
-      if (c.id === id) return c.text;
+      // スタンプは { text, sf, sw } で渡す(吹き出しが絵で出す)
+      if (c.id === id) return c.sf ? { text: c.text, sf: c.sf, sw: c.sw } : c.text;
     }
     return '';
   };
