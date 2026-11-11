@@ -1,6 +1,6 @@
 {
   "_説明": "仕事の種類 → モデルの表(1つの正本)。node tools/ctx.js model \"<仕事>\" と newsession がここを読む。人が読む説明と実例は docs/rules/MODEL_ROUTING.md。値段の目安: haiku < sonnet(opus の半分)< opus < fable(opus の2倍)。 考え方: 道具を作る・強化するのは最新モデル(1回)、できた道具を回してまとめるのは安いモデル。",
-  "既定": "design",
+  "既定": "build",
   "種類": [
     {
       "id": "watch",
