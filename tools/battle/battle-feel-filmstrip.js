@@ -58,15 +58,17 @@ const shootNow = async (run, dir, name = 'now') => {
   const cdp = await ctx.newCDPSession(page);
   const shots = [];
   cdp.on('Page.screencastFrame', (f) => { shots.push({ t: f.metadata.timestamp * 1000, data: f.data }); cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {}); });
-  await page.evaluate(() => {
+  await page.evaluate((forceCrit) => {
+    // FORCE_CRIT=1: 会心を出して撮るための確かめ用。乱数を小さい値に寄せるだけ(ゲーム本体は変えない)
+    if (forceCrit) { const r = Math.random.bind(Math); let n = 0; Math.random = () => (++n % 3 ? 0.002 : r()); }
     window.__hits = [];
     document.addEventListener('animationstart', (e) => { if (/^(thmHitCore|tacticsHitRing|kzHurt)$/.test(e.animationName)) window.__hits.push(Date.now()); }, true);
-    // 手ごたえが入ったあとの版は、当たりの間が入った瞬間(#root の data-feel-stop)と数字の札が出た瞬間を「当たり」とする
+    // 手ごたえが入ったあとの版は、当たりの間が入った瞬間(data-feel-stop)と数字の札が出た瞬間を「当たり」とする
     window.__feelHits = [];
-    new MutationObserver(() => { const r = document.getElementById('root'); if (r.hasAttribute('data-feel-stop')) window.__feelHits.push([Date.now(), r.getAttribute('data-feel-stop')]); }).observe(document.getElementById('root'), { attributes: true, attributeFilter: ['data-feel-stop'] });
+    new MutationObserver(() => { const r = document.querySelector('[data-feel-stop]'); if (r) window.__feelHits.push([Date.now(), r.getAttribute('data-feel-stop')]); }).observe(document.getElementById('root'), { attributes: true, subtree: true, attributeFilter: ['data-feel-stop'] });
     const auto = [...document.querySelectorAll('button')].find((x) => /AUTO/.test(x.textContent) && /OFF/.test(x.textContent));
     if (auto) auto.click();
-  });
+  }, process.env.FORCE_CRIT === '1');
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 70, maxWidth: 390, maxHeight: 844, everyNthFrame: 1 });
   await page.waitForTimeout(name === 'after' ? 26000 : 16000);
   await cdp.send('Page.stopScreencast');
