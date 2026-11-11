@@ -75,3 +75,34 @@ sh docs/progress/kirameki-2026-11-11/make-mocks.sh        見本の写しを作�
 ```
 
 `--trace` を付けるとレイアウトの時間が大きく出る(測る仕組みの重さ)。時間は付けないときの数字を見る。
+
+## 6. 社長の選択(2026-11-11)と、そのあとの進み
+
+社長は4つとも推奨を選んだ: ①A 判定の光+C コンボの熱・フルコンボ ②標準から入れる(軽さ優先には出さない) ③全部のせ・華やかの背景の層をまとめる ④モードえらびは M1+M3。
+
+### ④ モードえらび(作った・ブランチ `claude/beat-mode-select-light`・**公開は社長の「この文で」のあと**)
+
+- M1: すりガラス(backdrop-filter)をやめ、濃い半透明の色を敷いた(見出し・助手の枠と小さいボタン `.mhms-glass`・立ち絵/コメントの切替)
+- M3: 10秒さわらなければ飾りを止める(`html.mhms-idle` で `animation-play-state:paused`。さわれば続きから動く。画面は描き直さない)
+- 同じ舞台(`RhythmModeSelectStage`・`.mhms-glass`)を使うモンヒロバトル・MFバトルカードの入口にも同じく効く
+- 止め絵: [前](shots/M-mode-select-now.jpg) / [後](shots/M-mode-select-after.jpg)(見た目はほぼ同じ)
+
+| モードえらび・横 | 背景ぼかしの箱 | 層 | 動くアニメーション | 型の再計算 |
+| --- | --- | --- | --- | --- |
+| 前 | 9個 | 45枚 | 22本(ずっと) | 毎フレーム22要素 |
+| 後 | **0個** | 39枚 | 22本 → **10秒で0本** | 止まったあとは0 |
+
+更新履歴の案(社長の「この文で」待ち):
+
+> 題: モンヒロビートのモードえらびを軽くしました
+> 本文: モードえらびの画面の動作を軽くしました。しばらく操作しないと背景の光や音符の動きが止まり、画面にさわるとまた動きます。モンヒロバトル・MFバトルカードの入口の画面も同じように軽くなっています。
+
+ヘルプの案: 追記なし(遊び方は変わらないため。入れるなら「動作が重いとき」の項に「入口の画面は、しばらく操作しないと飾りの動きが止まります」の1行)。
+
+### ①③(まだ・次の会話へ引き継ぎ)
+
+- ① A 判定の光: 今の仕組みは `rhythmSpawnHitEffect`(data/rhythm-mode.js:50636。あらかじめ作った DOM を使い回す)と canvas 側の `drawHits`・WebGL 側の光の粒(`rhythmHitSparkActive`)。光の柱・輪・粒は**ノーツの canvas / WebGL の同じ1枚**へ足す(層を足さない)。見張りは `tools/mode/rhythm-hit-effect-check.js`
+- ① C コンボの熱: コンボの箱は `data-rhythm-combo-box`(30-rhythm-play.jsx:1061)。節目の輪は既にある `data-rhythm-combo-ring`(comboMilestoneFx)。両はしの光は canvas へ。フルコンボは `rhythm-fullcombo-celebrate-check.js` が見張る既存の祝いを強める
+- ③ 層をまとめる対象(`--preset FULL --trace` の「大きい層」): 光の粒 `data-rhythm-stage-sparks` 2枚(各 画面2枚ぶん)・`stage-pulse`・`judgment-band`・`stage-beam` 2枚・盛り上がりの筋 `::before` 2枚。前後の絵を画素で比べる(`rhythm-stage-gl-check.js` と同じやり方)
+- 見本の描き方(色・大きさ・時間)は `look-mock.js` にある
+- 作ったら `rhythm-weight-report.js --check` と `rhythm-gpu-estimate.js --check`、`rhythm-play-smoke-check.js`

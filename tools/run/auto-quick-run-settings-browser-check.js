@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // AUTO設定の「モンビー中に回すクイック周回」を実ブラウザで確かめる
 // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
 //

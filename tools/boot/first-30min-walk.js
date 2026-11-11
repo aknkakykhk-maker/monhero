@@ -225,7 +225,7 @@ async function walk(browser, base, orient) {
 
   // ---- 4. 村の案内(HOME の建物を指しながら話す) ----
   const tourStart = await scene('村の案内');
-  const firstReward = tourStart.dialogs.includes('ログインボーナス') ? { humanSec: humanSec(), taps } : null;
+  let firstReward = tourStart.dialogs.includes('ログインボーナス') ? { humanSec: humanSec(), taps } : null;
   if (tourStart.dialogs.length >= 2) note('隠れ', '村の案内', `案内が HOME の建物を指して話すあいだ、「${tourStart.dialogs.filter((d) => d !== 'はじめての案内').join('・')}」の窓が HOME を隠している`);
   const tour = await talk('村の案内');
   if (tour.taps >= LONG_TALK) note('長い', '村の案内', `「次へ」が${tour.taps}手続く(全${tour.total || tour.taps}話)`);
@@ -276,6 +276,12 @@ async function walk(browser, base, orient) {
   }
 
   // ---- 6. HOME。頼んでいない窓を順に閉じる ----
+  // 案内とれんしゅうのあとに出るログインボーナスの窓(最初のごほうび)を待つ。開き直すと窓は消えるので、ここで見る
+  if (!firstReward) {
+    const shown = await until(() => !!document.querySelector('[aria-label="ログインボーナス"]'), 4000, '');
+    if (shown >= 0) { firstReward = { humanSec: humanSec(), taps }; await scene('ログインボーナス'); await tap(/^(閉じる|とじる)$/); }
+    else note('行止', 'ログインボーナス', '案内とれんしゅうが終わっても、ログインボーナスの窓が出ない');
+  }
   const goHome = async () => {
     for (let i = 0; i < 5; i++) {
       const s = await state();

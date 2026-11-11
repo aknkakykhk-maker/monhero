@@ -827,7 +827,7 @@ const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
-const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中' });
+const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中', battle: 'バトル中' });
 // name … {name} に入れる呼び方を決めて渡すとき(よその家の助手が、訪ねてきたプレイヤーを呼ぶ: 「◯◯さん」)
 const alfFill = (text, { f = '', h = '', v = '', who = null, name = null } = {}) => String(text || '')
   .replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v)
@@ -1287,23 +1287,32 @@ function AssistantLifeFriendPage({ life }) {
   };
   const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
   const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  // まだ何も起きていない(フレンドの家も行き来も置き手紙も無い)ときは、空の箱を並べずに案内1つにする(2026-11-11 社長「わかりづらさをどんどん改善して」・ナカヨシ12)
+  const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
+  const hideIfEmpty = alfEmpty ? { display: 'none' } : undefined;
   return (
     <div className="px-3 pb-3 pt-1" data-alf-page="on">
-      {!s.intro && (
+      {alfEmpty && (
+        <div className={card} data-alf-empty-guide>
+          <p className="text-[13px] font-black text-amber-200">🏘 フレンドができると、ここがにぎやかになります</p>
+          <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
+        </div>)}
+      {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
+          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
         </div>)}
-      <p className={sec}>🏘 いまの行き来</p>
-      <div className={card} data-alf-now>
+      <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
+      <div className={card} data-alf-now style={hideIfEmpty}>
         {st.out && <div className="flex items-center gap-2" data-alf-now-out>{st.out.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.out.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{st.out.name}さんの家へ</span></p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="out" onClick={() => openScene('out')}>▶ 様子</button></div>}
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
-      <p className={sec}>✉️ 置き手紙</p>
-      <div className={card} data-alf-notes>
+      <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
+      <div className={card} data-alf-notes style={hideIfEmpty}>
         {notes.length ? notes.slice(0, 12).map(n => (
           <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
             <p className="text-[11px] leading-snug text-slate-100">
@@ -1322,8 +1331,8 @@ function AssistantLifeFriendPage({ life }) {
               : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
           </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
       </div>
-      <p className={sec}>🏠 フレンドの家</p>
-      <div data-alf-houses>
+      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
@@ -1351,9 +1360,9 @@ function AssistantLifeFriendPage({ life }) {
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
         {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
-          <label key={k} className="flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100" data-alf-setting={k}>
+          <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
             <span>{label}</span>
-            <input type="checkbox" checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
+            <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
           </label>))}
         {s.settings.muted.length > 0 && <button type="button" className="mt-1 text-[10.5px] text-amber-200 underline" data-alf-unmute onClick={() => assistantLifeFriendSetSettings({ muted: [] })}>来ないようにした家({s.settings.muted.length}軒)を戻す</button>}
       </div>
