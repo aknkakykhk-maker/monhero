@@ -1,18 +1,29 @@
+# 第8弾の袋の絵の見本(全18種類)。使い方: python3 p8-sample-make.py <作業フォルダ(p8.png・届いたカードのイラスト2枚)> <出力.png> 214,490,182,404,488,186
 import sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 S=sys.argv[1]; R='/home/user/monhero/monster-hero/images/monsters/'
 im=Image.open(S+'/p8.png').convert('RGBA')
 def trim(p):
   a=Image.open(p).convert('RGBA'); return a.crop(a.getchannel('A').getbbox())
-def put(a,cx,bottom,h,shadow=True):
+def blend(a):
+  # 袋の絵になじませる: 彩度と濃さを少し落とし、明るめに寄せ、ふちを薄く
+  from PIL import ImageEnhance
+  rgb=a.convert('RGB'); al=a.getchannel('A')
+  rgb=ImageEnhance.Color(rgb).enhance(0.88); rgb=ImageEnhance.Contrast(rgb).enhance(0.92); rgb=ImageEnhance.Brightness(rgb).enhance(1.04)
+  al=al.filter(ImageFilter.GaussianBlur(1.2))
+  out=rgb.convert('RGBA'); out.putalpha(al); return out
+def put(a,cx,bottom,h,shadow=False):
   w=round(a.width*h/a.height); a=a.resize((w,h),Image.LANCZOS)
   x=cx-w//2; y=bottom-h
   if shadow:
     sh=Image.new('RGBA',a.size,(255,255,255,0)); sh.putalpha(a.getchannel('A').filter(ImageFilter.GaussianBlur(3)).point(lambda v:min(255,int(v*0.9))))
     glow=Image.new('RGBA',a.size,(255,255,255,255)); glow.putalpha(sh.getchannel('A'))
     for dx,dy in [(-2,0),(2,0),(0,-2),(0,2)]: im.alpha_composite(glow,(x+dx,y+dy))
-  im.alpha_composite(a,(x,y))
-un=trim(R+'undine.PNG'); sn=trim(R+'snegurochka.png')
+  # 影: 下に薄い紫の影(まわりの光の色)
+  sh=Image.new('RGBA',a.size,(60,40,90,0)); sh.putalpha(a.getchannel('A').filter(ImageFilter.GaussianBlur(5)).point(lambda v:int(v*0.35)))
+  im.alpha_composite(sh,(x+3,y+4))
+  im.alpha_composite(blend(a),(x,y))
+un=trim(S+'/undine-stand-from-president.png'); sn=trim(S+'/snegurachka-stand-from-president.png')
 cfg=[float(v) for v in sys.argv[3].split(',')] if len(sys.argv)>3 else [232,478,150,392,478,140]
 put(un,int(cfg[0]),int(cfg[1]),int(cfg[2])); put(sn,int(cfg[3]),int(cfg[4]),int(cfg[5]))
 # 「全12種類」の「2」を「8」に
