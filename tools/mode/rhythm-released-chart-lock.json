@@ -54,7 +54,7 @@
   "pandora_boss_remix/easy": "003b26bbd1b5fed3",
   "pandora_boss_remix/normal": "797ea6987c41f89f",
   "pandora_boss_remix/hard": "2a496a3650789e02",
-  "pandora_boss_remix/expert": "6d704042965681ef",
+  "pandora_boss_remix/expert": "fb361d9246454610",
   "pandora_boss_remix/master": "b179816e11e0b9ca",
   "dullahan/easy": "b960aec5d86e2024",
   "dullahan/normal": "289329eeaa265145",
@@ -148,7 +148,7 @@
   "kiki_issen_short/master": "378125b4f5b55736",
   "crazy_party_night/easy": "a53b851eead5f1f9",
   "crazy_party_night/normal": "a63df0614690052e",
-  "crazy_party_night/hard": "3a201eaad38adab4",
+  "crazy_party_night/hard": "17fbc8e0e94af7f9",
   "crazy_party_night/expert": "c44995a421e40aa5",
   "crazy_party_night/master": "22032329620c4564",
   "crazy_party_night_full/easy": "6fbdac38d83da7b2",
@@ -239,8 +239,8 @@
   "light_player_short/easy": "306384c9db118097",
   "light_player_short/normal": "3839f86fa419d17c",
   "light_player_short/hard": "11b1ac3d17fc075d",
-  "light_player_short/expert": "537c1ce865d2f8fc",
-  "light_player_short/master": "27efba4792b8683c",
+  "light_player_short/expert": "a2d39bca234e84ba",
+  "light_player_short/master": "c0236f7f99588555",
   "tsuki_ga_michiru_mae_ni/easy": "5f15a227bf2282bb",
   "tsuki_ga_michiru_mae_ni/normal": "431b9eb42c25d7c2",
   "tsuki_ga_michiru_mae_ni/hard": "1cfce88b8fba2da3",
@@ -662,6 +662,16 @@
    "at": "2026-11-11 22:35",
    "reason": "2026-11-11 社長「全部変えていいけど告知はして」: 公開中の問題のある譜面の見直し(40曲の EASY〜MASTER を今の道具で作り直し・ヒューマノイドは位置だけ直し・Rebellion short は前と同じ Lv.42 へ)。HELL と Sheriruth・Grievous Lady の譜面は変えない",
    "changedCount": 200
+  },
+  {
+   "at": "2026-11-11 23:12",
+   "reason": "2026-11-11 公開中の譜面の見直しの続き: モンスター枠の欠け・見分けられない終点フリック・切り替え後の Lv. の表をそろえた",
+   "changed": [
+    "pandora_boss_remix/expert",
+    "crazy_party_night/hard",
+    "light_player_short/expert",
+    "light_player_short/master"
+   ]
   }
  ]
 }

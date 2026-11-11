@@ -37,9 +37,9 @@
    "assist": "6e4ffa2e466cb5d1"
   },
   "monster_hero/normal": {
-   "notes": "0fef315fe30ae4cd",
-   "mirror": "f1a23c868857cffe",
-   "assist": "95fc335cfa0d90d8"
+   "notes": "973173f846cbd82b",
+   "mirror": "666849884a76d3a2",
+   "assist": "b5254b8eee6bf2ad"
   },
   "monster_hero/hard": {
    "notes": "fd4a5e1c8cd79cd7",
@@ -47,14 +47,14 @@
    "assist": "90570eb28b544a2f"
   },
   "monster_hero/expert": {
-   "notes": "843c00ee0d69c035",
-   "mirror": "4670fb6fb780ee8a",
-   "assist": "46bc2a2bc375f1ba"
+   "notes": "620fc962e682de46",
+   "mirror": "8bbdfad6375ac89e",
+   "assist": "0dfc71c7cecd8270"
   },
   "monster_hero/master": {
-   "notes": "4747447f60e633f7",
-   "mirror": "be6381d0656f8e26",
-   "assist": "acfa22cb76f5bea8"
+   "notes": "f0ae3d36eee50bd3",
+   "mirror": "5539b76b626b1d34",
+   "assist": "faf695e270480b8a"
   },
   "monster_hero/hell": {
    "notes": "216aaa660b8a10df",
@@ -262,9 +262,9 @@
    "assist": "8b09b09948e54302"
   },
   "close_to_your_heart/master": {
-   "notes": "2d7293d82f011600",
-   "mirror": "831c40bcf8711c9c",
-   "assist": "ecba504e09af0f76"
+   "notes": "959508a1376f705d",
+   "mirror": "60303a2c34cca047",
+   "assist": "a3bc844631165c76"
   },
   "close_to_your_heart/hell": {
    "notes": "301d3c63c13ab3d4",
@@ -317,9 +317,9 @@
    "assist": "1fdb0b9bf11bf87b"
   },
   "pandora_boss_remix/expert": {
-   "notes": "de885e430260ae42",
-   "mirror": "fa0d556a3fc966c3",
-   "assist": "67881e5a7a2b93a7"
+   "notes": "1d524f8f42039f93",
+   "mirror": "f32fd123b8c4a6ec",
+   "assist": "0d6fbefb71eed3da"
   },
   "pandora_boss_remix/master": {
    "notes": "c786a0447d30d7d5",
@@ -882,9 +882,9 @@
    "assist": "c04876e6dff3e921"
   },
   "crazy_party_night/hard": {
-   "notes": "7d6c9bbbf97956eb",
-   "mirror": "c6e4329751c44d45",
-   "assist": "cff71f923105c127"
+   "notes": "36de81d383f902c2",
+   "mirror": "6d22f7a21ad08169",
+   "assist": "e3cefcf63fd5a6d7"
   },
   "crazy_party_night/expert": {
    "notes": "625bc4fa69c76232",
@@ -1427,14 +1427,14 @@
    "assist": "959e7cbb822b85e0"
   },
   "light_player_short/expert": {
-   "notes": "32906f508ecfb24c",
-   "mirror": "ec7a897793336530",
-   "assist": "2735217bb8f20f63"
+   "notes": "737518d9f181225c",
+   "mirror": "160c309134580679",
+   "assist": "5e19c1cd6fc31cf9"
   },
   "light_player_short/master": {
-   "notes": "435774e50e3d53eb",
-   "mirror": "cf34a776a404eaf1",
-   "assist": "09dcbcf5905b5a01"
+   "notes": "0df0761af10e817d",
+   "mirror": "24cd7cf1f77540b9",
+   "assist": "24c037a17d5c7d4d"
   },
   "light_player_short/hell": {
    "notes": "63411732322aee5b",
@@ -1704,6 +1704,20 @@
    "at": "2026-11-11 22:35",
    "reason": "2026-11-11 社長「全部変えていいけど告知はして」: 公開中の問題のある譜面の見直し(40曲の EASY〜MASTER を今の道具で作り直し・ヒューマノイドは位置だけ直し・Rebellion short は前と同じ Lv.42 へ)。HELL と Sheriruth・Grievous Lady の譜面は変えない",
    "changedCount": 205
+  },
+  {
+   "at": "2026-11-11 23:12",
+   "reason": "2026-11-11 公開中の譜面の見直しの続き: モンスター枠の欠け・見分けられない終点フリック・切り替え後の Lv. の表をそろえた",
+   "changed": [
+    "monster_hero/normal",
+    "monster_hero/expert",
+    "monster_hero/master",
+    "close_to_your_heart/master",
+    "pandora_boss_remix/expert",
+    "crazy_party_night/hard",
+    "light_player_short/expert",
+    "light_player_short/master"
+   ]
   }
  ]
 }
