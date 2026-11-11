@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 003643ad97501654
+// source-sha256: b1a9e80779ad1b6d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110849,7 +110849,7 @@ function AssistantLifeHouse({
     className: "min-h-[44px] px-3",
     onClick: () => setCallPicker(false)
   }, "閉じる ✕")), React.createElement("div", {
-    className: "max-h-[55vh] overflow-y-auto"
+    className: "max-h-[46vh] overflow-y-auto"
   }, Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => React.createElement("button", {
     type: "button",
     key: id,
