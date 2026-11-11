@@ -4,21 +4,21 @@
 # まずは各ペア 15マス(していること5 × 友情Lvの段3)に1本ずつ。回数の多いペアの上乗せは、コトバの割りふりが届いてから足す
 
 ## みゅあ × ソラシド
-pair mua sorashido doing=snack lv=1-3 | sorashido excited 今日のおやつ、新作が7つもあるぜ・・・！ | mua surprise え、もう数えたの！？ 早すぎｗ | sorashido happy 数えないと落ち着かなくてな笑 {c}はどれにする？ | mua excited 全部味見して、表にしてもらお♪
-pair mua sorashido doing=snack lv=4-6 | mua happy ねぇ、あたしが今週食べたクレープの数って分かる？ | sorashido wink 5つだ。ちゃんと表にしてある笑 | mua surprise まぢで記録されてた…！ ちょっとはずかしいんだけどｗ
-pair mua sorashido doing=snack lv=7-10 | sorashido normal このサーターアンダギー、半分どうだ？ | mua excited やった！ 半分こってなんか特別ぢゃん♪ | sorashido happy 計算しなくても、半分はちょうど半分だからな笑
-pair mua sorashido doing=practice lv=1-3 | mua excited 今日こそフルコンするから、見てて！ | sorashido excited うぉぉぉ！ ミスの数、しっかり数えとくぜ・・・！ | mua angry 数えるのはそっちぢゃなくて、コンボのほう！ｗ
-pair mua sorashido doing=practice lv=4-6 | sorashido normal 先週よりミスが3つ減ってる。ちゃんと伸びてるぞ笑 | mua surprise え、ほんと！？ 自分だと全然わかんなかった | sorashido happy 表は正直だからな。{c}の練習がそのまま出てる
-pair mua sorashido doing=practice lv=7-10 | mua normal ねぇ、次のイベントまでに何曲クリアできるか、目標立てよ | sorashido excited いいな！ 2人で表にして、毎日ぬりつぶしていこう笑 | mua happy 応援係と記録係、最強のチームぢゃん♪
-pair mua sorashido doing=training lv=1-3 | mua happy 見て見て、モッチーがこんなに大きくなった！ | sorashido surprise おお、能力の伸びがきれいだな。どうやって育てたんだ？ | mua wink いっぱいかわいがっただけ！ｗ
-pair mua sorashido doing=training lv=4-6 | sorashido normal モッチーの育て方、ちょっと表にまとめてみたんだが… | mua troubled 文字が多すぎて、目がぐるぐるするｗ | sorashido happy じゃあ絵にしてみるか。モッチーの顔つきで笑 | mua excited それならわかる！ かわいい！
-pair mua sorashido doing=training lv=7-10 | mua normal あたしのモッチーとキュービで、いっしょに育成しない？ | sorashido excited うぉぉぉ！ その組み合わせ、前から試したかったんだ！ | mua happy ふたりの推しが並ぶと、なんかうれしいね♪
-pair mua sorashido doing=cards lv=1-3 | sorashido excited この表を見てくれ！ カードの勝率を全部まとめたぜ・・・！ | mua surprise まぢ！？ これ全部ひとりで？ | mua happy わかんないとこもあるけど、すごいのは分かる！ | sorashido happy それで十分だ。ありがとな笑
-pair mua sorashido doing=cards lv=4-6 | mua angry ちょっと、なんで表に「みゅあさんのミス」って列があるの！？ | sorashido troubled いや、それは…次に勝つための数字で… | mua angry 名前は消して！ 数だけならいいからｗ
-pair mua sorashido doing=cards lv=7-10 | sorashido normal {c}が組んだこのデッキ、勢いだけなのに妙に強いんだ | mua wink 勢いも実力のうちってことぢゃん？ | sorashido happy 表に「勢い」って列、足しておくよ笑
-pair mua sorashido doing=walk lv=1-3 | mua happy {place}、今日は人が多いね！ | sorashido normal 数えたら23人いた。いつもの倍だ笑 | mua surprise 歩きながら数えてたの！？ｗ
-pair mua sorashido doing=walk lv=4-6 | sorashido happy 歩くときくらい、計算はお休みだな | mua surprise え、めずらしい！ 熱でもある？ｗ | sorashido wink たまにはな笑 オリヒメの話でもしながら歩こう | mua excited するする！ あたしもモッチーの話する！
-pair mua sorashido doing=walk lv=7-10 | mua normal 最近さ、表がなくても考えてることわかるようになってきた | sorashido surprise 本当か？ じゃあ今、何考えてる？ | mua wink 「このあと何歩で着くか」でしょｗ | sorashido happy ……正解だ。なんくるないさ〜笑
+pair mua sorashido doing=snack lv=1-3 | sorashido excited 今日のおやつは、新作が7つです・・・！ | mua surprise え、もう数えたの！？ 早すぎｗ | sorashido happy 数えないと落ち着かなくて笑 {c}はどれにしますか？ | mua excited 全部味見して、表にしてもらお♪
+pair mua sorashido doing=snack lv=4-6 | mua happy ねぇ、あたしが今週食べたクレープの数って分かる？ | sorashido wink 5つです。ちゃんと表にしてあります笑 | mua surprise まぢで記録されてた…！ ちょっとはずかしいんだけどｗ
+pair mua sorashido doing=snack lv=7-10 | sorashido normal このサーターアンダギー、半分どうですか？ | mua excited やった！ 半分こってなんか特別ぢゃん♪ | sorashido happy 計算しなくても、半分はちょうど半分ですからね笑
+pair mua sorashido doing=practice lv=1-3 | mua excited 今日こそフルコンするから、見てて！ | sorashido excited うぉぉぉ！ ミスの数、しっかり数えておきます・・・！ | mua angry 数えるのはそっちぢゃなくて、コンボのほう！ｗ
+pair mua sorashido doing=practice lv=4-6 | sorashido normal 先週よりミスが3つ減ってます。ちゃんと伸びてますよ笑 | mua surprise え、ほんと！？ 自分だと全然わかんなかった | sorashido happy 表は正直なので。{c}の練習がそのまま出てます
+pair mua sorashido doing=practice lv=7-10 | mua normal ねぇ、次のイベントまでに何曲クリアできるか、目標立てよ | sorashido excited いいですね！ 2人で表にして、毎日ぬりつぶしていきましょう笑 | mua happy 応援係と記録係、最強のチームぢゃん♪
+pair mua sorashido doing=training lv=1-3 | mua happy 見て見て、モッチーがこんなに大きくなった！ | sorashido surprise おお、能力の伸びがきれいですね。どうやって育てたんですか？ | mua wink いっぱいかわいがっただけ！ｗ
+pair mua sorashido doing=training lv=4-6 | sorashido normal モッチーの育て方、ちょっと表にまとめてみたんですけど・・・ | mua troubled 文字が多すぎて、目がぐるぐるするｗ | sorashido happy じゃあ絵にしてみますか。モッチーの顔つきで笑 | mua excited それならわかる！ かわいい！
+pair mua sorashido doing=training lv=7-10 | mua normal あたしのモッチーとキュービで、いっしょに育成しない？ | sorashido excited うぉぉぉ！ その組み合わせ、前から試したかったんです！ | mua happy ふたりの推しが並ぶと、なんかうれしいね♪
+pair mua sorashido doing=cards lv=1-3 | sorashido excited この表を見てください！ カードの勝率を全部まとめました・・・！ | mua surprise まぢ！？ これ全部ひとりで？ | mua happy わかんないとこもあるけど、すごいのは分かる！ | sorashido happy それで十分です。ありがとうございます笑
+pair mua sorashido doing=cards lv=4-6 | mua angry ちょっと、なんで表に「みゅあさんのミス」って列があるの！？ | sorashido troubled いや、それは・・・次に勝つための数字で・・・ | mua angry 名前は消して！ 数だけならいいからｗ
+pair mua sorashido doing=cards lv=7-10 | sorashido normal {c}が組んだこのデッキ、勢いだけなのに妙に強いんですよ | mua wink 勢いも実力のうちってことぢゃん？ | sorashido happy 表に「勢い」って列、足しておきます笑
+pair mua sorashido doing=walk lv=1-3 | mua happy {place}、今日は人が多いね！ | sorashido normal 数えたら23人いました。いつもの倍です笑 | mua surprise 歩きながら数えてたの！？ｗ
+pair mua sorashido doing=walk lv=4-6 | sorashido happy 歩くときくらい、計算はお休みですね | mua surprise え、めずらしい！ 熱でもある？ｗ | sorashido wink たまには、ですね笑 オリヒメの話でもしながら歩きましょう | mua excited するする！ あたしもモッチーの話する！
+pair mua sorashido doing=walk lv=7-10 | mua normal 最近さ、表がなくても考えてることわかるようになってきた | sorashido surprise 本当ですか？ じゃあ今、何を考えてると思います？ | mua wink 「このあと何歩で着くか」でしょｗ | sorashido happy ・・・正解です。なんくるないさ〜笑
 
 ## あつ × みゅあ
 pair atsu mua doing=snack lv=1-3 | atsu happy それ新作？ ひと口ちょうだい笑 | mua angry だーめ！ あつくん、ひと口が大きいもん！ | atsu wink ばれてた笑 じゃあ自分で買ってくる！
@@ -72,21 +72,21 @@ pair atsu kiki doing=walk lv=4-6 | kiki normal あっくん、歩くのが速い
 pair atsu kiki doing=walk lv=7-10 | atsu normal ききってさ、静かなのに一番頼りになるよね笑 | kiki surprise そうでしょうか | kiki happy あっくんがいつも前にいるから、私も前を向けるんでつよ | atsu happy …なんか照れるな笑
 
 ## もも × ソラシド
-pair momosuke sorashido doing=snack lv=1-3 | momosuke excited ソラちゃん、いちごタルトあったよ！！ | sorashido happy お、いいな。今週3回目のタルトだぞ笑 | momosuke surprise 数えないで！！w | sorashido wink つい癖でな。おいしいなら何回でもいいさ
-pair momosuke sorashido doing=snack lv=4-6 | sorashido normal 今日のおやつ、ももさんの分も表に入れておいた | momosuke angry 入れなくていいの！！ ももはおやつに数字いらない派！！ | sorashido happy じゃあ、「おいしかった」の欄だけにしておくよ笑 | momosuke wink それなら許す♡
-pair momosuke sorashido doing=snack lv=7-10 | momosuke happy ねえソラちゃん、たまには表の話じゃなくて、好きな食べ物の話しよ！！ | sorashido surprise ……言われてみれば、したことなかったな | sorashido happy 俺はタコライスだ。ももさんは？ | momosuke excited いちご！！ 知ってたでしょw
-pair momosuke sorashido doing=practice lv=1-3 | sorashido normal ももさん、今のミスは4つだったぞ | momosuke angry 言わなくていいから！！ | sorashido happy でも前の回は6つだった。2つ減ってるぜ・・・！ | momosuke wink …それは言っていいやつ♡
-pair momosuke sorashido doing=practice lv=4-6 | momosuke excited 見て！！ ミス、今日ゼロだったよ！！ | sorashido excited うぉぉぉ！ 表に赤い丸をつけるぜ・・・！ | momosuke happy いちばん大きい丸ね！！
-pair momosuke sorashido doing=practice lv=7-10 | momosuke normal ソラちゃんが数えてくれるから、毎日伸びてるのが分かるんだよね | sorashido surprise そうなのか。ただ数えてるだけだぞ | momosuke happy それがいいの！ 今度はももが、ソラちゃんの勝負を応援する番♡ | sorashido happy ……でーじうれしいな笑
-pair momosuke sorashido doing=training lv=1-3 | momosuke excited メタルナー、今日もピカピカでしょ！！ | sorashido normal ほんとだ。光り方が先週より明るいな | momosuke wink そこまで分かるの！？ ソラちゃん、目がいいw
-pair momosuke sorashido doing=training lv=4-6 | sorashido normal メタルナーの育て方、表にしたら意外と理にかなってたぞ | momosuke surprise え、ももってすごい！？ | sorashido happy すごいな。感覚でここまでやれるのは才能だ笑
-pair momosuke sorashido doing=training lv=7-10 | momosuke happy ソラちゃんのキュービ、ももが一緒にみがいてあげよっか？ | sorashido surprise いいのか？ ももさんのみがき方、前から気になってたんだ | momosuke excited まかせて！！ 先生って呼んでもいいよ♡
-pair momosuke sorashido doing=cards lv=1-3 | sorashido excited ももさん、新しい表ができたぜ・・・！ 見てくれ | momosuke troubled 字ちっちゃ！！ でも色はかわいいw | sorashido happy 次は字を大きくするよ笑
-pair momosuke sorashido doing=cards lv=4-6 | momosuke excited ソラちゃん、この表にシール貼ってもいい？ | sorashido surprise シール！？ | sorashido happy ……まあ、見やすくなるならいいか笑 | momosuke wink やった！！ いちばんかわいい表にしたげる♡
-pair momosuke sorashido doing=cards lv=7-10 | sorashido normal 今日の対戦、ももさんの応援があったから勝てた気がする | momosuke excited 気がするじゃなくて、そうなの！！ | sorashido happy そうだな。表には「応援の力」って書いておくよ
-pair momosuke sorashido doing=walk lv=1-3 | momosuke happy {place}、ちょっと歌いながら歩いてもいい？ | sorashido happy いいぞ。何曲歌うか数えておくよ笑 | momosuke wink 数えなくていいってばw
-pair momosuke sorashido doing=walk lv=4-6 | sorashido normal ももさん、今日は歩幅が大きいな | momosuke excited さっきフルコンしたから、ごきげんなの！！ | sorashido happy それなら納得だ。こっちまで足が軽くなるぜ・・・！
-pair momosuke sorashido doing=walk lv=7-10 | momosuke normal ねえソラちゃん、ももの応援の歌、作ってくれない？ | sorashido surprise 俺が？ | sorashido happy ……三線の音でいいなら、やってみるか笑 | momosuke excited やったぁ！！ できたら、ももが一番に歌う♡
+pair momosuke sorashido doing=snack lv=1-3 | momosuke excited ソラちゃん、いちごタルトあったよ！！ | sorashido happy お、いいですね。今週3回目のタルトですよ笑 | momosuke surprise 数えないで！！w | sorashido wink つい癖で。おいしいなら何回でもいいですよね
+pair momosuke sorashido doing=snack lv=4-6 | sorashido normal 今日のおやつ、ももさんの分も表に入れておきました | momosuke angry 入れなくていいの！！ ももはおやつに数字いらない派！！ | sorashido happy じゃあ、「おいしかった」の欄だけにしておきます笑 | momosuke wink それなら許す♡
+pair momosuke sorashido doing=snack lv=7-10 | momosuke happy ねえソラちゃん、たまには表の話じゃなくて、好きな食べ物の話しよ！！ | sorashido surprise ・・・言われてみれば、したことなかったですね | sorashido happy 自分はタコライスです。ももさんは？ | momosuke excited いちご！！ 知ってたでしょw
+pair momosuke sorashido doing=practice lv=1-3 | sorashido normal ももさん、今のミスは4つでしたよ | momosuke angry 言わなくていいから！！ | sorashido happy でも前の回は6つでした。2つ減ってます・・・！ | momosuke wink …それは言っていいやつ♡
+pair momosuke sorashido doing=practice lv=4-6 | momosuke excited 見て！！ ミス、今日ゼロだったよ！！ | sorashido excited うぉぉぉ！ 表に赤い丸をつけます・・・！ | momosuke happy いちばん大きい丸ね！！
+pair momosuke sorashido doing=practice lv=7-10 | momosuke normal ソラちゃんが数えてくれるから、毎日伸びてるのが分かるんだよね | sorashido surprise そうなんですか。ただ数えてるだけですよ | momosuke happy それがいいの！ 今度はももが、ソラちゃんの勝負を応援する番♡ | sorashido happy ・・・でーじうれしいです笑
+pair momosuke sorashido doing=training lv=1-3 | momosuke excited メタルナー、今日もピカピカでしょ！！ | sorashido normal ほんとですね。光り方が先週より明るいです | momosuke wink そこまで分かるの！？ ソラちゃん、目がいいw
+pair momosuke sorashido doing=training lv=4-6 | sorashido normal メタルナーの育て方、表にしたら意外と理にかなってましたよ | momosuke surprise え、ももってすごい！？ | sorashido happy すごいですね。感覚でここまでやれるのは才能です笑
+pair momosuke sorashido doing=training lv=7-10 | momosuke happy ソラちゃんのキュービ、ももが一緒にみがいてあげよっか？ | sorashido surprise いいんですか？ ももさんのみがき方、前から気になってたんです | momosuke excited まかせて！！ 先生って呼んでもいいよ♡
+pair momosuke sorashido doing=cards lv=1-3 | sorashido excited ももさん、新しい表ができました・・・！ 見てください | momosuke troubled 字ちっちゃ！！ でも色はかわいいw | sorashido happy 次は字を大きくします笑
+pair momosuke sorashido doing=cards lv=4-6 | momosuke excited ソラちゃん、この表にシール貼ってもいい？ | sorashido surprise シール！？ | sorashido happy ・・・まあ、見やすくなるならいいですね笑 | momosuke wink やった！！ いちばんかわいい表にしたげる♡
+pair momosuke sorashido doing=cards lv=7-10 | sorashido normal 今日の対戦、ももさんの応援があったから勝てた気がします | momosuke excited 気がするじゃなくて、そうなの！！ | sorashido happy そうですね。表には「応援の力」って書いておきます
+pair momosuke sorashido doing=walk lv=1-3 | momosuke happy {place}、ちょっと歌いながら歩いてもいい？ | sorashido happy いいですよ。何曲歌うか数えておきます笑 | momosuke wink 数えなくていいってばw
+pair momosuke sorashido doing=walk lv=4-6 | sorashido normal ももさん、今日は歩幅が大きいですね | momosuke excited さっきフルコンしたから、ごきげんなの！！ | sorashido happy それなら納得です。こっちまで足が軽くなります・・・！
+pair momosuke sorashido doing=walk lv=7-10 | momosuke normal ねえソラちゃん、ももの応援の歌、作ってくれない？ | sorashido surprise 自分がですか？ | sorashido happy ・・・三線の音でいいなら、やってみます笑 | momosuke excited やったぁ！！ できたら、ももが一番に歌う♡
 
 ## ドラ × きき
 pair dra kiki doing=snack lv=1-3 | dra happy {c}、このどら焼き、おでの名前に似てるだろ | kiki normal はい。そのお話、今日2回目でつね | dra troubled ギャグの回数、数えないでくれよ…
@@ -244,16 +244,16 @@ pair atsu erubin doing=walk lv=7-10 | erubin normal あっくんって、いつ�
 # ── 上乗せ(ALLOC.md の本数まで。言い合いのあと air=after・仲直りしたて air=makeup も入れる)
 
 ## みゅあ × ソラシド(+10・計25)
-pair mua sorashido doing=snack lv=1-3 | mua happy オリヒメってさ、どこが推しなの？ | sorashido excited 全部だ！ …強いて言えば、最後まで粘るところだな笑 | mua wink わかる〜、モッチーもねばり強いもん♪
-pair mua sorashido doing=snack lv=4-6 air=after | sorashido troubled ……あの、おやつ、どれにする？ | mua normal ……クレープ | sorashido normal じゃあ俺も同じのにする | mua troubled まねしないでよ…ｗ ちょっと笑っちゃったぢゃん
-pair mua sorashido doing=snack lv=7-10 air=makeup | sorashido happy 仲直りのしるしに、今日のおやつは俺が選んだ | mua happy え、いちごのやつ！ ちゃんと覚えてたんだ♪ | sorashido wink 表に書いてあるからな笑
-pair mua sorashido doing=practice lv=1-3 | sorashido normal みゅあさん、今の曲、後半でテンポが速くなってた | mua surprise え、あたし走ってた！？ | sorashido happy 気持ちが乗ってた証拠だ。悪いことばかりじゃないぞ笑
-pair mua sorashido doing=practice lv=4-6 | mua excited 見てた！？ 今日いちばんのスコア出た！ | sorashido excited うぉぉぉ！ 自己ベスト更新だ！ 表に星をつけるぜ・・・！ | mua happy 星、大きめでね♪
-pair mua sorashido doing=practice lv=7-10 air=makeup | mua normal さっきはごめんね。あたし、ちょっと言いすぎた | sorashido happy 俺もごめん。熱くなると、つい声が大きくなるんだ笑 | mua excited ぢゃあ、仲直りの一曲いっしょにやろ♪
-pair mua sorashido doing=cards lv=1-3 | mua troubled ねぇ、このカードとこのカード、どっちが強いの？ | sorashido normal 場合による。でも{c}が好きなほうでいいと思うぞ | mua happy ぢゃあ、モッチーに似てるほう！ｗ
-pair mua sorashido doing=cards lv=4-6 | sorashido excited 勝率の表、みゅあさんの欄だけ右肩上がりなんだ | mua surprise え、まぢ！？ どこどこ！？ | sorashido happy ここだ。最近ぐんと伸びてる笑
-pair mua sorashido doing=cards lv=7-10 | mua normal 今日の対戦、作戦は任せる。あたしは応援する！ | sorashido surprise 応援だけでいいのか？ | mua wink {c}が勝つと、あたしもうれしいからいいの♪
-pair mua sorashido doing=walk lv=4-6 | mua happy {place}の夕焼け、きれいぢゃない？ | sorashido normal ……ほんとだ。数えるの忘れて見てた笑 | mua wink それでいいの！ｗ
+pair mua sorashido doing=snack lv=1-3 | mua happy オリヒメってさ、どこが推しなの？ | sorashido excited 全部です！ ・・・強いて言えば、最後まで粘るところですね笑 | mua wink わかる〜、モッチーもねばり強いもん♪
+pair mua sorashido doing=snack lv=4-6 air=after | sorashido troubled ・・・あの、おやつ、どれにしますか？ | mua normal ……クレープ | sorashido normal じゃあ自分も同じのにします | mua troubled まねしないでよ…ｗ ちょっと笑っちゃったぢゃん
+pair mua sorashido doing=snack lv=7-10 air=makeup | sorashido happy 仲直りのしるしに、今日のおやつは自分が選びました | mua happy え、いちごのやつ！ ちゃんと覚えてたんだ♪ | sorashido wink 表に書いてあるので笑
+pair mua sorashido doing=practice lv=1-3 | sorashido normal みゅあさん、今の曲、後半でテンポが速くなってました | mua surprise え、あたし走ってた！？ | sorashido happy 気持ちが乗ってた証拠です。悪いことばかりじゃないですよ笑
+pair mua sorashido doing=practice lv=4-6 | mua excited 見てた！？ 今日いちばんのスコア出た！ | sorashido excited うぉぉぉ！ 自己ベスト更新です！ 表に星をつけます・・・！ | mua happy 星、大きめでね♪
+pair mua sorashido doing=practice lv=7-10 air=makeup | mua normal さっきはごめんね。あたし、ちょっと言いすぎた | sorashido happy 自分もすみません。熱くなると、つい声が大きくなるんです笑 | mua excited ぢゃあ、仲直りの一曲いっしょにやろ♪
+pair mua sorashido doing=cards lv=1-3 | mua troubled ねぇ、このカードとこのカード、どっちが強いの？ | sorashido normal 場合によりますね。でも{c}が好きなほうでいいと思いますよ | mua happy ぢゃあ、モッチーに似てるほう！ｗ
+pair mua sorashido doing=cards lv=4-6 | sorashido excited 勝率の表、みゅあさんの欄だけ右肩上がりなんですよ | mua surprise え、まぢ！？ どこどこ！？ | sorashido happy ここです。最近ぐんと伸びてます笑
+pair mua sorashido doing=cards lv=7-10 | mua normal 今日の対戦、作戦は任せる。あたしは応援する！ | sorashido surprise 応援だけでいいんですか？ | mua wink {c}が勝つと、あたしもうれしいからいいの♪
+pair mua sorashido doing=walk lv=4-6 | mua happy {place}の夕焼け、きれいぢゃない？ | sorashido normal ・・・ほんとだ。数えるの忘れて見てました笑 | mua wink それでいいの！ｗ
 
 ## ドラ × えるびん(+9・計24)
 pair dra erubin doing=cards lv=1-3 | erubin troubled ドラちゃん、このカード、どこに置けばいいかな？ | dra normal 迷ったら真ん中だ。いちばん守りやすいからな | erubin happy 分かった。覚えておくね
@@ -278,13 +278,13 @@ pair atsu mua doing=walk lv=4-6 | mua normal 今度はあつくんが転びそ�
 pair atsu mua doing=cards lv=7-10 | atsu normal 今日の対戦、みゅあに背中押してもらったから勝てた笑 | mua surprise え、あたし何もしてないよ？ | atsu happy 「いける！」って言ってくれた！ あれで決まった！
 
 ## もも × ソラシド(+7・計22)
-pair momosuke sorashido doing=practice lv=1-3 | momosuke troubled ソラちゃん、ミス数えるの、今日だけお休みにして！！ | sorashido normal じゃあ、うまくいったところだけ数えるよ | momosuke excited それならいい！！ いっぱい数えてね♡
-pair momosuke sorashido doing=practice lv=4-6 | sorashido excited スコア勝負だ！ 俺の計算では、今日は俺が勝つ！ | momosuke wink 計算どおりにいくかな〜？w | sorashido troubled ……負けた。計算に「ももさんの本気」を入れ忘れてた笑
-pair momosuke sorashido doing=practice lv=4-6 air=after | sorashido troubled ……ももさん、今日の練習、見てても大丈夫か？ | momosuke normal ……見るだけならいいよ。今日は静かにね | sorashido normal わかった。今日はただ見てる
-pair momosuke sorashido doing=practice lv=7-10 air=makeup | sorashido normal さっきは悪かった。俺、言い方がきつかったな | momosuke happy もういいよ！！ そのかわり、次はいっぱいほめてね♡ | sorashido happy 了解だ。小声で「すごい」も言うよ笑
-pair momosuke sorashido doing=cards lv=4-6 | momosuke excited ソラちゃん、この表の色、ももが選んでいい？ | sorashido happy いいぞ。何色にする？ | momosuke wink ぜんぶピンク！！w | sorashido surprise 見分けがつかないな…笑
-pair momosuke sorashido doing=snack lv=4-6 | sorashido happy ももさん、ちんすこう食べるか？ | momosuke excited なにそれ！！ 食べたい！！ | sorashido happy 俺のふるさとのおやつだ。おいしいぞ笑
-pair momosuke sorashido doing=walk lv=1-3 | sorashido normal ももさん、{place}の端まで何歩か当ててみるか？ | momosuke excited 当てたら何かくれる！？ | sorashido happy 当たったら、表に名前を載せるよ笑 | momosuke wink それ、うれしいのかなw
+pair momosuke sorashido doing=practice lv=1-3 | momosuke troubled ソラちゃん、ミス数えるの、今日だけお休みにして！！ | sorashido normal じゃあ、うまくいったところだけ数えます | momosuke excited それならいい！！ いっぱい数えてね♡
+pair momosuke sorashido doing=practice lv=4-6 | sorashido excited スコア勝負です！ 自分の計算では、今日は自分が勝ちます！ | momosuke wink 計算どおりにいくかな〜？w | sorashido troubled ・・・負けました。計算に「ももさんの本気」を入れ忘れてました笑
+pair momosuke sorashido doing=practice lv=4-6 air=after | sorashido troubled ・・・ももさん、今日の練習、見てても大丈夫ですか？ | momosuke normal ……見るだけならいいよ。今日は静かにね | sorashido normal わかりました。今日はただ見てます
+pair momosuke sorashido doing=practice lv=7-10 air=makeup | sorashido normal さっきはすみません。自分、言い方がきつかったです | momosuke happy もういいよ！！ そのかわり、次はいっぱいほめてね♡ | sorashido happy 了解です。小声で「すごい」も言いますね笑
+pair momosuke sorashido doing=cards lv=4-6 | momosuke excited ソラちゃん、この表の色、ももが選んでいい？ | sorashido happy いいですよ。何色にしますか？ | momosuke wink ぜんぶピンク！！w | sorashido surprise 見分けがつかないですね・・・笑
+pair momosuke sorashido doing=snack lv=4-6 | sorashido happy ももさん、ちんすこう食べますか？ | momosuke excited なにそれ！！ 食べたい！！ | sorashido happy 自分のふるさとのおやつです。おいしいですよ笑
+pair momosuke sorashido doing=walk lv=1-3 | sorashido normal ももさん、{place}の端まで何歩か当ててみますか？ | momosuke excited 当てたら何かくれる！？ | sorashido happy 当たったら、表に名前を載せます笑 | momosuke wink それ、うれしいのかなw
 
 ## あつ × きき(+6・計21)
 pair atsu kiki doing=training lv=1-3 | atsu excited きき、今日も全振り？笑 | kiki happy はい。いつもどおりでつ | atsu happy ブレないの、かっこいい！
@@ -345,24 +345,24 @@ pair erubin kiki doing=walk lv=7-10 air=makeup | erubin normal さっきは、�
 # A と B は ALLOC.md の2人の表の上のほうから15組 × 2本(コトバの受け持ちのペアもまぜた)
 trio erubin momosuke any doing=snack | momosuke excited 3人で食べると、おやつってなんでこんなにおいしいの！！ | erubin happy にぎやかだからかな。みんなの顔を見てると、つい食べすぎちゃうね | momosuke wink じゃあ、もう1個ずつ食べよ！！ 3人分ね♡
 trio erubin momosuke any doing=walk | erubin normal みんなで歩くと、いつもより道が短く感じるね | momosuke excited わかる！！ おしゃべりしてたら、もう着いちゃった！！ | erubin happy 帰りは遠回りしようか。もう少し話していたいしね
-trio mua sorashido any doing=practice | mua excited 3人いると、拍手が3倍で気持ちいいぢゃん♪ | sorashido happy 計算だと3倍だが、うれしさは5倍くらいだな笑 | mua wink 数字はてきとうでいいのｗ もう1曲いこ！
-trio mua sorashido any doing=cards | sorashido normal 3人だと、総当たりで3試合できるな。表にしておくぞ笑 | mua troubled 表はいいから、早く始めよ〜ｗ | sorashido excited よし、1試合目は{c:mua}からだ！
+trio mua sorashido any doing=practice | mua excited 3人いると、拍手が3倍で気持ちいいぢゃん♪ | sorashido happy 計算だと3倍ですけど、うれしさは5倍くらいですね笑 | mua wink 数字はてきとうでいいのｗ もう1曲いこ！
+trio mua sorashido any doing=cards | sorashido normal 3人だと、総当たりで3試合できますね。表にしておきます笑 | mua troubled 表はいいから、早く始めよ〜ｗ | sorashido excited よし、1試合目は{c:mua}からです！
 trio dra erubin any doing=cards | dra normal 3人いるなら、おでは解説係をやるか | erubin happy {c:dra}の解説を聞きながら対戦すると、勉強になるんだよね | dra wink 膝が痛くならないうちに、早く始めるぞ
 trio dra erubin any doing=snack | erubin happy みんなの分、おやつを3つに分けたよ | dra surprise おっ、きっちり同じ大きさだな。{c:erubin}は細かいなぁ | erubin wink 分けるのは得意なんだ笑 さあ、食べようか
 trio atsu mua any doing=practice | atsu excited 3人いるし、順番に一曲ずつ回そ笑 | mua happy いいね！ あたし2番目ね♪ | atsu wink じゃあ俺はトリ！ 盛り上げて待ってて笑
 trio atsu mua any doing=walk | mua excited 3人で並んで歩くと、なんかチームっぽくない？ | atsu happy それな！ 次のイベントもこのメンバーでいこ笑 | mua wink 決まりね！ 作戦はあとでみんなで考えよ♪
 trio dra mua any doing=snack | mua happy みんなでおやつって、それだけで楽しいぢゃん♪ | dra happy おでのせんべいも分けてやるぞ。膝にはやさしくないけどな | mua troubled せんべいと膝、関係あるの？ｗ
 trio dra mua any doing=training | dra normal 3人で育てると、マスモンも目移りしそうだな | mua happy モッチーはぜったい、あたしのとこに来るもん！ | dra wink それはどうかな。おでのとこはおやつがあるからな
-trio atsu sorashido any doing=practice | sorashido excited 3人の自己ベスト、並べたら全部2点差以内だったぜ・・・！ | atsu surprise まじ！？ じゃあ今日で差がつくね笑 | sorashido happy 記録はちゃんと取るからな。全員本気で頼む笑
-trio atsu sorashido any doing=cards | atsu happy 3人で勝ち抜き戦しよ！ 負けた人が次の審判ね笑 | sorashido normal いいな。勝ち数の表は俺が作る | atsu wink 審判しながら表作るの、忙しすぎでしょ笑
-trio momosuke sorashido any doing=practice | momosuke excited 3人で踊ったら、ステージみたいじゃない！？ | sorashido happy たしかに。立ち位置、計算しておこうか笑 | momosuke wink 真ん中はもも！！ そこだけは決まってるの♡
-trio momosuke sorashido any doing=snack | sorashido normal ちんすこう、3人分持ってきたぞ | momosuke excited やったー！！ {c:sorashido}のふるさとのやつ！！ | sorashido happy みんなで食べると、いつもよりうまく感じるな笑
-trio kiki sorashido any doing=training | kiki normal 3人で育成するなら、全員ちから全振りでいきましょう | sorashido surprise 全員！？ 計算したら、守りがゼロになるぞ笑 | kiki wink 先に倒せば、ゼロでも困りませんよ♪
-trio kiki sorashido any doing=cards | sorashido excited 3人分のデッキ、強さを表にして比べてみたぜ・・・！ | kiki happy 見せてください。…あれま、私のが一番とがってまつね | sorashido happy とがりすぎて、表の外にはみ出してるぞ笑
+trio atsu sorashido any doing=practice | sorashido excited 3人の自己ベスト、並べたら全部2点差以内でした・・・！ | atsu surprise まじ！？ じゃあ今日で差がつくね笑 | sorashido happy 記録はちゃんと取りますからね。全員本気でお願いします笑
+trio atsu sorashido any doing=cards | atsu happy 3人で勝ち抜き戦しよ！ 負けた人が次の審判ね笑 | sorashido normal いいですね。勝ち数の表は自分が作ります | atsu wink 審判しながら表作るの、忙しすぎでしょ笑
+trio momosuke sorashido any doing=practice | momosuke excited 3人で踊ったら、ステージみたいじゃない！？ | sorashido happy たしかに。立ち位置、計算しておきましょうか笑 | momosuke wink 真ん中はもも！！ そこだけは決まってるの♡
+trio momosuke sorashido any doing=snack | sorashido normal ちんすこう、3人分持ってきましたよ | momosuke excited やったー！！ {c:sorashido}のふるさとのやつ！！ | sorashido happy みんなで食べると、いつもよりおいしく感じますね笑
+trio kiki sorashido any doing=training | kiki normal 3人で育成するなら、全員ちから全振りでいきましょう | sorashido surprise 全員！？ 計算したら、守りがゼロになりますよ笑 | kiki wink 先に倒せば、ゼロでも困りませんよ♪
+trio kiki sorashido any doing=cards | sorashido excited 3人分のデッキ、強さを表にして比べてみました・・・！ | kiki happy 見せてください。…あれま、私のが一番とがってまつね | sorashido happy とがりすぎて、表の外にはみ出してますよ笑
 trio atsu kiki any doing=training | atsu happy 3人で育成すると、それぞれ育て方ちがっておもしろいね笑 | kiki normal 私は攻撃、{c:atsu}は勢い、もう1人は…何でしょうね | atsu wink それ、あとで本人に聞こ笑
 trio atsu kiki any doing=practice | kiki happy 3人で叩くと、音が厚くなって楽しいでつ♪ | atsu excited わかる！ {c:kiki}の音、一番強いけど笑 | kiki wink 力いっぱい、が私の取りえでつから
-trio erubin sorashido any doing=cards | sorashido normal 3人いると、デュラハン対策の話がはかどるな | erubin happy うん。みんなの意見を聞くと、新しい組み方が見えてくるね | sorashido excited よし、今日の結論は表にまとめておくぜ・・・！
-trio erubin sorashido any doing=walk | erubin normal 3人で散歩すると、{c:sorashido}は歩数を数えるのかな？ | sorashido happy もちろんだ。3人分ちゃんと数えてるぞ笑 | erubin wink それは大変そうだね笑 たまには景色も見ようね
+trio erubin sorashido any doing=cards | sorashido normal 3人いると、デュラハン対策の話がはかどりますね | erubin happy うん。みんなの意見を聞くと、新しい組み方が見えてくるね | sorashido excited よし、今日の結論は表にまとめておきます・・・！
+trio erubin sorashido any doing=walk | erubin normal 3人で散歩すると、{c:sorashido}は歩数を数えるのかな？ | sorashido happy もちろんです。3人分ちゃんと数えてますよ笑 | erubin wink それは大変そうだね笑 たまには景色も見ようね
 trio dra kiki any doing=snack | kiki happy みなさんの分も、お茶をいれましたよ | dra happy 助かるな。おやつは、おでが3人分持ってきたぞ | kiki wink では、ゆっくり3人のお茶会にしましょう♪
 trio dra kiki any doing=walk | dra troubled 3人で歩くと、おでがいつも最後になるな | kiki normal では、私たちが歩くのをゆっくりにしまつ | dra happy ……そういうとこ、優しいよな
 trio kiki momosuke any doing=snack | momosuke excited ケーキ、3人分選んできた！！ どれがいい！？ | kiki happy では、残ったものをいただきまつね♪ | momosuke wink {c:kiki}、いつも最後に選ぶよね！！ 優しいんだから♡
