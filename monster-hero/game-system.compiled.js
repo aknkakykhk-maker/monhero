@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f1788339e5c4df77
+// source-sha256: d23ae4fac0c1aa8a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -141039,6 +141039,14 @@ const assistantLifePlanOn = () => {
 };
 const assistantLifePlanOkId = id => typeof id === 'string' && typeof ASSISTANT_LIFE_PREFS !== 'undefined' && !!ASSISTANT_LIFE_PREFS[id];
 const assistantLifePlanOkPlace = p => ASSISTANT_LIFE_PLAN_PLACES.includes(p);
+const assistantLifePlanCanAsk = id => {
+  if (!assistantLifePlanOkId(id)) return false;
+  try {
+    return typeof assistantPartnerOkNow !== 'function' || assistantPartnerOkNow(id) === true;
+  } catch (_) {
+    return false;
+  }
+};
 const normalizeAssistantLifePlan = (raw, day) => {
   const out = {
     day: Number.isInteger(day) ? day : null,
@@ -141239,7 +141247,7 @@ const assistantLifePlanSave = data => {
   } catch (_) {}
 };
 const assistantLifePlanSet = (abs, id, place, now = Date.now()) => {
-  if (!assistantLifePlanOn() || !Number.isInteger(abs) || !assistantLifePlanOkId(id)) return false;
+  if (!assistantLifePlanOn() || !Number.isInteger(abs) || !assistantLifePlanCanAsk(id)) return false;
   const cur = assistantLifeSlotAt(now).abs;
   if (abs <= cur || Math.floor(abs / 12) !== Math.floor(cur / 12) || abs % 12 < ASSISTANT_LIFE_PLAN_FIRST_J) return false;
   if (place != null && !assistantLifePlanOkPlace(place)) return false;
@@ -141288,7 +141296,9 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     if (!assistantLifePlanOn() || !ASSISTANT_LIFE_PLAN_STORE.state.loaded || !decided) return decided;
     const d = ASSISTANT_LIFE_PLAN_STORE.state.data;
     if (!d || d.day !== Math.floor(decided.abs / 12)) return decided;
-    const want = d.plan[String(decided.abs)];
+    const want0 = d.plan[String(decided.abs)] || {};
+    const want = {};
+    for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length) return decided;
     const trust = {};
     for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
@@ -141358,7 +141368,7 @@ const assistantLifePlanClose = () => ASSISTANT_LIFE_PLAN_STORE.set({
   open: null
 });
 const assistantLifePlanRowInfo = id => {
-  if (!assistantLifePlanOn()) return null;
+  if (!assistantLifePlanOn() || !assistantLifePlanCanAsk(id)) return null;
   const left = assistantLifePlanSlotsLeft();
   if (!left.length) return null;
   const next = left[0];
@@ -141374,7 +141384,7 @@ const assistantLifePlanFreeCount = ids => {
   if (!assistantLifePlanOn()) return 0;
   const left = assistantLifePlanSlotsLeft();
   let n = 0;
-  for (const abs of left) if ((ids || []).some(id => !assistantLifePlanOf(abs, id))) n++;
+  for (const abs of left) if ((ids || []).filter(assistantLifePlanCanAsk).some(id => !assistantLifePlanOf(abs, id))) n++;
   return n;
 };
 const assistantLifePlanUse = () => {
@@ -141621,7 +141631,7 @@ function AssistantLifePlanHost({
   }, [open, land]);
   if (!assistantLifePlanOn() || !open) return null;
   const cur = assistantLifeSlotAt().abs;
-  const list = (ids || []).filter(assistantLifePlanOkId);
+  const list = (ids || []).filter(assistantLifePlanCanAsk);
   const lv = who ? assistantLifePlanLvOf(who) : null;
   return React.createElement("div", {
     className: "absolute inset-0 grid place-items-center bg-black/60 p-2",

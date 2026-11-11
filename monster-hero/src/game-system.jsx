@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d14d74faef8b71a7
+// generated-sha256: 92237c1fc83f8a04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74258,6 +74258,11 @@ const assistantLifePlanOn = () => {
 };
 const assistantLifePlanOkId = (id) => typeof id === 'string' && typeof ASSISTANT_LIFE_PREFS !== 'undefined' && !!ASSISTANT_LIFE_PREFS[id];
 const assistantLifePlanOkPlace = (p) => ASSISTANT_LIFE_PLAN_PLACES.includes(p);
+// お願いできる助手か(助手の解放 18-assistant-partner.jsx: まだ助手でない「町の人」にはお願いできない。口が無ければ今までどおり)
+const assistantLifePlanCanAsk = (id) => {
+  if (!assistantLifePlanOkId(id)) return false;
+  try { return typeof assistantPartnerOkNow !== 'function' || assistantPartnerOkNow(id) === true; } catch (_) { return false; }
+};
 // 保存の値を今日の形へ(壊れている・日が違う → 空)
 const normalizeAssistantLifePlan = (raw, day) => {
   const out = { day: Number.isInteger(day) ? day : null, plan: {}, result: {}, went: {} };
@@ -74376,7 +74381,7 @@ const assistantLifePlanSave = (data) => {
 };
 // 予定を決める・空ける(place が null ならおまかせに戻す)。いまの回と過ぎた回は変えられない
 const assistantLifePlanSet = (abs, id, place, now = Date.now()) => {
-  if (!assistantLifePlanOn() || !Number.isInteger(abs) || !assistantLifePlanOkId(id)) return false;
+  if (!assistantLifePlanOn() || !Number.isInteger(abs) || !assistantLifePlanCanAsk(id)) return false;
   const cur = assistantLifeSlotAt(now).abs;
   if (abs <= cur || Math.floor(abs / 12) !== Math.floor(cur / 12) || abs % 12 < ASSISTANT_LIFE_PLAN_FIRST_J) return false;
   if (place != null && !assistantLifePlanOkPlace(place)) return false;
@@ -74406,7 +74411,8 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     if (!assistantLifePlanOn() || !ASSISTANT_LIFE_PLAN_STORE.state.loaded || !decided) return decided;
     const d = ASSISTANT_LIFE_PLAN_STORE.state.data;
     if (!d || d.day !== Math.floor(decided.abs / 12)) return decided;
-    const want = d.plan[String(decided.abs)];
+    const want0 = d.plan[String(decided.abs)] || {};
+    const want = {}; for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
     const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
     const r = assistantLifePlanApply(decided, want, trust, salt);
@@ -74439,7 +74445,7 @@ const assistantLifePlanOpen = (opt = {}) => {
 const assistantLifePlanClose = () => ASSISTANT_LIFE_PLAN_STORE.set({ open: null });
 // 部屋の行・家の上の1行に出す数(印が偽なら null)
 const assistantLifePlanRowInfo = (id) => {
-  if (!assistantLifePlanOn()) return null;
+  if (!assistantLifePlanOn() || !assistantLifePlanCanAsk(id)) return null;
   const left = assistantLifePlanSlotsLeft(); if (!left.length) return null;
   const next = left[0]; const p = assistantLifePlanOf(next, id);
   const h = assistantLifeSlotOfAbs(next).from;
@@ -74448,7 +74454,7 @@ const assistantLifePlanRowInfo = (id) => {
 const assistantLifePlanFreeCount = (ids) => {
   if (!assistantLifePlanOn()) return 0;
   const left = assistantLifePlanSlotsLeft(); let n = 0;
-  for (const abs of left) if ((ids || []).some(id => !assistantLifePlanOf(abs, id))) n++;
+  for (const abs of left) if ((ids || []).filter(assistantLifePlanCanAsk).some(id => !assistantLifePlanOf(abs, id))) n++;
   return n;
 };
 
@@ -74558,7 +74564,7 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
   React.useEffect(() => { if (open) { setWho(open.who || (land ? null : ids[0] || null)); setCell(null); } }, [open, land]);
   if (!assistantLifePlanOn() || !open) return null;
   const cur = assistantLifeSlotAt().abs;
-  const list = (ids || []).filter(assistantLifePlanOkId);
+  const list = (ids || []).filter(assistantLifePlanCanAsk);
   const lv = who ? assistantLifePlanLvOf(who) : null;
   return (
     <div className="absolute inset-0 grid place-items-center bg-black/60 p-2" style={{ zIndex: 60 }} data-assistant-life-plan onClick={(e) => { if (e.target === e.currentTarget) assistantLifePlanClose(); }}>
