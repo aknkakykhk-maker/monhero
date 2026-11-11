@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 23489bf822f5a36c
+// generated-sha256: 2438c6e63ff8a771
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9738,7 +9738,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonBattlePvp: true, // 2026-11-11 助手マスモンの対戦 β その2(フレンド対戦+ランキング)。タイセンの表と関数(masmon-pvp)が本番に入ったあと真にした(本番の通しは省く・社長の決め 2026-11-11)
   assistantLifePlan: true, // 2026-11-11 助手の行き先の予定(📅 今日の予定表・ナカヨシ19・台帳 #5301)。止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと真にする
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
-  assistantMasmonCheer: false, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。更新履歴とヘルプに社長の「この文で」が出て、地図の窓の口(ナカヨシ19)が入ってから真
+  assistantMasmonCheer: true, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。ミハリ3 OK・地図の窓 #5448・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonRanchTicket: false, // 2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
@@ -57656,6 +57656,9 @@ function RhythmWatchLane({ chart }) {
     const notes = chart.notes;
     const lanes = Math.max(1, Math.min(8, Number(chart.laneCount) || 5));
     let raf = 0; let last = 0; let alive = true;
+    // 流れの速さが変わる曲(止まる・戻る)は、演奏している人と同じ見え方にする(2026-11-11 社長が選択・ヘンドウ)。
+    // 演奏中の画面の共有の表は使わず、この譜面だけの表で位置を出す。表の無い曲は今までどおり時刻をそのまま使う
+    const scrollAt = typeof rhythmScrollLocal === 'function' ? rhythmScrollLocal(chart, RHYTHM_WATCH_LANE_SPAN_MS) : null;
     const firstFrom = (t) => { let lo = 0; let hi = notes.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].timeMs < t) lo = mid + 1; else hi = mid; } return lo; };
     const frame = (stamp) => {
       if (!alive) return;
@@ -57677,20 +57680,25 @@ function RhythmWatchLane({ chart }) {
       ctx.strokeStyle = 'rgba(148,163,184,.18)'; ctx.lineWidth = 1;
       for (let i = 1; i < lanes; i += 1) { ctx.beginPath(); ctx.moveTo(i * lw, 0); ctx.lineTo(i * lw, h); ctx.stroke(); }
       ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, hitY); ctx.lineTo(w, hitY); ctx.stroke();
-      const yOf = (t) => hitY - ((t - now) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY;
+      const yOf = scrollAt
+        ? (t, g) => hitY - ((scrollAt(t, g) - scrollAt(now, g)) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY
+        : (t) => hitY - ((t - now) / RHYTHM_WATCH_LANE_SPAN_MS) * hitY;
+      // 止まっている間は、時刻では先のノーツも道の上に見える。表のある曲は先まで見て、道の外のノーツは描かない
+      const horizon = now + RHYTHM_WATCH_LANE_SPAN_MS * (scrollAt ? 4 : 1);
       let shown = null;
       for (let i = firstFrom(now - 4000); i < notes.length; i += 1) {
         const n = notes[i];
-        if (n.timeMs > now + RHYTHM_WATCH_LANE_SPAN_MS) break;
+        if (n.timeMs > horizon) break;
         const end = Number(n.endTimeMs) > n.timeMs ? Number(n.endTimeMs) : n.timeMs;
         if (end < now - 400) continue;
         const code = jm && jm.has(i) ? jm.get(i) : -1;
         const x = Math.max(0, Math.min(lanes - 1, Number(n.lane) || 0)) * lw + lw * 0.1; const nw = lw * 0.8;
-        const y = yOf(n.timeMs);
+        const y = yOf(n.timeMs, n.scrollGroup);
+        if (scrollAt && y < -12 && (end <= n.timeMs || yOf(end, n.scrollGroup) < -12)) continue;
         const passed = n.timeMs < now - 80;
         ctx.globalAlpha = code >= 0 ? (passed ? 0.25 : 0.9) : (passed ? 0.3 : 1);
         ctx.fillStyle = code >= 0 ? RHYTHM_WATCH_JUDGMENT_VIEW[code].color : (RHYTHM_WATCH_LANE_COLORS[n.type] || '#38bdf8');
-        if (end > n.timeMs) { const yEnd = yOf(end); ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd)); }
+        if (end > n.timeMs) { const yEnd = yOf(end, n.scrollGroup); ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd)); }
         ctx.fillRect(x, y - 6, nw, 12);
         ctx.globalAlpha = 1;
         // 叩いた瞬間の光(判定の色)
@@ -66885,7 +66893,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="flex flex-wrap items-start gap-x-2">
         <button type="button" data-assistant-life-close onClick={uiV2 ? backFromUiV2 : close} aria-label={uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる'} className={uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[19px] text-slate-100 active:bg-white/10' : 'h-9 w-8 shrink-0 text-[19px] text-slate-100'}>←</button>
         {/* 英字の小見出しは狭い横(🔄横 667)で縮んで省略する(時計の札を押し出さない・2026-11-08 ミハリ) */}
-        <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
+        <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? (uiV2 ? 'TOWN' : 'WHERE') : tab === 'friends' ? (uiV2 ? 'KIZUNA' : 'FRIENDS') : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
         {/* 新UI/旧UIの切替は設定の「助手ライフの画面」へ(2026-11-11 社長。AssistantLifeUiSettingRow) */}
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
@@ -68616,8 +68624,8 @@ function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
   </div>);
   return (
     <section className="mb-2 rounded-2xl border border-pink-300/60 bg-slate-950/90 p-2.5" data-assistant-life-reward-road={total}>
-      <p className="text-[14px] font-black text-pink-100">🎁 ごほうびの道のり</p>
-      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>見守る・贈る・おしゃべりで上がります。「あと」が小さい順に並べています。</p>
+      <p className="text-[14px] font-black text-pink-100">🤝 きずな <span className="text-[12px] text-pink-200/90">・ 🎁 ごほうびの道のり</span></p>{/* 見出しを下のタブ「きずな」とそろえる(2026-11-11 ミヤスサ点検 ⑦) */}
+      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>💗 仲良し度=あなたと助手・🤝 友情Lv=助手どうし。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。</p>
       {sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom)}
       {sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom)}
       {sec('🤝 友情Lv(助手どうし)', r.peer, 2, null)}
@@ -72817,7 +72825,7 @@ function AssistantMasmonWishRow({ who, onAsk }) {
     </div>);
 }
 
-const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
+const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好み']]);
 
 function AssistantMasmonPic({ t, size }) {
   const m = assistantMasmonMon(t.monster);
@@ -76131,7 +76139,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       </>);
   };
   return (
-    <div className="ambw-root" style={{ position: 'absolute', inset: 0, zIndex: 30, overflowY: 'auto', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
+    <div className="ambw-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
       <style>{AMBW_CSS}</style>
       <div className="ambw-row" style={{ marginBottom: 8 }}>
         <button className="ambw-btn2" data-amgc-close onClick={onClose}>← 戻る</button>
@@ -76356,7 +76364,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60" onClick={onClose} data-amgr-sheet>
       <div className="w-full max-w-md rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 p-3 pb-6 text-white" onClick={ev => ev.stopPropagation()} style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
         <p className="text-[16px] font-black">🥚 {name}のマスモンにチケットを使う</p>
-        <p className="text-[11px] font-bold text-slate-300">この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません</p>
+        <p className="text-[11px] font-bold text-slate-300">この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません。上げた能力は、マスモン対戦の強さにも効きます</p>
         {info && <div className="mt-2 flex items-center gap-2">
           {who && typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={who} size={40} accent={who.accent} expression={res ? 'happy' : null}/></span>}
           <p className="min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950" data-amgr-say>{res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`}</p>

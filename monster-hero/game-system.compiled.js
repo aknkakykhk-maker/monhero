@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75129e283bac4deb
+// source-sha256: 2db6238f3539e7a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13883,7 +13883,7 @@ const RELEASE_FLAGS = {
   assistantMasmonBattlePvp: true,
   assistantLifePlan: true,
   assistantMasmonTrain: true,
-  assistantMasmonCheer: false,
+  assistantMasmonCheer: true,
   assistantMasmonRanchTicket: false,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
@@ -96821,6 +96821,7 @@ function RhythmWatchLane({
     let raf = 0;
     let last = 0;
     let alive = true;
+    const scrollAt = typeof rhythmScrollLocal === 'function' ? rhythmScrollLocal(chart, RHYTHM_WATCH_LANE_SPAN_MS) : null;
     const firstFrom = t => {
       let lo = 0;
       let hi = notes.length;
@@ -96866,22 +96867,24 @@ function RhythmWatchLane({
       ctx.moveTo(0, hitY);
       ctx.lineTo(w, hitY);
       ctx.stroke();
-      const yOf = t => hitY - (t - now) / RHYTHM_WATCH_LANE_SPAN_MS * hitY;
+      const yOf = scrollAt ? (t, g) => hitY - (scrollAt(t, g) - scrollAt(now, g)) / RHYTHM_WATCH_LANE_SPAN_MS * hitY : t => hitY - (t - now) / RHYTHM_WATCH_LANE_SPAN_MS * hitY;
+      const horizon = now + RHYTHM_WATCH_LANE_SPAN_MS * (scrollAt ? 4 : 1);
       let shown = null;
       for (let i = firstFrom(now - 4000); i < notes.length; i += 1) {
         const n = notes[i];
-        if (n.timeMs > now + RHYTHM_WATCH_LANE_SPAN_MS) break;
+        if (n.timeMs > horizon) break;
         const end = Number(n.endTimeMs) > n.timeMs ? Number(n.endTimeMs) : n.timeMs;
         if (end < now - 400) continue;
         const code = jm && jm.has(i) ? jm.get(i) : -1;
         const x = Math.max(0, Math.min(lanes - 1, Number(n.lane) || 0)) * lw + lw * 0.1;
         const nw = lw * 0.8;
-        const y = yOf(n.timeMs);
+        const y = yOf(n.timeMs, n.scrollGroup);
+        if (scrollAt && y < -12 && (end <= n.timeMs || yOf(end, n.scrollGroup) < -12)) continue;
         const passed = n.timeMs < now - 80;
         ctx.globalAlpha = code >= 0 ? passed ? 0.25 : 0.9 : passed ? 0.3 : 1;
         ctx.fillStyle = code >= 0 ? RHYTHM_WATCH_JUDGMENT_VIEW[code].color : RHYTHM_WATCH_LANE_COLORS[n.type] || '#38bdf8';
         if (end > n.timeMs) {
-          const yEnd = yOf(end);
+          const yEnd = yOf(end, n.scrollGroup);
           ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd));
         }
         ctx.fillRect(x, y - 6, nw, 12);
@@ -113737,7 +113740,7 @@ function AssistantLifeHouse({
       letterSpacing: '.06em',
       fontSize: 8
     } : undefined
-  }, "ASSISTANT LIFE · ", tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'), React.createElement("p", {
+  }, "ASSISTANT LIFE · ", tab === 'where' ? uiV2 ? 'TOWN' : 'WHERE' : tab === 'friends' ? uiV2 ? 'KIZUNA' : 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'), React.createElement("p", {
     className: "mhl-ti whitespace-nowrap",
     style: land ? {
       fontSize: 18
@@ -118084,12 +118087,14 @@ function AssistantLifeRewardRoad({
     "data-assistant-life-reward-road": total
   }, React.createElement("p", {
     className: "text-[14px] font-black text-pink-100"
-  }, "🎁 ごほうびの道のり"), React.createElement("p", {
+  }, "🤝 きずな ", React.createElement("span", {
+    className: "text-[12px] text-pink-200/90"
+  }, "・ 🎁 ごほうびの道のり")), React.createElement("p", {
     className: "text-[11.5px] font-bold leading-snug text-slate-200",
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, "見守る・贈る・おしゃべりで上がります。「あと」が小さい順に並べています。"), sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom), sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom), sec('🤝 友情Lv(助手どうし)', r.peer, 2, null), r.maxed > 0 && React.createElement("p", {
+  }, "💗 仲良し度=あなたと助手・🤝 友情Lv=助手どうし。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。"), sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom), sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom), sec('🤝 友情Lv(助手どうし)', r.peer, 2, null), r.maxed > 0 && React.createElement("p", {
     className: "mt-1.5 text-[11.5px] font-bold text-slate-300"
   }, "💗 ", r.maxed, "人は、仲良し度がいちばん上まで来ました"), hidden > 0 && React.createElement("button", {
     type: "button",
@@ -138163,7 +138168,7 @@ function AssistantMasmonWishRow({
     "data-assistant-masmon-undo": "wish"
   }, "取り消す")));
 }
-const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好き・苦手']]);
+const ASSISTANT_MASMON_TABS = Object.freeze([['mons', '🐾 マスモン'], ['team', '⚔ 編成'], ['deck', '🃏 デッキ'], ['taste', '💗 好み']]);
 function AssistantMasmonPic({
   t,
   size
@@ -145068,10 +145073,12 @@ function AssistantMasmonTrainWatch({
   return React.createElement("div", {
     className: "ambw-root",
     style: {
-      position: 'absolute',
+      position: 'fixed',
       inset: 0,
-      zIndex: 30,
+      zIndex: 9000,
       overflowY: 'auto',
+      background: 'linear-gradient(180deg,#221a44,#141026 40%)',
+      color: '#fff',
       padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))'
     },
     "data-amgc-watch": true
@@ -145621,7 +145628,7 @@ function AssistantMasmonRanchSheet({
     className: "text-[16px] font-black"
   }, "🥚 ", name, "のマスモンにチケットを使う"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません"), info && React.createElement("div", {
+  }, "この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません。上げた能力は、マスモン対戦の強さにも効きます"), info && React.createElement("div", {
     className: "mt-2 flex items-center gap-2"
   }, who && typeof AssistantFace === 'function' && React.createElement("span", {
     className: "shrink-0"

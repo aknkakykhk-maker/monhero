@@ -298,3 +298,24 @@ node tools/mode/rhythm-chart-chorus-check.js                                    
 
 `rhythm-overlap-reach-check.js` と手の決まりの検査も回す。「遊ばれていた形」は何かを避けていることがある
 (#2808 でタップを元のサブレーンへ戻したら押せない近さの2音になり、#2821 で遊ばれていた形へ戻した)。
+
+## 流れの速さが変わる譜面(変動・2026-11-11 ヘンドウ)。新曲から使う
+
+止まる・戻る・一気に来る・だんだん速く/遅くは、`monster-hero/data/rhythm-mode.js` の速さの表(`scrollChanges`・`scrollGroups`)で動く
+(判定・スコア・ランキングは曲の時刻のまま。見た目の位置だけ)。公開中の Sheriruth・Grievous Lady・Evans は表を手で書いた。
+**新しい曲は表を手で書かず、変動の口 `rhythmScrollFxChart(譜面, 演出の並び)` を通す。**
+
+```
+const LAMIA_SCROLL_FX=[{at:'0:41.200',kind:'stop',len:450},{at:'1:02.000',kind:'back',len:800,amount:.15},
+  {at:'1:30.000',kind:'backHold',len:600,amount:.3,hold:true},{at:'1:30.600',kind:'stop',len:300,hold:true},{at:'1:30.900',kind:'rush',len:500},
+  {at:'1:45.000',kind:'ease',len:1500,to:1.6},{at:'1:50.000',kind:'speed',to:1}];
+EXPERT:rhythmScrollFxChart(mhChart(…),LAMIA_SCROLL_FX),
+```
+
+- 種類: `stop` 止まる / `back` 行って戻る(道の amount 割)/ `backHold` 戻ったまま / `rush` 奥の端から一気に来る(止まりの後)/
+  `ease` だんだん変える(from→to)/ `speed` 段差で変える。`hold:true` で次の演出へそのままつなぐ。`quiet:true` で演出の最中のノーツを外す
+- 止まる・戻る間に叩くノーツは、口が組1(ふつうの速さ)を付けて「手前は来る・奥だけ止まる」にする。
+  判定より前に一度判定線へ触れてしまうノーツ(行って戻るの直後など)も、ノーツ速度1〜12の全部で見て組1へ移す
+- 曲の終わりで止めるなら `ease` の `to` は 0 ではなく 0.1(0 のままだと拍の線を描くループが終わらない。Evans の件)
+- 検査: `node tools/mode/rhythm-scroll-fx-check.js`(全曲の表を同じ物差しで見る。毎回回す検査に入っている)
+- 置く時刻は曲の区切り・音の切れ目に合わせる(Evans はブレイクの切れ目・フィルの手前・最後のだんだん遅く)
