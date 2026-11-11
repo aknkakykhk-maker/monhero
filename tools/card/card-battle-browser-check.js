@@ -265,6 +265,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const total = Object.values(saved.col).reduce((s, v) => s + v, 0);
     check('② スターターを選ぶとカード53枚・デッキ1つ・カードポイント300(＋練習試合の100)', total === 53 && saved.decks && saved.decks.decks.length === 1 && saved.point === 400 && saved.starter && saved.starter.kit === 'powerful', JSON.stringify({ total, point: saved.point, starter: saved.starter }));
     check('② トップにカードポイント400(300＋練習試合の100)と出る', (await page.locator('[data-card-point]').innerText()).trim() === '400');
+    // ㉟ はじめて開いたトップでは「対戦」だけが光り、一言が出る。「対戦」を押すと印(mh_card_first_glow_v1)が立って、次から出ない(2026-11-11 社長「A 対戦」)
+    { await page.waitForTimeout(400);
+      const n = await page.locator('[data-card-first-glow]').count(); const only = await page.locator('[data-card-cpu][data-card-first-glow]').count();
+      check('㉟ はじめて開いたトップで「対戦」だけが光り、一言が出る', n === 1 && only === 1 && await page.locator('[data-card-first-glow-note]').count() === 1, `光る所${n}`); }
     await shot(page, '02-top');
     // ③ 戻ってもう一度開く
     await page.getByRole('button', { name: 'デバッグ設定へ戻る' }).click();
@@ -274,6 +278,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('③ 2回目はスターター選びが出ない', await page.locator('[data-card-top="starter"]').count() === 0);
     // ④ 相手えらび → 対戦
     await page.locator('[data-card-cpu]').click();
+    await page.waitForTimeout(300);
+    check('㉟ 「対戦」を押すと一度きりの印が立つ(mh_card_first_glow_v1)', await page.evaluate(() => localStorage.getItem('mh_card_first_glow_v1')) === 'true');
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
     const foes = await page.locator('[data-card-foe]').count();
