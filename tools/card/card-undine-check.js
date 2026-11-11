@@ -159,5 +159,25 @@ const cost = (st, p, cardNo, mi) => { const h = st.players[p].hand.slice(); if (
   check('F ウンディーネの立ち絵は本編の Undine(CARD_SPECIES_ART)', /undine: 'Undine'/.test(src('src/parts/84-screen-card-battle.jsx')));
 }
 
+// ---- G ----
+// 助手8人の推し・好き・素顔のデッキ(83 の CARD_AI_FACE_LAYOUTS)。ウンディーネはキュービの組に足した(2026-11-11 部長)。
+// 表に入っていないと「決めた振り分け」が使えなくなり、8人のデッキが総入れ替えになる(ミハリ 2026-11-11)。
+// 8人とも fixed で、4つのデッキの3体が足す前(main 2026-11-11)と同じかを見る
+{
+  const BEFORE = {"mua":{"order":"fixed","oshi":"mocchi/metalner/golem","suki":"joker/hybrid:C-059/henger","yoso":"tiger/hybrid:C-064/durahan","honne":"tiger/hybrid:C-064/durahan"},"kiki":{"order":"fixed","oshi":"golem/hybrid:C-042/hybrid:C-064","suki":"tiger/hybrid:C-042/dragon","yoso":"hare/hybrid:C-014/hybrid:C-034","honne":"hare/hybrid:C-014/dino"},"momosuke":{"order":"fixed","oshi":"metalner/hybrid:C-064/hybrid:C-043","suki":"mew/hybrid:C-010/hybrid:C-051","yoso":"henger/hybrid:C-010/hare","honne":"henger/hybrid:C-010/hybrid:C-055"},"dra":{"order":"fixed","oshi":"zilla/durahan/tiger","suki":"suezo/durahan/hybrid:C-063","yoso":"henger/durahan/golem","honne":"golem/durahan/henger"},"atsu":{"order":"fixed","oshi":"dragon/golem/hybrid:C-059","suki":"mocchi/hybrid:C-010/hybrid:C-044","yoso":"durahan/metalner/kyubi","honne":"ghost/durahan/metalner"},"kyuko":{"order":"fixed","oshi":"mew/hybrid:C-064/durahan","suki":"pixie/durahan/hybrid:C-063","yoso":"tiger/durahan/hybrid:C-052","honne":"tiger/hybrid:C-064/hybrid:C-052"},"sorashido":{"order":"fixed","oshi":"hare/hybrid:C-059/hybrid:C-039","suki":"kyubi/hybrid:C-951/tiger","yoso":"jell/hybrid:C-053/suezo","honne":"jell/hybrid:C-059/hybrid:C-053"},"erubin":{"order":"fixed","oshi":"durahan/hybrid:C-063/dragon","suki":"pixie/hybrid:C-014/phoenix","yoso":"tiger/hybrid:C-059/henger","honne":"tiger/hybrid:C-059/henger"}};
+  const c2 = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, Date });
+  vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/82-card-tactics-core.jsx')}\n;\n${src('src/parts/83-card-ai-deck.jsx')}\n;\n`
+    + 'this.F = { CARD_BATTLE_DATA, cardAiFaceLayout, cardAiFaceBuild, cardAiSeededRand };', c2);
+  const F = c2.F, d2 = F.CARD_BATTLE_DATA;
+  for (const [who, want] of Object.entries(BEFORE)) {
+    const lay = F.cardAiFaceLayout(d2, who);
+    check(`G ${who}: 決めた振り分けのまま(fixed)`, lay.order === 'fixed', String(lay.order));
+    for (const sl of ['oshi', 'suki', 'yoso', 'honne']) {
+      const trio = F.cardAiFaceBuild(d2, who, sl, 'master', F.cardAiSeededRand(`f:${who}${sl}`)).monsters.map((n) => d2.monsters[n].species).join('/');
+      check(`G ${who} ${sl}: デッキの3体が足す前と同じ`, trio === want[sl], `${want[sl]} → ${trio}`);
+    }
+  }
+}
+
 console.log(`card-undine-check: ${passed} OK / ${fails.length} NG`);
 if (fails.length) { fails.forEach((f) => console.log(`NG: ${f}`)); process.exit(1); }
