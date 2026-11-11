@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 726f91ad786c8ba3
+// generated-sha256: f69491269d414820
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74395,12 +74395,12 @@ function AssistantLifePlanTable({ ids, cur, onCell }) {
         <thead><tr><th className="w-[74px]"/>{cols.map(a => { const s = assistantLifeSlotOfAbs(a); return <th key={a} className="text-[10.5px] font-black text-sky-200">{s.from}〜{(s.from + 2) % 24}時 <span className="text-slate-400">{s.label}</span></th>; })}</tr></thead>
         <tbody>{ids.map(id => <tr key={id}>
           <td className="truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</td>
-          {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[30px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'}</button></td>; })}
+          {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'}</button></td>; })}
         </tr>)}</tbody>
       </table>
       {left.length > 4 && <div className="mt-1 flex justify-end gap-1">
-        <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)} className="min-h-[36px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40">◀ 前の回</button>
-        <button type="button" disabled={(page + 1) * 4 >= left.length} onClick={() => setPage(page + 1)} className="min-h-[36px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40">次の回 ▶</button>
+        <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)} className="min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40">◀ 前の回</button>
+        <button type="button" disabled={(page + 1) * 4 >= left.length} onClick={() => setPage(page + 1)} className="min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40">次の回 ▶</button>
       </div>}
     </div>);
 }

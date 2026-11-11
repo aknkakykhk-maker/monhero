@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c13387689a6cef5e
+// source-sha256: f4f3cce34068c3b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -141290,7 +141290,7 @@ function AssistantLifePlanTable({
       type: "button",
       "data-assistant-life-plan-cell": `${id}@${a}`,
       onClick: () => onCell(id, a),
-      className: `h-[30px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`
+      className: `h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`
     }, p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'));
   }))))), left.length > 4 && React.createElement("div", {
     className: "mt-1 flex justify-end gap-1"
@@ -141298,12 +141298,12 @@ function AssistantLifePlanTable({
     type: "button",
     disabled: page === 0,
     onClick: () => setPage(page - 1),
-    className: "min-h-[36px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40"
+    className: "min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40"
   }, "◀ 前の回"), React.createElement("button", {
     type: "button",
     disabled: (page + 1) * 4 >= left.length,
     onClick: () => setPage(page + 1),
-    className: "min-h-[36px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40"
+    className: "min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-white disabled:opacity-40"
   }, "次の回 ▶")));
 }
 function AssistantLifePlanPlace({
