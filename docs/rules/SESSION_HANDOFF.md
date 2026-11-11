@@ -14,6 +14,7 @@
 | 2 替える | やりとり40回・公開5件、または仕事の種類が変わる | 引き継ぎメモ1枚 → 新しい会話 |
 
 フック `tools/hooks/session-length-nudge.js`(`.claude/settings.json` の UserPromptSubmit)が、段ごとに1行知らせる(その後は10回ごと)。
+**窓口は替えない**(2026-11-12 社長)。窓口の会話(`routing.json` の「窓口の会話」)では、フックは「替える」を出さず、目安を超えたら「AskUserQuestion で要約してよいかを社長に聞く」とだけ知らせる。自動の要約(autoCompactWindow 700000)はそのまま。
 目安の数は [`tools/team/routing.json`](../../tools/team/routing.json) の「区切り」。日数・文字数ではなく「やりとり・公開の数」で数えるのは、
 会話の重さがそれで決まり、会話の中から機械で数えられるから。
 
