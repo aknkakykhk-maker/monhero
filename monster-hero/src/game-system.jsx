@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1d78c14201815010
+// generated-sha256: 921b2d9f555857f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68489,6 +68489,34 @@ const assistantLifeProfileRhythm = (id) => {
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
 
+// 紹介の立ち絵。助手ごとに絵の余白・全身か顔だけかが違うので、町の人形と同じ決まり(顔の表 assistantLifeStandFace と assistantLifeStandRule)で
+//   「頭(てっぺんから顎)の長さ」と「頭のてっぺんの高さ」をそろえる(2026-11-11 社長「助手ごとのサイズ感がばらばら」)。測れるまでは出さない
+function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
+  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, 'happy') : '';
+  const boxRef = React.useRef(null);
+  const [size, setSize] = React.useState(null);
+  const [art, setArt] = React.useState(() => (typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' && ASSISTANT_LIFE_STAND_BOX.get(src)) || null);
+  React.useEffect(() => { let alive = true; if (typeof assistantLifeStandBox === 'function') assistantLifeStandBox(src).then(b => { if (alive) setArt(b); }); return () => { alive = false; }; }, [src]);
+  React.useEffect(() => {
+    const el = boxRef.current; if (!el) return undefined;
+    const f = () => setSize(prev => { const n = { w: el.clientWidth, h: el.clientHeight }; return prev && prev.w === n.w && prev.h === n.h ? prev : n; });
+    f();
+    let ro = null; try { ro = typeof ResizeObserver === 'function' ? new ResizeObserver(f) : null; if (ro) ro.observe(el); } catch (_) { ro = null; }
+    window.addEventListener('resize', f);
+    return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
+  }, []);
+  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
+  const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
+  const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function'
+    ? assistantLifeStandRule({ face, box: art, F: (size.h * head) / len, topY: size.h * top, cx: size.w / 2 }) : null;
+  return (
+    <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id}>
+      {rule && (() => { // 胸から下は町の人形と同じ所でぼかして消す(絵が途中で切れて浮いて見えないように)。顔だけの絵(ドラ)はそのまま
+        const mask = rule.fade ? `linear-gradient(#000 ${Math.round(rule.fade[0] * 100)}%, transparent ${Math.round(rule.fade[1] * 100)}%)` : undefined;
+        return <img src={src} alt={who.name} draggable={false} className="absolute" style={{ top: rule.top, left: rule.left, width: rule.width, height: rule.height, maxWidth: 'none', objectFit: 'contain', WebkitMaskImage: mask, maskImage: mask }}/>; })()}
+    </div>);
+}
+
 // 一覧(タブ「📖 紹介」の中身)
 function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null }) {
   const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
@@ -68598,7 +68626,8 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}</span>);
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
-      {typeof assistantFullImage === 'function' && <img src={assistantFullImage(who, 'happy')} alt={who.name} className="pointer-events-none absolute bottom-0 object-contain object-bottom" style={land ? { right: -10, height: '86%', width: '62%' } : { right: -30, height: '112%', width: '68%' }}/>}
+      {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
+      <div className="absolute bottom-0 right-0" style={land ? { left: '40%', top: 0 } : { top: 0, width: '62%' }}><AssistantLifeProfileStand who={who} head={land ? 0.22 : 0.34} top={land ? 0.3 : 0.12}/></div>
       <div className="absolute left-3.5 z-[2]" style={{ top: land ? 56 : 14, width: land ? 150 : 210 }}>
         <p className="text-[28px] font-black leading-tight text-white" style={{ textShadow: '0 2px 6px #000' }}>{who.name}</p>
         <p className="text-[12.5px] font-black leading-snug" style={{ color: who.accent, textShadow: '0 1px 3px #000', ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline}</p>
