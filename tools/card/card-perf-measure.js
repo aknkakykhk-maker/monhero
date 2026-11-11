@@ -179,9 +179,12 @@ function summary(name, rows) {
   const CPU = Number(process.env.PERF_CPU || 4);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
   let shareRow = null;
+  let versionBody = null;
   // 外へは何も書かない。ほかのブリーダーのデッキは自分のデッキの写しを返す
   await page.route('**/*', (route) => {
     const rq = route.request(); const u = new URL(rq.url());
+    // 測っているあいだに作り直しても「新しいバージョンがあります」の帯が出ないよう、version.json は最初の中身のまま返す
+    if (u.hostname === 'localhost' && /\/version\.json$/.test(u.pathname)) { if (!versionBody) versionBody = fs.readFileSync(path.join(ROOT, 'monster-hero', 'version.json'), 'utf8'); return route.fulfill({ status: 200, contentType: 'application/json', body: versionBody }); }
     if (u.hostname === 'localhost') return route.continue();
     if (/\/rest\/v1\/card_deck_entries/.test(u.pathname) && rq.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(shareRow ? [shareRow] : []) });
     if (/\/rest\/v1\/rpc\/card_deck_record_of/.test(u.pathname)) return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
