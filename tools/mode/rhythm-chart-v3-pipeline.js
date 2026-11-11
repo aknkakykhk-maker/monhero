@@ -84,6 +84,9 @@ step('生成（音の種類・高さ・形の語彙から組み立てる）','rh
 //   通った難易度だけ、生成した譜面を区間ごとに良い候補で継ぎ合わせる。Rev.12 より前の曲では何もしない(道具の側で見る)
 if(write)step('区間の差し替え（悪い区間だけ別の候補に替える）','rhythm-chart-v3-splice.js',['--apply']);
 if(write)step('自動修正（押せない・忙しい配置をレーンだけ直す）','rhythm-chart-v2-step7-autofix.js',['--source','v3','--write']);
+// Rev.37〜(2026-11-11): 手の仕上げ。横持ちの親指で押せない所・押さえている帯の中のノーツを、位置だけ動かして直す(時刻・種類・ノーツ数は変えない)。
+//   曲の一覧に handFinish:'keep-climax' / 'smooth' を書いた曲は、交差・真ん中越えなどの「いやらしい形」も減らす(既定は must=好みは変えない)
+if(write)step('手の仕上げ（押せない・帯の中を位置だけで直す。handFinish を書いた曲はいやらしい形も減らす）','rhythm-chart-flow-fix.js',['--write']);
 
 // --- 検証 ---
 const sourceKind=write?'v3fixed':'v3';

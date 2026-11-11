@@ -38,5 +38,13 @@ HELL と新曲の5難易度の道具が直し、同じ検査が止める(前か�
 **参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13 社長の決定)。上の難易度を下の難易度の写し+割増しで作らない。
 HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
 
+**作ったら点検する**(2026-11-11・Rev.37): `node tools/mode/rhythm-chart-review.js --track <曲>` が、量・Lv.・押せない・交差・届きにくい・流れ・跳び・
+帯の中・モンスター4個・盛り上がりと密度・難易度の段の差を表にし、公開中の同じ難易度の帯(5〜95%)の外を「※」で出す(`--picture <フォルダ>` で止め絵・
+`--before A --after B` で前後比べ・`--released <songId>` で公開中の譜面)。帯は曲を足したら `--calibrate` で作り直す。
+**狙い(ノーツ数・Lv.)が来たら** `rhythm-chart-tune.js --track <曲> --target MASTER:notes=600` でつまみの候補を出す(書かない)。
+**いやらしい(交差・真ん中越えが多い)と言われたら** 曲の一覧に `handFinish:'keep-climax'`(山場は残す)か `'smooth'`(全部減らす)を書いて作り直す
+(既定は `must`=押せない・帯の中だけ直す)。パイプラインの「手の仕上げ」(`rhythm-chart-flow-fix.js --track`)が位置だけ動かす。
+本文と「社長の言い方 → 道具・つまみ」の表: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)「作った譜面の点検と仕上げ」
+
 > ⚠️ 譜面もゲーム本体も変わらない強化は、**更新履歴とヘルプへ載せない**(プレイヤーには何も
 > 起きていない)。効くのは次に曲を足したときなので、そのときの曲の告知に含まれる。

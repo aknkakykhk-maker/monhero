@@ -1,0 +1,41 @@
+# 譜面制作ツールの強化(2026-11-11・フメン・MHB CHART ENGINE Rev.37)
+
+社長「最新モデルで譜面制作ツールを強化したい」。配信中の曲の譜面・既存の解析・ゲーム本体は変えていない。効くのは次に作る曲から。
+決まりの本文: [`docs/rules/CHART_ENGINE.md`](../../rules/CHART_ENGINE.md)「作った譜面の点検と仕上げ」。
+
+## 足したもの
+
+| 道具 | 何をする |
+| --- | --- |
+| `tools/mode/rhythm-chart-review.js` | 作った譜面・公開中の譜面を同じ物差しで点検。表・帯の外(※)・「ここを見て」・止め絵・前後比べ |
+| `tools/mode/rhythm-chart-flow-fix.js --track` | 手の仕上げ。公開前の書き出しで、押せない所・帯の中(既定)と、いやらしい形(`handFinish`)を位置だけで直す |
+| `tools/mode/rhythm-chart-tune.js` | 狙い(ノーツ数・Lv.)に近いつまみの組み合わせを書かずに探す |
+| 生成器・自動修正(Rev.37) | モンスターノーツの欠けた枠を付け直す/自動修正のあと帯の中へ戻ったノーツを外へ |
+| `tools/mode/rhythm-chart-review-check.js` | 上の決まりの見張り |
+
+## 比べた結果(強化前のワークツリー vs 強化後・7曲の EXPERT と MASTER の14譜面の合計)
+
+書き出すだけで、ゲームのデータには入れていない。曲: Evans・ROSE(全編/short)・ヒューマノイド・Altar short・Rebellion short・Toward the Stars short。
+
+| | 強化前 | 強化後(既定) | 山場を残して減らす(`keep-climax`) | 全部減らす(`smooth`) |
+| --- | ---: | ---: | ---: | ---: |
+| 横持ちの親指で押せない | 15 | 1 | 2 | 2 |
+| 押さえている帯の中 | 38 | 0 | 0 | 0 |
+| モンスターが4個でない譜面 | 6 | 0 | 0 | 0 |
+| 交差 | 250 | 240 | 108 | 18 |
+| 届きにくい(真ん中越え) | 431 | 430 | 231 | 90 |
+| 速い続きの跳び | 167 | 164 | 145 | 131 |
+
+ノーツ数はどれも同じ(位置だけ動かす)。Lv. は ±1(`smooth` は Evans EXPERT だけ +3)。
+前からあった直しの道具は交差を消すと跳びが増えた(ヒューマノイド MASTER で 16 → 51)ので、流れを崩す1歩も点数に入れた(同じ譜面で 16 → 14)。
+
+## 止め絵(下から上へ進む・1本が8小節・左が前/右が後・柱の右の印が問題の場所)
+
+- 強化前 → 強化後(既定): `humanoid-master-before-vs-default.png`・`evans-master-before-vs-default.png`
+- 既定 → 山場を残して減らす: `humanoid-master-default-vs-keep-climax.png`・`evans-master-default-vs-keep-climax.png`
+- 既定 → 全部減らす: `humanoid-master-default-vs-smooth.png`・`evans-master-default-vs-smooth.png`
+
+## 社長に決めてほしいこと
+
+新曲の EXPERT・MASTER で、交差・真ん中越えを自動で減らすのを既定にするか(A 山場は残して減らす/B 今のまま/C 全部減らす)。
+決まるまでは B(曲の一覧に `handFinish` を書いた曲だけ減らす)。
