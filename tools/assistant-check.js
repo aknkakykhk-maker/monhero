@@ -326,8 +326,11 @@ check('バトル練習の視聴済みと初回案内表示済みを分ける',
 // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
 // デバッグのお試し再生では書き換えない
 check('バトル初回案内は表示時に記録し、完了時だけ練習を視聴済みにする',
+  // 2026-11-11 分割: はじめの1戦は別の印(mh_battle_tutorial_first_v1)だけ、seen はつづき・全部通しを終えたときだけ
   has('storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false)')
-    && has("if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }")
+    && has("if (completed && back === 'HOME') {")
+    && has("if (endedVariant === 'first') {")
+    && has('await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);')
     && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
   has('💬 助手') && source.indexOf('💬 助手') > source.indexOf("gameState==='DEBUG_SETTINGS'"));

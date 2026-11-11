@@ -135,6 +135,15 @@ const check = (name, ok, detail = '') => {
       home.includes('バトル') && home.includes('マーケット'), home.slice(0, 30));
     check('決めた名前とアイコンで始まる', (await saved()).onboarded === 'true' && home.includes('けんさ'));
     // 出すのを遅らせただけで、受け取り損ねてはいけない
+    // 設定のあとには、先に「はじめての案内」(村の案内・バトルチュートリアルの案内)が出る。ログインボーナスはそれを閉じたあとに出る(2026-11-11 直し)
+    for (let i = 0; i < 30; i++) {
+      if (await page.locator('[aria-label="ログインボーナス"]').count()) break;
+      const labels = await page.evaluate(() => { const d = [...document.querySelectorAll('[role=dialog]')].pop(); return d ? [...d.querySelectorAll('button')].map(b => (b.innerText || '').trim()) : []; });
+      const pick = labels.find(t => /^(スキップ|閉じる|あとで|今は見ない|わかった)/.test(t)) || labels.find(t => /^次へ/.test(t));
+      if (!pick) break;
+      await page.evaluate(t => { const d = [...document.querySelectorAll('[role=dialog]')].pop(); const b = [...d.querySelectorAll('button')].find(b => (b.innerText || '').trim() === t); b && b.click(); }, pick);
+      await page.waitForTimeout(900);
+    }
     check('遅らせたログインボーナスは設定のあとに出る',
       await page.locator('[aria-label="ログインボーナス"]').count() === 1);
 

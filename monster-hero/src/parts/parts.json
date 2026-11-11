@@ -75,6 +75,10 @@
       "role": "エイキの桜・パンドラの雷などバトル演出の部品"
     },
     {
+      "file": "24-battle-hit-feel.jsx",
+      "role": "バトルの手ごたえ(当たりの間・会心と撃破の見せ方・効果の札の種類)。敵に出た数字の札とライフを読むだけで、計算には触れない。state は持たない"
+    },
+    {
       "file": "24-sorashido-copy-view.jsx",
       "role": "アシカ「ソラシドの自動化」の見せ方の部品(コピーの演出・次に使うカードの札・コピーの手札の窓)。状態は持たず、バトル部が呼ぶ"
     },
@@ -105,6 +109,10 @@
     {
       "file": "30-rhythm-play.jsx",
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+    },
+    {
+      "file": "30-rhythm-preview-hands.jsx",
+      "role": "オプションの「▶ 見てみる」の見本を自動で叩く手(ふつうの指と同じポインタの合図を送るだけ。判定には触らない)"
     },
     {
       "file": "31-debug-ui.jsx",
@@ -194,6 +202,10 @@
     {
       "file": "39-beat-rank-api.jsx",
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
+    },
+    {
+      "file": "39-multi-stamp.jsx",
+      "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
     },
     {
       "file": "40-screen-effects.jsx",
@@ -386,6 +398,10 @@
     {
       "file": "56-assistant-life-ux.jsx",
       "role": "助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)の新UIだけの部品: 部屋の「その助手とできること」1列(AssistantLifeDoRow)と仲良し度の道のり(AssistantLifeBondRoad)。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-guide.jsx",
+      "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },
     {
       "file": "56-assistant-life-rel.jsx",
