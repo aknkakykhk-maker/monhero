@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be2556263ca46b70
+// generated-sha256: a2550ad8b1438168
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -280,6 +280,9 @@ const normalizeBattleFxSettings = (value) => {
     resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
     countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
     endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
+    // 当たりの間(2026-11-11 社長「当たりの間は入れる・設定で切れる・はじめは入」)。攻撃が当たった瞬間に、画面の動きを一瞬だけ止める。
+    // ★足す前に保存した人(hitStop が無い)は ON(入れる)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    hitStop: v.hitStop === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -304,6 +307,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'hitStop', title:'当たりの間',
+    desc:'攻撃が当たった瞬間に、画面の動きをほんの一瞬だけ止めて、当たった手ごたえを出します。会心の一撃と、敵を倒したときは少し長く止まります。バトルの速さを上げているときは、そのぶん短くなります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'入れる', note:'当たった手ごたえが出る' }, { id:'OFF', label:'入れない', note:'止めずに流す' }] },
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
@@ -18146,6 +18152,152 @@ const TapRippleLayer = ({ spawnRef }) => {
       </div>
   );
 };
+
+// ---- part: 24-battle-hit-feel.jsx ----
+// バトルの「手ごたえ」(2026-11-11 社長が選んだ形: 案A キレを土台 + 会心と撃破だけ案B ドカン + 効果の知らせは案C の札。
+// 「当たりの間は入れる・設定で切れる・はじめは入」)。資料: docs/progress/battle-feel/README.md
+//
+// ★見た目と間だけ。ダメージ・命中・会心の判定・スコア・ランキング・勝敗・ターンの進み・AUTO の回し方には一切触れない。
+//   この部品は「敵に出た数字の札」と「敵のライフ」を読むだけで、何も書き戻さない。
+//   「当たりの間」は CSS のアニメーションを一瞬止めるだけ(#root の data-feel-stop)。ゲームの時計(battleWait)は止めない。
+// ★React の state は持たない(ref と DOM だけ)。当たるたびにアプリ全体を描き直させないため。
+// ★動かすのは transform / opacity / translate / scale だけ(描き直しにならない)。
+
+// 当たりの間の長さ(ms・×1速のとき)。速さを上げているときは同じ割合で短くする
+const BATTLE_FEEL_STOP_MS = Object.freeze({ normal: 50, crit: 110, defeat: 140, chain: 30 });
+
+// 札の文から、効果の種類を決める(色と印を付けるだけ。案C)。当てはまらなければ undefined(いままでの見た目)
+const battleFeelKindOf = (text) => {
+  const s = String(text == null ? '' : text);
+  if (/反射/.test(s)) return 'reflect';
+  if (/吸収|ドレイン/.test(s)) return 'absorb';
+  if (/回避|かわし|MISS/i.test(s)) return 'evade';
+  if (/会心/.test(s)) return 'crit';
+  if (/撃破/.test(s)) return 'defeat';
+  return undefined;
+};
+
+// 敵に出た数字の札が「1発ぶんのダメージ」かどうか。会心は 60-app が末尾に「!!」を付けている
+const battleFeelTierOf = (text) => {
+  const s = String(text == null ? '' : text);
+  if (!/^\d[\d,]*!*$/.test(s)) return null;
+  return /!!$/.test(s) ? 'crit' : 'normal';
+};
+
+// popups … 敵に出ている数字の札(効果の小さな札を除いたもの)。enemyHp … 敵のライフ(0 になった瞬間を「倒した」とする)
+// speed … バトルの速さ(×1・×2…)。stopOn / shakeOn / defeatOn / richOn … 設定。off … 軽量表示・省エネ(何もしない)
+function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = true, defeatOn = true, richOn = true, off = false }) {
+  const hostRef = React.useRef(null);
+  const seenRef = React.useRef(undefined);
+  const hpRef = React.useRef(enemyHp);
+  const lastHitAtRef = React.useRef(0);
+  const stopTimerRef = React.useRef(0);
+  const last = Array.isArray(popups) && popups.length ? popups[popups.length - 1] : null;
+  const lastId = last ? last.id : null;
+  const lastText = last ? last.text : '';
+
+  React.useEffect(() => () => {
+    clearTimeout(stopTimerRef.current);
+    try { document.getElementById('root')?.removeAttribute('data-feel-stop'); } catch (e) {}
+  }, []);
+
+  React.useEffect(() => {
+    const prevHp = hpRef.current;
+    hpRef.current = enemyHp;
+    const first = seenRef.current === undefined;
+    const fresh = lastId != null && lastId !== seenRef.current;
+    seenRef.current = lastId;
+    if (first || off) return;
+    const defeated = Number.isFinite(enemyHp) && Number.isFinite(prevHp) && enemyHp <= 0 && prevHp > 0;
+    let tier = fresh ? battleFeelTierOf(lastText) : null;
+    if (defeated && defeatOn) tier = 'defeat';
+    if (!tier) return;
+    const host = hostRef.current;
+    if (!host) return;
+    let reduce = false;
+    try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    if (reduce) return;
+    const k = 1 / Math.max(1, Number(speed) || 1);
+    const now = Date.now();
+    const chain = tier === 'normal' && now - lastHitAtRef.current < 220;   // 連撃の2発目から先は短く
+    lastHitAtRef.current = now;
+    const made = [];
+    const run = (el, frames, opts) => {
+      if (!el || typeof el.animate !== 'function') return null;
+      try { const a = el.animate(frames, { fill: 'both', easing: 'cubic-bezier(.2,.9,.3,1)', ...opts, duration: Math.max(60, (opts.duration || 200) * k), delay: (opts.delay || 0) * k }); made.push(a); return a; } catch (e) { return null; }
+    };
+    const piece = (css) => {
+      const d = document.createElement('div');
+      d.style.cssText = `position:absolute;left:50%;top:50%;pointer-events:none;${css}`;
+      host.appendChild(d);
+      return d;
+    };
+    const fade = (d, a, ms) => { if (a) a.onfinish = () => d.remove(); else d.remove(); setTimeout(() => d.remove(), ms * k + 400); };
+    const T = (s) => `translate(-50%,-50%) ${s}`;
+    const burst = (color, n, len) => {
+      for (let i = 0; i < n; i += 1) {
+        const deg = i * 360 / n + 8;
+        const d = piece(`width:${len}px;height:4px;border-radius:2px;transform-origin:0 50%;background:linear-gradient(90deg,${color},rgba(255,255,255,0));`);
+        fade(d, run(d, [{ opacity: 1, transform: `translate(0,-50%) rotate(${deg}deg) translateX(20px) scaleX(.3)` }, { opacity: 0, transform: `translate(0,-50%) rotate(${deg}deg) translateX(${len + 30}px) scaleX(1)` }], { duration: 300, easing: 'ease-out' }), 300);
+      }
+    };
+    const ring = (color, size, to) => {
+      const d = piece(`width:${size}px;height:${size}px;border-radius:50%;border:3px solid ${color};`);
+      fade(d, run(d, [{ opacity: .95, transform: T('scale(.45)') }, { opacity: 0, transform: T(`scale(${to})`) }], { duration: 420, easing: 'ease-out' }), 420);
+    };
+    const flash = (css, peak, ms) => {
+      const d = piece(css);
+      fade(d, run(d, [{ opacity: peak }, { opacity: 0 }], { duration: ms, easing: 'ease-out' }), ms);
+    };
+    const stamp = (text, color, size, dx, dy, hold) => {
+      const d = piece(`margin-left:${dx}px;margin-top:${dy}px;white-space:nowrap;font-weight:900;line-height:1;font-size:${size}px;color:${color};letter-spacing:.06em;text-shadow:0 2px 0 #000,0 -1px 0 #000,2px 0 0 #000,-2px 0 0 #000,0 4px 10px rgba(0,0,0,.7);`);
+      d.textContent = text;
+      d.setAttribute('data-feel-stamp', tier);
+      run(d, [{ opacity: 0, transform: T('scale(2.6) rotate(-12deg)') }, { opacity: 1, transform: T('scale(.92) rotate(-6deg)'), offset: .7 }, { opacity: 1, transform: T('scale(1) rotate(-6deg)') }], { duration: 200 });
+      fade(d, run(d, [{ opacity: 1 }, { opacity: 0 }], { duration: 240, delay: hold, easing: 'linear', fill: 'forwards' }), hold + 240);
+    };
+    // 敵の舞台(この部品の親)を揺らす・寄せる。transform は使わず translate / scale で足す(舞台の元の位置を壊さない)
+    const stage = host.parentElement;
+    const shake = (amp, ms) => {
+      if (!shakeOn) return;
+      const pts = [[0, 0], [-1, .5], [1, -.6], [-.8, -.5], [.7, .5], [-.4, .2], [0, 0]];
+      run(stage, pts.map(([x, y], i) => ({ translate: `${(x * amp * (1 - i / 9)).toFixed(1)}px ${(y * amp * (1 - i / 9)).toFixed(1)}px` })), { duration: ms, easing: 'linear', fill: 'none' });
+    };
+
+    if (tier === 'crit') {
+      // 会心(案B): 白い光・光の筋・金の輪・「会心!!」・舞台が少し寄る。画面全体の揺れは今までどおり 60-app が出す
+      if (richOn) { flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
+      ring('#fde047', 80, 2.6);
+      stamp('会心!!', '#fde047', 20, -64, -58, 620);
+      if (shakeOn) run(stage, [{ scale: '1.07' }, { scale: '1' }], { duration: 240, fill: 'none' });
+    } else if (tier === 'defeat') {
+      // 撃破(案B): 敵が白く光る・光の筋・「撃破!」の判・強い揺れ
+      flash('width:120%;height:120%;margin-left:-60%;margin-top:-60%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0%,rgba(255,255,255,0) 70%);', 1, 300);
+      if (richOn) burst('#ffffff', 14, 90);
+      stamp('撃破!', '#fca5a5', 40, 0, 12, 750);
+      shake(9, 420);
+    } else if (!chain) {
+      shake(2.5, 160);
+    }
+
+    // 当たりの間: CSS のアニメーションだけを一瞬止める(70-bootstrap の #root[data-feel-stop])。自前の演出も一緒に止めて、同じ絵で固める
+    if (stopOn) {
+      const ms = (chain ? BATTLE_FEEL_STOP_MS.chain : BATTLE_FEEL_STOP_MS[tier]) * k;
+      const root = document.getElementById('root');
+      if (root && ms >= 12) {
+        root.setAttribute('data-feel-stop', tier);
+        made.forEach((a) => { try { a.pause(); } catch (e) {} });
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = setTimeout(() => {
+          root.removeAttribute('data-feel-stop');
+          made.forEach((a) => { try { if (a.playState === 'paused') a.play(); } catch (e) {} });
+        }, ms);
+      }
+    }
+  }, [lastId, enemyHp]);
+
+  return <div ref={hostRef} data-battle-hit-feel={off ? 'OFF' : 'ON'} aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 49 }}></div>;
+}
 
 // ---- part: 24-sorashido-copy-view.jsx ----
 // ===== ソラシドの自動化(アシカ copy_sorashido・2026-10-27 社長の決定)の見せ方の部品 =====
@@ -50278,16 +50430,18 @@ function BattleScreen({
     const popupGridStyle={display:'grid',gridTemplateColumns:`repeat(${popupCols}, max-content)`,justifyContent:'center',alignContent:'start',columnGap:'.35em',rowGap:0,paddingTop:`${popupTop}px`};
     // ★効果の小さな札は上の端へ1列に並べ、大きなダメージの数字はその下へ置く。縦の流れにするので重ならない
     //   (下の端へ置くと、盤面の上の縁に出る「合計DMG」の予測や味方の枠の裏に隠れた)
-    return (
+    return (<>
+      {/* 手ごたえ(当たりの間・会心と撃破の見せ方)。数字の札とライフを読むだけ(24-battle-hit-feel.jsx)。★数字の札の div より前に置く(CSS が隣を見て数字の出方を変える) */}
+      <BattleHitFeel popups={enemyPopups} enemyHp={enemy?.hp} speed={battleSpeed} stopOn={battleFx.hitStop!=='OFF'} shakeOn={!shakeOff} defeatOn={battleFx.defeatFx!=='OFF'} richOn={fxLoad==='RICH'||fxLoad==='STANDARD'} off={!!(liteBattleView||ecoBattleView)} />
       <div data-enemy-popups className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]">
         {enemyFxPopups.length>0&&<div data-enemy-fx-chips className="flex flex-col items-center gap-0.5 px-2">
-          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
+          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip data-feel-kind={battleFeelKindOf(p.text)} className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
         </div>}
         <div data-enemy-popup-grid={popupCols} style={popupGridStyle}>
           {enemyPopups.map((p,idx)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} data-enemy-popup={idx} style={popupFit(p)} className={`text-center ${p.color} font-black whitespace-nowrap ${popupCols===2?'':'px-4'} ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
         </div>
       </div>
-    );
+    </>);
   })()}
           </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
@@ -50553,7 +50707,7 @@ function BattleScreen({
             <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-[30px] flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
               {/* 誰のものでもない知らせ(回避の名乗り・合計など)。上へ積むと2枚目が強化の札の列(♥20%・⚡15%・詳細)に重なっていた(2026-11-01 イルミネの回避)。
                   強化の札の列の上(盤面の上の縁から30px上)から上へ積む。横1列にすると左右の「ステータス」「次の行動」の札にかかるので縦のまま */}
-              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined}
+              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-feel-kind={battleFeelKindOf(p.text)} data-lite-damage={liteBattleView?'true':undefined}
                 className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
                 style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
             </div>
@@ -50928,7 +51082,7 @@ function BattleScreen({
                   {slotFxEl}
                   {/* 枠が狭く、長い吹き出し(「セレーネチェイサー! 連撃…」「会心率+1.0% 会心ダメ+1…」)が途中で切れていた(ふつうの縦でも)。
                       最初の区切りまで(技名・最初の効果)だけ出す。全部の文はバトルの記録で読める(2026-11-01 社長「技名だけにする案でよい」) */}
-                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
+                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} data-feel-kind={battleFeelKindOf(p.text)} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
                     style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{short!==p.text?<span data-tactics-popup-short title={p.text}>{short}</span>:p.text}</div>);})}
                 </div>);
                 })()}
@@ -69475,12 +69629,15 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   const p = assistantMasmonPlanOf(id);
   if (!who || !p) return null;
   const team = assistantMasmonTeam(p), bench = assistantMasmonBench(p, save), all = [...team, ...bench], waiting = assistantMasmonWaiting(p, save);
+  const waitSorted = waiting.slice().sort((a, b) => (a.welcome || 0) - (b.welcome || 0)), waitNext = waitSorted[0] || null, waitRest = waitSorted.slice(1); // 🔒の枠は次の1体だけ大きく、残りは1行(通し点検の改善案9)
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      {waitNext && <p className="mhm-card mb-2 text-[12px] font-black text-pink-100" data-assistant-masmon-next-lv>💗 {Number.isFinite(bondLv) && waitNext.welcome > bondLv ? `あと仲良し度 ${waitNext.welcome - bondLv} Lv で、次のマスモンを迎えます` : `仲良し度 Lv${waitNext.welcome} で、次のマスモンを迎えます`}</p>}
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waitNext && <AssistantMasmonWaitCard key={waitNext.monster} t={waitNext} land={land}/>}</div>
+      {waitRest.length > 0 && <p className="mt-2 rounded-xl border border-dashed border-slate-600 px-3 py-2 text-[11px] font-bold text-slate-400" data-assistant-masmon-wait-rest={waitRest.length}>🔒 ほかに {waitRest.length} 体(仲良し度 {waitRest.map(t => `Lv${t.welcome}`).join('・')} で迎えます)</p>}
       {p.v2 && <AssistantMasmonStyleRow who={who}/>}
       {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
@@ -69961,7 +70118,7 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
 .mhm-body{flex:1;min-height:0;overflow-y:auto;padding:2px 2px 6px}
-.mhm-tab{border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.mhm-tab{min-height:44px;border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
 .mhm-tab.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
 .mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
 .mhm-pic{flex-shrink:0;border-radius:10px;background:radial-gradient(circle at 50% 40%,#94a3b8,#475569);overflow:hidden;margin:0 auto}
@@ -95350,7 +95507,7 @@ function MonsterHeroGame() {
     // (2026-10-01・ユーザー指示「超省エネをもっと画面情報減らしてエコに。VICTORY!とかの表示はなしでいい」)。
     // 保存した設定は書き換えない。この値を読む側(WaveIntro・EnemyDefeatFx・PhaseBanner・resultFxMs など)がそのまま効く
     const base = (ecoMode === 'ultra' && autoRepeat === true)
-      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF' }
+      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF', hitStop: 'OFF' }
       : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
@@ -124439,6 +124596,22 @@ const createAnimationStyle = () => {
       [data-tactics-look] [data-em-idle]:not([data-enemy-skill]):not([data-enemy-hurt]) > span > img { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
+    /* 手ごたえ(2026-11-11 社長が選んだ形。部品は 24-battle-hit-feel.jsx・資料は docs/progress/battle-feel/)。動かすのは transform と opacity だけ */
+    /* 敵に出るダメージの数字: 大きく出て、縮んで止まる(連撃で2列のときは控えめ)。そのあとの弾み(animate-bounce)は今までどおり */
+    @keyframes mhFeelNumPop { 0% { opacity: 1; transform: scale(var(--feel-from, 1.6)); } 55% { opacity: 1; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup]:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup].animate-bounce:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both, bounce 1s 180ms infinite; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup-grid="2"] [data-enemy-popup] { --feel-from: 1.3; }
+    /* 当たりの間: CSS のアニメーションだけを一瞬止める(ゲームの時計は止めない。付け外しは 24-battle-hit-feel.jsx) */
+    #root[data-feel-stop] *, #root[data-feel-stop] *::before, #root[data-feel-stop] *::after { animation-play-state: paused !important; }
+    /* 効果の札の種類(案C): 何が起きたかを色の縁と印で知らせる。文と出る場所・時間は今までどおり */
+    [data-feel-kind] { border-width: 2px; }
+    [data-feel-kind]::before { margin-right: .3em; }
+    [data-feel-kind="reflect"] { border-color: #d8b4fe; } [data-feel-kind="reflect"]::before { content: "↩"; color: #d8b4fe; }
+    [data-feel-kind="absorb"] { border-color: #86efac; } [data-feel-kind="absorb"]::before { content: "♥"; color: #86efac; }
+    [data-feel-kind="evade"] { border-color: #bae6fd; } [data-feel-kind="evade"]::before { content: "≫"; color: #bae6fd; }
+    [data-feel-kind="crit"] { border-color: #fde047; } [data-feel-kind="crit"]::before { content: "★"; color: #fde047; }
+    [data-feel-kind="defeat"] { border-color: #fca5a5; } [data-feel-kind="defeat"]::before { content: "✕"; color: #fca5a5; }
     @keyframes tacticsPopupRise {
       0% { opacity: 0; transform: translateY(6px) scale(0.92); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
