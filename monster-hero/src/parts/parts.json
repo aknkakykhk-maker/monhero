@@ -392,6 +392,10 @@
       "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
     },
     {
+      "file": "56-assistant-life-masmon-grow.jsx",
+      "role": "部品: 助手のマスモンの育成基盤(社長の仕様書の第①段階)。6能力・疲労・ストレス・1日3回(朝・昼・夜)の自主育成・相談。保存は mh_assistant_masmon_grow_v1 だけ(mh_assistant_life_masmon_v1 は読むだけ)。公開の印 assistantMasmonGrow が真のときだけ動く。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },
