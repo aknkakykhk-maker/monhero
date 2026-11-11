@@ -6,7 +6,7 @@
 助手id: mua(みゅあ) kiki momosuke(もも) dra atsu kyuko sorashido erubin
 時間帯: late(深夜) morning(朝) noon(昼) afternoon(午後) evening(夕方) night(夜)
 表情: normal happy excited wink surprise troubled angry crying
-`{c}` = プレイヤーの呼び方(仲良し度で変わる。きき「◯◯さん/◯◯ちー」など)。文の中で使ってよい
+`{name}` = プレイヤーの呼び方(仲良し度で変わる。きき「◯◯さん/◯◯ちー」など)。`{c}` は相手の助手の呼び方(back の中だけで使ってよい・open では使わない)
 
 ## 1. daily-lines.txt(家の場面で顔を押したときの一言)— 8人×6時間帯×2本 = 96本
 
@@ -29,7 +29,7 @@ scene evening-1 夕日を見る | 📸 一緒に写真を撮る | 🌇 ふたり
 evening-1 open atsu happy 夕日やば笑 空ぜんぶオレンジなんだけど
 evening-1 back atsu happy それな笑 今日いっぱい動いたし！
 evening-1 r1 atsu excited いい顔〜笑 これ待ち受けにしよ
-evening-1 r2 atsu wink え、オレらだけ？ じゃあ次は{c}も入って笑
+evening-1 r2 atsu wink え、オレらだけ？ じゃあ次は{name}も入って笑
 ```
 
 | 役 | いつ言う | 気をつけること |
