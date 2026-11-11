@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0cf7fe21b62a4af7
+// generated-sha256: 1edf3bafad3bff1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -798,7 +798,8 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //   (完走: Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300 / EXTREME 500、その上は仮で +200 ずつ。
 //    途中で負けたら WAVE n の重みを n にして、表 × 進んだ重みの合計 ÷ 135 の切り捨て、1WAVE以上なら最低1周。WAVE9 でクリアの3分の1。
 //    2026-11-10 社長「クリアだけは劇的に高くしないと報酬美味しすぎる」で ÷55 から ÷135 に下げた)。
-//   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal だけ(10WAVE完走で 1・2・5周。前のまま)
+//   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal の「10WAVE完走の数」(1・2・5周。前のまま)を出すときだけ。
+//   途中で負けたときは、Normal 以下も表の難易度と同じ形(完走の数 × 重みの合計 ÷ 135 の切り捨て、最低1周)。逆転しないように 2026-11-10 社長がそろえた
 const PRO_RUN_QUICK_LOOP_SCALE = 5;
 const PRO_RUN_QUICK_LOOP_MIN = 1;
 const proRunQuickLoops = (wavesCleared, difficultyPower, scale = PRO_RUN_QUICK_LOOP_SCALE) => {
@@ -11913,7 +11914,7 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
 // ===== プロモード(クラシックのプロ・タクティクスのプロ)で入る、裏のクイック周回ぶん(2026-11-10 社長の表) =====
-// 10WAVE を完走したときの周回数。Hard より下(Beginner・Easy・Normal)は表に入れず、今までの式(10-core.jsx の proRunQuickLoops)のまま。
+// 10WAVE を完走したときの周回数。Hard より下(Beginner・Easy・Normal)は表に入れず、完走の数は今までの式(10-core.jsx の proRunQuickLoops)の10WAVE完走(1・2・5周)。途中は表の難易度と同じ形。
 // 本体(60-app.jsx の awardProRunQuickLoops)もヘルプの表(20-market-notices-help.jsx の proQuickLoops)も、proQuickLoopsFor だけを読む(数を書き写さない)
 const PRO_CLEAR_QUICK_LOOPS = Object.freeze({ Hard:10, Expert:50, Master:100, GrandMaster:150, Hell:200, Legend:300 });
 // 極限(タクティクスのプロで遊べる)。EXTREME は 500。その上は ALL_EXTREME_DIFFICULTIES の並び順に 1段ごとに +200(NIGHTMARE 700・CHAOS 900…)。
@@ -11937,10 +11938,12 @@ const proQuickLoopsFor = (wavesCleared, difficulty, extremeId = null) => {
   const full = exIndex >= 0
     ? PRO_CLEAR_QUICK_LOOPS_EXTREME + PRO_CLEAR_QUICK_LOOPS_EXTREME_STEP * exIndex
     : Number(PRO_CLEAR_QUICK_LOOPS[difficulty]) || 0;
-  // 表に無い難易度(Normal 以下)は今までの式のまま
-  if (!(full > 0)) return proRunQuickLoops(waves, DIFFICULTY_SETTINGS[difficulty]?.power);
-  if (waves >= PRO_QUICK_LOOP_WAVES) return full;
-  return Math.max(1, Math.floor((full * proQuickLoopWeight(waves)) / PRO_QUICK_LOOP_PARTIAL_DIVISOR));
+  // 表に無い難易度(Beginner・Easy・Normal)は、今までの式の10WAVE完走(1・2・5周)を完走の数とみなし、途中は表の難易度と同じ形にそろえる
+  //   (2026-11-10 社長。今までの式のまま途中を数えると、4〜9WAVE で Normal が Hard より多くなっていた)
+  const goal = full > 0 ? full : proRunQuickLoops(PRO_QUICK_LOOP_WAVES, DIFFICULTY_SETTINGS[difficulty]?.power);
+  if (!(goal > 0)) return 0;
+  if (waves >= PRO_QUICK_LOOP_WAVES) return goal;
+  return Math.max(1, Math.floor((goal * proQuickLoopWeight(waves)) / PRO_QUICK_LOOP_PARTIAL_DIVISOR));
 };
 // 冥界チャレンジ(2026-11-01 社長の決定)。INFERNO・COCYTUS は難易度選びのタブだけ「冥界」へ移す。
 // ★難易度の名前・極限の一覧(ALL_EXTREME_DIFFICULTIES)の並び・保存キー(mh_extreme_hs_/clears_<id>)・ランキングの枠(Extreme<id>)は変えない。

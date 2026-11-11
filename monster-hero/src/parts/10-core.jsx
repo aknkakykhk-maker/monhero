@@ -791,7 +791,8 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //   (完走: Hard 10 / Expert 50 / Master 100 / GrandMaster 150 / Hell 200 / Legend 300 / EXTREME 500、その上は仮で +200 ずつ。
 //    途中で負けたら WAVE n の重みを n にして、表 × 進んだ重みの合計 ÷ 135 の切り捨て、1WAVE以上なら最低1周。WAVE9 でクリアの3分の1。
 //    2026-11-10 社長「クリアだけは劇的に高くしないと報酬美味しすぎる」で ÷55 から ÷135 に下げた)。
-//   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal だけ(10WAVE完走で 1・2・5周。前のまま)
+//   この式(proRunQuickLoops)が使われるのは、表に無い Beginner・Easy・Normal の「10WAVE完走の数」(1・2・5周。前のまま)を出すときだけ。
+//   途中で負けたときは、Normal 以下も表の難易度と同じ形(完走の数 × 重みの合計 ÷ 135 の切り捨て、最低1周)。逆転しないように 2026-11-10 社長がそろえた
 const PRO_RUN_QUICK_LOOP_SCALE = 5;
 const PRO_RUN_QUICK_LOOP_MIN = 1;
 const proRunQuickLoops = (wavesCleared, difficultyPower, scale = PRO_RUN_QUICK_LOOP_SCALE) => {
