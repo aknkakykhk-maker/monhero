@@ -68,6 +68,9 @@
         if (keys.indexOf(key) >= 0) return;
         try { if (storage.getItem(key) !== null) { storage.removeItem(key); cleared.push(key); } } catch (_) {}
       });
+      // 印(mh_onboarded)の無い、とても古いバックアップ(名前とアイコンで前から遊んでいる人と見分けた道)のときだけ:
+      // 新しい端末が書いた mh_onboarded=false が残ると、次の起動で「はじめての人」と数え直して印を書き戻すので、true を書く(Fable の留意1・2026-11-12)。ほかのキーには触らない
+      if (keys.indexOf('mh_onboarded') < 0) { try { storage.setItem('mh_onboarded', 'true'); } catch (_) {} }
     }
     // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
     if (keys.indexOf('mh_assistant_partner_v1') < 0) storage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
