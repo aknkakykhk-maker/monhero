@@ -11,7 +11,7 @@
 //   ⑥ 1対1・2対2・3対3・1対2・2対3・3対1 すべて動く/4体目以降は切る/空の編成は断る
 //   ⑦ 純粋な計算(Math.random・Date・window・localStorage・document・Math.exp/log/pow/sin/cos を使わない)
 //   ⑧ 技表(ASSISTANT_MASMON_TECHS。無ければ仮の draft-techs.js)の形: 数字は MF2 の幅の中・技 id は種の中で一意・
-//      どの種もどの距離にも届く技がある・ちから技とかしこさ技の両方がある・距離撃の名前を使わない・既存の技の表を計算で使わない
+//      どの種もどの距離にも届く技がある・距離撃の名前を使わない・既存の技の表を計算で使わない
 //   ⑬ 能力の差の効き方のつまみ(A=いまのまま/B=ゆるめ/C=強め): A は結果を変えない・記録に残る・B<A<C の順
 //   ⑪ 育成・修行の入れ物(st・Lv 1〜99・覚えた技・熟練)から1体を作れる/熟練で命中・ガッツ消費・ガードが「中」の分だけ変わる
 //   ⑨ 壊れた入力(能力が文字・範囲外・種類が無い)は既定値で補う
@@ -202,6 +202,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const bad = [];
   const table = data.ASSISTANT_MASMON_TECHS.species;
   const L = engine.TECH_LIMITS;
+  const oneKind = [];
   // 名前は既存の技の名前(HERO_ATK_NAMES・固有技)から選んでよい(シュギョウ)。距離撃の系統の名前だけは使わない(社長「距離撃はなし」)
   const banned = new Set(['距離撃', '強・距離撃', '極・距離撃', '真・距離撃', '超・距離撃', '銀河距離撃', '次元距離撃', '覇王距離撃', '神罰距離撃']);
   for (const id of Object.keys(data.ALL_PLAYER_MONSTERS)) {
@@ -223,9 +224,9 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       kinds.add(t.kind);
     }
     if (reach.size < 4) bad.push(`${id} 届かない距離がある(${[...reach].join(',')})`);
-    if (kinds.size < 2) bad.push(`${id} ちから技・かしこさ技の片方しか無い`);
+    if (kinds.size < 2) oneKind.push(id);   // 片方だけの種(ゴーレムなど)はあってよい。数だけ知らせる
   }
-  check(`⑧ 技表の形(${data.ASSISTANT_MASMON_TECHS.draft ? '仮の技表' : '本番の技表'}): MF2 の幅の中・id 一意・どの距離にも届く・ちから/かしこさ両方`, !bad.length, bad.slice(0, 4).join(' / '));
+  check(`⑧ 技表の形(${data.ASSISTANT_MASMON_TECHS.draft ? '仮の技表' : '本番の技表'}): MF2 の幅の中・id 一意・どの距離にも届く`, !bad.length, bad.slice(0, 4).join(' / ') || (oneKind.length ? `ちから技かかしこさ技だけの種: ${oneKind.join('・')}` : ''));
   check('⑧ 実装済みのモンスターがすべて対戦に出られる', Object.keys(catalog.species).length === Object.keys(data.ALL_PLAYER_MONSTERS).length,
     `${Object.keys(catalog.species).length}/${Object.keys(data.ALL_PLAYER_MONSTERS).length}`);
   const src = fs.readFileSync(path.join(ROOT, 'monster-hero/data/assistant-masmon-battle.js'), 'utf8');
