@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3a093df647c69378
+// source-sha256: 011fd40d10555c89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -126311,7 +126311,7 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
 const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
   wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
-  floor: [[0.14, 0.52], [0.86, 0.52], [0.08, 0.68], [0.92, 0.68], [0.36, 0.5]]
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]]
 });
 const assistantLifeLayoutOmakase = (who, owned) => {
   const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
@@ -126340,7 +126340,7 @@ const assistantLifeLayoutOmakase = (who, owned) => {
       r: h.tilt && slot !== 'ceil' ? i % 2 ? -h.tilt : h.tilt : 0,
       f: seat[0] > 0.5,
       c: 0,
-      a: false,
+      a: slot === 'floor',
       z: i
     });
   }
@@ -126716,7 +126716,7 @@ function AssistantLifeRoomEditor({
   })), line && React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow",
     style: {
-      top: land ? 50 : 70,
+      bottom: 12,
       zIndex: 30,
       wordBreak: 'auto-phrase'
     },

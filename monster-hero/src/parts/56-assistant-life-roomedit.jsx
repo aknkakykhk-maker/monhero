@@ -135,11 +135,11 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
   sorashido: Object.freeze({ hero: 'lantern',   pull: 0.08, low: -0.03, tilt: 0, big: 1.2,  line: '星のものは上に集めたぜ・・・！ でーじいい感じだぜ' }),
   erubin:    Object.freeze({ hero: 'plant',     pull: -0.06, low: 0,   tilt: 0,  big: 1.1,  line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う' }),
 });
-// 置き場所ごとの席(良い順)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける
+// 置き場所ごとの席(良い順)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける。床の家具は助手の前の机・ソファに隠れないよう、助手より前の層に置く
 const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
   wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
-  floor: [[0.14, 0.52], [0.86, 0.52], [0.08, 0.68], [0.92, 0.68], [0.36, 0.5]],
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]],
 });
 // owned … その助手に贈ってある家具の key。苦手な家具は押し入れへ。席が足りない分も押し入れへ
 const assistantLifeLayoutOmakase = (who, owned) => {
@@ -156,7 +156,7 @@ const assistantLifeLayoutOmakase = (who, owned) => {
     const i = items.length;
     const x = seat[0] + (0.5 - seat[0]) * h.pull, y = seat[1] + (slot === 'ceil' ? 0 : h.low);
     items.push({ k, x: Math.max(0.06, Math.min(0.94, x)), y: Math.max(0.03, Math.min(0.72, y)), s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
-      r: h.tilt && slot !== 'ceil' ? (i % 2 ? -h.tilt : h.tilt) : 0, f: seat[0] > 0.5, c: 0, a: false, z: i });
+      r: h.tilt && slot !== 'ceil' ? (i % 2 ? -h.tilt : h.tilt) : 0, f: seat[0] > 0.5, c: 0, a: slot === 'floor', z: i });
   }
   return { items, line: h.line, kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k)) };
 };
@@ -293,7 +293,7 @@ function AssistantLifeRoomEditor({ id, land = false, scene = {}, onClose }) {
           layoutWho={id} layoutEdit={{ items: cur, sel, onSelect: (k) => { setSel(k); setColorOpen(false); },
             onMove: (k, x, y) => setItems(cur.map(it => (it.k === k ? { ...it, x, y } : it))), onDrop: () => { if (items) commit(items); } }}/>
         {/* おまかせのひとこと(助手が留守でも出す) */}
-        {line && <p className="pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow" style={{ top: land ? 50 : 70, zIndex: 30, wordBreak: 'auto-phrase' }} data-assistant-life-layout-line>{who.name}「{line}」</p>}
+        {line && <p className="pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow" style={{ bottom: 12, zIndex: 30, wordBreak: 'auto-phrase' }} data-assistant-life-layout-line>{who.name}「{line}」</p>}
       </div>
       {panel}
     </div>);
