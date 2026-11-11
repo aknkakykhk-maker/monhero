@@ -7,7 +7,8 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..', '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const masmon = read('monster-hero/src/parts/56-assistant-life-masmon.jsx');
-const grow = read('monster-hero/src/parts/56-assistant-life-masmon-grow.jsx');
+const growAll = read('monster-hero/src/parts/56-assistant-life-masmon-grow.jsx');
+const grow = growAll.slice(0, growAll.indexOf('// ---------- 画面')); // 画面の部品(JSX)の手前まで
 const line = (name) => { const m = masmon.match(new RegExp(`^const ${name} = .*$`, 'm')); if (!m) throw new Error(`${name} が見つからない`); return m[0]; };
 let ng = 0;
 const check = (label, ok, info = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${info ? ` — ${info}` : ''}`); if (!ok) ng++; };
@@ -18,7 +19,7 @@ vm.runInContext([
   "const assistantMasmonGrowKind = (g) => String(g || '').split('(')[0];",
   "const assistantMasmonStats = (t) => ({ hp: 0.4, atk: 0.5, def: 0.3, guts: 0.4 });",
   grow,
-  'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf };',
+  'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf, amgView, amgPick, amgPicksLeft, AMG_CARE };',
 ].join('\n'), ctx);
 const T = ctx.T;
 const rows = [{ slot: 1, monster: 'Golem', nick: 'ごろべえ', lv: 25, grow: '攻撃型(ちからに振る)' }, { slot: 2, monster: 'Pixie', nick: 'ぴく', lv: 12, grow: 'すばやさ型' }];
@@ -54,7 +55,7 @@ const down = hist.some((e, i) => i > 0 && T.AMG_KEYS.some(k => e.st[k] < hist[i 
 check('⑤ 能力は下がらない', !down);
 check('⑤ 999 を超えない', hist.every(e => T.AMG_KEYS.every(k => e.st[k] <= 999)));
 const perDay = {}; for (const e of hist) { const x = e.log[e.log.length - 1]; const d = Math.floor(x.s / 3); perDay[d] = (perDay[d] || 0) + Object.values(x.g).reduce((a, b) => a + b, 0); }
-check(`⑤ 1体1日の伸びは ${T.AMG_DAY_CAP} まで`, Object.values(perDay).every(n => n <= T.AMG_DAY_CAP), `最大 ${Math.max(...Object.values(perDay))}`);
+check(`⑤ 何もしないとき、1体1日の伸びは ${T.AMG_DAY_CAP} まで`, Object.values(perDay).every(n => n <= T.AMG_DAY_CAP), `最大 ${Math.max(...Object.values(perDay))}`);
 check('⑤ 疲労・ストレスは 0〜100', hist.every(e => e.fat >= 0 && e.fat <= 100 && e.str >= 0 && e.str <= 100));
 const acts = hist.map(e => e.log[e.log.length - 1].a);
 check('⑤ 休養・遊び・軽トレ・重トレ・特殊訓練が出る', ['rest', 'light', 'heavy'].every(a => acts.includes(a)) && acts.some(a => ['real', 'focus', 'weak', 'joint'].includes(a)), [...new Set(acts)].join(','));
@@ -73,6 +74,34 @@ T.AMG_STORE.set(s1); T.amgAdvise('kiki', 2, 'rest');
 const sR = T.amgCatchUp(T.AMG_STORE.state, 'kiki', rows, 'seed-1', start + 1);
 check('⑥ 「休ませて」のあと、次の回は休む(1回だけ)', sR.mons.kiki['2:Pixie'].log.slice(-1)[0].a === 'rest' && !sR.rest.kiki[2]);
 
+// ⑩ 関わるほど強くなる(社長 11-11): 見に来た日は上限が上がる・自分で決めた訓練が当たる・指定は1日3回・上限の能力は指定できない
+{
+  const t0 = Date.UTC(2026, 10, 11, 0, 0); // 朝の回の中
+  T.AMG_STORE.set(s1);
+  T.amgView('kiki', 1, t0);
+  const okPick = T.amgPick('kiki', 1, { a: 'heavy', k: 'hit' }, t0);
+  const sP = T.amgCatchUp(T.AMG_STORE.state, 'kiki', rows, 'seed-1', start + 1);
+  const last = sP.mons.kiki['1:Golem'].log.slice(-1)[0];
+  check('⑩ 自分で決めた訓練が次の回に当たり、印 p が付く', okPick && last.a === 'heavy' && last.k === 'hit' && last.p === 1 && !sP.plan.kiki[1], JSON.stringify(last));
+  T.AMG_STORE.set(s1); T.amgView('kiki', 1, t0);
+  const a1 = T.amgPick('kiki', 1, { a: 'light', k: 'pow' }, t0), a2 = T.amgPick('kiki', 2, { a: 'light', k: 'pow' }, t0);
+  T.AMG_STORE.set({ ...T.AMG_STORE.state, plan: {} });
+  const a3 = T.amgPick('kiki', 1, { a: 'light', k: 'pow' }, t0), a4 = T.amgPick('kiki', 2, { a: 'rest' }, t0);
+  check('⑩ 指定は助手1人につき1日3回まで', a1 && a2 && a3 && !a4 && T.amgPicksLeft('kiki', t0) === 0);
+  const full = JSON.parse(JSON.stringify(s1)); full.mons.kiki['1:Golem'].st.pow = 999; T.AMG_STORE.set(T.normalizeAssistantMasmonGrow(full));
+  check('⑩ 上限に届いた能力は指定できない', !T.amgPick('kiki', 1, { a: 'heavy', k: 'pow' }, t0) && !T.amgPick('kiki', 1, { a: 'heavy', k: 'luck' }, t0));
+  // 見に来た日の上限(15 → 20)
+  let a = s1, b = s1;
+  for (let x = start + 1; x <= start + 30; x++) {
+    a = T.amgCatchUp(a, 'kiki', rows, 'seed-1', x);
+    T.AMG_STORE.set(b); T.amgView('kiki', 1, Date.UTC(2026, 10, 11, 0, 0) + Math.floor((x - start) / 3) * 86400000); b = T.amgCatchUp(T.AMG_STORE.state, 'kiki', rows, 'seed-1', x);
+  }
+  const sum = (z) => Object.values(z.mons.kiki['1:Golem'].st).reduce((p, q) => p + q, 0);
+  check('⑩ 毎日見に来た方が、何もしないより伸びる', sum(b) > sum(a), `${sum(a)} → ${sum(b)}`);
+  const perDay2 = {}; for (const x of b.mons.kiki['1:Golem'].log) { const d = Math.floor(x.s / 3); perDay2[d] = (perDay2[d] || 0) + Object.values(x.g).reduce((p, q) => p + q, 0); }
+  check(`⑩ 見に来た日でも1日の伸びは ${T.AMG_CARE.viewCap} まで`, Object.values(perDay2).every(n => n <= T.AMG_CARE.viewCap), `最大 ${Math.max(...Object.values(perDay2))}`);
+  check('⑩ Lv は訓練で上がる(経験がたまる)', b.mons.kiki['1:Golem'].lv >= 25 || b.mons.kiki['1:Golem'].xp > 0, `Lv${b.mons.kiki['1:Golem'].lv}`);
+}
 // ⑦ 保存の正規化: 壊れた値・知らない項目は既定に・数字は範囲に
 const n = T.normalizeAssistantMasmonGrow({ mons: { kiki: { '1:Golem': { st: { life: 5000, pow: 'x', wise: -3 }, fat: 400, ind: { life: 9 } }, 'bad key': { st: {} } }, 'BAD!': {} }, done: { kiki: 'x' }, focus: { kiki: { 1: { k: 'nope', until: 3 } } } });
 const ne = n.mons.kiki['1:Golem'];
@@ -85,7 +114,7 @@ const at = (h, m = 0) => Date.UTC(2026, 10, 11, h - 9, m);
 check('⑧ 朝・昼・夜の区切り', T.amgSlotOf(at(4)) % 3 === 0 && T.amgSlotOf(at(11, 59)) % 3 === 0 && T.amgSlotOf(at(12)) % 3 === 1 && T.amgSlotOf(at(18)) % 3 === 2 && T.amgSlotOf(at(27, 59)) === T.amgSlotOf(at(18)) && T.amgSlotOf(at(28)) === T.amgSlotOf(at(4)) + 3);
 
 // ⑨ 保存キーは新しいものだけ・いまのキーを書かない
-check('⑨ 書くのは mh_assistant_masmon_grow_v1 だけ', /storeSet\(ASSISTANT_MASMON_GROW_KEY/.test(grow) && !/storeSet\(ASSISTANT_MASMON_KEY/.test(grow) && /'mh_assistant_masmon_grow_v1'/.test(grow));
+check('⑨ 書くのは mh_assistant_masmon_grow_v1 だけ', /storeSet\(ASSISTANT_MASMON_GROW_KEY/.test(growAll) && !/storeSet\(ASSISTANT_MASMON_KEY/.test(growAll) && /'mh_assistant_masmon_grow_v1'/.test(grow));
 check('⑨ 公開の印が偽のあいだは動かない', /if \(!amgOn\(\)/.test(grow));
 console.log(ng ? `${ng}件 NG` : 'すべてOK');
 process.exit(ng ? 1 : 0);

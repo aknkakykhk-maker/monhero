@@ -218,6 +218,12 @@ const layoutProblems = (page) => page.evaluate(() => {
             if (GROW) { // 育成基盤: 6能力・疲労・ストレス・今日の育成。一覧の札にも6能力
               const g = await page.evaluate(() => ({ stats: document.querySelectorAll('[data-assistant-masmon-detail] [data-amg-card] [data-amg-stat]').length, fat: !!document.querySelector('[data-amg-fat]'), str: !!document.querySelector('[data-amg-str]'), log: document.querySelectorAll('[data-amg-log]').length, saved: typeof AMG_STORE !== 'undefined' && Object.keys(AMG_STORE.state.mons || {}).length }));
               check(`${T}育成基盤: くわしい画面に6能力・疲労・ストレス・今日の育成`, g.stats === 6 && g.fat && g.str && g.log >= 1 && g.saved >= 1, JSON.stringify(g));
+              // 関わるほど強くなる: 見に来た印・次の回の訓練を自分で決める
+              await page.locator('[data-amg-pick-select]').selectOption('heavy:hit').catch(() => {});
+              await page.locator('[data-amg-pick-go]').click({ timeout: 3000 }).catch(() => {});
+              await page.waitForTimeout(400);
+              const pk = await page.evaluate(() => ({ now: document.querySelector('[data-amg-pick-now]')?.textContent || '', viewed: !!document.querySelector('[data-amg-viewed]') }));
+              check(`${T}育成基盤: 見に来た印が出て、次の回の訓練を決められる`, pk.viewed && /高速射撃/.test(pk.now), JSON.stringify(pk));
               if (SHOTS) await page.screenshot({ path: path.join(shotDir, `masmon-grow-detail-${v.id}${WHO !== 'kiki' ? '-' + WHO : ''}.jpg`), type: 'jpeg', quality: 80 });
               if (ASK) { // 「命中を鍛えて」→ 受けると、しばらく命中を鍛える(育成の相談)
                 await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonSuggest = true; });
