@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e37642314f4767cb
+// source-sha256: b4eb3861ffb2d183
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -137926,6 +137926,50 @@ const assistantLifeMasmonTeamOf = id => {
     }));
   } catch (_) {
     return [];
+  }
+};
+const assistantLifeMasmonShareOf = id => {
+  try {
+    const p = assistantMasmonPlanOf(id);
+    if (!p) return {
+      list: [],
+      waiting: 0
+    };
+    const growOn = typeof amgOn === 'function' && amgOn() && typeof amgEntryOf === 'function';
+    const statsOf = t => {
+      if (!growOn) return null;
+      const e = amgEntryOf(id, t);
+      if (!e || !e.st) return null;
+      const o = {};
+      for (const k of ['life', 'pow', 'wise', 'hit', 'eva', 'tough']) {
+        const v = Number(e.st[k]);
+        if (!Number.isFinite(v)) return null;
+        o[k] = Math.round(v);
+      }
+      return o;
+    };
+    const list = [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({
+      monster: t.monster,
+      nick: t.nick,
+      colors: [...(t.dye && t.dye.colors || [])],
+      lead: !!t.lead,
+      slot: Number.isInteger(t.slot) ? t.slot : 0,
+      lv: Number.isFinite(Number(t.lv)) ? Number(t.lv) : 1,
+      grow: typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(t.grow) : String(t.grow || ''),
+      growMine: t.growMine && typeof t.growMine.kind === 'string' ? t.growMine.kind : '',
+      stats: statsOf(t),
+      why: typeof t.why === 'string' ? t.why : ''
+    }));
+    const waiting = Array.isArray(p.extra) ? p.extra.filter(t => t && t.unknown).length : 0;
+    return {
+      list,
+      waiting
+    };
+  } catch (_) {
+    return {
+      list: [],
+      waiting: 0
+    };
   }
 };
 const useAssistantMasmonSave = () => {
