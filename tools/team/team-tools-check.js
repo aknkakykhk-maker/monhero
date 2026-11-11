@@ -58,15 +58,14 @@ ok(R['種類'].every(k => /^claude-(haiku|sonnet|opus|fable)-\d/.test(k.model)),
 
 // ③
 const limit = R['区切り'];
-ok(hook.message({ prompts: limit['要約のやりとり'] - 1, merges: 0 }, limit) === '', '③ 目安の前は黙る');
-ok(/要約\(\/compact\)/.test(hook.message({ prompts: limit['要約のやりとり'], merges: 0 }, limit)), '③ 1段目: 要約の目安に届いたら「区切りで要約を」と知らせる');
-ok(!/handoff <自分の部> --write/.test(hook.message({ prompts: limit['要約のやりとり'], merges: 0 }, limit)), '③ 1段目では会話を替えさせない');
-ok(hook.message({ prompts: limit['要約のやりとり'] + 1, merges: 0 }, limit) === '', '③ 毎回は出さない');
+ok(hook.message({ prompts: limit['やりとり'] - 1, merges: 0 }, limit) === '', '③ 目安の前は黙る');
+// 部署には要約(/compact)を勧めない。要約は窓口の会話だけ(台帳 2026-11-11・2026-11-12 社長「ここ以外は要約しないんじゃないの？」)
+for (const k of [1, 20, 25, 39, 40, 50, 60]) for (const m of [0, 3, 5, 9]) { const t = hook.message({ prompts: k, merges: m }, limit); ok(!/要約\(\/compact\)を?[かけ頼]|--compact/.test(t) || /要約\(\/compact\)は頼まない/.test(t), `③ 部署の知らせで要約を勧めない(やりとり${k}・公開${m})`); }
+{ const r = spawnSync('node', [path.join(__dirname, 'handoff.js'), 'assistant-life', '--compact'], { encoding: 'utf8' }); ok(r.status !== 0 && /要約は窓口だけ/.test(r.stderr), '③ handoff <部> --compact は NG で止まる(部署は要約しない)'); }
 ok(/会話がとても長い/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ 2段目: 替える目安に届いたら引き継ぎメモを知らせる');
 ok(/作業の途中では替えない/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ 2段目でも作業の途中では替えさせない');
 ok(/会話がとても長い/.test(hook.message({ prompts: limit['やりとり'] + limit['くり返し'], merges: 0 }, limit)), '③ くり返しの回でまた知らせる');
 ok(/公開 \d+ 件/.test(hook.message({ prompts: limit['くり返し'], merges: limit['公開'] }, limit)), '③ 公開の件数でも知らせる');
-ok(limit['要約のやりとり'] < limit['やりとり'] && limit['要約の公開'] < limit['公開'], '③ 要約の目安は、替える目安より手前');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-team-'));
 const tr = path.join(tmp, 't.jsonl');
 const lines = [];

@@ -6,7 +6,7 @@
 //   ② 要約の境目(system / compact_boundary)と要約文(isCompactSummary)のあとから数え直す。直後は何も知らせない
 //   ③ 要約文の行は「やりとり」に数えない・要約の前の公開は数えない・あとの公開は数える
 //   ④ 本文や道具の結果に「compact_boundary」と書いてあるだけの行は、境目として扱わない(数えたままになる)
-//   ⑤ 要約のあとにまた長くなったら、「最後の要約のあと」と付けて知らせる(2回目以降の要約でも、あとの数だけで決まる)
+//   ⑤ 要約のあとにまた長くなったら、「最後の要約のあと」と付けて知らせる(部署には要約を勧めず引き継ぎメモ)(2回目以降の要約でも、あとの数だけで決まる)
 //   ⑥ フックを実際に起動しても同じ(要約前は出る・要約後は出ない)
 const fs = require('fs');
 const os = require('os');
@@ -56,11 +56,11 @@ const write = (name, lines) => { const p = path.join(fs.mkdtempSync(path.join(os
 }
 // ⑤ 要約のあとにまた長くなる(2回要約した会話)
 {
-  const lines = [...many(100, (_, i) => user(`一期${i}`)), boundary(), summary(), ...many(30, (_, i) => user(`二期${i}`)), ...many(2, merge), boundary(), summary(), ...many(20, (_, i) => user(`三期${i}`)), ...many(3, merge)];
+  const lines = [...many(100, (_, i) => user(`一期${i}`)), boundary(), summary(), ...many(30, (_, i) => user(`二期${i}`)), ...many(2, merge), boundary(), summary(), ...many(40, (_, i) => user(`三期${i}`)), ...many(5, merge)];
   const n = hook.count(write('g.jsonl', lines));
-  ok(n.prompts === 20 && n.merges === 3 && n.compacts === 2, '⑤ 2回要約した会話は、最後の要約のあとだけを数える', JSON.stringify(n));
+  ok(n.prompts === 40 && n.merges === 5 && n.compacts === 2, '⑤ 2回要約した会話は、最後の要約のあとだけを数える', JSON.stringify(n));
   const m = hook.message(n, limit);
-  ok(m.includes('【会話が長くなってきた】') && m.includes('最後の要約のあと'), '⑤ 目安(20回・3件)を超えたら、「最後の要約のあと」と付けて知らせる', m.slice(0, 60));
+  ok(m.includes('【会話がとても長い】') && m.includes('最後の要約のあと') && m.includes('要約(/compact)は頼まない'), '⑤ 目安(40回・5件)を超えたら、「最後の要約のあと」と付けて引き継ぎメモを知らせる(部署に要約は勧めない)', m.slice(0, 60));
 }
 // ⑥ フックを実際に起動して、標準入力から
 {
