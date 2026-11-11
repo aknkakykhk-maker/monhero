@@ -53,7 +53,7 @@ const CHANGELOG = [
   },
   {
     // 2026-11-11 社長「新曲追加。高難易度曲。曲にあわせて止まったり戻ったりとか変動型」。BlackY。文は社長の「この文で」(Lv.・ノーツ数は作り直したあとの値)
-    date: "2026-11-12 01:09", type:'update', group:'rhythm', title:'新曲「LAMIA」を追加しました', status:'new',
+    date: "2026-11-12 02:08", type:'update', group:'rhythm', title:'新曲「LAMIA」を追加しました', status:'new',
     image:'images/song-art/lamia.jpg?v=fc61230a48ac',
     items:[
       'モンヒロビートに「LAMIA」（2分23秒）を追加しました。曲えらびからすぐ遊べます。',
