@@ -30,9 +30,15 @@ console.log('--- ① 作り ---');
 check('公開の印 assistantMasmonBattleBeta・assistantMasmonBattlePvp がある(いまは偽)', /assistantMasmonBattleBeta: false/.test(flags) && /assistantMasmonBattlePvp: false/.test(flags));
 const code = part.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
 const keys = [...code.matchAll(/'(mh_[a-z0-9_]+)'/g)].map(m => m[1]);
-check('保存のキーは mh_assistant_masmon_battle_v1 だけ', keys.length > 0 && keys.every(k => k === 'mh_assistant_masmon_battle_v1'), keys.join(','));
+const writes = [...code.matchAll(/storeSet\(\s*([A-Za-z_'"0-9]+)/g)].map(m => m[1]);
+check('書く保存のキーは mh_assistant_masmon_battle_v1 だけ(ブリーダーの名前・アイコンは読むだけ)', writes.length > 0 && writes.every(k => k === 'ASSISTANT_MASMON_BATTLE_KEY') && keys.every(k => ['mh_assistant_masmon_battle_v1', 'mh_breeder_name', 'mh_breeder_icon'].includes(k)), writes.join(',') + ' / ' + keys.join(','));
 check('育成・修行・マスモンの保存に書かない(set を呼ばない)', !/(AMG_STORE|AMGT_STORE|ASSISTANT_MASMON_STORE)\.set\(|amgSave\(|amgtSave\(/.test(code));
-check('サーバ・ランキングへ送らない', !/supabase|fetch\(|masmonPvp/.test(code));
+check('通信を直に書かない(サーバはタイセンの口だけ)', !/supabase|fetch\(/.test(code));
+const pvpCalls = (t) => t.split(/masmonPvp(?:Register|Challenge|Friends|Ratings|Unregister)\(/).length - 1;
+check('サーバの口を呼ぶのは、印 assistantMasmonBattlePvp の後ろ(フレンドの欄・ランキング)だけ',
+  /const ambbPvpOn = \(\) => ambbOn\(\) && [^\n]*assistantMasmonBattlePvp === true/.test(code) && /const pvp = ambbPvpOn\(\) && !preview;/.test(code)
+  && /const srcNow = pvp \?/.test(code) && /srcNow === 'friend' && <AmbbFriendPanel/.test(code) && /phase === 'rank' && pvp\)/.test(code)
+  && pvpCalls(code) > 0 && pvpCalls(code) === pvpCalls(code.slice(code.indexOf('function AmbbFriendPanel'))));
 check('計算に手を入れていない', !/_internal/.test(code));
 check('作戦は名前で渡す(team.plan・team.swapPace)・style の数値の上書きはしない', /plan: ambbPlanOf\(engine, plan\), swapPace: ambbSwapOf\(engine, swap\)/.test(code) && !/[{,]\s*style:/.test(code));
 const engineSrc = read('monster-hero/data/assistant-masmon-battle.js');
