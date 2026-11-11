@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7cec1db7fb2044c
+// source-sha256: 34c8be21e48d6696
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13859,7 +13859,7 @@ const RELEASE_FLAGS = {
   rhythmAssistantSession: true,
   assistantSorashido: true,
   assistantErubin: true,
-  assistantLifeProfile: false,
+  assistantLifeProfile: true,
   cardBattle: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
@@ -116224,8 +116224,9 @@ function AssistantLifeProfilePage({
       if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false);
     } catch (_) {}
   };
+  const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
   React.useEffect(() => {
-    if (!seen) return;
+    if (!seen || !giftReady) return;
     const miss = metList.filter(w => !seen[w.id]);
     if (!miss.length) return;
     const next = {
@@ -116235,11 +116236,11 @@ function AssistantLifeProfilePage({
       n: counts[w.id] || 0
     };
     save(next);
-  }, [seen, metList.map(w => w.id).join(',')]);
-  const isNew = id => !!(seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  }, [seen, giftReady, metList.map(w => w.id).join(',')]);
+  const isNew = id => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
   const open = id => {
     if (!met.has(id)) return;
-    if (seen) save({
+    if (seen && giftReady) save({
       ...seen,
       [id]: {
         n: counts[id] || 0

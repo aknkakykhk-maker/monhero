@@ -170,18 +170,20 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
   }, []);
   const save = (next) => { setSeen(next); try { if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false); } catch (_) {} };
   // はじめて一覧を開いたとき(まだ記録の無い助手)は、いまの数を控えるだけ(全員に NEW が付かないように)
+  // 贈った記録が読み終わるまでは数を控えない・NEW も出さない(読む前の少ない数を控えると、あとで全員に NEW が付く・2026-11-11 最終確認の留意)
+  const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
   React.useEffect(() => {
-    if (!seen) return;
+    if (!seen || !giftReady) return;
     const miss = metList.filter(w => !seen[w.id]);
     if (!miss.length) return;
     const next = { ...seen };
     for (const w of miss) next[w.id] = { n: counts[w.id] || 0 };
     save(next);
-  }, [seen, metList.map(w => w.id).join(',')]);
-  const isNew = (id) => !!(seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  }, [seen, giftReady, metList.map(w => w.id).join(',')]);
+  const isNew = (id) => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
   const open = (id) => {
     if (!met.has(id)) return;
-    if (seen) save({ ...seen, [id]: { n: counts[id] || 0 } });
+    if (seen && giftReady) save({ ...seen, [id]: { n: counts[id] || 0 } });
     setOpenId(id);
   };
   const face = land ? 48 : 60;

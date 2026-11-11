@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c886190ddac79a5c
+// generated-sha256: fe69d5cda70851af
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9727,7 +9727,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // えるびん(8人目・2026-11-05)。社長が出来上がりを確かめて「オッケー」を出すまで偽のまま(お話・選ぶ画面・おしゃべりに出ない)
   assistantErubin: true,
   // 助手紹介(2026-11-11 社長・ナカヨシ18。56-assistant-life-profile.jsx)。ミハリの確認と窓口の最終確認が済んで、社長が「公開」と言ったら真にする。偽のあいだは助手ライフの下のタブに「📖 紹介」が出ない
-  assistantLifeProfile: false,
+  assistantLifeProfile: true, // 2026-11-11 社長「この文で」・ミハリ3と最終確認 OK で公開
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -67652,18 +67652,20 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
   }, []);
   const save = (next) => { setSeen(next); try { if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false); } catch (_) {} };
   // はじめて一覧を開いたとき(まだ記録の無い助手)は、いまの数を控えるだけ(全員に NEW が付かないように)
+  // 贈った記録が読み終わるまでは数を控えない・NEW も出さない(読む前の少ない数を控えると、あとで全員に NEW が付く・2026-11-11 最終確認の留意)
+  const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
   React.useEffect(() => {
-    if (!seen) return;
+    if (!seen || !giftReady) return;
     const miss = metList.filter(w => !seen[w.id]);
     if (!miss.length) return;
     const next = { ...seen };
     for (const w of miss) next[w.id] = { n: counts[w.id] || 0 };
     save(next);
-  }, [seen, metList.map(w => w.id).join(',')]);
-  const isNew = (id) => !!(seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  }, [seen, giftReady, metList.map(w => w.id).join(',')]);
+  const isNew = (id) => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
   const open = (id) => {
     if (!met.has(id)) return;
-    if (seen) save({ ...seen, [id]: { n: counts[id] || 0 } });
+    if (seen && giftReady) save({ ...seen, [id]: { n: counts[id] || 0 } });
     setOpenId(id);
   };
   const face = land ? 48 : 60;
