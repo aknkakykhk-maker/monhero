@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 622a836eb3aa288d
+// source-sha256: c9a9f01e9f5fd503
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116509,7 +116509,9 @@ function AssistantLifeProfileSheet({
   })), React.createElement("p", {
     "data-assistant-life-profile-voice-line": true,
     className: "min-h-[52px] flex-1 rounded-2xl bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800"
-  }, vLine ? vLine.t : vg && vg.emptyNote || 'まだ聞ける台詞がありません')), React.createElement("div", {
+  }, React.createElement("span", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, jw(vLine ? vLine.t : vg && vg.emptyNote || 'まだ聞ける台詞がありません')))), React.createElement("div", {
     className: "mt-2 flex flex-wrap gap-1.5"
   }, voices.map(g => React.createElement("button", {
     key: g.key,
