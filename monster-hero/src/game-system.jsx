@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c3ce26fe9de796ef
+// generated-sha256: 63185658a2505d07
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41384,6 +41384,9 @@ function BreederMarketScreen({
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
   const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
+  // 助手ライフの道具・家具の札には、印と上がる物の段を出す(段の高さは同じ一覧の札でそろえる)
+  const lifeNoteOf = (offer)=>typeof assistantLifeShopNoteOf==='function'?assistantLifeShopNoteOf(offer.itemId):null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer=>!!lifeNoteOf(offer));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -41667,9 +41670,14 @@ function BreederMarketScreen({
               <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
               <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
             </>:null;
+            const lifeNoteDef=offer.legendPass?null:lifeNoteOf(offer);
+            const lifeNote=lifeNoteDef?<>
+              <span data-market-life-mark className={`whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone==='f'?'bg-emerald-200 text-emerald-950':lifeNoteDef.tone==='p'?'bg-pink-300 text-pink-950':'bg-amber-400 text-slate-900'}`}>{lifeNoteDef.mark}</span>
+              {lifeNoteDef.lines.map((t,i)=><span key={i} className={`whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i===1&&lifeNoteDef.tone!=='a'?'text-slate-400':'text-amber-200'}`}>{t}</span>)}
+            </>:null;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id,...(/^peer_/.test(String(offer.itemId||''))?{'data-event-point-life-gift':offer.itemId}:{})}}
               item={item} owned={false} comingSoon={false}
-              noteSlot={legendPassSlot} note={passNote}
+              noteSlot={noteSlotOn} note={passNote||lifeNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}
@@ -68281,6 +68289,22 @@ const assistantLifeGiftOf = (kindOrKey) => {
   const offer = (typeof RHYTHM_EVENT_POINT_SHOP_OFFERS !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_OFFERS : []).find(x => x.itemId === g.itemId) || {};
   return { ...g, solo: assistantLifeIsSoloOnly(g.key), name: item.name || offer.name || '', emoji: item.emoji || offer.emoji || '🎁', cost: Number.isFinite(offer.cost) ? offer.cost : null };
 };
+// 交換所の札の段(2026-11-11 社長「この形で」・止め絵 gift-walkthrough/shop-note-still)。持ち物の id(peer_・solo_・furn_)から、印と上がる物を返す(道具でも家具でもなければ null)
+// 見せ方だけ。量は贈る窓と同じ数(好みで変わる前の「ふつう」)
+const assistantLifeShopNoteOf = (itemId) => {
+  const id = String(itemId || '');
+  if (/^furn_/.test(id)) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
+    if (!f) return null;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return { tone: 'f', mark: '🪑 家具', lines: [`💗 +${base}`, '初回だけ'] };
+  }
+  const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
+  if (!g) return null;
+  return assistantLifeIsSoloOnly(g.key)
+    ? { tone: 'p', mark: '💗 1人に', lines: [`💗 +${g.player}`, '1人用'] }
+    : { tone: 'a', mark: '🤝 2人に', lines: [`友情Lv +${g.peer}`, `💗 +${g.player}`] };
+};
 // 持っている数(60-app の ownedItems から)。{ [kind]: 数 }
 const assistantLifeGiftCounts = (ownedItems) => {
   const o = {};
@@ -68914,7 +68938,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden" aria-hidden="true">{info.emoji}</span>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-black text-white"><span data-assistant-life-give-name>{info.name}</span> <span className={`whitespace-nowrap text-[11px] ${have > 0 ? 'text-amber-200' : 'text-violet-300'}`} data-assistant-life-give-have={have}>{have > 0 ? `持っている ${have}個` : '持っていない'}</span>{info.cost != null && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400"> ビートP交換所 {info.cost}P</span>}</p>
-            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{info.what}</p>
+            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what}</p>
           </div>
         </div>
         <div className="mt-1.5 space-y-1 text-[12px]">
