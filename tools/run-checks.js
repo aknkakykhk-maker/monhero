@@ -698,5 +698,5 @@ async function main() {
 }
 
 // 選び方を見張る検査(run-checks-select-check.js)から読み込めるようにする。直接打ったときだけ回す
-module.exports = { planForChanges, planLanes, discoverAreas, FORCE_CHECKS, REQUIRED, GENERATED_RE, alwaysChecks };
+module.exports = { planForChanges, planLanes, portsOf, scriptMeta, discoverAreas, FORCE_CHECKS, REQUIRED, GENERATED_RE, alwaysChecks };
 if (require.main === module) main().catch(e => { console.error('NG: run-checks 自体が失敗:', e && e.stack || e); process.exit(2); });
