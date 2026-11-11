@@ -1401,10 +1401,12 @@
    },
    "chartIntensity": "extreme",
    "chartIntensityByDifficulty": {
-    "HARD": "strong"
+    "HARD": "strong",
+    "EXPERT": "mild"
    },
    "sustainScale": {
-    "MASTER": 0.2
+    "MASTER": 0.3,
+    "EASY": 0.2
    },
    "hellDensity": 1.6
   }
