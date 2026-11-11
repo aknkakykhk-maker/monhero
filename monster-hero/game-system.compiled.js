@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0dcdd2f393fc5e03
+// source-sha256: 3471c858b94ae1bf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -36169,7 +36169,7 @@ const RhythmOptions = ({
     disabled: !RHYTHM_HAPTICS.supported(),
     onClick: () => RHYTHM_HAPTICS.tap(26),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
-  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')))), React.createElement("section", {
+  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')), field('みんなで対戦の演奏中に、みんなのスコアを出す', toggle('multiLiveBoard')))), React.createElement("section", {
     className: card
   }, React.createElement("details", {
     "data-rhythm-option-help": true,
@@ -94476,7 +94476,20 @@ function RhythmMultiScreen({
   }, opts.advance), opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden landscape:block'), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && optionsButton(), view && rankingButton(), view && inviteButton(), view && chatButton());
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && liveBoardButton(), view && optionsButton(), view && rankingButton(), view && inviteButton(), view && chatButton());
+  const liveBoardButton = (extra = '') => onChangeMultiLiveBoard && React.createElement("button", {
+    "data-rhythm-multi-live-header": true,
+    type: "button",
+    "aria-label": "演奏中のみんなのスコア",
+    "aria-pressed": multiLiveBoard,
+    onClick: () => onChangeMultiLiveBoard(!multiLiveBoard),
+    className: `flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border leading-none ${multiLiveBoard ? 'border-cyan-300/80 bg-cyan-800/70 text-white' : 'border-slate-400/50 bg-slate-800/60 text-slate-400'} ${extra}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "📊"), React.createElement("b", {
+    className: "mt-0.5 text-[9px] font-black leading-none"
+  }, multiLiveBoard ? 'ON' : 'OFF'));
   const optionsButton = (extra = '') => onOpenOptions && React.createElement("button", {
     "data-rhythm-multi-options-open": true,
     type: "button",

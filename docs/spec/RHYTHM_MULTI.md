@@ -66,7 +66,7 @@
 - 受ける: `pg` だけは溜めずに、その場で `s.live.rows` へ入れて札へ知らせる(`RHYTHM_MULTI.onLive`)。**部屋の `emit` は呼ばない**(部屋の画面・演奏画面を作り直さない)。いまの回・人の参加者のものだけ受け、数は上限で切る。
 - **重さの決まり**: 行は演奏の始まりに1回だけ作る。届くたびにやるのは文字の節の書き換え(`rhythmSetText`)と、順位が入れ替わった行の `transform` だけ。行に `will-change` を付けない(行ごとの層で毎フレームの合成が増えた)。箱は `contain: strict`。置き場所を測るのは始まりの数回と画面の大きさが変わったときだけ。
 - 入り切らないときは行を減らす(`rhythmMultiLiveMaxRows`・`rhythmMultiLiveVisible`)。道の左のふちは上で幅の約46%(`RHYTHM_MULTI_LIVE_LANE_TOP`)。
-- 設定 `mh_rhythm_settings_v1` の `multiLiveBoard`(既定 `true`)。難易度えらびの「演奏中のみんなのスコア」で切り替える。消しても送るのは続ける。
+- 設定 `mh_rhythm_settings_v1` の `multiLiveBoard`(既定 `true`)。切り替えは3か所で同じ値: 部屋の上の帯の 📊(どの画面でも)・難易度えらびの「演奏中のみんなのスコア」・設定の「みんなで対戦の演奏中に、みんなのスコアを出す」(2026-11-11 社長「マルチ画面でもオンオフできるようにしたい」)。消しても送るのは続ける。
 - 古い版の端末は `pg` を知らないので、演奏中は溜めて(上限300件・古いものから捨てる)終わってから捨てる。結果は `res` と `hb` の両方に載るので欠けない。
 - 検査: `node tools/mode/rhythm-multi-live-board-check.js`。計測と経緯: `docs/progress/beat-multi-live-score/PLAN.md`
 

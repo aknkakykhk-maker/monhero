@@ -159,7 +159,11 @@ const ICONS = ['Mocchi', 'Suezo', 'Pixie', 'Tiger', 'Hare'];
     // 難易度えらびに、札の出し入れのボタンがある(はじめは ON)。B は消しておく
     const toggle = await A.evaluate(() => { const b = document.querySelector('[data-rhythm-multi-live-toggle]'); return b ? { pressed: b.getAttribute('aria-pressed'), text: b.innerText.replace(/\s+/g, ' ').trim(), h: b.getBoundingClientRect().height } : null; });
     check('難易度えらびに「演奏中のみんなのスコア」の切り替えがあり、はじめは ON', !!toggle && toggle.pressed === 'true' && /ON/.test(toggle.text), JSON.stringify(toggle));
-    await B.locator('[data-rhythm-multi-live-toggle]').click();
+    // 部屋の上の帯の 📊 でも同じ値を切り替えられる(2026-11-11 社長「マルチ画面でもオンオフできるようにしたい」)。い は帯のボタンで消す
+    const head = await B.evaluate(() => { const b = document.querySelector('[data-rhythm-multi-live-header]'); const r = b && b.getBoundingClientRect(); return b ? { pressed: b.getAttribute('aria-pressed'), text: b.innerText.replace(/\s+/g, ' ').trim(), in: r.width >= 38 && r.left >= -1 && r.right <= innerWidth + 1 && r.top >= -1 } : null; });
+    check('部屋の上の帯に 📊 の切り替えがあり、はじめは ON・画面に収まる', !!head && head.pressed === 'true' && /ON/.test(head.text) && head.in, JSON.stringify(head));
+    if (SHOT_DIR) await A.screenshot({ path: path.join(SHOT_DIR, 'ready-toggle.png') });
+    await B.locator('[data-rhythm-multi-live-header]').click();
     await B.waitForFunction(() => document.querySelector('[data-rhythm-multi-live-toggle]')?.getAttribute('aria-pressed') === 'false', null, { timeout: 5000 });
     for (const p of pages) await p.locator('[data-rhythm-multi-ready]').click();
     for (const p of pages) await p.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });

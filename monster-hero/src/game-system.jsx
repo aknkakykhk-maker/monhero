@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4e62807a521ecf53
+// generated-sha256: 8747b47cd299a077
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -22615,6 +22615,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
                 何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
+{/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
+{field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
 </div>
 </section>
 <section className={card}>
@@ -56476,6 +56478,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
+      {view && liveBoardButton()}
       {view && optionsButton()}
       {view && rankingButton()}
       {view && inviteButton()}
@@ -56484,6 +56487,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   );
   // ⚙ オプション(2026-11-07 社長「マルチでもオプションボタンつけて」)。ソロと同じ画面を部屋の上に重ねて開く(画面は移らないので、部屋の知らせは止まらない)。
   // 保存もソロと同じ。演奏を始める項目(タイミング調整・判定ラインを実際の画面で合わせる)は、部屋の中では出さない
+  // 📊 演奏中の札(ほかの人の順位・スコア・コンボ)の入/切。部屋のどの画面からでも切り替えられる(2026-11-11 社長「マルチ画面でもオンオフできるようにしたい」)。
+  // 設定の「みんなで対戦の演奏中に、みんなのスコアを出す」・難易度えらびの切り替えと同じ値
+  const liveBoardButton = (extra = '') => onChangeMultiLiveBoard && (
+    <button data-rhythm-multi-live-header type="button" aria-label="演奏中のみんなのスコア" aria-pressed={multiLiveBoard} onClick={() => onChangeMultiLiveBoard(!multiLiveBoard)}
+      className={`flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border leading-none ${multiLiveBoard ? 'border-cyan-300/80 bg-cyan-800/70 text-white' : 'border-slate-400/50 bg-slate-800/60 text-slate-400'} ${extra}`}>
+      <span aria-hidden="true" className="text-base leading-none">📊</span><b className="mt-0.5 text-[9px] font-black leading-none">{multiLiveBoard ? 'ON' : 'OFF'}</b>
+    </button>
+  );
   const optionsButton = (extra = '') => onOpenOptions && (
     <button data-rhythm-multi-options-open type="button" aria-label="オプション" onClick={() => { setChatOpen(false); onOpenOptions(); }}
       className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-slate-400/50 bg-slate-800/60 text-lg ${extra}`}>⚙</button>
