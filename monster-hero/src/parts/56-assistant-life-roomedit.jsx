@@ -69,8 +69,9 @@ const ASSISTANT_LIFE_LAYOUT_STORE = {
           try { await storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false); await storeSet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, true, false); } catch {}
         }
         this.state = { layout };
-      } catch {}
-      this.loaded = true; this.emit(); return this.state;
+        this.loaded = true;
+      } catch { this.loading = null; } // 読めなかったときは「読めた」ことにしない(空の並びで保存して、ほかの助手の並びを落とさないように。次に開いたとき読み直す・ミハリ最終確認 9)
+      this.emit(); return this.state;
     })();
     return this.loading;
   },
@@ -139,7 +140,7 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
   dra:       Object.freeze({ hero: 'sofa',      pull: 0.05, low: 0.1,  tilt: 6,  big: 1.2,  line: 'ぜんぶ低い所に寄せた…ごろごろできる…' }),
   atsu:      Object.freeze({ hero: 'trophy',    pull: 0,    low: 0,    tilt: 0,  big: 1.2,  line: 'トロフィーはいちばん目立つとこ！ いい部屋になったっしょ笑' }),
   kyuko:     Object.freeze({ hero: 'starpic',   pull: -0.04, low: 0,   tilt: 0,  big: 1.05, line: 'ほい、できたよぉ。すっきりさせてみた笑' }),
-  sorashido: Object.freeze({ hero: 'lantern',   pull: 0.08, low: -0.03, tilt: 0, big: 1.2,  line: '星のものは上に集めたぜ・・・！ でーじいい感じだぜ' }),
+  sorashido: Object.freeze({ hero: 'lantern',   pull: 0.08, low: -0.03, tilt: 0, big: 1.2,  line: '星の物は上に集めました。角度も計算済みです笑' }),
   erubin:    Object.freeze({ hero: 'plant',     pull: -0.06, low: 0,   tilt: 0,  big: 1.1,  line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う' }),
 });
 // 置き場所ごとの席(良い順)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける。床の家具は助手の前の机・ソファに隠れないよう、助手より前の層に置く
@@ -200,8 +201,9 @@ function AssistantLifeRoomLayoutHandles({ items, geom, sel, onSelect, onMove, on
   const drag = React.useRef(null);
   // 指2本のピンチで、選んだ家具の大きさを変える(2026-11-11 社長)。2本目の指は部屋のどこに置いてもよい
   const live = React.useRef(null); live.current = { items, sel, onScale, onDrop };
+  const touches = React.useRef(new Map()); // いま部屋に触れている指(下の札の down からも見る)
   React.useEffect(() => {
-    const pts = new Map(); let pinch = null;
+    const pts = touches.current; let pinch = null;
     const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
     const inRoom = (e) => !!(e.target && e.target.closest && e.target.closest('[data-assistant-life-roomview]'));
     const down = (e) => { if (e.pointerType === 'mouse' || !inRoom(e)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -215,6 +217,8 @@ function AssistantLifeRoomLayoutHandles({ items, geom, sel, onSelect, onMove, on
   }, []);
   const down = (e, it) => {
     e.preventDefault(); e.stopPropagation();
+    // 2本目の指(ピンチ)がよその家具の札に乗っても、選んでいる家具は変えない・その家具も動かさない(2026-11-11 ミハリ最終確認 1)
+    if (touches.current.size >= 2 || (drag.current && drag.current.id !== e.pointerId)) return;
     onSelect(it.k);
     const p = assistantLifeLayoutPx(it, geom);
     drag.current = { k: it.k, id: e.pointerId, dx: p.left - e.clientX, dy: p.top - e.clientY, moved: false };
@@ -253,6 +257,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
   const who = assistantById(id);
   const saved = assistantLifeLayoutOf(id, st, giftSt);
   const [items, setItems] = React.useState(null); // 動かしている間の並び(離したら保存)
+  const draft = React.useRef(null); // いちばん新しい並び(離した瞬間の最後の1コマまで保存に入れる・ミハリ最終確認 3)
   const first = React.useRef(null); // 開いたときの並び(「もとに戻す」)
   const [sel, setSel] = React.useState(null);
   const [colorOpen, setColorOpen] = React.useState(false);
@@ -264,7 +269,9 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
   const cur = items || saved;
   const got = Object.keys(assistantLifeRoomOf(id, giftSt).got || {});
   const kept = got.filter(k => !cur.some(it => it.k === k));
-  const commit = (next) => { setItems(null); assistantLifeLayoutSave(id, next); };
+  const commit = (next) => { draft.current = null; setItems(null); assistantLifeLayoutSave(id, next); };
+  const live = (fn) => { const next = (draft.current || cur).map(fn); draft.current = next; setItems(next); }; // 動かしている間(保存しない)
+  const settle = () => { if (draft.current) commit(draft.current); }; // 離したら保存
   const patch = (k, p) => commit(cur.map(it => (it.k === k ? { ...it, ...p } : it)));
   const selIt = cur.find(it => it.k === sel) || null;
   const zs = cur.map(it => it.z);
@@ -292,7 +299,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
           {[['h', '色あい', 0, 359, 1, ASSISTANT_LIFE_LAYOUT_HUE_BAR], ['l', '明るさ', 0.5, 1.5, 0.01, 'linear-gradient(90deg,#1f2937,#9ca3af,#ffffff)'], ['g', 'あざやかさ', 0, 2, 0.01, 'linear-gradient(90deg,#9ca3af,#f472b6,#e11d48)']].map(([key, label, lo, hi, step, bar]) => (
             <label key={key} className="flex items-center gap-2 text-[11px] font-black text-slate-200">
               <span className="w-[64px] shrink-0">{label}</span>
-              <input type="range" data-assistant-life-layout-color={key} aria-label={label} min={lo} max={hi} step={step} value={selIt[key]} onChange={(e) => patch(sel, { [key]: Number(e.target.value) })}
+              <input type="range" data-assistant-life-layout-color={key} aria-label={label} min={lo} max={hi} step={step} value={selIt[key]} onChange={(e) => { const v = Number(e.target.value); live(it => (it.k === sel ? { ...it, [key]: v } : it)); }} onPointerUp={settle} onKeyUp={settle} onBlur={settle}
                 className="mhl-layout-range min-w-0 flex-1" style={{ background: bar, touchAction: 'none' }}/>
             </label>))}
           <div className="flex items-center gap-1.5">
@@ -301,7 +308,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" data-assistant-life-layout-tools>
+        <div className={`flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`} data-assistant-life-layout-tools>
           {tool('small', '小', () => patch(sel, { s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100) }), !selIt || selIt.s <= ASSISTANT_LIFE_LAYOUT_S[0], '小さくする')}
           {tool('big', '大', () => patch(sel, { s: Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round((selIt.s + 0.15) * 100) / 100) }), !selIt || selIt.s >= ASSISTANT_LIFE_LAYOUT_S[1], '大きくする')}
           {tool('flip', '↔', () => patch(sel, { f: !selIt.f }), !selIt, '左右を返す')}
@@ -327,10 +334,10 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
   return (
     <div className={`absolute inset-0 flex ${land ? 'flex-row' : 'flex-col'} bg-slate-950`} style={{ zIndex: 34 }} data-assistant-life-layout-editor={id}>
       <div className="relative min-h-0 min-w-0 flex-1" style={{ touchAction: 'none' }}>
-        <AssistantLifeRoomScene {...room} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub="つまんで動かす・指2本で大きさ・下の道具で向きと色" bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
+        <AssistantLifeRoomScene {...room} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub={land ? 'つまんで動かす・指2本で大きさ・道具で向きと色' : 'つまんで動かす・指2本で大きさ・下の道具で向きと色'} bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
           layoutWho={id} layoutEdit={{ items: cur, sel, onSelect: (k) => { setSel(k); setColorOpen(false); },
-            onMove: (k, x, y) => setItems(cur.map(it => (it.k === k ? { ...it, x, y } : it))), onDrop: () => { if (items) commit(items); },
-            onScale: (k, sc) => setItems(cur.map(it => (it.k === k ? { ...it, s: sc } : it))) }}/>
+            onMove: (k, x, y) => live(it => (it.k === k ? { ...it, x, y } : it)), onDrop: settle,
+            onScale: (k, sc) => live(it => (it.k === k ? { ...it, s: sc } : it)) }}/>
         {/* おまかせのひとこと(助手が留守でも出す) */}
         {line && <p className="pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow" style={{ bottom: 12, zIndex: 30, wordBreak: 'auto-phrase' }} data-assistant-life-layout-line>{who.name}「{line}」</p>}
       </div>

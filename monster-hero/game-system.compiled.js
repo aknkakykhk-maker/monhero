@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5384868f10be9898
+// source-sha256: 2fccaabecb41cfdc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -128035,8 +128035,10 @@ const ASSISTANT_LIFE_LAYOUT_STORE = {
         this.state = {
           layout
         };
-      } catch {}
-      this.loaded = true;
+        this.loaded = true;
+      } catch {
+        this.loading = null;
+      }
       this.emit();
       return this.state;
     })();
@@ -128184,7 +128186,7 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
     low: -0.03,
     tilt: 0,
     big: 1.2,
-    line: '星のものは上に集めたぜ・・・！ でーじいい感じだぜ'
+    line: '星の物は上に集めました。角度も計算済みです笑'
   }),
   erubin: Object.freeze({
     hero: 'plant',
@@ -128308,8 +128310,9 @@ function AssistantLifeRoomLayoutHandles({
     onScale,
     onDrop
   };
+  const touches = React.useRef(new Map());
   React.useEffect(() => {
-    const pts = new Map();
+    const pts = touches.current;
     let pinch = null;
     const dist = () => {
       const [a, b] = [...pts.values()];
@@ -128368,6 +128371,7 @@ function AssistantLifeRoomLayoutHandles({
   const down = (e, it) => {
     e.preventDefault();
     e.stopPropagation();
+    if (touches.current.size >= 2 || drag.current && drag.current.id !== e.pointerId) return;
     onSelect(it.k);
     const p = assistantLifeLayoutPx(it, geom);
     drag.current = {
@@ -128475,6 +128479,7 @@ function AssistantLifeRoomEditor({
   const who = assistantById(id);
   const saved = assistantLifeLayoutOf(id, st, giftSt);
   const [items, setItems] = React.useState(null);
+  const draft = React.useRef(null);
   const first = React.useRef(null);
   const [sel, setSel] = React.useState(null);
   const [colorOpen, setColorOpen] = React.useState(false);
@@ -128493,8 +128498,17 @@ function AssistantLifeRoomEditor({
   const got = Object.keys(assistantLifeRoomOf(id, giftSt).got || {});
   const kept = got.filter(k => !cur.some(it => it.k === k));
   const commit = next => {
+    draft.current = null;
     setItems(null);
     assistantLifeLayoutSave(id, next);
+  };
+  const live = fn => {
+    const next = (draft.current || cur).map(fn);
+    draft.current = next;
+    setItems(next);
+  };
+  const settle = () => {
+    if (draft.current) commit(draft.current);
   };
   const patch = (k, p) => commit(cur.map(it => it.k === k ? {
     ...it,
@@ -128588,9 +128602,16 @@ function AssistantLifeRoomEditor({
     max: hi,
     step: step,
     value: selIt[key],
-    onChange: e => patch(sel, {
-      [key]: Number(e.target.value)
-    }),
+    onChange: e => {
+      const v = Number(e.target.value);
+      live(it => it.k === sel ? {
+        ...it,
+        [key]: v
+      } : it);
+    },
+    onPointerUp: settle,
+    onKeyUp: settle,
+    onBlur: settle,
     className: "mhl-layout-range min-w-0 flex-1",
     style: {
       background: bar,
@@ -128603,7 +128624,7 @@ function AssistantLifeRoomEditor({
     l: 1,
     g: 1
   }), selIt.h === 0 && selIt.l === 1 && selIt.g === 1), tool('colorclose', '← 道具へ戻る', () => setColorOpen(false)))) : React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
+    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
     "data-assistant-life-layout-tools": true
   }, tool('small', '小', () => patch(sel, {
     s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100)
@@ -128666,7 +128687,7 @@ function AssistantLifeRoomEditor({
     id: id,
     land: land,
     title: `${who.name}の部屋の模様替え`,
-    sub: "つまんで動かす・指2本で大きさ・下の道具で向きと色",
+    sub: land ? 'つまんで動かす・指2本で大きさ・道具で向きと色' : 'つまんで動かす・指2本で大きさ・下の道具で向きと色',
     bubble: "",
     padLeft: 78,
     dock: null,
@@ -128681,18 +128702,16 @@ function AssistantLifeRoomEditor({
         setSel(k);
         setColorOpen(false);
       },
-      onMove: (k, x, y) => setItems(cur.map(it => it.k === k ? {
+      onMove: (k, x, y) => live(it => it.k === k ? {
         ...it,
         x,
         y
-      } : it)),
-      onDrop: () => {
-        if (items) commit(items);
-      },
-      onScale: (k, sc) => setItems(cur.map(it => it.k === k ? {
+      } : it),
+      onDrop: settle,
+      onScale: (k, sc) => live(it => it.k === k ? {
         ...it,
         s: sc
-      } : it))
+      } : it)
     }
   })), line && React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow",

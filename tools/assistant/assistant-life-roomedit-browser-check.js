@@ -88,7 +88,7 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     // 大きさ・向き・回す・色・助手の前へ
     for (const k of ['big', 'big', 'flip', 'rotr', 'layer']) { await page.locator(`[data-assistant-life-layout-tool="${k}"]`).click(); await page.waitForTimeout(60); }
     await page.locator('[data-assistant-life-layout-tool="color"]').click();
-    const slide = (key, val) => page.evaluate(({ key, val }) => { const el = document.querySelector(`[data-assistant-life-layout-color="${key}"]`); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, String(val)); el.dispatchEvent(new Event('input', { bubbles: true })); }, { key, val });
+    const slide = (key, val) => page.evaluate(({ key, val }) => { const el = document.querySelector(`[data-assistant-life-layout-color="${key}"]`); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, String(val)); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); }, { key, val });
     await slide('h', 270); await slide('l', 1.2); await slide('g', 1.5); await page.waitForTimeout(150);
     await shot(page, `${v.id}-color`);
     const s2 = await layoutOf(page); const bear2 = s2.lay.mua.items.find(it => it.k === 'bear');
@@ -104,6 +104,16 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.waitForTimeout(200);
       const sp = await layoutOf(page); const bp = sp.lay.mua.items.find(it => it.k === 'bear');
       check(`${T}指2本のピンチで大きくなり、保存される`, Math.abs(bp.s - 1.95) < 0.06, `s 1.3→${bp.s}`); }
+    // ピンチの2本目の指がよその家具(鏡)の札に乗っても、選んでいるくまのまま・鏡は動かない(2026-11-11 ミハリ最終確認 1)
+    { const cdp = await page.context().newCDPSession(page); const bb = await page.locator('[data-assistant-life-layout-handle="bear"]').boundingBox(), mb = await page.locator('[data-assistant-life-layout-handle="heartmirror"]').boundingBox();
+      const before = await layoutOf(page); const m0 = before.lay.mua.items.find(it => it.k === 'heartmirror'), b0 = before.lay.mua.items.find(it => it.k === 'bear');
+      const a = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2, id: 1 }, m = (dx) => ({ x: mb.x + mb.width / 2 + dx, y: mb.y + mb.height / 2, id: 2 });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [a] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [a, m(0)] });
+      for (const dx of [-6, -12, -18]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [a, m(dx)] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.waitForTimeout(200);
+      const after = await layoutOf(page); const m1 = after.lay.mua.items.find(it => it.k === 'heartmirror'), b1 = after.lay.mua.items.find(it => it.k === 'bear');
+      const selNow = await page.locator('[data-assistant-life-layout-handle="bear"]').getAttribute('aria-pressed');
+      check(`${T}ピンチの2本目がよその家具に乗っても、選択は移らず・その家具は動かず・大きさが変わる`, selNow === 'true' && m1.x === m0.x && m1.y === m0.y && b1.s !== b0.s, `選択=${selNow} 鏡 ${m0.x}→${m1.x} くま s ${b0.s}→${b1.s}`); }
     // 押し入れから出す → しまう
     await page.locator('[data-assistant-life-layout-chip="sofa:kept"]').click(); await page.waitForTimeout(150);
     const s3 = await layoutOf(page); const hasSofa = s3.lay.mua.items.some(it => it.k === 'sofa');
