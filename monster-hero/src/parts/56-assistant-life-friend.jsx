@@ -772,7 +772,7 @@ const ALF_GO_LINES = Object.freeze({
   dra:       ['よっ、{f}。遊びに来たからな、えへへ', '{h}さんの家、いい匂いするな。おやつあるか？'],
   atsu:      ['とりあえず来てみた笑 {f}、元気？', '{h}さんの家、居心地いいな笑'],
   kyuko:     ['ほい！{f}、遊びに来たよ〜', '{h}さんの家、片づいてて動きやすいねぇ。'],
-  sorashido: ['うぉぉぉ！{f}、来たぜ・・・！', '{h}さんの家、でーじいい感じだな笑'],
+  sorashido: ['{f}、来ましたよー！ おじゃまします笑', '{h}さんの家、でーじいい感じですね笑'],
   erubin:    ['こんにちは、{f}。おじゃまするね', '{h}さんの家、あったかい感じがするね。'],
 });
 // 相手の家の助手の返事(その助手の口調)。{v} … 来た助手の名前
@@ -783,31 +783,31 @@ const ALF_REPLY_LINES = Object.freeze({
   dra:       ['おっ、{v}か。上がってけよな', 'おやつ、半分こしような'],
   atsu:      ['{v}じゃん、いらっしゃい笑', 'てか座って座って笑'],
   kyuko:     ['おけ〜、{v}いらっしゃい！', 'ちょうどひと息つくとこだったんだぁ。'],
-  sorashido: ['{v}！よく来たぜ・・・！', 'なんくるないさ〜、くつろいでけ笑'],
+  sorashido: ['{v}！ よく来てくれましたねー！', 'なんくるないさ〜、くつろいでいってください笑'],
   erubin:    ['{v}、来てくれたんだね', '寒くなかった？ゆっくりしてね'],
 });
 // 同じ助手どうしが会ったとき(❹ A)
 const ALF_SAME_LINES = Object.freeze({
   mua: 'もうひとりのあたし！？まぢ！？', kiki: '私がもうひとり…ふしぎな気分でつ。', momosuke: 'ももが2人！？かわいさも2倍じゃん！！',
   dra: 'おでがもうひとりいるな…えへへ', atsu: '俺がいる笑 なんか照れるな笑', kyuko: 'え、俺？ぐぬぬぬ、どっちが本物だぁ',
-  sorashido: 'うぉぉぉ！俺がもうひとりいるぜ・・・！', erubin: '自分と会うって、なんだかくすぐったいね',
+  sorashido: 'うぉぉぉ！ 自分がもうひとりいます・・・！', erubin: '自分と会うって、なんだかくすぐったいね',
 });
 // 帰ってきたとき(おかえり)
 const ALF_BACK_LINES = Object.freeze({
   mua: 'ただいま〜！{h}さんの家、楽しかったぢゃん♪', kiki: 'ただいま戻りました。{h}さんのお家、素敵でしたよ。', momosuke: 'ただいま！！{name}、おみやげあるよ♡',
   dra: 'ただいまだな。{h}さんの家、また行きたいな', atsu: 'ただいま笑 {h}さんの家、よかったよ笑', kyuko: 'ただいまぁ。{h}さんの家で、いい話できたよ〜',
-  sorashido: 'ただいまだぜ！{h}さんの家、でーじ楽しかった笑', erubin: 'ただいま。{h}さんの家の話、聞いてくれる？',
+  sorashido: 'ただいまです！ {h}さんの家、でーじ楽しかったです笑', erubin: 'ただいま。{h}さんの家の話、聞いてくれる？',
 });
 // フレンドの助手が来たとき: 来た助手のあいさつ/迎えた自分の助手
 const ALF_GUEST_LINES = Object.freeze({
   mua: '{h}さんちから遊びに来たよ♪', kiki: '{h}さんのところから参りました。おじゃまします。', momosuke: '{h}さんちのももだよ！！遊びに来た！',
   dra: '{h}さんちから来たからな。おじゃまするぞ', atsu: '{h}さんちから来た笑 おじゃまします笑', kyuko: 'ほい！{h}さんちから来たよ〜',
-  sorashido: '{h}さんちから来たぜ・・・！', erubin: '{h}さんの家から来たよ。おじゃまするね',
+  sorashido: '{h}さんの家から来ました！ おじゃまします笑', erubin: '{h}さんの家から来たよ。おじゃまするね',
 });
 const ALF_WELCOME_LINES = Object.freeze({
   mua: 'いらっしゃーい♪ ゆっくりしてってね！', kiki: 'ようこそ。お茶をどうぞ♪', momosuke: 'いらっしゃい！！ももの家、すごいでしょ♡',
   dra: 'よく来たな。おやつあるぞ', atsu: 'いらっしゃい笑 座って座って笑', kyuko: 'いらっしゃ〜い！ちょうどお茶いれたとこ〜',
-  sorashido: 'うぉぉぉ！いらっしゃいだぜ・・・！', erubin: 'いらっしゃい。来てくれてうれしいな',
+  sorashido: 'いらっしゃいませー！ 来てくれてうれしいです笑', erubin: 'いらっしゃい。来てくれてうれしいな',
 });
 // プレイヤーがフレンドの家で相手の助手に声をかけたとき(その助手の口調。{name} はプレイヤー)
 const ALF_TALK_LINES = Object.freeze({
@@ -817,20 +817,20 @@ const ALF_TALK_LINES = Object.freeze({
   dra:       ['おっ、お客さんだな。いらっしゃい', 'おやつ食べてくか？えへへ', 'また来いよな'],
   atsu:      ['お、いらっしゃい笑', '{h}さんの友だちなら大歓迎笑', 'また来てね笑'],
   kyuko:     ['ほい！いらっしゃ〜い', '{h}さんの友だちかぁ、ありがとん笑', 'またねぇ〜'],
-  sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
+  sorashido: ['お客さんですねー！ いらっしゃい笑', 'ちばりよー！ 応援してます笑', 'また来てくださいね笑'],
   erubin:    ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね'],
 });
 // 訪ねた家の台本(2026-11-08 コトバ・ツムギ。docs/progress/assistant-peer/lines/friend-*.txt・注文書 ORDER-FRIEND.md)
 //   greet … {name}(訪ねてきたプレイヤー)を迎える/doing … 部屋でしていることごとの迎え/reply … 返事への答え/sleep … 寝ている部屋の寝言
-const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["うぉぉぉ！ お客さんだ！ よく来てくれたな", "{name}、いらっしゃい！ くつろいでくれ笑", "{h}さんの友だちか。ゆっくりしていけよ"], "doing": {"snack": "ちょうどちんすこう食べてたんだ。一緒にどうだ？", "practice": "いま練習してたんだ！ 聞いていくか？", "training": "育成の記録をつけてたとこだ。ちょっと待っててくれ", "cards": "新しい表を作ってたんだぜ・・・！ 見ていくか？", "read": "本を読んでたんだ。いいところで来たな笑", "idle": "考えごとしてたんだ。話し相手ができてうれしいぞ"}, "reply": ["ありがとな！ でーじうれしいぞ笑", "そう言ってもらえると、表を作ったかいがあるな", "気をつかわなくていいぞ。ゆっくりしてくれ"], "sleep": ["……うぉぉ……むにゃ……表が……", "……なんくるないさ〜……すぅ……"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
+const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"], "doing": {"snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？", "practice": "いま練習してたんですよ！ 聞いていきますか？", "training": "育成の記録をつけてたところです。ちょっと待っててくださいね", "cards": "新しい表を作ってたんです・・・！ 見ていきますか？", "read": "本を読んでたんです。いいところで来ましたね笑", "idle": "考えごとをしてたんです。話し相手ができてうれしいです"}, "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"], "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
 // フレンドの家へ行ったとき・迎えるときに足す台本(前からの ALF_GO_LINES・ALF_WELCOME_LINES と合わせて選ぶ)
-const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来たぞ！ 今日はなにする？", "{h}さんの部屋、でーじ落ち着くな笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
-const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
+const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
+const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
 // 置き手紙の決まった一言(番号は表に残す。0〜11)とお礼(0〜5)
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
-const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中' });
+const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中', battle: 'バトル中' });
 // name … {name} に入れる呼び方を決めて渡すとき(よその家の助手が、訪ねてきたプレイヤーを呼ぶ: 「◯◯さん」)
 const alfFill = (text, { f = '', h = '', v = '', who = null, name = null } = {}) => String(text || '')
   .replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v)
@@ -1295,15 +1295,24 @@ function AssistantLifeFriendPage({ life }) {
   };
   const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
   const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  // まだ何も起きていない(フレンドの家も行き来も置き手紙も無い)ときは、空の箱を並べずに案内1つにする(2026-11-11 社長「わかりづらさをどんどん改善して」・ナカヨシ12)
+  const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
+  const hideIfEmpty = alfEmpty ? { display: 'none' } : undefined;
   return (
     <div className="px-3 pb-3 pt-1" data-alf-page="on">
-      {!s.intro && (
+      {alfEmpty && (
+        <div className={card} data-alf-empty-guide>
+          <p className="text-[13px] font-black text-amber-200">🏘 フレンドができると、ここがにぎやかになります</p>
+          <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
+        </div>)}
+      {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
+          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
         </div>)}
-      <p className={sec}>🏘 いまの行き来</p>
-      <div className={card} data-alf-now>
+      <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
+      <div className={card} data-alf-now style={hideIfEmpty}>
         {st.out && <div className="flex items-center gap-2" data-alf-now-out>{st.out.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.out.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{st.out.name}さんの家へ</span></p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="out" onClick={() => openScene('out')}>▶ 様子</button></div>}
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
@@ -1311,8 +1320,8 @@ function AssistantLifeFriendPage({ life }) {
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
       {typeof AlfGuestBook === 'function' && <AlfGuestBook s={s} card={card} sec={sec} onVisit={setVisit}/>}
-      <p className={sec}>✉️ 置き手紙</p>
-      <div className={card} data-alf-notes>
+      <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
+      <div className={card} data-alf-notes style={hideIfEmpty}>
         {notes.length ? notes.slice(0, 12).map(n => (
           <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
             <p className="text-[11px] leading-snug text-slate-100">
@@ -1331,8 +1340,8 @@ function AssistantLifeFriendPage({ life }) {
               : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
           </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
       </div>
-      <p className={sec}>🏠 フレンドの家</p>
-      <div data-alf-houses>
+      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
@@ -1361,9 +1370,9 @@ function AssistantLifeFriendPage({ life }) {
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
         {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
-          <label key={k} className="flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100" data-alf-setting={k}>
+          <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
             <span>{label}</span>
-            <input type="checkbox" checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
+            <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
           </label>))}
         {s.settings.muted.length > 0 && <button type="button" className="mt-1 text-[10.5px] text-amber-200 underline" data-alf-unmute onClick={() => assistantLifeFriendSetSettings({ muted: [] })}>来ないようにした家({s.settings.muted.length}軒)を戻す</button>}
       </div>

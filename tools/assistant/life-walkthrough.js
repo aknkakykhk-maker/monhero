@@ -67,7 +67,13 @@ const measure = () => {
   const NAV = /^(←|✕|×|閉じる|とじる|もどる|戻る|閉じる ✕)$/;
   const GAIN = /💗|🤝|仲良し|友情|×\s?\d|\d(\.\d)?倍|券なし|[+＋]\s?\d|ダイヤ|💎|経験値|ごほうび|もらえ|上が|割引|アップ|1割/;
   const taps = [...rootEl.querySelectorAll('button,a[href],[role="button"],[role="tab"],input,select')].map(el => {
-    const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return null;
+    // ラベルの中のチェックは、ラベルの行ごと押せるので行の大きさで測る
+    let r = (el.matches('input') && el.closest('label') ? el.closest('label') : el).getBoundingClientRect(); if (r.width < 1 || r.height < 1) return null;
+    // 送れる入れ物の中で切れている分は数えない(下のタブの後ろへ送られた行を「重なり」にしない)。見えている分の箱にする
+    { let t = r.top, b = r.bottom, l = r.left, rt = r.right;
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p); if (/(auto|scroll|hidden)/.test(o.overflowY + o.overflowX)) { const q = p.getBoundingClientRect(); t = Math.max(t, q.top); b = Math.min(b, q.bottom); l = Math.max(l, q.left); rt = Math.min(rt, q.right); } }
+      if (b - t < 1 || rt - l < 1) return null;
+      if (t > r.top + 1 || b < r.bottom - 1 || l > r.left + 1 || rt < r.right - 1) r = { top: t, bottom: b, left: l, right: rt, width: r.width, height: r.height }; }
     const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' && !el.disabled) return null;
     const cx = (Math.max(0, r.left) + Math.min(W, r.right)) / 2, cy = (Math.max(0, r.top) + Math.min(H, r.bottom)) / 2;
     if (!(r.bottom > 0 && r.top < H && r.right > 0 && r.left < W) || !seen(el, cx, cy)) return null;
@@ -199,7 +205,8 @@ const problemsOf = (key, label, m, view, who) => {
       await step('where', '居場所(地図)', () => click(sel.icon('where')));
       await step('where-place', '居場所 → 場所を押す(カード部屋)', () => click('[data-assistant-life-map-place="cardroom"]'), closeSheets);
       await step('friends', '友情', async () => { if (!(await page.locator(`${sel.icon('friends')}:visible`).count())) await click('[data-assistant-life-map-back], [data-assistant-life-close]'); await click(sel.icon('friends')); });
-      await step('items', '道具', () => click(sel.icon('items')));
+      // 道具: 新UI(STEP3)では「🎁 贈る」のシートの中の「道具の一覧」
+      await step('items', '道具', async () => { if (await page.locator(`${sel.icon('items')}:visible`).count()) { await click(sel.icon('items')); return; } await click(sel.icon('house')); await click('[data-assistant-life-today-act="give"]'); await click('[data-assistant-life-gift-items-toggle]'); }, closeSheets);
       if (await page.locator(sel.icon('visit')).count()) await step('visit', 'フレンド', () => click(sel.icon('visit')));
     } catch (e) {
       problems.push({ key: 'open', label: `${T} 助手ライフを開く`, kind: 'たどり着けない', score: 100, hard: true, who: who.id, view: v.id, text: String(e.message || e).split('\n')[0].slice(0, 90) });

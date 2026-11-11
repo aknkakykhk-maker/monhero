@@ -915,7 +915,7 @@ function MonsterHeroGame() {
     // (2026-10-01・ユーザー指示「超省エネをもっと画面情報減らしてエコに。VICTORY!とかの表示はなしでいい」)。
     // 保存した設定は書き換えない。この値を読む側(WaveIntro・EnemyDefeatFx・PhaseBanner・resultFxMs など)がそのまま効く
     const base = (ecoMode === 'ultra' && autoRepeat === true)
-      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF' }
+      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF', hitStop: 'OFF' }
       : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
@@ -2485,6 +2485,18 @@ function MonsterHeroGame() {
   // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  // ログインボーナスの窓は、助手の案内(村の案内・れんしゅうの誘い)とバトルのれんしゅうが終わってから出す(2026-11-11 社長・最初の30分の改善案1)。
+  // はじめての人は、名前を決めた直後にこの窓が出たまま案内が始まり、案内が指す建物も、れんしゅうの「押してみて」で光る所も
+  // 窓の下に隠れて進めなくなっていた(tools/boot/first-30min-walk.js の [隠れ])。
+  // 案内から次の案内へ移る一瞬に窓がちらつかないよう、案内が終わって少し(0.7秒)たってから出す。
+  // 受け取りそのもの(ギフトボックスへ送る)は今までどおりで、変えるのは窓を出す時機だけ。案内が出ない人には何も変わらない
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) { setLoginBonusGuideClear(false); return undefined; }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -10056,11 +10068,13 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    // 助手ライフ: M/B管理にいる助手のマスモンも少し育つ(プレイヤーの経験値は増やさない)
+    const ranchNote = typeof assistantLifeRanchPerk === 'function' ? assistantLifeRanchPerk() : '';
     // 使った瞬間の演出(見た目だけ)
     if (typeof growthFxMasuBondItem === 'function') {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       growthFxMasuBondItem({ masuName: masu.name, image: base && base.iconUrl, itemName: item.name, itemEmoji: item.emoji, count: n, gain: result.xpGain,
-        before: result.before, after: result.after });
+        before: result.before, after: result.after, note: ranchNote });
     }
     return result;
   };
@@ -12067,6 +12081,26 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_PLAY');
   };
   const leaveRhythmLineAdjust = () => { setRhythmLineAdjust(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  // ===== オプションの「▶ 見てみる」(2026-11-11 社長「モンビーのオプションで、現在の設定での画面が分からないから見れるようにしたい」・案A・音は鳴らす) =====
+  // 本物の演奏画面で、**保存前の設定(下書き)のまま**見本の譜面を自動で叩いて流す。曲の終わりで最初から流し直す。
+  //   記録・ランキング・ライフには何も残さない(判定ラインの位置の合わせの「試す」と同じ扱い)。譜面・判定・音の同期は変えない。
+  //   「設定へ戻る」で、下書きのままオプションへ戻る(rhythmOptionsDraft を渡して下書きを作り直さない)
+  const [rhythmPreview, setRhythmPreview] = useState(null);       // { draft, key }
+  const [rhythmOptionsDraft, setRhythmOptionsDraft] = useState(null); // 見本から戻ったときに、オプションの下書きへ戻す値
+  const startRhythmOptionPreview = (draft) => {
+    const settings = normalizeRhythmSettings(draft);
+    if (settings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmOptionsDraft(settings);
+    setRhythmPreview({ draft:settings, key:0 });
+    setRhythmPlay({ song:RHYTHM_OPTION_PREVIEW_SONG, difficulty:RHYTHM_OPTION_PREVIEW_DIFFICULTY, from:'preview' });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmOptionPreview = () => { setRhythmPreview(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  const rhythmPreviewProps = rhythmPreview ? {
+    phase:'try', preview:true, key:rhythmPreview.key, ground:rhythmPreview.draft.judgmentLineHeight,
+    onEnd: leaveRhythmOptionPreview, onFix: leaveRhythmOptionPreview,
+    onLoop: () => setRhythmPreview(p => p ? { ...p, key:p.key + 1 } : p),
+  } : null;
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -12823,21 +12857,24 @@ function MonsterHeroGame() {
     const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
     const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
     const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
-    // 帯は小さく(HOME の「モンヒロバトル」の左の空きに収まる幅)。WAVE・報酬・説明は押して開く詳細へ
+    // 帯は小さく右下へ(2026-11-11 テスターいちか「転生のすべて選択ボタンと被るから右下に」)。HOME の「モンヒロバトル」の右の空きに収まる幅で、2段にする。
+    //   上の段は「🔁 ◯周目」、下の段は WAVE(社長「他みたいに wave も見れるように」)。報酬・説明は押して開く詳細へ
     const label = finished ? (quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止')
       : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const subLabel = finished ? '' : `W${wave}/10${resting ? '・休み' : ''}`;
     const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
     const info = { wave, loops: quickRunProgress.loops, finished, catchingUp: false, reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
       canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing, canResume: finished && quickRunResumable };
     const closeDetail = () => setQuickAnywhereDetail(false);
     return (<>
-      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
-        className={`fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
-        style={{ left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))', bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))', minHeight: 30 }}>
-        {label}
-      </button>
+      <QuickAnywhereFloat screen={gameState} data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}${subLabel ? ` ${subLabel}` : ''}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
+        className={`z-[70] flex max-w-[84px] flex-col items-center justify-center rounded-2xl border px-2 py-0.5 text-[11px] font-black leading-[14px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
+        style={{ minHeight: 32 }}>
+        <span className="max-w-full truncate">{label}</span>
+        {subLabel && <span data-quick-anywhere-wave className="max-w-full truncate text-[10px] font-bold opacity-80">{subLabel}</span>}
+      </QuickAnywhereFloat>
       {quickAnywhereDetail && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-start p-2" onClick={closeDetail} style={{ paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))', paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))' }}>
+        <div className="fixed inset-0 z-[90] flex items-end justify-end p-2" onClick={closeDetail} style={{ paddingBottom: 'max(48px, calc(var(--mh-sa-bottom, 0px) + 46px))', paddingRight: 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))' }}>
           <div data-quick-anywhere-detail role="dialog" aria-label="裏クイックのようす" onClick={(e) => e.stopPropagation()}
             className="w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60">
             <div className="flex items-center justify-between gap-2">
@@ -16495,11 +16532,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retryRhythm = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS);   // 目印をモンヒロビートの始め直しとして分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   // ===== MFバトルカードを開いたら自動で∞周回を始める・負けたら始め直す(社長 2026-10-25「モンヒロビートと同じように」) =====
@@ -19826,7 +19864,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
             報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
             (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
-        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&!loginBonusGuideBusy&&loginBonusGuideClear&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(()=>{
           /* 行き先が名前だけでは分からなかったので、デバッグ画面の DebugMenuRow と同じ
@@ -21410,13 +21448,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
           // 判定ラインの位置の合わせも、何も残さない(練習と同じ扱い)
           if(rhythmPlay.from==='lineAdjust')return;
+          // オプションの「▶ 見てみる」の見本も、何も残さない
+          if(rhythmPlay.from==='preview')return;
           // レイドバトルのモンヒロビート挑戦: ジャックへのダメージの処理を始めたうえで、ふつうの演奏と同じく
           // 周回の報酬・自己ベスト・クリア回数・実績・全国ランキングにも入れる(2026-10-07・ユーザー指示「両方つなげる」)。
           // 下の共通の処理へそのまま進む(アシストモードは、共通の処理が記録も送信もしない)
@@ -21504,7 +21544,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home'||RHYTHM_HELL_STORY_TRIGGER==='release')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}if(rhythmPlay.from==='preview')setRhythmPreview(null);const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'||rhythmPlay.from==='preview'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:rhythmPlay.from==='preview'?rhythmPreviewProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -21517,6 +21557,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }}/>}
         {/* 助手とのセッション: 演奏中の助手の顔とひとこと(演奏画面の外から重ねる。演奏の仕組みには触れない) */}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()&&<RhythmAssistSessionPlayFace songId={rhythmPlay.song&&rhythmPlay.song.songId}/>}
+        {/* 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を重ねる(2026-11-11。77-screen-rhythm-multi.jsx の RhythmMultiLiveBoard。設定で消せる) */}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmSettings.multiLiveBoard!==false&&<RhythmMultiLiveBoard key={rhythmPlay.multiStartId} resolveIconUrl={resolveIconUrl}/>}
 
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
@@ -21531,6 +21573,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} guideAssistantId={selectedAssistantId} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
+          multiLiveBoard={rhythmSettings.multiLiveBoard!==false}
+          onChangeMultiLiveBoard={async(on)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLiveBoard:on===true});setRhythmSettings(saved);}}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):'',
             // 負けた・やめたあと、ここから1周目を始め直せるか(曲えらびの帯の「⚔ 1周目から新しく始める」と同じ条件)
@@ -21592,7 +21636,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 部屋の上に重ねるソロと同じオプション。タイミング調整・判定ラインを実際の画面で合わせる、は演奏を始めるので部屋の中では出さない */}
           <RhythmOptions value={rhythmSettings} onBack={()=>setRhythmMultiOptionsOpen(false)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>
         </div>}
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} onLineAdjust={startRhythmLineAdjust} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} initialDraft={rhythmOptionsDraft} onPreview={startRhythmOptionPreview} onBack={()=>{setRhythmOptionsDraft(null);setGameState(rhythmOptionsBack);}} onCalibrate={()=>{setRhythmOptionsDraft(null);startRhythmCalibration();}} onLineAdjust={()=>{setRhythmOptionsDraft(null);startRhythmLineAdjust();}} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);setRhythmOptionsDraft(null);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
