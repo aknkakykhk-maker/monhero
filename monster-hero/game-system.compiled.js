@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e2cb66bf45a1332
+// source-sha256: 1e843a5f44492baf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -126516,7 +126516,7 @@ function AssistantLifeItemRow({
   }, !solo && React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap text-orange-300"
   }, "🤝 友情Lv +", g.peer), React.createElement("span", {
-    className: "text-slate-500"
+    className: "text-slate-300"
   }, "・")), React.createElement("span", {
     className: "whitespace-nowrap text-pink-200",
     "data-assistant-life-item-solo-amt": solo ? '' : undefined
@@ -126535,12 +126535,12 @@ function AssistantLifeItemsHelp({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, "数は「ふつう」のときの量。", React.createElement("wbr", null), "💗好きな物は多め・", React.createElement("wbr", null), "💧苦手な物は少なめ(好みは贈ると分かる)"), React.createElement("button", {
+  }, "数は「ふつう」のときの量。", React.createElement("wbr", null), "💗好きな物は多め・", React.createElement("wbr", null), "💧苦手な物は少なめ(好みは贈ると分かる)。", React.createElement("wbr", null), "道具はビートP交換所で手に入ります"), React.createElement("button", {
     type: "button",
     "data-assistant-life-items-help-toggle": true,
     "aria-expanded": open,
     onClick: () => setOpen(v => !v),
-    className: "mt-1.5 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-950/70 px-3 text-left text-[12px] font-black text-slate-100 active:scale-[.98]"
+    className: "mt-1.5 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-950/85 px-3 text-left text-[12px] font-black text-slate-100 active:scale-[.98]"
   }, React.createElement("span", null, "？ 友情Lv・仲良し度と、贈るきまり"), React.createElement("span", null, open ? '▲' : '▼')), open && React.createElement("div", {
     className: "mt-1"
   }, React.createElement(AssistantLifeGiftExplain, {

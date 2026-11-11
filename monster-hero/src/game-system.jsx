@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 293c14876e5d28c1
+// generated-sha256: 374e40eb705d7222
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67642,7 +67642,7 @@ function AssistantLifeItemRow({ x, solo = false, have = 0, used = false, action 
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
       <div className="min-w-0 flex-1">
         <p className="text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{x.name} <span className={`whitespace-nowrap text-[11px] ${used ? 'text-slate-400' : have > 0 ? 'text-amber-200' : 'text-slate-400'}`}>{used && have > 0 ? '今日は済み' : `持ち ${have}`}</span></p>
-        <p className="text-[11px] font-bold leading-snug">{!solo && <><span className="whitespace-nowrap text-orange-300">🤝 友情Lv +{g.peer}</span><span className="text-slate-500">・</span></>}<span className="whitespace-nowrap text-pink-200" data-assistant-life-item-solo-amt={solo ? '' : undefined}>💗 仲良し度 +{g.player}</span></p>
+        <p className="text-[11px] font-bold leading-snug">{!solo && <><span className="whitespace-nowrap text-orange-300">🤝 友情Lv +{g.peer}</span><span className="text-slate-300">・</span></>}<span className="whitespace-nowrap text-pink-200" data-assistant-life-item-solo-amt={solo ? '' : undefined}>💗 仲良し度 +{g.player}</span></p>
       </div>
       {action}
     </div>);
@@ -67652,8 +67652,8 @@ function AssistantLifeItemsHelp({ solo = false }) {
   const [open, setOpen] = React.useState(false);
   return (
     <div className="mt-1.5" data-assistant-life-items-help>
-      <p className="rounded-xl bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>数は「ふつう」のときの量。<wbr/>💗好きな物は多め・<wbr/>💧苦手な物は少なめ(好みは贈ると分かる)</p>
-      <button type="button" data-assistant-life-items-help-toggle aria-expanded={open} onClick={() => setOpen(v => !v)} className="mt-1.5 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-950/70 px-3 text-left text-[12px] font-black text-slate-100 active:scale-[.98]"><span>？ 友情Lv・仲良し度と、贈るきまり</span><span>{open ? '▲' : '▼'}</span></button>
+      <p className="rounded-xl bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>数は「ふつう」のときの量。<wbr/>💗好きな物は多め・<wbr/>💧苦手な物は少なめ(好みは贈ると分かる)。<wbr/>道具はビートP交換所で手に入ります</p>
+      <button type="button" data-assistant-life-items-help-toggle aria-expanded={open} onClick={() => setOpen(v => !v)} className="mt-1.5 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-950/85 px-3 text-left text-[12px] font-black text-slate-100 active:scale-[.98]"><span>？ 友情Lv・仲良し度と、贈るきまり</span><span>{open ? '▲' : '▼'}</span></button>
       {open && <div className="mt-1"><AssistantLifeGiftExplain compact/><AssistantLifeGiftRules solo={solo}/></div>}
     </div>);
 }
