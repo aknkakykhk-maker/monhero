@@ -334,13 +334,16 @@ const badgeProblems = (page) => page.evaluate(() => {
         const ng = await textProblems(page, '[data-friend-row]'); check(`⑰ 一覧の字がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-17-life-list`);
       await page.locator('[data-friend-row="aoi-0001"]').click();
-      await page.waitForFunction(() => /のぞいている/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
+      await page.waitForFunction(() => /のぞいている/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
       check(`⑰ プロフィールは文の形「🏡 みゅあの部屋をのぞいている」(${v.id})`, /🏡 みゅあの部屋をのぞいている/.test(await page.locator('[data-friend-presence]').first().innerText().catch(() => '')));
       await shot(page, `${v.id}-17b-life-profile`);
+      // 「家へ行く」の札は、プロフィールを開いて相手の家の様子を読み終えてから出る。重いときは数えるのが早すぎて
+      // 1回だけ NG になった(2026-11-11 ミハリの見回り)。決まった時間ではなく、札が出るまで待ってから数える
+      await page.locator('[data-alf-profile-visit="ok"]').first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
       if (await page.locator('[data-alf-profile-visit="ok"]').count()) {
         await page.locator('[data-alf-profile-visit-go]').click();
-        await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
-        await page.waitForFunction(() => document.querySelector('[data-alf-visit-now]'), null, { timeout: 8000 }).catch(() => {});
+        await page.locator('[data-alf-visit]').waitFor({ timeout: 30000 });
+        await page.waitForFunction(() => document.querySelector('[data-alf-visit-now]'), null, { timeout: 30000 }).catch(() => {});
         check(`⑰ 訪ねた家の見出しは、横は文の形「いま 🏡 みゅあの部屋をのぞいている」・縦は札に収まる短い形「いま 🏡 みゅあの部屋」(${v.id})`, (v.w > v.h ? /いま 🏡 みゅあの部屋をのぞいている/ : /^いま 🏡 みゅあの部屋$/).test(await page.locator('[data-alf-visit-now]').innerText().catch(() => '')));
         await shot(page, `${v.id}-17c-life-visit`);
         // 自分が訪ねているあいだは lv=v を送る(持ち主の名前は送らない)
