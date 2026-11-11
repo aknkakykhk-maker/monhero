@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8358666c862828c
+// source-sha256: c13387689a6cef5e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140773,7 +140773,8 @@ const normalizeAssistantLifePlan = (raw, day) => {
   const out = {
     day: Number.isInteger(day) ? day : null,
     plan: {},
-    result: {}
+    result: {},
+    went: {}
   };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Number.isInteger(day) || raw.day !== day) return out;
   const inDay = k => {
@@ -140794,6 +140795,14 @@ const normalizeAssistantLifePlan = (raw, day) => {
       const row = {};
       for (const [id, r] of Object.entries(m)) if (assistantLifePlanOkId(id) && (r === 'ok' || r === 'no')) row[id] = r;
       if (Object.keys(row).length) out.result[String(Number(k))] = row;
+    }
+  }
+  if (raw.went && typeof raw.went === 'object' && !Array.isArray(raw.went)) {
+    for (const [k, m] of Object.entries(raw.went)) {
+      if (!inDay(k) || !m || typeof m !== 'object' || Array.isArray(m)) continue;
+      const row = {};
+      for (const [id, p] of Object.entries(m)) if (assistantLifePlanOkId(id) && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[p]) row[id] = p;
+      if (Object.keys(row).length) out.went[String(Number(k))] = row;
     }
   }
   return out;
@@ -141014,11 +141023,21 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     const trust = {};
     for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
     const r = assistantLifePlanApply(decided, want, trust, salt);
+    const went = {};
+    for (const [id, v] of Object.entries(r.result)) if (v === 'no') {
+      const g = (r.life.groups || []).find(x => x.ids.includes(id));
+      const pl = g ? g.place : (r.life.solo[id] || {}).place;
+      if (pl) went[id] = pl;
+    }
     assistantLifePlanSave({
       ...d,
       result: {
         ...d.result,
         [String(decided.abs)]: r.result
+      },
+      went: {
+        ...(d.went || {}),
+        [String(decided.abs)]: went
       }
     });
     return r.life;
@@ -141035,6 +141054,25 @@ const assistantLifePlanOf = (abs, id) => {
   const d = ASSISTANT_LIFE_PLAN_STORE.state.data;
   const m = d && d.plan[String(abs)];
   return m && m[id] ? m[id] : null;
+};
+const assistantLifePlanLineOf = (abs, id) => {
+  const r = assistantLifePlanResultOf(abs, id);
+  if (!r) return null;
+  const L = typeof ASSISTANT_LIFE_PLAN_LINES !== 'undefined' && ASSISTANT_LIFE_PLAN_LINES[id] ? ASSISTANT_LIFE_PLAN_LINES[id][r] : null;
+  if (!Array.isArray(L) || !L.length) return null;
+  const d = ASSISTANT_LIFE_PLAN_STORE.state.data;
+  const want = assistantLifePlanOf(abs, id);
+  const went = d && d.went && d.went[String(abs)] ? d.went[String(abs)][id] : null;
+  const place = r === 'ok' ? want : went || want;
+  const pick = L[assistantLifeHash(`plan-line|${abs}|${id}`) % L.length];
+  let call = 'あなた';
+  try {
+    if (typeof assistantPeerPlayerCall === 'function') call = assistantPeerPlayerCall(id);
+  } catch (_) {}
+  return {
+    e: pick.e,
+    text: pick.t.replace(/\{place\}/g, place ? ASSISTANT_LIFE_PLACES[place] : 'いつもの場所').replace(/\{want\}/g, want ? ASSISTANT_LIFE_PLACES[want] : '').replace(/\{c\}/g, call)
+  };
 };
 const assistantLifePlanOpen = (opt = {}) => {
   if (!assistantLifePlanOn()) return false;
@@ -141167,7 +141205,16 @@ function AssistantLifePlanWho({
       className: "ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100"
     }, "🌀 気分で別の場所へ"), now && React.createElement("span", {
       className: "block text-[10.5px] text-emerald-300"
-    }, "いまの時間"));else body = React.createElement("span", {
+    }, "いまの時間"), (() => {
+      const ln = assistantLifePlanLineOf(abs, id);
+      return ln ? React.createElement("span", {
+        className: "block text-[11px] text-pink-100",
+        "data-assistant-life-plan-line": `${id}@${abs}`,
+        style: {
+          wordBreak: 'auto-phrase'
+        }
+      }, assistantLifePlanName(id), "「", ln.text, "」") : null;
+    })());else body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
     }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", ASSISTANT_LIFE_PLACES[p], assistantLifePlanPerk(p) && React.createElement("span", {
       className: "block text-[10.5px] text-emerald-300"

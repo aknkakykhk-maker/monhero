@@ -6,7 +6,8 @@
 //   ・縦は1人ずつ(回が縦に並ぶ)・横は8人×4回の表/組めるのは今日の 4時〜24時の回だけ(深夜は出さない)
 //   ・公開の印 RELEASE_FLAGS.assistantLifePlan の後ろ。偽のあいだは何も出さず、保存も読まない
 // 保存(新しいキーだけ。既存の mh_assistant_life_v1 は変えない・CLAUDE.md ⑦):
-//   mh_assistant_life_plan_v1 = { day: 日の通し番号(abs ÷ 12), plan: { [abs]: { [助手id]: 場所id } }, result: { [abs]: { [助手id]: 'ok'|'no' } } }
+//   mh_assistant_life_plan_v1 = { day: 日の通し番号(abs ÷ 12), plan: { [abs]: { [助手id]: 場所id } }, result: { [abs]: { [助手id]: 'ok'|'no' } }, went: { [abs]: { [助手id]: 実際に行った場所 } } }
+//   went は断ったときの返事(「今日は{place}の気分」)に使う
 //   日が替わったら捨てる(次の日の予定は持たない)。壊れていれば空
 const ASSISTANT_LIFE_PLAN_KEY = 'mh_assistant_life_plan_v1';
 // 予定に入れられる場所(その場所でできる「していること」があるところ。マーケットは助手が行かない)
@@ -21,7 +22,7 @@ const assistantLifePlanOkId = (id) => typeof id === 'string' && typeof ASSISTANT
 const assistantLifePlanOkPlace = (p) => ASSISTANT_LIFE_PLAN_PLACES.includes(p);
 // 保存の値を今日の形へ(壊れている・日が違う → 空)
 const normalizeAssistantLifePlan = (raw, day) => {
-  const out = { day: Number.isInteger(day) ? day : null, plan: {}, result: {} };
+  const out = { day: Number.isInteger(day) ? day : null, plan: {}, result: {}, went: {} };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Number.isInteger(day) || raw.day !== day) return out;
   const inDay = (k) => { const a = Number(k); return Number.isInteger(a) && Math.floor(a / 12) === day; };
   if (raw.plan && typeof raw.plan === 'object' && !Array.isArray(raw.plan)) {
@@ -36,6 +37,13 @@ const normalizeAssistantLifePlan = (raw, day) => {
       if (!inDay(k) || !m || typeof m !== 'object' || Array.isArray(m)) continue;
       const row = {}; for (const [id, r] of Object.entries(m)) if (assistantLifePlanOkId(id) && (r === 'ok' || r === 'no')) row[id] = r;
       if (Object.keys(row).length) out.result[String(Number(k))] = row;
+    }
+  }
+  if (raw.went && typeof raw.went === 'object' && !Array.isArray(raw.went)) {
+    for (const [k, m] of Object.entries(raw.went)) {
+      if (!inDay(k) || !m || typeof m !== 'object' || Array.isArray(m)) continue;
+      const row = {}; for (const [id, p] of Object.entries(m)) if (assistantLifePlanOkId(id) && typeof ASSISTANT_LIFE_PLACES !== 'undefined' && ASSISTANT_LIFE_PLACES[p]) row[id] = p;
+      if (Object.keys(row).length) out.went[String(Number(k))] = row;
     }
   }
   return out;
@@ -164,13 +172,26 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
     const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
     const r = assistantLifePlanApply(decided, want, trust, salt);
-    assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result } });
+    const went = {}; for (const [id, v] of Object.entries(r.result)) if (v === 'no') { const g = (r.life.groups || []).find(x => x.ids.includes(id)); const pl = g ? g.place : (r.life.solo[id] || {}).place; if (pl) went[id] = pl; }
+    assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result }, went: { ...(d.went || {}), [String(decided.abs)]: went } });
     return r.life;
   } catch (_) { return decided; }
 };
 // その回の結果(ok・no・null)
 const assistantLifePlanResultOf = (abs, id) => { const d = ASSISTANT_LIFE_PLAN_STORE.state.data; const m = d && d.result[String(abs)]; return m && m[id] ? m[id] : null; };
 const assistantLifePlanOf = (abs, id) => { const d = ASSISTANT_LIFE_PLAN_STORE.state.data; const m = d && d.plan[String(abs)]; return m && m[id] ? m[id] : null; };
+// その回の助手の返事(ココロ3の32本・data/assistants.js の ASSISTANT_LIFE_PLAN_LINES)。結果が無い・台詞が無いときは null
+const assistantLifePlanLineOf = (abs, id) => {
+  const r = assistantLifePlanResultOf(abs, id); if (!r) return null;
+  const L = typeof ASSISTANT_LIFE_PLAN_LINES !== 'undefined' && ASSISTANT_LIFE_PLAN_LINES[id] ? ASSISTANT_LIFE_PLAN_LINES[id][r] : null;
+  if (!Array.isArray(L) || !L.length) return null;
+  const d = ASSISTANT_LIFE_PLAN_STORE.state.data;
+  const want = assistantLifePlanOf(abs, id); const went = d && d.went && d.went[String(abs)] ? d.went[String(abs)][id] : null;
+  const place = r === 'ok' ? want : (went || want);
+  const pick = L[assistantLifeHash(`plan-line|${abs}|${id}`) % L.length];
+  let call = 'あなた'; try { if (typeof assistantPeerPlayerCall === 'function') call = assistantPeerPlayerCall(id); } catch (_) {}
+  return { e: pick.e, text: pick.t.replace(/\{place\}/g, place ? ASSISTANT_LIFE_PLACES[place] : 'いつもの場所').replace(/\{want\}/g, want ? ASSISTANT_LIFE_PLACES[want] : '').replace(/\{c\}/g, call) };
+};
 // 窓を開く(入口3つから)。who … 1人の予定 / place … その場所に次の回で来てもらう助手を選ぶ / 何もなし … 表
 const assistantLifePlanOpen = (opt = {}) => {
   if (!assistantLifePlanOn()) return false;
@@ -237,7 +258,7 @@ function AssistantLifePlanWho({ id, cur }) {
     const abs = day * 12 + j; const s = assistantLifeSlotOfAbs(abs); const p = assistantLifePlanOf(abs, id); const r = assistantLifePlanResultOf(abs, id);
     const past = abs < cur, now = abs === cur;
     let body;
-    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}</span>;
+    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const ln = assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
     else body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? <>📍 {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{assistantLifePlanPerk(p) && <span className="block text-[10.5px] text-emerald-300">{assistantLifePlanPerk(p)}</span>}</> : <span className="text-slate-400">おまかせ<span className="block text-[10.5px]">{assistantLifePlanName(id)}が自分で決める</span></span>}</span>;
     rows.push(
       <div key={abs} data-assistant-life-plan-row={abs} className={`rounded-xl border px-1.5 py-1 ${now ? 'border-amber-300 bg-amber-900/50' : 'border-white/15 bg-white/5'} ${past ? 'opacity-50' : ''}`}>

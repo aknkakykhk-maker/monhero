@@ -7,6 +7,7 @@
 //   ④ 割合どおりに聞く(Lv1 で約65%・Lv30 で約93%。多くの回で数える)
 //   ⑤ 決める・空ける: いまの回・過ぎた回・深夜(0〜4時)・明日の回は決められない。印が偽なら何もせず、保存も書かない
 //   ⑥ assistantLifeNow: 印が偽なら予定を読まない(様子はふだんどおり)・真なら今の回の予定を当てはめ、結果を1回だけ書く
+//   ⑦ 返事の台詞(ココロ3の32本): 8人とも ok・no があり、穴が埋まる(ok は頼んだ場所・no は実際に行った場所)。取り込みとファイルがそろう
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -135,6 +136,19 @@ const slotAbs = () => G('assistantLifeSlotAt()').abs;
     check('⑥ 同じ回でもう一度開いても、結果は書き直さない', writes.filter(k => k === 'mh_assistant_life_plan_v1').length === w1);
     const src = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life.jsx'), 'utf8');
     check('⑥ assistantLifeNow は印が真のときだけ予定を読む(typeof で確かめる)', /assistantLifePlanOn === 'function' && assistantLifePlanOn\(\)\) \{ try \{ await ASSISTANT_LIFE_PLAN_STORE\.load\(\)/.test(src) && /typeof assistantLifePlanOnDecide === 'function' \? assistantLifePlanOnDecide\(decided0, cur\.salt\) : decided0/.test(src));
+  }
+  // ⑦ 返事の台詞
+  {
+    const L = G('ASSISTANT_LIFE_PLAN_LINES');
+    check('⑦ 8人とも ok・no の返事がある', IDS.every(id => L[id] && L[id].ok.length && L[id].no.length));
+    const d = G('ASSISTANT_LIFE_PLAN_STORE.state.data'); const k = String(cur + 1);
+    G(`ASSISTANT_LIFE_PLAN_STORE.set({ data: { ...ASSISTANT_LIFE_PLAN_STORE.state.data, plan: { ...ASSISTANT_LIFE_PLAN_STORE.state.data.plan, ${k}: { mua: 'cardroom', kiki: 'hill' } }, result: { ...ASSISTANT_LIFE_PLAN_STORE.state.data.result, ${k}: { mua: 'ok', kiki: 'no' } }, went: { ${k}: { kiki: 'library' } } } })`);
+    const a = G('assistantLifePlanLineOf')(cur + 1, 'mua'), b = G('assistantLifePlanLineOf')(cur + 1, 'kiki');
+    const holeOk = (x) => x && !/\{[a-z]+\}/.test(x.text);
+    check('⑦ 穴が埋まる(ok は頼んだ場所・no は実際に行った場所)', holeOk(a) && holeOk(b) && (!/カード部屋|図書室/.test(b.text) || !b.text.includes('カード部屋')), `${a && a.text} / ${b && b.text}`);
+    check('⑦ 結果が無い回は返事なし', G('assistantLifePlanLineOf')(cur + 2, 'mua') === null);
+    check('⑦ 取り込みとファイルがそろう', require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'life-plan-lines-import.js'), '--check']).status === 0);
+    void d;
   }
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
