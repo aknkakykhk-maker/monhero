@@ -110,7 +110,7 @@ function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = tr
 
     if (tier === 'crit') {
       // 会心(案B): 白い光・光の筋・金の輪・「会心!!」・舞台が少し寄る。画面全体の揺れは今までどおり 60-app が出す
-      if (richOn) { flash('left:-100vw;top:-100vh;width:300vw;height:300vh;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
+      if (richOn) { flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
       ring('#fde047', 80, 2.6);
       stamp('会心!!', '#fde047', 20, -64, -58, 620);
       if (shakeOn) run(stage, [{ scale: '1.07' }, { scale: '1' }], { duration: 240, fill: 'none' });

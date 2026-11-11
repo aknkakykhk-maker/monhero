@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 817b2f535a53d2fa
+// source-sha256: ea17e731da2ca796
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -30344,7 +30344,7 @@ function BattleHitFeel({
     };
     if (tier === 'crit') {
       if (richOn) {
-        flash('left:-100vw;top:-100vh;width:300vw;height:300vh;background:#fff;', .42, 150);
+        flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150);
         burst('#fde047', 12, 80);
       }
       ring('#fde047', 80, 2.6);
@@ -176531,7 +176531,8 @@ function MonsterHeroGame() {
       defeatFx: 'OFF',
       resultFx: 'OFF',
       countUp: 'OFF',
-      endFx: 'OFF'
+      endFx: 'OFF',
+      hitStop: 'OFF'
     } : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? {

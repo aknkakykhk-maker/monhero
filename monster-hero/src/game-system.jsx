@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8c46b040453df146
+// generated-sha256: f2b35c762b8b2c37
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -18194,7 +18194,7 @@ function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = tr
 
     if (tier === 'crit') {
       // 会心(案B): 白い光・光の筋・金の輪・「会心!!」・舞台が少し寄る。画面全体の揺れは今までどおり 60-app が出す
-      if (richOn) { flash('left:-100vw;top:-100vh;width:300vw;height:300vh;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
+      if (richOn) { flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
       ring('#fde047', 80, 2.6);
       stamp('会心!!', '#fde047', 20, -64, -58, 620);
       if (shakeOn) run(stage, [{ scale: '1.07' }, { scale: '1' }], { duration: 240, fill: 'none' });
@@ -94296,7 +94296,7 @@ function MonsterHeroGame() {
     // (2026-10-01・ユーザー指示「超省エネをもっと画面情報減らしてエコに。VICTORY!とかの表示はなしでいい」)。
     // 保存した設定は書き換えない。この値を読む側(WaveIntro・EnemyDefeatFx・PhaseBanner・resultFxMs など)がそのまま効く
     const base = (ecoMode === 'ultra' && autoRepeat === true)
-      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF' }
+      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF', hitStop: 'OFF' }
       : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
