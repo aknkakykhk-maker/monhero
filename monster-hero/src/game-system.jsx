@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6d98e7daf4948d1
+// generated-sha256: 7c1efb92bb149dfe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -22301,8 +22301,9 @@ const rhythmScoreFitSize=(text,maxPx,minPx)=>{
 // タブは4つ(2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」)。保存キー・値は変えず、並べ替えと見出しだけ。
 // id は前のまま使う(live=演奏 / volume=音 / system=軽さ・演出)。display(表示)はライブにあった表示の項目を分けたもの
 const RHYTHM_OPTION_TABS=Object.freeze([['live','演奏'],['display','表示'],['volume','音'],['system','軽さ・演出']]);
-const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{
-  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null,onPreview=null,initialDraft=null})=>{
+  // 「▶ 見てみる」の見本から戻ったときは、そのときの下書き(initialDraft)から続ける(保存前の変更を消さない。2026-11-11)
+  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(initialDraft||value));
   const [message,setMessage]=useState('');
   // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
   const [leaveAsk,setLeaveAsk]=useState(false);
@@ -22467,7 +22468,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+        {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
+        {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
+          className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
+          <span>▶ 見てみる</span>{!wide&&<small className="text-[10px] font-bold text-cyan-200/90">いまの設定で演奏画面</small>}</button>}</header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
       <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-4 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
@@ -24976,6 +24981,11 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
   ];
   // 試す段階(保存したあと)は、操作パネルを出さない。右上の一時停止の下に小さく「位置を直す」「終わる」だけを置く
   //   (2026-10-14 社長「位置調整してるときにノーツ落ちてくるのも邪魔」「試しにやるにも左の設定邪魔」)
+  // オプションの「▶ 見てみる」の見本(2026-11-11)。自動で叩いて流すだけなので、右上は「設定へ戻る」だけ(保存前の設定のまま戻る)
+  if(adjust.preview)return <div data-rhythm-option-preview-panel className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
+    <button type="button" data-rhythm-option-preview-back onClick={adjust.onEnd} className="min-h-[44px] rounded-xl border border-white/30 bg-slate-900/90 px-3 text-[12px] font-black text-white">設定へ戻る</button>
+    <span data-rhythm-option-preview-note className="max-w-[160px] rounded-lg bg-violet-900/85 px-2 py-1 text-right text-[10px] font-bold leading-snug text-violet-50">見本(自動で叩きます)<br/>保存前の設定で表示中</span>
+  </div>;
   if(adjust.phase==='try')return <div data-rhythm-line-adjust-panel data-phase="try" className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
     <button type="button" data-rhythm-line-adjust-fix onClick={adjust.onFix} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100">位置を直す</button>
     <button type="button" data-rhythm-line-adjust-end onClick={adjust.onEnd} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white">終わる</button>
@@ -25008,6 +25018,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
   const lineAdjustRef=useRef(lineAdjust);lineAdjustRef.current=lineAdjust;
+  // オプションの「▶ 見てみる」の見本は、曲が流れはじめたら自動で叩く(30-rhythm-preview-hands.jsx。ふつうの指と同じ合図を送るだけ)
+  const previewHands=!!(lineAdjust&&lineAdjust.preview);
   const lineHeightOverride=lineAdjust&&Number.isFinite(Number(lineAdjust.ground))?Number(lineAdjust.ground):null;
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
@@ -26725,6 +26737,12 @@ scheduleTick();};
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
+  useEffect(()=>{
+    if(!previewHands||typeof window==='undefined'||typeof rhythmPreviewHandsStart!=='function')return undefined;
+    let stop=null;
+    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current);clearInterval(wait);}},100);
+    return()=>{clearInterval(wait);if(stop)stop();};
+  },[previewHands]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);if(!(lineAdjust&&lineAdjust.phase==='set'))beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   // 演奏中にアプリを離れた(画面が隠れた)回数を診断で数える。直し方 autoPauseOnHidden を入れた端末では、離れた時点で自動で一時停止する
   // (既定は切ってある。入れる前は、Androidは裏でも曲が進んで戻ると大量のMISSになる・iOSは時計が止まる、という推測を診断で確かめる段階。2026-10-07)
@@ -27432,6 +27450,80 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
 <p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</>}</button></div>}</div></main>;
+};
+
+// ---- part: 30-rhythm-preview-hands.jsx ----
+// ===== オプションの「▶ 見てみる」で、見本の譜面を自動で叩く手(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) =====
+// 本物の演奏画面へ、ふつうの指と同じポインタの合図(pointerdown・pointermove・pointerup)を送るだけ。判定・譜面・音の同期には触らない
+// (プレイボットの「理想の人の手」tools/playbot/rhythm-ideal-hands.js と同じ叩き方を、見本の短い譜面向けに小さくしたもの)。
+//   タップ … 時刻ちょうどに押して 40ms で離す / フリック … 押して上(向きのあるものはその向き)へ払う
+//   ホールド・スライド … 押さえたまま帯をなぞり、終わりで離す(終点フリックは終わりで上へ払う)
+// 使うのは見本(from:'preview')の演奏だけ。曲の時刻は演奏画面の読み取り口(window.__mhTestHooks.rhythmSongMs)から読む。
+// 返す stop() で止める(画面を閉じたとき・流し直すとき)。
+const rhythmPreviewHandsStart = (area) => {
+  if (typeof window === 'undefined' || !area) return () => {};
+  const hooks = () => window.__mhTestHooks || {};
+  let stopped = false, raf = 0, k = 0, ids = 900;
+  const timers = new Set();
+  const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); if (!stopped) fn(); }, Math.max(0, ms)); timers.add(id); };
+  const lineR = () => (typeof RHYTHM_JUDGMENT_LINE_Y !== 'undefined' ? RHYTHM_JUDGMENT_LINE_Y.ratio : 0.82);
+  const rectOf = () => (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(area) : area.getBoundingClientRect());
+  // 演奏画面が回してある(🔄横)ときは、回した器の中の座標を、画面の座標へ戻して送る
+  const toClient = (x, y) => { if (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.unpoint) { const c = RHYTHM_VIEW_ROTATION.unpoint(x, y); return { x: c.clientX, y: c.clientY }; } return { x, y }; };
+  const pt = (c, sky) => { const r = rectOf(); const lr = lineR(); const lift = sky > 0 && typeof RHYTHM_SKY_LIFT !== 'undefined' ? RHYTHM_SKY_LIFT.ratio * sky : 0;
+    return { x: r.left + r.width * rhythmProjectBoundary(c, lr), y: r.top + r.height * (lr - lift) }; }; // 器の中の座標(払う向きもこの座標で足す)
+  const spanAt = (n, t) => {
+    if (rhythmNoteIsSlide(n)) return { c: rhythmSlideExpectedLane(n, t) + 0.5, sky: rhythmSlideHasSky(n) ? rhythmSlideSkyAt(n, t) : 0 };
+    const sky = rhythmNoteSkyHeight(n);
+    if (n.subLane != null && Number.isFinite(Number(n.subLane))) {
+      const sp = rhythmNoteHasHoldPoints(n) ? rhythmHoldSpanAt(n, t) : { subLane: Number(n.subLane), subLaneWidth: Number(n.subLaneWidth) || 2 };
+      return { c: (sp.subLane + sp.subLaneWidth / 2) / 2, sky };
+    }
+    return { c: (Number(n.lane) || 0) + 0.5, sky };
+  };
+  const posOf = (n, t) => { const s = spanAt(n, t); return pt(s.c, s.sky); };
+  const send = (type, id, p) => {
+    const c = toClient(p.x, p.y);
+    try { area.dispatchEvent(new window.PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: c.x, clientY: c.y, buttons: type === 'pointerup' ? 0 : 1 })); } catch (_) {}
+  };
+  const notes = (() => { try { return ((hooks().rhythmNotes && hooks().rhythmNotes()) || []).slice().sort((a, b) => a.timeMs - b.timeMs); } catch (_) { return []; } })();
+  const isLong = n => (n.type === 'HOLD' || n.type === 'SLIDE') && Number(n.endTimeMs) > Number(n.timeMs);
+  const flickVec = n => { const d = typeof rhythmFlickDir === 'function' ? rhythmFlickDir(n) : ''; return d === 'left' ? [-1, 0] : d === 'right' ? [1, 0] : [0, -1]; };
+  const events = [], follows = [];
+  for (const n of notes) {
+    const t = Number(n.timeMs), id = ++ids;
+    if (isLong(n)) {
+      const e = Number(n.endTimeMs), fo = { id, n, from: t, until: n.endFlick === true ? e - 40 : e - 5, on: false };
+      follows.push(fo);
+      events.push({ at: t, f: () => { fo.on = true; send('pointerdown', id, posOf(n, t)); } });
+      if (n.endFlick === true) {
+        events.push({ at: e - 40, f: () => { fo.on = false; const q = posOf(n, e); send('pointermove', id, { x: q.x, y: q.y - 30 }); } });
+        events.push({ at: e - 20, f: () => { const q = posOf(n, e); send('pointermove', id, { x: q.x, y: q.y - 70 }); } });
+        events.push({ at: e, f: () => { const q = posOf(n, e); send('pointerup', id, { x: q.x, y: q.y - 70 }); } });
+      } else events.push({ at: e - 5, f: () => { fo.on = false; send('pointerup', id, posOf(n, e)); } });
+    } else if (n.type === 'FLICK') {
+      const v = flickVec(n);
+      events.push({ at: t, f: () => send('pointerdown', id, posOf(n, t)) });
+      events.push({ at: t + 25, f: () => { const p = posOf(n, t); send('pointermove', id, { x: p.x + v[0] * 30, y: p.y + v[1] * 30 }); } });
+      events.push({ at: t + 45, f: () => { const p = posOf(n, t); send('pointermove', id, { x: p.x + v[0] * 60, y: p.y + v[1] * 60 }); } });
+      events.push({ at: t + 46, f: () => { const p = posOf(n, t); send('pointerup', id, { x: p.x + v[0] * 60, y: p.y + v[1] * 60 }); } });
+    } else {
+      events.push({ at: t, f: () => send('pointerdown', id, posOf(n, t)) });
+      events.push({ at: t + 40, f: () => send('pointerup', id, posOf(n, t)) });
+    }
+  }
+  events.sort((a, b) => a.at - b.at);
+  const tick = () => {
+    if (stopped) return;
+    const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null) {
+      while (k < events.length && events[k].at <= ms + 17) { const ev = events[k++]; const wait = ev.at - ms; if (wait > 1) later(wait, ev.f); else ev.f(); }
+      for (const f of follows) if (f.on && ms > f.from && ms < f.until) send('pointermove', f.id, posOf(f.n, ms));
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => { stopped = true; if (raf) cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); };
 };
 
 // ---- part: 31-debug-ui.jsx ----
@@ -106715,6 +106807,26 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_PLAY');
   };
   const leaveRhythmLineAdjust = () => { setRhythmLineAdjust(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  // ===== オプションの「▶ 見てみる」(2026-11-11 社長「モンビーのオプションで、現在の設定での画面が分からないから見れるようにしたい」・案A・音は鳴らす) =====
+  // 本物の演奏画面で、**保存前の設定(下書き)のまま**見本の譜面を自動で叩いて流す。曲の終わりで最初から流し直す。
+  //   記録・ランキング・ライフには何も残さない(判定ラインの位置の合わせの「試す」と同じ扱い)。譜面・判定・音の同期は変えない。
+  //   「設定へ戻る」で、下書きのままオプションへ戻る(rhythmOptionsDraft を渡して下書きを作り直さない)
+  const [rhythmPreview, setRhythmPreview] = useState(null);       // { draft, key }
+  const [rhythmOptionsDraft, setRhythmOptionsDraft] = useState(null); // 見本から戻ったときに、オプションの下書きへ戻す値
+  const startRhythmOptionPreview = (draft) => {
+    const settings = normalizeRhythmSettings(draft);
+    if (settings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmOptionsDraft(settings);
+    setRhythmPreview({ draft:settings, key:0 });
+    setRhythmPlay({ song:RHYTHM_OPTION_PREVIEW_SONG, difficulty:RHYTHM_OPTION_PREVIEW_DIFFICULTY, from:'preview' });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmOptionPreview = () => { setRhythmPreview(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  const rhythmPreviewProps = rhythmPreview ? {
+    phase:'try', preview:true, key:rhythmPreview.key, ground:rhythmPreview.draft.judgmentLineHeight,
+    onEnd: leaveRhythmOptionPreview, onFix: leaveRhythmOptionPreview,
+    onLoop: () => setRhythmPreview(p => p ? { ...p, key:p.key + 1 } : p),
+  } : null;
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -111146,11 +111258,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retryRhythm = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS);   // 目印をモンヒロビートの始め直しとして分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   // ===== MFバトルカードを開いたら自動で∞周回を始める・負けたら始め直す(社長 2026-10-25「モンヒロビートと同じように」) =====
@@ -116061,13 +116174,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
           // 判定ラインの位置の合わせも、何も残さない(練習と同じ扱い)
           if(rhythmPlay.from==='lineAdjust')return;
+          // オプションの「▶ 見てみる」の見本も、何も残さない
+          if(rhythmPlay.from==='preview')return;
           // レイドバトルのモンヒロビート挑戦: ジャックへのダメージの処理を始めたうえで、ふつうの演奏と同じく
           // 周回の報酬・自己ベスト・クリア回数・実績・全国ランキングにも入れる(2026-10-07・ユーザー指示「両方つなげる」)。
           // 下の共通の処理へそのまま進む(アシストモードは、共通の処理が記録も送信もしない)
@@ -116155,7 +116270,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home'||RHYTHM_HELL_STORY_TRIGGER==='release')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}if(rhythmPlay.from==='preview')setRhythmPreview(null);const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'||rhythmPlay.from==='preview'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:rhythmPlay.from==='preview'?rhythmPreviewProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -116247,7 +116362,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 部屋の上に重ねるソロと同じオプション。タイミング調整・判定ラインを実際の画面で合わせる、は演奏を始めるので部屋の中では出さない */}
           <RhythmOptions value={rhythmSettings} onBack={()=>setRhythmMultiOptionsOpen(false)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>
         </div>}
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} onLineAdjust={startRhythmLineAdjust} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} initialDraft={rhythmOptionsDraft} onPreview={startRhythmOptionPreview} onBack={()=>{setRhythmOptionsDraft(null);setGameState(rhythmOptionsBack);}} onCalibrate={()=>{setRhythmOptionsDraft(null);startRhythmCalibration();}} onLineAdjust={()=>{setRhythmOptionsDraft(null);startRhythmLineAdjust();}} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);setRhythmOptionsDraft(null);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
