@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4c86da7edb17b86
+// source-sha256: 5866db928a90aa50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115999,7 +115999,7 @@ function AssistantLifeRoomFigure({
   sleep = false,
   onPress = null
 }) {
-  const night = look === 'night',
+  const night = look === 'night' && sleep,
     evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)' : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
@@ -116877,15 +116877,15 @@ function AssistantLifeRoomScene({
     floorY: floorY,
     sleepers: people,
     look: look
-  }), !asleep && lay && standItems.map((x, i) => React.createElement(AssistantLifeRoomFigure, {
+  }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? React.createElement(AssistantLifeRoomFigure, {
     key: x.pid,
     who: x.who,
     src: x.src,
     p: lay[i],
     look: look,
-    sleep: sleepIds.includes(x.pid),
+    sleep: true,
     onPress: onPerson ? () => onPerson(x.pid) : null
-  })), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
+  }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
     top: deskTop,
@@ -116982,7 +116982,14 @@ function AssistantLifeRoomScene({
     style: {
       background: '#ff8a3018'
     }
-  }), bubble && people.length > 0 && React.createElement("p", {
+  }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? null : React.createElement(AssistantLifeRoomFigure, {
+    key: x.pid,
+    who: x.who,
+    src: x.src,
+    p: lay[i],
+    look: look,
+    onPress: onPerson ? () => onPerson(x.pid) : null
+  })), bubble && people.length > 0 && React.createElement("p", {
     className: "absolute z-[6] max-w-[64%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow",
     style: {
       left: W * 0.24,
