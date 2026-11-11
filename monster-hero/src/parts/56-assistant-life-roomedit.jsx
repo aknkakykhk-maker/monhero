@@ -134,7 +134,7 @@ const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]],
 });
 // owned … その助手に贈ってある家具の key。苦手な家具は押し入れへ。席が足りない分も押し入れへ
-const assistantLifeLayoutOmakase = (who, owned) => {
+const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
   const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
   const like = (k) => (typeof assistantLifeFurnLike === 'function' ? assistantLifeFurnLike(who, k) : 'mid');
   const rank = (k) => (k === h.hero ? 0 : like(k) === 'like' ? 1 : 2);
@@ -150,7 +150,13 @@ const assistantLifeLayoutOmakase = (who, owned) => {
     items.push({ k, x: Math.max(0.06, Math.min(0.94, x)), y: Math.max(0.03, Math.min(0.72, y)), s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
       r: h.tilt && slot !== 'ceil' ? (i % 2 ? -h.tilt : h.tilt) : 0, f: seat[0] > 0.5, h: 0, l: 1, g: 1, a: slot === 'floor', z: i });
   }
-  return { items, line: h.line, kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k)) };
+  // ひとこと: 家具が2つ以下 → few / 主役の家具がある → hero か done / それ以外 → done。台詞がまだ無い助手は仮の1行
+  const L = (typeof ASSISTANT_LIFE_LAYOUT_LINES !== 'undefined' && ASSISTANT_LIFE_LAYOUT_LINES[who]) || {};
+  const pool = (k) => (Array.isArray(L[k]) ? L[k].filter(t => typeof t === 'string' && t) : []);
+  const hasHero = items.some(it => it.k === h.hero);
+  const list = items.length <= 2 && pool('few').length ? pool('few') : hasHero && pool('hero').length && (rand() < 0.5 || !pool('done').length) ? pool('hero') : pool('done');
+  const line = list.length ? list[Math.floor(rand() * list.length) % list.length] : h.line;
+  return { items, line, kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k)) };
 };
 
 // ----- 描く -----
