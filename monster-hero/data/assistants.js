@@ -1606,6 +1606,8 @@ const ASSISTANT_BOND_ACTIONS = {
   // 助手ライフ STEP2(2026-11-11 社長): 神殿にいる助手が、合体・転生などの操作を終えたプレイヤーと仲良くなる。1日1回(56-assistant-life-ux.jsx の assistantLifeTemplePerk)
   lifeTemple: { amount:30, dailyMax:30, label:'神殿で助手と一緒に過ごす', releaseFlag:'assistantLife' },
   peerPlay:   { amount:6,  dailyMax:24, label:'ペアを連れて遊ぶ', releaseFlag:'assistantPeer' },
+  // 助手ライフのできごと(2026-11-11 社長 案A「仲良し度を少し上げる」)。場面に出た人それぞれ +4(珍しいできごとは +8)・1日 +12 まで。量は呼ぶ側が渡す(56-assistant-life-ux.jsx)
+  lifeDaily:  { amount:8,  dailyMax:12, label:'助手ライフのできごとを見る', releaseFlag:'assistantLifeDailyScene' },
   // ③ 3人の掛け合いは3人それぞれ・ミニイベントと仲直りは2人それぞれ(2026-11-07 社長)
   peerTrio:   { amount:3,  dailyMax:6,  label:'助手3人の掛け合いを見る', releaseFlag:'assistantPeer' },
   peerEvent:  { amount:8,  dailyMax:16, label:'助手どうしのミニイベントを見る', releaseFlag:'assistantPeer' },
@@ -24348,3 +24350,6 @@ const ASSISTANT_PEER_REACTION_REWRITES = Object.freeze({
   sorashido: { token:{ e:'happy', t:'友情のしるし・・・でーじうれしいです・・・！ {c}、ありがとうございます' } },
 });
 // ===== ASSISTANT_PEER_REWRITES ここまで =====
+// ===== ASSISTANT_LIFE_DAILY_TALKS ここから(tools/assistant/life-daily-import.js で生成・手で直さない) =====
+const ASSISTANT_LIFE_DAILY_TALKS = {"lines":{},"scenes":[],"rares":[]};
+// ===== ASSISTANT_LIFE_DAILY_TALKS ここまで =====
