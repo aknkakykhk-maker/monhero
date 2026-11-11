@@ -15,6 +15,33 @@
 //
 // 一覧と中身は同じ画面で切り替える(selected が null なら一覧)。
 // 画面(gameState)を2つに分けると、戻るたびに一覧を組み直すことになるため。
+// 終わったイベントの横長の告知画像。押すと大きく見られる(2026-11-11)。画像の無い回・読めなかったときは何も出さない。
+// 表示専用。保存も報酬も触らない
+function RhythmHistoryBanner({ event }) {
+  const src = rhythmEventBanner(event);
+  const [failed, setFailed] = useState(false);
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => { setFailed(false); setZoom(false); }, [src]);
+  if (!src || failed) return null;
+  const name = event && event.name ? event.name : 'イベント';
+  return (
+    <>
+      <button type="button" data-rhythm-history-banner onClick={() => setZoom(true)} aria-label={`${name}の画像を大きく見る`}
+        className="relative mb-2 block w-full overflow-hidden rounded-2xl border border-fuchsia-300/30 active:scale-[.98]">
+        <img src={src} alt={`${name}の告知`} onError={() => setFailed(true)} loading="lazy" decoding="async" className="block w-full landscape:max-h-[45vh] landscape:object-contain landscape:bg-black/40"/>
+        <span aria-hidden="true" className="absolute bottom-1 right-1 rounded-lg bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-white">🔍 大きく見る</span>
+      </button>
+      {zoom && (
+        <div data-rhythm-history-banner-zoom role="dialog" aria-label={`${name}の画像`} onClick={() => setZoom(false)}
+          className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-2 bg-black/85 p-3">
+          <img src={src} alt={`${name}の告知`} className="max-h-[80%] max-w-full rounded-xl object-contain"/>
+          <button type="button" data-rhythm-history-banner-close onClick={() => setZoom(false)}
+            className="min-h-[44px] rounded-xl bg-white/15 px-6 text-xs font-black text-white">閉じる</button>
+        </div>
+      )}
+    </>
+  );
+}
 function RhythmHistoryScreen({
   entries, selected, board, divisionId, rankingBreederIcon,
   onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
@@ -113,6 +140,7 @@ function RhythmHistoryScreen({
         )}
         {selected&&(
           <>
+            {selected.kind==='limited'&&<RhythmHistoryBanner event={selected.event}/>}
             <div className="mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3">
               <div className="flex items-center gap-2">
                 <span className="rounded-lg bg-slate-800 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-400">終了</span>
