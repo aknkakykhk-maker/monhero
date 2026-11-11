@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42f7ba1b193a5f70
+// source-sha256: 8fe5af085ba577f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74,7 +74,7 @@ const MH_SCREEN_TRAIL = (() => {
       document.addEventListener('visibilitychange', () => {
         last = 0;
       });
-      setInterval(() => {
+      const gapWatch = setInterval(() => {
         const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
         if (document.visibilityState !== 'visible') {
           last = 0;
@@ -83,6 +83,7 @@ const MH_SCREEN_TRAIL = (() => {
         if (last > 0 && now - last > 1000) push('gap', Math.round(now - last));
         last = now;
       }, 500);
+      if (gapWatch && typeof gapWatch.unref === 'function') gapWatch.unref();
     } catch (_) {}
   }
   return {
