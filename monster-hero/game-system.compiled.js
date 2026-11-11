@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 429941b5e3e44c19
+// source-sha256: 1d7139d4760ce1f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19238,6 +19238,70 @@ const MARKET_CURRENCY_META = Object.freeze({
 });
 const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
 const marketPriceText = item => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost) || 0)).toLocaleString());
+const ASSISTANT_MARKET_PERK_KEY = 'mh_assistant_market_perk_v1';
+const assistantMarketPerkCandidates = items => (Array.isArray(items) ? items : []).filter(it => it && it.type === 'item' && it.shop !== false && it.available !== false && !it.giftOnly && !it.currency && it.usage !== 'soulRankRespec' && Number(it.cost) >= 100 && Number(it.cost) <= 5000).sort((a, b) => String(a.id) < String(b.id) ? -1 : 1);
+const assistantMarketPerkHash = text => {
+  let h = 0;
+  for (const ch of String(text)) h = h * 31 + ch.charCodeAt(0) >>> 0;
+  return h;
+};
+const assistantMarketPerkPick = (items, dayKey) => {
+  const list = assistantMarketPerkCandidates(items);
+  return list.length ? list[assistantMarketPerkHash(dayKey) % list.length] : null;
+};
+const assistantMarketPerkCost = cost => Math.max(1, Math.floor((Number(cost) || 0) * 0.9));
+const normalizeAssistantMarketPerk = v => ({
+  day: v && typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : '',
+  used: !!v && v.used === true
+});
+let assistantMarketPerkState = {
+  loaded: false,
+  day: '',
+  used: false
+};
+const assistantMarketPerkLoad = async () => {
+  let saved = null;
+  try {
+    saved = await storeGet(ASSISTANT_MARKET_PERK_KEY, null, false);
+  } catch {
+    saved = null;
+  }
+  assistantMarketPerkState = {
+    loaded: true,
+    ...normalizeAssistantMarketPerk(saved)
+  };
+  return assistantMarketPerkState;
+};
+const assistantMarketPerkUsedToday = () => assistantMarketPerkState.day === jstDayKey4() && assistantMarketPerkState.used;
+const assistantMarketPerkMarkUsed = async () => {
+  const day = jstDayKey4();
+  assistantMarketPerkState = {
+    loaded: true,
+    day,
+    used: true
+  };
+  try {
+    await storeSet(ASSISTANT_MARKET_PERK_KEY, {
+      day,
+      used: true
+    }, false);
+  } catch {}
+};
+const assistantMarketPerkToday = () => {
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
+  const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
+  if (!item) return null;
+  if (!assistantMarketPerkState.loaded) {
+    void assistantMarketPerkLoad();
+    return null;
+  }
+  return {
+    itemId: item.id,
+    itemName: item.name,
+    discountedCost: assistantMarketPerkCost(item.cost),
+    used: assistantMarketPerkUsedToday()
+  };
+};
 const MarketBalanceBar = ({
   balances
 }) => React.createElement("div", {
@@ -65364,6 +65428,21 @@ function BreederMarketScreen({
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
+  const [perkTick, setPerkTick] = useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    Promise.resolve(assistantMarketPerkLoad()).then(() => {
+      if (alive) setPerkTick(n => n + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const perkToday = (() => {
+    void perkTick;
+    const p = assistantMarketPerkToday();
+    return p && !p.used ? p : null;
+  })();
   const [rebirth, setRebirth] = useState(null);
   const [sectionTabs, setSectionTabs] = useState(() => initialSection === 'card' && cardShopScrollMemo.pending && cardShopScrollMemo.tab ? {
     card: cardShopScrollMemo.tab
@@ -65447,7 +65526,12 @@ function BreederMarketScreen({
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-  const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false).map(item => perkToday && item.id === perkToday.itemId ? {
+    ...item,
+    cost: perkToday.discountedCost,
+    perk: true,
+    perkBaseCost: item.cost
+  } : item);
   const costumeItems = marketItems.filter(item => item.type === 'costume');
   const diamondTabs = [{
     key: 'disc',
@@ -65683,6 +65767,10 @@ function BreederMarketScreen({
       const result = await sheet.confirm(count);
       if (result === true || result?.ok) {
         if (sheet.rebirth && ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        if (sheet.item && sheet.item.perk) {
+          await assistantMarketPerkMarkUsed();
+          setPerkTick(n => n + 1);
+        }
         setSheet(null);
       }
     } finally {
@@ -65722,6 +65810,7 @@ function BreederMarketScreen({
       key: item.id
     }, showBase && React.createElement(MarketProductCard, {
       previewIcon: previewIcon,
+      ribbon: item.perk ? '🛍 助手のおすすめ 1割引き' : null,
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked || giftLocked,
@@ -65730,7 +65819,7 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
         item,
-        stackable: item.type === 'item',
+        stackable: item.type === 'item' && !item.perk,
         confirm: count => onBuy(item, count),
         rebirth: item.type === 'disc' ? {
           monsterId: item.id,
@@ -177144,6 +177233,7 @@ function DebugTrialsPanel({
     }, label))));
   })));
 }
+if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday;
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');

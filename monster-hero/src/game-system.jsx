@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8abbdf1a6c398b83
+// generated-sha256: 816b22c60d04e031
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13224,6 +13224,50 @@ const MARKET_CURRENCY_META = Object.freeze({
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
   : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
+
+// ==== 助手がマーケットにいるときの得(2026-11-08 社長・2026-11-11 ナカヨシ10と分担) ====
+// 助手が居場所「マーケット」にいるあいだ、その日のおすすめ品1つが1割引き(1日1回・1個まで・ランキングに効かない)。
+// ・おすすめ品: ダイヤで買う「道具」のうち、買える物(100〜5,000ダイヤ・魂格再編の書は外す)から、その日(朝4時区切り)の日付で1つ。同じ日は同じ品
+// ・割引き: 値段の9割(切り捨て・1ダイヤ未満にならない)。割引き中の品は1個だけ買える(まとめ買いの窓を出さない)
+// ・1日1回の印: 新しい保存キー mh_assistant_market_perk_v1 に { day, used } を足すだけ(既存のキーは触らない)。買えたときだけ使用済みにする
+// ・助手がマーケットにいるかは ASSISTANT_LIFE_LINKS 側(assistantLifeMarketWho)が決める。いなければ何も出さず、値段も変えない
+const ASSISTANT_MARKET_PERK_KEY = 'mh_assistant_market_perk_v1';
+const assistantMarketPerkCandidates = (items) => (Array.isArray(items) ? items : [])
+  .filter(it => it && it.type === 'item' && it.shop !== false && it.available !== false && !it.giftOnly && !it.currency
+    && it.usage !== 'soulRankRespec' && Number(it.cost) >= 100 && Number(it.cost) <= 5000)
+  .sort((a, b) => (String(a.id) < String(b.id) ? -1 : 1));
+const assistantMarketPerkHash = (text) => { let h = 0; for (const ch of String(text)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const assistantMarketPerkPick = (items, dayKey) => {
+  const list = assistantMarketPerkCandidates(items);
+  return list.length ? list[assistantMarketPerkHash(dayKey) % list.length] : null;
+};
+const assistantMarketPerkCost = (cost) => Math.max(1, Math.floor((Number(cost) || 0) * 0.9));
+const normalizeAssistantMarketPerk = (v) => ({
+  day: v && typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : '',
+  used: !!v && v.used === true,
+});
+let assistantMarketPerkState = { loaded: false, day: '', used: false };
+const assistantMarketPerkLoad = async () => {
+  let saved = null;
+  try { saved = await storeGet(ASSISTANT_MARKET_PERK_KEY, null, false); } catch { saved = null; }
+  assistantMarketPerkState = { loaded: true, ...normalizeAssistantMarketPerk(saved) };
+  return assistantMarketPerkState;
+};
+const assistantMarketPerkUsedToday = () => assistantMarketPerkState.day === jstDayKey4() && assistantMarketPerkState.used;
+const assistantMarketPerkMarkUsed = async () => {
+  const day = jstDayKey4();
+  assistantMarketPerkState = { loaded: true, day, used: true };
+  try { await storeSet(ASSISTANT_MARKET_PERK_KEY, { day, used: true }, false); } catch { /* 保存できなくてもこの会話の間は使用済み */ }
+};
+// 助手がいまマーケットにいて、今日のおすすめ品があるときだけ { itemId, itemName, discountedCost, used } を返す(無ければ null)。
+// 保存の読み込みが済むまでは null(まだ「使ったか」が分からないので出さない)。助手ライフの帯が ASSISTANT_LIFE_LINKS.marketPerkToday 経由で呼ぶ
+const assistantMarketPerkToday = () => {
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
+  const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
+  if (!item) return null;
+  if (!assistantMarketPerkState.loaded) { void assistantMarketPerkLoad(); return null; }
+  return { itemId: item.id, itemName: item.name, discountedCost: assistantMarketPerkCost(item.cost), used: assistantMarketPerkUsedToday() };
+};
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
 // 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
@@ -40465,6 +40509,11 @@ function BreederMarketScreen({
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
   const [sheetPending,setSheetPending]=useState(false);
+  // 助手がマーケットにいるときの「今日のおすすめ品1割引き」(20-market-notices-help.jsx の assistantMarketPerkToday)。
+  // 保存の読み込みが済んだら描き直す。割引き中の品は cost を9割にした写しに差し替え、画面の値段も買う処理の値段もそれを読む
+  const [perkTick,setPerkTick]=useState(0);
+  React.useEffect(()=>{ let alive=true; Promise.resolve(assistantMarketPerkLoad()).then(()=>{ if(alive) setPerkTick(n=>n+1); }); return ()=>{ alive=false; }; },[]);
+  const perkToday=(()=>{ void perkTick; const p=assistantMarketPerkToday(); return p&&!p.used?p:null; })();
   // 円盤石を買えたときの「円盤石から再生」の演出(DiscRebirthFx)。{ monsterId, discIcon }
   const [rebirth,setRebirth]=useState(null);
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
@@ -40524,7 +40573,8 @@ function BreederMarketScreen({
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false)
+    .map(item=>perkToday&&item.id===perkToday.itemId?{...item,cost:perkToday.discountedCost,perk:true,perkBaseCost:item.cost}:item);
   // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
   const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
@@ -40634,6 +40684,8 @@ function BreederMarketScreen({
       if(result===true||result?.ok){
         // 円盤石なら、買えたあとに「円盤石から再生」を出す(円盤石は1体1回なので、その子を初めて手に入れたときだけ)
         if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        // 割引き中の品を買えたら、今日の1割引きは使用済み(買えたときだけ。買えなかったら残る)
+        if(sheet.item&&sheet.item.perk){ await assistantMarketPerkMarkUsed(); setPerkTick(n=>n+1); }
         setSheet(null);
       }
     } finally { sheetBusyRef.current = false; setSheetPending(false); }
@@ -40661,10 +40713,10 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':null}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
+          onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
@@ -94135,6 +94187,9 @@ function DebugTrialsPanel({ onChange, bare = false }) {
     </section>
   );
 }
+
+// 助手ライフの帯(ナカヨシ10)が「マーケットの1割引き」を引く受け口(2026-11-11)。ASSISTANT_LIFE_LINKS は 56-assistant-life-house.jsx の定義より後の並びでしか触れないので、ここ(並びの後ろ)に置く
+if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday;
 
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
