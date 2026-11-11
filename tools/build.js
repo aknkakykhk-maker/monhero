@@ -123,6 +123,11 @@ if (process.argv.includes('--check')) {
     const r = require('./build-card-tournament-bundle').run({ check: true });
     if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
   }
+  // フレンド対戦のサーバの関数の計算の写し(masmon-pvp/engine.js)が、いまの計算と技データと合っているか
+  {
+    const r = require('./masmon-battle/build-masmon-pvp-bundle').run({ check: true });
+    if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
+  }
   // 本体JSのキャッシュキーが本体の中身と合っているか(合わないと、端末に古い本体が残ったり、ためた物を使えなかったりする)
   {
     const r = require('./stamp-game-build').checkGameBuild();
@@ -187,6 +192,13 @@ if (process.argv.includes('--check')) {
   const r = require('./build-card-tournament-bundle').run();
   if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
   if (r.changed) console.log(`大会のサーバの関数のルールの写しを作り直しました(${r.size}文字)`);
+}
+
+// フレンド対戦のサーバの関数(supabase/functions/masmon-pvp)が使う、計算の本体と技データの写しを作り直す
+{
+  const r = require('./masmon-battle/build-masmon-pvp-bundle').run();
+  if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
+  if (r.changed) console.log('フレンド対戦のサーバの関数の計算の写しを作り直しました');
 }
 
 // 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の

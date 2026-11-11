@@ -16,6 +16,10 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/56-assistant-life-masmon.jsx`
 - `monster-hero/src/parts/56-assistant-life-masmon-*.jsx`
 - `monster-hero/src/parts/56-assistant-masmon-battle-view.jsx`
+- `monster-hero/src/parts/56-assistant-masmon-battle-beta.jsx`
+- `monster-hero/src/parts/56-assistant-masmon-pvp.jsx`
+- `supabase/functions/masmon-pvp/*`
+- `supabase/migrations/202611110001_masmon_pvp.sql`
 - `monster-hero/data/assistant-masmon-battle.js`
 - `monster-hero/data/assistant-masmon-techs.js`
 - `tools/assistant/assistant-masmon-*`

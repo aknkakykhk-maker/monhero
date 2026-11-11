@@ -72,6 +72,15 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
     check(`${T}① 家の上に3行(いま・今日・次)・押せる所は44px以上・はみ出さない`, !!b && ['now', 'today', 'next'].every(k => b.keys.includes(k)) && b.small === 0 && !b.over && !b.guide, JSON.stringify(b));
     check(`${T}① 今日の行に「あと◯回」と上がるもの・次の行に「あと◯」`, !!b && /今\d組|済み|いまは無し/.test(b.today) && /友情Lv/.test(b.today) && /あと/.test(b.next), b ? `${b.today} / ${b.next}` : '');
     await shot(page, v, '2-house-board');
+    // ❶C 時間帯のできごと: 札がある・44px以上・はみ出さない → 聞くと保存(新しいキー)・もう一度は押せない・ミッションには1回だけ
+    const dly = await page.evaluate(() => { const d = document.querySelector('[data-assistant-life-daily]'); if (!d) return null; const r = d.getBoundingClientRect();
+      return { btn: !!d.querySelector('[data-assistant-life-daily-listen]'), small: [...d.querySelectorAll('button')].filter(x => x.getBoundingClientRect().height < 44).length, over: r.right > innerWidth + 1 || r.left < -1, stamps: d.querySelector('[data-assistant-life-daily-stamps]') ? d.querySelector('[data-assistant-life-daily-stamps]').getAttribute('data-assistant-life-daily-stamps') : null }; });
+    check(`${T}❶C できごとの札・聞く・7日の印・はみ出さない`, !!dly && dly.btn && dly.small === 0 && !dly.over && dly.stamps === '0', JSON.stringify(dly));
+    await shot(page, v, '5-daily-before');
+    await page.locator('[data-assistant-life-daily-listen]').click(); await page.waitForTimeout(500);
+    const heard = await page.evaluate(async () => ({ btn: !!document.querySelector('[data-assistant-life-daily-listen]'), stamps: document.querySelector('[data-assistant-life-daily-stamps]').getAttribute('data-assistant-life-daily-stamps'), saved: await Promise.resolve(storeGet('mh_assistant_life_daily_v1', null, false)) }));
+    check(`${T}❶C 聞くと1日ぶん印が1つ付き保存される・同じ時間帯は2回聞けない`, !heard.btn && heard.stamps === '1' && heard.saved && heard.saved.days.length === 1 && heard.saved.heard.length === 1, JSON.stringify(heard));
+    await shot(page, v, '5-daily-after');
     // ❓ 見かた で1枚をいつでも開ける
     await page.locator('[data-assistant-life-guide-open]').click(); await page.waitForTimeout(300);
     const reopen = await page.evaluate(() => ({ guide: !!document.querySelector('[data-assistant-life-guide]'), glow: !!document.querySelector('.mhl-glow') }));
