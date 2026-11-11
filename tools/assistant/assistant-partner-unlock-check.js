@@ -114,12 +114,14 @@ check('解放したときはその場で書く', /if \(r\.stateChanged\) \{ save
 // 古いバックアップを戻す道(2026-11-11 Fable の確認): 先に助手を選んで earn になった端末へ、印の無い古いバックアップを戻しても助手を失わない
 {
   const backup = read('monster-hero/data/mhsave-backup.js');
-  const sites = (app.match(/if \(!keys\.includes\('mh_assistant_partner_v1'\)\) window\.localStorage\.setItem\('mh_assistant_partner_v1', JSON\.stringify\(\{ v:1, mode:'all', first:null, unlocked:\[\], noticed:\[\] \}\)\);/g) || []).length;
-  check('戻す処理(コード・ファイル)は、印が無いバックアップなら「今の人」を書く(60-app の2か所)', sites === 2, `${sites}か所`);
-  check('戻す処理(.mhsave の補助)も同じ', /if \(keys\.indexOf\('mh_assistant_partner_v1'\) < 0\) window\.localStorage\.setItem\('mh_assistant_partner_v1', JSON\.stringify\(\{ v:1, mode:'all', first:null, unlocked:\[\], noticed:\[\] \}\)\);/.test(backup));
+  // 2026-11-12 から、3か所の復元は data/mhsave-backup.js の共通の口(mhApplyBackupRestore)を呼ぶ
+  const sites = (app.match(/window\.mhApplyBackupRestore\(data, keys\);/g) || []).length;
+  check('戻す処理(コード・ファイル)は共通の口を呼ぶ(60-app の2か所)', sites === 2, `${sites}か所`);
+  check('共通の口は、印が無いバックアップなら「今の人」を書く', /if \(keys\.indexOf\('mh_assistant_partner_v1'\) < 0\) storage\.setItem\('mh_assistant_partner_v1', JSON\.stringify\(\{ v:1, mode:'all', first:null, unlocked:\[\], noticed:\[\] \}\)\);/.test(backup)
+    && /function restoreValue\(modal, value\)\{[\s\S]{0,200}applyBackupRestore\(data, keys\);/.test(backup));
   // 動かして確かめる: .mhsave の補助を、偽の window で動かす
   const store = new Map([['mh_assistant_partner_v1', JSON.stringify({ v: 1, mode: 'earn', first: 'kiki', unlocked: ['kiki'], noticed: [] })]]);
-  const fakeWin = { localStorage: { setItem: (k, v) => store.set(k, String(v)), getItem: (k) => store.get(k) ?? null, key: () => null, length: 0 }, location: { reload() {} } };
+  const fakeWin = { localStorage: { setItem: (k, v) => store.set(k, String(v)), getItem: (k) => store.get(k) ?? null, removeItem: (k) => store.delete(k), key: () => null, length: 0 }, location: { reload() {} } };
   const doc = { querySelector: () => null, createElement: () => ({ setAttribute() {}, appendChild() {}, style: {}, addEventListener() {} }), body: { appendChild() {} }, addEventListener() {}, querySelectorAll: () => [], documentElement: {}, readyState: 'loading' };
   const bctx = { window: fakeWin, document: doc, MutationObserver: class { observe() {} }, Array, setTimeout: () => 0, btoa: (s) => Buffer.from(s, 'binary').toString('base64'), atob: (s) => Buffer.from(s, 'base64').toString('binary'), unescape, escape, encodeURIComponent, decodeURIComponent, console: { error() {} } };
   vm.createContext(bctx);

@@ -587,6 +587,7 @@ HP、ガッツ、現在WAVE、手札、山札、バフ、技強化、スコア�
 - `window.storage` やメモリフォールバックの内容は書き出さず、`localStorage` 専用。
 - 署名、暗号化、チェックサム、スキーマ検証、値型検証はない。
 - 復元は既存の `mh_` キーを全消去せず、コードに含まれるキーだけ上書きする。
+- 例外(2026-11-12・社長の選択 案1): 3か所の復元は共通の口 `mhApplyBackupRestore`(`data/mhsave-backup.js`)を通り、「バックアップが前から遊んでいる人のもの(`mh_onboarded` が true・`mh_story_one_at_a_time_v1` が true でない)」かつ「戻す前の端末が新しく始めた端末(`mh_story_one_at_a_time_v1` が true)」のときだけ、はじめての人の印の一覧 `MH_FIRST_TIMER_MARK_KEYS`(17キー)のうちバックアップに無いものを消す。遊んだ記録・一覧の外は消さない。印を増やしたら一覧へ足す(見張り `tools/boot/restore-first-timer-marks-check.js`)。
 - バックアップコードには進行データと表示名が含まれるため、公開場所へ貼らない。
 
 ## 7. ランキングデータ

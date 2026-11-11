@@ -25,6 +25,57 @@
     return { data, keys };
   }
 
+  // ── 復元の共通の口(2026-11-12・社長の選択 案1「一覧の印だけ消す」・保存を消すことは社長が確認済み) ──
+  // 復元は3か所(このファイルのファイルから戻す・60-app.jsx のコードから戻す/ファイルから戻す)。どれもここを呼ぶ。
+  // 新しく始めた端末(はじめての案内を通った端末)に、前から遊んでいる人のバックアップを戻すと、
+  // バックアップに無い「はじめての人の印」が端末に残り、前から遊んでいる人がはじめての人の扱いを受けていた。
+  // 両方そろったときだけ、下の一覧の印のうちバックアップに無いものを消す(遊んだ記録には触らない。一覧の外は消さない):
+  //   ① バックアップが前から遊んでいる人のもの(mh_onboarded が true・無ければ名前とアイコンが決まっている。mh_story_one_at_a_time_v1 が true でない)
+  //   ② いまの端末が新しく始めた端末(戻す前の mh_story_one_at_a_time_v1 が true)
+  // 消したあとの一覧の印はバックアップと同じになる(元の端末と同じ扱い)ので、お詫び・記念・報酬は二重に配られない。
+  // ★はじめての人だけに書く印を増やしたら、ここへ足す(見張り: tools/boot/restore-first-timer-marks-check.js)
+  const FIRST_TIMER_MARK_KEYS = Object.freeze([
+    'mh_story_one_at_a_time_v1', 'mh_first_steps_v1', 'mh_first_battle_done_v1',
+    'mh_kiki_intro_seen_v1', 'mh_momosuke_intro_seen_v1', 'mh_tactics_intro_seen_v1',
+    'mh_story_assistant_chat_seen_v1', 'mh_story_tactics_types_seen_v1', 'mh_story_card_battle_seen_v1',
+    'mh_rhythm_look_intro_seen_v1', 'mh_rhythm_event_story_v1',
+    'mh_compensation_waived_v1', 'mh_inherited_unique_level_compensation_v1', 'mh_rhythm_grand_open_gift_v1',
+    'mh_sorashido_gift_v1', 'mh_rhythm_event_reward_v1', 'mh_mission_renew_v1',
+  ]);
+  function parseStored(raw){
+    if (typeof raw !== 'string') return undefined;
+    try { return JSON.parse(raw); } catch (_) { return undefined; }
+  }
+  function isVeteranBackup(data){
+    if (parseStored(data.mh_story_one_at_a_time_v1) === true) return false;
+    const onboarded = parseStored(data.mh_onboarded);
+    if (onboarded === true) return true;
+    if (onboarded !== undefined && onboarded !== null) return false;
+    // 印が無い古いバックアップは、起動と同じ見分け方(名前とアイコンが決まっている)
+    const name = parseStored(data.mh_breeder_name);
+    const icon = parseStored(data.mh_breeder_icon);
+    return typeof name === 'string' && !!name.trim() && name !== '名無しのブリーダー' && typeof icon === 'string' && icon.length > 0;
+  }
+  function applyBackupRestore(data, keys){
+    const storage = window.localStorage;
+    let freshDevice = false;
+    try { freshDevice = parseStored(storage.getItem('mh_story_one_at_a_time_v1')) === true; } catch (_) { freshDevice = false; }
+    const veteran = isVeteranBackup(data);
+    keys.forEach(key => storage.setItem(key, data[key]));
+    const cleared = [];
+    if (veteran && freshDevice) {
+      FIRST_TIMER_MARK_KEYS.forEach(key => {
+        if (keys.indexOf(key) >= 0) return;
+        try { if (storage.getItem(key) !== null) { storage.removeItem(key); cleared.push(key); } } catch (_) {}
+      });
+    }
+    // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+    if (keys.indexOf('mh_assistant_partner_v1') < 0) storage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
+    return { veteran, freshDevice, cleared };
+  }
+  window.mhApplyBackupRestore = applyBackupRestore;
+  window.MH_FIRST_TIMER_MARK_KEYS = FIRST_TIMER_MARK_KEYS;
+
   function fileStamp(date){
     const pad = value => String(value).padStart(2, '0');
     return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
@@ -62,9 +113,7 @@
   function restoreValue(modal, value){
     try {
       const { data, keys } = decodeBackupCode(value);
-      keys.forEach(key => window.localStorage.setItem(key, data[key]));
-      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
-      if (keys.indexOf('mh_assistant_partner_v1') < 0) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
+      applyBackupRestore(data, keys);
       setMessage(modal, '復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch (_) { setMessage(modal, 'バックアップファイルが正しくありません', true); }

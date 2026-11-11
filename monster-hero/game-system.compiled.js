@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45ca8689d45134b3
+// source-sha256: 95cfd77a8bac9d3e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -198538,14 +198538,8 @@ function MonsterHeroGame() {
         setRestoreMsg('コードが正しくありません');
         return;
       }
-      keys.forEach(k => window.localStorage.setItem(k, data[k]));
-      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
-        v: 1,
-        mode: 'all',
-        first: null,
-        unlocked: [],
-        noticed: []
-      }));
+      if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+      window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch {
@@ -198635,14 +198629,8 @@ function MonsterHeroGame() {
           if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
-          keys.forEach(k => window.localStorage.setItem(k, data[k]));
-          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
-            v: 1,
-            mode: 'all',
-            first: null,
-            unlocked: [],
-            noticed: []
-          }));
+          if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+          window.mhApplyBackupRestore(data, keys);
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch {
