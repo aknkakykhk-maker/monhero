@@ -144,7 +144,26 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
   atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
   kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
+// 社長が描いた寝顔(2026-11-11 社長「寝顔こっちでつくる」→ 7枚): 目のまわりだけを重ねる絵。tools/assistant/life-sleep-faces-make.js で作る。
+//   助手の絵のフォルダ(imageDir)の sleep/ の下に、元の絵と同じ並び(face/・halloween/・card-master/)で置く。ここにある絵では SVG の代わりにこれを重ねる
+//   絵の無い助手・着せ替え(ももすけ など)は、いままでどおり下の SVG の閉じた目
+const ASSISTANT_LIFE_SLEEP_FACES = Object.freeze(new Set([
+  'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
+  'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
+  'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+]));
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  {
+    const who0 = typeof assistantById === 'function' ? assistantById(pid) : null;
+    const s0 = String(src || '').replace(/[?#].*$/, ''), dir = who0 && who0.imageDir ? `${who0.imageDir}/` : null;
+    const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
+    if (rel && ASSISTANT_LIFE_SLEEP_FACES.has(rel)) {
+      // 立ち絵の影(drop-shadow)は重ねる絵には付けない(目のまわりに暗い輪が出る)。明るさ・色の重ねは同じにする
+      const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      return <img data-assistant-life-roomview-sleep-eyes={pid} src={`${dir}sleep/${rel}`} alt="" aria-hidden="true" draggable={false}
+        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...style, filter }}/>;
+    }
+  }
   const isFace = /\/face\//.test(String(src || ''));
   const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
