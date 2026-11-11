@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a9d8c379dc05f1a
+// generated-sha256: 8f0bb0d6c1ba9145
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14715,6 +14715,62 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
   const actions=evaluateEnemyActions(ent,currentDist,state),total=actions.reduce((sum,a)=>sum+(a.available?a.weight:0),0);
   return actions.map(a=>({...a,probability:a.available&&total>0?a.weight/total:0}));
 };
+// ===== タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料「行動選択、距離、スキルの組み合わせ、難易度ごとの戦術を改善」)=====
+// ★本番では使わない。デバッグ設定の「敵の作戦AI(試作)」を選んだデバッグ戦のときだけ通す。
+//   社長が決めるまで、本番の強さ・ランキング対象のモードは chooseEnemyAction(決まった重みのくじ)のまま。
+// ★守ること: ①予告してから動く(選ぶのは今までどおり1ターン前。移動先も予告に出した値だけを使う)
+//   ②狙い(ヘイト)は変えない。画面の「狙われる確率◯%」と食い違わないように、ここは「何をするか」と「どこへ動くか」だけ
+//   ③どの手にも対抗手段がある、を崩さない(技の倍率・本数は変えない。重みだけを動かす)
+// 段: 0 いまのまま / 1 間合いを読む / 2 状況を読む / 3 技をつなぐ(上の段は下の段を全部含む)
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
+  Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
+  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'}),
+  Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
+  Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'}),
+]);
+// ai … { level, pressure:[4](敵がその間合いにいるときの味方の攻めの強さ), aliveSlots:[], lowCount, maxDef, lastType }
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others=[0,1,2,3].filter(d=>d!==currentDist);
+  return others.reduce((a,b)=>((pressure[b]||0)<(pressure[a]||0)?b:a),others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state={}, ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  const defs=Array.isArray(state.definitions)?state.definitions:[];
+  if(level<1||state.charging||state.piercing||!ent)return defs;
+  const pressure=Array.isArray(ai.pressure)&&ai.pressure.length===4?ai.pressure.map(v=>Math.max(0,Number(v)||0)):[0,0,0,0];
+  const best=tacticsEnemyAiBestDist(currentDist,pressure);
+  const ratio=pressure[best]>0?pressure[currentDist]/pressure[best]:1;
+  const maxHp=Math.max(0,Number(ent.maxHp)||0), hpR=maxHp>0?Math.max(0,Number(ent.hp)||0)/maxHp:1;
+  const alive=Array.isArray(ai.aliveSlots)?ai.aliveSlots:[];
+  const top=Math.max(0,...pressure);
+  return defs.map(def=>{
+    let w=def.weight;
+    if(def.type==='MOVE')w=ratio<=1?0:(ratio>=1.15?w*3:w);
+    if(level>=2){
+      if(def.type==='WAIT')w=0;
+      if(def.type==='REGEN'&&hpR<0.5)w*=3;
+      if(def.type==='ROAR')w=hpR<0.35?0:((hpR>0.7&&!(Number(state.roarStacks)>0))?w*2:w);
+      if(def.variant==='allout')w=alive.length<=1?w*0.3:w*(alive.length/2);
+      if(def.variant==='sweep')w=alive.includes(currentDist)?(pressure[currentDist]>=top*0.95?w*2:w):0;
+    }
+    if(level>=3){
+      if(def.type==='CHARGE'&&ai.lastType==='ROAR')w*=4;
+      if(def.type==='CHARGE'&&(Number(ai.lowCount)||0)>=1)w*=2;
+      if(def.type==='PIERCE_CHARGE'&&(Number(ai.maxDef)||0)>=300)w*=2;
+    }
+    return w===def.weight?def:{...def,weight:w};
+  });
+};
+const chooseTacticsEnemyActionAi = (ent,currentDist,random=Math.random,state={},ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  if(level<1)return chooseEnemyAction(ent,currentDist,random,state);
+  const intent=chooseEnemyAction(ent,currentDist,random,{...state,definitions:tacticsEnemyAiDefinitions(ent,currentDist,state,ai)});
+  if(intent&&intent.type==='MOVE'&&Array.isArray(ai.pressure)){
+    const targetDist=tacticsEnemyAiBestDist(currentDist,ai.pressure);
+    return {...intent,targetDist,label:`移動: ${RANGE_LABELS[targetDist]}`};
+  }
+  return intent;
+};
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
@@ -27873,6 +27929,19 @@ const tacticsTargetName = (units, slotIndex) => {
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 // copy を渡すと、コピーも単体攻撃の狙いの候補になる。当たったら targetCopy: true(targetSlot は付けない。枠の番号と混ぜない)
+// 敵の作戦AI(試作)が見る「その間合いにいると味方からどれだけ攻められるか」。
+// 立っている子の攻撃 × 枠と敵の間合いの差の倍率(1.5/1.3/1.1/0.9・与ダメの式と同じ)× (1 + その枠の間合いの補正)。
+// slotBonus[i] … 枠 i の「WAVE 報酬の間合いボーナス + そこに立つ子の適性」(distTotalBonus と同じ値)
+const TACTICS_ENEMY_AI_DIST_MULT = Object.freeze([1.5,1.3,1.1,0.9]);
+const tacticsEnemyPressure = (units, slotBonus=[0,0,0,0]) => [0,1,2,3].map(d => {
+  let sum=0;
+  tacticsAliveSlots(units).forEach(i => {
+    const u=normalizeTacticsUnit(units[i]);
+    if(!u)return;
+    sum+=Math.max(0,Number(u.atk)||0)*TACTICS_ENEMY_AI_DIST_MULT[Math.abs(i-d)]*(1+(Number((slotBonus||[])[i])||0));
+  });
+  return sum;
+});
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
@@ -96175,6 +96244,10 @@ function MonsterHeroGame() {
   // デバッグ戦で選んでいるモードと難易度(画面に出す選択。極限は実際の difficulty が 'Normal' になるので別に持つ)
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
+  // タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料)。0 = いまのまま。デバッグ戦の中だけで効く(保存しない)
+  const [debugEnemyAiLevel, setDebugEnemyAiLevel] = useState(0);
+  const debugEnemyAiLevelRef = useRef(0);
+  useEffect(()=>{debugEnemyAiLevelRef.current=debugEnemyAiLevel;},[debugEnemyAiLevel]);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   // デバッグ戦で自分で選んだパーティー(編成の入れ物と同じ書き方: 'masu:<id>' か モンスターid)。空なら、いつもの編成のまま
   const [debugPartyIds, setDebugPartyIds] = useState([]);
@@ -105704,8 +105777,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const scripted = battleScenarioIntent(scenario, battleScenarioIntentIndexRef.current, ent, currentDist);
       if (scripted) { battleScenarioIntentIndexRef.current += 1; return scripted; }
     }
+    // 敵の作戦AI(試作): デバッグ戦で段を選んだときだけ tacticsAi が入ってくる(tacticsEnemyAiState)。ふだんは今までどおりのくじ
+    const ai = extraState && extraState.tacticsAi;
+    if (ai && ai.level > 0) return chooseTacticsEnemyActionAi(ent,currentDist,Math.random,{...enemyActionStateFrom(lastIntent), ...extraState},{...ai,lastType:lastIntent?.type||null});
     return chooseEnemyAction(ent,currentDist,Math.random,{...enemyActionStateFrom(lastIntent), ...(extraState||{})});
   }, []);
+  // 敵の作戦AI(試作)へ渡す「いまの盤面」。★デバッグ戦(debugBattleRef)のタクティクスで段を選んだときだけ中身を返す。
+  //   本番・ランキング対象の戦いでは必ず空(= chooseEnemyAction のまま)。狙い(ヘイト)はここでは変えない
+  const tacticsEnemyAiState = () => {
+    const level = debugEnemyAiLevelRef.current;
+    if (!debugBattleRef.current || !isTacticsMode(runMode) || !(level > 0)) return {};
+    const units = tacticsUnitsRef.current || [];
+    const alive = tacticsAliveSlots(units);
+    const us = alive.map(i => normalizeTacticsUnit(units[i])).filter(Boolean);
+    return {tacticsAi:{level,
+      pressure:tacticsEnemyPressure(units,[0,1,2,3].map(i=>distTotalBonus(i))),
+      aliveSlots:alive,
+      lowCount:us.filter(u=>u.hp<u.maxHp*0.4).length,
+      maxDef:Math.max(0,...us.map(u=>Number(u.def)||0))}};
+  };
 
   // 敵の行動を1つ繰り上げる。
   // 「移動の吹き出し」で先に見せた行動は enemyNextIntent に入っているので、
@@ -105726,7 +105816,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
+    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty,enemy?.actionCount),roarStacks:tacticsRoarStacksRef.current,...tacticsEnemyAiState()});
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
     //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
     stepTacticsHate(runMode); // ヘイト(試作): このターンのぶんを足してから狙う
@@ -109779,7 +109869,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     tacticsRoarStacksRef.current=0;
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
-    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
+    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current,...tacticsEnemyAiState()});
     resetTacticsHate(runMode); // ヘイト(試作)は WAVE ごとに0から
     // AIコピーは WAVE の終わりで消える(2026-10-27 社長の答え)。★最初の狙いを決める前に消す
     //   (あとで消すと、新しい WAVE の1ターン目の予告が前の WAVE のコピーを狙ったまま出る・2026-10-28 本番の報告)
@@ -114531,6 +114621,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section data-debug-battle-difficulties><div className="text-[10px] text-slate-500 font-black mb-2">2. 難易度</div><div className="grid grid-cols-3 gap-2">{debugBattleDifficultyIds(debugBattleModeId).map(key=>{const setting=debugBattleDifficultySetting(key);const selected=debugBattleDifficultyId===key;return <button key={key} type="button" data-debug-battle-difficulty={key} aria-pressed={selected} onClick={()=>selectDebugBattle(debugBattleModeId,key)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${selected?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle({bg:'#475569',text:'#cbd5e1',...setting},selected)}>{setting.label||key}</button>;})}</div></section>
               <section data-debug-battle-enemies><div className="text-[10px] text-slate-500 font-black mb-2">3. 敵<small className="ml-1 font-bold text-slate-600">（その敵が出てくるWAVEとして戦う）</small></div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(debugBattleModeId).map(({key,wave:debugWave,enemy:debugEnemy})=><button key={key} type="button" data-debug-battle-enemy={key} aria-pressed={debugEnemyKey===key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><small className="block text-[8px] opacity-70">WAVE {debugWave}</small>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">4. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              {isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode)&&<section data-debug-enemy-ai><div className="text-[10px] text-slate-500 font-black mb-2">4-2. 敵の作戦AI<small className="ml-1 font-bold text-slate-600">（試作・デバッグ戦だけ。本番の敵はいまのまま）</small></div><div className="grid grid-cols-2 gap-2">{TACTICS_ENEMY_AI_LEVELS.map(lv=><button key={lv.id} type="button" data-debug-enemy-ai-option={lv.id} aria-pressed={debugEnemyAiLevel===lv.id} onClick={()=>setDebugEnemyAiLevel(lv.id)} className={`min-h-[52px] px-3 py-1.5 rounded-xl text-left font-black ${debugEnemyAiLevel===lv.id?'bg-amber-800 border-2 border-amber-300 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="block text-[11px]">{lv.id}. {lv.label}</span><small className="block text-[8px] opacity-75 leading-tight">{lv.note}</small></button>)}</div></section>}
               <section data-debug-party>
                 <div className="text-[10px] text-slate-500 font-black mb-2">5. パーティー<small className="ml-1 font-bold text-slate-600">（選んだ順。1番目が勇者モン・4体まで）</small></div>
                 {(()=>{
@@ -114553,7 +114644,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })()}
               </section>
               {/* ★開始の関数をそのまま onClick へ渡すと、押したときのイベントが「極限か」の引数へ入ってしまう */}
-              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">6. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
+              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">6. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}{isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode)&&debugEnemyAiLevel>0?` / 敵AI ${debugEnemyAiLevel}`:''}</small></button>
             </div>
           </main>
         )}

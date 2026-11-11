@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ad7994de179f706
+// source-sha256: 1c9289f91823575d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -21190,6 +21190,76 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
     ...a,
     probability: a.available && total > 0 ? a.weight / total : 0
   }));
+};
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([Object.freeze({
+  id: 0,
+  label: 'いまのまま',
+  note: '決まった重みのくじ(本番と同じ)'
+}), Object.freeze({
+  id: 1,
+  label: '間合いを読む',
+  note: '移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'
+}), Object.freeze({
+  id: 2,
+  label: '状況を読む',
+  note: '様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'
+}), Object.freeze({
+  id: 3,
+  label: '技をつなぐ',
+  note: '咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'
+})]);
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others = [0, 1, 2, 3].filter(d => d !== currentDist);
+  return others.reduce((a, b) => (pressure[b] || 0) < (pressure[a] || 0) ? b : a, others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state = {}, ai = {}) => {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(ai.level) || 0)));
+  const defs = Array.isArray(state.definitions) ? state.definitions : [];
+  if (level < 1 || state.charging || state.piercing || !ent) return defs;
+  const pressure = Array.isArray(ai.pressure) && ai.pressure.length === 4 ? ai.pressure.map(v => Math.max(0, Number(v) || 0)) : [0, 0, 0, 0];
+  const best = tacticsEnemyAiBestDist(currentDist, pressure);
+  const ratio = pressure[best] > 0 ? pressure[currentDist] / pressure[best] : 1;
+  const maxHp = Math.max(0, Number(ent.maxHp) || 0),
+    hpR = maxHp > 0 ? Math.max(0, Number(ent.hp) || 0) / maxHp : 1;
+  const alive = Array.isArray(ai.aliveSlots) ? ai.aliveSlots : [];
+  const top = Math.max(0, ...pressure);
+  return defs.map(def => {
+    let w = def.weight;
+    if (def.type === 'MOVE') w = ratio <= 1 ? 0 : ratio >= 1.15 ? w * 3 : w;
+    if (level >= 2) {
+      if (def.type === 'WAIT') w = 0;
+      if (def.type === 'REGEN' && hpR < 0.5) w *= 3;
+      if (def.type === 'ROAR') w = hpR < 0.35 ? 0 : hpR > 0.7 && !(Number(state.roarStacks) > 0) ? w * 2 : w;
+      if (def.variant === 'allout') w = alive.length <= 1 ? w * 0.3 : w * (alive.length / 2);
+      if (def.variant === 'sweep') w = alive.includes(currentDist) ? pressure[currentDist] >= top * 0.95 ? w * 2 : w : 0;
+    }
+    if (level >= 3) {
+      if (def.type === 'CHARGE' && ai.lastType === 'ROAR') w *= 4;
+      if (def.type === 'CHARGE' && (Number(ai.lowCount) || 0) >= 1) w *= 2;
+      if (def.type === 'PIERCE_CHARGE' && (Number(ai.maxDef) || 0) >= 300) w *= 2;
+    }
+    return w === def.weight ? def : {
+      ...def,
+      weight: w
+    };
+  });
+};
+const chooseTacticsEnemyActionAi = (ent, currentDist, random = Math.random, state = {}, ai = {}) => {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(ai.level) || 0)));
+  if (level < 1) return chooseEnemyAction(ent, currentDist, random, state);
+  const intent = chooseEnemyAction(ent, currentDist, random, {
+    ...state,
+    definitions: tacticsEnemyAiDefinitions(ent, currentDist, state, ai)
+  });
+  if (intent && intent.type === 'MOVE' && Array.isArray(ai.pressure)) {
+    const targetDist = tacticsEnemyAiBestDist(currentDist, ai.pressure);
+    return {
+      ...intent,
+      targetDist,
+      label: `移動: ${RANGE_LABELS[targetDist]}`
+    };
+  }
+  return intent;
 };
 const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'PIERCE_CHARGE' ? '貫通撃の構えをとっている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '攻撃力を上げている' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
 const enemyActionDisplayName = (ent, def) => {
@@ -46189,6 +46259,16 @@ const tacticsTargetName = (units, slotIndex) => {
   return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目のモンスター`;
 };
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
+const TACTICS_ENEMY_AI_DIST_MULT = Object.freeze([1.5, 1.3, 1.1, 0.9]);
+const tacticsEnemyPressure = (units, slotBonus = [0, 0, 0, 0]) => [0, 1, 2, 3].map(d => {
+  let sum = 0;
+  tacticsAliveSlots(units).forEach(i => {
+    const u = normalizeTacticsUnit(units[i]);
+    if (!u) return;
+    sum += Math.max(0, Number(u.atk) || 0) * TACTICS_ENEMY_AI_DIST_MULT[Math.abs(i - d)] * (1 + (Number((slotBonus || [])[i]) || 0));
+  });
+  return sum;
+});
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return {
@@ -177938,6 +178018,11 @@ function MonsterHeroGame() {
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
+  const [debugEnemyAiLevel, setDebugEnemyAiLevel] = useState(0);
+  const debugEnemyAiLevelRef = useRef(0);
+  useEffect(() => {
+    debugEnemyAiLevelRef.current = debugEnemyAiLevel;
+  }, [debugEnemyAiLevel]);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugPartyIds, setDebugPartyIds] = useState([]);
   const [debugOutcome, setDebugOutcome] = useState(null);
@@ -189433,11 +189518,35 @@ function MonsterHeroGame() {
         return scripted;
       }
     }
+    const ai = extraState && extraState.tacticsAi;
+    if (ai && ai.level > 0) return chooseTacticsEnemyActionAi(ent, currentDist, Math.random, {
+      ...enemyActionStateFrom(lastIntent),
+      ...extraState
+    }, {
+      ...ai,
+      lastType: lastIntent?.type || null
+    });
     return chooseEnemyAction(ent, currentDist, Math.random, {
       ...enemyActionStateFrom(lastIntent),
       ...(extraState || {})
     });
   }, []);
+  const tacticsEnemyAiState = () => {
+    const level = debugEnemyAiLevelRef.current;
+    if (!debugBattleRef.current || !isTacticsMode(runMode) || !(level > 0)) return {};
+    const units = tacticsUnitsRef.current || [];
+    const alive = tacticsAliveSlots(units);
+    const us = alive.map(i => normalizeTacticsUnit(units[i])).filter(Boolean);
+    return {
+      tacticsAi: {
+        level,
+        pressure: tacticsEnemyPressure(units, [0, 1, 2, 3].map(i => distTotalBonus(i))),
+        aliveSlots: alive,
+        lowCount: us.filter(u => u.hp < u.maxHp * 0.4).length,
+        maxDef: Math.max(0, ...us.map(u => Number(u.def) || 0))
+      }
+    };
+  };
   const advanceEnemyIntents = (executedIntent, distAfterExecuted, performed = true) => {
     const effective = performed ? executedIntent : null;
     let reserved = enemyNextIntentRef.current;
@@ -189446,7 +189555,8 @@ function MonsterHeroGame() {
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     const actionState = () => ({
       definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty, enemy?.actionCount),
-      roarStacks: tacticsRoarStacksRef.current
+      roarStacks: tacticsRoarStacksRef.current,
+      ...tacticsEnemyAiState()
     });
     stepTacticsHate(runMode);
     const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
@@ -194146,7 +194256,8 @@ function MonsterHeroGame() {
     setEnemyLastIntent(null);
     const actionState = () => ({
       definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id, newEnemy?.difficulty, newEnemy?.actionCount),
-      roarStacks: tacticsRoarStacksRef.current
+      roarStacks: tacticsRoarStacksRef.current,
+      ...tacticsEnemyAiState()
     });
     resetTacticsHate(runMode);
     commitAiCopy(null);
@@ -203923,7 +204034,26 @@ function MonsterHeroGame() {
       className: "block"
     }, "🛠 デバッグ最強モン"), React.createElement("small", {
       className: "block text-[8px] opacity-80"
-    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), React.createElement("section", {
+    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode) && React.createElement("section", {
+      "data-debug-enemy-ai": true
+    }, React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-black mb-2"
+    }, "4-2. 敵の作戦AI", React.createElement("small", {
+      className: "ml-1 font-bold text-slate-600"
+    }, "（試作・デバッグ戦だけ。本番の敵はいまのまま）")), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, TACTICS_ENEMY_AI_LEVELS.map(lv => React.createElement("button", {
+      key: lv.id,
+      type: "button",
+      "data-debug-enemy-ai-option": lv.id,
+      "aria-pressed": debugEnemyAiLevel === lv.id,
+      onClick: () => setDebugEnemyAiLevel(lv.id),
+      className: `min-h-[52px] px-3 py-1.5 rounded-xl text-left font-black ${debugEnemyAiLevel === lv.id ? 'bg-amber-800 border-2 border-amber-300 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+    }, React.createElement("span", {
+      className: "block text-[11px]"
+    }, lv.id, ". ", lv.label), React.createElement("small", {
+      className: "block text-[8px] opacity-75 leading-tight"
+    }, lv.note))))), React.createElement("section", {
       "data-debug-party": true
     }, React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
@@ -203982,7 +204112,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
     }, "6. デバッグ戦開始", React.createElement("small", {
       className: "block text-[9px] font-bold opacity-70"
-    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId)))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
+    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId, isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode) && debugEnemyAiLevel > 0 ? ` / 敵AI ${debugEnemyAiLevel}` : '')))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
