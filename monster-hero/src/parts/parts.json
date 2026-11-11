@@ -111,6 +111,10 @@
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
     },
     {
+      "file": "30-rhythm-preview-hands.jsx",
+      "role": "オプションの「▶ 見てみる」の見本を自動で叩く手(ふつうの指と同じポインタの合図を送るだけ。判定には触らない)"
+    },
+    {
       "file": "31-debug-ui.jsx",
       "role": "デバッグ画面の共通部品(どの画面も同じ頭・同じ「保存します/しません」のバッジ・メニューの1行)"
     },
@@ -390,6 +394,10 @@
     {
       "file": "56-assistant-life-ux.jsx",
       "role": "助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)の新UIだけの部品: 部屋の「その助手とできること」1列(AssistantLifeDoRow)と仲良し度の道のり(AssistantLifeBondRoad)。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-guide.jsx",
+      "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },
     {
       "file": "56-assistant-life-rel.jsx",
