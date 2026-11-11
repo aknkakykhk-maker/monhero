@@ -7,7 +7,7 @@ listen:mf_ichika_mix | momosuke excited 1:48からがいちばん盛り上がる
 listen:mf_ichika_mix | dra happy サビは1:48から2:14までだな。そこまでは体力をとっとけよ
 listen:mf_ichika_mix | atsu wink 自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！
 listen:mf_ichika_mix | kyuko normal サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ
-listen:mf_ichika_mix | sorashido excited いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑
+listen:mf_ichika_mix | sorashido excited いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑
 listen:mf_ichika_mix | erubin happy 2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか
 listen:monster_hero | mua excited 1:50からずーっといちばん強いの！ 最後までアゲてこ♪
 listen:monster_hero | kiki normal 最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます
@@ -15,7 +15,7 @@ listen:monster_hero | momosuke excited 1:50からいちばん強いとこが続�
 listen:monster_hero | dra happy 静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな
 listen:monster_hero | atsu happy 最後の2:30でいきなり静かになるから、きれいに締めよ笑
 listen:monster_hero | kyuko normal 0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ
-listen:monster_hero | sorashido excited 強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑
+listen:monster_hero | sorashido excited 強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑
 listen:monster_hero | erubin normal はじめの静かなところで、気持ちを落ち着けておくといいよ
 listen:monster_hero_another | mua excited こっちもサビは1:49から！ 最後までずっと盛り上がるの♪
 listen:monster_hero_another | kiki normal 0:48までは、静かな時間が長いんでつ。そこが好きです
@@ -23,7 +23,7 @@ listen:monster_hero_another | momosuke excited 1:49からの盛り上がり、�
 listen:monster_hero_another | dra normal 0:48で急に強くなるからな。そこで置いていかれるなよ
 listen:monster_hero_another | atsu happy サビは2:34まで続くから、最後の1秒までちゃんと締めよ！
 listen:monster_hero_another | kyuko normal 0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ
-listen:monster_hero_another | sorashido happy BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑
+listen:monster_hero_another | sorashido happy BPMはおよそ171。もとの曲より少しだけゆっくりです笑
 listen:monster_hero_another | erubin happy 1:14から少し落ち着く所があるね。そこでひと息つこうか
 listen:six_eternel_remix | mua excited 1:54からいちばん強いとこ！ そこまでガマンして一気にいこ♪
 listen:six_eternel_remix | kiki happy 1:44で一度静かになるんでつ。その静けさが、とてもきれいです
@@ -31,7 +31,7 @@ listen:six_eternel_remix | momosuke excited 静かになってからのサビ！
 listen:six_eternel_remix | dra happy 静かと強めを何回も行ったり来たりだな。山道みたいでおもしろいぞ
 listen:six_eternel_remix | atsu wink サビは2:29まで！ 最後の締めまで気を抜かないでいこ笑
 listen:six_eternel_remix | kyuko happy 1:44で落として、1:54でいちばん強い。この落とし方、展開がきれいだよねぇ
-listen:six_eternel_remix | sorashido normal 強い音35%・軽い音4%で、まざってるタイプだぜ。BPMはおよそ160笑
+listen:six_eternel_remix | sorashido normal 強い音35%・軽い音4%で、まざってるタイプです。BPMはおよそ160です笑
 listen:six_eternel_remix | erubin normal 0:32から0:45あたり、静かな時間が続くね。落ち着くところだよ
 listen:six_eternel_beat | mua surprise BPMおよそ276！？ 速すぎて目が回るけど、まぢ燃える♪
 listen:six_eternel_beat | kiki troubled とても速い曲でつ。でも、最初の静かなところで心を落ち着けられます
@@ -39,7 +39,7 @@ listen:six_eternel_beat | momosuke excited 2:13からのサビ、最後まで盛
 listen:six_eternel_beat | dra surprise 816ノーツもあるのか……おでの膝が先に音を上げそうだわ
 listen:six_eternel_beat | atsu excited Lv.39は上いきたい人向けじゃん笑 2:33の締めまで全力ね！
 listen:six_eternel_beat | kyuko excited サビが2:02と2:13の2回に分かれてるんだよねぇ。一回目は短いから、次に本気
-listen:six_eternel_beat | sorashido excited 816ノーツ・BPMおよそ276だぜ・・・！ 数字だけで燃えるな笑
+listen:six_eternel_beat | sorashido excited 816ノーツ・BPMおよそ276です・・・！ 数字だけで燃えますね笑
 listen:six_eternel_beat | erubin troubled とても速いね💦 静かな0:31のところで、ひと息つこうか
 listen:stay_with_me | mua happy 4分半もある長い曲！ サビが2回あるから、2回アゲられる♪
 listen:stay_with_me | kiki normal 1:29に静かなところがありまつ。その静けさが、少しせつなくて好きです
@@ -47,7 +47,7 @@ listen:stay_with_me | momosuke excited 2:12からと3:11からで、サビが2�
 listen:stay_with_me | dra normal 長い曲だからな。しんみりする所もあるけど、最後まで歩ききろう
 listen:stay_with_me | atsu happy 長い曲は締めが大事だよね！ 3:41までのサビ、きれいに決めよ笑
 listen:stay_with_me | kyuko normal 1:15でいちばん強くなって、1:29で静か。前半にも山があるんだよねぇ
-listen:stay_with_me | sorashido happy 704ノーツで4:34。長さのわりに落ち着いた数だぜ笑
+listen:stay_with_me | sorashido happy 704ノーツで4:34。長さのわりに落ち着いた数です笑
 listen:stay_with_me | erubin happy 1:29の静かなところ、落ち着いて聞けるね。好きだな☺️
 listen:kiki_issen | mua excited ひめちんの曲！ サビの2:52から、まぢテンション上がる♪
 listen:kiki_issen | kiki happy 私の曲でつ♪ 静かなところと強いところが、何度も入れ替わるんです
@@ -55,7 +55,7 @@ listen:kiki_issen | momosuke excited 2:52からのサビ、すっごい盛り上
 listen:kiki_issen | dra happy 4分22秒の長旅だな。最初の0:06でいきなり強くなるから、気をつけろよ
 listen:kiki_issen | atsu excited Lv.33で882ノーツ！ 3:34までのサビ、上等じゃん笑
 listen:kiki_issen | kyuko normal 静か→強めを何回もくり返して、2:52で一番上。ためが長い構成だねぇ
-listen:kiki_issen | sorashido excited 882ノーツは、前半の23曲でいちばん多いぜ・・・！
+listen:kiki_issen | sorashido excited 882ノーツは、前半の23曲でいちばん多いです・・・！
 listen:kiki_issen | erubin normal 1:38の静かなところ、きれいだね。そこでゆっくり息を整えようか
 listen:kaze_ga_soyogu | mua happy 1分39秒の短い曲！ 0:37からいきなりいちばん強いの♪
 listen:kaze_ga_soyogu | kiki happy BPMおよそ119の、ゆったりした曲でつ。終わりの静けさがきれいです
@@ -63,7 +63,7 @@ listen:kaze_ga_soyogu | momosuke excited 0:37からすぐサビ！！ 盛り上�
 listen:kaze_ga_soyogu | dra happy 短くて、ゆっくりだな。おでの膝にもやさしい曲だ
 listen:kaze_ga_soyogu | atsu wink 1:35で静かになって終わるから、最後はそっと締めよ笑
 listen:kaze_ga_soyogu | kyuko normal 0:37でいちばん強くなって、そこから少しずつ下りていく。山が前にある構成だよぉ
-listen:kaze_ga_soyogu | sorashido troubled BPMおよそ119、193ノーツ……ゆっくりの曲は、そわそわするんだよな笑
+listen:kaze_ga_soyogu | sorashido troubled BPMおよそ119、193ノーツ・・・ゆっくりの曲は、そわそわするんですよね笑
 listen:kaze_ga_soyogu | erubin happy ゆっくりで落ち着くね。最後の1:35の静けさ、とても好きだよ
 listen:close_to_your_heart | mua excited 1:02から最後まで、ずーっといちばん強いの！ 2分アゲっぱなし♪
 listen:close_to_your_heart | kiki normal はじまりの静かなところ、やさしい音がしまつ。そこから強くなっていきます
@@ -71,7 +71,7 @@ listen:close_to_your_heart | momosuke excited サビが1:02から1:59まで！�
 listen:close_to_your_heart | dra happy 2分の曲なのに、半分はサビだな。ずっと山の上を歩く感じだ
 listen:close_to_your_heart | atsu happy 1:59までサビだから、最後の1秒まで締めよ笑
 listen:close_to_your_heart | kyuko normal 0:25で強め、1:02でいちばん強い。前半で一気に上がる構成だねぇ
-listen:close_to_your_heart | sorashido happy 軽い音が11%で、前半の曲の中では多いほうだぜ笑
+listen:close_to_your_heart | sorashido happy 軽い音が11%で、前半の曲の中では多いほうです笑
 listen:close_to_your_heart | erubin normal 最初の静かな0:17までで、ゆっくり手をならそうか
 listen:eiki_boss_remix | mua excited 2:40からのサビ、まぢ盛り上がる！ 最後までアゲよ♪
 listen:eiki_boss_remix | kiki happy 1:47と2:27に静かなところがありまつ。その間のきれいさを聞いてほしいです
@@ -79,7 +79,7 @@ listen:eiki_boss_remix | momosuke excited 2:40から3:33までサビ！！ 最�
 listen:eiki_boss_remix | dra normal 前半はふつうの道が長いな。山場は後ろにあるから、あせるなよ
 listen:eiki_boss_remix | atsu happy 3:33までサビが続くから、最後まで集中して締めよ！
 listen:eiki_boss_remix | kyuko normal 2:27で一回静かにして、2:40で上がる。ためてから上がる構成だよぉ
-listen:eiki_boss_remix | sorashido normal 強い音52%、BPMはおよそ154。綺季一閃の別の顔だぜ笑
+listen:eiki_boss_remix | sorashido normal 強い音52%、BPMはおよそ154。綺季一閃の別の顔ですね笑
 listen:eiki_boss_remix | erubin happy 静かなところが何度かあるね。そこで落ち着いて合わせようか
 listen:pandora_boss_remix | mua excited 2:27からのサビ、強い音がいっぱいでまぢ燃える♪
 listen:pandora_boss_remix | kiki normal 1:34に静かなところがありまつ。強い曲の中の、ほっとする所です
@@ -87,7 +87,7 @@ listen:pandora_boss_remix | momosuke excited サビは2:27から！！ ここで
 listen:pandora_boss_remix | dra surprise 0:11でもう強めになるのか。いきなり戦いが始まる感じだな
 listen:pandora_boss_remix | atsu wink サビは2:56まで！ そこできれいに締めたら勝ちでしょ笑
 listen:pandora_boss_remix | kyuko normal 強めとふつうを何回も行き来して、2:27で上がる。じらし方がうまいんだよねぇ
-listen:pandora_boss_remix | sorashido excited 強く打つ音61%だぜ・・・！ 前半の曲でも強い音が多いほう笑
+listen:pandora_boss_remix | sorashido excited 強く打つ音61%です・・・！ 前半の曲でも強い音が多いほうです笑
 listen:pandora_boss_remix | erubin normal 1:34の静かなところで、ひと休みしようか
 listen:dullahan | mua happy 1:03からのとこ、強くなってテンション上がる♪
 listen:dullahan | kiki normal 0:49に静かなところがありまつ。重たい曲の中の、すっとする所です
@@ -95,7 +95,7 @@ listen:dullahan | momosuke excited 0:33と1:03で盛り上がるの！！ 2回�
 listen:dullahan | dra happy 静かになったり強くなったり、ダンジョンを進むみたいな曲だな
 listen:dullahan | atsu happy 1:45でまた強くなるから、そこから締めまでいこ笑
 listen:dullahan | kyuko normal サビが0:33と1:03の2回。短い山と長い山があるんだよねぇ
-listen:dullahan | sorashido normal 強い音17%・軽い音4%。強い音が少なめの、めずらしい曲だぜ笑
+listen:dullahan | sorashido normal 強い音17%・軽い音4%。強い音が少なめの、めずらしい曲です笑
 listen:dullahan | erubin happy 好きな曲なんだよね☺️ 0:49の静かなところで、ゆっくり聞いてほしいな
 listen:dullahan_clockwork | mua excited 始まった瞬間からいちばん強いの！ いきなりアゲてこ♪
 listen:dullahan_clockwork | kiki normal 0:13と0:51に静かなところがありまつ。強さとの差が、きれいなんです
@@ -103,7 +103,7 @@ listen:dullahan_clockwork | momosuke troubled チクタク鳴る感じがちょ�
 listen:dullahan_clockwork | dra surprise いきなり強く始まるな。扉をあけたら、もう戦いって感じだ
 listen:dullahan_clockwork | atsu happy 1:10から最後の2:02までサビだから、締めまで長いよ笑
 listen:dullahan_clockwork | kyuko normal 強い→静か→強いを2回くり返すんだよねぇ。形が分かると楽だよ
-listen:dullahan_clockwork | sorashido happy 強く打つ音57%・軽い音2%だぜ。352ノーツで2分ちょい笑
+listen:dullahan_clockwork | sorashido happy 強く打つ音57%・軽い音2%です。352ノーツで2分ちょいです笑
 listen:dullahan_clockwork | erubin normal 0:13の静かなところで、いったん落ち着こうか
 listen:toriko | mua happy あたしの個人杯の曲！ 0:47からのサビ、テンションまぢ上がるの♪
 listen:toriko | kiki happy 1分19秒の、短くてかわいい曲でつ。始まりの静けさが好きです
@@ -111,7 +111,7 @@ listen:toriko | momosuke excited 1:09でいちばん強くなるの！！ そこ
 listen:toriko | dra happy 短いけど、ちゃんと山があるな。ちょっとした散歩みたいな曲だ
 listen:toriko | atsu wink 1:15でスッと静かになるから、最後はきれいに止めよ笑
 listen:toriko | kyuko troubled ノリが良すぎて置いていかれがちなんだよねぇ。0:47のサビまでに体を慣らそ
-listen:toriko | sorashido happy 159ノーツ・Lv.17。短いから、全部拾えたら気持ちいいぜ笑
+listen:toriko | sorashido happy 159ノーツ・Lv.17。短いので、全部拾えたら気持ちいいです笑
 listen:toriko | erubin happy 短くて、やさしい感じだね。0:40から少しずつ強くなるよ☺️
 listen:4u_hitasura | mua excited 1:06からいちばん強いのがずっと続くの！ アゲっぱなし♪
 listen:4u_hitasura | kiki normal 最後の1:54で静かになりまつ。その終わり方が、きれいなんです
@@ -119,7 +119,7 @@ listen:4u_hitasura | momosuke excited 1:06から1:47までサビ！！ いっぱ
 listen:4u_hitasura | dra happy 0:20でもう強めだな。最初から走る道だから、ついてこいよ
 listen:4u_hitasura | atsu happy 1:47から締めに入るから、最後まで気を抜かないで笑
 listen:4u_hitasura | kyuko normal 0:35で一回ふつうに戻して、0:59から上がる。ためが分かりやすい構成だよぉ
-listen:4u_hitasura | sorashido normal BPMおよそ145、296ノーツ。数字はやさしめだぜ笑
+listen:4u_hitasura | sorashido normal BPMおよそ145、296ノーツ。数字はやさしめです笑
 listen:4u_hitasura | erubin normal 0:35のふつうになるところで、ひと息つこうか
 listen:kindan_no_resistance | mua excited サビが0:48と2:11の2回！ 2回ともまぢアゲよ♪
 listen:kindan_no_resistance | kiki normal 0:16に静かなところがありまつ。速い曲の中の、短いひと休みです
@@ -127,7 +127,7 @@ listen:kindan_no_resistance | momosuke excited 0:48からもう盛り上がる�
 listen:kindan_no_resistance | dra happy BPMおよそ180か。走り続ける冒険って感じだな
 listen:kindan_no_resistance | atsu excited 2:35までの2回目のサビ、最後まで全力で締めよ！
 listen:kindan_no_resistance | kyuko normal サビが2回で、1回目が長いんだよねぇ。前半から本気で
-listen:kindan_no_resistance | sorashido excited Lv.28で650ノーツだぜ・・・！ BPMもおよそ180笑
+listen:kindan_no_resistance | sorashido excited Lv.28で650ノーツです・・・！ BPMもおよそ180です笑
 listen:kindan_no_resistance | erubin troubled 速い曲だね💦 0:16の静かなところで、落ち着こうか
 listen:crossing_field | mua excited 0:46からいちばん強いの！ 一気にアゲるやつ♪
 listen:crossing_field | kiki normal 最初の0:17まで静かでつ。そこから一気に強くなります
@@ -135,7 +135,7 @@ listen:crossing_field | momosuke excited ももが一番かわいく踊れる曲
 listen:crossing_field | dra happy 1分29秒で、BPMはおよそ179。短くて速い、駆け足の冒険だな
 listen:crossing_field | atsu happy 1:24で静かになって終わるから、最後はピタッと止めよ笑
 listen:crossing_field | kyuko normal 0:41で強めにして、0:46でいちばん強い。助走が短い構成だねぇ
-listen:crossing_field | sorashido excited 強く打つ音60%・軽い音2%！ 強い音ばっかりだぜ・・・！
+listen:crossing_field | sorashido excited 強く打つ音60%・軽い音2%！ 強い音ばっかりです・・・！
 listen:crossing_field | erubin normal 短い曲だね。最初の静かなところで、手をならしておこうか
 listen:nothing_without_you | mua excited 1:38でいちばん強くなるの！ そこまでガマンしてアゲよ♪
 listen:nothing_without_you | kiki happy 1:43で一度静かになりまつ。その一瞬の静けさが、きれいです
@@ -143,7 +143,7 @@ listen:nothing_without_you | momosuke excited サビが1:14と2:41の2回！！ 
 listen:nothing_without_you | dra normal BPMおよそ194で、3分10秒。速くて長い道だから、ペース配分だな
 listen:nothing_without_you | atsu happy 2回目のサビは3:07まで！ 最後の締めまで集中ね笑
 listen:nothing_without_you | kyuko normal 強めが続いて、1:38で一番上、1:43で一気に静か。落とし方がうまいんだよねぇ
-listen:nothing_without_you | sorashido normal 強い音32%・軽い音8%でまざってるタイプ。BPMはおよそ194だぜ笑
+listen:nothing_without_you | sorashido normal 強い音32%・軽い音8%でまざってるタイプです。BPMはおよそ194です笑
 listen:nothing_without_you | erubin happy 1:43の静かなところ、ほっとするね☺️
 listen:freedom_dive | mua surprise Lv.47！？ 前半の曲でいちばん上ぢゃん！ まぢ燃える♪
 listen:freedom_dive | kiki troubled とても強い曲でつ。でも、1:21に一瞬だけ静かなところがあるんです
@@ -151,7 +151,7 @@ listen:freedom_dive | momosuke excited 1:17でいちばん強くなるの！！ 
 listen:freedom_dive | dra surprise BPMおよそ222か……おでの膝には、ちょっと急すぎる山道だな
 listen:freedom_dive | atsu excited Lv.47・814ノーツ！ 上等じゃん笑 最後まで締めきろ！
 listen:freedom_dive | kyuko normal 1:17でいちばん強くして、1:21で静か。そのあとまた上がっていくんだよねぇ
-listen:freedom_dive | sorashido excited 強く打つ音75%だぜ・・・！ 前半の曲でいちばん強い音が多い笑
+listen:freedom_dive | sorashido excited 強く打つ音75%です・・・！ 前半の曲でいちばん強い音が多いです笑
 listen:freedom_dive | erubin troubled とても速いね💦 1:21の静かなところで、ひと息つこうか
 listen:the_city_beneath_the_comets | mua excited サビは2:11から！ 最後の方で一気にアゲるの♪
 listen:the_city_beneath_the_comets | kiki normal 0:29と1:24に静かなところがありまつ。そこがきれいなんです
@@ -159,7 +159,7 @@ listen:the_city_beneath_the_comets | momosuke excited 2:11からのサビ、最�
 listen:the_city_beneath_the_comets | dra happy 静かと強めをくり返しながら、だんだん進んでいくな。長い旅だ
 listen:the_city_beneath_the_comets | atsu excited Lv.39・716ノーツ！ 2:35まで、きっちり締めよ笑
 listen:the_city_beneath_the_comets | kyuko normal 1:59で一回ふつうに戻してから、2:11でサビ。ためてから上がる形だよぉ
-listen:the_city_beneath_the_comets | sorashido excited 強く打つ音60%・BPMはおよそ170だぜ・・・！
+listen:the_city_beneath_the_comets | sorashido excited 強く打つ音60%・BPMはおよそ170です・・・！
 listen:the_city_beneath_the_comets | erubin normal 1:24の静かなところで、ゆっくり合わせようか
 listen:mou_hitotsu_no_sekai_e | mua excited 2:58からのサビ、待ったぶんまぢアガる♪
 listen:mou_hitotsu_no_sekai_e | kiki normal 1:17に静かなところがありまつ。長い曲の中の、ひと休みです
@@ -167,7 +167,7 @@ listen:mou_hitotsu_no_sekai_e | momosuke excited 2:58から3:32までサビ！�
 listen:mou_hitotsu_no_sekai_e | dra happy おでの曲だ。3分47秒、ゆっくり世界を広げていく感じが好きなんだよ
 listen:mou_hitotsu_no_sekai_e | atsu happy 長い曲だけど、3:32までのサビで全部締めよ笑
 listen:mou_hitotsu_no_sekai_e | kyuko normal ふつうが長く続いて、2:58で一番上。ためが長い構成だねぇ
-listen:mou_hitotsu_no_sekai_e | sorashido normal 強い音59%・軽い音1%。744ノーツで、BPMはおよそ188だぜ笑
+listen:mou_hitotsu_no_sekai_e | sorashido normal 強い音59%・軽い音1%。744ノーツで、BPMはおよそ188です笑
 listen:mou_hitotsu_no_sekai_e | erubin happy ふつうの所が長いから、落ち着いて合わせられるね☺️
 listen:senjou_no_shippuu | mua excited 2:52からのサビ、最後にまぢ盛り上がる♪
 listen:senjou_no_shippuu | kiki normal 1:29と2:04に静かなところがありまつ。そこで息を整えましょう
@@ -175,7 +175,7 @@ listen:senjou_no_shippuu | momosuke excited 最後の2:52から一気に盛り�
 listen:senjou_no_shippuu | dra happy おでの好きな曲だ。強めと静かが入れ替わって、戦場を駆けてる感じがするんだよ
 listen:senjou_no_shippuu | atsu happy サビは3:12まで！ 最後の20秒でぜんぶ締めよ笑
 listen:senjou_no_shippuu | kyuko normal 0:17でもう強め。静かを2回はさんで、2:52で一番上だよぉ
-listen:senjou_no_shippuu | sorashido normal BPMおよそ140で661ノーツ。長さのわりに数は多いぜ笑
+listen:senjou_no_shippuu | sorashido normal BPMおよそ140で661ノーツ。長さのわりに数は多いです笑
 listen:senjou_no_shippuu | erubin normal 2:04の静かなところで、ゆっくり落ち着こうか
 listen:makutsu_no_senritsu | mua excited 2:18でいちばん強くなるの！ 最後の最後でアゲる♪
 listen:makutsu_no_senritsu | kiki normal 最初の40秒くらいは静かでつ。ゆっくり入っていけます
@@ -183,5 +183,5 @@ listen:makutsu_no_senritsu | momosuke excited 2:18からのとこ、短いけど
 listen:makutsu_no_senritsu | dra happy 静かに始まって、どんどん深くもぐっていく感じだな
 listen:makutsu_no_senritsu | atsu wink 2:25で静かになって終わるから、最後はきれいに止めよ笑
 listen:makutsu_no_senritsu | kyuko normal 1:13からずっと強めで、2:18で一番上。最後まで上がり続ける構成だねぇ
-listen:makutsu_no_senritsu | sorashido normal サビは2:18から2:25の7秒だけだぜ。短いけど濃い笑
+listen:makutsu_no_senritsu | sorashido normal サビは2:18から2:25の7秒だけです。短いけど濃いです笑
 listen:makutsu_no_senritsu | erubin happy はじめの静かなところで、ゆっくり気持ちを整えようか☺️
