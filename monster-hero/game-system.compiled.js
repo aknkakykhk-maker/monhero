@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cff459c2f1eb6b55
+// source-sha256: e2ecbc24f6453743
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56921,9 +56921,9 @@ const friendsSetRoomPrivate = on => {
 const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
 const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
   h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
-  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
-  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
-  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  w: ['🗺 助手の町', '🗺 助手ライフで町を見ている'],
+  f: ['🤝 助手のきずな', '🤝 助手ライフで助手どうしのきずなを見ている'],
+  i: ['🎁 助手への贈り物', '🎁 助手ライフで贈る道具を選んでいる'],
   p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
   v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている']
 });
@@ -135605,7 +135605,7 @@ const alfFetchVisits = async (force = false) => {
       host: r.host_id,
       day: String(r.day || '').slice(0, 10),
       ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [],
-      word: alfInt(r.word, 0, ALF_WORDS - 1),
+      word: r.word === 12 ? 12 : alfInt(r.word, 0, ALF_WORDS - 1),
       thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1),
       at: Date.parse(r.created_at) || 0,
       note: typeof r.note === 'string' ? alfNoteShow(r.note) : '',
@@ -136130,12 +136130,16 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     ok: false,
     reason: nc.reason
   };
+  if (word === ALF_WORD_FREE && !nc.text) return {
+    ok: false,
+    reason: '言葉を書くか、下の一言を選んでください'
+  };
   const r = await alfPostVisitR({
     kind: 'player',
     visitor: self,
     host: hostId,
     ids,
-    word: alfInt(word, 0, ALF_WORDS - 1),
+    word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1),
     note: nc.text,
     noteTo: alfValidId(noteTo) ? noteTo : null
   });
@@ -136489,6 +136493,8 @@ const ALF_WELCOME_MORE = Object.freeze({
   "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"],
   "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]
 });
+const ALF_WORD_FREE = 12;
+const alfWordQuote = w => w === ALF_WORD_FREE ? '' : `「${ALF_WORD_TEXTS[w] || ''}」`;
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
 const ALF_DOING_ROOM = Object.freeze({
@@ -136968,7 +136974,7 @@ function AlfFriendHouseView({
     setRoomId(null);
     setTalk(null);
     setNoteText('');
-    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
   const noteLine = done ? done : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)` : can === 'done' ? `✉️ この家には今日もう置き手紙を残しました。見て回るのは自由です` : `✉️ 今日はもう置き手紙を残せません(朝4時に戻ります)。見て回るのは自由です`;
   const r0 = roomId ? h.r[roomId] : null;
@@ -137375,11 +137381,11 @@ function AlfFriendHouseView({
     }
   }, React.createElement("p", {
     className: "text-[15px] font-black text-amber-100"
-  }, "✉️ 置き手紙の一言をえらぶ", leaving ? React.createElement("span", {
+  }, "✉️ 置き手紙を残す", leaving ? React.createElement("span", {
     className: "ml-1 text-[11px] text-slate-200"
   }, "(あて先: ", assistantLifeName(leaving), h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : '', ")") : null), React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-200"
-  }, "一言を押すと", friend.name, "さんに届いて、この家から帰ります(ビートP 50)"), React.createElement("label", {
+  }, "一言を選ぶか、自由に書いて送ると、", friend.name, "さんに届いて、この家から帰ります(ビートP 50)"), React.createElement("label", {
     className: "mt-2 block text-[10.5px] font-bold text-slate-200",
     htmlFor: "alf-note-free"
   }, "✏️ ひとこと(自由・", ALF_NOTE_MAX, "字まで・なくてもよい)"), React.createElement("div", {
@@ -137409,8 +137415,17 @@ function AlfFriendHouseView({
     }, "⚠️ ", warn) : React.createElement("p", {
       className: "mt-1 text-[10px] text-slate-400"
     }, "連絡先・住所・本名などは書けません。悪い言葉は●になります。", friend.name, "さんは自由文を見ないようにもできます。");
-  })(), React.createElement("div", {
-    className: "mt-2 flex flex-wrap gap-1.5"
+  })(), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40",
+    "data-alf-note-send": true,
+    disabled: !noteText.trim() || !alfNoteCheck(noteText).ok,
+    onClick: () => leave(ALF_WORD_FREE)
+  }, "✉️ この言葉で送る"), React.createElement("p", {
+    className: "mt-2.5 text-[10.5px] font-bold text-slate-200",
+    "data-alf-word-hint": true
+  }, noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
   }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
@@ -137737,11 +137752,11 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
     className: "whitespace-nowrap"
-  }, assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', "「", ALF_WORD_TEXTS[n.word], "」", n.ids.length ? React.createElement("span", {
+  }, assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', alfWordQuote(n.word), n.ids.length ? React.createElement("span", {
     className: "whitespace-nowrap"
   }, "・", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た「", ALF_WORD_TEXTS[n.word], "」")), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
+  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た", alfWordQuote(n.word))), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
     className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
     "data-alf-note-text": true
   }, "✏️ ", n.note) : React.createElement("p", {
