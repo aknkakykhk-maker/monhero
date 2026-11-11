@@ -366,9 +366,9 @@ function AssistantLifeGiftLikesRow({ id, compact = false }) {
   return (
     <div className={compact ? 'py-1' : 'py-1.5'} data-assistant-life-gift-likes={id}>
       <button type="button" className="flex w-full items-center gap-1 text-left text-[10.5px] font-black text-slate-300" onClick={() => compact && setOpen(v => !v)} aria-expanded={showAll}>
-        <span className="shrink-0">🎁 好きなもの</span>
+        <span className="shrink-0">🎁 贈り物の好み</span>
         {compact && <span className="min-w-0 truncate text-[11px]">{liked.length ? liked.map(g => g.emoji).join('') : ''}</span>}
-        <span className="ml-auto shrink-0 text-[10px] font-bold text-slate-400">分かった {known}/{gifts.length}{compact ? (showAll ? ' ▲' : ' ▼') : ''}</span>
+        <span className="ml-auto shrink-0 text-[10px] font-bold text-slate-400">{gifts.length}種類のうち {known} 分かった{compact ? (showAll ? ' ▲' : ' ▼') : ''}</span>
       </button>
       {hint && (
         <button type="button" data-assistant-life-gift-told={told.key} onClick={() => assistantLifeGiftToldSeen(id)}
