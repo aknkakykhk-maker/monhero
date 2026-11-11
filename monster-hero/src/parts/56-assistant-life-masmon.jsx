@@ -1139,6 +1139,32 @@ const assistantLifeMasmonTeamOf = (id) => {
     return [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({ monster: t.monster, nick: t.nick, colors: [...((t.dye && t.dye.colors) || [])], lead: !!t.lead }));
   } catch (_) { return []; }
 };
+// フレンドに見せる形(オトズレのフレンドの家・2026-11-12)。読むだけ・何も保存しない。迎えた子だけを送り、まだの枠は数だけ
+// stats は育成の6能力(印が偽・まだ無いときは null)。思い出・今日の記録・疲れ・ストレスは送らない
+const assistantLifeMasmonShareOf = (id) => {
+  try {
+    const p = assistantMasmonPlanOf(id);
+    if (!p) return { list: [], waiting: 0 };
+    const growOn = typeof amgOn === 'function' && amgOn() && typeof amgEntryOf === 'function';
+    const statsOf = (t) => {
+      if (!growOn) return null;
+      const e = amgEntryOf(id, t);
+      if (!e || !e.st) return null;
+      const o = {};
+      for (const k of ['life', 'pow', 'wise', 'hit', 'eva', 'tough']) { const v = Number(e.st[k]); if (!Number.isFinite(v)) return null; o[k] = Math.round(v); }
+      return o;
+    };
+    const list = [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({
+      monster: t.monster, nick: t.nick, colors: [...((t.dye && t.dye.colors) || [])], lead: !!t.lead,
+      slot: Number.isInteger(t.slot) ? t.slot : 0, lv: Number.isFinite(Number(t.lv)) ? Number(t.lv) : 1,
+      grow: typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(t.grow) : String(t.grow || ''),
+      growMine: t.growMine && typeof t.growMine.kind === 'string' ? t.growMine.kind : '',
+      stats: statsOf(t), why: typeof t.why === 'string' ? t.why : '',
+    }));
+    const waiting = Array.isArray(p.extra) ? p.extra.filter(t => t && t.unknown).length : 0;
+    return { list, waiting };
+  } catch (_) { return { list: [], waiting: 0 }; }
+};
 const useAssistantMasmonSave = () => {
   const [st, setSt] = React.useState(ASSISTANT_MASMON_STORE.state);
   React.useEffect(() => { ASSISTANT_MASMON_STORE.subs.add(setSt); void ASSISTANT_MASMON_STORE.load(); return () => { ASSISTANT_MASMON_STORE.subs.delete(setSt); }; }, []);

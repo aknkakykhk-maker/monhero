@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8965001224125aaf
+// source-sha256: d4c86da7edb17b86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13886,6 +13886,7 @@ const RELEASE_FLAGS = {
   assistantLifeTopHouse: true,
   assistantLifeDailyScene: true,
   assistantLifeFriend: true,
+  alfMasmonShareSend: false,
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
   assistantMasmonBattlePvp: true,
@@ -64666,7 +64667,7 @@ const growthFxAssistantOf = assistantId => {
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
   const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
-  return `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+  return typeof assistantStandArt === 'function' && assistantStandArt(who, expression) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = assistantId => {
   const who = growthFxAssistantOf(assistantId);
@@ -113011,6 +113012,32 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.47,
       m: 1.25
     }
+  },
+  'stand-normal': {
+    mua: {
+      top: 0.1386,
+      eye: 0.3072,
+      chin: 0.4187,
+      m: 0.829
+    }
+  },
+  'stand-halloween': {
+    mua: {
+      top: 0.1502,
+      eye: 0.3379,
+      chin: 0.4334,
+      m: 0.711,
+      above: 0.85
+    }
+  },
+  'stand-card-master': {
+    mua: {
+      top: 0.1134,
+      eye: 0.2267,
+      chin: 0.2947,
+      m: 0.506,
+      above: 0.75
+    }
   }
 });
 const assistantLifeStandOutfitOf = src => {
@@ -137901,6 +137928,50 @@ const assistantLifeMasmonTeamOf = id => {
     return [];
   }
 };
+const assistantLifeMasmonShareOf = id => {
+  try {
+    const p = assistantMasmonPlanOf(id);
+    if (!p) return {
+      list: [],
+      waiting: 0
+    };
+    const growOn = typeof amgOn === 'function' && amgOn() && typeof amgEntryOf === 'function';
+    const statsOf = t => {
+      if (!growOn) return null;
+      const e = amgEntryOf(id, t);
+      if (!e || !e.st) return null;
+      const o = {};
+      for (const k of ['life', 'pow', 'wise', 'hit', 'eva', 'tough']) {
+        const v = Number(e.st[k]);
+        if (!Number.isFinite(v)) return null;
+        o[k] = Math.round(v);
+      }
+      return o;
+    };
+    const list = [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({
+      monster: t.monster,
+      nick: t.nick,
+      colors: [...(t.dye && t.dye.colors || [])],
+      lead: !!t.lead,
+      slot: Number.isInteger(t.slot) ? t.slot : 0,
+      lv: Number.isFinite(Number(t.lv)) ? Number(t.lv) : 1,
+      grow: typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(t.grow) : String(t.grow || ''),
+      growMine: t.growMine && typeof t.growMine.kind === 'string' ? t.growMine.kind : '',
+      stats: statsOf(t),
+      why: typeof t.why === 'string' ? t.why : ''
+    }));
+    const waiting = Array.isArray(p.extra) ? p.extra.filter(t => t && t.unknown).length : 0;
+    return {
+      list,
+      waiting
+    };
+  } catch (_) {
+    return {
+      list: [],
+      waiting: 0
+    };
+  }
+};
 const useAssistantMasmonSave = () => {
   const [st, setSt] = React.useState(ASSISTANT_MASMON_STORE.state);
   React.useEffect(() => {
@@ -146123,6 +146194,7 @@ function AssistantMasmonRanchSheet({
   }, React.createElement("span", null, "疲れ"), React.createElement("span", null, "+", res.fat)), React.createElement("button", {
     type: "button",
     onClick: onClose,
+    "data-mhl-sheet-close": true,
     className: `${btn} mt-3 w-full bg-slate-700`
   }, "閉じる")) : React.createElement(React.Fragment, null, rows.length > 1 && React.createElement("div", {
     className: "mt-2 flex flex-wrap gap-1.5",
@@ -146176,6 +146248,7 @@ function AssistantMasmonRanchSheet({
   }, React.createElement("button", {
     type: "button",
     onClick: onClose,
+    "data-mhl-sheet-close": true,
     className: `${btn} bg-slate-700`
   }, "やめる"), React.createElement("button", {
     type: "button",
@@ -146370,7 +146443,8 @@ const normalizeAssistantLifeFriendSettings = v => {
     muted: Array.isArray(o.muted) ? [...new Set(o.muted.filter(alfSafeOther))].slice(0, 100) : [],
     noteShow: o.noteShow !== false,
     noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : [],
-    act: o.act !== false
+    act: o.act !== false,
+    ms: o.ms !== false
   };
 };
 const normalizeAssistantLifeFriendKnown = v => {
@@ -147162,6 +147236,9 @@ const alfPublish = async (life, metIds, now = Date.now(), {
       ...alfToday(),
       sentAt: now,
       sentSig: sig
+    });
+    if (typeof alfMsPublish === 'function') void alfMsPublish(self, Array.isArray(house.ids) ? house.ids : Array.isArray(metIds) ? metIds : [], settings.show && settings.ms, now, {
+      force
     });
     void alfPublishMore(self, settings.show ? alfFitMasmon({
       ...alfBuildMore(house.ids),
@@ -149385,7 +149462,7 @@ function AssistantLifeFriendPage({
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
     "data-alf-settings": true
-  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
+  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
     key: k,
     className: "flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100",
     "data-alf-setting": k
@@ -150341,6 +150418,246 @@ function AlfFavEditor({
     className: "mt-1 text-[10px] leading-snug text-slate-400"
   }, "選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
 }
+const ALF_MS_TABLE = 'alf_masmon_share';
+const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
+const ALF_MS_GAP_MS = 10 * 60 * 1000;
+const ALF_MS_MAX_CHARS = 4800;
+const ALF_MS_FACES = Object.freeze(['oshi', 'suki', 'sugao']);
+const ALF_MS_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
+let _alfMsMissing = false;
+const alfMsSendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.alfMasmonShareSend === true;
+const alfMsMonOk = mo => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+const alfMsCardOk = id => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
+const alfMsText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '';
+const alfMsWord = (v, max) => {
+  const t = alfMsText(v, max);
+  return t && typeof alfNoteShow === 'function' ? alfNoteShow(t) : '';
+};
+const alfMsPackMon = t => {
+  if (!t || !alfMsMonOk(t.monster)) return null;
+  const st = t.stats && typeof t.stats === 'object' ? t.stats : null;
+  return {
+    mo: t.monster,
+    n: alfMsWord(t.nick, 16),
+    c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5).map(x => typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null),
+    ...(t.lead ? {
+      l: 1
+    } : {}),
+    ...(Number.isFinite(Number(t.slot)) ? {
+      s: alfInt(t.slot, 0, 99)
+    } : {}),
+    ...(Number.isFinite(Number(t.lv)) ? {
+      lv: alfInt(t.lv, 1, 999)
+    } : {}),
+    ...(alfMsText(t.grow, 16) ? {
+      g: alfMsText(t.grow, 16)
+    } : {}),
+    ...(alfMsText(t.growMine, 16) ? {
+      gm: alfMsText(t.growMine, 16)
+    } : {}),
+    ...(st ? {
+      st: ALF_MS_STATS.map(k => alfInt(st[k], 0, 9999))
+    } : {}),
+    ...(alfMsWord(t.why, 40) ? {
+      w: alfMsWord(t.why, 40)
+    } : {})
+  };
+};
+const alfMsPackDeck = (face, d) => {
+  if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(face)) return null;
+  const cards = (Array.isArray(d.cards) ? d.cards : []).map(x => Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null).filter(Boolean).slice(0, 50);
+  if (!cards.length) return null;
+  return {
+    f: face,
+    nm: alfMsText(d.name, 24),
+    ...(alfMsWord(d.line, 40) ? {
+      ln: alfMsWord(d.line, 40)
+    } : {}),
+    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsMonOk).slice(0, 3),
+    ...(alfMsText(d.ace, 20) ? {
+      a: alfMsText(d.ace, 20)
+    } : {}),
+    cd: cards
+  };
+};
+const alfMsBuild = aid => {
+  let list = [];
+  let waiting = 0;
+  try {
+    const r = typeof assistantLifeMasmonShareOf === 'function' ? assistantLifeMasmonShareOf(aid) : null;
+    if (r && Array.isArray(r.list)) {
+      list = r.list;
+      waiting = alfInt(r.waiting, 0, 20);
+    } else if (Array.isArray(r)) list = r;else if (typeof assistantLifeMasmonTeamOf === 'function') list = assistantLifeMasmonTeamOf(aid);
+  } catch (_) {
+    list = [];
+  }
+  const ms = list.map(alfMsPackMon).filter(Boolean).slice(0, 8);
+  const dk = [];
+  for (const f of ALF_MS_FACES) {
+    try {
+      const d = typeof cardAssistantDeckShareOf === 'function' ? alfMsPackDeck(f, cardAssistantDeckShareOf(aid, f)) : null;
+      if (d) dk.push(d);
+    } catch (_) {}
+  }
+  let body = {
+    v: 1,
+    ms,
+    ...(waiting ? {
+      wt: waiting
+    } : {}),
+    ...(dk.length ? {
+      dk
+    } : {})
+  };
+  const size = o => JSON.stringify(o).length;
+  while (size(body) > ALF_MS_MAX_CHARS && body.dk && body.dk.length) {
+    const dk2 = body.dk.slice(0, -1);
+    body = {
+      ...body,
+      ...(dk2.length ? {
+        dk: dk2
+      } : {})
+    };
+    if (!dk2.length) delete body.dk;
+  }
+  return size(body) > ALF_MS_MAX_CHARS ? {
+    v: 1,
+    ms: ms.slice(0, 5).map(({
+      w: _w,
+      ...rest
+    }) => rest)
+  } : body;
+};
+const alfMsNormalize = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if (raw.off === 1) return {
+    off: true,
+    ms: [],
+    dk: [],
+    wt: 0
+  };
+  const ms = (Array.isArray(raw.ms) ? raw.ms : []).slice(0, 8).map(t => {
+    if (!t || typeof t !== 'object' || !alfMsMonOk(t.mo)) return null;
+    const st = Array.isArray(t.st) && t.st.length === ALF_MS_STATS.length ? Object.fromEntries(ALF_MS_STATS.map((k, i) => [k, alfInt(t.st[i], 0, 9999)])) : null;
+    return {
+      monster: t.mo,
+      nick: alfMsWord(t.n, 16),
+      colors: (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null),
+      lead: t.l === 1,
+      slot: Number.isFinite(Number(t.s)) ? alfInt(t.s, 0, 99) : null,
+      lv: Number.isFinite(Number(t.lv)) ? alfInt(t.lv, 1, 999) : null,
+      grow: alfMsText(t.g, 16),
+      growMine: alfMsText(t.gm, 16),
+      stats: st,
+      why: alfMsWord(t.w, 40)
+    };
+  }).filter(Boolean);
+  const dk = (Array.isArray(raw.dk) ? raw.dk : []).slice(0, 3).map(d => {
+    if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(d.f)) return null;
+    const cards = (Array.isArray(d.cd) ? d.cd : []).map(x => Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null).filter(Boolean).slice(0, 50);
+    return cards.length ? {
+      face: d.f,
+      name: alfMsText(d.nm, 24),
+      line: alfMsWord(d.ln, 40),
+      monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsMonOk).slice(0, 3),
+      ace: alfMsText(d.a, 20),
+      cards
+    } : null;
+  }).filter(Boolean);
+  return {
+    off: false,
+    ms,
+    dk,
+    wt: alfInt(raw.wt, 0, 20)
+  };
+};
+const normalizeAlfMsSent = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const at = {};
+  const sig = {};
+  for (const id of ALF_IDS) {
+    if (o.at && Number.isFinite(Number(o.at[id])) && Number(o.at[id]) > 0) at[id] = Number(o.at[id]);
+    if (o.sig && typeof o.sig[id] === 'string' && /^[a-z0-9]{1,16}$/.test(o.sig[id])) sig[id] = o.sig[id];
+  }
+  return {
+    v: 1,
+    at,
+    sig
+  };
+};
+let _alfMsSent = null;
+const alfMsLoadSent = async () => {
+  if (_alfMsSent) return _alfMsSent;
+  let raw = null;
+  try {
+    raw = typeof storeGet === 'function' ? await storeGet(ALF_MS_SENT_KEY, null, false) : null;
+  } catch (_) {
+    raw = null;
+  }
+  _alfMsSent = normalizeAlfMsSent(raw);
+  return _alfMsSent;
+};
+const alfMsPublish = async (self, ids, show, now = Date.now(), {
+  force = false
+} = {}) => {
+  if (!alfMsSendOn() || _alfMsMissing || !alfSafeOther(self)) return 0;
+  const sent = await alfMsLoadSent();
+  let n = 0;
+  for (const aid of (Array.isArray(ids) ? ids : []).filter(id => ALF_IDS.includes(id))) {
+    const body = show ? alfMsBuild(aid) : {
+      v: 1,
+      off: 1
+    };
+    if (!body.off && !body.ms.length) continue;
+    const sig = alfSig(JSON.stringify(body));
+    if (sig === sent.sig[aid]) continue;
+    const flip = body.off || sent.sig[aid] === alfSig(JSON.stringify({
+      v: 1,
+      off: 1
+    }));
+    if (!force && !flip && sent.at[aid] && now - sent.at[aid] < ALF_MS_GAP_MS) continue;
+    try {
+      await alfRequest(`${ALF_MS_TABLE}?on_conflict=breeder_id,assistant_id`, {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: {
+          breeder_id: self,
+          assistant_id: aid,
+          body
+        },
+        soft: true
+      });
+      sent.at[aid] = now;
+      sent.sig[aid] = sig;
+      n += 1;
+    } catch (e) {
+      if (e && e.missing) {
+        _alfMsMissing = true;
+        break;
+      }
+    }
+  }
+  if (n) {
+    _alfMsSent = sent;
+    try {
+      if (typeof storeSet === 'function') await storeSet(ALF_MS_SENT_KEY, sent, false);
+    } catch (_) {}
+  }
+  return n;
+};
+const alfMsFetch = async (hostId, aid) => {
+  if (_alfMsMissing || !alfSafeOther(hostId) || !ALF_IDS.includes(aid)) return null;
+  try {
+    const rows = await alfRequest(`${ALF_MS_TABLE}?select=body,updated_at&breeder_id=eq.${encodeURIComponent(hostId)}&assistant_id=eq.${aid}&limit=1`, {
+      soft: true
+    });
+    return Array.isArray(rows) && rows[0] ? alfMsNormalize(rows[0].body) : null;
+  } catch (e) {
+    if (e && e.missing) _alfMsMissing = true;
+    return null;
+  }
+};
 const MASMON_PVP_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/masmon-pvp`;
 const MASMON_PVP_KEY = 'mh_masmon_pvp_owner_key_v1';
 const MASMON_PVP_TIMEOUT_MS = 12000;

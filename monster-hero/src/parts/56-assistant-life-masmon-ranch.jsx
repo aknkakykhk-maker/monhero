@@ -229,7 +229,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
             <p className="text-[13px] font-black">{res.kind === 'heavy' ? '🏋️' : '🎫'} {res.name}({AMGR_TICKET_NAME[res.kind]})</p>
             {res.rows.map(r => <p key={r.k} className="mt-1 flex justify-between text-[13px] font-black" data-amgr-row={r.k}><span>{amgrStatName(r.k)}</span><span className={r.to >= r.from ? 'text-emerald-300' : 'text-rose-300'}>{r.from} → {r.to}({amgrSignText(r.to - r.from)})</span></p>)}
             {res.fat > 0 && <p className="mt-1 flex justify-between text-[11px] font-bold text-slate-300"><span>疲れ</span><span>+{res.fat}</span></p>}
-            <button type="button" onClick={onClose} className={`${btn} mt-3 w-full bg-slate-700`}>閉じる</button>
+            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} mt-3 w-full bg-slate-700`}>閉じる</button>
           </div>
         ) : (<>
           {rows.length > 1 && <div className="mt-2 flex flex-wrap gap-1.5" data-amgr-mons>
@@ -251,7 +251,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
             : `${plan.name}: ${amgrStatName(plan.main)}が上がる`}</p>
           {(err || block) && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgr-why>{err || block}</p>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={onClose} className={`${btn} bg-slate-700`}>やめる</button>
+            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>やめる</button>
             <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} のこり {have} → {Math.max(0, have - 1)}枚</small></button>
           </div>
         </>)}

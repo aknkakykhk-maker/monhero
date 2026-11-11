@@ -86,7 +86,9 @@ const normalizeAssistantLifeFriendSettings = (v) => {
     // 置き手紙の自由文(2026-11-08 社長): 見る(既定は入)・この人の自由文は見ない
     noteShow: o.noteShow !== false, noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : [],
     // 最近の遊びをフレンドに見せる(2026-11-08 社長 既定は入)
-    act: o.act !== false };
+    act: o.act !== false,
+    // 助手のマスモンのくわしい中身(Lv・能力・デッキ)をフレンドに見せる(2026-11-12 社長 既定は入。56-assistant-life-friend-masmon-share)
+    ms: o.ms !== false };
 };
 const normalizeAssistantLifeFriendKnown = (v) => {
   const o = {};
@@ -494,6 +496,7 @@ const alfPublish = async (life, metIds, now = Date.now(), { force = false } = {}
   try {
     await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: { breeder_id: self, open: settings.open, house } });
     alfSaveSt({ ...alfToday(), sentAt: now, sentSig: sig });
+    if (typeof alfMsPublish === 'function') void alfMsPublish(self, Array.isArray(house.ids) ? house.ids : (Array.isArray(metIds) ? metIds : []), settings.show && settings.ms, now, { force });
     void alfPublishMore(self, settings.show ? alfFitMasmon({ ...alfBuildMore(house.ids), ...(settings.act ? { ac: _alfActCache || [] } : {}), ...(() => { const fv = typeof albFavShare === 'function' ? albFavShare(house.ids) : null; return fv ? { fv } : {}; })() }, alfMasmonShare(house.ids)) : {});
     return true;
   } catch { return false; }
@@ -1405,7 +1408,7 @@ function AssistantLifeFriendPage({ life }) {
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
-        {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
+        {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
           <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
             <span>{label}</span>
             <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
