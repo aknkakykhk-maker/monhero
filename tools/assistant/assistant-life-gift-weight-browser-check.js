@@ -72,8 +72,11 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       // ① 道具タブ
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
+      // 説明は下の「？ 友情Lv・仲良し度と、贈るきまり」に畳んである(2026-11-11 案7)。押すと出る
+      await page.locator('[data-assistant-life-items-help-toggle]').click().catch(() => {}); await page.waitForTimeout(200);
+      const itemsHelp = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
       // 2026-11-08 買って贈る: 持っていない行は「🛒 ◯P で買って贈る」(一緒にいる組がいないときは交換所の入口)。下の交換所の入口はいつもある
-      check(`① ${tag}: 道具タブに友情Lv・仲良し度の説明と交換所の入口が出る`, /友情Lv=贈った2人の助手どうしの仲/.test(items) && /仲良し度=あなたとその助手の仲/.test(items) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"], [data-assistant-life-items] [data-assistant-life-item-buy]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
+      check(`① ${tag}: 道具の一覧の説明は畳んであり、押すと友情Lv・仲良し度の説明が出る。交換所の入口が出る`, /ふつう/.test(items) && !/友情Lv=贈った2人の助手どうしの仲/.test(items) && /友情Lv=贈った2人の助手どうしの仲/.test(itemsHelp) && /仲良し度=あなたとその助手の仲/.test(itemsHelp) && (await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"], [data-assistant-life-items] [data-assistant-life-item-buy]').count()) >= 2, items.replace(/\s+/g, ' ').slice(0, 80));
       // 右上の時計の札が右端で切れない(🔄横 667 の狭い欄・2026-11-08 ミハリ)
       const clockOk = await page.evaluate(() => { const c = [...document.querySelectorAll('[data-assistant-life-clock-box] [data-time-of-day-clock]')].find(x => x.getClientRects().length); if (!c) return true; const r = c.getBoundingClientRect(); let p = c.parentElement; while (p && getComputedStyle(p).overflow === 'visible') p = p.parentElement; const pr = p ? p.getBoundingClientRect() : { right: innerWidth }; return r.right <= Math.min(innerWidth, pr.right) + 1; });
       check(`③ ${tag}: 右上の時計の札が右端で切れない`, clockOk);
