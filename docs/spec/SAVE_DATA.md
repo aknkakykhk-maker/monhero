@@ -68,9 +68,10 @@
 | `mh_assistant_market_perk_v1` | object / 無し | 助手がマーケットにいるときの「今日のおすすめ品1割引き」を使ったか(2026-11-11)。`{ day:'YYYY-MM-DD'(朝4時区切りの日), used:true }`。買えたときだけ書き、日が変われば古い日付は無視される。読むときは `normalizeAssistantMarketPerk` を通す(壊れていれば未使用)。既存のキーは触らない |
 | `mh_assistant_life_ui_v2` | boolean / 無いときは新UI(2026-11-11 から。それまでは `false`) | 助手ライフの画面の切替(設定の「助手ライフの画面」)。`true` で新UI、`false` で前の画面。押したときだけ書く・消さない。助手の進行・報酬・親密度には影響しない |
 | `mh_assistant_life_guide_seen_v1` | boolean / `false` | 助手ライフ(新UI)で「初めて開いた人への1枚」を見たか(2026-11-11)。`true` になると1枚は出なくなり、見守る札の光も止まる。無い・壊れているときは「まだ見ていない」。ほかの保存は読まない・変えない |
+| `mh_assistant_life_profile_seen_v1` | object / `normalizeAssistantLifeProfileSeen` | 助手紹介(2026-11-11)の NEW の印。`{ [助手id]: { n: 見た時点の数(分かった好み+聞ける台詞) } }`。いまの数がこれより多い助手に NEW を付ける。はじめて一覧を開いたときは、いまの数を控えるだけ。壊れた値・無い助手は控え直す |
 | `mh_assistant_life_daily_v1` | object / `{day:'',heard:[],days:[],claims:0}` | 助手ライフ(新UI)の「時間帯のできごと」(2026-11-11)。`heard` はその日に聞いた時間帯、`days` は聞いた日(最大7・とびとびでよい)、`claims` は7日で🧺おやつバスケットを受け取った回数。7日たまり、持ち物へ足せたときだけ `days` を空にして `claims` を1足す(二重に渡さない)。無い・壊れているときは全部空。ほかの保存(`mh_owned_items` は道具1個を足すだけ)は消さない |
 | `mh_assistant_life_perks_v1` | `{ day, temple }` / `{ day:'', temple:'' }` | 助手ライフの施設の得「神殿」を、その日(朝4時区切り・`day`)にもう受け取ったか。`temple` は受け取った助手のid(空 = まだ)。日が変われば未受け取りに戻る。壊れた値は既定へ。ランキングに効かない(56-assistant-life-ux.jsx) |
-| `mh_assistant_life_v1` | object | 助手たちの今(2026-11-07・公開の印 assistantLife)。いまの時間の様子 `{ salt(端末ごとの種), abs(時間の通し番号), slot, moods:{助手:気分}, groups:[{ids,doing,place}], solo:{助手:{doing,place,reason}}, lonely:[助手], recent:[{kind,abs,pair,ids}](最近のできごと 40件まで), nudges:{invite:[{id,abs}],introduce:[{pair,abs}]}(ブリーダーの声かけ) }`。壊れていたら空として読み直す |
+| `mh_assistant_life_v1` | object | 助手たちの今(2026-11-07・公開の印 assistantLife)。いまの時間の様子 `{ salt(端末ごとの種), abs(時間の通し番号), slot, moods:{助手:気分}, groups:[{ids,doing,place}], solo:{助手:{doing,place,reason}}, lonely:[助手], recent:[{kind,abs,pair,ids}](最近のできごと 40件まで), nudges:{invite:[{id,abs}],introduce:[{pair,abs}]}(ブリーダーの声かけ) }`。壊れていたら空として読み直す 2026-11-11 移動12回: 項目 `v:2` を足した。`abs` は 日×12+j(j=0〜11・2時間ずつ)。`v` が 2 でない旧データ(abs=日×6+i)は読み込み時に一度だけ `abs`・`recent[].abs` を 日×12+(区切りの始まり÷2) へ読み替え、旧の `nudges` は捨てる。`v:2` を書いたあとは変換しない |
 | `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
 | `mh_assistant_peer_seen14_v1` | object | 助手たちの今で見た台本 `{ [台本の id]: 見た日(朝4時区切り) }`。見た台本は14日のあいだ出しにくくする(全部見ていたら前に見たものから)。14日より前の記録・壊れた値は読むときに捨てる(最大4000件)。公開の印 `assistantLife` が真のときだけ書く |
 | `mh_assistant_life_item_intro_v1` | boolean | 2人にあげる道具(差し入れ・友情のしるし)を初めて持ったときの案内を出したか。true なら2度出さない。公開の印 `assistantLife` が真のときだけ書く |
@@ -126,6 +127,7 @@
 | `mh_friend_presence_show_v1` | boolean / `true` | 「いまの状態をフレンドに見せる」(2026-11-08)。`false` のときは friend_profiles の place を 'other'(ログイン中)にし、オート周回中・操作なしの分(records.au・records.im)も送らない |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
 | `mh_pending_room_link_v1` | object / `null` | 招待リンク(`?beatRoom=` / `?cardRoom=`)で開いたときの部屋 `{kind, code, at}`。URLの引数は読んだらすぐ消し、ここへ預けて、起動の流れ・はじめての案内が済んだHOMEで部屋へ入ったら消す。3時間たつと捨てる(`mhNormalizeRoomLink` を通す) |
+| `mh_rhythm_multi_spectate_v1` | object / `{allow:true}` | モンヒロビートのマルチで、自分の演奏を観戦してもらってよいか(`{ allow: boolean }`。無い・壊れているときは許す。`false` だけ「許さない」)。端末だけに覚える |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
@@ -185,6 +187,8 @@
 | `mh_corrupt_<元のキー>_v1` | string | 保存の JSON が壊れていて読めなかったときの、壊れた元の文字列の控え(2026-10-27)。読み込み(storeGet)が見つけたときに1回だけ書く(すでにあれば書かない)。元のキーは既定値で読まれ、作り直して書く所でそのまま上書きされるため、手で直せるよう残す。ゲームはこのキーを読まない |
 | `mh_assistant_bond_rewards_v1` | object / `null` | 助手の仲良し度の節目(Lv22・25・28・30)のごほうびを、**最初の量**(`ASSISTANT_BOND_LEVEL_REWARDS_V1`)で届けた印(`{ 助手のid: [22, 25, ...] }`・2026-10-21 #3241)。量を上げたあと(下の v2)は書かず、読むだけ。この印がある節目には、今の量との差のぶんだけを追加で届ける |
 | `mh_assistant_bond_rewards_v2` | object / `null` | 助手の仲良し度のLvごとのごほうび(Lv2〜30・`ASSISTANT_BOND_LEVEL_REWARDS`)を**今の量**で届けた(または最初の量との差を届けた)印(`{ 助手のid: [2, 3, ...] }`・2026-10-21)。助手ごとに各Lv1回。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する。起動時に、もう越えているLvのぶんをまとめて届ける |
+| `mh_assistant_partner_v1` | object | 助手の解放(2026-11-11)。`{ v:1, mode:'all'\|'earn'\|null, first, unlocked:[助手id], noticed:[助手id] }`。すでに遊んでいた人は読み込みで一度だけ `mode:'all'`(全員が助手のまま・二度と判定しない)。はじめての人は助手えらびで `mode:'earn'`・`first`・`unlocked:[first]`。アシストカードを40回使うと `unlocked` に足す(消さない)。`noticed` は解放の演出を見た助手。読むときは `normalizeAssistantPartner`(18-assistant-partner.jsx)。壊れた値・無い値は「判定前」= 全員選べる |
+| `mh_assistant_card_uses_v1` | object | 助手のアシストカードをモンヒロバトルで使った回数 `{ 助手id: 回数 }`(2026-11-11)。プレイヤーが切った分だけ(オート・クイックも含む・AIコピーとデバッグ戦は除く)。全員数える。読むときは `normalizeAssistantCardUses` |
 | `mh_raid_jack_boss_down_v1` | object / `null` | レイドの大王ジャックが(みんなで)倒されたのを見た印(`{ at }`・2026-10-20)。フレーム「ハロウィン・恐」をマーケットで買えるようにする条件。倒されたことは取り消されないので、一度見たら持っておき、サーバーへ届かないときも使う |
 | `mh_raid_jack_guide_seen_v1` | boolean / `false` | レイド画面を開いた最初の1度だけ出す、画面のなかの案内(助手の吹き出し)を見たか。新しく足したキー。既存のキーには触らない |
 | `mh_underworld_tab_seen_v1` | `true` のみ | 難易度選択の「冥界」タブ(冥界チャレンジ・ETERNAL クリアで解放)を一度でも開いた印(2026-11-01・新しく足したキー)。立つまでタブに NEW を出す。無い・読めないときは「まだ」。極限の記録・ランキングのキー(`mh_extreme_*`・`ExtremeINFERNO` など)はそのまま使い、名前も中身も変えない |

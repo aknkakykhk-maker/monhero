@@ -343,9 +343,10 @@ const assistantPeerSetPlayerBondAdder = (fn) => { assistantPeerPlayerBondAdder =
 let assistantPeerPlayerCaller = null;
 const assistantPeerSetPlayerCaller = (fn) => { assistantPeerPlayerCaller = typeof fn === 'function' ? fn : null; };
 const assistantPeerPlayerCall = (who) => { try { const c = assistantPeerPlayerCaller ? assistantPeerPlayerCaller(who) : ''; return c || 'あなた'; } catch { return 'あなた'; } };
-const assistantPeerAddPlayerBond = (ids, action) => {
+// amount … 1回ぶんを呼ぶ側が決めるとき(助手ライフの見守るは約75%。行動の1回ぶんは超えない)。null は今までどおり
+const assistantPeerAddPlayerBond = (ids, action, amount = null) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
-  for (const id of [...new Set(ids || [])]) { try { assistantPeerPlayerBondAdder(id, action); } catch {} }
+  for (const id of [...new Set(ids || [])]) { try { if (Number.isFinite(amount)) assistantPeerPlayerBondAdder(id, action, amount); else assistantPeerPlayerBondAdder(id, action); } catch {} }
 };
 
 // ---------- その日の出来事(台本の when) ----------

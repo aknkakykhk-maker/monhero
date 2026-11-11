@@ -73,7 +73,7 @@ const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = fals
   const sameDay = cur.day === today;
   const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
-  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: 'カード部屋の助手と対戦(1.5倍)', xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
