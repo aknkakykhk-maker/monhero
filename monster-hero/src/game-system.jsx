@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ae11a18c9c47433a
+// generated-sha256: 791e1cbe6b834a85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73023,7 +73023,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
         <div className="ambw-card">
           <div className="ambw-small">段(ポイントで決まります・はじめは 1500)</div>
           {AMBB_TIERS.slice().reverse().map((t, i, arr) => (
-            <div key={t.id} className="ambb-tier"><span>{t.icon} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
+            <div key={t.id} className="ambb-tier"><span>{cardIconNode(t.icon, 14)} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
           ))}
           <p className="ambw-small" style={{ marginTop: 6 }}>順位は1週間ごと(月曜 4:00 に切り替わり)。</p>
         </div>

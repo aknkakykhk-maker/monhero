@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd4e73056c765dad
+// source-sha256: 6a8f637a1259f28d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -138754,7 +138754,7 @@ function AssistantMasmonBattleBeta({
     }, "段(ポイントで決まります・はじめは 1500)"), AMBB_TIERS.slice().reverse().map((t, i, arr) => React.createElement("div", {
       key: t.id,
       className: "ambb-tier"
-    }, React.createElement("span", null, t.icon, " ", t.label), React.createElement("span", {
+    }, React.createElement("span", null, cardIconNode(t.icon, 14), " ", t.label), React.createElement("span", {
       className: "ambw-small"
     }, Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`))), React.createElement("p", {
       className: "ambw-small",
