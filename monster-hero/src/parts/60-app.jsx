@@ -8360,6 +8360,8 @@ function MonsterHeroGame() {
       const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
       if (keys.length === 0) { setRestoreMsg('コードが正しくありません'); return; }
       keys.forEach(k => window.localStorage.setItem(k, data[k]));
+      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch { setRestoreMsg('コードが正しくありません'); }
@@ -8430,6 +8432,8 @@ function MonsterHeroGame() {
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
           keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch { setRestoreMsg('バックアップファイルが正しくありません'); }
@@ -23763,7 +23767,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <span className="shrink-0" style={{opacity:.6,filter:'saturate(.35)'}}><AssistantFace who={who} size={52} accent="#64748b" expression="normal"/></span>
                         <span className="min-w-0 flex-1">
                           <b className="block text-[12px] font-black text-slate-300">{who.name}<span className="ml-1 rounded-full bg-slate-700 px-1.5 py-0.5 text-[8.5px] text-slate-200 align-middle">まだ助手ではありません</span></b>
-                          <small className="block text-[9px] text-slate-400 leading-tight mt-0.5">{owned?<>「{cardName}」をモンヒロバトルで使った回数 <b className="text-slate-200 tabular-nums">{n} / {need}</b></>:<>「{cardName}」を手に入れて、モンヒロバトルで{need}回使うと選べます</>}</small>
+                          <small className="block text-[9px] text-slate-400 leading-tight mt-0.5">{owned?<>「{cardName}」をモンヒロバトルで使った回数 <b className="text-slate-200 tabular-nums whitespace-nowrap">{n} / {need}</b></>:<>「{cardName}」を手に入れて、モンヒロバトルで{need}回使うと選べます</>}</small>
                           {owned&&<span className="block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"><span className="block h-full rounded-full" style={{width:`${Math.round(n/need*100)}%`,background:'linear-gradient(90deg,#38bdf8,#a78bfa)'}}/></span>}
                         </span>
                       </div>

@@ -63,6 +63,8 @@
     try {
       const { data, keys } = decodeBackupCode(value);
       keys.forEach(key => window.localStorage.setItem(key, data[key]));
+      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+      if (keys.indexOf('mh_assistant_partner_v1') < 0) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
       setMessage(modal, '復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch (_) { setMessage(modal, 'バックアップファイルが正しくありません', true); }
