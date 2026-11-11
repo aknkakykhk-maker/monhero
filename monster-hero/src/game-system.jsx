@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cadc4f5aaa1e626f
+// generated-sha256: 302ccb20d1e7c12a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9707,13 +9707,14 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
-  assistantLifeFriendBond: false, // フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳(56-assistant-life-friend-bond)。社長の「この文で」と表(assistant_life_friend_likes)のあとで真に
+  assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
   assistantMasmonBattleBeta: false, // 2026-11-11 助手マスモンの対戦 β その1(端末の中の対戦・ミセカタ2)。止め絵と更新履歴・ヘルプに社長の「この文で」が出て、窓口の最終確認が済んだら真
   assistantMasmonBattlePvp: false, // 2026-11-11 助手マスモンの対戦 β その2(フレンド対戦+ランキング)。タイセンの表と関数が本番に入り、サーバ検証がそろってから真
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
+  assistantMasmonCheer: false, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。更新履歴とヘルプに社長の「この文で」が出て、地図の窓の口(ナカヨシ19)が入ってから真
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
@@ -69367,7 +69368,8 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 // ---------- 段階C: 好きな家具を使う吹き出し・遊びに来た助手が家具に触れる(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md) ----------
 // 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
 const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
-  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
+  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴',
+  clock: 'ふりこ時計', map: '地図', guitar: 'ギター', tv: 'テレビ', windowflower: '窓辺の花', fishbowl: '金魚ばち', pendant: 'ライト', garland: 'ガーランド' });
 const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => (typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded
   ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean));
 // 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
@@ -69771,11 +69773,11 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
   sorashido: Object.freeze({ hero: 'lantern',   pull: 0.08, low: -0.03, tilt: 0, big: 1.2,  line: '星の物は上に集めました。角度も計算済みです笑' }),
   erubin:    Object.freeze({ hero: 'plant',     pull: -0.06, low: 0,   tilt: 0,  big: 1.1,  line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う' }),
 });
-// 置き場所ごとの席(良い順)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける。床の家具は助手の前の机・ソファに隠れないよう、助手より前の層に置く
+// 置き場所ごとの席(良い順)。2026-11-11 家具が20種類になったので、床 9・壁 6・天井 5(足りない分は押し入れへ)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける。床の家具は助手の前の机・ソファに隠れないよう、助手より前の層に置く
 const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
-  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
-  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]],
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19], [0.25, 0.33]],
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6], [0.67, 0.6], [0.24, 0.72], [0.76, 0.72], [0.5, 0.58]],
 });
 // owned … その助手に贈ってある家具の key。苦手な家具は押し入れへ。席が足りない分も押し入れへ
 const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
@@ -69949,7 +69951,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
           {tool('keep', 'しまう', () => { commit(cur.filter(it => it.k !== sel)); setSel(null); }, !selIt)}
         </div>)}
       {/* 置いてある家具(押すと選ぶ)と、押し入れの家具(押すと部屋に出す) */}
-      <div className={`flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`} data-assistant-life-layout-chips>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" data-assistant-life-layout-chips>
         {cur.map(it => chip(it.k, true))}{kept.map(k => chip(k, false))}
         {got.length === 0 && <p className="text-[11px] font-bold text-slate-300">まだ家具がありません。「🪑 家具」から贈ると、ここに並びます</p>}
       </div>
@@ -72673,11 +72675,12 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
   const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
   const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1; // 練習の相手がいないときの伸び(56-assistant-life-masmon-cheer.jsx・印が偽なら 1)
   const g = {};
   const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
   const up = (k, lo, hi) => {
     const cur = me.m[k] || 0;
-    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
   };
   // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)
@@ -73499,7 +73502,11 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   const o = opts && typeof opts === 'object' ? opts : {};
   const preview = !ambbOn();
   if (preview && o.from !== 'debug') return false;
-  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, at: Date.now() });
+  // デバッグからだけ: 本物のサーバでフレンド対戦を1回通す(窓口の確かめ・2026-11-11)。
+  //   タイセンの口は印 assistantMasmonBattlePvp を見るので、この起動のあいだだけ印を真にする(読み込み直すと偽に戻る・保存しない)
+  const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
+  if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
+  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, tryPvp, at: Date.now() });
   return true;
 };
 // 「できること」の1行。印が偽なら null(ボタンを出さない)
@@ -73547,7 +73554,7 @@ const AMBB_CSS = `
 .ambb-if{padding:8px;border-radius:12px;background:rgba(96,165,250,.14);margin-top:6px}
 `;
 
-function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClose }) {
+function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
   const save = useAmbbSave();
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -73638,7 +73645,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.assistantId } } }));
   };
 
-  const pvp = ambbPvpOn() && !preview;
+  // 確かめ(印が偽)ではフレンド対戦を出さない。デバッグの「フレンド対戦を試す」だけは出す(この端末の保存はしないまま)
+  const pvp = (ambbPvpOn() && !preview) || (!!tryPvp && typeof masmonPvpChallenge === 'function');
   const srcNow = pvp ? (src || (foes.length ? 'local' : 'friend')) : 'local';
   // フレンド対戦: サーバが回した試合(種と編成)を同じ計算で見返す。勝ち負けはサーバの返りが正本
   const startPvp = (m, foe) => {
@@ -73780,7 +73788,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
           {srcNow === 'local' && <button className="ambw-btn" data-ambb-start disabled={!foeId} onClick={start}>⚔ 対戦する</button>}
           <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
         </div>
-        {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。</p>}
+        {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。{tryPvp ? 'フレンド対戦は本物のサーバに登録・記録されます。' : ''}</p>}
       </div>
     );
   } else if (phase === 'rank' && pvp) {
@@ -74064,6 +74072,280 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
         ))}
       </div>
       <div className="ambw-ctl"><button className="ambw-btn2" onClick={onBack}>← もどる</button></div>
+    </div>
+  );
+}
+
+// ---- part: 56-assistant-life-masmon-cheer.jsx ----
+// 助手がモンヒロバトルにいるときにできること: 👀 修行を見る・📣 応援する(2026-11-11 シュギョウ2・台帳 #5350)
+//   設計と止め絵: docs/progress/assistant-peer/masmon-train/cheer/PLAN.md
+//   社長の答え(窓口経由 2026-11-11): 応援は 1回 熟練+1・💗+5・1日3回/練習の相手はフレンドのマスモン → 自分の別のマスモン → 一人(一人は修行の伸び ×0.5)/
+//   修行を見ても応援と同じ得(見ると応援を合わせて1日3回・移動1回に1回)
+//   公開の印 RELEASE_FLAGS.assistantMasmonCheer が偽のあいだ、口はすべて null / 何もしない(修行の結果も今のまま)
+//   保存は新しいキー mh_assistant_masmon_cheer_v1 だけ。修行の保存(mh_assistant_masmon_train_v1)へは熟練を足すだけ(amgtSave の守りを通す)
+const ASSISTANT_MASMON_CHEER_KEY = 'mh_assistant_masmon_cheer_v1';
+// 数字はここだけ
+const AMGC_NUM = Object.freeze({
+  mastery: 1, // 1回の熟練(いちばん最近に修行したマスモンの、いちばん低い技1つ)
+  bond: 5, // 1回の 💗 仲良し度(data/assistants.js の lifeCheer。1日の上限もそちら)
+  perDay: 3, // 見る・応援を合わせて、助手1人の1日の回数
+  soloMult: 0.5, // 一人で修行したときの伸び(練習相手がいない。社長が ×0.5 を選んだ・部の推奨は ×0.7)
+  friendDays: 7, // フレンドの登録編成を見つけた日から、相手ありとみなす日数
+});
+const amgcOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonCheer === true && typeof amgtOn === 'function' && amgtOn();
+const amgcOkAid = (aid) => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+const amgcInt = (v, d, lo, hi) => (Number.isInteger(v) ? Math.max(lo, Math.min(hi, v)) : d);
+// 形: { v:1, day: { [助手]: { d: 日, n: 今日の回数, s: [得をもらった生活の回 abs] } }, fr: フレンドの登録編成を見つけた日(-1 は無し) }
+const normalizeAssistantMasmonCheer = (raw) => {
+  const out = { v: 1, day: {}, fr: -1 };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (raw.day && typeof raw.day === 'object' && !Array.isArray(raw.day)) for (const [aid, x] of Object.entries(raw.day)) {
+    if (!amgcOkAid(aid) || !x || typeof x !== 'object') continue;
+    out.day[aid] = { d: amgcInt(x.d, -1, -1, 1e7), n: amgcInt(x.n, 0, 0, 99), s: [...new Set((Array.isArray(x.s) ? x.s : []).filter(n => Number.isInteger(n) && n >= 0))].slice(-12) };
+  }
+  out.fr = amgcInt(raw.fr, -1, -1, 1e7);
+  return out;
+};
+const AMGC_STORE = { state: normalizeAssistantMasmonCheer(null), loaded: false, subs: new Set(),
+  set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_CHEER_KEY, null, false) : null; } catch (_) {}
+      this.loaded = true; this.set(normalizeAssistantMasmonCheer(raw)); return this.state;
+    })();
+    return this._p;
+  } };
+// 読み込む前は書かない(空の既定値で前の記録を上書きしない)
+const amgcSave = (next) => {
+  if (!AMGC_STORE.loaded) return false;
+  AMGC_STORE.set(next);
+  try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_CHEER_KEY, next, false); } catch (_) {}
+  return true;
+};
+if (typeof window !== 'undefined') setTimeout(() => { try { if (amgcOn()) AMGC_STORE.load(); } catch (_) {} }, 0);
+
+const amgcToday = (now = Date.now()) => amgtSlotDay(amgtSlotOf(now));
+const amgcRowsOf = (aid) => {
+  try { return typeof assistantMasmonRowsOf === 'function' && typeof ASSISTANT_MASMON_STORE !== 'undefined' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).filter(t => t && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[t.monster]) : []; } catch (_) { return []; }
+};
+// 解放前の助手には関われない(カイホウ assistantPartnerOkNow。無いあいだ・今の人は常に関われる)
+const amgcPartnerOk = (aid) => { try { return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(aid) !== false : true; } catch (_) { return true; } };
+const amgcLife = () => (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) || null;
+const amgcAtBattle = (aid, life = amgcLife()) => {
+  try { const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, aid) : null; return !!(w && w.place === AMGT_PLACE); } catch (_) { return false; }
+};
+
+// ---------- 練習の相手(社長: フレンドのマスモン → 自分の別のマスモン → 一人) ----------
+// 修行は通信せずに回るので、「フレンド」は 👀 で見たときに登録編成を見つけた日を覚えておく(amgcNoteFriend)
+const amgcSparOf = (aid, now = Date.now()) => {
+  const fr = AMGC_STORE.state.fr;
+  if (fr >= 0 && amgcToday(now) - fr < AMGC_NUM.friendDays) return 'friend';
+  if (amgcRowsOf(aid).length >= 2) return 'own';
+  return 'solo';
+};
+// 修行の伸びの掛け算(修行の amgtDo から呼ぶ)。印が偽なら 1
+const amgcSparMult = (aid) => { try { return amgcOn() && AMGC_STORE.loaded && amgcSparOf(aid) === 'solo' ? AMGC_NUM.soloMult : 1; } catch (_) { return 1; } };
+const amgcNoteFriend = (found, now = Date.now()) => {
+  if (!found || !AMGC_STORE.loaded) return;
+  const d = amgcToday(now); if (AMGC_STORE.state.fr === d) return;
+  amgcSave({ ...AMGC_STORE.state, fr: d });
+};
+
+// ---------- いちばん最近の修行 ----------
+// { row, key, me, log(そのときの1回), today }。修行が1回も無ければ null
+const amgcLastShugyo = (aid, now = Date.now()) => {
+  const rows = amgcRowsOf(aid); const mons = (AMGT_STORE.state.mons || {})[aid] || {};
+  let best = null;
+  for (const row of rows) {
+    const me = mons[amgtKeyOf(row)]; const x = me && me.log[me.log.length - 1];
+    if (x && (!best || x.s > best.log.s)) best = { row, key: amgtKeyOf(row), me, log: x };
+  }
+  if (best) best.today = amgtSlotDay(best.log.s) === amgcToday(now);
+  return best;
+};
+const amgcTechName = (monster, id) => ((AMGT_SENSE.find(x => x[0] === id) || [])[1]) || ((amgtTechsOf(monster).find(t => t.id === id) || {}).name) || '';
+
+// ---------- 地図の窓の1行(ナカヨシ19が place==='battle' の行で呼ぶ) ----------
+// 印が偽・マスモンがいない → null(ボタンも「きょうの修行」の行も出さない)
+const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
+  if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid)) return null;
+  const rows = amgcRowsOf(aid); if (!rows.length) return null;
+  const last = amgcLastShugyo(aid, now);
+  let today = null;
+  if (last && last.today) {
+    const g = last.log.g || {}; const mainId = Object.keys(g).sort((a, b) => g[b] - g[a])[0];
+    today = { nick: last.row.nick || '', monster: last.row.monster, kind: (AMGT_KINDS[last.log.k] || {}).name || '', act: (AMGT_KINDS[last.log.k] || {}).act || '',
+      learned: last.log.l ? amgcTechName(last.row.monster, last.log.l) : '', main: mainId ? amgcTechName(last.row.monster, mainId) : '', gain: mainId ? g[mainId] : 0, fail: !!last.log.f };
+  }
+  const st = AMGC_STORE.state.day[aid]; const d = amgcToday(now);
+  const used = st && st.d === d ? st.n : 0; const life = amgcLife();
+  const thisMove = !!(st && st.d === d && life && Number.isInteger(life.abs) && st.s.includes(life.abs));
+  const left = Math.max(0, AMGC_NUM.perDay - used);
+  const why = !AMGC_STORE.loaded ? '読み込み中です' : !amgcAtBattle(aid, life) ? 'モンヒロバトルにいるときにできます' : left <= 0 ? '今日はもう応援しました(朝4時に戻ります)' : thisMove ? '次の時間帯にまた応援できます' : null;
+  return { today, last: last ? { nick: last.row.nick || '', today: last.today } : null, left, perDay: AMGC_NUM.perDay, canCheer: !why, why, spar: amgcSparOf(aid, now) };
+};
+
+// ---------- 📣 応援する(👀 で見たときも同じ得・合わせて1日3回・移動1回に1回) ----------
+// 返り: { ok:true, nick, tech, from, to, bond } か { ok:false, why }
+const assistantMasmonCheer = (aid, via = 'cheer', now = Date.now()) => {
+  const info = assistantMasmonTrainRowInfo(aid, now);
+  if (!info) return { ok: false, why: 'off' };
+  if (!info.canCheer) return { ok: false, why: info.why };
+  if (!AMGT_STORE.loaded) return { ok: false, why: '読み込み中です' };
+  const life = amgcLife(); if (!life || !Number.isInteger(life.abs)) return { ok: false, why: '読み込み中です' };
+  const rows = amgcRowsOf(aid);
+  const last = amgcLastShugyo(aid, now);
+  const row = (last && last.today ? last.row : null) || rows.slice().sort((a, b) => a.slot - b.slot)[0];
+  const e = typeof amgEntryOf === 'function' ? amgEntryOf(aid, row) : null;
+  const { next, me } = amgtEnsure(AMGT_STORE.state, aid, row, e);
+  const tid = me.learn.slice().sort((a, b) => (me.m[a] || 0) - (me.m[b] || 0) || a.localeCompare(b))[0];
+  let from = 0, to = 0;
+  if (tid) { from = me.m[tid] || 0; to = Math.min(100, from + AMGC_NUM.mastery); me.m[tid] = to; }
+  if (amgtSave(next) === false) return { ok: false, why: '読み込み中です' }; // 保存待ちのあいだは undefined が返る(書けている)
+  const d = amgcToday(now); const st0 = AMGC_STORE.state.day[aid];
+  const st = st0 && st0.d === d ? st0 : { d, n: 0, s: [] };
+  amgcSave({ ...AMGC_STORE.state, day: { ...AMGC_STORE.state.day, [aid]: { d, n: st.n + 1, s: [...st.s, life.abs].slice(-12) } } });
+  try { if (typeof assistantLifeAddBondWithFx === 'function') assistantLifeAddBondWithFx(aid, 'lifeCheer', AMGC_NUM.bond); } catch (_) {}
+  return { ok: true, via, nick: row.nick || '', tech: tid ? amgcTechName(row.monster, tid) : '', from, to, bond: AMGC_NUM.bond, left: Math.max(0, AMGC_NUM.perDay - st.n - 1) };
+};
+
+// ---------- 👀 修行を見る(練習試合を短く。保存しない・得は応援と同じで1回) ----------
+const AMGC_HOST = { open: null, subs: new Set(), set(v) { this.open = v; this.subs.forEach(f => { try { f(v); } catch (_) {} }); } };
+const assistantMasmonTrainWatchOpen = (aid) => { if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid) || !amgcRowsOf(aid).length) return false; AMGC_HOST.set({ assistantId: aid, at: Date.now() }); return true; };
+// 地図の中に1つだけ置く入れ物(ナカヨシ19)
+function AssistantMasmonTrainWatchHost() {
+  const [open, setOpen] = useState(AMGC_HOST.open);
+  useEffect(() => { const f = (v) => setOpen(v); AMGC_HOST.subs.add(f); return () => { AMGC_HOST.subs.delete(f); }; }, []);
+  if (!open) return null;
+  return <AssistantMasmonTrainWatch key={open.at} assistantId={open.assistantId} onClose={() => AMGC_HOST.set(null)}/>;
+}
+// 相手のチーム。friend … masmonPvpFriends の登録編成(印 assistantMasmonBattlePvp が偽なら空)
+const amgcFoeOf = async (engine, aid, mineKey) => {
+  try {
+    if (typeof masmonPvpFriends === 'function' && typeof masmonPvpEntriesOf === 'function') {
+      const r = await masmonPvpFriends();
+      const f = r && r.ok ? r.friends.find(x => x.registered) : null;
+      if (f) {
+        amgcNoteFriend(true);
+        const rows = await masmonPvpEntriesOf([f.friendId]); const t = rows && rows[0] && rows[0].team;
+        const m = t && Array.isArray(t.members) ? t.members[0] : null;
+        if (m) return { kind: 'friend', label: `${f.name || 'フレンド'}の${m.name || ''}`, team: { assistantId: rows[0].assistant_id, tactics: Number.isFinite(t.tactics) ? t.tactics : 40, members: [m] } };
+      }
+    }
+  } catch (_) {}
+  const others = ambbUnitsOf(engine, aid, amgcRowsOf(aid).filter(r => amgtKeyOf(r) !== mineKey)).sort((a, b) => b.total - a.total);
+  if (others[0]) return { kind: 'own', label: others[0].row.nick || '', team: { assistantId: aid, tactics: ambbTacticsOf(aid, [others[0].row]), members: [others[0].unit] } };
+  return { kind: 'solo', label: '', team: null };
+};
+function AssistantMasmonTrainWatch({ assistantId, onClose }) {
+  const aid = assistantId;
+  const who = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === aid)) || null;
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [battle, setBattle] = useState(null); // { r, frames, maxHp, moves, teamA, teamB, foe } / { solo:true, techs }
+  const [pos, setPos] = useState(0);
+  const [speed, setSpeed] = useState('hl');
+  const [done, setDone] = useState(false);
+  const [gift, setGift] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const last = amgcLastShugyo(aid);
+  const row = last ? last.row : amgcRowsOf(aid).slice().sort((a, b) => a.slot - b.slot)[0];
+  useEffect(() => {
+    let alive = true;
+    if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((e) => { if (!alive) return; if (e) setEngine(e); else setFailed(true); });
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (!engine || !row || battle) return undefined;
+    let alive = true;
+    (async () => {
+      try { if (typeof amgTick === 'function') await amgTick(aid); } catch (_) {} // 育成のまだの回を先に決める(ミセカタ2の注意)
+      let catalog = null; try { catalog = engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (_) {}
+      const mine = ambbUnitsOf(engine, aid, [row])[0];
+      if (!catalog || !mine) { if (alive) setFailed(true); return; }
+      const foe = await amgcFoeOf(engine, aid, amgtKeyOf(row));
+      if (!alive) return;
+      const teamA = { assistantId: aid, tactics: ambbTacticsOf(aid, [row]), members: [mine.unit] };
+      if (!foe.team) { const T = amgtTechsOf(row.monster); const own = (mine.unit.techs || []).map(x => (typeof x === 'string' ? T.find(t => t.id === x) : x)).filter(Boolean); setBattle({ solo: true, teamA, techs: (own.length ? own : T.filter(t => t.learn && t.learn.start)).slice(0, 4) }); return; }
+      const seed = `amgc-${aid}-${last ? last.log.s : 0}`; // 同じ修行なら何度見ても同じ試合
+      let r; try { r = engine.simulate({ seed, catalog, teamA, teamB: foe.team, balance: 'A', trace: true }); } catch (_) { setFailed(true); return; }
+      const st = r.log[0] || {};
+      setBattle({ r, frames: ambwFramesOf(r.log), maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, teamA, teamB: foe.team, foe });
+    })();
+    return () => { alive = false; };
+  }, [engine]);
+  // 再生(βと同じ進め方。短く見せるので ★見せ場だけ から始める)
+  const len = battle ? (battle.solo ? battle.techs.length + 1 : battle.r.log.length) : 0;
+  useEffect(() => {
+    if (!battle || done) return undefined;
+    if (pos >= len - 1) { const t = setTimeout(() => setDone(true), 800); return () => clearTimeout(t); }
+    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let n = pos + 1;
+      if (!battle.solo && speed === 'hl') while (n < len - 1 && !ambwIsHighlight(battle.r.log[n], battle.maxHp)) n++;
+      setPos(n);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [battle, pos, speed, done]);
+  const info = assistantMasmonTrainRowInfo(aid);
+  // 見終えたら応援と同じ得(社長「応援と同じで」)。できない時間帯なら何もしない
+  useEffect(() => { if (done && !gift) setGift(assistantMasmonCheer(aid, 'watch')); }, [done]);
+  const g = last ? last.log.g || {} : {};
+  const gains = Object.entries(g).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const me = last ? last.me : null;
+  const ring = () => {
+    if (failed) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }}>練習試合を読み込めませんでした。もう一度開いてください</p>;
+    if (!battle) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }} data-amgc-loading>練習の相手をさがしています…</p>;
+    if (battle.solo) {
+      const tch = battle.techs[Math.min(pos, battle.techs.length - 1)] || {};
+      return (
+        <div className="ambw-ring" data-amgc-solo>
+          <div className="ambw-stage"><div key={`a-${pos}`} className="ambw-f ambw-lungeA"><img className="ambw-flip" src={ALL_PLAYER_MONSTERS[row.monster].imgUrl} alt=""/><em>{row.nick}</em></div><div className="ambw-gap" style={{ width: 44 }}/>
+            <div className="ambw-f" data-amgc-shadow><img src={ALL_PLAYER_MONSTERS[row.monster].imgUrl} alt="" style={{ filter: 'brightness(.15) drop-shadow(0 0 6px #a78bfa)' }}/><em>かげ</em></div></div>
+          {tch.name && <div key={`s-${pos}`} className={`ambw-cut ${tch.kind || 'pow'}`}><small>ひとりで型の稽古</small><b>{tch.name}</b></div>}
+        </div>);
+    }
+    const e = battle.r.log[pos] || {}; const f = battle.frames[pos]; const foeSide = e.side === 'A' ? 'B' : 'A';
+    const fighter = (side) => {
+      const team = side === 'A' ? battle.teamA : battle.teamB; const m = team.members[f.act[side]] || team.members[0];
+      return (
+        <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
+          <img className={side === 'A' ? 'ambw-flip' : ''} src={(ALL_PLAYER_MONSTERS[m.species] || {}).imgUrl} alt=""/><em>{m.name}</em>
+          {e.ev === 'tech' && foeSide === side && (e.hit ? <div className="ambw-dmg">−{e.dmg}</div> : <div className="ambw-dmg miss">はずれ</div>)}
+        </div>);
+    };
+    return (
+      <>
+        <AmbwPanel side="B" team={battle.teamB} frame={f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
+        <div className="ambw-ring">
+          <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
+          <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
+          {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
+        </div>
+        <AmbwPanel side="A" team={battle.teamA} frame={f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
+      </>);
+  };
+  return (
+    <div className="ambw-root" style={{ position: 'absolute', inset: 0, zIndex: 30, overflowY: 'auto', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
+      <style>{AMBW_CSS}</style>
+      <div className="ambw-row" style={{ marginBottom: 8 }}>
+        <button className="ambw-btn2" data-amgc-close onClick={onClose}>← 戻る</button>
+        <b style={{ flex: 1, fontSize: 15, color: '#a5f3fc' }}>👀 {who ? who.name : ''}の修行</b>
+        <span className="ambw-small" data-amgc-foe={battle ? (battle.solo ? 'solo' : battle.foe.kind) : ''}>{battle ? (battle.solo ? 'ひとりで稽古' : battle.foe.kind === 'friend' ? `練習試合 vs ${battle.foe.label}` : `練習試合 vs ${battle.foe.label}`) : '練習試合'}</span>
+      </div>
+      {ring()}
+      <div className="ambw-ctl">
+        {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(s.id)}>{s.label}</button>)}
+        <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
+      </div>
+      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)</p>}
+      <div className="ambw-card" data-amgc-result>
+        <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? 'きょうの修行' : '前回の修行') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
+        {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
+        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {Math.max(0, to - n)}→{to}(+{n}・{amgtRankOf(to)})</p>; })}
+        {gift && gift.ok && <p data-amgc-gift style={{ margin: '6px 0 0', color: '#fdba74', fontWeight: 900 }}>{who ? who.name : ''}「見に来てくれてうれしいです！」 🥋 {gift.nick} {gift.tech} 熟練 +{gift.to - gift.from} ・ 💗 +{gift.bond}</p>}
+        {done && gift && !gift.ok && info && info.why && <p className="ambw-small" style={{ marginTop: 6 }} data-amgc-nogift>{info.why}</p>}
+      </div>
     </div>
   );
 }
@@ -75529,6 +75811,8 @@ const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '�
 const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
 const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
 
+// 来てくれた日のスタンプは「公開の時」から数える(2026-11-11 社長「公開の日から数える」)。これより前に書かれた表の行はスタンプにしない
+const ALB_START = { at: Date.parse('2026-11-11T21:09:00+09:00') };
 const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
 const albLv = (st) => ALB_STEPS.filter(n => st >= n).length;
 const albTitle = (st) => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
@@ -75619,7 +75903,7 @@ const albCountIncoming = async (s = ALF_STORE.state) => {
   if (!albEnabled() || !s.selfId) return [];
   await albLoad();
   const names = new Set((s.roster || []).map(f => f.id)); const muted = new Set(s.settings.muted);
-  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && v.at >= ALB_START.at && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
 };
 
 // ---------- B 今日の見どころ・すてき ----------
@@ -76121,6 +76405,9 @@ const masmonPvpFriends = async () => {
 //         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
 //         toGutsOnHit ダメージを与えたらガッツへ(ひのこ) / safeOnHit 当てた子は次の自分の番までダメージ0(陽炎) / gutsFromDiscard(n) 当てたら捨て札からランダムに n 枚をガッツへ(なめろう) /
 //         nextOwnCost(n,kinds) 当てた子が次に使うその種類の技のガッツ −n(天河天翔・重ねない・KO で消える。mons[].costDown) /
+//         costUpOnHit(n) 当てた子は、次の相手のターン、ちから技・かしこさ技の払うガッツ +n(アクアウェイブ・クリスタルレイン。重ねず大きいほう。mons[].costUp) /
+//         costUpAll(n) 特殊: 次の相手のターン、水中にいない相手全員のちから技・かしこさ技の払うガッツ +n(アクアドーム。水中かはそのターンに見る。players[].costUpAll)
+//         ★水牢2つは足し合わせる(当てた +1 とアクアドームの +2 で +3)。払うガッツの計算は cardActionCost の1か所(cardCostUpOf)
 //         守り: toGutsAfterUse 使ったら捨て札でなくガッツへ(九重神眼) / 特殊: gutsFromDiscardNow(n) 捨て札からランダムに n 枚をガッツへ(霊魂操作)
 //         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
 //         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
@@ -76328,6 +76615,17 @@ const cardTakeFromHand = (st, p, idxs) => {
   return taken;
 };
 
+// 水牢(ウンディーネ 2026-11-11): その子がそのターンに出すちから技・かしこさ技に足すガッツ。
+//   mons[].costUp … 当てられた子だけ(アクアウェイブ・クリスタルレイン)/ players[].costUpAll … 水中にいない子全員(アクアドーム。水中かはそのターンで見る)
+const cardCostUpOf = (st, p, mi, turn) => {
+  const me = st && st.players && st.players[p];
+  const mon = me && Number.isInteger(mi) && mi >= 0 ? me.mons[mi] : null;
+  if (!mon || mon.ko) return 0;
+  const T = Number.isFinite(turn) ? turn : st.turn;
+  const one = mon.costUp && mon.costUp.turn === T ? Number(mon.costUp.n) || 0 : 0;
+  const all = me.costUpAll && me.costUpAll.turn === T && cardMonType(mon, T) !== 'water' ? Number(me.costUpAll.n) || 0 : 0;
+  return one + all;
+};
 // 攻撃の総ガッツ(付ける札も含む)。技のぶん(組の札も)に、付けた札の「ガッツ-n・半分・0」と友情の証を効かせてから、付けた札のぶんを足す
 const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map((i) => cardOf(db, hand[i])).filter(Boolean);
@@ -76343,7 +76641,9 @@ const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   if (att.some((c) => cardHasEff(c, 'attachCostHalf'))) main = Math.ceil(main / 2);
   att.forEach((c) => { const e = cardEff(c, 'attachCost'); if (e) main -= e.n; });
   if (att.some((c) => cardHasEff(c, 'attachFree'))) main = 0;
-  return cardFieldCostOf(st, Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0));
+  // 水牢: ちから技・かしこさ技を出すときだけ +n(特殊・防御・回避・ブリーダーのカードは増えない)
+  const up = core[0] && (core[0].kind === 'pow' || core[0].kind === 'int') && core[0].user !== 'breeder' && st ? cardCostUpOf(st, p, mi) : 0;
+  return cardFieldCostOf(st, Math.max(0, main) + up + att.reduce((s, c) => s + (c.guts || 0), 0));
 };
 // 付けた札の効き目をまとめる(ダメージ +n・×n と、守りの縛り)。攻撃を出すときとコンピューターの見積もりで同じものを使う
 const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
@@ -76917,6 +77217,13 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
+    // 水牢(アクアウェイブ・クリスタルレイン): 当てた子は、次の相手のターン、ちから技・かしこさ技の払うガッツ +n(重ねがけは大きいほう)
+    const cu = cardEff(main, 'costUpOnHit');
+    if (cu && t.p !== pd.attacker && !target.ko && target.life > 0) {
+      const prev = target.costUp && target.costUp.turn === st.turn + 1 ? target.costUp.n : 0;
+      target.costUp = { turn: st.turn + 1, n: Math.max(prev, cu.n) };
+      cardLog(st, `${target.name}は次のターン、ちから技・かしこさ技のガッツ+${target.costUp.n}`);
+    }
     // なめろう(キュービ): 相手のガッツを減らしたあと、自分の捨て札からランダムに n 枚をガッツへ(相手が減少を無効にしても行う・1回の攻撃で1度だけ)
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) { pd.gutsFromDiscardDone = true; const k = cardDiscardToGuts(st, pd.attacker, gd.n); if (k) cardLog(st, `${st.players[pd.attacker].name}は捨て札から${k}枚をガッツにした`); }
@@ -77018,6 +77325,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'unlimitedAttacks' && self) { self.unlimited = st.turn; cardLog(st, `${self.name}はこのターン、技を何枚でも出せる`); }
     if (e.t === 'breederUnlimited') { st.breederFree = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}はブリーダーのカードを何枚でも出せる`); }
     if (e.t === 'taunt' && self) { st.taunts = [...(st.taunts || []).filter((t) => t.turn >= st.turn), { by: p, m: mi, mode: e.mode, noArea: !!e.noArea, turn: st.turn + 1 }]; cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`); }
+    // アクアドーム: 次の相手のターン、水中にいない相手全員のちから技・かしこさ技 +n(重ねがけは大きいほう)
+    if (e.t === 'costUpAll') { const prev = opp.costUpAll && opp.costUpAll.turn === st.turn + 1 ? opp.costUpAll.n : 0; opp.costUpAll = { turn: st.turn + 1, n: Math.max(prev, e.n) }; cardLog(st, `次のターン、${opp.name}の水中にいないモンスターは、ちから技・かしこさ技のガッツ+${opp.costUpAll.n}`); }
     if (e.t === 'stunAllEnemies') { opp.mons.forEach((m) => { if (!m.ko) m.stunTurn = st.turn + 1; }); cardLog(st, '相手のモンスターは全員、次のターン攻撃できない'); }
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
     if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次のターンを飛ばす`); }
@@ -77381,7 +77690,12 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0; // 純血のスピード
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
   // 払うのは「そのとき払うガッツ」(全体カードで変わる)。集中を付けた技には、払うガッツが0の守りは出せない
-  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts); };
+  // 「2以上のガッツを使う技」を回避する札(潜る・見切りなど)は、攻める子が払う数(水牢込み・使える子でいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null)).filter((x) => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
+  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
   const unseen = [...opp.hand, ...opp.deck];
@@ -77483,6 +77797,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'liftTarget') score += 0.3;
       if (e.t === 'taunt') score += 0.9 * habit.disrupt;
       if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter((m) => !m.ko).length * 1.0;
+      // アクアドーム(ウンディーネ): 相手のガッツが2〜4のときだけ使う(設計書の測定でいちばん良かった仮の値。少ないと高くしても意味が薄く、多いと払えてしまう)
+      if (e.t === 'costUpAll') { const op = st.players[cardOther(p)]; const g = op.guts.length; const nw = op.mons.filter((m) => !m.ko && cardMonType(m, st.turn + 1) !== 'water').length; score += g >= 2 && g <= 4 ? nw * 0.9 * habit.disrupt : -1.5; }
       // もう「次のターン攻撃できない」印が付いている子に重ねても効き目が無い(2026-10-27 見回り: EXPERT・MASTER で1試合に約0.3回)
       if (e.t === 'stunTarget' && tmon) score += tmon.stunTurn > st.turn ? -3 : 0.8 + (tmon.life / Math.max(1, tmon.max)) * 0.6;
       if (e.t === 'skipTurn') score += 3;
@@ -77546,6 +77862,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         if (cardHasEff(main, 'toGutsOnHit')) score += (1 - ev) * (main.guts || 0) * 0.35 * habit.saveGuts; // この札がガッツに戻る
         if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6); // 次の自分のターンまでダメージ0
         const gfd = cardEff(main, 'gutsFromDiscard'); if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts; // 捨て札からガッツ
+        if (cardHasEff(main, 'costUpOnHit')) score += (1 - ev) * (tm.costUp && tm.costUp.turn === st.turn + 1 ? 0 : 0.5) * habit.disrupt; // 水牢: 次のターンの技が重くなる(もう付いていれば効き目なし)
         if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3); // 次のかしこさ技が軽くなる
       }
     });
@@ -78226,6 +78543,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'breederUnlimited') v += 0.4;
       if (e.t === 'taunt') v += 0.6 * habit.disrupt;
       if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'costUpAll') v += 0.6; // アクアドーム
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
@@ -78263,6 +78581,7 @@ const cardAiCardValue = (card, habit) => {
   if (eff('safeOnHit')) dmg += 0.8;    // 陽炎: 当てたら次の自分のターンまでダメージ0
   const gfd = cardEff(card, 'gutsFromDiscard'); if (gfd) dmg += 0.4 * gfd.n; // なめろう: 捨て札からガッツ
   if (eff('nextOwnCost')) dmg += 0.6;  // 天河天翔: 次のかしこさ技が軽くなる
+  if (eff('costUpOnHit')) dmg += 0.5;  // 水牢(アクアウェイブ・クリスタルレイン): 当てた子の次のターンの技が重くなる
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt * (1 + (habit.mill || 0));
@@ -80881,15 +81200,16 @@ const CARD_AI_FACE_NOISE = Object.freeze({
 // 決めた振り分け(2026-11-08 自動で探した結果。EXPERT・MASTER で、どの顔もその助手の今の勝率に近い物。docs/progress/card-ai-faces/README.md の強さの表)
 //   探し方: 蛇行6通り+混ぜた割り当てから始め、2つの組の種を1つずつ入れかえて、いちばんずれの小さい物を残した(作業場所の道具。1組60戦)
 //   使う前に、決まり(重なり4割まで・主役2体以上ちがう)と、カードの種と合っているかを確かめる。合わなければ、下の手順で探し直す
+// ウンディーネ(2026-11-11)は、キュービを入れた組に足した(どの組でも主役・仲間に選ばれず、4つのデッキの3体は足す前と同じ。card-undine-check が見張る)
 const CARD_AI_FACE_LAYOUTS = Object.freeze({
-  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
-  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
-  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
-  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
-  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
-  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
-  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
-  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'undine', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
+  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'undine', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
+  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'undine', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'undine', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
+  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'undine', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'undine', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
+  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
 });
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
@@ -82160,7 +82480,7 @@ const CARD_RULE_PAGES = Object.freeze([
 //
 // 1パックの中身(どの弾も同じ): 8枚・300ビートP(5パックまとめて 1,350)。技などの枠7・モンスターの枠1(最後にめくる)
 // 技などの枠: その弾の「準備中でない」カード(その弾の種族の技・配った全モンスター/ブリーダーのカード)から同じ確率で1枚
-// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04))、そのレア度のモンスターから同じ確率で1枚
+// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04)とウンディーネ・スネグーラチカ(2026-11-11))、そのレア度のモンスターから同じ確率で1枚
 //   (「まだ持っていない種族を2倍」は社長の決めでなくした。混血はキラの無い通常のモンスターとして通常に入る)
 // 天井: その弾のパックでキラも別絵キラも出ないまま7パック開けたら、8パック目のモンスターの枠はキラ以上(弾ごとに数える)
 // だぶり(自動でビートPへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血も 50
@@ -82178,7 +82498,8 @@ const CARD_PACKS = Object.freeze([
   { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker', 'kyubi'], color: '#14b8a6' }, // キュービ(とオリヒメ)は 2026-11-04 に足した(社長)
   // ミーア(C-069・ピクシー×？？？)・スプーキー(C-070・ゴースト×？？？)は、メインの種族の弾(第2弾・第4弾)ではなく第8弾に入れる(2026-11-04 社長。
   //   第8弾の袋の絵に描かれているため)。hybrids は「この混血はこの弾」の指名(元の番号。キラ・別絵キラも同じ弾)
-  { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora'], hybrids: ['C-069', 'C-070'], color: '#ec4899' },
+  // ウンディーネ(とスネグーラチカ。メインがウンディーネなので指名なしで第8弾)は 2026-11-11 に足した(社長「第8弾に追加」)
+  { id: 'p8', no: 8, species: ['arrowhead', 'centaur', 'colorpandora', 'undine'], hybrids: ['C-069', 'C-070'], color: '#ec4899' },
 ].map((p) => Object.freeze({
   ...p, hybrids: Object.freeze(p.hybrids || []), name: `第${p.no}弾パック`, price: 300, bundle: Object.freeze({ n: 5, price: 1350 }), tech: 7, mon: 1,
   rarity: Object.freeze((p.no <= 3 || p.no === 5 || p.no === 7 || p.no === 8) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 }), pity: true,
@@ -82892,8 +83213,8 @@ const cardBgmOf = (v) => {
 const cardBgmRandomOne = () => { const all = cardBgmAllTracks(); return all.length ? all[Math.floor(Math.random() * all.length)] : null; };
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
-// キュービ(2026-11-04 新血統)はモンヒロにいる子なので、本編の立ち絵(ALL_PLAYER_MONSTERS.Kyubi)
-const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost', kyubi: 'Kyubi' });
+// キュービ(2026-11-04 新血統)・ウンディーネ(2026-11-11)はモンヒロにいるモンスターなので、本編の立ち絵(ALL_PLAYER_MONSTERS.Kyubi・Undine)
+const CARD_SPECIES_ART = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost', kyubi: 'Kyubi', undine: 'Undine' });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
   gali: typeof MF_GALI_IMG !== 'undefined' ? MF_GALI_IMG : null,
@@ -83079,6 +83400,10 @@ const cardMonStatuses = (st, p, m) => {
   else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({ key: 'water', short: '水中', left: left(mon.waterUntil), text: '持ちょうが水中', tone: 'type', pill: true });
   (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
   if (mon.cocoon) out.push({ key: 'cocoon', short: 'まゆ', left: '', text: '羽化のほかのカードは出せない', tone: 'down', pill: true });
+  // 水牢(ウンディーネ 2026-11-11): この子の番(今か次)に、ちから技・かしこさ技のガッツが増える
+  const cuT = T + (st.active === p ? 0 : 1);
+  const cu = typeof cardCostUpOf === 'function' ? cardCostUpOf(st, p, m, cuT) : 0;
+  if (cu > 0) out.push({ key: 'costUp', short: `水牢+${cu}`, left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は、ちから技・かしこさ技の消費ガッツが+${cu}`, tone: 'down', pill: true });
   if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は攻撃できない`, tone: 'down', pill: false });
   return out;
 };
@@ -84660,7 +84985,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    // 払う数は、水牢・天河天翔・全体カードなどを入れた「いま払う数」(使える子のうちいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(c, m) ? mi : -1)).filter((mi) => mi >= 0);
+    const need = users.length ? Math.min(...users.map((mi) => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
@@ -92368,7 +92696,7 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
 //   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
 //   9 → 10: ガッツの段から攻撃に戻る手(backToAttack)を足した(2026-10-27 社長)
-const CARD_REPLAY_RULES = 11; // 11: 捨て札からガッツ(なめろう・霊魂操作)を、2台で同じ札を選ぶ形に(2026-11-08。マルチが止まった直し)/ 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
+const CARD_REPLAY_RULES = 12; // 12: ウンディーネの水牢(costUpOnHit・costUpAll。払うガッツが変わる・2026-11-11)/ 11: 捨て札からガッツ(なめろう・霊魂操作)を、2台で同じ札を選ぶ形に(2026-11-08。マルチが止まった直し)/ 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -120029,6 +120357,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
                   <DebugMenuRow data-debug-masmon-battle-watch icon="🐾" label="助手マスモンの対戦を見る(試作)" desc="助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません" onClick={()=>setMasmonBattleWatchOpen(true)}/>
                   <DebugMenuRow data-debug-masmon-battle-beta icon="⚔" label="助手マスモンの対戦 β(公開前の確かめ)" desc="じゅんび→観戦→振り返り→ランキングを本物のマスモンで。印が偽のあいだは何も保存しません" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug'});}}/>
+                  <DebugMenuRow data-debug-masmon-battle-pvp-try icon="👥" label="助手マスモンのフレンド対戦を試す(本物のサーバ)" desc="この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug',tryPvp:true});}}/>
               </DebugMenuGroup>
 
               <DebugMenuGroup id="monster-look" title="🧬 モンスターの見た目" desc="育成マーク(転生・限界突破・超越)・模様・プロフィールの顔アイコン">

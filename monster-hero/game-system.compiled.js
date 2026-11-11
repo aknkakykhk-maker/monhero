@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4394b33537b13f4
+// source-sha256: dfbe26ce46739811
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13848,10 +13848,11 @@ const RELEASE_FLAGS = {
   assistantLifeRoomEdit: true,
   assistantLifeSolo: true,
   assistantLifeFriend: true,
-  assistantLifeFriendBond: false,
+  assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: false,
   assistantMasmonBattlePvp: false,
   assistantMasmonTrain: true,
+  assistantMasmonCheer: false,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
   assistantMasmonNamesApi: true,
@@ -129973,7 +129974,15 @@ const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({
   heartmirror: '鏡',
   lantern: 'ランタン',
   mirrorball: 'ミラーボール',
-  windbell: '風鈴'
+  windbell: '風鈴',
+  clock: 'ふりこ時計',
+  map: '地図',
+  guitar: 'ギター',
+  tv: 'テレビ',
+  windowflower: '窓辺の花',
+  fishbowl: '金魚ばち',
+  pendant: 'ライト',
+  garland: 'ガーランド'
 });
 const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
 const assistantLifeBubSplit = text => {
@@ -130784,8 +130793,8 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
 });
 const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
-  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
-  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]]
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19], [0.25, 0.33]],
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6], [0.67, 0.6], [0.24, 0.72], [0.76, 0.72], [0.5, 0.58]]
 });
 const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
   const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
@@ -131231,7 +131240,7 @@ function AssistantLifeRoomEditor({
     commit(cur.filter(it => it.k !== sel));
     setSel(null);
   }, !selIt)), React.createElement("div", {
-    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
+    className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
     "data-assistant-life-layout-chips": true
   }, cur.map(it => chip(it.k, true)), kept.map(k => chip(k, false)), got.length === 0 && React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
@@ -138123,11 +138132,12 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
   const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
   const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1;
   const g = {};
   const nameOf = k => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
   const up = (k, lo, hi) => {
     const cur = me.m[k] || 0;
-    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) {
       me.m[k] = cur + n;
       g[k] = (g[k] || 0) + n;
@@ -139655,11 +139665,14 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   const o = opts && typeof opts === 'object' ? opts : {};
   const preview = !ambbOn();
   if (preview && o.from !== 'debug') return false;
+  const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
+  if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
   AMBB_HOST.set({
     assistantId: typeof o.assistantId === 'string' ? o.assistantId : '',
     from: typeof o.from === 'string' ? o.from : 'room',
     foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '',
     preview,
+    tryPvp,
     at: Date.now()
   });
   return true;
@@ -139745,6 +139758,7 @@ function AssistantMasmonBattleBeta({
   assistantId,
   foeAssistantId,
   preview,
+  tryPvp,
   onClose
 }) {
   const save = useAmbbSave();
@@ -139919,7 +139933,7 @@ function AssistantMasmonBattleBeta({
       }
     }));
   };
-  const pvp = ambbPvpOn() && !preview;
+  const pvp = ambbPvpOn() && !preview || !!tryPvp && typeof masmonPvpChallenge === 'function';
   const srcNow = pvp ? src || (foes.length ? 'local' : 'friend') : 'local';
   const startPvp = (m, foe) => {
     if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
@@ -140306,7 +140320,7 @@ function AssistantMasmonBattleBeta({
         textAlign: 'center',
         marginTop: 8
       }
-    }, "公開前の確かめです。戦績も設定も保存しません。"));
+    }, "公開前の確かめです。戦績も設定も保存しません。", tryPvp ? 'フレンド対戦は本物のサーバに登録・記録されます。' : ''));
   } else if (phase === 'rank' && pvp) {
     body = React.createElement(AmbbRanking, {
       me: me,
@@ -141019,6 +141033,638 @@ function AmbbRanking({
     className: "ambw-btn2",
     onClick: onBack
   }, "← もどる")));
+}
+const ASSISTANT_MASMON_CHEER_KEY = 'mh_assistant_masmon_cheer_v1';
+const AMGC_NUM = Object.freeze({
+  mastery: 1,
+  bond: 5,
+  perDay: 3,
+  soloMult: 0.5,
+  friendDays: 7
+});
+const amgcOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonCheer === true && typeof amgtOn === 'function' && amgtOn();
+const amgcOkAid = aid => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+const amgcInt = (v, d, lo, hi) => Number.isInteger(v) ? Math.max(lo, Math.min(hi, v)) : d;
+const normalizeAssistantMasmonCheer = raw => {
+  const out = {
+    v: 1,
+    day: {},
+    fr: -1
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (raw.day && typeof raw.day === 'object' && !Array.isArray(raw.day)) for (const [aid, x] of Object.entries(raw.day)) {
+    if (!amgcOkAid(aid) || !x || typeof x !== 'object') continue;
+    out.day[aid] = {
+      d: amgcInt(x.d, -1, -1, 1e7),
+      n: amgcInt(x.n, 0, 0, 99),
+      s: [...new Set((Array.isArray(x.s) ? x.s : []).filter(n => Number.isInteger(n) && n >= 0))].slice(-12)
+    };
+  }
+  out.fr = amgcInt(raw.fr, -1, -1, 1e7);
+  return out;
+};
+const AMGC_STORE = {
+  state: normalizeAssistantMasmonCheer(null),
+  loaded: false,
+  subs: new Set(),
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_CHEER_KEY, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(normalizeAssistantMasmonCheer(raw));
+      return this.state;
+    })();
+    return this._p;
+  }
+};
+const amgcSave = next => {
+  if (!AMGC_STORE.loaded) return false;
+  AMGC_STORE.set(next);
+  try {
+    if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_CHEER_KEY, next, false);
+  } catch (_) {}
+  return true;
+};
+if (typeof window !== 'undefined') setTimeout(() => {
+  try {
+    if (amgcOn()) AMGC_STORE.load();
+  } catch (_) {}
+}, 0);
+const amgcToday = (now = Date.now()) => amgtSlotDay(amgtSlotOf(now));
+const amgcRowsOf = aid => {
+  try {
+    return typeof assistantMasmonRowsOf === 'function' && typeof ASSISTANT_MASMON_STORE !== 'undefined' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid).filter(t => t && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[t.monster]) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const amgcPartnerOk = aid => {
+  try {
+    return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(aid) !== false : true;
+  } catch (_) {
+    return true;
+  }
+};
+const amgcLife = () => typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life || null;
+const amgcAtBattle = (aid, life = amgcLife()) => {
+  try {
+    const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, aid) : null;
+    return !!(w && w.place === AMGT_PLACE);
+  } catch (_) {
+    return false;
+  }
+};
+const amgcSparOf = (aid, now = Date.now()) => {
+  const fr = AMGC_STORE.state.fr;
+  if (fr >= 0 && amgcToday(now) - fr < AMGC_NUM.friendDays) return 'friend';
+  if (amgcRowsOf(aid).length >= 2) return 'own';
+  return 'solo';
+};
+const amgcSparMult = aid => {
+  try {
+    return amgcOn() && AMGC_STORE.loaded && amgcSparOf(aid) === 'solo' ? AMGC_NUM.soloMult : 1;
+  } catch (_) {
+    return 1;
+  }
+};
+const amgcNoteFriend = (found, now = Date.now()) => {
+  if (!found || !AMGC_STORE.loaded) return;
+  const d = amgcToday(now);
+  if (AMGC_STORE.state.fr === d) return;
+  amgcSave({
+    ...AMGC_STORE.state,
+    fr: d
+  });
+};
+const amgcLastShugyo = (aid, now = Date.now()) => {
+  const rows = amgcRowsOf(aid);
+  const mons = (AMGT_STORE.state.mons || {})[aid] || {};
+  let best = null;
+  for (const row of rows) {
+    const me = mons[amgtKeyOf(row)];
+    const x = me && me.log[me.log.length - 1];
+    if (x && (!best || x.s > best.log.s)) best = {
+      row,
+      key: amgtKeyOf(row),
+      me,
+      log: x
+    };
+  }
+  if (best) best.today = amgtSlotDay(best.log.s) === amgcToday(now);
+  return best;
+};
+const amgcTechName = (monster, id) => (AMGT_SENSE.find(x => x[0] === id) || [])[1] || (amgtTechsOf(monster).find(t => t.id === id) || {}).name || '';
+const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
+  if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid)) return null;
+  const rows = amgcRowsOf(aid);
+  if (!rows.length) return null;
+  const last = amgcLastShugyo(aid, now);
+  let today = null;
+  if (last && last.today) {
+    const g = last.log.g || {};
+    const mainId = Object.keys(g).sort((a, b) => g[b] - g[a])[0];
+    today = {
+      nick: last.row.nick || '',
+      monster: last.row.monster,
+      kind: (AMGT_KINDS[last.log.k] || {}).name || '',
+      act: (AMGT_KINDS[last.log.k] || {}).act || '',
+      learned: last.log.l ? amgcTechName(last.row.monster, last.log.l) : '',
+      main: mainId ? amgcTechName(last.row.monster, mainId) : '',
+      gain: mainId ? g[mainId] : 0,
+      fail: !!last.log.f
+    };
+  }
+  const st = AMGC_STORE.state.day[aid];
+  const d = amgcToday(now);
+  const used = st && st.d === d ? st.n : 0;
+  const life = amgcLife();
+  const thisMove = !!(st && st.d === d && life && Number.isInteger(life.abs) && st.s.includes(life.abs));
+  const left = Math.max(0, AMGC_NUM.perDay - used);
+  const why = !AMGC_STORE.loaded ? '読み込み中です' : !amgcAtBattle(aid, life) ? 'モンヒロバトルにいるときにできます' : left <= 0 ? '今日はもう応援しました(朝4時に戻ります)' : thisMove ? '次の時間帯にまた応援できます' : null;
+  return {
+    today,
+    last: last ? {
+      nick: last.row.nick || '',
+      today: last.today
+    } : null,
+    left,
+    perDay: AMGC_NUM.perDay,
+    canCheer: !why,
+    why,
+    spar: amgcSparOf(aid, now)
+  };
+};
+const assistantMasmonCheer = (aid, via = 'cheer', now = Date.now()) => {
+  const info = assistantMasmonTrainRowInfo(aid, now);
+  if (!info) return {
+    ok: false,
+    why: 'off'
+  };
+  if (!info.canCheer) return {
+    ok: false,
+    why: info.why
+  };
+  if (!AMGT_STORE.loaded) return {
+    ok: false,
+    why: '読み込み中です'
+  };
+  const life = amgcLife();
+  if (!life || !Number.isInteger(life.abs)) return {
+    ok: false,
+    why: '読み込み中です'
+  };
+  const rows = amgcRowsOf(aid);
+  const last = amgcLastShugyo(aid, now);
+  const row = (last && last.today ? last.row : null) || rows.slice().sort((a, b) => a.slot - b.slot)[0];
+  const e = typeof amgEntryOf === 'function' ? amgEntryOf(aid, row) : null;
+  const {
+    next,
+    me
+  } = amgtEnsure(AMGT_STORE.state, aid, row, e);
+  const tid = me.learn.slice().sort((a, b) => (me.m[a] || 0) - (me.m[b] || 0) || a.localeCompare(b))[0];
+  let from = 0,
+    to = 0;
+  if (tid) {
+    from = me.m[tid] || 0;
+    to = Math.min(100, from + AMGC_NUM.mastery);
+    me.m[tid] = to;
+  }
+  if (amgtSave(next) === false) return {
+    ok: false,
+    why: '読み込み中です'
+  };
+  const d = amgcToday(now);
+  const st0 = AMGC_STORE.state.day[aid];
+  const st = st0 && st0.d === d ? st0 : {
+    d,
+    n: 0,
+    s: []
+  };
+  amgcSave({
+    ...AMGC_STORE.state,
+    day: {
+      ...AMGC_STORE.state.day,
+      [aid]: {
+        d,
+        n: st.n + 1,
+        s: [...st.s, life.abs].slice(-12)
+      }
+    }
+  });
+  try {
+    if (typeof assistantLifeAddBondWithFx === 'function') assistantLifeAddBondWithFx(aid, 'lifeCheer', AMGC_NUM.bond);
+  } catch (_) {}
+  return {
+    ok: true,
+    via,
+    nick: row.nick || '',
+    tech: tid ? amgcTechName(row.monster, tid) : '',
+    from,
+    to,
+    bond: AMGC_NUM.bond,
+    left: Math.max(0, AMGC_NUM.perDay - st.n - 1)
+  };
+};
+const AMGC_HOST = {
+  open: null,
+  subs: new Set(),
+  set(v) {
+    this.open = v;
+    this.subs.forEach(f => {
+      try {
+        f(v);
+      } catch (_) {}
+    });
+  }
+};
+const assistantMasmonTrainWatchOpen = aid => {
+  if (!amgcOn() || !amgcOkAid(aid) || !amgcPartnerOk(aid) || !amgcRowsOf(aid).length) return false;
+  AMGC_HOST.set({
+    assistantId: aid,
+    at: Date.now()
+  });
+  return true;
+};
+function AssistantMasmonTrainWatchHost() {
+  const [open, setOpen] = useState(AMGC_HOST.open);
+  useEffect(() => {
+    const f = v => setOpen(v);
+    AMGC_HOST.subs.add(f);
+    return () => {
+      AMGC_HOST.subs.delete(f);
+    };
+  }, []);
+  if (!open) return null;
+  return React.createElement(AssistantMasmonTrainWatch, {
+    key: open.at,
+    assistantId: open.assistantId,
+    onClose: () => AMGC_HOST.set(null)
+  });
+}
+const amgcFoeOf = async (engine, aid, mineKey) => {
+  try {
+    if (typeof masmonPvpFriends === 'function' && typeof masmonPvpEntriesOf === 'function') {
+      const r = await masmonPvpFriends();
+      const f = r && r.ok ? r.friends.find(x => x.registered) : null;
+      if (f) {
+        amgcNoteFriend(true);
+        const rows = await masmonPvpEntriesOf([f.friendId]);
+        const t = rows && rows[0] && rows[0].team;
+        const m = t && Array.isArray(t.members) ? t.members[0] : null;
+        if (m) return {
+          kind: 'friend',
+          label: `${f.name || 'フレンド'}の${m.name || ''}`,
+          team: {
+            assistantId: rows[0].assistant_id,
+            tactics: Number.isFinite(t.tactics) ? t.tactics : 40,
+            members: [m]
+          }
+        };
+      }
+    }
+  } catch (_) {}
+  const others = ambbUnitsOf(engine, aid, amgcRowsOf(aid).filter(r => amgtKeyOf(r) !== mineKey)).sort((a, b) => b.total - a.total);
+  if (others[0]) return {
+    kind: 'own',
+    label: others[0].row.nick || '',
+    team: {
+      assistantId: aid,
+      tactics: ambbTacticsOf(aid, [others[0].row]),
+      members: [others[0].unit]
+    }
+  };
+  return {
+    kind: 'solo',
+    label: '',
+    team: null
+  };
+};
+function AssistantMasmonTrainWatch({
+  assistantId,
+  onClose
+}) {
+  const aid = assistantId;
+  const who = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === aid) || null;
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [battle, setBattle] = useState(null);
+  const [pos, setPos] = useState(0);
+  const [speed, setSpeed] = useState('hl');
+  const [done, setDone] = useState(false);
+  const [gift, setGift] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const last = amgcLastShugyo(aid);
+  const row = last ? last.row : amgcRowsOf(aid).slice().sort((a, b) => a.slot - b.slot)[0];
+  useEffect(() => {
+    let alive = true;
+    if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then(e => {
+      if (!alive) return;
+      if (e) setEngine(e);else setFailed(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!engine || !row || battle) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof amgTick === 'function') await amgTick(aid);
+      } catch (_) {}
+      let catalog = null;
+      try {
+        catalog = engine.buildCatalog({
+          ALL_PLAYER_MONSTERS,
+          ASSISTANT_MASMON_TECHS: ambwTechTable()
+        });
+      } catch (_) {}
+      const mine = ambbUnitsOf(engine, aid, [row])[0];
+      if (!catalog || !mine) {
+        if (alive) setFailed(true);
+        return;
+      }
+      const foe = await amgcFoeOf(engine, aid, amgtKeyOf(row));
+      if (!alive) return;
+      const teamA = {
+        assistantId: aid,
+        tactics: ambbTacticsOf(aid, [row]),
+        members: [mine.unit]
+      };
+      if (!foe.team) {
+        const T = amgtTechsOf(row.monster);
+        const own = (mine.unit.techs || []).map(x => typeof x === 'string' ? T.find(t => t.id === x) : x).filter(Boolean);
+        setBattle({
+          solo: true,
+          teamA,
+          techs: (own.length ? own : T.filter(t => t.learn && t.learn.start)).slice(0, 4)
+        });
+        return;
+      }
+      const seed = `amgc-${aid}-${last ? last.log.s : 0}`;
+      let r;
+      try {
+        r = engine.simulate({
+          seed,
+          catalog,
+          teamA,
+          teamB: foe.team,
+          balance: 'A',
+          trace: true
+        });
+      } catch (_) {
+        setFailed(true);
+        return;
+      }
+      const st = r.log[0] || {};
+      setBattle({
+        r,
+        frames: ambwFramesOf(r.log),
+        maxHp: {
+          A: st.aHp || [],
+          B: st.bHp || []
+        },
+        moves: {
+          A: st.aMoves || [],
+          B: st.bMoves || []
+        },
+        teamA,
+        teamB: foe.team,
+        foe
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [engine]);
+  const len = battle ? battle.solo ? battle.techs.length + 1 : battle.r.log.length : 0;
+  useEffect(() => {
+    if (!battle || done) return undefined;
+    if (pos >= len - 1) {
+      const t = setTimeout(() => setDone(true), 800);
+      return () => clearTimeout(t);
+    }
+    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let n = pos + 1;
+      if (!battle.solo && speed === 'hl') while (n < len - 1 && !ambwIsHighlight(battle.r.log[n], battle.maxHp)) n++;
+      setPos(n);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [battle, pos, speed, done]);
+  const info = assistantMasmonTrainRowInfo(aid);
+  useEffect(() => {
+    if (done && !gift) setGift(assistantMasmonCheer(aid, 'watch'));
+  }, [done]);
+  const g = last ? last.log.g || {} : {};
+  const gains = Object.entries(g).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const me = last ? last.me : null;
+  const ring = () => {
+    if (failed) return React.createElement("p", {
+      className: "ambw-small",
+      style: {
+        padding: 24,
+        textAlign: 'center'
+      }
+    }, "練習試合を読み込めませんでした。もう一度開いてください");
+    if (!battle) return React.createElement("p", {
+      className: "ambw-small",
+      style: {
+        padding: 24,
+        textAlign: 'center'
+      },
+      "data-amgc-loading": true
+    }, "練習の相手をさがしています…");
+    if (battle.solo) {
+      const tch = battle.techs[Math.min(pos, battle.techs.length - 1)] || {};
+      return React.createElement("div", {
+        className: "ambw-ring",
+        "data-amgc-solo": true
+      }, React.createElement("div", {
+        className: "ambw-stage"
+      }, React.createElement("div", {
+        key: `a-${pos}`,
+        className: "ambw-f ambw-lungeA"
+      }, React.createElement("img", {
+        className: "ambw-flip",
+        src: ALL_PLAYER_MONSTERS[row.monster].imgUrl,
+        alt: ""
+      }), React.createElement("em", null, row.nick)), React.createElement("div", {
+        className: "ambw-gap",
+        style: {
+          width: 44
+        }
+      }), React.createElement("div", {
+        className: "ambw-f",
+        "data-amgc-shadow": true
+      }, React.createElement("img", {
+        src: ALL_PLAYER_MONSTERS[row.monster].imgUrl,
+        alt: "",
+        style: {
+          filter: 'brightness(.15) drop-shadow(0 0 6px #a78bfa)'
+        }
+      }), React.createElement("em", null, "かげ"))), tch.name && React.createElement("div", {
+        key: `s-${pos}`,
+        className: `ambw-cut ${tch.kind || 'pow'}`
+      }, React.createElement("small", null, "ひとりで型の稽古"), React.createElement("b", null, tch.name)));
+    }
+    const e = battle.r.log[pos] || {};
+    const f = battle.frames[pos];
+    const foeSide = e.side === 'A' ? 'B' : 'A';
+    const fighter = side => {
+      const team = side === 'A' ? battle.teamA : battle.teamB;
+      const m = team.members[f.act[side]] || team.members[0];
+      return React.createElement("div", {
+        key: `${side}-${pos}`,
+        className: `ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`
+      }, React.createElement("img", {
+        className: side === 'A' ? 'ambw-flip' : '',
+        src: (ALL_PLAYER_MONSTERS[m.species] || {}).imgUrl,
+        alt: ""
+      }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
+        className: "ambw-dmg"
+      }, "−", e.dmg) : React.createElement("div", {
+        className: "ambw-dmg miss"
+      }, "はずれ")));
+    };
+    return React.createElement(React.Fragment, null, React.createElement(AmbwPanel, {
+      side: "B",
+      team: battle.teamB,
+      frame: f,
+      maxHp: battle.maxHp,
+      moves: battle.moves.B,
+      lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
+      mine: false
+    }), React.createElement("div", {
+      className: "ambw-ring"
+    }, React.createElement("div", {
+      className: "ambw-stage"
+    }, fighter('A'), React.createElement("div", {
+      className: "ambw-gap",
+      style: {
+        width: [6, 44, 92, 146][f.d] || 44
+      }
+    }), fighter('B')), React.createElement("div", {
+      className: "ambw-dist"
+    }, AMBW_DIST.map((n, d) => React.createElement("span", {
+      key: d,
+      className: d === f.d ? 'cur' : ''
+    }, n))), e.ev === 'tech' && React.createElement("div", {
+      key: `c-${pos}`,
+      className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`
+    }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'), React.createElement("b", null, e.name))), React.createElement(AmbwPanel, {
+      side: "A",
+      team: battle.teamA,
+      frame: f,
+      maxHp: battle.maxHp,
+      moves: battle.moves.A,
+      lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
+      mine: true
+    }));
+  };
+  return React.createElement("div", {
+    className: "ambw-root",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 30,
+      overflowY: 'auto',
+      padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))'
+    },
+    "data-amgc-watch": true
+  }, React.createElement("style", null, AMBW_CSS), React.createElement("div", {
+    className: "ambw-row",
+    style: {
+      marginBottom: 8
+    }
+  }, React.createElement("button", {
+    className: "ambw-btn2",
+    "data-amgc-close": true,
+    onClick: onClose
+  }, "← 戻る"), React.createElement("b", {
+    style: {
+      flex: 1,
+      fontSize: 15,
+      color: '#a5f3fc'
+    }
+  }, "👀 ", who ? who.name : '', "の修行"), React.createElement("span", {
+    className: "ambw-small",
+    "data-amgc-foe": battle ? battle.solo ? 'solo' : battle.foe.kind : ''
+  }, battle ? battle.solo ? 'ひとりで稽古' : battle.foe.kind === 'friend' ? `練習試合 vs ${battle.foe.label}` : `練習試合 vs ${battle.foe.label}` : '練習試合')), ring(), React.createElement("div", {
+    className: "ambw-ctl"
+  }, AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => React.createElement("button", {
+    key: s.id,
+    className: speed === s.id ? 'ambw-btn' : 'ambw-btn2',
+    onClick: () => setSpeed(s.id)
+  }, s.label)), React.createElement("button", {
+    className: "ambw-btn2",
+    "data-amgc-skip": true,
+    onClick: () => {
+      setPos(Math.max(0, len - 1));
+      setDone(true);
+    }
+  }, "⏭ 結果へ")), battle && battle.solo && React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      textAlign: 'center'
+    }
+  }, "練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)"), React.createElement("div", {
+    className: "ambw-card",
+    "data-amgc-result": true
+  }, React.createElement("b", {
+    style: {
+      color: '#fde68a'
+    }
+  }, "🥋 ", last ? last.today ? 'きょうの修行' : '前回の修行' : 'まだ修行していません', last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''), last && last.log.l && React.createElement("p", {
+    "data-amgc-learned": true,
+    style: {
+      margin: '4px 0 0',
+      fontWeight: 800
+    }
+  }, React.createElement("span", {
+    style: {
+      background: '#fbbf24',
+      color: '#111',
+      borderRadius: 6,
+      padding: '0 4px',
+      fontSize: 10
+    }
+  }, "NEW"), " ", amgcTechName(row.monster, last.log.l), " を覚えた"), gains.map(([k, n]) => {
+    const to = me ? me.m[k] || 0 : 0;
+    return React.createElement("p", {
+      key: k,
+      "data-amgc-gain": k,
+      style: {
+        margin: '3px 0 0',
+        fontSize: 12,
+        fontWeight: 800
+      }
+    }, amgcTechName(row.monster, k), " ", Math.max(0, to - n), "→", to, "(+", n, "・", amgtRankOf(to), ")");
+  }), gift && gift.ok && React.createElement("p", {
+    "data-amgc-gift": true,
+    style: {
+      margin: '6px 0 0',
+      color: '#fdba74',
+      fontWeight: 900
+    }
+  }, who ? who.name : '', "「見に来てくれてうれしいです！」 🥋 ", gift.nick, " ", gift.tech, " 熟練 +", gift.to - gift.from, " ・ 💗 +", gift.bond), done && gift && !gift.ok && info && info.why && React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      marginTop: 6
+    },
+    "data-amgc-nogift": true
+  }, info.why)));
 }
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
@@ -144260,6 +144906,9 @@ const ALB_SLOT_NAME = Object.freeze({
   w: '壁',
   f: '床'
 });
+const ALB_START = {
+  at: Date.parse('2026-11-11T21:09:00+09:00')
+};
 const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
 const albLv = st => ALB_STEPS.filter(n => st >= n).length;
 const albTitle = st => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
@@ -144471,7 +145120,7 @@ const albCountIncoming = async (s = ALF_STORE.state) => {
   await albLoad();
   const names = new Set((s.roster || []).map(f => f.id));
   const muted = new Set(s.settings.muted);
-  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && v.at >= ALB_START.at && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
 };
 const albPutOf = (h, more, id) => more && more.fu && more.fu[id] ? more.fu[id].p : h.r[id] && h.r[id].fu || {};
 const albSnapOf = (h, more) => {
@@ -145671,6 +146320,15 @@ const cardTakeFromHand = (st, p, idxs) => {
   sorted.forEach(i => me.hand.splice(i, 1));
   return taken;
 };
+const cardCostUpOf = (st, p, mi, turn) => {
+  const me = st && st.players && st.players[p];
+  const mon = me && Number.isInteger(mi) && mi >= 0 ? me.mons[mi] : null;
+  if (!mon || mon.ko) return 0;
+  const T = Number.isFinite(turn) ? turn : st.turn;
+  const one = mon.costUp && mon.costUp.turn === T ? Number(mon.costUp.n) || 0 : 0;
+  const all = me.costUpAll && me.costUpAll.turn === T && cardMonType(mon, T) !== 'water' ? Number(me.costUpAll.n) || 0 : 0;
+  return one + all;
+};
 const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
   const cards = idxs.map(i => cardOf(db, hand[i])).filter(Boolean);
   const att = cards.filter(c => cardHasEff(c, 'attach'));
@@ -145687,7 +146345,8 @@ const cardActionCost = (db, st, p, hand, idxs, mi = null) => {
     if (e) main -= e.n;
   });
   if (att.some(c => cardHasEff(c, 'attachFree'))) main = 0;
-  return cardFieldCostOf(st, Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0));
+  const up = core[0] && (core[0].kind === 'pow' || core[0].kind === 'int') && core[0].user !== 'breeder' && st ? cardCostUpOf(st, p, mi) : 0;
+  return cardFieldCostOf(st, Math.max(0, main) + up + att.reduce((s, c) => s + (c.guts || 0), 0));
 };
 const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
 const cardAttachMods = cards => {
@@ -146585,6 +147244,15 @@ const cardResolveTarget = (db, st) => {
       target.stunTurn = st.turn + 1;
       cardLog(st, `${target.name}は次のターン攻撃できない`);
     }
+    const cu = cardEff(main, 'costUpOnHit');
+    if (cu && t.p !== pd.attacker && !target.ko && target.life > 0) {
+      const prev = target.costUp && target.costUp.turn === st.turn + 1 ? target.costUp.n : 0;
+      target.costUp = {
+        turn: st.turn + 1,
+        n: Math.max(prev, cu.n)
+      };
+      cardLog(st, `${target.name}は次のターン、ちから技・かしこさ技のガッツ+${target.costUp.n}`);
+    }
     const gd = cardEff(main, 'gutsFromDiscard');
     if (gd && t.p !== pd.attacker && !pd.gutsFromDiscardDone) {
       pd.gutsFromDiscardDone = true;
@@ -146794,6 +147462,14 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
         turn: st.turn + 1
       }];
       cardLog(st, e.mode === 'not' ? `相手は次のターン、${self.name}に当たる技を出せない` : `相手は次のターン、${self.name}を狙う技しか出せない`);
+    }
+    if (e.t === 'costUpAll') {
+      const prev = opp.costUpAll && opp.costUpAll.turn === st.turn + 1 ? opp.costUpAll.n : 0;
+      opp.costUpAll = {
+        turn: st.turn + 1,
+        n: Math.max(prev, e.n)
+      };
+      cardLog(st, `次のターン、${opp.name}の水中にいないモンスターは、ちから技・かしこさ技のガッツ+${opp.costUpAll.n}`);
     }
     if (e.t === 'stunAllEnemies') {
       opp.mons.forEach(m => {
@@ -147527,11 +148203,15 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   const tmon = opp.mons[target.m];
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0;
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0;
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => !m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null).filter(x => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
     const cost = c ? cardGuardCost(st, c) : 99;
-    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts);
+    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts);
   };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
@@ -147651,6 +148331,12 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'liftTarget') score += 0.3;
       if (e.t === 'taunt') score += 0.9 * habit.disrupt;
       if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter(m => !m.ko).length * 1.0;
+      if (e.t === 'costUpAll') {
+        const op = st.players[cardOther(p)];
+        const g = op.guts.length;
+        const nw = op.mons.filter(m => !m.ko && cardMonType(m, st.turn + 1) !== 'water').length;
+        score += g >= 2 && g <= 4 ? nw * 0.9 * habit.disrupt : -1.5;
+      }
       if (e.t === 'stunTarget' && tmon) score += tmon.stunTurn > st.turn ? -3 : 0.8 + tmon.life / Math.max(1, tmon.max) * 0.6;
       if (e.t === 'skipTurn') score += 3;
       if (e.t === 'rage' && mine) score += Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && (c.kind === 'pow' || c.kind === 'int') && cardUsableBy(c, mine)).map(c => c.damage || 0)) * 0.35 - 0.6;
@@ -147717,6 +148403,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         if (cardHasEff(main, 'safeOnHit') && mon) score += (1 - ev) * (mon.life * 2 <= mon.max ? 1.4 : 0.6);
         const gfd = cardEff(main, 'gutsFromDiscard');
         if (gfd) score += (1 - ev) * Math.min(gfd.n, me.discard.length) * 0.35 * habit.saveGuts;
+        if (cardHasEff(main, 'costUpOnHit')) score += (1 - ev) * (tm.costUp && tm.costUp.turn === st.turn + 1 ? 0 : 0.5) * habit.disrupt;
         if (cardHasEff(main, 'nextOwnCost') && mon) score += (1 - ev) * (me.hand.some((n2, j) => !opt.hand.includes(j) && (cardOf(db, n2) || {}).kind === 'int' && cardUsableBy(cardOf(db, n2), mon)) ? 0.8 : 0.3);
       }
     });
@@ -148662,6 +149349,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'breederUnlimited') v += 0.4;
       if (e.t === 'taunt') v += 0.6 * habit.disrupt;
       if (e.t === 'stunAllEnemies') v += 1.2;
+      if (e.t === 'costUpAll') v += 0.6;
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
@@ -148700,6 +149388,7 @@ const cardAiCardValue = (card, habit) => {
   const gfd = cardEff(card, 'gutsFromDiscard');
   if (gfd) dmg += 0.4 * gfd.n;
   if (eff('nextOwnCost')) dmg += 0.6;
+  if (eff('costUpOnHit')) dmg += 0.5;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit');
@@ -153363,7 +154052,7 @@ const CARD_AI_FACE_NOISE = Object.freeze({
 const CARD_AI_FACE_LAYOUTS = Object.freeze({
   mua: {
     oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'],
-    suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'],
+    suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'undine', 'ghost', 'gali', 'colorpandora', 'plant'],
     sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'],
     free: {
       oshi: 0,
@@ -153375,7 +154064,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   kiki: {
     oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'],
     suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'],
-    sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'],
+    sugao: ['hare', 'dino', 'naga', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'plant'],
     free: {
       oshi: 1,
       suki: 0,
@@ -153385,7 +154074,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   },
   momosuke: {
     oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'],
-    suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'],
+    suki: ['tiger', 'centaur', 'kyubi', 'undine', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'],
     sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'],
     free: {
       oshi: 0,
@@ -153396,7 +154085,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   },
   dra: {
     oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'],
-    suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'],
+    suki: ['dragon', 'durahan', 'dino', 'kyubi', 'undine', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'],
     sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'],
     free: {
       oshi: 1,
@@ -153408,7 +154097,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   atsu: {
     oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'],
     suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'],
-    sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'],
+    sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'undine', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'],
     free: {
       oshi: 0,
       suki: 0,
@@ -153419,7 +154108,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   kyuko: {
     oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'],
     suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'],
-    sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'],
+    sugao: ['tiger', 'metalner', 'kyubi', 'undine', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'],
     free: {
       oshi: 1,
       suki: 1,
@@ -153429,7 +154118,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   },
   sorashido: {
     oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'],
-    suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'],
+    suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'undine', 'worm', 'arrowhead', 'monol'],
     sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'],
     free: {
       oshi: 1,
@@ -153441,7 +154130,7 @@ const CARD_AI_FACE_LAYOUTS = Object.freeze({
   erubin: {
     oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'],
     suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'],
-    sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'],
+    sugao: ['tiger', 'henger', 'worm', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'ghost'],
     free: {
       oshi: 1,
       suki: 0,
@@ -155466,7 +156155,7 @@ const CARD_PACKS = Object.freeze([{
 }, {
   id: 'p8',
   no: 8,
-  species: ['arrowhead', 'centaur', 'colorpandora'],
+  species: ['arrowhead', 'centaur', 'colorpandora', 'undine'],
   hybrids: ['C-069', 'C-070'],
   color: '#ec4899'
 }].map(p => Object.freeze({
@@ -156741,7 +157430,8 @@ const CARD_SPECIES_ART = Object.freeze({
   monol: 'Monol',
   plant: 'Plant',
   ghost: 'Ghost',
-  kyubi: 'Kyubi'
+  kyubi: 'Kyubi',
+  undine: 'Undine'
 });
 const cardNewSpeciesArt = () => ({
   dino: typeof MF_DINO_IMG !== 'undefined' ? MF_DINO_IMG : null,
@@ -157060,6 +157750,16 @@ const cardMonStatuses = (st, p, m) => {
     short: 'まゆ',
     left: '',
     text: '羽化のほかのカードは出せない',
+    tone: 'down',
+    pill: true
+  });
+  const cuT = T + (st.active === p ? 0 : 1);
+  const cu = typeof cardCostUpOf === 'function' ? cardCostUpOf(st, p, m, cuT) : 0;
+  if (cu > 0) out.push({
+    key: 'costUp',
+    short: `水牢+${cu}`,
+    left: st.active === p ? '今' : '次',
+    text: `${st.active === p ? 'このターン' : '次のターン'}は、ちから技・かしこさ技の消費ガッツが+${cu}`,
     tone: 'down',
     pill: true
   });
@@ -159534,7 +160234,9 @@ const CardBattleBoard = ({
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => !m.ko && cardUsableBy(c, m) ? mi : -1).filter(mi => mi >= 0);
+    const need = users.length ? Math.min(...users.map(mi => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
@@ -174152,7 +174854,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 11;
+const CARD_REPLAY_RULES = 12;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
@@ -215143,6 +215845,17 @@ function MonsterHeroGame() {
       onClick: () => {
         if (typeof assistantMasmonBattleOpen === 'function') assistantMasmonBattleOpen({
           from: 'debug'
+        });
+      }
+    }), React.createElement(DebugMenuRow, {
+      "data-debug-masmon-battle-pvp-try": true,
+      icon: "👥",
+      label: "助手マスモンのフレンド対戦を試す(本物のサーバ)",
+      desc: "この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)",
+      onClick: () => {
+        if (typeof assistantMasmonBattleOpen === 'function') assistantMasmonBattleOpen({
+          from: 'debug',
+          tryPvp: true
         });
       }
     })), React.createElement(DebugMenuGroup, {

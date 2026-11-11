@@ -31,6 +31,8 @@ const SPECIES = [
   ['ghost', 'ghost', 'ゴースト'],
   // キュービ(2026-11-04 社長「バトルカードに新血統実装」。新しい血統。設計書 tools/art-sources/card-battle/kyubi/kyubi.md)
   ['kyubi', 'kyubi', 'キュービ'],
+  // ウンディーネ(2026-11-11 社長「バトルカードに新血統を追加。ウンディーネ種」。第8弾。設計書 tools/art-sources/card-battle/undine/undine.md)
+  ['undine', 'undine', 'ウンディーネ'],
 ];
 const SPECIES_BY_NAME = Object.fromEntries(SPECIES.map(([, id, name]) => [name, id]));
 // 弾(台帳 #3413)。番号の離れた技(357〜)は第4弾。全モンスター・ブリーダーは番号で分ける(推定)
@@ -44,6 +46,8 @@ const WAVE_OF_SPECIES = {
   metalner: 4, joker: 4, arrowhead: 4, centaur: 4, colorpandora: 4,
   // キュービ: 第7弾パック(ジョーカー・メタルナーと同じ。2026-11-04 社長)。パックの中身は 89-card-pack.jsx の CARD_PACKS の種族の一覧で決まる
   kyubi: 4,
+  // ウンディーネ: 第8弾パック(2026-11-11 社長)。パックの中身は 89-card-pack.jsx の CARD_PACKS の種族の一覧で決まる
+  undine: 4,
 };
 const waveOfNo = (no) => (no <= 128 ? 1 : no <= 260 ? 2 : no <= 280 ? 3 : 4);
 const KIND = { 'ちから': 'pow', 'かしこさ': 'int', '特殊': 'spe', '回避': 'dge', '防御': 'blk', '全体': 'fld' };
@@ -73,6 +77,9 @@ const SENTENCE_RULES = [
   [/^この技でダメージを与えた場合、このモンスターが次に使うかしこさ技の消費ガッツを[−-](\d+)する。$/, (m) => ({ t: 'nextOwnCost', n: +m[1], kinds: ['int'] })], // 天河天翔
   [/^このカードは捨て札にならずにガッツになる。$/, () => ({ t: 'toGutsAfterUse' })], // 九重神眼
   [/^自分の捨て札から、ランダムに(\d+)枚をガッツにする。$/, (m) => ({ t: 'gutsFromDiscardNow', n: +m[1] })], // 霊魂操作
+  // ウンディーネ(2026-11-11。設計: tools/art-sources/card-battle/undine/undine.md の「新しい効果の部品」)。水牢
+  [/^この技でダメージを受けたモンスターは、次の相手のターン、ちから技とかしこさ技の消費ガッツが\+(\d+)になる。$/, (m) => ({ t: 'costUpOnHit', n: +m[1] })], // アクアウェイブ・クリスタルレイン
+  [/^次の相手のターン、水中にいない全ての相手モンスターは、ちから技とかしこさ技の消費ガッツが\+(\d+)になる。$/, (m) => ({ t: 'costUpAll', n: +m[1] })], // アクアドーム
   [/^この技は空中にいる全ての相手モンスターにダメージを与える。$/, () => ({ t: 'area', who: 'enemies', only: 'air' })],
   [/^この技は地上にいる全ての相手モンスターにダメージを与える。$/, () => ({ t: 'area', who: 'enemies', only: 'ground' })],
   [/^この技は自分以外の全ての地上にいるモンスターにダメージを与える。$/, () => ({ t: 'area', who: 'others', only: 'ground' })],
