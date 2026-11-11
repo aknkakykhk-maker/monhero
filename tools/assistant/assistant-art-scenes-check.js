@@ -66,6 +66,7 @@ const probe = () => (async () => {
   for (const img of document.querySelectorAll('img')) {
     const raw = img.getAttribute('src') || ''; const m = raw.match(/images\/assistant\/(?:([a-z-]+)\/)?(?:(face)\/)?([a-z]+)_([a-z]+)\.(?:PNG|png)/);
     if (!m || !img.naturalWidth || !img.getClientRects().length) continue;
+    if (img.hasAttribute('data-assistant-life-roomview-sleep-eyes')) continue; // 寝顔の重ね絵(sleep/)は立ち絵ではない。⑥で別に測る
     const costume = m[1] && m[1] !== 'face' ? m[1] : null, face = m[1] === 'face' || !!m[2];
     const who = (typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : []).find(a => a.imagePrefix === m[3]);
     const cs = getComputedStyle(img); const box = R(img); const bw = box.r - box.l, bh = box.b - box.t;
@@ -116,7 +117,7 @@ const probe = () => (async () => {
   // 重ねた寝顔: すぐ前の立ち絵と同じ場所・同じ大きさか(AssistantLifeSleepEyes は立ち絵と同じ w・h・left・top をもらう作り)
   const overlays = [];
   for (const el of document.querySelectorAll('[data-assistant-life-roomview-sleep-eyes]')) {
-    const base = el.parentElement && [...el.parentElement.querySelectorAll('img')].find(i => /images\/assistant\//.test(i.getAttribute('src') || ''));
+    const base = el.parentElement && [...el.parentElement.querySelectorAll('img')].find(i => i !== el && !i.hasAttribute('data-assistant-life-roomview-sleep-eyes') && /images\/assistant\//.test(i.getAttribute('src') || ''));
     if (!base || !el.getClientRects().length) continue; const a = R(el), b = R(base);
     overlays.push({ who: el.getAttribute('data-assistant-life-roomview-sleep-eyes'), d: Math.max(Math.abs(a.l - b.l), Math.abs(a.t - b.t), Math.abs(a.r - b.r), Math.abs(a.b - b.b)) });
   }
