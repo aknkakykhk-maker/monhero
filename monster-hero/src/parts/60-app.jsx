@@ -176,6 +176,9 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  // 助手えらび(はじめての人)。選んだ助手と、くわしい紹介を開いている助手(2026-11-11 案9。顔と一言を1行ずつ並べ、紹介はタップで開く)
+  const [assistantPickSel, setAssistantPickSel] = useState(null);
+  const [assistantPickOpen, setAssistantPickOpen] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
@@ -22414,30 +22417,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='ASSISTANT_SELECT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
             {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
-            <div className="shrink-0 text-center mb-3" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
+            <div className="shrink-0 text-center mb-2" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
-              <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
+              <p className="text-[10px] text-slate-300 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。</p>
+              <span data-assistant-pick-later className="mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950">あとからいつでも変えられます</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
-                {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
-                {assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(
-                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
-                    aria-label={`${who.name}を選ぶ`}
-                    className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
-                    style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
-                    <AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>
-                    <span className="text-[13px] font-black text-white">{who.name}</span>
-                    <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
-                    <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この助手にする</span>
-                  </button>
-                ))}
-              </div>
-              <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
-                3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
-              </p>
-            </div>
+            {(()=>{
+              const list=assistantsUnlockedFrom(rhythmEventStorySeen);
+              const pickId=(list.some(w=>w.id===assistantPickSel)?assistantPickSel:null)||(list.some(w=>w.id===selectedAssistantId)?selectedAssistantId:null)||(list[0]&&list[0].id);
+              const pick=list.find(w=>w.id===pickId)||list[0];
+              return <>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="w-full max-w-md mx-auto flex flex-col gap-2 pb-2">
+                    {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
+                    {list.map(who=>{const on=who.id===pickId;const open=assistantPickOpen===who.id;return(
+                      <div key={who.id} className="rounded-2xl"
+                        style={{border:`2px solid ${on?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:on?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
+                        <div className="flex items-center gap-3 px-3 py-2">
+                          <button type="button" aria-label={`${who.name}を選ぶ`} aria-pressed={on} onClick={()=>setAssistantPickSel(who.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[.98]">
+                            <AssistantFace who={who} size={56} accent={who.accent} expression="happy"/>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[14px] font-black text-white">{who.name}</span>
+                              <span className="mt-0.5 block text-[11px] font-black leading-tight" style={{color:who.accent}}>{who.tagline||''}</span>
+                            </span>
+                          </button>
+                          <button type="button" aria-label={`${who.name}のくわしい紹介`} aria-expanded={open} onClick={()=>setAssistantPickOpen(open?null:who.id)} className="shrink-0 min-h-[44px] px-1 text-[11px] font-black text-slate-300 active:scale-95">くわしく{open?'▲':'›'}</button>
+                        </div>
+                        {open&&<div data-assistant-pick-intro className="px-3 pb-3 text-[11px] leading-snug text-slate-200">{who.intro||''}</div>}
+                      </div>);})}
+                  </div>
+                  <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
+                    仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
+                  </p>
+                </div>
+                {pick&&<div className="shrink-0 w-full max-w-md mx-auto pt-1" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
+                  <div className="mb-1 text-center text-[11px] font-black text-slate-300">{pick.name}を選んでいます</div>
+                  <button type="button" data-assistant-pick-confirm onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                    className="min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]" style={{backgroundColor:pick.accent}}>この助手にする</button>
+                </div>}
+              </>;
+            })()}
           </div>
         )}
 

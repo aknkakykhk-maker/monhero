@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aba836cab6d0a4ab
+// source-sha256: ec6bb40d7ae6ff58
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -179161,6 +179161,8 @@ function MonsterHeroGame() {
   const [tutorialStep, setTutorialStep] = useState(null);
   const [tutorialKind, setTutorialKind] = useState('tour');
   const [assistantDebug, setAssistantDebug] = useState(null);
+  const [assistantPickSel, setAssistantPickSel] = useState(null);
+  const [assistantPickOpen, setAssistantPickOpen] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null);
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
@@ -210244,57 +210246,93 @@ function MonsterHeroGame() {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, React.createElement("div", {
-      className: "shrink-0 text-center mb-3",
+      className: "shrink-0 text-center mb-2",
       style: {
         paddingTop: onboardingPreview ? 'calc(2.75rem + env(safe-area-inset-top))' : 'env(safe-area-inset-top)'
       }
     }, React.createElement("h2", {
       className: "text-lg font-black italic text-indigo-300 uppercase tracking-widest"
     }, "助手を選ぶ"), React.createElement("p", {
-      className: "text-[10px] text-slate-400 mt-1 leading-tight"
-    }, "冒険に付き添ってくれる助手を選んでください。", React.createElement("br", null), "あとからプロフィールでいつでも変えられます。")), React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, React.createElement("div", {
-      className: "w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3"
-    }, assistantsUnlockedFrom(rhythmEventStorySeen).map(who => React.createElement("button", {
-      key: who.id,
-      type: "button",
-      onClick: () => {
-        chooseAssistant(who.id);
-        markKikiIntroSeen();
-        markMomosukeIntroSeen();
-        setGameState('PROFILE');
-        setTutorialKind('intro');
-        setTutorialStep(0);
-      },
-      "aria-label": `${who.name}を選ぶ`,
-      className: `rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id === selectedAssistantId ? '' : 'opacity-95'}`,
-      style: {
-        border: `2px solid ${who.id === selectedAssistantId ? who.accent : 'rgba(255,255,255,.14)'}`,
-        backgroundColor: who.id === selectedAssistantId ? `${who.accent}1f` : 'rgba(15,23,42,.75)'
-      }
-    }, React.createElement(AssistantFace, {
-      who: who,
-      size: 88,
-      accent: who.accent,
-      expression: "happy"
-    }), React.createElement("span", {
-      className: "text-[13px] font-black text-white"
-    }, who.name), React.createElement("span", {
-      className: "text-[9px] font-black leading-tight text-center",
-      style: {
-        color: who.accent
-      }
-    }, who.tagline || ''), React.createElement("span", {
-      className: "text-[9px] text-slate-400 leading-tight text-center"
-    }, who.intro || ''), React.createElement("span", {
-      className: "mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950",
-      style: {
-        backgroundColor: who.accent
-      }
-    }, "この助手にする")))), React.createElement("p", {
-      className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
-    }, "3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。"))), gameState === 'PROFILE' && React.createElement(ProfileScreen, {
+      className: "text-[10px] text-slate-300 mt-1 leading-tight"
+    }, "冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。"), React.createElement("span", {
+      "data-assistant-pick-later": true,
+      className: "mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950"
+    }, "あとからいつでも変えられます")), (() => {
+      const list = assistantsUnlockedFrom(rhythmEventStorySeen);
+      const pickId = (list.some(w => w.id === assistantPickSel) ? assistantPickSel : null) || (list.some(w => w.id === selectedAssistantId) ? selectedAssistantId : null) || list[0] && list[0].id;
+      const pick = list.find(w => w.id === pickId) || list[0];
+      return React.createElement(React.Fragment, null, React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+      }, React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex flex-col gap-2 pb-2"
+      }, list.map(who => {
+        const on = who.id === pickId;
+        const open = assistantPickOpen === who.id;
+        return React.createElement("div", {
+          key: who.id,
+          className: "rounded-2xl",
+          style: {
+            border: `2px solid ${on ? who.accent : 'rgba(255,255,255,.14)'}`,
+            backgroundColor: on ? `${who.accent}1f` : 'rgba(15,23,42,.75)'
+          }
+        }, React.createElement("div", {
+          className: "flex items-center gap-3 px-3 py-2"
+        }, React.createElement("button", {
+          type: "button",
+          "aria-label": `${who.name}を選ぶ`,
+          "aria-pressed": on,
+          onClick: () => setAssistantPickSel(who.id),
+          className: "flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[.98]"
+        }, React.createElement(AssistantFace, {
+          who: who,
+          size: 56,
+          accent: who.accent,
+          expression: "happy"
+        }), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("span", {
+          className: "block text-[14px] font-black text-white"
+        }, who.name), React.createElement("span", {
+          className: "mt-0.5 block text-[11px] font-black leading-tight",
+          style: {
+            color: who.accent
+          }
+        }, who.tagline || ''))), React.createElement("button", {
+          type: "button",
+          "aria-label": `${who.name}のくわしい紹介`,
+          "aria-expanded": open,
+          onClick: () => setAssistantPickOpen(open ? null : who.id),
+          className: "shrink-0 min-h-[44px] px-1 text-[11px] font-black text-slate-300 active:scale-95"
+        }, "くわしく", open ? '▲' : '›')), open && React.createElement("div", {
+          "data-assistant-pick-intro": true,
+          className: "px-3 pb-3 text-[11px] leading-snug text-slate-200"
+        }, who.intro || ''));
+      })), React.createElement("p", {
+        className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
+      }, "仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。")), pick && React.createElement("div", {
+        className: "shrink-0 w-full max-w-md mx-auto pt-1",
+        style: {
+          paddingBottom: 'env(safe-area-inset-bottom)'
+        }
+      }, React.createElement("div", {
+        className: "mb-1 text-center text-[11px] font-black text-slate-300"
+      }, pick.name, "を選んでいます"), React.createElement("button", {
+        type: "button",
+        "data-assistant-pick-confirm": true,
+        onClick: () => {
+          chooseAssistant(pick.id);
+          markKikiIntroSeen();
+          markMomosukeIntroSeen();
+          setGameState('PROFILE');
+          setTutorialKind('intro');
+          setTutorialStep(0);
+        },
+        className: "min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]",
+        style: {
+          backgroundColor: pick.accent
+        }
+      }, "この助手にする")));
+    })()), gameState === 'PROFILE' && React.createElement(ProfileScreen, {
       onCardShareGo: intent => {
         if (typeof cardShareIntentSet === 'function') cardShareIntentSet(intent);
         setCardOrigin('profile');
