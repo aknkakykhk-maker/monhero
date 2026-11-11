@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 873ea058b2d4be36
+// source-sha256: 3265d44381c658c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93482,7 +93482,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card.free::after{animation-delay:1.9s}
 .mhms-card .mhms-mark{position:absolute;right:-4px;bottom:-6px;font-size:26px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.2);white-space:nowrap;pointer-events:none}
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
-.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03)),rgba(18,10,44,.42);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
 .mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
@@ -93576,6 +93576,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
 @keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+.mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
@@ -93674,9 +93675,33 @@ const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([{
   top: '40%',
   delay: '-1.3s'
 }]);
+const RHYTHM_MODE_SELECT_IDLE_MS = 10000;
 function RhythmModeSelectStage({
   notes = true
 }) {
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
+    const root = document.documentElement;
+    let timer = 0;
+    const wake = () => {
+      root.classList.remove('mhms-idle');
+      clearTimeout(timer);
+      timer = setTimeout(() => root.classList.add('mhms-idle'), RHYTHM_MODE_SELECT_IDLE_MS);
+    };
+    const events = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+    events.forEach(name => window.addEventListener(name, wake, {
+      passive: true,
+      capture: true
+    }));
+    wake();
+    return () => {
+      clearTimeout(timer);
+      events.forEach(name => window.removeEventListener(name, wake, {
+        capture: true
+      }));
+      root.classList.remove('mhms-idle');
+    };
+  }, []);
   return React.createElement("div", {
     className: "mhms-fx",
     "aria-hidden": "true"
@@ -93717,7 +93742,7 @@ function BattleScreenHead({
   right = null
 }) {
   return React.createElement("header", {
-    className: "relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm"
+    className: "relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1"
   }, onBack && React.createElement("button", {
     type: "button",
     "aria-label": "戻る",
@@ -93767,7 +93792,7 @@ function ModeSelectAssistToggles({
     [attr]: '',
     "aria-pressed": on,
     onClick: () => onToggle(key),
-    className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
   }, label, " ", on ? 'ON' : 'OFF'))) : null;
 }
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
@@ -94990,7 +95015,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-step": "rooms",
       className: `${shell} mhms-stage`
     }, React.createElement(RhythmModeSelectStage, null), React.createElement("header", {
-      className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm",
+      className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1",
       style: {
         paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
       }
