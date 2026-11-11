@@ -1,0 +1,110 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<!-- 止め絵(設計の見本・本物の部品ではない)。マスモン育成の専用ページ「育成ノート」(仮)。キズナ 2026-11-12 -->
+<style>
+*{box-sizing:border-box}body{margin:0;background:#1e293b;font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;color:#fff}
+.row{display:flex;gap:18px;padding:18px;align-items:flex-start}
+.cap{color:#fde68a;font-weight:900;font-size:14px;margin:0 0 6px;width:390px}
+.ph{width:390px;height:780px;position:relative;overflow:hidden;border-radius:26px;background:#0b1020;box-shadow:0 0 0 3px #475569;display:flex;flex-direction:column}
+.hd{padding:12px 14px 8px;background:linear-gradient(#14532d,#0b1020)}
+.hd h2{margin:0;font-size:18px;font-weight:900}.hd .s{font-size:11px;color:#cbd5e1;font-weight:700;margin-top:2px}
+.tabs{display:flex;gap:4px;padding:6px 10px;background:#0f172a;border-bottom:1px solid #334155}
+.tab{flex:1;text-align:center;font-size:12px;font-weight:900;padding:6px 0;border-radius:9px;color:#94a3b8;background:#1e293b}
+.tab.on{color:#0b1020;background:#86efac}
+.bd{padding:10px 12px;flex:1;overflow:hidden}
+.sec{font-size:12px;font-weight:900;color:#fde68a;margin:8px 0 6px}
+.mon{display:flex;gap:8px;align-items:center;border:1px solid #ffffff22;border-radius:14px;background:#111827;padding:8px;margin-bottom:7px}
+.mon.plan{border-color:#86efac;background:#052e16}
+.th{width:46px;height:46px;border-radius:12px;background:#334155;object-fit:contain;flex:none}
+.face{width:22px;height:22px;border-radius:50%;object-fit:cover;object-position:50% 12%;background:#334155;border:1px solid #fff6;vertical-align:middle}
+.nm{font-size:13px;font-weight:900}.mi{font-size:11px;color:#cbd5e1;font-weight:700;margin-top:1px}
+.bar{height:6px;border-radius:9px;background:#334155;margin-top:4px;overflow:hidden}.bar i{display:block;height:100%;background:#86efac}
+.pill{font-size:10px;font-weight:900;padding:2px 7px;border-radius:99px;background:#166534;color:#dcfce7;white-space:nowrap}
+.pill.y{background:#78350f;color:#fde68a}.pill.g{background:#334155;color:#cbd5e1}
+.empty{border:2px dashed #86efac88;border-radius:14px;padding:10px;text-align:center;font-size:12px;font-weight:900;color:#86efac;margin-bottom:7px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}.chip{font-size:11px;font-weight:900;padding:4px 9px;border-radius:99px;background:#1e293b;border:1px solid #475569}
+.chip.on{background:#86efac;color:#0b1020;border-color:#86efac}
+.wk{display:grid;grid-template-columns:40px 1fr;gap:5px;font-size:12px;font-weight:900}
+.d{background:#1e293b;border-radius:9px;padding:7px 0;text-align:center;color:#cbd5e1}.d.today{background:#86efac;color:#0b1020}
+.c{border-radius:9px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center}
+.c small{font-size:10px;color:#e2e8f0;font-weight:700}
+.tr{background:#1d4ed8}.hv{background:#7c3aed}.rs{background:#475569}.sg{background:#b45309}.fr{background:#0f766e}
+.btn{display:block;text-align:center;font-weight:900;font-size:14px;padding:11px;border-radius:14px;background:#22c55e;color:#052e16;margin-top:10px}
+.btn.s{background:#334155;color:#fff;font-size:12px;padding:8px}
+.box{border:1px solid #ffffff22;border-radius:12px;background:#111827;padding:8px;font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.5;margin-top:8px}
+.st{display:grid;grid-template-columns:52px 1fr 70px;gap:6px;align-items:center;font-size:12px;font-weight:900;margin:5px 0}
+.st .bar{margin:0;height:9px}.up{color:#86efac}.dn{color:#fca5a5}
+.log{font-size:11px;font-weight:700;color:#e2e8f0;border-bottom:1px solid #1e293b;padding:5px 0;display:flex;justify-content:space-between}
+.log b{color:#fde68a}
+.foot{position:absolute;left:0;right:0;bottom:0;display:flex;background:#0f172a;border-top:1px solid #334155}
+.foot div{flex:1;text-align:center;font-size:10px;font-weight:900;color:#94a3b8;padding:7px 0 10px}.foot .on{color:#86efac}
+.foot span{display:block;font-size:17px}
+</style></head><body>
+<div class="row">
+
+<!-- ① 一覧 -->
+<div><p class="cap">① 育成ノートの「一覧」: 計画する子(最大3体)が上・ほかは助手まかせ</p>
+<div class="ph">
+<div class="hd"><h2>‹ 📒 育成ノート</h2><div class="s">助手のマスモン 21体 ・ 計画中 2/3体</div></div>
+<div class="tabs"><div class="tab on">一覧</div><div class="tab">計画</div><div class="tab">記録</div><div class="tab">修行</div><div class="tab">チケット</div></div>
+<div class="bd">
+<div class="sec">📌 計画して育てる子(2/3)</div>
+<div class="mon plan"><img class="th" src="../../../../monster-hero/images/monster-thumbs/golem.png"><div style="flex:1"><div class="nm">ゴロンタ <img class="face" src="../../../../monster-hero/images/assistant/face/kiki_normal.PNG"> キキ</div><div class="mi">今日: 昼 重量上げ ・ 疲れ 38</div><div class="bar"><i style="width:65%"></i></div><div class="mi">今日の伸び 13/20</div></div><span class="pill">計画どおり</span></div>
+<div class="mon plan"><img class="th" src="../../../../monster-hero/images/monster-thumbs/pixie.png"><div style="flex:1"><div class="nm">ピピ <img class="face" src="../../../../monster-hero/images/assistant/face/myua_normal.PNG"> みゅあ</div><div class="mi">今日: 休み ・ 疲れ 62→32</div><div class="bar"><i style="width:0%"></i></div><div class="mi">今日の伸び 0/20</div></div><span class="pill y">休みの日</span></div>
+<div class="empty">＋ 計画する子を選ぶ(あと1体)</div>
+<div class="sec">🍃 助手まかせ(自主育成)19体</div>
+<div class="chips"><span class="chip on">全員</span><span class="chip">キキ</span><span class="chip">みゅあ</span><span class="chip">ドラ</span><span class="chip">…</span></div>
+<div class="mon"><img class="th" src="../../../../monster-hero/images/monster-thumbs/mocchi.png"><div style="flex:1"><div class="nm">モチモチ <img class="face" src="../../../../monster-hero/images/assistant/face/kiki_normal.PNG"></div><div class="mi">攻撃型 ・ 今日の伸び 9/15</div></div><span class="pill g">まかせる</span></div>
+<div class="mon"><img class="th" src="../../../../monster-hero/images/monster-thumbs/tiger.png"><div style="flex:1"><div class="nm">トラ吉 <img class="face" src="../../../../monster-hero/images/assistant/face/dra_normal.PNG"></div><div class="mi">ライフ型 ・ 今日の伸び 15/15</div></div><span class="pill g">まかせる</span></div>
+</div>
+<div class="foot"><div class="on"><span>🏡</span>家</div><div><span>🗺</span>町</div><div><span>🤝</span>きずな</div><div><span>🏘</span>フレンド</div></div>
+</div></div>
+
+<!-- ② 計画 -->
+<div><p class="cap">② 「計画」: 1週間の予定を日ごとに1つ。くり返す</p>
+<div class="ph">
+<div class="hd"><h2>‹ 📒 育成ノート</h2><div class="s">ゴロンタ(キキのマスモン)の1週間</div></div>
+<div class="tabs"><div class="tab">一覧</div><div class="tab on">計画</div><div class="tab">記録</div><div class="tab">修行</div><div class="tab">チケット</div></div>
+<div class="bd">
+<div class="chips"><span class="chip on">ゴロンタ</span><span class="chip">ピピ</span><span class="chip">＋</span></div>
+<div class="wk">
+<div class="d">月</div><div class="c tr">💪 腕立て(ちから)<small>軽</small></div>
+<div class="d">火</div><div class="c hv">🏋 重量上げ(ちから)<small>重・疲れ大</small></div>
+<div class="d today">水</div><div class="c tr">🎯 的当て(命中)<small>軽</small></div>
+<div class="d">木</div><div class="c hv">🛡 耐久特訓(丈夫さ)<small>重</small></div>
+<div class="d">金</div><div class="c sg">⚔ 修行の日<small>モンバトにいれば</small></div>
+<div class="d">土</div><div class="c fr">🍃 助手にまかせる<small>いつもどおり</small></div>
+<div class="d">日</div><div class="c rs">😴 休み<small>疲れ −90</small></div>
+</div>
+<div class="box">🗓 1日の朝・昼・夜の3回とも、その日の予定で育てます。<br>📈 計画の子は伸び 1.3倍・失敗が半分。1日の上限は20<br>⚠ 疲れが70をこえた回は、予定より休みを優先します</div>
+<div class="box">見通し(1週間): <b class="up">ちから +52</b> ・ 命中 +18 ・ 丈夫さ +24 ・ ライフ +9</div>
+<span class="btn">この予定でくり返す</span>
+</div>
+<div class="foot"><div class="on"><span>🏡</span>家</div><div><span>🗺</span>町</div><div><span>🤝</span>きずな</div><div><span>🏘</span>フレンド</div></div>
+</div></div>
+
+<!-- ③ 記録・能力の変化 -->
+<div><p class="cap">③ 「記録」: 何をして、どれだけ伸びたか(チケット・修行も1本に)</p>
+<div class="ph">
+<div class="hd"><h2>‹ 📒 育成ノート</h2><div class="s">ゴロンタ ・ Lv 24 ・ 攻撃型 ・ 計画中</div></div>
+<div class="tabs"><div class="tab">一覧</div><div class="tab">計画</div><div class="tab on">記録</div><div class="tab">修行</div><div class="tab">チケット</div></div>
+<div class="bd">
+<div class="sec">この7日の能力の変化</div>
+<div class="st"><span>ライフ</span><div class="bar"><i style="width:42%"></i></div><span>412 <span class="up">+9</span></span></div>
+<div class="st"><span>ちから</span><div class="bar"><i style="width:58%;background:#f97316"></i></div><span>578 <span class="up">+61</span></span></div>
+<div class="st"><span>かしこさ</span><div class="bar"><i style="width:22%"></i></div><span>220 <span class="dn">−3</span></span></div>
+<div class="st"><span>命中</span><div class="bar"><i style="width:38%"></i></div><span>377 <span class="up">+18</span></span></div>
+<div class="st"><span>回避</span><div class="bar"><i style="width:25%"></i></div><span>251 <span class="up">+4</span></span></div>
+<div class="st"><span>丈夫さ</span><div class="bar"><i style="width:47%"></i></div><span>468 <span class="up">+24</span></span></div>
+<div class="sec">できごと</div>
+<div class="log"><span>水 昼 🎯 的当て(計画)</span><b>命中 +6</b></div>
+<div class="log"><span>水 朝 🎯 的当て(計画)</span><b>命中 +5</b></div>
+<div class="log"><span>火 夜 🎫 重トレ(M/B管理)</span><b>ちから +11 かしこさ −3</b></div>
+<div class="log"><span>火 昼 🏋 重量上げ(計画)</span><b>ちから +14 ライフ +3</b></div>
+<div class="log"><span>火 朝 ⚔ 修行(モンヒロバトル)</span><b>熟練 +5</b></div>
+<div class="log"><span>月 夜 📣 応援</span><b>熟練 +1 💗+5</b></div>
+<div class="box">関わって伸びた分(この7日): 計画 +21 ・ チケット +11 ・ 見に来た +4</div>
+</div>
+<div class="foot"><div class="on"><span>🏡</span>家</div><div><span>🗺</span>町</div><div><span>🤝</span>きずな</div><div><span>🏘</span>フレンド</div></div>
+</div></div>
+
+</div></body></html>
