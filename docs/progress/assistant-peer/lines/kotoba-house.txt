@@ -10,15 +10,15 @@ fight erubin momosuke cause=promise | momosuke angry {c}、昨日の練習見に
 fight dra mua cause=snack | mua angry ちょっと！ あたしのプリン、なんでないの！？ | dra troubled えへへ…名前が書いてなかったからな | mua angry 冷蔵庫のいちばん奥、あたしの場所ぢゃん！ | dra troubled そ、そうだったのか… || mua troubled …プリンくらいで怒りすぎたかな | dra troubled おで、悪いことしたな || dra normal {c}、プリン2つ買ってきた。1つ多めだ | mua happy …2つ！？ もう、ゆるすしかないぢゃん♪ | dra happy 次からは名前を書いてくれよな
 fight dra mua cause=tidy | mua troubled {c}、居間にカードの箱、出しっぱなしだよ〜 | dra normal あとで片づけるからな。いま、いいところなんだ | mua angry それ、昨日も言ってたぢゃん！ あたし、つまずいたんだけど！ | dra troubled う…すまん || dra troubled おで、片づけは苦手なんだよな… | mua normal 言い方、ちょっときつかったかも || dra happy {c}、箱、ぜんぶ部屋にしまったぞ。見てくれ | mua excited わ、ほんとだ！ ありがと！ あたしもいっしょに棚ふくね | dra happy 2人だと早いな、えへへ
 fight dra mua cause=promise | mua angry {c}、昨日いっしょに広場いくって言ったのに、寝てたぢゃん！ | dra troubled 昼寝のつもりが…起きたら夜だったんだ | mua angry あたし、ずっと待ってたんだからね！ || mua troubled …ひとりでおしゃべりしても、つまんなかったな | dra troubled おで、またやっちまった… || dra normal {c}、今日は寝ないで広場いくぞ。ほら、もう靴はいた | mua happy …目、半分閉じてるけど？ｗ | dra happy 広場に着いたら開くからな
-fight atsu sorashido cause=win | sorashido excited うぉぉぉ！ これで俺の51勝50敗だぜ・・・！ | atsu angry 待て待て、今のはノーカンだろ笑 | sorashido angry 表にちゃんと書いてあるんだぜ！ 数字はうそつかないさ | atsu angry 表を書いてるのがそっちなんだよな！？ || atsu troubled …1勝くらいで熱くなりすぎたか… | sorashido troubled 数え方、先に決めておけばよかったな || sorashido normal {c}、数え方の決まり、2人で書こうぜ | atsu happy おう、じゃあ今日のは引き分けってことで笑 | sorashido happy 引き分けか…しょうがない、なんくるないさ〜
-fight atsu sorashido cause=late | atsu normal {c}、朝6時に育成って約束したよな？ もう8時だぞ… | sorashido troubled ご、ごめんだぜ… 3時まで表を作ってたら、寝坊したさ | atsu angry ドラゴンも待ってたんだけど！？ | sorashido angry 夜のほうが計算がはかどるんだって！ || atsu troubled …朝に合わせろってのも、勝手だったか… | sorashido troubled 俺、約束したのに言い返しちまったな || sorashido normal {c}、明日は寝ないで行く…のは無理だから、9時でどうだ？ | atsu happy 9時な笑 じゃあ俺は先に軽く走っとく！ | sorashido excited 決まりだぜ！ ちばりよー！
-fight atsu sorashido cause=tidy | atsu troubled {c}、カード部屋の机、表の紙で埋まってるんだけど！？ | sorashido normal 全部、大事な表なんだぜ。並べ方にも意味があるさ | atsu angry デッキ広げる場所がないって笑 ちょっとどけるぞ！ | sorashido angry あっ！ 順番がくずれる！ || sorashido troubled …並べ方、俺にしか分からないもんな | atsu troubled 勝手にさわったのは、俺が悪かったな… || atsu normal さっきはごめんな！ 紙、どこに戻せばいい？ | sorashido happy 俺もごめんだぜ。いっそ、表を1冊にまとめるさ | atsu happy それなら机も広いな笑
-fight kiki sorashido cause=tidy | kiki troubled {c}、図書室の机に、表の紙が広がったままでつ | sorashido normal あとで続きをやるから、そのままにしといたんだぜ | kiki angry 図書室は、みんなの机なんです。少しお片づけをお願いします | sorashido troubled う…分かってはいるんだけどさ || sorashido troubled 言われたとおりだよな… | kiki normal 少しきつく聞こえたでしょうか… || sorashido normal {c}、紙は全部ファイルに入れたぜ。机、ぴかぴかさ | kiki happy ありがとうございまつ。私も、続きの場所をとっておきまつね♪ | sorashido excited それは助かるぜ・・・！
-fight kiki sorashido cause=late | kiki normal {c}、朝の散歩、5時半の約束でしたよね | sorashido troubled ……いま、何時さ？ | kiki troubled 7時でつ。お日さま、もうすっかり昇りました | sorashido angry 5時半は、俺にとっては真夜中なんだぜ！ || kiki troubled 朝が苦手なのを、知っていたのに… | sorashido troubled 寝ぼけて、きつく言っちまったな || sorashido normal {c}、さっきはごめん。夕方の散歩なら、絶対起きてるさ | kiki happy では夕焼けの散歩にしましょう。私も、少し夜ふかししてみまつ♪ | sorashido happy {c}の夜ふかし、何時までもつか計算しとくぜ笑
-fight kiki sorashido cause=win | sorashido excited 今のカード勝負、計算どおり俺の勝ちだぜ！ | kiki angry …もう一回お願いします。今のは、火力が足りませんでした | sorashido normal 何回やっても、表の上では俺が有利さ | kiki angry では、表をこえる火力を出しまつ || kiki troubled 少しむきになってしまいました… | sorashido troubled 有利とか、言わなきゃよかったな || sorashido normal {c}、さっきの一言はなしだぜ。次は真剣勝負、受けて立つさ | kiki happy はい。ちから全開で、いきまつね♪ | sorashido excited うぉぉぉ！ そう来なくちゃ！
-fight erubin sorashido cause=promise | sorashido troubled {c}、今日カードの研究会って言ってたよな？ | erubin surprise あ…ごめん、明日だと思ってた | sorashido angry 表、2人ぶん作って待ってたんだぜ！ | erubin troubled ほんとにごめん。でも、そんなに怒らなくても… || sorashido troubled 言いすぎた…楽しみにしてただけなんだよな | erubin normal 待たせたのは、俺のほうなのにね || erubin normal {c}、いまからでも研究会、まだ間に合う？ | sorashido happy もちろんだぜ！ 表は消えないさ | erubin happy よかった。今度は、カレンダーに書いとくね
-fight erubin sorashido cause=snack | erubin troubled {c}、さっきのクッキー、最後の1枚食べた？ | sorashido surprise あれ、だれのでもないと思って…計算中は手が止まらないんだぜ | erubin troubled みんなで分けようと思って、残しておいたんだけどな | sorashido angry だったら、書いといてくれよな！ || erubin normal 言わなかった俺も、悪かったかな | sorashido troubled 言い返すことじゃなかったさ… || sorashido normal {c}、クッキー焼いてみたぜ。形はちょっと計算外だけどさ笑 | erubin happy わ、手作りだ。いいね、みんなで食べよう | sorashido happy 今度は、ちゃんと人数ぶんあるぜ
-fight erubin sorashido cause=song | sorashido excited 練習の曲、ぜんぶアップテンポにしようぜ！ | erubin troubled 俺、落ち着いた曲も入れたいな | sorashido normal でも速い曲のほうが、スコアが伸びるって表に出てるさ | erubin troubled スコアだけで選ぶのは、ちょっとさみしいかな || sorashido troubled …たしかに、楽しいかどうかは表に入れてなかったな | erubin normal 言い方、もう少し考えればよかった || erubin normal {c}、速い曲と落ち着いた曲、半分ずつにしない？ | sorashido happy いいぜ！ 半分ずつなら計算も楽さ笑 | erubin happy さすが{c}。じゃあ1曲目、選んでいいよ
+fight atsu sorashido cause=win | sorashido excited よし！ これで自分の51勝50敗ですねー！ | atsu angry 待て待て、今のはノーカンだろ笑 | sorashido angry 表にちゃんと書いてあるんですよ！ 数字はうそつかないので | atsu angry 表を書いてるのがそっちなんだよな！？ || atsu troubled …1勝くらいで熱くなりすぎたか… | sorashido troubled 数え方、先に決めておけばよかったな・・・ || sorashido normal {c}、数え方の決まり、2人で書きませんか | atsu happy おう、じゃあ今日のは引き分けってことで笑 | sorashido happy 引き分けですか・・・しょうがないですね、なんくるないさ〜
+fight atsu sorashido cause=late | atsu normal {c}、朝6時に育成って約束したよな？ もう8時だぞ… | sorashido troubled す、すみません・・・3時まで表を作ってたら、寝坊しました💦 | atsu angry ドラゴンも待ってたんだけど！？ | sorashido angry 夜のほうが計算がはかどるんですって！ || atsu troubled …朝に合わせろってのも、勝手だったか… | sorashido troubled 約束したのに、言い返しちゃったな・・・ || sorashido normal {c}、明日は寝ないで行く・・・のは無理なので、9時でどうですか？ | atsu happy 9時な笑 じゃあ俺は先に軽く走っとく！ | sorashido excited 決まりですね！ ちばりよー！
+fight atsu sorashido cause=tidy | atsu troubled {c}、カード部屋の机、表の紙で埋まってるんだけど！？ | sorashido normal 全部、大事な表なんですよ。並べ方にも意味があるので | atsu angry デッキ広げる場所がないって笑 ちょっとどけるぞ！ | sorashido angry あっ！ 順番がくずれます！ || sorashido troubled ・・・並べ方、自分にしか分からないもんな | atsu troubled 勝手にさわったのは、俺が悪かったな… || atsu normal さっきはごめんな！ 紙、どこに戻せばいい？ | sorashido happy 自分もすみません。いっそ、表を1冊にまとめますね | atsu happy それなら机も広いな笑
+fight kiki sorashido cause=tidy | kiki troubled {c}、図書室の机に、表の紙が広がったままでつ | sorashido normal あとで続きをやるので、そのままにしておいたんです | kiki angry 図書室は、みんなの机なんです。少しお片づけをお願いします | sorashido troubled う・・・分かってはいるんですけどね || sorashido troubled 言われたとおりだよな・・・ | kiki normal 少しきつく聞こえたでしょうか… || sorashido normal {c}、紙は全部ファイルに入れました。机、ぴかぴかです | kiki happy ありがとうございまつ。私も、続きの場所をとっておきまつね♪ | sorashido excited それは助かります・・・！
+fight kiki sorashido cause=late | kiki normal {c}、朝の散歩、5時半の約束でしたよね | sorashido troubled ・・・いま、何時ですか？ | kiki troubled 7時でつ。お日さま、もうすっかり昇りました | sorashido angry 5時半は、自分にとっては真夜中なんですよ！ || kiki troubled 朝が苦手なのを、知っていたのに… | sorashido troubled 寝ぼけて、きつく言っちゃったな・・・ || sorashido normal {c}、さっきはすみません。夕方の散歩なら、絶対起きてます | kiki happy では夕焼けの散歩にしましょう。私も、少し夜ふかししてみまつ♪ | sorashido happy {c}の夜ふかし、何時までもつか計算しておきますね笑
+fight kiki sorashido cause=win | sorashido excited 今のカード勝負、計算どおり自分の勝ちですね！ | kiki angry …もう一回お願いします。今のは、火力が足りませんでした | sorashido normal 何回やっても、表の上では自分が有利なので | kiki angry では、表をこえる火力を出しまつ || kiki troubled 少しむきになってしまいました… | sorashido troubled 有利とか、言わなきゃよかったな・・・ || sorashido normal {c}、さっきの一言はなしでお願いします。次は真剣勝負、受けて立ちます | kiki happy はい。ちから全開で、いきまつね♪ | sorashido excited ほほー！ そう来なくちゃですね！
+fight erubin sorashido cause=promise | sorashido troubled {c}、今日カードの研究会って言ってましたよね？ | erubin surprise あ…ごめん、明日だと思ってた | sorashido angry 表、2人ぶん作って待ってたんですよ！ | erubin troubled ほんとにごめん。でも、そんなに怒らなくても… || sorashido troubled 言いすぎた・・・楽しみにしてただけなんだよな | erubin normal 待たせたのは、俺のほうなのにね || erubin normal {c}、いまからでも研究会、まだ間に合う？ | sorashido happy もちろんです！ 表は消えないので | erubin happy よかった。今度は、カレンダーに書いとくね
+fight erubin sorashido cause=snack | erubin troubled {c}、さっきのクッキー、最後の1枚食べた？ | sorashido surprise あれ、だれのでもないと思って・・・計算中は手が止まらないんです | erubin troubled みんなで分けようと思って、残しておいたんだけどな | sorashido angry だったら、書いておいてくださいよ！ || erubin normal 言わなかった俺も、悪かったかな | sorashido troubled 言い返すことじゃなかったな・・・ || sorashido normal {c}、クッキーを焼いてみました。形はちょっと計算外ですけど笑 | erubin happy わ、手作りだ。いいね、みんなで食べよう | sorashido happy 今度は、ちゃんと人数ぶんあります
+fight erubin sorashido cause=song | sorashido excited 練習の曲、ぜんぶアップテンポにしませんか！ | erubin troubled 俺、落ち着いた曲も入れたいな | sorashido normal でも速い曲のほうが、スコアが伸びるって表に出てるんですよ | erubin troubled スコアだけで選ぶのは、ちょっとさみしいかな || sorashido troubled ・・・たしかに、楽しいかどうかは表に入れてなかったな | erubin normal 言い方、もう少し考えればよかった || erubin normal {c}、速い曲と落ち着いた曲、半分ずつにしない？ | sorashido happy いいですね！ 半分ずつなら計算も楽です笑 | erubin happy さすが{c}。じゃあ1曲目、選んでいいよ
 fight kiki momosuke cause=song | kiki troubled {c}、夜の練習の音、少しだけ小さくしていただけますか | momosuke angry えー！！ 小さくしたらリズムが聞こえないじゃん！！ | kiki troubled 私、22時には休みたいんでつ… | momosuke angry もも、夜しか集中できないんだもん！！ || momosuke troubled …ずっと、がまんさせてたのかな | kiki troubled 練習のじゃまをしたかったわけでは、ないのですけれど || momosuke normal {c}、ヘッドホン買った！！ これなら音もれしないよ♡ | kiki happy まあ、ありがとうございまつ。今夜はぐっすりでつね♪ | momosuke wink そのかわり、朝の散歩でももを起こさないでねw
 fight kiki momosuke cause=tidy | kiki troubled {c}、私の本のしおり、ちがうページに挟まっていまつ | momosuke troubled あ、それもも！！ 読みかけっぽかったから、挟みなおしてあげたの | kiki angry 挟んであったのを、抜いてしまったのでつね… | momosuke angry よかれと思ったのに！！ || kiki troubled 親切のつもりだったのに、強く言ってしまいました | momosuke troubled 勝手にさわったの、ももが悪いよね… || momosuke normal {c}、しおり、ももが作ったの！！ かわりに使って♡ | kiki happy かわいいでつね。大事にしまつ | momosuke excited 次はさわる前に聞くね！！
 fight kiki momosuke cause=snack | momosuke angry {c}！！ ももが残しておいたシュークリーム、食べた！？ | kiki surprise まあ…2つあったので、1つは私のぶんかと | momosuke angry 2つとも、もものなの！！ | kiki troubled それは失礼しました。でも、名前がなかったので… || kiki troubled おやつのことで、悲しい顔をさせてしまいました | momosuke troubled 言い方、きつかったかも… || kiki normal {c}、駅前のシュークリームでつ。3つ買ってきました♪ | momosuke excited 3つ！？ じゃあ1つは{c}のぶんね！！ | kiki happy では、いっしょにいただきまつ
@@ -37,12 +37,12 @@ fight kiki mua cause=tidy | kiki troubled {c}、居間のクッション、ま�
 fight erubin kyuko cause=late | erubin troubled {c}、また3時まで起きてたでしょ。目が赤いよ | kyuko troubled えぇ、いいとこだったんだもん、あの本 | erubin troubled 毎日だと、体が心配なんだよ | kyuko angry 心配しすぎだってぇ。俺、夜のほうが元気なんだから || erubin troubled …言いすぎたかな。おせっかいだったね | kyuko troubled 心配してくれてたのに、きつく返しちゃったなぁ || kyuko normal {c}、さっきはごめん。今日は1時に寝るよ。1時ね笑 | erubin happy ありがとう。1時なら、俺も安心かな | kyuko happy おやすみの前に、おすすめの本1冊わたすね
 fight erubin kyuko cause=promise | kyuko troubled {c}、お気に入りの丘、案内してくれるって言ってたよねぇ | erubin surprise あ…ごめん、カードの大会と重なっちゃって | kyuko angry 俺、お弁当まで用意してたんだよぉ | erubin troubled ほんとにごめん。言うのが遅かったね || kyuko troubled …お弁当、ひとりで食べちゃった | erubin troubled 楽しみにしてくれてたのにな… || erubin normal {c}、今日こそ丘に行こう。お弁当は俺が作ってきたよ | kyuko happy えぇ、ほんとに！？ ありがとん笑 | erubin happy 景色のいい場所、とっておきのを教えるね
 fight erubin kyuko cause=tidy | erubin troubled {c}、居間に本が積まれて、通れなくなってるよ | kyuko normal あ、それ順番に読むやつ。動かさないでぇ | erubin troubled でも、みんなつまずいちゃうからさ | kyuko angry 順番、くずしたら分からなくなるんだってぇ || erubin normal 大事な並びだったんだね | kyuko troubled 居間は、みんなの場所なのになぁ… || kyuko normal {c}、本、部屋に運んだよ。順番そのままで笑 | erubin happy ありがとう。運ぶの手伝えばよかったね | kyuko happy じゃあ次は、いっしょに運んでぇ
-fight dra sorashido cause=win | sorashido excited 今のカード勝負、表で見ても俺の作戦勝ちだぜ！ | dra angry いや、おでの引きが悪かっただけだぞ | sorashido normal 引きも計算のうちさ。確率の表、見るか？ | dra angry 表はいい！ もう1回だ！ || dra troubled 負けると、ついむきになるな… | sorashido troubled 勝ったあとに表は、ちょっと意地悪だったな || sorashido normal {c}、さっきはごめんだぜ。もう1回、表なしでやろう | dra happy おう。今度はおでの読みを見せてやるからな | sorashido excited 望むところだぜ！
-fight dra sorashido cause=tidy | dra troubled {c}、おでの部屋の前まで、表の紙が並んでるんだが | sorashido normal 廊下がいちばん長いから、つなげて並べたんだぜ | dra angry 寝ぼけて踏んだら、破れちまうだろ | sorashido angry 踏まないように歩いてくれよ！ || sorashido troubled …廊下は、みんなの通り道だよな | dra troubled 寝ぼけるおでも、悪いんだがな… || sorashido normal {c}、表は巻物にしてまとめたぜ。廊下、すっきりさ | dra happy おお、巻物か。広げるのはおでが手伝うぞ | sorashido happy それなら、いっしょに読もうぜ
-fight dra sorashido cause=promise | dra troubled {c}、攻略本の説明、今日いっしょに書くって言ってたよな | sorashido surprise あっ…表の計算に夢中で、すっかりだぜ | dra angry おで、説明の下書き、3ページ書いて待ってたんだぞ | sorashido troubled 3ページも…！？ || dra troubled …言いすぎたな。待つのは苦手でな | sorashido troubled 約束より、表を選んじまった… || sorashido normal {c}、下書き読んだぜ。わかりやすくて、でーじいいさ！ | dra happy そ、そうか？ えへへ | sorashido excited 今日は表より先に、説明を仕上げるぜ
-fight kyuko sorashido cause=win | sorashido excited 今のスコア、俺が12点上だぜ・・・！ | kyuko angry ぐぬぬぬ…でも俺のほうが、ミスは少なかったよ | sorashido normal 勝ち負けは点で決めるって表にあるさ | kyuko angry その表、だれが作ったのぉ笑 || kyuko troubled 12点で、すねすぎたかなぁ | sorashido troubled 表をたてに、言いすぎたな || sorashido normal {c}、ミスの少なさ部門も表に足したぜ。そっちは{c}の勝ちさ | kyuko happy えぇ、ありがとん笑 じゃあ1勝1敗だね | sorashido excited 決着は次の1曲だぜ！
-fight kyuko sorashido cause=song | kyuko normal {c}、練習の曲、たまには落ち着いたのにしない？ | sorashido normal いや、速い曲のほうが計算しがいがあるんだぜ | kyuko troubled 毎回それだと、俺の指がもたないってぇ | sorashido angry 指も鍛えれば、速くなるさ！ || sorashido troubled …自分の好みばっかり押しつけたな | kyuko troubled 言い方、もうちょっとあったなぁ || sorashido normal {c}、ゆっくりの曲、1曲選んでくれよ。その次は俺の | kyuko happy ほい！ じゃあ、とっておきの1曲ね | sorashido happy 交代ばんこ、表に書いとくぜ
-fight kyuko sorashido cause=snack | kyuko troubled {c}、俺のポテチ、最後の1袋あけた？ | sorashido surprise 計算してたら、つい手がのびたんだぜ… | kyuko angry 作戦会議用に、とっといたのにぃ | sorashido angry 言ってくれたら、食べなかったさ！ || kyuko troubled ポテチで怒るの、ちょっとはずかしいなぁ | sorashido troubled 言い返しちまったけど、食べたのは俺だよな || sorashido normal {c}、ポテチ、3袋買ってきたぜ！ 味もちがうのにしたさ | kyuko excited えぇ、3袋も！？ ありがとん笑 | sorashido happy どの味が勝つか、表にしようぜ
+fight dra sorashido cause=win | sorashido excited 今のカード勝負、表で見ても自分の作戦勝ちですね！ | dra angry いや、おでの引きが悪かっただけだぞ | sorashido normal 引きも計算のうちですよ。確率の表、見ますか？ | dra angry 表はいい！ もう1回だ！ || dra troubled 負けると、ついむきになるな… | sorashido troubled 勝ったあとに表は、ちょっと意地悪だったな・・・ || sorashido normal {c}、さっきはすみません。もう1回、表なしでやりましょう | dra happy おう。今度はおでの読みを見せてやるからな | sorashido excited 望むところです！
+fight dra sorashido cause=tidy | dra troubled {c}、おでの部屋の前まで、表の紙が並んでるんだが | sorashido normal 廊下がいちばん長いので、つなげて並べたんです | dra angry 寝ぼけて踏んだら、破れちまうだろ | sorashido angry 踏まないように歩いてくださいよ！ || sorashido troubled ・・・廊下は、みんなの通り道だよな | dra troubled 寝ぼけるおでも、悪いんだがな… || sorashido normal {c}、表は巻物にしてまとめました。廊下、すっきりです | dra happy おお、巻物か。広げるのはおでが手伝うぞ | sorashido happy それなら、いっしょに読みましょう
+fight dra sorashido cause=promise | dra troubled {c}、攻略本の説明、今日いっしょに書くって言ってたよな | sorashido surprise あっ・・・表の計算に夢中で、すっかり忘れてました💦 | dra angry おで、説明の下書き、3ページ書いて待ってたんだぞ | sorashido troubled 3ページも・・・！？ || dra troubled …言いすぎたな。待つのは苦手でな | sorashido troubled 約束より、表を選んじゃった・・・ || sorashido normal {c}、下書き読みました。わかりやすくて、でーじいいです！ | dra happy そ、そうか？ えへへ | sorashido excited 今日は表より先に、説明を仕上げます
+fight kyuko sorashido cause=win | sorashido excited 今のスコア、自分が12点上ですねー！ | kyuko angry ぐぬぬぬ…でも俺のほうが、ミスは少なかったよ | sorashido normal 勝ち負けは点で決めるって、表にあるので | kyuko angry その表、だれが作ったのぉ笑 || kyuko troubled 12点で、すねすぎたかなぁ | sorashido troubled 表をたてに、言いすぎたな・・・ || sorashido normal {c}、ミスの少なさ部門も表に足しました。そっちは{c}の勝ちです | kyuko happy えぇ、ありがとん笑 じゃあ1勝1敗だね | sorashido excited 決着は次の1曲ですね！
+fight kyuko sorashido cause=song | kyuko normal {c}、練習の曲、たまには落ち着いたのにしない？ | sorashido normal いや、速い曲のほうが計算しがいがあるんですよ | kyuko troubled 毎回それだと、俺の指がもたないってぇ | sorashido angry 指も鍛えれば、速くなりますって！ || sorashido troubled ・・・自分の好みばっかり押しつけたな | kyuko troubled 言い方、もうちょっとあったなぁ || sorashido normal {c}、ゆっくりの曲、1曲選んでください。その次は自分の番で | kyuko happy ほい！ じゃあ、とっておきの1曲ね | sorashido happy 交代ばんこ、表に書いておきますね
+fight kyuko sorashido cause=snack | kyuko troubled {c}、俺のポテチ、最後の1袋あけた？ | sorashido surprise 計算してたら、つい手がのびたんです・・・ | kyuko angry 作戦会議用に、とっといたのにぃ | sorashido angry 言ってくれたら、食べなかったですよ！ || kyuko troubled ポテチで怒るの、ちょっとはずかしいなぁ | sorashido troubled 言い返しちゃったけど、食べたのは自分だよな・・・ || sorashido normal {c}、ポテチ、3袋買ってきました！ 味もちがうのにしてあります | kyuko excited えぇ、3袋も！？ ありがとん笑 | sorashido happy どの味が勝つか、表にしましょう
 fight dra kyuko cause=snack | kyuko troubled {c}、冷蔵庫のケーキ、半分なくなってるんだけどぉ | dra troubled 半分は、おでの分かと思ってな | kyuko angry あれ、みんなの分なんだってぇ | dra angry 書いてなかったぞ！ || dra troubled …半分は、さすがに食べすぎたか | kyuko troubled 書いておけば、よかったなぁ || dra normal {c}、ケーキ、まるごと1つ買ってきたぞ | kyuko happy えぇ、まるごと！？ ありがとん笑 | dra happy みんなで分けような。今度はおでが切るぞ
 fight dra kyuko cause=late | dra normal {c}、昼の作戦会議、もう2時だぞ… | kyuko troubled ごめぇ…夜ふかしして、起きたらお昼すぎてたぁ | dra angry おで、昼寝もしないで待ってたんだからな | kyuko angry {c}だって、よく昼寝で遅れるっしょぉ || kyuko troubled …言い返すことじゃなかったなぁ | dra troubled おでも、人のこと言えないな || kyuko normal {c}、さっきはごめん。おわびに、山札チェックは俺がやるよ | dra happy おう、助かるぞ。じゃあおでは説明係だな | kyuko happy ほい、役割分担〜
 fight dra kyuko cause=promise | dra troubled {c}、新しいデッキ、見てくれるって言ってたよな | kyuko surprise あ…ごめん、本のつづきが気になって忘れてたぁ | dra angry おで、1枚決まらないままで待ってたんだぞ | kyuko troubled ぐぬぬぬ…それは悪いことしたなぁ || dra troubled 1枚くらい、自分で決めればよかったか | kyuko troubled 約束、本に負けちゃったなぁ || kyuko normal {c}、いまから見るよ。その1枚、いっしょに決めよ | dra happy おう！ 助かるな | kyuko happy 理由もちゃんと書いとくね笑
@@ -55,15 +55,15 @@ mend erubin momosuke how=player | momosuke troubled {name}に「仲直りしな�
 mend dra mua how=apology | dra troubled {c}…その、なんだ | mua normal ん？ なに〜？ | dra troubled 昨日は、おでが悪かった。すまん | mua happy もう、言うのおそいぢゃん！ でも、ありがと♪ | dra happy ほっとしたぞ
 mend dra mua how=gift | mua normal {c}、{name}からドーナツ届いたよ。2個ある | dra troubled …おで、もらっていいのか？ | mua wink いっしょに食べたら仲直りってことで！ｗ | dra happy おう。昨日はすまんかったな | mua happy あたしも、言いすぎてごめん！
 mend dra mua how=player | mua troubled {name}に「ちゃんと話しな」って言われた… | dra troubled おでもだ。{name}に言われたら、しょうがないな | mua normal …じゃあ、せーので謝ろ。せーの、ごめん！ | dra happy ごめん！ …声がそろったな、えへへ
-mend atsu sorashido how=apology | atsu normal {c}、ちょっといいか？ | sorashido normal お、どうしたんだぜ？ | atsu troubled 昨日はムキになって悪かった！ ごめん！ | sorashido happy 俺もだぜ。言いすぎたって、ずっと思ってたさ | atsu happy だよな笑 じゃあ1戦いくか！
-mend atsu sorashido how=gift | sorashido normal {c}、{name}から差し入れのおにぎりだぜ | atsu troubled …お、おう！ ありがと… | sorashido happy 腹がへってると言い合いになるって、表にも出てるさ笑 | atsu happy そんな表あるのかよ笑 昨日はごめんな！ | sorashido happy 俺もごめんだぜ。食べたら協力プレイな
-mend atsu sorashido how=player | atsu troubled {name}に、ちゃんと話せって言われちまった… | sorashido troubled 俺もさ。{name}に言われたら、しょうがないさ | atsu normal じゃあ…昨日のは、おあいこってことで！ | sorashido happy おあいこ、表に書いとくぜ！
-mend kiki sorashido how=apology | sorashido troubled {c}、昨日の…あれ、俺が悪かったんだぜ | kiki surprise まあ、わざわざ言いにきてくださったんでつね | sorashido troubled 言わないと、表の計算も手につかなくてさ | kiki happy 私も言いすぎました。仲直りでつ♪ | sorashido excited うぉぉぉ、ほっとしたぜ！
-mend kiki sorashido how=gift | kiki normal {c}、{name}から、お茶とお団子をいただきました | sorashido troubled …俺、もらっていいのか？ | kiki happy もちろんでつ。いっしょにいただきましょう | sorashido happy 昨日はごめんだぜ。お団子、ちょうど2人ぶんさ | kiki happy 私もごめんなさい。{name}に感謝でつね
-mend kiki sorashido how=player | kiki troubled {name}に、話してきてくださいと言われました | sorashido troubled 俺もさ。{name}に言われたら、断れないぜ | kiki normal では…昨日のことは、なかったことにしまつか？ | sorashido happy いや、仲直りしたことを表に残すぜ！ | kiki happy ふふ、それはいいでつね♪
-mend erubin sorashido how=apology | erubin normal {c}、昨日はごめんね。ちゃんと謝りたくて | sorashido surprise お、俺から言おうと思ってたのに、先をこされたぜ | erubin happy じゃあ、おあいこだね笑 | sorashido happy おあいこだぜ！ カード、1戦やろうさ
-mend erubin sorashido how=gift | sorashido normal {c}、{name}がクッキーくれたぜ。人数ぶん、ぴったりさ | erubin happy ほんとだ。{name}、気がきくね | sorashido troubled 昨日は、言い返してごめんだぜ | erubin happy 俺も言いすぎたよ。食べながら研究会しよっか
-mend erubin sorashido how=player | erubin troubled {name}に、もう仲直りしなよって言われちゃった | sorashido troubled 俺も言われたさ。{name}には、かなわないぜ | erubin normal しょうがないね。ごめんね、{c} | sorashido happy 俺もごめんだぜ。これで元どおりさ
+mend atsu sorashido how=apology | atsu normal {c}、ちょっといいか？ | sorashido normal お、どうしました？ | atsu troubled 昨日はムキになって悪かった！ ごめん！ | sorashido happy 自分もです。言いすぎたって、ずっと思ってました | atsu happy だよな笑 じゃあ1戦いくか！
+mend atsu sorashido how=gift | sorashido normal {c}、{name}から差し入れのおにぎりです | atsu troubled …お、おう！ ありがと… | sorashido happy お腹がへってると言い合いになるって、表にも出てるんですよ笑 | atsu happy そんな表あるのかよ笑 昨日はごめんな！ | sorashido happy 自分もすみません。食べたら協力プレイしましょう
+mend atsu sorashido how=player | atsu troubled {name}に、ちゃんと話せって言われちまった… | sorashido troubled 自分もです。{name}に言われたら、しょうがないですね | atsu normal じゃあ…昨日のは、おあいこってことで！ | sorashido happy おあいこ、表に書いておきます！
+mend kiki sorashido how=apology | sorashido troubled {c}、昨日の・・・あれ、自分が悪かったです | kiki surprise まあ、わざわざ言いにきてくださったんでつね | sorashido troubled 言わないと、表の計算も手につかなくて | kiki happy 私も言いすぎました。仲直りでつ♪ | sorashido excited ほっとしましたー！
+mend kiki sorashido how=gift | kiki normal {c}、{name}から、お茶とお団子をいただきました | sorashido troubled ・・・自分、もらっていいんですか？ | kiki happy もちろんでつ。いっしょにいただきましょう | sorashido happy 昨日はすみません。お団子、ちょうど2人ぶんです | kiki happy 私もごめんなさい。{name}に感謝でつね
+mend kiki sorashido how=player | kiki troubled {name}に、話してきてくださいと言われました | sorashido troubled 自分もです。{name}に言われたら、断れないですね | kiki normal では…昨日のことは、なかったことにしまつか？ | sorashido happy いや、仲直りしたことを表に残します！ | kiki happy ふふ、それはいいでつね♪
+mend erubin sorashido how=apology | erubin normal {c}、昨日はごめんね。ちゃんと謝りたくて | sorashido surprise じ、自分から言おうと思ってたのに、先をこされました | erubin happy じゃあ、おあいこだね笑 | sorashido happy おあいこですね！ カード、1戦やりましょう
+mend erubin sorashido how=gift | sorashido normal {c}、{name}がクッキーをくれました。人数ぶん、ぴったりです | erubin happy ほんとだ。{name}、気がきくね | sorashido troubled 昨日は、言い返してすみません | erubin happy 俺も言いすぎたよ。食べながら研究会しよっか
+mend erubin sorashido how=player | erubin troubled {name}に、もう仲直りしなよって言われちゃった | sorashido troubled 自分も言われました。{name}には、かなわないですね | erubin normal しょうがないね。ごめんね、{c} | sorashido happy 自分もすみません。これで元どおりですね
 mend kiki momosuke how=apology | momosuke troubled {c}…あの、昨日の…… | kiki normal はい、どうしましたか？ | momosuke troubled ……ごめんなさい！！ もも、言いすぎた！！ | kiki happy 私もでつ。言いにきてくれて、うれしいでつ♪ | momosuke happy よかったぁ…！！
 mend kiki momosuke how=gift | kiki normal {c}、{name}から、いちごのパフェが届きました | momosuke troubled …ももの分も、あるの？ | kiki happy ありまつよ。いっしょに食べたら、仲直りでつ | momosuke happy うん！！ 昨日はごめんね、{c}♡
 mend kiki momosuke how=player | momosuke troubled {name}に「話しておいで」って言われた… | kiki normal 私もでつ。{name}に言われたら、しょうがありませんね | momosuke troubled じゃあ…ごめんね | kiki happy はい、私もごめんなさい。これでおしまいでつ♪ | momosuke excited おしまい！！ 練習いこ！！
@@ -82,12 +82,12 @@ mend kiki mua how=player | mua troubled {name}に、ちゃんと話しておい�
 mend erubin kyuko how=apology | erubin normal {c}、昨日はごめんね。言い方、きつかったよね | kyuko troubled ううん、俺もきつく返しちゃったぁ | erubin happy それなら、おたがいさまだね | kyuko happy うん。また夜のおすすめ、教えるね笑
 mend erubin kyuko how=gift | kyuko normal {c}、{name}がお弁当くれたよぉ。2つ | erubin happy ほんとだ。丘で食べよっか | kyuko troubled …昨日はごめんね | erubin happy こちらこそ。景色、いっしょに見よう
 mend erubin kyuko how=player | erubin troubled {name}に、もう話しておいでって言われたよ | kyuko troubled 俺もぉ…{name}に言われたら、しょうがないなぁ | erubin normal 俺から言うね。ごめんね、{c} | kyuko happy ほい、俺もごめん。これで元どおり〜
-mend dra sorashido how=apology | sorashido troubled {c}、昨日のこと…俺が悪かったんだぜ | dra normal いや、おでもむきになりすぎた | sorashido happy じゃあ、仲直りの記録をつけとくさ | dra happy 記録するのか。まあ、いいけどな
-mend dra sorashido how=gift | dra normal {c}、{name}がサーターアンダギーくれたぞ | sorashido excited うぉぉぉ、でーじうれしいぜ！ | dra troubled …昨日は、すまんかったな | sorashido happy 俺もごめんだぜ。半分ずつ食べようさ
-mend dra sorashido how=player | dra troubled {name}に、もう仲直りしろって言われちまった | sorashido troubled 俺もさ。{name}にそう言われたら、しょうがないぜ | dra normal じゃあ、攻略本のつづきを書くか | sorashido happy おう！ 説明は{c}、表は俺だぜ
-mend kyuko sorashido how=apology | kyuko normal {c}、昨日はすねちゃってごめぇ | sorashido surprise 俺のほうこそ、言いすぎてごめんだぜ | kyuko happy じゃあ、次の勝負で決着ね笑 | sorashido excited 望むところだぜ・・・！
-mend kyuko sorashido how=gift | sorashido normal {c}、{name}からポテチの差し入れだぜ。3つの味さ | kyuko happy えぇ、ちょうど食べたかったやつぅ | sorashido troubled 昨日は、ごめんだぜ | kyuko happy 俺もごめん。どれから食べるか、作戦会議ね
-mend kyuko sorashido how=player | kyuko troubled {name}に、2人で話しなよって言われちゃったぁ | sorashido troubled 俺も言われたぜ。{name}の言うことなら、聞くしかないさ | kyuko normal じゃあ…ごめんね | sorashido happy 俺もごめんだぜ。攻略メモ、また見せてくれよ
+mend dra sorashido how=apology | sorashido troubled {c}、昨日のこと・・・自分が悪かったです | dra normal いや、おでもむきになりすぎた | sorashido happy じゃあ、仲直りの記録をつけておきます | dra happy 記録するのか。まあ、いいけどな
+mend dra sorashido how=gift | dra normal {c}、{name}がサーターアンダギーくれたぞ | sorashido excited でーじうれしいです！ | dra troubled …昨日は、すまんかったな | sorashido happy 自分もすみません。半分ずつ食べましょう
+mend dra sorashido how=player | dra troubled {name}に、もう仲直りしろって言われちまった | sorashido troubled 自分もです。{name}にそう言われたら、しょうがないですね | dra normal じゃあ、攻略本のつづきを書くか | sorashido happy はい！ 説明は{c}、表は自分ですね
+mend kyuko sorashido how=apology | kyuko normal {c}、昨日はすねちゃってごめぇ | sorashido surprise 自分のほうこそ、言いすぎてすみません | kyuko happy じゃあ、次の勝負で決着ね笑 | sorashido excited 望むところです・・・！
+mend kyuko sorashido how=gift | sorashido normal {c}、{name}からポテチの差し入れです。3つの味ですよ | kyuko happy えぇ、ちょうど食べたかったやつぅ | sorashido troubled 昨日は、すみません | kyuko happy 俺もごめん。どれから食べるか、作戦会議ね
+mend kyuko sorashido how=player | kyuko troubled {name}に、2人で話しなよって言われちゃったぁ | sorashido troubled 自分も言われました。{name}の言うことなら、聞くしかないですね | kyuko normal じゃあ…ごめんね | sorashido happy 自分もすみません。攻略メモ、また見せてください
 mend dra kyuko how=apology | dra troubled {c}、昨日のこと、すまんかったな | kyuko surprise えぇ、先に言われちゃったぁ。俺もごめん | dra happy じゃあ、これでいつもどおりだな | kyuko happy ほい！ 山札チェック、いこっか
 mend dra kyuko how=gift | kyuko normal {c}、{name}からケーキ届いたよぉ | dra troubled …おで、昨日のこと、まだ言えてないんだが | kyuko happy 食べながらでいいよぉ笑 | dra happy すまんかったな。今度はおでが切るぞ | kyuko happy ありがとん。俺もごめんね
 mend dra kyuko how=player | kyuko troubled {name}に、ちゃんと話しなって言われたぁ | dra troubled おでもだ。{name}にああ言われちゃ、しょうがないな | kyuko normal ……ごめんね | dra happy おう、おでもすまん。作戦会議、いっしょにやろうな
@@ -99,29 +99,29 @@ secret momosuke mua | momosuke wink （ごにょごにょ）…ってポーズ�
 secret dra mua | dra normal （小声で）{c}、新ネタなんだが…（ごにょごにょ） | mua surprise …ぷっ！ 今のはずるいｗ | dra happy まだ早いか？ 本番は明日だぞ | mua wink 明日まで、あたし笑うのがまんする！
 secret atsu mua | atsu normal （ひそひそ）{c}、例の作戦、明日いけるか？ | mua wink （ひそひそ）ばっちり！ 合図は手をたたく、でいい？ | atsu happy それでいこう笑 | mua surprise あっ、{name}…！ な、なんの話もしてないよ？ｗ
 secret kyuko mua | kyuko normal （ひそひそ）…でさ、計算すると、ここが一番きれいに見えるんだよねぇ | mua excited まぢで！？ 夜、そこ行こ！ | kyuko happy うん。でも、着くまでは何するか言わないでね笑 | mua wink わかった！ びっくりさせよ♪
-secret mua sorashido | sorashido normal （ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんだぜ | mua surprise え、3年！？ だれの？ | sorashido wink それは、渡すときのお楽しみさ | mua happy 気になるぅ！ でも待ってる♪
+secret mua sorashido | sorashido normal （ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんです | mua surprise え、3年！？ だれの？ | sorashido wink それは、渡すときのお楽しみです | mua happy 気になるぅ！ でも待ってる♪
 secret erubin mua | mua normal （ひそひそ）{c}、あれ、ちゃんと選んできた？ | erubin happy （ひそひそ）うん。色は、{c}が言ってたほうにしたよ | mua excited さすが！ 渡すの、いつにする？ | erubin surprise …あ、{name}が来た。この話は、またあとでね
 secret kiki momosuke | momosuke normal （ひそひそ）{c}、あの曲のサビ、どうだった？ | kiki wink （ひそひそ）とても上手でつ。本番で、みんなびっくりしまつね | momosuke excited ほんと！？ じゃあ、もうちょっとだけ練習する！！ | kiki happy あら、{name}。いま、お茶の話をしていたんでつよ♪
 secret dra kiki | dra normal （小声で）{c}、教えたギャグ、覚えたか？ | kiki wink （小声で）はい。ここぞというときに使いまつ | dra happy おでより先に言うなよ | kiki happy もちろんでつ。…{name}、いまの、聞こえていましたか？
 secret atsu kiki | atsu normal （ひそひそ）{c}、明日のボス、2人で先に行くぞ… | kiki wink （ひそひそ）ちから全開で、まいりましょう | atsu happy 決まりだな笑 | kiki surprise …あら、{name}。聞こえてしまいましたか？
 secret kiki kyuko | kyuko normal （ひそひそ）{c}、図書室の奥の棚、見つけちゃった | kiki surprise （ひそひそ）まあ、あの古い地図の棚でつか？ | kyuko happy うん。明日、2人で行こ | kiki happy …ふふ。{name}にも、いつか教えてあげましょうね
-secret kiki sorashido | sorashido normal （ひそひそ）{c}、例の数字、出たぜ・・・！ | kiki surprise （ひそひそ）まあ…そんなに大きく？ | sorashido excited ああ、表の新記録さ | kiki happy 発表の日まで、静かにしておきまつね♪
+secret kiki sorashido | sorashido normal （ひそひそ）{c}、例の数字、出ました・・・！ | kiki surprise （ひそひそ）まあ…そんなに大きく？ | sorashido excited はい、表の新記録です | kiki happy 発表の日まで、静かにしておきまつね♪
 secret erubin kiki | erubin normal （小声で）{c}、明日の朝、いつものベンチで | kiki wink （小声で）はい。お茶は私が持っていきまつ | erubin happy 6時でいいかな | kiki happy 6時でつね。…あら、{name}。朝のお茶の相談でつよ♪
 secret dra momosuke | momosuke normal （ひそひそ）{c}、2人のお笑いの名前、決めた？ | dra normal （ひそひそ）おでは、これがいいと思うんだ…（ごにょごにょ） | momosuke excited それ、ありかも！！ | dra happy 発表は、ライブの日だぞ
 secret atsu momosuke | momosuke wink （ひそひそ）{c}、明日の勝負、あの曲でいこ | atsu happy （ひそひそ）おう、HELLのやつな笑 | momosuke excited みんなには、当日まで言わないでねw | atsu wink わかってる！ …って、{name}いたのかよ笑
 secret kyuko momosuke | kyuko normal （ひそひそ）{c}、ドリーミィの新しい技、見たい？ | momosuke excited （ひそひそ）見たい見たい！！ | kyuko happy じゃあ夜、図書室の裏でね笑 | momosuke wink もも、絶対行く♡
-secret momosuke sorashido | sorashido normal （ひそひそ）{c}、ミスの数、先週の半分になってたぜ | momosuke surprise ほんと！？ まだ言わないで！！ | sorashido wink ゼロになったら、みんなの前で発表さ | momosuke excited それまで、2人で数えよ！！
+secret momosuke sorashido | sorashido normal （ひそひそ）{c}、ミスの数、先週の半分になってましたよ | momosuke surprise ほんと！？ まだ言わないで！！ | sorashido wink ゼロになったら、みんなの前で発表ですね | momosuke excited それまで、2人で数えよ！！
 secret erubin momosuke | momosuke normal （ひそひそ）{c}、ライブの日、一番前に来てくれる？ | erubin happy （ひそひそ）もちろん。手作りのうちわも用意してるよ | momosuke surprise え、うちわ！？ 見たい！！ | erubin wink それは、当日のお楽しみね
 secret atsu dra | atsu normal （ひそひそ）{c}、今夜の作戦会議、いつもの場所な… | dra normal （ひそひそ）おう。決勝のときの作戦、持っていくぞ | atsu happy あれか笑 | dra happy 寝ないで行くからな。…たぶん
 secret dra kyuko | kyuko normal （ひそひそ）{c}、山札の最後の1枚、決まったよ | dra surprise （ひそひそ）ほんとか。どれにした？ | kyuko wink それは、対戦で見せるねぇ笑 | dra happy 楽しみにしとくぞ
-secret dra sorashido | sorashido normal （ひそひそ）{c}、攻略本の表紙、こんな感じでどうだ？ | dra surprise （ひそひそ）おお…いいな、それ | sorashido excited 完成するまで、だれにも見せないぜ | dra happy おでも、説明の最後のページ、がんばるぞ
+secret dra sorashido | sorashido normal （ひそひそ）{c}、攻略本の表紙、こんな感じでどうですか？ | dra surprise （ひそひそ）おお…いいな、それ | sorashido excited 完成するまで、だれにも見せません | dra happy おでも、説明の最後のページ、がんばるぞ
 secret dra erubin | erubin normal （小声で）{c}、デュラハンの新しい組み方、思いついたんだ | dra surprise （小声で）お、聞かせてくれ | erubin happy …（ごにょごにょ）…って感じ | dra happy 対戦で、まんまとやられそうだな、えへへ
 secret atsu kyuko | atsu normal （ひそひそ）{c}、ランキングの作戦、例のやつでいくか？ | kyuko wink （ひそひそ）ほい。理由は、あとで紙で渡すね | atsu happy 頼んだ笑 | kyuko surprise …あ、{name}。いまのは、ただの雑談〜
-secret atsu sorashido | sorashido normal （ひそひそ）{c}、協力プレイの合図、決めようぜ | atsu happy （ひそひそ）指2本で「いけ」、な笑 | sorashido excited それだぜ！ 見ても分からないさ | atsu wink 本番まで、だれにも言うなよ笑
+secret atsu sorashido | sorashido normal （ひそひそ）{c}、協力プレイの合図、決めませんか | atsu happy （ひそひそ）指2本で「いけ」、な笑 | sorashido excited それです！ 見ても分からないですね | atsu wink 本番まで、だれにも言うなよ笑
 secret atsu erubin | erubin normal （小声で）{c}、明日、みんなに差し入れ持っていこうと思うんだ | atsu happy （小声で）いいな笑 俺も半分出す！ | erubin happy ありがとう。何がいいかな | atsu normal おにぎりだろ！ …あ、{name}、聞こえた？笑
-secret kyuko sorashido | kyuko normal （ひそひそ）{c}、たまには攻略じゃない話してもいい？ | sorashido surprise （ひそひそ）お、なんだぜ？ | kyuko happy …（ごにょごにょ）…ってことがあってさぁ | sorashido happy それは、表にしないでおくさ
+secret kyuko sorashido | kyuko normal （ひそひそ）{c}、たまには攻略じゃない話してもいい？ | sorashido surprise （ひそひそ）お、なんですか？ | kyuko happy …（ごにょごにょ）…ってことがあってさぁ | sorashido happy それは、表にしないでおきます
 secret erubin kyuko | kyuko normal （ひそひそ）{c}、夜の図書室、星が見える窓があるんだよぉ | erubin surprise （ひそひそ）へえ、そんなところが | kyuko happy 今度、23時より前に見に行こ笑 | erubin happy うん。俺が寝る前に、ね
-secret erubin sorashido | sorashido normal （ひそひそ）{c}、次の大会のデッキ、2人で組まないか？ | erubin happy （ひそひそ）いいね。デュラハンも入れていい？ | sorashido excited もちろんだぜ。でーじ強くなるさ | erubin wink 当日まで、2人で研究だね
+secret erubin sorashido | sorashido normal （ひそひそ）{c}、次の大会のデッキ、2人で組みませんか？ | erubin happy （ひそひそ）いいね。デュラハンも入れていい？ | sorashido excited もちろんです。でーじ強くなりますよ | erubin wink 当日まで、2人で研究だね
 
 ## 相談に乗る consult <相談する人> <乗る人> mood=lonely/sulky/restless
 
@@ -130,29 +130,29 @@ consult momosuke mua mood=restless | momosuke troubled {c}、なんか今日、�
 consult dra mua mood=lonely | dra troubled {c}…みんな出かけてて、家がしーんとしてるんだ | mua surprise え、ずっとひとりだったの？ | dra troubled 昼寝しても、起きたらまだしーんとしててな | mua happy じゃあ今から、あたしと広場いこ！ ギャグも聞いてあげる！ | dra happy …おう。ありがとな
 consult mua atsu mood=sulky | mua angry {c}、聞いて！ 今日のビート、3回ともフルコン逃したの！ | atsu normal そりゃくやしいな… | mua troubled あたし、むいてないのかも… | atsu happy 3回とも最後まで行けたなら、むいてるだろ笑 明日いっしょにやるぞ！ | mua happy …うん！ 一曲だけね！ｗ
 consult kyuko mua mood=restless | kyuko troubled {c}、作戦がまとまらなくて、頭がぐるぐるしてるんだよねぇ | mua normal そういうときは、考えるのやめちゃお！ | kyuko surprise えぇ、やめるの？ | mua wink うん、なんかいい感じのほう選べば、だいたい当たるって！ｗ | kyuko happy …たしかに、{c}の勘って当たるんだよなぁ笑
-consult sorashido mua mood=sulky | sorashido troubled {c}、俺の表、だれも最後まで読んでくれないんだぜ… | mua surprise え、そうなの？ あたし見たい！ | sorashido troubled 長すぎるって、言われちまってさ | mua happy じゃあ、あたしが見出し付けたげる！ そしたら読みやすいぢゃん♪ | sorashido excited …うぉぉぉ、それだぜ！
+consult sorashido mua mood=sulky | sorashido troubled {c}、自分の表、だれも最後まで読んでくれないんですよ・・・ | mua surprise え、そうなの？ あたし見たい！ | sorashido troubled 長すぎるって、言われちゃいまして | mua happy じゃあ、あたしが見出し付けたげる！ そしたら読みやすいぢゃん♪ | sorashido excited ・・・ほほー、それです！
 consult erubin mua mood=lonely | erubin troubled {c}、この町にもだいぶ慣れたけど、ときどき、まだかなって思うんだ | mua normal うんうん | erubin troubled ちょっとだけ、さみしくなる日があってさ | mua happy じゃあ、明日いっしょにコーデ選ぼ！ あたし、毎日でも誘いにいくから！ | erubin happy …ありがとう。{c}の元気に、いつも助けられてるよ
 consult momosuke kiki mood=sulky | momosuke angry {c}、聞いて！！ 今日の練習、ぜんぶうまくいかなかった！！ | kiki normal まあ、それはくやしかったでつね | momosuke troubled もも、むいてないのかなぁ… | kiki happy うまくいかない日も、練習した日でつ。明日の{c}は、きっと強いでつよ♪ | momosuke happy …うん！！ 明日、見ててね！！
 consult kiki dra mood=restless | kiki troubled {c}、少しよろしいですか。今日はなんだか、落ち着かなくて | dra normal おう、どうした？ | kiki troubled 理由は分からないのでつけれど…胸がそわそわするんでつ | dra happy そういう日は、ギャグを1つ聞くといいぞ。…アルミ缶の上にあるみかん | kiki happy ……ふふ。少しだけ、落ち着きました
 consult atsu kiki mood=restless | atsu troubled {c}、なんか今日、じっとしてられないんだよな… | kiki normal では、ボスにでも挑みまつか？ | atsu surprise いきなりボスかよ笑 | kiki happy ちから全開で動けば、そわそわも消えまつよ♪ | atsu happy たしかに！ 行くか笑
 consult kyuko kiki mood=lonely | kyuko troubled {c}、図書室で読んでたら、急にさみしくなっちゃってさぁ | kiki normal ひとりの時間が、長かったのでつね | kyuko troubled うん…本はおもしろいんだけどねぇ | kiki happy では、となりの席で私も読みまつ。話さなくても、いっしょでつよ | kyuko happy …ありがとん。それがいちばんいいかも笑
-consult sorashido kiki mood=restless | sorashido troubled {c}、計算が合わなくて、ずっと落ち着かないんだぜ… | kiki normal どこが合わないのでつか？ | sorashido troubled 火力の数字が、思ったより高く出るんだ | kiki wink それは、私が強いからでつ♪ 計算は合っていまつよ | sorashido surprise …そういうことか！ 笑うしかないぜ笑
+consult sorashido kiki mood=restless | sorashido troubled {c}、計算が合わなくて、ずっと落ち着かないんです・・・ | kiki normal どこが合わないのでつか？ | sorashido troubled 火力の数字が、思ったより高く出るんですよ | kiki wink それは、私が強いからでつ♪ 計算は合っていまつよ | sorashido surprise ・・・そういうことですか！ 笑うしかないです笑
 consult kiki erubin mood=lonely | kiki troubled {c}…今日は、みんな出かけているみたいでつね | erubin normal うん。さみしい？ | kiki troubled 少しだけ。見守る相手がいないと、手持ちぶさたでつ | erubin happy じゃあ、今日は俺が{c}を見守るね。お茶、いれてくるよ | kiki happy …まあ。では、お言葉に甘えまつ♪
 consult momosuke dra mood=lonely | momosuke troubled {c}…みんな、ももの練習見にきてくれない… | dra normal おでが見るぞ。いちばん前でな | momosuke troubled ほんと？ 寝ない？ | dra happy 寝ないぞ。…たぶんな。ほら、行くぞ | momosuke happy …うん！！ ちゃんと起きててね♡
 consult atsu momosuke mood=sulky | atsu troubled {c}、今日の勝負、ぜんぶ負けた… | momosuke surprise えー！！ めずらしいじゃん！！ | atsu troubled 調子出ない日もあるよな… | momosuke wink 負けた日の{c}、ちょっとかわいいw でも明日はリベンジだよ！！ | atsu happy かわいいって言うな笑 でも、ありがと！
 consult momosuke kyuko mood=restless | momosuke troubled {c}、新しい編成の名前、決まらなくてそわそわする！！ | kyuko normal えぇ、それでそわそわしてたの笑 | momosuke troubled だって大事じゃん！！ | kyuko happy じゃあ候補、3つ出して。俺が理由つけて選ぶよ | momosuke excited それいい！！ ちょっと待ってて！！
-consult momosuke sorashido mood=sulky | momosuke troubled {c}…ミスの数、また増えてた… | sorashido normal 増えた日もあるさ。表で見ると、ぐっと減ってるんだぜ | momosuke surprise ほんと！？ 見せて！！ | sorashido happy ほら、先月の半分さ。ちばりよー！ | momosuke happy …ほんとだ！！ 元気出た♡
+consult momosuke sorashido mood=sulky | momosuke troubled {c}…ミスの数、また増えてた… | sorashido normal 増えた日もありますよ。表で見ると、ぐっと減ってるんです | momosuke surprise ほんと！？ 見せて！！ | sorashido happy ほら、先月の半分です。ちばりよー！ | momosuke happy …ほんとだ！！ 元気出た♡
 consult momosuke erubin mood=lonely | momosuke troubled {c}、夜の練習って、ひとりだと静かすぎるんだよね… | erubin normal そっか。夜は、みんな寝ちゃうもんね | momosuke troubled うん、ちょっとさみしい… | erubin happy 俺が起きてる時間なら、聞きにいくよ。23時までだけどね笑 | momosuke happy じゃあ、23時までにいちばんいい曲やる！！
 consult atsu dra mood=lonely | atsu troubled {c}、みんな忙しそうで、勝負の相手がいないんだよな… | dra normal おでがいるぞ | atsu surprise いいのかよ笑 | dra happy 決勝のつづき、まだ終わってないからな | atsu happy …だな！ 今日こそ決着つけるぞ！
 consult dra kyuko mood=restless | dra troubled {c}、デッキの1枚が決まらなくて、落ち着かないんだ | kyuko normal 候補、何枚あるのぉ？ | dra troubled 3枚だ。どれもいいんだよな | kyuko happy じゃあ、相手のデッキで分けよっか。理由があれば、決めやすいっしょ | dra happy おお、なるほどな。さすがだぞ
-consult sorashido dra mood=lonely | sorashido troubled {c}、カード部屋、今日はだれも来ないんだぜ… | dra normal おでが来たぞ | sorashido surprise お、ほんとだぜ！ | dra happy 長い表、最後まで読んでやるからな | sorashido excited うぉぉぉ、でーじうれしいさ！
+consult sorashido dra mood=lonely | sorashido troubled {c}、カード部屋、今日はだれも来ないんですよ・・・ | dra normal おでが来たぞ | sorashido surprise お、ほんとですね！ | dra happy 長い表、最後まで読んでやるからな | sorashido excited でーじうれしいです！
 consult erubin dra mood=restless | erubin troubled {c}、次の対戦のこと考えると、そわそわしちゃって | dra normal 緊張してるのか | erubin troubled うん、少し。負けたくないなって | dra happy おでが教えたことを思い出せばいいぞ。{c}はもう強いからな | erubin happy …ありがとう、先生。がんばるね
 consult kyuko atsu mood=sulky | kyuko troubled {c}…作戦立てたのに、だれも聞いてくれなかったんだよねぇ | atsu surprise まじか！ 俺に聞かせろよ！ | kyuko normal えぇ、いいのぉ？ | atsu happy {c}の作戦なら、全力で走るだけだ笑 | kyuko happy …ありがとん。じゃあ、最初からね
-consult atsu sorashido mood=sulky | atsu troubled {c}、最近、2点差で負けてばっかだよな… | sorashido normal 表で見ると、3回に1回は勝ってるさ | atsu troubled それ、なぐさめになってるか？笑 | sorashido happy 前は5回に1回だったんだぜ。伸びてるさ！ | atsu happy …まじか！ じゃあもう1戦だ！
+consult atsu sorashido mood=sulky | atsu troubled {c}、最近、2点差で負けてばっかだよな… | sorashido normal 表で見ると、3回に1回は勝ってますよ | atsu troubled それ、なぐさめになってるか？笑 | sorashido happy 前は5回に1回だったんです。伸びてますね！ | atsu happy …まじか！ じゃあもう1戦だ！
 consult atsu erubin mood=lonely | atsu troubled {c}、ちょっといいか… 今日、なんか疲れたんだよな… | erubin normal うん。顔に出てたよ | atsu troubled みんなの前だと、弱いとこ見せたくなくてさ… | erubin happy 俺の前なら、いいよ。今日はゆっくり休もう | atsu happy …助かる！ ありがとな笑
-consult sorashido kyuko mood=restless | sorashido troubled {c}、表が1行ずれてて、気になって眠れないんだぜ… | kyuko normal それ、明日でもよくない？ | sorashido troubled いや、ずれてると落ち着かないのさ | kyuko happy じゃあ俺が読むから、直してこ。2人なら5分っしょ笑 | sorashido excited 助かるぜ・・・！
+consult sorashido kyuko mood=restless | sorashido troubled {c}、表が1行ずれてて、気になって眠れないんです・・・ | kyuko normal それ、明日でもよくない？ | sorashido troubled いや、ずれてると落ち着かないんですよ | kyuko happy じゃあ俺が読むから、直してこ。2人なら5分っしょ笑 | sorashido excited 助かります・・・！
 consult kyuko erubin mood=lonely | kyuko troubled {c}、夜ふかししてると、ときどきさみしくなるんだよねぇ | erubin normal みんな寝ちゃってるもんね | kyuko troubled うん。起きてるのが、俺だけみたいでさぁ | erubin happy 寝る前に、おやすみって言いに行くね。それなら少しは、ね | kyuko happy …ありがとん。それ、うれしいなぁ
-consult erubin sorashido mood=sulky | erubin troubled {c}、今日の対戦、デュラハンが全然活躍できなくて… | sorashido normal 表で見ると、相手との相性が悪かったんだぜ | erubin troubled そっか…ちょっと落ちこんだよ | sorashido happy 相性のいい相手の表、作っといたさ。次はここで出すんだぜ | erubin happy …さすが。ありがとう、元気出た
+consult erubin sorashido mood=sulky | erubin troubled {c}、今日の対戦、デュラハンが全然活躍できなくて… | sorashido normal 表で見ると、相手との相性が悪かったんですよ | erubin troubled そっか…ちょっと落ちこんだよ | sorashido happy 相性のいい相手の表、作っておきました。次はここで出しましょう | erubin happy …さすが。ありがとう、元気出た
 
 ## からかう・照れる tease <からかう人> <照れる人>(28組を両方の向きで)
 
@@ -166,8 +166,8 @@ tease mua atsu | mua wink {c}、さっきのフルコン、ガッツポーズ大
 tease atsu mua | atsu wink {c}、また「一曲だけ」って言って5曲やってたな笑 | mua troubled う…だって楽しかったんだもん！ | atsu happy まあ、5曲とも上手かったけどな笑
 tease mua kyuko | mua wink {c}、作戦の説明してるとき、目がきらきらしてたよ！ | kyuko troubled えぇ、そんなことないってぇ… | mua happy あるある！ ああいうときの{c}、いいなって思う♪
 tease kyuko mua | kyuko wink {c}の「なんかいい」、今日も当たってたねぇ笑 | mua troubled えっ…そんなにほめられると、照れるぢゃん！ | kyuko happy 照れてる{c}、めずらしいねぇ笑
-tease mua sorashido | mua wink {c}、表を作ってるときの顔、まぢ真剣ぢゃん！ | sorashido troubled そ、そんなに見てたのか…照れるぜ | mua happy かっこいいってことだよ♪
-tease sorashido mua | sorashido wink {c}の今月の勝ち数、表でいちばん伸びてるぜ・・・！ | mua troubled えっ、ほんと！？ …なんか照れるｗ | sorashido happy 数字は、うそつかないさ
+tease mua sorashido | mua wink {c}、表を作ってるときの顔、まぢ真剣ぢゃん！ | sorashido troubled そ、そんなに見てたんですか・・・照れますね | mua happy かっこいいってことだよ♪
+tease sorashido mua | sorashido wink {c}の今月の勝ち数、表でいちばん伸びてますよ・・・！ | mua troubled えっ、ほんと！？ …なんか照れるｗ | sorashido happy 数字は、うそつかないので
 tease mua erubin | mua wink {c}、今日のコーデ、あたしが選んだのより似合ってるかもｗ | erubin troubled え、そうかな…照れるね | mua happy ちょっとくやしいけど、ほめてる♪
 tease erubin mua | erubin happy {c}が選んでくれた服、みんなにほめられたよ | mua troubled え、ほんと！？ …なんか、照れるぢゃん | erubin happy {c}のおかげだね。ありがとう
 tease kiki momosuke | kiki wink {c}、さっきのサビ、とても輝いていましたよ♪ | momosuke troubled え、えっ…きゅ、急にほめないで！！ | kiki happy 照れている{c}も、かわいいでつね♪
@@ -178,8 +178,8 @@ tease kiki atsu | kiki wink {c}、さっきボスの前で、少し足が震え�
 tease atsu kiki | atsu wink {c}、ボスの前だと目つき変わるよな笑 | kiki troubled …そんなに変わりまつか？ | atsu happy 変わる変わる！ 頼もしすぎるって笑
 tease kiki kyuko | kiki wink {c}、本を読むとき、口が少し動いていまつね♪ | kyuko troubled えぇ、うそぉ… 声出てた？ | kiki happy 出ていませんよ。とても楽しそうでした
 tease kyuko kiki | kyuko wink {c}、火力の話になると、声がちょっと大きくなるよねぇ笑 | kiki troubled …気づかれていましたか | kyuko happy わかりやすくて、いいと思うよ笑
-tease kiki sorashido | kiki wink {c}の表、今日は誤字がひとつもありませんでした♪ | sorashido troubled そ、そんなに細かく読んでくれてたのか… | kiki happy はい。1行目から最後まででつ
-tease sorashido kiki | sorashido wink {c}、さっきの一撃、表の数字をこえてたぜ・・・！ | kiki troubled まあ…そんなに言われると、照れてしまいまつ | sorashido happy 次の表は、{c}のために1列ふやすさ
+tease kiki sorashido | kiki wink {c}の表、今日は誤字がひとつもありませんでした♪ | sorashido troubled そ、そんなに細かく読んでくれてたんですか・・・ | kiki happy はい。1行目から最後まででつ
+tease sorashido kiki | sorashido wink {c}、さっきの一撃、表の数字をこえてました・・・！ | kiki troubled まあ…そんなに言われると、照れてしまいまつ | sorashido happy 次の表は、{c}のために1列ふやしますね
 tease kiki erubin | kiki wink {c}、ベンチで寝ていたの、私は見ていましたよ♪ | erubin troubled あ…起こしてくれればよかったのに | kiki happy 気持ちよさそうだったので、見守っていました
 tease erubin kiki | erubin happy {c}のいれるお茶、やっぱりいちばんおいしいね | kiki troubled まあ…そんな、ふつうのお茶でつよ | erubin happy ふつうでも、いちばんだよ
 tease momosuke dra | momosuke wink {c}、昼寝のいびき、リズムぴったりだったよw | dra troubled ほ、ほんとか…はずかしいな | momosuke happy ももの練習のメトロノームにしたい♡
@@ -188,30 +188,30 @@ tease momosuke atsu | momosuke wink {c}、さっきのライブ、いちばん�
 tease atsu momosuke | atsu wink {c}、HELLのフルコン、ほんとにすげえよ！ | momosuke troubled ……え、なに、急に！！ | atsu happy 照れてんの？笑 珍しいな！
 tease momosuke kyuko | momosuke wink {c}、ドリーミィ見せるとき、すごい自慢げだよねw | kyuko troubled えぇ、そう見えるぅ？ | momosuke happy 自慢していいよ♡ ほんとにかわいいもん！！
 tease kyuko momosuke | kyuko wink {c}が決めた編成の名前、みんなに好評だったよぉ | momosuke troubled え、ほんと！？ …もも、照れちゃう… | kyuko happy 次の名前も、頼むね笑
-tease momosuke sorashido | momosuke wink {c}、ミス数えるとき、ちょっと楽しそうだよねw | sorashido troubled ば、ばれてたか…記録するのが好きなんだぜ | momosuke happy じゃあ、減ってくところも楽しんでね♡
-tease sorashido momosuke | sorashido wink {c}、今日はミスが2つだけだったぜ。新記録さ！ | momosuke troubled え、数えてたの！？ …うれしいけど、はずかしい！！ | sorashido happy ちゃんと表に残しとくさ
+tease momosuke sorashido | momosuke wink {c}、ミス数えるとき、ちょっと楽しそうだよねw | sorashido troubled ば、ばれてましたか・・・記録するのが好きなんです | momosuke happy じゃあ、減ってくところも楽しんでね♡
+tease sorashido momosuke | sorashido wink {c}、今日はミスが2つだけでしたよ。新記録です！ | momosuke troubled え、数えてたの！？ …うれしいけど、はずかしい！！ | sorashido happy ちゃんと表に残しておきます
 tease momosuke erubin | momosuke wink {c}、うちわ振るの、すっごい一生けんめいだったw | erubin troubled 見えてた？ ちょっとはずかしいな | momosuke happy うれしかったから、また振ってね♡
 tease erubin momosuke | erubin happy {c}のステージ、今日もきらきらしてたね | momosuke troubled そ、そう？ …えっと、ありがと… | erubin happy 照れてるのも、いいね笑
 tease dra atsu | dra happy {c}、決勝のときの顔、今でも覚えてるぞ | atsu troubled それ、もう言うなって笑 | dra happy かっこよかったからな
 tease atsu dra | atsu wink {c}、さっきの読み、完全にやられたわ笑 | dra troubled そ、そうか？ 照れるな… | atsu happy 次は負けないけどな！
 tease dra kyuko | dra happy {c}、今日も寝ぐせ、ぴょんってなってるぞ | kyuko troubled えぇ、うそぉ…さっき直したのにぃ | dra happy 似合ってるから、いいと思うぞ
 tease kyuko dra | kyuko wink {c}の説明、俺のメモよりわかりやすいんだよねぇ笑 | dra troubled ほ、ほめても何も出ないぞ | kyuko happy ほい、じゃあもう1回説明して笑
-tease dra sorashido | dra happy {c}の表、今日は最後まで読んだぞ。いい表だったな | sorashido troubled ……でーじ照れるぜ | dra happy 誤字もなかったぞ
-tease sorashido dra | sorashido wink {c}の説明を表に入れたら、見やすさ倍増だぜ・・・！ | dra troubled そ、そんなにか… | sorashido happy 攻略本の主役は、{c}の説明さ
+tease dra sorashido | dra happy {c}の表、今日は最後まで読んだぞ。いい表だったな | sorashido troubled ・・・でーじ照れます | dra happy 誤字もなかったぞ
+tease sorashido dra | sorashido wink {c}の説明を表に入れたら、見やすさ倍増でした・・・！ | dra troubled そ、そんなにか… | sorashido happy 攻略本の主役は、{c}の説明ですよ
 tease dra erubin | dra wink {c}、今日も石油王みたいな服だな | erubin troubled そんなことないよ笑 ふつうの服だって | dra happy えへへ、似合ってるってことだぞ
 tease erubin dra | erubin happy {c}に教わったカード、今日も勝てたよ。先生のおかげだね | dra troubled せ、先生はやめてくれ…照れるだろ | erubin happy じゃあ、照れてる先生だね笑
 tease atsu kyuko | atsu wink {c}、無課金でその順位、ほんとにすげえよな笑 | kyuko troubled えぇ、たまたまだってぇ | atsu happy たまたまで毎回上位は無理だろ！
 tease kyuko atsu | kyuko wink {c}、さっき転びそうになって、何もなかった顔してたよねぇ笑 | atsu troubled …見てたのかよ！ | kyuko happy ほい、見てた〜。かっこよく立て直してたよ笑
-tease atsu sorashido | atsu wink {c}、2点差で勝ったとき、表より先に叫んでたな笑 | sorashido troubled う…つい、うれしくてさ | atsu happy 俺もうれしかったけどな！
-tease sorashido atsu | sorashido wink {c}、今日の勝率、俺の表でいちばん高いぜ・・・！ | atsu troubled そ、そうか…なんか照れるな笑 | sorashido happy 次は俺が上をいくさ
+tease atsu sorashido | atsu wink {c}、2点差で勝ったとき、表より先に叫んでたな笑 | sorashido troubled う・・・つい、うれしくて | atsu happy 俺もうれしかったけどな！
+tease sorashido atsu | sorashido wink {c}、今日の勝率、自分の表でいちばん高いです・・・！ | atsu troubled そ、そうか…なんか照れるな笑 | sorashido happy 次は自分が上をいきます
 tease atsu erubin | atsu wink {c}、また俺より先に、俺の疲れに気づいてたな笑 | erubin troubled …ばれてた？ | atsu happy 助かってるって意味だぞ！
 tease erubin atsu | erubin happy {c}が前にいると、安心するんだよね | atsu troubled …急になんだよ、照れるだろ笑 | erubin happy ほんとのことだよ
-tease kyuko sorashido | kyuko wink {c}、俺のメモ、こっそりきれいな表にしてくれてたんだねぇ笑 | sorashido troubled ……見つかったか | kyuko happy ありがとん。うれしいよ
-tease sorashido kyuko | sorashido wink {c}の「だいたい」、計算したら97点だったぜ・・・！ | kyuko troubled えぇ、そんなに？ なんか照れるなぁ | sorashido happy だいたいで97点は、才能さ
+tease kyuko sorashido | kyuko wink {c}、俺のメモ、こっそりきれいな表にしてくれてたんだねぇ笑 | sorashido troubled ・・・見つかりましたか | kyuko happy ありがとん。うれしいよ
+tease sorashido kyuko | sorashido wink {c}の「だいたい」、計算したら97点でした・・・！ | kyuko troubled えぇ、そんなに？ なんか照れるなぁ | sorashido happy だいたいで97点は、才能ですよ
 tease kyuko erubin | kyuko wink {c}、カード部屋で寝ちゃってたでしょ笑 | erubin troubled …23時すぎてたからね | kyuko happy 寝顔、デュラハンみたいにりりしかったよ笑
 tease erubin kyuko | erubin happy {c}に教わった場所、ほんとにきれいだったよ | kyuko troubled えぇ、そう？ よかったぁ…照れる | erubin happy また教えてね
-tease sorashido erubin | sorashido wink {c}、カードを引くとき、ちょっと祈ってるだろ笑 | erubin troubled ばれてた？ 癖なんだよね | sorashido happy 祈ったときの勝率、表にしとくぜ
-tease erubin sorashido | erubin happy {c}の表のおかげで、今日は勝てたよ | sorashido troubled お、おう…照れるぜ | erubin happy さすが{c}だね
+tease sorashido erubin | sorashido wink {c}、カードを引くとき、ちょっと祈ってますよね笑 | erubin troubled ばれてた？ 癖なんだよね | sorashido happy 祈ったときの勝率、表にしておきます
+tease erubin sorashido | erubin happy {c}の表のおかげで、今日は勝てたよ | sorashido troubled は、はい・・・照れますね | erubin happy さすが{c}だね
 
 ## 寝言 sleep <人> line=talk(寝ている助手に話しかけたとき・1行)
 
@@ -251,12 +251,12 @@ sleep kyuko line=talk | kyuko normal …ぐぬぬぬ…あと1枚…
 sleep kyuko line=talk | kyuko happy …ほい…ありがとん…すぅ
 sleep kyuko line=talk | kyuko normal …だいたい…97点…
 sleep kyuko line=talk | kyuko happy …{name}…イルミネ、きれいだねぇ…
-sleep sorashido line=talk | sorashido normal …表の…3行目…ずれてる…
-sleep sorashido line=talk | sorashido happy …うぉぉぉ…新記録…むにゃ
-sleep sorashido line=talk | sorashido normal …なんくるないさ…すぅ…
-sleep sorashido line=talk | sorashido happy …確率…でーじ…高い…
-sleep sorashido line=talk | sorashido normal …攻略本…完成…だぜ…
-sleep sorashido line=talk | sorashido happy …{name}…ちばりよー…
+sleep sorashido line=talk | sorashido normal ・・・表の・・・3行目・・・ずれてる・・・
+sleep sorashido line=talk | sorashido happy ・・・うぉぉぉ・・・新記録・・・むにゃ
+sleep sorashido line=talk | sorashido normal ・・・なんくるないさ・・・すぅ・・・
+sleep sorashido line=talk | sorashido happy ・・・確率・・・でーじ・・・高い・・・
+sleep sorashido line=talk | sorashido normal ・・・攻略本・・・完成・・・です・・・
+sleep sorashido line=talk | sorashido happy ・・・{name}・・・ちばりよー・・・
 sleep erubin line=talk | erubin normal …すぅ…デュラハン…いけ…
 sleep erubin line=talk | erubin happy …みんな…おやすみ…
 sleep erubin line=talk | erubin normal …もう1戦…いいね…
@@ -290,10 +290,10 @@ sleep kyuko line=woken lv=1-4 | kyuko surprise …ぇ、あ、{name}…？ 寝�
 sleep kyuko line=woken lv=1-4 | kyuko troubled …ん…朝はまだ、むりぃ…
 sleep kyuko line=woken lv=5-10 | kyuko troubled …{name}ぉ…いま、本の夢見てたのにぃ | kyuko happy …ま、いっか。ほい、起きたよ笑
 sleep kyuko line=woken lv=5-10 | kyuko normal …ぐぬぬぬ…起こされたぁ。ありがとん…なのかなぁ
-sleep sorashido line=woken lv=1-4 | sorashido surprise …うぉっ！？ {name}か…寝ぼけてたぜ
-sleep sorashido line=woken lv=1-4 | sorashido troubled …まだ10時前だろ…朝は弱いのさ…
-sleep sorashido line=woken lv=5-10 | sorashido troubled …{name}…いま、表の夢の途中だったんだぜ… | sorashido happy …まあいいさ。起きたからには、計算するぜ
-sleep sorashido line=woken lv=5-10 | sorashido happy …ふぁ…{name}の声なら、目ざましより効くさ
+sleep sorashido line=woken lv=1-4 | sorashido surprise ・・・はっ！？ {name}ですか・・・寝ぼけてました
+sleep sorashido line=woken lv=1-4 | sorashido troubled ・・・まだ10時前ですよね・・・朝は弱いんです・・・
+sleep sorashido line=woken lv=5-10 | sorashido troubled ・・・{name}・・・いま、表の夢の途中だったんですよ・・・ | sorashido happy ・・・まあいいです。起きたからには、計算しますねー
+sleep sorashido line=woken lv=5-10 | sorashido happy ・・・ふぁ・・・{name}の声なら、目ざましより効きますね笑
 sleep erubin line=woken lv=1-4 | erubin surprise …あ、{name}。ごめんね、寝てたみたい
 sleep erubin line=woken lv=1-4 | erubin normal …ん…どうしたの？ 何かあった？
 sleep erubin line=woken lv=5-10 | erubin troubled …{name}…もう23時すぎてるよ… | erubin happy …でも、顔見られてよかった。少しだけ話そっか
@@ -309,14 +309,14 @@ owl momosuke place=studio | momosuke happy 昼より、夜のほうがリズム�
 owl momosuke place=studio | momosuke normal ヘッドホンしてるから、音もれは大丈夫！！ …たぶん
 owl momosuke place=studio | momosuke wink {name}も夜ふかし仲間？ ふふん、ももの勝ちw
 owl momosuke place=studio | momosuke excited 3時になったら寝る！！ …って、毎日言ってるw
-owl sorashido place=cardroom | sorashido normal 夜のカード部屋は、計算がはかどるんだぜ
-owl sorashido place=cardroom | sorashido excited うぉぉぉ、この組み合わせ、勝率が2%上がるさ！
-owl sorashido place=cardroom | sorashido happy お、{name}！ こんな夜中に来るとは、でーじ珍しいぜ
-owl sorashido place=cardroom | sorashido normal 静かな夜は、表の線もまっすぐ引けるさ
-owl sorashido place=cardroom | sorashido troubled …あと1行で寝る…ってのを、もう3回言ったな笑
-owl sorashido place=cardroom | sorashido happy {name}も、ちょっと見ていくか？ 夜の新作の表だぜ・・・！
-owl sorashido place=cardroom | sorashido normal 2時か…まだ寝るには早いさ
-owl sorashido place=cardroom | sorashido excited 明日の朝はたぶん起きられないが、なんくるないさ〜
+owl sorashido place=cardroom | sorashido normal 夜のカード部屋は、計算がはかどるんですよ
+owl sorashido place=cardroom | sorashido excited ほほー！ この組み合わせ、勝率が2%上がります！
+owl sorashido place=cardroom | sorashido happy お、{name}！ こんな夜中に来るなんて、でーじ珍しいですね
+owl sorashido place=cardroom | sorashido normal 静かな夜は、表の線もまっすぐ引けるんですよ
+owl sorashido place=cardroom | sorashido troubled ・・・あと1行で寝る・・・っていうのを、もう3回言ってますね笑
+owl sorashido place=cardroom | sorashido happy {name}も、ちょっと見ていきますか？ 夜の新作の表です・・・！
+owl sorashido place=cardroom | sorashido normal 2時ですか・・・まだ寝るには早いですね
+owl sorashido place=cardroom | sorashido excited 明日の朝はたぶん起きられないですけど、なんくるないさ〜
 owl kyuko place=home | kyuko normal 深夜の読書タイム、はじまり〜
 owl kyuko place=home | kyuko happy この章、おもしろすぎて止まらないんだよねぇ笑
 owl kyuko place=home | kyuko surprise あ、{name}。こんな時間に、どしたのぉ？
@@ -360,10 +360,10 @@ rhythm kyuko shift=night | kyuko happy {name}と夜遊んでたら、3時まで�
 rhythm kyuko shift=night | kyuko normal 夜ふかし、前よりのびちゃった。本も、もっと読めるけどねぇ
 rhythm kyuko shift=morning | kyuko surprise 最近、朝に起きれるようになったんだよねぇ。{name}のおかげかなぁ
 rhythm kyuko shift=morning | kyuko happy 朝の図書室、こんなに静かだったんだぁ。ちょっと得した気分〜
-rhythm sorashido shift=night | sorashido happy {name}と夜遊ぶから、カードの研究が4時までのびたぜ笑
-rhythm sorashido shift=night | sorashido normal 夜ふかし度、表にしたら先月より上がってるさ
-rhythm sorashido shift=morning | sorashido surprise 最近、9時に起きれるんだぜ。俺にしては、でーじ早いさ
-rhythm sorashido shift=morning | sorashido happy {name}と朝会うから、朝の表も作れるようになったぜ
+rhythm sorashido shift=night | sorashido happy {name}と夜に遊ぶので、カードの研究が4時までのびました笑
+rhythm sorashido shift=night | sorashido normal 夜ふかし度、表にしたら先月より上がってますね
+rhythm sorashido shift=morning | sorashido surprise 最近、9時に起きられるんですよ。自分にしては、でーじ早いです
+rhythm sorashido shift=morning | sorashido happy {name}と朝に会うので、朝の表も作れるようになりました
 rhythm erubin shift=night | erubin happy 最近、0時まで起きてることが増えたんだよね。{name}と話すのが楽しくて
 rhythm erubin shift=night | erubin wink 夜ふかし、ちょっとクセになってきたかも笑
 rhythm erubin shift=morning | erubin happy {name}と朝会うようになって、5時に目がさめるようになったよ
@@ -403,7 +403,7 @@ trio atsu dra kyuko doing=cards | atsu happy 今夜の作戦会議、3人でや�
 trio atsu dra kyuko doing=training | dra troubled 朝の育成、ちょっと早すぎないか… | kyuko troubled 俺も、まだ目が開かないよぉ | atsu happy 2人とも、走れば目がさめるって笑
 trio atsu dra erubin doing=cards | erubin happy {c:dra}に教わったデュラハン、{c:atsu}にも見せたいな | atsu happy おう、かかってこい！ | dra wink {c:erubin}は強くなったからな。気をつけろよ
 trio atsu dra erubin doing=snack | atsu happy 試合のあとは、やっぱり肉まんだろ！ | dra happy 3つ買ってきたぞ。熱いから気をつけろよ | erubin happy ありがとう。{c:dra}、気がきくね
-trio atsu kyuko sorashido doing=practice | sorashido excited 3人のスコア、表にしたら2点差の三つどもえだぜ・・・！ | atsu happy また2点差かよ笑 | kyuko happy じゃあ、次の1曲で決めよっかぁ
-trio atsu kyuko sorashido doing=cards | kyuko normal ランキングの作戦、3人で立てよ | sorashido happy 数字は俺に任せてくれよ | atsu happy 俺は全力で走るだけだ笑 | kyuko happy 役割分担、ぴったりだねぇ
-trio atsu erubin sorashido doing=cards | sorashido excited 協力プレイのデッキ、3人ぶん組んだぜ！ | erubin happy すごいね。デュラハンも入ってる？ | sorashido wink もちろんさ。いちばんいい場所にな | atsu happy じゃあ、てっぺん取りに行くか！
-trio atsu erubin sorashido doing=snack | erubin normal {c:atsu}、{c:sorashido}、差し入れのサーターアンダギーだよ | sorashido excited うぉぉぉ、でーじうれしいぜ！ | atsu happy 3人で食べると、もっとうまいな笑
+trio atsu kyuko sorashido doing=practice | sorashido excited 3人のスコア、表にしたら2点差の三つどもえです・・・！ | atsu happy また2点差かよ笑 | kyuko happy じゃあ、次の1曲で決めよっかぁ
+trio atsu kyuko sorashido doing=cards | kyuko normal ランキングの作戦、3人で立てよ | sorashido happy 数字は自分に任せてください | atsu happy 俺は全力で走るだけだ笑 | kyuko happy 役割分担、ぴったりだねぇ
+trio atsu erubin sorashido doing=cards | sorashido excited 協力プレイのデッキ、3人ぶん組みました！ | erubin happy すごいね。デュラハンも入ってる？ | sorashido wink もちろんです。いちばんいい場所に、ですね | atsu happy じゃあ、てっぺん取りに行くか！
+trio atsu erubin sorashido doing=snack | erubin normal {c:atsu}、{c:sorashido}、差し入れのサーターアンダギーだよ | sorashido excited でーじうれしいです！ | atsu happy 3人で食べると、もっとうまいな笑
