@@ -175,6 +175,9 @@ function BreederMarketScreen({
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
   const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
+  // 助手ライフの道具・家具の札には、印と上がる物の段を出す(段の高さは同じ一覧の札でそろえる)
+  const lifeNoteOf = (offer)=>typeof assistantLifeShopNoteOf==='function'?assistantLifeShopNoteOf(offer.itemId):null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer=>!!lifeNoteOf(offer));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -458,9 +461,14 @@ function BreederMarketScreen({
               <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
               <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
             </>:null;
+            const lifeNoteDef=offer.legendPass?null:lifeNoteOf(offer);
+            const lifeNote=lifeNoteDef?<>
+              <span data-market-life-mark className={`whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone==='f'?'bg-emerald-200 text-emerald-950':lifeNoteDef.tone==='p'?'bg-pink-300 text-pink-950':'bg-amber-400 text-slate-900'}`}>{lifeNoteDef.mark}</span>
+              {lifeNoteDef.lines.map((t,i)=><span key={i} className={`whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i===1&&lifeNoteDef.tone!=='a'?'text-slate-400':'text-amber-200'}`}>{t}</span>)}
+            </>:null;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id,...(/^peer_/.test(String(offer.itemId||''))?{'data-event-point-life-gift':offer.itemId}:{})}}
               item={item} owned={false} comingSoon={false}
-              noteSlot={legendPassSlot} note={passNote}
+              noteSlot={noteSlotOn} note={passNote||lifeNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}

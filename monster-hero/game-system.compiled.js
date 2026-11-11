@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38fef9555fc5388b
+// source-sha256: 6e973c8bc2378c40
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67246,6 +67246,8 @@ function BreederMarketScreen({
     return eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId);
   }).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
+  const lifeNoteOf = offer => typeof assistantLifeShopNoteOf === 'function' ? assistantLifeShopNoteOf(offer.itemId) : null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer => !!lifeNoteOf(offer));
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
@@ -67807,6 +67809,14 @@ function BreederMarketScreen({
     }, offer.baseCost.toLocaleString(), "P→", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("span", {
       className: "whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums"
     }, offer.cost.toLocaleString(), "P→", offer.grantAmount.toLocaleString(), offer.unit)) : null;
+    const lifeNoteDef = offer.legendPass ? null : lifeNoteOf(offer);
+    const lifeNote = lifeNoteDef ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "data-market-life-mark": true,
+      className: `whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone === 'f' ? 'bg-emerald-200 text-emerald-950' : lifeNoteDef.tone === 'p' ? 'bg-pink-300 text-pink-950' : 'bg-amber-400 text-slate-900'}`
+    }, lifeNoteDef.mark), lifeNoteDef.lines.map((t, i) => React.createElement("span", {
+      key: i,
+      className: `whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i === 1 && lifeNoteDef.tone !== 'a' ? 'text-slate-400' : 'text-amber-200'}`
+    }, t))) : null;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -67818,8 +67828,8 @@ function BreederMarketScreen({
       item: item,
       owned: false,
       comingSoon: false,
-      noteSlot: legendPassSlot,
-      note: passNote,
+      noteSlot: noteSlotOn,
+      note: passNote || lifeNote,
       canBuy: safeEventPoints >= offer.cost && !busy,
       disabled: purchaseProcessing,
       onZoom: () => onZoomIcon(item),
@@ -89317,6 +89327,51 @@ function MasuAutoEnhanceScreen({
     className: "w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2"
   }, "完了")));
 }
+function RhythmHistoryBanner({
+  event
+}) {
+  const src = rhythmEventBanner(event);
+  const [failed, setFailed] = useState(false);
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+    setZoom(false);
+  }, [src]);
+  if (!src || failed) return null;
+  const name = event && event.name ? event.name : 'イベント';
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-rhythm-history-banner": true,
+    onClick: () => setZoom(true),
+    "aria-label": `${name}の画像を大きく見る`,
+    className: "relative mb-2 block w-full overflow-hidden rounded-2xl border border-fuchsia-300/30 active:scale-[.98]"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${name}の告知`,
+    onError: () => setFailed(true),
+    loading: "lazy",
+    decoding: "async",
+    className: "block w-full landscape:max-h-[45vh] landscape:object-contain landscape:bg-black/40"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute bottom-1 right-1 rounded-lg bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-white"
+  }, "🔍 大きく見る")), zoom && React.createElement("div", {
+    "data-rhythm-history-banner-zoom": true,
+    role: "dialog",
+    "aria-label": `${name}の画像`,
+    onClick: () => setZoom(false),
+    className: "fixed inset-0 z-[300] flex flex-col items-center justify-center gap-2 bg-black/85 p-3"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${name}の告知`,
+    className: "max-h-[80%] max-w-full rounded-xl object-contain"
+  }), React.createElement("button", {
+    type: "button",
+    "data-rhythm-history-banner-close": true,
+    onClick: () => setZoom(false),
+    className: "min-h-[44px] rounded-xl bg-white/15 px-6 text-xs font-black text-white"
+  }, "閉じる")));
+}
 function RhythmHistoryScreen({
   entries,
   selected,
@@ -89446,7 +89501,9 @@ function RhythmHistoryScreen({
   }, "対象曲 ", entry.event?.songIds?.length || 0, "曲")), React.createElement(ChevronRight, {
     size: 16,
     className: "shrink-0 text-slate-500"
-  })))))), selected && React.createElement(React.Fragment, null, React.createElement("div", {
+  })))))), selected && React.createElement(React.Fragment, null, selected.kind === 'limited' && React.createElement(RhythmHistoryBanner, {
+    event: selected.event
+  }), React.createElement("div", {
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3"
   }, React.createElement("div", {
     className: "flex items-center gap-2"
@@ -128039,6 +128096,30 @@ const assistantLifeGiftOf = kindOrKey => {
     cost: Number.isFinite(offer.cost) ? offer.cost : null
   };
 };
+const assistantLifeShopNoteOf = itemId => {
+  const id = String(itemId || '');
+  if (/^furn_/.test(id)) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
+    if (!f) return null;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return {
+      tone: 'f',
+      mark: '🪑 家具',
+      lines: [`💗 +${base}`, '初回だけ']
+    };
+  }
+  const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
+  if (!g) return null;
+  return assistantLifeIsSoloOnly(g.key) ? {
+    tone: 'p',
+    mark: '💗 1人に',
+    lines: [`💗 +${g.player}`, '1人用']
+  } : {
+    tone: 'a',
+    mark: '🤝 2人に',
+    lines: [`友情Lv +${g.peer}`, `💗 +${g.player}`]
+  };
+};
 const assistantLifeGiftCounts = ownedItems => {
   const o = {};
   for (const g of [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()]) {
@@ -129162,7 +129243,7 @@ function AssistantLifeGiftSheet({
     className: "whitespace-nowrap text-[11px] font-bold text-slate-400"
   }, " ビートP交換所 ", info.cost, "P")), React.createElement("p", {
     className: "text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
-  }, info.what))), React.createElement("div", {
+  }, soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[12px]"
   }, people.map((id, i) => React.createElement("div", {
     key: id,
