@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ee80d1ac6d6c209
+// source-sha256: abe417610c5aa0a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -138116,6 +138116,44 @@ const AMBB_CARE_JP = Object.freeze({
   ask: '相談',
   ranch: 'M/B管理'
 });
+const ambbPvpOn = () => ambbOn() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattlePvp === true && typeof masmonPvpChallenge === 'function';
+const AMBB_KINDS = Object.freeze([{
+  id: 'raw',
+  label: '育ったまま',
+  note: '育てた能力そのままで戦う'
+}, {
+  id: 'fair',
+  label: '公平',
+  note: '能力の合計とLvをそろえて、戦い方で勝負'
+}]);
+const ambbPvpReason = reason => reason === 'locked' ? 'この端末では登録できません。お問い合わせ(サポート)へ連絡してください' : typeof masmonPvpReasonText === 'function' ? masmonPvpReasonText(reason) : 'うまくいきませんでした';
+const ambbWeekOf = (now = Date.now()) => {
+  const d = new Date(now + 9 * 3600000 - 4 * 3600000);
+  d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+  return d.toISOString().slice(0, 10);
+};
+const ambbPvpMemberOf = u => {
+  const x = u.unit || {},
+    techs = Array.isArray(x.techs) && x.techs.length ? x.techs.slice() : undefined;
+  const keep = new Set([...(techs || []), 'guard', 'dist', 'swap']);
+  const mastery = {};
+  for (const [k, v] of Object.entries(x.mastery || {})) {
+    const n = Math.round(Number(v));
+    if (keep.has(k) && Number.isFinite(n) && n > 0) mastery[k] = Math.min(100, n);
+  }
+  const name = typeof x.name === 'string' && x.name.trim() || typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[x.species] && ALL_PLAYER_MONSTERS[x.species].name || x.species;
+  return {
+    slot: u.row.slot,
+    species: x.species,
+    name: String(name).slice(0, 24),
+    lv: x.lv,
+    stats: x.stats,
+    ...(techs ? {
+      techs
+    } : {}),
+    mastery
+  };
+};
 const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattleBeta === true && RELEASE_FLAGS.assistantMasmonGrow === true;
 const ambbInt = (v, lo, hi, d) => {
   const n = Number(v);
@@ -138129,7 +138167,8 @@ const normalizeAssistantMasmonBattleSave = raw => {
     mode: {},
     last: {},
     rec: {},
-    done: []
+    done: [],
+    reg: {}
   };
   if (typeof src.speed === 'string' && typeof AMBW_SPEEDS !== 'undefined' && AMBW_SPEEDS.some(s => s.id === src.speed)) out.speed = src.speed;
   const obj = o => o && typeof o === 'object' && !Array.isArray(o) ? o : {};
@@ -138153,6 +138192,14 @@ const normalizeAssistantMasmonBattleSave = raw => {
     };
   }
   out.done = (Array.isArray(src.done) ? src.done : []).filter(x => typeof x === 'string').slice(-40);
+  for (const [aid, r] of Object.entries(obj(src.reg))) {
+    const x = obj(r);
+    const at = ambbInt(x.at, 0, 9e15, 0);
+    if (at) out.reg[aid] = {
+      at,
+      size: ambbInt(x.size, 1, 3, 3)
+    };
+  }
   return out;
 };
 const AMBB_STORE = {
@@ -138275,7 +138322,7 @@ const assistantMasmonBattleRowInfo = assistantId => {
     disabled: true,
     why: 'マスモンを迎えると対戦できます'
   };
-  if (!ambbAssistantsWithRows().some(a => a.id !== assistantId)) return {
+  if (!ambbPvpOn() && !ambbAssistantsWithRows().some(a => a.id !== assistantId)) return {
     ...base,
     sub: 'ほかの助手がマスモンを迎えたら対戦できます',
     disabled: true,
@@ -138355,6 +138402,7 @@ function AssistantMasmonBattleBeta({
   const [paused, setPaused] = useState(false);
   const [ifs, setIfs] = useState(null);
   const [ask, setAsk] = useState(null);
+  const [src, setSrc] = useState(null);
   const rootRef = useRef(null);
   useEffect(() => {
     if (rootRef.current) rootRef.current.scrollTop = 0;
@@ -138516,6 +138564,80 @@ function AssistantMasmonBattleBeta({
       }
     }));
   };
+  const pvp = ambbPvpOn() && !preview;
+  const srcNow = pvp ? src || (foes.length ? 'local' : 'friend') : 'local';
+  const startPvp = (m, foe) => {
+    if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
+    const teamA = {
+      ...m.teamA,
+      assistantId: m.teamA.assistantId || meId
+    };
+    const teamB = {
+      ...m.teamB,
+      assistantId: m.teamB.assistantId || foe.assistantId
+    };
+    let r;
+    try {
+      r = engine.simulate({
+        seed: m.seed,
+        catalog,
+        teamA,
+        teamB,
+        balance: m.balance || 'A',
+        trace: true
+      });
+    } catch (e) {
+      return;
+    }
+    let plain = null;
+    try {
+      plain = engine.simulate({
+        seed: m.seed,
+        catalog,
+        teamA,
+        teamB,
+        balance: m.balance || 'A'
+      });
+    } catch (_) {
+      plain = null;
+    }
+    const same = !!plain && plain.winner === m.winner && plain.rounds === m.rounds && (!m.digest || plain.digest === m.digest);
+    const st = r.log[0] || {};
+    const units = chosen.filter(u => teamA.members.some(x => x.species === u.unit.species && x.name === u.unit.name));
+    setBattle({
+      id: `pvp-${m.id}`,
+      seed: m.seed,
+      r: {
+        ...r,
+        winner: m.winner || r.winner
+      },
+      frames: ambwFramesOf(r.log),
+      teamA,
+      teamB,
+      units: units.length ? units : chosen,
+      maxHp: {
+        A: st.aHp || [],
+        B: st.bHp || []
+      },
+      moves: {
+        A: st.aMoves || [],
+        B: st.bMoves || []
+      },
+      pvp: {
+        kind: m.kind,
+        rated: m.rated,
+        rating: m.rating,
+        oppRating: m.oppRating,
+        remaining: m.remaining,
+        same,
+        foeName: foe.name
+      }
+    });
+    setPos(0);
+    setPaused(false);
+    setIfs(null);
+    setPhase('watch');
+  };
   const speed = save.speed || 'x1';
   const setSpeed = id => {
     if (!ambbSave(s => ({
@@ -138542,7 +138664,7 @@ function AssistantMasmonBattleBeta({
     return () => clearTimeout(t);
   }, [phase, battle, pos, paused, speed]);
   useEffect(() => {
-    if (phase !== 'review' || !battle) return;
+    if (phase !== 'review' || !battle || battle.pvp) return;
     ambbSave(s => {
       if (s.done.includes(battle.id)) return s;
       const rc = s.rec[meId] || {
@@ -138639,7 +138761,20 @@ function AssistantMasmonBattleBeta({
     const plan = AMBB_PLANS.find(p => p.id === sel.plan) || AMBB_PLANS[0];
     body = React.createElement("div", {
       "data-ambb-prep": true
-    }, React.createElement("div", {
+    }, pvp && React.createElement("div", {
+      className: "ambb-tabs",
+      style: {
+        marginBottom: 8
+      }
+    }, React.createElement("button", {
+      "data-ambb-src": "local",
+      className: srcNow === 'local' ? 'on' : '',
+      onClick: () => setSrc('local')
+    }, "🏠 この端末の助手"), React.createElement("button", {
+      "data-ambb-src": "friend",
+      className: srcNow === 'friend' ? 'on' : '',
+      onClick: () => setSrc('friend')
+    }, "👥 フレンドの助手")), srcNow === 'local' && React.createElement("div", {
       className: "ambw-card"
     }, React.createElement("div", {
       className: "ambb-vs"
@@ -138787,9 +138922,21 @@ function AssistantMasmonBattleBeta({
     }, React.createElement("i", null, j + 1), React.createElement("img", {
       src: ALL_PLAYER_MONSTERS[u.row.monster].imgUrl,
       alt: ""
-    }), React.createElement("b", null, u.row.nick || ALL_PLAYER_MONSTERS[u.row.monster].name), React.createElement("small", null, "Lv", u.entry && u.entry.lv || 1))))), React.createElement("div", {
+    }), React.createElement("b", null, u.row.nick || ALL_PLAYER_MONSTERS[u.row.monster].name), React.createElement("small", null, "Lv", u.entry && u.entry.lv || 1))))), srcNow === 'friend' && React.createElement(AmbbFriendPanel, {
+      me: me,
+      meId: meId,
+      engine: engine,
+      catalog: catalog,
+      units: chosen,
+      size: size,
+      plan: modeNow === 'auto' ? 'omakase' : sel.plan,
+      swap: modeNow === 'auto' ? 'omakase' : sel.swap,
+      tactics: ambbTacticsOf(meId, chosen.map(u => u.row)),
+      reg: save.reg[meId],
+      onBattle: startPvp
+    }), React.createElement("div", {
       className: "ambw-ctl"
-    }, React.createElement("button", {
+    }, srcNow === 'local' && React.createElement("button", {
       className: "ambw-btn",
       "data-ambb-start": true,
       disabled: !foeId,
@@ -138805,6 +138952,13 @@ function AssistantMasmonBattleBeta({
         marginTop: 8
       }
     }, "公開前の確かめです。戦績も設定も保存しません。"));
+  } else if (phase === 'rank' && pvp) {
+    body = React.createElement(AmbbRanking, {
+      me: me,
+      faceOf: faceOf,
+      nameOf: nameOf,
+      onBack: () => setPhase(battle ? 'review' : 'prep')
+    });
   } else if (phase === 'rank') {
     body = React.createElement("div", {
       "data-ambb-rank": true
@@ -138920,7 +139074,7 @@ function AssistantMasmonBattleBeta({
     };
     const sa = stat('A'),
       sb = stat('B');
-    const foeName = nameOf(battle.teamB.assistantId);
+    const foeName = battle.pvp ? `${battle.pvp.foeName}の${nameOf(battle.teamB.assistantId)}` : nameOf(battle.teamB.assistantId);
     const gains = battle.units.map(u => ({
       u,
       g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : {
@@ -138937,7 +139091,31 @@ function AssistantMasmonBattleBeta({
       "data-ambb-review": true
     }, React.createElement("div", {
       className: "ambw-res"
-    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), React.createElement("div", {
+    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), battle.pvp && React.createElement("div", {
+      className: "ambw-card",
+      "data-ambb-pvp-result": true
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "フレンド対戦・", (AMBB_KINDS.find(k => k.id === battle.pvp.kind) || AMBB_KINDS[0]).label), battle.pvp.rated && battle.pvp.rating ? React.createElement("div", null, React.createElement("b", {
+      style: {
+        fontSize: 15
+      }
+    }, cardIconNode(ambbTierOf(battle.pvp.rating.rating).icon, 14), " ", battle.pvp.rating.rating, " ポイント"), " ", React.createElement("span", {
+      style: {
+        color: battle.pvp.rating.delta >= 0 ? '#86efac' : '#fca5a5'
+      }
+    }, "(", battle.pvp.rating.delta >= 0 ? '+' : '', battle.pvp.rating.delta, ")"), React.createElement("span", {
+      className: "ambw-small"
+    }, "・", ambbTierOf(battle.pvp.rating.rating).label)) : React.createElement("div", {
+      className: "ambw-small"
+    }, "この試合はランキングに数えません(数えるのは 3対3 だけ・同じ相手とは1日3回まで)"), Number.isFinite(battle.pvp.remaining) && React.createElement("div", {
+      className: "ambw-small"
+    }, "今日あと ", battle.pvp.remaining, " 回 挑めます"), !battle.pvp.same && React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        color: '#fcd34d'
+      }
+    }, "ゲームの版がちがうため、見返しが本当の試合と少しちがうかもしれません。結果はサーバの記録のとおりです。")), React.createElement("div", {
       className: "ambw-card"
     }, React.createElement("table", {
       className: "ambw-tbl"
@@ -139143,6 +139321,349 @@ function AssistantMasmonBattleBeta({
     initialText: ask.text,
     onClose: () => setAsk(null)
   }));
+}
+function AmbbFriendPanel({
+  me,
+  meId,
+  units,
+  size,
+  plan,
+  swap,
+  tactics,
+  reg,
+  onBattle
+}) {
+  const [data, setData] = useState({
+    loading: true,
+    friends: [],
+    remaining: 0,
+    reason: ''
+  });
+  const [pickF, setPickF] = useState(null);
+  const [kind, setKind] = useState('raw');
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      let r = null;
+      try {
+        r = await masmonPvpFriends();
+      } catch (_) {
+        r = {
+          ok: false,
+          reason: 'network',
+          friends: [],
+          remaining: 0
+        };
+      }
+      if (alive) setData({
+        loading: false,
+        friends: r && r.friends || [],
+        remaining: r && r.remaining || 0,
+        reason: r && !r.ok ? r.reason : ''
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const opts = [];
+  for (const f of data.friends) for (const a of f.assistants) opts.push({
+    f,
+    a,
+    key: `${f.friendId}|${a.assistantId}`
+  });
+  const cur = opts.find(o => pickF && o.key === pickF) || opts[0] || null;
+  const register = async () => {
+    let userName = '',
+      icon = null;
+    try {
+      userName = String((await storeGet('mh_breeder_name', '', false)) || '');
+      icon = (await storeGet('mh_breeder_icon', null, false)) || null;
+    } catch (_) {}
+    const r = await masmonPvpRegister({
+      assistantId: meId,
+      size,
+      members: units.map(ambbPvpMemberOf),
+      plan: plan !== 'omakase' ? plan : undefined,
+      swapPace: swap !== 'omakase' ? swap : undefined,
+      tactics,
+      userName,
+      icon: typeof icon === 'string' ? icon : null
+    });
+    if (r && r.ok) ambbSave(s => ({
+      ...s,
+      reg: {
+        ...s.reg,
+        [meId]: {
+          at: Date.now(),
+          size
+        }
+      }
+    }));
+    return r || {
+      ok: false,
+      reason: 'server'
+    };
+  };
+  const doRegister = async () => {
+    if (busy) return;
+    setBusy('reg');
+    setMsg('');
+    try {
+      const r = await register();
+      setMsg(r.ok ? 'この編成をフレンドに見せるように登録しました' : ambbPvpReason(r.reason));
+    } finally {
+      setBusy('');
+    }
+  };
+  const doChallenge = async () => {
+    if (busy || !cur) return;
+    setBusy('go');
+    setMsg('');
+    try {
+      const rg = await register();
+      if (!rg.ok) {
+        setMsg(ambbPvpReason(rg.reason));
+        return;
+      }
+      const m = await masmonPvpChallenge({
+        assistantId: meId,
+        friendId: cur.f.friendId,
+        friendAssistantId: cur.a.assistantId,
+        kind,
+        size
+      });
+      if (!m || !m.ok) {
+        setMsg(ambbPvpReason(m && m.reason));
+        return;
+      }
+      onBattle(m, {
+        name: cur.f.name || 'フレンド',
+        assistantId: cur.a.assistantId
+      });
+    } catch (_) {
+      setMsg(ambbPvpReason('network'));
+    } finally {
+      setBusy('');
+    }
+  };
+  const aName = id => (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id) || {}).name || '';
+  return React.createElement("div", {
+    "data-ambb-friend": true
+  }, React.createElement("div", {
+    className: "ambw-card"
+  }, React.createElement("div", {
+    className: "ambw-small"
+  }, "相手(フレンドが登録している助手の編成)"), data.loading ? React.createElement("p", {
+    className: "ambw-small"
+  }, "フレンドを読み込んでいます…") : data.reason ? React.createElement("p", {
+    className: "ambw-small"
+  }, ambbPvpReason(data.reason)) : !opts.length ? React.createElement("p", {
+    className: "ambw-small"
+  }, data.friends.length ? 'フレンドが助手の編成を登録すると、ここに出ます。' : 'フレンドができると、フレンドの助手と対戦できます。') : React.createElement("div", {
+    className: "ambb-tabs",
+    style: {
+      marginTop: 6
+    }
+  }, opts.map(o => React.createElement("button", {
+    key: o.key,
+    "data-ambb-friend-opt": o.key,
+    className: cur && cur.key === o.key ? 'on' : '',
+    onClick: () => setPickF(o.key)
+  }, o.f.name || 'フレンド', "の", aName(o.a.assistantId), React.createElement("small", null, o.a.members.map(m => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.species] ? ALL_PLAYER_MONSTERS[m.species].name : m.species).join('・'))))), React.createElement("div", {
+    className: "ambw-small",
+    style: {
+      marginTop: 10
+    }
+  }, "ランキングの区分"), React.createElement("div", {
+    className: "ambb-tabs"
+  }, AMBB_KINDS.map(k => React.createElement("button", {
+    key: k.id,
+    "data-ambb-kind": k.id,
+    className: kind === k.id ? 'on' : '',
+    onClick: () => setKind(k.id)
+  }, k.label, React.createElement("small", null, k.note)))), React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      marginTop: 6
+    }
+  }, "ランキングに数えるのは 3対3 だけです。", !data.loading && !data.reason ? `今日あと ${data.remaining} 回 挑めます。` : '')), React.createElement("div", {
+    className: "ambw-ctl"
+  }, React.createElement("button", {
+    className: "ambw-btn",
+    "data-ambb-challenge": true,
+    disabled: !cur || !!busy || !data.loading && data.remaining <= 0,
+    onClick: doChallenge
+  }, busy === 'go' ? '対戦しています…' : '⚔ 挑む'), React.createElement("button", {
+    className: "ambw-btn2",
+    "data-ambb-register": true,
+    disabled: !!busy,
+    onClick: doRegister
+  }, busy === 'reg' ? '登録しています…' : '📮 この編成を登録')), React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      textAlign: 'center'
+    }
+  }, msg || (reg ? `${me.name}の編成はフレンドに見えています(挑むときに、いまの育ち方で登録し直します)` : '登録すると、フレンドもあなたの助手に挑めるようになります')));
+}
+function AmbbRanking({
+  me,
+  faceOf,
+  nameOf,
+  onBack
+}) {
+  const [kind, setKind] = useState('raw');
+  const [period, setPeriod] = useState('all');
+  const [data, setData] = useState({
+    loading: true,
+    rows: [],
+    mine: [],
+    reason: ''
+  });
+  useEffect(() => {
+    let alive = true;
+    setData(d => ({
+      ...d,
+      loading: true
+    }));
+    (async () => {
+      let r = null;
+      try {
+        r = await masmonPvpRatings({
+          kind,
+          limit: 50,
+          week: period === 'week' ? ambbWeekOf() : null
+        });
+      } catch (_) {
+        r = {
+          ok: false,
+          reason: 'network',
+          rows: [],
+          mine: []
+        };
+      }
+      if (alive) setData({
+        loading: false,
+        rows: r && r.rows || [],
+        mine: r && r.mine || [],
+        reason: r && !r.ok ? r.reason : ''
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [kind, period]);
+  const week = period === 'week';
+  return React.createElement("div", {
+    "data-ambb-rank": true,
+    "data-ambb-rank-live": true
+  }, React.createElement("div", {
+    className: "ambw-card",
+    style: {
+      textAlign: 'center'
+    }
+  }, React.createElement("b", {
+    style: {
+      fontSize: 16
+    }
+  }, "🏆 ランキング", React.createElement("span", {
+    className: "ambb-beta"
+  }, "β")), React.createElement("div", {
+    className: "ambb-tabs",
+    style: {
+      marginTop: 8
+    }
+  }, AMBB_KINDS.map(k => React.createElement("button", {
+    key: k.id,
+    "data-ambb-rank-kind": k.id,
+    className: kind === k.id ? 'on' : '',
+    onClick: () => setKind(k.id)
+  }, k.label))), React.createElement("div", {
+    className: "ambb-tabs",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("button", {
+    "data-ambb-rank-period": "all",
+    className: !week ? 'on' : '',
+    onClick: () => setPeriod('all')
+  }, "ポイント"), React.createElement("button", {
+    "data-ambb-rank-period": "week",
+    className: week ? 'on' : '',
+    onClick: () => setPeriod('week')
+  }, "今週")), React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      marginTop: 6
+    }
+  }, week ? '今週(月曜 4:00 から)に増えたポイントの順です' : 'ポイントの順です(はじめは 1500)')), React.createElement("div", {
+    className: "ambw-card"
+  }, data.loading ? React.createElement("p", {
+    className: "ambw-small"
+  }, "読み込んでいます…") : data.reason ? React.createElement("p", {
+    className: "ambw-small"
+  }, ambbPvpReason(data.reason)) : !data.rows.length ? React.createElement("p", {
+    className: "ambw-small"
+  }, "まだだれも載っていません。フレンドの助手に 3対3 で挑むと載ります。") : data.rows.map(r => {
+    const t = ambbTierOf(r.rating);
+    return React.createElement("div", {
+      key: `${r.rank}-${r.assistantId}`,
+      className: "ambb-tier",
+      "data-ambb-rank-row": true,
+      style: r.me ? {
+        background: 'rgba(249,168,212,.16)',
+        borderRadius: 8
+      } : null
+    }, React.createElement("span", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 0
+      }
+    }, React.createElement("b", {
+      style: {
+        width: 22,
+        textAlign: 'right'
+      }
+    }, r.rank), faceOf(r.assistantId) ? React.createElement("img", {
+      src: faceOf(r.assistantId),
+      alt: "",
+      style: {
+        width: 24,
+        height: 24,
+        borderRadius: '50%'
+      }
+    }) : null, React.createElement("span", {
+      style: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, r.name, "の", nameOf(r.assistantId))), React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, week ? `${r.rating >= 0 ? '+' : ''}${r.rating}` : React.createElement(React.Fragment, null, cardIconNode(t.icon, 14), " ", r.rating), React.createElement("span", {
+      className: "ambw-small"
+    }, " ", r.win, "勝", r.lose, "敗")));
+  })), React.createElement("div", {
+    className: "ambw-card"
+  }, React.createElement("div", {
+    className: "ambw-small"
+  }, "段(ポイントで決まります)"), AMBB_TIERS.slice().reverse().map((t, i, arr) => React.createElement("div", {
+    key: t.id,
+    className: "ambb-tier"
+  }, React.createElement("span", null, cardIconNode(t.icon, 14), " ", t.label), React.createElement("span", {
+    className: "ambw-small"
+  }, Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`)))), React.createElement("div", {
+    className: "ambw-ctl"
+  }, React.createElement("button", {
+    className: "ambw-btn2",
+    onClick: onBack
+  }, "← もどる")));
 }
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
