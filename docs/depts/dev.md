@@ -39,7 +39,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/56-quick-guide.jsx`
 - `monster-hero/src/parts/56-screen-profile.jsx`
 - `monster-hero/src/parts/59-*`
-- `monster-hero/src/parts/60-app.jsx`(2.2MB・開かない)
+- `monster-hero/src/parts/60-app.jsx`(2.3MB・開かない)
 - `monster-hero/src/parts/61-*`
 - `monster-hero/src/parts/62-*`
 - `monster-hero/src/parts/63-*`

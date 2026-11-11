@@ -56,7 +56,8 @@ for (const [rel, src] of sources) {
     && ['defeat', 'retire', 'hidden', 'manual', 'error'].every((key) => new RegExp(`${key}:`).test(src)));
   // 生成物は `{` が外れて `&&/*#__PURE__*/React.createElement(` になるので、条件式までを見る
   check(`${rel}: 全画面の敗北・リタイア画面はモンビー中に出さない`,
-    compact.includes('hp<=0&&!debugBattle&&!rhythmScreenOpen&&') && compact.includes('gaveUp&&!debugBattle&&!rhythmScreenOpen&&'));
+    // 2026-11-11: 画面ごとの条件を「いまバトルの画面を見ていない」1つの値(runBackgroundAllowed。モンビーを含む)へまとめた
+    compact.includes('hp<=0&&!debugBattle&&!runBackgroundAllowed&&') && compact.includes('gaveUp&&!debugBattle&&!runBackgroundAllowed&&'));
   check(`${rel}: 詳細からバトルへ戻れる`, src.includes('data-quick-run-progress-back'));
 
   // ---- 次の周へ入れること ----
