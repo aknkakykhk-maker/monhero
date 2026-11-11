@@ -13531,6 +13531,8 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   token:  { amount:30, dailyMax:30, label:'友情のしるしを使った', uncapped:true },
   // 助手ライフの道具(2026-11-08)。量は道具と2人の好みで変わるので呼ぶ側が渡す(いちばん多くて 30×1.5=45・1日3回)
   lifeItem: { amount:45, dailyMax:135, label:'道具をもらった', uncapped:true },
+  // 助手ライフでおやつ屋さん・広場に一緒にいた(2026-11-12・56-assistant-life-body.jsx。印 assistantLifeBody が偽なら呼ばれない)
+  outing: { amount:2, dailyMax:4, label:'おやつ屋さん・広場で一緒に過ごした' },
   play:   { amount:4, dailyMax:12, label:'いっしょに遊びに行った' },
   // モンヒロビートの助手とのセッション: 2人で部屋に呼ばれて1曲終えた(2026-11-07 社長の決定・ビート部マモリ。公開の印 rhythmAssistantSession の後ろで足す)
   session: { amount:3, dailyMax:12, label:'2人でセッションをした' },

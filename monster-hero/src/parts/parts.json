@@ -453,6 +453,10 @@
       "role": "部品: 助手ライフの行き先の予定(📅 今日の予定表)。保存 mh_assistant_life_plan_v1(新しいキーだけ)・当てはめ assistantLifePlanApply(純粋)・assistantLifeNow から assistantLifePlanOnDecide・窓 AssistantLifePlanHost・家の上の1行 AssistantLifePlanBand・口 assistantLifePlanOpen/assistantLifePlanRowInfo。公開の印 assistantLifePlan の後ろ。設計 docs/progress/assistant-life/SCHEDULE-PLAN.md"
     },
     {
+      "file": "56-assistant-life-body.jsx",
+      "role": "部品: 助手の疲れ・ストレス・けが・病気と🏥病院。assistantLifeNow から assistantLifeBodyOnDecide(サボり・けが・病気は家へ・疲れたら自分で休む)と assistantLifeBodyOnSlot(場所で値を動かす)。予定表へ AssistantLifeBodyPanel・AssistantLifeBodyPlaceStat。マスモンへ口 assistantLifeHospitalSlotsOf・assistantLifePlaceSlotsOf。保存は新しいキー mh_assistant_life_body_v1 だけ。公開の印 assistantLifeBody の後ろ。案 docs/progress/assistant-peer/life-places/PLAN.md"
+    },
+    {
       "file": "56-assistant-masmon-battle-view.jsx",
       "role": "部品: 助手のマスモンの対戦を観戦する試作(AssistantMasmonBattleWatch)。入口はデバッグ設定だけ。data/assistant-masmon-battle.js を開いたときにだけ読み、1戦の記録を再生する。何も保存しない。2026-11-11 VIEW-PLAN.md"
     },

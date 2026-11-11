@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e37642314f4767cb
+// source-sha256: 79ffc743871fd281
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13890,6 +13890,7 @@ const RELEASE_FLAGS = {
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
   assistantMasmonBattlePvp: true,
+  assistantLifeBody: false,
   assistantLifePlan: true,
   assistantMasmonTrain: true,
   assistantMasmonCheer: true,
@@ -108160,6 +108161,12 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
     te: 'バトルして',
     group: true,
     places: ['battle']
+  },
+  checkup: {
+    label: '診察',
+    te: '診てもらって',
+    group: false,
+    places: ['clinic']
   }
 });
 const ASSISTANT_LIFE_PLACES = Object.freeze({
@@ -108173,7 +108180,8 @@ const ASSISTANT_LIFE_PLACES = Object.freeze({
   market: 'マーケット',
   hill: 'ひなたの丘',
   garden: '中庭',
-  battle: 'モンヒロバトル'
+  battle: 'モンヒロバトル',
+  clinic: '病院'
 });
 const ASSISTANT_LIFE_PREFS = Object.freeze({
   mua: {
@@ -109195,7 +109203,13 @@ const assistantLifeNow = async ({
       await ASSISTANT_LIFE_PLAN_STORE.load();
     } catch {}
   }
-  const decided = typeof assistantLifePlanOnDecide === 'function' ? assistantLifePlanOnDecide(decided0, cur.salt) : decided0;
+  const decided1 = typeof assistantLifePlanOnDecide === 'function' ? assistantLifePlanOnDecide(decided0, cur.salt) : decided0;
+  if (typeof ASSISTANT_LIFE_BODY_STORE !== 'undefined' && typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) {
+    try {
+      await ASSISTANT_LIFE_BODY_STORE.load();
+    } catch {}
+  }
+  const decided = typeof assistantLifeBodyOnDecide === 'function' ? assistantLifeBodyOnDecide(decided1, cur.salt) : decided1;
   const keep = n => n.abs >= slot.abs;
   const life = {
     ...cur,
@@ -109214,6 +109228,11 @@ const assistantLifeNow = async ({
   if (typeof assistantLifeDiaryOnSlot === 'function') {
     try {
       assistantLifeDiaryOnSlot(life, slot, now);
+    } catch {}
+  }
+  if (typeof assistantLifeBodyOnSlot === 'function') {
+    try {
+      assistantLifeBodyOnSlot(life, slot);
     } catch {}
   }
   if (typeof amgtOnLifeSlot === 'function') {
@@ -114891,29 +114910,32 @@ function AssistantLifeHomeFaces({
     rect: rects.life
   }));
 }
-const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
-const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza', 'clinic']);
+const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza', 'clinic']);
 const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
   classic: {
     hill: [0.47, 0.115],
     library: [0.72, 0.205],
     cafe: [0.9, 0.29],
     garden: [0.8, 0.44],
-    plaza: [0.5, 0.465]
+    plaza: [0.5, 0.465],
+    clinic: [0.22, 0.3]
   },
   halloween: {
     hill: [0.5, 0.085],
     library: [0.7, 0.2],
     cafe: [0.9, 0.27],
     garden: [0.82, 0.45],
-    plaza: [0.5, 0.465]
+    plaza: [0.5, 0.465],
+    clinic: [0.22, 0.28]
   },
   halloweenWide: {
     hill: [0.5, 0.17],
     library: [0.62, 0.27],
     cafe: [0.84, 0.22],
     garden: [0.76, 0.4],
-    plaza: [0.47, 0.54]
+    plaza: [0.47, 0.54],
+    clinic: [0.3, 0.24]
   }
 });
 const assistantLifeMapArtOf = src => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
@@ -114926,7 +114948,8 @@ const ASSISTANT_LIFE_DOING_ICON = Object.freeze({
   idle: '💭',
   sleep: '💤',
   read: '📖',
-  battle: '⚔️'
+  battle: '⚔️',
+  checkup: '🏥'
 });
 const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
@@ -114940,7 +114963,8 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   cafe: 'おやつ屋さんでおやつを食べている助手',
   hill: 'ひなたの丘でのんびりしている助手',
   garden: '中庭で過ごしている助手',
-  plaza: '広場を散歩している助手'
+  plaza: '広場を散歩している助手',
+  clinic: '病院で診てもらっている助手。けがや病気が早く治ります'
 });
 const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({
   management: 'M/B管理',
@@ -141726,7 +141750,7 @@ function AmgtCard({
   }));
 }
 const ASSISTANT_LIFE_PLAN_KEY = 'mh_assistant_life_plan_v1';
-const ASSISTANT_LIFE_PLAN_PLACES = Object.freeze(['cafe', 'plaza', 'garden', 'hill', 'studio', 'ranch', 'cardroom', 'library', 'battle', 'home']);
+const ASSISTANT_LIFE_PLAN_PLACES = Object.freeze(['cafe', 'plaza', 'garden', 'hill', 'studio', 'ranch', 'cardroom', 'library', 'battle', 'home', 'clinic']);
 const ASSISTANT_LIFE_PLAN_FIRST_J = 2;
 const ASSISTANT_LIFE_PLAN_TRUST = Object.freeze({
   base: 0.65,
@@ -142004,7 +142028,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length) return decided;
     const trust = {};
-    for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
+    for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {};
     for (const [id, v] of Object.entries(r.result)) if (v === 'no') {
@@ -142112,12 +142136,13 @@ const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({
   cardroom: '🃏',
   library: '📚',
   battle: '⚔',
-  home: '🏡'
+  home: '🏡',
+  clinic: '🏥'
 });
 const assistantLifePlanPerk = place => {
   if (place === 'cardroom') return `対戦すると ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'battle') return 'マスモンが修行する';
-  return '';
+  return typeof assistantLifeBodyPerk === 'function' ? assistantLifeBodyPerk(place) : '';
 };
 const assistantLifePlanName = id => {
   try {
@@ -142133,7 +142158,8 @@ function AssistantLifePlanPicker({
 }) {
   const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
   const cur = assistantLifePlanOf(abs, id);
-  const list = [...ASSISTANT_LIFE_PLAN_PLACES].sort((a, b) => (assistantLifePlanPerk(b) ? 1 : 0) - (assistantLifePlanPerk(a) ? 1 : 0));
+  const places = typeof assistantLifeBodyPlaces === 'function' ? assistantLifeBodyPlaces(ASSISTANT_LIFE_PLAN_PLACES) : ASSISTANT_LIFE_PLAN_PLACES.filter(p => p !== 'clinic');
+  const list = [...places].sort((a, b) => (assistantLifePlanPerk(b) ? 1 : 0) - (assistantLifePlanPerk(a) ? 1 : 0));
   const h = assistantLifeSlotOfAbs(abs).from;
   return React.createElement("div", {
     className: "mt-1 rounded-xl border border-sky-300/60 bg-slate-900/95 p-1.5",
@@ -142146,14 +142172,20 @@ function AssistantLifePlanPicker({
     key: p,
     type: "button",
     "data-assistant-life-plan-place": p,
+    disabled: typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p),
     onClick: () => {
       assistantLifePlanSet(abs, id, p);
       onDone && onDone();
     },
-    className: `min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95`
-  }, ASSISTANT_LIFE_PLAN_ICON[p], " ", ASSISTANT_LIFE_PLACES[p], p === fav ? ' ♥' : '', assistantLifePlanPerk(p) && React.createElement("span", {
+    className: `min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95 disabled:opacity-35`
+  }, ASSISTANT_LIFE_PLAN_ICON[p], " ", typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p) ? React.createElement(React.Fragment, null, assistantLifeBodyLabel(p)[0], " ", React.createElement("span", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, assistantLifeBodyLabel(p)[1])) : ASSISTANT_LIFE_PLACES[p], p === fav ? typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? ' ♥ 好きな場所' : ' ♥' : '', assistantLifePlanPerk(p) && React.createElement("span", {
     className: "block text-[10px] font-bold text-amber-200"
-  }, "得: ", assistantLifePlanPerk(p)))), React.createElement("button", {
+  }, "得: ", assistantLifePlanPerk(p)), typeof AssistantLifeBodyPlaceStat === 'function' && React.createElement(AssistantLifeBodyPlaceStat, {
+    place: p,
+    abs: abs
+  }))), React.createElement("button", {
     type: "button",
     "data-assistant-life-plan-place": "auto",
     onClick: () => {
@@ -142230,7 +142262,10 @@ function AssistantLifePlanWho({
   return React.createElement("div", {
     className: "flex flex-col gap-1",
     "data-assistant-life-plan-who": id
-  }, rows);
+  }, typeof AssistantLifeBodyPanel === 'function' && React.createElement(AssistantLifeBodyPanel, {
+    id: id,
+    cur: cur
+  }), rows);
 }
 function AssistantLifePlanTable({
   ids,
@@ -142425,6 +142460,617 @@ function AssistantLifePlanBand({
     className: "shrink-0 rounded-xl bg-amber-400 px-2 py-1 text-[11.5px] font-black text-slate-900"
   }, "開く"));
 }
+const ASSISTANT_LIFE_BODY_KEY = 'mh_assistant_life_body_v1';
+const ASSISTANT_LIFE_BODY_PLACE = Object.freeze({
+  battle: {
+    fat: 12,
+    st: 5,
+    hard: true
+  },
+  studio: {
+    fat: 10,
+    st: -5,
+    hard: true
+  },
+  ranch: {
+    fat: 10,
+    st: 5,
+    hard: true
+  },
+  plaza: {
+    fat: 3,
+    st: -8,
+    hard: true
+  },
+  cardroom: {
+    fat: 5,
+    st: 3
+  },
+  library: {
+    fat: 3,
+    st: 3
+  },
+  cafe: {
+    fat: -5,
+    st: -15
+  },
+  garden: {
+    fat: -5,
+    st: -10
+  },
+  hill: {
+    fat: -10,
+    st: -10
+  },
+  home: {
+    fat: -10,
+    st: -5
+  },
+  clinic: {
+    fat: -15,
+    st: 0
+  },
+  temple: {
+    fat: 0,
+    st: -5
+  },
+  market: {
+    fat: 3,
+    st: -3
+  }
+});
+const ASSISTANT_LIFE_BODY_SLEEP_FAT = -25;
+const ASSISTANT_LIFE_BODY_FAV_ST = -5;
+const ASSISTANT_LIFE_BODY_START = Object.freeze({
+  fat: 20,
+  st: 20
+});
+const ASSISTANT_LIFE_BODY_LINE = Object.freeze({
+  fatWarn: 60,
+  fatBad: 70,
+  stWarn: 50,
+  stBad: 60,
+  sulky: 80
+});
+const ASSISTANT_LIFE_BODY_COND = Object.freeze({
+  hurt: {
+    light: {
+      slots: 24,
+      visits: 1
+    },
+    heavy: {
+      slots: 48,
+      visits: 2
+    }
+  },
+  sick: {
+    light: {
+      slots: 36,
+      visits: 2
+    },
+    heavy: {
+      slots: 60,
+      visits: 3
+    }
+  }
+});
+const ASSISTANT_LIFE_BODY_GAP = Object.freeze({
+  fat: -8,
+  st: -3,
+  max: 84
+});
+const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']);
+const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({
+  studio: ['モンヒロビート', '練習スタジオ'],
+  ranch: ['M/B管理', '育成場'],
+  cardroom: ['MFバトルカード', 'カード部屋']
+});
+const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
+  studio: '券なしで一緒に遊べる',
+  ranch: 'マスモンにトレーニングチケットを使える',
+  cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
+  plaza: 'ほかの助手と会いやすい・なかよく',
+  garden: 'マスモンが遊んでストレスが下がる',
+  hill: 'ごきげんに(次のお願いが通りやすい)',
+  library: 'マスモンの技が少し伸びる',
+  home: '疲れがいちばん取れる(寝ると たくさん)',
+  clinic: 'けが・病気を治す(マスモンも)'
+});
+const ASSISTANT_LIFE_BODY_OUTING = Object.freeze(['cafe', 'plaza']);
+const assistantLifeBodyOn = () => {
+  try {
+    return typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeBody === true;
+  } catch (_) {
+    return false;
+  }
+};
+const assistantLifeBodyClamp = n => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
+const assistantLifeBodyOkId = id => typeof id === 'string' && typeof ASSISTANT_LIFE_PREFS !== 'undefined' && !!ASSISTANT_LIFE_PREFS[id];
+const assistantLifeBodyFresh = () => ({
+  fat: ASSISTANT_LIFE_BODY_START.fat,
+  st: ASSISTANT_LIFE_BODY_START.st,
+  cond: null
+});
+const normalizeAssistantLifeBodyCond = c => {
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  if (!ASSISTANT_LIFE_BODY_COND[c.k] || !ASSISTANT_LIFE_BODY_COND[c.k][c.sev]) return null;
+  const left = Number(c.left),
+    visits = Number(c.visits);
+  if (!Number.isInteger(left) || left <= 0 || !Number.isInteger(visits) || visits <= 0) return null;
+  return {
+    k: c.k,
+    sev: c.sev,
+    left: Math.min(left, 120),
+    visits: Math.min(visits, 5)
+  };
+};
+const normalizeAssistantLifeBody = raw => {
+  const out = {
+    v: 1,
+    at: null,
+    s: {},
+    log: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (Number.isInteger(raw.at) && raw.at >= 0) out.at = raw.at;
+  if (raw.s && typeof raw.s === 'object' && !Array.isArray(raw.s)) {
+    for (const [id, e] of Object.entries(raw.s)) {
+      if (!assistantLifeBodyOkId(id) || !e || typeof e !== 'object' || Array.isArray(e)) continue;
+      const fat = typeof e.fat === 'number' ? e.fat : NaN,
+        st = typeof e.st === 'number' ? e.st : NaN;
+      out.s[id] = {
+        fat: Number.isFinite(fat) ? assistantLifeBodyClamp(fat) : ASSISTANT_LIFE_BODY_START.fat,
+        st: Number.isFinite(st) ? assistantLifeBodyClamp(st) : ASSISTANT_LIFE_BODY_START.st,
+        cond: normalizeAssistantLifeBodyCond(e.cond)
+      };
+    }
+  }
+  if (raw.log && typeof raw.log === 'object' && !Array.isArray(raw.log)) {
+    for (const [id, list] of Object.entries(raw.log)) {
+      if (!assistantLifeBodyOkId(id) || !Array.isArray(list)) continue;
+      const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({
+        abs: r.abs,
+        place: r.place,
+        ev: typeof r.ev === 'string' ? r.ev : ''
+      }));
+      if (ok.length) out.log[id] = ok.slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
+    }
+  }
+  return out;
+};
+const assistantLifeBodyStepOne = (e0, place, doing, fav, rand) => {
+  const e = {
+    fat: e0.fat,
+    st: e0.st,
+    cond: e0.cond ? {
+      ...e0.cond
+    } : null
+  };
+  const P = ASSISTANT_LIFE_BODY_PLACE[place] || {
+    fat: 0,
+    st: 0
+  };
+  e.fat = assistantLifeBodyClamp(e.fat + (place === 'home' && doing === 'sleep' ? ASSISTANT_LIFE_BODY_SLEEP_FAT : P.fat));
+  e.st = assistantLifeBodyClamp(e.st + P.st + (place === fav && place !== 'home' ? ASSISTANT_LIFE_BODY_FAV_ST : 0));
+  let ev = '';
+  if (e.cond) {
+    e.cond.left -= 1;
+    if (place === 'clinic') {
+      e.cond.visits -= 1;
+      ev = 'clinic';
+    }
+    if (e.cond.k === 'sick') e.st = assistantLifeBodyClamp(e.st - 5);
+    if (e.cond.left <= 0 || e.cond.visits <= 0) {
+      e.cond = null;
+      ev = 'healed';
+    }
+    return {
+      e,
+      ev
+    };
+  }
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const r = rand();
+  const pHurt = P.hard && e.fat >= L.fatBad ? Math.min(0.3, (e.fat - L.fatBad) * 0.015) : 0;
+  const pSick = e.st >= L.stBad && place !== 'clinic' ? Math.min(0.3, (e.st - L.stBad) * 0.01) : 0;
+  let k = null,
+    over = 0;
+  if (r < pHurt) {
+    k = 'hurt';
+    over = e.fat - L.fatBad;
+  } else if (r < pHurt + pSick) {
+    k = 'sick';
+    over = e.st - L.stBad;
+  }
+  if (k) {
+    const sev = rand() < Math.min(0.6, over * 0.03) ? 'heavy' : 'light';
+    const c = ASSISTANT_LIFE_BODY_COND[k][sev];
+    e.cond = {
+      k,
+      sev,
+      left: c.slots,
+      visits: c.visits
+    };
+    ev = k;
+  }
+  return {
+    e,
+    ev
+  };
+};
+const assistantLifeBodyGapOne = (e0, n) => {
+  const m = Math.max(0, Math.min(ASSISTANT_LIFE_BODY_GAP.max, Math.floor(n)));
+  if (!m) return e0;
+  const e = {
+    fat: assistantLifeBodyClamp(e0.fat + ASSISTANT_LIFE_BODY_GAP.fat * m),
+    st: assistantLifeBodyClamp(e0.st + ASSISTANT_LIFE_BODY_GAP.st * m),
+    cond: e0.cond ? {
+      ...e0.cond
+    } : null
+  };
+  if (e.cond) {
+    e.cond.left -= m;
+    if (e.cond.left <= 0) e.cond = null;
+  }
+  return e;
+};
+const assistantLifeBodySkipChance = (e, place) => {
+  if (!e || ASSISTANT_LIFE_BODY_REST.includes(place)) return 0;
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  return Math.min(0.35, Math.max(0, e.fat - L.fatWarn) * 0.01 + Math.max(0, e.st - L.stWarn) * 0.01);
+};
+const assistantLifeBodyHurtChance = (fat, place) => {
+  const P = ASSISTANT_LIFE_BODY_PLACE[place];
+  return P && P.hard && fat >= ASSISTANT_LIFE_BODY_LINE.fatBad ? Math.min(0.3, (fat - ASSISTANT_LIFE_BODY_LINE.fatBad) * 0.015) : 0;
+};
+const assistantLifeBodySickChance = (st, place) => st >= ASSISTANT_LIFE_BODY_LINE.stBad && place !== 'clinic' ? Math.min(0.3, (st - ASSISTANT_LIFE_BODY_LINE.stBad) * 0.01) : 0;
+const assistantLifeBodyPreview = (e, place, abs, fav) => {
+  const s = typeof assistantLifeSlotOfAbs === 'function' ? assistantLifeSlotOfAbs(abs) : null;
+  const sleep = place === 'home' && s && (s.id === 'late' || s.id === 'night');
+  const P = ASSISTANT_LIFE_BODY_PLACE[place] || {
+    fat: 0,
+    st: 0
+  };
+  const fat = assistantLifeBodyClamp(e.fat + (sleep ? ASSISTANT_LIFE_BODY_SLEEP_FAT : P.fat));
+  const st = assistantLifeBodyClamp(e.st + P.st + (place === fav && place !== 'home' ? ASSISTANT_LIFE_BODY_FAV_ST : 0));
+  return {
+    fat,
+    st,
+    skip: assistantLifeBodySkipChance(e, place),
+    hurt: assistantLifeBodyHurtChance(fat, place),
+    sick: assistantLifeBodySickChance(st, place)
+  };
+};
+const ASSISTANT_LIFE_BODY_STORE = {
+  state: {
+    loaded: false,
+    data: normalizeAssistantLifeBody(null)
+  },
+  listeners: new Set(),
+  loading: null,
+  set(patch) {
+    this.state = {
+      ...this.state,
+      ...patch
+    };
+    for (const fn of this.listeners) {
+      try {
+        fn(this.state);
+      } catch (_) {}
+    }
+  },
+  load() {
+    if (this.state.loaded) return Promise.resolve(this.state);
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      let raw = null;
+      try {
+        raw = await storeGet(ASSISTANT_LIFE_BODY_KEY, null, false);
+      } catch (_) {
+        raw = null;
+      }
+      this.set({
+        loaded: true,
+        data: normalizeAssistantLifeBody(raw)
+      });
+      return this.state;
+    })();
+    return this.loading;
+  }
+};
+const assistantLifeBodySave = data => {
+  ASSISTANT_LIFE_BODY_STORE.set({
+    data
+  });
+  try {
+    storeSet(ASSISTANT_LIFE_BODY_KEY, data, false);
+  } catch (_) {}
+};
+const assistantLifeBodyOf = id => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !assistantLifeBodyOkId(id)) return null;
+  return ASSISTANT_LIFE_BODY_STORE.state.data.s[id] || assistantLifeBodyFresh();
+};
+const assistantLifeBodyCondOf = id => {
+  const e = assistantLifeBodyOf(id);
+  return e ? e.cond : null;
+};
+const assistantLifeBodyWhere = (life, id) => {
+  const g = (life.groups || []).find(x => x.ids.includes(id));
+  if (g) return {
+    place: g.place,
+    doing: g.doing
+  };
+  const s = (life.solo || {})[id];
+  return s ? {
+    place: s.place,
+    doing: s.doing
+  } : null;
+};
+const assistantLifeBodyOnDecide = (decided, salt = '') => {
+  try {
+    if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !decided || typeof assistantLifePlanApply !== 'function') return decided;
+    const abs = decided.abs;
+    const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+    const gap = Number.isInteger(D.at) && abs > D.at ? abs - D.at - 1 : 0;
+    const ids = [...new Set([...(decided.groups || []).flatMap(g => g.ids), ...Object.keys(decided.solo || {})])].sort();
+    const slot = assistantLifeSlotOfAbs(abs);
+    const day = slot.id !== 'late' && slot.id !== 'night';
+    const want = {};
+    for (const id of ids) {
+      const e = assistantLifeBodyGapOne(D.s[id] || assistantLifeBodyFresh(), gap);
+      const w = assistantLifeBodyWhere(decided, id);
+      if (!w) continue;
+      const asked = typeof assistantLifePlanResultOf === 'function' && assistantLifePlanResultOf(abs, id) === 'ok';
+      const rand = assistantLifeRng(`${salt}|body-go|${abs}|${id}`);
+      if (e.cond) {
+        if (asked && w.place === 'clinic') continue;
+        want[id] = day && rand() < 0.35 ? 'clinic' : 'home';
+        continue;
+      }
+      if (rand() < assistantLifeBodySkipChance(e, w.place)) {
+        want[id] = 'home';
+        continue;
+      }
+      if (!asked) {
+        const pf = e.fat >= 50 ? Math.min(0.95, 0.5 + (e.fat - 50) * 0.03) : 0;
+        const ps = e.st >= 45 ? Math.min(0.95, 0.5 + (e.st - 45) * 0.03) : 0;
+        if (ASSISTANT_LIFE_BODY_REST.includes(w.place)) {} else if (pf && rand() < pf) want[id] = 'home';else if (ps && rand() < ps) want[id] = rand() < 0.5 ? 'cafe' : 'hill';
+      }
+    }
+    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) delete want[id];
+    if (!Object.keys(want).length) return decided;
+    const trust = {};
+    for (const id of Object.keys(want)) trust[id] = 1;
+    return assistantLifePlanApply(decided, want, trust, `${salt}|body`).life;
+  } catch (_) {
+    return decided;
+  }
+};
+const assistantLifeBodyOnSlot = (life, slot) => {
+  try {
+    if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !life || !slot) return null;
+    const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+    if (Number.isInteger(D.at) && D.at >= slot.abs) return null;
+    const gap = Number.isInteger(D.at) ? slot.abs - D.at - 1 : 0;
+    const ids = [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])].filter(assistantLifeBodyOkId).sort();
+    const s = {
+      ...D.s
+    };
+    const log = {
+      ...D.log
+    };
+    const evs = {};
+    for (const id of ids) {
+      const w = assistantLifeBodyWhere(life, id);
+      if (!w) continue;
+      const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
+      const r = assistantLifeBodyStepOne(assistantLifeBodyGapOne(s[id] || assistantLifeBodyFresh(), gap), w.place, w.doing, fav, assistantLifeRng(`${life.salt || ''}|body|${slot.abs}|${id}`));
+      s[id] = r.e;
+      evs[id] = r.ev;
+      log[id] = [...(log[id] || []), {
+        abs: slot.abs,
+        place: w.place,
+        ev: r.ev
+      }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
+    }
+    assistantLifeBodySave({
+      v: 1,
+      at: slot.abs,
+      s,
+      log
+    });
+    if (typeof assistantPeerGain === 'function') {
+      for (const g of life.groups || []) {
+        if (!ASSISTANT_LIFE_BODY_OUTING.includes(g.place)) continue;
+        for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) {
+          try {
+            void assistantPeerGain(g.ids[i], g.ids[j], 'outing');
+          } catch (_) {}
+        }
+      }
+    }
+    return evs;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantLifeBodyTrustAdj = (id, abs) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return 0;
+  const e = assistantLifeBodyOf(id);
+  if (!e) return 0;
+  const last = (ASSISTANT_LIFE_BODY_STORE.state.data.log[id] || []).slice(-1)[0];
+  let n = 0;
+  if (last && last.place === 'hill' && last.abs === abs - 1) n += 0.1;
+  if (e.st >= ASSISTANT_LIFE_BODY_LINE.sulky) n -= 0.3;
+  return n;
+};
+const assistantLifePlaceSlotsOf = (aid, place) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
+  return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
+};
+const assistantLifeHospitalSlotsOf = aid => assistantLifePlaceSlotsOf(aid, 'clinic');
+const assistantLifeBodyPerk = place => assistantLifeBodyOn() ? ASSISTANT_LIFE_BODY_PERK[place] || '' : '';
+const assistantLifeBodyPlaces = list => assistantLifeBodyOn() ? [...list.filter(p => p !== 'clinic'), 'clinic'] : list.filter(p => p !== 'clinic');
+const assistantLifeBodyLabel = place => assistantLifeBodyOn() && ASSISTANT_LIFE_BODY_LABEL[place] || null;
+const assistantLifeBodyCanGo = (id, place) => {
+  const c = assistantLifeBodyCondOf(id);
+  return !c || place === 'home' || place === 'clinic';
+};
+const assistantLifeBodyUse = () => {
+  const [st, setSt] = React.useState(ASSISTANT_LIFE_BODY_STORE.state);
+  React.useEffect(() => {
+    const fn = s => setSt(s);
+    ASSISTANT_LIFE_BODY_STORE.listeners.add(fn);
+    void ASSISTANT_LIFE_BODY_STORE.load();
+    return () => {
+      ASSISTANT_LIFE_BODY_STORE.listeners.delete(fn);
+    };
+  }, []);
+  return st;
+};
+const ASSISTANT_LIFE_BODY_COND_NAME = Object.freeze({
+  hurt: '🤕 けが',
+  sick: '🤒 病気'
+});
+const assistantLifeBodyCondText = c => {
+  if (!c) return '';
+  const d = Math.floor(c.left / 12),
+    h = c.left % 12 * 2;
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家で休んでいます(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
+};
+const assistantLifeBodyDelta = n => n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0';
+function AssistantLifeBodyPlaceStat({
+  place,
+  abs
+}) {
+  if (!assistantLifeBodyOn()) return null;
+  const P = ASSISTANT_LIFE_BODY_PLACE[place];
+  if (!P) return null;
+  const s = Number.isInteger(abs) && typeof assistantLifeSlotOfAbs === 'function' ? assistantLifeSlotOfAbs(abs) : null;
+  const fat = place === 'home' && s && (s.id === 'late' || s.id === 'night') ? ASSISTANT_LIFE_BODY_SLEEP_FAT : P.fat;
+  const cls = n => n > 0 ? 'text-rose-300' : n < 0 ? 'text-emerald-300' : 'text-slate-400';
+  return React.createElement("span", {
+    className: "block text-[10px] font-bold leading-tight",
+    "data-assistant-life-body-place": place
+  }, React.createElement("span", {
+    className: cls(fat)
+  }, "疲れ", assistantLifeBodyDelta(fat)), " ", React.createElement("span", {
+    className: cls(P.st)
+  }, "ストレス", assistantLifeBodyDelta(P.st)));
+}
+function AssistantLifeBodyBar({
+  label,
+  v,
+  warn,
+  bad,
+  color
+}) {
+  const tone = v >= bad ? 'text-rose-300' : v >= warn ? 'text-amber-300' : 'text-slate-100';
+  return React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[11px] font-black"
+  }, React.createElement("span", {
+    className: "w-[64px] shrink-0"
+  }, label), React.createElement("span", {
+    className: "relative block h-2.5 flex-1 overflow-hidden rounded-full bg-slate-800"
+  }, React.createElement("span", {
+    className: "block h-full rounded-full",
+    style: {
+      width: `${v}%`,
+      background: v >= bad ? '#f87171' : v >= warn ? '#fbbf24' : color
+    }
+  }), React.createElement("span", {
+    className: "absolute inset-y-0 w-0.5 bg-amber-300",
+    style: {
+      left: `${warn}%`
+    }
+  }), React.createElement("span", {
+    className: "absolute inset-y-0 w-0.5 bg-rose-400",
+    style: {
+      left: `${bad}%`
+    }
+  })), React.createElement("span", {
+    className: `w-[28px] shrink-0 text-right ${tone}`
+  }, v));
+}
+function AssistantLifeBodyPanel({
+  id,
+  cur
+}) {
+  assistantLifeBodyUse();
+  const e = assistantLifeBodyOf(id);
+  if (!e) return null;
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
+  const note = e.cond ? assistantLifeBodyCondText(e.cond) : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう` : '元気です';
+  const rows = [];
+  if (!e.cond && Number.isInteger(cur) && typeof assistantLifePlanOf === 'function') {
+    let v = {
+      fat: e.fat,
+      st: e.st
+    };
+    for (let a = cur + 1; a < Math.floor(cur / 12) * 12 + 12; a++) {
+      const p = assistantLifePlanOf(a, id);
+      if (!p) break;
+      const pv = assistantLifeBodyPreview(v, p, a, fav);
+      rows.push({
+        abs: a,
+        place: p,
+        fat: pv.fat,
+        st: pv.st,
+        risk: Math.max(pv.hurt, pv.sick, pv.skip),
+        kind: pv.hurt >= pv.sick && pv.hurt >= pv.skip ? 'けが' : pv.sick >= pv.skip ? '病気' : 'サボり'
+      });
+      v = {
+        fat: pv.fat,
+        st: pv.st
+      };
+    }
+  }
+  return React.createElement("div", {
+    className: "mb-1.5 rounded-xl border border-white/15 bg-slate-900/80 p-1.5",
+    "data-assistant-life-body-panel": id
+  }, React.createElement(AssistantLifeBodyBar, {
+    label: "😮‍💨 疲れ",
+    v: e.fat,
+    warn: L.fatWarn,
+    bad: L.fatBad,
+    color: "#38bdf8"
+  }), React.createElement("div", {
+    className: "mt-0.5"
+  }, React.createElement(AssistantLifeBodyBar, {
+    label: "💢 ストレス",
+    v: e.st,
+    warn: L.stWarn,
+    bad: L.stBad,
+    color: "#c084fc"
+  })), React.createElement("p", {
+    className: `mt-1 text-[11px] font-bold leading-snug ${e.cond ? 'text-rose-200' : 'text-indigo-200'}`,
+    "data-assistant-life-body-note": true
+  }, note), rows.length > 0 && React.createElement("div", {
+    className: "mt-1 flex flex-col gap-0.5",
+    "data-assistant-life-body-forecast": true
+  }, rows.map(r => {
+    const s = assistantLifeSlotOfAbs(r.abs);
+    return React.createElement("p", {
+      key: r.abs,
+      className: "flex items-center gap-1 text-[10.5px] font-bold text-slate-200"
+    }, React.createElement("span", {
+      className: "w-[58px] shrink-0 text-sky-200"
+    }, s.from, "〜", (s.from + 2) % 24, "時"), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate"
+    }, ASSISTANT_LIFE_PLACES[r.place], "のあと 疲れ", r.fat, "・ストレス", r.st), r.risk > 0 && React.createElement("span", {
+      className: "shrink-0 text-rose-300"
+    }, "⚠ ", r.kind, " ", Math.round(r.risk * 100), "%"));
+  })));
+}
+const assistantLifeBodyBadge = id => {
+  const e = assistantLifeBodyOf(id);
+  if (!e) return '';
+  if (e.cond) return e.cond.k === 'hurt' ? '🤕' : '🤒';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  return e.fat >= L.fatBad || e.st >= L.stBad ? '💤' : '';
+};
 const AMBW_ENGINE_SRC = 'data/assistant-masmon-battle.js';
 const AMBW_DIST = ['零', '近', '中', '遠'];
 const AMBW_STAT_JP = Object.freeze({
