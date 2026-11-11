@@ -80,7 +80,7 @@ check('固有技Lv2で技名・威力・会心率・消費Gを現在技へ切替
 check('限界突破の固有技候補名は強化後Lvのレベル別名称を使う',source.includes('name:uniqueSkillAtLevel(choice.unique,Math.min(MAX_UNIQUE_SKILL_LEVEL,level+1))?.name||choice.name'));
 check('限界突破済みソート・表示設定と旧設定の補完を追加',source.includes("key: 'reborn', label: '限界突破済み'")&&source.includes("monsterSortKey === 'reborn'")&&source.includes('DEFAULT_MONSTER_LIST_SETTINGS.display[key]'));
 // 複数副の個別選択に作り直したとき、系統ID(lineageId)で重複を弾く形になった
-check('同一固有技の継承を禁止',source.includes('const duplicate = !!lineageId && ownedLineageIds.has(lineageId);')&&source.includes('const inherited = requested && eligible && !!lineageId && !duplicate;')&&source.includes('同じ系統の固有技が主または先の副から継承されます'));
+check('同一固有技の継承を禁止',source.includes('const duplicate = !!lineageId && ownedLineageIds.has(lineageId);')&&source.includes('const inherited = requested && eligible && !!chosen && !!lineageId && !duplicate;')&&source.includes('同じ系統の固有技が主または先の副から継承される'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
 // ★は 青→黄色→ピンク→紫→赤→金 の6段階。5凸で1段階が完成し、次の段階は1個ずつ置き換わる。
 // 31～35凸で金★が虹★へ1個ずつ置き換わる。細かい凸数ごとの並びは breakthrough-star-check.js で見る

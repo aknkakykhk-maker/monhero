@@ -804,7 +804,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
   dra: { yes: 'おう、そうしてみるぞ。えへへ', some: 'ちょっとだけ変えてみたぞ', no: 'それはちょっとなあ…ごめんな', talk: 'ん？どうしたいのか、もうちょい教えてくれ', ng: 'その言葉は名前にできないぞ…別のにしてくれ', think: 'ちょっと考えとくぞ' },
   atsu: { yes: 'いいね、そうしてみるわ笑', some: 'ちょっとだけ取り入れてみたわ笑', no: 'それはちょっと違うかな笑 ごめんね(｡-人-｡)', talk: 'ん？どうしたいか教えて笑', ng: 'その名前は付けられないんだわ笑 別のにしよ', think: 'ちょっと考えとくわ笑' },
   kyuko: { yes: 'ほい、そうしてみるよぉ笑', some: 'ちょっとだけ変えてみたよぉ笑', no: 'それはちょっとなぁ…ごめんねぇ笑', talk: 'ん〜？どうしたいか教えてよぉ笑', ng: 'その名前は付けられないんだよぉ笑 別のにしよぉ', think: 'ちょっと考えとくよぉ笑' },
-  sorashido: { yes: '了解・・・！そうしてみるぜ笑', some: '少しだけ取り入れてみたぜ・・・！', no: 'それは計算に合わないぜ・・・ごめんな', talk: 'どうしたいか、もう少し教えてくれ・・・！', ng: 'その言葉は名前に使えないぜ・・・別の名前にしてくれ笑', think: '少し考えておくぜ・・・！' },
+  sorashido: { yes: 'なるほど了解です！ そうしてみます笑', some: '少しだけ取り入れてみました・・・！', no: 'それは計算に合わないんです・・・すみません', talk: 'どうしたいか、もう少し教えてください・・・！', ng: 'その言葉は名前に使えないんです・・・別の名前でお願いします笑', think: '少し考えておきますね・・・！' },
   erubin: { yes: 'うん、そうしてみるね笑', some: 'ちょっとだけ取り入れてみたよ笑', no: 'それはちょっと…ごめんね🤔', talk: 'どうしたいか、もうちょっと教えてね🤔', ng: 'その名前は付けられないみたい…別のにしよ🤔', think: 'ちょっと考えとくね🤔' },
 });
 // ng(名前として通さない言葉)・think(受けたが今回は変えない)は、AI の返事を使わず用意した台詞だけ
@@ -1150,7 +1150,7 @@ const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
   dra: 'おう、{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てていくからな',
   atsu: '{name}！ 新しい仲間が来た笑 {mon}の「{nick}」、よろしく頼む！',
   kyuko: 'ほい、{name}。新しいマスモン迎えたよ〜。{mon}の「{nick}」、仲良くしてねぇ',
-  sorashido: 'うぉぉぉ！{name}、新しい仲間だぜ・・・！ {mon}の「{nick}」、表にも足しとくな笑',
+  sorashido: '{name}、新しい仲間が来ましたよー！ {mon}の「{nick}」、表にも足しておきますね笑',
   erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。仲良くしてくれるとうれしいな',
 });
 // 名前を付け直したあとの1回だけ(同じくコトバ・ツムギ。社長の「この文で」待ち)
@@ -1161,7 +1161,7 @@ const ASSISTANT_MASMON_RENAMED_LINES = Object.freeze({
   dra: '{name}、マスモンたちに新しい名前を付けたぞ。見てやってくれ',
   atsu: '{name}、マスモンたちに新しい名前付けた笑 見てって！',
   kyuko: 'ほい、{name}。マスモンたちに新しい名前付けたよ〜。見てみてねぇ',
-  sorashido: '{name}、マスモンたちに新しい名前を付けたぜ・・・！ 見てくれ笑',
+  sorashido: '{name}、マスモンたちに新しい名前を付けました・・・！ 見てください笑',
   erubin: '{name}、マスモンたちに新しい名前を付けたんだ。見てくれるかな',
 });
 const assistantMasmonRenamedLine = (aid) => { const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(aid) : 'あなた'; return String(ASSISTANT_MASMON_RENAMED_LINES[aid] || '{name}、マスモンたちに新しい名前を付けたよ').split('{name}').join(call); };
@@ -1342,8 +1342,9 @@ function AssistantMasmonDeckAsk({ who, onAsk }) {
     </div>);
 }
 // 提案のシート(自由に書いて送る → 助手の返事・変わった所)。印 assistantMasmonSuggest が偽のときは開くボタン自体を出さない
-function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose }) {
-  const [text, setText] = React.useState('');
+// initialText: 文をあらかじめ入れて開く(対戦の振り返りの「💡 ◯◯を鍛えてと提案する」から・ミセカタ 11-11)。送るのはプレイヤーが押したとき
+function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose, initialText = '' }) {
+  const [text, setText] = React.useState(typeof initialText === 'string' ? initialText.slice(0, 100) : '');
   const [busy, setBusy] = React.useState(false);
   const [out, setOut] = React.useState(null);
   useAssistantMasmonSave();
@@ -1499,12 +1500,15 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   const p = assistantMasmonPlanOf(id);
   if (!who || !p) return null;
   const team = assistantMasmonTeam(p), bench = assistantMasmonBench(p, save), all = [...team, ...bench], waiting = assistantMasmonWaiting(p, save);
+  const waitSorted = waiting.slice().sort((a, b) => (a.welcome || 0) - (b.welcome || 0)), waitNext = waitSorted[0] || null, waitRest = waitSorted.slice(1); // 🔒の枠は次の1体だけ大きく、残りは1行(通し点検の改善案9)
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      {waitNext && <p className="mhm-card mb-2 text-[12px] font-black text-pink-100" data-assistant-masmon-next-lv>💗 {Number.isFinite(bondLv) && waitNext.welcome > bondLv ? `あと仲良し度 ${waitNext.welcome - bondLv} Lv で、次のマスモンを迎えます` : `仲良し度 Lv${waitNext.welcome} で、次のマスモンを迎えます`}</p>}
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waitNext && <AssistantMasmonWaitCard key={waitNext.monster} t={waitNext} land={land}/>}</div>
+      {waitRest.length > 0 && <p className="mt-2 rounded-xl border border-dashed border-slate-600 px-3 py-2 text-[11px] font-bold text-slate-400" data-assistant-masmon-wait-rest={waitRest.length}>🔒 ほかに {waitRest.length} 体(仲良し度 {waitRest.map(t => `Lv${t.welcome}`).join('・')} で迎えます)</p>}
       {p.v2 && <AssistantMasmonStyleRow who={who}/>}
       {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
@@ -1876,6 +1880,7 @@ function AssistantMasmonRoomPet({ id, h, life }) {
     });
   }, [key, tick, size]);
   // 歩く: 止まる(3〜6秒・印を出す)→ 止まってよい所のどこかへ歩く(1秒に14px くらい)
+  //   (2026-11-11 カルク: 歩きは left ではなく transform で動かす。left だと歩くあいだ毎コマ配置の計算と描き直しが起き、助手ライフを開いているだけで重かった。見た目は同じ)
   React.useEffect(() => {
     if (!plan || !at || assistantMasmonReducedMotion()) return undefined;
     let alive = true, timer = null;
@@ -1903,7 +1908,7 @@ function AssistantMasmonRoomPet({ id, h, life }) {
   return (
     <span ref={ref} className="mhm-pet" data-assistant-life-room-masmon-pet={t.monster} data-assistant-life-room-masmon-where={where.kind}
       data-assistant-life-room-masmon-walk={plan ? `${plan.run[0]}-${plan.run[1]}` : ''} data-assistant-life-room-masmon-moving={show && at.moving ? '1' : '0'}
-      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(show ? { left: at.x, top: plan.y, width: size, height: size, transition: at.moving ? `left ${at.ms}ms linear` : 'none' } : { left: 0, top: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
+      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(show ? { left: 0, top: plan.y, width: size, height: size, transform: `translateX(${at.x}px)`, transition: at.moving ? `transform ${at.ms}ms linear` : 'none' } : { left: 0, top: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
       {show && <>
         <span style={{ display: 'block', width: '100%', height: '100%', transform: at.dir < 0 ? 'scaleX(-1)' : 'none', animation: at.moving ? 'mhmPetHop .5s ease-in-out infinite' : 'none' }}>
           {typeof DyedMonsterImage === 'function'
@@ -1984,7 +1989,7 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
 .mhm-body{flex:1;min-height:0;overflow-y:auto;padding:2px 2px 6px}
-.mhm-tab{border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.mhm-tab{min-height:44px;border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
 .mhm-tab.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
 .mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
 .mhm-pic{flex-shrink:0;border-radius:10px;background:radial-gradient(circle at 50% 40%,#94a3b8,#475569);overflow:hidden;margin:0 auto}

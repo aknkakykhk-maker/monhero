@@ -35,7 +35,7 @@ const grab = (from, to) => {
   const j = game.indexOf(to, i);
   return i >= 0 && j > i ? game.slice(i, j) : '';
 };
-const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{', '\n// モンスターノーツ用のマスモン設定');
+const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null,onPreview=null,initialDraft=null})=>{', '\n// モンスターノーツ用のマスモン設定');
 
 // ---- タブ ----
 check('オプションの本体が取り出せている', options.length > 0);
@@ -61,7 +61,8 @@ check('横向きでは見出しとタブを1行に並べる',
   options.includes("data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}")
   && /data-rhythm-options-tabs className=\{`grid shrink-0 grid-cols-4 px-3 \$\{wide\?'min-w-0 flex-1/.test(options));
 check('横向きでは中身を3列に並べる',
-  /const grid=`grid gap-2\.5 \$\{wide\?'grid-cols-3 gap-2':'grid-cols-2'\}`/.test(options));
+  // 2026-11 に横の列を上そろえ(items-start)にした。3列のままであることを見る
+  /const grid=`grid gap-2\.5 \$\{wide\?'grid-cols-3(?: items-start)? gap-2':'grid-cols-2'\}`/.test(options));
 // 横向きは高さが390pxしかない。高さを食うものは出さない・詰める
 check('横向きでは高さを食うものを省く(説明・スライダー・外枠・見出し)',
   options.includes('{description&&!wide&&<details data-rhythm-option-help')
@@ -71,7 +72,8 @@ check('横向きでは高さを食うものを省く(説明・スライダー・
   && options.includes('{!wide&&<h3 className={head}>◆ 見え方</h3>}')
   && options.includes('{!wide&&<h3 className={favHead}>★ よく触る設定</h3>}'));
 check('項目は枠に入れ、頭に帯のラベルを置く',
-  /const field=\(title,control,description=null,\{full=false\}=\{\}\)=>/.test(options)
+  // 2026-11 に「横で3列ぶん広く取る」(wideFull)の指定が足された。枠と帯のラベルはそのまま
+  /const field=\(title,control,description=null,\{full=false(?:,wideFull=false)?\}=\{\}\)=>/.test(options)
   && options.includes('data-rhythm-option-field')
   && options.includes('rounded-lg bg-cyan-700/70 px-2 text-center'));
 check('説明は畳んでおく(消してはいない)',

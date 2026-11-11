@@ -75,6 +75,10 @@
       "role": "エイキの桜・パンドラの雷などバトル演出の部品"
     },
     {
+      "file": "24-battle-hit-feel.jsx",
+      "role": "バトルの手ごたえ(当たりの間・会心と撃破の見せ方・効果の札の種類)。敵に出た数字の札とライフを読むだけで、計算には触れない。state は持たない"
+    },
+    {
       "file": "24-sorashido-copy-view.jsx",
       "role": "アシカ「ソラシドの自動化」の見せ方の部品(コピーの演出・次に使うカードの札・コピーの手札の窓)。状態は持たず、バトル部が呼ぶ"
     },
@@ -105,6 +109,10 @@
     {
       "file": "30-rhythm-play.jsx",
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+    },
+    {
+      "file": "30-rhythm-preview-hands.jsx",
+      "role": "オプションの「▶ 見てみる」の見本を自動で叩く手(ふつうの指と同じポインタの合図を送るだけ。判定には触らない)"
     },
     {
       "file": "31-debug-ui.jsx",
@@ -218,6 +226,10 @@
     {
       "file": "44-growth-fx.jsx",
       "role": "上がる値の演出(仲良し度・絆Lv・ブリーダーLv など。小=札・中=アイテムのカード・大=Lvアップ)。見た目だけ"
+    },
+    {
+      "file": "45-quick-anywhere-float.jsx",
+      "role": "裏クイック(どこでも回す)の小さな帯の置き場所。右下を第一に、画面のボタンにかからない隅を選ぶ。見た目だけ"
     },
     {
       "file": "50-error-boundary.jsx",
@@ -402,6 +414,10 @@
     {
       "file": "56-assistant-life-masmon-train.jsx",
       "role": "部品: 助手のマスモンの修行と助手の成長(社長の仕様書の第②段階・シュギョウ)。修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・相談・出来事。第①段階(育成)へは受け口 amgtChoose/amgtDo/amgtAfterAct と掛け算、第③段階(戦闘)へは amgtBattleOf/amgtTacticsOf。公開の印 assistantMasmonTrain の後ろ。保存は新しいキー mh_assistant_masmon_train_v1 だけ。案 docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md"
+    },
+    {
+      "file": "56-assistant-masmon-battle-view.jsx",
+      "role": "部品: 助手のマスモンの対戦を観戦する試作(AssistantMasmonBattleWatch)。入口はデバッグ設定だけ。data/assistant-masmon-battle.js を開いたときにだけ読み、1戦の記録を再生する。何も保存しない。2026-11-11 VIEW-PLAN.md"
     },
     {
       "file": "56-assistant-life-friend.jsx",

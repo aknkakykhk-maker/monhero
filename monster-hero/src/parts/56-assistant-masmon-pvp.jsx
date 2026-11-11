@@ -78,15 +78,16 @@ const masmonPvpRead = async (path) => {
 };
 
 // 自分の助手の編成を登録する(登録し直しも同じ)。members は出る順。1体 = { slot, species, name, lv(育成の Lv・1〜99), stats, techs?, mastery? }
-//   style は作戦・交代の早さ(計算の style の上書き・0.5〜1.5)。size は登録する体数(1〜3。members の先頭から)
-const masmonPvpRegister = async ({ assistantId, size, members, style, tactics, userName, icon } = {}) => {
+//   plan は作戦('attack'|'guard'|'range'|'big')・swapPace は交代の早さ('early'|'late')。無くてよい(計算の表 PLANS・SWAP_PACES の名前)。size は登録する体数(1〜3。members の先頭から)
+const masmonPvpRegister = async ({ assistantId, size, members, plan, swapPace, tactics, userName, icon } = {}) => {
   if (!masmonPvpOn()) return { ok: false, reason: 'off' };
   const me = await masmonPvpSelf(true);
   if (!me) return { ok: false, reason: 'no_id' };
   const n = Math.max(1, Math.min(3, Number.isInteger(size) ? size : 3));
   const list = (Array.isArray(members) ? members : []).slice(0, n);
   const team = { tactics: Number.isInteger(tactics) ? Math.max(0, Math.min(100, tactics)) : 0, members: list };
-  if (style && typeof style === 'object') team.style = style;
+  if (typeof plan === 'string' && plan) team.plan = plan;
+  if (typeof swapPace === 'string' && swapPace) team.swapPace = swapPace;
   const r = await masmonPvpPost({ action: 'register', owner: me.owner, key: me.key, assistant: assistantId,
     name: typeof userName === 'string' ? userName : '', icon: typeof icon === 'string' ? icon : null, team });
   return r.ok ? { ok: true } : { ok: false, reason: r.reason, detail: r.detail };

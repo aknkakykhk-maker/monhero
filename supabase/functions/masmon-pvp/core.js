@@ -38,9 +38,8 @@ export const DIVISIONS = Object.freeze(['raw', 'fair']);
 export const BALANCE = 'A';
 export const MASTERY_MAX = 100;
 const MASTERY_EXTRA = ['guard', 'dist', 'swap'];
-// 作戦・交代の早さ(社長の決め ❹A)。計算の style の上書き。読み(read)は性格と戦術経験で決まるので上書きさせない
-export const STYLE_MIN = 0.5;
-export const STYLE_MAX = 1.5;
+// 作戦・交代の早さ(社長の決め ❹A)。計算の第3版は名前で受ける(plan・swapPace。倍率は計算側の表 PLANS・SWAP_PACES)。
+//   数値の style は受けない(登録の形に入っていても計算へ渡さない)
 
 const MS_DAY = 86400000;
 const OWNER_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -111,18 +110,17 @@ export const parseTeam = (raw, engine, catalog, learn = {}) => {
     }
     members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats, techs: [...techs], mastery });
   }
-  // 作戦(無くてよい)。計算の性格の重みの名前だけ・0.5〜1.5
-  let style = null;
-  if (raw.style != null) {
-    if (typeof raw.style !== 'object' || Array.isArray(raw.style)) return { error: 'style' };
-    const keys = Object.keys((engine.STYLES && engine.STYLES.atsu) || {}).filter((k) => k !== 'read' && k !== 'label');
-    style = {};
-    for (const [k, v] of Object.entries(raw.style)) {
-      if (!keys.includes(k) || typeof v !== 'number' || !Number.isFinite(v) || v < STYLE_MIN || v > STYLE_MAX) return { error: 'style' };
-      style[k] = Math.round(v * 100) / 100;
-    }
+  // 作戦(plan)・交代の早さ(swapPace)。無くてよい。計算の表にある名前だけ
+  const team = { tactics: raw.tactics, members };
+  if (raw.plan != null) {
+    if (typeof raw.plan !== 'string' || !(engine.PLANS && Object.prototype.hasOwnProperty.call(engine.PLANS, raw.plan))) return { error: 'plan' };
+    team.plan = raw.plan;
   }
-  return { team: style ? { tactics: raw.tactics, members, style } : { tactics: raw.tactics, members } };
+  if (raw.swapPace != null) {
+    if (typeof raw.swapPace !== 'string' || !(engine.SWAP_PACES && Object.prototype.hasOwnProperty.call(engine.SWAP_PACES, raw.swapPace))) return { error: 'swapPace' };
+    team.swapPace = raw.swapPace;
+  }
+  return { team };
 };
 
 export const unitKeyOf = (m) => `${m.slot}:${m.species}`;
@@ -186,7 +184,8 @@ export const battleTeam = ({ assistantId, team, division, size, engine }) => {
   return {
     assistantId,
     tactics: team.tactics,
-    ...(team.style ? { style: { ...team.style } } : {}),
+    ...(team.plan ? { plan: team.plan } : {}),
+    ...(team.swapPace ? { swapPace: team.swapPace } : {}),
     members: division === 'fair' ? list.map((u) => fairUnit(u, engine.STAT_KEYS)) : list,
   };
 };

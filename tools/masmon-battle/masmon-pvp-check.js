@@ -114,9 +114,10 @@ const check = (name, ok, extra) => {
     check('C 名前に URL・メール・長い数字ははじく', ['http://x', 'a@b', 'もち12345', ''].every((n) => bad({ tactics: 0, members: [member(0, SPEC[0], { name: n })] }, 'name')));
     check('C 名前は13字ではじく・12字は通る', bad({ tactics: 0, members: [member(0, SPEC[0], { name: 'あ'.repeat(13) })] }, 'name')
       && !core.parseTeam({ tactics: 0, members: [member(0, SPEC[0], { name: 'あ'.repeat(12) })] }, engine, catalog).error);
-    check('C 作戦(style)は 0.5〜1.5 の数で通る・幅の外や読み(read)・知らない名前ははじく',
-      !core.parseTeam({ ...team3(), style: { aggr: 1.3, swap: 0.5 } }, engine, catalog, learn).error
-      && bad({ ...team3(), style: { aggr: 1.6 } }, 'style') && bad({ ...team3(), style: { read: 1 } }, 'style') && bad({ ...team3(), style: { nope: 1 } }, 'style'));
+    check('C 作戦(plan)と交代の早さ(swapPace)は計算の表の名前だけ通る',
+      !core.parseTeam({ ...team3(), plan: Object.keys(engine.PLANS)[0], swapPace: Object.keys(engine.SWAP_PACES)[0] }, engine, catalog, learn).error
+      && bad({ ...team3(), plan: 'nope' }, 'plan') && bad({ ...team3(), swapPace: 'nope' }, 'swapPace') && bad({ ...team3(), plan: 1 }, 'plan'));
+    check('C 数値の style は計算へ渡さない', !('style' in core.parseTeam({ ...team3(), style: { aggr: 1.8 } }, engine, catalog, learn).team));
     check('C 戦術経験が 0〜100 の整数でなければはじく', bad({ tactics: 101, members: [member(0, SPEC[0])] }, 'tactics'));
   }
 
@@ -191,8 +192,14 @@ const check = (name, ok, extra) => {
     const fm = r.json.match;
     check('F 公平の区分は能力をそろえて回す', fm && fm.teamA.members.every((u) => K.reduce((t, k) => t + u.stats[k], 0) === core.FAIR_TOTAL));
     r = await ch({ size: 1 });
-    check('F 作戦を登録すると計算に渡る', (await reg('alice', KEY_A, 'mua', { ...team3(), style: { aggr: 0.6 } }, T0 + 86400000)).status === 200
-      && (await ch({}, T0 + 86400000)).json.match.teamA.style.aggr === 0.6);
+    {
+      const pl = Object.keys(engine.PLANS)[1] || Object.keys(engine.PLANS)[0];
+      const sp = Object.keys(engine.SWAP_PACES)[0];
+      const ok = (await reg('alice', KEY_A, 'mua', { ...team3(), plan: pl, swapPace: sp }, T0 + 86400000)).status === 200;
+      const mm = (await ch({}, T0 + 86400000)).json.match;
+      const rp = client.engine.simulate({ seed: mm.seed, catalog: client.catalog, teamA: mm.teamA, teamB: mm.teamB, balance: mm.balance });
+      check('F 作戦と交代の早さを登録すると計算に渡り、見返しても同じ指紋', ok && mm.teamA.plan === pl && mm.teamA.swapPace === sp && rp.digest === mm.digest);
+    }
     check('F 1対1 も回せる(先頭の1体)', r.status === 200 && r.json.match.teamA.members.length === 1);
     r = await ch({ division: 'cheat' });
     check('F 知らない区分ははじく', r.status === 400 && r.json.error === 'division');
