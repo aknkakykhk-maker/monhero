@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3e4b4a4c4ee03a2a
+// generated-sha256: 00d5a8955acd04ca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67435,7 +67435,9 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
   const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'), src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
-  React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
+  // 測り終えるまでは見せない(仮の形は顔でそろえる決まりを通らず、一瞬だけ顔が小さく出ていた・2026-11-11 ミヤスサ点検 ③)。測れなかった絵(読み込みの失敗)は仮の形のまま見せる
+  const [ready, setReady] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.has(src));
+  React.useEffect(() => { let alive = true; setReady(ASSISTANT_LIFE_STAND_BOX.has(src)); assistantLifeStandBox(src).then(b => { if (alive) { setBox(b); setReady(true); } }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
   const b = box || { t: 0, b: 1, l: 0, r: 1, ar: 0.6 };
   // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
@@ -67450,7 +67452,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   const mask = 'linear-gradient(#000 74%,transparent)';
   // 印(💤・ごほうび済み)は、下をぼかした絵の外側に重ねる(ぼかしに消されない)
   return (
-    <span className="relative block shrink-0" style={{ width: w, height: h }}>
+    <span className="relative block shrink-0" style={{ width: w, height: h, visibility: ready ? undefined : 'hidden' }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
         <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
         {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
@@ -67639,8 +67641,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             return <button type="button" disabled={info.used} title={`${info.ask.nick}の${info.ask.stat}を鍛えたい`} data-assistant-life-map-act="ranch-ticket" onClick={() => { setSheet(null); try { assistantMasmonRanchOpen(id); } catch (_) {} }} className={`rounded-xl min-h-[44px] px-3 py-1 text-[12px] font-black active:scale-95 ${info.used ? 'border border-slate-500/60 text-slate-300' : 'bg-gradient-to-r from-emerald-600 to-lime-600 text-white'}`}>{info.used ? '✓ チケット済み' : '🎫 チケットを使う'}</button>;
           })()}
           {place === 'battle' && !ti && battleBtn}
-          {typeof onView === 'function' && <button type="button" data-assistant-life-map-act="view" onClick={() => onView(id)} className="rounded-xl border border-sky-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-sky-100 active:scale-95">💬 詳細を見る</button>}
-          <button type="button" data-assistant-life-map-act="room" onClick={() => { setSheet(null); onPick(id); }} className="rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
+          <button type="button" data-assistant-life-map-act="room" onClick={() => { if (typeof onView === 'function') onView(id); else { setSheet(null); onPick(id); } }} className="rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
         </div>)}
         {ti && (
           <div className="grid w-full gap-1" style={{ gridTemplateColumns: battleBtn ? '1fr 1fr 1fr' : '1fr 1fr' }} data-assistant-life-map-train-acts={id}>
@@ -67659,7 +67660,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       <style>{`.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`}</style>
       {/* 地図の枠は少なくとも画面の高さ。HOME の場面が画面より低い端末(上下に帯がある iPhone など)で、
           下の一覧の見出しが地図の下にのぞいて切れて見えていた(2026-11-09 社長「画面バグってる」) */}
@@ -67692,7 +67693,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           </div>
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}
         </div>
-        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ bottom: land ? 68 : 'calc(68px + env(safe-area-inset-bottom))' }} data-assistant-life-map-hint>場所を押すと、いる助手とできること</p>
+        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ top: land ? 54 : 'calc(60px + env(safe-area-inset-top))' }} data-assistant-life-map-hint>場所を押すと、いる助手と「いま行くと得」が見られます</p>{/* 下にあるとモンヒロバトルの札にかぶっていた(2026-11-11 ミヤスサ点検 ⑥)。上のタブのすぐ下へ */}
       </div>
       </div>
       {list && <div ref={listRef} className="relative bg-[#0b1020]" data-assistant-life-map-below>{list}</div>}

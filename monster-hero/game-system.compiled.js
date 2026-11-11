@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 806410ea0247d549
+// source-sha256: 13a402064cf6cf86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114966,10 +114966,15 @@ function AssistantLifeMapFig({
   const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'),
     src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  const [ready, setReady] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.has(src));
   React.useEffect(() => {
     let alive = true;
+    setReady(ASSISTANT_LIFE_STAND_BOX.has(src));
     assistantLifeStandBox(src).then(b => {
-      if (alive) setBox(b);
+      if (alive) {
+        setBox(b);
+        setReady(true);
+      }
     });
     return () => {
       alive = false;
@@ -115000,7 +115005,8 @@ function AssistantLifeMapFig({
     className: "relative block shrink-0",
     style: {
       width: w,
-      height: h
+      height: h,
+      visibility: ready ? undefined : 'hidden'
     }
   }, React.createElement("span", {
     className: "absolute inset-0 overflow-hidden",
@@ -115538,17 +115544,14 @@ function AssistantLifeTownMap({
         },
         className: `rounded-xl min-h-[44px] px-3 py-1 text-[12px] font-black active:scale-95 ${info.used ? 'border border-slate-500/60 text-slate-300' : 'bg-gradient-to-r from-emerald-600 to-lime-600 text-white'}`
       }, info.used ? '✓ チケット済み' : '🎫 チケットを使う');
-    })(), place === 'battle' && !ti && battleBtn, typeof onView === 'function' && React.createElement("button", {
-      type: "button",
-      "data-assistant-life-map-act": "view",
-      onClick: () => onView(id),
-      className: "rounded-xl border border-sky-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-sky-100 active:scale-95"
-    }, "💬 詳細を見る"), React.createElement("button", {
+    })(), place === 'battle' && !ti && battleBtn, React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "room",
       onClick: () => {
-        setSheet(null);
-        onPick(id);
+        if (typeof onView === 'function') onView(id);else {
+          setSheet(null);
+          onPick(id);
+        }
       },
       className: "rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95"
     }, "🏡 部屋へ ›")), ti && React.createElement("div", {
@@ -115604,7 +115607,7 @@ function AssistantLifeTownMap({
   }, typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
     className: "relative",
     style: {
@@ -115723,10 +115726,10 @@ function AssistantLifeTownMap({
   }, "📃 一覧 ↓")), React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
     style: {
-      bottom: land ? 68 : 'calc(68px + env(safe-area-inset-bottom))'
+      top: land ? 54 : 'calc(60px + env(safe-area-inset-top))'
     },
     "data-assistant-life-map-hint": true
-  }, "場所を押すと、いる助手とできること"))), list && React.createElement("div", {
+  }, "場所を押すと、いる助手と「いま行くと得」が見られます"))), list && React.createElement("div", {
     ref: listRef,
     className: "relative bg-[#0b1020]",
     "data-assistant-life-map-below": true
