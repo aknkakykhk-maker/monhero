@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e7d17302a39ee946
+// source-sha256: 5eb4d244ab47ca64
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67247,6 +67247,8 @@ function BreederMarketScreen({
     return eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId);
   }).map(offer => rhythmEventPointShopOfferWithPass(offer, legendPassActive === true));
   const legendPassSlot = eventItemOffers.some(offer => offer.legendPass === true);
+  const lifeNoteOf = offer => typeof assistantLifeShopNoteOf === 'function' ? assistantLifeShopNoteOf(offer.itemId) : null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer => !!lifeNoteOf(offer));
   const renderSectionTabs = (section, scroll = false) => {
     const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
@@ -67808,6 +67810,14 @@ function BreederMarketScreen({
     }, offer.baseCost.toLocaleString(), "P→", offer.baseGrantAmount.toLocaleString(), offer.unit), React.createElement("span", {
       className: "whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums"
     }, offer.cost.toLocaleString(), "P→", offer.grantAmount.toLocaleString(), offer.unit)) : null;
+    const lifeNoteDef = offer.legendPass ? null : lifeNoteOf(offer);
+    const lifeNote = lifeNoteDef ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "data-market-life-mark": true,
+      className: `whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone === 'f' ? 'bg-emerald-200 text-emerald-950' : lifeNoteDef.tone === 'p' ? 'bg-pink-300 text-pink-950' : 'bg-amber-400 text-slate-900'}`
+    }, lifeNoteDef.mark), lifeNoteDef.lines.map((t, i) => React.createElement("span", {
+      key: i,
+      className: `whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i === 1 && lifeNoteDef.tone !== 'a' ? 'text-slate-400' : 'text-amber-200'}`
+    }, t))) : null;
     return React.createElement(MarketProductCard, {
       key: offer.id,
       dataAttrs: {
@@ -67819,8 +67829,8 @@ function BreederMarketScreen({
       item: item,
       owned: false,
       comingSoon: false,
-      noteSlot: legendPassSlot,
-      note: passNote,
+      noteSlot: noteSlotOn,
+      note: passNote || lifeNote,
       canBuy: safeEventPoints >= offer.cost && !busy,
       disabled: purchaseProcessing,
       onZoom: () => onZoomIcon(item),
@@ -89318,6 +89328,51 @@ function MasuAutoEnhanceScreen({
     className: "w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2"
   }, "完了")));
 }
+function RhythmHistoryBanner({
+  event
+}) {
+  const src = rhythmEventBanner(event);
+  const [failed, setFailed] = useState(false);
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+    setZoom(false);
+  }, [src]);
+  if (!src || failed) return null;
+  const name = event && event.name ? event.name : 'イベント';
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-rhythm-history-banner": true,
+    onClick: () => setZoom(true),
+    "aria-label": `${name}の画像を大きく見る`,
+    className: "relative mb-2 block w-full overflow-hidden rounded-2xl border border-fuchsia-300/30 active:scale-[.98]"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${name}の告知`,
+    onError: () => setFailed(true),
+    loading: "lazy",
+    decoding: "async",
+    className: "block w-full landscape:max-h-[45vh] landscape:object-contain landscape:bg-black/40"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute bottom-1 right-1 rounded-lg bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-white"
+  }, "🔍 大きく見る")), zoom && React.createElement("div", {
+    "data-rhythm-history-banner-zoom": true,
+    role: "dialog",
+    "aria-label": `${name}の画像`,
+    onClick: () => setZoom(false),
+    className: "fixed inset-0 z-[300] flex flex-col items-center justify-center gap-2 bg-black/85 p-3"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${name}の告知`,
+    className: "max-h-[80%] max-w-full rounded-xl object-contain"
+  }), React.createElement("button", {
+    type: "button",
+    "data-rhythm-history-banner-close": true,
+    onClick: () => setZoom(false),
+    className: "min-h-[44px] rounded-xl bg-white/15 px-6 text-xs font-black text-white"
+  }, "閉じる")));
+}
 function RhythmHistoryScreen({
   entries,
   selected,
@@ -89447,7 +89502,9 @@ function RhythmHistoryScreen({
   }, "対象曲 ", entry.event?.songIds?.length || 0, "曲")), React.createElement(ChevronRight, {
     size: 16,
     className: "shrink-0 text-slate-500"
-  })))))), selected && React.createElement(React.Fragment, null, React.createElement("div", {
+  })))))), selected && React.createElement(React.Fragment, null, selected.kind === 'limited' && React.createElement(RhythmHistoryBanner, {
+    event: selected.event
+  }), React.createElement("div", {
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3"
   }, React.createElement("div", {
     className: "flex items-center gap-2"
@@ -128040,6 +128097,30 @@ const assistantLifeGiftOf = kindOrKey => {
     cost: Number.isFinite(offer.cost) ? offer.cost : null
   };
 };
+const assistantLifeShopNoteOf = itemId => {
+  const id = String(itemId || '');
+  if (/^furn_/.test(id)) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
+    if (!f) return null;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    return {
+      tone: 'f',
+      mark: '🪑 家具',
+      lines: [`💗 +${base}`, '初回だけ']
+    };
+  }
+  const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
+  if (!g) return null;
+  return assistantLifeIsSoloOnly(g.key) ? {
+    tone: 'p',
+    mark: '💗 1人に',
+    lines: [`💗 +${g.player}`, '1人用']
+  } : {
+    tone: 'a',
+    mark: '🤝 2人に',
+    lines: [`友情Lv +${g.peer}`, `💗 +${g.player}`]
+  };
+};
 const assistantLifeGiftCounts = ownedItems => {
   const o = {};
   for (const g of [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()]) {
@@ -129163,7 +129244,7 @@ function AssistantLifeGiftSheet({
     className: "whitespace-nowrap text-[11px] font-bold text-slate-400"
   }, " ビートP交換所 ", info.cost, "P")), React.createElement("p", {
     className: "text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
-  }, info.what))), React.createElement("div", {
+  }, soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[12px]"
   }, people.map((id, i) => React.createElement("div", {
     key: id,
@@ -139208,11 +139289,14 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   const o = opts && typeof opts === 'object' ? opts : {};
   const preview = !ambbOn();
   if (preview && o.from !== 'debug') return false;
+  const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
+  if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
   AMBB_HOST.set({
     assistantId: typeof o.assistantId === 'string' ? o.assistantId : '',
     from: typeof o.from === 'string' ? o.from : 'room',
     foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '',
     preview,
+    tryPvp,
     at: Date.now()
   });
   return true;
@@ -139298,6 +139382,7 @@ function AssistantMasmonBattleBeta({
   assistantId,
   foeAssistantId,
   preview,
+  tryPvp,
   onClose
 }) {
   const save = useAmbbSave();
@@ -139472,7 +139557,7 @@ function AssistantMasmonBattleBeta({
       }
     }));
   };
-  const pvp = ambbPvpOn() && !preview;
+  const pvp = ambbPvpOn() && !preview || !!tryPvp && typeof masmonPvpChallenge === 'function';
   const srcNow = pvp ? src || (foes.length ? 'local' : 'friend') : 'local';
   const startPvp = (m, foe) => {
     if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
@@ -139859,7 +139944,7 @@ function AssistantMasmonBattleBeta({
         textAlign: 'center',
         marginTop: 8
       }
-    }, "公開前の確かめです。戦績も設定も保存しません。"));
+    }, "公開前の確かめです。戦績も設定も保存しません。", tryPvp ? 'フレンド対戦は本物のサーバに登録・記録されます。' : ''));
   } else if (phase === 'rank' && pvp) {
     body = React.createElement(AmbbRanking, {
       me: me,
@@ -143429,7 +143514,7 @@ function AlfFriendHouseView({
       setLeaving(null);
       setBondOpen(true);
     }
-  }), React.createElement("p", {
+  }), !(land && typeof albEnabled === 'function' && albEnabled()) && React.createElement("p", {
     className: "mb-1 text-[10px] font-black text-slate-200"
   }, "この家でできること"), React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
@@ -144476,7 +144561,7 @@ const normalizeAssistantLifeFriendBond = v => {
       },
       done: x.done === true,
       liked: (Array.isArray(x.liked) ? x.liked : []).filter(s => typeof s === 'string' && ALB_SPOT_RE.test(s)).slice(0, ALB_MAX.likes),
-      in: (Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(-12),
+      in: [...new Set((Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-12),
       snap: albNormalizeSnap(x.snap)
     };
   }
@@ -144617,7 +144702,7 @@ const albIncoming = pairs => {
         [fid]: {
           ...x,
           st: Math.min(9999, x.st + 1),
-          in: [...x.in, day].slice(-12)
+          in: [...new Set([...x.in, day])].sort().slice(-12)
         }
       }
     };
@@ -144941,15 +145026,15 @@ function AlfBondBar({
   const full = !x.done && s.bond.houses >= ALB_MAX.houses;
   return React.createElement("button", {
     type: "button",
-    className: `flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-1 py-0' : 'mb-1.5 py-1'}`,
+    className: `flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-0.5 py-0' : 'mb-1.5 py-1'}`,
     "data-alb-bar": true,
     onClick: onOpen
   }, React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
-    className: "block truncate text-[11.5px] font-black text-pink-100",
+    className: `block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`,
     "data-alb-bar-title": true
-  }, "🤝 友情Lv", albLv(x.st), "「", albTitle(x.st), "」", compact ? (x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`) + (fresh ? ` ・ ✨${fresh}` : '') : ''), React.createElement("small", {
+  }, compact ? `🤝 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🤝 友情Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
     className: `truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`,
     "data-alb-bar-sub": true
   }, x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`, fresh ? ` ・ ✨ 見どころ ${fresh}` : '')), React.createElement("span", {
@@ -144957,7 +145042,7 @@ function AlfBondBar({
     "data-alb-bar-tasks": true
   }, ALB_TASKS.map(([k, icon]) => React.createElement("i", {
     key: k,
-    className: `flex ${compact ? 'h-5 w-5' : 'h-6 w-6'} items-center justify-center rounded-full text-[12px] not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`,
+    className: `flex ${compact ? 'h-4 w-4 text-[10px]' : 'h-6 w-6 text-[12px]'} items-center justify-center rounded-full not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`,
     "data-alb-task": k,
     "data-alb-task-done": x.t[k] ? '1' : '0'
   }, icon))), React.createElement("span", {
@@ -145001,7 +145086,7 @@ function AlfBondSheet({
       width: '46%',
       top: 0,
       maxHeight: '100%',
-      paddingTop: 92,
+      paddingTop: 14,
       borderRadius: '22px 0 0 22px'
     } : {
       maxHeight: 'calc(100% - 96px)'
@@ -145025,7 +145110,7 @@ function AlfBondSheet({
     "data-alb-tasks": true
   }, ALB_TASKS.map(([k, icon, label]) => React.createElement("div", {
     key: k,
-    className: `rounded-xl px-1 py-1.5 text-center text-[11px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`
+    className: `whitespace-nowrap rounded-xl px-0.5 py-1.5 text-center text-[10.5px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`
   }, icon, " ", label, x.t[k] ? ' ✔' : ''))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-300"
   }, "この家で3つすると、今日のスタンプが1個たまります(1軒につき1日1個・1日", ALB_MAX.houses, "軒まで)。", friend.name, "さんにも、あなたが来た日に1個たまります。"), React.createElement("p", {
@@ -215201,6 +215286,17 @@ function MonsterHeroGame() {
       onClick: () => {
         if (typeof assistantMasmonBattleOpen === 'function') assistantMasmonBattleOpen({
           from: 'debug'
+        });
+      }
+    }), React.createElement(DebugMenuRow, {
+      "data-debug-masmon-battle-pvp-try": true,
+      icon: "👥",
+      label: "助手マスモンのフレンド対戦を試す(本物のサーバ)",
+      desc: "この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)",
+      onClick: () => {
+        if (typeof assistantMasmonBattleOpen === 'function') assistantMasmonBattleOpen({
+          from: 'debug',
+          tryPvp: true
         });
       }
     })), React.createElement(DebugMenuGroup, {
