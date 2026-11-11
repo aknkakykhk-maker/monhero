@@ -10,6 +10,7 @@
 //   ⑦ 旧UI(保存が false)は今までどおり: タブ5つ・「みんなの居場所」・地図の下の一覧
 //   ⑧ 保存が無い人は ASSISTANT_LIFE_UI_V2_DEFAULT のとおり・保存 mh_assistant_life_ui_v2 は開いただけでは書き換わらない
 //   ⑨ ページのエラーが出ない
+//   ⑫ 切替は設定の「助手ライフの画面」(助手ライフの上の帯には無い)
 //   ⑩ 家の8部屋: 留守の札は字10.5px以上・家にいる助手の部屋に「会える」の印
 //   ⑪ きずな: 組の行は高さ44px以上で、次の Lv まであといくつが出る
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -40,7 +41,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
   const open = async (v, saved) => {
     const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: SHOTS ? 2 : 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
-    await page.addInitScript((sv) => { window.__mhSupabaseStubbed = true; if (sv != null) localStorage.setItem('mh_assistant_life_ui_v2', sv); else localStorage.removeItem('mh_assistant_life_ui_v2'); }, saved);
+    await page.addInitScript((sv) => { window.__mhSupabaseStubbed = true; if (sv != null) localStorage.setItem('mh_assistant_life_ui_v2', sv); else window.__mhLifeUiNoSeed = true; }, saved);
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -123,6 +124,26 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const page = await open(VIEWS[0], null);
     const r = await page.evaluate(() => ({ def: ASSISTANT_LIFE_UI_V2_DEFAULT, v2: !document.querySelector('[data-assistant-life-icon="items"]'), saved: localStorage.getItem('mh_assistant_life_ui_v2') }));
     check(`⑧ 保存が無い人は既定(${r.def ? '新UI' : '旧UI'})で開き、保存は書き換わらない`, r.v2 === r.def && r.saved === null, JSON.stringify(r));
+    await page.close();
+  }
+  for (const v of VIEWS) { // ⑫ 切替は設定の中: 助手ライフの上の帯に切替は無く、設定の「助手ライフの画面」で前の画面を選ぶと、次に開いたとき前の画面
+    const T = `[${v.name}] `;
+    const page = await open(v, null);
+    const noSwitch = await page.locator('[data-assistant-life-ui-switch]').count() === 0;
+    await page.locator('[data-assistant-life-close]').first().click(); await page.waitForTimeout(500);
+    await page.locator('.mh-home-settings').first().click({ timeout: 8000 }); await page.waitForTimeout(700);
+    const row = page.locator('[data-assistant-life-ui-setting]');
+    await row.scrollIntoViewIfNeeded().catch(() => {});
+    const before = await page.evaluate(() => ({ newOn: (document.querySelector('[data-assistant-life-ui-setting-pick="new"]') || { getAttribute: () => null }).getAttribute('aria-pressed'), saved: localStorage.getItem('mh_assistant_life_ui_v2'),
+      out: [...document.querySelectorAll('[data-assistant-life-ui-setting] button')].filter(b => { const r = b.getBoundingClientRect(); return r.right > innerWidth + 1 || r.left < -1 || r.height < 44; }).length }));
+    check(`${T}⑫ 上の帯に切替は無く、設定に「助手ライフの画面」(はじめは新しい画面・見ただけでは保存しない・ボタンは44px以上)`, noSwitch && before.newOn === 'true' && before.saved === null && before.out === 0, JSON.stringify({ noSwitch, ...before }));
+    if (SHOTS) await page.screenshot({ path: path.join(shotDir, `${v.id}-5-setting.png`) });
+    await page.locator('[data-assistant-life-ui-setting-pick="old"]').click(); await page.waitForTimeout(300);
+    const saved = await page.evaluate(() => localStorage.getItem('mh_assistant_life_ui_v2'));
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /HOMEへ戻る/.test(x.getAttribute('aria-label') || x.innerText || '')); if (b) b.click(); }); await page.waitForTimeout(700);
+    await page.locator('[data-home-assistant-life]').click({ timeout: 20000 }); await page.waitForTimeout(1500);
+    const oldUi = await page.locator('[data-assistant-life-icon="items"]').count() > 0;
+    check(`${T}⑫ 「前の画面」を選ぶと false が保存され、次に開くと前の画面`, saved === 'false' && oldUi, JSON.stringify({ saved, oldUi }));
     await page.close();
   }
   check('⑨ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));

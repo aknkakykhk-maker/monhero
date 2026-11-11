@@ -333,7 +333,7 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
         if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
         // 送り仮名(「来|て」「強|く」)の手前・小さい字の手前・閉じる記号の手前では分けない
         if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
-        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～・]/.test(s[p] || '')) continue;
         if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
         // くっついた言葉(「振り|直す」「受け取り|忘れ」「押し|切る」)の、送り仮名と次の漢字のあいだでは分けない
         if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;

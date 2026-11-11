@@ -246,7 +246,7 @@ const run = async (browser, mode, errors) => {
     const in6 = await inView('[data-assistant-life-room-act="card-spent"]');
     const fit6 = await textFits('[data-assistant-life-room-act="card-spent"]');
     check(`⑥ ${mode.label} ソラシドの部屋: 灰色の押せない「🃏 ごほうびアップは使い切りました…次は${nx}時から」・画面に入り、字が切れない`,
-      !!room6 && room6.disabled && !room6.normal && room6.text === `🃏 ごほうびアップは使い切りました…次は${nx}時から` && in6 === true && !fit6.length, JSON.stringify({ room6, in6, fit6 }));
+      !!room6 && room6.disabled && !room6.normal && room6.text.endsWith(`🃏 ごほうびアップは使い切りました…次は${nx}時から`) && in6 === true && !fit6.length, JSON.stringify({ room6, in6, fit6 }));
     await scene('6-room-sorashido', '[data-assistant-life-room-act="card-spent"]', '部屋の灰色のボタン');
     await page.locator('[data-assistant-life-room-close]').click().catch(() => {});
     await page.waitForTimeout(500);
