@@ -559,6 +559,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
                 何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
+{/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
+{field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
 </div>
 </section>
 <section className={card}>

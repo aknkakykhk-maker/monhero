@@ -202,6 +202,16 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
     && guardBranch.includes('guardValue-incomingBeforeTurnReduction;') // INFERNOの連撃は同じ diff を連撃の受け方で出す
     && guardBranch.includes('貫通!') && guardBranch.includes('🛡 ガード成功'));
   check('普通にダメージを受けたときも発動する', plainBranch.includes('triggerShake();'));
+  // タクティクスも、回避・反射・吸収・不発だけで終わったターンは発動しない(2026-11-11 バトルの監査。先に立てていたころは回避でも減っていた)
+  if (enemyTurn.includes('} else if (isTacticsMode(runMode)) {')) {
+    const tacticsBranch = grab(enemyTurn, '} else if (isTacticsMode(runMode)) {', '} else if (guardValue>0) {');
+    const received = tacticsBranch.indexOf('tacticsReceived=true;');
+    check('タクティクスは、だれかが実際に受け止めたときだけ発動する(回避・反射・吸収のあとで印を立てる)',
+      tacticsBranch.includes('let tacticsReceived=false;') && tacticsBranch.includes('if(tacticsReceived) tookEnemyAttack=true;')
+      && received > tacticsBranch.indexOf('if(slotIdx===absorbedSlot){') && received > tacticsBranch.indexOf('if(slotIdx===reflectedSlot){')
+      && received > tacticsBranch.indexOf("slotFx[slotIdx]={evade:true}; return; }")
+      && received < tacticsBranch.indexOf('const hit=resolveTacticsGuardedHit(slotIncoming'));
+  }
   check('反射・吸収・回避では発動しない',
     !reflectBranch.includes('tookEnemyAttack')
     && reflectBranch.includes('反射！') && reflectBranch.includes('吸収！') && reflectBranch.includes('回避！'));
