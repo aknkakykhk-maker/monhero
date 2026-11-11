@@ -1344,7 +1344,12 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0; // 純血のスピード
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
   // 払うのは「そのとき払うガッツ」(全体カードで変わる)。集中を付けた技には、払うガッツが0の守りは出せない
-  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts); };
+  // 「2以上のガッツを使う技」を回避する札(潜る・見切りなど)は、攻める子が払う数(水牢込み・使える子でいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null)).filter((x) => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
+  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
   const unseen = [...opp.hand, ...opp.deck];

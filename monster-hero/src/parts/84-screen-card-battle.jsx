@@ -1932,7 +1932,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    // 払う数は、水牢・天河天翔・全体カードなどを入れた「いま払う数」(使える子のうちいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(c, m) ? mi : -1)).filter((mi) => mi >= 0);
+    const need = users.length ? Math.min(...users.map((mi) => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';

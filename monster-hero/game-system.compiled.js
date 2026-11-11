@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f9083124a11e72e
+// source-sha256: 140549593f69648e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139231,11 +139231,15 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   const tmon = opp.mons[target.m];
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0;
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0;
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => !m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null).filter(x => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
     const cost = c ? cardGuardCost(st, c) : 99;
-    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts);
+    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts);
   };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
@@ -151245,7 +151249,9 @@ const CardBattleBoard = ({
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => !m.ko && cardUsableBy(c, m) ? mi : -1).filter(mi => mi >= 0);
+    const need = users.length ? Math.min(...users.map(mi => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';

@@ -64,9 +64,10 @@ const ally = read('monster-hero/data/images/images-ally.js');
 ids.forEach((no) => { assert(new RegExp(`'${no}': ${K.img}`).test(ally), `${no} の立ち絵`); assert(new RegExp(`'${no}': ${K.face}`).test(ally), `${no} の顔`); });
 for (const f of K.files) assert(fs.statSync(path.join(root, 'monster-hero', f)).size > 0);
 }
-// 第8弾: 5体(通常5・キラ5・別絵キラ2)= 袋の「全12種類」
-assert.deepEqual(rarities.map((k) => E.cardPackMonPool(db, p, k).length), [5, 5, 2]);
-assert.equal(JSON.stringify(E.cardPackMonPool(db, p, 'alt')), JSON.stringify(['C-069V', 'C-070V']));
+// 第8弾: もとは5体(通常5・キラ5・別絵キラ2)= 袋の「全12種類」。ウンディーネ・スネグーラチカで 7体(袋の絵の扱いは窓口の返事待ち)
+// 2026-11-11 にウンディーネ(C-921)・スネグーラチカ(C-952)が3種類ずつ入って 7体(通常7・キラ7・別絵キラ4)
+assert.deepEqual(rarities.map((k) => E.cardPackMonPool(db, p, k).length), [7, 7, 4]);
+assert.equal(JSON.stringify(E.cardPackMonPool(db, p, 'alt')), JSON.stringify(['C-069V', 'C-070V', 'C-921V', 'C-952V']));
 E.CARD_PACKS.forEach((pack) => {
   const want = pack.no <= 3 || pack.no === 5 || pack.no === 7 || pack.no === 8 ? [85, 12, 3] : [85, 15, 0]; // 第8弾はミーア・スプーキーの別絵キラが入って 85/12/3(2026-11-04)
   assert.deepEqual(rarities.map((k) => pack.rarity[k]), want);

@@ -15,7 +15,7 @@ const GAME = path.join(ROOT, 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 const src = (f) => fs.readFileSync(path.join(GAME, f), 'utf8');
 vm.runInContext(`${src('data/card-battle-cards.js')}\n;\n${src('src/parts/82-card-battle-core.jsx')}\n;\n${src('src/parts/89-card-pack.jsx')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardActionCost, cardUsableBy, cardCostUpOf, cardPackOf, cardPackMonPool, cardPackTechPool };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardActionCost, cardUsableBy, cardCostUpOf, cardPackOf, cardPackMonPool, cardPackTechPool, cardAiEvadeChance };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -138,6 +138,12 @@ const cost = (st, p, cardNo, mi) => { const h = st.players[p].hand.slice(); if (
   s3.players[1].hand = ['921'];
   const s4 = act(s3, 1, '921', { mon: 2, target: 0, guard: 0 });
   check('E 水牢が無ければ、アイスブレード(1)は潜るで回避できない', s4 === null || s4.players[0].mons[0].life === 10, J(s4 && s4.players[0].mons[0].life));
+  // コンピューターの回避の見込みも、水牢込みの払う数で見る(ミハリ 2026-11-11)
+  const pick = (x) => { x.players[0].hand = ['932']; x.players[1].hand = ['921']; return x; };
+  const withUp = pick(oppTurn(act(scene(['923']), 0, '923', { target: 2 })));
+  const noUp = pick(oppTurn(scene([])));
+  const ch = (x) => E.cardAiEvadeChance(db, x, 1, db.cards['921'], { p: 0, m: 0 }, 'master', {}, x.players[1].mons[2]);
+  check('E コンピューターの見込み: 水牢で 1→2 のアイスブレードは潜るで回避されうる(水牢なしより高い)', ch(withUp) > ch(noUp), J({ up: ch(withUp), none: ch(noUp) }));
 }
 
 // ---- F ----

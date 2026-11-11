@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d1b98ae66cd37ebe
+// generated-sha256: 112c068bee185c54
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73437,7 +73437,12 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0; // 純血のスピード
   if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
   // 払うのは「そのとき払うガッツ」(全体カードで変わる)。集中を付けた技には、払うガッツが0の守りは出せない
-  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts); };
+  // 「2以上のガッツを使う技」を回避する札(潜る・見切りなど)は、攻める子が払う数(水牢込み・使える子でいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+  const me = st.players[p];
+  const ami = atkMon ? me.mons.indexOf(atkMon) : -1;
+  const ups = ami >= 0 ? [cardCostUpOf(st, p, ami)] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(card, m) ? cardCostUpOf(st, p, mi) : null)).filter((x) => x !== null);
+  const atkGuts = (card.guts || 0) + (ups.length ? Math.min(...ups) : 0);
+  const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || atkGuts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
   const unseen = [...opp.hand, ...opp.deck];
@@ -80720,7 +80725,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!c.ready) return '準備中';
     if (cardIsGuardKind(c.kind)) return '守りに使う';
     if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    // 払う数は、水牢・天河天翔・全体カードなどを入れた「いま払う数」(使える子のうちいちばん少ない数)で見る(2026-11-11 ウンディーネ)
+    const users = c.user === 'breeder' ? [] : me.mons.map((m, mi) => (!m.ko && cardUsableBy(c, m) ? mi : -1)).filter((mi) => mi >= 0);
+    const need = users.length ? Math.min(...users.map((mi) => cardActionCost(db, st, CARD_ME, me.hand, [i], mi))) : cardActionCost(db, st, CARD_ME, me.hand, [i]);
+    if (need > me.guts.length) return `ガッツ不足(あと${need - me.guts.length})`;
     if (cardHasEff(c, 'attach')) return '付ける技がない';
     if (cardHasEff(c, 'requires')) return '組むカードなし';
     return '今は使えない';
