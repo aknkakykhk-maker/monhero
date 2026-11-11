@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 46821f09aefd49fb
+// generated-sha256: fa162344eb4845dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9707,7 +9707,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
-  assistantLifeFriendBond: false, // フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳(56-assistant-life-friend-bond)。社長の「この文で」と表(assistant_life_friend_likes)のあとで真に
+  assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
@@ -69126,7 +69126,8 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 // ---------- 段階C: 好きな家具を使う吹き出し・遊びに来た助手が家具に触れる(2026-11-08 社長 ❶A ❷A・docs/progress/assistant-peer/gifts/STAGE-C-PLAN.md) ----------
 // 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
 const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
-  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
+  trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴',
+  clock: 'ふりこ時計', map: '地図', guitar: 'ギター', tv: 'テレビ', windowflower: '窓辺の花', fishbowl: '金魚ばち', pendant: 'ライト', garland: 'ガーランド' });
 const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => (typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded
   ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean));
 // 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
@@ -69530,11 +69531,11 @@ const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
   sorashido: Object.freeze({ hero: 'lantern',   pull: 0.08, low: -0.03, tilt: 0, big: 1.2,  line: '星の物は上に集めました。角度も計算済みです笑' }),
   erubin:    Object.freeze({ hero: 'plant',     pull: -0.06, low: 0,   tilt: 0,  big: 1.1,  line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う' }),
 });
-// 置き場所ごとの席(良い順)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける。床の家具は助手の前の机・ソファに隠れないよう、助手より前の層に置く
+// 置き場所ごとの席(良い順)。2026-11-11 家具が20種類になったので、床 9・壁 6・天井 5(足りない分は押し入れへ)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける。床の家具は助手の前の机・ソファに隠れないよう、助手より前の層に置く
 const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
-  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
-  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]],
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19], [0.25, 0.33]],
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6], [0.67, 0.6], [0.24, 0.72], [0.76, 0.72], [0.5, 0.58]],
 });
 // owned … その助手に贈ってある家具の key。苦手な家具は押し入れへ。席が足りない分も押し入れへ
 const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
@@ -69708,7 +69709,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
           {tool('keep', 'しまう', () => { commit(cur.filter(it => it.k !== sel)); setSel(null); }, !selIt)}
         </div>)}
       {/* 置いてある家具(押すと選ぶ)と、押し入れの家具(押すと部屋に出す) */}
-      <div className={`flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`} data-assistant-life-layout-chips>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" data-assistant-life-layout-chips>
         {cur.map(it => chip(it.k, true))}{kept.map(k => chip(k, false))}
         {got.length === 0 && <p className="text-[11px] font-bold text-slate-300">まだ家具がありません。「🪑 家具」から贈ると、ここに並びます</p>}
       </div>
@@ -75293,6 +75294,8 @@ const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '�
 const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
 const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
 
+// 来てくれた日のスタンプは「公開の時」から数える(2026-11-11 社長「公開の日から数える」)。これより前に書かれた表の行はスタンプにしない
+const ALB_START = { at: Date.parse('2026-11-11T21:09:00+09:00') };
 const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
 const albLv = (st) => ALB_STEPS.filter(n => st >= n).length;
 const albTitle = (st) => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
@@ -75383,7 +75386,7 @@ const albCountIncoming = async (s = ALF_STORE.state) => {
   if (!albEnabled() || !s.selfId) return [];
   await albLoad();
   const names = new Set((s.roster || []).map(f => f.id)); const muted = new Set(s.settings.muted);
-  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && v.at >= ALB_START.at && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
 };
 
 // ---------- B 今日の見どころ・すてき ----------
