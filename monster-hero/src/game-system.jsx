@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e0c7ec765841cdaf
+// generated-sha256: 6d8d44a5e1bf3cb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9727,6 +9727,11 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantSorashido: true,
   // えるびん(8人目・2026-11-05)。社長が出来上がりを確かめて「オッケー」を出すまで偽のまま(お話・選ぶ画面・おしゃべりに出ない)
   assistantErubin: true,
+  // 助手の解放(2026-11-11 社長・設計 docs/progress/assistant-unlock/DESIGN.md・18-assistant-partner.jsx)。
+  //   偽のあいだは、はじめての人も今までどおり全員を選べる(助手えらびで mode:'earn' を書かない・案内の文も出さない)。
+  //   すでに遊んでいる人の「全員が助手」(mode:'all')の一度きりの判定は、偽のあいだも書く(公開の前から遊んでいた人を守る)。
+  //   ミハリの確認と Fable の最終確認のあと、窓口が真にする
+  assistantPartnerUnlock: false,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -11194,6 +11199,158 @@ const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarve
   }
   return { next: { ...cur, xp, day: day || cur.day, dayFirst: first || (cur.day === day && cur.dayFirst), got: Math.max(cur.got, to) }, add, parts, from, to, tickets, beatPoints, bonusTickets, bonusPoints, seeds };
 };
+
+// ---- part: 18-assistant-partner.jsx ----
+// ==================== 助手の解放(アシストカードを使った回数で助手になる) ====================
+// 2026-11-11 社長「これから始める人はアシカの助手を使った回数で解放されるようにしようか。最初は好きな助手を選べて
+//   あとは解放条件を満たしたら助手として使えるようになる。これなら存在はするからイベント的にも違和感がないはず」
+// 決め(台帳 2026-11-11・設計 docs/progress/assistant-unlock/DESIGN.md):
+//   ・40回(オート・クイックも数える・AIコピーとデバッグ戦は数えない)
+//   ・すでに遊んでいる人は今のまま全員が助手(一度きりの判定。mode:'all' を書いたら二度と判定し直さない)
+//   ・これから始める人は最初に1人選び(mode:'earn')、ほかはカードを40回使うと助手になる(解放は戻さない)
+//   ・まだ助手でない助手は「町の人」: 町・お話・掛け合いには出るが、話す・贈る・部屋・きずな・マスモンは押せない
+// ★公開前の助手を隠す決まり(assistantReleased・unreleased-assistant-hidden)とは混ぜない。そちらが先に止める。
+// ★お話で出会う助手(あつ等)の「お話を見たか」(assistantUnlockedBy)も今のまま。これはその上に重ねる段。
+// 保存は新しいキー2つだけ(既存の mh_* の意味は変えない)。ここは純粋な計算だけ(保存・画面は呼ぶ側)。
+
+const ASSISTANT_PARTNER_KEY = 'mh_assistant_partner_v1';
+const ASSISTANT_CARD_USES_KEY = 'mh_assistant_card_uses_v1';
+// 助手になるまでに使う回数(社長 2026-11-11「40回」)。変えるのはここだけ
+const ASSISTANT_PARTNER_NEED = 40;
+
+const assistantPartnerIdOk = (id) => typeof id === 'string' && id.length > 0 && id.length <= 40;
+const assistantPartnerIdList = (value) => {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const id of value) if (assistantPartnerIdOk(id) && !out.includes(id)) out.push(id);
+  return out;
+};
+// 保存値 → いつも同じ形。壊れた値・無い値は「まだ判定していない」(mode:null)
+const normalizeAssistantPartner = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const mode = src.mode === 'all' || src.mode === 'earn' ? src.mode : null;
+  const first = assistantPartnerIdOk(src.first) ? src.first : null;
+  const unlocked = assistantPartnerIdList(src.unlocked);
+  if (mode === 'earn' && first && !unlocked.includes(first)) unlocked.unshift(first);
+  return { v: 1, mode, first, unlocked, noticed: assistantPartnerIdList(src.noticed) };
+};
+// 使った回数 { 助手id: 回数 }。数でない・負・無限は落とす
+const normalizeAssistantCardUses = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = {};
+  for (const [id, n] of Object.entries(src)) {
+    const v = Number(n);
+    if (assistantPartnerIdOk(id) && Number.isFinite(v) && v > 0) out[id] = Math.min(Math.floor(v), 1e9);
+  }
+  return out;
+};
+
+// すでに遊んでいる人の一度きりの判定。まだ判定していなくて、プロフィールを決め終えた・助手を選んだことがある人は 'all'。
+// 返り値 changed が真のときだけ保存する(判定ずみなら何もしない=二重に判定しない)
+const assistantPartnerJudgeExisting = (state, { wasOnboarded = false, hasAssistant = false } = {}) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode) return { state: s, changed: false };
+  if (!wasOnboarded && !hasAssistant) return { state: s, changed: false };
+  return { state: { ...s, mode: 'all' }, changed: true };
+};
+// はじめての人が最初の助手を決めたとき。判定ずみなら何もしない
+const assistantPartnerStartEarn = (state, firstId) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode || !assistantPartnerIdOk(firstId)) return { state: s, changed: false };
+  return { state: { ...s, mode: 'earn', first: firstId, unlocked: [firstId] }, changed: true };
+};
+// この段だけで見た「助手として関われるか」。'earn' の人は解放した助手だけ。まだ判定していない人(助手えらびの前)は全員
+const assistantPartnerAllowed = (state, id) => {
+  const s = normalizeAssistantPartner(state);
+  return s.mode !== 'earn' || s.unlocked.includes(id);
+};
+// カードを1回使った。回数を足し、'earn' の人で40回に届いたら解放する(足すだけ・消さない)
+const assistantPartnerCountUse = (uses, state, id) => {
+  const u = normalizeAssistantCardUses(uses);
+  const s = normalizeAssistantPartner(state);
+  if (!assistantPartnerIdOk(id)) return { uses: u, state: s, unlockedId: null, stateChanged: false };
+  const nextUses = { ...u, [id]: (u[id] || 0) + 1 };
+  if (s.mode === 'earn' && !s.unlocked.includes(id) && nextUses[id] >= ASSISTANT_PARTNER_NEED) {
+    return { uses: nextUses, state: { ...s, unlocked: [...s.unlocked, id] }, unlockedId: id, stateChanged: true };
+  }
+  return { uses: nextUses, state: s, unlockedId: null, stateChanged: false };
+};
+// まだ見せていない解放の演出(最初に選んだ助手は出さない)。isOk で「いま本当に助手か」(お話の条件も)を確かめる
+const assistantPartnerPendingNotice = (state, isOk = () => true) => {
+  const s = normalizeAssistantPartner(state);
+  if (s.mode !== 'earn') return null;
+  return s.unlocked.find(id => id !== s.first && !s.noticed.includes(id) && isOk(id)) || null;
+};
+const assistantPartnerMarkNoticed = (state, id) => {
+  const s = normalizeAssistantPartner(state);
+  if (!assistantPartnerIdOk(id) || s.noticed.includes(id)) return { state: s, changed: false };
+  return { state: { ...s, noticed: [...s.noticed, id] }, changed: true };
+};
+// はじめての人のあつの加入のお話は、あつの挑発を40回で流れる(社長 2026-11-11 C)
+const assistantPartnerAtsuJoinReady = (state, uses) => {
+  const s = normalizeAssistantPartner(state);
+  return s.mode === 'earn' && (normalizeAssistantCardUses(uses).atsu || 0) >= ASSISTANT_PARTNER_NEED;
+};
+
+// ---- いまの値(画面の部品から読む入口) ----
+// 本体(60-app.jsx)が読み込み・変化のたびに assistantPartnerSetNow で知らせる。ほかの部(助手ライフ・贈る・マスモン・おしゃべり)は
+//   assistantPartnerOkNow(id) / assistantPartnerProgressNow(id) / assistantPartnerIdsNow() だけを使う(保存は読まない)
+let assistantPartnerNowState = normalizeAssistantPartner(null);
+let assistantPartnerNowUses = {};
+let assistantPartnerNowSeen = [];
+let assistantPartnerNowOwned = [];
+const assistantPartnerSetNow = ({ state, uses, seenStoryIds, ownedCards } = {}) => {
+  if (state !== undefined) assistantPartnerNowState = normalizeAssistantPartner(state);
+  if (uses !== undefined) assistantPartnerNowUses = normalizeAssistantCardUses(uses);
+  if (seenStoryIds !== undefined) assistantPartnerNowSeen = Array.isArray(seenStoryIds) ? seenStoryIds : [];
+  if (ownedCards !== undefined) assistantPartnerNowOwned = Array.isArray(ownedCards) ? ownedCards : [];
+};
+// 「助手か」= 公開ずみ・お話の条件(今のまま)・この段(解放したか)のすべて
+const assistantPartnerOkWith = (state, seenStoryIds, id) => {
+  if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, seenStoryIds)) return false;
+  return assistantPartnerAllowed(state, id);
+};
+const assistantPartnerOkNow = (id) => assistantPartnerOkWith(assistantPartnerNowState, assistantPartnerNowSeen, id);
+// 町の人として出すか(会っているが、まだ助手でない)。今の人・判定前の人は常に偽
+const assistantPartnerLockedNow = (id) => assistantPartnerNowState.mode === 'earn' && !assistantPartnerAllowed(assistantPartnerNowState, id);
+const assistantPartnerEarnNow = () => assistantPartnerNowState.mode === 'earn';
+const assistantPartnerCardName = (id) => {
+  const list = typeof TEACHING_CARDS !== 'undefined' && Array.isArray(TEACHING_CARDS) ? TEACHING_CARDS : [];
+  const card = list.find(c => c && c.id === id);
+  return card ? card.baseName : '';
+};
+// 「あと何回」の案内用。cardOwned … そのカードを持っているか(持っていなければ「ショップで手に入る」と案内する)
+const assistantPartnerProgressNow = (id) => ({
+  count: Math.min(assistantPartnerNowUses[id] || 0, ASSISTANT_PARTNER_NEED),
+  need: ASSISTANT_PARTNER_NEED,
+  cardName: assistantPartnerCardName(id),
+  cardOwned: assistantPartnerNowOwned.includes(id),
+  unlocked: assistantPartnerAllowed(assistantPartnerNowState, id),
+});
+const assistantPartnerIdsNow = () => {
+  const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+  return list.map(a => a && a.id).filter(id => assistantPartnerIdOk(id) && assistantPartnerOkNow(id));
+};
+
+// 解放の演出の一言(2026-11-11 社長「この形・この文で」)
+const ASSISTANT_PARTNER_UNLOCK_LINES = Object.freeze({
+  mua: 'えっ、みゅあのカードいっぱい使ってくれてたの！？ まぢうれしい(｡ ˘_˘)ｳﾝｳﾝ これからは隣でいっしょにいこ！',
+  kiki: 'ききのカード、たくさん使ってくれてたんでつね (´ー`*)ウンウン 今日からは助手として、いっしょに火力で押していきましょ',
+  momosuke: 'ずっとももすけのカード使ってくれてたの、知ってたよ♡ これからは、もっと近くで応援させて！',
+  dra: 'おでのカード、何回も使ってくれたな。今度は、おでが隣で手伝う番だ',
+  atsu: 'あつの挑発、めっちゃ使ってくれてたじゃん笑 そこまでされたら、助手やるしかないでしょ！',
+  kyuko: 'きゅうこのカード、こんなに使ってくれてたんだねぇ😭 うれしい…今日から、ちゃんと隣にいるからね',
+  sorashido: 'ソラシドの自動化、かなり回してもらってましたね笑 なるほど了解です、ここからは助手として手伝います！',
+  erubin: '俺のカード、ずっと使ってくれてたんだね。ありがとう。これからは、隣でゆっくり見守るよ',
+});
+const assistantPartnerUnlockLine = (id) => ASSISTANT_PARTNER_UNLOCK_LINES[id] || 'これからは、助手としてよろしくね';
+// 解放されてできるようになること(演出の4コマ目)
+const ASSISTANT_PARTNER_UNLOCK_EFFECTS = Object.freeze([
+  '助手として選べる',
+  '助手ライフで話す・贈る・部屋に入れる',
+  '仲良し度が貯まる(ごほうびも届く)',
+  '助手のマスモンを迎えられる',
+]);
 
 // ---- part: 18-points-and-auto.jsx ----
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
@@ -41242,6 +41399,9 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 // MFバトルカードの売り場で、パック・スターターを買って開ける画面へ行き、戻ったときの位置(2026-10-30 社長「パックを買って戻ったら上に戻される」)。
 // 開ける画面へ行くとこの画面ごと消える(state も消える)ので、画面の外の変数に覚える。保存はしない(遊んでいる間だけ)。
 // 覚え方はフレンドの一覧(#4313)と同じ: 押す前のスクロールの位置と、押した物(行の目印)。戻ったら位置を戻し、押した物が見えなければ真ん中へ寄せる
+// 助手の解放(2026-11-11)。これから始める人で、まだ助手でない助手のアシストカードの札に「使うと助手になります」を1行(18-assistant-partner.jsx)
+const marketPartnerRibbon = (cardId) => (cardId && typeof assistantPartnerLockedNow === 'function' && assistantPartnerLockedNow(cardId)
+  && typeof ASSISTANTS !== 'undefined' && ASSISTANTS.some(a => a && a.id === cardId)) ? '🤝 使うと助手になります' : null;
 const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack','data-card-shop-starter','data-card-shop-disc','data-card-shop-assist'];
 const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
@@ -41470,7 +41630,7 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':null}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
@@ -41632,7 +41792,7 @@ function BreederMarketScreen({
                 const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
                 const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'cardPoint', cost:offer.cost };
                 const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}}
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
                   item={item} owned={owned} comingSoon={false}
                   canBuy={!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
@@ -41719,7 +41879,7 @@ function BreederMarketScreen({
             const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
             const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'beatPoint', cost:offer.cost };
             const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}}
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
               item={item} owned={owned} comingSoon={false}
               canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
@@ -44159,6 +44319,87 @@ function MasuMonsScreen({
           })()}
         </div>
       </div>
+  );
+}
+
+// ---- part: 59-assistant-partner-fx.jsx ----
+// ==================== 助手の解放の演出(2026-11-11 社長「解放されたときの専用演出も作って」) ====================
+// 止め絵: docs/progress/assistant-unlock/fx-portrait.jpg・fx-landscape.jpg(4コマ)
+//   1 カードが満ちる(約0.8秒) → 2 カードが光に割れ、影が現れる(約0.8秒) → 3 立ち絵と一言(押すまで待つ) → 4 できるようになったことと「助手にする/あとで」
+// 出すかどうか・見たことの保存は 60-app.jsx(assistantPartnerPendingNotice / assistantPartnerMarkNoticed)。ここは見た目だけで保存に触らない。
+// 押せば前のコマを飛ばせる(1・2コマ目は押すと3コマ目へ)。動きを減らす設定の人は1・2コマ目を出さない
+const ASSISTANT_PARTNER_FX_CSS = `
+@keyframes mhPartnerGlow{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes mhPartnerFill{0%{width:70%}100%{width:100%}}
+@keyframes mhPartnerSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@keyframes mhPartnerRise{0%{transform:translateY(18px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes mhPartnerSil{0%{filter:brightness(0) drop-shadow(0 0 22px var(--mh-pc));opacity:0;transform:scale(.9)}100%{filter:brightness(0) drop-shadow(0 0 22px var(--mh-pc));opacity:1;transform:scale(1)}}
+.mh-partner-rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.12) 0 6deg,transparent 6deg 18deg);animation:mhPartnerSpin 18s linear infinite}
+@media (prefers-reduced-motion: reduce){.mh-partner-rays{animation:none}}
+`;
+function AssistantPartnerUnlockFx({ who, cardName = '', need = 40, line = '', effects = [], onChoose, onLater }) {
+  const reduce = (() => { try { return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } })();
+  const [step, setStep] = useState(reduce ? 2 : 0);
+  // 1・2コマ目は、それぞれのアニメ(約0.8秒)が終わったら次へ(タイマーは使わない。画面を離れれば一緒に消える)
+  const advance = (from) => () => setStep(s => (s === from ? from + 1 : s));
+  if (!who) return null;
+  const accent = who.accent || '#38bdf8';
+  const name = who.name || '';
+  const next = () => setStep(s => (s < 2 ? 2 : s === 2 ? 3 : s));
+  const stand = (expr) => (typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '');
+  const face = typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : '';
+  return (
+    <div data-assistant-partner-fx={who.id} data-step={step} onClick={step < 3 ? next : undefined}
+      className="fixed inset-0 overflow-hidden select-none" style={{ zIndex: 90500, backgroundColor: '#05060f', '--mh-pc': accent }}>
+      <style>{ASSISTANT_PARTNER_FX_CSS}</style>
+      {step >= 1 && step <= 2 && <div className="mh-partner-rays" aria-hidden="true"/>}
+      <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 45%, ${accent} 0, transparent 58%)`, opacity: step === 1 ? .9 : step === 3 ? .35 : .55 }}/>
+      <div className="absolute inset-0 flex items-center justify-center" style={{ padding: 'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))' }}>
+        {step === 0 && (
+          <div className="flex flex-col landscape:flex-row items-center gap-6" style={{ animation: 'mhPartnerGlow .8s ease-out' }} onAnimationEnd={(e) => { if (e.target === e.currentTarget) advance(0)(); }}>
+            <div className="w-[150px] h-[210px] rounded-2xl flex flex-col items-center justify-center gap-2" style={{ background: 'linear-gradient(160deg,#1e3a8a,#0f172a)', border: `3px solid ${accent}`, boxShadow: `0 0 30px ${accent}` }}>
+              <img src={face} alt="" className="w-[92px] h-[92px] rounded-full object-cover border-[3px] border-white"/>
+              <b className="text-[13px] font-black text-white text-center px-2">{cardName}</b>
+            </div>
+            <div className="text-center">
+              <div className="text-[34px] font-black tabular-nums" style={{ color: '#fde047', textShadow: '0 0 14px #facc15' }}>{need} / {need}</div>
+              <div className="w-[220px] h-2.5 rounded-full bg-slate-800 overflow-hidden mx-auto my-1.5"><div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg,#38bdf8,#fde047)', animation: 'mhPartnerFill .7s ease-out forwards' }}/></div>
+              <div className="text-[12px] text-slate-300">モンヒロバトルで使った回数</div>
+            </div>
+          </div>
+        )}
+        {step === 1 && <img src={stand('normal')} alt="" className="h-[72%] max-w-[85%] object-contain" style={{ animation: 'mhPartnerSil .8s ease-out forwards' }} onAnimationEnd={advance(1)}/>}
+        {step === 2 && (
+          <div className="flex flex-col landscape:flex-row items-center justify-center gap-2 landscape:gap-6 w-full h-full">
+            <img src={stand('happy')} alt="" className="object-contain max-h-[56%] landscape:max-h-[92%] max-w-[90%] landscape:max-w-[45%] min-h-0" style={{ animation: 'mhPartnerRise .5s ease-out', filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
+            <div className="max-w-[360px] landscape:max-w-[420px] w-full" style={{ animation: 'mhPartnerRise .6s ease-out' }}>
+              <div className="text-[12px] font-black text-center" style={{ color: '#fde047', letterSpacing: '.25em' }}>NEW PARTNER</div>
+              <div className="text-[24px] font-black text-white text-center whitespace-nowrap my-1">{name}が助手になりました！</div>
+              <div data-assistant-partner-line className="rounded-2xl px-3 py-2.5 text-[13px] leading-relaxed text-slate-100" style={{ background: 'rgba(15,23,42,.9)', border: `2px solid ${accent}` }}>
+                <b style={{ color: accent }}>{name}</b>「{line}」
+              </div>
+              <div className="text-[11px] text-slate-400 text-center mt-2">画面を押して次へ</div>
+            </div>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="flex flex-col landscape:flex-row items-center justify-center gap-3 landscape:gap-6 w-full h-full" style={{ animation: 'mhPartnerRise .4s ease-out' }}>
+            <img src={stand('wink')} alt="" className="object-contain max-h-[38%] landscape:max-h-[90%] max-w-[80%] landscape:max-w-[40%] min-h-0" style={{ filter: 'drop-shadow(0 0 18px rgba(255,255,255,.35))' }}/>
+            <div className="w-full max-w-[380px] landscape:max-w-[420px]">
+              <div className="text-[19px] font-black text-white text-center mb-2">{name}とできるようになったこと</div>
+              <div className="flex flex-col gap-1.5">
+                {effects.map(e => <div key={e} className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[12.5px] font-bold text-slate-100 border border-slate-700" style={{ background: 'rgba(15,23,42,.8)' }}><b className="text-green-400">✓</b>{e}</div>)}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button type="button" data-assistant-partner-choose onClick={onChoose} className="flex-[1.3] min-h-[46px] rounded-2xl font-black text-[14px] text-white active:scale-[.98]" style={{ background: 'linear-gradient(#ec4899,#be185d)' }}>{name}を助手にする</button>
+                <button type="button" data-assistant-partner-later onClick={onLater} className="flex-1 min-h-[46px] rounded-2xl font-black text-[14px] text-slate-300 bg-slate-800 border border-slate-600 active:scale-[.98]">あとで</button>
+              </div>
+              <div className="text-[11px] text-slate-400 text-center mt-1.5">あとでも、HOME の助手アイコンからいつでも変えられます</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -100898,6 +101139,11 @@ function MonsterHeroGame() {
   const missionClaimingRef = useRef(false);
   // いま一緒に遊んでいる助手。保存が無い既存プレイヤーは「みゅあ」のまま変わらない
   const [selectedAssistantId, setSelectedAssistantId] = useState(() => normalizeAssistantId(null));
+  // 助手の解放(18-assistant-partner.jsx)。mh_assistant_partner_v1 と mh_assistant_card_uses_v1。続けて書いても取りこぼさないよう ref も持つ
+  const [assistantPartner, setAssistantPartner] = useState(() => normalizeAssistantPartner(null));
+  const [assistantCardUses, setAssistantCardUses] = useState({});
+  const assistantPartnerRef = useRef(normalizeAssistantPartner(null));
+  const assistantCardUsesRef = useRef({});
   const selectedAssistantIdRef = useRef(normalizeAssistantId(null));
   // 助手選択の画面を出すかどうか(はじめて遊ぶ人にだけ、名前を決めるより前に出す)
   const [assistantChosen, setAssistantChosen] = useState(true);
@@ -104044,6 +104290,36 @@ function MonsterHeroGame() {
   const [cardShopState, setCardShopState] = useState(null); // { point, starter, shop }(売り場に出す分だけ。保存の正本は mh_card_*)
   const [cardPackOpen, setCardPackOpen] = useState(null);   // パックを開ける画面に渡す結果 { packId, packs, dupPoint, cost }
   const rhythmEventStorySeenRef = useRef(null);
+  // 助手の解放: ほかの部(助手ライフ・贈る・マスモン・おしゃべり)が assistantPartnerOkNow(id) で読む「いまの値」を、描くたびに知らせる(値を写すだけ)
+  assistantPartnerSetNow({ state: assistantPartner, uses: assistantCardUses, seenStoryIds: Array.isArray(rhythmEventStorySeen) ? rhythmEventStorySeen : [], ownedCards: unlockedTeachingIds });
+  // 結果画面の進み具合に出す、この戦いで使った「まだ助手でない助手」と、この戦いで解放した助手(HOME に戻ると空にする)
+  const assistantPartnerRunUsesRef = useRef({});
+  const assistantPartnerRunUnlockedRef = useRef([]);
+  // この助手は「助手」か(公開ずみ・お話の条件・解放したか)。続けて呼ばれても新しい値で判定するよう ref から読む
+  const assistantIsPartner = (id) => assistantPartnerOkWith(assistantPartnerRef.current, rhythmEventStorySeenRef.current, id);
+  // 助手の解放の保存。ref を先に変えてから書く(続けて呼ばれても取りこぼさない)
+  const saveAssistantPartner = (next) => {
+    assistantPartnerRef.current = next; setAssistantPartner(next);
+    void Promise.resolve().then(() => storeSet(ASSISTANT_PARTNER_KEY, next, false)).catch(error => console.error('[assistant-partner] save failed:', error && error.message ? error.message : error));
+  };
+  // モンヒロバトルで助手のアシストカードを1回切った(プレイヤーが切った分だけ。AIコピー・デバッグ戦は呼ぶ側で除く)
+  const countAssistantCardUse = (assistantId) => {
+    // 戦闘を止めない(数えるのに失敗しても、例外は外へ出さない。ジン 2026-11-11)
+    try {
+      const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
+      if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = { ...assistantPartnerRunUsesRef.current, [assistantId]: true };
+      if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
+      assistantCardUsesRef.current = r.uses; setAssistantCardUses(r.uses);
+      void Promise.resolve().then(() => storeSet(ASSISTANT_CARD_USES_KEY, r.uses, false)).catch(error => console.error('[assistant-partner] uses save failed:', error && error.message ? error.message : error));
+      if (r.stateChanged) saveAssistantPartner(r.state);
+    } catch (error) { console.error('[assistant-partner] count failed:', error && error.message ? error.message : error); }
+  };
+  useEffect(() => { if (gameState === 'HOME') { assistantPartnerRunUsesRef.current = {}; assistantPartnerRunUnlockedRef.current = []; } }, [gameState]);
+  // はじめての人が最初の助手を決めた(判定ずみなら何もしない)
+  const startAssistantPartnerEarn = (firstId) => {
+    const r = assistantPartnerStartEarn(assistantPartnerRef.current, firstId);
+    if (r.changed) saveAssistantPartner(r.state);
+  };
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
   // はじめて遊ぶ人は、HOME に着くたびにお話を1本だけ(STORY_ONE_AT_A_TIME_KEY)。この HOME でもう流したかを覚え、HOME を離れたら戻す
   const [storyOneAtATime, setStoryOneAtATime] = useState(false);
@@ -104288,11 +104564,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantAtsu) return;
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID)) return;
-    if (!assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
+    // これから始める人(助手の解放・mode:'earn')は、あつの挑発を40回使ったら流れる(2026-11-11 社長 C)。今の人は仲良し度のまま
+    if (assistantPartner.mode === 'earn' ? !assistantPartnerAtsuJoinReady(assistantPartner, assistantCardUses)
+      : !assistantAtsuUnlockReady(id => assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points))) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(ATSU_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(ATSU_JOIN_STORY_ID);
-  }, [rhythmEventStorySeen, assistantBonds, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  }, [rhythmEventStorySeen, assistantBonds, assistantPartner, assistantCardUses, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // きゅうこの加入のお話(2026-10-22 社長の決定)。きゅうこは最初から選べるので、公開のあとの最初の HOME でだれにでも1回だけ流す。
   // 見たかどうかはあつと同じ「見終えたお話の id」(mh_rhythm_event_story_v1)。見たらマーケットにカード「きゅうこ」が並ぶ(data/breeder.js の kyukoCardOnSale)。
   // 公開の印 assistantKyuko が偽なら何もしない
@@ -106029,6 +106307,16 @@ function MonsterHeroGame() {
       // 下の行で「名前かアイコンが欠けている既存プレイヤー」も未完了へ戻すが、
       // その人はもう一度はじめての設定を通るだけで、新規ではない(配ってはいけない)
       const everOnboarded = wasOnboarded === true;
+      // 助手の解放(2026-11-11・18-assistant-partner.jsx)。すでに遊んでいる人(プロフィールを決め終えた・助手を選んだことがある)は
+      //   一度だけ「今のまま全員が助手」(mode:'all')を書く。判定ずみなら読むだけ(二重に判定しない)。はじめての人は助手えらびで決める
+      try {
+        const partnerRaw = await storeGet(ASSISTANT_PARTNER_KEY, null, false);
+        const judged = assistantPartnerJudgeExisting(partnerRaw, { wasOnboarded: everOnboarded, hasAssistant: savedAssistant != null });
+        if (judged.changed) await storeSet(ASSISTANT_PARTNER_KEY, judged.state, false);
+        const usesLoaded = normalizeAssistantCardUses(await storeGet(ASSISTANT_CARD_USES_KEY, {}, false));
+        assistantPartnerRef.current = judged.state; assistantCardUsesRef.current = usesLoaded;
+        setAssistantPartner(judged.state); setAssistantCardUses(usesLoaded);
+      } catch (error) { console.error('[assistant-partner] load failed:', error && error.message ? error.message : error); }
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
@@ -107167,7 +107455,7 @@ function MonsterHeroGame() {
         // ★まだ解放していない助手(あつ・ドラ)のごほうびは、解放するまで届けない(届ける計算のときだけLv0とみなす。
         //   保存してある仲良し度はそのまま残すので、加入のお話を見たら、その時点のLvまでのごほうびがまとめて届く)
         const levels = Object.fromEntries(ASSISTANT_LIST.map(who =>
-          [who.id, (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current)) ? 0
+          [who.id, ((typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current)) || !assistantPartnerAllowed(assistantPartnerRef.current, who.id)) ? 0
             : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
         const savedGifts = await storeGet('mh_gifts', [], false);
         const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
@@ -107188,7 +107476,7 @@ function MonsterHeroGame() {
     } finally { assistantBondRewardRunningRef.current = false; }
   }, [onboardingPreview]);
   // 加入のお話を見て助手を解放したとき(rhythmEventStorySeen が変わったとき)も、待たせていたごほうびを届ける
-  useEffect(() => { if (dataLoaded) void deliverAssistantBondRewards(); }, [dataLoaded, deliverAssistantBondRewards, rhythmEventStorySeen]);
+  useEffect(() => { if (dataLoaded) void deliverAssistantBondRewards(); }, [dataLoaded, deliverAssistantBondRewards, rhythmEventStorySeen, assistantPartner]);
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
   // 指定した助手の仲良し度を、行動に応じて増やす。上限に達していれば何も起きない。
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
@@ -107201,6 +107489,8 @@ function MonsterHeroGame() {
     //   カード「あつの挑発」は加入より前から持てるので、カード本人へ入れる道(assistantCardUse)から貯まっていた。
     //   条件のない助手(みゅあ・きき・もも・きゅうこ)はそのまま。すでに貯まった値は消さない・書き換えない(CLAUDE.md ⑦)
     if (typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(id, rhythmEventStorySeenRef.current)) return;
+    // 町の人(助手の解放・まだ助手でない)も増やさない
+    if (!assistantPartnerAllowed(assistantPartnerRef.current, id)) return;
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
     const before = assistantBondLevelOf(current.points);
     const result = gainAssistantBond(current, actionKey, Date.now(), amount);
@@ -109394,6 +109684,31 @@ function MonsterHeroGame() {
   // ラン終了画面: 今回のランで勇者モンに選んでいた(まだマスモン化していない)モンスター種を、
   // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
   // ラン終了画面(CHAMPION/敗北/リタイア)共通: マスモン登録ボタン・登録済み表示
+  // 助手の解放(2026-11-11): 結果画面(勝ち・負け・リタイア)に、この戦いで使った「まだ助手でない助手」のカードの進み具合を1行ずつ。
+  //   画面の部品(68)は変えず、マスモン登録の案内の下に足す(masuRegisterWithPartnerNode)。数えた助手は HOME に戻ると空にする
+  const assistantPartnerRunNode = () => {
+    if (debugBattle || assistantPartner.mode !== 'earn') return null;
+    const ids = Object.keys(assistantPartnerRunUsesRef.current || {});
+    if (!ids.length) return null;
+    const need = ASSISTANT_PARTNER_NEED;
+    const rows = ids.map(id => ({ id, who: ASSISTANT_LIST.find(w => w.id === id), n: Math.min(assistantCardUses[id] || 0, need), done: assistantPartnerAllowed(assistantPartner, id) }))
+      .filter(r => r.who && (r.done ? assistantPartner.first !== r.id && assistantPartnerRunUnlockedRef.current.includes(r.id) : true));
+    if (!rows.length) return null;
+    return (
+      <div data-assistant-partner-run className="w-full max-w-xs mx-auto mt-1.5 flex flex-col gap-1 shrink-0">
+        {rows.map(r => (
+          <div key={r.id} className="rounded-xl border border-cyan-300/30 bg-slate-900/80 px-2.5 py-1 text-left">
+            <div className="flex items-center justify-between gap-2 text-[10.5px] font-black text-slate-100">
+              <span className="truncate">🤝 「{assistantPartnerCardName(r.id)}」</span>
+              <span className="tabular-nums shrink-0" style={{ color: r.done ? '#fde047' : '#a5f3fc' }}>{r.done ? `${r.who.name}が助手になりました！` : `${r.n} / ${need}`}</span>
+            </div>
+            {!r.done && <div className="h-1 rounded-full bg-slate-800 overflow-hidden mt-0.5"><div className="h-full rounded-full" style={{ width: `${Math.round(r.n / need * 100)}%`, background: 'linear-gradient(90deg,#38bdf8,#a78bfa)' }}/></div>}
+          </div>
+        ))}
+      </div>
+    );
+  };
+  const masuRegisterWithPartnerNode = () => <>{masuRegisterButtonNode()}{assistantPartnerRunNode()}</>;
   const masuRegisterButtonNode = () => {
     if (debugBattle || mainHero?.debugOnly) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
@@ -114236,6 +114551,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       // AIコピーが使ったアシカは仲良し度に数えない(プレイヤーが切った札ではない)
+      // 助手の解放: カード本人の使った回数(40回で助手に)
+      if(!entry.aiCopy&&isBreeder&&!debugBattleRef.current){ const partnerCardId=assistantIdOfAssistCard(card.id); if(partnerCardId) countAssistantCardUse(partnerCardId); }
       if(!entry.aiCopy){ if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); } }
       // ★AIコピーの札は、帯・ログ・ダメージの数字に出す名前を「〜のコピー」にする(元の子が動いたと取り違えないように。2026-10-27 部長)
       const actorName=(si)=>entry.aiCopy?tacticsAiCopyName(aiCopyRef.current):battleActorName(si);
@@ -120991,6 +121308,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
               <p className="text-[10px] text-slate-300 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。</p>
               <span data-assistant-pick-later className="mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950">あとからいつでも変えられます</span>
+              {/* 助手の解放(2026-11-11)。これから始める人は、ほかの助手をカードを使って迎える */}
+              {assistantPartner.mode!=='all'&&RELEASE_FLAGS.assistantPartnerUnlock===true&&<p data-assistant-pick-partner-note className="text-[10px] text-cyan-200 mt-1.5 leading-tight">ほかの助手は、モンヒロバトルでその助手のアシストカードを使うと、助手として選べるようになります。</p>}
             </div>
             {(()=>{
               const list=assistantsUnlockedFrom(rhythmEventStorySeen);
@@ -121022,7 +121341,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 {pick&&<div className="shrink-0 w-full max-w-md mx-auto pt-1" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
                   <div className="mb-1 text-center text-[11px] font-black text-slate-300">{pick.name}を選んでいます</div>
-                  <button type="button" data-assistant-pick-confirm onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                  <button type="button" data-assistant-pick-confirm onClick={()=>{if(!onboardingPreview&&RELEASE_FLAGS.assistantPartnerUnlock===true)startAssistantPartnerEarn(pick.id);chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
                     className="min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]" style={{backgroundColor:pick.accent}}>この助手にする</button>
                 </div>}
               </>;
@@ -121085,7 +121404,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             rhythmHistoryCount={rhythmHistoryCount}
             /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
                ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>(who.id!=='momosuke'||momosukeIntroSeenFlag)&&assistantPartnerAllowed(assistantPartner,who.id))}
             onReplayPeerTalk={(talk)=>setPeerReplay(talk)}
             peerItems={typeof assistantLifeGiftCounts==='function'?assistantLifeGiftCounts(ownedItems):{gift:ownedItemCount(ownedItems,'peer_gift'),token:ownedItemCount(ownedItems,'peer_token')}}
             onUsePeerItem={useAssistantPeerItem}
@@ -122074,11 +122393,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* プロフィールからの助手変更。仲良し度も呼び方も助手ごとに分けてあるので、
             切り替えても、もう片方のぶんは何も失われない */}
+        {/* 助手の解放の演出(2026-11-11・59-assistant-partner-fx.jsx)。解放した戦いのあと、HOME に戻ったときに1人ずつ。
+            ほかのお話・小窓が出ているあいだは待つ。閉じたら見た印(noticed)を書き、二度出さない */}
+        {(()=>{
+          if(onboardingPreview||!dataLoaded||bootPhase!=='GAME'||gameState!=='HOME'||eventReplay||rhythmEventStoryPending||rhythmHellGuide||showAssistantPicker) return null;
+          const id=assistantPartnerPendingNotice(assistantPartner,(x)=>assistantPartnerOkWith(assistantPartner,rhythmEventStorySeen,x));
+          const who=id?ASSISTANT_LIST.find(w=>w.id===id):null;
+          if(!who||typeof AssistantPartnerUnlockFx!=='function') return null;
+          const done=(choose)=>{const r=assistantPartnerMarkNoticed(assistantPartnerRef.current,who.id);if(r.changed)saveAssistantPartner(r.state);if(choose)chooseAssistant(who.id);};
+          return <AssistantPartnerUnlockFx key={who.id} who={who} cardName={assistantPartnerCardName(who.id)} need={ASSISTANT_PARTNER_NEED}
+            line={assistantPartnerUnlockLine(who.id)} effects={ASSISTANT_PARTNER_UNLOCK_EFFECTS} onChoose={()=>done(true)} onLater={()=>done(false)}/>;
+        })()}
         {showAssistantPicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
               <h3 className="text-base font-black text-white mb-1 text-center">いっしょに遊ぶ助手</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。</p>
+              {assistantPartner.mode==='earn'&&<p data-assistant-partner-note className="text-[9px] text-cyan-200 text-center -mt-2 mb-3 leading-tight">モンヒロバトルで助手のアシストカードを{ASSISTANT_PARTNER_NEED}回使うと、その助手を選べるようになります(オートも数えます)。</p>}
               <div className="space-y-2 mb-3">
                 {/* 公開の印が立つまでの助手(あつ)は、鍵つきの「？？？」としても出さない(assistantReleased) */}
                 {ASSISTANT_LIST.filter(who=>assistantReleased(who.id)).map(who=>{
@@ -122099,6 +122430,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       </span>
                     </div>
                   );
+                  // これから始める人の、まだ助手でない助手(2026-11-11 助手の解放)。顔と「あと何回」を出し、押しても選ばない
+                  if(!assistantPartnerAllowed(assistantPartner,who.id)){
+                    const need=ASSISTANT_PARTNER_NEED;const n=Math.min(assistantCardUses[who.id]||0,need);const cardName=assistantPartnerCardName(who.id);
+                    const owned=Array.isArray(unlockedTeachingIds)&&unlockedTeachingIds.includes(who.id);
+                    return(
+                      <div key={who.id} data-assistant-partner-locked={who.id} className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60">
+                        <span className="shrink-0" style={{opacity:.6,filter:'saturate(.35)'}}><AssistantFace who={who} size={52} accent="#64748b" expression="normal"/></span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block text-[12px] font-black text-slate-300">{who.name}<span className="ml-1 rounded-full bg-slate-700 px-1.5 py-0.5 text-[8.5px] text-slate-200 align-middle">まだ助手ではありません</span></b>
+                          <small className="block text-[9px] text-slate-400 leading-tight mt-0.5">{owned?<>「{cardName}」をモンヒロバトルで使った回数 <b className="text-slate-200 tabular-nums">{n} / {need}</b></>:<>「{cardName}」を手に入れて、モンヒロバトルで{need}回使うと選べます</>}</small>
+                          {owned&&<span className="block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"><span className="block h-full rounded-full" style={{width:`${Math.round(n/need*100)}%`,background:'linear-gradient(90deg,#38bdf8,#a78bfa)'}}/></span>}
+                        </span>
+                      </div>
+                    );
+                  }
                   return(
                     <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);setShowAssistantPicker(false);}} aria-pressed={active}
                       className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97]"
@@ -124558,7 +124904,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {gameState==='CHAMPION'&&(
         <ChampionScreen
           autoRepeat={autoRepeat} finalRewardSummary={finalRewardSummary}
-          masuRegisterButtonNode={masuRegisterButtonNode}
+          masuRegisterButtonNode={masuRegisterWithPartnerNode}
           openSpeciesChallengeSelection={openSpeciesChallengeSelection}
           resultActionPending={resultActionPending} resultProcessing={resultProcessing}
           returnToHome={returnToHome} runHighlights={runHighlights} runMode={runMode}
@@ -124577,7 +124923,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {hp<=0&&!debugBattle&&!runBackgroundAllowed&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
-          masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
+          masuRegisterButtonNode={masuRegisterWithPartnerNode} resultActionPending={resultActionPending}
           returnToHome={returnToHome} runHighlights={runHighlights} runMode={runMode}
           runResultActionOnce={runResultActionOnce} score={score}
         />
@@ -124586,7 +124932,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {gaveUp&&!debugBattle&&!runBackgroundAllowed&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
-          masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
+          masuRegisterButtonNode={masuRegisterWithPartnerNode} resultActionPending={resultActionPending}
           returnToHome={returnToHome} runMode={runMode} runResultActionOnce={runResultActionOnce}
           score={score}
         />
