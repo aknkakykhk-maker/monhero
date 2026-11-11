@@ -5,9 +5,10 @@
 // 見るもの(画面に出ている「助手の絵」の img を全部拾って測る。場面の作りを知らなくても測れる)
 //   ① 伸び: 縦横の比が元の絵とちがう(3% まで)
 //   ② ぼやけ: 元の絵より大きく引き伸ばしている(CSS の 1px に元の絵 1px 未満。スマホは 2倍の細かさなので、1.0倍を超えたら NG)
-//   ③ 切れ: 描かれている所(透けていない範囲)が、枠・画面の外に出ている(上=頭 4%・左右 6% まで。下は胸から上の絵なので見ない。全身の絵=ドラは下も見る)
+//   ③ 切れ: 顔(頭のてっぺん〜顎。表 ASSISTANT_LIFE_STAND_FACE と着替えの表から)が枠・画面の外に出ている(5% まで)。描かれている所の上は 4% まで(顔の点が分かる絵は、耳・帽子・王冠の先が 10% まで)。
+//      羽・肩が左右で枠の外へ出るのは切れに数えない(顔の点が分からない絵だけ、左右 6% まで)。下は胸から上の絵なので見ない。全身の絵=ドラは下も見る
 //   ④ 小さすぎ: 立ち絵の顔(目から顎)が 5px 未満・顔の絵が 12px 未満
-//   ⑤ ばらつき: 同じ場面・同じ大きさの画面で、助手ごとの顔の大きさ(立ち絵)の最大÷最小が 1.25 を超える
+//   ⑤ ばらつき: 並んで立つ場面(地図・場面・アルバム)で、助手ごとの顔の大きさ(立ち絵)の最大÷最小が 1.25 を超える。1人ずつ出す場面(モードえらび・カード)は参考として出すだけ
 //   run-checks-timeout: 1500(全部で10分あまり。実物を起動して、助手を1人ずつ替えながら場面を開く)
 //   ⑥ 重ねた絵(寝顔)のずれ: 目を閉じた形が、下の立ち絵と同じ場所・同じ大きさ(1.5px まで)
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -34,7 +35,7 @@ const OUTFIT = arg('--outfit') ? OUTFITS[arg('--outfit')] : null;
 const SFX = arg('--outfit') ? `-outfit${arg('--outfit')}` : '';
 const WHO = OUTFIT ? WHO0.filter(id => OUTFIT[id]) : WHO0;
 const want0 = (scene) => !ONLY || ONLY.includes(scene);
-const LIMIT = { stretch: 0.03, blur: 1.0, cutTop: 0.04, cutSide: 0.06, cutBottom: 0.04, faceMin: 5, iconMin: 12, spread: 1.25, overlay: 1.5 };
+const LIMIT = { stretch: 0.03, blur: 1.0, cutTop: 0.04, cutTopDeco: 0.1, cutSide: 0.06, faceCut: 0.05, cutBottom: 0.04, faceMin: 5, iconMin: 12, spread: 1.25, overlay: 1.5 };
 
 // 画面の中で、助手の絵を全部拾って測る
 const probe = () => (async () => {
@@ -80,12 +81,13 @@ const probe = () => (async () => {
     const pos = (cs.objectPosition || '50% 50%').split(/\s+/).map(v => (/%$/.test(v) ? parseFloat(v) / 100 : 0.5));
     const dw = nw * kx, dh = nh * ky; const drawn = { l: box.l + (bw - dw) * pos[0], t: box.t + (bh - dh) * (pos[1] != null ? pos[1] : 0.5) }; drawn.r = drawn.l + dw; drawn.b = drawn.t + dh;
     // 見えている範囲: 自分の箱・自分の clip-path・overflow で切る祖先・祖先の clip-path・画面
-    let vis = inset(cs, box);
+    let vis = inset(cs, box), scrolled = false;
     for (let e = img.parentElement; e && e.nodeType === 1 && e !== document.documentElement; e = e.parentElement) {
       const s = getComputedStyle(e); const r = R(e);
       if (s.overflowX !== 'visible' || s.overflowY !== 'visible') { // スクロールできる箱は「切れ」ではないので、その箱では切らない
-        const scrolls = /(auto|scroll)/.test(s.overflowX + s.overflowY) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1);
+        const scrolls = /(auto|scroll)/.test(s.overflowX + s.overflowY);
         if (!scrolls) vis = cut(vis, r);
+        else if (box.t < r.t - 1 || box.b > r.b + 1 || box.l < r.l - 1 || box.r > r.r + 1) scrolled = true; // スクロールの先に掛かっている絵は、切れを見ない
       }
       if (s.clipPath && s.clipPath !== 'none') vis = cut(vis, inset(s, r));
     }
@@ -94,16 +96,22 @@ const probe = () => (async () => {
     const aw = Math.max(1, a.r - a.l), ah = Math.max(1, a.b - a.t);
     const seen = vis.r > vis.l && vis.b > vis.t ? Math.max(0, Math.min(a.r, vis.r) - Math.max(a.l, vis.l)) * Math.max(0, Math.min(a.b, vis.b) - Math.max(a.t, vis.t)) / (aw * ah) : 0;
     // 立ち絵の顔の大きさ(目から顎)。表(ASSISTANT_LIFE_STAND_FACE)にある、ふだんの服の絵だけ
-    let facePx = null;
-    if (!face && !costume && who && typeof ASSISTANT_LIFE_STAND_FACE !== 'undefined' && ASSISTANT_LIFE_STAND_FACE[who.id]) {
-      const f = ASSISTANT_LIFE_STAND_FACE[who.id]; facePx = ah * ASSISTANT_LIFE_STAND_EC * (f.m || 1);
+    //   顔の四角(頭のてっぺん〜顎・体の真ん中から左右に頭の幅ぶん)が、どれだけ見えていないか(faceCut)。羽・耳・肩が枠の外へ出るのは切れに数えない
+    let facePx = null, faceCut = null;
+    const known = !face && who && typeof assistantLifeStandFace === 'function' && (costume ? (typeof ASSISTANT_LIFE_STAND_FACE_OUTFIT !== 'undefined' && ASSISTANT_LIFE_STAND_FACE_OUTFIT[costume] && ASSISTANT_LIFE_STAND_FACE_OUTFIT[costume][who.id]) : ASSISTANT_LIFE_STAND_FACE[who.id]);
+    if (known) {
+      const f = assistantLifeStandFace(who.id, raw); facePx = ah * ASSISTANT_LIFE_STAND_EC * (f.m || 1) / (f.fit || 1);
+      const U = facePx * ASSISTANT_LIFE_STAND_FACE_LEN, cx = (a.l + a.r) / 2;
+      const fr = { l: cx - U * 0.36, r: cx + U * 0.36, t: a.t + (f.top || 0) * ah, b: f.head ? a.b : a.t + (f.chin || 0.47) * ah };
+      const fa = (fr.r - fr.l) * (fr.b - fr.t); const fv = Math.max(0, Math.min(fr.r, vis.r) - Math.max(fr.l, vis.l)) * Math.max(0, Math.min(fr.b, vis.b) - Math.max(fr.t, vis.t));
+      faceCut = fa > 0 ? 1 - fv / fa : 0;
     }
     const mask = [img, img.parentElement, img.parentElement && img.parentElement.parentElement].some(e => { if (!e) return false; const s = getComputedStyle(e); return (s.maskImage && s.maskImage !== 'none') || (s.webkitMaskImage && s.webkitMaskImage !== 'none'); });
     const tag = (() => { for (let e = img; e && e.nodeType === 1; e = e.parentElement) { const d = [...e.attributes].find(x => /^data-(assistant|card|home|mh|rhythm)/.test(x.name)); if (d) return d.name.replace(/^data-/, ''); } return ''; })();
     out.push({ who: who ? who.id : m[3], expr: m[4], kind: face ? 'face' : 'full', costume, tag, w: Math.round(bw * 10) / 10, h: Math.round(bh * 10) / 10,
-      stretch: Math.max(sx / sy, sy / sx) - 1, scale: tilt ? Math.max(lw / nw, lh / nh) : Math.max(kx, ky), seen, tilt,
+      stretch: Math.max(sx / sy, sy / sx) - 1, scale: tilt ? Math.max(lw / nw, lh / nh) : Math.max(kx, ky), seen, tilt: tilt || scrolled,
       cutTop: Math.max(0, vis.t - a.t) / ah, cutBottom: Math.max(0, a.b - vis.b) / ah, cutLeft: Math.max(0, vis.l - a.l) / aw, cutRight: Math.max(0, a.r - vis.r) / aw,
-      bottomEdge: ab.b > 0.985, mask, facePx, x: Math.round((a.l + a.r) / 2), y: Math.round(a.t), box: [Math.round(drawn.l * 10) / 10, Math.round(drawn.t * 10) / 10, Math.round(dw * 10) / 10, Math.round(dh * 10) / 10] });
+      bottomEdge: ab.b > 0.985, mask, facePx, faceCut, x: Math.round((a.l + a.r) / 2), y: Math.round(a.t), box: [Math.round(drawn.l * 10) / 10, Math.round(drawn.t * 10) / 10, Math.round(dw * 10) / 10, Math.round(dh * 10) / 10] });
   }
   // 重ねた寝顔: すぐ前の立ち絵と同じ場所・同じ大きさか(AssistantLifeSleepEyes は立ち絵と同じ w・h・left・top をもらう作り)
   const overlays = [];
@@ -130,7 +138,7 @@ const notes = [];
   });
   await new Promise(r => server.listen(PORT, r));
   if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(fs.existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
   const errors = [];
   const BASE = `http://localhost:${PORT}/`;
 
@@ -162,7 +170,7 @@ const notes = [];
     const setLife = (mix) => page.evaluate((m) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: m.groups, solo: m.solo, watched: [] } }); }, mix);
     const closeLife = async () => { for (let i = 0; i < 3 && await page.locator('[data-assistant-life-screen]').count(); i++) { await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false })); await page.waitForTimeout(300); } };
     const openLife = async () => {
-      for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) throw e; await page.waitForTimeout(800); } }
+      for (let i = 0; i < 5; i++) { const pc = page.locator('[data-assistant-peer-close]'); if (await pc.count()) await pc.first().click({ timeout: 2000 }).catch(() => {}); try { await page.locator('[data-home-assistant-life]').click({ timeout: 4000 }); break; } catch (e) { if (i === 4) { await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: true })); await page.locator('[data-assistant-life-screen]').waitFor({ timeout: 4000 }); break; } await finishTalk(page); await page.waitForTimeout(800); } }
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {}); await page.waitForTimeout(600);
     };
     try {
@@ -310,33 +318,38 @@ const notes = [];
     if (r.stretch > LIMIT.stretch) add(r, '伸び', r.stretch);
     if (r.scale > LIMIT.blur) add(r, 'ぼやけ', r.scale);
     if (r.tilt) continue;
-    if (r.cutTop > LIMIT.cutTop) add(r, '上が切れる', r.cutTop);
-    if (r.cutLeft > LIMIT.cutSide || r.cutRight > LIMIT.cutSide) add(r, '左右が切れる', Math.max(r.cutLeft, r.cutRight));
+    if (r.cutTop > (r.faceCut != null ? LIMIT.cutTopDeco : LIMIT.cutTop)) add(r, '上が切れる', r.cutTop);
+    if (r.faceCut != null) { if (r.faceCut > LIMIT.faceCut) add(r, '顔が切れる', r.faceCut); }
+    else if (r.cutLeft > LIMIT.cutSide || r.cutRight > LIMIT.cutSide) add(r, '左右が切れる', Math.max(r.cutLeft, r.cutRight));
     if (r.kind === 'full' && !r.bottomEdge && !r.mask && r.cutBottom > LIMIT.cutBottom) add(r, '足元が切れる', r.cutBottom);
     if (r.kind === 'full' && r.facePx != null && r.facePx < LIMIT.faceMin) add(r, '小さすぎ', r.facePx);
     if (r.kind === 'face' && Math.min(r.w, r.h) < LIMIT.iconMin) add(r, '小さすぎ', Math.min(r.w, r.h));
   }
   // ばらつき: 同じ場面・同じ画面の大きさ・同じ使いどころ(tag)で、助手ごとの顔の大きさ
   const groups = new Map();
-  for (const r of rows) { if (r.kind !== 'full' || r.facePx == null || r.seen <= 0.02 || r.tilt) continue; const k = `${r.scene}|${r.view}|${r.tag}${/^(scene|album)$/.test(r.scene) ? `|${r.label}` : ''}`; if (!groups.has(k)) groups.set(k, new Map()); const g = groups.get(k); g.set(r.who, Math.max(g.get(r.who) || 0, r.facePx)); }
-  const spreads = [];
-  for (const [k, g] of groups) { if (g.size < 2) continue; const e = [...g.entries()].sort((a, b) => a[1] - b[1]); const ratio = e[e.length - 1][1] / e[0][1]; if (ratio > LIMIT.spread) spreads.push({ k, ratio, min: e[0], max: e[e.length - 1] }); }
+  for (const r of rows) { if (r.kind !== 'full' || r.facePx == null || r.seen <= 0.02 || r.tilt) continue; const k = `${r.scene}|${r.view}|${r.tag}${/^(scene|album)/.test(r.scene) ? `|${r.label}` : ''}`; if (!groups.has(k)) groups.set(k, new Map()); const g = groups.get(k); g.set(r.who, Math.max(g.get(r.who) || 0, r.facePx)); }
+  // 並んで立つ場面(地図・場面・アルバム・部屋・家)は NG。1人ずつ枠いっぱいに出す場面(モードえらび・カード)は、絵ごとの余白のちがいと
+  //   社長が1人ずつ決めた寄せ方(あつ・きゅうこ)があるので、参考として出すだけ(--all)
+  const SIDE_BY_SIDE = /^(map|scene|album|room|house)/;
+  const spreads = [], soloSpreads = [];
+  for (const [k, g] of groups) { if (g.size < 2) continue; const e = [...g.entries()].sort((a, b) => a[1] - b[1]); const ratio = e[e.length - 1][1] / e[0][1]; if (ratio > LIMIT.spread) (SIDE_BY_SIDE.test(k) ? spreads : soloSpreads).push({ k, ratio, min: e[0], max: e[e.length - 1] }); }
   const overlayBad = overlayRows.filter(o => o.d > LIMIT.overlay);
 
   // 問題の大きい順(場面 × 種類ごとにまとめる)
   const byKey = new Map();
   for (const b of bad) { if (!byKey.has(b.key)) byKey.set(b.key, []); byKey.get(b.key).push(b); }
-  const weight = { '伸び': 5, '上が切れる': 4, '左右が切れる': 3, '足元が切れる': 3, 'ぼやけ': 2, '小さすぎ': 2 };
+  const weight = { '顔が切れる': 6, '伸び': 5, '上が切れる': 4, '左右が切れる': 3, '足元が切れる': 3, 'ぼやけ': 2, '小さすぎ': 2 };
   const table = [...byKey.entries()].map(([key, l]) => { const worst = l.reduce((a, b) => (b.num > a.num ? b : a)); const [scene, kind, what] = key.split('|');
     return { scene, kind, what, n: l.length, who: [...new Set(l.map(x => x.r.who))], views: [...new Set(l.map(x => x.r.view))], worst, score: weight[what] * 100 + Math.min(99, l.length) }; }).sort((a, b) => b.score - a.score);
   const fmt = (what, n) => (what === 'ぼやけ' ? `${n.toFixed(2)}倍` : what === '小さすぎ' ? `${n.toFixed(1)}px` : `${Math.round(n * 100)}%`);
   console.log(`測った絵 ${rows.length} 枚(場面 ${[...new Set(rows.map(r => r.scene))].length}・画面の大きさ ${VIEWS.length})`);
   for (const t of table.slice(0, ALL ? 999 : 12)) console.log(`NG: ${t.scene} ${t.kind === 'face' ? '顔' : '立ち絵'} ${t.what} ${t.n}件(最大 ${fmt(t.what, t.worst.num)} ${t.worst.r.who}・${t.worst.r.view}・${t.worst.r.label}・${t.worst.r.tag})/ ${t.who.join(',')} / ${t.views.join(',')}`);
   for (const s of spreads.sort((a, b) => b.ratio - a.ratio).slice(0, ALL ? 999 : 8)) console.log(`NG: ばらつき ${s.k} — 最大÷最小 ${s.ratio.toFixed(2)}(${s.min[0]} ${s.min[1].toFixed(1)}px 〜 ${s.max[0]} ${s.max[1].toFixed(1)}px)`);
+  if (ALL) for (const s of soloSpreads.sort((a, b) => b.ratio - a.ratio).slice(0, 6)) console.log(`参考: 1人で出す場面の顔の大きさ ${s.k} — 最大÷最小 ${s.ratio.toFixed(2)}(${s.min[0]} ${s.min[1].toFixed(1)}px 〜 ${s.max[0]} ${s.max[1].toFixed(1)}px)`);
   for (const o of overlayBad.slice(0, ALL ? 999 : 5)) console.log(`NG: 寝顔のずれ ${o.scene} ${o.view} ${o.label} ${o.who} ${o.d.toFixed(1)}px`);
   for (const n of notes.slice(0, ALL ? 999 : 8)) console.log(`NG: ${n}`);
   for (const e of [...new Set(errors)].slice(0, 3)) console.log(`NG: ページのエラー ${e}`);
-  if (SHOTS) { fs.writeFileSync(path.join(SHOTS, 'rows.json'), JSON.stringify({ rows, overlayRows, shots, table: table.map(t => ({ ...t, worst: { num: t.worst.num, ...t.worst.r } })), spreads, notes }, null, 0)); }
+  if (SHOTS) { fs.writeFileSync(path.join(SHOTS, 'rows.json'), JSON.stringify({ rows, overlayRows, shots, table: table.map(t => ({ ...t, worst: { num: t.worst.num, ...t.worst.r } })), spreads, soloSpreads, notes }, null, 0)); }
   const total = table.length + spreads.length + overlayBad.length + notes.length + new Set(errors).size;
   console.log(total ? `NG ${total}種類(絵 ${bad.length} 件・ばらつき ${spreads.length}・寝顔 ${overlayBad.length}・開けない ${notes.length}・エラー ${new Set(errors).size})` : `OK 助手の絵 ${rows.length} 枚: 伸び・ぼやけ・切れ・小さすぎ・ばらつき・寝顔のずれ なし`);
   process.exit(total ? 1 : 0);
