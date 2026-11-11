@@ -228,6 +228,33 @@ node tools/mode/rhythm-chart-review-check.js                                    
 > **既定(2026-11-11 社長の決定 A)**: 新曲の EXPERT・MASTER は、交差・真ん中越えを既定で減らす。いちばん盛り上がる区切り(盛り上がりが山の85%以上)の交差は見せ場として残す
 > (`handFinish` を書かない曲は EXPERT・MASTER が `keep-climax`、EASY〜HARD が `must`)。配信中の曲の譜面は変えない。
 
+## サビ・短い動機・量の配り方(2026-11-11 社長が NEXT-PLAN の 1→2→3 を選択・MHB CHART ENGINE Rev.38)
+
+新曲から効く。配信中の曲の譜面・既存の解析は変えていない。数字と止め絵: [`docs/progress/beat-chart-tools/REV38.md`](../progress/beat-chart-tools/REV38.md)
+
+| こと | 何をする | 切り方 |
+| --- | --- | --- |
+| サビを見つける(`rhythm-chart-chorus.js`) | 区切りごとに「サビらしさ」の点数(盛り上がり0.4・繰り返し0.2・歌の帯0.15・前からの上がり0.15・位置0.1)。その曲の最高点の85%以上・0.55以上・4小節以上・盛り上がりが山の半分以上をサビとする。名札は付けない | `--no-chorus`(盛り上がりの上位3割で決める前の作り) |
+| 見せ場をサビへ | 生成器の「盛り上がる区切り(climax)」をサビで決める。左右対称の同時フリック・両手スライド・端から端の SLIDE・同時押しの連なりは、狙いの7割までを先にサビから選ぶ | 同上 |
+| サビ前の溜め | サビに入る直前の1小節は取り分を0.6倍(曲全体のノーツ数は変えない)。見せ場も置かない | 同上 |
+| 手の仕上げの山場 | `keep-climax` が交差を残す区切りは、サビのうち盛り上がりが山の85%以上の区切り(大きいだけの間奏は残さない)。押せない・帯の中は、いやらしい形をいくつ消しても作らない重さ(1000) | — |
+| 短い動機の写し(`rhythm-chart-motifs.js`) | 区切りの繰り返し・4小節の繰り返しが付いていない小節で、拾った音の位置が6割以上同じ・音の上下も似ている1〜2小節を探し、同じ手の動きで置く(2回目は左右反転・高さが違えば形ごと最大2レーンずらす)。かたまりの4分の3以上に元があるときだけ写す | `--no-motifs` |
+| 盛り上がりに合わせて量を配る(引き出し R6) | **既定は切**(7曲で数字が良くならずノーツが減った)。曲の一覧の `energySpread:true` / `'strong'` を書いた曲だけ | `tools/mode/CHART_DRAWERS.md` |
+
+```
+node tools/mode/rhythm-chart-chorus.js --track <曲> | --all                         サビの点数と内訳(読むだけ)
+node tools/mode/rhythm-chart-motifs.js --track <曲> [--dir <場所>] [--difficulty MASTER]   短い動機の小節と、元と同じ向きの割合
+node tools/mode/rhythm-chart-compare.js --make <場所> [--root <変更前のワークツリー>] [--gen-args "…"]   何曲かまとめて作る(生成 → 自動修正 → 手の仕上げ)
+node tools/mode/rhythm-chart-compare.js --before <場所A> --after <場所B>            合計とサビ・動機の数字で前後を比べる
+node tools/mode/rhythm-chart-compare.js --released --after <場所B> [--tracks …]     公開中の譜面(前)と、いまの道具の作り直し(後)を比べる(読むだけ)
+node tools/mode/rhythm-chart-chorus-check.js                                        上の決まりの見張り
+```
+
+- **強化の前後比べ**はこの道具で回す(既定は Rev.37 と同じ7曲。`--tracks` で替える)。1譜面ずつの点検と止め絵は `rhythm-chart-review.js --before/--after`
+- **公開中の譜面へ当てたら何が変わるか**は `--make <場所> --tracks <曲>` → `--released --after <場所>`。公開中の譜面は人の手直しと公開時のつまみも入っているので、
+  差は道具の強化だけのものではない。譜面を直すと決まった曲だけ、決まりどおり(下の「公開中の譜面のノーツを動かす・戻すとき」)に進める
+- 動機の「元と同じ向き」は、何もしなくても5割を超える数字(小節ごとに、そのまま・左右反転の合う方で数える)。見るのは前後の差
+
 ## 公開中の譜面のノーツを動かす・戻すとき
 
 `rhythm-overlap-reach-check.js` と手の決まりの検査も回す。「遊ばれていた形」は何かを避けていることがある
