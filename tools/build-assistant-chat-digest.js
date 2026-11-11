@@ -54,6 +54,8 @@ const TERM_GROUPS = [
   { variants: ['供モン'], topic: 'basics/quickstart' },
   { variants: ['絆レベル', '絆Lv'], topic: 'masu/masumon' },
   { variants: ['仲良し度'], topic: 'tips/bond' },
+  // 2026-11-11 「マルチのスタンプ」の項目を足したら「マルチってなに？」でそちらが先に選ばれた。マルチの説明は「みんなで対戦」の項目
+  { variants: ['マルチ', 'みんなで対戦'], topic: 'rhythm/rhythm-multi' },
   { variants: ['M/B管理'], topic: 'home/roster' },
 ];
 
