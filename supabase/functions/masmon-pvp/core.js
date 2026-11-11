@@ -17,7 +17,9 @@ export const INITIAL_TOTAL_CAP = 3000;                       // 仮
 // 育成(6能力)を始めた日。この日より前には育っていない(この日からの日数で上限を出す)。公開の日に合わせて直す(仮)
 export const GROW_EPOCH = '2026-11-11';
 export const STAT_ABS_MAX = 999;
-export const LV_CAP = 30;                                    // いまのマスモンの Lv の上限(迎えたときに決まる 1〜30)
+export const LV_CAP = 99;                                    // 育成の Lv(56-assistant-life-masmon-grow の AMG_LV_MAX)。迎えたときの Lv は 1〜30
+export const LV_INITIAL_CAP = 30;                            // 迎えたときの Lv の上限
+export const LV_DAILY_CAP = 2;                               // 育成の Lv が1日に上がってよい数(経験は1回1〜3・次の Lv に 11 以上要る。閉じていた分のまとめも入れて多めに)
 export const TACTICS_INITIAL_CAP = 20;                       // 仮。戦術経験(0〜100)の初めの上限
 export const TACTICS_DAILY_CAP = 5;                          // 仮。戦術経験が1日に増えてよい量
 export const NAME_MAX = 12;                                  // マスモンの名前(提案の決まり 1〜12字)
@@ -138,6 +140,7 @@ export const capProblems = ({ team, anchors, entry, today, engine }) => {
       const grow = DAILY_GROWTH_CAP * sinceEpoch;
       for (const k of keys) if (m.stats[k] > INITIAL_STAT_CAP[k] + grow) out.push({ slot: m.slot, what: 'stat', key: k });
       if (total > INITIAL_TOTAL_CAP + grow) out.push({ slot: m.slot, what: 'total' });
+      if (m.lv > LV_INITIAL_CAP + LV_DAILY_CAP * sinceEpoch) out.push({ slot: m.slot, what: 'lv' });
     } else {
       const grow = DAILY_GROWTH_CAP * (Math.max(0, daysBetween(a.first_day, today)) + 1);
       for (const k of keys) {
@@ -145,8 +148,8 @@ export const capProblems = ({ team, anchors, entry, today, engine }) => {
         if (m.stats[k] > base + grow) out.push({ slot: m.slot, what: 'stat', key: k });
       }
       if (total > a.first_total + grow) out.push({ slot: m.slot, what: 'total' });
-      // Lv はいまは迎えたときに決まって上がらない。上がる形になっても1日1つまで
-      if (m.lv > a.first_lv + Math.max(0, daysBetween(a.first_day, today))) out.push({ slot: m.slot, what: 'lv' });
+      // 育成の Lv は訓練で上がる。初めて登録した値から1日 LV_DAILY_CAP まで
+      if (m.lv > a.first_lv + LV_DAILY_CAP * (Math.max(0, daysBetween(a.first_day, today)) + 1)) out.push({ slot: m.slot, what: 'lv' });
     }
   }
   const tFirst = entry ? entry.tactics_first : null;

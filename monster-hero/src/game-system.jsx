@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3ceea98eff3ee244
+// generated-sha256: b63f1017107077fb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71651,7 +71651,7 @@ const masmonPvpRead = async (path) => {
   } catch (_) { return null; }
 };
 
-// 自分の助手の編成を登録する(登録し直しも同じ)。members は出る順。1体 = { slot, species, name, lv, stats, techs?, mastery? }
+// 自分の助手の編成を登録する(登録し直しも同じ)。members は出る順。1体 = { slot, species, name, lv(育成の Lv・1〜99), stats, techs?, mastery? }
 //   style は作戦・交代の早さ(計算の style の上書き・0.5〜1.5)。size は登録する体数(1〜3。members の先頭から)
 const masmonPvpRegister = async ({ assistantId, size, members, style, tactics, userName, icon } = {}) => {
   if (!masmonPvpOn()) return { ok: false, reason: 'off' };

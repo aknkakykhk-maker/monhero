@@ -136,7 +136,9 @@ const check = (name, ok, extra) => {
     check('D 同じ日: +20 は通る・+21 ははじく', P(t1(plus(20)), anc).length === 0 && P(t1(plus(21)), anc).length > 0);
     check('D 3日後: +80(=20×4) は通る・+81 ははじく', P(t1(plus(80)), anc, null, '2026-11-23').length === 0 && P(t1(plus(81)), anc, null, '2026-11-23').length > 0);
     check('D 合計も見る(6能力を少しずつ上げて合計で超える)', P(t1({ life: 304, pow: 304, wise: 304, hit: 304, eva: 304, tough: 301 }), anc).some((p) => p.what === 'total'));
-    check('D Lv は同じ日に上がらない', P(t1(st(300), 11), anc).some((p) => p.what === 'lv'));
+    check('D Lv は初めて登録した値から1日2つまで(同じ日に +2 は通る・+3 ははじく)', P(t1(st(300), 12), anc).length === 0 && P(t1(st(300), 13), anc).some((p) => p.what === 'lv'));
+    check('D 育てた Lv(31 以上)も日数に見合えば通る(5日後は初めの10から22まで・初めての登録なら 30+2×日数)', P(t1(st(300), 22), anc, null, '2026-11-25').length === 0
+      && P(t1(st(300), 23), anc, null, '2026-11-25').some((p) => p.what === 'lv') && P(t1(st(300), 40)).length === 0);
     check('D 戦術経験: 初めの登録の基準 + 1日5 まで(同じ日は +5)', P({ ...t1(st(300)), tactics: 10 }, anc, { tactics_first: 5, tactics_day: today }).length === 0
       && P({ ...t1(st(300)), tactics: 11 }, anc, { tactics_first: 5, tactics_day: today }).some((p) => p.what === 'tactics'));
     check('D 能力が下がるのは通す', P(t1(st(100)), anc).length === 0);
