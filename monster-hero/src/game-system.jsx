@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 658307215b1a9d5c
+// generated-sha256: 8abbdf1a6c398b83
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38830,7 +38830,7 @@ const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data
 // 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
 //   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
-// 裏クイックをどこでも回しているあいだ(左下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
+// 裏クイックをどこでも回しているあいだ(右下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
 //   (2026-11-11 社長「ホームにいなくても出るときがある」。HOME へ戻ったときにまとめて出す)
 const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
@@ -39524,6 +39524,69 @@ const GrowthFxLayer = ({ screen, load }) => {
         : <GrowthFxItemCard key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>)}
     </>
   );
+};
+
+// ---- part: 45-quick-anywhere-float.jsx ----
+// ===== 裏クイック(どこでも回す)の小さな帯の置き場所(2026-11-11) =====
+// テスターいちか「転生のすべて選択ボタンと被るから右下にしてほし〜」。
+// 帯は画面の隅に浮かせて置く(画面の高さを取らない)。右下を第一にするが、その画面のボタンにかかるときは、
+// 空いている所へ移す。探す順: 右の端を下から上へ(6pxずつ・画面の高さの6割まで)→ 左の端を下から上へ。どこも空いていなければ右下のまま。
+// 画面が変わったとき・中身が遅れて出たとき・0.8秒ごとに置き直す(見た目だけ。周回の動きには触らない)。
+// tools/battle/quick-run-anywhere-strip-overlap-check.js が、縦・横・横小でほかのボタンと重ならないことを見る。
+const QUICK_ANYWHERE_FLOAT_STEP = 6;
+const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
+const quickAnywhereFloatStyle = (spot) => {
+  const s = { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` };
+  if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
+  else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
+  return s;
+};
+// そこに置いたとき、ほかの押せるもの(button・a・[role=button])にかかるか。自分と、自分の詳細の窓は数えない
+const quickAnywhereFloatHits = (el, spot) => {
+  if (typeof document === 'undefined' || !el) return 0;
+  const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  const css = getComputedStyle(document.documentElement);
+  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  const saB = num(css.getPropertyValue('--mh-sa-bottom')), saL = num(css.getPropertyValue('--mh-sa-left')), saR = num(css.getPropertyValue('--mh-sa-right'));
+  const bottom = Math.max(8 + spot.lift, saB + 6 + spot.lift);
+  const top = window.innerHeight - bottom - h;
+  const left = spot.side === 'right' ? window.innerWidth - Math.max(8, saR + 6) - w : Math.max(8, saL + 6);
+  const R = { left, top, right: left + w, bottom: top + h };
+  let hits = 0;
+  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+    if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    const cs = getComputedStyle(o);
+    if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
+    const r = o.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits++;
+  }
+  return hits;
+};
+const quickAnywhereFloatPick = (el) => {
+  const maxLift = Math.max(0, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT) / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
+  for (const side of ['right', 'left']) {
+    for (let lift = 0; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
+      const spot = { side, lift };
+      if (quickAnywhereFloatHits(el, spot) === 0) return spot;
+    }
+  }
+  return { side: 'right', lift: 0 };
+};
+// screen … いまの gameState(変わったら置き直す)。children … 帯のボタンの中身。ほかの props はボタンへそのまま渡す
+const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
+  const ref = useRef(null);
+  const [spot, setSpot] = useState({ side: 'right', lift: 0 });
+  React.useLayoutEffect(() => {
+    // いまの置き場所がまだ空いていれば動かさない(0.8秒ごとに行ったり来たりしない)
+    const place = () => { if (!ref.current) return; setSpot(prev => (quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current))); };
+    // 画面が変わったら、いちばん良い所(右下)から探し直す。中身が遅れて出る画面のため、少しおいてもう一度
+    const fresh = () => { if (ref.current) setSpot(quickAnywhereFloatPick(ref.current)); };
+    fresh();
+    const t1 = setTimeout(fresh, 300), t2 = setTimeout(place, 1200), iv = setInterval(place, 800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); };
+  }, [screen]);
+  return <button ref={ref} type="button" data-quick-anywhere-spot={`${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
@@ -106899,21 +106962,24 @@ function MonsterHeroGame() {
     const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
     const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
     const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
-    // 帯は小さく(HOME の「モンヒロバトル」の左の空きに収まる幅)。WAVE・報酬・説明は押して開く詳細へ
+    // 帯は小さく右下へ(2026-11-11 テスターいちか「転生のすべて選択ボタンと被るから右下に」)。HOME の「モンヒロバトル」の右の空きに収まる幅で、2段にする。
+    //   上の段は「🔁 ◯周目」、下の段は WAVE(社長「他みたいに wave も見れるように」)。報酬・説明は押して開く詳細へ
     const label = finished ? (quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止')
       : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const subLabel = finished ? '' : `W${wave}/10${resting ? '・休み' : ''}`;
     const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
     const info = { wave, loops: quickRunProgress.loops, finished, catchingUp: false, reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
       canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing, canResume: finished && quickRunResumable };
     const closeDetail = () => setQuickAnywhereDetail(false);
     return (<>
-      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
-        className={`fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
-        style={{ left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))', bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))', minHeight: 30 }}>
-        {label}
-      </button>
+      <QuickAnywhereFloat screen={gameState} data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}${subLabel ? ` ${subLabel}` : ''}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
+        className={`z-[70] flex max-w-[84px] flex-col items-center justify-center rounded-2xl border px-2 py-0.5 text-[11px] font-black leading-[14px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
+        style={{ minHeight: 32 }}>
+        <span className="max-w-full truncate">{label}</span>
+        {subLabel && <span data-quick-anywhere-wave className="max-w-full truncate text-[10px] font-bold opacity-80">{subLabel}</span>}
+      </QuickAnywhereFloat>
       {quickAnywhereDetail && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-start p-2" onClick={closeDetail} style={{ paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))', paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))' }}>
+        <div className="fixed inset-0 z-[90] flex items-end justify-end p-2" onClick={closeDetail} style={{ paddingBottom: 'max(48px, calc(var(--mh-sa-bottom, 0px) + 46px))', paddingRight: 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))' }}>
           <div data-quick-anywhere-detail role="dialog" aria-label="裏クイックのようす" onClick={(e) => e.stopPropagation()}
             className="w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60">
             <div className="flex items-center justify-between gap-2">

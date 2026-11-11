@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6d6d3ae2b222a4ff
+// source-sha256: 429941b5e3e44c19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63919,6 +63919,104 @@ const GrowthFxLayer = ({
     level: level,
     onClose: () => growthFxDropSheet(sheet.id)
   })));
+};
+const QUICK_ANYWHERE_FLOAT_STEP = 6;
+const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
+const quickAnywhereFloatStyle = spot => {
+  const s = {
+    position: 'fixed',
+    bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
+  };
+  if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
+  return s;
+};
+const quickAnywhereFloatHits = (el, spot) => {
+  if (typeof document === 'undefined' || !el) return 0;
+  const w = el.offsetWidth || 70,
+    h = el.offsetHeight || 34;
+  const css = getComputedStyle(document.documentElement);
+  const num = v => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const saB = num(css.getPropertyValue('--mh-sa-bottom')),
+    saL = num(css.getPropertyValue('--mh-sa-left')),
+    saR = num(css.getPropertyValue('--mh-sa-right'));
+  const bottom = Math.max(8 + spot.lift, saB + 6 + spot.lift);
+  const top = window.innerHeight - bottom - h;
+  const left = spot.side === 'right' ? window.innerWidth - Math.max(8, saR + 6) - w : Math.max(8, saL + 6);
+  const R = {
+    left,
+    top,
+    right: left + w,
+    bottom: top + h
+  };
+  let hits = 0;
+  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+    if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    const cs = getComputedStyle(o);
+    if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
+    const r = o.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits++;
+  }
+  return hits;
+};
+const quickAnywhereFloatPick = el => {
+  const maxLift = Math.max(0, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
+  for (const side of ['right', 'left']) {
+    for (let lift = 0; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
+      const spot = {
+        side,
+        lift
+      };
+      if (quickAnywhereFloatHits(el, spot) === 0) return spot;
+    }
+  }
+  return {
+    side: 'right',
+    lift: 0
+  };
+};
+const QuickAnywhereFloat = ({
+  screen,
+  children,
+  style,
+  ...rest
+}) => {
+  const ref = useRef(null);
+  const [spot, setSpot] = useState({
+    side: 'right',
+    lift: 0
+  });
+  React.useLayoutEffect(() => {
+    const place = () => {
+      if (!ref.current) return;
+      setSpot(prev => quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+    };
+    const fresh = () => {
+      if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
+    };
+    fresh();
+    const t1 = setTimeout(fresh, 300),
+      t2 = setTimeout(place, 1200),
+      iv = setInterval(place, 800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearInterval(iv);
+    };
+  }, [screen]);
+  return React.createElement("button", _extends({
+    ref: ref,
+    type: "button",
+    "data-quick-anywhere-spot": `${spot.side}-${spot.lift}`
+  }, rest, {
+    style: {
+      ...(style || {}),
+      ...quickAnywhereFloatStyle(spot)
+    }
+  }), children);
 };
 class MhErrorBoundary extends React.Component {
   constructor(props) {
@@ -191924,6 +192022,7 @@ function MonsterHeroGame() {
       xp = Math.floor(quickRunProgress.xp + pending.xp);
     const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
     const label = finished ? quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止' : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const subLabel = finished ? '' : `W${wave}/10${resting ? '・休み' : ''}`;
     const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
     const info = {
       wave,
@@ -191936,27 +192035,30 @@ function MonsterHeroGame() {
       canResume: finished && quickRunResumable
     };
     const closeDetail = () => setQuickAnywhereDetail(false);
-    return React.createElement(React.Fragment, null, React.createElement("button", {
-      type: "button",
+    return React.createElement(React.Fragment, null, React.createElement(QuickAnywhereFloat, {
+      screen: gameState,
       "data-quick-anywhere": state,
       "data-wave": wave,
       "data-loops": quickRunProgress.loops,
       "data-screen": gameState,
       "data-stage": runStage || "",
-      "aria-label": `裏クイック ${label}。押すと詳しく`,
+      "aria-label": `裏クイック ${label}${subLabel ? ` ${subLabel}` : ''}。押すと詳しく`,
       onClick: () => setQuickAnywhereDetail(v => !v),
-      className: `fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
+      className: `z-[70] flex max-w-[84px] flex-col items-center justify-center rounded-2xl border px-2 py-0.5 text-[11px] font-black leading-[14px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
       style: {
-        left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))',
-        bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))',
-        minHeight: 30
+        minHeight: 32
       }
-    }, label), quickAnywhereDetail && React.createElement("div", {
-      className: "fixed inset-0 z-[90] flex items-end justify-start p-2",
+    }, React.createElement("span", {
+      className: "max-w-full truncate"
+    }, label), subLabel && React.createElement("span", {
+      "data-quick-anywhere-wave": true,
+      className: "max-w-full truncate text-[10px] font-bold opacity-80"
+    }, subLabel)), quickAnywhereDetail && React.createElement("div", {
+      className: "fixed inset-0 z-[90] flex items-end justify-end p-2",
       onClick: closeDetail,
       style: {
-        paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))',
-        paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))'
+        paddingBottom: 'max(48px, calc(var(--mh-sa-bottom, 0px) + 46px))',
+        paddingRight: 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))'
       }
     }, React.createElement("div", {
       "data-quick-anywhere-detail": true,
