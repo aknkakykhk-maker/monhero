@@ -302,6 +302,7 @@ done
 6. `RHYTHM_DEMO_SONG_IDS` の**末尾**へ songId
 
 さらに `rhythm-runtime-notes.js` へ2行、`13-bgm-and-rhythm-settings.jsx` の `BGM_TRACKS` へ1行。
+同じファイルの `RHYTHM_SONG_GENRE_TAGS`(曲えらびのジャンル)へも1行: 自作は `'original'`、ほかの人と組んだ曲は `'collab'`、アニメ・ゲーム・アーティストの曲は `'external'`(既存曲の short ver. などの版は代表の曲の行に従うので足さない。`rhythm-song-genre-check.js` が書き忘れを止める)。
 
 ```bash
 node tools/mode/rhythm-chart-v3-pipeline.js --track <track_id> --release

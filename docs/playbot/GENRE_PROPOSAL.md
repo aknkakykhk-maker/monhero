@@ -5,6 +5,21 @@
 **まだ曲には付けていない。ゲームのデータも触っていない。** 決まったら `RHYTHM_GENRES` へタブを足し、
 `RHYTHM_SONG_GENRE_TAGS` へ曲ごとの印を書く(画面 `29-rhythm-screens.jsx` は書き換えない)。
 
+## 2026-11-11 入れた形(社長「分け方はそっちに任せる。後で修正があれば俺が手を加える」)
+
+ビート班が案Aで入れた(公開は社長の「この文で」のあと)。**曲ごとのジャンルは `13-bgm-and-rhythm-settings.jsx` の
+`RHYTHM_SONG_GENRE_TAGS` の1か所だけ**。版(remix・short ver. など)は代表の曲の行に従う。直すときはその行の印を書き換える。
+
+| タブ(id) | 行 | 曲 | 中身(代表の曲) |
+| --- | --- | --- | --- |
+| オリジナル(`original`) | 21 | 31 | Monster Hero・SIX ÉTERNEL・Stay With Me・綺季一閃・風がそよぐ場所・Close To Your Heart・デュラハンテーマ・呪われた騎士の時計仕掛け・戦場の疾風・魔窟の旋律・Crazy Party Night・Rebellion・トリコ・4U ～ひたすら～・Nothing Without You・The City Beneath the Comets・Emerald Rush・Monster・Wrath of the Thorn King・Against My Own Shadow・SAD SONG |
+| コラボ(`collab`) | 2 | 2 | もう一つの世界へ(ドラ)・MF × ICHIKA MIX(いちか) |
+| ほかの作品(`external`) | 19 | 23 | 禁断のレジスタンス・crossing field・FREEDOM DiVE↓・only my railgun・ビッグブリッヂの死闘・Rising Hope・ハルカ・ANiMA・Journey・Sheriruth・Grievous Lady・ROSE・Toward the Stars・BLACK SHOUT・light player・月が満ちる前に・Altar of the World Tree・Evans・ヒューマノイド |
+
+- ※の24曲のうち、広く知られた既存の曲と分かる8曲(禁断のレジスタンス・crossing field・FREEDOM DiVE↓・only my railgun・ビッグブリッヂの死闘・Rising Hope・ハルカ・ANiMA)は「ほかの作品」へ。
+  ほかの※の曲は、作者の欄どおり「オリジナル」のまま(作者を推測しない)。違う曲があれば社長が1行直す
+- 新曲は `rhythm-song-add` スキルの手順で1行足す。書き忘れは `rhythm-song-genre-check.js` が止める
+
 ## いまの状態
 
 - タブは **ALL・イベント・お気に入り** の3つだけ(`13-bgm-and-rhythm-settings.jsx` の `RHYTHM_GENRES`)。曲に付けた印は0件

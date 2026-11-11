@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66b10943bd8256b9
+// source-sha256: 375cf8488a213c82
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6277,6 +6277,21 @@ const RHYTHM_GENRES = Object.freeze([Object.freeze({
   label: 'ALL',
   note: '遊べる曲を全部'
 }), Object.freeze({
+  id: 'original',
+  label: 'オリジナル',
+  note: 'モンスターヒーローの曲',
+  tag: 'original'
+}), Object.freeze({
+  id: 'collab',
+  label: 'コラボ',
+  note: 'ほかの人といっしょに作った曲',
+  tag: 'collab'
+}), Object.freeze({
+  id: 'external',
+  label: 'ほかの作品',
+  note: 'アニメ・ゲーム・アーティストの曲',
+  tag: 'external'
+}), Object.freeze({
   id: 'event',
   label: 'イベント',
   note: 'いま開催しているイベントの対象曲',
@@ -6287,9 +6302,54 @@ const RHYTHM_GENRES = Object.freeze([Object.freeze({
   note: '♡を付けた曲',
   favorite: true
 })]);
-const RHYTHM_SONG_GENRE_TAGS = Object.freeze({});
+const RHYTHM_SONG_GENRE_TAGS = Object.freeze({
+  monster_hero: Object.freeze(['original']),
+  six_eternel_beat: Object.freeze(['original']),
+  stay_with_me: Object.freeze(['original']),
+  kiki_issen: Object.freeze(['original']),
+  kaze_ga_soyogu: Object.freeze(['original']),
+  close_to_your_heart: Object.freeze(['original']),
+  dullahan: Object.freeze(['original']),
+  dullahan_clockwork: Object.freeze(['original']),
+  senjou_no_shippuu: Object.freeze(['original']),
+  makutsu_no_senritsu: Object.freeze(['original']),
+  crazy_party_night_full: Object.freeze(['original']),
+  rebellion: Object.freeze(['original']),
+  toriko: Object.freeze(['original']),
+  '4u_hitasura': Object.freeze(['original']),
+  nothing_without_you: Object.freeze(['original']),
+  the_city_beneath_the_comets: Object.freeze(['original']),
+  emerald_rush: Object.freeze(['original']),
+  monster: Object.freeze(['original']),
+  wrath_of_the_thorn_king: Object.freeze(['original']),
+  against_my_own_shadow: Object.freeze(['original']),
+  sad_song: Object.freeze(['original']),
+  mou_hitotsu_no_sekai_e: Object.freeze(['collab']),
+  mf_ichika_mix: Object.freeze(['collab']),
+  kindan_no_resistance: Object.freeze(['external']),
+  crossing_field: Object.freeze(['external']),
+  freedom_dive: Object.freeze(['external']),
+  only_my_railgun: Object.freeze(['external']),
+  big_bridge_no_shitou: Object.freeze(['external']),
+  rising_hope: Object.freeze(['external']),
+  haruka: Object.freeze(['external']),
+  anima: Object.freeze(['external']),
+  journey: Object.freeze(['external']),
+  sheriruth: Object.freeze(['external']),
+  grievous_lady: Object.freeze(['external']),
+  rose: Object.freeze(['external']),
+  toward_the_stars_short: Object.freeze(['external']),
+  black_shout: Object.freeze(['external']),
+  light_player: Object.freeze(['external']),
+  tsuki_ga_michiru_mae_ni: Object.freeze(['external']),
+  altar_world_tree: Object.freeze(['external']),
+  evans: Object.freeze(['external']),
+  humanoid: Object.freeze(['external'])
+});
 const rhythmSongGenreTags = song => {
-  const tags = song && RHYTHM_SONG_GENRE_TAGS[song.songId];
+  const id = song && song.songId;
+  const head = id && typeof rhythmSongVersionHead === 'function' ? rhythmSongVersionHead(id) : id;
+  const tags = id ? RHYTHM_SONG_GENRE_TAGS[id] || RHYTHM_SONG_GENRE_TAGS[head] : null;
   return Array.isArray(tags) && tags.length ? tags : ['original'];
 };
 const RHYTHM_FAVORITES_MAX = 200;

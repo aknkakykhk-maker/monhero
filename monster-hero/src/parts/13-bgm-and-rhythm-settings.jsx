@@ -172,17 +172,46 @@ const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
 //   'original' / 'collab' は半日だけ出していたので、保存値に残っている人がいる。一覧に無い id は
 //   normalizeRhythmSelectView が 'all' へ倒すので、消しても一覧が空になる人は出ない。
 //   また出すときは同じ id で足し直す(別の意味で使い回さない)。
+// ★2026-11-11 社長「分け方はそっちに任せる。後で修正があれば俺が手を加える」で、出どころの3つ(オリジナル・コラボ・
+//   ほかの作品)を足した(docs/playbot/GENRE_PROPOSAL.md の案A)。'original' / 'collab' は 2026-09-26 と同じ id・同じ意味。
+//   ★曲ごとのジャンルは下の RHYTHM_SONG_GENRE_TAGS の1か所だけで決まる。直すときはそこの1行を書き換える
 const RHYTHM_GENRES = Object.freeze([
   Object.freeze({ id:'all',      label:'ALL',        note:'遊べる曲を全部' }),
+  Object.freeze({ id:'original', label:'オリジナル', note:'モンスターヒーローの曲', tag:'original' }),
+  Object.freeze({ id:'collab',   label:'コラボ',     note:'ほかの人といっしょに作った曲', tag:'collab' }),
+  Object.freeze({ id:'external', label:'ほかの作品', note:'アニメ・ゲーム・アーティストの曲', tag:'external' }),
   Object.freeze({ id:'event',    label:'イベント',   note:'いま開催しているイベントの対象曲', whileEvent:true }),
   Object.freeze({ id:'favorite', label:'お気に入り', note:'♡を付けた曲', favorite:true }),
 ]);
-// 曲に付ける印(ジャンルの tag)。書いていない曲は 'original'。
-// ★tag で見分けるジャンルを足すときは、上の一覧へ1件足して、ここへ曲ごとの印を1行ずつ書く。
-//   例: mf_ichika_mix: Object.freeze(['collab'])
-const RHYTHM_SONG_GENRE_TAGS = Object.freeze({});
+// 曲ごとのジャンル(tag)。**ここが曲のジャンルの1か所だけの置き場所**(社長があとで直しやすいように)。
+//   ・曲えらびで1行にまとまる版(remix・short ver.・フルなど)は、代表の曲(rhythmSongVersionHead)の行を見るので、
+//     版ごとに書かなくてよい(版だけ別にしたいときは、その版の songId で1行書けばそちらが勝つ)
+//   ・書いていない曲は 'original'。新曲を足したら、ここへ1行足す(rhythm-song-add スキル)
+//   ・1曲に2つ以上のジャンルを付けてもよい(例: Object.freeze(['original','collab']))
+const RHYTHM_SONG_GENRE_TAGS = Object.freeze({
+  // オリジナル(モンスターヒーローの曲。BGM の作者の欄が「オリジナル」のもの)
+  monster_hero:Object.freeze(['original']), six_eternel_beat:Object.freeze(['original']), stay_with_me:Object.freeze(['original']),
+  kiki_issen:Object.freeze(['original']), kaze_ga_soyogu:Object.freeze(['original']), close_to_your_heart:Object.freeze(['original']),
+  dullahan:Object.freeze(['original']), dullahan_clockwork:Object.freeze(['original']), senjou_no_shippuu:Object.freeze(['original']),
+  makutsu_no_senritsu:Object.freeze(['original']), crazy_party_night_full:Object.freeze(['original']), rebellion:Object.freeze(['original']),
+  toriko:Object.freeze(['original']), '4u_hitasura':Object.freeze(['original']), nothing_without_you:Object.freeze(['original']),
+  the_city_beneath_the_comets:Object.freeze(['original']), emerald_rush:Object.freeze(['original']), monster:Object.freeze(['original']),
+  wrath_of_the_thorn_king:Object.freeze(['original']), against_my_own_shadow:Object.freeze(['original']), sad_song:Object.freeze(['original']),
+  // コラボ(ほかの人といっしょに作った曲)
+  mou_hitotsu_no_sekai_e:Object.freeze(['collab']), mf_ichika_mix:Object.freeze(['collab']),
+  // ほかの作品(アニメ・ゲーム・アーティストの曲)
+  kindan_no_resistance:Object.freeze(['external']), crossing_field:Object.freeze(['external']), freedom_dive:Object.freeze(['external']),
+  only_my_railgun:Object.freeze(['external']), big_bridge_no_shitou:Object.freeze(['external']), rising_hope:Object.freeze(['external']),
+  haruka:Object.freeze(['external']), anima:Object.freeze(['external']), journey:Object.freeze(['external']),
+  sheriruth:Object.freeze(['external']), grievous_lady:Object.freeze(['external']), rose:Object.freeze(['external']),
+  toward_the_stars_short:Object.freeze(['external']), black_shout:Object.freeze(['external']), light_player:Object.freeze(['external']),
+  tsuki_ga_michiru_mae_ni:Object.freeze(['external']), altar_world_tree:Object.freeze(['external']), evans:Object.freeze(['external']),
+  humanoid:Object.freeze(['external']),
+});
 const rhythmSongGenreTags = song => {
-  const tags = song && RHYTHM_SONG_GENRE_TAGS[song.songId];
+  const id = song && song.songId;
+  const head = id && typeof rhythmSongVersionHead === 'function' ? rhythmSongVersionHead(id) : id;
+  const tags = id ? (RHYTHM_SONG_GENRE_TAGS[id] || RHYTHM_SONG_GENRE_TAGS[head]) : null;
   return Array.isArray(tags) && tags.length ? tags : ['original'];
 };
 // お気に入りの上限(保存値が膨らみすぎないように)
