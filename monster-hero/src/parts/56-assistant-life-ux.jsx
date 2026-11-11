@@ -116,7 +116,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   } catch (_) {}
   try {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
-    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', place: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
@@ -172,7 +172,9 @@ let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
 function assistantLifeUiV2Tabs() {
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+  // 📖 紹介(助手紹介・56-assistant-life-profile.jsx)は公開の印 assistantLifeProfile が真のときだけ。きずなの次(2026-11-11 社長 Q6 A)
+  const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
 }
 
 // 引き合わせる(「きずな」の上)。2人を選ぶと、次の時間に一緒に過ごしやすくなる。決まりは今までと同じ(assistantLifeNudge('introduce'))
@@ -322,7 +324,8 @@ const assistantLifeDailyListen = async (slotId) => {
   return { added: true, got };
 };
 
-function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
+// life・onScene … 場面の印が真のとき、いま一緒にいる2人の場面を開く(家が AssistantLifeDailySceneView を重ねる)。偽なら今までどおり1人の話を聞く
+function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScene = null }) {
   const [st, setSt] = React.useState(() => ASSISTANT_LIFE_DAILY_STORE.state);
   const [said, setSaid] = React.useState('');
   const [got, setGot] = React.useState(false);
@@ -337,7 +340,13 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
   const done = st.day === day && st.heard.includes(slot.id);
-  const who = list[slot.i % list.length];
+  const cast = assistantLifeDailyWho(life, list, slot.i);
+  const who = cast ? cast.ids[0] : list[slot.i % list.length];
+  const sceneKey = assistantLifeDailySceneOf(slotDef.from);
+  const plan = typeof onScene === 'function' && assistantLifeDailySceneOn() ? assistantLifeDailyPlan(cast, sceneKey, day, slot.i) : null;
+  const sayLine = assistantLifeDailySay(who, sceneKey, day);
+  const castNames = plan ? plan.ids.map(nameOf).join('と') : nameOf(who);
+  const castPlace = cast && cast.place && cast.place !== 'home' ? assistantLifePlaceShow(cast.place) : '家';
   const leftH = (() => { const s = slotDef; const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return s ? Math.max(1, s.to - h) : 1; })();
   const n = st.days.length;
   const listen = async () => {
@@ -345,7 +354,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
     setBusy(true);
     const r = await assistantLifeDailyListen(slot.id);
     setSt({ ...ASSISTANT_LIFE_DAILY_STORE.state });
-    setSaid(`${nameOf(who)}「${scene.say}」`);
+    setSaid(`${nameOf(who)}「${sayLine ? assistantLifeDailyText(sayLine, [who]) : scene.say}」`);
     setGot(!!r.got);
     setBusy(false);
   };
@@ -356,11 +365,15 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>
-          {said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
-          {!done && <span className="block text-[11px] text-emerald-300">→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)</span>}
+          {plan
+            ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : <>{plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`}<span className="inline-block" data-assistant-life-daily-title>「{plan.title}」</span></>)
+            : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`}
+          {!done && <span className="block text-[11px] text-emerald-300">{plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'}</span>}
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
-        {!done && <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>}
+        {!done && (plan
+          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotDef.label })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
+          : <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>)}
       </div>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1" data-assistant-life-daily-stamps={n}>
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">🧺 7日で1個</span>
@@ -373,4 +386,184 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
         </span>
       </div>
     </section>);
+}
+
+// ===== 開いたトップの家の場面・できごとの小さな場面(2026-11-11 社長 案A・ナカヨシ20・docs/progress/assistant-life/top-scene/PLAN.md) =====
+//   公開の印: RELEASE_FLAGS.assistantLifeTopHouse(家の断面図を上へ・出かけ先の丸・得の帯をたたむ)/assistantLifeDailyScene(できごとを場面に。台詞が入るまで偽)
+//   台詞は ASSISTANT_LIFE_DAILY_TALKS(data/assistants.js。tools/assistant/life-daily-import.js が docs/progress/assistant-life/top-scene/*.txt から作る)
+//   保存は今の mh_assistant_life_daily_v1 だけ(場面を最後まで見たら「聞いた」に数える)。新しいキーは足さない
+const assistantLifeTopHouseOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeTopHouse === true;
+const assistantLifeDailyData = () => (typeof ASSISTANT_LIFE_DAILY_TALKS !== 'undefined' && ASSISTANT_LIFE_DAILY_TALKS && typeof ASSISTANT_LIFE_DAILY_TALKS === 'object' ? ASSISTANT_LIFE_DAILY_TALKS : null);
+const assistantLifeDailySceneOn = () => {
+  if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof RELEASE_FLAGS === 'undefined' || RELEASE_FLAGS.assistantLifeDailyScene !== true) return false;
+  const D = assistantLifeDailyData();
+  return !!D && Array.isArray(D.scenes) && D.scenes.length > 0;
+};
+const ASSISTANT_LIFE_DAILY_RARE_PCT = 5; // 珍しいできごとが出る割合(2人でいる時間帯ごとに 5%・1日6回でおよそ3日に1回)
+const ASSISTANT_LIFE_DAILY_BOND = Object.freeze({ scene: 4, rare: 8 }); // 見たときの 💗(出てきた人それぞれ。1日 +12 まで=ASSISTANT_BOND_ACTIONS.lifeDaily)
+const assistantLifeDailyHash = (s) => { let h = 7; for (const c of String(s)) h = (h * 31 + c.codePointAt(0)) >>> 0; return h; };
+
+// できごとに出る人: 場面の印が真なら、いま同じ場所にいる2人を時間帯ごとに1組。いなければ1人(今までの選び方)
+// 解放前の助手(町の人)は出さない(カイホウの assistantPartnerOkNow。まだ main に無いときは全員)
+const assistantLifeTopOk = (id) => { try { return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(id) !== false : true; } catch (_) { return true; } };
+const assistantLifeDailyWho = (life, ids, slotI) => {
+  const list = (Array.isArray(ids) ? ids : []).filter(assistantLifeTopOk);
+  if (!list.length) return null;
+  const whereOf = (id) => { try { return life && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null; } catch (_) { return null; } };
+  if (assistantLifeDailySceneOn()) {
+    const pairs = [], seen = new Set();
+    for (const id of list) {
+      const w = whereOf(id);
+      const g = w && w.group && Array.isArray(w.group.ids) ? w.group.ids.filter(x => list.includes(x)) : [];
+      if (g.length < 2 || w.doing === 'sleep') continue;
+      const key = [...g].sort().join('-');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pairs.push({ ids: g.slice(0, 2), place: w.place });
+    }
+    if (pairs.length) return pairs[slotI % pairs.length];
+  }
+  const one = list[slotI % list.length];
+  const w = whereOf(one);
+  return { ids: [one], place: w ? w.place : 'home' };
+};
+// その助手の時間帯のひとこと(取り込んだ台詞があれば。無ければ null で、今までの1行を使う)
+const assistantLifeDailySay = (who, sceneKey, day) => {
+  const D = assistantLifeDailyData();
+  const l = D && D.lines && D.lines[who] && Array.isArray(D.lines[who][sceneKey]) ? D.lines[who][sceneKey] : [];
+  return l.length ? l[assistantLifeDailyHash(`${day}-${who}`) % l.length] : null;
+};
+// 見せる場面を決める(日・時間帯・人で決まる。同じ時間帯に開き直しても同じ場面)
+const assistantLifeDailyPlan = (cast, sceneKey, day, slotI) => {
+  const D = assistantLifeDailyData();
+  if (!D || !cast || !cast.ids || !cast.ids.length) return null;
+  const [a, b] = cast.ids;
+  const has = (parts, id, roles) => !!(parts && parts[id] && roles.every(r => parts[id][r] && parts[id][r].t));
+  if (b) {
+    const rares = (Array.isArray(D.rares) ? D.rares : []).filter(r => Array.isArray(r.slots) && r.slots.includes(sceneKey) && has(r.parts, a, ['open']) && has(r.parts, b, ['back']));
+    if (rares.length && assistantLifeDailyHash(`${day}-${slotI}-rare`) % 100 < ASSISTANT_LIFE_DAILY_RARE_PCT) {
+      const r = rares[assistantLifeDailyHash(`${day}-${slotI}`) % rares.length];
+      return { kind: 'rare', id: r.id, title: r.title, ids: [a, b], lines: [{ who: a, ...r.parts[a].open }, { who: b, ...r.parts[b].back }], choices: [] };
+    }
+  }
+  const scenes = (Array.isArray(D.scenes) ? D.scenes : []).filter(s => s.slot === sceneKey && Array.isArray(s.choices) && s.choices.length === 2 && has(s.parts, a, ['open', 'r1', 'r2']) && (!b || has(s.parts, b, ['back'])));
+  if (!scenes.length) return null;
+  const s = scenes[assistantLifeDailyHash(`${day}-${slotI}-${a}`) % scenes.length];
+  const lines = [{ who: a, ...s.parts[a].open }];
+  if (b) lines.push({ who: b, ...s.parts[b].back });
+  return { kind: 'scene', id: s.id, title: s.title, ids: b ? [a, b] : [a], lines, choices: s.choices.map((label, i) => ({ label, reply: { who: a, ...s.parts[a][i ? 'r2' : 'r1'] } })) };
+};
+// 台詞の穴: {name} = プレイヤーの呼び方/{c} = 相手の助手の呼び方
+const assistantLifeDailyText = (line, ids) => {
+  const partner = (ids || []).find(x => x !== line.who) || line.who;
+  const name = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(line.who) : 'あなた';
+  const call = typeof assistantPeerCall === 'function' ? (() => { try { return assistantPeerCall(line.who, partner); } catch (_) { return assistantLifeName(partner); } })() : assistantLifeName(partner);
+  return String(line.t || '').replace(/\{name\}/g, name).replace(/\{c\}/g, call);
+};
+// 珍しいできごとの思い出アルバムの1枚(2人の組ごと。アルバムは 56-assistant-peer.jsx の形のまま入れる)
+const assistantLifeDailyRareTalk = (rareId, a, b) => {
+  const D = assistantLifeDailyData();
+  const r = D && Array.isArray(D.rares) ? D.rares.find(x => x.id === rareId) : null;
+  const [x, y] = [a, b].sort();
+  if (!r || !r.parts || !r.parts[x] || !r.parts[y] || !r.parts[x].open || !r.parts[y].back) return null;
+  return { id: `daily-rare-${r.id}-${x}-${y}`, kind: 'pair', pair: [x, y], title: r.title, lines: [{ who: x, ...r.parts[x].open }, { who: y, ...r.parts[y].back }] };
+};
+// アルバムが見返すときに引く一覧(56-assistant-life.jsx の assistantLifeAlbumTalks に足す)
+const assistantLifeDailyAlbumTalks = () => {
+  const D = assistantLifeDailyData();
+  if (!D || !Array.isArray(D.rares) || !assistantLifeDailySceneOn()) return [];
+  const out = [];
+  const ids = ASSISTANT_LIFE_HOUSE_ORDER;
+  for (const r of D.rares) for (let i = 0; i < ids.length; i += 1) for (let j = i + 1; j < ids.length; j += 1) {
+    const t = assistantLifeDailyRareTalk(r.id, ids[i], ids[j]);
+    if (t) out.push(t);
+  }
+  return out;
+};
+// 場面を見終わったとき: 「聞いた」に数える(ミッション・🧺 7日)/初めてなら 💗 を出てきた人へ/珍しいできごとはアルバムへ
+const assistantLifeDailyFinish = async (plan, slotId) => {
+  const r = await assistantLifeDailyListen(slotId);
+  let bond = 0;
+  if (r.added && plan) {
+    bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
+    if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+      for (const id of plan.ids) { try { assistantPeerPlayerBondAdder(id, 'lifeDaily', bond); } catch (_) {} }
+    }
+    if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') { const t = assistantLifeDailyRareTalk(plan.id, plan.ids[0], plan.ids[1]); if (t) { try { assistantPeerAlbumAdd(t); } catch (_) {} } }
+  }
+  return { added: r.added, got: r.got, bond };
+};
+
+// できごとの場面(家の上に重ねる。外枠は見守るの場面 .mhl-scene と同じ)
+function AssistantLifeDailySceneView({ plan, place, look, slotLabel, slotId, onClose }) {
+  const [step, setStep] = React.useState(0);
+  const [pick, setPick] = React.useState(null);
+  const [res, setRes] = React.useState(null);
+  const busy = React.useRef(false);
+  const hasChoice = plan.kind === 'scene' && plan.choices.length > 0;
+  const atEnd = step >= plan.lines.length - 1;
+  const phase = !atEnd ? 'talk' : hasChoice && pick == null ? 'choice' : 'done';
+  const finish = async () => { if (busy.current) return; busy.current = true; setRes(await assistantLifeDailyFinish(plan, slotId)); };
+  React.useEffect(() => { if (phase === 'done') void finish(); }, [phase]);
+  const shown = [...plan.lines.slice(0, step + 1), ...(pick != null ? [plan.choices[pick].reply] : [])];
+  const bg = place && place !== 'home' && typeof assistantLifeSceneBg === 'function' ? assistantLifeSceneBg(place, look) : null;
+  const placeName = !place || place === 'home' ? '家' : assistantLifePlaceShow(place);
+  return (
+    <div className="mhl-scene" data-assistant-life-daily-scene={plan.kind} data-assistant-life-daily-scene-id={plan.id} data-assistant-life-daily-phase={phase}>
+      {bg ? <div className="bg" style={{ backgroundImage: `url(${bg.src})`, backgroundPosition: bg.pos || 'center', backgroundSize: bg.zoom ? '260%' : 'cover', filter: bg.zoom ? 'blur(2px)' : undefined }}/>
+        : <div className="bg" style={{ background: 'linear-gradient(#3b2a5a,#a0584a)' }}/>}
+      {bg && bg.tint && typeof ASSISTANT_LIFE_TINT !== 'undefined' && <div className="absolute inset-0" style={{ background: ASSISTANT_LIFE_TINT[bg.tint] }}/>}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 35%,rgba(10,6,30,.85) 78%)' }}/>
+      {typeof AssistantLifeStands === 'function' && <AssistantLifeStands ids={plan.ids}/>}
+      <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
+        <button type="button" data-assistant-life-daily-scene-back onClick={onClose} aria-label="家へ戻る" className="h-11 w-11 rounded-full bg-black/50 text-[18px] text-white">←</button>
+        <p className="rounded-full bg-black/60 px-3 py-1 text-[12px] font-black text-amber-100">{plan.kind === 'rare' ? `✨ めずらしいできごと「${plan.title}」` : `${slotLabel}のできごと ・ ${placeName}`}</p>
+      </div>
+      <div className="absolute inset-x-3 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-slate-950/90 p-2 text-white" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))', maxHeight: '52%' }}
+        role="button" tabIndex={0} data-assistant-life-daily-talk onClick={() => { if (phase === 'talk') setStep(v => v + 1); }}>
+        {shown.map((l, i) => { const who = assistantById(l.who); return (
+          <div key={i} className="mb-1 flex items-start gap-1.5" data-assistant-life-daily-line={i}>
+            {who && typeof AssistantFace === 'function' && <AssistantFace who={who} size={30} accent={who.accent} expression={l.e || 'normal'}/>}
+            <p className="min-w-0 flex-1 rounded-xl bg-white px-2 py-1 text-[12.5px] font-bold leading-snug text-slate-900" style={{ wordBreak: 'auto-phrase' }}><b className="mr-1" style={{ color: (who && who.accent) || '#be185d' }}>{assistantLifeName(l.who)}</b>「{assistantLifeDailyText(l, plan.ids)}」</p>
+          </div>); })}
+        {phase === 'talk' && <p className="text-center text-[11px] font-bold text-slate-400">▼ タップで続き</p>}
+        {phase === 'choice' && <div className="mt-1 grid grid-cols-2 gap-1.5" data-assistant-life-daily-choices>
+          {plan.choices.map((c, i) => <button key={i} type="button" data-assistant-life-daily-choice={i} onClick={(ev) => { ev.stopPropagation(); setPick(i); }}
+            className="min-h-[44px] rounded-xl px-2 text-[12px] font-black text-white active:scale-95" style={{ background: 'linear-gradient(90deg,#f59e0b,#f43f5e)', wordBreak: 'auto-phrase' }}>{c.label}</button>)}
+        </div>}
+        {phase === 'done' && <div data-assistant-life-daily-result>
+          {res && <p className="mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700">{res.added
+            ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ')
+            : 'この時間帯のできごとは見ました'}</p>}
+          <button type="button" data-assistant-life-daily-scene-close onClick={(ev) => { ev.stopPropagation(); onClose(); }} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12px] font-black">🏡 家へ戻る</button>
+        </div>}
+      </div>
+    </div>);
+}
+
+// 出かけ先の丸(家の断面図の下)。同じ場所にいる人をまとめ、押すと町の地図のその場所へ。最後に1行「家に◯人・おでかけ◯人・次に動くのは◯時」
+function AssistantLifeTopStrip({ life, ids, evIds = [], onPlace }) {
+  const list = (Array.isArray(ids) ? ids : []).filter(assistantLifeTopOk);
+  const groups = {}; let home = 0;
+  for (const id of list) {
+    let w = null; try { w = assistantLifeWhereOf(life, id); } catch (_) { w = null; }
+    const place = w ? w.place : 'home';
+    if (place === 'home') { home += 1; continue; }
+    (groups[place] = groups[place] || []).push(id);
+  }
+  const places = Object.keys(groups);
+  let next = null;
+  try { const s = assistantLifeSlotAt(); const d = ASSISTANT_LIFE_SLOTS[s.i]; next = d && Number.isFinite(d.to) ? d.to % 24 : null; } catch (_) { next = null; }
+  return (
+    <div className="mx-3 mb-1.5 text-white" data-assistant-life-top-strip>
+      {places.length > 0 && <div className="flex gap-1 overflow-x-auto overscroll-contain pb-0.5" style={{ scrollbarWidth: 'none' }}>
+        {places.map(p => { const ev = groups[p].some(id => evIds.includes(id)); return (
+          <button key={p} type="button" data-assistant-life-top-place={p} onClick={() => onPlace && onPlace(p, groups[p][0])}
+            className={`flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-slate-950/85 py-0.5 pl-1 pr-2 text-[11.5px] font-black active:scale-95 ${ev ? 'border-2 border-amber-300 text-amber-100' : 'border border-white/15'}`}>
+            <span className="flex -space-x-1.5">{groups[p].slice(0, 3).map(id => { const who = assistantById(id); return who && typeof AssistantFace === 'function' ? <AssistantFace key={id} who={who} size={24} accent={who.accent}/> : null; })}</span>
+            <span>{ASSISTANT_LIFE_PLACE_ICON[p] || '🚶'} {assistantLifePlaceShow(p)}{ev ? ' ❗' : ''}</span>
+          </button>); })}
+      </div>}
+      <p className="mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100" data-assistant-life-top-sum>家に{home}人 ・ おでかけ{list.length - home}人{next != null ? ` ・ 次にみんなが動くのは ${next}:00` : ''}</p>
+    </div>);
 }
