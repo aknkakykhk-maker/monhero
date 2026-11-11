@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8613664e0cce8601
+// source-sha256: 5f79be4f38bf9d43
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -125211,7 +125211,9 @@ function AssistantLifeGiftSheet({
   }, info.name), " ", React.createElement("span", {
     className: `whitespace-nowrap text-[11px] ${have > 0 ? 'text-amber-200' : 'text-violet-300'}`,
     "data-assistant-life-give-have": have
-  }, have > 0 ? `持っている ${have}個` : `持っていない${info.cost != null ? `(ビートP交換所 ${info.cost}P)` : ''}`)), React.createElement("p", {
+  }, have > 0 ? `持っている ${have}個` : '持っていない'), info.cost != null && React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-bold text-slate-400"
+  }, " ビートP交換所 ", info.cost, "P")), React.createElement("p", {
     className: "text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
   }, info.what))), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[12px]"
