@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 208692895dbb4aa3
+// source-sha256: ea7b7717a9dc5581
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8896,6 +8896,7 @@ const Audio_ = (() => {
   const setBackgroundSeQuiet = on => {
     backgroundSeQuiet = !!on;
   };
+  const isBackgroundSeQuiet = () => backgroundSeQuiet;
   const fgSe = {
     trainingDice: async () => {
       if (!enabled) return;
@@ -9794,6 +9795,7 @@ const Audio_ = (() => {
     }
   };
   return {
+    isBackgroundSeQuiet,
     setVideoHold,
     setStoryEndFade,
     setStoryOpenFade,
@@ -173059,6 +173061,7 @@ function MonsterHeroGame() {
   const gameStateNowRef = useRef('HOME');
   const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
   const quickAnywhereRunRef = useRef(false);
+  const offscreenEffectRef = useRef(null);
   const quickAnywhereSeQuietRef = useRef(false);
   const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
   const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
@@ -173719,6 +173722,7 @@ function MonsterHeroGame() {
     setScreenShake(false);
     setBigShake(false);
     requestAnimationFrame(() => {
+      if (runBackgroundAllowedRef.current) return;
       setScreenShake(true);
       setBigShake(big);
       setTimeout(() => {
@@ -178353,6 +178357,7 @@ function MonsterHeroGame() {
   const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
   const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
     setRunStage(stage);
@@ -179626,9 +179631,10 @@ function MonsterHeroGame() {
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
+  const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -192082,7 +192088,7 @@ function MonsterHeroGame() {
       slotMaxUses,
       ...tacticsAutoOptions
     });
-    if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
+    if (lacksOnlyGuts && autoBattleRef.current && (gameState === 'BATTLE' || runStage === 'BATTLE') && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
     return null;
   };
   const setAutoBattleEnabled = enabled => {
@@ -197302,7 +197308,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !runBackgroundAllowed && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !runBackgroundAllowed && gameState === runStage && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -210725,7 +210731,8 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), renderQuickAnywhereStrip(), effect && !runBackgroundAllowed && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), effect && !runBackgroundAllowed && effect !== offscreenEffectRef.current && React.createElement("div", {
+      "data-battle-effect-overlay": true,
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',

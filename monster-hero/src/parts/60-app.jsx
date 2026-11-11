@@ -23,6 +23,7 @@ function MonsterHeroGame() {
   //   ランを捨てたとき(clearRunStage)に落とす。負けてもランが残るあいだは立てたまま
   //   (負けた直後に予約済みの段階の切り替えが着地しても、HOME などからバトルの画面へ飛ばさないため)
   const quickAnywhereRunRef = useRef(false);
+  const offscreenEffectRef = useRef(null); // 裏で回しているあいだに立った演出(下の effect)。表へ移っても出さない
   const quickAnywhereSeQuietRef = useRef(false); // 裏のバトルの効果音を止めているか(ボタンの音を fgSe で鳴らすため)
   // 進め続ける画面。ここに無い画面(M/B管理・神殿・トレーニング・デバッグ・これから足す画面)では「休む」=進めないだけで、出たら続きから。
   //   モンヒロビート・MFバトルカードは今までどおりそれぞれの決まりで回す(演奏中の配り方を崩さない)
@@ -654,7 +655,9 @@ function MonsterHeroGame() {
   const [bigShake, setBigShake] = useState(false);
   const triggerShake = useCallback((big=false) => {
     setScreenShake(false); setBigShake(false);
-    requestAnimationFrame(() => { setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
+    // ★裏で回しているあいだ(バトルの画面を見ていない)は揺らさない。揺れを立てたまま表の画面へ移ると、移った瞬間に1コマ揺れていた
+    //   (2026-11-11 社長「裏クイックがない所に戻ったときに、一瞬だけ画面揺れとか」)。描く側の !runBackgroundAllowed だけでは移る瞬間を止められない
+    requestAnimationFrame(() => { if (runBackgroundAllowedRef.current) return; setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
   }, []);
   // 波紋の一覧は TapRippleLayer だけが持つ(波紋が出たり消えたりするたびに、ここを丸ごと描き直さない)
   const rippleSpawnRef = useRef(null);
@@ -4994,6 +4997,9 @@ function MonsterHeroGame() {
   //   ここだけだと「画面を切り替えてから次の描画まで」のあいだ古い値が残り、
   //   モンビーから戻った直後に段階だけ進んで進行不能になる(2026-09-14)。
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  // 裏で回しているあいだに立った演出(effect)は、表の画面へ移ったあとも出さない(移った瞬間の1コマも。2026-11-11 社長「一瞬だけバトルの演出が起こる」)。
+  //   描くときに「裏で立ったものと同じか」で見るので、表へ移った最初の描画でも出ない。表で新しく立った演出はふつうに出る
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
   // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
@@ -6451,7 +6457,10 @@ function MonsterHeroGame() {
   // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   // 助手ライフの上で裏の周回を回しているあいだも、バトルの音は鳴らさない(BGM は助手ライフの曲のまま。2026-11-08)
-  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeBackgroundRun) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
+  // ★助手ライフは「回しているあいだ(∞が入っている)」ではなく「ランが残っているあいだ」で見る。∞は負けた瞬間に切れるので、
+  //   負けた最後のターンの音(敵の必殺技など)が助手ライフの上でそのまま鳴っていた(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)
+  const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
+  useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
@@ -16235,7 +16244,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hand, slots:autoSlots, cardLimit, strategy:autoSettings.strategy,
       getCardGuts, cardNeedsMonster, slotMaxUses, ...tacticsAutoOptions,
     });
-    if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0
+    // ★見ている画面(gameState)ではなく、ランの段階(runStage)で見る。裏で回しているとき(HOME・モンヒロビートなど)は gameState が BATTLE にならず、
+    //   ガッツ切れで緊急回復できずに「出せるカードが無い」として周回が理由なしで止まっていた(2026-11-11 どこでも回すの確かめで見つけた)
+    if(lacksOnlyGuts&&autoBattleRef.current&&(gameState==='BATTLE'||runStage==='BATTLE')&&enemy&&enemy.hp>0&&hp>0
         &&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();
     return null;
   };
@@ -19600,7 +19611,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
-      {ultraEcoSession&&!runBackgroundAllowed&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {/* 暗幕はランの画面を見ているときだけ。周回を締めて表の画面へ移った瞬間に、省エネを切るより先に1コマ暗くなっていた(2026-11-11 社長「一瞬だけ…」) */}{ultraEcoSession&&!runBackgroundAllowed&&gameState===runStage&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
@@ -25782,7 +25793,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {renderQuickAnywhereStrip()}
-      {effect&&!runBackgroundAllowed&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(<div data-battle-effect-overlay className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>

@@ -83,7 +83,7 @@ const evaluateWith = (initialGameState, { runStage: initialRunStage = null, auto
   vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameStateRaw=(v)=>{gameState=v;}; const QUICK_RUN_ANYWHERE_RELEASE=${anywhereRelease};
 ${screenEntry}
 cardMarketEntryRef.current=${cardMarketEntry}; assistantLifeOpenRef.current=${assistantLifeOpen}; quickAnywhereRunRef.current=${anywhere}; gameStateNowRef.current=gameState;
-const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick';
+const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick'; const effect=null;
 ${definition.replace('const [runStage, setRunStage] = useState(null);', `let runStage=${JSON.stringify(initialRunStage)}; const setRunStage=(v)=>{runStage=v;};`)}
 this.api={ advanceRunStage, clearRunStage, isRunStage, setGameState, screens:RUN_STAGE_SCREENS, rhythmScreens:RHYTHM_BACKGROUND_RUN_SCREENS,
   setCardMarketEntry:(v)=>{ cardMarketEntryRef.current=v; },
@@ -316,11 +316,26 @@ check('MFバトルカードからクイックのバトルへ戻れる・戻る�
 // 2026-11-11: 画面ごとに条件を並べるのをやめ、「いまバトルの画面を見ていない」の1つの値(runBackgroundAllowed)で決める(どこでも回す裏クイックも同じ値に入る)
 check('MFバトルカード・助手ライフ・どこでも回す裏クイックの上に、裏の周回の負け・演出の幕・画面の揺れ・超省エネの暗幕を出さない',
   ['{hp<=0&&!debugBattle&&!runBackgroundAllowed&&(', '{gaveUp&&!debugBattle&&!runBackgroundAllowed&&(',
-    '{effect&&!runBackgroundAllowed&&(', '{ultraEcoSession&&!runBackgroundAllowed&&<div data-ultra-eco-session-dimmer',
+    '{effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(', '{ultraEcoSession&&!runBackgroundAllowed&&gameState===runStage&&<div data-ultra-eco-session-dimmer',
     "!runBackgroundAllowed&&battleFxSettings.shake!=='OFF'"]
     .every(t => source.includes(t))
   && /const runBackgroundAllowed = rhythmScreenOpen \|\| cardScreenOpen \|\| assistantLifeScreenOpen \|\| quickAnywhereScreenOpen;/.test(source)
   && !/!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen/.test(source));
+// 移る瞬間の1コマ(2026-11-11 社長「裏クイックがない所に戻ったときに、一瞬だけバトルの演出が起こる。画面揺れとか」)。
+//   描く側の !runBackgroundAllowed だけでは、裏で立った揺れ・演出が「表へ移った最初の描画」で出てしまう
+check('裏で回しているあいだは揺れを立てない(表へ移った瞬間に1コマ揺れない)',
+  source.includes('requestAnimationFrame(() => { if (runBackgroundAllowedRef.current) return; setScreenShake(true);'));
+check('裏で立った演出は、表へ移ったあとも出さない(表で立った演出はふつうに出す)',
+  source.includes('if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;')
+  && source.includes('{effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&('));
+check('超省エネの暗幕は、ランの画面を見ているときだけ(締めて表へ移った瞬間に暗くならない)',
+  source.includes('ultraEcoSession&&!runBackgroundAllowed&&gameState===runStage&&<div data-ultra-eco-session-dimmer'));
+// 裏で負けたときの音(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)。∞は負けた瞬間に切れるので、∞で見ると負けた最後のターンの音が鳴る
+check('助手ライフの上の裏の周回の音は、∞ではなくランが残っているかで止める(負けても鳴らさない)',
+  source.includes('const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;')
+  && /Audio_\.setSeVolume\(\(\(ultraEcoSession && !cardScreenOpen\) \|\| rhythmScreenOpen \|\| assistantLifeRunMuted\) \? 0 : seVolume\)/.test(source));
+check('裏で回しているとき(HOME など)、ガッツ切れの緊急回復は見ている画面ではなくランの段階で決める(理由なしで止まらない)',
+  source.includes("(gameState==='BATTLE'||runStage==='BATTLE')&&enemy&&enemy.hp>0&&hp>0"));
 
 if (failed) { console.error(`\n${failed}件のNGがあります`); process.exit(1); }
 console.log('\nrun stage check passed.');

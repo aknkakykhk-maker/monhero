@@ -36,7 +36,7 @@ const serve = () => new Promise((resolve) => {
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
-const seedFor = (autoStart) => `(() => {
+const seedFor = (autoStart, difficulty = 'Beginner') => `(() => {
   if (sessionStorage.getItem('__qaSeeded')) return;
   sessionStorage.setItem('__qaSeeded', '1');
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -45,17 +45,17 @@ const seedFor = (autoStart) => `(() => {
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);
   put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
   put('mh_monster_roster', ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro', 'Mocchi']);
-  put('mh_clears_Beginner', 3); put('mh_quick_clears_Beginner', 3);
+  put('mh_clears_Beginner', 3); for (const d of ['Beginner', 'Easy', 'Normal', 'Hard', 'Expert', 'Master', 'GrandMaster', 'Hell']) put('mh_quick_clears_' + d, 3);
   put('mh_auto_settings_v1', { strategy: 'random', allies: [{ rosterEntry: null, slot: null }, { rosterEntry: null, slot: null }, { rosterEntry: null, slot: null }],
-    breakthroughReserve: { gold: 0, psyche: 0 }, quickRun: { heroRosterEntry: 'Suezo', distance: 2, difficulty: 'Beginner', autoStart: ${autoStart ? 'true' : 'false'} } });
+    breakthroughReserve: { gold: 0, psyche: 0 }, quickRun: { heroRosterEntry: 'Suezo', distance: 2, difficulty: '${difficulty}', autoStart: ${autoStart ? 'true' : 'false'} } });
   put('mh_gold', 1000);
 })();`;
 
-const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }) => {
+const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }, difficulty = 'Beginner') => {
   const page = await browser.newPage({ viewport });
   const fatal = [];
   page.on('pageerror', (e) => fatal.push(e.message));
-  await page.addInitScript(seedFor(autoStart));
+  await page.addInitScript(seedFor(autoStart, difficulty));
   await page.addInitScript(quiet.quietBootSeed());
   await page.addInitScript(quiet.updateNoticeSeed());
   await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
@@ -178,9 +178,36 @@ const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }) 
     const offStrip = await off.page.evaluate(() => !!document.querySelector('[data-quick-anywhere]'));
     check('⑧ 自動開始が切なら、ゲームを開いても始まらない', !offStrip);
     check('⑨ 実行時エラーが出ない(自動開始が切)', off.fatal.length === 0, off.fatal.slice(0, 3).join(' / '));
+    // ⑩ 裏で負けたとき(Hell ですぐ負ける)。2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」
+    //   HOME で回しているあいだ(負けて始め直すまでも)、裏のバトルの効果音は止めたまま(Audio_.se が呼ばれたとき、止める印が立っている)。
+    //   助手ライフの上でも、負けたあと効果音の音量を戻さない。ガッツ切れで理由なしに止まらない(負け以外で止まらない)
+    {
+      await off.page.close().catch(() => {});
+      const hell = await boot(browser, true, { width: 390, height: 844 }, 'Hell');
+      await hell.page.evaluate(() => {
+        window.__se = []; window.__vol = [];
+        for (const k of Object.keys(Audio_.se)) { const f = Audio_.se[k]; Audio_.se[k] = (...a) => { const el = document.querySelector('[data-quick-anywhere]'); window.__se.push({ k, quiet: Audio_.isBackgroundSeQuiet(), strip: el ? el.getAttribute('data-quick-anywhere') : '' }); return f(...a); }; }
+        const sv = Audio_.setSeVolume; Audio_.setSeVolume = (v) => { window.__vol.push({ v, life: !!document.querySelector('[data-life-quick-run]') }); return sv(v); };
+      });
+      const states = [];
+      for (let t = 0; t < 70; t++) { await hell.page.waitForTimeout(1000); const st = await hell.page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); return el ? `${el.getAttribute('data-quick-anywhere')}:${el.textContent}` : 'none'; }); if (states[states.length - 1] !== st) states.push(st); }
+      const se = await hell.page.evaluate(() => window.__se);
+      const loud = se.filter(x => x.k !== 'tap' && !x.quiet);
+      check('⑩ HOME で裏クイックが負けて始め直すあいだ、裏のバトルの効果音は鳴らさない', se.length > 0 && loud.length === 0, JSON.stringify({ calls: se.length, loud: loud.slice(0, 5) }));
+      check('⑩ 負けたら「😢 負け」になり、数秒で始め直す', states.some(x => /負け/.test(x)) && states.slice(states.findIndex(x => /負け/.test(x))).some(x => /^live/.test(x)), states.join(' → '));
+      check('⑩ ガッツ切れなどで、負け以外の理由で止まらない(「⏹ 停止」にならない)', !states.some(x => /停止/.test(x)), states.join(' → '));
+      // 助手ライフの上で負けたとき、効果音の音量を戻さない
+      await hell.page.evaluate(() => { window.__vol = []; assistantLifeOpenScreen(); });
+      let lifeLost = false;
+      for (let t = 0; t < 60 && !lifeLost; t++) { await hell.page.waitForTimeout(1000); lifeLost = await hell.page.evaluate(() => !!document.querySelector('[data-life-quick-run-lose]')); }
+      await hell.page.waitForTimeout(1500);
+      const vol = await hell.page.evaluate(() => window.__vol);
+      check('⑩ 助手ライフの上で負けても、裏のバトルの効果音の音量を戻さない(負けた最後のターンの音を鳴らさない)', lifeLost && !vol.some(x => x.v > 0 && x.life), JSON.stringify({ lifeLost, vol: vol.slice(-6) }));
+      check('⑨ 実行時エラーが出ない(Hell)', hell.fatal.length === 0, hell.fatal.slice(0, 3).join(' / '));
+      await hell.page.close().catch(() => {});
+    }
     // 横画面(止め絵を撮るときだけ): HOME の帯が「モンヒロバトル」と重ならない
     if (SHOT_DIR) {
-      await off.page.close();
       const yoko = await boot(browser, true, { width: 844, height: 390 });
       await yoko.page.waitForTimeout(6000);
       for (let i = 0; i < 6 && await yoko.closePopups(); i++) await yoko.page.waitForTimeout(300);
