@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5866db928a90aa50
+// source-sha256: f19636eae52aeebc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117198,6 +117198,12 @@ const assistantLifeMarketWho = () => {
     return null;
   }
 };
+const assistantLifePlacePerkTail = place => {
+  if (place === 'studio') return '券なしで一緒に遊べる';
+  if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
+  if (place === 'ranch') return typeof amgrOn === 'function' && amgrOn() ? '助手のマスモンにトレーニングチケットを使ってあげられる' : 'トレーニングすると、その助手のマスモンも育つ';
+  return '';
+};
 const assistantLifePerkRows = (life, ids, nameOf) => {
   const rows = [];
   if (!life) return rows;
@@ -117216,7 +117222,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'beat',
       place: 'studio',
       icon: '🎵',
-      text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`,
+      text: `${nm(beat)}がビートにいます。${assistantLifePlacePerkTail('studio')}`,
       go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null
     });
   } catch (_) {}
@@ -117226,7 +117232,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'card',
       place: 'cardroom',
       icon: '🃏',
-      text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
+      text: `${nm(card)}とカードで${assistantLifePlacePerkTail('cardroom')}`,
       go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null
     });
   } catch (_) {}
@@ -117272,7 +117278,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     k: 'ranch',
     place: 'ranch',
     icon: '🥚',
-    text: typeof amgrOn === 'function' && amgrOn() ? `${nm(ranch)}がM/B管理にいます。助手のマスモンにトレーニングチケットを使ってあげられる` : `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`,
+    text: `${nm(ranch)}がM/B管理にいます。${assistantLifePlacePerkTail('ranch')}`,
     go: typeof go.ranch === 'function' ? go.ranch : null
   });
   return rows;
@@ -142166,9 +142172,8 @@ const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({
   home: '🏡'
 });
 const assistantLifePlanPerk = place => {
-  if (place === 'cardroom') return `対戦すると ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'battle') return 'マスモンが修行する';
-  return '';
+  return typeof assistantLifePlacePerkTail === 'function' ? assistantLifePlacePerkTail(place) : '';
 };
 const assistantLifePlanName = id => {
   try {
