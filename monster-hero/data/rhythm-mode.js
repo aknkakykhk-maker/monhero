@@ -43432,6 +43432,29 @@ const rhythmNoteDexSong=(id,text='')=>{
     difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(chart)}),
     tutorialSteps:Object.freeze([Object.freeze({fromMs:0,title:entry.name,text:String(text||'')})])});
 };
+// ===== オプションの「▶ 見てみる」の見本(2026-11-11 社長「モンビーのオプションで、現在の設定での画面が分からないから見れるようにしたい」) =====
+// 本物の演奏画面で、保存前の設定のまま流す短い見本。ノーツの種類がひととおり見えるよう、練習と同じ曲・同じ拍で並べる。
+// 自動で叩く(30-rhythm-preview-hands.jsx)。記録・ランキング・ライフには何も残さない(60-app.jsx の from:'preview')。曲の終わりで最初から流し直す
+const RHYTHM_OPTION_PREVIEW_END_BEAT=25;
+const RHYTHM_OPTION_PREVIEW_SONG=(()=>{
+  const t=rhythmTutorialMs;
+  const notes=[
+    mhTap(t(4),1,3,0), mhTap(t(5),4,3,0), mhTap(t(6),2,3,0),
+    mhTap(t(7),0,3,0), mhTap(t(7),5,3,0),                       // 同時押し
+    mhHoldV2(t(8),2,4,t(10)),                                   // ホールド
+    mhFlick(t(11),2,4),                                         // フリック
+    mhSlideV2(t(12),t(15),[[t(12),0,3],[t(13.5),2,3],[t(15),5,3]]), // スライド
+    mhTap(t(16),2,4,1),                                         // モンスターノーツ(マスモンを置いていれば絵が出る)
+    mhTap(t(17),1,3,0), mhTap(t(17.5),4,3,0), mhTap(t(18),2,3,0),
+    mhHoldV2(t(19),2,4,t(21),1),                                // 終点フリック
+    mhTap(t(22),0,3,0), mhTap(t(22),5,3,0),
+  ];
+  const endMs=t(RHYTHM_OPTION_PREVIEW_END_BEAT);
+  return Object.freeze({songId:'rhythm_option_preview',displayName:'見本',bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,playDurationMs:endMs,
+    difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(mhChart(1,notes,endMs))})});
+})();
+// 見本の難易度の札は「見本」(id は練習と同じ TUTORIAL。満点も同じ)
+const RHYTHM_OPTION_PREVIEW_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'見本'});
 // 練習の満点は EASY と同じ値にしておく。スコアは記録に残さないが、
 // ランクのゲージや「→次のランク」の表示が満点を分母に使うので、0や1にすると壊れる
 const RHYTHM_TUTORIAL_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:800000,label:'れんしゅう'}); // 満点は EASY と同じ(2026-10-13 に 60万→80万)

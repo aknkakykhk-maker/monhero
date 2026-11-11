@@ -166,7 +166,7 @@ ok('あそびかた練習も曲えらびへ戻る',
   game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',
   game.includes('const [rhythmOptionsBack,setRhythmOptionsBack]')
-  &&game.includes('onBack={()=>setGameState(rhythmOptionsBack)}')
+  &&game.includes('onBack={()=>{setRhythmOptionsDraft(null);setGameState(rhythmOptionsBack);}}')
   &&game.includes("setRhythmOptionsBack('RHYTHM_DEMO_HOME')")
   &&game.includes("setRhythmOptionsBack('RHYTHM_DEBUG')"));
 // 2026-09-10(STEP 6-10)にモンヒロビートの画面を切り出したので、

@@ -65,8 +65,10 @@ check('N5 HOME の財布・プロフィールの所持数・マーケットの�
 
 const multi = P('77-screen-rhythm-multi.jsx');
 check('M5 マルチの部屋: 縦向きは下の欄を枠のすぐ下へ(mt-auto は横向きだけ)・高さの上限 70%',
-  multi.includes('<div className="max-h-[70%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%]'));
-check('M5 マルチの部屋: 大きい札の名前は2行まで', multi.includes("${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}"));
+  // 2026-11 に、狭い画面で中身がはみ出さないよう shrink-0 を min-h-0 shrink にした(縦で下の欄を枠のすぐ下へ・70% の上限・mt-auto は横だけ、は同じ)
+  /className="max-h-\[70%\] (?:shrink-0|min-h-0 shrink) overflow-y-auto border-t border-white\/10 bg-slate-950\/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-\[58%\]/.test(multi));
+// 2026-11 に、CPU(助手・マスモン)の名前は1行に収める形に分けた。人の名前は今までどおり2行まで
+check('M5 マルチの部屋: 大きい札の名前は2行まで', multi.includes("'line-clamp-2 break-all text-[11px] landscape:text-sm') : 'truncate text-[10px]'}") || multi.includes("${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}"));
 check('M5 選曲の制限時間の札は狭い画面で詰める(「なし」が次の行へ落ちない)', multi.includes('max-[359px]:min-w-[44px] max-[359px]:px-1.5'));
 
 check('M6 結果に、その難易度の満点に対する出来(満点の◯%)を出す', /data-rhythm-result-achievement[^>]*>満点の\{Math\.min\(100,Math\.floor\(view\.score\/Number\(difficulty\.maxScore\)\*100\)\)\}%/.test(play));
