@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c2ffee9e8306715
+// source-sha256: 42aeb3818087876c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -79205,7 +79205,8 @@ function HomeScreen({
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
       ranch: onOpenManagement,
       temple: onOpenTemple,
-      market: onOpenMarket
+      market: onOpenMarket,
+      battle: onOpenBattle
     };
   });
   const homeSceneRef = React.useRef(null);
@@ -113643,6 +113644,24 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`,
     go: typeof go.temple === 'function' ? go.temple : null
   });
+  try {
+    const bt = typeof amgtRoomLine === 'function' ? assistantLifeAtPlace(life, ids, 'battle').filter(id => {
+      let t = null;
+      try {
+        t = amgtRoomLine(id);
+      } catch (_) {
+        t = null;
+      }
+      return typeof t === 'string' && t.indexOf('いま') === 0;
+    }) : [];
+    if (bt.length) rows.push({
+      k: 'battle',
+      place: 'battle',
+      icon: '⚔',
+      text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`,
+      go: typeof go.battle === 'function' ? go.battle : null
+    });
+  } catch (_) {}
   try {
     const mk = assistantLifeAtPlace(life, ids, 'market');
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;

@@ -125,6 +125,15 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     check('⑨ 助手がマーケットにいるとき assistantLifeMarketWho が助手を返す', mk.who === 'atsu', JSON.stringify(mk));
     check('⑨ 場所の判定 assistantLifePerkAt が帯と同じ(神殿は受け取り済みなので無し・マーケットは助手がいてできるときだけ)', await page.evaluate(() => assistantLifePerkAt('temple') === false && assistantLifePerkAt('ranch') === false && assistantLifePerkAt('market') === !!(ASSISTANT_LIFE_LINKS.marketPerkToday && (p => p && !p.used)(ASSISTANT_LIFE_LINKS.marketPerkToday()))));
     check('⑨ マーケットのおすすめが出せるとき、帯に🛍の行(3行を超えるときは「ほか」の中)', !mk.perk || mk.perk === 'なし' || mk.perk.used || mk.row || mk.more, JSON.stringify(mk));
+    // ⑩ モンヒロバトルの行: 助手が battle にいて修行中のとき、帯に⚔の行。修行が未公開なら出ない
+    const bt = await page.evaluate(async () => {
+      const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, momosuke: { doing: 'battle', place: 'battle' } } } });
+      const off = assistantLifePerkAt('battle');
+      const had = RELEASE_FLAGS.assistantMasmonTrain; let on = null;
+      try { RELEASE_FLAGS.assistantMasmonTrain = true; if (typeof AMGT_STORE !== 'undefined' && AMGT_STORE.load) await AMGT_STORE.load(); on = assistantLifePerkAt('battle'); } catch (e) { on = String(e); } finally { RELEASE_FLAGS.assistantMasmonTrain = had; }
+      return { off, on, had, goReady: typeof ASSISTANT_LIFE_LINKS.goPlace === 'object' && !!ASSISTANT_LIFE_LINKS.goPlace && typeof ASSISTANT_LIFE_LINKS.goPlace.battle === 'function' };
+    });
+    check('⑩ 修行が未公開のあいだはモンヒロバトルの行を出さず、公開で修行中の助手がいれば出る・HOME が行き先(battle)を入れている', (bt.had === true || bt.off === false) && bt.on === true && bt.goReady, JSON.stringify(bt));
     check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
     check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
     const gone = await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; return !!l; });
