@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abe417610c5aa0a1
+// source-sha256: 95789506270bd94a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13845,6 +13845,7 @@ const RELEASE_FLAGS = {
   assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
+  assistantLifeRoomEdit: true,
   assistantLifeSolo: true,
   assistantLifeFriend: true,
   assistantLifeFriendBond: false,
@@ -14297,6 +14298,7 @@ const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
 const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
 const FIRST_BATTLE_DONE_KEY = 'mh_first_battle_done_v1';
+const FIRST_STEPS_KEY = 'mh_first_steps_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
@@ -80265,7 +80267,8 @@ function HomeScreen({
   cardBattleTeaser = false,
   onOpenCardTeaser = null,
   cardTourVisible = false,
-  onOpenCardTour = null
+  onOpenCardTour = null,
+  nextStep = null
 }) {
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
@@ -80546,7 +80549,19 @@ function HomeScreen({
     "aria-label": "モンヒロバトル"
   }, React.createElement("span", null, React.createElement(Sword, {
     size: 25
-  }), "モンヒロバトル"))), React.createElement("button", {
+  }), "モンヒロバトル"))), nextStep && React.createElement("button", {
+    type: "button",
+    className: "mh-home-nextstep",
+    "data-home-next-step": nextStep.n,
+    onClick: nextStep.onTap,
+    "aria-label": `つぎにやること ${nextStep.n}/3 ${nextStep.title}`
+  }, React.createElement("span", {
+    className: "mh-home-nextstep-lab"
+  }, "つぎに", React.createElement("br", null), "やること", React.createElement("b", null, nextStep.n, "/3")), React.createElement("span", {
+    className: "mh-home-nextstep-body"
+  }, React.createElement("b", null, ['①', '②', '③'][nextStep.n - 1], " ", nextStep.title), React.createElement("small", null, nextStep.sub)), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "›")), React.createElement("button", {
     onClick: openMissions,
     className: `mh-home-mission${spotClass('reward')}`
   }, React.createElement(List, {
@@ -110511,6 +110526,8 @@ function AssistantLifeRoomSheet({
   uiV2 = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const [layoutOpen, setLayoutOpen] = React.useState(false);
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
@@ -110608,7 +110625,8 @@ function AssistantLifeRoomSheet({
     onPerson: () => toSheet(),
     onMasmon: onMasmon ? () => onMasmon(id) : null,
     dock: rvDock,
-    padLeft: 78
+    padLeft: 78,
+    layoutWho: layoutOn ? id : null
   }) : null;
   const followCard = follow && onChat && React.createElement("div", {
     className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
@@ -110969,6 +110987,21 @@ function AssistantLifeRoomSheet({
     onTalk: (talk, text) => {
       setFurnOpen(false);
       if (onFurnTalk) onFurnTalk(talk, text);
+    },
+    onLayout: layoutOn ? () => {
+      setFurnOpen(false);
+      setLayoutOpen(true);
+    } : null
+  }), layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && React.createElement(AssistantLifeRoomEditor, {
+    id: id,
+    land: land,
+    onClose: () => setLayoutOpen(false),
+    room: {
+      look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
+      people,
+      sleepIds,
+      away,
+      team: rvTeam
     }
   }));
 }
@@ -114478,7 +114511,10 @@ function AssistantLifeRoomScene({
   onMasmon = null,
   dock = null,
   backLabel = '← 家へ',
-  padLeft = 0
+  padLeft = 0,
+  layoutWho = null,
+  layoutEdit = null,
+  layoutItems = null
 }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({
@@ -114565,6 +114601,13 @@ function AssistantLifeRoomScene({
     perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
+  const layoutGeom = {
+    W,
+    top: topH,
+    floorY,
+    bottom: H - dockH
+  };
   const furnBox = slot => slot === 'ceil' ? {
     left: W * 0.42,
     top: topH + 6,
@@ -114621,7 +114664,13 @@ function AssistantLifeRoomScene({
       border: '6px solid #ffffff99',
       background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)'
     }
-  }), furn.map(f => {
+  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+    who: layoutWho,
+    items: layoutEdit ? layoutEdit.items : layoutItems,
+    geom: layoutGeom,
+    front: false,
+    onTip: layoutEdit ? null : setTip
+  }), !layoutOn && furn.map(f => {
     const b = furnBox(f.slot);
     return React.createElement("button", {
       key: f.slot,
@@ -114657,6 +114706,12 @@ function AssistantLifeRoomScene({
     top: deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
+  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+    who: layoutWho,
+    items: layoutEdit ? layoutEdit.items : layoutItems,
+    geom: layoutGeom,
+    front: true,
+    onTip: layoutEdit ? null : setTip
   }), away && React.createElement("div", {
     className: "absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center",
     style: {
@@ -114714,6 +114769,14 @@ function AssistantLifeRoomScene({
       t: mt,
       size: s
     }) : null);
+  }), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
+    items: layoutEdit.items,
+    geom: layoutGeom,
+    sel: layoutEdit.sel,
+    onSelect: layoutEdit.onSelect,
+    onMove: layoutEdit.onMove,
+    onDrop: layoutEdit.onDrop,
+    onScale: layoutEdit.onScale
   }), night && React.createElement("div", {
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0",
@@ -129435,10 +129498,12 @@ const assistantLifeFurnGive = async (who, key) => {
     kind: 'give'
   });
   const talk = assistantLifeFurnTalk(who, key);
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
+  if (layoutOn && typeof assistantLifeLayoutOnGive === 'function') assistantLifeLayoutOnGive(who, key);
   return talk ? {
     ...talk,
     amount,
-    placed: r.placed
+    placed: layoutOn ? true : r.placed
   } : null;
 };
 const assistantLifeFurnMove = async (who, key, toPut) => {
@@ -129461,7 +129526,7 @@ const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({
   mirrorball: 'ミラーボール',
   windbell: '風鈴'
 });
-const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
 const assistantLifeBubSplit = text => {
   const t = String(text || '');
   if (t.length <= 8) return [t];
@@ -129508,7 +129573,20 @@ const assistantLifeFurnVisitBub = talk => {
   return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
 };
 const assistantLifeFurnAlbumTalks = () => assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : [];
-function AssistantLifeRoomFurn({
+function AssistantLifeRoomFurn(props) {
+  if ((!props.put || Array.isArray(props.layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return React.createElement(AssistantLifeRoomLayoutMini, {
+    id: props.id,
+    w: props.w,
+    h: props.h,
+    given: Array.isArray(props.layoutItems) ? props.layoutItems : null
+  });
+  const {
+    layoutItems,
+    ...rest
+  } = props;
+  return React.createElement(AssistantLifeRoomFurnSlots, rest);
+}
+function AssistantLifeRoomFurnSlots({
   id,
   w,
   h,
@@ -129767,9 +129845,12 @@ function AssistantLifeFurnSheet({
   onGiveFurn,
   onClose,
   onTalk,
-  land = false
+  land = false,
+  onLayout = null
 }) {
   const st = useAssistantLifeGiftState();
+  const laySt = typeof useAssistantLifeLayoutState === 'function' ? useAssistantLifeLayoutState() : null;
+  const layoutOn = !!laySt && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [buyKey, setBuyKey] = React.useState(null);
@@ -129778,6 +129859,9 @@ function AssistantLifeFurnSheet({
   const room = assistantLifeRoomOf(id, st);
   const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
   const mine = all.filter(f => room.got[f.key]);
+  const layKeys = layoutOn ? new Set(assistantLifeLayoutOf(id, laySt, st).map(it => it.k)) : null;
+  const isPut = f => layoutOn ? layKeys.has(f.key) : room.put[f.slot] === f.key;
+  const movePut = (f, toPut) => layoutOn ? assistantLifeLayoutPut(id, f.key, toPut) : assistantLifeFurnMove(id, f.key, toPut);
   const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
   const furnGainText = k => {
@@ -129879,14 +129963,19 @@ function AssistantLifeFurnSheet({
     }
   }, "家具を贈ると、", React.createElement("wbr", null), "その家具の初めての1回だけ ", React.createElement("b", {
     className: "text-pink-200"
-  }, "💗 仲良し度"), "が上がります", React.createElement("wbr", null), "(好きな家具は多め)。", React.createElement("wbr", null), "置けるのは 天井・壁・床に1つずつ。", React.createElement("wbr", null), "ほかは押し入れにしまえます"), React.createElement("p", {
+  }, "💗 仲良し度"), "が上がります", React.createElement("wbr", null), "(好きな家具は多め)。", React.createElement("wbr", null), layoutOn ? React.createElement(React.Fragment, null, "贈った家具は、", React.createElement("wbr", null), "部屋の好きな所に置けます。", React.createElement("wbr", null), "「模様替え」で指でつまんで動かせます") : React.createElement(React.Fragment, null, "置けるのは 天井・壁・床に1つずつ。", React.createElement("wbr", null), "ほかは押し入れにしまえます")), React.createElement("p", {
     "data-assistant-life-furn-rule": true,
     className: "mt-1 flex flex-wrap gap-1 text-[11px] font-black"
   }, React.createElement("span", {
     className: "whitespace-nowrap rounded-full bg-amber-400/20 px-2 leading-[22px] text-amber-100"
   }, "🪑 家具は1⁠日に何個でも贈れる"), React.createElement("span", {
     className: "whitespace-nowrap rounded-full bg-slate-800 px-2 leading-[22px] text-slate-200"
-  }, "同じ家具は1人に1つ")), msg && React.createElement("p", {
+  }, "同じ家具は1人に1つ")), layoutOn && onLayout && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-furn-layout": true,
+    onClick: onLayout,
+    className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-[13px] font-black text-white shadow active:scale-[.98]"
+  }, "🛠 模様替え(指でつまんで動かす・", who.name, "におまかせ)"), msg && React.createElement("p", {
     "data-assistant-life-furn-msg": true,
     className: "mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100"
   }, msg), React.createElement("p", {
@@ -129922,16 +130011,16 @@ function AssistantLifeFurnSheet({
   }, "(", mine.length, "/", all.length, "持っている)")), React.createElement("div", {
     className: "mt-1 space-y-1",
     "data-assistant-life-furn-placed": true
-  }, mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', {
+  }, mine.filter(isPut).length ? mine.filter(isPut).map(f => row(f, btn('しまう', () => movePut(f, false), 'border-slate-500 text-slate-200', {
     'data-assistant-life-furn-keep': f.key
   }))) : React.createElement("p", {
     className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, "まだありません")), mine.some(f => room.put[f.slot] !== f.key) && React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "まだありません")), mine.some(f => !isPut(f)) && React.createElement(React.Fragment, null, React.createElement("p", {
     className: "mt-2 text-[11px] font-black text-amber-200"
   }, "📦 押し入れ"), React.createElement("div", {
     className: "mt-1 space-y-1",
     "data-assistant-life-furn-kept": true
-  }, mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
+  }, mine.filter(f => !isPut(f)).map(f => row(f, btn(!layoutOn && room.put[f.slot] ? '入れかえる' : '置く', () => movePut(f, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
     'data-assistant-life-furn-put': f.key
   }))))), React.createElement("button", {
     type: "button",
@@ -129952,6 +130041,823 @@ function AssistantLifeFurnSheet({
       give: () => give(f.key, true)
     }) : null;
   })());
+}
+const ASSISTANT_LIFE_LAYOUT_KEY = 'mh_assistant_life_room_layout_v1';
+const ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY = 'mh_assistant_life_room_layout_migrated_v1';
+const ASSISTANT_LIFE_LAYOUT_FLOOR = 0.56;
+const ASSISTANT_LIFE_LAYOUT_MAX = 40;
+const ASSISTANT_LIFE_LAYOUT_S = Object.freeze([0.5, 2.4]);
+const assistantLifeLayoutColorFilter = it => `${it.h ? `hue-rotate(${it.h}deg) ` : ''}${it.g !== 1 ? `saturate(${it.g}) ` : ''}${it.l !== 1 ? `brightness(${it.l}) ` : ''}`;
+const ASSISTANT_LIFE_LAYOUT_HUE_BAR = 'linear-gradient(90deg,#f87171,#facc15,#4ade80,#22d3ee,#60a5fa,#c084fc,#f472b6,#f87171)';
+const ASSISTANT_LIFE_LAYOUT_SLOT_POS = Object.freeze({
+  ceil: Object.freeze({
+    x: 0.47,
+    y: 0.05
+  }),
+  wall: Object.freeze({
+    x: 0.13,
+    y: 0.2
+  }),
+  floor: Object.freeze({
+    x: 0.13,
+    y: 0.5
+  })
+});
+const assistantLifeRoomEditEnabled = () => typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeRoomEdit === true;
+const assistantLifeLayoutClamp = (v, lo, hi, def) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def;
+};
+const normalizeAssistantLifeLayoutItem = (raw, keys) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.k !== 'string' || !keys.has(raw.k)) return null;
+  return {
+    k: raw.k,
+    x: assistantLifeLayoutClamp(raw.x, 0, 1, 0.5),
+    y: assistantLifeLayoutClamp(raw.y, 0, 1, 0.3),
+    s: assistantLifeLayoutClamp(raw.s, ASSISTANT_LIFE_LAYOUT_S[0], ASSISTANT_LIFE_LAYOUT_S[1], 1),
+    r: Math.round(assistantLifeLayoutClamp(raw.r, -180, 180, 0)),
+    f: raw.f === true,
+    h: Math.round(assistantLifeLayoutClamp(raw.h, 0, 359, 0)),
+    l: Math.round(assistantLifeLayoutClamp(raw.l, 0.5, 1.5, 1) * 100) / 100,
+    g: Math.round(assistantLifeLayoutClamp(raw.g, 0, 2, 1) * 100) / 100,
+    a: raw.a === true,
+    z: Math.round(assistantLifeLayoutClamp(raw.z, -9999, 9999, 0))
+  };
+};
+const normalizeAssistantLifeLayoutOne = raw => {
+  const keys = new Set((typeof assistantLifeFurnDefs === 'function' ? assistantLifeFurnDefs() : []).map(f => f.key));
+  const seen = new Set(),
+    items = [];
+  for (const it of raw && typeof raw === 'object' && Array.isArray(raw.items) ? raw.items : []) {
+    const n = normalizeAssistantLifeLayoutItem(it, keys);
+    if (!n || seen.has(n.k) || items.length >= ASSISTANT_LIFE_LAYOUT_MAX) continue;
+    seen.add(n.k);
+    items.push(n);
+  }
+  return {
+    items
+  };
+};
+const normalizeAssistantLifeLayout = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const o = {};
+  for (const [who, v] of Object.entries(r)) if (/^[a-z]+$/.test(who)) o[who] = normalizeAssistantLifeLayoutOne(v);
+  return o;
+};
+const assistantLifeLayoutFromRoom = (room, layout) => {
+  const out = {
+    ...(layout || {})
+  };
+  for (const [who, v] of Object.entries(room || {})) {
+    if (out[who] && Array.isArray(out[who].items) && out[who].items.length) continue;
+    const items = [];
+    for (const slot of ['ceil', 'wall', 'floor']) {
+      const k = v && v.put ? v.put[slot] : null;
+      const p = ASSISTANT_LIFE_LAYOUT_SLOT_POS[slot];
+      if (typeof k === 'string' && k) items.push({
+        k,
+        x: p.x,
+        y: p.y,
+        s: 1,
+        r: 0,
+        f: false,
+        h: 0,
+        l: 1,
+        g: 1,
+        a: false,
+        z: items.length
+      });
+    }
+    if (items.length) out[who] = {
+      items
+    };
+  }
+  return out;
+};
+const ASSISTANT_LIFE_LAYOUT_STORE = {
+  state: {
+    layout: {}
+  },
+  loaded: false,
+  loading: null,
+  listeners: new Set(),
+  emit() {
+    for (const fn of this.listeners) {
+      try {
+        fn(this.state);
+      } catch {}
+    }
+  },
+  set(layout) {
+    this.state = {
+      layout
+    };
+    this.emit();
+  },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    if (!assistantLifeRoomEditEnabled()) return Promise.resolve(this.state);
+    if (!this.loading) this.loading = (async () => {
+      try {
+        const [raw, migrated, gift] = await Promise.all([storeGet(ASSISTANT_LIFE_LAYOUT_KEY, null, false), storeGet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, null, false), ASSISTANT_LIFE_GIFT_STORE.load()]);
+        let layout = normalizeAssistantLifeLayout(raw);
+        if (migrated !== true && migrated !== 1) {
+          layout = normalizeAssistantLifeLayout(assistantLifeLayoutFromRoom(gift && gift.room || {}, layout));
+          try {
+            await storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false);
+            await storeSet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, true, false);
+          } catch {}
+        }
+        this.state = {
+          layout
+        };
+        this.loaded = true;
+      } catch {
+        this.loading = null;
+      }
+      this.emit();
+      return this.state;
+    })();
+    return this.loading;
+  }
+};
+const useAssistantLifeLayoutState = () => {
+  const [st, setSt] = React.useState(ASSISTANT_LIFE_LAYOUT_STORE.state);
+  React.useEffect(() => {
+    const fn = s => setSt(s);
+    ASSISTANT_LIFE_LAYOUT_STORE.listeners.add(fn);
+    void ASSISTANT_LIFE_LAYOUT_STORE.load().then(() => setSt(ASSISTANT_LIFE_LAYOUT_STORE.state));
+    return () => {
+      ASSISTANT_LIFE_LAYOUT_STORE.listeners.delete(fn);
+    };
+  }, []);
+  return st;
+};
+const assistantLifeLayoutOf = (who, st = ASSISTANT_LIFE_LAYOUT_STORE.state, giftSt = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const got = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(who, giftSt).got : {};
+  return normalizeAssistantLifeLayoutOne((st.layout || {})[who]).items.filter(it => got[it.k]).sort((a, b) => a.z - b.z);
+};
+const assistantLifeLayoutSave = (who, items) => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return;
+  const layout = {
+    ...ASSISTANT_LIFE_LAYOUT_STORE.state.layout,
+    [who]: normalizeAssistantLifeLayoutOne({
+      items
+    })
+  };
+  ASSISTANT_LIFE_LAYOUT_STORE.set(layout);
+  try {
+    storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false);
+  } catch {}
+};
+const assistantLifeLayoutNewItem = (key, items) => {
+  const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null;
+  const p = ASSISTANT_LIFE_LAYOUT_SLOT_POS[f && f.slot || 'floor'] || ASSISTANT_LIFE_LAYOUT_SLOT_POS.floor;
+  let x = p.x,
+    n = 0;
+  while (n < 10 && items.some(it => Math.abs(it.x - x) < 0.06 && Math.abs(it.y - p.y) < 0.06)) {
+    x = Math.min(0.94, x + 0.13);
+    n++;
+  }
+  return {
+    k: key,
+    x,
+    y: p.y,
+    s: 1,
+    r: 0,
+    f: false,
+    h: 0,
+    l: 1,
+    g: 1,
+    a: false,
+    z: items.reduce((m, it) => Math.max(m, it.z), 0) + 1
+  };
+};
+const assistantLifeLayoutPut = async (who, key, toPut) => {
+  await ASSISTANT_LIFE_LAYOUT_STORE.load();
+  const cur = assistantLifeLayoutOf(who);
+  if (toPut) {
+    if (!cur.some(it => it.k === key)) assistantLifeLayoutSave(who, [...cur, assistantLifeLayoutNewItem(key, cur)]);
+  } else assistantLifeLayoutSave(who, cur.filter(it => it.k !== key));
+};
+const assistantLifeLayoutOnGive = (who, key) => {
+  if (assistantLifeRoomEditEnabled()) void assistantLifeLayoutPut(who, key, true);
+};
+const assistantLifeLayoutPack = who => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return null;
+  const items = assistantLifeLayoutOf(who);
+  return items.length ? items.map(it => [it.k, Math.round(it.x * 1000), Math.round(it.y * 1000), Math.round(it.s * 100), it.r, it.f ? 1 : 0, it.h, Math.round(it.l * 100), Math.round(it.g * 100), it.a ? 1 : 0, it.z]) : null;
+};
+const assistantLifeLayoutUnpack = raw => {
+  if (!Array.isArray(raw)) return null;
+  const items = raw.filter(Array.isArray).map(a => ({
+    k: a[0],
+    x: Number(a[1]) / 1000,
+    y: Number(a[2]) / 1000,
+    s: Number(a[3]) / 100,
+    r: a[4],
+    f: a[5] === 1,
+    h: a[6],
+    l: Number(a[7]) / 100,
+    g: Number(a[8]) / 100,
+    a: a[9] === 1,
+    z: a[10]
+  }));
+  return normalizeAssistantLifeLayoutOne({
+    items
+  }).items.sort((p, q) => p.z - q.z);
+};
+const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
+  mua: Object.freeze({
+    hero: 'bear',
+    pull: 0.22,
+    low: 0,
+    tilt: 0,
+    big: 1.15,
+    line: 'できたー♪ くまさんは真ん中がいいのっ✨'
+  }),
+  kiki: Object.freeze({
+    hero: 'bookshelf',
+    pull: 0,
+    low: 0,
+    tilt: 0,
+    big: 1.05,
+    line: '本は手の届く所、植物は窓のそば。きっちり並べたよ'
+  }),
+  momosuke: Object.freeze({
+    hero: 'record',
+    pull: 0.12,
+    low: 0,
+    tilt: 10,
+    big: 1.25,
+    line: 'にぎやかにしてみた！ ここで歌ったら最高ぢゃない？'
+  }),
+  dra: Object.freeze({
+    hero: 'sofa',
+    pull: 0.05,
+    low: 0.1,
+    tilt: 6,
+    big: 1.2,
+    line: 'ぜんぶ低い所に寄せた…ごろごろできる…'
+  }),
+  atsu: Object.freeze({
+    hero: 'trophy',
+    pull: 0,
+    low: 0,
+    tilt: 0,
+    big: 1.2,
+    line: 'トロフィーはいちばん目立つとこ！ いい部屋になったっしょ笑'
+  }),
+  kyuko: Object.freeze({
+    hero: 'starpic',
+    pull: -0.04,
+    low: 0,
+    tilt: 0,
+    big: 1.05,
+    line: 'ほい、できたよぉ。すっきりさせてみた笑'
+  }),
+  sorashido: Object.freeze({
+    hero: 'lantern',
+    pull: 0.08,
+    low: -0.03,
+    tilt: 0,
+    big: 1.2,
+    line: '星の物は上に集めました。角度も計算済みです笑'
+  }),
+  erubin: Object.freeze({
+    hero: 'plant',
+    pull: -0.06,
+    low: 0,
+    tilt: 0,
+    big: 1.1,
+    line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う'
+  })
+});
+const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
+  ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
+  floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]]
+});
+const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
+  const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
+  const like = k => typeof assistantLifeFurnLike === 'function' ? assistantLifeFurnLike(who, k) : 'mid';
+  const rank = k => k === h.hero ? 0 : like(k) === 'like' ? 1 : 2;
+  const keys = [...new Set(owned)].filter(k => like(k) !== 'bad').sort((a, b) => rank(a) - rank(b));
+  const used = {
+      ceil: 0,
+      wall: 0,
+      floor: 0
+    },
+    items = [];
+  for (const k of keys) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
+    const slot = f && ASSISTANT_LIFE_LAYOUT_SEATS[f.slot] ? f.slot : 'floor';
+    const seat = ASSISTANT_LIFE_LAYOUT_SEATS[slot][used[slot]++];
+    if (!seat) continue;
+    const i = items.length;
+    const x = seat[0] + (0.5 - seat[0]) * h.pull,
+      y = seat[1] + (slot === 'ceil' ? 0 : h.low);
+    items.push({
+      k,
+      x: Math.max(0.06, Math.min(0.94, x)),
+      y: Math.max(0.03, Math.min(0.72, y)),
+      s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
+      r: h.tilt && slot !== 'ceil' ? i % 2 ? -h.tilt : h.tilt : 0,
+      f: seat[0] > 0.5,
+      h: 0,
+      l: 1,
+      g: 1,
+      a: slot === 'floor',
+      z: i
+    });
+  }
+  const L = typeof ASSISTANT_LIFE_LAYOUT_LINES !== 'undefined' && ASSISTANT_LIFE_LAYOUT_LINES[who] || {};
+  const pool = k => Array.isArray(L[k]) ? L[k].filter(t => typeof t === 'string' && t) : [];
+  const hasHero = items.some(it => it.k === h.hero);
+  const list = items.length <= 2 && pool('few').length ? pool('few') : hasHero && pool('hero').length && (rand() < 0.5 || !pool('done').length) ? pool('hero') : pool('done');
+  const line = list.length ? list[Math.floor(rand() * list.length) % list.length] : h.line;
+  return {
+    items,
+    line,
+    kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k))
+  };
+};
+const assistantLifeLayoutPx = (it, g) => ({
+  left: it.x * g.W,
+  top: it.y <= ASSISTANT_LIFE_LAYOUT_FLOOR ? g.top + it.y / ASSISTANT_LIFE_LAYOUT_FLOOR * (g.floorY - g.top) : g.floorY + (it.y - ASSISTANT_LIFE_LAYOUT_FLOOR) / (1 - ASSISTANT_LIFE_LAYOUT_FLOOR) * (g.bottom - g.floorY)
+});
+const assistantLifeLayoutFromPx = (left, top, g) => ({
+  x: Math.max(0.02, Math.min(0.98, left / g.W)),
+  y: Math.max(0.01, Math.min(0.99, top <= g.floorY ? (top - g.top) / Math.max(1, g.floorY - g.top) * ASSISTANT_LIFE_LAYOUT_FLOOR : ASSISTANT_LIFE_LAYOUT_FLOOR + (top - g.floorY) / Math.max(1, g.bottom - g.floorY) * (1 - ASSISTANT_LIFE_LAYOUT_FLOOR)))
+});
+const assistantLifeLayoutBase = g => Math.round(Math.max(34, Math.min(56, g.W * 0.12)));
+const assistantLifeLayoutStyle = (it, g) => {
+  const p = assistantLifeLayoutPx(it, g);
+  return {
+    position: 'absolute',
+    left: p.left,
+    top: p.top,
+    fontSize: Math.round(assistantLifeLayoutBase(g) * it.s),
+    lineHeight: 1,
+    transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
+    filter: `${assistantLifeLayoutColorFilter(it)}drop-shadow(0 5px 4px #0005)`
+  };
+};
+function AssistantLifeRoomLayoutLayer({
+  who,
+  items = null,
+  geom,
+  front = false,
+  onTip = null
+}) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const list = (items || assistantLifeLayoutOf(who, st, giftSt)).filter(it => !!it.a === front);
+  return React.createElement(React.Fragment, null, list.map(it => {
+    const f = assistantLifeFurnOf(it.k);
+    if (!f) return null;
+    return React.createElement("button", {
+      key: it.k,
+      type: "button",
+      "data-assistant-life-roomview-furn": it.k,
+      "data-assistant-life-layout-item": `${it.k}:${front ? 'front' : 'back'}`,
+      "aria-label": f.name,
+      onClick: () => {
+        if (onTip) onTip(`${f.emoji} ${f.name}`);
+      },
+      style: assistantLifeLayoutStyle(it, geom)
+    }, f.emoji);
+  }));
+}
+function AssistantLifeRoomLayoutHandles({
+  items,
+  geom,
+  sel,
+  onSelect,
+  onMove,
+  onDrop,
+  onScale = null
+}) {
+  const drag = React.useRef(null);
+  const live = React.useRef(null);
+  live.current = {
+    items,
+    sel,
+    onScale,
+    onDrop
+  };
+  const touches = React.useRef(new Map());
+  React.useEffect(() => {
+    const pts = touches.current;
+    let pinch = null;
+    const dist = () => {
+      const [a, b] = [...pts.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const inRoom = e => !!(e.target && e.target.closest && e.target.closest('[data-assistant-life-roomview]'));
+    const down = e => {
+      if (e.pointerType === 'mouse' || !inRoom(e)) return;
+      pts.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY
+      });
+      const c = live.current;
+      const it = c.items.find(x => x.k === c.sel);
+      if (pts.size === 2 && it && c.onScale) {
+        pinch = {
+          k: it.k,
+          s0: it.s,
+          d0: Math.max(10, dist())
+        };
+        drag.current = null;
+      }
+    };
+    const move = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY
+      });
+      if (pinch && pts.size === 2) {
+        const c = live.current;
+        const s = Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round(pinch.s0 * (dist() / pinch.d0) * 100) / 100));
+        if (c.onScale) c.onScale(pinch.k, s);
+      }
+    };
+    const up = e => {
+      if (!pts.delete(e.pointerId)) return;
+      if (pinch) {
+        const k = pinch.k;
+        pinch = null;
+        const c = live.current;
+        if (c.onDrop) c.onDrop(k);
+      }
+    };
+    window.addEventListener('pointerdown', down, true);
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+    return () => {
+      window.removeEventListener('pointerdown', down, true);
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', up, true);
+      window.removeEventListener('pointercancel', up, true);
+    };
+  }, []);
+  const down = (e, it) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (touches.current.size >= 2 || drag.current && drag.current.id !== e.pointerId) return;
+    onSelect(it.k);
+    const p = assistantLifeLayoutPx(it, geom);
+    drag.current = {
+      k: it.k,
+      id: e.pointerId,
+      dx: p.left - e.clientX,
+      dy: p.top - e.clientY,
+      moved: false
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+  const move = e => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    d.moved = true;
+    const q = assistantLifeLayoutFromPx(e.clientX + d.dx, e.clientY + d.dy, geom);
+    onMove(d.k, q.x, q.y);
+  };
+  const up = e => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    if (d.moved && onDrop) onDrop(d.k);
+  };
+  return React.createElement(React.Fragment, null, items.map(it => {
+    const f = assistantLifeFurnOf(it.k);
+    if (!f) return null;
+    const p = assistantLifeLayoutPx(it, geom);
+    const size = Math.max(44, Math.round(assistantLifeLayoutBase(geom) * it.s * 1.15));
+    return React.createElement("button", {
+      key: it.k,
+      type: "button",
+      "data-assistant-life-layout-handle": it.k,
+      "aria-label": `${f.name}を動かす`,
+      "aria-pressed": sel === it.k,
+      onPointerDown: e => down(e, it),
+      onPointerMove: move,
+      onPointerUp: up,
+      onPointerCancel: up,
+      style: {
+        position: 'absolute',
+        left: p.left,
+        top: p.top,
+        width: size,
+        height: size,
+        transform: 'translate(-50%,-50%)',
+        zIndex: 20 + (sel === it.k ? 1 : 0),
+        touchAction: 'none',
+        cursor: 'grab',
+        borderRadius: 12,
+        border: sel === it.k ? '2.5px dashed #f472b6' : '1.5px dashed #ffffff90',
+        background: sel === it.k ? '#ffffff38' : 'transparent'
+      }
+    });
+  }));
+}
+function AssistantLifeRoomLayoutMini({
+  id,
+  w,
+  h,
+  given = null
+}) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const items = Array.isArray(given) ? given : assistantLifeLayoutOf(id, st, giftSt);
+  const g = {
+    W: w,
+    top: 2,
+    floorY: Math.round(h * 0.62),
+    bottom: h - 4
+  };
+  const base = Math.max(11, Math.min(20, h * 0.2, w * 0.13));
+  return React.createElement(React.Fragment, null, items.map(it => {
+    const f = assistantLifeFurnOf(it.k);
+    if (!f) return null;
+    const p = assistantLifeLayoutPx(it, g);
+    return React.createElement("span", {
+      key: it.k,
+      "aria-hidden": "true",
+      "data-assistant-life-room-furn": `${id}:layout:${it.k}`,
+      style: {
+        position: 'absolute',
+        left: p.left,
+        top: p.top,
+        zIndex: 0,
+        pointerEvents: 'none',
+        lineHeight: 1,
+        fontSize: Math.round(base * Math.min(1.6, it.s)),
+        transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
+        filter: assistantLifeLayoutColorFilter(it).trim() || undefined
+      }
+    }, f.emoji);
+  }));
+}
+function AssistantLifeRoomEditor({
+  id,
+  land = false,
+  room = {},
+  onClose
+}) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const who = assistantById(id);
+  const saved = assistantLifeLayoutOf(id, st, giftSt);
+  const [items, setItems] = React.useState(null);
+  const draft = React.useRef(null);
+  const first = React.useRef(null);
+  const [sel, setSel] = React.useState(null);
+  const [colorOpen, setColorOpen] = React.useState(false);
+  const [line, setLine] = React.useState('');
+  const loaded = ASSISTANT_LIFE_LAYOUT_STORE.loaded;
+  React.useEffect(() => {
+    if (loaded && first.current === null) first.current = saved;
+  }, [loaded]);
+  React.useEffect(() => {
+    if (!line) return undefined;
+    const t = setTimeout(() => setLine(''), 5000);
+    return () => clearTimeout(t);
+  }, [line]);
+  if (!who || !assistantLifeRoomEditEnabled()) return null;
+  const cur = items || saved;
+  const got = Object.keys(assistantLifeRoomOf(id, giftSt).got || {});
+  const kept = got.filter(k => !cur.some(it => it.k === k));
+  const commit = next => {
+    draft.current = null;
+    setItems(null);
+    assistantLifeLayoutSave(id, next);
+  };
+  const live = fn => {
+    const next = (draft.current || cur).map(fn);
+    draft.current = next;
+    setItems(next);
+  };
+  const settle = () => {
+    if (draft.current) commit(draft.current);
+  };
+  const patch = (k, p) => commit(cur.map(it => it.k === k ? {
+    ...it,
+    ...p
+  } : it));
+  const selIt = cur.find(it => it.k === sel) || null;
+  const zs = cur.map(it => it.z);
+  const tool = (key, label, fn, dis = false, aria = null) => React.createElement("button", {
+    key: key,
+    type: "button",
+    "data-assistant-life-layout-tool": key,
+    "aria-label": aria || undefined,
+    disabled: dis,
+    onClick: fn,
+    className: "min-h-[40px] min-w-[44px] shrink-0 rounded-lg border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-35"
+  }, label);
+  const chip = (k, placed) => {
+    const f = assistantLifeFurnOf(k);
+    if (!f) return null;
+    return React.createElement("button", {
+      key: k,
+      type: "button",
+      "data-assistant-life-layout-chip": `${k}:${placed ? 'put' : 'kept'}`,
+      "aria-label": placed ? `${f.name}を選ぶ` : `${f.name}を部屋に置く`,
+      "aria-pressed": sel === k,
+      onClick: () => {
+        if (placed) {
+          setSel(sel === k ? null : k);
+        } else {
+          const it = {
+            ...assistantLifeLayoutNewItem(k, cur),
+            x: 0.5,
+            y: 0.3,
+            a: true
+          };
+          commit([...cur, it]);
+          setSel(k);
+        }
+        setColorOpen(false);
+      },
+      className: `relative h-[44px] w-[44px] shrink-0 rounded-xl border-2 text-[22px] leading-none active:scale-95 ${sel === k ? 'border-pink-400 bg-pink-500/30' : placed ? 'border-slate-500 bg-slate-800' : 'border-dashed border-amber-300/80 bg-slate-900'}`
+    }, React.createElement("span", {
+      style: {
+        opacity: placed ? 1 : 0.55
+      }
+    }, f.emoji), !placed && React.createElement("span", {
+      className: "absolute -right-1 -top-1 rounded-full bg-amber-400 px-1 text-[10px] font-black leading-[14px] text-slate-900"
+    }, "＋"));
+  };
+  const omakase = () => {
+    const r = assistantLifeLayoutOmakase(id, got);
+    commit(r.items);
+    setSel(null);
+    setColorOpen(false);
+    setLine(r.line);
+  };
+  const panel = React.createElement("div", {
+    className: "flex flex-col gap-1.5 bg-slate-950 px-3 pt-2",
+    style: {
+      paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
+      ...(land ? {
+        width: '44%',
+        height: '100%',
+        overflowY: 'auto',
+        paddingTop: 8
+      } : {})
+    },
+    "data-assistant-life-layout-panel": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 truncate text-[12px] font-black text-white"
+  }, selIt ? `${assistantLifeFurnOf(selIt.k).emoji} ${assistantLifeFurnOf(selIt.k).name}` : '家具を指でつまんで動かす'), React.createElement("span", {
+    className: "shrink-0 text-[10.5px] font-bold text-slate-300",
+    "data-assistant-life-layout-count": true
+  }, "置いてある ", cur.length, " / ", got.length)), colorOpen && selIt ? React.createElement("div", {
+    className: "flex flex-col gap-2 py-1",
+    "data-assistant-life-layout-colors": true
+  }, React.createElement("style", null, `.mhl-layout-range{-webkit-appearance:none;appearance:none;height:16px;border-radius:999px;border:1.5px solid #ffffff55;outline-offset:3px}
+.mhl-layout-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #f472b6;box-shadow:0 1px 4px #000a}
+.mhl-layout-range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #f472b6;box-shadow:0 1px 4px #000a}`), [['h', '色あい', 0, 359, 1, ASSISTANT_LIFE_LAYOUT_HUE_BAR], ['l', '明るさ', 0.5, 1.5, 0.01, 'linear-gradient(90deg,#1f2937,#9ca3af,#ffffff)'], ['g', 'あざやかさ', 0, 2, 0.01, 'linear-gradient(90deg,#9ca3af,#f472b6,#e11d48)']].map(([key, label, lo, hi, step, bar]) => React.createElement("label", {
+    key: key,
+    className: "flex items-center gap-2 text-[11px] font-black text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[64px] shrink-0"
+  }, label), React.createElement("input", {
+    type: "range",
+    "data-assistant-life-layout-color": key,
+    "aria-label": label,
+    min: lo,
+    max: hi,
+    step: step,
+    value: selIt[key],
+    onChange: e => {
+      const v = Number(e.target.value);
+      live(it => it.k === sel ? {
+        ...it,
+        [key]: v
+      } : it);
+    },
+    onPointerUp: settle,
+    onKeyUp: settle,
+    onBlur: settle,
+    className: "mhl-layout-range min-w-0 flex-1",
+    style: {
+      background: bar,
+      touchAction: 'none'
+    }
+  }))), React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, tool('colorreset', 'もとの色', () => patch(sel, {
+    h: 0,
+    l: 1,
+    g: 1
+  }), selIt.h === 0 && selIt.l === 1 && selIt.g === 1), tool('colorclose', '← 道具へ戻る', () => setColorOpen(false)))) : React.createElement("div", {
+    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
+    "data-assistant-life-layout-tools": true
+  }, tool('small', '小', () => patch(sel, {
+    s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100)
+  }), !selIt || selIt.s <= ASSISTANT_LIFE_LAYOUT_S[0], '小さくする'), tool('big', '大', () => patch(sel, {
+    s: Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round((selIt.s + 0.15) * 100) / 100)
+  }), !selIt || selIt.s >= ASSISTANT_LIFE_LAYOUT_S[1], '大きくする'), tool('flip', '↔', () => patch(sel, {
+    f: !selIt.f
+  }), !selIt, '左右を返す'), tool('rotl', '↺', () => patch(sel, {
+    r: (selIt.r - 15 + 540) % 360 - 180
+  }), !selIt, '左へ回す'), tool('rotr', '↻', () => patch(sel, {
+    r: (selIt.r + 15 + 540) % 360 - 180
+  }), !selIt, '右へ回す'), tool('color', '🎨 色', () => setColorOpen(true), !selIt), tool('front', '前へ', () => patch(sel, {
+    z: Math.max(...zs) + 1
+  }), !selIt), tool('back', '後ろへ', () => patch(sel, {
+    z: Math.min(...zs) - 1
+  }), !selIt), tool('layer', selIt && selIt.a ? '助手の後ろへ' : '助手の前へ', () => patch(sel, {
+    a: !selIt.a
+  }), !selIt), tool('keep', 'しまう', () => {
+    commit(cur.filter(it => it.k !== sel));
+    setSel(null);
+  }, !selIt)), React.createElement("div", {
+    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
+    "data-assistant-life-layout-chips": true
+  }, cur.map(it => chip(it.k, true)), kept.map(k => chip(k, false)), got.length === 0 && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "まだ家具がありません。「🪑 家具」から贈ると、ここに並びます")), React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-layout-omakase": true,
+    disabled: got.length === 0,
+    onClick: omakase,
+    className: "min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-2 text-[12.5px] font-black text-white shadow active:scale-95 disabled:opacity-40"
+  }, "🎀 ", who.name, "におまかせ"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-layout-undo": true,
+    onClick: () => {
+      if (first.current) commit(first.current);
+      setSel(null);
+    },
+    className: "min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95"
+  }, "もとに戻す"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-layout-done": true,
+    onClick: onClose,
+    className: "min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95"
+  }, "✓ できた")));
+  return React.createElement("div", {
+    className: `absolute inset-0 flex ${land ? 'flex-row' : 'flex-col'} bg-slate-950`,
+    style: {
+      zIndex: 34
+    },
+    "data-assistant-life-layout-editor": id
+  }, React.createElement("div", {
+    className: "relative min-h-0 min-w-0 flex-1",
+    style: {
+      touchAction: 'none'
+    }
+  }, React.createElement(AssistantLifeRoomScene, _extends({}, room, {
+    id: id,
+    land: land,
+    title: `${who.name}の部屋の模様替え`,
+    sub: land ? 'つまんで動かす・指2本で大きさ・道具で向きと色' : 'つまんで動かす・指2本で大きさ・下の道具で向きと色',
+    bubble: "",
+    padLeft: 78,
+    dock: null,
+    onBack: null,
+    onPerson: null,
+    onMasmon: null,
+    layoutWho: id,
+    layoutEdit: {
+      items: cur,
+      sel,
+      onSelect: k => {
+        setSel(k);
+        setColorOpen(false);
+      },
+      onMove: (k, x, y) => live(it => it.k === k ? {
+        ...it,
+        x,
+        y
+      } : it),
+      onDrop: settle,
+      onScale: (k, sc) => live(it => it.k === k ? {
+        ...it,
+        s: sc
+      } : it)
+    }
+  })), line && React.createElement("p", {
+    className: "pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow",
+    style: {
+      bottom: 12,
+      zIndex: 30,
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-life-layout-line": true
+  }, who.name, "「", line, "」")), panel);
 }
 const ASSISTANT_MASMON_PLAN = [{
   "id": "mua",
@@ -189278,6 +190184,24 @@ function MonsterHeroGame() {
   const storyShownThisHomeRef = useRef(false);
   const [firstBattleDone, setFirstBattleDone] = useState(true);
   const realBattleSeenRef = useRef(false);
+  const [firstStepsStage, setFirstStepsStage] = useState(3);
+  const firstStepsMissionSeenRef = useRef(false);
+  const advanceFirstSteps = next => {
+    setFirstStepsStage(cur => next > cur ? next : cur);
+    (async () => {
+      try {
+        await storeSet(FIRST_STEPS_KEY, next, false);
+      } catch {}
+    })();
+  };
+  useEffect(() => {
+    if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3 || gameState !== 'HOME') return;
+    const giftN = giftClaimableCount(gifts);
+    const missionN = missionClaimableCount(normalizeMissions(missions));
+    if (firstStepsStage === 0 && giftN === 0) advanceFirstSteps(1);else if (firstStepsStage === 1 && firstBattleDone) advanceFirstSteps(2);else if (firstStepsStage === 2) {
+      if (missionN > 0) firstStepsMissionSeenRef.current = true;else if (firstStepsMissionSeenRef.current) advanceFirstSteps(3);
+    }
+  }, [storyOneAtATime, dataLoaded, firstStepsStage, gameState, gifts, missions, firstBattleDone]);
   useEffect(() => {
     if (firstBattleDone) return;
     if (Object.values(clearCounts || {}).some(n => (Number(n) || 0) > 0)) setFirstBattleDone(true);
@@ -191166,6 +192090,12 @@ function MonsterHeroGame() {
         setStoryOneAtATime(oneAtATime);
         if (oneAtATime && (await storeGet(FIRST_BATTLE_DONE_KEY, false, false)) !== true) {
           setFirstBattleDone(false);
+        }
+        if (oneAtATime) {
+          const savedRaw = await storeGet(FIRST_STEPS_KEY, null, false);
+          const savedSteps = Number(savedRaw);
+          const playedBefore = savedRaw == null && Object.values(clears || {}).some(n => (Number(n) || 0) > 0);
+          setFirstStepsStage(playedBefore ? 3 : Number.isFinite(savedSteps) && savedSteps >= 0 && savedSteps < 3 ? Math.floor(savedSteps) : savedSteps >= 3 ? 3 : 0);
         }
       } catch {}
       setAssistantChosen(!!savedAssistant || wasOnboarded);
@@ -208136,6 +209066,28 @@ function MonsterHeroGame() {
       openChangelog: openChangelog,
       openGiftBox: openGiftBox,
       openMissions: openMissions,
+      nextStep: (() => {
+        if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3) return null;
+        if (firstStepsStage === 0 && giftClaimableCount(gifts) > 0) return {
+          n: 1,
+          title: 'ギフトを受け取ろう',
+          sub: 'ダイヤなどが届いています',
+          onTap: openGiftBox
+        };
+        if (firstStepsStage === 1) return {
+          n: 2,
+          title: 'モンヒロバトルを1回あそぼう',
+          sub: 'カードを出して勝ってみよう',
+          onTap: openBattleSystemSelect
+        };
+        if (firstStepsStage === 2 && missionClaimableCount(normalizeMissions(missions)) > 0) return {
+          n: 3,
+          title: 'ミッションを受け取ろう',
+          sub: 'バトルのごほうびがもらえます',
+          onTap: openMissions
+        };
+        return null;
+      })(),
       profileFrameId: profileFrameId,
       resolveIconUrl: resolveIconUrl,
       spotClass: spotClass,
@@ -227324,6 +228276,18 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
     .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
     }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management,.mh-home-facility.temple{top:max(27.4%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    /* はじめての人の「つぎにやること」(2026-11-11 案4)。モンヒロバトルの札のすぐ上。縦持ちは下の列の上に横いっぱい、横持ち(背が低い)はバトルの札のすぐ上の中央の小さな帯 */
+    .mh-home-nextstep{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;min-height:52px;padding:7px 12px;border:2px solid #fcd34d;border-radius:16px;background:#0f172af0;color:#fff;text-align:left;box-shadow:0 4px 14px #000a;animation:mhNextStepPulse 2.4s ease-in-out infinite}
+    .mh-home-nextstep:active{transform:scale(.97)}
+    .mh-home-nextstep-lab{flex:none;font-size:10px;font-weight:900;line-height:1.2;text-align:center;color:#fcd34d}
+    .mh-home-nextstep-lab b{display:block;color:#cbd5e1;font-weight:900}
+    .mh-home-nextstep-body{flex:1;min-width:0}
+    .mh-home-nextstep-body b{display:block;font-size:14px;font-weight:900;line-height:1.25}
+    .mh-home-nextstep-body small{display:block;margin-top:2px;font-size:10px;color:#cbd5e1;line-height:1.25}
+    .mh-home-nextstep i{flex:none;font-style:normal;font-size:22px;font-weight:900;color:#fcd34d}
+    @keyframes mhNextStepPulse{0%,100%{box-shadow:0 4px 14px #000a}50%{box-shadow:0 4px 18px #fcd34dcc}}
+    @media(prefers-reduced-motion:reduce){.mh-home-nextstep{animation:none}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{left:50%;right:auto;transform:translateX(-50%);width:min(32%,230px);bottom:calc(66px + env(safe-area-inset-bottom));min-height:44px;padding:5px 10px}.mh-home-nextstep:active{transform:translateX(-50%) scale(.97)}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}

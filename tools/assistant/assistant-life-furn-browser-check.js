@@ -10,6 +10,8 @@
 //   ⑥ 交換所: 「家具」タブに12種類、「アイテム」タブには家具が並ばない
 //   ⑦ ページのエラーが出ない
 //   ⑧ 8人の部屋に3つずつ置いても、家具が吹き出し・名札・Lv・顔・もとの家具に隠れない(重なるときは測って空いた所へずらす。出かけた札の後ろはよい)
+// ★2026-11-11 模様替え(公開の印 assistantLifeRoomEdit)が出てからは、自分の家は「好きな所にいくつでも」になった(確かめは assistant-life-roomedit-browser-check.js)。
+//   ここは「天井・壁・床に1つずつ」の置き方(フレンドの家の控えを描く道・印がオフのとき)を、印をオフにして確かめる
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9233;
 const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -38,7 +40,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, life: true, intro: false, bondAll: null });
     await page.addInitScript((on) => {
-      const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLifeFurniture = !!on; clearInterval(t); } } catch {} }, 2);
+      const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLifeFurniture = !!on; RELEASE_FLAGS.assistantLifeRoomEdit = false; clearInterval(t); } } catch {} }, 2);
       if (localStorage.getItem('mh_check_furn') === null) { localStorage.setItem('mh_check_furn', '1'); const o = JSON.parse(localStorage.getItem('mh_owned_items') || '{}');
         Object.assign(o, { furn_sofa: 1, furn_trophy: 1, furn_lantern: 1, furn_record: 1, furn_heartmirror: 1, furn_bear: 2 }); localStorage.setItem('mh_owned_items', JSON.stringify(o)); }
     }, furn);
