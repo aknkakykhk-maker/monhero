@@ -112,6 +112,7 @@ node tools/build.js --check
 | `node debug-passphrase-hash.js <合言葉>` | デバッグ設定の入口の合言葉を、塩と PBKDF2 のハッシュにして出す(2026-10-20)。出た値だけを `25-storage.jsx` の `DEBUG_PASSPHRASE_*` へ書く。合言葉そのものはソース・コミット・PR に書かない。 |
 | `node build-asset-manifest.js` | 事前ダウンロード(Service Worker `monster-hero/sw.js`)が使う音源・画像の一覧と版の印 `monster-hero/asset-manifest.json` を作る。`build.js` が毎回呼ぶので手で打つことはふつう無い。`--check` で古くなっていないかだけ見る(`build.js --check` も見る)。説明は `docs/spec/ASSET_PREFETCH.md` |
 | `node check-syntax.js` | `monster-hero/game-system.jsx` をBabelで変換して構文エラーが無いか確認する。**改修後は必ず実行する。** |
+| `node conflict-marker-check.js` | 配信されるファイル(`monster-hero/` の .html .js .json .css と `src/parts`)に、マージのぶつかりの印(行頭の `<<<<<<<` `=======` `>>>>>>>`)が残っていないか確認する。#5487 で `index.html` に印が残り本番の起動が止まった経緯から足した。生成物がぶつかったら `merge-main.js` で解消 → `build.js` → この検査、の順。 |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node jsx-text-brace-check.js` | JSXの中に、閉じ忘れ・閉じすぎでできた「{」「}」がそのまま文字として混ざっていないかを調べる。`{cond&&<div>…</div>}` の開き `{cond&&` を書き忘れると、余った `}` は画面に出る文字として扱われ構文エラーにならない。**改修後は必ず実行する。** |
 | `node render-error-check.js` | 画面が真っ白になる類の不具合(JSの実行時エラー)を、実際にブラウザで開いて確かめる。構文も参照先も正しいのに描画した瞬間だけ落ちる(宣言前の定数を読むなど)場合はここでしか止められない。**改修後は必ず実行する。** |
