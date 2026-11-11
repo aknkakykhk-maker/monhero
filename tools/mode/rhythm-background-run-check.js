@@ -21,6 +21,8 @@ const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/in
 // 進んだかどうかを見る時間。×1速でもWAVEかターンのどちらかは必ず動く長さ
 const WATCH_MS = 12000;
 const results = [];
+// 裏クイックをどこでも回す公開の印(17-release)
+const QUICK_ANYWHERE = /const QUICK_RUN_ANYWHERE_RELEASE = true;/.test(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8'));
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ' — ' + detail : ''}`); };
 
 const seed = () => {
@@ -277,7 +279,11 @@ const seed = () => {
     // 周回を締めてHOMEへ戻るボタンは、2026-10-03にモードえらびの左上へ移った。曲えらびの「←」でモードえらびへ戻ってから押す
     await clickSelector('[data-rhythm-song-select-back]');
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-mode-select]'), { timeout: 10000 }).catch(() => {});
-    check('周回中の戻るボタンが「終わる」と分かる見た目になっている',
+    // 2026-11-11 裏クイックをどこでも回す(QUICK_RUN_ANYWHERE_RELEASE)では、左上はふつうの「←」で、HOME へ戻っても周回は続く。
+    //   締めるのは HOME の左下の帯の「⏹ 止める」。そのあとの「周回が残っていない」「もう一度回る」(⑦)は今までどおり見る
+    if (QUICK_ANYWHERE) check('どこでも回すときは、周回中の戻るボタンはふつうの「←」(出ても周回は続く)',
+      await page.evaluate(() => { const back = document.querySelector('[data-rhythm-back]'); return !!back && back.getAttribute('data-quick-run-finishing') !== '1' && (back.getAttribute('aria-label') || '') === '戻る'; }));
+    else check('周回中の戻るボタンが「終わる」と分かる見た目になっている',
       await page.evaluate(() => {
         const back = document.querySelector('[data-rhythm-back]');
         return !!back && back.getAttribute('data-quick-run-finishing') === '1'
@@ -301,11 +307,20 @@ const seed = () => {
         && !document.querySelector('[data-rhythm-mode-select]')
         && (document.body.innerText || '').includes('モンヒロビート')),
       await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 60)));
-    // 戻ったあとに周回が残っていないこと(帯もバトルの段階も消えている)
-    check('戻ると周回も終わっている',
+    if (QUICK_ANYWHERE) {
+      check('どこでも回すときは、HOME へ戻っても周回は続く(左下の帯)', await page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); return !!el && el.getAttribute('data-quick-anywhere') !== 'finished'; }));
+      await page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); if (el) el.click(); });
+      await page.waitForTimeout(300);
+      await page.evaluate(() => { const b = document.querySelector('[data-quick-anywhere-stop]'); if (b) b.click(); });
+      await page.waitForFunction(() => !document.querySelector('[data-quick-anywhere]'), { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(800);
+    }
+    // 戻ったあと(どこでも回すときは帯の「止める」のあと)に周回が残っていないこと(帯もバトルの段階も消えている)
+    check(QUICK_ANYWHERE ? '帯の「止める」で周回が終わっている' : '戻ると周回も終わっている',
       await page.evaluate(() => !document.querySelector('[data-quick-run-progress-header]')
         && !document.querySelector('[data-quick-run-progress]')
-        && !document.querySelector('button[aria-label^="AUTO"]')),
+        && !document.querySelector('button[aria-label^="AUTO"]')
+        && !document.querySelector('[data-quick-anywhere]')),
       `戻る前 W${beforeHome.wave}/T${beforeHome.turn}`);
 
     // ---- ⑦ HOMEへ戻ったあと、もう一度周回を始めても回る ----

@@ -255,6 +255,62 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
   const actions=evaluateEnemyActions(ent,currentDist,state),total=actions.reduce((sum,a)=>sum+(a.available?a.weight:0),0);
   return actions.map(a=>({...a,probability:a.available&&total>0?a.weight/total:0}));
 };
+// ===== タクティクスの敵の作戦AI(試作・2026-11-11 社長の材料「行動選択、距離、スキルの組み合わせ、難易度ごとの戦術を改善」)=====
+// ★本番では使わない。デバッグ設定の「敵の作戦AI(試作)」を選んだデバッグ戦のときだけ通す。
+//   社長が決めるまで、本番の強さ・ランキング対象のモードは chooseEnemyAction(決まった重みのくじ)のまま。
+// ★守ること: ①予告してから動く(選ぶのは今までどおり1ターン前。移動先も予告に出した値だけを使う)
+//   ②狙い(ヘイト)は変えない。画面の「狙われる確率◯%」と食い違わないように、ここは「何をするか」と「どこへ動くか」だけ
+//   ③どの手にも対抗手段がある、を崩さない(技の倍率・本数は変えない。重みだけを動かす)
+// 段: 0 いまのまま / 1 間合いを読む / 2 状況を読む / 3 技をつなぐ(上の段は下の段を全部含む)
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
+  Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
+  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'}),
+  Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
+  Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'}),
+]);
+// ai … { level, pressure:[4](敵がその間合いにいるときの味方の攻めの強さ), aliveSlots:[], lowCount, maxDef, lastType }
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others=[0,1,2,3].filter(d=>d!==currentDist);
+  return others.reduce((a,b)=>((pressure[b]||0)<(pressure[a]||0)?b:a),others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state={}, ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  const defs=Array.isArray(state.definitions)?state.definitions:[];
+  if(level<1||state.charging||state.piercing||!ent)return defs;
+  const pressure=Array.isArray(ai.pressure)&&ai.pressure.length===4?ai.pressure.map(v=>Math.max(0,Number(v)||0)):[0,0,0,0];
+  const best=tacticsEnemyAiBestDist(currentDist,pressure);
+  const ratio=pressure[best]>0?pressure[currentDist]/pressure[best]:1;
+  const maxHp=Math.max(0,Number(ent.maxHp)||0), hpR=maxHp>0?Math.max(0,Number(ent.hp)||0)/maxHp:1;
+  const alive=Array.isArray(ai.aliveSlots)?ai.aliveSlots:[];
+  const top=Math.max(0,...pressure);
+  return defs.map(def=>{
+    let w=def.weight;
+    if(def.type==='MOVE')w=ratio<=1?0:(ratio>=1.15?w*3:w);
+    if(level>=2){
+      if(def.type==='WAIT')w=0;
+      if(def.type==='REGEN'&&hpR<0.5)w*=3;
+      if(def.type==='ROAR')w=hpR<0.35?0:((hpR>0.7&&!(Number(state.roarStacks)>0))?w*2:w);
+      if(def.variant==='allout')w=alive.length<=1?w*0.3:w*(alive.length/2);
+      if(def.variant==='sweep')w=alive.includes(currentDist)?(pressure[currentDist]>=top*0.95?w*2:w):0;
+    }
+    if(level>=3){
+      if(def.type==='CHARGE'&&ai.lastType==='ROAR')w*=4;
+      if(def.type==='CHARGE'&&(Number(ai.lowCount)||0)>=1)w*=2;
+      if(def.type==='PIERCE_CHARGE'&&(Number(ai.maxDef)||0)>=300)w*=2;
+    }
+    return w===def.weight?def:{...def,weight:w};
+  });
+};
+const chooseTacticsEnemyActionAi = (ent,currentDist,random=Math.random,state={},ai={}) => {
+  const level=Math.max(0,Math.min(3,Math.floor(Number(ai.level)||0)));
+  if(level<1)return chooseEnemyAction(ent,currentDist,random,state);
+  const intent=chooseEnemyAction(ent,currentDist,random,{...state,definitions:tacticsEnemyAiDefinitions(ent,currentDist,state,ai)});
+  if(intent&&intent.type==='MOVE'&&Array.isArray(ai.pressure)){
+    const targetDist=tacticsEnemyAiBestDist(currentDist,ai.pressure);
+    return {...intent,targetDist,label:`移動: ${RANGE_LABELS[targetDist]}`};
+  }
+  return intent;
+};
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
@@ -1063,6 +1119,29 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
 // そのカードを使ったあと、同じターンの次のカードが攻撃を始める敵の距離。距離撃(range_atk)は敵を指定の距離へ動かすので、
 // あとのカードは動かしたあとの距離で計算する。実処理(processTurn)と予測(previewLocalBoosts・aiCopyPredictedDmg)が同じここを通る
 const attackDistanceAfterCard = (card, dist) => (card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist);
+// かたよりのない混ぜ方(フィッシャー・イェーツ)。元の配列は変えず、混ぜた写しを返す。山札を作るとき・捨て札を山札へ戻すときに使う。
+// sort(()=>Math.random()-0.5) は並びにかたよりが出る(元の並びに近い順が出やすい)ので使わない(2026-11-11 バトルの監査)
+const shuffledCopy = (list, random = Math.random) => {
+  const out = Array.isArray(list) ? [...list] : [];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+// 敵を倒した瞬間の「このWAVEに与えたダメージ」。live は、ターンの途中で足したぶんまで入った「いまの値」(今回の一撃も足し済み)。
+// stale はターンの始めの値(state)、lastBlow は今回の一撃。ふつうは live をそのまま使う。
+// live が「ターンの始め＋今回の一撃」より小さいことは無いはずだが、もしそうなら前の数え方(stale+lastBlow)を下回らないようにする
+const waveDamageAtDefeat = (live, stale, lastBlow) => {
+  const legacy = (Number(stale) || 0) + (Number(lastBlow) || 0);
+  const now = Number(live);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+};
+const waveDistDamageAtDefeat = (live, stale, lastBlow) => [0, 1, 2, 3].map(i => {
+  const legacy = (Number(stale?.[i]) || 0) + (Number(lastBlow?.[i]) || 0);
+  const now = Number(live?.[i]);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+});
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;

@@ -15,7 +15,7 @@ node tools/ctx.js brief               いまの状態
 
 - `monster-hero/src/parts/82-card-*`
 - `monster-hero/src/parts/83-card-*`
-- `monster-hero/src/parts/84-screen-card-battle.jsx`(0.4MB・開かない)
+- `monster-hero/src/parts/84-screen-card-battle.jsx`(0.5MB・開かない)
 - `monster-hero/src/parts/85-card-*`
 - `monster-hero/src/parts/86-card-*`
 - `monster-hero/src/parts/87-card-*`

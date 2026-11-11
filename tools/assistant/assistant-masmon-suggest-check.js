@@ -65,6 +65,16 @@ const base = (extra = {}) => ({ kind: 'masmon_suggest', breederId: 'b-1', player
     const sora = (await core.handleRequest({ body: base({ a: 'sorashido' }), digest: DIGEST, client: ai({ replies: { yes: '', some: '', no: '', talk: 'もう少し教えてくれ・・・！' } }), ...counter() })).json;
     check('⑩ 「〜てくれ」「〜ぜ」の言い切りはドラ・ソラシドだけ(みゅあの返事は捨てて用意した台詞で埋める)', mua.ok === true && mua.result.replies.talk === '' && sora.ok === true && core.suggestToneOk('kiki', 'なぜですか？'), `${mua.kind} / ${sora.ok}`);
   }
+  { // ⑪ 育成の相談(2026-11-11 社長「◯◯を鍛えて」「休ませて」)。ゲームが ctx.train=true を送ったときだけ
+    const ai = (obj) => fakeClient(() => okRes({ kind: 'train', grow: '', train: 'hit', name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', style: '', names: [], palette: [], replies, ...obj }));
+    const on = (await core.handleRequest({ body: base({ text: '命中を鍛えて', ctx: { ...base().ctx, train: true } }), digest: DIGEST, client: ai({}), ...counter() })).json.result;
+    const off = (await core.handleRequest({ body: base({ text: '命中を鍛えて' }), digest: DIGEST, client: ai({}), ...counter() })).json.result;
+    const bad = (await core.handleRequest({ body: base({ text: '命中を鍛えて', ctx: { ...base().ctx, train: true } }), digest: DIGEST, client: ai({ train: 'luck' }), ...counter() })).json.result;
+    check('⑪ 育成の相談: 印が真なら train を受け、偽なら受けない・知らない能力は受けない', on.kind === 'train' && on.train === 'hit' && off.kind === 'none' && bad.kind === 'none', `${on.kind}:${on.train} / ${off.kind} / ${bad.kind}`);
+    const cl = ai({}); await core.handleRequest({ body: base({ text: '休ませて', ctx: { ...base().ctx, train: true } }), digest: DIGEST, client: cl, ...counter() });
+    const cl2 = ai({}); await core.handleRequest({ body: base({ text: '休ませて' }), digest: DIGEST, client: cl2, ...counter() });
+    check('⑪ 頼みに育成の相談の説明が入るのは、印が真のときだけ', cl.calls[0].messages[0].content[0].text.includes('育成の相談ができる') && !cl2.calls[0].messages[0].content[0].text.includes('育成の相談ができる'));
+  }
   { // ① 迎える・勇者モン・デッキ
     const run = async (obj) => (await core.handleRequest({ body: base(), digest: DIGEST, client: fakeClient(() => okRes({ name: '', colors: [], monster: '', slot: 0, face: '', deckName: '', plan: '', replies, ...obj })), ...counter() })).json;
     check('① 迎える: 候補の種類だけ', (await run({ kind: 'welcome', monster: 'Plant' })).result.monster === 'Plant' && (await run({ kind: 'welcome', monster: 'Ark' })).result.kind === 'none');
