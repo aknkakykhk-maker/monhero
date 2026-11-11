@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c665821df811e9e
+// generated-sha256: 9f273daf1514f6ca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65825,7 +65825,7 @@ const U0 = (F) => F * 2.63;
 
 // 大きな部屋の絵。people … 部屋にいる助手(1〜4人)/away … 留守のときの札 { title, sub }/team … マスモン { monster, nick, colors }
 //   onPerson(id)・onMasmon(index)・onFurn(f) … 押したとき(無ければ押せない)。dock … 下に重ねる札の段(呼ぶ側の部品)
-function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], sleepIds = [], away = null, team = [], furn = [], bubble = '', title = '', sub = '', onBack = null, onPerson = null, onMasmon = null, dock = null, backLabel = '← 家へ', padLeft = 0, layoutWho = null, layoutEdit = null }) {
+function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], sleepIds = [], away = null, team = [], furn = [], bubble = '', title = '', sub = '', onBack = null, onPerson = null, onMasmon = null, dock = null, backLabel = '← 家へ', padLeft = 0, layoutWho = null, layoutEdit = null, layoutItems = null }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({ w: 390, h: 640 });
   React.useLayoutEffect(() => {
@@ -65860,7 +65860,8 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   const mN = team.length, rows = mN > 4 ? 2 : 1, perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
-  const layoutOn = !!layoutWho && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
+  // layoutWho … 自分の家の助手(保存してある並びで描く)/ layoutItems … よその家の並び(フレンドの家。assistantLifeLayoutUnpack の結果)/ layoutEdit … 模様替えの間
+  const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = { W, top: topH, floorY, bottom: H - dockH };
   const furnBox = (slot) => slot === 'ceil' ? { left: W * 0.42, top: topH + 6, fs: 36 } : slot === 'wall' ? { left: W * 0.06, top: topH + usable * 0.18, fs: 44 } : { left: W * 0.06, top: floorY - 58, fs: 52 };
   return (
@@ -65874,7 +65875,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
         background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}/>
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
       {/* 模様替え(公開の印 assistantLifeRoomEdit・56-assistant-life-roomedit.jsx): 自分の家の部屋は、保存してある並びで描く。助手の後ろの層 */}
-      {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : null} geom={layoutGeom} front={false} onTip={layoutEdit ? null : setTip}/>}
+      {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={false} onTip={layoutEdit ? null : setTip}/>}
       {!layoutOn && furn.map((f) => { const b = furnBox(f.slot); return (
         <button key={f.slot} type="button" data-assistant-life-roomview-furn={f.key} onClick={() => setTip(`${f.emoji} ${f.name}`)} className="absolute" style={{ left: b.left, top: b.top, fontSize: b.fs, lineHeight: 1, filter: 'drop-shadow(0 5px 4px #0005)' }}>{f.emoji}</button>); })}
       {/* 助手(①③)と前の家具(②) */}
@@ -65883,7 +65884,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
         <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} sleep={sleepIds.includes(x.pid)} onPress={onPerson ? () => onPerson(x.pid) : null}/>))}
       {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
       {/* 助手より前に出した家具(机の前) */}
-      {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : null} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
+      {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
         <div className="absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center" style={{ top: floorY - 120 }} data-assistant-life-roomview-away>
           <p className="whitespace-nowrap text-[14px] font-black text-white">{away.title}</p>
@@ -67779,8 +67780,10 @@ const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof 
 // put … よその家(フレンドの家の控え)の置き方 { ceil, wall, floor }。渡されたら自分の部屋の家具ではなくそれを描く(56-assistant-life-friend.jsx)
 // 模様替え(公開の印 assistantLifeRoomEdit)がオンで自分の家なら、保存してある並びを小さく写す(顔・吹き出しの後ろ。測り直さない)
 function AssistantLifeRoomFurn(props) {
-  if (!props.put && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return <AssistantLifeRoomLayoutMini id={props.id} w={props.w} h={props.h}/>;
-  return <AssistantLifeRoomFurnSlots {...props}/>;
+  // layoutItems … よその家の並び(フレンドの家の控え。assistantLifeLayoutUnpack の結果)。無ければ put(天井・壁・床)で今までどおり
+  if ((!props.put || Array.isArray(props.layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return <AssistantLifeRoomLayoutMini id={props.id} w={props.w} h={props.h} given={Array.isArray(props.layoutItems) ? props.layoutItems : null}/>;
+  const { layoutItems, ...rest } = props;
+  return <AssistantLifeRoomFurnSlots {...rest}/>;
 }
 function AssistantLifeRoomFurnSlots({ id, w, h, faces = 0, baseCount = 2, put = null }) {
   const st = useAssistantLifeGiftState();
@@ -68102,6 +68105,21 @@ const assistantLifeLayoutPut = async (who, key, toPut) => {
 // 贈った家具は、そのまま部屋に出す(56-assistant-life-gifts.jsx の assistantLifeFurnGive から)
 const assistantLifeLayoutOnGive = (who, key) => { if (assistantLifeRoomEditEnabled()) void assistantLifeLayoutPut(who, key, true); };
 
+// ----- フレンドの家へ送る控え(56-assistant-life-friend.jsx が使う。2026-11-11 社長「フレンドも進めていいよ」) -----
+// 小さな形: [[k, x, y, s, r, f, h, l, g, a, z], …](x・y は千分率の整数、s・l・g は百分率の整数、f・a は 0/1)。1つ 40字ほど
+// 印がオフのとき・並びが無いときは null(控えに載せない)。受ける側は assistantLifeLayoutUnpack で正規化してから描く
+const assistantLifeLayoutPack = (who) => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return null;
+  const items = assistantLifeLayoutOf(who);
+  return items.length ? items.map(it => [it.k, Math.round(it.x * 1000), Math.round(it.y * 1000), Math.round(it.s * 100), it.r, it.f ? 1 : 0, it.h, Math.round(it.l * 100), Math.round(it.g * 100), it.a ? 1 : 0, it.z]) : null;
+};
+// よその控えから並びへ(知らない家具・壊れた値は捨てる。配列でなければ null → 今までの天井・壁・床で描く)
+const assistantLifeLayoutUnpack = (raw) => {
+  if (!Array.isArray(raw)) return null;
+  const items = raw.filter(Array.isArray).map(a => ({ k: a[0], x: Number(a[1]) / 1000, y: Number(a[2]) / 1000, s: Number(a[3]) / 100, r: a[4], f: a[5] === 1, h: a[6], l: Number(a[7]) / 100, g: Number(a[8]) / 100, a: a[9] === 1, z: a[10] }));
+  return normalizeAssistantLifeLayoutOne({ items }).items.sort((p, q) => p.z - q.z);
+};
+
 // ----- ◯◯におまかせ(助手のくせ) -----
 // hero … いちばん良い所へ大きく置く家具 / pull … 真ん中へ寄せる強さ / low … 下へ下げる / tilt … かたむき / gap … 好きな家具の大きさ
 // 置き方の型と台詞は仮(台詞は台詞の担当へ頼む。ROOM-LAYOUT-PREP.md の2)
@@ -68122,7 +68140,7 @@ const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]],
 });
 // owned … その助手に贈ってある家具の key。苦手な家具は押し入れへ。席が足りない分も押し入れへ
-const assistantLifeLayoutOmakase = (who, owned) => {
+const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
   const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
   const like = (k) => (typeof assistantLifeFurnLike === 'function' ? assistantLifeFurnLike(who, k) : 'mid');
   const rank = (k) => (k === h.hero ? 0 : like(k) === 'like' ? 1 : 2);
@@ -68138,7 +68156,13 @@ const assistantLifeLayoutOmakase = (who, owned) => {
     items.push({ k, x: Math.max(0.06, Math.min(0.94, x)), y: Math.max(0.03, Math.min(0.72, y)), s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
       r: h.tilt && slot !== 'ceil' ? (i % 2 ? -h.tilt : h.tilt) : 0, f: seat[0] > 0.5, h: 0, l: 1, g: 1, a: slot === 'floor', z: i });
   }
-  return { items, line: h.line, kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k)) };
+  // ひとこと: 家具が2つ以下 → few / 主役の家具がある → hero か done / それ以外 → done。台詞がまだ無い助手は仮の1行
+  const L = (typeof ASSISTANT_LIFE_LAYOUT_LINES !== 'undefined' && ASSISTANT_LIFE_LAYOUT_LINES[who]) || {};
+  const pool = (k) => (Array.isArray(L[k]) ? L[k].filter(t => typeof t === 'string' && t) : []);
+  const hasHero = items.some(it => it.k === h.hero);
+  const list = items.length <= 2 && pool('few').length ? pool('few') : hasHero && pool('hero').length && (rand() < 0.5 || !pool('done').length) ? pool('hero') : pool('done');
+  const line = list.length ? list[Math.floor(rand() * list.length) % list.length] : h.line;
+  return { items, line, kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k)) };
 };
 
 // ----- 描く -----
@@ -68201,10 +68225,10 @@ function AssistantLifeRoomLayoutHandles({ items, geom, sel, onSelect, onMove, on
         borderRadius: 12, border: sel === it.k ? '2.5px dashed #f472b6' : '1.5px dashed #ffffff90', background: sel === it.k ? '#ffffff38' : 'transparent' }}/>); })}</>);
 }
 // 家の一覧の小さな部屋(印がオンのとき)。同じ並びを小さく写す。顔・吹き出し・札の後ろに描くので、重なりを測り直さない
-function AssistantLifeRoomLayoutMini({ id, w, h }) {
+function AssistantLifeRoomLayoutMini({ id, w, h, given = null }) {
   const st = useAssistantLifeLayoutState();
   const giftSt = useAssistantLifeGiftState();
-  const items = assistantLifeLayoutOf(id, st, giftSt);
+  const items = Array.isArray(given) ? given : assistantLifeLayoutOf(id, st, giftSt); // given … よその家の並び(フレンドの家)
   const g = { W: w, top: 2, floorY: Math.round(h * 0.62), bottom: h - 4 };
   const base = Math.max(11, Math.min(20, h * 0.2, w * 0.13));
   return (<>{items.map(it => { const f = assistantLifeFurnOf(it.k); if (!f) return null; const p = assistantLifeLayoutPx(it, g); return (

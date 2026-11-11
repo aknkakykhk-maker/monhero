@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d47795d5a30f094a
+// source-sha256: 76ad9eb85b47466e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112558,7 +112558,8 @@ function AssistantLifeRoomScene({
   backLabel = '← 家へ',
   padLeft = 0,
   layoutWho = null,
-  layoutEdit = null
+  layoutEdit = null,
+  layoutItems = null
 }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({
@@ -112645,7 +112646,7 @@ function AssistantLifeRoomScene({
     perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
-  const layoutOn = !!layoutWho && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
+  const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = {
     W,
     top: topH,
@@ -112710,7 +112711,7 @@ function AssistantLifeRoomScene({
     }
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
     who: layoutWho,
-    items: layoutEdit ? layoutEdit.items : null,
+    items: layoutEdit ? layoutEdit.items : layoutItems,
     geom: layoutGeom,
     front: false,
     onTip: layoutEdit ? null : setTip
@@ -112752,7 +112753,7 @@ function AssistantLifeRoomScene({
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
     who: layoutWho,
-    items: layoutEdit ? layoutEdit.items : null,
+    items: layoutEdit ? layoutEdit.items : layoutItems,
     geom: layoutGeom,
     front: true,
     onTip: layoutEdit ? null : setTip
@@ -126793,12 +126794,17 @@ const assistantLifeFurnVisitBub = talk => {
 };
 const assistantLifeFurnAlbumTalks = () => assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : [];
 function AssistantLifeRoomFurn(props) {
-  if (!props.put && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return React.createElement(AssistantLifeRoomLayoutMini, {
+  if ((!props.put || Array.isArray(props.layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return React.createElement(AssistantLifeRoomLayoutMini, {
     id: props.id,
     w: props.w,
-    h: props.h
+    h: props.h,
+    given: Array.isArray(props.layoutItems) ? props.layoutItems : null
   });
-  return React.createElement(AssistantLifeRoomFurnSlots, props);
+  const {
+    layoutItems,
+    ...rest
+  } = props;
+  return React.createElement(AssistantLifeRoomFurnSlots, rest);
 }
 function AssistantLifeRoomFurnSlots({
   id,
@@ -127426,6 +127432,30 @@ const assistantLifeLayoutPut = async (who, key, toPut) => {
 const assistantLifeLayoutOnGive = (who, key) => {
   if (assistantLifeRoomEditEnabled()) void assistantLifeLayoutPut(who, key, true);
 };
+const assistantLifeLayoutPack = who => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return null;
+  const items = assistantLifeLayoutOf(who);
+  return items.length ? items.map(it => [it.k, Math.round(it.x * 1000), Math.round(it.y * 1000), Math.round(it.s * 100), it.r, it.f ? 1 : 0, it.h, Math.round(it.l * 100), Math.round(it.g * 100), it.a ? 1 : 0, it.z]) : null;
+};
+const assistantLifeLayoutUnpack = raw => {
+  if (!Array.isArray(raw)) return null;
+  const items = raw.filter(Array.isArray).map(a => ({
+    k: a[0],
+    x: Number(a[1]) / 1000,
+    y: Number(a[2]) / 1000,
+    s: Number(a[3]) / 100,
+    r: a[4],
+    f: a[5] === 1,
+    h: a[6],
+    l: Number(a[7]) / 100,
+    g: Number(a[8]) / 100,
+    a: a[9] === 1,
+    z: a[10]
+  }));
+  return normalizeAssistantLifeLayoutOne({
+    items
+  }).items.sort((p, q) => p.z - q.z);
+};
 const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
   mua: Object.freeze({
     hero: 'bear',
@@ -127497,7 +127527,7 @@ const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
   wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
   floor: [[0.13, 0.57], [0.87, 0.57], [0.08, 0.72], [0.92, 0.72], [0.33, 0.6]]
 });
-const assistantLifeLayoutOmakase = (who, owned) => {
+const assistantLifeLayoutOmakase = (who, owned, rand = Math.random) => {
   const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
   const like = k => typeof assistantLifeFurnLike === 'function' ? assistantLifeFurnLike(who, k) : 'mid';
   const rank = k => k === h.hero ? 0 : like(k) === 'like' ? 1 : 2;
@@ -127530,9 +127560,14 @@ const assistantLifeLayoutOmakase = (who, owned) => {
       z: i
     });
   }
+  const L = typeof ASSISTANT_LIFE_LAYOUT_LINES !== 'undefined' && ASSISTANT_LIFE_LAYOUT_LINES[who] || {};
+  const pool = k => Array.isArray(L[k]) ? L[k].filter(t => typeof t === 'string' && t) : [];
+  const hasHero = items.some(it => it.k === h.hero);
+  const list = items.length <= 2 && pool('few').length ? pool('few') : hasHero && pool('hero').length && (rand() < 0.5 || !pool('done').length) ? pool('hero') : pool('done');
+  const line = list.length ? list[Math.floor(rand() * list.length) % list.length] : h.line;
   return {
     items,
-    line: h.line,
+    line,
     kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k))
   };
 };
@@ -127721,11 +127756,12 @@ function AssistantLifeRoomLayoutHandles({
 function AssistantLifeRoomLayoutMini({
   id,
   w,
-  h
+  h,
+  given = null
 }) {
   const st = useAssistantLifeLayoutState();
   const giftSt = useAssistantLifeGiftState();
-  const items = assistantLifeLayoutOf(id, st, giftSt);
+  const items = Array.isArray(given) ? given : assistantLifeLayoutOf(id, st, giftSt);
   const g = {
     W: w,
     top: 2,
