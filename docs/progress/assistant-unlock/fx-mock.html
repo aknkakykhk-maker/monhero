@@ -1,0 +1,50 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#020617;font-family:"Noto Sans CJK JP","Hiragino Sans",sans-serif;color:#e2e8f0;padding:16px}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.ph{position:relative;overflow:hidden;border-radius:22px;border:2px solid #334155;background:#05060f}
+.P{width:390px;height:844px}.L{width:844px;height:390px}
+.note{position:absolute;left:8px;top:8px;z-index:9;background:#f59e0b;color:#111;font-size:11px;font-weight:900;padding:3px 9px;border-radius:8px}
+.rays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(56,189,248,.20) 0 6deg,transparent 6deg 18deg);}
+.glow{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,var(--c,#38bdf8) 0,transparent 55%);opacity:.55}
+.cardx{width:150px;height:210px;border-radius:14px;background:linear-gradient(160deg,#1e3a8a,#0f172a);border:3px solid #7dd3fc;box-shadow:0 0 30px #38bdf8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.cardx img{width:92px;height:92px;border-radius:50%;object-fit:cover;border:3px solid #fff}
+.cnt{font-size:34px;font-weight:900;color:#fde047;text-shadow:0 0 14px #facc15}
+.bar{width:220px;height:10px;border-radius:9px;background:#1e293b;overflow:hidden}.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#38bdf8,#fde047)}
+.stand{object-fit:contain;filter:drop-shadow(0 0 18px rgba(255,255,255,.35))}
+.sil{filter:brightness(0) drop-shadow(0 0 22px #7dd3fc)}
+.title{font-weight:900;text-align:center}
+.bub{background:rgba(15,23,42,.9);border:2px solid var(--c,#38bdf8);border-radius:16px;padding:10px 12px;font-size:13px;line-height:1.5}
+.eff{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;background:rgba(15,23,42,.8);border-radius:10px;padding:6px 10px;border:1px solid #334155}
+.eff b{color:#4ade80}
+.btn{border-radius:14px;padding:11px;text-align:center;font-weight:900;font-size:14px}
+.go{background:linear-gradient(#ec4899,#be185d);color:#fff}.gh{background:#1e293b;color:#cbd5e1;border:1px solid #475569}
+.spark{position:absolute;width:8px;height:8px;border-radius:50%;background:#fde047;box-shadow:0 0 10px #fde047}
+.cen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+</style></head><body><div id="P" class="row"></div><div style="height:20px"></div><div id="L" class="row" style="max-width:1720px"></div>
+<script>
+const F='../../../monster-hero/images/assistant/';
+const who={id:'kiki',name:'きき',p:'kiki',c:'#38bdf8',card:'ききの応援',line:'ききのカード、たくさん使ってくれてたんでつね (´ー`*)ウンウン 今日からは助手として、いっしょに火力で押していきましょ'};
+const sp=(n)=>Array.from({length:n},(_,i)=>`<i class="spark" style="left:${(i*37)%100}%;top:${(i*53)%100}%;opacity:${.4+(i%5)/10}"></i>`).join('');
+function f1(o){return `<div class="ph ${o}" style="--c:${who.c}"><div class="note">1コマ目 カードが満ちる(約0.8秒)</div><div class="glow"></div>${sp(14)}
+<div class="cen" style="flex-direction:${o=='P'?'column':'row'};gap:22px"><div class="cardx"><img src="${F}face/${who.p}_normal.PNG"><div style="font-weight:900;font-size:13px">${who.card}</div></div>
+<div style="text-align:center"><div class="cnt">40 / 40</div><div class="bar" style="margin:6px auto"><i></i></div><div style="font-size:12px;color:#cbd5e1">モンヒロバトルで使った回数</div></div></div></div>`}
+function f2(o){return `<div class="ph ${o}" style="--c:${who.c}"><div class="note">2コマ目 カードが光に割れ、影が現れる(約0.8秒)</div><div class="rays"></div><div class="glow" style="opacity:.9"></div>${sp(26)}
+<div class="cen"><img class="stand sil" src="${F}${who.p}_normal.PNG" style="height:${o=='P'?'560px':'340px'}"></div></div>`}
+function f3(o){const P=o=='P';return `<div class="ph ${o}" style="--c:${who.c}"><div class="note">3コマ目 立ち絵と一言(押すまで待つ)</div><div class="rays" style="opacity:.6"></div><div class="glow"></div>${sp(10)}
+<div style="position:absolute;inset:0;display:flex;flex-direction:${P?'column':'row'};align-items:center;justify-content:center;gap:${P?'6px':'20px'};padding:${P?'40px 16px 20px':'14px 30px'}">
+<img class="stand" src="${F}${who.p}_happy.PNG" style="height:${P?'470px':'360px'}">
+<div style="max-width:${P?'360px':'420px'}"><div style="font-size:12px;color:#fde047;letter-spacing:.25em;text-align:center;font-weight:900">NEW PARTNER</div>
+<div class="title" style="font-size:${P?'26px':'24px'};white-space:nowrap;margin:4px 0 10px">${who.name}が助手になりました！</div>
+<div class="bub"><b style="color:${who.c}">${who.name}</b>「${who.line}」</div>
+<div style="text-align:center;font-size:11px;color:#94a3b8;margin-top:8px">画面を押して次へ</div></div></div></div>`}
+function f4(o){const P=o=='P';const effs=['助手として選べる','助手ライフで話す・贈る・部屋に入れる','仲良し度が貯まる(ごほうびも届く)','助手のマスモンを迎えられる'];
+return `<div class="ph ${o}" style="--c:${who.c}"><div class="note">4コマ目 解放の効果と決める</div><div class="glow" style="opacity:.35"></div>
+<div style="position:absolute;inset:0;display:flex;flex-direction:${P?'column':'row'};align-items:center;justify-content:center;gap:${P?'10px':'22px'};padding:${P?'40px 18px 24px':'14px 30px'}">
+<img class="stand" src="${F}${who.p}_wink.PNG" style="height:${P?'330px':'340px'}">
+<div style="width:${P?'100%':'420px'}"><div class="title" style="font-size:20px;margin-bottom:8px">${who.name}とできるようになったこと</div>
+<div style="display:flex;flex-direction:column;gap:5px">${effs.map(e=>`<div class="eff"><b>✓</b>${e}</div>`).join('')}</div>
+<div style="display:flex;gap:8px;margin-top:12px"><div class="btn go" style="flex:1.3">${who.name}を助手にする</div><div class="btn gh" style="flex:1">あとで</div></div>
+<div style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:center">あとでも、HOME の助手アイコンからいつでも変えられます</div></div></div></div>`}
+const P=document.getElementById('P'),L=document.getElementById('L');[f1,f2,f3,f4].forEach(f=>{P.insertAdjacentHTML('beforeend',f('P'));L.insertAdjacentHTML('beforeend',f('L'));});
+</script></body></html>

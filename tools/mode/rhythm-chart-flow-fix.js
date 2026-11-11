@@ -27,7 +27,10 @@ const fromRuntime=list=>list.map(n=>n.type==='SLIDE'?{k:'s',hand:null,pts:(n.sli
   :{k:n.type==='FLICK'?'f':'t',t:n.timeMs,sub:n.subLane,w:n.subLaneWidth||2,sky:Number(n.skyHeight)>0?1:0,mon:n.monsterSlot||0,src:n});
 // 親指モデルの形 → ゲームのノーツ(数えるとき用。動かしたのはタップ・フリックの subLane だけ)
 const toRuntime=list=>list.map(n=>n.k==='t'||n.k==='f'?{...n.src,subLane:n.sub,lane:Math.floor(n.sub/2),subLaneWidth:n.w}:n.src);
-const W={impossible:100,cross:60,reach:40,busy:10};
+// 押せない・帯の中は「必ず直す」ものなので、いやらしい形(交差60・真ん中越え40 など)をいくつ消しても釣り合わない重さにする
+//   (Rev.38: 100 のままだと、交差と真ん中越えを同時に消す1手が、ノーツを帯の中へ入れることがあった。7曲の作り比べで 帯の中 0→3 の譜面)
+const MUST_W=1000;
+const W={impossible:MUST_W,cross:60,reach:40,busy:10};
 const SP_W={centerSwap:40,beside:20,chord:40,skyPath:40,stacked:40};
 // 流れを崩す1歩(速い続き=半拍以内で、同じ側のまま1.6レーンより大きく跳ぶ・真ん中をまたいで3.5レーンより大きく跳ぶ・同じ所の叩き直し)を数える。
 //   数え方は rhythm-chart-flow-report.js の flowStats と同じ。公開前の仕上げで、交差を消す代わりに跳びを増やさないために点数へ足す(flowWeight)
@@ -38,8 +41,8 @@ const flowBreaks=(list,beat)=>{const g=[];for(const n of list.slice().sort((a,b)
 const score=(list,prof,beat,flowWeight=0)=>{const rt=toRuntime(list),fb=flowWeight?flowBreaks(list,beat):null;
   return (fb?(fb.jump+fb.jack*.5)*flowWeight:0)+thumbCheck(list.slice().sort((a,b)=>startOf(a)-startOf(b)),prof,beat).issues.reduce((a,i)=>a+W[i.kind],0)
     +HR.samePlace(rt).reduce((a,x)=>a+(SP_W[x.kind]||0),0)
-    +HR.heldBandBlocked(rt).length*100+HR.flatCross(rt).length*100+HR.fastSameSide(rt).length*30
-    +simulateRuntime(rt.filter(n=>!(n.skyHeight>0))).impossible*100;};
+    +HR.heldBandBlocked(rt).length*MUST_W+HR.flatCross(rt).length*100+HR.fastSameSide(rt).length*30
+    +simulateRuntime(rt.filter(n=>!(n.skyHeight>0))).impossible*MUST_W;};
 const counts=(list,prof,beat)=>{const c={cross:0,reach:0,busy:0,impossible:0};for(const i of thumbCheck(list.slice().sort((a,b)=>startOf(a)-startOf(b)),prof,beat).issues)c[i.kind]++;
   const rt=toRuntime(list),sp={};for(const x of HR.samePlace(rt))sp[x.kind]=(sp[x.kind]||0)+1;
   return {同じ側の速い押し始め:HR.fastSameSide(rt).length,交差:c.cross,真ん中越え:c.reach,忙しい:c.busy,押せない:c.impossible,真ん中で入れ替わり:sp.centerSwap||0,帯のすぐ横:sp.beside||0,隣り合う同時押し:sp.chord||0,帯の中:HR.heldBandBlocked(rt).length};};
@@ -59,8 +62,12 @@ const flowFix=(notes,{prof=THUMB_PROFILES.landscape,beat,kinds=null,keepRanges=[
   for(let r=0;r<5000;r++){const list=targets();if(!list.length)break;const i0=list[0];tried.add(i0.key);
     const at=n=>Math.abs(startOf(n)-i0.t)<=5;
     const cands=[...notes.filter(at).sort((a,b)=>i0.x==null?0:Math.abs(xOf(a)-i0.x)-Math.abs(xOf(b)-i0.x)),
-      ...notes.filter(n=>!at(n)&&startOf(n)<i0.t&&startOf(n)>=i0.t-beat*1.5).sort((a,b)=>startOf(b)-startOf(a))].filter(n=>(n.k==='t'||n.k==='f')&&!n.mon);
-    for(const n of cands){const t=startOf(n),base=score(local(t,null),prof,beat,flowWeight);let best=null;
+      ...notes.filter(n=>!at(n)&&startOf(n)<i0.t&&startOf(n)>=i0.t-beat*1.5).sort((a,b)=>startOf(b)-startOf(a))].filter(n=>n.k==='t'||n.k==='f');
+    // モンスターノーツは動かさない。ただし「押さえている帯の中」だけは、ほかのノーツで直せなかったときの最後にモンスターノーツも動かす
+    //   (Rev.38: 帯の中に置かれたモンスターノーツが直せずに残った。Rebellion short EXPERT 28.3秒)
+    const must=/\|held$/.test(i0.key);
+    cands.sort((a,b)=>(a.mon?1:0)-(b.mon?1:0));
+    for(const n of cands){if(n.mon&&!must)continue;const t=startOf(n),base=score(local(t,null),prof,beat,flowWeight);let best=null;
       for(let sub=0;sub+n.w<=12;sub++){if(sub===n.sub)continue;const v={...n,sub};const sc=score(local(t,n,v),prof,beat,flowWeight);if(sc<base&&(!best||sc<best.sc))best={sc,sub};}
       if(best){n.sub=best.sub;moved++;break;}}}
   return moved;};
@@ -75,20 +82,24 @@ const flowFix=(notes,{prof=THUMB_PROFILES.landscape,beat,kinds=null,keepRanges=[
 //   曲の一覧(rhythm-song-registry.json)の handFinish に書けば全難易度その値(「交差はありでいい・普通に作って」と言われた曲は 'must')。--mode が優先
 const FINISH_MODES=['must','keep-climax','smooth'];
 const FINISH_FLOW_WEIGHT=30;
-// いちばん盛り上がる区切り(盛り上がりが山の85%以上)
-const climaxRanges=audio=>{const secs=(audio.structure&&audio.structure.sections)||[],max=Math.max(0,...secs.map(s=>Number(s.intensity)||0));
-  return max>0?secs.filter(s=>s.intensity>=max*.85).map(s=>[s.startMs,s.endMs]):[];};
+// 山場(交差を見せ場として残す区切り)。Rev.38 から: サビ(rhythm-chart-chorus.js)のうち、盛り上がりが山の85%以上の区切り。
+//   大きいだけの間奏は山場にしない。サビが見つからない曲は今までどおり、盛り上がりが山の85%以上の区切り
+const climaxRanges=(audio,layers=null)=>{const secs=(audio.structure&&audio.structure.sections)||[],max=Math.max(0,...secs.map(s=>Number(s.intensity)||0));
+  if(!(max>0))return [];
+  const chorus=require('./rhythm-chart-chorus.js').chorusScores(audio,layers);
+  if(chorus.hasChorus){const kept=chorus.chorus.filter(s=>s.parts.energy>=.85).map(s=>[s.startMs,s.endMs]);if(kept.length)return kept;}
+  return secs.filter(s=>s.intensity>=max*.85).map(s=>[s.startMs,s.endMs]);};
 const DEFAULT_FINISH={EXPERT:'keep-climax',MASTER:'keep-climax'};
 const finishAuthoring=(track,{dir=null,difficulties=['EASY','NORMAL','HARD','EXPERT','MASTER'],mode:modeArg=null,write=false}={})=>{
   if(modeArg&&!FINISH_MODES.includes(modeArg))throw new Error(`--mode は ${FINISH_MODES.join(' / ')}`);
   const {toRuntimeChart}=require('./rhythm-chart-review.js'),{assignSideFlickDirs}=require('./rhythm-side-flick.js');
   const dashed=track.replace(/_/g,'-'),base=dir||path.join(__dirname,'authoring');
-  const audio=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring',`${dashed}-v3-audio.json`),'utf8')),beat=audio.timing.beatMs,out=[];
+  const {audio,layers}=require('./rhythm-chart-chorus.js').loadForTrack(track),beat=audio.timing.beatMs,out=[];
   for(const d of difficulties){const file=path.join(base,`${dashed}-v3-fixed-${d.toLowerCase()}.json`);if(!fs.existsSync(file))continue;
     const mode=modeArg||DEFAULT_FINISH[d]||'must';
     const chart=JSON.parse(fs.readFileSync(file,'utf8')),notes=fromRuntime(toRuntimeChart(chart,audio).notes);
     const before=counts(notes,THUMB_PROFILES.landscape,beat);
-    const moved=flowFix(notes,{beat,heldBand:true,flowWeight:mode==='must'?0:FINISH_FLOW_WEIGHT,kinds:mode==='must'?new Set(['impossible']):null,keepRanges:mode==='keep-climax'?climaxRanges(audio):[]});
+    const moved=flowFix(notes,{beat,heldBand:true,flowWeight:mode==='must'?0:FINISH_FLOW_WEIGHT,kinds:mode==='must'?new Set(['impossible']):null,keepRanges:mode==='keep-climax'?climaxRanges(audio,layers):[]});
     const after=counts(notes,THUMB_PROFILES.landscape,beat);
     if(moved){for(const n of notes){if(!(n.k==='t'||n.k==='f'))continue;const a=n.src.src;if(a.subLane!==n.sub){a.subLane=n.sub;a.lane=Math.floor(n.sub/2);}}
       // 位置を動かしたので、横フリックの向きを付け直す(自動修正と同じ決め方・MASTER だけ向きを持つ)

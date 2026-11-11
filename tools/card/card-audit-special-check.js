@@ -25,7 +25,7 @@ const GAME = path.join(ROOT, 'monster-hero');
 const CORE_SRC = fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${CORE_SRC}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_BATTLE_HAND_MAX, CARD_BATTLE_SETUP_GUTS_MAX, cardCreateGame, cardApplyAction, cardAttackOptions, cardGuardOptions, cardOf, cardEff, cardHasEff, cardUsableBy, cardMonType, cardDecider, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardRngNext };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_BATTLE_HAND_MAX, CARD_BATTLE_SETUP_GUTS_MAX, cardCreateGame, cardApplyAction, cardAttackOptions, cardGuardOptions, cardOf, cardEff, cardHasEff, cardUsableBy, cardMonType, cardCostUpOf, cardDecider, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardRngNext };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -75,7 +75,7 @@ const WORDS = [
   [/攻撃できない/, ['stunTarget', 'stunAllEnemies', 'revive', 'possess', 'fuse', 'unstunTarget']],
   [/攻撃できる/, ['extraAttack', 'extraAttackTarget', 'unstunTarget']],
   [/2倍|3倍/, ['attachMult', 'charge', 'rage']],
-  [/\+2/, ['attachAdd']],
+  [/\+2/, ['attachAdd', 'costUpAll']], // costUpAll … アクアドーム「消費ガッツが+2」(2026-11-11 ウンディーネ)
   [/回避されない/, ['attachNoEvade', 'attachNoEvadeHybrid']],
   [/捨て札の中から/, ['choose']],
   [/手札を1枚捨てさせる/, ['discardOpp']],
@@ -171,6 +171,9 @@ const EXPECT = {
   unlimitedAttacks: (e, a, b) => b.players[P].mons[0].unlimited === b.turn || '何枚でもの印が付かない',
   breederUnlimited: (e, a, b) => (b.breederFree && b.breederFree.p === P) || 'ブリーダーのカード何枚でもの印が付かない',
   taunt: (e, a, b) => (b.taunts || []).some((t) => t.by === P && t.m === 0 && t.mode === e.mode && t.turn === b.turn + 1) || '相手の次の番の縛りが付かない',
+  // アクアドーム(ウンディーネ 2026-11-11): 相手のブリーダーに「次のターン +n」の印。水中でない子だけ払うガッツが増える
+  costUpAll: (e, a, b) => (b.players[Q].costUpAll && b.players[Q].costUpAll.n === e.n && b.players[Q].costUpAll.turn === b.turn + 1
+    && b.players[Q].mons.every((m, i) => m.ko || E.cardCostUpOf(b, Q, i, b.turn + 1) === (E.cardMonType(m, b.turn + 1) === 'water' ? 0 : e.n))) || '相手の次のターンの +n の印が付かない',
   stunAllEnemies: (e, a, b) => b.players[Q].mons.every((m) => m.ko || m.stunTurn === b.turn + 1) || '相手の全員が次のターン攻撃できない形にならない',
   stunTarget: (e, a, b, o) => (o.target && o.target.p === Q && b.players[Q].mons[o.target.m].stunTurn === b.turn + 1) || '選んだ相手が次のターン攻撃できない形にならない',
   skipTurn: (e, a, b) => b.skip === Q || '相手の番を飛ばす印が付かない',
