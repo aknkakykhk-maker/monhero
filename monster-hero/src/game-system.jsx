@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c2430a67c6aa4546
+// generated-sha256: 791e1cbe6b834a85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66961,7 +66961,7 @@ function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
       {shown.map(r => (
         <button key={r.k} type="button" data-assistant-life-now-perk={r.k} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
           className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-60">
-          <span className="w-6 shrink-0 text-center text-[20px] leading-none" aria-hidden="true">{r.icon}</span>
+          <span className="w-6 shrink-0 text-center text-[20px] leading-none" aria-hidden="true">{cardIconNode(r.icon, 20)}</span>
           <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-snug" style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
           {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
         </button>))}
@@ -67157,7 +67157,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{scene.icon} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>
@@ -67298,7 +67298,7 @@ function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watc
               <button key={r.k} type="button" data-assistant-life-now-perk={r.k} data-assistant-life-benefit-row={i === 0 ? 'now' : 'now-more'} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
                 className="mt-1 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1 text-left active:scale-[.98] disabled:opacity-60">
                 <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{i === 0 ? '⏰ いま' : ''}</span>
-                <span className="w-5 shrink-0 text-center text-[17px] leading-none" aria-hidden="true">{r.icon}</span>
+                <span className="w-5 shrink-0 text-center text-[17px] leading-none" aria-hidden="true">{cardIconNode(r.icon, 17)}</span>
                 <span className={`min-w-0 flex-1 ${land ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
                 {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
               </button>))}
@@ -73023,7 +73023,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
         <div className="ambw-card">
           <div className="ambw-small">段(ポイントで決まります・はじめは 1500)</div>
           {AMBB_TIERS.slice().reverse().map((t, i, arr) => (
-            <div key={t.id} className="ambb-tier"><span>{t.icon} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
+            <div key={t.id} className="ambb-tier"><span>{cardIconNode(t.icon, 14)} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
           ))}
           <p className="ambw-small" style={{ marginTop: 6 }}>順位は1週間ごと(月曜 4:00 に切り替わり)。</p>
         </div>
@@ -74905,7 +74905,7 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
           {spots.length ? spots.map(p => (
             <div key={p.spot} className="mt-1 flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-2 py-1" data-alb-spot={p.spot}>
               <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" disabled={!p.room} onClick={() => p.room && onRoom(p.room)}>
-                <span className="text-[15px]">{p.icon}</span><span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100">{p.text}</span>
+                <span className="text-[15px]">{cardIconNode(p.icon, 15)}</span><span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100">{p.text}</span>
                 {p.isNew ? <span className="shrink-0 rounded-full bg-amber-300 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-950">NEW</span> : null}
               </button>
               {likeOk ? <button type="button" className="shrink-0 rounded-lg border border-pink-300/70 px-1.5 py-0.5 text-[11px] font-black text-pink-100 disabled:opacity-40" data-alb-like={p.spot} disabled={x.liked.includes(p.spot) || x.liked.length >= ALB_MAX.likes} onClick={() => like(p.spot)}>{x.liked.includes(p.spot) ? '💗 送った' : '💗 すてき'}</button> : null}

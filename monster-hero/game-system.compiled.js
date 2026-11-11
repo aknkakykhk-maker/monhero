@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef575bad4723f073
+// source-sha256: 6a8f637a1259f28d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114981,7 +114981,7 @@ function AssistantLifeNowPerks({
   }, React.createElement("span", {
     className: "w-6 shrink-0 text-center text-[20px] leading-none",
     "aria-hidden": "true"
-  }, r.icon), React.createElement("span", {
+  }, cardIconNode(r.icon, 20)), React.createElement("span", {
     className: "min-w-0 flex-1 text-[12.5px] font-bold leading-snug",
     style: {
       wordBreak: 'auto-phrase'
@@ -115359,7 +115359,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily": true
   }, React.createElement("p", {
     className: "flex items-center gap-2 px-1 text-[13px] font-black text-amber-200"
-  }, scene.icon, " ", slotDef.label, "の できごと ", React.createElement("span", {
+  }, cardIconNode(scene.icon, 14), " ", slotDef.label, "の できごと ", React.createElement("span", {
     className: "text-[10.5px] font-bold text-slate-300"
   }, "あと約", leftH, "時間")), React.createElement("div", {
     className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1"
@@ -115602,7 +115602,7 @@ function AssistantLifeBenefitBoard({
   }, i === 0 ? '⏰ いま' : ''), React.createElement("span", {
     className: "w-5 shrink-0 text-center text-[17px] leading-none",
     "aria-hidden": "true"
-  }, r.icon), React.createElement("span", {
+  }, cardIconNode(r.icon, 17)), React.createElement("span", {
     className: `min-w-0 flex-1 ${land ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold leading-snug`,
     style: {
       wordBreak: 'auto-phrase'
@@ -138754,7 +138754,7 @@ function AssistantMasmonBattleBeta({
     }, "段(ポイントで決まります・はじめは 1500)"), AMBB_TIERS.slice().reverse().map((t, i, arr) => React.createElement("div", {
       key: t.id,
       className: "ambb-tier"
-    }, React.createElement("span", null, t.icon, " ", t.label), React.createElement("span", {
+    }, React.createElement("span", null, cardIconNode(t.icon, 14), " ", t.label), React.createElement("span", {
       className: "ambw-small"
     }, Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`))), React.createElement("p", {
       className: "ambw-small",
@@ -142930,7 +142930,7 @@ function AlfBondSheet({
     onClick: () => p.room && onRoom(p.room)
   }, React.createElement("span", {
     className: "text-[15px]"
-  }, p.icon), React.createElement("span", {
+  }, cardIconNode(p.icon, 15)), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[11.5px] font-bold text-slate-100"
   }, p.text), p.isNew ? React.createElement("span", {
     className: "shrink-0 rounded-full bg-amber-300 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-950"
