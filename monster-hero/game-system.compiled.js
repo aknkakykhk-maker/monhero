@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d5ac9fdc5c03f03
+// source-sha256: 727304affad50c62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139446,8 +139446,18 @@ const cardAiFavoriteCandidates = (db, who, lead = null) => {
 const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
   const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
-  const base = Object.values(db.monsters).find(x => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
-  return base ? Number(base.wave) || 1 : 4;
+  const t = cardAiBaseWaveTable(db);
+  return t.has(sp) ? t.get(sp) : 4;
+};
+const CARD_AI_BASE_WAVE = new WeakMap();
+const cardAiBaseWaveTable = db => {
+  const mons = db.monsters;
+  const hit = CARD_AI_BASE_WAVE.get(mons);
+  if (hit) return hit;
+  const t = new Map();
+  for (const x of Object.values(mons)) if (!x.variant && String(x.wave) !== 'hybrid' && !t.has(x.species)) t.set(x.species, Number(x.wave) || 1);
+  CARD_AI_BASE_WAVE.set(mons, t);
+  return t;
 };
 const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
   const habit = cardAiDeckHabit(who, levelId);
@@ -149033,11 +149043,25 @@ const CardFitLabel = ({
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    const over = v => {
+      el.style.fontSize = `${v}px`;
+      return el.scrollWidth > el.clientWidth + 0.5;
+    };
     const fit = () => {
       let s = max;
-      el.style.fontSize = `${s}px`;
-      while (s > min && el.scrollWidth > el.clientWidth + 0.5) {
-        s -= 0.5;
+      if (over(max)) {
+        const steps = Math.ceil((max - min) * 2);
+        let lo = 1,
+          hi = steps,
+          best = steps;
+        while (lo <= hi) {
+          const k = lo + hi >> 1;
+          if (!over(max - k * 0.5) || k === steps) {
+            best = Math.min(best, k);
+            hi = k - 1;
+          } else lo = k + 1;
+        }
+        s = max - best * 0.5;
         el.style.fontSize = `${s}px`;
       }
       setSize(s);
