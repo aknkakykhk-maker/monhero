@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1cafca0899d16ca9
+// generated-sha256: 46c6d9a6fad11e3f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67940,7 +67940,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
 const assistantMasmonAskLine = (aid, replies, kind) => (kind !== 'ng' && kind !== 'think' && replies && replies[kind]) || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10; // 2026-11-09 社長「1日の制限は10に増やして」(前は3)
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
-  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
+  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/命中を鍛えて/休ませて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
   hero: '勇者モンについて自由に書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？/プラントに変えてみたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)',
@@ -69247,7 +69247,7 @@ const normalizeAssistantMasmonGrow = (raw) => {
   if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
     if (!okAid(aid) || !ms || typeof ms !== 'object') continue;
     const one = {};
-    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+    for (const [key, e] of Object.entries(ms).slice(-64)) { // 新しい方を残す(入れ替えをくり返しても、足したばかりのマスモンの育成を落とさない・ミハリ 11-11)
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.st || typeof e.st !== 'object') continue;
       const st = {}; for (const k of AMG_KEYS) st[k] = amgNum(e.st[k], 0, 0, AMG_MAX);
       const ind = {}; for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
@@ -69361,7 +69361,9 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     if (!mons[key] && typeof assistantMasmonRng === 'function') { mons[key] = amgInitial(row, assistantMasmonRng(`${seed}|${aid}|grow-init|${key}`)); changed = true; }
   }
   const last = state.done[aid];
-  let from = Number.isInteger(last) ? last + 1 : nowSlot; // 初めては今の回だけ
+  // 端末の時刻を先へ進めて開いたあと戻した(最後の回がいまより6回以上先): その回は育てず、いまの回に置き直す(実時刻が追いつくまで止まらないように・ミハリ 11-11)
+  const reset = Number.isInteger(last) && last > nowSlot + AMG_CATCH_UP;
+  let from = reset ? nowSlot + 1 : Number.isInteger(last) ? last + 1 : nowSlot; // 初めては今の回だけ
   from = Math.max(from, nowSlot - AMG_CATCH_UP + 1);
   const focus = { ...(state.focus[aid] || {}) }; const rest = { ...(state.rest[aid] || {}) }; const plan = { ...(state.plan[aid] || {}) };
   const care = state.care[aid] || { d: -1, view: {}, picks: 0 };
@@ -69380,16 +69382,19 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     }
     changed = true;
   }
-  if (!changed && state.done[aid] === nowSlot) return state;
-  return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
+  if (!changed && !reset && (state.done[aid] === nowSlot || (Number.isInteger(last) && last > nowSlot))) return state; // 何も変わらないときは同じものを返す(書き直さない)
+  return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
 };
 const amgActName = (x) => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, subs: new Set(),
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
-  async load() {
-    if (this.loaded) return this.state;
-    let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_GROW_KEY, null, false) : null; } catch (_) {}
-    this.loaded = true; this.set(normalizeAssistantMasmonGrow(raw)); return this.state;
+  load() { // 読み込みは1回だけ(2か所から同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_GROW_KEY, null, false) : null; } catch (_) {}
+      this.loaded = true; this.set(normalizeAssistantMasmonGrow(raw)); return this.state;
+    })();
+    return this._p;
   } };
 const amgOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonGrow === true;
 // 保存を読み込む前には書かない(空の既定値で上書きして、それまでの育成を消さない・2026-11-11 ミハリ)

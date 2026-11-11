@@ -121,6 +121,24 @@ check('⑥ 「休ませて」のあと、次の回は休む(1回だけ)', sR.mon
   const tot = (x) => Object.values(x.g).reduce((p, q) => p + q, 0);
   check('⑪ M/B管理の受け口: 1日1回だけ true・次の回に印 r・伸びは同じか多い', b1 === true && b2 === false && b3 === false && lb.r === 1 && tot(lb) >= tot(ln), `${tot(ln)} → ${tot(lb)}`);
 }
+// ⑫ 端末の時刻を先へ進めて開いたあと戻しても、次の回から育つ・能力は減らない(ミハリ 11-11)
+{
+  const fwd = T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 3 * 365); // 1年先で開いた
+  const back = T.amgCatchUp(fwd, 'kiki', rows, 'seed-1', start + 6); // 元の日付へ戻して2日後
+  const next = T.amgCatchUp(back, 'kiki', rows, 'seed-1', start + 7); // その次の回
+  const sum = (z) => Object.values(z.mons.kiki['1:Golem'].st).reduce((p, q) => p + q, 0);
+  check('⑫ 時刻を先へ進めて戻しても、置き直した次の回から育つ・能力は減らない', back.done.kiki === start + 6 && sum(next) > sum(back) && sum(back) >= sum(fwd), `${sum(fwd)} → ${sum(back)} → ${sum(next)}`);
+  const small = T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 3);
+  const smallBack = T.amgCatchUp(small, 'kiki', rows, 'seed-1', start + 1);
+  check('⑫ 小さいずれ(6回以内)で戻したときは、何も変えず同じものを返す', smallBack === small);
+}
+// ⑬ 入れ物が多くても(入れ替えをくり返した)、新しく足したマスモンの育成が読み込みで落ちない
+{
+  const many = { mons: { kiki: {} } };
+  for (let i = 0; i < 30; i++) many.mons.kiki[`1:Mon${i}`] = { st: { life: 100 + i } };
+  const n2 = T.normalizeAssistantMasmonGrow(many);
+  check('⑬ 30個あっても、いちばん新しい入れ物が残る', !!n2.mons.kiki['1:Mon29'] && Object.keys(n2.mons.kiki).length === 30);
+}
 // ⑦ 保存の正規化: 壊れた値・知らない項目は既定に・数字は範囲に
 const n = T.normalizeAssistantMasmonGrow({ mons: { kiki: { '1:Golem': { st: { life: 5000, pow: 'x', wise: -3 }, fat: 400, ind: { life: 9 } }, 'bad key': { st: {} } }, 'BAD!': {} }, done: { kiki: 'x' }, focus: { kiki: { 1: { k: 'nope', until: 3 } } } });
 const ne = n.mons.kiki['1:Golem'];

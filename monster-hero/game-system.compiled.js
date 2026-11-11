@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56d53f4f0a24dfd9
+// source-sha256: afa8a7ab1224ff89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -128154,7 +128154,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
 const assistantMasmonAskLine = (aid, replies, kind) => kind !== 'ng' && kind !== 'think' && replies && replies[kind] || (ASSISTANT_MASMON_ASK_LINES[aid] || ASSISTANT_MASMON_ASK_LINES.mua)[kind];
 const ASSISTANT_MASMON_ASK_PER_DAY = 10;
 const ASSISTANT_MASMON_ASK_HINT = Object.freeze({
-  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
+  masmon: '名前や色、育て方など、このマスモンのことを自由に書いてみてください(例: 体を夕焼けっぽくしてみたら？/名前に♪を付けて/攻撃型に育ててみたら？/命中を鍛えて/休ませて/別のマスモンに変えてみたら？/みんなの名前をお菓子っぽくして)',
   hero: '勇者モンについて自由に書いてみてください(例: 勇者モンはミーアにしてみたら？/名前に♪を付けたら？/プラントに変えてみたら？)',
   welcome: '次に迎えてほしいマスモンを書いてみてください(例: 次はプラントを迎えてみたら？)',
   deck: 'MFバトルカードのデッキについて書いてみてください(例: 推しのデッキは守りで「まったり作戦」にしたら？)'
@@ -131240,7 +131240,7 @@ const normalizeAssistantMasmonGrow = raw => {
   if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
     if (!okAid(aid) || !ms || typeof ms !== 'object') continue;
     const one = {};
-    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+    for (const [key, e] of Object.entries(ms).slice(-64)) {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.st || typeof e.st !== 'object') continue;
       const st = {};
       for (const k of AMG_KEYS) st[k] = amgNum(e.st[k], 0, 0, AMG_MAX);
@@ -131488,7 +131488,8 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     }
   }
   const last = state.done[aid];
-  let from = Number.isInteger(last) ? last + 1 : nowSlot;
+  const reset = Number.isInteger(last) && last > nowSlot + AMG_CATCH_UP;
+  let from = reset ? nowSlot + 1 : Number.isInteger(last) ? last + 1 : nowSlot;
   from = Math.max(from, nowSlot - AMG_CATCH_UP + 1);
   const focus = {
     ...(state.focus[aid] || {})
@@ -131536,7 +131537,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     }
     changed = true;
   }
-  if (!changed && state.done[aid] === nowSlot) return state;
+  if (!changed && !reset && (state.done[aid] === nowSlot || Number.isInteger(last) && last > nowSlot)) return state;
   return {
     ...state,
     mons: {
@@ -131545,7 +131546,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     },
     done: {
       ...state.done,
-      [aid]: Math.max(nowSlot, state.done[aid] || 0)
+      [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0)
     },
     focus: {
       ...state.focus,
@@ -131574,15 +131575,18 @@ const AMG_STORE = {
       } catch (_) {}
     });
   },
-  async load() {
-    if (this.loaded) return this.state;
-    let raw = null;
-    try {
-      raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_GROW_KEY, null, false) : null;
-    } catch (_) {}
-    this.loaded = true;
-    this.set(normalizeAssistantMasmonGrow(raw));
-    return this.state;
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_GROW_KEY, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(normalizeAssistantMasmonGrow(raw));
+      return this.state;
+    })();
+    return this._p;
   }
 };
 const amgOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonGrow === true;
