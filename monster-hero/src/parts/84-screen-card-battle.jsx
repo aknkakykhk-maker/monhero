@@ -1126,10 +1126,18 @@ const CardFitLabel = ({ children, max = 14, min = 9 }) => {
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    // 入る中でいちばん大きい字(0.5px 刻み・入らなければ min)。前は 0.5px ずつ縮めて毎回幅を測っていた(最大10回)のを、
+    //   半分ずつ絞る探し方にした(最大 1+4 回。2026-11-11 カード部カルク 軽量化)。決まる大きさは前と同じ
+    const over = (v) => { el.style.fontSize = `${v}px`; return el.scrollWidth > el.clientWidth + 0.5; };
     const fit = () => {
       let s = max;
-      el.style.fontSize = `${s}px`;
-      while (s > min && el.scrollWidth > el.clientWidth + 0.5) { s -= 0.5; el.style.fontSize = `${s}px`; }
+      if (over(max)) {
+        const steps = Math.ceil((max - min) * 2); // 候補 max-0.5, max-1, … (前の作りと同じく min を下回る1つ手前まで)
+        let lo = 1, hi = steps, best = steps;     // k … max - k*0.5。入る中で最小の k を探す(入らなければ steps)
+        while (lo <= hi) { const k = (lo + hi) >> 1; if (!over(max - k * 0.5) || k === steps) { best = Math.min(best, k); hi = k - 1; } else lo = k + 1; }
+        s = max - best * 0.5;
+        el.style.fontSize = `${s}px`;
+      }
       setSize(s);
     };
     fit();

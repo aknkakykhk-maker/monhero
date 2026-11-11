@@ -38,13 +38,14 @@ for (const file of files) {
   const compact = src.replace(/\s+/g, '');
 
   check(`${rel}: モンビーを開いている間は画面を揺らさない`,
-    // 後ろに条件が足されてもよい(バトルの揺れの設定 battleFxSettings.shake など)。!rhythmScreenOpen が付いていることを見る
-    /screenShake&&!ecoBattleView&&!rhythmScreenOpen(?:&&[^?]{0,80})?\?/.test(compact));
+    // 後ろに条件が足されてもよい(バトルの揺れの設定 battleFxSettings.shake など)。
+    // 2026-11-11: 画面ごとの条件を runBackgroundAllowed(= モンビー || カード || 助手ライフ || どこでも回す裏クイック)へまとめた。それが付いていて、モンビーを含むことを見る
+    /screenShake&&!ecoBattleView&&!runBackgroundAllowed(?:&&[^?]{0,80})?\?/.test(compact) && /(?:const|var|let)runBackgroundAllowed=rhythmScreenOpen\|\|/.test(compact));
   // 生成物は `&&/*#__PURE__*/React.createElement(` の形になるので、条件式までを見る
   check(`${rel}: モンビーを開いている間は全画面演出を出さない`,
-    compact.includes('effect&&!rhythmScreenOpen&&'));
+    compact.includes('effect&&!runBackgroundAllowed&&'));
   check(`${rel}: モンビーを開いている間は超省エネの暗幕を外す`,
-    compact.includes('ultraEcoSession&&!rhythmScreenOpen&&'));
+    compact.includes('ultraEcoSession&&!runBackgroundAllowed&&'));
 
   // 入口は通常のバトル画面と超省エネの簡易画面の両方に置く。
   // 片方にしか無いと「超省エネではモンビーへ行けない」になる

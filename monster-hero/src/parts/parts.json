@@ -396,6 +396,10 @@
       "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
     },
     {
+      "file": "56-assistant-life-masmon-grow.jsx",
+      "role": "部品: 助手のマスモンの育成基盤(社長の仕様書の第①段階)。6能力・疲労・ストレス・1日3回(朝・昼・夜)の自主育成・相談。保存は mh_assistant_masmon_grow_v1 だけ(mh_assistant_life_masmon_v1 は読むだけ)。公開の印 assistantMasmonGrow が真のときだけ動く。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md"
+    },
+    {
       "file": "56-assistant-life-masmon-train.jsx",
       "role": "部品: 助手のマスモンの修行と助手の成長(社長の仕様書の第②段階・シュギョウ)。修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・相談・出来事。第①段階(育成)へは受け口 amgtChoose/amgtDo/amgtAfterAct と掛け算、第③段階(戦闘)へは amgtBattleOf/amgtTacticsOf。公開の印 assistantMasmonTrain の後ろ。保存は新しいキー mh_assistant_masmon_train_v1 だけ。案 docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md"
     },
