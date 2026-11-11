@@ -180,7 +180,7 @@ check('解放されるまで助手として選べない',
   /const locked=\(who\.id==='momosuke'&&!momosukeIntroSeenFlag\)/.test(gameSrc)
     || gameSrc.includes("const locked=who.id==='momosuke'&&!momosukeIntroSeenFlag;"));
 check('新規プレイヤーは助手選択の時点で選べる',
-  gameSrc.includes('chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();'));
+  gameSrc.includes('chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();'));
 check('選んでいる助手を勝手に変えていない',
   !/markMomosukeIntroSeen[^\n]*chooseAssistant\('momosuke'\)/.test(gameSrc)
   && !gameSrc.includes("setSelectedAssistantId('momosuke')"));

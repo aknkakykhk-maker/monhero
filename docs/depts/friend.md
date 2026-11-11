@@ -14,6 +14,7 @@ node tools/ctx.js brief               いまの状態
 ## 受け持つファイル
 
 - `monster-hero/src/parts/56-assistant-life-friend.jsx`
+- `monster-hero/src/parts/56-assistant-life-friend-*.jsx`
 - `monster-hero/src/parts/34-friends-api.jsx`
 - `monster-hero/src/parts/75-screen-friends.jsx`
 - `tools/friends/*`

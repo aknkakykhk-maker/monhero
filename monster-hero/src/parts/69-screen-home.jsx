@@ -336,6 +336,8 @@ function HomeScreen({
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
   cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
   cardTourVisible = false, onOpenCardTour = null,
+  // はじめての人の「つぎにやること」(2026-11-11 案4)。{ n:1〜3, title, sub, onTap }。null なら出さない
+  nextStep = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -481,6 +483,11 @@ function HomeScreen({
               モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
         </nav>
+        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`つぎにやること ${nextStep.n}/3 ${nextStep.title}`}>
+          <span className="mh-home-nextstep-lab">つぎに<br/>やること<b>{nextStep.n}/3</b></span>
+          <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+          <i aria-hidden="true">›</i>
+        </button>}
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
           {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
         </button>

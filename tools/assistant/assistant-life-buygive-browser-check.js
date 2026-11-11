@@ -11,7 +11,7 @@
 //   ⑦ 1人に贈るシートでも買って贈れる
 //   ⑧ 家具のシートに「まだ持っていない家具」。買って贈ると部屋に置かれ、ビートPが値段ぶん減る
 //   ⑨ 道具タブの持っていない行に「🛒 ◯P で買って贈る」。押すとその道具を選んだ贈るシート
-//   ⑩ 思い出アルバムの「2人にしてあげる」は10種類。持っていない道具から確かめの窓が開く
+//   ⑩ 思い出アルバムの「2人にしてあげる」は「🎁 この2人に贈る」1つ。押すと贈る窓がその2人で開く(2026-11-11 社長 案6 A)
 //   ⑪ 縦 390・横 844・🔄横 667 で、贈るシートと確かめの窓の字が切れない・ボタンが押せる
 //   ⑫ ページのエラーが出ない
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -152,7 +152,7 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300);
       await page.locator('[data-assistant-life-room-act="furn"]').click(); await page.waitForTimeout(400);
       const toBuy = await page.locator('[data-assistant-life-furn-buy]').count();
-      check('⑧ 家具のシートに「まだ持っていない家具」(12種類)', toBuy === 12, String(toBuy));
+      check('⑧ 家具のシートに「まだ持っていない家具」(20種類)', toBuy === 20, String(toBuy));
       if (SHOTS) { await page.locator('[data-assistant-life-furn-tobuy]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, 'tate-4-furn.png') }); }
       await page.locator('[data-assistant-life-furn-buy="plant"]').click(); await page.waitForTimeout(400);
       const conf3 = await page.locator('[data-assistant-life-buy-confirm]').innerText().catch(() => '');
@@ -178,15 +178,13 @@ const pressable = (page, sel) => page.evaluate((s) => { const b = document.query
       const albumOpen = page.locator('[data-assistant-peer-row], [data-assistant-peer-daily]').first();
       if (await albumOpen.count()) {
         await albumOpen.click(); await page.waitForTimeout(400);
-        const n = await page.locator('[data-assistant-peer-actions] [data-assistant-peer-use]').count();
-        check('⑩ アルバムの「2人にしてあげる」は10種類', n === 10, String(n));
-        const b = page.locator('[data-assistant-peer-buy]').first();
+        // 2026-11-11 社長 案6 A: 助手ライフの中のアルバムは、押すとすぐ贈る10個のボタンをやめて「🎁 この2人に贈る」1つ。押すと贈る窓がその2人で開く(買って贈るも窓の中から)
+        const n = await page.locator('[data-assistant-peer-actions] [data-assistant-peer-give-sheet]').count();
+        check('⑩ アルバムの「2人にしてあげる」は「🎁 この2人に贈る」1つ(すぐ贈るボタンは無い)', n === 1 && (await page.locator('[data-assistant-peer-actions] [data-assistant-peer-use]').count()) === 0, String(n));
         if (SHOTS) { await page.locator('[data-assistant-peer-actions]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, 'tate-6-album.png') }); }
-        await b.click(); await page.waitForTimeout(400);
-        check('⑩ 持っていない道具から確かめの窓が開く', (await page.locator('[data-assistant-peer-album] [data-assistant-life-buy-confirm]').count()) === 1);
-        const names = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-peer-use] > span:first-child')].map(s => { const r = document.createRange(); r.selectNodeContents(s); const lines = new Set([...r.getClientRects()].map(x => Math.round(x.top))); return lines.size; }));
-        check('⑩ 札の名前は言葉の区切りで折る(2行まで)', names.every(n => n <= 2), names.join(','));
-        await page.locator('[data-assistant-life-buy-cancel]').click(); await page.waitForTimeout(200);
+        await page.locator('[data-assistant-peer-give-sheet]').click(); await page.waitForTimeout(400);
+        check('⑩ 押すと贈る窓がその2人で開き、アルバムは閉じる', (await page.locator('[data-assistant-life-give-sheet]').count()) === 1 && (await page.locator('[data-assistant-peer-album]').count()) === 0 && /と.+に贈る/.test(await page.locator('[data-assistant-life-give-title]').innerText().catch(() => '')));
+        await page.locator('[data-assistant-life-give-cancel]').click(); await page.waitForTimeout(200);
       } else check('⑩ アルバムを開ける', false);
       await page.close();
     }

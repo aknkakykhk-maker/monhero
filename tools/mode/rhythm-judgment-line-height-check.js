@@ -63,7 +63,9 @@ ok('判定の窓・スコアの数え方には入れていない',
 // 演奏画面を出すのは1か所だけで、マルチのとき以外は保存した設定(rhythmSettings)をそのまま渡す
 ok('演奏画面へ渡す設定は、マルチは自分の設定に見た目の組を重ねたもの・それ以外は自分の設定',
   (game.match(/<RhythmTapTest /g)||[]).length===1
-  &&game.includes("settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings}"));
+  // 2026-11-11: オプションの「▶ 見てみる」(#5279)は保存前の設定(rhythmPreview.draft)で見本を流す。それ以外は今までどおり
+  &&(game.includes("settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings}")
+    ||game.includes("settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings}")));
 // マルチで重ねる見た目の組(RHYTHM_LOOK_PRESETS)に判定ラインの高さが入っていない(部屋や組に引きずられない)
 {const presets=(game.match(/const RHYTHM_LOOK_PRESETS[\s\S]*?\]\);/)||[''])[0];
   ok('マルチの見た目の組は、判定ラインの高さを上書きしない',presets.length>0&&!presets.includes('judgmentLineHeight'));}

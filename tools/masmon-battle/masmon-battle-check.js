@@ -51,6 +51,16 @@ const mkInput = (seed, na, nb, rng, extra = {}) => Object.assign({
   }
   check('① 同じ種・同じ編成なら同じ結果', same === N, `${same}/${N}`);
   check('① 編成と技データを JSON にして持っていっても同じ結果(サーバで回す前提)', jsonSame === N, `${jsonSame}/${N}`);
+  {
+    let tr = 0;
+    const rng2 = engine.makeRng('chk-trace');
+    for (let i = 0; i < 100; i++) {
+      const inp = mkInput(`tr-${i}`, 3, 3, rng2);
+      const a = engine.simulate(inp), b = engine.simulate(Object.assign({}, inp, { trace: true }));
+      if (a.digest === b.digest && b.log.some(e => e.cands)) tr++;
+    }
+    check('① trace:true でも指紋は同じ(見返しとサーバの照合が1回で済む)', tr === 100, `${tr}/100`);
+  }
   check('① 種が違えば結果もたいてい変わる', differ >= N * 0.9, `${differ}/${N}`);
 }
 

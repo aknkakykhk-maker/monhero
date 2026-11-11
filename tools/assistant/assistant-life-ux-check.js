@@ -72,6 +72,9 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     // STEP2 ⑦ 家のいちばん上の「✨ いま行くと得なこと」: 札がある・カード部屋の助手と神殿の助手の行・押せる大きさ・横にはみ出さない
     await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
     await page.waitForTimeout(900);
+    // 「得」の3行(56-assistant-life-guide.jsx)の1行目は、初めは1行+「ほか◯件 ▼」。開いて、残りの行(カード部屋・神殿)を確かめる
+    const firstN = await page.locator('[data-assistant-life-now-perk]').count();
+    await page.locator('[data-assistant-life-now-perks-more]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
     { const pk = await page.evaluate(() => {
         const b = document.querySelector('[data-assistant-life-now-perks]'); if (!b) return null;
         const rs = [...b.querySelectorAll('[data-assistant-life-now-perk]')], art = document.querySelector('[data-assistant-life-house]');
@@ -79,7 +82,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
           over: rs.filter(x => { const r = x.getBoundingClientRect(); return r.right > innerWidth + 1 || r.left < -1; }).length, goReady: typeof ASSISTANT_LIFE_LINKS.goPlace === 'object' && !!ASSISTANT_LIFE_LINKS.goPlace && typeof ASSISTANT_LIFE_LINKS.goPlace.temple === 'function',
           above: !art || b.getBoundingClientRect().top <= art.getBoundingClientRect().top };
       });
-      check(`${T}⑦ 家の上に「いま行くと得なこと」(カード部屋・神殿の行・3行まで)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && pk.n <= 3, JSON.stringify(pk));
+      check(`${T}⑦ 家の上の「得」の1行目(初めは1行・ほか◯件を開くとカード部屋・神殿の行)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && firstN === 1, JSON.stringify({ ...pk, firstN }));
       check(`${T}⑦ 行は高さ44px以上・横にはみ出さない・家の絵より上`, !!pk && pk.small === 0 && pk.over === 0 && pk.above, JSON.stringify(pk));
       check(`${T}⑦ HOME が施設へ行く口(goPlace)を入れている`, !!pk && pk.goReady === true);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-house.png`) });
@@ -92,6 +95,20 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
       { const lvTitle = await page.evaluate(() => { const m = /仲良し度 Lv(\d+)/.exec(document.querySelector('[data-assistant-life-room-sheet]').innerText || ''); return m ? m[1] : null; });
         const w = span[Number(r.road)];
         check(`${T}② ${id}: 仲良し度の道のり Lv${r.road}・あと${r.remain}(部屋の題の Lv と同じ・その段階の幅の中)`, r.road != null && r.road === lvTitle && (w == null ? r.remain == null : (r.remain > 0 && r.remain <= w)), JSON.stringify({ road: r.road, lvTitle, remain: r.remain, span: w })); }
+      // 助手マスモン対戦β(ミセカタ2の口)の行: 口が null を返すあいだは出ない。口が値を返せば「🐾 マスモン」の下に出る(2026-11-11)
+      if (id === 'mua') {
+        // 公開(印が真)のあとは、はじめから行が出る。口が null を返すとき(印が偽)だけ出ない(2026-11-11 公開でミセカタ2が直した)
+        const bbOpenNow = await page.evaluate(() => typeof assistantMasmonBattleRowInfo === 'function' && assistantMasmonBattleRowInfo('mua') != null);
+        check(`${T}⑧ mua: 「マスモンで対戦(β)」の行は、口が値を返すときだけ出る(null なら出ない)`, bbOpenNow === r.rows.includes('masmon-battle'), `${bbOpenNow} / ${r.rows.join(',')}`);
+        await closeRoom(page);
+        await page.evaluate(() => { window.__bbFlags = { b: RELEASE_FLAGS.assistantMasmonBattleBeta, g: RELEASE_FLAGS.assistantMasmonGrow }; RELEASE_FLAGS.assistantMasmonBattleBeta = true; RELEASE_FLAGS.assistantMasmonGrow = true; });
+        const r2 = await room(page, id);
+        const at = r2.rows.indexOf('masmon-battle');
+        check(`${T}⑧ mua: 対戦βの印が真だと「🐾 マスモン」のすぐ下に行が出る`, at > 0 && r2.rows[at - 1] === 'masmon', r2.rows.join(','));
+        check(`${T}⑧ mua: 対戦βの行も高さ44px以上・横にはみ出さない`, !r2.small.includes('masmon-battle') && !r2.over.includes('masmon-battle'), JSON.stringify({ small: r2.small, over: r2.over }));
+        await closeRoom(page);
+        await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonBattleBeta = window.__bbFlags.b; RELEASE_FLAGS.assistantMasmonGrow = window.__bbFlags.g; });
+      }
       if (id === 'dra') check(`${T}③ カード部屋のドラは「対戦する」が先頭`, r.rows[0] === 'card', r.rows[0]);
       if (id === 'momosuke') check(`${T}③ ビートのももすけは「ビート」が先頭(券なし)`, r.rows[0] === 'beat', r.rows[0]);
       if (SHOTS && (id === 'dra' || id === 'mua')) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-${id}.png`) });
