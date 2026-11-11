@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fb1209168236666
+// source-sha256: 6de34ced702fe040
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6808,6 +6808,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteShape: 'STANDARD',
   multiLightLook: true,
   multiLook: 'LIGHT',
+  multiLiveBoard: true,
   modeSelectArt: true,
   modeSelectComment: true,
   noteSeType: 'STANDARD',
@@ -7146,6 +7147,7 @@ const normalizeRhythmSettings = value => {
     lightweightMode: bool('lightweightMode'),
     livePartnerVisible: bool('livePartnerVisible'),
     multiLightLook: bool('multiLightLook'),
+    multiLiveBoard: bool('multiLiveBoard'),
     modeSelectArt: bool('modeSelectArt'),
     modeSelectComment: bool('modeSelectComment'),
     multiLook: RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook) ? source.multiLook : source.multiLightLook === false ? 'OWN' : 'LIGHT',
@@ -19236,6 +19238,70 @@ const MARKET_CURRENCY_META = Object.freeze({
 });
 const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
 const marketPriceText = item => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost) || 0)).toLocaleString());
+const ASSISTANT_MARKET_PERK_KEY = 'mh_assistant_market_perk_v1';
+const assistantMarketPerkCandidates = items => (Array.isArray(items) ? items : []).filter(it => it && it.type === 'item' && it.shop !== false && it.available !== false && !it.giftOnly && !it.currency && it.usage !== 'soulRankRespec' && Number(it.cost) >= 100 && Number(it.cost) <= 5000).sort((a, b) => String(a.id) < String(b.id) ? -1 : 1);
+const assistantMarketPerkHash = text => {
+  let h = 0;
+  for (const ch of String(text)) h = h * 31 + ch.charCodeAt(0) >>> 0;
+  return h;
+};
+const assistantMarketPerkPick = (items, dayKey) => {
+  const list = assistantMarketPerkCandidates(items);
+  return list.length ? list[assistantMarketPerkHash(dayKey) % list.length] : null;
+};
+const assistantMarketPerkCost = cost => Math.max(1, Math.floor((Number(cost) || 0) * 0.9));
+const normalizeAssistantMarketPerk = v => ({
+  day: v && typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : '',
+  used: !!v && v.used === true
+});
+let assistantMarketPerkState = {
+  loaded: false,
+  day: '',
+  used: false
+};
+const assistantMarketPerkLoad = async () => {
+  let saved = null;
+  try {
+    saved = await storeGet(ASSISTANT_MARKET_PERK_KEY, null, false);
+  } catch {
+    saved = null;
+  }
+  assistantMarketPerkState = {
+    loaded: true,
+    ...normalizeAssistantMarketPerk(saved)
+  };
+  return assistantMarketPerkState;
+};
+const assistantMarketPerkUsedToday = () => assistantMarketPerkState.day === jstDayKey4() && assistantMarketPerkState.used;
+const assistantMarketPerkMarkUsed = async () => {
+  const day = jstDayKey4();
+  assistantMarketPerkState = {
+    loaded: true,
+    day,
+    used: true
+  };
+  try {
+    await storeSet(ASSISTANT_MARKET_PERK_KEY, {
+      day,
+      used: true
+    }, false);
+  } catch {}
+};
+const assistantMarketPerkToday = () => {
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
+  const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
+  if (!item) return null;
+  if (!assistantMarketPerkState.loaded) {
+    void assistantMarketPerkLoad();
+    return null;
+  }
+  return {
+    itemId: item.id,
+    itemName: item.name,
+    discountedCost: assistantMarketPerkCost(item.cost),
+    used: assistantMarketPerkUsedToday()
+  };
+};
 const MarketBalanceBar = ({
   balances
 }) => React.createElement("div", {
@@ -36195,7 +36261,7 @@ const RhythmOptions = ({
     disabled: !RHYTHM_HAPTICS.supported(),
     onClick: () => RHYTHM_HAPTICS.tap(26),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
-  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')))), React.createElement("section", {
+  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')), field('みんなで対戦の演奏中に、みんなのスコアを出す', toggle('multiLiveBoard')))), React.createElement("section", {
     className: card
   }, React.createElement("details", {
     "data-rhythm-option-help": true,
@@ -63918,6 +63984,104 @@ const GrowthFxLayer = ({
     onClose: () => growthFxDropSheet(sheet.id)
   })));
 };
+const QUICK_ANYWHERE_FLOAT_STEP = 6;
+const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
+const quickAnywhereFloatStyle = spot => {
+  const s = {
+    position: 'fixed',
+    bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
+  };
+  if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
+  return s;
+};
+const quickAnywhereFloatHits = (el, spot) => {
+  if (typeof document === 'undefined' || !el) return 0;
+  const w = el.offsetWidth || 70,
+    h = el.offsetHeight || 34;
+  const css = getComputedStyle(document.documentElement);
+  const num = v => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const saB = num(css.getPropertyValue('--mh-sa-bottom')),
+    saL = num(css.getPropertyValue('--mh-sa-left')),
+    saR = num(css.getPropertyValue('--mh-sa-right'));
+  const bottom = Math.max(8 + spot.lift, saB + 6 + spot.lift);
+  const top = window.innerHeight - bottom - h;
+  const left = spot.side === 'right' ? window.innerWidth - Math.max(8, saR + 6) - w : Math.max(8, saL + 6);
+  const R = {
+    left,
+    top,
+    right: left + w,
+    bottom: top + h
+  };
+  let hits = 0;
+  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+    if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    const cs = getComputedStyle(o);
+    if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
+    const r = o.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits++;
+  }
+  return hits;
+};
+const quickAnywhereFloatPick = el => {
+  const maxLift = Math.max(0, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
+  for (const side of ['right', 'left']) {
+    for (let lift = 0; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
+      const spot = {
+        side,
+        lift
+      };
+      if (quickAnywhereFloatHits(el, spot) === 0) return spot;
+    }
+  }
+  return {
+    side: 'right',
+    lift: 0
+  };
+};
+const QuickAnywhereFloat = ({
+  screen,
+  children,
+  style,
+  ...rest
+}) => {
+  const ref = useRef(null);
+  const [spot, setSpot] = useState({
+    side: 'right',
+    lift: 0
+  });
+  React.useLayoutEffect(() => {
+    const place = () => {
+      if (!ref.current) return;
+      setSpot(prev => quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+    };
+    const fresh = () => {
+      if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
+    };
+    fresh();
+    const t1 = setTimeout(fresh, 300),
+      t2 = setTimeout(place, 1200),
+      iv = setInterval(place, 800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearInterval(iv);
+    };
+  }, [screen]);
+  return React.createElement("button", _extends({
+    ref: ref,
+    type: "button",
+    "data-quick-anywhere-spot": `${spot.side}-${spot.lift}`
+  }, rest, {
+    style: {
+      ...(style || {}),
+      ...quickAnywhereFloatStyle(spot)
+    }
+  }), children);
+};
 class MhErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -65264,6 +65428,21 @@ function BreederMarketScreen({
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
+  const [perkTick, setPerkTick] = useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    Promise.resolve(assistantMarketPerkLoad()).then(() => {
+      if (alive) setPerkTick(n => n + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const perkToday = (() => {
+    void perkTick;
+    const p = assistantMarketPerkToday();
+    return p && !p.used ? p : null;
+  })();
   const [rebirth, setRebirth] = useState(null);
   const [sectionTabs, setSectionTabs] = useState(() => initialSection === 'card' && cardShopScrollMemo.pending && cardShopScrollMemo.tab ? {
     card: cardShopScrollMemo.tab
@@ -65347,7 +65526,12 @@ function BreederMarketScreen({
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-  const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false).map(item => perkToday && item.id === perkToday.itemId ? {
+    ...item,
+    cost: perkToday.discountedCost,
+    perk: true,
+    perkBaseCost: item.cost
+  } : item);
   const costumeItems = marketItems.filter(item => item.type === 'costume');
   const diamondTabs = [{
     key: 'disc',
@@ -65583,6 +65767,10 @@ function BreederMarketScreen({
       const result = await sheet.confirm(count);
       if (result === true || result?.ok) {
         if (sheet.rebirth && ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        if (sheet.item && sheet.item.perk) {
+          await assistantMarketPerkMarkUsed();
+          setPerkTick(n => n + 1);
+        }
         setSheet(null);
       }
     } finally {
@@ -65622,6 +65810,7 @@ function BreederMarketScreen({
       key: item.id
     }, showBase && React.createElement(MarketProductCard, {
       previewIcon: previewIcon,
+      ribbon: item.perk ? '🛍 助手のおすすめ 1割引き' : null,
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked || giftLocked,
@@ -65630,7 +65819,7 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
         item,
-        stackable: item.type === 'item',
+        stackable: item.type === 'item' && !item.perk,
         confirm: count => onBuy(item, count),
         rebirth: item.type === 'disc' ? {
           monsterId: item.id,
@@ -89823,6 +90012,9 @@ const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
 const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 const RHYTHM_MULTI_QUEUE_MAX = 300;
+const RHYTHM_MULTI_LIVE_MS = 3000;
+const RHYTHM_MULTI_LIVE_SCORE_MAX = 1e12;
+const RHYTHM_MULTI_LIVE_COMBO_MAX = 100000;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
@@ -90269,6 +90461,59 @@ const RHYTHM_MULTI = (() => {
     const o = ordered();
     return !!s && o.length > 0 && o[0].id === s.selfId;
   };
+  let liveTimer = null;
+  const liveListeners = new Set();
+  const liveEmit = () => {
+    liveListeners.forEach(fn => {
+      try {
+        fn();
+      } catch (_) {}
+    });
+  };
+  const liveStop = () => {
+    if (liveTimer) clearInterval(liveTimer);
+    liveTimer = null;
+  };
+  const liveSend = () => {
+    const me = selfMember();
+    if (!s || !me || !me.playing || !s.live) {
+      liveStop();
+      return;
+    }
+    const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
+    const h = watch && watch.hud ? watch.hud.get() : null;
+    if (!h) return;
+    const sc = rhythmMultiInt(h.score, RHYTHM_MULTI_LIVE_SCORE_MAX);
+    const cb = rhythmMultiInt(h.combo, RHYTHM_MULTI_LIVE_COMBO_MAX);
+    const mine = s.live.rows[s.selfId];
+    if (mine && mine.s === sc && mine.c === cb) return;
+    s.live.rows[s.selfId] = {
+      s: sc,
+      c: cb
+    };
+    if (socket) socket.send({
+      t: 'pg',
+      id: s.selfId,
+      r: s.live.round,
+      s: sc,
+      c: cb
+    });
+    liveEmit();
+  };
+  const liveReceive = raw => {
+    if (!s || !s.live || s.live.done || raw.r !== s.live.round) return;
+    const id = rhythmMultiText(raw.id, 40);
+    if (!id || id === s.selfId || !s.live.ids.includes(id)) return;
+    const sc = rhythmMultiInt(raw.s, RHYTHM_MULTI_LIVE_SCORE_MAX);
+    const cb = rhythmMultiInt(raw.c, RHYTHM_MULTI_LIVE_COMBO_MAX);
+    const prev = s.live.rows[id];
+    if (prev && prev.s === sc && prev.c === cb) return;
+    s.live.rows[id] = {
+      s: sc,
+      c: cb
+    };
+    liveEmit();
+  };
   const roomPayload = () => {
     const r = s.room;
     return {
@@ -90377,6 +90622,7 @@ const RHYTHM_MULTI = (() => {
   };
   const stopTimers = () => {
     if (hbTimer) clearInterval(hbTimer);
+    liveStop();
     if (sweepTimer) clearInterval(sweepTimer);
     if (reconnectTimer) clearTimeout(reconnectTimer);
     hbTimer = sweepTimer = reconnectTimer = null;
@@ -90933,6 +91179,10 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = raw => {
     if (!s) return;
+    if (raw && raw.t === 'pg') {
+      liveReceive(raw);
+      return;
+    }
     const playingNow = selfMember();
     if (playingNow && playingNow.playing) {
       s.queue.push(raw);
@@ -91068,6 +91318,14 @@ const RHYTHM_MULTI = (() => {
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true;
           me.res = null;
+          liveStop();
+          s.live = {
+            round: msg.round,
+            ids: msg.participants.filter(pid => s.members[pid] && !s.members[pid].cpu),
+            rows: {},
+            done: false
+          };
+          if (s.live.ids.length >= 2) liveTimer = setInterval(liveSend, RHYTHM_MULTI_LIVE_MS);
           const kept = s.liveIds.length > 0 && s.liveIds.every(pid => msg.participants.includes(pid));
           s.liveStreak = kept ? s.liveStreak + 1 : 1;
           s.liveIds = msg.participants.slice();
@@ -91125,6 +91383,27 @@ const RHYTHM_MULTI = (() => {
     onStart(fn) {
       startListeners.add(fn);
       return () => startListeners.delete(fn);
+    },
+    onLive(fn) {
+      liveListeners.add(fn);
+      return () => liveListeners.delete(fn);
+    },
+    liveView() {
+      if (!s || !s.live) return null;
+      return {
+        round: s.live.round,
+        selfId: s.selfId,
+        done: s.live.done === true,
+        rows: s.live.rows,
+        people: s.live.ids.map(id => {
+          const m = s.members[id] || {};
+          return {
+            id,
+            name: m.name || '',
+            icon: m.icon || ''
+          };
+        })
+      };
     },
     setCpuBrain(brain) {
       cpuBrain = brain && typeof brain === 'object' ? brain : null;
@@ -91501,6 +91780,12 @@ const RHYTHM_MULTI = (() => {
         fs: result && result.fast,
         sl: result && result.slow
       });
+      if (s.live && s.live.round === round && liveTimer) liveSend();
+      liveStop();
+      if (s.live && s.live.round === round) {
+        s.live.done = true;
+        liveEmit();
+      }
       me.playing = false;
       if (quit === true && round === s.startedRound && s.liveStreak > 0 && s.streakQuitRound !== round) {
         s.liveStreak -= 1;
@@ -92811,6 +93096,252 @@ function RhythmMultiAvatar({
     })
   );
 }
+const rhythmMultiLiveOrder = (people, rows) => people.map((p, i) => ({
+  id: p.id,
+  i,
+  s: rows && rows[p.id] ? Number(rows[p.id].s) || 0 : 0
+})).sort((a, b) => b.s - a.s || a.i - b.i).map(x => x.id);
+const rhythmMultiLiveVisible = (order, selfId, max) => {
+  if (max <= 0) return [];
+  if (order.length <= max) return order.slice();
+  const me = Math.max(0, order.indexOf(selfId));
+  const start = Math.min(Math.max(0, me - (max - 1)), order.length - max);
+  const out = order.slice(start, start + max);
+  if (max >= 3 && start > 0) out[0] = order[0];
+  return out;
+};
+const RHYTHM_MULTI_LIVE_LANE_TOP = 0.46;
+const rhythmMultiLiveMaxRows = ({
+  width,
+  height,
+  top,
+  left,
+  boardW,
+  step,
+  count
+}) => {
+  if (!(width > 0) || !(height > 0)) return 0;
+  const bottomMax = height * (1 - (left + boardW + 8) / (RHYTHM_MULTI_LIVE_LANE_TOP * width));
+  return Math.max(0, Math.min(count, Math.floor((bottomMax - top + 2) / step)));
+};
+function RhythmMultiLiveBoard({
+  resolveIconUrl = null
+}) {
+  const first = React.useMemo(() => RHYTHM_MULTI.liveView(), []);
+  const people = first ? first.people : [];
+  const selfId = first ? first.selfId : '';
+  const round = first ? first.round : '';
+  const boxRef = React.useRef(null);
+  const rowRefs = React.useRef({});
+  const [lay, setLay] = React.useState(null);
+  const [ended, setEnded] = React.useState(false);
+  const layRef = React.useRef(null);
+  layRef.current = lay;
+  const paint = React.useCallback(() => {
+    const v = RHYTHM_MULTI.liveView();
+    if (!v || v.round !== round) return;
+    if (v.done) {
+      setEnded(true);
+      return;
+    }
+    const l = layRef.current;
+    if (!l) return;
+    const order = rhythmMultiLiveOrder(people, v.rows);
+    const vis = rhythmMultiLiveVisible(order, selfId, l.max);
+    const step = l.land ? 22 : 28;
+    people.forEach(p => {
+      const r = rowRefs.current[p.id];
+      if (!r || !r.row) return;
+      const at = vis.indexOf(p.id);
+      const show = at >= 0 ? 'visible' : 'hidden';
+      if (r.show !== show) {
+        r.show = show;
+        r.row.style.visibility = show;
+      }
+      if (at < 0) return;
+      const tf = `translateY(${at * step}px)`;
+      if (r.tf !== tf) {
+        r.tf = tf;
+        r.row.style.transform = tf;
+      }
+      const mine = v.rows[p.id];
+      rhythmSetText(r.rank, order.indexOf(p.id) + 1);
+      rhythmSetText(r.score, (mine ? mine.s : 0).toLocaleString());
+      rhythmSetText(r.combo, mine ? mine.c : 0);
+    });
+  }, [people, selfId, round]);
+  React.useEffect(() => {
+    if (people.length < 2) return undefined;
+    const place = () => {
+      const box = boxRef.current;
+      const hud = document.querySelector('[data-rhythm-hud]');
+      if (!box || !hud || !box.offsetParent) return;
+      const parent = box.offsetParent;
+      const at = node => {
+        let top = 0;
+        let left = 0;
+        let el = node;
+        while (el && el !== parent) {
+          top += el.offsetTop;
+          left += el.offsetLeft;
+          el = el.offsetParent;
+        }
+        return el === parent ? {
+          top,
+          left
+        } : null;
+      };
+      const hudAt = at(hud);
+      if (!hudAt) return;
+      let bottom = hudAt.top;
+      document.querySelectorAll('[data-rhythm-hud] *, [data-rhythm-song-clock] *').forEach(el => {
+        if (el.children.length || !el.offsetHeight) return;
+        const p = at(el);
+        if (!p || p.left - hudAt.left > 150) return;
+        bottom = Math.max(bottom, p.top + el.offsetHeight);
+      });
+      const faces = document.querySelector('[data-rhythm-assist-play]');
+      if (faces && faces.offsetHeight) {
+        const p = at(faces);
+        if (p) bottom = Math.max(bottom, p.top + faces.offsetHeight);
+      }
+      const width = parent.clientWidth;
+      const height = parent.clientHeight;
+      const top = Math.round(bottom + 6);
+      const left = Math.round(hudAt.left + 12);
+      const maxTall = rhythmMultiLiveMaxRows({
+        width,
+        height,
+        top,
+        left,
+        boardW: 98,
+        step: 28,
+        count: people.length
+      });
+      const maxWide = width > height ? rhythmMultiLiveMaxRows({
+        width,
+        height,
+        top,
+        left,
+        boardW: 196,
+        step: 22,
+        count: people.length
+      }) : 0;
+      const land = maxWide > 0 && maxWide >= maxTall;
+      const max = land ? maxWide : maxTall;
+      setLay(q => q && q.top === top && q.left === left && q.land === land && q.max === max ? q : {
+        top,
+        left,
+        land,
+        max
+      });
+    };
+    let timers = [];
+    const soon = list => {
+      timers.forEach(clearTimeout);
+      timers = list.map(ms => setTimeout(place, ms));
+    };
+    const onResize = () => soon([0, 300, 1000]);
+    soon([0, 400, 1500, 7000]);
+    window.addEventListener('resize', onResize);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [people.length]);
+  React.useEffect(() => {
+    paint();
+    return RHYTHM_MULTI.onLive(paint);
+  }, [paint, lay]);
+  if (people.length < 2 || ended) return null;
+  const land = !!(lay && lay.land);
+  const step = land ? 22 : 28;
+  const shadow = {
+    textShadow: '0 1px 3px rgba(2,6,23,.9)'
+  };
+  return React.createElement("div", {
+    ref: boxRef,
+    "data-rhythm-multi-live": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute z-[58]",
+    style: lay && lay.max > 0 ? {
+      top: lay.top,
+      left: lay.left,
+      width: land ? 196 : 98,
+      height: lay.max * step,
+      contain: 'strict'
+    } : {
+      visibility: 'hidden',
+      top: 0,
+      left: 0,
+      width: 98,
+      height: 0
+    }
+  }, people.map(p => {
+    const src = resolveIconUrl ? resolveIconUrl(p.icon) : null;
+    const self = p.id === selfId;
+    const keep = key => el => {
+      const r = rowRefs.current[p.id] || (rowRefs.current[p.id] = {});
+      r[key] = el;
+      if (key === 'row') {
+        r.show = '';
+        r.tf = '';
+      }
+    };
+    const icon = React.createElement("span", {
+      className: `block shrink-0 overflow-hidden rounded-full border border-white/60 bg-slate-800 ${land ? 'h-[18px] w-[18px]' : 'h-[20px] w-[20px]'}`
+    }, src ? React.createElement(BreederIcon, {
+      src: src,
+      id: p.icon,
+      alt: "",
+      roundedClass: "rounded-full",
+      className: "h-full w-full"
+    }) : React.createElement("span", {
+      className: "flex h-full w-full items-center justify-center text-[10px]"
+    }, "🎵"));
+    const rank = React.createElement("b", {
+      ref: keep('rank'),
+      "data-rhythm-multi-live-rank": true,
+      className: "w-[9px] shrink-0 text-center text-[10px] font-black leading-none text-amber-200"
+    }, "1");
+    const name = React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[9px] font-black leading-none text-slate-100"
+    }, p.name);
+    const score = React.createElement("b", {
+      ref: keep('score'),
+      "data-rhythm-multi-live-score": true,
+      className: `shrink-0 font-black leading-none tabular-nums text-white ${land ? 'text-[10px]' : 'text-[9.5px]'}`
+    }, "0");
+    const combo = React.createElement("span", {
+      className: "shrink-0 whitespace-nowrap text-[7.5px] font-black leading-none text-amber-200"
+    }, "🔥", React.createElement("span", {
+      ref: keep('combo'),
+      "data-rhythm-multi-live-combo": true,
+      className: "tabular-nums"
+    }, "0"));
+    return React.createElement("div", {
+      key: p.id,
+      ref: keep('row'),
+      "data-rhythm-multi-live-row": p.id,
+      "data-self": self ? '1' : undefined,
+      className: `absolute left-0 top-0 flex items-center gap-1 rounded-l-full rounded-r-md border ${self ? 'border-cyan-300/90 bg-cyan-700/75' : 'border-white/15 bg-slate-950/65'} ${land ? 'pl-px pr-1.5' : 'pl-0.5 pr-0.5'}`,
+      style: {
+        width: land ? 196 : 98,
+        height: step - 2,
+        visibility: 'hidden',
+        ...shadow
+      }
+    }, icon, land ? React.createElement(React.Fragment, null, rank, name, score, React.createElement("span", {
+      className: "flex w-[34px] shrink-0 justify-end"
+    }, combo)) : React.createElement("span", {
+      className: "flex min-w-0 flex-1 flex-col justify-center gap-[3px] overflow-hidden"
+    }, React.createElement("span", {
+      className: "flex items-center gap-1"
+    }, rank, name), React.createElement("span", {
+      className: "flex items-center justify-between"
+    }, score, combo)));
+  }));
+}
 function RhythmMultiMemberCards({
   members,
   hostId,
@@ -93360,6 +93891,8 @@ function RhythmMultiScreen({
   onUserGesture = null,
   multiLook = 'LIGHT',
   onChangeMultiLook = null,
+  multiLiveBoard = true,
+  onChangeMultiLiveBoard = null,
   onBack,
   onStartPlay,
   modeSelect = null,
@@ -94199,7 +94732,20 @@ function RhythmMultiScreen({
   }, opts.advance), opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden landscape:block'), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && optionsButton(), view && rankingButton(), view && inviteButton(), view && chatButton());
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && liveBoardButton(), view && optionsButton(), view && rankingButton(), view && inviteButton(), view && chatButton());
+  const liveBoardButton = (extra = '') => onChangeMultiLiveBoard && React.createElement("button", {
+    "data-rhythm-multi-live-header": true,
+    type: "button",
+    "aria-label": "演奏中のみんなのスコア",
+    "aria-pressed": multiLiveBoard,
+    onClick: () => onChangeMultiLiveBoard(!multiLiveBoard),
+    className: `flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border leading-none ${multiLiveBoard ? 'border-cyan-300/80 bg-cyan-800/70 text-white' : 'border-slate-400/50 bg-slate-800/60 text-slate-400'} ${extra}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "📊"), React.createElement("b", {
+    className: "mt-0.5 text-[9px] font-black leading-none"
+  }, multiLiveBoard ? 'ON' : 'OFF'));
   const optionsButton = (extra = '') => onOpenOptions && React.createElement("button", {
     "data-rhythm-multi-options-open": true,
     type: "button",
@@ -95704,7 +96250,13 @@ function RhythmMultiScreen({
       "aria-pressed": multiLook === c.id,
       onClick: () => onChangeMultiLook(c.id),
       className: `min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`
-    }, c.label))))), React.createElement("div", {
+    }, c.label))), onChangeMultiLiveBoard && React.createElement("button", {
+      type: "button",
+      "data-rhythm-multi-live-toggle": true,
+      "aria-pressed": multiLiveBoard,
+      onClick: () => onChangeMultiLiveBoard(!multiLiveBoard),
+      className: `mt-1 flex min-h-[26px] items-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`
+    }, React.createElement("span", null, "演奏中のみんなのスコア"), React.createElement("b", null, multiLiveBoard ? 'ON' : 'OFF')))), React.createElement("div", {
       "data-rhythm-multi-difficulties": drawnDiffs.length,
       className: "grid gap-1.5 landscape:flex-1",
       style: {
@@ -132271,6 +132823,9 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
   });
   return true;
 };
+try {
+  if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost;
+} catch (_) {}
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
   if (!AMG_STORE.loaded) return false;
@@ -176686,6 +177241,7 @@ function DebugTrialsPanel({
     }, label))));
   })));
 }
+if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday;
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
   const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
@@ -191564,6 +192120,7 @@ function MonsterHeroGame() {
       xp = Math.floor(quickRunProgress.xp + pending.xp);
     const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
     const label = finished ? quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止' : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const subLabel = finished ? '' : `W${wave}/10${resting ? '・休み' : ''}`;
     const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
     const info = {
       wave,
@@ -191576,27 +192133,30 @@ function MonsterHeroGame() {
       canResume: finished && quickRunResumable
     };
     const closeDetail = () => setQuickAnywhereDetail(false);
-    return React.createElement(React.Fragment, null, React.createElement("button", {
-      type: "button",
+    return React.createElement(React.Fragment, null, React.createElement(QuickAnywhereFloat, {
+      screen: gameState,
       "data-quick-anywhere": state,
       "data-wave": wave,
       "data-loops": quickRunProgress.loops,
       "data-screen": gameState,
       "data-stage": runStage || "",
-      "aria-label": `裏クイック ${label}。押すと詳しく`,
+      "aria-label": `裏クイック ${label}${subLabel ? ` ${subLabel}` : ''}。押すと詳しく`,
       onClick: () => setQuickAnywhereDetail(v => !v),
-      className: `fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
+      className: `z-[70] flex max-w-[84px] flex-col items-center justify-center rounded-2xl border px-2 py-0.5 text-[11px] font-black leading-[14px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
       style: {
-        left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))',
-        bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))',
-        minHeight: 30
+        minHeight: 32
       }
-    }, label), quickAnywhereDetail && React.createElement("div", {
-      className: "fixed inset-0 z-[90] flex items-end justify-start p-2",
+    }, React.createElement("span", {
+      className: "max-w-full truncate"
+    }, label), subLabel && React.createElement("span", {
+      "data-quick-anywhere-wave": true,
+      className: "max-w-full truncate text-[10px] font-bold opacity-80"
+    }, subLabel)), quickAnywhereDetail && React.createElement("div", {
+      className: "fixed inset-0 z-[90] flex items-end justify-end p-2",
       onClick: closeDetail,
       style: {
-        paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))',
-        paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))'
+        paddingBottom: 'max(48px, calc(var(--mh-sa-bottom, 0px) + 46px))',
+        paddingRight: 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))'
       }
     }, React.createElement("div", {
       "data-quick-anywhere-detail": true,
@@ -205493,6 +206053,9 @@ function MonsterHeroGame() {
       }
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() && React.createElement(RhythmAssistSessionPlayFace, {
       songId: rhythmPlay.song && rhythmPlay.song.songId
+    }), gameState === 'RHYTHM_PLAY' && rhythmPlay && rhythmPlay.from === 'multi' && rhythmSettings.multiLiveBoard !== false && React.createElement(RhythmMultiLiveBoard, {
+      key: rhythmPlay.multiStartId,
+      resolveIconUrl: resolveIconUrl
     }), React.createElement(RhythmInviteHomeBar, {
       show: gameState === 'HOME',
       onAccept: () => {
@@ -205540,6 +206103,14 @@ function MonsterHeroGame() {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
       },
       multiLook: rhythmSettings.multiLook || 'LIGHT',
+      multiLiveBoard: rhythmSettings.multiLiveBoard !== false,
+      onChangeMultiLiveBoard: async on => {
+        const saved = await saveRhythmSettings({
+          ...rhythmSettings,
+          multiLiveBoard: on === true
+        });
+        setRhythmSettings(saved);
+      },
       onChangeMultiLook: async id => {
         const saved = await saveRhythmSettings({
           ...rhythmSettings,

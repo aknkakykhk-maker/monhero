@@ -65,6 +65,7 @@
 | `mh_assistant_peer_play_v1` | object | 遊びに連れていくペア。`{ pair }`(null でだれも連れていない) |
 | `mh_assistant_peer_quarrel_v1` | object | 助手どうしのけんか→仲直り(2026-11-07)。`{ pending: { id, pair, at } \| null, done: [けんかid] }`。pending は言い合いを見て、まだ仲直りを見ていないもの(次に HOME を開いたとき仲直りが流れる)。done は見たけんか(同じけんかは2度出ない) |
 | `mh_assistant_peer_special2_seen_v1` | array | 仲良し度 Lv10 の「2人の特別なお話・その2」を見たペア。`[ペア]`。Lv5 の記録(`mh_assistant_peer_special_seen_v1`)とは別に持つ |
+| `mh_assistant_market_perk_v1` | object / 無し | 助手がマーケットにいるときの「今日のおすすめ品1割引き」を使ったか(2026-11-11)。`{ day:'YYYY-MM-DD'(朝4時区切りの日), used:true }`。買えたときだけ書き、日が変われば古い日付は無視される。読むときは `normalizeAssistantMarketPerk` を通す(壊れていれば未使用)。既存のキーは触らない |
 | `mh_assistant_life_ui_v2` | boolean / `false` | 助手ライフの新UIを試す設定。`true` で地図を維持した助手詳細・声かけ相手選択を有効化し、`false` で従来UIへ戻す。助手の進行・報酬・親密度には影響しない |
 | `mh_assistant_life_v1` | object | 助手たちの今(2026-11-07・公開の印 assistantLife)。いまの時間の様子 `{ salt(端末ごとの種), abs(時間の通し番号), slot, moods:{助手:気分}, groups:[{ids,doing,place}], solo:{助手:{doing,place,reason}}, lonely:[助手], recent:[{kind,abs,pair,ids}](最近のできごと 40件まで), nudges:{invite:[{id,abs}],introduce:[{pair,abs}]}(ブリーダーの声かけ) }`。壊れていたら空として読み直す |
 | `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
