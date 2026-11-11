@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45212ddcdbe9dca7
+// source-sha256: 011f60659cb4802f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112095,7 +112095,31 @@ function AssistantLifeTownMap({
         onCard(id);
       },
       className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95"
-    }, "🃏 対戦する"), typeof onView === 'function' && React.createElement("button", {
+    }, "🃏 対戦する"), place === 'battle' && (() => {
+      let info = null;
+      try {
+        info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+      } catch (_) {
+        info = null;
+      }
+      if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
+      return React.createElement("button", {
+        type: "button",
+        disabled: !!info.disabled,
+        title: info.disabled ? info.why || '' : info.sub || '',
+        "data-assistant-life-map-act": "masmon-battle",
+        onClick: () => {
+          setSheet(null);
+          try {
+            assistantMasmonBattleOpen({
+              assistantId: id,
+              from: 'place'
+            });
+          } catch (_) {}
+        },
+        className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2 py-1 text-[11px] font-black text-white active:scale-95 disabled:opacity-50"
+      }, info.label || '⚔ マスモンで対戦(β)');
+    })(), typeof onView === 'function' && React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "view",
       onClick: () => onView(id),
