@@ -919,7 +919,7 @@ function AssistantPeerPhoto({ pair, photo, open }) {
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
     </div>);
 }
-function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null }) {
+function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null, onGivePair = null }) {
   const st = useAssistantPeerState();
   // 助手ライフの道具10種類と「買って贈る」(2026-11-08)。部品はいつもあるので、フックは毎回同じ順で呼ばれる
   const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
@@ -975,9 +975,15 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
             <div data-assistant-peer-actions className="mt-3">
               <p className="mb-1 text-[11px] font-black text-amber-200">2人にしてあげる</p>
               {useMsg && <p data-assistant-peer-use-msg className="mb-1 rounded-lg bg-slate-800 px-2 py-1 text-[10.5px] font-bold text-slate-200">{useMsg}</p>}
-              <div className="grid grid-cols-2 gap-1.5">
+              {/* 2026-11-11 社長 案6 A: 助手ライフの中では、押すとすぐ贈るのをやめて、贈る窓をこの2人で開く(上がる量・好み・回数を見てから贈る。入口を1つの形に) */}
+              {lifeOn && typeof onGivePair === 'function'
+                ? <button type="button" data-assistant-peer-give-sheet onClick={() => onGivePair(pair)} className="min-h-[48px] w-full rounded-xl border border-amber-300/70 bg-amber-400/20 px-3 py-1 text-left active:scale-[.98]">
+                    <span className="block text-[13px] font-black text-amber-100">🎁 この2人に贈る</span>
+                    <span className="block text-[11px] font-bold text-slate-300">道具を選ぶ窓が開きます(今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(st, giftSt) : 0}回)</span>
+                  </button>
+                : <div className="grid grid-cols-2 gap-1.5">
                 {kinds.map(itemBtn)}
-              </div>
+              </div>}
               <button type="button" data-assistant-peer-play={playing ? 'on' : 'off'} onClick={() => assistantPeerSetPlayPair(playing ? null : pair)}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 px-2 py-1 text-left active:scale-[.98]">
                 <span className="block text-[11px] font-black text-sky-100">{playing ? '🎮 遊びに連れていく(いま連れています。押すとやめます)' : '🎮 遊びに連れていく'}</span>
@@ -1008,7 +1014,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
 
 // ---------- プロフィールの関係図(Lv3 から線が出る) ----------
 // 会った助手を円に並べ、Lv3 以上のペアを線で結ぶ(太さ・色が Lv で変わる)。下に今日のペアと全部のペアの Lv。行を押すと思い出アルバム
-function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null, v2 = false }) {
+function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null, v2 = false, onGivePair = null }) {
   const st = useAssistantPeerState();
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
@@ -1087,6 +1093,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
           </button>)}
       </div>
       {albumPair && <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); if (onReplay) onReplay(t); }}
+        onGivePair={onGivePair ? (p) => { setAlbumPair(null); onGivePair(p); } : null}
         peerItems={peerItems} onUseItem={onUseItem ? async (kind, pair) => { const talk = await onUseItem(kind, pair); if (talk) { setAlbumPair(null); if (onReplay) onReplay(talk); } return talk; } : null}/>}
     </div>
   );

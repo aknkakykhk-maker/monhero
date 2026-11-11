@@ -91,6 +91,8 @@
 | `mh_assistant_life_friend_known_v1` | object | 顔なじみの回数 `{ '自分の助手|フレンドのID|相手の助手': 回数 }`(300組まで)。数字は増えるだけで、ほかの値は変えない |
 | `mh_assistant_life_friend_intro_v1` | boolean | 「🏘 フレンド」のはじめての案内を見たか |
 | `mh_assistant_life_friend_activity_v1` | object[] / `[]` | フレンドに見せる「最近」のうち、モンヒロビートで遊んだ曲名(2026-11-08)。`[{ k:'beat', x:曲名(30字), at }]` を新しい順に6つまで。公開中の曲だけ・スコアなどは残さない。設定 `act` が切なら送らない(端末の中には残る) |
+| `mh_assistant_life_friend_bond_v1` | object | フレンドごとの友情とスタンプ(2026-11-11) `{ day(朝4時区切り), houses(今日スタンプをもらった軒数), f: { フレンドのID: { st(スタンプの数・増えるだけ), t:{talk,find,note}(今日した3つ), done(今日のスタンプ), liked(今日送ったすてきの場所・3つまで), in(来てくれた日・12日ぶん), snap(前に来たときの家具・マスモン・最近の控え) } } }`(100人まで)。日が変わると今日の分だけ戻す |
+| `mh_assistant_life_friend_fav_v1` | object | お気に入りの棚(2026-11-11) `{ on(フレンドに見せる), a(好きな助手), m:{aid,mo}(自慢のマスモン), s(好きな曲・30字), fn(集めた家具の数を見せる) }` |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
@@ -118,6 +120,7 @@
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_presence_show_v1` | boolean / `true` | 「いまの状態をフレンドに見せる」(2026-11-08)。`false` のときは friend_profiles の place を 'other'(ログイン中)にし、オート周回中・操作なしの分(records.au・records.im)も送らない |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
+| `mh_pending_room_link_v1` | object / `null` | 招待リンク(`?beatRoom=` / `?cardRoom=`)で開いたときの部屋 `{kind, code, at}`。URLの引数は読んだらすぐ消し、ここへ預けて、起動の流れ・はじめての案内が済んだHOMEで部屋へ入ったら消す。3時間たつと捨てる(`mhNormalizeRoomLink` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
