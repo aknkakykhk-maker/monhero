@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 23489bf822f5a36c
+// generated-sha256: 43c22c6ee18ede05
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76356,7 +76356,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60" onClick={onClose} data-amgr-sheet>
       <div className="w-full max-w-md rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 p-3 pb-6 text-white" onClick={ev => ev.stopPropagation()} style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
         <p className="text-[16px] font-black">🥚 {name}のマスモンにチケットを使う</p>
-        <p className="text-[11px] font-bold text-slate-300">この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません</p>
+        <p className="text-[11px] font-bold text-slate-300">この時間帯に1枚。自分のモンスターには入りません・絆ランキングには効きません。上げた能力は、マスモン対戦の強さにも効きます</p>
         {info && <div className="mt-2 flex items-center gap-2">
           {who && typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={who} size={40} accent={who.accent} expression={res ? 'happy' : null}/></span>}
           <p className="min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950" data-amgr-say>{res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`}</p>
