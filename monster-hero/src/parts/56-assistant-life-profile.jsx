@@ -151,6 +151,22 @@ const assistantLifeProfileRhythm = (id) => {
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
 
+// 社長の全身画(2026-11-11 社長「全身画作ってるから…助手の紹介ページに使って」)。キーは「助手id」か「助手id:服の名前」。
+//   絵の仕上げ: tools/assistant/life-fullbody-art.py(元の絵 tools/art-sources/assistant-fullbody/received-v1/)。まだ絵の無い助手・服はここに無い=今の立ち絵のまま。
+//   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
+const ASSISTANT_FULLBODY_ART = Object.freeze({
+  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
+  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido',
+});
+// その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す。服の全身画が無いときは null(今の立ち絵へ)
+const assistantLifeProfileFullBody = (who) => {
+  if (!who || !who.id) return null;
+  let outfit = '';
+  try { const c = typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null; if (c && c.imageDir) outfit = String(c.imageDir).split('/').pop(); } catch (_) { outfit = ''; }
+  const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
+  return name ? `images/assistant/fullbody/${name}.png` : null;
+};
+
 // 紹介の立ち絵。助手ごとに絵の余白・全身か顔だけかが違うので、町の人形と同じ決まり(顔の表 assistantLifeStandFace と assistantLifeStandRule)で
 //   「頭(てっぺんから顎)の長さ」と「頭のてっぺんの高さ」をそろえる(2026-11-11 社長「助手ごとのサイズ感がばらばら」)。測れるまでは出さない
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
@@ -167,6 +183,13 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
     window.addEventListener('resize', f);
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
+  const fullSrc = assistantLifeProfileFullBody(who);
+  if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
+    return (
+      <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
+        <img src={fullSrc} alt={who.name} draggable={false} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>
+      </div>);
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function'
