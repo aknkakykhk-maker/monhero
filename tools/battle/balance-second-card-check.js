@@ -74,7 +74,7 @@ check('弱ガードも同じ扱い', has('GUARD_EVOLUTION[guardLevel].flat*0.5*e
 check('攻撃ダメージの半減が枚数基準になっている',
   /getDmg\(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist[,)]/.test(source)
     && !has('localDmgModAdd,attackCount>0,attackStartDist'));
-check('あつの挑発(アシストカード)の攻撃は半減しない', has('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)'));
+check('あつの挑発(アシストカード)の攻撃は半減しない', has('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false,attackDistance)'));
 // 効果量そのものはバランス調整で変わるので、数字ではなく「*effMul が掛かっているか」を見る。
 // (実際にゴーレムの闘志を 0.1 → 0.075 にしたときここが落ちた。見たいのは半減の結線であって
 //  効果量ではないので、数字を書き写さない形にしてある)
