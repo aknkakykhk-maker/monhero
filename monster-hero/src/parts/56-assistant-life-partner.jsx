@@ -19,8 +19,17 @@ const assistantLifePartnerProgress = (id) => {
     return { count, need, cardName: typeof p.cardName === 'string' ? p.cardName : '', cardOwned: p.cardOwned !== false };
   } catch (_) { return null; }
 };
-// 町の人の一言(助手ごと。届くまでは空 → 小窓は様子の1行だけ)
-const ASSISTANT_LIFE_TOWN_PERSON_LINES = Object.freeze({});
+// 町の人の一言(ナカヨシ18の案をココロ2が口調を見て直した。2026-11-11。社長の「この文で」待ち)。無い助手は様子の1行だけ
+const ASSISTANT_LIFE_TOWN_PERSON_LINES = Object.freeze({
+  mua: 'やっほー♪ あたしはまだ町でぶらぶら中ｗ カードいっぱい使ってくれたら、隣いっちゃうかも！',
+  kiki: 'こんにちは。いまは町でのんびりしていまつ( ˘ω˘) 私のカード、使ってもらえたらうれしいでつ',
+  momosuke: 'ふーん、来たんだ？ ももはまだ見てるだけw でも、ちょっと気になってるよ？♡',
+  dra: 'おう、町でぶらぶらしてるぞ。おでのカード使ってくれたら、手伝いに行けるんだけどな、えへへ',
+  atsu: 'よっ、まだ町の人やってるわ笑 挑発、使ってくれたら考えるよ？',
+  kyuko: 'ほい、俺はまだ町でのんびり中〜笑 カード使ってくれたら、隣いくねぇ',
+  sorashido: 'こんにちは、自分はまだ町の人です笑 カードを使った回数、ちゃんと数えておきますね！',
+  erubin: 'やあ。俺はまだ町で見守ってるよ。ゆっくりでいいからね',
+});
 
 // どこから押しても同じ小窓を出す(部屋・地図・家の札)
 const ASSISTANT_LIFE_TOWN_PERSON = { id: null, subs: new Set() };
