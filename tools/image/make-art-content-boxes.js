@@ -10,7 +10,7 @@
 // 中身の範囲が分かれば、画面の側で「中身が枠に収まる」ように拡大でき、1体ずつ手で寄せる数字(台帳 #202 で禁止)が要らない。
 //
 // 【決めごと】
-// ・対象は images/monsters/*.png(立ち絵・混血の全身絵)と images/assistant/ の下の *.PNG(顔アイコンの face/ と、寝顔の重ね絵 sleep/ は除く)
+// ・対象は images/monsters/*.png(立ち絵・混血の全身絵)と images/assistant/ の下の *.PNG(顔アイコンの face/ と、助手ライフの寝顔 ◯◯_sleep.PNG は除く)
 // ・中身は「不透明度が CUT を超える画素」。透けていない絵(四角い絵)は全体が中身になる
 // ・値は [左, 上, 右, 下, 横÷縦] で、左〜下は画像の幅・高さに対する割合(小数3桁)。
 //   キーは images/ の下の道(「images/」は付けない。付けると tools/stamp-version.js が ?v= を打って、引けなくなる)
@@ -31,8 +31,8 @@ const listFiles = () => {
   const mon = path.join(GAME, 'images', 'monsters');
   fs.readdirSync(mon).filter((f) => /\.png$/i.test(f)).sort().forEach((f) => out.push(`images/monsters/${f}`));
   const walk = (dir, rel) => fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1)).forEach((d) => {
-    if (d.isDirectory()) { if (d.name !== 'face' && d.name !== 'sleep') walk(path.join(dir, d.name), `${rel}/${d.name}`); return; }
-    if (/\.png$/i.test(d.name)) out.push(`${rel}/${d.name}`);
+    if (d.isDirectory()) { if (d.name !== 'face') walk(path.join(dir, d.name), `${rel}/${d.name}`); return; }
+    if (/\.png$/i.test(d.name) && !/_sleep\.png$/i.test(d.name)) out.push(`${rel}/${d.name}`); // ◯◯_sleep.PNG は助手ライフの寝顔(立ち絵の範囲の表には入れない)
   });
   walk(path.join(GAME, 'images', 'assistant'), 'images/assistant');
   return out;

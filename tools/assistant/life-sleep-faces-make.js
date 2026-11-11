@@ -1,5 +1,5 @@
 // 助手ライフの寝顔: 社長が描いた「目を閉じた絵」から、立ち絵・顔アイコンに重ねる絵を作る(2026-11-11 社長「寝顔こっちでつくる」→ 7枚を受け取り)
-//   node tools/assistant/life-sleep-faces-make.js                 作る(monster-hero/images/assistant/sleep/ の下に、元の絵と同じ並びで置く)
+//   node tools/assistant/life-sleep-faces-make.js                 作る(元の絵と同じフォルダに ◯◯_sleep.PNG。全身と顔アイコン)
 //   node tools/assistant/life-sleep-faces-make.js --only myua,kiki          一部の人だけ作り直す
 //   node tools/assistant/life-sleep-faces-make.js --preview <フォルダ>   [元 | 重ねた後] の目のまわりの比較も書き出す
 // 受け取った物: tools/art-sources/sleep-faces/received-v1.png(1枚に7人。背景は抜いてある。加工せずに残す)
@@ -8,7 +8,8 @@
 //   ② 社長の絵を元の立ち絵へ合わせる(縮尺・回転・位置)。体全体の明るさと形でざっと → 目のまわり(目そのものは除く)で細かく
 //   ③ 重ねる範囲は目ごとの楕円。元の開いた目とまつげがまるごと隠れる芯の外側を、なめらかにぼかす(口・前髪の先までは届かない)
 //   ④ 顔アイコン(face/)は、元の全身から顔アイコンへの対応(縮尺・位置)を求め、全身の合わせ方を写したうえで目のまわりでもう一度詰める
-// 出来るのは元の絵と同じ大きさの透明PNG。ゲームでは元の絵と同じ位置・大きさで重ねるだけ(AssistantLifeSleepEyes)
+// 出来るのは、社長の絵をまるごと元の絵と同じ大きさのキャンバスへ置いたPNG(顔の位置が元の絵と同じ)。寝ているあいだは元の絵の代わりにこれを出す(assistantLifeSleepSrc)
+//   合わせ方は life-sleep-faces-fit.json に控える(--refit で測り直す)
 const sharp = require('sharp'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), IMG = path.join(ROOT, 'monster-hero/images/assistant');
 const SRC = path.join(ROOT, 'tools/art-sources/sleep-faces/received-v1.png');
@@ -27,7 +28,8 @@ const JOBS = [
   { panel: 'myua-halloween', mask: { up: [0.58, 0.28] }, full: 'halloween/myua_normal.PNG', faceEyes: [[97.5, 113.5, 35, 22], [150, 123.5, 28, 22]], panelEyes: [[188, 216, 36], [251, 230, 30]] },
 ];
 const faceOf = (rel) => rel.includes('/') ? rel.replace(/\/([^/]+)$/, '/face/$1') : `face/${rel}`;
-const outOf = (rel) => path.join(IMG, 'sleep', rel);
+// 置き場所: 元の絵と同じフォルダに ◯◯_sleep.PNG(表情の名前のように置くので、着せ替えの見分け・顔の位置の表がそのまま使える)
+const outOf = (rel) => path.join(IMG, rel.replace(/_normal\.PNG$/, '_sleep.PNG'));
 
 const loadRaw = async (f, resize) => { const { data, info } = await sharp(f).ensureAlpha().resize(resize).raw().toBuffer({ resolveWithObject: true }); return { d: data, W: info.width, H: info.height }; };
 
@@ -103,25 +105,46 @@ async function compose(src, tgtFile, R, eyesT, out, { core = [0.62, 0.75], fe = 
   await sharp(buf, { raw: { width: W, height: H, channels: 4 } }).png({ compressionLevel: 9 }).toFile(out);
 }
 
+
+// ③' 社長の絵をまるごと、元の絵と同じ大きさのキャンバスへ置く(2026-11-11 社長「絵をそのまま使う」)。下の切れ目(腰のあたり)は少しぼかして消す
+async function composeWhole(src, tgtFile, R, out, { fadeBottom = 0.07 } = {}) {
+  const m = await sharp(tgtFile).metadata(), W = m.width, H = m.height, P = src, buf = Buffer.alloc(W * H * 4);
+  let pyMax = 0; for (let i = 0; i < P.W * P.H; i++) if (P.d[i * 4 + 3] > 40) pyMax = Math.max(pyMax, (i / P.W) | 0);
+  const fadeH = P.H * fadeBottom;
+  for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
+    const [x, y] = inv(R, X, Y); if (x < 0 || y < 0 || x > P.W - 1 || y > P.H - 1) continue;
+    const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, x1 = Math.min(P.W - 1, x0 + 1), y1 = Math.min(P.H - 1, y0 + 1); let aSum = 0; const acc = [0, 0, 0];
+    for (const [xx, yy, w] of [[x0, y0, (1 - fx) * (1 - fy)], [x1, y0, fx * (1 - fy)], [x0, y1, (1 - fx) * fy], [x1, y1, fx * fy]]) { const p = (yy * P.W + xx) * 4, a = P.d[p + 3] * w; aSum += a; for (let k = 0; k < 3; k++) acc[k] += P.d[p + k] * a; }
+    if (aSum <= 0) continue; const f = y > pyMax - fadeH ? Math.max(0, (pyMax - y) / fadeH) : 1;
+    const o = (Y * W + X) * 4; for (let k = 0; k < 3; k++) buf[o + k] = Math.round(acc[k] / aSum); buf[o + 3] = Math.round(aSum * f * f * (3 - 2 * f));
+  }
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  await sharp(buf, { raw: { width: W, height: H, channels: 4 } }).png({ compressionLevel: 9 }).toFile(out);
+}
+
 // 着せ替え: 社長の絵の閉じた線 → 開いた目の楕円(線の少し上が目の中心。幅は線の1.25倍・高さは線の長さ)
 const eyesFromPanel = (R, pe) => pe.map(([x, y, len]) => { const [X, Y] = fwd(R, x, y - len * 0.25); return [X, Y, len * 1.25 * R.s, len * 1.0 * R.s]; });
 
 async function main() {
   const panels = await cutPanels(); const log = [];
+  const FIT = path.join(__dirname, 'life-sleep-faces-fit.json'); const fits = fs.existsSync(FIT) ? JSON.parse(fs.readFileSync(FIT, 'utf8')) : {}; const refit = process.argv.includes('--refit');
   const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
   for (const job of JOBS) {
     if (only && !only.includes(job.panel)) continue;
     const P = panels[job.panel], fullFile = path.join(IMG, job.full), fm = await sharp(fullFile).metadata();
     // 全身
-    let R = await coarse(P.png, fullFile, [0.3, 4.5]);
-    let eyesT = job.eyes ? job.eyes.map(([fx, fy, fw, fh]) => [fx * fm.width, fy * fm.height, fw * fm.width, fh * fm.height]) : eyesFromPanel(R, job.panelEyes);
-    R = await refine(P, fullFile, R, eyesT);
+    let R, eyesT;
+    if (fits[job.full] && !refit) { R = fits[job.full]; eyesT = job.eyes ? job.eyes.map(([fx, fy, fw, fh]) => [fx * fm.width, fy * fm.height, fw * fm.width, fh * fm.height]) : eyesFromPanel(R, job.panelEyes); }
+    else { R = await coarse(P.png, fullFile, [0.3, 4.5]);
+    eyesT = job.eyes ? job.eyes.map(([fx, fy, fw, fh]) => [fx * fm.width, fy * fm.height, fw * fm.width, fh * fm.height]) : eyesFromPanel(R, job.panelEyes);
+    R = await refine(P, fullFile, R, eyesT); }
     if (!job.eyes) eyesT = eyesFromPanel(R, job.panelEyes);
-    await compose(P, fullFile, R, eyesT, outOf(job.full), job.mask || {});
-    log.push(`${job.full}: 縮尺 ${R.s.toFixed(3)} 回転 ${R.rDeg.toFixed(1)}° 差 ${R.before.toFixed(0)}→${R.after.toFixed(0)}`);
+    await composeWhole(P, fullFile, R, outOf(job.full)); fits[job.full] = R;
+    log.push(`${job.full}: 縮尺 ${R.s.toFixed(3)} 回転 ${R.rDeg.toFixed(1)}°`);
     // 顔アイコン: 元の全身 → 顔アイコン の対応を求めて写す
     const faceRel = faceOf(job.full), faceFile = path.join(IMG, faceRel);
     if (!fs.existsSync(faceFile)) { log.push(`${faceRel}: 無い(とばす)`); continue; }
+    if (fits[faceRel] && !refit) { await composeWhole(P, faceFile, fits[faceRel], outOf(faceRel), { fadeBottom: 0.04 }); log.push(`${faceRel}: 控えの合わせ方`); continue; }
     if (job.faceEyes) {
       // 両目の2点から 社長の絵 → 顔アイコン を決めて詰める
       const pe = eyesT.map(([x, y]) => inv(R, x, y)), fe2 = job.faceEyes;
@@ -130,7 +153,7 @@ async function main() {
       const mx = (pe[0][0] + pe[1][0]) / 2, my = (pe[0][1] + pe[1][1]) / 2, [ax0, ay0] = fwd({ s, rDeg, tx: 0, ty: 0 }, mx, my);
       let RF = { s, rDeg, tx: (fe2[0][0] + fe2[1][0]) / 2 - ax0, ty: (fe2[0][1] + fe2[1][1]) / 2 - ay0 };
       RF = await refine(P, faceFile, RF, fe2);
-      await compose(P, faceFile, RF, fe2, outOf(faceRel), job.mask || {});
+      await composeWhole(P, faceFile, RF, outOf(faceRel), { fadeBottom: 0.04 }); fits[faceRel] = RF;
       log.push(`${faceRel}: 両目の2点から 差 ${RF.before.toFixed(0)}→${RF.after.toFixed(0)}`);
       continue;
     }
@@ -141,9 +164,10 @@ async function main() {
     const eyesF = faceEyesFromFull(F);
     let RF = { s: R.s * F.s, rDeg: R.rDeg + F.rDeg, tx: 0, ty: 0 }; const [ox, oy] = fwd(F, R.tx, R.ty); RF.tx = ox; RF.ty = oy;
     RF = await refine(P, faceFile, RF, eyesF);
-    await compose(P, faceFile, RF, eyesF, outOf(faceRel), job.mask || {});
+    await composeWhole(P, faceFile, RF, outOf(faceRel), { fadeBottom: 0.04 }); fits[faceRel] = RF;
     log.push(`${faceRel}: 全身→顔 縮尺 ${F.s.toFixed(3)}(差 ${F.after.toFixed(0)})/ 社長の絵→顔 差 ${RF.before.toFixed(0)}→${RF.after.toFixed(0)}`);
   }
+  fs.writeFileSync(FIT, JSON.stringify(Object.fromEntries(Object.entries(fits).map(([k, v]) => [k, { s: +v.s.toFixed(5), rDeg: +v.rDeg.toFixed(3), tx: +v.tx.toFixed(2), ty: +v.ty.toFixed(2) }])), null, 1) + '\n');
   console.log(log.join('\n'));
   const i = process.argv.indexOf('--preview'); if (i > 0) await preview(process.argv[i + 1]);
 }
