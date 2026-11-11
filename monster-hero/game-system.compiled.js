@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dac13d874f4d17ef
+// source-sha256: 57bd30f62ab9495c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -80673,7 +80673,8 @@ function HomeScreen({
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
       ranch: onOpenManagement,
       temple: onOpenTemple,
-      market: onOpenMarket
+      market: onOpenMarket,
+      battle: onOpenBattle
     };
   });
   const homeSceneRef = React.useRef(null);
@@ -112114,6 +112115,14 @@ function AssistantLifeRoomSheet({
     } : null;
   }).filter(Boolean) : [];
   const rvTeam = typeof assistantLifeRoomMasmons === 'function' ? assistantLifeRoomMasmons(id, life) : [];
+  const allTeamN = (() => {
+    try {
+      const t = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+      return Array.isArray(t) ? t.length : 0;
+    } catch (_) {
+      return 0;
+    }
+  })();
   const rvAct = (k, label, cls, fn, dis = false) => React.createElement("button", {
     key: k,
     type: "button",
@@ -112127,7 +112136,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-dock": true
   }, rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet), rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => onChat ? onChat(id, null) : toSheet(), !onChat && !home), rvAct('give', '🎁 贈る', 'bg-pink-600', () => {
     if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]);else if (w && w.group && canGive) onGive(w.group);else toSheet();
-  }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${rvTeam.length || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
+  }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${allTeamN || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
   const rvSheetW = land && typeof window !== 'undefined' && window.innerWidth < 760 ? '50%' : '42%';
   const rvScene = typeof AssistantLifeRoomScene === 'function' ? React.createElement(AssistantLifeRoomScene, {
     id: id,
@@ -112251,7 +112260,7 @@ function AssistantLifeRoomSheet({
   }), !hotBeat && beatRow, !hotCard && cardRow, React.createElement(AssistantLifeDoRow, {
     k: "masmon",
     icon: "🐾",
-    label: `${who.name}のマスモン${rvTeam.length ? ` ${rvTeam.length}体` : ''}`,
+    label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`,
     sub: "育ち方・編成を見る",
     on: onMasmon ? () => onMasmon(id) : null,
     why: "まだ見られません"
@@ -116762,6 +116771,24 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`,
     go: typeof go.temple === 'function' ? go.temple : null
   });
+  try {
+    const bt = typeof amgtRoomLine === 'function' ? assistantLifeAtPlace(life, ids, 'battle').filter(id => {
+      let t = null;
+      try {
+        t = amgtRoomLine(id);
+      } catch (_) {
+        t = null;
+      }
+      return typeof t === 'string' && t.indexOf('いま') === 0;
+    }) : [];
+    if (bt.length) rows.push({
+      k: 'battle',
+      place: 'battle',
+      icon: '⚔',
+      text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`,
+      go: typeof go.battle === 'function' ? go.battle : null
+    });
+  } catch (_) {}
   try {
     const mk = assistantLifeAtPlace(life, ids, 'market');
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
