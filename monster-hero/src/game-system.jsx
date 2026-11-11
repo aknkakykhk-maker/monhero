@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c4fd5fdd0bacb719
+// generated-sha256: 5c0146f122b63bc2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25925,7 +25925,7 @@ useEffect(()=>{
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
-{const jd=RHYTHM_PLAY_WATCH.jd;if(jd!==null)jd.push(note.index,RHYTHM_PLAY_WATCH_CODES[judgment]??5);}/* 観戦: 見られているあいだだけ、判定を1件ためる */
+{const jd=RHYTHM_PLAY_WATCH.jd;if(jd!==null&&jd.length<480)jd.push(note.index,RHYTHM_PLAY_WATCH_CODES[judgment]??5);}/* 観戦: 見られているあいだだけ、判定を1件ためる */
 RHYTHM_INPUT_REC.event(judgment==='MISS'?'miss':'hit',{note:note.index,j:judgment,dt:typeof deltaMs==='number'&&Number.isFinite(deltaMs)?Math.round(deltaMs):null,key:note.activePointerId,sky:rhythmNoteIsSky(note)});
 if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
@@ -55863,7 +55863,7 @@ const RHYTHM_WATCH = (() => {
       // 譜面: ためた判定(ノーツ番号, 判定の番号, …)を、その人の判定の表に入れる。数は上限で切る
       if (Array.isArray(raw.j)) {
         const jm = st.judged[id] || (st.judged[id] = new Map());
-        for (let i = 0; i + 1 < raw.j.length && i < 240; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
+        for (let i = 0; i + 1 < raw.j.length && i < 240 && jm.size < 4000; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));   // 知らないノーツ番号は描かないだけ。表が大きくなりすぎないよう上限で切る
       }
       st.rows[id] = row; st.lastPg = now;
       if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
@@ -57487,7 +57487,9 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
       {playing && <div className="shrink-0 px-3"><button type="button" onClick={close} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">観戦をやめる</button></div>}
     </div>
   );
-  return ReactDOM.createPortal(body, document.body);
+  // 画面を回して遊んでいるときは、回した器の中へ出す(保存できない知らせ・新しい版の知らせと同じ出し先)
+  const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
+  return ReactDOM.createPortal(body, target);
 }
 // 演奏中の部屋の一覧(観戦できる部屋)。フリーマッチの窓を開いているあいだだけ受付を聞く。フレンドの部屋は🤝を付けて先に並べる
 function RhythmWatchRoomList({ songs = [], friendIds = null, resolveIconUrl = null, onWatch }) {

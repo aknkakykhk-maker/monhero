@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 018b67bd098b1ed9
+// source-sha256: df87903a743a5ff4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42016,7 +42016,7 @@ const RhythmTapTest = ({
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     {
       const jd = RHYTHM_PLAY_WATCH.jd;
-      if (jd !== null) jd.push(note.index, RHYTHM_PLAY_WATCH_CODES[judgment] ?? 5);
+      if (jd !== null && jd.length < 480) jd.push(note.index, RHYTHM_PLAY_WATCH_CODES[judgment] ?? 5);
     }
     RHYTHM_INPUT_REC.event(judgment === 'MISS' ? 'miss' : 'hit', {
       note: note.index,
@@ -93855,7 +93855,7 @@ const RHYTHM_WATCH = (() => {
       row.lt = raw.lt === 1;
       if (Array.isArray(raw.j)) {
         const jm = st.judged[id] || (st.judged[id] = new Map());
-        for (let i = 0; i + 1 < raw.j.length && i < 240; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
+        for (let i = 0; i + 1 < raw.j.length && i < 240 && jm.size < 4000; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
       }
       st.rows[id] = row;
       st.lastPg = now;
@@ -96619,7 +96619,8 @@ function RhythmWatchScreen({
     onClick: close,
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "観戦をやめる")));
-  return ReactDOM.createPortal(body, document.body);
+  const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
+  return ReactDOM.createPortal(body, target);
 }
 function RhythmWatchRoomList({
   songs = [],

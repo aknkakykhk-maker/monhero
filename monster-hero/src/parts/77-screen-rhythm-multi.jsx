@@ -3087,7 +3087,9 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
       {playing && <div className="shrink-0 px-3"><button type="button" onClick={close} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">観戦をやめる</button></div>}
     </div>
   );
-  return ReactDOM.createPortal(body, document.body);
+  // 画面を回して遊んでいるときは、回した器の中へ出す(保存できない知らせ・新しい版の知らせと同じ出し先)
+  const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
+  return ReactDOM.createPortal(body, target);
 }
 // 演奏中の部屋の一覧(観戦できる部屋)。フリーマッチの窓を開いているあいだだけ受付を聞く。フレンドの部屋は🤝を付けて先に並べる
 function RhythmWatchRoomList({ songs = [], friendIds = null, resolveIconUrl = null, onWatch }) {
