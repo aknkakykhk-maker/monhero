@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9fc38ed1ab868de6
+// source-sha256: f8f34a9516c9ad31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -134879,7 +134879,7 @@ const normalizeAssistantMasmonTrain = raw => {
   if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
     if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
     const one = {};
-    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+    for (const [key, e] of Object.entries(ms).slice(-24)) {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
@@ -134957,7 +134957,7 @@ const amgtCanLearn = (t, st, me) => {
 };
 const amgtInitMon = (monster, lv, st) => {
   const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
-  const learn = amgtTechsOf(monster).filter(t => t.learn && (t.learn.start || !t.learn.need && amgtCanLearn(t, st, null))).map(t => t.id);
+  const learn = amgtTechsOf(monster).filter(t => t.learn && t.learn.start).map(t => t.id);
   const m = {};
   for (const k of AMGT_SENSE_KEYS) m[k] = base;
   for (const id of learn) m[id] = base;
@@ -135036,15 +135036,18 @@ const AMGT_STORE = {
       } catch (_) {}
     });
   },
-  async load() {
-    if (this.loaded) return this.state;
-    let raw = null;
-    try {
-      raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
-    } catch (_) {}
-    this.loaded = true;
-    this.set(normalizeAssistantMasmonTrain(raw));
-    return this.state;
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(normalizeAssistantMasmonTrain(raw));
+      return this.state;
+    })();
+    return this._p;
   }
 };
 const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
@@ -135167,7 +135170,8 @@ const amgtOnLifeSlot = life => {
 };
 const amgtWasAtPlace = (aid, slot, st = AMGT_STORE.state) => {
   if (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) amgtNoteLife(ASSISTANT_LIFE_STORE.state.life);
-  return ((AMGT_STORE.state.at || st.at)[aid] || []).includes(slot);
+  const day = amgtSlotDay(slot);
+  return ((AMGT_STORE.state.at || st.at)[aid] || []).some(n => amgtSlotDay(n) === day && n <= slot);
 };
 const amgtChoose = (aid, e, row, _rnd, slot) => {
   if (!amgtOn() || !AMGT_STORE.loaded || !row || !e || !Number.isInteger(slot)) return null;
@@ -135192,6 +135196,8 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
   const K = AMGT_KINDS[act.k];
   const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const me0 = (AMGT_STORE.state.mons[aid] || {})[amgtKeyOf(row)];
+  if (me0 && me0.log.some(x => x.s === slot)) return e;
   const {
     next,
     me,
@@ -135490,7 +135496,7 @@ function AmgtCard({
       className: `flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`,
       "data-amgt-tech": x.id
     }, React.createElement("span", {
-      className: `w-[96px] shrink-0 truncate ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`
+      className: `w-[96px] shrink-0 break-words leading-tight ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`
     }, has ? x.name : '???'), React.createElement("span", {
       className: "w-[46px] shrink-0 whitespace-nowrap text-[9px]"
     }, [0, 1, 2, 3].map(d => React.createElement("i", {
