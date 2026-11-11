@@ -11803,7 +11803,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
   { who:'dra',       e:'happy',    monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'いっしょにいたいってことだな。えへへ' },
   { who:'momosuke',  e:'wink',     t:'ねえソラちゃん、2体といっしょに、ここで助手やればいいじゃん♡' },
-  { who:'sorashido', e:'excited',  t:'えっ！？ ・・・やります！ 推しのそばにいたいので！ 理由はそれだけです！' },
+  { who:'sorashido', e:'excited',  t:'えっ！？ ・・・やります！ 推しのそばにいたいからです！ 理由はそれだけです！' },
   { who:'mua',       e:'wink',     t:'理由が正直すぎｗ でも、そういうの好きぢゃん' },
   { who:'sorashido', e:'happy',    atsu:'with',    t:'改めて、よろしくお願いします！ みゅあさん、ききさん、ももさん、ドラさん、あつさん、きゅうこちゃん！' },
   { who:'sorashido', e:'happy',    atsu:'without', t:'改めて、よろしくお願いします！ みゅあさん、ききさん、ももさん、ドラさん、きゅうこちゃん！' },
