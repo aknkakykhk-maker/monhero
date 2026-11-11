@@ -897,6 +897,44 @@
    "variant": "別絵キラ",
    "base": "C-070",
    "name_source": "C-070 のキラ・別絵キラ(同じ子。デッキには1体まで)"
+  },
+  {
+   "no": "C-952",
+   "name": "スネグーラチカ",
+   "type": "水中",
+   "life": 6,
+   "main": "ウンディーネ",
+   "sub": "？？？",
+   "img": "C-U02.jpg",
+   "display_no": "C-◆04",
+   "name_source": "ウンディーネの設計(tools/art-sources/card-battle/undine/snegurachka.cards.json・2026-11-11。ライフ6・水中は仮にウンディーネと同じ)。絵は undine/C-U02*.jpg。番号 C-952 はオリヒメ C-951 に続けた案(社長の返事待ち)",
+   "sub_note": "副血統は ??? (レアの印。カードの絵には「サブ レア」)。専用技は持たず、ウンディーネの技を使う"
+  },
+  {
+   "no": "C-952S",
+   "name": "スネグーラチカ",
+   "type": "水中",
+   "life": 6,
+   "main": "ウンディーネ",
+   "sub": "？？？",
+   "img": "C-U02S.jpg",
+   "variant": "キラ",
+   "base": "C-952",
+   "display_no": "C-◆04S",
+   "name_source": "C-952 のキラ(同じ子。デッキには1体まで)"
+  },
+  {
+   "no": "C-952V",
+   "name": "スネグーラチカ",
+   "type": "水中",
+   "life": 6,
+   "main": "ウンディーネ",
+   "sub": "？？？",
+   "img": "C-U02V.jpg",
+   "variant": "別絵キラ",
+   "base": "C-952",
+   "display_no": "C-◆04S",
+   "name_source": "C-952 の別絵キラ(同じ子。デッキには1体まで)"
   }
  ],
  "skills": []
