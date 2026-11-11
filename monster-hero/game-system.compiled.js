@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05ece8eaead94eb1
+// source-sha256: aba836cab6d0a4ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19653,6 +19653,29 @@ const imagePreloadQueue = (() => {
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+const BATTLE_TUTORIAL_FIRST_KEY = 'mh_battle_tutorial_first_v1';
+const BATTLE_TUTORIAL_MORE_KEY = 'mh_battle_tutorial_more_v1';
+const normalizeBattleTutorialFirst = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const h = r.hints && typeof r.hints === 'object' && !Array.isArray(r.hints) ? r.hints : {};
+  return {
+    done: r.done === true,
+    at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0,
+    hints: {
+      system: h.system === true,
+      mode: h.mode === true,
+      difficulty: h.difficulty === true
+    }
+  };
+};
+const normalizeBattleTutorialMore = v => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return {
+    offered: r.offered === true,
+    done: r.done === true,
+    declined: r.declined === true
+  };
+};
 const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
 const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
 const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';
@@ -192719,7 +192742,7 @@ function MonsterHeroGame() {
       setGameState('PROFILE');
       return;
     }
-    if (kind === 'battleGuide') return;
+    if (kind === 'battleGuide' || kind === 'battleMore') return;
     if (kind === 'rhythm') {
       if (remember) {
         try {
@@ -192955,6 +192978,62 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
+  const realBattlePlayedRef = useRef(false);
+  useEffect(() => {
+    if (runStage === 'BATTLE' && !debugBattleRef.current && battleTutorialStep == null) realBattlePlayedRef.current = true;
+  }, [runStage, battleTutorialStep]);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || runStage !== null || !realBattlePlayedRef.current || tutorialStep != null || battleTutorialStep != null) return;
+    realBattlePlayedRef.current = false;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first, more] = await Promise.all([storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false), storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false)]);
+        const f = normalizeBattleTutorialFirst(first),
+          m = normalizeBattleTutorialMore(more);
+        if (cancelled || seen === true || !f.done || m.offered) return;
+        await storeSet(BATTLE_TUTORIAL_MORE_KEY, {
+          ...m,
+          offered: true
+        }, false);
+        if (!cancelled) {
+          setTutorialKind('battleMore');
+          setTutorialStep(0);
+        }
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootPhase, gameState, runStage, tutorialStep, battleTutorialStep]);
+  const [battleSelectHint, setBattleSelectHint] = useState(null);
+  useEffect(() => {
+    const key = gameState === 'BATTLE_SYSTEM_SELECT' ? 'system' : gameState === 'BATTLE_MODE_SELECT' ? 'mode' : gameState === 'BATTLE_DIFFICULTY_SELECT' ? 'difficulty' : null;
+    if (!key) {
+      setBattleSelectHint(null);
+      return undefined;
+    }
+    if (battleTutorialStep != null || typeof BATTLE_SELECT_HINTS === 'undefined' || !BATTLE_SELECT_HINTS[key]) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first] = await Promise.all([storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false)]);
+        const f = normalizeBattleTutorialFirst(first);
+        if (cancelled || seen === true || f.hints[key]) return;
+        await storeSet(BATTLE_TUTORIAL_FIRST_KEY, {
+          ...f,
+          hints: {
+            ...f.hints,
+            [key]: true
+          }
+        }, false);
+        if (!cancelled) setBattleSelectHint(key);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameState, battleTutorialStep]);
   useEffect(() => {
     if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || inheritedUniqueCompensation || dailyMasuAdvice || eventReplay || dailyMasuAdviceCheckedRef.current) return;
     dailyMasuAdviceCheckedRef.current = true;
@@ -199185,10 +199264,10 @@ function MonsterHeroGame() {
     const options = getDebugEnemyOptions(mode.id);
     if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
   };
-  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];
+  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics', 'first', 'more'];
   const battleTutorialVariantOf = variant => BATTLE_TUTORIAL_VARIANTS.includes(variant) ? variant : 'v2';
   const battleTutorialModeOf = variant => battleTutorialVariantOf(variant) === 'tactics' ? BATTLE_MODE_TACTICS : BATTLE_MODE_CHALLENGE;
-  const battleTutorialScenarioOf = variant => battleTutorialVariantOf(variant) === 'tactics' ? typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS || null : typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO || null;
+  const battleTutorialScenarioOf = variant => battleTutorialVariantOf(variant) === 'tactics' ? typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS || null : battleTutorialVariantOf(variant) === 'first' ? typeof BATTLE_TUTORIAL_SCENARIO_FIRST !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_FIRST || null : typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO || null;
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     stopAllAuto();
     battleSpeedRef.current = 1;
@@ -199243,6 +199322,11 @@ function MonsterHeroGame() {
     setBattleTutorialReturn(returnTo);
     setBattleTutorialVariant(battleTutorialVariantOf(variant));
     setBattleTutorialStep(0);
+    if (battleTutorialVariantOf(variant) === 'more') {
+      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      advanceRunStage('PICK_HERO');
+      return;
+    }
     if (variant !== 'v1') {
       setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
@@ -199274,6 +199358,7 @@ function MonsterHeroGame() {
   const scenarioPicksTeaching = id => !battleScenario || !battleScenario.teachingId || battleScenario.teachingId === id;
   const endBattleTutorial = async (completed = false) => {
     const back = battleTutorialReturn;
+    const endedVariant = battleTutorialVariant;
     battleScenarioRef.current = null;
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
@@ -199293,7 +199378,24 @@ function MonsterHeroGame() {
     setBattleTutorialVariant('v2');
     if (completed && back === 'HOME') {
       try {
-        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);
+        if (endedVariant === 'first') {
+          const cur = normalizeBattleTutorialFirst(await storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false));
+          await storeSet(BATTLE_TUTORIAL_FIRST_KEY, {
+            ...cur,
+            done: true,
+            at: cur.at || Date.now()
+          }, false);
+        } else {
+          await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);
+          if (endedVariant === 'more') {
+            const cur = normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false));
+            await storeSet(BATTLE_TUTORIAL_MORE_KEY, {
+              ...cur,
+              offered: true,
+              done: true
+            }, false);
+          }
+        }
       } catch {}
     }
     if (back === 'HOME') {
@@ -199302,7 +199404,7 @@ function MonsterHeroGame() {
     }
     setGameState(back || 'DEBUG_SETTINGS');
   };
-  const battleTutorialSteps = (battleTutorialVariant === 'v1' ? typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL : battleTutorialVariant === 'tactics' ? typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS : typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2) || [];
+  const battleTutorialSteps = (battleTutorialVariant === 'v1' ? typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL : battleTutorialVariant === 'first' ? typeof ASSISTANT_BATTLE_TUTORIAL_FIRST !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_FIRST : battleTutorialVariant === 'more' ? typeof ASSISTANT_BATTLE_TUTORIAL_MORE !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_MORE : battleTutorialVariant === 'tactics' ? typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS : typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2) || [];
   const battleTutorial = battleTutorialStep != null ? battleTutorialSteps[battleTutorialStep] || null : null;
   const battleTutorialMode = battleTutorialModeOf(battleTutorialVariant);
   const battleTutorialSystem = isTacticsMode(battleTutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC;
@@ -215119,11 +215221,48 @@ function MonsterHeroGame() {
       runMode: runMode,
       totalTurnCount: totalTurnCount,
       ultimateDistanceBreakLevels: ultimateDistanceBreakLevels
-    }), tutorialStep != null && (() => {
+    }), battleSelectHint && battleTutorialStep == null && typeof BATTLE_SELECT_HINTS !== 'undefined' && BATTLE_SELECT_HINTS[battleSelectHint] && activeAssistant && React.createElement("div", {
+      "data-battle-select-hint": battleSelectHint,
+      className: "fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pointer-events-none",
+      style: {
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom))'
+      }
+    }, React.createElement("div", {
+      className: "pointer-events-auto w-full max-w-md rounded-2xl border-2 bg-slate-950/95 p-3 shadow-2xl",
+      style: {
+        borderColor: activeAssistant.accent
+      }
+    }, React.createElement("div", {
+      className: "flex items-start gap-2"
+    }, React.createElement("img", {
+      src: assistantFaceSrc(activeAssistant, 'happy'),
+      alt: "",
+      className: "h-10 w-10 shrink-0 rounded-full object-cover"
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "block text-[10px] font-black tracking-widest",
+      style: {
+        color: activeAssistant.accent
+      }
+    }, activeAssistant.name), React.createElement("span", {
+      className: "block text-[12px] font-bold leading-relaxed text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(BATTLE_SELECT_HINTS[battleSelectHint])))), React.createElement("button", {
+      type: "button",
+      "data-battle-select-hint-close": true,
+      onClick: () => setBattleSelectHint(null),
+      className: "mt-2 min-h-[40px] w-full rounded-xl text-[12px] font-black text-black active:scale-[.98]",
+      style: {
+        backgroundColor: activeAssistant.accent
+      }
+    }, "わかった！"))), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
+      const battleMore = tutorialKind === 'battleMore';
       const battleGuide = tutorialKind === 'battleGuide';
+      const guideLook = battleGuide || battleMore;
       const rhythm = tutorialKind === 'rhythm';
-      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
+      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleMore ? typeof assistantBattleMorePages === 'function' && assistantBattleMorePages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
       const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
       if (!page) return null;
       const who = activeAssistant;
@@ -215151,7 +215290,7 @@ function MonsterHeroGame() {
         style: {
           color: who.accent
         }
-      }, tutorialStep + 1, " / ", pages.length), !battleGuide && React.createElement("button", {
+      }, tutorialStep + 1, " / ", pages.length), !guideLook && React.createElement("button", {
         onClick: () => finishTutorial(true),
         className: "px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
       }, "スキップ")), React.createElement("div", {
@@ -215199,7 +215338,7 @@ function MonsterHeroGame() {
       }, "この話をヘルプで詳しく見る"), page.offer === 'battle' && React.createElement("button", {
         onClick: () => {
           finishTutorial(true);
-          startBattleTutorial('HOME');
+          startBattleTutorial('HOME', 'first');
         },
         className: "w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
@@ -215210,7 +215349,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: () => {
           finishTutorial(false);
-          startBattleTutorial('HOME');
+          startBattleTutorial('HOME', 'first');
         },
         className: "min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
@@ -215219,13 +215358,42 @@ function MonsterHeroGame() {
       }, "チュートリアルを見る"), React.createElement("button", {
         onClick: () => setTutorialStep(v => v + 1),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]"
+      }, "今は見ない")), page.offer === 'battleMore' && React.createElement("div", {
+        className: "w-full grid grid-cols-1 gap-2 mt-3",
+        "data-battle-more-offer": true
+      }, React.createElement("button", {
+        "data-battle-more-start": true,
+        onClick: () => {
+          finishTutorial(false);
+          startBattleTutorial('HOME', 'more');
+        },
+        className: "min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+        style: {
+          backgroundColor: who.accent
+        }
+      }, "つづきのれんしゅうをやる"), React.createElement("button", {
+        "data-battle-more-later": true,
+        onClick: () => {
+          void (async () => {
+            try {
+              const cur = normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false));
+              await storeSet(BATTLE_TUTORIAL_MORE_KEY, {
+                ...cur,
+                offered: true,
+                declined: true
+              }, false);
+            } catch {}
+          })();
+          setTutorialStep(v => v + 1);
+        },
+        className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]"
       }, "今は見ない")), page.declined && React.createElement("button", {
         onClick: () => finishTutorial(false),
         className: "w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
           backgroundColor: who.accent
         }
-      }, "わかった！"), !battleGuide && React.createElement("div", {
+      }, "わかった！"), !guideLook && React.createElement("div", {
         className: "w-full grid grid-cols-2 gap-2 mt-3"
       }, React.createElement("button", {
         disabled: tutorialStep <= 0,
@@ -215239,7 +215407,7 @@ function MonsterHeroGame() {
         style: page.offer === 'battle' ? undefined : {
           backgroundColor: who.accent
         }
-      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : '次へ')), battleGuide && !page.offer && !page.declined && React.createElement("button", {
+      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : '次へ')), guideLook && !page.offer && !page.declined && React.createElement("button", {
         onClick: () => setTutorialStep(v => v + 1),
         className: "w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
@@ -215553,13 +215721,28 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: cat.color
         }
-      }, label))), topic.launch === 'battleTutorial' && React.createElement("button", {
-        onClick: () => startBattleTutorial('HOME'),
+      }, label))), topic.launch === 'battleTutorial' && React.createElement("div", {
+        className: "space-y-2",
+        "data-battle-tutorial-launch": true
+      }, React.createElement("button", {
+        "data-battle-tutorial-launch-first": true,
+        onClick: () => startBattleTutorial('HOME', 'first'),
         className: "w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95",
         style: {
           backgroundColor: cat.color
         }
-      }, "🎓 バトルのれんしゅうを始める"), React.createElement("div", {
+      }, "🎓 はじめの1戦(カードを出して勝つまで)"), React.createElement("button", {
+        "data-battle-tutorial-launch-more": true,
+        onClick: () => startBattleTutorial('HOME', 'more'),
+        className: "w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95",
+        style: {
+          backgroundColor: cat.color
+        }
+      }, "🎓 つづきのれんしゅう(バトルのいろいろな仕組み)"), React.createElement("button", {
+        "data-battle-tutorial-launch-all": true,
+        onClick: () => startBattleTutorial('HOME'),
+        className: "w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95"
+      }, "🎓 れんしゅうを最初から全部通す")), React.createElement("div", {
         className: "pt-1 flex gap-2"
       }, React.createElement("button", {
         onClick: () => setHelpTopicId(null),
