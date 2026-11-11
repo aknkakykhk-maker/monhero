@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 04fb2471843b596b
+// generated-sha256: 2649cd6c46b85f69
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -45,7 +45,10 @@ const MH_SCREEN_TRAIL=(()=>{
       //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
       document.addEventListener('visibilitychange',()=>{last=0;});
-      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -5332,6 +5335,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
   // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
   multiLook:'LIGHT',
+  // 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11 社長「消せる・はじめは入」)。新しい項目なので、保存値に無い人は ON で補われる
+  multiLiveBoard:true,
   // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
   // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
   modeSelectArt:true, modeSelectComment:true,
@@ -5574,7 +5579,7 @@ const normalizeRhythmSettings = value => {
     noteSeTickVolume:rhythmFiniteStep(source.noteSeTickVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeTickVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), multiLiveBoard:bool('multiLiveBoard'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -13222,6 +13227,50 @@ const MARKET_CURRENCY_META = Object.freeze({
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
   : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
+
+// ==== 助手がマーケットにいるときの得(2026-11-08 社長・2026-11-11 ナカヨシ10と分担) ====
+// 助手が居場所「マーケット」にいるあいだ、その日のおすすめ品1つが1割引き(1日1回・1個まで・ランキングに効かない)。
+// ・おすすめ品: ダイヤで買う「道具」のうち、買える物(100〜5,000ダイヤ・魂格再編の書は外す)から、その日(朝4時区切り)の日付で1つ。同じ日は同じ品
+// ・割引き: 値段の9割(切り捨て・1ダイヤ未満にならない)。割引き中の品は1個だけ買える(まとめ買いの窓を出さない)
+// ・1日1回の印: 新しい保存キー mh_assistant_market_perk_v1 に { day, used } を足すだけ(既存のキーは触らない)。買えたときだけ使用済みにする
+// ・助手がマーケットにいるかは ASSISTANT_LIFE_LINKS 側(assistantLifeMarketWho)が決める。いなければ何も出さず、値段も変えない
+const ASSISTANT_MARKET_PERK_KEY = 'mh_assistant_market_perk_v1';
+const assistantMarketPerkCandidates = (items) => (Array.isArray(items) ? items : [])
+  .filter(it => it && it.type === 'item' && it.shop !== false && it.available !== false && !it.giftOnly && !it.currency
+    && it.usage !== 'soulRankRespec' && Number(it.cost) >= 100 && Number(it.cost) <= 5000)
+  .sort((a, b) => (String(a.id) < String(b.id) ? -1 : 1));
+const assistantMarketPerkHash = (text) => { let h = 0; for (const ch of String(text)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const assistantMarketPerkPick = (items, dayKey) => {
+  const list = assistantMarketPerkCandidates(items);
+  return list.length ? list[assistantMarketPerkHash(dayKey) % list.length] : null;
+};
+const assistantMarketPerkCost = (cost) => Math.max(1, Math.floor((Number(cost) || 0) * 0.9));
+const normalizeAssistantMarketPerk = (v) => ({
+  day: v && typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : '',
+  used: !!v && v.used === true,
+});
+let assistantMarketPerkState = { loaded: false, day: '', used: false };
+const assistantMarketPerkLoad = async () => {
+  let saved = null;
+  try { saved = await storeGet(ASSISTANT_MARKET_PERK_KEY, null, false); } catch { saved = null; }
+  assistantMarketPerkState = { loaded: true, ...normalizeAssistantMarketPerk(saved) };
+  return assistantMarketPerkState;
+};
+const assistantMarketPerkUsedToday = () => assistantMarketPerkState.day === jstDayKey4() && assistantMarketPerkState.used;
+const assistantMarketPerkMarkUsed = async () => {
+  const day = jstDayKey4();
+  assistantMarketPerkState = { loaded: true, day, used: true };
+  try { await storeSet(ASSISTANT_MARKET_PERK_KEY, { day, used: true }, false); } catch { /* 保存できなくてもこの会話の間は使用済み */ }
+};
+// 助手がいまマーケットにいて、今日のおすすめ品があるときだけ { itemId, itemName, discountedCost, used } を返す(無ければ null)。
+// 保存の読み込みが済むまでは null(まだ「使ったか」が分からないので出さない)。助手ライフの帯が ASSISTANT_LIFE_LINKS.marketPerkToday 経由で呼ぶ
+const assistantMarketPerkToday = () => {
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
+  const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
+  if (!item) return null;
+  if (!assistantMarketPerkState.loaded) { void assistantMarketPerkLoad(); return null; }
+  return { itemId: item.id, itemName: item.name, discountedCost: assistantMarketPerkCost(item.cost), used: assistantMarketPerkUsedToday() };
+};
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
 // 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
@@ -22645,6 +22694,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
                 何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
+{/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
+{field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
 </div>
 </section>
 <section className={card}>
@@ -38826,7 +38877,7 @@ const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data
 // 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
 //   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
-// 裏クイックをどこでも回しているあいだ(左下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
+// 裏クイックをどこでも回しているあいだ(右下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
 //   (2026-11-11 社長「ホームにいなくても出るときがある」。HOME へ戻ったときにまとめて出す)
 const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
@@ -38934,10 +38985,10 @@ const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
     face: growthFxAssistantFace(assistantId, 'excited'), gains });
 };
 // マスモンに絆経験値のアイテムを使った(60-app.jsx の useBondXpTickets から)
-const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after }) => {
+const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after, note = '' }) => {
   if (!before || !after || !(growthFxNum(gain) > 0)) return;
   const pct = (info) => growthFxPct((growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext))) * 100);
-  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`,
+  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`, sub: note ? String(note) : undefined,
     faces: image ? [image] : [], faceRound: true,
     rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
 };
@@ -39278,6 +39329,7 @@ const GrowthFxItemCard = ({ sheet, level, onClose }) => {
         {(sheet.faces || []).length > 0 && <div className="faces">{sheet.faces.map((src, i) => <img key={i} src={src} alt="" className={sheet.faceRound ? 'round' : ''} style={{ animationDelay: `${0.4 + i * 0.15}s` }}/>)}</div>}
         <div className="ttl">{sheet.title}{reaction && <span className={`tag ${reaction}`}>{reaction === 'like' ? '大好き！' : 'ちょっと苦手…'}</span>}</div>
         {sheet.item && <div className="itm">{sheet.item}</div>}
+        {sheet.sub && <div className="itm" data-growth-fx-note>{sheet.sub}</div>}
         {(sheet.rows || []).map((row, i) => {
           const rk = growthFxKind(row.kind);
           const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
@@ -39520,6 +39572,69 @@ const GrowthFxLayer = ({ screen, load }) => {
         : <GrowthFxItemCard key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>)}
     </>
   );
+};
+
+// ---- part: 45-quick-anywhere-float.jsx ----
+// ===== 裏クイック(どこでも回す)の小さな帯の置き場所(2026-11-11) =====
+// テスターいちか「転生のすべて選択ボタンと被るから右下にしてほし〜」。
+// 帯は画面の隅に浮かせて置く(画面の高さを取らない)。右下を第一にするが、その画面のボタンにかかるときは、
+// 空いている所へ移す。探す順: 右の端を下から上へ(6pxずつ・画面の高さの6割まで)→ 左の端を下から上へ。どこも空いていなければ右下のまま。
+// 画面が変わったとき・中身が遅れて出たとき・0.8秒ごとに置き直す(見た目だけ。周回の動きには触らない)。
+// tools/battle/quick-run-anywhere-strip-overlap-check.js が、縦・横・横小でほかのボタンと重ならないことを見る。
+const QUICK_ANYWHERE_FLOAT_STEP = 6;
+const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
+const quickAnywhereFloatStyle = (spot) => {
+  const s = { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` };
+  if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
+  else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
+  return s;
+};
+// そこに置いたとき、ほかの押せるもの(button・a・[role=button])にかかるか。自分と、自分の詳細の窓は数えない
+const quickAnywhereFloatHits = (el, spot) => {
+  if (typeof document === 'undefined' || !el) return 0;
+  const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  const css = getComputedStyle(document.documentElement);
+  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  const saB = num(css.getPropertyValue('--mh-sa-bottom')), saL = num(css.getPropertyValue('--mh-sa-left')), saR = num(css.getPropertyValue('--mh-sa-right'));
+  const bottom = Math.max(8 + spot.lift, saB + 6 + spot.lift);
+  const top = window.innerHeight - bottom - h;
+  const left = spot.side === 'right' ? window.innerWidth - Math.max(8, saR + 6) - w : Math.max(8, saL + 6);
+  const R = { left, top, right: left + w, bottom: top + h };
+  let hits = 0;
+  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+    if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    const cs = getComputedStyle(o);
+    if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
+    const r = o.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits++;
+  }
+  return hits;
+};
+const quickAnywhereFloatPick = (el) => {
+  const maxLift = Math.max(0, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT) / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
+  for (const side of ['right', 'left']) {
+    for (let lift = 0; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
+      const spot = { side, lift };
+      if (quickAnywhereFloatHits(el, spot) === 0) return spot;
+    }
+  }
+  return { side: 'right', lift: 0 };
+};
+// screen … いまの gameState(変わったら置き直す)。children … 帯のボタンの中身。ほかの props はボタンへそのまま渡す
+const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
+  const ref = useRef(null);
+  const [spot, setSpot] = useState({ side: 'right', lift: 0 });
+  React.useLayoutEffect(() => {
+    // いまの置き場所がまだ空いていれば動かさない(0.8秒ごとに行ったり来たりしない)
+    const place = () => { if (!ref.current) return; setSpot(prev => (quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current))); };
+    // 画面が変わったら、いちばん良い所(右下)から探し直す。中身が遅れて出る画面のため、少しおいてもう一度
+    const fresh = () => { if (ref.current) setSpot(quickAnywhereFloatPick(ref.current)); };
+    fresh();
+    const t1 = setTimeout(fresh, 300), t2 = setTimeout(place, 1200), iv = setInterval(place, 800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); };
+  }, [screen]);
+  return <button ref={ref} type="button" data-quick-anywhere-spot={`${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
@@ -40400,6 +40515,11 @@ function BreederMarketScreen({
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
   const [sheetPending,setSheetPending]=useState(false);
+  // 助手がマーケットにいるときの「今日のおすすめ品1割引き」(20-market-notices-help.jsx の assistantMarketPerkToday)。
+  // 保存の読み込みが済んだら描き直す。割引き中の品は cost を9割にした写しに差し替え、画面の値段も買う処理の値段もそれを読む
+  const [perkTick,setPerkTick]=useState(0);
+  React.useEffect(()=>{ let alive=true; Promise.resolve(assistantMarketPerkLoad()).then(()=>{ if(alive) setPerkTick(n=>n+1); }); return ()=>{ alive=false; }; },[]);
+  const perkToday=(()=>{ void perkTick; const p=assistantMarketPerkToday(); return p&&!p.used?p:null; })();
   // 円盤石を買えたときの「円盤石から再生」の演出(DiscRebirthFx)。{ monsterId, discIcon }
   const [rebirth,setRebirth]=useState(null);
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
@@ -40459,7 +40579,8 @@ function BreederMarketScreen({
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false)
+    .map(item=>perkToday&&item.id===perkToday.itemId?{...item,cost:perkToday.discountedCost,perk:true,perkBaseCost:item.cost}:item);
   // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
   const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
@@ -40569,6 +40690,8 @@ function BreederMarketScreen({
       if(result===true||result?.ok){
         // 円盤石なら、買えたあとに「円盤石から再生」を出す(円盤石は1体1回なので、その子を初めて手に入れたときだけ)
         if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        // 割引き中の品を買えたら、今日の1割引きは使用済み(買えたときだけ。買えなかったら残る)
+        if(sheet.item&&sheet.item.perk){ await assistantMarketPerkMarkUsed(); setPerkTick(n=>n+1); }
         setSheet(null);
       }
     } finally { sheetBusyRef.current = false; setSheetPending(false); }
@@ -40596,10 +40719,10 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':null}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
+          onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
@@ -43666,6 +43789,7 @@ function MasuInheritedUniqueCompensation({
 function MasuRebirthAnimation({
   rebirthAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
 
       const starList=breakthroughStars(rebirthAnimation.masu.rebirthCount||1);
       const finalBreak=isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
@@ -43684,6 +43808,7 @@ function MasuRebirthAnimation({
 function MasuTranscendAnimation({
   transcendAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-transcend-animation" role="status" aria-live="polite">
       <div className="mh-transcend-converge" aria-hidden="true"><i style={{'--i':0}}/><i style={{'--i':1}}/><i style={{'--i':2}}/><i style={{'--i':3}}/><i style={{'--i':4}}/><i style={{'--i':5}}/><i style={{'--i':6}}/><i style={{'--i':7}}/></div>
@@ -43703,6 +43828,7 @@ function MasuTranscendAnimation({
 function MasuSoulRankAnimation({
   soulRankAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   // 魂格の段階の色で燃え上がり、光の輪が広がって、段階名とLv上限が数え上がる。
   // 魂格Ⅴだけは5色が混ざった特別な背景にする(色は step.accent が正本)
   const a = soulRankAnimation;
@@ -43739,6 +43865,7 @@ function MasuSoulRankAnimation({
 function MasuReincarnateAnimation({
   reincarnateAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-reincarnation-animation" role="status" aria-live="polite">
       {/* 層の順番はCSSのz-indexで決めている(放射光0 → 本体1 → 粒2 → 輪3 → 閃光5 → 文字6)。
@@ -43765,6 +43892,7 @@ function MasuReincarnateAnimation({
 function MasuDonationAnimation({
   donationAnimation,
 }) {
+  React.useEffect(()=>{ if(typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[]); // 助手ライフ: 神殿にいる助手との仲良し度(1日1回)
   return (
 <div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>
   );
@@ -44822,6 +44950,7 @@ function MasuFusionScreen({
   setFusionSubId, setFusionSubIds, setMasuMonDetail, lockedMasuIds=[],
   fusionInheritSkillKeys={}, setFusionInheritSkillKeys=()=>{},
 }) {
+  React.useEffect(()=>{ if(fusionResultData&&typeof assistantLifeTemplePerk==='function') void assistantLifeTemplePerk(); },[!!fusionResultData]); // 助手ライフ: 合体を終えたとき、神殿にいる助手との仲良し度(1日1回)
 
       // 戻り先(TEMPLE)の指定は本体に残す。この画面は「閉じる」とだけ言う
       const closeFusion = onClose;
@@ -47034,6 +47163,8 @@ function HomeScreen({
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket}; });
   const homeSceneRef=React.useRef(null);
   const [homeSceneWide,setHomeSceneWide]=React.useState(false);
   React.useEffect(()=>{
@@ -53569,6 +53700,11 @@ const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000
   + (typeof RHYTHM_SONG_INTRO_MS === 'number' ? RHYTHM_SONG_INTRO_MS : 3000) + 4 * 800 + 10000;
 // 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
 const RHYTHM_MULTI_QUEUE_MAX = 300;
+// 演奏中にほかの人の順位・スコア・コンボを見る札(2026-11-11 社長「演奏中もほかプレイヤーのスコア等みたい。ただし重くなるようならかんがえもの」)。
+// 3秒に1回だけ、いまのスコアとコンボを小さい知らせ(pg)で送る。受けた側は数字の文字を書き換えるだけで、演奏画面は作り直さない
+const RHYTHM_MULTI_LIVE_MS = 3000;
+const RHYTHM_MULTI_LIVE_SCORE_MAX = 1e12;
+const RHYTHM_MULTI_LIVE_COMBO_MAX = 100000;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
@@ -53938,6 +54074,39 @@ const RHYTHM_MULTI = (() => {
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => (s ? s.members[s.selfId] : null);
   const isHostNow = () => { const o = ordered(); return !!s && o.length > 0 && o[0].id === s.selfId; };
+  // ---- 演奏中の札(RhythmMultiLiveBoard)のための、スコアとコンボの知らせ ----
+  // s.live = { round, ids(人の参加者・入った順), rows{id:{s,c}}, done }。部屋の画面の更新(emit)は起こさず、札だけへ知らせる
+  let liveTimer = null;
+  const liveListeners = new Set();
+  const liveEmit = () => { liveListeners.forEach((fn) => { try { fn(); } catch (_) { /* 札の失敗で通信を止めない */ } }); };
+  const liveStop = () => { if (liveTimer) clearInterval(liveTimer); liveTimer = null; };
+  // 自分のいまのスコアとコンボを、演奏画面の「読むだけの窓」(RHYTHM_PLAY_WATCH)から読んで送る。前に送った値と同じなら送らない(ポーズ中など)
+  const liveSend = () => {
+    const me = selfMember();
+    if (!s || !me || !me.playing || !s.live) { liveStop(); return; }
+    const watch = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
+    const h = watch && watch.hud ? watch.hud.get() : null;
+    if (!h) return;
+    const sc = rhythmMultiInt(h.score, RHYTHM_MULTI_LIVE_SCORE_MAX);
+    const cb = rhythmMultiInt(h.combo, RHYTHM_MULTI_LIVE_COMBO_MAX);
+    const mine = s.live.rows[s.selfId];
+    if (mine && mine.s === sc && mine.c === cb) return;
+    s.live.rows[s.selfId] = { s: sc, c: cb };
+    if (socket) socket.send({ t: 'pg', id: s.selfId, r: s.live.round, s: sc, c: cb });
+    liveEmit();
+  };
+  // ほかの人の pg。いまの回の、人の参加者のものだけ受ける(数は上限で切る)。自分のぶんは送るときに入れてあるので、返りは捨てる
+  const liveReceive = (raw) => {
+    if (!s || !s.live || s.live.done || raw.r !== s.live.round) return;
+    const id = rhythmMultiText(raw.id, 40);
+    if (!id || id === s.selfId || !s.live.ids.includes(id)) return;
+    const sc = rhythmMultiInt(raw.s, RHYTHM_MULTI_LIVE_SCORE_MAX);
+    const cb = rhythmMultiInt(raw.c, RHYTHM_MULTI_LIVE_COMBO_MAX);
+    const prev = s.live.rows[id];
+    if (prev && prev.s === sc && prev.c === cb) return;
+    s.live.rows[id] = { s: sc, c: cb };
+    liveEmit();
+  };
   const roomPayload = () => {
     const r = s.room;
     return { ph: r.phase, rd: r.round, sg: r.songId, lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0, dl: r.deadline ? 1 : 0, ss: rhythmMultiNormalizeSelectSec(r.selectSec), pt: r.participants };
@@ -53986,6 +54155,7 @@ const RHYTHM_MULTI = (() => {
   };
   const stopTimers = () => {
     if (hbTimer) clearInterval(hbTimer);
+    liveStop();
     if (sweepTimer) clearInterval(sweepTimer);
     if (reconnectTimer) clearTimeout(reconnectTimer);
     hbTimer = sweepTimer = reconnectTimer = null;
@@ -54332,6 +54502,8 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = (raw) => {
     if (!s) return;
+    // 演奏中の札の知らせ(pg)だけは溜めずに、その場で数字へ入れる。部屋の状態・画面の更新には触らない(演奏していない人は捨てるだけ)
+    if (raw && raw.t === 'pg') { liveReceive(raw); return; }
     // 演奏中は、届いた知らせを処理せずに溜めておく(演奏の判定と描画に一切割り込ませない)。
     // 演奏が終わったら reportResult がまとめて処理する。溜めすぎないよう古いものから捨てる
     const playingNow = selfMember();
@@ -54390,6 +54562,10 @@ const RHYTHM_MULTI = (() => {
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
+          // 演奏中の札: 人の参加者が2人以上のときだけ、3秒ごとに自分のスコアを送る(呼んだマスモンは演奏中のスコアを持たないので入れない)
+          liveStop();
+          s.live = { round: msg.round, ids: msg.participants.filter((pid) => s.members[pid] && !s.members[pid].cpu), rows: {}, done: false };
+          if (s.live.ids.length >= 2) liveTimer = setInterval(liveSend, RHYTHM_MULTI_LIVE_MS);
           const kept = s.liveIds.length > 0 && s.liveIds.every((pid) => msg.participants.includes(pid));
           s.liveStreak = kept ? s.liveStreak + 1 : 1;
           s.liveIds = msg.participants.slice();
@@ -54425,6 +54601,15 @@ const RHYTHM_MULTI = (() => {
   const api = {
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     onStart(fn) { startListeners.add(fn); return () => startListeners.delete(fn); },
+    // 演奏中の札が読む: 人の参加者(入った順)と、届いているスコア・コンボ。rows は書き換えずに読むだけ
+    onLive(fn) { liveListeners.add(fn); return () => liveListeners.delete(fn); },
+    liveView() {
+      if (!s || !s.live) return null;
+      return {
+        round: s.live.round, selfId: s.selfId, done: s.live.done === true, rows: s.live.rows,
+        people: s.live.ids.map((id) => { const m = s.members[id] || {}; return { id, name: m.name || '', icon: m.icon || '' }; }),
+      };
+    },
     setCpuBrain(brain) { cpuBrain = brain && typeof brain === 'object' ? brain : null; },
     // いまマスモンを呼べるか(満員でない・ライブ中でない)。1人で何体でも呼べる(回数・券は呼ぶ側が数える。2026-10-07・ユーザー指示)
     canSummon() {
@@ -54661,6 +54846,10 @@ const RHYTHM_MULTI = (() => {
         j: result && result.judgments ? RHYTHM_MULTI_JUDGMENT_IDS.map((id) => result.judgments[id]) : null,
         fs: result && result.fast, sl: result && result.slow,
       });
+      // 演奏中の札: 最後のスコアを1回送って止める(札はここで消える)
+      if (s.live && s.live.round === round && liveTimer) liveSend();
+      liveStop();
+      if (s.live && s.live.round === round) { s.live.done = true; liveEmit(); }
       me.playing = false;
       // 途中でやめた曲は連続ボーナスに数えない(2026-11-08 社長「やり直しして途中で曲をやめても連続ボーナスが増えてる」)。
       //   ライブの開始で足した1つを戻す。顔ぶれ(liveIds)はそのままなので、次の曲を最後まで演奏すれば、やめた曲の前から続く。
@@ -55440,6 +55629,145 @@ function RhythmMultiAvatar({ m, resolveIconUrl, sizeClass = 'h-10 w-10', small =
   );
 }
 
+// ===== 演奏中の札: ほかの人の順位・スコア・コンボ(2026-11-11) =====
+// 演奏画面の外(60-app)から重ねる。演奏の仕組みには触れない。置き場所は左上の表示の下(道の外。呼んだ助手の顔があればその下)。
+// ★重さの決まり: 行(アイコン・名前)は演奏の始まりに1回だけ作る。届くたびにやるのは文字の節の中身の書き換えと、
+//   順位が入れ替わった行の transform だけ(React の描き直しなし)。演奏中に絵を読み込まない(待合室で出していた絵)
+//   行に will-change を付けない(行ごとに重ね描きの層ができ、毎フレームの合成が増えた。2026-11-11 の計測)。箱は contain:strict で外へ影響させない
+// 並べ方: スコアの高い順(同点は入った順)
+const rhythmMultiLiveOrder = (people, rows) => people
+  .map((p, i) => ({ id: p.id, i, s: rows && rows[p.id] ? Number(rows[p.id].s) || 0 : 0 }))
+  .sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.id);
+// 出す行: 全部は入らないとき、自分で終わる続きの順位(すぐ上の人たちと自分)。3行以上あって1位が外れるなら、先頭を1位に替える
+const rhythmMultiLiveVisible = (order, selfId, max) => {
+  if (max <= 0) return [];
+  if (order.length <= max) return order.slice();
+  const me = Math.max(0, order.indexOf(selfId));
+  const start = Math.min(Math.max(0, me - (max - 1)), order.length - max);
+  const out = order.slice(start, start + max);
+  if (max >= 3 && start > 0) out[0] = order[0];
+  return out;
+};
+// 道(台形)の左のふちは、上で画面の幅の約46%・下で左端。札の右下の角がふちの内へ入らない高さまでに収める
+const RHYTHM_MULTI_LIVE_LANE_TOP = 0.46;
+const rhythmMultiLiveMaxRows = ({ width, height, top, left, boardW, step, count }) => {
+  if (!(width > 0) || !(height > 0)) return 0;
+  const bottomMax = height * (1 - (left + boardW + 8) / (RHYTHM_MULTI_LIVE_LANE_TOP * width));
+  return Math.max(0, Math.min(count, Math.floor((bottomMax - top + 2) / step)));
+};
+function RhythmMultiLiveBoard({ resolveIconUrl = null }) {
+  const first = React.useMemo(() => RHYTHM_MULTI.liveView(), []);
+  const people = first ? first.people : [];
+  const selfId = first ? first.selfId : '';
+  const round = first ? first.round : '';
+  const boxRef = React.useRef(null);
+  const rowRefs = React.useRef({});
+  const [lay, setLay] = React.useState(null); // { top, left, land(横長の形か), max(出せる行の数) }
+  const [ended, setEnded] = React.useState(false);
+  const layRef = React.useRef(null);
+  layRef.current = lay;
+  const paint = React.useCallback(() => {
+    const v = RHYTHM_MULTI.liveView();
+    if (!v || v.round !== round) return;
+    if (v.done) { setEnded(true); return; }
+    const l = layRef.current;
+    if (!l) return;
+    const order = rhythmMultiLiveOrder(people, v.rows);
+    const vis = rhythmMultiLiveVisible(order, selfId, l.max);
+    const step = l.land ? 22 : 28;
+    people.forEach((p) => {
+      const r = rowRefs.current[p.id];
+      if (!r || !r.row) return;
+      const at = vis.indexOf(p.id);
+      const show = at >= 0 ? 'visible' : 'hidden';
+      if (r.show !== show) { r.show = show; r.row.style.visibility = show; }
+      if (at < 0) return;
+      const tf = `translateY(${at * step}px)`;
+      if (r.tf !== tf) { r.tf = tf; r.row.style.transform = tf; }
+      const mine = v.rows[p.id];
+      rhythmSetText(r.rank, order.indexOf(p.id) + 1);
+      rhythmSetText(r.score, (mine ? mine.s : 0).toLocaleString());
+      rhythmSetText(r.combo, mine ? mine.c : 0);
+    });
+  }, [people, selfId, round]);
+  React.useEffect(() => {
+    if (people.length < 2) return undefined;
+    const place = () => {
+      const box = boxRef.current; const hud = document.querySelector('[data-rhythm-hud]');
+      if (!box || !hud || !box.offsetParent) return;
+      const parent = box.offsetParent;
+      // 演奏画面ごと回して描くときも合うよう、画面上の位置ではなく offset の鎖で測る(助手の顔と同じ測り方)
+      const at = (node) => { let top = 0; let left = 0; let el = node; while (el && el !== parent) { top += el.offsetTop; left += el.offsetLeft; el = el.offsetParent; } return el === parent ? { top, left } : null; };
+      const hudAt = at(hud);
+      if (!hudAt) return;
+      let bottom = hudAt.top;
+      document.querySelectorAll('[data-rhythm-hud] *, [data-rhythm-song-clock] *').forEach((el) => {
+        if (el.children.length || !el.offsetHeight) return;
+        const p = at(el);
+        if (!p || p.left - hudAt.left > 150) return;
+        bottom = Math.max(bottom, p.top + el.offsetHeight);
+      });
+      // 呼んだ助手の顔が同じ場所に出ているときは、その下
+      const faces = document.querySelector('[data-rhythm-assist-play]');
+      if (faces && faces.offsetHeight) { const p = at(faces); if (p) bottom = Math.max(bottom, p.top + faces.offsetHeight); }
+      const width = parent.clientWidth; const height = parent.clientHeight;
+      const top = Math.round(bottom + 6); const left = Math.round(hudAt.left + 12);
+      // 形は2つ: 横長(1行に全部・幅196)と、縦長(2段・幅98)。縦画面はいつも縦長。横画面は横長で全員入るならそれ、入らないなら多く入るほう
+      const maxTall = rhythmMultiLiveMaxRows({ width, height, top, left, boardW: 98, step: 28, count: people.length });
+      const maxWide = width > height ? rhythmMultiLiveMaxRows({ width, height, top, left, boardW: 196, step: 22, count: people.length }) : 0;
+      const land = maxWide > 0 && maxWide >= maxTall;
+      const max = land ? maxWide : maxTall;
+      setLay((q) => (q && q.top === top && q.left === left && q.land === land && q.max === max ? q : { top, left, land, max }));
+    };
+    // 置き場所は、演奏画面が出そろうころに数回と、画面の大きさが変わったときだけ測る(演奏中に測り続けない)
+    let timers = [];
+    const soon = (list) => { timers.forEach(clearTimeout); timers = list.map((ms) => setTimeout(place, ms)); };
+    const onResize = () => soon([0, 300, 1000]);
+    soon([0, 400, 1500, 7000]);
+    window.addEventListener('resize', onResize);
+    return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', onResize); };
+  }, [people.length]);
+  React.useEffect(() => { paint(); return RHYTHM_MULTI.onLive(paint); }, [paint, lay]);
+  if (people.length < 2 || ended) return null;
+  const land = !!(lay && lay.land);
+  const step = land ? 22 : 28;
+  const shadow = { textShadow: '0 1px 3px rgba(2,6,23,.9)' };
+  return (
+    <div ref={boxRef} data-rhythm-multi-live aria-hidden="true" className="pointer-events-none absolute z-[58]"
+      style={lay && lay.max > 0 ? { top: lay.top, left: lay.left, width: land ? 196 : 98, height: lay.max * step, contain: 'strict' } : { visibility: 'hidden', top: 0, left: 0, width: 98, height: 0 }}>
+      {people.map((p) => {
+        const src = resolveIconUrl ? resolveIconUrl(p.icon) : null;
+        const self = p.id === selfId;
+        const keep = (key) => (el) => { const r = rowRefs.current[p.id] || (rowRefs.current[p.id] = {}); r[key] = el; if (key === 'row') { r.show = ''; r.tf = ''; } };
+        const icon = (
+          <span className={`block shrink-0 overflow-hidden rounded-full border border-white/60 bg-slate-800 ${land ? 'h-[18px] w-[18px]' : 'h-[20px] w-[20px]'}`}>
+            {/* 待合室のアイコン(RhythmMultiAvatar)と同じ絵・同じ切り出し。枠(プロフィールフレーム)はこの大きさでは潰れるので出さない */}
+            {src ? <BreederIcon src={src} id={p.icon} alt="" roundedClass="rounded-full" className="h-full w-full" /> : <span className="flex h-full w-full items-center justify-center text-[10px]">🎵</span>}
+          </span>
+        );
+        const rank = <b ref={keep('rank')} data-rhythm-multi-live-rank className="w-[9px] shrink-0 text-center text-[10px] font-black leading-none text-amber-200">1</b>;
+        const name = <span className="min-w-0 flex-1 truncate text-[9px] font-black leading-none text-slate-100">{p.name}</span>;
+        const score = <b ref={keep('score')} data-rhythm-multi-live-score className={`shrink-0 font-black leading-none tabular-nums text-white ${land ? 'text-[10px]' : 'text-[9.5px]'}`}>0</b>;
+        // コンボは 🔥 と数だけ(「コンボ」と字で書くと、縦長の形で名前が1文字しか残らなかった)
+        const combo = <span className="shrink-0 whitespace-nowrap text-[7.5px] font-black leading-none text-amber-200">🔥<span ref={keep('combo')} data-rhythm-multi-live-combo className="tabular-nums">0</span></span>;
+        return (
+          <div key={p.id} ref={keep('row')} data-rhythm-multi-live-row={p.id} data-self={self ? '1' : undefined}
+            className={`absolute left-0 top-0 flex items-center gap-1 rounded-l-full rounded-r-md border ${self ? 'border-cyan-300/90 bg-cyan-700/75' : 'border-white/15 bg-slate-950/65'} ${land ? 'pl-px pr-1.5' : 'pl-0.5 pr-0.5'}`}
+            style={{ width: land ? 196 : 98, height: step - 2, visibility: 'hidden', ...shadow }}>
+            {icon}
+            {land
+              ? <>{rank}{name}{score}<span className="flex w-[34px] shrink-0 justify-end">{combo}</span></>
+              : <span className="flex min-w-0 flex-1 flex-col justify-center gap-[3px] overflow-hidden">
+                  <span className="flex items-center gap-1">{rank}{name}</span>
+                  <span className="flex items-center justify-between">{score}{combo}</span>
+                </span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // 本家の上に並ぶ5人のカード。空いている枠も点線で見せる(何人で遊んでいるかがひと目で分かる)。
 // size="tall" はマッチング・準備・待機の画面で、空いている高さいっぱいに大きく出す(横画面では画面の上半分以上)。
 // size="strip" は曲えらびの上の細い帯。曲の一覧を狭めないよう、横画面ではアイコンと名前を横並びにして低くする
@@ -55769,7 +56097,7 @@ function RhythmQuickRunPill({ info, onRestart = null, onResume = null, widthClas
     </small>
   );
 }
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);
@@ -56343,6 +56671,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
+      {view && liveBoardButton()}
       {view && optionsButton()}
       {view && rankingButton()}
       {view && inviteButton()}
@@ -56351,6 +56680,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   );
   // ⚙ オプション(2026-11-07 社長「マルチでもオプションボタンつけて」)。ソロと同じ画面を部屋の上に重ねて開く(画面は移らないので、部屋の知らせは止まらない)。
   // 保存もソロと同じ。演奏を始める項目(タイミング調整・判定ラインを実際の画面で合わせる)は、部屋の中では出さない
+  // 📊 演奏中の札(ほかの人の順位・スコア・コンボ)の入/切。部屋のどの画面からでも切り替えられる(2026-11-11 社長「マルチ画面でもオンオフできるようにしたい」)。
+  // 設定の「みんなで対戦の演奏中に、みんなのスコアを出す」・難易度えらびの切り替えと同じ値
+  const liveBoardButton = (extra = '') => onChangeMultiLiveBoard && (
+    <button data-rhythm-multi-live-header type="button" aria-label="演奏中のみんなのスコア" aria-pressed={multiLiveBoard} onClick={() => onChangeMultiLiveBoard(!multiLiveBoard)}
+      className={`flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border leading-none ${multiLiveBoard ? 'border-cyan-300/80 bg-cyan-800/70 text-white' : 'border-slate-400/50 bg-slate-800/60 text-slate-400'} ${extra}`}>
+      <span aria-hidden="true" className="text-base leading-none">📊</span><b className="mt-0.5 text-[9px] font-black leading-none">{multiLiveBoard ? 'ON' : 'OFF'}</b>
+    </button>
+  );
   const optionsButton = (extra = '') => onOpenOptions && (
     <button data-rhythm-multi-options-open type="button" aria-label="オプション" onClick={() => { setChatOpen(false); onOpenOptions(); }}
       className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-slate-400/50 bg-slate-800/60 text-lg ${extra}`}>⚙</button>
@@ -57119,6 +57456,11 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                       className={`min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
                   ))}
                 </div>}
+                {/* 演奏中の札(ほかの人の順位・スコア・コンボ)の出し入れ(2026-11-11 社長「消せる・はじめは入」) */}
+                {onChangeMultiLiveBoard && <button type="button" data-rhythm-multi-live-toggle aria-pressed={multiLiveBoard} onClick={() => onChangeMultiLiveBoard(!multiLiveBoard)}
+                  className={`mt-1 flex min-h-[26px] items-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>
+                  <span>演奏中のみんなのスコア</span><b>{multiLiveBoard ? 'ON' : 'OFF'}</b>
+                </button>}
               </div>
             </div>
           )}
@@ -63680,7 +64022,8 @@ const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
 // chatWith(id, { asleep, follow }) … その助手とのおしゃべりを、助手ライフの上に開く(本体 60-app.jsx が入れる・2026-11-08 社長 ❼〜❿ 助手部ココロ)
 // chatFollowLine(id) … 声をかけたあとの続きのカードのひとこと { kind:'ask'|'offer'|'plain', text, value? }(呼び方の話の日・社長 ❾)
 //   公開の印 assistantCallname が偽のあいだは null のまま(部屋に「おしゃべりする」も続きのカードも出ない)
-const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null };
+// goPlace … HOME が入れておく { ranch, temple, market } の開き方(「いま行くと得なこと」から施設へ行く。HOME の札と同じ動き)
+const ASSISTANT_LIFE_LINKS = { beatInvite: null, cardInvite: null, chatWith: null, chatFollowLine: null, goPlace: null, masmonTrainBoost: null, marketPerkToday: null };
 // いまカード部屋にいる助手(段階2の読むだけの口 assistantLifeCardIds。無い・こわれているときはだれもいない)
 const assistantLifeHouseCardIds = () => {
   try { const v = typeof assistantLifeCardIds === 'function' ? assistantLifeCardIds() : []; return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch { return []; }
@@ -64335,14 +64678,18 @@ const assistantLifeViewSize = () => {
   const rot = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
   return rot ? { w: window.innerHeight, h: window.innerWidth, rot: true } : { w: window.innerWidth, h: window.innerHeight, rot: false };
 };
-// 大きさが変わったら描き直す。🔄横の切り替えは resize が来ないので、0.5秒ごとにも見る
+// 大きさが変わったら描き直す。resize・orientationchange と 🔄横の切り替えの知らせで測り、iPhone が回転のあと大きさを
+// 遅れて直す分は 0.1・0.3・0.8秒あとにも測り直す(2026-11-11 カルク: もとは 0.5秒ごとにずっと見ていた。🔄横の切り替えも resize を鳴らす)
 const useAssistantLifeViewSize = () => {
   const [size, setSize] = React.useState(assistantLifeViewSize);
   React.useEffect(() => {
     const f = () => setSize(prev => { const n = assistantLifeViewSize(); return (n.w === prev.w && n.h === prev.h && n.rot === prev.rot) ? prev : n; });
-    window.addEventListener('resize', f); window.addEventListener('orientationchange', f);
-    const id = setInterval(f, 500);
-    return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); clearInterval(id); };
+    let ts = [];
+    const g = () => { f(); ts.forEach(clearTimeout); ts = [100, 300, 800].map(ms => setTimeout(f, ms)); };
+    window.addEventListener('resize', g); window.addEventListener('orientationchange', g);
+    const off = typeof RHYTHM_VIEW_ROTATION === 'object' && RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.subscribe === 'function' ? RHYTHM_VIEW_ROTATION.subscribe(g) : null;
+    f();
+    return () => { window.removeEventListener('resize', g); window.removeEventListener('orientationchange', g); if (off) off(); ts.forEach(clearTimeout); };
   }, []);
   return size;
 };
@@ -64657,6 +65004,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   ) : null;
   const houseView = (
     <div className="relative pt-1">
+      {uiV2 && typeof AssistantLifeNowPerks === 'function' && <AssistantLifeNowPerks life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}/>}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
       {lifeStatusList}
@@ -65577,6 +65925,119 @@ function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, di
       </span>
       {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
     </button>);
+}
+
+// ===== STEP2: 「✨ いま行くと得なこと」と施設の得(2026-11-11 社長) =====
+//   どれも助手がその場所にいるあいだだけ・上限つき・ランキングに効かない。新しく保存するのは「神殿でその日もう受け取ったか」だけ
+const ASSISTANT_LIFE_PERK_KEY = 'mh_assistant_life_perks_v1'; // { day: 'YYYY-MM-DD'(朝4時区切り), temple: 受け取った助手のid('' = まだ) }
+const ASSISTANT_LIFE_PERK_STORE = {
+  loaded: false, p: null, state: { day: '', temple: '' },
+  async load() { if (this.loaded) return this.state; if (!this.p) this.p = Promise.resolve(storeGet(ASSISTANT_LIFE_PERK_KEY, null, false)).then(v => { this.state = assistantLifePerkNormalize(v); this.loaded = true; return this.state; }).catch(() => { this.loaded = true; return this.state; }); return this.p; },
+};
+// 保存値が無い・壊れているときは「まだ受け取っていない」
+const assistantLifePerkNormalize = (v) => ({ day: v && typeof v.day === 'string' ? v.day : '', temple: v && typeof v.temple === 'string' ? v.temple : '' });
+const assistantLifePerkDay = () => (typeof assistantPeerDayKey === 'function' ? assistantPeerDayKey() : '');
+const assistantLifeTempleDone = () => { const s = ASSISTANT_LIFE_PERK_STORE.state; return !!s.temple && s.day === assistantLifePerkDay(); };
+// 神殿・M/B管理・マーケットの得は、新UIでも旧UIでも全員に入る(2026-11-11 社長。帯「いま行くと得なこと」を見るのは新UIだけ)
+const ASSISTANT_LIFE_TEMPLE_BOND = 30; // 神殿で操作を終えたときの仲良し度(assistants.js の lifeTemple。1日1回)
+
+// その場所にいて起きている助手(出会っている人だけ)
+const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  return !!w && w.place === place && w.doing !== 'sleep';
+});
+
+// 神殿の得: 合体・転生などの操作を終えたとき(62-screen-masu-temple.jsx・66-screen-masu-fusion.jsx から1行で呼ぶ)、temple にいる助手の仲良し度を少し。1日1回
+const assistantLifeTemplePerk = async () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    await ASSISTANT_LIFE_PERK_STORE.load();
+    if (assistantLifeTempleDone()) return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const who = assistantLifeAtPlace(assistantLifeCurrent(), ids, 'temple')[0];
+    if (!who) return null;
+    const next = { day: assistantLifePerkDay(), temple: who };
+    ASSISTANT_LIFE_PERK_STORE.state = next; // 先に印を付ける(二重に上げない)
+    try { storeSet(ASSISTANT_LIFE_PERK_KEY, next, false); } catch (_) {}
+    if (typeof assistantLifeAddBondWithFx === 'function') assistantLifeAddBondWithFx(who, 'lifeTemple', ASSISTANT_LIFE_TEMPLE_BOND);
+    return who;
+  } catch (_) { return null; }
+};
+
+// M/B管理の得: トレーニングチケットを使ったとき(60-app.jsx の useBondXpTickets から)、ranch にいる助手のマスモンの育ちが伸びる。
+//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口 ASSISTANT_LIFE_LINKS.masmonTrainBoost(キズナ4が assistantMasmonTrainBoost を入れる)(1日1回は向こうで数える)。無ければ何もしない。
+//   返り値: 演出に足す一文('' = 何も起きなかった)
+const assistantLifeRanchPerk = () => {
+  try {
+    const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    const names = [];
+    for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
+      let ok = false; try { ok = boost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; }
+      if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
+    }
+    return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
+  } catch (_) { return ''; }
+};
+
+// マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
+//   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
+const assistantLifeMarketWho = () => {
+  try {
+    if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
+  } catch (_) { return null; }
+};
+
+// 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
+const assistantLifePerkRows = (life, ids, nameOf) => {
+  const rows = [];
+  if (!life) return rows;
+  const nm = (list) => list.map(nameOf).join('・');
+  const L = typeof ASSISTANT_LIFE_LINKS !== 'undefined' ? ASSISTANT_LIFE_LINKS : {};
+  const go = L.goPlace || {};
+  try {
+    const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } }) : [];
+    if (beat.length) rows.push({ k: 'beat', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
+  } catch (_) {}
+  try {
+    const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
+    if (card.length) rows.push({ k: 'card', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+  } catch (_) {}
+  const temple = assistantLifeAtPlace(life, ids, 'temple');
+  if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
+  // 🛍 マーケット: 助手がいるあいだ、おすすめ品1つが1割引き(1日1回)。開発部が ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday と入れる。それが { itemName, discountedCost, used } を返す
+  try {
+    const mk = assistantLifeAtPlace(life, ids, 'market');
+    const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
+    if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
+  } catch (_) {}
+  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
+  if (ranch.length) rows.push({ k: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
+  return rows;
+};
+
+// 家のいちばん上の帯。3行まで+「ほか◯件」。行を押すとその施設へ(onGo で画面を閉じてから呼ぶ)
+function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
+  const rows = assistantLifePerkRows(life, ids, nameOf);
+  const [more, setMore] = React.useState(false);
+  if (!rows.length) return null;
+  const shown = more ? rows : rows.slice(0, 3);
+  const rest = rows.length - shown.length;
+  return (
+    <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2 text-white`} data-assistant-life-now-perks={rows.length}>
+      <p className="text-[13px] font-black text-amber-200">✨ いま行くと得なこと</p>
+      {shown.map(r => (
+        <button key={r.k} type="button" data-assistant-life-now-perk={r.k} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
+          className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-2 py-1 text-left active:scale-[.98] disabled:opacity-60">
+          <span className="w-6 shrink-0 text-center text-[20px] leading-none" aria-hidden="true">{r.icon}</span>
+          <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-snug" style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
+          {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
+        </button>))}
+      {rest > 0 && <button type="button" data-assistant-life-now-perks-more className="mt-1 min-h-[36px] w-full text-right text-[11.5px] font-black text-amber-200" onClick={() => setMore(true)}>ほか {rest} 件 ▼</button>}
+    </section>);
 }
 
 // ===== STEP3: タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。道具は「🎁 贈る」の中、引き合わせるは「きずな」へ =====
@@ -69797,6 +70258,8 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
   amgSave({ ...st, boost: { ...st.boost, [aid]: { d, s: s + 1 } } });
   return true;
 };
+// ナカヨシ10 の受け口(M/B管理): ASSISTANT_LIFE_LINKS.masmonTrainBoost(id, { source: 'ranch' }) から呼べるようにつなぐ(2026-11-11)
+try { if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost; } catch (_) {}
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 // 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
@@ -93879,6 +94342,9 @@ function DebugTrialsPanel({ onChange, bare = false }) {
   );
 }
 
+// 助手ライフの帯(ナカヨシ10)が「マーケットの1割引き」を引く受け口(2026-11-11)。ASSISTANT_LIFE_LINKS は 56-assistant-life-house.jsx の定義より後の並びでしか触れないので、ここ(並びの後ろ)に置く
+if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday;
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -96367,6 +96833,18 @@ function MonsterHeroGame() {
   // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  // ログインボーナスの窓は、助手の案内(村の案内・れんしゅうの誘い)とバトルのれんしゅうが終わってから出す(2026-11-11 社長・最初の30分の改善案1)。
+  // はじめての人は、名前を決めた直後にこの窓が出たまま案内が始まり、案内が指す建物も、れんしゅうの「押してみて」で光る所も
+  // 窓の下に隠れて進めなくなっていた(tools/boot/first-30min-walk.js の [隠れ])。
+  // 案内から次の案内へ移る一瞬に窓がちらつかないよう、案内が終わって少し(0.7秒)たってから出す。
+  // 受け取りそのもの(ギフトボックスへ送る)は今までどおりで、変えるのは窓を出す時機だけ。案内が出ない人には何も変わらない
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) { setLoginBonusGuideClear(false); return undefined; }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -103938,11 +104416,13 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    // 助手ライフ: M/B管理にいる助手のマスモンも少し育つ(プレイヤーの経験値は増やさない)
+    const ranchNote = typeof assistantLifeRanchPerk === 'function' ? assistantLifeRanchPerk() : '';
     // 使った瞬間の演出(見た目だけ)
     if (typeof growthFxMasuBondItem === 'function') {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       growthFxMasuBondItem({ masuName: masu.name, image: base && base.iconUrl, itemName: item.name, itemEmoji: item.emoji, count: n, gain: result.xpGain,
-        before: result.before, after: result.after });
+        before: result.before, after: result.after, note: ranchNote });
     }
     return result;
   };
@@ -106705,21 +107185,24 @@ function MonsterHeroGame() {
     const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
     const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
     const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
-    // 帯は小さく(HOME の「モンヒロバトル」の左の空きに収まる幅)。WAVE・報酬・説明は押して開く詳細へ
+    // 帯は小さく右下へ(2026-11-11 テスターいちか「転生のすべて選択ボタンと被るから右下に」)。HOME の「モンヒロバトル」の右の空きに収まる幅で、2段にする。
+    //   上の段は「🔁 ◯周目」、下の段は WAVE(社長「他みたいに wave も見れるように」)。報酬・説明は押して開く詳細へ
     const label = finished ? (quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止')
       : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const subLabel = finished ? '' : `W${wave}/10${resting ? '・休み' : ''}`;
     const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
     const info = { wave, loops: quickRunProgress.loops, finished, catchingUp: false, reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
       canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing, canResume: finished && quickRunResumable };
     const closeDetail = () => setQuickAnywhereDetail(false);
     return (<>
-      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
-        className={`fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
-        style={{ left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))', bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))', minHeight: 30 }}>
-        {label}
-      </button>
+      <QuickAnywhereFloat screen={gameState} data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}${subLabel ? ` ${subLabel}` : ''}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
+        className={`z-[70] flex max-w-[84px] flex-col items-center justify-center rounded-2xl border px-2 py-0.5 text-[11px] font-black leading-[14px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
+        style={{ minHeight: 32 }}>
+        <span className="max-w-full truncate">{label}</span>
+        {subLabel && <span data-quick-anywhere-wave className="max-w-full truncate text-[10px] font-bold opacity-80">{subLabel}</span>}
+      </QuickAnywhereFloat>
       {quickAnywhereDetail && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-start p-2" onClick={closeDetail} style={{ paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))', paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))' }}>
+        <div className="fixed inset-0 z-[90] flex items-end justify-end p-2" onClick={closeDetail} style={{ paddingBottom: 'max(48px, calc(var(--mh-sa-bottom, 0px) + 46px))', paddingRight: 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))' }}>
           <div data-quick-anywhere-detail role="dialog" aria-label="裏クイックのようす" onClick={(e) => e.stopPropagation()}
             className="w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60">
             <div className="flex items-center justify-between gap-2">
@@ -113708,7 +114191,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
             報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
             (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
-        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&!loginBonusGuideBusy&&loginBonusGuideClear&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(()=>{
           /* 行き先が名前だけでは分からなかったので、デバッグ画面の DebugMenuRow と同じ
@@ -115399,6 +115882,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }}/>}
         {/* 助手とのセッション: 演奏中の助手の顔とひとこと(演奏画面の外から重ねる。演奏の仕組みには触れない) */}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()&&<RhythmAssistSessionPlayFace songId={rhythmPlay.song&&rhythmPlay.song.songId}/>}
+        {/* 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を重ねる(2026-11-11。77-screen-rhythm-multi.jsx の RhythmMultiLiveBoard。設定で消せる) */}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmSettings.multiLiveBoard!==false&&<RhythmMultiLiveBoard key={rhythmPlay.multiStartId} resolveIconUrl={resolveIconUrl}/>}
 
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
@@ -115413,6 +115898,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} guideAssistantId={selectedAssistantId} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
+          multiLiveBoard={rhythmSettings.multiLiveBoard!==false}
+          onChangeMultiLiveBoard={async(on)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLiveBoard:on===true});setRhythmSettings(saved);}}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):'',
             // 負けた・やめたあと、ここから1周目を始め直せるか(曲えらびの帯の「⚔ 1周目から新しく始める」と同じ条件)
