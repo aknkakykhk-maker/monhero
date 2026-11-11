@@ -2,7 +2,7 @@
 //   node tools/assistant/life-sleep-faces-make.js                 作る(元の絵と同じフォルダに ◯◯_sleep.PNG。全身と顔アイコン)
 //   node tools/assistant/life-sleep-faces-make.js --only myua,kiki          一部の人だけ作り直す
 //   node tools/assistant/life-sleep-faces-make.js --preview <フォルダ>   [元 | 重ねた後] の目のまわりの比較も書き出す
-// 受け取った物: tools/art-sources/sleep-faces/received-v1.png(1枚に7人。背景は抜いてある。加工せずに残す)
+// 受け取った物: tools/art-sources/sleep-faces/received-v1.png(1枚に7人)・momosuke-normal.png・momosuke-halloween.png(1枚に1人)。背景は抜いてある。加工せずに残す
 // 作り方
 //   ① 人ごとの枠の中で、いちばん大きなつながった塊だけを取る(背景を抜いた跡の点・筋・隣の人のはみ出しを捨てる)
 //   ② 社長の絵を元の立ち絵へ合わせる(縮尺・回転・位置)。体全体の明るさと形でざっと → 目のまわり(目そのものは除く)で細かく
@@ -14,6 +14,8 @@ const sharp = require('sharp'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), IMG = path.join(ROOT, 'monster-hero/images/assistant');
 const SRC = path.join(ROOT, 'tools/art-sources/sleep-faces/received-v1.png');
 // 受け取った絵の中の人ごとの枠 [x0, y0, x1, y1]
+// 1枚に1人の絵(あとから届いた分)。絵の全体から、いちばん大きなつながった塊だけを取る
+const SINGLE = { momosuke: 'momosuke-normal.png', 'momosuke-halloween': 'momosuke-halloween.png' };
 const BOX = { atsu: [0, 0, 425, 487], kiki: [426, 0, 722, 487], 'kiki-halloween': [722, 0, 1128, 487], kyuko: [1128, 0, 1536, 487], myua: [40, 487, 565, 1024], 'myua-card-master': [545, 487, 975, 1024], 'myua-halloween': [975, 487, 1536, 1024] };
 // 重ね先。eyes … 元の全身の絵の開いた目 [x, y, 幅, 高さ](絵に対する割合。56-assistant-life-roomview.jsx の表と同じ測り方)
 //   faceEyes … 顔アイコンが全身の単純な切り抜きでない絵(みゅあ)は、顔アイコンの目 [x, y, 幅, 高さ](画素)を測って、両目の2点から合わせる
@@ -25,6 +27,8 @@ const JOBS = [
   { panel: 'kyuko', full: 'kyuko_normal.PNG', eyes: [[0.342, 0.415, 0.117, 0.072], [0.579, 0.383, 0.142, 0.075]] },
   { panel: 'myua', mask: { up: [0.58, 0.28] }, full: 'myua_normal.PNG', faceEyes: [[102.5, 125.5, 34, 27], [155, 135.5, 27, 25]], eyes: [[0.46, 0.334, 0.043, 0.048], [0.524, 0.347, 0.032, 0.046]] },
   { panel: 'myua-card-master', mask: { up: [0.58, 0.28] }, full: 'card-master/myua_normal.PNG', faceEyes: [[107.5, 107.5, 27, 20], [155, 125, 27, 20]], panelEyes: [[190, 190, 38], [253, 208, 32]] },
+  { panel: 'momosuke', full: 'momosuke_normal.PNG', eyes: [[0.4254, 0.4363, 0.0918, 0.0781], [0.5967, 0.3836, 0.0918, 0.0859]] },
+  { panel: 'momosuke-halloween', full: 'halloween/momosuke_normal.PNG', panelEyes: [[549, 527, 100], [754, 463, 105]] },
   { panel: 'myua-halloween', mask: { up: [0.58, 0.28] }, full: 'halloween/myua_normal.PNG', faceEyes: [[97.5, 113.5, 35, 22], [150, 123.5, 28, 22]], panelEyes: [[188, 216, 36], [251, 230, 30]] },
 ];
 const faceOf = (rel) => rel.includes('/') ? rel.replace(/\/([^/]+)$/, '/face/$1') : `face/${rel}`;
@@ -35,8 +39,9 @@ const loadRaw = async (f, resize) => { const { data, info } = await sharp(f).ens
 
 // ① 人ごとに切り出す
 async function cutPanels() {
-  const { d, W } = await loadRaw(SRC); const out = {};
-  for (const [name, [bx0, by0, bx1, by1]] of Object.entries(BOX)) {
+  const out = {}; const main0 = await loadRaw(SRC); const jobs = Object.entries(BOX).map(([n, b]) => [n, b, main0]);
+  for (const [n, f] of Object.entries(SINGLE)) { const r = await loadRaw(path.join(path.dirname(SRC), f)); jobs.push([n, [0, 0, r.W, r.H], r]); }
+  for (const [name, [bx0, by0, bx1, by1], { d, W }] of jobs) {
     const w = bx1 - bx0, h = by1 - by0, A = i => d[((by0 + ((i / w) | 0)) * W + bx0 + (i % w)) * 4 + 3];
     const lab = new Int32Array(w * h).fill(-1); let best = -1, bestN = 0, id = 0;
     for (let s = 0; s < w * h; s++) { if (lab[s] >= 0 || A(s) < 40) continue; const st = [s]; lab[s] = id; let n = 0;

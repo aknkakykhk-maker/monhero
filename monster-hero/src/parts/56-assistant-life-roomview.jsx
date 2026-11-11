@@ -147,11 +147,12 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
 // 社長が描いた寝顔(2026-11-11 社長「寝顔こっちでつくる」→ 7枚・「絵をそのまま使う」): 寝ているあいだは、上半身の寝顔の絵をまるごと出す。
 //   tools/assistant/life-sleep-faces-make.js が、元の絵と同じ大きさ・同じ顔の位置で、同じフォルダに ◯◯_sleep.PNG として置く(着せ替えの見分け・顔の位置の表がそのまま使える)
 //   全身(地図・場面の立ち絵・ベッド)は assistantLifeSleepSrc で絵を差し替える。顔アイコン(家の部屋の顔)は、顔の絵の部品が絵のパスを受け取らないので、上から重ねる
-//   絵の無い助手(ももすけ・ドラ・えるびん・ソラシド)と、絵の無い着せ替えは、いままでどおり下の SVG の閉じた目
+//   絵の無い助手(ドラ・えるびん・ソラシド)と、絵の無い着せ替えは、いままでどおり下の SVG の閉じた目
 const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
   'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
   'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+  'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
 ]));
 // その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
 function assistantLifeSleepArt(pid, src) {
@@ -160,8 +161,15 @@ function assistantLifeSleepArt(pid, src) {
   const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
   return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
 }
-// 寝ているときに出す全身の絵: 社長の寝顔の絵があればそれ、無ければ元の絵のまま
-const assistantLifeSleepSrc = (pid, src) => assistantLifeSleepArt(pid, src) || src;
+// 寝ているときに出す全身の絵: 社長の寝顔の絵があればそれ、無ければ元の絵のまま。
+//   起きているときの全身の絵が別の場所(全身画など)を指す助手もいるので、見つからないときは顔アイコン(ふつうの顔)のパスから、どの服の寝顔かを割り出す(…/face/◯◯_normal.PNG → …/◯◯_sleep.PNG)
+const assistantLifeSleepSrc = (pid, src) => {
+  const a = assistantLifeSleepArt(pid, src); if (a) return a;
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const face = who && typeof assistantFaceImage === 'function' ? assistantFaceImage(who, 'normal') : null;
+  const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
+  return f || src;
+};
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
   // すでに社長の寝顔の絵を出している(全身を差し替えた)ときは何も重ねない
   if (/_sleep\.PNG/i.test(String(src || ''))) return null;
