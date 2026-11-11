@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66b10943bd8256b9
+// source-sha256: 05ea471b362ca49f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22310,6 +22310,7 @@ const buildAttackHits = ({
   }
   return hits;
 };
+const attackDistanceAfterCard = (card, dist) => card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist;
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
   const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);
@@ -83012,7 +83013,7 @@ function BattleScreen({
     const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
     const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0,
       guardHits = 1;
     if (Array.isArray(tacticsUnits) && slotIdx !== null) {
@@ -83024,18 +83025,25 @@ function BattleScreen({
       guardHits = tacticsGuardHits(own.cards, hits);
     } else {
       let flat = 0,
-        mult = 0;
+        mult = 0,
+        guardCards = 0;
       const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         const card = hand[idx];
         const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         const w = guardCardWeight(card);
         if (!(w > 0)) return;
+        guardCards += 1;
         const effect = cardEffectMultiplier(card, halved);
         flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
         mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
       });
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
+      const layerRushHits = enemyIntent.type === 'SPECIAL' ? extremeLayerRushHits(infernoShellRule, wave, infernoShellView?.broken) : 1;
+      if (layerRushHits > 1) {
+        hits = layerRushHits;
+        guardHits = guardCards >= TACTICS_RUSH_GUARD_CARDS ? hits : 1;
+      }
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     if (hit.taken > 0) hit.taken *= plannedLifeTreeMult(slotIdx);
@@ -84364,7 +84372,7 @@ function BattleScreen({
           combo: 0
         };
         if (slotIdx != null && isAttackCard(card)) {
-          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
+          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved, b.dist);
           committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo, slotIdx, halved);
         }
         const gw = guardCardWeight(card);
@@ -84435,7 +84443,7 @@ function BattleScreen({
           if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
           pendingValidSlot = i;
           const pendingHalved = committedCounter.peek(pendingCardObj, i);
-          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, pendingHalved);
+          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, pendingHalved, boosts.forPending.dist);
           pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo, i, pendingHalved);
           break;
         }
@@ -84704,7 +84712,7 @@ function BattleScreen({
         pendingCounter.take(hand[idx], cardAssignments[idx] != null ? cardAssignments[idx] : null);
       });
       const isSecondOrLater = pendingCounter.peek(pendingCardObj, i);
-      const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
+      const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater, slotBoosts.forPending.dist);
       previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo, i, isSecondOrLater);
       previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
       isPendingPreview = true;
@@ -84721,7 +84729,7 @@ function BattleScreen({
             dmgMod: 0,
             combo: 0
           };
-          const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
+          const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved, b.dist);
           previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo, i, halved);
         }
       });
@@ -175000,12 +175008,17 @@ function MonsterHeroGame() {
       left -= cost;
       if (card.type === 'guard' || card.type === 'weak_guard') return;
       const b = boostsForCardDamage(run, card, false);
-      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale), b.combo, copy.srcSlot, false);
       const boost = localBoostFromCard(card);
       if (boost) run = {
+        ...run,
         oryo: run.oryo + (boost.oryo || 0),
         dmgMod: run.dmgMod + (boost.dmgMod || 0),
         combo: run.combo + (boost.combo || 0)
+      };
+      run = {
+        ...run,
+        dist: attackDistanceAfterCard(card, run.dist)
       };
     });
     return total;
@@ -189024,21 +189037,26 @@ function MonsterHeroGame() {
       combo: base.combo + (boost.combo || 0) * effMul
     };
   };
+  const previewAttackStartDist = (card, dist) => card?.subType === 'stun_atsu' ? enemyDist : dist;
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
-      combo = 0;
+      combo = 0,
+      dist = enemyDist;
     const counter = makeHalveCounter();
     const perCard = {};
     selectedCards.forEach(idx => {
       const card = hand[idx];
       const slotIdx = cardAssignments[idx] != null ? cardAssignments[idx] : null;
       const halved = counter.peek(card, slotIdx);
-      perCard[idx] = boostsForCardDamage({
-        oryo,
-        dmgMod,
-        combo
-      }, card, halved);
+      perCard[idx] = {
+        ...boostsForCardDamage({
+          oryo,
+          dmgMod,
+          combo
+        }, card, halved),
+        dist: previewAttackStartDist(card, dist)
+      };
       if (idx === excludeIdx) return;
       if (!card) return;
       const effMul = cardEffectMultiplier(card, halved);
@@ -189048,6 +189066,7 @@ function MonsterHeroGame() {
         dmgMod += (boost.dmgMod || 0) * effMul;
         combo += (boost.combo || 0) * effMul;
       }
+      dist = attackDistanceAfterCard(card, dist);
       counter.take(card, slotIdx);
     });
     const pendingCard = excludeIdx != null ? hand[excludeIdx] : null;
@@ -189057,13 +189076,17 @@ function MonsterHeroGame() {
       final: {
         oryo,
         dmgMod,
-        combo
+        combo,
+        dist
       },
-      forPending: boostsForCardDamage({
-        oryo,
-        dmgMod,
-        combo
-      }, pendingCard, pendingHalved)
+      forPending: {
+        ...boostsForCardDamage({
+          oryo,
+          dmgMod,
+          combo
+        }, pendingCard, pendingHalved),
+        dist: previewAttackStartDist(pendingCard, dist)
+      }
     };
   };
   const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist = enemyDist) => {
@@ -189118,7 +189141,7 @@ function MonsterHeroGame() {
       distanceBrokenDmg = applyUltimateDistanceBreak(turnPressedDmg, slotIdx, ultimateDistanceBreakLevels, specialRuleDifficulty, card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg, specialRuleDifficulty, 'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, wave, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0, slotIdx = null, halved = false) => {
     if (baseDmg <= 0) return 0;
     const soulAttack = attackBoostProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
@@ -189143,7 +189166,7 @@ function MonsterHeroGame() {
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode, wave, turnCount]);
   const resolveEnemyDefeat = async ({
     remainingHp,
     damage,
@@ -191240,7 +191263,7 @@ function MonsterHeroGame() {
         }
         if (rangeMoveTarget != null) {
           forcedMoveTarget = rangeMoveTarget;
-          attackDistance = rangeMoveTarget;
+          attackDistance = attackDistanceAfterCard(card, attackDistance);
         }
         {
           const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;

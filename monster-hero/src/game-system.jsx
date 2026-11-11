@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1edf3bafad3bff1e
+// generated-sha256: b1558a5ab53485e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15447,6 +15447,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   }
   return hits;
 };
+// そのカードを使ったあと、同じターンの次のカードが攻撃を始める敵の距離。距離撃(range_atk)は敵を指定の距離へ動かすので、
+// あとのカードは動かしたあとの距離で計算する。実処理(processTurn)と予測(previewLocalBoosts・aiCopyPredictedDmg)が同じここを通る
+const attackDistanceAfterCard = (card, dist) => (card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist);
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
@@ -49246,7 +49249,7 @@ function BattleScreen({
     const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
     const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
@@ -49257,18 +49260,24 @@ function BattleScreen({
       guardHits = tacticsGuardHits(own.cards, hits);
     } else {
       // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
-      let flat = 0, mult = 0;
+      let flat = 0, mult = 0, guardCards = 0;
       const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         const card = hand[idx];
         const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         const w = guardCardWeight(card);
         if (!(w > 0)) return;
+        guardCards += 1;
         const effect = cardEffectMultiplier(card, halved);
         flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
         mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
       });
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
+      // ★シールドが割れたあとの連撃必殺技(INFERNO系のデュラハン・ムー。extremeLayerRushHits)は、実処理と同じ受け方で出す:
+      //   そのターンのガードが1枚なら1発ぶんだけ止まり、2枚以上で全部止まる。ここを1発扱いのままにすると、
+      //   ガード1枚で「ほぼ止まる」と出るのに、実際は残りの発がそのまま通る(2026-11-11 バトルの監査)
+      const layerRushHits = enemyIntent.type === 'SPECIAL' ? extremeLayerRushHits(infernoShellRule, wave, infernoShellView?.broken) : 1;
+      if (layerRushHits > 1) { hits = layerRushHits; guardHits = guardCards >= TACTICS_RUSH_GUARD_CARDS ? hits : 1; }
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     // 大樹の加護を選んでいれば、ガードのあとの通る量へ使ったターンぶんを掛ける(実処理の applyImmediateTakenReduction と同じ順)。
@@ -50074,7 +50083,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved,b.dist); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx,halved);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -50124,7 +50133,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
+                pendingValidSlot=i; const pendingHalved=committedCounter.peek(pendingCardObj,i); const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,pendingHalved,boosts.forPending.dist); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i,pendingHalved); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -50314,7 +50323,7 @@ function BattleScreen({
                 const pendingCounter=makeCardHalveCounter();
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
-                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
+                const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater,slotBoosts.forPending.dist);
                 previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i,isSecondOrLater);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
@@ -50327,7 +50336,7 @@ function BattleScreen({
                   const halved=slotCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
+                    const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved,b.dist);
                     previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i,halved);
                   }
                 });
@@ -93899,9 +93908,10 @@ function MonsterHeroGame() {
       left -= cost;
       if (card.type === 'guard' || card.type === 'weak_guard') return;
       const b = boostsForCardDamage(run, card, false);
-      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale), b.combo, copy.srcSlot, false);
       const boost = localBoostFromCard(card);
-      if (boost) run = { oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      if (boost) run = { ...run, oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      run = { ...run, dist: attackDistanceAfterCard(card, run.dist) };
     });
     return total;
   };
@@ -105805,26 +105815,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
   // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
   // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
+  // ★dist … そのカードが攻撃を始めるときの敵の距離。距離撃(range_atk)を先に置くと、実処理(processTurn の attackDistance)は
+  //   あとのカードを「動かしたあとの距離」で計算する。予測もここで同じ距離を積んで getDmg へ渡す
+  //   (渡していなかったころは、距離撃のあとに置いたカードの予測が、動かす前の距離のままだった。2026-11-11 バトルの監査)
+  //   あつの挑発(stun_atsu)だけは、実処理が getDmg へ距離を渡していない(ターンの始めの距離のまま)ので、予測も動かす前の距離で出す
+  const previewAttackStartDist = (card, dist) => (card?.subType==='stun_atsu' ? enemyDist : dist);
   const previewLocalBoosts = (excludeIdx=null) => {
-    let oryo=0, dmgMod=0, combo=0;
+    let oryo=0, dmgMod=0, combo=0, dist=enemyDist;
     const counter=makeHalveCounter();
     const perCard={};
     selectedCards.forEach(idx=>{
       const card=hand[idx];
       const slotIdx=cardAssignments[idx]!=null?cardAssignments[idx]:null;
       const halved=counter.peek(card,slotIdx);
-      perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
+      perCard[idx]={...boostsForCardDamage({oryo,dmgMod,combo},card,halved), dist:previewAttackStartDist(card,dist)};
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
       if(idx===excludeIdx) return;
       if(!card) return;
       const effMul=cardEffectMultiplier(card,halved);
       const boost=localBoostFromCard(card);
       if(boost){ oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
+      dist=attackDistanceAfterCard(card,dist);
       counter.take(card,slotIdx);
     });
     const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
     const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
-    return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
+    return { perCard, final:{oryo,dmgMod,combo,dist}, forPending:{...boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved), dist:previewAttackStartDist(pendingCard,dist)} };
   };
   // 固有技のオリジナル強化の「〇〇特攻」を見るための、いまの戦いの様子。予測と実際のダメージ(どちらも getDmg)が同じ値を使う
   const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist=enemyDist) => {
@@ -105893,7 +105909,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       distanceBrokenDmg=applyUltimateDistanceBreak(turnPressedDmg,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg,specialRuleDifficulty,'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, wave, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]); // wave は適性(タクティクス)と段階の特殊ルールが読む
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -105912,7 +105928,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo,kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,false)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode, wave, turnCount]); // wave・turnCount は楔の上限(kusabiCapAt)が読む
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -107629,7 +107645,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   2発目以降だけ技ごとの動きが見つからず、更新前の通常モーションに戻る(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる」)
         const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
         for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
-        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
+        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=attackDistanceAfterCard(card,attackDistance); }
         // ★トリックスタート(ゴースト・スプーキー): 攻撃が当たったら、その技で払った消費ガッツの半分を回復する。
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
