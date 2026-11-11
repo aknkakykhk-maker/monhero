@@ -2878,6 +2878,10 @@ const HELP_CATEGORIES = [
           { t:'note', releaseFlag:'assistantMasmonCheer', title:'👀 修行を見る', text:'町の地図でモンヒロバトルを押すと、そこにいる助手のマスモンの練習試合を見られます。今日覚えた技や、技の熟練の伸びも分かります。' },
           { t:'note', releaseFlag:'assistantMasmonCheer', title:'📣 応援する', text:'応援すると修行が少し進み、仲良し度も上がります。見る・応援するを合わせて1日3回、移動の時間帯ごとに1回までです。' },
           { t:'note', releaseFlag:'assistantMasmonCheer', title:'練習の相手', text:'フレンドが登録編成を持っていれば、そのフレンドのマスモンが相手になります(👀 修行を見る、またはフレンドの対戦の画面で確認してから7日間)。フレンドがいないときは、自分の別のマスモンが相手になります。どちらもいないと、ひとりで稽古するので、修行の伸びが半分になります。' },
+          { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'🎫 M/B管理でチケットを使う', text:'助手がM/B管理にいるとき、地図のM/B管理の窓か、M/B管理の画面の帯から、助手のマスモンにトレーニングチケット・重トレーニングチケットを使えます。使えるのは、助手がM/B管理にいる時間帯ごとに助手1人につき1枚、同じマスモンには1日1枚までです。' },
+          { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'トレーニングチケット', text:'選んだ能力が上がります。伸びやすさ(A〜E)が高い能力ほどよく上がります。' },
+          { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'重トレーニングチケット', text:'選んだ能力が大きく上がり、決まった能力も少し上がりますが、かわりに決まった能力が少し下がり、マスモンが少し疲れます。何が上がって何が下がるかは、使う前に表示されます。' },
+          { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'自分のモンスターには入りません', text:'助手のマスモンに使ったチケットは、自分のマスモンの絆経験値にはなりません。絆ランキングにも効きません。上がった能力は、助手のマスモンのフレンド対戦にはそのまま入ります。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚔ マスモンで対戦(β)', text:'助手が育てているマスモンを、ほかの助手のマスモンと対戦させて観戦できます。' },
           { t:'list', releaseFlag:'assistantMasmonBattleBeta', items:[
             'じゅんび: 「おまかせ」なら助手が3体と順番を決めます。「自分で決める」では、対戦の形(1対1〜3対3)・出す順番・作戦・交代の早さを選べます',
