@@ -4,6 +4,8 @@
 //   QG_BASE=<URL> で見る版を選ぶ(既定は本番 https://aknkakykhk-maker.github.io/monhero/)。手元なら QG_BASE=http://localhost:8899/
 //   QG_SHOT_DIR=<フォルダ> で止め絵(1回目・2回目)を残す
 //   node tools/assistant/quick-guide-once-check.js
+// 裏クイックをどこでも回す公開の印(17-release)
+const QUICK_ANYWHERE = /const QUICK_RUN_ANYWHERE_RELEASE = true;/.test(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8'));
 'use strict';
 const path = require('path');
 let failed = 0;
@@ -73,7 +75,10 @@ const SHOT = process.env.QG_SHOT_DIR || '';
     if (vp.rot) { await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(RHYTHM_VIEW_ROTATION.preferredAngle())); await page.waitForTimeout(1200); }
     const g1 = await guide();
     await shot('1回目-モードえらび');
-    check(`${T}1回目のモードえらび: 裏周回の案内(g3c)が出る`, g1 && g1.id === 'g3c', JSON.stringify(g1));
+    // 裏クイックをどこでも回すとき(2026-11-11 QUICK_RUN_ANYWHERE_RELEASE)は、モードえらびの左上がふつうの「←」になる(出ても周回は続く)ので、
+    //   「⏹ 終了」の案内(g3c)は出さない(意図した変更。56-quick-guide.jsx)。曲えらびの案内(g3b)は今までどおり
+    if (QUICK_ANYWHERE) check(`${T}1回目のモードえらび: どこでも回すときは「⏹ 終了」の案内(g3c)を出さない`, !(g1 && g1.id === 'g3c'), JSON.stringify(g1));
+    else check(`${T}1回目のモードえらび: 裏周回の案内(g3c)が出る`, g1 && g1.id === 'g3c', JSON.stringify(g1));
     if (g1) await click('[data-quick-guide-next]');
     await page.waitForTimeout(500);
     await tapSel('[data-rhythm-mode-solo]'); await page.waitForTimeout(2000);
@@ -90,7 +95,7 @@ const SHOT = process.env.QG_SHOT_DIR || '';
     await shot('2回目-曲えらび');
     check(`${T}2回目のモードえらび・曲えらび: 案内は出ない`, back && solo && !g3 && !g4, JSON.stringify({ back, solo, g3, g4 }));
     const seen = (await store('mh_quick_guide_seen_v1')) || {};
-    check(`${T}見た印(g3b・g3c)が保存されている`, (seen.seen || []).includes('g3b') && (seen.seen || []).includes('g3c'), JSON.stringify(seen));
+    check(`${T}見た印(g3b${QUICK_ANYWHERE ? '' : '・g3c'})が保存されている`, (seen.seen || []).includes('g3b') && (QUICK_ANYWHERE || (seen.seen || []).includes('g3c')), JSON.stringify(seen));
     check(`${T}画面のエラーが無い`, errors.length === 0, errors.slice(0, 3).join(' / '));
     await page.close();
   }
