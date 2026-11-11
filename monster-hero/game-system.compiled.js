@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57f88502a8eeeaec
+// source-sha256: d31fe41849809e11
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86,24 +86,87 @@ const MH_SCREEN_TRAIL = (() => {
     compact
   };
 })();
-(() => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+const MH_PAGE_OFFSET_GUARD = (() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return {
+    state: () => null,
+    check: () => {}
+  };
   const editing = () => {
     const el = document.activeElement;
     if (!el) return false;
     const tag = String(el.tagName || '').toUpperCase();
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
   };
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const state = () => {
+    const vv = window.visualViewport || null;
+    const se = document.scrollingElement || document.documentElement;
+    return {
+      sx: num(window.scrollX) || num(se && se.scrollLeft) || num(document.body && document.body.scrollLeft),
+      sy: num(window.scrollY) || num(se && se.scrollTop) || num(document.body && document.body.scrollTop),
+      ox: vv ? num(vv.offsetLeft) : 0,
+      oy: vv ? num(vv.offsetTop) : 0,
+      scale: vv && Number.isFinite(Number(vv.scale)) && Number(vv.scale) > 0 ? Number(vv.scale) : 1
+    };
+  };
+  const zoomed = st => Math.abs(st.scale - 1) > 0.01;
+  const moved = st => Math.abs(st.sx) >= 1 || Math.abs(st.sy) >= 1 || Math.abs(st.ox) >= 1 || Math.abs(st.oy) >= 1;
+  let lastTrailAt = 0,
+    zoomFixes = 0,
+    zoomFixAt = 0,
+    wasBig = false;
+  const remeasure = () => setTimeout(() => {
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (_) {}
+  }, 0);
+  const unzoom = () => {
+    const now = Date.now();
+    if (zoomFixes >= 3 || now - zoomFixAt < 3000) return;
+    const meta = document.querySelector('meta[name="viewport"]');
+    const content = meta && meta.getAttribute('content');
+    if (!content) return;
+    zoomFixes++;
+    zoomFixAt = now;
+    meta.setAttribute('content', content + ', minimum-scale=1.0');
+    setTimeout(() => {
+      try {
+        meta.setAttribute('content', content);
+      } catch (_) {}
+    }, 50);
+  };
   const reset = () => {
     if (editing()) return;
     try {
-      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
-      for (const el of [document.scrollingElement, document.documentElement, document.body]) {
-        if (el && (el.scrollTop || el.scrollLeft)) {
-          el.scrollTop = 0;
-          el.scrollLeft = 0;
+      const st = state();
+      const bad = moved(st),
+        big = zoomed(st);
+      if (big) wasBig = true;else {
+        zoomFixes = 0;
+        if (wasBig) {
+          wasBig = false;
+          remeasure();
         }
       }
+      if (!bad && !big) return;
+      const now = Date.now();
+      if (now - lastTrailAt > 5000 && typeof MH_SCREEN_TRAIL !== 'undefined') {
+        lastTrailAt = now;
+        MH_SCREEN_TRAIL.push('vv', `s${Math.round(st.scale * 100) / 100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);
+      }
+      if (bad) {
+        window.scrollTo(0, 0);
+        for (const el of [document.scrollingElement, document.documentElement, document.body]) {
+          if (el && (el.scrollTop || el.scrollLeft)) {
+            el.scrollTop = 0;
+            el.scrollLeft = 0;
+          }
+        }
+      }
+      if (big) unzoom();
     } catch (_) {}
   };
   let timers = [];
@@ -125,6 +188,25 @@ const MH_SCREEN_TRAIL = (() => {
   }, 60), true);
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(type => document.addEventListener(type, soon));
   document.addEventListener('webkitendfullscreen', soon, true);
+  window.addEventListener('load', soon, passive);
+  window.addEventListener('pageshow', soon, passive);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') soon();
+  });
+  soon();
+  document.addEventListener('click', reset, {
+    capture: true,
+    passive: true
+  });
+  ['gesturestart', 'gesturechange'].forEach(type => document.addEventListener(type, e => {
+    if (e.cancelable) e.preventDefault();
+  }, {
+    passive: false
+  }));
+  return {
+    state,
+    check: soon
+  };
 })();
 const _LI = {};
 const _ICON_PATHS = {
@@ -8549,6 +8631,7 @@ const Audio_ = (() => {
         },
         started: () => playing,
         songTimeMs: () => songTimeSeconds() * 1000,
+        rawSongTimeMs: () => rawSongTimeSeconds() * 1000,
         info: () => ({
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
@@ -8896,6 +8979,7 @@ const Audio_ = (() => {
   const setBackgroundSeQuiet = on => {
     backgroundSeQuiet = !!on;
   };
+  const isBackgroundSeQuiet = () => backgroundSeQuiet;
   const fgSe = {
     trainingDice: async () => {
       if (!enabled) return;
@@ -9794,6 +9878,7 @@ const Audio_ = (() => {
     }
   };
   return {
+    isBackgroundSeQuiet,
     setVideoHold,
     setStoryEndFade,
     setStoryOpenFade,
@@ -13720,6 +13805,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RHYTHM_GRAND_OPEN_RELEASE = true;
 const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
+const QUICK_RUN_ANYWHERE_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
@@ -13738,6 +13824,7 @@ const RELEASE_FLAGS = {
   assistantLifeFurniture: true,
   assistantLifeSolo: true,
   assistantLifeFriend: true,
+  assistantMasmonTrain: false,
   assistantMasmonSuggest: true,
   assistantMasmonNamesApi: true,
   assistantLifeFriendApi: true,
@@ -21104,6 +21191,76 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
     probability: a.available && total > 0 ? a.weight / total : 0
   }));
 };
+const TACTICS_ENEMY_AI_LEVELS = Object.freeze([Object.freeze({
+  id: 0,
+  label: 'いまのまま',
+  note: '決まった重みのくじ(本番と同じ)'
+}), Object.freeze({
+  id: 1,
+  label: '間合いを読む',
+  note: '移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'
+}), Object.freeze({
+  id: 2,
+  label: '状況を読む',
+  note: '様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'
+}), Object.freeze({
+  id: 3,
+  label: '技をつなぐ',
+  note: '咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'
+})]);
+const tacticsEnemyAiBestDist = (currentDist, pressure) => {
+  const others = [0, 1, 2, 3].filter(d => d !== currentDist);
+  return others.reduce((a, b) => (pressure[b] || 0) < (pressure[a] || 0) ? b : a, others[0]);
+};
+const tacticsEnemyAiDefinitions = (ent, currentDist, state = {}, ai = {}) => {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(ai.level) || 0)));
+  const defs = Array.isArray(state.definitions) ? state.definitions : [];
+  if (level < 1 || state.charging || state.piercing || !ent) return defs;
+  const pressure = Array.isArray(ai.pressure) && ai.pressure.length === 4 ? ai.pressure.map(v => Math.max(0, Number(v) || 0)) : [0, 0, 0, 0];
+  const best = tacticsEnemyAiBestDist(currentDist, pressure);
+  const ratio = pressure[best] > 0 ? pressure[currentDist] / pressure[best] : 1;
+  const maxHp = Math.max(0, Number(ent.maxHp) || 0),
+    hpR = maxHp > 0 ? Math.max(0, Number(ent.hp) || 0) / maxHp : 1;
+  const alive = Array.isArray(ai.aliveSlots) ? ai.aliveSlots : [];
+  const top = Math.max(0, ...pressure);
+  return defs.map(def => {
+    let w = def.weight;
+    if (def.type === 'MOVE') w = ratio <= 1 ? 0 : ratio >= 1.15 ? w * 3 : w;
+    if (level >= 2) {
+      if (def.type === 'WAIT') w = 0;
+      if (def.type === 'REGEN' && hpR < 0.5) w *= 3;
+      if (def.type === 'ROAR') w = hpR < 0.35 ? 0 : hpR > 0.7 && !(Number(state.roarStacks) > 0) ? w * 2 : w;
+      if (def.variant === 'allout') w = alive.length <= 1 ? w * 0.3 : w * (alive.length / 2);
+      if (def.variant === 'sweep') w = alive.includes(currentDist) ? pressure[currentDist] >= top * 0.95 ? w * 2 : w : 0;
+    }
+    if (level >= 3) {
+      if (def.type === 'CHARGE' && ai.lastType === 'ROAR') w *= 4;
+      if (def.type === 'CHARGE' && (Number(ai.lowCount) || 0) >= 1) w *= 2;
+      if (def.type === 'PIERCE_CHARGE' && (Number(ai.maxDef) || 0) >= 300) w *= 2;
+    }
+    return w === def.weight ? def : {
+      ...def,
+      weight: w
+    };
+  });
+};
+const chooseTacticsEnemyActionAi = (ent, currentDist, random = Math.random, state = {}, ai = {}) => {
+  const level = Math.max(0, Math.min(3, Math.floor(Number(ai.level) || 0)));
+  if (level < 1) return chooseEnemyAction(ent, currentDist, random, state);
+  const intent = chooseEnemyAction(ent, currentDist, random, {
+    ...state,
+    definitions: tacticsEnemyAiDefinitions(ent, currentDist, state, ai)
+  });
+  if (intent && intent.type === 'MOVE' && Array.isArray(ai.pressure)) {
+    const targetDist = tacticsEnemyAiBestDist(currentDist, ai.pressure);
+    return {
+      ...intent,
+      targetDist,
+      label: `移動: ${RANGE_LABELS[targetDist]}`
+    };
+  }
+  return intent;
+};
 const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'PIERCE_CHARGE' ? '貫通撃の構えをとっている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '攻撃力を上げている' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
 const enemyActionDisplayName = (ent, def) => {
   if (!def) return '';
@@ -22310,6 +22467,7 @@ const buildAttackHits = ({
   }
   return hits;
 };
+const attackDistanceAfterCard = (card, dist) => card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist;
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
   const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);
@@ -42160,7 +42318,7 @@ const RhythmTapTest = ({
       const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
-      RHYTHM_TIMING_DIAG.frame(songTimeMs);
+      RHYTHM_TIMING_DIAG.frame(songTimeMs, typeof run.audio.rawSongTimeMs === 'function' ? run.audio.rawSongTimeMs() : null);
       const RHYTHM_MISS_RECLAIM_MS = rhythmMissReclaimMs();
       const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
@@ -43652,8 +43810,15 @@ const RhythmTapTest = ({
       if (!playing()) return;
       const now = nowMs();
       RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length || 0);
+      const vw = typeof window !== 'undefined' ? Number(window.innerWidth) || 0 : 0,
+        vh = typeof window !== 'undefined' ? Number(window.innerHeight) || 0 : 0,
+        live = e.touches?.length || 0;
       Array.from(e.changedTouches || []).forEach(t => {
-        if (inArea(t.target)) RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp);
+        if (!inArea(t.target) || RHYTHM_TOUCH_BRIDGE.lateFollow(t.identifier, e.timeStamp)) return;
+        RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp, {
+          edgePx: vw > 0 && vh > 0 ? Math.max(0, Math.min(t.clientX, vw - t.clientX, t.clientY, vh - t.clientY)) : NaN,
+          live
+        });
       });
       sweep();
     };
@@ -43822,10 +43987,27 @@ const RhythmTapTest = ({
           return;
         }
         current.activeTouchInputs.add(inputKey);
-        if (e.type !== 'touchstart') {
-          RHYTHM_TOUCH_BRIDGE.lateStart();
-          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
-          RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
+        const ownStart = e.type === 'touchstart' && Array.from(e.changedTouches || []).some(t => t.identifier === touch.identifier);
+        if (!ownStart) {
+          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            droppedAt = current.droppedNoEnd?.get(inputKey),
+            back = droppedAt !== undefined && nowPerf - droppedAt <= RHYTHM_TOUCH_BACK_MS,
+            guarded = back && rhythmTouchPlatform() === 'ios';
+          current.droppedNoEnd?.delete(inputKey);
+          RHYTHM_TOUCH_BRIDGE.lateStart({
+            id: touch.identifier,
+            type: e.type,
+            stamp: e.timeStamp,
+            back,
+            guarded
+          });
+          if (guarded) {
+            RHYTHM_INPUT_REC.event('back', {
+              key: inputKey
+            });
+            return;
+          }
+          if (!back && e.type !== 'touchstart') RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
         }
         if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
@@ -43875,6 +44057,15 @@ const RhythmTapTest = ({
             }, RHYTHM_MISSING_TOUCH_CONFIRM_MS);
           }
           return;
+        }
+        if (!ownEnd) {
+          current.droppedNoEnd = current.droppedNoEnd || new Map();
+          if (current.droppedNoEnd.size > 32) current.droppedNoEnd.clear();
+          current.droppedNoEnd.set(inputKey, performance.now());
+        } else {
+          current.droppedNoEnd?.delete(inputKey);
+          const m = /^touch:(-?\d+)$/.exec(String(inputKey));
+          if (m) RHYTHM_TOUCH_BRIDGE.forgetTouch(Number(m[1]));
         }
         current.missingHeld?.delete(inputKey);
         current.activeTouchInputs.delete(inputKey);
@@ -46068,6 +46259,16 @@ const tacticsTargetName = (units, slotIndex) => {
   return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目のモンスター`;
 };
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
+const TACTICS_ENEMY_AI_DIST_MULT = Object.freeze([1.5, 1.3, 1.1, 0.9]);
+const tacticsEnemyPressure = (units, slotBonus = [0, 0, 0, 0]) => [0, 1, 2, 3].map(d => {
+  let sum = 0;
+  tacticsAliveSlots(units).forEach(i => {
+    const u = normalizeTacticsUnit(units[i]);
+    if (!u) return;
+    sum += Math.max(0, Number(u.atk) || 0) * TACTICS_ENEMY_AI_DIST_MULT[Math.abs(i - d)] * (1 + (Number((slotBonus || [])[i]) || 0));
+  });
+  return sum;
+});
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return {
@@ -62480,6 +62681,7 @@ const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
+const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;
 const GROWTH_FX_ITEM_MS = 3400;
@@ -62541,7 +62743,7 @@ const growthFxPush = ev => {
   } else {
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
-    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    const prev = mergeKey ? sheets.find(s => s.tier === 'level' && s.key === mergeKey) : null;
     if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), {
       tier,
       key: mergeKey
@@ -62991,9 +63193,11 @@ const ensureGrowthFxCss = () => {
 };
 const growthFxVisible = (screen, domHold = {}) => {
   const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
+  const sheet = all && !domHold.sheet;
   return {
     all,
-    sheet: all && !domHold.sheet
+    sheet,
+    level: sheet && !(domHold.quickAnywhere && screen !== 'HOME')
   };
 };
 const growthFxLevelOf = load => {
@@ -63270,7 +63474,10 @@ const GrowthFxLevelUp = ({
     if (!done) setDone(true);else onClose();
   };
   const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
-  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  const jumpFrom = growthFxNum(sheet.levelFrom),
+    jumpTo = growthFxNum(sheet.levelTo);
+  const jump = jumpFrom > 0 && jumpTo - jumpFrom >= 2;
+  const label = jump ? `${k.label}が Lv.${jumpFrom} から Lv.${jumpTo} に上がりました` : `${k.label}が Lv.${sheet.levelTo} に上がりました`;
   if (level === 'minimal') {
     return React.createElement("div", {
       className: "mh-gfx-sheet level-mini mh-gfx-minimal",
@@ -63287,7 +63494,7 @@ const GrowthFxLevelUp = ({
       className: "mh-gfx-band"
     }, React.createElement("span", {
       className: "big"
-    }, cardIconNode(k.icon, 20), " ", k.label, " Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
+    }, cardIconNode(k.icon, 20), " ", k.label, " ", jump ? `Lv.${jumpFrom} → ` : '', "Lv.", sheet.levelTo), React.createElement("small", null, sheet.sub, gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''), React.createElement("small", null, "押すと閉じる")));
   }
   const conf = level === 'full' ? Array.from({
     length: 24
@@ -63379,7 +63586,10 @@ const GrowthFxLevelUp = ({
     "aria-hidden": "true"
   })), React.createElement("div", {
     className: "ttl"
-  }, sheet.title || `${k.label} UP!`), sheet.sub && React.createElement("div", {
+  }, sheet.title || `${k.label} UP!`), jump && React.createElement("div", {
+    className: "sub",
+    "data-growth-fx-level-jump": true
+  }, React.createElement("b", null, "Lv.", jumpFrom, " → Lv.", jumpTo)), sheet.sub && React.createElement("div", {
     className: "sub"
   }, sheet.sub)), gains.length > 0 && React.createElement("ul", {
     className: "mh-gfx-gains",
@@ -63614,7 +63824,8 @@ const GrowthFxLayer = ({
   const [, setTick] = useState(0);
   const [domHold, setDomHold] = useState({
     all: false,
-    sheet: false
+    sheet: false,
+    quickAnywhere: false
   });
   useEffect(() => {
     ensureGrowthFxCss();
@@ -63628,9 +63839,11 @@ const GrowthFxLayer = ({
     const check = () => {
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
-      setDomHold(prev => prev.all === all && prev.sheet === sheet ? prev : {
+      const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : {
         all,
-        sheet
+        sheet,
+        quickAnywhere
       });
     };
     check();
@@ -63642,7 +63855,7 @@ const GrowthFxLayer = ({
   const holdAll = !vis.all;
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? sheets[0] : null;
+  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
@@ -78884,7 +79097,7 @@ function HomeUpdateGuideBundle({
     "aria-modal": "true",
     "aria-label": "新しいお知らせの一覧"
   }, React.createElement("div", {
-    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
     style: {
       paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)'
     }
@@ -78898,7 +79111,7 @@ function HomeUpdateGuideBundle({
   }), React.createElement("div", {
     className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white"
   }, "新しいお知らせが", updateGuideQueue.length, "件あるよ♪ 読みたいものだけ「くわしく」で開いてね。")), React.createElement("div", {
-    className: "mt-3 space-y-2"
+    className: "mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto"
   }, updateGuideQueue.map(n => React.createElement("div", {
     key: n.id,
     "data-update-guide-bundle-item": n.id,
@@ -78917,9 +79130,10 @@ function HomeUpdateGuideBundle({
     type: "button",
     "data-update-guide-bundle-later": true,
     onClick: dismissUpdateGuideAll,
-    className: "mt-4 min-h-[50px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white"
+    className: "mt-4 min-h-[50px] w-full shrink-0 rounded-2xl bg-slate-700 text-sm font-black text-white"
   }, "あとで読む"), React.createElement("p", {
-    className: "mt-2 text-center text-[10px] font-bold text-slate-500"
+    "data-update-guide-bundle-foot": true,
+    className: "mt-2 shrink-0 text-center text-[10px] font-bold text-slate-500"
   }, "更新履歴からいつでも読めます")));
 }
 function HomeUpdateGuideOverlay({
@@ -83042,7 +83256,7 @@ function BattleScreen({
     const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
     const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0,
       guardHits = 1;
     if (Array.isArray(tacticsUnits) && slotIdx !== null) {
@@ -83054,18 +83268,25 @@ function BattleScreen({
       guardHits = tacticsGuardHits(own.cards, hits);
     } else {
       let flat = 0,
-        mult = 0;
+        mult = 0,
+        guardCards = 0;
       const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         const card = hand[idx];
         const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         const w = guardCardWeight(card);
         if (!(w > 0)) return;
+        guardCards += 1;
         const effect = cardEffectMultiplier(card, halved);
         flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
         mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
       });
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
+      const layerRushHits = enemyIntent.type === 'SPECIAL' ? extremeLayerRushHits(infernoShellRule, wave, infernoShellView?.broken) : 1;
+      if (layerRushHits > 1) {
+        hits = layerRushHits;
+        guardHits = guardCards >= TACTICS_RUSH_GUARD_CARDS ? hits : 1;
+      }
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     if (hit.taken > 0) hit.taken *= plannedLifeTreeMult(slotIdx);
@@ -84394,7 +84615,7 @@ function BattleScreen({
           combo: 0
         };
         if (slotIdx != null && isAttackCard(card)) {
-          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
+          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved, b.dist);
           committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo, slotIdx, halved);
         }
         const gw = guardCardWeight(card);
@@ -84465,7 +84686,7 @@ function BattleScreen({
           if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
           pendingValidSlot = i;
           const pendingHalved = committedCounter.peek(pendingCardObj, i);
-          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, pendingHalved);
+          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, pendingHalved, boosts.forPending.dist);
           pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo, i, pendingHalved);
           break;
         }
@@ -84734,7 +84955,7 @@ function BattleScreen({
         pendingCounter.take(hand[idx], cardAssignments[idx] != null ? cardAssignments[idx] : null);
       });
       const isSecondOrLater = pendingCounter.peek(pendingCardObj, i);
-      const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
+      const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater, slotBoosts.forPending.dist);
       previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo, i, isSecondOrLater);
       previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
       isPendingPreview = true;
@@ -84751,7 +84972,7 @@ function BattleScreen({
             dmgMod: 0,
             combo: 0
           };
-          const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
+          const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved, b.dist);
           previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo, i, halved);
         }
       });
@@ -103296,7 +103517,7 @@ const quickGuidePick = ctx => {
     case 'RHYTHM_DEMO_HOME':
       return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
     case 'RHYTHM_MODE_SELECT':
-      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+      return c.backgroundRun === true && !(typeof QUICK_RUN_ANYWHERE_RELEASE !== 'undefined' && QUICK_RUN_ANYWHERE_RELEASE) && not('g3c') ? 'g3c' : null;
     case 'HOME':
       return nudge ? 'nudgeHome' : null;
     default:
@@ -107390,12 +107611,27 @@ function AssistantLifeRoom({
     return who ? React.createElement("span", {
       key: pid,
       className: state.lonely && pid === id ? 'lonely' : state.after ? 'after' : '',
-      "data-assistant-life-room-face": pid
+      "data-assistant-life-room-face": pid,
+      style: {
+        position: 'relative'
+      }
     }, React.createElement(AssistantFace, {
       who: who,
       size: Math.round(Math.min(40, h * .44)),
       accent: who.accent
-    })) : null;
+    }), met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => {
+      const sz = Math.round(Math.min(40, h * .44)) - 4;
+      return React.createElement(AssistantLifeSleepEyes, {
+        pid: pid,
+        src: assistantFaceSrc(who, null),
+        w: sz,
+        h: sz,
+        style: {
+          left: 2,
+          top: 2
+        }
+      });
+    })()) : null;
   })), ppl && state.bub && React.createElement("span", {
     className: "bb",
     "data-assistant-life-room-bub": true,
@@ -108414,6 +108650,17 @@ function AssistantLifeStands({
         opacity: 0,
         height: '50%',
         filter
+      }
+    }), zz && p && typeof AssistantLifeSleepEyes === 'function' && React.createElement(AssistantLifeSleepEyes, {
+      pid: x.pid,
+      src: x.src,
+      w: p.width,
+      h: p.height,
+      style: {
+        left: p.left,
+        top: p.top,
+        filter,
+        zIndex: 1
       }
     }), zz && p && React.createElement("span", {
       className: "absolute text-[34px]",
@@ -109988,6 +110235,16 @@ function AssistantLifeMapFig({
       left: w / 2 - cx,
       filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)'
     }
+  }), sleep && typeof AssistantLifeSleepEyes === 'function' && React.createElement(AssistantLifeSleepEyes, {
+    pid: who && who.id,
+    src: src,
+    w: iw,
+    h: ih,
+    style: {
+      left: w / 2 - cx,
+      top: -b.t * ih,
+      filter: 'brightness(.62) saturate(.7)'
+    }
   })), sleep && React.createElement("span", {
     className: "absolute right-0 top-0 text-[10px]",
     "aria-hidden": "true"
@@ -110967,6 +111224,43 @@ const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
     ang: -27,
     line: '#3a1f2a',
     eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']]
+  },
+  mua: {
+    ang: 8,
+    line: '#5a3a2a',
+    eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']]
+  },
+  kyuko: {
+    ang: -10,
+    line: '#4a2418',
+    eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']]
+  }
+});
+const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
+  mua: {
+    ang: 10,
+    line: '#5a3a2a',
+    eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']]
+  },
+  kiki: {
+    ang: -2,
+    line: '#4a2030',
+    eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']]
+  },
+  momosuke: {
+    ang: -19,
+    line: '#5a3a28',
+    eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']]
+  },
+  atsu: {
+    ang: -30,
+    line: '#3a1f2a',
+    eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']]
+  },
+  kyuko: {
+    ang: -11,
+    line: '#4a2418',
+    eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
 function AssistantLifeSleepEyes({
@@ -110976,10 +111270,11 @@ function AssistantLifeSleepEyes({
   h,
   style
 }) {
-  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const isFace = /\/face\//.test(String(src || ''));
+  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}`;
+  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
   return React.createElement("svg", {
     "data-assistant-life-roomview-sleep-eyes": pid,
     width: w,
@@ -131105,6 +131400,854 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
+const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
+const AMGT_KINDS = Object.freeze({
+  pow: {
+    name: 'ちから修行',
+    act: '岩割り',
+    stat: 'pow',
+    aim: 'ちから技'
+  },
+  wise: {
+    name: 'かしこさ修行',
+    act: '瞑想',
+    stat: 'wise',
+    aim: 'かしこさ技'
+  },
+  hit: {
+    name: '命中修行',
+    act: '一点突き',
+    stat: 'hit',
+    aim: '当てにくい技'
+  },
+  eva: {
+    name: '回避修行',
+    act: '見切り',
+    stat: 'eva',
+    aim: '間合いの判断'
+  },
+  tough: {
+    name: '防御修行',
+    act: '受け止め',
+    stat: 'tough',
+    aim: 'ガード'
+  },
+  real: {
+    name: '実戦修行',
+    act: '手合わせ',
+    stat: 'life',
+    aim: '交代の判断と全部の技'
+  }
+});
+const AMGT_KIND_KEYS = Object.keys(AMGT_KINDS);
+const AMGT_SENSE = Object.freeze([['guard', 'ガード'], ['dist', '間合いの判断'], ['swap', '交代の判断']]);
+const AMGT_SENSE_KEYS = AMGT_SENSE.map(x => x[0]);
+const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'], [25, '慣れ'], [0, '見習い']]);
+const amgtRankOf = v => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
+const AMGT_NUM = Object.freeze({
+  gain: [4, 8],
+  realAll: [1, 2],
+  stat: [2, 4],
+  fat: 12,
+  str: 2,
+  perDay: 2,
+  fatStop: 45,
+  goAt: 0.4,
+  initPerLv: 0.3,
+  initMax: 30,
+  askMult: 1.1
+});
+const AMGT_BONUS = Object.freeze({
+  hit: 0.06,
+  guts: 0.15,
+  guard: 0.08
+});
+const AMGT_BR = Object.freeze([['know', '育成知識'], ['lead', '指導力'], ['obs', '観察力'], ['tac', '戦術力'], ['trust', '信頼構築'], ['exp', '育成経験']]);
+const AMGT_BR_KEYS = AMGT_BR.map(x => x[0]);
+const AMGT_BR_INIT = Object.freeze({
+  mua: [25, 40, 20, 30, 35, 20],
+  kiki: [40, 25, 40, 35, 20, 20],
+  momosuke: [30, 25, 40, 20, 40, 20],
+  dra: [20, 40, 15, 40, 30, 20],
+  atsu: [30, 30, 30, 30, 30, 20],
+  kyuko: [45, 25, 35, 30, 20, 20],
+  sorashido: [30, 30, 30, 35, 35, 20],
+  erubin: [35, 25, 35, 25, 35, 20]
+});
+const AMGT_TRAIT = Object.freeze({
+  mua: {
+    p: 0.4,
+    like: ['pow', 'real']
+  },
+  kiki: {
+    p: 0.4,
+    like: ['wise', 'eva']
+  },
+  momosuke: {
+    p: 0.3,
+    like: ['tough']
+  },
+  dra: {
+    p: 0.45,
+    like: ['pow', 'real']
+  },
+  atsu: {
+    p: 0.35,
+    like: []
+  },
+  kyuko: {
+    p: 0.5,
+    like: ['wise', 'hit']
+  },
+  sorashido: {
+    p: 0.4,
+    like: ['eva', 'real']
+  },
+  erubin: {
+    p: 0.35,
+    like: ['tough', 'eva']
+  }
+});
+const AMGT_BR_EFFECT = Object.freeze({
+  lead: 0.20,
+  know: 0.60,
+  trust: 0.60,
+  obs: 10
+});
+const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, 'はじめたて']]);
+const amgtBrRankOf = v => (AMGT_BR_RANKS.find(r => v >= r[0]) || AMGT_BR_RANKS[AMGT_BR_RANKS.length - 1])[1];
+const AMGT_BR_XP = Object.freeze({
+  light: ['lead'],
+  heavy: ['lead'],
+  real: ['tac', 'lead'],
+  joint: ['trust', 'lead'],
+  focus: ['lead'],
+  weak: ['know'],
+  rest: ['obs'],
+  play: ['obs', 'trust'],
+  shugyo: ['know', 'tac'],
+  fail: ['know'],
+  ask: ['trust']
+});
+const AMGT_LOG = 21;
+const AMGT_EV = 30;
+const AMGT_AT = 12;
+const AMGT_PLACE = 'battle';
+const AMGT_PLACE_NAME = 'モンヒロバトル';
+const amgtSlotDay = slot => Math.floor(slot / 3);
+const amgtSlotOf = (now = Date.now()) => {
+  const t = Number(now) + 9 * 3600000 - 4 * 3600000;
+  const day = Math.floor(t / 86400000);
+  const h = (t - day * 86400000) / 3600000;
+  return day * 3 + (h < 8 ? 0 : h < 14 ? 1 : 2);
+};
+const amgtClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const amgtNum = (v, d, lo, hi) => Number.isFinite(Number(v)) ? amgtClamp(Math.round(Number(v)), lo, hi) : d;
+const amgtOkAid = aid => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+const amgtRngOf = text => {
+  if (typeof assistantMasmonRng === 'function') return assistantMasmonRng(text);
+  let h = 2166136261;
+  for (const ch of String(text)) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  let x = h >>> 0 || 1;
+  return () => {
+    x ^= x << 13;
+    x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x >>>= 0;
+    return x / 4294967296;
+  };
+};
+const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+const amgtTechsOf = monster => typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : [];
+const amgtTechIdOk = id => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+const normalizeAssistantMasmonTrain = raw => {
+  const out = {
+    v: 1,
+    mons: {},
+    br: {},
+    ask: {},
+    ev: {},
+    at: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
+    if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
+    const one = {};
+    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+      if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
+      const m = {};
+      for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
+      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG).map(x => ({
+        s: x.s,
+        k: x.k,
+        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])),
+        ...(amgtTechIdOk(x.l) ? {
+          l: x.l
+        } : {}),
+        ...(x.f ? {
+          f: 1
+        } : {})
+      }));
+      one[key] = {
+        m,
+        learn,
+        day: {
+          d: amgtNum(e.day && e.day.d, -1, -1, 1e7),
+          n: amgtNum(e.day && e.day.n, 0, 0, 9)
+        },
+        log,
+        src: 'init_v1'
+      };
+    }
+    out.mons[aid] = one;
+  }
+  if (raw.br && typeof raw.br === 'object') for (const [aid, b] of Object.entries(raw.br)) {
+    if (!amgtOkAid(aid) || !b || typeof b !== 'object' || !b.ab || typeof b.ab !== 'object') continue;
+    const ab = {};
+    const xp = {};
+    for (const k of AMGT_BR_KEYS) {
+      ab[k] = amgtNum(b.ab[k], 20, 0, 100);
+      xp[k] = Number.isFinite(Number(b.xp && b.xp[k])) ? amgtClamp(Math.round(Number(b.xp[k]) * 2) / 2, 0, 999) : 0;
+    }
+    out.br[aid] = {
+      ab,
+      xp,
+      src: 'init_v1'
+    };
+  }
+  if (raw.ask && typeof raw.ask === 'object') for (const [aid, a] of Object.entries(raw.ask)) {
+    if (!amgtOkAid(aid) || !a || typeof a !== 'object' || !Number.isInteger(a.d)) continue;
+    const o = {
+      d: a.d,
+      q: typeof a.q === 'string' ? a.q.slice(0, 12) : '',
+      slot: amgtNum(a.slot, 1, 1, 8)
+    };
+    if (typeof a.a === 'string') o.a = a.a.slice(0, 12);
+    if (Number.isInteger(a.until)) o.until = a.until;
+    out.ask[aid] = o;
+  }
+  if (raw.ev && typeof raw.ev === 'object') for (const [aid, list] of Object.entries(raw.ev)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.ev[aid] = list.filter(x => x && Number.isInteger(x.s) && typeof x.t === 'string').slice(-AMGT_EV).map(x => ({
+      s: x.s,
+      t: x.t.slice(0, 12),
+      x: typeof x.x === 'string' ? x.x.slice(0, 60) : ''
+    }));
+  }
+  if (raw.at && typeof raw.at === 'object') for (const [aid, list] of Object.entries(raw.at)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.at[aid] = [...new Set(list.filter(n => Number.isInteger(n) && n > 0))].sort((a, b) => a - b).slice(-AMGT_AT);
+  }
+  return out;
+};
+const amgtCanLearn = (t, st, me) => {
+  if (!t || !t.learn) return false;
+  if (t.learn.start) return true;
+  for (const [k, v] of Object.entries(t.learn.st || {})) if (!st || !(Number(st[k]) >= v)) return false;
+  for (const [id, v] of Object.entries(t.learn.need || {})) if (!me || !me.learn.includes(id) || !((me.m[id] || 0) >= v)) return false;
+  return true;
+};
+const amgtInitMon = (monster, lv, st) => {
+  const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
+  const learn = amgtTechsOf(monster).filter(t => t.learn && (t.learn.start || !t.learn.need && amgtCanLearn(t, st, null))).map(t => t.id);
+  const m = {};
+  for (const k of AMGT_SENSE_KEYS) m[k] = base;
+  for (const id of learn) m[id] = base;
+  return {
+    m,
+    learn,
+    day: {
+      d: -1,
+      n: 0
+    },
+    log: [],
+    src: 'init_v1'
+  };
+};
+const amgtInitBreeder = aid => {
+  const a = AMGT_BR_INIT[aid] || AMGT_BR_INIT.atsu;
+  const ab = {};
+  const xp = {};
+  AMGT_BR_KEYS.forEach((k, i) => {
+    ab[k] = a[i];
+    xp[k] = 0;
+  });
+  return {
+    ab,
+    xp,
+    src: 'init_v1'
+  };
+};
+const amgtBrNeed = v => 4 + Math.floor(v / 8);
+const amgtBrCap = (br, k) => k === 'exp' ? 100 : Math.min(100, 60 + Math.floor(br.ab.exp * 0.4));
+const amgtBrGain = (br, kinds, onUp) => {
+  for (const k of [...kinds, 'exp']) {
+    br.xp[k] = (br.xp[k] || 0) + (k === 'exp' ? 0.5 : 1);
+    while (br.ab[k] < amgtBrCap(br, k) && br.xp[k] >= amgtBrNeed(br.ab[k])) {
+      br.xp[k] -= amgtBrNeed(br.ab[k]);
+      const before = br.ab[k];
+      br.ab[k] += 1;
+      if (onUp && [40, 60, 80].some(n => before < n && br.ab[k] >= n)) onUp(k, br.ab[k]);
+    }
+  }
+  return br;
+};
+const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
+  if (askK && AMGT_KINDS[askK]) return askK;
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  const learned = techs.filter(t => me.learn.includes(t.id));
+  const lowOf = k => {
+    if (k === 'eva') return me.m.dist;
+    if (k === 'tough') return me.m.guard;
+    if (k === 'real') return me.m.swap;
+    const list = k === 'hit' ? learned : learned.filter(t => t.kind === k);
+    return list.length ? Math.min(...list.map(t => me.m[t.id] || 0)) : 100;
+  };
+  let best = '';
+  let sc = -1;
+  for (const k of AMGT_KIND_KEYS) {
+    const canNew = techs.some(t => !me.learn.includes(t.id) && t.learn && t.learn.by === k && amgtCanLearn(t, st, me)) ? 0.9 : 0;
+    const s = (T.like.includes(k) ? 0.7 : 0) + (1 - lowOf(k) / 100) * 1.5 + canNew + rnd() * 0.8;
+    if (s > sc) {
+      sc = s;
+      best = k;
+    }
+  }
+  return best;
+};
+const AMGT_STORE = {
+  state: normalizeAssistantMasmonTrain(null),
+  loaded: false,
+  subs: new Set(),
+  dirty: false,
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  async load() {
+    if (this.loaded) return this.state;
+    let raw = null;
+    try {
+      raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
+    } catch (_) {}
+    this.loaded = true;
+    this.set(normalizeAssistantMasmonTrain(raw));
+    return this.state;
+  }
+};
+const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
+const amgtSave = next => {
+  if (!AMGT_STORE.loaded) return false;
+  AMGT_STORE.set(next);
+  if (AMGT_STORE.dirty) return;
+  AMGT_STORE.dirty = true;
+  Promise.resolve().then(() => {
+    AMGT_STORE.dirty = false;
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_TRAIN_KEY, AMGT_STORE.state, false);
+    } catch (_) {}
+  });
+  return true;
+};
+if (typeof window !== 'undefined') setTimeout(() => {
+  try {
+    if (amgtOn()) AMGT_STORE.load();
+  } catch (_) {}
+}, 0);
+const amgtSeed = () => typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed || '';
+const amgtKeyOf = row => `${row.slot}:${row.monster}`;
+const amgtEnsure = (st, aid, row, e) => {
+  const key = amgtKeyOf(row);
+  const mons = {
+    ...(st.mons[aid] || {})
+  };
+  const me0 = mons[key] || amgtInitMon(row.monster, e && e.lv, e && e.st);
+  const me = {
+    ...me0,
+    m: {
+      ...me0.m
+    },
+    learn: [...me0.learn],
+    day: {
+      ...me0.day
+    },
+    log: [...me0.log]
+  };
+  mons[key] = me;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = {
+    ab: {
+      ...br0.ab
+    },
+    xp: {
+      ...br0.xp
+    },
+    src: 'init_v1'
+  };
+  return {
+    next: {
+      ...st,
+      mons: {
+        ...st.mons,
+        [aid]: mons
+      },
+      br: {
+        ...st.br,
+        [aid]: br
+      },
+      ev: {
+        ...st.ev,
+        [aid]: [...(st.ev[aid] || [])]
+      }
+    },
+    me,
+    br
+  };
+};
+const amgtPushEv = (next, aid, s, t, x) => {
+  next.ev[aid] = [...next.ev[aid], {
+    s,
+    t,
+    x: String(x || '').slice(0, 60)
+  }].slice(-AMGT_EV);
+};
+const amgtLifeSlotsToGrow = abs => {
+  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
+  if (!S || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 6);
+  const s = S[abs - day * 6];
+  if (!s) return [];
+  const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000;
+  const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
+  return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
+};
+const amgtNoteLife = life => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !life || !Number.isInteger(life.abs)) return false;
+  const ids = [...(life.groups || []).filter(g => g && g.place === AMGT_PLACE).flatMap(g => g.ids || []), ...Object.entries(life.solo || {}).filter(([, s]) => s && s.place === AMGT_PLACE).map(([id]) => id)].filter(amgtOkAid);
+  if (!ids.length) return false;
+  const slots = amgtLifeSlotsToGrow(life.abs);
+  if (!slots.length) return false;
+  const st = AMGT_STORE.state;
+  let changed = false;
+  const at = {
+    ...st.at
+  };
+  for (const id of ids) {
+    const cur = at[id] || [];
+    const add = slots.filter(n => !cur.includes(n));
+    if (add.length) {
+      at[id] = [...cur, ...add].sort((a, b) => a - b).slice(-AMGT_AT);
+      changed = true;
+    }
+  }
+  if (changed) amgtSave({
+    ...st,
+    at
+  });
+  return changed;
+};
+const amgtOnLifeSlot = life => {
+  try {
+    return amgtNoteLife(life);
+  } catch (_) {
+    return false;
+  }
+};
+const amgtWasAtPlace = (aid, slot, st = AMGT_STORE.state) => {
+  if (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) amgtNoteLife(ASSISTANT_LIFE_STORE.state.life);
+  return ((AMGT_STORE.state.at || st.at)[aid] || []).includes(slot);
+};
+const amgtChoose = (aid, e, row, _rnd, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !row || !e || !Number.isInteger(slot)) return null;
+  if (e.fat >= AMGT_NUM.fatStop || e.str >= 50) return null;
+  if (!amgtWasAtPlace(aid, slot)) return null;
+  const st = AMGT_STORE.state;
+  const me = (st.mons[aid] || {})[amgtKeyOf(row)] || amgtInitMon(row.monster, e.lv, e.st);
+  const day = amgtSlotDay(slot);
+  if (me.day.d === day && me.day.n >= AMGT_NUM.perDay) return null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-pick|${amgtKeyOf(row)}|${slot}`);
+  const ask = st.ask[aid];
+  const askK = ask && ask.q === 'next' && ask.a && ask.slot === row.slot && Number.isInteger(ask.until) && ask.until >= slot ? ask.a : '';
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  if (!askK && rnd() >= T.p + AMGT_NUM.goAt) return null;
+  return {
+    a: 'shugyo',
+    k: amgtPickKind(aid, me, amgtTechsOf(row.monster), e.st, rnd, askK),
+    asked: !!askK
+  };
+};
+const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
+  const K = AMGT_KINDS[act.k];
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const {
+    next,
+    me,
+    br
+  } = amgtEnsure(AMGT_STORE.state, aid, row, e);
+  const techs = amgtTechsOf(row.monster);
+  const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
+  const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
+  const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const g = {};
+  const nameOf = k => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
+  const up = (k, lo, hi) => {
+    const cur = me.m[k] || 0;
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    if (n > 0) {
+      me.m[k] = cur + n;
+      g[k] = (g[k] || 0) + n;
+      if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`);
+    }
+  };
+  let learned = '';
+  if (!fail) {
+    const t = techs.find(x => !me.learn.includes(x.id) && x.learn && x.learn.by === act.k && amgtCanLearn(x, e.st, me));
+    if (t) {
+      me.learn = [...me.learn, t.id];
+      me.m[t.id] = me.m[t.id] || 0;
+      learned = t.id;
+      amgtPushEv(next, aid, slot, 'learn', `${amgtKeyOf(row)}|${t.name}`);
+    }
+  }
+  const known = techs.filter(t => me.learn.includes(t.id));
+  const lowest = list => list.slice().sort((a, b) => (me.m[a.id] || 0) - (me.m[b.id] || 0) || a.id.localeCompare(b.id))[0];
+  let main = '';
+  if (act.k === 'eva') main = 'dist';else if (act.k === 'tough') main = 'guard';else if (act.k === 'real') main = 'swap';else if (learned) main = learned;else {
+    const pool = act.k === 'hit' ? known.slice().sort((a, b) => a.hit - b.hit).slice(0, 2) : known.filter(t => t.kind === act.k);
+    const t = lowest(pool.length ? pool : known);
+    main = t ? t.id : 'swap';
+  }
+  up(main, AMGT_NUM.gain[0], AMGT_NUM.gain[1]);
+  if (act.k === 'real') for (const t of known) up(t.id, AMGT_NUM.realAll[0], AMGT_NUM.realAll[1]);
+  if (typeof add === 'function') add(K.stat, AMGT_NUM.stat[0], AMGT_NUM.stat[1]);
+  e.fat = amgtClamp(e.fat + AMGT_NUM.fat, 0, 100);
+  e.str = amgtClamp(e.str + Math.round((AMGT_NUM.str + (fail ? 5 : 0)) * amgtStressMult(aid)), 0, 100);
+  const day = amgtSlotDay(slot);
+  me.day = {
+    d: day,
+    n: (me.day.d === day ? me.day.n : 0) + 1
+  };
+  me.log = [...me.log, {
+    s: slot,
+    k: act.k,
+    g,
+    ...(learned ? {
+      l: learned
+    } : {}),
+    ...(fail ? {
+      f: 1
+    } : {})
+  }].slice(-AMGT_LOG);
+  amgtPushEv(next, aid, slot, 'shugyo', `${amgtKeyOf(row)}|${act.k}`);
+  amgtBrGain(br, AMGT_BR_XP.shugyo.concat(fail ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, slot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  e.shugyo = {
+    k: act.k,
+    g,
+    ...(learned ? {
+      l: learned
+    } : {}),
+    ...(fail ? {
+      f: 1
+    } : {})
+  };
+  return e;
+};
+const amgtAfterAct = (aid, act, failed, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || act.a === 'shugyo' || !amgtOkAid(aid)) return;
+  const st = AMGT_STORE.state;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = {
+    ab: {
+      ...br0.ab
+    },
+    xp: {
+      ...br0.xp
+    },
+    src: 'init_v1'
+  };
+  const next = {
+    ...st,
+    br: {
+      ...st.br,
+      [aid]: br
+    },
+    ev: {
+      ...st.ev,
+      [aid]: [...(st.ev[aid] || [])]
+    }
+  };
+  amgtBrGain(br, (AMGT_BR_XP[act.a] || []).concat(failed ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, Number.isInteger(slot) ? slot : 0, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+};
+const amgtBr = aid => (AMGT_STORE.state.br[aid] || amgtInitBreeder(aid)).ab;
+const amgtLeadMult = aid => amgtOn() ? 1 + amgtBr(aid).lead / 100 * AMGT_BR_EFFECT.lead : 1;
+const amgtFailMult = aid => amgtOn() ? 1 - amgtBr(aid).know / 100 * AMGT_BR_EFFECT.know : 1;
+const amgtStressMult = aid => amgtOn() ? 1 - amgtBr(aid).trust / 100 * AMGT_BR_EFFECT.trust : 1;
+const amgtRestAt = (aid, base) => {
+  if (!amgtOn() || !Number.isFinite(base)) return base;
+  const pull = Math.round(amgtBr(aid).obs / 100 * AMGT_BR_EFFECT.obs);
+  return base > 55 ? Math.max(55, base - pull) : Math.min(55, base + pull);
+};
+const amgtActName = x => x && x.a === 'shugyo' && AMGT_KINDS[x.k] ? `${AMGT_PLACE_NAME}で${AMGT_KINDS[x.k].act}(${AMGT_KINDS[x.k].name})` : '';
+const amgtEntryOf = (aid, t, st = AMGT_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgtKeyOf(t)] : null) || null;
+const amgtBattleOf = (aid, t, lv, st = AMGT_STORE.state) => {
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(t && t.monster, lv, null);
+  return {
+    techs: [...me.learn],
+    mastery: {
+      ...me.m
+    }
+  };
+};
+const amgtTacticsOf = (aid, rows, st = AMGT_STORE.state) => {
+  const br = (st.br[aid] || amgtInitBreeder(aid)).ab;
+  const list = (Array.isArray(rows) ? rows : []).map(t => amgtEntryOf(aid, t, st)).filter(Boolean);
+  const avg = list.length ? list.reduce((a, me) => a + (me.m.dist + me.m.swap) / 2, 0) / list.length : 0;
+  return amgtClamp(Math.round(br.tac * 0.8 + avg * 0.2), 0, 100);
+};
+const amgtAskOf = (aid, rows, day, growOf, st = AMGT_STORE.state) => {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const done = st.ask[aid] && st.ask[aid].d === day ? st.ask[aid] : null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-ask|${day}`);
+  const t = rows[Math.floor(rnd() * rows.length)];
+  const g = typeof growOf === 'function' ? growOf(t) : null;
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(t.monster, g ? g.lv : t.lv, g ? g.st : null);
+  const techs = amgtTechsOf(t.monster);
+  const near = techs.find(x => !me.learn.includes(x.id) && x.learn && !x.learn.start && amgtCanLearn(x, g ? g.st : null, me));
+  let q = 'next';
+  if (g && g.fat >= 50) q = 'rest';else if (near && rnd() < 0.6) q = 'learn';
+  const opts = q === 'rest' ? ['rest', 'more'] : q === 'learn' ? [near.learn.by, near.learn.by === 'real' ? 'hit' : 'real'] : AMGT_KIND_KEYS.map(k => [k, rnd()]).sort((a, b) => a[1] - b[1]).slice(0, 3).map(x => x[0]);
+  return {
+    q,
+    slot: t.slot,
+    row: t,
+    opts,
+    tech: near ? near.name : '',
+    answered: done ? done.a : ''
+  };
+};
+const amgtAnswer = (aid, ask, choice, nowSlot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
+  const day = amgtSlotDay(nowSlot);
+  const st = AMGT_STORE.state;
+  if (st.ask[aid] && st.ask[aid].d === day && st.ask[aid].a) return false;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = {
+    ab: {
+      ...br0.ab
+    },
+    xp: {
+      ...br0.xp
+    },
+    src: 'init_v1'
+  };
+  const next = {
+    ...st,
+    br: {
+      ...st.br,
+      [aid]: br
+    },
+    ev: {
+      ...st.ev,
+      [aid]: [...(st.ev[aid] || [])]
+    }
+  };
+  const kind = AMGT_KINDS[choice] ? choice : '';
+  next.ask = {
+    ...st.ask,
+    [aid]: {
+      d: day,
+      q: kind ? 'next' : ask.q,
+      slot: ask.slot,
+      a: choice,
+      ...(kind ? {
+        until: nowSlot + 9
+      } : {})
+    }
+  };
+  if (choice === 'rest' && !(typeof amgAdvise === 'function' && amgAdvise(aid, ask.slot, 'rest') !== false)) return false;
+  amgtPushEv(next, aid, nowSlot, 'ask', `${ask.slot}|${choice}`);
+  amgtBrGain(br, AMGT_BR_XP.ask, (k, v) => amgtPushEv(next, aid, nowSlot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  return true;
+};
+const amgtRoomLine = (aid, now = Date.now()) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !amgtOkAid(aid)) return null;
+  const life = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state ? ASSISTANT_LIFE_STORE.state.life : null;
+  const here = life && typeof assistantLifeSlotAt === 'function' && life.abs === assistantLifeSlotAt(now).abs && ((life.groups || []).some(g => g && g.place === AMGT_PLACE && (g.ids || []).includes(aid)) || (life.solo || {})[aid] && life.solo[aid].place === AMGT_PLACE);
+  if (here) return `いま${AMGT_PLACE_NAME}で修行中`;
+  const st = AMGT_STORE.state;
+  const day = amgtSlotDay(amgtSlotOf(now));
+  const ask = st.ask[aid];
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid) : [];
+  if (rows.length && !(ask && ask.d === day && ask.a)) return '修行の相談があるみたい';
+  const n = Object.values(st.mons[aid] || {}).reduce((a, me) => a + (me.day.d === day ? me.day.n : 0), 0);
+  return n ? `今日は${AMGT_PLACE_NAME}で${n}回修行した` : null;
+};
+const AMGT_ASK_TEXT = Object.freeze({
+  next: n => `${n}、次はどの修行がいいかな?`,
+  rest: n => `${n}、ちょっと疲れてるみたい。休ませた方がいいかな?`,
+  learn: (n, tech) => `${n}、もうすぐ「${tech}」を覚えられそう! どの修行がいいと思う?`
+});
+const AMGT_OPT_TEXT = Object.freeze({
+  rest: '休ませよう',
+  more: 'もう少しがんばろう'
+});
+const AMGT_DIST = '零近中遠';
+const useAmgtState = () => {
+  const [st, setSt] = React.useState(AMGT_STORE.state);
+  React.useEffect(() => {
+    AMGT_STORE.subs.add(setSt);
+    if (!AMGT_STORE.loaded) AMGT_STORE.load();
+    return () => {
+      AMGT_STORE.subs.delete(setSt);
+    };
+  }, []);
+  return st;
+};
+const amgtEvText = (x, rowsByKey) => {
+  const [a, b, c] = String(x.x || '').split('|');
+  const nm = k => rowsByKey[k] && rowsByKey[k].nick || 'マスモン';
+  if (x.t === 'shugyo') return AMGT_KINDS[b] ? `${nm(a)}が${AMGT_PLACE_NAME}で${AMGT_KINDS[b].act}をした` : '';
+  if (x.t === 'rank') return `${nm(a)}の「${b}」が「${c}」になった`;
+  if (x.t === 'learn') return `${nm(a)}が「${b}」を覚えた!`;
+  if (x.t === 'breeder') return `ブリーダーの${(AMGT_BR.find(m => m[0] === a) || [])[1] || ''}が上がった`;
+  if (x.t === 'ask') return '相談に答えてもらった';
+  return '';
+};
+function AmgtBreederBars({
+  who,
+  st
+}) {
+  const ab = (st.br[who.id] || amgtInitBreeder(who.id)).ab;
+  return React.createElement("div", {
+    className: "mhm-card",
+    "data-amgt-breeder": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, who.name, "のブリーダーの腕"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5"
+  }, AMGT_BR.map(([k, label]) => React.createElement("div", {
+    key: k,
+    className: "flex items-center gap-1.5 text-[10px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[52px] shrink-0 whitespace-nowrap"
+  }, label), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${ab[k]}%`,
+      background: 'linear-gradient(90deg,#34d399,#22d3ee)'
+    }
+  })), React.createElement("b", {
+    className: "w-[52px] shrink-0 text-right text-[9.5px] text-emerald-200",
+    "data-amgt-br": k
+  }, amgtBrRankOf(ab[k]))))));
+}
+function AmgtCard({
+  who,
+  t,
+  e
+}) {
+  const st = useAmgtState();
+  if (!amgtOn() || !who || !t) return null;
+  const me = amgtEntryOf(who.id, t, st) || amgtInitMon(t.monster, e && e.lv, e && e.st);
+  const nowSlot = amgtSlotOf();
+  const day = amgtSlotDay(nowSlot);
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, who.id) : [t];
+  const growOf = r => typeof amgEntryOf === 'function' ? amgEntryOf(who.id, r) : null;
+  const ask = amgtAskOf(who.id, rows, day, growOf, st);
+  const rowsByKey = Object.fromEntries(rows.map(r => [amgtKeyOf(r), r]));
+  const evs = (st.ev[who.id] || []).filter(x => amgtSlotDay(x.s) === day).map(x => amgtEvText(x, rowsByKey)).filter(Boolean).slice(-6);
+  const techs = amgtTechsOf(t.monster);
+  return React.createElement("div", {
+    className: "mt-2 space-y-2",
+    "data-amgt-card": true
+  }, React.createElement("div", {
+    className: "mhm-card"
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-1 gap-y-0.5"
+  }, techs.map(x => {
+    const has = me.learn.includes(x.id);
+    return React.createElement("div", {
+      key: x.id,
+      className: `flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`,
+      "data-amgt-tech": x.id
+    }, React.createElement("span", {
+      className: `w-[96px] shrink-0 truncate ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`
+    }, has ? x.name : '???'), React.createElement("span", {
+      className: "w-[46px] shrink-0 whitespace-nowrap text-[9px]"
+    }, [0, 1, 2, 3].map(d => React.createElement("i", {
+      key: d,
+      className: `not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`
+    }, AMGT_DIST[d]))), React.createElement("span", {
+      className: "mhm-bar"
+    }, React.createElement("i", {
+      style: {
+        width: `${has ? me.m[x.id] || 0 : 0}%`,
+        background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
+      }
+    })), React.createElement("b", {
+      className: "w-[40px] shrink-0 text-right text-[9.5px] text-amber-200"
+    }, has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'));
+  }), AMGT_SENSE.map(([k, label]) => React.createElement("div", {
+    key: k,
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200",
+    "data-amgt-sense": k
+  }, React.createElement("span", {
+    className: "w-[148px] shrink-0 truncate"
+  }, label), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${me.m[k] || 0}%`,
+      background: 'linear-gradient(90deg,#a78bfa,#f472b6)'
+    }
+  })), React.createElement("b", {
+    className: "w-[40px] shrink-0 text-right text-[9.5px] text-amber-200"
+  }, amgtRankOf(me.m[k] || 0)))))), ask && ask.slot === t.slot && React.createElement("div", {
+    className: "mhm-card",
+    "data-amgt-ask": ask.q
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold text-pink-100"
+  }, "💬 ", who.name, "「", AMGT_ASK_TEXT[ask.q](t.nick || 'マスモン', ask.tech), "」"), ask.answered ? React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-sky-200",
+    "data-amgt-ask-done": true
+  }, "あなたの答え: ", AMGT_KINDS[ask.answered] ? AMGT_KINDS[ask.answered].name : AMGT_OPT_TEXT[ask.answered]) : React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, ask.opts.map(o => React.createElement("button", {
+    key: o,
+    type: "button",
+    className: "mhl-btn px-3 text-[11px]",
+    onClick: () => amgtAnswer(who.id, ask, o, nowSlot),
+    "data-amgt-ask-opt": o
+  }, AMGT_KINDS[o] ? AMGT_KINDS[o].name : AMGT_OPT_TEXT[o])))), evs.length > 0 && React.createElement("div", {
+    className: "mhm-card",
+    "data-amgt-events": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "今日の出来事"), evs.map((s, i) => React.createElement("p", {
+    key: i,
+    className: "text-[10.5px] font-bold text-slate-100"
+  }, "・", s))), React.createElement(AmgtBreederBars, {
+    who: who,
+    st: st
+  }));
+}
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
 const ALF_KNOWN_KEY = 'mh_assistant_life_friend_known_v1';
@@ -173493,7 +174636,15 @@ function MonsterHeroGame() {
   const assistantLifeExitingRef = useRef(false);
   const gameStateNowRef = useRef('HOME');
   const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
+  const quickAnywhereRunRef = useRef(false);
+  const offscreenEffectRef = useRef(null);
+  const quickAnywhereSeQuietRef = useRef(false);
+  const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
+  const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
+  const quickAnywhereEndingRef = useRef(false);
+  const quickAnywhereKeepsRun = () => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !quickAnywhereEndingRef.current && !assistantLifeSettlingRef.current && !!runStageRef.current && !RUN_STAGE_SCREENS.includes(gameStateNowRef.current);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state) || isQuickAnywhereScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -174147,6 +175298,7 @@ function MonsterHeroGame() {
     setScreenShake(false);
     setBigShake(false);
     requestAnimationFrame(() => {
+      if (runBackgroundAllowedRef.current) return;
       setScreenShake(true);
       setBigShake(big);
       setTimeout(() => {
@@ -175448,12 +176600,17 @@ function MonsterHeroGame() {
       left -= cost;
       if (card.type === 'guard' || card.type === 'weak_guard') return;
       const b = boostsForCardDamage(run, card, false);
-      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale), b.combo, copy.srcSlot, false);
       const boost = localBoostFromCard(card);
       if (boost) run = {
+        ...run,
         oryo: run.oryo + (boost.oryo || 0),
         dmgMod: run.dmgMod + (boost.dmgMod || 0),
         combo: run.combo + (boost.combo || 0)
+      };
+      run = {
+        ...run,
+        dist: attackDistanceAfterCard(card, run.dist)
       };
     });
     return total;
@@ -176099,7 +177256,7 @@ function MonsterHeroGame() {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
     const fn = st => {
       const open = !!(st && st.open);
-      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current) && !(QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current)) assistantLifeExitingRef.current = true;
       assistantLifeOpenRef.current = open;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       setAssistantLifeOpenNow(open);
@@ -177121,6 +178278,11 @@ function MonsterHeroGame() {
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
   const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
+  const [debugEnemyAiLevel, setDebugEnemyAiLevel] = useState(0);
+  const debugEnemyAiLevelRef = useRef(0);
+  useEffect(() => {
+    debugEnemyAiLevelRef.current = debugEnemyAiLevel;
+  }, [debugEnemyAiLevel]);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugPartyIds, setDebugPartyIds] = useState([]);
   const [debugOutcome, setDebugOutcome] = useState(null);
@@ -178777,8 +179939,11 @@ function MonsterHeroGame() {
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
+  const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
     setRunStage(stage);
@@ -178786,9 +179951,11 @@ function MonsterHeroGame() {
   };
   const clearRunStage = () => {
     runStageRef.current = null;
+    quickAnywhereRunRef.current = false;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -180027,7 +181194,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen || quickAnywhereScreenOpen;
     bgmPreloadKeys(gameState, wave).forEach(next => Audio_.preloadBGM(next));
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
@@ -180050,9 +181217,10 @@ function MonsterHeroGame() {
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
+  const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeBackgroundRun ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeBackgroundRun]);
+    Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
@@ -180061,8 +181229,9 @@ function MonsterHeroGame() {
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   useEffect(() => {
-    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
-  }, [cardScreenOpen]);
+    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen);
+  }, [cardScreenOpen, quickAnywhereScreenOpen]);
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
@@ -180460,7 +181629,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = e => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) Audio_.se.tap();
+      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -185973,7 +187142,7 @@ function MonsterHeroGame() {
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null);
     setCardOrigin('home');
-    if (runStageRef.current != null) {
+    if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
       cardExitingRunRef.current = true;
       try {
@@ -187592,6 +188761,10 @@ function MonsterHeroGame() {
     window.alert('アップデート通知テストを未読へ戻しました。');
   };
   const returnToHome = () => {
+    if (quickAnywhereKeepsRun()) {
+      setGameState('HOME');
+      return;
+    }
     stopAllAuto();
     abandonRunAnimations();
     clearRunStage();
@@ -188246,6 +189419,10 @@ function MonsterHeroGame() {
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
   const exitRhythmSongSelect = async () => {
+    if (quickAnywhereKeepsRun()) {
+      setGameState('HOME');
+      return;
+    }
     if (rhythmBackgroundRun) {
       if (rhythmExitingRunRef.current) return;
       rhythmExitingRunRef.current = true;
@@ -188302,6 +189479,188 @@ function MonsterHeroGame() {
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     });
   }, [assistantLifeOpenNow]);
+  const [quickAnywhereDetail, setQuickAnywhereDetail] = useState(false);
+  useEffect(() => {
+    if (!quickAnywhereScreenOpen) setQuickAnywhereDetail(false);
+  }, [quickAnywhereScreenOpen]);
+  const renderQuickAnywhereStrip = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const paused = !finished && !resting && !quickAnywhereBackgroundRun;
+    const pending = finished ? {
+      xp: 0,
+      gold: 0
+    } : quickRunPendingRewards();
+    const gold = Math.floor(quickRunProgress.gold + pending.gold),
+      xp = Math.floor(quickRunProgress.xp + pending.xp);
+    const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
+    const label = finished ? quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止' : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
+    const info = {
+      wave,
+      loops: quickRunProgress.loops,
+      finished,
+      catchingUp: false,
+      reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+      canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(),
+      processing: resultProcessing,
+      canResume: finished && quickRunResumable
+    };
+    const closeDetail = () => setQuickAnywhereDetail(false);
+    return React.createElement(React.Fragment, null, React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere": state,
+      "data-wave": wave,
+      "data-loops": quickRunProgress.loops,
+      "data-screen": gameState,
+      "data-stage": runStage || "",
+      "aria-label": `裏クイック ${label}。押すと詳しく`,
+      onClick: () => setQuickAnywhereDetail(v => !v),
+      className: `fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
+      style: {
+        left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))',
+        bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))',
+        minHeight: 30
+      }
+    }, label), quickAnywhereDetail && React.createElement("div", {
+      className: "fixed inset-0 z-[90] flex items-end justify-start p-2",
+      onClick: closeDetail,
+      style: {
+        paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))',
+        paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))'
+      }
+    }, React.createElement("div", {
+      "data-quick-anywhere-detail": true,
+      role: "dialog",
+      "aria-label": "裏クイックのようす",
+      onClick: e => e.stopPropagation(),
+      className: "w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, React.createElement("b", {
+      className: "text-[13px] font-black text-fuchsia-100"
+    }, "🔁 裏クイック", diffLabel ? `(${diffLabel})` : ''), React.createElement("button", {
+      type: "button",
+      onClick: closeDetail,
+      className: "min-h-[32px] rounded-full border border-white/25 px-2.5 text-[11px] font-black"
+    }, "閉じる")), React.createElement("p", {
+      className: "mt-1.5 text-[12px] font-bold leading-snug"
+    }, finished ? info.reason : `WAVE ${wave}/10・${quickRunProgress.loops}周目`), React.createElement("p", {
+      className: "mt-1 text-[12px] font-bold leading-snug text-slate-200"
+    }, "ここまで ダイヤ+", gold.toLocaleString(), "・経験値+", xp.toLocaleString()), React.createElement("p", {
+      className: "mt-1.5 text-[11px] leading-snug text-slate-300"
+    }, resting ? 'M/B管理・神殿などにいるあいだは休みます。出ると続きから進みます。' : 'ゲームのどこにいても、AUTO設定の編成でクイックの周回が裏で進みます。M/B管理・神殿にいるあいだは休み、ほかのバトルを始めると、それまでの報酬を受け取って終わります。'), React.createElement("div", {
+      className: "mt-2 flex flex-wrap items-center gap-1.5"
+    }, finished ? React.createElement(RhythmQuickRunPill, {
+      info: info,
+      onRestart: () => {
+        closeDetail();
+        return startQuickRunFromRhythm();
+      },
+      onResume: () => {
+        closeDetail();
+        return resumeQuickRunFromRhythm();
+      },
+      widthClass: "min-w-0 flex-1"
+    }) : React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere-watch": true,
+      onClick: () => {
+        closeDetail();
+        returnToBackgroundRun();
+      },
+      className: "min-h-[34px] flex-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-3 text-[12px] font-black text-white active:scale-[.97]"
+    }, "⚔ バトルを見る"), !finished && React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere-stop": true,
+      onClick: () => {
+        closeDetail();
+        void settleQuickAnywhereRun();
+      },
+      className: "min-h-[34px] rounded-full border border-white/30 bg-slate-800/90 px-3 text-[12px] font-black text-slate-100 active:scale-[.97]"
+    }, "⏹ 止める")))));
+  };
+  const [quickAnywhereSettling, setQuickAnywhereSettling] = useState(false);
+  const settleQuickAnywhereRun = async () => {
+    if (quickAnywhereEndingRef.current || !runStageRef.current) return;
+    quickAnywhereEndingRef.current = true;
+    setQuickAnywhereSettling(true);
+    try {
+      const running = isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({
+        silent: true
+      });
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)),
+          gold = Math.max(0, Math.floor(Number(before.gold) || 0)),
+          xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({
+          tier: 'small',
+          kind: 'quick',
+          key: `quick:${Date.now()}`,
+          gain: 1,
+          text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}`
+        });
+      }
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      quickAnywhereEndingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setQuickAnywhereSettling(false);
+    }
+  };
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
+    if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    void settleQuickAnywhereRun();
+  }, [gameState]);
+  const quickAnywhereTryStart = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!repeatTemplateFromAutoSettings()) return false;
+    return startQuickRunFromRhythm();
+  };
+  const quickAnywhereTryStartRef = useRef(null);
+  quickAnywhereTryStartRef.current = quickAnywhereTryStart;
+  const quickAnywhereBootTriedRef = useRef(false);
+  const quickAnywherePrevScreenRef = useRef('HOME');
+  useEffect(() => {
+    const prev = quickAnywherePrevScreenRef.current;
+    quickAnywherePrevScreenRef.current = gameState;
+    if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    const boot = !quickAnywhereBootTriedRef.current;
+    const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
+    if (!boot && !fromBattle) return undefined;
+    quickAnywhereBootTriedRef.current = true;
+    const timer = setTimeout(() => {
+      if (quickAnywhereTryStartRef.current) quickAnywhereTryStartRef.current();
+    }, boot ? 1500 : 300);
+    return () => clearTimeout(timer);
+  }, [gameState, bootPhase]);
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryAnywhere = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const assistantLifeQuickRunView = () => {
     if (!assistantLifeOpenNow) return null;
     const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
@@ -188339,7 +189698,7 @@ function MonsterHeroGame() {
       autoDifficulty: autoDifficulty,
       todayLoops: null,
       onClose: () => setLifeQuickDetail(false),
-      note: "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
+      note: QUICK_RUN_ANYWHERE_RELEASE ? "AUTO設定の編成でクイックの周回が裏で進みます。助手ライフを閉じても、HOMEなどで回り続けます。「止める」を押すと、それまでの報酬を受け取って周回を終えます。" : "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
     }), React.createElement("div", {
       "data-life-quick-run": view.live ? 'live' : 'stopped',
       className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
@@ -188421,11 +189780,35 @@ function MonsterHeroGame() {
         return scripted;
       }
     }
+    const ai = extraState && extraState.tacticsAi;
+    if (ai && ai.level > 0) return chooseTacticsEnemyActionAi(ent, currentDist, Math.random, {
+      ...enemyActionStateFrom(lastIntent),
+      ...extraState
+    }, {
+      ...ai,
+      lastType: lastIntent?.type || null
+    });
     return chooseEnemyAction(ent, currentDist, Math.random, {
       ...enemyActionStateFrom(lastIntent),
       ...(extraState || {})
     });
   }, []);
+  const tacticsEnemyAiState = () => {
+    const level = debugEnemyAiLevelRef.current;
+    if (!debugBattleRef.current || !isTacticsMode(runMode) || !(level > 0)) return {};
+    const units = tacticsUnitsRef.current || [];
+    const alive = tacticsAliveSlots(units);
+    const us = alive.map(i => normalizeTacticsUnit(units[i])).filter(Boolean);
+    return {
+      tacticsAi: {
+        level,
+        pressure: tacticsEnemyPressure(units, [0, 1, 2, 3].map(i => distTotalBonus(i))),
+        aliveSlots: alive,
+        lowCount: us.filter(u => u.hp < u.maxHp * 0.4).length,
+        maxDef: Math.max(0, ...us.map(u => Number(u.def) || 0))
+      }
+    };
+  };
   const advanceEnemyIntents = (executedIntent, distAfterExecuted, performed = true) => {
     const effective = performed ? executedIntent : null;
     let reserved = enemyNextIntentRef.current;
@@ -188434,7 +189817,8 @@ function MonsterHeroGame() {
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     const actionState = () => ({
       definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty, enemy?.actionCount),
-      roarStacks: tacticsRoarStacksRef.current
+      roarStacks: tacticsRoarStacksRef.current,
+      ...tacticsEnemyAiState()
     });
     stepTacticsHate(runMode);
     const aimed = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
@@ -189474,21 +190858,26 @@ function MonsterHeroGame() {
       combo: base.combo + (boost.combo || 0) * effMul
     };
   };
+  const previewAttackStartDist = (card, dist) => card?.subType === 'stun_atsu' ? enemyDist : dist;
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
-      combo = 0;
+      combo = 0,
+      dist = enemyDist;
     const counter = makeHalveCounter();
     const perCard = {};
     selectedCards.forEach(idx => {
       const card = hand[idx];
       const slotIdx = cardAssignments[idx] != null ? cardAssignments[idx] : null;
       const halved = counter.peek(card, slotIdx);
-      perCard[idx] = boostsForCardDamage({
-        oryo,
-        dmgMod,
-        combo
-      }, card, halved);
+      perCard[idx] = {
+        ...boostsForCardDamage({
+          oryo,
+          dmgMod,
+          combo
+        }, card, halved),
+        dist: previewAttackStartDist(card, dist)
+      };
       if (idx === excludeIdx) return;
       if (!card) return;
       const effMul = cardEffectMultiplier(card, halved);
@@ -189498,6 +190887,7 @@ function MonsterHeroGame() {
         dmgMod += (boost.dmgMod || 0) * effMul;
         combo += (boost.combo || 0) * effMul;
       }
+      dist = attackDistanceAfterCard(card, dist);
       counter.take(card, slotIdx);
     });
     const pendingCard = excludeIdx != null ? hand[excludeIdx] : null;
@@ -189507,13 +190897,17 @@ function MonsterHeroGame() {
       final: {
         oryo,
         dmgMod,
-        combo
+        combo,
+        dist
       },
-      forPending: boostsForCardDamage({
-        oryo,
-        dmgMod,
-        combo
-      }, pendingCard, pendingHalved)
+      forPending: {
+        ...boostsForCardDamage({
+          oryo,
+          dmgMod,
+          combo
+        }, pendingCard, pendingHalved),
+        dist: previewAttackStartDist(pendingCard, dist)
+      }
     };
   };
   const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist = enemyDist) => {
@@ -189568,7 +190962,7 @@ function MonsterHeroGame() {
       distanceBrokenDmg = applyUltimateDistanceBreak(turnPressedDmg, slotIdx, ultimateDistanceBreakLevels, specialRuleDifficulty, card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg, specialRuleDifficulty, 'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, wave, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0, slotIdx = null, halved = false) => {
     if (baseDmg <= 0) return 0;
     const soulAttack = attackBoostProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
@@ -189593,7 +190987,7 @@ function MonsterHeroGame() {
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode, wave, turnCount]);
   const resolveEnemyDefeat = async ({
     remainingHp,
     damage,
@@ -191690,7 +193084,7 @@ function MonsterHeroGame() {
         }
         if (rangeMoveTarget != null) {
           forcedMoveTarget = rangeMoveTarget;
-          attackDistance = rangeMoveTarget;
+          attackDistance = attackDistanceAfterCard(card, attackDistance);
         }
         {
           const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;
@@ -192321,7 +193715,7 @@ function MonsterHeroGame() {
       slotMaxUses,
       ...tacticsAutoOptions
     });
-    if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
+    if (lacksOnlyGuts && autoBattleRef.current && (gameState === 'BATTLE' || runStage === 'BATTLE') && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
     return null;
   };
   const setAutoBattleEnabled = enabled => {
@@ -192353,6 +193747,7 @@ function MonsterHeroGame() {
     if (next) setAutoBattleEnabled(true);
     if (!next) setEcoModeSafe('off');
     if (next) beginQuickRunProgress();
+    if (next) quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
   };
   const runResultFinished = hp <= 0 || gaveUp;
   const runResultFinishedRef = useRef(false);
@@ -192373,8 +193768,12 @@ function MonsterHeroGame() {
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     const result = startRunFromRepeatTemplate(template);
     if (!result.ok) {
+      quickAnywhereRunRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       stopAllAuto();
       clearQuickRunProgress();
       return false;
@@ -192390,6 +193789,7 @@ function MonsterHeroGame() {
     if (runResultFinishedRef.current) return false;
     if (!isQuickMode(runMode)) return false;
     if (!storageReadyForRun()) return false;
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
     autoRepeatStartingRef.current = false;
     autoRepeatRef.current = true;
     setAutoRepeat(true);
@@ -193118,7 +194518,8 @@ function MonsterHeroGame() {
     setEnemyLastIntent(null);
     const actionState = () => ({
       definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id, newEnemy?.difficulty, newEnemy?.actionCount),
-      roarStacks: tacticsRoarStacksRef.current
+      roarStacks: tacticsRoarStacksRef.current,
+      ...tacticsEnemyAiState()
     });
     resetTacticsHate(runMode);
     commitAiCopy(null);
@@ -197535,7 +198936,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !runBackgroundAllowed && gameState === runStage && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -197544,7 +198945,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && battleFxSettings.shake !== 'OFF' ? {
+      style: screenShake && !ecoBattleView && !runBackgroundAllowed && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && cardTeaserOpen && React.createElement(CardBattleTeaser, {
@@ -198390,7 +199791,7 @@ function MonsterHeroGame() {
         }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), React.createElement("div", null, React.createElement("div", {
         className: "text-[11px] font-black text-slate-300 mb-1.5"
-      }, "モンヒロビート・助手ライフを開いたら自動で始める"), React.createElement("button", {
+      }, QUICK_RUN_ANYWHERE_RELEASE ? 'ゲーム・モンヒロビート・助手ライフを開いたら自動で始める' : 'モンヒロビート・助手ライフを開いたら自動で始める'), React.createElement("button", {
         type: "button",
         "data-auto-quick-run-autostart": true,
         "aria-pressed": draftAutoSettings.quickRun?.autoStart === true,
@@ -202103,7 +203504,7 @@ function MonsterHeroGame() {
       modeSelect: gameState === 'RHYTHM_MODE_SELECT' ? {
         multi: RELEASE_FLAGS.rhythmMulti === true,
         onExit: exitRhythmSongSelect,
-        backgroundRun: rhythmBackgroundRun,
+        backgroundRun: rhythmBackgroundRun && !QUICK_RUN_ANYWHERE_RELEASE,
         exiting: rhythmExitingRun,
         onSolo: () => setGameState('RHYTHM_DEMO_HOME'),
         onHelp: () => {
@@ -202895,7 +204296,26 @@ function MonsterHeroGame() {
       className: "block"
     }, "🛠 デバッグ最強モン"), React.createElement("small", {
       className: "block text-[8px] opacity-80"
-    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), React.createElement("section", {
+    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M"))), isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode) && React.createElement("section", {
+      "data-debug-enemy-ai": true
+    }, React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-black mb-2"
+    }, "4-2. 敵の作戦AI", React.createElement("small", {
+      className: "ml-1 font-bold text-slate-600"
+    }, "（試作・デバッグ戦だけ。本番の敵はいまのまま）")), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, TACTICS_ENEMY_AI_LEVELS.map(lv => React.createElement("button", {
+      key: lv.id,
+      type: "button",
+      "data-debug-enemy-ai-option": lv.id,
+      "aria-pressed": debugEnemyAiLevel === lv.id,
+      onClick: () => setDebugEnemyAiLevel(lv.id),
+      className: `min-h-[52px] px-3 py-1.5 rounded-xl text-left font-black ${debugEnemyAiLevel === lv.id ? 'bg-amber-800 border-2 border-amber-300 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+    }, React.createElement("span", {
+      className: "block text-[11px]"
+    }, lv.id, ". ", lv.label), React.createElement("small", {
+      className: "block text-[8px] opacity-75 leading-tight"
+    }, lv.note))))), React.createElement("section", {
       "data-debug-party": true
     }, React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
@@ -202954,7 +204374,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
     }, "6. デバッグ戦開始", React.createElement("small", {
       className: "block text-[9px] font-bold opacity-70"
-    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId)))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
+    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId, isTacticsMode(debugBattleModeOf(debugBattleModeId).runMode) && debugEnemyAiLevel > 0 ? ` / 敵AI ${debugEnemyAiLevel}` : '')))), gameState === 'DEBUG_SETTINGS' && React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -210903,7 +212323,7 @@ function MonsterHeroGame() {
       speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
       speciesChallengeSaveRunRef: speciesChallengeSaveRunRef,
       speciesChallengeBattleRunRef: speciesChallengeBattleRunRef
-    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GameOverScreen, {
+    }), hp <= 0 && !debugBattle && !runBackgroundAllowed && React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -210913,7 +212333,7 @@ function MonsterHeroGame() {
       runMode: runMode,
       runResultActionOnce: runResultActionOnce,
       score: score
-    }), gaveUp && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GaveUpScreen, {
+    }), gaveUp && !debugBattle && !runBackgroundAllowed && React.createElement(GaveUpScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -210958,7 +212378,18 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), effect && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), quickAnywhereSettling && React.createElement("div", {
+      "data-quick-anywhere-settling": true,
+      role: "status",
+      className: "fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24",
+      onClickCapture: e => {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, React.createElement("span", {
+      className: "rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100"
+    }, "🔁 裏クイックの報酬を受け取っています…")), effect && !runBackgroundAllowed && effect !== offscreenEffectRef.current && React.createElement("div", {
+      "data-battle-effect-overlay": true,
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',

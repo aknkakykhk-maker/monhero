@@ -308,9 +308,10 @@ assert(source.includes("const localBoostAppliesToSelf = (card) => card?.type==='
   '固有技だけが自分に乗る、という判定が実コードから消えている');
 assert(source.includes('const boostsForCardDamage = (base, card, halved) => {'),
   'そのカードのダメージに使う補正をまとめる関数が必要');
-assert(source.includes('perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);'),
+// 距離撃のあとの距離(dist)も一緒に持つようになった(2026-11-11)。補正の入れ物は同じ関数から作る
+assert(source.includes('perCard[idx]={...boostsForCardDamage({oryo,dmgMod,combo},card,halved), dist:previewAttackStartDist(card,dist)};'),
   '選択済みカードの予測が自分のぶんを含めていない');
-assert(/forPending:boostsForCardDamage\(\{oryo,dmgMod,combo\},pendingCard,pendingHalved\)/.test(source),
+assert(/forPending:\{\.\.\.boostsForCardDamage\(\{oryo,dmgMod,combo\},pendingCard,pendingHalved\), dist:previewAttackStartDist\(pendingCard,dist\)\}/.test(source),
   '保留カードの予測が自分のぶんを含めていない');
 assert(!/getDmg\(pendingCardObj,[^)]*\.final\./.test(source),
   '保留カードの予測が forPending ではなく final を使っている(自分のぶんが抜ける)');

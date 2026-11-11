@@ -85,6 +85,10 @@ const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 // 本オープン(上)を真にしたあとは、予告のお話は HOME では流さない(回想には残る)。日にちが決まって社長が「予告を出す」と言うまで偽
 // 2026-11-08 社長「この文で」(本オープンは 11/9 10:00)
 const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
+// 裏クイックを、ゲームのどこにいても回す(2026-11-11 社長。台帳「クイックの裏周回を、ゲームを開いたら自動で始まり、どの画面でも裏で回る形にする。M/B管理と神殿では休む」)。
+//   偽にすると、今までどおり モンヒロビート・MFバトルカード・助手ライフ の上でだけ回る(HOME へ戻ると周回は終わる)。
+//   方針と決めごとは docs/progress/quick-run-anywhere/PLAN.md
+const QUICK_RUN_ANYWHERE_RELEASE = true;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 // ★rhythmHell … 難易度 HELL(空中のノーツ SKY TAP・SKY SLIDE)。社長の OK まで偽(HISTORY 10/11 02:05「HELL はデバッグで色々見てから」)。
@@ -137,6 +141,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
+  assistantMasmonTrain: false, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。社長の答え(TRAIN-PLAN.md の ❶〜❻)と第①段階の受け口がそろうまで偽
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
   assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない

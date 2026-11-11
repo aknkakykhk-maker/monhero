@@ -51,6 +51,22 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const superseded = new Set([...fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8')
       .matchAll(/id:'(update_notice_[a-z0-9_]+)'[^}]*supersededBy:'/g)].map(m => m[1]));
     check('実装予告(本物が出ているもの)は一覧に並ばない', superseded.size > 0 && !first.some(id => superseded.has(id)), first.join(' / '));
+    // 小さい横画面(667×375・568×320)でも窓が画面に収まり、「あとで読む」と下の一行が最初から見える(2026-11-11 ミハリの見回り)
+    for (const [w, h] of [[667, 375], [568, 320], [390, 844], [844, 390]]) {
+      await s.page.setViewportSize({ width: w, height: h });
+      await s.wait(300);
+      const r = await s.page.evaluate(() => {
+        const box = document.querySelector('[data-update-guide-bundle] > div');
+        const later = document.querySelector('[data-update-guide-bundle-later]');
+        const foot = document.querySelector('[data-update-guide-bundle-foot]');
+        const rc = e => (e ? e.getBoundingClientRect() : null);
+        return { vh: window.innerHeight, box: rc(box), later: rc(later), foot: rc(foot), scroll: box ? box.scrollHeight - box.clientHeight : -1 };
+      });
+      const ok = !!(r.box && r.later && r.foot && r.box.top >= -1 && r.box.bottom <= r.vh + 1 && r.later.bottom <= r.vh && r.foot.bottom <= r.vh );
+      check(`お知らせの一覧が ${w}×${h} で画面に収まり、ボタンと下の一行が見える`, ok, JSON.stringify({ vh: r.vh, box: r.box && [Math.round(r.box.top), Math.round(r.box.bottom)], later: r.later && Math.round(r.later.bottom), foot: r.foot && Math.round(r.foot.bottom), scroll: r.scroll }));
+      if (w === 568 || w === 667) await s.page.screenshot({ path: path.join(out, `bundle-${w}x${h}.png`) });
+    }
+    await s.page.setViewportSize({ width: 390, height: 844 });
     const seen0 = await seenIds();
     check('一覧を出しただけでは既読にならない', Array.isArray(seen0) && !first.some(id => seen0.includes(id)));
 
