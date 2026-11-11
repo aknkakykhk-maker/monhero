@@ -53,6 +53,7 @@ const MH_SCREEN_TRAIL=(()=>{
 //      拡大そのものは index.html の touch-action と、下の gesturestart で止める。残っていた拡大は viewport の書き直しで戻す。
 //   ② 見るきっかけに、起動のとき・ほかのアプリから戻ったとき(pageshow / visibilitychange)を足す。
 //   ③ ずれを見つけたら、画面の出来事の記録(MH_SCREEN_TRAIL の vv)に残す(次に起きたとき、何がずれていたかが分かる)。
+//   ④ 拡大が解けたら resize を1回鳴らして、拡大中に測られた画面の大きさ(🔄横の器・押した点の直し)を測り直させる。
 // 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
 const MH_PAGE_OFFSET_GUARD=(()=>{
   if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
@@ -71,7 +72,13 @@ const MH_PAGE_OFFSET_GUARD=(()=>{
   };
   const zoomed=st=>Math.abs(st.scale-1)>0.01;
   const moved=st=>Math.abs(st.sx)>=1||Math.abs(st.sy)>=1||Math.abs(st.ox)>=1||Math.abs(st.oy)>=1;
-  let lastTrailAt=0,zoomFixes=0,zoomFixAt=0;
+  let lastTrailAt=0,zoomFixes=0,zoomFixAt=0,wasBig=false;
+  // 拡大が解けたら、画面の大きさを測り直させる(resize を1回鳴らす)。
+  // iPhone は拡大している間、window.innerWidth / innerHeight が「見えている範囲」の小ささで返る。そのあいだに測った大きさ
+  // (🔄横で回した器・押した点の直し RHYTHM_VIEW_ROTATION が持つ)は、拡大が解けても resize が来ないので小さいまま残り、
+  // 器と押した点がその分ずれる。回す仕組みは resize を合図に測り直すので、端末が回ったときと同じ道を通す。
+  // 拡大→解けた、の切り替わりの1回だけ鳴らす(鳴らした resize でここへ戻ってきても、もう wasBig は倒れている)
+  const remeasure=()=>setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(_){}},0);
   // 残っている拡大を戻す。viewport の中身を一度書き直すと、ブラウザが initial-scale(1.0)へ合わせ直す。
   // 戻らない端末で繰り返さないよう、3秒に1回・続けて3回まで(倍率が1に戻ったら数え直す)
   const unzoom=()=>{
@@ -89,7 +96,8 @@ const MH_PAGE_OFFSET_GUARD=(()=>{
     try{
       const st=state();
       const bad=moved(st),big=zoomed(st);
-      if(!big)zoomFixes=0;
+      if(big)wasBig=true;
+      else{zoomFixes=0;if(wasBig){wasBig=false;remeasure();}}
       if(!bad&&!big)return;
       const now=Date.now();
       if(now-lastTrailAt>5000&&typeof MH_SCREEN_TRAIL!=='undefined'){lastTrailAt=now;MH_SCREEN_TRAIL.push('vv',`s${Math.round(st.scale*100)/100} y${Math.round(st.sy)} o${Math.round(st.ox)},${Math.round(st.oy)}`);}

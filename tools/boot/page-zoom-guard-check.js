@@ -26,6 +26,7 @@ ok('見張りは visualViewport の位置と倍率も見る',/vv\.offsetTop/.tes
 ok('見張りは起動のとき・戻ってきたときにも見る',["'load'","'pageshow'","'visibilitychange'"].every(k=>guard.includes(k)));
 ok('見張りは入力中は戻さない',/const reset=\(\)=>\{\s*if\(editing\(\)\)return;/.test(guard));
 ok('見張りは演奏中のタッチ・毎コマでは動かない',!/touchstart|touchmove|pointerdown|pointermove|requestAnimationFrame/.test(guard));
+ok('見張りは拡大が解けたら resize を鳴らして測り直させる',/if\(wasBig\)\{wasBig=false;remeasure\(\);\}/.test(guard)&&/dispatchEvent\(new Event\('resize'\)\)/.test(guard));
 ok('見張りは押したとき(click)にも見る',/document\.addEventListener\('click',reset,\{capture:true,passive:true\}\)/.test(guard));
 ok('2本指の合図(gesturestart)をどの画面でも止める',/\['gesturestart','gesturechange'\]\.forEach\(type=>document\.addEventListener\(type,e=>\{if\(e\.cancelable\)e\.preventDefault\(\);\},\{passive:false\}\)\)/.test(guard));
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.ico':'image/x-icon'};
@@ -75,6 +76,19 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
       const trail=await page.evaluate(()=>{try{return JSON.parse(localStorage.getItem('mh_screen_trail_v1')||'[]');}catch(_){return [];}});
       const hit=trail.find(x=>x&&x.k==='vv');
       ok('② 見張りが拡大に気づいて、画面の出来事の記録に残す',!!hit&&/^s\d/.test(hit.d),hit?hit.d:'vv の記録なし');
+      // ⑥ 拡大が解けたら resize を1回鳴らす(拡大中に測った画面の大きさ=🔄横の器・押した点の直しを測り直させる)
+      const r=await page.evaluate(async()=>{
+        const vvp=window.visualViewport;let fake=1.4,n=0;
+        Object.defineProperty(vvp,'scale',{configurable:true,get:()=>fake});
+        const count=()=>{n++;};window.addEventListener('resize',count);
+        const wait=ms=>new Promise(r=>setTimeout(r,ms));
+        vvp.dispatchEvent(new Event('resize'));await wait(900);const whileBig=n;
+        fake=1;vvp.dispatchEvent(new Event('resize'));await wait(900);const afterBack=n;
+        vvp.dispatchEvent(new Event('resize'));await wait(900);const again=n;
+        window.removeEventListener('resize',count);delete vvp.scale;
+        return {whileBig,afterBack,again};
+      });
+      ok('⑥ 拡大が解けたら、画面の大きさを測り直させる(resize を1回だけ)',r.whileBig===0&&r.afterBack===1&&r.again===1,`拡大中 ${r.whileBig} / 解けたあと ${r.afterBack} / そのあと ${r.again}`);
       await ctx.close();
     }
     // ③④ いまの形
