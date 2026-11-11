@@ -151,6 +151,7 @@
 | `mh_card_tactic_use_v1` | object / `cardTacticUseNormalize` | MFバトルカードの戦術カードを、登録の一覧から入れた回数 `{ v:1, used:{ [カードid]: 回数 } }`(一覧の「よく使う順」。2026-10-31・97-card-tactics-screen.jsx)。無い・壊れているときは空。知らないカードidと0以下の数は捨てる |
 | `mh_card_level_v1` | object / `cardNormalizeLevel` | MFバトルカードのレベル(2026-10-29・96-card-tactics.jsx)`{ v:1, xp, day, dayWin, got:[引く券を配ったレベル] }`。上限なし・全員 Lv1 から(今の戦績からは起こさない)。対戦の結果と同じ取引で足す(84)。公開前はデバッグの人だけ入る。壊れた経験値は0。`got` で引く券を二度配らない。`CARD_SAVE_KEYS` には入れない |
 | `mh_card_share_guide_seen_v1` | `true` のみ | MFバトルカードの対戦の入口で、助手が「フリー対戦」と「デッキ登録」を一度だけ知らせる案内を閉じた印(2026-10-30 公開・84)。無い・読めないときは案内を出す(読めなかったときは出さない) |
+| `mh_card_first_glow_v1` | `true` のみ | MFバトルカードをはじめて開いたとき、最初に押す「対戦」を光らせる案内を終えた印(2026-11-12 公開・84)。「対戦」を押すと立つ。無い・読めないときは、スターター受け取り済み・練習試合済み・コンピューター戦もマルチも0戦のときだけ光らせる(前から遊んでいる人には出さない) |
 | `mh_card_decks_v1` | object / `cardNormalizeDecks` | MFバトルカードのデッキ `{ active, decks:[{ id, name, monsters:[3], cards:[50] }] }`(5つまで)。持っていないカードが入っていても消さない |
 | `mh_card_point_v1` | number / `cardNormalizePoint` | MFバトルカードのカードポイント(**2026-10-26 から読まない**。カードポイントをやめてビートPにした・社長。キーは消さずに残す。カードの支払い・受け取りはビートPの `mh_rhythm_event_points_v1`。`CARD_POINT_STORE_KEY`) |
 | `mh_card_points_to_beatp_migrated_v1` | `true` のみ | 前のカードポイント(`mh_card_point_v1`)の残りをビートPへ1回だけ移した印(2026-10-26 社長)。印とビートPを1つの取引で書く(`cardMigratePointsOnce`)。`CARD_SAVE_KEYS` には入れない(デバッグの記録の消去で消えて二重に足されないように)。`tools/card/card-point-migration-check.js` |
