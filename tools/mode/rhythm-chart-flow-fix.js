@@ -138,8 +138,9 @@ if(require.main===module&&argOf('--track')){
   // --mode must(2026-11-11 フメン3): 公開中の譜面でも「押せない」所だけを位置で直す(交差・届きにくいは動かさない)。
   //   参考動画から作った譜面(Sheriruth)を作り直さずに直すため。付けなければ今までどおり全部減らす形
   const songMode=argOf('--mode');
-  if(songMode&&songMode!=='must')throw new Error('--song で使える --mode は must だけ');
-  const moved=flowFix(notes,songMode==='must'?{beat,heldBand:true,flowWeight:0,kinds:new Set(['impossible'])}:{beat});
+  //   --mode smooth: 交差・届きにくいも減らすが、跳び・叩き直しも点数に入れる(作る段の smooth と同じ。全部減らす形より跳びが増えない)
+  if(songMode&&!['must','smooth'].includes(songMode))throw new Error('--song で使える --mode は must / smooth');
+  const moved=flowFix(notes,songMode==='must'?{beat,heldBand:true,flowWeight:0,kinds:new Set(['impossible'])}:songMode==='smooth'?{beat,heldBand:true,flowWeight:FINISH_FLOW_WEIGHT}:{beat});
   const after=counts(notes,THUMB_PROFILES.landscape,beat);
   console.log(`${songId}/${difficulty}${songMode?`(${songMode})`:''} ノーツ ${notes.length} ・ 動かした ${moved}か所`);
   for(const k of Object.keys(before))console.log(`  ${k} ${before[k]} → ${after[k]}`);

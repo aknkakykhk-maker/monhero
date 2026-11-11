@@ -402,6 +402,8 @@ const LEVEL_OVERRIDES=Object.freeze({
   only_my_railgun:Object.freeze({MASTER:23}),
   close_to_your_heart:Object.freeze({MASTER:23}),
   journey:Object.freeze({EXPERT:30}),
+  // 2026-11-07 社長が決めたヒューマノイドの5難易度の Lv.(11/11 の見直しでは公開中の譜面のまま位置だけ直したので、式が NORMAL 19→20 に動いても社長の値を出す)
+  humanoid:Object.freeze({EASY:12,NORMAL:19,HARD:25,EXPERT:31,MASTER:50}),
   // 2026-10-13 夜 社長「(Against My Own Shadow の)マスターの被りって、さっき決めたルール的にアウトだよね?」→ MASTER と EXPERT の押さえている帯の中のノーツを
   // 帯の外へ置き直した(時刻・幅・ノーツ数は同じ)。帯から外すと横の動きが少し増え、EXPERT の式の値が 22.44→22.58 で丸めると 23 になる。
   // どこへ置いても 22.5 を越える(1か所ずつ候補を比べても 22.53)。直したのは押せなかった所なので、表示は前の Lv.22 のまま(社長「Lv. は変えない」)

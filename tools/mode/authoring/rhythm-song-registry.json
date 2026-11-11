@@ -1528,7 +1528,9 @@
     "EASY": "smooth",
     "NORMAL": "smooth",
     "HARD": "smooth"
-   }
+   },
+   "challengeFactor": 1.08,
+   "masterDensity": 1.2
   },
   "altar_world_tree": {
    "flowPlacement": true,
@@ -1591,7 +1593,7 @@
   "humanoid": {
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-humanoid.mp3",
-   "chartRevision": 38,
+   "chartRevision": 35,
    "audioSha256": "763466fbbf97a7ab31edcf79b9a8b1fd5e145868b2a263455f8783f396afcc09",
    "durationMs": 98847,
    "analyzedTiming": {
@@ -1611,11 +1613,6 @@
     "EXPERT": 0.8,
     "MASTER": 0.3,
     "HELL": 0.3
-   },
-   "handFinish": {
-    "EASY": "smooth",
-    "NORMAL": "smooth",
-    "HARD": "smooth"
    }
   }
  }
