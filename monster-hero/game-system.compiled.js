@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8e1aae2f0be242d0
+// source-sha256: e042f6e7512a5ebc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13848,7 +13848,7 @@ const RELEASE_FLAGS = {
   assistantLifeRoomEdit: true,
   assistantLifeSolo: true,
   assistantLifeFriend: true,
-  assistantLifeFriendBond: false,
+  assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: false,
   assistantMasmonBattlePvp: false,
   assistantMasmonTrain: true,
@@ -143896,6 +143896,9 @@ const ALB_SLOT_NAME = Object.freeze({
   w: '壁',
   f: '床'
 });
+const ALB_START = {
+  at: Date.parse('2026-11-11T21:09:00+09:00')
+};
 const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
 const albLv = st => ALB_STEPS.filter(n => st >= n).length;
 const albTitle = st => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
@@ -144107,7 +144110,7 @@ const albCountIncoming = async (s = ALF_STORE.state) => {
   await albLoad();
   const names = new Set((s.roster || []).map(f => f.id));
   const muted = new Set(s.settings.muted);
-  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
+  return albIncoming((s.visits || []).filter(v => v.host === s.selfId && (v.kind === 'go' || v.kind === 'player') && v.at >= ALB_START.at && names.has(v.visitor) && !muted.has(v.visitor)).map(v => [v.visitor, v.day]));
 };
 const albPutOf = (h, more, id) => more && more.fu && more.fu[id] ? more.fu[id].p : h.r[id] && h.r[id].fu || {};
 const albSnapOf = (h, more) => {
