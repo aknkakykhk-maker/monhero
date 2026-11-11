@@ -20,7 +20,7 @@ const root = path.join(__dirname, '..', '..');
 const linesDir = path.join(root, 'docs', 'progress', 'assistant-peer', 'lines');
 const dataFile = path.join(root, 'monster-hero', 'data', 'assistants.js');
 // tsumugi-rewrite.txt は今の台本を id のまま直す一覧(edit/tag)なので、ここでは読まない(当てるのはナカヨシ(3)の道具)
-const SOURCES = ['kotoba-life.txt', 'tsumugi.txt'];
+const SOURCES = ['kotoba-life.txt', 'tsumugi.txt', 'kotoba-battle.txt'];
 const BEGIN = '// ===== ASSISTANT_LIFE_TALKS ここから(tools で生成・手で直さない) =====';
 const END = '// ===== ASSISTANT_LIFE_TALKS ここまで =====';
 const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1 };
