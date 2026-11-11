@@ -50,7 +50,7 @@ const run = async (mode) => {
   await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
   await page.locator('footer button[aria-label=""]').dispatchEvent('click');
   await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-  await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+  await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
   await page.locator('[data-debug-card-battle]').dispatchEvent('click');
   await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
   await page.locator('[data-card-kit="powerful"]').click();

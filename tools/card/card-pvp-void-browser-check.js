@@ -133,7 +133,7 @@ const cardMission = (raw) => { let n = 0; const walk = (v) => { if (!v || typeof
       for (let i = 0; i < 8 && await page.locator('[role="dialog"][aria-label="ログインボーナス"]').count(); i++) {
         await page.locator('[role="dialog"][aria-label="ログインボーナス"]').getByRole('button', { name: '閉じる' }).first().dispatchEvent('click').catch(() => {}); await page.waitForTimeout(400);
       }
-      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
     const starter = async (page, kit) => {

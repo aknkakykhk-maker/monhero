@@ -183,7 +183,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
         const b = page.locator('[role="dialog"][aria-label="ログインボーナス"]').getByRole('button', { name: '閉じる' }).first();
         await b.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(400);
       }
-      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+      await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
     // それぞれの台で: スターターを選び、練習試合は飛ばす(保存先が別なので、2台とも)
