@@ -1372,7 +1372,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </ul>
       {/* 「マスモンに聞く」札と定型文。縦は高さを抑えて中だけ上下にすべらせ、横向きは1行で横にすべらせる
           (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
-      <div data-rhythm-multi-chat-mode className="mt-2 grid shrink-0 grid-cols-2 gap-1">
+      <div data-rhythm-multi-chat-mode className="mt-2 grid shrink-0 grid-cols-2 gap-1 landscape:hidden [[data-mh-view-rotation=true]_&]:hidden">
         <button type="button" data-rhythm-multi-chat-mode-btn="text" aria-pressed={!stampOpen} onClick={() => setStampOpen(false)}
           className={`min-h-[34px] rounded-lg text-[12px] font-black ${!stampOpen ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>💬 ひとこと</button>
         <button type="button" data-rhythm-multi-chat-mode-btn="stamp" aria-pressed={stampOpen} onClick={() => setStampOpen(true)}
@@ -1380,12 +1380,17 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </div>
       {stampOpen && (
         <div data-rhythm-multi-chat-stamps className="mt-2 max-h-[13.5rem] shrink-0 overflow-y-auto landscape:max-h-[9.5rem] [[data-mh-view-rotation=true]_&]:max-h-[9.5rem]">
+          {/* 横向きは切り替えの段を置かない(発言の一覧の高さを残す)。ここから「ひとこと」へ戻る */}
+          <button type="button" data-rhythm-multi-chat-mode-chip="text" onClick={() => setStampOpen(false)}
+            className="mb-1.5 hidden min-h-[30px] rounded-full border border-cyan-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-cyan-100 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">💬 ひとことへ</button>
           <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={5} />
         </div>
       )}
       {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
       {!stampOpen && <>
       <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]">
+        <button type="button" data-rhythm-multi-chat-mode-chip="stamp" onClick={() => setStampOpen(true)}
+          className="hidden min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-cyan-300/60 bg-cyan-600 px-2.5 text-[11px] font-black text-white active:scale-95 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">😊 スタンプ</button>
         {askName && (
           <div data-rhythm-buddy-ask={askOpen ? 'open' : 'closed'} className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap">
             {/* 2026-11-07 社長「みゅあにきくみたいなやつは閉じたりできるようにしたい」。はじめは畳み、押すと開く。開いたかどうかは端末に覚える */}

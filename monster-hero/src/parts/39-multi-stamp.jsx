@@ -252,7 +252,9 @@ function MultiStampView({ f, w, text = '', size = 64, className = '', forcePic =
   );
 }
 // チャットの板の「よく使う」(押すとすぐ送る)。onSend({ f, w, text }) が送れたら true を返す
-function MultiStampPalette({ onSend, onEdit = null, cols = 4, className = '' }) {
+// 列の数はクラスで決める(横向きで増やせるように)。wide … 横向き・回転のときは8列
+const MULTI_STAMP_COLS = Object.freeze({ 4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6', 8: 'grid-cols-8' });
+function MultiStampPalette({ onSend, onEdit = null, cols = 4, wide = false, className = '' }) {
   const st = useMultiStamp();
   const [flash, setFlash] = React.useState(null);
   const [why, setWhy] = React.useState('');
@@ -269,7 +271,7 @@ function MultiStampPalette({ onSend, onEdit = null, cols = 4, className = '' }) 
   const list = st.slots.map((s, i) => ({ s, i })).filter((x) => x.s);
   return (
     <div data-multi-stamp-palette className={className}>
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className={`grid gap-1.5 ${MULTI_STAMP_COLS[cols] || 'grid-cols-4'} ${wide ? 'landscape:grid-cols-8 [[data-mh-view-rotation=true]_&]:grid-cols-8' : ''}`}>
         {list.map(({ s, i }) => {
           const word = multiStampWord(s.w);
           const src = multiStampFaceSrc(s.f);
@@ -345,7 +347,7 @@ function MultiStampEditor({ onClose, onShop = null }) {
                 <button type="button" data-multi-stamp-clear disabled={!cur} onClick={() => MULTI_STAMP.setSlot(sel, null)} className="min-h-[36px] flex-1 rounded-lg bg-slate-800 text-[12px] font-black text-rose-200 disabled:opacity-40">外す</button>
               </div>
             </section>
-            <section className="flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2">
+            <section data-multi-stamp-preview className="flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2 landscape:order-first">
               <MultiStampView f={face} w={word} size={76} forcePic />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <button type="button" data-multi-stamp-put disabled={!canPut} onClick={() => MULTI_STAMP.setSlot(sel, { f: face, w: word })}

@@ -203,7 +203,7 @@ const FAKE_WS = () => {
     await B.waitForTimeout(800);
     await A.evaluate(() => document.querySelector('[data-rhythm-multi-chat-open]')?.click());
     await A.waitForSelector('[data-rhythm-multi-chat]', { timeout: 5000 });
-    await A.locator('[data-rhythm-multi-chat-mode-btn="stamp"]').click();
+    await A.locator('[data-rhythm-multi-chat-mode-btn="stamp"]:visible, [data-rhythm-multi-chat-mode-chip="stamp"]:visible').first().click();
     await A.waitForSelector('[data-multi-stamp-palette]', { timeout: 5000 });
     await A.locator('[data-multi-stamp-send="0"]').click();
     await B.waitForFunction(() => (RHYTHM_MULTI.view().chat || []).some((c) => c.sf === 'a.kiki.angry' && c.sw === 'f02'), null, { timeout: 8000 }).then(() => true, () => false)
@@ -229,11 +229,14 @@ const FAKE_WS = () => {
     // 同じスタンプは続けて3回まで
     const same = await A.evaluate(async () => {
       const slot = MULTI_STAMP.get().slots[0];
+      await new Promise((ok) => setTimeout(ok, 2100)); // 手前の送信から2秒あける
+      const other = MULTI_STAMP.get().slots[1]; if (MULTI_STAMP.check(other).ok) MULTI_STAMP.sent(other); // 続きの数を0にする
+      await new Promise((ok) => setTimeout(ok, 2100));
       const res = [];
       for (let i = 0; i < 4; i++) { const r = MULTI_STAMP.check(slot); res.push(r.ok); if (r.ok) MULTI_STAMP.sent(slot); await new Promise((ok) => setTimeout(ok, 2050)); }
       return res;
     });
-    check('同じスタンプは続けて3回まで', same.join(',') === 'true,true,true,false' || same.join(',') === 'true,true,false,false', same.join(','));
+    check('同じスタンプは続けて3回まで', same.join(',') === 'true,true,true,false', same.join(','));
     // 絵で出さない設定
     const off = await B.evaluate(async () => { MULTI_STAMP.setPic(false); await new Promise((r) => setTimeout(r, 200)); const n = document.querySelectorAll('[data-rhythm-multi-chat-list] [data-multi-stamp] img, [data-rhythm-multi-stamp-bubble] img').length; MULTI_STAMP.setPic(true); return n; });
     check('「絵で出す」を切ると、届いたスタンプを絵で出さない', off === 0, String(off));

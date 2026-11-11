@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 091dd4626135765b
+// generated-sha256: 2e047d6eee5b8915
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -36812,7 +36812,9 @@ function MultiStampView({ f, w, text = '', size = 64, className = '', forcePic =
   );
 }
 // チャットの板の「よく使う」(押すとすぐ送る)。onSend({ f, w, text }) が送れたら true を返す
-function MultiStampPalette({ onSend, onEdit = null, cols = 4, className = '' }) {
+// 列の数はクラスで決める(横向きで増やせるように)。wide … 横向き・回転のときは8列
+const MULTI_STAMP_COLS = Object.freeze({ 4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6', 8: 'grid-cols-8' });
+function MultiStampPalette({ onSend, onEdit = null, cols = 4, wide = false, className = '' }) {
   const st = useMultiStamp();
   const [flash, setFlash] = React.useState(null);
   const [why, setWhy] = React.useState('');
@@ -36829,7 +36831,7 @@ function MultiStampPalette({ onSend, onEdit = null, cols = 4, className = '' }) 
   const list = st.slots.map((s, i) => ({ s, i })).filter((x) => x.s);
   return (
     <div data-multi-stamp-palette className={className}>
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className={`grid gap-1.5 ${MULTI_STAMP_COLS[cols] || 'grid-cols-4'} ${wide ? 'landscape:grid-cols-8 [[data-mh-view-rotation=true]_&]:grid-cols-8' : ''}`}>
         {list.map(({ s, i }) => {
           const word = multiStampWord(s.w);
           const src = multiStampFaceSrc(s.f);
@@ -36905,7 +36907,7 @@ function MultiStampEditor({ onClose, onShop = null }) {
                 <button type="button" data-multi-stamp-clear disabled={!cur} onClick={() => MULTI_STAMP.setSlot(sel, null)} className="min-h-[36px] flex-1 rounded-lg bg-slate-800 text-[12px] font-black text-rose-200 disabled:opacity-40">外す</button>
               </div>
             </section>
-            <section className="flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2">
+            <section data-multi-stamp-preview className="flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2 landscape:order-first">
               <MultiStampView f={face} w={word} size={76} forcePic />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <button type="button" data-multi-stamp-put disabled={!canPut} onClick={() => MULTI_STAMP.setSlot(sel, { f: face, w: word })}
@@ -55458,7 +55460,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </ul>
       {/* 「マスモンに聞く」札と定型文。縦は高さを抑えて中だけ上下にすべらせ、横向きは1行で横にすべらせる
           (チャットの発言と自由入力の欄を押しつぶさない。2026-10-08・ユーザー報告「定型文のゾーンが動かせず、下の自由入力が出せない」) */}
-      <div data-rhythm-multi-chat-mode className="mt-2 grid shrink-0 grid-cols-2 gap-1">
+      <div data-rhythm-multi-chat-mode className="mt-2 grid shrink-0 grid-cols-2 gap-1 landscape:hidden [[data-mh-view-rotation=true]_&]:hidden">
         <button type="button" data-rhythm-multi-chat-mode-btn="text" aria-pressed={!stampOpen} onClick={() => setStampOpen(false)}
           className={`min-h-[34px] rounded-lg text-[12px] font-black ${!stampOpen ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}>💬 ひとこと</button>
         <button type="button" data-rhythm-multi-chat-mode-btn="stamp" aria-pressed={stampOpen} onClick={() => setStampOpen(true)}
@@ -55466,12 +55468,17 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
       </div>
       {stampOpen && (
         <div data-rhythm-multi-chat-stamps className="mt-2 max-h-[13.5rem] shrink-0 overflow-y-auto landscape:max-h-[9.5rem] [[data-mh-view-rotation=true]_&]:max-h-[9.5rem]">
+          {/* 横向きは切り替えの段を置かない(発言の一覧の高さを残す)。ここから「ひとこと」へ戻る */}
+          <button type="button" data-rhythm-multi-chat-mode-chip="text" onClick={() => setStampOpen(false)}
+            className="mb-1.5 hidden min-h-[30px] rounded-full border border-cyan-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-cyan-100 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">💬 ひとことへ</button>
           <MultiStampPalette onSend={sendStamp} onEdit={() => setStampEdit(true)} cols={5} />
         </div>
       )}
       {stampEdit && <MultiStampEditor onClose={() => setStampEdit(false)} />}
       {!stampOpen && <>
       <div data-rhythm-multi-chat-quick className="mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]">
+        <button type="button" data-rhythm-multi-chat-mode-chip="stamp" onClick={() => setStampOpen(true)}
+          className="hidden min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-cyan-300/60 bg-cyan-600 px-2.5 text-[11px] font-black text-white active:scale-95 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center">😊 スタンプ</button>
         {askName && (
           <div data-rhythm-buddy-ask={askOpen ? 'open' : 'closed'} className="flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap">
             {/* 2026-11-07 社長「みゅあにきくみたいなやつは閉じたりできるようにしたい」。はじめは畳み、押すと開く。開いたかどうかは端末に覚える */}

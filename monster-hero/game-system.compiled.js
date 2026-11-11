@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c2ce4c79fd4cfb2
+// source-sha256: 4decc6b8a6d91c4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -59844,10 +59844,17 @@ function MultiStampView({
     className: "mt-0.5 block max-w-full truncate text-center text-[11px] font-black leading-tight"
   }, label));
 }
+const MULTI_STAMP_COLS = Object.freeze({
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+  8: 'grid-cols-8'
+});
 function MultiStampPalette({
   onSend,
   onEdit = null,
   cols = 4,
+  wide = false,
   className = ''
 }) {
   const st = useMultiStamp();
@@ -59889,10 +59896,7 @@ function MultiStampPalette({
     "data-multi-stamp-palette": true,
     className: className
   }, React.createElement("div", {
-    className: "grid gap-1.5",
-    style: {
-      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`
-    }
+    className: `grid gap-1.5 ${MULTI_STAMP_COLS[cols] || 'grid-cols-4'} ${wide ? 'landscape:grid-cols-8 [[data-mh-view-rotation=true]_&]:grid-cols-8' : ''}`
   }, list.map(({
     s,
     i
@@ -60046,7 +60050,8 @@ function MultiStampEditor({
     onClick: () => MULTI_STAMP.setSlot(sel, null),
     className: "min-h-[36px] flex-1 rounded-lg bg-slate-800 text-[12px] font-black text-rose-200 disabled:opacity-40"
   }, "外す"))), React.createElement("section", {
-    className: "flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2"
+    "data-multi-stamp-preview": true,
+    className: "flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2 landscape:order-first"
   }, React.createElement(MultiStampView, {
     f: face,
     w: word,
@@ -93068,7 +93073,7 @@ function RhythmMultiChatPanel({
     }, c.text)));
   })), React.createElement("div", {
     "data-rhythm-multi-chat-mode": true,
-    className: "mt-2 grid shrink-0 grid-cols-2 gap-1"
+    className: "mt-2 grid shrink-0 grid-cols-2 gap-1 landscape:hidden [[data-mh-view-rotation=true]_&]:hidden"
   }, React.createElement("button", {
     type: "button",
     "data-rhythm-multi-chat-mode-btn": "text",
@@ -93084,7 +93089,12 @@ function RhythmMultiChatPanel({
   }, "😊 スタンプ")), stampOpen && React.createElement("div", {
     "data-rhythm-multi-chat-stamps": true,
     className: "mt-2 max-h-[13.5rem] shrink-0 overflow-y-auto landscape:max-h-[9.5rem] [[data-mh-view-rotation=true]_&]:max-h-[9.5rem]"
-  }, React.createElement(MultiStampPalette, {
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-multi-chat-mode-chip": "text",
+    onClick: () => setStampOpen(false),
+    className: "mb-1.5 hidden min-h-[30px] rounded-full border border-cyan-300/40 bg-slate-900 px-2.5 text-[11px] font-black text-cyan-100 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center"
+  }, "💬 ひとことへ"), React.createElement(MultiStampPalette, {
     onSend: sendStamp,
     onEdit: () => setStampEdit(true),
     cols: 5
@@ -93093,7 +93103,12 @@ function RhythmMultiChatPanel({
   }), !stampOpen && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-multi-chat-quick": true,
     className: "mt-2 flex max-h-[8.5rem] shrink-0 flex-col gap-2 overflow-y-auto landscape:max-h-none [[data-mh-view-rotation=true]_&]:max-h-none landscape:flex-row [[data-mh-view-rotation=true]_&]:flex-row landscape:items-center [[data-mh-view-rotation=true]_&]:items-center landscape:gap-1.5 [[data-mh-view-rotation=true]_&]:gap-1.5 landscape:overflow-x-auto [[data-mh-view-rotation=true]_&]:overflow-x-auto landscape:overflow-y-hidden [[data-mh-view-rotation=true]_&]:overflow-y-hidden landscape:[scrollbar-width:none] [[data-mh-view-rotation=true]_&]:[scrollbar-width:none]"
-  }, askName && React.createElement("div", {
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-multi-chat-mode-chip": "stamp",
+    onClick: () => setStampOpen(true),
+    className: "hidden min-h-[34px] shrink-0 whitespace-nowrap rounded-full border border-cyan-300/60 bg-cyan-600 px-2.5 text-[11px] font-black text-white active:scale-95 landscape:inline-flex landscape:items-center [[data-mh-view-rotation=true]_&]:inline-flex [[data-mh-view-rotation=true]_&]:items-center"
+  }, "😊 スタンプ"), askName && React.createElement("div", {
     "data-rhythm-buddy-ask": askOpen ? 'open' : 'closed',
     className: "flex shrink-0 flex-wrap items-center gap-1.5 landscape:flex-nowrap [[data-mh-view-rotation=true]_&]:flex-nowrap"
   }, React.createElement("button", {
