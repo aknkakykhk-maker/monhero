@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0466ee538ab5505a
+// generated-sha256: 5a0575b50790598a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37778,7 +37778,7 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
         if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
         // 送り仮名(「来|て」「強|く」)の手前・小さい字の手前・閉じる記号の手前では分けない
         if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
-        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～・]/.test(s[p] || '')) continue;
         if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
         // くっついた言葉(「振り|直す」「受け取り|忘れ」「押し|切る」)の、送り仮名と次の漢字のあいだでは分けない
         if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
