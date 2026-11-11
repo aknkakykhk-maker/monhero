@@ -160,6 +160,7 @@ const Audio_ = (() => {
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-lamia.mp3": "f0105abb3aa0",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
