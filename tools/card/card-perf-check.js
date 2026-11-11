@@ -32,10 +32,12 @@ let pw = null;
 try { pw = require('playwright'); } catch { /* 下で SKIP */ }
 if (!pw) { console.log('SKIP: playwright が無いので、画面の測りは飛ばします'); process.exit(failed ? 1 : 0); }
 
+// 空いているポートを使う(ほかの検査と同時に回しても、ぶつからない)
+const freePort = () => { const r = spawnSync(process.execPath, ['-e', "const s=require('net').createServer().listen(0,()=>{console.log(s.address().port);s.close()})"], { encoding: 'utf8' }); return String(r.stdout || '').trim() || '8963'; };
 const out = path.join(os.tmpdir(), `card-perf-check-${process.pid}.json`);
 const B = Number(process.env.PERF_BATTLES || 5), L = Number(process.env.PERF_LOOPS || 30);
 const r = spawnSync(process.execPath, [path.join(__dirname, 'card-perf-measure.js')], {
-  env: { ...process.env, PERF_BATTLES: String(B), PERF_LOOPS: String(L), PERF_CPU: process.env.PERF_CPU || '1', PERF_OUT: out, CARD_PORT: process.env.CARD_PORT || '8963' },
+  env: { ...process.env, PERF_BATTLES: String(B), PERF_LOOPS: String(L), PERF_CPU: process.env.PERF_CPU || '1', PERF_OUT: out, CARD_PORT: process.env.CARD_PORT || freePort() },
   encoding: 'utf8', timeout: 40 * 60 * 1000, maxBuffer: 64 * 1024 * 1024,
 });
 if (!fs.existsSync(out)) { check('④ 測る道具が最後まで回った', false, String(r.stdout || '').split('\n').filter((x) => /止まった|Error/.test(x)).slice(0, 3).join(' / ') || `終了 ${r.status}`); process.exit(1); }
