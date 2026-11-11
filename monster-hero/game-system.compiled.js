@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 973f6eb9a85a2c2f
+// source-sha256: 5c61a4452e970008
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111706,6 +111706,7 @@ function AssistantLifeRoom({
   }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
     id: id,
     put: other ? other.put || {} : null,
+    layoutItems: other && Array.isArray(other.layout) ? other.layout : null,
     w: w,
     h: h,
     faces: ppl ? ppl.length : 0,
@@ -134991,9 +134992,11 @@ const normalizeAssistantMasmonSave = raw => {
     pickNameDay: '',
     renamed2: {},
     asked: [],
-    mine: {}
+    mine: {},
+    nickFix1: false
   };
   if (raw && typeof raw === 'object') {
+    out.nickFix1 = raw.nickFix1 === true;
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
@@ -136037,7 +136040,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
     role,
     welcome: assistantMasmonWelcomeLv(slot),
     colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd),
-    ai: false,
+    ai: !!(typeof best.c.t.nick === 'string' && best.c.t.nick),
     reason,
     at: day
   };
@@ -136201,10 +136204,80 @@ const assistantMasmonEnsureMade = async () => {
       } catch (_) {}
     }
   } catch (_) {}
+  try {
+    const st = ASSISTANT_MASMON_STORE.state;
+    const next = assistantMasmonNickFix1(st);
+    if (next !== st) {
+      ASSISTANT_MASMON_STORE.set(next);
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+      } catch (_) {}
+    }
+  } catch (_) {}
   void assistantMasmonAskNames();
 };
-let _assistantMasmonNamesBusy = false;
+const assistantMasmonIsMonName = n => {
+  try {
+    return typeof ALL_PLAYER_MONSTERS !== 'undefined' && Object.values(ALL_PLAYER_MONSTERS).some(m => m && m.name === n);
+  } catch (_) {
+    return false;
+  }
+};
+const assistantMasmonNickFix1 = st => {
+  if (!st || st.nickFix1 || !st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V) return st;
+  const pick = {
+    ...(st.pick || {})
+  };
+  for (const aid of Object.keys(pick)) {
+    const base = assistantMasmonBasePlanOf(aid);
+    if (!base || !pick[aid]) continue;
+    const pool = assistantMasmonDrawPool(aid, base);
+    const all = [...pool.likes, ...pool.more, ...pool.rest];
+    const mine = assistantMasmonMineOf(st, aid);
+    const pk = {
+      ...pick[aid]
+    };
+    for (const k of Object.keys(pk)) {
+      const t = pk[k];
+      const mon = assistantMasmonMon(t.monster);
+      if (!mon || t.nick !== mon.name || (mine.names[t.slot] || []).length) continue;
+      const src = all.find(x => x.monster === t.monster && typeof x.nick === 'string' && x.nick);
+      if (!src || assistantMasmonRowsOf({
+        ...st,
+        pick: {
+          ...pick,
+          [aid]: pk
+        }
+      }, aid).some(y => y.nick === src.nick)) continue;
+      pk[k] = {
+        ...t,
+        nick: src.nick,
+        ai: true
+      };
+    }
+    pick[aid] = pk;
+  }
+  return {
+    ...st,
+    pick,
+    nickFix1: true
+  };
+};
+let _assistantMasmonNamesBusy = false,
+  _assistantMasmonNamesAgain = false;
 const assistantMasmonAskNames = async () => {
+  if (_assistantMasmonNamesBusy) {
+    _assistantMasmonNamesAgain = true;
+    return 'skip';
+  }
+  const r = await assistantMasmonAskNamesOnce();
+  if (_assistantMasmonNamesAgain) {
+    _assistantMasmonNamesAgain = false;
+    if (r !== 'failed' && r !== 'tired') return assistantMasmonAskNamesOnce();
+  }
+  return r;
+};
+const assistantMasmonAskNamesOnce = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
@@ -136288,7 +136361,7 @@ const assistantMasmonAskNames = async () => {
         if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
         const styled = !!assistantMasmonMineOf(cur, a).nameStyle;
-        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n);
+        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n) && !assistantMasmonIsMonName(n);
         if (!ok) return t;
         used.add(n);
         changed = true;
@@ -136934,6 +137007,9 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       }
     }));
     if (!r.name) void assistantMasmonAskNames();
+    try {
+      if (typeof amgTick === 'function') void amgTick(aid);
+    } catch (_) {}
     return {
       changed: true,
       what: `${row.nick}を${monName(r.monster)}に入れ替え`
@@ -137467,6 +137543,17 @@ const assistantMasmonLineage = mid => {
     const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null;
     const m = l && l.main;
     return (m && typeof m === 'object' ? m.id : m) || null;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantMasmonLineageRep = lin => {
+  try {
+    if (!lin || typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+    const id = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].monId : '';
+    if (id && ALL_PLAYER_MONSTERS[id]) return ALL_PLAYER_MONSTERS[id];
+    const k = Object.keys(ALL_PLAYER_MONSTERS).find(m => assistantMasmonLineage(m) === lin);
+    return k ? ALL_PLAYER_MONSTERS[k] : null;
   } catch (_) {
     return null;
   }
@@ -138195,6 +138282,11 @@ function AssistantMasmonSheet({
         lv = Number(bondLv);
       if (p0 && p0.v2) {
         const got = await assistantMasmonWelcomeDue(id, lv);
+        if (got.length && typeof amgTick === 'function') {
+          try {
+            await amgTick(id);
+          } catch (_) {}
+        }
         if (got.length && alive) setWelcome(got[got.length - 1]);
       } else {
         const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
@@ -138452,7 +138544,7 @@ function AssistantMasmonSheet({
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
       if (!name) return null;
-      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : x.lineage ? assistantMasmonLineageRep(x.lineage) : null;
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return React.createElement("div", {
         key: `${kind}-${x.monster || x.lineage}`,
@@ -145276,9 +145368,13 @@ const alfBuildMore = ids => {
       const p = {};
       for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
       const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
-      if (Object.keys(p).length || k.length) fu[id] = {
+      const l = typeof assistantLifeLayoutPack === 'function' ? assistantLifeLayoutPack(id) : null;
+      if (Object.keys(p).length || k.length || l) fu[id] = {
         p,
-        k
+        k,
+        ...(l ? {
+          l
+        } : {})
       };
     } catch {}
   }
@@ -145313,9 +145409,39 @@ const alfMoreChars = o => {
   const t = JSON.stringify(o);
   return t.length + (t.match(/[:,]/g) || []).length;
 };
+const alfTrimLayout = (more, floor = 0) => {
+  const fu = {};
+  for (const [id, x] of Object.entries(more.fu || {})) fu[id] = x;
+  const total = () => alfMoreChars({
+    ...more,
+    fu
+  });
+  for (let guard = 0; guard < 200; guard++) {
+    if (total() <= ALF_MORE_FIT) break;
+    let best = null;
+    for (const [id, x] of Object.entries(fu)) if (Array.isArray(x.l) && x.l.length && x.l.length > floor && (!best || x.l.length > fu[best].l.length)) best = id;
+    if (!best) break;
+    const l = fu[best].l;
+    let lo = 0;
+    for (let i = 1; i < l.length; i++) if ((l[i][10] || 0) < (l[lo][10] || 0)) lo = i;
+    const rest = l.filter((_, i) => i !== lo);
+    const {
+      l: _drop,
+      ...keep
+    } = fu[best];
+    fu[best] = rest.length ? {
+      ...keep,
+      l: rest
+    } : keep;
+  }
+  return {
+    ...more,
+    fu
+  };
+};
 const alfFitMasmon = (more, ms) => {
-  if (!ms || !Object.keys(ms).length) return more;
-  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+  const withMs = (base, n, allColor) => {
+    if (!ms || !Object.keys(ms).length) return base;
     const cut = {};
     const mn = {};
     for (const [id, list] of Object.entries(ms)) {
@@ -145325,16 +145451,32 @@ const alfFitMasmon = (more, ms) => {
       });
       if (list.length > n) mn[id] = list.length;
     }
-    const next = {
-      ...more,
+    return {
+      ...base,
       ms: cut,
       ...(Object.keys(mn).length ? {
         mn
       } : {})
     };
-    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
+  };
+  const dyOf = n => ({
+    ...more,
+    dy: (more.dy || []).slice(0, n)
+  });
+  const ok = o => alfMoreChars(o) <= ALF_MORE_FIT;
+  let next = withMs(more, 8, true);
+  if (ok(next)) return next;
+  next = withMs(more, 8, false);
+  if (ok(next)) return next;
+  for (const n of [4, 0]) {
+    next = withMs(dyOf(n), 8, false);
+    if (ok(next)) return next;
   }
-  return more;
+  for (const n of [8, 4, 2, 1]) {
+    next = alfTrimLayout(withMs(dyOf(0), n, false), 8);
+    if (ok(next)) return next;
+  }
+  return alfTrimLayout(withMs(dyOf(0), 1, false));
 };
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
 const ALF_ACT_MAX = 6;
@@ -145442,7 +145584,12 @@ const assistantLifeFriendNormalizeMore = raw => {
       if (f && f.slot === sl) p[k] = f.key;
     }
     const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
-    fu[id] = {
+    const l = (Array.isArray(x.l) ? x.l : []).slice(0, 20).filter(a => Array.isArray(a) && a.length === 11 && furn.some(y => y.key === a[0]) && a.slice(1).every(v => Number.isFinite(v)));
+    fu[id] = l.length ? {
+      p,
+      k,
+      l
+    } : {
       p,
       k
     };
@@ -147201,7 +147348,13 @@ function AlfFriendHouseView({
     const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
     return f ? `${f.emoji} ${f.name}` : null;
   };
+  const layoutOf = id => {
+    const l = more && more.fu[id] && Array.isArray(more.fu[id].l) && typeof assistantLifeLayoutUnpack === 'function' ? assistantLifeLayoutUnpack(more.fu[id].l) : null;
+    return l && l.length ? l : null;
+  };
   const furnNames = id => {
+    const lay = layoutOf(id);
+    if (lay && lay.length) return [...new Set(lay.map(it => fname(it.k)).filter(Boolean))];
     const fu = putOf(id);
     return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
   };
@@ -147226,7 +147379,8 @@ function AlfFriendHouseView({
         ceil: more.fu[id].p.c || null,
         wall: more.fu[id].p.w || null,
         floor: more.fu[id].p.f || null
-      }
+      },
+      layout: layoutOf(id)
     };
     return o;
   })();
@@ -147414,6 +147568,7 @@ function AlfFriendHouseView({
     } : null,
     team: rvTeam,
     furn: rvFurn,
+    layoutItems: layoutOf(roomId),
     bubble: talk && talk.aid === roomId ? talk.text : '',
     title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
     sub: `🏘 ${friend.name}さんの家`,

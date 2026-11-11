@@ -54,7 +54,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
       put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
     });
-    await page.addInitScript(eventStorySeed());
+    await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
     // 決めた場面: 自分の番・攻撃の段。自分の先頭の子の、文の無いちから技と影縛り。相手は緊急回避だけ
     await page.addInitScript(() => {
       window.__mhCardScene = (st) => {
@@ -75,7 +75,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -89,7 +89,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
     await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
     await page.locator('[data-card-kit="powerful"]').click();

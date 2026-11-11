@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 801c80ff6a22848f
+// generated-sha256: 26a271607be53e7b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66076,7 +66076,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {v2 && met && ppl && ppl.includes(id) && <span className={`meet${state.sleep ? ' zz' : ''}`} data-assistant-life-room-meet={id} style={w >= 150 ? { left: [...assistantLifeName(id)].length * 10 + 24 } : { right: 3 }}>{w >= 150 ? (state.sleep ? '💤 おやすみ中' : '● いま会える') : (state.sleep ? '💤' : [...assistantLifeName(id)].length >= 4 ? '●' : '会える')}</span>}
       {met && sess && sess.level > 1 && <span className="lv" data-assistant-life-room-session={sess.level}>🎵Lv{sess.level}</span>}
       <span className="fu" aria-hidden="true">{L.furn}</span><div className="fl"/>
-      {typeof AssistantLifeRoomFurn === 'function' && <AssistantLifeRoomFurn id={id} put={other ? other.put || {} : null} w={w} h={h} faces={ppl ? ppl.length : 0} baseCount={[...String(L.furn || '')].filter(c => /\p{Extended_Pictographic}/u.test(c)).length}/>}
+      {typeof AssistantLifeRoomFurn === 'function' && <AssistantLifeRoomFurn id={id} put={other ? other.put || {} : null} layoutItems={other && Array.isArray(other.layout) ? other.layout : null} w={w} h={h} faces={ppl ? ppl.length : 0} baseCount={[...String(L.furn || '')].filter(c => /\p{Extended_Pictographic}/u.test(c)).length}/>}
       {ppl && !state.sleep && (look === 'night' || look === 'evening') && <div className="lamp"/>}
       {ppl && state.sleep && <div className="off" style={{ background: night ? 'rgba(3,5,16,.6)' : 'rgba(30,27,75,.35)' }}/>}
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
@@ -71518,8 +71518,9 @@ const normalizeAssistantMasmonMine = (raw) => {
 };
 const assistantMasmonMineOf = (st, aid) => (st && st.mine && st.mine[aid]) || { names: {}, parts: {}, hero: 0, wish: '', deck: null, former: {} };
 const normalizeAssistantMasmonSave = (raw) => {
-  const out = { v: 1, welcomed: {}, seed: '', made: {}, named: false, noticed: {}, dyes: {}, draw: normalizeAssistantMasmonDraw(null), pick: {}, pickNameDay: '', renamed2: {}, asked: [], mine: {} };
+  const out = { v: 1, welcomed: {}, seed: '', made: {}, named: false, noticed: {}, dyes: {}, draw: normalizeAssistantMasmonDraw(null), pick: {}, pickNameDay: '', renamed2: {}, asked: [], mine: {}, nickFix1: false };
   if (raw && typeof raw === 'object') {
+    out.nickFix1 = raw.nickFix1 === true; // 種類名になった迎えた子の名前を、助手が紹介した名前に戻した印(一度だけ・2026-11-11)
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
@@ -71988,7 +71989,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
   const mon = assistantMasmonMon(best.c.t.monster);
   return { slot, monster: best.c.t.monster, nick: typeof best.c.t.nick === 'string' && best.c.t.nick ? best.c.t.nick : (mon && mon.name) || best.c.t.monster,
     lv: Math.max(1, Math.min(30, 4 + Math.round(ctx.lv * 0.9) + Math.round((rnd() - 0.5) * 4))), grow, why: ASSISTANT_MASMON_PICK_REASON[reason], role, welcome: assistantMasmonWelcomeLv(slot),
-    colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd), ai: false, reason, at: day };
+    colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd), ai: !!(typeof best.c.t.nick === 'string' && best.c.t.nick), reason, at: day }; // 表に名前がある子は、迎えるときに助手がその名前で紹介するので名前済み(あとから AI で付け直さない・2026-11-11 社長「助手がその名前を紹介してきた」)
 };
 // まだの枠のうち、仲良し度が届いた枠を、その場で選んで迎える(pick に書く・1回だけ)。迎えた行の配列を返す(場面は最後の1体)
 const assistantMasmonWelcomeDue = async (aid, bondLv) => {
@@ -72075,14 +72076,45 @@ const assistantMasmonEnsureMade = async () => {
     const next = st.seed ? assistantMasmonDyeEnsure(st, day) : st;
     if (next !== st) { ASSISTANT_MASMON_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false); } catch (_) {} }
   } catch (_) {}
+  try { const st = ASSISTANT_MASMON_STORE.state; const next = assistantMasmonNickFix1(st); if (next !== st) { ASSISTANT_MASMON_STORE.set(next); try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false); } catch (_) {} } } catch (_) {}
   void assistantMasmonAskNames();
+};
+// 種類名か(どのモンスターの名前とも同じなら真)
+const assistantMasmonIsMonName = (n) => { try { return typeof ALL_PLAYER_MONSTERS !== 'undefined' && Object.values(ALL_PLAYER_MONSTERS).some(m => m && m.name === n); } catch (_) { return false; } };
+// 一度だけの直し(印 nickFix1): 迎えたときに助手が表の名前(例: センくん)で紹介したのに、そのあとの AI の名前付けで種類名(エイキ)になった子を、表の名前に戻す。
+//   戻すのは「いまの名前が種類名そのもの」で「プレイヤーが提案で名前を変えていない」迎えた枠(pick)だけ。表に名前が無い・同じ助手のほかの子と重なるときは戻さない(あとで AI が付ける)
+const assistantMasmonNickFix1 = (st) => {
+  if (!st || st.nickFix1 || !st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V) return st;
+  const pick = { ...(st.pick || {}) };
+  for (const aid of Object.keys(pick)) {
+    const base = assistantMasmonBasePlanOf(aid); if (!base || !pick[aid]) continue;
+    const pool = assistantMasmonDrawPool(aid, base); const all = [...pool.likes, ...pool.more, ...pool.rest];
+    const mine = assistantMasmonMineOf(st, aid); const pk = { ...pick[aid] };
+    for (const k of Object.keys(pk)) {
+      const t = pk[k]; const mon = assistantMasmonMon(t.monster);
+      if (!mon || t.nick !== mon.name || (mine.names[t.slot] || []).length) continue;
+      const src = all.find(x => x.monster === t.monster && typeof x.nick === 'string' && x.nick);
+      if (!src || assistantMasmonRowsOf({ ...st, pick: { ...pick, [aid]: pk } }, aid).some(y => y.nick === src.nick)) continue;
+      pk[k] = { ...t, nick: src.nick, ai: true };
+    }
+    pick[aid] = pk;
+  }
+  return { ...st, pick, nickFix1: true };
 };
 // 名前を Claude API で(assistant-chat の kind:'masmon_names')。印 assistantMasmonNamesApi が偽・失敗のときは表の名前のまま
 //   迎えたマスモン(勇者モン・draw で迎えた枠・pick)のうち、AI の名前がまだのものだけをまとめて1回。失敗・上限のときはその日はもう試さない(pickNameDay)
 //   2026-11-08 社長「名前を変えてないのがあった」: 前は1回付けたら(draw.named)二度と試さなかったので、6〜8体目(受け口が5体までだった間)や
 //   言葉の決まりで落ちた名前が表のままだった。いまは「まだのものだけ」を次に開いたときに付け直し、付け直したら1行だけ知らせる(renamed2)
-let _assistantMasmonNamesBusy = false;
+//   2026-11-11 社長「名前を付けたのにエイキのまま」: 起動時の名付けが走っているあいだに迎えた子は、頼みが 'skip' で捨てられ、その日は名前が付かなかった。
+//   走っている最中に頼まれたら覚えておき、終わったあともう1回だけ回す(新しく迎えた子もその場で名前が付く)
+let _assistantMasmonNamesBusy = false, _assistantMasmonNamesAgain = false;
 const assistantMasmonAskNames = async () => {
+  if (_assistantMasmonNamesBusy) { _assistantMasmonNamesAgain = true; return 'skip'; }
+  const r = await assistantMasmonAskNamesOnce();
+  if (_assistantMasmonNamesAgain) { _assistantMasmonNamesAgain = false; if (r !== 'failed' && r !== 'tired') return assistantMasmonAskNamesOnce(); } // 失敗・上限の日はその日はもう試さない(前のまま)
+  return r;
+};
+const assistantMasmonAskNamesOnce = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
@@ -72106,7 +72138,7 @@ const assistantMasmonAskNames = async () => {
       const got = res.names[a] && typeof res.names[a] === 'object' ? res.names[a] : {};
       const used = new Set(assistantMasmonRowsOf(cur, a).filter(t => t.ai).map(t => t.nick));
       let changed = false;
-      const name = (t) => { if (t.ai) return t; const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : ''; const styled = !!assistantMasmonMineOf(cur, a).nameStyle; const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n); if (!ok) return t; used.add(n); changed = true; return { ...t, nick: n, ai: true }; };
+      const name = (t) => { if (t.ai) return t; const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : ''; const styled = !!assistantMasmonMineOf(cur, a).nameStyle; const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n) && !assistantMasmonIsMonName(n); /* 種類名そのもの(例: エイキ)は名前にしない */ if (!ok) return t; used.add(n); changed = true; return { ...t, nick: n, ai: true }; };
       const pk = pick[a] ? { ...pick[a] } : null;
       const w = cur.draw.welcomed[a] || {};
       made[a] = made[a].map(t => (pk && pk[t.slot]) || !(t.slot === 1 || w[t.monster]) ? t : name(t));
@@ -72347,6 +72379,7 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
     const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(p), roles: {}, slots: { [t.slot]: nu.colors } }];
     assistantMasmonSave(withMine({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [t.slot]: nu } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) } }));
     if (!r.name) void assistantMasmonAskNames();
+    try { if (typeof amgTick === 'function') void amgTick(aid); } catch (_) {} // 入れ替えた子の育成(6能力)もその場で作る
     return { changed: true, what: `${row.nick}を${monName(r.monster)}に入れ替え` };
   }
   if (r.kind === 'hero' && outcome === 'yes') {
@@ -72534,6 +72567,16 @@ const assistantMasmonWelcomeLine = (aid, t) => {
 const assistantMasmonAll = (p) => [...assistantMasmonTeam(p), ...assistantMasmonBench(p)];
 const assistantMasmonMon = (mid) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[mid]) || null;
 const assistantMasmonLineage = (mid) => { try { const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null; const m = l && l.main; return (m && typeof m === 'object' ? m.id : m) || null; } catch (_) { return null; } };
+// 種族(血統)の行に出す代表の絵(2026-11-11 社長「ゴースト種の所に絵が無い」): 血統の代表(monId)。いなければその血統が主のいちばん初めのモンスター。どちらも無ければ null(🧬のまま)
+const assistantMasmonLineageRep = (lin) => {
+  try {
+    if (!lin || typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+    const id = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].monId : '';
+    if (id && ALL_PLAYER_MONSTERS[id]) return ALL_PLAYER_MONSTERS[id];
+    const k = Object.keys(ALL_PLAYER_MONSTERS).find(m => assistantMasmonLineage(m) === lin);
+    return k ? ALL_PLAYER_MONSTERS[k] : null;
+  } catch (_) { return null; }
+};
 const assistantMasmonLineageName = (lin) => (typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].name : '');
 // 好き・苦手の1行の表示名(血統なら「○○種」)
 const assistantMasmonTasteName = (x) => {
@@ -72834,6 +72877,8 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
       if (p0 && p0.v2) {
         // まだの枠は、迎えるその時に1体を選ぶ(2026-11-08 社長「迎えるときに決める」)
         const got = await assistantMasmonWelcomeDue(id, lv);
+        // 迎えた子の育成(6能力)もその場で作る(2026-11-11 社長: 新しく来たエイキだけ「ライフ・攻撃・防御・ガッツ」の古い棒だった。開いた瞬間にしか作っていなかった)
+        if (got.length && typeof amgTick === 'function') { try { await amgTick(id); } catch (_) {} }
         if (got.length && alive) setWelcome(got[got.length - 1]);
       } else {
         const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
@@ -72944,7 +72989,7 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
       if (!name) return null;
-      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : x.lineage ? assistantMasmonLineageRep(x.lineage) : null;
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return (
         <div key={`${kind}-${x.monster || x.lineage}`} className="flex items-center gap-2 py-1" data-assistant-masmon-taste={`${kind}:${x.monster || x.lineage}`}>
@@ -76247,7 +76292,8 @@ const alfBuildMore = (ids) => {
       if (!room) continue;
       const p = {}; for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
       const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
-      if (Object.keys(p).length || k.length) fu[id] = { p, k };
+      const l = typeof assistantLifeLayoutPack === 'function' ? assistantLifeLayoutPack(id) : null;
+      if (Object.keys(p).length || k.length || l) fu[id] = { p, k, ...(l ? { l } : {}) };
     } catch {}
   }
   const dy = alfDiaryShare(8);
@@ -76272,18 +76318,39 @@ const alfMasmonShare = (ids) => {
 };
 // jsonb の文字の形は「": "」「, 」と空白が入るので、区切りの数だけ足して見積もる(多めに見る)
 const alfMoreChars = (o) => { const t = JSON.stringify(o); return t.length + (t.match(/[:,]/g) || []).length; };
+// 切り詰める順(2026-11-11 家具が20種類になり、並び l が増えたぶん): ①勇者モン以外のマスモンの色 → ②今日あったこと 8→4→0件 →
+//   ③家具の並び l を、いちばん多い助手から奥(z の小さい)の家具の順に、1人8個まで減らす → ④マスモンの数 8→4→2→1 → ⑤それでも入らなければ並び l をさらに減らす
+const alfTrimLayout = (more, floor = 0) => {
+  const fu = {}; for (const [id, x] of Object.entries(more.fu || {})) fu[id] = x;
+  const total = () => alfMoreChars({ ...more, fu });
+  for (let guard = 0; guard < 200; guard++) {
+    if (total() <= ALF_MORE_FIT) break;
+    let best = null; for (const [id, x] of Object.entries(fu)) if (Array.isArray(x.l) && x.l.length && x.l.length > floor && (!best || x.l.length > fu[best].l.length)) best = id;
+    if (!best) break;
+    const l = fu[best].l; let lo = 0; for (let i = 1; i < l.length; i++) if ((l[i][10] || 0) < (l[lo][10] || 0)) lo = i;
+    const rest = l.filter((_, i) => i !== lo);
+    const { l: _drop, ...keep } = fu[best]; fu[best] = rest.length ? { ...keep, l: rest } : keep;
+  }
+  return { ...more, fu };
+};
 const alfFitMasmon = (more, ms) => {
-  if (!ms || !Object.keys(ms).length) return more;
-  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+  const withMs = (base, n, allColor) => {
+    if (!ms || !Object.keys(ms).length) return base;
     const cut = {}; const mn = {};
     for (const [id, list] of Object.entries(ms)) {
       cut[id] = list.slice(0, n).map(t => (allColor || t.l ? t : { ...t, c: [] }));
       if (list.length > n) mn[id] = list.length;
     }
-    const next = { ...more, ms: cut, ...(Object.keys(mn).length ? { mn } : {}) };
-    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
-  }
-  return more;
+    return { ...base, ms: cut, ...(Object.keys(mn).length ? { mn } : {}) };
+  };
+  const dyOf = (n) => ({ ...more, dy: (more.dy || []).slice(0, n) });
+  const ok = (o) => alfMoreChars(o) <= ALF_MORE_FIT;
+  let next = withMs(more, 8, true); if (ok(next)) return next;
+  next = withMs(more, 8, false); if (ok(next)) return next;
+  for (const n of [4, 0]) { next = withMs(dyOf(n), 8, false); if (ok(next)) return next; }
+  // 並びは1人8個までは先に減らす。それでも入らなければマスモンの数を減らし、最後に並びをさらに減らす
+  for (const n of [8, 4, 2, 1]) { next = alfTrimLayout(withMs(dyOf(0), n, false), 8); if (ok(next)) return next; }
+  return alfTrimLayout(withMs(dyOf(0), 1, false));
 };
 // ---------- フレンドの最近(2026-11-08 社長「フレンドで相手の行動見えるバリエーションも増やして」・FRIEND-ACTIVITY-PLAN.md) ----------
 // 端末の記録から組み立てる(曲名・勝ったこと・迎えたマスモンの種類・置いた家具だけ。スコア・数・相手の名前は入れない)。
@@ -76336,7 +76403,9 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     if (!x || typeof x !== 'object') continue;
     const p = {}; for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) { const f = x.p && furn.find(y => y.key === x.p[k]); if (f && f.slot === sl) p[k] = f.key; }
     const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
-    fu[id] = { p, k };
+    // 並び l(模様替え): [[k,x,y,s,r,f,h,l,g,a,z],…]を20個まで。知らない家具・数でない値は捨てる(描くときは assistantLifeLayoutUnpack がもう一度整える)
+    const l = (Array.isArray(x.l) ? x.l : []).slice(0, 20).filter(a => Array.isArray(a) && a.length === 11 && furn.some(y => y.key === a[0]) && a.slice(1).every(v => Number.isFinite(v)));
+    fu[id] = l.length ? { p, k, l } : { p, k };
   }
   const dy = (Array.isArray(raw.dy) ? raw.dy : []).slice(0, 8).map(d => (d && typeof d.x === 'string' ? { t: /^\d{1,2}:\d{2}$/.test(d.t) ? d.t : '', x: d.x.replace(/[{}<>]/g, '').slice(0, 40) } : null)).filter(d => d && d.x);
   // マスモン: 実装済みのモンスターだけ・名前は16字まで(置き手紙と同じ見張り)・色は決まった形だけ(ほかは元の色)
@@ -77188,12 +77257,14 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 家具: くわしい控えがあればそれ、無ければ今の控え
   const putOf = (id) => (more && more.fu[id] ? more.fu[id].p : (h.r[id] && h.r[id].fu) || null);
   const fname = (k) => { const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null; return f ? `${f.emoji} ${f.name}` : null; };
-  const furnNames = (id) => { const fu = putOf(id); return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : []; };
+  // 並び l があれば、そこに置いてある家具すべて(手前の物が後ろ)。無ければ今までの天井・壁・床
+  const layoutOf = (id) => { const l = more && more.fu[id] && Array.isArray(more.fu[id].l) && typeof assistantLifeLayoutUnpack === 'function' ? assistantLifeLayoutUnpack(more.fu[id].l) : null; return l && l.length ? l : null; };
+  const furnNames = (id) => { const lay = layoutOf(id); if (lay && lay.length) return [...new Set(lay.map(it => fname(it.k)).filter(Boolean))]; const fu = putOf(id); return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : []; };
   const keptNames = (id) => (more && more.fu[id] ? more.fu[id].k.map(fname).filter(Boolean) : []);
   // その人の助手のマスモン(写し)。写しが無い(古い版の人・控えが読めない)ときは出さない(見ている人のマスモンは出さない)
   const masmonOf = (id) => (more && more.ms && Array.isArray(more.ms[id]) ? more.ms[id] : []).map(t => { const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.mo) : null; return m ? { monster: t.mo, nick: t.n || m.name, name: m.name, lead: !!t.l, dye: { colors: t.c } } : null; }).filter(Boolean);
   const masmonMore = (id) => (more && more.mn && more.mn[id] ? Math.max(0, more.mn[id] - masmonOf(id).length) : 0);
-  const otherPut = (() => { const o = alfFurnPutOf(h); if (more) for (const id of Object.keys(more.fu)) o[id] = { put: { ceil: more.fu[id].p.c || null, wall: more.fu[id].p.w || null, floor: more.fu[id].p.f || null } }; return o; })();
+  const otherPut = (() => { const o = alfFurnPutOf(h); if (more) for (const id of Object.keys(more.fu)) o[id] = { put: { ceil: more.fu[id].p.c || null, wall: more.fu[id].p.w || null, floor: more.fu[id].p.f || null }, layout: layoutOf(id) }; return o; })();
   // 掲示板: 助手の今日(dy)と、その人の最近の遊び(ac)を混ぜる(最近は先に。時刻は「今日 10:10」などの形)
   const actItems = more && more.ac ? more.ac.map(a => ({ t: alfAgoText(a.at).replace(/^今日 /, ''), x: `${ALF_ACT_ICON[a.k] || '✨'} ${a.x}`, act: a.k })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : (h.dy || []))].slice(0, 10);
@@ -77245,7 +77316,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>);
   const rvScene = rvOk && roomId && r0 ? (
     <AssistantLifeRoomScene id={roomId} look={look} land={land} people={roomState === 'out' ? [] : [roomId]} sleepIds={roomState === 'sleep' ? [roomId] : []}
-      away={roomState === 'out' ? { title: rvPlace, sub: 'いまは家にいない' } : null} team={rvTeam} furn={rvFurn}
+      away={roomState === 'out' ? { title: rvPlace, sub: 'いまは家にいない' } : null} team={rvTeam} furn={rvFurn} layoutItems={layoutOf(roomId)}
       bubble={talk && talk.aid === roomId ? talk.text : ''} title={`${alfTheirLabel(friend.name, roomId)}の部屋`} sub={`🏘 ${friend.name}さんの家`}
       onPerson={roomState === 'home' ? () => { greet(roomId); setTimeout(rvToSheet, 60); } : () => rvToSheet()} dock={rvDock} padLeft={78}/>) : null;
   const rvSheetW = land && vw < 760 ? '50%' : '42%';
