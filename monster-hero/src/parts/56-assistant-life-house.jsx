@@ -17,15 +17,15 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨' });
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️' });
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', battle: 'モンヒロバトル', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 // 場所 → HOME の札(地図 56-assistant-life-map.jsx と同じ表。HOME の顔と地図の全身が同じ時刻に同じ場所に出る・2026-11-08 社長「矛盾のない作り」)。
 //   町だけの場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)と家は「🏡 助手ライフ」
-const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', home: 'life' });
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
 //   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
@@ -85,12 +85,12 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([
   { id:'life-sleep-kyuko-004', kind:'life-sleep', who:'kyuko', line:'talk', lv:null, lines:[{ who:'kyuko', e:'happy', t:'…ほい…ありがとん…すぅ' }] },
   { id:'life-sleep-kyuko-005', kind:'life-sleep', who:'kyuko', line:'talk', lv:null, lines:[{ who:'kyuko', e:'normal', t:'…だいたい…97点…' }] },
   { id:'life-sleep-kyuko-006', kind:'life-sleep', who:'kyuko', line:'talk', lv:null, lines:[{ who:'kyuko', e:'happy', t:'…{name}…イルミネ、きれいだねぇ…' }] },
-  { id:'life-sleep-sorashido-001', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'…表の…3行目…ずれてる…' }] },
-  { id:'life-sleep-sorashido-002', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'…うぉぉぉ…新記録…むにゃ' }] },
-  { id:'life-sleep-sorashido-003', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'…なんくるないさ…すぅ…' }] },
-  { id:'life-sleep-sorashido-004', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'…確率…でーじ…高い…' }] },
-  { id:'life-sleep-sorashido-005', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'…攻略本…完成…だぜ…' }] },
-  { id:'life-sleep-sorashido-006', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'…{name}…ちばりよー…' }] },
+  { id:'life-sleep-sorashido-001', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'・・・表の・・・3行目・・・ずれてる・・・' }] },
+  { id:'life-sleep-sorashido-002', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'・・・うぉぉぉ・・・新記録・・・むにゃ' }] },
+  { id:'life-sleep-sorashido-003', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'・・・なんくるないさ・・・すぅ・・・' }] },
+  { id:'life-sleep-sorashido-004', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'・・・確率・・・でーじ・・・高い・・・' }] },
+  { id:'life-sleep-sorashido-005', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'・・・攻略本・・・完成・・・です・・・' }] },
+  { id:'life-sleep-sorashido-006', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'・・・{name}・・・ちばりよー・・・' }] },
   { id:'life-sleep-erubin-001', kind:'life-sleep', who:'erubin', line:'talk', lv:null, lines:[{ who:'erubin', e:'normal', t:'…すぅ…デュラハン…いけ…' }] },
   { id:'life-sleep-erubin-002', kind:'life-sleep', who:'erubin', line:'talk', lv:null, lines:[{ who:'erubin', e:'happy', t:'…みんな…おやすみ…' }] },
   { id:'life-sleep-erubin-003', kind:'life-sleep', who:'erubin', line:'talk', lv:null, lines:[{ who:'erubin', e:'normal', t:'…もう1戦…いいね…' }] },
@@ -121,10 +121,10 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([
   { id:'life-sleep-kyuko-008', kind:'life-sleep', who:'kyuko', line:'woken', lv:'1-4', lines:[{ who:'kyuko', e:'troubled', t:'…ん…朝はまだ、むりぃ…' }] },
   { id:'life-sleep-kyuko-009', kind:'life-sleep', who:'kyuko', line:'woken', lv:'5-10', lines:[{ who:'kyuko', e:'troubled', t:'…{name}ぉ…いま、本の夢見てたのにぃ' }, { who:'kyuko', e:'happy', t:'…ま、いっか。ほい、起きたよ笑' }] },
   { id:'life-sleep-kyuko-010', kind:'life-sleep', who:'kyuko', line:'woken', lv:'5-10', lines:[{ who:'kyuko', e:'normal', t:'…ぐぬぬぬ…起こされたぁ。ありがとん…なのかなぁ' }] },
-  { id:'life-sleep-sorashido-007', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'surprise', t:'…うぉっ！？ {name}か…寝ぼけてたぜ' }] },
-  { id:'life-sleep-sorashido-008', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'troubled', t:'…まだ10時前だろ…朝は弱いのさ…' }] },
-  { id:'life-sleep-sorashido-009', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'troubled', t:'…{name}…いま、表の夢の途中だったんだぜ…' }, { who:'sorashido', e:'happy', t:'…まあいいさ。起きたからには、計算するぜ' }] },
-  { id:'life-sleep-sorashido-010', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'happy', t:'…ふぁ…{name}の声なら、目ざましより効くさ' }] },
+  { id:'life-sleep-sorashido-007', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'surprise', t:'・・・はっ！？ {name}ですか・・・寝ぼけてました' }] },
+  { id:'life-sleep-sorashido-008', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'troubled', t:'・・・まだ10時前ですよね・・・朝は弱いんです・・・' }] },
+  { id:'life-sleep-sorashido-009', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'troubled', t:'・・・{name}・・・いま、表の夢の途中だったんですよ・・・' }, { who:'sorashido', e:'happy', t:'・・・まあいいです。起きたからには、計算しますねー' }] },
+  { id:'life-sleep-sorashido-010', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'happy', t:'・・・ふぁ・・・{name}の声なら、目ざましより効きますね笑' }] },
   { id:'life-sleep-erubin-007', kind:'life-sleep', who:'erubin', line:'woken', lv:'1-4', lines:[{ who:'erubin', e:'surprise', t:'…あ、{name}。ごめんね、寝てたみたい' }] },
   { id:'life-sleep-erubin-008', kind:'life-sleep', who:'erubin', line:'woken', lv:'1-4', lines:[{ who:'erubin', e:'normal', t:'…ん…どうしたの？ 何かあった？' }] },
   { id:'life-sleep-erubin-009', kind:'life-sleep', who:'erubin', line:'woken', lv:'5-10', lines:[{ who:'erubin', e:'troubled', t:'…{name}…もう23時すぎてるよ…' }, { who:'erubin', e:'happy', t:'…でも、顔見られてよかった。少しだけ話そっか' }] },
@@ -175,6 +175,10 @@ const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLi
 //   印が偽・いまの時間の様子がまだ無いときは false/[]。図書室でのカード研究は入れない。組で来ていれば全員。
 //   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
 const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
+// いまモンヒロバトルにいる助手(読むだけ。助手のマスモンの修行は、助手がここにいる回に行う・2026-11-11 社長「MB管理とモンバトは別」)。
+//   印が偽・いまの時間の様子がまだ無いときは false/[]。組で来ていれば全員
+const assistantLifeAtBattle = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'battle' && w.place === 'battle'); } catch (_) { return false; } };
+const assistantLifeBattleIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBattle);
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
@@ -1367,7 +1371,7 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
 // 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
 // HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', life: 'main.mh-home-scene .mh-home-facility.life' });
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);

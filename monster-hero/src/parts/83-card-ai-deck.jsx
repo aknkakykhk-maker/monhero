@@ -899,7 +899,7 @@ const CARD_AI_DECK_VS_LINES = Object.freeze({
   kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
   dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
   atsu: '今日は『{name}』でいくわ笑 全力な！',
-  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  sorashido: '今日は『{name}』でいきます！ 計算済みです笑',
   erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑',
 });
 // 提案のデッキで初めて戦うとき(1回だけ・AI のひとことより先)。2026-11-08 部長の案・社長「やる」
@@ -910,7 +910,7 @@ const CARD_AI_DECK_WISH_LINES = Object.freeze({
   kyuko: 'ほい、考えてくれた『{name}』でいくよぉ笑 ありがとね',
   dra: 'おで、考えてくれた『{name}』でいくぞ。えへへ、うれしいな。手加減しないからな',
   atsu: '考えてくれた『{name}』でいくわ笑 全力な！',
-  sorashido: '考えてくれた『{name}』でいくぜ・・・！ これも計算済み笑',
+  sorashido: '考えてくれた『{name}』でいきます！ これも計算済みです笑',
   erubin: '考えてくれた『{name}』でいこうかな🤔 ありがとね笑',
 });
 const cardAiDeckVsLine = (who, pick) => {
