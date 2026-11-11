@@ -73,6 +73,8 @@ const LATER_HOOKS = {
   assistantLifeCardMood: '育つ助手の気分の言葉(助手部キズナ2が相談を作るときに足す。2026-11-08)',
   amgAdvise: '助手のマスモンの育成(第①段階・キズナ4)の相談の口。修行(第②段階・シュギョウ)の相談「休ませよう」から呼ぶ。2026-11-11',
   amgEntryOf: '助手のマスモンの育成(第①段階・キズナ4)の入れ物。修行の相談が疲れ具合を見るのに使う。2026-11-11',
+  assistantMasmonBattleRowInfo: '助手マスモン対戦βの入口の情報(マスモン部ミセカタ2が足す。モンヒロバトルの場所の窓のボタン。2026-11-11)',
+  assistantMasmonBattleOpen: '助手マスモン対戦βの画面を開く(マスモン部ミセカタ2が足す。2026-11-11)',
 };
 const laterOk = (name) => Object.prototype.hasOwnProperty.call(LATER_HOOKS, name) && source.includes(`typeof ${name} === 'function'`);
 
