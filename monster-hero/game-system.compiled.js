@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b92f7678562eedd
+// source-sha256: 5ca6e7d3c461fd92
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13850,7 +13850,7 @@ const RELEASE_FLAGS = {
   assistantLifeFriendBond: false,
   assistantMasmonBattleBeta: false,
   assistantMasmonBattlePvp: false,
-  assistantMasmonTrain: false,
+  assistantMasmonTrain: true,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
   assistantMasmonNamesApi: true,
@@ -14297,6 +14297,7 @@ const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
 const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
 const FIRST_BATTLE_DONE_KEY = 'mh_first_battle_done_v1';
+const FIRST_STEPS_KEY = 'mh_first_steps_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
@@ -80265,7 +80266,8 @@ function HomeScreen({
   cardBattleTeaser = false,
   onOpenCardTeaser = null,
   cardTourVisible = false,
-  onOpenCardTour = null
+  onOpenCardTour = null,
+  nextStep = null
 }) {
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
@@ -80546,7 +80548,19 @@ function HomeScreen({
     "aria-label": "モンヒロバトル"
   }, React.createElement("span", null, React.createElement(Sword, {
     size: 25
-  }), "モンヒロバトル"))), React.createElement("button", {
+  }), "モンヒロバトル"))), nextStep && React.createElement("button", {
+    type: "button",
+    className: "mh-home-nextstep",
+    "data-home-next-step": nextStep.n,
+    onClick: nextStep.onTap,
+    "aria-label": `つぎにやること ${nextStep.n}/3 ${nextStep.title}`
+  }, React.createElement("span", {
+    className: "mh-home-nextstep-lab"
+  }, "つぎに", React.createElement("br", null), "やること", React.createElement("b", null, nextStep.n, "/3")), React.createElement("span", {
+    className: "mh-home-nextstep-body"
+  }, React.createElement("b", null, ['①', '②', '③'][nextStep.n - 1], " ", nextStep.title), React.createElement("small", null, nextStep.sub)), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "›")), React.createElement("button", {
     onClick: openMissions,
     className: `mh-home-mission${spotClass('reward')}`
   }, React.createElement(List, {
@@ -136457,7 +136471,7 @@ const normalizeAssistantMasmonTrain = raw => {
   if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
     if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
     const one = {};
-    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+    for (const [key, e] of Object.entries(ms).slice(-24)) {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
@@ -136535,7 +136549,7 @@ const amgtCanLearn = (t, st, me) => {
 };
 const amgtInitMon = (monster, lv, st) => {
   const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
-  const learn = amgtTechsOf(monster).filter(t => t.learn && (t.learn.start || !t.learn.need && amgtCanLearn(t, st, null))).map(t => t.id);
+  const learn = amgtTechsOf(monster).filter(t => t.learn && t.learn.start).map(t => t.id);
   const m = {};
   for (const k of AMGT_SENSE_KEYS) m[k] = base;
   for (const id of learn) m[id] = base;
@@ -136614,15 +136628,18 @@ const AMGT_STORE = {
       } catch (_) {}
     });
   },
-  async load() {
-    if (this.loaded) return this.state;
-    let raw = null;
-    try {
-      raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
-    } catch (_) {}
-    this.loaded = true;
-    this.set(normalizeAssistantMasmonTrain(raw));
-    return this.state;
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(normalizeAssistantMasmonTrain(raw));
+      return this.state;
+    })();
+    return this._p;
   }
 };
 const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
@@ -136744,7 +136761,8 @@ const amgtOnLifeSlot = life => {
 };
 const amgtWasAtPlace = (aid, slot, st = AMGT_STORE.state) => {
   if (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) amgtNoteLife(ASSISTANT_LIFE_STORE.state.life);
-  return ((AMGT_STORE.state.at || st.at)[aid] || []).includes(slot);
+  const day = amgtSlotDay(slot);
+  return ((AMGT_STORE.state.at || st.at)[aid] || []).some(n => amgtSlotDay(n) === day && n <= slot);
 };
 const amgtChoose = (aid, e, row, _rnd, slot) => {
   if (!amgtOn() || !AMGT_STORE.loaded || !row || !e || !Number.isInteger(slot)) return null;
@@ -136769,6 +136787,8 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
   const K = AMGT_KINDS[act.k];
   const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const me0 = (AMGT_STORE.state.mons[aid] || {})[amgtKeyOf(row)];
+  if (me0 && me0.log.some(x => x.s === slot)) return e;
   const {
     next,
     me,
@@ -137067,7 +137087,7 @@ function AmgtCard({
       className: `flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`,
       "data-amgt-tech": x.id
     }, React.createElement("span", {
-      className: `w-[96px] shrink-0 truncate ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`
+      className: `w-[96px] shrink-0 break-words leading-tight ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`
     }, has ? x.name : '???'), React.createElement("span", {
       className: "w-[46px] shrink-0 whitespace-nowrap text-[9px]"
     }, [0, 1, 2, 3].map(d => React.createElement("i", {
@@ -138126,6 +138146,44 @@ const AMBB_CARE_JP = Object.freeze({
   ask: '相談',
   ranch: 'M/B管理'
 });
+const ambbPvpOn = () => ambbOn() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattlePvp === true && typeof masmonPvpChallenge === 'function';
+const AMBB_KINDS = Object.freeze([{
+  id: 'raw',
+  label: '育ったまま',
+  note: '育てた能力そのままで戦う'
+}, {
+  id: 'fair',
+  label: '公平',
+  note: '能力の合計とLvをそろえて、戦い方で勝負'
+}]);
+const ambbPvpReason = reason => reason === 'locked' ? 'この端末では登録できません。お問い合わせ(サポート)へ連絡してください' : typeof masmonPvpReasonText === 'function' ? masmonPvpReasonText(reason) : 'うまくいきませんでした';
+const ambbWeekOf = (now = Date.now()) => {
+  const d = new Date(now + 9 * 3600000 - 4 * 3600000);
+  d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+  return d.toISOString().slice(0, 10);
+};
+const ambbPvpMemberOf = u => {
+  const x = u.unit || {},
+    techs = Array.isArray(x.techs) && x.techs.length ? x.techs.slice() : undefined;
+  const keep = new Set([...(techs || []), 'guard', 'dist', 'swap']);
+  const mastery = {};
+  for (const [k, v] of Object.entries(x.mastery || {})) {
+    const n = Math.round(Number(v));
+    if (keep.has(k) && Number.isFinite(n) && n > 0) mastery[k] = Math.min(100, n);
+  }
+  const name = typeof x.name === 'string' && x.name.trim() || typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[x.species] && ALL_PLAYER_MONSTERS[x.species].name || x.species;
+  return {
+    slot: u.row.slot,
+    species: x.species,
+    name: String(name).slice(0, 24),
+    lv: x.lv,
+    stats: x.stats,
+    ...(techs ? {
+      techs
+    } : {}),
+    mastery
+  };
+};
 const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattleBeta === true && RELEASE_FLAGS.assistantMasmonGrow === true;
 const ambbInt = (v, lo, hi, d) => {
   const n = Number(v);
@@ -138139,7 +138197,8 @@ const normalizeAssistantMasmonBattleSave = raw => {
     mode: {},
     last: {},
     rec: {},
-    done: []
+    done: [],
+    reg: {}
   };
   if (typeof src.speed === 'string' && typeof AMBW_SPEEDS !== 'undefined' && AMBW_SPEEDS.some(s => s.id === src.speed)) out.speed = src.speed;
   const obj = o => o && typeof o === 'object' && !Array.isArray(o) ? o : {};
@@ -138163,6 +138222,14 @@ const normalizeAssistantMasmonBattleSave = raw => {
     };
   }
   out.done = (Array.isArray(src.done) ? src.done : []).filter(x => typeof x === 'string').slice(-40);
+  for (const [aid, r] of Object.entries(obj(src.reg))) {
+    const x = obj(r);
+    const at = ambbInt(x.at, 0, 9e15, 0);
+    if (at) out.reg[aid] = {
+      at,
+      size: ambbInt(x.size, 1, 3, 3)
+    };
+  }
   return out;
 };
 const AMBB_STORE = {
@@ -138285,7 +138352,7 @@ const assistantMasmonBattleRowInfo = assistantId => {
     disabled: true,
     why: 'マスモンを迎えると対戦できます'
   };
-  if (!ambbAssistantsWithRows().some(a => a.id !== assistantId)) return {
+  if (!ambbPvpOn() && !ambbAssistantsWithRows().some(a => a.id !== assistantId)) return {
     ...base,
     sub: 'ほかの助手がマスモンを迎えたら対戦できます',
     disabled: true,
@@ -138365,6 +138432,7 @@ function AssistantMasmonBattleBeta({
   const [paused, setPaused] = useState(false);
   const [ifs, setIfs] = useState(null);
   const [ask, setAsk] = useState(null);
+  const [src, setSrc] = useState(null);
   const rootRef = useRef(null);
   useEffect(() => {
     if (rootRef.current) rootRef.current.scrollTop = 0;
@@ -138526,6 +138594,80 @@ function AssistantMasmonBattleBeta({
       }
     }));
   };
+  const pvp = ambbPvpOn() && !preview;
+  const srcNow = pvp ? src || (foes.length ? 'local' : 'friend') : 'local';
+  const startPvp = (m, foe) => {
+    if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
+    const teamA = {
+      ...m.teamA,
+      assistantId: m.teamA.assistantId || meId
+    };
+    const teamB = {
+      ...m.teamB,
+      assistantId: m.teamB.assistantId || foe.assistantId
+    };
+    let r;
+    try {
+      r = engine.simulate({
+        seed: m.seed,
+        catalog,
+        teamA,
+        teamB,
+        balance: m.balance || 'A',
+        trace: true
+      });
+    } catch (e) {
+      return;
+    }
+    let plain = null;
+    try {
+      plain = engine.simulate({
+        seed: m.seed,
+        catalog,
+        teamA,
+        teamB,
+        balance: m.balance || 'A'
+      });
+    } catch (_) {
+      plain = null;
+    }
+    const same = !!plain && plain.winner === m.winner && plain.rounds === m.rounds && (!m.digest || plain.digest === m.digest);
+    const st = r.log[0] || {};
+    const units = chosen.filter(u => teamA.members.some(x => x.species === u.unit.species && x.name === u.unit.name));
+    setBattle({
+      id: `pvp-${m.id}`,
+      seed: m.seed,
+      r: {
+        ...r,
+        winner: m.winner || r.winner
+      },
+      frames: ambwFramesOf(r.log),
+      teamA,
+      teamB,
+      units: units.length ? units : chosen,
+      maxHp: {
+        A: st.aHp || [],
+        B: st.bHp || []
+      },
+      moves: {
+        A: st.aMoves || [],
+        B: st.bMoves || []
+      },
+      pvp: {
+        kind: m.kind,
+        rated: m.rated,
+        rating: m.rating,
+        oppRating: m.oppRating,
+        remaining: m.remaining,
+        same,
+        foeName: foe.name
+      }
+    });
+    setPos(0);
+    setPaused(false);
+    setIfs(null);
+    setPhase('watch');
+  };
   const speed = save.speed || 'x1';
   const setSpeed = id => {
     if (!ambbSave(s => ({
@@ -138552,7 +138694,7 @@ function AssistantMasmonBattleBeta({
     return () => clearTimeout(t);
   }, [phase, battle, pos, paused, speed]);
   useEffect(() => {
-    if (phase !== 'review' || !battle) return;
+    if (phase !== 'review' || !battle || battle.pvp) return;
     ambbSave(s => {
       if (s.done.includes(battle.id)) return s;
       const rc = s.rec[meId] || {
@@ -138649,7 +138791,20 @@ function AssistantMasmonBattleBeta({
     const plan = AMBB_PLANS.find(p => p.id === sel.plan) || AMBB_PLANS[0];
     body = React.createElement("div", {
       "data-ambb-prep": true
-    }, React.createElement("div", {
+    }, pvp && React.createElement("div", {
+      className: "ambb-tabs",
+      style: {
+        marginBottom: 8
+      }
+    }, React.createElement("button", {
+      "data-ambb-src": "local",
+      className: srcNow === 'local' ? 'on' : '',
+      onClick: () => setSrc('local')
+    }, "🏠 この端末の助手"), React.createElement("button", {
+      "data-ambb-src": "friend",
+      className: srcNow === 'friend' ? 'on' : '',
+      onClick: () => setSrc('friend')
+    }, "👥 フレンドの助手")), srcNow === 'local' && React.createElement("div", {
       className: "ambw-card"
     }, React.createElement("div", {
       className: "ambb-vs"
@@ -138797,9 +138952,21 @@ function AssistantMasmonBattleBeta({
     }, React.createElement("i", null, j + 1), React.createElement("img", {
       src: ALL_PLAYER_MONSTERS[u.row.monster].imgUrl,
       alt: ""
-    }), React.createElement("b", null, u.row.nick || ALL_PLAYER_MONSTERS[u.row.monster].name), React.createElement("small", null, "Lv", u.entry && u.entry.lv || 1))))), React.createElement("div", {
+    }), React.createElement("b", null, u.row.nick || ALL_PLAYER_MONSTERS[u.row.monster].name), React.createElement("small", null, "Lv", u.entry && u.entry.lv || 1))))), srcNow === 'friend' && React.createElement(AmbbFriendPanel, {
+      me: me,
+      meId: meId,
+      engine: engine,
+      catalog: catalog,
+      units: chosen,
+      size: size,
+      plan: modeNow === 'auto' ? 'omakase' : sel.plan,
+      swap: modeNow === 'auto' ? 'omakase' : sel.swap,
+      tactics: ambbTacticsOf(meId, chosen.map(u => u.row)),
+      reg: save.reg[meId],
+      onBattle: startPvp
+    }), React.createElement("div", {
       className: "ambw-ctl"
-    }, React.createElement("button", {
+    }, srcNow === 'local' && React.createElement("button", {
       className: "ambw-btn",
       "data-ambb-start": true,
       disabled: !foeId,
@@ -138815,6 +138982,13 @@ function AssistantMasmonBattleBeta({
         marginTop: 8
       }
     }, "公開前の確かめです。戦績も設定も保存しません。"));
+  } else if (phase === 'rank' && pvp) {
+    body = React.createElement(AmbbRanking, {
+      me: me,
+      faceOf: faceOf,
+      nameOf: nameOf,
+      onBack: () => setPhase(battle ? 'review' : 'prep')
+    });
   } else if (phase === 'rank') {
     body = React.createElement("div", {
       "data-ambb-rank": true
@@ -138930,7 +139104,7 @@ function AssistantMasmonBattleBeta({
     };
     const sa = stat('A'),
       sb = stat('B');
-    const foeName = nameOf(battle.teamB.assistantId);
+    const foeName = battle.pvp ? `${battle.pvp.foeName}の${nameOf(battle.teamB.assistantId)}` : nameOf(battle.teamB.assistantId);
     const gains = battle.units.map(u => ({
       u,
       g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : {
@@ -138947,7 +139121,31 @@ function AssistantMasmonBattleBeta({
       "data-ambb-review": true
     }, React.createElement("div", {
       className: "ambw-res"
-    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), React.createElement("div", {
+    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), battle.pvp && React.createElement("div", {
+      className: "ambw-card",
+      "data-ambb-pvp-result": true
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "フレンド対戦・", (AMBB_KINDS.find(k => k.id === battle.pvp.kind) || AMBB_KINDS[0]).label), battle.pvp.rated && battle.pvp.rating ? React.createElement("div", null, React.createElement("b", {
+      style: {
+        fontSize: 15
+      }
+    }, cardIconNode(ambbTierOf(battle.pvp.rating.rating).icon, 14), " ", battle.pvp.rating.rating, " ポイント"), " ", React.createElement("span", {
+      style: {
+        color: battle.pvp.rating.delta >= 0 ? '#86efac' : '#fca5a5'
+      }
+    }, "(", battle.pvp.rating.delta >= 0 ? '+' : '', battle.pvp.rating.delta, ")"), React.createElement("span", {
+      className: "ambw-small"
+    }, "・", ambbTierOf(battle.pvp.rating.rating).label)) : React.createElement("div", {
+      className: "ambw-small"
+    }, "この試合はランキングに数えません(数えるのは 3対3 だけ・同じ相手とは1日3回まで)"), Number.isFinite(battle.pvp.remaining) && React.createElement("div", {
+      className: "ambw-small"
+    }, "今日あと ", battle.pvp.remaining, " 回 挑めます"), !battle.pvp.same && React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        color: '#fcd34d'
+      }
+    }, "ゲームの版がちがうため、見返しが本当の試合と少しちがうかもしれません。結果はサーバの記録のとおりです。")), React.createElement("div", {
       className: "ambw-card"
     }, React.createElement("table", {
       className: "ambw-tbl"
@@ -139153,6 +139351,349 @@ function AssistantMasmonBattleBeta({
     initialText: ask.text,
     onClose: () => setAsk(null)
   }));
+}
+function AmbbFriendPanel({
+  me,
+  meId,
+  units,
+  size,
+  plan,
+  swap,
+  tactics,
+  reg,
+  onBattle
+}) {
+  const [data, setData] = useState({
+    loading: true,
+    friends: [],
+    remaining: 0,
+    reason: ''
+  });
+  const [pickF, setPickF] = useState(null);
+  const [kind, setKind] = useState('raw');
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      let r = null;
+      try {
+        r = await masmonPvpFriends();
+      } catch (_) {
+        r = {
+          ok: false,
+          reason: 'network',
+          friends: [],
+          remaining: 0
+        };
+      }
+      if (alive) setData({
+        loading: false,
+        friends: r && r.friends || [],
+        remaining: r && r.remaining || 0,
+        reason: r && !r.ok ? r.reason : ''
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const opts = [];
+  for (const f of data.friends) for (const a of f.assistants) opts.push({
+    f,
+    a,
+    key: `${f.friendId}|${a.assistantId}`
+  });
+  const cur = opts.find(o => pickF && o.key === pickF) || opts[0] || null;
+  const register = async () => {
+    let userName = '',
+      icon = null;
+    try {
+      userName = String((await storeGet('mh_breeder_name', '', false)) || '');
+      icon = (await storeGet('mh_breeder_icon', null, false)) || null;
+    } catch (_) {}
+    const r = await masmonPvpRegister({
+      assistantId: meId,
+      size,
+      members: units.map(ambbPvpMemberOf),
+      plan: plan !== 'omakase' ? plan : undefined,
+      swapPace: swap !== 'omakase' ? swap : undefined,
+      tactics,
+      userName,
+      icon: typeof icon === 'string' ? icon : null
+    });
+    if (r && r.ok) ambbSave(s => ({
+      ...s,
+      reg: {
+        ...s.reg,
+        [meId]: {
+          at: Date.now(),
+          size
+        }
+      }
+    }));
+    return r || {
+      ok: false,
+      reason: 'server'
+    };
+  };
+  const doRegister = async () => {
+    if (busy) return;
+    setBusy('reg');
+    setMsg('');
+    try {
+      const r = await register();
+      setMsg(r.ok ? 'この編成をフレンドに見せるように登録しました' : ambbPvpReason(r.reason));
+    } finally {
+      setBusy('');
+    }
+  };
+  const doChallenge = async () => {
+    if (busy || !cur) return;
+    setBusy('go');
+    setMsg('');
+    try {
+      const rg = await register();
+      if (!rg.ok) {
+        setMsg(ambbPvpReason(rg.reason));
+        return;
+      }
+      const m = await masmonPvpChallenge({
+        assistantId: meId,
+        friendId: cur.f.friendId,
+        friendAssistantId: cur.a.assistantId,
+        kind,
+        size
+      });
+      if (!m || !m.ok) {
+        setMsg(ambbPvpReason(m && m.reason));
+        return;
+      }
+      onBattle(m, {
+        name: cur.f.name || 'フレンド',
+        assistantId: cur.a.assistantId
+      });
+    } catch (_) {
+      setMsg(ambbPvpReason('network'));
+    } finally {
+      setBusy('');
+    }
+  };
+  const aName = id => (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id) || {}).name || '';
+  return React.createElement("div", {
+    "data-ambb-friend": true
+  }, React.createElement("div", {
+    className: "ambw-card"
+  }, React.createElement("div", {
+    className: "ambw-small"
+  }, "相手(フレンドが登録している助手の編成)"), data.loading ? React.createElement("p", {
+    className: "ambw-small"
+  }, "フレンドを読み込んでいます…") : data.reason ? React.createElement("p", {
+    className: "ambw-small"
+  }, ambbPvpReason(data.reason)) : !opts.length ? React.createElement("p", {
+    className: "ambw-small"
+  }, data.friends.length ? 'フレンドが助手の編成を登録すると、ここに出ます。' : 'フレンドができると、フレンドの助手と対戦できます。') : React.createElement("div", {
+    className: "ambb-tabs",
+    style: {
+      marginTop: 6
+    }
+  }, opts.map(o => React.createElement("button", {
+    key: o.key,
+    "data-ambb-friend-opt": o.key,
+    className: cur && cur.key === o.key ? 'on' : '',
+    onClick: () => setPickF(o.key)
+  }, o.f.name || 'フレンド', "の", aName(o.a.assistantId), React.createElement("small", null, o.a.members.map(m => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.species] ? ALL_PLAYER_MONSTERS[m.species].name : m.species).join('・'))))), React.createElement("div", {
+    className: "ambw-small",
+    style: {
+      marginTop: 10
+    }
+  }, "ランキングの区分"), React.createElement("div", {
+    className: "ambb-tabs"
+  }, AMBB_KINDS.map(k => React.createElement("button", {
+    key: k.id,
+    "data-ambb-kind": k.id,
+    className: kind === k.id ? 'on' : '',
+    onClick: () => setKind(k.id)
+  }, k.label, React.createElement("small", null, k.note)))), React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      marginTop: 6
+    }
+  }, "ランキングに数えるのは 3対3 だけです。", !data.loading && !data.reason ? `今日あと ${data.remaining} 回 挑めます。` : '')), React.createElement("div", {
+    className: "ambw-ctl"
+  }, React.createElement("button", {
+    className: "ambw-btn",
+    "data-ambb-challenge": true,
+    disabled: !cur || !!busy || !data.loading && data.remaining <= 0,
+    onClick: doChallenge
+  }, busy === 'go' ? '対戦しています…' : '⚔ 挑む'), React.createElement("button", {
+    className: "ambw-btn2",
+    "data-ambb-register": true,
+    disabled: !!busy,
+    onClick: doRegister
+  }, busy === 'reg' ? '登録しています…' : '📮 この編成を登録')), React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      textAlign: 'center'
+    }
+  }, msg || (reg ? `${me.name}の編成はフレンドに見えています(挑むときに、いまの育ち方で登録し直します)` : '登録すると、フレンドもあなたの助手に挑めるようになります')));
+}
+function AmbbRanking({
+  me,
+  faceOf,
+  nameOf,
+  onBack
+}) {
+  const [kind, setKind] = useState('raw');
+  const [period, setPeriod] = useState('all');
+  const [data, setData] = useState({
+    loading: true,
+    rows: [],
+    mine: [],
+    reason: ''
+  });
+  useEffect(() => {
+    let alive = true;
+    setData(d => ({
+      ...d,
+      loading: true
+    }));
+    (async () => {
+      let r = null;
+      try {
+        r = await masmonPvpRatings({
+          kind,
+          limit: 50,
+          week: period === 'week' ? ambbWeekOf() : null
+        });
+      } catch (_) {
+        r = {
+          ok: false,
+          reason: 'network',
+          rows: [],
+          mine: []
+        };
+      }
+      if (alive) setData({
+        loading: false,
+        rows: r && r.rows || [],
+        mine: r && r.mine || [],
+        reason: r && !r.ok ? r.reason : ''
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [kind, period]);
+  const week = period === 'week';
+  return React.createElement("div", {
+    "data-ambb-rank": true,
+    "data-ambb-rank-live": true
+  }, React.createElement("div", {
+    className: "ambw-card",
+    style: {
+      textAlign: 'center'
+    }
+  }, React.createElement("b", {
+    style: {
+      fontSize: 16
+    }
+  }, "🏆 ランキング", React.createElement("span", {
+    className: "ambb-beta"
+  }, "β")), React.createElement("div", {
+    className: "ambb-tabs",
+    style: {
+      marginTop: 8
+    }
+  }, AMBB_KINDS.map(k => React.createElement("button", {
+    key: k.id,
+    "data-ambb-rank-kind": k.id,
+    className: kind === k.id ? 'on' : '',
+    onClick: () => setKind(k.id)
+  }, k.label))), React.createElement("div", {
+    className: "ambb-tabs",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("button", {
+    "data-ambb-rank-period": "all",
+    className: !week ? 'on' : '',
+    onClick: () => setPeriod('all')
+  }, "ポイント"), React.createElement("button", {
+    "data-ambb-rank-period": "week",
+    className: week ? 'on' : '',
+    onClick: () => setPeriod('week')
+  }, "今週")), React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      marginTop: 6
+    }
+  }, week ? '今週(月曜 4:00 から)に増えたポイントの順です' : 'ポイントの順です(はじめは 1500)')), React.createElement("div", {
+    className: "ambw-card"
+  }, data.loading ? React.createElement("p", {
+    className: "ambw-small"
+  }, "読み込んでいます…") : data.reason ? React.createElement("p", {
+    className: "ambw-small"
+  }, ambbPvpReason(data.reason)) : !data.rows.length ? React.createElement("p", {
+    className: "ambw-small"
+  }, "まだだれも載っていません。フレンドの助手に 3対3 で挑むと載ります。") : data.rows.map(r => {
+    const t = ambbTierOf(r.rating);
+    return React.createElement("div", {
+      key: `${r.rank}-${r.assistantId}`,
+      className: "ambb-tier",
+      "data-ambb-rank-row": true,
+      style: r.me ? {
+        background: 'rgba(249,168,212,.16)',
+        borderRadius: 8
+      } : null
+    }, React.createElement("span", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 0
+      }
+    }, React.createElement("b", {
+      style: {
+        width: 22,
+        textAlign: 'right'
+      }
+    }, r.rank), faceOf(r.assistantId) ? React.createElement("img", {
+      src: faceOf(r.assistantId),
+      alt: "",
+      style: {
+        width: 24,
+        height: 24,
+        borderRadius: '50%'
+      }
+    }) : null, React.createElement("span", {
+      style: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, r.name, "の", nameOf(r.assistantId))), React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, week ? `${r.rating >= 0 ? '+' : ''}${r.rating}` : React.createElement(React.Fragment, null, cardIconNode(t.icon, 14), " ", r.rating), React.createElement("span", {
+      className: "ambw-small"
+    }, " ", r.win, "勝", r.lose, "敗")));
+  })), React.createElement("div", {
+    className: "ambw-card"
+  }, React.createElement("div", {
+    className: "ambw-small"
+  }, "段(ポイントで決まります)"), AMBB_TIERS.slice().reverse().map((t, i, arr) => React.createElement("div", {
+    key: t.id,
+    className: "ambb-tier"
+  }, React.createElement("span", null, cardIconNode(t.icon, 14), " ", t.label), React.createElement("span", {
+    className: "ambw-small"
+  }, Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`)))), React.createElement("div", {
+    className: "ambw-ctl"
+  }, React.createElement("button", {
+    className: "ambw-btn2",
+    onClick: onBack
+  }, "← もどる")));
 }
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
@@ -188767,6 +189308,24 @@ function MonsterHeroGame() {
   const storyShownThisHomeRef = useRef(false);
   const [firstBattleDone, setFirstBattleDone] = useState(true);
   const realBattleSeenRef = useRef(false);
+  const [firstStepsStage, setFirstStepsStage] = useState(3);
+  const firstStepsMissionSeenRef = useRef(false);
+  const advanceFirstSteps = next => {
+    setFirstStepsStage(cur => next > cur ? next : cur);
+    (async () => {
+      try {
+        await storeSet(FIRST_STEPS_KEY, next, false);
+      } catch {}
+    })();
+  };
+  useEffect(() => {
+    if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3 || gameState !== 'HOME') return;
+    const giftN = giftClaimableCount(gifts);
+    const missionN = missionClaimableCount(normalizeMissions(missions));
+    if (firstStepsStage === 0 && giftN === 0) advanceFirstSteps(1);else if (firstStepsStage === 1 && firstBattleDone) advanceFirstSteps(2);else if (firstStepsStage === 2) {
+      if (missionN > 0) firstStepsMissionSeenRef.current = true;else if (firstStepsMissionSeenRef.current) advanceFirstSteps(3);
+    }
+  }, [storyOneAtATime, dataLoaded, firstStepsStage, gameState, gifts, missions, firstBattleDone]);
   useEffect(() => {
     if (firstBattleDone) return;
     if (Object.values(clearCounts || {}).some(n => (Number(n) || 0) > 0)) setFirstBattleDone(true);
@@ -190655,6 +191214,12 @@ function MonsterHeroGame() {
         setStoryOneAtATime(oneAtATime);
         if (oneAtATime && (await storeGet(FIRST_BATTLE_DONE_KEY, false, false)) !== true) {
           setFirstBattleDone(false);
+        }
+        if (oneAtATime) {
+          const savedRaw = await storeGet(FIRST_STEPS_KEY, null, false);
+          const savedSteps = Number(savedRaw);
+          const playedBefore = savedRaw == null && Object.values(clears || {}).some(n => (Number(n) || 0) > 0);
+          setFirstStepsStage(playedBefore ? 3 : Number.isFinite(savedSteps) && savedSteps >= 0 && savedSteps < 3 ? Math.floor(savedSteps) : savedSteps >= 3 ? 3 : 0);
         }
       } catch {}
       setAssistantChosen(!!savedAssistant || wasOnboarded);
@@ -207625,6 +208190,28 @@ function MonsterHeroGame() {
       openChangelog: openChangelog,
       openGiftBox: openGiftBox,
       openMissions: openMissions,
+      nextStep: (() => {
+        if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3) return null;
+        if (firstStepsStage === 0 && giftClaimableCount(gifts) > 0) return {
+          n: 1,
+          title: 'ギフトを受け取ろう',
+          sub: 'ダイヤなどが届いています',
+          onTap: openGiftBox
+        };
+        if (firstStepsStage === 1) return {
+          n: 2,
+          title: 'モンヒロバトルを1回あそぼう',
+          sub: 'カードを出して勝ってみよう',
+          onTap: openBattleSystemSelect
+        };
+        if (firstStepsStage === 2 && missionClaimableCount(normalizeMissions(missions)) > 0) return {
+          n: 3,
+          title: 'ミッションを受け取ろう',
+          sub: 'バトルのごほうびがもらえます',
+          onTap: openMissions
+        };
+        return null;
+      })(),
       profileFrameId: profileFrameId,
       resolveIconUrl: resolveIconUrl,
       spotClass: spotClass,
@@ -226813,6 +227400,18 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
     .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
     }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management,.mh-home-facility.temple{top:max(27.4%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    /* はじめての人の「つぎにやること」(2026-11-11 案4)。モンヒロバトルの札のすぐ上。縦持ちは下の列の上に横いっぱい、横持ち(背が低い)はバトルの札のすぐ上の中央の小さな帯 */
+    .mh-home-nextstep{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;min-height:52px;padding:7px 12px;border:2px solid #fcd34d;border-radius:16px;background:#0f172af0;color:#fff;text-align:left;box-shadow:0 4px 14px #000a;animation:mhNextStepPulse 2.4s ease-in-out infinite}
+    .mh-home-nextstep:active{transform:scale(.97)}
+    .mh-home-nextstep-lab{flex:none;font-size:10px;font-weight:900;line-height:1.2;text-align:center;color:#fcd34d}
+    .mh-home-nextstep-lab b{display:block;color:#cbd5e1;font-weight:900}
+    .mh-home-nextstep-body{flex:1;min-width:0}
+    .mh-home-nextstep-body b{display:block;font-size:14px;font-weight:900;line-height:1.25}
+    .mh-home-nextstep-body small{display:block;margin-top:2px;font-size:10px;color:#cbd5e1;line-height:1.25}
+    .mh-home-nextstep i{flex:none;font-style:normal;font-size:22px;font-weight:900;color:#fcd34d}
+    @keyframes mhNextStepPulse{0%,100%{box-shadow:0 4px 14px #000a}50%{box-shadow:0 4px 18px #fcd34dcc}}
+    @media(prefers-reduced-motion:reduce){.mh-home-nextstep{animation:none}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{left:50%;right:auto;transform:translateX(-50%);width:min(32%,230px);bottom:calc(66px + env(safe-area-inset-bottom));min-height:44px;padding:5px 10px}.mh-home-nextstep:active{transform:translateX(-50%) scale(.97)}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}

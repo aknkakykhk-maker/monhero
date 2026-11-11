@@ -28,7 +28,7 @@ const make = (on, seed = 'seed-1') => {
 };
 const rows = [{ slot: 1, monster: 'Golem', nick: 'ごろべえ', lv: 25 }, { slot: 2, monster: 'Pixie', nick: 'ぴく', lv: 12 }];
 const START = 20403 * 3; // ある日の朝
-const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
+const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; // よく混ぜる(似た文字列で片寄らない)
 // 第①段階の代わり: 疲れたら休む・ストレスが高ければ遊ぶ・それ以外は軽トレ(伸ばす能力は回ごとに変わる)。修行の回は amgtDo。
 //   モンヒロバトルにいた回は、プレイヤーが開いていたとして半分くらいの回に印を付ける
 const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
@@ -46,7 +46,7 @@ const drive = (T, aid, days, opt = {}) => {
         const add = (k, lo) => { e.st[k] = Math.min(999, e.st[k] + lo); };
         T.amgtDo(aid, e, r, null, s, act, add, (x) => 0.05 + x);
         const d = Math.floor(s / 3); per[d] = per[d] || {}; per[d][r.slot] = (per[d][r.slot] || 0) + 1;
-        if (!atSlots.has(s)) per.outside = (per.outside || 0) + 1;
+        if (![...atSlots].some(n => Math.floor(n / 3) === Math.floor(s / 3) && n <= s)) per.outside = (per.outside || 0) + 1;
       } else {
         if (act.a === 'rest') e.fat = Math.max(0, e.fat - 30); else if (act.a === 'play') { e.fat = Math.max(0, e.fat - 10); e.str = Math.max(0, e.str - 15); } else { e.fat = Math.min(100, e.fat + 5); e.str = Math.min(100, e.str + 1); e.st[act.k] = Math.min(999, e.st[act.k] + 5); }
         T.amgtAfterAct(aid, act, false, s);
@@ -114,7 +114,7 @@ const drive = (T, aid, days, opt = {}) => {
   const { T } = make(true);
   const g = T.amgtInitMon('Golem', 30, { pow: 220, wise: 100, hit: 80 }); const p = T.amgtInitMon('Pixie', 12, { pow: 80, wise: 120, hit: 150 });
   check('② 初めからの技は覚えている', T.amgtTechsOf('Golem').filter(t => t.learn.start).every(t => g.learn.includes(t.id)));
-  check('② いまの能力で条件を満たす技(先に磨く技の要らないもの)も覚えている', g.learn.includes('golem_03') && !p.learn.includes('pixie_03'), g.learn.join(','));
+  check('② 初めは「初めから」の技の2つだけ(能力が高くても先に覚えない・ヘルプ「初めは2つだけ」)', g.learn.length === 2 && p.learn.length === 2, g.learn.join(','));
   check('② 熟練の初めの値は育成 Lv×0.3(最大30)', g.m.golem_01 === 9 && p.m.pixie_01 === 4 && T.amgtInitMon('Golem', 99, null).m.guard === 30);
 }
 
@@ -125,7 +125,7 @@ const drive = (T, aid, days, opt = {}) => {
   check('③ 同じ種なら同じ結果', JSON.stringify(a.T.AMGT_STORE.state) === JSON.stringify(b.T.AMGT_STORE.state));
   const c = make(true, 'seed-2'); drive(c.T, 'kyuko', 60);
   check('③ 違う種なら違う結果', JSON.stringify(c.T.AMGT_STORE.state.mons) !== JSON.stringify(a.T.AMGT_STORE.state.mons));
-  check('③ 修行はモンヒロバトルにいた回だけ', !ra.per.outside);
+  check('③ 修行は、その日にモンヒロバトルにいた回から(その日の残りの回)だけ', !ra.per.outside);
   const z = make(true); const rz = drive(z.T, 'kyuko', 30, { atRate: 0 });
   check('③ モンヒロバトルにいなかったら修行しない', Object.keys(rz.per).length === 0);
   const over = Object.entries(ra.per).filter(([k]) => k !== 'outside').some(([, d]) => Object.values(d).some(n => n > a.T.AMGT_NUM.perDay));
@@ -137,6 +137,23 @@ const drive = (T, aid, days, opt = {}) => {
   check('③ 熟練の伸びはどれもプラス(下がらない)', ms.flatMap(me => me.log).every(x => Object.values(x.g).every(n => n > 0)));
   check('③ 修行の記録は21回まで', ms.every(me => me.log.length <= 21));
   check('③ 修行の名前', a.T.amgtActName({ a: 'shugyo', k: 'tough' }) === 'モンヒロバトルで受け止め(防御修行)');
+}
+
+// ③-2 その日にいたら残りの回も・同じ回は二度当てない
+{
+  const { T } = make(true);
+  const r = rows[0]; const e = { st: { pow: 300 }, fat: 0, str: 0, lv: 25 };
+  T.AMGT_STORE.state = { ...T.AMGT_STORE.state, at: { kyuko: [START] } };
+  let ok = false; for (let i = 0; i < 20 && !ok; i++) { const c = make(true, `seed-${i}`); c.T.AMGT_STORE.state = { ...c.T.AMGT_STORE.state, at: { kyuko: [START] } }; ok = !!c.T.amgtChoose('kyuko', { ...e }, r, null, START + 2); }
+  check('③ 朝にいたら、同じ日の夜にも修行できる', ok);
+  T.AMGT_STORE.state = { ...T.AMGT_STORE.state, at: { kyuko: [START + 2] } };
+  check('③ 夜にいただけなら、同じ日の朝には修行しない', T.amgtChoose('kyuko', { ...e }, r, null, START) === null);
+  check('③ 前の日にいただけなら、次の日は修行しない', T.amgtChoose('kyuko', { ...e }, r, null, START + 3) === null);
+  const e2 = { st: { pow: 300, life: 100 }, fat: 0, str: 0, lv: 25 };
+  T.amgtDo('kyuko', e2, r, null, START, { a: 'shugyo', k: 'pow' }, () => {}, () => 0);
+  const before = JSON.stringify(T.AMGT_STORE.state.mons.kyuko); const fat = e2.fat;
+  T.amgtDo('kyuko', e2, r, null, START, { a: 'shugyo', k: 'pow' }, () => {}, () => 0);
+  check('③ 同じ回の修行は二度当てない', JSON.stringify(T.AMGT_STORE.state.mons.kyuko) === before && e2.fat === fat);
 }
 
 // ④ 技の習得・ブリーダー能力
@@ -233,15 +250,16 @@ const drive = (T, aid, days, opt = {}) => {
 }
 
 // --sim: 伸びの目安
+const SIM_RATE = Number((process.argv.find(a => a.startsWith('--rate=')) || '--rate=0.07').split('=')[1]); // 本物の生活でモンヒロバトルにいる回は1割弱(ミハリ 11-11 の実測 平均7%)
 if (process.argv.includes('--sim')) {
   for (const days of [30, 90, 180]) {
     const out = [];
     for (const aid of Object.keys(make(true).T.AMGT_BR_INIT)) {
-      const { T } = make(true); drive(T, aid, days, { answer: true });
-      const g = T.AMGT_STORE.state.mons[aid]['1:Golem']; const b = T.AMGT_STORE.state.br[aid].ab;
-      out.push(`${aid.padEnd(10)} 技 ${g.learn.length}/8 熟練 ${g.learn.map(id => String(g.m[id]).padStart(3)).join(' ')} | 判断 ${['guard', 'dist', 'swap'].map(k => String(g.m[k]).padStart(3)).join(' ')} | 腕 ${T.AMGT_BR_KEYS.map(k => String(b[k]).padStart(3)).join(' ')}`);
+      const { T } = make(true); const r = drive(T, aid, days, { answer: true, atRate: SIM_RATE }); r.shu = Object.entries(r.per).filter(([k]) => k !== 'outside').reduce((x, [, d]) => x + (d[1] || 0), 0);
+      const g = (T.AMGT_STORE.state.mons[aid] || {})['1:Golem'] || T.amgtInitMon('Golem', 25, null); const b = (T.AMGT_STORE.state.br[aid] || { ab: Object.fromEntries(T.AMGT_BR_KEYS.map((k, i) => [k, T.AMGT_BR_INIT[aid][i]])) }).ab;
+      out.push(`${aid.padEnd(10)} 修行 ${String(r.shu || 0).padStart(3)}回 技 ${g.learn.length}/8 熟練 ${g.learn.map(id => String(g.m[id]).padStart(3)).join(' ')} | 判断 ${['guard', 'dist', 'swap'].map(k => String(g.m[k]).padStart(3)).join(' ')} | 腕 ${T.AMGT_BR_KEYS.map(k => String(b[k]).padStart(3)).join(' ')}`);
     }
-    console.log(`\n[${days}日・ゴーレム・モンヒロバトルに半分の回・相談に毎日答えた] 腕=know lead obs tac trust exp\n${out.join('\n')}`);
+    console.log(`\n[${days}日・ゴーレム・モンヒロバトルにいる回 ${Math.round(SIM_RATE * 100)}%・相談に毎日答えた] 腕=know lead obs tac trust exp\n${out.join('\n')}`);
   }
 }
 
