@@ -30,6 +30,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
     let owned = {}; try { owned = JSON.parse(localStorage.getItem('mh_owned_items')) || {}; } catch {}
     put('mh_owned_items', { ...owned, peer_gift: 2, peer_token: 1 });
     if (!intro) put('mh_assistant_life_item_intro_v1', true);
+    if (!intro) put('mh_assistant_life_guide_seen_v1', true); // 初めて開いた人への1枚(intro のときだけ出す)
   }
   // 公開の印はページの中だけで切り替える(本体は 2026-11-07 から真)。偽の確かめのときは偽に戻す
   { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = !!life; clearInterval(t); } } catch {} }, 2); }
@@ -38,7 +39,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
     localStorage.setItem('mh_check_life_seeded', '1');
     const t = Date.now() + 9 * 3600000, h = new Date(t).getUTCHours();
     const i = [0, 5, 10, 14, 18, 21].filter(x => h >= x).length - 1, ids = ['late', 'morning', 'noon', 'afternoon', 'evening', 'night'];
-    const base = { salt: 'check', abs: Math.floor(t / 86400000) * 6 + i, slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
+    const base = { v: 2, salt: 'check', abs: Math.floor(t / 86400000) * 12 + Math.floor(h / 2), slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
     put('mh_assistant_life_v1', bondAll != null
       ? { ...base, moods: {}, solo: {}, groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'momosuke'], doing: 'walk', place: 'plaza' }, { ids: ['atsu', 'kyuko'], doing: 'cards', place: 'library' }, { ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }] }
       : { ...base, moods: { atsu: 'lonely', kyuko: 'happy', momosuke: 'lonely' },

@@ -597,7 +597,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ほかの部の仕組みが、カードを遊んだときにわざと書く新しいキー(2026-11-07 ミハリの知らせで足した。どれも新しいキーで、既存のセーブは書き換えない)
     //   mh_screen_trail_v1 … 画面の出来事を最近30件だけ残す記録(10-core) / mh_assistant_life_play_v1 … 助手ライフのにぎわい(カードを遊び終えると assistantPeerOnPlay('card') が数える) /
     //   mh_assistant_peer_play_v1 … 連れていくペアの印(同じ assistantPeerOnPlay が書く)
-    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1']);
+    //   2026-11-11 助手ライフ側の書き込みを足した(ナカヨシ13が「意図どおり」と確認。助手ライフの仕様でカードの保存は変えない):
+    //   mh_assistant_life_diary_v1 … カード部屋の対戦のあと「今日あったこと」へ1行足す(その日の末尾に追記・同じ日の行は消さない) /
+    //   mh_assistant_life_rhythm_v1 … 生活のリズム(誘って遊んだ) / mh_assistant_peer_talk_log_v1・mh_assistant_peer_seen14_v1・mh_assistant_peer_talk_day_v1 … カード中の助手の掛け合いの記録
+    const OTHER_OK = new Set(['mh_screen_trail_v1', 'mh_assistant_life_play_v1', 'mh_assistant_peer_play_v1', 'mh_assistant_life_diary_v1', 'mh_assistant_life_rhythm_v1', 'mh_assistant_peer_talk_log_v1', 'mh_assistant_peer_seen14_v1', 'mh_assistant_peer_talk_day_v1']);
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k) && before[k] !== after.all[k]);
     check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
     const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !OTHER_OK.has(k) && !volatile.test(k));
@@ -636,6 +639,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
     check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(周回中だけ。していないときは何も出さない。2026-10-26 カゲあつくんの点検)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && demoTxt.out === '', JSON.stringify(demoTxt).slice(0, 200));
     // ⑬ パックを開ける見本(デバッグ・保存しない。1パック目の最後は別絵キラ・2パック目の最後はキラ)
+    //   2パック目からは、ふつうのカードが自動で一気にめくれる(早送り・2026-11-11)ので、めくる音は1枚ずつ16回ではなく10回以上
     //   キラ以上は真ん中に大きく出る(data-card-pack-spot)。鳴らした効果音(data-card-pack-se)に、破る音・めくる音・キラの音(crit＋levelUp)・別絵キラの音(crit＋fusion)がそろう
     await page.locator('[data-card-pack-open-demo]').dispatchEvent('click');
     await page.locator('[data-card-pack-tear]').waitFor({ timeout: 10000 });
@@ -652,7 +656,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const packSe = ((await page.locator('[data-card-pack-open]').getAttribute('data-card-pack-se')) || '').split(',');
     const seCount = (n) => packSe.filter((x) => x === n).length;
     check('⑬ パックを開ける見本: 別絵キラ・キラが真ん中に大きく出て、破る音・めくる音・キラの音・別絵キラの音を鳴らす',
-      spotAlt && spotKira && seCount('special') === 2 && seCount('card') === 16 && seCount('crit') >= 4 && seCount('fusion') === 1 && seCount('levelUp') === 1,
+      spotAlt && spotKira && seCount('special') === 2 && seCount('card') >= 10 && seCount('crit') >= 4 && seCount('fusion') === 1 && seCount('levelUp') === 1,
       JSON.stringify({ spotAlt, spotKira, se: ['special', 'card', 'crit', 'fusion', 'levelUp'].map((n) => `${n}:${seCount(n)}`).join(' ') }));
     await page.locator('[data-card-pack-spot]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
     await page.locator('[data-card-pack-done]').dispatchEvent('click');
@@ -845,7 +849,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-pack-card="0"]').dispatchEvent('click');
       await page.waitForTimeout(600);
       if (k === 0 && SHOT) await shot(page, '27-pack-one');
-      await page.locator('[data-card-pack-flip-all]').dispatchEvent('click');
+      // 2パック目からは、ふつうのカードが自動でめくれて全部開いていることがある(早送り・2026-11-11)ので、「全部めくる」が無くてもよい
+      await page.locator('[data-card-pack-flip-all]').dispatchEvent('click', { timeout: 2000 }).catch(() => {});
       // 全部めくるは1枚ずつ順にめくる(キラ以上は光る分だけ長い)
       await page.waitForFunction(() => document.querySelectorAll('[data-card-pack-card][data-card-pack-flipped="0"]').length === 0, null, { timeout: 10000 });
       await page.waitForTimeout(900);

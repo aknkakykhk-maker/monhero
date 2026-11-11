@@ -37,6 +37,8 @@ const OUT = path.resolve(opt('--out') || path.join(os.tmpdir(), 'mh-first-30min'
 const DETAIL = flag('--detail');
 const ORIENTS = flag('--portrait') ? ['portrait'] : flag('--landscape') ? ['landscape'] : ['portrait', 'landscape'];
 const VIEW = { portrait: { width: 390, height: 844 }, landscape: { width: 844, height: 390 } };
+// --size=667x375 のように、画面の大きさを決める(小さい横画面で札が重ならないかを見る。向きの指定と一緒に使う)
+{ const m = process.argv.map(x => /^--size=(\d+)x(\d+)$/.exec(x)).find(Boolean); if (m) { const v = { width: +m[1], height: +m[2] }; for (const k of ORIENTS) VIEW[k] = v; } }
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
 
 // 読む速さの目安(1秒に10字)と、1手にかかる目安(1.5秒)。機械は速すぎるので、人の時間はこの目安で出す
@@ -204,7 +206,8 @@ async function walk(browser, base, orient) {
   const pick = await scene('助手えらび');
   readChars += pick.text.length;
   if (pick.text.length > 600) note('長い', '助手えらび', `最初の画面で読む字が${pick.text.length}字ある(助手${pick.reach.length}人ぶんの紹介)`);
-  await tap(/^みゅあ$/);
+  // 2026-11-11 案9: 行を押して選び、下の「この助手にする」で決める(はじめから みゅあ が選ばれている)
+  await tap(/^この助手にする$/);
 
   // ---- 3. 名前とアイコン ----
   await until(() => /はじめての設定/.test(document.body.innerText), 10000, '名前とアイコン');

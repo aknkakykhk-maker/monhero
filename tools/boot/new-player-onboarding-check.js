@@ -30,7 +30,7 @@ check('助手を選ぶ前にあいさつを出さない',
   has("if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('助手を選ぶとあいさつ→プロフィールへ続く',
   // 助手が増えるたびに markXxxIntroSeen() が増えるので、その並びは固定で見ない
-  has("onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();")
+  has("chooseAssistant(pick.id);markKikiIntroSeen();")
     && has("setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
     && has("if (kind === 'intro') { setGameState('PROFILE'); return; }"));
 // 新しく始めた人は、助手選択の時点でももすけも選べる(登場の会話は流さない)
@@ -38,14 +38,14 @@ check('助手選択を通ったら、ももすけ登場の会話も見たこと�
   has('markKikiIntroSeen();markMomosukeIntroSeen();'));
 // 新しく始めた人へ、既存プレイヤー向けの「きき加入の会話」が後から流れないようにする
 check('助手選択を通ったら、きき加入の会話は見たことにする',
-  has('chooseAssistant(who.id);markKikiIntroSeen();'));
+  has('chooseAssistant(pick.id);markKikiIntroSeen();'));
 check('中断して開き直しても助手選択から再開する',
   has("setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');"));
 check('助手選択の画面がある',
   has("{gameState==='ASSISTANT_SELECT'&&(") && has('助手を選ぶ'));
 check('助手選択でも顔・名前・紹介を見て選べる',
-  has('<AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>')
-    && has('{who.tagline||\'\'}') && has('{who.intro||\'\'}'));
+  has('<AssistantFace who={who} size={56} accent={who.accent} expression="happy"/>')
+    && has('{who.tagline||\'\'}') && has('{who.intro||\'\'}') && has('data-assistant-pick-intro'));
 check('助手選択はヘルプの対象画面になっている', /ASSISTANT_SELECT:\s*'tips\/assistant'/.test(helpSrc));
 
 // --- 既存プレイヤーの互換 ---
@@ -105,7 +105,7 @@ check('決定するとそのまま村の案内へ続く',
 // ここが固定のままだと、ききを選んだのにみゅあが案内してしまう
 check('あいさつ・村の案内・はじめての設定は選んだ助手のもの',
   has('assistantIntroPages(selectedAssistantId)')
-    && has('assistantTutorialPages(selectedAssistantId)')
+    && has('assistantTutorialPages(selectedAssistantId')
     && has('findAssistantOnboarding(hasName,hasIcon,selectedAssistantId)'));
 check('台本を固定の助手のものへ書き戻していない',
   !/\(\(typeof ASSISTANT_INTRO!=='undefined'/.test(source)

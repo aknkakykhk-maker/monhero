@@ -23,6 +23,7 @@ const PROJECT_ID = 'zrzevudkbgtxlbvmuziy';
 // 配り直せる関数。entry は「index.ts が読む本体」。本体が相対で読むファイル(core.js など)は同じ版から一緒に読まれる
 const FUNCTIONS = {
   'assistant-chat': { entry: 'serve.js', needs: ['serve.js', 'core.js', 'ranking.js'], verify_jwt: false, after: '不正な頼み(空の本文)を本番のゲームの Origin から送り、400 bad_request が返ること' },
+  'masmon-pvp': { entry: 'serve.js', needs: ['serve.js', 'core.js', 'engine.js'], verify_jwt: false, after: '空の本文({})を本番のゲームの Origin から送り、400 bad_request が返ること' },
 };
 
 const git = (args) => { const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' }); return r.status === 0 ? r.stdout.trim() : ''; };

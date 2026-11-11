@@ -133,5 +133,20 @@ const setMixed = [];
 for (const r of data.sets) { const h = foreignIn(r.who, r.t); if (h.length) setMixed.push(`${r.set}.${r.who}「${r.t.slice(0, 20)}」に${h.join('・')}`); }
 check('⑤ 助手ごとの台本の表の行に、ほかの助手の口ぐせが混ざっていない', setMixed.length === 0, setMixed.slice(0, 6).join(' / ') + (setMixed.length > 6 ? ` ほか${setMixed.length - 6}件` : ''));
 
+// ⑥ 助手ライフのできごとの台詞(ASSISTANT_LIFE_DAILY_TALKS。2026-11-11 ナカヨシ20)。ひとこと・場面・珍しいできごとの全部
+const dailyMixed = [];
+{
+  let D = null;
+  try { D = vm.runInContext('typeof ASSISTANT_LIFE_DAILY_TALKS !== "undefined" ? ASSISTANT_LIFE_DAILY_TALKS : null', ctx); } catch (_) { D = null; }
+  if (!D) { const m = read('monster-hero/data/assistants.js').match(/^const ASSISTANT_LIFE_DAILY_TALKS = (.+);$/m); D = m ? JSON.parse(m[1]) : null; }
+  const rows = [];
+  if (D) {
+    for (const [who, o] of Object.entries(D.lines || {})) for (const [k, l] of Object.entries(o)) for (const x of l) rows.push({ at: `ひとこと.${k}`, who, t: x.t });
+    for (const sc of [...(D.scenes || []), ...(D.rares || [])]) for (const [who, o] of Object.entries(sc.parts || {})) for (const [role, x] of Object.entries(o)) rows.push({ at: `${sc.id}.${role}`, who, t: x.t });
+  }
+  for (const r of rows) { const h = foreignIn(r.who, r.t); if (h.length) dailyMixed.push(`${r.at}:${r.who}「${r.t.slice(0, 20)}」に${h.join('・')}`); }
+  check('⑥ 助手ライフのできごとの台詞に、ほかの助手の口ぐせが混ざっていない', dailyMixed.length === 0, `${rows.length}本 ` + dailyMixed.slice(0, 6).join(' / ') + (dailyMixed.length > 6 ? ` ほか${dailyMixed.length - 6}件` : ''));
+}
+
 console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

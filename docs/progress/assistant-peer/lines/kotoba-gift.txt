@@ -186,3 +186,41 @@ furn dra item=heartmirror like=mid | surprise ハートの鏡か。…おでの�
 furn dra item=lantern like=mid | happy 星のランタンか。部屋があったかくなるな
 furn dra item=mirrorball like=mid | surprise ミラーボールか！ おでの部屋、ずいぶん派手になるな
 furn dra item=windbell like=mid | happy 風鈴か。ちりんって、いい音だな
+
+# 家具8種類(2026-11-11 ココロ2・docs/progress/assistant-life/furn8-lines.json から。ヘヤヅクリ2が入れた。窓辺の花は windowflower)
+furn mua item=clock like=mid | happy ふりこ時計だー！ {name}、ありがとー♪
+furn mua item=map like=mid | happy 冒険の地図！ かべに貼ったら、まぢ映えるぢゃん♪
+furn mua item=guitar like=mid | happy ギターだ！ あたしも弾けるかなー？ ありがとー✨
+furn mua item=tv like=mid | happy レトロテレビ、かたちがかわいいー！ ありがと♪
+furn mua item=windowflower like=like | excited わー、お花！ まぢうれしい！ 窓辺がかわいくなるよー✨
+furn mua item=fishbowl like=mid | happy 金魚ばちだ！ ずっと見ちゃいそうー♪ ありがとー
+furn mua item=pendant like=mid | happy ペンダントライト！ お部屋があったかくなるねー♪
+furn mua item=garland like=mid | happy ガーランドだー！ パーティーみたいぢゃん♪ ありがと✨
+furnuse mua item=windowflower | お花にお水あげ中♪
+furn kiki item=clock like=like | excited ふりこ時計…！ とてもうれしいでつ。{name}、大切にしまつね♪
+furn kiki item=map like=mid | happy 冒険の地図でつね。ありがとうございまつ♪
+furn kiki item=guitar like=mid | happy ギターでつか。少しずつ練習してみまつね
+furn kiki item=tv like=bad | troubled レトロテレビでつか…お気持ちはうれしいでつ。そっと置いておきまつね
+furn kiki item=windowflower like=mid | happy 窓辺のお花、ありがとうございまつ♪ 毎朝お水をあげまつね
+furn kiki item=fishbowl like=mid | happy 金魚ばち、涼しげでつね。ありがとうございまつ
+furn kiki item=pendant like=mid | happy ペンダントライト、本が読みやすくなりまつ♪
+furn kiki item=garland like=mid | happy ガーランドでつね。お部屋が明るくなりまつ♪
+furnuse kiki item=clock | ふりこをながめ中でつ
+furn momosuke item=clock like=mid | happy ふりこ時計じゃん！！ ありがとw リズム取れそう
+furn momosuke item=map like=mid | happy 冒険の地図！！ ももの行き先、決めちゃお♡
+furn momosuke item=guitar like=like | excited ギター！！ まって、ももこれ欲しかったの！！ すご♡
+furn momosuke item=tv like=mid | happy レトロテレビ、かわいいじゃんw ありがと！！
+furn momosuke item=windowflower like=mid | happy お花だ！！ ももの部屋がかわいくなるね♡
+furn momosuke item=fishbowl like=mid | happy 金魚ばち！！ ももが名前つけてあげるw
+furn momosuke item=pendant like=mid | happy ペンダントライト！！ ももにスポットライトだね♡
+furn momosuke item=garland like=mid | happy ガーランド！！ ライブ会場みたいじゃんw
+furnuse momosuke item=guitar | ギターで作曲中！！
+furn dra item=clock like=bad | troubled ふりこ時計か…音で起きちまいそうだな。でも気持ちはうれしいぞ
+furn dra item=map like=mid | happy 冒険の地図か。ながめてるだけで行った気になれるな
+furn dra item=guitar like=mid | happy ギターか。おでも弾いてみるかな。ありがとな
+furn dra item=tv like=like | excited レトロテレビ！ ごろごろしながら見られるな。うれしいぞ、えへへ
+furn dra item=windowflower like=mid | happy 窓辺の花か。水やり、忘れないようにするからな
+furn dra item=fishbowl like=mid | happy 金魚ばちか。のんびり泳いでて、おでみたいだな
+furn dra item=pendant like=mid | happy ペンダントライトか。部屋があったかくなるな。ありがとな
+furn dra item=garland like=mid | happy ガーランドか。にぎやかでいいな。えへへ
+furnuse dra item=tv | テレビ見てごろごろ中

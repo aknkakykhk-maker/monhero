@@ -1,0 +1,92 @@
+{ "gift": {
+ "mua": {
+  "clock": { "like": "mid", "e": "happy", "t": "ふりこ時計だー！ {name}、ありがとー♪" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図！ かべに貼ったら、まぢ映えるぢゃん♪" },
+  "guitar": { "like": "mid", "e": "happy", "t": "ギターだ！ あたしも弾けるかなー？ ありがとー✨" },
+  "tv": { "like": "mid", "e": "happy", "t": "レトロテレビ、かたちがかわいいー！ ありがと♪" },
+  "flower": { "like": "like", "e": "excited", "t": "わー、お花！ まぢうれしい！ 窓辺がかわいくなるよー✨" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばちだ！ ずっと見ちゃいそうー♪ ありがとー" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライト！ お部屋があったかくなるねー♪" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランドだー！ パーティーみたいぢゃん♪ ありがと✨" }
+ },
+ "kiki": {
+  "clock": { "like": "like", "e": "excited", "t": "ふりこ時計…！ とてもうれしいでつ。{name}、大切にしまつね♪" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図でつね。ありがとうございまつ♪" },
+  "guitar": { "like": "mid", "e": "happy", "t": "ギターでつか。少しずつ練習してみまつね" },
+  "tv": { "like": "bad", "e": "troubled", "t": "レトロテレビでつか…お気持ちはうれしいでつ。そっと置いておきまつね" },
+  "flower": { "like": "mid", "e": "happy", "t": "窓辺のお花、ありがとうございまつ♪ 毎朝お水をあげまつね" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばち、涼しげでつね。ありがとうございまつ" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライト、本が読みやすくなりまつ♪" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランドでつね。お部屋が明るくなりまつ♪" }
+ },
+ "momosuke": {
+  "clock": { "like": "mid", "e": "happy", "t": "ふりこ時計じゃん！！ ありがとw リズム取れそう" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図！！ ももの行き先、決めちゃお♡" },
+  "guitar": { "like": "like", "e": "excited", "t": "ギター！！ まって、ももこれ欲しかったの！！ すご♡" },
+  "tv": { "like": "mid", "e": "happy", "t": "レトロテレビ、かわいいじゃんw ありがと！！" },
+  "flower": { "like": "mid", "e": "happy", "t": "お花だ！！ ももの部屋がかわいくなるね♡" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばち！！ ももが名前つけてあげるw" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライト！！ ももにスポットライトだね♡" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランド！！ ライブ会場みたいじゃんw" }
+ },
+ "dra": {
+  "clock": { "like": "bad", "e": "troubled", "t": "ふりこ時計か…音で起きちまいそうだな。でも気持ちはうれしいぞ" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図か。ながめてるだけで行った気になれるな" },
+  "guitar": { "like": "mid", "e": "happy", "t": "ギターか。おでも弾いてみるかな。ありがとな" },
+  "tv": { "like": "like", "e": "excited", "t": "レトロテレビ！ ごろごろしながら見られるな。うれしいぞ、えへへ" },
+  "flower": { "like": "mid", "e": "happy", "t": "窓辺の花か。水やり、忘れないようにするからな" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばちか。のんびり泳いでて、おでみたいだな" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライトか。部屋があったかくなるな。ありがとな" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランドか。にぎやかでいいな。えへへ" }
+ },
+ "atsu": {
+  "clock": { "like": "mid", "e": "happy", "t": "ふりこ時計ね。いいじゃん、ありがと笑" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図！ 次のクエスト、これで決めよ笑" },
+  "guitar": { "like": "like", "e": "excited", "t": "ギター！？ まじで？ {name}、わかってるじゃん！ 最高！" },
+  "tv": { "like": "mid", "e": "happy", "t": "レトロテレビね。味があっていいね笑" },
+  "flower": { "like": "bad", "e": "troubled", "t": "花かー…世話できるかな笑 でも気持ちはうれしいよ！" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばちね。見てると落ち着くかも笑" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライト、いいね。作戦会議がはかどる笑" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランド！ パーティの拠点っぽくていいじゃん笑" }
+ },
+ "kyuko": {
+  "clock": { "like": "mid", "e": "happy", "t": "ふりこ時計だぁ。ありがとん笑" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図かぁ。見てるだけで楽しいねぇ" },
+  "guitar": { "like": "mid", "e": "happy", "t": "ギターだ！ ちょっと弾いてみたいなぁ。ありがとん笑" },
+  "tv": { "like": "mid", "e": "happy", "t": "レトロテレビ、いい形してるねぇw ありがとぉ" },
+  "flower": { "like": "mid", "e": "happy", "t": "窓辺の花、いいねぇ。水やり忘れないようにするよぉ" },
+  "fishbowl": { "like": "like", "e": "excited", "t": "金魚ばち！ え、すごくうれしい…ずっと見てられるよぉ🥺" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライト、落ち着く明るさだねぇ。ありがとん笑" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランドかぁ。部屋が楽しそうになったねぇw" }
+ },
+ "sorashido": {
+  "clock": { "like": "mid", "e": "happy", "t": "ふりこ時計ですか。振れる回数、数えたくなりますね笑" },
+  "map": { "like": "like", "e": "excited", "t": "冒険の地図・・・！ でーじうれしいです！ 道のり、ぜんぶ計算します笑" },
+  "guitar": { "like": "mid", "e": "happy", "t": "ギターですか。三線と合わせてみたいですね笑" },
+  "tv": { "like": "mid", "e": "happy", "t": "レトロテレビ、ありがとうございます。仕組みが気になりますね笑" },
+  "flower": { "like": "mid", "e": "happy", "t": "窓辺の花、ありがとうございます。水やりの日、表にしておきます" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばちですか。泳ぐ道すじ、つい目で追っちゃいますね笑" },
+  "pendant": { "like": "mid", "e": "happy", "t": "ペンダントライト、ありがとうございます。夜の計算がはかどります" },
+  "garland": { "like": "mid", "e": "happy", "t": "ガーランドですか。旗の数、もう数えました笑" }
+ },
+ "erubin": {
+  "clock": { "like": "mid", "e": "happy", "t": "ふりこ時計か。音が落ち着くね。ありがとう" },
+  "map": { "like": "mid", "e": "happy", "t": "冒険の地図だね。旅をしていたころを思い出すかな" },
+  "guitar": { "like": "mid", "e": "happy", "t": "ギターか。みんなが集まったときに弾けるといいね" },
+  "tv": { "like": "mid", "e": "happy", "t": "レトロテレビ、いい味だね。ありがとう" },
+  "flower": { "like": "mid", "e": "happy", "t": "窓辺の花、きれいだね。大事に育てるよ" },
+  "fishbowl": { "like": "mid", "e": "happy", "t": "金魚ばちか。見ていると気持ちがゆるむね" },
+  "pendant": { "like": "like", "e": "excited", "t": "ペンダントライト！ うれしいな。{name}さん、部屋がやさしくなるね" },
+  "garland": { "like": "bad", "e": "troubled", "t": "ガーランドか…俺には少しにぎやかかな。でも気持ちはうれしいよ" }
+ }
+},
+"furnuse": {
+ "mua": { "flower": "お花にお水あげ中♪" },
+ "kiki": { "clock": "ふりこをながめ中でつ" },
+ "momosuke": { "guitar": "ギターで作曲中！！" },
+ "dra": { "tv": "テレビ見てごろごろ中" },
+ "atsu": { "guitar": "ギターで一曲弾き中笑" },
+ "kyuko": { "fishbowl": "金魚をながめ中だよぉ" },
+ "sorashido": { "map": "地図で道のりを計算中" },
+ "erubin": { "pendant": "灯りの下でひと息中" }
+} }

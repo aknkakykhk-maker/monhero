@@ -26,7 +26,7 @@ assert(!/setInterval\s*\(/.test(source.slice(source.indexOf('const setAutoBattle
 assert(has('const turnPromise=runAutoTurnOnce();'), '連続AUTOがrunAutoTurnOnceを使用していません');
 assert(has('if(entries.length>0)return processTurn(entries);'), 'AUTOが合法なカードを明示entriesとして処理していません');
 assert(has('const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({'), 'AUTOがガッツ不足だけの行動不能を判定していません');
-assert(has("if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0"), '緊急回復前にAUTO・戦闘・生存状態を再確認していません');
+assert(has("if(lacksOnlyGuts&&autoBattleRef.current&&(gameState==='BATTLE'||runStage==='BATTLE')&&enemy&&enemy.hp>0&&hp>0"), '緊急回復前にAUTO・戦闘・生存状態を再確認していません');
 assert(has('&&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();'), '練習を除外して既存の緊急回復を再利用していません');
 // ラン進行の判定は runStage / runProgressAllowed へ寄せた(docs/spec/QUICK_RHYTHM_LINK.md PR2)。
 // 「バトル中か」の意味は変わっていない。切り分けそのものは battle/run-stage-check.js が見る
@@ -55,7 +55,8 @@ assert(!has('setSelectedTeachingCard(choice);'), 'AUTO確定が選択stateの反
 assert(has("addPopup('AUTO停止：アシストカードを選べません'"), '候補0件時の安全なAUTO停止がありません');
 assert(!source.slice(source.indexOf('const stopAutoBattle = () => {'), source.indexOf('};', source.indexOf('const stopAutoBattle = () => {'))).includes('autoTurnRunningRef.current'), '停止helperが実行中ターンのロックを解除しています');
 assert(has("if(hp<=0)stopAllAuto('defeat');\n    else if(gaveUp)stopAllAuto('retire');\n    else if(gameState==='PICK_HERO')stopAllAuto('manual');"), '敗北・リタイア・新規周回の停止条件がありません');
-assert(has('const returnToHome = () => {\n    stopAllAuto();'), 'HOME遷移時にAUTOを停止していません');
+// 2026-11-11 から、裏クイックを HOME でも回すときだけ(quickAnywhereKeepsRun)は、AUTOを止めずに HOME へ戻る。それ以外は今までどおり止める
+assert(/const returnToHome = \(\) => \{[\s\S]{0,700}?\n\s*stopAllAuto\(\);/.test(source), 'HOME遷移時にAUTOを停止していません');
 assert(has('const handleRetry = () => {\n    stopAllAuto();'), 'Retry時にAUTOを停止していません');
 assert(has('const startBattleTutorial = (returnTo = \'DEBUG_SETTINGS\', variant = \'v2\') => {\n    stopAllAuto();'), 'バトル練習開始時にAUTOを停止していません');
 assert(has("const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto('hidden'); };"), 'バックグラウンド移行時にAUTOを停止していません');

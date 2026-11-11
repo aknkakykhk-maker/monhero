@@ -62,7 +62,7 @@ const digest=path.join(ROOT,'monster-hero/data/assistant-chat-digest.json');
 ok('だれにでも話す助手の要約に入れない',!fs.existsSync(digest)||!fs.readFileSync(digest,'utf8').includes('レジェンドブリーダー優待パス'));
 
 // 2026-11-06 社長「画面ひどい」: 帯と2行の交換を、持ち数の段(高さ22pxの横並び)に押し込んで縦に潰れ、ボタンの下へはみ出していた
-ok('優待パスの帯と交換は、持ち数の段ではなく品名の下の専用の段(noteSlot)に出す',/noteSlot=\{legendPassSlot\} note=\{passNote\}/.test(parts)&&!/const middle=passPart/.test(parts));
+ok('優待パスの帯と交換は、持ち数の段ではなく品名の下の専用の段(noteSlot)に出す',/noteSlot=\{noteSlotOn\} note=\{passNote\|\|lifeNote\}/.test(parts)&&!/const middle=passPart/.test(parts));
 ok('同じ一覧のほかの札にも同じ高さの段を取って、札の高さをそろえる',/const legendPassSlot = eventItemOffers\.some\(offer=>offer\.legendPass===true\)/.test(parts));
 ok('帯・いつもの交換・優待の交換は折り返さない(whitespace-nowrap)',(passCard.match(/whitespace-nowrap/g)||[]).length>=3);
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
