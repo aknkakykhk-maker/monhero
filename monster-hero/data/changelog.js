@@ -35,7 +35,32 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-12 00:15", type:'update', group:'rhythm', title:'譜面制作ツール「MHB CHART ENGINE」の強化に合わせて、一部の譜面を新しくしました', status:'new',
+    // 助手のマスモンの名前(2026-11-11 社長の報告・キズナ5 #5447。文は社長「この文で」)
+    date: "2026-11-12 00:02", type:'fix', group:'assistant', title:'助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました', status:'new',
+    items:[
+      '助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました',
+    ],
+  },
+  {
+    // スマホでブラウザらしい動きを出さない(2026-11-11 社長「ブラウザだからかたまに画面の挙動がおかしい」・文は社長「この文で」・アプリカ #5455)
+    date: "2026-11-11 23:42", type:'update', group:'ui', title:'スマホで遊ぶときの操作が、より安定しました', status:'new',
+    items:[
+      'iPhone のホーム画面から遊ぶとき、画面の左端をなぞってもゲームの画面が戻らなくなりました。',
+      '画面を2回続けてタップしたときに、画面が拡大されにくくなりました。',
+      '長押ししたときに、文字が選ばれたり、画像を保存するメニューが出たりしないようにしました。',
+      '文字を入力する欄は、今までどおり長押しで貼り付けなどができます。',
+    ],
+  },
+  {
+    // 画面ごとの数のずれ(2026-11-11 ミヤスサ点検 #5451。文は社長「この文で」)
+    date: "2026-11-11 23:41", type:'fix', group:'assistant', title:'助手ライフで、画面ごとに違って見えていた数をそろえました', status:'new',
+    items:[
+      '町の地図のMFバトルカードの印を、ほかの画面と同じ「×1.375」にしました',
+      '家の「贈る」の残り回数を、贈る画面と同じ「2人に・1人に」の数で出すようにしました',
+    ],
+  },
+  {
+    date: "2026-11-11 23:12", type:'update', group:'rhythm', title:'譜面制作ツール「MHB CHART ENGINE」の強化に合わせて、一部の譜面を新しくしました', status:'new',
     items:[
       'モンヒロビートの譜面を作る「MHB CHART ENGINE」を強化しました。指が交差したり、届きにくかったりする並びを作らないようにし、難易度ごとの差もはっきり出るようにしています。',
       '強化に合わせて、押しにくい並びがあった曲の譜面を、EASY〜MASTER の5つの難易度まとめて新しくしました。新しくした曲は、FREEDOM DiVE↓ / Evans / Altar of the World Tree, Beneath the White Night short ver. / Stay With Me / light player short ver. / Stay With Me short ver. / The City Beneath the Comets / ANiMA / MF × ICHIKA MIX / Monster Hero / SIX ÉTERNEL / 綺季一閃 short ver. / SAD SONG / Toward the Stars, Paradise or Truth short ver. / BLACK SHOUT / light player / 月が満ちる前に / 月が満ちる前に short ver. / Rebellion short ver. / Stay With Me remix / トリコ / 魔窟の旋律 / SAD SONG short ver. / Monster Hero -Another- / SIX ÉTERNEL ドパガキリミックス / 綺季一閃 / 綺季一閃 battle remix / crossing field / もう一つの世界へ / 戦場の疾風 / ハルカ / Crazy Party Night / Crazy Party Night full ver. / Emerald Rush / ROSE / Rebellion / Altar of the World Tree, Beneath the White Night / 4U ～ひたすら～ / Monster です。',
@@ -83,31 +108,6 @@ const CHANGELOG = [
       '難しさの表示(Lv.)が実際の難しさと合っていなかった譜面は、表示の Lv. だけを直しました(譜面は変わりません)。Grievous Lady MASTER Lv.50→43 / Sheriruth MASTER Lv.35→39 / ROSE short ver. MASTER Lv.33→28 / only my railgun MASTER Lv.29→23 / Close To Your Heart MASTER Lv.28→23 / Journey EXPERT Lv.23→30',
       'HELL の譜面は変わっていません。',
       'これまでの自己ベスト・ランキング・フルコンボの記録は、そのまま残ります。',
-    ],
-  },
-  {
-    // 助手のマスモンの名前(2026-11-11 社長の報告・キズナ5 #5447。文は社長「この文で」)
-    date: "2026-11-12 00:02", type:'fix', group:'assistant', title:'助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました', status:'new',
-    items:[
-      '助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました',
-    ],
-  },
-  {
-    // スマホでブラウザらしい動きを出さない(2026-11-11 社長「ブラウザだからかたまに画面の挙動がおかしい」・文は社長「この文で」・アプリカ #5455)
-    date: "2026-11-11 23:42", type:'update', group:'ui', title:'スマホで遊ぶときの操作が、より安定しました', status:'new',
-    items:[
-      'iPhone のホーム画面から遊ぶとき、画面の左端をなぞってもゲームの画面が戻らなくなりました。',
-      '画面を2回続けてタップしたときに、画面が拡大されにくくなりました。',
-      '長押ししたときに、文字が選ばれたり、画像を保存するメニューが出たりしないようにしました。',
-      '文字を入力する欄は、今までどおり長押しで貼り付けなどができます。',
-    ],
-  },
-  {
-    // 画面ごとの数のずれ(2026-11-11 ミヤスサ点検 #5451。文は社長「この文で」)
-    date: "2026-11-11 23:41", type:'fix', group:'assistant', title:'助手ライフで、画面ごとに違って見えていた数をそろえました', status:'new',
-    items:[
-      '町の地図のMFバトルカードの印を、ほかの画面と同じ「×1.375」にしました',
-      '家の「贈る」の残り回数を、贈る画面と同じ「2人に・1人に」の数で出すようにしました',
     ],
   },
   {
