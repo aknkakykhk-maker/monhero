@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 71b966cd0faa1e3d
+// source-sha256: 3a093df647c69378
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13828,6 +13828,7 @@ const RELEASE_FLAGS = {
   assistantCallname: true,
   assistantLife: true,
   assistantLifeFurniture: true,
+  assistantLifeRoomEdit: false,
   assistantLifeSolo: true,
   assistantLifeFriend: true,
   assistantMasmonTrain: false,
@@ -107961,6 +107962,8 @@ function AssistantLifeRoomSheet({
   uiV2 = false
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const [layoutOpen, setLayoutOpen] = React.useState(false);
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
@@ -108058,7 +108061,8 @@ function AssistantLifeRoomSheet({
     onPerson: () => toSheet(),
     onMasmon: onMasmon ? () => onMasmon(id) : null,
     dock: rvDock,
-    padLeft: 78
+    padLeft: 78,
+    layoutWho: layoutOn ? id : null
   }) : null;
   const followCard = follow && onChat && React.createElement("div", {
     className: "col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2",
@@ -108394,6 +108398,21 @@ function AssistantLifeRoomSheet({
     onTalk: (talk, text) => {
       setFurnOpen(false);
       if (onFurnTalk) onFurnTalk(talk, text);
+    },
+    onLayout: layoutOn ? () => {
+      setFurnOpen(false);
+      setLayoutOpen(true);
+    } : null
+  }), layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && React.createElement(AssistantLifeRoomEditor, {
+    id: id,
+    land: land,
+    onClose: () => setLayoutOpen(false),
+    scene: {
+      look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
+      people,
+      sleepIds,
+      away,
+      team: rvTeam
     }
   }));
 }
@@ -111648,7 +111667,9 @@ function AssistantLifeRoomScene({
   onMasmon = null,
   dock = null,
   backLabel = '← 家へ',
-  padLeft = 0
+  padLeft = 0,
+  layoutWho = null,
+  layoutEdit = null
 }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({
@@ -111735,6 +111756,13 @@ function AssistantLifeRoomScene({
     perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  const layoutOn = !!layoutWho && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
+  const layoutGeom = {
+    W,
+    top: topH,
+    floorY,
+    bottom: H - dockH
+  };
   const furnBox = slot => slot === 'ceil' ? {
     left: W * 0.42,
     top: topH + 6,
@@ -111791,7 +111819,13 @@ function AssistantLifeRoomScene({
       border: '6px solid #ffffff99',
       background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)'
     }
-  }), furn.map(f => {
+  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+    who: layoutWho,
+    items: layoutEdit ? layoutEdit.items : null,
+    geom: layoutGeom,
+    front: false,
+    onTip: layoutEdit ? null : setTip
+  }), !layoutOn && furn.map(f => {
     const b = furnBox(f.slot);
     return React.createElement("button", {
       key: f.slot,
@@ -111827,6 +111861,12 @@ function AssistantLifeRoomScene({
     top: deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
+  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+    who: layoutWho,
+    items: layoutEdit ? layoutEdit.items : null,
+    geom: layoutGeom,
+    front: true,
+    onTip: layoutEdit ? null : setTip
   }), away && React.createElement("div", {
     className: "absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center",
     style: {
@@ -111884,6 +111924,13 @@ function AssistantLifeRoomScene({
       t: mt,
       size: s
     }) : null);
+  }), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
+    items: layoutEdit.items,
+    geom: layoutGeom,
+    sel: layoutEdit.sel,
+    onSelect: layoutEdit.onSelect,
+    onMove: layoutEdit.onMove,
+    onDrop: layoutEdit.onDrop
   }), night && React.createElement("div", {
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0",
@@ -125457,10 +125504,12 @@ const assistantLifeFurnGive = async (who, key) => {
     kind: 'give'
   });
   const talk = assistantLifeFurnTalk(who, key);
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
+  if (layoutOn && typeof assistantLifeLayoutOnGive === 'function') assistantLifeLayoutOnGive(who, key);
   return talk ? {
     ...talk,
     amount,
-    placed: r.placed
+    placed: layoutOn ? true : r.placed
   } : null;
 };
 const assistantLifeFurnMove = async (who, key, toPut) => {
@@ -125483,7 +125532,7 @@ const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({
   mirrorball: 'ミラーボール',
   windbell: '風鈴'
 });
-const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
 const assistantLifeBubSplit = text => {
   const t = String(text || '');
   if (t.length <= 8) return [t];
@@ -125530,7 +125579,15 @@ const assistantLifeFurnVisitBub = talk => {
   return f ? [`${f.emoji} ${ASSISTANT_LIFE_FURN_SHORT[k] || f.name}の話を`, 'してる'] : null;
 };
 const assistantLifeFurnAlbumTalks = () => assistantLifeFurnEnabled() && typeof ASSISTANT_LIFE_VISITFURN_LINES !== 'undefined' && Array.isArray(ASSISTANT_LIFE_VISITFURN_LINES) ? ASSISTANT_LIFE_VISITFURN_LINES.map(assistantLifeFurnVisitTalk) : [];
-function AssistantLifeRoomFurn({
+function AssistantLifeRoomFurn(props) {
+  if (!props.put && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return React.createElement(AssistantLifeRoomLayoutMini, {
+    id: props.id,
+    w: props.w,
+    h: props.h
+  });
+  return React.createElement(AssistantLifeRoomFurnSlots, props);
+}
+function AssistantLifeRoomFurnSlots({
   id,
   w,
   h,
@@ -125789,9 +125846,12 @@ function AssistantLifeFurnSheet({
   onGiveFurn,
   onClose,
   onTalk,
-  land = false
+  land = false,
+  onLayout = null
 }) {
   const st = useAssistantLifeGiftState();
+  const laySt = typeof useAssistantLifeLayoutState === 'function' ? useAssistantLifeLayoutState() : null;
+  const layoutOn = !!laySt && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [buyKey, setBuyKey] = React.useState(null);
@@ -125800,6 +125860,9 @@ function AssistantLifeFurnSheet({
   const room = assistantLifeRoomOf(id, st);
   const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
   const mine = all.filter(f => room.got[f.key]);
+  const layKeys = layoutOn ? new Set(assistantLifeLayoutOf(id, laySt, st).map(it => it.k)) : null;
+  const isPut = f => layoutOn ? layKeys.has(f.key) : room.put[f.slot] === f.key;
+  const movePut = (f, toPut) => layoutOn ? assistantLifeLayoutPut(id, f.key, toPut) : assistantLifeFurnMove(id, f.key, toPut);
   const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
   const furnGainText = k => {
@@ -125879,7 +125942,12 @@ function AssistantLifeFurnSheet({
     className: "text-[18px] font-black text-white"
   }, "🪑 ", who.name, "の部屋の家具"), React.createElement("p", {
     className: "text-[10.5px] font-bold leading-snug text-slate-300"
-  }, "置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。好きな家具なら仲良し度が多めに上がります(1つの家具は1回)"), msg && React.createElement("p", {
+  }, layoutOn ? '贈った家具は、部屋の好きな所に置けます。「模様替え」で指でつまんで動かせます。' : '置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。', "好きな家具なら仲良し度が多めに上がります(1つの家具は1回)"), layoutOn && onLayout && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-furn-layout": true,
+    onClick: onLayout,
+    className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-[13px] font-black text-white shadow active:scale-[.98]"
+  }, "🛠 模様替え(指でつまんで動かす・", who.name, "におまかせ)"), msg && React.createElement("p", {
     "data-assistant-life-furn-msg": true,
     className: "mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100"
   }, msg), React.createElement("p", {
@@ -125915,16 +125983,16 @@ function AssistantLifeFurnSheet({
   }, "(", mine.length, "/", all.length, "持っている)")), React.createElement("div", {
     className: "mt-1 space-y-1",
     "data-assistant-life-furn-placed": true
-  }, mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', {
+  }, mine.filter(isPut).length ? mine.filter(isPut).map(f => row(f, btn('しまう', () => movePut(f, false), 'border-slate-500 text-slate-200', {
     'data-assistant-life-furn-keep': f.key
   }))) : React.createElement("p", {
     className: "rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300"
-  }, "まだありません")), mine.some(f => room.put[f.slot] !== f.key) && React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "まだありません")), mine.some(f => !isPut(f)) && React.createElement(React.Fragment, null, React.createElement("p", {
     className: "mt-2 text-[11px] font-black text-amber-200"
   }, "📦 押し入れ"), React.createElement("div", {
     className: "mt-1 space-y-1",
     "data-assistant-life-furn-kept": true
-  }, mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
+  }, mine.filter(f => !isPut(f)).map(f => row(f, btn(!layoutOn && room.put[f.slot] ? '入れかえる' : '置く', () => movePut(f, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', {
     'data-assistant-life-furn-put': f.key
   }))))), React.createElement("button", {
     type: "button",
@@ -125945,6 +126013,715 @@ function AssistantLifeFurnSheet({
       give: () => give(f.key, true)
     }) : null;
   })());
+}
+const ASSISTANT_LIFE_LAYOUT_KEY = 'mh_assistant_life_room_layout_v1';
+const ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY = 'mh_assistant_life_room_layout_migrated_v1';
+const ASSISTANT_LIFE_LAYOUT_FLOOR = 0.56;
+const ASSISTANT_LIFE_LAYOUT_MAX = 40;
+const ASSISTANT_LIFE_LAYOUT_S = Object.freeze([0.5, 2.4]);
+const ASSISTANT_LIFE_LAYOUT_COLORS = Object.freeze([Object.freeze({
+  label: 'もとの色',
+  dot: '#e5e7eb',
+  filter: ''
+}), Object.freeze({
+  label: 'きいろ',
+  dot: '#facc15',
+  filter: 'hue-rotate(45deg)'
+}), Object.freeze({
+  label: 'みどり',
+  dot: '#4ade80',
+  filter: 'hue-rotate(100deg)'
+}), Object.freeze({
+  label: 'みずいろ',
+  dot: '#38bdf8',
+  filter: 'hue-rotate(170deg)'
+}), Object.freeze({
+  label: 'あお',
+  dot: '#6366f1',
+  filter: 'hue-rotate(220deg)'
+}), Object.freeze({
+  label: 'むらさき',
+  dot: '#c084fc',
+  filter: 'hue-rotate(270deg)'
+}), Object.freeze({
+  label: 'ピンク',
+  dot: '#f472b6',
+  filter: 'hue-rotate(320deg)'
+}), Object.freeze({
+  label: 'セピア',
+  dot: '#b08968',
+  filter: 'sepia(0.85)'
+}), Object.freeze({
+  label: 'しろくろ',
+  dot: '#6b7280',
+  filter: 'grayscale(1)'
+})]);
+const ASSISTANT_LIFE_LAYOUT_SLOT_POS = Object.freeze({
+  ceil: Object.freeze({
+    x: 0.47,
+    y: 0.05
+  }),
+  wall: Object.freeze({
+    x: 0.13,
+    y: 0.2
+  }),
+  floor: Object.freeze({
+    x: 0.13,
+    y: 0.5
+  })
+});
+const assistantLifeRoomEditEnabled = () => typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeRoomEdit === true;
+const assistantLifeLayoutClamp = (v, lo, hi, def) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def;
+};
+const normalizeAssistantLifeLayoutItem = (raw, keys) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.k !== 'string' || !keys.has(raw.k)) return null;
+  return {
+    k: raw.k,
+    x: assistantLifeLayoutClamp(raw.x, 0, 1, 0.5),
+    y: assistantLifeLayoutClamp(raw.y, 0, 1, 0.3),
+    s: assistantLifeLayoutClamp(raw.s, ASSISTANT_LIFE_LAYOUT_S[0], ASSISTANT_LIFE_LAYOUT_S[1], 1),
+    r: Math.round(assistantLifeLayoutClamp(raw.r, -180, 180, 0)),
+    f: raw.f === true,
+    c: Math.round(assistantLifeLayoutClamp(raw.c, 0, ASSISTANT_LIFE_LAYOUT_COLORS.length - 1, 0)),
+    a: raw.a === true,
+    z: Math.round(assistantLifeLayoutClamp(raw.z, -9999, 9999, 0))
+  };
+};
+const normalizeAssistantLifeLayoutOne = raw => {
+  const keys = new Set((typeof assistantLifeFurnDefs === 'function' ? assistantLifeFurnDefs() : []).map(f => f.key));
+  const seen = new Set(),
+    items = [];
+  for (const it of raw && typeof raw === 'object' && Array.isArray(raw.items) ? raw.items : []) {
+    const n = normalizeAssistantLifeLayoutItem(it, keys);
+    if (!n || seen.has(n.k) || items.length >= ASSISTANT_LIFE_LAYOUT_MAX) continue;
+    seen.add(n.k);
+    items.push(n);
+  }
+  return {
+    items
+  };
+};
+const normalizeAssistantLifeLayout = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const o = {};
+  for (const [who, v] of Object.entries(r)) if (/^[a-z]+$/.test(who)) o[who] = normalizeAssistantLifeLayoutOne(v);
+  return o;
+};
+const assistantLifeLayoutFromRoom = (room, layout) => {
+  const out = {
+    ...(layout || {})
+  };
+  for (const [who, v] of Object.entries(room || {})) {
+    if (out[who] && Array.isArray(out[who].items) && out[who].items.length) continue;
+    const items = [];
+    for (const slot of ['ceil', 'wall', 'floor']) {
+      const k = v && v.put ? v.put[slot] : null;
+      const p = ASSISTANT_LIFE_LAYOUT_SLOT_POS[slot];
+      if (typeof k === 'string' && k) items.push({
+        k,
+        x: p.x,
+        y: p.y,
+        s: 1,
+        r: 0,
+        f: false,
+        c: 0,
+        a: false,
+        z: items.length
+      });
+    }
+    if (items.length) out[who] = {
+      items
+    };
+  }
+  return out;
+};
+const ASSISTANT_LIFE_LAYOUT_STORE = {
+  state: {
+    layout: {}
+  },
+  loaded: false,
+  loading: null,
+  listeners: new Set(),
+  emit() {
+    for (const fn of this.listeners) {
+      try {
+        fn(this.state);
+      } catch {}
+    }
+  },
+  set(layout) {
+    this.state = {
+      layout
+    };
+    this.emit();
+  },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    if (!assistantLifeRoomEditEnabled()) return Promise.resolve(this.state);
+    if (!this.loading) this.loading = (async () => {
+      try {
+        const [raw, migrated, gift] = await Promise.all([storeGet(ASSISTANT_LIFE_LAYOUT_KEY, null, false), storeGet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, null, false), ASSISTANT_LIFE_GIFT_STORE.load()]);
+        let layout = normalizeAssistantLifeLayout(raw);
+        if (migrated !== true && migrated !== 1) {
+          layout = normalizeAssistantLifeLayout(assistantLifeLayoutFromRoom(gift && gift.room || {}, layout));
+          try {
+            await storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false);
+            await storeSet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, true, false);
+          } catch {}
+        }
+        this.state = {
+          layout
+        };
+      } catch {}
+      this.loaded = true;
+      this.emit();
+      return this.state;
+    })();
+    return this.loading;
+  }
+};
+const useAssistantLifeLayoutState = () => {
+  const [st, setSt] = React.useState(ASSISTANT_LIFE_LAYOUT_STORE.state);
+  React.useEffect(() => {
+    const fn = s => setSt(s);
+    ASSISTANT_LIFE_LAYOUT_STORE.listeners.add(fn);
+    void ASSISTANT_LIFE_LAYOUT_STORE.load().then(() => setSt(ASSISTANT_LIFE_LAYOUT_STORE.state));
+    return () => {
+      ASSISTANT_LIFE_LAYOUT_STORE.listeners.delete(fn);
+    };
+  }, []);
+  return st;
+};
+const assistantLifeLayoutOf = (who, st = ASSISTANT_LIFE_LAYOUT_STORE.state, giftSt = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const got = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(who, giftSt).got : {};
+  return normalizeAssistantLifeLayoutOne((st.layout || {})[who]).items.filter(it => got[it.k]).sort((a, b) => a.z - b.z);
+};
+const assistantLifeLayoutSave = (who, items) => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return;
+  const layout = {
+    ...ASSISTANT_LIFE_LAYOUT_STORE.state.layout,
+    [who]: normalizeAssistantLifeLayoutOne({
+      items
+    })
+  };
+  ASSISTANT_LIFE_LAYOUT_STORE.set(layout);
+  try {
+    storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false);
+  } catch {}
+};
+const assistantLifeLayoutNewItem = (key, items) => {
+  const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null;
+  const p = ASSISTANT_LIFE_LAYOUT_SLOT_POS[f && f.slot || 'floor'] || ASSISTANT_LIFE_LAYOUT_SLOT_POS.floor;
+  let x = p.x,
+    n = 0;
+  while (n < 10 && items.some(it => Math.abs(it.x - x) < 0.06 && Math.abs(it.y - p.y) < 0.06)) {
+    x = Math.min(0.94, x + 0.13);
+    n++;
+  }
+  return {
+    k: key,
+    x,
+    y: p.y,
+    s: 1,
+    r: 0,
+    f: false,
+    c: 0,
+    a: false,
+    z: items.reduce((m, it) => Math.max(m, it.z), 0) + 1
+  };
+};
+const assistantLifeLayoutPut = async (who, key, toPut) => {
+  await ASSISTANT_LIFE_LAYOUT_STORE.load();
+  const cur = assistantLifeLayoutOf(who);
+  if (toPut) {
+    if (!cur.some(it => it.k === key)) assistantLifeLayoutSave(who, [...cur, assistantLifeLayoutNewItem(key, cur)]);
+  } else assistantLifeLayoutSave(who, cur.filter(it => it.k !== key));
+};
+const assistantLifeLayoutOnGive = (who, key) => {
+  if (assistantLifeRoomEditEnabled()) void assistantLifeLayoutPut(who, key, true);
+};
+const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
+  mua: Object.freeze({
+    hero: 'bear',
+    pull: 0.22,
+    low: 0,
+    tilt: 0,
+    big: 1.15,
+    line: 'できたー♪ くまさんは真ん中がいいのっ✨'
+  }),
+  kiki: Object.freeze({
+    hero: 'bookshelf',
+    pull: 0,
+    low: 0,
+    tilt: 0,
+    big: 1.05,
+    line: '本は手の届く所、植物は窓のそば。きっちり並べたよ'
+  }),
+  momosuke: Object.freeze({
+    hero: 'record',
+    pull: 0.12,
+    low: 0,
+    tilt: 10,
+    big: 1.25,
+    line: 'にぎやかにしてみた！ ここで歌ったら最高ぢゃない？'
+  }),
+  dra: Object.freeze({
+    hero: 'sofa',
+    pull: 0.05,
+    low: 0.1,
+    tilt: 6,
+    big: 1.2,
+    line: 'ぜんぶ低い所に寄せた…ごろごろできる…'
+  }),
+  atsu: Object.freeze({
+    hero: 'trophy',
+    pull: 0,
+    low: 0,
+    tilt: 0,
+    big: 1.2,
+    line: 'トロフィーはいちばん目立つとこ！ いい部屋になったっしょ笑'
+  }),
+  kyuko: Object.freeze({
+    hero: 'starpic',
+    pull: -0.04,
+    low: 0,
+    tilt: 0,
+    big: 1.05,
+    line: 'ほい、できたよぉ。すっきりさせてみた笑'
+  }),
+  sorashido: Object.freeze({
+    hero: 'lantern',
+    pull: 0.08,
+    low: -0.03,
+    tilt: 0,
+    big: 1.2,
+    line: '星のものは上に集めたぜ・・・！ でーじいい感じだぜ'
+  }),
+  erubin: Object.freeze({
+    hero: 'plant',
+    pull: -0.06,
+    low: 0,
+    tilt: 0,
+    big: 1.1,
+    line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う'
+  })
+});
+const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
+  ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
+  floor: [[0.14, 0.52], [0.86, 0.52], [0.08, 0.68], [0.92, 0.68], [0.36, 0.5]]
+});
+const assistantLifeLayoutOmakase = (who, owned) => {
+  const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
+  const like = k => typeof assistantLifeFurnLike === 'function' ? assistantLifeFurnLike(who, k) : 'mid';
+  const rank = k => k === h.hero ? 0 : like(k) === 'like' ? 1 : 2;
+  const keys = [...new Set(owned)].filter(k => like(k) !== 'bad').sort((a, b) => rank(a) - rank(b));
+  const used = {
+      ceil: 0,
+      wall: 0,
+      floor: 0
+    },
+    items = [];
+  for (const k of keys) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
+    const slot = f && ASSISTANT_LIFE_LAYOUT_SEATS[f.slot] ? f.slot : 'floor';
+    const seat = ASSISTANT_LIFE_LAYOUT_SEATS[slot][used[slot]++];
+    if (!seat) continue;
+    const i = items.length;
+    const x = seat[0] + (0.5 - seat[0]) * h.pull,
+      y = seat[1] + (slot === 'ceil' ? 0 : h.low);
+    items.push({
+      k,
+      x: Math.max(0.06, Math.min(0.94, x)),
+      y: Math.max(0.03, Math.min(0.72, y)),
+      s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
+      r: h.tilt && slot !== 'ceil' ? i % 2 ? -h.tilt : h.tilt : 0,
+      f: seat[0] > 0.5,
+      c: 0,
+      a: false,
+      z: i
+    });
+  }
+  return {
+    items,
+    line: h.line,
+    kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k))
+  };
+};
+const assistantLifeLayoutPx = (it, g) => ({
+  left: it.x * g.W,
+  top: it.y <= ASSISTANT_LIFE_LAYOUT_FLOOR ? g.top + it.y / ASSISTANT_LIFE_LAYOUT_FLOOR * (g.floorY - g.top) : g.floorY + (it.y - ASSISTANT_LIFE_LAYOUT_FLOOR) / (1 - ASSISTANT_LIFE_LAYOUT_FLOOR) * (g.bottom - g.floorY)
+});
+const assistantLifeLayoutFromPx = (left, top, g) => ({
+  x: Math.max(0.02, Math.min(0.98, left / g.W)),
+  y: Math.max(0.01, Math.min(0.99, top <= g.floorY ? (top - g.top) / Math.max(1, g.floorY - g.top) * ASSISTANT_LIFE_LAYOUT_FLOOR : ASSISTANT_LIFE_LAYOUT_FLOOR + (top - g.floorY) / Math.max(1, g.bottom - g.floorY) * (1 - ASSISTANT_LIFE_LAYOUT_FLOOR)))
+});
+const assistantLifeLayoutBase = g => Math.round(Math.max(34, Math.min(56, g.W * 0.12)));
+const assistantLifeLayoutStyle = (it, g) => {
+  const p = assistantLifeLayoutPx(it, g),
+    col = ASSISTANT_LIFE_LAYOUT_COLORS[it.c] || ASSISTANT_LIFE_LAYOUT_COLORS[0];
+  return {
+    position: 'absolute',
+    left: p.left,
+    top: p.top,
+    fontSize: Math.round(assistantLifeLayoutBase(g) * it.s),
+    lineHeight: 1,
+    transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
+    filter: `${col.filter ? `${col.filter} ` : ''}drop-shadow(0 5px 4px #0005)`
+  };
+};
+function AssistantLifeRoomLayoutLayer({
+  who,
+  items = null,
+  geom,
+  front = false,
+  onTip = null
+}) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const list = (items || assistantLifeLayoutOf(who, st, giftSt)).filter(it => !!it.a === front);
+  return React.createElement(React.Fragment, null, list.map(it => {
+    const f = assistantLifeFurnOf(it.k);
+    if (!f) return null;
+    return React.createElement("button", {
+      key: it.k,
+      type: "button",
+      "data-assistant-life-roomview-furn": it.k,
+      "data-assistant-life-layout-item": `${it.k}:${front ? 'front' : 'back'}`,
+      "aria-label": f.name,
+      onClick: () => {
+        if (onTip) onTip(`${f.emoji} ${f.name}`);
+      },
+      style: assistantLifeLayoutStyle(it, geom)
+    }, f.emoji);
+  }));
+}
+function AssistantLifeRoomLayoutHandles({
+  items,
+  geom,
+  sel,
+  onSelect,
+  onMove,
+  onDrop
+}) {
+  const drag = React.useRef(null);
+  const down = (e, it) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect(it.k);
+    const p = assistantLifeLayoutPx(it, geom);
+    drag.current = {
+      k: it.k,
+      id: e.pointerId,
+      dx: p.left - e.clientX,
+      dy: p.top - e.clientY,
+      moved: false
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+  const move = e => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    d.moved = true;
+    const q = assistantLifeLayoutFromPx(e.clientX + d.dx, e.clientY + d.dy, geom);
+    onMove(d.k, q.x, q.y);
+  };
+  const up = e => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    if (d.moved && onDrop) onDrop(d.k);
+  };
+  return React.createElement(React.Fragment, null, items.map(it => {
+    const f = assistantLifeFurnOf(it.k);
+    if (!f) return null;
+    const p = assistantLifeLayoutPx(it, geom);
+    const size = Math.max(44, Math.round(assistantLifeLayoutBase(geom) * it.s * 1.15));
+    return React.createElement("button", {
+      key: it.k,
+      type: "button",
+      "data-assistant-life-layout-handle": it.k,
+      "aria-label": `${f.name}を動かす`,
+      "aria-pressed": sel === it.k,
+      onPointerDown: e => down(e, it),
+      onPointerMove: move,
+      onPointerUp: up,
+      onPointerCancel: up,
+      style: {
+        position: 'absolute',
+        left: p.left,
+        top: p.top,
+        width: size,
+        height: size,
+        transform: 'translate(-50%,-50%)',
+        zIndex: 20 + (sel === it.k ? 1 : 0),
+        touchAction: 'none',
+        cursor: 'grab',
+        borderRadius: 12,
+        border: sel === it.k ? '2.5px dashed #f472b6' : '1.5px dashed #ffffff90',
+        background: sel === it.k ? '#ffffff38' : 'transparent'
+      }
+    });
+  }));
+}
+function AssistantLifeRoomLayoutMini({
+  id,
+  w,
+  h
+}) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const items = assistantLifeLayoutOf(id, st, giftSt);
+  const g = {
+    W: w,
+    top: 2,
+    floorY: Math.round(h * 0.62),
+    bottom: h - 4
+  };
+  const base = Math.max(11, Math.min(20, h * 0.2, w * 0.13));
+  return React.createElement(React.Fragment, null, items.map(it => {
+    const f = assistantLifeFurnOf(it.k);
+    if (!f) return null;
+    const p = assistantLifeLayoutPx(it, g);
+    const col = ASSISTANT_LIFE_LAYOUT_COLORS[it.c] || ASSISTANT_LIFE_LAYOUT_COLORS[0];
+    return React.createElement("span", {
+      key: it.k,
+      "aria-hidden": "true",
+      "data-assistant-life-room-furn": `${id}:layout:${it.k}`,
+      style: {
+        position: 'absolute',
+        left: p.left,
+        top: p.top,
+        zIndex: 0,
+        pointerEvents: 'none',
+        lineHeight: 1,
+        fontSize: Math.round(base * Math.min(1.6, it.s)),
+        transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
+        filter: col.filter || undefined
+      }
+    }, f.emoji);
+  }));
+}
+function AssistantLifeRoomEditor({
+  id,
+  land = false,
+  scene = {},
+  onClose
+}) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const who = assistantById(id);
+  const saved = assistantLifeLayoutOf(id, st, giftSt);
+  const [items, setItems] = React.useState(null);
+  const first = React.useRef(null);
+  const [sel, setSel] = React.useState(null);
+  const [colorOpen, setColorOpen] = React.useState(false);
+  const [line, setLine] = React.useState('');
+  const loaded = ASSISTANT_LIFE_LAYOUT_STORE.loaded;
+  React.useEffect(() => {
+    if (loaded && first.current === null) first.current = saved;
+  }, [loaded]);
+  React.useEffect(() => {
+    if (!line) return undefined;
+    const t = setTimeout(() => setLine(''), 5000);
+    return () => clearTimeout(t);
+  }, [line]);
+  if (!who || !assistantLifeRoomEditEnabled()) return null;
+  const cur = items || saved;
+  const got = Object.keys(assistantLifeRoomOf(id, giftSt).got || {});
+  const kept = got.filter(k => !cur.some(it => it.k === k));
+  const commit = next => {
+    setItems(null);
+    assistantLifeLayoutSave(id, next);
+  };
+  const patch = (k, p) => commit(cur.map(it => it.k === k ? {
+    ...it,
+    ...p
+  } : it));
+  const selIt = cur.find(it => it.k === sel) || null;
+  const zs = cur.map(it => it.z);
+  const tool = (key, label, fn, dis = false, aria = null) => React.createElement("button", {
+    key: key,
+    type: "button",
+    "data-assistant-life-layout-tool": key,
+    "aria-label": aria || undefined,
+    disabled: dis,
+    onClick: fn,
+    className: "min-h-[40px] min-w-[44px] shrink-0 rounded-lg border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-35"
+  }, label);
+  const chip = (k, placed) => {
+    const f = assistantLifeFurnOf(k);
+    if (!f) return null;
+    return React.createElement("button", {
+      key: k,
+      type: "button",
+      "data-assistant-life-layout-chip": `${k}:${placed ? 'put' : 'kept'}`,
+      "aria-label": placed ? `${f.name}を選ぶ` : `${f.name}を部屋に置く`,
+      "aria-pressed": sel === k,
+      onClick: () => {
+        if (placed) {
+          setSel(sel === k ? null : k);
+        } else {
+          const it = {
+            ...assistantLifeLayoutNewItem(k, cur),
+            x: 0.5,
+            y: 0.3,
+            a: true
+          };
+          commit([...cur, it]);
+          setSel(k);
+        }
+        setColorOpen(false);
+      },
+      className: `relative h-[44px] w-[44px] shrink-0 rounded-xl border-2 text-[22px] leading-none active:scale-95 ${sel === k ? 'border-pink-400 bg-pink-500/30' : placed ? 'border-slate-500 bg-slate-800' : 'border-dashed border-amber-300/80 bg-slate-900'}`
+    }, React.createElement("span", {
+      style: {
+        opacity: placed ? 1 : 0.55
+      }
+    }, f.emoji), !placed && React.createElement("span", {
+      className: "absolute -right-1 -top-1 rounded-full bg-amber-400 px-1 text-[10px] font-black leading-[14px] text-slate-900"
+    }, "＋"));
+  };
+  const omakase = () => {
+    const r = assistantLifeLayoutOmakase(id, got);
+    commit(r.items);
+    setSel(null);
+    setColorOpen(false);
+    setLine(r.line);
+  };
+  const panel = React.createElement("div", {
+    className: "flex flex-col gap-1.5 bg-slate-950 px-3 pt-2",
+    style: {
+      paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
+      ...(land ? {
+        width: '44%',
+        height: '100%',
+        overflowY: 'auto',
+        paddingTop: 8
+      } : {})
+    },
+    "data-assistant-life-layout-panel": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 truncate text-[12px] font-black text-white"
+  }, selIt ? `${assistantLifeFurnOf(selIt.k).emoji} ${assistantLifeFurnOf(selIt.k).name}` : '家具を指でつまんで動かす'), React.createElement("span", {
+    className: "shrink-0 text-[10.5px] font-bold text-slate-300",
+    "data-assistant-life-layout-count": true
+  }, "置いてある ", cur.length, " / ", got.length)), colorOpen && selIt ? React.createElement("div", {
+    className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
+    "data-assistant-life-layout-colors": true
+  }, ASSISTANT_LIFE_LAYOUT_COLORS.map((c, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    "data-assistant-life-layout-color": i,
+    "aria-label": c.label,
+    "aria-pressed": selIt.c === i,
+    onClick: () => patch(sel, {
+      c: i
+    }),
+    className: `h-[40px] w-[40px] shrink-0 rounded-full border-[3px] active:scale-95 ${selIt.c === i ? 'border-white' : 'border-slate-600'}`,
+    style: {
+      background: c.dot
+    }
+  })), tool('colorclose', '← 戻る', () => setColorOpen(false))) : React.createElement("div", {
+    className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
+    "data-assistant-life-layout-tools": true
+  }, tool('small', '小', () => patch(sel, {
+    s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100)
+  }), !selIt || selIt.s <= ASSISTANT_LIFE_LAYOUT_S[0], '小さくする'), tool('big', '大', () => patch(sel, {
+    s: Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round((selIt.s + 0.15) * 100) / 100)
+  }), !selIt || selIt.s >= ASSISTANT_LIFE_LAYOUT_S[1], '大きくする'), tool('flip', '↔', () => patch(sel, {
+    f: !selIt.f
+  }), !selIt, '左右を返す'), tool('rotl', '↺', () => patch(sel, {
+    r: (selIt.r - 15 + 540) % 360 - 180
+  }), !selIt, '左へ回す'), tool('rotr', '↻', () => patch(sel, {
+    r: (selIt.r + 15 + 540) % 360 - 180
+  }), !selIt, '右へ回す'), tool('color', '🎨 色', () => setColorOpen(true), !selIt), tool('front', '前へ', () => patch(sel, {
+    z: Math.max(...zs) + 1
+  }), !selIt), tool('back', '後ろへ', () => patch(sel, {
+    z: Math.min(...zs) - 1
+  }), !selIt), tool('layer', selIt && selIt.a ? '助手の後ろへ' : '助手の前へ', () => patch(sel, {
+    a: !selIt.a
+  }), !selIt), tool('keep', 'しまう', () => {
+    commit(cur.filter(it => it.k !== sel));
+    setSel(null);
+  }, !selIt)), React.createElement("div", {
+    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
+    "data-assistant-life-layout-chips": true
+  }, cur.map(it => chip(it.k, true)), kept.map(k => chip(k, false)), got.length === 0 && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "まだ家具がありません。「🪑 家具」から贈ると、ここに並びます")), React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-layout-omakase": true,
+    disabled: got.length === 0,
+    onClick: omakase,
+    className: "min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-2 text-[12.5px] font-black text-white shadow active:scale-95 disabled:opacity-40"
+  }, "🎀 ", who.name, "におまかせ"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-layout-undo": true,
+    onClick: () => {
+      if (first.current) commit(first.current);
+      setSel(null);
+    },
+    className: "min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95"
+  }, "もとに戻す"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-layout-done": true,
+    onClick: onClose,
+    className: "min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95"
+  }, "✓ できた")));
+  return React.createElement("div", {
+    className: `absolute inset-0 flex ${land ? 'flex-row' : 'flex-col'} bg-slate-950`,
+    style: {
+      zIndex: 34
+    },
+    "data-assistant-life-layout-editor": id
+  }, React.createElement("div", {
+    className: "relative min-h-0 min-w-0 flex-1"
+  }, React.createElement(AssistantLifeRoomScene, _extends({}, scene, {
+    id: id,
+    land: land,
+    title: `${who.name}の部屋の模様替え`,
+    sub: "家具をつまんで好きな所へ。下の道具で大きさ・向き・色",
+    bubble: "",
+    padLeft: 78,
+    dock: null,
+    onBack: null,
+    onPerson: null,
+    onMasmon: null,
+    layoutWho: id,
+    layoutEdit: {
+      items: cur,
+      sel,
+      onSelect: k => {
+        setSel(k);
+        setColorOpen(false);
+      },
+      onMove: (k, x, y) => setItems(cur.map(it => it.k === k ? {
+        ...it,
+        x,
+        y
+      } : it)),
+      onDrop: () => {
+        if (items) commit(items);
+      }
+    }
+  })), line && React.createElement("p", {
+    className: "pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow",
+    style: {
+      top: land ? 50 : 70,
+      zIndex: 30,
+      wordBreak: 'auto-phrase'
+    },
+    "data-assistant-life-layout-line": true
+  }, who.name, "「", line, "」")), panel);
 }
 const ASSISTANT_MASMON_PLAN = [{
   "id": "mua",

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2260f40c27a9b0d4
+// generated-sha256: 26b1ef73a8351477
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9690,6 +9690,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLife: true,
   // 助手ライフの家具(段階B・2026-11-08 社長 GIFT-PLAN.md)。交換所の「家具」・部屋に置く・贈ったときの反応。社長の「この文で」が出るまで偽
   assistantLifeFurniture: true, // 2026-11-08 社長「この文で」
+  assistantLifeRoomEdit: false, // 助手の部屋の模様替え(家具を指で動かす・大きさ・向き・色・前後・おまかせ)。2026-11-11 試作。社長の「この形で」が出るまでオフ(56-assistant-life-roomedit.jsx)
   // 助手1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md ❶B ❷A ❸A ❹A ❺A)。台詞・止め絵・更新履歴の「この文で」・ミハリの確認のあとで真にする
   assistantLifeSolo: true, // 2026-11-08 社長「この文で公開」
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
@@ -63963,6 +63964,8 @@ const assistantLifeRoomsOf = (life, metIds) => {
 // 部屋を押したとき(その助手のこと・その場でできること)
 function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
+  const [layoutOpen, setLayoutOpen] = React.useState(false); // 模様替え(56-assistant-life-roomedit.jsx・公開の印 assistantLifeRoomEdit)
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn() && !!onGiveSolo;
   const who = assistantById(id);
   if (!who) return null;
@@ -64013,7 +64016,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const rvScene = typeof AssistantLifeRoomScene === 'function' ? (
     <AssistantLifeRoomScene id={id} look={typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon'} land={land} people={people} sleepIds={sleepIds} away={away} team={rvTeam} furn={rvFurn}
       bubble={follow && follow.text ? follow.text : ''} title={`${who.name}の部屋`} sub={`${lv != null ? `💗 仲良し度 Lv${lv} ・ ` : ''}${where}`}
-      onPerson={() => toSheet()} onMasmon={onMasmon ? () => onMasmon(id) : null} dock={rvDock} padLeft={78}/>) : null;
+      onPerson={() => toSheet()} onMasmon={onMasmon ? () => onMasmon(id) : null} dock={rvDock} padLeft={78} layoutWho={layoutOn ? id : null}/>) : null;
   const followCard = (follow && onChat && (
             <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
               {/* 言葉の切れ目で折る(かぎかっこだけが1行に割れないよう、名前と台詞をひとつの文として折る・ミハリ 2026-11-08) */}
@@ -64114,7 +64117,9 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       </div>
       </div>
       {furnOpen && typeof AssistantLifeFurnSheet === 'function' && <AssistantLifeFurnSheet id={id} furnItems={furnItems || {}} onGiveFurn={onGiveFurn} land={land}
-        onClose={() => setFurnOpen(false)} onTalk={(talk, text) => { setFurnOpen(false); if (onFurnTalk) onFurnTalk(talk, text); }}/>}
+        onClose={() => setFurnOpen(false)} onTalk={(talk, text) => { setFurnOpen(false); if (onFurnTalk) onFurnTalk(talk, text); }} onLayout={layoutOn ? () => { setFurnOpen(false); setLayoutOpen(true); } : null}/>}
+      {layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && <AssistantLifeRoomEditor id={id} land={land} onClose={() => setLayoutOpen(false)}
+        scene={{ look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon', people, sleepIds, away, team: rvTeam }}/>}
     </div>);
 }
 
@@ -65389,7 +65394,7 @@ const U0 = (F) => F * 2.63;
 
 // 大きな部屋の絵。people … 部屋にいる助手(1〜4人)/away … 留守のときの札 { title, sub }/team … マスモン { monster, nick, colors }
 //   onPerson(id)・onMasmon(index)・onFurn(f) … 押したとき(無ければ押せない)。dock … 下に重ねる札の段(呼ぶ側の部品)
-function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], sleepIds = [], away = null, team = [], furn = [], bubble = '', title = '', sub = '', onBack = null, onPerson = null, onMasmon = null, dock = null, backLabel = '← 家へ', padLeft = 0 }) {
+function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], sleepIds = [], away = null, team = [], furn = [], bubble = '', title = '', sub = '', onBack = null, onPerson = null, onMasmon = null, dock = null, backLabel = '← 家へ', padLeft = 0, layoutWho = null, layoutEdit = null }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({ w: 390, h: 640 });
   React.useLayoutEffect(() => {
@@ -65424,6 +65429,8 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   const mN = team.length, rows = mN > 4 ? 2 : 1, perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  const layoutOn = !!layoutWho && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
+  const layoutGeom = { W, top: topH, floorY, bottom: H - dockH };
   const furnBox = (slot) => slot === 'ceil' ? { left: W * 0.42, top: topH + 6, fs: 36 } : slot === 'wall' ? { left: W * 0.06, top: topH + usable * 0.18, fs: 44 } : { left: W * 0.06, top: floorY - 58, fs: 52 };
   return (
     <div ref={ref} className="relative h-full w-full overflow-hidden" data-assistant-life-roomview={id} data-assistant-life-roomview-look={look}
@@ -65435,13 +65442,17 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       <div aria-hidden="true" style={{ position: 'absolute', right: W * 0.06, top: topH + usable * 0.06, width: Math.min(130, W * 0.3), height: Math.min(96, usable * 0.22), borderRadius: 8, border: '6px solid #ffffff99',
         background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}/>
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
-      {furn.map((f) => { const b = furnBox(f.slot); return (
+      {/* 模様替え(公開の印 assistantLifeRoomEdit・56-assistant-life-roomedit.jsx): 自分の家の部屋は、保存してある並びで描く。助手の後ろの層 */}
+      {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : null} geom={layoutGeom} front={false} onTip={layoutEdit ? null : setTip}/>}
+      {!layoutOn && furn.map((f) => { const b = furnBox(f.slot); return (
         <button key={f.slot} type="button" data-assistant-life-roomview-furn={f.key} onClick={() => setTip(`${f.emoji} ${f.name}`)} className="absolute" style={{ left: b.left, top: b.top, fontSize: b.fs, lineHeight: 1, filter: 'drop-shadow(0 5px 4px #0005)' }}>{f.emoji}</button>); })}
       {/* 助手(①③)と前の家具(②) */}
       {asleep && <AssistantLifeRoomBed id={id} W={W} floorY={floorY} sleepers={people} look={look}/>}
       {!asleep && lay && standItems.map((x, i) => (
         <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} sleep={sleepIds.includes(x.pid)} onPress={onPerson ? () => onPerson(x.pid) : null}/>))}
       {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
+      {/* 助手より前に出した家具(机の前) */}
+      {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : null} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
         <div className="absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center" style={{ top: floorY - 120 }} data-assistant-life-roomview-away>
           <p className="whitespace-nowrap text-[14px] font-black text-white">{away.title}</p>
@@ -65464,6 +65475,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
             {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={mt} size={s}/> : null}
           </button>); })}
       {/* 時間帯: 夜は暗く・灯り */}
+      {layoutOn && layoutEdit && <AssistantLifeRoomLayoutHandles items={layoutEdit.items} geom={layoutGeom} sel={layoutEdit.sel} onSelect={layoutEdit.onSelect} onMove={layoutEdit.onMove} onDrop={layoutEdit.onDrop}/>}
       {night && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
       {night && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
       {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}
@@ -67085,7 +67097,10 @@ const assistantLifeFurnGive = async (who, key) => {
   const f = assistantLifeFurnOf(key);
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}の部屋に${f.name}を贈った`, [who], { kind: 'give' });
   const talk = assistantLifeFurnTalk(who, key);
-  return talk ? { ...talk, amount, placed: r.placed } : null;
+  // 模様替え(公開の印 assistantLifeRoomEdit)がオンなら、贈った家具はいつも部屋に出る(56-assistant-life-roomedit.jsx)
+  const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
+  if (layoutOn && typeof assistantLifeLayoutOnGive === 'function') assistantLifeLayoutOnGive(who, key);
+  return talk ? { ...talk, amount, placed: layoutOn ? true : r.placed } : null;
 };
 const assistantLifeFurnMove = async (who, key, toPut) => {
   await ASSISTANT_LIFE_GIFT_STORE.load();
@@ -67098,7 +67113,8 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 // 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
 const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
   trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴' });
-const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean);
+const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => (typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded
+  ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean));
 // 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
 const assistantLifeBubSplit = (text) => {
   const t = String(text || '');
@@ -67140,7 +67156,12 @@ const assistantLifeFurnAlbumTalks = () => (assistantLifeFurnEnabled() && typeof 
 // faces … いま部屋にいる顔の数 / baseCount … もとからある家具(左下の絵文字)の数。床の家具は、もとの家具と顔のあいだに入れる。
 //   狭い部屋で入らないときは、部屋の上の真ん中へ寄せる(顔に重ねない・2026-11-08 検査で見つけた 横 844 の重なり)
 // put … よその家(フレンドの家の控え)の置き方 { ceil, wall, floor }。渡されたら自分の部屋の家具ではなくそれを描く(56-assistant-life-friend.jsx)
-function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null }) {
+// 模様替え(公開の印 assistantLifeRoomEdit)がオンで自分の家なら、保存してある並びを小さく写す(顔・吹き出しの後ろ。測り直さない)
+function AssistantLifeRoomFurn(props) {
+  if (!props.put && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutMini === 'function') return <AssistantLifeRoomLayoutMini id={props.id} w={props.w} h={props.h}/>;
+  return <AssistantLifeRoomFurnSlots {...props}/>;
+}
+function AssistantLifeRoomFurnSlots({ id, w, h, faces = 0, baseCount = 2, put = null }) {
   const st = useAssistantLifeGiftState();
   const marker = React.useRef(null);
   const [moved, setMoved] = React.useState({});
@@ -67258,8 +67279,11 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null 
 }
 
 // 部屋のシートの「🪑 家具」(贈る・置く・しまう)。furnItems … 持っている家具の数 { key: 数 } / onGiveFurn(who, key) … 60-app が持ち物を減らして assistantLifeFurnGive を呼ぶ
-function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, land = false }) {
+function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, land = false, onLayout = null }) {
   const st = useAssistantLifeGiftState();
+  // 模様替え(公開の印 assistantLifeRoomEdit): 部屋に出ているかは新しい並びで見る
+  const laySt = typeof useAssistantLifeLayoutState === 'function' ? useAssistantLifeLayoutState() : null;
+  const layoutOn = !!laySt && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [buyKey, setBuyKey] = React.useState(null); // 買って贈る(2026-11-08)
@@ -67268,6 +67292,9 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   const room = assistantLifeRoomOf(id, st);
   const all = assistantLifeFurnDefs().map(f => assistantLifeFurnOf(f.key)).filter(Boolean);
   const mine = all.filter(f => room.got[f.key]);
+  const layKeys = layoutOn ? new Set(assistantLifeLayoutOf(id, laySt, st).map(it => it.k)) : null;
+  const isPut = (f) => (layoutOn ? layKeys.has(f.key) : room.put[f.slot] === f.key);
+  const movePut = (f, toPut) => (layoutOn ? assistantLifeLayoutPut(id, f.key, toPut) : assistantLifeFurnMove(id, f.key, toPut));
   const canGive = all.filter(f => !room.got[f.key] && (Number(furnItems && furnItems[f.key]) || 0) > 0);
   // まだ持っていない家具(買ってそのまま贈れる。同じ家具は1人に1つなので、贈った家具は出さない)
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
@@ -67301,7 +67328,8 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #fbbf24', paddingTop: 10 } : { borderTopColor: '#fbbf24' }}>
         <p className="mhl-en">FURNITURE · {String(id).toUpperCase()}</p>
         <p className="text-[18px] font-black text-white">🪑 {who.name}の部屋の家具</p>
-        <p className="text-[10.5px] font-bold leading-snug text-slate-300">置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。好きな家具なら仲良し度が多めに上がります(1つの家具は1回)</p>
+        <p className="text-[10.5px] font-bold leading-snug text-slate-300">{layoutOn ? '贈った家具は、部屋の好きな所に置けます。「模様替え」で指でつまんで動かせます。' : '置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。'}好きな家具なら仲良し度が多めに上がります(1つの家具は1回)</p>
+        {layoutOn && onLayout && <button type="button" data-assistant-life-furn-layout onClick={onLayout} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-[13px] font-black text-white shadow active:scale-[.98]">🛠 模様替え(指でつまんで動かす・{who.name}におまかせ)</button>}
         {msg && <p data-assistant-life-furn-msg className="mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100">{msg}</p>}
         <p className="mt-2 text-[11px] font-black text-amber-200">🎁 贈れる家具</p>
         <div className="mt-1 space-y-1">
@@ -67318,13 +67346,13 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         {/* 部屋に置いてある家具と押し入れの家具を、見出しで分ける(2026-11-08 ミハリ「どちらが置いてあるか字で分からない」) */}
         <p className="mt-2 text-[11px] font-black text-amber-200">🏠 部屋に置いてある家具 <span className="text-slate-300">({mine.length}/{all.length}持っている)</span></p>
         <div className="mt-1 space-y-1" data-assistant-life-furn-placed>
-          {mine.filter(f => room.put[f.slot] === f.key).length ? mine.filter(f => room.put[f.slot] === f.key).map(f => row(f, btn('しまう', () => assistantLifeFurnMove(id, f.key, false), 'border-slate-500 text-slate-200', { 'data-assistant-life-furn-keep': f.key })))
+          {mine.filter(isPut).length ? mine.filter(isPut).map(f => row(f, btn('しまう', () => movePut(f, false), 'border-slate-500 text-slate-200', { 'data-assistant-life-furn-keep': f.key })))
             : <p className="rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300">まだありません</p>}
         </div>
-        {mine.some(f => room.put[f.slot] !== f.key) && (<>
+        {mine.some(f => !isPut(f)) && (<>
           <p className="mt-2 text-[11px] font-black text-amber-200">📦 押し入れ</p>
           <div className="mt-1 space-y-1" data-assistant-life-furn-kept>
-            {mine.filter(f => room.put[f.slot] !== f.key).map(f => row(f, btn(room.put[f.slot] ? '入れかえる' : '置く', () => assistantLifeFurnMove(id, f.key, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', { 'data-assistant-life-furn-put': f.key })))}
+            {mine.filter(f => !isPut(f)).map(f => row(f, btn(!layoutOn && room.put[f.slot] ? '入れかえる' : '置く', () => movePut(f, true), 'border-pink-300/70 bg-pink-400/15 text-pink-100', { 'data-assistant-life-furn-put': f.key })))}
           </div>
         </>)}
         <button type="button" data-assistant-life-furn-close data-mhl-sheet-close onClick={onClose} className="mt-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
@@ -67333,6 +67361,308 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
         <AssistantLifeBuyConfirm item={f} to={who.name} onClose={() => setBuyKey(null)}
           gains={[{ text: `💗 ${who.name}との仲良し度 ${furnGainText(f.key)}(1つの家具は1回)` }]}
           check={() => (assistantLifeRoomOf(id).got[f.key] ? 'この家具はもう贈りました' : '')} give={() => give(f.key, true)}/>) : null; })()}
+    </div>);
+}
+
+// ---- part: 56-assistant-life-roomedit.jsx ----
+// ===== 助手の部屋の模様替え(2026-11-11 社長「こっちのをこまかくいじれるように。サイズや位置や向きとか色とかも。位置は自分でそのまま指で持ってける」) =====
+// 部屋を大きく見る画面(56-assistant-life-roomview.jsx の AssistantLifeRoomScene)の上で、家具を指でつまんで動かす。
+//   位置(x・y)・大きさ(s)・向き(f 左右を返す・r 回す)・色(c)・前後(z 重なりの順・a 助手より前)。「◯◯におまかせ」で助手のくせの並べ方
+// 公開の印 assistantLifeRoomEdit の後ろ(家具の印 assistantLifeFurniture も要る)。印がオフのあいだは何も読まない・何も書かない。
+// 保存は新しいキーだけ(CLAUDE.md ⑦)。今の mh_assistant_life_room_v1(持っている家具 got・天井/壁/床 put・押し入れ kept)は読むだけで、書き換えない。
+//   mh_assistant_life_room_layout_v1 … { [助手]: { items: [{ k 家具, x, y, s, r, f, c, a, z }] } }
+//     x … 部屋の横幅に対する割合(0〜1・家具の真ん中)/ y … 0〜0.56 が壁(上の帯の下〜床の線)、0.56〜1 が床(床の線〜部屋の下)。縦・横で床の線の高さが違っても壁の物は壁に残る
+//   mh_assistant_life_room_layout_migrated_v1 … 今の置き方(天井・壁・床の3つ)を一度だけ写した印
+const ASSISTANT_LIFE_LAYOUT_KEY = 'mh_assistant_life_room_layout_v1';
+const ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY = 'mh_assistant_life_room_layout_migrated_v1';
+const ASSISTANT_LIFE_LAYOUT_FLOOR = 0.56;
+const ASSISTANT_LIFE_LAYOUT_MAX = 40;
+const ASSISTANT_LIFE_LAYOUT_S = Object.freeze([0.5, 2.4]);
+// 色(染色のように、いくつかから選ぶ)。絵文字の色を回す。0 はもとの色
+const ASSISTANT_LIFE_LAYOUT_COLORS = Object.freeze([
+  Object.freeze({ label: 'もとの色', dot: '#e5e7eb', filter: '' }),
+  Object.freeze({ label: 'きいろ', dot: '#facc15', filter: 'hue-rotate(45deg)' }),
+  Object.freeze({ label: 'みどり', dot: '#4ade80', filter: 'hue-rotate(100deg)' }),
+  Object.freeze({ label: 'みずいろ', dot: '#38bdf8', filter: 'hue-rotate(170deg)' }),
+  Object.freeze({ label: 'あお', dot: '#6366f1', filter: 'hue-rotate(220deg)' }),
+  Object.freeze({ label: 'むらさき', dot: '#c084fc', filter: 'hue-rotate(270deg)' }),
+  Object.freeze({ label: 'ピンク', dot: '#f472b6', filter: 'hue-rotate(320deg)' }),
+  Object.freeze({ label: 'セピア', dot: '#b08968', filter: 'sepia(0.85)' }),
+  Object.freeze({ label: 'しろくろ', dot: '#6b7280', filter: 'grayscale(1)' }),
+]);
+// 今の置き場所(天井・壁・床)に当たる位置。一度きりの写しと、新しく置くときの最初の位置
+const ASSISTANT_LIFE_LAYOUT_SLOT_POS = Object.freeze({ ceil: Object.freeze({ x: 0.47, y: 0.05 }), wall: Object.freeze({ x: 0.13, y: 0.2 }), floor: Object.freeze({ x: 0.13, y: 0.5 }) });
+const assistantLifeRoomEditEnabled = () => typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeRoomEdit === true;
+const assistantLifeLayoutClamp = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def; };
+const normalizeAssistantLifeLayoutItem = (raw, keys) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.k !== 'string' || !keys.has(raw.k)) return null;
+  return { k: raw.k, x: assistantLifeLayoutClamp(raw.x, 0, 1, 0.5), y: assistantLifeLayoutClamp(raw.y, 0, 1, 0.3),
+    s: assistantLifeLayoutClamp(raw.s, ASSISTANT_LIFE_LAYOUT_S[0], ASSISTANT_LIFE_LAYOUT_S[1], 1), r: Math.round(assistantLifeLayoutClamp(raw.r, -180, 180, 0)),
+    f: raw.f === true, c: Math.round(assistantLifeLayoutClamp(raw.c, 0, ASSISTANT_LIFE_LAYOUT_COLORS.length - 1, 0)), a: raw.a === true, z: Math.round(assistantLifeLayoutClamp(raw.z, -9999, 9999, 0)) };
+};
+const normalizeAssistantLifeLayoutOne = (raw) => {
+  const keys = new Set((typeof assistantLifeFurnDefs === 'function' ? assistantLifeFurnDefs() : []).map(f => f.key));
+  const seen = new Set(), items = [];
+  for (const it of (raw && typeof raw === 'object' && Array.isArray(raw.items) ? raw.items : [])) {
+    const n = normalizeAssistantLifeLayoutItem(it, keys);
+    if (!n || seen.has(n.k) || items.length >= ASSISTANT_LIFE_LAYOUT_MAX) continue; // 同じ家具は1人に1つ
+    seen.add(n.k); items.push(n);
+  }
+  return { items };
+};
+const normalizeAssistantLifeLayout = (raw) => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const o = {};
+  for (const [who, v] of Object.entries(r)) if (/^[a-z]+$/.test(who)) o[who] = normalizeAssistantLifeLayoutOne(v);
+  return o;
+};
+// 今の置き方(天井・壁・床)を新しい並びへ写す(純粋な計算。もう並びがある助手は触らない)
+const assistantLifeLayoutFromRoom = (room, layout) => {
+  const out = { ...(layout || {}) };
+  for (const [who, v] of Object.entries(room || {})) {
+    if (out[who] && Array.isArray(out[who].items) && out[who].items.length) continue;
+    const items = [];
+    for (const slot of ['ceil', 'wall', 'floor']) { const k = v && v.put ? v.put[slot] : null; const p = ASSISTANT_LIFE_LAYOUT_SLOT_POS[slot]; if (typeof k === 'string' && k) items.push({ k, x: p.x, y: p.y, s: 1, r: 0, f: false, c: 0, a: false, z: items.length }); }
+    if (items.length) out[who] = { items };
+  }
+  return out;
+};
+const ASSISTANT_LIFE_LAYOUT_STORE = {
+  state: { layout: {} }, loaded: false, loading: null, listeners: new Set(),
+  emit() { for (const fn of this.listeners) { try { fn(this.state); } catch {} } },
+  set(layout) { this.state = { layout }; this.emit(); },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    if (!assistantLifeRoomEditEnabled()) return Promise.resolve(this.state); // 印がオフのあいだは読まない・写さない
+    if (!this.loading) this.loading = (async () => {
+      try {
+        const [raw, migrated, gift] = await Promise.all([storeGet(ASSISTANT_LIFE_LAYOUT_KEY, null, false), storeGet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, null, false), ASSISTANT_LIFE_GIFT_STORE.load()]);
+        let layout = normalizeAssistantLifeLayout(raw);
+        if (migrated !== true && migrated !== 1) {
+          // 一度だけ: 今の天井・壁・床の家具を、今と同じあたりへ写す。押し入れの家具は押し入れのまま
+          layout = normalizeAssistantLifeLayout(assistantLifeLayoutFromRoom((gift && gift.room) || {}, layout));
+          try { await storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false); await storeSet(ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY, true, false); } catch {}
+        }
+        this.state = { layout };
+      } catch {}
+      this.loaded = true; this.emit(); return this.state;
+    })();
+    return this.loading;
+  },
+};
+const useAssistantLifeLayoutState = () => {
+  const [st, setSt] = React.useState(ASSISTANT_LIFE_LAYOUT_STORE.state);
+  React.useEffect(() => {
+    const fn = (s) => setSt(s);
+    ASSISTANT_LIFE_LAYOUT_STORE.listeners.add(fn);
+    void ASSISTANT_LIFE_LAYOUT_STORE.load().then(() => setSt(ASSISTANT_LIFE_LAYOUT_STORE.state));
+    return () => { ASSISTANT_LIFE_LAYOUT_STORE.listeners.delete(fn); };
+  }, []);
+  return st;
+};
+// その助手の部屋に出ている家具(贈ってある物だけ。重なりの順に並べる)
+const assistantLifeLayoutOf = (who, st = ASSISTANT_LIFE_LAYOUT_STORE.state, giftSt = ASSISTANT_LIFE_GIFT_STORE.state) => {
+  const got = typeof assistantLifeRoomOf === 'function' ? assistantLifeRoomOf(who, giftSt).got : {};
+  return normalizeAssistantLifeLayoutOne((st.layout || {})[who]).items.filter(it => got[it.k]).sort((a, b) => a.z - b.z);
+};
+const assistantLifeLayoutSave = (who, items) => {
+  if (!assistantLifeRoomEditEnabled() || !ASSISTANT_LIFE_LAYOUT_STORE.loaded) return; // 読み終わる前に書くと、保存してある並びを空で上書きしてしまう
+  const layout = { ...ASSISTANT_LIFE_LAYOUT_STORE.state.layout, [who]: normalizeAssistantLifeLayoutOne({ items }) };
+  ASSISTANT_LIFE_LAYOUT_STORE.set(layout);
+  try { storeSet(ASSISTANT_LIFE_LAYOUT_KEY, layout, false); } catch {}
+};
+// 新しく置くときの位置(その家具のもとの置き場所のあたり。先客がいたら少しずつ右へずらす)
+const assistantLifeLayoutNewItem = (key, items) => {
+  const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(key) : null;
+  const p = ASSISTANT_LIFE_LAYOUT_SLOT_POS[(f && f.slot) || 'floor'] || ASSISTANT_LIFE_LAYOUT_SLOT_POS.floor;
+  let x = p.x, n = 0;
+  while (n < 10 && items.some(it => Math.abs(it.x - x) < 0.06 && Math.abs(it.y - p.y) < 0.06)) { x = Math.min(0.94, x + 0.13); n++; }
+  return { k: key, x, y: p.y, s: 1, r: 0, f: false, c: 0, a: false, z: items.reduce((m, it) => Math.max(m, it.z), 0) + 1 };
+};
+// 置く/しまう(家具のシートから。印がオンのときの行き先)
+const assistantLifeLayoutPut = async (who, key, toPut) => {
+  await ASSISTANT_LIFE_LAYOUT_STORE.load();
+  const cur = assistantLifeLayoutOf(who);
+  if (toPut) { if (!cur.some(it => it.k === key)) assistantLifeLayoutSave(who, [...cur, assistantLifeLayoutNewItem(key, cur)]); }
+  else assistantLifeLayoutSave(who, cur.filter(it => it.k !== key));
+};
+// 贈った家具は、そのまま部屋に出す(56-assistant-life-gifts.jsx の assistantLifeFurnGive から)
+const assistantLifeLayoutOnGive = (who, key) => { if (assistantLifeRoomEditEnabled()) void assistantLifeLayoutPut(who, key, true); };
+
+// ----- ◯◯におまかせ(助手のくせ) -----
+// hero … いちばん良い所へ大きく置く家具 / pull … 真ん中へ寄せる強さ / low … 下へ下げる / tilt … かたむき / gap … 好きな家具の大きさ
+// 置き方の型と台詞は仮(台詞は台詞の担当へ頼む。ROOM-LAYOUT-PREP.md の2)
+const ASSISTANT_LIFE_LAYOUT_HABITS = Object.freeze({
+  mua:       Object.freeze({ hero: 'bear',      pull: 0.22, low: 0,    tilt: 0,  big: 1.15, line: 'できたー♪ くまさんは真ん中がいいのっ✨' }),
+  kiki:      Object.freeze({ hero: 'bookshelf', pull: 0,    low: 0,    tilt: 0,  big: 1.05, line: '本は手の届く所、植物は窓のそば。きっちり並べたよ' }),
+  momosuke:  Object.freeze({ hero: 'record',    pull: 0.12, low: 0,    tilt: 10, big: 1.25, line: 'にぎやかにしてみた！ ここで歌ったら最高ぢゃない？' }),
+  dra:       Object.freeze({ hero: 'sofa',      pull: 0.05, low: 0.1,  tilt: 6,  big: 1.2,  line: 'ぜんぶ低い所に寄せた…ごろごろできる…' }),
+  atsu:      Object.freeze({ hero: 'trophy',    pull: 0,    low: 0,    tilt: 0,  big: 1.2,  line: 'トロフィーはいちばん目立つとこ！ いい部屋になったっしょ笑' }),
+  kyuko:     Object.freeze({ hero: 'starpic',   pull: -0.04, low: 0,   tilt: 0,  big: 1.05, line: 'ほい、できたよぉ。すっきりさせてみた笑' }),
+  sorashido: Object.freeze({ hero: 'lantern',   pull: 0.08, low: -0.03, tilt: 0, big: 1.2,  line: '星のものは上に集めたぜ・・・！ でーじいい感じだぜ' }),
+  erubin:    Object.freeze({ hero: 'plant',     pull: -0.06, low: 0,   tilt: 0,  big: 1.1,  line: '窓のそばに緑を置いたよ。落ち着く部屋になったと思う' }),
+});
+// 置き場所ごとの席(良い順)。窓(右上)と助手(真ん中)とマスモン(床の手前)を空ける
+const ASSISTANT_LIFE_LAYOUT_SEATS = Object.freeze({
+  ceil: [[0.47, 0.05], [0.17, 0.04], [0.76, 0.03], [0.32, 0.03], [0.62, 0.04]],
+  wall: [[0.13, 0.24], [0.34, 0.2], [0.12, 0.41], [0.9, 0.43], [0.53, 0.19]],
+  floor: [[0.14, 0.52], [0.86, 0.52], [0.08, 0.68], [0.92, 0.68], [0.36, 0.5]],
+});
+// owned … その助手に贈ってある家具の key。苦手な家具は押し入れへ。席が足りない分も押し入れへ
+const assistantLifeLayoutOmakase = (who, owned) => {
+  const h = ASSISTANT_LIFE_LAYOUT_HABITS[who] || ASSISTANT_LIFE_LAYOUT_HABITS.mua;
+  const like = (k) => (typeof assistantLifeFurnLike === 'function' ? assistantLifeFurnLike(who, k) : 'mid');
+  const rank = (k) => (k === h.hero ? 0 : like(k) === 'like' ? 1 : 2);
+  const keys = [...new Set(owned)].filter(k => like(k) !== 'bad').sort((a, b) => rank(a) - rank(b));
+  const used = { ceil: 0, wall: 0, floor: 0 }, items = [];
+  for (const k of keys) {
+    const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
+    const slot = f && ASSISTANT_LIFE_LAYOUT_SEATS[f.slot] ? f.slot : 'floor';
+    const seat = ASSISTANT_LIFE_LAYOUT_SEATS[slot][used[slot]++];
+    if (!seat) continue;
+    const i = items.length;
+    const x = seat[0] + (0.5 - seat[0]) * h.pull, y = seat[1] + (slot === 'ceil' ? 0 : h.low);
+    items.push({ k, x: Math.max(0.06, Math.min(0.94, x)), y: Math.max(0.03, Math.min(0.72, y)), s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
+      r: h.tilt && slot !== 'ceil' ? (i % 2 ? -h.tilt : h.tilt) : 0, f: seat[0] > 0.5, c: 0, a: false, z: i });
+  }
+  return { items, line: h.line, kept: [...new Set(owned)].filter(k => !items.some(it => it.k === k)) };
+};
+
+// ----- 描く -----
+// 部屋の中の位置(px)。geom … { W, top 壁の上, floorY 床の線, bottom 部屋の下 }
+const assistantLifeLayoutPx = (it, g) => ({ left: it.x * g.W, top: it.y <= ASSISTANT_LIFE_LAYOUT_FLOOR ? g.top + (it.y / ASSISTANT_LIFE_LAYOUT_FLOOR) * (g.floorY - g.top) : g.floorY + ((it.y - ASSISTANT_LIFE_LAYOUT_FLOOR) / (1 - ASSISTANT_LIFE_LAYOUT_FLOOR)) * (g.bottom - g.floorY) });
+const assistantLifeLayoutFromPx = (left, top, g) => ({ x: Math.max(0.02, Math.min(0.98, left / g.W)),
+  y: Math.max(0.01, Math.min(0.99, top <= g.floorY ? ((top - g.top) / Math.max(1, g.floorY - g.top)) * ASSISTANT_LIFE_LAYOUT_FLOOR : ASSISTANT_LIFE_LAYOUT_FLOOR + ((top - g.floorY) / Math.max(1, g.bottom - g.floorY)) * (1 - ASSISTANT_LIFE_LAYOUT_FLOOR))) });
+const assistantLifeLayoutBase = (g) => Math.round(Math.max(34, Math.min(56, g.W * 0.12)));
+const assistantLifeLayoutStyle = (it, g) => {
+  const p = assistantLifeLayoutPx(it, g), col = ASSISTANT_LIFE_LAYOUT_COLORS[it.c] || ASSISTANT_LIFE_LAYOUT_COLORS[0];
+  return { position: 'absolute', left: p.left, top: p.top, fontSize: Math.round(assistantLifeLayoutBase(g) * it.s), lineHeight: 1, transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
+    filter: `${col.filter ? `${col.filter} ` : ''}drop-shadow(0 5px 4px #0005)` };
+};
+// 大きな部屋の家具。front … 助手より前の層か(a が真の家具)。items を渡さなければ、その助手の保存してある並び
+//   edit … 模様替えの間だけ { sel, onSelect(k), onMove(k, x, y) }。つまむ所は AssistantLifeRoomLayoutHandles(いちばん前の層)
+function AssistantLifeRoomLayoutLayer({ who, items = null, geom, front = false, onTip = null }) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const list = (items || assistantLifeLayoutOf(who, st, giftSt)).filter(it => !!it.a === front);
+  return (<>{list.map(it => { const f = assistantLifeFurnOf(it.k); if (!f) return null; return (
+    <button key={it.k} type="button" data-assistant-life-roomview-furn={it.k} data-assistant-life-layout-item={`${it.k}:${front ? 'front' : 'back'}`} aria-label={f.name}
+      onClick={() => { if (onTip) onTip(`${f.emoji} ${f.name}`); }} style={assistantLifeLayoutStyle(it, geom)}>{f.emoji}</button>); })}</>);
+}
+// 模様替えの間、家具をつまむ所(見えない札を家具と同じ位置に、いちばん前の層へ置く。助手やマスモンの後ろの家具もつまめる)
+function AssistantLifeRoomLayoutHandles({ items, geom, sel, onSelect, onMove, onDrop }) {
+  const drag = React.useRef(null);
+  const down = (e, it) => {
+    e.preventDefault(); e.stopPropagation();
+    onSelect(it.k);
+    const p = assistantLifeLayoutPx(it, geom);
+    drag.current = { k: it.k, id: e.pointerId, dx: p.left - e.clientX, dy: p.top - e.clientY, moved: false };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+  };
+  const move = (e) => {
+    const d = drag.current; if (!d || d.id !== e.pointerId) return;
+    d.moved = true;
+    const q = assistantLifeLayoutFromPx(e.clientX + d.dx, e.clientY + d.dy, geom);
+    onMove(d.k, q.x, q.y);
+  };
+  const up = (e) => { const d = drag.current; if (!d || d.id !== e.pointerId) return; drag.current = null; if (d.moved && onDrop) onDrop(d.k); };
+  return (<>{items.map(it => { const f = assistantLifeFurnOf(it.k); if (!f) return null; const p = assistantLifeLayoutPx(it, geom); const size = Math.max(44, Math.round(assistantLifeLayoutBase(geom) * it.s * 1.15)); return (
+    <button key={it.k} type="button" data-assistant-life-layout-handle={it.k} aria-label={`${f.name}を動かす`} aria-pressed={sel === it.k}
+      onPointerDown={(e) => down(e, it)} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+      style={{ position: 'absolute', left: p.left, top: p.top, width: size, height: size, transform: 'translate(-50%,-50%)', zIndex: 20 + (sel === it.k ? 1 : 0), touchAction: 'none', cursor: 'grab',
+        borderRadius: 12, border: sel === it.k ? '2.5px dashed #f472b6' : '1.5px dashed #ffffff90', background: sel === it.k ? '#ffffff38' : 'transparent' }}/>); })}</>);
+}
+// 家の一覧の小さな部屋(印がオンのとき)。同じ並びを小さく写す。顔・吹き出し・札の後ろに描くので、重なりを測り直さない
+function AssistantLifeRoomLayoutMini({ id, w, h }) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const items = assistantLifeLayoutOf(id, st, giftSt);
+  const g = { W: w, top: 2, floorY: Math.round(h * 0.62), bottom: h - 4 };
+  const base = Math.max(11, Math.min(20, h * 0.2, w * 0.13));
+  return (<>{items.map(it => { const f = assistantLifeFurnOf(it.k); if (!f) return null; const p = assistantLifeLayoutPx(it, g); const col = ASSISTANT_LIFE_LAYOUT_COLORS[it.c] || ASSISTANT_LIFE_LAYOUT_COLORS[0]; return (
+    <span key={it.k} aria-hidden="true" data-assistant-life-room-furn={`${id}:layout:${it.k}`} style={{ position: 'absolute', left: p.left, top: p.top, zIndex: 0, pointerEvents: 'none', lineHeight: 1,
+      fontSize: Math.round(base * Math.min(1.6, it.s)), transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`, filter: col.filter || undefined }}>{f.emoji}</span>); })}</>);
+}
+
+// ----- 模様替えの画面 -----
+// scene … AssistantLifeRoomScene へそのまま渡す中身(people・team・look など)。onClose … 閉じる
+function AssistantLifeRoomEditor({ id, land = false, scene = {}, onClose }) {
+  const st = useAssistantLifeLayoutState();
+  const giftSt = useAssistantLifeGiftState();
+  const who = assistantById(id);
+  const saved = assistantLifeLayoutOf(id, st, giftSt);
+  const [items, setItems] = React.useState(null); // 動かしている間の並び(離したら保存)
+  const first = React.useRef(null); // 開いたときの並び(「もとに戻す」)
+  const [sel, setSel] = React.useState(null);
+  const [colorOpen, setColorOpen] = React.useState(false);
+  const [line, setLine] = React.useState('');
+  const loaded = ASSISTANT_LIFE_LAYOUT_STORE.loaded;
+  React.useEffect(() => { if (loaded && first.current === null) first.current = saved; }, [loaded]);
+  React.useEffect(() => { if (!line) return undefined; const t = setTimeout(() => setLine(''), 5000); return () => clearTimeout(t); }, [line]);
+  if (!who || !assistantLifeRoomEditEnabled()) return null;
+  const cur = items || saved;
+  const got = Object.keys(assistantLifeRoomOf(id, giftSt).got || {});
+  const kept = got.filter(k => !cur.some(it => it.k === k));
+  const commit = (next) => { setItems(null); assistantLifeLayoutSave(id, next); };
+  const patch = (k, p) => commit(cur.map(it => (it.k === k ? { ...it, ...p } : it)));
+  const selIt = cur.find(it => it.k === sel) || null;
+  const zs = cur.map(it => it.z);
+  const tool = (key, label, fn, dis = false, aria = null) => <button key={key} type="button" data-assistant-life-layout-tool={key} aria-label={aria || undefined} disabled={dis} onClick={fn}
+    className="min-h-[40px] min-w-[44px] shrink-0 rounded-lg border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white active:scale-95 disabled:opacity-35">{label}</button>;
+  const chip = (k, placed) => { const f = assistantLifeFurnOf(k); if (!f) return null; return (
+    <button key={k} type="button" data-assistant-life-layout-chip={`${k}:${placed ? 'put' : 'kept'}`} aria-label={placed ? `${f.name}を選ぶ` : `${f.name}を部屋に置く`} aria-pressed={sel === k}
+      onClick={() => { if (placed) { setSel(sel === k ? null : k); } else { const it = { ...assistantLifeLayoutNewItem(k, cur), x: 0.5, y: 0.3, a: true }; commit([...cur, it]); setSel(k); } setColorOpen(false); }}
+      className={`relative h-[44px] w-[44px] shrink-0 rounded-xl border-2 text-[22px] leading-none active:scale-95 ${sel === k ? 'border-pink-400 bg-pink-500/30' : placed ? 'border-slate-500 bg-slate-800' : 'border-dashed border-amber-300/80 bg-slate-900'}`}>
+      <span style={{ opacity: placed ? 1 : 0.55 }}>{f.emoji}</span>{!placed && <span className="absolute -right-1 -top-1 rounded-full bg-amber-400 px-1 text-[10px] font-black leading-[14px] text-slate-900">＋</span>}
+    </button>); };
+  const omakase = () => { const r = assistantLifeLayoutOmakase(id, got); commit(r.items); setSel(null); setColorOpen(false); setLine(r.line); };
+  const panel = (
+    <div className="flex flex-col gap-1.5 bg-slate-950 px-3 pt-2" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))', ...(land ? { width: '44%', height: '100%', overflowY: 'auto', paddingTop: 8 } : {}) }} data-assistant-life-layout-panel>
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{selIt ? `${assistantLifeFurnOf(selIt.k).emoji} ${assistantLifeFurnOf(selIt.k).name}` : '家具を指でつまんで動かす'}</p>
+        <span className="shrink-0 text-[10.5px] font-bold text-slate-300" data-assistant-life-layout-count>置いてある {cur.length} / {got.length}</span>
+      </div>
+      {/* 選んだ家具の道具 */}
+      {colorOpen && selIt ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" data-assistant-life-layout-colors>
+          {ASSISTANT_LIFE_LAYOUT_COLORS.map((c, i) => <button key={i} type="button" data-assistant-life-layout-color={i} aria-label={c.label} aria-pressed={selIt.c === i} onClick={() => patch(sel, { c: i })}
+            className={`h-[40px] w-[40px] shrink-0 rounded-full border-[3px] active:scale-95 ${selIt.c === i ? 'border-white' : 'border-slate-600'}`} style={{ background: c.dot }}/>)}
+          {tool('colorclose', '← 戻る', () => setColorOpen(false))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" data-assistant-life-layout-tools>
+          {tool('small', '小', () => patch(sel, { s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100) }), !selIt || selIt.s <= ASSISTANT_LIFE_LAYOUT_S[0], '小さくする')}
+          {tool('big', '大', () => patch(sel, { s: Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round((selIt.s + 0.15) * 100) / 100) }), !selIt || selIt.s >= ASSISTANT_LIFE_LAYOUT_S[1], '大きくする')}
+          {tool('flip', '↔', () => patch(sel, { f: !selIt.f }), !selIt, '左右を返す')}
+          {tool('rotl', '↺', () => patch(sel, { r: ((selIt.r - 15 + 540) % 360) - 180 }), !selIt, '左へ回す')}
+          {tool('rotr', '↻', () => patch(sel, { r: ((selIt.r + 15 + 540) % 360) - 180 }), !selIt, '右へ回す')}
+          {tool('color', '🎨 色', () => setColorOpen(true), !selIt)}
+          {tool('front', '前へ', () => patch(sel, { z: Math.max(...zs) + 1 }), !selIt)}
+          {tool('back', '後ろへ', () => patch(sel, { z: Math.min(...zs) - 1 }), !selIt)}
+          {tool('layer', selIt && selIt.a ? '助手の後ろへ' : '助手の前へ', () => patch(sel, { a: !selIt.a }), !selIt)}
+          {tool('keep', 'しまう', () => { commit(cur.filter(it => it.k !== sel)); setSel(null); }, !selIt)}
+        </div>)}
+      {/* 置いてある家具(押すと選ぶ)と、押し入れの家具(押すと部屋に出す) */}
+      <div className={`flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`} data-assistant-life-layout-chips>
+        {cur.map(it => chip(it.k, true))}{kept.map(k => chip(k, false))}
+        {got.length === 0 && <p className="text-[11px] font-bold text-slate-300">まだ家具がありません。「🪑 家具」から贈ると、ここに並びます</p>}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button type="button" data-assistant-life-layout-omakase disabled={got.length === 0} onClick={omakase} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-2 text-[12.5px] font-black text-white shadow active:scale-95 disabled:opacity-40">🎀 {who.name}におまかせ</button>
+        <button type="button" data-assistant-life-layout-undo onClick={() => { if (first.current) commit(first.current); setSel(null); }} className="min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95">もとに戻す</button>
+        <button type="button" data-assistant-life-layout-done onClick={onClose} className="min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95">✓ できた</button>
+      </div>
+    </div>);
+  return (
+    <div className={`absolute inset-0 flex ${land ? 'flex-row' : 'flex-col'} bg-slate-950`} style={{ zIndex: 34 }} data-assistant-life-layout-editor={id}>
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <AssistantLifeRoomScene {...scene} id={id} land={land} title={`${who.name}の部屋の模様替え`} sub="家具をつまんで好きな所へ。下の道具で大きさ・向き・色" bubble="" padLeft={78} dock={null} onBack={null} onPerson={null} onMasmon={null}
+          layoutWho={id} layoutEdit={{ items: cur, sel, onSelect: (k) => { setSel(k); setColorOpen(false); },
+            onMove: (k, x, y) => setItems(cur.map(it => (it.k === k ? { ...it, x, y } : it))), onDrop: () => { if (items) commit(items); } }}/>
+        {/* おまかせのひとこと(助手が留守でも出す) */}
+        {line && <p className="pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow" style={{ top: land ? 50 : 70, zIndex: 30, wordBreak: 'auto-phrase' }} data-assistant-life-layout-line>{who.name}「{line}」</p>}
+      </div>
+      {panel}
     </div>);
 }
 

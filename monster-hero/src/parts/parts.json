@@ -392,6 +392,10 @@
       "role": "部品: 助手ライフの道具(2人に贈る10種類)・好み(好き・ふつう・苦手。贈ると分かる・仲良し度の段で教えてくれる)・贈るシート・部屋の「好きなもの」。保存 mh_assistant_life_gift_day_v1・mh_assistant_life_likes_v1・mh_assistant_life_cheki_v1。2026-11-08 GIFT-PLAN.md"
     },
     {
+      "file": "56-assistant-life-roomedit.jsx",
+      "role": "部品: 助手の部屋の模様替え(大きな部屋の上で家具を指でつまんで動かす・大きさ・向き・色・前後・「◯◯におまかせ」)。公開の印 assistantLifeRoomEdit の後ろ。保存は新しいキー mh_assistant_life_room_layout_v1 と一度きりの写しの印 mh_assistant_life_room_layout_migrated_v1(今の mh_assistant_life_room_v1 は読むだけ)。docs/progress/assistant-life/ROOM-LAYOUT-PLAN.md"
+    },
+    {
       "file": "56-assistant-life-masmon.jsx",
       "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
     },
