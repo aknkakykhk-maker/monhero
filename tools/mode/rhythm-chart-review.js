@@ -264,11 +264,14 @@ const pictureSvg=(panels,audio,title)=>{
   o.push('</svg>');return o.join('\n');
 };
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+// 止め絵を PNG にするブラウザ。入っている Playwright の版に合うものが無ければ、置いてある Chromium(/opt/pw-browsers/chromium・PLAYWRIGHT_CHROMIUM)を使う
+const launchChromium=async pw=>{for(const opt of [{},{executablePath:process.env.PLAYWRIGHT_CHROMIUM||'/opt/pw-browsers/chromium'}]){try{return await pw.chromium.launch(opt);}catch(e){}}return null;};
 const writePicture=async(file,svg)=>{
   fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(`${file}.svg`,svg);
   let pw=null;try{pw=require('playwright');}catch(e){try{pw=require(path.join(__dirname,'..','node_modules','playwright'));}catch(e2){}}
   if(!pw)return [`${file}.svg`];
-  const m=svg.match(/width="(\d+)" height="(\d+)"/),browser=await pw.chromium.launch();
+  const m=svg.match(/width="(\d+)" height="(\d+)"/),browser=await launchChromium(pw);
+  if(!browser)return [`${file}.svg`];// ブラウザが無い環境では SVG だけ(SVG はそのまま開ける)
   try{const page=await browser.newPage({viewport:{width:Number(m[1]),height:Number(m[2])},deviceScaleFactor:2});await page.setContent(`<body style="margin:0;background:#0f172a">${svg}</body>`);
     await page.screenshot({path:`${file}.png`});}finally{await browser.close();}
   return [`${file}.svg`,`${file}.png`];
@@ -276,7 +279,7 @@ const writePicture=async(file,svg)=>{
 
 const reviewOf=(loaded,difficulties)=>{const by={};for(const d of DIFFS){if(!loaded.charts[d]||(difficulties&&!difficulties.includes(d)))continue;by[d]=measureChart(loaded.charts[d],loaded.audio,{formula:loaded.formula,difficulty:d});}return by;};
 
-module.exports={measureChart,ladderOf,hotSpots,toRuntimeChart,loadAuthoring,loadReleased,reviewOf,calibrate,readBands,outOfBand,pictureSvg,BAND_KEYS,BANDS_FILE,DIFFS};
+module.exports={launchChromium,writePicture,measureChart,ladderOf,hotSpots,toRuntimeChart,loadAuthoring,loadReleased,reviewOf,calibrate,readBands,outOfBand,pictureSvg,BAND_KEYS,BANDS_FILE,DIFFS};
 
 if(require.main===module)(async()=>{
   const args=process.argv.slice(2),arg=(n,d=null)=>{const i=args.indexOf(n);return i>=0&&i+1<args.length?args[i+1]:d;},has=n=>args.includes(n);

@@ -122,9 +122,7 @@ if(require.main===module)(async()=>{
     notes:r.m.notes,nps:r.m.nps,peak4s:r.m.peak4s,minGapMs:r.m.minGapMs,impossible:r.m.impossible,cross:r.m.cross,reach:r.m.reach,jump:r.m.jump,heldBand:r.m.heldBand,monsters:r.m.monsters}))},null,1)+'\n');
   console.log(`書いた: ${path.join(dir,'AUDIT.md')}`);
   const n=Number(argOf('--pictures',0))||0;
-  if(n){const pw=require('playwright');void pw;const {pictureSvg}=R;
-    for(const r of top.slice(0,n)){const file=path.join(dir,`${r.songId.replace(/_/g,'-')}-${r.difficulty.toLowerCase()}`),svg=pictureSvg([{label:r.difficulty,chart:r.chart,metrics:r.m}],r.audio,`${r.name} ${r.difficulty} 表示Lv.${r.shown} ${r.m.notes}ノーツ  ${[...r.odd,r.levelFlag].filter(Boolean).join('・')}`);
-      const m=svg.match(/width="(\d+)" height="(\d+)"/),browser=await pw.chromium.launch();
-      try{const page=await browser.newPage({viewport:{width:Number(m[1]),height:Number(m[2])},deviceScaleFactor:1});await page.setContent(`<body style="margin:0;background:#0f172a">${svg}</body>`);await page.screenshot({path:`${file}.png`});}finally{await browser.close();}
-      console.log(`止め絵: ${file}.png`);}}
+  if(n)for(const r of top.slice(0,n)){const files=await R.writePicture(path.join(dir,`${r.songId.replace(/_/g,'-')}-${r.difficulty.toLowerCase()}`),
+      R.pictureSvg([{label:r.difficulty,chart:r.chart,metrics:r.m}],r.audio,`${r.name} ${r.difficulty} 表示Lv.${r.shown} ${r.m.notes}ノーツ  ${[...r.odd,r.levelFlag].filter(Boolean).join('・')}`));
+    console.log(`止め絵: ${files[files.length-1]}`);}
 })().catch(e=>{console.error(e.stack||e);process.exit(1);});

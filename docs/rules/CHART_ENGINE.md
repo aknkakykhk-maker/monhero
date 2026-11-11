@@ -189,7 +189,7 @@
 | 難易度を聞くときの体感の数字を書き捨ての `node -e` で出す | `rhythm-chart-review.js` の表 |
 
 7曲(Evans・ROSE 全編/short・ヒューマノイド・Altar short・Rebellion short・Toward the Stars short)の EXPERT・MASTER 14譜面を、変更前のワークツリーと作り比べた合計:
-押せない 15 → 2・帯の中 38 → 0・モンスターが4個でない譜面 6 → 0・交差 250 → 108・届きにくい 431 → 231・跳び 167 → 145(既定=`keep-climax`・Lv. は±1〜2)。
+押せない 15 → 2・帯の中 38 → 0・モンスターが4個でない譜面 6 → 0・交差 250 → 105・届きにくい 431 → 227・跳び 167 → 144(既定=`keep-climax`・ノーツ数は同じ・Lv. は±1〜2)。EASY〜HARD の21譜面は交差・届きにくい・跳びとも変わらない。
 `handFinish:'must'` なら 交差 240・届きにくい 430・跳び 164、`'smooth'` なら 交差 18・届きにくい 90・跳び 131。
 止め絵と数字: [`docs/progress/beat-chart-tools/`](../progress/beat-chart-tools/README.md)
 
