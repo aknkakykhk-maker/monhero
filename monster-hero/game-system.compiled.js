@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c44bfdcdbfca0814
+// source-sha256: ef2776c5542b2466
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112174,6 +112174,10 @@ function AssistantLifeHouse({
     },
     onRoad: () => setTab('friends'),
     onGuide: () => setGuideOpen(true)
+  }), uiV2 && typeof AssistantLifeDailyCard === 'function' && React.createElement(AssistantLifeDailyCard, {
+    ids: ids,
+    nameOf: nameOf,
+    land: land
   }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
     style: {
@@ -115175,6 +115179,228 @@ function AssistantLifeUiSettingRow() {
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))));
+}
+const ASSISTANT_LIFE_DAILY_KEY = 'mh_assistant_life_daily_v1';
+const ASSISTANT_LIFE_DAILY_NEED = 7;
+const ASSISTANT_LIFE_DAILY_ITEM = 'peer_gift';
+const ASSISTANT_LIFE_DAILY_SCENES = Object.freeze({
+  late: {
+    icon: '🌙',
+    text: '{n}が夜ふかしをしています',
+    say: 'しーっ…みんなには ないしょですよ'
+  },
+  morning: {
+    icon: '🌅',
+    text: '{n}が朝の空気を吸っています',
+    say: 'おはようございます。今日もいい一日になりそうですね'
+  },
+  noon: {
+    icon: '🍙',
+    text: '{n}がお昼ごはんを食べています',
+    say: 'お昼はやっぱり元気が出ますね。ひとくち、どうですか'
+  },
+  afternoon: {
+    icon: '☀️',
+    text: '{n}がひなたでひと休みしています',
+    say: 'ぽかぽかして、つい うとうとしてしまいますね'
+  },
+  evening: {
+    icon: '🌇',
+    text: '{n}が夕日を見ています',
+    say: '夕日がきれいですね。一緒に見られて うれしいです'
+  },
+  night: {
+    icon: '⭐',
+    text: '{n}が星を見ています',
+    say: '今日も一日おつかれさまでした。また明日'
+  }
+});
+const assistantLifeDailySceneOf = h => h < 5 ? 'late' : h < 10 ? 'morning' : h < 14 ? 'noon' : h < 18 ? 'afternoon' : h < 21 ? 'evening' : 'night';
+const assistantLifeDailyNormalize = v => {
+  const o = v && typeof v === 'object' ? v : {};
+  const days = Array.isArray(o.days) ? o.days.filter(d => typeof d === 'string' && d).slice(-ASSISTANT_LIFE_DAILY_NEED) : [];
+  return {
+    day: typeof o.day === 'string' ? o.day : '',
+    heard: Array.isArray(o.heard) ? o.heard.filter(s => typeof s === 'string') : [],
+    days: [...new Set(days)],
+    claims: Number.isFinite(o.claims) && o.claims > 0 ? Math.floor(o.claims) : 0
+  };
+};
+const assistantLifeDailyHear = (st, slotId, day) => {
+  const s = assistantLifeDailyNormalize(st);
+  const heard = s.day === day ? s.heard : [];
+  if (heard.includes(slotId)) return {
+    st: {
+      ...s,
+      day,
+      heard
+    },
+    added: false,
+    full: false
+  };
+  const days = s.days.includes(day) ? s.days : [...s.days, day].slice(-ASSISTANT_LIFE_DAILY_NEED);
+  return {
+    st: {
+      ...s,
+      day,
+      heard: [...heard, slotId],
+      days
+    },
+    added: true,
+    full: days.length >= ASSISTANT_LIFE_DAILY_NEED
+  };
+};
+const ASSISTANT_LIFE_DAILY_STORE = {
+  loaded: false,
+  p: null,
+  state: assistantLifeDailyNormalize(null),
+  granter: null,
+  async load() {
+    if (this.loaded) return this.state;
+    if (!this.p) this.p = Promise.resolve(storeGet(ASSISTANT_LIFE_DAILY_KEY, null, false)).then(v => {
+      this.state = assistantLifeDailyNormalize(v);
+      this.loaded = true;
+      return this.state;
+    }).catch(() => {
+      this.loaded = true;
+      return this.state;
+    });
+    return this.p;
+  }
+};
+const assistantLifeDailySetGranter = fn => {
+  ASSISTANT_LIFE_DAILY_STORE.granter = typeof fn === 'function' ? fn : null;
+};
+const assistantLifeDailyListen = async slotId => {
+  const S = ASSISTANT_LIFE_DAILY_STORE;
+  await S.load();
+  const r = assistantLifeDailyHear(S.state, slotId, assistantLifePerkDay());
+  if (!r.added) return {
+    added: false,
+    got: false
+  };
+  let st = r.st,
+    got = false;
+  if (r.full && typeof S.granter === 'function') {
+    try {
+      got = (await S.granter(ASSISTANT_LIFE_DAILY_ITEM)) === true;
+    } catch (_) {
+      got = false;
+    }
+    if (got) st = {
+      ...st,
+      days: [],
+      claims: st.claims + 1
+    };
+  }
+  S.state = st;
+  try {
+    await storeSet(ASSISTANT_LIFE_DAILY_KEY, st, false);
+  } catch (_) {}
+  if (typeof missionNotify === 'function') missionNotify('assistantTouch');
+  return {
+    added: true,
+    got
+  };
+};
+function AssistantLifeDailyCard({
+  ids,
+  nameOf,
+  land = false
+}) {
+  const [st, setSt] = React.useState(() => ASSISTANT_LIFE_DAILY_STORE.state);
+  const [said, setSaid] = React.useState('');
+  const [got, setGot] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => {
+    let alive = true;
+    ASSISTANT_LIFE_DAILY_STORE.load().then(s => {
+      if (alive) setSt(s);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  let slot = null;
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt() : null;
+  } catch (_) {
+    slot = null;
+  }
+  const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
+  const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
+  const list = Array.isArray(ids) ? ids : [];
+  if (!scene || !list.length) return null;
+  const day = assistantLifePerkDay();
+  const done = st.day === day && st.heard.includes(slot.id);
+  const who = list[slot.i % list.length];
+  const leftH = (() => {
+    const s = slotDef;
+    const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
+    return s ? Math.max(1, s.to - h) : 1;
+  })();
+  const n = st.days.length;
+  const listen = async () => {
+    if (busy || done) return;
+    setBusy(true);
+    const r = await assistantLifeDailyListen(slot.id);
+    setSt({
+      ...ASSISTANT_LIFE_DAILY_STORE.state
+    });
+    setSaid(`${nameOf(who)}「${scene.say}」`);
+    setGot(!!r.got);
+    setBusy(false);
+  };
+  const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
+  return React.createElement("section", {
+    className: `mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`,
+    "data-assistant-life-daily": true
+  }, React.createElement("p", {
+    className: "flex items-center gap-2 px-1 text-[13px] font-black text-amber-200"
+  }, scene.icon, " ", slotDef.label, "の できごと ", React.createElement("span", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, "あと約", leftH, "時間")), React.createElement("div", {
+    className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1"
+  }, React.createElement("span", {
+    className: "w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200"
+  }, done ? '✓ 聞いた' : '🆕 いま'), React.createElement("span", {
+    className: `min-w-0 flex-1 ${T} font-bold leading-snug`,
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
+    className: "block text-[11px] text-emerald-300"
+  }, "→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)"), got && React.createElement("span", {
+    className: "block text-[11px] text-pink-200"
+  }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-daily-listen": true,
+    onClick: listen,
+    disabled: busy,
+    className: "shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60"
+  }, "聞く ▶")), React.createElement("div", {
+    className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1",
+    "data-assistant-life-daily-stamps": n
+  }, React.createElement("span", {
+    className: "w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200"
+  }, "🧺 7日で1個"), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: `block ${T} font-bold leading-snug`,
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "できごとを聞いた日が7日たまると、🧺 おやつバスケット1個"), React.createElement("span", {
+    className: "mt-0.5 flex gap-1",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: ASSISTANT_LIFE_DAILY_NEED
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    className: `grid h-5 w-5 place-items-center rounded-full text-[11px] not-italic ${i < n ? 'bg-amber-300 text-slate-900' : i === ASSISTANT_LIFE_DAILY_NEED - 1 ? 'bg-pink-400' : 'bg-slate-700'}`
+  }, i < n ? '✓' : i === ASSISTANT_LIFE_DAILY_NEED - 1 ? '🧺' : i + 1))), React.createElement("span", {
+    className: "block text-[11px] font-bold text-emerald-300"
+  }, "あと", Math.max(0, ASSISTANT_LIFE_DAILY_NEED - n), "日(とびとびでもOK・消えません)"))));
 }
 const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
 function assistantLifeBondOpens(id, nextLevel) {
@@ -141800,6 +142026,337 @@ function AlfFavEditor({
     className: "mt-1 text-[10px] leading-snug text-slate-400"
   }, "選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
 }
+const MASMON_PVP_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/masmon-pvp`;
+const MASMON_PVP_KEY = 'mh_masmon_pvp_owner_key_v1';
+const MASMON_PVP_TIMEOUT_MS = 12000;
+const MASMON_PVP_CHALLENGE_DAILY = 20;
+const MASMON_PVP_REASON_TEXT = Object.freeze({
+  off: 'フレンド対戦は準備中です',
+  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  no_id: 'この端末ではまだ登録できません',
+  locked: 'この登録は別の端末で作られています',
+  over_cap: '育った量が、日数から考えられる上限を超えています',
+  team: '編成の中に、登録できないところがあります',
+  no_entry: '先に自分の助手の編成を登録してね',
+  no_opponent: 'その助手の編成は、まだ登録されていません',
+  not_friend: 'フレンドどうしだけが対戦できます',
+  size_short: '編成の体数が足りません',
+  limit: '今日の対戦はここまで。また明日ね',
+  self: '自分とは対戦できません'
+});
+const masmonPvpReasonText = reason => MASMON_PVP_REASON_TEXT[reason] || MASMON_PVP_REASON_TEXT.server;
+const masmonPvpOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantMasmonBattlePvp === true;
+const masmonPvpSafeId = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : null;
+const masmonPvpOwnerKey = async (create = false) => {
+  let key = null;
+  try {
+    key = await storeGet(MASMON_PVP_KEY, null, false);
+  } catch (_) {
+    key = null;
+  }
+  if (typeof key === 'string' && /^[0-9a-f]{48}$/.test(key)) return key;
+  if (!create) return null;
+  try {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const made = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (!(await storeSet(MASMON_PVP_KEY, made, false))) return null;
+    return made;
+  } catch (_) {
+    return null;
+  }
+};
+const masmonPvpSelf = async createKey => {
+  const owner = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  const key = owner ? await masmonPvpOwnerKey(createKey) : null;
+  return owner && key ? {
+    owner,
+    key
+  } : null;
+};
+const masmonPvpPost = async body => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), MASMON_PVP_TIMEOUT_MS) : null;
+  try {
+    const r = await fetch(MASMON_PVP_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: ac ? ac.signal : undefined
+    });
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (_) {
+      j = null;
+    }
+    if (j && j.ok) return j;
+    const e = j && typeof j.error === 'string' ? j.error : r.status >= 500 ? 'server' : 'network';
+    return {
+      ok: false,
+      reason: MASMON_PVP_REASON_TEXT[e] ? e : 'server',
+      detail: j && (j.detail || j.problems) || null
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const masmonPvpRead = async path => {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers: SB_HEADERS,
+      cache: 'no-store'
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j) ? j : null;
+  } catch (_) {
+    return null;
+  }
+};
+const masmonPvpRegister = async ({
+  assistantId,
+  size,
+  members,
+  plan,
+  swapPace,
+  tactics,
+  userName,
+  icon
+} = {}) => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(true);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const n = Math.max(1, Math.min(3, Number.isInteger(size) ? size : 3));
+  const list = (Array.isArray(members) ? members : []).slice(0, n);
+  const team = {
+    tactics: Number.isInteger(tactics) ? Math.max(0, Math.min(100, tactics)) : 0,
+    members: list
+  };
+  if (typeof plan === 'string' && plan) team.plan = plan;
+  if (typeof swapPace === 'string' && swapPace) team.swapPace = swapPace;
+  const r = await masmonPvpPost({
+    action: 'register',
+    owner: me.owner,
+    key: me.key,
+    assistant: assistantId,
+    name: typeof userName === 'string' ? userName : '',
+    icon: typeof icon === 'string' ? icon : null,
+    team
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason,
+    detail: r.detail
+  };
+};
+const masmonPvpUnregister = async ({
+  assistantId
+} = {}) => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: false,
+    reason: 'no_entry'
+  };
+  const r = await masmonPvpPost({
+    action: 'unregister',
+    owner: me.owner,
+    key: me.key,
+    assistant: assistantId
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const masmonPvpEntriesOf = async ownerIds => {
+  const ids = (Array.isArray(ownerIds) ? ownerIds : []).map(masmonPvpSafeId).filter(Boolean).slice(0, 100);
+  if (!ids.length) return [];
+  const rows = await masmonPvpRead(`masmon_pvp_entries?select=owner_id,assistant_id,user_name,icon,team,team_total,updated_at&active=eq.true&owner_id=in.(${ids.join(',')})&order=updated_at.desc`);
+  return rows || [];
+};
+const masmonPvpChallenge = async ({
+  assistantId,
+  friendId,
+  friendAssistantId,
+  kind = 'raw',
+  size = 3
+} = {}) => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: false,
+    reason: 'no_entry'
+  };
+  const fid = masmonPvpSafeId(friendId);
+  if (!fid) return {
+    ok: false,
+    reason: 'no_opponent'
+  };
+  let oppAssistant = typeof friendAssistantId === 'string' ? friendAssistantId : null;
+  if (!oppAssistant) {
+    const rows = await masmonPvpEntriesOf([fid]);
+    if (!rows.length) return {
+      ok: false,
+      reason: 'no_opponent'
+    };
+    oppAssistant = rows[0].assistant_id;
+  }
+  const r = await masmonPvpPost({
+    action: 'challenge',
+    owner: me.owner,
+    key: me.key,
+    assistant: assistantId,
+    opp_owner: fid,
+    opp_assistant: oppAssistant,
+    division: kind === 'fair' ? 'fair' : 'raw',
+    size
+  });
+  if (!r.ok) return {
+    ok: false,
+    reason: r.reason
+  };
+  const m = r.match || {};
+  return {
+    ok: true,
+    id: m.id,
+    seed: m.seed,
+    teamA: m.teamA,
+    teamB: m.teamB,
+    engineVersion: m.version,
+    techsVersion: m.techVersion,
+    balance: m.balance,
+    winner: m.winner,
+    reason: m.reason,
+    rounds: m.rounds,
+    digest: m.digest,
+    kind: m.division,
+    size: m.size,
+    rated: !!m.rated,
+    rating: m.a || null,
+    oppRating: m.b || null,
+    remaining: m.remaining
+  };
+};
+const masmonPvpRatings = async ({
+  kind = 'raw',
+  limit = 50,
+  week = null
+} = {}) => {
+  const div = kind === 'fair' ? 'fair' : 'raw';
+  const lim = Math.max(1, Math.min(200, Number(limit) || 50));
+  const weekly = typeof week === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(week);
+  const rows = weekly ? await masmonPvpRead(`masmon_pvp_weekly?select=owner_id,assistant_id,points,wins,losses,draws&division=eq.${div}&week=eq.${week}&order=points.desc&limit=${lim}`) : await masmonPvpRead(`masmon_pvp_ratings?select=owner_id,assistant_id,user_name,icon,rating,wins,losses,draws&division=eq.${div}&order=rating.desc,matches.desc&limit=${lim}`);
+  if (!rows) return {
+    ok: false,
+    reason: 'network',
+    rows: [],
+    mine: null
+  };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  const entries = await masmonPvpEntriesOf(rows.map(r => r.owner_id));
+  const teamOf = (o, a) => {
+    const e = entries.find(x => x.owner_id === o && x.assistant_id === a);
+    return e && e.team && Array.isArray(e.team.members) ? e.team.members.map(u => u.species) : [];
+  };
+  const nameOf = (o, a, r) => r.user_name || (entries.find(x => x.owner_id === o && x.assistant_id === a) || {}).user_name || '名無しのブリーダー';
+  const list = rows.map((r, i) => ({
+    rank: i + 1,
+    name: nameOf(r.owner_id, r.assistant_id, r),
+    icon: r.icon ?? null,
+    assistantId: r.assistant_id,
+    rating: weekly ? r.points : r.rating,
+    win: r.wins,
+    lose: r.losses,
+    draw: r.draws,
+    members: teamOf(r.owner_id, r.assistant_id),
+    me: !!self && r.owner_id === self
+  }));
+  return {
+    ok: true,
+    rows: list,
+    mine: list.filter(r => r.me)
+  };
+};
+const masmonPvpFriends = async () => {
+  if (!masmonPvpOn()) return {
+    ok: false,
+    reason: 'off',
+    friends: [],
+    remaining: 0
+  };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  if (!self || typeof sbFetchFriendRoster !== 'function') return {
+    ok: false,
+    reason: 'no_id',
+    friends: [],
+    remaining: 0
+  };
+  let roster = [];
+  try {
+    roster = await sbFetchFriendRoster(self);
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network',
+      friends: [],
+      remaining: 0
+    };
+  }
+  const entries = await masmonPvpEntriesOf(roster.map(f => f.otherId));
+  const day = new Date(Date.now() + 9 * 3600000 - 4 * 3600000).toISOString().slice(0, 10);
+  const mine = await masmonPvpRead(`masmon_pvp_matches?select=id&a_owner=eq.${self}&day=eq.${day}&limit=100`);
+  const remaining = Math.max(0, MASMON_PVP_CHALLENGE_DAILY - (mine ? mine.length : 0));
+  const friends = roster.map(f => ({
+    friendId: f.otherId,
+    name: f.userName,
+    icon: f.icon ?? null,
+    profileFrame: f.profileFrame || null,
+    assistants: entries.filter(e => e.owner_id === f.otherId).map(e => ({
+      assistantId: e.assistant_id,
+      members: e.team && Array.isArray(e.team.members) ? e.team.members.map(u => ({
+        species: u.species,
+        name: u.name,
+        lv: u.lv
+      })) : [],
+      total: e.team_total,
+      updatedAt: Date.parse(e.updated_at) || 0
+    }))
+  })).map(f => ({
+    ...f,
+    registered: f.assistants.length > 0
+  }));
+  return {
+    ok: true,
+    friends,
+    remaining
+  };
+};
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
 const CARD_BATTLE_SETUP_GUTS_MAX = 2;
@@ -190172,6 +190729,23 @@ function MonsterHeroGame() {
       return r;
     });
   });
+  useEffect(() => {
+    if (typeof assistantLifeDailySetGranter === 'function') assistantLifeDailySetGranter(async itemId => {
+      if (typeof itemId !== 'string' || !itemId) return false;
+      const nextItems = {
+        ...ownedItemsRef.current,
+        [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1
+      };
+      try {
+        if ((await storeSet('mh_owned_items', nextItems, false)) === false) return false;
+      } catch {
+        return false;
+      }
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      return true;
+    });
+  }, []);
   useEffect(() => {
     if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener(tab => {
       setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item');
