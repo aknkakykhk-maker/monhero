@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d10c12f033d0e04f
+// source-sha256: fce4fccd7558aeb3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117048,7 +117048,7 @@ function AssistantLifeDailyCard({
   const who = cast ? cast.ids[0] : list[slot.i % list.length];
   const sceneKey = assistantLifeDailySceneOf(slotDef.from);
   const plan = typeof onScene === 'function' && assistantLifeDailySceneOn() ? assistantLifeDailyPlan(cast, sceneKey, day, slot.i) : null;
-  const sayLine = assistantLifeDailySay(who, sceneKey, day);
+  const sayLine = assistantLifeDailySceneOn() ? assistantLifeDailySay(who, sceneKey, day) : null;
   const castNames = plan ? plan.ids.map(nameOf).join('と') : nameOf(who);
   const castPlace = cast && cast.place && cast.place !== 'home' ? assistantLifePlaceShow(cast.place) : '家';
   const leftH = (() => {
