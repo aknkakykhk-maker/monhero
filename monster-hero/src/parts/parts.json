@@ -43,6 +43,11 @@
       "pure": true
     },
     {
+      "file": "18-assistant-partner.jsx",
+      "role": "助手の解放(これから始める人はアシストカードを40回使うと助手になる)の判定と、いまの値の入口",
+      "pure": true
+    },
+    {
       "file": "18-points-and-auto.jsx",
       "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
       "pure": true
@@ -280,6 +285,10 @@
       "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
     },
     {
+      "file": "59-assistant-partner-fx.jsx",
+      "role": "画面: 助手の解放の演出(カードが満ちる→影→立ち絵と一言→できるようになったこと)。見た目だけで保存に触らない"
+    },
+    {
       "file": "61-screen-masu-regen-donation.jsx",
       "role": "画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と、その確認・結果)"
     },
@@ -404,6 +413,14 @@
       "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },
     {
+      "file": "56-assistant-life-partner.jsx",
+      "role": "助手ライフの「町の人」(2026-11-11 社長の決め E・開発部カイホウ docs/progress/assistant-unlock/DESIGN.md): 助手になる前の助手は町・家に出るが、押すと小窓(一言と解放までのあと何回)・話す/贈る/部屋は🔒。判定は開発部の口 assistantPartnerOkNow(無いあいだは全員関われる)。新UIだけ。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-profile.jsx",
+      "role": "助手紹介(2026-11-11 社長・docs/progress/assistant-life/profile/PLAN.md): 助手ライフの下のタブ「📖 紹介」の一覧(AssistantLifeProfilePage)と1人ずつの紹介(AssistantLifeProfileSheet)。人となり・好き苦手(贈って分かったものだけ)・きずな・台詞の試し聞き。公開の印 assistantLifeProfile の後ろ。データは読むだけで、保存は NEW の印の新しいキー mh_assistant_life_profile_seen_v1 だけ"
+    },
+    {
       "file": "56-assistant-life-rel.jsx",
       "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
     },
@@ -434,6 +451,10 @@
     {
       "file": "56-assistant-masmon-battle-beta.jsx",
       "role": "部品: 助手マスモンの対戦 β(じゅんび→観戦→振り返り→ランキング)。口 assistantMasmonBattleOpen・assistantMasmonBattleRowInfo と入れ物 AssistantMasmonBattleHost。公開の印 assistantMasmonBattleBeta の後ろ(偽のあいだはデバッグ設定から確かめだけ・保存なし)。観戦は 56-assistant-masmon-battle-view.jsx の部品を使い回す。保存は新しいキー mh_assistant_masmon_battle_v1 だけ。案 docs/progress/assistant-peer/masmon-battle/beta/STYLE-PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-cheer.jsx",
+      "role": "部品: 助手がモンヒロバトルにいるときの 👀 修行を見る(練習試合・保存しない)・📣 応援する(1回 熟練+1・💗+5・合わせて1日3回)・一人修行の伸び。口 assistantMasmonTrainRowInfo・assistantMasmonCheer・assistantMasmonTrainWatchOpen と入れ物 AssistantMasmonTrainWatchHost(地図に置く)。公開の印 assistantMasmonCheer の後ろ。保存は新しいキー mh_assistant_masmon_cheer_v1。観戦は 56-assistant-masmon-battle-view.jsx・beta の部品を使い回す。案 docs/progress/assistant-peer/masmon-train/cheer/PLAN.md"
     },
     {
       "file": "56-assistant-life-friend.jsx",

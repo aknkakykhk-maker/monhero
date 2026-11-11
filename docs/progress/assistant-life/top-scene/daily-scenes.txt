@@ -1,0 +1,318 @@
+# 助手ライフ「できごとの場面」と「珍しいできごと」の台詞(ココロ3・2026-11-11・LINES-SPEC.md)
+# 場面は時間帯ごとに1場面(6場面×32本=192本)。2場面めは後から足せる。珍しいできごと 6つ×8人×2役=96本
+# 形: 「scene 場面id 題 | 2択1 | 2択2」/「場面id 役 助手id 表情 台詞」/「rare 題id 時間帯 題」/「題id 役 助手id 表情 台詞」
+# 台詞は(助手ごとの口調) 2択の返事 r1・r2 は open の人が言う。{c}はプレイヤーの呼び方
+
+scene late-1 夜ふかし | 🌙 いっしょに夜ふかしする | 😴 もう寝ようと言う
+scene morning-1 朝ののび | 🤸 いっしょにのびる | 🍞 朝ごはんに誘う
+scene noon-1 お昼ごはん | 🍙 いっしょに食べる | 🍰 デザートに誘う
+scene afternoon-1 おやつの最後の1個 | 🍪 半分こする | 🎲 じゃんけんで決める
+scene evening-1 夕日を見る | 📸 一緒に写真を撮る | 🌇 ふたりを撮ってあげる
+scene night-1 星空を見上げる | ⭐ 星をさがす | 🛏 そろそろ寝ようと言う
+
+late-1 open mua troubled まぢ眠いのに、目だけさえてるぢゃんｗ
+late-1 back mua normal わかるー、夜中ってなんか特別だよね
+late-1 r1 mua happy やった、夜ふかし仲間ぢゃん！ たのしー🌙
+late-1 r2 mua wink はーい、寝よ寝よ。あしたの朝まぢ起きれるかもｗ
+late-1 open kiki troubled 夜ふかししてしまいまつ…目がさえてしまいまつ
+late-1 back kiki normal 夜の静けさは、少しだけ心細いでつね
+late-1 r1 kiki happy 一緒だと安心でつ。夜ふかしも悪くないでつね♪
+late-1 r2 kiki normal はい、寝まつ。おやすみなさいでつ
+late-1 open momosuke troubled 眠いのに目がさえちゃった…もも、どうしようw
+late-1 back momosuke normal 夜ってドキドキするよね…！！
+late-1 r1 momosuke excited 一緒だと楽しい！！ 夜ふかしライブしちゃう？♡
+late-1 r2 momosuke happy はーい、寝る寝る！ おやすみ♡ あしたも元気にいくよ！！
+late-1 open dra troubled 夜更かししちまったな。目がさえてるな
+late-1 back dra normal 夜中は静かでいいもんだな
+late-1 r1 dra happy 一緒なら夜更かしも悪くないな、えへへ。せんべいでも食うか
+late-1 r2 dra normal そうだな、寝るか。おで、もう限界だな
+late-1 open atsu troubled 眠いのに寝れない笑 深夜テンションやばい笑
+late-1 back atsu normal 夜中ってなんかそわそわするわ笑
+late-1 r1 atsu happy 夜ふかし仲間だな笑 あしたの朝きついぞ笑
+late-1 r2 atsu normal だな、寝るか笑 おやすみ！
+late-1 open kyuko troubled ほい…こんな時間なのに、目が冴えてるぅ笑
+late-1 back kyuko normal 夜はなんか頭が回るんだよねぇ笑
+late-1 r1 kyuko happy 夜ふかし仲間、歓迎だよぉ笑 一緒に作戦会議しよぉ
+late-1 r2 kyuko normal ほい、寝よぉ。おやすみぃ
+late-1 open sorashido troubled もう深夜か。数字が二重に見えてきた…
+late-1 back sorashido normal 夜は集中できるんだ笑
+late-1 r1 sorashido happy 一緒だと心強いです。もう少しだけ、そばにいてくれると助かります笑
+late-1 r2 sorashido normal そうですね、今日はもう寝ます。おやすみなさい
+late-1 open erubin troubled 夜遅いのに、なんだか眠れないね
+late-1 back erubin normal 夜の静けさって、不思議と落ち着くね
+late-1 r1 erubin happy 一緒にいてくれてうれしいな☺️ もう少しだけおしゃべりしよう
+late-1 r2 erubin normal そうだね、休もうか。おやすみ
+
+morning-1 open mua excited おはよー！ 朝イチののびって最高だよねー🤸
+morning-1 back mua happy おはよー、からだがほぐれてく感じするー
+morning-1 r1 mua excited せーのっ、んーっ！ ｳﾝｳﾝ気持ちいー
+morning-1 r2 mua happy 朝ごはん！ それ最高ぢゃん、行こ行こー🍞
+morning-1 open kiki happy おはようございまつ。朝ののびは気持ちいいでつ♪
+morning-1 back kiki normal からだが目覚めていく感じがしまつね
+morning-1 r1 kiki happy いち、にの、さん…ふぅ。すっきりしまつ♪
+morning-1 r2 kiki excited 朝ごはん、いいでつね！ お腹がすいてきまつ♪
+morning-1 open momosuke excited おはよう！！ 朝のストレッチ、ももの日課なの♡
+morning-1 back momosuke happy 体が目覚めてくるよね！！
+morning-1 r1 momosuke excited せーの、んーっ！！ 一緒だと気持ちいいよ♡
+morning-1 r2 momosuke happy 朝ごはん行く行く！！ もも、パンがいい♡
+morning-1 open dra happy おはよう。朝ののびは気持ちいいな、えへへ
+morning-1 back dra normal 体がほぐれるのはいいもんだな
+morning-1 r1 dra happy ぐーっとのびるな。おで、腰がよろこんでるな
+morning-1 r2 dra excited 朝ごはんか。おで、ごはんにせんべいだな、えへへ
+morning-1 open atsu excited おはよ！ 朝イチののびは気持ちいい笑
+morning-1 back atsu happy 体起きてくる感じ、いいわ笑
+morning-1 r1 atsu excited せーの、んーっ！ 気持ちいいー笑
+morning-1 r2 atsu happy 朝メシか！ 腹減ってたんだよね笑
+morning-1 open kyuko happy ほい、おはよぉ。朝ののびは大事だよぉ笑
+morning-1 back kyuko normal 体を起こさないと頭も回らないしねぇ
+morning-1 r1 kyuko happy いーち、にー…ほい、すっきりぃ笑
+morning-1 r2 kyuko excited 朝ごはん、作戦のうちだねぇ笑 行こぉ
+morning-1 open sorashido happy 朝か。のびをすると頭もすっきりするな笑
+morning-1 back sorashido normal 朝の空気はいいな。数字もよく見える笑
+morning-1 r1 sorashido happy 一緒にのびると気持ちいいですね笑
+morning-1 r2 sorashido happy 朝ごはん、いいですね。食べながら表を見ます笑
+morning-1 open erubin happy おはよう。朝ののびって心地よいね
+morning-1 back erubin happy 体がゆっくり目覚めていくね
+morning-1 r1 erubin happy 一緒にのびると、もっと心地よいね☺️
+morning-1 r2 erubin excited 朝ごはんか、いい考えだね。おなかすいてきたよ
+
+noon-1 open mua happy お昼の時間だー！ なに食べるかまぢ迷うー
+noon-1 back mua wink おなかぺこぺこだよね、わかるわかるｗ
+noon-1 r1 mua excited 一緒に食べよ！ それだけでおいしさ倍ぢゃん🍴
+noon-1 r2 mua happy デザートは別腹ぢゃんｗ 行こ行こー！
+noon-1 open kiki happy お昼でつね。今日は何を食べまつか？
+noon-1 back kiki wink 迷う時間も、楽しいでつ♪
+noon-1 r1 kiki happy 一緒に食べると、おいしさが倍でつ♪
+noon-1 r2 kiki excited デザート！ それは断れないでつ♪♪
+noon-1 open momosuke happy お昼だー！！ 今日のごはん、なににしよう♡
+noon-1 back momosuke excited おなかペコペコだよね！！
+noon-1 r1 momosuke happy 一緒に食べるとおいしさ倍だよ♡ ももうれしい！！
+noon-1 r2 momosuke excited デザート！！ それは外せないよ♡♡
+noon-1 open dra happy お昼だな。おで、腹の虫が鳴いてるな
+noon-1 back dra wink いい匂いがしてくるな、えへへ
+noon-1 r1 dra happy 一緒に食うとうまいな、えへへ
+noon-1 r2 dra excited デザートか。それは行くしかないな
+noon-1 open atsu happy 昼メシの時間だー笑 なに食べよっかな笑
+noon-1 back atsu excited 腹へったー！ 何でも入りそう笑
+noon-1 r1 atsu happy 一緒に食うとうまいわ笑
+noon-1 r2 atsu excited デザート！ それは行くしかないでしょ笑
+noon-1 open kyuko happy ほい、お昼だぁ。今日は何食べよっかなぁ笑
+noon-1 back kyuko wink 悩む時間も醍醐味っしょw
+noon-1 r1 kyuko happy 一緒に食べるとおいしいよねぇ笑
+noon-1 r2 kyuko excited デザートは別腹だぁ！ 乗ったぁ笑
+noon-1 open sorashido normal お昼か。ごはん食べながら数字を見ちゃう笑
+noon-1 back sorashido wink 定食にするか、麺にするか。悩むな笑
+noon-1 r1 sorashido happy 一緒に食べると、味が分かる気がします笑
+noon-1 r2 sorashido excited デザートですか。それは付き合います笑
+noon-1 open erubin happy お昼の時間だね。今日は何を食べようかな
+noon-1 back erubin wink 迷うのも楽しい時間だね☺️
+noon-1 r1 erubin happy 一緒に食べると、おいしさが増すね☺️
+noon-1 r2 erubin excited デザートか、嬉しいな。行ってみよう笑
+
+afternoon-1 open mua surprise あっ、最後の1個ぢゃん！ これは迷うー🍪
+afternoon-1 back mua troubled えー、ゆずりたくないけどぉｗ
+afternoon-1 r1 mua happy 半分こ！ やさしー、まぢありがと♪
+afternoon-1 r2 mua excited じゃんけんぽん！ 負けても恨みっこなしぢゃんｗ
+afternoon-1 open kiki surprise あ、おやつが最後の1個でつ。どうしまつか…
+afternoon-1 back kiki troubled ゆずりたいけど、食べたいでつ…
+afternoon-1 r1 kiki happy 半分こ、うれしいでつ。やさしいでつね♪
+afternoon-1 r2 kiki excited じゃんけんでつね！ 負けても笑顔でつ♪
+afternoon-1 open momosuke surprise あっ、おやつ最後の1個だ！！ どうしよう…
+afternoon-1 back momosuke troubled 食べたいけど、ゆずりたい気もする…w
+afternoon-1 r1 momosuke happy 半分こ！！ やさしい♡ ありがとう！！
+afternoon-1 r2 momosuke excited じゃんけんだね！！ 負けないよ！！w
+afternoon-1 open dra surprise おっ、おやつが最後の1個だな。どうするか迷うな
+afternoon-1 back dra troubled おで、食べたいが…ゆずりたい気もするな
+afternoon-1 r1 dra happy 半分こか。{c}はやさしいな、えへへ
+afternoon-1 r2 dra excited じゃんけんだな。おで、グーしか出さないぞ
+afternoon-1 open atsu surprise あ、おやつ最後の1個だ！ 迷う笑
+afternoon-1 back atsu troubled 食いたいけどゆずるべきか笑
+afternoon-1 r1 atsu happy 半分こか！ やさしいな笑 ありがと！
+afternoon-1 r2 atsu excited じゃんけんな！ 負けないぞ笑
+afternoon-1 open kyuko surprise ほい、最後の1個だぁ。これは悩むなぁ笑
+afternoon-1 back kyuko troubled ゆずるか、取るか…作戦会議だぁw
+afternoon-1 r1 kyuko happy 半分こ、平和で最高だぁ笑 ありがとぉ
+afternoon-1 r2 kyuko excited じゃんけんなら負けないよぉ笑
+afternoon-1 open sorashido surprise おやつ、最後の1個か。計算しても答えが出ない笑
+afternoon-1 back sorashido troubled 食べたいけど、ゆずる選択もあるな笑
+afternoon-1 r1 sorashido happy 半分こですか。公平でいい考えです笑
+afternoon-1 r2 sorashido excited じゃんけんは確率3分の1ですね。勝負します笑
+afternoon-1 open erubin surprise あ、おやつが最後の1個だね。迷っちゃうな
+afternoon-1 back erubin troubled 食べたいけど、ゆずりたい気持ちもあるね
+afternoon-1 r1 erubin happy 半分こ、うれしいな☺️ {c}はやさしいね
+afternoon-1 r2 erubin excited じゃんけんか。負けても笑って許してね笑
+
+evening-1 open mua happy 夕焼けまぢきれい〜 写真とっとこ📸
+evening-1 back mua excited ほんとだ、空ぜんぶオレンジぢゃん✨
+evening-1 r1 mua wink 並んでパシャッ！ あとで送るねー📸
+evening-1 r2 mua happy えー撮ってくれるの？ {c}ってやさしー♪
+evening-1 open kiki happy 空がオレンジ色でつ。きれいでつね♪
+evening-1 back kiki happy ずっと見ていたくなりまつね
+evening-1 r1 kiki happy 並んで撮りまつ。いい思い出になりまつ♪
+evening-1 r2 kiki excited 撮ってくれるんでつか！ うれしいでつ♪♪
+evening-1 open momosuke happy 夕日きれい！！ もも、いま最高にキラキラしてるw
+evening-1 back momosuke excited 空ぜんぶオレンジ！！ すてきだね♡
+evening-1 r1 momosuke wink 並んで撮ろ！！ 笑ってね、せーの♡
+evening-1 r2 momosuke excited え、撮ってくれるの！！ ありがとう♡
+evening-1 open dra happy 夕日がきれいだな。おで、見入っちまったな
+evening-1 back dra happy 空がオレンジ一色だな、えへへ
+evening-1 r1 dra happy 並んで撮るのか。おで、笑顔になるな
+evening-1 r2 dra excited おで、撮ってもらえるのか。うれしいな、えへへ
+evening-1 open atsu happy 夕日やば笑 空ぜんぶオレンジなんだけど笑
+evening-1 back atsu excited それな笑 今日いっぱい動いたし！
+evening-1 r1 atsu excited いい顔！ これ待ち受けにしよ笑
+evening-1 r2 atsu wink え、撮ってくれんの！ ありがと笑
+evening-1 open kyuko happy ほい、夕焼けだぁ。ちょっとだけ見てこ笑
+evening-1 back kyuko happy 空ぜんぶオレンジだぁ。きれいだなぁ
+evening-1 r1 kyuko wink ほい、並んでパシャッと笑 いい一枚だぁ
+evening-1 r2 kyuko happy 撮ってくれるのぉ？ ありがとぉ笑
+evening-1 open sorashido happy 夕日、きれいだな。明日もがんばれそう
+evening-1 back sorashido normal 空の色が刻々と変わっていくな
+evening-1 r1 sorashido happy 並んで撮りましょう。いい記念になります笑
+evening-1 r2 sorashido surprise え、撮ってくれるんですか。ありがとうございます笑
+evening-1 open erubin happy 夕日がきれいだね。見てるとほっとするよ
+evening-1 back erubin happy 空がオレンジ一色だね。心まで染まりそう
+evening-1 r1 erubin wink 並んで撮ろうか。いい思い出になるね☺️
+evening-1 r2 erubin happy 撮ってくれるの？ うれしいな。ありがとう☺️
+
+night-1 open mua happy 星いっぱいー！ 見上げるだけで元気出るぢゃん
+night-1 back mua normal 静かでいい夜だよねー、まぢ落ち着く
+night-1 r1 mua excited あ、あれ流れ星かも！ …気のせいだったｗ
+night-1 r2 mua wink はーい、寝よ寝よ。おやすみ、また明日ね🌙
+night-1 open kiki happy 星がたくさんでつ。きれいでつね♪
+night-1 back kiki normal 静かで、心が落ち着きまつね
+night-1 r1 kiki excited あっ、いま光ったでつ！ 流れ星でつか？
+night-1 r2 kiki normal はい、そろそろ寝まつ。おやすみなさいでつ
+night-1 open momosuke happy 星がいっぱい！！ ステージのライトみたい♡
+night-1 back momosuke normal 夜空っていい雰囲気だよね…！！
+night-1 r1 momosuke excited あっ光った！！ 流れ星かも♡ お願いごとしなきゃ！！
+night-1 r2 momosuke happy うん、寝よっか♡ おやすみ！！ あしたも歌うよ！！
+night-1 open dra happy 星がいっぱいだな。おで、ずっと見ていられるな
+night-1 back dra normal 夜空を見てると、気持ちが落ち着くな
+night-1 r1 dra excited おっ、いま流れたな！ 願いごと、間に合わなかったな
+night-1 r2 dra normal そうだな、寝るか。おやすみだな、えへへ
+night-1 open atsu happy 星いっぱいだ！ 見てると元気出る笑
+night-1 back atsu normal 夜空って落ち着くわ笑
+night-1 r1 atsu excited あ、いま流れた！ 願いごと間に合わなかった笑
+night-1 r2 atsu normal だな、寝るか！ おやすみ笑
+night-1 open kyuko happy ほい、星がいっぱいだぁ。見とれちゃうなぁ笑
+night-1 back kyuko normal 静かな夜だぁ。頭が休まるよねぇ
+night-1 r1 kyuko excited ほい、流れたぁ！ 願いごと間に合わなかったぁw
+night-1 r2 kyuko normal ほい、寝よぉ。おやすみぃ笑
+night-1 open sorashido happy 星がきれいだな。しばらく見ていたい
+night-1 back sorashido normal 夜空を見ると、考えが整理される
+night-1 r1 sorashido excited あ、流れました。願いごと間に合わなかったな笑
+night-1 r2 sorashido normal そうですね、そろそろ寝ます。おやすみなさい
+night-1 open erubin happy 星がたくさん出てるね。ずっと見ていたいな
+night-1 back erubin normal 夜空を見てると、心が静かになるね
+night-1 r1 erubin excited あ、いま流れたね！ 願いごと間に合わなかった笑
+night-1 r2 erubin normal そうだね、そろそろ休もう。おやすみ☺️
+
+rare shootingstar night 流れ星
+rare rainbow afternoon 虹
+rare rainshelter evening 夕立で雨宿り
+rare sunrise morning 朝焼け
+rare fullmoon late まんまるの月
+rare cat noon ねこが遊びに来た
+
+shootingstar open mua surprise あっ流れ星！ まぢ見えたぢゃん！
+shootingstar back mua excited 見た見た！ 願いごと間に合わなかったー
+shootingstar open kiki surprise あっ、流れ星でつ！ 見えましたでつ♪
+shootingstar back kiki happy 見えましたでつ。願いごとは間に合わなかったでつ
+shootingstar open momosuke excited 流れ星だ！！ お願いごと、お願いごと！！
+shootingstar back momosuke happy 見た！！ キラッて光ったよ♡
+shootingstar open dra surprise おっ、流れ星だな。おで、初めて見たかもな
+shootingstar back dra happy いいもの見たな、えへへ
+shootingstar open atsu excited うわ、流れ星！ 今の見た！？
+shootingstar back atsu happy 見た見た！ 願いごと間に合わなかった笑
+shootingstar open kyuko surprise ほい、いまの見たぁ？ 流れ星…！
+shootingstar back kyuko excited 見たぁ！ 願いごと間に合わなかったぁw
+shootingstar open sorashido surprise あ、流れ星。願いごと言う間もなかったな
+shootingstar back sorashido happy 見えました。なんだか得した気分です笑
+shootingstar open erubin surprise あ、流れ星だ。見えたかな
+shootingstar back erubin happy 見えたよ。きれいだったね☺️
+
+rainbow open mua excited 虹ー！ まぢきれいぢゃん📷
+rainbow back mua happy ほんとだ、虹ってテンション上がるー
+rainbow open kiki surprise あっ、虹でつ。空に大きくかかってまつ♪
+rainbow back kiki happy 見られてうれしいでつ。幸せになれそうでつ
+rainbow open momosuke excited 虹だ！！ ステージの演出みたい♡
+rainbow back momosuke happy 虹ってワクワクするよね！！
+rainbow open dra surprise おっ、虹が出てるな。おで、思わず見入っちまったな
+rainbow back dra happy 空がにぎやかでいいな、えへへ
+rainbow open atsu excited 虹出てる！ でかっ笑
+rainbow back atsu happy 見られてラッキーだわ笑
+rainbow open kyuko surprise ほい、虹だぁ。でっかいなぁ笑
+rainbow back kyuko happy いいもの見たぁ。得した気分だぁw
+rainbow open sorashido surprise 虹か。久しぶりに見たな
+rainbow back sorashido normal 雨のあとの空はきれいですね笑
+rainbow open erubin surprise あ、虹が出てるね。大きくてきれいだな
+rainbow back erubin happy 見られてよかったね☺️ 気分が明るくなるよ
+
+rainshelter open mua surprise うわ、急に雨ぢゃん！ まぢびっくりｗ
+rainshelter back mua normal 軒下に入ろー、すぐ止むかもだよ
+rainshelter open kiki surprise わっ、夕立でつ。軒下に入りまつ
+rainshelter back kiki normal 雨の音を聞くのも、悪くないでつね♪
+rainshelter open momosuke surprise きゃっ、雨！！ 急いで雨宿りだ！！w
+rainshelter back momosuke happy 雨宿りって、ちょっとワクワクするよね♡
+rainshelter open dra surprise おっ、降ってきたな。おで、雨宿りするな
+rainshelter back dra normal 雨の音は落ち着くな、えへへ
+rainshelter open atsu surprise うわ、急に降ってきた！ 走れ走れ笑
+rainshelter back atsu normal 軒下で雨宿りだ笑 すぐ止むでしょ笑
+rainshelter open kyuko surprise ほい、夕立だぁ。軒下に避難だぁ笑
+rainshelter back kyuko normal 雨の音聞きながら、ぼーっとするのも悪くないなぁ
+rainshelter open sorashido surprise あ、夕立か。少し雨宿りしよう
+rainshelter back sorashido normal 雨の音を聞いてると落ち着きますね笑
+rainshelter open erubin surprise あ、雨が降ってきたね。少し雨宿りしようか
+rainshelter back erubin happy 雨の音を聞くのも、悪くないね☺️
+
+sunrise open mua excited 朝焼けやばー！ 空がピンクぢゃん📷
+sunrise back mua happy 早起きしてよかったー、まぢきれい
+sunrise open kiki happy 朝焼けでつ。空がやさしい色でつね♪
+sunrise back kiki happy 一日のはじまりが、きれいでつね
+sunrise open momosuke excited 朝焼けだ！！ ステージの幕が開くみたい♡
+sunrise back momosuke happy 空がキラキラしてるね！！
+sunrise open dra happy 朝焼けか。おで、早起きしてよかったな
+sunrise back dra normal 空が燃えてるみたいだな、えへへ
+sunrise open atsu excited 朝焼けやば！ 空ぜんぶ赤いんだけど笑
+sunrise back atsu happy 早起きの特権だわ笑
+sunrise open kyuko happy ほい、朝焼けだぁ。きれいだなぁ笑
+sunrise back kyuko happy 早起きは三文の徳ってやつだぁ笑
+sunrise open sorashido happy 朝焼けか。空の色がだんだん変わっていくな
+sunrise back sorashido happy 早起きすると得した気分になりますね笑
+sunrise open erubin happy 朝焼けがきれいだね。空の色が変わっていくよ
+sunrise back erubin happy 早起きしてよかったね☺️
+
+fullmoon open mua surprise うわ、月まんまるぢゃん！ でっかー🌕
+fullmoon back mua happy ほんとだ、光ってるー。まぢきれい
+fullmoon open kiki happy 月がまんまるでつ。きれいでつね♪
+fullmoon back kiki normal 夜道が明るくて、安心しまつね
+fullmoon open momosuke excited 満月だ！！ スポットライトみたい♡
+fullmoon back momosuke happy 夜空のステージだね！！
+fullmoon open dra surprise おっ、月がまんまるだな。おで、見入っちまったな
+fullmoon back dra happy うさぎが餅つきしてそうだな、えへへ
+fullmoon open atsu excited 月まんまる！ でかくない！？
+fullmoon back atsu happy 夜中に見るとさらにきれいだわ笑
+fullmoon open kyuko surprise ほい、満月だぁ。まんまるだなぁ笑
+fullmoon back kyuko normal 夜ふかししてよかったぁ。いいもの見たぁ笑
+fullmoon open sorashido surprise 満月か。まんまるできれいだな
+fullmoon back sorashido happy 夜ふかしの甲斐がありました笑
+fullmoon open erubin happy 満月だね。まんまるでとてもきれいだよ
+fullmoon back erubin happy 夜更かししてよかったね☺️
+
+cat open mua excited ねこ来たー！ まぢかわいー🐱
+cat back mua happy ふわふわだー、さわりたいぃ
+cat open kiki happy ねこさんが来まつ。愛らしいでつね♪
+cat back kiki happy そっと見守りまつ。なでたいでつ
+cat open momosuke excited ねこちゃんだ！！ 一緒に歌う？w
+cat back momosuke happy ふわふわで癒されるね♡
+cat open dra happy おっ、ねこが来たな。おで、せんべい分けるな
+cat back dra happy 丸くなってる姿がいいな、えへへ
+cat open atsu excited ねこ来た！ かわい笑
+cat back atsu happy 近くまで来てくれた笑 うれしい！
+cat open kyuko happy ほい、ねこだぁ。ふらっと来たなぁ笑
+cat back kyuko happy ごろごろしてるぅ。愛らしいなぁw
+cat open sorashido happy ねこか。ふらっと遊びに来たんだな笑
+cat back sorashido happy 見てると和みますね笑
+cat open erubin happy ねこが遊びに来たよ。愛らしいね☺️
+cat back erubin happy ふわふわだね。見てると癒されるな
