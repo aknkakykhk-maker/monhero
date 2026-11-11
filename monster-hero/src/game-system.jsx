@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fdff904f7dafb8bf
+// generated-sha256: 513238942b90d950
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10148,6 +10148,8 @@ const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
 // はじめて遊ぶ人の印(2026-10-27 社長「はじめて遊ぶ人のお話は、続けて流すのを1本まで」)。はじめての案内を通る人にだけ true を書く。
 // true の人は、HOME に着くたびにお話を1本だけ流す(残りは HOME を離れて戻ったときに1本ずつ)。前から遊んでいる人には付けない
 const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
+// はじめて遊ぶ人が、最初の本番のバトルを終えたときの印(新しいキー・一度付いたら消さない)。付くまでイベントのお話は自動で流さない(2026-11-11 案3)
+const FIRST_BATTLE_DONE_KEY = 'mh_first_battle_done_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
@@ -13475,6 +13477,20 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// れんしゅうを「はじめの1戦」と「つづき」に分けた(2026-11-11)。新しいキーを足すだけ(上の2つの意味は変えない)
+//   mh_battle_tutorial_first_v1 { done(はじめの1戦を最後まで), at, hints:{ system, mode, difficulty }(入口3画面の一言を出した) }
+//   mh_battle_tutorial_more_v1  { offered(つづきに誘った), done(つづきを最後まで), declined(誘いを断った) }
+const BATTLE_TUTORIAL_FIRST_KEY = 'mh_battle_tutorial_first_v1';
+const BATTLE_TUTORIAL_MORE_KEY = 'mh_battle_tutorial_more_v1';
+const normalizeBattleTutorialFirst = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const h = r.hints && typeof r.hints === 'object' && !Array.isArray(r.hints) ? r.hints : {};
+  return { done: r.done === true, at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0, hints: { system: h.system === true, mode: h.mode === true, difficulty: h.difficulty === true } };
+};
+const normalizeBattleTutorialMore = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return { offered: r.offered === true, done: r.done === true, declined: r.declined === true };
+};
 // モンビー(モンヒロビート)のチュートリアルを見たかどうか。既存のキーには触らず新しく足す。
 // 値が無い既存セーブは「まだ見ていない」として扱うので、後方互換のまま初回案内が出る。
 const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
@@ -18199,7 +18215,7 @@ function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = tr
 
   React.useEffect(() => () => {
     clearTimeout(stopTimerRef.current);
-    try { document.getElementById('root')?.removeAttribute('data-feel-stop'); } catch (e) {}
+    try { document.querySelectorAll('[data-feel-stop]').forEach((el) => el.removeAttribute('data-feel-stop')); } catch (e) {}
   }, []);
 
   React.useEffect(() => {
@@ -18269,7 +18285,7 @@ function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = tr
       // 会心(案B): 白い光・光の筋・金の輪・「会心!!」・舞台が少し寄る。画面全体の揺れは今までどおり 60-app が出す
       if (richOn) { flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
       ring('#fde047', 80, 2.6);
-      stamp('会心!!', '#fde047', 20, -64, -58, 620);
+      stamp('会心!!', '#fde047', 20, -44, -108, 620);
       if (shakeOn) run(stage, [{ scale: '1.07' }, { scale: '1' }], { duration: 240, fill: 'none' });
     } else if (tier === 'defeat') {
       // 撃破(案B): 敵が白く光る・光の筋・「撃破!」の判・強い揺れ
@@ -18284,7 +18300,8 @@ function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = tr
     // 当たりの間: CSS のアニメーションだけを一瞬止める(70-bootstrap の #root[data-feel-stop])。自前の演出も一緒に止めて、同じ絵で固める
     if (stopOn) {
       const ms = (chain ? BATTLE_FEEL_STOP_MS.chain : BATTLE_FEEL_STOP_MS[tier]) * k;
-      const root = document.getElementById('root');
+      // 止める範囲はバトル画面の中だけ(スタイル計算を広げない)。見つからなければ従来どおり #root
+      const root = (host.closest && host.closest('[data-battle-speed]')) || document.getElementById('root');
       if (root && ms >= 12) {
         root.setAttribute('data-feel-stop', tier);
         made.forEach((a) => { try { a.pause(); } catch (e) {} });
@@ -40307,6 +40324,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               ))}
             </div>
           </div>)}
+        {/* 助手ライフの画面(新しい画面/前の画面)。部品は 56-assistant-life-ux.jsx */}
+        {typeof AssistantLifeUiSettingRow === 'function' && <AssistantLifeUiSettingRow/>}
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
           <div className="text-center text-[10px] font-mono text-slate-400">BUILD {BUILD_DATE}</div>
@@ -41013,10 +41032,10 @@ function BreederMarketScreen({
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
-            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
-            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'アイコン・フレームが買える(Pはレベルアップで獲得)',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'プシュケー・勇者の証と交換',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'円盤石・アシストなどと交換',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
             ...(cardShop?[{key:'card',emoji:'🃏',label:'MFバトルカード',titleLines:['MFバトル','カード'],value:`🎟️${compactCount(cardShop.point)}`,hint:'ビートPでパックなど',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
@@ -49485,8 +49504,13 @@ function BattleScreen({
   // 攻撃する子から敵までのずれ(24-battle-fx.jsx の measureAttackAim)。
   // ★描画の前(レイアウト直後)に測るので、最初のコマから敵の向きへ飛ぶ。見た目だけに使う
   const [attackAim, setAttackAim] = useState(null);
+  // ★1回の攻撃(タメ→本技の2段目)で1度だけ測る。位置は自分の transform を含めず測るので、2段目でも同じ値。攻撃が終われば(null)測り直せる
+  const aimMeasuredSlotRef = React.useRef(null);
   React.useLayoutEffect(()=>{
-    if(!attackAnim||ecoBattleView) return;
+    if(!attackAnim){ aimMeasuredSlotRef.current=null; return; }
+    if(ecoBattleView) return;
+    if(aimMeasuredSlotRef.current===attackAnim.slotIndex) return;
+    aimMeasuredSlotRef.current=attackAnim.slotIndex;
     const aim=measureAttackAim(attackAnim.slotIndex);
     setAttackAim(prev=>(prev&&aim&&prev.slotIndex===aim.slotIndex&&prev.dx===aim.dx&&prev.dy===aim.dy)?prev:aim);
   },[attackAnim,ecoBattleView]);
@@ -56069,6 +56093,8 @@ const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!
 // ★CSSは <head> へ1回だけ入れる(HOMEのバッジと同じやり方。画面のDOMへ <style> を混ぜない)。
 // ★動かすのは transform と opacity だけ(裏で回している周回や演奏の重さに響かないように)。
 // ★動きを減らす設定の人には、すべて止める
+// ★すりガラス(backdrop-filter)は使わない(2026-11-11 社長の選択 M1)。後ろで光が動くたびに、ぼかしを毎フレーム作り直していた。濃い半透明の色を敷く
+// ★10秒さわらなければ飾りを止める(同 M3・html に mhms-idle を付ける。さわれば続きから動く)
 const RHYTHM_MODE_SELECT_CSS = `
 .mhms-stage{background:radial-gradient(120% 70% at 50% -10%,rgba(217,70,239,.32),transparent 60%),radial-gradient(90% 60% at 15% 110%,rgba(56,189,248,.22),transparent 65%),radial-gradient(90% 60% at 90% 105%,rgba(244,114,182,.22),transparent 65%),linear-gradient(160deg,#0b0620 0%,#1d0b3a 45%,#0a1030 100%);}
 .mhms-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
@@ -56093,7 +56119,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card.free::after{animation-delay:1.9s}
 .mhms-card .mhms-mark{position:absolute;right:-4px;bottom:-6px;font-size:26px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.2);white-space:nowrap;pointer-events:none}
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
-.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03)),rgba(18,10,44,.42);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
 .mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
@@ -56187,6 +56213,8 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
 @keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+.mhms-stage[data-mhms-rest] :is(.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float),.mhms-stage[data-mhms-rest] .mhms-card::after{animation-play-state:paused!important}
+.mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
 // 助手の立ち絵の切り出し方(2026-10-03・ユーザー指摘「もものアイコンが右側に変なの見えてる / 位置も調整して」)。
@@ -56223,9 +56251,42 @@ const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([
   { left: '12%', top: '18%', delay: '0s' }, { left: '34%', top: '9%', delay: '-.9s' }, { left: '57%', top: '22%', delay: '-1.8s' },
   { left: '76%', top: '12%', delay: '-.4s' }, { left: '88%', top: '34%', delay: '-2.2s' }, { left: '48%', top: '40%', delay: '-1.3s' },
 ]);
+// 窓(お知らせなど)が上に重なっている間・画面(タブ)を離れている間は、飾りの動きを止める(見た目は変わらない)。
+// 0.5秒ごとに見るだけ。画面を離れたら止め、タイマーは unref(Node の検査で残らないように)
+function useMhmsRestWhenHidden(ref) {
+  React.useEffect(() => {
+    const stage = ref.current && ref.current.closest ? ref.current.closest('.mhms-stage') : null;
+    if (!stage || typeof document === 'undefined') return undefined;
+    const check = () => {
+      let rest = false;
+      try { rest = !!document.hidden || !!document.querySelector('[aria-modal="true"],[role="dialog"]'); } catch (e) { rest = false; }
+      if (rest) { if (!stage.hasAttribute('data-mhms-rest')) stage.setAttribute('data-mhms-rest', ''); }
+      else if (stage.hasAttribute('data-mhms-rest')) stage.removeAttribute('data-mhms-rest');
+    };
+    check();
+    const t = setInterval(check, 500);
+    if (t && typeof t.unref === 'function') t.unref();
+    document.addEventListener('visibilitychange', check);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', check); if (stage.hasAttribute('data-mhms-rest')) stage.removeAttribute('data-mhms-rest'); };
+  }, []);
+}
+const RHYTHM_MODE_SELECT_IDLE_MS = 10000;
 function RhythmModeSelectStage({ notes = true }) {
+  const fxRef = React.useRef(null);
+  useMhmsRestWhenHidden(fxRef);
+  // 10秒さわらなければ飾りを止める(置きっぱなしのときの電池と熱のため)。印を付け外しするだけで、画面は描き直さない
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
+    const root = document.documentElement;
+    let timer = 0;
+    const wake = () => { root.classList.remove('mhms-idle'); clearTimeout(timer); timer = setTimeout(() => root.classList.add('mhms-idle'), RHYTHM_MODE_SELECT_IDLE_MS); };
+    const events = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+    events.forEach(name => window.addEventListener(name, wake, { passive: true, capture: true }));
+    wake();
+    return () => { clearTimeout(timer); events.forEach(name => window.removeEventListener(name, wake, { capture: true })); root.classList.remove('mhms-idle'); };
+  }, []);
   return (
-    <div className="mhms-fx" aria-hidden="true">
+    <div className="mhms-fx" aria-hidden="true" ref={fxRef}>
       <span className="mhms-beam b1" /><span className="mhms-beam b2" /><span className="mhms-beam b3" />
       <span className="mhms-floor" />
       {RHYTHM_MODE_SELECT_SPARKS.map((sp, i) => <span key={`s${i}`} className="mhms-spark" style={{ left: sp.left, top: sp.top, animationDelay: sp.delay }} />)}
@@ -56237,7 +56298,7 @@ function RhythmModeSelectStage({ notes = true }) {
 // 題名を舞台の上へ載せる作りにしたもの(モンヒロビートのモードえらびの見出しと同じ並び)
 function BattleScreenHead({ eyebrow, title, accent = 'text-white', accentStyle = null, note = '', onBack = null, disabled = false, right = null }) {
   return (
-    <header className="relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm">
+    <header className="relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1">
       {onBack && <button type="button" aria-label="戻る" onClick={onBack} disabled={disabled} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90 disabled:opacity-30">←</button>}
       <div className="min-w-0 flex-1 leading-none">
         <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">{eyebrow}</small>
@@ -56266,7 +56327,7 @@ function ModeSelectAssistToggles({ assistant, showArt, showComment, onToggle, cl
       {withLabel && <small className="mr-auto text-[10px] font-black text-slate-400">助手 {assistant ? assistant.name : ''}</small>}
       {[['modeSelectArt', showArt, '立ち絵', 'data-rhythm-mode-toggle-art'], ['modeSelectComment', showComment, 'コメント', 'data-rhythm-mode-toggle-comment']].map(([key, on, label, attr]) => (
         <button key={key} type="button" {...{ [attr]: '' }} aria-pressed={on} onClick={() => onToggle(key)}
-          className={`min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{label} {on ? 'ON' : 'OFF'}</button>
+          className={`min-h-[32px] rounded-full border px-2.5 text-[10px] font-black ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{label} {on ? 'ON' : 'OFF'}</button>
       ))}
     </div>
   ) : null;
@@ -57083,7 +57144,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return (
       <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
         <RhythmModeSelectStage />
-        <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
+        <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
           {/* 戻るとHOMEへ。裏でクイック∞周回が回っているときは、締めてから戻る(曲えらびにあった戻るボタンの役目をここへ移した) */}
           <button data-rhythm-back data-quick-run-finishing={ms.backgroundRun ? '1' : undefined} data-quick-run-exiting={ms.exiting ? '1' : undefined} disabled={!!ms.exiting}
             type="button" aria-label={ms.exiting ? '周回を終えています' : ms.backgroundRun ? '周回を終えてホームへ戻る' : '戻る'} onClick={ms.onExit}
@@ -64405,7 +64466,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-door{position:absolute;bottom:0;width:38px;border-radius:18px 18px 0 0;background:linear-gradient(#8b5a2b,#6b4423);border:2px solid #3b2412}
 .mhl-find{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#db2777);border:1.5px solid #fff9;box-shadow:0 4px 12px #0009}
 .mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
-.mhl-tile:active{transform:scale(.97)}.mhl-tile:disabled{opacity:.55}
+.mhl-tile:active{transform:scale(.97)}@media (prefers-reduced-motion:no-preference){.mhl-glow{animation:mhl-glow 1.3s ease-in-out infinite}}@keyframes mhl-glow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.7) saturate(1.3);transform:scale(1.05)}}.mhl-tile:disabled{opacity:.55}
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
 .mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
@@ -64479,7 +64540,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       <div className="win"><img src={view} alt="" loading="lazy" style={{ objectPosition: `${(idx % 3) * 40}% 60%` }}/></div>
       <span className="pl">{met ? assistantLifeName(id) : '？'}</span>
       {/* 新UI: いま部屋にいて会える助手の部屋に印(留守の部屋と見分ける・2026-11-11 改善案3) */}
-      {v2 && met && ppl && ppl.includes(id) && <span className={`meet${state.sleep ? ' zz' : ''}`} data-assistant-life-room-meet={id} style={w >= 150 ? { left: [...assistantLifeName(id)].length * 10 + 24 } : { right: 3 }}>{w >= 150 ? (state.sleep ? '💤 おやすみ中' : '● いま会える') : (state.sleep ? '💤' : '● 会える')}</span>}
+      {v2 && met && ppl && ppl.includes(id) && <span className={`meet${state.sleep ? ' zz' : ''}`} data-assistant-life-room-meet={id} style={w >= 150 ? { left: [...assistantLifeName(id)].length * 10 + 24 } : { right: 3 }}>{w >= 150 ? (state.sleep ? '💤 おやすみ中' : '● いま会える') : (state.sleep ? '💤' : [...assistantLifeName(id)].length >= 4 ? '●' : '会える')}</span>}
       {met && sess && sess.level > 1 && <span className="lv" data-assistant-life-room-session={sess.level}>🎵Lv{sess.level}</span>}
       <span className="fu" aria-hidden="true">{L.furn}</span><div className="fl"/>
       {typeof AssistantLifeRoomFurn === 'function' && <AssistantLifeRoomFurn id={id} put={other ? other.put || {} : null} w={w} h={h} faces={ppl ? ppl.length : 0} baseCount={[...String(L.furn || '')].filter(c => /\p{Extended_Pictographic}/u.test(c)).length}/>}
@@ -65013,22 +65074,27 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // フレンドの家との行き来(部屋の札・5つ目のアイコン)が変わったら描き直す(56-assistant-life-friend.jsx。部品はいつもある)
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
-  // 新UIは明示的に有効化した場合だけ使用。保存が読めなくても従来UIへ戻る。
-  const [uiV2, setUiV2] = React.useState(() => assistantLifeUiV2Of(null));
+  // 新UIが既定(2026-11-11)。保存 mh_assistant_life_ui_v2 が false の人だけ前の画面。保存は消さない・ここでは書かない
+  const [uiV2, setUiV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   const [giftItemsOpen, setGiftItemsOpen] = React.useState(false); // 贈るシートの中の「道具の一覧」を開いているか(ふだんは畳む)
   const [giftOpen, setGiftOpen] = React.useState(false); // 新UI: 「🎁 贈る」のシート(だれに贈るか+持っている道具)
   const [callPicker, setCallPicker] = React.useState(false);
   const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
+  // 初めて開いた人への1枚(56-assistant-life-guide.jsx)。「見た」の印は新しいキー1つ。読めるまで(null)は出さない
+  const [guideSeen, setGuideSeen] = React.useState(null);
+  const [guideOpen, setGuideOpen] = React.useState(false);
+  React.useEffect(() => { let alive = true; Promise.resolve(storeGet(ASSISTANT_LIFE_GUIDE_KEY, false, false)).then(v => { if (alive) setGuideSeen(v === true); }).catch(() => { if (alive) setGuideSeen(true); }); return () => { alive = false; }; }, []);
+  const markGuideSeen = () => { setGuideSeen(true); setGuideOpen(false); try { void storeSet(ASSISTANT_LIFE_GUIDE_KEY, true, false); } catch {} };
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
-  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { if (alive) setUiV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
-  const toggleUiV2 = () => { const next = !uiV2; setUiV2(next); setCallPicker(false); setGiftOpen(false); setRoomId(null); if (next && tab === 'items') setTab('house'); try { void storeSet('mh_assistant_life_ui_v2', next, false); } catch {} };
+  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setUiV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, [!!(st.open && st.loaded)]); // 開くたびに読み直す(設定の「助手ライフの画面」で切り替えた分)
   const [roomId, setRoomId] = React.useState(st.focus || null);
   // フレンドに見せる「いまの状態」に、家の中のどこにいるかを知らせる(34-friends-api・2026-11-08 案A)。閉じたら消す
   React.useEffect(() => {
     if (typeof friendsSetLifeSpot !== 'function') return;
+    if (uiV2 && tab === 'items') return; // 新UIに道具のタブは無い(すぐ家+贈るシートへ戻す)。一瞬の「道具」は知らせない
     friendsSetLifeSpot(({ house: 'h', where: 'w', friends: 'f', items: 'i', visit: 'p' })[tab] || 'h', tab === 'house' && roomId ? String(roomId) : '');
-  }, [tab, roomId]);
+  }, [tab, roomId, uiV2]);
   React.useEffect(() => () => { if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot(''); }, []);
   const [scene, setScene] = React.useState(null);
   // 声をかけたあとの続きのカード(2026-11-08 社長 ❼A)。掛け合いが閉じたら、同じ部屋のシートを開き直して出す
@@ -65226,9 +65292,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = (
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
-      <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
+      <button type="button" className={`mhl-tile mhl-watch flex-1${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`} data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => { if (guideSeen === false) markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}>
         {/* 1日の上限はなくした(2026-11-08 社長)。いま見守れる組の数を出す */}
-        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small data-assistant-life-today-gain="watch">{uiV2 ? (unwatched.length ? '🤝💗 アップ' : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に') : (unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')}</small></button>
+        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small data-assistant-life-today-gain="watch">{uiV2 ? (unwatched.length ? (guideSeen === false ? '👆 まずはここ' : '🤝💗 アップ') : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に') : (unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length} onClick={() => { if (uiV2) { setCallPicker(true); return; } const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0]; if (id) setRoomId(id); }}>
         <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!uiV2 && (!canGive || (!giveGroup && !giveSoloId))} onClick={() => { if (uiV2) { setGiftItemsOpen(false); setGiftOpen(true); return; } if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]); else setTab('items'); }}>
@@ -65249,7 +65315,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {/* 英字の小見出しは狭い横(🔄横 667)で縮んで省略する(時計の札を押し出さない・2026-11-08 ミハリ) */}
         <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? 'WHERE' : tab === 'friends' ? 'FRIENDS' : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
-        <button type="button" data-assistant-life-ui-switch onClick={toggleUiV2} aria-label={uiV2 ? '従来UIに戻す' : '新UIを試す'} className="shrink-0 rounded-lg border border-white/30 bg-slate-900/90 px-2 py-2 text-[10px] font-bold text-white">{uiV2 ? '↩ 旧UI' : '✨ 新UI'}</button>
+        {/* 新UI/旧UIの切替は設定の「助手ライフの画面」へ(2026-11-11 社長。AssistantLifeUiSettingRow) */}
         {/* いまの時刻の札(ハナビの共通部品 44-time-of-day.jsx。設定の「いまの時刻を出す」が切なら出ない) */}
         {/* 裏クイック: 60-app がほかのモードと同じ帯(quickRunStrip)を渡すときは帯を見出しの下に出し、この小さな札は出さない(2026-11-08 社長「他のモードと同じような表示に」) */}
         {!quickRunStrip && <AssistantLifeQuickChip quickRun={quickRun} onStop={onQuickRunStop} onStart={onQuickRunStart} land={land}/>}
@@ -65292,7 +65358,10 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   ) : null;
   const houseView = (
     <div className="relative pt-1">
-      {uiV2 && typeof AssistantLifeNowPerks === 'function' && <AssistantLifeNowPerks life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}/>}
+      {uiV2 && typeof AssistantLifeFirstGuide === 'function' && (guideSeen === false || guideOpen) && <AssistantLifeFirstGuide land={land} canWatch={!!unwatched.length} onClose={markGuideSeen} onWatch={() => { markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}/>}
+      {uiV2 && typeof AssistantLifeBenefitBoard === 'function' && <AssistantLifeBenefitBoard life={life} ids={ids} nameOf={nameOf} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }}
+        watchNow={unwatched.length} watchDone={(life.watched || []).length > 0} giveLeft={soloOn ? itemsLeft + soloLeft : itemsLeft}
+        onWatch={() => { if (unwatched[0]) watch(unwatched[0]); }} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }} onRoad={() => setTab('friends')} onGuide={() => setGuideOpen(true)}/>}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>
       {lifeStatusList}
@@ -65334,7 +65403,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const tabBody = tab === 'house' ? houseView
     : tab === 'where' ? null // 地図は画面いっぱい(下の whereView)
     : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? <AssistantLifeFriendPage life={life}/>
-    : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{uiV2 && typeof AssistantLifeIntroduceCard === 'function' && <AssistantLifeIntroduceCard ids={ids} life={life}/>}{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem} v2={uiV2}/>}</div>)
+    : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{uiV2 && typeof AssistantLifeRewardRoad === 'function' && <AssistantLifeRewardRoad ids={ids} peerSt={peerSt} nameOf={nameOf} onRoom={setRoomId}/>}{uiV2 && typeof AssistantLifeIntroduceCard === 'function' && <AssistantLifeIntroduceCard ids={ids} life={life}/>}{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem} v2={uiV2}/>}</div>)
     : itemsBody;
   return (
     <div className="mhl-root" style={{ zIndex: 9000 }} data-assistant-life-screen data-assistant-life-look={look} data-assistant-life-land={land ? '1' : '0'}>
@@ -65757,6 +65826,11 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         <div className="flex shrink-0 flex-col gap-1">
           {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { setSheet(null); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 px-2 py-1 text-[11px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
           {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { setSheet(null); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95">🃏 対戦する</button>}
+          {place === 'battle' && (() => { // 助手のマスモン対戦β(ミセカタ2・マスモン部の口。口が無い・印が偽で null のときは出さない・2026-11-11)
+            let info = null; try { info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { info = null; }
+            if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
+            return <button type="button" disabled={!!info.disabled} title={info.disabled ? (info.why || '') : (info.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { setSheet(null); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2 py-1 text-[11px] font-black text-white active:scale-95 disabled:opacity-50">{info.label || '⚔ マスモンで対戦(β)'}</button>;
+          })()}
           {typeof onView === 'function' && <button type="button" data-assistant-life-map-act="view" onClick={() => onView(id)} className="rounded-xl border border-sky-300/60 px-2 py-1 text-[11px] font-black text-sky-100 active:scale-95">💬 詳細を見る</button>}
           <button type="button" data-assistant-life-map-act="room" onClick={() => { setSheet(null); onPick(id); }} className="rounded-xl border border-pink-300/60 px-2 py-1 text-[11px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
         </div>
@@ -66185,18 +66259,7 @@ function AssistantLifeBondRoad({ id, points = null, level = null, land = false }
   const from = pts != null && typeof assistantBondStage === 'function' ? (assistantBondStage(pts).need || 0) : 0;
   const pct = next ? Math.max(0, Math.min(100, Math.round(((pts - from) / Math.max(1, next.need - from)) * 100))) : 100;
   // 次の Lv で開くもの(プロフィールの「ごほうび一覧」と同じ表)
-  let opens = [];
-  if (next && typeof assistantBondRewardRows === 'function') {
-    try {
-      const row = (assistantBondRewardRows(id) || []).find(r => r.level === next.level);
-      if (row) {
-        if (row.title) opens.push(`「${row.title}」の話し方`);
-        if (row.callStyle) opens.push('呼び方の相談');
-        if (row.frames && row.frames.length) opens.push('飾り枠');
-        opens = opens.concat((row.rewards || []).slice(0, 2));
-      }
-    } catch (_) { opens = []; }
-  }
+  const opens = next && typeof assistantLifeBondOpens === 'function' ? assistantLifeBondOpens(id, next.level) : [];
   return (
     <div className={`rounded-2xl border border-pink-300/70 bg-pink-950/60 px-3 py-2 ${land ? 'mt-1.5' : 'mt-2'}`} data-assistant-life-bond-road={lv}>
       <p className="flex items-baseline gap-2 text-[13px] font-black text-pink-50">💗 仲良し度 <b className="text-[16px]">Lv{lv}</b>
@@ -66296,27 +66359,39 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   const go = L.goPlace || {};
   try {
     const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } }) : [];
-    if (beat.length) rows.push({ k: 'beat', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
+    if (beat.length) rows.push({ k: 'beat', place: 'studio', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
   } catch (_) {}
   try {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
-    if (card.length) rows.push({ k: 'card', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
-  if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
+  if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', place: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
   // 🛍 マーケット: 助手がいるあいだ、おすすめ品1つが1割引き(1日1回)。開発部が ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday と入れる。それが { itemName, discountedCost, used } を返す
   try {
     const mk = assistantLifeAtPlace(life, ids, 'market');
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
-    if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
+    if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', place: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
   } catch (_) {}
   const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
-  if (ranch.length) rows.push({ k: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
+  if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
   return rows;
+};
+
+// 場所 id(studio・cardroom・temple・ranch・market)に「いま行くと得」があるか。帯と同じ判定(地図の札の得の印など、外から引く口)
+const assistantLifePerkAt = (place, life = null, ids = null) => {
+  try {
+    const lf = life || (typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null);
+    const who = ids || (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifePerkRows(lf, who, x => x).some(r => r.place === place);
+  } catch (_) { return false; }
 };
 
 // 家のいちばん上の帯。3行まで+「ほか◯件」。行を押すとその施設へ(onGo で画面を閉じてから呼ぶ)
 function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
+  // マーケットのおすすめ品は保存を読み終えるまで出せない(開発部の assistantMarketPerkToday は読み込み中 null)。開いてから少しあと(と4秒おき)に描き直して拾う
+  const [, redraw] = React.useState(0);
+  React.useEffect(() => { const t = setTimeout(() => redraw(n => n + 1), 1500), i = setInterval(() => redraw(n => n + 1), 4000); return () => { clearTimeout(t); clearInterval(i); }; }, []);
   const rows = assistantLifePerkRows(life, ids, nameOf);
   const [more, setMore] = React.useState(false);
   if (!rows.length) return null;
@@ -66338,7 +66413,9 @@ function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
 
 // ===== STEP3: タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。道具は「🎁 贈る」の中、引き合わせるは「きずな」へ =====
 // 新UIを既定にするか。保存(mh_assistant_life_ui_v2)が true/false ならそれに従い、無い人だけこの値になる(保存は消さない・書き換えない)
-const ASSISTANT_LIFE_UI_V2_DEFAULT = false;
+const ASSISTANT_LIFE_UI_V2_DEFAULT = true; // 2026-11-11 社長: STEP3 まで出来たので新UIを既定に(旧UIは設定の「助手ライフの画面」から)
+// 前に読んだ保存の値(true/false/null=無い)。画面が作り直されたときの初めの値に使う(保存には触れない)
+let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
 function assistantLifeUiV2Tabs() {
@@ -66411,6 +66488,229 @@ function assistantLifePeerNextOpens(a, b, nextLv) {
     if (all.some(t => !t.special && t.kind !== 'quarrel' && t.kind !== 'makeup' && (t.lv || 1) === nextLv)) out.push('新しい掛け合い');
   } catch (_) { return ''; }
   return out.join('・');
+}
+
+// 設定の「助手ライフの画面」(新しい画面/前の画面)。2026-11-11 社長: 切替は助手ライフの上の帯から外して設定の中へ。
+//   保存は今ある mh_assistant_life_ui_v2 だけ(true=新しい画面/false=前の画面/無い人は既定)。押したときだけ書く。置き場所は 51-screen-settings.jsx
+function AssistantLifeUiSettingRow() {
+  const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
+  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
+  if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
+  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} };
+  return (
+    <div data-assistant-life-ui-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+      <b className="block text-[13px] font-black text-slate-200">助手ライフの画面</b>
+      <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手ライフの見た目を選びます。「前の画面」は、新しい機能が入らない前の形です。助手との仲良し度やごほうびは、どちらでも同じです。</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {[{ on: true, label: '新しい画面', note: 'タブ4つ・おすすめ' }, { on: false, label: '前の画面', note: '今までの形' }].map(option => (
+          <button key={option.label} type="button" data-assistant-life-ui-setting-pick={option.on ? 'new' : 'old'} aria-pressed={v2 === option.on} onClick={() => pick(option.on)}
+            className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${v2 === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+            <span className="block">{option.label}</span>
+            <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+          </button>))}
+      </div>
+    </div>);
+}
+
+// ---- part: 56-assistant-life-guide.jsx ----
+// ===== 助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ・docs/progress/assistant-life/BENEFIT-PLAN.md)。新UI(mh_assistant_life_ui_v2 が入)のときだけ使う =====
+//   B  家のいちばん上の3行 …… ⏰ いま(STEP2 の得)/📅 今日(あと何回 → 何が上がる)/🌱 次のごほうび(いちばん近い1つ)
+//   C  「きずな」の先頭の「ごほうびの道のり」 …… 💗 仲良し度・🐾 マスモン・🤝 友情Lv の次にもらえるもの(近い順)
+//   案1 初めて開いた人への1枚 …… 1回だけ。最初に押す札(見守る)を光らせる。「見た」の印だけ新しいキーに保存する
+//   新しい報酬は作らない。数字はどれも今ある決まり(仲良し度の段・友情Lv の段・マスモンを迎えるLv)を読むだけ
+
+// 「見た」の印(boolean)。無い・壊れているときは「まだ見ていない」。既存のキーは触らない
+const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
+
+// 次の仲良し度 Lv で開くもの(プロフィールの「ごほうび一覧」と同じ表)
+function assistantLifeBondOpens(id, nextLevel) {
+  let opens = [];
+  try {
+    if (typeof assistantBondRewardRows !== 'function') return opens;
+    const row = (assistantBondRewardRows(id) || []).find(r => r.level === nextLevel);
+    if (row) {
+      if (row.title) opens.push(`「${row.title}」の話し方`);
+      if (row.callStyle) opens.push('呼び方の相談');
+      if (row.frames && row.frames.length) opens.push('飾り枠');
+      opens = opens.concat((row.rewards || []).slice(0, 2));
+    }
+  } catch (_) { opens = []; }
+  return opens;
+}
+
+// 助手のマスモンを次に迎える仲良し度 Lv(Lv1 で1体・Lv3・5・7…と2つ上がるごとに1体。最大 ASSISTANT_MASMON_DRAW_MAX 体)。迎え終わっていれば null
+function assistantLifeMasmonNextLv(lv) {
+  try {
+    if (typeof assistantMasmonWelcomeLv !== 'function' || !Number.isFinite(lv)) return null;
+    const max = typeof ASSISTANT_MASMON_DRAW_MAX === 'number' ? ASSISTANT_MASMON_DRAW_MAX : 8;
+    for (let slot = 1; slot <= max; slot++) { const w = assistantMasmonWelcomeLv(slot); if (w > lv) return w; }
+  } catch (_) {}
+  return null;
+}
+
+// ごほうびの一覧。bond … 💗 仲良し度(あと◯が小さい順)/masmon … 🐾 次のマスモン/peer … 🤝 友情Lv の組。どれも「あと◯」の小さい順
+function assistantLifeRewardItems(ids, peerSt) {
+  const bond = [], masmon = [];
+  let maxed = 0;
+  for (const id of ids || []) {
+    const pts = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
+    if (!Number.isFinite(pts) || typeof assistantBondNext !== 'function' || typeof assistantBondLevel !== 'function') continue;
+    const lv = assistantBondLevel(pts), next = assistantBondNext(pts);
+    const mLv = assistantLifeMasmonNextLv(lv);
+    if (next) {
+      const opens = assistantLifeBondOpens(id, next.level);
+      if (mLv === next.level) opens.push('新しいマスモン');
+      bond.push({ k: `bond-${id}`, kind: 'bond', id, lv, nextLv: next.level, remain: next.remain, opens });
+    } else maxed++;
+    if (mLv != null && (!next || mLv !== next.level)) {
+      const need = typeof assistantBondLevelsOf === 'function' ? ((assistantBondLevelsOf(id).find(s => s.level === mLv) || {}).need) : null;
+      if (Number.isFinite(need) && need > pts) masmon.push({ k: `masmon-${id}`, kind: 'masmon', id, lv, nextLv: mLv, remain: need - pts, opens: ['新しいマスモン'] });
+    }
+  }
+  const peer = [];
+  const levels = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  if (peerSt && levels.length && typeof assistantPeerPoints === 'function' && typeof assistantPeerLevel === 'function') {
+    const list = (ids || []).filter(Boolean);
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      const pts = assistantPeerPoints(peerSt, a, b), lv = assistantPeerLevel(peerSt, a, b);
+      const nextStage = levels.find(s => s.level === lv + 1);
+      if (!nextStage) continue;
+      const opens = typeof assistantLifePeerNextOpens === 'function' ? assistantLifePeerNextOpens(a, b, nextStage.level) : '';
+      peer.push({ k: `peer-${a}-${b}`, kind: 'peer', a, b, lv, nextLv: nextStage.level, remain: nextStage.min - pts, opens: opens ? opens.split('・') : [] });
+    }
+  }
+  const byRemain = (x, y) => x.remain - y.remain;
+  return { bond: bond.sort(byRemain), masmon: masmon.sort(byRemain), peer: peer.sort(byRemain), maxed };
+}
+
+// 「次のごほうび」でいちばん近い1つ(💗 仲良し度の次の Lv)
+function assistantLifeNearestReward(ids) {
+  const r = assistantLifeRewardItems(ids, null);
+  return r.bond[0] || null;
+}
+
+// ---------- B: 家のいちばん上の3行 ----------
+function AssistantLifeBenefitLine({ k, tag, children, sub = '', onClick = null, land = false, go = true }) {
+  const inner = (<>
+    <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{tag}</span>
+    <span className="min-w-0 flex-1">
+      <span className={`block ${land ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold leading-snug text-white`} style={{ wordBreak: 'auto-phrase' }}>{children}</span>
+      {sub && <span className="block text-[11px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{sub}</span>}
+    </span>
+    {onClick && go && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
+  </>);
+  return onClick
+    ? <button type="button" data-assistant-life-benefit-row={k} onClick={onClick} className="mt-1 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1 text-left active:scale-[.98]">{inner}</button>
+    : <div data-assistant-life-benefit-row={k} className="mt-1 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1">{inner}</div>;
+}
+
+function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watchNow = 0, watchDone = false, giveLeft = 0, onWatch = null, onGive = null, onRoad = null, onGuide = null }) {
+  const [more, setMore] = React.useState(false);
+  const rows = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : [];
+  const first = rows[0] || null;
+  const rest = rows.length - 1;
+  const near = assistantLifeNearestReward(ids);
+  const slotTo = (() => { try { const s = assistantLifeSlotAt(); return s && Number.isFinite(s.to) ? s.to % 24 : null; } catch (_) { return null; } })();
+  const todayClick = watchNow > 0 && onWatch ? onWatch : giveLeft > 0 && onGive ? onGive : null;
+  const todayParts = [
+    watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し',
+    giveLeft > 0 ? `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み',
+  ];
+  const shown = more ? rows : rows.slice(0, 1);
+  return (
+    <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-benefit>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">✨ 助手ライフの得
+        {onGuide && <button type="button" data-assistant-life-guide-open onClick={onGuide} className="ml-auto min-h-[44px] rounded-lg px-2 text-[11.5px] font-black text-amber-100 active:scale-95" style={{ marginTop: -8, marginBottom: -8 }}>❓ 見かた</button>}
+      </p>
+      {/* ⏰ いま(STEP2: 助手がいま居る場所の得) */}
+      {rows.length > 0
+        ? <div data-assistant-life-now-perks={rows.length}>
+            {shown.map((r, i) => (
+              <button key={r.k} type="button" data-assistant-life-now-perk={r.k} data-assistant-life-benefit-row={i === 0 ? 'now' : 'now-more'} disabled={typeof r.go !== 'function'} onClick={() => { if (typeof r.go === 'function') onGo(r.go); }}
+                className="mt-1 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1 text-left active:scale-[.98] disabled:opacity-60">
+                <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{i === 0 ? '⏰ いま' : ''}</span>
+                <span className="w-5 shrink-0 text-center text-[17px] leading-none" aria-hidden="true">{r.icon}</span>
+                <span className={`min-w-0 flex-1 ${land ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>{r.text}</span>
+                {typeof r.go === 'function' && <span className="shrink-0 text-[11px] font-black text-amber-200" aria-hidden="true">▶</span>}
+              </button>))}
+            {rest > 0 && !more && <button type="button" data-assistant-life-now-perks-more className="min-h-[44px] w-full text-right text-[11.5px] font-black text-amber-200" onClick={() => setMore(true)}>ほか {rest} 件 ▼</button>}
+          </div>
+        : <AssistantLifeBenefitLine k="now" tag="⏰ いま" land={land}>いまは特別な得はありません{slotTo != null ? `(助手が動く ${slotTo}時に変わります)` : ''}</AssistantLifeBenefitLine>}
+      {/* 📅 今日(あと何回 → 何が上がる) */}
+      <AssistantLifeBenefitLine k="today" tag="📅 今日" land={land} onClick={todayClick} sub="→ 🤝 友情Lv・💗 仲良し度が上がる">{todayParts.join(' ・ ')}</AssistantLifeBenefitLine>
+      {/* 🌱 次のごほうび(いちばん近い1つ) */}
+      {near
+        ? <AssistantLifeBenefitLine k="next" tag="🌱 次の ごほうび" land={land} onClick={onRoad} sub={near.opens.length ? `→ ${near.opens.join('・')}` : ''}>{nameOf(near.id)}の 💗 仲良し度 Lv{near.nextLv} まで <b className="text-amber-200">あと {near.remain}</b></AssistantLifeBenefitLine>
+        : <AssistantLifeBenefitLine k="next" tag="🌱 次の ごほうび" land={land} onClick={onRoad}>見守る・贈る・おしゃべりで 💗 仲良し度が上がると、ごほうびが届きます</AssistantLifeBenefitLine>}
+    </section>);
+}
+
+// ---------- C: 「きずな」の先頭「ごほうびの道のり」 ----------
+function AssistantLifeRewardRow({ it, nameOf, onOpen = null }) {
+  const isPeer = it.kind === 'peer';
+  const who = (id) => (typeof assistantById === 'function' ? assistantById(id) : null);
+  const w = isPeer ? who(it.a) : who(it.id);
+  const title = isPeer ? `${nameOf(it.a)} × ${nameOf(it.b)}` : nameOf(it.id);
+  const what = it.kind === 'bond' ? `💗 仲良し度 Lv${it.lv} → Lv${it.nextLv}` : it.kind === 'masmon' ? `🐾 新しいマスモン(💗 Lv${it.nextLv}で迎える)` : `🤝 友情Lv ${it.lv} → ${it.nextLv}`;
+  const body = (<>
+    {w && typeof AssistantFace === 'function' && <span className="shrink-0"><AssistantFace who={w} size={34} accent={w.accent}/></span>}
+    <span className="min-w-0 flex-1">
+      <span className="flex items-baseline gap-2"><b className="min-w-0 truncate text-[13px] text-white">{title}</b><span className="ml-auto shrink-0 text-[12px] font-black text-amber-200">あと {it.remain}</span></span>
+      <span className="block text-[11.5px] font-bold leading-snug text-pink-100" style={{ wordBreak: 'auto-phrase' }}>{what}</span>
+      {it.opens.length > 0 && it.kind !== 'masmon' && <span className="block text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>→ {it.opens.join('・')}</span>}
+    </span>
+  </>);
+  const cls = 'mt-1 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-900/80 px-2 py-1 text-left';
+  return onOpen
+    ? <button type="button" data-assistant-life-reward-item={it.k} onClick={() => onOpen(it.id)} className={`${cls} active:scale-[.98]`}>{body}</button>
+    : <div data-assistant-life-reward-item={it.k} className={cls}>{body}</div>;
+}
+
+function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
+  const [all, setAll] = React.useState(false);
+  const r = assistantLifeRewardItems(ids, peerSt);
+  const total = r.bond.length + r.masmon.length + r.peer.length;
+  if (!total) return null;
+  const cut = (list, n) => (all ? list : list.slice(0, n));
+  const hidden = (r.bond.length - Math.min(3, r.bond.length)) + (r.masmon.length - Math.min(2, r.masmon.length)) + (r.peer.length - Math.min(2, r.peer.length));
+  const sec = (title, list, n, open) => list.length > 0 && (<div key={title}>
+    <p className="mt-2 text-[12px] font-black text-slate-200">{title}</p>
+    {cut(list, n).map(it => <AssistantLifeRewardRow key={it.k} it={it} nameOf={nameOf} onOpen={open}/>)}
+  </div>);
+  return (
+    <section className="mb-2 rounded-2xl border border-pink-300/60 bg-slate-950/90 p-2.5" data-assistant-life-reward-road={total}>
+      <p className="text-[14px] font-black text-pink-100">🎁 ごほうびの道のり</p>
+      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>見守る・贈る・おしゃべりで上がります。「あと」が小さい順に並べています。</p>
+      {sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom)}
+      {sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom)}
+      {sec('🤝 友情Lv(助手どうし)', r.peer, 2, null)}
+      {r.maxed > 0 && <p className="mt-1.5 text-[11.5px] font-bold text-slate-300">💗 {r.maxed}人は、仲良し度がいちばん上まで来ました</p>}
+      {hidden > 0 && <button type="button" data-assistant-life-reward-more aria-expanded={all} onClick={() => setAll(v => !v)} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-100 active:scale-[.98]">{all ? '近い所だけにする ▲' : `ぜんぶ見る(あと ${hidden} 件)▼`}</button>}
+    </section>);
+}
+
+// ---------- 案1: 初めて開いた人への1枚 ----------
+function AssistantLifeFirstGuide({ land = false, canWatch = false, onClose, onWatch = null }) {
+  const Item = ({ n, head, text }) => (
+    <li className="flex items-start gap-2">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-amber-300 text-[12px] font-black text-slate-900" aria-hidden="true">{n}</span>
+      <span className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-100" style={{ wordBreak: 'auto-phrase' }}><b className="text-white">{head}</b>{text}</span>
+    </li>);
+  return (
+    <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border-2 border-amber-300 bg-slate-950/95 p-2.5 text-white`} data-assistant-life-guide>
+      <p className="text-[14px] font-black text-amber-200">🏡 助手ライフは、助手と過ごすと得する場所です</p>
+      <ol className="mt-1.5 space-y-1.5">
+        <Item n="1" head="👀 見守る・🎁 贈る・💬 おしゃべり" text=" で、助手たちと過ごす"/>
+        <Item n="2" head="💗 仲良くなるとごほうび" text=" が届く(ダイヤ・飾り枠・話し方・マスモン)"/>
+        <Item n="3" head="🎮 ほかの遊びも得に" text=" なる(モンヒロビートは券なし・カードはごほうび1.5倍)"/>
+      </ol>
+      <p className="mt-1.5 text-[11.5px] font-bold text-amber-100">まずは 光っている「👀 見守る」を押してみよう</p>
+      <div className="mt-1.5 flex gap-1.5">
+        {canWatch && onWatch && <button type="button" data-assistant-life-guide-watch onClick={onWatch} className="min-h-[44px] flex-1 rounded-xl border border-amber-200 bg-amber-400/90 px-2 text-[12.5px] font-black text-slate-900 active:scale-[.98]">👀 見守ってみる</button>}
+        <button type="button" data-assistant-life-guide-close onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]">わかった</button>
+      </div>
+    </section>);
 }
 
 // ---- part: 56-assistant-life-rel.jsx ----
@@ -70439,7 +70739,7 @@ const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return { a: 'rest' };
-  if (e.fat >= T.rest) return { a: 'rest' };
+  if (e.fat >= (typeof amgtRestAt === 'function' ? amgtRestAt(aid, T.rest) : T.rest)) return { a: 'rest' }; // 修行(第②段階)の観察力で目安が55へ寄る。印が偽ならそのまま
   if (e.str >= 50) return { a: 'play' };
   // 修行の回(第②段階の受け口・シュギョウ)。修行の印が偽なら null を返し、rnd も引かない
   if (typeof amgtChoose === 'function') { const x = amgtChoose(aid, e, row, rnd, slot); if (x) return x; }
@@ -70503,6 +70803,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
   while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) { e.xp -= amgLvNeed(e.lv); e.lv += 1; }
   e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}), ...(care.ranch ? { r: 1 } : {}) }].slice(-AMG_LOG);
+  if (act.a !== 'shugyo' && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot); // 修行(第②段階)の助手の腕に経験。印が偽なら何もしない
   return e;
 };
 // まだの回をまとめて決める。rows = その助手のいまのマスモン(assistantMasmonRowsOf)。初めての助手は、今の回から数える(さかのぼって育てない)
@@ -100698,6 +100999,22 @@ function MonsterHeroGame() {
   // はじめて遊ぶ人は、HOME に着くたびにお話を1本だけ(STORY_ONE_AT_A_TIME_KEY)。この HOME でもう流したかを覚え、HOME を離れたら戻す
   const [storyOneAtATime, setStoryOneAtATime] = useState(false);
   const storyShownThisHomeRef = useRef(false);
+  // 最初の本番のバトルを終えたか。既定は真(前から遊んでいる人・読み込み前は何も変えない)。はじめての人で印がまだ無いときだけ偽にする
+  const [firstBattleDone, setFirstBattleDone] = useState(true);
+  const realBattleSeenRef = useRef(false);
+  // すでに本番でクリアした記録がある人は、終えた扱い(お話を止めたままにしない)
+  useEffect(() => {
+    if (firstBattleDone) return;
+    if (Object.values(clearCounts || {}).some(n => (Number(n) || 0) > 0)) setFirstBattleDone(true);
+  }, [clearCounts, firstBattleDone]);
+  useEffect(() => {
+    if (gameState === 'BATTLE' && battleTutorialStep == null) { realBattleSeenRef.current = true; return; }
+    if (gameState === 'HOME' && realBattleSeenRef.current && !firstBattleDone) {
+      realBattleSeenRef.current = false;
+      setFirstBattleDone(true);
+      (async () => { try { await storeSet(FIRST_BATTLE_DONE_KEY, true, false); } catch {} })();
+    }
+  }, [gameState, battleTutorialStep, firstBattleDone]);
   useEffect(() => { if (gameState !== 'HOME') storyShownThisHomeRef.current = false; }, [gameState]);
   // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
   // ほかの案内が出ていないHOMEへ来たところで、フレンド画面を開いて申請の確認を出す。公開前・はじめての設定の前は何もしない
@@ -100809,6 +101126,9 @@ function MonsterHeroGame() {
       && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     // ★はじめて遊ぶ人は、続けて流すのを1本まで(2026-10-27 社長)。並んだお話は消さずに待たせ、HOME を離れて戻ったときに流す
     if (storyOneAtATime && storyShownThisHomeRef.current) return;
+    // 案3: はじめての人は、最初の本番のバトルを終えるまで自動では流さない(HOME の札・回想からは見られる)。案6: ワンポイントアドバイスの窓が出ているあいだも待つ
+    if (storyOneAtATime && !firstBattleDone) return;
+    if (dailyMasuAdvice) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     storyShownThisHomeRef.current = true;
@@ -100820,7 +101140,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime, firstBattleDone, dailyMasuAdvice]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -102610,6 +102930,10 @@ function MonsterHeroGame() {
         let oneAtATime = (await storeGet(STORY_ONE_AT_A_TIME_KEY, false, false)) === true;
         if (!everOnboarded && !oneAtATime) { await storeSet(STORY_ONE_AT_A_TIME_KEY, true, false); oneAtATime = true; }
         setStoryOneAtATime(oneAtATime);
+        // 案3: はじめての人で、最初の本番のバトルがまだなら偽。すでにクリアの記録がある人は終えた扱い(閉じ込めない)
+        if (oneAtATime && (await storeGet(FIRST_BATTLE_DONE_KEY, false, false)) !== true) {
+          setFirstBattleDone(false);
+        }
       } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
@@ -107126,7 +107450,7 @@ function MonsterHeroGame() {
     setTutorialStep(null);
     // 最初のあいさつを読み終えたら、名前とアイコンを決めるプロフィール画面へ進む
     if (kind === 'intro') { setGameState('PROFILE'); return; }
-    if (kind === 'battleGuide') return;
+    if (kind === 'battleGuide' || kind === 'battleMore') return;
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
     // 最後まで読んだときだけ、そのまま「あそびかた練習」(演奏画面で叩いて覚える)へ入る。
@@ -107297,12 +107621,58 @@ function MonsterHeroGame() {
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
 
+  // ===== つづきのれんしゅうの誘い(2026-11-11 社長 1=A) =====
+  // はじめの1戦を終えた人が、はじめての本番のバトル(れんしゅう・デバッグでない)を1回終えて HOME に戻ったとき、一度だけ誘う。
+  // 誘ったら mh_battle_tutorial_more_v1.offered を立てて、二度と出さない。れんしゅうを全部見た人(seen)には出さない
+  const realBattlePlayedRef = useRef(false);
+  useEffect(() => {
+    if (runStage === 'BATTLE' && !debugBattleRef.current && battleTutorialStep == null) realBattlePlayedRef.current = true;
+  }, [runStage, battleTutorialStep]);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || runStage !== null || !realBattlePlayedRef.current || tutorialStep != null || battleTutorialStep != null) return;
+    realBattlePlayedRef.current = false;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first, more] = await Promise.all([
+          storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+          storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false),
+          storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false),
+        ]);
+        const f = normalizeBattleTutorialFirst(first), m = normalizeBattleTutorialMore(more);
+        if (cancelled || seen === true || !f.done || m.offered) return;
+        await storeSet(BATTLE_TUTORIAL_MORE_KEY, { ...m, offered: true }, false);
+        if (!cancelled) { setTutorialKind('battleMore'); setTutorialStep(0); }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [bootPhase, gameState, runStage, tutorialStep, battleTutorialStep]);
+  // ===== 入口3画面の一言(2026-11-11 社長 2=A) =====
+  // バトルの仕組み・モード・難易度をえらぶ画面を、ふだん(れんしゅう以外で)初めて開いたとき、一度だけ下に出す。
+  // れんしゅうを全部見た人(seen)には出さない。出したら mh_battle_tutorial_first_v1.hints に書く(同じ画面で二度出さない)
+  const [battleSelectHint, setBattleSelectHint] = useState(null);
+  useEffect(() => {
+    const key = gameState === 'BATTLE_SYSTEM_SELECT' ? 'system' : gameState === 'BATTLE_MODE_SELECT' ? 'mode' : gameState === 'BATTLE_DIFFICULTY_SELECT' ? 'difficulty' : null;
+    if (!key) { setBattleSelectHint(null); return undefined; }
+    if (battleTutorialStep != null || typeof BATTLE_SELECT_HINTS === 'undefined' || !BATTLE_SELECT_HINTS[key]) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [seen, first] = await Promise.all([storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false)]);
+        const f = normalizeBattleTutorialFirst(first);
+        if (cancelled || seen === true || f.hints[key]) return;
+        await storeSet(BATTLE_TUTORIAL_FIRST_KEY, { ...f, hints: { ...f.hints, [key]: true } }, false);
+        if (!cancelled) setBattleSelectHint(key);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, battleTutorialStep]);
   // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
   // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
   useEffect(() => {
     if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded ||
         tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || inheritedUniqueCompensation ||
-        dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
+        dailyMasuAdvice || eventReplay || dailyMasuAdviceCheckedRef.current) return;
     dailyMasuAdviceCheckedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -107327,7 +107697,7 @@ function MonsterHeroGame() {
       if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true, shortcut: quickClearTotal >= DAILY_MASU_SHORTCUT_MIN_QUICK_CLEARS });
     })();
     return () => { cancelled = true; };
-  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, eventReplay, masuMons.length]);
 
   // モンヒロバトルの入口で仕組みを選んだとき(2026-09-20 ユーザー指示)。
   // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
@@ -112465,13 +112835,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 'tactics'(タクティクスバトルのれんしゅう。公開前なのでデバッグからだけ)。
   // ★どの台本かで「どのモードで走らせるか」「どの台本データを使うか」が決まる。
   //   3つの対応をここ1か所にまとめて、入口が増えても取り違えないようにする
-  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];
+  // 'first'(はじめの1戦・21手)と 'more'(つづきのれんしゅう・勇者えらびから)は 2026-11-11 に足した(docs/progress/first-30min/BATTLE-TUTORIAL-SPLIT.md)
+  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics', 'first', 'more'];
   const battleTutorialVariantOf = (variant) => (BATTLE_TUTORIAL_VARIANTS.includes(variant) ? variant : 'v2');
   const battleTutorialModeOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
     ? BATTLE_MODE_TACTICS : BATTLE_MODE_CHALLENGE);
   const battleTutorialScenarioOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
     ? ((typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS) || null)
-    : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
+    : battleTutorialVariantOf(variant) === 'first'
+      ? ((typeof BATTLE_TUTORIAL_SCENARIO_FIRST !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_FIRST) || null)
+      : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     stopAllAuto();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
@@ -112506,6 +112879,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★v2とタクティクスは「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
     //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
     //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
+    // つづきのれんしゅうは入口の3画面を飛ばして、勇者えらびから始める(はじめの1戦で通った所なので)
+    if (battleTutorialVariantOf(variant) === 'more') {
+      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      advanceRunStage('PICK_HERO');
+      return;
+    }
     if (variant !== 'v1') {
       setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
@@ -112540,6 +112919,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
   const endBattleTutorial = async (completed = false) => {
     const back = battleTutorialReturn;
+    const endedVariant = battleTutorialVariant;
     // 台本を外す。以降のバトルはふだんどおりの抽選に戻る
     battleScenarioRef.current = null;
     battleScenarioIntentIndexRef.current = 0;
@@ -112557,13 +112937,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setBattleTutorialVariant('v2');
     // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
     // デバッグのお試し再生で、通常プレイの既読状態を書き換えないようにする
-    if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
+    // はじめの1戦を終えたら新しい印(mh_battle_tutorial_first_v1)だけ。「れんしゅうを全部見た」(seen)は、つづき・全部通しを終えたときだけ立てる(意味は変えない)
+    if (completed && back === 'HOME') {
+      try {
+        if (endedVariant === 'first') {
+          const cur = normalizeBattleTutorialFirst(await storeGet(BATTLE_TUTORIAL_FIRST_KEY, null, false));
+          await storeSet(BATTLE_TUTORIAL_FIRST_KEY, { ...cur, done: true, at: cur.at || Date.now() }, false);
+        } else {
+          await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);
+          if (endedVariant === 'more') {
+            const cur = normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY, null, false));
+            await storeSet(BATTLE_TUTORIAL_MORE_KEY, { ...cur, offered: true, done: true }, false);
+          }
+        }
+      } catch {}
+    }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') { returnToHome(); return; }
     setGameState(back || 'DEBUG_SETTINGS');
   };
   const battleTutorialSteps = (battleTutorialVariant === 'v1'
     ? (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)
+    : battleTutorialVariant === 'first'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_FIRST !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_FIRST)
+    : battleTutorialVariant === 'more'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_MORE !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_MORE)
     : battleTutorialVariant === 'tactics'
       ? (typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS)
       : (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)) || [];
@@ -119295,6 +119693,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <ScrollMoreList data-reward-receipt-list moreText={`全${rewardReceipt.rewards.length}件・窓の中を下へ送ると続きが見られます`} className="mt-3 max-h-[46vh] grid grid-cols-1 gap-1.5 overflow-y-auto landscape:grid-cols-2">
             {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white landscape:px-2 landscape:py-1.5 landscape:text-[11px] landscape:leading-tight">{giftRewardText(reward)}</div>)}
           </ScrollMoreList>
+          {storyOneAtATime&&rewardReceipt.rewards.some(r=>r&&r.type==='diamond')&&<div data-reward-receipt-hint className="mt-2 rounded-lg bg-cyan-900/40 px-2 py-1.5 text-center text-[11px] font-bold leading-snug text-cyan-100">💎 ダイヤは、HOMEの「マーケット」のダイヤショップで使えます</div>}
           {rewardReceipt.count>1&&<div className="mt-2 text-center text-[10px] font-bold text-slate-400">{rewardReceipt.count}件をまとめて受け取りました</div>}
           <div className="mt-3"><ModalCloseButton onClick={()=>setRewardReceipt(null)}/></div>
         </ModalFrame>
@@ -120192,12 +120591,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         />
       )}
 
+      {battleSelectHint&&battleTutorialStep==null&&typeof BATTLE_SELECT_HINTS!=='undefined'&&BATTLE_SELECT_HINTS[battleSelectHint]&&activeAssistant&&(
+        <div data-battle-select-hint={battleSelectHint} className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pointer-events-none" style={{paddingBottom:'max(12px, env(safe-area-inset-bottom))'}}>
+          <div className="pointer-events-auto w-full max-w-md rounded-2xl border-2 bg-slate-950/95 p-3 shadow-2xl" style={{borderColor:activeAssistant.accent}}>
+            <div className="flex items-start gap-2">
+              <img src={assistantFaceSrc(activeAssistant,'happy')} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover"/>
+              <div className="min-w-0 flex-1">
+                <span className="block text-[10px] font-black tracking-widest" style={{color:activeAssistant.accent}}>{activeAssistant.name}</span>
+                <span className="block text-[12px] font-bold leading-relaxed text-white" style={JA_WRAP_STYLE}>{jaWrap(BATTLE_SELECT_HINTS[battleSelectHint])}</span>
+              </div>
+            </div>
+            <button type="button" data-battle-select-hint-close onClick={()=>setBattleSelectHint(null)} className="mt-2 min-h-[40px] w-full rounded-xl text-[12px] font-black text-black active:scale-[.98]" style={{backgroundColor:activeAssistant.accent}}>わかった！</button>
+          </div>
+        </div>
+      )}
       {tutorialStep!=null&&(()=>{
         const intro=tutorialKind==='intro';
+        const battleMore=tutorialKind==='battleMore';
+        // つづきの誘いは、はじめての案内と同じ見た目(スキップなし・次へ)で出す
         const battleGuide=tutorialKind==='battleGuide';
+        const guideLook=battleGuide||battleMore;
         const rhythm=tutorialKind==='rhythm';
         const pages=(rhythm
           ? ((typeof assistantRhythmTutorialPages==='function'&&assistantRhythmTutorialPages(selectedAssistantId))||[])
+          : battleMore
+          ? ((typeof assistantBattleMorePages==='function'&&assistantBattleMorePages(selectedAssistantId))||[])
           : battleGuide
           ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
           : intro
@@ -120213,7 +120631,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="w-full max-w-md flex flex-col items-center">
             <div className="w-full flex justify-between items-center mb-2">
               <span className="text-[10px] font-black tracking-widest" style={{color:who.accent}}>{tutorialStep+1} / {pages.length}</span>
-              {!battleGuide&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
+              {!guideLook&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
             </div>
             <div className="w-full flex items-end gap-3">
               <AssistantFace who={who} size={104} accent={who.accent} expression={page.e}/>
@@ -120234,22 +120652,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 案内の最後のページ(offer:'battle')では、そのままバトルの練習へ入れる。
                 断ってもヘルプの「バトルのれんしゅう」からいつでも始められる */}
             {page.offer==='battle'&&(
-              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
+              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME','first'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
             )}
             {page.offer==='battleGuide'&&(
               <div className="w-full grid grid-cols-1 gap-2 mt-3">
-                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
+                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','first'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
                 <button onClick={()=>setTutorialStep(v=>v+1)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
+              </div>
+            )}
+            {page.offer==='battleMore'&&(
+              <div className="w-full grid grid-cols-1 gap-2 mt-3" data-battle-more-offer>
+                <button data-battle-more-start onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','more'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>つづきのれんしゅうをやる</button>
+                <button data-battle-more-later onClick={()=>{ void (async()=>{ try{ const cur=normalizeBattleTutorialMore(await storeGet(BATTLE_TUTORIAL_MORE_KEY,null,false)); await storeSet(BATTLE_TUTORIAL_MORE_KEY,{...cur,offered:true,declined:true},false); }catch{} })(); setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
               </div>
             )}
             {page.declined&&(
               <button onClick={()=>finishTutorial(false)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>わかった！</button>
             )}
-            {!battleGuide&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
+            {!guideLook&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">戻る</button>
               <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}</button>
             </div>}
-            {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
+            {guideLook&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
           </div>
         </div>);
       })()}
@@ -120425,7 +120849,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 )}
                 {topic.launch==='battleTutorial'&&(
-                  <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
+                  <div className="space-y-2" data-battle-tutorial-launch>
+                    <button data-battle-tutorial-launch-first onClick={()=>startBattleTutorial('HOME','first')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 はじめの1戦(カードを出して勝つまで)</button>
+                    <button data-battle-tutorial-launch-more onClick={()=>startBattleTutorial('HOME','more')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 つづきのれんしゅう(バトルのいろいろな仕組み)</button>
+                    <button data-battle-tutorial-launch-all onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95">🎓 れんしゅうを最初から全部通す</button>
+                  </div>
                 )}
                 <div className="pt-1 flex gap-2">
                   <button onClick={()=>setHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
@@ -125157,7 +125585,7 @@ const createAnimationStyle = () => {
     [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup].animate-bounce:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both, bounce 1s 180ms infinite; }
     [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup-grid="2"] [data-enemy-popup] { --feel-from: 1.3; }
     /* 当たりの間: CSS のアニメーションだけを一瞬止める(ゲームの時計は止めない。付け外しは 24-battle-hit-feel.jsx) */
-    #root[data-feel-stop] *, #root[data-feel-stop] *::before, #root[data-feel-stop] *::after { animation-play-state: paused !important; }
+    [data-feel-stop] *, [data-feel-stop] *::before, [data-feel-stop] *::after { animation-play-state: paused !important; }
     /* 効果の札の種類(案C): 何が起きたかを色の縁と印で知らせる。文と出る場所・時間は今までどおり */
     [data-feel-kind] { border-width: 2px; }
     [data-feel-kind]::before { margin-right: .3em; }
