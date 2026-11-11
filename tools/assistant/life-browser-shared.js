@@ -30,6 +30,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
     let owned = {}; try { owned = JSON.parse(localStorage.getItem('mh_owned_items')) || {}; } catch {}
     put('mh_owned_items', { ...owned, peer_gift: 2, peer_token: 1 });
     if (!intro) put('mh_assistant_life_item_intro_v1', true);
+    if (!intro) put('mh_assistant_life_guide_seen_v1', true); // 初めて開いた人への1枚(intro のときだけ出す)
   }
   // 公開の印はページの中だけで切り替える(本体は 2026-11-07 から真)。偽の確かめのときは偽に戻す
   { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = !!life; clearInterval(t); } } catch {} }, 2); }
