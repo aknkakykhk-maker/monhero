@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 93cd46fb98a07370
+// generated-sha256: 13e96996405db9cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9739,7 +9739,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantLifePlan: true, // 2026-11-11 助手の行き先の予定(📅 今日の予定表・ナカヨシ19・台帳 #5301)。止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと真にする
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonCheer: true, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。ミハリ3 OK・地図の窓 #5448・更新履歴とヘルプは社長「この文で」で公開
-  assistantMasmonRanchTicket: false, // 2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
+  assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
@@ -40838,6 +40838,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いつも出す(切のときは、ページの中に「使う」ボタンを出す)
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
+  // 「ホーム画面に追加」の案内(51-home-screen-guide.jsx。iPhone の Safari のときだけ入口を出す・2026-11-11)
+  const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
@@ -40935,6 +40937,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
+        {typeof mhIsIphoneSafariBrowser==='function'&&mhIsIphoneSafariBrowser()&&(
+          <SettingsMenuLink icon="📲" label="ホーム画面に追加" desc="アプリのように遊ぶ方法(データの引き継ぎつき)" onClick={() => setHomeScreenGuideOpen(true)} data-open-home-screen-guide/>
+        )}
+        {homeScreenGuideOpen&&<HomeScreenGuideSheet onClose={() => setHomeScreenGuideOpen(false)} onOpenBackup={onOpenBackup}/>}
         <SettingsMenuLink icon="📚" label="ヘルプ" desc="遊び方・育て方・画面の説明" onClick={onOpenHelp}/>
         <SettingsMenuLink icon="🔄" label="ゲームを更新" desc="最新のゲームデータを読み込みます" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} accent="text-cyan-200"/>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
@@ -41078,6 +41084,140 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
       </div>
     </div>
   );
+}
+
+// ---- part: 51-home-screen-guide.jsx ----
+// ==== 「ホーム画面に追加」の案内(2026-11-11 社長の選択 B・窓口経由・アプリカ) ====
+// 社長「ブラウザだからかたまに画面の挙動がおかしい。ホームに追加しても、それでもブラウザのような挙動がある気がする」
+// → ホーム画面のアプリでは左端スワイプの戻るを出さなくした(#5455)。Safari で遊んでいる人には、ホーム画面に追加する案内を出す。
+// 決まり(窓口):
+//   ・iPhone の Safari で遊んでいる人だけに出す(ホーム画面のアプリ・Android・パソコン・LINE などのアプリ内ブラウザには出さない)
+//   ・iPhone はホーム画面のアプリと Safari で保存データが別になる。追加の手順の前に「先に Safari 側でバックアップ → 追加したアプリで戻す」を出す
+//   ・しつこくしない。自動で出すのは HOME で、出したら14日は出さない・3回出したらもう自動では出さない・「もう表示しない」で二度と出さない
+//     (新しいキー mh_home_screen_guide_v1 で覚える。既存のキーは触らない)。設定の「📲 ホーム画面に追加」からはいつでも開ける
+//   ・ヘルプ(データ引き継ぎの次の「ホーム画面に追加」)にも同じ手順を載せる
+const MH_HOME_SCREEN_GUIDE_KEY = 'mh_home_screen_guide_v1';
+const MH_HOME_SCREEN_GUIDE_GAP_MS = 14 * 24 * 60 * 60 * 1000;   // 自動で出したあと、次に出すまで
+const MH_HOME_SCREEN_GUIDE_MAX_AUTO = 3;                         // 自動で出すのはここまで
+const MH_HOME_SCREEN_GUIDE_FIRST_WAIT_MS = 60 * 60 * 1000;       // はじめて HOME に来てから1時間は出さない(最初の30分の案内とぶつけない)
+
+// iPhone の Safari(ホーム画面のアプリではない)か。Chrome・Firefox・Edge などの iPhone 版と、LINE・X・Instagram などのアプリ内ブラウザは除く
+// (アプリ内ブラウザからはホーム画面に追加できない。ほかのブラウザは手順が違う)
+function mhIsIphoneSafariBrowser(ua) {
+  try {
+    if (typeof window === 'undefined' || !window.navigator) return false;
+    if (typeof mhIsIosHomeScreenApp === 'function' && mhIsIosHomeScreenApp()) return false;
+    const text = String(ua == null ? window.navigator.userAgent || '' : ua);
+    if (!/iPhone|iPod/.test(text)) return false;
+    if (!/Safari\//.test(text) || !/Version\//.test(text)) return false;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YJApp|DuckDuckGo|Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK/i.test(text)) return false;
+    return true;
+  } catch (_) { return false; }
+}
+
+// 保存値の読み書き。壊れていても既定値で動く(CLAUDE.md ⑦)
+function normalizeHomeScreenGuideState(value) {
+  const src = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const num = v => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return {
+    firstSeenAt: num(src.firstSeenAt),
+    lastShownAt: num(src.lastShownAt),
+    autoCount: Math.min(99, Math.floor(num(src.autoCount))),
+    never: src.never === true,
+  };
+}
+function readHomeScreenGuideState() {
+  try { return normalizeHomeScreenGuideState(JSON.parse(window.localStorage.getItem(MH_HOME_SCREEN_GUIDE_KEY) || 'null')); }
+  catch (_) { return normalizeHomeScreenGuideState(null); }
+}
+function writeHomeScreenGuideState(next) {
+  try { window.localStorage.setItem(MH_HOME_SCREEN_GUIDE_KEY, JSON.stringify(normalizeHomeScreenGuideState(next))); } catch (_) { /* 書けなくても遊べる */ }
+}
+// いま自動で出してよいか(時刻を渡して決める。読み込み時に1回だけ決めない)
+function homeScreenGuideAutoDue(state, now) {
+  const s = normalizeHomeScreenGuideState(state);
+  if (s.never || s.autoCount >= MH_HOME_SCREEN_GUIDE_MAX_AUTO) return false;
+  if (!s.firstSeenAt || now - s.firstSeenAt < MH_HOME_SCREEN_GUIDE_FIRST_WAIT_MS) return false;
+  if (s.lastShownAt && now - s.lastShownAt < MH_HOME_SCREEN_GUIDE_GAP_MS) return false;
+  return true;
+}
+
+// 案内の窓。データ引き継ぎの窓(zIndex 90000)がこの上に開くので、戻ってくると手順の続きが見える
+function HomeScreenGuideSheet({ onClose, onNever = null, onOpenBackup }) {
+  const step = (no, title, body) => (
+    <li data-home-screen-guide-step={no} className="flex gap-2.5 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[12px] font-black text-slate-950">{no}</span>
+      <div className="min-w-0">
+        <div className="text-[12px] font-black leading-snug text-white">{title}</div>
+        <div className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">{body}</div>
+      </div>
+    </li>
+  );
+  return (
+    <div data-home-screen-guide role="dialog" aria-modal="true" aria-label="ホーム画面に追加"
+      className="fixed inset-0 flex items-center justify-center p-4" style={{ position: 'fixed', inset: 0, zIndex: 85000, backgroundColor: 'rgba(0,0,0,0.82)' }}>
+      <div className="w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border border-amber-300/60 bg-slate-900 p-4 shadow-2xl">
+        <div className="mh-dialog-head flex items-start justify-between gap-2">
+          <h3 className="text-[16px] font-black leading-snug text-white">📲 ホーム画面に追加して遊ぼう</h3>
+          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95">✕</button>
+        </div>
+        <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">アプリのように画面が広くなり、ブラウザの操作(画面の左端をなぞると戻る、など)が出なくなります。</p>
+        <div data-home-screen-guide-warning className="mt-3 rounded-2xl border border-red-300/70 bg-red-950/60 p-3 text-left">
+          <div className="text-[12px] font-black text-red-200">⚠ 追加する前に、必ずバックアップを作ってください</div>
+          <div className="mt-1 text-[11px] font-bold leading-relaxed text-red-100/90">iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは はじめからになります。</div>
+        </div>
+        <ol className="mt-3 space-y-2">
+          {step(1, 'いまの Safari でバックアップを作る', <>「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。<br/>(「バックアップコードを作成」→「コードをコピー」でも作れます)<button type="button" data-home-screen-guide-backup onClick={onOpenBackup} className="mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95">💾 データ引き継ぎを開く</button></>)}
+          {step(2, 'ホーム画面に追加する', 'Safari の下にある共有ボタン(四角から上向きの矢印)を押し、「ホーム画面に追加」→ 右上の「追加」。')}
+          {step(3, '追加したアイコンから開いて、データを戻す', 'ホーム画面のアイコンから開き、「設定」→「データ引き継ぎ」→「復元」で、保存したファイル(またはコピーしたコード)を読み込みます。')}
+        </ol>
+        <p className="mt-3 text-[10px] font-bold leading-relaxed text-slate-400">戻したあとは、ホーム画面のアイコンから遊んでください。Safari とアプリの両方で遊ぶと、進み方が別々になります。</p>
+        <div className="mt-3 flex gap-2">
+          {onNever && <button type="button" data-home-screen-guide-never onClick={onNever} className="min-h-[44px] flex-1 rounded-xl border border-white/10 bg-slate-800 px-2 text-[11px] font-black text-slate-300 active:scale-95">もう表示しない</button>}
+          <button type="button" data-home-screen-guide-close onClick={onClose} className="mh-button min-h-[44px] flex-1 rounded-xl bg-amber-400 px-2 text-[12px] font-black text-slate-950 active:scale-95">閉じる</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// HOME に置く。iPhone の Safari で、決まりの回数のうちなら、ほかの窓が出ていないときに1回だけ出す
+function HomeScreenGuideAuto({ onOpenBackup }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!mhIsIphoneSafariBrowser()) return undefined;
+    const first = readHomeScreenGuideState();
+    if (!first.firstSeenAt) writeHomeScreenGuideState({ ...first, firstSeenAt: Date.now() });
+    let tries = 0, timer = null, alive = true;
+    // ほかの窓(お知らせ・ログインボーナス・案内など)が出ているあいだは待つ。前に出ている物があるかだけを見る
+    const busy = () => {
+      try {
+        return [...document.querySelectorAll('.fixed, [role="dialog"], .mh-title-modal')].some(el => {
+          if (el.closest('[data-home-screen-guide]')) return false;
+          const st = window.getComputedStyle(el);
+          if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) === 0) return false;
+          const z = Number(st.zIndex);
+          const r = el.getBoundingClientRect();
+          return Number.isFinite(z) && z >= 40 && r.width * r.height >= window.innerWidth * window.innerHeight * 0.3;
+        });
+      } catch (_) { return true; }
+    };
+    const tick = () => {
+      if (!alive) return;
+      const now = Date.now();
+      if (!homeScreenGuideAutoDue(readHomeScreenGuideState(), now)) return;
+      if (busy()) { if (++tries < 20) timer = setTimeout(tick, 3000); return; }
+      const s = readHomeScreenGuideState();
+      writeHomeScreenGuideState({ ...s, lastShownAt: now, autoCount: s.autoCount + 1 });   // 出した時点で数える(閉じずに画面を移っても、また出さない)
+      setOpen(true);
+    };
+    timer = setTimeout(tick, 4000);
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, []);
+  if (!open) return null;
+  return <HomeScreenGuideSheet onClose={() => setOpen(false)}
+    onNever={() => { writeHomeScreenGuideState({ ...readHomeScreenGuideState(), never: true }); setOpen(false); }}
+    onOpenBackup={onOpenBackup}/>;
 }
 
 // ---- part: 52-mission-daily-line.jsx ----
@@ -76151,7 +76291,8 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(s.id)}>{s.label}</button>)}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
       </div>
-      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)</p>}
+      {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
+      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
       <div className="ambw-card" data-amgc-result>
         <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? 'きょうの修行' : '前回の修行') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
@@ -76178,6 +76319,7 @@ const AMGR_NUM = Object.freeze({
   light: [3, 6], // トレーニングチケット: 選んだ能力(× 伸びやすさ)
   heavyMain: [8, 12], heavySub: [2, 4], heavyDown: [2, 4], // 重トレーニングチケット: 大きく上がる・少し上がる(× 伸びやすさ)・下がる(そのまま)
   heavyFat: 10, // 重トレーニングの疲れ
+  serverDay: 40, // フレンド対戦のサーバの1日の上限(masmon-pvp の DAILY_GROWTH_CAP)。1枚で上がる分の合計は、これから自主育成の1日の最大(AMG_CARE.viewCap)を引いた分まで(同じ日に重なっても超えない・窓口 11-12)
 });
 const AMGR_TICKET = Object.freeze({ light: 'training_ticket', heavy: 'training_ticket_l' });
 const AMGR_TICKET_NAME = Object.freeze({ light: 'トレーニングチケット', heavy: '重トレーニングチケット' });
@@ -76299,8 +76441,9 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const bump = (s, n) => { const from = e.st[s]; const to = amgClamp(from + n, 1, AMG_MAX); if (to === from) return; e.st[s] = to; g[s] = (g[s] || 0) + (to - from); rows.push({ k: s, from, to }); };
   const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0))));
   const plan = amgrPlanOf(kind, k);
-  if (kind === 'heavy') { bump(plan.main, upOf(plan.main, AMGR_NUM.heavyMain)); bump(plan.sub, upOf(plan.sub, AMGR_NUM.heavySub)); bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1])); e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100); }
-  else bump(plan.main, upOf(plan.main, AMGR_NUM.light));
+  const room = Math.max(1, AMGR_NUM.serverDay - (Number(AMG_CARE.viewCap) || 20)); // 1枚で上がる分の合計の上限
+  if (kind === 'heavy') { const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room); bump(plan.main, main); bump(plan.sub, Math.min(upOf(plan.sub, AMGR_NUM.heavySub), Math.max(0, room - main))); bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1])); e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100); }
+  else bump(plan.main, Math.min(upOf(plan.main, AMGR_NUM.light), room));
   const net = Object.values(g).reduce((a, n) => a + n, 0);
   if (net > 0) e.cg.ranch = Math.round(((e.cg.ranch || 0) + net) * 100) / 100; // 関わって伸びた分(M/B管理)
   e.log = [...e.log, { s: amgSlotOf(now), a: kind === 'heavy' ? 'tktH' : 'tkt', k, g }].slice(-AMG_LOG);
@@ -78451,6 +78594,8 @@ const masmonPvpFriends = async () => {
       total: e.team_total, updatedAt: Date.parse(e.updated_at) || 0,
     })),
   })).map((f) => ({ ...f, registered: f.assistants.length > 0 }));
+  // 登録編成を持つフレンドがいれば、助手の修行の「練習相手」に数える(通信は増やさず、読んだ結果を使うだけ)
+  try { if (friends.some((f) => f.registered) && typeof amgcNoteFriend === 'function') amgcNoteFriend(true); } catch (_) {}
   return { ok: true, friends, remaining };
 };
 
@@ -110557,10 +110702,13 @@ function MonsterHeroGame() {
   // 助手ライフ: M/B管理にいる助手のマスモンにチケットを使ってあげる(56-assistant-life-masmon-ranch.jsx・ボクジョウ 2026-11-11)。
   //   数を読む口と1枚減らす口だけを渡す(トレーニングチケット・重トレーニングチケットのみ。足りなければ false)。プレイヤーのマスモン・絆経験値には触れない
   if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS){
-    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItems[itemId])||0);
+    // 持ち数は ownedItemsRef で読み、減らしたらすぐ ref も減らす(描き直す前に続けて使っても、残り1枚を2回使えないように・Fable 11-12)
+    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItemsRef.current[itemId])||0);
     ASSISTANT_LIFE_LINKS.ticketSpend=(itemId)=>{
-      if(!['training_ticket','training_ticket_l'].includes(itemId)||!((Number(ownedItems[itemId])||0)>0))return false;
-      setOwnedItems(prev=>{const have=Number(prev[itemId])||0;if(have<=0)return prev;const next={...prev,[itemId]:have-1};storeSet('mh_owned_items',next,false);return next;});
+      const have=Number(ownedItemsRef.current[itemId])||0;
+      if(!['training_ticket','training_ticket_l'].includes(itemId)||have<=0)return false;
+      ownedItemsRef.current={...ownedItemsRef.current,[itemId]:have-1};
+      setOwnedItems(prev=>{const n=Number(prev[itemId])||0;if(n<=0)return prev;const next={...prev,[itemId]:n-1};storeSet('mh_owned_items',next,false);return next;});
       return true;
     };
   }
@@ -121520,6 +121668,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="モンスター一覧" accent="text-cyan-400" onBack={returnToHome}/><div className="w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"><button onClick={()=>setGameState('OWNED_MONSTERS')} className="w-full min-h-[72px] bg-cyan-950/50 border border-cyan-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">ベースモン</button><button onClick={()=>setGameState('MASU_MONS')} className="w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">マスモン</button></div></div>
         )}
 
+        {/* 「ホーム画面に追加」の案内(iPhone の Safari だけ・しつこくしない回数で。51-home-screen-guide.jsx・2026-11-11) */}
+        {gameState==='HOME'&&typeof HomeScreenGuideAuto==='function'&&(
+          <HomeScreenGuideAuto onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}/>
+        )}
         {gameState==='SETTINGS'&&(
           <SettingsScreen
             onBack={returnToHome}
