@@ -187,11 +187,16 @@ const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, 
     this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
   } };
 const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
+// 保存を読み込む前は書かない(空の既定値で前の記録を上書きしない・ミハリ 11-11)
 const amgtSave = (next) => {
+  if (!AMGT_STORE.loaded) return false;
   AMGT_STORE.set(next);
   if (AMGT_STORE.dirty) return; AMGT_STORE.dirty = true;
   Promise.resolve().then(() => { AMGT_STORE.dirty = false; try { if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_TRAIN_KEY, AMGT_STORE.state, false); } catch (_) {} });
+  return true;
 };
+// 印が真なら、起動してすぐ読み込みを始める(第①段階の育成の回より先にそろえる)
+if (typeof window !== 'undefined') setTimeout(() => { try { if (amgtOn()) AMGT_STORE.load(); } catch (_) {} }, 0);
 const amgtSeed = () => (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed) || '';
 const amgtKeyOf = (row) => `${row.slot}:${row.monster}`;
 // 状態を1つ写して、助手・マスモンの入れ物を(無ければ一度だけ)作る
@@ -255,7 +260,7 @@ const amgtChoose = (aid, e, row, _rnd, slot) => {
 };
 // 修行を当てる。add(k, lo, hi) は第①段階の伸び(1日の上限・適性・個体差・関わり込み)。failChance(extra) は第①段階の失敗の起きやすさ
 const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
-  if (!amgtOn() || !act || !AMGT_KINDS[act.k]) return e;
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
   const K = AMGT_KINDS[act.k];
   const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
   const { next, me, br } = amgtEnsure(AMGT_STORE.state, aid, row, e);
@@ -358,7 +363,7 @@ const amgtAskOf = (aid, rows, day, growOf, st = AMGT_STORE.state) => {
 };
 // 相談に答える。修行の系統なら3日間(9回)その系統を優先・その修行は ×1.1。「休ませて」は第①段階の相談へ渡す
 const amgtAnswer = (aid, ask, choice, nowSlot) => {
-  if (!amgtOn() || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
+  if (!amgtOn() || !AMGT_STORE.loaded || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
   const day = amgtSlotDay(nowSlot);
   const st = AMGT_STORE.state;
   if (st.ask[aid] && st.ask[aid].d === day && st.ask[aid].a) return false;
@@ -367,7 +372,7 @@ const amgtAnswer = (aid, ask, choice, nowSlot) => {
   const next = { ...st, br: { ...st.br, [aid]: br }, ev: { ...st.ev, [aid]: [...(st.ev[aid] || [])] } };
   const kind = AMGT_KINDS[choice] ? choice : '';
   next.ask = { ...st.ask, [aid]: { d: day, q: kind ? 'next' : ask.q, slot: ask.slot, a: choice, ...(kind ? { until: nowSlot + 9 } : {}) } };
-  if (choice === 'rest' && typeof amgAdvise === 'function') amgAdvise(aid, ask.slot, 'rest');
+  if (choice === 'rest' && !(typeof amgAdvise === 'function' && amgAdvise(aid, ask.slot, 'rest') !== false)) return false; // 休ませる相談が受けられなかったら、答えも残さない
   amgtPushEv(next, aid, nowSlot, 'ask', `${ask.slot}|${choice}`);
   amgtBrGain(br, AMGT_BR_XP.ask, (k, v) => amgtPushEv(next, aid, nowSlot, 'breeder', `${k}|${v}`));
   amgtSave(next);

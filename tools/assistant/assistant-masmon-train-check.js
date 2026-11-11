@@ -89,6 +89,23 @@ const drive = (T, aid, days, opt = {}) => {
   check('① 印が偽なら生活の居場所も覚えない', T.amgtNoteLife({ abs: 100, groups: [], solo: { kiki: { place: 'battle' } } }) === false);
 }
 
+// ①-2 保存を読み込む前は書かない(ミハリ 11-11)
+{
+  const { T, saved } = make(true);
+  T.AMGT_STORE.loaded = false;
+  const e = { st: { pow: 300 }, fat: 0, str: 0, lv: 30 };
+  T.amgtDo('kiki', e, rows[0], null, START, { a: 'shugyo', k: 'pow' }, () => {}, () => 0);
+  const ask = { q: 'next', slot: 1, opts: ['pow', 'wise'] };
+  const ok = T.amgtAnswer('kiki', ask, 'pow', START);
+  T.amgtAfterAct('kiki', { a: 'light', k: 'pow' }, false, START);
+  check('① 読み込む前に amgtDo・amgtAnswer・amgtAfterAct を呼んでも保存しない', Object.keys(saved).length === 0 && ok === false && JSON.stringify(T.AMGT_STORE.state.mons) === '{}');
+  const r = make(true);
+  const qr = { q: 'rest', slot: 1, opts: ['rest', 'more'] };
+  check('① 「休ませよう」は第①段階が受けなければ答えを残さない', r.T.amgtAnswer('kiki', qr, 'rest', START) === false && !r.T.AMGT_STORE.state.ask.kiki);
+  r.ctx.amgAdvise = () => true;
+  check('① 第①段階が受ければ「休ませよう」を残す', r.T.amgtAnswer('kiki', qr, 'rest', START) === true && r.T.AMGT_STORE.state.ask.kiki.a === 'rest');
+}
+
 // ② 初めの値
 {
   const { T } = make(true);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dfd0f2d46c139446
+// source-sha256: 8396cc628a4ff5a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131302,6 +131302,7 @@ const AMGT_STORE = {
 };
 const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
 const amgtSave = next => {
+  if (!AMGT_STORE.loaded) return false;
   AMGT_STORE.set(next);
   if (AMGT_STORE.dirty) return;
   AMGT_STORE.dirty = true;
@@ -131311,7 +131312,13 @@ const amgtSave = next => {
       if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_TRAIN_KEY, AMGT_STORE.state, false);
     } catch (_) {}
   });
+  return true;
 };
+if (typeof window !== 'undefined') setTimeout(() => {
+  try {
+    if (amgtOn()) AMGT_STORE.load();
+  } catch (_) {}
+}, 0);
 const amgtSeed = () => typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed || '';
 const amgtKeyOf = row => `${row.slot}:${row.monster}`;
 const amgtEnsure = (st, aid, row, e) => {
@@ -131435,7 +131442,7 @@ const amgtChoose = (aid, e, row, _rnd, slot) => {
   };
 };
 const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
-  if (!amgtOn() || !act || !AMGT_KINDS[act.k]) return e;
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
   const K = AMGT_KINDS[act.k];
   const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
   const {
@@ -131587,7 +131594,7 @@ const amgtAskOf = (aid, rows, day, growOf, st = AMGT_STORE.state) => {
   };
 };
 const amgtAnswer = (aid, ask, choice, nowSlot) => {
-  if (!amgtOn() || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
+  if (!amgtOn() || !AMGT_STORE.loaded || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
   const day = amgtSlotDay(nowSlot);
   const st = AMGT_STORE.state;
   if (st.ask[aid] && st.ask[aid].d === day && st.ask[aid].a) return false;
@@ -131625,7 +131632,7 @@ const amgtAnswer = (aid, ask, choice, nowSlot) => {
       } : {})
     }
   };
-  if (choice === 'rest' && typeof amgAdvise === 'function') amgAdvise(aid, ask.slot, 'rest');
+  if (choice === 'rest' && !(typeof amgAdvise === 'function' && amgAdvise(aid, ask.slot, 'rest') !== false)) return false;
   amgtPushEv(next, aid, nowSlot, 'ask', `${ask.slot}|${choice}`);
   amgtBrGain(br, AMGT_BR_XP.ask, (k, v) => amgtPushEv(next, aid, nowSlot, 'breeder', `${k}|${v}`));
   amgtSave(next);
