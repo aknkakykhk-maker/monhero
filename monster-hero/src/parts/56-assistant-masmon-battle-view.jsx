@@ -241,7 +241,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
     try { return engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (e) { return null; }
   }, [ready]);
   const speciesIds = useMemo(() => (catalog ? Object.keys(catalog.species) : Object.keys(ALL_PLAYER_MONSTERS)), [catalog]);
-  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id]), [ready]);
+  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id] && (typeof assistantReleased !== 'function' || assistantReleased(a.id))), [ready]);
   const BASE_TOTAL = 1800;
   const teamsNow = () => ({
     teamA: ambwTeamOf(engine, sideA, size, Math.round(BASE_TOTAL * (1 + diff / 100)), catalog, allTechs),

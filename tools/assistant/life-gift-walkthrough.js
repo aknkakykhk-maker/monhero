@@ -131,7 +131,8 @@ const measure = () => {
       await closeSheets(); await closeRoom();
       await step('15-room-solo', '部屋(家にひとり・あつ)の贈るの行', async () => { await openRoom('atsu'); await page.locator('[data-assistant-life-room-act="give-solo"]').first().scrollIntoViewIfNeeded().catch(() => {}); }, closeRoom);
       await step('16-friends', '友情(きずな)', () => click('[data-assistant-life-icon="friends"]'));
-      await step('17-album', '友情 → 組を押す(思い出アルバム・2人にしてあげる)', async () => { await click('[data-assistant-peer-row]'); await page.locator('[data-assistant-peer-use]').first().waitFor({ timeout: 4000 }); await page.locator('[data-assistant-peer-use]').last().scrollIntoViewIfNeeded(); }, () => click('[data-assistant-peer-album-close]'));
+      await step('17-album', '友情 → 組を押す(思い出アルバム・この2人に贈る)', async () => { await click('[data-assistant-peer-row]'); const b = page.locator('[data-assistant-peer-give-sheet], [data-assistant-peer-use]').last(); await b.waitFor({ timeout: 4000 }); await b.scrollIntoViewIfNeeded(); }, () => click('[data-assistant-peer-album-close]'));
+      await step('17b-album-give', 'アルバムの「この2人に贈る」→ 贈る窓', async () => { await click('[data-assistant-peer-row]'); await click('[data-assistant-peer-give-sheet]'); await page.locator('[data-assistant-life-give-sheet]').waitFor({ timeout: 4000 }); }, closeSheets);
       // 道具の一覧: 新しいUIでは「🎁 贈る」のシートの中の「📦 道具の一覧」。道具タブが残っている版ではタブ
       const openItems = async () => { if (await page.locator('[data-assistant-life-icon="items"]:visible').count()) { await click('[data-assistant-life-icon="items"]'); return; }
         await click('[data-assistant-life-icon="house"]').catch(() => {}); await openPick(); await click('[data-assistant-life-gift-items-toggle]'); await page.locator('[data-assistant-life-items]').first().scrollIntoViewIfNeeded(); };

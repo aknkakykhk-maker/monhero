@@ -216,7 +216,7 @@ const statusOf = (a, b) => {
     check('いまの状態(助手ライフ): 見せない設定なら場所の印も送らない', ls0.place === 'other' && !ls0.spot, JSON.stringify(ls0.spot));
     check('いまの状態(助手ライフ): 一覧は短い形・プロフィールは文の形(「🏡 みゅあの部屋」「🏡 みゅあの部屋をのぞいている」「🏘 フレンドの家へ」)',
       lp({ lv: 'h', la: 'mua' }).text === '🏡 みゅあの部屋' && lp({ lv: 'h', la: 'mua' }).long === '🏡 みゅあの部屋をのぞいている'
-      && lp({ lv: 'v' }).text === '🏘 フレンドの家へ' && lp({ lv: 'v' }).long === '🏘 フレンドの家に遊びに行っている' && lp({ lv: 'w' }).text === '📋 みんなの居場所', JSON.stringify(lp({ lv: 'h', la: 'mua' })));
+      && lp({ lv: 'v' }).text === '🏘 フレンドの家へ' && lp({ lv: 'v' }).long === '🏘 フレンドの家に遊びに行っている' && lp({ lv: 'w' }).text === '🗺 助手の町', JSON.stringify(lp({ lv: 'h', la: 'mua' })));
     check('いまの状態(助手ライフ): 印が無い・知らない助手・知らない印は、今までの「🏡 助手ライフ」/家の形', lp(null).text === '🏡 助手ライフ' && lp({ lv: 'x' }).text === '🏡 助手ライフ' && lp({ lv: 'h', la: 'zzz' }).text === '🏡 助手の家'
       && api.friendsNormalizeRecords({ lv: 'q', la: '<b>' }).lv === '' && api.friendsNormalizeRecords({ lv: 'q', la: '<b>' }).la === '', JSON.stringify(lp({ lv: 'h', la: 'zzz' })));
     // 短い形は一覧の1行に収まる長さ(印のあと全角9字まで)
