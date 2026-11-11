@@ -3301,6 +3301,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return () => { alive = false; };
   }, [shareForm]);
   const closeShareGuide = () => { Audio_.fgSe.tap(); setShareGuide(false); void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {}); };
+  // はじめて開いたとき「対戦」だけを光らせる(2026-11-11 社長「A 対戦」)。一度きりの印は新しいキー mh_card_first_glow_v1。
+  //   出す条件: 印が無い・スターターを受け取り練習試合も済んだ(飛ばした)・コンピューター戦もマルチも1戦もしていない(前から遊んでいる人には出さない)。読めなければ出さない
+  const CARD_FIRST_GLOW_KEY = 'mh_card_first_glow_v1';
+  const [firstGlow, setFirstGlow] = useState(false);
+  useEffect(() => {
+    if (screen !== 'CARD_TOP' || view !== 'top' || !save || !save.starter || !save.tutorial || (!save.tutorial.done && !save.tutorial.skipped)) { setFirstGlow(false); return undefined; }
+    const rec = save.record || {};
+    const played = ['win', 'lose', 'surrender'].reduce((n, k) => n + (Number(rec.cpu && rec.cpu[k]) || 0), 0) + ['win', 'lose'].reduce((n, k) => n + (Number(rec.pvp && rec.pvp[k]) || 0), 0);
+    if (played > 0) { setFirstGlow(false); return undefined; }
+    let alive = true;
+    storeGet(CARD_FIRST_GLOW_KEY, null, false).then((v) => { if (alive) setFirstGlow(v !== true); }).catch(() => {});
+    return () => { alive = false; };
+  }, [screen, view, !!save, !!(save && save.starter), !!(save && save.tutorial && (save.tutorial.done || save.tutorial.skipped)), save && save.record]);
+  const closeFirstGlow = () => { if (!firstGlow) return; setFirstGlow(false); void storeSet(CARD_FIRST_GLOW_KEY, true).catch(() => {}); };
   const [startLevel, setStartLevel] = useState('last'); // 設定「助手と対戦の最初の強さ」
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -4738,7 +4752,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
-    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: go('mode') },
+    { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: () => { closeFirstGlow(); go('mode')(); } },
     { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
     { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.fgSe.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
     { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
@@ -4791,15 +4805,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
           )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
+          {firstGlow && <p data-card-first-glow-note className="text-center text-[12px] font-black text-yellow-200" style={JA_LABEL_STYLE}>まずはここ！コンピューターと対戦してみよう ▼</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
-            {bigCards.map((c, idx) => (
-              <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}
-                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
+            {bigCards.map((c, idx) => { const glow = firstGlow && c.key === 'cpu'; const btn = (
+              <button type="button" {...c.attr} {...(glow ? { 'data-card-first-glow': '' } : {})} disabled={!!c.disabled} onClick={c.onClick}
+                className={`${glow ? 'w-full ' : ''}mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
                 <span aria-hidden="true" className="mhms-mark">{c.mark}</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden">{c.ico}</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">{c.label}</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">{c.sub}</small></span>
               </button>
-            ))}
+            ); return glow ? <div key={c.key} className="mhcard-first-glow flex">{btn}</div> : <React.Fragment key={c.key}>{btn}</React.Fragment>; })}
           </div>
           <div data-card-top-shortcuts className="mhms-in grid grid-cols-4 gap-1.5" style={{ animationDelay: '.28s' }}>
             {smallButtons.map((b) => (

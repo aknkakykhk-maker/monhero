@@ -249,6 +249,10 @@
       "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
     },
     {
+      "file": "51-home-screen-guide.jsx",
+      "role": "「ホーム画面に追加」の案内(iPhone の Safari だけ・データ引き継ぎとセット・mh_home_screen_guide_v1)"
+    },
+    {
       "file": "52-mission-daily-line.jsx",
       "role": "ミッション: 助手の1日1行の案内(中継役 mission-daily-line・決まった台詞・mh_mission_daily_line_v1)"
     },
@@ -459,6 +463,10 @@
     {
       "file": "56-assistant-life-masmon-cheer.jsx",
       "role": "部品: 助手がモンヒロバトルにいるときの 👀 修行を見る(練習試合・保存しない)・📣 応援する(1回 熟練+1・💗+5・合わせて1日3回)・一人修行の伸び。口 assistantMasmonTrainRowInfo・assistantMasmonCheer・assistantMasmonTrainWatchOpen と入れ物 AssistantMasmonTrainWatchHost(地図に置く)。公開の印 assistantMasmonCheer の後ろ。保存は新しいキー mh_assistant_masmon_cheer_v1。観戦は 56-assistant-masmon-battle-view.jsx・beta の部品を使い回す。案 docs/progress/assistant-peer/masmon-train/cheer/PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-ranch.jsx",
+      "role": "部品: M/B管理にいる助手のマスモンに、トレーニングチケット/重トレーニングチケットを使ってあげる(時間帯ごとに助手1人1枚・同じマスモンは1日1枚・重トレは上がる/少し上がる/下がる)。口 assistantMasmonRanchRowInfo・assistantMasmonRanchUse・assistantMasmonRanchOpen と入れ物 AssistantMasmonRanchHost(地図)・帯 AssistantMasmonRanchBand(M/B管理)。公開の印 assistantMasmonRanchTicket。保存は新しいキー mh_assistant_masmon_ranch_v1 と育成の st。案 docs/progress/assistant-peer/masmon-ranch-ticket/PLAN.md"
     },
     {
       "file": "56-assistant-life-friend.jsx",
