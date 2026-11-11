@@ -125,7 +125,7 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
 // 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
 //   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
-//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡、えるびんは社長「そのままでいい」)。
+//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡 → 2026-11-11 から眼鏡を外した顔 ASSISTANT_LIFE_SLEEP_GLASSES、えるびんは社長「そのままでいい」)。
 //   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)の絵の表も持つ。
 //   ベッドだけでなく、家の部屋の顔・場面の立ち絵・地図の全身(寝ている姿が出る所すべて)に重ねる
 //   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
@@ -144,7 +144,50 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
   atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
   kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
+// 眼鏡の人の寝顔(2026-11-11 社長「ドラはメガネ外してメガネをどこかに置いてメガネ3の字になってるみたいにできる？」)。
+//   元の絵は描き直さず、眼鏡(レンズ・つる・鼻あて)を肌の色の太い線でふさぎ、「3」の字の目を重ねる。外した眼鏡はそばに置く(AssistantLifeSleepGlassesPut)。
+//   cover … 肌でふさぐ線 [x1, y1, x2, y2, 太さ](絵の幅に対する割合。始点=終点は丸)/eyes … 3の字の目 [中心x, 中心y, 幅, 高さ]/lw … 目の線の太さ。測り方は閉じた目と同じ
+const ASSISTANT_LIFE_SLEEP_GLASSES = Object.freeze({
+  dra: { skin: '#f6be96', line: '#372a24', lens: '#b2bdc6',
+    full: { lw: 0.034, cover: [[0.35, 0.44, 0.35, 0.44, 0.2], [0.622, 0.437, 0.622, 0.437, 0.19], [0.42, 0.435, 0.56, 0.43, 0.07], [0.225, 0.435, 0.28, 0.435, 0.06], [0.69, 0.43, 0.757, 0.419, 0.075], [0.685, 0.372, 0.7, 0.362, 0.05]],
+      eyes: [[0.355, 0.445, 0.075, 0.105], [0.615, 0.44, 0.075, 0.105]] },
+    face: { lw: 0.046, cover: [[0.297, 0.51, 0.297, 0.51, 0.27], [0.67, 0.505, 0.67, 0.505, 0.265], [0.4, 0.50, 0.58, 0.495, 0.09], [0.14, 0.495, 0.2, 0.5, 0.085], [0.76, 0.50, 0.832, 0.48, 0.095], [0.755, 0.42, 0.78, 0.4, 0.07]],
+      eyes: [[0.30, 0.515, 0.10, 0.14], [0.66, 0.51, 0.10, 0.14]] } },
+});
+// その絵に「眼鏡を外した寝顔」を重ねられるか(その助手のふつうの顔の絵のときだけ。着替えなど別の絵では位置がちがう)
+function assistantLifeSleepGlassesDef(pid, src) {
+  const g = ASSISTANT_LIFE_SLEEP_GLASSES[pid], who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  if (!g || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  return g;
+}
+// 外してそばに置いた眼鏡(つるをたたんだ形)。gw … 眼鏡の幅(px)。置けるのは眼鏡を外した寝顔が出るときだけ
+function AssistantLifeSleepGlassesPut({ pid, src, gw, style }) {
+  const g = assistantLifeSleepGlassesDef(pid, src); if (!g || !(gw > 0)) return null;
+  const W = gw * 1.2, H = gw * 0.72, x = W / 2, y = H * 0.56, r = gw * 0.2, lw = Math.max(1.1, gw * 0.075), c1 = x - gw * 0.27, c2 = x + gw * 0.27;
+  return (
+    <svg aria-hidden="true" data-assistant-life-sleep-glasses-put={pid} width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
+      <ellipse cx={x} cy={y + r * 1.25} rx={gw * 0.56} ry={r * 0.3} fill="#000" opacity=".22"/>
+      <path d={`M${c1 - r},${y - r * 0.2} L${c1 - r - gw * 0.02},${y - r * 1.05} L${c2 + r * 0.2},${y - r * 1.3}`} fill="none" stroke={g.line} strokeWidth={lw * 0.8} strokeLinecap="round" strokeLinejoin="round" opacity=".85"/>
+      <path d={`M${c2 + r},${y - r * 0.2} L${c2 + r + gw * 0.02},${y - r * 1.05}`} fill="none" stroke={g.line} strokeWidth={lw * 0.8} strokeLinecap="round" opacity=".85"/>
+      {[c1, c2].map((c, i) => (<g key={i}>
+        <ellipse cx={c} cy={y} rx={r} ry={r * 0.95} fill={g.lens} stroke={g.line} strokeWidth={lw}/>
+        <path d={`M${c - r * 0.45},${y - r * 0.1} l${r * 0.4},${-r * 0.45}`} fill="none" stroke="#fff" strokeWidth={lw * 0.6} strokeLinecap="round" opacity=".8"/></g>))}
+      <path d={`M${c1 + r},${y - r * 0.1} Q${x},${y - r * 0.5} ${c2 - r},${y - r * 0.1}`} fill="none" stroke={g.line} strokeWidth={lw} strokeLinecap="round"/>
+    </svg>);
+}
+function AssistantLifeSleepGlassesOff({ g, pid, isFace, w, h, style }) {
+  const d = isFace ? g.face : g.full;
+  const three = (cx, cy, s, eh) => { const X = v => (cx + v * s).toFixed(2), Y = v => (cy + v * eh).toFixed(2);
+    return `M${X(-0.45)},${Y(-0.5)} C${X(0.6)},${Y(-0.62)} ${X(0.6)},${Y(-0.04)} ${X(-0.12)},${Y(-0.02)} C${X(0.7)},${Y(0)} ${X(0.62)},${Y(0.62)} ${X(-0.5)},${Y(0.5)}`; };
+  return (
+    <svg data-assistant-life-roomview-sleep-eyes={pid} data-assistant-life-sleep-glasses-off={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
+      {d.cover.map(([x1, y1, x2, y2, t], i) => <path key={i} d={`M${x1 * w},${y1 * h} L${x2 * w + 0.01},${y2 * h}`} fill="none" stroke={g.skin} strokeWidth={t * w} strokeLinecap="round"/>)}
+      {d.eyes.map(([cx, cy, ew, eh], i) => <path key={`e${i}`} d={three(cx * w, cy * h, ew * w, eh * h)} fill="none" stroke={g.line} strokeWidth={Math.max(1, d.lw * w)} strokeLinecap="round" strokeLinejoin="round"/>)}
+    </svg>);
+}
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  const gl = assistantLifeSleepGlassesDef(pid, src);
+  if (gl) return <AssistantLifeSleepGlassesOff g={gl} pid={pid} isFace={/\/face\//.test(String(src || ''))} w={w} h={h} style={style}/>;
   const isFace = /\/face\//.test(String(src || ''));
   const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -193,6 +236,14 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
       <span style={{ position: 'absolute', left: left + 14, top: mattTop + 2, width: bw - 26, height: 20, borderRadius: 6, background: '#f8fafc' }}/>
       {/* 枕 */}
       <span data-assistant-life-roomview-pillow style={{ position: 'absolute', left: pillow.left, top: pillow.top, width: pillow.w, height: pillow.h, borderRadius: 16, background: 'linear-gradient(#ffffff,#e2e8f0)', boxShadow: 'inset 0 -4px 0 #cbd5e1, 0 2px 3px #0003' }}/>
+      {/* 眼鏡の人が寝ているときは、頭板の横の小さな台に外した眼鏡を置く(2026-11-11 社長) */}
+      {items.filter(x => assistantLifeSleepGlassesDef(x.pid, x.src)).slice(0, 1).map(x => { const tw = Math.min(34, Math.max(24, left - 6)), tx = left - tw - 1, ty = mattTop - 12; return (
+        <span key={`g-${x.pid}`} data-assistant-life-roomview-nightstand={x.pid}>
+          <span style={{ position: 'absolute', left: tx + tw * 0.38, top: ty + 4, width: tw * 0.24, height: bottom - ty - 4, borderRadius: 2, background: 'linear-gradient(90deg,#8a5a33,#6b4426)' }}/>
+          <span style={{ position: 'absolute', left: tx + tw * 0.14, top: bottom - 3, width: tw * 0.72, height: 5, borderRadius: 3, background: '#5c3a1f' }}/>
+          <span style={{ position: 'absolute', left: tx, top: ty, width: tw, height: 7, borderRadius: 4, background: 'linear-gradient(#c89060,#a06a3c)', boxShadow: '0 2px 3px #0005' }}/>
+          <AssistantLifeSleepGlassesPut pid={x.pid} src={x.src} gw={tw * 0.74} style={{ left: tx + tw * 0.055, top: ty - tw * 0.74 * 0.6, filter: night ? 'brightness(.78)' : undefined }}/>
+        </span>); })}
       {/* 寝ている頭(倒して枕の上) */}
       {items.map((x, i) => {
         const box = boxes[x.src]; if (!box) return null;
