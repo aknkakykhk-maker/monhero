@@ -1,0 +1,77 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>
+:root{--bg:#0f172a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#020617;font-family:"Noto Sans CJK JP","Hiragino Sans",sans-serif;color:#e2e8f0;padding:16px}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.cap{font-size:13px;font-weight:900;color:#fbbf24;margin:0 0 6px 2px}
+.ph{background:linear-gradient(#1e1b4b,#0f172a);border-radius:22px;overflow:hidden;position:relative;border:2px solid #334155}
+.P{width:390px;height:844px}.L{width:844px;height:390px}
+.h2{font-size:18px;font-weight:900;font-style:italic;color:#a5b4fc;text-align:center;letter-spacing:.15em}
+.sub{font-size:11px;color:#cbd5e1;text-align:center;margin-top:4px;line-height:1.4}
+.pill{display:inline-block;border-radius:999px;background:#fcd34d;color:#020617;font-size:11px;font-weight:900;padding:4px 12px}
+.card{display:flex;align-items:center;gap:10px;border-radius:16px;padding:7px 10px;border:2px solid rgba(255,255,255,.14);background:rgba(15,23,42,.75)}
+.card.on{border-color:#f472b6;background:#f472b61f}
+.face{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#334155;border:2px solid #475569}
+.nm{font-weight:900;font-size:14px}.ln{font-size:10.5px;color:#cbd5e1;line-height:1.35}
+.btn{border-radius:14px;padding:10px;text-align:center;font-weight:900;font-size:14px}
+.go{background:linear-gradient(#ec4899,#be185d);color:#fff}
+.gh{background:#1e293b;color:#cbd5e1;border:1px solid #475569}
+.bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#a78bfa)}
+.lock{opacity:.62;filter:saturate(.35)}
+.tag{font-size:9.5px;font-weight:900;border-radius:999px;padding:2px 7px;background:#334155;color:#cbd5e1;white-space:nowrap}
+.note{position:absolute;right:8px;top:8px;background:#f59e0b;color:#111;font-size:10px;font-weight:900;padding:3px 8px;border-radius:8px}
+.map{position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,#14532d,#052e16 70%)}
+.place{position:absolute;border-radius:14px;background:rgba(2,6,23,.55);border:1px solid rgba(255,255,255,.2);padding:6px 8px;font-size:11px;font-weight:900}
+.mini{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #fff;background:#334155}
+.mini.npc{border-color:#64748b;filter:saturate(.3) brightness(.85)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#0b1225;border-top:2px solid #475569;border-radius:20px 20px 0 0;padding:14px}
+.dim{position:absolute;inset:0;background:rgba(2,6,23,.6)}
+.glow{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,rgba(250,204,21,.45),transparent 55%)}
+.big{width:150px;height:150px;border-radius:50%;object-fit:cover;border:4px solid #fde047;box-shadow:0 0 40px #facc15}
+</style></head><body>
+<div id="P" class="row"></div>
+<div style="height:24px"></div>
+<div id="L" class="row" style="max-width:1720px"></div>
+<script>
+const F='../../../monster-hero/images/assistant/face/';
+const A=[['mua','みゅあ','myua','#f472b6','みゅあの愛'],['kiki','きき','kiki','#38bdf8','ききの応援'],['momosuke','ももすけ','momosuke','#fb923c','ももすけのおねだり'],['dra','ドラ','dra','#4ade80','ドラの緑膝'],['kyuko','きゅうこ','kyuko','#c084fc','きゅうこの譜面'],['sorashido','ソラシド','sorashido','#22d3ee','ソラシドの自動化'],['erubin','えるびん','erubin','#a3e635','えるびんの見守り']];
+const img=(a,c='face',e='normal')=>`<img class="${c}" src="${F}${a[2]}_${e}.PNG">`;
+const line={mua:'いっしょにがんばろうね！',kiki:'ゆるっといこ〜',momosuke:'ぼくもいっしょに行きたいな',dra:'まかせとけ',kyuko:'よろしくお願いします',sorashido:'なるほど了解です！',erubin:'ゆっくりでいいからね'};
+// 1 はじめの助手えらび
+function s1(o){const cards=A.map((a,i)=>`<div class="card ${i==1?'on':''}">${img(a)}<div style="flex:1"><div class="nm" style="color:${a[3]}">${a[1]}</div><div class="ln">「${line[a[0]]}」</div></div></div>`).join('');
+return `<div class="ph ${o}"><div class="note">① はじめの助手えらび</div><div style="padding:${o=='P'?'40px 14px 12px':'14px'};height:100%;display:flex;flex-direction:column">
+<div style="text-align:center"><div class="h2">助手を選ぶ</div><div class="sub">冒険に付き添ってくれる助手を<b style="color:#fde047">1人</b>選んでください。</div>
+<div class="sub" style="color:#a5f3fc">ほかの助手は、モンヒロバトルでその助手のアシストカードを使うと、助手として選べるようになります。</div></div>
+<div style="flex:1;overflow:hidden;margin-top:8px;display:grid;grid-template-columns:${o=='P'?'1fr':'1fr 1fr 1fr'};gap:6px;align-content:start">${cards}</div>
+<div class="btn go" style="margin-top:8px">ききに決める</div></div></div>`}
+// 2 助手を変える小窓
+function s2(o){const st={kiki:[1],mua:[0,12],momosuke:[0,0,'カードを買うと数え始めます'],dra:[0,7],kyuko:[0,0,'お話のあとで出会えます'],sorashido:[0,3],erubin:[0,20]};
+const N=20;const A2=[A[1],A[0],...A.slice(2),['atsu','あつ','atsu','#f87171','あつの挑発']];st.atsu=[0,0,'お話「あつ」のあとで出会えます'];const rows=A2.map(a=>{const s=st[a[0]];if(s[0])return `<div class="card on">${img(a)}<div style="flex:1"><div class="nm" style="color:${a[3]}">${a[1]} <span class="tag" style="background:#be185d;color:#fff">いまの助手</span></div><div class="ln">助手として選べます</div></div></div>`;
+const done=s[1]>=N;return `<div class="card ${done?'':''}"><span class="${done?'':'lock'}">${img(a)}</span><div style="flex:1;min-width:0"><div class="nm" style="color:${a[3]}">${a[1]} ${done?'<span class="tag" style="background:#fde047;color:#111">✨ 選べるようになりました</span>':'<span class="tag">まだ助手ではありません</span>'}</div>
+<div class="ln">${s[2]?s[2]:`「${a[4]}」を使った回数 <b>${Math.min(s[1],N)} / ${N}</b>`}</div>${s[2]?'':`<div class="bar"><i style="width:${Math.min(100,s[1]/N*100)}%"></i></div>`}</div></div>`}).join('');
+return `<div class="ph ${o}"><div class="dim"></div><div class="note">② 助手を変える(HOME の小窓)</div><div class="sheet" style="top:${o=='P'?'110px':'40px'}">
+<div style="font-weight:900;font-size:15px;color:#a5b4fc;margin-bottom:6px">助手を変える</div>
+<div style="display:grid;grid-template-columns:${o=='P'?'1fr':'1fr 1fr'};gap:6px">${rows}</div>
+<div class="ln" style="margin-top:8px">モンヒロバトルで、その助手のアシストカードを使うと数えます(オートも数えます)。</div></div></div>`}
+// 3 解放の演出(バトルの結果のあと)
+function s3(o){const a=A[3];return `<div class="ph ${o}" style="background:#0b1020"><div class="glow"></div><div class="note">③ 解放の演出(バトルの結果のあと)</div>
+<div style="position:absolute;inset:0;display:flex;${o=='P'?'flex-direction:column':'flex-direction:row'};align-items:center;justify-content:center;gap:${o=='P'?'14px':'28px'};padding:20px">
+${img(a,'big','happy')}<div style="text-align:center;max-width:330px"><div style="font-size:12px;color:#fde047;font-weight:900;letter-spacing:.2em">NEW PARTNER</div>
+<div style="font-size:24px;font-weight:900;margin:4px 0">ドラが助手になりました！</div>
+<div class="ln" style="font-size:12px">「ドラの緑膝」を20回使いました</div>
+<div style="background:rgba(15,23,42,.85);border:1px solid #4ade80;border-radius:14px;padding:10px;margin:12px 0;font-size:13px;text-align:left">ドラ「何度も使ってくれてたの、見てたぞ。…これからは、俺も手伝う」</div>
+<div style="display:flex;gap:8px"><div class="btn go" style="flex:1">ドラを助手にする</div><div class="btn gh" style="flex:1">あとで</div></div>
+<div class="ln" style="margin-top:6px">助手ライフで話したり、贈り物ができるようになりました</div></div></div></div>`}
+// 4 助手ライフの町(解放前の助手は町の人)
+function s4(o){const P=o=='P';const pl=[['🏛 神殿',P?[20,120]:[30,40],[A[0],A[3]]],['🛒 マーケット',P?[200,200]:[300,60],[A[1]]],['⚔ モンヒロバトル',P?[30,330]:[40,190],[A[2],A[5]]],['☕ カフェ',P?[200,420]:[220,250],[A[4],A[6]]]];
+const locked=['momosuke','dra','kyuko','sorashido','erubin'];
+const places=pl.map(([n,[x,y],w])=>`<div class="place" style="left:${x}px;top:${y}px">${n}<div style="display:flex;gap:4px;margin-top:4px">${w.map(a=>`<img class="mini ${locked.includes(a[0])?'npc':''}" src="${F}${a[2]}_normal.PNG">`).join('')}</div></div>`).join('');
+const a=A[2];return `<div class="ph ${o}"><div class="map"></div><div class="note">④ 助手ライフの町(解放前は町の人)</div>${places}
+<div class="sheet" style="${P?'':'left:auto;width:430px;top:60px;border-radius:20px 0 0 20px;border-top:0;border-left:2px solid #475569'}">
+<div style="display:flex;gap:10px;align-items:center"><span class="lock">${img(a)}</span><div><div class="nm" style="color:${a[3]}">ももすけ <span class="tag">町の人・まだ助手ではありません</span></div><div class="ln">いまは ⚔ モンヒロバトルにいます</div></div></div>
+<div style="background:#111827;border-radius:12px;padding:8px 10px;margin:10px 0;font-size:12.5px">ももすけ「あ、こんにちは…！ ぼく、まだ見てるだけだけど…」</div>
+<div class="ln">「ももすけのおねだり」をモンヒロバトルで <b>20回</b> 使うと、助手として選べるようになります(いま 0 / 20 ・カードはダイヤショップ)</div>
+<div style="display:flex;gap:6px;margin-top:10px"><div class="btn gh" style="flex:1;opacity:.5">💬 話す 🔒</div><div class="btn gh" style="flex:1;opacity:.5">🎁 贈る 🔒</div><div class="btn gh" style="flex:1;opacity:.5">🏠 部屋 🔒</div></div></div></div>`}
+const P=document.getElementById('P'),L=document.getElementById('L');
+[s1,s2,s3,s4].forEach(f=>{P.insertAdjacentHTML('beforeend',f('P'));L.insertAdjacentHTML('beforeend',f('L'));});
+</script></body></html>

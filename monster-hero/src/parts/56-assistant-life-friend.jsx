@@ -1105,7 +1105,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const tiles = (
     <div data-alf-visit-acts>
       {typeof AlfBondBar === 'function' && <AlfBondBar friend={friend} more={more} compact={land} onOpen={() => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(true); }}/>}
-      <p className="mb-1 text-[10px] font-black text-slate-200">この家でできること</p>
+      {!(land && typeof albEnabled === 'function' && albEnabled()) && <p className="mb-1 text-[10px] font-black text-slate-200">この家でできること</p>}
       <div className="grid grid-cols-3 gap-1.5">
         <button type="button" className="mhl-tile mhl-call" disabled={!home.length} data-alf-visit-act="talk" onClick={() => home[0] && greet(home[0])}><i>💬</i><b>話す</b><small>{home.length ? `家にいる ${home.length}人` : 'いまはだれも'}</small></button>
         <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => { setRoomId(h.ids[0] || null); if (h.ids[0]) bondMark('find'); }}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
