@@ -123,14 +123,26 @@ const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
     const back = await goHome();
     const secondStay = back ? await watch(60, 20) : [];
     played.push(...secondStay.filter((id) => !played.includes(id)));
-    check('はじめての人の最初の HOME では、お話は1本だけ流れる', firstStay.length === 1, `流れたお話: ${firstStay.join(' → ') || 'なし'}`);
-    check('HOME を離れて戻ると、次のお話が1本流れる', back && secondStay.length === 1 && !firstStay.includes(secondStay[0]), `戻れた=${back} 流れたお話: ${secondStay.join(' → ') || 'なし'}`);
+    // 2026-11-11 案3: 最初の本番のバトルを終えるまで、お話は自動で流さない(HOME の札・回想からは見られる)
+    check('はじめての人は、最初のバトルを終えるまで、お話が自動では流れない', firstStay.length === 0 && secondStay.length === 0, `流れたお話: ${[...firstStay, ...secondStay].join(' → ') || 'なし'}`);
+    // 最初のバトルを終えた印を付けて開き直すと、お話が1本だけ流れる
+    await page.evaluate(() => { try { localStorage.setItem('mh_first_battle_done_v1', 'true'); } catch {} });
+    await page.reload();
+    // 開き直すとタイトルから始まる。HOME の顔が見えるまで、タイトルの入口を押す
+    for (let i = 0; i < 20; i++) {
+      if (await page.evaluate(() => !!document.querySelector('.mh-home-player'))) break;
+      await page.getByRole('button', { name: /TAP TO START|トップ画面へ進む/ }).first().click({ timeout: 1500 }).catch(() => {});
+      await page.waitForTimeout(700);
+    }
+    const afterBattle = await watch(180, 150);
+    played.push(...afterBattle.filter((id) => !played.includes(id)));
+    check('最初のバトルを終えたあとの HOME では、お話が1本だけ流れる', afterBattle.length === 1, `流れたお話: ${afterBattle.join(' → ') || 'なし'}`);
     check('はじめての人には印(mh_story_one_at_a_time_v1)が付く', await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_story_one_at_a_time_v1')) === true; } catch { return false; } }));
     // 目印の無い古い作り(直す前)と比べるときのために、題でも見分ける
     const PAST_TITLE = /きゅうこ登場|ことのはの鈴|4人のタイプ|物置の古い箱/;
     const pastPlayed = played.filter((id) => Object.values(PAST).includes(id) || PAST_TITLE.test(id));
     // 開催中のイベントのお話(ハロウィン・ナイトは 11/1 に終わり、11/2 12:00 からパンドライベント。時刻で入れ替わるので両方を数える)
-    const live = played.filter((id) => /^halloween|^raid_jack|ハロウィン・ナイト|^pandora_wings/.test(id));
+    const live = played.filter((id) => /^halloween|^raid_jack|ハロウィン・ナイト|^pandora_wings|^card_cup/.test(id));
     check('開催中のイベント(ハロウィン・ナイト・パンドラ)のお話は流れる', live.length > 0, `流れたお話: ${played.join(' → ') || 'なし'}`);
     check('HOME のあとに流れたお話に、昔のお知らせのお話が無い', pastPlayed.length === 0, `流れたお話: ${played.join(' → ') || 'なし'}`);
     check('ログインボーナスの窓とお話の窓が同時に出ていない', overlap === 0, overlap ? `${overlap}回重なった` : '');

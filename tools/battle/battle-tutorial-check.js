@@ -160,11 +160,20 @@ check('保存しないことはデバッグ戦と同じ仕組み',
 check('練習の中で保存していない',
   !/storeSet\(/.test(startBlock) && !/submitLocalScore|recordClearOnce|saveMissionProgress/.test(startBlock));
 const endBlock = source.slice(source.indexOf('const endBattleTutorial = async ('), source.indexOf('const battleTutorialSteps'));
-// 終わるときに書き込むのは「練習を見た」という既読フラグだけ。
+// 終わるときに書き込むのは練習の印だけ(既読・はじめの1戦・つづき。2026-11-11 分割)。
 // スコア・記録・編成などのセーブデータには一切触らない
-check('終わるときに保存するのは既読フラグだけ',
-  (endBlock.match(/storeSet\(/g) || []).length === 1 && endBlock.includes(`storeSet(${BATTLE_TUTORIAL_SEEN}, true, false)`)
+check('終わるときに保存するのは練習の印だけ',
+  (endBlock.match(/storeSet\(/g) || []).length === 3
+    && endBlock.includes('storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false)')
+    && endBlock.includes('storeSet(BATTLE_TUTORIAL_FIRST_KEY,')
+    && endBlock.includes('storeSet(BATTLE_TUTORIAL_MORE_KEY,')
     && !/submitLocalScore|recordClearOnce|saveMissionProgress/.test(endBlock));
+// はじめの1戦だけ通しても「全部見た」(seen)は立てない(意味は変えない)
+check('はじめの1戦では既読を立てない',
+  endBlock.indexOf("if (endedVariant === 'first') {") >= 0
+    && endBlock.indexOf("if (endedVariant === 'first') {") < endBlock.indexOf('storeSet(BATTLE_TUTORIAL_FIRST_KEY,')
+    && endBlock.indexOf('storeSet(BATTLE_TUTORIAL_FIRST_KEY,') < endBlock.indexOf('} else {')
+    && endBlock.indexOf('} else {') < endBlock.indexOf('storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false)'));
 check('やさしい難易度で固定する', startBlock.includes("setDifficulty('Beginner');"));
 check('編成が空でも始められる', startBlock.includes('setMonSelection(getUnlockedBaseMonsterList());'));
 // ふだんの「この難易度で挑戦」は debugBattleRef を false へ戻すので、
@@ -206,18 +215,21 @@ check('練習中の勇者モン選択にデバッグ個体を混ぜない',
 // --- ④ 入口は3つ・戻り先を覚える ---
 check('デバッグ設定から開始できる', has('<button onClick={()=>startBattleTutorial()}') && has('バトルチュートリアル開始'));
 check('はじめての案内の最後から開始できる',
-  has("startBattleTutorial('HOME'); }") && has('バトルのれんしゅうをやってみる！'));
+  has("startBattleTutorial('HOME','first'); }") && has('バトルのれんしゅうをやってみる！'));
 check('ヘルプの項目から開始できる',
-  has("topic.launch==='battleTutorial'") && has('バトルのれんしゅうを始める'));
+  has("topic.launch==='battleTutorial'") && has("data-battle-tutorial-launch-first onClick={()=>startBattleTutorial('HOME','first')}")
+    && has("data-battle-tutorial-launch-more onClick={()=>startBattleTutorial('HOME','more')}")
+    && has("data-battle-tutorial-launch-all onClick={()=>startBattleTutorial('HOME')}"));
+check('つづきは HOME の1回きりの誘いから開始できる', has("data-battle-more-start onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME','more'); }}"));
 // ヘルプを開いてすぐ目に入る場所にも導線を置く(いつでも見返せるように)
 check('ヘルプのいちばん上に導線がある',
   has("onClick={()=>{setHelpCatId('battle');setHelpTopicId('tutorial');}}")
     && has('みゅあと一緒に、実際に動かして遊び方を覚えられます'));
 check('ヘルプ側に項目がある', helpSrc.includes("launch: 'battleTutorial'"));
 // 呼び出し口は、定義を除いて デバッグ(v2)・デバッグ(v1)・デバッグ(タクティクス)・
-// はじめての案内2つ・ヘルプ の6つ
+// はじめての案内2つ・つづきの誘い・ヘルプ3つ(はじめの1戦・つづき・全部通し) の9つ
 const entryCalls = (source.match(/startBattleTutorial\(/g) || []).length;
-check('入口は決めた6つだけ', entryCalls === 6, `${entryCalls}か所`);
+check('入口は決めた9つだけ', entryCalls === 9, `${entryCalls}か所`);
 // 役割が入れ替わったので、デバッグ専用は v1 のほう
 check('お試しの台本はデバッグからだけ開ける',
   (source.match(/startBattleTutorial\('DEBUG_SETTINGS','v1'\)/g) || []).length === 1
@@ -231,7 +243,8 @@ check('終わったら始めた場所へ帰る',
 check('何度でも始められる', !startBlock.includes(BATTLE_TUTORIAL_SEEN) && !startBlock.includes('battleTutorialSeen'));
 // デバッグのお試し再生で、通常プレイの既読状態を書き換えない
 check('既読にするのはふだんの入口から通したときだけ',
-  endBlock.includes(`if (completed && back === 'HOME') { try { await storeSet(${BATTLE_TUTORIAL_SEEN}, true, false); } catch {} }`));
+  endBlock.includes("if (completed && back === 'HOME') {")
+    && endBlock.indexOf("if (completed && back === 'HOME') {") < endBlock.indexOf('storeSet('));
 
 // --- ⑤ 画面の重ね方 ---
 check('専用画面を作らず、いまの画面へ重ねる',
@@ -511,7 +524,7 @@ check('台本の敵の行動はこのモードの定義から作る',
     && assistantsSrc.includes('enemyActionDisplayName(enemy, tacticsDef)'));
 // 走らせるモードと台本データは1か所で決める(入口が増えても取り違えないように)
 check('台本ごとのモードとデータを1か所で決めている',
-  has("const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];")
+  has("const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics', 'first', 'more'];")
     && has('const battleTutorialModeOf = (variant) => (battleTutorialVariantOf(variant) === \'tactics\'')
     && has('battleScenarioRef.current = battleTutorialScenarioOf(variant);'));
 check('タクティクスのれんしゅうはタクティクスのモードで走る',
