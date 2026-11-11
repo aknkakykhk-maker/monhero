@@ -1,0 +1,126 @@
+{
+ "tate": [
+  {
+   "name": "家",
+   "buttons": 21,
+   "buttonsInView": 21,
+   "smallButtons": 1,
+   "scrollers": 0,
+   "scrollHeight": 0,
+   "chars": 394,
+   "tinyTextNodes": 41
+  },
+  {
+   "name": "部屋",
+   "buttons": 38,
+   "buttonsInView": 30,
+   "smallButtons": 2,
+   "scrollers": 1,
+   "scrollHeight": 1250,
+   "chars": 778,
+   "tinyTextNodes": 58
+  },
+  {
+   "name": "居場所",
+   "buttons": 47,
+   "buttonsInView": 21,
+   "smallButtons": 6,
+   "scrollers": 1,
+   "scrollHeight": 1715,
+   "chars": 544,
+   "tinyTextNodes": 20
+  },
+  {
+   "name": "友情",
+   "buttons": 14,
+   "buttonsInView": 14,
+   "smallButtons": 7,
+   "scrollers": 0,
+   "scrollHeight": 0,
+   "chars": 303,
+   "tinyTextNodes": 33
+  },
+  {
+   "name": "道具",
+   "buttons": 20,
+   "buttonsInView": 11,
+   "smallButtons": 0,
+   "scrollers": 1,
+   "scrollHeight": 1683,
+   "chars": 1706,
+   "tinyTextNodes": 39
+  },
+  {
+   "name": "新UIの家",
+   "buttons": 22,
+   "buttonsInView": 22,
+   "smallButtons": 1,
+   "scrollers": 1,
+   "scrollHeight": 635,
+   "chars": 411,
+   "tinyTextNodes": 42
+  }
+ ],
+ "yoko": [
+  {
+   "name": "家",
+   "buttons": 21,
+   "buttonsInView": 21,
+   "smallButtons": 1,
+   "scrollers": 0,
+   "scrollHeight": 0,
+   "chars": 336,
+   "tinyTextNodes": 30
+  },
+  {
+   "name": "部屋",
+   "buttons": 32,
+   "buttonsInView": 32,
+   "smallButtons": 2,
+   "scrollers": 1,
+   "scrollHeight": 605,
+   "chars": 644,
+   "tinyTextNodes": 34
+  },
+  {
+   "name": "居場所",
+   "buttons": 47,
+   "buttonsInView": 21,
+   "smallButtons": 6,
+   "scrollers": 1,
+   "scrollHeight": 1183,
+   "chars": 544,
+   "tinyTextNodes": 20
+  },
+  {
+   "name": "友情",
+   "buttons": 18,
+   "buttonsInView": 14,
+   "smallButtons": 3,
+   "scrollers": 1,
+   "scrollHeight": 542,
+   "chars": 357,
+   "tinyTextNodes": 40
+  },
+  {
+   "name": "道具",
+   "buttons": 24,
+   "buttonsInView": 13,
+   "smallButtons": 0,
+   "scrollers": 1,
+   "scrollHeight": 1373,
+   "chars": 1760,
+   "tinyTextNodes": 46
+  },
+  {
+   "name": "新UIの家",
+   "buttons": 22,
+   "buttonsInView": 22,
+   "smallButtons": 1,
+   "scrollers": 1,
+   "scrollHeight": 419,
+   "chars": 353,
+   "tinyTextNodes": 31
+  }
+ ]
+}
