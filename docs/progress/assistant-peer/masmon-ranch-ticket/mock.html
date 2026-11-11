@@ -1,0 +1,96 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- 止め絵(設計の見本・本物の部品ではない)。M/B管理にいる助手のマスモンに、トレーニングチケット/重トレーニングチケットを使ってあげる。ボクジョウ 2026-11-11 -->
+<style>
+*{box-sizing:border-box}body{margin:0;background:#1e293b;font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;color:#fff}
+.row{display:flex;gap:18px;padding:18px;align-items:flex-start}
+.cap{color:#fde68a;font-weight:900;font-size:14px;margin:0 0 6px;width:390px}
+.ph{width:390px;height:780px;position:relative;overflow:hidden;border-radius:26px;background:#0b1020;box-shadow:0 0 0 3px #475569}
+.map{position:absolute;inset:0;background:url(../../../../monster-hero/data/images/home-background.jpg) center/cover;filter:brightness(.5)}
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:22px 22px 0 0;background:#0f172af7;border-top:2px solid #86efacaa;padding:12px 12px 20px}
+.sheet h3{margin:0;font-size:16px;font-weight:900}.sub{font-size:11px;color:#cbd5e1;font-weight:700;margin-top:2px}
+.who{margin-top:10px;border:1px solid #ffffff1a;border-radius:16px;background:#0f172ad9;padding:9px}
+.top{display:flex;gap:8px;align-items:center}
+.face{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:50% 12%;background:#334155;border:2px solid #86efac}
+.nm{font-size:13px;font-weight:900}.doing{font-size:10.5px;color:#cbd5e1;font-weight:700}
+.say{margin-top:7px;border-radius:12px;background:#ecfccb;color:#1a2e05;padding:7px 10px;font-size:12.5px;font-weight:900;position:relative}
+.say:before{content:"";position:absolute;left:16px;top:-6px;border:6px solid transparent;border-top:0;border-bottom-color:#ecfccb}
+.mon{display:flex;gap:8px;align-items:center;margin-top:8px;border-radius:12px;background:#1e293b;padding:6px 8px;font-size:11.5px;font-weight:800}
+.mon img{width:34px;height:34px;object-fit:contain}
+.b{min-height:44px;flex-direction:column;border-radius:12px;padding:4px 10px;font-size:12.5px;font-weight:900;color:#fff;border:0;display:flex;align-items:center;justify-content:center;gap:4px;line-height:1.2;text-align:center}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.tk{background:#166534}.hv{background:#9a3412}.off{background:#334155;color:#94a3b8}
+.left{font-size:10.5px;color:#bbf7d0;font-weight:800;margin-top:6px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}
+.st{min-height:52px;border-radius:12px;background:#1e293b;border:1px solid #ffffff22;font-size:12px;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.st small{font-size:10.5px;color:#cbd5e1;font-weight:800}
+.st.sel{border:2px solid #86efac;background:#14532d}
+.st .ask{font-size:9.5px;background:#fbbf24;color:#111;border-radius:6px;padding:0 4px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.tab{min-height:40px;border-radius:10px;border:1px solid #ffffff33;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.tab.on{background:#9a3412;border-color:#fdba74}
+.note{font-size:10.5px;color:#fde68a;font-weight:800;margin-top:6px;line-height:1.45}
+.res{margin-top:8px;border-radius:14px;background:#052e16;border:2px solid #86efac;padding:10px}
+.res .t{font-size:13px;font-weight:900}
+.res .l{display:flex;justify-content:space-between;font-size:13px;font-weight:900;margin-top:5px}
+.up{color:#86efac}.dn{color:#fca5a5}
+.pop{position:absolute;right:26px;top:330px;font-size:22px;font-weight:900;color:#86efac;text-shadow:0 2px 6px #000}
+.band{position:absolute;left:10px;right:10px;top:70px;border-radius:14px;background:#14532df0;border:1px solid #86efac;padding:8px 10px;font-size:12px;font-weight:900;line-height:1.4}
+.band .b{margin-top:6px;background:#22c55e;color:#052e16}
+.list{position:absolute;left:10px;right:10px;top:200px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.list div{height:84px;border-radius:12px;background:#1e293b;border:1px solid #334155}
+.hd{position:absolute;left:0;right:0;top:0;height:58px;background:#0f172a;display:flex;align-items:center;padding:0 14px;font-weight:900;font-size:15px}
+</style></head><body>
+<div class="row">
+<!-- 1. 地図の M/B管理の窓 -->
+<div><p class="cap">① 地図の「M/B管理」の窓:助手の頼みとチケットのボタン</p>
+<div class="ph"><div class="map"></div>
+<div class="sheet"><h3>🥚 M/B管理</h3><div class="sub">いる助手のマスモンに、チケットを1枚使ってあげられます(この時間帯に1人1枚)</div>
+<div class="who"><div class="top"><img class="face" src="../../../../monster-hero/images/assistant/face/kiki_happy.PNG"><div><div class="nm">きき</div><div class="doing">育成している(〜14:00)</div></div></div>
+<div class="say">ごろべえの「ちから」を鍛えたいな。チケット、使ってくれる？</div>
+<div class="mon"><img src="../../../../monster-hero/images/monster-thumbs/golem.png"><div>ごろべえ(ゴーレム) Lv12<br><span style="color:#cbd5e1">ちから 312 ・ 伸びやすさ A</span></div></div>
+<div class="g2"><div class="b tk">🎟️ トレーニング<br>チケットを使う</div><div class="b hv">🎟️ 重トレーニング<br>チケットを使う</div></div>
+<div class="left">持っている:トレーニングチケット 24枚/重トレーニングチケット 3枚</div></div>
+<div class="who"><div class="top"><img class="face" src="../../../../monster-hero/images/assistant/face/myua_normal.PNG"><div><div class="nm">みゅあ</div><div class="doing">育成している(〜14:00)</div></div></div>
+<div class="say">ぴくの「回避」を鍛えたいの！</div>
+<div class="b off" style="margin-top:8px">✓ 使いました:ぴく 回避 149 → 155(+6)<small>次は みゅあ が M/B管理に来たときに</small></div></div>
+</div></div></div>
+
+<!-- 2. 能力を選ぶ -->
+<div><p class="cap">② 選ぶ:マスモン・能力(頼みのままでも、別の能力でも)</p>
+<div class="ph"><div class="map"></div>
+<div class="sheet"><h3>ききのマスモンにチケットを使う</h3><div class="sub">自分のモンスターには入りません・絆ランキングには効きません</div>
+<div class="mon"><img src="../../../../monster-hero/images/monster-thumbs/golem.png"><div>ごろべえ(ゴーレム) ▼ ほかのマスモンにする</div></div>
+<div class="tabs"><div class="tab">🎟️ トレーニング</div><div class="tab on">🎟️ 重トレーニング</div></div>
+<div class="stats">
+<div class="st">ライフ<small>421 ・B</small></div>
+<div class="st sel"><span class="ask">頼み</span>ちから<small>312 ・A</small></div>
+<div class="st">かしこさ<small>158 ・D</small></div>
+<div class="st">命中<small>205 ・C</small></div>
+<div class="st">回避<small>149 ・E</small></div>
+<div class="st">丈夫さ<small>398 ・A</small></div></div>
+<div class="note">重量上げ:ちから が大きく上がり、ライフ も少し上がる。かわりに 回避 が少し下がる。疲れが少したまる</div>
+<div class="g2"><div class="b off">やめる</div><div class="b hv">この1枚を使う<small>重トレーニングチケット のこり 3 → 2 枚</small></div></div>
+</div></div></div>
+
+<!-- 3. 使った直後 -->
+<div><p class="cap">③ 使った直後:その場で「いくつ → いくつ」</p>
+<div class="ph"><div class="map"></div><div class="pop">ちから +14</div>
+<div class="sheet"><h3>🥚 M/B管理</h3>
+<div class="who"><div class="top"><img class="face" src="../../../../monster-hero/images/assistant/face/kiki_excited.PNG"><div><div class="nm">きき</div><div class="doing">育成している(〜14:00)</div></div></div>
+<div class="say">わあ、ごろべえ がんばった！ ありがとう！</div>
+<div class="res"><div class="t">🏋️ 重量上げ(重トレーニングチケット)</div>
+<div class="l"><span>ちから</span><span class="up">312 → 326(+14)</span></div>
+<div class="l"><span>ライフ</span><span class="up">421 → 425(+4)</span></div>
+<div class="l"><span>回避</span><span class="dn">149 → 146(−3)</span></div>
+<div class="l" style="font-size:11px;color:#cbd5e1"><span>疲れ</span><span>+10</span></div></div>
+<div class="b off" style="margin-top:8px">閉じる</div></div>
+</div></div></div>
+
+<!-- 4. M/B管理の画面 -->
+<div><p class="cap">④ M/B管理の画面:助手が来ている帯(押すと②へ)</p>
+<div class="ph" style="background:#0b1020"><div class="hd">M/B管理</div>
+<div class="band">🥚 きき・みゅあ が来ています<br><span style="font-weight:800;color:#dcfce7">きき「ごろべえの ちから を鍛えたいな」</span>
+<div class="b">🎟️ 助手のマスモンにチケットを使う(あと1人)</div></div>
+<div class="list"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+</div></div>
+</div></body></html>
