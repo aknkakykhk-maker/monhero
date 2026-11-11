@@ -7,40 +7,73 @@ const AMG_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['
 const AMG_KEYS = AMG_STATS.map(x => x[0]);
 const AMG_MAX = 999; // 仕様書 §2 の仮案
 // 種族ごとの適性(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)。案: docs/progress/assistant-peer/masmon-grow/aptitude-draft.jpg(社長が見て決める)
+// 種族ごとの伸びやすさ(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)と初めの値。2026-11-11 社長「モンスターファームを参考に」:
+//   モンスターファーム2の種族ランクと純血の初期値(appmedia.jp の MF2 攻略 wiki の種族ページ)。◇=近い血統の値・※=モンヒロ独自(MF2 に無い)。表は docs/progress/assistant-peer/masmon-grow/aptitude-mf2.json
 const AMG_APT = Object.freeze({
-  Mocchi: 'AADCDA',
-  Suezo: 'BBDADB',
-  Golem: 'BAEEEA',
-  Tiger: 'CADBBC',
-  Ham: 'DCDCBC',
-  Pixie: 'ECAEAE',
-  Mia: 'EBADAD',
-  Pandora: 'DBBBBB',
-  Monol: 'BDECEA',
-  Oboro: 'ADEEDD',
-  Plant: 'ADEEED',
+  Mocchi: 'CCCBBB',
+  Suezo: 'DCABDD',
+  Golem: 'CACEEA',
+  Tiger: 'DDBABE',
+  Ham: 'CAECAE',
+  Pixie: 'EDABBE',
+  Mia: 'DCABBE',
+  Pandora: 'EDABBE',
+  Monol: 'DCCDEA',
+  Oboro: 'BECCDD',
+  Plant: 'AECCDE',
   Zan: 'EBEAAE',
   Eiki: 'DADAAE',
-  KenshiMocchi: 'EBDACC',
-  Mitarashi: 'BAEDDB',
+  KenshiMocchi: 'CCCBBB',
+  Mitarashi: 'CBBBCB',
   Ark: 'CCCDCB',
   Iblis: 'DCCDCC',
-  Snegurochka: 'DEADCC',
-  Undine: 'ECAEBE',
-  Yaobikuni: 'CEBEDB',
+  Snegurochka: 'CEBABD',
+  Undine: 'CEBABD',
+  Yaobikuni: 'CEBABD',
   Yggdrasil: 'AECDEA',
   MelWhip: 'ADCCEA',
   Melody: 'AECBEA',
   Kuromy: 'BACBDB',
-  Ghost: 'CDBBBE',
-  Spooky: 'BBBBBD',
+  Ghost: 'EEBBBE',
+  Spooky: 'EEBBBE',
   Illumine: 'EEBCAE',
   Dreamy: 'DEBCAD',
   Kyubi: 'CCAACD',
   Orihime: 'CDAACC',
 });
+const AMG_INIT = Object.freeze({
+  Mocchi: [110, 100, 120, 140, 150, 130],
+  Suezo: [80, 120, 170, 130, 90, 100],
+  Golem: [100, 220, 110, 70, 60, 160],
+  Tiger: [80, 90, 130, 160, 140, 70],
+  Ham: [50, 130, 70, 100, 140, 40],
+  Pixie: [50, 80, 170, 150, 140, 60],
+  Mia: [94, 104, 204, 124, 94, 94],
+  Pandora: [50, 80, 170, 150, 140, 60],
+  Monol: [110, 130, 140, 100, 10, 220],
+  Oboro: [140, 50, 120, 110, 100, 80],
+  Plant: [160, 40, 120, 110, 100, 70],
+  Zan: [60, 135, 60, 160, 160, 60],
+  Eiki: [85, 160, 85, 160, 160, 60],
+  KenshiMocchi: [110, 100, 120, 140, 150, 130],
+  Mitarashi: [100, 110, 140, 150, 120, 160],
+  Ark: [110, 110, 110, 85, 110, 135],
+  Iblis: [85, 110, 110, 85, 110, 110],
+  Snegurochka: [50, 10, 150, 110, 100, 60],
+  Undine: [50, 10, 150, 110, 100, 60],
+  Yaobikuni: [50, 10, 150, 110, 100, 60],
+  Yggdrasil: [160, 60, 110, 85, 60, 160],
+  MelWhip: [160, 85, 110, 110, 60, 160],
+  Melody: [160, 60, 110, 135, 60, 160],
+  Kuromy: [135, 160, 110, 135, 85, 135],
+  Ghost: [100, 90, 120, 140, 150, 80],
+  Spooky: [100, 90, 120, 140, 150, 80],
+  Illumine: [60, 60, 135, 110, 160, 60],
+  Dreamy: [85, 60, 135, 110, 160, 85],
+  Kyubi: [110, 110, 160, 160, 110, 85],
+  Orihime: [110, 85, 160, 160, 110, 110],
+});
 const AMG_APT_MULT = Object.freeze({ A: 1.3, B: 1.15, C: 1, D: 0.85, E: 0.7 });
-const AMG_APT_BASE = Object.freeze({ A: 300, B: 250, C: 200, D: 150, E: 100 }); // かしこさ・命中・回避の初めの値の元
 const amgAptOf = (monster) => { const s = AMG_APT[monster] || 'CCCCCC'; const o = {}; AMG_KEYS.forEach((k, i) => { o[k] = AMG_APT_MULT[s[i]] ? s[i] : 'C'; }); return o; };
 // 訓練(仕様書 §4 の表の名前)
 const AMG_LIGHT = Object.freeze({ life: '走り込み', pow: '腕立て', wise: '勉強', hit: '的当て', eva: 'ステップ', tough: '受け身' });
@@ -66,6 +99,7 @@ const AMG_CARE = Object.freeze({
   viewCap: 20, viewMult: 1.1, // その日にプレイヤーが様子を見に来たマスモン: 1日の上限 15→20・伸び 1.1倍
   pickMult: 1.3, pickFail: 0.5, picksPerDay: 3, // 自分で訓練を指定した回: 伸び 1.3倍・失敗しにくい(半分)。指定は助手1人につき1日3回まで
   askMult: 1.1, // 相談(鍛えて)で頼んだ能力を伸ばした回: 1.1倍
+  ranchMult: 1.2, // M/B管理に助手がいるあいだにプレイヤーがトレーニングした(ナカヨシ9の受け口・1日1回): 次の回の伸び 1.2倍(2026-11-11 社長)
 });
 const AMG_LV_MAX = 99; // Lv は育成の経験(訓練で上がる・社長 11-11)
 const amgLvNeed = (lv) => 10 + lv; // 次の Lv までの経験
@@ -80,7 +114,7 @@ const amgClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const amgNum = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? amgClamp(Math.round(Number(v)), lo, hi) : d);
 const amgMonKey = (slot, monster) => `${slot}:${monster}`;
 const normalizeAssistantMasmonGrow = (raw) => {
-  const out = { v: 1, mons: {}, done: {}, focus: {}, rest: {}, care: {}, plan: {} };
+  const out = { v: 1, mons: {}, done: {}, focus: {}, rest: {}, care: {}, plan: {}, boost: {} };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   const okAid = (aid) => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
   if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
@@ -91,7 +125,7 @@ const normalizeAssistantMasmonGrow = (raw) => {
       const st = {}; for (const k of AMG_KEYS) st[k] = amgNum(e.st[k], 0, 0, AMG_MAX);
       const ind = {}; for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && typeof x.a === 'string').slice(-AMG_LOG)
-        .map(x => ({ s: x.s, a: x.a.slice(0, 12), k: AMG_KEYS.includes(x.k) ? x.k : '', g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])), ...(x.f ? { f: 1 } : {}), ...(x.p ? { p: 1 } : {}) }));
+        .map(x => ({ s: x.s, a: x.a.slice(0, 12), k: AMG_KEYS.includes(x.k) ? x.k : '', g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])), ...(x.f ? { f: 1 } : {}), ...(x.p ? { p: 1 } : {}), ...(x.r ? { r: 1 } : {}) }));
       one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999) };
     }
     out.mons[aid] = one;
@@ -119,19 +153,17 @@ const normalizeAssistantMasmonGrow = (raw) => {
     const o = {}; for (const [sl, x] of Object.entries(p)) { const n = Number(sl); if (Number.isInteger(n) && n >= 1 && n <= 8 && x && Number.isInteger(x.s) && ACTS.includes(x.a) && (!x.k || AMG_KEYS.includes(x.k))) o[n] = { s: x.s, a: x.a, k: x.k || '' }; }
     out.plan[aid] = o;
   }
+  if (raw.boost && typeof raw.boost === 'object') for (const [aid, b] of Object.entries(raw.boost)) if (okAid(aid) && b && Number.isInteger(b.d) && Number.isInteger(b.s)) out.boost[aid] = { d: b.d, s: b.s };
   return out;
 };
-// 初めの値(一度だけ・社長 11-11 ②): ライフ・ちから・丈夫さはいまのゲージ(種族×Lv×型)の割合×600、かしこさ・命中・回避は適性と Lv から
+// 初めの値(一度だけ・2026-11-11 社長「初期ステータスも独自に。モンスターファームを参考に」): 種族の初期値(AMG_INIT)に、小さな個体差と Lv の上乗せ
+const AMG_INIT_VAR = 0.1; // 個体差(±10%)
+const AMG_INIT_LV_BONUS = 2; // 今の Lv × 2 を全能力に上乗せ(Lv25 なら +50)。0 にすれば上乗せなし
+const AMG_INIT_FLOOR = 0; // 初めの値の下限(MF2 は 10 などの低い値もある。社長の答えで 50 などにできる)
 const amgInitial = (row, rnd) => {
-  const apt = amgAptOf(row.monster); const lv = Number.isFinite(row.lv) ? row.lv : 10;
-  const now = (typeof assistantMasmonStats === 'function' ? assistantMasmonStats({ ...row, growMine: null }) : null) || {};
-  const lvUp = 0.7 + Math.min(30, lv) / 50;
-  const st = {
-    life: Math.round((now.hp || 0.3) * 600), pow: Math.round((now.atk || 0.3) * 600), tough: Math.round((now.def || 0.3) * 600),
-    wise: Math.round(AMG_APT_BASE[apt.wise] * lvUp), hit: Math.round(AMG_APT_BASE[apt.hit] * lvUp), eva: Math.round(AMG_APT_BASE[apt.eva] * lvUp),
-  };
-  for (const k of AMG_KEYS) st[k] = amgClamp(st[k], 1, 600);
-  const ind = {}; for (const k of AMG_KEYS) { const r = rnd(); ind[k] = r < 0.2 ? -1 : r > 0.8 ? 1 : 0; } // 個体差(迎えたとき1回だけ・仕様書 §3)
+  const base = AMG_INIT[row.monster] || [110, 110, 110, 110, 110, 110]; const lv = Number.isFinite(row.lv) ? row.lv : 10;
+  const st = {}; AMG_KEYS.forEach((k, i) => { st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + lv * AMG_INIT_LV_BONUS), Math.max(1, AMG_INIT_FLOOR), AMG_MAX); });
+  const ind = {}; for (const k of AMG_KEYS) { const r = rnd(); ind[k] = r < 0.2 ? -1 : r > 0.8 ? 1 : 0; } // 伸びの個体差(迎えたとき1回だけ・仕様書 §3)
   return { st, fat: 0, str: 0, ind, log: [], src: 'init_v1', dg: { d: 0, n: 0 }, lv: amgClamp(Math.round(lv), 1, AMG_LV_MAX), xp: 0 };
 };
 const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
@@ -168,7 +200,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const apt = amgAptOf(row.monster); const g = {}; let fail = false;
   const day = amgSlotDay(slot);
   const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
-  const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1);
+  const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
   const add = (k, lo, hi) => {
     const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
@@ -190,7 +222,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   // 経験と Lv(訓練をすると上がる)
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
   while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) { e.xp -= amgLvNeed(e.lv); e.lv += 1; }
-  e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}) }].slice(-AMG_LOG);
+  e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}), ...(care.ranch ? { r: 1 } : {}) }].slice(-AMG_LOG);
   return e;
 };
 // まだの回をまとめて決める。rows = その助手のいまのマスモン(assistantMasmonRowsOf)。初めての助手は、今の回から数える(さかのぼって育てない)
@@ -216,7 +248,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
       if (!pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
-      mons[key] = amgDo(aid, e, row, rnd, s, act, { viewed: care.d === amgSlotDay(s) && !!care.view[row.slot] });
+      mons[key] = amgDo(aid, e, row, rnd, s, act, { viewed: care.d === amgSlotDay(s) && !!care.view[row.slot], ranch: !!(state.boost[aid] && state.boost[aid].s === s) });
     }
     changed = true;
   }
@@ -263,6 +295,15 @@ const amgPick = (aid, slot, act, now = Date.now()) => {
   if (!had && amgPicksLeft(aid, now) <= 0) return false;
   const c = st.care[aid] && st.care[aid].d === d ? st.care[aid] : { d, view: {}, picks: 0 };
   amgSave({ ...st, plan: { ...st.plan, [aid]: { ...(st.plan[aid] || {}), [slot]: { s, a: act.a, k: act.k || '' } } }, care: { ...st.care, [aid]: { ...c, picks: c.picks + (had ? 0 : 1) } } });
+  return true;
+};
+// 外から呼ぶ受け口(ナカヨシ9・2026-11-11 社長): M/B管理(ranch)に助手がいるあいだにプレイヤーがトレーニングした。
+//   その日1回だけ受け付け、その助手のマスモン全員の「次の育成の回」の伸びを AMG_CARE.ranchMult 倍にする。受け付けたら true(もう受けた日・印が偽なら false)
+const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
+  if (!amgOn() || typeof aid !== 'string' || !/^[a-z]{2,12}$/.test(aid) || (opts && opts.source && opts.source !== 'ranch')) return false;
+  const st = AMG_STORE.state; const s = amgSlotOf(now); const d = amgSlotDay(s);
+  if (st.boost[aid] && st.boost[aid].d === d) return false;
+  amgSave({ ...st, boost: { ...st.boost, [aid]: { d, s: s + 1 } } });
   return true;
 };
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
@@ -337,7 +378,7 @@ function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
       {kindText && <p className="text-[10.5px] font-bold text-slate-300">{kindText}</p>}
       <p className="mt-1.5 text-[10px] font-black text-slate-400">今日の育成({who.name}{T ? `・${T.name}` : ''})</p>
       {logs.length ? logs.map(x => (
-        <p key={x.s} className="text-[11px] font-bold text-slate-100" data-amg-log={x.a}>{['🌅', '☀', '🌙'][x.s % 3]} {AMG_PERIOD_NAME[x.s % 3]} {amgActName(x)}{x.p ? '(あなたが決めた)' : ''}{x.f ? '(うまくいかなかった)' : ''} {Object.entries(x.g).map(([k, n]) => `${(AMG_STATS.find(s => s[0] === k) || [])[1]} +${n}`).join('・')}{x.a === 'rest' ? '(疲れがとれた)' : x.a === 'play' ? '(気分転換)' : ''}</p>))
+        <p key={x.s} className="text-[11px] font-bold text-slate-100" data-amg-log={x.a}>{['🌅', '☀', '🌙'][x.s % 3]} {AMG_PERIOD_NAME[x.s % 3]} {amgActName(x)}{x.p ? '(あなたが決めた)' : ''}{x.r ? '(M/B管理でいっしょにトレーニング)' : ''}{x.f ? '(うまくいかなかった)' : ''} {Object.entries(x.g).map(([k, n]) => `${(AMG_STATS.find(s => s[0] === k) || [])[1]} +${n}`).join('・')}{x.a === 'rest' ? '(疲れがとれた)' : x.a === 'play' ? '(気分転換)' : ''}</p>))
         : <p className="text-[10.5px] font-bold text-slate-400">まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に{who.name}が育てます)</p>}
       {(amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot]) && <p className="mt-1 text-[10px] font-bold text-pink-200" data-amg-viewed>👀 今日は様子を見に来たので、いつもより伸びやすい</p>}
       <AmgPickRow who={who} t={t} e={e} st={amgSt}/>

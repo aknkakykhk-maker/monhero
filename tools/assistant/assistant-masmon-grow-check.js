@@ -19,7 +19,7 @@ vm.runInContext([
   "const assistantMasmonGrowKind = (g) => String(g || '').split('(')[0];",
   "const assistantMasmonStats = (t) => ({ hp: 0.4, atk: 0.5, def: 0.3, guts: 0.4 });",
   grow,
-  'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf, amgView, amgPick, amgPicksLeft, AMG_CARE };',
+  'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf, amgView, amgPick, amgPicksLeft, AMG_CARE, assistantMasmonTrainBoost };',
 ].join('\n'), ctx);
 const T = ctx.T;
 const rows = [{ slot: 1, monster: 'Golem', nick: 'ごろべえ', lv: 25, grow: '攻撃型(ちからに振る)' }, { slot: 2, monster: 'Pixie', nick: 'ぴく', lv: 12, grow: 'すばやさ型' }];
@@ -29,9 +29,9 @@ const fresh = () => T.normalizeAssistantMasmonGrow(null);
 // ① 初めて開いたとき: 初めの値を作り、今の回だけ育てる(さかのぼらない)
 const s1 = T.amgCatchUp(fresh(), 'kiki', rows, 'seed-1', start);
 const e1 = s1.mons.kiki['1:Golem'];
-check('① 初めの値を作る(6能力・0〜600・印 init_v1)', e1 && T.AMG_KEYS.every(k => e1.st[k] >= 1 && e1.st[k] <= 600) && e1.src === 'init_v1', JSON.stringify(e1 && e1.st));
+check('① 初めの値を作る(6能力・種族の初期値+個体差+Lv・印 init_v1)', e1 && T.AMG_KEYS.every(k => e1.st[k] >= 1 && e1.st[k] <= 400) && e1.src === 'init_v1', JSON.stringify(e1 && e1.st));
 check('① 初めては今の回だけ育てる', e1.log.length === 1 && e1.log[0].s === start && s1.done.kiki === start, `${e1.log.length}回`);
-check('① ライフ・ちから・丈夫さは、いまのゲージ×600', s1.mons.kiki['2:Pixie'].log.length === 1);
+check('① ほかのマスモンも初めの値を作る', s1.mons.kiki['2:Pixie'].log.length === 1);
 
 // ② 同じ種なら同じ結果・違う種なら違う結果
 const s1b = T.amgCatchUp(fresh(), 'kiki', rows, 'seed-1', start);
@@ -101,6 +101,17 @@ check('⑥ 「休ませて」のあと、次の回は休む(1回だけ)', sR.mon
   const perDay2 = {}; for (const x of b.mons.kiki['1:Golem'].log) { const d = Math.floor(x.s / 3); perDay2[d] = (perDay2[d] || 0) + Object.values(x.g).reduce((p, q) => p + q, 0); }
   check(`⑩ 見に来た日でも1日の伸びは ${T.AMG_CARE.viewCap} まで`, Object.values(perDay2).every(n => n <= T.AMG_CARE.viewCap), `最大 ${Math.max(...Object.values(perDay2))}`);
   check('⑩ Lv は訓練で上がる(経験がたまる)', b.mons.kiki['1:Golem'].lv >= 25 || b.mons.kiki['1:Golem'].xp > 0, `Lv${b.mons.kiki['1:Golem'].lv}`);
+}
+// ⑪ M/B管理の受け口(ナカヨシ9): 1日1回だけ・次の回の伸びに補正・印 r
+{
+  const t0 = Date.UTC(2026, 10, 11, 0, 0);
+  T.AMG_STORE.set(s1);
+  const b1 = T.assistantMasmonTrainBoost('kiki', { source: 'ranch' }, t0), b2 = T.assistantMasmonTrainBoost('kiki', { source: 'ranch' }, t0), b3 = T.assistantMasmonTrainBoost('BAD', {}, t0);
+  const sB = T.amgCatchUp(T.AMG_STORE.state, 'kiki', rows, 'seed-1', start + 1);
+  const sN = T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 1);
+  const lb = sB.mons.kiki['1:Golem'].log.slice(-1)[0], ln = sN.mons.kiki['1:Golem'].log.slice(-1)[0];
+  const tot = (x) => Object.values(x.g).reduce((p, q) => p + q, 0);
+  check('⑪ M/B管理の受け口: 1日1回だけ true・次の回に印 r・伸びは同じか多い', b1 === true && b2 === false && b3 === false && lb.r === 1 && tot(lb) >= tot(ln), `${tot(ln)} → ${tot(lb)}`);
 }
 // ⑦ 保存の正規化: 壊れた値・知らない項目は既定に・数字は範囲に
 const n = T.normalizeAssistantMasmonGrow({ mons: { kiki: { '1:Golem': { st: { life: 5000, pow: 'x', wise: -3 }, fat: 400, ind: { life: 9 } }, 'bad key': { st: {} } }, 'BAD!': {} }, done: { kiki: 'x' }, focus: { kiki: { 1: { k: 'nope', until: 3 } } } });
