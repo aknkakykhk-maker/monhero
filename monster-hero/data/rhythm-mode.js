@@ -44526,6 +44526,7 @@ const RHYTHM_SONG_CLIMAX=Object.freeze({
   altar_world_tree_short:[[98034,131699,1]],
   evans:[[59224,82578,0.76],[92958,104635,1]],
   humanoid:[[57114,87302,1]],
+  lamia:[[33908,62848,1]],
 // </rhythm-song-climax>
 });
 const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if(!Array.isArray(spans)||!Number.isFinite(ms))return 0;for(const span of spans){if(!Array.isArray(span))continue;const [a,b,s]=span.map(Number);if(ms>=a&&ms<b)return s>0?Math.min(1,s):0;}return 0;};
