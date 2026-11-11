@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b244f0e4e18634ac
+// source-sha256: 34d124d0752df1c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13720,6 +13720,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RHYTHM_GRAND_OPEN_RELEASE = true;
 const RHYTHM_GRAND_OPEN_START_AT = '2026-11-09T10:00:00+09:00';
 const RHYTHM_GRAND_OPEN_TEASER_RELEASE = true;
+const QUICK_RUN_ANYWHERE_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
@@ -173043,7 +173044,14 @@ function MonsterHeroGame() {
   const assistantLifeExitingRef = useRef(false);
   const gameStateNowRef = useRef('HOME');
   const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state);
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
+  const quickAnywhereRunRef = useRef(false);
+  const quickAnywhereSeQuietRef = useRef(false);
+  const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
+  const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
+  const quickAnywhereEndingRef = useRef(false);
+  const quickAnywhereKeepsRun = () => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !quickAnywhereEndingRef.current && !assistantLifeSettlingRef.current && !!runStageRef.current && !RUN_STAGE_SCREENS.includes(gameStateNowRef.current);
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state) || isQuickAnywhereScreen(state);
   const runBackgroundAllowedRef = useRef(false);
   const gameStateCaller = () => {
     try {
@@ -175649,7 +175657,7 @@ function MonsterHeroGame() {
     if (typeof ASSISTANT_LIFE_STORE === 'undefined') return undefined;
     const fn = st => {
       const open = !!(st && st.open);
-      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current) && !(QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current)) assistantLifeExitingRef.current = true;
       assistantLifeOpenRef.current = open;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       setAssistantLifeOpenNow(open);
@@ -178327,7 +178335,9 @@ function MonsterHeroGame() {
   const cardBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && cardScreenOpen;
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
+  const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -178336,9 +178346,11 @@ function MonsterHeroGame() {
   };
   const clearRunStage = () => {
     runStageRef.current = null;
+    quickAnywhereRunRef.current = false;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     setRunStage(null);
   };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -179577,7 +179589,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen || quickAnywhereScreenOpen;
     bgmPreloadKeys(gameState, wave).forEach(next => Audio_.preloadBGM(next));
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
@@ -179611,8 +179623,9 @@ function MonsterHeroGame() {
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   useEffect(() => {
-    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen);
-  }, [cardScreenOpen]);
+    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen);
+  }, [cardScreenOpen, quickAnywhereScreenOpen]);
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
@@ -180010,7 +180023,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = e => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) Audio_.se.tap();
+      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -185521,7 +185534,7 @@ function MonsterHeroGame() {
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null);
     setCardOrigin('home');
-    if (runStageRef.current != null) {
+    if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
       cardExitingRunRef.current = true;
       try {
@@ -187140,6 +187153,10 @@ function MonsterHeroGame() {
     window.alert('アップデート通知テストを未読へ戻しました。');
   };
   const returnToHome = () => {
+    if (quickAnywhereKeepsRun()) {
+      setGameState('HOME');
+      return;
+    }
     stopAllAuto();
     abandonRunAnimations();
     clearRunStage();
@@ -187794,6 +187811,10 @@ function MonsterHeroGame() {
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
   const exitRhythmSongSelect = async () => {
+    if (quickAnywhereKeepsRun()) {
+      setGameState('HOME');
+      return;
+    }
     if (rhythmBackgroundRun) {
       if (rhythmExitingRunRef.current) return;
       rhythmExitingRunRef.current = true;
@@ -187850,6 +187871,184 @@ function MonsterHeroGame() {
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     });
   }, [assistantLifeOpenNow]);
+  const [quickAnywhereDetail, setQuickAnywhereDetail] = useState(false);
+  useEffect(() => {
+    if (!quickAnywhereScreenOpen) setQuickAnywhereDetail(false);
+  }, [quickAnywhereScreenOpen]);
+  const renderQuickAnywhereStrip = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const paused = !finished && !resting && !quickAnywhereBackgroundRun;
+    const pending = finished ? {
+      xp: 0,
+      gold: 0
+    } : quickRunPendingRewards();
+    const gold = Math.floor(quickRunProgress.gold + pending.gold),
+      xp = Math.floor(quickRunProgress.xp + pending.xp);
+    const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
+    const label = finished ? quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止' : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
+    const info = {
+      wave,
+      loops: quickRunProgress.loops,
+      finished,
+      catchingUp: false,
+      reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+      canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(),
+      processing: resultProcessing,
+      canResume: finished && quickRunResumable
+    };
+    const closeDetail = () => setQuickAnywhereDetail(false);
+    return React.createElement(React.Fragment, null, React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere": state,
+      "data-wave": wave,
+      "data-loops": quickRunProgress.loops,
+      "data-screen": gameState,
+      "aria-label": `裏クイック ${label}。押すと詳しく`,
+      onClick: () => setQuickAnywhereDetail(v => !v),
+      className: `fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
+      style: {
+        left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))',
+        bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))',
+        minHeight: 30
+      }
+    }, label), quickAnywhereDetail && React.createElement("div", {
+      className: "fixed inset-0 z-[90] flex items-end justify-start p-2",
+      onClick: closeDetail,
+      style: {
+        paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))',
+        paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))'
+      }
+    }, React.createElement("div", {
+      "data-quick-anywhere-detail": true,
+      role: "dialog",
+      "aria-label": "裏クイックのようす",
+      onClick: e => e.stopPropagation(),
+      className: "w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, React.createElement("b", {
+      className: "text-[13px] font-black text-fuchsia-100"
+    }, "🔁 裏クイック", diffLabel ? `(${diffLabel})` : ''), React.createElement("button", {
+      type: "button",
+      onClick: closeDetail,
+      className: "min-h-[32px] rounded-full border border-white/25 px-2.5 text-[11px] font-black"
+    }, "閉じる")), React.createElement("p", {
+      className: "mt-1.5 text-[12px] font-bold leading-snug"
+    }, finished ? info.reason : `WAVE ${wave}/10・${quickRunProgress.loops}周目`), React.createElement("p", {
+      className: "mt-1 text-[12px] font-bold leading-snug text-slate-200"
+    }, "ここまで ダイヤ+", gold.toLocaleString(), "・経験値+", xp.toLocaleString()), React.createElement("p", {
+      className: "mt-1.5 text-[11px] leading-snug text-slate-300"
+    }, resting ? 'M/B管理・神殿などにいるあいだは休みます。出ると続きから進みます。' : 'ゲームのどこにいても、AUTO設定の編成でクイックの周回が裏で進みます。M/B管理・神殿にいるあいだは休み、ほかのバトルを始めると、それまでの報酬を受け取って終わります。'), React.createElement("div", {
+      className: "mt-2 flex flex-wrap items-center gap-1.5"
+    }, finished ? React.createElement(RhythmQuickRunPill, {
+      info: info,
+      onRestart: () => {
+        closeDetail();
+        return startQuickRunFromRhythm();
+      },
+      onResume: () => {
+        closeDetail();
+        return resumeQuickRunFromRhythm();
+      },
+      widthClass: "min-w-0 flex-1"
+    }) : React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere-watch": true,
+      onClick: () => {
+        closeDetail();
+        returnToBackgroundRun();
+      },
+      className: "min-h-[34px] flex-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-3 text-[12px] font-black text-white active:scale-[.97]"
+    }, "⚔ バトルを見る"), !finished && React.createElement("button", {
+      type: "button",
+      "data-quick-anywhere-stop": true,
+      onClick: () => {
+        closeDetail();
+        void settleQuickAnywhereRun();
+      },
+      className: "min-h-[34px] rounded-full border border-white/30 bg-slate-800/90 px-3 text-[12px] font-black text-slate-100 active:scale-[.97]"
+    }, "⏹ 止める")))));
+  };
+  const settleQuickAnywhereRun = async () => {
+    if (quickAnywhereEndingRef.current || !runStageRef.current) return;
+    quickAnywhereEndingRef.current = true;
+    try {
+      const running = isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({
+        silent: true
+      });
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)),
+          gold = Math.max(0, Math.floor(Number(before.gold) || 0)),
+          xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({
+          tier: 'small',
+          kind: 'quick',
+          key: `quick:${Date.now()}`,
+          gain: 1,
+          text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}`
+        });
+      }
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      quickAnywhereEndingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    }
+  };
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
+    if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    void settleQuickAnywhereRun();
+  }, [gameState]);
+  const quickAnywhereTryStart = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!repeatTemplateFromAutoSettings()) return false;
+    return startQuickRunFromRhythm();
+  };
+  const quickAnywhereTryStartRef = useRef(null);
+  quickAnywhereTryStartRef.current = quickAnywhereTryStart;
+  const quickAnywhereBootTriedRef = useRef(false);
+  const quickAnywherePrevScreenRef = useRef('HOME');
+  useEffect(() => {
+    const prev = quickAnywherePrevScreenRef.current;
+    quickAnywherePrevScreenRef.current = gameState;
+    if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    const boot = !quickAnywhereBootTriedRef.current;
+    const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
+    if (!boot && !fromBattle) return undefined;
+    quickAnywhereBootTriedRef.current = true;
+    const timer = setTimeout(() => {
+      if (quickAnywhereTryStartRef.current) quickAnywhereTryStartRef.current();
+    }, boot ? 1500 : 300);
+    return () => clearTimeout(timer);
+  }, [gameState, bootPhase]);
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryAnywhere = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   const assistantLifeQuickRunView = () => {
     if (!assistantLifeOpenNow) return null;
     const canStart = autoQuickRunConfigured(autoSettings) && !!repeatTemplateFromAutoSettings() && !(runStage !== null && !runResultFinished);
@@ -191901,6 +192100,7 @@ function MonsterHeroGame() {
     if (next) setAutoBattleEnabled(true);
     if (!next) setEcoModeSafe('off');
     if (next) beginQuickRunProgress();
+    if (next) quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
   };
   const runResultFinished = hp <= 0 || gaveUp;
   const runResultFinishedRef = useRef(false);
@@ -191921,8 +192121,12 @@ function MonsterHeroGame() {
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     const result = startRunFromRepeatTemplate(template);
     if (!result.ok) {
+      quickAnywhereRunRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       stopAllAuto();
       clearQuickRunProgress();
       return false;
@@ -191938,6 +192142,7 @@ function MonsterHeroGame() {
     if (runResultFinishedRef.current) return false;
     if (!isQuickMode(runMode)) return false;
     if (!storageReadyForRun()) return false;
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
     autoRepeatStartingRef.current = false;
     autoRepeatRef.current = true;
     setAutoRepeat(true);
@@ -197083,7 +197288,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !runBackgroundAllowed && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -197092,7 +197297,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && battleFxSettings.shake !== 'OFF' ? {
+      style: screenShake && !ecoBattleView && !runBackgroundAllowed && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && cardTeaserOpen && React.createElement(CardBattleTeaser, {
@@ -210451,7 +210656,7 @@ function MonsterHeroGame() {
       speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
       speciesChallengeSaveRunRef: speciesChallengeSaveRunRef,
       speciesChallengeBattleRunRef: speciesChallengeBattleRunRef
-    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GameOverScreen, {
+    }), hp <= 0 && !debugBattle && !runBackgroundAllowed && React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -210461,7 +210666,7 @@ function MonsterHeroGame() {
       runMode: runMode,
       runResultActionOnce: runResultActionOnce,
       score: score
-    }), gaveUp && !debugBattle && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement(GaveUpScreen, {
+    }), gaveUp && !debugBattle && !runBackgroundAllowed && React.createElement(GaveUpScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,
       masuRegisterButtonNode: masuRegisterButtonNode,
@@ -210506,7 +210711,7 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), effect && !rhythmScreenOpen && !cardScreenOpen && !assistantLifeScreenOpen && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), effect && !runBackgroundAllowed && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',

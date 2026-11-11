@@ -18,8 +18,28 @@ function MonsterHeroGame() {
   const assistantLifeExitingRef = useRef(false);
   const gameStateNowRef = useRef('HOME');
   const isAssistantLifeRunScreen = state => assistantLifeExitingRef.current || (assistantLifeOpenRef.current && ASSISTANT_LIFE_RUN_STATES.includes(state));
-  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード・助手ライフ)
-  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state);
+  // ===== 裏クイックを、ゲームのどこにいても回す(2026-11-11 社長・docs/progress/quick-run-anywhere/PLAN.md) =====
+  // quickAnywhereRunRef … いまのランが「どこにいても裏で回してよいクイック∞周回」か。∞を立てたとき(startQuickRunFromRhythm・∞の切り替え・再開)に立て、
+  //   ランを捨てたとき(clearRunStage)に落とす。負けてもランが残るあいだは立てたまま
+  //   (負けた直後に予約済みの段階の切り替えが着地しても、HOME などからバトルの画面へ飛ばさないため)
+  const quickAnywhereRunRef = useRef(false);
+  const quickAnywhereSeQuietRef = useRef(false); // 裏のバトルの効果音を止めているか(ボタンの音を fgSe で鳴らすため)
+  // 進め続ける画面。ここに無い画面(M/B管理・神殿・トレーニング・デバッグ・これから足す画面)では「休む」=進めないだけで、出たら続きから。
+  //   モンヒロビート・MFバトルカードは今までどおりそれぞれの決まりで回す(演奏中の配り方を崩さない)
+  const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  // ほかのバトルの入口。開いたら裏クイックを締めて(そこまでの報酬を確定して)から入る(社長 B「ほかのバトルを始めたら締めて報酬を確定」)
+  const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT',
+    'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
+  // その画面が「裏クイックがランの画面の外で回っている」状態か(休む画面も含む。段階が進んでも画面をバトルへ飛ばさない)
+  const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current
+    && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
+  // 締めている途中(止める・ほかのバトルの入口)。このあいだの returnToHome はふつうどおりランを終わらせる
+  const quickAnywhereEndingRef = useRef(false);
+  // いま HOME へ戻る・画面を出るときに、ランを終わらせず回し続けるか(ランの画面の外にいて、締めている途中でないとき)
+  const quickAnywhereKeepsRun = () => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !quickAnywhereEndingRef.current
+    && !assistantLifeSettlingRef.current && !!runStageRef.current && !RUN_STAGE_SCREENS.includes(gameStateNowRef.current);
+  // 裏でクイック∞周回を続けたまま開いていてよい画面か(モンビー・MFバトルカード・助手ライフ・裏クイックの回っている画面)
+  const isBackgroundRunScreen = state => isRhythmScreen(state) || isCardRunScreen(state) || isAssistantLifeRunScreen(state) || isQuickAnywhereScreen(state);
   // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
   const runBackgroundAllowedRef = useRef(false);
   // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
@@ -2439,7 +2459,9 @@ function MonsterHeroGame() {
     // 裏の周回を回したまま閉じたら、締め終わるまで「裏で回してよい」のままにする(締めは下の effect)
     const fn = (st) => {
       const open = !!(st && st.open);
-      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;
+      //   ★裏クイックをどこでも回すときは締めない(閉じても HOME で回り続ける。2026-11-11 社長)。「止める」の札で止めたときだけ締める
+      if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)
+        && !(QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current)) assistantLifeExitingRef.current = true;
       assistantLifeOpenRef.current = open;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
       setAssistantLifeOpenNow(open);
@@ -4955,8 +4977,14 @@ function MonsterHeroGame() {
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   // 助手ライフを開いたまま裏で周回してよい状態か。クイックの∞周回だけ(モンビー・カードと同じ)
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
-  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフを開いている間はそのまま進める
-  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen;
+  // 裏クイックが、ランの画面の外(HOME・M/B管理など)で回っているか。休む画面も含む(段階が進んでも画面を切り替えない)
+  const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
+  // そのうち、進めてよい画面にいるか(QUICK_RUN_ANYWHERE_RUN_SCREENS)。休む画面では進めないだけで、出たら続きから
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen
+    && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフ・裏クイックの回っている画面ではそのまま進める。
+  //   ★「いまバトルの画面を見ていない」の1つの値。揺れ・暗幕・負けの全面・効果音などの「見せない」はこれで決める(画面ごとに条件を並べない)
+  const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   // ★advanceRunStage は setTimeout や await の後から呼ばれる。
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
@@ -4976,9 +5004,10 @@ function MonsterHeroGame() {
     if (!runBackgroundAllowedRef.current) setGameState(stage);
   };
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
-  const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
+  // 印を落としたら、画面を切り替えてよいかの控えもその場で入れ直す(次の描画を待たない。2026-09-14 の型)
+  const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -6391,7 +6420,7 @@ function MonsterHeroGame() {
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp, false);
     }
-    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen;
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen || cardScreenOpen || quickAnywhereScreenOpen;
     // ★次に鳴る曲も読んでおく。AUTO中の「直前の曲を続ける」で下のreturnへ入る場面でも
     //   読んでおきたいので、鳴らす処理より先に呼ぶ
     bgmPreloadKeys(gameState, wave).forEach((next) => Audio_.preloadBGM(next));
@@ -6434,7 +6463,9 @@ function MonsterHeroGame() {
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
-  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen); }, [cardScreenOpen]);
+  // 裏クイックが HOME などで回っているあいだも同じ(裏のバトルの音だけ止める。ボタンの音は下の「全ボタンのタップ」が fgSe で鳴らす。2026-11-11)
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen]);
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
   // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
@@ -6813,7 +6844,8 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = (e) => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) Audio_.se.tap();
+      // 裏クイックが回っている画面では裏のバトルの効果音を止めているので、ボタンの音は止めない側(fgSe)で鳴らす
+      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -10877,7 +10909,8 @@ function MonsterHeroGame() {
     const toDebug = cardOrigin === 'debug';
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null); setCardOrigin('home');
-    if (runStageRef.current != null) {
+    // 裏クイックをどこでも回すときは、締めずにそのまま出る(出た先でも回り続ける。2026-11-11 社長)
+    if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
       cardExitingRunRef.current = true;
       try { if (cardQuickRunLive()) await handleGiveUp({ silent: true }); } catch (_) {}
@@ -12275,6 +12308,9 @@ function MonsterHeroGame() {
   };
 
   const returnToHome = () => {
+    // 裏クイックを HOME でも回すとき(2026-11-11 社長 A「HOME でも回す」)。ランの画面の外から HOME へ戻るだけなら、ランは終わらせない。
+    //   締めるとき(止める・ほかのバトルの入口)は quickAnywhereEndingRef を立ててから呼ぶので、ここは通らない
+    if (quickAnywhereKeepsRun()) { setGameState('HOME'); return; }
     stopAllAuto();
     // ★まず世代を進める。この行より先で中身を空にするので、
     //   いま進んでいるターンの演出はここで止まり、空になった状態を触らない
@@ -12687,6 +12723,8 @@ function MonsterHeroGame() {
   //   returnToHome を通らないぶん周回が宙ぶらりんのまま残る。
   // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
   const exitRhythmSongSelect = async () => {
+    // 裏クイックをどこでも回すときは、締めずに HOME へ(HOME でも回り続ける。負けて止まっていたら、HOME で数秒おいて始め直す。2026-11-11 社長)
+    if (quickAnywhereKeepsRun()) { setGameState('HOME'); return; }
     if (rhythmBackgroundRun) {
       if (rhythmExitingRunRef.current) return;
       rhythmExitingRunRef.current = true;
@@ -12748,6 +12786,127 @@ function MonsterHeroGame() {
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     });
   }, [assistantLifeOpenNow]);
+  // ===== 裏クイックを、ゲームのどこにいても回す(2026-11-11 社長・docs/progress/quick-run-anywhere/PLAN.md) =====
+  // 締める: 助手ライフの「止める」(settleAssistantLifeRun)と同じく、報酬を入れて(リザルトは見せない)から片付ける。見ている画面はそのまま。
+  //   使うのは、帯の「止める」と、ほかのバトルの入口を開いたとき(社長 B「ほかのバトルを始めたら締めて報酬を確定」)
+  // 帯の詳細の窓(押すと開く)
+  const [quickAnywhereDetail, setQuickAnywhereDetail] = useState(false);
+  useEffect(() => { if (!quickAnywhereScreenOpen) setQuickAnywhereDetail(false); }, [quickAnywhereScreenOpen]);
+  // どの画面からも見える小さな帯(左下)。画面の高さを取らない(fixed)。助手ライフ・モンヒロビート・カードの上では、それぞれの帯があるので出さない
+  const renderQuickAnywhereStrip = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    const finished = !!quickRunProgress.finished;
+    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const paused = !finished && !resting && !quickAnywhereBackgroundRun;
+    const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
+    const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
+    const diffLabel = (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || '';
+    // 帯は小さく(HOME の「モンヒロバトル」の左の空きに収まる幅)。WAVE・報酬・説明は押して開く詳細へ
+    const label = finished ? (quickRunProgress.reason === 'defeat' ? '😢 負け' : '⏹ 停止')
+      : resting || paused ? `⏸ ${quickRunProgress.loops}周目` : `🔁 ${quickRunProgress.loops}周目`;
+    const state = finished ? 'finished' : resting ? 'resting' : paused ? 'paused' : 'live';
+    const info = { wave, loops: quickRunProgress.loops, finished, catchingUp: false, reason: finished ? quickRunFinishReasonText(quickRunProgress.reason) : '',
+      canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing, canResume: finished && quickRunResumable };
+    const closeDetail = () => setQuickAnywhereDetail(false);
+    return (<>
+      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
+        className={`fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
+        style={{ left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))', bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))', minHeight: 30 }}>
+        {label}
+      </button>
+      {quickAnywhereDetail && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-start p-2" onClick={closeDetail} style={{ paddingBottom: 'max(44px, calc(var(--mh-sa-bottom, 0px) + 42px))', paddingLeft: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))' }}>
+          <div data-quick-anywhere-detail role="dialog" aria-label="裏クイックのようす" onClick={(e) => e.stopPropagation()}
+            className="w-[min(320px,calc(100vw-16px))] rounded-2xl border border-fuchsia-300/40 bg-slate-950/95 p-3 text-slate-100 shadow-2xl shadow-black/60">
+            <div className="flex items-center justify-between gap-2">
+              <b className="text-[13px] font-black text-fuchsia-100">🔁 裏クイック{diffLabel ? `(${diffLabel})` : ''}</b>
+              <button type="button" onClick={closeDetail} className="min-h-[32px] rounded-full border border-white/25 px-2.5 text-[11px] font-black">閉じる</button>
+            </div>
+            <p className="mt-1.5 text-[12px] font-bold leading-snug">{finished ? info.reason : `WAVE ${wave}/10・${quickRunProgress.loops}周目`}</p>
+            <p className="mt-1 text-[12px] font-bold leading-snug text-slate-200">ここまで ダイヤ+{gold.toLocaleString()}・経験値+{xp.toLocaleString()}</p>
+            <p className="mt-1.5 text-[11px] leading-snug text-slate-300">{resting ? 'M/B管理・神殿などにいるあいだは休みます。出ると続きから進みます。' : 'ゲームのどこにいても、AUTO設定の編成でクイックの周回が裏で進みます。M/B管理・神殿にいるあいだは休み、ほかのバトルを始めると、それまでの報酬を受け取って終わります。'}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {finished
+                ? <RhythmQuickRunPill info={info} onRestart={() => { closeDetail(); return startQuickRunFromRhythm(); }} onResume={() => { closeDetail(); return resumeQuickRunFromRhythm(); }} widthClass="min-w-0 flex-1"/>
+                : <button type="button" data-quick-anywhere-watch onClick={() => { closeDetail(); returnToBackgroundRun(); }} className="min-h-[34px] flex-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-3 text-[12px] font-black text-white active:scale-[.97]">⚔ バトルを見る</button>}
+              {!finished && <button type="button" data-quick-anywhere-stop onClick={() => { closeDetail(); void settleQuickAnywhereRun(); }} className="min-h-[34px] rounded-full border border-white/30 bg-slate-800/90 px-3 text-[12px] font-black text-slate-100 active:scale-[.97]">⏹ 止める</button>}
+            </div>
+          </div>
+        </div>
+      )}
+    </>);
+  };
+  const settleQuickAnywhereRun = async () => {
+    if (quickAnywhereEndingRef.current || !runStageRef.current) return;
+    quickAnywhereEndingRef.current = true;
+    try {
+      const running = isQuickMode(runMode) && !runResultFinishedRef.current;
+      const before = running ? cardQuickRunView() : null;
+      if (running) await handleGiveUp({ silent: true });
+      if (before) {
+        const loops = Math.max(0, Math.floor(Number(before.loops) || 0)), gold = Math.max(0, Math.floor(Number(before.gold) || 0)), xp = Math.max(0, Math.floor(Number(before.xp) || 0));
+        if (typeof growthFxPush === 'function') growthFxPush({ tier: 'small', kind: 'quick', key: `quick:${Date.now()}`, gain: 1, text: `${loops}周・ダイヤ+${gold.toLocaleString()}・経験値+${xp.toLocaleString()}` });
+      }
+      if (runStageRef.current) {
+        const stay = gameStateNowRef.current;
+        returnToHome();
+        if (stay && stay !== 'HOME' && !isRunStage(stay)) setGameState(stay);
+      }
+    } finally {
+      quickAnywhereEndingRef.current = false;
+      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    }
+  };
+  // ほかのバトルの入口を開いたら締める(その周までの報酬を確定)。「動いているバトルは常に1つ」(QUICK_RHYTHM_LINK.md §13)の作りのまま
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
+    if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    void settleQuickAnywhereRun();
+  }, [gameState]);
+  // 自動で始める(条件はモンヒロビート・助手ライフの自動開始と同じ: AUTO設定のクイックがそろっていて、自動開始が入、その難易度をクリア済み)。
+  //   始めるのは「ゲームを開いたとき」と「ほかのバトル(入口を含む)から、回す画面へ戻ってきたとき」だけ。
+  //   帯の「止める」で止めたあとは、回す画面を行き来しても始め直さない(次にゲームを開くか、ほかのバトルから戻ったら、また始まる)
+  const quickAnywhereTryStart = () => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!repeatTemplateFromAutoSettings()) return false;
+    return startQuickRunFromRhythm();
+  };
+  const quickAnywhereTryStartRef = useRef(null);
+  quickAnywhereTryStartRef.current = quickAnywhereTryStart;
+  const quickAnywhereBootTriedRef = useRef(false);
+  const quickAnywherePrevScreenRef = useRef('HOME');
+  useEffect(() => {
+    const prev = quickAnywherePrevScreenRef.current;
+    quickAnywherePrevScreenRef.current = gameState;
+    if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    const boot = !quickAnywhereBootTriedRef.current;
+    const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
+    if (!boot && !fromBattle) return undefined;
+    quickAnywhereBootTriedRef.current = true;
+    // 起動直後は、読み込んだ記録・マスモン・AUTO設定が画面へ行き渡るのを少し待つ(待つあいだに画面を移っても、回す画面にいれば始める)
+    const timer = setTimeout(() => { if (quickAnywhereTryStartRef.current) quickAnywhereTryStartRef.current(); }, boot ? 1500 : 300);
+    return () => clearTimeout(timer);
+  }, [gameState, bootPhase]);
+  // 負けたら数秒おいて1周目から始め直す(モンヒロビート・助手ライフと同じ。回す画面にいて、自動開始が入のときだけ)
+  useEffect(() => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
+    const retryAnywhere = () => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      startQuickRunFromRhythm();
+    };
+    const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);   // 目印を「どこでも回す」の始め直しとして分ける(SCREEN_EFFECTS_MAP)
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, assistantLifeOpenNow]);
   // 助手ライフへ渡す、裏の周回のようす(cardQuickRunView と同じ作り)。周回をしていなくて、始められもしないときは null
   //   canStart … AUTO設定のクイック周回がそろっていて、勝負のついていない挑戦が無いとき(札の「始める」を出す)。
   //   開いたら自動で始めるのは、下の「助手ライフを開いたら自動で∞周回を始める」(AUTO設定の自動開始スイッチが ON のとき)
@@ -16112,6 +16271,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(!next)setEcoModeSafe('off');
     // モンビーで見せる進捗を数えはじめる(∞にしたときだけ。切ったときの印は周回を止める側で付ける)
     if(next)beginQuickRunProgress();
+    if(next)quickAnywhereRunRef.current=QUICK_RUN_ANYWHERE_RELEASE; // ∞にしたクイックは、ほかの画面へ移っても裏で回る(2026-11-11)
   };
   // モンビーから∞周回を始める(docs/spec/QUICK_RHYTHM_LINK.md PR6)。
   // 編成は repeatTemplateForNewRun() ＝「1周目に自分で組んだ編成」→ 無ければAUTO設定の事前設定。
@@ -16154,8 +16314,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);
+    // ★ランを作る前に「どこでも回す周回」の印を立てる。作る途中の段階の切り替えで、HOME などからバトルの画面へ飛ばさないため
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
     const result = startRunFromRepeatTemplate(template); // 中で stopAutoBattle を通る
-    if (!result.ok) { stopAllAuto(); clearQuickRunProgress(); return false; }
+    if (!result.ok) { quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); stopAllAuto(); clearQuickRunProgress(); return false; }
     autoBattleRef.current = true;
     setAutoBattle(true);
     setAutoTurnCycle(n => n + 1);
@@ -16175,6 +16338,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (runResultFinishedRef.current) return false;      // 勝負がついている(続きが無い)
     if (!isQuickMode(runMode)) return false;
     if (!storageReadyForRun()) return false;             // 端末へ書けないなら続けない
+    quickAnywhereRunRef.current = QUICK_RUN_ANYWHERE_RELEASE;
     // 止まったときに「次周を始めている最中」の印が残っていることがある。
     // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
     autoRepeatStartingRef.current = false;
@@ -19436,11 +19600,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
-      {ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {ultraEcoSession&&!runBackgroundAllowed&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!runBackgroundAllowed&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* MFバトルカードの予告の小窓(HOME の「近日公開」の札から。84 の CardBattleTeaser) */}
         {gameState==='HOME'&&cardTeaserOpen&&<CardBattleTeaser onClose={()=>setCardTeaserOpen(false)}/>}
@@ -25577,7 +25741,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       )}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
+      {hp<=0&&!debugBattle&&!runBackgroundAllowed&&(
         <GameOverScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -25586,7 +25750,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         />
       )}
 
-      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(
+      {gaveUp&&!debugBattle&&!runBackgroundAllowed&&(
         <GaveUpScreen
           finalRewardSummary={finalRewardSummary} handleRetry={handleRetry}
           masuRegisterButtonNode={masuRegisterButtonNode} resultActionPending={resultActionPending}
@@ -25616,7 +25780,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         ?<RaidJackIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} enemyName={enemy?.name} title={battleModeInfo(runMode).short} tier={enemy?.raidJackPumpkin?1:(Number(String(enemy?.raidJackTier||'').slice(1))||1)} friendly={enemy?.raidJackPumpkin===true}/>
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
-      {effect&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {renderQuickAnywhereStrip()}
+      {effect&&!runBackgroundAllowed&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>
