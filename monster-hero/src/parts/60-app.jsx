@@ -5581,6 +5581,24 @@ function MonsterHeroGame() {
   // 最初の本番のバトルを終えたか。既定は真(前から遊んでいる人・読み込み前は何も変えない)。はじめての人で印がまだ無いときだけ偽にする
   const [firstBattleDone, setFirstBattleDone] = useState(true);
   const realBattleSeenRef = useRef(false);
+  // 案4: HOME の「つぎにやること」の進み具合。既定は3(出さない・前から遊んでいる人と読み込み前)。はじめての人で終わっていなければ読み込みで 0〜2 にする
+  const [firstStepsStage, setFirstStepsStage] = useState(3);
+  const firstStepsMissionSeenRef = useRef(false);
+  const advanceFirstSteps = (next) => {
+    setFirstStepsStage(cur => (next > cur ? next : cur));
+    (async () => { try { await storeSet(FIRST_STEPS_KEY, next, false); } catch {} })();
+  };
+  useEffect(() => {
+    if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3 || gameState !== 'HOME') return;
+    const giftN = giftClaimableCount(gifts);
+    const missionN = missionClaimableCount(normalizeMissions(missions));
+    if (firstStepsStage === 0 && giftN === 0) advanceFirstSteps(1);
+    else if (firstStepsStage === 1 && firstBattleDone) advanceFirstSteps(2);
+    else if (firstStepsStage === 2) {
+      if (missionN > 0) firstStepsMissionSeenRef.current = true;
+      else if (firstStepsMissionSeenRef.current) advanceFirstSteps(3);
+    }
+  }, [storyOneAtATime, dataLoaded, firstStepsStage, gameState, gifts, missions, firstBattleDone]);
   // すでに本番でクリアした記録がある人は、終えた扱い(お話を止めたままにしない)
   useEffect(() => {
     if (firstBattleDone) return;
@@ -7552,6 +7570,11 @@ function MonsterHeroGame() {
         // 案3: はじめての人で、最初の本番のバトルがまだなら偽。すでにクリアの記録がある人は終えた扱い(閉じ込めない)
         if (oneAtATime && (await storeGet(FIRST_BATTLE_DONE_KEY, false, false)) !== true) {
           setFirstBattleDone(false);
+        }
+        // 案4: 「つぎにやること」は、はじめての人で3つ終えていない間だけ
+        if (oneAtATime) {
+          const savedSteps = Number(await storeGet(FIRST_STEPS_KEY, 0, false));
+          setFirstStepsStage(Number.isFinite(savedSteps) && savedSteps >= 0 && savedSteps < 3 ? Math.floor(savedSteps) : (savedSteps >= 3 ? 3 : 0));
         }
       } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
@@ -19894,6 +19917,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenSettings={()=>setGameState('SETTINGS')}
             onOpenTemple={()=>{addAssistantBond('temple');setGameState('TEMPLE');}}
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
+            nextStep={(() => {
+              if (!storyOneAtATime || !dataLoaded || firstStepsStage >= 3) return null;
+              if (firstStepsStage === 0 && giftClaimableCount(gifts) > 0) return { n:1, title:'ギフトを受け取ろう', sub:'ダイヤなどが届いています', onTap:openGiftBox };
+              if (firstStepsStage === 1) return { n:2, title:'モンヒロバトルを1回あそぼう', sub:'カードを出して勝ってみよう', onTap:openBattleSystemSelect };
+              if (firstStepsStage === 2 && missionClaimableCount(normalizeMissions(missions)) > 0) return { n:3, title:'ミッションを受け取ろう', sub:'バトルのごほうびがもらえます', onTap:openMissions };
+              return null;
+            })()}
             profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
