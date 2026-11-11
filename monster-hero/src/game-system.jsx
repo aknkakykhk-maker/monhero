@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0389f1d4d4cd4ca1
+// generated-sha256: 55c10d7d6092c280
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -45,7 +45,10 @@ const MH_SCREEN_TRAIL=(()=>{
       //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
       document.addEventListener('visibilitychange',()=>{last=0;});
-      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -96877,6 +96880,18 @@ function MonsterHeroGame() {
   // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  // ログインボーナスの窓は、助手の案内(村の案内・れんしゅうの誘い)とバトルのれんしゅうが終わってから出す(2026-11-11 社長・最初の30分の改善案1)。
+  // はじめての人は、名前を決めた直後にこの窓が出たまま案内が始まり、案内が指す建物も、れんしゅうの「押してみて」で光る所も
+  // 窓の下に隠れて進めなくなっていた(tools/boot/first-30min-walk.js の [隠れ])。
+  // 案内から次の案内へ移る一瞬に窓がちらつかないよう、案内が終わって少し(0.7秒)たってから出す。
+  // 受け取りそのもの(ギフトボックスへ送る)は今までどおりで、変えるのは窓を出す時機だけ。案内が出ない人には何も変わらない
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) { setLoginBonusGuideClear(false); return undefined; }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -114223,7 +114238,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
             報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
             (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
-        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&!loginBonusGuideBusy&&loginBonusGuideClear&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(()=>{
           /* 行き先が名前だけでは分からなかったので、デバッグ画面の DebugMenuRow と同じ
