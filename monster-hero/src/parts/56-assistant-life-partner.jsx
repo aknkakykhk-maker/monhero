@@ -19,7 +19,7 @@ const assistantLifePartnerProgress = (id) => {
     return { count, need, cardName: typeof p.cardName === 'string' ? p.cardName : '', cardOwned: p.cardOwned !== false };
   } catch (_) { return null; }
 };
-// 町の人の一言(ナカヨシ18の案をココロ2が口調を見て直した。2026-11-11。社長の「この文で」待ち)。無い助手は様子の1行だけ
+// 町の人の一言(ナカヨシ18の案をココロ2が口調を見て直した。社長の「この文で」済み(2026-11-11))。無い助手は様子の1行だけ
 const ASSISTANT_LIFE_TOWN_PERSON_LINES = Object.freeze({
   mua: 'やっほー♪ あたしはまだ町でぶらぶら中ｗ カードいっぱい使ってくれたら、隣いっちゃうかも！',
   kiki: 'こんにちは。いまは町でのんびりしていまつ( ˘ω˘) 私のカード、使ってもらえたらうれしいでつ',
