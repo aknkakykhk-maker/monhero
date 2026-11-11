@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00d5a8955acd04ca
+// generated-sha256: cd7ba9b2d589aff0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91623,6 +91623,37 @@ const cardAssistantDeckSummary = (who, styleId) => {
     return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at, side: d.side === 'honne' || d.side === 'yoso' ? d.side : null, past, period };
   } catch (_) { return null; }
 };
+// フレンドの家へ見せる中身(読むだけ・保存しない)。face … 'oshi'|'suki'|'sugao'。読めなければ null
+//   { face, name, line(助手のひとこと・無ければ ''), monsters:[モンスター番号×3], ace(切り札の技名・無ければ ''), cards:[[カード番号, 枚数], …] }
+const cardAssistantDeckShareOf = (aid, face) => {
+  try {
+    if (!cardDeckIsFace(face) || typeof CARD_AI_FACES === 'undefined' || !CARD_AI_FACES[aid]) return null;
+    const s = cardAssistantDeckSummary(aid, face);
+    if (!s) return null;
+    return { face, name: s.name || '', line: s.line || '', monsters: s.monsters.map((m) => m.no), ace: s.ace ? s.ace.name : '', cards: Object.keys(s.count).map((no) => [no, s.count[no]]) };
+  } catch (_) { return null; }
+};
+// 相手から受け取った中身(上の形)を、CardAssistantDeckView が見る形に直す。形が違う・知らないカードは捨てる。読めなければ null
+const cardAssistantDeckSummaryOfShare = (deck) => {
+  try {
+    if (!deck || typeof deck !== 'object' || typeof CARD_BATTLE_DATA === 'undefined' || !Array.isArray(deck.monsters) || !Array.isArray(deck.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const face = cardDeckIsFace(deck.face) ? deck.face : 'oshi';
+    const monsters = deck.monsters.slice(0, 3).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+    const count = {};
+    deck.cards.slice(0, 60).forEach((e) => {
+      const n = Array.isArray(e) ? Math.floor(Number(e[1])) : 0;
+      if (Array.isArray(e) && typeof e[0] === 'string' && n >= 1 && n <= 20 && cardOf(db, e[0])) count[e[0]] = (count[e[0]] || 0) + n;
+    });
+    const uniq = Object.keys(count).map((no) => cardOf(db, no));
+    if (!monsters.length || !uniq.length) return null;
+    const byGuts = (a, b) => ((b.guts || 0) - (a.guts || 0)) || ((b.damage || 0) - (a.damage || 0)) || (a.no < b.no ? -1 : 1);
+    const aceName = typeof deck.ace === 'string' ? deck.ace : '';
+    const ace = uniq.filter((c) => c.kind === 'pow' || c.kind === 'int').sort(byGuts).find((c) => !aceName || c.name === aceName) || uniq.filter((c) => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter((c) => kinds.includes(c.kind)).sort(byGuts)]).filter((g) => g[1].length);
+    return { styleId: face, monsters, count, ace, groups, total: Object.values(count).reduce((x, y) => x + y, 0), name: typeof deck.name === 'string' && deck.name ? deck.name.slice(0, 20) : null, line: typeof deck.line === 'string' && deck.line ? deck.line.slice(0, 60) : null, at: null, side: null, past: false, period: '' };
+  } catch (_) { return null; }
+};
 // 組み直した時刻(4:00 など)。無ければ空
 const cardAssistantDeckAtText = (at) => {
   if (!Number.isFinite(at) || at <= 0) return '';
@@ -91630,10 +91661,11 @@ const cardAssistantDeckAtText = (at) => {
   return Number.isNaN(t.getTime()) ? '' : `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
 };
 
-function CardAssistantDeckView({ who, styleId, land = false }) {
+// deck … 相手の中身(cardAssistantDeckShareOf の形)を渡すと、その中身を見るだけで出す(who は助手の id)。渡さなければ今までどおり自分の端末のデッキ
+function CardAssistantDeckView({ who, styleId, land = false, deck = null }) {
   const [detail, setDetail] = React.useState(null);
   if (!cardAssistantDeckViewOn()) return null;
-  const s = cardAssistantDeckSummary(who, styleId);
+  const s = deck ? cardAssistantDeckSummaryOfShare(deck) : cardAssistantDeckSummary(who, styleId);
   const a = typeof assistantById === 'function' ? assistantById(who) : null;
   if (!s) return <div className="mhm-card" data-card-assistant-deck-view="none"><p className="text-[11.5px] font-bold text-slate-300">デッキを読めませんでした</p></div>;
   const db = CARD_BATTLE_DATA;
