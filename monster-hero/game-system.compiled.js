@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0062c07c6385b5e8
+// source-sha256: 746cde937cacc2e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117048,7 +117048,7 @@ function AssistantLifeDailyCard({
   const who = cast ? cast.ids[0] : list[slot.i % list.length];
   const sceneKey = assistantLifeDailySceneOf(slotDef.from);
   const plan = typeof onScene === 'function' && assistantLifeDailySceneOn() ? assistantLifeDailyPlan(cast, sceneKey, day, slot.i) : null;
-  const sayLine = assistantLifeDailySay(who, sceneKey, day);
+  const sayLine = assistantLifeDailySceneOn() ? assistantLifeDailySay(who, sceneKey, day) : null;
   const castNames = plan ? plan.ids.map(nameOf).join('と') : nameOf(who);
   const castPlace = cast && cast.place && cast.place !== 'home' ? assistantLifePlaceShow(cast.place) : '家';
   const leftH = (() => {
@@ -118114,6 +118114,81 @@ const assistantLifeProfileRhythm = id => {
   const h = n => Number.isFinite(n) ? `${n}時` : '';
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
+function AssistantLifeProfileStand({
+  who,
+  head = 0.32,
+  top = 0.16
+}) {
+  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, 'happy') : '';
+  const boxRef = React.useRef(null);
+  const [size, setSize] = React.useState(null);
+  const [art, setArt] = React.useState(() => typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' && ASSISTANT_LIFE_STAND_BOX.get(src) || null);
+  React.useEffect(() => {
+    let alive = true;
+    if (typeof assistantLifeStandBox === 'function') assistantLifeStandBox(src).then(b => {
+      if (alive) setArt(b);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  React.useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const f = () => setSize(prev => {
+      const n = {
+        w: el.clientWidth,
+        h: el.clientHeight
+      };
+      return prev && prev.w === n.w && prev.h === n.h ? prev : n;
+    });
+    f();
+    let ro = null;
+    try {
+      ro = typeof ResizeObserver === 'function' ? new ResizeObserver(f) : null;
+      if (ro) ro.observe(el);
+    } catch (_) {
+      ro = null;
+    }
+    window.addEventListener('resize', f);
+    return () => {
+      window.removeEventListener('resize', f);
+      if (ro) ro.disconnect();
+    };
+  }, []);
+  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
+  const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
+  const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
+    face,
+    box: art,
+    F: size.h * head / len,
+    topY: size.h * top,
+    cx: size.w / 2
+  }) : null;
+  return React.createElement("div", {
+    ref: boxRef,
+    className: "pointer-events-none absolute inset-0 overflow-hidden",
+    "data-assistant-life-profile-stand": who.id
+  }, rule && (() => {
+    const mask = rule.fade ? `linear-gradient(#000 ${Math.round(rule.fade[0] * 100)}%, transparent ${Math.round(rule.fade[1] * 100)}%)` : undefined;
+    return React.createElement("img", {
+      src: src,
+      alt: who.name,
+      draggable: false,
+      className: "absolute",
+      style: {
+        top: rule.top,
+        left: rule.left,
+        width: rule.width,
+        height: rule.height,
+        maxWidth: 'none',
+        objectFit: 'contain',
+        WebkitMaskImage: mask,
+        maskImage: mask
+      }
+    });
+  })());
+}
 function AssistantLifeProfilePage({
   metIds,
   bondLevelOf = null,
@@ -118324,20 +118399,20 @@ function AssistantLifeProfileSheet({
       height: land ? '100%' : 300,
       backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)`
     }
-  }, typeof assistantFullImage === 'function' && React.createElement("img", {
-    src: assistantFullImage(who, 'happy'),
-    alt: who.name,
-    className: "pointer-events-none absolute bottom-0 object-contain object-bottom",
+  }, React.createElement("div", {
+    className: "absolute bottom-0 right-0",
     style: land ? {
-      right: -10,
-      height: '86%',
-      width: '62%'
+      left: '40%',
+      top: 0
     } : {
-      right: -30,
-      height: '112%',
-      width: '68%'
+      top: 0,
+      width: '62%'
     }
-  }), React.createElement("div", {
+  }, React.createElement(AssistantLifeProfileStand, {
+    who: who,
+    head: land ? 0.22 : 0.34,
+    top: land ? 0.3 : 0.12
+  })), React.createElement("div", {
     className: "absolute left-3.5 z-[2]",
     style: {
       top: land ? 56 : 14,
