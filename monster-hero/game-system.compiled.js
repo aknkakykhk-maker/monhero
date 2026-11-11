@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56cccb7bf3f846af
+// source-sha256: d8358666c862828c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13847,6 +13847,8 @@ const RELEASE_FLAGS = {
   assistantLifeFurniture: true,
   assistantLifeRoomEdit: true,
   assistantLifeSolo: true,
+  assistantLifeTopHouse: false,
+  assistantLifeDailyScene: false,
   assistantLifeFriend: true,
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
@@ -109165,7 +109167,7 @@ const assistantLifeTalkSet = () => {
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])];
 const assistantLifeAlbumTalks = () => {
   const x = assistantLifeTalkSet();
-  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
+  return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeDailyAlbumTalks === 'function' ? assistantLifeDailyAlbumTalks() : []), ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])];
 };
 const assistantLifeFillHoles = (text, talk) => {
   const c = talk && talk.ctx || {};
@@ -111546,8 +111548,9 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-pop .pp>span{animation:mhlPop .35s ease-out both}
 @media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
 `;
+const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:9.5px;line-height:11px;max-height:22px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 function AssistantLifeHouseStyle() {
-  return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS);
+  return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS);
 }
 function AssistantLifeNames({
   text
@@ -111761,11 +111764,15 @@ function AssistantLifeRoom({
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
     className: "lock"
-  }, other ? 'まだいない' : 'まだ会っていない'));
+  }, other ? 'まだいない' : 'まだ会っていない'), met && state && state.ev && React.createElement("span", {
+    className: "evm",
+    "data-assistant-life-room-ev": id,
+    "aria-label": "いま、できごとがあります"
+  }, "❗"));
 }
 function AssistantLifeHouseArt({
   width,
-  land,
+  land: landIn,
   look,
   rooms,
   metSet,
@@ -111777,15 +111784,18 @@ function AssistantLifeHouseArt({
   peerSt = null,
   hname = '🏡 助手の家',
   other = null,
-  v2 = false
+  v2 = false,
+  grid4 = false
 }) {
+  const g4 = grid4 && !landIn,
+    land = landIn || g4;
   const wall = 6,
     cols = land ? 4 : 2,
     rows = land ? 2 : 4;
   const rw = (width - wall * (cols + 1)) / cols;
-  const rh = land ? Math.round(rw * 0.74) : Math.round(rw * 0.5);
+  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.round(rw * 0.74) : Math.round(rw * 0.5);
   const lh = land ? 62 : 78,
-    roofH = land ? 44 : 64;
+    roofH = g4 ? 40 : land ? 44 : 64;
   const bodyH = wall + rows * (rh + wall) + lh + wall,
     ly = wall + rows * (rh + wall);
   const night = look === 'night';
@@ -111804,6 +111814,7 @@ function AssistantLifeHouseArt({
   return React.createElement("div", {
     className: `mhl-house${pop ? ' mhl-pop' : ''}`,
     "data-assistant-life-house": true,
+    "data-assistant-life-grid4": g4 ? '1' : '0',
     style: {
       width,
       height: roofH + bodyH
@@ -113197,6 +113208,8 @@ function AssistantLifeHouse({
     if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot('');
   }, []);
   const [scene, setScene] = React.useState(null);
+  const [dailyScene, setDailyScene] = React.useState(null);
+  const [dailyKey, setDailyKey] = React.useState(0);
   const [follow, setFollow] = React.useState(null);
   const followAfterRef = React.useRef(null);
   const [note, setNote] = React.useState('');
@@ -113290,7 +113303,24 @@ function AssistantLifeHouse({
   const tier = assistantLifeTierOf(play.points);
   const next = ASSISTANT_LIFE_TIERS[assistantLifeTierIndex(tier) + 1] || null;
   const watchLeft = assistantLifeWatchLeft(st.play, day);
-  const rooms = assistantLifeRoomsOf(life, ids);
+  const rooms0 = assistantLifeRoomsOf(life, ids);
+  const topOn = uiV2 && typeof assistantLifeTopHouseOn === 'function' && assistantLifeTopHouseOn();
+  const evIds = (() => {
+    if (!topOn || typeof assistantLifeDailyWho !== 'function') return [];
+    try {
+      const sl = assistantLifeSlotAt();
+      const ds = ASSISTANT_LIFE_DAILY_STORE.state;
+      if (ds.day === assistantLifePerkDay() && ds.heard.includes(sl.id)) return [];
+      const c = assistantLifeDailyWho(life, ids, sl.i);
+      return c ? c.ids : [];
+    } catch (_) {
+      return [];
+    }
+  })();
+  const rooms = evIds.length ? Object.fromEntries(Object.entries(rooms0).map(([k, v]) => [k, v && evIds.includes(k) ? {
+    ...v,
+    ev: true
+  } : v])) : rooms0;
   const nameOf = assistantLifeName;
   const close = () => {
     setScene(null);
@@ -113770,7 +113800,41 @@ function AssistantLifeHouse({
       markGuideSeen();
       if (unwatched[0]) watch(unwatched[0]);
     }
+  }), topOn && React.createElement("div", {
+    className: "mb-1 flex justify-center",
+    "data-assistant-life-top-house": true
+  }, React.createElement(AssistantLifeHouseArt, {
+    width: houseW,
+    land: land,
+    look: look,
+    rooms: rooms,
+    metSet: metSet,
+    onOpen: setRoomId,
+    diary: diary,
+    pop: !!intro,
+    onBoard: () => setBoardOpen(true),
+    life: life,
+    peerSt: peerSt,
+    v2: true,
+    grid4: true
+  })), topOn && typeof AssistantLifeTopStrip === 'function' && React.createElement(AssistantLifeTopStrip, {
+    life: life,
+    ids: ids,
+    evIds: evIds,
+    onPlace: (p, id) => {
+      setMapFocusPlace(ASSISTANT_LIFE_MAP_ORDER.includes(p) ? p : 'home');
+      setMapFocusAssistantId(id);
+      setTab('where');
+    }
+  }), topOn && typeof AssistantLifeDailyCard === 'function' && React.createElement(AssistantLifeDailyCard, {
+    key: dailyKey,
+    ids: ids,
+    nameOf: nameOf,
+    land: land,
+    life: life,
+    onScene: setDailyScene
   }), uiV2 && typeof AssistantLifeBenefitBoard === 'function' && React.createElement(AssistantLifeBenefitBoard, {
+    fold: topOn,
     life: life,
     ids: ids,
     nameOf: nameOf,
@@ -113793,10 +113857,13 @@ function AssistantLifeHouse({
     },
     onRoad: () => setTab('friends'),
     onGuide: () => setGuideOpen(true)
-  }), uiV2 && typeof AssistantLifeDailyCard === 'function' && React.createElement(AssistantLifeDailyCard, {
+  }), uiV2 && !topOn && typeof AssistantLifeDailyCard === 'function' && React.createElement(AssistantLifeDailyCard, {
+    key: dailyKey,
     ids: ids,
     nameOf: nameOf,
-    land: land
+    land: land,
+    life: life,
+    onScene: setDailyScene
   }), uiV2 && typeof AssistantLifePlanBand === 'function' && React.createElement(AssistantLifePlanBand, {
     ids: ids,
     land: land
@@ -113805,7 +113872,7 @@ function AssistantLifeHouse({
     style: {
       paddingInline: pad
     }
-  }, uiV2 ? null : findBtn), React.createElement(AssistantLifeHouseArt, {
+  }, uiV2 ? null : findBtn), !topOn && React.createElement(AssistantLifeHouseArt, {
     width: houseW,
     land: land,
     look: look,
@@ -113818,7 +113885,7 @@ function AssistantLifeHouse({
     life: life,
     peerSt: peerSt,
     v2: uiV2
-  }), lifeStatusList);
+  }), !topOn && lifeStatusList);
   const itemsBody = React.createElement("div", {
     className: "px-3 pb-3 pt-1",
     "data-assistant-life-items": true
@@ -114205,6 +114272,16 @@ function AssistantLifeHouse({
       showFollow();
     },
     onGive: openGive
+  }), dailyScene && typeof AssistantLifeDailySceneView === 'function' && React.createElement(AssistantLifeDailySceneView, {
+    plan: dailyScene.plan,
+    place: dailyScene.place,
+    look: look,
+    slotId: dailyScene.slotId,
+    slotLabel: dailyScene.slotLabel,
+    onClose: () => {
+      setDailyScene(null);
+      setDailyKey(k => k + 1);
+    }
   }), intro && React.createElement("button", {
     type: "button",
     className: "mhl-intro",
@@ -116980,7 +117057,9 @@ const assistantLifeDailyListen = async slotId => {
 function AssistantLifeDailyCard({
   ids,
   nameOf,
-  land = false
+  land = false,
+  life = null,
+  onScene = null
 }) {
   const [st, setSt] = React.useState(() => ASSISTANT_LIFE_DAILY_STORE.state);
   const [said, setSaid] = React.useState('');
@@ -117007,7 +117086,13 @@ function AssistantLifeDailyCard({
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
   const done = st.day === day && st.heard.includes(slot.id);
-  const who = list[slot.i % list.length];
+  const cast = assistantLifeDailyWho(life, list, slot.i);
+  const who = cast ? cast.ids[0] : list[slot.i % list.length];
+  const sceneKey = assistantLifeDailySceneOf(slotDef.from);
+  const plan = typeof onScene === 'function' && assistantLifeDailySceneOn() ? assistantLifeDailyPlan(cast, sceneKey, day, slot.i) : null;
+  const sayLine = assistantLifeDailySay(who, sceneKey, day);
+  const castNames = plan ? plan.ids.map(nameOf).join('と') : nameOf(who);
+  const castPlace = cast && cast.place && cast.place !== 'home' ? assistantLifePlaceShow(cast.place) : '家';
   const leftH = (() => {
     const s = slotDef;
     const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
@@ -117021,7 +117106,7 @@ function AssistantLifeDailyCard({
     setSt({
       ...ASSISTANT_LIFE_DAILY_STORE.state
     });
-    setSaid(`${nameOf(who)}「${scene.say}」`);
+    setSaid(`${nameOf(who)}「${sayLine ? assistantLifeDailyText(sayLine, [who]) : scene.say}」`);
     setGot(!!r.got);
     setBusy(false);
   };
@@ -117042,17 +117127,30 @@ function AssistantLifeDailyCard({
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
+  }, plan ? done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : React.createElement(React.Fragment, null, plan.kind === 'rare' ? `✨ ${castPlace}で、${castNames}に めずらしいできごと` : `${castPlace}で、${castNames}が`, React.createElement("span", {
+    className: "inline-block",
+    "data-assistant-life-daily-title": true
+  }, "「", plan.title, "」")) : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
     className: "block text-[11px] text-emerald-300"
-  }, "→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)"), got && React.createElement("span", {
+  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
     className: "block text-[11px] text-pink-200"
-  }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && React.createElement("button", {
+  }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && (plan ? React.createElement("button", {
+    type: "button",
+    "data-assistant-life-daily-go": plan.kind,
+    onClick: () => onScene({
+      plan,
+      place: cast.place,
+      slotId: slot.id,
+      slotLabel: slotDef.label
+    }),
+    className: "shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95"
+  }, "見に行く ▶") : React.createElement("button", {
     type: "button",
     "data-assistant-life-daily-listen": true,
     onClick: listen,
     disabled: busy,
     className: "shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60"
-  }, "聞く ▶")), React.createElement("div", {
+  }, "聞く ▶"))), React.createElement("div", {
     className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1",
     "data-assistant-life-daily-stamps": n
   }, React.createElement("span", {
@@ -117075,6 +117173,388 @@ function AssistantLifeDailyCard({
   }, i < n ? '✓' : i === ASSISTANT_LIFE_DAILY_NEED - 1 ? '🧺' : i + 1))), React.createElement("span", {
     className: "block text-[11px] font-bold text-emerald-300"
   }, "あと", Math.max(0, ASSISTANT_LIFE_DAILY_NEED - n), "日(とびとびでもOK・消えません)"))));
+}
+const assistantLifeTopHouseOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeTopHouse === true;
+const assistantLifeDailyData = () => typeof ASSISTANT_LIFE_DAILY_TALKS !== 'undefined' && ASSISTANT_LIFE_DAILY_TALKS && typeof ASSISTANT_LIFE_DAILY_TALKS === 'object' ? ASSISTANT_LIFE_DAILY_TALKS : null;
+const assistantLifeDailySceneOn = () => {
+  if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof RELEASE_FLAGS === 'undefined' || RELEASE_FLAGS.assistantLifeDailyScene !== true) return false;
+  const D = assistantLifeDailyData();
+  return !!D && Array.isArray(D.scenes) && D.scenes.length > 0;
+};
+const ASSISTANT_LIFE_DAILY_RARE_PCT = 5;
+const ASSISTANT_LIFE_DAILY_BOND = Object.freeze({
+  scene: 4,
+  rare: 8
+});
+const assistantLifeDailyHash = s => {
+  let h = 7;
+  for (const c of String(s)) h = h * 31 + c.codePointAt(0) >>> 0;
+  return h;
+};
+const assistantLifeTopOk = id => {
+  try {
+    return typeof assistantPartnerOkNow === 'function' ? assistantPartnerOkNow(id) !== false : true;
+  } catch (_) {
+    return true;
+  }
+};
+const assistantLifeDailyWho = (life, ids, slotI) => {
+  const list = (Array.isArray(ids) ? ids : []).filter(assistantLifeTopOk);
+  if (!list.length) return null;
+  const whereOf = id => {
+    try {
+      return life && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  if (assistantLifeDailySceneOn()) {
+    const pairs = [],
+      seen = new Set();
+    for (const id of list) {
+      const w = whereOf(id);
+      const g = w && w.group && Array.isArray(w.group.ids) ? w.group.ids.filter(x => list.includes(x)) : [];
+      if (g.length < 2 || w.doing === 'sleep') continue;
+      const key = [...g].sort().join('-');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pairs.push({
+        ids: g.slice(0, 2),
+        place: w.place
+      });
+    }
+    if (pairs.length) return pairs[slotI % pairs.length];
+  }
+  const one = list[slotI % list.length];
+  const w = whereOf(one);
+  return {
+    ids: [one],
+    place: w ? w.place : 'home'
+  };
+};
+const assistantLifeDailySay = (who, sceneKey, day) => {
+  const D = assistantLifeDailyData();
+  const l = D && D.lines && D.lines[who] && Array.isArray(D.lines[who][sceneKey]) ? D.lines[who][sceneKey] : [];
+  return l.length ? l[assistantLifeDailyHash(`${day}-${who}`) % l.length] : null;
+};
+const assistantLifeDailyPlan = (cast, sceneKey, day, slotI) => {
+  const D = assistantLifeDailyData();
+  if (!D || !cast || !cast.ids || !cast.ids.length) return null;
+  const [a, b] = cast.ids;
+  const has = (parts, id, roles) => !!(parts && parts[id] && roles.every(r => parts[id][r] && parts[id][r].t));
+  if (b) {
+    const rares = (Array.isArray(D.rares) ? D.rares : []).filter(r => Array.isArray(r.slots) && r.slots.includes(sceneKey) && has(r.parts, a, ['open']) && has(r.parts, b, ['back']));
+    if (rares.length && assistantLifeDailyHash(`${day}-${slotI}-rare`) % 100 < ASSISTANT_LIFE_DAILY_RARE_PCT) {
+      const r = rares[assistantLifeDailyHash(`${day}-${slotI}`) % rares.length];
+      return {
+        kind: 'rare',
+        id: r.id,
+        title: r.title,
+        ids: [a, b],
+        lines: [{
+          who: a,
+          ...r.parts[a].open
+        }, {
+          who: b,
+          ...r.parts[b].back
+        }],
+        choices: []
+      };
+    }
+  }
+  const scenes = (Array.isArray(D.scenes) ? D.scenes : []).filter(s => s.slot === sceneKey && Array.isArray(s.choices) && s.choices.length === 2 && has(s.parts, a, ['open', 'r1', 'r2']) && (!b || has(s.parts, b, ['back'])));
+  if (!scenes.length) return null;
+  const s = scenes[assistantLifeDailyHash(`${day}-${slotI}-${a}`) % scenes.length];
+  const lines = [{
+    who: a,
+    ...s.parts[a].open
+  }];
+  if (b) lines.push({
+    who: b,
+    ...s.parts[b].back
+  });
+  return {
+    kind: 'scene',
+    id: s.id,
+    title: s.title,
+    ids: b ? [a, b] : [a],
+    lines,
+    choices: s.choices.map((label, i) => ({
+      label,
+      reply: {
+        who: a,
+        ...s.parts[a][i ? 'r2' : 'r1']
+      }
+    }))
+  };
+};
+const assistantLifeDailyText = (line, ids) => {
+  const partner = (ids || []).find(x => x !== line.who) || line.who;
+  const name = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(line.who) : 'あなた';
+  const call = typeof assistantPeerCall === 'function' ? (() => {
+    try {
+      return assistantPeerCall(line.who, partner);
+    } catch (_) {
+      return assistantLifeName(partner);
+    }
+  })() : assistantLifeName(partner);
+  return String(line.t || '').replace(/\{name\}/g, name).replace(/\{c\}/g, call);
+};
+const assistantLifeDailyRareTalk = (rareId, a, b) => {
+  const D = assistantLifeDailyData();
+  const r = D && Array.isArray(D.rares) ? D.rares.find(x => x.id === rareId) : null;
+  const [x, y] = [a, b].sort();
+  if (!r || !r.parts || !r.parts[x] || !r.parts[y] || !r.parts[x].open || !r.parts[y].back) return null;
+  return {
+    id: `daily-rare-${r.id}-${x}-${y}`,
+    kind: 'pair',
+    pair: [x, y],
+    title: r.title,
+    lines: [{
+      who: x,
+      ...r.parts[x].open
+    }, {
+      who: y,
+      ...r.parts[y].back
+    }]
+  };
+};
+const assistantLifeDailyAlbumTalks = () => {
+  const D = assistantLifeDailyData();
+  if (!D || !Array.isArray(D.rares) || !assistantLifeDailySceneOn()) return [];
+  const out = [];
+  const ids = ASSISTANT_LIFE_HOUSE_ORDER;
+  for (const r of D.rares) for (let i = 0; i < ids.length; i += 1) for (let j = i + 1; j < ids.length; j += 1) {
+    const t = assistantLifeDailyRareTalk(r.id, ids[i], ids[j]);
+    if (t) out.push(t);
+  }
+  return out;
+};
+const assistantLifeDailyFinish = async (plan, slotId) => {
+  const r = await assistantLifeDailyListen(slotId);
+  let bond = 0;
+  if (r.added && plan) {
+    bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
+    if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+      for (const id of plan.ids) {
+        try {
+          assistantPeerPlayerBondAdder(id, 'lifeDaily', bond);
+        } catch (_) {}
+      }
+    }
+    if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') {
+      const t = assistantLifeDailyRareTalk(plan.id, plan.ids[0], plan.ids[1]);
+      if (t) {
+        try {
+          assistantPeerAlbumAdd(t);
+        } catch (_) {}
+      }
+    }
+  }
+  return {
+    added: r.added,
+    got: r.got,
+    bond
+  };
+};
+function AssistantLifeDailySceneView({
+  plan,
+  place,
+  look,
+  slotLabel,
+  slotId,
+  onClose
+}) {
+  const [step, setStep] = React.useState(0);
+  const [pick, setPick] = React.useState(null);
+  const [res, setRes] = React.useState(null);
+  const busy = React.useRef(false);
+  const hasChoice = plan.kind === 'scene' && plan.choices.length > 0;
+  const atEnd = step >= plan.lines.length - 1;
+  const phase = !atEnd ? 'talk' : hasChoice && pick == null ? 'choice' : 'done';
+  const finish = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setRes(await assistantLifeDailyFinish(plan, slotId));
+  };
+  React.useEffect(() => {
+    if (phase === 'done') void finish();
+  }, [phase]);
+  const shown = [...plan.lines.slice(0, step + 1), ...(pick != null ? [plan.choices[pick].reply] : [])];
+  const bg = place && place !== 'home' && typeof assistantLifeSceneBg === 'function' ? assistantLifeSceneBg(place, look) : null;
+  const placeName = !place || place === 'home' ? '家' : assistantLifePlaceShow(place);
+  return React.createElement("div", {
+    className: "mhl-scene",
+    "data-assistant-life-daily-scene": plan.kind,
+    "data-assistant-life-daily-scene-id": plan.id,
+    "data-assistant-life-daily-phase": phase
+  }, bg ? React.createElement("div", {
+    className: "bg",
+    style: {
+      backgroundImage: `url(${bg.src})`,
+      backgroundPosition: bg.pos || 'center',
+      backgroundSize: bg.zoom ? '260%' : 'cover',
+      filter: bg.zoom ? 'blur(2px)' : undefined
+    }
+  }) : React.createElement("div", {
+    className: "bg",
+    style: {
+      background: 'linear-gradient(#3b2a5a,#a0584a)'
+    }
+  }), bg && bg.tint && typeof ASSISTANT_LIFE_TINT !== 'undefined' && React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: ASSISTANT_LIFE_TINT[bg.tint]
+    }
+  }), React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: 'linear-gradient(180deg,transparent 35%,rgba(10,6,30,.85) 78%)'
+    }
+  }), typeof AssistantLifeStands === 'function' && React.createElement(AssistantLifeStands, {
+    ids: plan.ids
+  }), React.createElement("div", {
+    className: "absolute inset-x-0 top-0 flex items-center gap-2 px-3",
+    style: {
+      paddingTop: 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-daily-scene-back": true,
+    onClick: onClose,
+    "aria-label": "家へ戻る",
+    className: "h-11 w-11 rounded-full bg-black/50 text-[18px] text-white"
+  }, "←"), React.createElement("p", {
+    className: "rounded-full bg-black/60 px-3 py-1 text-[12px] font-black text-amber-100"
+  }, plan.kind === 'rare' ? `✨ めずらしいできごと「${plan.title}」` : `${slotLabel}のできごと ・ ${placeName}`)), React.createElement("div", {
+    className: "absolute inset-x-3 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-slate-950/90 p-2 text-white",
+    style: {
+      bottom: 'calc(10px + env(safe-area-inset-bottom))',
+      maxHeight: '52%'
+    },
+    role: "button",
+    tabIndex: 0,
+    "data-assistant-life-daily-talk": true,
+    onClick: () => {
+      if (phase === 'talk') setStep(v => v + 1);
+    }
+  }, shown.map((l, i) => {
+    const who = assistantById(l.who);
+    return React.createElement("div", {
+      key: i,
+      className: "mb-1 flex items-start gap-1.5",
+      "data-assistant-life-daily-line": i
+    }, who && typeof AssistantFace === 'function' && React.createElement(AssistantFace, {
+      who: who,
+      size: 30,
+      accent: who.accent,
+      expression: l.e || 'normal'
+    }), React.createElement("p", {
+      className: "min-w-0 flex-1 rounded-xl bg-white px-2 py-1 text-[12.5px] font-bold leading-snug text-slate-900",
+      style: {
+        wordBreak: 'auto-phrase'
+      }
+    }, React.createElement("b", {
+      className: "mr-1",
+      style: {
+        color: who && who.accent || '#be185d'
+      }
+    }, assistantLifeName(l.who)), "「", assistantLifeDailyText(l, plan.ids), "」"));
+  }), phase === 'talk' && React.createElement("p", {
+    className: "text-center text-[11px] font-bold text-slate-400"
+  }, "▼ タップで続き"), phase === 'choice' && React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-1.5",
+    "data-assistant-life-daily-choices": true
+  }, plan.choices.map((c, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    "data-assistant-life-daily-choice": i,
+    onClick: ev => {
+      ev.stopPropagation();
+      setPick(i);
+    },
+    className: "min-h-[44px] rounded-xl px-2 text-[12px] font-black text-white active:scale-95",
+    style: {
+      background: 'linear-gradient(90deg,#f59e0b,#f43f5e)',
+      wordBreak: 'auto-phrase'
+    }
+  }, c.label))), phase === 'done' && React.createElement("div", {
+    "data-assistant-life-daily-result": true
+  }, res && React.createElement("p", {
+    className: "mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700"
+  }, res.added ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-daily-scene-close": true,
+    onClick: ev => {
+      ev.stopPropagation();
+      onClose();
+    },
+    className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12px] font-black"
+  }, "🏡 家へ戻る"))));
+}
+function AssistantLifeTopStrip({
+  life,
+  ids,
+  evIds = [],
+  onPlace
+}) {
+  const list = (Array.isArray(ids) ? ids : []).filter(assistantLifeTopOk);
+  const groups = {};
+  let home = 0;
+  for (const id of list) {
+    let w = null;
+    try {
+      w = assistantLifeWhereOf(life, id);
+    } catch (_) {
+      w = null;
+    }
+    const place = w ? w.place : 'home';
+    if (place === 'home') {
+      home += 1;
+      continue;
+    }
+    (groups[place] = groups[place] || []).push(id);
+  }
+  const places = Object.keys(groups);
+  let next = null;
+  try {
+    const s = assistantLifeSlotAt();
+    const d = ASSISTANT_LIFE_SLOTS[s.i];
+    next = d && Number.isFinite(d.to) ? d.to % 24 : null;
+  } catch (_) {
+    next = null;
+  }
+  return React.createElement("div", {
+    className: "mx-3 mb-1.5 text-white",
+    "data-assistant-life-top-strip": true
+  }, places.length > 0 && React.createElement("div", {
+    className: "flex gap-1 overflow-x-auto overscroll-contain pb-0.5",
+    style: {
+      scrollbarWidth: 'none'
+    }
+  }, places.map(p => {
+    const ev = groups[p].some(id => evIds.includes(id));
+    return React.createElement("button", {
+      key: p,
+      type: "button",
+      "data-assistant-life-top-place": p,
+      onClick: () => onPlace && onPlace(p, groups[p][0]),
+      className: `flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-slate-950/85 py-0.5 pl-1 pr-2 text-[11.5px] font-black active:scale-95 ${ev ? 'border-2 border-amber-300 text-amber-100' : 'border border-white/15'}`
+    }, React.createElement("span", {
+      className: "flex -space-x-1.5"
+    }, groups[p].slice(0, 3).map(id => {
+      const who = assistantById(id);
+      return who && typeof AssistantFace === 'function' ? React.createElement(AssistantFace, {
+        key: id,
+        who: who,
+        size: 24,
+        accent: who.accent
+      }) : null;
+    })), React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p] || '🚶', " ", assistantLifePlaceShow(p), ev ? ' ❗' : ''));
+  })), React.createElement("p", {
+    className: "mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100",
+    "data-assistant-life-top-sum": true
+  }, "家に", home, "人 ・ おでかけ", list.length - home, "人", next != null ? ` ・ 次にみんなが動くのは ${next}:00` : ''));
 }
 const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
 function assistantLifeBondOpens(id, nextLevel) {
@@ -117225,9 +117705,12 @@ function AssistantLifeBenefitBoard({
   onWatch = null,
   onGive = null,
   onRoad = null,
-  onGuide = null
+  onGuide = null,
+  fold = false,
+  below = null
 }) {
   const [more, setMore] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
   const rows = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : [];
   const first = rows[0] || null;
   const rest = rows.length - 1;
@@ -117291,7 +117774,13 @@ function AssistantLifeBenefitBoard({
     k: "now",
     tag: "⏰ いま",
     land: land
-  }, "いまは特別な得はありません", slotTo != null ? `(助手が動く ${slotTo}時に変わります)` : ''), React.createElement(AssistantLifeBenefitLine, {
+  }, "いまは特別な得はありません", slotTo != null ? `(助手が動く ${slotTo}時に変わります)` : ''), fold && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-benefit-fold": open ? 'open' : 'closed',
+    "aria-expanded": open,
+    onClick: () => setOpen(v => !v),
+    className: "min-h-[44px] w-full text-right text-[11.5px] font-black text-amber-200"
+  }, "📅 今日 ・ 🌱 次のごほうび ", open ? '▲' : '▼'), (!fold || open) && React.createElement(React.Fragment, null, React.createElement(AssistantLifeBenefitLine, {
     k: "today",
     tag: "📅 今日",
     land: land,
@@ -117310,7 +117799,7 @@ function AssistantLifeBenefitBoard({
     tag: "🌱 次の ごほうび",
     land: land,
     onClick: onRoad
-  }, "見守る・贈る・おしゃべりで 💗 仲良し度が上がると、ごほうびが届きます"));
+  }, "見守る・贈る・おしゃべりで 💗 仲良し度が上がると、ごほうびが届きます")), below);
 }
 function AssistantLifeRewardRow({
   it,

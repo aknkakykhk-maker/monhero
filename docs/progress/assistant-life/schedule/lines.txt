@@ -1,0 +1,44 @@
+# 助手の予定表: 行き先をお願いされた助手の返事(ココロ3・2026-11-11・ナカヨシ19の依頼)
+# ok = お願いどおり行った / no = 気分で別の場所へ行った。8人 × ok 2本・no 2本 = 32本
+# 穴: {place}(ok は頼まれた場所、no は実際に行った場所。「〜へ」「〜に」につながる名詞)・{c}(プレイヤーの呼び方)。1本に穴は1つまで・40字まで
+# 断りは責めない・謝りすぎない。「今日は◯◯の気分」くらいの軽さ
+
+ok mua | happy {place}ね、りょーかい！ いってきまーす♪
+ok mua | excited {c}のおすすめなら行くしかないぢゃんｗ
+no mua | wink ごめんね〜、今日は{place}の気分だったのｗ
+no mua | normal なんか足が{place}に向いちゃった！ また今度ね🌙
+
+ok kiki | happy {place}でつね。いってきまつ♪
+ok kiki | excited {c}のお願いなら、よろこんで行きまつ♪
+no kiki | normal 今日はなんだか{place}の気分でつ。ごめんなさいでつ
+no kiki | wink 気がついたら{place}にいたでつ♪ また次回でつ
+
+ok momosuke | excited {place}ね！！ ももにおまかせ♡
+ok momosuke | happy {c}がそう言うなら、行ってくる！！
+no momosuke | wink ごめんね！！ 今日は{place}の気分だったの♡
+no momosuke | happy {place}に呼ばれた気がしたの！！ また今度ね♡
+
+ok dra | happy {place}か。おで、行ってくるな、えへへ
+ok dra | normal {c}の頼みなら、断る理由はないな
+no dra | normal 今日は{place}の気分だったな。すまんな、えへへ
+no dra | wink 足が勝手に{place}に向かっちまったな
+
+ok atsu | excited {place}ね、任せて！ いってくる笑
+ok atsu | happy {c}の頼みなら任せろ笑
+no atsu | wink わり、今日は{place}の気分だった笑
+no atsu | normal 気づいたら{place}にいたわ、また今度な笑
+
+ok kyuko | happy ほい、{place}ねぇ。いってくるよぉ笑
+ok kyuko | wink {c}の頼みなら、乗ったぁ笑
+no kyuko | normal ごめんねぇ、今日は{place}の気分だったぁ笑
+no kyuko | happy 気ままに歩いてたら{place}に着いたよぉw
+
+ok sorashido | happy {place}ですね、行ってきます笑
+ok sorashido | normal {c}のお願いなら、喜んで
+no sorashido | normal すみません、今日は{place}の気分でした笑
+no sorashido | wink 気づいたら{place}にいました。また今度行きます
+
+ok erubin | happy {place}だね、行ってくるよ☺️
+ok erubin | wink {c}の頼みなら、もちろん行くよ笑
+no erubin | normal ごめんね、今日は{place}の気分だったんだ
+no erubin | happy 歩いてたら{place}に着いちゃったよ☺️ また今度ね
