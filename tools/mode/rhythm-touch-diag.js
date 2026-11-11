@@ -269,13 +269,88 @@ const frameSummary=(rows,{days=null,now=Date.now()}={})=>{
   }
   return [...groups.values()].map(g=>({key:g.key,plays:g.plays,frameAvg:median(g.avg),tickAvg:median(g.tick),over34Share:g.frames?g.over34/g.frames:0,gpu:[...g.gpu].slice(0,3)})).sort((a,b)=>b.plays-a.plays);
 };
+// ── 同期の総点検の数(2026-11-11) ──
+// ①曲の時計の直し(smoothSongClock)が入ったり切れたりしていないか ②上限(80ms)を超えて遅れて届いた入力の時刻を信じてよいか
+// ③遅れて届くタッチは画面のふち・ほかの指と関係があるか ④自分の touchstart なしに見えた指の内訳。
+// ①は古い行でも出る(入れている回の stalls は、2026-11-11 より前の版では「なめらかにした後の時計」で数えていたので 0 に見える)。②〜④は足した版からの行だけ
+const SYNC_LATE_MIN=30;
+const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
+  const since=days?now-days*86400000:-Infinity,groups=new Map();
+  for(const row of rows){
+    if(isReportRow(row))continue;
+    const at=Date.parse(row.created_at||'');if(Number.isFinite(at)&&at<since)continue;
+    const st=row.stats&&typeof row.stats==='object'?row.stats:null,t=st&&st.timing&&typeof st.timing==='object'?st.timing:null;
+    if(!st||!t||st.assist)continue;
+    const key=row.platform||'other';
+    if(!groups.has(key))groups.set(key,{key,plays:0,devices:new Map(),lateN:0,lateAct:[],lateFull:[],lateBias:[],lateEx:[],lateHist:[0,0,0,0],edgeAll:[0,0,0,0],edgeLate:[0,0,0,0],
+      multiAll:0,multiLate:0,taps:0,late:0,newPlays:0,lateStart:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0,shownFrames:0,shownStalls:0});
+    const g=groups.get(key);g.plays++;
+    const dk=String(row.device_key||'?');
+    if(!g.devices.has(dk))g.devices.set(dk,{on:0,off:0,offFrames:0,offStalls:0,onFrames:0,onStalls:0});
+    const d=g.devices.get(dk),smooth=Array.isArray(st.fixes)&&st.fixes.includes('smoothSongClock');
+    if(smooth){d.on++;d.onFrames+=num(t.frames);d.onStalls+=num(t.stalls);}else{d.off++;d.offFrames+=num(t.frames);d.offStalls+=num(t.stalls);}
+    if(t.stallsShown!==undefined&&smooth){g.shownFrames+=num(t.frames);g.shownStalls+=num(t.stallsShown);}
+    if(Array.isArray(st.lateHist)){
+      g.newPlays++;g.taps+=num(st.touchStarts);g.late+=num(st.lateDelivery);
+      st.lateHist.forEach((v,i)=>{if(i<4)g.lateHist[i]+=num(v);});
+      (Array.isArray(st.edgeAll)?st.edgeAll:[]).forEach((v,i)=>{if(i<4)g.edgeAll[i]+=num(v);});
+      (Array.isArray(st.edgeLate)?st.edgeLate:[]).forEach((v,i)=>{if(i<4)g.edgeLate[i]+=num(v);});
+      g.multiAll+=num(st.multiAll);g.multiLate+=num(st.multiLate);g.lateStart+=num(st.lateStart);
+      for(const name of ['lsBack','lsBackGuard','lsByStart','lsByMove','lsByEnd','lsFollow','lsFollowEarlier'])g[name]+=num(st[name]);
+      g.lsFollowMaxMs=Math.max(g.lsFollowMaxMs,num(st.lsFollowMaxMs));
+    }
+    // 1曲に3回以上あって、ふだんのずれ(biasMs)も出ている曲だけ比べる
+    if(num(t.lateN)>=3&&Number.isFinite(Number(t.lateActMs))&&Number.isFinite(Number(t.lateFullMs))&&Number.isFinite(Number(t.biasMs))&&num(t.biasN)>=30){
+      g.lateN+=num(t.lateN);g.lateAct.push(Number(t.lateActMs));g.lateFull.push(Number(t.lateFullMs));g.lateBias.push(Number(t.biasMs));if(Number.isFinite(Number(t.lateExMs)))g.lateEx.push(Number(t.lateExMs));
+    }
+  }
+  const mean=list=>list.length?list.reduce((a,b)=>a+b,0)/list.length:null;
+  return [...groups.values()].map(g=>{
+    const devices=[...g.devices.values()];
+    // 入り切りをくり返している端末: 入れた回と切れた回がどちらも3回以上あり、切れた回の元の時計の止まりが基準(2%)以上
+    const flapping=devices.filter(d=>d.on>=3&&d.off>=3&&d.offFrames>=3000&&d.offStalls/d.offFrames>=.02);
+    const offStally=devices.filter(d=>d.offFrames>=3000&&d.offStalls/d.offFrames>=.02);
+    const actGap=g.lateAct.length?mean(g.lateAct.map((v,i)=>Math.abs(v-g.lateBias[i]))):null,fullGap=g.lateFull.length?mean(g.lateFull.map((v,i)=>Math.abs(v-g.lateBias[i]))):null;
+    return {key:g.key,plays:g.plays,devices:devices.length,flappingDevices:flapping.length,stallyDevices:offStally.length,
+      flappingOffPlays:flapping.reduce((a,d)=>a+d.off,0),flappingOnPlays:flapping.reduce((a,d)=>a+d.on,0),
+      shownStallShare:g.shownFrames?g.shownStalls/g.shownFrames:null,
+      newPlays:g.newPlays,taps:g.taps,late:g.late,lateHist:g.lateHist,edgeAll:g.edgeAll,edgeLate:g.edgeLate,multiAll:g.multiAll,multiLate:g.multiLate,
+      lateStart:g.lateStart,lsBack:g.lsBack,lsBackGuard:g.lsBackGuard,lsByStart:g.lsByStart,lsByMove:g.lsByMove,lsByEnd:g.lsByEnd,lsFollow:g.lsFollow,lsFollowEarlier:g.lsFollowEarlier,lsFollowMaxMs:g.lsFollowMaxMs,
+      lateN:g.lateN,latePlays:g.lateAct.length,lateActMs:median(g.lateAct),lateFullMs:median(g.lateFull),lateBiasMs:median(g.lateBias),lateExMs:median(g.lateEx),lateActGap:actGap,lateFullGap:fullGap};
+  }).sort((a,b)=>b.plays-a.plays);
+};
+const syncLines=summary=>{
+  const lines=[],pct=(a,b)=>b?`${(a/b*100).toFixed(1)}%`:'-';
+  for(const g of summary){
+    if(g.flappingDevices)lines.push(`▲ [${g.key}] 曲の時計の直し(smoothSongClock)が入ったり切れたりしている端末が ${g.flappingDevices}台(入り ${g.flappingOnPlays}曲 / 切れ ${g.flappingOffPlays}曲)。2026-11-11 の版より前の記録なら、その版で直してある(止まりを元の時計で数える)。新しい版でも続くなら直っていない`);
+    else if(g.stallyDevices)lines.push(`・ [${g.key}] 元の時計が止まるコマの多い端末(2%以上)は ${g.stallyDevices}台。入り切りのくり返しは見えない`);
+    if(g.shownStallShare!==null)lines.push(`${g.shownStallShare<.005?'◎':'▲'} [${g.key}] 直しを入れた回の、画面に出している時計の止まり ${(g.shownStallShare*100).toFixed(2)}%(0.5%未満なら効いている)`);
+    if(g.newPlays){
+      lines.push(`・ [${g.key}] 遅れて届いた touchstart(足した版 ${g.newPlays}曲・${g.late}回): 50〜80ms ${g.lateHist[0]} / 〜150 ${g.lateHist[1]} / 〜300 ${g.lateHist[2]} / 300ms超 ${g.lateHist[3]}`);
+      const all=g.edgeAll.reduce((a,b)=>a+b,0),late=g.edgeLate.reduce((a,b)=>a+b,0);
+      if(all&&late>=SYNC_LATE_MIN){
+        const nearAll=(g.edgeAll[0]+g.edgeAll[1])/all,nearLate=(g.edgeLate[0]+g.edgeLate[1])/late;
+        lines.push(`${nearLate>=nearAll*2&&nearLate>=.3?'●':'・'} [${g.key}] ふちから60px未満のタッチ: 全体の ${pct(g.edgeAll[0]+g.edgeAll[1],all)} / 遅れて届いたものの ${pct(g.edgeLate[0]+g.edgeLate[1],late)}${nearLate>=nearAll*2&&nearLate>=.3?'。遅れは画面のふち(端末のジェスチャー待ち)に寄っている。叩く場所をふちから離す案が効く':''}`);
+        lines.push(`${g.taps&&g.multiLate/late>=g.multiAll/g.taps*2?'●':'・'} [${g.key}] ほかの指が触れている最中のタッチ: 全体の ${pct(g.multiAll,g.taps)} / 遅れて届いたものの ${pct(g.multiLate,late)}`);
+      }
+      const ls=g.lsBack+g.lsByStart+g.lsByMove+g.lsByEnd;
+      if(ls)lines.push(`・ [${g.key}] 自分の touchstart なしに見えた指 ${ls}回: 消えていた指が戻っただけ ${g.lsBack}(うち押した扱いにしなかった ${g.lsBackGuard}) / 別の指の touchstart で ${g.lsByStart} / touchmove で ${g.lsByMove} / 離しの合図で ${g.lsByEnd}。あとから自分の touchstart が届いた ${g.lsFollow}(その時刻のほうが古かった ${g.lsFollowEarlier}・最大 ${g.lsFollowMaxMs}ms)`);
+    }
+    if(g.lateN>=SYNC_LATE_MIN&&g.latePlays>=3){
+      const trust=g.lateFullGap+5<g.lateActGap,stale=g.lateActGap+5<g.lateFullGap;
+      lines.push(`${trust||stale?'●':'・'} [${g.key}] 上限(80ms)を超えて遅れた入力で取れた単押し ${g.lateN}回(${g.latePlays}曲): いまの判定のずれ ${g.lateActMs}ms / 合図の時刻まで戻したら ${g.lateFullMs}ms / ふだんのずれ ${g.lateBiasMs}ms(戻し切れなかった分の中央値 ${g.lateExMs}ms)。`
+        +(trust?'合図の時刻まで戻したほうがふだんのずれに近い=**合図の時刻は本当に指の触れた時刻**。コマが止まっていなくても戻してよい(遅く判定されている)':stale?'いまの判定のほうがふだんのずれに近い=**合図の時刻だけ古い**。上限は今のままでよい':'どちらとも言えない(差が5ms未満)'));
+    }else if(g.newPlays)lines.push(`… [${g.key}] 遅れた入力の時刻を信じてよいかは、取れた単押しが ${SYNC_LATE_MIN}回たまってから(いま ${g.lateN}回)`);
+  }
+  return lines;
+};
 const report=(rows,{json=false,days=null}={})=>{
   const summary=aggregate(rows,{days});
   const verdict=diagnose(summary);
   const compared=compareReported(rows,{days});
   const fixes=fixesFor(verdict,compared);
   const fixCompare=Object.values(FIX_FOR).map(item=>item.fix).filter((name,i,list)=>list.indexOf(name)===i).map(name=>compareFix(rows,name,{days}));
-  if(json){const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing);console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare,timing,timingVerdict,frames:frameSummary(rows,{days})},null,1));return {summary,verdict,compared,fixes,fixCompare,timing,timingVerdict};}
+  if(json){const timing=timingSummary(rows,{days}),timingVerdict=timingLines(timing);console.log(JSON.stringify({summary,verdict,compared,fixes,fixCompare,timing,timingVerdict,frames:frameSummary(rows,{days}),sync:syncSummary(rows,{days}),syncVerdict:syncLines(syncSummary(rows,{days}))},null,1));return {summary,verdict,compared,fixes,fixCompare,timing,timingVerdict};}
   console.log(`タッチの診断: ${rows.length}行${days?`(直近${days}日)`:''}`);
   for(const g of summary){
     console.log(`\n[${g.key}] ${g.plays}曲・${g.devices}端末・${g.taps}タッチ・${g.notes}ノーツ`);
@@ -306,10 +381,14 @@ const report=(rows,{json=false,days=null}={})=>{
   console.log('\n1コマの重さ(stats.frame・端末:描き方):');
   if(!frames.length)console.log('  まだ記録がありません(frame を送る版からの行だけ数える)');
   for(const g of frames)console.log(`  [${g.key}] ${g.plays}曲  1コマ平均の中央値 ${g.frameAvg??'-'}ms / ゲームの JS ${g.tickAvg??'-'}ms / 33ms超 ${(g.over34Share*100).toFixed(1)}%${g.gpu.length?` / ${g.gpu.join('・')}`:''}`);
-  return {summary,verdict,compared,fixes,fixCompare,frames};
+  const sync=syncSummary(rows,{days}),syncText=syncLines(sync);
+  console.log('\n同期の総点検の数(曲の時計の直しの入り切り・遅れた入力の時刻・ふち・見えた指の内訳):');
+  if(!syncText.length)console.log('  まだ記録がありません');
+  syncText.forEach(line=>console.log(`  ${line}`));
+  return {summary,verdict,compared,fixes,fixCompare,frames,sync};
 };
 
-module.exports={frameSummary,timingSummary,timingLines,timingFixesFor,TIMING_MIN_PLAYS,aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
+module.exports={syncSummary,syncLines,frameSummary,timingSummary,timingLines,timingFixesFor,TIMING_MIN_PLAYS,aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,compareFix,fixesFor,FIX_FOR,MIN_REPORTED};
 
 if(require.main===module){
   let rows=readRows();

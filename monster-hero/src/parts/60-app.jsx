@@ -1923,9 +1923,10 @@ function MonsterHeroGame() {
       left -= cost;
       if (card.type === 'guard' || card.type === 'weak_guard') return;
       const b = boostsForCardDamage(run, card, false);
-      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, enemyDist, dmgScale), b.combo, copy.srcSlot, false);
+      if (isAttackCard(card)) total += getAttackPredictedDmg(card, srcMon, getDmg(card, copy.srcSlot, srcMon, b.oryo, b.dmgMod, false, run.dist, dmgScale), b.combo, copy.srcSlot, false);
       const boost = localBoostFromCard(card);
-      if (boost) run = { oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      if (boost) run = { ...run, oryo: run.oryo + (boost.oryo || 0), dmgMod: run.dmgMod + (boost.dmgMod || 0), combo: run.combo + (boost.combo || 0) };
+      run = { ...run, dist: attackDistanceAfterCard(card, run.dist) };
     });
     return total;
   };
@@ -13979,26 +13980,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
   // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
   // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
+  // ★dist … そのカードが攻撃を始めるときの敵の距離。距離撃(range_atk)を先に置くと、実処理(processTurn の attackDistance)は
+  //   あとのカードを「動かしたあとの距離」で計算する。予測もここで同じ距離を積んで getDmg へ渡す
+  //   (渡していなかったころは、距離撃のあとに置いたカードの予測が、動かす前の距離のままだった。2026-11-11 バトルの監査)
+  //   あつの挑発(stun_atsu)だけは、実処理が getDmg へ距離を渡していない(ターンの始めの距離のまま)ので、予測も動かす前の距離で出す
+  const previewAttackStartDist = (card, dist) => (card?.subType==='stun_atsu' ? enemyDist : dist);
   const previewLocalBoosts = (excludeIdx=null) => {
-    let oryo=0, dmgMod=0, combo=0;
+    let oryo=0, dmgMod=0, combo=0, dist=enemyDist;
     const counter=makeHalveCounter();
     const perCard={};
     selectedCards.forEach(idx=>{
       const card=hand[idx];
       const slotIdx=cardAssignments[idx]!=null?cardAssignments[idx]:null;
       const halved=counter.peek(card,slotIdx);
-      perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
+      perCard[idx]={...boostsForCardDamage({oryo,dmgMod,combo},card,halved), dist:previewAttackStartDist(card,dist)};
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
       if(idx===excludeIdx) return;
       if(!card) return;
       const effMul=cardEffectMultiplier(card,halved);
       const boost=localBoostFromCard(card);
       if(boost){ oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
+      dist=attackDistanceAfterCard(card,dist);
       counter.take(card,slotIdx);
     });
     const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
     const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
-    return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
+    return { perCard, final:{oryo,dmgMod,combo,dist}, forPending:{...boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved), dist:previewAttackStartDist(pendingCard,dist)} };
   };
   // 固有技のオリジナル強化の「〇〇特攻」を見るための、いまの戦いの様子。予測と実際のダメージ(どちらも getDmg)が同じ値を使う
   const uniqueBoostCtxFor = (mon, slotIdx, attackStartDist=enemyDist) => {
@@ -14067,7 +14074,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       distanceBrokenDmg=applyUltimateDistanceBreak(turnPressedDmg,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,card.type);
     }
     return applyExtremeIntegerRule(distanceBrokenDmg,specialRuleDifficulty,'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, wave, runMode, difficulty, extremeDifficulty, enemy, enemyIntent]); // wave は適性(タクティクス)と段階の特殊ルールが読む
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -14086,7 +14093,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo,kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,false)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
-  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode]);
+  }, [mainHero, turnBuffs, permaBuffs, enemyIntent, runMode, wave, turnCount]); // wave・turnCount は楔の上限(kusabiCapAt)が読む
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -15803,7 +15810,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   2発目以降だけ技ごとの動きが見つからず、更新前の通常モーションに戻る(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる」)
         const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
         for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
-        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
+        if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=attackDistanceAfterCard(card,attackDistance); }
         // ★トリックスタート(ゴースト・スプーキー): 攻撃が当たったら、その技で払った消費ガッツの半分を回復する。
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
