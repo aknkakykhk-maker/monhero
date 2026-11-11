@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 727304affad50c62
+// source-sha256: cb8aee8b9d9b8e2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22475,6 +22475,24 @@ const buildAttackHits = ({
   return hits;
 };
 const attackDistanceAfterCard = (card, dist) => card && card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : dist;
+const shuffledCopy = (list, random = Math.random) => {
+  const out = Array.isArray(list) ? [...list] : [];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+const waveDamageAtDefeat = (live, stale, lastBlow) => {
+  const legacy = (Number(stale) || 0) + (Number(lastBlow) || 0);
+  const now = Number(live);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+};
+const waveDistDamageAtDefeat = (live, stale, lastBlow) => [0, 1, 2, 3].map(i => {
+  const legacy = (Number(stale?.[i]) || 0) + (Number(lastBlow?.[i]) || 0);
+  const now = Number(live?.[i]);
+  return Number.isFinite(now) ? Math.max(now, legacy) : legacy;
+});
 const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
   if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
   const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);
@@ -46781,6 +46799,28 @@ const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
     perHit
   } = splitTacticsGuardedHit(incoming, hits, guardHits);
   const amounts = splitTacticsGuardedAmounts(incoming, hits, guard, guardHits);
+  if (covered >= amounts.length && through > 0) {
+    const value = Math.max(0, tacticsSafeInt(guard, 0));
+    const lastHit = perHit + through;
+    const taken = amounts.reduce((sum, v) => sum + v, 0);
+    return taken > 0 ? {
+      taken,
+      saved: 0,
+      guarded: guarded + through,
+      through: 0,
+      covered,
+      amounts,
+      blocked: value >= perHit
+    } : {
+      taken: 0,
+      saved: value - lastHit,
+      guarded: guarded + through,
+      through: 0,
+      covered,
+      amounts,
+      blocked: true
+    };
+  }
   const left = Math.max(0, tacticsSafeInt(guard, 0)) - perHit;
   if (left < 0) return {
     taken: -left * covered + through,
@@ -82515,6 +82555,7 @@ function BattleScreen({
   liteBattleView,
   mainHero,
   openHelp,
+  ownedTeachings,
   ownedUniques,
   pendingCard,
   pendingCardGuts,
@@ -83217,9 +83258,15 @@ function BattleScreen({
       const card = hand[idx];
       const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
       const halved = counter.take(card, owner);
+      if (card?.subType === 'watch_erubin') {
+        const owned = (ownedTeachings || []).find(ot => ot.id === card.id);
+        const conf = ERUBIN_TIERS[Math.min(owned ? owned.evoLevel : 0, ERUBIN_TIERS.length - 1)];
+        mult *= Math.max(0.1, 1 - conf.cut * cardEffectMultiplier(card, halved));
+        return;
+      }
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
+      mult *= lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
@@ -177066,6 +177113,13 @@ function MonsterHeroGame() {
   const [enemyAttackFx, setEnemyAttackFx] = useState(null);
   const [currentWaveDamage, setCurrentWaveDamage] = useState(0);
   const [waveDistDamage, setWaveDistDamage] = useState([0, 0, 0, 0]);
+  const currentWaveDamageRef = useRef(0);
+  currentWaveDamageRef.current = currentWaveDamage;
+  const waveDistDamageRef = useRef([0, 0, 0, 0]);
+  waveDistDamageRef.current = waveDistDamage;
+  const addCurrentWaveDamageLive = amount => {
+    currentWaveDamageRef.current = (Number(currentWaveDamageRef.current) || 0) + (Number(amount) || 0);
+  };
   const [distDmgBonus, setDistDmgBonus] = useState([0, 0, 0, 0]);
   const [distAptPct, setDistAptPct] = useState([0, 0, 0, 0]);
   const tacticsSlotApt = slotIdx => {
@@ -177507,6 +177561,7 @@ function MonsterHeroGame() {
     const shellAbsorbed = markShellAbsorbedHits(ca.hits, enemyShellPool(enemy));
     for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total);
+    addCurrentWaveDamageLive(ca.total);
     raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - (ca.total - shellAbsorbed));
     enemyRevivedHpRef.current = null;
@@ -191636,7 +191691,7 @@ function MonsterHeroGame() {
       combo: base.combo + (boost.combo || 0) * effMul
     };
   };
-  const previewAttackStartDist = (card, dist) => card?.subType === 'stun_atsu' ? enemyDist : dist;
+  const previewAttackStartDist = (card, dist) => dist;
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
@@ -191821,7 +191876,7 @@ function MonsterHeroGame() {
       key: Date.now()
     });
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
-    const totalWaveDamage = currentWaveDamage + damage;
+    const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
     const turnMult = Math.max(1.0, 2.0 - (20 - remainingTurns) * 0.05);
@@ -191842,7 +191897,7 @@ function MonsterHeroGame() {
     const rawRoundScore = (totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier;
     const finalRoundScore = shrinkBattleScore(rawRoundScore);
     setScore(s => s + finalRoundScore);
-    const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
+    const finalDistDamage = waveDistDamageAtDefeat(waveDistDamageRef.current, waveDistDamage, distDamage);
     const normalGainedDistBonus = finalDistDamage.map(d => d * DIST_BONUS_PER_DAMAGE);
     const gainedDistBonus = finalDistDamage.map(d => applyDistanceEnhancement(d * DIST_BONUS_PER_DAMAGE, specialRuleDifficulty, wave));
     const newDistBonus = distDmgBonus.map((b, i) => b + gainedDistBonus[i]);
@@ -192094,10 +192149,13 @@ function MonsterHeroGame() {
           const id = tacticsUnitsRef.current[i]?.id;
           return id === 'Ark' || id === 'Iblis';
         });
-        if (chuuniAimed && getWaveBuff('chuuniDmgCutUses') < 2) {
+        let chuuniCutUsed = false;
+        const useChuuniCut = () => {
+          if (chuuniCutUsed || !chuuniAimed || !(getWaveBuff('chuuniDmgCutUses') < 2)) return;
+          chuuniCutUsed = true;
           addWaveBuff('chuuniDmgCutUses', 1);
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
-        }
+        };
         const forcedReflect = getTurnBuff('reflect', false);
         const kageroEvade = !forcedReflect && defenseHeroId === KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
         if (kageroEvade) {
@@ -192160,6 +192218,7 @@ function MonsterHeroGame() {
             addPopup(`反射 ${reflectDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
             const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectDmg);
             setCurrentWaveDamage(p => p + reflectDmg);
+            addCurrentWaveDamageLive(reflectDmg);
             raidJackDamageRef.current += Number(reflectDmg) || 0;
             setEnemy(prev => prev ? {
               ...prev,
@@ -192171,29 +192230,10 @@ function MonsterHeroGame() {
               damage: reflectDmg
             })) return;
           }
-        } else if (isAbsorb) {
+        } else if (isAbsorb && !isTacticsMode(runMode)) {
           addPopup("吸収！", 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
-          const absorbSlot = isTacticsMode(runMode) ? pickDefenseSlot() : null;
-          if (isTacticsMode(runMode)) {
-            let units = tacticsUnitsRef.current,
-              hpGain = 0,
-              gutsGain = 0;
-            if (absorbSlot != null) {
-              const gain = applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, absorbSlot), absorbSlot);
-              const guts = Math.floor(gain * 0.1);
-              hpGain = gain;
-              gutsGain = guts;
-              units = recoverTacticsGutsAt(healTacticsAt(units, absorbSlot, gain), absorbSlot, guts);
-            }
-            currentHp = commitTacticsUnits(units);
-            if (absorbSlot != null && (hpGain > 0 || gutsGain > 0)) mergeTacticsSlotFx({
-              [absorbSlot]: hpGain
-            }, {
-              [absorbSlot]: gutsGain
-            });
-            if (hpGain <= 0) addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
-          } else {
+          {
             const hpGain = incomingDmg;
             const gutsGain = Math.floor(incomingDmg * 0.1);
             addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
@@ -192207,7 +192247,7 @@ function MonsterHeroGame() {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
         } else if (isTacticsMode(runMode)) {
-          tookEnemyAttack = true;
+          let tacticsReceived = false;
           const targets = tacticsTargetsNow(intent, actingEnemyDist);
           const copyNow = aiCopyRef.current;
           const copyHit = EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(copyNow, turnCount) && tacticsIntentHitsAiCopy(intent, copyNow);
@@ -192221,6 +192261,7 @@ function MonsterHeroGame() {
             pushBattleLog(`${tacticsAiCopyName(copyNow)}に${fdC}ダメージ`, 'enemy');
             if (afterC) commitAiCopy(afterC);else clearAiCopy('倒されて消えた');
             if (!targets.length) await battleWait(600);
+            tookEnemyAttack = !!copyHit;
           }
           const coverSlot = tacticsCoverSlotNow();
           if (coverSlot != null && targets.length) {
@@ -192237,8 +192278,10 @@ function MonsterHeroGame() {
             let coveredHits = 0;
             const evadedSlot = isEvasion ? pickDefenseSlot() : null;
             const reflectedSlot = isReflect ? pickDefenseSlot() : null;
+            const absorbedSlot = isAbsorb ? pickDefenseSlot() : null;
             let evadedName = '',
               reflectedName = '',
+              absorbedName = '',
               reflectBack = 0;
             let units = tacticsUnitsRef.current,
               dealt = 0,
@@ -192285,6 +192328,22 @@ function MonsterHeroGame() {
                   reflect: true
                 };
                 return;
+              }
+              if (slotIdx === absorbedSlot) {
+                const gain = applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx);
+                const gutsGain = Math.floor(gain * 0.1);
+                units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, gain), slotIdx, gutsGain);
+                absorbedName = tacticsTargetName(units, slotIdx);
+                slotFx[slotIdx] = {
+                  heal: gain,
+                  guts: gutsGain
+                };
+                return;
+              }
+              tacticsReceived = true;
+              {
+                const hitId = tacticsUnitsRef.current[slotIdx]?.id;
+                if (hitId === 'Ark' || hitId === 'Iblis') useChuuniCut();
               }
               const own = slotGuards[slotIdx] || {
                 flat: 0,
@@ -192371,6 +192430,11 @@ function MonsterHeroGame() {
               addPopup(`反射！ ${reflectedName}`, 'hero', 'text-purple-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
             }
+            if (absorbedSlot != null && absorbedName) {
+              addPopup(`吸収！ ${absorbedName}`, 'hero', 'text-emerald-400 font-black text-xl drop-shadow-lg');
+              await battleWait(600);
+            }
+            if (tacticsReceived) tookEnemyAttack = true;
             if (rushHits > 1) {
               const coverText = coveredHits > 0 && throughTotal > 0 ? ` ガードは${coveredHits}ヒットぶん` : coveredHits > 0 ? ` ガード ${coveredHits}ヒットぶんで受け止めた` : '';
               addPopup(`連撃 ${rushHits}ヒット！${coverText}`, 'enemy', 'text-orange-300 font-black text-lg drop-shadow-md');
@@ -192395,12 +192459,13 @@ function MonsterHeroGame() {
               addPopup(`合計 ${dealt}`, 'hero', 'text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]', `味方は 合計 ${dealt.toLocaleString()} ダメージを受けた`);
               await battleWait(400);
             }
-            if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
+            if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null && !absorbedName) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             if (reflectBack > 0) {
               addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
               const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectBack);
               setCurrentWaveDamage(p => p + reflectBack);
+              addCurrentWaveDamageLive(reflectBack);
               raidJackDamageRef.current += Number(reflectBack) || 0;
               setEnemy(prev => prev ? {
                 ...prev,
@@ -192415,6 +192480,7 @@ function MonsterHeroGame() {
           }
         } else if (guardValue > 0) {
           tookEnemyAttack = true;
+          useChuuniCut();
           const rushHits = intent.type === 'SPECIAL' ? extremeLayerRushHits(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave, enemyLiveRef.current?.shellBroken) : 1;
           const guardCards = Object.values(immediateEffects.guardBySlot || {}).reduce((sum, e) => sum + Math.max(0, Number(e?.cards) || 0), 0);
           const rushGuard = rushHits > 1 ? resolveTacticsGuardedHit(incomingBeforeTurnReduction, rushHits, guardValue, guardCards >= TACTICS_RUSH_GUARD_CARDS ? rushHits : 1) : null;
@@ -192445,6 +192511,7 @@ function MonsterHeroGame() {
           }
         } else {
           tookEnemyAttack = true;
+          useChuuniCut();
           addPopup(`-${incomingDmg}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
           triggerShake();
           const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
@@ -192472,12 +192539,13 @@ function MonsterHeroGame() {
     }
     const autoHpRecoveryRate = getPermaBuff('autoHpRecovery', 0.1);
     const currentAutoGutsRecovery = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
-    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
+    const enemyDistAfterTurn = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
+    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDistAfterTurn);
     const soulAdjustedGutsRecoveryRate = Math.max(0, gutsRecoveryRate) * soulBattleParty.autoGutsMultiplier;
     const baseGutsRecoveryRate = Math.max(0, currentAutoGutsRecovery) * soulBattleParty.autoGutsMultiplier;
     const iceExtraRateAt = slotIdx => {
       const id = tacticsUnitsRef.current[slotIdx]?.id;
-      const withIce = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, id, iceLockActive, slotIdx, enemyDist);
+      const withIce = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, id, iceLockActive, slotIdx, enemyDistAfterTurn);
       return Math.max(0, withIce - Math.max(0, currentAutoGutsRecovery)) * soulBattleParty.autoGutsMultiplier;
     };
     const regen = tacticsRegen(autoHpRecoveryRate + (isTacticsMode(runMode) ? tacticsExPartyBuffNow().hpAdd : 0), isTacticsMode(runMode) ? baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd : soulAdjustedGutsRecoveryRate);
@@ -192532,7 +192600,7 @@ function MonsterHeroGame() {
     if (timeStopSlot == null) tickOrihimeEx();
     if (timeStopSlot == null) tickReikonAll();
     {
-      const lifeSourceTurn = turnCount + 1;
+      const lifeSourceTurn = timeStopSlot == null ? turnCount + 1 : 0;
       let lifeSourceGain = 0;
       if (isTacticsMode(runMode)) {
         tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
@@ -193512,7 +193580,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul) * copyDmgScale);
+          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false, attackDistance) * effMul) * copyDmgScale);
           const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           const stunHits = buildAttackHits({
             d,
@@ -193524,10 +193592,11 @@ function MonsterHeroGame() {
             critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
             kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
-            rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
+            rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, stunMon?.id).critAdd + kyubiAttackAt(slotIdx, stunMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
+            hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
             exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, [...kusabiCombosAt(slotIdx, stunMon?.id, card), kyubiAttackAt(slotIdx, stunMon?.id, card).combo, kyubiAttackAt(slotIdx, stunMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
@@ -194005,13 +194074,16 @@ function MonsterHeroGame() {
               addPopup(`🎻 与ダメ +${Math.round(guardFx.atkStack * n * 100)}%`, 'hero', 'text-fuchsia-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
             }
             if (isTacticsMode(runMode)) {
-              immediateTakenMultBySlot[slotIdx] = guardMult;
+              {
+                const cur = Number(immediateTakenMultBySlot[slotIdx]);
+                immediateTakenMultBySlot[slotIdx] = (Number.isFinite(cur) && cur > 0 ? cur : 1) * guardMult;
+              }
               writeNextTurnBuffs(p => ({
                 ...p,
                 bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, 'takenDamageMult', tacticsSlotRate(p.bySlot, slotIdx, 'takenDamageMult', 1.0) * guardMult)
               }));
             } else {
-              immediateTakenMult = guardMult;
+              immediateTakenMult *= guardMult;
               writeNextTurnBuffs(p => {
                 const cur = Number(p.takenDamageMult);
                 return {
@@ -194301,6 +194373,7 @@ function MonsterHeroGame() {
         }
         aiCopyHitRef.current = false;
         setCurrentWaveDamage(p => p + totalDmg);
+        addCurrentWaveDamageLive(totalDmg);
         raidJackDamageRef.current += Number(totalDmg) || 0;
         const turnDistDmg = [0, 0, 0, 0];
         for (const h of attackHits) {
@@ -194313,6 +194386,7 @@ function MonsterHeroGame() {
           for (let k = 0; k < 4; k++) n[k] = (n[k] || 0) + turnDistDmg[k];
           return n;
         });
+        waveDistDamageRef.current = [0, 1, 2, 3].map(k => (Number(waveDistDamageRef.current?.[k]) || 0) + turnDistDmg[k]);
         if (tacticsHateOnFor(runMode)) tacticsHateDealtRef.current = tacticsHateDealtRef.current.map((v, k) => v + turnDistDmg[k]);
         if (multiHit) {
           await battleWait(150);
@@ -194349,7 +194423,7 @@ function MonsterHeroGame() {
       for (let i = 0; i < count; i++) {
         if (nextDeck.length === 0) {
           if (nextGraveyard.length === 0) break;
-          nextDeck = [...nextGraveyard].sort(() => Math.random() - 0.5);
+          nextDeck = shuffledCopy(nextGraveyard);
           nextGraveyard = [];
         }
         if (nextDeck.length > 0) nextHand.push(nextDeck.pop());
@@ -195057,7 +195131,7 @@ function MonsterHeroGame() {
     });
     const scenario = battleScenarioRef.current;
     if (scenario && typeof orderDeckForScenario === 'function') return orderDeckForScenario(scenario, pool);
-    return pool.sort(() => Math.random() - 0.5);
+    return shuffledCopy(pool);
   };
   const applyUniqueChoiceForSlot = (slotIdx, key) => {
     const mon = slots[slotIdx];
@@ -209653,6 +209727,7 @@ function MonsterHeroGame() {
       pendingCard: pendingCard,
       pendingCardGuts: pendingCardGuts,
       popups: popups,
+      ownedTeachings: ownedTeachings,
       previewLocalBoosts: previewLocalBoosts,
       processTurn: processTurn,
       quickRhythmIntroVisible: quickRhythmIntroVisible,
