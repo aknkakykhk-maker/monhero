@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2fd47770ec51cceb
+// generated-sha256: 3a166beb8c0d88b8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66281,22 +66281,56 @@ const assistantLifeTemplePerk = async () => {
   } catch (_) { return null; }
 };
 
-// M/B管理の得: トレーニングチケットを使ったとき(60-app.jsx の useBondXpTickets から)、ranch にいる助手のマスモンの育ちが伸びる。
-//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口 ASSISTANT_LIFE_LINKS.masmonTrainBoost(キズナ4が assistantMasmonTrainBoost を入れる)(1日1回は向こうで数える)。無ければ何もしない。
-//   返り値: 演出に足す一文('' = 何も起きなかった)
-const assistantLifeRanchPerk = () => {
+// M/B管理の得: トレーニングチケットを使ったとき(60-app.jsx の useBondXpTickets から)、ranch にいる助手のマスモンの次の修行が伸びる(1日1回・倍率は育成側 AMG_CARE.ranchMult)。
+//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口は ASSISTANT_LIFE_LINKS.masmonTrainBoost(キズナ4が assistantMasmonTrainBoost を入れる)。無ければ何もしない。
+// いま ranch にいる起きている助手と、その日もう受け取ったか。{ names: [], left: [id], done: [id], mult } か null(受け口が無い・育成が未公開・読み込み前)
+const assistantLifeRanchInfo = () => {
   try {
     const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
-    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    if (typeof amgOn !== 'function' || !amgOn() || typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded) return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
-    const names = [];
-    for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
-      let ok = false; try { ok = boost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; }
-      if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
-    }
-    return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
+    const here = assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch');
+    if (!here.length) return null;
+    const day = typeof amgSlotDay === 'function' && typeof amgSlotOf === 'function' ? amgSlotDay(amgSlotOf()) : null;
+    const b = (AMG_STORE.state && AMG_STORE.state.boost) || {};
+    const done = here.filter(id => b[id] && day != null && b[id].d === day), left = here.filter(id => !done.includes(id));
+    const mult = typeof AMG_CARE !== 'undefined' && Number.isFinite(AMG_CARE.ranchMult) ? AMG_CARE.ranchMult : 1.2;
+    return { here, done, left, mult };
+  } catch (_) { return null; }
+};
+const assistantLifeNames = (ids) => ids.map(id => (typeof assistantLifeName === 'function' ? assistantLifeName(id) : id)).join('・');
+// トレーニングチケットを使った演出に足す一文('' = 何も出さない)。受け取れたら「次の修行が◯倍」、その日もう受け取っていたら「受け取り済み」
+const assistantLifeRanchPerk = () => {
+  try {
+    const info = assistantLifeRanchInfo();
+    if (!info) return '';
+    const boost = ASSISTANT_LIFE_LINKS.masmonTrainBoost, got = [];
+    for (const id of info.left) { let ok = false; try { ok = boost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; } if (ok) got.push(id); }
+    if (got.length) return `${assistantLifeNames(got)}のマスモンたちの次の修行が${info.mult}倍になりました(今日はこれで終わり)`;
+    return info.done.length ? `${assistantLifeNames(info.done)}のマスモンたちの次の修行は${info.mult}倍(今日の分は受け取り済み)` : '';
   } catch (_) { return ''; }
 };
+// M/B管理の画面の帯(60-app.jsx の MB_MANAGEMENT から)。助手がいるあいだだけ、得と今日の受け取り具合を出す
+function AssistantLifeRanchBand() {
+  const [, redraw] = React.useState(0);
+  React.useEffect(() => {
+    const f = () => redraw(n => n + 1);
+    const i = setInterval(f, 3000); let subs = null;
+    try { if (typeof AMG_STORE !== 'undefined' && AMG_STORE.subs) { subs = AMG_STORE.subs; subs.add(f); } } catch (_) {}
+    return () => { clearInterval(i); try { if (subs) subs.delete(f); } catch (_) {} };
+  }, []);
+  const info = assistantLifeRanchInfo();
+  if (!info) return null;
+  const doneAll = info.left.length === 0;
+  return (
+    <div className="mx-auto mb-2 w-full max-w-md rounded-xl border border-amber-300/60 bg-slate-950/85 px-3 py-2 text-white" data-assistant-life-ranch-band={doneAll ? 'done' : 'ready'}>
+      <p className="text-[12.5px] font-black leading-snug" style={{ wordBreak: 'auto-phrase' }}>
+        🥚 {doneAll ? `${assistantLifeNames(info.done)}のマスモンの次の修行は${info.mult}倍` : `トレーニングすると${assistantLifeNames(info.left)}のマスモンの次の修行が${info.mult}倍`}
+        <span className="ml-1 text-[11px] font-bold text-amber-200">{doneAll ? '(今日の分は受け取り済み)' : '(1日1回)'}</span>
+      </p>
+    </div>);
+}
 
 // マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
 //   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
@@ -66331,8 +66365,8 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
     if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', place: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
   } catch (_) {}
-  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
-  if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
+  const ri = assistantLifeRanchInfo();
+  if (ri && ri.left.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: `${nm(ri.left)}がM/B管理にいます。トレーニングすると${nm(ri.left)}のマスモンの次の修行が${ri.mult}倍(1日1回)`, go: typeof go.ranch === 'function' ? go.ranch : null });
   return rows;
 };
 
@@ -114669,6 +114703,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="M/B管理" accent="text-indigo-300" note="M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
+            {typeof AssistantLifeRanchBand==='function'&&<AssistantLifeRanchBand/>}
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>

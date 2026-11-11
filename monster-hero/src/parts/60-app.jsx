@@ -19884,6 +19884,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="M/B管理" accent="text-indigo-300" note="M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
+            {typeof AssistantLifeRanchBand==='function'&&<AssistantLifeRanchBand/>}
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>

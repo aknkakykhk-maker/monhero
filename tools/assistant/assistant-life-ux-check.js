@@ -11,7 +11,7 @@
 //   ⑥ ページのエラーが出ない
 //   STEP2 ⑦ 家の上の「✨ いま行くと得なこと」(行・大きさ・goPlace)/⑧ 神殿の得は1日1回・保存は新しいキー・旧UIには出ない
 const http = require('http'), path = require('path'), fs = require('fs');
-const root = path.resolve(__dirname, '..', '..'), PORT = 9265;
+const root = path.resolve(__dirname, '..', '..'), PORT = Number(process.env.LIFE_PORT) || 9265;
 const SHOTS = process.argv.includes('--shots');
 const shotDir = path.join(root, 'docs/progress/assistant-peer/lifeux/step1');
 let failed = 0;
@@ -133,6 +133,37 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const old = await open(v, false);
     check('⑧ 旧UIには「いま行くと得なこと」を足さない', (await old.locator('[data-assistant-life-now-perks]').count()) === 0);
     await old.close();
+  }
+  // ⑪ M/B管理の得の見せ方: 助手が ranch にいてトレーニングチケットを使うと「次の修行が1.2倍(今日はこれで終わり)」・その日2回目は「受け取り済み」・M/B管理の画面に帯
+  for (const v of [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko', name: '横 844×390', w: 844, h: 390 }]) {
+    const page = await open(v, true);
+    const r = await page.evaluate(async () => {
+      const had = RELEASE_FLAGS.assistantMasmonGrow; RELEASE_FLAGS.assistantMasmonGrow = true;
+      try {
+        await AMG_STORE.load();
+        const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, atsu: { doing: 'idle', place: 'ranch' } } } });
+        const ids = assistantLifeAtPlace(assistantLifeCurrent(), ['atsu'], 'ranch');
+        const before = assistantLifePerkAt('ranch');
+        const a = assistantLifeRanchPerk(), b = assistantLifeRanchPerk();
+        const after = assistantLifePerkAt('ranch');
+        return { ids, before, a, b, after };
+      } finally { RELEASE_FLAGS.assistantMasmonGrow = had; }
+    });
+    // M/B管理の画面に帯が出る(止め絵も撮る)
+    await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonGrow = true; const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, atsu: { doing: 'idle', place: 'ranch' } } } }); });
+    await page.locator('[data-assistant-life-close]').first().click().catch(() => {});
+    await page.waitForTimeout(700);
+    await page.locator('main.mh-home-scene .mh-home-facility.management').first().click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(3500);
+    const band = await page.evaluate(() => { const b = document.querySelector('[data-assistant-life-ranch-band]'); if (!b) return null; const r = b.getBoundingClientRect(); return { state: b.getAttribute('data-assistant-life-ranch-band'), text: b.innerText.replace(/\s+/g, ' '), over: r.right > innerWidth + 1 || r.left < -1 }; });
+    check(`${v.name} ⑪ M/B管理の画面に帯(トレーニングすると〜が1.2倍・1日1回/受け取り済み)が出る・はみ出さない`, !!band && !band.over && /1\.2倍/.test(band.text), JSON.stringify(band));
+    if (SHOTS) {
+      await page.screenshot({ path: path.join(shotDir, `check-${v.id}-ranch-done.png`) });
+      await page.evaluate(() => { AMG_STORE.state = { ...AMG_STORE.state, boost: {} }; }); await page.waitForTimeout(3600); // 受け取る前の形も撮る(止め絵用)
+      await page.screenshot({ path: path.join(shotDir, `check-${v.id}-ranch.png`) });
+    }
+    check('⑪ M/B管理の得: 受け取れたとき「次の修行が1.2倍(今日はこれで終わり)」・2回目は「受け取り済み」・済んだら帯の行は消える', r.ids.length === 1 && r.before === true && /次の修行が1\.2倍になりました\(今日はこれで終わり\)/.test(r.a) && /受け取り済み/.test(r.b) && r.after === false, JSON.stringify(r));
+    await page.close();
   }
   for (const id of Object.keys(order)) check(`① ${id}: 縦と横で同じ並び`, order[id].tate === order[id].yoko, JSON.stringify(order[id]));
   check('⑥ ページのエラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));

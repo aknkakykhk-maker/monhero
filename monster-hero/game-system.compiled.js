@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c2ffee9e8306715
+// source-sha256: f7148399c096fafd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113572,13 +113572,37 @@ const assistantLifeTemplePerk = async () => {
     return null;
   }
 };
-const assistantLifeRanchPerk = () => {
+const assistantLifeRanchInfo = () => {
   try {
     const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
-    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    if (typeof amgOn !== 'function' || !amgOn() || typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded) return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
-    const names = [];
-    for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
+    const here = assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch');
+    if (!here.length) return null;
+    const day = typeof amgSlotDay === 'function' && typeof amgSlotOf === 'function' ? amgSlotDay(amgSlotOf()) : null;
+    const b = AMG_STORE.state && AMG_STORE.state.boost || {};
+    const done = here.filter(id => b[id] && day != null && b[id].d === day),
+      left = here.filter(id => !done.includes(id));
+    const mult = typeof AMG_CARE !== 'undefined' && Number.isFinite(AMG_CARE.ranchMult) ? AMG_CARE.ranchMult : 1.2;
+    return {
+      here,
+      done,
+      left,
+      mult
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const assistantLifeNames = ids => ids.map(id => typeof assistantLifeName === 'function' ? assistantLifeName(id) : id).join('・');
+const assistantLifeRanchPerk = () => {
+  try {
+    const info = assistantLifeRanchInfo();
+    if (!info) return '';
+    const boost = ASSISTANT_LIFE_LINKS.masmonTrainBoost,
+      got = [];
+    for (const id of info.left) {
       let ok = false;
       try {
         ok = boost(id, {
@@ -113587,13 +113611,48 @@ const assistantLifeRanchPerk = () => {
       } catch (_) {
         ok = false;
       }
-      if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
+      if (ok) got.push(id);
     }
-    return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
+    if (got.length) return `${assistantLifeNames(got)}のマスモンたちの次の修行が${info.mult}倍になりました(今日はこれで終わり)`;
+    return info.done.length ? `${assistantLifeNames(info.done)}のマスモンたちの次の修行は${info.mult}倍(今日の分は受け取り済み)` : '';
   } catch (_) {
     return '';
   }
 };
+function AssistantLifeRanchBand() {
+  const [, redraw] = React.useState(0);
+  React.useEffect(() => {
+    const f = () => redraw(n => n + 1);
+    const i = setInterval(f, 3000);
+    let subs = null;
+    try {
+      if (typeof AMG_STORE !== 'undefined' && AMG_STORE.subs) {
+        subs = AMG_STORE.subs;
+        subs.add(f);
+      }
+    } catch (_) {}
+    return () => {
+      clearInterval(i);
+      try {
+        if (subs) subs.delete(f);
+      } catch (_) {}
+    };
+  }, []);
+  const info = assistantLifeRanchInfo();
+  if (!info) return null;
+  const doneAll = info.left.length === 0;
+  return React.createElement("div", {
+    className: "mx-auto mb-2 w-full max-w-md rounded-xl border border-amber-300/60 bg-slate-950/85 px-3 py-2 text-white",
+    "data-assistant-life-ranch-band": doneAll ? 'done' : 'ready'
+  }, React.createElement("p", {
+    className: "text-[12.5px] font-black leading-snug",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "🥚 ", doneAll ? `${assistantLifeNames(info.done)}のマスモンの次の修行は${info.mult}倍` : `トレーニングすると${assistantLifeNames(info.left)}のマスモンの次の修行が${info.mult}倍`, React.createElement("span", {
+    className: "ml-1 text-[11px] font-bold text-amber-200"
+  }, doneAll ? '(今日の分は受け取り済み)' : '(1日1回)')));
+}
 const assistantLifeMarketWho = () => {
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
@@ -113654,12 +113713,12 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       go: typeof go.market === 'function' ? go.market : null
     });
   } catch (_) {}
-  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
-  if (ranch.length) rows.push({
+  const ri = assistantLifeRanchInfo();
+  if (ri && ri.left.length) rows.push({
     k: 'ranch',
     place: 'ranch',
     icon: '🥚',
-    text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`,
+    text: `${nm(ri.left)}がM/B管理にいます。トレーニングすると${nm(ri.left)}のマスモンの次の修行が${ri.mult}倍(1日1回)`,
     go: typeof go.ranch === 'function' ? go.ranch : null
   });
   return rows;
@@ -203505,7 +203564,7 @@ function MonsterHeroGame() {
       }, React.createElement(AssistantBubble, {
         scene: "mbManagement",
         compact: true
-      })), React.createElement(ScreenTabs, {
+      })), typeof AssistantLifeRanchBand === 'function' && React.createElement(AssistantLifeRanchBand, null), React.createElement(ScreenTabs, {
         className: "w-full max-w-md mx-auto",
         value: managementTab,
         onChange: setManagementTab,
