@@ -166,6 +166,8 @@ function AssistantLifeNowPerks({ life, ids, nameOf, onGo, land = false }) {
 // ===== STEP3: タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。道具は「🎁 贈る」の中、引き合わせるは「きずな」へ =====
 // 新UIを既定にするか。保存(mh_assistant_life_ui_v2)が true/false ならそれに従い、無い人だけこの値になる(保存は消さない・書き換えない)
 const ASSISTANT_LIFE_UI_V2_DEFAULT = true; // 2026-11-11 社長: STEP3 まで出来たので新UIを既定に(旧UIは設定の「助手ライフの画面」から)
+// 前に読んだ保存の値(true/false/null=無い)。画面が作り直されたときの初めの値に使う(保存には触れない)
+let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
 function assistantLifeUiV2Tabs() {
@@ -243,10 +245,10 @@ function assistantLifePeerNextOpens(a, b, nextLv) {
 // 設定の「助手ライフの画面」(新しい画面/前の画面)。2026-11-11 社長: 切替は助手ライフの上の帯から外して設定の中へ。
 //   保存は今ある mh_assistant_life_ui_v2 だけ(true=新しい画面/false=前の画面/無い人は既定)。押したときだけ書く。置き場所は 51-screen-settings.jsx
 function AssistantLifeUiSettingRow() {
-  const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(null));
-  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
+  const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
+  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
   if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
-  const pick = (on) => { setV2(on); try { void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} };
+  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} };
   return (
     <div data-assistant-life-ui-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
       <b className="block text-[13px] font-black text-slate-200">助手ライフの画面</b>

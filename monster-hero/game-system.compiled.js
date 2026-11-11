@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 92339d322f518d4a
+// source-sha256: 0db7d6ec05822934
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108238,7 +108238,7 @@ function AssistantLifeRoom({
     } : {
       right: 3
     }
-  }, w >= 150 ? state.sleep ? '💤 おやすみ中' : '● いま会える' : state.sleep ? '💤' : '● 会える'), met && sess && sess.level > 1 && React.createElement("span", {
+  }, w >= 150 ? state.sleep ? '💤 おやすみ中' : '● いま会える' : state.sleep ? '💤' : [...assistantLifeName(id)].length >= 4 ? '●' : '会える'), met && sess && sess.level > 1 && React.createElement("span", {
     className: "lv",
     "data-assistant-life-room-session": sess.level
   }, "🎵Lv", sess.level), React.createElement("span", {
@@ -109616,7 +109616,7 @@ function AssistantLifeHouse({
   const land = useAssistantLifeLand();
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
-  const [uiV2, setUiV2] = React.useState(() => assistantLifeUiV2Of(null));
+  const [uiV2, setUiV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   const [giftItemsOpen, setGiftItemsOpen] = React.useState(false);
   const [giftOpen, setGiftOpen] = React.useState(false);
   const [callPicker, setCallPicker] = React.useState(false);
@@ -109626,6 +109626,7 @@ function AssistantLifeHouse({
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+      assistantLifeUiV2Last = v === true || v === false ? v : null;
       if (alive) setUiV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
     return () => {
@@ -109635,6 +109636,7 @@ function AssistantLifeHouse({
   const [roomId, setRoomId] = React.useState(st.focus || null);
   React.useEffect(() => {
     if (typeof friendsSetLifeSpot !== 'function') return;
+    if (uiV2 && tab === 'items') return;
     friendsSetLifeSpot({
       house: 'h',
       where: 'w',
@@ -109642,7 +109644,7 @@ function AssistantLifeHouse({
       items: 'i',
       visit: 'p'
     }[tab] || 'h', tab === 'house' && roomId ? String(roomId) : '');
-  }, [tab, roomId]);
+  }, [tab, roomId, uiV2]);
   React.useEffect(() => () => {
     if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot('');
   }, []);
@@ -112978,6 +112980,7 @@ function AssistantLifeNowPerks({
   }, "ほか ", rest, " 件 ▼"));
 }
 const ASSISTANT_LIFE_UI_V2_DEFAULT = true;
+let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) {
   return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT;
 }
@@ -113113,10 +113116,11 @@ function assistantLifePeerNextOpens(a, b, nextLv) {
   return out.join('・');
 }
 function AssistantLifeUiSettingRow() {
-  const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(null));
+  const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+      assistantLifeUiV2Last = v === true || v === false ? v : null;
       if (alive) setV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
     return () => {
@@ -113126,6 +113130,7 @@ function AssistantLifeUiSettingRow() {
   if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
   const pick = on => {
     setV2(on);
+    assistantLifeUiV2Last = on;
     try {
       void storeSet('mh_assistant_life_ui_v2', on, false);
     } catch (_) {}
