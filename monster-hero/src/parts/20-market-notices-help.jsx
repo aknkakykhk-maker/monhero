@@ -572,6 +572,20 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// れんしゅうを「はじめの1戦」と「つづき」に分けた(2026-11-11)。新しいキーを足すだけ(上の2つの意味は変えない)
+//   mh_battle_tutorial_first_v1 { done(はじめの1戦を最後まで), at, hints:{ system, mode, difficulty }(入口3画面の一言を出した) }
+//   mh_battle_tutorial_more_v1  { offered(つづきに誘った), done(つづきを最後まで), declined(誘いを断った) }
+const BATTLE_TUTORIAL_FIRST_KEY = 'mh_battle_tutorial_first_v1';
+const BATTLE_TUTORIAL_MORE_KEY = 'mh_battle_tutorial_more_v1';
+const normalizeBattleTutorialFirst = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const h = r.hints && typeof r.hints === 'object' && !Array.isArray(r.hints) ? r.hints : {};
+  return { done: r.done === true, at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0, hints: { system: h.system === true, mode: h.mode === true, difficulty: h.difficulty === true } };
+};
+const normalizeBattleTutorialMore = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return { offered: r.offered === true, done: r.done === true, declined: r.declined === true };
+};
 // モンビー(モンヒロビート)のチュートリアルを見たかどうか。既存のキーには触らず新しく足す。
 // 値が無い既存セーブは「まだ見ていない」として扱うので、後方互換のまま初回案内が出る。
 const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
