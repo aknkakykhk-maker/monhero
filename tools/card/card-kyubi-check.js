@@ -36,7 +36,7 @@ const J = (v) => JSON.stringify(v);
   });
   const k = db.monsters['C-901'], o = db.monsters['C-951'];
   check('A キュービ: ライフ7・空中・番号の表示 C-◆01・絵 C-K01', !!k && k.life === 7 && k.type === 'air' && k.species === 'kyubi' && k.dispNo === 'C-◆01' && k.img === 'C-K01', J(k));
-  check('A オリヒメ: ライフ7・空中・混血(メイン キュービ・サブ ？？？)・番号の表示 C-◆04・絵 C-K02', !!o && o.life === 7 && o.type === 'air' && o.main === 'kyubi' && o.sub === 'unknown' && o.dispNo === 'C-◆04' && o.img === 'C-K02' && o.ready, J(o));
+  check('A オリヒメ: ライフ7・空中・混血(メイン キュービ・サブ ？？？)・番号の表示 C-◆02(2026-11-11 社長がウンディーネと通し番号に振り直した)・絵 C-K02', !!o && o.life === 7 && o.type === 'air' && o.main === 'kyubi' && o.sub === 'unknown' && o.dispNo === 'C-◆02' && o.img === 'C-K02' && o.ready, J(o));
 }
 
 // 場を作る: 自分(0)= キュービ・オリヒメ・ゴースト / 相手(1)= ゴースト3体(ライフ5・空中)。ガッツは10ずつ。自分の攻める段

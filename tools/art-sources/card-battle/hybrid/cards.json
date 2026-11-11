@@ -774,7 +774,7 @@
    "main": "キュービ",
    "sub": "？？？",
    "img": "C-K02.jpg",
-   "display_no": "C-◆04",
+   "display_no": "C-◆02",
    "name_source": "キュービの設計(tools/art-sources/card-battle/kyubi/orihime.cards.json・2026-11-03。ライフ7は社長)。絵は kyubi/C-K02.jpg",
    "sub_note": "副血統は ??? (レアの印)。専用技は持たず、キュービの技を使う"
   },
@@ -788,7 +788,7 @@
    "img": "C-K02S.jpg",
    "variant": "キラ",
    "base": "C-951",
-   "display_no": "C-◆04S",
+   "display_no": "C-◆02S",
    "name_source": "C-951 のキラ・別絵キラ(同じ子。デッキには1体まで)。2026-11-05 社長の追加分 kyubi-2026-11-05-fix/kira/ の C-K02S・C-K02S-alt。印刷の番号はどちらも C-◆04S(剣士モッチー C-066S・C-066V と同じ仕組み)"
   },
   {
@@ -801,7 +801,7 @@
    "img": "C-K02V.jpg",
    "variant": "別絵キラ",
    "base": "C-951",
-   "display_no": "C-◆04S",
+   "display_no": "C-◆02S",
    "name_source": "C-951 のキラ・別絵キラ(同じ子。デッキには1体まで)。2026-11-05 社長の追加分 kyubi-2026-11-05-fix/kira/ の C-K02S・C-K02S-alt。印刷の番号はどちらも C-◆04S(剣士モッチー C-066S・C-066V と同じ仕組み)"
   },
   {
@@ -908,7 +908,7 @@
    "img": "C-U02.jpg",
    "display_no": "C-◆04",
    "name_source": "ウンディーネの設計(tools/art-sources/card-battle/undine/snegurachka.cards.json・2026-11-11。ライフ6・水中は仮にウンディーネと同じ)。絵は undine/C-U02*.jpg。番号 C-952 はオリヒメ C-951 に続けた案(社長の返事待ち)",
-   "sub_note": "副血統は ??? (レアの印。カードの絵には「サブ レア」)。専用技は持たず、ウンディーネの技を使う"
+   "sub_note": "副血統は ??? (レアの印。カードの絵も「サブ ？？？」。2026-11-11 社長の差し替え版)。専用技は持たず、ウンディーネの技を使う"
   },
   {
    "no": "C-952S",
