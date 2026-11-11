@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6bb6ab72bde918cc
+// generated-sha256: c574f8325f5fee09
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9732,6 +9732,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
+  alfMasmonShareSend: false, // 2026-11-12 フレンドの家で助手のマスモンをくわしく見せる(送る側・56-assistant-life-friend-masmon-share)。表 alf_masmon_share を窓口が流したあと、ミハリの確認を経て真にする(オトズレ)
   assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
@@ -72803,6 +72804,32 @@ const assistantLifeMasmonTeamOf = (id) => {
     return [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({ monster: t.monster, nick: t.nick, colors: [...((t.dye && t.dye.colors) || [])], lead: !!t.lead }));
   } catch (_) { return []; }
 };
+// フレンドに見せる形(オトズレのフレンドの家・2026-11-12)。読むだけ・何も保存しない。迎えた子だけを送り、まだの枠は数だけ
+// stats は育成の6能力(印が偽・まだ無いときは null)。思い出・今日の記録・疲れ・ストレスは送らない
+const assistantLifeMasmonShareOf = (id) => {
+  try {
+    const p = assistantMasmonPlanOf(id);
+    if (!p) return { list: [], waiting: 0 };
+    const growOn = typeof amgOn === 'function' && amgOn() && typeof amgEntryOf === 'function';
+    const statsOf = (t) => {
+      if (!growOn) return null;
+      const e = amgEntryOf(id, t);
+      if (!e || !e.st) return null;
+      const o = {};
+      for (const k of ['life', 'pow', 'wise', 'hit', 'eva', 'tough']) { const v = Number(e.st[k]); if (!Number.isFinite(v)) return null; o[k] = Math.round(v); }
+      return o;
+    };
+    const list = [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({
+      monster: t.monster, nick: t.nick, colors: [...((t.dye && t.dye.colors) || [])], lead: !!t.lead,
+      slot: Number.isInteger(t.slot) ? t.slot : 0, lv: Number.isFinite(Number(t.lv)) ? Number(t.lv) : 1,
+      grow: typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(t.grow) : String(t.grow || ''),
+      growMine: t.growMine && typeof t.growMine.kind === 'string' ? t.growMine.kind : '',
+      stats: statsOf(t), why: typeof t.why === 'string' ? t.why : '',
+    }));
+    const waiting = Array.isArray(p.extra) ? p.extra.filter(t => t && t.unknown).length : 0;
+    return { list, waiting };
+  } catch (_) { return { list: [], waiting: 0 }; }
+};
 const useAssistantMasmonSave = () => {
   const [st, setSt] = React.useState(ASSISTANT_MASMON_STORE.state);
   React.useEffect(() => { ASSISTANT_MASMON_STORE.subs.add(setSt); void ASSISTANT_MASMON_STORE.load(); return () => { ASSISTANT_MASMON_STORE.subs.delete(setSt); }; }, []);
@@ -76683,7 +76710,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
             <p className="text-[13px] font-black">{res.kind === 'heavy' ? '🏋️' : '🎫'} {res.name}({AMGR_TICKET_NAME[res.kind]})</p>
             {res.rows.map(r => <p key={r.k} className="mt-1 flex justify-between text-[13px] font-black" data-amgr-row={r.k}><span>{amgrStatName(r.k)}</span><span className={r.to >= r.from ? 'text-emerald-300' : 'text-rose-300'}>{r.from} → {r.to}({amgrSignText(r.to - r.from)})</span></p>)}
             {res.fat > 0 && <p className="mt-1 flex justify-between text-[11px] font-bold text-slate-300"><span>疲れ</span><span>+{res.fat}</span></p>}
-            <button type="button" onClick={onClose} className={`${btn} mt-3 w-full bg-slate-700`}>閉じる</button>
+            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} mt-3 w-full bg-slate-700`}>閉じる</button>
           </div>
         ) : (<>
           {rows.length > 1 && <div className="mt-2 flex flex-wrap gap-1.5" data-amgr-mons>
@@ -76705,7 +76732,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
             : `${plan.name}: ${amgrStatName(plan.main)}が上がる`}</p>
           {(err || block) && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgr-why>{err || block}</p>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={onClose} className={`${btn} bg-slate-700`}>やめる</button>
+            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>やめる</button>
             <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} のこり {have} → {Math.max(0, have - 1)}枚</small></button>
           </div>
         </>)}
@@ -76821,7 +76848,9 @@ const normalizeAssistantLifeFriendSettings = (v) => {
     // 置き手紙の自由文(2026-11-08 社長): 見る(既定は入)・この人の自由文は見ない
     noteShow: o.noteShow !== false, noteOff: Array.isArray(o.noteOff) ? [...new Set(o.noteOff.filter(alfSafeOther))].slice(0, 100) : [],
     // 最近の遊びをフレンドに見せる(2026-11-08 社長 既定は入)
-    act: o.act !== false };
+    act: o.act !== false,
+    // 助手のマスモンのくわしい中身(Lv・能力・デッキ)をフレンドに見せる(2026-11-12 社長 既定は入。56-assistant-life-friend-masmon-share)
+    ms: o.ms !== false };
 };
 const normalizeAssistantLifeFriendKnown = (v) => {
   const o = {};
@@ -77229,6 +77258,7 @@ const alfPublish = async (life, metIds, now = Date.now(), { force = false } = {}
   try {
     await alfRequest(`${ALF_TABLE_HOUSES}?on_conflict=breeder_id`, { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: { breeder_id: self, open: settings.open, house } });
     alfSaveSt({ ...alfToday(), sentAt: now, sentSig: sig });
+    if (typeof alfMsPublish === 'function') void alfMsPublish(self, Array.isArray(house.ids) ? house.ids : (Array.isArray(metIds) ? metIds : []), settings.show && settings.ms, now, { force });
     void alfPublishMore(self, settings.show ? alfFitMasmon({ ...alfBuildMore(house.ids), ...(settings.act ? { ac: _alfActCache || [] } : {}), ...(() => { const fv = typeof albFavShare === 'function' ? albFavShare(house.ids) : null; return fv ? { fv } : {}; })() }, alfMasmonShare(house.ids)) : {});
     return true;
   } catch { return false; }
@@ -78140,7 +78170,7 @@ function AssistantLifeFriendPage({ life }) {
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
-        {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
+        {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
           <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
             <span>{label}</span>
             <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
@@ -78577,6 +78607,159 @@ function AlfFavEditor({ s, card, sec }) {
     </div>
   </>);
 }
+
+// ---- part: 56-assistant-life-friend-masmon-share.jsx ----
+// ===== 助手ライフ: フレンドの家で「その人の助手のマスモン」をくわしく見せる(送る側・受け取りの形) =====
+// 2026-11-12 社長「自分のと同じぐらい見れるようにして」「マスモンって助手ライフのほうね」(オトズレ・案 docs/progress/assistant-peer/FRIEND-SHOWCASE-PLAN.md)
+// 社長の選択: 送り方は変わった分だけ/見せる設定ははじめは入/デッキは今の3つ(推し・好き・素顔)の中身だけ/6つの能力は数字まで/
+//   見る専用の口はキズナ(助手マスモン)・ツナグ(カード部)に足してもらう。見る画面はキズナの計画育成のページの案が決まってから組む
+//
+// 表: alf_masmon_share(docs/sql/assistant-life/ALF_MASMON_SHARE_ADD.sql・足すだけ)。1人×助手で1行。
+//   body = { v:1, ms:[マスモン], wt:まだの枠の数, dk:[デッキ] } か、見せない設定のときは { v:1, off:1 }
+// 保存: mh_alf_masmon_share_sent_v1(助手ごとに前に送った中身の指紋と時刻。新しいキー)。見せる設定は今の設定(mh_*の行き来の設定)に項目 ms を足す
+// 公開の印: RELEASE_FLAGS.alfMasmonShareSend(送る)。偽のあいだは何も送らない。表が無ければ、その回はそれ以後送らない・読まない
+// 口(読むだけ。無ければ今ある口だけで送る):
+//   キズナ  assistantLifeMasmonShareOf(aid) → { list:[{ monster, nick, colors, lead, slot, lv, grow, growMine, stats:{life,pow,wise,hit,eva,tough}, why }], waiting }
+//   ツナグ  cardAssistantDeckShareOf(aid, face) → { name, line, monsters:[3], ace, cards:[[カードid, 枚数], …] } | null
+// ほかのプレイヤーの名前・ブリーダーIDは中身に入れない(だれの行かは表の breeder_id だけ)
+
+const ALF_MS_TABLE = 'alf_masmon_share';
+const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
+const ALF_MS_GAP_MS = 10 * 60 * 1000;      // 変わってから送るまでの最短の間隔(助手ごと)
+const ALF_MS_MAX_CHARS = 4800;             // 表の決まり(5000)より少し下
+const ALF_MS_FACES = Object.freeze(['oshi', 'suki', 'sugao']);
+const ALF_MS_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
+let _alfMsMissing = false;
+
+const alfMsSendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.alfMasmonShareSend === true;
+const alfMsMonOk = (mo) => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+const alfMsCardOk = (id) => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
+const alfMsText = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '');
+const alfMsWord = (v, max) => { const t = alfMsText(v, max); return t && typeof alfNoteShow === 'function' ? alfNoteShow(t) : ''; };
+
+// 1体を送る形にする(壊れた値・知らないモンスターは null)
+const alfMsPackMon = (t) => {
+  if (!t || !alfMsMonOk(t.monster)) return null;
+  const st = t.stats && typeof t.stats === 'object' ? t.stats : null;
+  return {
+    mo: t.monster, n: alfMsWord(t.nick, 16),
+    c: (Array.isArray(t.colors) ? t.colors : []).slice(0, 5).map(x => (typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null)),
+    ...(t.lead ? { l: 1 } : {}),
+    ...(Number.isFinite(Number(t.slot)) ? { s: alfInt(t.slot, 0, 99) } : {}),
+    ...(Number.isFinite(Number(t.lv)) ? { lv: alfInt(t.lv, 1, 999) } : {}),
+    ...(alfMsText(t.grow, 16) ? { g: alfMsText(t.grow, 16) } : {}),
+    ...(alfMsText(t.growMine, 16) ? { gm: alfMsText(t.growMine, 16) } : {}),
+    ...(st ? { st: ALF_MS_STATS.map(k => alfInt(st[k], 0, 9999)) } : {}),
+    ...(alfMsWord(t.why, 40) ? { w: alfMsWord(t.why, 40) } : {}),
+  };
+};
+// デッキ1つを送る形にする
+const alfMsPackDeck = (face, d) => {
+  if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(face)) return null;
+  const cards = (Array.isArray(d.cards) ? d.cards : []).map(x => (Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null)).filter(Boolean).slice(0, 50);
+  if (!cards.length) return null;
+  return {
+    f: face, nm: alfMsText(d.name, 24),
+    ...(alfMsWord(d.line, 40) ? { ln: alfMsWord(d.line, 40) } : {}),
+    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsMonOk).slice(0, 3),
+    ...(alfMsText(d.ace, 20) ? { a: alfMsText(d.ace, 20) } : {}),
+    cd: cards,
+  };
+};
+// 1人の助手ぶんの中身(口が無い・読めないときは、今ある口 assistantLifeMasmonTeamOf だけで作る)
+const alfMsBuild = (aid) => {
+  let list = []; let waiting = 0;
+  try {
+    const r = typeof assistantLifeMasmonShareOf === 'function' ? assistantLifeMasmonShareOf(aid) : null;
+    if (r && Array.isArray(r.list)) { list = r.list; waiting = alfInt(r.waiting, 0, 20); }
+    else if (Array.isArray(r)) list = r;
+    else if (typeof assistantLifeMasmonTeamOf === 'function') list = assistantLifeMasmonTeamOf(aid);
+  } catch (_) { list = []; }
+  const ms = list.map(alfMsPackMon).filter(Boolean).slice(0, 8);
+  const dk = [];
+  for (const f of ALF_MS_FACES) {
+    try { const d = typeof cardAssistantDeckShareOf === 'function' ? alfMsPackDeck(f, cardAssistantDeckShareOf(aid, f)) : null; if (d) dk.push(d); } catch (_) {}
+  }
+  let body = { v: 1, ms, ...(waiting ? { wt: waiting } : {}), ...(dk.length ? { dk } : {}) };
+  // 大きすぎたら、カードの多いデッキから中身を減らす → それでも大きければデッキを外す
+  const size = (o) => JSON.stringify(o).length;
+  while (size(body) > ALF_MS_MAX_CHARS && body.dk && body.dk.length) {
+    const dk2 = body.dk.slice(0, -1);
+    body = { ...body, ...(dk2.length ? { dk: dk2 } : {}) }; if (!dk2.length) delete body.dk;
+  }
+  return size(body) > ALF_MS_MAX_CHARS ? { v: 1, ms: ms.slice(0, 5).map(({ w: _w, ...rest }) => rest) } : body;
+};
+
+// 受け取った中身を整える(型を確かめ、知らないモンスター・カード・壊れた値は捨てる)。見せていない人は { off:true }、無い・壊れていれば null
+const alfMsNormalize = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if (raw.off === 1) return { off: true, ms: [], dk: [], wt: 0 };
+  const ms = (Array.isArray(raw.ms) ? raw.ms : []).slice(0, 8).map(t => {
+    if (!t || typeof t !== 'object' || !alfMsMonOk(t.mo)) return null;
+    const st = Array.isArray(t.st) && t.st.length === ALF_MS_STATS.length ? Object.fromEntries(ALF_MS_STATS.map((k, i) => [k, alfInt(t.st[i], 0, 9999)])) : null;
+    return {
+      monster: t.mo, nick: alfMsWord(t.n, 16), colors: (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => (typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null)),
+      lead: t.l === 1, slot: Number.isFinite(Number(t.s)) ? alfInt(t.s, 0, 99) : null, lv: Number.isFinite(Number(t.lv)) ? alfInt(t.lv, 1, 999) : null,
+      grow: alfMsText(t.g, 16), growMine: alfMsText(t.gm, 16), stats: st, why: alfMsWord(t.w, 40),
+    };
+  }).filter(Boolean);
+  const dk = (Array.isArray(raw.dk) ? raw.dk : []).slice(0, 3).map(d => {
+    if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(d.f)) return null;
+    const cards = (Array.isArray(d.cd) ? d.cd : []).map(x => (Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null)).filter(Boolean).slice(0, 50);
+    return cards.length ? { face: d.f, name: alfMsText(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
+  }).filter(Boolean);
+  return { off: false, ms, dk, wt: alfInt(raw.wt, 0, 20) };
+};
+
+// 前に送った指紋 { v:1, at:{ aid: 時刻 }, sig:{ aid: 指紋 } }(壊れていれば空)
+const normalizeAlfMsSent = (raw) => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const at = {}; const sig = {};
+  for (const id of ALF_IDS) {
+    if (o.at && Number.isFinite(Number(o.at[id])) && Number(o.at[id]) > 0) at[id] = Number(o.at[id]);
+    if (o.sig && typeof o.sig[id] === 'string' && /^[a-z0-9]{1,16}$/.test(o.sig[id])) sig[id] = o.sig[id];
+  }
+  return { v: 1, at, sig };
+};
+let _alfMsSent = null;
+const alfMsLoadSent = async () => {
+  if (_alfMsSent) return _alfMsSent;
+  let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ALF_MS_SENT_KEY, null, false) : null; } catch (_) { raw = null; }
+  _alfMsSent = normalizeAlfMsSent(raw);
+  return _alfMsSent;
+};
+
+// 送る(alfPublish の後ろから呼ぶ)。ids … 家にいる助手(迎えた助手)。show … 見せる設定。変わった助手の行だけ・助手ごとに10分あける
+//   force … 見せる設定を変えたとき(間隔を見ない)。送った数を返す
+const alfMsPublish = async (self, ids, show, now = Date.now(), { force = false } = {}) => {
+  if (!alfMsSendOn() || _alfMsMissing || !alfSafeOther(self)) return 0;
+  const sent = await alfMsLoadSent();
+  let n = 0;
+  for (const aid of (Array.isArray(ids) ? ids : []).filter(id => ALF_IDS.includes(id))) {
+    const body = show ? alfMsBuild(aid) : { v: 1, off: 1 };
+    if (!body.off && !body.ms.length) continue;
+    const sig = alfSig(JSON.stringify(body));
+    if (sig === sent.sig[aid]) continue;
+    // 見せる/見せないを切り替えたぶんは間隔を待たない
+    const flip = body.off || sent.sig[aid] === alfSig(JSON.stringify({ v: 1, off: 1 }));
+    if (!force && !flip && sent.at[aid] && now - sent.at[aid] < ALF_MS_GAP_MS) continue;
+    try {
+      await alfRequest(`${ALF_MS_TABLE}?on_conflict=breeder_id,assistant_id`, { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: { breeder_id: self, assistant_id: aid, body }, soft: true });
+      sent.at[aid] = now; sent.sig[aid] = sig; n += 1;
+    } catch (e) { if (e && e.missing) { _alfMsMissing = true; break; } }
+  }
+  if (n) { _alfMsSent = sent; try { if (typeof storeSet === 'function') await storeSet(ALF_MS_SENT_KEY, sent, false); } catch (_) {} }
+  return n;
+};
+
+// 訪ねた家の、1人の助手のマスモンを読む(開いたときの1行だけ)。無い・表が無い・読めないときは null(今までどおり絵と名前だけで出す)
+const alfMsFetch = async (hostId, aid) => {
+  if (_alfMsMissing || !alfSafeOther(hostId) || !ALF_IDS.includes(aid)) return null;
+  try {
+    const rows = await alfRequest(`${ALF_MS_TABLE}?select=body,updated_at&breeder_id=eq.${encodeURIComponent(hostId)}&assistant_id=eq.${aid}&limit=1`, { soft: true });
+    return Array.isArray(rows) && rows[0] ? alfMsNormalize(rows[0].body) : null;
+  } catch (e) { if (e && e.missing) _alfMsMissing = true; return null; }
+};
 
 // ---- part: 56-assistant-masmon-pvp.jsx ----
 // ===== 助手のマスモンのフレンド対戦(非同期PvP・第④段階)の端末の口(2026-11-11 タイセン) =====
@@ -91632,6 +91815,37 @@ const cardAssistantDeckSummary = (who, styleId) => {
     return { styleId: sid, monsters, count, ace, groups, total: d.cards.length, name, line, at, side: d.side === 'honne' || d.side === 'yoso' ? d.side : null, past, period };
   } catch (_) { return null; }
 };
+// フレンドの家へ見せる中身(読むだけ・保存しない)。face … 'oshi'|'suki'|'sugao'。読めなければ null
+//   { face, name, line(助手のひとこと・無ければ ''), monsters:[モンスター番号×3], ace(切り札の技名・無ければ ''), cards:[[カード番号, 枚数], …] }
+const cardAssistantDeckShareOf = (aid, face) => {
+  try {
+    if (!cardDeckIsFace(face) || typeof CARD_AI_FACES === 'undefined' || !CARD_AI_FACES[aid]) return null;
+    const s = cardAssistantDeckSummary(aid, face);
+    if (!s) return null;
+    return { face, name: s.name || '', line: s.line || '', monsters: s.monsters.map((m) => m.no), ace: s.ace ? s.ace.name : '', cards: Object.keys(s.count).map((no) => [no, s.count[no]]) };
+  } catch (_) { return null; }
+};
+// 相手から受け取った中身(上の形)を、CardAssistantDeckView が見る形に直す。形が違う・知らないカードは捨てる。読めなければ null
+const cardAssistantDeckSummaryOfShare = (deck) => {
+  try {
+    if (!deck || typeof deck !== 'object' || typeof CARD_BATTLE_DATA === 'undefined' || !Array.isArray(deck.monsters) || !Array.isArray(deck.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const face = cardDeckIsFace(deck.face) ? deck.face : 'oshi';
+    const monsters = deck.monsters.slice(0, 3).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+    const count = {};
+    deck.cards.slice(0, 60).forEach((e) => {
+      const n = Array.isArray(e) ? Math.floor(Number(e[1])) : 0;
+      if (Array.isArray(e) && typeof e[0] === 'string' && n >= 1 && n <= 20 && cardOf(db, e[0])) count[e[0]] = (count[e[0]] || 0) + n;
+    });
+    const uniq = Object.keys(count).map((no) => cardOf(db, no));
+    if (!monsters.length || !uniq.length) return null;
+    const byGuts = (a, b) => ((b.guts || 0) - (a.guts || 0)) || ((b.damage || 0) - (a.damage || 0)) || (a.no < b.no ? -1 : 1);
+    const aceName = typeof deck.ace === 'string' ? deck.ace : '';
+    const ace = uniq.filter((c) => c.kind === 'pow' || c.kind === 'int').sort(byGuts).find((c) => !aceName || c.name === aceName) || uniq.filter((c) => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter((c) => kinds.includes(c.kind)).sort(byGuts)]).filter((g) => g[1].length);
+    return { styleId: face, monsters, count, ace, groups, total: Object.values(count).reduce((x, y) => x + y, 0), name: typeof deck.name === 'string' && deck.name ? deck.name.slice(0, 20) : null, line: typeof deck.line === 'string' && deck.line ? deck.line.slice(0, 60) : null, at: null, side: null, past: false, period: '' };
+  } catch (_) { return null; }
+};
 // 組み直した時刻(4:00 など)。無ければ空
 const cardAssistantDeckAtText = (at) => {
   if (!Number.isFinite(at) || at <= 0) return '';
@@ -91639,10 +91853,11 @@ const cardAssistantDeckAtText = (at) => {
   return Number.isNaN(t.getTime()) ? '' : `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
 };
 
-function CardAssistantDeckView({ who, styleId, land = false }) {
+// deck … 相手の中身(cardAssistantDeckShareOf の形)を渡すと、その中身を見るだけで出す(who は助手の id)。渡さなければ今までどおり自分の端末のデッキ
+function CardAssistantDeckView({ who, styleId, land = false, deck = null }) {
   const [detail, setDetail] = React.useState(null);
   if (!cardAssistantDeckViewOn()) return null;
-  const s = cardAssistantDeckSummary(who, styleId);
+  const s = deck ? cardAssistantDeckSummaryOfShare(deck) : cardAssistantDeckSummary(who, styleId);
   const a = typeof assistantById === 'function' ? assistantById(who) : null;
   if (!s) return <div className="mhm-card" data-card-assistant-deck-view="none"><p className="text-[11.5px] font-bold text-slate-300">デッキを読めませんでした</p></div>;
   const db = CARD_BATTLE_DATA;
