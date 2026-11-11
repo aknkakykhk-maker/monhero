@@ -6,7 +6,7 @@
   "EASY": {
    "difficulty": "EASY",
    "noteCount": 318,
-   "seconds": 190.2,
+   "seconds": 190.6,
    "density": 1.67,
    "pass": true,
    "gate": {
@@ -21,32 +21,32 @@
     "difficultyFit": 100
    },
    "musicality": {
-    "onsetHitRate": 0.861,
-    "ghostNotes": 43,
+    "onsetHitRate": 0.858,
+    "ghostNotes": 44,
     "importantOnsets": 537,
-    "importantHit": 152,
-    "importantCoverage": 0.283,
+    "importantHit": 150,
+    "importantCoverage": 0.279,
     "importantReach": 0.577,
     "importantNeed": 0.35,
     "beatShare": {
-     "beat": 0.577,
-     "eighth": 0.423,
+     "beat": 0.565,
+     "eighth": 0.435,
      "sixteenth": 0
     },
     "notesInSilence": 0,
-    "phraseTotal": 7,
-    "phraseSame": 5,
-    "motifGroups": 4,
-    "motifTotal": 4,
+    "phraseTotal": 4,
+    "phraseSame": 3,
+    "motifGroups": 1,
+    "motifTotal": 2,
     "motifSame": 1,
-    "phraseConsistency": 0.545,
-    "phraseEcho": 0.376,
+    "phraseConsistency": 0.667,
+    "phraseEcho": 0.307,
     "phraseEchoTotal": 101,
-    "phraseVariations": 4,
-    "mirrorRate": 0.263,
-    "intensityDensityAgreement": 0.804,
+    "phraseVariations": 2,
+    "mirrorRate": 0.238,
+    "intensityDensityAgreement": 0.766,
     "sectionDensitySpread": 4.09,
-    "sectionVocabSpread": 6,
+    "sectionVocabSpread": 8,
     "sections": [
      {
       "label": "A",
@@ -62,11 +62,11 @@
       "label": "B",
       "bars": 8,
       "intensity": 0.506,
-      "notes": 18,
-      "perSecond": 1.45,
+      "notes": 15,
+      "perSecond": 1.21,
       "vocab": 4,
       "chords": 1,
-      "widths": 4.89
+      "widths": 4.8
      },
      {
       "label": "C",
@@ -74,49 +74,49 @@
       "intensity": 0.169,
       "notes": 9,
       "perSecond": 1.45,
-      "vocab": 2,
+      "vocab": 3,
       "chords": 0,
-      "widths": 5.33
+      "widths": 5.56
      },
      {
       "label": "C",
       "bars": 12,
       "intensity": 0.16,
-      "notes": 21,
-      "perSecond": 1.13,
-      "vocab": 4,
+      "notes": 23,
+      "perSecond": 1.24,
+      "vocab": 5,
       "chords": 0,
-      "widths": 6
+      "widths": 5.74
      },
      {
       "label": "D",
       "bars": 9,
       "intensity": 0.439,
-      "notes": 16,
-      "perSecond": 1.15,
-      "vocab": 2,
+      "notes": 18,
+      "perSecond": 1.29,
+      "vocab": 5,
       "chords": 1,
-      "widths": 4.19
+      "widths": 4.78
      },
      {
       "label": "E",
       "bars": 4,
       "intensity": 0.474,
-      "notes": 11,
-      "perSecond": 1.78,
+      "notes": 10,
+      "perSecond": 1.61,
       "vocab": 2,
       "chords": 0,
-      "widths": 5.27
+      "widths": 5.2
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.619,
-      "notes": 54,
-      "perSecond": 1.94,
-      "vocab": 7,
+      "notes": 55,
+      "perSecond": 1.97,
+      "vocab": 9,
       "chords": 2,
-      "widths": 4.89
+      "widths": 4.91
      },
      {
       "label": "G",
@@ -132,21 +132,21 @@
       "label": "H",
       "bars": 8,
       "intensity": 0.253,
-      "notes": 18,
-      "perSecond": 1.45,
+      "notes": 19,
+      "perSecond": 1.53,
       "vocab": 4,
       "chords": 0,
-      "widths": 6.56
+      "widths": 6.74
      },
      {
       "label": "I",
       "bars": 4,
       "intensity": 0.534,
-      "notes": 7,
-      "perSecond": 1.13,
+      "notes": 6,
+      "perSecond": 0.97,
       "vocab": 1,
       "chords": 1,
-      "widths": 4.86
+      "widths": 5
      },
      {
       "label": "J",
@@ -156,27 +156,27 @@
       "perSecond": 2.66,
       "vocab": 6,
       "chords": 1,
-      "widths": 5.39
+      "widths": 5.27
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.886,
-      "notes": 63,
-      "perSecond": 2.26,
-      "vocab": 7,
+      "notes": 64,
+      "perSecond": 2.3,
+      "vocab": 9,
       "chords": 2,
-      "widths": 5.03
+      "widths": 5.02
      },
      {
       "label": "F",
       "bars": 6,
       "intensity": 0.707,
-      "notes": 19,
-      "perSecond": 2.05,
+      "notes": 16,
+      "perSecond": 1.72,
       "vocab": 5,
       "chords": 0,
-      "widths": 5.16
+      "widths": 5
      },
      {
       "label": "K",
@@ -186,7 +186,7 @@
       "perSecond": 1.45,
       "vocab": 1,
       "chords": 0,
-      "widths": 4.22
+      "widths": 4.44
      },
      {
       "label": "L",
@@ -194,7 +194,7 @@
       "intensity": 0.426,
       "notes": 17,
       "perSecond": 1.57,
-      "vocab": 3,
+      "vocab": 4,
       "chords": 0,
       "widths": 4.24
      },
@@ -202,58 +202,58 @@
       "label": "M",
       "bars": 7,
       "intensity": 0.167,
-      "notes": 12,
-      "perSecond": 1.11,
-      "vocab": 1,
+      "notes": 13,
+      "perSecond": 1.2,
+      "vocab": 3,
       "chords": 0,
-      "widths": 4.33
+      "widths": 4.31
      }
     ]
    },
    "vocabulary": {
     "patternCounts": {
-     "fold_up": 9,
-     "stair_down": 15,
-     "stair_up": 8,
-     "jack": 14,
-     "trill": 17,
-     "fold_down": 4,
-     "bounce": 2,
+     "fold_up": 10,
+     "stair_down": 13,
+     "stair_up": 13,
+     "jack": 11,
+     "trill": 12,
+     "bounce": 5,
+     "fold_down": 5,
      "plateau_up": 1,
-     "echo_down": 7,
-     "stair_up_long": 1,
-     "echo_up": 2
+     "echo_up": 8,
+     "echo_down": 4,
+     "stair_up_long": 2
     },
     "distinctPatterns": 11,
-    "topPattern": "trill",
-    "topShare": 0.213,
+    "topPattern": "stair_down",
+    "topShare": 0.155,
     "fallbackShare": 0,
-    "maxSameRun": 3,
-    "localBias": 0.5,
-    "transitionKinds": 42,
-    "transitionTotal": 79,
-    "transitionEntropy": 5.14
+    "maxSameRun": 2,
+    "localBias": 0.375,
+    "transitionKinds": 49,
+    "transitionTotal": 83,
+    "transitionEntropy": 5.43
    },
    "lanes": {
     "laneShare": [
-     0.025,
-     0.277,
-     0.17,
-     0.195,
+     0.031,
+     0.283,
+     0.151,
+     0.22,
      0.236,
-     0.097
+     0.079
     ],
-    "leftRightBias": 0.057,
-    "centerShare": 0.365,
-    "edgeShare": 0.123,
-    "meanMove": 0,
-    "maxMove": 0,
-    "moveSpeedPerSecond": 0,
+    "leftRightBias": 0.069,
+    "centerShare": 0.371,
+    "edgeShare": 0.11,
+    "meanMove": 0.06,
+    "maxMove": 1,
+    "moveSpeedPerSecond": 0.02,
     "hardJumps": 0,
-    "fastPairs": 60,
+    "fastPairs": 65,
     "fingerTravel": [
-     76.5,
-     79.5
+     72.5,
+     84
     ]
    },
    "types": {
@@ -265,7 +265,7 @@
     "chordRuns": 0,
     "sweeps": 0,
     "crosses": 0,
-    "accents": 8,
+    "accents": 9,
     "endFlicks": 0,
     "tapers": 6,
     "tapDuringHold": 0,
@@ -279,11 +279,11 @@
     "slideWidthSequences": 0,
     "slideVarying": 0,
     "slideVariety": 1,
-    "rests": 249,
-    "longRests": 21,
+    "rests": 244,
+    "longRests": 23,
     "longestRestMs": 2709,
     "hardWindows": 13,
-    "hardSectionMaxMs": 6000,
+    "hardSectionMaxMs": 6500,
     "restAfterHard": 12,
     "peakWindowNotes": 8
    },
@@ -304,48 +304,48 @@
   },
   "NORMAL": {
    "difficulty": "NORMAL",
-   "noteCount": 364,
+   "noteCount": 368,
    "seconds": 190.6,
-   "density": 1.91,
+   "density": 1.93,
    "pass": true,
    "gate": {
     "impossible": 0
    },
    "scores": {
     "playability": 100,
-    "musicality": 80,
+    "musicality": 79,
     "readability": 100,
-    "flow": 96,
+    "flow": 97,
     "variety": 100,
     "difficultyFit": 100
    },
    "musicality": {
-    "onsetHitRate": 0.859,
-    "ghostNotes": 50,
+    "onsetHitRate": 0.863,
+    "ghostNotes": 49,
     "importantOnsets": 537,
-    "importantHit": 170,
-    "importantCoverage": 0.317,
-    "importantReach": 0.659,
+    "importantHit": 172,
+    "importantCoverage": 0.32,
+    "importantReach": 0.667,
     "importantNeed": 0.45,
     "beatShare": {
-     "beat": 0.554,
-     "eighth": 0.446,
+     "beat": 0.564,
+     "eighth": 0.436,
      "sixteenth": 0
     },
     "notesInSilence": 0,
-    "phraseTotal": 2,
-    "phraseSame": 1,
-    "motifGroups": 2,
-    "motifTotal": 2,
+    "phraseTotal": 5,
+    "phraseSame": 3,
+    "motifGroups": 4,
+    "motifTotal": 4,
     "motifSame": 1,
-    "phraseConsistency": 0.5,
-    "phraseEcho": 0.265,
-    "phraseEchoTotal": 117,
-    "phraseVariations": 0,
-    "mirrorRate": 0.242,
-    "intensityDensityAgreement": 0.794,
-    "sectionDensitySpread": 5.22,
-    "sectionVocabSpread": 8,
+    "phraseConsistency": 0.444,
+    "phraseEcho": 0.242,
+    "phraseEchoTotal": 120,
+    "phraseVariations": 3,
+    "mirrorRate": 0.34,
+    "intensityDensityAgreement": 0.766,
+    "sectionDensitySpread": 5.09,
+    "sectionVocabSpread": 10,
     "sections": [
      {
       "label": "A",
@@ -361,41 +361,41 @@
       "label": "B",
       "bars": 8,
       "intensity": 0.506,
-      "notes": 16,
-      "perSecond": 1.29,
+      "notes": 17,
+      "perSecond": 1.37,
       "vocab": 5,
       "chords": 1,
-      "widths": 4.75
+      "widths": 4.71
      },
      {
       "label": "C",
       "bars": 4,
       "intensity": 0.169,
-      "notes": 10,
-      "perSecond": 1.61,
+      "notes": 11,
+      "perSecond": 1.78,
       "vocab": 3,
       "chords": 0,
-      "widths": 5.3
+      "widths": 4.64
      },
      {
       "label": "C",
       "bars": 12,
       "intensity": 0.16,
-      "notes": 26,
-      "perSecond": 1.4,
-      "vocab": 4,
+      "notes": 25,
+      "perSecond": 1.35,
+      "vocab": 5,
       "chords": 0,
-      "widths": 5.69
+      "widths": 5.76
      },
      {
       "label": "D",
       "bars": 9,
       "intensity": 0.439,
-      "notes": 18,
-      "perSecond": 1.29,
-      "vocab": 4,
-      "chords": 1,
-      "widths": 4
+      "notes": 20,
+      "perSecond": 1.44,
+      "vocab": 5,
+      "chords": 2,
+      "widths": 3.9
      },
      {
       "label": "E",
@@ -411,11 +411,11 @@
       "label": "F",
       "bars": 18,
       "intensity": 0.619,
-      "notes": 59,
-      "perSecond": 2.12,
+      "notes": 60,
+      "perSecond": 2.15,
       "vocab": 9,
       "chords": 2,
-      "widths": 4.83
+      "widths": 4.82
      },
      {
       "label": "G",
@@ -431,41 +431,41 @@
       "label": "H",
       "bars": 8,
       "intensity": 0.253,
-      "notes": 22,
-      "perSecond": 1.78,
-      "vocab": 4,
+      "notes": 21,
+      "perSecond": 1.7,
+      "vocab": 5,
       "chords": 0,
-      "widths": 5.91
+      "widths": 6.24
      },
      {
       "label": "I",
       "bars": 4,
       "intensity": 0.534,
-      "notes": 11,
-      "perSecond": 1.78,
-      "vocab": 3,
-      "chords": 1,
-      "widths": 5
+      "notes": 7,
+      "perSecond": 1.13,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 5.57
      },
      {
       "label": "J",
       "bars": 8,
       "intensity": 0.781,
-      "notes": 42,
-      "perSecond": 3.39,
-      "vocab": 7,
+      "notes": 41,
+      "perSecond": 3.31,
+      "vocab": 6,
       "chords": 2,
-      "widths": 5.24
+      "widths": 5.17
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.886,
-      "notes": 73,
-      "perSecond": 2.62,
-      "vocab": 9,
-      "chords": 2,
-      "widths": 4.82
+      "notes": 76,
+      "perSecond": 2.73,
+      "vocab": 11,
+      "chords": 1,
+      "widths": 4.84
      },
      {
       "label": "F",
@@ -473,7 +473,7 @@
       "intensity": 0.707,
       "notes": 21,
       "perSecond": 2.26,
-      "vocab": 5,
+      "vocab": 6,
       "chords": 1,
       "widths": 4.62
      },
@@ -481,21 +481,21 @@
       "label": "K",
       "bars": 4,
       "intensity": 0.532,
-      "notes": 9,
-      "perSecond": 1.45,
+      "notes": 10,
+      "perSecond": 1.61,
       "vocab": 1,
       "chords": 0,
-      "widths": 4.22
+      "widths": 4.2
      },
      {
       "label": "L",
       "bars": 7,
       "intensity": 0.426,
-      "notes": 19,
-      "perSecond": 1.75,
-      "vocab": 4,
-      "chords": 0,
-      "widths": 4.26
+      "notes": 21,
+      "perSecond": 1.94,
+      "vocab": 5,
+      "chords": 1,
+      "widths": 4.14
      },
      {
       "label": "M",
@@ -503,79 +503,80 @@
       "intensity": 0.167,
       "notes": 15,
       "perSecond": 1.38,
-      "vocab": 4,
+      "vocab": 3,
       "chords": 0,
-      "widths": 3.87
+      "widths": 4.13
      }
     ]
    },
    "vocabulary": {
     "patternCounts": {
-     "alternate2": 14,
+     "alternate2": 13,
      "stair_up": 11,
      "expand": 5,
-     "stair2_up": 2,
-     "trill": 14,
-     "zigzag2_up": 7,
+     "echo_up": 3,
+     "stair2_up": 1,
+     "trill": 13,
+     "fold_up": 12,
+     "jack": 7,
+     "zigzag2_up": 9,
+     "bounce": 3,
      "plateau_up": 2,
-     "stair_up_long": 3,
-     "echo_up": 4,
-     "jack": 5,
-     "fold_up": 8,
-     "echo_down": 7,
-     "stair_down": 7,
+     "zigzag2_down": 4,
+     "stair_down": 6,
      "fold_down": 3,
-     "stair_down_long": 1,
      "contract": 1,
-     "zigzag2_down": 1
+     "out_in_out": 1,
+     "echo_down": 1,
+     "stair_up_long": 2
     },
-    "distinctPatterns": 17,
+    "distinctPatterns": 18,
     "topPattern": "alternate2",
-    "topShare": 0.147,
+    "topShare": 0.134,
     "fallbackShare": 0,
     "maxSameRun": 2,
     "localBias": 0.375,
-    "transitionKinds": 70,
-    "transitionTotal": 94,
-    "transitionEntropy": 5.98
+    "transitionKinds": 75,
+    "transitionTotal": 96,
+    "transitionEntropy": 6.09
    },
    "lanes": {
     "laneShare": [
-     0.044,
-     0.234,
-     0.201,
+     0.046,
+     0.272,
+     0.193,
      0.22,
-     0.22,
-     0.082
+     0.196,
+     0.073
     ],
-    "leftRightBias": 0.044,
-    "centerShare": 0.42,
-    "edgeShare": 0.126,
-    "meanMove": 0.08,
+    "leftRightBias": 0.022,
+    "centerShare": 0.413,
+    "edgeShare": 0.12,
+    "meanMove": 0.19,
     "maxMove": 1.5,
-    "moveSpeedPerSecond": 0.04,
+    "moveSpeedPerSecond": 0.11,
     "hardJumps": 0,
-    "fastPairs": 98,
+    "fastPairs": 108,
     "fingerTravel": [
-     100.5,
-     105
+     92.5,
+     120
     ]
    },
    "types": {
     "TAP": 325,
     "HOLD": 20,
     "SLIDE": 0,
-    "FLICK": 19,
+    "FLICK": 23,
     "chords": 10,
     "chordRuns": 0,
     "sweeps": 0,
     "crosses": 0,
     "accents": 8,
-    "endFlicks": 0,
+    "endFlicks": 1,
     "tapers": 7,
     "tapDuringHold": 0,
     "tapDuringSlide": 0,
-    "expandCount": 5,
+    "expandCount": 6,
     "contractCount": 1,
     "chordShapes": {
      "3w/4": 10
@@ -584,13 +585,13 @@
     "slideWidthSequences": 0,
     "slideVarying": 0,
     "slideVariety": 1,
-    "rests": 255,
+    "rests": 249,
     "longRests": 21,
     "longestRestMs": 2903,
-    "hardWindows": 17,
+    "hardWindows": 19,
     "hardSectionMaxMs": 5000,
-    "restAfterHard": 14,
-    "peakWindowNotes": 8
+    "restAfterHard": 16,
+    "peakWindowNotes": 9
    },
    "hand": {
     "impossible": 0,
@@ -609,8 +610,8 @@
   },
   "HARD": {
    "difficulty": "HARD",
-   "noteCount": 498,
-   "seconds": 190.8,
+   "noteCount": 497,
+   "seconds": 190.5,
    "density": 2.61,
    "pass": true,
    "gate": {
@@ -618,39 +619,39 @@
    },
    "scores": {
     "playability": 100,
-    "musicality": 82,
+    "musicality": 83,
     "readability": 100,
-    "flow": 86,
+    "flow": 93,
     "variety": 99,
-    "difficultyFit": 100
+    "difficultyFit": 93
    },
    "musicality": {
-    "onsetHitRate": 0.881,
-    "ghostNotes": 58,
+    "onsetHitRate": 0.884,
+    "ghostNotes": 56,
     "importantOnsets": 538,
-    "importantHit": 236,
-    "importantCoverage": 0.439,
-    "importantReach": 0.903,
+    "importantHit": 233,
+    "importantCoverage": 0.433,
+    "importantReach": 0.9,
     "importantNeed": 0.6,
     "beatShare": {
-     "beat": 0.43,
-     "eighth": 0.387,
-     "sixteenth": 0.183
+     "beat": 0.436,
+     "eighth": 0.38,
+     "sixteenth": 0.184
     },
     "notesInSilence": 0,
-    "phraseTotal": 5,
-    "phraseSame": 3,
+    "phraseTotal": 4,
+    "phraseSame": 4,
     "motifGroups": 4,
-    "motifTotal": 5,
+    "motifTotal": 4,
     "motifSame": 2,
-    "phraseConsistency": 0.5,
-    "phraseEcho": 0.293,
-    "phraseEchoTotal": 150,
+    "phraseConsistency": 0.75,
+    "phraseEcho": 0.247,
+    "phraseEchoTotal": 154,
     "phraseVariations": 2,
-    "mirrorRate": 0.218,
-    "intensityDensityAgreement": 0.785,
-    "sectionDensitySpread": 4.35,
-    "sectionVocabSpread": 14,
+    "mirrorRate": 0.252,
+    "intensityDensityAgreement": 0.766,
+    "sectionDensitySpread": 4.5,
+    "sectionVocabSpread": 12,
     "sections": [
      {
       "label": "A",
@@ -666,51 +667,51 @@
       "label": "B",
       "bars": 8,
       "intensity": 0.506,
-      "notes": 26,
-      "perSecond": 2.1,
+      "notes": 25,
+      "perSecond": 2.02,
       "vocab": 6,
-      "chords": 3,
-      "widths": 4.15
+      "chords": 2,
+      "widths": 4.24
      },
      {
       "label": "C",
       "bars": 4,
       "intensity": 0.169,
-      "notes": 12,
-      "perSecond": 1.94,
+      "notes": 13,
+      "perSecond": 2.1,
       "vocab": 3,
       "chords": 0,
-      "widths": 4.83
+      "widths": 4.85
      },
      {
       "label": "C",
       "bars": 12,
       "intensity": 0.16,
-      "notes": 36,
-      "perSecond": 1.94,
-      "vocab": 7,
+      "notes": 40,
+      "perSecond": 2.15,
+      "vocab": 5,
       "chords": 0,
-      "widths": 4.67
+      "widths": 4.72
      },
      {
       "label": "D",
       "bars": 9,
       "intensity": 0.439,
-      "notes": 25,
-      "perSecond": 1.79,
-      "vocab": 6,
-      "chords": 0,
+      "notes": 27,
+      "perSecond": 1.94,
+      "vocab": 5,
+      "chords": 1,
       "widths": 3.56
      },
      {
       "label": "E",
       "bars": 4,
       "intensity": 0.474,
-      "notes": 17,
-      "perSecond": 2.74,
+      "notes": 16,
+      "perSecond": 2.58,
       "vocab": 3,
       "chords": 0,
-      "widths": 4.41
+      "widths": 4.44
      },
      {
       "label": "F",
@@ -718,9 +719,9 @@
       "intensity": 0.619,
       "notes": 81,
       "perSecond": 2.91,
-      "vocab": 12,
-      "chords": 1,
-      "widths": 4.22
+      "vocab": 8,
+      "chords": 2,
+      "widths": 4.21
      },
      {
       "label": "G",
@@ -728,7 +729,7 @@
       "intensity": 0.428,
       "notes": 11,
       "perSecond": 1.78,
-      "vocab": 3,
+      "vocab": 2,
       "chords": 0,
       "widths": 3.91
      },
@@ -736,51 +737,51 @@
       "label": "H",
       "bars": 8,
       "intensity": 0.253,
-      "notes": 31,
-      "perSecond": 2.5,
-      "vocab": 7,
+      "notes": 28,
+      "perSecond": 2.26,
+      "vocab": 5,
       "chords": 0,
-      "widths": 5.03
+      "widths": 5.04
      },
      {
       "label": "I",
       "bars": 4,
       "intensity": 0.534,
-      "notes": 15,
-      "perSecond": 2.42,
-      "vocab": 3,
-      "chords": 1,
-      "widths": 4.53
+      "notes": 13,
+      "perSecond": 2.1,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 4.69
      },
      {
       "label": "J",
       "bars": 8,
       "intensity": 0.781,
-      "notes": 61,
-      "perSecond": 4.92,
-      "vocab": 8,
-      "chords": 3,
-      "widths": 4.48
+      "notes": 63,
+      "perSecond": 5.09,
+      "vocab": 11,
+      "chords": 7,
+      "widths": 4.33
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.886,
-      "notes": 91,
-      "perSecond": 3.27,
-      "vocab": 16,
-      "chords": 3,
-      "widths": 4.24
+      "notes": 89,
+      "perSecond": 3.19,
+      "vocab": 14,
+      "chords": 1,
+      "widths": 4.2
      },
      {
       "label": "F",
       "bars": 6,
       "intensity": 0.707,
-      "notes": 27,
-      "perSecond": 2.91,
-      "vocab": 3,
-      "chords": 1,
-      "widths": 3.93
+      "notes": 26,
+      "perSecond": 2.8,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 3.96
      },
      {
       "label": "K",
@@ -796,83 +797,84 @@
       "label": "L",
       "bars": 7,
       "intensity": 0.426,
-      "notes": 28,
-      "perSecond": 2.58,
-      "vocab": 7,
+      "notes": 29,
+      "perSecond": 2.68,
+      "vocab": 6,
       "chords": 0,
-      "widths": 4.25
+      "widths": 4.24
      },
      {
       "label": "M",
       "bars": 7,
       "intensity": 0.167,
-      "notes": 20,
-      "perSecond": 1.85,
+      "notes": 19,
+      "perSecond": 1.75,
       "vocab": 5,
       "chords": 0,
-      "widths": 4.15
+      "widths": 4.16
      }
     ]
    },
    "vocabulary": {
     "patternCounts": {
-     "stair_up": 11,
-     "bounce": 7,
-     "alternate2": 13,
-     "trill": 15,
-     "expand": 4,
+     "stair_up": 15,
+     "bounce": 11,
+     "alternate2": 14,
+     "trill": 14,
+     "expand": 3,
      "out_in_out": 2,
-     "echo_up": 8,
-     "fold_up": 12,
-     "zigzag2_up": 10,
-     "echo_down": 10,
-     "stair_down": 9,
-     "fold_down": 4,
-     "stair_up_long": 1,
+     "echo_up": 10,
+     "fold_up": 8,
+     "stair_down": 14,
+     "fold_down": 3,
      "jack": 6,
-     "plateau_up": 7,
-     "contract": 3,
-     "stair2_up": 1,
-     "in_out_in": 1
+     "zigzag2_up": 8,
+     "echo_down": 3,
+     "zigzag2_down": 4,
+     "stair_up_long": 2,
+     "contract": 1,
+     "plateau_up": 3,
+     "in_out_in": 1,
+     "stair2_down": 1
     },
-    "distinctPatterns": 18,
-    "topPattern": "trill",
-    "topShare": 0.121,
+    "distinctPatterns": 19,
+    "topPattern": "stair_up",
+    "topShare": 0.122,
     "fallbackShare": 0,
-    "maxSameRun": 2,
-    "localBias": 0.375,
+    "maxSameRun": 3,
+    "localBias": 0.5,
     "transitionKinds": 86,
-    "transitionTotal": 123,
-    "transitionEntropy": 6.27
+    "transitionTotal": 122,
+    "transitionEntropy": 6.25
    },
    "lanes": {
     "laneShare": [
-     0.016,
-     0.277,
-     0.191,
+     0.006,
+     0.316,
+     0.173,
      0.193,
-     0.249,
-     0.074
+     0.256,
+     0.056
     ],
-    "leftRightBias": 0.032,
-    "centerShare": 0.384,
-    "edgeShare": 0.09,
-    "meanMove": 0.16,
-    "maxMove": 1.5,
-    "moveSpeedPerSecond": 0.23,
+    "leftRightBias": 0.01,
+    "centerShare": 0.366,
+    "edgeShare": 0.062,
+    "meanMove": 0.35,
+    "maxMove": 2.75,
+    "moveSpeedPerSecond": 0.51,
     "hardJumps": 0,
-    "fastPairs": 285,
+    "fastPairs": 278,
     "fingerTravel": [
-     170,
-     206.5
+     140,
+     181
     ]
    },
    "types": {
     "TAP": 434,
     "HOLD": 29,
     "SLIDE": 16,
-    "FLICK": 19,
-    "chords": 12,
+    "FLICK": 18,
+    "chords": 13,
     "chordRuns": 0,
     "sweeps": 3,
     "crosses": 0,
@@ -881,10 +883,10 @@
     "tapers": 10,
     "tapDuringHold": 0,
     "tapDuringSlide": 0,
-    "expandCount": 6,
-    "contractCount": 4,
+    "expandCount": 5,
+    "contractCount": 2,
     "chordShapes": {
-     "3w/2.5": 12
+     "3w/2.5": 13
     },
     "slideShapes": {
      "fold": 5,
@@ -894,133 +896,141 @@
     "slideWidthSequences": 15,
     "slideVarying": 12,
     "slideVariety": 0.925,
-    "rests": 200,
-    "longRests": 15,
+    "rests": 205,
+    "longRests": 14,
     "longestRestMs": 2613,
-    "hardWindows": 11,
-    "hardSectionMaxMs": 12000,
+    "hardWindows": 15,
+    "hardSectionMaxMs": 6500,
     "restAfterHard": 10,
-    "peakWindowNotes": 12
+    "peakWindowNotes": 13
    },
    "hand": {
     "impossible": 0,
-    "strained": 0,
-    "strainedRate": 0,
+    "strained": 1,
+    "strainedRate": 0.002,
     "maxStrainStreakMs": 0,
-    "strainStreaks": 0,
+    "strainStreaks": 1,
     "alternationRate": 1,
-    "alternationTotal": 42,
+    "alternationTotal": 44,
     "sameFingerMinMs": 194,
     "chordClearMinMs": 194,
     "heldFreeOk": 0,
     "heldFreeTotal": 0,
-    "issues": []
+    "issues": [
+     {
+      "severity": "strained",
+      "timeMs": 150224,
+      "bar": 96,
+      "type": "TAP",
+      "detail": "2.50レーンの移動が194ms(快適には250ms欲しい)"
+     }
+    ]
    }
   },
   "EXPERT": {
    "difficulty": "EXPERT",
-   "noteCount": 595,
+   "noteCount": 592,
    "seconds": 191.2,
-   "density": 3.11,
+   "density": 3.1,
    "pass": true,
    "gate": {
     "impossible": 0
    },
    "scores": {
     "playability": 100,
-    "musicality": 78,
-    "readability": 94,
-    "flow": 93,
-    "variety": 99,
+    "musicality": 77,
+    "readability": 95,
+    "flow": 94,
+    "variety": 98,
     "difficultyFit": 100
    },
    "musicality": {
-    "onsetHitRate": 0.868,
-    "ghostNotes": 74,
+    "onsetHitRate": 0.871,
+    "ghostNotes": 72,
     "importantOnsets": 538,
-    "importantHit": 259,
-    "importantCoverage": 0.481,
+    "importantHit": 258,
+    "importantCoverage": 0.48,
     "importantReach": 1,
     "importantNeed": 0.75,
     "beatShare": {
-     "beat": 0.414,
-     "eighth": 0.38,
-     "sixteenth": 0.207
+     "beat": 0.408,
+     "eighth": 0.381,
+     "sixteenth": 0.211
     },
     "notesInSilence": 0,
     "phraseTotal": 6,
-    "phraseSame": 5,
-    "motifGroups": 6,
+    "phraseSame": 6,
+    "motifGroups": 7,
     "motifTotal": 8,
-    "motifSame": 5,
-    "phraseConsistency": 0.714,
-    "phraseEcho": 0.167,
+    "motifSame": 3,
+    "phraseConsistency": 0.643,
+    "phraseEcho": 0.15,
     "phraseEchoTotal": 180,
-    "phraseVariations": 3,
-    "mirrorRate": 0.208,
-    "intensityDensityAgreement": 0.738,
-    "sectionDensitySpread": 2.63,
-    "sectionVocabSpread": 12,
+    "phraseVariations": 4,
+    "mirrorRate": 0.247,
+    "intensityDensityAgreement": 0.776,
+    "sectionDensitySpread": 3.28,
+    "sectionVocabSpread": 10,
     "sections": [
      {
       "label": "A",
       "bars": 4,
       "intensity": 0.067,
-      "notes": 12,
-      "perSecond": 1.94,
+      "notes": 9,
+      "perSecond": 1.45,
       "vocab": 2,
-      "chords": 3,
-      "widths": 3
+      "chords": 0,
+      "widths": 4.33
      },
      {
       "label": "B",
       "bars": 8,
       "intensity": 0.506,
-      "notes": 33,
-      "perSecond": 2.66,
+      "notes": 31,
+      "perSecond": 2.5,
       "vocab": 6,
-      "chords": 5,
-      "widths": 3.45
+      "chords": 3,
+      "widths": 3.71
      },
      {
       "label": "C",
       "bars": 4,
       "intensity": 0.169,
-      "notes": 15,
-      "perSecond": 2.42,
+      "notes": 14,
+      "perSecond": 2.26,
       "vocab": 4,
-      "chords": 2,
-      "widths": 3.67
+      "chords": 0,
+      "widths": 4.57
      },
      {
       "label": "C",
       "bars": 12,
       "intensity": 0.16,
-      "notes": 47,
-      "perSecond": 2.53,
-      "vocab": 6,
-      "chords": 3,
-      "widths": 4.11
+      "notes": 44,
+      "perSecond": 2.37,
+      "vocab": 7,
+      "chords": 0,
+      "widths": 4.45
      },
      {
       "label": "D",
       "bars": 9,
       "intensity": 0.439,
-      "notes": 33,
-      "perSecond": 2.37,
-      "vocab": 9,
+      "notes": 32,
+      "perSecond": 2.3,
+      "vocab": 10,
       "chords": 0,
-      "widths": 3.97
+      "widths": 4
      },
      {
       "label": "E",
       "bars": 4,
       "intensity": 0.474,
-      "notes": 20,
-      "perSecond": 3.23,
+      "notes": 17,
+      "perSecond": 2.74,
       "vocab": 4,
-      "chords": 3,
-      "widths": 3.5
+      "chords": 0,
+      "widths": 4.18
      },
      {
       "label": "F",
@@ -1028,7 +1038,7 @@
       "intensity": 0.619,
       "notes": 83,
       "perSecond": 2.98,
-      "vocab": 11,
+      "vocab": 12,
       "chords": 6,
       "widths": 4
      },
@@ -1038,7 +1048,7 @@
       "intensity": 0.428,
       "notes": 11,
       "perSecond": 1.78,
-      "vocab": 2,
+      "vocab": 3,
       "chords": 0,
       "widths": 3.82
      },
@@ -1046,41 +1056,41 @@
       "label": "H",
       "bars": 8,
       "intensity": 0.253,
-      "notes": 43,
-      "perSecond": 3.47,
-      "vocab": 8,
+      "notes": 40,
+      "perSecond": 3.23,
+      "vocab": 9,
       "chords": 0,
-      "widths": 4.95
+      "widths": 5.1
      },
      {
       "label": "I",
       "bars": 4,
       "intensity": 0.534,
-      "notes": 25,
-      "perSecond": 4.04,
-      "vocab": 5,
-      "chords": 2,
-      "widths": 4
+      "notes": 26,
+      "perSecond": 4.2,
+      "vocab": 6,
+      "chords": 3,
+      "widths": 3.96
      },
      {
       "label": "J",
       "bars": 8,
       "intensity": 0.781,
-      "notes": 58,
-      "perSecond": 4.68,
+      "notes": 59,
+      "perSecond": 4.76,
       "vocab": 10,
-      "chords": 4,
-      "widths": 4.24
+      "chords": 5,
+      "widths": 4.22
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.886,
-      "notes": 107,
-      "perSecond": 3.84,
-      "vocab": 14,
-      "chords": 5,
-      "widths": 4.12
+      "notes": 117,
+      "perSecond": 4.2,
+      "vocab": 12,
+      "chords": 15,
+      "widths": 3.71
      },
      {
       "label": "F",
@@ -1088,9 +1098,9 @@
       "intensity": 0.707,
       "notes": 35,
       "perSecond": 3.77,
-      "vocab": 6,
+      "vocab": 5,
       "chords": 1,
-      "widths": 4.06
+      "widths": 3.91
      },
      {
       "label": "K",
@@ -1108,7 +1118,7 @@
       "intensity": 0.426,
       "notes": 35,
       "perSecond": 3.23,
-      "vocab": 6,
+      "vocab": 7,
       "chords": 0,
       "widths": 4.11
      },
@@ -1116,135 +1126,144 @@
       "label": "M",
       "bars": 7,
       "intensity": 0.167,
-      "notes": 26,
-      "perSecond": 2.4,
-      "vocab": 7,
+      "notes": 27,
+      "perSecond": 2.49,
+      "vocab": 6,
       "chords": 0,
-      "widths": 4.08
+      "widths": 4.11
      }
     ]
    },
    "vocabulary": {
     "patternCounts": {
-     "fold_up": 12,
-     "trill": 14,
+     "fold_up": 9,
+     "trill": 12,
      "alternate2": 11,
-     "bounce": 13,
-     "stair_up": 14,
-     "zigzag2_up": 9,
+     "bounce": 12,
+     "stair_up": 13,
+     "zigzag2_up": 11,
      "stair2_up": 1,
      "stair_up_long": 1,
-     "fallback": 6,
-     "plateau_up": 4,
-     "echo_down": 10,
+     "fallback": 5,
+     "plateau_up": 1,
+     "echo_down": 17,
+     "echo_up": 9,
      "in_out_in": 4,
      "zigzag2_down": 5,
-     "echo_up": 8,
-     "stair_down": 11,
-     "expand": 5,
-     "out_in_out": 9,
-     "fold_down": 5,
-     "jack": 1,
-     "contract": 1
+     "zigzag": 1,
+     "jack": 2,
+     "stair_down": 15,
+     "fold_down": 7,
+     "out_in_out": 6,
+     "expand": 4
     },
     "distinctPatterns": 19,
-    "topPattern": "trill",
-    "topShare": 0.097,
-    "fallbackShare": 0.042,
-    "maxSameRun": 3,
-    "localBias": 0.5,
+    "topPattern": "echo_down",
+    "topShare": 0.116,
+    "fallbackShare": 0.034,
+    "maxSameRun": 2,
+    "localBias": 0.375,
     "transitionKinds": 104,
-    "transitionTotal": 143,
-    "transitionEntropy": 6.57
+    "transitionTotal": 145,
+    "transitionEntropy": 6.55
    },
    "lanes": {
     "laneShare": [
-     0.022,
-     0.244,
-     0.183,
-     0.217,
-     0.255,
-     0.079
+     0.014,
+     0.287,
+     0.206,
+     0.176,
+     0.23,
+     0.088
     ],
-    "leftRightBias": 0.103,
-    "centerShare": 0.4,
+    "leftRightBias": 0.014,
+    "centerShare": 0.382,
     "edgeShare": 0.101,
-    "meanMove": 0.26,
-    "maxMove": 1.75,
-    "moveSpeedPerSecond": 0.47,
+    "meanMove": 0.34,
+    "maxMove": 3,
+    "moveSpeedPerSecond": 0.62,
     "hardJumps": 0,
-    "fastPairs": 347,
+    "fastPairs": 343,
     "fingerTravel": [
-     241,
-     260.5
+     236,
+     261
     ]
    },
    "types": {
-    "TAP": 512,
+    "TAP": 505,
     "HOLD": 36,
-    "SLIDE": 27,
-    "FLICK": 20,
-    "chords": 34,
-    "chordRuns": 7,
-    "sweeps": 5,
-    "crosses": 5,
-    "accents": 12,
+    "SLIDE": 28,
+    "FLICK": 23,
+    "chords": 33,
+    "chordRuns": 6,
+    "sweeps": 6,
+    "crosses": 4,
+    "accents": 13,
     "endFlicks": 1,
     "tapers": 12,
-    "tapDuringHold": 23,
+    "tapDuringHold": 22,
     "tapDuringSlide": 51,
-    "expandCount": 14,
-    "contractCount": 5,
+    "expandCount": 10,
+    "contractCount": 4,
     "chordShapes": {
-     "2w/2": 17,
-     "3w/2.5": 14,
-     "3w/2": 3
+     "3w/2.5": 15,
+     "3w/2": 3,
+     "2w/2": 15
     },
     "slideShapes": {
-     "wave": 5,
-     "line": 15,
-     "fold": 7
+     "wave": 6,
+     "line": 16,
+     "fold": 5,
+     "sweep": 1
     },
-    "slideWidthSequences": 19,
-    "slideVarying": 18,
-    "slideVariety": 0.9,
-    "rests": 211,
+    "slideWidthSequences": 17,
+    "slideVarying": 17,
+    "slideVariety": 0.882,
+    "rests": 212,
     "longRests": 5,
     "longestRestMs": 2322,
-    "hardWindows": 21,
-    "hardSectionMaxMs": 4500,
-    "restAfterHard": 14,
-    "peakWindowNotes": 13
+    "hardWindows": 13,
+    "hardSectionMaxMs": 6000,
+    "restAfterHard": 9,
+    "peakWindowNotes": 15
    },
    "hand": {
     "impossible": 0,
-    "strained": 0,
-    "strainedRate": 0,
+    "strained": 1,
+    "strainedRate": 0.002,
     "maxStrainStreakMs": 0,
-    "strainStreaks": 0,
+    "strainStreaks": 1,
     "alternationRate": 1,
-    "alternationTotal": 63,
+    "alternationTotal": 66,
     "sameFingerMinMs": 194,
     "chordClearMinMs": 194,
-    "heldFreeOk": 74,
-    "heldFreeTotal": 74,
-    "issues": []
+    "heldFreeOk": 73,
+    "heldFreeTotal": 73,
+    "issues": [
+     {
+      "severity": "strained",
+      "timeMs": 157191,
+      "bar": 101,
+      "type": "TAP",
+      "detail": "2.75レーンの移動が194ms(快適には275ms欲しい)"
+     }
+    ]
    }
   },
   "MASTER": {
    "difficulty": "MASTER",
-   "noteCount": 631,
+   "noteCount": 628,
    "seconds": 191.2,
-   "density": 3.3,
+   "density": 3.28,
    "pass": true,
    "gate": {
     "impossible": 0
    },
    "scores": {
     "playability": 100,
-    "musicality": 74,
+    "musicality": 75,
     "readability": 91,
-    "flow": 93,
+    "flow": 91,
     "variety": 98,
     "difficultyFit": 100
    },
@@ -1257,43 +1276,43 @@
     "importantReach": 1,
     "importantNeed": 0.85,
     "beatShare": {
-     "beat": 0.395,
-     "eighth": 0.379,
-     "sixteenth": 0.226
+     "beat": 0.393,
+     "eighth": 0.378,
+     "sixteenth": 0.229
     },
     "notesInSilence": 0,
     "phraseTotal": 6,
-    "phraseSame": 4,
-    "motifGroups": 6,
+    "phraseSame": 5,
+    "motifGroups": 7,
     "motifTotal": 10,
-    "motifSame": 7,
+    "motifSame": 6,
     "phraseConsistency": 0.688,
-    "phraseEcho": 0.132,
-    "phraseEchoTotal": 174,
-    "phraseVariations": 3,
-    "mirrorRate": 0.188,
-    "intensityDensityAgreement": 0.626,
-    "sectionDensitySpread": 2.95,
-    "sectionVocabSpread": 15,
+    "phraseEcho": 0.151,
+    "phraseEchoTotal": 172,
+    "phraseVariations": 4,
+    "mirrorRate": 0.265,
+    "intensityDensityAgreement": 0.654,
+    "sectionDensitySpread": 2.91,
+    "sectionVocabSpread": 10,
     "sections": [
      {
       "label": "A",
       "bars": 4,
       "intensity": 0.067,
-      "notes": 15,
-      "perSecond": 2.42,
-      "vocab": 4,
-      "chords": 4,
-      "widths": 2.73
+      "notes": 10,
+      "perSecond": 1.61,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 3.3
      },
      {
       "label": "B",
       "bars": 8,
       "intensity": 0.506,
-      "notes": 27,
-      "perSecond": 2.18,
-      "vocab": 5,
-      "chords": 2,
+      "notes": 28,
+      "perSecond": 2.26,
+      "vocab": 7,
+      "chords": 3,
       "widths": 3.04
      },
      {
@@ -1302,7 +1321,7 @@
       "intensity": 0.169,
       "notes": 15,
       "perSecond": 2.42,
-      "vocab": 4,
+      "vocab": 3,
       "chords": 0,
       "widths": 3.4
      },
@@ -1312,99 +1331,99 @@
       "intensity": 0.16,
       "notes": 49,
       "perSecond": 2.64,
-      "vocab": 10,
+      "vocab": 9,
       "chords": 0,
-      "widths": 3.16
+      "widths": 3.18
      },
      {
       "label": "D",
       "bars": 9,
       "intensity": 0.439,
-      "notes": 34,
-      "perSecond": 2.44,
-      "vocab": 7,
-      "chords": 2,
-      "widths": 3.06
+      "notes": 36,
+      "perSecond": 2.58,
+      "vocab": 8,
+      "chords": 3,
+      "widths": 2.94
      },
      {
       "label": "E",
       "bars": 4,
       "intensity": 0.474,
-      "notes": 20,
-      "perSecond": 3.23,
-      "vocab": 3,
-      "chords": 3,
-      "widths": 3.1
+      "notes": 19,
+      "perSecond": 3.07,
+      "vocab": 2,
+      "chords": 2,
+      "widths": 3.26
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.619,
-      "notes": 78,
-      "perSecond": 2.8,
-      "vocab": 13,
-      "chords": 7,
-      "widths": 3
+      "notes": 81,
+      "perSecond": 2.91,
+      "vocab": 12,
+      "chords": 10,
+      "widths": 2.93
      },
      {
       "label": "G",
       "bars": 4,
       "intensity": 0.428,
-      "notes": 11,
-      "perSecond": 1.78,
+      "notes": 10,
+      "perSecond": 1.61,
       "vocab": 3,
       "chords": 0,
-      "widths": 2.73
+      "widths": 2.8
      },
      {
       "label": "H",
       "bars": 8,
       "intensity": 0.253,
-      "notes": 65,
-      "perSecond": 5.25,
-      "vocab": 12,
-      "chords": 8,
-      "widths": 3.32
+      "notes": 57,
+      "perSecond": 4.6,
+      "vocab": 7,
+      "chords": 0,
+      "widths": 3.61
      },
      {
       "label": "I",
       "bars": 4,
       "intensity": 0.534,
-      "notes": 26,
-      "perSecond": 4.2,
+      "notes": 28,
+      "perSecond": 4.52,
       "vocab": 5,
       "chords": 2,
-      "widths": 3.12
+      "widths": 3.21
      },
      {
       "label": "J",
       "bars": 8,
       "intensity": 0.781,
-      "notes": 65,
-      "perSecond": 5.25,
-      "vocab": 9,
-      "chords": 13,
-      "widths": 3.09
+      "notes": 58,
+      "perSecond": 4.68,
+      "vocab": 10,
+      "chords": 6,
+      "widths": 3.43
      },
      {
       "label": "F",
       "bars": 18,
       "intensity": 0.886,
-      "notes": 108,
-      "perSecond": 3.88,
-      "vocab": 17,
-      "chords": 15,
-      "widths": 2.96
+      "notes": 114,
+      "perSecond": 4.09,
+      "vocab": 12,
+      "chords": 23,
+      "widths": 2.78
      },
      {
       "label": "F",
       "bars": 6,
       "intensity": 0.707,
-      "notes": 34,
-      "perSecond": 3.66,
+      "notes": 38,
+      "perSecond": 4.09,
       "vocab": 6,
-      "chords": 2,
-      "widths": 3.09
+      "chords": 6,
+      "widths": 2.84
      },
      {
       "label": "K",
@@ -1414,7 +1433,7 @@
       "perSecond": 1.94,
       "vocab": 2,
       "chords": 0,
-      "widths": 2.83
+      "widths": 2.75
      },
      {
       "label": "L",
@@ -1430,124 +1449,144 @@
       "label": "M",
       "bars": 7,
       "intensity": 0.167,
-      "notes": 36,
-      "perSecond": 3.32,
-      "vocab": 9,
+      "notes": 37,
+      "perSecond": 3.41,
+      "vocab": 8,
       "chords": 0,
-      "widths": 2.94
+      "widths": 2.95
      }
     ]
    },
    "vocabulary": {
     "patternCounts": {
-     "stair_up": 12,
-     "trill": 15,
-     "alternate2": 15,
-     "bounce": 9,
-     "stair_up_long": 2,
-     "zigzag2_up": 10,
-     "fallback": 10,
+     "fold_up": 15,
+     "trill": 14,
+     "alternate2": 9,
+     "bounce": 15,
+     "zigzag2_up": 9,
+     "echo_up": 10,
+     "stair_up_long": 1,
+     "stair2_up": 1,
+     "fallback": 9,
+     "stair_down": 14,
+     "stair_up": 11,
      "echo_down": 15,
-     "echo_up": 7,
-     "zigzag": 1,
-     "fold_up": 14,
-     "stair_down": 13,
-     "jack": 6,
-     "contract": 1,
+     "contract": 3,
+     "fold_down": 8,
      "plateau_up": 3,
-     "fold_down": 5,
-     "expand": 2,
-     "out_in_out": 5,
-     "in_out_in": 5,
-     "zigzag2_down": 3,
-     "stair2_up": 1
+     "out_in_out": 6,
+     "zigzag2_down": 4,
+     "jack": 2,
+     "expand": 1,
+     "in_out_in": 1
     },
-    "distinctPatterns": 20,
-    "topPattern": "trill",
-    "topShare": 0.097,
-    "fallbackShare": 0.065,
+    "distinctPatterns": 19,
+    "topPattern": "fold_up",
+    "topShare": 0.099,
+    "fallbackShare": 0.06,
     "maxSameRun": 2,
     "localBias": 0.375,
-    "transitionKinds": 110,
-    "transitionTotal": 153,
-    "transitionEntropy": 6.62
+    "transitionKinds": 109,
+    "transitionTotal": 150,
+    "transitionEntropy": 6.64
    },
    "lanes": {
     "laneShare": [
      0.078,
-     0.235,
-     0.209,
-     0.193,
-     0.181,
-     0.105
+     0.196,
+     0.218,
+     0.207,
+     0.197,
+     0.104
     ],
-    "leftRightBias": 0.043,
-    "centerShare": 0.403,
+    "leftRightBias": 0.016,
+    "centerShare": 0.425,
     "edgeShare": 0.182,
-    "meanMove": 0.49,
-    "maxMove": 3,
-    "moveSpeedPerSecond": 0.93,
-    "hardJumps": 0,
-    "fastPairs": 361,
+    "meanMove": 0.61,
+    "maxMove": 4,
+    "moveSpeedPerSecond": 1.15,
+    "hardJumps": 2,
+    "fastPairs": 362,
     "fingerTravel": [
-     310.3,
-     301.3
+     315.8,
+     313.8
     ]
    },
    "types": {
-    "TAP": 527,
-    "HOLD": 46,
-    "SLIDE": 38,
-    "FLICK": 20,
-    "chords": 59,
-    "chordRuns": 12,
-    "sweeps": 7,
+    "TAP": 523,
+    "HOLD": 45,
+    "SLIDE": 41,
+    "FLICK": 19,
+    "chords": 56,
+    "chordRuns": 11,
+    "sweeps": 5,
     "crosses": 5,
-    "accents": 14,
+    "accents": 13,
     "endFlicks": 2,
     "tapers": 15,
     "tapDuringHold": 25,
-    "tapDuringSlide": 65,
+    "tapDuringSlide": 62,
     "expandCount": 7,
-    "contractCount": 6,
+    "contractCount": 4,
     "chordShapes": {
-     "2w/2": 25,
-     "3w/2": 27,
+     "3w/2": 26,
+     "2w/2": 22,
+     "2w/2.5": 2,
      "2w/3": 2,
-     "2w/3.5": 2,
-     "2w/4.5": 1,
-     "2w/2.5": 2
+     "2w/3.5": 2
     },
     "slideShapes": {
-     "wave": 4,
-     "line": 23,
+     "wave": 5,
+     "line": 26,
      "fold": 7,
-     "sweep": 4
+     "sweep": 3
     },
     "slideWidthSequences": 23,
-    "slideVarying": 23,
-    "slideVariety": 0.882,
-    "rests": 205,
-    "longRests": 4,
+    "slideVarying": 26,
+    "slideVariety": 0.89,
+    "rests": 202,
+    "longRests": 5,
     "longestRestMs": 2322,
-    "hardWindows": 15,
-    "hardSectionMaxMs": 6000,
+    "hardWindows": 18,
+    "hardSectionMaxMs": 3500,
     "restAfterHard": 10,
-    "peakWindowNotes": 16
+    "peakWindowNotes": 15
    },
    "hand": {
     "impossible": 0,
-    "strained": 0,
-    "strainedRate": 0,
+    "strained": 3,
+    "strainedRate": 0.005,
     "maxStrainStreakMs": 0,
-    "strainStreaks": 0,
+    "strainStreaks": 3,
     "alternationRate": 1,
-    "alternationTotal": 81,
+    "alternationTotal": 84,
     "sameFingerMinMs": 194,
     "chordClearMinMs": 194,
-    "heldFreeOk": 89,
-    "heldFreeTotal": 90,
-    "issues": []
+    "heldFreeOk": 86,
+    "heldFreeTotal": 87,
+    "issues": [
+     {
+      "severity": "strained",
+      "timeMs": 45521,
+      "bar": 29,
+      "type": "TAP",
+      "detail": "2.25レーンの移動が194ms(快適には225ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 110356,
+      "bar": 71,
+      "type": "TAP",
+      "detail": "2.00レーンの移動が194ms(快適には200ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 157191,
+      "bar": 101,
+      "type": "TAP",
+      "detail": "3.25レーンの移動が194ms(快適には325ms欲しい)"
+     }
+    ]
    }
   }
  }

@@ -36,8 +36,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 32,
-    "cost": 32
+    "spread": 49,
+    "cost": 49
    },
    "after": {
     "impossible": 0,
@@ -45,13 +45,13 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 32,
-    "cost": 32
+    "spread": 49,
+    "cost": 49
    },
    "fixes": []
   },
   "NORMAL": {
-   "noteCount": 197,
+   "noteCount": 196,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -60,8 +60,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 39,
-    "cost": 39
+    "spread": 51,
+    "cost": 51
    },
    "after": {
     "impossible": 0,
@@ -69,202 +69,130 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 39,
-    "cost": 39
+    "spread": 51,
+    "cost": 51
    },
    "fixes": []
   },
   "HARD": {
-   "noteCount": 266,
+   "noteCount": 268,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 2,
+    "hardJumps": 3,
     "overSteps": 0,
-    "spread": 61,
-    "cost": 301
+    "spread": 68,
+    "cost": 428
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 2,
+    "hardJumps": 3,
     "overSteps": 0,
-    "spread": 61,
-    "cost": 301
+    "spread": 68,
+    "cost": 428
    },
    "fixes": []
   },
   "EXPERT": {
    "noteCount": 424,
-   "fixCount": 4,
+   "fixCount": 1,
    "passes": 1,
    "before": {
     "impossible": 0,
-    "strained": 11,
+    "strained": 5,
     "reach": 0,
-    "hardJumps": 7,
+    "hardJumps": 3,
     "overSteps": 0,
-    "spread": 111,
-    "cost": 2051
+    "spread": 100,
+    "cost": 960
    },
    "after": {
     "impossible": 0,
-    "strained": 8,
+    "strained": 4,
     "reach": 0,
-    "hardJumps": 4,
+    "hardJumps": 3,
     "overSteps": 0,
-    "spread": 113,
-    "cost": 1393
+    "spread": 100,
+    "cost": 860
    },
    "fixes": [
     {
-     "grid": 398,
-     "bar": 24,
-     "timeMs": 49876,
+     "grid": 432,
+     "bar": 27,
+     "timeMs": 53956,
      "type": "TAP",
-     "move": "サブレーン10→2",
+     "move": "サブレーン7→6",
      "pass": 1,
-     "costBefore": 2051,
-     "costAfter": 1931,
+     "costBefore": 960,
+     "costAfter": 860,
      "impossibleAfter": 0,
-     "strainedAfter": 11
-    },
-    {
-     "grid": 426,
-     "bar": 26,
-     "timeMs": 53236,
-     "type": "TAP",
-     "move": "サブレーン0→6",
-     "pass": 1,
-     "costBefore": 1931,
-     "costAfter": 1712,
-     "impossibleAfter": 0,
-     "strainedAfter": 10
-    },
-    {
-     "grid": 430,
-     "bar": 26,
-     "timeMs": 53716,
-     "type": "TAP",
-     "move": "サブレーン2→3",
-     "pass": 1,
-     "costBefore": 1712,
-     "costAfter": 1612,
-     "impossibleAfter": 0,
-     "strainedAfter": 9
-    },
-    {
-     "grid": 1200,
-     "bar": 75,
-     "timeMs": 146116,
-     "type": "TAP",
-     "move": "サブレーン8→6",
-     "pass": 1,
-     "costBefore": 1612,
-     "costAfter": 1393,
-     "impossibleAfter": 0,
-     "strainedAfter": 8
+     "strainedAfter": 4
     }
    ]
   },
   "MASTER": {
-   "noteCount": 533,
-   "fixCount": 18,
+   "noteCount": 521,
+   "fixCount": 12,
    "passes": 1,
    "before": {
-    "impossible": 3,
+    "impossible": 0,
     "strained": 39,
     "reach": 0,
-    "hardJumps": 23,
-    "overSteps": 1,
-    "spread": 92,
-    "cost": 36872
+    "hardJumps": 22,
+    "overSteps": 0,
+    "spread": 99,
+    "cost": 6639
    },
    "after": {
     "impossible": 0,
-    "strained": 36,
+    "strained": 33,
     "reach": 0,
-    "hardJumps": 9,
+    "hardJumps": 14,
     "overSteps": 0,
-    "spread": 93,
-    "cost": 4773
+    "spread": 102,
+    "cost": 5082
    },
    "fixes": [
     {
-     "grid": 452,
+     "grid": 320,
+     "bar": 20,
+     "timeMs": 40516,
+     "type": "TAP",
+     "move": "サブレーン9→5",
+     "pass": 1,
+     "costBefore": 6639,
+     "costAfter": 6540,
+     "impossibleAfter": 0,
+     "strainedAfter": 38
+    },
+    {
+     "grid": 324,
+     "bar": 20,
+     "timeMs": 40996,
+     "type": "HOLD",
+     "move": "サブレーン8→7",
+     "pass": 1,
+     "costBefore": 6540,
+     "costAfter": 6440,
+     "impossibleAfter": 0,
+     "strainedAfter": 37
+    },
+    {
+     "grid": 460,
      "bar": 28,
-     "timeMs": 56356,
+     "timeMs": 57316,
      "type": "TAP",
-     "move": "サブレーン0→4",
+     "move": "サブレーン7→4",
      "pass": 1,
-     "costBefore": 36872,
-     "costAfter": 26833,
-     "impossibleAfter": 2,
-     "strainedAfter": 41
-    },
-    {
-     "grid": 1114,
-     "bar": 69,
-     "timeMs": 135796,
-     "type": "TAP",
-     "move": "サブレーン8→2",
-     "pass": 1,
-     "costBefore": 26833,
-     "costAfter": 16693,
-     "impossibleAfter": 1,
-     "strainedAfter": 42
-    },
-    {
-     "grid": 1334,
-     "bar": 83,
-     "timeMs": 162196,
-     "type": "TAP",
-     "move": "サブレーン8→3",
-     "pass": 1,
-     "costBefore": 16693,
-     "costAfter": 6553,
+     "costBefore": 6440,
+     "costAfter": 6220,
      "impossibleAfter": 0,
-     "strainedAfter": 43
-    },
-    {
-     "grid": 1336,
-     "bar": 83,
-     "timeMs": 162436,
-     "type": "TAP",
-     "move": "サブレーン2→3",
-     "pass": 1,
-     "costBefore": 6553,
-     "costAfter": 6452,
-     "impossibleAfter": 0,
-     "strainedAfter": 42
-    },
-    {
-     "grid": 118,
-     "bar": 7,
-     "timeMs": 16276,
-     "type": "SLIDE",
-     "move": "レーン3.0→2.5",
-     "pass": 1,
-     "costBefore": 6452,
-     "costAfter": 6352,
-     "impossibleAfter": 0,
-     "strainedAfter": 41
-    },
-    {
-     "grid": 358,
-     "bar": 22,
-     "timeMs": 45076,
-     "type": "TAP",
-     "move": "サブレーン9→1",
-     "pass": 1,
-     "costBefore": 6352,
-     "costAfter": 6233,
-     "impossibleAfter": 0,
-     "strainedAfter": 41
+     "strainedAfter": 36
     },
     {
      "grid": 698,
@@ -273,70 +201,34 @@
      "type": "TAP",
      "move": "サブレーン8→7",
      "pass": 1,
-     "costBefore": 6233,
-     "costAfter": 6133,
+     "costBefore": 6220,
+     "costAfter": 6120,
      "impossibleAfter": 0,
-     "strainedAfter": 40
+     "strainedAfter": 35
     },
     {
-     "grid": 763,
-     "bar": 47,
-     "timeMs": 93676,
+     "grid": 712,
+     "bar": 44,
+     "timeMs": 87556,
      "type": "TAP",
-     "move": "サブレーン0→1",
+     "move": "サブレーン10→8",
      "pass": 1,
-     "costBefore": 6133,
-     "costAfter": 6033,
+     "costBefore": 6120,
+     "costAfter": 6000,
      "impossibleAfter": 0,
-     "strainedAfter": 39
+     "strainedAfter": 35
     },
     {
-     "grid": 766,
-     "bar": 47,
-     "timeMs": 94036,
+     "grid": 872,
+     "bar": 54,
+     "timeMs": 106756,
      "type": "TAP",
-     "move": "サブレーン9→1",
+     "move": "サブレーン3→4",
      "pass": 1,
-     "costBefore": 6033,
-     "costAfter": 5914,
+     "costBefore": 6000,
+     "costAfter": 5880,
      "impossibleAfter": 0,
-     "strainedAfter": 39
-    },
-    {
-     "grid": 942,
-     "bar": 58,
-     "timeMs": 115156,
-     "type": "TAP",
-     "move": "サブレーン1→3",
-     "pass": 1,
-     "costBefore": 5914,
-     "costAfter": 5793,
-     "impossibleAfter": 0,
-     "strainedAfter": 39
-    },
-    {
-     "grid": 944,
-     "bar": 59,
-     "timeMs": 115396,
-     "type": "TAP",
-     "move": "サブレーン0→4",
-     "pass": 1,
-     "costBefore": 5793,
-     "costAfter": 5554,
-     "impossibleAfter": 0,
-     "strainedAfter": 39
-    },
-    {
-     "grid": 1022,
-     "bar": 63,
-     "timeMs": 124756,
-     "type": "TAP",
-     "move": "サブレーン2→10",
-     "pass": 1,
-     "costBefore": 5554,
-     "costAfter": 5433,
-     "impossibleAfter": 0,
-     "strainedAfter": 39
+     "strainedAfter": 35
     },
     {
      "grid": 1140,
@@ -345,70 +237,70 @@
      "type": "TAP",
      "move": "サブレーン7→4",
      "pass": 1,
-     "costBefore": 5433,
-     "costAfter": 5333,
+     "costBefore": 5880,
+     "costAfter": 5661,
      "impossibleAfter": 0,
-     "strainedAfter": 38
-    },
-    {
-     "grid": 1144,
-     "bar": 71,
-     "timeMs": 139396,
-     "type": "TAP",
-     "move": "サブレーン8→6",
-     "pass": 1,
-     "costBefore": 5333,
-     "costAfter": 5213,
-     "impossibleAfter": 0,
-     "strainedAfter": 38
+     "strainedAfter": 34
     },
     {
      "grid": 1170,
      "bar": 73,
      "timeMs": 142516,
      "type": "TAP",
-     "move": "サブレーン2→3",
+     "move": "サブレーン0→4",
      "pass": 1,
-     "costBefore": 5213,
-     "costAfter": 5113,
+     "costBefore": 5661,
+     "costAfter": 5562,
      "impossibleAfter": 0,
-     "strainedAfter": 37
+     "strainedAfter": 33
     },
     {
-     "grid": 1232,
-     "bar": 77,
-     "timeMs": 149956,
+     "grid": 1210,
+     "bar": 75,
+     "timeMs": 147316,
      "type": "TAP",
-     "move": "サブレーン0→1",
+     "move": "サブレーン1→4",
      "pass": 1,
-     "costBefore": 5113,
-     "costAfter": 4993,
+     "costBefore": 5562,
+     "costAfter": 5443,
      "impossibleAfter": 0,
-     "strainedAfter": 37
+     "strainedAfter": 33
     },
     {
-     "grid": 1266,
+     "grid": 1270,
      "bar": 79,
-     "timeMs": 154036,
+     "timeMs": 154516,
      "type": "TAP",
-     "move": "サブレーン0→1",
+     "move": "サブレーン2→10",
      "pass": 1,
-     "costBefore": 4993,
-     "costAfter": 4873,
+     "costBefore": 5443,
+     "costAfter": 5323,
      "impossibleAfter": 0,
-     "strainedAfter": 37
+     "strainedAfter": 33
     },
     {
-     "grid": 1286,
-     "bar": 80,
-     "timeMs": 156436,
+     "grid": 1274,
+     "bar": 79,
+     "timeMs": 154996,
      "type": "TAP",
-     "move": "サブレーン8→7",
+     "move": "サブレーン2→10",
      "pass": 1,
-     "costBefore": 4873,
-     "costAfter": 4773,
+     "costBefore": 5323,
+     "costAfter": 5203,
      "impossibleAfter": 0,
-     "strainedAfter": 36
+     "strainedAfter": 33
+    },
+    {
+     "grid": 1320,
+     "bar": 82,
+     "timeMs": 160516,
+     "type": "TAP",
+     "move": "サブレーン8→0",
+     "pass": 1,
+     "costBefore": 5203,
+     "costAfter": 5082,
+     "impossibleAfter": 0,
+     "strainedAfter": 33
     }
    ]
   }

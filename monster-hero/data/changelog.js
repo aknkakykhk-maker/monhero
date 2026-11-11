@@ -35,6 +35,121 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-12 00:24", type:'update', group:'assistant', releaseFlag:'assistantMasmonRanchTicket', title:'M/B管理にいる助手のマスモンに、トレーニングチケットを使ってあげられるようになりました', status:'new',
+    items:[
+      '助手がM/B管理にいると「ごろべえのちからを鍛えたいな」のように頼んできます。頼みのままでも、別のマスモン・別の能力を選んでもかまいません',
+      '助手がM/B管理にいる時間帯ごとに、助手1人につき1枚。同じマスモンには1日1枚までです',
+      '重トレーニングチケットを使うと大きく上がりますが、ほかの能力が少し下がり、マスモンが少し疲れます。使ったその場で「いくつ → いくつ」が見られます',
+    ],
+  },
+  {
+    // MFバトルカードをはじめて開いたとき、最初に押す所を光らせる(2026-11-11 社長「A 対戦」・文は社長「この文で」・はじめての人の案10)
+    date: "2026-11-12 00:22", type:'update', group:'cardBattle', title:'MFバトルカードをはじめて開いたとき、最初に押す「対戦」が光ってお知らせするようになりました', status:'new',
+    items:[
+      'MFバトルカードをはじめて開いたとき、最初に押す「対戦」が光ってお知らせするようになりました。',
+    ],
+  },
+  {
+    // 「ホーム画面に追加」の案内(2026-11-11 社長の選択 B・文は社長「この形・この文で」・アプリカ)
+    date: "2026-11-12 00:12", type:'update', group:'ui', title:'iPhone の Safari で遊んでいる人に、ホーム画面に追加する方法をお知らせします', status:'new',
+    items:[
+      'iPhone の Safari で遊んでいるときに、ホーム画面に追加する方法の案内が出るようになりました。ホーム画面から遊ぶと、画面が広くなり、ブラウザの操作が出なくなります。',
+      'iPhone では、ホーム画面のアプリと Safari で、遊んだ記録が別々になります。追加する前に「データ引き継ぎ」でバックアップを作り、追加したアプリで戻してください。案内の中から、そのまま「データ引き継ぎ」を開けます。',
+      '案内は、設定の「📲 ホーム画面に追加」とヘルプの「ホーム画面に追加」からも見られます。',
+    ],
+  },
+  {
+    // 助手のマスモンの名前(2026-11-11 社長の報告・キズナ5 #5447。文は社長「この文で」)
+    date: "2026-11-12 00:02", type:'fix', group:'assistant', title:'助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました', status:'new',
+    items:[
+      '助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました',
+    ],
+  },
+  {
+    // スマホでブラウザらしい動きを出さない(2026-11-11 社長「ブラウザだからかたまに画面の挙動がおかしい」・文は社長「この文で」・アプリカ #5455)
+    date: "2026-11-11 23:42", type:'update', group:'ui', title:'スマホで遊ぶときの操作が、より安定しました', status:'new',
+    items:[
+      'iPhone のホーム画面から遊ぶとき、画面の左端をなぞってもゲームの画面が戻らなくなりました。',
+      '画面を2回続けてタップしたときに、画面が拡大されにくくなりました。',
+      '長押ししたときに、文字が選ばれたり、画像を保存するメニューが出たりしないようにしました。',
+      '文字を入力する欄は、今までどおり長押しで貼り付けなどができます。',
+    ],
+  },
+  {
+    // 画面ごとの数のずれ(2026-11-11 ミヤスサ点検 #5451。文は社長「この文で」)
+    date: "2026-11-11 23:41", type:'fix', group:'assistant', title:'助手ライフで、画面ごとに違って見えていた数をそろえました', status:'new',
+    items:[
+      '町の地図のMFバトルカードの印を、ほかの画面と同じ「×1.375」にしました',
+      '家の「贈る」の残り回数を、贈る画面と同じ「2人に・1人に」の数で出すようにしました',
+    ],
+  },
+  {
+    // マルチ観戦の速さの変わる曲(2026-11-11 社長が選択・ヘンドウ)
+    date: "2026-11-11 23:39", type:'update', group:'rhythm', title:'観戦でも、ノーツの流れが止まる・戻る曲が演奏と同じに見えるようになりました', status:'new',
+    items:[
+      'マルチの観戦で選んだ人の譜面が、ノーツの流れが止まったり奥へ戻ったりする曲でも、演奏している人と同じように動いて見えます。',
+    ],
+  },
+  {
+    date: "2026-11-11 23:27", type:'update', group:'assistant', releaseFlag:'assistantMasmonCheer', title:'助手がモンヒロバトルにいるとき、マスモンの修行を見たり、応援したりできるようになりました', status:'new',
+    items:[
+      '町の地図でモンヒロバトルを押すと、そこにいる助手のマスモンの練習試合を見られます。今日覚えた技や、技の熟練の伸びも分かります。',
+      '応援すると修行が少し進み、仲良し度も上がります。見る・応援するを合わせて1日3回、移動の時間帯ごとに1回までです。',
+      'フレンドのマスモンか、自分の別のマスモンが相手になります。相手がいないときはひとりで稽古するので、修行の伸びが半分になります。',
+    ],
+  },
+  {
+    date: "2026-11-11 23:12", type:'update', group:'rhythm', title:'譜面制作ツール「MHB CHART ENGINE」の強化に合わせて、一部の譜面を新しくしました', status:'new',
+    items:[
+      'モンヒロビートの譜面を作る「MHB CHART ENGINE」を強化しました。指が交差したり、届きにくかったりする並びを作らないようにし、難易度ごとの差もはっきり出るようにしています。',
+      '強化に合わせて、押しにくい並びがあった曲の譜面を、EASY〜MASTER の5つの難易度まとめて新しくしました。新しくした曲は、FREEDOM DiVE↓ / Evans / Altar of the World Tree, Beneath the White Night short ver. / Stay With Me / light player short ver. / Stay With Me short ver. / The City Beneath the Comets / ANiMA / MF × ICHIKA MIX / Monster Hero / SIX ÉTERNEL / 綺季一閃 short ver. / SAD SONG / Toward the Stars, Paradise or Truth short ver. / BLACK SHOUT / light player / 月が満ちる前に / 月が満ちる前に short ver. / Rebellion short ver. / Stay With Me remix / トリコ / 魔窟の旋律 / SAD SONG short ver. / Monster Hero -Another- / SIX ÉTERNEL ドパガキリミックス / 綺季一閃 / 綺季一閃 battle remix / crossing field / もう一つの世界へ / 戦場の疾風 / ハルカ / Crazy Party Night / Crazy Party Night full ver. / Emerald Rush / ROSE / Rebellion / Altar of the World Tree, Beneath the White Night / 4U ～ひたすら～ / Monster です。',
+      'ヒューマノイドは、押しにくい並びの位置だけを直しました(ノーツ数と Lv. は変わりません)。',
+      '新しくした曲は、ノーツ数と Lv. が少し変わります。Lv. が変わった譜面は次のとおりです。',
+      'FREEDOM DiVE↓: EASY Lv.15→16 / NORMAL Lv.22→24 / HARD Lv.26→28 / EXPERT Lv.37→39 / MASTER Lv.47→41',
+      'Evans: NORMAL Lv.11→12 / HARD Lv.18→21 / MASTER Lv.44→43',
+      'Altar of the World Tree, Beneath the White Night short ver.: NORMAL Lv.9→10 / HARD Lv.14→15 / EXPERT Lv.20→24 / MASTER Lv.27→28',
+      'Stay With Me: HARD Lv.11→12 / EXPERT Lv.16→17 / MASTER Lv.20→19',
+      'light player short ver.: NORMAL Lv.9→10 / EXPERT Lv.20→21',
+      'Stay With Me short ver.: EXPERT Lv.21→20 / MASTER Lv.29→31',
+      'The City Beneath the Comets: HARD Lv.21→22 / EXPERT Lv.26→30 / MASTER Lv.39→41',
+      'ANiMA: EASY Lv.8→9 / NORMAL Lv.11→10 / HARD Lv.17→18 / EXPERT Lv.26→27 / MASTER Lv.44→40',
+      'MF × ICHIKA MIX: NORMAL Lv.10→9 / EXPERT Lv.18→20 / MASTER Lv.23→25',
+      'Monster Hero: NORMAL Lv.10→9 / EXPERT Lv.19→22 / MASTER Lv.26→27',
+      'SIX ÉTERNEL: NORMAL Lv.13→14 / EXPERT Lv.29→32',
+      '綺季一閃 short ver.: HARD Lv.16→17 / EXPERT Lv.21→25 / MASTER Lv.30→27',
+      'SAD SONG: HARD Lv.13→15 / EXPERT Lv.21→24 / MASTER Lv.29→28',
+      'Toward the Stars, Paradise or Truth short ver.: HARD Lv.13→14 / EXPERT Lv.17→21',
+      'BLACK SHOUT: EASY Lv.8→9 / NORMAL Lv.12→13 / HARD Lv.18→17 / EXPERT Lv.24→27',
+      'light player: EXPERT Lv.23→22 / MASTER Lv.30→32',
+      '月が満ちる前に: EXPERT Lv.24→25 / MASTER Lv.34→31',
+      '月が満ちる前に short ver.: EASY Lv.9→10 / HARD Lv.16→17 / EXPERT Lv.23→24 / MASTER Lv.33→35',
+      'Rebellion short ver.: HARD Lv.16→17',
+      'Stay With Me remix: EXPERT Lv.17→19 / MASTER Lv.24→26',
+      'トリコ: EASY Lv.6→5 / EXPERT Lv.13→15 / MASTER Lv.17→20',
+      '魔窟の旋律: HARD Lv.17→19 / EXPERT Lv.22→23',
+      'SAD SONG short ver.: EASY Lv.8→9 / HARD Lv.16→18 / EXPERT Lv.24→27 / MASTER Lv.28→29',
+      'Monster Hero -Another-: HARD Lv.13→14 / MASTER Lv.26→24',
+      'SIX ÉTERNEL ドパガキリミックス: EASY Lv.6→7 / EXPERT Lv.17→20',
+      '綺季一閃: HARD Lv.15→16 / EXPERT Lv.23→24 / MASTER Lv.33→30',
+      '綺季一閃 battle remix: NORMAL Lv.9→8 / EXPERT Lv.20→24 / MASTER Lv.27→30',
+      'crossing field: EASY Lv.9→8 / NORMAL Lv.11→10 / HARD Lv.15→16 / EXPERT Lv.20→24 / MASTER Lv.26→32',
+      'もう一つの世界へ: EXPERT Lv.18→21 / MASTER Lv.22→26',
+      '戦場の疾風: EASY Lv.7→8 / HARD Lv.15→14 / EXPERT Lv.19→25 / MASTER Lv.27→29',
+      'ハルカ: NORMAL Lv.11→10 / HARD Lv.17→19 / EXPERT Lv.28→30 / MASTER Lv.33→37',
+      'Crazy Party Night: EXPERT Lv.17→20 / MASTER Lv.23→29',
+      'Crazy Party Night full ver.: HARD Lv.14→13 / EXPERT Lv.19→20 / MASTER Lv.25→28',
+      'Emerald Rush: NORMAL Lv.7→8 / HARD Lv.11→13 / EXPERT Lv.18→20 / MASTER Lv.25→27',
+      'ROSE: EXPERT Lv.17→20 / MASTER Lv.30→32',
+      'Rebellion: NORMAL Lv.11→10 / EXPERT Lv.25→24 / MASTER Lv.44→45',
+      'Altar of the World Tree, Beneath the White Night: EASY Lv.8→7 / EXPERT Lv.20→21 / MASTER Lv.24→25',
+      '4U ～ひたすら～: NORMAL Lv.7→8 / EXPERT Lv.16→15 / MASTER Lv.22→24',
+      'Monster: EXPERT Lv.17→19 / MASTER Lv.24→25',
+      '難しさの表示(Lv.)が実際の難しさと合っていなかった譜面は、表示の Lv. だけを直しました(譜面は変わりません)。Grievous Lady MASTER Lv.50→43 / Sheriruth MASTER Lv.35→39 / ROSE short ver. MASTER Lv.33→28 / only my railgun MASTER Lv.29→23 / Close To Your Heart MASTER Lv.28→23 / Journey EXPERT Lv.23→30',
+      'HELL の譜面は変わっていません。',
+      'これまでの自己ベスト・ランキング・フルコンボの記録は、そのまま残ります。',
+    ],
+  },
+  {
     // 助手の行き先の予定(📅 今日の予定表・2026-11-11 社長 台帳 #5301。文は社長「この文で」・ナカヨシ19)
     date: "2026-11-11 23:02", type:'update', group:'assistant', title:'助手に、次の行き先をお願いできるようになりました', status:'new', releaseFlag:'assistantLifePlan',
     items:[
@@ -2147,7 +2262,7 @@ const CHANGELOG = [
       'モンヒロビートに、school food punishment の「light player」の全編（4分29秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
       'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.23 ／ MASTER Lv.30 ／ HELL Lv.54 です。',
-      'ノーツ数は 491 ／ 568 ／ 765 ／ 921 ／ 1060 です。',
+      'ノーツ数は 476 ／ 557 ／ 762 ／ 904 ／ 1072 です。',
     ],
     assistantNotice: { id:'update_notice_light_player_v1', type:'content' },
   },
@@ -2159,7 +2274,7 @@ const CHANGELOG = [
       'light player の短い版（2分31秒）です。曲の頭から2つ目のサビの終わりまでを遊べます。曲えらびでは全編と同じ行にまとまり、難易度ボタンの上で切り替えられます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
       'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.20 ／ MASTER Lv.27 ／ HELL Lv.52 です。',
-      'ノーツ数は 268 ／ 298 ／ 409 ／ 496 ／ 569 です。',
+      'ノーツ数は 267 ／ 308 ／ 417 ／ 499 ／ 570 です。',
     ],
   },
   {
@@ -2170,7 +2285,7 @@ const CHANGELOG = [
       'モンヒロビートに、Fuki Commune の「月が満ちる前に」の全編（4分37秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
       'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.34 ／ HELL Lv.65 です。',
-      'ノーツ数は 546 ／ 637 ／ 875 ／ 1048 ／ 1210 です。',
+      'ノーツ数は 549 ／ 648 ／ 861 ／ 1037 ／ 1206 です。',
     ],
     assistantNotice: { id:'update_notice_tsuki_ga_michiru_mae_ni_v1', type:'content' },
   },
@@ -2182,7 +2297,7 @@ const CHANGELOG = [
       '月が満ちる前にの短い版（1分52秒）です。曲の頭から2つ目のサビの終わりまでを遊べます。曲えらびでは全編と同じ行にまとまり、難易度ボタンの上で切り替えられます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
       'レベルは EASY Lv.9 ／ NORMAL Lv.12 ／ HARD Lv.16 ／ EXPERT Lv.23 ／ MASTER Lv.33 ／ HELL Lv.65 です。',
-      'ノーツ数は 232 ／ 266 ／ 354 ／ 438 ／ 496 です。',
+      'ノーツ数は 233 ／ 268 ／ 354 ／ 431 ／ 504 です。',
     ],
   },
   {
@@ -2732,7 +2847,7 @@ const CHANGELOG = [
       'モンヒロビートに「SAD SONG」の全編（3分39秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
       'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.43 です。',
-      'ノーツ数は 350 ／ 394 ／ 536 ／ 652 ／ 742 です。',
+      'ノーツ数は 351 ／ 402 ／ 551 ／ 652 ／ 746 です。',
     ],
     assistantNotice:{ id:'update_notice_sad_song_v1', type:'content' },
   },
@@ -2744,7 +2859,7 @@ const CHANGELOG = [
       'モンヒロビートに「SAD SONG」の short ver.（1分22秒）も追加しました。曲えらびでは全編と同じ行にまとまっていて、難易度ボタンの上の「short ver.」で切り替えられます。',
       'short ver. にも HELL があります。short ver. の MASTER をクリアすると開きます。',
       'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.28 ／ HELL Lv.42 です。',
-      'ノーツ数は 139 ／ 164 ／ 221 ／ 268 ／ 300 です。',
+      'ノーツ数は 143 ／ 162 ／ 219 ／ 269 ／ 299 です。',
     ],
   },
   {
@@ -2794,7 +2909,7 @@ const CHANGELOG = [
       'モンヒロビートに、HANA の「ROSE」の全編（2分45秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
       'レベルは EASY Lv.5 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.30 ／ HELL Lv.51 です。',
-      'ノーツ数は 159 ／ 197 ／ 266 ／ 424 ／ 533 です。',
+      'ノーツ数は 159 ／ 196 ／ 268 ／ 424 ／ 521 です。',
     ],
     assistantNotice: { id:'update_notice_rose_v1', type:'content' },
   },
@@ -3507,7 +3622,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに Team Grimoire vs Laur の「Grievous Lady」（2分22秒）を追加しました。曲えらびからすぐ遊べます。',
       '曲の途中で、ノーツの流れが止まったり、弾んだり、奥へ戻ったりする場面があります。判定のタイミングは音楽どおりなので、音を聞いて叩いてください。',
-      'レベルは EASY Lv.12 ／ NORMAL Lv.16 ／ HARD Lv.22 ／ EXPERT Lv.35 ／ MASTER Lv.50 です。',
+      'レベルは EASY Lv.12 ／ NORMAL Lv.16 ／ HARD Lv.22 ／ EXPERT Lv.35 ／ MASTER Lv.43 です。',
       'ノーツ数は 294 ／ 355 ／ 422 ／ 536 ／ 636 です。',
     ],
     assistantNotice: { id:'update_notice_grievous_lady_v1', type:'content' },
@@ -3671,7 +3786,7 @@ const CHANGELOG = [
     image: 'images/song-art/sheriruth.jpg?v=4302be7eca16',
     items:[
       'モンヒロビートに Team Grimoire さんの「Sheriruth」（2分15秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.33 ／ MASTER Lv.35 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.33 ／ MASTER Lv.39 です。',
       'ノーツ数は 259 ／ 312 ／ 384 ／ 535 ／ 642 です。',
       'EASY でも手ごたえのある譜面です。',
       '曲の途中で、音に合わせてノーツの流れが3回止まる所があります。止まったあとはいつもと同じ速さで流れてきます。止まっている間も、叩くタイミングは変わりません。',
@@ -3710,7 +3825,7 @@ const CHANGELOG = [
     image: 'images/song-art/journey.jpg?v=2285e26648c0',
     items:[
       'モンヒロビートに DECO*27 さんの「Journey」（2分44秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.36 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.30 ／ MASTER Lv.36 です。',
       'ノーツ数は 233 ／ 287 ／ 398 ／ 627 ／ 731 です。',
     ],
     assistantNotice: { id:'update_notice_journey_v1', type:'content' },
@@ -4442,8 +4557,8 @@ const CHANGELOG = [
     image: 'images/song-art/anima.jpg?v=2d830b603ed9',
     items:[
       'モンヒロビートに「ANiMA」（1分55秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.26 ／ MASTER Lv.44 です。',
-      'ノーツ数は 215 ／ 255 ／ 358 ／ 444 ／ 567 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.18 ／ EXPERT Lv.27 ／ MASTER Lv.40 です。',
+      'ノーツ数は 211 ／ 254 ／ 353 ／ 441 ／ 569 です。',
     ],
     assistantNotice: { id:'update_notice_anima_v1', type:'content' },
   },
@@ -4762,8 +4877,8 @@ const CHANGELOG = [
     image: 'images/song-art/monster.jpg?v=61def8c02286',
     items:[
       'モンヒロビートに、ハロウィンの新曲「Monster」の全編版（4分25秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.17 ／ MASTER Lv.24 です。',
-      'ノーツ数は 316 ／ 359 ／ 494 ／ 601 ／ 675 です。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.19 ／ MASTER Lv.25 です。',
+      'ノーツ数は 313 ／ 366 ／ 487 ／ 594 ／ 694 です。',
       'ハロウィン・ナイトのあいだ、ジャックとの戦い（レイドバトル・グランドスラム）のBGMがこの曲になります。レイド画面・段階えらび・編成は今までどおり「Crazy Party Night ～ぱんぷきんの逆襲～」です。',
     ],
     assistantNotice: { id:'update_notice_monster_v1', type:'content' },
@@ -4844,8 +4959,8 @@ const CHANGELOG = [
     image: 'images/song-art/emerald-rush.jpg?v=d9bc5685600b',
     items:[
       'モンヒロビートに「Emerald Rush」（2分26秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.11 ／ EXPERT Lv.18 ／ MASTER Lv.25 です。',
-      'ノーツ数は 191 ／ 218 ／ 302 ／ 365 ／ 415 です。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.8 ／ HARD Lv.13 ／ EXPERT Lv.20 ／ MASTER Lv.27 です。',
+      'ノーツ数は 193 ／ 217 ／ 301 ／ 368 ／ 424 です。',
       '曲が進むにつれて少しずつテンポが速くなる曲です。ノーツもその速さに合わせて流れてきます。',
     ],
     assistantNotice: { id:'update_notice_emerald_rush_v1', type:'content' },
@@ -4997,8 +5112,8 @@ const CHANGELOG = [
     image: 'images/song-art/crazy-party-night.jpg?v=cc3f31ed7b0d',
     items:[
       'モンヒロビートに「Crazy Party Night ～ぱんぷきんの逆襲～」の全編版（4分5秒）を追加しました。1分34秒の版と同じ曲なので、曲えらびでは1行にまとまり、難易度ボタンの上で切り替えられます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.14 ／ EXPERT Lv.19 ／ MASTER Lv.25 です。',
-      'ノーツ数は 358 ／ 411 ／ 572 ／ 699 ／ 792 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.13 ／ EXPERT Lv.20 ／ MASTER Lv.28 です。',
+      'ノーツ数は 359 ／ 412 ／ 585 ／ 705 ／ 796 です。',
       'ハロウィン・ナイトのお話のBGMは、この全編版になりました。',
       'ハロウィン・ナイトのあいだ（11/1 3:59まで）は、M/B管理のBGMも、設定を変えていない場合はこの曲になります。終わると元の曲に戻ります。BGMアレンジで好きな曲に変えることもできます。',
     ],
@@ -5167,8 +5282,8 @@ const CHANGELOG = [
     image: 'images/song-art/crazy-party-night.jpg?v=cc3f31ed7b0d',
     items:[
       'モンヒロビートに「Crazy Party Night ～ぱんぷきんの逆襲～」（1分34秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.11 ／ EXPERT Lv.17 ／ MASTER Lv.23 です。',
-      'ノーツ数は 140 ／ 158 ／ 219 ／ 267 ／ 307 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.11 ／ EXPERT Lv.20 ／ MASTER Lv.29 です。',
+      'ノーツ数は 138 ／ 163 ／ 220 ／ 273 ／ 307 です。',
     ],
     assistantNotice: { id:'update_notice_crazy_party_night_v1', type:'content', notifyFrom:'2026-10-04T08:00:00+09:00' },
   },
@@ -5363,8 +5478,8 @@ const CHANGELOG = [
     image: 'images/song-art/kiki-issen.jpg?v=49bfb0c27729',
     items:[
       'モンヒロビートに「綺季一閃 ～花雪に舞う詠姫～ short ver.」（3分15秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.21 ／ MASTER Lv.30 です。',
-      'ノーツ数は 318 ／ 364 ／ 498 ／ 595 ／ 631 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.17 ／ EXPERT Lv.25 ／ MASTER Lv.27 です。',
+      'ノーツ数は 318 ／ 368 ／ 497 ／ 592 ／ 628 です。',
     ],
     assistantNotice: { id:'update_notice_kiki_issen_short_v1', type:'content' },
   },
@@ -5374,8 +5489,8 @@ const CHANGELOG = [
     image: 'images/song-art/stay-with-me.jpg?v=0a8784f80cf1',
     items:[
       'モンヒロビートに「Stay With Me ～Locked Fate～ short ver.」（2分57秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
-      'ノーツ数は 242 ／ 291 ／ 397 ／ 498 ／ 571 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.20 ／ MASTER Lv.31 です。',
+      'ノーツ数は 243 ／ 292 ／ 395 ／ 491 ／ 564 です。',
     ],
     assistantNotice: { id:'update_notice_stay_with_me_short_v1', type:'content' },
   },
@@ -5625,8 +5740,8 @@ const CHANGELOG = [
     image: 'images/song-art/haruka.jpg?v=d3979cac1117',
     items:[
       'モンヒロビートに「ハルカ」（1分38秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.28 ／ MASTER Lv.33 です。',
-      'ノーツ数は 205 ／ 233 ／ 324 ／ 386 ／ 451 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.19 ／ EXPERT Lv.30 ／ MASTER Lv.37 です。',
+      'ノーツ数は 206 ／ 231 ／ 322 ／ 389 ／ 454 です。',
     ],
     assistantNotice: { id:'update_notice_haruka_v1', type:'content' },
   },
@@ -6228,7 +6343,7 @@ const CHANGELOG = [
     items:[
       '「only my railgun」の譜面を作り直しました。',
       '曲の中で同じフレーズが繰り返される所では、前と同じ形・同じリズムでノーツが来るようになりました。一度覚えた動きで取れます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.23 です。',
       'ノーツ数は 146 ／ 169 ／ 227 ／ 282 ／ 325 です。',
       'これまでのスコア・自己ベスト・クリアの記録はそのまま残ります。',
     ],
@@ -6408,7 +6523,7 @@ const CHANGELOG = [
     image: 'images/song-art/only-my-railgun.jpg?v=a79e2735865b',
     items:[
       'モンヒロビートに「only my railgun」（1分30秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.23 です。',
       'ノーツ数は 146 ／ 169 ／ 227 ／ 282 ／ 325 です。',
     ],
     assistantNotice: { id:'update_notice_only_my_railgun_v1', type:'content' },
@@ -7456,8 +7571,8 @@ const CHANGELOG = [
     image: 'images/song-art/makutsu-no-senritsu.jpg?v=fdac185e6f69',
     items:[
       'モンヒロビートに「魔窟の旋律」（2分28秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.17 ／ EXPERT Lv.22 ／ MASTER Lv.27 です。',
-      'ノーツ数は 269 ／ 314 ／ 432 ／ 506 ／ 518 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.19 ／ EXPERT Lv.23 ／ MASTER Lv.27 です。',
+      'ノーツ数は 273 ／ 316 ／ 432 ／ 473 ／ 536 です。',
       '暗い洞窟の奥へ進んでいくような、重くて緊張感のある曲です。',
     ],
     assistantNotice: { id:'update_notice_makutsu_no_senritsu_v1', type:'content' },
@@ -7468,8 +7583,8 @@ const CHANGELOG = [
     image: 'images/song-art/senjou-no-shippuu.jpg?v=50e3ed20ee08',
     items:[
       'モンヒロビートに「戦場の疾風」（3分13秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.19 ／ MASTER Lv.27 です。',
-      'ノーツ数は 314 ／ 360 ／ 496 ／ 593 ／ 661 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.29 です。',
+      'ノーツ数は 309 ／ 357 ／ 490 ／ 584 ／ 633 です。',
       '戦いの始まりを思わせる、疾走感のある曲です。',
     ],
     assistantNotice: { id:'update_notice_senjou_no_shippuu_v1', type:'content' },
@@ -9063,8 +9178,8 @@ const CHANGELOG = [
       'モンヒロビートに「もう一つの世界へ」（3分47秒）を追加しました。曲えらびからすぐ遊べます。',
       'この曲は、ドラさんが自作しているゲーム「CREATE MONSTERS（クリエイトモンスターズ）」のために作られた曲です。本人の許可をいただいて入れさせてもらいました。',
       'ブラウザでそのまま遊べるゲームだそうです。下のボタンから開けるので、この曲が気に入った方はのぞいてみてください。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.14 ／ EXPERT Lv.18 ／ MASTER Lv.22 です。',
-      'ノーツ数は 334 ／ 380 ／ 536 ／ 656 ／ 744 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.26 です。',
+      'ノーツ数は 338 ／ 383 ／ 548 ／ 654 ／ 751 です。',
       '3分47秒で、モンヒロビートでいちばん長い曲になりました。ゆったり始まって終盤で盛り上がるので、最後まで走り切る手応えがあります。',
       '音の大きさはほかの曲と同じくらいにそろえてあります。',
     ],
@@ -9246,8 +9361,8 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「The City Beneath the Comets」（2分40秒）を追加しました。曲えらびからすぐ遊べます。',
       'BPM170の曲です。音数が多く、MASTERはいちばん詰まったところで4秒に36回押します。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.12 ／ HARD Lv.21 ／ EXPERT Lv.26 ／ MASTER Lv.39 です。',
-      'ノーツ数は 327 ／ 381 ／ 519 ／ 614 ／ 716 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.12 ／ HARD Lv.22 ／ EXPERT Lv.30 ／ MASTER Lv.41 です。',
+      'ノーツ数は 325 ／ 376 ／ 522 ／ 628 ／ 726 です。',
       '長押し・スライド・フリックもひととおり入っています（MASTERは長押し23・スライド18・フリック26）。',
       '音の大きさはほかの曲と同じ -14 LUFS にそろえてあります。',
     ],
@@ -9781,8 +9896,8 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「FREEDOM DiVE↓」（2分25秒）を追加しました。曲えらびからすぐ遊べます。',
       'BPM222.22の高速曲です。5つの難易度すべてが、いままででいちばん難しい譜面になりました。',
-      'レベルは EASY Lv.15 ／ NORMAL Lv.22 ／ HARD Lv.26 ／ EXPERT Lv.37 ／ MASTER Lv.47 です。',
-      'ノーツ数は 370 ／ 470 ／ 552 ／ 741 ／ 814 です。',
+      'レベルは EASY Lv.16 ／ NORMAL Lv.24 ／ HARD Lv.28 ／ EXPERT Lv.39 ／ MASTER Lv.41 です。',
+      'ノーツ数は 375 ／ 474 ／ 556 ／ 732 ／ 804 です。',
       'この曲はEASYとNORMALでも16分（最短0.067秒の間隔）が出ます。ほかの曲では8分までなので、いちばん大きな違いはここです。ただし押す種類は難易度ごとの決まりどおりで、EASYにフリックやスライドは出ません。',
       'MASTERは毎秒5.75ノーツで、全曲でいちばん濃い譜面です。いちばん詰まったところは4秒で36回押します。',
       'Lv.の上限（これまで50）をなくしました。Lv.は「忙しさ」にそのまま比例する数字なので、上限で頭打ちになると、もっと難しい曲が来たときに区別がつかなくなるためです。ほかの曲のLv.は1つも変わっていません。',
@@ -10925,7 +11040,7 @@ const CHANGELOG = [
     assistantNotice:{id:'update_notice_crossing_field_v1',type:'content'},
     items:[
       '「crossing field」（1分29秒）を追加しました。EASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。曲えらびの一覧にジャケットの絵も出ます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.15 ／ EXPERT Lv.20 ／ MASTER Lv.26。ノーツ数は 160 ／ 186 ／ 254 ／ 303 ／ 354 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.32。ノーツ数は 161 ／ 183 ／ 249 ／ 308 ／ 349 です。',
       '179BPMと速い曲なので、上の難易度ほど手が忙しくなります。MASTERのLv.27は「禁断のレジスタンス」と同じで、いまある曲のまん中あたりです。',
       '自己ベストも全国ランキングも、ほかの曲と同じように記録されます。',
     ],
@@ -10945,7 +11060,7 @@ const CHANGELOG = [
     assistantNotice:{id:'update_notice_monster_hero_another_v1',type:'content'},
     items:[
       '「Monster Hero -Another-」（約155秒）を追加しました。本編ですでに使っている別テイクのBGMをそのまま使い、音源は複製していません。ジャケットは「Monster Hero」と同じ絵です。',
-      'EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.19 ／ MASTER Lv.26。ノーツ数は 242 ／ 273 ／ 373 ／ 451 ／ 531 です。',
+      'EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.19 ／ MASTER Lv.24。ノーツ数は 242 ／ 274 ／ 375 ／ 460 ／ 514 です。',
       '譜面はAnotherの音源そのものを解析して作っています（約171.1BPM・4拍子）。元の「Monster Hero」の譜面コピーではありません。',
       '自己ベスト・全国ランキングは「Monster Hero」と別の曲として記録されます。EXPERTとMASTERは、同じ曲のHARDをクリアすると遊べます。',
     ],

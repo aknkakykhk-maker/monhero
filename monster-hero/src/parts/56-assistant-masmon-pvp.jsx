@@ -179,5 +179,7 @@ const masmonPvpFriends = async () => {
       total: e.team_total, updatedAt: Date.parse(e.updated_at) || 0,
     })),
   })).map((f) => ({ ...f, registered: f.assistants.length > 0 }));
+  // 登録編成を持つフレンドがいれば、助手の修行の「練習相手」に数える(通信は増やさず、読んだ結果を使うだけ)
+  try { if (friends.some((f) => f.registered) && typeof amgcNoteFriend === 'function') amgcNoteFriend(true); } catch (_) {}
   return { ok: true, friends, remaining };
 };
