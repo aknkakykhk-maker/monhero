@@ -1,7 +1,6 @@
 # `tools/mode/`(譜面生成ツール MHB CHART ENGINE など)を触るときの決まり
 
-ルートの [`CLAUDE.md`](../../CLAUDE.md) から、**この場所のファイルを触るときだけ要る決まり**を移したもの
-(Claude Code はこのフォルダのファイルを読んだときにこのファイルを読み込む)。決まりの重さはルートと同じ。
+ルートの [`CLAUDE.md`](../../CLAUDE.md) から、**この場所のファイルを触るときだけ要る決まり**を移したもの。決まりの重さはルートと同じ。
 移した一覧: [`docs/rules/README.md`](../../docs/rules/README.md)「節の置き場所」。
 
 - モンヒロビートの新曲を足すときは `rhythm-song-add` スキルを開く(⑥-3 の本文はスキルにある)
@@ -28,7 +27,7 @@
 
 **手の決まり**(同じ側で地上⇔空中は **150ms 以上**・空中は地上から250ms以上が目安・押さえている帯と同じ側は反対の手が空いているときだけ・
 同じ側の押し始めは90ms未満にしない)は `rhythm-chart-hand-rules-check.js` が見張る。**公開中の譜面のノーツを動かす・戻すとき**は
-`rhythm-overlap-reach-check.js` と手の決まりの検査も回す(#2808→#2821)。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
+`rhythm-overlap-reach-check.js` と手の決まりの検査も回す(#2808→#2821)。本文: `CHART_ENGINE.md`
 **HELL の交差は上下に分ける**(同じ高さのまま左右が入れ替わる「水平クロス」は作らない・2026-10-13)。同じ検査が HELL で0を見張る
 **押さえている帯の中にノーツを置かない**(2026-10-13): 同じ高さで重なる・幅1が絡む半レーンの重なりは不可(地上と空中なら同じ位置でもよい)。
 HELL と新曲の5難易度の道具が直し、同じ検査が止める(前からある譜面の上限は `rhythm-held-band-existing.json`)
@@ -36,16 +35,9 @@ HELL と新曲の5難易度の道具が直し、同じ検査が止める(前か�
 **新曲は `flowPlacement:true`**(手の流れを狙う配置・既定は切・2026-10-21)。本文: `CHART_ENGINE.md`「手の流れを狙う配置」
 
 **参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13 社長の決定)。上の難易度を下の難易度の写し+割増しで作らない。
-HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける。本文: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)
+HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける。本文: `CHART_ENGINE.md`
 
-**作ったら点検する**(2026-11-11・Rev.37): `node tools/mode/rhythm-chart-review.js --track <曲>` が、量・Lv.・押せない・交差・届きにくい・流れ・跳び・
-帯の中・モンスター4個・盛り上がりと密度・難易度の段の差を表にし、公開中の同じ難易度の帯(5〜95%)の外を「※」で出す(`--picture <フォルダ>` で止め絵・
-`--before A --after B` で前後比べ・`--released <songId>` で公開中の譜面)。帯は曲を足したら `--calibrate` で作り直す。
-**狙い(ノーツ数・Lv.)が来たら** `rhythm-chart-tune.js --track <曲> --target MASTER:notes=600` でつまみの候補を出す(書かない)。
-**新曲の EXPERT・MASTER は、交差・真ん中越えを既定で減らす。いちばん盛り上がる区切りの交差は見せ場として残す**(2026-11-11 社長の決定)。
-パイプラインの「手の仕上げ」(`rhythm-chart-flow-fix.js --track`)が位置だけ動かす(EASY〜HARD は押せない・帯の中だけ)。
-曲ごとに変えるときは曲の一覧の `handFinish`: 「交差はありでいい」→ `'must'`・「もっと減らして」→ `'smooth'`。
-本文と「社長の言い方 → 道具・つまみ」の表: [`docs/rules/CHART_ENGINE.md`](../../docs/rules/CHART_ENGINE.md)「作った譜面の点検と仕上げ」
+**作ったら点検**: `rhythm-chart-review.js`。新曲の EXPERT・MASTER は交差を減らし山場は残す(曲ごとは `handFinish`)。本文: `CHART_ENGINE.md`「作った譜面の点検と仕上げ」
 
 > ⚠️ 譜面もゲーム本体も変わらない強化は、**更新履歴とヘルプへ載せない**(プレイヤーには何も
 > 起きていない)。効くのは次に曲を足したときなので、そのときの曲の告知に含まれる。
