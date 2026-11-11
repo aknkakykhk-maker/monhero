@@ -43,24 +43,24 @@ welcome kyuko | kyuko happy いらっしゃ〜い。{f}、待ってたよぉ
 welcome kyuko | kyuko normal ほい、上がって上がって〜。お茶いれるねぇ
 
 ## ソラシド
-visit sorashido line=greet | sorashido excited うぉぉぉ！ お客さんだ！ よく来てくれたな
-visit sorashido line=greet | sorashido happy {name}、いらっしゃい！ くつろいでくれ笑
-visit sorashido line=greet | sorashido normal {h}さんの友だちか。ゆっくりしていけよ
-visit sorashido line=greet doing=snack | sorashido happy ちょうどちんすこう食べてたんだ。一緒にどうだ？
-visit sorashido line=greet doing=practice | sorashido excited いま練習してたんだ！ 聞いていくか？
-visit sorashido line=greet doing=training | sorashido normal 育成の記録をつけてたとこだ。ちょっと待っててくれ
-visit sorashido line=greet doing=cards | sorashido excited 新しい表を作ってたんだぜ・・・！ 見ていくか？
-visit sorashido line=greet doing=read | sorashido normal 本を読んでたんだ。いいところで来たな笑
-visit sorashido line=greet doing=idle | sorashido happy 考えごとしてたんだ。話し相手ができてうれしいぞ
-visit sorashido line=reply | sorashido happy ありがとな！ でーじうれしいぞ笑
-visit sorashido line=reply | sorashido wink そう言ってもらえると、表を作ったかいがあるな
-visit sorashido line=reply | sorashido normal 気をつかわなくていいぞ。ゆっくりしてくれ
-visit sorashido line=sleep | sorashido normal ……うぉぉ……むにゃ……表が……
-visit sorashido line=sleep | sorashido happy ……なんくるないさ〜……すぅ……
-go sorashido | sorashido excited {f}、遊びに来たぞ！ 今日はなにする？
-go sorashido | sorashido happy {h}さんの部屋、でーじ落ち着くな笑
-welcome sorashido | sorashido excited よく来たな！ {f}、待ってたぞ
-welcome sorashido | sorashido happy いらっしゃい！ ゆっくりしていけよ笑
+visit sorashido line=greet | sorashido excited お客さんですねー！ よく来てくれました笑
+visit sorashido line=greet | sorashido happy {name}、いらっしゃい！ くつろいでいってください笑
+visit sorashido line=greet | sorashido normal {h}さんのお友だちですか。ゆっくりしていってくださいね
+visit sorashido line=greet doing=snack | sorashido happy ちょうどちんすこうを食べてたんです。一緒にどうですか？
+visit sorashido line=greet doing=practice | sorashido excited いま練習してたんですよ！ 聞いていきますか？
+visit sorashido line=greet doing=training | sorashido normal 育成の記録をつけてたところです。ちょっと待っててくださいね
+visit sorashido line=greet doing=cards | sorashido excited 新しい表を作ってたんです・・・！ 見ていきますか？
+visit sorashido line=greet doing=read | sorashido normal 本を読んでたんです。いいところで来ましたね笑
+visit sorashido line=greet doing=idle | sorashido happy 考えごとをしてたんです。話し相手ができてうれしいです
+visit sorashido line=reply | sorashido happy ありがとうございます！ でーじうれしいです笑
+visit sorashido line=reply | sorashido wink そう言ってもらえると、表を作ったかいがありますねー
+visit sorashido line=reply | sorashido normal 気をつかわなくて大丈夫ですよ。ゆっくりしてください
+visit sorashido line=sleep | sorashido normal ・・・うぉぉ・・・むにゃ・・・表が・・・
+visit sorashido line=sleep | sorashido happy ・・・なんくるないさ〜・・・すぅ・・・
+go sorashido | sorashido excited {f}、遊びに来ました！ 今日はなにをしますか？
+go sorashido | sorashido happy {h}さんの部屋、でーじ落ち着きますね笑
+welcome sorashido | sorashido excited よく来てくれましたね！ {f}、待ってましたよ
+welcome sorashido | sorashido happy いらっしゃい！ ゆっくりしていってください笑
 
 ## えるびん
 visit erubin line=greet | erubin happy いらっしゃい。{name}、来てくれてありがとう
