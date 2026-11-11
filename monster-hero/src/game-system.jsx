@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d7d03b32d8718b29
+// generated-sha256: 17fda42a8df9796e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67155,7 +67155,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{scene.icon} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>

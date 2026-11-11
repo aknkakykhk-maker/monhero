@@ -352,7 +352,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false }) {
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{scene.icon} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={{ wordBreak: 'auto-phrase' }}>

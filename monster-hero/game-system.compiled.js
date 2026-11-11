@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef2776c5542b2466
+// source-sha256: c9ac021a8931c9ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115357,7 +115357,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily": true
   }, React.createElement("p", {
     className: "flex items-center gap-2 px-1 text-[13px] font-black text-amber-200"
-  }, scene.icon, " ", slotDef.label, "の できごと ", React.createElement("span", {
+  }, cardIconNode(scene.icon, 14), " ", slotDef.label, "の できごと ", React.createElement("span", {
     className: "text-[10.5px] font-bold text-slate-300"
   }, "あと約", leftH, "時間")), React.createElement("div", {
     className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1"
