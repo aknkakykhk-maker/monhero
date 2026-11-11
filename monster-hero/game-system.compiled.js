@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 011f60659cb4802f
+// source-sha256: d8c1a9b7aba77a52
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111958,6 +111958,22 @@ function AssistantLifeTownMap({
     margin: '0 auto',
     ...home.vars
   };
+  const PERK_WORD = {
+    studio: '券なし',
+    cardroom: '×1.5'
+  };
+  const perkOf = place => {
+    try {
+      return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true;
+    } catch (_) {
+      return false;
+    }
+  };
+  const perkMark = place => perkOf(place) ? React.createElement("i", {
+    "aria-hidden": "true",
+    "data-assistant-life-map-perk": place,
+    className: "pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow"
+  }, PERK_WORD[place] || '得') : null;
   const facBtn = (place, cls, aria, inner) => {
     const n = (at[place] || []).length;
     return React.createElement("button", {
@@ -111972,7 +111988,7 @@ function AssistantLifeTownMap({
         filter: 'saturate(.5)'
       },
       onClick: () => setSheet(place)
-    }, inner);
+    }, inner, perkMark(place));
   };
   const cardN = (at.cardroom || []).length;
   const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
@@ -112086,7 +112102,7 @@ function AssistantLifeTownMap({
         setSheet(null);
         onBeat(id);
       },
-      className: "rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 px-2 py-1 text-[11px] font-black text-white active:scale-95"
+      className: "rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95"
     }, "🎵 一緒に遊ぶ"), place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "card",
@@ -112094,7 +112110,7 @@ function AssistantLifeTownMap({
         setSheet(null);
         onCard(id);
       },
-      className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 px-2 py-1 text-[11px] font-black text-white active:scale-95"
+      className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95"
     }, "🃏 対戦する"), place === 'battle' && (() => {
       let info = null;
       try {
@@ -112117,13 +112133,13 @@ function AssistantLifeTownMap({
             });
           } catch (_) {}
         },
-        className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2 py-1 text-[11px] font-black text-white active:scale-95 disabled:opacity-50"
+        className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
       }, info.label || '⚔ マスモンで対戦(β)');
     })(), typeof onView === 'function' && React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "view",
       onClick: () => onView(id),
-      className: "rounded-xl border border-sky-300/60 px-2 py-1 text-[11px] font-black text-sky-100 active:scale-95"
+      className: "rounded-xl border border-sky-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-sky-100 active:scale-95"
     }, "💬 詳細を見る"), React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "room",
@@ -112131,7 +112147,7 @@ function AssistantLifeTownMap({
         setSheet(null);
         onPick(id);
       },
-      className: "rounded-xl border border-pink-300/60 px-2 py-1 text-[11px] font-black text-pink-100 active:scale-95"
+      className: "rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95"
     }, "🏡 部屋へ ›")));
   };
   return React.createElement("div", {
@@ -112139,9 +112155,9 @@ function AssistantLifeTownMap({
     "data-assistant-life-where": true,
     "data-assistant-life-map-art": art
   }, React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
-.mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;padding:4px 9px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
+.mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${small ? 8 : 9}px;font-weight:900;line-height:${small ? 12 : 13}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
     className: "relative",
     style: {
@@ -112197,7 +112213,7 @@ function AssistantLifeTownMap({
       filter: 'saturate(.5)'
     },
     onClick: () => setSheet('cardroom')
-  }, React.createElement("span", null, "🃏 MFバトルカード")), ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => {
+  }, React.createElement("span", null, "🃏 MFバトルカード"), perkMark('cardroom')), ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => {
     const n = (at[p] || []).length;
     return React.createElement("button", {
       key: p,
