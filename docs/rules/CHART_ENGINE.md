@@ -222,6 +222,7 @@ node tools/mode/rhythm-chart-review-check.js                                    
 | 「交差がいやらしい」「指がぶつかる」 | 既定で山場以外は減っている。山場も減らすなら `handFinish:'smooth'`。公開中の譜面を直すと決まったときは `rhythm-chart-flow-fix.js --song <songId> --difficulty <難易度>` |
 | 「交差はありでいい」「普通に作って」 | `handFinish:'must'`(押せない・帯の中だけ直す) |
 | 「MASTER だけ重く/EXPERT は軽く」 | `chartIntensityByDifficulty`({"EXPERT":"mild","MASTER":"extreme"}) |
+| 「入りと間奏をもっと軽く」「静かな所はもっと休ませて」 | `energySpread:'strong'`(盛り上がりに合わせて量を配る・引き出し R6。ノーツは減る。2026-11-11 社長の決定 A: 既定にしない・曲ごと) |
 | 「全体にもっと難しく/易しく」 | `challengeFactor`(上げすぎると Lv. が下がる。スキルの「`challengeFactor` の落とし穴」)・`chartIntensity`('strong'/'extreme') |
 | 「HELL をもっと重く/空中は少なめ」 | `hellDensity`・`rhythm-hell-mix.js` の `phrases`(上の「HELL を重くする」) |
 
@@ -239,7 +240,7 @@ node tools/mode/rhythm-chart-review-check.js                                    
 | サビ前の溜め | サビに入る直前の1小節は取り分を0.6倍(曲全体のノーツ数は変えない)。見せ場も置かない | 同上 |
 | 手の仕上げの山場 | `keep-climax` が交差を残す区切りは、サビのうち盛り上がりが山の85%以上の区切り(大きいだけの間奏は残さない)。押せない・帯の中は、いやらしい形をいくつ消しても作らない重さ(1000) | — |
 | 短い動機の写し(`rhythm-chart-motifs.js`) | 区切りの繰り返し・4小節の繰り返しが付いていない小節で、拾った音の位置が6割以上同じ・音の上下も似ている1〜2小節を探し、同じ手の動きで置く(2回目は左右反転・高さが違えば形ごと最大2レーンずらす)。かたまりの4分の3以上に元があるときだけ写す | `--no-motifs` |
-| 盛り上がりに合わせて量を配る(引き出し R6) | **既定は切**(7曲で数字が良くならずノーツが減った)。曲の一覧の `energySpread:true` / `'strong'` を書いた曲だけ | `tools/mode/CHART_DRAWERS.md` |
+| 盛り上がりに合わせて量を配る(引き出し R6) | **既定は切・曲ごとに使う**(2026-11-11 社長の決定 A。7曲で数字が良くならずノーツが減った)。「入りと間奏をもっと軽く」と言われた曲の一覧へ `energySpread:'strong'` | `tools/mode/CHART_DRAWERS.md` |
 
 ```
 node tools/mode/rhythm-chart-chorus.js --track <曲> | --all                         サビの点数と内訳(読むだけ)

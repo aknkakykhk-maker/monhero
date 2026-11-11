@@ -28,7 +28,7 @@
 
 サビに拾える音が残っていない曲では、軽くしたぶんがサビへ回らず、ノーツが減るだけになる。盛り上がりに合わせる効き目は、
 Rev.38 のサビ(盛り上がる区切りの決め方・サビ前の溜め)で先に出ている(静かなのに重い区切り 76 → 63)。
-既定にするか・曲ごとに使うかは社長が決める。数字と止め絵: [`docs/progress/beat-chart-tools/REV38.md`](../../docs/progress/beat-chart-tools/REV38.md)
+**2026-11-11 社長の決定(A): 既定にしない。曲ごとに使う**(曲の一覧の `energySpread:'strong'`)。数字と止め絵: [`docs/progress/beat-chart-tools/REV38.md`](../../docs/progress/beat-chart-tools/REV38.md)
 
 ## 守ること(引き出しを使っても変わらない)
 

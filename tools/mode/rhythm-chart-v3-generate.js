@@ -48,7 +48,7 @@ const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&
 // 手の流れを狙う配置(2026-10-21 社長「新しい譜面から流れを狙う」)。既定は切。曲の一覧に flowPlacement:true を書いた曲(新曲)か、
 //   --flow を付けたときだけ効く(--no-flow で切る)。切のときは今までと1バイトも同じ譜面になる(公開中の曲は作り直さない・⑩-2)
 let FLOW_ON=process.argv.includes('--flow')&&!process.argv.includes('--no-flow');
-// 盛り上がりに合わせてノーツの量を配る(引き出し R6・2026-11-11)。既定は切(密度の感じが変わるので、社長が前後比べを見て決めるまで)。
+// 盛り上がりに合わせてノーツの量を配る(引き出し R6・2026-11-11)。既定は切(2026-11-11 社長の決定 A: 既定にしない・曲ごとに使う)。
 //   曲の一覧に energySpread:true を書いた曲か、--energy-spread を付けたときだけ効く(--no-energy-spread で切る)
 //   強さは2つ: true=順をそろえるだけ(静かな区切りが、もっと盛り上がる区切りより重い所を直す) / 'strong'=谷もはっきり(静かな区切りを、盛り上がりに見合う量まで軽くする)。
 //   --energy-spread strong / 曲の一覧の energySpread:'strong'
