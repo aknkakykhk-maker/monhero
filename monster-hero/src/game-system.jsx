@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad23f33008a6b0ac
+// generated-sha256: 58f11511a2f3811b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78215,7 +78215,7 @@ const CARD_RULE_PAGES = Object.freeze([
 //
 // 1パックの中身(どの弾も同じ): 8枚・300ビートP(5パックまとめて 1,350)。技などの枠7・モンスターの枠1(最後にめくる)
 // 技などの枠: その弾の「準備中でない」カード(その弾の種族の技・配った全モンスター/ブリーダーのカード)から同じ確率で1枚
-// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04))、そのレア度のモンスターから同じ確率で1枚
+// モンスターの枠: まずレア度(第1〜3・5・7・8弾 通常85%/キラ12%/別絵キラ3%・第4・6弾 通常85%/キラ15%。第8弾の別絵キラはミーア・スプーキー(2026-11-04)とウンディーネ・スネグーラチカ(2026-11-11))、そのレア度のモンスターから同じ確率で1枚
 //   (「まだ持っていない種族を2倍」は社長の決めでなくした。混血はキラの無い通常のモンスターとして通常に入る)
 // 天井: その弾のパックでキラも別絵キラも出ないまま7パック開けたら、8パック目のモンスターの枠はキラ以上(弾ごとに数える)
 // だぶり(自動でビートPへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血も 50
@@ -79137,6 +79137,10 @@ const cardMonStatuses = (st, p, m) => {
   else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({ key: 'water', short: '水中', left: left(mon.waterUntil), text: '持ちょうが水中', tone: 'type', pill: true });
   (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
   if (mon.cocoon) out.push({ key: 'cocoon', short: 'まゆ', left: '', text: '羽化のほかのカードは出せない', tone: 'down', pill: true });
+  // 水牢(ウンディーネ 2026-11-11): この子の番(今か次)に、ちから技・かしこさ技のガッツが増える
+  const cuT = T + (st.active === p ? 0 : 1);
+  const cu = typeof cardCostUpOf === 'function' ? cardCostUpOf(st, p, m, cuT) : 0;
+  if (cu > 0) out.push({ key: 'costUp', short: `水牢+${cu}`, left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は、ちから技・かしこさ技の消費ガッツが+${cu}`, tone: 'down', pill: true });
   if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({ key: 'stun', short: '攻撃できない', left: st.active === p ? '今' : '次', text: `${st.active === p ? 'このターン' : '次のターン'}は攻撃できない`, tone: 'down', pill: false });
   return out;
 };
