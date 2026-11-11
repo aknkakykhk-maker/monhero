@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4d08e312f574886
+// source-sha256: 2515fbfed3a95837
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -134578,8 +134578,21 @@ const assistantMasmonEnsureMade = async () => {
   } catch (_) {}
   void assistantMasmonAskNames();
 };
-let _assistantMasmonNamesBusy = false;
+let _assistantMasmonNamesBusy = false,
+  _assistantMasmonNamesAgain = false;
 const assistantMasmonAskNames = async () => {
+  if (_assistantMasmonNamesBusy) {
+    _assistantMasmonNamesAgain = true;
+    return 'skip';
+  }
+  const r = await assistantMasmonAskNamesOnce();
+  if (_assistantMasmonNamesAgain) {
+    _assistantMasmonNamesAgain = false;
+    if (r !== 'failed' && r !== 'tired') return assistantMasmonAskNamesOnce();
+  }
+  return r;
+};
+const assistantMasmonAskNamesOnce = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
@@ -135309,6 +135322,9 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       }
     }));
     if (!r.name) void assistantMasmonAskNames();
+    try {
+      if (typeof amgTick === 'function') void amgTick(aid);
+    } catch (_) {}
     return {
       changed: true,
       what: `${row.nick}を${monName(r.monster)}に入れ替え`
@@ -135842,6 +135858,17 @@ const assistantMasmonLineage = mid => {
     const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null;
     const m = l && l.main;
     return (m && typeof m === 'object' ? m.id : m) || null;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantMasmonLineageRep = lin => {
+  try {
+    if (!lin || typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+    const id = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].monId : '';
+    if (id && ALL_PLAYER_MONSTERS[id]) return ALL_PLAYER_MONSTERS[id];
+    const k = Object.keys(ALL_PLAYER_MONSTERS).find(m => assistantMasmonLineage(m) === lin);
+    return k ? ALL_PLAYER_MONSTERS[k] : null;
   } catch (_) {
     return null;
   }
@@ -136570,6 +136597,11 @@ function AssistantMasmonSheet({
         lv = Number(bondLv);
       if (p0 && p0.v2) {
         const got = await assistantMasmonWelcomeDue(id, lv);
+        if (got.length && typeof amgTick === 'function') {
+          try {
+            await amgTick(id);
+          } catch (_) {}
+        }
         if (got.length && alive) setWelcome(got[got.length - 1]);
       } else {
         const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
@@ -136827,7 +136859,7 @@ function AssistantMasmonSheet({
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
       if (!name) return null;
-      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : x.lineage ? assistantMasmonLineageRep(x.lineage) : null;
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return React.createElement("div", {
         key: `${kind}-${x.monster || x.lineage}`,
