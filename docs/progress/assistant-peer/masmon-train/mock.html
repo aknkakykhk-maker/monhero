@@ -1,0 +1,824 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../../../../monster-hero/tailwind.css">
+<style>body{margin:0;background:#0b1220;font-family:system-ui,sans-serif}.mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
+.mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
+.mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
+.mhl-btn{min-height:44px;border-radius:12px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.cols{display:flex;gap:14px;padding:14px;align-items:flex-start}.col{width:360px}.cap{color:#fde68a;font:900 13px system-ui;margin:0 0 6px}</style>
+<script src="../../../../monster-hero/vendor/react.production.min.js"></script>
+<script src="../../../../monster-hero/vendor/react-dom.production.min.js"></script>
+<script src="../../../../monster-hero/data/images/images-ally.js"></script>
+<script src="../../../../monster-hero/data/ally-monsters.js"></script>
+<script src="../../../../monster-hero/data/skills.js"></script>
+</head><body><div class="cols" id="app"></div><script>
+var RELEASE_FLAGS = { assistantMasmonTrain: true };
+var ASSISTANT_MASMON_STORE = { state: { seed: 'mock' } };
+var NOW = 20403 * 3 + 1;
+var amgSlotOf = function () { return NOW; };
+var assistantMasmonRowsOf = function () { return ROWS; };
+var ROWS = [{ slot: 1, monster: 'Golem', nick: 'ごろべえ', lv: 25 }, { slot: 2, monster: 'Pixie', nick: 'ぴく', lv: 12 }];
+// 助手のマスモンの修行と助手の成長(社長の仕様書 docs/progress/assistant-peer/ASSISTANT-MASMON-AUTOBATTLE-SPEC-v1.md の第②段階・2026-11-11 シュギョウ)
+//   修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・助手からの相談・日常の出来事。案は docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md
+//   保存は新しいキー mh_assistant_masmon_train_v1 だけ(mh_assistant_masmon_grow_v1・mh_assistant_life_masmon_v1 は読むだけ)
+//   公開の印 RELEASE_FLAGS.assistantMasmonTrain が偽のあいだは、受け口はすべて「何もしない」を返す(第①段階の結果を1つも変えない)
+//   乱数は自分の種(ブリーダーの種・助手・枠:種類・回)から作り、第①段階の乱数の列を引かない(同じ種なら同じ結果)
+const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
+// 修行の6系統(仕様書 §6)。tech=磨く熟練・stat=少し伸びる能力
+const AMGT_KINDS = Object.freeze({
+  pow: {
+    name: 'ちから修行',
+    act: '岩割り',
+    tech: 'atk',
+    stat: 'pow'
+  },
+  wise: {
+    name: 'かしこさ修行',
+    act: '瞑想',
+    tech: 'range',
+    stat: 'wise'
+  },
+  hit: {
+    name: '命中修行',
+    act: '一点突き',
+    tech: 'unique',
+    stat: 'hit'
+  },
+  eva: {
+    name: '回避修行',
+    act: '見切り',
+    tech: 'dist',
+    stat: 'eva'
+  },
+  tough: {
+    name: '防御修行',
+    act: '滝行',
+    tech: 'guard',
+    stat: 'tough'
+  },
+  real: {
+    name: '実戦修行',
+    act: '手合わせ',
+    tech: 'swap',
+    stat: 'life'
+  }
+});
+const AMGT_KIND_KEYS = Object.keys(AMGT_KINDS);
+// 熟練(0〜100)。atk=通常攻撃・range=距離撃・unique=固有技・guard=ガード・dist=間合いの判断・swap=交代の判断
+const AMGT_M = Object.freeze([['atk', '通常攻撃'], ['range', '距離撃'], ['unique', '固有技'], ['guard', 'ガード'], ['dist', '間合い'], ['swap', '交代']]);
+const AMGT_M_KEYS = AMGT_M.map(x => x[0]);
+const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'], [25, '慣れ'], [0, '見習い']]);
+const amgtRankOf = v => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
+// 数字(どれも仮。社長の答え ❷〜❺ 待ち・案A で作る)。数字はここだけ
+const AMGT_NUM = Object.freeze({
+  gain: [4, 8],
+  // 修行1回の熟練(主)。❹
+  realAll: [1, 2],
+  // 実戦修行で全部の技に足す分
+  stat: [2, 4],
+  // 修行1回の能力の伸び(第①段階の1日の上限に入る)
+  fat: 12,
+  str: 2,
+  // 疲労・ストレス
+  perDay: 1,
+  // 1日の修行の回数 ❶
+  fatStop: 45,
+  // これ以上疲れていたら修行に行かない(訓練側が休ませる)
+  initPerLv: 0.3,
+  initMax: 30,
+  // 熟練の初めの値 = 育成 Lv × 0.3(最大30)
+  learnLv: 20,
+  learnAt: 10,
+  // ❷A: 初めから固有技を覚えているのは育成 Lv20 以上。ほかは固有技の熟練が10で覚える
+  askMult: 1.1 // 相談に答えた日の修行の伸び
+});
+// 熟練100のときの補正(対戦の中だけ・❸A 小)。対戦の計算はタタカイの戦闘の芯が持つ。ここは画面の説明用の写し
+const AMGT_BONUS = Object.freeze({
+  hit: 0.04,
+  guts: 0.10,
+  guard: 0.05
+});
+// 助手のブリーダー能力(仕様書 §7)
+const AMGT_BR = Object.freeze([['know', '育成知識'], ['lead', '指導力'], ['obs', '観察力'], ['tac', '戦術力'], ['trust', '信頼構築'], ['exp', '育成経験']]);
+const AMGT_BR_KEYS = AMGT_BR.map(x => x[0]);
+// 性格の初めの傾向(仕様書 §7 の仮の傾向。並びは AMGT_BR_KEYS)
+const AMGT_BR_INIT = Object.freeze({
+  mua: [25, 40, 20, 30, 35, 20],
+  // 積極型
+  kiki: [40, 25, 40, 35, 20, 20],
+  // 分析型
+  momosuke: [30, 25, 40, 20, 40, 20],
+  // 安定型
+  dra: [20, 40, 15, 40, 30, 20],
+  // 大胆型
+  atsu: [30, 30, 30, 30, 30, 20],
+  // バランス型
+  kyuko: [45, 25, 35, 30, 20, 20],
+  // 研究型
+  sorashido: [30, 30, 30, 35, 35, 20],
+  // 柔軟型
+  erubin: [35, 25, 35, 25, 35, 20] // 防御型
+});
+// 修行に行きやすさ(1回ごと)と、好んで選ぶ系統
+const AMGT_TRAIT = Object.freeze({
+  mua: {
+    p: 0.4,
+    like: ['pow', 'real']
+  },
+  kiki: {
+    p: 0.4,
+    like: ['wise', 'eva']
+  },
+  momosuke: {
+    p: 0.3,
+    like: ['tough']
+  },
+  dra: {
+    p: 0.45,
+    like: ['pow', 'real']
+  },
+  atsu: {
+    p: 0.35,
+    like: []
+  },
+  kyuko: {
+    p: 0.5,
+    like: ['wise', 'hit']
+  },
+  sorashido: {
+    p: 0.4,
+    like: ['eva', 'real']
+  },
+  erubin: {
+    p: 0.35,
+    like: ['tough', 'eva']
+  }
+});
+// ブリーダー能力の効き目(能力100のとき・❺A)
+const AMGT_BR_EFFECT = Object.freeze({
+  lead: 0.10,
+  know: 0.30,
+  trust: 0.30,
+  obs: 10
+});
+const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, 'はじめたて']]);
+const amgtBrRankOf = v => (AMGT_BR_RANKS.find(r => v >= r[0]) || AMGT_BR_RANKS[AMGT_BR_RANKS.length - 1])[1];
+// 行動ごとに経験が入るブリーダー能力
+const AMGT_BR_XP = Object.freeze({
+  light: ['lead'],
+  heavy: ['lead'],
+  real: ['tac', 'lead'],
+  joint: ['trust', 'lead'],
+  focus: ['lead'],
+  weak: ['know'],
+  rest: ['obs'],
+  play: ['obs', 'trust'],
+  shugyo: ['know', 'tac'],
+  fail: ['know'],
+  ask: ['trust']
+});
+const AMGT_LOG = 21;
+const AMGT_EV = 30;
+const amgtSlotDay = slot => Math.floor(slot / 3);
+const amgtClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const amgtNum = (v, d, lo, hi) => Number.isFinite(Number(v)) ? amgtClamp(Math.round(Number(v)), lo, hi) : d;
+const amgtOkAid = aid => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
+const amgtRngOf = text => {
+  if (typeof assistantMasmonRng === 'function') return assistantMasmonRng(text);
+  let h = 2166136261;
+  for (const ch of String(text)) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  let x = h >>> 0 || 1;
+  return () => {
+    x ^= x << 13;
+    x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x >>>= 0;
+    return x / 4294967296;
+  };
+};
+const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+const normalizeAssistantMasmonTrain = raw => {
+  const out = {
+    v: 1,
+    mons: {},
+    br: {},
+    ask: {},
+    ev: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
+    if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
+    const one = {};
+    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+      if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
+      const m = {};
+      for (const k of AMGT_M_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
+      const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG).map(x => ({
+        s: x.s,
+        k: x.k,
+        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMGT_M_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])),
+        ...(x.f ? {
+          f: 1
+        } : {})
+      }));
+      const learnS = e.learn && Number.isInteger(e.learn.unique) && e.learn.unique >= 0 ? e.learn.unique : null;
+      one[key] = {
+        m,
+        learn: learnS == null ? {} : {
+          unique: learnS
+        },
+        day: {
+          d: amgtNum(e.day && e.day.d, -1, -1, 1e7),
+          n: amgtNum(e.day && e.day.n, 0, 0, 9)
+        },
+        log,
+        src: 'init_v1'
+      };
+    }
+    out.mons[aid] = one;
+  }
+  if (raw.br && typeof raw.br === 'object') for (const [aid, b] of Object.entries(raw.br)) {
+    if (!amgtOkAid(aid) || !b || typeof b !== 'object' || !b.ab || typeof b.ab !== 'object') continue;
+    const ab = {};
+    const xp = {};
+    for (const k of AMGT_BR_KEYS) {
+      ab[k] = amgtNum(b.ab[k], 20, 0, 100);
+      xp[k] = amgtNum(b.xp && b.xp[k], 0, 0, 999);
+    }
+    out.br[aid] = {
+      ab,
+      xp,
+      src: 'init_v1'
+    };
+  }
+  if (raw.ask && typeof raw.ask === 'object') for (const [aid, a] of Object.entries(raw.ask)) {
+    if (!amgtOkAid(aid) || !a || typeof a !== 'object' || !Number.isInteger(a.d)) continue;
+    const o = {
+      d: a.d,
+      q: typeof a.q === 'string' ? a.q.slice(0, 12) : '',
+      slot: amgtNum(a.slot, 1, 1, 8)
+    };
+    if (typeof a.a === 'string') o.a = a.a.slice(0, 12);
+    if (Number.isInteger(a.until)) o.until = a.until;
+    out.ask[aid] = o;
+  }
+  if (raw.ev && typeof raw.ev === 'object') for (const [aid, list] of Object.entries(raw.ev)) {
+    if (!amgtOkAid(aid) || !Array.isArray(list)) continue;
+    out.ev[aid] = list.filter(x => x && Number.isInteger(x.s) && typeof x.t === 'string').slice(-AMGT_EV).map(x => ({
+      s: x.s,
+      t: x.t.slice(0, 12),
+      x: typeof x.x === 'string' ? x.x.slice(0, 40) : ''
+    }));
+  }
+  return out;
+};
+// 初めの値(一度だけ)
+const amgtInitMon = lv => {
+  const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
+  const m = {};
+  for (const k of AMGT_M_KEYS) m[k] = base;
+  return {
+    m,
+    learn: Number.isFinite(lv) && lv >= AMGT_NUM.learnLv ? {
+      unique: 0
+    } : {},
+    day: {
+      d: -1,
+      n: 0
+    },
+    log: [],
+    src: 'init_v1'
+  };
+};
+const amgtInitBreeder = aid => {
+  const a = AMGT_BR_INIT[aid] || AMGT_BR_INIT.atsu;
+  const ab = {};
+  const xp = {};
+  AMGT_BR_KEYS.forEach((k, i) => {
+    ab[k] = a[i];
+    xp[k] = 0;
+  });
+  return {
+    ab,
+    xp,
+    src: 'init_v1'
+  };
+};
+const amgtLearned = me => !!(me && me.learn && Number.isInteger(me.learn.unique));
+// ブリーダー能力に経験を足す(高いほど上がりにくい・苦手も少しずつ伸びる)。天井は 60 + 育成経験×0.4
+const amgtBrNeed = v => 4 + Math.floor(v / 8);
+const amgtBrCap = (br, k) => k === 'exp' ? 100 : Math.min(100, 60 + Math.floor(br.ab.exp * 0.4));
+const amgtBrGain = (br, kinds, onUp) => {
+  const keys = [...kinds, 'exp'];
+  for (const k of keys) {
+    br.xp[k] = (br.xp[k] || 0) + (k === 'exp' ? 0.5 : 1);
+    while (br.ab[k] < amgtBrCap(br, k) && br.xp[k] >= amgtBrNeed(br.ab[k])) {
+      br.xp[k] -= amgtBrNeed(br.ab[k]);
+      const before = br.ab[k];
+      br.ab[k] += 1;
+      if (onUp && [40, 60, 80].some(n => before < n && br.ab[k] >= n)) onUp(k, br.ab[k]);
+    }
+  }
+  return br;
+};
+// 修行の系統を選ぶ(相談の答え → 性格の好み → 熟練の低い所)
+const amgtPickKind = (aid, me, rnd, askK) => {
+  if (askK && AMGT_KINDS[askK]) return askK;
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  let best = '';
+  let sc = -1;
+  for (const k of AMGT_KIND_KEYS) {
+    const tech = AMGT_KINDS[k].tech;
+    const notYet = k === 'hit' && !amgtLearned(me) ? 0.8 : 0;
+    const s = (T.like.includes(k) ? 0.7 : 0) + (1 - me.m[tech] / 100) * 1.5 + notYet + rnd() * 0.8;
+    if (s > sc) {
+      sc = s;
+      best = k;
+    }
+  }
+  return best;
+};
+
+// ---------- 店(保存) ----------
+const AMGT_STORE = {
+  state: normalizeAssistantMasmonTrain(null),
+  loaded: false,
+  subs: new Set(),
+  dirty: false,
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  async load() {
+    if (this.loaded) return this.state;
+    let raw = null;
+    try {
+      raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
+    } catch (_) {}
+    this.loaded = true;
+    this.set(normalizeAssistantMasmonTrain(raw));
+    return this.state;
+  }
+};
+const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
+const amgtSave = next => {
+  AMGT_STORE.set(next);
+  if (AMGT_STORE.dirty) return;
+  AMGT_STORE.dirty = true;
+  Promise.resolve().then(() => {
+    AMGT_STORE.dirty = false;
+    try {
+      if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_TRAIN_KEY, AMGT_STORE.state, false);
+    } catch (_) {}
+  });
+};
+const amgtSeed = () => typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed || '';
+const amgtKeyOf = row => `${row.slot}:${row.monster}`;
+// 状態を1つ写して、助手・マスモンの入れ物を(無ければ一度だけ)作る
+const amgtEnsure = (st, aid, row, lv) => {
+  const key = amgtKeyOf(row);
+  const mons = {
+    ...(st.mons[aid] || {})
+  };
+  const me0 = mons[key] || amgtInitMon(lv);
+  const me = {
+    ...me0,
+    m: {
+      ...me0.m
+    },
+    learn: {
+      ...me0.learn
+    },
+    day: {
+      ...me0.day
+    },
+    log: [...me0.log]
+  };
+  mons[key] = me;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = {
+    ab: {
+      ...br0.ab
+    },
+    xp: {
+      ...br0.xp
+    },
+    src: 'init_v1'
+  };
+  return {
+    next: {
+      ...st,
+      mons: {
+        ...st.mons,
+        [aid]: mons
+      },
+      br: {
+        ...st.br,
+        [aid]: br
+      },
+      ev: {
+        ...st.ev,
+        [aid]: [...(st.ev[aid] || [])]
+      }
+    },
+    me,
+    br
+  };
+};
+const amgtPushEv = (next, aid, s, t, x) => {
+  next.ev[aid] = [...next.ev[aid], {
+    s,
+    t,
+    x: String(x || '').slice(0, 40)
+  }].slice(-AMGT_EV);
+};
+
+// ---------- 第①段階(キズナ4)からの受け口。印が偽なら何もしない ----------
+// 1回分の行動を修行にするか。修行なら { a:'shugyo', k:系統 }、しないなら null。第①段階の rnd は引かない
+const amgtChoose = (aid, e, row, _rnd, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !row || !e || !Number.isInteger(slot)) return null;
+  if (e.fat >= AMGT_NUM.fatStop || e.str >= 50) return null;
+  const me = (AMGT_STORE.state.mons[aid] || {})[amgtKeyOf(row)] || amgtInitMon(e.lv);
+  const day = amgtSlotDay(slot);
+  if (me.day.d === day && me.day.n >= AMGT_NUM.perDay) return null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-pick|${amgtKeyOf(row)}|${slot}`);
+  const ask = AMGT_STORE.state.ask[aid];
+  const askK = ask && ask.q === 'next' && ask.a && ask.slot === row.slot && Number.isInteger(ask.until) && ask.until >= slot ? ask.a : '';
+  const T = AMGT_TRAIT[aid] || AMGT_TRAIT.atsu;
+  const lastOfDay = slot % 3 === 2;
+  if (!askK && !lastOfDay && rnd() >= T.p) return null;
+  if (!askK && lastOfDay && rnd() >= T.p + 0.3) return null;
+  return {
+    a: 'shugyo',
+    k: amgtPickKind(aid, me, rnd, askK),
+    asked: !!askK
+  };
+};
+// 修行を当てる。add(k, lo, hi) は第①段階の伸び(1日の上限・適性・個体差・関わり込み)。failChance(extra) は第①段階の失敗の起きやすさ
+const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
+  if (!amgtOn() || !act || !AMGT_KINDS[act.k]) return e;
+  const K = AMGT_KINDS[act.k];
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const {
+    next,
+    me,
+    br
+  } = amgtEnsure(AMGT_STORE.state, aid, row, e.lv);
+  const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05);
+  const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
+  const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const g = {};
+  const up = (k, lo, hi) => {
+    const n = Math.min(100 - me.m[k], Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    if (n > 0) {
+      const before = me.m[k];
+      me.m[k] += n;
+      g[k] = (g[k] || 0) + n;
+      if (amgtRankOf(before) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${k}|${amgtRankOf(me.m[k])}`);
+    }
+  };
+  up(K.tech, AMGT_NUM.gain[0], AMGT_NUM.gain[1]);
+  if (act.k === 'real') for (const k of ['atk', 'range', 'unique', 'guard']) up(k, AMGT_NUM.realAll[0], AMGT_NUM.realAll[1]);
+  if (typeof add === 'function') add(K.stat, AMGT_NUM.stat[0], AMGT_NUM.stat[1]);
+  e.fat = amgtClamp(e.fat + AMGT_NUM.fat, 0, 100);
+  e.str = amgtClamp(e.str + Math.round((AMGT_NUM.str + (fail ? 5 : 0)) * amgtStressMult(aid)), 0, 100);
+  if (!amgtLearned(me) && (act.k === 'hit' || act.k === 'real') && me.m.unique >= AMGT_NUM.learnAt) {
+    me.learn = {
+      unique: slot
+    };
+    amgtPushEv(next, aid, slot, 'learn', amgtKeyOf(row));
+  }
+  const day = amgtSlotDay(slot);
+  me.day = {
+    d: day,
+    n: (me.day.d === day ? me.day.n : 0) + 1
+  };
+  me.log = [...me.log, {
+    s: slot,
+    k: act.k,
+    g,
+    ...(fail ? {
+      f: 1
+    } : {})
+  }].slice(-AMGT_LOG);
+  amgtPushEv(next, aid, slot, 'shugyo', `${amgtKeyOf(row)}|${act.k}`);
+  amgtBrGain(br, AMGT_BR_XP.shugyo.concat(fail ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, slot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  e.shugyo = {
+    k: act.k,
+    g,
+    ...(fail ? {
+      f: 1
+    } : {})
+  };
+  return e;
+};
+// 訓練・休養などのあと(修行以外)。ブリーダー能力に経験
+const amgtAfterAct = (aid, act, failed, slot) => {
+  if (!amgtOn() || !AMGT_STORE.loaded || !act || act.a === 'shugyo' || !amgtOkAid(aid)) return;
+  const st = AMGT_STORE.state;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = {
+    ab: {
+      ...br0.ab
+    },
+    xp: {
+      ...br0.xp
+    },
+    src: 'init_v1'
+  };
+  const next = {
+    ...st,
+    br: {
+      ...st.br,
+      [aid]: br
+    },
+    ev: {
+      ...st.ev,
+      [aid]: [...(st.ev[aid] || [])]
+    }
+  };
+  amgtBrGain(br, (AMGT_BR_XP[act.a] || []).concat(failed ? AMGT_BR_XP.fail : []), (k, v) => amgtPushEv(next, aid, Number.isInteger(slot) ? slot : 0, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+};
+const amgtBr = aid => (AMGT_STORE.state.br[aid] || amgtInitBreeder(aid)).ab;
+// 掛け算(印が偽なら全部 1)
+const amgtLeadMult = aid => amgtOn() ? 1 + amgtBr(aid).lead / 100 * AMGT_BR_EFFECT.lead : 1;
+const amgtFailMult = aid => amgtOn() ? 1 - amgtBr(aid).know / 100 * AMGT_BR_EFFECT.know : 1;
+const amgtStressMult = aid => amgtOn() ? 1 - amgtBr(aid).trust / 100 * AMGT_BR_EFFECT.trust : 1;
+// 観察力: 休ませる疲労の目安を、ちょうどよい所(55)へ寄せる(観察力100で最大10寄る)
+const amgtRestAt = (aid, base) => {
+  if (!amgtOn() || !Number.isFinite(base)) return base;
+  const pull = Math.round(amgtBr(aid).obs / 100 * AMGT_BR_EFFECT.obs);
+  return base > 55 ? Math.max(55, base - pull) : Math.min(55, base + pull);
+};
+const amgtActName = x => x && x.a === 'shugyo' && AMGT_KINDS[x.k] ? `神殿で${AMGT_KINDS[x.k].act}(${AMGT_KINDS[x.k].name})` : '';
+
+// ---------- 第③段階(タタカイ)へ渡すもの ----------
+const amgtEntryOf = (aid, t, st = AMGT_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgtKeyOf(t)] : null) || null;
+// 1体: { mastery:{atk,range,unique,guard,dist,swap}, learned:{unique} }。入れ物が無ければ育成 Lv から作った初めの値
+const amgtBattleOf = (aid, t, lv, st = AMGT_STORE.state) => {
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(lv);
+  return {
+    mastery: {
+      ...me.m
+    },
+    learned: {
+      unique: amgtLearned(me)
+    }
+  };
+};
+// チームの戦術経験 = ブリーダーの戦術力×0.8 + 出るマスモンの間合い・交代の熟練の平均×0.2
+const amgtTacticsOf = (aid, rows, st = AMGT_STORE.state) => {
+  const br = (st.br[aid] || amgtInitBreeder(aid)).ab;
+  const list = (Array.isArray(rows) ? rows : []).map(t => amgtEntryOf(aid, t, st)).filter(Boolean);
+  const avg = list.length ? list.reduce((a, me) => a + (me.m.dist + me.m.swap) / 2, 0) / list.length : 0;
+  return amgtClamp(Math.round(br.tac * 0.8 + avg * 0.2), 0, 100);
+};
+
+// ---------- 助手からの相談(1日1回まで) ----------
+// その日の相談を決める(同じ日・同じ種なら同じ相談)。rows=いまのマスモン・grow=第①段階の入れ物を引く関数
+const amgtAskOf = (aid, rows, day, growOf, st = AMGT_STORE.state) => {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const done = st.ask[aid] && st.ask[aid].d === day ? st.ask[aid] : null;
+  const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo-ask|${day}`);
+  const t = rows[Math.floor(rnd() * rows.length)];
+  const g = typeof growOf === 'function' ? growOf(t) : null;
+  const me = amgtEntryOf(aid, t, st) || amgtInitMon(g ? g.lv : t.lv);
+  let q = 'next';
+  if (g && g.fat >= 50) q = 'rest';else if (!amgtLearned(me) && rnd() < 0.5) q = 'unique';
+  const opts = q === 'rest' ? ['rest', 'more'] : q === 'unique' ? ['hit', 'real'] : AMGT_KIND_KEYS.slice().sort((a, b) => me.m[AMGT_KINDS[a].tech] - me.m[AMGT_KINDS[b].tech] || a.localeCompare(b)).slice(0, 3);
+  return {
+    q,
+    slot: t.slot,
+    row: t,
+    opts,
+    answered: done ? done.a : ''
+  };
+};
+// 相談に答える。修行の系統なら3日間(9回)その系統を優先・その日の修行は ×1.1。「休ませて」は第①段階の相談へ渡す
+const amgtAnswer = (aid, ask, choice, nowSlot) => {
+  if (!amgtOn() || !ask || !ask.opts.includes(choice) || !Number.isInteger(nowSlot)) return false;
+  const day = amgtSlotDay(nowSlot);
+  const st = AMGT_STORE.state;
+  if (st.ask[aid] && st.ask[aid].d === day && st.ask[aid].a) return false;
+  const br0 = st.br[aid] || amgtInitBreeder(aid);
+  const br = {
+    ab: {
+      ...br0.ab
+    },
+    xp: {
+      ...br0.xp
+    },
+    src: 'init_v1'
+  };
+  const next = {
+    ...st,
+    br: {
+      ...st.br,
+      [aid]: br
+    },
+    ev: {
+      ...st.ev,
+      [aid]: [...(st.ev[aid] || [])]
+    }
+  };
+  const kind = AMGT_KINDS[choice] ? choice : '';
+  next.ask = {
+    ...st.ask,
+    [aid]: {
+      d: day,
+      q: kind ? 'next' : ask.q,
+      slot: ask.slot,
+      a: choice,
+      ...(kind ? {
+        until: nowSlot + 9
+      } : {})
+    }
+  };
+  if (choice === 'rest' && typeof amgAdvise === 'function') amgAdvise(aid, ask.slot, 'rest');
+  amgtPushEv(next, aid, nowSlot, 'ask', `${ask.slot}|${choice}`);
+  amgtBrGain(br, AMGT_BR_XP.ask, (k, v) => amgtPushEv(next, aid, nowSlot, 'breeder', `${k}|${v}`));
+  amgtSave(next);
+  return true;
+};
+
+// ---------- 画面(公開の印が真のときだけ出す) ----------
+// 技の名前は既存のデータから(段は育成 Lv。タタカイの stageOf と同じ式)
+const amgtStageOf = lv => amgtClamp(Math.floor((amgtNum(lv, 1, 1, 99) - 1) * 9 / 99), 0, 8);
+const amgtTechName = (k, monster, lv) => {
+  const s = amgtStageOf(lv);
+  if (k === 'atk') return typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[monster]) && HERO_ATK_NAMES[monster][s] || '通常攻撃';
+  if (k === 'range') return typeof RANGE_EVOLUTION !== 'undefined' && RANGE_EVOLUTION[s] && RANGE_EVOLUTION[s].name || '距離撃';
+  if (k === 'guard') return typeof GUARD_EVOLUTION !== 'undefined' && GUARD_EVOLUTION[s] && GUARD_EVOLUTION[s].name || 'ガード';
+  if (k === 'unique') {
+    const u = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monster] && ALL_PLAYER_MONSTERS[monster].unique;
+    return u && (Array.isArray(u.names) && u.names[Math.min(s, u.names.length - 1)] || u.name) || '固有技';
+  }
+  return (AMGT_M.find(x => x[0] === k) || [])[1] || '';
+};
+const AMGT_ASK_TEXT = Object.freeze({
+  // 仮の文(公開の前に社長の「この文で」をもらう)
+  next: n => `${n}、次はどの修行がいいかな?`,
+  rest: n => `${n}、ちょっと疲れてるみたい。休ませた方がいいかな?`,
+  unique: n => `${n}の固有技、まだうまく出せないの。どの修行がいいと思う?`
+});
+const AMGT_OPT_TEXT = Object.freeze({
+  rest: '休ませよう',
+  more: 'もう少しがんばろう'
+});
+const useAmgtState = () => {
+  const [st, setSt] = React.useState(AMGT_STORE.state);
+  React.useEffect(() => {
+    AMGT_STORE.subs.add(setSt);
+    if (!AMGT_STORE.loaded) AMGT_STORE.load();
+    return () => {
+      AMGT_STORE.subs.delete(setSt);
+    };
+  }, []);
+  return st;
+};
+const amgtEvText = (x, rowsByKey) => {
+  const [a, b, c] = String(x.x || '').split('|');
+  const nm = k => rowsByKey[k] && rowsByKey[k].nick || 'マスモン';
+  if (x.t === 'shugyo') return AMGT_KINDS[b] ? `${nm(a)}が神殿で${AMGT_KINDS[b].act}をした` : '';
+  if (x.t === 'rank') return `${nm(a)}の${(AMGT_M.find(m => m[0] === b) || [])[1] || ''}が「${c}」になった`;
+  if (x.t === 'learn') return `${nm(a)}が固有技を覚えた!`;
+  if (x.t === 'breeder') return `ブリーダーの${(AMGT_BR.find(m => m[0] === a) || [])[1] || ''}が上がった`;
+  if (x.t === 'ask') return '相談に答えてもらった';
+  return '';
+};
+// ブリーダー能力の6つのゲージ(数字なし・段の名前だけ ❻A)
+function AmgtBreederBars({
+  who,
+  st
+}) {
+  const ab = (st.br[who.id] || amgtInitBreeder(who.id)).ab;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mhm-card",
+    "data-amgt-breeder": true
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, who.name, "\u306E\u30D6\u30EA\u30FC\u30C0\u30FC\u306E\u8155"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5"
+  }, AMGT_BR.map(([k, label]) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    className: "flex items-center gap-1.5 text-[10px] font-bold text-slate-200"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-[52px] shrink-0 whitespace-nowrap"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "mhm-bar"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      width: `${ab[k]}%`,
+      background: 'linear-gradient(90deg,#34d399,#22d3ee)'
+    }
+  })), /*#__PURE__*/React.createElement("b", {
+    className: "w-[52px] shrink-0 text-right text-[9.5px] text-emerald-200",
+    "data-amgt-br": k
+  }, amgtBrRankOf(ab[k]))))));
+}
+// くわしい画面の修行の札(熟練・相談・出来事)。e = 第①段階の入れ物
+function AmgtCard({
+  who,
+  t,
+  e
+}) {
+  const st = useAmgtState();
+  if (!amgtOn() || !who || !t) return null;
+  const lv = e && e.lv;
+  const me = amgtEntryOf(who.id, t, st) || amgtInitMon(lv);
+  const nowSlot = typeof amgSlotOf === 'function' ? amgSlotOf() : 0;
+  const day = amgtSlotDay(nowSlot);
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, who.id) : [t];
+  const growOf = r => typeof amgEntryOf === 'function' ? amgEntryOf(who.id, r) : null;
+  const ask = amgtAskOf(who.id, rows, day, growOf, st);
+  const rowsByKey = Object.fromEntries(rows.map(r => [amgtKeyOf(r), r]));
+  const evs = (st.ev[who.id] || []).filter(x => amgtSlotDay(x.s) === day).map(x => amgtEvText(x, rowsByKey)).filter(Boolean).slice(-6);
+  const learned = amgtLearned(me);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 space-y-2",
+    "data-amgt-card": true
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mhm-card"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "\u26E9 \u6280\u306E\u719F\u7DF4(\u4FEE\u884C\u3067\u78E8\u304F\u30FB\u4E0A\u9650100)"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-1 gap-y-0.5"
+  }, AMGT_M.map(([k, label]) => {
+    const locked = k === 'unique' && !learned;
+    return /*#__PURE__*/React.createElement("div", {
+      key: k,
+      className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200",
+      "data-amgt-m": k
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-[86px] shrink-0 truncate"
+    }, k === 'dist' || k === 'swap' ? `${label}の判断` : amgtTechName(k, t.monster, lv)), /*#__PURE__*/React.createElement("span", {
+      className: "mhm-bar"
+    }, /*#__PURE__*/React.createElement("i", {
+      style: {
+        width: `${me.m[k]}%`,
+        background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
+      }
+    })), /*#__PURE__*/React.createElement("b", {
+      className: "w-[44px] shrink-0 text-right text-[9.5px] text-amber-200"
+    }, locked ? 'まだ' : amgtRankOf(me.m[k])));
+  })), !learned && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400",
+    "data-amgt-unlearned": true
+  }, "\u56FA\u6709\u6280\u306F\u307E\u3060\u899A\u3048\u3066\u3044\u307E\u305B\u3093(\u547D\u4E2D\u4FEE\u884C\u30FB\u5B9F\u6226\u4FEE\u884C\u3067\u899A\u3048\u307E\u3059)")), ask && ask.slot === t.slot && /*#__PURE__*/React.createElement("div", {
+    className: "mhm-card",
+    "data-amgt-ask": ask.q
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] font-bold text-pink-100"
+  }, "\uD83D\uDCAC ", who.name, "\u300C", AMGT_ASK_TEXT[ask.q](t.nick || 'マスモン'), "\u300D"), ask.answered ? /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-sky-200",
+    "data-amgt-ask-done": true
+  }, "\u3042\u306A\u305F\u306E\u7B54\u3048: ", AMGT_KINDS[ask.answered] ? AMGT_KINDS[ask.answered].name : AMGT_OPT_TEXT[ask.answered]) : /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, ask.opts.map(o => /*#__PURE__*/React.createElement("button", {
+    key: o,
+    type: "button",
+    className: "mhl-btn px-3 text-[11px]",
+    onClick: () => amgtAnswer(who.id, ask, o, nowSlot),
+    "data-amgt-ask-opt": o
+  }, AMGT_KINDS[o] ? AMGT_KINDS[o].name : AMGT_OPT_TEXT[o])))), evs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mhm-card",
+    "data-amgt-events": true
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "\u4ECA\u65E5\u306E\u51FA\u6765\u4E8B"), evs.map((s, i) => /*#__PURE__*/React.createElement("p", {
+    key: i,
+    className: "text-[10.5px] font-bold text-slate-100"
+  }, "\u30FB", s))), /*#__PURE__*/React.createElement(AmgtBreederBars, {
+    who: who,
+    st: st
+  }));
+}
+AMGT_STORE.loaded = true;
+// 見本の中身: 40日ほど育てたようす(本物の受け口で回す)
+(function () {
+  var E = {}; ROWS.forEach(function (r) { E[r.slot] = { st: { life: 100, pow: 100, wise: 100, hit: 100, eva: 100, tough: 100 }, fat: 0, str: 0, lv: r.lv }; });
+  for (var s = NOW - 120; s < NOW; s++) ROWS.forEach(function (r) {
+    var e = E[r.slot]; var act = e.fat >= 60 ? { a: 'rest' } : (amgtChoose('kiki', e, r, null, s) || { a: 'light', k: 'pow' });
+    if (act.a === 'shugyo') amgtDo('kiki', e, r, null, s, act, function () {}, function (x) { return 0.05 + x; });
+    else { e.fat = act.a === 'rest' ? Math.max(0, e.fat - 30) : e.fat + 5; amgtAfterAct('kiki', act, false, s); }
+  });
+  window.E = E;
+})();
+var amgEntryOf = function (aid, t) { return E[t.slot]; };
+var who = { id: 'kiki', name: 'きき' };
+var h = React.createElement;
+function Col(p) { return h('div', { className: 'col' }, h('p', { className: 'cap' }, p.cap), p.children); }
+ReactDOM.render(h(React.Fragment, null,
+  h(Col, { cap: '① ごろべえ(Lv25)・助手からの相談' }, h(AmgtCard, { who: who, t: ROWS[0], e: E[1] })),
+  h(Col, { cap: '② ぴく(Lv12・修行で固有技を覚えた)' }, h(AmgtCard, { who: who, t: ROWS[1], e: E[2] }))
+), document.getElementById('app'));
+</script></body></html>
