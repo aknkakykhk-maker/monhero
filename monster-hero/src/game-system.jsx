@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 280583130109b7ab
+// generated-sha256: 60178cf368b4c4b6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9624,7 +9624,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
-  assistantMasmonGrow: false, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成。社長が止め絵と更新履歴を見るまで偽
+  assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
   assistantLifeFriendApi: true, // 2026-11-08 assistant-chat v17(窓口が配った)を端末の形で1回呼んで確かめた。スイッチが thin/off のあいだは頼まない
   // モンヒロビートの助手とのセッション(2026-11-07 社長の決定・ビート部マモリ)。全部そろって社長の「この文で」が出るまで偽
@@ -69005,7 +69005,7 @@ const AMG_KEYS = AMG_STATS.map(x => x[0]);
 const AMG_MAX = 999; // 仕様書 §2 の仮案
 // 種族ごとの適性(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)。案: docs/progress/assistant-peer/masmon-grow/aptitude-draft.jpg(社長が見て決める)
 // 種族ごとの伸びやすさ(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)と初めの値。2026-11-11 社長「モンスターファームを参考に」:
-//   モンスターファーム2の種族ランクと純血の初期値(appmedia.jp の MF2 攻略 wiki の種族ページ)。◇=近い血統の値・※=モンヒロ独自(MF2 に無い)。表は docs/progress/assistant-peer/masmon-grow/aptitude-mf2.json
+//   モンスターファーム2の種族ランクと純血の初期値(appmedia.jp の MF2 攻略 wiki の種族ページ)。◇=近い血統の値・※=モンヒロ独自(MF2 に無い)・★=オリジナルの独自の素質(剣士モッチー・パンドラ・エイキ。社長 11-11)。表は docs/progress/assistant-peer/masmon-grow/aptitude-mf2.json
 const AMG_APT = Object.freeze({
   Mocchi: 'CCCBBB',
   Suezo: 'DCABDD',
@@ -69014,13 +69014,13 @@ const AMG_APT = Object.freeze({
   Ham: 'CAECAE',
   Pixie: 'EDABBE',
   Mia: 'DCABBE',
-  Pandora: 'EDABBE',
+  Pandora: 'DBABCC',
   Monol: 'DCCDEA',
   Oboro: 'BECCDD',
   Plant: 'AECCDE',
   Zan: 'EBEAAE',
-  Eiki: 'DADAAE',
-  KenshiMocchi: 'CCCBBB',
+  Eiki: 'DACBAE',
+  KenshiMocchi: 'CAEABD',
   Mitarashi: 'CBBBCB',
   Ark: 'CCCDCB',
   Iblis: 'DCCDCC',
@@ -69046,13 +69046,13 @@ const AMG_INIT = Object.freeze({
   Ham: [50, 130, 70, 100, 140, 40],
   Pixie: [50, 80, 170, 150, 140, 60],
   Mia: [94, 104, 204, 124, 94, 94],
-  Pandora: [50, 80, 170, 150, 140, 60],
+  Pandora: [85, 135, 160, 135, 110, 110],
   Monol: [110, 130, 140, 100, 10, 220],
   Oboro: [140, 50, 120, 110, 100, 80],
   Plant: [160, 40, 120, 110, 100, 70],
   Zan: [60, 135, 60, 160, 160, 60],
-  Eiki: [85, 160, 85, 160, 160, 60],
-  KenshiMocchi: [110, 100, 120, 140, 150, 130],
+  Eiki: [85, 160, 110, 135, 160, 60],
+  KenshiMocchi: [110, 160, 60, 160, 135, 85],
   Mitarashi: [100, 110, 140, 150, 120, 160],
   Ark: [110, 110, 110, 85, 110, 135],
   Iblis: [85, 110, 110, 85, 110, 110],
@@ -69155,11 +69155,12 @@ const normalizeAssistantMasmonGrow = (raw) => {
 };
 // 初めの値(一度だけ・2026-11-11 社長「初期ステータスも独自に。モンスターファームを参考に」): 種族の初期値(AMG_INIT)に、小さな個体差と Lv の上乗せ
 const AMG_INIT_VAR = 0.1; // 個体差(±10%)
-const AMG_INIT_LV_BONUS = 2; // 今の Lv × 2 を全能力に上乗せ(Lv25 なら +50)。0 にすれば上乗せなし
-const AMG_INIT_FLOOR = 0; // 初めの値の下限(MF2 は 10 などの低い値もある。社長の答えで 50 などにできる)
+const AMG_INIT_LV_BONUS = 3; // 今の Lv × 3 を、育成方針(型)の能力だけに上乗せ(社長 11-11 案C。Lv25 なら +75)。0 にすれば上乗せなし
+const AMG_INIT_FLOOR = 50; // 初めの値の下限(MF2 は 10 などの低い値もある。社長 11-11「下限を50にする」)
 const amgInitial = (row, rnd) => {
   const base = AMG_INIT[row.monster] || [110, 110, 110, 110, 110, 110]; const lv = Number.isFinite(row.lv) ? row.lv : 10;
-  const st = {}; AMG_KEYS.forEach((k, i) => { st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + lv * AMG_INIT_LV_BONUS), Math.max(1, AMG_INIT_FLOOR), AMG_MAX); });
+  const pol = AMG_POLICY[String(row.grow || '').split('(')[0]] || [];
+  const st = {}; AMG_KEYS.forEach((k, i) => { st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + (pol.includes(k) ? lv * AMG_INIT_LV_BONUS : 0)), Math.max(1, AMG_INIT_FLOOR), AMG_MAX); });
   const ind = {}; for (const k of AMG_KEYS) { const r = rnd(); ind[k] = r < 0.2 ? -1 : r > 0.8 ? 1 : 0; } // 伸びの個体差(迎えたとき1回だけ・仕様書 §3)
   return { st, fat: 0, str: 0, ind, log: [], src: 'init_v1', dg: { d: 0, n: 0 }, lv: amgClamp(Math.round(lv), 1, AMG_LV_MAX), xp: 0 };
 };

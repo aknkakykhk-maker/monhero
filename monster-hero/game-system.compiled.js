@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9606df4ff3b43c0a
+// source-sha256: e64390a8d6e9dd76
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13739,7 +13739,7 @@ const RELEASE_FLAGS = {
   assistantLifeSolo: true,
   assistantLifeFriend: true,
   assistantMasmonSuggest: true,
-  assistantMasmonGrow: false,
+  assistantMasmonGrow: true,
   assistantMasmonNamesApi: true,
   assistantLifeFriendApi: true,
   rhythmAssistantSession: true,
@@ -130717,13 +130717,13 @@ const AMG_APT = Object.freeze({
   Ham: 'CAECAE',
   Pixie: 'EDABBE',
   Mia: 'DCABBE',
-  Pandora: 'EDABBE',
+  Pandora: 'DBABCC',
   Monol: 'DCCDEA',
   Oboro: 'BECCDD',
   Plant: 'AECCDE',
   Zan: 'EBEAAE',
-  Eiki: 'DADAAE',
-  KenshiMocchi: 'CCCBBB',
+  Eiki: 'DACBAE',
+  KenshiMocchi: 'CAEABD',
   Mitarashi: 'CBBBCB',
   Ark: 'CCCDCB',
   Iblis: 'DCCDCC',
@@ -130749,13 +130749,13 @@ const AMG_INIT = Object.freeze({
   Ham: [50, 130, 70, 100, 140, 40],
   Pixie: [50, 80, 170, 150, 140, 60],
   Mia: [94, 104, 204, 124, 94, 94],
-  Pandora: [50, 80, 170, 150, 140, 60],
+  Pandora: [85, 135, 160, 135, 110, 110],
   Monol: [110, 130, 140, 100, 10, 220],
   Oboro: [140, 50, 120, 110, 100, 80],
   Plant: [160, 40, 120, 110, 100, 70],
   Zan: [60, 135, 60, 160, 160, 60],
-  Eiki: [85, 160, 85, 160, 160, 60],
-  KenshiMocchi: [110, 100, 120, 140, 150, 130],
+  Eiki: [85, 160, 110, 135, 160, 60],
+  KenshiMocchi: [110, 160, 60, 160, 135, 85],
   Mitarashi: [100, 110, 140, 150, 120, 160],
   Ark: [110, 110, 110, 85, 110, 135],
   Iblis: [85, 110, 110, 85, 110, 110],
@@ -131028,14 +131028,15 @@ const normalizeAssistantMasmonGrow = raw => {
   return out;
 };
 const AMG_INIT_VAR = 0.1;
-const AMG_INIT_LV_BONUS = 2;
-const AMG_INIT_FLOOR = 0;
+const AMG_INIT_LV_BONUS = 3;
+const AMG_INIT_FLOOR = 50;
 const amgInitial = (row, rnd) => {
   const base = AMG_INIT[row.monster] || [110, 110, 110, 110, 110, 110];
   const lv = Number.isFinite(row.lv) ? row.lv : 10;
+  const pol = AMG_POLICY[String(row.grow || '').split('(')[0]] || [];
   const st = {};
   AMG_KEYS.forEach((k, i) => {
-    st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + lv * AMG_INIT_LV_BONUS), Math.max(1, AMG_INIT_FLOOR), AMG_MAX);
+    st[k] = amgClamp(Math.round(base[i] * (1 + (rnd() - 0.5) * 2 * AMG_INIT_VAR) + (pol.includes(k) ? lv * AMG_INIT_LV_BONUS : 0)), Math.max(1, AMG_INIT_FLOOR), AMG_MAX);
   });
   const ind = {};
   for (const k of AMG_KEYS) {
