@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2dffe1b15000f340
+// source-sha256: ef575bad4723f073
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112176,6 +112176,10 @@ function AssistantLifeHouse({
     },
     onRoad: () => setTab('friends'),
     onGuide: () => setGuideOpen(true)
+  }), uiV2 && typeof AssistantLifeDailyCard === 'function' && React.createElement(AssistantLifeDailyCard, {
+    ids: ids,
+    nameOf: nameOf,
+    land: land
   }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
     style: {
@@ -115177,6 +115181,228 @@ function AssistantLifeUiSettingRow() {
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))));
+}
+const ASSISTANT_LIFE_DAILY_KEY = 'mh_assistant_life_daily_v1';
+const ASSISTANT_LIFE_DAILY_NEED = 7;
+const ASSISTANT_LIFE_DAILY_ITEM = 'peer_gift';
+const ASSISTANT_LIFE_DAILY_SCENES = Object.freeze({
+  late: {
+    icon: '🌙',
+    text: '{n}が夜ふかしをしています',
+    say: 'しーっ…みんなには ないしょですよ'
+  },
+  morning: {
+    icon: '🌅',
+    text: '{n}が朝の空気を吸っています',
+    say: 'おはようございます。今日もいい一日になりそうですね'
+  },
+  noon: {
+    icon: '🍙',
+    text: '{n}がお昼ごはんを食べています',
+    say: 'お昼はやっぱり元気が出ますね。ひとくち、どうですか'
+  },
+  afternoon: {
+    icon: '☀️',
+    text: '{n}がひなたでひと休みしています',
+    say: 'ぽかぽかして、つい うとうとしてしまいますね'
+  },
+  evening: {
+    icon: '🌇',
+    text: '{n}が夕日を見ています',
+    say: '夕日がきれいですね。一緒に見られて うれしいです'
+  },
+  night: {
+    icon: '⭐',
+    text: '{n}が星を見ています',
+    say: '今日も一日おつかれさまでした。また明日'
+  }
+});
+const assistantLifeDailySceneOf = h => h < 5 ? 'late' : h < 10 ? 'morning' : h < 14 ? 'noon' : h < 18 ? 'afternoon' : h < 21 ? 'evening' : 'night';
+const assistantLifeDailyNormalize = v => {
+  const o = v && typeof v === 'object' ? v : {};
+  const days = Array.isArray(o.days) ? o.days.filter(d => typeof d === 'string' && d).slice(-ASSISTANT_LIFE_DAILY_NEED) : [];
+  return {
+    day: typeof o.day === 'string' ? o.day : '',
+    heard: Array.isArray(o.heard) ? o.heard.filter(s => typeof s === 'string') : [],
+    days: [...new Set(days)],
+    claims: Number.isFinite(o.claims) && o.claims > 0 ? Math.floor(o.claims) : 0
+  };
+};
+const assistantLifeDailyHear = (st, slotId, day) => {
+  const s = assistantLifeDailyNormalize(st);
+  const heard = s.day === day ? s.heard : [];
+  if (heard.includes(slotId)) return {
+    st: {
+      ...s,
+      day,
+      heard
+    },
+    added: false,
+    full: false
+  };
+  const days = s.days.includes(day) ? s.days : [...s.days, day].slice(-ASSISTANT_LIFE_DAILY_NEED);
+  return {
+    st: {
+      ...s,
+      day,
+      heard: [...heard, slotId],
+      days
+    },
+    added: true,
+    full: days.length >= ASSISTANT_LIFE_DAILY_NEED
+  };
+};
+const ASSISTANT_LIFE_DAILY_STORE = {
+  loaded: false,
+  p: null,
+  state: assistantLifeDailyNormalize(null),
+  granter: null,
+  async load() {
+    if (this.loaded) return this.state;
+    if (!this.p) this.p = Promise.resolve(storeGet(ASSISTANT_LIFE_DAILY_KEY, null, false)).then(v => {
+      this.state = assistantLifeDailyNormalize(v);
+      this.loaded = true;
+      return this.state;
+    }).catch(() => {
+      this.loaded = true;
+      return this.state;
+    });
+    return this.p;
+  }
+};
+const assistantLifeDailySetGranter = fn => {
+  ASSISTANT_LIFE_DAILY_STORE.granter = typeof fn === 'function' ? fn : null;
+};
+const assistantLifeDailyListen = async slotId => {
+  const S = ASSISTANT_LIFE_DAILY_STORE;
+  await S.load();
+  const r = assistantLifeDailyHear(S.state, slotId, assistantLifePerkDay());
+  if (!r.added) return {
+    added: false,
+    got: false
+  };
+  let st = r.st,
+    got = false;
+  if (r.full && typeof S.granter === 'function') {
+    try {
+      got = (await S.granter(ASSISTANT_LIFE_DAILY_ITEM)) === true;
+    } catch (_) {
+      got = false;
+    }
+    if (got) st = {
+      ...st,
+      days: [],
+      claims: st.claims + 1
+    };
+  }
+  S.state = st;
+  try {
+    await storeSet(ASSISTANT_LIFE_DAILY_KEY, st, false);
+  } catch (_) {}
+  if (typeof missionNotify === 'function') missionNotify('assistantTouch');
+  return {
+    added: true,
+    got
+  };
+};
+function AssistantLifeDailyCard({
+  ids,
+  nameOf,
+  land = false
+}) {
+  const [st, setSt] = React.useState(() => ASSISTANT_LIFE_DAILY_STORE.state);
+  const [said, setSaid] = React.useState('');
+  const [got, setGot] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => {
+    let alive = true;
+    ASSISTANT_LIFE_DAILY_STORE.load().then(s => {
+      if (alive) setSt(s);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  let slot = null;
+  try {
+    slot = typeof assistantLifeSlotAt === 'function' ? assistantLifeSlotAt() : null;
+  } catch (_) {
+    slot = null;
+  }
+  const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
+  const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
+  const list = Array.isArray(ids) ? ids : [];
+  if (!scene || !list.length) return null;
+  const day = assistantLifePerkDay();
+  const done = st.day === day && st.heard.includes(slot.id);
+  const who = list[slot.i % list.length];
+  const leftH = (() => {
+    const s = slotDef;
+    const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
+    return s ? Math.max(1, s.to - h) : 1;
+  })();
+  const n = st.days.length;
+  const listen = async () => {
+    if (busy || done) return;
+    setBusy(true);
+    const r = await assistantLifeDailyListen(slot.id);
+    setSt({
+      ...ASSISTANT_LIFE_DAILY_STORE.state
+    });
+    setSaid(`${nameOf(who)}「${scene.say}」`);
+    setGot(!!r.got);
+    setBusy(false);
+  };
+  const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
+  return React.createElement("section", {
+    className: `mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`,
+    "data-assistant-life-daily": true
+  }, React.createElement("p", {
+    className: "flex items-center gap-2 px-1 text-[13px] font-black text-amber-200"
+  }, scene.icon, " ", slotDef.label, "の できごと ", React.createElement("span", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, "あと約", leftH, "時間")), React.createElement("div", {
+    className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1"
+  }, React.createElement("span", {
+    className: "w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200"
+  }, done ? '✓ 聞いた' : '🆕 いま'), React.createElement("span", {
+    className: `min-w-0 flex-1 ${T} font-bold leading-snug`,
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
+    className: "block text-[11px] text-emerald-300"
+  }, "→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)"), got && React.createElement("span", {
+    className: "block text-[11px] text-pink-200"
+  }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-daily-listen": true,
+    onClick: listen,
+    disabled: busy,
+    className: "shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60"
+  }, "聞く ▶")), React.createElement("div", {
+    className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1",
+    "data-assistant-life-daily-stamps": n
+  }, React.createElement("span", {
+    className: "w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200"
+  }, "🧺 7日で1個"), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: `block ${T} font-bold leading-snug`,
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "できごとを聞いた日が7日たまると、🧺 おやつバスケット1個"), React.createElement("span", {
+    className: "mt-0.5 flex gap-1",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: ASSISTANT_LIFE_DAILY_NEED
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    className: `grid h-5 w-5 place-items-center rounded-full text-[11px] not-italic ${i < n ? 'bg-amber-300 text-slate-900' : i === ASSISTANT_LIFE_DAILY_NEED - 1 ? 'bg-pink-400' : 'bg-slate-700'}`
+  }, i < n ? '✓' : i === ASSISTANT_LIFE_DAILY_NEED - 1 ? '🧺' : i + 1))), React.createElement("span", {
+    className: "block text-[11px] font-bold text-emerald-300"
+  }, "あと", Math.max(0, ASSISTANT_LIFE_DAILY_NEED - n), "日(とびとびでもOK・消えません)"))));
 }
 const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
 function assistantLifeBondOpens(id, nextLevel) {
@@ -191604,6 +191830,23 @@ function MonsterHeroGame() {
       return r;
     });
   });
+  useEffect(() => {
+    if (typeof assistantLifeDailySetGranter === 'function') assistantLifeDailySetGranter(async itemId => {
+      if (typeof itemId !== 'string' || !itemId) return false;
+      const nextItems = {
+        ...ownedItemsRef.current,
+        [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1
+      };
+      try {
+        if ((await storeSet('mh_owned_items', nextItems, false)) === false) return false;
+      } catch {
+        return false;
+      }
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      return true;
+    });
+  }, []);
   useEffect(() => {
     if (typeof assistantLifeSetShopOpener === 'function') assistantLifeSetShopOpener(tab => {
       setLifeShopEntry(tab === 'furniture' ? 'furniture' : 'item');
