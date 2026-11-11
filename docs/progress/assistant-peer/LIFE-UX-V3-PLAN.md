@@ -107,3 +107,8 @@
   - 検査 `tools/assistant/assistant-life-ux-check.js`(縦横×4人・旧UIは今までどおり)。止め絵 `lifeux/step1/`
   - 更新履歴: 新UIは「試す」の切替の中なので、STEP3 の既定化のときにまとめて書く(そのとき文案を社長へ)
 - 次: STEP2(いま行くと得なこと+施設の得。ジンとすり合わせ)
+- STEP2 のすり合わせ(2026-11-11):
+  - M/B管理 → 社長「助手側の得に」。プレイヤーがトレーニングチケットを使ったとき(60-app useBondXpTickets・ジン了承済みで2〜3行)、ranch にいる助手ごとにキズナ4の `assistantMasmonTrainBoost(id, { source: 'ranch' })` を呼ぶ(1日1回・次の育成の回の伸び 1.2倍・true のときだけ演出の文「◯◯のマスモンも少し伸びます」)。公開の印 assistantMasmonGrow が偽のあいだはいつも false
+  - 神殿 → 新しい押す所は作らず、合体・転生などを終えたときに temple にいる助手との仲良し度を少し(1日1回)。キズナの神殿の受け口はまだ無いので、神殿の画面(62-screen-masu-temple.jsx)へ1行で呼べる関数をこちらで作る。触ったら縦・横・🔄横の止め絵(バトル部も確かめる)
+  - マーケット → おすすめ品1つ1割引き(1日1回)。持ち主を確かめてから
+  - 書きかけ: HOME から施設を開く受け口(ASSISTANT_LIFE_LINKS.goPlace)の差分は STEP2 の枝で入れ直す
