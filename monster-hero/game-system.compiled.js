@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 72a3e9778dea4a21
+// source-sha256: e5a83d2280a072fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74,7 +74,7 @@ const MH_SCREEN_TRAIL = (() => {
       document.addEventListener('visibilitychange', () => {
         last = 0;
       });
-      setInterval(() => {
+      const gapWatch = setInterval(() => {
         const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
         if (document.visibilityState !== 'visible') {
           last = 0;
@@ -83,6 +83,7 @@ const MH_SCREEN_TRAIL = (() => {
         if (last > 0 && now - last > 1000) push('gap', Math.round(now - last));
         last = now;
       }, 500);
+      if (gapWatch && typeof gapWatch.unref === 'function') gapWatch.unref();
     } catch (_) {}
   }
   return {
@@ -109604,13 +109605,21 @@ const useAssistantLifeViewSize = () => {
       const n = assistantLifeViewSize();
       return n.w === prev.w && n.h === prev.h && n.rot === prev.rot ? prev : n;
     });
-    window.addEventListener('resize', f);
-    window.addEventListener('orientationchange', f);
-    const id = setInterval(f, 500);
+    let ts = [];
+    const g = () => {
+      f();
+      ts.forEach(clearTimeout);
+      ts = [100, 300, 800].map(ms => setTimeout(f, ms));
+    };
+    window.addEventListener('resize', g);
+    window.addEventListener('orientationchange', g);
+    const off = typeof RHYTHM_VIEW_ROTATION === 'object' && RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.subscribe === 'function' ? RHYTHM_VIEW_ROTATION.subscribe(g) : null;
+    f();
     return () => {
-      window.removeEventListener('resize', f);
-      window.removeEventListener('orientationchange', f);
-      clearInterval(id);
+      window.removeEventListener('resize', g);
+      window.removeEventListener('orientationchange', g);
+      if (off) off();
+      ts.forEach(clearTimeout);
     };
   }, []);
   return size;
@@ -180211,6 +180220,16 @@ function MonsterHeroGame() {
   const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) {
+      setLoginBonusGuideClear(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT);
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -202492,7 +202511,7 @@ function MonsterHeroGame() {
     }, "ログインボーナス")), renderLoginBonusList(loginBonusTodayDay), React.createElement("button", {
       onClick: () => setShowLoginBonusList(false),
       className: "w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]"
-    }, "閉じる"))), loginBonusPopup && onboarded && !onboardingPreview && React.createElement("div", {
+    }, "閉じる"))), loginBonusPopup && onboarded && !onboardingPreview && !loginBonusGuideBusy && loginBonusGuideClear && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 60000,
