@@ -1,5 +1,6 @@
 // 助手ライフの「町の人」(助手になる前の助手・56-assistant-life-partner.jsx / docs/progress/assistant-unlock/DESIGN.md の E)を実ブラウザで確かめる
-//   開発部の口(assistantPartnerLockedNow・assistantPartnerProgressNow)は、ページの中で仮に入れる(きき・ドラ以外は町の人。ももすけは 12/40・カード未所持)
+//   開発部の口(18-assistant-partner.jsx)はそのまま使い、保存に「はじめての人・きき・ドラだけ助手」(mh_assistant_partner_v1 mode:'earn')と
+//   ももすけのカードを12回使った記録(mh_assistant_card_uses_v1)を入れて見る
 //   ① 口が無い(今の人)なら、町の人の印は1つも出ない
 //   ② 家: 町の人の部屋に「町の人」の札・押すと部屋ではなく小窓(一言の欄・あと何回・話す/贈る/部屋は🔒)
 //   ③ 声をかける・贈るの一覧に町の人が出ない
@@ -39,8 +40,8 @@ const PARTNERS = ['kiki', 'dra'];
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     if (hooks) await page.addInitScript((ok) => {
-      window.assistantPartnerLockedNow = (id) => !ok.includes(id);
-      window.assistantPartnerProgressNow = (id) => ({ count: id === 'momosuke' ? 12 : 3, need: 40, cardName: id === 'momosuke' ? 'ももすけのおねだり' : '', cardOwned: id !== 'momosuke' });
+      localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v: 1, mode: 'earn', first: ok[0], unlocked: ok, noticed: ok }));
+      localStorage.setItem('mh_assistant_card_uses_v1', JSON.stringify({ momosuke: 12 }));
     }, PARTNERS);
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
@@ -74,7 +75,7 @@ const PARTNERS = ['kiki', 'dra'];
           progress: c && (c.querySelector('[data-assistant-life-town-progress]') || {}).getAttribute ? c.querySelector('[data-assistant-life-town-progress]').getAttribute('data-assistant-life-town-progress') : '',
           locks: c ? [...c.querySelectorAll('[data-assistant-life-town-lock]')].filter(b => b.disabled).length : 0, text: c ? c.textContent : '' };
       });
-      check(`${T}② 町の人の部屋を押すと、部屋ではなく小窓(あと何回・話す/贈る/部屋は🔒)`, card.id === 'momosuke' && card.progress === '12/40' && card.locks === 3 && /ももすけのおねだり/.test(card.text) && /マーケットで手に入ります/.test(card.text), JSON.stringify({ ...card, text: card.text.slice(0, 80) }));
+      check(`${T}② 町の人の部屋を押すと、部屋ではなく小窓(あと何回・話す/贈る/部屋は🔒)`, card.id === 'momosuke' && card.progress === '12/40' && card.locks === 3 && /モンヒロバトルで 40回/.test(card.text) && /ふーん、来たんだ/.test(card.text), JSON.stringify({ ...card, text: card.text.slice(0, 80) }));
       check(`${T}⑤ 小窓が画面の横にはみ出さない`, (await overflow(page, '[data-assistant-life-town-person]')) === 0);
       await shot(page, `card-${v.tag}`);
       await page.locator('[data-assistant-life-town-close]').click(); await page.waitForTimeout(300);
