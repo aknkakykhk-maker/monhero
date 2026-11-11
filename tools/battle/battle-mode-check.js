@@ -264,6 +264,8 @@ check('既存のランキング行を書き換える処理を足していない'
     //   ランキングの表ではない(2026-10-26 #3678)。例外にするのは、この関数の中の card_battle_invites への PATCH だけ
     && !/method:\s*'PATCH'/.test(source
       .replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, '')
+      // 助手ライフのフレンドの家の「お礼」(ALF_TABLE_VISITS の thanks)の PATCH も、ランキングの表ではない(2026-11)
+      .replace(/alfRequest\(`\$\{ALF_TABLE_VISITS\}\?[^`]*`, \{ method: 'PATCH',[^\n]*/g, '')
       // 2026-10-30: 招待を取り消す処理にも card_battle_invites への PATCH が増えた。招待の表への PATCH はどれもランキングの表ではないので外して数える
       .replace(/cardPvpInviteRequest\(`card_battle_invites\?[^`]*`, \{ method: 'PATCH',[^\n]*/g, ''))
     && !has('DELETE FROM') && !has('migrateRanking'));

@@ -39,7 +39,7 @@ for (const file of files) {
 
   check(`${rel}: モンビーで止めたことを覚えている`,
     src.includes('const bgmSuspendedByRhythmRef = useRef(false);')
-    && compact.includes('bgmSuspendedByRhythmRef.current=rhythmScreenOpen||cardScreenOpen;'));
+    && compact.includes('bgmSuspendedByRhythmRef.current=rhythmScreenOpen||cardScreenOpen||quickAnywhereScreenOpen;'));
   check(`${rel}: 戻った最初の1回は維持せず鳴らし直す`,
     /key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef\.current/.test(src)
     // 生成物は `(waveHistory || [])` のように空白が入るので、空白を潰してから見る

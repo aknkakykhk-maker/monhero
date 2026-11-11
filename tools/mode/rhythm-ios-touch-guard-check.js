@@ -104,7 +104,9 @@ const fire = (page, kind, selector) => page.evaluate(([kind, selector]) => {
     await page.evaluate(() => document.querySelector('[data-rhythm-pause]').click());
     await page.waitForTimeout(400);
     check('ポーズ中は、演奏エリアの外のタッチを止めない', (await fire(page, 'touchstart', 'document')) === false);
-    check('ポーズ中は、gesturestart を止めない', (await fire(page, 'gesturestart')) === false);
+    // 2026-11-11: gesturestart は演奏中でなくても、全画面の見張り(10-core.jsx の MH_PAGE_OFFSET_GUARD)が止める。
+    // ページの拡大が始まると、押した所と反応する所がずれるため(tools/boot/page-zoom-guard-check.js)。タッチ(上の行)は止めない
+    check('ポーズ中も、gesturestart は止める(ページの拡大を始めさせない)', (await fire(page, 'gesturestart')) === true);
     await page.close();
   } finally {
     await browser.close();

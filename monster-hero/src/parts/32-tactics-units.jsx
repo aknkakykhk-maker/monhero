@@ -587,6 +587,19 @@ const tacticsTargetName = (units, slotIndex) => {
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 // copy を渡すと、コピーも単体攻撃の狙いの候補になる。当たったら targetCopy: true(targetSlot は付けない。枠の番号と混ぜない)
+// 敵の作戦AI(試作)が見る「その間合いにいると味方からどれだけ攻められるか」。
+// 立っている子の攻撃 × 枠と敵の間合いの差の倍率(1.5/1.3/1.1/0.9・与ダメの式と同じ)× (1 + その枠の間合いの補正)。
+// slotBonus[i] … 枠 i の「WAVE 報酬の間合いボーナス + そこに立つ子の適性」(distTotalBonus と同じ値)
+const TACTICS_ENEMY_AI_DIST_MULT = Object.freeze([1.5,1.3,1.1,0.9]);
+const tacticsEnemyPressure = (units, slotBonus=[0,0,0,0]) => [0,1,2,3].map(d => {
+  let sum=0;
+  tacticsAliveSlots(units).forEach(i => {
+    const u=normalizeTacticsUnit(units[i]);
+    if(!u)return;
+    sum+=Math.max(0,Number(u.atk)||0)*TACTICS_ENEMY_AI_DIST_MULT[Math.abs(i-d)]*(1+(Number((slotBonus||[])[i])||0));
+  });
+  return sum;
+});
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };

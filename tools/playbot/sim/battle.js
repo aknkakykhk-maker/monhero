@@ -318,7 +318,12 @@ function slotGuardValue(st, guardBySlot, slot) {
 // ---------- 敵の予告 ----------
 // 60-app.jsx spawnEnemy(13629)・advanceEnemyIntents(10241)・aimTacticsIntent(1320)
 const actionState = (st) => ({ definitions: G.enemyActionDefinitionsFor('tacticsPro', st.enemy.id, st.enemy.difficulty, st.enemy.actionCount), roarStacks: st.roarStacks });
-const nextAction = (st, dist, last, extra = {}) => G.chooseEnemyAction(st.enemy, dist, st.rng, { ...G.enemyActionStateFrom(last), ...actionState(st), ...extra });
+// st.enemyAiHook … 敵の「次の手」の選び方を差し替える口(2026-11-11 サクセン・敵の作戦AIの試算 enemy-ai-trial.js が使う)。
+//   渡さなければゲームと同じ chooseEnemyAction(確率のくじ)。口は (st, dist, state) → intent
+const nextAction = (st, dist, last, extra = {}) => {
+  const state = { ...G.enemyActionStateFrom(last), ...actionState(st), ...extra };
+  return typeof st.enemyAiHook === 'function' ? st.enemyAiHook(st, dist, state) : G.chooseEnemyAction(st.enemy, dist, st.rng, state);
+};
 // st.aimHook … 狙いの決め方を差し替える口(2026-10-17 ヘイトの試算 hate-trial.js が使う)。渡さなければゲームと同じ狙い方
 // ★ヘイト(2026-10-22 社長「ヘイトをシミュレーターに入れて」): ゲームはタクティクスで公開ずみ(RELEASE_FLAGS.tacticsHate)。
 //   狙いは本体の withTacticsTarget にヘイトを渡す(60-app.jsx aimTacticsIntent 1413)。数字・式はすべて写した本体の関数(G.tacticsHate*)を使う
@@ -1509,7 +1514,7 @@ function trainAfterWave(st, w) {
   }
 }
 
-function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null, actHook = null, emergencyCfg = null, heroStyle = null }) {
+function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', seed = 1, maxWave = 10, exMode = 'bot', assist = 'bot', assistPlay = 'bot', training = 'bot', exLog = false, distBonus = true, uniqueUp = true, emergency = 'auto', uniquePlan = 'bot', discardBlocked = true, revive = 'bot', aimHook = null, actHook = null, enemyAiHook = null, emergencyCfg = null, heroStyle = null }) {
   const rng = mulberry32(hashSeed(seed, heroId, difficulty, allies.join(',')));
   const hero = MON_BY_ID[heroId];
   if (!hero) throw new Error(`勇者モンが見つからない: ${heroId}`);
@@ -1517,7 +1522,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
   const st = {
     // ヘイト(ゲームと同じく既定で入)。hate:false で入れない(比べる用)。狙いを差し替える aimHook を渡したときは、その口に任せる
     hateOn: hate !== false && typeof aimHook !== 'function', hate: [0, 0, 0, 0], hatePending: [0, 0, 0, 0], hateDmgMark: [0, 0, 0, 0],
-    aimHook, actHook, rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
+    aimHook, actHook, enemyAiHook, rng, heroId, difficulty, exMode, maxWave, mons: [null, null, null, null], units: [null, null, null, null], trick: [{}, {}, {}, {}],
     autoHp: 0.1, joinCatchUp: 1, powerStart: monsterPowerOf(hero), powerNow: monsterPowerOf(hero),
     dealtTotal: 0, taken: 0, recentDealt: 0, recentWave: 0, turnsTotal: 0, waveTurns: [],
     // ランのあいだ残るもの: EX の回数・permaBuffs・クッキー/黒音符・メロディ・ボゥの積み・運命のコイン/輪の積み

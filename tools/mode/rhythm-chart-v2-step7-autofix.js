@@ -429,6 +429,24 @@ for(const difficulty of DIFFICULTIES){
   const {notes,fixes,passes,before,after}=autofix(chart.notes||[]);
   // Rev.8〜: レーンを動かしたので、横フリックの向きを払う指の動きで付け直す(生成器と同じ決め方)。
   //   生成器で付けた向きのままだと、動かしたノーツへ向かう向きが逆になっていることがある
+  // Rev.37〜(2026-11-11): レーンを動かしたあと、押さえている帯の中へ戻ったタップ・フリックを帯の外へ出し直す(V3 の新しい曲だけ)。
+  //   生成器は帯の中を0にして書き出すが、ここでレーンを動かすと戻ることがあり、新曲のたびに人が直していた(ROSE〜ヒューマノイドの EXPERT・MASTER で1〜14個)。
+  //   時刻・種類・ノーツ数は変えない(取り除かない)。まず幅もそのままで試し、入らないものだけ幅を1段細くして試す。それでも残れば検査(rhythm-chart-hand-rules-check.js)が止める。
+  //   決まりより前からある曲(rhythm-held-band-existing.json)と V2 の譜面には当てない(作り直しても今の形のまま)
+  let heldBandNote='';
+  if(!fileArg&&sourceKind==='v3'){
+    const existing=JSON.parse(fs.readFileSync(path.join(__dirname,'rhythm-held-band-existing.json'),'utf8')).tracks||[];
+    if(!existing.includes(trackId)){
+      const {fixHeldBandOnGrid}=require('./rhythm-chart-hand-rules.js'),lanes=LANE_COUNT*2;
+      // 動かした先で「押せない・帯に指が入らない」が増えるなら、ここでは動かさずに元へ戻す(このあとの手の仕上げ rhythm-chart-flow-fix.js が、押せるかどうかも見ながら帯の外へ出す)
+      const keep=notes.map(n=>[n.subLane,n.subLaneWidth,n.lane]),base=evaluate(notes);
+      let a=fixHeldBandOnGrid(notes,{lanes,keepWidth:true,canRemove:()=>false}),b=a.left?fixHeldBandOnGrid(notes,{lanes,canRemove:()=>false}):{moved:0,mirrored:0,left:0};
+      const now=evaluate(notes);
+      if(now.impossible>base.impossible||now.reach>base.reach){notes.forEach((n,i)=>{[n.subLane,n.subLaneWidth,n.lane]=keep[i];});a={moved:0,mirrored:0,left:0};b={moved:0,mirrored:0,left:0};
+        heldBandNote='    押さえている帯の中へ戻ったノーツ: 動かすと押せない所が増えるので、ここでは動かさない(手の仕上げが直す)';}
+      if(a.moved||a.mirrored||b.moved||b.mirrored||b.left)heldBandNote=`    押さえている帯の中へ戻ったノーツ: 帯の外へ${a.moved+b.moved}個・左右を写す${a.mirrored+b.mirrored}個`+(b.left?`・直せず${b.left}個(検査が止める)`:'');
+    }
+  }
   let sideFlickNote='';
   if((chart.difficulty||difficulty)==='MASTER'){
     const side=assignSideFlickDirs(notes,timing);
@@ -444,6 +462,7 @@ for(const difficulty of DIFFICULTIES){
   const show=verbose?fixes:fixes.slice(0,5);
   for(const fix of show)console.log(`      ${(fix.timeMs/1000).toFixed(1)}s 第${fix.bar+1}小節 ${fix.type}: ${fix.move}`);
   if(!verbose&&fixes.length>5)console.log(`      … ほか${fixes.length-5}箇所(--verbose で全件)`);
+  if(heldBandNote)console.log(heldBandNote);
   if(sideFlickNote)console.log(sideFlickNote);
 
   report.difficulties[key]={noteCount:notes.length,fixCount:fixes.length,passes,before,after,fixes};
