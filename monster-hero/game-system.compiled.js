@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b648a3fda31a7967
+// source-sha256: 128d9880e13ac3ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57449,9 +57449,9 @@ const friendsSetRoomPrivate = on => {
 const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
 const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
   h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
-  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
-  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
-  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  w: ['🗺 助手の町', '🗺 助手ライフで町を見ている'],
+  f: ['🤝 助手のきずな', '🤝 助手ライフで助手どうしのきずなを見ている'],
+  i: ['🎁 助手への贈り物', '🎁 助手ライフで贈る道具を選んでいる'],
   p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
   v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている']
 });
@@ -61265,7 +61265,7 @@ const jaKeepKanaRuns = (s, chunks, segs, {
       for (const [a, b] of runs) for (const p of [a, b]) {
         if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
         if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
-        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～・]/.test(s[p] || '')) continue;
         if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
         if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
         if (/[「『（(【〔〈《\s]/.test(s[p - 1] || '') || /\s/.test(s[p] || '')) continue;
@@ -137663,14 +137663,14 @@ const ALF_LIMITS = Object.freeze({
   on: Object.freeze({
     go: 3,
     come: 2,
-    look: 3,
+    look: 999,
     readMs: 30 * 60000,
     sendMs: 10 * 60000
   }),
   thin: Object.freeze({
     go: 1,
     come: 0,
-    look: 1,
+    look: 999,
     readMs: 30 * 60000,
     sendMs: 60 * 60000
   })
@@ -138427,7 +138427,7 @@ const alfFetchVisits = async (force = false) => {
       host: r.host_id,
       day: String(r.day || '').slice(0, 10),
       ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [],
-      word: alfInt(r.word, 0, ALF_WORDS - 1),
+      word: r.word === 12 ? 12 : alfInt(r.word, 0, ALF_WORDS - 1),
       thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1),
       at: Date.parse(r.created_at) || 0,
       note: typeof r.note === 'string' ? alfNoteShow(r.note) : '',
@@ -138695,7 +138695,7 @@ const assistantLifeFriendSetGiftSender = fn => {
 };
 const alfGiveBeatP = async (kind, giftId, st) => {
   const want = ALF_BEAT_P[kind] || 0;
-  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  const amount = kind === 'look' ? want : Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
   if (!amount || !_alfGiftSender) return 0;
   let ok = false;
   try {
@@ -138952,12 +138952,16 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     ok: false,
     reason: nc.reason
   };
+  if (word === ALF_WORD_FREE && !nc.text) return {
+    ok: false,
+    reason: '言葉を書くか、下の一言を選んでください'
+  };
   const r = await alfPostVisitR({
     kind: 'player',
     visitor: self,
     host: hostId,
     ids,
-    word: alfInt(word, 0, ALF_WORDS - 1),
+    word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1),
     note: nc.text,
     noteTo: alfValidId(noteTo) ? noteTo : null
   });
@@ -138989,13 +138993,6 @@ const assistantLifeFriendLeaveNote = async (hostId, {
   };
   alfSaveSt(marked);
   const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
-  if (got) {
-    const now2 = alfToday();
-    alfSaveSt({
-      ...now2,
-      beatP: now2.beatP + got
-    });
-  }
   return {
     ok: true,
     beatP: got,
@@ -139311,6 +139308,8 @@ const ALF_WELCOME_MORE = Object.freeze({
   "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"],
   "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]
 });
+const ALF_WORD_FREE = 12;
+const alfWordQuote = w => w === ALF_WORD_FREE ? '' : `「${ALF_WORD_TEXTS[w] || ''}」`;
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
 const ALF_DOING_ROOM = Object.freeze({
@@ -139791,7 +139790,7 @@ function AlfFriendHouseView({
     setRoomId(null);
     setTalk(null);
     setNoteText('');
-    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
   const noteLine = done ? done : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)` : can === 'done' ? `✉️ この家には今日もう置き手紙を残しました。見て回るのは自由です` : `✉️ 今日はもう置き手紙を残せません(朝4時に戻ります)。見て回るのは自由です`;
   const r0 = roomId ? h.r[roomId] : null;
@@ -139894,7 +139893,7 @@ function AlfFriendHouseView({
       setNoteWarn('');
       setLeaving('');
     }
-  }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'))), React.createElement("p", {
+  }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'))), React.createElement("p", {
     className: "mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100",
     "data-alf-visit-note": done ? 'done' : can
   }, noteLine), React.createElement("p", {
@@ -140198,11 +140197,11 @@ function AlfFriendHouseView({
     }
   }, React.createElement("p", {
     className: "text-[15px] font-black text-amber-100"
-  }, "✉️ 置き手紙の一言をえらぶ", leaving ? React.createElement("span", {
+  }, "✉️ 置き手紙を残す", leaving ? React.createElement("span", {
     className: "ml-1 text-[11px] text-slate-200"
   }, "(あて先: ", assistantLifeName(leaving), h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : '', ")") : null), React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-200"
-  }, "一言を押すと", friend.name, "さんに届いて、この家から帰ります(ビートP 50)"), React.createElement("label", {
+  }, "一言を選ぶか、自由に書いて送ると、", friend.name, "さんに届いて、この家から帰ります(ビートP 50)"), React.createElement("label", {
     className: "mt-2 block text-[10.5px] font-bold text-slate-200",
     htmlFor: "alf-note-free"
   }, "✏️ ひとこと(自由・", ALF_NOTE_MAX, "字まで・なくてもよい)"), React.createElement("div", {
@@ -140232,8 +140231,17 @@ function AlfFriendHouseView({
     }, "⚠️ ", warn) : React.createElement("p", {
       className: "mt-1 text-[10px] text-slate-400"
     }, "連絡先・住所・本名などは書けません。悪い言葉は●になります。", friend.name, "さんは自由文を見ないようにもできます。");
-  })(), React.createElement("div", {
-    className: "mt-2 flex flex-wrap gap-1.5"
+  })(), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40",
+    "data-alf-note-send": true,
+    disabled: !noteText.trim() || !alfNoteCheck(noteText).ok,
+    onClick: () => leave(ALF_WORD_FREE)
+  }, "✉️ この言葉で送る"), React.createElement("p", {
+    className: "mt-2.5 text-[10.5px] font-bold text-slate-200",
+    "data-alf-word-hint": true
+  }, noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
   }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
     key: i,
     type: "button",
@@ -140552,7 +140560,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, "来てくれた ", st.come, "/", lim.come), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "置き手紙 ", st.look, "/", lim.look), React.createElement("span", {
+  }, "置き手紙 ", st.look, "通"), React.createElement("span", {
     className: "whitespace-nowrap"
   }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
     className: sec,
@@ -140577,11 +140585,11 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
     className: "whitespace-nowrap"
-  }, assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', "「", ALF_WORD_TEXTS[n.word], "」", n.ids.length ? React.createElement("span", {
+  }, assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', alfWordQuote(n.word), n.ids.length ? React.createElement("span", {
     className: "whitespace-nowrap"
   }, "・", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap"
-  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た「", ALF_WORD_TEXTS[n.word], "」")), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
+  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た", alfWordQuote(n.word))), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
     className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
     "data-alf-note-text": true
   }, "✏️ ", n.note) : React.createElement("p", {
@@ -180384,6 +180392,8 @@ function MonsterHeroGame() {
   const [tutorialStep, setTutorialStep] = useState(null);
   const [tutorialKind, setTutorialKind] = useState('tour');
   const [assistantDebug, setAssistantDebug] = useState(null);
+  const [assistantPickSel, setAssistantPickSel] = useState(null);
+  const [assistantPickOpen, setAssistantPickOpen] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null);
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
@@ -193945,7 +193955,7 @@ function MonsterHeroGame() {
   };
   const tutorialSpot = (() => {
     if (tutorialStep == null) return null;
-    const pages = tutorialKind === 'rhythm' ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current) || [] : tutorialKind === 'tour' ? typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current) || [] : [];
+    const pages = tutorialKind === 'rhythm' ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current) || [] : tutorialKind === 'tour' ? typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current, storyOneAtATime && !firstBattleDone) || [] : [];
     return pages[tutorialStep]?.spot || null;
   })();
   const spotClass = name => tutorialSpot === name ? ' is-tutorial-spot' : '';
@@ -211487,57 +211497,93 @@ function MonsterHeroGame() {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, React.createElement("div", {
-      className: "shrink-0 text-center mb-3",
+      className: "shrink-0 text-center mb-2",
       style: {
         paddingTop: onboardingPreview ? 'calc(2.75rem + env(safe-area-inset-top))' : 'env(safe-area-inset-top)'
       }
     }, React.createElement("h2", {
       className: "text-lg font-black italic text-indigo-300 uppercase tracking-widest"
     }, "助手を選ぶ"), React.createElement("p", {
-      className: "text-[10px] text-slate-400 mt-1 leading-tight"
-    }, "冒険に付き添ってくれる助手を選んでください。", React.createElement("br", null), "あとからプロフィールでいつでも変えられます。")), React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, React.createElement("div", {
-      className: "w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3"
-    }, assistantsUnlockedFrom(rhythmEventStorySeen).map(who => React.createElement("button", {
-      key: who.id,
-      type: "button",
-      onClick: () => {
-        chooseAssistant(who.id);
-        markKikiIntroSeen();
-        markMomosukeIntroSeen();
-        setGameState('PROFILE');
-        setTutorialKind('intro');
-        setTutorialStep(0);
-      },
-      "aria-label": `${who.name}を選ぶ`,
-      className: `rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id === selectedAssistantId ? '' : 'opacity-95'}`,
-      style: {
-        border: `2px solid ${who.id === selectedAssistantId ? who.accent : 'rgba(255,255,255,.14)'}`,
-        backgroundColor: who.id === selectedAssistantId ? `${who.accent}1f` : 'rgba(15,23,42,.75)'
-      }
-    }, React.createElement(AssistantFace, {
-      who: who,
-      size: 88,
-      accent: who.accent,
-      expression: "happy"
-    }), React.createElement("span", {
-      className: "text-[13px] font-black text-white"
-    }, who.name), React.createElement("span", {
-      className: "text-[9px] font-black leading-tight text-center",
-      style: {
-        color: who.accent
-      }
-    }, who.tagline || ''), React.createElement("span", {
-      className: "text-[9px] text-slate-400 leading-tight text-center"
-    }, who.intro || ''), React.createElement("span", {
-      className: "mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950",
-      style: {
-        backgroundColor: who.accent
-      }
-    }, "この助手にする")))), React.createElement("p", {
-      className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
-    }, "3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。"))), gameState === 'PROFILE' && React.createElement(ProfileScreen, {
+      className: "text-[10px] text-slate-300 mt-1 leading-tight"
+    }, "冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。"), React.createElement("span", {
+      "data-assistant-pick-later": true,
+      className: "mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950"
+    }, "あとからいつでも変えられます")), (() => {
+      const list = assistantsUnlockedFrom(rhythmEventStorySeen);
+      const pickId = (list.some(w => w.id === assistantPickSel) ? assistantPickSel : null) || (list.some(w => w.id === selectedAssistantId) ? selectedAssistantId : null) || list[0] && list[0].id;
+      const pick = list.find(w => w.id === pickId) || list[0];
+      return React.createElement(React.Fragment, null, React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+      }, React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex flex-col gap-2 pb-2"
+      }, list.map(who => {
+        const on = who.id === pickId;
+        const open = assistantPickOpen === who.id;
+        return React.createElement("div", {
+          key: who.id,
+          className: "rounded-2xl",
+          style: {
+            border: `2px solid ${on ? who.accent : 'rgba(255,255,255,.14)'}`,
+            backgroundColor: on ? `${who.accent}1f` : 'rgba(15,23,42,.75)'
+          }
+        }, React.createElement("div", {
+          className: "flex items-center gap-3 px-3 py-2"
+        }, React.createElement("button", {
+          type: "button",
+          "aria-label": `${who.name}を選ぶ`,
+          "aria-pressed": on,
+          onClick: () => setAssistantPickSel(who.id),
+          className: "flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[.98]"
+        }, React.createElement(AssistantFace, {
+          who: who,
+          size: 56,
+          accent: who.accent,
+          expression: "happy"
+        }), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("span", {
+          className: "block text-[14px] font-black text-white"
+        }, who.name), React.createElement("span", {
+          className: "mt-0.5 block text-[11px] font-black leading-tight",
+          style: {
+            color: who.accent
+          }
+        }, who.tagline || ''))), React.createElement("button", {
+          type: "button",
+          "aria-label": `${who.name}のくわしい紹介`,
+          "aria-expanded": open,
+          onClick: () => setAssistantPickOpen(open ? null : who.id),
+          className: "shrink-0 min-h-[44px] px-1 text-[11px] font-black text-slate-300 active:scale-95"
+        }, "くわしく", open ? '▲' : '›')), open && React.createElement("div", {
+          "data-assistant-pick-intro": true,
+          className: "px-3 pb-3 text-[11px] leading-snug text-slate-200"
+        }, who.intro || ''));
+      })), React.createElement("p", {
+        className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
+      }, "仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。")), pick && React.createElement("div", {
+        className: "shrink-0 w-full max-w-md mx-auto pt-1",
+        style: {
+          paddingBottom: 'env(safe-area-inset-bottom)'
+        }
+      }, React.createElement("div", {
+        className: "mb-1 text-center text-[11px] font-black text-slate-300"
+      }, pick.name, "を選んでいます"), React.createElement("button", {
+        type: "button",
+        "data-assistant-pick-confirm": true,
+        onClick: () => {
+          chooseAssistant(pick.id);
+          markKikiIntroSeen();
+          markMomosukeIntroSeen();
+          setGameState('PROFILE');
+          setTutorialKind('intro');
+          setTutorialStep(0);
+        },
+        className: "min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]",
+        style: {
+          backgroundColor: pick.accent
+        }
+      }, "この助手にする")));
+    })()), gameState === 'PROFILE' && React.createElement(ProfileScreen, {
       onCardShareGo: intent => {
         if (typeof cardShareIntentSet === 'function') cardShareIntentSet(intent);
         setCardOrigin('profile');
@@ -216505,7 +216551,7 @@ function MonsterHeroGame() {
       const battleGuide = tutorialKind === 'battleGuide';
       const guideLook = battleGuide || battleMore;
       const rhythm = tutorialKind === 'rhythm';
-      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleMore ? typeof assistantBattleMorePages === 'function' && assistantBattleMorePages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
+      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleMore ? typeof assistantBattleMorePages === 'function' && assistantBattleMorePages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId, storyOneAtATime && !firstBattleDone) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId, storyOneAtATime && !firstBattleDone) || [];
       const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
       if (!page) return null;
       const who = activeAssistant;

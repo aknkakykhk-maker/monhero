@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c1a8102fbe174d7
+// generated-sha256: 0d289cb0b85b034a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34950,9 +34950,9 @@ const friendsSetRoomPrivate = (on) => { _friendsRoomPrivate = !!on; };
 const FRIEND_LIFE_SPOTS = Object.freeze(['h', 'w', 'f', 'i', 'p', 'v']);
 const FRIEND_LIFE_SPOT_TEXT = Object.freeze({
   h: ['🏡 助手の家', '🏡 助手ライフで家の様子を見ている'],
-  w: ['📋 みんなの居場所', '📋 助手ライフでみんなの居場所を見ている'],
-  f: ['🤝 助手の友情', '🤝 助手ライフで助手どうしの友情を見ている'],
-  i: ['🎒 助手の道具', '🎒 助手ライフで道具を選んでいる'],
+  w: ['🗺 助手の町', '🗺 助手ライフで町を見ている'],
+  f: ['🤝 助手のきずな', '🤝 助手ライフで助手どうしのきずなを見ている'],
+  i: ['🎁 助手への贈り物', '🎁 助手ライフで贈る道具を選んでいる'],
   p: ['🏘 遊びに行く家選び', '🏘 遊びに行くフレンドの家を選んでいる'],
   v: ['🏘 フレンドの家へ', '🏘 フレンドの家に遊びに行っている'],
 });
@@ -37778,7 +37778,7 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
         if (p <= x || p >= y || inKeepWord(p) || !segEndAt.has(p)) continue;
         // 送り仮名(「来|て」「強|く」)の手前・小さい字の手前・閉じる記号の手前では分けない
         if (p === a && /^[ぁ-ゖ](?:[^ぁ-ゖ]|$)/.test(s.slice(a, a + 2)) && b - a <= 2) continue;
-        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～]/.test(s[p] || '')) continue;
+        if (/^[ぁぃぅぇぉっゃゅょゎー、。！？!?」』）)…‥〜～・]/.test(s[p] || '')) continue;
         if (p === a && /^[てでくいしきっ]/.test(s[p]) && /[一-龯]$/.test(s[p - 1] || '')) continue;
         // くっついた言葉(「振り|直す」「受け取り|忘れ」「押し|切る」)の、送り仮名と次の漢字のあいだでは分けない
         if (p === b && b - a <= 2 && /[一-龯々]/.test(s[a - 1] || '') && /^[一-龯]/.test(s[p] || '')) continue;
@@ -72495,9 +72495,10 @@ const ALF_TABLE_HOUSES = 'assistant_life_friend_houses';
 const ALF_TABLE_VISITS = 'assistant_life_friend_visits';
 const ALF_IDS = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 // 1日の上限(朝4時の区切り)。thin=間引く(送り出し量が分かるまでの最初の形)
+// look(プレイヤーの置き手紙)は合計の上限なし(999 は「数えない」の意味)。同じフレンドへは1日1通(st.looked と表の一意の決まり)。2026-11-11 社長「置き手紙はフレンドごとの回数制限にして」「上限はなしで1人1通」
 const ALF_LIMITS = Object.freeze({
-  on:   Object.freeze({ go: 3, come: 2, look: 3, readMs: 30 * 60000, sendMs: 10 * 60000 }),
-  thin: Object.freeze({ go: 1, come: 0, look: 1, readMs: 30 * 60000, sendMs: 60 * 60000 }),
+  on:   Object.freeze({ go: 3, come: 2, look: 999, readMs: 30 * 60000, sendMs: 10 * 60000 }),
+  thin: Object.freeze({ go: 1, come: 0, look: 999, readMs: 30 * 60000, sendMs: 60 * 60000 }),
 });
 const ALF_BEAT_P = Object.freeze({ go: 100, look: 50, dayMax: 300 });
 const ALF_FRESH_DAYS = Object.freeze({ go: 14, look: 14, come: 7 });
@@ -72890,7 +72891,7 @@ const alfFetchVisits = async (force = false) => {
     const rows = await alfRequest(`${ALF_TABLE_VISITS}?select=id,kind,visitor_id,host_id,day,assistants,word,thanks,note,note_to,created_at&or=(host_id.eq.${self},visitor_id.eq.${self})&day=gte.${from}&order=created_at.desc&limit=60`);
     const visits = (Array.isArray(rows) ? rows : []).map(r => (r && Number.isFinite(r.id) && ['go', 'come', 'player'].includes(r.kind) && alfSafeOther(r.visitor_id) && alfSafeOther(r.host_id) ? {
       id: r.id, kind: r.kind, visitor: r.visitor_id, host: r.host_id, day: String(r.day || '').slice(0, 10),
-      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [], word: alfInt(r.word, 0, ALF_WORDS - 1),
+      ids: Array.isArray(r.assistants) ? r.assistants.filter(alfValidId).slice(0, 2) : [], word: r.word === 12 ? 12 : alfInt(r.word, 0, ALF_WORDS - 1),
       thanks: r.thanks == null ? null : alfInt(r.thanks, 0, ALF_THANKS - 1), at: Date.parse(r.created_at) || 0,
       note: typeof r.note === 'string' ? alfNoteShow(r.note) : '', noteTo: alfValidId(r.note_to) ? r.note_to : null } : null)).filter(Boolean);
     _alfVisitsAt = Date.now();
@@ -73036,7 +73037,8 @@ let _alfGiftSender = null;
 const assistantLifeFriendSetGiftSender = (fn) => { _alfGiftSender = typeof fn === 'function' ? fn : null; };
 const alfGiveBeatP = async (kind, giftId, st) => {
   const want = ALF_BEAT_P[kind] || 0;
-  const amount = Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
+  // 1日300Pまでの上限は、助手が持ち帰るおみやげ(go)だけ。置き手紙(look)は1通ごとに 50(2026-11-11 社長)
+  const amount = kind === 'look' ? want : Math.max(0, Math.min(want, ALF_BEAT_P.dayMax - (st.beatP || 0)));
   if (!amount || !_alfGiftSender) return 0;
   let ok = false;
   try { ok = await _alfGiftSender({ id: giftId, title: kind === 'look' ? 'フレンドの家へ遊びに行ったおみやげ' : '助手のフレンドの家のおみやげ', source: 'assistantLifeFriend', rewards: [{ type: 'beatPoint', amount }] }); } catch { ok = false; }
@@ -73152,7 +73154,8 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
   const nc = alfNoteCheck(note);
   if (!nc.ok) return { ok: false, reason: nc.reason };
-  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
+  if (word === ALF_WORD_FREE && !nc.text) return { ok: false, reason: '言葉を書くか、下の一言を選んでください' };
+  const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
   if (!r.ok) return { ok: false, reason: r.reason };
   // ミッションの「フレンドの家へ行く」と「助手とふれあう」(2026-11-08)
   if (typeof missionNotify === 'function') { missionNotify('friendVisit'); missionNotify('assistantTouch'); }
@@ -73162,7 +73165,7 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   const marked = { ...cur, look: cur.look + 1, looked: { ...cur.looked, [hostId]: 1 }, photos };
   alfSaveSt(marked);
   const got = await alfGiveBeatP('look', `alf_player_${cur.day}_${hostId.slice(0, 12)}`, marked);
-  if (got) { const now2 = alfToday(); alfSaveSt({ ...now2, beatP: now2.beatP + got }); }
+  // 置き手紙のビートPは、助手のおみやげの1日300Pの数(st.beatP)には入れない
     return { ok: true, beatP: got, photo: firstHere };
 };
 
@@ -73297,6 +73300,9 @@ const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー�
 const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
 const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
 // 置き手紙の決まった一言(番号は表に残す。0〜11)とお礼(0〜5)
+// 自由に書いた言葉だけの置き手紙(決まった一言なし)の番号(2026-11-11 社長「自由文でどうやって返すの？決定がない？」)。表は word 0〜31 を通す
+const ALF_WORD_FREE = 12;
+const alfWordQuote = (w) => (w === ALF_WORD_FREE ? '' : `「${ALF_WORD_TEXTS[w] || ''}」`);
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
@@ -73531,7 +73537,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name, note: noteText, noteTo: to });
     if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); return; }
     setLeaving(null); setRoomId(null); setTalk(null); setNoteText('');
-    setDone(r && r.ok ? `✉️ 置き手紙「${ALF_WORD_TEXTS[word]}」を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
   // 置き手紙の1行(押す前に、何が届くか・今日できるかが分かるように)
   const noteLine = done ? done
@@ -73569,7 +73575,7 @@ function AlfFriendHouseView({ friend, onClose }) {
       <div className="grid grid-cols-3 gap-1.5">
         <button type="button" className="mhl-tile mhl-call" disabled={!home.length} data-alf-visit-act="talk" onClick={() => home[0] && greet(home[0])}><i>💬</i><b>話す</b><small>{home.length ? `家にいる ${home.length}人` : 'いまはだれも'}</small></button>
         <button type="button" className="mhl-tile mhl-watch" data-alf-visit-act="peek" onClick={() => setRoomId(h.ids[0] || null)}><i>👀</i><b>部屋を見る</b><small>部屋を押す</small></button>
-        <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '今日あと1回' : '今日は残した'}</small></button>
+        <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'}</small></button>
       </div>
       <p className="mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100" data-alf-visit-note={done ? 'done' : can}>{noteLine}</p>
       <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、{friend.name}さんの助手の仲良し度は変わりません。</p>
@@ -73659,8 +73665,8 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alf-visit-words>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={() => setLeaving(null)}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
-        <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙の一言をえらぶ{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
-        <p className="text-[10.5px] font-bold text-slate-200">一言を押すと{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
+        <p className="text-[15px] font-black text-amber-100">✉️ 置き手紙を残す{leaving ? <span className="ml-1 text-[11px] text-slate-200">(あて先: {assistantLifeName(leaving)}{h.r[leaving] && (h.r[leaving].at !== 'home' || h.r[leaving].d === 'sleep') ? '・留守' : ''})</span> : null}</p>
+        <p className="text-[10.5px] font-bold text-slate-200">一言を選ぶか、自由に書いて送ると、{friend.name}さんに届いて、この家から帰ります(ビートP 50)</p>
         <label className="mt-2 block text-[10.5px] font-bold text-slate-200" htmlFor="alf-note-free">✏️ ひとこと(自由・{ALF_NOTE_MAX}字まで・なくてもよい)</label>
         <div className="mt-1 flex items-center gap-1.5">
           <input id="alf-note-free" type="text" data-alf-note-free value={noteText} maxLength={ALF_NOTE_MAX} autoComplete="off" spellCheck={false}
@@ -73669,7 +73675,9 @@ function AlfFriendHouseView({ friend, onClose }) {
           <span className="shrink-0 text-[10px] text-slate-400">{[...noteText].length}/{ALF_NOTE_MAX}</span>
         </div>
         {(() => { const c = alfNoteCheck(noteText); const warn = noteWarn || (!c.ok ? c.reason : ''); return warn ? <p className="mt-1 text-[10.5px] font-bold text-rose-300" data-alf-note-warn>⚠️ {warn}</p> : <p className="mt-1 text-[10px] text-slate-400">連絡先・住所・本名などは書けません。悪い言葉は●になります。{friend.name}さんは自由文を見ないようにもできます。</p>; })()}
-        <div className="mt-2 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
+        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => leave(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
+        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'}</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
         <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
       </div>
     </div>) : null;
@@ -73782,7 +73790,7 @@ function AssistantLifeFriendPage({ life }) {
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
-        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
+        <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}通</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
       <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes style={hideIfEmpty}>
@@ -73791,8 +73799,8 @@ function AssistantLifeFriendPage({ life }) {
             <p className="text-[11px] leading-snug text-slate-100">
               <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
               {n.dir === 'away' ? <><span className="whitespace-nowrap">{n.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{n.name}さんの家へ</span>遊びに行っていた</>
-                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}「{ALF_WORD_TEXTS[n.word]}」{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
-                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た「{ALF_WORD_TEXTS[n.word]}」</>}
+                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
+                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
             </p>
             {n.dir === 'in' && n.note ? (s.settings.noteShow && !s.settings.noteOff.includes(n.who)
               ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-note-text>✏️ {n.note}</p>
@@ -95757,6 +95765,9 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  // 助手えらび(はじめての人)。選んだ助手と、くわしい紹介を開いている助手(2026-11-11 案9。顔と一言を1行ずつ並べ、紹介はタップで開く)
+  const [assistantPickSel, setAssistantPickSel] = useState(null);
+  const [assistantPickOpen, setAssistantPickOpen] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
@@ -107588,7 +107599,7 @@ function MonsterHeroGame() {
     const pages = tutorialKind === 'rhythm'
       ? ((typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current)) || [])
       : tutorialKind === 'tour'
-      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [])
+      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current, storyOneAtATime && !firstBattleDone)) || [])
       : [];
     return pages[tutorialStep]?.spot || null;
   })();
@@ -118009,30 +118020,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='ASSISTANT_SELECT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
             {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
-            <div className="shrink-0 text-center mb-3" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
+            <div className="shrink-0 text-center mb-2" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
-              <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
+              <p className="text-[10px] text-slate-300 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。「くわしく」で紹介が見られます。</p>
+              <span data-assistant-pick-later className="mt-1.5 inline-block rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950">あとからいつでも変えられます</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
-                {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
-                {assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(
-                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
-                    aria-label={`${who.name}を選ぶ`}
-                    className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
-                    style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
-                    <AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>
-                    <span className="text-[13px] font-black text-white">{who.name}</span>
-                    <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
-                    <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
-                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この助手にする</span>
-                  </button>
-                ))}
-              </div>
-              <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
-                3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
-              </p>
-            </div>
+            {(()=>{
+              const list=assistantsUnlockedFrom(rhythmEventStorySeen);
+              const pickId=(list.some(w=>w.id===assistantPickSel)?assistantPickSel:null)||(list.some(w=>w.id===selectedAssistantId)?selectedAssistantId:null)||(list[0]&&list[0].id);
+              const pick=list.find(w=>w.id===pickId)||list[0];
+              return <>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="w-full max-w-md mx-auto flex flex-col gap-2 pb-2">
+                    {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
+                    {list.map(who=>{const on=who.id===pickId;const open=assistantPickOpen===who.id;return(
+                      <div key={who.id} className="rounded-2xl"
+                        style={{border:`2px solid ${on?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:on?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
+                        <div className="flex items-center gap-3 px-3 py-2">
+                          <button type="button" aria-label={`${who.name}を選ぶ`} aria-pressed={on} onClick={()=>setAssistantPickSel(who.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[.98]">
+                            <AssistantFace who={who} size={56} accent={who.accent} expression="happy"/>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[14px] font-black text-white">{who.name}</span>
+                              <span className="mt-0.5 block text-[11px] font-black leading-tight" style={{color:who.accent}}>{who.tagline||''}</span>
+                            </span>
+                          </button>
+                          <button type="button" aria-label={`${who.name}のくわしい紹介`} aria-expanded={open} onClick={()=>setAssistantPickOpen(open?null:who.id)} className="shrink-0 min-h-[44px] px-1 text-[11px] font-black text-slate-300 active:scale-95">くわしく{open?'▲':'›'}</button>
+                        </div>
+                        {open&&<div data-assistant-pick-intro className="px-3 pb-3 text-[11px] leading-snug text-slate-200">{who.intro||''}</div>}
+                      </div>);})}
+                  </div>
+                  <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
+                    仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
+                  </p>
+                </div>
+                {pick&&<div className="shrink-0 w-full max-w-md mx-auto pt-1" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
+                  <div className="mb-1 text-center text-[11px] font-black text-slate-300">{pick.name}を選んでいます</div>
+                  <button type="button" data-assistant-pick-confirm onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                    className="min-h-[48px] w-full rounded-2xl text-[15px] font-black text-slate-950 active:scale-[.98]" style={{backgroundColor:pick.accent}}>この助手にする</button>
+                </div>}
+              </>;
+            })()}
           </div>
         )}
 
@@ -120788,10 +120815,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : battleMore
           ? ((typeof assistantBattleMorePages==='function'&&assistantBattleMorePages(selectedAssistantId))||[])
           : battleGuide
-          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
+          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[])
           : intro
           ? ((typeof assistantIntroPages==='function'&&assistantIntroPages(selectedAssistantId))||[])
-          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId))||[]));
+          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
         if(!page) return null;
         const who=activeAssistant;

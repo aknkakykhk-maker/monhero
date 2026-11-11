@@ -72,6 +72,9 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     // STEP2 ⑦ 家のいちばん上の「✨ いま行くと得なこと」: 札がある・カード部屋の助手と神殿の助手の行・押せる大きさ・横にはみ出さない
     await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
     await page.waitForTimeout(900);
+    // 「得」の3行(56-assistant-life-guide.jsx)の1行目は、初めは1行+「ほか◯件 ▼」。開いて、残りの行(カード部屋・神殿)を確かめる
+    const firstN = await page.locator('[data-assistant-life-now-perk]').count();
+    await page.locator('[data-assistant-life-now-perks-more]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(300);
     { const pk = await page.evaluate(() => {
         const b = document.querySelector('[data-assistant-life-now-perks]'); if (!b) return null;
         const rs = [...b.querySelectorAll('[data-assistant-life-now-perk]')], art = document.querySelector('[data-assistant-life-house]');
@@ -79,7 +82,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
           over: rs.filter(x => { const r = x.getBoundingClientRect(); return r.right > innerWidth + 1 || r.left < -1; }).length, goReady: typeof ASSISTANT_LIFE_LINKS.goPlace === 'object' && !!ASSISTANT_LIFE_LINKS.goPlace && typeof ASSISTANT_LIFE_LINKS.goPlace.temple === 'function',
           above: !art || b.getBoundingClientRect().top <= art.getBoundingClientRect().top };
       });
-      check(`${T}⑦ 家の上に「いま行くと得なこと」(カード部屋・神殿の行・3行まで)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && pk.n <= 3, JSON.stringify(pk));
+      check(`${T}⑦ 家の上の「得」の1行目(初めは1行・ほか◯件を開くとカード部屋・神殿の行)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && firstN === 1, JSON.stringify({ ...pk, firstN }));
       check(`${T}⑦ 行は高さ44px以上・横にはみ出さない・家の絵より上`, !!pk && pk.small === 0 && pk.over === 0 && pk.above, JSON.stringify(pk));
       check(`${T}⑦ HOME が施設へ行く口(goPlace)を入れている`, !!pk && pk.goReady === true);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-house.png`) });
