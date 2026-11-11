@@ -7573,8 +7573,11 @@ function MonsterHeroGame() {
         }
         // 案4: 「つぎにやること」は、はじめての人で3つ終えていない間だけ
         if (oneAtATime) {
-          const savedSteps = Number(await storeGet(FIRST_STEPS_KEY, 0, false));
-          setFirstStepsStage(Number.isFinite(savedSteps) && savedSteps >= 0 && savedSteps < 3 ? Math.floor(savedSteps) : (savedSteps >= 3 ? 3 : 0));
+          const savedRaw = await storeGet(FIRST_STEPS_KEY, null, false);
+          const savedSteps = Number(savedRaw);
+          // 保存がまだ無く、すでに本番でクリアした記録がある人(この帯ができる前から遊んでいる人)は、最初から終わり扱いにして帯を出さない(書き込みもしない=今までの進み方と同じ)
+          const playedBefore = savedRaw == null && Object.values(clears || {}).some(n => (Number(n) || 0) > 0);
+          setFirstStepsStage(playedBefore ? 3 : (Number.isFinite(savedSteps) && savedSteps >= 0 && savedSteps < 3 ? Math.floor(savedSteps) : (savedSteps >= 3 ? 3 : 0)));
         }
       } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
