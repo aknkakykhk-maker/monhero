@@ -428,7 +428,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
         <div className="ambw-card">
           <div className="ambw-small">段(ポイントで決まります・はじめは 1500)</div>
           {AMBB_TIERS.slice().reverse().map((t, i, arr) => (
-            <div key={t.id} className="ambb-tier"><span>{t.icon} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
+            <div key={t.id} className="ambb-tier"><span>{cardIconNode(t.icon, 14)} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
           ))}
           <p className="ambw-small" style={{ marginTop: 6 }}>順位は1週間ごと(月曜 4:00 に切り替わり)。</p>
         </div>

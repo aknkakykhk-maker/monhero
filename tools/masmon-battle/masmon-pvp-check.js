@@ -253,6 +253,14 @@ const check = (name, ok, extra) => {
     check('H サーバが返す断りの種類は、端末の口で日本語にできる', missing.length === 0, missing.join(','));
     check('H 端末の口は公開の印 assistantMasmonBattlePvp の後ろ', /RELEASE_FLAGS\.assistantMasmonBattlePvp === true/.test(part));
     check('H 端末の口は勝ち負けをサーバへ送らない', !/winner\s*:/.test((part.match(/action: 'challenge'[\s\S]*?\}\);/) || [''])[0]));
+    // データ引き継ぎ(バックアップ)は mh_ で始まる localStorage のキーを全部写す(60-app.jsx の generateBackupCode)。
+    //   鍵がそこから外れると、端末を替えた人が登録し直せなくなる(社長 2026-11-11 1-B)
+    const keyName = (part.match(/const MASMON_PVP_KEY = '([^']+)'/) || [])[1] || '';
+    const app = fs.readFileSync(path.join(ROOT, 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+    const storage = fs.readFileSync(path.join(ROOT, 'monster-hero', 'src', 'parts', '25-storage.jsx'), 'utf8');
+    check('H 持ち主の鍵はデータ引き継ぎで運ばれる(mh_ で始まり・引き継ぎは mh_ を全部写し・storeSet はキーの名前のまま書く)',
+      /^mh_/.test(keyName) && /const generateBackupCode[\s\S]{0,600}startsWith\('mh_'\)/.test(app)
+      && /window\.localStorage\.setItem\(key, raw\)/.test(storage) && /storeSet\(MASMON_PVP_KEY/.test(part), keyName);
     check('H 端末の口は表へ書かない(読むだけ)', !/method:\s*'(PATCH|DELETE|PUT)'/.test(part) && !/rest\/v1\/rpc/.test(part));
   }
 
