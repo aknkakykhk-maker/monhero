@@ -600,6 +600,8 @@ const Audio_ = (() => {
         start:()=>{if(playing||stopped||naturallyEnded)return playing;return startSource(0);},
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
+        // 元の時計(なめらかにする前)。診断で「止まったコマ」を数えるためだけに使う(2026-11-11。画面・判定は songTimeMs のまま)
+        rawSongTimeMs:()=>rawSongTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
         info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,
@@ -785,6 +787,7 @@ const Audio_ = (() => {
   // そこで、se.* は印が立っているあいだ何もしない口にし、カードの画面は印を見ない fgSe.* から鳴らす。
   // 音量の保存値・seBus には触らない(手で変えた音量は上書きしない)。
   const setBackgroundSeQuiet = (on) => { backgroundSeQuiet = !!on; };
+  const isBackgroundSeQuiet = () => backgroundSeQuiet; // 検査が「裏のバトルの音を止めているか」を見る口(ゲームの動きは変えない)
   const fgSe = {
     trainingDice: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t=Tone.now(); const n=new Tone.NoiseSynth({noise:{type:'brown'},envelope:{attack:.001,decay:.22,sustain:0},volume:-15}).connect(seBus); n.triggerAttackRelease('8n',t); setTimeout(()=>{try{n.dispose();}catch(e){}},500); },
     trainingDecide: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(seBus); s.triggerAttackRelease('C6','16n'); setTimeout(()=>{try{s.dispose();}catch(e){}},300); },
@@ -873,5 +876,5 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
