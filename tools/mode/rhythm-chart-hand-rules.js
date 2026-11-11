@@ -293,4 +293,17 @@ if(require.main===module){
       +(bl.length?' — '+bl.slice(0,12).map(x=>`${(x.at/1000).toFixed(3)} ${x.type} ${x.level} ${x.lanes}(押さえ ${x.held} ${x.heldLanes}・${HELD_BAND_KINDS[x.kind]})`).join(' / '):''));}
     for(const [k,list] of Object.entries(res))console.log(`  ${RULE_LABELS[k]}: ${list.length}件`+(list.length?' — '+list.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}${x.side}`+(x.gapMs!=null?`(${x.gapMs})`:'')).join(' ')+(list.length>12?' …':''):''));}
 }
+// 格子(grid)で書いた譜面(生成器・自動修正の JSON)に fixHeldBand を当てる(2026-11-11・MHB CHART ENGINE Rev.37)。
+//   自動修正(step7)がレーンを動かしたあとに帯の中へ戻るノーツを、公開前に道具で外へ出すため(それまでは新曲のたびに人が直していた)。
+//   時刻は格子×100 で渡す(同時かどうかだけ分かればよい。生成器の仕上げと同じ渡し方)。notes は書き換える(取り除いたぶんは返り値の notes から外れる)
+const fixHeldBandOnGrid=(notes,options={})=>{const K=100;
+  const rt=notes.map(n=>{const o={type:n.type,timeMs:n.grid*K,lane:n.lane,subLane:n.subLane,subLaneWidth:n.subLaneWidth};
+    if(n.type==='HOLD'){o.endTimeMs=(n.grid+(Number(n.durationGrids)||0))*K;if(Array.isArray(n.holdPoints))o.holdPoints=n.holdPoints.map(p=>({timeMs:p.grid*K,subLane:p.subLane,subLaneWidth:p.subLaneWidth}));}
+    if(n.type==='SLIDE'){const pts=n.slidePoints||[];o.endTimeMs=(pts.length?pts[pts.length-1].grid:n.grid+(Number(n.durationGrids)||0))*K;o.slidePoints=pts.map(p=>({timeMs:p.grid*K,lane:p.lane,subLaneWidth:p.subLaneWidth}));}
+    Object.defineProperty(o,'src',{value:n});return o;});
+  const res=fixHeldBand(rt,{...options,canRemove:o=>!o.src.monsterSlot&&(options.canRemove?options.canRemove(o.src):true),canMirror:o=>!!o.src.monsterSlot});
+  for(const o of rt)if((o.type==='TAP'||o.type==='FLICK')&&(o.src.subLane!==o.subLane||o.src.subLaneWidth!==o.subLaneWidth)){o.src.subLane=o.subLane;o.src.subLaneWidth=o.subLaneWidth;o.src.lane=Math.floor(o.subLane/2);}
+  const gone=new Set(res.removed.map(o=>o.src));
+  return {moved:res.moved,removed:res.removed.length,mirrored:res.mirrored,left:res.left,notes:gone.size?notes.filter(n=>!gone.has(n)):notes};};
+module.exports.fixHeldBandOnGrid=fixHeldBandOnGrid;
 module.exports.samePlace=samePlace;module.exports.SAME_PLACE_KINDS=SAME_PLACE_KINDS;module.exports.SAME_PLACE_PATH_MS=SAME_PLACE_PATH_MS;module.exports.SAME_PLACE_NEAR=SAME_PLACE_NEAR;

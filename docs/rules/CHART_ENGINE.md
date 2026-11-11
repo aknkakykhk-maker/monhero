@@ -174,6 +174,60 @@
   流れの割合 平均 81.6% → 84.7%(9譜面で上がる)・跳び 256 → 226・同じ所の連打 275 → 244・腕の交差 157 → 126・押せない 20 → 20・届きにくい 278 → 291。
   FREEDOM DiVE↓ MASTER だけは流れの割合が下がり、押せないが 2 → 4 に増えた(新曲で使うときも、押せない・届きにくいは自動修正と検査で見る)
 
+## 作った譜面の点検と仕上げ(2026-11-11 社長「最新モデルで譜面制作ツールを強化したい」・MHB CHART ENGINE Rev.37)
+
+それまでの新曲で、人が公開前・公開後に直していたこと(自動の出力 `authoring/*-v3-fixed-*.json` と公開した譜面を突き合わせて数えた)を道具へ戻した。
+配信中の曲の譜面は変えていない(効くのは次に作る曲から)。
+
+| 直しの傾向(それまで) | いま |
+| --- | --- |
+| 自動修正がレーンを動かすと、押さえている帯の中へノーツが戻る(ROSE〜ヒューマノイドの EXPERT・MASTER で1〜14個。毎回手で外へ) | 自動修正(step7)の最後と、パイプラインの「手の仕上げ」が帯の外へ出す |
+| 生成のあとの手直しでモンスターノーツが2〜3個になる(6譜面。手で枠を付けた) | 生成器の最後で、欠けた枠だけ付け直す |
+| 横持ちの親指で「押せない」所が残る(両手のシミュレートは通る) | 「手の仕上げ」(`must`)が位置だけ動かして直す |
+| 交差・真ん中越えが多い(社長「指交差のいやらしい場面が多かった」Rebellion。直す道具は公開後の譜面にしか使えず、交差を消すと跳びが増えた) | 「手の仕上げ」が EXPERT・MASTER で既定で減らす(山場は残す)。流れを崩す跳び・叩き直しも点数に入れたので、跳びは増えない |
+| 狙いのノーツ数・Lv. に合わせて、つまみを人が1つずつ回す(ヒューマノイドで5回以上) | `rhythm-chart-tune.js` が候補を出す |
+| 難易度を聞くときの体感の数字を書き捨ての `node -e` で出す | `rhythm-chart-review.js` の表 |
+
+7曲(Evans・ROSE 全編/short・ヒューマノイド・Altar short・Rebellion short・Toward the Stars short)の EXPERT・MASTER 14譜面を、変更前のワークツリーと作り比べた合計:
+押せない 15 → 2・帯の中 38 → 0・モンスターが4個でない譜面 6 → 0・交差 250 → 105・届きにくい 431 → 227・跳び 167 → 144(既定=`keep-climax`・ノーツ数は同じ・Lv. は±1〜2)。EASY〜HARD の21譜面は交差・届きにくい・跳びとも変わらない。
+`handFinish:'must'` なら 交差 240・届きにくい 430・跳び 164、`'smooth'` なら 交差 18・届きにくい 90・跳び 131。
+止め絵と数字: [`docs/progress/beat-chart-tools/`](../progress/beat-chart-tools/README.md)
+
+### 道具
+
+```
+node tools/mode/rhythm-chart-review.js --track <曲> [--dir <場所>] [--difficulty EXPERT,MASTER] [--picture <フォルダ>]   作った譜面を点検
+node tools/mode/rhythm-chart-review.js --released <songId>                                                          公開中の譜面を点検(読むだけ)
+node tools/mode/rhythm-chart-review.js --track <曲> --before <場所A> --after <場所B> --picture <フォルダ>           2つの書き出しを比べる
+node tools/mode/rhythm-chart-review.js --calibrate                                                                  帯を作り直す(曲を足したら)
+node tools/mode/rhythm-chart-flow-fix.js --track <曲> [--dir <場所>] [--mode must|keep-climax|smooth] [--write]     手の仕上げ(公開前の書き出し)
+node tools/mode/rhythm-chart-tune.js --track <曲> --target MASTER:notes=600 [--target EXPERT:level=27]              狙いからつまみを探す(書かない)
+node tools/mode/rhythm-chart-review-check.js                                                                        上の決まりの見張り
+```
+
+- **点検の読み方**: 「※」は公開中の同じ難易度の 5〜95% の帯(`authoring/chart-review-bands.json`)の外。帯の外=悪いではない(社長が「ノーツ数で難しく」と言った曲は毎秒が帯より高くなる)。
+  狙いどおりなら理由を添えて進める。「気になる所」の先頭に出る 押せない・帯の中・太さの飛び・モンスター4個でない・難易度の差が無い は必ず直す。
+  「ここを見て」は問題の重い4秒の窓(押せない10・帯の中6・交差3・跳び2・届きにくい1 で足した順)。止め絵の右の印と同じ場所
+- **盛り上がりとの合い方**は、曲の盛り上がり(解析の小節ごとの値)とノーツの密度の順位の相関。「静かなのに重い」「盛り上がるのに軽い」区切りを出す。
+  入りを軽くする引き出し R2 が効いた区切りは「軽い」に出るが狙いどおり。「静かなのに重い」が続く曲は `challengeFactor` を下げるより、その難易度の `chartIntensityByDifficulty` を1段下げた候補を比べる
+- **比べ方**(強化の前後): 変更前のワークツリー(`git worktree add <場所> HEAD`)と今の道具で、同じ曲を `--output-dir` へ生成 → `--source v3 --input-dir/--output-dir` で自動修正 →
+  `rhythm-chart-flow-fix.js --track <曲> --dir <場所> --write` → `rhythm-chart-review.js --before/--after`。ゲームのデータには何も入らない
+
+### 社長の言い方 → 道具・つまみ(曲の一覧 `rhythm-song-registry.json` に書く。どれも書いた曲にだけ効く)
+
+| 言い方 | 使うもの |
+| --- | --- |
+| 「MASTER を◯◯ノーツ前後で」「Lv.◯◯ あたりで」 | `rhythm-chart-tune.js --target` で候補 → 選んだ設定を一覧へ |
+| 「ノーツ数で難しく」「高速系に」「気持ちよく押せる」 | `masterDensity`(1〜2・MASTER だけ拾う音を増やす)+ `sustainScale`({MASTER:.3} など・長押しを減らしてタップへ戻す)。交差は既定で減る(もっと減らすなら `handFinish:'smooth'`) |
+| 「交差がいやらしい」「指がぶつかる」 | 既定で山場以外は減っている。山場も減らすなら `handFinish:'smooth'`。公開中の譜面を直すと決まったときは `rhythm-chart-flow-fix.js --song <songId> --difficulty <難易度>` |
+| 「交差はありでいい」「普通に作って」 | `handFinish:'must'`(押せない・帯の中だけ直す) |
+| 「MASTER だけ重く/EXPERT は軽く」 | `chartIntensityByDifficulty`({"EXPERT":"mild","MASTER":"extreme"}) |
+| 「全体にもっと難しく/易しく」 | `challengeFactor`(上げすぎると Lv. が下がる。スキルの「`challengeFactor` の落とし穴」)・`chartIntensity`('strong'/'extreme') |
+| 「HELL をもっと重く/空中は少なめ」 | `hellDensity`・`rhythm-hell-mix.js` の `phrases`(上の「HELL を重くする」) |
+
+> **既定(2026-11-11 社長の決定 A)**: 新曲の EXPERT・MASTER は、交差・真ん中越えを既定で減らす。いちばん盛り上がる区切り(盛り上がりが山の85%以上)の交差は見せ場として残す
+> (`handFinish` を書かない曲は EXPERT・MASTER が `keep-climax`、EASY〜HARD が `must`)。配信中の曲の譜面は変えない。
+
 ## 公開中の譜面のノーツを動かす・戻すとき
 
 `rhythm-overlap-reach-check.js` と手の決まりの検査も回す。「遊ばれていた形」は何かを避けていることがある

@@ -130,6 +130,10 @@
 //        刻みが粗いと太さが 2→4 のように一気に飛んでいた(アルター原曲 EXPERT 108.82秒の 2-4-4-4-3-3-2)。
 //        飛んだ側の点を細い側へ1段ずつ寄せる(2-4 → 2-3-4)。飛んでいない SLIDE と他のノーツは Rev.34 と同じ譜面。
 //        配信中の譜面は変えていない(アルターのその SLIDE は 2026-11-02 社長「遊ぶ譜面が変わるので触らない」)
+//   37 … 人が公開前に毎回直していた取りこぼしを道具で直す(2026-11-11 社長「最新モデルで譜面制作ツールを強化したい」)。
+//        ・モンスターノーツの仕上げ: 4個置いたあとの手直しで枠の付いたノーツが消えた譜面に、欠けた枠だけを付け直す(生成器の最後)
+//        ・自動修正(step7)がレーンを動かしたあと、押さえている帯の中へ戻ったタップ・フリックを帯の外へ出し直す(時刻・ノーツ数は変えない)
+//        どちらも起きていない譜面は Rev.36 までと同じ。配信中の譜面は変えていない(36 は遊んだ記録・重みの学び直しの番号)
 //   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
@@ -141,7 +145,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=35;
+const CHART_REVISION_CODE_LATEST=37;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
