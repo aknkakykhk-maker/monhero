@@ -933,8 +933,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
-  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => { if (typeof ASSISTANT_LIFE_UI_V2_FLAG !== 'undefined') { ASSISTANT_LIFE_UI_V2_FLAG.v = v === true; ASSISTANT_LIFE_UI_V2_FLAG.loaded = true; } if (alive) setUiV2(v === true); }).catch(() => {}); return () => { alive = false; }; }, []);
-  const toggleUiV2 = () => { const next = !uiV2; setUiV2(next); if (typeof ASSISTANT_LIFE_UI_V2_FLAG !== 'undefined') { ASSISTANT_LIFE_UI_V2_FLAG.v = next; ASSISTANT_LIFE_UI_V2_FLAG.loaded = true; } setCallPicker(false); setRoomId(null); try { void storeSet('mh_assistant_life_ui_v2', next, false); } catch {} };
+  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => { if (alive) setUiV2(v === true); }).catch(() => {}); return () => { alive = false; }; }, []);
+  const toggleUiV2 = () => { const next = !uiV2; setUiV2(next); setCallPicker(false); setRoomId(null); try { void storeSet('mh_assistant_life_ui_v2', next, false); } catch {} };
   const [roomId, setRoomId] = React.useState(st.focus || null);
   // フレンドに見せる「いまの状態」に、家の中のどこにいるかを知らせる(34-friends-api・2026-11-08 案A)。閉じたら消す
   React.useEffect(() => {
