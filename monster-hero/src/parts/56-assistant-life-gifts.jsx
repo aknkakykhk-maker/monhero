@@ -80,17 +80,17 @@ const assistantLifeGiftAmounts = (kindOrKey, pair) => {
   };
 };
 // 画面に出す友情Lv の量。分かっている人はその倍率、分からない人は苦手〜好きの幅で、2人の平均の いちばん少ない〜多い
-const assistantLifeGiftPeerShown = (g, shownLikes) => {
-  const opts = shownLikes.map(s => (s === 'unknown' ? ['bad', 'like'] : [s]).map(assistantLifeGiftMult));
+//   (2026-11-11 社長 案3 A: 幅「+8〜23」はやめ、分からない人は「ふつう」で数えた1つの数で出す。好みは数から分からないまま。opts.range で前の幅)
+const assistantLifeGiftPeerShown = (g, shownLikes, o = null) => {
+  const opts = shownLikes.map(s => (s === 'unknown' ? (o && o.range ? ['bad', 'like'] : ['mid']) : [s]).map(assistantLifeGiftMult));
   const lo = Math.round(g.peer * (Math.min(...opts[0]) + Math.min(...opts[1])) / 2), hi = Math.round(g.peer * (Math.max(...opts[0]) + Math.max(...opts[1])) / 2);
   return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
 };
-// 道具の欄に出す量(だれに贈るか決まる前なので、苦手〜好きの幅)。贈るシートの幅と同じ数
+// 道具の欄に出す量(だれに贈るか決まる前なので「ふつう」の量を1つ。2026-11-11 社長 案3 A。好きなら多め・苦手なら少なめ、は横の字で言う)
 const assistantLifeItemRange = (info) => {
   const g = info && assistantLifeGiftOf(info.kind);
   if (!g) return { peer: '', player: '' };
-  return { peer: `+${Math.round(g.peer * assistantLifeGiftMult('bad'))}〜${Math.round(g.peer * assistantLifeGiftMult('like'))}`,
-    player: `+${Math.round(g.player * assistantLifeGiftMult('bad'))}〜${Math.round(g.player * assistantLifeGiftMult('like'))}` };
+  return { peer: `+${g.peer}`, player: `+${g.player}` };
 };
 
 // ---------- 保存(3つのキー) ----------
@@ -472,7 +472,7 @@ const assistantLifeGiftGainsFor = (kind, pair, nameOf, st = ASSISTANT_LIFE_GIFT_
   const g = assistantLifeGiftOf(kind), amt = g && assistantLifeGiftAmounts(kind, pair);
   if (!amt) return [];
   const shown = pair.map(id => assistantLifeGiftShownLike(id, g.key, st));
-  return [...pair.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`}` })),
+  return [...pair.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${shown[i] === 'unknown' ? `+${g.player}(好みで変わる)` : `+${amt.player[i]}`}` })),
     { text: `🤝 2人の友情Lv ${assistantLifeGiftPeerShown(g, shown)}`, cls: 'text-orange-300' }];
 };
 const assistantLifeBuyLabel = (item) => `🛒 ${item.cost}P で買って贈る`;
@@ -544,6 +544,32 @@ function AssistantLifeGiftRules({ solo = false }) {
     </div>);
 }
 
+// 道具の一覧の1行(2026-11-11 社長「贈るやつも見た目とか分かりにくい」・案7: 1つの道具に4行あった説明を「名前・持っている数/上がる物」の2行に)
+// x … assistantLifeItemInfo の形 / solo … 1人用の道具 / have … 持っている数 / used … 今日はもう贈った / action … 右のボタン
+function AssistantLifeItemRow({ x, solo = false, have = 0, used = false, action = null }) {
+  const g = assistantLifeGiftOf(x.kind);
+  if (!g) return null;
+  return (
+    <div data-assistant-life-item={x.kind} className={`mt-1.5 flex items-center gap-2 rounded-2xl border bg-slate-900/85 px-2 py-1.5 ${solo ? 'border-pink-300/30' : 'border-amber-300/30'}`}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/5 text-[24px]" aria-hidden="true">{x.emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{x.name} <span className={`whitespace-nowrap text-[11px] ${used ? 'text-slate-400' : have > 0 ? 'text-amber-200' : 'text-slate-400'}`}>{used && have > 0 ? '今日は済み' : `持ち ${have}`}</span></p>
+        <p className="text-[11px] font-bold leading-snug">{!solo && <><span className="whitespace-nowrap text-orange-300">🤝 友情Lv +{g.peer}</span><span className="text-slate-500">・</span></>}<span className="whitespace-nowrap text-pink-200" data-assistant-life-item-solo-amt={solo ? '' : undefined}>💗 仲良し度 +{g.player}</span></p>
+      </div>
+      {action}
+    </div>);
+}
+// 道具の一覧の下の説明(畳む)。押すと 友情Lv・仲良し度の説明と、回数・同じ道具・好みのきまり
+function AssistantLifeItemsHelp({ solo = false }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="mt-1.5" data-assistant-life-items-help>
+      <p className="rounded-xl bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>数は「ふつう」のときの量。<wbr/>💗好きな物は多め・<wbr/>💧苦手な物は少なめ(好みは贈ると分かる)</p>
+      <button type="button" data-assistant-life-items-help-toggle aria-expanded={open} onClick={() => setOpen(v => !v)} className="mt-1.5 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-950/70 px-3 text-left text-[12px] font-black text-slate-100 active:scale-[.98]"><span>？ 友情Lv・仲良し度と、贈るきまり</span><span>{open ? '▲' : '▼'}</span></button>
+      {open && <div className="mt-1"><AssistantLifeGiftExplain compact/><AssistantLifeGiftRules solo={solo}/></div>}
+    </div>);
+}
+
 // 2人に贈るシート(道具10種類・2人の好み・上がる量)。56-assistant-life.jsx・56-assistant-life-house.jsx の両方から開く
 // give … { ids(一緒にいる助手), pair(2人に贈るとき), solo(1人に贈るときの助手), kind }。1人に贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)は印 assistantLifeSolo の後ろ
 function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, onGive }) {
@@ -577,8 +603,10 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const shown = people.map(id => (lifeOn ? assistantLifeGiftShownLike(id, info.key, st) : 'mid'));
   const soloRange = [Math.round(info.player * assistantLifeGiftMult('bad')), Math.round(info.player * assistantLifeGiftMult('like'))];
   const tagCls = { like: 'bg-pink-600 text-white', mid: 'bg-slate-600 text-white', bad: 'bg-cyan-700 text-white', unknown: 'bg-slate-700 text-slate-200' };
-  const playerText = (i) => (soloWho ? (shown[i] === 'unknown' ? `+${soloRange[0]}〜${soloRange[1]}` : `+${assistantLifeSoloAmount(soloWho, info.key)}`)
-    : !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`);
+  // 好みが分からない人は「ふつう」の量を1つ出し、横に(好みで変わる)(2026-11-11 社長 案3 A)
+  const playerText = (i) => (soloWho ? (shown[i] === 'unknown' ? `+${info.player}` : `+${assistantLifeSoloAmount(soloWho, info.key)}`)
+    : !amt ? '' : shown[i] === 'unknown' ? `+${info.player}` : `+${amt.player[i]}`);
+  const vary = (i) => (lifeOn && shown[i] === 'unknown' ? '(好みで変わる)' : '');
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
   // 数字の重み(好みが分からない人は幅のまま。隠れた好みが数字から分からないようにする)
   const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
@@ -587,7 +615,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
     if (soloWho) { const n = assistantLifeSoloAmount(soloWho, info.key); const [lo, hi] = shown[i] === 'unknown' ? soloRange : [n, n]; return assistantLifeWeightOf(assistantLifeBondPointsOf(soloWho), lo, hi, bondLv, 'need'); }
     if (!amt) return null; const [lo, hi] = shown[i] === 'unknown' ? amt.range.player : [amt.player[i], amt.player[i]];
     return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need'); };
-  const peerNums = String(peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
+  const peerNums = String(amt && lifeOn ? assistantLifeGiftPeerShown(info, shown, { range: true }) : peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
   const peerW = amt && hint && peerNums.length ? assistantLifeWeightOf(hint.pts, peerNums[0], peerNums[peerNums.length - 1], peerLv, 'min') : null;
   // ---- 見せ方(2026-11-11 社長「贈るやつも見た目とか分かりにくい仕様だから、全体的にそのへんも見直して」。きまり・量・保存は変えていない) ----
   // 回数は「2人に」「1人に」の2本を並べて出す/説明ときまりは「？」に畳む/道具の札に 持っている数・値段・今日は済み を出す
@@ -657,14 +685,14 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
               <div className="flex items-center gap-2">
                 <span className="min-w-0 shrink truncate font-black text-white">{nameOf(id)}</span>
                 {lifeOn && <span className={`shrink-0 rounded-full px-1.5 text-[11px] font-black ${tagCls[shown[i]]}`}>{shown[i] === 'unknown' ? '好み ？' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]}</span>}
-                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 <b className="text-[14px] text-white">{playerText(i)}</b></span>
+                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 <b className="text-[14px] text-white">{playerText(i)}</b>{vary(i) && <span className="text-[10.5px] font-bold text-slate-300">{vary(i)}</span>}</span>
               </div>
               {lifeOn && <AssistantLifeGiftWeight w={playerW(i)} tone="player" kind={`player-${id}`} gainText={(() => { const w = playerW(i); return w && !w.max ? assistantLifeBondLvGain(w.next) : ''; })()}/>}
             </div>))}
           {!soloWho && <div className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-peer>
             <div className="flex items-center gap-2">
               <span className="min-w-0 truncate font-black text-white">{pair.length === 2 ? pair.map(nameOf).join('と') : '2人'}</span>
-              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv <b className="text-[14px] text-white">{peerText}</b>{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
+              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv <b className="text-[14px] text-white">{peerText}</b>{anyUnknown && <span className="text-[10.5px] font-bold text-slate-300">(好みで変わる)</span>}{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
             </div>
             {lifeOn && <AssistantLifeGiftWeight w={peerW} tone="peer" kind="peer" gainText={peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''}/>}
           </div>}
@@ -687,7 +715,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
         </div>
       </div>
       {buying && <AssistantLifeBuyConfirm item={info} to={soloWho ? nameOf(soloWho) : pair.map(nameOf).join('と')} onClose={() => setBuying(false)}
-        gains={[...people.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${playerText(i)}` })), ...(!soloWho ? [{ text: `🤝 2人の友情Lv ${peerText}`, cls: 'text-orange-300' }] : [])]}
+        gains={[...people.map((id, i) => ({ text: `💗 ${nameOf(id)}との仲良し度 ${playerText(i)}${vary(i)}` })), ...(!soloWho ? [{ text: `🤝 2人の友情Lv ${peerText}${anyUnknown ? '(好みで変わる)' : ''}`, cls: 'text-orange-300' }] : [])]}
         check={reasonOf} give={() => onGive({ bought: info })}/>}
     </div>);
 }
@@ -1008,7 +1036,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   // まだ持っていない家具(買ってそのまま贈れる。同じ家具は1人に1つなので、贈った家具は出さない)
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
   const furnGainText = (k) => { const s = shown(k); if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
-    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${Math.round(base * assistantLifeGiftMult('bad'))}〜${Math.round(base * assistantLifeGiftMult('like'))}`; };
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${base}(好みで変わる)`; };
   const shown = (k) => assistantLifeGiftShownLike(id, k, st);
   const give = async (k, bought = false) => {
     if (busy) return; setBusy(true);
