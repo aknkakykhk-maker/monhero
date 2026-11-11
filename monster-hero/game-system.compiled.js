@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4eb3861ffb2d183
+// source-sha256: 965386e1bae9cf0a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146194,6 +146194,7 @@ function AssistantMasmonRanchSheet({
   }, React.createElement("span", null, "疲れ"), React.createElement("span", null, "+", res.fat)), React.createElement("button", {
     type: "button",
     onClick: onClose,
+    "data-mhl-sheet-close": true,
     className: `${btn} mt-3 w-full bg-slate-700`
   }, "閉じる")) : React.createElement(React.Fragment, null, rows.length > 1 && React.createElement("div", {
     className: "mt-2 flex flex-wrap gap-1.5",
@@ -146247,6 +146248,7 @@ function AssistantMasmonRanchSheet({
   }, React.createElement("button", {
     type: "button",
     onClick: onClose,
+    "data-mhl-sheet-close": true,
     className: `${btn} bg-slate-700`
   }, "やめる"), React.createElement("button", {
     type: "button",
