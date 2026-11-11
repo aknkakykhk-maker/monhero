@@ -105,7 +105,7 @@ check('魂格再編の書(勇者の証で交換)の窓で個数を選べ、選�
   screen.includes("openSheet({ item:exchangeItem, stackable:true, confirm:(count)=>onExchangeSoulRankRespec(count) })")
   && /const exchangeSoulRankRespecByProof = async \(quantity=1\) => \{[\s\S]{0,200}?buildSoulRankRespecProofExchange\(before, quantity\)/.test(app));
 check('消耗品とビートPの品も、窓で選んだ個数が本体へ渡る',
-  screen.includes("stackable:item.type==='item', confirm:(count)=>onBuy(item,count)")
+  screen.includes("stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count)")
   && screen.includes("confirm:(count)=>onExchangeEventPoints?onExchangeEventPoints(offer,count):false"));
 
 // --- ④ 二重に引かれない ---
