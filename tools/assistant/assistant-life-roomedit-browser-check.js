@@ -87,10 +87,23 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     check(`${T}つまんで動かすと位置が変わり、保存される`, Math.abs(b2.x - b.x - 90) < 4 && bear1.x > bear0.x + 0.05, `画面 ${Math.round(b2.x - b.x)}px / 保存 x ${bear0.x}→${bear1.x.toFixed(2)}`);
     // 大きさ・向き・回す・色・助手の前へ
     for (const k of ['big', 'big', 'flip', 'rotr', 'layer']) { await page.locator(`[data-assistant-life-layout-tool="${k}"]`).click(); await page.waitForTimeout(60); }
-    await page.locator('[data-assistant-life-layout-tool="color"]').click(); await page.locator('[data-assistant-life-layout-color="5"]').click(); await page.waitForTimeout(150);
+    await page.locator('[data-assistant-life-layout-tool="color"]').click();
+    const slide = (key, val) => page.evaluate(({ key, val }) => { const el = document.querySelector(`[data-assistant-life-layout-color="${key}"]`); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, String(val)); el.dispatchEvent(new Event('input', { bubbles: true })); }, { key, val });
+    await slide('h', 270); await slide('l', 1.2); await slide('g', 1.5); await page.waitForTimeout(150);
+    await shot(page, `${v.id}-color`);
     const s2 = await layoutOf(page); const bear2 = s2.lay.mua.items.find(it => it.k === 'bear');
-    check(`${T}大きさ・向き・回す・色・助手の前へ が保存される`, Math.abs(bear2.s - 1.3) < 0.01 && bear2.f === true && bear2.r === 15 && bear2.c === 5 && bear2.a === true, JSON.stringify(bear2));
+    check(`${T}大きさ・向き・回す・色・助手の前へ が保存される`, Math.abs(bear2.s - 1.3) < 0.01 && bear2.f === true && bear2.r === 15 && bear2.h === 270 && bear2.l === 1.2 && bear2.g === 1.5 && bear2.a === true, JSON.stringify(bear2));
+    check(`${T}色えらびの帯と道具が画面の中`, (await inside(page)).length === 0, (await inside(page)).slice(0, 3).join(' / '));
     await page.locator('[data-assistant-life-layout-tool="colorclose"]').click();
+    // 指2本のピンチで大きさ(くまを選んだまま、部屋の上で指を広げる)
+    { const cdp = await page.context().newCDPSession(page); const sc = await page.locator('[data-assistant-life-layout-editor] [data-assistant-life-roomview]').boundingBox();
+      const cx = sc.x + sc.width / 2, cy = sc.y + sc.height * 0.45; const pt = (d) => [{ x: cx - d, y: cy, id: 1 }, { x: cx + d, y: cy, id: 2 }];
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt(40)[0]] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(40) });
+      for (const d of [48, 56, 60]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(d) });
+      await page.waitForTimeout(120); await shot(page, `${v.id}-pinch`);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.waitForTimeout(200);
+      const sp = await layoutOf(page); const bp = sp.lay.mua.items.find(it => it.k === 'bear');
+      check(`${T}指2本のピンチで大きくなり、保存される`, Math.abs(bp.s - 1.95) < 0.06, `s 1.3→${bp.s}`); }
     // 押し入れから出す → しまう
     await page.locator('[data-assistant-life-layout-chip="sofa:kept"]').click(); await page.waitForTimeout(150);
     const s3 = await layoutOf(page); const hasSofa = s3.lay.mua.items.some(it => it.k === 'sofa');

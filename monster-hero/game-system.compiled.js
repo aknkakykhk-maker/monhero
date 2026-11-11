@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 80a0446253d03a0f
+// source-sha256: 20379e82dd3fd06e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111930,7 +111930,8 @@ function AssistantLifeRoomScene({
     sel: layoutEdit.sel,
     onSelect: layoutEdit.onSelect,
     onMove: layoutEdit.onMove,
-    onDrop: layoutEdit.onDrop
+    onDrop: layoutEdit.onDrop,
+    onScale: layoutEdit.onScale
   }), night && React.createElement("div", {
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0",
@@ -126019,43 +126020,8 @@ const ASSISTANT_LIFE_LAYOUT_MIGRATED_KEY = 'mh_assistant_life_room_layout_migrat
 const ASSISTANT_LIFE_LAYOUT_FLOOR = 0.56;
 const ASSISTANT_LIFE_LAYOUT_MAX = 40;
 const ASSISTANT_LIFE_LAYOUT_S = Object.freeze([0.5, 2.4]);
-const ASSISTANT_LIFE_LAYOUT_COLORS = Object.freeze([Object.freeze({
-  label: 'もとの色',
-  dot: '#e5e7eb',
-  filter: ''
-}), Object.freeze({
-  label: 'きいろ',
-  dot: '#facc15',
-  filter: 'hue-rotate(45deg)'
-}), Object.freeze({
-  label: 'みどり',
-  dot: '#4ade80',
-  filter: 'hue-rotate(100deg)'
-}), Object.freeze({
-  label: 'みずいろ',
-  dot: '#38bdf8',
-  filter: 'hue-rotate(170deg)'
-}), Object.freeze({
-  label: 'あお',
-  dot: '#6366f1',
-  filter: 'hue-rotate(220deg)'
-}), Object.freeze({
-  label: 'むらさき',
-  dot: '#c084fc',
-  filter: 'hue-rotate(270deg)'
-}), Object.freeze({
-  label: 'ピンク',
-  dot: '#f472b6',
-  filter: 'hue-rotate(320deg)'
-}), Object.freeze({
-  label: 'セピア',
-  dot: '#b08968',
-  filter: 'sepia(0.85)'
-}), Object.freeze({
-  label: 'しろくろ',
-  dot: '#6b7280',
-  filter: 'grayscale(1)'
-})]);
+const assistantLifeLayoutColorFilter = it => `${it.h ? `hue-rotate(${it.h}deg) ` : ''}${it.g !== 1 ? `saturate(${it.g}) ` : ''}${it.l !== 1 ? `brightness(${it.l}) ` : ''}`;
+const ASSISTANT_LIFE_LAYOUT_HUE_BAR = 'linear-gradient(90deg,#f87171,#facc15,#4ade80,#22d3ee,#60a5fa,#c084fc,#f472b6,#f87171)';
 const ASSISTANT_LIFE_LAYOUT_SLOT_POS = Object.freeze({
   ceil: Object.freeze({
     x: 0.47,
@@ -126084,7 +126050,9 @@ const normalizeAssistantLifeLayoutItem = (raw, keys) => {
     s: assistantLifeLayoutClamp(raw.s, ASSISTANT_LIFE_LAYOUT_S[0], ASSISTANT_LIFE_LAYOUT_S[1], 1),
     r: Math.round(assistantLifeLayoutClamp(raw.r, -180, 180, 0)),
     f: raw.f === true,
-    c: Math.round(assistantLifeLayoutClamp(raw.c, 0, ASSISTANT_LIFE_LAYOUT_COLORS.length - 1, 0)),
+    h: Math.round(assistantLifeLayoutClamp(raw.h, 0, 359, 0)),
+    l: Math.round(assistantLifeLayoutClamp(raw.l, 0.5, 1.5, 1) * 100) / 100,
+    g: Math.round(assistantLifeLayoutClamp(raw.g, 0, 2, 1) * 100) / 100,
     a: raw.a === true,
     z: Math.round(assistantLifeLayoutClamp(raw.z, -9999, 9999, 0))
   };
@@ -126126,7 +126094,9 @@ const assistantLifeLayoutFromRoom = (room, layout) => {
         s: 1,
         r: 0,
         f: false,
-        c: 0,
+        h: 0,
+        l: 1,
+        g: 1,
         a: false,
         z: items.length
       });
@@ -126227,7 +126197,9 @@ const assistantLifeLayoutNewItem = (key, items) => {
     s: 1,
     r: 0,
     f: false,
-    c: 0,
+    h: 0,
+    l: 1,
+    g: 1,
     a: false,
     z: items.reduce((m, it) => Math.max(m, it.z), 0) + 1
   };
@@ -126339,7 +126311,9 @@ const assistantLifeLayoutOmakase = (who, owned) => {
       s: k === h.hero ? h.big + 0.15 : like(k) === 'like' ? h.big : 0.95,
       r: h.tilt && slot !== 'ceil' ? i % 2 ? -h.tilt : h.tilt : 0,
       f: seat[0] > 0.5,
-      c: 0,
+      h: 0,
+      l: 1,
+      g: 1,
       a: slot === 'floor',
       z: i
     });
@@ -126360,8 +126334,7 @@ const assistantLifeLayoutFromPx = (left, top, g) => ({
 });
 const assistantLifeLayoutBase = g => Math.round(Math.max(34, Math.min(56, g.W * 0.12)));
 const assistantLifeLayoutStyle = (it, g) => {
-  const p = assistantLifeLayoutPx(it, g),
-    col = ASSISTANT_LIFE_LAYOUT_COLORS[it.c] || ASSISTANT_LIFE_LAYOUT_COLORS[0];
+  const p = assistantLifeLayoutPx(it, g);
   return {
     position: 'absolute',
     left: p.left,
@@ -126369,7 +126342,7 @@ const assistantLifeLayoutStyle = (it, g) => {
     fontSize: Math.round(assistantLifeLayoutBase(g) * it.s),
     lineHeight: 1,
     transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
-    filter: `${col.filter ? `${col.filter} ` : ''}drop-shadow(0 5px 4px #0005)`
+    filter: `${assistantLifeLayoutColorFilter(it)}drop-shadow(0 5px 4px #0005)`
   };
 };
 function AssistantLifeRoomLayoutLayer({
@@ -126404,9 +126377,74 @@ function AssistantLifeRoomLayoutHandles({
   sel,
   onSelect,
   onMove,
-  onDrop
+  onDrop,
+  onScale = null
 }) {
   const drag = React.useRef(null);
+  const live = React.useRef(null);
+  live.current = {
+    items,
+    sel,
+    onScale,
+    onDrop
+  };
+  React.useEffect(() => {
+    const pts = new Map();
+    let pinch = null;
+    const dist = () => {
+      const [a, b] = [...pts.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const inRoom = e => !!(e.target && e.target.closest && e.target.closest('[data-assistant-life-roomview]'));
+    const down = e => {
+      if (e.pointerType === 'mouse' || !inRoom(e)) return;
+      pts.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY
+      });
+      const c = live.current;
+      const it = c.items.find(x => x.k === c.sel);
+      if (pts.size === 2 && it && c.onScale) {
+        pinch = {
+          k: it.k,
+          s0: it.s,
+          d0: Math.max(10, dist())
+        };
+        drag.current = null;
+      }
+    };
+    const move = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY
+      });
+      if (pinch && pts.size === 2) {
+        const c = live.current;
+        const s = Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round(pinch.s0 * (dist() / pinch.d0) * 100) / 100));
+        if (c.onScale) c.onScale(pinch.k, s);
+      }
+    };
+    const up = e => {
+      if (!pts.delete(e.pointerId)) return;
+      if (pinch) {
+        const k = pinch.k;
+        pinch = null;
+        const c = live.current;
+        if (c.onDrop) c.onDrop(k);
+      }
+    };
+    window.addEventListener('pointerdown', down, true);
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+    return () => {
+      window.removeEventListener('pointerdown', down, true);
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', up, true);
+      window.removeEventListener('pointercancel', up, true);
+    };
+  }, []);
   const down = (e, it) => {
     e.preventDefault();
     e.stopPropagation();
@@ -126487,7 +126525,6 @@ function AssistantLifeRoomLayoutMini({
     const f = assistantLifeFurnOf(it.k);
     if (!f) return null;
     const p = assistantLifeLayoutPx(it, g);
-    const col = ASSISTANT_LIFE_LAYOUT_COLORS[it.c] || ASSISTANT_LIFE_LAYOUT_COLORS[0];
     return React.createElement("span", {
       key: it.k,
       "aria-hidden": "true",
@@ -126501,7 +126538,7 @@ function AssistantLifeRoomLayoutMini({
         lineHeight: 1,
         fontSize: Math.round(base * Math.min(1.6, it.s)),
         transform: `translate(-50%,-50%) rotate(${it.r}deg) scaleX(${it.f ? -1 : 1})`,
-        filter: col.filter || undefined
+        filter: assistantLifeLayoutColorFilter(it).trim() || undefined
       }
     }, f.emoji);
   }));
@@ -126613,22 +126650,38 @@ function AssistantLifeRoomEditor({
     className: "shrink-0 text-[10.5px] font-bold text-slate-300",
     "data-assistant-life-layout-count": true
   }, "置いてある ", cur.length, " / ", got.length)), colorOpen && selIt ? React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
+    className: "flex flex-col gap-2 py-1",
     "data-assistant-life-layout-colors": true
-  }, ASSISTANT_LIFE_LAYOUT_COLORS.map((c, i) => React.createElement("button", {
-    key: i,
-    type: "button",
-    "data-assistant-life-layout-color": i,
-    "aria-label": c.label,
-    "aria-pressed": selIt.c === i,
-    onClick: () => patch(sel, {
-      c: i
+  }, React.createElement("style", null, `.mhl-layout-range{-webkit-appearance:none;appearance:none;height:16px;border-radius:999px;border:1.5px solid #ffffff55;outline-offset:3px}
+.mhl-layout-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #f472b6;box-shadow:0 1px 4px #000a}
+.mhl-layout-range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #f472b6;box-shadow:0 1px 4px #000a}`), [['h', '色あい', 0, 359, 1, ASSISTANT_LIFE_LAYOUT_HUE_BAR], ['l', '明るさ', 0.5, 1.5, 0.01, 'linear-gradient(90deg,#1f2937,#9ca3af,#ffffff)'], ['g', 'あざやかさ', 0, 2, 0.01, 'linear-gradient(90deg,#9ca3af,#f472b6,#e11d48)']].map(([key, label, lo, hi, step, bar]) => React.createElement("label", {
+    key: key,
+    className: "flex items-center gap-2 text-[11px] font-black text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[64px] shrink-0"
+  }, label), React.createElement("input", {
+    type: "range",
+    "data-assistant-life-layout-color": key,
+    "aria-label": label,
+    min: lo,
+    max: hi,
+    step: step,
+    value: selIt[key],
+    onChange: e => patch(sel, {
+      [key]: Number(e.target.value)
     }),
-    className: `h-[40px] w-[40px] shrink-0 rounded-full border-[3px] active:scale-95 ${selIt.c === i ? 'border-white' : 'border-slate-600'}`,
+    className: "mhl-layout-range min-w-0 flex-1",
     style: {
-      background: c.dot
+      background: bar,
+      touchAction: 'none'
     }
-  })), tool('colorclose', '← 戻る', () => setColorOpen(false))) : React.createElement("div", {
+  }))), React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, tool('colorreset', 'もとの色', () => patch(sel, {
+    h: 0,
+    l: 1,
+    g: 1
+  }), selIt.h === 0 && selIt.l === 1 && selIt.g === 1), tool('colorclose', '← 道具へ戻る', () => setColorOpen(false)))) : React.createElement("div", {
     className: "flex items-center gap-1.5 overflow-x-auto pb-0.5",
     "data-assistant-life-layout-tools": true
   }, tool('small', '小', () => patch(sel, {
@@ -126684,12 +126737,15 @@ function AssistantLifeRoomEditor({
     },
     "data-assistant-life-layout-editor": id
   }, React.createElement("div", {
-    className: "relative min-h-0 min-w-0 flex-1"
+    className: "relative min-h-0 min-w-0 flex-1",
+    style: {
+      touchAction: 'none'
+    }
   }, React.createElement(AssistantLifeRoomScene, _extends({}, room, {
     id: id,
     land: land,
     title: `${who.name}の部屋の模様替え`,
-    sub: "家具をつまんで好きな所へ。下の道具で大きさ・向き・色",
+    sub: "つまんで動かす・指2本で大きさ・下の道具で向きと色",
     bubble: "",
     padLeft: 78,
     dock: null,
@@ -126711,7 +126767,11 @@ function AssistantLifeRoomEditor({
       } : it)),
       onDrop: () => {
         if (items) commit(items);
-      }
+      },
+      onScale: (k, sc) => setItems(cur.map(it => it.k === k ? {
+        ...it,
+        s: sc
+      } : it))
     }
   })), line && React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 max-w-[86%] -translate-x-1/2 rounded-2xl border-2 border-pink-400 bg-white px-3 py-1.5 text-center text-[12.5px] font-black leading-snug text-slate-900 shadow",

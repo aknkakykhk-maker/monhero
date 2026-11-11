@@ -330,7 +330,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
             {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={mt} size={s}/> : null}
           </button>); })}
       {/* 時間帯: 夜は暗く・灯り */}
-      {layoutOn && layoutEdit && <AssistantLifeRoomLayoutHandles items={layoutEdit.items} geom={layoutGeom} sel={layoutEdit.sel} onSelect={layoutEdit.onSelect} onMove={layoutEdit.onMove} onDrop={layoutEdit.onDrop}/>}
+      {layoutOn && layoutEdit && <AssistantLifeRoomLayoutHandles items={layoutEdit.items} geom={layoutGeom} sel={layoutEdit.sel} onSelect={layoutEdit.onSelect} onMove={layoutEdit.onMove} onDrop={layoutEdit.onDrop} onScale={layoutEdit.onScale}/>}
       {night && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
       {night && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
       {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}

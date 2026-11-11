@@ -165,7 +165,7 @@
       "部長": "オクリモノ",
       "受け持ち": "助手ライフの贈り物(買って贈る)・道具・家具",
       "語": ["贈り物", "ギフト", "家具", "道具", "オクリモノ"],
-      "files": ["P/56-assistant-life-gifts.jsx", "tools/assistant/life-gift-*"],
+      "files": ["P/56-assistant-life-gifts.jsx", "P/56-assistant-life-roomedit.jsx", "tools/assistant/life-gift-*", "tools/assistant/assistant-life-roomedit-*"],
       "入口": ["AssistantLifeGiftSheet", "AssistantLifeFurnSheet"],
       "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)"],
       "資料": ["docs/progress/assistant-peer/GIFT-PLAN.md", "docs/progress/assistant-peer/GIFT-HANDOFF.md"],
