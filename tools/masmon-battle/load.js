@@ -54,7 +54,9 @@ const makeUnit = (engine, catalog, rng, opts = {}) => {
   const stats = {};
   engine.STAT_KEYS.forEach((k, i) => { stats[k] = Math.min(999, Math.round(total * w[i] / sum)); });
   if (opts.stats) Object.assign(stats, opts.stats);
-  return { species, name: catalog.species[species].name, lv: opts.lv || 1 + Math.floor(rng() * 99), stats };
+  // 技は全部覚えている形で(集計では覚え方の差を消す)
+  return { species, name: catalog.species[species].name, lv: opts.lv || 1 + Math.floor(rng() * 99), stats,
+    techs: catalog.species[species].techs.map(t => t.id) };
 };
 
 module.exports = { ROOT, load, makeUnit };

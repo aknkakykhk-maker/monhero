@@ -126,8 +126,8 @@ const out = {};
   for (let x = 0; x < ids.length; x++) for (let y = x + 1; y < ids.length; y++) for (let i = 0; i < M; i++) {
     for (const sw of [false, true]) {
       const [p, q] = sw ? [ids[y], ids[x]] : [ids[x], ids[y]];
-      const r = run(`sp-${x}-${y}-${i}-${sw}`, { assistantId: 'atsu', tactics: 50, members: [{ species: p, lv: 50, stats: flat }] },
-        { assistantId: 'atsu', tactics: 50, members: [{ species: q, lv: 50, stats: flat }] });
+      const r = run(`sp-${x}-${y}-${i}-${sw}`, { assistantId: 'atsu', tactics: 50, members: [{ species: p, lv: 50, stats: flat, techs: catalog.species[p].techs.map(t => t.id) }] },
+        { assistantId: 'atsu', tactics: 50, members: [{ species: q, lv: 50, stats: flat, techs: catalog.species[q].techs.map(t => t.id) }] });
       g[p]++; g[q]++;
       if (r.winner === 'A') w[p]++; else if (r.winner === 'B') w[q]++; else { w[p] += 0.5; w[q] += 0.5; }
     }

@@ -14,8 +14,8 @@ const makeDraftTechs = (ALL_PLAYER_MONSTERS) => {
     const other = bigKind === 'pow' ? 'wise' : 'pow';
     const k = id.toLowerCase();
     species[id] = [
-      { id: `${k}_01`, name: '仮・軽打', kind: 'pow', dist: [0, 1], power: 12, hit: 8, guts: 12, crit: 5, gd: 3 },
-      { id: `${k}_02`, name: '仮・遠撃', kind: 'wise', dist: [2, 3], power: 14, hit: 4, guts: 16, crit: 5, gd: 5 },
+      { id: `${k}_01`, name: '仮・軽打', kind: 'pow', dist: [0, 1], power: 12, hit: 8, guts: 12, crit: 5, gd: 3, learn: { start: true } },
+      { id: `${k}_02`, name: '仮・遠撃', kind: 'wise', dist: [2, 3], power: 14, hit: 4, guts: 16, crit: 5, gd: 5, learn: { start: true } },
       { id: `${k}_03`, name: '仮・大技', kind: bigKind, dist: [best], power: 34, hit: -14, guts: 42, crit: 12, gd: 8 },
       { id: `${k}_04`, name: '仮・ガッツ崩し', kind: other, dist: [Math.min(best, near), Math.max(best, near)], power: 10, hit: 2, guts: 22, crit: 5, gd: 28 },
       { id: `${k}_05`, name: '仮・会心', kind: 'pow', dist: [1, 2], power: 18, hit: 16, guts: 24, crit: 22, gd: 5 },

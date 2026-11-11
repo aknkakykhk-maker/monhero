@@ -18,13 +18,13 @@ const catalog = ASSISTANT_MASMON_BATTLE.buildCatalog({ ALL_PLAYER_MONSTERS, ASSI
 ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, roundLimit?, trace? })
 // team = { assistantId:'mua'…'erubin', tactics:0〜100(戦術経験), members:[1体, …](1〜3体) }
 // 1体 = { species, name, lv:1〜99, stats:{ life, pow, wise, hit, eva, tough }(0〜999),
-//         techs:['技id', …](覚えている技。無ければその種の全部), mastery:{ [技id]:0〜100, guard, dist, swap } }
+//         techs:['技id', …](覚えている技。無ければ技表の learn.start の技), mastery:{ [技id]:0〜100, guard, dist, swap } }
 // → { version, winner:'A'|'B'|'draw', reason:'wipe'|'judge', rounds, log:[1手ずつ], final, digest }
 ```
 
 - 育成(キズナ4・`mh_assistant_masmon_grow_v1`)と修行(シュギョウ・`mh_assistant_masmon_train_v1`)からは
   `unitFromGrow(row, amgEntryOf(…), amgtEntryOf(…))` で1体を作る(row = `assistantMasmonRowsOf` の行。
-  修行の入れ物の `m` が熟練、`learn` が覚えた技(id の配列か {id:true})。入れ物が無ければ既定値)
+  修行の入れ物の `m` が熟練、`learn` が覚えた技の id の配列。入れ物が無ければ既定値)
 - `VERSION` は計算を変えたら上げる(サーバの試合の行に残る)。**2 = 技を MF のように一新**(2026-11-11)
 - 疲労・ストレス・好き嫌い・型(攻撃型など)は**入力に取らない**(強さに効かせない)
 - `trace:true` で、各手に AI が付けた点(`cands`)が記録に付く(観戦で「なぜその手か」を見せる用)

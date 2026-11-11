@@ -110,6 +110,7 @@
       dist: dist.length ? [...new Set(dist)].sort() : [1],
       power: num(x.power, 'power', 10), hit: num(x.hit, 'hit', 0), guts: num(x.guts, 'guts', 20),
       crit: num(x.crit, 'crit', 5), gd: num(x.gd, 'gd', 0),
+      start: !!(x.learn && x.learn.start),        // はじめから覚えている技(覚えた技の記録が無いときはこれだけ)
     };
   };
   const buildCatalog = (src) => {
@@ -143,11 +144,13 @@
   };
 
   // 1体ぶんの技の表。覚えている技(techs)だけ・熟練で命中とガッツ消費を直す。
-  // 覚えている技が1つも無ければ、その種の最初の技(はじめから覚えている技)を持たせる
+  // 覚えた技の記録が無い(古い入れ物)ときは、はじめから覚えている技(learn.start)だけ。それも無い種は全部。
+  // 記録があって1つも当てはまらなければ、はじめの技(無ければ最初の技)
+  const startTechs = (sp) => { const st = sp.techs.filter(t => t.start); return st.length ? st : sp.techs.slice(); };
   const buildMoves = (catalog, speciesId, techIds, mastery) => {
     const sp = catalog.species[speciesId];
-    const known = Array.isArray(techIds) ? sp.techs.filter(t => techIds.includes(t.id)) : sp.techs.slice();
-    const list = known.length ? known : [sp.techs[0]];
+    const known = Array.isArray(techIds) ? sp.techs.filter(t => techIds.includes(t.id)) : startTechs(sp);
+    const list = known.length ? known : (sp.techs.some(t => t.start) ? startTechs(sp) : [sp.techs[0]]);
     return list.map(t => {
       const m = clamp(Number(mastery && mastery[t.id]) || 0, 0, 100);
       return { key: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power / 20,
