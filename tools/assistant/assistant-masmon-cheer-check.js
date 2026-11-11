@@ -86,7 +86,7 @@ const make = ({ on = true, rows = ROWS2, place = 'battle', abs = 1000 } = {}) =>
 {
   check('⑤ 自分のマスモンが2体なら相手あり(own)', make().T.amgcSparOf('kiki', NOW) === 'own');
   const one = make({ rows: [ROWS2[0]] });
-  check('⑤ 1体だけ・フレンド無しは一人(solo)・伸び×0.7', one.T.amgcSparOf('kiki', NOW) === 'solo' && one.T.amgcSparMult('kiki') === 0.7);
+  check('⑤ 1体だけ・フレンド無しは一人(solo)・伸び×0.5', one.T.amgcSparOf('kiki', NOW) === 'solo' && one.T.amgcSparMult('kiki') === 0.5);
   one.T.amgcNoteFriend(true, NOW);
   check('⑤ フレンドの登録編成を見つけたら friend(伸びは1)', one.T.amgcSparOf('kiki', NOW) === 'friend' && one.T.amgcSparMult('kiki') === 1);
   check('⑤ フレンドは7日で切れる', one.T.amgcSparOf('kiki', NOW + 7 * 86400000) === 'solo');
@@ -99,7 +99,7 @@ const make = ({ on = true, rows = ROWS2, place = 'battle', abs = 1000 } = {}) =>
     return sum;
   };
   const own = gain(ROWS2), solo = gain([ROWS2[0]]);
-  check('⑤ 一人で修行すると伸びが下がる(12回の合計)', solo < own && solo >= Math.floor(own * 0.5), `相手あり ${own} / 一人 ${solo}`);
+  check('⑤ 一人で修行すると伸びが下がる(12回の合計)', solo < own && solo >= Math.floor(own * 0.3), `相手あり ${own} / 一人 ${solo}`);
 }
 // ⑥ 保存の正規化・読み込み前は書かない
 {
@@ -113,7 +113,7 @@ const make = ({ on = true, rows = ROWS2, place = 'battle', abs = 1000 } = {}) =>
 // ⑦ 数字と印
 {
   const { T } = make();
-  check('⑦ 数字は社長の答えのまま(熟練+1・💗+5・1日3回・一人×0.7)', T.AMGC_NUM.mastery === 1 && T.AMGC_NUM.bond === 5 && T.AMGC_NUM.perDay === 3 && T.AMGC_NUM.soloMult === 0.7);
+  check('⑦ 数字は社長の答えのまま(熟練+1・💗+5・1日3回・一人×0.5)', T.AMGC_NUM.mastery === 1 && T.AMGC_NUM.bond === 5 && T.AMGC_NUM.perDay === 3 && T.AMGC_NUM.soloMult === 0.5);
   check('⑦ assistants.js の lifeCheer は +5・1日15', /lifeCheer:\s*\{\s*amount:5,\s*dailyMax:15,/.test(read('monster-hero/data/assistants.js')));
   check('⑦ 公開の印 assistantMasmonCheer は偽(社長の「この文で」の前)', /assistantMasmonCheer: false,/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
 }

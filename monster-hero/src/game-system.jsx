@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8373dd56c090ff9b
+// generated-sha256: b9631d47245978a4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73837,7 +73837,7 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
 // ---- part: 56-assistant-life-masmon-cheer.jsx ----
 // 助手がモンヒロバトルにいるときにできること: 👀 修行を見る・📣 応援する(2026-11-11 シュギョウ2・台帳 #5350)
 //   設計と止め絵: docs/progress/assistant-peer/masmon-train/cheer/PLAN.md
-//   社長の答え(窓口経由 2026-11-11): 応援は 1回 熟練+1・💗+5・1日3回/練習の相手はフレンドのマスモン → 自分の別のマスモン → 一人(一人は修行の伸びが下がる)/
+//   社長の答え(窓口経由 2026-11-11): 応援は 1回 熟練+1・💗+5・1日3回/練習の相手はフレンドのマスモン → 自分の別のマスモン → 一人(一人は修行の伸び ×0.5)/
 //   修行を見ても応援と同じ得(見ると応援を合わせて1日3回・移動1回に1回)
 //   公開の印 RELEASE_FLAGS.assistantMasmonCheer が偽のあいだ、口はすべて null / 何もしない(修行の結果も今のまま)
 //   保存は新しいキー mh_assistant_masmon_cheer_v1 だけ。修行の保存(mh_assistant_masmon_train_v1)へは熟練を足すだけ(amgtSave の守りを通す)
@@ -73847,7 +73847,7 @@ const AMGC_NUM = Object.freeze({
   mastery: 1, // 1回の熟練(いちばん最近に修行したマスモンの、いちばん低い技1つ)
   bond: 5, // 1回の 💗 仲良し度(data/assistants.js の lifeCheer。1日の上限もそちら)
   perDay: 3, // 見る・応援を合わせて、助手1人の1日の回数
-  soloMult: 0.7, // 一人で修行したときの伸び(練習相手がいない)
+  soloMult: 0.5, // 一人で修行したときの伸び(練習相手がいない。社長が ×0.5 を選んだ・部の推奨は ×0.7)
   friendDays: 7, // フレンドの登録編成を見つけた日から、相手ありとみなす日数
 });
 const amgcOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonCheer === true && typeof amgtOn === 'function' && amgtOn();
@@ -74015,6 +74015,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
     if (!engine || !row || battle) return undefined;
     let alive = true;
     (async () => {
+      try { if (typeof amgTick === 'function') await amgTick(aid); } catch (_) {} // 育成のまだの回を先に決める(ミセカタ2の注意)
       let catalog = null; try { catalog = engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (_) {}
       const mine = ambbUnitsOf(engine, aid, [row])[0];
       if (!catalog || !mine) { if (alive) setFailed(true); return; }
@@ -74055,7 +74056,8 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       const tch = battle.techs[Math.min(pos, battle.techs.length - 1)] || {};
       return (
         <div className="ambw-ring" data-amgc-solo>
-          <div className="ambw-stage"><div className="ambw-f ambw-lungeA"><img className="ambw-flip" src={ALL_PLAYER_MONSTERS[row.monster].imgUrl} alt=""/><em>{row.nick}</em></div></div>
+          <div className="ambw-stage"><div key={`a-${pos}`} className="ambw-f ambw-lungeA"><img className="ambw-flip" src={ALL_PLAYER_MONSTERS[row.monster].imgUrl} alt=""/><em>{row.nick}</em></div><div className="ambw-gap" style={{ width: 44 }}/>
+            <div className="ambw-f" data-amgc-shadow><img src={ALL_PLAYER_MONSTERS[row.monster].imgUrl} alt="" style={{ filter: 'brightness(.15) drop-shadow(0 0 6px #a78bfa)' }}/><em>かげ</em></div></div>
           {tch.name && <div key={`s-${pos}`} className={`ambw-cut ${tch.kind || 'pow'}`}><small>ひとりで型の稽古</small><b>{tch.name}</b></div>}
         </div>);
     }
@@ -74092,7 +74094,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(s.id)}>{s.label}</button>)}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
       </div>
-      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>練習の相手がいないと、修行の伸びが少し下がります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)</p>}
+      {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)</p>}
       <div className="ambw-card" data-amgc-result>
         <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? 'きょうの修行' : '前回の修行') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5eb4d244ab47ca64
+// source-sha256: 710f06952d7b6fb4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140663,7 +140663,7 @@ const AMGC_NUM = Object.freeze({
   mastery: 1,
   bond: 5,
   perDay: 3,
-  soloMult: 0.7,
+  soloMult: 0.5,
   friendDays: 7
 });
 const amgcOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonCheer === true && typeof amgtOn === 'function' && amgtOn();
@@ -140997,6 +140997,9 @@ function AssistantMasmonTrainWatch({
     if (!engine || !row || battle) return undefined;
     let alive = true;
     (async () => {
+      try {
+        if (typeof amgTick === 'function') await amgTick(aid);
+      } catch (_) {}
       let catalog = null;
       try {
         catalog = engine.buildCatalog({
@@ -141108,12 +141111,27 @@ function AssistantMasmonTrainWatch({
       }, React.createElement("div", {
         className: "ambw-stage"
       }, React.createElement("div", {
+        key: `a-${pos}`,
         className: "ambw-f ambw-lungeA"
       }, React.createElement("img", {
         className: "ambw-flip",
         src: ALL_PLAYER_MONSTERS[row.monster].imgUrl,
         alt: ""
-      }), React.createElement("em", null, row.nick))), tch.name && React.createElement("div", {
+      }), React.createElement("em", null, row.nick)), React.createElement("div", {
+        className: "ambw-gap",
+        style: {
+          width: 44
+        }
+      }), React.createElement("div", {
+        className: "ambw-f",
+        "data-amgc-shadow": true
+      }, React.createElement("img", {
+        src: ALL_PLAYER_MONSTERS[row.monster].imgUrl,
+        alt: "",
+        style: {
+          filter: 'brightness(.15) drop-shadow(0 0 6px #a78bfa)'
+        }
+      }), React.createElement("em", null, "かげ"))), tch.name && React.createElement("div", {
         key: `s-${pos}`,
         className: `ambw-cut ${tch.kind || 'pow'}`
       }, React.createElement("small", null, "ひとりで型の稽古"), React.createElement("b", null, tch.name)));
@@ -141218,7 +141236,7 @@ function AssistantMasmonTrainWatch({
     style: {
       textAlign: 'center'
     }
-  }, "練習の相手がいないと、修行の伸びが少し下がります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)"), React.createElement("div", {
+  }, "練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)"), React.createElement("div", {
     className: "ambw-card",
     "data-amgc-result": true
   }, React.createElement("b", {
