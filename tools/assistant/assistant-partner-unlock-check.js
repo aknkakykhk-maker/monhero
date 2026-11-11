@@ -107,8 +107,9 @@ check('使った回数は戦いの終わりにまとめて書く(切るたびに
   const body = app.slice(at, app.indexOf('\n  };\n', at));
   return at > 0 && !/storeSet\(ASSISTANT_CARD_USES_KEY/.test(body) && /flushAssistantCardUses\(\)/.test(body);
 })());
-check('戦いの終わり・画面の切り替え・ページを離れるときに書く', /useEffect\(\(\) => \{ flushAssistantCardUses\(\); \}, \[gameState, hp <= 0, gaveUp\]\);/.test(app)
+check('戦いの終わり・画面の切り替え・ページを離れるときに書く', /useEffect\(\(\) => \{ flushAssistantCardUses\(\); \}, \[gameState, runStage, hp <= 0, gaveUp\]\);/.test(app)
   && /window\.addEventListener\('pagehide', flushAssistantCardUses\)/.test(app));
+check('画面用の回数は毎回更新する(勝ちの結果画面で古くならない・ミハリ3)', /assistantCardUsesRef\.current = r\.uses; setAssistantCardUses\(r\.uses\);/.test(app));
 check('解放したときはその場で書く', /if \(r\.stateChanged\) \{ saveAssistantPartner\(r\.state\); flushAssistantCardUses\(\); \}/.test(app));
 // ③ 公開前の助手の決まりと混ぜない
 check('判定はお話・公開の決まり(assistantUnlockedBy)を先に通す', /if \(typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy\(id, seenStoryIds\)\) return false;\n  return assistantPartnerAllowed\(state, id\);/.test(src));

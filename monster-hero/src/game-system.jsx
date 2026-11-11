@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 95097bca55e11184
+// generated-sha256: d28f9935bb5dec35
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -104322,14 +104322,16 @@ function MonsterHeroGame() {
       const r = assistantPartnerCountUse(assistantCardUsesRef.current, assistantPartnerRef.current, assistantId);
       if (assistantPartnerRef.current.mode === 'earn' && (!assistantPartnerAllowed(assistantPartnerRef.current, assistantId) || r.stateChanged)) assistantPartnerRunUsesRef.current = { ...assistantPartnerRunUsesRef.current, [assistantId]: true };
       if (r.stateChanged && r.unlockedId) assistantPartnerRunUnlockedRef.current = [...assistantPartnerRunUnlockedRef.current, r.unlockedId];
-      assistantCardUsesRef.current = r.uses;
+      // 画面用の値は毎回更新する(結果画面の進み具合・あつのお話の条件が読む。軽い)。重い保存だけをまとめる
+      assistantCardUsesRef.current = r.uses; setAssistantCardUses(r.uses);
       assistantCardUsesDirtyRef.current += 1;
       if (r.stateChanged) { saveAssistantPartner(r.state); flushAssistantCardUses(); }
       else if (assistantCardUsesDirtyRef.current >= ASSISTANT_CARD_USES_FLUSH_EVERY) flushAssistantCardUses();
     } catch (error) { console.error('[assistant-partner] count failed:', error && error.message ? error.message : error); }
   };
   // 画面が替わったとき・戦いの終わり(負け・リタイアは gameState が変わらないので hp と gaveUp も見る)にまとめて書く
-  useEffect(() => { flushAssistantCardUses(); }, [gameState, hp <= 0, gaveUp]);
+  //   勝ちの結果(WAVE_RESULT・REWARD_PICK・CHAMPION)は runStage で切り替わるので、runStage も見る(数え漏れを1戦ぶんまでにする)
+  useEffect(() => { flushAssistantCardUses(); }, [gameState, runStage, hp <= 0, gaveUp]);
   // ページを離れる・裏へ回るときも書く(閉じても数え漏れを残さない)
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
