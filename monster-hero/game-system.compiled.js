@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ae6413e2eca28e4
+// source-sha256: f119be27f77cb848
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13884,7 +13884,7 @@ const RELEASE_FLAGS = {
   assistantLifePlan: true,
   assistantMasmonTrain: true,
   assistantMasmonCheer: true,
-  assistantMasmonRanchTicket: false,
+  assistantMasmonRanchTicket: true,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
   assistantMasmonNamesApi: true,
@@ -66280,6 +66280,7 @@ function SettingsScreen({
 }) {
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
+  const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
@@ -66434,6 +66435,15 @@ function SettingsScreen({
     label: "データ引き継ぎ",
     desc: "バックアップの保存と、別の端末での復元",
     onClick: onOpenBackup
+  }), typeof mhIsIphoneSafariBrowser === 'function' && mhIsIphoneSafariBrowser() && React.createElement(SettingsMenuLink, {
+    icon: "📲",
+    label: "ホーム画面に追加",
+    desc: "アプリのように遊ぶ方法(データの引き継ぎつき)",
+    onClick: () => setHomeScreenGuideOpen(true),
+    "data-open-home-screen-guide": true
+  }), homeScreenGuideOpen && React.createElement(HomeScreenGuideSheet, {
+    onClose: () => setHomeScreenGuideOpen(false),
+    onOpenBackup: onOpenBackup
   }), React.createElement(SettingsMenuLink, {
     icon: "📚",
     label: "ヘルプ",
@@ -66685,6 +66695,187 @@ function ScreenThemeModal({
     className: "mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
     onClick: onClose
   }, "決定")));
+}
+const MH_HOME_SCREEN_GUIDE_KEY = 'mh_home_screen_guide_v1';
+const MH_HOME_SCREEN_GUIDE_GAP_MS = 14 * 24 * 60 * 60 * 1000;
+const MH_HOME_SCREEN_GUIDE_MAX_AUTO = 3;
+const MH_HOME_SCREEN_GUIDE_FIRST_WAIT_MS = 60 * 60 * 1000;
+function mhIsIphoneSafariBrowser(ua) {
+  try {
+    if (typeof window === 'undefined' || !window.navigator) return false;
+    if (typeof mhIsIosHomeScreenApp === 'function' && mhIsIosHomeScreenApp()) return false;
+    const text = String(ua == null ? window.navigator.userAgent || '' : ua);
+    if (!/iPhone|iPod/.test(text)) return false;
+    if (!/Safari\//.test(text) || !/Version\//.test(text)) return false;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YJApp|DuckDuckGo|Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK/i.test(text)) return false;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+function normalizeHomeScreenGuideState(value) {
+  const src = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
+  return {
+    firstSeenAt: num(src.firstSeenAt),
+    lastShownAt: num(src.lastShownAt),
+    autoCount: Math.min(99, Math.floor(num(src.autoCount))),
+    never: src.never === true
+  };
+}
+function readHomeScreenGuideState() {
+  try {
+    return normalizeHomeScreenGuideState(JSON.parse(window.localStorage.getItem(MH_HOME_SCREEN_GUIDE_KEY) || 'null'));
+  } catch (_) {
+    return normalizeHomeScreenGuideState(null);
+  }
+}
+function writeHomeScreenGuideState(next) {
+  try {
+    window.localStorage.setItem(MH_HOME_SCREEN_GUIDE_KEY, JSON.stringify(normalizeHomeScreenGuideState(next)));
+  } catch (_) {}
+}
+function homeScreenGuideAutoDue(state, now) {
+  const s = normalizeHomeScreenGuideState(state);
+  if (s.never || s.autoCount >= MH_HOME_SCREEN_GUIDE_MAX_AUTO) return false;
+  if (!s.firstSeenAt || now - s.firstSeenAt < MH_HOME_SCREEN_GUIDE_FIRST_WAIT_MS) return false;
+  if (s.lastShownAt && now - s.lastShownAt < MH_HOME_SCREEN_GUIDE_GAP_MS) return false;
+  return true;
+}
+function HomeScreenGuideSheet({
+  onClose,
+  onNever = null,
+  onOpenBackup
+}) {
+  const step = (no, title, body) => React.createElement("li", {
+    "data-home-screen-guide-step": no,
+    className: "flex gap-2.5 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left"
+  }, React.createElement("span", {
+    className: "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[12px] font-black text-slate-950"
+  }, no), React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black leading-snug text-white"
+  }, title), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold leading-relaxed text-slate-300"
+  }, body)));
+  return React.createElement("div", {
+    "data-home-screen-guide": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "ホーム画面に追加",
+    className: "fixed inset-0 flex items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 85000,
+      backgroundColor: 'rgba(0,0,0,0.82)'
+    }
+  }, React.createElement("div", {
+    className: "w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border border-amber-300/60 bg-slate-900 p-4 shadow-2xl"
+  }, React.createElement("div", {
+    className: "mh-dialog-head flex items-start justify-between gap-2"
+  }, React.createElement("h3", {
+    className: "text-[16px] font-black leading-snug text-white"
+  }, "📲 ホーム画面に追加して遊ぼう"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    onClick: onClose,
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95"
+  }, "✕")), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "アプリのように画面が広くなり、ブラウザの操作(画面の左端をなぞると戻る、など)が出なくなります。"), React.createElement("div", {
+    "data-home-screen-guide-warning": true,
+    className: "mt-3 rounded-2xl border border-red-300/70 bg-red-950/60 p-3 text-left"
+  }, React.createElement("div", {
+    className: "text-[12px] font-black text-red-200"
+  }, "⚠ 追加する前に、必ずバックアップを作ってください"), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold leading-relaxed text-red-100/90"
+  }, "iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは はじめからになります。")), React.createElement("ol", {
+    className: "mt-3 space-y-2"
+  }, step(1, 'いまの Safari でバックアップを作る', React.createElement(React.Fragment, null, "「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。", React.createElement("br", null), "(「バックアップコードを作成」→「コードをコピー」でも作れます)", React.createElement("button", {
+    type: "button",
+    "data-home-screen-guide-backup": true,
+    onClick: onOpenBackup,
+    className: "mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95"
+  }, "💾 データ引き継ぎを開く"))), step(2, 'ホーム画面に追加する', 'Safari の下にある共有ボタン(四角から上向きの矢印)を押し、「ホーム画面に追加」→ 右上の「追加」。'), step(3, '追加したアイコンから開いて、データを戻す', 'ホーム画面のアイコンから開き、「設定」→「データ引き継ぎ」→「復元」で、保存したファイル(またはコピーしたコード)を読み込みます。')), React.createElement("p", {
+    className: "mt-3 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "戻したあとは、ホーム画面のアイコンから遊んでください。Safari とアプリの両方で遊ぶと、進み方が別々になります。"), React.createElement("div", {
+    className: "mt-3 flex gap-2"
+  }, onNever && React.createElement("button", {
+    type: "button",
+    "data-home-screen-guide-never": true,
+    onClick: onNever,
+    className: "min-h-[44px] flex-1 rounded-xl border border-white/10 bg-slate-800 px-2 text-[11px] font-black text-slate-300 active:scale-95"
+  }, "もう表示しない"), React.createElement("button", {
+    type: "button",
+    "data-home-screen-guide-close": true,
+    onClick: onClose,
+    className: "mh-button min-h-[44px] flex-1 rounded-xl bg-amber-400 px-2 text-[12px] font-black text-slate-950 active:scale-95"
+  }, "閉じる"))));
+}
+function HomeScreenGuideAuto({
+  onOpenBackup
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!mhIsIphoneSafariBrowser()) return undefined;
+    const first = readHomeScreenGuideState();
+    if (!first.firstSeenAt) writeHomeScreenGuideState({
+      ...first,
+      firstSeenAt: Date.now()
+    });
+    let tries = 0,
+      timer = null,
+      alive = true;
+    const busy = () => {
+      try {
+        return [...document.querySelectorAll('.fixed, [role="dialog"], .mh-title-modal')].some(el => {
+          if (el.closest('[data-home-screen-guide]')) return false;
+          const st = window.getComputedStyle(el);
+          if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) === 0) return false;
+          const z = Number(st.zIndex);
+          const r = el.getBoundingClientRect();
+          return Number.isFinite(z) && z >= 40 && r.width * r.height >= window.innerWidth * window.innerHeight * 0.3;
+        });
+      } catch (_) {
+        return true;
+      }
+    };
+    const tick = () => {
+      if (!alive) return;
+      const now = Date.now();
+      if (!homeScreenGuideAutoDue(readHomeScreenGuideState(), now)) return;
+      if (busy()) {
+        if (++tries < 20) timer = setTimeout(tick, 3000);
+        return;
+      }
+      const s = readHomeScreenGuideState();
+      writeHomeScreenGuideState({
+        ...s,
+        lastShownAt: now,
+        autoCount: s.autoCount + 1
+      });
+      setOpen(true);
+    };
+    timer = setTimeout(tick, 4000);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+  if (!open) return null;
+  return React.createElement(HomeScreenGuideSheet, {
+    onClose: () => setOpen(false),
+    onNever: () => {
+      writeHomeScreenGuideState({
+        ...readHomeScreenGuideState(),
+        never: true
+      });
+      setOpen(false);
+    },
+    onOpenBackup: onOpenBackup
+  });
 }
 const MISSION_PROGRESS_EVENT = 'mh:mission-progress';
 const missionNotify = (event, amount = 1) => {
@@ -96367,6 +96558,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
 .mhbs-dot.on{width:16px;background:linear-gradient(90deg,#f0abfc,#a78bfa)}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+/* MFバトルカードをはじめて開いたとき、最初に押す所だけ光らせる縁(84-screen-card-battle.jsx。一度きり) */
+.mhcard-first-glow{filter:drop-shadow(0 0 4px #fde047) drop-shadow(0 0 10px rgba(253,224,71,.8));animation:mhcardFirstGlow 1.3s ease-in-out infinite}
+@keyframes mhcardFirstGlow{0%,100%{filter:drop-shadow(0 0 3px #fde047) drop-shadow(0 0 6px rgba(253,224,71,.5))}50%{filter:drop-shadow(0 0 6px #fff7b0) drop-shadow(0 0 16px rgba(253,224,71,1))}}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
 .mhmv-mvp::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-70%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,236,170,.45),transparent);animation:mhmsShine 2.6s ease-in-out infinite;pointer-events:none}
 .mhmv-badge{animation:mhmvPop .5s cubic-bezier(.2,1.4,.4,1) both}
@@ -96384,7 +96578,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
 .mhms-stage[data-mhms-rest] :is(.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float),.mhms-stage[data-mhms-rest] .mhms-card::after{animation-play-state:paused!important}
 .mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
-@media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
+@media (prefers-reduced-motion:reduce){.mhcard-first-glow{animation:none}.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   momosuke: {
@@ -96821,6 +97015,7 @@ function RhythmWatchLane({
     let raf = 0;
     let last = 0;
     let alive = true;
+    const scrollAt = typeof rhythmScrollLocal === 'function' ? rhythmScrollLocal(chart, RHYTHM_WATCH_LANE_SPAN_MS) : null;
     const firstFrom = t => {
       let lo = 0;
       let hi = notes.length;
@@ -96866,22 +97061,24 @@ function RhythmWatchLane({
       ctx.moveTo(0, hitY);
       ctx.lineTo(w, hitY);
       ctx.stroke();
-      const yOf = t => hitY - (t - now) / RHYTHM_WATCH_LANE_SPAN_MS * hitY;
+      const yOf = scrollAt ? (t, g) => hitY - (scrollAt(t, g) - scrollAt(now, g)) / RHYTHM_WATCH_LANE_SPAN_MS * hitY : t => hitY - (t - now) / RHYTHM_WATCH_LANE_SPAN_MS * hitY;
+      const horizon = now + RHYTHM_WATCH_LANE_SPAN_MS * (scrollAt ? 4 : 1);
       let shown = null;
       for (let i = firstFrom(now - 4000); i < notes.length; i += 1) {
         const n = notes[i];
-        if (n.timeMs > now + RHYTHM_WATCH_LANE_SPAN_MS) break;
+        if (n.timeMs > horizon) break;
         const end = Number(n.endTimeMs) > n.timeMs ? Number(n.endTimeMs) : n.timeMs;
         if (end < now - 400) continue;
         const code = jm && jm.has(i) ? jm.get(i) : -1;
         const x = Math.max(0, Math.min(lanes - 1, Number(n.lane) || 0)) * lw + lw * 0.1;
         const nw = lw * 0.8;
-        const y = yOf(n.timeMs);
+        const y = yOf(n.timeMs, n.scrollGroup);
+        if (scrollAt && y < -12 && (end <= n.timeMs || yOf(end, n.scrollGroup) < -12)) continue;
         const passed = n.timeMs < now - 80;
         ctx.globalAlpha = code >= 0 ? passed ? 0.25 : 0.9 : passed ? 0.3 : 1;
         ctx.fillStyle = code >= 0 ? RHYTHM_WATCH_JUDGMENT_VIEW[code].color : RHYTHM_WATCH_LANE_COLORS[n.type] || '#38bdf8';
         if (end > n.timeMs) {
-          const yEnd = yOf(end);
+          const yEnd = yOf(end, n.scrollGroup);
           ctx.fillRect(x + nw * 0.2, yEnd, nw * 0.6, Math.max(2, y - yEnd));
         }
         ctx.fillRect(x, y - 6, nw, 12);
@@ -111578,7 +111775,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-pop .pp>span{animation:mhlPop .35s ease-out both}
 @media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
 `;
-const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:9.5px;line-height:11px;max-height:22px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
+const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 function AssistantLifeHouseStyle() {
   return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS);
 }
@@ -115203,7 +115400,7 @@ function AssistantLifeTownMap({
           wordBreak: 'auto-phrase'
         },
         "data-assistant-life-map-ranch-ask": true
-      }, x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${x.ask.nick}の${x.ask.stat}を鍛えたいな」`) : null;
+      }, x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`) : null;
     })(), tiLine && React.createElement("p", {
       className: "text-[10.5px] font-bold text-emerald-200",
       style: {
@@ -118639,6 +118836,29 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  if (fullSrc) {
+    return React.createElement("div", {
+      ref: boxRef,
+      className: "pointer-events-none absolute inset-0 overflow-hidden",
+      "data-assistant-life-profile-stand": who.id,
+      "data-assistant-life-profile-fullbody": fullSrc
+    }, React.createElement("img", {
+      src: fullSrc,
+      alt: who.name,
+      draggable: false,
+      className: "absolute",
+      style: {
+        left: 0,
+        right: 0,
+        bottom: '2%',
+        width: '100%',
+        height: '96%',
+        objectFit: 'contain',
+        objectPosition: 'center bottom'
+      }
+    }));
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
@@ -145194,12 +145414,17 @@ function AssistantMasmonTrainWatch({
       setPos(Math.max(0, len - 1));
       setDone(true);
     }
-  }, "⏭ 結果へ")), battle && battle.solo && React.createElement("p", {
+  }, "⏭ 結果へ")), battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && React.createElement("p", {
     className: "ambw-small",
     style: {
       textAlign: 'center'
     }
-  }, "練習の相手がいないと、修行の伸びが半分になります(マスモンが2体になるか、フレンドが対戦に登録すると相手ができます)"), React.createElement("div", {
+  }, "フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)"), battle && battle.solo && React.createElement("p", {
+    className: "ambw-small",
+    style: {
+      textAlign: 'center'
+    }
+  }, "いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)"), React.createElement("div", {
     className: "ambw-card",
     "data-amgc-result": true
   }, React.createElement("b", {
@@ -145252,7 +145477,8 @@ const AMGR_NUM = Object.freeze({
   heavyMain: [8, 12],
   heavySub: [2, 4],
   heavyDown: [2, 4],
-  heavyFat: 10
+  heavyFat: 10,
+  serverDay: 40
 });
 const AMGR_TICKET = Object.freeze({
   light: 'training_ticket',
@@ -145393,6 +145619,46 @@ const amgrAskOf = (aid, abs) => {
     row,
     k
   } : null;
+};
+const AMGR_ASK_VOICE = {
+  mua: {
+    v: ['{n}の{s}、鍛えたいんだけど！ まぢ気になるー', '{n}の{s}あげたいぢゃん！ 手伝ってｗ', 'ねね、{n}の{s}鍛えよー♪'],
+    ticket: 'チケット、使ってくれる？ おねがい♪'
+  },
+  kiki: {
+    v: ['{n}の{s}を鍛えたいでつ♪', '{n}の{s}、少しずつ育てたいでつ', '{n}の{s}を伸ばしたいんでつ。お願いしまつ♪'],
+    ticket: 'チケット、使ってもらえまつか？'
+  },
+  momosuke: {
+    v: ['{n}の{s}、もっと鍛えたい！！', 'ももね、{n}の{s}を強くしたいの♡', '{n}の{s}アップ大作戦だよ！！'],
+    ticket: 'チケット使って！！ お願い♡'
+  },
+  dra: {
+    v: ['{n}の{s}を鍛えたいな、えへへ', 'おで、{n}の{s}が気になってるな', '{n}の{s}、ちょっと伸ばしてやりたいな'],
+    ticket: 'チケット、使ってくれるか？'
+  },
+  atsu: {
+    v: ['{n}の{s}鍛えたい笑', '{n}の{s}、上げたいんだよね笑', '{n}の{s}、もっと上げたい！'],
+    ticket: 'チケット使ってくれる？'
+  },
+  kyuko: {
+    v: ['ほい、{n}の{s}を鍛えたいなぁ笑', '{n}の{s}、育てたいんだよねぇ', '{n}の{s}を伸ばす作戦だぁw'],
+    ticket: 'チケット、使ってくれるぅ？'
+  },
+  sorashido: {
+    v: ['{n}の{s}を鍛えたいです', '{n}の{s}、上げたいなと思ってます', '{n}の{s}を、少し伸ばしたいんです'],
+    ticket: 'チケットを使ってもらえますか？'
+  },
+  erubin: {
+    v: ['{n}の{s}を鍛えたいな☺️', '{n}の{s}、伸ばしてあげたいんだ', '{n}の{s}を鍛えたいんだけど、どうかな'],
+    ticket: 'チケット、使ってくれるかな？'
+  }
+};
+const assistantMasmonRanchAskText = (aid, ask, abs, withTicket) => {
+  const o = AMGR_ASK_VOICE[aid] || AMGR_ASK_VOICE.erubin;
+  const n = Number.isFinite(abs) ? Math.abs(Math.floor(abs)) : 0;
+  const t = o.v[n % o.v.length].replace('{n}', ask && ask.nick || '').replace('{s}', ask && ask.stat || '');
+  return withTicket ? `${t} ${o.ticket}` : t;
 };
 const assistantMasmonRanchRowInfo = (aid, now = Date.now()) => {
   if (!amgrOn() || !amgrOkAid(aid) || !amgrPartnerOk(aid)) return null;
@@ -145548,12 +145814,14 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   };
   const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0))));
   const plan = amgrPlanOf(kind, k);
+  const room = Math.max(1, AMGR_NUM.serverDay - (Number(AMG_CARE.viewCap) || 20));
   if (kind === 'heavy') {
-    bump(plan.main, upOf(plan.main, AMGR_NUM.heavyMain));
-    bump(plan.sub, upOf(plan.sub, AMGR_NUM.heavySub));
+    const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room);
+    bump(plan.main, main);
+    bump(plan.sub, Math.min(upOf(plan.sub, AMGR_NUM.heavySub), Math.max(0, room - main)));
     bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1]));
     e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100);
-  } else bump(plan.main, upOf(plan.main, AMGR_NUM.light));
+  } else bump(plan.main, Math.min(upOf(plan.main, AMGR_NUM.light), room));
   const net = Object.values(g).reduce((a, n) => a + n, 0);
   if (net > 0) e.cg.ranch = Math.round(((e.cg.ranch || 0) + net) * 100) / 100;
   e.log = [...e.log, {
@@ -145721,7 +145989,7 @@ function AssistantMasmonRanchSheet({
   })), React.createElement("p", {
     className: "min-w-0 flex-1 rounded-xl bg-lime-100 px-3 py-2 text-[12.5px] font-black text-lime-950",
     "data-amgr-say": true
-  }, res ? `わあ、${res.nick}がんばったね！ ありがとう！` : `${info.ask.nick}の「${info.ask.stat}」を鍛えたいな。チケット、使ってくれる？`)), res ? React.createElement("div", {
+  }, res ? `わあ、${res.nick}がんばったね！ ありがとう！` : assistantMasmonRanchAskText(aid, info.ask, info.abs, true))), res ? React.createElement("div", {
     className: "mt-3 rounded-2xl border-2 border-emerald-300 bg-emerald-950 p-3",
     "data-amgr-result": true
   }, React.createElement("p", {
@@ -145819,7 +146087,7 @@ function AssistantMasmonRanchBand() {
     className: "text-[12px] font-black"
   }, "🥚 ", ids.map(nm).join('・'), "が来ています"), first && React.createElement("p", {
     className: "text-[11.5px] font-bold text-emerald-100"
-  }, nm(open[0]), "「", first.ask.nick, "の", first.ask.stat, "を鍛えたいな」"), open.length ? React.createElement("button", {
+  }, nm(open[0]), "「", assistantMasmonRanchAskText(open[0], first.ask, first.abs), "」"), open.length ? React.createElement("button", {
     type: "button",
     onClick: () => assistantMasmonRanchOpen(open[0]),
     "data-amgr-band-open": true,
@@ -150280,6 +150548,9 @@ const masmonPvpFriends = async () => {
     ...f,
     registered: f.assistants.length > 0
   }));
+  try {
+    if (friends.some(f => f.registered) && typeof amgcNoteFriend === 'function') amgcNoteFriend(true);
+  } catch (_) {}
   return {
     ok: true,
     friends,
@@ -166862,6 +167133,32 @@ const CardBattleScreen = ({
     setShareGuide(false);
     void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {});
   };
+  const CARD_FIRST_GLOW_KEY = 'mh_card_first_glow_v1';
+  const [firstGlow, setFirstGlow] = useState(false);
+  useEffect(() => {
+    if (screen !== 'CARD_TOP' || view !== 'top' || !save || !save.starter || !save.tutorial || !save.tutorial.done && !save.tutorial.skipped) {
+      setFirstGlow(false);
+      return undefined;
+    }
+    const rec = save.record || {};
+    const played = ['win', 'lose', 'surrender'].reduce((n, k) => n + (Number(rec.cpu && rec.cpu[k]) || 0), 0) + ['win', 'lose'].reduce((n, k) => n + (Number(rec.pvp && rec.pvp[k]) || 0), 0);
+    if (played > 0) {
+      setFirstGlow(false);
+      return undefined;
+    }
+    let alive = true;
+    storeGet(CARD_FIRST_GLOW_KEY, null, false).then(v => {
+      if (alive) setFirstGlow(v !== true);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [screen, view, !!save, !!(save && save.starter), !!(save && save.tutorial && (save.tutorial.done || save.tutorial.skipped)), save && save.record]);
+  const closeFirstGlow = () => {
+    if (!firstGlow) return;
+    setFirstGlow(false);
+    void storeSet(CARD_FIRST_GLOW_KEY, true).catch(() => {});
+  };
   const [startLevel, setStartLevel] = useState('last');
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -169895,7 +170192,10 @@ const CardBattleScreen = ({
     ico: '⚔️',
     grad: 'from-orange-200 via-orange-400 to-rose-500',
     disabled: !activeDeck,
-    onClick: go('mode')
+    onClick: () => {
+      closeFirstGlow();
+      go('mode')();
+    }
   }, {
     key: 'decks',
     attr: {
@@ -170072,32 +170372,46 @@ const CardBattleScreen = ({
     className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`,
     style: JA_LABEL_STYLE,
     title: notice
-  }, jaWrap(notice)), React.createElement("div", {
+  }, jaWrap(notice)), firstGlow && React.createElement("p", {
+    "data-card-first-glow-note": true,
+    className: "text-center text-[12px] font-black text-yellow-200",
+    style: JA_LABEL_STYLE
+  }, "まずはここ！コンピューターと対戦してみよう ▼"), React.createElement("div", {
     "data-card-top-cards": true,
     className: "grid grid-cols-2 gap-2"
-  }, bigCards.map((c, idx) => React.createElement("button", _extends({
-    key: c.key,
-    type: "button"
-  }, c.attr, {
-    disabled: !!c.disabled,
-    onClick: c.onClick,
-    className: `mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`,
-    style: {
-      animationDelay: `${0.05 + idx * 0.06}s`
-    }
-  }), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "mhms-mark"
-  }, c.mark), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden"
-  }, c.ico), React.createElement("span", {
-    className: "relative min-w-0"
-  }, React.createElement("b", {
-    className: "block text-[18px] font-black italic leading-tight"
-  }, c.label), React.createElement("small", {
-    className: "block text-[10px] font-black leading-tight text-slate-900/80"
-  }, c.sub))))), React.createElement("div", {
+  }, bigCards.map((c, idx) => {
+    const glow = firstGlow && c.key === 'cpu';
+    const btn = React.createElement("button", _extends({
+      type: "button"
+    }, c.attr, glow ? {
+      'data-card-first-glow': ''
+    } : {}, {
+      disabled: !!c.disabled,
+      onClick: c.onClick,
+      className: `${glow ? 'w-full ' : ''}mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`,
+      style: {
+        animationDelay: `${0.05 + idx * 0.06}s`
+      }
+    }), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, c.mark), React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden"
+    }, c.ico), React.createElement("span", {
+      className: "relative min-w-0"
+    }, React.createElement("b", {
+      className: "block text-[18px] font-black italic leading-tight"
+    }, c.label), React.createElement("small", {
+      className: "block text-[10px] font-black leading-tight text-slate-900/80"
+    }, c.sub)));
+    return glow ? React.createElement("div", {
+      key: c.key,
+      className: "mhcard-first-glow flex"
+    }, btn) : React.createElement(React.Fragment, {
+      key: c.key
+    }, btn);
+  })), React.createElement("div", {
     "data-card-top-shortcuts": true,
     className: "mhms-in grid grid-cols-4 gap-1.5",
     style: {
@@ -201035,15 +201349,20 @@ function MonsterHeroGame() {
     return result;
   };
   if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) {
-    ASSISTANT_LIFE_LINKS.ticketCount = itemId => Math.max(0, Number(ownedItems[itemId]) || 0);
+    ASSISTANT_LIFE_LINKS.ticketCount = itemId => Math.max(0, Number(ownedItemsRef.current[itemId]) || 0);
     ASSISTANT_LIFE_LINKS.ticketSpend = itemId => {
-      if (!['training_ticket', 'training_ticket_l'].includes(itemId) || !((Number(ownedItems[itemId]) || 0) > 0)) return false;
+      const have = Number(ownedItemsRef.current[itemId]) || 0;
+      if (!['training_ticket', 'training_ticket_l'].includes(itemId) || have <= 0) return false;
+      ownedItemsRef.current = {
+        ...ownedItemsRef.current,
+        [itemId]: have - 1
+      };
       setOwnedItems(prev => {
-        const have = Number(prev[itemId]) || 0;
-        if (have <= 0) return prev;
+        const n = Number(prev[itemId]) || 0;
+        if (n <= 0) return prev;
         const next = {
           ...prev,
-          [itemId]: have - 1
+          [itemId]: n - 1
         };
         storeSet('mh_owned_items', next, false);
         return next;
@@ -217609,7 +217928,15 @@ function MonsterHeroGame() {
     }, "ベースモン"), React.createElement("button", {
       onClick: () => setGameState('MASU_MONS'),
       className: "w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
-    }, "マスモン"))), gameState === 'SETTINGS' && React.createElement(SettingsScreen, {
+    }, "マスモン"))), gameState === 'HOME' && typeof HomeScreenGuideAuto === 'function' && React.createElement(HomeScreenGuideAuto, {
+      onOpenBackup: () => {
+        setShowBackup(true);
+        setBackupTab('export');
+        setBackupCode('');
+        setRestoreInput('');
+        setRestoreMsg('');
+      }
+    }), gameState === 'SETTINGS' && React.createElement(SettingsScreen, {
       onBack: returnToHome,
       onOpenAudioSettings: () => setShowAudioSettings(true),
       onOpenBgmArrangement: () => setShowBgmArrangement(true),

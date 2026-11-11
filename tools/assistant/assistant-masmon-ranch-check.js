@@ -111,6 +111,18 @@ const dg0 = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].dg);
   check('⑥ 正規化: 変な値を落とし、形をそろえる', JSON.stringify(n.used) === '{"kiki":[1,2]}' && JSON.stringify(n.mon) === '{"kiki":{"1:Golem":3}}' && n.last.kiki.rows.length === 1 && n.last.kiki.rows[0].to === 999);
   check('⑥ 正規化: 無い・壊れた保存は既定値', JSON.stringify(T.normalizeAssistantMasmonRanch('x')) === '{"v":1,"used":{},"mon":{},"last":{}}');
 }
+// ⑧ 1枚で上がる分の合計は 20 まで(自主育成の最大 20 と重なってもサーバの1日 40 を超えない)
+{
+  let worst = 0; let n = 0;
+  for (let i = 0; i < 40; i++) {
+    ctx.ASSISTANT_LIFE_STORE.state.life.abs = 1000 + i; tickets.training_ticket_l = 1;
+    const S = T.AMG_STORE.state; const e = S.mons.kiki['1:Golem']; e.ind = { life: 1, pow: 1, wise: 1, hit: 1, eva: 1, tough: 1 }; e.st = { life: 300, pow: 300, wise: 300, hit: 300, eva: 300, tough: 300 };
+    const r = T.assistantMasmonRanchUse('kiki', '1:Golem', 'heavy', ['pow', 'life', 'tough'][i % 3], now + 86400000 * (10 + i));
+    if (!r.ok) continue; n++;
+    worst = Math.max(worst, r.rows.filter(x => x.to > x.from).reduce((a, x) => a + x.to - x.from, 0));
+  }
+  check('⑧ 重トレ1枚で上がる分の合計は 20 まで(伸びやすさ A・個体差いちばん上でも)', n >= 30 && worst <= 20, `${n}回 最大 +${worst}`);
+}
 // ⑦ 印が真なら旧 1.2倍 は受けない・印が偽なら何もしない
 {
   check('⑦ 印が真なら旧の 1.2倍(assistantMasmonTrainBoost)は受けない', T.assistantMasmonTrainBoost('kiki', { source: 'ranch' }, now) === false);

@@ -509,6 +509,7 @@
   "mode/rhythm-run-stop-check.js": 0.5,
   "mode/rhythm-screen-layout-check.js": 2.3,
   "mode/rhythm-scroll-back-check.js": 0.8,
+  "mode/rhythm-scroll-fx-check.js": 0.6,
   "mode/rhythm-side-flick-check.js": 0.7,
   "mode/rhythm-side-monster-check.js": 0.9,
   "mode/rhythm-side-monster-size-check.js": 0.1,
