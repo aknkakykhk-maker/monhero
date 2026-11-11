@@ -21517,6 +21517,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }}/>}
         {/* 助手とのセッション: 演奏中の助手の顔とひとこと(演奏画面の外から重ねる。演奏の仕組みには触れない) */}
         {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()&&<RhythmAssistSessionPlayFace songId={rhythmPlay.song&&rhythmPlay.song.songId}/>}
+        {/* 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を重ねる(2026-11-11。77-screen-rhythm-multi.jsx の RhythmMultiLiveBoard。設定で消せる) */}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='multi'&&rhythmSettings.multiLiveBoard!==false&&<RhythmMultiLiveBoard key={rhythmPlay.multiStartId} resolveIconUrl={resolveIconUrl}/>}
 
         {/* モードえらび(RHYTHM_MODE_SELECT)と対戦(RHYTHM_MULTI)は同じ部品で描く。部屋に入る処理(フリーマッチ・
             ルーム作成・入室・フレンドの招待)はモードえらびの画面に並べ、入れたら RHYTHM_MULTI へ移る。
@@ -21531,6 +21533,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} masuMons={masuMons} masuPicker={{entries:unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu'),renderSortFilterBar:renderMonsterSortFilterBar,renderCardBody:renderMonsterCardBody,cardClass:MONSTER_CARD_CLASS,cardStyle:MONSTER_CARD_STYLE}} buddyTickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseBuddyTicket={consumeBuddyTicket} onRefundBuddyTicket={refundBuddyTicket} onOpenMasuBeat={()=>openMasuBeat(gameState)} guideAssistantId={selectedAssistantId} sessionAssistants={rhythmAssistSessionEnabled()&&typeof assistantsUnlockedFrom==='function'?assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag):[]} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_PLAY_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
           multiLook={rhythmSettings.multiLook||'LIGHT'}
+          multiLiveBoard={rhythmSettings.multiLiveBoard!==false}
+          onChangeMultiLiveBoard={async(on)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLiveBoard:on===true});setRhythmSettings(saved);}}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):'',
             // 負けた・やめたあと、ここから1周目を始め直せるか(曲えらびの帯の「⚔ 1周目から新しく始める」と同じ条件)
