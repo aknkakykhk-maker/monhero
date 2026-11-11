@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-11 21:14", type:'update', group:'assistant', title:'助手の部屋の家具が8種類増えました', status:'new',
+    items:[
+      'ふりこ時計・冒険の地図・ギター・レトロテレビ・窓辺の花・金魚ばち・ペンダントライト・ガーランドが加わり、家具は全部で20種類になりました。',
+      'ビートP交換所の「家具」で手に入ります。助手ごとに、好きな家具・苦手な家具もあります。',
+    ],
+  },
+  {
     date: "2026-11-11 20:03", type:'update', group:'assistant', title:'助手の部屋の「模様替え」ができるようになりました', status:'new', releaseFlag:'assistantLifeRoomEdit',
     assistantNotice:{ id:'update_notice_assistant_life_room_edit_v1', type:'content' },
     items:[
