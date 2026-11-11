@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 13ca7c343c401c1b
+// source-sha256: c9a4842a176b1a6a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114023,6 +114023,7 @@ const ASSISTANT_LIFE_DAILY_SCENES = Object.freeze({
     say: '今日も一日おつかれさまでした。また明日'
   }
 });
+const assistantLifeDailySceneOf = h => h < 5 ? 'late' : h < 10 ? 'morning' : h < 14 ? 'noon' : h < 18 ? 'afternoon' : h < 21 ? 'evening' : 'night';
 const assistantLifeDailyNormalize = v => {
   const o = v && typeof v === 'object' ? v : {};
   const days = Array.isArray(o.days) ? o.days.filter(d => typeof d === 'string' && d).slice(-ASSISTANT_LIFE_DAILY_NEED) : [];
@@ -114134,14 +114135,15 @@ function AssistantLifeDailyCard({
   } catch (_) {
     slot = null;
   }
-  const scene = slot ? ASSISTANT_LIFE_DAILY_SCENES[slot.id] : null;
+  const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
+  const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
   const list = Array.isArray(ids) ? ids : [];
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
   const done = st.day === day && st.heard.includes(slot.id);
   const who = list[slot.i % list.length];
   const leftH = (() => {
-    const s = ASSISTANT_LIFE_SLOTS[slot.i];
+    const s = slotDef;
     const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
     return s ? Math.max(1, s.to - h) : 1;
   })();
@@ -114163,7 +114165,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily": true
   }, React.createElement("p", {
     className: "flex items-center gap-2 px-1 text-[13px] font-black text-amber-200"
-  }, scene.icon, " ", ASSISTANT_LIFE_SLOTS[slot.i].label, "の できごと ", React.createElement("span", {
+  }, scene.icon, " ", slotDef.label, "の できごと ", React.createElement("span", {
     className: "text-[10.5px] font-bold text-slate-300"
   }, "あと約", leftH, "時間")), React.createElement("div", {
     className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1"
