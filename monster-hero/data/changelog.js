@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-11 社長「新曲追加。高難易度曲。曲にあわせて止まったり戻ったりとか変動型」。BlackY。文は社長の「この文で」(Lv.・ノーツ数は作り直したあとの値)
+    date: "2026-11-12 01:09", type:'update', group:'rhythm', title:'新曲「LAMIA」を追加しました', status:'new',
+    image:'images/song-art/lamia.jpg?v=fc61230a48ac',
+    items:[
+      'モンヒロビートに「LAMIA」（2分23秒）を追加しました。曲えらびからすぐ遊べます。',
+      '流れてくるノーツが曲に合わせて止まったり、戻ったり、速さが変わったりする譜面です。',
+      'レベルは EASY Lv.13 ／ NORMAL Lv.19 ／ HARD Lv.25 ／ EXPERT Lv.34 ／ MASTER Lv.51 ／ HELL Lv.78 です。',
+      'ノーツ数は 362 ／ 442 ／ 495 ／ 617 ／ 797 ／ 728 です。',
+    ],
+    assistantNotice:{ id:'update_notice_lamia_v1', type:'content' },
+  },
+  {
     // 助手のマスモンの名前(2026-11-11 社長の報告・キズナ5 #5447。文は社長「この文で」)
     date: "2026-11-12 00:02", type:'fix', group:'assistant', title:'助手のマスモンで、迎えたときに助手が紹介した名前が、種類名に変わってしまうことがある不具合を直しました', status:'new',
     items:[

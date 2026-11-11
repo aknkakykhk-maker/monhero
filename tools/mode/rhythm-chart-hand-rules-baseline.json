@@ -2051,6 +2051,41 @@
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
+  },
+  "lamia/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 9,
+   "heldHandSwitch": 0
+  },
+  "lamia/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 30,
+   "heldHandSwitch": 0
+  },
+  "lamia/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 43,
+   "heldHandSwitch": 0
+  },
+  "lamia/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 15,
+   "heldHandSwitch": 0
+  },
+  "lamia/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 27,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -2103,6 +2138,11 @@
    "at": "2026-11-01T16:00",
    "reason": "新曲 Altar of the World Tree, Beneath the White Night(全編・short ver.)を公開(新曲の行だけを足した)",
    "changed": 10
+  },
+  {
+   "at": "2026-11-12T01:09",
+   "reason": "新曲 LAMIA を公開(LAMIA の5行だけ足した)",
+   "changed": 5
   }
  ]
 }
