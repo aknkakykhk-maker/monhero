@@ -547,7 +547,7 @@ pair kiki sorashido lv=1-3 | kiki happy {c}の表、きのうのも読みまし�
 pair kiki sorashido lv=4-6 | sorashido normal {c}って、静かなのに大胆ですよね | kiki wink よく言われまつ | sorashido happy その差を表にしたいくらいです笑
 pair kiki sorashido lv=7-10 | kiki normal {c}が作る表、いつか全部集めて本にしたいです | sorashido surprise 本に！？ | kiki happy はい。いちばん前の席に置いておきたいので
 pair kiki sorashido lv=4-6 air=after | kiki normal …さっきのことは、まだ少し気にしています | sorashido troubled ・・・そうですよね。自分の言い方が悪かったです | kiki normal 少しだけ、時間をください
-pair kiki sorashido lv=4-6 air=makeup | sorashido normal {c}、さっきはすみません。仲直りの表、作ってきました | kiki happy …仲直りの表、ですか。ありがとうございます | sorashido happy 中身は「ごめんなさい」って1行だけなんですけど笑
+pair kiki sorashido lv=4-6 air=makeup | sorashido normal {c}、さっきはすみません。仲直りの表、作ってきました | kiki happy …仲直りの表、ですか。ありがとうございます | sorashido happy 中身は「ごめんなさい」の1行だけなんですけど笑
 pair kiki sorashido lv=7-10 air=makeup | kiki happy 仲直りのお茶、いれました | sorashido happy ありがとうございます。・・・これ、何杯目か数えないでおきます | kiki wink 今日だけは、ですね
 
 ## 2人 えるびん × ソラシド(20本)
@@ -1050,7 +1050,7 @@ quarrel kyuko sorashido seed=peek | kyuko troubled {c}、俺のメモ、勝手�
 quarrel kyuko sorashido seed=noise | kyuko troubled {c}、夜中にキーボードの音、ずっと聞こえてたよぉ | sorashido angry 計算が止まらなかったんですよ！ || sorashido troubled ・・・今夜は静かにします || sorashido normal {c}、夜はノートに書くことにしました笑 | kyuko happy それなら、いっしょに夜ふかしできるねぇ笑
 quarrel erubin kyuko seed=late | erubin troubled {c}、また夜ふかししたの？ 心配だよ | kyuko troubled ……心配しすぎだよぉ。大丈夫だって || erubin normal そっかぁ。……ちょっと言いすぎたかな || kyuko normal {c}、さっきはごめん。昨日はちゃんと寝たよ | erubin happy よかった。それだけで安心したよ☺️
 quarrel erubin kyuko seed=plan | kyuko troubled {c}のデッキ、守りのカード多すぎない？ | erubin troubled 俺はじっくり勝ちたいんだよね… || kyuko normal ……そっか。口出しすぎたかも || kyuko happy {c}、守りのまま強くなる形、考えてきたよ | erubin happy ありがとう。それなら試してみたいな
-quarrel erubin sorashido seed=look | erubin troubled {c}、表の文字、本当に読めなくて… | sorashido troubled ・・・そんなに小さいですか？ 気にしてたんですけどね || erubin normal ごめんね。言い方がよくなかったかな || sorashido happy {c}、文字を2倍にしました・・・！ | erubin happy 読みやすい！ ありがとう、{c}
+quarrel erubin sorashido seed=look | erubin troubled {c}、表の文字、本当に読めなくて… | sorashido troubled ・・・そんなに小さい？ 気にしてたんですけどね || erubin normal ごめんね。言い方がよくなかったかな || sorashido happy {c}、文字を2倍にしました・・・！ | erubin happy 読みやすい！ ありがとう、{c}
 quarrel erubin sorashido seed=late | sorashido angry {c}、待ち合わせ、15分遅れましたよ！ | erubin troubled ごめんね、中庭の花に見とれてて… || sorashido normal ・・・先に行ってます || erubin normal {c}、お詫びに、その花の場所を教えるね | sorashido happy ・・・何本咲いてるか、数えに行きましょう笑
 
 ## ブリーダーへのひとこと

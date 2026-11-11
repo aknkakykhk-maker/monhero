@@ -4,7 +4,7 @@
 # まずは各ペア 15マス(していること5 × 友情Lvの段3)に1本ずつ。回数の多いペアの上乗せは、コトバの割りふりが届いてから足す
 
 ## みゅあ × ソラシド
-pair mua sorashido doing=snack lv=1-3 | sorashido excited 今日のおやつ、新作が7つもあります・・・！ | mua surprise え、もう数えたの！？ 早すぎｗ | sorashido happy 数えないと落ち着かなくて笑 {c}はどれにしますか？ | mua excited 全部味見して、表にしてもらお♪
+pair mua sorashido doing=snack lv=1-3 | sorashido excited 今日のおやつは、新作が7つです・・・！ | mua surprise え、もう数えたの！？ 早すぎｗ | sorashido happy 数えないと落ち着かなくて笑 {c}はどれにしますか？ | mua excited 全部味見して、表にしてもらお♪
 pair mua sorashido doing=snack lv=4-6 | mua happy ねぇ、あたしが今週食べたクレープの数って分かる？ | sorashido wink 5つです。ちゃんと表にしてあります笑 | mua surprise まぢで記録されてた…！ ちょっとはずかしいんだけどｗ
 pair mua sorashido doing=snack lv=7-10 | sorashido normal このサーターアンダギー、半分どうですか？ | mua excited やった！ 半分こってなんか特別ぢゃん♪ | sorashido happy 計算しなくても、半分はちょうど半分ですからね笑
 pair mua sorashido doing=practice lv=1-3 | mua excited 今日こそフルコンするから、見てて！ | sorashido excited うぉぉぉ！ ミスの数、しっかり数えておきます・・・！ | mua angry 数えるのはそっちぢゃなくて、コンボのほう！ｗ

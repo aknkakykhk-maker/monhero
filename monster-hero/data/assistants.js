@@ -8388,7 +8388,7 @@ addAssistantLinePack({
       { e:'wink', t:'了解っす！ 今日の分、さくっと片づけちゃいましょう笑', bond:[9,15] },
       { e:'troubled', t:'攻略まとめ、また夜ふかしして書いちゃった笑 つい！', bond:[9,15] },
       { e:'happy', t:'そうだ、{name}に見せたい表があるんだった。あとで見てください👀', bond:16 },
-      { e:'normal', t:'今日こそ早く寝なきゃ！ ・・・って毎日言ってますね笑', bond:16 },
+      { e:'normal', t:'今日こそ早く寝なきゃ！ と、毎日言ってますね笑', bond:16 },
     ],
     onboarding: [
       { e:'happy',    t:'自分はソラシドといいます。攻略班のエンジニアをやってます笑 よろしくお願いします！' },
@@ -8488,7 +8488,7 @@ addAssistantLinePack({
       { e:'wink', t:'そうだ、この並び、昨日の夜に計算してみたんですよ。試さなきゃ！', bond:16 },
     ],
     rhythmHome: [
-      { e:'excited',  t:'モンヒロビートやりますか？ 譜面の作り、自分けっこう調べてます笑' },
+      { e:'excited',  t:'モンヒロビート、遊びますか？ 譜面の作り、自分けっこう調べてます笑' },
       { e:'normal',   t:'曲を選んで、難易度を選んで、決定。それだけですよ' },
       { e:'wink',     t:'{name}、どの曲にしますか？ 試聴しながら決めるのもアリですね笑' },
       { e:'normal',   t:'きついと思ったら、オプションでノーツ速度を変えましょう。調整も攻略のうちです' },
@@ -8515,7 +8515,7 @@ addAssistantLinePack({
     missionsNormal: [
       { e:'normal',   t:'ミッションは今日のやること表ですね。迷ったらここからです' },
       { e:'happy',    t:'{name}、ついでに終わるものが混じっているので、見ておくと得ですよ' },
-      { e:'wink',     t:'いちばんもったいないのは受け取り忘れです。ほんとに笑' },
+      { e:'wink',     t:'受け取り忘れが、いちばんもったいないです。ほんとに笑' },
       { e:'normal',   t:'デイリーは毎日、ウィークリーは週ごとに入れかわります' },
       { e:'normal',   t:'週のぶんは月曜に切り替わります。終わりそうなものから片づけましょう' },
     ],
@@ -8585,7 +8585,7 @@ addAssistantLinePack({
       { e:'normal',   t:'演奏中だけは周回が止まります。叩き終われば、その曲のぶんが入りますよ' },
       { e:'wink',     t:'上の帯を押すと、いま何周めか見られます笑' },
       { e:'troubled', t:'アプリを閉じたらそこで止まるので、そこだけ気をつけてください' },
-      { e:'excited',  t:'叩いているあいだも数が増えていきますねー。効率、でーじいいです笑' },
+      { e:'excited',  t:'叩いている間も、数が増えていきますねー。効率、でーじいいです笑' },
       { e:'normal',   t:'演奏中に止まるぶんは、ほぼ誤差です。気にしなくて大丈夫ですよ' },
     ],
     tacticsExIntro: [
@@ -12225,7 +12225,7 @@ const PANDORA_WINGS_EP4 = [
   { who:'mua',      e:'surprise', monsters:[{ id:'Pandora', pose:'idle' }], t:'あ……！ 今、笑った！' },
   { who:'pandora',  e:'normal',   t:'……笑って、ない' },
   { who:'momosuke', e:'excited',  t:'笑ったよ〜！ ももちゃんと見たもん！' },
-  { who:'sorashido', e:'wink',    t:'計算どおりです！ ・・・ってことにしておいてください笑' },
+  { who:'sorashido', e:'wink',    t:'計算どおりです！ ということにしておいてください笑' },
   { who:'pandora',  e:'normal',   t:'……ありがとう。どっちも、って言ってくれて' },
   { who:'pandora',  e:'normal',   t:'……わたし、こういうの、はじめて' },
   { who:'atsu',     e:'happy',    atsu:'with',    t:'また選びに行こ。次はパンドラも一緒に笑' },
@@ -13676,7 +13676,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'kiki-sorashido-1', pair:['kiki', 'sorashido'], lv:1, scene:'any', lines:[
     { who:'sorashido', e:'excited', t:'{c}！ 攻撃に全部振ったときのダメージ、計算してみました・・・！' },
     { who:'kiki', e:'happy', t:'どうでした、{c}？' },
-    { who:'sorashido', e:'surprise', t:'でーじ強かったです・・・！ 理にかなってたんですね笑' },
+    { who:'sorashido', e:'surprise', t:'でーじ強かったです！ 理にかなってたんですね笑' },
   ] },
   { id:'kiki-sorashido-2', pair:['kiki', 'sorashido'], lv:1, scene:'masu', lines:[
     { who:'kiki', e:'normal', t:'{c}、このマスモンの伸び方、表にできますか？' },
@@ -13874,7 +13874,7 @@ const ASSISTANT_PEER_TALKS = Object.freeze([
   { id:'dra-sorashido-sp', pair:['dra', 'sorashido'], lv:5, scene:'home', special:true, lines:[
     { who:'sorashido', e:'normal', t:'{c}、自分の表、いつも最後まで読んでくれるの、{c}だけなんですよね笑' },
     { who:'dra', e:'happy', t:'長いけど、ちゃんと役に立つからな' },
-    { who:'sorashido', e:'happy', t:'そう言ってくれるの、でーじうれしいんですよ' },
+    { who:'sorashido', e:'happy', t:'そう言ってくれて、でーじうれしいです' },
     { who:'dra', e:'wink', t:'{c}は熱いからな。おでは、そういうやつが好きなんだわ' },
     { who:'sorashido', e:'excited', t:'これからも一緒に攻略していきましょう！' },
   ] },
@@ -17949,7 +17949,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   { id:'life-pair-kiki-sorashido-020', kind:'pair', pair:['kiki', 'sorashido'], keys:{ lv:'4-6', air:'makeup' }, lines:[
     { who:'sorashido', e:'normal', t:'{c}、さっきはすみません。仲直りの表、作ってきました' },
     { who:'kiki', e:'happy', t:'…仲直りの表、ですか。ありがとうございます' },
-    { who:'sorashido', e:'happy', t:'中身は「ごめんなさい」って1行だけなんですけど笑' },
+    { who:'sorashido', e:'happy', t:'中身は「ごめんなさい」の1行だけなんですけど笑' },
   ] },
   { id:'life-pair-kiki-sorashido-021', kind:'pair', pair:['kiki', 'sorashido'], keys:{ lv:'7-10', air:'makeup' }, lines:[
     { who:'kiki', e:'happy', t:'仲直りのお茶、いれました' },
@@ -20400,7 +20400,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
   ] },
   { id:'life-quarrel-erubin-sorashido-009', kind:'quarrel', pair:['erubin', 'sorashido'], keys:{ seed:'look' }, lines:[
     { who:'erubin', e:'troubled', t:'{c}、表の文字、本当に読めなくて…' },
-    { who:'sorashido', e:'troubled', t:'・・・そんなに小さいですか？ 気にしてたんですけどね' },
+    { who:'sorashido', e:'troubled', t:'・・・そんなに小さい？ 気にしてたんですけどね' },
   ], distance:[
     { who:'erubin', e:'normal', t:'ごめんね。言い方がよくなかったかな' },
   ], makeup:[
@@ -20705,7 +20705,7 @@ const ASSISTANT_LIFE_TALKS = Object.freeze([
     { who:'erubin', e:'surprise', t:'新しい場所の話を聞いたんだ。ちょっとわくわくするね' },
   ] },
   { id:'life-pair-mua-sorashido-001', kind:'pair', pair:['mua', 'sorashido'], keys:{ doing:'snack', lv:'1-3' }, lines:[
-    { who:'sorashido', e:'excited', t:'今日のおやつ、新作が7つもあります・・・！' },
+    { who:'sorashido', e:'excited', t:'今日のおやつは、新作が7つです・・・！' },
     { who:'mua', e:'surprise', t:'え、もう数えたの！？ 早すぎｗ' },
     { who:'sorashido', e:'happy', t:'数えないと落ち着かなくて笑 {c}はどれにしますか？' },
     { who:'mua', e:'excited', t:'全部味見して、表にしてもらお♪' },
@@ -22558,7 +22558,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'kiki-sorashido-1': { doing:'training', lv:'1-3', lines:[
       { who:'sorashido', e:'excited', t:'攻撃に全部振ったときのダメージ、計算してみました・・・！' },
       { who:'kiki', e:'happy', t:'どうでした、{c}？' },
-      { who:'sorashido', e:'surprise', t:'でーじ強かったです・・・！ 理にかなってたんですね笑' },
+      { who:'sorashido', e:'surprise', t:'でーじ強かったです！ 理にかなってたんですね笑' },
     ] },
   'kiki-sorashido-2': { doing:'training', lv:'1-3', lines:[
       { who:'kiki', e:'normal', t:'このマスモンの伸び方、表にできますか？' },
@@ -22743,7 +22743,7 @@ const ASSISTANT_PEER_REWRITES = Object.freeze({
   'dra-sorashido-sp': { lines:[
       { who:'sorashido', e:'normal', t:'自分の表、いつも最後まで読んでくれるの、{c}だけなんですよね笑' },
       { who:'dra', e:'happy', t:'長いけど、ちゃんと役に立つからな' },
-      { who:'sorashido', e:'happy', t:'そう言ってくれるの、でーじうれしいんですよ' },
+      { who:'sorashido', e:'happy', t:'そう言ってくれて、でーじうれしいです' },
       { who:'dra', e:'wink', t:'{c}は熱いからな。おでは、そういうやつが好きなんだ' },
       { who:'sorashido', e:'excited', t:'次の攻略も、一緒にやりましょう！' },
     ] },

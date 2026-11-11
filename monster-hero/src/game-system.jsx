@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a7a8f34511f4d82c
+// generated-sha256: ebd8feadbf0a78e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65562,7 +65562,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend-erubin-kyuko-2', kind:'mend', ppl:['erubin', 'kyuko'], keys:{ how:'gift' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、{name}がお弁当くれたよぉ。2つ' }, { who:'erubin', e:'happy', t:'ほんとだ。丘で食べよっか' }, { who:'kyuko', e:'troubled', t:'…昨日はごめんね' }, { who:'erubin', e:'happy', t:'こちらこそ。景色、いっしょに見よう' }] },
   { id:'rel-mend-erubin-kyuko-3', kind:'mend', ppl:['erubin', 'kyuko'], keys:{ how:'player' }, lines:[{ who:'erubin', e:'troubled', t:'{name}に、もう話しておいでって言われたよ' }, { who:'kyuko', e:'troubled', t:'俺もぉ…{name}に言われたら、しょうがないなぁ' }, { who:'erubin', e:'normal', t:'俺から言うね。ごめんね、{c}' }, { who:'kyuko', e:'happy', t:'ほい、俺もごめん。これで元どおり〜' }] },
   { id:'rel-mend-dra-sorashido-1', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、昨日のこと・・・自分が悪かったです' }, { who:'dra', e:'normal', t:'いや、おでもむきになりすぎた' }, { who:'sorashido', e:'happy', t:'じゃあ、仲直りの記録をつけておきます' }, { who:'dra', e:'happy', t:'記録するのか。まあ、いいけどな' }] },
-  { id:'rel-mend-dra-sorashido-2', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'dra', e:'normal', t:'{c}、{name}がサーターアンダギーくれたぞ' }, { who:'sorashido', e:'excited', t:'でーじうれしいです！' }, { who:'dra', e:'troubled', t:'…昨日は、すまんかったな' }, { who:'sorashido', e:'happy', t:'自分もすみません。半分ずつ食べましょう' }] },
+  { id:'rel-mend-dra-sorashido-2', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'dra', e:'normal', t:'{c}、{name}がサーターアンダギーくれたぞ' }, { who:'sorashido', e:'excited', t:'うわ、でーじうれしいです！' }, { who:'dra', e:'troubled', t:'…昨日は、すまんかったな' }, { who:'sorashido', e:'happy', t:'自分もすみません。半分ずつ食べましょう' }] },
   { id:'rel-mend-dra-sorashido-3', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'dra', e:'troubled', t:'{name}に、もう仲直りしろって言われちまった' }, { who:'sorashido', e:'troubled', t:'自分もです。{name}にそう言われたら、しょうがないですね' }, { who:'dra', e:'normal', t:'じゃあ、攻略本のつづきを書くか' }, { who:'sorashido', e:'happy', t:'はい！ 説明は{c}、表は自分ですね' }] },
   { id:'rel-mend-kyuko-sorashido-1', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、昨日はすねちゃってごめぇ' }, { who:'sorashido', e:'surprise', t:'自分のほうこそ、言いすぎてすみません' }, { who:'kyuko', e:'happy', t:'じゃあ、次の勝負で決着ね笑' }, { who:'sorashido', e:'excited', t:'望むところです・・・！' }] },
   { id:'rel-mend-kyuko-sorashido-2', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}からポテチの差し入れです。3つの味ですよ' }, { who:'kyuko', e:'happy', t:'えぇ、ちょうど食べたかったやつぅ' }, { who:'sorashido', e:'troubled', t:'昨日は、すみません' }, { who:'kyuko', e:'happy', t:'俺もごめん。どれから食べるか、作戦会議ね' }] },
