@@ -87,15 +87,16 @@ const assistantLifeTemplePerk = async () => {
 };
 
 // M/B管理の得: トレーニングチケットを使ったとき(60-app.jsx の useBondXpTickets から)、ranch にいる助手のマスモンの育ちが伸びる。
-//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口 assistantMasmonTrainBoost はキズナ4が作る(1日1回は向こうで数える)。無ければ何もしない。
+//   プレイヤーの経験値は増やさない(絆ランキングに効くため)。受け口 ASSISTANT_LIFE_LINKS.masmonTrainBoost(キズナ4が assistantMasmonTrainBoost を入れる)(1日1回は向こうで数える)。無ければ何もしない。
 //   返り値: 演出に足す一文('' = 何も起きなかった)
 const assistantLifeRanchPerk = () => {
   try {
-    if (typeof assistantMasmonTrainBoost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
+    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     const names = [];
     for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {
-      let ok = false; try { ok = assistantMasmonTrainBoost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; }
+      let ok = false; try { ok = boost(id, { source: 'ranch' }) === true; } catch (_) { ok = false; }
       if (ok) names.push(typeof assistantLifeName === 'function' ? assistantLifeName(id) : id);
     }
     return names.length ? `${names.join('・')}のマスモンも少し伸びます` : '';
@@ -119,7 +120,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
-  const ranch = typeof assistantMasmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
+  const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
   if (ranch.length) rows.push({ k: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`, go: typeof go.ranch === 'function' ? go.ranch : null });
   return rows;
 };
