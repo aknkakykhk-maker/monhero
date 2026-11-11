@@ -49,3 +49,65 @@ function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, di
       {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
     </button>);
 }
+
+// ===== STEP3: タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。道具は「🎁 贈る」の中、引き合わせるは「きずな」へ =====
+// 新UIを既定にするか。保存(mh_assistant_life_ui_v2)が true/false ならそれに従い、無い人だけこの値になる(保存は消さない・書き換えない)
+const ASSISTANT_LIFE_UI_V2_DEFAULT = false;
+function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
+// 新UIのタブ(下の列と、町の上の帯で同じ並び)
+function assistantLifeUiV2Tabs() {
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+}
+
+// 引き合わせる(「きずな」の上)。2人を選ぶと、次の時間に一緒に過ごしやすくなる。決まりは今までと同じ(assistantLifeNudge('introduce'))
+function AssistantLifeIntroduceCard({ ids, life }) {
+  const [pick, setPick] = React.useState([]);
+  const [done, setDone] = React.useState('');
+  const list = (ids || []).filter(Boolean);
+  if (list.length < 2) return null;
+  const slot = assistantLifeSlotAt();
+  const introNext = ((life && life.nudges && life.nudges.introduce) || []).find(n => n.abs === slot.abs + 1) || null;
+  const nameOf = assistantLifeName;
+  const go = async () => {
+    if (pick.length !== 2) return;
+    let ok = false; try { ok = await assistantLifeNudge('introduce', pick); } catch (_) { ok = false; }
+    if (ok) { setDone(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`); setPick([]); }
+  };
+  return (
+    <div data-assistant-life-introduce className="mb-2 rounded-2xl border border-sky-300/50 bg-slate-950/90 p-2.5">
+      <p className="flex items-baseline gap-2 text-[14px] font-black text-sky-100">🤝 引き合わせる<span className="ml-auto text-[11px] font-bold text-emerald-300">無料</span></p>
+      <p className="mb-1.5 text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。</p>
+      <div className="flex flex-wrap gap-1.5">
+        {list.map(id => { const on = pick.includes(id); return (
+          <button key={id} type="button" data-assistant-life-pick={id} aria-pressed={on} onClick={() => { setDone(''); setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2)); }}
+            className={`min-h-[44px] rounded-full border px-3 text-[12.5px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-500/40 text-white' : 'border-white/25 bg-slate-800 text-slate-100'}`}>{nameOf(id)}</button>); })}
+      </div>
+      <button type="button" data-assistant-life-introduce-go disabled={pick.length !== 2 || !!introNext} onClick={go}
+        className="mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/25 px-2 text-[12.5px] font-black text-sky-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">
+        {introNext ? `次の時間は ${String(introNext.pair).split('-').map(nameOf).join('と')} を引き合わせます` : pick.length === 2 ? `${nameOf(pick[0])}と${nameOf(pick[1])}に、次の時間に一緒に過ごしてもらう` : '2人を選んでください'}
+      </button>
+      {done && <p data-assistant-life-introduce-done className="mt-1.5 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11.5px] font-bold text-sky-100">{done}</p>}
+    </div>);
+}
+
+// 「🎁 贈る」のシートの上: だれに贈るか。groups … いま一緒にいる組/soloIds … 1人に贈れる助手
+function AssistantLifeGiveWho({ groups, soloIds, pairLeft = 0, soloLeft = 0, canPair = false, soloOn = false, onPair, onSolo }) {
+  const nameOf = assistantLifeName;
+  const gs = groups || [], ss = soloOn ? (soloIds || []) : [];
+  return (
+    <div data-assistant-life-give-who>
+      <p className="mt-2 text-[13px] font-black text-amber-200">🤝 一緒にいる2人に贈る <span className="text-[11px] font-bold text-slate-200">今日あと {pairLeft}回</span></p>
+      <p className="text-[11px] font-bold leading-snug text-slate-300">2人の友情Lv と、あなたとの仲良し度が上がります</p>
+      {gs.length ? <div className="mt-1 flex flex-wrap gap-1.5">{gs.map(g => (
+        <button key={g.ids.join('-')} type="button" data-assistant-life-give-who-pair={g.ids.join('-')} disabled={!canPair || pairLeft <= 0} onClick={() => onPair(g)}
+          className="min-h-[44px] rounded-xl border border-amber-300/70 bg-amber-500/25 px-3 text-[12.5px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">🎁 {g.ids.map(nameOf).join('・')}</button>))}</div>
+        : <p className="mt-1 rounded-xl bg-white/5 px-2 py-1.5 text-[11.5px] font-bold text-slate-300">いまは、一緒にいる組がありません(次の時間帯に)</p>}
+      {soloOn && (<>
+        <p className="mt-3 text-[13px] font-black text-pink-200">💗 1人に贈る <span className="text-[11px] font-bold text-slate-200">今日あと {soloLeft}回</span></p>
+        <p className="text-[11px] font-bold leading-snug text-slate-300">その助手とあなたの仲良し度が上がります</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">{ss.map(id => (
+          <button key={id} type="button" data-assistant-life-give-who-solo={id} disabled={soloLeft <= 0} onClick={() => onSolo(id)}
+            className="min-h-[44px] rounded-xl border border-pink-300/70 bg-pink-500/25 px-3 text-[12.5px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400">{nameOf(id)}</button>))}</div>
+      </>)}
+    </div>);
+}

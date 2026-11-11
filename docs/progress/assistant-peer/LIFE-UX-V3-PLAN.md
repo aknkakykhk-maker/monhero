@@ -112,3 +112,11 @@
   - 神殿 → 新しい押す所は作らず、合体・転生などを終えたときに temple にいる助手との仲良し度を少し(1日1回)。キズナの神殿の受け口はまだ無いので、神殿の画面(62-screen-masu-temple.jsx)へ1行で呼べる関数をこちらで作る。触ったら縦・横・🔄横の止め絵(バトル部も確かめる)
   - マーケット → おすすめ品1つ1割引き(1日1回)。持ち主を確かめてから
   - 書きかけ: HOME から施設を開く受け口(ASSISTANT_LIFE_LINKS.goPlace)の差分は STEP2 の枝で入れ直す
+- **STEP3(枝 claude/nakayoshi13-life-step3・ナカヨシ13)**: 新UIのときだけ
+  - タブは4つ(🏡 家・🗺 町・🤝 きずな・🏘 フレンド)。並びは `assistantLifeUiV2Tabs()`(下の列と町の上の帯で同じ)
+  - 道具のタブは無し。「今日やれること」の「🎁 贈る」を押すと、だれに贈るか(一緒にいる組・1人)+道具の一覧のシート(`AssistantLifeGiveWho`+今までの道具の一覧)。交換所から戻ったときもこのシート
+  - 家の上の「📋 みんなの居場所」は出さない(町のタブ1つに)。町(地図)は下の一覧をやめ、上の帯に同じ4つのタブ(`AssistantLifeTownMap` の nav)
+  - 引き合わせるは「きずな」の上(`AssistantLifeIntroduceCard`。決まりは今までと同じ assistantLifeNudge('introduce'))
+  - 既定の切り替えは `ASSISTANT_LIFE_UI_V2_DEFAULT`(いまは false)。保存 mh_assistant_life_ui_v2 が true/false の人はそのまま、無い人だけ既定に従う。保存は消さない・開いただけでは書かない
+  - 検査 `tools/assistant/assistant-life-ux3-check.js`(縦・横・横小)。止め絵 `lifeux/step3/`
+  - 残り: 既定を true に(社長の「この文で」と Fable の最終確認のあと)。そのとき旧UIを前提にした検査は、保存 false を先に入れて旧UIのまま見る

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9bf648f343ac2771
+// source-sha256: c33ac016e783459e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108723,15 +108723,16 @@ function AssistantLifeHouse({
   const land = useAssistantLifeLand();
   if (typeof useAssistantLifeFriendState === 'function') useAssistantLifeFriendState();
   const [tab, setTab] = React.useState('house');
-  const [uiV2, setUiV2] = React.useState(false);
+  const [uiV2, setUiV2] = React.useState(() => assistantLifeUiV2Of(null));
+  const [giftOpen, setGiftOpen] = React.useState(false);
   const [callPicker, setCallPicker] = React.useState(false);
   const [lifeStatusExpanded, setLifeStatusExpanded] = React.useState(false);
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
   React.useEffect(() => {
     let alive = true;
-    Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
-      if (alive) setUiV2(v === true);
+    Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+      if (alive) setUiV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
     return () => {
       alive = false;
@@ -108741,7 +108742,9 @@ function AssistantLifeHouse({
     const next = !uiV2;
     setUiV2(next);
     setCallPicker(false);
+    setGiftOpen(false);
     setRoomId(null);
+    if (next && tab === 'items') setTab('house');
     try {
       void storeSet('mh_assistant_life_ui_v2', next, false);
     } catch {}
@@ -108834,6 +108837,12 @@ function AssistantLifeHouse({
       if (b.furn) setFurnBack(b.room);
     }
   }, []);
+  React.useEffect(() => {
+    if (uiV2 && tab === 'items') {
+      setTab('house');
+      if (!roomId) setGiftOpen(true);
+    }
+  }, [uiV2, tab]);
   if (!assistantLifeEnabled() || !st.loaded || !st.open) return null;
   const life = st.life || {};
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
@@ -109139,8 +109148,12 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
-    disabled: !canGive || !giveGroup && !giveSoloId,
+    disabled: !uiV2 && (!canGive || !giveGroup && !giveSoloId),
     onClick: () => {
+      if (uiV2) {
+        setGiftOpen(true);
+        return;
+      }
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
   }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
@@ -109156,7 +109169,7 @@ function AssistantLifeHouse({
     className: "mhl-icons",
     role: "tablist",
     "data-assistant-life-icons": true
-  }, [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])].map(([k, ic, label]) => React.createElement("button", {
+  }, (uiV2 ? assistantLifeUiV2Tabs() : [['house', '🏡', '家'], ['where', '📋', '居場所'], ['friends', '🤝', '友情'], ['items', '🎒', '道具'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])]).map(([k, ic, label]) => React.createElement("button", {
     key: k,
     type: "button",
     role: "tab",
@@ -109164,6 +109177,11 @@ function AssistantLifeHouse({
     "data-assistant-life-icon": k,
     className: tab === k ? 'on' : '',
     onClick: () => {
+      if (uiV2) {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+        setGiftOpen(false);
+      }
       setTab(k);
       setRoomId(null);
     }
@@ -109299,7 +109317,7 @@ function AssistantLifeHouse({
     style: {
       paddingInline: pad
     }
-  }, findBtn), React.createElement(AssistantLifeHouseArt, {
+  }, uiV2 ? null : findBtn), React.createElement(AssistantLifeHouseArt, {
     width: houseW,
     land: land,
     look: look,
@@ -109312,16 +109330,7 @@ function AssistantLifeHouse({
     life: life,
     peerSt: peerSt
   }), lifeStatusList);
-  const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
-    life: life
-  }) : tab === 'friends' ? React.createElement("div", {
-    className: "px-3 pb-3 pt-1"
-  }, typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
-    metIds: metIds,
-    onReplay: t => playTalk(t, null),
-    peerItems: peerItems,
-    onUseItem: onUseItem
-  })) : React.createElement("div", {
+  const itemsBody = React.createElement("div", {
     className: "px-3 pb-3 pt-1",
     "data-assistant-life-items": true
   }, React.createElement("p", {
@@ -109415,6 +109424,19 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeShopButton, {
     tab: "item"
   })));
+  const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
+    life: life
+  }) : tab === 'friends' ? React.createElement("div", {
+    className: "px-3 pb-3 pt-1"
+  }, uiV2 && typeof AssistantLifeIntroduceCard === 'function' && React.createElement(AssistantLifeIntroduceCard, {
+    ids: ids,
+    life: life
+  }), typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
+    metIds: metIds,
+    onReplay: t => playTalk(t, null),
+    peerItems: peerItems,
+    onUseItem: onUseItem
+  })) : itemsBody;
   return React.createElement("div", {
     className: "mhl-root",
     style: {
@@ -109459,7 +109481,8 @@ function AssistantLifeHouse({
     onView: uiV2 ? id => setRoomId(id) : null,
     onBeat: beat,
     onCard: card,
-    list: React.createElement(React.Fragment, null, header, note && React.createElement("p", {
+    nav: uiV2 ? icons : null,
+    list: uiV2 ? null : React.createElement(React.Fragment, null, header, note && React.createElement("p", {
       "data-assistant-life-note": true,
       className: "mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100"
     }, note), React.createElement("div", {
@@ -109540,7 +109563,66 @@ function AssistantLifeHouse({
     }
   }, React.createElement("span", null, nameOf(id)), React.createElement("span", {
     className: "text-xs text-slate-300"
-  }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), roomId && React.createElement(AssistantLifeRoomSheet, {
+  }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), uiV2 && tab === 'where' && note && !roomId && React.createElement("p", {
+    "data-assistant-life-note": true,
+    className: "absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100",
+    style: {
+      bottom: 'calc(44px + env(safe-area-inset-bottom))'
+    }
+  }, note), giftOpen && uiV2 && !roomId && !give && React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 21
+    },
+    "data-assistant-life-gift-sheet": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
+    className: "absolute inset-0 bg-black/60",
+    onClick: () => setGiftOpen(false)
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '56%',
+      top: 0,
+      maxHeight: '100%',
+      borderRadius: '22px 0 0 22px'
+    } : undefined
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("p", {
+    className: "text-[18px] font-black"
+  }, "🎁 贈る"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-gift-sheet-close": true,
+    "data-mhl-sheet-close": true,
+    onClick: () => setGiftOpen(false),
+    className: "min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる ✕")), typeof AssistantLifeGiveWho === 'function' && React.createElement(AssistantLifeGiveWho, {
+    groups: (life.groups || []).map(g => ({
+      ...g,
+      ids: (g.ids || []).filter(id => metSet.has(id))
+    })).filter(g => g.ids.length >= 2),
+    soloIds: ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id) && !awayFriend(id)),
+    pairLeft: typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0,
+    soloLeft: soloLeft,
+    canPair: canGive,
+    soloOn: soloOn,
+    onPair: g => {
+      setGiftOpen(false);
+      openGive(g.ids);
+    },
+    onSolo: id => {
+      setGiftOpen(false);
+      const g = (life.groups || []).find(x => (x.ids || []).includes(id));
+      openGiveSolo(id, g ? g.ids : [id]);
+    }
+  }), React.createElement("p", {
+    className: "mt-3 border-t border-white/15 pt-2 text-[13px] font-black text-white"
+  }, "📦 道具の一覧"), React.createElement("div", {
+    className: "-mx-3"
+  }, itemsBody))), roomId && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     id: roomId,
     uiV2: uiV2,
@@ -110023,6 +110105,7 @@ function AssistantLifeTownMap({
   onCard = null,
   onBack,
   list = null,
+  nav = null,
   land = false,
   initialPlace = null,
   initialAssistantId = null
@@ -110496,7 +110579,13 @@ function AssistantLifeTownMap({
       paddingRight: 'calc(8px + env(safe-area-inset-right))'
     },
     "data-assistant-life-map-bar": true
-  }, React.createElement("button", {
+  }, nav ? React.createElement("div", {
+    className: "shrink-0",
+    style: {
+      width: land ? 250 : 216
+    },
+    "data-assistant-life-map-nav": true
+  }, nav) : React.createElement("button", {
     type: "button",
     "data-assistant-life-map-back": true,
     onClick: onBack,
@@ -110508,7 +110597,7 @@ function AssistantLifeTownMap({
     style: {
       textShadow: '0 2px 4px #000'
     }
-  }, "📋 みんなの居場所"), React.createElement("p", {
+  }, nav ? '🗺 町' : '📋 みんなの居場所'), React.createElement("p", {
     className: "truncate text-[10px] font-bold text-slate-200",
     "data-assistant-life-map-time": true
   }, assistantLifeTodLabel(), " ・ ", assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), list && React.createElement("button", {
@@ -111797,6 +111886,124 @@ function AssistantLifeDoRow({
     className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
     "data-assistant-life-room-do-gain": true
   }, gain));
+}
+const ASSISTANT_LIFE_UI_V2_DEFAULT = false;
+function assistantLifeUiV2Of(saved) {
+  return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT;
+}
+function assistantLifeUiV2Tabs() {
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+}
+function AssistantLifeIntroduceCard({
+  ids,
+  life
+}) {
+  const [pick, setPick] = React.useState([]);
+  const [done, setDone] = React.useState('');
+  const list = (ids || []).filter(Boolean);
+  if (list.length < 2) return null;
+  const slot = assistantLifeSlotAt();
+  const introNext = (life && life.nudges && life.nudges.introduce || []).find(n => n.abs === slot.abs + 1) || null;
+  const nameOf = assistantLifeName;
+  const go = async () => {
+    if (pick.length !== 2) return;
+    let ok = false;
+    try {
+      ok = await assistantLifeNudge('introduce', pick);
+    } catch (_) {
+      ok = false;
+    }
+    if (ok) {
+      setDone(`${nameOf(pick[0])}と${nameOf(pick[1])}が、次の時間に一緒に過ごしやすくなりました`);
+      setPick([]);
+    }
+  };
+  return React.createElement("div", {
+    "data-assistant-life-introduce": true,
+    className: "mb-2 rounded-2xl border border-sky-300/50 bg-slate-950/90 p-2.5"
+  }, React.createElement("p", {
+    className: "flex items-baseline gap-2 text-[14px] font-black text-sky-100"
+  }, "🤝 引き合わせる", React.createElement("span", {
+    className: "ml-auto text-[11px] font-bold text-emerald-300"
+  }, "無料")), React.createElement("p", {
+    className: "mb-1.5 text-[11.5px] font-bold leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "2人を選ぶと、次の時間に一緒に過ごしやすくなります。言い合いのあとなら、仲直りのきっかけに。"), React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, list.map(id => {
+    const on = pick.includes(id);
+    return React.createElement("button", {
+      key: id,
+      type: "button",
+      "data-assistant-life-pick": id,
+      "aria-pressed": on,
+      onClick: () => {
+        setDone('');
+        setPick(p => on ? p.filter(x => x !== id) : [...p, id].slice(-2));
+      },
+      className: `min-h-[44px] rounded-full border px-3 text-[12.5px] font-black active:scale-95 ${on ? 'border-sky-300 bg-sky-500/40 text-white' : 'border-white/25 bg-slate-800 text-slate-100'}`
+    }, nameOf(id));
+  })), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-introduce-go": true,
+    disabled: pick.length !== 2 || !!introNext,
+    onClick: go,
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/25 px-2 text-[12.5px] font-black text-sky-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, introNext ? `次の時間は ${String(introNext.pair).split('-').map(nameOf).join('と')} を引き合わせます` : pick.length === 2 ? `${nameOf(pick[0])}と${nameOf(pick[1])}に、次の時間に一緒に過ごしてもらう` : '2人を選んでください'), done && React.createElement("p", {
+    "data-assistant-life-introduce-done": true,
+    className: "mt-1.5 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11.5px] font-bold text-sky-100"
+  }, done));
+}
+function AssistantLifeGiveWho({
+  groups,
+  soloIds,
+  pairLeft = 0,
+  soloLeft = 0,
+  canPair = false,
+  soloOn = false,
+  onPair,
+  onSolo
+}) {
+  const nameOf = assistantLifeName;
+  const gs = groups || [],
+    ss = soloOn ? soloIds || [] : [];
+  return React.createElement("div", {
+    "data-assistant-life-give-who": true
+  }, React.createElement("p", {
+    className: "mt-2 text-[13px] font-black text-amber-200"
+  }, "🤝 一緒にいる2人に贈る ", React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, "今日あと ", pairLeft, "回")), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-300"
+  }, "2人の友情Lv と、あなたとの仲良し度が上がります"), gs.length ? React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, gs.map(g => React.createElement("button", {
+    key: g.ids.join('-'),
+    type: "button",
+    "data-assistant-life-give-who-pair": g.ids.join('-'),
+    disabled: !canPair || pairLeft <= 0,
+    onClick: () => onPair(g),
+    className: "min-h-[44px] rounded-xl border border-amber-300/70 bg-amber-500/25 px-3 text-[12.5px] font-black text-amber-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, "🎁 ", g.ids.map(nameOf).join('・')))) : React.createElement("p", {
+    className: "mt-1 rounded-xl bg-white/5 px-2 py-1.5 text-[11.5px] font-bold text-slate-300"
+  }, "いまは、一緒にいる組がありません(次の時間帯に)"), soloOn && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 text-[13px] font-black text-pink-200"
+  }, "💗 1人に贈る ", React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, "今日あと ", soloLeft, "回")), React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-slate-300"
+  }, "その助手とあなたの仲良し度が上がります"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, ss.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-assistant-life-give-who-solo": id,
+    disabled: soloLeft <= 0,
+    onClick: () => onSolo(id),
+    className: "min-h-[44px] rounded-xl border border-pink-300/70 bg-pink-500/25 px-3 text-[12.5px] font-black text-pink-50 active:scale-[.98] disabled:border-transparent disabled:bg-slate-800 disabled:text-slate-400"
+  }, nameOf(id))))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
