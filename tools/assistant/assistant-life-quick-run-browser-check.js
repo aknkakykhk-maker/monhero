@@ -7,7 +7,7 @@
 //   ① 助手ライフを開くと、AUTO設定のクイック周回がそろっていれば「始められる」(quickRun.canStart)。開いただけでは始まらない
 //   ② 始めると、HOME(助手ライフの下)のまま周回が進む。バトル画面へ飛ばない
 //   ③ 裏で回しているあいだ、バトルの効果音を鳴らさない(効果音の音量が0)
-//   ④ 助手ライフを閉じると締まる: 報酬(ダイヤ・ブリーダー経験値)が入り、HOME に残り、周回(段階)が残らない
+//   ④ 助手ライフを閉じても締めない(2026-11-11 どこでも回す)。HOME の帯の「止める」で締まる: 報酬が入り、HOME に残り、周回(段階)が残らない
 //   ⑤ 止める(onQuickRunStop)でも同じく締まり、助手ライフは開いたまま
 //   ⑥ どこでも実行時エラーが出ない
 //   ⑦ AUTO設定の「モンヒロビート・助手ライフを開いたら自動で始める」が ON なら、開いた瞬間に始まる(OFF なら始まらない=①)。
@@ -113,12 +113,18 @@ const seed = () => {
     check('② 獲得の見込み(ダイヤ・経験値)が増えていく', !!s.q && (s.q.gold > 0 || s.q.xp > 0), JSON.stringify(s.q));
     // ③ 効果音は鳴らさない
     check('③ 裏で回しているあいだ、バトルの効果音は鳴らさない(効果音の音量0)', s.se === 0, String(s.se));
-    // ④ 閉じると締まる
+    // ④ 閉じても締めない(2026-11-11 社長「裏クイックをゲームのどこにいても回す」。HOME の帯で回り続ける)。帯の「止める」で締まる
     await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false }));
     await page.waitForTimeout(3500);
     for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
+    const keep = await page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); return el ? el.getAttribute('data-quick-anywhere') : null; });
+    check('④ 閉じても周回は終わらず、HOME の帯(裏クイック)で回り続ける', keep === 'live' && (await state()).home && !(await state()).battle, String(keep));
+    await page.evaluate(() => document.querySelector('[data-quick-anywhere]').click()); await page.waitForTimeout(300);
+    await page.evaluate(() => document.querySelector('[data-quick-anywhere-stop]').click());
+    await page.waitForTimeout(3500);
+    for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(400);
     const afterClose = await state();
-    check('④ 閉じると締まり、報酬(ダイヤか経験値)が入る', afterClose.gold > before.gold || afterClose.xp > before.xp, JSON.stringify({ before: [before.gold, before.xp], after: [afterClose.gold, afterClose.xp] }));
+    check('④ 帯の「止める」で締まり、報酬(ダイヤか経験値)が入る', afterClose.gold > before.gold || afterClose.xp > before.xp, JSON.stringify({ before: [before.gold, before.xp], after: [afterClose.gold, afterClose.xp] }));
     check('④ 閉じたあとも HOME のまま(バトル画面へ行かない)', afterClose.home && !afterClose.battle);
     await page.waitForTimeout(6000);
     check('④ 閉じたあと、しばらく待ってもバトルへ飛ばない(段階が残っていない)', !(await state()).battle && (await state()).home);
