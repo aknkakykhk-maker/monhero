@@ -1,0 +1,212 @@
+{
+  "_説明": "部ごとの受け持ち(1つの正本)。docs/depts/<id>.md はここから node tools/team/dept-guide.js --write で作る。handoff・decisions・gate・newsession もここを読む。P/ は monster-hero/src/parts/、D/ は monster-hero/data/ の略。",
+  "depts": [
+    {
+      "id": "hq",
+      "部": "本社(窓口)",
+      "部長": "統括部長モンヒロくん",
+      "受け持ち": "社長の頼みを受けて部へ振る・台帳・Supabase の操作(SQL・配り直し)・新しい会話を作る。自分では改修しない",
+      "語": ["窓口", "モンヒロくん", "台帳", "会話", "トークン", "モデル", "部署", "報告"],
+      "files": ["docs/rules/*", "docs/depts/*", "docs/playbot/dashboard/*", "tools/team/*"],
+      "入口": [],
+      "検査": ["node tools/rules-index-check.js(決まり・手引きを触ったとき)"],
+      "資料": ["docs/rules/ORGANIZATION.md", "docs/rules/MODEL_ROUTING.md", "docs/rules/SESSION_HANDOFF.md", "docs/rules/REVIEW_GATE.md", "docs/rules/EDGE_REDEPLOY.md", "docs/rules/NEW_DEPT_BRIEF.md"],
+      "決まり": [
+        "新しい会話は node tools/ctx.js newsession <部> \"<仕事>\" の出力どおりに作る(モデル・最初に読むもの・報告先が入る)",
+        "claude-fable-5-2 を使ってよいのは決まりの3つ(道具・仕組みを作る/強化する1回・新機能の公開前の最終確認・2回直しても直らない不具合)だけ。外れるときは社長に選択式で聞いてから",
+        "配り直しは node tools/ctx.js redeploy assistant-chat の出力をそのまま deploy_edge_function に渡す",
+        "足すだけ・読むだけの SQL は聞かずに流す。消す・書き換えるは先に社長へ(CLAUDE.md ⑦)",
+        "社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す"
+      ],
+      "板": []
+    },
+    {
+      "id": "beat",
+      "部": "ビート部(モンヒロビート)",
+      "部長": "テンポくん",
+      "受け持ち": "モンヒロビート(曲えらび・演奏・判定・マルチ・ランキング・相棒・助手とのセッション)、譜面生成ツール、曲の音源",
+      "語": ["ビート", "モンビー", "譜面", "新曲", "判定", "ノーツ", "HELL", "テンポ", "相棒", "セッション", "曲"],
+      "files": ["P/13-bgm-and-rhythm-settings.jsx", "P/14-audio.jsx", "P/28-rhythm-*", "P/29-rhythm-*", "P/30-rhythm-*", "P/33-rhythm-*", "P/39-*", "P/58-screen-rhythm.jsx", "P/73-screen-rhythm-history.jsx", "P/77-screen-rhythm-multi.jsx", "P/80-screen-rhythm-*", "D/rhythm-*", "monster-hero/audio/*", "tools/mode/*", "tools/audio/*", "supabase/functions/rhythm-anomaly-report/*"],
+      "入口": ["RhythmSongSelectScreen", "RhythmMultiScreen", "RhythmRankingScreen", "RhythmInfoScreen"],
+      "検査": ["node tools/run-checks.js --changed(tools/mode・tools/audio から選ばれる)", "新曲: rhythm-song-add スキルの検査の並び"],
+      "資料": ["tools/mode/CLAUDE.md", "monster-hero/data/CLAUDE.md", "monster-hero/audio/CLAUDE.md", "docs/rules/RHYTHM_SONG.md", "docs/rules/RHYTHM_EVENT.md", "docs/rules/CHART_ENGINE.md", "docs/spec/RHYTHM_EVENT_PLAYBOOK.md", "docs/spec/RHYTHM_MULTI.md", "docs/spec/RHYTHM_RANKING.md"],
+      "決まり": [
+        "配信中の曲の譜面を作り直さない・既存の解析を作り直さない(CLAUDE.md ⑩-2)。イベント対象曲の譜面は開催中に触らない",
+        "新曲は rhythm-song-add スキルを最後まで通す。聞き返すのは難易度だけ",
+        "D/rhythm-mode.js(1.3MB)・docs/spec/RHYTHM_MODE.md(0.5MB)・tools/mode/authoring/*.json は開かない。node tools/ctx.js doc / read で切り出す",
+        "受け取った音源はそのまま入れない(音量をそろえる)"
+      ],
+      "板": ["docs/progress/beat-board.md", "docs/progress/beat-backlog.md"]
+    },
+    {
+      "id": "card",
+      "部": "カード部(MFバトルカード)",
+      "部長": "ソランドくん",
+      "受け持ち": "MFバトルカード(対戦・デッキ・パック・マルチ・リプレイ・観戦・大会・カップ・ランキング・助手の台詞)",
+      "語": ["カード", "デッキ", "パック", "大会", "カップ", "混血", "リプレイ", "観戦", "ソランド"],
+      "files": ["P/82-card-*", "P/83-card-*", "P/84-screen-card-battle.jsx", "P/85-card-*", "P/86-card-*", "P/87-card-*", "P/88-card-*", "P/89-card-*", "P/90-card-*", "P/91-card-*", "P/92-card-*", "P/93-card-*", "P/94-card-*", "P/95-card-*", "P/96-card-*", "P/97-card-*", "P/98-card-*", "P/99-card-*", "D/card-battle-cards.js", "tools/card/*", "supabase/functions/card-tournament-run/*", "supabase/functions/card-assistant-talk/*"],
+      "入口": ["CardBattleScreen", "CardStatusSheet", "CardChatPanel"],
+      "検査": ["node tools/run-checks.js --changed(tools/card から選ばれる)"],
+      "資料": ["docs/spec/CARD_BATTLE.md", "docs/spec/CARD_CUP.md", "docs/spec/CARD_TOURNAMENT.md", "docs/spec/CARD_ASSISTANT_TALK.md"],
+      "決まり": [
+        "大会用の game.js を変えたら、窓口へ「card-tournament-run の配り直し」を頼む(部は Supabase に触れない)",
+        "カードの数字・ルールの釣り合いは自分で決めず、案を窓口へ",
+        "ランキング・戦績の送信を変えるときは ミハリ確認が要る(node tools/ctx.js gate が判定)"
+      ],
+      "板": ["docs/progress/card-board.md", "docs/progress/card-backlog.md"]
+    },
+    {
+      "id": "battle",
+      "部": "バトル部(モンヒロバトル)",
+      "部長": "ジンくん",
+      "受け持ち": "モンヒロバトル(難易度とルール・敵・戦闘画面・演出・タクティクス・レイドのジャック・編成・結果)",
+      "語": ["バトル", "タクティクス", "レイド", "ジャック", "難易度", "WAVE", "クイック", "プロモード", "Tier", "ジン"],
+      "files": ["P/19-difficulties-and-rules.jsx", "P/22-enemy-and-bond-entries.jsx", "P/24-*", "P/32-*", "P/33-ai-copy*", "P/34-tactics-ex-effects.jsx", "P/35-raid-jack.jsx", "P/36-raid-jack-api.jsx", "P/37-raid-jack-aura.jsx", "P/38-raid-jack-home-lines.jsx", "P/67-screen-pick.jsx", "P/68-screen-run-result.jsx", "P/71-screen-battle.jsx", "P/78-screen-raid-jack-debug.jsx", "P/79-screen-raid-jack.jsx", "D/enemy-monsters.js", "D/skills.js", "tools/battle/*"],
+      "入口": ["BattleScreen", "BattleUnitDetailPanel", "ExtremeRuleOverlay"],
+      "検査": ["node tools/run-checks.js --changed(tools/battle から選ばれる)"],
+      "資料": ["docs/spec/BATTLE_SYSTEM.md", "docs/spec/TACTICS_EX_SKILLS.md", "docs/spec/RAID_BOSS_JACK.md", "docs/spec/BATTLE_LOG.md"],
+      "決まり": [
+        "敵の数字・まだ出ていない敵は更新履歴・ヘルプに書かない(ネタバレ)",
+        "ランキング対象外の遊び方(スキップチケット・クイック)は、送信しないだけでなく自己ベストも上書きしない(CLAUDE.md ⑦)",
+        "数字の釣り合いは自分で決めず、案を窓口へ"
+      ],
+      "板": ["docs/progress/battle-board.md", "docs/progress/battle-backlog.md"]
+    },
+    {
+      "id": "monster",
+      "部": "モンスター部(図鑑・絵・染色・新モンスター)",
+      "部長": "ズカンくん",
+      "受け持ち": "モンスターの絵と染色マスク・図鑑・新しい味方モンスターの追加",
+      "語": ["モンスター", "図鑑", "染色", "染め", "マスク", "立ち絵", "顔アイコン", "ズカン"],
+      "files": ["P/15-dye-and-art.jsx", "P/57-screen-monster-dex.jsx", "P/74-screen-monster-check-debug.jsx", "D/ally-monsters.js", "D/lineages.js", "D/images/*", "monster-hero/images/*", "tools/monster/*", "tools/image/*"],
+      "入口": ["MonsterDexScreen", "MonsterDexDetailScreen", "DyeTabbedSheet"],
+      "検査": ["node tools/build.js のあと node tools/image-asset-check.js(絵を足した・差し替えたとき)", "node tools/run-checks.js --changed(tools/monster・tools/image から選ばれる)"],
+      "資料": ["monster-hero/images/CLAUDE.md", "docs/rules/ASSETS.md", "docs/spec/MONSTER_SYSTEM.md"],
+      "決まり": [
+        "新しい味方モンスターは monster-add スキルを開く(数字は聞いてから決める)",
+        "受け取った画像はそのまま入れない(軽くする)。絵はパスだけ書く",
+        "顔アイコンは1案で決めず、A〜D の案を1枚にして窓口へ"
+      ],
+      "板": ["docs/progress/monster-board.md", "docs/progress/zukan-backlog.md"]
+    },
+    {
+      "id": "dev",
+      "部": "開発部(HOME・マーケット・育成・設定・ヘルプ・土台)",
+      "部長": "クラフトくん",
+      "受け持ち": "HOME・マーケット・マスモンの育成・ミッション・プロフィール・設定・ヘルプと更新履歴の仕組み・保存と通信の土台・デバッグ・検査の道具・速さ",
+      "語": ["HOME", "マーケット", "育成", "ミッション", "プロフィール", "設定", "ヘルプ", "デバッグ", "速さ", "クラフト"],
+      "files": ["P/10-core.jsx", "P/11-masu-progression.jsx", "P/12-training.jsx", "P/16-*", "P/17-*", "P/18-*", "P/20-market-notices-help.jsx", "P/23-rpg-debug.jsx", "P/25-*", "P/26-supabase.jsx", "P/27-result-widgets.jsx", "P/31-debug-ui.jsx", "P/40-*", "P/41-*", "P/42-*", "P/43-*", "P/44-*", "P/50-*", "P/51-*", "P/52-screen-missions.jsx", "P/53-*", "P/54-*", "P/55-*", "P/56-quick-guide.jsx", "P/56-screen-profile.jsx", "P/59-*", "P/60-app.jsx", "P/61-*", "P/62-*", "P/63-*", "P/64-*", "P/65-*", "P/66-*", "P/69-screen-home.jsx", "P/70-bootstrap.jsx", "P/72-*", "P/76-*", "P/81-*", "D/breeder.js", "D/help.js", "D/changelog.js", "D/mhsave-backup.js", "tools/boot/*", "tools/market/*", "tools/masu/*", "tools/ui/*", "tools/ranking/*", "tools/changelog/*", "tools/run/*"],
+      "入口": ["HomeScreen", "MarketModal", "MarketPurchaseSheet"],
+      "検査": ["node tools/run-checks.js --changed", "HOME の配置を触ったら node tools/home-layout-check.js"],
+      "資料": ["docs/spec/SAVE_DATA.md", "docs/rules/SAVE_DATA_RULES.md", "docs/rules/BUILD_CHECKS.md", "docs/spec/UI_RULES.md", "docs/spec/SOUL_RANK_SYSTEM.md"],
+      "決まり": [
+        "P/60-app.jsx(2MB超)・P/70-bootstrap.jsx は全部の部が通る場所。開かずに node tools/ctx.js read <名前> で切り出す。ほかの部の場所を触るときは先に窓口へ",
+        "P/25-storage.jsx・P/26-supabase.jsx は保存データとランキングの土台。変えたら ミハリ確認が要る",
+        "デバッグ専用の変更は更新履歴にもヘルプにも載せない"
+      ],
+      "板": ["docs/progress/dev-board.md", "docs/progress/craft-backlog.md", "docs/progress/tsugihagi-backlog.md", "docs/progress/speed-backlog.md"]
+    },
+    {
+      "id": "assistant-ai",
+      "部": "助手部ココロ(助手の AI・おしゃべり)",
+      "部長": "ココロ",
+      "受け持ち": "助手の人柄と台詞の土台・おしゃべり・ミッションのひとこと・Edge Function assistant-chat(中継役)",
+      "語": ["おしゃべり", "ココロ", "呼び方", "口調", "中継役", "assistant-chat", "助手の台詞"],
+      "files": ["P/21-assistant.jsx", "P/52-mission-daily-line.jsx", "P/56-assistant-chat.jsx", "D/assistants.js", "D/assistant-chat-digest.json", "supabase/functions/assistant-chat/*", "supabase/functions/mission-daily-line/*", "tools/assistant/assistant-chat-*", "tools/assistant/edge-*"],
+      "入口": ["handleRequest", "loadDigest", "normalizeAssistantChatMemo", "assistantChatSendWindow"],
+      "検査": ["node tools/assistant/assistant-chat-check.js --unit(中継役を触ったとき)", "node tools/assistant/edge-serve-check.js(serve.js を触ったとき)", "node tools/run-checks.js --changed"],
+      "資料": ["docs/spec/ASSISTANT_CHAT.md", "docs/rules/EDGE_REDEPLOY.md", "docs/rules/ASSISTANT_ADD.md", "docs/rules/CALL_NAMES.md", "docs/spec/ASSISTANT_MUA_VOICE.md"],
+      "決まり": [
+        "助手の一人称と性格のくせは消さない(台帳「中身の決めごと」)",
+        "会話の本文はログに書かない。API キーは Secrets だけ(チャット・リポジトリに貼らない)",
+        "中継役(core.js・serve.js)を変えて main に入れたら、窓口へ「assistant-chat の配り直し」を頼む",
+        "D/assistants.js(大きい)は開かず、node tools/ctx.js read で切り出す"
+      ],
+      "板": []
+    },
+    {
+      "id": "assistant-life",
+      "部": "助手部ナカヨシ(助手ライフ・地図・助手どうし)",
+      "部長": "ナカヨシ",
+      "受け持ち": "助手ライフ本体(家・部屋・時間帯・仲良し度・けんかと仲直り)・地図・助手どうしの掛け合い",
+      "語": ["助手ライフ", "地図", "マップ", "掛け合い", "仲良し", "見守る", "部屋", "ナカヨシ"],
+      "files": ["P/56-assistant-life.jsx", "P/56-assistant-life-house.jsx", "P/56-assistant-life-roomview.jsx", "P/56-assistant-life-rel.jsx", "P/56-assistant-life-map.jsx", "P/56-assistant-peer.jsx", "P/44-time-of-day.jsx", "tools/assistant/life-*", "tools/assistant/peer-*"],
+      "入口": ["AssistantLifeScreen", "AssistantLifeRoomSheet"],
+      "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)"],
+      "資料": ["docs/progress/assistant-peer/STATUS.md", "docs/progress/assistant-peer-plan.md", "docs/progress/assistant-peer/LIFE-HOUSE-RELEASE.md"],
+      "決まり": [
+        "台詞は取り込みの道具(tools/assistant/*-import.js)で入れる。助手ごとの口調の見張りを通す",
+        "贈り物・フレンドの家・マスモンは別の担当(gift・friend・masmon)。同じファイルを触るときは先に窓口へ",
+        "表示の直しは縦・横・🔄横で崩れないこと(検査が見る)"
+      ],
+      "板": ["docs/progress/assistant-peer/STATUS.md"]
+    },
+    {
+      "id": "gift",
+      "部": "助手部オクリモノ(贈り物・道具・家具)",
+      "部長": "オクリモノ",
+      "受け持ち": "助手ライフの贈り物(買って贈る)・道具・家具",
+      "語": ["贈り物", "ギフト", "家具", "道具", "オクリモノ"],
+      "files": ["P/56-assistant-life-gifts.jsx", "tools/assistant/life-gift-*"],
+      "入口": ["AssistantLifeGiftSheet", "AssistantLifeFurnSheet"],
+      "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)"],
+      "資料": ["docs/progress/assistant-peer/GIFT-PLAN.md", "docs/progress/assistant-peer/GIFT-HANDOFF.md"],
+      "決まり": [
+        "ダイヤ・ポイントが減る/増える所は保存データ。新しいキーに足す。変えたら ミハリ確認が要る",
+        "値段・ごほうびの数字は自分で決めず、案を窓口へ"
+      ],
+      "板": ["docs/progress/assistant-peer/GIFT-HANDOFF.md"]
+    },
+    {
+      "id": "friend",
+      "部": "助手部オトズレ(フレンドの家・フレンド)",
+      "部長": "オトズレ",
+      "受け持ち": "フレンドの家(助手の行き来・場面)とフレンド機能(一覧・申請・通信)",
+      "語": ["フレンド", "訪問", "行き来", "オトズレ"],
+      "files": ["P/56-assistant-life-friend.jsx", "P/34-friends-api.jsx", "P/75-screen-friends.jsx", "tools/friends/*"],
+      "入口": ["AssistantLifeFriendPage", "AlfFriendHouseView", "FriendsScreen"],
+      "検査": ["node tools/run-checks.js --changed(tools/friends・tools/assistant から選ばれる)"],
+      "資料": ["docs/spec/FRIENDS.md", "docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md", "docs/progress/assistant-peer/FRIEND-VISIT-BUILD.md"],
+      "決まり": [
+        "フレンドの通信は Supabase。表・関数を変える SQL は自分で流さず、本文を窓口へ。変えたら ミハリ確認が要る",
+        "ほかのプレイヤーの個人の情報を画面・ログに出さない"
+      ],
+      "板": ["docs/progress/assistant-peer/FRIEND-VISIT-BUILD.md"]
+    },
+    {
+      "id": "masmon",
+      "部": "助手部キズナ(育つ助手・助手のマスモン・提案)",
+      "部長": "キズナ",
+      "受け持ち": "助手のマスモン(名前・染め方・育て方)・育つ助手・「助手に提案する」",
+      "語": ["マスモン", "提案", "育つ助手", "キズナ", "染め方", "引き直し"],
+      "files": ["P/56-assistant-life-masmon.jsx", "tools/assistant/assistant-masmon-*"],
+      "入口": ["AssistantMasmonSheet", "AssistantMasmonAskSheet"],
+      "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)", "node tools/assistant/assistant-chat-check.js --unit(中継役の masmon_names・masmon_suggest を触ったとき)"],
+      "資料": ["docs/spec/ASSISTANT_CHAT.md", "docs/progress/assistant-peer/STATUS.md"],
+      "決まり": [
+        "名前付け・提案は中継役(assistant-chat)を通る。core.js を変えて main に入れたら、窓口へ配り直しを頼む",
+        "プレイヤーが選んだ色は季節で上書きしない・前に戻せること(台帳 2026-11-08)",
+        "1日の回数の上限は台帳の値(社長の決定)。変えるときは先に窓口へ"
+      ],
+      "板": []
+    },
+    {
+      "id": "kensa",
+      "部": "検査部(ミハリ)",
+      "部長": "ミハリ",
+      "受け持ち": "作った人と別の目での通し確認。新機能・保存データ・ランキングに関わる変更だけを見る(小さな直しは見ない)",
+      "語": ["ミハリ", "検査部", "通し確認", "確認"],
+      "files": ["tools/browser/*", "docs/progress/qa-*"],
+      "入口": [],
+      "検査": ["node tools/ctx.js gate --base <公開前のコミット>(何を見るかが出る)", "本物の画面を縦・横・🔄横で開いて撮り、自分で見る"],
+      "資料": ["docs/rules/REVIEW_GATE.md", "docs/spec/SAVE_DATA.md", "docs/rules/SAVE_DATA_RULES.md"],
+      "決まり": [
+        "見るだけ。直さない・コミットしない。見つけた物は作った部へ返す",
+        "呼ばれるのは node tools/ctx.js gate が「要る」と出した変更だけ。「要らない」の変更の確認は断ってよい",
+        "保存データ: 既存のキー(mh_*)が消えない・古い形が読める・移行が1回だけ、を確かめる。ランキング: 既存の記録と送信が壊れない・対象外の遊び方が自己ベストを上書きしない",
+        "新機能の最終確認だけ claude-fable-5-2 で(docs/rules/MODEL_ROUTING.md)"
+      ],
+      "板": []
+    }
+  ]
+}

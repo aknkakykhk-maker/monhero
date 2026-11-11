@@ -79,11 +79,12 @@ HELL・モンヒロビート・マルチの項目が材料に無かった)。
 
 1. 表と関数(済み・2026-10-14 窓口が実行): `supabase/migrations/202610140001_assistant_chat_usage.sql`
 2. Secrets に `ANTHROPIC_API_KEY` を登録(社長)
-3. Edge Function `assistant-chat` を公開する。ファイルは `supabase/functions/assistant-chat/index.ts` と `core.js` の2つ。
-   **verify_jwt は外す**(ゲームが送る publishable key は JWT ではないため。外さないと 401 になる)
-   core.js・ranking.js を固定の版から読ませる中継ぎにするときは、`cdn.jsdelivr.net/gh/aknkakykhk-maker/monhero@<sha>/supabase/functions/assistant-chat/` を使う。
-   **jsdelivr がその sha で 403 を返したら、`raw.githubusercontent.com/aknkakykhk-maker/monhero/<sha>/supabase/functions/assistant-chat/` を読む形にする**(中身は同じ。2026-11-08 version 19・7249b53 で jsdelivr が 403 になり、窓口がこちらで配った)。
-   どちらも sha は短縮でなく固定した版(ブランチ名にしない)。配ったら不正な頼み(空の本文)で 400 bad_request が返ることを確かめる
+3. Edge Function `assistant-chat` を公開する。**送るのは数行の `index.ts` 1つだけ**(2026-11-11 から)。
+   `git fetch origin main` → `node tools/ctx.js redeploy assistant-chat --verify` の出力を、そのまま `deploy_edge_function` に渡す。
+   本体(`serve.js`・`core.js`・`ranking.js`)は GitHub の固定の版(`raw.githubusercontent.com/…/<40桁のコミット>/…`)から読まれる。
+   **verify_jwt は外す**(ゲームが送る publishable key は JWT ではないため。外さないと 401 になる)。
+   jsdelivr は使わない(新しいコミットで 403 になる。2026-11-08 version 19)。ブランチ名・短いコミットも使わない。
+   配ったら不正な頼み(空の本文)で 400 bad_request が返ることを確かめる。手順と戻し方: [`docs/rules/EDGE_REDEPLOY.md`](../rules/EDGE_REDEPLOY.md)
 4. 呼べるのは `https://aknkakykhk-maker.github.io` からだけ(CORS と Origin の確認)。増やすなら Secrets `ASSISTANT_CHAT_ALLOWED_ORIGINS`(カンマ区切り)
 
 ## 検査
