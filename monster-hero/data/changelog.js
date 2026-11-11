@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // ウンディーネのカード(2026-11-11 社長「バトルカードに新血統を追加。ウンディーネ種」。第8弾。部長ソランドの案・オリヒメの番号の行は外した)
     date: "2026-11-11 15:44", type:'update', group:'cardBattle', title:'ウンディーネのカードが入りました', status:'new',
-    image:'images/card-battle/packs/p8.webp?v=b2300408401e',
+    image:'images/card-battle/packs/p8.webp?v=a9f1a993b777',
     items:[
       '第8弾パックに、ウンディーネのカードと、ウンディーネの技カード13枚が入りました。ウンディーネの混血のスネグーラチカも、第8弾パックから出ます。',
       'ウンディーネとスネグーラチカは、どちらも通常・キラ・レアキラの3種類です。',
