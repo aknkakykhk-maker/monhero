@@ -413,6 +413,10 @@
       "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },
     {
+      "file": "56-assistant-life-partner.jsx",
+      "role": "助手ライフの「町の人」(2026-11-11 社長の決め E・開発部カイホウ docs/progress/assistant-unlock/DESIGN.md): 助手になる前の助手は町・家に出るが、押すと小窓(一言と解放までのあと何回)・話す/贈る/部屋は🔒。判定は開発部の口 assistantPartnerOkNow(無いあいだは全員関われる)。新UIだけ。何も保存しない"
+    },
+    {
       "file": "56-assistant-life-profile.jsx",
       "role": "助手紹介(2026-11-11 社長・docs/progress/assistant-life/profile/PLAN.md): 助手ライフの下のタブ「📖 紹介」の一覧(AssistantLifeProfilePage)と1人ずつの紹介(AssistantLifeProfileSheet)。人となり・好き苦手(贈って分かったものだけ)・きずな・台詞の試し聞き。公開の印 assistantLifeProfile の後ろ。データは読むだけで、保存は NEW の印の新しいキー mh_assistant_life_profile_seen_v1 だけ"
     },
@@ -439,6 +443,10 @@
     {
       "file": "56-assistant-life-masmon-train.jsx",
       "role": "部品: 助手のマスモンの修行と助手の成長(社長の仕様書の第②段階・シュギョウ)。修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・相談・出来事。第①段階(育成)へは受け口 amgtChoose/amgtDo/amgtAfterAct と掛け算、第③段階(戦闘)へは amgtBattleOf/amgtTacticsOf。公開の印 assistantMasmonTrain の後ろ。保存は新しいキー mh_assistant_masmon_train_v1 だけ。案 docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-plan.jsx",
+      "role": "部品: 助手ライフの行き先の予定(📅 今日の予定表)。保存 mh_assistant_life_plan_v1(新しいキーだけ)・当てはめ assistantLifePlanApply(純粋)・assistantLifeNow から assistantLifePlanOnDecide・窓 AssistantLifePlanHost・家の上の1行 AssistantLifePlanBand・口 assistantLifePlanOpen/assistantLifePlanRowInfo。公開の印 assistantLifePlan の後ろ。設計 docs/progress/assistant-life/SCHEDULE-PLAN.md"
     },
     {
       "file": "56-assistant-masmon-battle-view.jsx",
