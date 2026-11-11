@@ -290,7 +290,22 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       let first = null;
       while (performance.now() - t0 < 9000) {
         const el = document.querySelector('[data-card-bubble]');
-        if (!first && el) first = { text: el.textContent, ms: Number(el.getAttribute('data-card-bubble-ms')), at: performance.now() };
+        if (!first && el) {
+          first = { text: el.textContent, ms: Number(el.getAttribute('data-card-bubble-ms')), at: performance.now() };
+          // ⑲ 始まりの台詞は確実に出るので、ここで1回、行の高い字(line-height 1.6)で切れないかを測る。
+          //   ⑲ の測りは下の対戦ループの中の偶然出た吹き出しだけだと、1回も出ずに落ちることがあった(吹き出しあり 0回・2026-11-11)ため、
+          //   必ず出る始まりの台詞をここで測っておく(測るあいだだけ行の高さを足し、すぐ戻す)
+          const stl = document.createElement('style'); stl.textContent = '[data-card-stage], [data-card-stage] * { line-height: 1.6 !important; }'; document.head.appendChild(stl);
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const stg = document.querySelector('[data-card-stage]'); const out = [];
+          if (stg) {
+            const sb = stg.getBoundingClientRect();
+            const inside = (e, name) => { if (!e) return; const b = e.getBoundingClientRect(); if (b.top < sb.top - 1) out.push(`${name}の上が切れる(${Math.round(sb.top - b.top)}px)`); if (b.bottom > sb.bottom + 1) out.push(`${name}の下が切れる(${Math.round(b.bottom - sb.bottom)}px)`); };
+            inside(stg.querySelector('[data-card-bubble]'), '始まりの吹き出し'); inside(stg.querySelector('[data-card-log]'), '記録');
+            first.bubbleMeasure = { out, bubble: !!stg.querySelector('[data-card-bubble]') };
+          }
+          stl.remove();
+        }
         if (first && (!el || el.textContent !== first.text)) return { ...first, shown: Math.round(performance.now() - first.at) };
         await new Promise((r) => setTimeout(r, 100));
       }
@@ -334,6 +349,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     //   iPhone の字(ヒラギノ)は行が高いので、まんなかの字の行の高さを 1.6 にして、実機より厳しめの条件で測る
     await page.addStyleTag({ content: '[data-card-stage], [data-card-stage] * { line-height: 1.6 !important; }' });
     const stageClip = new Set(); const fitSeen = new Set(); let stageSamples = 0, stageBubbleSamples = 0, logSheetOpened = false;
+    // ㉒ で測った始まりの台詞(必ず出る)を数に入れる
+    if (startTalk && startTalk.bubbleMeasure) { stageSamples += 1; if (startTalk.bubbleMeasure.bubble) stageBubbleSamples += 1; startTalk.bubbleMeasure.out.forEach((x) => stageClip.add(x)); }
     const measureStage = async () => {
       const r = await page.evaluate(() => {
         const st = document.querySelector('[data-card-stage]'); if (!st) return null;
