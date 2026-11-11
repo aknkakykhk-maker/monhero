@@ -16,7 +16,8 @@
 | 置き場所 | 中身 |
 | --- | --- |
 | `supabase/migrations/202611110001_masmon_pvp.sql` | 表・RLS・関数(足すだけ・何度流しても同じ) |
-| `supabase/functions/masmon-pvp/index.ts` | 入口(Deno)。表の読み書き・種・CORS |
+| `supabase/functions/masmon-pvp/index.ts` | 入口。npm の部品を渡して `serve.js` の `start()` を呼ぶ数行だけ(配り直しの形・[`EDGE_REDEPLOY.md`](../rules/EDGE_REDEPLOY.md)) |
+| `supabase/functions/masmon-pvp/serve.js` | Deno で動く部分。表の読み書き・種・CORS |
 | `supabase/functions/masmon-pvp/core.js` | 中身(登録の見張り・挑む・公平の区分)。数字はここの先頭だけで変える |
 | `supabase/functions/masmon-pvp/engine.js` | 計算の本体と技データの**写し**(`tools/masmon-battle/build-masmon-pvp-bundle.js` が `node tools/build.js` のたびに作る。手で直さない) |
 | `tools/masmon-battle/masmon-pvp-check.js` | 検査(偽物の表で動かす。写しの鮮度・端末と同じ指紋・見張り・流れ・SQL が足すだけか) |
@@ -82,8 +83,8 @@
 ## 公開の手順(窓口)
 
 1. SQL: `supabase/migrations/202611110001_masmon_pvp.sql` を流す(足すだけ・何度流しても同じ)。手元の Postgres 16 で2回流し、関数を動かして確かめ済み
-2. 関数: `masmon-pvp` を index.ts・core.js・engine.js の3つで配る。**verify_jwt は外す**(assistant-chat と同じ)。Secrets は増えない(SUPABASE_URL・SERVICE_ROLE_KEY は既定)
-3. 確かめ: 下の「確かめる SQL」(読むだけ)
+2. 関数: このPRが main に入ったあと `git fetch origin main` → `node tools/ctx.js redeploy masmon-pvp --verify`。出てきた引数をそのまま `deploy_edge_function` に渡す(送るのは数行の index.ts だけ。serve.js・core.js・engine.js は GitHub の固定の版から読まれる)。**verify_jwt は外す**。Secrets は増えない
+3. 確かめ: 空の本文(`{}`)を本番のゲームの Origin から送り、400 `bad_request` が返ること/下の「確かめる SQL」(読むだけ)
 4. ゲームの画面は公開の印が偽なので、1〜3 を先にしても、プレイヤーには何も変わらない
 
 ### 確かめる SQL(読むだけ)

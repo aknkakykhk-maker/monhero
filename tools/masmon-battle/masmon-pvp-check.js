@@ -197,7 +197,9 @@ const check = (name, ok, extra) => {
     const recCall = (coreSrc.match(/db\.record\(\{([\s\S]*?)\}\);/) || [])[1] || '';
     const jsNames = [...recCall.matchAll(/\b(p_\w+):/g)].map((m) => m[1]).sort();
     check('G masmon_pvp_record の引数がサーバの呼び方と合う', sqlNames.length === 20 && sqlNames.join() === jsNames.join(), `${sqlNames.length}/${jsNames.length}`);
-    const idx = fs.readFileSync(path.join(FN, 'index.ts'), 'utf8');
+    const idx = fs.readFileSync(path.join(FN, 'serve.js'), 'utf8');
+    const entry = fs.readFileSync(path.join(FN, 'index.ts'), 'utf8');
+    check('G index.ts は serve.js を読む数行だけ(配り直しの形・docs/rules/EDGE_REDEPLOY.md)', entry.split('"./serve.js"').length === 2 && entry.split('\n').filter((l) => l.trim() && !l.startsWith('//')).length <= 4);
     const rpcs = [...idx.matchAll(/rpc\("(\w+)"/g)].map((m) => m[1]);
     check('G サーバが呼ぶ関数が SQL にある', rpcs.length >= 4 && rpcs.every((n) => sql.includes(`function public.${n}(`)), rpcs.join(','));
     check('G 端末(anon)に書く権限を渡していない', !/grant\s+(insert|update|delete|all)[^;]*to\s+anon/i.test(sql)
