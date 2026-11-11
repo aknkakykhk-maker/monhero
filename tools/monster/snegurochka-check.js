@@ -47,7 +47,7 @@ const checks = [
   ['発動中だけ敵の最終与ダメージを30%減少', /iceLockActive = iceLockTurns>0 && !iceLockPreparing/.test(game) && /iceLockEnemyDamageMult = iceLockActive \? 0\.7 : 1\.0/.test(game) && /dmgBase[\s\S]*?getPermaBuff\('dmgCutPct'\)[\s\S]*?\*iceLockEnemyDamageMult/.test(game)],
   // 絶氷の楔と氷海の支配者は対象IDだけを共有し、効果処理は分離する。
   ['氷海の支配者は対象3体の勇者だけに自動ガッツ回復率+50%', game.includes("const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni'])")
-    && game.includes('applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist)')
+    && game.includes('applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDistAfterTurn)')
     && game.includes('&& iceLockActive')
     && game.includes('&& heroDist===enemyDist')
     && game.includes('? Math.min(1, currentRate + 0.5)')],

@@ -1543,7 +1543,7 @@ function BattleScreen({
   getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx, guardImpact,
   guardLevel, guardValueOf, tacticsSlotGuardValue, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
   iceLockPreparing, iceLockTurns, isAssistCard, isAttackCard, isBusy, isHeroSlotMon,
-  kikiCardBonus, liteBattleView, mainHero, openHelp, ownedUniques, pendingCard, pendingCardGuts,
+  kikiCardBonus, liteBattleView, mainHero, openHelp, ownedTeachings, ownedUniques, pendingCard, pendingCardGuts,
   popups, previewLocalBoosts, processTurn, quickRhythmIntroVisible, quickToRhythmButtonNode, quickToCardButtonNode,
   renderQuickRunBattleBand, runMode, safeDifficulty, score, selectedCardGuts, selectedCards,
   setCardAssignments, setDragState, setFocusedCard, setPendingCard, setShowAutoBgmPicker,
@@ -2051,9 +2051,17 @@ function BattleScreen({
       const card = hand[idx];
       const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
       const halved = counter.take(card, owner);
+      // えるびんの見守り: このターンだけ、味方全員の受けるダメージダウン(実処理と同じ式。タクティクスも全員ぶん)
+      if (card?.subType === 'watch_erubin') {
+        const owned = (ownedTeachings || []).find(ot => ot.id === card.id);
+        const conf = ERUBIN_TIERS[Math.min(owned ? owned.evoLevel : 0, ERUBIN_TIERS.length - 1)];
+        mult *= Math.max(0.1, 1 - conf.cut * cardEffectMultiplier(card, halved));
+        return;
+      }
       if (!isLifeTreeGuardCard(card)) return;
       if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
-      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
+      // 実処理と同じく掛け合わせる(加護を2枚使ったとき・えるびんの見守りと合わせたとき)
+      mult *= lifeTreeGuardMult(cardEffectMultiplier(card, halved), card.monId);
     });
     return mult;
   };
