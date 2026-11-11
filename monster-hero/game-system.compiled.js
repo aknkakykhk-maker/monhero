@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0d5e04472a35a311
+// source-sha256: f8b42e77b65fc05a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -145171,7 +145171,8 @@ const AMGR_NUM = Object.freeze({
   heavyMain: [8, 12],
   heavySub: [2, 4],
   heavyDown: [2, 4],
-  heavyFat: 10
+  heavyFat: 10,
+  serverDay: 40
 });
 const AMGR_TICKET = Object.freeze({
   light: 'training_ticket',
@@ -145467,12 +145468,14 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   };
   const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0))));
   const plan = amgrPlanOf(kind, k);
+  const room = Math.max(1, AMGR_NUM.serverDay - (Number(AMG_CARE.viewCap) || 20));
   if (kind === 'heavy') {
-    bump(plan.main, upOf(plan.main, AMGR_NUM.heavyMain));
-    bump(plan.sub, upOf(plan.sub, AMGR_NUM.heavySub));
+    const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room);
+    bump(plan.main, main);
+    bump(plan.sub, Math.min(upOf(plan.sub, AMGR_NUM.heavySub), Math.max(0, room - main)));
     bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1]));
     e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100);
-  } else bump(plan.main, upOf(plan.main, AMGR_NUM.light));
+  } else bump(plan.main, Math.min(upOf(plan.main, AMGR_NUM.light), room));
   const net = Object.values(g).reduce((a, n) => a + n, 0);
   if (net > 0) e.cg.ranch = Math.round(((e.cg.ranch || 0) + net) * 100) / 100;
   e.log = [...e.log, {
