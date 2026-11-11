@@ -1,6 +1,7 @@
 {
  "_説明": "保存データ・ランキングにそのまま書く値の錠(tools/boot/saved-value-lock-check.js)。足すのは --update、外すのは手で(理由を PR に書く)",
  "storageKeys": [
+  "mh_alf_sent_notes_v1",
   "mh_asset_prefetch_v1",
   "mh_assistant_bond_",
   "mh_assistant_bond_rewards_v1",

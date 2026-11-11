@@ -477,6 +477,10 @@
       "role": "助手ライフのフレンドの家の「行く意味・来てもらう意味」(友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳・来ている印)。56-assistant-life-friend.jsx が差しこむ。公開の印 assistantLifeFriendBond の後ろ。保存は mh_assistant_life_friend_bond_v1・_fav_v1 の新しいキーだけ。表は assistant_life_friend_likes(足すだけ)"
     },
     {
+      "file": "56-assistant-life-friend-sent.jsx",
+      "role": "助手ライフ: 自分が残した置き手紙の見返し(「🏘 フレンド」の家の一覧の下・家の中)と、自由文を送る前の確認。56-assistant-life-friend.jsx が差しこむ。保存は mh_alf_sent_notes_v1 の新しいキーだけ(30日・50通まで)。表は今の行き来の表を読むだけ"
+    },
+    {
       "file": "56-assistant-life-friend-masmon-share.jsx",
       "role": "助手ライフ: フレンドの家で、その人の助手のマスモン(Lv・型・6能力・デッキ3つ)をくわしく見せるための送る側と受け取りの形。表 alf_masmon_share(足すだけ)。保存は mh_alf_masmon_share_sent_v1 の新しいキーだけ。公開の印 alfMasmonShareSend"
     },

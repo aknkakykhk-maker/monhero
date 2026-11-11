@@ -716,6 +716,8 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   if (word === ALF_WORD_FREE && !nc.text) return { ok: false, reason: '言葉を書くか、下の一言を選んでください' };
   const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
   if (!r.ok) return { ok: false, reason: r.reason };
+  // 自分が残した置き手紙の控え(30日・50通まで・56-assistant-life-friend-sent)
+  if (typeof alfSentRecord === 'function') void alfSentRecord({ host: hostId, name, to: alfValidId(noteTo) ? noteTo : null, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text });
   // ミッションの「フレンドの家へ行く」と「助手とふれあう」(2026-11-08)
   if (typeof missionNotify === 'function') { missionNotify('friendVisit'); missionNotify('assistantTouch'); }
   const cur = alfToday();
@@ -1061,6 +1063,8 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [leaving, setLeaving] = React.useState(null); // 置き手紙のあて先(助手の id か '' = 家のみんなへ)
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
+  // 自由文を送る前の確認(2026-11-12 社長・自由文があるときだけ。決まった一言だけならすぐ送る)
+  const [confirm, setConfirm] = React.useState(null); // { word, warn, busy }
   const [boardOpen, setBoardOpen] = React.useState(false);
   const [bondOpen, setBondOpen] = React.useState(false); // 友情のシート(56-assistant-life-friend-bond・印が偽なら出ない)
   const bondMark = (task) => { if (typeof albMark === 'function') void albMark(friend.id, task); };
@@ -1095,12 +1099,16 @@ function AlfFriendHouseView({ friend, onClose }) {
   const reply = (i) => { if (!talk) return; bondMark('talk'); setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
   const leave = async (word) => {
     const to = leaving || null;
+    if (confirm) setConfirm(c => c && { ...c, busy: true });
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name, note: noteText, noteTo: to });
-    if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); return; }
+    if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); setConfirm(c => c && { ...c, busy: false, warn: r.reason }); return; }
+    setConfirm(null);
     setLeaving(null); setRoomId(null); setTalk(null); setNoteText('');
     if (r && r.ok) bondMark('note');
     setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
+  // 自由文があるときは確認を出してから送る
+  const ask = (word) => { const c = alfNoteCheck(noteText); if (c.ok && c.text) { setNoteWarn(''); setConfirm({ word, warn: '', busy: false }); } else void leave(word); };
   // 置き手紙の1行(押す前に、何が届くか・今日できるかが分かるように)
   const noteLine = done ? done
     : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)`
@@ -1143,6 +1151,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'}</small></button>
       </div>
       <p className="mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100" data-alf-visit-note={done ? 'done' : can}>{noteLine}</p>
+      {typeof AlfSentHere === 'function' && <AlfSentHere friendId={friend.id}/>}
       <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、{friend.name}さんの助手の仲良し度は変わりません。</p>
     </div>);
   const board = diaryItems.length ? (
@@ -1240,9 +1249,9 @@ function AlfFriendHouseView({ friend, onClose }) {
           <span className="shrink-0 text-[10px] text-slate-400">{[...noteText].length}/{ALF_NOTE_MAX}</span>
         </div>
         {(() => { const c = alfNoteCheck(noteText); const warn = noteWarn || (!c.ok ? c.reason : ''); return warn ? <p className="mt-1 text-[10.5px] font-bold text-rose-300" data-alf-note-warn>⚠️ {warn}</p> : <p className="mt-1 text-[10px] text-slate-400">連絡先・住所・本名などは書けません。悪い言葉は●になります。{friend.name}さんは自由文を見ないようにもできます。</p>; })()}
-        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => leave(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
-        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'}</p>
-        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
+        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => ask(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
+        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます(送る前に確かめられます)' : '💬 決まった一言で送る(押すと届きます)'}</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => ask(i)}>{t}</button>)}</div>
         <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
       </div>
     </div>) : null;
@@ -1275,6 +1284,8 @@ function AlfFriendHouseView({ friend, onClose }) {
         </>)}
         {sheet}
         {words}
+        {confirm && leaving != null && typeof AlfNoteConfirm === 'function' && <AlfNoteConfirm friend={friend} to={leaving || null} word={confirm.word} note={alfNoteCheck(noteText).text} selfName={selfName} warn={confirm.warn} busy={confirm.busy} land={land}
+          onFix={() => { if (!confirm.busy) setConfirm(null); }} onSend={() => { if (!confirm.busy) void leave(confirm.word); }}/>}
         {diarySheet}
         {bondOpen && typeof AlfBondSheet === 'function' && <AlfBondSheet friend={friend} more={more} land={land} onClose={() => setBondOpen(false)} onRoom={(id) => { setBondOpen(false); setRoomId(id); bondMark('find'); }}/>}
       </div>
@@ -1405,6 +1416,7 @@ function AssistantLifeFriendPage({ life }) {
             <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
           </div>))}
       </div>
+      {!alfEmpty && typeof AlfSentNotes === 'function' && <AlfSentNotes s={s} card={card} sec={sec} onVisit={setVisit}/>}
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
