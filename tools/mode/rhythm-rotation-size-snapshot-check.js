@@ -42,7 +42,7 @@ timers.splice(0).forEach(t=>t.fn());
 ok('大きさが同じなら鳴らさない(回り続けない)',resizeFired===firedStill);
 
 const core=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/10-core.jsx'),'utf8');
-const guard=core.slice(core.indexOf('見えないページのずれを戻す'),core.indexOf('見えないページのずれを戻す')+4000);
+const guard=core.slice(core.indexOf('見えないページのずれを戻す'),core.indexOf('見えないページのずれを戻す')+8000);
 ok('全画面の見張り(A)がある',core.includes('見えないページのずれを戻す'));
 ok('A: 画面の大きさ・回転・visualViewport・入力欄から離れたとき・全画面の終わりで戻す',
   ['resize','orientationchange',"visualViewport.addEventListener('resize'","visualViewport.addEventListener('scroll'",'focusout','webkitendfullscreen','fullscreenchange'].every(k=>guard.includes(k)));
