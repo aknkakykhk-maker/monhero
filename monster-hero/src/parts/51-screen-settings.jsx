@@ -119,6 +119,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いつも出す(切のときは、ページの中に「使う」ボタンを出す)
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
+  // 「ホーム画面に追加」の案内(51-home-screen-guide.jsx。iPhone の Safari のときだけ入口を出す・2026-11-11)
+  const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
@@ -216,6 +218,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
+        {typeof mhIsIphoneSafariBrowser==='function'&&mhIsIphoneSafariBrowser()&&(
+          <SettingsMenuLink icon="📲" label="ホーム画面に追加" desc="アプリのように遊ぶ方法(データの引き継ぎつき)" onClick={() => setHomeScreenGuideOpen(true)} data-open-home-screen-guide/>
+        )}
+        {homeScreenGuideOpen&&<HomeScreenGuideSheet onClose={() => setHomeScreenGuideOpen(false)} onOpenBackup={onOpenBackup}/>}
         <SettingsMenuLink icon="📚" label="ヘルプ" desc="遊び方・育て方・画面の説明" onClick={onOpenHelp}/>
         <SettingsMenuLink icon="🔄" label="ゲームを更新" desc="最新のゲームデータを読み込みます" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} accent="text-cyan-200"/>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
