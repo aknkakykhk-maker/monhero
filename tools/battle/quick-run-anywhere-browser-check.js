@@ -151,6 +151,16 @@ const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }, 
       for (let k = 0; k < 6; k++) { w = await watch(5000); if (w.s.loops > a.loops || w.maxWave > a.wave) break; }
       check(`③ ${name} から出ると続きから進む`, w.s.strip === 'live' && w.s.loops >= a.loops && (w.maxWave > a.wave || w.s.loops > a.loops), JSON.stringify({ a: [a.loops, a.wave], b: [w.s.loops, w.maxWave] }));
     }
+    // ⑪ WAVE10(ボス)に着いたら、回す画面にいれば40秒以内に次の周回へ進む(2026-11-11 ミハリ「WAVE10 から次の周回へ移らずに止まることがある」の見張り。
+    //   ボス戦は 11〜19秒かかる。WAVE10 を終えて次の周へ移る所が、画面によって止まらないこと)
+    {
+      await goHome();
+      let at10 = null, t0 = 0;
+      for (let t = 0; t < 120 && !at10; t++) { await page.waitForTimeout(500); const x = await state(); if (x.wave === 10 && x.strip === 'live') { at10 = x; t0 = Date.now(); } }
+      let next = null;
+      if (at10) for (let t = 0; t < 80 && !next; t++) { await page.waitForTimeout(500); const x = await state(); if (x.loops > at10.loops) next = { ...x, sec: Math.round((Date.now() - t0) / 1000) }; }
+      check('⑪ WAVE10 に着いたら、HOME で40秒以内に次の周回へ進む(止まらない)', !!at10 && !!next, JSON.stringify({ at10: at10 && [at10.loops, at10.wave, at10.screen], next: next && [next.loops, next.wave, next.sec] }));
+    }
     // ⑥ 帯の詳細と「止める」
     await goHome();
     for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(300);

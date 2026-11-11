@@ -12818,7 +12818,7 @@ function MonsterHeroGame() {
       canRestart: finished && !quickRunResumable && !!repeatTemplateForNewRun(), processing: resultProcessing, canResume: finished && quickRunResumable };
     const closeDetail = () => setQuickAnywhereDetail(false);
     return (<>
-      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
+      <button type="button" data-quick-anywhere={state} data-wave={wave} data-loops={quickRunProgress.loops} data-screen={gameState} data-stage={runStage||""} aria-label={`裏クイック ${label}。押すと詳しく`} onClick={() => setQuickAnywhereDetail(v => !v)}
         className={`fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`}
         style={{ left: 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))', bottom: 'max(8px, calc(var(--mh-sa-bottom, 0px) + 6px))', minHeight: 30 }}>
         {label}
@@ -12845,9 +12845,13 @@ function MonsterHeroGame() {
       )}
     </>);
   };
+  // 締めているあいだは画面の操作を受け付けない(下の幕)。報酬を待つあいだにバトルの入口から新しいバトルを始めると、
+  //   締め終わりの returnToHome がその新しいランまで片付けてしまうため(2026-11-11 ミハリ)
+  const [quickAnywhereSettling, setQuickAnywhereSettling] = useState(false);
   const settleQuickAnywhereRun = async () => {
     if (quickAnywhereEndingRef.current || !runStageRef.current) return;
     quickAnywhereEndingRef.current = true;
+    setQuickAnywhereSettling(true);
     try {
       const running = isQuickMode(runMode) && !runResultFinishedRef.current;
       const before = running ? cardQuickRunView() : null;
@@ -12864,6 +12868,7 @@ function MonsterHeroGame() {
     } finally {
       quickAnywhereEndingRef.current = false;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setQuickAnywhereSettling(false);
     }
   };
   // ほかのバトルの入口を開いたら締める(その周までの報酬を確定)。「動いているバトルは常に1つ」(QUICK_RHYTHM_LINK.md §13)の作りのまま
@@ -25793,6 +25798,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {renderQuickAnywhereStrip()}
+      {quickAnywhereSettling && <div data-quick-anywhere-settling role="status" className="fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+        <span className="rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100">🔁 裏クイックの報酬を受け取っています…</span>
+      </div>}
       {effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(<div data-battle-effect-overlay className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>

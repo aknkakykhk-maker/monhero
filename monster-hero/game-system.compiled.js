@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea7b7717a9dc5581
+// source-sha256: e5bb2abaef400cbb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -187926,6 +187926,7 @@ function MonsterHeroGame() {
       "data-wave": wave,
       "data-loops": quickRunProgress.loops,
       "data-screen": gameState,
+      "data-stage": runStage || "",
       "aria-label": `裏クイック ${label}。押すと詳しく`,
       onClick: () => setQuickAnywhereDetail(v => !v),
       className: `fixed z-[70] max-w-[84px] truncate rounded-full border px-2 text-[11px] font-black leading-[28px] shadow-lg shadow-black/40 backdrop-blur-sm active:scale-[.97] ${finished ? 'border-rose-300/60 bg-rose-950/85 text-rose-100' : resting || paused ? 'border-amber-300/50 bg-slate-950/85 text-amber-100' : 'border-fuchsia-300/60 bg-slate-950/85 text-fuchsia-100'}`,
@@ -187992,9 +187993,11 @@ function MonsterHeroGame() {
       className: "min-h-[34px] rounded-full border border-white/30 bg-slate-800/90 px-3 text-[12px] font-black text-slate-100 active:scale-[.97]"
     }, "⏹ 止める")))));
   };
+  const [quickAnywhereSettling, setQuickAnywhereSettling] = useState(false);
   const settleQuickAnywhereRun = async () => {
     if (quickAnywhereEndingRef.current || !runStageRef.current) return;
     quickAnywhereEndingRef.current = true;
+    setQuickAnywhereSettling(true);
     try {
       const running = isQuickMode(runMode) && !runResultFinishedRef.current;
       const before = running ? cardQuickRunView() : null;
@@ -188021,6 +188024,7 @@ function MonsterHeroGame() {
     } finally {
       quickAnywhereEndingRef.current = false;
       runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+      setQuickAnywhereSettling(false);
     }
   };
   useEffect(() => {
@@ -210731,7 +210735,17 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), renderQuickAnywhereStrip(), effect && !runBackgroundAllowed && effect !== offscreenEffectRef.current && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), quickAnywhereSettling && React.createElement("div", {
+      "data-quick-anywhere-settling": true,
+      role: "status",
+      className: "fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24",
+      onClickCapture: e => {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, React.createElement("span", {
+      className: "rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100"
+    }, "🔁 裏クイックの報酬を受け取っています…")), effect && !runBackgroundAllowed && effect !== offscreenEffectRef.current && React.createElement("div", {
       "data-battle-effect-overlay": true,
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
