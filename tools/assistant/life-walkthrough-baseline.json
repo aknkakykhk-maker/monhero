@@ -1,0 +1,21 @@
+{
+ "slot": "afternoon",
+ "total": 3141,
+ "hard": 0,
+ "screens": {
+  "first-view": 392,
+  "house-list": 363,
+  "diary": 36,
+  "call": 140,
+  "give": 0,
+  "room-pair": 16,
+  "room-solo": 114,
+  "room-away": 46,
+  "masmon": 256,
+  "where": 528,
+  "where-place": 448,
+  "friends": 253,
+  "items": 151,
+  "visit": 398
+ }
+}
