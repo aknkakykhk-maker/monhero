@@ -12,6 +12,7 @@
 //               --settings '{"roadFx":false}'(おまかせの値に重ねる) --hide '<CSSセレクタ>'(その部品を隠して測る=切り分け。{ を含めば CSS としてそのまま当てる=直す前の試し)
 //               --json <ファイル>(全部の数字を JSON で残す) --port 9191
 //               --trace(原因さがし: 時間の内訳と、スタイル再計算・レイアウト・塗り直しの出どころの上位を出す。数字は少し重く出る)
+//               --screen select(演奏ではなく曲えらびを、触らずに止まったまま測る。飾りのアニメーションの重さを見る。予算は見ない)
 //               --inject <jsファイル>(ページへ足すスクリプト。見た目の案の見本を重ねて、重さの見込みを同じ物差しで測る)
 //               --shot <png>(測っている途中の画面を撮る。ファイル名に場面の名前が付く)
 //               --gpu(GPU のある端末と同じ層の分け方で動かす。GPU の仕事は CPU が肩代わりするので時間は遅く出る。層・塗り直しの「構造」を見るとき)
@@ -47,7 +48,7 @@ const PRESETS=arg('preset',QUICK?'STANDARD,FULL':'STANDARD,FULL').split(',').fil
 const ORIENTS=arg('orient',QUICK?'landscape':'landscape,portrait').split(',').filter(Boolean);
 const CPUS=arg('cpu',QUICK?'4':'1,4').split(',').map(Number).filter(n=>n>=1);
 const DRAW=arg('draw','canvas'),DPR=Number(arg('dpr','2'))||2,PORT=Number(arg('port','9191'))||9191,HIDE=arg('hide','');
-const INJECT=arg('inject',''),SHOT=arg('shot','');
+const INJECT=arg('inject',''),SHOT=arg('shot',''),SELECT=arg('screen','play')==='select';
 let EXTRA={};try{EXTRA=JSON.parse(arg('settings','{}'));}catch(e){console.log('NG: --settings は JSON で書いてください');process.exit(1);}
 const BUDGET_FILE=path.join(__dirname,'weight-budget.json');
 // 予算を見る数字(どれも「小さいほど良い」)。tol … 予算に対して何倍まで許すか(ぶれの分)。floor … これ以下は差を見ない(小さい数のぶれで落とさない)
@@ -88,6 +89,9 @@ const measure=async(playwright,port,scene)=>{
     for(let i=0;i<2;i++){await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());}
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
+    const bcdp=await browser.newBrowserCDPSession(),cdp=await page.context().newCDPSession(page);
+    if(SELECT){await page.waitForTimeout(2500);if(scene.cpu>1)await cdp.send('Emulation.setCPUThrottlingRate',{rate:scene.cpu});await page.waitForTimeout(800);}
+    else{
     await page.evaluate(s=>document.querySelector(`[data-rhythm-song-row="${s}"]`)?.click(),SONG);await page.waitForTimeout(300);
     await page.evaluate(d=>document.querySelector(`[data-rhythm-difficulty="${d}"]`)?.click(),DIFF);await page.waitForTimeout(300);
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
@@ -105,12 +109,12 @@ const measure=async(playwright,port,scene)=>{
           requestAnimationFrame(step);};requestAnimationFrame(step);};
       let seen1=false;const wait=()=>{const t=document.querySelector('[data-rhythm-song-clock]')?.textContent||'';if(/0:01\//.test(t))seen1=true;if(seen1&&/0:02\//.test(t))start();else requestAnimationFrame(wait);};requestAnimationFrame(wait);
     },[SONG,DIFF]);
-    const bcdp=await browser.newBrowserCDPSession(),cdp=await page.context().newCDPSession(page);
     // 絞るのは曲が始まってから(起動まで絞ると、測りたい所へ着くのが遅くなるだけ)。測る2秒前から絞って落ち着かせる
     const [fm,fs_]=FROM.split(':').map(Number),fromSec=fm*60+fs_,pre=Math.max(2,fromSec-2),preLabel=`${Math.floor(pre/60)}:${String(pre%60).padStart(2,'0')}`;
     await page.waitForFunction(rx=>(document.querySelector('[data-rhythm-song-clock]')?.textContent||'').includes(rx+'/'),preLabel,{timeout:240000,polling:100});
     if(scene.cpu>1)await cdp.send('Emulation.setCPUThrottlingRate',{rate:scene.cpu});
     await page.waitForFunction(rx=>(document.querySelector('[data-rhythm-song-clock]')?.textContent||'').includes(rx+'/'),FROM,{timeout:240000,polling:100});
+    }
     const procTime=async()=>{const {processInfo}=await bcdp.send('SystemInfo.getProcessInfo');const sum=type=>processInfo.filter(p=>p.type===type).reduce((a,p)=>a+p.cpuTime,0);return {gpu:sum('GPU'),renderer:sum('renderer')};};
     const perf=async()=>{const {metrics}=await cdp.send('Performance.getMetrics');return Object.fromEntries(metrics.map(m=>[m.name,m.value]));};
     let layers=null;cdp.on('LayerTree.layerTreeDidChange',e=>{if(e.layers)layers=e.layers;});await cdp.send('LayerTree.enable');await cdp.send('Performance.enable');
@@ -185,14 +189,14 @@ if(require.main===module)(async()=>{
   // おまかせの値は本体(RHYTHM_LOOK_PRESETS)から読む(道具へ書き写さない)
   const server=await serve(ROOT,PORT);
   const compareRef=arg('compare',null);let baseRoot=null,baseServer=null;
-  const out={scene:`${SONG} ${DIFF} ${FROM} から ${SECONDS}秒・${DRAW}・dpr${DPR}`,rows:[]};let ng=[];
+  const out={scene:SELECT?`曲えらび(止まったまま ${SECONDS}秒)・dpr${DPR}`:`${SONG} ${DIFF} ${FROM} から ${SECONDS}秒・${DRAW}・dpr${DPR}`,rows:[]};let ng=[];
   try{
     const b=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});const probe=await b.newPage();
     await probe.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});await probe.waitForFunction(()=>typeof RHYTHM_LOOK_PRESETS!=='undefined',{timeout:60000});
     const presets=await probe.evaluate(()=>RHYTHM_LOOK_PRESETS.map(p=>({id:p.id,label:p.label,values:p.values})));await b.close();
     if(compareRef){baseRoot=fs.mkdtempSync(path.join(os.tmpdir(),'mh-weight-base-'));execFileSync('git',['-C',ROOT,'worktree','add','--detach',baseRoot,compareRef],{stdio:'ignore'});baseServer=await serve(baseRoot,PORT+1);}
     const budget=fs.existsSync(BUDGET_FILE)?JSON.parse(fs.readFileSync(BUDGET_FILE,'utf8')):{};
-    console.log(`場面: ${out.scene}(自動で叩く)`);
+    console.log(`場面: ${out.scene}${SELECT?'':'(自動で叩く)'}`);
     for(const id of PRESETS){const preset=presets.find(p=>p.id===id);if(!preset){ng.push(`おまかせ ${id} が本体に無い`);continue;}
       for(const orient of ORIENTS)for(const cpu of CPUS){
         const key=`${id}/${orient}/cpu${cpu}`,label=`${preset.label}・${orient==='landscape'?'横':'縦'}・CPU 1/${cpu}`;
@@ -204,11 +208,11 @@ if(require.main===module)(async()=>{
           console.log(`   大きい層(画面◯枚ぶん):\n     ${[...g.entries()].sort((a,b)=>b[1].area-a[1].area).slice(0,18).map(([k,v])=>`${(v.area/sc).toFixed(2)}枚 ${v.n>1?v.n+'個 ':''}${v.size} ${k}`).join('\n     ')}`);}
         if(r.causes){console.log(`   canvas: ${r.canvases.join(' / ')}${r.canvasDraw?` ・ 1フレームに 画像 ${f1(r.canvasDraw.images)}枚(画面 ${f2(r.canvasDraw.screens)}枚ぶん)・消す 画面 ${f2(r.canvasDraw.clearScreens)}枚ぶん・図形 ${f1(r.canvasDraw.fills)}個`:''}`);console.log(`   時間の内訳(1フレームあたり): ${r.causes.time.join(' / ')}`);if(r.causes.js.length)console.log(`   JavaScript の関数(自分の時間・1フレームあたり):\n     ${r.causes.js.join('\n     ')}`);console.log(`   動いているアニメーション(transform・opacity 以外を動かす物は毎フレーム型の再計算を起こす):\n     ${r.causes.anims.join('\n     ')}`);console.log(`   スタイル再計算の出どころ(${r.causes.styleScope}):\n     ${r.causes.style.join('\n     ')}`);console.log(`   レイアウトの出どころ(${r.causes.layoutScope}):\n     ${r.causes.layout.join('\n     ')}`);console.log(`   塗り直した物:\n     ${r.causes.paint.join('\n     ')}`);}
         if(r.errors.length)ng.push(`${label}: ページのエラー ${r.errors[0].slice(0,80)}`);
-        if(r.frames<SECONDS*2)ng.push(`${label}: フレームがほとんど取れていない(${r.frames})`);
+        if(!SELECT&&r.frames<SECONDS*2)ng.push(`${label}: フレームがほとんど取れていない(${r.frames})`);
         if(baseServer){try{const base=await measure(playwright,PORT+1,{...scene});
           console.log(`   ${compareRef} との差: 95% ${pct(r.p95,base.p95)} ・ JS ${pct(r.jsPerFrame,base.jsPerFrame)} ・ 配置 ${pct(r.layoutPerFrame,base.layoutPerFrame)} ・ 型 ${pct(r.stylePerFrame,base.stylePerFrame)} ・ 塗り ${pct(r.repaintScreens,base.repaintScreens)} ・ 層 ${pct(r.layerScreens,base.layerScreens)} ・ DOM ${pct(r.domNodes,base.domNodes)}`);
           out.rows[out.rows.length-1].base=base;}catch(e){console.log(`   ${compareRef} は測れない: ${String(e.message).split('\n')[0].slice(0,80)}`);}}
-        if(flag('check')&&budget.rows&&budget.rows[key]){for(const [k,name,tol,floor] of BUDGET_KEYS){const lim=Math.max(budget.rows[key][k]*tol,floor);if(r[k]>lim)ng.push(`${label}: ${name} ${f2(r[k])} が予算 ${f2(lim)} を超えた`);}}
+        if(flag('check')&&!SELECT&&budget.rows&&budget.rows[key]){for(const [k,name,tol,floor] of BUDGET_KEYS){const lim=Math.max(budget.rows[key][k]*tol,floor);if(r[k]>lim)ng.push(`${label}: ${name} ${f2(r[k])} が予算 ${f2(lim)} を超えた`);}}
       }}
     if(flag('write-budget')&&!ng.length){const rows={};for(const row of out.rows)rows[row.key]=Object.fromEntries(BUDGET_KEYS.map(([k])=>[k,Number(row[k].toFixed(3))]));
       fs.writeFileSync(BUDGET_FILE,JSON.stringify({note:'rhythm-weight-report.js --write-budget が書く。演奏画面の重さの予算(この環境での値。小さいほど良い)',scene:out.scene,rows},null,1)+'\n');console.log(`予算を書き直した: ${path.relative(ROOT,BUDGET_FILE)}`);}
