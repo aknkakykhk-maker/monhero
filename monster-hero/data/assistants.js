@@ -12780,7 +12780,17 @@ const assistantTutorialWithAutoQuick = (pages, assistantId) => {
   const page = { e: line.e || 'normal', t: line.t, title: line.title || 'AUTOとクイック', help: 'battle/quick-auto-guide', spot: 'battle', autoQuick: true };
   return [...pages.slice(0, at + 1), page, ...pages.slice(at + 1)];
 };
-const assistantTutorialPages = (assistantId) => assistantTutorialWithAutoQuick(ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL, assistantId);
+// はじめての人の村の案内は、11ページから6ページに絞る(2026-11-11 社長。文は書き足さず、各助手の既存の文をそのまま使う)。
+//   残すのは 0 あいさつ / 1 目的 / 2 HOMEのこと / 5 バトル(あとに「AUTOとクイック」が付く)/ 9 ヘルプは設定の中 / 10 いってらっしゃい。
+//   外した神殿・マスモン・ランキング・マーケット・ミッションとギフトは、ヘルプと各画面の中で見られる
+const ASSISTANT_TUTORIAL_SHORT_INDEXES = [0, 1, 2, 5, 9, 10];
+const assistantTutorialPages = (assistantId, short = false) => {
+  const base = ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL;
+  const pages = short && Array.isArray(base) && base.length > Math.max(...ASSISTANT_TUTORIAL_SHORT_INDEXES)
+    ? ASSISTANT_TUTORIAL_SHORT_INDEXES.map(i => base[i])
+    : base;
+  return assistantTutorialWithAutoQuick(pages, assistantId);
+};
 
 // ---------- バトルチュートリアルの初回案内 ----------
 // バトルの練習を未完了の人へ、ログイン後のHOMEで一度だけ見せる。
@@ -12837,8 +12847,22 @@ const ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS = {
     { e:'happy', t:'おけ。あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみてね☺️', title:'いつでも待ってるよ', declined:true },
   ],
 };
-const assistantBattleGuidePages = (assistantId) =>
-  ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS[assistantId] || ASSISTANT_BATTLE_TUTORIAL_GUIDE;
+// はじめての人向けの1行目(2026-11-11 案5。前から遊んでいる人には「新しく追加された」の今の文のまま)。2行目以降は変えない
+const ASSISTANT_BATTLE_TUTORIAL_FIRST_LINES = {
+  mua:       { t:'まずはバトルのれんしゅうから始めよ〜♪ すぐ終わるよ！', title:'はじめてのバトル、やってみよ！' },
+  kiki:      { t:'まずはバトルのれんしゅうから始めまつ♪ すぐ終わりまつよ。', title:'はじめてのバトルでつ' },
+  momosuke:  { t:'まずはバトルのれんしゅうからね！！ すぐ終わるから、ももについてきなよw', title:'はじめてのバトル、いくよ' },
+  dra:       { t:'まずはバトルのれんしゅうからだな。すぐ終わるぞ。', title:'はじめてのバトルだぞ' },
+  atsu:      { t:'とりあえずバトルのれんしゅうからやろ！ すぐ終わるよ笑', title:'はじめてのバトル、やろ！' },
+  kyuko:     { t:'まずはバトルのれんしゅうからいこぉ。すぐ終わるよぉ', title:'はじめてのバトル、いこぉ' },
+  sorashido: { t:'まずはバトルのれんしゅうからですね。すぐ終わりますよ笑', title:'はじめてのバトル、行きましょう！' },
+  erubin:    { t:'まずはバトルのれんしゅうからやろう。すぐ終わるよ', title:'はじめてのバトル、やろう' },
+};
+const assistantBattleGuidePages = (assistantId, firstTime = false) => {
+  const pages = ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS[assistantId] || ASSISTANT_BATTLE_TUTORIAL_GUIDE;
+  const first = ASSISTANT_BATTLE_TUTORIAL_FIRST_LINES[assistantId] || ASSISTANT_BATTLE_TUTORIAL_FIRST_LINES.mua;
+  return firstTime && Array.isArray(pages) && pages[0] ? [{ ...pages[0], ...first }, ...pages.slice(1)] : pages;
+};
 // つづきのれんしゅうの誘い(2026-11-11)。はじめての本番のバトルを1回終えて HOME に戻ったとき、一度だけ出す
 const ASSISTANT_BATTLE_TUTORIAL_MORE_OFFER = [
   { e:'happy', title:'つづきのれんしゅう', t:'はじめてのバトル、おつかれさま！ 必殺技・アシストカード・距離技・技変更みたいな、バトルのいろいろな仕組みも覚えとく？ もう1戦するだけだよ♪', offer:'battleMore' },

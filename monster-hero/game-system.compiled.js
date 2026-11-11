@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec6bb40d7ae6ff58
+// source-sha256: 74e22fcca917254c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -192704,7 +192704,7 @@ function MonsterHeroGame() {
   };
   const tutorialSpot = (() => {
     if (tutorialStep == null) return null;
-    const pages = tutorialKind === 'rhythm' ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current) || [] : tutorialKind === 'tour' ? typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current) || [] : [];
+    const pages = tutorialKind === 'rhythm' ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current) || [] : tutorialKind === 'tour' ? typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current, storyOneAtATime && !firstBattleDone) || [] : [];
     return pages[tutorialStep]?.spot || null;
   })();
   const spotClass = name => tutorialSpot === name ? ' is-tutorial-spot' : '';
@@ -215300,7 +215300,7 @@ function MonsterHeroGame() {
       const battleGuide = tutorialKind === 'battleGuide';
       const guideLook = battleGuide || battleMore;
       const rhythm = tutorialKind === 'rhythm';
-      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleMore ? typeof assistantBattleMorePages === 'function' && assistantBattleMorePages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
+      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleMore ? typeof assistantBattleMorePages === 'function' && assistantBattleMorePages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId, storyOneAtATime && !firstBattleDone) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId, storyOneAtATime && !firstBattleDone) || [];
       const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
       if (!page) return null;
       const who = activeAssistant;

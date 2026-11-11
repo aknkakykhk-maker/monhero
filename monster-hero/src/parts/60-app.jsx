@@ -11996,7 +11996,7 @@ function MonsterHeroGame() {
     const pages = tutorialKind === 'rhythm'
       ? ((typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current)) || [])
       : tutorialKind === 'tour'
-      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [])
+      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current, storyOneAtATime && !firstBattleDone)) || [])
       : [];
     return pages[tutorialStep]?.spot || null;
   })();
@@ -25212,10 +25212,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : battleMore
           ? ((typeof assistantBattleMorePages==='function'&&assistantBattleMorePages(selectedAssistantId))||[])
           : battleGuide
-          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
+          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[])
           : intro
           ? ((typeof assistantIntroPages==='function'&&assistantIntroPages(selectedAssistantId))||[])
-          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId))||[]));
+          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId, storyOneAtATime && !firstBattleDone))||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
         if(!page) return null;
         const who=activeAssistant;
