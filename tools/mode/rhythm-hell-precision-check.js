@@ -8,6 +8,7 @@
 // ③ 仕上げ(settleSwitches)は、同じ親指の速い持ち替えに関わる空中のタップを地上へ下ろす。ノーツの数・時刻・位置は変えない
 // ④ 空中の量は、順番で回したときの9割を下回らない所まで寄せる(下回るときは両手が空の小節を増やす)
 // ⑤ 点検(rhythm-hell-review.js)は公開中の HELL を読むだけで数えられ、ゲームのデータを書き換えない
+// ⑥ Rev.39(2026-11-11 社長の決定 A): HELL の骨組みは短い動機の写しを使わない(生成器 --difficulty HELL。試すときだけ --hell-motifs)
 'use strict';
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const M=require('./rhythm-hell-mix.js'),R=require('./rhythm-hell-review.js'),HR=require('./rhythm-chart-hand-rules.js');
@@ -50,6 +51,17 @@ ok('空中の量を保つ割合は9割',M.PRECISION_SKY_KEEP===.9&&fine.precisio
   ok('点検: 公開中の HELL を数えられる(40譜面以上・速い持ち替えと合い方が出る)',rows.length>=40&&rows.every(r=>Number.isFinite(r.sw150)&&Number.isFinite(r.sky250))&&rows.some(r=>r.energySky!=null),`${rows.length}譜面`);
   ok('点検: 解析が無くても数えられる',m.notes===64&&m.offSound===null);
   ok('点検と作る道具は、ゲームのデータを書き換えない',sha()===before);}
+
+// ⑥ 短い曲(ROSE short ver.)の HELL の骨組みを作業用のフォルダへ作る(authoring には書かない)
+{const os=require('os'),{spawnSync}=require('child_process'),rev=require('./rhythm-chart-v3-revision.js');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mh-hell39-')),gen=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-generate.js'),'utf8');
+  const r=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track','rose_short','--difficulty','HELL','--variant','2','--output-dir',dir,'--write'],{encoding:'utf8',maxBuffer:64*1024*1024});
+  const f=path.join(dir,'rose-short-v3-chart-hell.json'),chart=r.status===0&&fs.existsSync(f)?JSON.parse(fs.readFileSync(f,'utf8')):null;
+  ok('作り方の最新は Rev.39 以上',rev.CHART_REVISION_CODE_LATEST>=39,String(rev.CHART_REVISION_CODE_LATEST));
+  ok('HELL の骨組みは短い動機の写しを使わない(写した小節 0)',!!chart&&chart.motifs&&chart.motifs.bars===0,chart?`写した小節 ${chart.motifs&&chart.motifs.bars}・ノーツ ${chart.notes.length}`:String(r.stderr||r.stdout).slice(-200));
+  ok('試すときの入口(--hell-motifs)がある',/--hell-motifs/.test(gen));
+  fs.rmSync(dir,{recursive:true,force:true});
+  ok('骨組みを作っても、ゲームのデータを書き換えない',sha()===before);}
 
 console.log(failed?`\n${failed} 件の NG`:'\nすべて OK');
 process.exit(failed?1:0);

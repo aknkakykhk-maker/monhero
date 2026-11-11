@@ -1481,7 +1481,9 @@ const buildChart=(difficulty,options={})=>{
   {
     const offsets=new Map();
     for(const onset of picked){const bar=Math.floor(onset.grid/BAR);if(!offsets.has(bar))offsets.set(bar,new Set());offsets.get(bar).add(onset.grid-bar*BAR);}
-    const count=findMotifs(offsets);
+    // Rev.39(2026-11-11 社長の決定 A): HELL の骨組みは、短い動機の写しを既定で使わない。HELL の骨組みは手の仕上げを通らず、写した形のまま空中を付けるので、
+    //   押せない所が新しく出て交差も増えた(7曲の比べ: docs/progress/beat-chart-tools/REV38-HELL.md)。試すときは --hell-motifs
+    const count=difficulty==='HELL'&&!process.argv.includes('--hell-motifs')?findMotifs(null):findMotifs(offsets);
     if(count)notice.push(`短い動機の写し: 同じリズムで音の上下も似ている ${count}小節に、元の小節を足した`);
   }
 

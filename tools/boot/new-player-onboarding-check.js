@@ -30,7 +30,7 @@ check('助手を選ぶ前にあいさつを出さない',
   has("if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('助手を選ぶとあいさつ→プロフィールへ続く',
   // 助手が増えるたびに markXxxIntroSeen() が増えるので、その並びは固定で見ない
-  has("onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();")
+  has("chooseAssistant(pick.id);markKikiIntroSeen();")
     && has("setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
     && has("if (kind === 'intro') { setGameState('PROFILE'); return; }"));
 // 新しく始めた人は、助手選択の時点でももすけも選べる(登場の会話は流さない)

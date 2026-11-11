@@ -97,7 +97,9 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
         check(`${T}② ${id}: 仲良し度の道のり Lv${r.road}・あと${r.remain}(部屋の題の Lv と同じ・その段階の幅の中)`, r.road != null && r.road === lvTitle && (w == null ? r.remain == null : (r.remain > 0 && r.remain <= w)), JSON.stringify({ road: r.road, lvTitle, remain: r.remain, span: w })); }
       // 助手マスモン対戦β(ミセカタ2の口)の行: 口が null を返すあいだは出ない。口が値を返せば「🐾 マスモン」の下に出る(2026-11-11)
       if (id === 'mua') {
-        check(`${T}⑧ mua: 対戦βの口が null のあいだは「マスモンで対戦(β)」の行は出ない`, !r.rows.includes('masmon-battle'), r.rows.join(','));
+        // 公開(印が真)のあとは、はじめから行が出る。口が null を返すとき(印が偽)だけ出ない(2026-11-11 公開でミセカタ2が直した)
+        const bbOpenNow = await page.evaluate(() => typeof assistantMasmonBattleRowInfo === 'function' && assistantMasmonBattleRowInfo('mua') != null);
+        check(`${T}⑧ mua: 「マスモンで対戦(β)」の行は、口が値を返すときだけ出る(null なら出ない)`, bbOpenNow === r.rows.includes('masmon-battle'), `${bbOpenNow} / ${r.rows.join(',')}`);
         await closeRoom(page);
         await page.evaluate(() => { window.__bbFlags = { b: RELEASE_FLAGS.assistantMasmonBattleBeta, g: RELEASE_FLAGS.assistantMasmonGrow }; RELEASE_FLAGS.assistantMasmonBattleBeta = true; RELEASE_FLAGS.assistantMasmonGrow = true; });
         const r2 = await room(page, id);
