@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60af30a5c33b5a30
+// source-sha256: 13a402064cf6cf86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6243,6 +6243,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_lamia',
+  name: 'LAMIA',
+  creator: 'BlackY',
+  src: 'audio/bgm-lamia.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8031,6 +8038,7 @@ const Audio_ = (() => {
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
@@ -20527,6 +20535,21 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   }), b.text && React.createElement("div", {
     className: "text-[12px] text-slate-300 leading-relaxed mt-2"
   }, helpWrap(b.text)));
+  if (b.t === 'image') return React.createElement("figure", {
+    key: i,
+    "data-help-image": true,
+    className: "m-0"
+  }, b.title && React.createElement("figcaption", {
+    className: "text-[11px] font-black text-white mb-2"
+  }, b.title), React.createElement("img", {
+    src: b.src,
+    alt: b.alt || b.title || '',
+    loading: "lazy",
+    className: "block w-full max-w-[360px] mx-auto rounded-2xl",
+    onError: e => {
+      e.currentTarget.style.display = 'none';
+    }
+  }));
   if (b.t === 'note') return React.createElement("div", {
     key: i,
     className: "rounded-2xl p-4 border",
@@ -52460,6 +52483,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['excited', '2:58からのサビ、待ったぶんまぢアガる♪']],
     'listen:senjou_no_shippuu': [['excited', '2:52からのサビ、最後にまぢ盛り上がる♪']],
     'listen:makutsu_no_senritsu': [['excited', '2:18でいちばん強くなるの！ 最後の最後でアゲる♪']],
+    'listen:lamia': [['excited', '0:32から一気にいちばん強くなるの！ ここまぢでアガる♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
@@ -52533,6 +52557,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['normal', '1:17に静かなところがありまつ。長い曲の中の、ひと休みです']],
     'listen:senjou_no_shippuu': [['normal', '1:29と2:04に静かなところがありまつ。そこで息を整えましょう']],
     'listen:makutsu_no_senritsu': [['normal', '最初の40秒くらいは静かでつ。ゆっくり入っていけます']],
+    'listen:lamia': [['normal', '最初の静かなところから少しずつ大きくなるの、きれいでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
@@ -52606,6 +52631,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['excited', '2:58から3:32までサビ！！ 最後にどーんと盛り上がるよ♡']],
     'listen:senjou_no_shippuu': [['excited', '最後の2:52から一気に盛り上がるよ！！ ラストが見せ場♡']],
     'listen:makutsu_no_senritsu': [['excited', '2:18からのとこ、短いけどいちばん盛り上がるよ！！']],
+    'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
@@ -52679,6 +52705,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['happy', 'おでの曲だ。3分47秒、ゆっくり世界を広げていく感じが好きなんだよ']],
     'listen:senjou_no_shippuu': [['happy', 'おでの好きな曲だ。強めと静かが入れ替わって、戦場を駆けてる感じがするんだよ']],
     'listen:makutsu_no_senritsu': [['happy', '静かに始まって、どんどん深くもぐっていく感じだな']],
+    'listen:lamia': [['troubled', 'BPM199でLv.51だぞ。速すぎて、おでの冒険も駆け足だな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
     'listen:rising_hope': [['normal', 'テンポが190もあるからな。最初から最後まで走りっぱなしの冒険だ']],
@@ -52752,6 +52779,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['happy', '長い曲だけど、3:32までのサビで全部締めよ笑']],
     'listen:senjou_no_shippuu': [['happy', 'サビは3:12まで！ 最後の20秒でぜんぶ締めよ笑']],
     'listen:makutsu_no_senritsu': [['wink', '2:25で静かになって終わるから、最後はきれいに止めよ笑']],
+    'listen:lamia': [['happy', '2:08から静かに締めていくとこ、余韻あっていいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
@@ -52825,6 +52853,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['normal', 'ふつうが長く続いて、2:58で一番上。ためが長い構成だねぇ']],
     'listen:senjou_no_shippuu': [['normal', '0:17でもう強め。静かを2回はさんで、2:52で一番上だよぉ']],
     'listen:makutsu_no_senritsu': [['normal', '1:13からずっと強めで、2:18で一番上。最後まで上がり続ける構成だねぇ']],
+    'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
@@ -52898,6 +52927,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['normal', '強い音59%・軽い音1%。744ノーツで、BPMはおよそ188です笑']],
     'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いです笑']],
     'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけです。短いけど濃いです笑']],
+    'listen:lamia': [['normal', 'BPM199で797ノーツ、Lv.51。強く打つ音が56%です・・・！']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
     'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
@@ -52971,6 +53001,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mou_hitotsu_no_sekai_e': [['happy', 'ふつうの所が長いから、落ち着いて合わせられるね☺️']],
     'listen:senjou_no_shippuu': [['normal', '2:04の静かなところで、ゆっくり落ち着こうか']],
     'listen:makutsu_no_senritsu': [['happy', 'はじめの静かなところで、ゆっくり気持ちを整えようか☺️']],
+    'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
     'listen:rising_hope': [['happy', '1:20でふつうに戻る所で、最後に少しほっとできるね']],
@@ -66435,7 +66466,7 @@ function SettingsScreen({
     label: "データ引き継ぎ",
     desc: "バックアップの保存と、別の端末での復元",
     onClick: onOpenBackup
-  }), typeof mhIsIphoneSafariBrowser === 'function' && mhIsIphoneSafariBrowser() && React.createElement(SettingsMenuLink, {
+  }), typeof mhHomeScreenGuideMode === 'function' && !!mhHomeScreenGuideMode() && React.createElement(SettingsMenuLink, {
     icon: "📲",
     label: "ホーム画面に追加",
     desc: "アプリのように遊ぶ方法(データの引き継ぎつき)",
@@ -66713,6 +66744,27 @@ function mhIsIphoneSafariBrowser(ua) {
     return false;
   }
 }
+function mhIsIphoneInAppBrowser(ua) {
+  try {
+    if (typeof window === 'undefined' || !window.navigator) return false;
+    if (typeof mhIsIosHomeScreenApp === 'function' && mhIsIosHomeScreenApp()) return false;
+    const text = String(ua == null ? window.navigator.userAgent || '' : ua);
+    if (!/iPhone|iPod/.test(text)) return false;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|DuckDuckGo/i.test(text)) return false;
+    if (/Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK|GSA\/|YJApp/i.test(text)) return true;
+    return !(/Safari\//.test(text) && /Version\//.test(text));
+  } catch (_) {
+    return false;
+  }
+}
+function mhHomeScreenGuideMode(ua) {
+  if (mhIsIphoneSafariBrowser(ua)) return 'safari';
+  if (mhIsIphoneInAppBrowser(ua)) return 'inapp';
+  return null;
+}
+const MH_HOME_SCREEN_HOWTO_STEPS_IMAGE = 'images/guide/home-screen-howto-steps.jpg';
+const MH_HOME_SCREEN_HOWTO_ADD_IMAGE = 'images/guide/home-screen-howto-add.jpg';
+const MH_HOME_SCREEN_RESTORE_TEXT = '遊び始める前に、タイトルの設定から戻します。ホーム画面のアイコンから開き、タイトル画面の「設定」→「データ引き継ぎ」→「復元」で、保存したファイル(またはコピーしたコード)を読み込みます。';
 function normalizeHomeScreenGuideState(value) {
   const src = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const num = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0;
@@ -66745,8 +66797,14 @@ function homeScreenGuideAutoDue(state, now) {
 function HomeScreenGuideSheet({
   onClose,
   onNever = null,
-  onOpenBackup
+  onOpenBackup,
+  mode = null
 }) {
+  const kind = mode || mhHomeScreenGuideMode() || 'safari';
+  const inApp = kind === 'inapp';
+  const w = x => typeof x === 'string' && typeof jaWrap === 'function' ? React.createElement("span", {
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, jaWrap(x)) : x;
   const step = (no, title, body) => React.createElement("li", {
     "data-home-screen-guide-step": no,
     className: "flex gap-2.5 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left"
@@ -66756,11 +66814,19 @@ function HomeScreenGuideSheet({
     className: "min-w-0"
   }, React.createElement("div", {
     className: "text-[12px] font-black leading-snug text-white"
-  }, title), React.createElement("div", {
+  }, w(title)), React.createElement("div", {
     className: "mt-1 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, body)));
+  }, w(body))));
+  const backupText = inApp ? ['「データ引き継ぎ」の「バックアップコードを作成」→「コードをコピー」で控え、メモなどに貼って残します。', '(「バックアップファイルを保存(.mhsave)」でも作れます)'] : ['「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。', '(「バックアップコードを作成」→「コードをコピー」でも作れます)'];
+  const backupBody = React.createElement(React.Fragment, null, w(backupText[0]), React.createElement("br", null), w(backupText[1]), React.createElement("button", {
+    type: "button",
+    "data-home-screen-guide-backup": true,
+    onClick: onOpenBackup,
+    className: "mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95"
+  }, "💾 データ引き継ぎを開く"));
+  const addBody = 'Safari の下にある共有ボタン(四角から上向きの矢印)を押し、「ホーム画面に追加」→ 右上の「追加」。';
   return React.createElement("div", {
-    "data-home-screen-guide": true,
+    "data-home-screen-guide": kind,
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "ホーム画面に追加",
@@ -66777,30 +66843,37 @@ function HomeScreenGuideSheet({
     className: "mh-dialog-head flex items-start justify-between gap-2"
   }, React.createElement("h3", {
     className: "text-[16px] font-black leading-snug text-white"
-  }, "📲 ホーム画面に追加して遊ぼう"), React.createElement("button", {
+  }, w(inApp ? '📲 Safari で開いて、ホーム画面に追加しよう' : '📲 ホーム画面に追加して遊ぼう')), React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     onClick: onClose,
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95"
   }, "✕")), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "アプリのように画面が広くなり、ブラウザの操作(画面の左端をなぞると戻る、など)が出なくなります。"), React.createElement("div", {
+  }, w(inApp ? 'いまは X や LINE などのアプリの中で開いています。Safari で開いてホーム画面に追加すると、アプリのように画面が広くなり、ブラウザの操作が出なくなります。' : 'アプリのように画面が広くなり、ブラウザの操作(画面の左端をなぞると戻る、など)が出なくなります。')), React.createElement("div", {
     "data-home-screen-guide-warning": true,
     className: "mt-3 rounded-2xl border border-red-300/70 bg-red-950/60 p-3 text-left"
   }, React.createElement("div", {
     className: "text-[12px] font-black text-red-200"
-  }, "⚠ 追加する前に、必ずバックアップを作ってください"), React.createElement("div", {
+  }, w(inApp ? '⚠ 開き直す前に、必ずバックアップを作ってください' : '⚠ 追加する前に、必ずバックアップを作ってください')), React.createElement("div", {
     className: "mt-1 text-[11px] font-bold leading-relaxed text-red-100/90"
-  }, "iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは はじめからになります。")), React.createElement("ol", {
+  }, w(inApp ? 'アプリの中の画面と、Safari・ホーム画面のアプリでは、保存データが別々です。そのまま開き直すと、はじめからになります。' : 'iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは はじめからになります。'))), inApp && React.createElement("img", {
+    "data-home-screen-guide-image": "steps",
+    src: MH_HOME_SCREEN_HOWTO_STEPS_IMAGE,
+    alt: "ホーム画面に追加する方法(リンクを押す → ブラウザで開く → ホーム画面に追加)",
+    loading: "lazy",
+    className: "mt-3 block w-full rounded-2xl"
+  }), React.createElement("ol", {
     className: "mt-3 space-y-2"
-  }, step(1, 'いまの Safari でバックアップを作る', React.createElement(React.Fragment, null, "「データ引き継ぎ」の「バックアップファイルを保存(.mhsave)」を押し、「ファイルに保存」を選びます。", React.createElement("br", null), "(「バックアップコードを作成」→「コードをコピー」でも作れます)", React.createElement("button", {
-    type: "button",
-    "data-home-screen-guide-backup": true,
-    onClick: onOpenBackup,
-    className: "mt-2 block min-h-[44px] w-full rounded-xl bg-indigo-600 px-3 text-[12px] font-black text-white active:scale-95"
-  }, "💾 データ引き継ぎを開く"))), step(2, 'ホーム画面に追加する', 'Safari の下にある共有ボタン(四角から上向きの矢印)を押し、「ホーム画面に追加」→ 右上の「追加」。'), step(3, '追加したアイコンから開いて、データを戻す', 'ホーム画面のアイコンから開き、「設定」→「データ引き継ぎ」→「復元」で、保存したファイル(またはコピーしたコード)を読み込みます。')), React.createElement("p", {
+  }, inApp ? React.createElement(React.Fragment, null, step(1, 'いまの画面でバックアップを作る', backupBody), step(2, 'ブラウザ(Safari)で開く', 'アプリの画面の「⋮」や共有のボタンから「ブラウザで開く」(または「Safari で開く」)を選びます。X なら、画面の下の「github.io」の右にある「⋮」から選べます(絵の③)。'), step(3, 'ホーム画面に追加する', addBody + '(絵の④)'), step(4, '追加したアイコンから開いて、データを戻す', MH_HOME_SCREEN_RESTORE_TEXT)) : React.createElement(React.Fragment, null, step(1, 'いまの Safari でバックアップを作る', backupBody), step(2, 'ホーム画面に追加する', React.createElement(React.Fragment, null, addBody, React.createElement("img", {
+    "data-home-screen-guide-image": "add",
+    src: MH_HOME_SCREEN_HOWTO_ADD_IMAGE,
+    alt: "共有ボタンから「ホーム画面に追加」を選ぶ",
+    loading: "lazy",
+    className: "mx-auto mt-2 block w-full max-w-[220px] rounded-xl"
+  }))), step(3, '追加したアイコンから開いて、データを戻す', MH_HOME_SCREEN_RESTORE_TEXT))), React.createElement("p", {
     className: "mt-3 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "戻したあとは、ホーム画面のアイコンから遊んでください。Safari とアプリの両方で遊ぶと、進み方が別々になります。"), React.createElement("div", {
+  }, w(inApp ? '戻したあとは、ホーム画面のアイコンから遊んでください。アプリの中の画面とホーム画面のアプリの両方で遊ぶと、進み方が別々になります。' : '戻したあとは、ホーム画面のアイコンから遊んでください。Safari とアプリの両方で遊ぶと、進み方が別々になります。')), React.createElement("div", {
     className: "mt-3 flex gap-2"
   }, onNever && React.createElement("button", {
     type: "button",
@@ -66819,7 +66892,7 @@ function HomeScreenGuideAuto({
 }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    if (!mhIsIphoneSafariBrowser()) return undefined;
+    if (!mhHomeScreenGuideMode()) return undefined;
     const first = readHomeScreenGuideState();
     if (!first.firstSeenAt) writeHomeScreenGuideState({
       ...first,
@@ -112270,7 +112343,8 @@ function AssistantLifeRoomSheet({
   onGiveSolo = null,
   canGiveSolo = false,
   returnToMap = false,
-  uiV2 = false
+  uiV2 = false,
+  onGoPlace = null
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false);
@@ -112434,7 +112508,13 @@ function AssistantLifeRoomSheet({
     land: land
   }), React.createElement("p", {
     className: "mt-3 text-[12px] font-black text-amber-200"
-  }, who.name, "とできること"), follow && onChat && followCard, hotCard && cardRow, hotBeat && beatRow, onChat && !follow && React.createElement(AssistantLifeDoRow, {
+  }, who.name, "とできること"), follow && onChat && followCard, hotCard && cardRow, hotBeat && beatRow, typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['cardroom', 'studio'].includes(w.place) && React.createElement(AssistantLifePlacePerk, {
+    life: life,
+    ids: [id],
+    place: w.place,
+    land: land,
+    onGo: onGoPlace
+  }), onChat && !follow && React.createElement(AssistantLifeDoRow, {
     k: "chat",
     icon: asleep ? '💤' : '💬',
     label: asleep ? '起こしておしゃべりする' : 'おしゃべりする',
@@ -114246,6 +114326,12 @@ function AssistantLifeHouse({
     life: life,
     ids: ids,
     land: land,
+    onGo: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    },
     initialPlace: uiV2 ? mapFocusPlace : null,
     initialAssistantId: uiV2 ? mapFocusAssistantId : null,
     onBack: () => {
@@ -114338,17 +114424,35 @@ function AssistantLifeHouse({
     onClick: () => setCallPicker(false)
   }, "閉じる ✕")), React.createElement("div", {
     className: "max-h-[46vh] overflow-y-auto"
-  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).map(id => React.createElement("button", {
-    type: "button",
-    key: id,
-    className: "mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left",
-    onClick: () => {
-      setCallPicker(false);
-      setRoomId(id);
-    }
-  }, React.createElement("span", null, nameOf(id)), React.createElement("span", {
-    className: "text-xs text-slate-300"
-  }, life.solo[id]?.reason === 'lonely' ? '💭 さみしそう・声をかけよう' : 'ひとりで過ごしている', " ›")))), React.createElement("p", {
+  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).sort((x, y) => (life.solo[y]?.reason === 'lonely') - (life.solo[x]?.reason === 'lonely')).map(id => {
+    const lonely = life.solo[id]?.reason === 'lonely';
+    const cw = assistantLifeWhereOf(life, id);
+    const cd = cw && ASSISTANT_LIFE_DOINGS[cw.doing];
+    return React.createElement("button", {
+      type: "button",
+      key: id,
+      "data-assistant-life-call-row": id,
+      className: `mb-2 flex min-h-[52px] w-full items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-left ${lonely ? 'border-pink-300 bg-pink-950/60' : 'border-white/15 bg-slate-800'}`,
+      onClick: () => {
+        setCallPicker(false);
+        setRoomId(id);
+      }
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[14px] text-white"
+    }, nameOf(id)), React.createElement("small", {
+      className: `block text-[11.5px] font-bold leading-snug ${lonely ? 'text-pink-200' : 'text-slate-300'}`
+    }, (() => {
+      const doing = cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている';
+      return lonely ? `💭 さみしそう・声をかけよう(${doing})` : doing;
+    })())), lonely && React.createElement("span", {
+      className: "shrink-0 text-right text-[11px] font-black leading-tight text-amber-200"
+    }, "🤝 友情Lv", React.createElement("br", null), "のきっかけ"), React.createElement("span", {
+      className: "shrink-0 text-slate-400",
+      "aria-hidden": "true"
+    }, "›"));
+  })), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold leading-snug text-slate-300",
     "data-assistant-life-call-hint": true
   }, "💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)"))), uiV2 && tab === 'where' && note && !roomId && React.createElement("p", {
@@ -114420,6 +114524,12 @@ function AssistantLifeHouse({
     className: "-mx-3"
   }, itemsBody))), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
+    onGoPlace: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    },
     id: roomId,
     uiV2: uiV2,
     returnToMap: uiV2 && tab === 'where',
@@ -114943,6 +115053,7 @@ function AssistantLifeTownMap({
   onView = null,
   onBeat = null,
   onCard = null,
+  onGo = null,
   onBack,
   list = null,
   nav = null,
@@ -115657,7 +115768,16 @@ function AssistantLifeTownMap({
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, "MFバトルカードの研究をしている助手。いる助手と対戦すると、", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && React.createElement(AssistantLifePlacePerk, {
+    life: life,
+    ids: sheetWho,
+    place: sheetPlace,
+    land: land,
+    onGo: onGo ? fn => {
+      setSheet(null);
+      onGo(fn);
+    } : null
+  }), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true
   }, "いまはだれもいません"), typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
@@ -117123,6 +117243,43 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   });
   return rows;
 };
+function AssistantLifePlacePerk({
+  life,
+  ids,
+  place,
+  onGo = null,
+  land = false
+}) {
+  let rows = [];
+  try {
+    rows = (typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, id => typeof assistantLifeName === 'function' ? assistantLifeName(id) : id) : []).filter(r => r && r.place === place);
+  } catch (_) {
+    rows = [];
+  }
+  if (!rows.length) return null;
+  return React.createElement("div", {
+    className: `${land ? 'mt-1.5' : 'mt-2'} rounded-2xl border-2 border-amber-300 bg-amber-950/80 px-3 py-2`,
+    "data-assistant-life-place-perk": place
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-amber-300"
+  }, "✨ いま行くと得"), rows.map(r => React.createElement("div", {
+    key: r.k,
+    className: "mt-0.5 flex items-center gap-2",
+    "data-assistant-life-place-perk-row": r.k
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-place-perk-go": r.k,
+    onClick: () => onGo(r.go),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12.5px] font-black text-slate-900 active:scale-95"
+  }, "行く ›"))));
+}
 const assistantLifePerkAt = (place, life = null, ids = null) => {
   try {
     const lf = life || (typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null);
@@ -198692,14 +198849,8 @@ function MonsterHeroGame() {
         setRestoreMsg('コードが正しくありません');
         return;
       }
-      keys.forEach(k => window.localStorage.setItem(k, data[k]));
-      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
-        v: 1,
-        mode: 'all',
-        first: null,
-        unlocked: [],
-        noticed: []
-      }));
+      if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+      window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch {
@@ -198789,14 +198940,8 @@ function MonsterHeroGame() {
           if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
-          keys.forEach(k => window.localStorage.setItem(k, data[k]));
-          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
-            v: 1,
-            mode: 'all',
-            first: null,
-            unlocked: [],
-            noticed: []
-          }));
+          if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+          window.mhApplyBackupRestore(data, keys);
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch {

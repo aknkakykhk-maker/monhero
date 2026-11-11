@@ -281,6 +281,11 @@
   "humanoid/hard": "a1043a43867ae878",
   "humanoid/expert": "83b2b14349150dc8",
   "humanoid/master": "ed0ae5ce04c0b01c",
+  "lamia/easy": "2829c95f642ac59d",
+  "lamia/normal": "307341d20f57523b",
+  "lamia/hard": "d2c57d8bcdd3a75e",
+  "lamia/expert": "8c50f5c8636a1735",
+  "lamia/master": "c25d0cd43bf2ec13",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -336,7 +341,8 @@
   "altar_world_tree/hell": "7a17297ddcf051e7",
   "altar_world_tree_short/hell": "02d22507dcb0689c",
   "evans/hell": "c6f47f64d053a04d",
-  "humanoid/hell": "ee7be8fbe5d11239"
+  "humanoid/hell": "ee7be8fbe5d11239",
+  "lamia/hell": "9774324d7ef3d0f1"
  },
  "history": [
   {
@@ -671,6 +677,18 @@
     "crazy_party_night/hard",
     "light_player_short/expert",
     "light_player_short/master"
+   ]
+  },
+  {
+   "at": "2026-11-12 02:04",
+   "reason": "新曲 LAMIA を公開",
+   "changed": [
+    "lamia/easy",
+    "lamia/normal",
+    "lamia/hard",
+    "lamia/expert",
+    "lamia/master",
+    "lamia/hell"
    ]
   }
  ]

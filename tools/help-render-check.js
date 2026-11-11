@@ -200,6 +200,8 @@ for (const cat of HELP_GUIDE) {
       if (b.t === 'kv') return b.rows.some(r => !body.includes(r[0]) || !body.includes(r[1]));
       if (b.t === 'list' || b.t === 'steps') return b.items.some(x => !body.includes(x));
       if (b.t === 'note') return (b.title && !body.includes(b.title)) || !body.includes(b.text);
+      // 絵(2026-11-12)。見出しが出ていればよい(絵の中身は文字で見られない)
+      if (b.t === 'image') return !!b.title && !body.includes(b.title);
       // 実データから作る表は、行が1つ残らず出ているかを見る
       if (b.t === 'data') {
         const rows = dataRows(b.id);
