@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a19eed7b49be560d
+// source-sha256: d7549ac49b7b9769
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112327,7 +112327,8 @@ function AssistantLifeRoomSheet({
   onGiveSolo = null,
   canGiveSolo = false,
   returnToMap = false,
-  uiV2 = false
+  uiV2 = false,
+  onGoPlace = null
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false);
@@ -112491,7 +112492,13 @@ function AssistantLifeRoomSheet({
     land: land
   }), React.createElement("p", {
     className: "mt-3 text-[12px] font-black text-amber-200"
-  }, who.name, "とできること"), follow && onChat && followCard, hotCard && cardRow, hotBeat && beatRow, onChat && !follow && React.createElement(AssistantLifeDoRow, {
+  }, who.name, "とできること"), follow && onChat && followCard, hotCard && cardRow, hotBeat && beatRow, typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['cardroom', 'studio'].includes(w.place) && React.createElement(AssistantLifePlacePerk, {
+    life: life,
+    ids: [id],
+    place: w.place,
+    land: land,
+    onGo: onGoPlace
+  }), onChat && !follow && React.createElement(AssistantLifeDoRow, {
     k: "chat",
     icon: asleep ? '💤' : '💬',
     label: asleep ? '起こしておしゃべりする' : 'おしゃべりする',
@@ -114303,6 +114310,12 @@ function AssistantLifeHouse({
     life: life,
     ids: ids,
     land: land,
+    onGo: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    },
     initialPlace: uiV2 ? mapFocusPlace : null,
     initialAssistantId: uiV2 ? mapFocusAssistantId : null,
     onBack: () => {
@@ -114395,17 +114408,35 @@ function AssistantLifeHouse({
     onClick: () => setCallPicker(false)
   }, "閉じる ✕")), React.createElement("div", {
     className: "max-h-[46vh] overflow-y-auto"
-  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).map(id => React.createElement("button", {
-    type: "button",
-    key: id,
-    className: "mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left",
-    onClick: () => {
-      setCallPicker(false);
-      setRoomId(id);
-    }
-  }, React.createElement("span", null, nameOf(id)), React.createElement("span", {
-    className: "text-xs text-slate-300"
-  }, life.solo[id]?.reason === 'lonely' ? '💭 さみしそう・声をかけよう' : 'ひとりで過ごしている', " ›")))), React.createElement("p", {
+  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).sort((x, y) => (life.solo[y]?.reason === 'lonely') - (life.solo[x]?.reason === 'lonely')).map(id => {
+    const lonely = life.solo[id]?.reason === 'lonely';
+    const cw = assistantLifeWhereOf(life, id);
+    const cd = cw && ASSISTANT_LIFE_DOINGS[cw.doing];
+    return React.createElement("button", {
+      type: "button",
+      key: id,
+      "data-assistant-life-call-row": id,
+      className: `mb-2 flex min-h-[52px] w-full items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-left ${lonely ? 'border-pink-300 bg-pink-950/60' : 'border-white/15 bg-slate-800'}`,
+      onClick: () => {
+        setCallPicker(false);
+        setRoomId(id);
+      }
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[14px] text-white"
+    }, nameOf(id)), React.createElement("small", {
+      className: `block text-[11.5px] font-bold leading-snug ${lonely ? 'text-pink-200' : 'text-slate-300'}`
+    }, (() => {
+      const doing = cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている';
+      return lonely ? `💭 さみしそう・声をかけよう(${doing})` : doing;
+    })())), lonely && React.createElement("span", {
+      className: "shrink-0 text-right text-[11px] font-black leading-tight text-amber-200"
+    }, "🤝 友情Lv", React.createElement("br", null), "のきっかけ"), React.createElement("span", {
+      className: "shrink-0 text-slate-400",
+      "aria-hidden": "true"
+    }, "›"));
+  })), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold leading-snug text-slate-300",
     "data-assistant-life-call-hint": true
   }, "💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)"))), uiV2 && tab === 'where' && note && !roomId && React.createElement("p", {
@@ -114477,6 +114508,12 @@ function AssistantLifeHouse({
     className: "-mx-3"
   }, itemsBody))), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
+    onGoPlace: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    },
     id: roomId,
     uiV2: uiV2,
     returnToMap: uiV2 && tab === 'where',
@@ -114994,6 +115031,7 @@ function AssistantLifeTownMap({
   onView = null,
   onBeat = null,
   onCard = null,
+  onGo = null,
   onBack,
   list = null,
   nav = null,
@@ -115711,7 +115749,16 @@ function AssistantLifeTownMap({
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, "MFバトルカードの研究をしている助手。いる助手と対戦すると、", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && React.createElement(AssistantLifePlacePerk, {
+    life: life,
+    ids: sheetWho,
+    place: sheetPlace,
+    land: land,
+    onGo: onGo ? fn => {
+      setSheet(null);
+      onGo(fn);
+    } : null
+  }), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true
   }, "いまはだれもいません"), typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
@@ -117177,6 +117224,43 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   });
   return rows;
 };
+function AssistantLifePlacePerk({
+  life,
+  ids,
+  place,
+  onGo = null,
+  land = false
+}) {
+  let rows = [];
+  try {
+    rows = (typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, id => typeof assistantLifeName === 'function' ? assistantLifeName(id) : id) : []).filter(r => r && r.place === place);
+  } catch (_) {
+    rows = [];
+  }
+  if (!rows.length) return null;
+  return React.createElement("div", {
+    className: `${land ? 'mt-1.5' : 'mt-2'} rounded-2xl border-2 border-amber-300 bg-amber-950/80 px-3 py-2`,
+    "data-assistant-life-place-perk": place
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-amber-300"
+  }, "✨ いま行くと得"), rows.map(r => React.createElement("div", {
+    key: r.k,
+    className: "mt-0.5 flex items-center gap-2",
+    "data-assistant-life-place-perk-row": r.k
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-place-perk-go": r.k,
+    onClick: () => onGo(r.go),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12.5px] font-black text-slate-900 active:scale-95"
+  }, "行く ›"))));
+}
 const assistantLifePerkAt = (place, life = null, ids = null) => {
   try {
     const lf = life || (typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null);
