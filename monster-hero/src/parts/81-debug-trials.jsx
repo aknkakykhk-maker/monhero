@@ -104,3 +104,6 @@ function DebugTrialsPanel({ onChange, bare = false }) {
     </section>
   );
 }
+
+// 助手ライフの帯(ナカヨシ10)が「マーケットの1割引き」を引く受け口(2026-11-11)。ASSISTANT_LIFE_LINKS は 56-assistant-life-house.jsx の定義より後の並びでしか触れないので、ここ(並びの後ろ)に置く
+if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday;
