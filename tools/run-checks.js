@@ -130,6 +130,8 @@ const FORCE_CHECKS = [
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
   // ページの拡大・見えている範囲のずれ(押した所と反応する所がずれる)。index.html の touch-action と 10-core.jsx の見張り(2026-11-11)
   { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx)$|^tools\/boot\/page-zoom-guard-check\.js$/, checks: ['boot/page-zoom-guard-check.js'], why: 'ページが拡大されない・ずれを見張りが見つけるか' },
+  // ブラウザらしい動き(左端スワイプの戻る・長押しの吹き出し・文字の選択・箱の中の連続タップ拡大)を出さない仕組み(2026-11-11)
+  { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx|src\/parts\/60-app\.jsx)$|^tools\/boot\/browser-gesture-guard-check\.js$/, checks: ['boot/browser-gesture-guard-check.js'], why: 'ホーム画面のアプリで戻るの履歴を足さない・長押しや選択が出ない' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
   { re: /^monster-hero\/src\/parts\/(10-core|22-enemy-and-bond-entries|32-tactics-units|60-app|71-screen-battle)\.jsx$/,
@@ -145,6 +147,8 @@ const FORCE_CHECKS = [
   // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
   { re: /^monster-hero\/(src\/parts\/(10-core|17-release-changelog-login-missions|56-screen-profile|60-app)\.jsx|data\/assistants\.js)$/,
     checks: ['assistant/atsu-unlock-browser-check.js'], why: 'あつの解放の流れ(公開の印・お話・選ぶ画面)' },
+  { re: /^monster-hero\/(src\/parts\/(18-assistant-partner|59-assistant-partner-fx|55-screen-breeder-market|60-app)\.jsx|data\/assistants\.js)$/,
+    checks: ['assistant/assistant-partner-unlock-check.js'], why: '助手の解放(アシカを40回使うと助手になる・今の人は全員そのまま)' },
   // 入口のカードは、行を1つ足すだけで小さい端末から簡単にあふれる。
   // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告)
   { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,

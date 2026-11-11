@@ -83,7 +83,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
           above: !art || b.getBoundingClientRect().top <= art.getBoundingClientRect().top };
       });
       check(`${T}⑦ 家の上の「得」の1行目(初めは1行・ほか◯件を開くとカード部屋・神殿の行)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && firstN === 1, JSON.stringify({ ...pk, firstN }));
-      check(`${T}⑦ 行は高さ44px以上・横にはみ出さない・家の絵より上`, !!pk && pk.small === 0 && pk.over === 0 && pk.above, JSON.stringify(pk));
+      check(`${T}⑦ 行は高さ44px以上・横にはみ出さない(置き場所は今日の得の板を作ったナカヨシ12・17の形に従う。「家の絵より上」は求めない)`, !!pk && pk.small === 0 && pk.over === 0, JSON.stringify(pk));
       check(`${T}⑦ HOME が施設へ行く口(goPlace)を入れている`, !!pk && pk.goReady === true);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-house.png`) });
     }
@@ -97,7 +97,9 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
         check(`${T}② ${id}: 仲良し度の道のり Lv${r.road}・あと${r.remain}(部屋の題の Lv と同じ・その段階の幅の中)`, r.road != null && r.road === lvTitle && (w == null ? r.remain == null : (r.remain > 0 && r.remain <= w)), JSON.stringify({ road: r.road, lvTitle, remain: r.remain, span: w })); }
       // 助手マスモン対戦β(ミセカタ2の口)の行: 口が null を返すあいだは出ない。口が値を返せば「🐾 マスモン」の下に出る(2026-11-11)
       if (id === 'mua') {
-        check(`${T}⑧ mua: 対戦βの口が null のあいだは「マスモンで対戦(β)」の行は出ない`, !r.rows.includes('masmon-battle'), r.rows.join(','));
+        // 公開(印が真)のあとは、はじめから行が出る。口が null を返すとき(印が偽)だけ出ない(2026-11-11 公開でミセカタ2が直した)
+        const bbOpenNow = await page.evaluate(() => typeof assistantMasmonBattleRowInfo === 'function' && assistantMasmonBattleRowInfo('mua') != null);
+        check(`${T}⑧ mua: 「マスモンで対戦(β)」の行は、口が値を返すときだけ出る(null なら出ない)`, bbOpenNow === r.rows.includes('masmon-battle'), `${bbOpenNow} / ${r.rows.join(',')}`);
         await closeRoom(page);
         await page.evaluate(() => { window.__bbFlags = { b: RELEASE_FLAGS.assistantMasmonBattleBeta, g: RELEASE_FLAGS.assistantMasmonGrow }; RELEASE_FLAGS.assistantMasmonBattleBeta = true; RELEASE_FLAGS.assistantMasmonGrow = true; });
         const r2 = await room(page, id);
@@ -140,6 +142,15 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     check('⑨ 助手がマーケットにいるとき assistantLifeMarketWho が助手を返す', mk.who === 'atsu', JSON.stringify(mk));
     check('⑨ 場所の判定 assistantLifePerkAt が帯と同じ(神殿は受け取り済みなので無し・マーケットは助手がいてできるときだけ)', await page.evaluate(() => assistantLifePerkAt('temple') === false && assistantLifePerkAt('ranch') === false && assistantLifePerkAt('market') === !!(ASSISTANT_LIFE_LINKS.marketPerkToday && (p => p && !p.used)(ASSISTANT_LIFE_LINKS.marketPerkToday()))));
     check('⑨ マーケットのおすすめが出せるとき、帯に🛍の行(3行を超えるときは「ほか」の中)', !mk.perk || mk.perk === 'なし' || mk.perk.used || mk.row || mk.more, JSON.stringify(mk));
+    // ⑩ モンヒロバトルの行: 助手が battle にいて修行中のとき、帯に⚔の行。修行が未公開なら出ない
+    const bt = await page.evaluate(async () => {
+      const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, momosuke: { doing: 'battle', place: 'battle' } } } });
+      const off = assistantLifePerkAt('battle');
+      const had = RELEASE_FLAGS.assistantMasmonTrain; let on = null;
+      try { RELEASE_FLAGS.assistantMasmonTrain = true; if (typeof AMGT_STORE !== 'undefined' && AMGT_STORE.load) await AMGT_STORE.load(); on = assistantLifePerkAt('battle'); } catch (e) { on = String(e); } finally { RELEASE_FLAGS.assistantMasmonTrain = had; }
+      return { off, on, had, goReady: typeof ASSISTANT_LIFE_LINKS.goPlace === 'object' && !!ASSISTANT_LIFE_LINKS.goPlace && typeof ASSISTANT_LIFE_LINKS.goPlace.battle === 'function' };
+    });
+    check('⑩ 修行が未公開のあいだはモンヒロバトルの行を出さず、公開で修行中の助手がいれば出る・HOME が行き先(battle)を入れている', (bt.had === true || bt.off === false) && bt.on === true && bt.goReady, JSON.stringify(bt));
     check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
     check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
     const gone = await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; return !!l; });

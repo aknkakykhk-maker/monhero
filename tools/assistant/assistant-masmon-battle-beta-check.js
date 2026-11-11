@@ -27,7 +27,7 @@ let failed = 0;
 const check = (label, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 console.log('--- ① 作り ---');
-check('公開の印 assistantMasmonBattleBeta・assistantMasmonBattlePvp がある(いまは偽)', /assistantMasmonBattleBeta: false/.test(flags) && /assistantMasmonBattlePvp: false/.test(flags));
+check('公開の印 assistantMasmonBattleBeta・assistantMasmonBattlePvp がある', /assistantMasmonBattleBeta: (true|false)/.test(flags) && /assistantMasmonBattlePvp: (true|false)/.test(flags));
 const code = part.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
 const keys = [...code.matchAll(/'(mh_[a-z0-9_]+)'/g)].map(m => m[1]);
 const writes = [...code.matchAll(/storeSet\(\s*([A-Za-z_'"0-9]+)/g)].map(m => m[1]);
@@ -44,7 +44,10 @@ check('作戦は名前で渡す(team.plan・team.swapPace)・style の数値の�
 const engineSrc = read('monster-hero/data/assistant-masmon-battle.js');
 check('画面の作戦の名前は、計算の表にあるものだけ', ['attack', 'guard', 'range', 'big'].every(k => new RegExp(`\\b${k}:\\s*Object\\.freeze`).test(engineSrc)) && ['early', 'late'].every(k => new RegExp(`\\b${k}:\\s*Object\\.freeze`).test(engineSrc)));
 check('入れ物は 60-app に1つ・デバッグの入口は1つ', app.split('<AssistantMasmonBattleHost/>').length === 2 && app.split('data-debug-masmon-battle-beta').length === 2);
-check('更新履歴・ヘルプにはまだ載せていない(公開前)', !/マスモンで対戦/.test(read('monster-hero/data/changelog.js')) && !/マスモンで対戦/.test(read('monster-hero/data/help.js')));
+const clog = read('monster-hero/data/changelog.js'), help = read('monster-hero/data/help.js');
+check('公開の印が真なら、更新履歴とヘルプが同じ印で載っている(偽なら載せない)', /assistantMasmonBattleBeta: true/.test(flags)
+  ? /releaseFlag:'assistantMasmonBattleBeta'/.test(clog) && /releaseFlag:'assistantMasmonBattleBeta', title:'⚔ マスモンで対戦\(β\)'/.test(help) && (!/assistantMasmonBattlePvp: true/.test(flags) || /releaseFlag:'assistantMasmonBattlePvp'/.test(help))
+  : !/マスモンで対戦/.test(clog) && !/マスモンで対戦/.test(help));
 
 console.log('\n--- ② 実ブラウザ ---');
 const seed = () => {
@@ -92,6 +95,7 @@ const seed = () => {
     }
     // 助手のマスモンを用意する(この検査のブラウザの中だけ): 引き当てを作り、全員の控えを迎えた形にする
     const prepared = await page.evaluate(async () => {
+      RELEASE_FLAGS.assistantMasmonBattleBeta = false; RELEASE_FLAGS.assistantMasmonBattlePvp = false; // 公開後も「印が偽のとき」から確かめる
       await ASSISTANT_MASMON_STORE.load(); await assistantMasmonEnsureMade();
       const st = ASSISTANT_MASMON_STORE.state, w = { ...st.draw.welcomed };
       for (const [aid, rows] of Object.entries(st.draw.made)) { w[aid] = { ...(w[aid] || {}) }; for (const t of rows) w[aid][t.monster] = w[aid][t.monster] || '2026-11-01'; }

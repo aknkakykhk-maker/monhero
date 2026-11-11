@@ -165,8 +165,13 @@ const ASSISTANT_LIFE_PLAY_POINTS = Object.freeze({
 });
 // 続けて遊んだ日数の上乗せ(その日の始まりのにぎわい)
 const ASSISTANT_LIFE_STREAK_BONUS = Object.freeze([{ days: 7, points: 10 }, { days: 3, points: 5 }]);
-// 最近のできごとを覚えておく時間の数(6つで1日)
-const ASSISTANT_LIFE_RECENT_SLOTS = 12;
+// 最近のできごとを覚えておく時間の数(12区切りで1日。前は6つで1日・12=2日ぶんだった)
+const ASSISTANT_LIFE_RECENT_SLOTS = 24;
+
+// 移動が1日6回→12回になったぶん、時間帯ごとに戻る得の1回ぶんを約75%にする(台帳 #5304・#5328。1日に取れる量はいまの約1.5倍)
+//   四捨五入し、1より小さくはしない(1・2 の小さい点はそのまま残る)。数でないときは null(呼ぶ側は今までどおりの量)
+const ASSISTANT_LIFE_SLOT_GAIN_RATE = 0.75;
+const assistantLifeSlotGainOf = (amount) => (Number.isFinite(amount) && amount > 0 ? Math.max(1, Math.round(amount * ASSISTANT_LIFE_SLOT_GAIN_RATE)) : null);
 
 const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true;
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
@@ -174,16 +179,34 @@ const assistantLifeDayKey = (now = Date.now()) => (typeof jstDayKey4 === 'functi
 
 // ---------- 時間 ----------
 // abs … 通しの番号(日本時間の暦の日 × 6 + 時間の並び)。1つ進むと次の時間
+// 12区切り(2026-11-11 社長: 移動を1日6回→12回。2時間ずつ均等)。傾向を引く名前(id・label・i)は、区切りの真ん中の時刻が入る6つ(上の ASSISTANT_LIFE_SLOTS)のまま。
+//   abs … 通しの番号(日本時間の暦の日 × 12 + j)。j は 0〜11(0 は 0〜2時)。1つ進むと2時間あと
+//   absV1 … 前の数え方(日 × 6 + 6つの並び)。前の版の保存(abs)を読み替えるときと、6を前提にした他の部との橋渡し用
+//   from・to … この区切りの時刻(2時間)。i・id・label … 傾向の名前(深夜・朝・昼・午後・夕方・夜)
+const ASSISTANT_LIFE_PER_DAY = 12;
+const assistantLifeSixIndexOfHour = (h) => Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
+const assistantLifeSlotBuild = (day, j, hourForV1) => {
+  const i = assistantLifeSixIndexOfHour(j * 2 + 1); // 区切りの真ん中(1時・3時・5時…)がどの6つに入るか
+  const six = ASSISTANT_LIFE_SLOTS[i];
+  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
+};
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
   const day = Math.floor(t / 86400000);
   const h = new Date(t).getUTCHours();
-  const i = Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
-  return { abs: day * 6 + i, i, id: ASSISTANT_LIFE_SLOTS[i].id, label: ASSISTANT_LIFE_SLOTS[i].label };
+  return assistantLifeSlotBuild(day, Math.floor(h / 2), h);
 };
 const assistantLifeSlotOfAbs = (abs) => {
-  const i = ((Math.floor(Number(abs) || 0) % 6) + 6) % 6;
-  return { abs: Math.floor(Number(abs) || 0), i, id: ASSISTANT_LIFE_SLOTS[i].id, label: ASSISTANT_LIFE_SLOTS[i].label };
+  const a = Math.floor(Number(abs) || 0);
+  const j = ((a % ASSISTANT_LIFE_PER_DAY) + ASSISTANT_LIFE_PER_DAY) % ASSISTANT_LIFE_PER_DAY;
+  return assistantLifeSlotBuild(Math.floor((a - j) / ASSISTANT_LIFE_PER_DAY), j, j * 2);
+};
+// 前の数え方の abs(日 × 6 + i)→ 12区切りの abs。その区切りの始まりの時刻が入る 2時間の区切りへ(例: 朝 5〜10時 → 4〜6時の区切り)。二重に変換しないよう、保存側が印(v:2)を持つ
+const assistantLifeAbsV1ToV2 = (abs) => {
+  const a = Math.floor(Number(abs));
+  if (!Number.isFinite(a)) return null;
+  const i = ((a % 6) + 6) % 6;
+  return Math.floor((a - i) / 6) * ASSISTANT_LIFE_PER_DAY + Math.floor(ASSISTANT_LIFE_SLOTS[i].from / 2);
 };
 
 // ---------- 決まった乱数(同じ時間・同じ端末なら同じ結果) ----------
@@ -223,14 +246,14 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
   const ids = [...new Set((members || []).filter(id => ASSISTANT_LIFE_PREFS[id]))].sort();
   const rand = assistantLifeRng(`${salt}|${slot.abs}|${ids.join(',')}`);
   const gap = prev && Number.isFinite(prev.abs) ? slot.abs - prev.abs : Infinity;
-  const inertia = gap === 1 ? 3 : (gap >= 2 && gap <= 6 ? 1.5 : 0);
+  const inertia = gap === 1 ? 3 : (gap >= 2 && gap <= 12 ? 1.5 : 0); // 12区切り: 前の幅(2〜6回)を2倍に
   const tierI = assistantLifeTierIndex(tier);
   const near = (r, n) => Number.isFinite(r.abs) && slot.abs - r.abs >= 0 && slot.abs - r.abs <= n;
   const recentOf = (kind, pred, n = ASSISTANT_LIFE_RECENT_SLOTS) => (recent || []).some(r => r && r.kind === kind && near(r, n) && pred(r));
   const hasPair = (r, a, b) => r.pair === assistantLifePairKey(a, b);
   // 言い合いのあと3つの時間は距離をおく(そのあと仲直りしていれば終わり)
   const quarrelNow = (a, b) => {
-    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 3));
+    const qs = (recent || []).filter(r => r && r.kind === 'quarrel' && hasPair(r, a, b) && near(r, 6)); // 言い合いのあと6つの区切り(前は3つの時間)
     if (!qs.length) return false;
     const last = Math.max(...qs.map(r => r.abs));
     return !(recent || []).some(r => r && r.kind === 'makeup' && hasPair(r, a, b) && r.abs >= last);
@@ -238,7 +261,7 @@ const assistantLifeDecide = ({ abs, members, bond = {}, prev = null, recent = []
   const invited = new Set((nudges.invite || []).filter(n => n && n.abs === slot.abs).map(n => n.id));
   const introduced = (nudges.introduce || []).filter(n => n && n.abs === slot.abs).map(n => n.pair);
   const prevPairs = new Set(gap === 1 && prev && Array.isArray(prev.groups) ? prev.groups.flatMap(g => { const o = []; for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) o.push(assistantLifePairKey(g.ids[i], g.ids[j])); return o; }) : []);
-  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 2 ? prev.lonely : []);
+  const wasLonely = new Set(prev && Array.isArray(prev.lonely) && gap >= 1 && gap <= 4 ? prev.lonely : []); // 12区切り: 前は1〜2回
 
   // 1. 気分
   const moods = {};
@@ -423,10 +446,13 @@ const normalizeAssistantLife = (v) => {
     if (s.doing === 'sleep') { if (s.reason === 'lonely') s.reason = 'mypace'; moods[id] = 'sleepy'; }
     if (!ASSISTANT_LIFE_DOINGS[s.doing].places.includes(s.place)) s.place = ASSISTANT_LIFE_DOINGS[s.doing].places[0];
   }
-  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).slice(-40) : [];
-  const nudgeList = (x) => Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : [];
+  // 前の数え方(印 v が 2 でない)の保存は、abs を12区切りへ読み替える(一度だけ。返す値には v:2 を付ける)。前の声かけ(次の1回ぶんだけ)は捨てる
+  const old = o.v !== 2;
+  const absOf = (x) => (old ? assistantLifeAbsV1ToV2(x) : Math.floor(x));
+  const recent = Array.isArray(o.recent) ? o.recent.filter(r => r && typeof r.kind === 'string' && Number.isFinite(r.abs)).map(r => ({ ...r, abs: absOf(r.abs) })).slice(-80) : [];
+  const nudgeList = (x) => (old ? [] : Array.isArray(x) ? x.filter(n => n && Number.isFinite(n.abs)).slice(-20) : []);
   const nudges = { invite: nudgeList(o.nudges && o.nudges.invite).filter(n => ok(n.id)), introduce: nudgeList(o.nudges && o.nudges.introduce).filter(n => typeof n.pair === 'string') };
-  return { salt: typeof o.salt === 'string' && o.salt ? o.salt : '', abs: Number.isFinite(o.abs) ? o.abs : null, slot: typeof o.slot === 'string' ? o.slot : null,
+  return { v: 2, salt: typeof o.salt === 'string' && o.salt ? o.salt : '', abs: Number.isFinite(o.abs) ? absOf(o.abs) : null, slot: typeof o.slot === 'string' ? o.slot : null,
     moods, groups, solo, lonely: Array.isArray(o.lonely) ? o.lonely.filter(id => ok(id) && !(solo[id] && solo[id].doing === 'sleep')) : [], recent, nudges,
     watched: Array.isArray(o.watched) ? o.watched.filter(k => typeof k === 'string').slice(-30) : [] };
 };
@@ -469,7 +495,10 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   const tier = assistantLifeTierOf(assistantLifePlayForDay(ASSISTANT_LIFE_STORE.state.play, day).points);
   const prev = cur.abs != null && cur.abs < slot.abs ? cur : null;
   const rhythmShift = {}; for (const id of ids) rhythmShift[id] = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], day);
-  const decided = assistantLifeDecide({ abs: slot.abs, members: ids, bond, prev, recent: cur.recent, nudges: cur.nudges, tier, salt: cur.salt, rhythmShift });
+  const decided0 = assistantLifeDecide({ abs: slot.abs, members: ids, bond, prev, recent: cur.recent, nudges: cur.nudges, tier, salt: cur.salt, rhythmShift });
+  // 行き先の予定(📅 今日の予定表・56-assistant-life-plan.jsx。印 assistantLifePlan が偽・予定なしなら そのまま)
+  if (typeof ASSISTANT_LIFE_PLAN_STORE !== 'undefined' && typeof assistantLifePlanOn === 'function' && assistantLifePlanOn()) { try { await ASSISTANT_LIFE_PLAN_STORE.load(); } catch {} }
+  const decided = typeof assistantLifePlanOnDecide === 'function' ? assistantLifePlanOnDecide(decided0, cur.salt) : decided0;
   const keep = (n) => n.abs >= slot.abs;
   const life = { ...cur, ...decided, watched: [], recent: cur.recent.filter(r => slot.abs - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS),
     nudges: { invite: cur.nudges.invite.filter(keep), introduce: cur.nudges.introduce.filter(keep) } };
@@ -492,7 +521,7 @@ const assistantLifeNote = async (kind, { pair = null, ids = null, now = Date.now
   const abs = assistantLifeSlotAt(now).abs;
   const ids2 = ids || (pair ? String(pair).split('-') : []);
   const rec = { kind, abs, pair: pair || (ids2.length === 2 ? assistantLifePairKey(ids2[0], ids2[1]) : null), ids: ids2 };
-  ASSISTANT_LIFE_STORE.set({ life: { ...life, recent: [...life.recent, rec].slice(-40) } });
+  ASSISTANT_LIFE_STORE.set({ life: { ...life, recent: [...life.recent, rec].slice(-80) } }); // 12区切りで覚える幅が2倍になったので、読む側(80)とそろえる
   assistantLifeSaveLife();
 };
 // 誘って遊んだ(家からの誘い・セッション・会いに行く)。生活のリズムが少しずつ変わる
@@ -632,7 +661,7 @@ const assistantLifeTalkSet = () => {
 };
 const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])]; // 原因つきのけんか(rel.jsx)も
 // 思い出アルバムに入るもの(2人・3人)
-const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
+const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeDailyAlbumTalks === 'function' ? assistantLifeDailyAlbumTalks() : []), ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
 // 台本の穴 {place}・{doing}・{doing_te}。いまの様子(talk.ctx)→ 台本の鍵 → していることの場所 の順で決める
 const assistantLifeFillHoles = (text, talk) => {
   const c = (talk && talk.ctx) || {};
@@ -670,7 +699,7 @@ const assistantLifeAirOf = (life, a, b) => {
   const rs = ((life && life.recent) || []).filter(r => r && r.pair === key && Number.isFinite(r.abs) && now - r.abs >= 0 && now - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS);
   const lastQ = Math.max(-Infinity, ...rs.filter(r => r.kind === 'quarrel').map(r => r.abs));
   const lastM = Math.max(-Infinity, ...rs.filter(r => r.kind === 'makeup').map(r => r.abs));
-  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 6) return 'makeup';
+  if (lastM >= lastQ && lastM > -Infinity && now - lastM <= 12) return 'makeup'; // 12区切り: 前は6回
   if (lastQ > -Infinity && lastQ > lastM) return 'after';
   return 'normal';
 };
@@ -907,15 +936,19 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
   try { assistantPeerMarkShown(talk, { scene: 'life', special: false, now }); } catch {}
   // 言い合いは何も増やさない(2人はしばらく距離をおく。また一緒になったときの仲直りで増える)
   if (talk.kind === 'quarrel') return talk;
+  // 移動が1日12回になったので、見守る1回ぶんの友情・仲良し度は約75%(台帳 #5304・#5328。1日の上限はそのまま)
+  const pg = (act) => assistantLifeSlotGainOf(typeof ASSISTANT_PEER_BOND_ACTIONS !== 'undefined' && ASSISTANT_PEER_BOND_ACTIONS[act] ? ASSISTANT_PEER_BOND_ACTIONS[act].amount : null);
+  const bg = (act) => assistantLifeSlotGainOf(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS[act] ? ASSISTANT_BOND_ACTIONS[act].amount : null);
   if (talk.kind === 'makeup') {
-    if (assistantPeerMakeupDone(talk)) { await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup'); assistantPeerAddPlayerBond(talk.pair, 'peerMakeup'); }
+    if (assistantPeerMakeupDone(talk)) { await assistantPeerGain(talk.pair[0], talk.pair[1], 'makeup', pg('makeup')); assistantPeerAddPlayerBond(talk.pair, 'peerMakeup', bg('peerMakeup')); }
     try { assistantPeerAlbumAdd(talk); } catch {}
     return talk;
   }
   try { assistantPeerAlbumAdd(talk); } catch {}
-  if (talk.kind === 'event') { await assistantPeerGain(talk.pair[0], talk.pair[1], 'event'); assistantPeerAddPlayerBond(talk.pair, 'peerEvent'); return talk; }
-  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk');
-  assistantPeerAddPlayerBond(assistantPeerMembers(talk), talk.kind === 'trio' ? 'peerTrio' : 'peerTalk');
+  if (talk.kind === 'event') { await assistantPeerGain(talk.pair[0], talk.pair[1], 'event', pg('event')); assistantPeerAddPlayerBond(talk.pair, 'peerEvent', bg('peerEvent')); return talk; }
+  for (const [a, b] of assistantPeerPairsOf(talk)) await assistantPeerGain(a, b, 'talk', pg('talk'));
+  const bk = talk.kind === 'trio' ? 'peerTrio' : 'peerTalk';
+  assistantPeerAddPlayerBond(assistantPeerMembers(talk), bk, bg(bk));
   return talk;
 };
 
@@ -934,13 +967,13 @@ const ASSISTANT_LIFE_REASON_LABEL = Object.freeze({ lonely: 'さみしそう', m
 const assistantLifeNextSlotText = (now = Date.now()) => {
   const cur = assistantLifeSlotAt(now);
   const h = new Date(Number(now) + 9 * 3600000);
-  const slot = ASSISTANT_LIFE_SLOTS[cur.i];
+  const slot = cur; // 12区切り: 次の移動は2時間ごと(cur.to)
   const mins = Math.max(1, (slot.to * 60) - (h.getUTCHours() * 60 + h.getUTCMinutes()));
   const t = mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? `${mins % 60}分` : ''}` : `${mins}分`;
   // 次の区切りの名前(夕方・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
   return `あと${t}でみんなが動きます`;
 };
-const assistantLifeSlotRange = (id) => { const s = ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.from}〜${s.to % 24}時` : ''; }; // 区切りの名前(午後・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
+const assistantLifeSlotRange = (id) => { const s = id && typeof id === 'object' ? id : ASSISTANT_LIFE_SLOTS.find(x => x.id === id); return s ? `${s.from}〜${s.to % 24}時` : ''; }; // 区切りの名前(午後・深夜など)は出さない。見出しの朝・昼・夕・夜とずれる(2026-11-07 ミハリ L8)
 
 // 様子を、いまの時間に合わせて読む(画面と帯で使う)
 const useAssistantLifeNow = (metIds) => {
@@ -1079,7 +1112,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
       <div className={embedded ? 'w-full' : 'flex h-full w-full max-w-md flex-col bg-slate-950'} style={embedded ? undefined : { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {!embedded && <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
           <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手ライフ</p>
-          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot.id)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
+          <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
           <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
         </div>}
         <div className={embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'}>

@@ -48,7 +48,7 @@ check('新規プレイヤーと同じ状態にしてから始める',
 check('きき加入の既読も未読に戻してから始める', /setKikiIntroSeenFlag\(false\)/.test(startFn));
 // 助手を選ぶボタンは本番と同じもの。プレビュー用に別のボタンを作っていない
 check('助手選択は本番と同じボタンをそのまま使う',
-  has("onClick={()=>{chooseAssistant(pick.id);markKikiIntroSeen();")
+  has("onClick={()=>{if(!onboardingPreview&&RELEASE_FLAGS.assistantPartnerUnlock===true)startAssistantPartnerEarn(pick.id);chooseAssistant(pick.id);markKikiIntroSeen();")
     && has("setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
     && (source.match(/chooseAssistant\(pick\.id\);markKikiIntroSeen\(\)/g) || []).length === 1);
 // 以前は ASSISTANT_LIST をそのまま並べていたが、イベントで加入する助手(ドラ)は

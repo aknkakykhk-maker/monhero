@@ -23,11 +23,11 @@ const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'
 const amgtRankOf = (v) => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
 // 数字(社長 11-11: 修行の伸びはふつう)。数字はここだけ
 const AMGT_NUM = Object.freeze({
-  gain: [4, 8], // 修行1回の熟練(主)
-  realAll: [1, 2], // 実戦修行で、覚えている全部の技に足す分
+  gain: [3, 6], // 修行1回の熟練(主)。移動12回で約75%(前は [4, 8]。シュギョウ2の試算・台帳 #5328)
+  realAll: [1, 1], // 実戦修行で、覚えている全部の技に足す分(移動12回で [1, 2] → [1, 1])
   stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
   fat: 12, str: 2, // 疲労・ストレス
-  perDay: 2, // 1日の修行の回数の上限(案)
+  perDay: 3, // 1日の修行の回数の上限(2026-11-11 社長: 移動12回に合わせて 2 → 3。1回の伸びは約75%のまま)
   fatStop: 45, // これ以上疲れていたら修行に行かない(訓練側が休ませる)
   goAt: 0.4, // モンヒロバトルにいた回に修行へ行く起こりやすさに足す分(性格の p に足す)
   initPerLv: 0.3, initMax: 30, // 覚えている技の熟練の初めの値 = 育成 Lv × 0.3(最大30)
@@ -216,12 +216,11 @@ const amgtEnsure = (st, aid, row, e) => {
 const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { s, t, x: String(x || '').slice(0, 60) }].slice(-AMGT_EV); };
 
 // ---------- 修行の場所: 助手の生活でモンヒロバトルにいた回を覚えておく ----------
-// 生活の1つの時間(life.abs = 日×6+区切り)が、第①段階のどの回に当たるか(始めと終わり)
+// 生活の1つの時間(life.abs = 日×12+区切り。2時間ずつ)が、第①段階のどの回に当たるか(始めと終わり)
 const amgtLifeSlotsToGrow = (abs) => {
-  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
-  if (!S || !Number.isInteger(abs)) return [];
-  const n = S.length || 6; // 1日の区切りの数は生活の表から読む(6回→12回に変わっても合う)
-  const day = Math.floor(abs / n); const s = S[abs - day * n]; if (!s) return [];
+  // 12区切り(2026-11-11 ナカヨシ11。abs = 日×12+j・2時間ずつ)。区切りの時刻は assistantLifeSlotOfAbs の from・to
+  if (typeof assistantLifeSlotOfAbs !== 'function' || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 12); const s = assistantLifeSlotOfAbs(abs); if (!s || !Number.isFinite(s.from)) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
 };
@@ -276,11 +275,12 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
   const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
   const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1; // 練習の相手がいないときの伸び(56-assistant-life-masmon-cheer.jsx・印が偽なら 1)
   const g = {};
   const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
   const up = (k, lo, hi) => {
     const cur = me.m[k] || 0;
-    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
   };
   // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)
