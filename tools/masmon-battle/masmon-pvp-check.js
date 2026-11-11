@@ -217,6 +217,13 @@ const check = (name, ok, extra) => {
     const before = db.s.refunds;
     r = await core.handle({ body: { action: 'challenge', owner: 'alice', key: KEY_A, assistant: 'mua', opp_owner: 'bob', opp_assistant: 'erubin', division: 'raw' }, db, engine: throwing, catalog, nowMs: T0, newSeed: () => 'mptestseedx' });
     check('F 計算が失敗したら回数を戻す', r.status === 500 && db.s.refunds === before + 1);
+    {
+      const failing = { ...db, record: async () => { throw new Error('db:record'); } };
+      const before2 = db.s.refunds;
+      const used = db.s.usage.alice || 0;
+      const rr = await core.handle({ body: { action: 'challenge', owner: 'alice', key: KEY_A, assistant: 'mua', opp_owner: 'bob', opp_assistant: 'erubin', division: 'raw' }, db: failing, engine, catalog, learn, nowMs: T0, newSeed: () => 'mptestseedy' });
+      check('F 記録が失敗したら回数を戻す(試合はなかったことに)', rr.status === 500 && rr.json.error === 'server' && db.s.refunds === before2 + 1 && (db.s.usage.alice || 0) === used);
+    }
     r = await call(db, { action: 'nope' });
     check('F 知らない頼みははじく', r.status === 400);
   }
