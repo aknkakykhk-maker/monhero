@@ -14,8 +14,9 @@
 // タブは4つ(2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」)。保存キー・値は変えず、並べ替えと見出しだけ。
 // id は前のまま使う(live=演奏 / volume=音 / system=軽さ・演出)。display(表示)はライブにあった表示の項目を分けたもの
 const RHYTHM_OPTION_TABS=Object.freeze([['live','演奏'],['display','表示'],['volume','音'],['system','軽さ・演出']]);
-const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{
-  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null,onPreview=null,initialDraft=null})=>{
+  // 「▶ 見てみる」の見本から戻ったときは、そのときの下書き(initialDraft)から続ける(保存前の変更を消さない。2026-11-11)
+  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(initialDraft||value));
   const [message,setMessage]=useState('');
   // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
   const [leaveAsk,setLeaveAsk]=useState(false);
@@ -180,7 +181,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+        {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
+        {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
+          className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
+          <span>▶ 見てみる</span>{!wide&&<small className="text-[9px] font-bold text-cyan-200/90">いまの設定で演奏画面</small>}</button>}</header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
       <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-4 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}

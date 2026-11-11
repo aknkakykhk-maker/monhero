@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 873ea058b2d4be36
+// source-sha256: 5d5cae199fbd4687
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -35286,9 +35286,11 @@ const RhythmOptions = ({
   onCalibrate = null,
   onLineAdjust = null,
   calibrationResult = null,
-  onClearCalibration = null
+  onClearCalibration = null,
+  onPreview = null,
+  initialDraft = null
 }) => {
-  const [draft, setDraft] = useState(() => normalizeRhythmSettings(value));
+  const [draft, setDraft] = useState(() => normalizeRhythmSettings(initialDraft || value));
   const [message, setMessage] = useState('');
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [tab, setTab] = useState('live');
@@ -35604,7 +35606,15 @@ const RhythmOptions = ({
     className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
   }, "MONBEAT"), React.createElement("h2", {
     className: `font-black ${wide ? 'text-[13px]' : 'text-base'}`
-  }, "⚙️ オプション"))), React.createElement("nav", {
+  }, "⚙️ オプション")), onPreview && React.createElement("button", {
+    type: "button",
+    "data-rhythm-option-preview-open": true,
+    onClick: () => onPreview(draft),
+    "aria-label": "いまの設定で演奏画面を見てみる",
+    className: `ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide ? 'min-h-[38px] text-[12px]' : 'min-h-[44px] text-[13px]'}`
+  }, React.createElement("span", null, "▶ 見てみる"), !wide && React.createElement("small", {
+    className: "text-[9px] font-bold text-cyan-200/90"
+  }, "いまの設定で演奏画面"))), React.createElement("nav", {
     "data-rhythm-options-tabs": true,
     className: `grid shrink-0 grid-cols-4 px-3 ${wide ? 'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3' : 'gap-2 pb-2'}`
   }, RHYTHM_OPTION_TABS.map(([id, text]) => React.createElement("button", {
@@ -40204,6 +40214,18 @@ const RhythmLineAdjustPanel = ({
   };
   const skyRange = rhythmSkyLineOffsetRange(RHYTHM_SKY_LIFT.base, RHYTHM_JUDGMENT_LINE_Y.ratio);
   const rows = [['ground', '地上の判定ライン', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, '%', 0], ['groundW', '地上の受付の広さ', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyLine', '空中の判定ライン', skyRange.min, skyRange.max, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, '%', 1], ['skyW', '空中の受付の広さ(下側)', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyTop', '空中の受付の上の端', RHYTHM_SKY_ACCEPT_TOP_MIN_PCT, RHYTHM_SKY_ACCEPT_TOP_MAX_PCT, RHYTHM_SKY_ACCEPT_TOP_STEP_PCT, '%', 0]];
+  if (adjust.preview) return React.createElement("div", {
+    "data-rhythm-option-preview-panel": true,
+    className: `pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape ? 'right-1 top-[54px]' : 'right-2 top-[76px]'}`
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-option-preview-back": true,
+    onClick: adjust.onEnd,
+    className: "min-h-[44px] rounded-xl border border-white/30 bg-slate-900/90 px-3 text-[12px] font-black text-white"
+  }, "設定へ戻る"), React.createElement("span", {
+    "data-rhythm-option-preview-note": true,
+    className: "max-w-[160px] rounded-lg bg-violet-900/85 px-2 py-1 text-right text-[10px] font-bold leading-snug text-violet-50"
+  }, "見本(自動で叩きます)", React.createElement("br", null), "保存前の設定で表示中"));
   if (adjust.phase === 'try') return React.createElement("div", {
     "data-rhythm-line-adjust-panel": true,
     "data-phase": "try",
@@ -40316,6 +40338,7 @@ const RhythmTapTest = ({
   tutorial = tutorial || !!lineAdjust;
   const lineAdjustRef = useRef(lineAdjust);
   lineAdjustRef.current = lineAdjust;
+  const previewHands = !!(lineAdjust && lineAdjust.preview);
   const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
   const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
@@ -43468,6 +43491,22 @@ const RhythmTapTest = ({
     };
   }, []);
   useEffect(() => {
+    if (!previewHands || typeof window === 'undefined' || typeof rhythmPreviewHandsStart !== 'function') return undefined;
+    let stop = null;
+    const wait = setInterval(() => {
+      if (stop) return;
+      const ms = window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs ? window.__mhTestHooks.rhythmSongMs() : null;
+      if (ms != null && playAreaRef.current) {
+        stop = rhythmPreviewHandsStart(playAreaRef.current);
+        clearInterval(wait);
+      }
+    }, 100);
+    return () => {
+      clearInterval(wait);
+      if (stop) stop();
+    };
+  }, [previewHands]);
+  useEffect(() => {
     mountedRef.current = true;
     rhythmChartSwitchHold(true);
     if (!(lineAdjust && lineAdjust.phase === 'set')) beginRun(bestRecord);
@@ -45696,6 +45735,227 @@ const RhythmTapTest = ({
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
   }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る')))));
+};
+const rhythmPreviewHandsStart = area => {
+  if (typeof window === 'undefined' || !area) return () => {};
+  const hooks = () => window.__mhTestHooks || {};
+  let stopped = false,
+    raf = 0,
+    k = 0,
+    ids = 900;
+  const timers = new Set();
+  const later = (ms, fn) => {
+    const id = setTimeout(() => {
+      timers.delete(id);
+      if (!stopped) fn();
+    }, Math.max(0, ms));
+    timers.add(id);
+  };
+  const lineR = () => typeof RHYTHM_JUDGMENT_LINE_Y !== 'undefined' ? RHYTHM_JUDGMENT_LINE_Y.ratio : 0.82;
+  const rectOf = () => typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(area) : area.getBoundingClientRect();
+  const toClient = (x, y) => {
+    if (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.unpoint) {
+      const c = RHYTHM_VIEW_ROTATION.unpoint(x, y);
+      return {
+        x: c.clientX,
+        y: c.clientY
+      };
+    }
+    return {
+      x,
+      y
+    };
+  };
+  const pt = (c, sky) => {
+    const r = rectOf();
+    const lr = lineR();
+    const lift = sky > 0 && typeof RHYTHM_SKY_LIFT !== 'undefined' ? RHYTHM_SKY_LIFT.ratio * sky : 0;
+    return {
+      x: r.left + r.width * rhythmProjectBoundary(c, lr),
+      y: r.top + r.height * (lr - lift)
+    };
+  };
+  const spanAt = (n, t) => {
+    if (rhythmNoteIsSlide(n)) return {
+      c: rhythmSlideExpectedLane(n, t) + 0.5,
+      sky: rhythmSlideHasSky(n) ? rhythmSlideSkyAt(n, t) : 0
+    };
+    const sky = rhythmNoteSkyHeight(n);
+    if (n.subLane != null && Number.isFinite(Number(n.subLane))) {
+      const sp = rhythmNoteHasHoldPoints(n) ? rhythmHoldSpanAt(n, t) : {
+        subLane: Number(n.subLane),
+        subLaneWidth: Number(n.subLaneWidth) || 2
+      };
+      return {
+        c: (sp.subLane + sp.subLaneWidth / 2) / 2,
+        sky
+      };
+    }
+    return {
+      c: (Number(n.lane) || 0) + 0.5,
+      sky
+    };
+  };
+  const posOf = (n, t) => {
+    const s = spanAt(n, t);
+    return pt(s.c, s.sky);
+  };
+  const send = (type, id, p) => {
+    const c = toClient(p.x, p.y);
+    try {
+      area.dispatchEvent(new window.PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        pointerId: id,
+        pointerType: 'mouse',
+        isPrimary: false,
+        clientX: c.x,
+        clientY: c.y,
+        buttons: type === 'pointerup' ? 0 : 1
+      }));
+    } catch (_) {}
+  };
+  const notes = (() => {
+    try {
+      return (hooks().rhythmNotes && hooks().rhythmNotes() || []).slice().sort((a, b) => a.timeMs - b.timeMs);
+    } catch (_) {
+      return [];
+    }
+  })();
+  const isLong = n => (n.type === 'HOLD' || n.type === 'SLIDE') && Number(n.endTimeMs) > Number(n.timeMs);
+  const flickVec = n => {
+    const d = typeof rhythmFlickDir === 'function' ? rhythmFlickDir(n) : '';
+    return d === 'left' ? [-1, 0] : d === 'right' ? [1, 0] : [0, -1];
+  };
+  const events = [],
+    follows = [];
+  for (const n of notes) {
+    const t = Number(n.timeMs),
+      id = ++ids;
+    if (isLong(n)) {
+      const e = Number(n.endTimeMs),
+        fo = {
+          id,
+          n,
+          from: t,
+          until: n.endFlick === true ? e - 40 : e - 5,
+          on: false
+        };
+      follows.push(fo);
+      events.push({
+        at: t,
+        f: () => {
+          fo.on = true;
+          send('pointerdown', id, posOf(n, t));
+        }
+      });
+      if (n.endFlick === true) {
+        events.push({
+          at: e - 40,
+          f: () => {
+            fo.on = false;
+            const q = posOf(n, e);
+            send('pointermove', id, {
+              x: q.x,
+              y: q.y - 30
+            });
+          }
+        });
+        events.push({
+          at: e - 20,
+          f: () => {
+            const q = posOf(n, e);
+            send('pointermove', id, {
+              x: q.x,
+              y: q.y - 70
+            });
+          }
+        });
+        events.push({
+          at: e,
+          f: () => {
+            const q = posOf(n, e);
+            send('pointerup', id, {
+              x: q.x,
+              y: q.y - 70
+            });
+          }
+        });
+      } else events.push({
+        at: e - 5,
+        f: () => {
+          fo.on = false;
+          send('pointerup', id, posOf(n, e));
+        }
+      });
+    } else if (n.type === 'FLICK') {
+      const v = flickVec(n);
+      events.push({
+        at: t,
+        f: () => send('pointerdown', id, posOf(n, t))
+      });
+      events.push({
+        at: t + 25,
+        f: () => {
+          const p = posOf(n, t);
+          send('pointermove', id, {
+            x: p.x + v[0] * 30,
+            y: p.y + v[1] * 30
+          });
+        }
+      });
+      events.push({
+        at: t + 45,
+        f: () => {
+          const p = posOf(n, t);
+          send('pointermove', id, {
+            x: p.x + v[0] * 60,
+            y: p.y + v[1] * 60
+          });
+        }
+      });
+      events.push({
+        at: t + 46,
+        f: () => {
+          const p = posOf(n, t);
+          send('pointerup', id, {
+            x: p.x + v[0] * 60,
+            y: p.y + v[1] * 60
+          });
+        }
+      });
+    } else {
+      events.push({
+        at: t,
+        f: () => send('pointerdown', id, posOf(n, t))
+      });
+      events.push({
+        at: t + 40,
+        f: () => send('pointerup', id, posOf(n, t))
+      });
+    }
+  }
+  events.sort((a, b) => a.at - b.at);
+  const tick = () => {
+    if (stopped) return;
+    const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null) {
+      while (k < events.length && events[k].at <= ms + 17) {
+        const ev = events[k++];
+        const wait = ev.at - ms;
+        if (wait > 1) later(wait, ev.f);else ev.f();
+      }
+      for (const f of follows) if (f.on && ms > f.from && ms < f.until) send('pointermove', f.id, posOf(f.n, ms));
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => {
+    stopped = true;
+    if (raf) cancelAnimationFrame(raf);
+    timers.forEach(clearTimeout);
+    timers.clear();
+  };
 };
 const DebugScreenHead = ({
   title,
@@ -191299,6 +191559,40 @@ function MonsterHeroGame() {
     setRhythmPlay(null);
     setGameState('RHYTHM_OPTIONS');
   };
+  const [rhythmPreview, setRhythmPreview] = useState(null);
+  const [rhythmOptionsDraft, setRhythmOptionsDraft] = useState(null);
+  const startRhythmOptionPreview = draft => {
+    const settings = normalizeRhythmSettings(draft);
+    if (settings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmOptionsDraft(settings);
+    setRhythmPreview({
+      draft: settings,
+      key: 0
+    });
+    setRhythmPlay({
+      song: RHYTHM_OPTION_PREVIEW_SONG,
+      difficulty: RHYTHM_OPTION_PREVIEW_DIFFICULTY,
+      from: 'preview'
+    });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmOptionPreview = () => {
+    setRhythmPreview(null);
+    setRhythmPlay(null);
+    setGameState('RHYTHM_OPTIONS');
+  };
+  const rhythmPreviewProps = rhythmPreview ? {
+    phase: 'try',
+    preview: true,
+    key: rhythmPreview.key,
+    ground: rhythmPreview.draft.judgmentLineHeight,
+    onEnd: leaveRhythmOptionPreview,
+    onFix: leaveRhythmOptionPreview,
+    onLoop: () => setRhythmPreview(p => p ? {
+      ...p,
+      key: p.key + 1
+    } : p)
+  } : null;
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -206140,11 +206434,11 @@ function MonsterHeroGame() {
       gains: beatRankFx.gains,
       onClose: () => setBeatRankFx(null)
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
-      key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : undefined,
+      key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : rhythmPlay.from === 'preview' && rhythmPreview ? `option-preview-${rhythmPreview.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
-      settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
+      settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmPlay.from === 'preview' && rhythmPreview ? rhythmPreview.draft : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
       breederName: breederName,
       multi: rhythmPlay.from === 'multi',
@@ -206164,6 +206458,7 @@ function MonsterHeroGame() {
       onComplete: async (result, merged) => {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
+        if (rhythmPlay.from === 'preview') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const assistBonus = rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() ? rhythmAssistSessionRewardBonusNow() : 0;
         const multiScale = rhythmPlay.from === 'multi' ? Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) * (1 + assistBonus) * 100) / 100 : 1;
@@ -206252,7 +206547,8 @@ function MonsterHeroGame() {
           rhythmLineAdjustRestore(rhythmLineAdjust?.orig);
           setRhythmLineAdjust(null);
         }
-        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.backTo === 'RHYTHM_NOTE_DEX' ? 'RHYTHM_NOTE_DEX' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
+        if (rhythmPlay.from === 'preview') setRhythmPreview(null);
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' || rhythmPlay.from === 'preview' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.backTo === 'RHYTHM_NOTE_DEX' ? 'RHYTHM_NOTE_DEX' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
         if (rhythmHellStoryAfterResultRef.current) {
@@ -206267,7 +206563,7 @@ function MonsterHeroGame() {
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial' || rhythmPlay.from === 'notedex',
       calibrating: rhythmPlay.from === 'calibration',
-      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : null,
+      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : rhythmPlay.from === 'preview' ? rhythmPreviewProps : null,
       onApplyCalibration: async measured => {
         const offsetMs = Number(measured && measured.offsetMs);
         if (Number.isFinite(offsetMs)) {
@@ -206465,14 +206761,26 @@ function MonsterHeroGame() {
       }
     })), gameState === 'RHYTHM_OPTIONS' && React.createElement(RhythmOptions, {
       value: rhythmSettings,
-      onBack: () => setGameState(rhythmOptionsBack),
-      onCalibrate: startRhythmCalibration,
-      onLineAdjust: startRhythmLineAdjust,
+      initialDraft: rhythmOptionsDraft,
+      onPreview: startRhythmOptionPreview,
+      onBack: () => {
+        setRhythmOptionsDraft(null);
+        setGameState(rhythmOptionsBack);
+      },
+      onCalibrate: () => {
+        setRhythmOptionsDraft(null);
+        startRhythmCalibration();
+      },
+      onLineAdjust: () => {
+        setRhythmOptionsDraft(null);
+        startRhythmLineAdjust();
+      },
       calibrationResult: rhythmCalibrationResult,
       onClearCalibration: () => setRhythmCalibrationResult(null),
       onSave: async draft => {
         const saved = await saveRhythmSettings(draft);
         setRhythmSettings(saved);
+        setRhythmOptionsDraft(null);
         rhythmResetAutoEffect();
         return saved;
       }
