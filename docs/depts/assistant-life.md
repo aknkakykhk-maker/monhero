@@ -16,6 +16,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/56-assistant-life.jsx`
 - `monster-hero/src/parts/56-assistant-life-house.jsx`
 - `monster-hero/src/parts/56-assistant-life-roomview.jsx`
+- `monster-hero/src/parts/56-assistant-life-ux.jsx`
 - `monster-hero/src/parts/56-assistant-life-rel.jsx`
 - `monster-hero/src/parts/56-assistant-life-map.jsx`
 - `monster-hero/src/parts/56-assistant-peer.jsx`
