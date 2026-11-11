@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7aebb6081ccd6a4
+// source-sha256: 23b50925494bbcb7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -142854,7 +142854,7 @@ function AlfFriendHouseView({
       setLeaving(null);
       setBondOpen(true);
     }
-  }), React.createElement("p", {
+  }), !(land && typeof albEnabled === 'function' && albEnabled()) && React.createElement("p", {
     className: "mb-1 text-[10px] font-black text-slate-200"
   }, "この家でできること"), React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
@@ -143901,7 +143901,7 @@ const normalizeAssistantLifeFriendBond = v => {
       },
       done: x.done === true,
       liked: (Array.isArray(x.liked) ? x.liked : []).filter(s => typeof s === 'string' && ALB_SPOT_RE.test(s)).slice(0, ALB_MAX.likes),
-      in: (Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(-12),
+      in: [...new Set((Array.isArray(x.in) ? x.in : []).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-12),
       snap: albNormalizeSnap(x.snap)
     };
   }
@@ -144042,7 +144042,7 @@ const albIncoming = pairs => {
         [fid]: {
           ...x,
           st: Math.min(9999, x.st + 1),
-          in: [...x.in, day].slice(-12)
+          in: [...new Set([...x.in, day])].sort().slice(-12)
         }
       }
     };
@@ -144366,15 +144366,15 @@ function AlfBondBar({
   const full = !x.done && s.bond.houses >= ALB_MAX.houses;
   return React.createElement("button", {
     type: "button",
-    className: `flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-1 py-0' : 'mb-1.5 py-1'}`,
+    className: `flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-0.5 py-0' : 'mb-1.5 py-1'}`,
     "data-alb-bar": true,
     onClick: onOpen
   }, React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
-    className: "block truncate text-[11.5px] font-black text-pink-100",
+    className: `block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`,
     "data-alb-bar-title": true
-  }, "🤝 友情Lv", albLv(x.st), "「", albTitle(x.st), "」", compact ? (x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`) + (fresh ? ` ・ ✨${fresh}` : '') : ''), React.createElement("small", {
+  }, compact ? `🤝 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🤝 友情Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
     className: `truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`,
     "data-alb-bar-sub": true
   }, x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`, fresh ? ` ・ ✨ 見どころ ${fresh}` : '')), React.createElement("span", {
@@ -144382,7 +144382,7 @@ function AlfBondBar({
     "data-alb-bar-tasks": true
   }, ALB_TASKS.map(([k, icon]) => React.createElement("i", {
     key: k,
-    className: `flex ${compact ? 'h-5 w-5' : 'h-6 w-6'} items-center justify-center rounded-full text-[12px] not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`,
+    className: `flex ${compact ? 'h-4 w-4 text-[10px]' : 'h-6 w-6 text-[12px]'} items-center justify-center rounded-full not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`,
     "data-alb-task": k,
     "data-alb-task-done": x.t[k] ? '1' : '0'
   }, icon))), React.createElement("span", {
@@ -144426,7 +144426,7 @@ function AlfBondSheet({
       width: '46%',
       top: 0,
       maxHeight: '100%',
-      paddingTop: 92,
+      paddingTop: 14,
       borderRadius: '22px 0 0 22px'
     } : {
       maxHeight: 'calc(100% - 96px)'
@@ -144450,7 +144450,7 @@ function AlfBondSheet({
     "data-alb-tasks": true
   }, ALB_TASKS.map(([k, icon, label]) => React.createElement("div", {
     key: k,
-    className: `rounded-xl px-1 py-1.5 text-center text-[11px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`
+    className: `whitespace-nowrap rounded-xl px-0.5 py-1.5 text-center text-[10.5px] font-black ${x.t[k] ? 'border border-pink-300 bg-pink-500/25 text-pink-50' : 'border border-dashed border-slate-500 text-slate-300'}`
   }, icon, " ", label, x.t[k] ? ' ✔' : ''))), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-300"
   }, "この家で3つすると、今日のスタンプが1個たまります(1軒につき1日1個・1日", ALB_MAX.houses, "軒まで)。", friend.name, "さんにも、あなたが来た日に1個たまります。"), React.createElement("p", {
