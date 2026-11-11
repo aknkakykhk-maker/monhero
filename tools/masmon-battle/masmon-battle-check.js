@@ -10,7 +10,10 @@
 //   ⑤ 弱い AI(戦術経験 0)でも最低限の手を選ぶ(倒しきれる相手には撃つ・満タンでためない・届かない技は撃たない)
 //   ⑥ 1対1・2対2・3対3・1対2・2対3・3対1 すべて動く/4体目以降は切る/空の編成は断る
 //   ⑦ 純粋な計算(Math.random・Date・window・localStorage・document・Math.exp/log/pow/sin/cos を使わない)
-//   ⑧ 技は既存の技データだけ(通常攻撃の名前=HERO_ATK_NAMES・距離撃=RANGE_EVOLUTION・固有技=unique.names)
+//   ⑧ 技表(ASSISTANT_MASMON_TECHS。無ければ仮の draft-techs.js)の形: 数字は MF2 の幅の中・技 id は種の中で一意・
+//      どの種もどの距離にも届く技がある・距離撃の名前を使わない・既存の技の表を計算で使わない
+//   ⑬ 能力の差の効き方のつまみ(A=いまのまま/B=ゆるめ/C=強め): A は結果を変えない・記録に残る・B<A<C の順
+//   ⑪ 育成・修行の入れ物(st・Lv 1〜99・覚えた技・熟練)から1体を作れる/熟練で命中・ガッツ消費・ガードが「中」の分だけ変わる
 //   ⑨ 壊れた入力(能力が文字・範囲外・種類が無い)は既定値で補う
 //   ⑩ 好き嫌い・疲労・ストレスは入力に取らない(渡しても結果が変わらない)
 'use strict';
@@ -89,6 +92,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
           const foe = e.side === 'A' ? 'B' : 'A';
           const f = st.teams[foe].units[active[foe]];
           f.hp = Math.max(0, f.hp - e.dmg);
+          f.guts -= e.gd || 0;
+          if (e.foeGuts != null && f.guts !== e.foeGuts) { ng.guts.push(`${tag} r${e.r} ガッツダウン ${f.guts}≠${e.foeGuts}`); bad = 1; }
           if (f.hp !== e.foeHp) { ng.hp.push(`${tag} r${e.r} ${f.hp}≠${e.foeHp}`); bad = 1; }
         } else if (e.ev === 'move') {
           if (Math.abs(e.to - dist) !== 1 || e.to < 0 || e.to > 3) { ng.dist.push(`${tag} r${e.r} ${dist}→${e.to}`); bad = 1; }
@@ -103,6 +108,12 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
           const u = st.teams[e.side].units[e.i]; u.guts = Math.max(u.guts, 40);
           if (u.hp <= 0) { ng.hp.push(`${tag} 倒れた体が出てきた`); bad = 1; }
         }
+        if (e.ev === 'tech' && e.ti !== active[e.side === 'A' ? 'B' : 'A']) { ng.hp.push(`${tag} r${e.r} 受けた側 ${e.ti}`); bad = 1; }
+        if (e.ga != null && (st.teams.A.units[active.A].guts !== e.ga || st.teams.B.units[active.B].guts !== e.gb)) {
+          ng.guts.push(`${tag} r${e.r} ${e.ev} 両方のガッツ ${st.teams.A.units[active.A].guts}/${st.teams.B.units[active.B].guts}≠${e.ga}/${e.gb}`); bad = 1;
+        }
+        if (['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev) && !engine.WHY[e.why]) { ng.hp.push(`${tag} r${e.r} 理由が無い ${e.why}`); bad = 1; }
+        if (e.ev === 'tech' && !(e.p >= 15 && e.p <= 97)) { ng.hp.push(`${tag} r${e.r} 命中率 ${e.p}`); bad = 1; }
         if (e.d !== dist && e.ev !== 'move') { ng.dist.push(`${tag} r${e.r} 記録の距離 ${e.d}≠${dist}`); bad = 1; }
         if (e.guts != null) {
           const u = st.teams[e.side].units[active[e.side]];
@@ -115,8 +126,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check(`③ ラウンドの上限(${engine.ROUND_LIMIT})を超えない`, !ng.limit.length, ng.limit.slice(0, 3).join(' / '));
   check('④ 距離は零〜遠で1歩ずつ・記録の距離と合う', !ng.dist.length, ng.dist.slice(0, 3).join(' / '));
   check('④ 技はその距離で届くものだけ', !ng.range.length, ng.range.slice(0, 3).join(' / '));
-  check('④ ガッツは 0〜100・技の分だけ減り、決まった分だけ増える', !ng.guts.length, ng.guts.slice(0, 3).join(' / '));
-  check('④ ライフの減り方が記録と合う・倒れた体は出てこない', !ng.hp.length, ng.hp.slice(0, 3).join(' / '));
+  check('④ ガッツは 0〜100・技の分だけ減り、決まった分だけ増える・手のあとの両方のガッツ(ga/gb)が合う', !ng.guts.length, ng.guts.slice(0, 3).join(' / '));
+  check('④ ライフの減り方・受けた側・命中率・手の理由が記録と合う・倒れた体は出てこない', !ng.hp.length, ng.hp.slice(0, 3).join(' / '));
   check('⑥ 1対1・2対2・3対3・1対2・2対3・3対1 がすべて動く', Object.keys(fmtSeen).length === FORMATS.length, `${total} 戦`);
 }
 
@@ -186,24 +197,41 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑦ 画面・時刻・ずれうる計算を使わない', !hits.length, hits.join('・'));
 }
 
-// ── ⑧ 技は既存の技データだけ ──
+// ── ⑧ 技表の形 ──
 {
   const bad = [];
-  const atkNames = new Set(Object.values(data.HERO_ATK_NAMES).flat());
-  const rangeNames = new Set(data.RANGE_EVOLUTION.map(e => e.name));
-  for (const id of Object.keys(catalog.species)) {
-    const uniq = new Set(data.ALL_PLAYER_MONSTERS[id].unique.names || [data.ALL_PLAYER_MONSTERS[id].unique.name]);
-    for (const lv of [1, 30, 60, 99]) {
-      for (const mv of I.buildMoves(catalog, id, lv, { pow: 100, wise: 100 })) {
-        const ok = mv.key === 'atk' ? (atkNames.has(mv.name) || mv.name === '通常攻撃') : mv.key === 'range' ? rangeNames.has(mv.name) : uniq.has(mv.name);
-        if (!ok) bad.push(`${id} Lv${lv} ${mv.name}`);
-        if (!mv.dist.length) bad.push(`${id} ${mv.name} 届く距離なし`);
+  const table = data.ASSISTANT_MASMON_TECHS.species;
+  const L = engine.TECH_LIMITS;
+  const oneKind = [];
+  // 名前は既存の技の名前(HERO_ATK_NAMES・固有技)から選んでよい(シュギョウ)。距離撃の系統の名前だけは使わない(社長「距離撃はなし」)
+  const banned = new Set(['距離撃', '強・距離撃', '極・距離撃', '真・距離撃', '超・距離撃', '銀河距離撃', '次元距離撃', '覇王距離撃', '神罰距離撃']);
+  for (const id of Object.keys(data.ALL_PLAYER_MONSTERS)) {
+    const list = table[id];
+    if (!Array.isArray(list) || !list.length) { bad.push(`${id} 技が無い`); continue; }
+    const ids = new Set();
+    const reach = new Set();
+    const kinds = new Set();
+    for (const t of list) {
+      if (typeof t.id !== 'string' || !t.id || ids.has(t.id)) bad.push(`${id} id ${t.id}`);
+      ids.add(t.id);
+      for (const k of ['power', 'hit', 'guts', 'crit', 'gd']) {
+        if (!Number.isFinite(t[k]) || t[k] < L[k][0] || t[k] > L[k][1]) bad.push(`${id} ${t.name} ${k}=${t[k]}`);
       }
+      if (!['pow', 'wise'].includes(t.kind)) bad.push(`${id} ${t.name} kind=${t.kind}`);
+      if (!Array.isArray(t.dist) || !t.dist.length || t.dist.some(d => ![0, 1, 2, 3].includes(d))) bad.push(`${id} ${t.name} dist`);
+      else t.dist.forEach(d => reach.add(d));
+      if (banned.has(t.name)) bad.push(`${id} ${t.name} は距離撃の名前`);
+      kinds.add(t.kind);
     }
+    if (reach.size < 4) bad.push(`${id} 届かない距離がある(${[...reach].join(',')})`);
+    if (kinds.size < 2) oneKind.push(id);   // 片方だけの種(ゴーレムなど)はあってよい。数だけ知らせる
   }
-  check('⑧ 技の名前はすべて既存の技データから・どの技にも届く距離がある', !bad.length, bad.slice(0, 4).join(' / '));
+  check(`⑧ 技表の形(${data.ASSISTANT_MASMON_TECHS.draft ? '仮の技表' : '本番の技表'}): MF2 の幅の中・id 一意・どの距離にも届く`, !bad.length, bad.slice(0, 4).join(' / ') || (oneKind.length ? `ちから技かかしこさ技だけの種: ${oneKind.join('・')}` : ''));
   check('⑧ 実装済みのモンスターがすべて対戦に出られる', Object.keys(catalog.species).length === Object.keys(data.ALL_PLAYER_MONSTERS).length,
     `${Object.keys(catalog.species).length}/${Object.keys(data.ALL_PLAYER_MONSTERS).length}`);
+  const src = fs.readFileSync(path.join(ROOT, 'monster-hero/data/assistant-masmon-battle.js'), 'utf8');
+  const old = ['BASE_ATK_EVOLUTION', 'RANGE_EVOLUTION', 'GUARD_EVOLUTION', 'HERO_ATK_NAMES'].filter(w => src.split('\n').some(l => !/^\s*\/\//.test(l) && l.includes(w)));
+  check('⑧ 既存のモンヒロバトルの技(通常攻撃・距離撃・固有技・ガード)の表を使わない', !old.length, old.join('・'));
 }
 
 // ── ⑨ 壊れた入力 ──
@@ -229,14 +257,36 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑩ 好き嫌い・疲労・ストレスを渡しても結果は同じ(強さに効かせない)', same === 50, `${same}/50`);
 }
 
-// ⑪ 育成の入れ物(キズナ4: st・Lv 1〜99)からそのまま作れる
+// ⑪ 育成・修行の入れ物から作れる/熟練の効き
 {
-  const u = engine.unitFromGrow({ monster: 'Golem', nick: 'ごろ', lv: 7, slot: 1 }, { st: { life: 500, pow: 610, wise: 40, hit: 200, eva: 90, tough: 700 }, lv: 99 });
+  const golem = catalog.species.Golem.techs;
+  const t0 = golem[0], t1 = golem[1];
+  const u = engine.unitFromGrow({ monster: 'Golem', nick: 'ごろ', lv: 7, slot: 1 },
+    { st: { life: 500, pow: 610, wise: 40, hit: 200, eva: 90, tough: 700 }, lv: 99 },
+    { m: { [t0.id]: 100, guard: 100 }, learn: [t0.id] });
   const n = I.normalizeUnit(u, catalog);
   const n2 = I.normalizeUnit(engine.unitFromGrow({ monster: 'Golem', nick: 'ごろ', lv: 7 }, null), catalog);
-  check('⑪ 育成の入れ物(st・Lv 1〜99)から1体を作れる・入れ物が無ければ行の Lv',
-    n.species === 'Golem' && n.name === 'ごろ' && n.lv === 99 && n.stats.pow === 610 && n.stats.tough === 700 && I.stageOf(99) === 8 && n2.lv === 7,
-    JSON.stringify(n));
+  check('⑪ 育成・修行の入れ物(st・Lv 1〜99・覚えた技・熟練)から1体を作れる・入れ物が無ければ既定値',
+    n.species === 'Golem' && n.name === 'ごろ' && n.lv === 99 && n.stats.pow === 610 && n.stats.tough === 700
+      && n.techs.length === 1 && n.techs[0] === t0.id && n.mastery[t0.id] === 100 && n.mastery[t1.id] === 0
+      && n2.lv === 7 && n2.techs === null && n2.mastery[t0.id] === 0, JSON.stringify(n));
+  const starts = catalog.species.Golem.techs.filter(t => t.start).map(t => t.id);
+  const def = I.buildMoves(catalog, 'Golem', null, {}).map(m => m.key);
+  check('⑪ 覚えた技の記録が無ければ、はじめの技(learn.start)だけ(無い種は全部)',
+    starts.length ? JSON.stringify(def) === JSON.stringify(starts) : def.length === golem.length, def.join('・'));
+  const n3 = I.normalizeUnit(engine.unitFromGrow({ monster: 'Golem', nick: 'ごろ' }, null, { techs: [t0.id], mastery: { [t0.id]: 40 } }), catalog);
+  check('⑪ 修行の受け渡し amgtBattleOf の { techs, mastery } もそのまま受ける', n3.techs.length === 1 && n3.techs[0] === t0.id && n3.mastery[t0.id] === 40);
+  const mv = I.buildMoves(catalog, 'Golem', n.techs, n.mastery);
+  const raw = I.buildMoves(catalog, 'Golem', golem.map(t => t.id), {});
+  const m0 = mv.find(m => m.key === t0.id), r0 = raw.find(m => m.key === t0.id);
+  const nope = I.buildMoves(catalog, 'Golem', ['nope'], {}).map(m => m.key);
+  const startIds = golem.filter(t => t.start).map(t => t.id);
+  check('⑪ 覚えている技だけ出す・当てはまる技が0なら、はじめの技(無ければ最初の技)',
+    mv.length === 1 && raw.length === golem.length && JSON.stringify(nope) === JSON.stringify(startIds.length ? startIds : [golem[0].id]), nope.join('・'));
+  check('⑪ 熟練100で 命中+6%・ガッツ消費−15%(四捨五入)',
+    Math.abs(m0.hit - r0.hit - engine.MASTERY_HIT_MAX) < 1e-9 && m0.guts === Math.round(t0.guts * (1 - engine.MASTERY_GUTS_CUT)),
+    `命中 ${r0.hit}→${m0.hit} / ガッツ ${r0.guts}→${m0.guts}`);
+  check('⑪ 熟練の数字は社長の「中」(6%・15%・8%)', engine.MASTERY_HIT_MAX === 0.06 && engine.MASTERY_GUTS_CUT === 0.15 && engine.MASTERY_GUARD_ADD === 0.08);
 }
 
 // ⑫ 種ごとのガッツのたまる速さは 8〜12 の整数(既存の baseGuts から)
@@ -244,6 +294,32 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < 8 || v.regen > 12).map(([k, v]) => `${k}:${v.regen}`);
   const vals = new Set(Object.values(catalog.species).map(v => v.regen));
   check('⑫ 種ごとのガッツのたまる速さは 8〜12(既存の baseGuts から)・種でちがう', !bad.length && vals.size >= 3, bad.join(' ') || [...vals].sort().join('・'));
+}
+
+// ⑬ 能力の差の効き方のつまみ(A/B/C。社長が観戦してから決める)
+{
+  const rng = engine.makeRng('chk-bal');
+  let sameA = 0, okLog = 0, w = { A: 0, B: 0, C: 0 };
+  const M = 600;
+  for (let i = 0; i < M; i++) {
+    const strong = { assistantId: 'atsu', tactics: 50, members: team(rng, 3, { total: 1980 }) };
+    const weak = { assistantId: 'atsu', tactics: 50, members: team(rng, 3, { total: 1800 }) };
+    const sf = i % 2 === 0;
+    const base = { seed: `bal-${i}`, catalog, teamA: sf ? strong : weak, teamB: sf ? weak : strong };
+    const r0 = engine.simulate(base);
+    const rA = engine.simulate(Object.assign({}, base, { balance: 'A' }));
+    const rX = engine.simulate(Object.assign({}, base, { balance: 'へんな値' }));
+    if (r0.digest === rA.digest && rX.digest === rA.digest) sameA++;
+    for (const b of ['A', 'B', 'C']) {
+      const r = b === 'A' ? rA : engine.simulate(Object.assign({}, base, { balance: b }));
+      if (r.balance === b && r.log[0].balance === b && r.log[0].v === engine.VERSION) okLog++;
+      if (r.winner === (sf ? 'A' : 'B')) w[b]++;
+    }
+  }
+  check('⑬ つまみ A は渡さないときと同じ結果・知らない値は A', sameA === M, `${sameA}/${M}`);
+  check('⑬ つまみと計算の版が結果と記録に残る', okLog === M * 3, `${okLog}/${M * 3}`);
+  check('⑬ 能力の合計が多い側の勝率が B < A < C の順(B はゆるめ・C は強め)', w.B < w.A && w.A < w.C,
+    ['A', 'B', 'C'].map(b => `${b} ${(w[b] / M * 100).toFixed(1)}%`).join(' / '));
 }
 
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');

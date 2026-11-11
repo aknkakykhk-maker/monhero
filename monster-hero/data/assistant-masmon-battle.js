@@ -5,14 +5,14 @@
 //   同じ(編成・種)なら、端末でもサーバ(Supabase Edge Function / Deno)でも同じ結果になる。
 //   使ってよい計算は + − × ÷・Math.floor/round/min/max/abs/sqrt だけ(Math.exp/log/pow/sin は
 //   エンジンで値がずれうるので使わない)。
-// ★技は既存の技データだけを使う(未実装の技を足さない):
-//   通常攻撃 = BASE_ATK_EVOLUTION + HERO_ATK_NAMES / 距離撃 = RANGE_EVOLUTION /
-//   固有技 = ALL_PLAYER_MONSTERS[種].unique / ガード = GUARD_EVOLUTION / 距離の得意 = distAptitude
+// ★技はモンスターファームのような助手のマスモン専用の技表(ASSISTANT_MASMON_TECHS・シュギョウ担当)を使う
+//   (2026-11-11 社長「距離撃はなしにして、技の性能自体も一新して作ってほしい。モンファーみたいな感じで」)。
+//   既存のモンヒロバトルの技(通常攻撃・距離撃・固有技・ガード)は使わない。種から使うのは 距離の得意(distAptitude)と
+//   基礎ガッツ(baseGuts → ガッツのたまる速さ)だけ
 // ★好き嫌い・疲労・ストレスは入力に取らない(強さに効かせない)。プレイヤーのセーブ・ランキングに触れない。
 //
 // 使い方:
-//   const catalog = ASSISTANT_MASMON_BATTLE.buildCatalog({ ALL_PLAYER_MONSTERS, HERO_ATK_NAMES,
-//     BASE_ATK_EVOLUTION, RANGE_EVOLUTION, GUARD_EVOLUTION });   // 技データの写し(JSON にできる)
+//   const catalog = ASSISTANT_MASMON_BATTLE.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS });  // 写し(JSON にできる)
 //   const r = ASSISTANT_MASMON_BATTLE.simulate({ seed:'abc', catalog,
 //     teamA:{ assistantId:'mua', tactics:20, members:[{ species:'Mocchi', name:'もち', lv:12,
 //       stats:{ life:400, pow:420, wise:150, hit:260, eva:180, tough:390 } }] },
@@ -21,7 +21,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 1;
+  const VERSION = 2;           // 計算を変えたら上げる(サーバの試合の行に残る。2 = 技を MF のように一新)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
   const DIST_NAMES = ['零', '近', '中', '遠'];
@@ -37,6 +37,16 @@
   const ROUND_LIMIT = 150;    // これを超えたら判定(無限に続かない)
   const SWAP_COOLDOWN = 2;    // 出てきてから自分の手番2回は交代しない(行ったり来たりを防ぐ)
   const CRIT_MULT = 1.5;
+  // 技の熟練(0〜100。シュギョウの mh_assistant_masmon_train_v1)の効き。社長が「中」を選んだ(2026-11-11)
+  const MASTERY_HIT_MAX = 0.06;    // 熟練100で命中 +6%
+  const MASTERY_GUTS_CUT = 0.15;   // 熟練100でガッツ消費 −15%(四捨五入)
+  const MASTERY_GUARD_ADD = 0.08;  // ガードの熟練100で受けるダメージがさらに −8%
+  // 能力の差の効き方のつまみ(2026-11-11 社長「実際バトルをしてほしい。それを観戦できるようにしたい」。決めるのは観戦してから)。
+  //   1体ごとの6能力の合計と、出る全員の平均の合計との差を k 倍にする(6能力の配分=個性はそのまま)。
+  //   A=いまのまま(本番の技表で合計+10%の側が約75%勝つ)/B=差を半分に(約62%)/C=差を1.5倍に(約85%)
+  const BALANCE = Object.freeze({ A: 1, B: 0.5, C: 1.5 });
+  // 技の数字の幅(MF2 の技の幅。docs/spec/ASSISTANT_MASMON_BATTLE.md「MF との対応」)。外れた値は切る
+  const TECH_LIMITS = Object.freeze({ power: [1, 70], hit: [-25, 22], guts: [5, 60], crit: [0, 30], gd: [0, 45] });
 
   // ── 種(シード)から決まる乱数。文字列でも数でもよい ──
   const hashSeed = (seed) => {
@@ -69,7 +79,7 @@
 
   // ── 助手の性格(仕様書 §7 の仮の傾向)。重みは 1 が普通 ──
   //   aggr 攻め / caution 守り(ガードと反撃の怖さ) / thrift ガッツの節約 / mobility 間合いを取りに行く
-  //   swap 交代の好み / gamble 大技(固有技)と会心の好み / read 読みの良さ(戦術経験に足す)
+  //   swap 交代の好み / gamble 大技(威力30以上)の好み / read 読みの良さ(戦術経験に足す)
   const STYLE_BASE = Object.freeze({ aggr: 1, caution: 1, thrift: 1, mobility: 1, swap: 1, gamble: 1, read: 0 });
   const STYLES = Object.freeze({
     mua:       Object.freeze({ label: '積極型', aggr: 1.3, caution: 0.75, thrift: 0.8, mobility: 1.0, swap: 0.7, gamble: 1.25, read: 0 }),
@@ -91,76 +101,81 @@
     return out;
   };
 
-  // ── 技データの写し(画面の変数から一度だけ作る。JSON にしてサーバへ持っていける) ──
+  // ── 技表の写し(画面の変数から一度だけ作る。JSON にしてサーバへ持っていける) ──
+  //   ASSISTANT_MASMON_TECHS = { version, species: { [種]: [ { id, name, kind:'pow'|'wise', dist:[0..3], power, hit, guts, crit, gd } ] } }
+  const normTech = (t, idx) => {
+    const x = t && typeof t === 'object' ? t : {};
+    const num = (v, k, def) => { const n = Number(v); const [lo, hi] = TECH_LIMITS[k]; return Number.isFinite(n) ? clamp(Math.round(n), lo, hi) : def; };
+    const dist = (Array.isArray(x.dist) ? x.dist : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 3);
+    return {
+      id: typeof x.id === 'string' && x.id ? x.id : `t${idx}`,
+      name: typeof x.name === 'string' && x.name ? x.name : `技${idx + 1}`,
+      kind: x.kind === 'wise' ? 'wise' : 'pow',
+      dist: dist.length ? [...new Set(dist)].sort() : [1],
+      power: num(x.power, 'power', 10), hit: num(x.hit, 'hit', 0), guts: num(x.guts, 'guts', 20),
+      crit: num(x.crit, 'crit', 5), gd: num(x.gd, 'gd', 0),
+      start: !!(x.learn && x.learn.start),        // はじめから覚えている技(覚えた技の記録が無いときはこれだけ)
+    };
+  };
   const buildCatalog = (src) => {
     const s = src || {};
     const mons = s.ALL_PLAYER_MONSTERS || {};
-    const names = s.HERO_ATK_NAMES || {};
-    const pick = (arr) => (Array.isArray(arr) ? arr : []).map(e => ({
-      name: e && typeof e.name === 'string' ? e.name : '',
-      mult: Number(e && e.mult) || 1,
-      crit: Number(e && e.crit) || 0,
-      guts: Number(e && (e.baseGuts != null ? e.baseGuts : e.guts)) || 0,
-    }));
+    const table = (s.ASSISTANT_MASMON_TECHS && s.ASSISTANT_MASMON_TECHS.species) || {};
     const species = {};
     for (const id of Object.keys(mons).sort()) {
       const m = mons[id];
-      if (!m || !m.unique) continue;
+      const techs = Array.isArray(table[id]) ? table[id].map(normTech) : [];
+      if (!m || !techs.length) continue;            // 技表に無い種は対戦に出られない
       const apt = Array.isArray(m.distAptitude) && m.distAptitude.length === 4
         ? m.distAptitude.map(g => (GRADES.includes(g) ? g : 'C')) : ['C', 'C', 'C', 'C'];
-      species[id] = {
-        name: String(m.name || id),
-        apt,
-        atkNames: Array.isArray(names[id]) ? names[id].slice(0, 9).map(String) : [],
-        unique: {
-          names: Array.isArray(m.unique.names) ? m.unique.names.slice(0, 9).map(String) : [String(m.unique.name || '固有技')],
-          mult: Number(m.unique.baseMult) || 2,
-          guts: Number(m.unique.baseGuts) || 40,
-        },
-      };
+      species[id] = { name: String(m.name || id), apt, techs, baseGuts: Number(m.baseGuts) || 0 };
     }
     // 種ごとのガッツのたまる速さ: モンヒロバトルの基礎ガッツ(baseGuts)の大きさで 9〜11(真ん中 10)
-    const gs = Object.keys(species).map(id => Number(mons[id].baseGuts) || 0);
+    const gs = Object.values(species).map(v => v.baseGuts);
     const gMin = Math.min(...gs), gMax = Math.max(...gs);
-    for (const id of Object.keys(species)) {
-      const g = Number(mons[id].baseGuts) || 0;
-      species[id].regen = gMax > gMin ? GUTS_REGEN - 1 + Math.round((g - gMin) / (gMax - gMin) * 2) : GUTS_REGEN;
+    for (const v of Object.values(species)) {
+      v.regen = gMax > gMin ? GUTS_REGEN - 1 + Math.round((v.baseGuts - gMin) / (gMax - gMin) * 2) : GUTS_REGEN;
+      delete v.baseGuts;
     }
-    return { version: VERSION, atk: pick(s.BASE_ATK_EVOLUTION), range: pick(s.RANGE_EVOLUTION), guard: pick(s.GUARD_EVOLUTION), species };
+    const tv = s.ASSISTANT_MASMON_TECHS && Number(s.ASSISTANT_MASMON_TECHS.version);
+    return { version: VERSION, techVersion: Number.isFinite(tv) ? tv : 0, species };
   };
 
-  // Lv(育成の Lv 1〜99。キズナ4の AMG_LV_MAX)から技の段(0〜8)。段は技の名前と会心率だけに効く(強さは6能力が持つ)
-  const LV_MAX = 99;
-  const stageOf = (lv) => clamp(Math.floor((toInt(lv, 1, LV_MAX, 1) - 1) * 9 / LV_MAX), 0, 8);
+  const LV_MAX = 99;   // 育成の Lv 1〜99(キズナ4の AMG_LV_MAX)。いまは強さに効かない(強さは6能力と熟練が持つ)
   const aptMult = (grade) => {
     const i = GRADES.indexOf(grade);
     return clamp(1 + ((i < 0 ? 4 : i) - 4) * 0.05, 0.8, 1.25);
   };
 
-  // 1体ぶんの技の表。威力は通常攻撃を 1 とした比(同じ段どうしの比)
-  const buildMoves = (catalog, speciesId, lv, stats) => {
+  // 1体ぶんの技の表。覚えている技(techs)だけ・熟練で命中とガッツ消費を直す。
+  // 覚えた技の記録が無い(古い入れ物)ときは、はじめから覚えている技(learn.start)だけ。それも無い種は全部。
+  // 記録があって1つも当てはまらなければ、はじめの技(無ければ最初の技)
+  const startTechs = (sp) => { const st = sp.techs.filter(t => t.start); return st.length ? st : sp.techs.slice(); };
+  const buildMoves = (catalog, speciesId, techIds, mastery) => {
     const sp = catalog.species[speciesId];
-    const st = stageOf(lv);
-    const atk = catalog.atk[st] || catalog.atk[0] || { mult: 1, crit: 0.1, guts: 16, name: '' };
-    const rng = catalog.range[st] || catalog.range[0] || { mult: 1.4, crit: 0.1, guts: 20, name: '距離撃' };
-    const best = Math.max(...sp.apt.map(g => GRADES.indexOf(g)));
-    const uniqueDist = [0, 1, 2, 3].filter(d => GRADES.indexOf(sp.apt[d]) === best);
-    const uName = sp.unique.names[Math.min(st, sp.unique.names.length - 1)] || sp.unique.names[0];
-    // 固有技は、ちからとかしこさの高い方で撃つ(同じならちから)
-    const uKind = (stats.wise > stats.pow) ? 'wise' : 'pow';
-    return [
-      { key: 'atk', name: sp.atkNames[st] || '通常攻撃', kind: 'pow', power: 1, guts: atk.guts || 16, crit: atk.crit, hit: 0.05, dist: [0, 1] },
-      { key: 'range', name: rng.name || '距離撃', kind: 'wise', power: (rng.mult || 1.4) / (atk.mult || 1), guts: rng.guts || 20, crit: rng.crit, hit: -0.03, dist: [2, 3] },
-      { key: 'unique', name: uName, kind: uKind, power: sp.unique.mult, guts: sp.unique.guts, crit: atk.crit, hit: -0.1, dist: uniqueDist },
-    ];
+    const known = Array.isArray(techIds) ? sp.techs.filter(t => techIds.includes(t.id)) : startTechs(sp);
+    const list = known.length ? known : (sp.techs.some(t => t.start) ? startTechs(sp) : [sp.techs[0]]);
+    return list.map(t => {
+      const m = clamp(Number(mastery && mastery[t.id]) || 0, 0, 100);
+      return { key: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power / 20,
+        hit: t.hit / 100 + m / 100 * MASTERY_HIT_MAX, guts: Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT)),
+        crit: t.crit / 100, gd: t.gd, big: t.power >= 30 };
+    });
   };
 
   // 助手のマスモンの並び(mh_assistant_life_masmon_v1 の行: monster・nick・lv)と育成の入れ物
-  // (mh_assistant_masmon_grow_v1 の amgEntryOf の戻り: st・lv)から、対戦の1体を作る。入れ物が無ければ行の Lv・能力は既定値
-  const unitFromGrow = (row, entry) => {
+  // (mh_assistant_masmon_grow_v1 の amgEntryOf の戻り: st・lv)と修行の入れ物(mh_assistant_masmon_train_v1 の
+  // amgtEntryOf の戻り: m=熟練・learn=覚えた技。amgtBattleOf の { techs, mastery } でもよい)から、対戦の1体を作る。入れ物が無ければ既定値
+  const unitFromGrow = (row, entry, train) => {
     const r = row && typeof row === 'object' ? row : {};
     const e = entry && typeof entry === 'object' ? entry : null;
-    return { species: r.monster, name: r.nick, lv: e && e.lv != null ? e.lv : r.lv, stats: e ? e.st : null };
+    const t = train && typeof train === 'object' ? train : null;
+    // 修行の入れ物 { m, learn } でも、受け渡し amgtBattleOf の { techs, mastery } でもよい
+    const learn = t && (Array.isArray(t.techs) ? t.techs : t.learn);
+    const techs = Array.isArray(learn) ? learn : (learn && typeof learn === 'object' ? Object.keys(learn).filter(k => learn[k]) : undefined);
+    const mastery = t && (t.mastery && typeof t.mastery === 'object' ? t.mastery : (t.m && typeof t.m === 'object' ? t.m : undefined));
+    return { species: r.monster, name: r.nick, lv: e && e.lv != null ? e.lv : r.lv, stats: e ? e.st : null,
+      techs, mastery: mastery || undefined };
   };
 
   // ── 入力の正規化(壊れた値は既定値で補う) ──
@@ -174,7 +189,12 @@
     const ss = raw && typeof raw === 'object' ? raw : {};
     for (const k of STAT_KEYS) stats[k] = toInt(ss[k], 0, STAT_MAX, 100);
     const lv = toInt(src.lv, 1, LV_MAX, 1);
-    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats };
+    // 覚えている技(無ければその種の全部)・熟練(技 id ごと+guard・dist・swap。無ければ 0)
+    const techs = Array.isArray(src.techs) ? src.techs.filter(x => typeof x === 'string') : null;
+    const mastery = {};
+    const ms = src.mastery && typeof src.mastery === 'object' ? src.mastery : {};
+    for (const k of [...catalog.species[species].techs.map(t => t.id), 'guard', 'dist', 'swap']) mastery[k] = toInt(ms[k], 0, 100, 0);
+    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery };
   };
   const normalizeTeam = (t, catalog) => {
     const src = t && typeof t === 'object' ? t : {};
@@ -202,7 +222,7 @@
     const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g);
     return base * 300 / (300 + defU.stats.tough * 0.9);
   };
-  const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6);
+  const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
   const inRange = (mv, dist) => mv.dist.includes(dist);
   const expected = (atkU, defU, mv, dist, guarded, g) => {
@@ -262,9 +282,11 @@
       if (e >= f.hp) score += 35 * p * sty.aggr;                    // 倒しきれそう
       // ガッツの節約: 使ったあと次の手で撃てなくなる分(危ないときは気にしない)
       score -= Math.max(0, mv.guts - u.regen) * 0.12 * sty.thrift * (1 - Math.min(1, danger));
-      if (mv.key === 'unique') score *= 1 + (sty.gamble - 1) * 0.8;
+      if (mv.big) score *= 1 + (sty.gamble - 1) * 0.8;               // 大技(威力30以上)の好み
+      // ガッツダウン: 当たれば相手が次に撃てる技が減る(相手のガッツが少ないほど効く)
+      if (mv.gd > 0) score += p * Math.min(mv.gd, f.guts) * 0.12 * (0.6 + 0.4 * skill);
       if (score > bestTech) bestTech = score;
-      cands.push({ type: 'tech', key: mv.key, score });
+      cands.push({ type: 'tech', key: mv.key, score, why: e >= f.hp ? 'finish' : (mv.gd > 0 && mv.gd >= 20 ? 'gutsDown' : (mv.big ? 'big' : 'attack')) });
     }
     // 移動(1歩)。手番を1つ使う=いま撃てる技を捨てる。相手も動けるので、得は半分しか当てにしない
     const reachHere = u.moves.some(mv => inRange(mv, dist));
@@ -278,15 +300,16 @@
       let score = (gain / f.maxHp * 100 * sty.aggr - risk / u.maxHp * 100 * sty.caution * (0.5 + 0.5 * skill)) * 0.9 * sty.mobility;
       score -= bestTech * 0.7 + 2 + u.moveStreak * 5;   // 続けて動くほど損(行ったり来たりを防ぐ)
       // どの技も届かない距離にいるなら、届く方へ
-      if (!reachHere && u.moves.some(mv => inRange(mv, nd))) score += 20;
-      cands.push({ type: 'move', step, score });
+      const toReach = !reachHere && u.moves.some(mv => inRange(mv, nd));
+      if (toReach) score += 20;
+      cands.push({ type: 'move', step, score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
     }
     // ガード(相手が撃ってこなければ無駄になるので、見込みは 6 割)
     if (threatNow > 0) {
       const saved = threatNow * guardCut(u) * 0.6;
       let score = saved / u.maxHp * 100 * (0.4 + 0.6 * sty.caution) * (0.8 + (1 - hpFrac) * 0.6) * (0.5 + 0.5 * skill);
       score -= bestTech * (0.45 - 0.15 * (sty.caution - 1));
-      cands.push({ type: 'guard', score });
+      cands.push({ type: 'guard', score, why: hpFrac < 0.5 ? 'lowHp' : 'block' });
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
@@ -296,7 +319,7 @@
       let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
       score -= danger * 20 * (0.8 + 0.2 * sty.caution);              // 危ないときにためるのは損
       if (nowBest === 0 && laterBest > 0) score += 8;
-      cands.push({ type: 'charge', score });
+      cands.push({ type: 'charge', score, why: nowBest === 0 ? 'noGuts' : 'saveUp' });
     }
     // 交代
     if (u.swapCooldown <= 0) {
@@ -308,10 +331,10 @@
         let score = gain * 6 * sty.swap * (0.4 + 0.6 * skill);
         if (danger >= 1 && hpFrac < 0.5) score += 10 * sty.swap * skill;  // このままだと倒される → 逃がす
         score -= 6;                                                       // 手番を使う分
-        cands.push({ type: 'swap', to: i, score });
+        cands.push({ type: 'swap', to: i, score, why: danger >= 1 && hpFrac < 0.5 ? 'rescue' : 'matchup' });
       }
     }
-    if (!cands.length) cands.push({ type: 'charge', score: 0 });       // ガッツ満タンで何もできない時の保険(実際は起きない)
+    if (!cands.length) cands.push({ type: 'charge', score: 0, why: 'noGuts' });       // ガッツ満タンで何もできない時の保険(実際は起きない)
 
     // 最低限の判断(戦術経験に関係なく): 当たれば確実に倒せる技があれば、一番当たりやすいものを撃つ
     let sure = null;
@@ -325,6 +348,7 @@
     if (sure) {
       const pick = cands.find(c => c.type === 'tech' && c.key === sure.key);
       pick.eval = pick.score;
+      pick.why = 'finish';
       if (ctx.trace) ctx.lastCands = cands.map(c => Object.assign({}, c, { score: Math.round(c.score * 10) / 10 }));
       return pick;
     }
@@ -365,13 +389,32 @@
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: catalog.species[m.species].apt,
-            moves: buildMoves(catalog, m.species, m.lv, m.stats), maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen,
+            moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen,
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0 };
         }),
       };
     };
     return { teams: { A: mkTeam(inp.teamA), B: mkTeam(inp.teamB) }, dist: DIST_START, round: 0 };
   };
+
+  // 能力の差の効き方: 1体ごとの合計の差を k 倍(A は何もしない=結果は変わらない)
+  const applyBalance = (state, k) => {
+    if (k === 1) return;
+    const all = [...state.teams.A.units, ...state.teams.B.units];
+    const sum = (u) => STAT_KEYS.reduce((t, key) => t + u.stats[key], 0);
+    const avg = all.reduce((t, u) => t + sum(u), 0) / all.length;
+    for (const u of all) {
+      const tot = sum(u);
+      if (tot <= 0) continue;
+      const f = (avg + (tot - avg) * k) / tot;
+      const st = {};
+      for (const key of STAT_KEYS) st[key] = clamp(Math.round(u.stats[key] * f), 0, STAT_MAX);
+      u.stats = st;
+      u.maxHp = maxHpOf(st); u.hp = u.maxHp;
+    }
+  };
+
+  const ACTION_EVS = ['tech', 'move', 'guard', 'charge', 'swap'];
 
   // ── 本体 ──
   const simulate = (input) => {
@@ -381,6 +424,8 @@
     const rng = makeRng(inp.seed);
     const roundLimit = toInt(inp.roundLimit, 1, 1000, ROUND_LIMIT);
     const state = setupState(inp, catalog);
+    const balance = BALANCE[inp.balance] != null ? inp.balance : 'A';
+    applyBalance(state, BALANCE[balance]);
     state.dist = 1 + Math.floor(rng() * 2);
     const ctx = { state, rng, trace: !!inp.trace, lastCands: null };
     const log = [];
@@ -388,11 +433,14 @@
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
     const push = (e) => {
       const row = Object.assign({ r: state.round, d: state.dist }, e);
-      if (ctx.trace && ctx.lastCands && ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev)) { row.cands = ctx.lastCands; ctx.lastCands = null; }
+      if (ACTION_EVS.includes(e.ev)) { row.ga = unitOf('A').guts; row.gb = unitOf('B').guts; }   // 手のあとの両方の場のガッツ
+      if (ctx.trace && ctx.lastCands && ACTION_EVS.includes(e.ev)) { row.cands = ctx.lastCands; ctx.lastCands = null; }
       log.push(row);
     };
 
-    push({ ev: 'start', a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
+    const movesOf = (side) => state.teams[side].units.map(x => x.moves.map(m => ({ id: m.key, name: m.name, kind: m.kind, guts: m.guts, dist: m.dist })));
+    push({ ev: 'start', v: VERSION, balance, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
+      aMoves: movesOf('A'), bMoves: movesOf('B'),
       aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp) });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
@@ -419,20 +467,21 @@
           dmg = Math.max(1, Math.round(dmg));
           f.hp = Math.max(0, f.hp - dmg);
         }
-        push({ ev: 'tech', side, i: me.active, move: mv.key, name: mv.name, kind: mv.kind, hit, crit, dmg,
-          guarded: !!(hit && f.guarding), guts: u.guts, foeHp: f.hp });
+        const gd = hit && mv.gd > 0 ? Math.min(mv.gd, f.guts) : 0;   // ガッツダウン
+        f.guts -= gd;
+        push({ ev: 'tech', side, i: me.active, ti: state.teams[foeSide].active, p: Math.round(p * 1000) / 10, why: c.why, move: mv.key, name: mv.name, kind: mv.kind, hit, crit, dmg,
+          guarded: !!(hit && f.guarding), guts: u.guts, foeHp: f.hp, gd, foeGuts: f.guts });
       } else if (c.type === 'move') {
         state.dist = clamp(state.dist + c.step, 0, 3);
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
-        push({ ev: 'move', side, i: me.active, step: c.step, to: state.dist, guts: u.guts });
+        push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts });
       } else if (c.type === 'guard') {
         u.guarding = true;
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
-        const g = catalog.guard[stageOf(u.lv)] || catalog.guard[0];
-        push({ ev: 'guard', side, i: me.active, name: (g && g.name) || 'ガード', guts: u.guts });
+        push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
-        push({ ev: 'charge', side, i: me.active, guts: u.guts });
+        push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
         u.guarding = false;
@@ -440,7 +489,7 @@
         const n = unitOf(side);
         n.guts = Math.max(n.guts, GUTS_SWAP_IN);
         n.swapCooldown = SWAP_COOLDOWN;
-        push({ ev: 'swap', side, from, i: c.to, name: n.name, guts: n.guts });
+        push({ ev: 'swap', side, from, why: c.why, i: c.to, name: n.name, guts: n.guts });
       }
       u.swapCooldown = Math.max(0, u.swapCooldown - 1);
       u.moveStreak = c.type === 'move' ? u.moveStreak + 1 : 0;
@@ -488,17 +537,21 @@
     push({ ev: 'end', winner, reason });
     const final = {};
     for (const side of ['A', 'B']) final[side] = state.teams[side].units.map(x => ({ name: x.name, hp: x.hp, maxHp: x.maxHp, guts: x.guts }));
-    return { version: VERSION, winner, reason, rounds: state.round, log, final, digest: digestOf(log) };
+    return { version: VERSION, balance, winner, reason, rounds: state.round, log, final, digest: digestOf(log) };
   };
 
   // 結果の指紋(同じ種・同じ編成なら同じ値。端末とサーバの突き合わせ用)
   const digestOf = (log) => hashSeed(JSON.stringify(log)).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES,
+    VERSION, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE,
     LV_MAX, buildCatalog, simulate, unitFromGrow, makeRng, hashSeed,
+    WHY: Object.freeze({ finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
+      safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
+      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ' }),
     // 検査用(計算の部品)
-    _internal: Object.freeze({ setupState, stageOf, aptMult, buildMoves, normalizeUnit, normalizeTeam, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
+    _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ASSISTANT_MASMON_BATTLE = api;
