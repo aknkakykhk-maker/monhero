@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 392e2d0629f8d74e
+// generated-sha256: c4c1a5a3887dd67a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64442,7 +64442,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
             <b className="flex items-center gap-1">📌 今日あったこと{items.length > 0 && <span className="mhl-board-more" data-assistant-life-board-more={restN}>{restN > 0 ? `ほか${restN}件 ›` : '全部 ›'}</span>}</b>
-            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>まだ何もありません</p>}
+            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>👀 見守ると ここに残ります</p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
           <span className="absolute text-[24px]" style={{ left: width * (land ? .62 : .66) + 46, bottom: 6 }} aria-hidden="true">🛋️</span>
@@ -65128,11 +65128,11 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
       <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
         {/* 1日の上限はなくした(2026-11-08 社長)。いま見守れる組の数を出す */}
-        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? '時間帯ごとに1回' : '次の時間帯に'}</small></button>
+        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small data-assistant-life-today-gain="watch">{uiV2 ? (unwatched.length ? '🤝💗 アップ' : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に') : (unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length} onClick={() => { if (uiV2) { setCallPicker(true); return; } const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0]; if (id) setRoomId(id); }}>
         <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!uiV2 && (!canGive || (!giveGroup && !giveSoloId))} onClick={() => { if (uiV2) { setGiftItemsOpen(false); setGiftOpen(true); return; } if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]); else setTab('items'); }}>
-        <em>{soloOn ? itemsLeft + soloLeft : itemsLeft}回</em><i>🎁</i><b>贈る</b><small>道具 {itemsHave}個</small></button>
+        <em>{soloOn ? itemsLeft + soloLeft : itemsLeft}回</em><i>🎁</i><b>贈る</b><small data-assistant-life-today-gain="give">{!uiV2 ? `道具 ${itemsHave}個` : (soloOn ? itemsLeft + soloLeft : itemsLeft) <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える'}</small></button>
       <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
         <i>🎵</i><b>モンヒロビート</b><small>{beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも'}</small></button>
     </div>);
@@ -65158,7 +65158,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
       <p className="mt-0.5 text-[10px] font-bold text-slate-200" data-assistant-life-clock>{assistantLifeTodLabel()} ・ <span data-assistant-life-next-slot className="whitespace-nowrap">{assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</span></p>
       <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
-        <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>
+        {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
         <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : 'いちばん上'}</span>
       </div>
@@ -65275,7 +65275,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mt-1.5">{icons}</div>
           </div>
         </>)}
-        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[55vh] overflow-y-auto">{Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => <button type="button" key={id} className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left" onClick={() => { setCallPicker(false); setRoomId(id); }}><span>{nameOf(id)}</span><span className="text-xs text-slate-300">{life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている'} ›</span></button>)}</div></div></div>}
+        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[55vh] overflow-y-auto">{Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => <button type="button" key={id} className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left" onClick={() => { setCallPicker(false); setRoomId(id); }}><span>{nameOf(id)}</span><span className="text-xs text-slate-300">{life.solo[id]?.reason === 'lonely' ? '💭 さみしそう・声をかけよう' : 'ひとりで過ごしている'} ›</span></button>)}</div><p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" data-assistant-life-call-hint>💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)</p></div></div>}
         {uiV2 && tab === 'where' && note && !roomId && <p data-assistant-life-note className="absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100" style={{ bottom: 'calc(44px + env(safe-area-inset-bottom))' }}>{note}</p>}
         {giftOpen && uiV2 && !roomId && !give && (
           <div className="absolute inset-0" style={{ zIndex: 21 }} data-assistant-life-gift-sheet>
@@ -65297,7 +65297,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p><p className="text-[10.5px] font-bold text-slate-400" data-assistant-life-diary-count>全部で{(diary.items || []).length}件・新しい順</p>
-              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
+              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <div className="mt-2" data-assistant-life-diary-empty><p className="text-[12px] font-bold leading-snug text-slate-300">まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)</p>{uiV2 && unwatched[0] && <button type="button" data-assistant-life-diary-watch onClick={() => { setBoardOpen(false); watch(unwatched[0]); }} className="mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]">👀 いまいる組を見守る(🤝💗 アップ)</button>}</div>}
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
@@ -69456,8 +69456,9 @@ function AssistantMasmonDeckAsk({ who, onAsk }) {
     </div>);
 }
 // 提案のシート(自由に書いて送る → 助手の返事・変わった所)。印 assistantMasmonSuggest が偽のときは開くボタン自体を出さない
-function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose }) {
-  const [text, setText] = React.useState('');
+// initialText: 文をあらかじめ入れて開く(対戦の振り返りの「💡 ◯◯を鍛えてと提案する」から・ミセカタ 11-11)。送るのはプレイヤーが押したとき
+function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose, initialText = '' }) {
+  const [text, setText] = React.useState(typeof initialText === 'string' ? initialText.slice(0, 100) : '');
   const [busy, setBusy] = React.useState(false);
   const [out, setOut] = React.useState(null);
   useAssistantMasmonSave();
@@ -70216,7 +70217,7 @@ const AMG_CARE = Object.freeze({
 });
 const AMG_LV_MAX = 99; // Lv は育成の経験(訓練で上がる・社長 11-11)
 const amgLvNeed = (lv) => 10 + lv; // 次の Lv までの経験
-const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0 });
+const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0, shugyo: 2 }); // shugyo = 修行(第②段階・シュギョウ)
 const AMG_CATCH_UP = 6; // 閉じていた分をまとめて決める回数の上限(2日分)
 const AMG_LOG = 21;
 const AMG_PERIOD_NAME = Object.freeze(['朝', '昼', '夜']);
@@ -70239,7 +70240,7 @@ const normalizeAssistantMasmonGrow = (raw) => {
       const ind = {}; for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && typeof x.a === 'string').slice(-AMG_LOG)
         .map(x => ({ s: x.s, a: x.a.slice(0, 12), k: AMG_KEYS.includes(x.k) ? x.k : '', g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])), ...(x.f ? { f: 1 } : {}), ...(x.p ? { p: 1 } : {}), ...(x.r ? { r: 1 } : {}) }));
-      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999) };
+      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999), cg: Object.fromEntries(['view', 'pick', 'ask', 'ranch'].map(k => [k, Number.isFinite(Number(e.cg && e.cg[k])) ? Math.max(0, Math.min(1e6, Number(e.cg[k]))) : 0])) };
     }
     out.mons[aid] = one;
   }
@@ -70282,11 +70283,13 @@ const amgInitial = (row, rnd) => {
 };
 const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 // 1回分の行動を選ぶ(仕様書 §8: 能力・適性・疲労・ストレス・性格・助言から)
-const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return { a: 'rest' };
   if (e.fat >= T.rest) return { a: 'rest' };
   if (e.str >= 50) return { a: 'play' };
+  // 修行の回(第②段階の受け口・シュギョウ)。修行の印が偽なら null を返し、rnd も引かない
+  if (typeof amgtChoose === 'function') { const x = amgtChoose(aid, e, row, rnd, slot); if (x) return x; }
   const apt = amgAptOf(row.monster);
   const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
   // 伸ばしたい能力: 相談で頼まれた能力 → なければ、方針・性格の好み・適性に比べて低い能力に点を付けて選ぶ
@@ -70316,22 +70319,32 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  // 助手のブリーダー能力(第②段階の受け口・シュギョウ)。印が偽なら 1
+  const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
+  const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
+  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const up = (v) => (v > 0 ? Math.round(v * sm) : v); // ストレスが増える分だけに掛ける
+  // 関わって伸びた分(ミセカタ 11-11): 関わりの倍率で上乗せになった伸びを、効いた関わりに振り分けて数える
+  const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
+  const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n; g[k] = (g[k] || 0) + n; e.dg = { d: day, n: (e.dg.d === day ? e.dg.n : 0) + n };
+    if (lnAll > 0) { const extra = n - n / mult; e.cg = { ...(e.cg || {}) }; for (const [key, m] of parts) e.cg[key] = Math.round(((e.cg[key] || 0) + extra * Math.log(m) / lnAll) * 100) / 100; }
   };
-  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
   if (act.a === 'rest') { e.fat = amgClamp(e.fat - 30, 0, 100); e.str = amgClamp(e.str - 5, 0, 100); }
   else if (act.a === 'play') { e.fat = amgClamp(e.fat - 10, 0, 100); e.str = amgClamp(e.str - 15, 0, 100); }
-  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100); }
-  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100); }
+  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + up(fail ? 6 : 1), 0, 100); }
+  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + up(fail ? 9 : 4), 0, 100); }
+  else if (act.a === 'shugyo' && typeof amgtDo === 'function') { amgtDo(aid, e, row, rnd, slot, act, add, failChance); } // 修行(第②段階・シュギョウ)。伸びは add を通る
   else { // 特殊訓練
     fail = rnd() < failChance(0.03);
     const others = AMG_KEYS.filter(k => k !== act.k); const sub = others[Math.floor(rnd() * others.length)];
     add(act.k, 4, 9); add(sub, 2, 5);
-    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
   // 経験と Lv(訓練をすると上がる)
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
@@ -70360,7 +70373,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
-      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
       if (!pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
@@ -70371,7 +70384,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
   if (!changed && !reset && (state.done[aid] === nowSlot || (Number.isInteger(last) && last > nowSlot))) return state; // 何も変わらないときは同じものを返す(書き直さない)
   return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
 };
-const amgActName = (x) => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const amgActName = (x) => (x.a === 'shugyo' ? (typeof amgtActName === 'function' ? amgtActName(x) : '修行') : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, subs: new Set(),
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
   load() { // 読み込みは1回だけ(2か所から同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
@@ -70432,6 +70445,8 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 };
 // ナカヨシ10 の受け口(M/B管理): ASSISTANT_LIFE_LINKS.masmonTrainBoost(id, { source: 'ranch' }) から呼べるようにつなぐ(2026-11-11)
 try { if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost; } catch (_) {}
+// 関わって伸びた分の合計(対戦の振り返りから読む・ミセカタ)。{ total, view, pick, ask, ranch }(点・整数)
+const amgCareGainOf = (e) => { const c = (e && e.cg) || {}; const o = { view: Math.round(c.view || 0), pick: Math.round(c.pick || 0), ask: Math.round(c.ask || 0), ranch: Math.round(c.ranch || 0) }; return { total: Math.round((c.view || 0) + (c.pick || 0) + (c.ask || 0) + (c.ranch || 0)), ...o }; };
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 // 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
@@ -70509,6 +70524,7 @@ function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
         : <p className="text-[10.5px] font-bold text-slate-400">まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に{who.name}が育てます)</p>}
       {(amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot]) && <p className="mt-1 text-[10px] font-bold text-pink-200" data-amg-viewed>👀 今日は様子を見に来たので、いつもより伸びやすい</p>}
       <AmgPickRow who={who} t={t} e={e} st={amgSt}/>
+      {typeof AmgtCard === 'function' && <AmgtCard who={who} t={t} e={e}/>}
     </div>);
 }
 
@@ -72764,23 +72780,32 @@ function AssistantLifeFriendPage({ life }) {
   };
   const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
   const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  // まだ何も起きていない(フレンドの家も行き来も置き手紙も無い)ときは、空の箱を並べずに案内1つにする(2026-11-11 社長「わかりづらさをどんどん改善して」・ナカヨシ12)
+  const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
+  const hideIfEmpty = alfEmpty ? { display: 'none' } : undefined;
   return (
     <div className="px-3 pb-3 pt-1" data-alf-page="on">
-      {!s.intro && (
+      {alfEmpty && (
+        <div className={card} data-alf-empty-guide>
+          <p className="text-[13px] font-black text-amber-200">🏘 フレンドができると、ここがにぎやかになります</p>
+          <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
+        </div>)}
+      {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
+          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
         </div>)}
-      <p className={sec}>🏘 いまの行き来</p>
-      <div className={card} data-alf-now>
+      <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
+      <div className={card} data-alf-now style={hideIfEmpty}>
         {st.out && <div className="flex items-center gap-2" data-alf-now-out>{st.out.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.out.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{st.out.name}さんの家へ</span></p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="out" onClick={() => openScene('out')}>▶ 様子</button></div>}
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
-      <p className={sec}>✉️ 置き手紙</p>
-      <div className={card} data-alf-notes>
+      <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
+      <div className={card} data-alf-notes style={hideIfEmpty}>
         {notes.length ? notes.slice(0, 12).map(n => (
           <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
             <p className="text-[11px] leading-snug text-slate-100">
@@ -72799,8 +72824,8 @@ function AssistantLifeFriendPage({ life }) {
               : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
           </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
       </div>
-      <p className={sec}>🏠 フレンドの家</p>
-      <div data-alf-houses>
+      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
@@ -72828,9 +72853,9 @@ function AssistantLifeFriendPage({ life }) {
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
         {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
-          <label key={k} className="flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100" data-alf-setting={k}>
+          <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
             <span>{label}</span>
-            <input type="checkbox" checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
+            <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
           </label>))}
         {s.settings.muted.length > 0 && <button type="button" className="mt-1 text-[10.5px] text-amber-200 underline" data-alf-unmute onClick={() => assistantLifeFriendSetSettings({ muted: [] })}>来ないようにした家({s.settings.muted.length}軒)を戻す</button>}
       </div>

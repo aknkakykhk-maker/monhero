@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57b99073a61f80f7
+// source-sha256: ee96ea7aee5a3380
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108748,7 +108748,7 @@ function AssistantLifeHouseArt({
     "data-assistant-life-board-item": true
   }, React.createElement(AssistantLifeChunks, {
     text: `${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`
-  }))) : React.createElement("p", null, "まだ何もありません")), React.createElement("div", {
+  }))) : React.createElement("p", null, "👀 見守ると ここに残ります")), React.createElement("div", {
     className: "mhl-door",
     style: {
       left: width * (land ? .62 : .66),
@@ -110363,7 +110363,9 @@ function AssistantLifeHouse({
     onClick: () => unwatched[0] && watch(unwatched[0])
   }, React.createElement("em", {
     "data-assistant-life-today-watch-now": unwatched.length
-  }, unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'), React.createElement("i", null, "👀"), React.createElement("b", null, "見守る"), React.createElement("small", null, unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')), React.createElement("button", {
+  }, unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'), React.createElement("i", null, "👀"), React.createElement("b", null, "見守る"), React.createElement("small", {
+    "data-assistant-life-today-gain": "watch"
+  }, uiV2 ? unwatched.length ? '🤝💗 アップ' : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に' : unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-call flex-1",
     "data-assistant-life-today-act": "call",
@@ -110391,7 +110393,9 @@ function AssistantLifeHouse({
       }
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", null, "道具 ", itemsHave, "個")), React.createElement("button", {
+  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
+    "data-assistant-life-today-gain": "give"
+  }, !uiV2 ? `道具 ${itemsHave}個` : (soloOn ? itemsLeft + soloLeft : itemsLeft) <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -110474,7 +110478,19 @@ function AssistantLifeHouse({
     className: "mt-1 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]
-  }, React.createElement("span", {
+  }, uiV2 ? React.createElement("button", {
+    type: "button",
+    className: "mhl-chip",
+    "data-assistant-life-tier-help": true,
+    "aria-label": "にぎわいの説明",
+    onClick: () => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`),
+    style: {
+      minHeight: 32,
+      padding: '0 10px'
+    }
+  }, "🎉 ", tier.label, " ×", tier.mult, " ", React.createElement("span", {
+    "aria-hidden": "true"
+  }, "ⓘ")) : React.createElement("span", {
     className: "mhl-chip"
   }, "🎉 ", tier.label, " ×", tier.mult), React.createElement("span", {
     className: "mhl-bar",
@@ -110811,7 +110827,10 @@ function AssistantLifeHouse({
     }
   }, React.createElement("span", null, nameOf(id)), React.createElement("span", {
     className: "text-xs text-slate-300"
-  }, life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている', " ›")))))), uiV2 && tab === 'where' && note && !roomId && React.createElement("p", {
+  }, life.solo[id]?.reason === 'lonely' ? '💭 さみしそう・声をかけよう' : 'ひとりで過ごしている', " ›")))), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold leading-snug text-slate-300",
+    "data-assistant-life-call-hint": true
+  }, "💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)"))), uiV2 && tab === 'where' && note && !roomId && React.createElement("p", {
     "data-assistant-life-note": true,
     className: "absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100",
     style: {
@@ -110959,9 +110978,20 @@ function AssistantLifeHouse({
     className: "mr-1.5 text-amber-200"
   }, x.t), React.createElement(AssistantLifeChunks, {
     text: x.text
-  }))) : React.createElement("p", {
-    className: "mt-2 text-[12px] text-slate-400"
-  }, "まだ何もありません"), React.createElement("button", {
+  }))) : React.createElement("div", {
+    className: "mt-2",
+    "data-assistant-life-diary-empty": true
+  }, React.createElement("p", {
+    className: "text-[12px] font-bold leading-snug text-slate-300"
+  }, "まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)"), uiV2 && unwatched[0] && React.createElement("button", {
+    type: "button",
+    "data-assistant-life-diary-watch": true,
+    onClick: () => {
+      setBoardOpen(false);
+      watch(unwatched[0]);
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]"
+  }, "👀 いまいる組を見守る(🤝💗 アップ)")), React.createElement("button", {
     type: "button",
     "data-assistant-life-diary-close": true,
     "data-mhl-sheet-close": true,
@@ -131254,9 +131284,10 @@ function AssistantMasmonAskSheet({
   from,
   t = null,
   land = false,
-  onClose
+  onClose,
+  initialText = ''
 }) {
-  const [text, setText] = React.useState('');
+  const [text, setText] = React.useState(typeof initialText === 'string' ? initialText.slice(0, 100) : '');
   const [busy, setBusy] = React.useState(false);
   const [out, setOut] = React.useState(null);
   useAssistantMasmonSave();
@@ -132908,7 +132939,8 @@ const AMG_XP = Object.freeze({
   focus: 2,
   weak: 2,
   rest: 0,
-  play: 0
+  play: 0,
+  shugyo: 2
 });
 const AMG_CATCH_UP = 6;
 const AMG_LOG = 21;
@@ -132972,7 +133004,8 @@ const normalizeAssistantMasmonGrow = raw => {
           n: amgNum(e.dg && e.dg.n, 0, 0, 999)
         },
         lv: amgNum(e.lv, 1, 1, AMG_LV_MAX),
-        xp: amgNum(e.xp, 0, 0, 9999)
+        xp: amgNum(e.xp, 0, 0, 9999),
+        cg: Object.fromEntries(['view', 'pick', 'ask', 'ranch'].map(k => [k, Number.isFinite(Number(e.cg && e.cg[k])) ? Math.max(0, Math.min(1e6, Number(e.cg[k]))) : 0]))
       };
     }
     out.mons[aid] = one;
@@ -133064,7 +133097,7 @@ const amgInitial = (row, rnd) => {
   };
 };
 const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
-const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return {
     a: 'rest'
@@ -133075,6 +133108,10 @@ const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
   if (e.str >= 50) return {
     a: 'play'
   };
+  if (typeof amgtChoose === 'function') {
+    const x = amgtChoose(aid, e, row, rnd, slot);
+    if (x) return x;
+  }
   const apt = amgAptOf(row.monster);
   const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
   let k = focusK && AMG_KEYS.includes(focusK) ? focusK : '';
@@ -133113,8 +133150,14 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
+  const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
+  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const up = v => v > 0 ? Math.round(v * sm) : v;
+  const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
+  const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n;
@@ -133123,8 +133166,15 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
       d: day,
       n: (e.dg.d === day ? e.dg.n : 0) + n
     };
+    if (lnAll > 0) {
+      const extra = n - n / mult;
+      e.cg = {
+        ...(e.cg || {})
+      };
+      for (const [key, m] of parts) e.cg[key] = Math.round(((e.cg[key] || 0) + extra * Math.log(m) / lnAll) * 100) / 100;
+    }
   };
-  const failChance = extra => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  const failChance = extra => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
   if (act.a === 'rest') {
     e.fat = amgClamp(e.fat - 30, 0, 100);
     e.str = amgClamp(e.str - 5, 0, 100);
@@ -133135,13 +133185,15 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     fail = rnd() < failChance(0);
     add(act.k, 3, 6);
     e.fat = amgClamp(e.fat + 5, 0, 100);
-    e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100);
+    e.str = amgClamp(e.str + up(fail ? 6 : 1), 0, 100);
   } else if (act.a === 'heavy') {
     fail = rnd() < failChance(0.05);
     add(act.k, 7, 12);
     add(AMG_SUB[act.k], 1, 3);
     e.fat = amgClamp(e.fat + 14, 0, 100);
-    e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100);
+    e.str = amgClamp(e.str + up(fail ? 9 : 4), 0, 100);
+  } else if (act.a === 'shugyo' && typeof amgtDo === 'function') {
+    amgtDo(aid, e, row, rnd, slot, act, add, failChance);
   } else {
     fail = rnd() < failChance(0.03);
     const others = AMG_KEYS.filter(k => k !== act.k);
@@ -133149,7 +133201,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     add(act.k, 4, 9);
     add(sub, 2, 5);
     e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100);
-    e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+    e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0);
   e.lv = e.lv || 1;
@@ -133225,7 +133277,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
         a: pl.a,
         k: pl.k,
         picked: true
-      } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
       if (!pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
@@ -133261,7 +133313,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     }
   };
 };
-const amgActName = x => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const amgActName = x => (x.a === 'shugyo' ? typeof amgtActName === 'function' ? amgtActName(x) : '修行' : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = {
   state: normalizeAssistantMasmonGrow(null),
   loaded: false,
@@ -133405,6 +133457,19 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 try {
   if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost;
 } catch (_) {}
+const amgCareGainOf = e => {
+  const c = e && e.cg || {};
+  const o = {
+    view: Math.round(c.view || 0),
+    pick: Math.round(c.pick || 0),
+    ask: Math.round(c.ask || 0),
+    ranch: Math.round(c.ranch || 0)
+  };
+  return {
+    total: Math.round((c.view || 0) + (c.pick || 0) + (c.ask || 0) + (c.ranch || 0)),
+    ...o
+  };
+};
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
   if (!AMG_STORE.loaded) return false;
@@ -133641,6 +133706,10 @@ function AmgGrowCard({
     t: t,
     e: e,
     st: amgSt
+  }), typeof AmgtCard === 'function' && React.createElement(AmgtCard, {
+    who: who,
+    t: t,
+    e: e
   }));
 }
 const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
@@ -138212,10 +138281,23 @@ function AssistantLifeFriendPage({
   };
   const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
   const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
+  const hideIfEmpty = alfEmpty ? {
+    display: 'none'
+  } : undefined;
   return React.createElement("div", {
     className: "px-3 pb-3 pt-1",
     "data-alf-page": "on"
-  }, !s.intro && React.createElement("div", {
+  }, alfEmpty && React.createElement("div", {
+    className: card,
+    "data-alf-empty-guide": true
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200"
+  }, "🏘 フレンドができると、ここがにぎやかになります"), React.createElement("p", {
+    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-200"
+  }, "・🚪 フレンドの家を訪ねて、助手や家具を見られます", React.createElement("br", null), "・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます"), React.createElement("p", {
+    className: "mt-1 text-[11px] leading-snug text-slate-300"
+  }, "フレンドが助手ライフを開くと、その人の家がここに並びます。")), !s.intro && !alfEmpty && React.createElement("div", {
     className: card,
     "data-alf-intro": true
   }, React.createElement("p", {
@@ -138226,7 +138308,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, t))), React.createElement("button", {
     type: "button",
-    className: "mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950",
+    className: "mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950",
     "data-alf-intro-ok": true,
     onClick: () => {
       ALF_STORE.set({
@@ -138237,10 +138319,12 @@ function AssistantLifeFriendPage({
       } catch {}
     }
   }, "わかった")), React.createElement("p", {
-    className: sec
+    className: sec,
+    style: hideIfEmpty
   }, "🏘 いまの行き来"), React.createElement("div", {
     className: card,
-    "data-alf-now": true
+    "data-alf-now": true,
+    style: hideIfEmpty
   }, st.out && React.createElement("div", {
     className: "flex items-center gap-2",
     "data-alf-now-out": true
@@ -138307,10 +138391,12 @@ function AssistantLifeFriendPage({
   }, "置き手紙 ", st.look, "/", lim.look), React.createElement("span", {
     className: "whitespace-nowrap"
   }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), React.createElement("p", {
-    className: sec
+    className: sec,
+    style: hideIfEmpty
   }, "✉️ 置き手紙"), React.createElement("div", {
     className: card,
-    "data-alf-notes": true
+    "data-alf-notes": true,
+    style: hideIfEmpty
   }, notes.length ? notes.slice(0, 12).map(n => React.createElement("div", {
     key: n.id,
     className: "border-b border-slate-700/60 py-1 last:border-0",
@@ -138360,9 +138446,11 @@ function AssistantLifeFriendPage({
   }, "お礼「", ALF_THANKS_TEXTS[n.thanks], "」を返しました")))) : React.createElement("p", {
     className: "text-[11px] text-slate-400"
   }, "まだ置き手紙はありません。")), React.createElement("p", {
-    className: sec
+    className: sec,
+    style: hideIfEmpty
   }, "🏠 フレンドの家"), React.createElement("div", {
-    "data-alf-houses": true
+    "data-alf-houses": true,
+    style: hideIfEmpty
   }, houses.length ? houses.map(f => {
     const can = assistantLifeFriendCanLook(f.id);
     const been = st.photos.some(p => p.host === f.id);
@@ -138443,10 +138531,14 @@ function AssistantLifeFriendPage({
     "data-alf-settings": true
   }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
     key: k,
-    className: "flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100",
+    className: "flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100",
     "data-alf-setting": k
   }, React.createElement("span", null, label), React.createElement("input", {
     type: "checkbox",
+    style: {
+      width: 22,
+      height: 22
+    },
     checked: !!s.settings[k],
     onChange: e => assistantLifeFriendSetSettings({
       [k]: e.target.checked

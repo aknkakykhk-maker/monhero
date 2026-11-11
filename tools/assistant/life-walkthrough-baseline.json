@@ -1,10 +1,10 @@
 {
  "slot": "afternoon",
- "total": 3141,
+ "total": 3001,
  "hard": 0,
  "screens": {
-  "first-view": 392,
-  "house-list": 363,
+  "first-view": 408,
+  "house-list": 373,
   "diary": 36,
   "call": 140,
   "give": 0,
@@ -14,8 +14,8 @@
   "masmon": 256,
   "where": 528,
   "where-place": 448,
-  "friends": 253,
+  "friends": 263,
   "items": 151,
-  "visit": 398
+  "visit": 222
  }
 }
