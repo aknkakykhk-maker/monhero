@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9735ef3734a37619
+// source-sha256: 011f60659cb4802f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -35530,9 +35530,11 @@ const RhythmOptions = ({
   onCalibrate = null,
   onLineAdjust = null,
   calibrationResult = null,
-  onClearCalibration = null
+  onClearCalibration = null,
+  onPreview = null,
+  initialDraft = null
 }) => {
-  const [draft, setDraft] = useState(() => normalizeRhythmSettings(value));
+  const [draft, setDraft] = useState(() => normalizeRhythmSettings(initialDraft || value));
   const [message, setMessage] = useState('');
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [tab, setTab] = useState('live');
@@ -35848,7 +35850,15 @@ const RhythmOptions = ({
     className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
   }, "MONBEAT"), React.createElement("h2", {
     className: `font-black ${wide ? 'text-[13px]' : 'text-base'}`
-  }, "⚙️ オプション"))), React.createElement("nav", {
+  }, "⚙️ オプション")), onPreview && React.createElement("button", {
+    type: "button",
+    "data-rhythm-option-preview-open": true,
+    onClick: () => onPreview(draft),
+    "aria-label": "いまの設定で演奏画面を見てみる",
+    className: `ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide ? 'min-h-[38px] text-[12px]' : 'min-h-[44px] text-[13px]'}`
+  }, React.createElement("span", null, "▶ 見てみる"), !wide && React.createElement("small", {
+    className: "text-[10px] font-bold text-cyan-200/90"
+  }, "いまの設定で演奏画面"))), React.createElement("nav", {
     "data-rhythm-options-tabs": true,
     className: `grid shrink-0 grid-cols-4 px-3 ${wide ? 'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3' : 'gap-2 pb-2'}`
   }, RHYTHM_OPTION_TABS.map(([id, text]) => React.createElement("button", {
@@ -40448,6 +40458,18 @@ const RhythmLineAdjustPanel = ({
   };
   const skyRange = rhythmSkyLineOffsetRange(RHYTHM_SKY_LIFT.base, RHYTHM_JUDGMENT_LINE_Y.ratio);
   const rows = [['ground', '地上の判定ライン', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, '%', 0], ['groundW', '地上の受付の広さ', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyLine', '空中の判定ライン', skyRange.min, skyRange.max, RHYTHM_SKY_LINE_OFFSET_STEP_PCT, '%', 1], ['skyW', '空中の受付の広さ(下側)', RHYTHM_ACCEPT_WIDTH_MIN_PCT, 100, RHYTHM_ACCEPT_WIDTH_STEP_PCT, '%', 0], ['skyTop', '空中の受付の上の端', RHYTHM_SKY_ACCEPT_TOP_MIN_PCT, RHYTHM_SKY_ACCEPT_TOP_MAX_PCT, RHYTHM_SKY_ACCEPT_TOP_STEP_PCT, '%', 0]];
+  if (adjust.preview) return React.createElement("div", {
+    "data-rhythm-option-preview-panel": true,
+    className: `pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape ? 'right-1 top-[54px]' : 'right-2 top-[76px]'}`
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-option-preview-back": true,
+    onClick: adjust.onEnd,
+    className: "min-h-[44px] rounded-xl border border-white/30 bg-slate-900/90 px-3 text-[12px] font-black text-white"
+  }, "設定へ戻る"), React.createElement("span", {
+    "data-rhythm-option-preview-note": true,
+    className: "max-w-[160px] rounded-lg bg-violet-900/85 px-2 py-1 text-right text-[10px] font-bold leading-snug text-violet-50"
+  }, "見本(自動で叩きます)", React.createElement("br", null), "保存前の設定で表示中"));
   if (adjust.phase === 'try') return React.createElement("div", {
     "data-rhythm-line-adjust-panel": true,
     "data-phase": "try",
@@ -40560,6 +40582,7 @@ const RhythmTapTest = ({
   tutorial = tutorial || !!lineAdjust;
   const lineAdjustRef = useRef(lineAdjust);
   lineAdjustRef.current = lineAdjust;
+  const previewHands = !!(lineAdjust && lineAdjust.preview);
   const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
   const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
@@ -43712,6 +43735,22 @@ const RhythmTapTest = ({
     };
   }, []);
   useEffect(() => {
+    if (!previewHands || typeof window === 'undefined' || typeof rhythmPreviewHandsStart !== 'function') return undefined;
+    let stop = null;
+    const wait = setInterval(() => {
+      if (stop) return;
+      const ms = window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs ? window.__mhTestHooks.rhythmSongMs() : null;
+      if (ms != null && playAreaRef.current) {
+        stop = rhythmPreviewHandsStart(playAreaRef.current);
+        clearInterval(wait);
+      }
+    }, 100);
+    return () => {
+      clearInterval(wait);
+      if (stop) stop();
+    };
+  }, [previewHands]);
+  useEffect(() => {
     mountedRef.current = true;
     rhythmChartSwitchHold(true);
     if (!(lineAdjust && lineAdjust.phase === 'set')) beginRun(bestRecord);
@@ -45940,6 +45979,227 @@ const RhythmTapTest = ({
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
   }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る')))));
+};
+const rhythmPreviewHandsStart = area => {
+  if (typeof window === 'undefined' || !area) return () => {};
+  const hooks = () => window.__mhTestHooks || {};
+  let stopped = false,
+    raf = 0,
+    k = 0,
+    ids = 900;
+  const timers = new Set();
+  const later = (ms, fn) => {
+    const id = setTimeout(() => {
+      timers.delete(id);
+      if (!stopped) fn();
+    }, Math.max(0, ms));
+    timers.add(id);
+  };
+  const lineR = () => typeof RHYTHM_JUDGMENT_LINE_Y !== 'undefined' ? RHYTHM_JUDGMENT_LINE_Y.ratio : 0.82;
+  const rectOf = () => typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(area) : area.getBoundingClientRect();
+  const toClient = (x, y) => {
+    if (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.unpoint) {
+      const c = RHYTHM_VIEW_ROTATION.unpoint(x, y);
+      return {
+        x: c.clientX,
+        y: c.clientY
+      };
+    }
+    return {
+      x,
+      y
+    };
+  };
+  const pt = (c, sky) => {
+    const r = rectOf();
+    const lr = lineR();
+    const lift = sky > 0 && typeof RHYTHM_SKY_LIFT !== 'undefined' ? RHYTHM_SKY_LIFT.ratio * sky : 0;
+    return {
+      x: r.left + r.width * rhythmProjectBoundary(c, lr),
+      y: r.top + r.height * (lr - lift)
+    };
+  };
+  const spanAt = (n, t) => {
+    if (rhythmNoteIsSlide(n)) return {
+      c: rhythmSlideExpectedLane(n, t) + 0.5,
+      sky: rhythmSlideHasSky(n) ? rhythmSlideSkyAt(n, t) : 0
+    };
+    const sky = rhythmNoteSkyHeight(n);
+    if (n.subLane != null && Number.isFinite(Number(n.subLane))) {
+      const sp = rhythmNoteHasHoldPoints(n) ? rhythmHoldSpanAt(n, t) : {
+        subLane: Number(n.subLane),
+        subLaneWidth: Number(n.subLaneWidth) || 2
+      };
+      return {
+        c: (sp.subLane + sp.subLaneWidth / 2) / 2,
+        sky
+      };
+    }
+    return {
+      c: (Number(n.lane) || 0) + 0.5,
+      sky
+    };
+  };
+  const posOf = (n, t) => {
+    const s = spanAt(n, t);
+    return pt(s.c, s.sky);
+  };
+  const send = (type, id, p) => {
+    const c = toClient(p.x, p.y);
+    try {
+      area.dispatchEvent(new window.PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        pointerId: id,
+        pointerType: 'mouse',
+        isPrimary: false,
+        clientX: c.x,
+        clientY: c.y,
+        buttons: type === 'pointerup' ? 0 : 1
+      }));
+    } catch (_) {}
+  };
+  const notes = (() => {
+    try {
+      return (hooks().rhythmNotes && hooks().rhythmNotes() || []).slice().sort((a, b) => a.timeMs - b.timeMs);
+    } catch (_) {
+      return [];
+    }
+  })();
+  const isLong = n => (n.type === 'HOLD' || n.type === 'SLIDE') && Number(n.endTimeMs) > Number(n.timeMs);
+  const flickVec = n => {
+    const d = typeof rhythmFlickDir === 'function' ? rhythmFlickDir(n) : '';
+    return d === 'left' ? [-1, 0] : d === 'right' ? [1, 0] : [0, -1];
+  };
+  const events = [],
+    follows = [];
+  for (const n of notes) {
+    const t = Number(n.timeMs),
+      id = ++ids;
+    if (isLong(n)) {
+      const e = Number(n.endTimeMs),
+        fo = {
+          id,
+          n,
+          from: t,
+          until: n.endFlick === true ? e - 40 : e - 5,
+          on: false
+        };
+      follows.push(fo);
+      events.push({
+        at: t,
+        f: () => {
+          fo.on = true;
+          send('pointerdown', id, posOf(n, t));
+        }
+      });
+      if (n.endFlick === true) {
+        events.push({
+          at: e - 40,
+          f: () => {
+            fo.on = false;
+            const q = posOf(n, e);
+            send('pointermove', id, {
+              x: q.x,
+              y: q.y - 30
+            });
+          }
+        });
+        events.push({
+          at: e - 20,
+          f: () => {
+            const q = posOf(n, e);
+            send('pointermove', id, {
+              x: q.x,
+              y: q.y - 70
+            });
+          }
+        });
+        events.push({
+          at: e,
+          f: () => {
+            const q = posOf(n, e);
+            send('pointerup', id, {
+              x: q.x,
+              y: q.y - 70
+            });
+          }
+        });
+      } else events.push({
+        at: e - 5,
+        f: () => {
+          fo.on = false;
+          send('pointerup', id, posOf(n, e));
+        }
+      });
+    } else if (n.type === 'FLICK') {
+      const v = flickVec(n);
+      events.push({
+        at: t,
+        f: () => send('pointerdown', id, posOf(n, t))
+      });
+      events.push({
+        at: t + 25,
+        f: () => {
+          const p = posOf(n, t);
+          send('pointermove', id, {
+            x: p.x + v[0] * 30,
+            y: p.y + v[1] * 30
+          });
+        }
+      });
+      events.push({
+        at: t + 45,
+        f: () => {
+          const p = posOf(n, t);
+          send('pointermove', id, {
+            x: p.x + v[0] * 60,
+            y: p.y + v[1] * 60
+          });
+        }
+      });
+      events.push({
+        at: t + 46,
+        f: () => {
+          const p = posOf(n, t);
+          send('pointerup', id, {
+            x: p.x + v[0] * 60,
+            y: p.y + v[1] * 60
+          });
+        }
+      });
+    } else {
+      events.push({
+        at: t,
+        f: () => send('pointerdown', id, posOf(n, t))
+      });
+      events.push({
+        at: t + 40,
+        f: () => send('pointerup', id, posOf(n, t))
+      });
+    }
+  }
+  events.sort((a, b) => a.at - b.at);
+  const tick = () => {
+    if (stopped) return;
+    const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null) {
+      while (k < events.length && events[k].at <= ms + 17) {
+        const ev = events[k++];
+        const wait = ev.at - ms;
+        if (wait > 1) later(wait, ev.f);else ev.f();
+      }
+      for (const f of follows) if (f.on && ms > f.from && ms < f.until) send('pointermove', f.id, posOf(f.n, ms));
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => {
+    stopped = true;
+    if (raf) cancelAnimationFrame(raf);
+    timers.forEach(clearTimeout);
+    timers.clear();
+  };
 };
 const DebugScreenHead = ({
   title,
@@ -52332,77 +52592,77 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']]
   },
   sorashido: {
-    join: [['happy', 'うぉぉぉ！俺も参戦するぜ・・・！'], ['happy', '今日はオリヒメの曲あるかな！？ 楽しみだぜ笑']],
-    first: [['excited', 'はじめての曲か。今から計算するぜ・・・！'], ['excited', '初見は燃えるな！ ちばりよー、俺！']],
-    like: [['happy', 'この曲は全ノーツ計算済みだぜ笑']],
-    dislike: [['troubled', 'ゆっくりの曲は、計算が合わなくてそわそわするぜ笑']],
-    combo: [['excited', 'うぉぉぉ！計算どおりだぜ・・・！'], ['excited', 'うまい！ 今の、でーじきれいだった笑'], ['excited', 'このまま最後まで行く計算だぜ・・・！']],
-    miss: [['normal', 'ここから巻き返す計算だぜ笑'], ['normal', '俺もさっき1個落とした笑 気にすんな！']],
-    climax: [['excited', 'うぉぉぉ！ここだぜ！'], ['excited', 'サビの密度、計算済みだぜ笑'], ['excited', 'なんくるないさ〜、ここは楽しむところだぜ！']],
-    last: [['normal', '残り10秒、計算どおりに締めるぜ笑'], ['normal', 'ラストまで全部拾うぞ！']],
-    mvp: [['wink', 'MVPは計算済みだったぜ・・・！'], ['wink', 'まじか、俺がMVP！？ 表に太字で書いとく笑']],
-    high: [['happy', '計算どおりの名演だぜ・・・！'], ['happy', '今の数字、表に残しておきたいぜ笑']],
-    mid: [['happy', '悪くない数字だぜ。次はもっと上がる計算だ'], ['happy', 'もう一曲いこう！ 次は勝つ笑']],
-    low: [['troubled', '次は全ノーツ計算して挑むぜ笑'], ['crying', 'くっそー！ 悔しい……次は上がるぜ・・・！']],
-    fc: [['surprise', 'うぉぉぉ！フルコンだぜ笑'], ['surprise', '計算を超えてきたぜ笑']],
-    levelup: [['happy', 'セッションLvアップだぜ・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりだぜ笑']],
-    likeup: [['wink', 'この曲、何回もやってたら好きになってきた笑']],
-    overcome: [['happy', 'ゆっくりの曲も、計算が合ったぜ！'], ['happy', 'そわそわしたけど、乗りこえたぜ笑']],
-    'song:monster_hero': [['happy', 'Monster Hero は全ノーツ計算済みだぜ！']],
-    'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちだぜ笑']],
-    'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないぜ！']],
-    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきったぜ笑']],
-    'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
-    'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
-    'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
-    woke: [['surprise', '…うぉっ！？ 起きたぜ、行くさ！'], ['normal', '寝起きの指でも、計算どおり叩くぜ'], ['happy', 'ふぁ…目ざましより効いたさ笑']],
-    refuse: [['normal', '…表の…3行目…むにゃ…'], ['troubled', '…すまん…朝は弱いのさ…'], ['happy', '…なんくるないさ…すぅ…']],
-    'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑']],
-    'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑']],
-    'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑']],
-    'listen:six_eternel_remix': [['normal', '強い音35%・軽い音4%で、まざってるタイプだぜ。BPMはおよそ160笑']],
-    'listen:six_eternel_beat': [['excited', '816ノーツ・BPMおよそ276だぜ・・・！ 数字だけで燃えるな笑']],
-    'listen:stay_with_me': [['happy', '704ノーツで4:34。長さのわりに落ち着いた数だぜ笑']],
-    'listen:kiki_issen': [['excited', '882ノーツは、前半の23曲でいちばん多いぜ・・・！']],
-    'listen:kaze_ga_soyogu': [['troubled', 'BPMおよそ119、193ノーツ……ゆっくりの曲は、そわそわするんだよな笑']],
-    'listen:close_to_your_heart': [['happy', '軽い音が11%で、前半の曲の中では多いほうだぜ笑']],
-    'listen:eiki_boss_remix': [['normal', '強い音52%、BPMはおよそ154。綺季一閃の別の顔だぜ笑']],
-    'listen:pandora_boss_remix': [['excited', '強く打つ音61%だぜ・・・！ 前半の曲でも強い音が多いほう笑']],
-    'listen:dullahan': [['normal', '強い音17%・軽い音4%。強い音が少なめの、めずらしい曲だぜ笑']],
-    'listen:dullahan_clockwork': [['happy', '強く打つ音57%・軽い音2%だぜ。352ノーツで2分ちょい笑']],
-    'listen:toriko': [['happy', '159ノーツ・Lv.17。短いから、全部拾えたら気持ちいいぜ笑']],
-    'listen:4u_hitasura': [['normal', 'BPMおよそ145、296ノーツ。数字はやさしめだぜ笑']],
-    'listen:kindan_no_resistance': [['excited', 'Lv.28で650ノーツだぜ・・・！ BPMもおよそ180笑']],
-    'listen:crossing_field': [['excited', '強く打つ音60%・軽い音2%！ 強い音ばっかりだぜ・・・！']],
-    'listen:nothing_without_you': [['normal', '強い音32%・軽い音8%でまざってるタイプ。BPMはおよそ194だぜ笑']],
-    'listen:freedom_dive': [['excited', '強く打つ音75%だぜ・・・！ 前半の曲でいちばん強い音が多い笑']],
-    'listen:the_city_beneath_the_comets': [['excited', '強く打つ音60%・BPMはおよそ170だぜ・・・！']],
-    'listen:mou_hitotsu_no_sekai_e': [['normal', '強い音59%・軽い音1%。744ノーツで、BPMはおよそ188だぜ笑']],
-    'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いぜ笑']],
-    'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけだぜ。短いけど濃い笑']],
-    'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいぜ・・・！']],
-    'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34だ。2分25秒でこの数は、でーじ多い笑']],
-    'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もあるな笑']],
-    'listen:haruka': [['excited', 'BPM200で451ノーツ、Lv.33。数字だけでも燃えてくる笑']],
-    'listen:crazy_party_night': [['normal', 'Lv.23で307ノーツ。はじめての人にも、ちょうどいい数だな']],
-    'listen:emerald_rush': [['happy', '415ノーツでLv.25。BPM152だから、落ち着いて数えられるぞ']],
-    'listen:wrath_of_the_thorn_king': [['normal', '229ノーツでLv.22。強い音が半分だから、一打一打が重いな']],
-    'listen:monster': [['happy', '4:25で675ノーツ。長いけど、BPM135だから数えやすいぞ']],
-    'listen:anima': [['excited', 'BPM184で567ノーツ、Lv.44。数字が全部でかいぜ・・・！']],
-    'listen:journey': [['surprise', 'BPM128なのに731ノーツ、Lv.36。ゆっくりなのに多いのが不思議だ笑']],
-    'listen:sheriruth': [['normal', '642ノーツでLv.35。サビが5秒しかないのは、表にしても珍しいぞ']],
-    'listen:against_my_own_shadow': [['normal', 'BPM143で397ノーツ、Lv.29だ。強い音が52%あるぞ']],
-    'listen:grievous_lady': [['excited', 'BPM210・636ノーツ・Lv.50。どの数字も手ごわいぜ・・・！']],
-    'listen:rose': [['normal', 'BPM125で533ノーツ、Lv.30。ゆっくりでも数はしっかりあるぞ']],
-    'listen:sad_song': [['happy', '3:39で742ノーツ、Lv.29。長いぶん、数もしっかりあるな笑']],
-    'listen:toward_the_stars_short': [['normal', 'BPM143で481ノーツ、Lv.37。強い音が48%だぞ']],
-    'listen:black_shout': [['happy', '445ノーツでLv.33。強い音が62%、数えてて手が熱くなるな笑']],
-    'listen:light_player': [['surprise', '1060ノーツだぜ・・・！ 4:29あるとはいえ、数がすごい']],
-    'listen:tsuki_ga_michiru_mae_ni': [['happy', '1210ノーツ、強い音が67%。数えるのが楽しくなる曲だ笑']],
-    'listen:rebellion': [['excited', '1299ノーツ、Lv.44。数えがいがあるぜ・・・！']],
-    'listen:altar_world_tree': [['normal', '6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けるぞ']],
-    'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いな']],
-    'listen:humanoid': [['excited', '好きな曲だ！ BPM159で606ノーツ、Lv.50。全部計算済みだぜ・・・！']]
+    join: [['happy', '自分も参戦します！ よろしくお願いします笑'], ['happy', '今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑']],
+    first: [['excited', 'はじめての曲ですね。今から計算します・・・！'], ['excited', '初見は燃えますねー！ ちばりよー、自分！']],
+    like: [['happy', 'この曲は全ノーツ計算済みです笑']],
+    dislike: [['troubled', 'ゆっくりの曲は、計算が合わなくてそわそわします笑']],
+    combo: [['excited', 'ほほー！ 計算どおりです・・・！'], ['excited', 'うまい！ 今の、でーじきれいでした笑'], ['excited', 'このまま最後まで行く計算です・・・！']],
+    miss: [['normal', 'ここから巻き返す計算です笑'], ['normal', '自分もさっき1個落としました笑 気にしないでいきましょう！']],
+    climax: [['excited', 'うぉぉぉ！ ここですね！'], ['excited', 'サビの密度、計算済みです笑'], ['excited', 'なんくるないさ〜、ここは楽しむところですよ！']],
+    last: [['normal', '残り10秒、計算どおりに締めます笑'], ['normal', 'ラストまで全部拾いましょう！']],
+    mvp: [['wink', 'MVPは計算済みでした・・・！笑'], ['wink', 'え、自分がMVPですか！？ 表に太字で書いておきます笑']],
+    high: [['happy', '計算どおりの名演でしたねー！'], ['happy', '今の数字、表に残しておきたいです笑']],
+    mid: [['happy', '悪くない数字ですね。次はもっと上がる計算です'], ['happy', 'もう一曲いきましょう！ 次は勝ちます笑']],
+    low: [['troubled', '次は全ノーツ計算して挑みます笑'], ['crying', 'くやしい・・・！ 次は上げます！']],
+    fc: [['surprise', 'フルコンですねー！ すごいです笑'], ['surprise', '計算を超えてきましたね笑']],
+    levelup: [['happy', 'セッションLvアップです・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりですね笑']],
+    likeup: [['wink', 'この曲、何回もやってたら好きになってきました笑']],
+    overcome: [['happy', 'ゆっくりの曲も、計算が合いました！'], ['happy', 'そわそわしましたけど、乗りこえました笑']],
+    'song:monster_hero': [['happy', 'Monster Hero は全ノーツ計算済みです！']],
+    'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちですね笑']],
+    'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないです！']],
+    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきりました笑']],
+    'sp50': [['excited', 'セッションLv.50です！ 表に太字で書いておきます笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあります・・・！']],
+    'sp80': [['excited', 'Lv.80！ 誤差がほとんど無くなってきましたねー！'], ['happy', 'この伸び方、グラフにしたらきれいです笑']],
+    'sp100': [['excited', 'うぉぉぉ！ Lv.100、セッションマスターです・・・！'], ['happy', 'ここまでの記録、全部宝物です笑']],
+    woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
+    refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
+    'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
+    'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
+    'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
+    'listen:six_eternel_remix': [['normal', '強い音35%・軽い音4%で、まざってるタイプです。BPMはおよそ160です笑']],
+    'listen:six_eternel_beat': [['excited', '816ノーツ・BPMおよそ276です・・・！ 数字だけで燃えますね笑']],
+    'listen:stay_with_me': [['happy', '704ノーツで4:34。長さのわりに落ち着いた数です笑']],
+    'listen:kiki_issen': [['excited', '882ノーツは、前半の23曲でいちばん多いです・・・！']],
+    'listen:kaze_ga_soyogu': [['troubled', 'BPMおよそ119、193ノーツ・・・ゆっくりの曲は、そわそわするんですよね笑']],
+    'listen:close_to_your_heart': [['happy', '軽い音が11%で、前半の曲の中では多いほうです笑']],
+    'listen:eiki_boss_remix': [['normal', '強い音52%、BPMはおよそ154。綺季一閃の別の顔ですね笑']],
+    'listen:pandora_boss_remix': [['excited', '強く打つ音61%です・・・！ 前半の曲でも強い音が多いほうです笑']],
+    'listen:dullahan': [['normal', '強い音17%・軽い音4%。強い音が少なめの、めずらしい曲です笑']],
+    'listen:dullahan_clockwork': [['happy', '強く打つ音57%・軽い音2%です。352ノーツで2分ちょいです笑']],
+    'listen:toriko': [['happy', '159ノーツ・Lv.17。短いので、全部拾えたら気持ちいいです笑']],
+    'listen:4u_hitasura': [['normal', 'BPMおよそ145、296ノーツ。数字はやさしめです笑']],
+    'listen:kindan_no_resistance': [['excited', 'Lv.28で650ノーツです・・・！ BPMもおよそ180です笑']],
+    'listen:crossing_field': [['excited', '強く打つ音60%・軽い音2%！ 強い音ばっかりです・・・！']],
+    'listen:nothing_without_you': [['normal', '強い音32%・軽い音8%でまざってるタイプです。BPMはおよそ194です笑']],
+    'listen:freedom_dive': [['excited', '強く打つ音75%です・・・！ 前半の曲でいちばん強い音が多いです笑']],
+    'listen:the_city_beneath_the_comets': [['excited', '強く打つ音60%・BPMはおよそ170です・・・！']],
+    'listen:mou_hitotsu_no_sekai_e': [['normal', '強い音59%・軽い音1%。744ノーツで、BPMはおよそ188です笑']],
+    'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いです笑']],
+    'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけです。短いけど濃いです笑']],
+    'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
+    'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
+    'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
+    'listen:haruka': [['excited', 'BPM200で451ノーツ、Lv.33。数字だけでも燃えてきます笑']],
+    'listen:crazy_party_night': [['normal', 'Lv.23で307ノーツ。はじめての人にも、ちょうどいい数ですね']],
+    'listen:emerald_rush': [['happy', '415ノーツでLv.25。BPM152なので、落ち着いて数えられますよ']],
+    'listen:wrath_of_the_thorn_king': [['normal', '229ノーツでLv.22。強い音が半分なので、一打一打が重いですね']],
+    'listen:monster': [['happy', '4:25で675ノーツ。長いけど、BPM135なので数えやすいです']],
+    'listen:anima': [['excited', 'BPM184で567ノーツ、Lv.44。数字が全部でかいですね・・・！']],
+    'listen:journey': [['surprise', 'BPM128なのに731ノーツ、Lv.36。ゆっくりなのに多いのが不思議です笑']],
+    'listen:sheriruth': [['normal', '642ノーツでLv.35。サビが5秒しかないのは、表にしても珍しいです']],
+    'listen:against_my_own_shadow': [['normal', 'BPM143で397ノーツ、Lv.29です。強い音が52%ありますよ']],
+    'listen:grievous_lady': [['excited', 'BPM210・636ノーツ・Lv.50。どの数字も手ごわいですね・・・！']],
+    'listen:rose': [['normal', 'BPM125で533ノーツ、Lv.30。ゆっくりでも数はしっかりありますよ']],
+    'listen:sad_song': [['happy', '3:39で742ノーツ、Lv.29。長いぶん、数もしっかりありますね笑']],
+    'listen:toward_the_stars_short': [['normal', 'BPM143で481ノーツ、Lv.37。強い音が48%です']],
+    'listen:black_shout': [['happy', '445ノーツでLv.33。強い音が62%、数えてて手が熱くなりますね笑']],
+    'listen:light_player': [['surprise', '1060ノーツです・・・！ 4:29あるとはいえ、数がすごいです']],
+    'listen:tsuki_ga_michiru_mae_ni': [['happy', '1210ノーツ、強い音が67%。数えるのが楽しくなる曲です笑']],
+    'listen:rebellion': [['excited', '1299ノーツ、Lv.44。数えがいがありますね・・・！']],
+    'listen:altar_world_tree': [['normal', '6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けますよ']],
+    'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね']],
+    'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']]
   },
   erubin: {
     join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
@@ -52510,9 +52770,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['atsu', 'excited', '{c}、ここ決めるぞ笑'], ['mua', 'excited', 'りょ！いっくよ〜♪']]]
   },
   'atsu-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここのノーツ、気持ちいいぜ・・・！'], ['atsu', 'happy', 'さすがだな笑']], [['sorashido', 'happy', '{c}との差、今日は2点だぜ笑'], ['atsu', 'happy', '細かすぎだろ笑']]],
-    result: [[['sorashido', 'happy', '2人で最高値だぜ・・・！'], ['atsu', 'wink', 'いい数字だったな笑']]],
-    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ここだぜ！']]]
+    play: [[['sorashido', 'happy', '{c}、ここのノーツ、気持ちいいですねー！'], ['atsu', 'happy', 'さすがだな笑']], [['sorashido', 'happy', '{c}との差、今日は2点です笑'], ['atsu', 'happy', '細かすぎだろ笑']]],
+    result: [[['sorashido', 'happy', '2人で最高値ですね・・・！'], ['atsu', 'wink', 'いい数字だったな笑']]],
+    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ ここですね！']]]
   },
   'dra-erubin': {
     play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だぞ、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
@@ -52540,9 +52800,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、いっくよ〜！'], ['dra', 'excited', 'おでも全力だからな！']]]
   },
   'dra-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここの密度、すごいぜ・・・！'], ['dra', 'happy', 'おでも負けないからな']], [['dra', 'happy', '{c}、楽しそうだな'], ['sorashido', 'happy', '楽しいぜ笑']]],
-    result: [[['sorashido', 'happy', '2人の数字、いい感じだぜ・・・！'], ['dra', 'wink', 'えへへ、うれしいな']]],
-    gattai: [[['sorashido', 'excited', 'いくぜ、{c}！最高値を出すぜ笑'], ['dra', 'excited', 'おう、ワイもいくぞ！']]]
+    play: [[['sorashido', 'happy', '{c}、ここの密度、すごいです・・・！'], ['dra', 'happy', 'おでも負けないからな']], [['dra', 'happy', '{c}、楽しそうだな'], ['sorashido', 'happy', '楽しいです笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、いい感じですねー！'], ['dra', 'wink', 'えへへ、うれしいな']]],
+    gattai: [[['sorashido', 'excited', 'いきましょう、{c}！ 最高値を出します笑'], ['dra', 'excited', 'おう、ワイもいくぞ！']]]
   },
   'erubin-kiki': {
     play: [[['erubin', 'happy', '{c}、無理してないかな？'], ['kiki', 'happy', '大丈夫でつ、楽しいです♪']], [['kiki', 'happy', '{c}、ここは静かにきれいにいきましょう'], ['erubin', 'happy', 'うん、そうしよう']]],
@@ -52565,9 +52825,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、いくよ！'], ['erubin', 'excited', 'うん、一緒にね']]]
   },
   'erubin-sorashido': {
-    play: [[['sorashido', 'happy', 'ここからが山場だ！ うぉぉぉ！'], ['erubin', 'happy', '頼もしいね']], [['erubin', 'happy', '{c}、楽しそうだね'], ['sorashido', 'happy', '楽しいぜ笑']]],
-    result: [[['sorashido', 'happy', '2人のデータ、最高だぜ・・・！'], ['erubin', 'wink', 'うん、さすがだね笑']]],
-    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、合わせるぜ！'], ['erubin', 'excited', 'うん、一緒にいこう']]]
+    play: [[['sorashido', 'happy', 'ここからが山場です！ うぉぉぉ！'], ['erubin', 'happy', '頼もしいね']], [['erubin', 'happy', '{c}、楽しそうだね'], ['sorashido', 'happy', '楽しいです笑']]],
+    result: [[['sorashido', 'happy', '2人のデータ、最高です・・・！'], ['erubin', 'wink', 'うん、さすがだね笑']]],
+    gattai: [[['sorashido', 'excited', '{c}、合わせます！ いきましょう！'], ['erubin', 'excited', 'うん、一緒にいこう']]]
   },
   'kiki-kyuko': {
     play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'はい、ついていきまつ♪']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
@@ -52585,9 +52845,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、いくよ！'], ['kiki', 'excited', 'せーの、でつ♪']]]
   },
   'kiki-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここの判定、ぴったりだぜ！'], ['kiki', 'happy', 'ほんとですか？うれしいでつ♪']], [['kiki', 'happy', '{c}、次はどう来ますか？'], ['sorashido', 'happy', '計算済みだぜ、右から来るぜ笑']]],
-    result: [[['sorashido', 'happy', '2人の数字、きれいにそろったぜ・・・！'], ['kiki', 'wink', '計算どおりでしたか？♪']]],
-    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、ここだぜ！'], ['kiki', 'excited', 'はい、いきまつ♪']]]
+    play: [[['sorashido', 'happy', '{c}、ここの判定、ぴったりです！'], ['kiki', 'happy', 'ほんとですか？うれしいでつ♪']], [['kiki', 'happy', '{c}、次はどう来ますか？'], ['sorashido', 'happy', '計算済みです。右から来ますよ笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、きれいにそろいましたねー！'], ['kiki', 'wink', '計算どおりでしたか？♪']]],
+    gattai: [[['sorashido', 'excited', '{c}、ここです！ いきましょう！'], ['kiki', 'excited', 'はい、いきまつ♪']]]
   },
   'kyuko-momosuke': {
     play: [[['kyuko', 'happy', '{c}、ここサビ前だよ〜'], ['momosuke', 'happy', '知ってる！！ももが一番かわいくなるとこ♡']], [['momosuke', 'happy', '{c}、もものダンスどう？'], ['kyuko', 'happy', 'ほい、リズムぴったりだよ〜']]],
@@ -52600,9 +52860,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['kyuko', 'excited', '{c}、ここだよ〜'], ['mua', 'excited', 'まかせて！せーの♪']]]
   },
   'kyuko-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここの構成、計算どおりだぜ・・・！'], ['kyuko', 'happy', '読みどおりだね〜']], [['kyuko', 'happy', 'だいたいこのへんでサビだよぉ'], ['sorashido', 'happy', '正確には3小節あとだぜ笑']]],
-    result: [[['kyuko', 'happy', '構成も計算もぴったりだったね〜'], ['sorashido', 'wink', 'うぉぉぉ！最高のデータだぜ・・・！']]],
-    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['sorashido', 'excited', 'うぉぉぉ！いくぜ！']]]
+    play: [[['sorashido', 'happy', '{c}、ここの構成、計算どおりです・・・！'], ['kyuko', 'happy', '読みどおりだね〜']], [['kyuko', 'happy', 'だいたいこのへんでサビだよぉ'], ['sorashido', 'happy', '正確には3小節あとですね笑']]],
+    result: [[['kyuko', 'happy', '構成も計算もぴったりだったね〜'], ['sorashido', 'wink', 'ほほー！ 最高のデータです・・・！']]],
+    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['sorashido', 'excited', 'はい、いきます！']]]
   },
   'momosuke-mua': {
     play: [[['momosuke', 'happy', '{c}、ももについてきてね！！'], ['mua', 'happy', 'えー、あたしが先頭なんだけどｗ']], [['mua', 'wink', '{c}、そのポーズあたしが教えたやつぢゃん？ｗ'], ['momosuke', 'happy', 'ももがアレンジしたから、もものだよ！！']]],
@@ -52610,14 +52870,14 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、ここで決めよ！'], ['momosuke', 'excited', 'ダブルセンターいくよ！！']]]
   },
   'momosuke-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここ、でーじ盛り上がるぞ笑'], ['momosuke', 'happy', 'ももが盛り上げるから計算いらないよw']], [['sorashido', 'happy', '{c}のミス、今日はまだ0だぜ！'], ['momosuke', 'troubled', '数えなくていいから！！w']]],
-    result: [[['sorashido', 'happy', '今日のステージ、表にしたら満点だぜ・・・！'], ['momosuke', 'wink', '当然でしょ！！♡']]],
-    gattai: [[['sorashido', 'excited', '{c}、ここが計算の答えだぜ！'], ['momosuke', 'excited', 'ももの見せ場だよ！！']]]
+    play: [[['sorashido', 'happy', '{c}、ここ、でーじ盛り上がりますよ笑'], ['momosuke', 'happy', 'ももが盛り上げるから計算いらないよw']], [['sorashido', 'happy', '{c}のミス、今日はまだ0です！'], ['momosuke', 'troubled', '数えなくていいから！！w']]],
+    result: [[['sorashido', 'happy', '今日のステージ、表にしたら満点ですね・・・！'], ['momosuke', 'wink', '当然でしょ！！♡']]],
+    gattai: [[['sorashido', 'excited', '{c}、ここが計算の答えです！'], ['momosuke', 'excited', 'ももの見せ場だよ！！']]]
   },
   'mua-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここから密度が上がるぜ！'], ['mua', 'happy', 'まぢ！？がんばる♪']], [['sorashido', 'happy', '{c}の勝ち数、表に足しとくぜ笑'], ['mua', 'excited', 'やった！今日も勝つ♪']]],
-    result: [[['sorashido', 'happy', '今日の2人、表にしたら最高値だぜ！'], ['mua', 'wink', 'すごっ！また一緒にやろ♪']]],
-    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、いくぜ！'], ['mua', 'excited', 'いっくよ〜♪']]]
+    play: [[['sorashido', 'happy', '{c}、ここから密度が上がりますよ！'], ['mua', 'happy', 'まぢ！？がんばる♪']], [['sorashido', 'happy', '{c}の勝ち数、表に足しておきます笑'], ['mua', 'excited', 'やった！今日も勝つ♪']]],
+    result: [[['sorashido', 'happy', '今日の2人、表にしたら最高値です！'], ['mua', 'wink', 'すごっ！また一緒にやろ♪']]],
+    gattai: [[['sorashido', 'excited', '{c}、いきましょう！ うぉぉぉ！'], ['mua', 'excited', 'いっくよ〜♪']]]
   }
 });
 const RHYTHM_BUDDY_TALK_MAX = 40;
@@ -65173,7 +65433,7 @@ const MISSION_DAILY_LINE_FALLBACK = Object.freeze({
   dra: '今日は{day}曜日だな。{task}と、{reward}がもらえるからな。えへへ',
   atsu: '今日は{day}曜日！ とりあえず{task}と{reward}もらえるよ笑',
   kyuko: 'ほい！ 今日は{day}曜日ぃ。{task}と{reward}もらえるよ〜',
-  sorashido: 'うぉぉぉ！ 今日は{day}曜日だぜ・・・！ {task}と{reward}がもらえるぜ笑',
+  sorashido: '今日は{day}曜日ですねー！ {task}と{reward}がもらえます笑',
   erubin: '今日は{day}曜日だね。{task}と、{reward}がもらえるよ。無理しない程度にね'
 });
 const missionLineRewardText = r => {
@@ -79490,7 +79750,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
-  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  sorashido: who => `${who}からフレンド申請が来てますよ！ 見にいきましょう笑`,
   erubin: who => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`
 });
 function HomeFriendRequestNotice({
@@ -93738,7 +93998,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-card.free::after{animation-delay:1.9s}
 .mhms-card .mhms-mark{position:absolute;right:-4px;bottom:-6px;font-size:26px;line-height:1;font-style:italic;font-weight:900;letter-spacing:-.02em;color:rgba(255,255,255,.2);white-space:nowrap;pointer-events:none}
 .mhms-card .mhms-ico{filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
-.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mhms-glass{background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03)),rgba(18,10,44,.42);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.25)}
 .mhms-bubble::before{content:"";position:absolute;top:-8px;left:22px;width:14px;height:14px;transform:rotate(45deg);background:inherit;border-left:inherit;border-top:inherit}
 .mhms-bubble-alone::before{display:none}
 .mhbs-screen>*:not(.mhms-fx){position:relative;z-index:1}
@@ -93832,6 +94092,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 @keyframes mhmsShine{0%,55%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(420%) skewX(-20deg)}}
 @keyframes mhmsIn{from{opacity:0;transform:translateX(24px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes mhmsInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+.mhms-idle .mhms-beam,.mhms-idle .mhms-floor,.mhms-idle .mhms-note,.mhms-idle .mhms-spark,.mhms-idle .mhms-glow,.mhms-idle .mhms-float,.mhms-idle .mhms-card::after{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.mhms-beam,.mhms-floor,.mhms-note,.mhms-spark,.mhms-glow,.mhms-float,.mhms-card::after,.mhms-in,.mhms-in-left,.mhmv-mvp,.mhmv-mvp::after,.mhmv-badge{animation:none!important}.mhms-note,.mhms-spark{display:none}}
 `;
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
@@ -93920,9 +94181,33 @@ const RHYTHM_MODE_SELECT_SPARKS = Object.freeze([{
   top: '40%',
   delay: '-1.3s'
 }]);
+const RHYTHM_MODE_SELECT_IDLE_MS = 10000;
 function RhythmModeSelectStage({
   notes = true
 }) {
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
+    const root = document.documentElement;
+    let timer = 0;
+    const wake = () => {
+      root.classList.remove('mhms-idle');
+      clearTimeout(timer);
+      timer = setTimeout(() => root.classList.add('mhms-idle'), RHYTHM_MODE_SELECT_IDLE_MS);
+    };
+    const events = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+    events.forEach(name => window.addEventListener(name, wake, {
+      passive: true,
+      capture: true
+    }));
+    wake();
+    return () => {
+      clearTimeout(timer);
+      events.forEach(name => window.removeEventListener(name, wake, {
+        capture: true
+      }));
+      root.classList.remove('mhms-idle');
+    };
+  }, []);
   return React.createElement("div", {
     className: "mhms-fx",
     "aria-hidden": "true"
@@ -93963,7 +94248,7 @@ function BattleScreenHead({
   right = null
 }) {
   return React.createElement("header", {
-    className: "relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm"
+    className: "relative z-10 -mx-4 mb-1.5 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1"
   }, onBack && React.createElement("button", {
     type: "button",
     "aria-label": "戻る",
@@ -94013,7 +94298,7 @@ function ModeSelectAssistToggles({
     [attr]: '',
     "aria-pressed": on,
     onClick: () => onToggle(key),
-    className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
   }, label, " ", on ? 'ON' : 'OFF'))) : null;
 }
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
@@ -95239,7 +95524,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-step": "rooms",
       className: `${shell} mhms-stage`
     }, React.createElement(RhythmModeSelectStage, null), React.createElement("header", {
-      className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/55 px-2 py-1 backdrop-blur-sm",
+      className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1",
       style: {
         paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
       }
@@ -99800,7 +100085,7 @@ const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
   dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
   atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
   kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
-  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  sorashido: 'うぉぉぉ！ 自分たち助手も呼べるようになりました！ {name}、一緒に演奏しましょう笑',
   erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね'
 });
 function RhythmAssistSessionGuide({
@@ -107576,7 +107861,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '…表の…3行目…ずれてる…'
+    t: '・・・表の・・・3行目・・・ずれてる・・・'
   }]
 }, {
   id: 'life-sleep-sorashido-002',
@@ -107587,7 +107872,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'happy',
-    t: '…うぉぉぉ…新記録…むにゃ'
+    t: '・・・うぉぉぉ・・・新記録・・・むにゃ'
   }]
 }, {
   id: 'life-sleep-sorashido-003',
@@ -107598,7 +107883,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '…なんくるないさ…すぅ…'
+    t: '・・・なんくるないさ・・・すぅ・・・'
   }]
 }, {
   id: 'life-sleep-sorashido-004',
@@ -107609,7 +107894,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'happy',
-    t: '…確率…でーじ…高い…'
+    t: '・・・確率・・・でーじ・・・高い・・・'
   }]
 }, {
   id: 'life-sleep-sorashido-005',
@@ -107620,7 +107905,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '…攻略本…完成…だぜ…'
+    t: '・・・攻略本・・・完成・・・です・・・'
   }]
 }, {
   id: 'life-sleep-sorashido-006',
@@ -107631,7 +107916,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'happy',
-    t: '…{name}…ちばりよー…'
+    t: '・・・{name}・・・ちばりよー・・・'
   }]
 }, {
   id: 'life-sleep-erubin-001',
@@ -108000,7 +108285,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'surprise',
-    t: '…うぉっ！？ {name}か…寝ぼけてたぜ'
+    t: '・・・はっ！？ {name}ですか・・・寝ぼけてました'
   }]
 }, {
   id: 'life-sleep-sorashido-008',
@@ -108011,7 +108296,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '…まだ10時前だろ…朝は弱いのさ…'
+    t: '・・・まだ10時前ですよね・・・朝は弱いんです・・・'
   }]
 }, {
   id: 'life-sleep-sorashido-009',
@@ -108022,11 +108307,11 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '…{name}…いま、表の夢の途中だったんだぜ…'
+    t: '・・・{name}・・・いま、表の夢の途中だったんですよ・・・'
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '…まあいいさ。起きたからには、計算するぜ'
+    t: '・・・まあいいです。起きたからには、計算しますねー'
   }]
 }, {
   id: 'life-sleep-sorashido-010',
@@ -108037,7 +108322,7 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'happy',
-    t: '…ふぁ…{name}の声なら、目ざましより効くさ'
+    t: '・・・ふぁ・・・{name}の声なら、目ざましより効きますね笑'
   }]
 }, {
   id: 'life-sleep-erubin-007',
@@ -110849,7 +111134,7 @@ function AssistantLifeHouse({
     className: "min-h-[44px] px-3",
     onClick: () => setCallPicker(false)
   }, "閉じる ✕")), React.createElement("div", {
-    className: "max-h-[55vh] overflow-y-auto"
+    className: "max-h-[46vh] overflow-y-auto"
   }, Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => React.createElement("button", {
     type: "button",
     key: id,
@@ -113846,7 +114131,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: 'うぉぉぉ！ これで俺の51勝50敗だぜ・・・！'
+    t: 'よし！ これで自分の51勝50敗ですねー！'
   }, {
     who: 'atsu',
     e: 'angry',
@@ -113854,7 +114139,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '表にちゃんと書いてあるんだぜ！ 数字はうそつかないさ'
+    t: '表にちゃんと書いてあるんですよ！ 数字はうそつかないので'
   }, {
     who: 'atsu',
     e: 'angry',
@@ -113867,12 +114152,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '数え方、先に決めておけばよかったな'
+    t: '数え方、先に決めておけばよかったな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、数え方の決まり、2人で書こうぜ'
+    t: '{c}、数え方の決まり、2人で書きませんか'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -113880,7 +114165,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '引き分けか…しょうがない、なんくるないさ〜'
+    t: '引き分けですか・・・しょうがないですね、なんくるないさ〜'
   }]
 }, {
   id: 'rel-fight-atsu-sorashido-2',
@@ -113896,7 +114181,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'ご、ごめんだぜ… 3時まで表を作ってたら、寝坊したさ'
+    t: 'す、すみません・・・3時まで表を作ってたら、寝坊しました💦'
   }, {
     who: 'atsu',
     e: 'angry',
@@ -113904,7 +114189,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '夜のほうが計算がはかどるんだって！'
+    t: '夜のほうが計算がはかどるんですって！'
   }],
   distance: [{
     who: 'atsu',
@@ -113913,12 +114198,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '俺、約束したのに言い返しちまったな'
+    t: '約束したのに、言い返しちゃったな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、明日は寝ないで行く…のは無理だから、9時でどうだ？'
+    t: '{c}、明日は寝ないで行く・・・のは無理なので、9時でどうですか？'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -113926,7 +114211,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '決まりだぜ！ ちばりよー！'
+    t: '決まりですね！ ちばりよー！'
   }]
 }, {
   id: 'rel-fight-atsu-sorashido-3',
@@ -113942,7 +114227,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '全部、大事な表なんだぜ。並べ方にも意味があるさ'
+    t: '全部、大事な表なんですよ。並べ方にも意味があるので'
   }, {
     who: 'atsu',
     e: 'angry',
@@ -113950,12 +114235,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: 'あっ！ 順番がくずれる！'
+    t: 'あっ！ 順番がくずれます！'
   }],
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '…並べ方、俺にしか分からないもんな'
+    t: '・・・並べ方、自分にしか分からないもんな'
   }, {
     who: 'atsu',
     e: 'troubled',
@@ -113968,7 +114253,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もごめんだぜ。いっそ、表を1冊にまとめるさ'
+    t: '自分もすみません。いっそ、表を1冊にまとめますね'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -113988,7 +114273,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: 'あとで続きをやるから、そのままにしといたんだぜ'
+    t: 'あとで続きをやるので、そのままにしておいたんです'
   }, {
     who: 'kiki',
     e: 'angry',
@@ -113996,12 +114281,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'う…分かってはいるんだけどさ'
+    t: 'う・・・分かってはいるんですけどね'
   }],
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '言われたとおりだよな…'
+    t: '言われたとおりだよな・・・'
   }, {
     who: 'kiki',
     e: 'normal',
@@ -114010,7 +114295,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、紙は全部ファイルに入れたぜ。机、ぴかぴかさ'
+    t: '{c}、紙は全部ファイルに入れました。机、ぴかぴかです'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -114018,7 +114303,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'それは助かるぜ・・・！'
+    t: 'それは助かります・・・！'
   }]
 }, {
   id: 'rel-fight-kiki-sorashido-2',
@@ -114034,7 +114319,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……いま、何時さ？'
+    t: '・・・いま、何時ですか？'
   }, {
     who: 'kiki',
     e: 'troubled',
@@ -114042,7 +114327,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '5時半は、俺にとっては真夜中なんだぜ！'
+    t: '5時半は、自分にとっては真夜中なんですよ！'
   }],
   distance: [{
     who: 'kiki',
@@ -114051,12 +114336,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '寝ぼけて、きつく言っちまったな'
+    t: '寝ぼけて、きつく言っちゃったな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、さっきはごめん。夕方の散歩なら、絶対起きてるさ'
+    t: '{c}、さっきはすみません。夕方の散歩なら、絶対起きてます'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -114064,7 +114349,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '{c}の夜ふかし、何時までもつか計算しとくぜ笑'
+    t: '{c}の夜ふかし、何時までもつか計算しておきますね笑'
   }]
 }, {
   id: 'rel-fight-kiki-sorashido-3',
@@ -114076,7 +114361,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '今のカード勝負、計算どおり俺の勝ちだぜ！'
+    t: '今のカード勝負、計算どおり自分の勝ちですね！'
   }, {
     who: 'kiki',
     e: 'angry',
@@ -114084,7 +114369,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '何回やっても、表の上では俺が有利さ'
+    t: '何回やっても、表の上では自分が有利なので'
   }, {
     who: 'kiki',
     e: 'angry',
@@ -114097,12 +114382,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '有利とか、言わなきゃよかったな'
+    t: '有利とか、言わなきゃよかったな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、さっきの一言はなしだぜ。次は真剣勝負、受けて立つさ'
+    t: '{c}、さっきの一言はなしでお願いします。次は真剣勝負、受けて立ちます'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -114110,7 +114395,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'うぉぉぉ！ そう来なくちゃ！'
+    t: 'ほほー！ そう来なくちゃですね！'
   }]
 }, {
   id: 'rel-fight-erubin-sorashido-1',
@@ -114122,7 +114407,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、今日カードの研究会って言ってたよな？'
+    t: '{c}、今日カードの研究会って言ってましたよね？'
   }, {
     who: 'erubin',
     e: 'surprise',
@@ -114130,7 +114415,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '表、2人ぶん作って待ってたんだぜ！'
+    t: '表、2人ぶん作って待ってたんですよ！'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -114139,7 +114424,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '言いすぎた…楽しみにしてただけなんだよな'
+    t: '言いすぎた・・・楽しみにしてただけなんだよな'
   }, {
     who: 'erubin',
     e: 'normal',
@@ -114152,7 +114437,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'もちろんだぜ！ 表は消えないさ'
+    t: 'もちろんです！ 表は消えないので'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -114172,7 +114457,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'あれ、だれのでもないと思って…計算中は手が止まらないんだぜ'
+    t: 'あれ、だれのでもないと思って・・・計算中は手が止まらないんです'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -114180,7 +114465,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: 'だったら、書いといてくれよな！'
+    t: 'だったら、書いておいてくださいよ！'
   }],
   distance: [{
     who: 'erubin',
@@ -114189,12 +114474,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '言い返すことじゃなかったさ…'
+    t: '言い返すことじゃなかったな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、クッキー焼いてみたぜ。形はちょっと計算外だけどさ笑'
+    t: '{c}、クッキーを焼いてみました。形はちょっと計算外ですけど笑'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -114202,7 +114487,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '今度は、ちゃんと人数ぶんあるぜ'
+    t: '今度は、ちゃんと人数ぶんあります'
   }]
 }, {
   id: 'rel-fight-erubin-sorashido-3',
@@ -114214,7 +114499,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '練習の曲、ぜんぶアップテンポにしようぜ！'
+    t: '練習の曲、ぜんぶアップテンポにしませんか！'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -114222,7 +114507,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: 'でも速い曲のほうが、スコアが伸びるって表に出てるさ'
+    t: 'でも速い曲のほうが、スコアが伸びるって表に出てるんですよ'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -114231,7 +114516,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '…たしかに、楽しいかどうかは表に入れてなかったな'
+    t: '・・・たしかに、楽しいかどうかは表に入れてなかったな'
   }, {
     who: 'erubin',
     e: 'normal',
@@ -114244,7 +114529,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'いいぜ！ 半分ずつなら計算も楽さ笑'
+    t: 'いいですね！ 半分ずつなら計算も楽です笑'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -115088,7 +115373,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '今のカード勝負、表で見ても俺の作戦勝ちだぜ！'
+    t: '今のカード勝負、表で見ても自分の作戦勝ちですね！'
   }, {
     who: 'dra',
     e: 'angry',
@@ -115096,7 +115381,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '引きも計算のうちさ。確率の表、見るか？'
+    t: '引きも計算のうちですよ。確率の表、見ますか？'
   }, {
     who: 'dra',
     e: 'angry',
@@ -115109,12 +115394,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '勝ったあとに表は、ちょっと意地悪だったな'
+    t: '勝ったあとに表は、ちょっと意地悪だったな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、さっきはごめんだぜ。もう1回、表なしでやろう'
+    t: '{c}、さっきはすみません。もう1回、表なしでやりましょう'
   }, {
     who: 'dra',
     e: 'happy',
@@ -115122,7 +115407,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '望むところだぜ！'
+    t: '望むところです！'
   }]
 }, {
   id: 'rel-fight-dra-sorashido-2',
@@ -115138,7 +115423,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '廊下がいちばん長いから、つなげて並べたんだぜ'
+    t: '廊下がいちばん長いので、つなげて並べたんです'
   }, {
     who: 'dra',
     e: 'angry',
@@ -115146,12 +115431,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '踏まないように歩いてくれよ！'
+    t: '踏まないように歩いてくださいよ！'
   }],
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '…廊下は、みんなの通り道だよな'
+    t: '・・・廊下は、みんなの通り道だよな'
   }, {
     who: 'dra',
     e: 'troubled',
@@ -115160,7 +115445,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、表は巻物にしてまとめたぜ。廊下、すっきりさ'
+    t: '{c}、表は巻物にしてまとめました。廊下、すっきりです'
   }, {
     who: 'dra',
     e: 'happy',
@@ -115168,7 +115453,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'それなら、いっしょに読もうぜ'
+    t: 'それなら、いっしょに読みましょう'
   }]
 }, {
   id: 'rel-fight-dra-sorashido-3',
@@ -115184,7 +115469,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'あっ…表の計算に夢中で、すっかりだぜ'
+    t: 'あっ・・・表の計算に夢中で、すっかり忘れてました💦'
   }, {
     who: 'dra',
     e: 'angry',
@@ -115192,7 +115477,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '3ページも…！？'
+    t: '3ページも・・・！？'
   }],
   distance: [{
     who: 'dra',
@@ -115201,12 +115486,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '約束より、表を選んじまった…'
+    t: '約束より、表を選んじゃった・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、下書き読んだぜ。わかりやすくて、でーじいいさ！'
+    t: '{c}、下書き読みました。わかりやすくて、でーじいいです！'
   }, {
     who: 'dra',
     e: 'happy',
@@ -115214,7 +115499,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '今日は表より先に、説明を仕上げるぜ'
+    t: '今日は表より先に、説明を仕上げます'
   }]
 }, {
   id: 'rel-fight-kyuko-sorashido-1',
@@ -115226,7 +115511,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '今のスコア、俺が12点上だぜ・・・！'
+    t: '今のスコア、自分が12点上ですねー！'
   }, {
     who: 'kyuko',
     e: 'angry',
@@ -115234,7 +115519,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '勝ち負けは点で決めるって表にあるさ'
+    t: '勝ち負けは点で決めるって、表にあるので'
   }, {
     who: 'kyuko',
     e: 'angry',
@@ -115247,12 +115532,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '表をたてに、言いすぎたな'
+    t: '表をたてに、言いすぎたな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、ミスの少なさ部門も表に足したぜ。そっちは{c}の勝ちさ'
+    t: '{c}、ミスの少なさ部門も表に足しました。そっちは{c}の勝ちです'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -115260,7 +115545,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '決着は次の1曲だぜ！'
+    t: '決着は次の1曲ですね！'
   }]
 }, {
   id: 'rel-fight-kyuko-sorashido-2',
@@ -115276,7 +115561,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: 'いや、速い曲のほうが計算しがいがあるんだぜ'
+    t: 'いや、速い曲のほうが計算しがいがあるんですよ'
   }, {
     who: 'kyuko',
     e: 'troubled',
@@ -115284,12 +115569,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '指も鍛えれば、速くなるさ！'
+    t: '指も鍛えれば、速くなりますって！'
   }],
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '…自分の好みばっかり押しつけたな'
+    t: '・・・自分の好みばっかり押しつけたな'
   }, {
     who: 'kyuko',
     e: 'troubled',
@@ -115298,7 +115583,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、ゆっくりの曲、1曲選んでくれよ。その次は俺の'
+    t: '{c}、ゆっくりの曲、1曲選んでください。その次は自分の番で'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -115306,7 +115591,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '交代ばんこ、表に書いとくぜ'
+    t: '交代ばんこ、表に書いておきますね'
   }]
 }, {
   id: 'rel-fight-kyuko-sorashido-3',
@@ -115322,7 +115607,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '計算してたら、つい手がのびたんだぜ…'
+    t: '計算してたら、つい手がのびたんです・・・'
   }, {
     who: 'kyuko',
     e: 'angry',
@@ -115330,7 +115615,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '言ってくれたら、食べなかったさ！'
+    t: '言ってくれたら、食べなかったですよ！'
   }],
   distance: [{
     who: 'kyuko',
@@ -115339,12 +115624,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '言い返しちまったけど、食べたのは俺だよな'
+    t: '言い返しちゃったけど、食べたのは自分だよな・・・'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、ポテチ、3袋買ってきたぜ！ 味もちがうのにしたさ'
+    t: '{c}、ポテチ、3袋買ってきました！ 味もちがうのにしてあります'
   }, {
     who: 'kyuko',
     e: 'excited',
@@ -115352,7 +115637,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'どの味が勝つか、表にしようぜ'
+    t: 'どの味が勝つか、表にしましょう'
   }]
 }, {
   id: 'rel-fight-dra-kyuko-1',
@@ -115670,7 +115955,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: 'お、どうしたんだぜ？'
+    t: 'お、どうしました？'
   }, {
     who: 'atsu',
     e: 'troubled',
@@ -115678,7 +115963,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もだぜ。言いすぎたって、ずっと思ってたさ'
+    t: '自分もです。言いすぎたって、ずっと思ってました'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -115694,7 +115979,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、{name}から差し入れのおにぎりだぜ'
+    t: '{c}、{name}から差し入れのおにぎりです'
   }, {
     who: 'atsu',
     e: 'troubled',
@@ -115702,7 +115987,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '腹がへってると言い合いになるって、表にも出てるさ笑'
+    t: 'お腹がへってると言い合いになるって、表にも出てるんですよ笑'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -115710,7 +115995,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もごめんだぜ。食べたら協力プレイな'
+    t: '自分もすみません。食べたら協力プレイしましょう'
   }]
 }, {
   id: 'rel-mend-atsu-sorashido-3',
@@ -115726,7 +116011,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '俺もさ。{name}に言われたら、しょうがないさ'
+    t: '自分もです。{name}に言われたら、しょうがないですね'
   }, {
     who: 'atsu',
     e: 'normal',
@@ -115734,7 +116019,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'おあいこ、表に書いとくぜ！'
+    t: 'おあいこ、表に書いておきます！'
   }]
 }, {
   id: 'rel-mend-kiki-sorashido-1',
@@ -115746,7 +116031,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、昨日の…あれ、俺が悪かったんだぜ'
+    t: '{c}、昨日の・・・あれ、自分が悪かったです'
   }, {
     who: 'kiki',
     e: 'surprise',
@@ -115754,7 +116039,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '言わないと、表の計算も手につかなくてさ'
+    t: '言わないと、表の計算も手につかなくて'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -115762,7 +116047,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'うぉぉぉ、ほっとしたぜ！'
+    t: 'ほっとしましたー！'
   }]
 }, {
   id: 'rel-mend-kiki-sorashido-2',
@@ -115778,7 +116063,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '…俺、もらっていいのか？'
+    t: '・・・自分、もらっていいんですか？'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -115786,7 +116071,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '昨日はごめんだぜ。お団子、ちょうど2人ぶんさ'
+    t: '昨日はすみません。お団子、ちょうど2人ぶんです'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -115806,7 +116091,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '俺もさ。{name}に言われたら、断れないぜ'
+    t: '自分もです。{name}に言われたら、断れないですね'
   }, {
     who: 'kiki',
     e: 'normal',
@@ -115814,7 +116099,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'いや、仲直りしたことを表に残すぜ！'
+    t: 'いや、仲直りしたことを表に残します！'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -115834,7 +116119,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'お、俺から言おうと思ってたのに、先をこされたぜ'
+    t: 'じ、自分から言おうと思ってたのに、先をこされました'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -115842,7 +116127,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'おあいこだぜ！ カード、1戦やろうさ'
+    t: 'おあいこですね！ カード、1戦やりましょう'
   }]
 }, {
   id: 'rel-mend-erubin-sorashido-2',
@@ -115854,7 +116139,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、{name}がクッキーくれたぜ。人数ぶん、ぴったりさ'
+    t: '{c}、{name}がクッキーをくれました。人数ぶん、ぴったりです'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -115862,7 +116147,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '昨日は、言い返してごめんだぜ'
+    t: '昨日は、言い返してすみません'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -115882,7 +116167,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '俺も言われたさ。{name}には、かなわないぜ'
+    t: '自分も言われました。{name}には、かなわないですね'
   }, {
     who: 'erubin',
     e: 'normal',
@@ -115890,7 +116175,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もごめんだぜ。これで元どおりさ'
+    t: '自分もすみません。これで元どおりですね'
   }]
 }, {
   id: 'rel-mend-kiki-momosuke-1',
@@ -116366,7 +116651,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、昨日のこと…俺が悪かったんだぜ'
+    t: '{c}、昨日のこと・・・自分が悪かったです'
   }, {
     who: 'dra',
     e: 'normal',
@@ -116374,7 +116659,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'じゃあ、仲直りの記録をつけとくさ'
+    t: 'じゃあ、仲直りの記録をつけておきます'
   }, {
     who: 'dra',
     e: 'happy',
@@ -116394,7 +116679,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'うぉぉぉ、でーじうれしいぜ！'
+    t: 'うわ、でーじうれしいです！'
   }, {
     who: 'dra',
     e: 'troubled',
@@ -116402,7 +116687,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もごめんだぜ。半分ずつ食べようさ'
+    t: '自分もすみません。半分ずつ食べましょう'
   }]
 }, {
   id: 'rel-mend-dra-sorashido-3',
@@ -116418,7 +116703,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '俺もさ。{name}にそう言われたら、しょうがないぜ'
+    t: '自分もです。{name}にそう言われたら、しょうがないですね'
   }, {
     who: 'dra',
     e: 'normal',
@@ -116426,7 +116711,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'おう！ 説明は{c}、表は俺だぜ'
+    t: 'はい！ 説明は{c}、表は自分ですね'
   }]
 }, {
   id: 'rel-mend-kyuko-sorashido-1',
@@ -116442,7 +116727,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '俺のほうこそ、言いすぎてごめんだぜ'
+    t: '自分のほうこそ、言いすぎてすみません'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -116450,7 +116735,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '望むところだぜ・・・！'
+    t: '望むところです・・・！'
   }]
 }, {
   id: 'rel-mend-kyuko-sorashido-2',
@@ -116462,7 +116747,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、{name}からポテチの差し入れだぜ。3つの味さ'
+    t: '{c}、{name}からポテチの差し入れです。3つの味ですよ'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -116470,7 +116755,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '昨日は、ごめんだぜ'
+    t: '昨日は、すみません'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -116490,7 +116775,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '俺も言われたぜ。{name}の言うことなら、聞くしかないさ'
+    t: '自分も言われました。{name}の言うことなら、聞くしかないですね'
   }, {
     who: 'kyuko',
     e: 'normal',
@@ -116498,7 +116783,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もごめんだぜ。攻略メモ、また見せてくれよ'
+    t: '自分もすみません。攻略メモ、また見せてください'
   }]
 }, {
   id: 'rel-mend-dra-kyuko-1',
@@ -116694,7 +116979,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '（ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんだぜ'
+    t: '（ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんです'
   }, {
     who: 'mua',
     e: 'surprise',
@@ -116702,7 +116987,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'wink',
-    t: 'それは、渡すときのお楽しみさ'
+    t: 'それは、渡すときのお楽しみです'
   }, {
     who: 'mua',
     e: 'happy',
@@ -116826,7 +117111,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '（ひそひそ）{c}、例の数字、出たぜ・・・！'
+    t: '（ひそひそ）{c}、例の数字、出ました・・・！'
   }, {
     who: 'kiki',
     e: 'surprise',
@@ -116834,7 +117119,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'ああ、表の新記録さ'
+    t: 'はい、表の新記録です'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -116936,7 +117221,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '（ひそひそ）{c}、ミスの数、先週の半分になってたぜ'
+    t: '（ひそひそ）{c}、ミスの数、先週の半分になってましたよ'
   }, {
     who: 'momosuke',
     e: 'surprise',
@@ -116944,7 +117229,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'wink',
-    t: 'ゼロになったら、みんなの前で発表さ'
+    t: 'ゼロになったら、みんなの前で発表ですね'
   }, {
     who: 'momosuke',
     e: 'excited',
@@ -117024,7 +117309,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '（ひそひそ）{c}、攻略本の表紙、こんな感じでどうだ？'
+    t: '（ひそひそ）{c}、攻略本の表紙、こんな感じでどうですか？'
   }, {
     who: 'dra',
     e: 'surprise',
@@ -117032,7 +117317,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '完成するまで、だれにも見せないぜ'
+    t: '完成するまで、だれにも見せません'
   }, {
     who: 'dra',
     e: 'happy',
@@ -117090,7 +117375,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '（ひそひそ）{c}、協力プレイの合図、決めようぜ'
+    t: '（ひそひそ）{c}、協力プレイの合図、決めませんか'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -117098,7 +117383,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'それだぜ！ 見ても分からないさ'
+    t: 'それです！ 見ても分からないですね'
   }, {
     who: 'atsu',
     e: 'wink',
@@ -117138,7 +117423,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '（ひそひそ）お、なんだぜ？'
+    t: '（ひそひそ）お、なんですか？'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -117146,7 +117431,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'それは、表にしないでおくさ'
+    t: 'それは、表にしないでおきます'
   }]
 }, {
   id: 'rel-secret-erubin-kyuko-1',
@@ -117178,7 +117463,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '（ひそひそ）{c}、次の大会のデッキ、2人で組まないか？'
+    t: '（ひそひそ）{c}、次の大会のデッキ、2人で組みませんか？'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -117186,7 +117471,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'もちろんだぜ。でーじ強くなるさ'
+    t: 'もちろんです。でーじ強くなりますよ'
   }, {
     who: 'erubin',
     e: 'wink',
@@ -117342,7 +117627,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、俺の表、だれも最後まで読んでくれないんだぜ…'
+    t: '{c}、自分の表、だれも最後まで読んでくれないんですよ・・・'
   }, {
     who: 'mua',
     e: 'surprise',
@@ -117350,7 +117635,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '長すぎるって、言われちまってさ'
+    t: '長すぎるって、言われちゃいまして'
   }, {
     who: 'mua',
     e: 'happy',
@@ -117358,7 +117643,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '…うぉぉぉ、それだぜ！'
+    t: '・・・ほほー、それです！'
   }]
 }, {
   id: 'rel-consult-erubin-mua-1',
@@ -117510,7 +117795,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、計算が合わなくて、ずっと落ち着かないんだぜ…'
+    t: '{c}、計算が合わなくて、ずっと落ち着かないんです・・・'
   }, {
     who: 'kiki',
     e: 'normal',
@@ -117518,7 +117803,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '火力の数字が、思ったより高く出るんだ'
+    t: '火力の数字が、思ったより高く出るんですよ'
   }, {
     who: 'kiki',
     e: 'wink',
@@ -117526,7 +117811,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '…そういうことか！ 笑うしかないぜ笑'
+    t: '・・・そういうことですか！ 笑うしかないです笑'
   }]
 }, {
   id: 'rel-consult-kiki-erubin-1',
@@ -117654,7 +117939,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '増えた日もあるさ。表で見ると、ぐっと減ってるんだぜ'
+    t: '増えた日もありますよ。表で見ると、ぐっと減ってるんです'
   }, {
     who: 'momosuke',
     e: 'surprise',
@@ -117662,7 +117947,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'ほら、先月の半分さ。ちばりよー！'
+    t: 'ほら、先月の半分です。ちばりよー！'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -117762,7 +118047,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、カード部屋、今日はだれも来ないんだぜ…'
+    t: '{c}、カード部屋、今日はだれも来ないんですよ・・・'
   }, {
     who: 'dra',
     e: 'normal',
@@ -117770,7 +118055,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'お、ほんとだぜ！'
+    t: 'お、ほんとですね！'
   }, {
     who: 'dra',
     e: 'happy',
@@ -117778,7 +118063,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: 'うぉぉぉ、でーじうれしいさ！'
+    t: 'でーじうれしいです！'
   }]
 }, {
   id: 'rel-consult-erubin-dra-1',
@@ -117850,7 +118135,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '表で見ると、3回に1回は勝ってるさ'
+    t: '表で見ると、3回に1回は勝ってますよ'
   }, {
     who: 'atsu',
     e: 'troubled',
@@ -117858,7 +118143,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '前は5回に1回だったんだぜ。伸びてるさ！'
+    t: '前は5回に1回だったんです。伸びてますね！'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -117902,7 +118187,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、表が1行ずれてて、気になって眠れないんだぜ…'
+    t: '{c}、表が1行ずれてて、気になって眠れないんです・・・'
   }, {
     who: 'kyuko',
     e: 'normal',
@@ -117910,7 +118195,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'いや、ずれてると落ち着かないのさ'
+    t: 'いや、ずれてると落ち着かないんですよ'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -117918,7 +118203,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '助かるぜ・・・！'
+    t: '助かります・・・！'
   }]
 }, {
   id: 'rel-consult-kyuko-erubin-1',
@@ -117962,7 +118247,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '表で見ると、相手との相性が悪かったんだぜ'
+    t: '表で見ると、相手との相性が悪かったんですよ'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -117970,7 +118255,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '相性のいい相手の表、作っといたさ。次はここで出すんだぜ'
+    t: '相性のいい相手の表、作っておきました。次はここで出しましょう'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -118168,7 +118453,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'そ、そんなに見てたのか…照れるぜ'
+    t: 'そ、そんなに見てたんですか・・・照れますね'
   }, {
     who: 'mua',
     e: 'happy',
@@ -118182,7 +118467,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}の今月の勝ち数、表でいちばん伸びてるぜ・・・！'
+    t: '{c}の今月の勝ち数、表でいちばん伸びてますよ・・・！'
   }, {
     who: 'mua',
     e: 'troubled',
@@ -118190,7 +118475,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '数字は、うそつかないさ'
+    t: '数字は、うそつかないので'
   }]
 }, {
   id: 'rel-tease-mua-erubin-1',
@@ -118384,7 +118669,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'そ、そんなに細かく読んでくれてたのか…'
+    t: 'そ、そんなに細かく読んでくれてたんですか・・・'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -118398,7 +118683,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}、さっきの一撃、表の数字をこえてたぜ・・・！'
+    t: '{c}、さっきの一撃、表の数字をこえてました・・・！'
   }, {
     who: 'kiki',
     e: 'troubled',
@@ -118406,7 +118691,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '次の表は、{c}のために1列ふやすさ'
+    t: '次の表は、{c}のために1列ふやしますね'
   }]
 }, {
   id: 'rel-tease-kiki-erubin-1',
@@ -118564,7 +118849,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'ば、ばれてたか…記録するのが好きなんだぜ'
+    t: 'ば、ばれてましたか・・・記録するのが好きなんです'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -118578,7 +118863,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}、今日はミスが2つだけだったぜ。新記録さ！'
+    t: '{c}、今日はミスが2つだけでしたよ。新記録です！'
   }, {
     who: 'momosuke',
     e: 'troubled',
@@ -118586,7 +118871,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'ちゃんと表に残しとくさ'
+    t: 'ちゃんと表に残しておきます'
   }]
 }, {
   id: 'rel-tease-momosuke-erubin-1',
@@ -118708,7 +118993,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……でーじ照れるぜ'
+    t: '・・・でーじ照れます'
   }, {
     who: 'dra',
     e: 'happy',
@@ -118722,7 +119007,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}の説明を表に入れたら、見やすさ倍増だぜ・・・！'
+    t: '{c}の説明を表に入れたら、見やすさ倍増でした・・・！'
   }, {
     who: 'dra',
     e: 'troubled',
@@ -118730,7 +119015,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '攻略本の主役は、{c}の説明さ'
+    t: '攻略本の主役は、{c}の説明ですよ'
   }]
 }, {
   id: 'rel-tease-dra-erubin-1',
@@ -118816,7 +119101,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'う…つい、うれしくてさ'
+    t: 'う・・・つい、うれしくて'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -118830,7 +119115,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}、今日の勝率、俺の表でいちばん高いぜ・・・！'
+    t: '{c}、今日の勝率、自分の表でいちばん高いです・・・！'
   }, {
     who: 'atsu',
     e: 'troubled',
@@ -118838,7 +119123,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '次は俺が上をいくさ'
+    t: '次は自分が上をいきます'
   }]
 }, {
   id: 'rel-tease-atsu-erubin-1',
@@ -118888,7 +119173,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……見つかったか'
+    t: '・・・見つかりましたか'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -118902,7 +119187,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}の「だいたい」、計算したら97点だったぜ・・・！'
+    t: '{c}の「だいたい」、計算したら97点でした・・・！'
   }, {
     who: 'kyuko',
     e: 'troubled',
@@ -118910,7 +119195,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'だいたいで97点は、才能さ'
+    t: 'だいたいで97点は、才能ですよ'
   }]
 }, {
   id: 'rel-tease-kyuko-erubin-1',
@@ -118956,7 +119241,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'wink',
-    t: '{c}、カードを引くとき、ちょっと祈ってるだろ笑'
+    t: '{c}、カードを引くとき、ちょっと祈ってますよね笑'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -118964,7 +119249,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '祈ったときの勝率、表にしとくぜ'
+    t: '祈ったときの勝率、表にしておきます'
   }]
 }, {
   id: 'rel-tease-erubin-sorashido-1',
@@ -118978,7 +119263,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'お、おう…照れるぜ'
+    t: 'は、はい・・・照れますね'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -118994,7 +119279,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '……あれ、ここに置いてた表がない'
+    t: '・・・あれ、ここに置いてた表がない'
   }, {
     who: 'mua',
     e: 'normal',
@@ -119002,7 +119287,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '順番どおりに並べてたんだよ！ 全部ばらばらだ…'
+    t: '順番どおりに並べてたんですよ！ 全部ばらばらだ・・・'
   }, {
     who: 'mua',
     e: 'angry',
@@ -119015,12 +119300,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '……並べ直すか'
+    t: '・・・並べ直すか'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'troubled',
-    t: 'さっきは大きい声出して悪かった。片づけてくれたのは助かったよ'
+    t: 'さっきは大きい声を出してすみません。片づけてくれたのは助かりました'
   }, {
     who: 'mua',
     e: 'happy',
@@ -119028,7 +119313,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'じゃあ、一緒に並べ直そう。順番を教えるよ笑'
+    t: 'じゃあ、一緒に並べ直しましょう。順番を教えますね笑'
   }, {
     who: 'mua',
     e: 'excited',
@@ -119048,7 +119333,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'え、残ってたから、いらないのかと思って…'
+    t: 'え、残ってたから、いらないのかと思って・・・'
   }, {
     who: 'mua',
     e: 'angry',
@@ -119056,12 +119341,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'それなら、先に言ってくれよ！'
+    t: 'それなら、先に言ってくださいよ！'
   }],
   distance: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '……数えておけばよかったな'
+    t: '・・・数えておけばよかったな'
   }, {
     who: 'mua',
     e: 'normal',
@@ -119070,7 +119355,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、新しいの買ってきた。さっきはごめんな'
+    t: '{c}、新しいのを買ってきました。さっきはすみません'
   }, {
     who: 'mua',
     e: 'surprise',
@@ -119090,7 +119375,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: 'よし、今のは俺の勝ちだな！ 表に書いとくぜ・・・！'
+    t: 'よし、今のは自分の勝ちですね！ 表に書いておきます'
   }, {
     who: 'mua',
     e: 'angry',
@@ -119098,7 +119383,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: 'すべっても、勝ちは勝ちだぞ'
+    t: 'すべっても、勝ちは勝ちですよ'
   }, {
     who: 'mua',
     e: 'angry',
@@ -119111,12 +119396,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '……ちょっと言いすぎたか'
+    t: '・・・ちょっと言いすぎたか'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、もう一回やろう。さっきのは、表に書かないでおく'
+    t: '{c}、もう一回やりましょう。さっきのは、表に書かないでおきます'
   }, {
     who: 'mua',
     e: 'happy',
@@ -119124,7 +119409,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '次は勝っても負けても、2人で笑おうな笑'
+    t: '次は勝っても負けても、2人で笑いましょう笑'
   }, {
     who: 'mua',
     e: 'excited',
@@ -119582,7 +119867,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: 'いや、今日は速い曲で計算したいんだ'
+    t: 'いや、今日は速い曲で計算したいんです'
   }, {
     who: 'momosuke',
     e: 'angry',
@@ -119590,7 +119875,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '練習だからこそ、速い曲なんだぞ'
+    t: '練習だからこそ、速い曲なんですよ'
   }],
   distance: [{
     who: 'momosuke',
@@ -119599,12 +119884,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……くっそー、言い方まずかったか'
+    t: '・・・うわ、言い方まずかったか'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、交代にしよう。1曲目は、{c}の好きな曲だ'
+    t: '{c}、交代にしましょう。1曲目は、{c}の好きな曲で'
   }, {
     who: 'momosuke',
     e: 'surprise',
@@ -119616,7 +119901,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '了解だ笑'
+    t: '了解です笑'
   }]
 }, {
   id: 'rel-fight-momosuke-sorashido-2',
@@ -119628,7 +119913,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '今日のスコア、俺が3点上だぜ・・・！'
+    t: '今日のスコア、自分が3点上ですねー！'
   }, {
     who: 'momosuke',
     e: 'angry',
@@ -119636,7 +119921,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '数字は数字だ。勝ちは勝ちだぞ'
+    t: '数字は数字です。勝ちは勝ちですよ'
   }, {
     who: 'momosuke',
     e: 'angry',
@@ -119649,12 +119934,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……3点くらい、言わなくてもよかったな'
+    t: '・・・3点くらい、言わなくてもよかったな'
   }],
   makeup: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、さっきのは、ほんとはほぼ引き分けだ。ごめんな'
+    t: '{c}、さっきのは、ほんとはほぼ引き分けです。すみません'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -119662,7 +119947,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '次は2人で合わせて、最高点を出そう笑'
+    t: '次は2人で合わせて、最高点を出しましょう笑'
   }, {
     who: 'momosuke',
     e: 'excited',
@@ -119678,7 +119963,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c}、合わせ練習の時間、とっくにすぎてるぞ'
+    t: '{c}、合わせ練習の時間、とっくにすぎてますよ'
   }, {
     who: 'momosuke',
     e: 'troubled',
@@ -119686,7 +119971,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'angry',
-    t: '待ってるあいだに、表が3枚できたぞ'
+    t: '待ってるあいだに、表が3枚できました'
   }, {
     who: 'momosuke',
     e: 'angry',
@@ -119695,7 +119980,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   distance: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……計算どおりにいかないな'
+    t: '・・・計算どおりにいかないな'
   }, {
     who: 'momosuke',
     e: 'troubled',
@@ -119708,7 +119993,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'いいさ。夜も練習してたんだもんな'
+    t: '大丈夫ですよ。夜も練習してたんですもんね'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -121018,7 +121303,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '……{c}、その、さっきは……'
+    t: '・・・{c}、その、さっきは・・・'
   }, {
     who: 'mua',
     e: 'normal',
@@ -121026,7 +121311,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '……ごめん。言いすぎた'
+    t: '・・・すみません。言いすぎました'
   }, {
     who: 'mua',
     e: 'happy',
@@ -121046,11 +121331,11 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'いいのか？'
+    t: 'いいんですか？'
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'ありがとな。……さっきは悪かった'
+    t: 'ありがとうございます。・・・さっきはすみませんでした'
   }, {
     who: 'mua',
     e: 'wink',
@@ -121070,7 +121355,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……{name}に言われたら、しょうがないな'
+    t: '・・・{name}に言われたら、しょうがないですね'
   }, {
     who: 'mua',
     e: 'happy',
@@ -121078,7 +121363,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'おう。記録は、なしでな笑'
+    t: 'はい。記録は、なしで笑'
   }]
 }, {
   id: 'rel-mend-atsu-mua-1',
@@ -121302,7 +121587,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c}、さっきは悪かった'
+    t: '{c}、さっきはすみませんでした'
   }, {
     who: 'momosuke',
     e: 'troubled',
@@ -121310,7 +121595,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '思ってる。表にも書いた。「俺が悪い」って笑'
+    t: '思ってます。表にも書きました。「自分が悪い」って笑'
   }, {
     who: 'momosuke',
     e: 'excited',
@@ -121330,7 +121615,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'お、2つあるな'
+    t: 'お、2つありますね'
   }, {
     who: 'momosuke',
     e: 'wink',
@@ -121338,7 +121623,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'ありがとな。俺もごめん。数えずに食べるよ笑'
+    t: 'ありがとうございます。自分もすみません。数えずに食べます笑'
   }]
 }, {
   id: 'rel-mend-momosuke-sorashido-3',
@@ -121350,7 +121635,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{name}に「計算より先に謝りな」って言われたぜ・・・'
+    t: '{name}に「計算より先に謝りな」って言われました・・・'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -121358,7 +121643,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}、ごめん'
+    t: '・・・{c}、すみません'
   }, {
     who: 'momosuke',
     e: 'excited',
@@ -122028,7 +122313,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……きっかけがなくてな'
+    t: '・・・きっかけがなくて'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -122176,7 +122461,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……話しかけるきっかけを探してたんだ'
+    t: '・・・話しかけるきっかけを探してたんです'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -122268,7 +122553,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……ちょっと、言い合いになってな'
+    t: '・・・ちょっと、言い合いになりまして'
   }, {
     who: 'kyuko',
     e: 'troubled',
@@ -122280,7 +122565,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……それは、いい案だな笑'
+    t: '・・・それは、いい案ですね笑'
   }]
 }, {
   id: 'rel-mend3-momosuke-erubin-dra-1',
@@ -122328,7 +122613,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……ちょっと、気まずいんだが'
+    t: '・・・ちょっと、気まずいんですけど'
   }, {
     who: 'mua',
     e: 'wink',
@@ -122340,7 +122625,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もだ。……いい写真になったな'
+    t: '自分もです。・・・いい写真になりましたね'
   }]
 }, {
   id: 'rel-mend3-mua-kiki-dra-1',
@@ -122414,7 +122699,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……ああ'
+    t: '・・・はい'
   }, {
     who: 'atsu',
     e: 'wink',
@@ -122422,7 +122707,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……{c:dra}、作戦、聞いてもいいか'
+    t: '・・・{c:dra}、作戦、聞いてもいいですか'
   }, {
     who: 'dra',
     e: 'happy',
@@ -122560,7 +122845,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '……表まであるのか'
+    t: '・・・表まであるんですか'
   }, {
     who: 'kyuko',
     e: 'wink',
@@ -122572,7 +122857,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '俺もだ。ごめんな'
+    t: '自分もです。すみません'
   }]
 }, {
   id: 'rel-mend3-kyuko-mua-erubin-1',
@@ -122612,7 +122897,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '{c:atsu}、{c:kiki}。計算したら、二人が仲直りする確率は100%だった'
+    t: '{c:atsu}、{c:kiki}。計算したら、二人が仲直りする確率は100%でした'
   }, {
     who: 'atsu',
     e: 'surprise',
@@ -122624,7 +122909,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'だから、早めに済ませたほうが得だぞ笑'
+    t: 'なので、早めに済ませたほうが得ですよ笑'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -122642,7 +122927,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '{c:momosuke}、{c:dra}、3人でスコア勝負しないか'
+    t: '{c:momosuke}、{c:dra}、3人でスコア勝負しませんか'
   }, {
     who: 'momosuke',
     e: 'troubled',
@@ -122654,7 +122939,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '2人の点を足して、俺と勝負だ。チームなら話すしかないぜ・・・！'
+    t: '2人の点を足して、自分と勝負です。チームなら話すしかないですよね！'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -122710,7 +122995,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……ありがとう、{c:kiki}'
+    t: '・・・ありがとうございます、{c:kiki}'
   }, {
     who: 'kiki',
     e: 'wink',
@@ -122718,7 +123003,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……それは困るな笑 {c:erubin}、さっきは悪かった'
+    t: '・・・それは困りますね笑 {c:erubin}、さっきはすみません'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -122856,7 +123141,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……話すきっかけがなくてな'
+    t: '・・・話すきっかけがなくて'
   }, {
     who: 'kiki',
     e: 'troubled',
@@ -122868,7 +123153,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……{c:kiki}の攻めの列だな'
+    t: '・・・{c:kiki}の攻めの列ですね'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -122890,7 +123175,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '……数え方、分かるのか？'
+    t: '・・・数え方、分かるんですか？'
   }, {
     who: 'mua',
     e: 'wink',
@@ -122902,7 +123187,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'おう。{c:momosuke}、さっきは悪かったな'
+    t: 'はい。{c:momosuke}、さっきはすみませんでした'
   }]
 }, {
   id: 'rel-mend3-dra-erubin-momosuke-1',
@@ -123108,7 +123393,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '{c:momosuke}の欄も作ったんだ。見てくれ'
+    t: '{c:momosuke}の欄も作ったんです。見てください'
   }, {
     who: 'momosuke',
     e: 'excited',
@@ -123128,7 +123413,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'そんなことないぞ。さっきから「{c:momosuke}がいたら」って話してた'
+    t: 'そんなことないですよ。さっきから「{c:momosuke}がいたら」って話してました'
   }, {
     who: 'mua',
     e: 'happy',
@@ -123252,7 +123537,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'ちょうどいい。3人で総当たりにしようぜ・・・！'
+    t: 'ちょうどいいですね。3人で総当たりにしましょう！'
   }, {
     who: 'atsu',
     e: 'excited',
@@ -123272,7 +123557,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'そんなことないぞ。{c:atsu}との勝負が一番燃える'
+    t: 'そんなことないですよ。{c:atsu}との勝負が一番燃えます'
   }, {
     who: 'dra',
     e: 'happy',
@@ -123292,7 +123577,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c:kyuko}と{c:atsu}、二人でランキングの話か……'
+    t: '{c:kyuko}と{c:atsu}、二人でランキングの話か・・・'
   }, {
     who: 'kyuko',
     e: 'surprise',
@@ -123304,7 +123589,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '……任せろ！ すぐ表にするぜ・・・！'
+    t: '・・・任せてください！ すぐ表にします！'
   }]
 }, {
   id: 'rel-jealous-sorashido-kyuko-atsu-2',
@@ -123316,7 +123601,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '二人の作戦、俺の表がなくても勝てそうだな'
+    t: '二人の作戦、自分の表がなくても勝てそうだな・・・'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -123328,7 +123613,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……なんくるないさ〜。じゃあ、一緒にやるか笑'
+    t: '・・・なんくるないさ〜。じゃあ、一緒にやりましょう笑'
   }]
 }, {
   id: 'rel-jealous-erubin-atsu-dra-1',
@@ -123492,7 +123777,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: 'そうだ。{c:dra}の解説、表にも書いてるんだ'
+    t: 'そうなんです。{c:dra}の解説、表にも書いてるんですよ'
   }, {
     who: 'dra',
     e: 'happy',
@@ -123512,7 +123797,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'そんなことない。{c:dra}の説明で、俺は強くなったんだ'
+    t: 'そんなことないです。{c:dra}の説明で、自分は強くなったんです'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -123540,7 +123825,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '{c:kyuko}の組み方、表にしたかったんだ'
+    t: '{c:kyuko}の組み方、表にしたかったんですよ'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -123564,7 +123849,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '{c:kyuko}がいると、話がまとまるんだぞ'
+    t: '{c:kyuko}がいると、話がまとまるんですよね'
   }, {
     who: 'kyuko',
     e: 'happy',
@@ -123588,7 +123873,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '{c:kiki}の意見、聞きたいぞ'
+    t: '{c:kiki}の意見、聞きたいです'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -123608,7 +123893,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: '{c:kiki}の攻め方、表でも一番強いんだぞ'
+    t: '{c:kiki}の攻め方、表でも一番強いんですよ'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -123676,7 +123961,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'troubled',
-    t: '{c:dra}と{c:erubin}、二人でデュラハンの研究か…'
+    t: '{c:dra}と{c:erubin}、二人でデュラハンの研究か・・・'
   }, {
     who: 'dra',
     e: 'happy',
@@ -123688,7 +123973,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '……まかせろ！ うぉぉぉ！'
+    t: '・・・任せてください！ うぉぉぉ！'
   }]
 }, {
   id: 'rel-jealous-sorashido-dra-erubin-2',
@@ -123700,7 +123985,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '二人の組み方、もう俺の計算はいらないかもな'
+    t: '二人の組み方、もう自分の計算はいらないかもな・・・'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -123712,7 +123997,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……でーじうれしいな笑'
+    t: '・・・でーじうれしいです笑'
   }]
 }, {
   id: 'rel-jealous-erubin-kiki-kyuko-1',
@@ -123964,7 +124249,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: 'よし、今日は2点差で俺の勝ちだぜ・・・！'
+    t: 'よし、今日は2点差で自分の勝ちですねー！'
   }, {
     who: 'atsu',
     e: 'angry',
@@ -123972,7 +124257,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '次も2点差で勝つ'
+    t: '次も2点差で勝ちます'
   }, {
     who: 'atsu',
     e: 'excited',
@@ -123992,7 +124277,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……くっそー！ 計算では勝ってたのに'
+    t: '・・・くやしい！ 計算では勝ってたのに'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -124000,7 +124285,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '次までに、勢いも計算に入れてくる！'
+    t: '次までに、勢いも計算に入れてきます！'
   }]
 }, {
   id: 'rel-rival-atsu-dra-1',
@@ -124112,7 +124397,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……くっそー！ 表に「負け」って書くのは久しぶりだ笑'
+    t: '・・・くやしい！ 表に「負け」って書くのは久しぶりです笑'
   }, {
     who: 'mua',
     e: 'wink',
@@ -124120,7 +124405,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '次は勝ちの欄だ！ 明日、もう一回な'
+    t: '次は勝ちの欄ですね！ 明日、もう一回お願いします'
   }]
 }, {
   id: 'rel-rival-mua-sorashido-2',
@@ -124132,7 +124417,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'happy',
-    t: '今日のカードは俺の勝ちだな'
+    t: '今日のカードは自分の勝ちですね'
   }, {
     who: 'mua',
     e: 'angry',
@@ -124140,7 +124425,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '{c}の直感、半分は当たってたぞ'
+    t: '{c}の直感、半分は当たってましたよ'
   }, {
     who: 'mua',
     e: 'excited',
@@ -124304,7 +124589,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……ミスの数は、俺のほうが少ないのにな'
+    t: '・・・ミスの数は、自分のほうが少ないのにな'
   }, {
     who: 'momosuke',
     e: 'wink',
@@ -124312,7 +124597,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '次は、ミスもスコアも勝つぞ。もう一回だ！'
+    t: '次は、ミスもスコアも勝ちます。もう一回です！'
   }]
 }, {
   id: 'rel-rival-kyuko-sorashido-1',
@@ -124324,7 +124609,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'excited',
-    t: '今日のカード、俺の勝ちだな！ 計算どおりだ'
+    t: '今日のカード、自分の勝ちですね！ 計算どおりです'
   }, {
     who: 'kyuko',
     e: 'troubled',
@@ -124332,7 +124617,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '{c}の組み方も、表で読めるようになったんだ笑'
+    t: '{c}の組み方も、表で読めるようになったんですよ笑'
   }, {
     who: 'kyuko',
     e: 'wink',
@@ -124352,7 +124637,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'surprise',
-    t: 'デュラハンの守り、計算より固かったぞ…'
+    t: 'デュラハンの守り、計算より固かったです・・・'
   }, {
     who: 'erubin',
     e: 'wink',
@@ -124360,7 +124645,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'excited',
-    t: '次までに、数字にしてくる！ もう一回だ！'
+    t: '次までに、数字にしてきます！ もう一回です！'
   }]
 }, {
   id: 'rel-rival-dra-kiki-1',
@@ -124556,7 +124841,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}、元気だったか'
+    t: '・・・{c}、元気でしたか'
   }, {
     who: 'mua',
     e: 'normal',
@@ -124564,7 +124849,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '5日ぶりだ。ちゃんと数えてた笑'
+    t: '5日ぶりです。ちゃんと数えてました笑'
   }, {
     who: 'mua',
     e: 'excited',
@@ -124688,7 +124973,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}。何日ぶりか、数えてなかったな'
+    t: '・・・{c}。何日ぶりか、数えてなかったな'
   }, {
     who: 'kiki',
     e: 'normal',
@@ -124696,7 +124981,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……何を話そうか、表にしてくればよかったな'
+    t: '・・・何を話そうか、表にしてくればよかったですね'
   }, {
     who: 'kiki',
     e: 'happy',
@@ -124806,7 +125091,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}、少し会わなかったな'
+    t: '・・・{c}、少し会わなかったですね'
   }, {
     who: 'momosuke',
     e: 'normal',
@@ -124814,7 +125099,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……会ってないあいだのミスの数、聞いてもいいか'
+    t: '・・・会ってないあいだのミスの数、聞いてもいいですか'
   }, {
     who: 'momosuke',
     e: 'wink',
@@ -124894,7 +125179,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}、会うのは5日ぶりだな'
+    t: '・・・{c}、会うのは5日ぶりですね'
   }, {
     who: 'dra',
     e: 'normal',
@@ -124902,7 +125187,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '会ってないあいだに、表が30ページたまったんだが…'
+    t: '会ってないあいだに、表が30ページたまったんですけど・・・'
   }, {
     who: 'dra',
     e: 'happy',
@@ -124960,7 +125245,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}、しばらくぶりだな'
+    t: '・・・{c}、しばらくぶりですね'
   }, {
     who: 'atsu',
     e: 'normal',
@@ -124968,7 +125253,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '勝ち負けの数、どっちが上だったか忘れたな'
+    t: '勝ち負けの数、どっちが上だったか忘れちゃいました'
   }, {
     who: 'atsu',
     e: 'happy',
@@ -125008,7 +125293,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'normal',
-    t: '……ああ。{c}も'
+    t: '・・・はい。{c}も'
   }, {
     who: 'kyuko',
     e: 'troubled',
@@ -125016,7 +125301,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'happy',
-    t: '……全部、表にしよう。久しぶりの共同作業だな笑'
+    t: '・・・全部、表にしましょう。久しぶりの共同作業ですね笑'
   }]
 }, {
   id: 'rel-awkward-kyuko-erubin-1',
@@ -125048,7 +125333,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'sorashido',
     e: 'normal',
-    t: '……{c}、少し会わなかったな'
+    t: '・・・{c}、少し会わなかったですね'
   }, {
     who: 'erubin',
     e: 'normal',
@@ -125056,7 +125341,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'sorashido',
     e: 'troubled',
-    t: '……何から話せばいいか、計算できない'
+    t: '・・・何から話せばいいか、計算できないです'
   }, {
     who: 'erubin',
     e: 'happy',
@@ -130045,12 +130330,12 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
     think: 'ちょっと考えとくよぉ笑'
   },
   sorashido: {
-    yes: '了解・・・！そうしてみるぜ笑',
-    some: '少しだけ取り入れてみたぜ・・・！',
-    no: 'それは計算に合わないぜ・・・ごめんな',
-    talk: 'どうしたいか、もう少し教えてくれ・・・！',
-    ng: 'その言葉は名前に使えないぜ・・・別の名前にしてくれ笑',
-    think: '少し考えておくぜ・・・！'
+    yes: 'なるほど了解です！ そうしてみます笑',
+    some: '少しだけ取り入れてみました・・・！',
+    no: 'それは計算に合わないんです・・・すみません',
+    talk: 'どうしたいか、もう少し教えてください・・・！',
+    ng: 'その言葉は名前に使えないんです・・・別の名前でお願いします笑',
+    think: '少し考えておきますね・・・！'
   },
   erubin: {
     yes: 'うん、そうしてみるね笑',
@@ -131051,7 +131336,7 @@ const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
   dra: 'おう、{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てていくからな',
   atsu: '{name}！ 新しい仲間が来た笑 {mon}の「{nick}」、よろしく頼む！',
   kyuko: 'ほい、{name}。新しいマスモン迎えたよ〜。{mon}の「{nick}」、仲良くしてねぇ',
-  sorashido: 'うぉぉぉ！{name}、新しい仲間だぜ・・・！ {mon}の「{nick}」、表にも足しとくな笑',
+  sorashido: '{name}、新しい仲間が来ましたよー！ {mon}の「{nick}」、表にも足しておきますね笑',
   erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。仲良くしてくれるとうれしいな'
 });
 const ASSISTANT_MASMON_RENAMED_LINES = Object.freeze({
@@ -131061,7 +131346,7 @@ const ASSISTANT_MASMON_RENAMED_LINES = Object.freeze({
   dra: '{name}、マスモンたちに新しい名前を付けたぞ。見てやってくれ',
   atsu: '{name}、マスモンたちに新しい名前付けた笑 見てって！',
   kyuko: 'ほい、{name}。マスモンたちに新しい名前付けたよ〜。見てみてねぇ',
-  sorashido: '{name}、マスモンたちに新しい名前を付けたぜ・・・！ 見てくれ笑',
+  sorashido: '{name}、マスモンたちに新しい名前を付けました・・・！ 見てください笑',
   erubin: '{name}、マスモンたちに新しい名前を付けたんだ。見てくれるかな'
 });
 const assistantMasmonRenamedLine = aid => {
@@ -133293,7 +133578,7 @@ const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   if (restReq) return {
     a: 'rest'
   };
-  if (e.fat >= T.rest) return {
+  if (e.fat >= (typeof amgtRestAt === 'function' ? amgtRestAt(aid, T.rest) : T.rest)) return {
     a: 'rest'
   };
   if (e.str >= 50) return {
@@ -133415,6 +133700,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
       r: 1
     } : {})
   }].slice(-AMG_LOG);
+  if (act.a !== 'shugyo' && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot);
   return e;
 };
 const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
@@ -137150,7 +137436,7 @@ const ALF_GO_LINES = Object.freeze({
   dra: ['よっ、{f}。遊びに来たからな、えへへ', '{h}さんの家、いい匂いするな。おやつあるか？'],
   atsu: ['とりあえず来てみた笑 {f}、元気？', '{h}さんの家、居心地いいな笑'],
   kyuko: ['ほい！{f}、遊びに来たよ〜', '{h}さんの家、片づいてて動きやすいねぇ。'],
-  sorashido: ['うぉぉぉ！{f}、来たぜ・・・！', '{h}さんの家、でーじいい感じだな笑'],
+  sorashido: ['{f}、来ましたよー！ おじゃまします笑', '{h}さんの家、でーじいい感じですね笑'],
   erubin: ['こんにちは、{f}。おじゃまするね', '{h}さんの家、あったかい感じがするね。']
 });
 const ALF_REPLY_LINES = Object.freeze({
@@ -137160,7 +137446,7 @@ const ALF_REPLY_LINES = Object.freeze({
   dra: ['おっ、{v}か。上がってけよな', 'おやつ、半分こしような'],
   atsu: ['{v}じゃん、いらっしゃい笑', 'てか座って座って笑'],
   kyuko: ['おけ〜、{v}いらっしゃい！', 'ちょうどひと息つくとこだったんだぁ。'],
-  sorashido: ['{v}！よく来たぜ・・・！', 'なんくるないさ〜、くつろいでけ笑'],
+  sorashido: ['{v}！ よく来てくれましたねー！', 'なんくるないさ〜、くつろいでいってください笑'],
   erubin: ['{v}、来てくれたんだね', '寒くなかった？ゆっくりしてね']
 });
 const ALF_SAME_LINES = Object.freeze({
@@ -137170,7 +137456,7 @@ const ALF_SAME_LINES = Object.freeze({
   dra: 'おでがもうひとりいるな…えへへ',
   atsu: '俺がいる笑 なんか照れるな笑',
   kyuko: 'え、俺？ぐぬぬぬ、どっちが本物だぁ',
-  sorashido: 'うぉぉぉ！俺がもうひとりいるぜ・・・！',
+  sorashido: 'うぉぉぉ！ 自分がもうひとりいます・・・！',
   erubin: '自分と会うって、なんだかくすぐったいね'
 });
 const ALF_BACK_LINES = Object.freeze({
@@ -137180,7 +137466,7 @@ const ALF_BACK_LINES = Object.freeze({
   dra: 'ただいまだな。{h}さんの家、また行きたいな',
   atsu: 'ただいま笑 {h}さんの家、よかったよ笑',
   kyuko: 'ただいまぁ。{h}さんの家で、いい話できたよ〜',
-  sorashido: 'ただいまだぜ！{h}さんの家、でーじ楽しかった笑',
+  sorashido: 'ただいまです！ {h}さんの家、でーじ楽しかったです笑',
   erubin: 'ただいま。{h}さんの家の話、聞いてくれる？'
 });
 const ALF_GUEST_LINES = Object.freeze({
@@ -137190,7 +137476,7 @@ const ALF_GUEST_LINES = Object.freeze({
   dra: '{h}さんちから来たからな。おじゃまするぞ',
   atsu: '{h}さんちから来た笑 おじゃまします笑',
   kyuko: 'ほい！{h}さんちから来たよ〜',
-  sorashido: '{h}さんちから来たぜ・・・！',
+  sorashido: '{h}さんの家から来ました！ おじゃまします笑',
   erubin: '{h}さんの家から来たよ。おじゃまするね'
 });
 const ALF_WELCOME_LINES = Object.freeze({
@@ -137200,7 +137486,7 @@ const ALF_WELCOME_LINES = Object.freeze({
   dra: 'よく来たな。おやつあるぞ',
   atsu: 'いらっしゃい笑 座って座って笑',
   kyuko: 'いらっしゃ〜い！ちょうどお茶いれたとこ〜',
-  sorashido: 'うぉぉぉ！いらっしゃいだぜ・・・！',
+  sorashido: 'いらっしゃいませー！ 来てくれてうれしいです笑',
   erubin: 'いらっしゃい。来てくれてうれしいな'
 });
 const ALF_TALK_LINES = Object.freeze({
@@ -137210,7 +137496,7 @@ const ALF_TALK_LINES = Object.freeze({
   dra: ['おっ、お客さんだな。いらっしゃい', 'おやつ食べてくか？えへへ', 'また来いよな'],
   atsu: ['お、いらっしゃい笑', '{h}さんの友だちなら大歓迎笑', 'また来てね笑'],
   kyuko: ['ほい！いらっしゃ〜い', '{h}さんの友だちかぁ、ありがとん笑', 'またねぇ〜'],
-  sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
+  sorashido: ['お客さんですねー！ いらっしゃい笑', 'ちばりよー！ 応援してます笑', 'また来てくださいね笑'],
   erubin: ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね']
 });
 const ALF_VISIT_LINES = Object.freeze({
@@ -137293,17 +137579,17 @@ const ALF_VISIT_LINES = Object.freeze({
     "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]
   },
   "sorashido": {
-    "greet": ["うぉぉぉ！ お客さんだ！ よく来てくれたな", "{name}、いらっしゃい！ くつろいでくれ笑", "{h}さんの友だちか。ゆっくりしていけよ"],
+    "greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"],
     "doing": {
-      "snack": "ちょうどちんすこう食べてたんだ。一緒にどうだ？",
-      "practice": "いま練習してたんだ！ 聞いていくか？",
-      "training": "育成の記録をつけてたとこだ。ちょっと待っててくれ",
-      "cards": "新しい表を作ってたんだぜ・・・！ 見ていくか？",
-      "read": "本を読んでたんだ。いいところで来たな笑",
-      "idle": "考えごとしてたんだ。話し相手ができてうれしいぞ"
+      "snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？",
+      "practice": "いま練習してたんですよ！ 聞いていきますか？",
+      "training": "育成の記録をつけてたところです。ちょっと待っててくださいね",
+      "cards": "新しい表を作ってたんです・・・！ 見ていきますか？",
+      "read": "本を読んでたんです。いいところで来ましたね笑",
+      "idle": "考えごとをしてたんです。話し相手ができてうれしいです"
     },
-    "reply": ["ありがとな！ でーじうれしいぞ笑", "そう言ってもらえると、表を作ったかいがあるな", "気をつかわなくていいぞ。ゆっくりしてくれ"],
-    "sleep": ["……うぉぉ……むにゃ……表が……", "……なんくるないさ〜……すぅ……"]
+    "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"],
+    "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]
   },
   "erubin": {
     "greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"],
@@ -137326,7 +137612,7 @@ const ALF_GO_MORE = Object.freeze({
   "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"],
   "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"],
   "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"],
-  "sorashido": ["{f}、遊びに来たぞ！ 今日はなにする？", "{h}さんの部屋、でーじ落ち着くな笑"],
+  "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"],
   "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]
 });
 const ALF_WELCOME_MORE = Object.freeze({
@@ -137336,7 +137622,7 @@ const ALF_WELCOME_MORE = Object.freeze({
   "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"],
   "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"],
   "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"],
-  "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"],
+  "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"],
   "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]
 });
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね', 'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
@@ -146047,21 +146333,21 @@ const CARD_BATTLE_LINES = Object.freeze({
     winQuick: [['え、もう終わり？ 次は最後までやろうぜ笑', 'surprise'], ['今日は俺のペースだったな笑 また相手してな！', 'wink']]
   },
   sorashido: {
-    challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
-    start: [['デッキは組み直してきた。今日の俺は強いぜ・・・！', 'happy'], ['よろしく！ 様子見…と見せかけて攻める笑', 'wink'], ['いくぜ・・・！ 最初の1手が大事なんだよな', 'excited'], ['三線みたいに、気持ちよく勝ちたいね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいぜ・・・！', 'happy']],
-    big: [['うぉぉぉ！ ここで大技いくぜ・・・！', 'excited'], ['ガッツためといた甲斐があった笑', 'happy'], ['この流れ、攻略まとめに書いとこ笑', 'wink'], ['読みどおり！ 一気に押し込むぜ・・・！', 'excited']],
-    bigHit: [['なに！？ 今のは効いた…笑', 'surprise'], ['うわ、それ持ってたの！？ やられた笑', 'surprise'], ['痛っ…でも次の手はもう考えてあるぜ・・・！', 'troubled'], ['なんくるないさ〜。まだ巻き返せる笑', 'normal']],
-    guardMine: [['その手、読めてたぜ・・・！', 'happy'], ['守り、残しといて正解だった笑', 'wink'], ['はい、よけた！ 計算どおり笑', 'excited']],
-    guardTheirs: [['なに！？ そこで守るの！？', 'surprise'], ['読みが深いな…やるじゃん笑', 'troubled'], ['次は守りにくい手でいくぜ・・・！', 'normal']],
-    myKo: [['ごめんな…あとは俺が取り返すぜ・・・！', 'crying'], ['なに！？ ここで倒れるのかよ…笑', 'surprise'], ['まだまだ！ 作戦はここからだぜ・・・！', 'angry']],
-    theirKo: [['うぉぉぉ！ 1体いただき！', 'excited'], ['弱ってたの、見逃さないぜ・・・！', 'wink'], ['よし！ 計算どおり笑', 'happy']],
-    lastMine: [['残り1体…ここからひっくり返すのが楽しいんだよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託すぜ・・・！', 'troubled']],
-    lastTheirs: [['あと1体！ 最後まで読み切るぜ・・・！', 'excited'], ['詰めの手順、もう見えてる笑', 'wink']],
-    deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
-    deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
-    win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
-    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
-    winQuick: [['え、もう終わり！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じか・・・！ 次はがっつりやろうぜ笑', 'wink']]
+    challenge: [['カード勝負ですね。受けて立ちます！', 'wink'], ['対戦しましょう！ 攻略まとめ、もう頭に入ってます笑', 'happy'], ['手加減なしでいきます！ 勝ち負けは本気なので笑', 'excited'], ['どんなデッキでくるか、楽しみすぎます笑', 'wink']],
+    start: [['デッキは組み直してきました。今日の自分は強いですよ笑', 'happy'], ['よろしくお願いします！ 様子見・・・と見せかけて攻めます笑', 'wink'], ['いきます！ 最初の1手が大事なんですよね', 'excited'], ['三線みたいに、気持ちよく勝ちたいですね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいです・・・！', 'happy']],
+    big: [['うぉぉぉ！ ここで大技いきます！', 'excited'], ['ガッツをためておいた甲斐がありました笑', 'happy'], ['この流れ、攻略まとめに書いておきます笑', 'wink'], ['読みどおり！ 一気に押し込みます！', 'excited']],
+    bigHit: [['今のは効きました・・・！笑', 'surprise'], ['うわ、それ持ってたんですか！？ やられました笑', 'surprise'], ['痛っ・・・でも次の手はもう考えてあります', 'troubled'], ['なんくるないさ〜。まだ巻き返せます笑', 'normal']],
+    guardMine: [['その手、読めてました！', 'happy'], ['守り、残しておいて正解でした笑', 'wink'], ['はい、よけました！ 計算どおりです笑', 'excited']],
+    guardTheirs: [['そこで守るんですか・・・！', 'surprise'], ['読みが深いですね・・・やりますね笑', 'troubled'], ['次は守りにくい手でいきます！', 'normal']],
+    myKo: [['ごめん・・・あとは自分が取り返します！', 'crying'], ['ここで倒れるのか・・・！笑', 'surprise'], ['まだまだ！ 作戦はここからです！', 'angry']],
+    theirKo: [['よし！ 1体いただきました！', 'excited'], ['弱ってたの、見逃さないですよ笑', 'wink'], ['よし！ 計算どおりです笑', 'happy']],
+    lastMine: [['残り1体・・・ここからひっくり返すのが楽しいんですよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託します！', 'troubled']],
+    lastTheirs: [['あと1体！ 最後まで読み切ります！', 'excited'], ['詰めの手順、もう見えてます笑', 'wink']],
+    deckMine: [['山札やばい・・・！ 急がないと笑', 'surprise'], ['ガッツにしすぎました・・・計算ミスです笑', 'troubled']],
+    deckTheirs: [['そっちの山札、もう少ないですよね？笑', 'wink'], ['山札切れも勝ち筋のひとつですからね！', 'happy']],
+    win: [['読みどおり！ いい勝負でした笑', 'happy'], ['作戦がきれいにはまりました！ もう1戦だけやりましょう笑', 'excited'], ['楽しかったです！ 気づいたら朝になりそうです笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかったです笑', 'excited']],
+    lose: [['そこでそれですか・・・！ 悔しいですけど、今のはうまいです', 'crying'], ['完敗です！ 今の対戦、攻略まとめにして研究します笑', 'troubled'], ['なんくるないさ〜。次はデッキを組み直してきます笑', 'happy']],
+    winQuick: [['え、もう終わりですか！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じですかね・・・！ 次はがっつりやりましょう笑', 'wink']]
   },
   erubin: {
     challenge: [['カード勝負、いいね！ こっちに来てから、すっかりはまってるんだよね笑', 'happy'], ['今日はどの組み方でいこうかな🤔 いくつか持ってきたんだよね', 'wink'], ['対戦しよっか。手加減はしないけど、それでもよいかな？笑', 'wink'], ['デュラハンの出番だね。よろしくお願いします☺️', 'happy']],
@@ -147843,7 +148129,7 @@ const CARD_AI_DECK_VS_LINES = Object.freeze({
   kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
   dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
   atsu: '今日は『{name}』でいくわ笑 全力な！',
-  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  sorashido: '今日は『{name}』でいきます！ 計算済みです笑',
   erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑'
 });
 const CARD_AI_DECK_WISH_LINES = Object.freeze({
@@ -147853,7 +148139,7 @@ const CARD_AI_DECK_WISH_LINES = Object.freeze({
   kyuko: 'ほい、考えてくれた『{name}』でいくよぉ笑 ありがとね',
   dra: 'おで、考えてくれた『{name}』でいくぞ。えへへ、うれしいな。手加減しないからな',
   atsu: '考えてくれた『{name}』でいくわ笑 全力な！',
-  sorashido: '考えてくれた『{name}』でいくぜ・・・！ これも計算済み笑',
+  sorashido: '考えてくれた『{name}』でいきます！ これも計算済みです笑',
   erubin: '考えてくれた『{name}』でいこうかな🤔 ありがとね笑'
 });
 const cardAiDeckVsLine = (who, pick) => {
@@ -148026,23 +148312,23 @@ const CARD_VS_LINES = Object.freeze({
   sorashido: {
     easy: {
       e: 'happy',
-      t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！'
+      t: 'ゆるっといきましょう！ でも読みは手を抜かないですよ笑'
     },
     normal: {
       e: 'wink',
-      t: '浜の風みたいに、さらっと勝たせてもらう笑'
+      t: '浜の風みたいに、さらっと勝たせてもらいます笑'
     },
     hard: {
       e: 'excited',
-      t: 'ここからは本気の読み合いだぜ・・・！'
+      t: 'ここからは本気の読み合いですね・・・！'
     },
     expert: {
       e: 'excited',
-      t: '攻略班の作戦、ぜんぶ試させてもらう笑'
+      t: '攻略班の作戦、ぜんぶ試させてもらいます笑'
     },
     master: {
       e: 'angry',
-      t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！'
+      t: 'うぉぉぉ！ 自分の全力、受けてみてください・・・！'
     }
   },
   erubin: {
@@ -163794,9 +164080,9 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']]
   },
   sorashido: {
-    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
-    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
-    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']]
+    win: [['勝ちましたね！ 今の組み方、最高でした笑', 'happy'], ['ナイスです！ 読み合い、完全に勝ってました！', 'excited'], ['いい勝ち方ですね！ 攻略まとめに残したいくらいです笑', 'wink']],
+    lose: [['惜しい・・・！ 次はどう組むか考えてみませんか', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になりました笑', 'normal'], ['相手も強かったですね！ もう1戦いっておきますか？笑', 'happy']],
+    left: [['あれ、相手がいなくなりましたね？ 決着つけたかったです笑', 'surprise'], ['電波ですかね？ 次の相手をさがしてみますか！', 'normal'], ['勝ちは勝ちですけど・・・ちょっと物足りないですね', 'troubled']]
   },
   erubin: {
     win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
@@ -191996,6 +192282,40 @@ function MonsterHeroGame() {
     setRhythmPlay(null);
     setGameState('RHYTHM_OPTIONS');
   };
+  const [rhythmPreview, setRhythmPreview] = useState(null);
+  const [rhythmOptionsDraft, setRhythmOptionsDraft] = useState(null);
+  const startRhythmOptionPreview = draft => {
+    const settings = normalizeRhythmSettings(draft);
+    if (settings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmOptionsDraft(settings);
+    setRhythmPreview({
+      draft: settings,
+      key: 0
+    });
+    setRhythmPlay({
+      song: RHYTHM_OPTION_PREVIEW_SONG,
+      difficulty: RHYTHM_OPTION_PREVIEW_DIFFICULTY,
+      from: 'preview'
+    });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmOptionPreview = () => {
+    setRhythmPreview(null);
+    setRhythmPlay(null);
+    setGameState('RHYTHM_OPTIONS');
+  };
+  const rhythmPreviewProps = rhythmPreview ? {
+    phase: 'try',
+    preview: true,
+    key: rhythmPreview.key,
+    ground: rhythmPreview.draft.judgmentLineHeight,
+    onEnd: leaveRhythmOptionPreview,
+    onFix: leaveRhythmOptionPreview,
+    onLoop: () => setRhythmPreview(p => p ? {
+      ...p,
+      key: p.key + 1
+    } : p)
+  } : null;
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -197415,11 +197735,12 @@ function MonsterHeroGame() {
     if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retryRhythm = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   const cardAutoStartInsideRef = useRef(false);
@@ -206837,11 +207158,11 @@ function MonsterHeroGame() {
       gains: beatRankFx.gains,
       onClose: () => setBeatRankFx(null)
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
-      key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : undefined,
+      key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : rhythmPlay.from === 'preview' && rhythmPreview ? `option-preview-${rhythmPreview.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
-      settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmSettings,
+      settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmPlay.from === 'preview' && rhythmPreview ? rhythmPreview.draft : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
       breederName: breederName,
       multi: rhythmPlay.from === 'multi',
@@ -206861,6 +207182,7 @@ function MonsterHeroGame() {
       onComplete: async (result, merged) => {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
+        if (rhythmPlay.from === 'preview') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const assistBonus = rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() ? rhythmAssistSessionRewardBonusNow() : 0;
         const multiScale = rhythmPlay.from === 'multi' ? Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) * (1 + assistBonus) * 100) / 100 : 1;
@@ -206949,7 +207271,8 @@ function MonsterHeroGame() {
           rhythmLineAdjustRestore(rhythmLineAdjust?.orig);
           setRhythmLineAdjust(null);
         }
-        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.backTo === 'RHYTHM_NOTE_DEX' ? 'RHYTHM_NOTE_DEX' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
+        if (rhythmPlay.from === 'preview') setRhythmPreview(null);
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' || rhythmPlay.from === 'lineAdjust' || rhythmPlay.from === 'preview' ? 'RHYTHM_OPTIONS' : rhythmPlay.backTo === 'RHYTHM_DEBUG_SELECT' ? 'RHYTHM_DEBUG_SELECT' : rhythmPlay.backTo === 'RHYTHM_NOTE_DEX' ? 'RHYTHM_NOTE_DEX' : rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
         if (rhythmHellStoryAfterResultRef.current) {
@@ -206964,7 +207287,7 @@ function MonsterHeroGame() {
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial' || rhythmPlay.from === 'notedex',
       calibrating: rhythmPlay.from === 'calibration',
-      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : null,
+      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : rhythmPlay.from === 'preview' ? rhythmPreviewProps : null,
       onApplyCalibration: async measured => {
         const offsetMs = Number(measured && measured.offsetMs);
         if (Number.isFinite(offsetMs)) {
@@ -207162,14 +207485,26 @@ function MonsterHeroGame() {
       }
     })), gameState === 'RHYTHM_OPTIONS' && React.createElement(RhythmOptions, {
       value: rhythmSettings,
-      onBack: () => setGameState(rhythmOptionsBack),
-      onCalibrate: startRhythmCalibration,
-      onLineAdjust: startRhythmLineAdjust,
+      initialDraft: rhythmOptionsDraft,
+      onPreview: startRhythmOptionPreview,
+      onBack: () => {
+        setRhythmOptionsDraft(null);
+        setGameState(rhythmOptionsBack);
+      },
+      onCalibrate: () => {
+        setRhythmOptionsDraft(null);
+        startRhythmCalibration();
+      },
+      onLineAdjust: () => {
+        setRhythmOptionsDraft(null);
+        startRhythmLineAdjust();
+      },
       calibrationResult: rhythmCalibrationResult,
       onClearCalibration: () => setRhythmCalibrationResult(null),
       onSave: async draft => {
         const saved = await saveRhythmSettings(draft);
         setRhythmSettings(saved);
+        setRhythmOptionsDraft(null);
         rhythmResetAutoEffect();
         return saved;
       }

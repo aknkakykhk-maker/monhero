@@ -305,53 +305,53 @@ refuse | kyuko troubled …ぐぬぬぬ…眠い…またあとでぇ…
 refuse | kyuko happy …すぅ…{name}…おやすみぃ…
 
 ## sorashido
-join | sorashido happy うぉぉぉ！俺も参戦するぜ・・・！
-join | sorashido happy 今日はオリヒメの曲あるかな！？ 楽しみだぜ笑
-first | sorashido excited はじめての曲か。今から計算するぜ・・・！
-first | sorashido excited 初見は燃えるな！ ちばりよー、俺！
-like | sorashido happy この曲は全ノーツ計算済みだぜ笑
-dislike | sorashido troubled ゆっくりの曲は、計算が合わなくてそわそわするぜ笑
-combo | sorashido excited うぉぉぉ！計算どおりだぜ・・・！
-combo | sorashido excited うまい！ 今の、でーじきれいだった笑
-combo | sorashido excited このまま最後まで行く計算だぜ・・・！
-miss | sorashido normal ここから巻き返す計算だぜ笑
-miss | sorashido normal 俺もさっき1個落とした笑 気にすんな！
-climax | sorashido excited うぉぉぉ！ここだぜ！
-climax | sorashido excited サビの密度、計算済みだぜ笑
-climax | sorashido excited なんくるないさ〜、ここは楽しむところだぜ！
-last | sorashido normal 残り10秒、計算どおりに締めるぜ笑
-last | sorashido normal ラストまで全部拾うぞ！
-mvp | sorashido wink MVPは計算済みだったぜ・・・！
-mvp | sorashido wink まじか、俺がMVP！？ 表に太字で書いとく笑
-high | sorashido happy 計算どおりの名演だぜ・・・！
-high | sorashido happy 今の数字、表に残しておきたいぜ笑
-mid | sorashido happy 悪くない数字だぜ。次はもっと上がる計算だ
-mid | sorashido happy もう一曲いこう！ 次は勝つ笑
-low | sorashido troubled 次は全ノーツ計算して挑むぜ笑
-low | sorashido crying くっそー！ 悔しい……次は上がるぜ・・・！
-fc | sorashido surprise うぉぉぉ！フルコンだぜ笑
-fc | sorashido surprise 計算を超えてきたぜ笑
-levelup | sorashido happy セッションLvアップだぜ・・・！
-levelup | sorashido happy 伸び方、グラフにしたら右肩上がりだぜ笑
-likeup | sorashido wink この曲、何回もやってたら好きになってきた笑
-overcome | sorashido happy ゆっくりの曲も、計算が合ったぜ！
-overcome | sorashido happy そわそわしたけど、乗りこえたぜ笑
-song:monster_hero | sorashido happy Monster Hero は全ノーツ計算済みだぜ！
-song:freedom_dive | sorashido happy FREEDOM DiVE↓、速さも計算のうちだぜ笑
-song:humanoid | sorashido happy ヒューマノイド、ノーツの多さがたまらないぜ！
-song:kaze_ga_soyogu | sorashido happy 風がそよぐ場所、ゆっくりでも合わせきったぜ笑
-sp50 | sorashido excited セッションLv.50だぜ！表に太字で書いとくぜ笑
-sp50 | sorashido happy ここまでの演奏回数、ちゃんと数えてあるぜ・・・！
-sp80 | sorashido excited Lv.80！誤差がほとんど無くなってきたぜ！
-sp80 | sorashido happy この伸び方、グラフにしたらきれいだぜ笑
-sp100 | sorashido excited うぉぉぉ！Lv.100、セッションマスターだぜ・・・！
-sp100 | sorashido happy ここまでの記録、全部宝物だぜ笑
-woke | sorashido surprise …うぉっ！？ 起きたぜ、行くさ！
-woke | sorashido normal 寝起きの指でも、計算どおり叩くぜ
-woke | sorashido happy ふぁ…目ざましより効いたさ笑
-refuse | sorashido normal …表の…3行目…むにゃ…
-refuse | sorashido troubled …すまん…朝は弱いのさ…
-refuse | sorashido happy …なんくるないさ…すぅ…
+join | sorashido happy 自分も参戦します！ よろしくお願いします笑
+join | sorashido happy 今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑
+first | sorashido excited はじめての曲ですね。今から計算します・・・！
+first | sorashido excited 初見は燃えますねー！ ちばりよー、自分！
+like | sorashido happy この曲は全ノーツ計算済みです笑
+dislike | sorashido troubled ゆっくりの曲は、計算が合わなくてそわそわします笑
+combo | sorashido excited ほほー！ 計算どおりです・・・！
+combo | sorashido excited うまい！ 今の、でーじきれいでした笑
+combo | sorashido excited このまま最後まで行く計算です・・・！
+miss | sorashido normal ここから巻き返す計算です笑
+miss | sorashido normal 自分もさっき1個落としました笑 気にしないでいきましょう！
+climax | sorashido excited うぉぉぉ！ ここですね！
+climax | sorashido excited サビの密度、計算済みです笑
+climax | sorashido excited なんくるないさ〜、ここは楽しむところですよ！
+last | sorashido normal 残り10秒、計算どおりに締めます笑
+last | sorashido normal ラストまで全部拾いましょう！
+mvp | sorashido wink MVPは計算済みでした・・・！笑
+mvp | sorashido wink え、自分がMVPですか！？ 表に太字で書いておきます笑
+high | sorashido happy 計算どおりの名演でしたねー！
+high | sorashido happy 今の数字、表に残しておきたいです笑
+mid | sorashido happy 悪くない数字ですね。次はもっと上がる計算です
+mid | sorashido happy もう一曲いきましょう！ 次は勝ちます笑
+low | sorashido troubled 次は全ノーツ計算して挑みます笑
+low | sorashido crying くやしい・・・！ 次は上げます！
+fc | sorashido surprise フルコンですねー！ すごいです笑
+fc | sorashido surprise 計算を超えてきましたね笑
+levelup | sorashido happy セッションLvアップです・・・！
+levelup | sorashido happy 伸び方、グラフにしたら右肩上がりですね笑
+likeup | sorashido wink この曲、何回もやってたら好きになってきました笑
+overcome | sorashido happy ゆっくりの曲も、計算が合いました！
+overcome | sorashido happy そわそわしましたけど、乗りこえました笑
+song:monster_hero | sorashido happy Monster Hero は全ノーツ計算済みです！
+song:freedom_dive | sorashido happy FREEDOM DiVE↓、速さも計算のうちですね笑
+song:humanoid | sorashido happy ヒューマノイド、ノーツの多さがたまらないです！
+song:kaze_ga_soyogu | sorashido happy 風がそよぐ場所、ゆっくりでも合わせきりました笑
+sp50 | sorashido excited セッションLv.50です！ 表に太字で書いておきます笑
+sp50 | sorashido happy ここまでの演奏回数、ちゃんと数えてあります・・・！
+sp80 | sorashido excited Lv.80！ 誤差がほとんど無くなってきましたねー！
+sp80 | sorashido happy この伸び方、グラフにしたらきれいです笑
+sp100 | sorashido excited うぉぉぉ！ Lv.100、セッションマスターです・・・！
+sp100 | sorashido happy ここまでの記録、全部宝物です笑
+woke | sorashido surprise ・・・はっ！？ 起きました、行きます！
+woke | sorashido normal 寝起きの指でも、計算どおり叩きます
+woke | sorashido happy ふぁ・・・目ざましより効きました笑
+refuse | sorashido normal ・・・表の・・・3行目・・・むにゃ・・・
+refuse | sorashido troubled ・・・すみません・・・朝は弱いんです・・・
+refuse | sorashido happy ・・・なんくるないさ・・・すぅ・・・
 
 ## erubin
 join | erubin happy 俺も一緒にいいかな？よろしくね
