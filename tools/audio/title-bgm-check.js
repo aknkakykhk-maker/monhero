@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // タイトルBGMが「最初のタップだけで」鳴るかを確認する。
 //
