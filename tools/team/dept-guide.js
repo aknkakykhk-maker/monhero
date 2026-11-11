@@ -46,6 +46,8 @@ function render(d) {
   L.push('## 回す検査', '');
   for (const c of d['検査']) L.push(`- ${c}`);
   L.push('- 公開の前: `node tools/ctx.js gate`(ミハリ確認が要るかを機械が判定。`run-checks.js --changed` の最後にも出る)', '');
+  // 部ごとの点検の道具(あれば。題 + 行。安いモデルで回せる形の使い方を置く)
+  if (d['点検'] && Array.isArray(d['点検'].行) && d['点検'].行.length) { L.push(`## ${d['点検'].題}`, ''); for (const r of d['点検'].行) L.push(r); L.push(''); }
   L.push('## 関係する決まり', '');
   for (const r of d['決まり']) L.push(`- ${r}`);
   L.push('');

@@ -1008,7 +1008,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
 
 // ---------- プロフィールの関係図(Lv3 から線が出る) ----------
 // 会った助手を円に並べ、Lv3 以上のペアを線で結ぶ(太さ・色が Lv で変わる)。下に今日のペアと全部のペアの Lv。行を押すと思い出アルバム
-function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null }) {
+function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null, v2 = false }) {
   const st = useAssistantPeerState();
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
@@ -1030,8 +1030,8 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   const dailyPair = daily ? daily.pair.split('-') : null;
   return (
     <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/85 p-3">
-      <p className="text-[12px] font-black text-pink-200">助手どうしの関係図</p>
-      <p className="mb-2 text-[9px] leading-tight text-slate-400">助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
+      <p className={v2 ? 'text-[14px] font-black text-pink-200' : 'text-[12px] font-black text-pink-200'}>{v2 ? '🤝 助手どうしの友情Lv' : '助手どうしの関係図'}</p>
+      <p className={v2 ? 'mb-2 text-[11.5px] font-bold leading-snug text-slate-200' : 'mb-2 text-[9px] leading-tight text-slate-400'} style={v2 ? { wordBreak: 'auto-phrase' } : undefined}>助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
       {!assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && (
         <button type="button" data-assistant-peer-daily onClick={() => setAlbumPair(dailyPair)}
           className="mb-2 flex w-full items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1.5 text-left active:scale-[.98]">
@@ -1050,11 +1050,25 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
         {ids.map(id => { const who = assistantById(id); return (
           <div key={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
             <AssistantFace who={who} size={48} accent={who.accent}/>
-            <span className="mt-0.5 whitespace-nowrap text-[9px] font-black text-slate-200">{who.name}</span>
+            <span className={`mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`}>{who.name}</span>
           </div>); })}
       </div>
       <div className="mt-3 space-y-1">
         {(showAll ? rows : rows.slice(0, 6)).map(x => { const A = assistantById(x.a), B = assistantById(x.b); const stage = levels.find(s => s.level === x.lv); const nextStage = levels.find(s => s.level === x.lv + 1);
+          // 新UI(助手ライフの「きずな」): 押せる高さの行に、次の段まであといくつ・そこで何が開くか(2026-11-11 改善案6)
+          if (v2) { const opens = nextStage && typeof assistantLifePeerNextOpens === 'function' ? assistantLifePeerNextOpens(x.a, x.b, nextStage.level) : ''; return (
+            <button key={`${x.a}-${x.b}`} type="button" data-assistant-peer-row={assistantPeerPairKey(x.a, x.b)} data-assistant-peer-row-v2 onClick={() => setAlbumPair([x.a, x.b])}
+              className="block w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900/80 px-2.5 py-1.5 text-left active:scale-[.98]">
+              <span className="flex items-baseline gap-2">
+                <b className="min-w-0 flex-1 truncate text-[13px] text-white">{A.name} × {B.name}</b>
+                <span className="whitespace-nowrap text-[12px] font-black text-pink-200">Lv{x.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</span>
+                <span className="text-[12px] font-black text-slate-300" aria-hidden="true">›</span>
+              </span>
+              <span className="mt-1 flex items-center gap-2">
+                <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
+                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : 'いちばん上まで来ました'}</span>
+              </span>
+            </button>); }
           return (
             <button key={`${x.a}-${x.b}`} type="button" data-assistant-peer-row={assistantPeerPairKey(x.a, x.b)} onClick={() => setAlbumPair([x.a, x.b])}
               className="flex w-full items-center gap-2 rounded-lg bg-slate-900/70 px-2 py-1 text-left active:scale-[.98]">
@@ -1068,7 +1082,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
             </button>); })}
         {rows.length > 6 && (
           <button type="button" data-assistant-peer-more onClick={() => setShowAll(v => !v)}
-            className="w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]">
+            className={v2 ? 'min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-200 active:scale-[.98]' : 'w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]'}>
             {showAll ? 'たたむ' : `全部のペアを見る(${rows.length}組)`}
           </button>)}
       </div>

@@ -190,6 +190,8 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
     const slots = { [slotIdx]: stunMon0 }; const effMul = 1; const localOryoAdd = 0, localDmgModAdd = 0;
     const copyDmgScale = 1; // AIコピーの札だけ縮める倍率(ふつうの札は1倍)
     const getDmg = () => d0; const setImmediateTurnBuff = () => {};
+    const attackDistance = 0; // あつの挑発も、その時点の距離を getDmg へ渡すようになった(2026-11-11)。ここの getDmg は固定値なので何でもよい
+    const tacticsExStyleAt = () => null; const TACTICS_EX_DUAL_HIT_REPEAT = 1; // 二刀流のくり返しはタクティクスのEXだけ
     ${fateSrc}
     ${laterSrc}
     const livePermaBuff = getPermaBuff;
