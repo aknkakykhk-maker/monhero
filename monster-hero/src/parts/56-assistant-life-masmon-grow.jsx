@@ -317,6 +317,8 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
   amgSave({ ...st, boost: { ...st.boost, [aid]: { d, s: s + 1 } } });
   return true;
 };
+// ナカヨシ10 の受け口(M/B管理): ASSISTANT_LIFE_LINKS.masmonTrainBoost(id, { source: 'ranch' }) から呼べるようにつなぐ(2026-11-11)
+try { if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost; } catch (_) {}
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 // 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
 const amgAdvise = (aid, slot, what, now = Date.now()) => {

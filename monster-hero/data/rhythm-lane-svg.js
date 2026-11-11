@@ -162,7 +162,9 @@
     if (currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected) return;
     currentArea = document.querySelector('[data-rhythm-play-area]');
     currentSvg = currentArea?.querySelector(':scope > [data-rhythm-lane-svg]') || null;
-    document.documentElement.dataset.rhythmPlayActive=currentArea?'true':'false';
+    // 同じ値なら書かない(書くたびに属性の変化として、ほかの見張りやスタイルの計算を起こすため)
+    const active = currentArea ? 'true' : 'false';
+    if (document.documentElement.dataset.rhythmPlayActive !== active) document.documentElement.dataset.rhythmPlayActive = active;
     if (currentArea) mount(currentArea);
   };
   // 演奏画面が道の幅の倍率を変えたときに呼ぶ(横向きの道の幅)。いまのレーンを外して作り直す
@@ -175,9 +177,14 @@
   };
   const start = () => {
     scan();
-    new MutationObserver(() => {
+    // 演奏の場所は部品ごと足されるので、足された部品の中にあるときだけ画面全体を探す。
+    // いまの場所やレーンが外れたときは、これまでどおりすぐ探し直す
+    // (2026-11-11 カルク: 演奏画面の外では変化のたびに画面全体を探し直し、バトル中は20秒で約200回動いていた)
+    const hasArea = (n) => n.nodeType === 1 && (n.hasAttribute('data-rhythm-play-area') || !!n.querySelector('[data-rhythm-play-area]'));
+    new MutationObserver((list) => {
       // プレイ中のノーツ増減では全画面querySelectorを繰り返さない。
       if (currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected) return;
+      if (!currentArea && !list.some(m => Array.prototype.some.call(m.addedNodes, hasArea))) return;
       scan();
     }).observe(document.body, { childList:true, subtree:true });
   };
