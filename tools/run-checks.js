@@ -47,6 +47,7 @@ const SERVER_PORT = 8899;
 const REQUIRED = [
   'build.js --check',
   'check-syntax.js',
+  'conflict-marker-check.js',
   'undefined-reference-check.js',
   'jsx-text-brace-check.js',
   'render-error-check.js',
@@ -133,6 +134,7 @@ const FORCE_CHECKS = [
   // 「ホーム画面に追加」の案内(iPhone の Safari だけ・データ引き継ぎとセット・しつこくしない。2026-11-11)
   { re: /^monster-hero\/src\/parts\/(51-home-screen-guide|51-screen-settings)\.jsx$|^monster-hero\/data\/help\.js$|^tools\/boot\/home-screen-guide-check\.js$/, checks: ['boot/home-screen-guide-check.js'], why: 'ホーム画面に追加の案内が iPhone の Safari だけに・決まりの回数で出るか' },
   // ブラウザらしい動き(左端スワイプの戻る・長押しの吹き出し・文字の選択・箱の中の連続タップ拡大)を出さない仕組み(2026-11-11)
+  { re: /^monster-hero\/data\/mhsave-backup\.js$|^monster-hero\/src\/parts\/(60-app|17-release-changelog-login-missions)\.jsx$|^tools\/boot\/restore-first-timer-marks-check\.js$/, checks: ['boot/restore-first-timer-marks-check.js', 'assistant/assistant-partner-unlock-check.js'], why: '復元のとき、新しく始めた端末に残るはじめての人の印を片づける(3か所が共通の口)・印を増やしたときの取りこぼし' },
   { re: /^monster-hero\/(index\.html|src\/parts\/10-core\.jsx|src\/parts\/60-app\.jsx)$|^tools\/boot\/browser-gesture-guard-check\.js$/, checks: ['boot/browser-gesture-guard-check.js'], why: 'ホーム画面のアプリで戻るの履歴を足さない・長押しや選択が出ない' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く

@@ -62,7 +62,8 @@ const assistantLifeMapReadHome = () => {
 
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
-  const src = assistantFullImage(who, sleep ? 'normal' : 'happy');
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const src0 = assistantFullImage(who, sleep ? 'normal' : 'happy'), src = sleep && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(who && who.id, src0) : src0;
   const [box, setBox] = React.useState(() => ASSISTANT_LIFE_STAND_BOX.get(src) || null);
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)

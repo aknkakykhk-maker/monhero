@@ -8359,9 +8359,9 @@ function MonsterHeroGame() {
       const data = JSON.parse(json);
       const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
       if (keys.length === 0) { setRestoreMsg('コードが正しくありません'); return; }
-      keys.forEach(k => window.localStorage.setItem(k, data[k]));
-      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
-      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
+      // 書き込み・はじめての人の印の片づけ・助手の解放の直しは data/mhsave-backup.js の共通の口で行う(3か所の復元で同じ)
+      if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+      window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch { setRestoreMsg('コードが正しくありません'); }
@@ -8431,9 +8431,9 @@ function MonsterHeroGame() {
           if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
-          keys.forEach(k => window.localStorage.setItem(k, data[k]));
-          // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
-          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
+          // 書き込み・はじめての人の印の片づけ・助手の解放の直しは data/mhsave-backup.js の共通の口で行う(3か所の復元で同じ)
+          if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
+          window.mhApplyBackupRestore(data, keys);
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch { setRestoreMsg('バックアップファイルが正しくありません'); }

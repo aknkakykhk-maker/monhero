@@ -842,7 +842,8 @@ const assistantLifeStandLayout = (items, W, H) => {
 function AssistantLifeStands({ ids, sleepIds = [] }) {
   const ref = React.useRef(null);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
-  const srcs = ids.map(pid => { const who = assistantById(pid); return who ? assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy') : null; });
+  // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
+  const srcs = ids.map(pid => { const who = assistantById(pid); if (!who) return null; const s = assistantFullImage(who, sleepIds.includes(pid) ? 'normal' : 'happy'); return sleepIds.includes(pid) && typeof assistantLifeSleepSrc === 'function' ? assistantLifeSleepSrc(pid, s) : s; });
   const [boxes, setBoxes] = React.useState(() => srcs.map(s => (s ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
   const key = srcs.join('|');
   React.useEffect(() => { let alive = true; Promise.all(srcs.map(s => (s ? assistantLifeStandBox(s) : Promise.resolve(null)))).then(b => { if (alive) setBoxes(b); }); return () => { alive = false; }; }, [key]);

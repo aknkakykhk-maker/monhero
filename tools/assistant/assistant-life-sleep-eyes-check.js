@@ -1,7 +1,7 @@
 // 寝ているときの目(2026-11-11 社長「助手ライフで寝ているときに、目を開けっぱなしの人がいる。えるびんだけそのままでいい」)
 //   node tools/assistant/assistant-life-sleep-eyes-check.js
 //   8人とも家で寝ている様子にして、寝姿が出る所に閉じた目(AssistantLifeSleepEyes)が重なっているかを見る
-//   ① 家の部屋の顔・② 地図の全身・③ 大きな部屋のベッド: みゅあ・きき・ももすけ・あつ・きゅうこ には閉じた目が付く
+//   ① 家の部屋の顔・② 地図の全身・③ 大きな部屋のベッド: みゅあ・きき・ももすけ・あつ・きゅうこ には閉じた目が付く(社長の寝顔の絵 ◯◯_sleep.PNG に差し替えたものも数える)
 //   ④ ドラ(眼鏡)・ソラシド(元から閉じた絵)・えるびん(そのまま)には付かない
 //   ⑤ 顔の表と全身の表に、5人とも目の位置がある ⑥ ページのエラーが出ない
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -40,17 +40,21 @@ const CLOSE = ['mua', 'kiki', 'momosuke', 'atsu', 'kyuko'];
   await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(1500);
   const got = (sel) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map(e => e.getAttribute('data-assistant-life-roomview-sleep-eyes')).sort(), sel);
+  // 2026-11-11 社長の寝顔の絵(◯◯_sleep.PNG)がある助手は、目を重ねるのではなく絵そのものを差し替える。その絵を出しているのも「閉じた目」に数える
+  const PRE = { mua: 'myua', kiki: 'kiki', momosuke: 'momosuke', dra: 'dra', atsu: 'atsu', kyuko: 'kyuko', sorashido: 'sorashido', erubin: 'erubin' };
+  const gotAll = (scope) => page.evaluate(({ scope, PRE }) => { const out = new Set(); for (const e of document.querySelectorAll(`${scope} [data-assistant-life-roomview-sleep-eyes]`)) out.add(e.getAttribute('data-assistant-life-roomview-sleep-eyes'));
+    for (const img of document.querySelectorAll(`${scope} img`)) { const s = img.getAttribute('src') || ''; for (const [id, pre] of Object.entries(PRE)) if (new RegExp(`/${pre}_sleep\\.PNG`).test(s)) out.add(id); } return [...out].sort(); }, { scope, PRE });
   const want = [...CLOSE].sort().join(',');
   const house = await got('[data-assistant-life-room-face] [data-assistant-life-roomview-sleep-eyes]');
   check('① 家の部屋の顔: 5人に閉じた目', house.join(',') === want, house.join(','));
   await page.locator('[data-assistant-life-icon="where"]').click(); await page.waitForTimeout(1800);
-  const map = await got('[data-assistant-life-map-fig] [data-assistant-life-roomview-sleep-eyes]');
+  const map = await gotAll('[data-assistant-life-map-fig]');
   check('② 地図の全身: 5人に閉じた目', map.join(',') === want, map.join(','));
   await page.locator('[data-assistant-life-map-back]').click(); await page.waitForTimeout(600);
   const bed = [];
   for (const id of IDS) {
     await page.locator(`[data-assistant-life-room="${id}"]`).first().click({ timeout: 3000 }); await page.waitForTimeout(1200);
-    const g = await got('[data-assistant-life-room-sheet] [data-assistant-life-roomview-sleep-eyes]');
+    const g = await gotAll('[data-assistant-life-room-sheet]');
     if (g.includes(id)) bed.push(id);
     await page.locator('[data-assistant-life-roomview-close]').click().catch(() => {}); await page.waitForTimeout(400);
   }
