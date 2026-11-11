@@ -7,7 +7,7 @@ const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 //   gs   … 画面(gameState)が変わった。d は「次の画面 < 動かした処理の名前」
 //   err  … 画面のエラーを受け止めた(MhErrorBoundary)
 //   vis / page … 画面が隠れた・戻った(アプリの切り替え・通知など)
-//   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
+//   gap  … 画面の処理が1秒ほど以上止まった(見えているのに)
 //   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
 //   rot  … 自前の画面の回転(🔄 横)を切り替えた
 //   play … 演奏が始まった・終わった
@@ -31,10 +31,13 @@ const MH_SCREEN_TRAIL=(()=>{
       window.addEventListener('pageshow',e=>push('page','show'+(e&&e.persisted?'*':'')));
       document.addEventListener('webglcontextlost',()=>push('gl','lost'),true);
       document.addEventListener('webglcontextrestored',()=>push('gl','restored'),true);
-      // 描き直しの止まり。1コマに1回時刻を見るだけ(演奏の判定・描画には触れない)
+      // 描き直しの止まり。0.5秒ごとの見張りが1秒以上遅れたら記録する(演奏の判定・描画には触れない)
+      //   2026-11-11 カルク: もとは毎コマ requestAnimationFrame で見ていたが、止まっている画面(HOME・助手ライフなど)でも
+      //   ブラウザに毎秒60コマ描かせ続け、iPhone の発熱・電池の元になっていた。画面を止めるのは処理の詰まりなので、タイマーの遅れで同じく分かる。
+      //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
-      const tick=now=>{if(last>0&&now-last>1000&&document.visibilityState==='visible')push('gap',Math.round(now-last));last=now;window.requestAnimationFrame(tick);};
-      if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(tick);
+      document.addEventListener('visibilitychange',()=>{last=0;});
+      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
