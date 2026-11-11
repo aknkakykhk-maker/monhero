@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56f633a75980b22c
+// source-sha256: c9c09e5d4270ffbc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -137835,6 +137835,12 @@ const assistantMasmonBattleRowInfo = assistantId => {
     disabled: true,
     why: 'マスモンを迎えると対戦できます'
   };
+  if (!ambbAssistantsWithRows().some(a => a.id !== assistantId)) return {
+    ...base,
+    sub: 'ほかの助手がマスモンを迎えたら対戦できます',
+    disabled: true,
+    why: 'ほかの助手がマスモンを迎えたら対戦できます'
+  };
   const rec = AMBB_STORE.state.rec[assistantId];
   let gain = 0;
   try {
@@ -137989,30 +137995,16 @@ function AssistantMasmonBattleBeta({
     });
   };
   const foeTeam = () => {
-    if (foeId) {
-      const rows = ambbRowsOf(foeId);
-      const units = ambbUnitsOf(engine, foeId, rows).sort((a, b) => b.total - a.total).slice(0, size);
-      return {
-        assistantId: foeId,
-        tactics: ambbTacticsOf(foeId, rows),
-        members: units.map(u => u.unit),
-        rows: units.map(u => u.row),
-        practice: false
-      };
-    }
-    const pid = meId === 'atsu' ? 'kiki' : 'atsu';
+    const rows = ambbRowsOf(foeId);
+    const units = ambbUnitsOf(engine, foeId, rows).sort((a, b) => b.total - a.total).slice(0, size);
     return {
-      assistantId: pid,
-      tactics: 40,
-      members: chosen.map(u => ({
-        ...u.unit
-      })),
-      rows: [],
-      practice: true
+      assistantId: foeId,
+      tactics: ambbTacticsOf(foeId, rows),
+      members: units.map(u => u.unit)
     };
   };
   const start = () => {
-    if (!ready || !catalog || !chosen.length) return;
+    if (!ready || !catalog || !chosen.length || !foeId) return;
     const plan = modeNow === 'auto' ? 'omakase' : sel.plan,
       swap = modeNow === 'auto' ? 'omakase' : sel.swap;
     const teamA = {
@@ -138050,7 +138042,6 @@ function AssistantMasmonBattleBeta({
       frames: ambwFramesOf(r.log),
       teamA,
       teamB,
-      practice: fb.practice,
       units: chosen,
       maxHp: {
         A: st.aHp || [],
@@ -138080,7 +138071,7 @@ function AssistantMasmonBattleBeta({
           order: chosen.map(u => ambbRowKey(u.row)),
           plan: sel.plan,
           swap: sel.swap,
-          foe: fb.practice ? '' : fb.assistantId
+          foe: fb.assistantId
         }
       }
     }));
@@ -138111,7 +138102,7 @@ function AssistantMasmonBattleBeta({
     return () => clearTimeout(t);
   }, [phase, battle, pos, paused, speed]);
   useEffect(() => {
-    if (phase !== 'review' || !battle || battle.practice) return;
+    if (phase !== 'review' || !battle) return;
     ambbSave(s => {
       if (s.done.includes(battle.id)) return s;
       const rc = s.rec[meId] || {
@@ -138238,9 +138229,9 @@ function AssistantMasmonBattleBeta({
       style: {
         fontSize: 15
       }
-    }, foeId ? nameOf(foeId) : '練習相手'), React.createElement("div", {
+    }, foeId ? nameOf(foeId) : '?'), React.createElement("div", {
       className: "ambw-small"
-    }, foeId ? (engine.STYLES[foeId] || {}).label || '' : '同じマスモン・同じ強さ')), foeId ? React.createElement("img", {
+    }, foeId ? (engine.STYLES[foeId] || {}).label || '' : 'まだいません')), foeId ? React.createElement("img", {
       src: faceOf(foeId),
       alt: ""
     }) : null), foes.length > 1 && React.createElement("div", {
@@ -138261,7 +138252,7 @@ function AssistantMasmonBattleBeta({
       style: {
         marginTop: 6
       }
-    }, "ほかの助手がマスモンを迎えると、助手どうしで対戦できます。いまは同じマスモンどうしの練習です(戦績には入りません)。")), React.createElement("div", {
+    }, "ほかの助手がマスモンを迎えたら対戦できます。")), React.createElement("div", {
       className: "ambw-card"
     }, React.createElement("div", {
       className: "ambb-tabs"
@@ -138361,6 +138352,7 @@ function AssistantMasmonBattleBeta({
     }, React.createElement("button", {
       className: "ambw-btn",
       "data-ambb-start": true,
+      disabled: !foeId,
       onClick: start
     }, "⚔ 対戦する"), React.createElement("button", {
       className: "ambw-btn2",
@@ -138488,7 +138480,7 @@ function AssistantMasmonBattleBeta({
     };
     const sa = stat('A'),
       sb = stat('B');
-    const foeName = battle.practice ? '練習相手' : nameOf(battle.teamB.assistantId);
+    const foeName = nameOf(battle.teamB.assistantId);
     const gains = battle.units.map(u => ({
       u,
       g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : {
@@ -138505,7 +138497,7 @@ function AssistantMasmonBattleBeta({
       "data-ambb-review": true
     }, React.createElement("div", {
       className: "ambw-res"
-    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着', battle.practice ? '・練習(戦績に入りません)' : '')), React.createElement("div", {
+    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), React.createElement("div", {
       className: "ambw-card"
     }, React.createElement("table", {
       className: "ambw-tbl"

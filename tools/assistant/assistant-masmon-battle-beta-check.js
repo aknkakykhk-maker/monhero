@@ -174,6 +174,18 @@ const seed = () => {
     await clickSel('[data-ambb-close]'); await page.waitForTimeout(200); await clickSel('[data-ambb-close]');
     await page.waitForTimeout(300);
     check('「もどる」で閉じる', await page.evaluate(() => !document.querySelector('[data-ambb-root]')));
+    // 相手がいない(マスモンを持つ助手が1人だけ)ときは、練習相手を出さず案内だけ(社長 2026-11-11 B)
+    const solo = await page.evaluate(async (a) => {
+      const st = ASSISTANT_MASMON_STORE.state;
+      ASSISTANT_MASMON_STORE.set({ ...st, draw: { ...st.draw, made: { [a]: st.draw.made[a] } } });
+      const info = assistantMasmonBattleRowInfo(a);
+      assistantMasmonBattleOpen({ assistantId: a, from: 'room' });
+      await new Promise(r => setTimeout(r, 1500));
+      const b = document.querySelector('[data-ambb-start]');
+      return { info, disabled: !!(b && b.disabled), text: (document.querySelector('[data-ambb-prep]') || {}).textContent || '', practice: /練習/.test(document.body.innerText) };
+    }, aid);
+    check('相手がいないとき: 入口は押せず、案内だけ・練習相手は出ない', solo.info && solo.info.disabled === true && /ほかの助手がマスモンを迎えたら対戦できます/.test(solo.info.why) && solo.disabled && /ほかの助手がマスモンを迎えたら対戦できます/.test(solo.text) && !solo.practice, JSON.stringify({ ...solo, text: solo.text.slice(0, 60) }));
+    await shot('7-no-foe');
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('検査が最後まで進む', false, String(e && e.message || e).slice(0, 200));

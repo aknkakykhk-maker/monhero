@@ -123,6 +123,7 @@ const assistantMasmonBattleRowInfo = (assistantId) => {
   const rows = ambbRowsOf(assistantId);
   const base = { label: '⚔ マスモンで対戦(β)', gain: 0 };
   if (!rows.length) return { ...base, sub: 'マスモンを迎えると対戦できます', disabled: true, why: 'マスモンを迎えると対戦できます' };
+  if (!ambbAssistantsWithRows().some(a => a.id !== assistantId)) return { ...base, sub: 'ほかの助手がマスモンを迎えたら対戦できます', disabled: true, why: 'ほかの助手がマスモンを迎えたら対戦できます' };
   const rec = AMBB_STORE.state.rec[assistantId];
   let gain = 0;
   try { if (typeof amgCareGainOf === 'function' && typeof amgEntryOf === 'function') for (const t of rows) gain += amgCareGainOf(amgEntryOf(assistantId, t)).total; } catch (_) {}
@@ -229,19 +230,15 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     setSel({ order: has ? picked.filter(x => x !== k) : [...picked, k].slice(-size) });
   };
 
-  // 相手: この端末のほかの助手のマスモン(おまかせ・能力の大きい順)。だれもいなければ「練習相手」(同じ3体・同じ能力)
+  // 相手: この端末のほかの助手のマスモン(おまかせ・能力の大きい順)。だれもいなければ対戦しない(練習相手は出さない・社長 2026-11-11 B)
   const foeTeam = () => {
-    if (foeId) {
-      const rows = ambbRowsOf(foeId);
-      const units = ambbUnitsOf(engine, foeId, rows).sort((a, b) => b.total - a.total).slice(0, size);
-      return { assistantId: foeId, tactics: ambbTacticsOf(foeId, rows), members: units.map(u => u.unit), rows: units.map(u => u.row), practice: false };
-    }
-    const pid = meId === 'atsu' ? 'kiki' : 'atsu';
-    return { assistantId: pid, tactics: 40, members: chosen.map(u => ({ ...u.unit })), rows: [], practice: true };
+    const rows = ambbRowsOf(foeId);
+    const units = ambbUnitsOf(engine, foeId, rows).sort((a, b) => b.total - a.total).slice(0, size);
+    return { assistantId: foeId, tactics: ambbTacticsOf(foeId, rows), members: units.map(u => u.unit) };
   };
 
   const start = () => {
-    if (!ready || !catalog || !chosen.length) return;
+    if (!ready || !catalog || !chosen.length || !foeId) return;
     const plan = modeNow === 'auto' ? 'omakase' : sel.plan, swap = modeNow === 'auto' ? 'omakase' : sel.swap;
     const teamA = { assistantId: meId, tactics: ambbTacticsOf(meId, chosen.map(u => u.row)), plan: ambbPlanOf(engine, plan), swapPace: ambbSwapOf(engine, swap), members: chosen.map(u => u.unit) };
     const fb = foeTeam();
@@ -250,9 +247,9 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     let r;
     try { r = engine.simulate({ seed, catalog, teamA, teamB, balance: 'A', trace: true }); } catch (e) { return; }
     const st = r.log[0] || {};
-    setBattle({ id: seed, seed, r, frames: ambwFramesOf(r.log), teamA, teamB, practice: fb.practice, units: chosen, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, plan, swap });
+    setBattle({ id: seed, seed, r, frames: ambwFramesOf(r.log), teamA, teamB, units: chosen, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, plan, swap });
     setPos(0); setPaused(false); setIfs(null); setPhase('watch');
-    ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.practice ? '' : fb.assistantId } } }));
+    ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.assistantId } } }));
   };
 
   const speed = save.speed || 'x1';
@@ -272,9 +269,9 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     return () => clearTimeout(t);
   }, [phase, battle, pos, paused, speed]);
 
-  // 戦績(1戦に1回だけ・練習相手は数えない)
+  // 戦績(1戦に1回だけ)
   useEffect(() => {
-    if (phase !== 'review' || !battle || battle.practice) return;
+    if (phase !== 'review' || !battle) return;
     ambbSave(s => {
       if (s.done.includes(battle.id)) return s;
       const rc = s.rec[meId] || { w: 0, l: 0, d: 0 };
@@ -321,13 +318,13 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
             <img src={faceOf(meId)} alt=""/>
             <div style={{ flex: 1 }}><b style={{ fontSize: 15 }}>{me.name}</b><div className="ambw-small">{(engine.STYLES[meId] || {}).label || ''}・{rec.w}勝 {rec.l}敗{rec.d ? ` ${rec.d}分` : ''}</div></div>
             <b style={{ color: '#f9a8d4' }}>VS</b>
-            <div style={{ flex: 1, textAlign: 'right' }}><b style={{ fontSize: 15 }}>{foeId ? nameOf(foeId) : '練習相手'}</b><div className="ambw-small">{foeId ? ((engine.STYLES[foeId] || {}).label || '') : '同じマスモン・同じ強さ'}</div></div>
+            <div style={{ flex: 1, textAlign: 'right' }}><b style={{ fontSize: 15 }}>{foeId ? nameOf(foeId) : '?'}</b><div className="ambw-small">{foeId ? ((engine.STYLES[foeId] || {}).label || '') : 'まだいません'}</div></div>
             {foeId ? <img src={faceOf(foeId)} alt=""/> : null}
           </div>
           {foes.length > 1 && (
             <div className="ambb-tabs" style={{ marginTop: 8 }} data-ambb-foes>{foes.map(a => <button key={a.id} data-ambb-foe={a.id} className={a.id === foeId ? 'on' : ''} onClick={() => setSel({ foe: a.id })}>{a.name}</button>)}</div>
           )}
-          {!foes.length && <p className="ambw-small" style={{ marginTop: 6 }}>ほかの助手がマスモンを迎えると、助手どうしで対戦できます。いまは同じマスモンどうしの練習です(戦績には入りません)。</p>}
+          {!foes.length && <p className="ambw-small" style={{ marginTop: 6 }}>ほかの助手がマスモンを迎えたら対戦できます。</p>}
         </div>
         <div className="ambw-card">
           <div className="ambb-tabs">
@@ -367,7 +364,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
           </div>
         )}
         <div className="ambw-ctl">
-          <button className="ambw-btn" data-ambb-start onClick={start}>⚔ 対戦する</button>
+          <button className="ambw-btn" data-ambb-start disabled={!foeId} onClick={start}>⚔ 対戦する</button>
           <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
         </div>
         {preview && <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>公開前の確かめです。戦績も設定も保存しません。</p>}
@@ -434,7 +431,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
     const won = battle.r.winner === 'A', draw = battle.r.winner === 'draw';
     const stat = (side) => { const t = log.filter(x => x.ev === 'tech' && x.side === side); return { n: t.length, hit: t.filter(x => x.hit).length, crit: t.filter(x => x.crit).length, dmg: t.reduce((a, x) => a + (x.dmg || 0), 0), ko: log.filter(x => x.ev === 'ko' && x.side !== side).length }; };
     const sa = stat('A'), sb = stat('B');
-    const foeName = battle.practice ? '練習相手' : nameOf(battle.teamB.assistantId);
+    const foeName = nameOf(battle.teamB.assistantId);
     const gains = battle.units.map(u => ({ u, g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : { total: 0 } }));
     const bestStat = ifs && ifs.best;
     const lead = bestStat ? battle.units.slice().sort((a, b) => (Number(a.unit.stats && a.unit.stats[bestStat.k]) || 0) - (Number(b.unit.stats && b.unit.stats[bestStat.k]) || 0))[0] : null;
@@ -442,7 +439,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, onClo
       <div data-ambb-watch data-ambb-phase={phase} data-ambw-pos={pos}>
         {review && (
           <div data-ambb-review>
-            <div className="ambw-res"><b>{draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`}</b><span>{battle.r.rounds} ラウンド・{battle.r.reason === 'judge' ? '判定' : '全滅で決着'}{battle.practice ? '・練習(戦績に入りません)' : ''}</span></div>
+            <div className="ambw-res"><b>{draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`}</b><span>{battle.r.rounds} ラウンド・{battle.r.reason === 'judge' ? '判定' : '全滅で決着'}</span></div>
             <div className="ambw-card">
               <table className="ambw-tbl"><tbody>
                 <tr><td>この1戦</td><td className="A">{me.name}</td><td className="B">{foeName}</td></tr>
