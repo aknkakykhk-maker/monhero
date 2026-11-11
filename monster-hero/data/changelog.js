@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-11 23:12", type:'update', group:'rhythm', title:'譜面制作ツール「MHB CHART ENGINE」の強化に合わせて、一部の譜面を新しくしました', status:'new',
+    date: "2026-11-12 00:15", type:'update', group:'rhythm', title:'譜面制作ツール「MHB CHART ENGINE」の強化に合わせて、一部の譜面を新しくしました', status:'new',
     items:[
       'モンヒロビートの譜面を作る「MHB CHART ENGINE」を強化しました。指が交差したり、届きにくかったりする並びを作らないようにし、難易度ごとの差もはっきり出るようにしています。',
       '強化に合わせて、押しにくい並びがあった曲の譜面を、EASY〜MASTER の5つの難易度まとめて新しくしました。新しくした曲は、FREEDOM DiVE↓ / Evans / Altar of the World Tree, Beneath the White Night short ver. / Stay With Me / light player short ver. / Stay With Me short ver. / The City Beneath the Comets / ANiMA / MF × ICHIKA MIX / Monster Hero / SIX ÉTERNEL / 綺季一閃 short ver. / SAD SONG / Toward the Stars, Paradise or Truth short ver. / BLACK SHOUT / light player / 月が満ちる前に / 月が満ちる前に short ver. / Rebellion short ver. / Stay With Me remix / トリコ / 魔窟の旋律 / SAD SONG short ver. / Monster Hero -Another- / SIX ÉTERNEL ドパガキリミックス / 綺季一閃 / 綺季一閃 battle remix / crossing field / もう一つの世界へ / 戦場の疾風 / ハルカ / Crazy Party Night / Crazy Party Night full ver. / Emerald Rush / ROSE / Rebellion / Altar of the World Tree, Beneath the White Night / 4U ～ひたすら～ / Monster です。',
