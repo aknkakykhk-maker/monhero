@@ -137,10 +137,10 @@ const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
     face: growthFxAssistantFace(assistantId, 'excited'), gains });
 };
 // マスモンに絆経験値のアイテムを使った(60-app.jsx の useBondXpTickets から)
-const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after }) => {
+const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after, note = '' }) => {
   if (!before || !after || !(growthFxNum(gain) > 0)) return;
   const pct = (info) => growthFxPct((growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext))) * 100);
-  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`,
+  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`, sub: note ? String(note) : undefined,
     faces: image ? [image] : [], faceRound: true,
     rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
 };
@@ -479,6 +479,7 @@ const GrowthFxItemCard = ({ sheet, level, onClose }) => {
         {(sheet.faces || []).length > 0 && <div className="faces">{sheet.faces.map((src, i) => <img key={i} src={src} alt="" className={sheet.faceRound ? 'round' : ''} style={{ animationDelay: `${0.4 + i * 0.15}s` }}/>)}</div>}
         <div className="ttl">{sheet.title}{reaction && <span className={`tag ${reaction}`}>{reaction === 'like' ? '大好き！' : 'ちょっと苦手…'}</span>}</div>
         {sheet.item && <div className="itm">{sheet.item}</div>}
+        {sheet.sub && <div className="itm" data-growth-fx-note>{sheet.sub}</div>}
         {(sheet.rows || []).map((row, i) => {
           const rk = growthFxKind(row.kind);
           const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);

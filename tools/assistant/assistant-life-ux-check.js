@@ -9,6 +9,7 @@
 //   ④ 行は押せる大きさ(高さ44px以上)・横幅からはみ出さない
 //   ⑤ 旧UI(既定)は今までどおり: 縦は6つのボタン、「できること」の行は出ない
 //   ⑥ ページのエラーが出ない
+//   STEP2 ⑦ 家の上の「✨ いま行くと得なこと」(行・大きさ・goPlace)/⑧ 神殿の得は1日1回・保存は新しいキー・旧UIには出ない
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9265;
 const SHOTS = process.argv.includes('--shots');
@@ -68,6 +69,21 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const page = await open(v, true);
     // 仲良し度の段階の幅(Lv → 次の Lv までに要る点数)
     const span = await page.evaluate(() => Object.fromEntries(ASSISTANT_BOND_LEVELS.map((s, i, a) => [s.level, a[i + 1] ? a[i + 1].need - s.need : null])));
+    // STEP2 ⑦ 家のいちばん上の「✨ いま行くと得なこと」: 札がある・カード部屋の助手と神殿の助手の行・押せる大きさ・横にはみ出さない
+    await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
+    await page.waitForTimeout(900);
+    { const pk = await page.evaluate(() => {
+        const b = document.querySelector('[data-assistant-life-now-perks]'); if (!b) return null;
+        const rs = [...b.querySelectorAll('[data-assistant-life-now-perk]')], art = document.querySelector('[data-assistant-life-house]');
+        return { keys: rs.map(x => x.getAttribute('data-assistant-life-now-perk')), n: rs.length, small: rs.filter(x => x.getBoundingClientRect().height < 44).length,
+          over: rs.filter(x => { const r = x.getBoundingClientRect(); return r.right > innerWidth + 1 || r.left < -1; }).length, goReady: typeof ASSISTANT_LIFE_LINKS.goPlace === 'object' && !!ASSISTANT_LIFE_LINKS.goPlace && typeof ASSISTANT_LIFE_LINKS.goPlace.temple === 'function',
+          above: !art || b.getBoundingClientRect().top <= art.getBoundingClientRect().top };
+      });
+      check(`${T}⑦ 家の上に「いま行くと得なこと」(カード部屋・神殿の行・3行まで)`, !!pk && pk.keys.includes('card') && pk.keys.includes('temple') && pk.n <= 3, JSON.stringify(pk));
+      check(`${T}⑦ 行は高さ44px以上・横にはみ出さない・家の絵より上`, !!pk && pk.small === 0 && pk.over === 0 && pk.above, JSON.stringify(pk));
+      check(`${T}⑦ HOME が施設へ行く口(goPlace)を入れている`, !!pk && pk.goReady === true);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, `check-${v.id}-house.png`) });
+    }
     for (const id of ['mua', 'dra', 'momosuke', 'atsu']) {
       const r = await room(page, id);
       (order[id] = order[id] || {})[v.id] = r.rows.join(',');
@@ -86,6 +102,25 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     const old = await open(v, false);
     const r = await room(old, 'mua');
     check(`${T}⑤ 旧UI(既定)は今までどおり: できることの行は出ない${v.id === 'tate' ? '・縦は6つのボタン' : ''}`, r.rows.length === 0 && r.road === null && (v.id === 'yoko' || r.dock), JSON.stringify(r));
+    await old.close();
+  }
+  // ⑧ 神殿の得: 神殿にいる助手との仲良し度が1日1回だけ上がる・押すと神殿へ行く(画面が閉じる)・旧UIには帯が出ない
+  { const v = { id: 'tate', name: '縦 390×844', w: 390, h: 844 };
+    const page = await open(v, true);
+    await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
+    await page.waitForTimeout(900);
+    const t = await page.evaluate(async () => {
+      const before = assistantLifeBondPointsOf('kyuko');
+      const a = await assistantLifeTemplePerk(), mid = assistantLifeBondPointsOf('kyuko'), b = await assistantLifeTemplePerk(), after = assistantLifeBondPointsOf('kyuko');
+      return { a, b, up: mid - before, again: after - mid, saved: localStorage.getItem('mh_assistant_life_perks_v1') || '' };
+    });
+    check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
+    check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
+    const gone = await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; return !!l; });
+    check('⑧ (準備)助手ライフの状態がある', gone);
+    await page.close();
+    const old = await open(v, false);
+    check('⑧ 旧UIには「いま行くと得なこと」を足さない', (await old.locator('[data-assistant-life-now-perks]').count()) === 0);
     await old.close();
   }
   for (const id of Object.keys(order)) check(`① ${id}: 縦と横で同じ並び`, order[id].tate === order[id].yoko, JSON.stringify(order[id]));

@@ -66,6 +66,7 @@
 | `mh_assistant_peer_quarrel_v1` | object | 助手どうしのけんか→仲直り(2026-11-07)。`{ pending: { id, pair, at } \| null, done: [けんかid] }`。pending は言い合いを見て、まだ仲直りを見ていないもの(次に HOME を開いたとき仲直りが流れる)。done は見たけんか(同じけんかは2度出ない) |
 | `mh_assistant_peer_special2_seen_v1` | array | 仲良し度 Lv10 の「2人の特別なお話・その2」を見たペア。`[ペア]`。Lv5 の記録(`mh_assistant_peer_special_seen_v1`)とは別に持つ |
 | `mh_assistant_life_ui_v2` | boolean / `false` | 助手ライフの新UIを試す設定。`true` で地図を維持した助手詳細・声かけ相手選択を有効化し、`false` で従来UIへ戻す。助手の進行・報酬・親密度には影響しない |
+| `mh_assistant_life_perks_v1` | `{ day, temple }` / `{ day:'', temple:'' }` | 助手ライフの施設の得「神殿」を、その日(朝4時区切り・`day`)にもう受け取ったか。`temple` は受け取った助手のid(空 = まだ)。日が変われば未受け取りに戻る。壊れた値は既定へ。ランキングに効かない(56-assistant-life-ux.jsx) |
 | `mh_assistant_life_v1` | object | 助手たちの今(2026-11-07・公開の印 assistantLife)。いまの時間の様子 `{ salt(端末ごとの種), abs(時間の通し番号), slot, moods:{助手:気分}, groups:[{ids,doing,place}], solo:{助手:{doing,place,reason}}, lonely:[助手], recent:[{kind,abs,pair,ids}](最近のできごと 40件まで), nudges:{invite:[{id,abs}],introduce:[{pair,abs}]}(ブリーダーの声かけ) }`。壊れていたら空として読み直す |
 | `mh_assistant_life_play_v1` | object | 助手たちの今のにぎわい `{ day(朝4時区切り), points, counts:{rhythm,battle,card,chat,peer}, lastDay, streak }`。段(静か/ふつう/にぎやか/お祭り)で助手どうしの仲良くなり方と1日の上限が変わる。助手どうしの点 `mh_assistant_peer_bond_v1` は書き換えない(上がる量が変わるだけ) |
 | `mh_assistant_peer_seen14_v1` | object | 助手たちの今で見た台本 `{ [台本の id]: 見た日(朝4時区切り) }`。見た台本は14日のあいだ出しにくくする(全部見ていたら前に見たものから)。14日より前の記録・壊れた値は読むときに捨てる(最大4000件)。公開の印 `assistantLife` が真のときだけ書く |
