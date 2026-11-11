@@ -284,7 +284,7 @@
       // ガッツダウン: 当たれば相手が次に撃てる技が減る(相手のガッツが少ないほど効く)
       if (mv.gd > 0) score += p * Math.min(mv.gd, f.guts) * 0.12 * (0.6 + 0.4 * skill);
       if (score > bestTech) bestTech = score;
-      cands.push({ type: 'tech', key: mv.key, score });
+      cands.push({ type: 'tech', key: mv.key, score, why: e >= f.hp ? 'finish' : (mv.gd > 0 && mv.gd >= 20 ? 'gutsDown' : (mv.big ? 'big' : 'attack')) });
     }
     // 移動(1歩)。手番を1つ使う=いま撃てる技を捨てる。相手も動けるので、得は半分しか当てにしない
     const reachHere = u.moves.some(mv => inRange(mv, dist));
@@ -298,15 +298,16 @@
       let score = (gain / f.maxHp * 100 * sty.aggr - risk / u.maxHp * 100 * sty.caution * (0.5 + 0.5 * skill)) * 0.9 * sty.mobility;
       score -= bestTech * 0.7 + 2 + u.moveStreak * 5;   // 続けて動くほど損(行ったり来たりを防ぐ)
       // どの技も届かない距離にいるなら、届く方へ
-      if (!reachHere && u.moves.some(mv => inRange(mv, nd))) score += 20;
-      cands.push({ type: 'move', step, score });
+      const toReach = !reachHere && u.moves.some(mv => inRange(mv, nd));
+      if (toReach) score += 20;
+      cands.push({ type: 'move', step, score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
     }
     // ガード(相手が撃ってこなければ無駄になるので、見込みは 6 割)
     if (threatNow > 0) {
       const saved = threatNow * guardCut(u) * 0.6;
       let score = saved / u.maxHp * 100 * (0.4 + 0.6 * sty.caution) * (0.8 + (1 - hpFrac) * 0.6) * (0.5 + 0.5 * skill);
       score -= bestTech * (0.45 - 0.15 * (sty.caution - 1));
-      cands.push({ type: 'guard', score });
+      cands.push({ type: 'guard', score, why: hpFrac < 0.5 ? 'lowHp' : 'block' });
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
@@ -316,7 +317,7 @@
       let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
       score -= danger * 20 * (0.8 + 0.2 * sty.caution);              // 危ないときにためるのは損
       if (nowBest === 0 && laterBest > 0) score += 8;
-      cands.push({ type: 'charge', score });
+      cands.push({ type: 'charge', score, why: nowBest === 0 ? 'noGuts' : 'saveUp' });
     }
     // 交代
     if (u.swapCooldown <= 0) {
@@ -328,10 +329,10 @@
         let score = gain * 6 * sty.swap * (0.4 + 0.6 * skill);
         if (danger >= 1 && hpFrac < 0.5) score += 10 * sty.swap * skill;  // このままだと倒される → 逃がす
         score -= 6;                                                       // 手番を使う分
-        cands.push({ type: 'swap', to: i, score });
+        cands.push({ type: 'swap', to: i, score, why: danger >= 1 && hpFrac < 0.5 ? 'rescue' : 'matchup' });
       }
     }
-    if (!cands.length) cands.push({ type: 'charge', score: 0 });       // ガッツ満タンで何もできない時の保険(実際は起きない)
+    if (!cands.length) cands.push({ type: 'charge', score: 0, why: 'noGuts' });       // ガッツ満タンで何もできない時の保険(実際は起きない)
 
     // 最低限の判断(戦術経験に関係なく): 当たれば確実に倒せる技があれば、一番当たりやすいものを撃つ
     let sure = null;
@@ -345,6 +346,7 @@
     if (sure) {
       const pick = cands.find(c => c.type === 'tech' && c.key === sure.key);
       pick.eval = pick.score;
+      pick.why = 'finish';
       if (ctx.trace) ctx.lastCands = cands.map(c => Object.assign({}, c, { score: Math.round(c.score * 10) / 10 }));
       return pick;
     }
@@ -410,6 +412,8 @@
     }
   };
 
+  const ACTION_EVS = ['tech', 'move', 'guard', 'charge', 'swap'];
+
   // ── 本体 ──
   const simulate = (input) => {
     const inp = input && typeof input === 'object' ? input : {};
@@ -427,11 +431,14 @@
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
     const push = (e) => {
       const row = Object.assign({ r: state.round, d: state.dist }, e);
-      if (ctx.trace && ctx.lastCands && ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev)) { row.cands = ctx.lastCands; ctx.lastCands = null; }
+      if (ACTION_EVS.includes(e.ev)) { row.ga = unitOf('A').guts; row.gb = unitOf('B').guts; }   // 手のあとの両方の場のガッツ
+      if (ctx.trace && ctx.lastCands && ACTION_EVS.includes(e.ev)) { row.cands = ctx.lastCands; ctx.lastCands = null; }
       log.push(row);
     };
 
+    const movesOf = (side) => state.teams[side].units.map(x => x.moves.map(m => ({ id: m.key, name: m.name, kind: m.kind, guts: m.guts, dist: m.dist })));
     push({ ev: 'start', v: VERSION, balance, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
+      aMoves: movesOf('A'), bMoves: movesOf('B'),
       aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp) });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
@@ -460,19 +467,19 @@
         }
         const gd = hit && mv.gd > 0 ? Math.min(mv.gd, f.guts) : 0;   // ガッツダウン
         f.guts -= gd;
-        push({ ev: 'tech', side, i: me.active, move: mv.key, name: mv.name, kind: mv.kind, hit, crit, dmg,
+        push({ ev: 'tech', side, i: me.active, ti: state.teams[foeSide].active, p: Math.round(p * 1000) / 10, why: c.why, move: mv.key, name: mv.name, kind: mv.kind, hit, crit, dmg,
           guarded: !!(hit && f.guarding), guts: u.guts, foeHp: f.hp, gd, foeGuts: f.guts });
       } else if (c.type === 'move') {
         state.dist = clamp(state.dist + c.step, 0, 3);
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
-        push({ ev: 'move', side, i: me.active, step: c.step, to: state.dist, guts: u.guts });
+        push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts });
       } else if (c.type === 'guard') {
         u.guarding = true;
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
-        push({ ev: 'guard', side, i: me.active, name: 'ガード', guts: u.guts });
+        push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
-        push({ ev: 'charge', side, i: me.active, guts: u.guts });
+        push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
         u.guarding = false;
@@ -480,7 +487,7 @@
         const n = unitOf(side);
         n.guts = Math.max(n.guts, GUTS_SWAP_IN);
         n.swapCooldown = SWAP_COOLDOWN;
-        push({ ev: 'swap', side, from, i: c.to, name: n.name, guts: n.guts });
+        push({ ev: 'swap', side, from, why: c.why, i: c.to, name: n.name, guts: n.guts });
       }
       u.swapCooldown = Math.max(0, u.swapCooldown - 1);
       u.moveStreak = c.type === 'move' ? u.moveStreak + 1 : 0;
@@ -538,6 +545,9 @@
     VERSION, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE,
     LV_MAX, buildCatalog, simulate, unitFromGrow, makeRng, hashSeed,
+    WHY: Object.freeze({ finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
+      safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
+      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ' }),
     // 検査用(計算の部品)
     _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });

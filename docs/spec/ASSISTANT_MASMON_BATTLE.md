@@ -75,16 +75,16 @@ ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, balance?, roundL
 
 | ev | 中身 |
 | --- | --- |
-| `start` | `v`(計算の版)・`balance`・`a`/`b`(名前の並び)・`aHp`/`bHp`(最大ライフ) |
+| `start` | `v`(計算の版)・`balance`・`a`/`b`(名前の並び)・`aHp`/`bHp`(最大ライフ)・`aMoves`/`bMoves`(1体ごとの技 [{id,name,kind,guts,dist}]・熟練の後のガッツ) |
 | `enter` | `side`・`i`(何体目)・`name`・`guts`(倒れたあとに出たとき) |
-| `tech` | `side`・`i`・`move`(技 id)・`name`・`kind`・`hit`・`crit`・`dmg`・`guarded`・`guts`(撃ったあと)・`foeHp`・`gd`・`foeGuts` |
+| `tech` | `side`・`i`・`ti`(受けた側の何体目)・`p`(撃つ前の命中率 %)・`move`(技 id)・`name`・`kind`・`hit`・`crit`・`dmg`・`guarded`・`guts`(撃ったあと)・`foeHp`・`gd`・`foeGuts` |
 | `move` | `side`・`i`・`step`(−1 近づく/+1 離れる)・`to`(新しい距離)・`guts` |
 | `guard`・`charge` | `side`・`i`・`guts` |
 | `swap` | `side`・`from`・`i`・`name`・`guts` |
 | `ko` | `side`・`i`・`name` |
 | `judge`・`end` | 判定の点・`winner`・`reason` |
 
-どの行にも `r`(ラウンド)と `d`(その時の距離)。`trace:true` なら手の行に `cands`(AI が付けた点)。
+どの行にも `r`(ラウンド)と `d`(その時の距離)。手の行(tech・move・guard・charge・swap)には `ga`/`gb`(手のあとの両方の場のガッツ)と `why`(手の理由。`ASSISTANT_MASMON_BATTLE.WHY` に日本語の言い方: 倒しきれる・ガッツを削る・大技・攻める・技が届く所へ・有利な間合いへ・危ない間合いから離れる・ライフが少ないので守る・相手の大きい一撃にそなえる・ガッツが足りない・大技のためにためる・倒されそうなので下げる・相性のよい仲間へ)。`trace:true` なら手の行に `cands`(AI が付けた点)。
 
 ## 助手の AI
 

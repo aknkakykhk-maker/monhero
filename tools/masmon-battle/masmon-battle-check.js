@@ -108,6 +108,12 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
           const u = st.teams[e.side].units[e.i]; u.guts = Math.max(u.guts, 40);
           if (u.hp <= 0) { ng.hp.push(`${tag} 倒れた体が出てきた`); bad = 1; }
         }
+        if (e.ev === 'tech' && e.ti !== active[e.side === 'A' ? 'B' : 'A']) { ng.hp.push(`${tag} r${e.r} 受けた側 ${e.ti}`); bad = 1; }
+        if (e.ga != null && (st.teams.A.units[active.A].guts !== e.ga || st.teams.B.units[active.B].guts !== e.gb)) {
+          ng.guts.push(`${tag} r${e.r} ${e.ev} 両方のガッツ ${st.teams.A.units[active.A].guts}/${st.teams.B.units[active.B].guts}≠${e.ga}/${e.gb}`); bad = 1;
+        }
+        if (['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev) && !engine.WHY[e.why]) { ng.hp.push(`${tag} r${e.r} 理由が無い ${e.why}`); bad = 1; }
+        if (e.ev === 'tech' && !(e.p >= 15 && e.p <= 97)) { ng.hp.push(`${tag} r${e.r} 命中率 ${e.p}`); bad = 1; }
         if (e.d !== dist && e.ev !== 'move') { ng.dist.push(`${tag} r${e.r} 記録の距離 ${e.d}≠${dist}`); bad = 1; }
         if (e.guts != null) {
           const u = st.teams[e.side].units[active[e.side]];
@@ -120,8 +126,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check(`③ ラウンドの上限(${engine.ROUND_LIMIT})を超えない`, !ng.limit.length, ng.limit.slice(0, 3).join(' / '));
   check('④ 距離は零〜遠で1歩ずつ・記録の距離と合う', !ng.dist.length, ng.dist.slice(0, 3).join(' / '));
   check('④ 技はその距離で届くものだけ', !ng.range.length, ng.range.slice(0, 3).join(' / '));
-  check('④ ガッツは 0〜100・技の分だけ減り、決まった分だけ増える', !ng.guts.length, ng.guts.slice(0, 3).join(' / '));
-  check('④ ライフの減り方が記録と合う・倒れた体は出てこない', !ng.hp.length, ng.hp.slice(0, 3).join(' / '));
+  check('④ ガッツは 0〜100・技の分だけ減り、決まった分だけ増える・手のあとの両方のガッツ(ga/gb)が合う', !ng.guts.length, ng.guts.slice(0, 3).join(' / '));
+  check('④ ライフの減り方・受けた側・命中率・手の理由が記録と合う・倒れた体は出てこない', !ng.hp.length, ng.hp.slice(0, 3).join(' / '));
   check('⑥ 1対1・2対2・3対3・1対2・2対3・3対1 がすべて動く', Object.keys(fmtSeen).length === FORMATS.length, `${total} 戦`);
 }
 
