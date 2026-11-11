@@ -1605,6 +1605,8 @@ const ASSISTANT_BOND_ACTIONS = {
   lifeFurn:   { amount:120, dailyMax:1440, label:'助手ライフで家具を贈る', releaseFlag:'assistantLife' },
   // 助手ライフ STEP2(2026-11-11 社長): 神殿にいる助手が、合体・転生などの操作を終えたプレイヤーと仲良くなる。1日1回(56-assistant-life-ux.jsx の assistantLifeTemplePerk)
   lifeTemple: { amount:30, dailyMax:30, label:'神殿で助手と一緒に過ごす', releaseFlag:'assistantLife' },
+  // モンヒロバトルにいる助手のマスモンを応援する・修行を見る(2026-11-11 社長。1回 +5・見ると応援を合わせて1日3回。56-assistant-life-masmon-cheer.jsx)
+  lifeCheer:  { amount:5,  dailyMax:15, label:'モンヒロバトルで助手のマスモンを応援する', releaseFlag:'assistantMasmonCheer' },
   peerPlay:   { amount:6,  dailyMax:24, label:'ペアを連れて遊ぶ', releaseFlag:'assistantPeer' },
   // ③ 3人の掛け合いは3人それぞれ・ミニイベントと仲直りは2人それぞれ(2026-11-07 社長)
   peerTrio:   { amount:3,  dailyMax:6,  label:'助手3人の掛け合いを見る', releaseFlag:'assistantPeer' },
