@@ -600,6 +600,8 @@ const Audio_ = (() => {
         start:()=>{if(playing||stopped||naturallyEnded)return playing;return startSource(0);},
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
+        // 元の時計(なめらかにする前)。診断で「止まったコマ」を数えるためだけに使う(2026-11-11。画面・判定は songTimeMs のまま)
+        rawSongTimeMs:()=>rawSongTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
         info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,

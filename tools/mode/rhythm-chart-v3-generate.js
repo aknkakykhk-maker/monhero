@@ -494,7 +494,10 @@ let registryEntry=null;
 {
   const registryFile=path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json');
   if(fs.existsSync(registryFile)){
-    const entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
+    let entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
+    // --song-settings '<JSON>' … 曲の一覧の設定を、この1回だけ上書きして試す(2026-11-11・rhythm-chart-tune.js が狙いに合うつまみを探すのに使う)。
+    //   値が null の項目は外す。一覧のファイルは書き換えない。付けなければ今までと同じ
+    {const raw=arg('--song-settings');if(raw){const over=JSON.parse(raw);entry={...(entry||{})};for(const [k,v] of Object.entries(over)){if(v===null)delete entry[k];else entry[k]=v;}}}
     const pinned=Number(entry&&entry.challengeFactor);
     if(Number.isFinite(pinned)&&pinned>0)audio.challengeFactor=pinned;
     // 曲ごとの「激しさ」。書いた曲だけに効く（書いていない曲は今までと1音も変わらない）。
@@ -4110,6 +4113,37 @@ if(ending&&ending.active){
       if(res.removed.length){const gone=new Set(res.removed.map(o=>o.src));r.notes=r.notes.filter(n=>!gone.has(n));}
       if(res.moved||res.removed.length||res.mirrored||res.left)(r.notice||(r.notice=[])).push(`押さえている帯の中のノーツ: 帯の外へ${res.moved}個・取り除き${res.removed.length}個・左右を写す${res.mirrored}個`+(res.left?`・直せず${res.left}個(検査が止める)`:''));
     }
+  }
+}
+// モンスターノーツの仕上げ(Rev.37・2026-11-11): 13 で4個置いたあとの手直し(指の条件の最終確認・終わりの長押し・帯の中の取り除きなど)で
+//   枠の付いたノーツが消えると、3個以下のまま書き出していた(ROSE MASTER 3個・ROSE short MASTER 2個・Evans EXPERT 3個など6譜面。公開前に人が足していた)。
+//   欠けた枠だけを、13 と同じ探し方(狙いの前後10%で段を順にゆるめる→曲全体)で付け直す。4個そろっている譜面は1つも変わらない。ノーツの数・位置は変えない(枠を付けるだけ)
+{
+  for(const difficulty of targets){
+    const r=results[difficulty],notes=r.notes;if(!notes.length)continue;
+    const have=new Set(notes.filter(n=>n.monsterSlot).map(n=>n.monsterSlot)),missing=COMMON.monsterTargets.map((ratio,slot)=>({ratio,slot:slot+1})).filter(x=>!have.has(x.slot));
+    if(!missing.length)continue;
+    const first=notes[0].grid,last=notes[notes.length-1].grid;
+    const gapOf=index=>Math.min(index>0?notes[index].grid-notes[index-1].grid:Infinity,index<notes.length-1?notes[index+1].grid-notes[index].grid:Infinity);
+    const tiers=[
+      (note,index)=>!note.chord&&note.grid%BEAT===0&&gapOf(index)>=COMMON.monsterClearGrids,
+      (note,index)=>!note.chord&&note.grid%BEAT===0&&gapOf(index)>=COMMON.monsterClearGrids/2,
+      note=>!note.chord&&note.grid%BEAT===0,
+      note=>!note.chord,
+      ()=>true,
+    ];
+    let added=0;
+    for(const {ratio,slot} of missing){
+      const target=first+(last-first)*ratio;let bestIndex=-1;
+      for(const reach of [(last-first)*.1,Infinity]){
+        for(const fits of tiers){let bestDistance=Infinity;
+          notes.forEach((note,index)=>{if(note.type!=='TAP'||note.monsterSlot||!fits(note,index))return;
+            const distance=Math.abs(note.grid-target);if(distance<=reach&&distance<bestDistance){bestDistance=distance;bestIndex=index;}});
+          if(bestIndex>=0)break;}
+        if(bestIndex>=0)break;}
+      if(bestIndex>=0){notes[bestIndex].monsterSlot=slot;added++;if(Array.isArray(r.monsterSlotGrids))r.monsterSlotGrids.push(notes[bestIndex].grid);}
+    }
+    if(added)(r.notice||(r.notice=[])).push(`モンスターノーツの仕上げ: 手直しで欠けた枠を${added}個付け直した`);
   }
 }
 if(results.MASTER){
