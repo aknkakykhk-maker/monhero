@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e83f5d5a8ab7f889
+// source-sha256: 624810a16662caf9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108702,6 +108702,10 @@ function AssistantLifeHouse({
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
+      if (typeof ASSISTANT_LIFE_UI_V2_FLAG !== 'undefined') {
+        ASSISTANT_LIFE_UI_V2_FLAG.v = v === true;
+        ASSISTANT_LIFE_UI_V2_FLAG.loaded = true;
+      }
       if (alive) setUiV2(v === true);
     }).catch(() => {});
     return () => {
@@ -108711,6 +108715,10 @@ function AssistantLifeHouse({
   const toggleUiV2 = () => {
     const next = !uiV2;
     setUiV2(next);
+    if (typeof ASSISTANT_LIFE_UI_V2_FLAG !== 'undefined') {
+      ASSISTANT_LIFE_UI_V2_FLAG.v = next;
+      ASSISTANT_LIFE_UI_V2_FLAG.loaded = true;
+    }
     setCallPicker(false);
     setRoomId(null);
     try {
@@ -111762,6 +111770,24 @@ const assistantLifeTempleDone = () => {
   const s = ASSISTANT_LIFE_PERK_STORE.state;
   return !!s.temple && s.day === assistantLifePerkDay();
 };
+const ASSISTANT_LIFE_UI_V2_FLAG = {
+  v: false,
+  loaded: false,
+  p: null
+};
+const assistantLifeUiV2Load = () => {
+  if (!ASSISTANT_LIFE_UI_V2_FLAG.p) ASSISTANT_LIFE_UI_V2_FLAG.p = Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => {
+    ASSISTANT_LIFE_UI_V2_FLAG.v = v === true;
+    ASSISTANT_LIFE_UI_V2_FLAG.loaded = true;
+  }).catch(() => {
+    ASSISTANT_LIFE_UI_V2_FLAG.loaded = true;
+  });
+  return ASSISTANT_LIFE_UI_V2_FLAG.p;
+};
+const assistantLifeUiV2On = () => {
+  if (!ASSISTANT_LIFE_UI_V2_FLAG.loaded) void assistantLifeUiV2Load();
+  return ASSISTANT_LIFE_UI_V2_FLAG.v === true;
+};
 const ASSISTANT_LIFE_TEMPLE_BOND = 30;
 const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
   const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
@@ -111770,6 +111796,8 @@ const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
 const assistantLifeTemplePerk = async () => {
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    await assistantLifeUiV2Load();
+    if (!ASSISTANT_LIFE_UI_V2_FLAG.v) return null;
     await ASSISTANT_LIFE_PERK_STORE.load();
     if (assistantLifeTempleDone()) return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
@@ -111792,7 +111820,7 @@ const assistantLifeTemplePerk = async () => {
 const assistantLifeRanchPerk = () => {
   try {
     const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
-    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    if (!assistantLifeUiV2On() || typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     const names = [];
     for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {

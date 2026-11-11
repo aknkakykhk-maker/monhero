@@ -61,6 +61,14 @@ const ASSISTANT_LIFE_PERK_STORE = {
 const assistantLifePerkNormalize = (v) => ({ day: v && typeof v.day === 'string' ? v.day : '', temple: v && typeof v.temple === 'string' ? v.temple : '' });
 const assistantLifePerkDay = () => (typeof assistantPeerDayKey === 'function' ? assistantPeerDayKey() : '');
 const assistantLifeTempleDone = () => { const s = ASSISTANT_LIFE_PERK_STORE.state; return !!s.temple && s.day === assistantLifePerkDay(); };
+// 新UI(mh_assistant_life_ui_v2)のときだけ施設の得を入れる(旧UIの人には何も変えない・2026-11-11 ミハリの指摘)。
+//   読み終わるまでは「旧UI」とみなす(得を入れない側に倒す)。助手ライフの画面で切り替えたときは ASSISTANT_LIFE_UI_V2_FLAG.v を直接更新する
+const ASSISTANT_LIFE_UI_V2_FLAG = { v: false, loaded: false, p: null };
+const assistantLifeUiV2Load = () => {
+  if (!ASSISTANT_LIFE_UI_V2_FLAG.p) ASSISTANT_LIFE_UI_V2_FLAG.p = Promise.resolve(storeGet('mh_assistant_life_ui_v2', false, false)).then(v => { ASSISTANT_LIFE_UI_V2_FLAG.v = v === true; ASSISTANT_LIFE_UI_V2_FLAG.loaded = true; }).catch(() => { ASSISTANT_LIFE_UI_V2_FLAG.loaded = true; });
+  return ASSISTANT_LIFE_UI_V2_FLAG.p;
+};
+const assistantLifeUiV2On = () => { if (!ASSISTANT_LIFE_UI_V2_FLAG.loaded) void assistantLifeUiV2Load(); return ASSISTANT_LIFE_UI_V2_FLAG.v === true; };
 const ASSISTANT_LIFE_TEMPLE_BOND = 30; // 神殿で操作を終えたときの仲良し度(assistants.js の lifeTemple。1日1回)
 
 // その場所にいて起きている助手(出会っている人だけ)
@@ -73,6 +81,8 @@ const assistantLifeAtPlace = (life, ids, place) => (ids || []).filter(id => {
 const assistantLifeTemplePerk = async () => {
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
+    await assistantLifeUiV2Load();
+    if (!ASSISTANT_LIFE_UI_V2_FLAG.v) return null;
     await ASSISTANT_LIFE_PERK_STORE.load();
     if (assistantLifeTempleDone()) return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
@@ -92,7 +102,7 @@ const assistantLifeTemplePerk = async () => {
 const assistantLifeRanchPerk = () => {
   try {
     const boost = typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS ? ASSISTANT_LIFE_LINKS.masmonTrainBoost : null;
-    if (typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
+    if (!assistantLifeUiV2On() || typeof boost !== 'function' || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return '';
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     const names = [];
     for (const id of assistantLifeAtPlace(assistantLifeCurrent(), ids, 'ranch')) {

@@ -114,6 +114,10 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
       const a = await assistantLifeTemplePerk(), mid = assistantLifeBondPointsOf('kyuko'), b = await assistantLifeTemplePerk(), after = assistantLifeBondPointsOf('kyuko');
       return { a, b, up: mid - before, again: after - mid, saved: localStorage.getItem('mh_assistant_life_perks_v1') || '' };
     });
+    // 旧UIの人には何も入れない(神殿の得は新UIのときだけ)
+    const oldT = await (async () => { const o = await open(v, false); await o.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, solo: { ...l.solo, kyuko: { doing: 'idle', place: 'temple' } } } }); });
+      const r = await o.evaluate(async () => ({ a: await assistantLifeTemplePerk(), saved: localStorage.getItem('mh_assistant_life_perks_v1') })); await o.close(); return r; })();
+    check('⑧ 旧UIの人は神殿で仲良し度が上がらず、新しいキーも書かれない', oldT.a === null && !oldT.saved, JSON.stringify(oldT));
     check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
     check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
     const gone = await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; return !!l; });
