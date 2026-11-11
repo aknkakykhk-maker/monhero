@@ -4,8 +4,8 @@
 // 「みゅあの吹き出しがプロフィールに重なる」「はじめての案内の説明が、
 // 光らせた施設の上に重なって見えなくなる」といったことが起きる。実際に2回起こした。
 //
-// HOMEのCSSは自前のスタイル(Tailwindを使っていない)ので、CSSだけを取り出して
-// 同じ形のDOMへ当てれば、このサンドボックスでも本物と同じ位置を測れる。
+// 以前は HOME の CSS だけを取り出して見本の DOM へ当てて測っていたが、本体が札の位置を測って押し下げるようになり、
+// 見本は本物とずれて 62件の NG を出し続けた(2026-11-11)。いまは全部の大きさで本物の画面を開いて測る。
 //
 //   node tools/home-layout-check.js
 const fs = require('fs');
@@ -14,12 +14,6 @@ const { chromium } = require('playwright');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
-// createAnimationStyle のCSSから、HOMEに関する行だけを集める
-// 右上の枠を桁が多いときだけ広げる計算(69-screen-home.jsx の homeWalletGrowPx)を、本物の1行から作る
-const growLine = (source.match(/^const homeWalletGrowPx=.*$/m) || [''])[0];
-const homeWalletGrowPx = growLine ? new Function(`${growLine}; return homeWalletGrowPx;`)() : null;
-const css = source.split('\n').filter(l => l.includes('.mh-home-')).join('\n')
-  .replace(/^\s*`?/, '').replace(/`;?\s*$/, '');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -27,50 +21,7 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
-// 本物と同じ組み立て(施設・ミッション・ギフト・設定・みゅあの吹き出し)
-// 本体は #root > div を max-width:600px で中央へ寄せている。
-// 幅の広い端末(折りたたみ)では、そこが効いた状態で測らないと意味が無いので同じにする。
-const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
-html,body{margin:0;height:100%}
-body{display:flex;justify-content:center}
-#shell{width:100%;height:100%;max-width:600px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden}
-/* 本体(index.html)と同じ: 横画面のスマホではコラムを広げる(#146) */
-@media (orientation: landscape) and (max-height: 600px){#shell{max-width:1024px}}
-${css}
-</style></head><body>
-<div id="shell">
-<main class="mh-home-scene">
-  <header class="mh-home-status">
-    <button class="mh-home-player"><div class="mh-home-avatar"></div><div class="mh-home-player-copy"><strong>あつ</strong><span>ブリーダー Lv.38</span><div class="mh-home-xp"><i style="width:60%"></i></div><small>414 / 651 XP</small></div></button>
-    <section class="mh-home-wallet"><div><svg width="14" height="14"></svg><b style="--len:6">19,003</b><small>ダイヤ</small></div><div><svg width="14" height="14"></svg><b style="--len:3">138</b><small>ブリーダーP</small></div><button class="mh-home-settings"><svg width="20" height="20"></svg><span>設定</span></button></section>
-  </header>
-  <nav class="mh-home-facilities">
-    <button class="mh-home-facility management"><span>M/B管理</span></button>
-    <button class="mh-home-facility temple"><span>神殿</span></button>
-    <button class="mh-home-facility market"><span>マーケット</span></button>
-    <button class="mh-home-facility rhythm"><span>🎵 モンヒロビート<small>準備中</small></span></button>
-    <button class="mh-home-facility battle"><span>バトル</span></button>
-  </nav>
-  <button class="mh-home-mission">ミッション</button>
-  <button class="mh-home-gift">ギフト</button>
-  <button class="mh-home-update">更新履歴</button>
-  <button class="mh-home-event-banner"><b>🎃 ハロウィン・ナイト</b><small>開催中 〜11/1 13:59</small></button>
-  <button class="mh-home-tour-banner" style="display:none"><span>🏆</span><span><b>第1回 MFバトルカード公式杯</b><small>受付中 あと23時間<em>1位 ビートP 100,000</em></small></span></button>
-  <button class="mh-home-card-battle"><span>🃏 MFバトルカード</span></button>
-  <div class="mh-home-assistant" style="height:70px">みゅあ</div>
-</main></div></body></html>`;
 
-// 光らせる場所と、そこを説明するときに吹き出しを上へ寄せるべきか
-// (画面の下半分にあるものは、下に出すと説明が重なってしまう)
-const SPOTS = {
-  management: { sel: '.mh-home-facility.management', wantTop: false },
-  temple:     { sel: '.mh-home-facility.temple',     wantTop: false },
-  market:     { sel: '.mh-home-facility.market',     wantTop: true },
-  battle:     { sel: '.mh-home-facility.battle',     wantTop: true },
-  reward:     { sel: '.mh-home-mission,.mh-home-gift', wantTop: true },
-  settings:   { sel: '.mh-home-settings',            wantTop: false },
-  assistant:  { sel: '.mh-home-assistant',           wantTop: false },
-};
 // 代表的な画面の大きさ(小さい端末・ふつう・大きい端末・折りたたみ)
 // 折りたたみ端末は「幅が広く、高さが低い」。ふつうのスマホより150pxほど低いので、
 // 縦に置いたものが入りきらないかどうかは、ここで初めて分かる
@@ -91,112 +42,6 @@ const SIZES = [
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  for (const size of SIZES) {
-    const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
-    await page.setContent(html);
-    const res = await page.evaluate((spots) => {
-      const box = (sel) => {
-        let top = Infinity, bottom = -Infinity;
-        document.querySelectorAll(sel).forEach(el => {
-          // 施設は当たり判定の枠が広く、見えているのは中のラベルなので、そちらを測る
-          const target = el.classList.contains('mh-home-facility') ? (el.querySelector('span') || el) : el;
-          const r = target.getBoundingClientRect();
-          if (r.height > 0) { top = Math.min(top, r.top); bottom = Math.max(bottom, r.bottom); }
-        });
-        return { top, bottom };
-      };
-      const out = { spots: {}, height: window.innerHeight, width: window.innerWidth };
-      for (const [name, sel] of Object.entries(spots)) {
-        const b = box(sel);
-        out.spots[name] = { ...b, atTop: b.bottom > window.innerHeight * 0.5 };
-      }
-      const card = document.querySelector('.mh-home-player').getBoundingClientRect();
-      const bubble = document.querySelector('.mh-home-assistant').getBoundingClientRect();
-      const facilities = [...document.querySelectorAll('.mh-home-facility')].map(el => {
-        const s = el.querySelector('span');
-        const r = (s || el).getBoundingClientRect();
-        return { name: el.className.replace('mh-home-facility ', ''), top: r.top, bottom: r.bottom, left: r.left, right: r.right };
-      });
-      return { ...out, card: { bottom: card.bottom }, bubble: { top: bubble.top, bottom: bubble.bottom, left: bubble.left, right: bubble.right }, facilities };
-    }, Object.fromEntries(Object.entries(SPOTS).map(([k, v]) => [k, v.sel])));
-
-    console.log(`\n【${size.name}】`);
-    // ① プロフィールカードに重ならないか
-    const gap = Math.round(res.bubble.top - res.card.bottom);
-    check('  みゅあの吹き出しがプロフィールに重ならない', gap >= 6, `すき間 ${gap}px`);
-    // ② 施設のラベルに重ならないか
-    const hit = res.facilities.filter(f =>
-      f.top < res.bubble.bottom && f.bottom > res.bubble.top && f.left < res.bubble.right && f.right > res.bubble.left);
-    check('  みゅあの吹き出しが施設に重ならない', hit.length === 0, hit.map(f => f.name).join(', '));
-    // ③ 案内の説明を上下どちらへ出すかが、光らせる場所ごとに正しいか
-    const wrong = Object.entries(SPOTS).filter(([name, def]) => res.spots[name].atTop !== def.wantTop)
-      .map(([name]) => `${name}(下端${Math.round(res.spots[name].bottom)}/画面${res.height})`);
-    check('  案内の説明を出す向きが正しい', wrong.length === 0, wrong.join(', '));
-    // ④ 施設のラベルが画面の外へはみ出していないか
-    // (名前を長くしたときに、狭い端末で右や左が切れるのを拾う)
-    const overflow = res.facilities.filter(f => f.left < -0.5 || f.right > res.width + 0.5);
-    check('  施設のラベルが画面からはみ出さない', overflow.length === 0,
-      overflow.map(f => `${f.name}(${Math.round(f.left)}〜${Math.round(f.right)} / 画面${res.width})`).join(', '));
-    // ⑤ 上下に切れていないか。折りたたみ端末は高さが低いので、
-    //    「バトル」のように下端へ置いたものが画面の外へ出ていないかを見る。
-    const cut = res.facilities.filter(f => f.bottom > res.height + 0.5 || f.top < -0.5);
-    check('  施設のラベルが上下に切れない', cut.length === 0,
-      cut.map(f => `${f.name}(上${Math.round(f.top)} 下${Math.round(f.bottom)} / 画面高${res.height})`).join(', '));
-    // ⑦ 左の列の札(モンヒロビート・イベントの札・公式杯・MFバトルカード)が重ならない(2026-10-26 320×568〜375×667 で 3〜6px 重なっていた)。
-    //    イベントの札が無いときは、下の札が1段上がる(.raised)ので、そちらも見る。
-    //    公式杯の札(2026-10-31 社長・案A)はイベントの札の下・MFバトルカードの上。あるときは MFバトルカードの札が1段下がる(.below-tour)
-    const leftCol = async ([event, tour]) => page.evaluate(([event, tour]) => {
-      const ev = document.querySelector('.mh-home-event-banner'); const cardBtn = document.querySelector('.mh-home-card-battle');
-      const tourBtn = document.querySelector('.mh-home-tour-banner');
-      ev.style.display = event ? '' : 'none'; tourBtn.style.display = tour ? '' : 'none'; tourBtn.classList.toggle('raised', !event);
-      cardBtn.classList.toggle('raised', !tour && !event); cardBtn.classList.toggle('below-tour', tour && event);
-      const r = (el) => { const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right, h: b.height }; };
-      const items = [['モンヒロビート', document.querySelector('.mh-home-facility.rhythm>span')], ['イベントの札', ev], ['公式杯', tourBtn], ['MFバトルカード', cardBtn.querySelector('span')], ['バトル', document.querySelector('.mh-home-facility.battle>span')]]
-        .map(([n, el]) => [n, r(el)]).filter(([, b]) => b.h > 0);
-      const hits = [];
-      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
-        const [na, a] = items[i], [nb, b] = items[j];
-        if (a.top < b.bottom && a.bottom > b.top && a.left < b.right && a.right > b.left) hits.push(`${na}と${nb}(${Math.round(Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))}px)`);
-      }
-      // 公式杯の札は、画面の中に収まり、右の列(ミッション・ギフト)にかからない
-      if (tour) {
-        const t = r(tourBtn);
-        if (t.right > window.innerWidth + 0.5 || t.left < -0.5) hits.push(`公式杯の札が画面の外(${Math.round(t.left)}〜${Math.round(t.right)})`);
-        for (const sel of ['.mh-home-mission', '.mh-home-gift', '.mh-home-facility.market>span']) {
-          const b = r(document.querySelector(sel));
-          if (b.h > 0 && t.top < b.bottom && t.bottom > b.top && t.left < b.right && t.right > b.left) hits.push(`公式杯と${sel}`);
-        }
-      }
-      ev.style.display = ''; tourBtn.style.display = 'none'; tourBtn.classList.remove('raised'); cardBtn.classList.remove('raised', 'below-tour');
-      return hits;
-    }, [event, tour]);
-    for (const [label, event, tour] of [['イベントの札があるとき', true, false], ['イベントの札が無いとき', false, false],
-      ['イベントの札と公式杯の札があるとき', true, true], ['公式杯の札だけのとき', false, true]]) {
-      const hits = await leftCol([event, tour]);
-      check(`  左の列の札が重ならない(${label})`, hits.length === 0, hits.join(', '));
-    }
-    // ⑥ 右上の枠(ダイヤ・ブリーダーP)は桁が増えても高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)。
-    //    0・8桁・10桁で、数とラベルが1行のまま・枠とプロフィールの高さが同じかを見る
-    const walletAt = async (gold, bp) => page.evaluate(([g, p, grow]) => {
-      document.querySelector('.mh-home-wallet').style.setProperty('--wal-grow', `${grow}px`);
-      const rows = document.querySelectorAll('.mh-home-wallet>div');
-      [[rows[0], g], [rows[1], p]].forEach(([row, value]) => {
-        const b = row.querySelector('b'); const text = Number(value).toLocaleString('en');
-        b.textContent = text; b.style.setProperty('--len', String(text.length));
-      });
-      const lines = el => { const r = document.createRange(); r.selectNodeContents(el); return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size; };
-      const wrapped = [...document.querySelectorAll('.mh-home-wallet>div b,.mh-home-wallet>div small')].filter(el => lines(el) > 1).map(el => el.textContent);
-      return { wallet: document.querySelector('.mh-home-wallet').getBoundingClientRect().height, player: document.querySelector('.mh-home-player').getBoundingClientRect().height, wrapped };
-    }, [gold, bp, homeWalletGrowPx(Number(gold).toLocaleString('en'), Number(bp).toLocaleString('en'))]);
-    check('  右上の枠を広げる計算(homeWalletGrowPx)を本物から取り出せる', typeof homeWalletGrowPx === 'function');
-    const base = await walletAt(0, 0);
-    for (const [label, gold, bp] of [['8桁', 54065882, 54065882], ['10桁', 1234567890, 1234567890]]) {
-      const w = await walletAt(gold, bp);
-      check(`  右上の枠が${label}でも1行のまま・高さが変わらない`, w.wrapped.length === 0 && Math.abs(w.wallet - base.wallet) < 0.5 && Math.abs(w.player - base.player) < 0.5,
-        `枠 ${Math.round(base.wallet)}→${Math.round(w.wallet)}px / プロフィール ${Math.round(base.player)}→${Math.round(w.player)}px${w.wrapped.length ? ` / 折り返し ${w.wrapped.join(',')}` : ''}`);
-    }
-    await page.close();
-  }
   // ---- 本物の画面でも測る(2026-10-20 改善部 M7) ----
   // 上の見本は .mh-home- の CSS だけで組むので、index.html の CSS や吹き出しの本当の文の長さが入らない。
   // 320×568 で「みゅあの吹き出しが M/B管理 の札の左上を隠す」のを見逃していた。本物を開いて、
@@ -324,6 +169,55 @@ const SIZES = [
           const ng = await homeFacesProblems(page);
           check(`  (${label})札どうし・顔の列が重ならず、画面の外へ出ない`, ng.length === 0, ng.join(' / '));
         }
+        await page.close();
+      }
+    }
+    // 模型(HOME の CSS だけを当てた見本)をやめ、上の大きさ全部で本物の画面を開いて測る(2026-11-11 窓口: 模型は本物とずれて 62件の NG を出し続けていた)。
+    // 模型で見ていたこと → 本物での見方:
+    //   札どうしの重なり・画面からのはみ出し・上下の切れ・みゅあの吹き出しと札 → homeFacesProblems(本物の札の位置で測る)
+    //   みゅあの吹き出しがプロフィールに重ならない → 本物の箱どうしで測る
+    //   右上の枠が8桁でも1行のまま・高さが変わらない → 本物の財布の数を8桁に差し替えて測る(9桁からは縮めて出す。上の節で見る)
+    //   左の列(イベント・公式杯・MFバトルカード)の重なり → 本物で、いま出ている札で測る。イベントの札は出し入れして両方を見る
+    //   案内の説明を出す向き → 本体が光らせた場所の位置を測って決める(60-app.jsx の tutorialPanelAtTop)。その結線は assistant-check.js が見る
+    {
+      const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, 'boot/quiet-boot-seed'));
+      const { STORY_IDS, seed, toHome, waitFaces, finishTalk, homeFacesProblems } = require(path.resolve(__dirname, 'assistant/life-browser-shared'));
+      for (const size of SIZES) {
+        console.log(`--- 本物 ${size.name}`);
+        const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
+        await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
+        await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
+        await page.addInitScript(seed, { storyIds: STORY_IDS, life: true, intro: false, bondAll: null });
+        await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+        await toHome(page); await waitFaces(page); await finishTalk(page);
+        await page.waitForTimeout(2500); // 吹き出しが伸びたぶん札が下がる(1秒ごとに測り直す)のを待つ
+        const ng = await homeFacesProblems(page);
+        check(`  札どうし・吹き出し・顔の列が重ならず、画面の外へ出ない`, ng.length === 0, ng.join(' / '));
+        const over = await page.evaluate(() => { const a = document.querySelector('.mh-home-assistant'), p = document.querySelector('.mh-home-player'); if (!a || !p) return 'みゅあの吹き出しかプロフィールが無い';
+          const r = a.getBoundingClientRect(), q = p.getBoundingClientRect(); return (r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top) ? `重なり ${Math.round(Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top))}px` : ''; });
+        check('  みゅあの吹き出しがプロフィールに重ならない', !over, over);
+        // 左の列: イベントの札があれば、隠して(無いとき)もう一度測る。本体は札の位置を測って押し下げるので、変えたあと落ち着くのを待つ
+        const hasEvent = await page.locator('.mh-home-event-banner').count();
+        if (hasEvent) {
+          await page.evaluate(() => { document.querySelector('.mh-home-event-banner').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
+          await page.waitForTimeout(1500);
+          const ng2 = await homeFacesProblems(page);
+          check('  (イベントの札が無いとき)札どうしが重ならず、画面の外へ出ない', ng2.length === 0, ng2.join(' / '));
+          await page.evaluate(() => { document.querySelector('.mh-home-event-banner').style.display = ''; });
+        }
+        // 右上の枠: 8桁でも数とラベルが1行のまま・枠とプロフィールの高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)
+        const wal = await page.evaluate(() => {
+          const lines = el => { const r = document.createRange(); r.selectNodeContents(el); return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size; };
+          const w = document.querySelector('.mh-home-wallet'), p = document.querySelector('.mh-home-player');
+          if (!w || !p) return null;
+          const h0 = [w.getBoundingClientRect().height, p.getBoundingClientRect().height];
+          for (const b of w.querySelectorAll('b')) { b.textContent = '54,065,882'; b.style.setProperty('--len', '10'); }
+          const wrapped = [...w.querySelectorAll('b,small')].filter(el => lines(el) > 1).map(el => el.textContent);
+          return { wrapped, dw: w.getBoundingClientRect().height - h0[0], dp: p.getBoundingClientRect().height - h0[1] };
+        });
+        check('  右上の枠が8桁でも1行のまま・高さが変わらない', !!wal && !wal.wrapped.length && Math.abs(wal.dw) < 0.5 && Math.abs(wal.dp) < 0.5,
+          wal ? `折り返し ${wal.wrapped.join(',') || 'なし'} / 枠の高さ +${Math.round(wal.dw)}px / プロフィール +${Math.round(wal.dp)}px` : '財布かプロフィールが無い');
         await page.close();
       }
     }
