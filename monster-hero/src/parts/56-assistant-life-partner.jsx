@@ -1,12 +1,13 @@
 // ===== 助手ライフの「町の人」(2026-11-11 社長の決め E・開発部カイホウの設計 docs/progress/assistant-unlock/DESIGN.md・止め絵④) =====
 //   はじめての人は、最初に選んだ助手のほかは「町の人」から始まる(その助手のアシストカードをモンヒロバトルで40回使うと助手になる)。
 //   町の人は、町・場所・家・掛け合いには出る(会った助手 metIds はそのまま)。押すと小窓(一言と「あと何回」)。話す・贈る・部屋は🔒
-//   判定は開発部の口 assistantPartnerOkNow(id)・assistantPartnerProgressNow(id)(18-assistant-partner.jsx)。口が無いあいだは全員「関われる」扱い(今のまま)
+//   判定は開発部の口 assistantPartnerLockedNow(id)(会っているがまだ助手でないとき true)・assistantPartnerProgressNow(id)(18-assistant-partner.jsx)。
+//   町に出す・出さないは今の metIds のまま(OkNow は公開前・お話の前でも false になるので使わない・カイホウ)。口が無いあいだは全員「関われる」扱い(今のまま)
 //   今遊んでいる人は、開発部の判定で全員が助手(何も変わらない)。関われてしまうのを防ぐ止めなので旧UIでも同じに止める。何も保存しない
 
-// 関われる助手か(口が無い・壊れているときは true)
+// 関われる助手か(町の人でなければ true。口が無い・壊れているときも true)
 const assistantLifePartnerOk = (id) => {
-  try { return typeof assistantPartnerOkNow !== 'function' || assistantPartnerOkNow(id) !== false; } catch (_) { return true; }
+  try { return !(typeof assistantPartnerLockedNow === 'function' && assistantPartnerLockedNow(id) === true); } catch (_) { return true; }
 };
 // 解放までの進み具合 { count, need, cardName, cardOwned } か null
 const assistantLifePartnerProgress = (id) => {
@@ -57,7 +58,7 @@ function AssistantLifeTownPersonCard({ life = null, land = false }) {
         {line && <p data-assistant-life-town-line className="mt-2 rounded-xl bg-slate-800/90 px-3 py-2 text-[12.5px] font-bold leading-relaxed text-slate-100" style={ja}>{jw(`${who.name}「${line}」`)}</p>}
         {p && (
           <div className="mt-2" data-assistant-life-town-progress={`${p.count}/${p.need}`}>
-            <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={ja}>{jw(`${p.cardName ? `「${p.cardName}」` : `${who.name}のアシストカード`}をモンヒロバトルで ${p.need}回 使うと、助手として選べるようになります(いま ${p.count} / ${p.need}${p.cardOwned ? '' : '・カードはダイヤショップ'})`)}</p>
+            <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={ja}>{jw(`${p.cardName ? `「${p.cardName}」` : `${who.name}のアシストカード`}をモンヒロバトルで ${p.need}回 使うと、助手として選べるようになります(いま ${p.count} / ${p.need}${p.cardOwned ? '' : '・カードはマーケットで手に入ります'})`)}</p>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-700"><i className="block h-full rounded-full bg-gradient-to-r from-sky-400 to-violet-500" style={{ width: `${Math.round((p.count / p.need) * 100)}%` }}/></div>
           </div>)}
         <div className="mt-2.5 flex gap-1.5">{lock('talk', '💬 話す')}{lock('give', '🎁 贈る')}{lock('room', '🏠 部屋')}</div>
