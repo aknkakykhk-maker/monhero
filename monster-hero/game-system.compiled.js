@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5021fb7471915b2
+// source-sha256: 727304affad50c62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -71,12 +71,18 @@ const MH_SCREEN_TRAIL = (() => {
       document.addEventListener('webglcontextlost', () => push('gl', 'lost'), true);
       document.addEventListener('webglcontextrestored', () => push('gl', 'restored'), true);
       let last = 0;
-      const tick = now => {
-        if (last > 0 && now - last > 1000 && document.visibilityState === 'visible') push('gap', Math.round(now - last));
+      document.addEventListener('visibilitychange', () => {
+        last = 0;
+      });
+      setInterval(() => {
+        const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+        if (document.visibilityState !== 'visible') {
+          last = 0;
+          return;
+        }
+        if (last > 0 && now - last > 1000) push('gap', Math.round(now - last));
         last = now;
-        window.requestAnimationFrame(tick);
-      };
-      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(tick);
+      }, 500);
     } catch (_) {}
   }
   return {
@@ -125640,22 +125646,53 @@ function AssistantLifeRoomFurn({
     const run = () => {
       if (measure.current) measure.current();
     };
-    const t = setInterval(run, 700);
+    let t = 0,
+      left = 0;
+    const settle = () => {
+      left = 6;
+      if (!t) t = setInterval(() => {
+        run();
+        if (--left <= 0) {
+          clearInterval(t);
+          t = 0;
+        }
+      }, 700);
+    };
+    settle();
     const roomEl = marker.current && marker.current.parentElement;
     let raf = 0;
-    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => {
+    const soon = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(run);
+      settle();
+    };
+    const notPet = m => {
+      const el = m.target && (m.target.nodeType === 1 ? m.target : m.target.parentElement);
+      return !(el && el.closest && el.closest('.mhm-pet'));
+    };
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(list => {
+      if (list.some(notPet)) soon();
     }) : null;
     if (mo) mo.observe(roomEl, {
       childList: true,
       subtree: true,
       characterData: true
     });
+    const ro = roomEl && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(soon) : null;
+    if (ro) {
+      ro.observe(roomEl);
+      for (const el of roomEl.querySelectorAll('[data-assistant-life-room-bub]')) ro.observe(el);
+    }
+    const fonts = typeof document !== 'undefined' && document.fonts && document.fonts.addEventListener ? document.fonts : null;
+    if (fonts) fonts.addEventListener('loadingdone', soon);
+    window.addEventListener('resize', soon);
     return () => {
-      clearInterval(t);
+      if (t) clearInterval(t);
       cancelAnimationFrame(raf);
       if (mo) mo.disconnect();
+      if (ro) ro.disconnect();
+      if (fonts) fonts.removeEventListener('loadingdone', soon);
+      window.removeEventListener('resize', soon);
     };
   }, [on]);
   if (!on) return null;
@@ -131020,11 +131057,12 @@ function AssistantMasmonRoomPet({
     style: {
       ...ASSISTANT_MASMON_PET_STYLE,
       ...(show ? {
-        left: at.x,
+        left: 0,
         top: plan.y,
         width: size,
         height: size,
-        transition: at.moving ? `left ${at.ms}ms linear` : 'none'
+        transform: `translateX(${at.x}px)`,
+        transition: at.moving ? `transform ${at.ms}ms linear` : 'none'
       } : {
         left: 0,
         top: 0,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 43b2470db9cf3dab
+// generated-sha256: d85159e6872cb74c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14,7 +14,7 @@ const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 //   gs   … 画面(gameState)が変わった。d は「次の画面 < 動かした処理の名前」
 //   err  … 画面のエラーを受け止めた(MhErrorBoundary)
 //   vis / page … 画面が隠れた・戻った(アプリの切り替え・通知など)
-//   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
+//   gap  … 画面の処理が1秒ほど以上止まった(見えているのに)
 //   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
 //   rot  … 自前の画面の回転(🔄 横)を切り替えた
 //   vv   … ページのずれ・拡大を見つけて戻した(s=倍率 y=ページのスクロール o=見えている範囲のずれ。MH_PAGE_OFFSET_GUARD・2026-11-11)
@@ -39,10 +39,13 @@ const MH_SCREEN_TRAIL=(()=>{
       window.addEventListener('pageshow',e=>push('page','show'+(e&&e.persisted?'*':'')));
       document.addEventListener('webglcontextlost',()=>push('gl','lost'),true);
       document.addEventListener('webglcontextrestored',()=>push('gl','restored'),true);
-      // 描き直しの止まり。1コマに1回時刻を見るだけ(演奏の判定・描画には触れない)
+      // 描き直しの止まり。0.5秒ごとの見張りが1秒以上遅れたら記録する(演奏の判定・描画には触れない)
+      //   2026-11-11 カルク: もとは毎コマ requestAnimationFrame で見ていたが、止まっている画面(HOME・助手ライフなど)でも
+      //   ブラウザに毎秒60コマ描かせ続け、iPhone の発熱・電池の元になっていた。画面を止めるのは処理の詰まりなので、タイマーの遅れで同じく分かる。
+      //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
-      const tick=now=>{if(last>0&&now-last>1000&&document.visibilityState==='visible')push('gap',Math.round(now-last));last=now;window.requestAnimationFrame(tick);};
-      if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(tick);
+      document.addEventListener('visibilitychange',()=>{last=0;});
+      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -67173,17 +67176,29 @@ function AssistantLifeRoomFurn({ id, w, h, faces = 0, baseCount = 2, put = null 
     setMoved(prev => (JSON.stringify(next) === JSON.stringify(prev) ? prev : next));
   };
   React.useLayoutEffect(() => { if (measure.current) measure.current(); });
-  // 吹き出しの字があとから読み込まれて大きさが変わることがあるので、ときどき測り直す
-  //   部屋の中身(吹き出し・顔・札)が変わったときは、次のコマですぐ測り直す
+  // 吹き出しの字があとから読み込まれて大きさが変わることがあるので、しばらく測り直す
+  //   部屋の中身(吹き出し・顔・札)が変わったときは、次のコマですぐ測り直し、そこからまたしばらく測り直す
+  //   (2026-11-11 カルク: もとは 0.7秒ごとにずっと測っていた。部屋の数だけ回り、止まっている画面でも配置を読み直し続けて重かった。
+  //    中身が変わった・部屋や吹き出しの大きさが変わった・字が読み込まれたときだけにする。動きが落ち着いたあとは測らない)
   React.useEffect(() => {
     if (!on) return undefined;
     const run = () => { if (measure.current) measure.current(); };
-    const t = setInterval(run, 700);
+    let t = 0, left = 0;
+    const settle = () => { left = 6; if (!t) t = setInterval(() => { run(); if (--left <= 0) { clearInterval(t); t = 0; } }, 700); };
+    settle();
     const roomEl = marker.current && marker.current.parentElement;
     let raf = 0;
-    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); }) : null;
+    const soon = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); settle(); };
+    // 部屋を歩くマスモン(.mhm-pet)の書き換えは家具の避け先に関係しないので数えない(歩くたびに測り直し続けないように)
+    const notPet = (m) => { const el = m.target && (m.target.nodeType === 1 ? m.target : m.target.parentElement); return !(el && el.closest && el.closest('.mhm-pet')); };
+    const mo = roomEl && typeof MutationObserver !== 'undefined' ? new MutationObserver((list) => { if (list.some(notPet)) soon(); }) : null;
     if (mo) mo.observe(roomEl, { childList: true, subtree: true, characterData: true });
-    return () => { clearInterval(t); cancelAnimationFrame(raf); if (mo) mo.disconnect(); };
+    const ro = roomEl && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(soon) : null;
+    if (ro) { ro.observe(roomEl); for (const el of roomEl.querySelectorAll('[data-assistant-life-room-bub]')) ro.observe(el); }
+    const fonts = typeof document !== 'undefined' && document.fonts && document.fonts.addEventListener ? document.fonts : null;
+    if (fonts) fonts.addEventListener('loadingdone', soon);
+    window.addEventListener('resize', soon);
+    return () => { if (t) clearInterval(t); cancelAnimationFrame(raf); if (mo) mo.disconnect(); if (ro) ro.disconnect(); if (fonts) fonts.removeEventListener('loadingdone', soon); window.removeEventListener('resize', soon); };
   }, [on]);
   if (!on) return null;
   return (<><span ref={marker} hidden/>{Object.entries(room.put).filter(([, k]) => k).map(([slot, k]) => {
@@ -69158,6 +69173,7 @@ function AssistantMasmonRoomPet({ id, h, life }) {
     });
   }, [key, tick, size]);
   // 歩く: 止まる(3〜6秒・印を出す)→ 止まってよい所のどこかへ歩く(1秒に14px くらい)
+  //   (2026-11-11 カルク: 歩きは left ではなく transform で動かす。left だと歩くあいだ毎コマ配置の計算と描き直しが起き、助手ライフを開いているだけで重かった。見た目は同じ)
   React.useEffect(() => {
     if (!plan || !at || assistantMasmonReducedMotion()) return undefined;
     let alive = true, timer = null;
@@ -69185,7 +69201,7 @@ function AssistantMasmonRoomPet({ id, h, life }) {
   return (
     <span ref={ref} className="mhm-pet" data-assistant-life-room-masmon-pet={t.monster} data-assistant-life-room-masmon-where={where.kind}
       data-assistant-life-room-masmon-walk={plan ? `${plan.run[0]}-${plan.run[1]}` : ''} data-assistant-life-room-masmon-moving={show && at.moving ? '1' : '0'}
-      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(show ? { left: at.x, top: plan.y, width: size, height: size, transition: at.moving ? `left ${at.ms}ms linear` : 'none' } : { left: 0, top: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
+      style={{ ...ASSISTANT_MASMON_PET_STYLE, ...(show ? { left: 0, top: plan.y, width: size, height: size, transform: `translateX(${at.x}px)`, transition: at.moving ? `transform ${at.ms}ms linear` : 'none' } : { left: 0, top: 0, width: 1, height: 1, visibility: 'hidden' }) }} aria-hidden="true">
       {show && <>
         <span style={{ display: 'block', width: '100%', height: '100%', transform: at.dir < 0 ? 'scaleX(-1)' : 'none', animation: at.moving ? 'mhmPetHop .5s ease-in-out infinite' : 'none' }}>
           {typeof DyedMonsterImage === 'function'
