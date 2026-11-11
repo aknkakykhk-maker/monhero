@@ -247,7 +247,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       </>);
   };
   return (
-    <div className="ambw-root" style={{ position: 'absolute', inset: 0, zIndex: 30, overflowY: 'auto', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
+    <div className="ambw-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
       <style>{AMBW_CSS}</style>
       <div className="ambw-row" style={{ marginBottom: 8 }}>
         <button className="ambw-btn2" data-amgc-close onClick={onClose}>← 戻る</button>

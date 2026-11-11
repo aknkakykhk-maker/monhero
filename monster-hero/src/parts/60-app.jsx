@@ -5693,8 +5693,13 @@ function MonsterHeroGame() {
   // 保存データには触らない(履歴の目印を足すだけ)
   const gameStateForBackRef = useRef(gameState);
   gameStateForBackRef.current = gameState;
+  // 【2026-11-11 社長「ホームに追加しても、ブラウザのような挙動がある」】iPhone のホーム画面から開いたとき(navigator.standalone)は履歴を足さない。
+  // iPhone は履歴があると、ホーム画面のアプリでも左端からのスワイプで「戻る」が効き、前の画面の写しが横から出てくる(ブラウザの動き)。
+  // ホーム画面のアプリにはブラウザの戻るボタンが無いので、履歴が無ければゲームの外へ出ることもない。
+  // Android のホーム画面は残す(本体の「戻る」は履歴が無いとアプリを閉じるので、今までどおり画面の戻るにする)。Safari・Chrome で遊ぶ人も今のまま
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (mhIsIosHomeScreenApp()) return;
     let armed = false;
     const arm = () => { try { window.history.pushState({ mhBack:1 }, '', window.location.href); armed = true; } catch (error) { armed = false; } };
     const onPop = () => {
@@ -8355,6 +8360,8 @@ function MonsterHeroGame() {
       const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
       if (keys.length === 0) { setRestoreMsg('コードが正しくありません'); return; }
       keys.forEach(k => window.localStorage.setItem(k, data[k]));
+      // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch { setRestoreMsg('コードが正しくありません'); }
@@ -8425,6 +8432,8 @@ function MonsterHeroGame() {
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
           keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          // 助手の解放(2026-11-11・Fable の確認): 今日より前のバックアップには mh_assistant_partner_v1 が無い。先に助手を選んで mode:'earn' が書かれた端末へ戻すと、今の人が助手を失うので、無いときは「今の人(全員が助手)」を書く
+          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({ v:1, mode:'all', first:null, unlocked:[], noticed:[] }));
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch { setRestoreMsg('バックアップファイルが正しくありません'); }
@@ -10267,6 +10276,16 @@ function MonsterHeroGame() {
     }
     return result;
   };
+  // 助手ライフ: M/B管理にいる助手のマスモンにチケットを使ってあげる(56-assistant-life-masmon-ranch.jsx・ボクジョウ 2026-11-11)。
+  //   数を読む口と1枚減らす口だけを渡す(トレーニングチケット・重トレーニングチケットのみ。足りなければ false)。プレイヤーのマスモン・絆経験値には触れない
+  if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS){
+    ASSISTANT_LIFE_LINKS.ticketCount=(itemId)=>Math.max(0,Number(ownedItems[itemId])||0);
+    ASSISTANT_LIFE_LINKS.ticketSpend=(itemId)=>{
+      if(!['training_ticket','training_ticket_l'].includes(itemId)||!((Number(ownedItems[itemId])||0)>0))return false;
+      setOwnedItems(prev=>{const have=Number(prev[itemId])||0;if(have<=0)return prev;const next={...prev,[itemId]:have-1};storeSet('mh_owned_items',next,false);return next;});
+      return true;
+    };
+  }
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
   // デバッグ設定を開く(ヘルプの奥の入口と、設定の画面の入口が同じものを呼ぶ)
   const openDebugSettings=()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');};
@@ -20183,6 +20202,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="M/B管理" accent="text-indigo-300" note="M/B＝モンスターとブリーダー。仲間の一覧・編成・図鑑・アシストカードはここ" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement" compact/></div>
+            {typeof AssistantMasmonRanchBand==='function'&&<div className="shrink-0"><AssistantMasmonRanchBand/></div>}
             <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
               items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
             <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
@@ -23754,7 +23774,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <span className="shrink-0" style={{opacity:.6,filter:'saturate(.35)'}}><AssistantFace who={who} size={52} accent="#64748b" expression="normal"/></span>
                         <span className="min-w-0 flex-1">
                           <b className="block text-[12px] font-black text-slate-300">{who.name}<span className="ml-1 rounded-full bg-slate-700 px-1.5 py-0.5 text-[8.5px] text-slate-200 align-middle">まだ助手ではありません</span></b>
-                          <small className="block text-[9px] text-slate-400 leading-tight mt-0.5">{owned?<>「{cardName}」をモンヒロバトルで使った回数 <b className="text-slate-200 tabular-nums">{n} / {need}</b></>:<>「{cardName}」を手に入れて、モンヒロバトルで{need}回使うと選べます</>}</small>
+                          <small className="block text-[9px] text-slate-400 leading-tight mt-0.5">{owned?<>「{cardName}」をモンヒロバトルで使った回数 <b className="text-slate-200 tabular-nums whitespace-nowrap">{n} / {need}</b></>:<>「{cardName}」を手に入れて、モンヒロバトルで{need}回使うと選べます</>}</small>
                           {owned&&<span className="block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"><span className="block h-full rounded-full" style={{width:`${Math.round(n/need*100)}%`,background:'linear-gradient(90deg,#38bdf8,#a78bfa)'}}/></span>}
                         </span>
                       </div>

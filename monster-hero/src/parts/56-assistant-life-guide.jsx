@@ -91,7 +91,7 @@ function AssistantLifeBenefitLine({ k, tag, children, sub = '', onClick = null, 
 }
 
 // fold … 開いたトップの家の場面の下に置くとき(2026-11-11 社長「今日・次のごほうびは▼でたたむ」)。⏰ いまの1行だけ出し、📅 今日・🌱 次のごほうびは ▼ で開く
-function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watchNow = 0, watchDone = false, giveLeft = 0, onWatch = null, onGive = null, onRoad = null, onGuide = null, fold = false, below = null }) {
+function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watchNow = 0, watchDone = false, giveLeft = 0, giveGroupLeft = null, giveSoloLeft = null, onWatch = null, onGive = null, onRoad = null, onGuide = null, fold = false, below = null }) {
   const [more, setMore] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const rows = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : [];
@@ -102,7 +102,7 @@ function AssistantLifeBenefitBoard({ life, ids, nameOf, land = false, onGo, watc
   const todayClick = watchNow > 0 && onWatch ? onWatch : giveLeft > 0 && onGive ? onGive : null;
   const todayParts = [
     watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し',
-    giveLeft > 0 ? `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み',
+    giveLeft > 0 ? (Number.isFinite(giveGroupLeft) && Number.isFinite(giveSoloLeft) ? `🎁 贈る 2人に${giveGroupLeft}・1人に${giveSoloLeft}回` : `🎁 贈る 今日あと${giveLeft}回`) : '🎁 贈る ✓ 今日は済み',
   ];
   const shown = more ? rows : rows.slice(0, 1);
   return (
@@ -172,8 +172,8 @@ function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
   </div>);
   return (
     <section className="mb-2 rounded-2xl border border-pink-300/60 bg-slate-950/90 p-2.5" data-assistant-life-reward-road={total}>
-      <p className="text-[14px] font-black text-pink-100">🎁 ごほうびの道のり</p>
-      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>見守る・贈る・おしゃべりで上がります。「あと」が小さい順に並べています。</p>
+      <p className="text-[14px] font-black text-pink-100">🤝 きずな <span className="text-[12px] text-pink-200/90">・ 🎁 ごほうびの道のり</span></p>{/* 見出しを下のタブ「きずな」とそろえる(2026-11-11 ミヤスサ点検 ⑦) */}
+      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>💗 仲良し度=あなたと助手・🤝 友情Lv=助手どうし。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。</p>
       {sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom)}
       {sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom)}
       {sec('🤝 友情Lv(助手どうし)', r.peer, 2, null)}
