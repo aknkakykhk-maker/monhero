@@ -197,7 +197,7 @@ check('敵の行動は台本があるときだけ差し替える',
     && /return chooseEnemyAction\(ent,currentDist[,)]/.test(source));
 check('手札の並びは台本があるときだけ固定する',
   has('if (scenario && typeof orderDeckForScenario === \'function\') return orderDeckForScenario(scenario, pool);')
-    && has('return pool.sort(()=>Math.random()-0.5);'));
+    && has('return shuffledCopy(pool);'));
 check('敵の強さを書き換えるのは台本があるときだけ',
   has('if (scenario) {\n      if (Number.isFinite(Number(scenario.enemyHp)))'));
 check('選択肢を絞るのは台本があるときだけ',

@@ -1,0 +1,214 @@
+<title>助手の部屋 模様替えの試作</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 1画面の道具: 上=案の切り替え / 中=部屋(指で動かす) / 下=選んだ家具の操作・押し入れ・おまかせ。横向きは部屋が左・操作が右 */
+:root{
+  --bg:#141a2e; --panel:#1e2742; --line:#39456e; --fg:#f4f1ff; --sub:#a9b3d6;
+  --pink:#ff8fc0; --pink-deep:#d9488a; --gold:#ffd166; --ok:#7be0b0;
+  --font:"Zen Maru Gothic","Hiragino Maru Gothic ProN","IPAPGothic","Noto Sans JP",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:13px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px;
+  box-sizing:border-box;display:flex;flex-direction:column;gap:6px;overflow:hidden;-webkit-user-select:none;user-select:none}
+*{box-sizing:border-box}
+button,select{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;flex:1 1 260px;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;min-width:0}
+.seg button{flex:1;background:none;border:0;padding:7px 4px;font-weight:800;font-size:12px;white-space:nowrap;cursor:pointer;color:var(--sub)}
+.seg button[aria-pressed=true]{background:var(--pink);color:#3a0f26}
+.chip{border:1.5px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-weight:800;font-size:11.5px;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
+.main{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+.room{position:relative;flex:1;min-height:0;border-radius:14px;overflow:hidden;border:2px solid var(--line);touch-action:none;
+  background:linear-gradient(#ffd9ea,#ffc2dc)}
+.room .floor{position:absolute;left:0;right:0;top:56%;bottom:0;border-top:4px solid #6b4426;
+  background:repeating-linear-gradient(90deg,#b07a4a 0 56px,#9a6538 56px 58px)}
+.room .board{position:absolute;left:0;right:0;top:calc(56% - 34px);height:34px;background:linear-gradient(#ffffff55,#00000014);border-top:3px solid #00000022}
+.room .win{position:absolute;right:7%;top:15%;width:27%;height:19%;border-radius:8px;border:5px solid #ffffffb0;background:linear-gradient(#7cc4ff,#d6f0ff)}
+.room .sill{position:absolute;right:5%;top:calc(34% + 5px);width:31%;height:7px;border-radius:3px;background:#fff;box-shadow:0 2px 0 #0002}
+.stand{position:absolute;left:50%;top:27%;height:46%;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 6px 5px #0004)}
+.desk{position:absolute;left:50%;top:67%;width:44%;height:9%;transform:translateX(-50%);border-radius:8px;background:linear-gradient(#e7b98a,#b98250);border:2px solid #7d5230;pointer-events:none}
+.f{position:absolute;transform:translate(-50%,-50%);line-height:1;cursor:grab;filter:drop-shadow(0 4px 3px #0005);padding:4px;border-radius:10px;background:none;border:0}
+.f.sel{outline:2.5px dashed var(--pink-deep);background:#ffffff66}
+.f span{display:block}
+.f.flip span{transform:scaleX(-1)}
+.f .cord{position:absolute;left:50%;bottom:92%;width:1.5px;background:#7c5a3a}
+.cell{position:absolute;transform:translate(-50%,-50%);border:2px dashed #ffffffcc;background:#ffffff40;border-radius:10px;pointer-events:none}
+.cell.dim{border-color:#ffffff55;background:#ffffff14}
+.bub{position:absolute;left:50%;top:11%;transform:translateX(-50%);max-width:86%;background:#fff;color:#2a1830;border:2px solid var(--pink-deep);
+  border-radius:14px;padding:6px 10px;font-weight:800;font-size:12.5px;text-align:center;pointer-events:none;z-index:60}
+.count{position:absolute;left:8px;bottom:6px;background:#0f1428cc;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:800;z-index:60;pointer-events:none}
+.panel{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.row .lab{font-size:11px;color:var(--sub);font-weight:800}
+.tray{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;min-height:54px}
+.tray button{flex:0 0 auto;width:50px;height:50px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);font-size:26px;cursor:pointer;position:relative}
+.tray button.pick{border-color:var(--pink);background:#4a2444}
+.tray button small{position:absolute;right:2px;top:1px;font-size:10px}
+.tray .empty{color:var(--sub);font-size:11.5px;align-self:center;font-weight:700}
+.omakase{background:linear-gradient(#ff9ecb,#ff7fb6);color:#3a0f26;border:0;border-radius:999px;padding:8px 14px;font-weight:900;cursor:pointer}
+select{background:var(--panel);border:1.5px solid var(--line);border-radius:999px;padding:6px 8px;font-weight:800}
+.note{font-size:11px;color:var(--sub);line-height:1.45;margin:0}
+.act[disabled]{opacity:.35}
+@media (orientation:landscape) and (max-height:520px){
+  .main{flex-direction:row}
+  .room{flex:1.5}
+  .panel{flex:1;min-width:0;overflow-y:auto}
+  .tray{flex-wrap:wrap;overflow:visible}
+  .tray button{width:44px;height:44px;font-size:22px}
+}
+</style>
+<div class="top">
+  <div class="seg" role="group" aria-label="置き方の案">
+    <button id="mA" aria-pressed="false">案A マス目</button>
+    <button id="mB" aria-pressed="false">案B 自由</button>
+    <button id="mC" aria-pressed="true">案C 吸いつき</button>
+  </div>
+  <button class="chip" id="more" aria-pressed="false">家具を増やす(案)</button>
+  <button class="chip" id="now">いまの部屋</button>
+</div>
+<div class="main">
+  <div class="room" id="room">
+    <div class="win"></div><div class="sill"></div><div class="board"></div><div class="floor"></div>
+    <img class="stand" id="stand" alt="">
+    <div class="desk" id="desk"></div>
+    <div id="cells"></div><div id="items"></div>
+    <div class="bub" id="bub" hidden></div>
+    
+  </div>
+  <div class="panel">
+    <div class="row">
+      <span class="lab" id="selName">家具を押して選ぶ</span>
+      <button class="chip act" id="flip">↔ 向き</button>
+      <button class="chip act" id="front">前へ</button>
+      <button class="chip act" id="back">後ろへ</button>
+      <button class="chip act" id="keep">しまう</button>
+    </div>
+    <div class="row"><span class="lab">押し入れ</span><span class="lab" id="count" style="margin-left:auto"></span></div>
+    <div class="tray" id="tray"></div>
+    <div class="row">
+      <select id="who" aria-label="助手"><option value="myua">みゅあ</option><option value="kiki">キキ</option><option value="atsu">あつ</option><option value="dra">ドラ</option></select>
+      <button class="omakase" id="oma">におまかせ</button>
+      <button class="chip" id="clear">ぜんぶしまう</button>
+    </div>
+    <p class="note" id="note"></p>
+  </div>
+</div>
+<script>
+const STAND = /*STAND*/{};
+// zone: c 天井 / w 壁 / f 床。small は窓辺にも置ける
+const BASE = [['sofa','🛋️','ふかふかソファ','f'],['bear','🧸','くまのぬいぐるみ','f',1],['plant','🪴','観葉植物','f',1],['record','📻','レコードプレーヤー','f',1],['nyacushion','🐈','ニャーのクッション','f',1],
+  ['starpic','🖼️','星空の絵','w'],['trophy','🏆','トロフィー棚','w'],['bookshelf','📚','小さな本棚','w'],['heartmirror','🪞','ハートの鏡','w'],
+  ['lantern','🏮','星のランタン','c'],['mirrorball','🪩','ミラーボール','c'],['windbell','🎐','風鈴','c']];
+const MORE = [['clock','🕰️','ふりこ時計(案)','w'],['guitar','🎸','ギター(案)','f'],['tv','📺','レトロテレビ(案)','f'],['flower','🌷','窓辺の花(案)','f',1],
+  ['lamp','💡','ペンダントライト(案)','c'],['garland','🎏','ガーランド(案)','c'],['fish','🐠','金魚ばち(案)','f',1],['poster','🗺️','冒険の地図(案)','w']];
+const NOTE = { A:'案A マス目: 押し入れの家具を押す → 光ったマスを押す。1マスに1つ(重ならない)。置けるのは 天井4・壁4・窓辺2・床7 の17マス。',
+  B:'案B 自由: 指でつまんで好きな所へ。重ねてもよい(「前へ」「後ろへ」で順番)。天井・壁・床の帯からは出ない。',
+  C:'案C 吸いつき: 指でつまんで動かすと、細かいマスにぴたっと寄る。床は手前ほど大きく前に出る(前後はおまかせ)。同じ所に置くと入れかわる。' };
+// 助手のくせ(仮)。order … 置きたい順(好きな物が先)/ skip … しまう(苦手)/ pos … 置き方の型 / line … ひとこと(仮・本番は台詞の担当へ)
+const HABIT = {
+  myua:{ skip:['bookshelf'], line:'できたー♪ くまさんは真ん中がいいのっ✨', sym:true,
+    pos:{ bear:[.5,.86], heartmirror:[.2,.3], mirrorball:[.5,.06], sofa:[.16,.72], nyacushion:[.84,.86], plant:[.86,.66], record:[.14,.87], starpic:[.42,.2], trophy:[.2,.46], lantern:[.2,.06], windbell:[.8,.06],
+      clock:[.42,.44], guitar:[.3,.64], tv:[.7,.87], flower:[.7,.385], lamp:[.36,.06], garland:[.66,.06], fish:[.86,.385], poster:[.08,.2] } },
+  kiki:{ skip:['mirrorball'], line:'本は手の届く所、植物は窓のそば。きっちり並べたよ',
+    pos:{ bookshelf:[.14,.3], plant:[.7,.385], windbell:[.86,.06], starpic:[.38,.3], trophy:[.14,.46], heartmirror:[.38,.46], lantern:[.14,.06], sofa:[.14,.7], record:[.38,.87], bear:[.62,.87], nyacushion:[.86,.87],
+      clock:[.26,.16], guitar:[.86,.68], tv:[.14,.87], flower:[.86,.385], lamp:[.38,.06], garland:[.62,.06], fish:[.62,.66], poster:[.5,.16] } },
+  atsu:{ skip:['heartmirror'], line:'トロフィーはいちばん目立つとこ！ ソファで作戦会議な笑',
+    pos:{ trophy:[.3,.26], sofa:[.2,.86], record:[.84,.86], starpic:[.1,.42], bookshelf:[.42,.44], lantern:[.3,.06], mirrorball:[.6,.06], windbell:[.88,.06], bear:[.86,.385], plant:[.9,.68], nyacushion:[.5,.87],
+      clock:[.1,.2], guitar:[.12,.68], tv:[.68,.7], flower:[.7,.385], lamp:[.46,.06], garland:[.74,.06], fish:[.66,.87], poster:[.46,.2] } },
+  dra:{ skip:['trophy'], line:'ぜんぶ床に寄せた…ごろごろできる…',
+    pos:{ sofa:[.2,.86], bear:[.38,.87], nyacushion:[.08,.88], plant:[.9,.66], record:[.7,.87], starpic:[.14,.3], bookshelf:[.38,.42], heartmirror:[.14,.48], lantern:[.2,.06], mirrorball:[.5,.06], windbell:[.8,.06],
+      clock:[.38,.2], guitar:[.54,.86], tv:[.86,.86], flower:[.86,.385], lamp:[.36,.06], garland:[.66,.06], fish:[.7,.385], poster:[.26,.18] } },
+};
+const CELLS = { c:[[.14,.06],[.38,.06],[.62,.06],[.86,.06]], w:[[.14,.24],[.38,.24],[.14,.44],[.38,.44]], s:[[.7,.385],[.86,.385]],
+  f:[[.12,.66],[.37,.64],[.63,.64],[.88,.66],[.18,.86],[.5,.87],[.82,.86]] };
+const BAND = { c:[.04,.08], w:[.15,.5], f:[.6,.89] };
+let mode = 'C', more = false, sel = null, pick = null, zc = 1;
+let placed = {}; // key → { x, y, flip, z }
+const room = document.getElementById('room'), $ = (id) => document.getElementById(id);
+const defs = () => (more ? BASE.concat(MORE) : BASE).map(([key, emoji, name, zone, small]) => ({ key, emoji, name, zone, small: !!small }));
+const def = (k) => defs().find(d => d.key === k);
+const onSill = (d, x, y) => d.small && x > .6 && y > .34 && y < .5;
+// 案ごとの「置ける所へ寄せる」
+function fit(d, x, y) {
+  if (mode === 'A') { const list = CELLS[d.zone].concat(d.small ? CELLS.s : []); let best = null;
+    for (const c of list) { const taken = Object.entries(placed).some(([k, p]) => k !== d.key && p.x === c[0] && p.y === c[1]); const dist = Math.hypot(c[0] - x, c[1] - y) + (taken ? .5 : 0); if (!best || dist < best.dist) best = { c, dist, taken }; }
+    return best && !best.taken ? { x: best.c[0], y: best.c[1] } : null; }
+  x = Math.max(.07, Math.min(.93, x));
+  if (onSill(d, x, y)) return { x: mode === 'C' ? (x < .78 ? .7 : .86) : Math.max(.66, Math.min(.9, x)), y: .385 };
+  const b = BAND[d.zone]; y = Math.max(b[0], Math.min(b[1], y));
+  if (mode === 'C') { x = Math.round(x / .0625) * .0625; x = Math.max(.0625, Math.min(.9375, x)); y = d.zone === 'c' ? .06 : Math.round(y / .0625) * .0625; y = Math.max(b[0], Math.min(b[1], y)); }
+  return { x, y };
+}
+function size(d, p) { const W = room.clientWidth, H = room.clientHeight, u = Math.min(W, H * .62);
+  const base = d.zone === 'c' ? .1 : d.zone === 'w' ? .12 : .13; const sill = p.y > .34 && p.y < .5 && d.zone === 'f';
+  const depth = d.zone === 'f' && !sill ? .8 + (p.y - .6) / .29 * .55 : sill ? .6 : 1; return Math.round(u * base * depth); }
+function draw() {
+  const items = $('items'); items.textContent = '';
+  for (const [k, p] of Object.entries(placed)) { const d = def(k); if (!d) continue;
+    const b = document.createElement('button'); b.className = 'f' + (sel === k ? ' sel' : '') + (p.flip ? ' flip' : ''); b.dataset.k = k; b.setAttribute('aria-label', d.name);
+    const fs = size(d, p); b.style.cssText = `left:${p.x * 100}%;top:${p.y * 100}%;font-size:${fs}px;z-index:${d.zone === 'f' && mode !== 'B' ? Math.round(p.y * 40) : 10 + (p.z || 0)}`;
+    if (d.zone === 'c') { const c = document.createElement('i'); c.className = 'cord'; c.style.height = Math.round(room.clientHeight * p.y) + 'px'; b.appendChild(c); }
+    const s = document.createElement('span'); s.textContent = d.emoji; b.appendChild(s); items.appendChild(b); }
+  // 立ち絵と机は床の真ん中の高さ(案A・Cでは手前の家具が前、奥の家具が後ろ)
+  $('stand').style.zIndex = mode === 'B' ? 9 : 27; $('desk').style.zIndex = mode === 'B' ? 9 : 28;
+  const cells = $('cells'); cells.textContent = '';
+  const cur = pick || sel, cd = cur && def(cur);
+  if (mode === 'A') for (const z of ['c', 'w', 's', 'f']) for (const c of CELLS[z]) { const e = document.createElement('div'); const ok = cd && (cd.zone === z || (z === 's' && cd.small));
+    e.className = 'cell' + (ok ? '' : ' dim'); const s = Math.round(Math.min(room.clientWidth, room.clientHeight * .62) * (z === 's' ? .1 : .15)); e.style.cssText = `left:${c[0] * 100}%;top:${c[1] * 100}%;width:${s}px;height:${s}px`; cells.appendChild(e); }
+  const tray = $('tray'); tray.textContent = ''; const kept = defs().filter(d => !placed[d.key]);
+  if (!kept.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'からっぽ(ぜんぶ部屋に置いてある)'; tray.appendChild(e); }
+  for (const d of kept) { const b = document.createElement('button'); b.dataset.k = d.key; b.className = pick === d.key ? 'pick' : ''; b.title = d.name; b.setAttribute('aria-label', d.name); b.textContent = d.emoji;
+    const sm = document.createElement('small'); sm.textContent = d.zone === 'c' ? '天' : d.zone === 'w' ? '壁' : '床'; b.appendChild(sm); tray.appendChild(b); }
+  const sd = sel && def(sel); $('selName').textContent = sd ? `${sd.emoji} ${sd.name}` : pick ? `${def(pick).emoji} 置く所を押す` : '家具を押して選ぶ';
+  for (const id of ['flip', 'keep']) $(id).disabled = !sd; for (const id of ['front', 'back']) { $(id).disabled = !sd || mode !== 'B'; $(id).hidden = mode !== 'B'; }
+  $('count').textContent = `置いてある家具 ${Object.keys(placed).length} / ${defs().length}`;
+  $('note').textContent = NOTE[mode];
+  for (const m of ['A', 'B', 'C']) $('m' + m).setAttribute('aria-pressed', String(mode === m));
+  $('more').setAttribute('aria-pressed', String(more)); $('stand').src = STAND[$('who').value] || '';
+}
+function place(k, x, y) { const d = def(k); if (!d) return false; const q = fit(d, x, y); if (!q) return false;
+  if (mode === 'C') { const other = Object.keys(placed).find(o => o !== k && placed[o].x === q.x && placed[o].y === q.y);
+    if (other) { if (placed[k] && def(other).zone === d.zone) { placed[other].x = placed[k].ox; placed[other].y = placed[k].oy; } else delete placed[other]; } }
+  placed[k] = { flip: false, z: ++zc, ...(placed[k] || {}), x: q.x, y: q.y }; return true; }
+function say(t) { const b = $('bub'); b.textContent = t; b.hidden = !t; clearTimeout(say.t); if (t) say.t = setTimeout(() => { b.hidden = true; }, 4200); }
+function omakase() { const h = HABIT[$('who').value]; placed = {}; sel = pick = null; const save = mode;
+  for (const d of defs()) { if (h.skip.includes(d.key)) continue; const p = h.pos[d.key]; if (!p) continue;
+    if (!place(d.key, p[0], p[1]) && mode === 'A') { /* マスが埋まっていたら押し入れのまま */ } }
+  mode = save; say(h.line); draw(); }
+function nowRoom() { placed = {}; sel = pick = null; const m = mode; mode = 'B'; place('lantern', .42, .06); place('starpic', .14, .3); place('sofa', .14, .68); mode = m; say(''); draw(); }
+// 指の操作
+let drag = null;
+room.addEventListener('pointerdown', (e) => { const f = e.target.closest('.f'); const r = room.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  if (f) { sel = f.dataset.k; pick = null; if (mode !== 'A') { drag = { k: sel, dx: placed[sel].x - x, dy: placed[sel].y - y, id: e.pointerId }; placed[sel].ox = placed[sel].x; placed[sel].oy = placed[sel].y; if (mode === 'B') placed[sel].z = ++zc; room.setPointerCapture(e.pointerId); } draw(); return; }
+  const k = pick || (mode === 'A' ? sel : null);
+  if (k) { if (place(k, x, y)) { sel = k; pick = null; } draw(); return; }
+  sel = null; draw(); });
+room.addEventListener('pointermove', (e) => { if (!drag || e.pointerId !== drag.id) return; const r = room.getBoundingClientRect(); const d = def(drag.k);
+  const x = (e.clientX - r.left) / r.width + drag.dx, y = (e.clientY - r.top) / r.height + drag.dy;
+  // 動かしている間は指についてくる(置ける帯の中だけ)。離したときに寄せる
+  const b = BAND[d.zone]; const p = placed[drag.k]; p.x = Math.max(.05, Math.min(.95, x)); p.y = onSill(d, x, y) ? .385 : Math.max(b[0], Math.min(b[1], y));
+  const el = $('items').querySelector(`[data-k="${drag.k}"]`); if (el) { el.style.left = p.x * 100 + '%'; el.style.top = p.y * 100 + '%'; el.style.fontSize = size(d, p) + 'px'; } });
+const drop = (e) => { if (!drag || e.pointerId !== drag.id) return; const p = placed[drag.k]; const x = p.x, y = p.y; p.x = p.ox; p.y = p.oy; place(drag.k, x, y); drag = null; draw(); };
+room.addEventListener('pointerup', drop); room.addEventListener('pointercancel', drop);
+$('tray').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k, d = def(k);
+  if (mode === 'A') { pick = pick === k ? null : k; sel = null; }
+  else { const start = d.zone === 'c' ? [.5, .06] : d.zone === 'w' ? [.26, .3] : [.5, .8]; let n = 0; while (n < 12 && Object.values(placed).some(p => Math.abs(p.x - (start[0] + n * .0625) % 1) < .01 && Math.abs(p.y - start[1]) < .01)) n++;
+    place(k, Math.min(.93, start[0] + n * .0625), start[1]); sel = k; }
+  draw(); });
+$('flip').onclick = () => { if (sel) { placed[sel].flip = !placed[sel].flip; draw(); } };
+$('front').onclick = () => { if (sel) { placed[sel].z = ++zc; draw(); } };
+$('back').onclick = () => { if (sel) { placed[sel].z = Math.min(...Object.values(placed).map(p => p.z || 0)) - 1; draw(); } };
+$('keep').onclick = () => { if (sel) { delete placed[sel]; sel = null; draw(); } };
+$('clear').onclick = () => { placed = {}; sel = pick = null; say(''); draw(); };
+$('oma').onclick = omakase; $('now').onclick = nowRoom; $('who').onchange = () => { draw(); };
+$('more').onclick = () => { more = !more; for (const k of Object.keys(placed)) if (!def(k)) delete placed[k]; draw(); };
+for (const m of ['A', 'B', 'C']) $('m' + m).onclick = () => { mode = m; sel = pick = null; const old = placed; placed = {}; for (const [k, p] of Object.entries(old)) { if (place(k, p.x, p.y)) placed[k].flip = p.flip; } draw(); };
+window.addEventListener('resize', draw);
+// 止め絵用: #A-myua-more のように開くと、その案・その助手のおまかせで始まる
+const h = location.hash.slice(1).split('-'); if (['A', 'B', 'C'].includes(h[0])) mode = h[0]; if (h[1] && HABIT[h[1]]) $('who').value = h[1]; if (h[2] === 'more') more = true;
+if (h[1] === 'now') nowRoom(); else omakase();
+</script>

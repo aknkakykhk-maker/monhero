@@ -90,7 +90,7 @@ check('自動ガッツ回復は既存最終率を0でクランプしてから魂
 // 省気: 本人だけ、手動/実消費/AUTOでslot-aware
 check('省気は割当先slotの本人だけから取得',
   app.includes('const getCardGuts = (card, slotIdx=null) =>')
-  && app.includes("soulTraitAttackProfile(soulOwner,card,slotIdx).gutsCostMultiplier"));
+  && app.includes("attackBoostProfile(soulOwner,card,slotIdx).gutsCostMultiplier"));
 check('省気は高難度倍率とまとめて最後に丸める',
   app.includes("effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier"));
 check('実ターンの合計と個別消費はslotIdx込みgetCardGutsを使う',

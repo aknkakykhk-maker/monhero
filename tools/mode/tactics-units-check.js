@@ -1039,7 +1039,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
   // ★吸ったのは狙われた子ひとり。誰が吸ったのかを出す
   check('吸収も誰が吸ったかを出す',
-    has('if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});'));
+    has('absorbedName=tacticsTargetName(units,slotIdx);') && has('slotFx[slotIdx]={heal:gain,guts:gutsGain};') && has('addPopup(`吸収！ ${absorbedName}`')); // 吸った1体の枠へ出す(2026-11-11 個別処理の中へ移した)
   check('ガッツの増えたぶんも枠へ出す', inScreen('{f.guts>0&&'));
   // --- 連撃は1ヒットずつ出す(2026-09-21 ユーザー指示) ---
   // 「連撃の表示が1回だけだった 敵の3連撃なら3回ダメージ表記が出るようにして
