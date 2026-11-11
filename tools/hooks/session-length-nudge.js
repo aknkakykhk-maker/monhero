@@ -8,7 +8,8 @@
 // 【数えるもの】(目安は tools/team/routing.json の「区切り」)
 //   やりとり … 人・ほかの会話から届いた頼みの数(道具の結果は数えない)
 //   公開     … PR をマージした回数
-// どちらかが目安を超えたら知らせる。毎回は出さず「くり返し」回ごとに1回。
+// 1段目(要約の目安)を超えたら「区切りで要約を」、2段目(替える目安)を超えたら「引き継ぎメモ → 新しい会話」と知らせる。
+// 毎回は出さず「くり返し」回ごとに1回。
 //
 // 【止めない】知らせるだけ。何が起きても終了コード 0(このフックのせいで会話が止まらないように)。
 //   echo '{"transcript_path":"<jsonl>"}' | node tools/hooks/session-length-nudge.js
@@ -37,13 +38,24 @@ function count(transcriptPath) {
   return { prompts, merges };
 }
 
+// 2段構え(2026-11-11 社長「会話を替えるのも無駄にならないか」):
+//   1段目 … 同じ仕事が続くなら、公開の区切りで要約(/compact)をかけて軽くする(会話は替えない)
+//   2段目 … とても長い・仕事の種類が変わる → 引き継ぎメモ1枚 → 新しい会話
 function message(n, limit) {
+  const every = n.prompts % limit['くり返し'] === 0;
   const over = [];
   if (n.prompts >= limit['やりとり']) over.push(`やりとり ${n.prompts} 回(目安 ${limit['やりとり']})`);
   if (n.merges >= limit['公開']) over.push(`公開 ${n.merges} 件(目安 ${limit['公開']})`);
-  if (!over.length) return '';
-  if (n.prompts % limit['くり返し'] !== 0 && n.prompts !== limit['やりとり']) return '';
-  return `【会話が長くなった】この会話は ${over.join('・')}。いまの仕事の区切りがついたら、node tools/ctx.js handoff <自分の部> --write で引き継ぎメモを作り、窓口へ「会話を替えてほしい」と知らせる(docs/rules/SESSION_HANDOFF.md)。やりかけの仕事は先に終わらせてよい。`;
+  if (over.length) {
+    if (!every && n.prompts !== limit['やりとり']) return '';
+    return `【会話がとても長い】この会話は ${over.join('・')}。いまの仕事の区切りがついたら、node tools/ctx.js handoff <自分の部> --write で引き継ぎメモを作り、窓口へ「会話を替えてほしい」と知らせる(docs/rules/SESSION_HANDOFF.md)。作業の途中では替えない。やりかけの仕事は先に終わらせる。`;
+  }
+  const soft = [];
+  if (n.prompts >= limit['要約のやりとり']) soft.push(`やりとり ${n.prompts} 回`);
+  if (n.merges >= limit['要約の公開']) soft.push(`公開 ${n.merges} 件`);
+  if (!soft.length) return '';
+  if (!every && n.prompts !== limit['要約のやりとり']) return '';
+  return `【会話が長くなってきた】この会話は ${soft.join('・')}。同じ仕事が続くなら、次に公開が済んだ区切りの報告の最後に「この会話に要約(/compact)をかけてほしい」と1行書き、node tools/ctx.js handoff <自分の部> --compact が出す指示文を添える(docs/rules/SESSION_HANDOFF.md)。仕事の種類が変わるなら、要約ではなく引き継ぎメモ → 新しい会話。`;
 }
 
 function main() {

@@ -11,6 +11,7 @@
 //   ④ 新しい会話の依頼文: 部の手引き・decisions・gate・報告先が入り、台帳の全文を読ませない。短い(3KB 未満)
 //   ⑤ 台帳の絞り込み: どの部も 30KB 未満(台帳そのものは 300KB 超)・「進め方」が全部入る
 //   ⑥ 部の手引き: どの部も 1枚 5KB 未満
+//   ⑦ 新しい会話の立ち上がりで読む量が、どの部も 60KB 未満
 'use strict';
 const fs = require('fs');
 const os = require('os');
@@ -51,11 +52,15 @@ ok(R['種類'].every(k => /^claude-(haiku|sonnet|opus|fable)-\d/.test(k.model)),
 
 // ③
 const limit = R['区切り'];
-ok(hook.message({ prompts: limit['やりとり'] - 1, merges: 0 }, limit) === '', '③ 目安の前は黙る');
-ok(/会話が長くなった/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ やりとりが目安に届いたら知らせる');
-ok(hook.message({ prompts: limit['やりとり'] + 1, merges: 0 }, limit) === '', '③ 毎回は出さない');
-ok(/会話が長くなった/.test(hook.message({ prompts: limit['やりとり'] + limit['くり返し'], merges: 0 }, limit)), '③ くり返しの回でまた知らせる');
+ok(hook.message({ prompts: limit['要約のやりとり'] - 1, merges: 0 }, limit) === '', '③ 目安の前は黙る');
+ok(/要約\(\/compact\)/.test(hook.message({ prompts: limit['要約のやりとり'], merges: 0 }, limit)), '③ 1段目: 要約の目安に届いたら「区切りで要約を」と知らせる');
+ok(!/handoff <自分の部> --write/.test(hook.message({ prompts: limit['要約のやりとり'], merges: 0 }, limit)), '③ 1段目では会話を替えさせない');
+ok(hook.message({ prompts: limit['要約のやりとり'] + 1, merges: 0 }, limit) === '', '③ 毎回は出さない');
+ok(/会話がとても長い/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ 2段目: 替える目安に届いたら引き継ぎメモを知らせる');
+ok(/作業の途中では替えない/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ 2段目でも作業の途中では替えさせない');
+ok(/会話がとても長い/.test(hook.message({ prompts: limit['やりとり'] + limit['くり返し'], merges: 0 }, limit)), '③ くり返しの回でまた知らせる');
 ok(/公開 \d+ 件/.test(hook.message({ prompts: limit['くり返し'], merges: limit['公開'] }, limit)), '③ 公開の件数でも知らせる');
+ok(limit['要約のやりとり'] < limit['やりとり'] && limit['要約の公開'] < limit['公開'], '③ 要約の目安は、替える目安より手前');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-team-'));
 const tr = path.join(tmp, 't.jsonl');
 const lines = [];
@@ -92,5 +97,16 @@ for (const d of loadDepts()) {
   if (fs.existsSync(guide)) ok(fs.statSync(guide).size < 5000, `⑥ docs/depts/${d.id}.md は 5KB 未満のはずが ${fs.statSync(guide).size}`);
 }
 
+// ⑦ 新しい会話の立ち上がりで読む量(CLAUDE.md + 部の手引き + 決めごとの絞り込み + 依頼文)が、どの部も 60KB 未満
+//    (仕組みの前は CLAUDE.md 16KB + 台帳 320KB + 申し送り 4KB = 約340KB)
+const claudeMd = fs.statSync(path.join(ROOT, 'CLAUDE.md')).size;
+let maxBoot = 0;
+for (const d of loadDepts()) {
+  const c = collect(d, {});
+  const boot = claudeMd + fs.statSync(path.join(ROOT, 'docs', 'depts', `${d.id}.md`)).size + Buffer.byteLength([...c.how, ...c.undated, ...c.recent].join('\n')) + Buffer.byteLength(build(d, '表示のずれを直す', {}).prompt);
+  maxBoot = Math.max(maxBoot, boot);
+  ok(boot < 60000, `⑦ ${d.id}: 立ち上がりで読む量は 60KB 未満のはずが ${boot}`);
+}
+
 if (problems.length) { console.error(`NG: トークン節約の仕組みの道具に ${problems.length} 件の問題`); for (const p of problems) console.error(`  - ${p}`); process.exit(1); }
-console.log(`OK: モデルの表 ${CASES.length + 7} 例・会話の区切りのフック・依頼文・台帳の絞り込み・手引き(${loadDepts().length} 部)`);
+console.log(`OK: モデルの表 ${CASES.length + 7} 例・会話の区切りのフック・依頼文・台帳の絞り込み・手引き(${loadDepts().length} 部)・立ち上がりで読む量 最大 ${(maxBoot / 1024).toFixed(0)}KB`);

@@ -174,7 +174,7 @@ node tools/run-checks.js --changed       # 変更から要る検査を選んで�
 | 場面 | 打つもの(`node tools/ctx.js` に続けて) | 本文 |
 | --- | --- | --- |
 | 公開の前 | `gate`(`run-checks.js --changed` の最後にも出る) | [`REVIEW_GATE.md`](docs/rules/REVIEW_GATE.md) |
-| 会話が長くなった(フックが知らせる) | `handoff <部> --write` → 窓口へ | [`SESSION_HANDOFF.md`](docs/rules/SESSION_HANDOFF.md) |
+| 会話が長くなった(フックが知らせる) | 同じ仕事が続く: 区切りで要約(`handoff <部> --compact`)/ 種類が変わる・とても長い: `handoff <部> --write` → 窓口へ | [`SESSION_HANDOFF.md`](docs/rules/SESSION_HANDOFF.md) |
 | 新しい会話を作る(窓口) | `newsession <部> "<仕事>"`(モデルと依頼文が出る) | [`MODEL_ROUTING.md`](docs/rules/MODEL_ROUTING.md) |
 | Edge Function の配り直し(窓口) | `redeploy assistant-chat` | [`EDGE_REDEPLOY.md`](docs/rules/EDGE_REDEPLOY.md) |
 
