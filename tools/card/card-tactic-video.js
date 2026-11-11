@@ -93,7 +93,7 @@ const boot = async (browser, opts = {}) => {
     for (const [k, v] of Object.entries({ mh_breeder_name: name, mh_breeder_icon: '🐣', mh_onboarded: true, mh_tutorial_seen_v1: true, mh_battle_tutorial_seen_v1: true,
       mh_battle_tutorial_guide_shown_v1: true, mh_inherited_unique_level_compensation_v1: true, mh_inherited_unique_level_compensation_pending_v1: false })) localStorage.setItem(k, JSON.stringify(v));
   }, opts.name || 'ブリーダー');
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   const sleep = (ms) => page.waitForTimeout(ms);
   const dismiss = async () => { for (const x of await page.getByRole('button', { name: /^(受け取る|閉じる|はじめる|OK|スキップ|次へ|とじる|あとで|あとで読む|わかった)$/ }).all()) { if (await x.isVisible().catch(() => false)) { await x.dispatchEvent('click').catch(() => {}); await sleep(300); } } };

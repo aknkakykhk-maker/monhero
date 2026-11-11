@@ -61,7 +61,7 @@ const openBattle = async (browser, cfg, errors) => {
     put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
   });
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   await page.addInitScript(sceneScript, cfg);
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });

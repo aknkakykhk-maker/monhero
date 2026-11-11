@@ -106,7 +106,7 @@ const cardMission = (raw) => { let n = 0; const walk = (v) => { if (!v || typeof
         put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
         put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
       }, icon);
-      await ctx.addInitScript(eventStorySeed());
+      await ctx.addInitScript(eventStorySeed()); await ctx.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
       await ctx.addInitScript(FAKE_WS);
       return ctx;
     };

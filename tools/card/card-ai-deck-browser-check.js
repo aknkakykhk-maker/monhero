@@ -65,7 +65,7 @@ const run = async (browser, mode, scene, errors) => {
     const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
     put('mh_breeder_name', 'あかり'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_intro_done', true); put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_update_notice_seen_v1', true); });
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   // おしゃべり AI を呼べる端末にする(公開の印 cardAssistantTalk は main で真)。デッキの印は検査の中だけ
   // 自動操作のブラウザの書き込みの守り(26-supabase.jsx)は、中継役だけ偽物へ通す(差し替えた口だけ)
   await page.addInitScript((on) => { window.__aiDeckFlag = on; window.__mhSupabaseStubbed = ['card-assistant-talk']; }, scene.flag);

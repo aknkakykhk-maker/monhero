@@ -98,7 +98,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
     });
-    await page.addInitScript(eventStorySeed());
+    await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
@@ -503,6 +503,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           await page.locator(`[data-card-hand-card="${i}"]`).click().catch(() => {});
         }
         if (acted) { myActions += 1; await page.waitForTimeout(400); continue; }
+        // 使えない札を2回続けて押すと、2回タップで詳しい画面が開く(本体の決まりどおり)。開いていたら閉じてから「攻撃おわり」を押す(2026-11-11)
+        if (await page.locator('[data-card-detail]').count()) { await page.locator('[data-card-detail]').click({ position: { x: 4, y: 4 } }).catch(() => {}); await page.waitForTimeout(250); }
         await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click();
         continue;
       }

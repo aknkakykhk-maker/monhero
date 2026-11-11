@@ -40,7 +40,7 @@ const serve = () => new Promise((resolve) => {
     put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
   });
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   await page.addInitScript(() => {
     // 対戦の始まりを「相手は全員倒れていて、自分が勝った」場にする(自分の番は8回ぶん)
     window.__mhCardScene = (st) => { st.players[1].mons.forEach((m) => { m.ko = true; m.life = 0; }); st.turn = 16; st.first = 0; st.winner = 0; return st; };
