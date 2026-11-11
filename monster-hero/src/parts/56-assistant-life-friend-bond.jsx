@@ -20,7 +20,7 @@ const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
 const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
 
 // 来てくれた日のスタンプは「公開の時」から数える(2026-11-11 社長「公開の日から数える」)。これより前に書かれた表の行はスタンプにしない
-const ALB_START = { at: Date.parse('2026-11-11T20:22:00+09:00') };
+const ALB_START = { at: Date.parse('2026-11-11T21:09:00+09:00') };
 const albEnabled = () => alfEnabled() && RELEASE_FLAGS.assistantLifeFriendBond === true;
 const albLv = (st) => ALB_STEPS.filter(n => st >= n).length;
 const albTitle = (st) => ALB_TITLES[albLv(st)] || ALB_TITLES[0];
