@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9830bd4ccd0d84ce
+// generated-sha256: 9bb1d0fb59e67d36
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71779,8 +71779,8 @@ const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'
 const amgtRankOf = (v) => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
 // 数字(社長 11-11: 修行の伸びはふつう)。数字はここだけ
 const AMGT_NUM = Object.freeze({
-  gain: [4, 8], // 修行1回の熟練(主)
-  realAll: [1, 2], // 実戦修行で、覚えている全部の技に足す分
+  gain: [3, 6], // 修行1回の熟練(主)。移動12回で約75%(前は [4, 8]。シュギョウ2の試算・台帳 #5328)
+  realAll: [1, 1], // 実戦修行で、覚えている全部の技に足す分(移動12回で [1, 2] → [1, 1])
   stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
   fat: 12, str: 2, // 疲労・ストレス
   perDay: 2, // 1日の修行の回数の上限(案)

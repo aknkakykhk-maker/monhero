@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ac2055d2a26c98e
+// source-sha256: 6c2a535c26cb3782
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -136344,8 +136344,8 @@ const AMGT_SENSE_KEYS = AMGT_SENSE.map(x => x[0]);
 const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'], [25, '慣れ'], [0, '見習い']]);
 const amgtRankOf = v => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
 const AMGT_NUM = Object.freeze({
-  gain: [4, 8],
-  realAll: [1, 2],
+  gain: [3, 6],
+  realAll: [1, 1],
   stat: [2, 4],
   fat: 12,
   str: 2,
