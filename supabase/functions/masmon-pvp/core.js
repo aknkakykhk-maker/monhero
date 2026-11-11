@@ -10,7 +10,7 @@
 
 // ---- 決めた数字(仮の数字は 仮 と書く。変えるのはここだけ) ----
 // 1体の6能力の合計が1日に伸びてよい量(社長「関わった最大=1日20」)
-export const DAILY_GROWTH_CAP = 20;
+export const DAILY_GROWTH_CAP = 40; // 2026-11-11 20→40: M/B管理で助手のマスモンにチケットを使う分(自主育成の上限の外・1体1日1枚)を入れる(ボクジョウ・社長が案Aを選択)
 // 初めて登録する1体の上限(移行で作る初めの値: ライフ・ちから・丈夫さ ≦ 600、かしこさ・命中・回避 ≦ 300 を Lv で少し上げる。GROW-BASE-PLAN)
 export const INITIAL_STAT_CAP = Object.freeze({ life: 600, pow: 600, wise: 400, hit: 400, eva: 400, tough: 600 });
 export const INITIAL_TOTAL_CAP = 3000;                       // 仮
