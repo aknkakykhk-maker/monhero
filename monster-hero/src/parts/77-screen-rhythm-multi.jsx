@@ -253,6 +253,8 @@ const rhythmMultiCleanMessage = (raw) => {
     out.diff = rhythmMultiText(raw.diff, 20);
     out.playing = raw.playing === true;
     out.open = raw.open === true;
+    // 観戦を許さない人の印(0)。足すだけ。古い版は送らない・読み飛ばすだけ(許す扱い)
+    out.wa = raw.wa === 0 ? 0 : 1;
     out.mode = RHYTHM_MULTI_MODES.includes(raw.mode) ? raw.mode : 'private';
     if (raw.res && typeof raw.res === 'object') out.res = rhythmMultiCleanResult(raw.res);
     if (raw.room) out.room = rhythmMultiCleanRoom(raw.room);
@@ -548,6 +550,15 @@ const RHYTHM_MULTI = (() => {
   };
   // 観戦の人の「見ています」(wt)。演奏中でも pg と同じく先頭で受けて、印を1つ立てるだけ(部屋の画面の更新はしない)。
   // 演奏している人は、曲・参加者を教える wi を返す(観戦の人は途中から入るので、曲と顔ぶれを知らない)
+  // 観戦を許す/許さないを切り替えた人の知らせ(wo)。ほかの人の手元の印を直し、観戦の画面からその人の行を外す/戻す。演奏中でも先頭で受ける
+  const watchAllowedBy = (pid) => (pid === s.selfId ? watchAllow : !(s.members[pid] && s.members[pid].wa === 0));
+  const woHear = (raw) => {
+    if (!s) return;
+    const id = rhythmMultiText(raw.id, 40);
+    if (id && id !== s.selfId && s.members[id]) s.members[id].wa = raw.on === 1 ? 1 : 0;
+    // 見ている人には、次の返事で顔ぶれ(pt)をもう一度つけて返す(許すに戻した人を足せるように)
+    Object.keys(s.watchers).forEach((wid) => { s.watchers[wid].ptRound = ''; s.watchers[wid].repliedAt = 0; });
+  };
   const watchHear = (raw) => {
     if (!s || !socket || !s.live || s.live.done) return;   // 自分が演奏していないあいだは何もしない(待機の人の「見ています」で枠を使わない)
     const id = rhythmMultiText(raw.id, 40).replace(/[^A-Za-z0-9_-]/g, '');
@@ -574,7 +585,7 @@ const RHYTHM_MULTI = (() => {
       socket.send({
         t: 'wi', id: s.selfId, to: id, r: s.live.round, sg: s.room.songId,
         ...(nowHud ? { sc: rhythmMultiInt(nowHud.score, RHYTHM_MULTI_LIVE_SCORE_MAX), cb: rhythmMultiInt(nowHud.combo, RHYTHM_MULTI_LIVE_COMBO_MAX) } : {}),
-        ...(sendPt ? { pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map((pid) => {
+        ...(sendPt ? { pt: s.live.ids.filter(watchAllowedBy).slice(0, RHYTHM_MULTI_ROOM_MAX).map((pid) => {
           const m = s.members[pid] || {};
           return { i: pid, n: rhythmMultiText(m.name, 12), a: rhythmMultiText(m.icon, 60), f: rhythmMultiText(m.frame, 40), d: rhythmMultiText(m.diff, 20) };
         }) } : {}),
@@ -587,7 +598,8 @@ const RHYTHM_MULTI = (() => {
   const watchAdStart = () => {
     watchAdStop();
     if (!s || !s.live || s.mode !== 'free' || !watchAllow) return;
-    const first = s.live.ids.slice().sort()[0];
+    // 観戦を許している人のうち id がいちばん小さい1人が送る(許していない人は一覧に出さない・全員が許していなければ出ない)
+    const first = s.live.ids.filter(watchAllowedBy).sort()[0];
     if (first !== s.selfId) return;
     const code = s.code;
     watchAdTimer = setTimeout(() => {
@@ -596,7 +608,7 @@ const RHYTHM_MULTI = (() => {
       const send = () => {
         const me = selfMember();
         if (!s || !me || !s.live || s.live.done || !watchAdSocket) { watchAdStop(); return; }
-        watchAdSocket.send({ t: 'wroom', code: s.code, n: s.live.ids.length, hn: me.name, hi: me.icon, hr: me.level, hb: me.bid || undefined, sg: s.room.songId });
+        watchAdSocket.send({ t: 'wroom', code: s.code, n: Math.max(1, s.live.ids.filter(watchAllowedBy).length), hn: me.name, hi: me.icon, hr: me.level, hb: me.bid || undefined, sg: s.room.songId });
       };
       watchAdSocket = rhythmMultiOpenSocket({
         topic: RHYTHM_MULTI_LOBBY_TOPIC + rhythmMultiTopicTag() + 'free',
@@ -618,6 +630,7 @@ const RHYTHM_MULTI = (() => {
       t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame, bid: me.bid || undefined,
       pick: me.pick, pickRound: me.pickRound, readyRound: me.readyRound, diff: me.diff, playing: me.playing,
       open: me.open, mode: s.mode, res: me.res || undefined, room: isHostNow() ? roomPayload() : undefined,
+      ...(watchAllow ? {} : { wa: 0 }),
     });
     sendCpuHb();
   };
@@ -1005,6 +1018,7 @@ const RHYTHM_MULTI = (() => {
     // 観戦の知らせ: 見ている人の wt は先頭で受けて印を立てるだけ。演奏している人から返る wi は、観戦の画面(待機中のメンバー)へ渡す
     if (raw && raw.t === 'wt') { watchHear(raw); return; }
     if (raw && raw.t === 'wi') { if (watchFeed) watchFeed(raw); return; }
+    if (raw && raw.t === 'wo') { woHear(raw); if (watchFeed) watchFeed(raw); return; }
     if (raw && raw.t === 'res' && watchFeed) watchFeed(raw);   // 結果(res)も観戦の画面へ。ふつうの処理はこのまま続ける
     // 演奏中は、届いた知らせを処理せずに溜めておく(演奏の判定と描画に一切割り込ませない)。
     // 演奏が終わったら reportResult がまとめて処理する。溜めすぎないよう古いものから捨てる
@@ -1037,7 +1051,7 @@ const RHYTHM_MULTI = (() => {
       s.members[msg.id] = {
         ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, icon: msg.icon, frame: msg.frame, bid: msg.bid,
         pick: msg.pick, pickRound: msg.pickRound, readyRound: msg.readyRound, diff: msg.diff, playing: msg.playing,
-        open: msg.open, res: msg.res || prev.res, seen: Date.now(),
+        open: msg.open, wa: msg.wa, res: msg.res || prev.res, seen: Date.now(),
         cpu: msg.cpu, owner: msg.owner || '', mb: msg.mb || '', mc: msg.mc || [], pickWhy: msg.pw || '', as: msg.as || '',
       };
       // 部屋の進行は部屋主の知らせに従う(残り時間は受け取った時刻から数える)
@@ -1114,6 +1128,8 @@ const RHYTHM_MULTI = (() => {
     setWatchAllow(v) {
       watchAllow = v !== false;
       try { void storeSet(RHYTHM_WATCH_KEY, { allow: watchAllow }); } catch (_) { /* 保存できなくても、この起動のうちは効く */ }
+      // 部屋のほかの人と、見ている人へ知らせる(演奏中は hb が出ないので、この1通で行を外す/戻す)
+      if (s && socket) socket.send({ t: 'wo', id: s.selfId, ...(watchAllow ? { on: 1 } : {}) });
       if (!watchAllow && s) {
         // 部屋のメンバー以外の観戦の人は外す。演奏の知らせの送り方も戻す
         Object.keys(s.watchers).forEach((id) => { if (!s.members[id]) delete s.watchers[id]; });
@@ -1494,11 +1510,27 @@ const RHYTHM_WATCH = (() => {
       emit();
       return;
     }
+    if (raw.t === 'wo') {
+      // 観戦を許さなくした人は、その場で行を外す。許すに戻した人は、演奏している人に顔ぶれをもう一度もらう
+      const id = rhythmMultiText(raw.id, 40);
+      if (st.members[id]) st.members[id].hidden = raw.on !== 1;
+      if (raw.on === 1) { st.round && ping(); return; }
+      if (!st.people.some((x) => x.id === id)) return;
+      st.people = st.people.filter((x) => x.id !== id);
+      delete st.rows[id];
+      if (st.judged) delete st.judged[id];
+      if (st.focus === id) st.focus = st.people.length ? st.people[0].id : '';
+      if (!st.people.length) { st.phase = 'ended'; st.endedAt = now; }
+      else if (!st.people.some((x) => x.id === st.focus)) st.focus = st.people[0].id;
+      ping();
+      emit();
+      return;
+    }
     if (st.member) return;
     if (raw.t === 'hb') {
       const m = rhythmMultiCleanMessage(raw);
       if (!m) return;
-      st.members[m.id] = { id: m.id, name: m.name, icon: m.icon, frame: m.frame, diff: m.diff, cpu: m.cpu === true };
+      st.members[m.id] = { id: m.id, name: m.name, icon: m.icon, frame: m.frame, diff: m.diff, cpu: m.cpu === true, hidden: m.wa === 0 };
       st.heard = true;
       const ph = m.room && m.room.phase;
       if (ph && ph !== 'playing' && (st.phase === 'connecting' || st.phase === 'none' || (st.phase === 'playing' && now - st.lastPg > 8000) || (st.phase === 'ended' && now - (st.endedAt || 0) > 8000))) { st.phase = 'waiting'; }
@@ -1508,7 +1540,7 @@ const RHYTHM_WATCH = (() => {
     if (raw.t === 'start') {
       const m = rhythmMultiCleanMessage(raw);
       if (!m) return;
-      const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
+      const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu && !x.hidden);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
       st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.phase = 'playing'; st.lastPg = now;
       if (!people.some((x) => x.id === st.focus)) st.focus = people[0].id;
