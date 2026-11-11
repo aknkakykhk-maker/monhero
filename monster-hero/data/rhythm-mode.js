@@ -39480,15 +39480,26 @@ const evansHellChart=mhChart(51,evansHellNotes,EVANS_DURATION_MS,6);
 //   その間に叩くノーツはいつもどおり流れて来て、その奥のノーツだけが止まる・戻る(Grievous Lady と同じ見せ方)
 const EVANS_SCROLL_WINDOWS=Object.freeze([[26170,26620],[33950,34400],[37360,37650],[56820,57110],[78450,79050],[84230,84680],[88700,89500],[91400,92280]]);
 const EVANS_SCROLL_GROUPS=Object.freeze({1:Object.freeze([Object.freeze([0,1])])});
+// ノーツ速度ごとの道の時間(ms)。早く触れるノーツはこのすべてで数える
+const EVANS_SCROLL_TRAVEL_MS=Object.freeze([7000,6000,5000,4000,3000,2150,1680,1300,1020,800,630,500]);
 const evansScrollTable=lastMs=>Object.freeze([[24200,'LERP',1],[26170,0],[26620,1],[33950,0],[34400,1],[37360,0],[37650,1],[56820,0],[57110,1],
   [78450,0],[79050,1],[84230,'GLIDE',-0.12,0.5],[84455,'GLIDE',0.12,0.5],[84680,1],[88700,'GLIDE',-0.2,0.5],[89100,'GLIDE',0.2,0.5],[89500,1],
   [91400,0],[92280,1],[104600,'LERP',1],[Math.max(104800,lastMs),0.1]].map(row=>Object.freeze(row)));
 const evansScrolled=chart=>{
   const notes=chart.notes;
   const lastMs=notes.reduce((m,note)=>Math.max(m,Number(note.endTimeMs)||0,Number(note.timeMs)||0),0);
-  const grouped=notes.map(note=>{const a=Number(note.timeMs),b=Math.max(a,Number(note.endTimeMs)||a);
+  let grouped=notes.map(note=>{const a=Number(note.timeMs),b=Math.max(a,Number(note.endTimeMs)||a);
     return EVANS_SCROLL_WINDOWS.some(([s,e])=>a<=e&&b>=s)?Object.freeze({...note,scrollGroup:1}):note;});
-  return mhChart(chart.level,grouped,chart.durationMs,chart.laneCount,{scrollChanges:evansScrollTable(lastMs),scrollGroups:EVANS_SCROLL_GROUPS});
+  // 窓の外でも、行って戻る・止まるせいで判定の前に判定線へ触れてしまうノーツ(窓の終わりの直後など)は組1にする
+  //   (2026-11-11 ヘンドウ: 84.687秒のノーツが「行って戻る」の始まりで判定線に着いて見えた。ノーツ速度のすべての道の時間で数える)
+  const table=evansScrollTable(lastMs);
+  for(let pass=0;pass<3;pass++){
+    const early=new Set();
+    for(const travelMs of EVANS_SCROLL_TRAVEL_MS)for(const note of rhythmScrollEarlyTouches(table,grouped,travelMs,EVANS_SCROLL_GROUPS))if(note.scrollGroup!==1)early.add(note);
+    if(!early.size)break;
+    grouped=grouped.map(note=>early.has(note)?Object.freeze({...note,scrollGroup:1}):note);
+  }
+  return mhChart(chart.level,grouped,chart.durationMs,chart.laneCount,{scrollChanges:table,scrollGroups:EVANS_SCROLL_GROUPS});
 };
 const evansScrolledCharts=Object.freeze(Object.fromEntries(Object.entries(evansCharts).map(([id,chart])=>[id,evansScrolled(chart)])));
 const evansHellScrolledChart=evansScrolled(evansHellChart);

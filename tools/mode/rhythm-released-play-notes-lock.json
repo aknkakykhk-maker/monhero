@@ -1637,19 +1637,19 @@
    "assist": "70bf31b17ded399d"
   },
   "evans/expert": {
-   "notes": "c5d08aa711213d57",
-   "mirror": "6204cdd1b80b58f6",
-   "assist": "8c02b55333934ca5"
+   "notes": "ebd7f67d66cefa6b",
+   "mirror": "9d8d5cb5e5381cb4",
+   "assist": "146daeb72961aeea"
   },
   "evans/master": {
-   "notes": "dae45b9b25228065",
-   "mirror": "a355bedc4bca175e",
-   "assist": "e490c8a1db20eda8"
+   "notes": "4c5dc6c086c3bde1",
+   "mirror": "20bf4c826f67604c",
+   "assist": "748754db31eb6812"
   },
   "evans/hell": {
-   "notes": "083c9eed96b12c3c",
-   "mirror": "11a5478eb131e1e1",
-   "assist": "b403ab36b8f696dc"
+   "notes": "07672e7b8efed10b",
+   "mirror": "8cf9fd1023a7958c",
+   "assist": "0b7df0b2dd1bf670"
   },
   "humanoid/easy": {
    "notes": "94784f2969c7bb2d",
@@ -1717,6 +1717,15 @@
     "crazy_party_night/hard",
     "light_player_short/expert",
     "light_player_short/master"
+   ]
+  },
+  {
+   "at": "2026-11-11 23:43",
+   "reason": "2026-11-11 ヘンドウ: Evans の行って戻る・止まる表で、判定の前に判定線へ触れて見えるノーツを組1(ふつうの速さ)にする(叩く時刻・ノーツ数・Lv. は同じ)",
+   "changed": [
+    "evans/expert",
+    "evans/master",
+    "evans/hell"
    ]
   }
  ]
