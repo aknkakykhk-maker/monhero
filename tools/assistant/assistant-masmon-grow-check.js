@@ -19,7 +19,7 @@ vm.runInContext([
   "const assistantMasmonGrowKind = (g) => String(g || '').split('(')[0];",
   "const assistantMasmonStats = (t) => ({ hp: 0.4, atk: 0.5, def: 0.3, guts: 0.4 });",
   grow,
-  'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf, amgView, amgPick, amgPicksLeft, AMG_CARE, assistantMasmonTrainBoost };',
+  'this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgAdvise, AMG_STORE, AMG_KEYS, AMG_APT, AMG_DAY_CAP, amgActName, amgEntryOf, amgAptOf, amgView, amgPick, amgPicksLeft, AMG_CARE, assistantMasmonTrainBoost, amgCareGainOf };',
 ].join('\n'), ctx);
 const T = ctx.T;
 // ⓪ 保存を読み込む前に書かない(ミハリ 11-11: 空の既定値で上書きして育成を消さない)
@@ -138,6 +138,30 @@ check('⑥ 「休ませて」のあと、次の回は休む(1回だけ)', sR.mon
   for (let i = 0; i < 30; i++) many.mons.kiki[`1:Mon${i}`] = { st: { life: 100 + i } };
   const n2 = T.normalizeAssistantMasmonGrow(many);
   check('⑬ 30個あっても、いちばん新しい入れ物が残る', !!n2.mons.kiki['1:Mon29'] && Object.keys(n2.mons.kiki).length === 30);
+}
+// ⑭ 修行の受け口(シュギョウ): 修行の印が偽(null を返し rnd を引かない)なら結果は1つも変わらない/修行の回は add を通って伸びる
+{
+  const base = T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 9);
+  ctx.amgtChoose = () => null;
+  const same = T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 9);
+  check('⑭ 修行の印が偽なら、結果は1つも変わらない', JSON.stringify(same) === JSON.stringify(base));
+  ctx.amgtChoose = (aid, e, row, rnd, slot) => (slot % 2 === 0 ? { a: 'shugyo', k: 'pow' } : null);
+  ctx.amgtDo = (aid, e, row, rnd, slot, act, add, failChance) => { add('pow', 2, 4); e.fat = Math.min(100, e.fat + 6); };
+  ctx.amgtActName = (x) => '修行場で力の修行';
+  const sh = T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 9);
+  const logs = sh.mons.kiki['1:Golem'].log.filter(x => x.a === 'shugyo');
+  check('⑭ 修行の回は記録に shugyo と残り、add を通って伸びる・名前は修行の部品から', logs.length >= 1 && logs.every(x => (x.g.pow || 0) >= 1 && x.k === 'pow') && T.amgActName(logs[0]) === '修行場で力の修行', `${logs.length}回`);
+  delete ctx.amgtChoose; delete ctx.amgtDo; delete ctx.amgtActName;
+}
+// ⑮ 関わって伸びた分(ミセカタ): 見に来た日・自分で決めた回の上乗せが cg に数えられる。何もしなければ 0
+{
+  const t0 = Date.UTC(2026, 10, 11, 0, 0);
+  T.AMG_STORE.set(s1); T.amgView('kiki', 1, t0); T.amgPick('kiki', 1, { a: 'heavy', k: 'hit' }, t0);
+  const c = T.amgCatchUp(T.AMG_STORE.state, 'kiki', rows, 'seed-1', start + 2);
+  const g = T.amgCareGainOf(c.mons.kiki['1:Golem']); const g0 = T.amgCareGainOf(T.amgCatchUp(s1, 'kiki', rows, 'seed-1', start + 2).mons.kiki['1:Golem']);
+  check('⑮ 関わって伸びた分が数えられる(見に来た・決めた)・何もしなければ 0', g.total >= 1 && g.pick >= 1 && g.view >= 0 && g0.total === 0, JSON.stringify(g));
+  const n3 = T.normalizeAssistantMasmonGrow({ mons: { kiki: { '1:Golem': { st: {}, cg: { view: 'x', pick: 5.5, ranch: -3 } } } } });
+  check('⑮ cg の正規化(数でないもの・負は 0)', n3.mons.kiki['1:Golem'].cg.view === 0 && n3.mons.kiki['1:Golem'].cg.pick === 5.5 && n3.mons.kiki['1:Golem'].cg.ranch === 0);
 }
 // ⑦ 保存の正規化: 壊れた値・知らない項目は既定に・数字は範囲に
 const n = T.normalizeAssistantMasmonGrow({ mons: { kiki: { '1:Golem': { st: { life: 5000, pow: 'x', wise: -3 }, fat: 400, ind: { life: 9 } }, 'bad key': { st: {} } }, 'BAD!': {} }, done: { kiki: 'x' }, focus: { kiki: { 1: { k: 'nope', until: 3 } } } });

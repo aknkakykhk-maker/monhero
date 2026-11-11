@@ -103,7 +103,7 @@ const AMG_CARE = Object.freeze({
 });
 const AMG_LV_MAX = 99; // Lv は育成の経験(訓練で上がる・社長 11-11)
 const amgLvNeed = (lv) => 10 + lv; // 次の Lv までの経験
-const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0 });
+const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0, shugyo: 2 }); // shugyo = 修行(第②段階・シュギョウ)
 const AMG_CATCH_UP = 6; // 閉じていた分をまとめて決める回数の上限(2日分)
 const AMG_LOG = 21;
 const AMG_PERIOD_NAME = Object.freeze(['朝', '昼', '夜']);
@@ -126,7 +126,7 @@ const normalizeAssistantMasmonGrow = (raw) => {
       const ind = {}; for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && typeof x.a === 'string').slice(-AMG_LOG)
         .map(x => ({ s: x.s, a: x.a.slice(0, 12), k: AMG_KEYS.includes(x.k) ? x.k : '', g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])), ...(x.f ? { f: 1 } : {}), ...(x.p ? { p: 1 } : {}), ...(x.r ? { r: 1 } : {}) }));
-      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999) };
+      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999), cg: Object.fromEntries(['view', 'pick', 'ask', 'ranch'].map(k => [k, Number.isFinite(Number(e.cg && e.cg[k])) ? Math.max(0, Math.min(1e6, Number(e.cg[k]))) : 0])) };
     }
     out.mons[aid] = one;
   }
@@ -169,11 +169,13 @@ const amgInitial = (row, rnd) => {
 };
 const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 // 1回分の行動を選ぶ(仕様書 §8: 能力・適性・疲労・ストレス・性格・助言から)
-const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return { a: 'rest' };
   if (e.fat >= T.rest) return { a: 'rest' };
   if (e.str >= 50) return { a: 'play' };
+  // 修行の回(第②段階の受け口・シュギョウ)。修行の印が偽なら null を返し、rnd も引かない
+  if (typeof amgtChoose === 'function') { const x = amgtChoose(aid, e, row, rnd, slot); if (x) return x; }
   const apt = amgAptOf(row.monster);
   const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
   // 伸ばしたい能力: 相談で頼まれた能力 → なければ、方針・性格の好み・適性に比べて低い能力に点を付けて選ぶ
@@ -203,22 +205,32 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  // 助手のブリーダー能力(第②段階の受け口・シュギョウ)。印が偽なら 1
+  const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
+  const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
+  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const up = (v) => (v > 0 ? Math.round(v * sm) : v); // ストレスが増える分だけに掛ける
+  // 関わって伸びた分(ミセカタ 11-11): 関わりの倍率で上乗せになった伸びを、効いた関わりに振り分けて数える
+  const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
+  const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n; g[k] = (g[k] || 0) + n; e.dg = { d: day, n: (e.dg.d === day ? e.dg.n : 0) + n };
+    if (lnAll > 0) { const extra = n - n / mult; e.cg = { ...(e.cg || {}) }; for (const [key, m] of parts) e.cg[key] = Math.round(((e.cg[key] || 0) + extra * Math.log(m) / lnAll) * 100) / 100; }
   };
-  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
   if (act.a === 'rest') { e.fat = amgClamp(e.fat - 30, 0, 100); e.str = amgClamp(e.str - 5, 0, 100); }
   else if (act.a === 'play') { e.fat = amgClamp(e.fat - 10, 0, 100); e.str = amgClamp(e.str - 15, 0, 100); }
-  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100); }
-  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100); }
+  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + up(fail ? 6 : 1), 0, 100); }
+  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + up(fail ? 9 : 4), 0, 100); }
+  else if (act.a === 'shugyo' && typeof amgtDo === 'function') { amgtDo(aid, e, row, rnd, slot, act, add, failChance); } // 修行(第②段階・シュギョウ)。伸びは add を通る
   else { // 特殊訓練
     fail = rnd() < failChance(0.03);
     const others = AMG_KEYS.filter(k => k !== act.k); const sub = others[Math.floor(rnd() * others.length)];
     add(act.k, 4, 9); add(sub, 2, 5);
-    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
   // 経験と Lv(訓練をすると上がる)
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
@@ -247,7 +259,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
-      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
       if (!pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
@@ -258,7 +270,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
   if (!changed && !reset && (state.done[aid] === nowSlot || (Number.isInteger(last) && last > nowSlot))) return state; // 何も変わらないときは同じものを返す(書き直さない)
   return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
 };
-const amgActName = (x) => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const amgActName = (x) => (x.a === 'shugyo' ? (typeof amgtActName === 'function' ? amgtActName(x) : '修行') : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, subs: new Set(),
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
   load() { // 読み込みは1回だけ(2か所から同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
@@ -319,6 +331,8 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 };
 // ナカヨシ10 の受け口(M/B管理): ASSISTANT_LIFE_LINKS.masmonTrainBoost(id, { source: 'ranch' }) から呼べるようにつなぐ(2026-11-11)
 try { if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost; } catch (_) {}
+// 関わって伸びた分の合計(対戦の振り返りから読む・ミセカタ)。{ total, view, pick, ask, ranch }(点・整数)
+const amgCareGainOf = (e) => { const c = (e && e.cg) || {}; const o = { view: Math.round(c.view || 0), pick: Math.round(c.pick || 0), ask: Math.round(c.ask || 0), ranch: Math.round(c.ranch || 0) }; return { total: Math.round((c.view || 0) + (c.pick || 0) + (c.ask || 0) + (c.ranch || 0)), ...o }; };
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 // 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
@@ -396,5 +410,6 @@ function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
         : <p className="text-[10.5px] font-bold text-slate-400">まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に{who.name}が育てます)</p>}
       {(amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot]) && <p className="mt-1 text-[10px] font-bold text-pink-200" data-amg-viewed>👀 今日は様子を見に来たので、いつもより伸びやすい</p>}
       <AmgPickRow who={who} t={t} e={e} st={amgSt}/>
+      {typeof AmgtCard === 'function' && <AmgtCard who={who} t={t} e={e}/>}
     </div>);
 }
