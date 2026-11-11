@@ -90,6 +90,9 @@ node tools/build.js --check
 | `node mode/rhythm-gpu-estimate.js [--check]` | **実機が無くても GPU の重さを見積もる。**「おまかせ」4つが画面いっぱいを何回塗ったのと同じかを測り、機種の帯ごとの GPU の時間と fps の目安に直す。`--check` で `mode/gpu-budget.json` の上限を超えていないかを見る(1回5分ほど)。 |
 | `node mode/rhythm-slowmo-shot.js` | **演奏画面を「コマ送り」で撮る。** ブラウザの仮想の時間で、遅い環境でも本来の速さで遊んだときの 0.083秒ごとの画面を撮る(自動で叩く・叩いたときの光も写る)。参考動画と同じ間隔で並べて見比べるときに使う。 |
 | `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定40本で、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
+| `run-checks-deps.js` | `--changed` の索引(2026-11-11)。検査のソースから「何を読むか」を決める。名指しで読む検査は上限の外で必ず選ぶ。選んだ検査はふつう組に分けて同時に回す(`--serial` で1本ずつ) |
+| `node run-checks-select-check.js` | `--changed` の選び方の見張り(名指しで読む検査の漏れ・どの領域にも入らない検査・一覧に書いた検査の在り無し) |
+| `node checks-inventory.js --json <全部回した結果>` | 検査の棚卸し(何を見るか・秒・30日で直された回数・似ている検査)を `docs/ops/checks/` へ書く |
 | `node rules-index-check.js` | `CLAUDE.md` の大きさ・`docs/rules/` とのリンク・**要のことばが消えていないか**を見る。CIでも回す。 |
 
 ### ビルドと必須検査（`game-system.jsx` を触ったら必ず通す）

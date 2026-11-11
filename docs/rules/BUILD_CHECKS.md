@@ -97,3 +97,18 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
   - 一部の表だけのとき: `window.__mhSupabaseStubbed = ['rankings', 'bond_levels']`(並べた表だけを通す)
   - 入れ方は `await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });`(開いたあとなら `page.evaluate` も)
 - **差し替えずに印だけ入れない**(本物へ届いてしまう)。モンヒロくんは `lib/session.js` がにせの Supabase で受け止めたうえで入れている
+
+### `--changed` は「検査が読んでいるファイル」で選ぶ(2026-11-11)
+
+それまでは変えたファイルの名前から語を取り、その語を名前に含む検査を選んでいた。数えると、変えたファイルを
+**名指しで読んでいる検査の 43%(1615件中697件)が選ばれていなかった**(`app`・`core` は語として捨てていて当たらず、
+当たる語は上限40本で切られる。例: `82-card-battle-core.jsx` を読む検査51本中49本)。過去1500件のコミットで
+「本体と一緒に直された検査」が選ばれていた割合も 53% だった。
+
+- `tools/run-checks-deps.js` が検査のソースから「何を読むか」を機械で決める。名指し(`60-app.jsx`・`data/help.js`・
+  `require('./lib')`・絵や音のファイル名)は**上限の外で必ず選ぶ**。本体全体を読む検査は、探している関数名・`data-…` の目印が
+  1か所だけ定義されている parts と結び付け、語の当たりより先に並べる(上限の内)
+- 選んだ検査は**ふつう組に分けて同時に回す**(4組まで。1本ずつなら `--serial`)。`--plan` で本数と見込みの時間が出る
+- `tools/run-checks-select-check.js` が、名指しで読む検査の漏れ・どの領域にも入らない検査(`playbot/sim/hate-sim-check.js` が
+  一度も回っていなかった)・一覧に書いた検査の在り無しを見張る。選び方を変えたら必ず通る
+- 検査の棚卸しは `node tools/checks-inventory.js --json <全部回した結果>` → [`docs/ops/checks/INVENTORY.md`](../ops/checks/INVENTORY.md)
