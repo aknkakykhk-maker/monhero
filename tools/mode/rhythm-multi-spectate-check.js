@@ -223,7 +223,7 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     }
     if (SHOT_DIR) { await W.waitForTimeout(700); await W.screenshot({ path: path.join(SHOT_DIR, 'watch-lane-landscape.png') }); }
     // ---- 重い端末: フレームが40枚/秒を切る状態が2秒続くと、譜面は送らず数字だけにする ----
-    await B.evaluate(() => { Object.defineProperty(RHYTHM_PLAY_WATCH, 'frames', { get: () => 5, set: () => {}, configurable: true }); });
+    await B.evaluate(() => { Object.defineProperty(RHYTHM_PLAY_WATCH, 'frames', { get: () => Math.floor(Date.now() / 100), set: () => {}, configurable: true }); /* 10枚/秒で進む(重い端末) */ });
     await W.evaluate((id) => RHYTHM_WATCH.focus(id), idB);
     await W.waitForSelector('[data-rhythm-watch-lite]', { timeout: 9000 })
       .then(() => check('重い端末の人を見ているときは「数字だけ」の案内が出て、譜面は出ない', true), () => check('重い端末の人を見ているときは「数字だけ」の案内が出る', false));
