@@ -568,7 +568,13 @@ const __mod = { exports: {} };
   };
 
   // 結果の指紋(同じ種・同じ編成なら同じ値。端末とサーバの突き合わせ用)
-  const digestOf = (log) => hashSeed(JSON.stringify(log)).toString(16).padStart(8, '0');
+  // AI の点の一覧(cands。trace:true のときだけ付く)は除く=trace のあり・なしで同じ指紋(trace なしの値はこれまでと同じ)
+  const digestOf = (log) => hashSeed(JSON.stringify(log.map(e => {
+    if (!e.cands) return e;
+    const c = Object.assign({}, e);
+    delete c.cands;
+    return c;
+  }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
     VERSION, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,

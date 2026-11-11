@@ -132,7 +132,7 @@ ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, balance?, roundL
 - 技表に `version` を持たせ、catalog の `techVersion` に写す(技表を変えたら上げる)
 - サーバ(第④段階)では、`buildCatalog` の結果を JSON にして本体と一緒に関数へ持っていく(検査①で JSON を通しても同じ結果を見ている)。
   MFバトルカードの `card-tournament-run` が `game.js` を写して持つのと同じ形
-- `digest` は記録の指紋。端末の見返し(リプレイ)とサーバの結果の突き合わせに使う
+- `digest` は記録の指紋(`cands` は除く=`trace:true` でも同じ値)。端末の見返し(リプレイ)とサーバの結果の突き合わせに使う
 
 ## MF との対応(2026-11-11 社長「モンスターファームの計算方法を調べて参考にして」)
 
