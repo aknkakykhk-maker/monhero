@@ -125,7 +125,7 @@ const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }) 
       await goHome();
       const before = await state();
       await clickText(re); await page.waitForTimeout(800); await closePopups();
-      w = await watch(5000);
+      w = await watch(9000); // WAVE10 のボス・周の切り替わりに重なっても進みが見える長さ
       await shot(`2-${name}`);
       const progressed = (w.s.loops > before.loops) || (w.s.loops === before.loops && w.maxWave > before.wave) || w.s.loops < before.loops;
       check(`② ${name} でも帯が見えて周回が進む・バトルへ飛ばない`, w.s.strip === 'live' && w.s.screen === name && progressed && !w.jumped, JSON.stringify({ before: [before.loops, before.wave], after: [w.s.loops, w.s.wave], screen: w.s.screen, strip: w.s.strip, jumped: w.jumped }));
@@ -178,6 +178,20 @@ const boot = async (browser, autoStart, viewport = { width: 390, height: 844 }) 
     const offStrip = await off.page.evaluate(() => !!document.querySelector('[data-quick-anywhere]'));
     check('⑧ 自動開始が切なら、ゲームを開いても始まらない', !offStrip);
     check('⑨ 実行時エラーが出ない(自動開始が切)', off.fatal.length === 0, off.fatal.slice(0, 3).join(' / '));
+    // 横画面(止め絵を撮るときだけ): HOME の帯が「モンヒロバトル」と重ならない
+    if (SHOT_DIR) {
+      await off.page.close();
+      const yoko = await boot(browser, true, { width: 844, height: 390 });
+      await yoko.page.waitForTimeout(6000);
+      for (let i = 0; i < 6 && await yoko.closePopups(); i++) await yoko.page.waitForTimeout(300);
+      await yoko.page.screenshot({ path: path.join(SHOT_DIR, 'yoko-home.png') });
+      const yr = await yoko.page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); const b = document.querySelector('button[aria-label="モンヒロバトル"]'); return { r: el && el.getBoundingClientRect().toJSON(), b: b && b.getBoundingClientRect().toJSON() }; });
+      const hit = yr.r && yr.b && !(yr.r.right <= yr.b.left || yr.r.left >= yr.b.right || yr.r.bottom <= yr.b.top || yr.r.top >= yr.b.bottom);
+      check('② 横画面でも、HOME の帯が出て「モンヒロバトル」と重ならない', !!yr.r && !hit, JSON.stringify(yr));
+      await yoko.page.evaluate(() => document.querySelector('[data-quick-anywhere]') && document.querySelector('[data-quick-anywhere]').click()); await yoko.page.waitForTimeout(400);
+      await yoko.page.screenshot({ path: path.join(SHOT_DIR, 'yoko-detail.png') });
+      check('⑨ 実行時エラーが出ない(横画面)', yoko.fatal.length === 0, yoko.fatal.slice(0, 3).join(' / '));
+    }
   } finally {
     await browser.close();
     server.close();

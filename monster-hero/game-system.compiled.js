@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34d124d0752df1c0
+// source-sha256: 905800501edbb32c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103265,7 +103265,7 @@ const quickGuidePick = ctx => {
     case 'RHYTHM_DEMO_HOME':
       return c.backgroundRun === true && not('g3b') ? 'g3b' : null;
     case 'RHYTHM_MODE_SELECT':
-      return c.backgroundRun === true && not('g3c') ? 'g3c' : null;
+      return c.backgroundRun === true && !(typeof QUICK_RUN_ANYWHERE_RELEASE !== 'undefined' && QUICK_RUN_ANYWHERE_RELEASE) && not('g3c') ? 'g3c' : null;
     case 'HOME':
       return nudge ? 'nudgeHome' : null;
     default:
@@ -188086,7 +188086,7 @@ function MonsterHeroGame() {
       autoDifficulty: autoDifficulty,
       todayLoops: null,
       onClose: () => setLifeQuickDetail(false),
-      note: "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
+      note: QUICK_RUN_ANYWHERE_RELEASE ? "AUTO設定の編成でクイックの周回が裏で進みます。助手ライフを閉じても、HOMEなどで回り続けます。「止める」を押すと、それまでの報酬を受け取って周回を終えます。" : "助手ライフを開いているあいだ、AUTO設定の編成でクイックの周回が裏で進みます。閉じるか「止める」を押すと、それまでの報酬を受け取って周回を終えます。"
     }), React.createElement("div", {
       "data-life-quick-run": view.live ? 'live' : 'stopped',
       className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
@@ -198143,7 +198143,7 @@ function MonsterHeroGame() {
         }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), React.createElement("div", null, React.createElement("div", {
         className: "text-[11px] font-black text-slate-300 mb-1.5"
-      }, "モンヒロビート・助手ライフを開いたら自動で始める"), React.createElement("button", {
+      }, QUICK_RUN_ANYWHERE_RELEASE ? 'ゲーム・モンヒロビート・助手ライフを開いたら自動で始める' : 'モンヒロビート・助手ライフを開いたら自動で始める'), React.createElement("button", {
         type: "button",
         "data-auto-quick-run-autostart": true,
         "aria-pressed": draftAutoSettings.quickRun?.autoStart === true,
@@ -201856,7 +201856,7 @@ function MonsterHeroGame() {
       modeSelect: gameState === 'RHYTHM_MODE_SELECT' ? {
         multi: RELEASE_FLAGS.rhythmMulti === true,
         onExit: exitRhythmSongSelect,
-        backgroundRun: rhythmBackgroundRun,
+        backgroundRun: rhythmBackgroundRun && !QUICK_RUN_ANYWHERE_RELEASE,
         exiting: rhythmExitingRun,
         onSolo: () => setGameState('RHYTHM_DEMO_HOME'),
         onHelp: () => {
