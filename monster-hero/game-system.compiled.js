@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8aa5ab68c4ab38b8
+// source-sha256: b3d86f6b941a4348
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8549,6 +8549,7 @@ const Audio_ = (() => {
         },
         started: () => playing,
         songTimeMs: () => songTimeSeconds() * 1000,
+        rawSongTimeMs: () => rawSongTimeSeconds() * 1000,
         info: () => ({
           outLatMs: Math.round(outputLatencySeconds * 1000),
           baseLatMs: Math.round((Number(ctx.baseLatency) || 0) * 1000),
@@ -42160,7 +42161,7 @@ const RhythmTapTest = ({
       const perfTickStart = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
-      RHYTHM_TIMING_DIAG.frame(songTimeMs);
+      RHYTHM_TIMING_DIAG.frame(songTimeMs, typeof run.audio.rawSongTimeMs === 'function' ? run.audio.rawSongTimeMs() : null);
       const RHYTHM_MISS_RECLAIM_MS = rhythmMissReclaimMs();
       const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
@@ -43652,8 +43653,15 @@ const RhythmTapTest = ({
       if (!playing()) return;
       const now = nowMs();
       RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length || 0);
+      const vw = typeof window !== 'undefined' ? Number(window.innerWidth) || 0 : 0,
+        vh = typeof window !== 'undefined' ? Number(window.innerHeight) || 0 : 0,
+        live = e.touches?.length || 0;
       Array.from(e.changedTouches || []).forEach(t => {
-        if (inArea(t.target)) RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp);
+        if (!inArea(t.target) || RHYTHM_TOUCH_BRIDGE.lateFollow(t.identifier, e.timeStamp)) return;
+        RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp, {
+          edgePx: vw > 0 && vh > 0 ? Math.max(0, Math.min(t.clientX, vw - t.clientX, t.clientY, vh - t.clientY)) : NaN,
+          live
+        });
       });
       sweep();
     };
@@ -43822,10 +43830,27 @@ const RhythmTapTest = ({
           return;
         }
         current.activeTouchInputs.add(inputKey);
-        if (e.type !== 'touchstart') {
-          RHYTHM_TOUCH_BRIDGE.lateStart();
-          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
-          RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
+        const ownStart = e.type === 'touchstart' && Array.from(e.changedTouches || []).some(t => t.identifier === touch.identifier);
+        if (!ownStart) {
+          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            droppedAt = current.droppedNoEnd?.get(inputKey),
+            back = droppedAt !== undefined && nowPerf - droppedAt <= RHYTHM_TOUCH_BACK_MS,
+            guarded = back && rhythmTouchPlatform() === 'ios';
+          current.droppedNoEnd?.delete(inputKey);
+          RHYTHM_TOUCH_BRIDGE.lateStart({
+            id: touch.identifier,
+            type: e.type,
+            stamp: e.timeStamp,
+            back,
+            guarded
+          });
+          if (guarded) {
+            RHYTHM_INPUT_REC.event('back', {
+              key: inputKey
+            });
+            return;
+          }
+          if (!back && e.type !== 'touchstart') RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
         }
         if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
@@ -43875,6 +43900,15 @@ const RhythmTapTest = ({
             }, RHYTHM_MISSING_TOUCH_CONFIRM_MS);
           }
           return;
+        }
+        if (!ownEnd) {
+          current.droppedNoEnd = current.droppedNoEnd || new Map();
+          if (current.droppedNoEnd.size > 32) current.droppedNoEnd.clear();
+          current.droppedNoEnd.set(inputKey, performance.now());
+        } else {
+          current.droppedNoEnd?.delete(inputKey);
+          const m = /^touch:(-?\d+)$/.exec(String(inputKey));
+          if (m) RHYTHM_TOUCH_BRIDGE.forgetTouch(Number(m[1]));
         }
         current.missingHeld?.delete(inputKey);
         current.activeTouchInputs.delete(inputKey);

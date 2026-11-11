@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 46185821b86598ae
+// generated-sha256: 4f2a7d8d9eeb7ccb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6575,6 +6575,8 @@ const Audio_ = (() => {
         start:()=>{if(playing||stopped||naturallyEnded)return playing;return startSource(0);},
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
+        // 元の時計(なめらかにする前)。診断で「止まったコマ」を数えるためだけに使う(2026-11-11。画面・判定は songTimeMs のまま)
+        rawSongTimeMs:()=>rawSongTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
         info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,
@@ -25905,7 +25907,7 @@ if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){con
     //   この枠でタッチが RHYTHM_TOUCH_FIX_LATE_BURST 回以上 50ms 以上遅れて届いていたら、同じ道で演出を一段下げる
     const lateNow=RHYTHM_TOUCH_BRIDGE.lateCount(),lateBurst=rhythmTouchFixOn('lateInputEffectDown')&&lateNow-(ae.late||0)>=RHYTHM_TOUCH_FIX_LATE_BURST;ae.late=lateNow;
     if(ae.settle>0)ae.settle--;else if(!qualityFirst&&((ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO)||lateBurst)&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep(lateBurst?'演出(タッチの遅れ)':'演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
-if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0,traceGround=0,traceSky=0;updateJudgmentBand(travel,travelMs);
+if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs,typeof run.audio.rawSongTimeMs==='function'?run.audio.rawSongTimeMs():null);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0,traceGround=0,traceSky=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
    間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
@@ -26565,7 +26567,10 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
       if(!playing())return;
       const now=nowMs();
       RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length||0);
-      Array.from(e.changedTouches||[]).forEach(t=>{if(inArea(t.target))RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier,t.clientX,t.clientY,e.timeStamp,now,now-e.timeStamp);});
+      // 先に別の指の合図で見えていた指(lateFollow)は、数え直さない。ふちからの近さ・ほかの指の有無は診断に足すだけ(2026-11-11)
+      const vw=typeof window!=='undefined'?Number(window.innerWidth)||0:0,vh=typeof window!=='undefined'?Number(window.innerHeight)||0:0,live=e.touches?.length||0;
+      Array.from(e.changedTouches||[]).forEach(t=>{if(!inArea(t.target)||RHYTHM_TOUCH_BRIDGE.lateFollow(t.identifier,e.timeStamp))return;
+        RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier,t.clientX,t.clientY,e.timeStamp,now,now-e.timeStamp,{edgePx:vw>0&&vh>0?Math.max(0,Math.min(t.clientX,vw-t.clientX,t.clientY,vh-t.clientY)):NaN,live});});
       sweep();
     };
     const onTouchCancel=e=>{if(playing())RHYTHM_TOUCH_BRIDGE.touchCancel(e.changedTouches?.length||0);};
@@ -26597,7 +26602,16 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
         /* 道の外(余白の外)に降りた指が、そのあと道の中へ滑ってきたときは、サブレーンを RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES 本ぶん中へ入ってから、押した指として扱う(2026-10-07・ユーザー指示)。
            これまでは降りた場所が外だと、道へ滑っても音も光も判定も出なかった。入ってすぐは拾わない(手のひら・指のつけ根の接触で、意図しない押下にしないため) */
         if(current.outsideStartInputs?.has(inputKey)&&movedTouchInputs?.has(inputKey)&&lane!==null&&subLaneCoordinate!==null&&subLaneCoordinate>=RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES&&subLaneCoordinate<=RHYTHM_SUB_LANE_COUNT-RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES){current.outsideStartInputs.delete(inputKey);starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect)});return;}
-        if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(e.type!=='touchstart'){RHYTHM_TOUCH_BRIDGE.lateStart();const nowPerf=typeof performance!=='undefined'?performance.now():Date.now();RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier,touch.clientX,touch.clientY,e.timeStamp,nowPerf,null);}if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect)});else{RHYTHM_PERF.touchIgnored();(current.outsideStartInputs=current.outsideStartInputs||new Set()).add(inputKey);}});liveTouchSubLanesRef.current=liveSubLanes;liveTouchSkySubLanesRef.current=liveSkySubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(live.has(inputKey)){current.missingHeld?.delete(inputKey);return;}
+        if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);
+/* 【2026-11-11・同期の総点検】自分の touchstart なしに見えた指(別の指の合図の指の一覧で初めて見えた)。
+   そのうち「自分の離しの合図なしに一覧から消えていた、同じ番号の指」が戻っただけのものは、押し直していない(iPhone は指ごとに番号が1回きりなので、同じ番号は同じ接触)。
+   iPhone では、それを新しく押した扱いにしない(押していないのに空打ち・早取りになるのを防ぐ)。判定の窓・スコアの数え方は変えない。Android は番号を使い回すので数えるだけ */
+const ownStart=e.type==='touchstart'&&Array.from(e.changedTouches||[]).some(t=>t.identifier===touch.identifier);
+if(!ownStart){const nowPerf=typeof performance!=='undefined'?performance.now():Date.now(),droppedAt=current.droppedNoEnd?.get(inputKey),back=droppedAt!==undefined&&nowPerf-droppedAt<=RHYTHM_TOUCH_BACK_MS,guarded=back&&rhythmTouchPlatform()==='ios';
+  current.droppedNoEnd?.delete(inputKey);
+  RHYTHM_TOUCH_BRIDGE.lateStart({id:touch.identifier,type:e.type,stamp:e.timeStamp,back,guarded});
+  if(guarded){RHYTHM_INPUT_REC.event('back',{key:inputKey});return;}
+  if(!back&&e.type!=='touchstart')RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier,touch.clientX,touch.clientY,e.timeStamp,nowPerf,null);}if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect)});else{RHYTHM_PERF.touchIgnored();(current.outsideStartInputs=current.outsideStartInputs||new Set()).add(inputKey);}});liveTouchSubLanesRef.current=liveSubLanes;liveTouchSkySubLanesRef.current=liveSkySubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(live.has(inputKey)){current.missingHeld?.delete(inputKey);return;}
 /* ★ロング(ホールド・スライド)を押さえている指が、自分の離しの合図(touchend/touchcancel の changedTouches)なしに指の一覧から消えたときは、
    すぐ離した扱いにせず RHYTHM_MISSING_TOUCH_CONFIRM_MS だけ待つ。そのあいだに一覧へ戻れば押さえたまま続ける(2026-10-15 社長「空スライド中に別の指でタップ・フリックすると空スライドが外れる」)。
    iPhone は別の指の合図の中で、押さえている指を一覧から一瞬落とすことがある(別の指の合図で初めて見える指が 1000タッチに約13回)。それで押さえている帯が離した扱いになり、暗くなる・切れる経路を塞ぐ */
@@ -26605,6 +26619,8 @@ const ownEnd=(e.type==='touchend'||e.type==='touchcancel')&&Array.from(e.changed
 const heldIndex=current.activePointers.get(inputKey),heldNote=heldIndex===undefined?null:current.notes[heldIndex];
 if(!ownEnd&&heldNote&&!heldNote.done&&heldNote.type==='HOLD'){current.missingHeld=current.missingHeld||new Map();if(!current.missingHeld.has(inputKey)){const since=performance.now();current.missingHeld.set(inputKey,since);RHYTHM_INPUT_REC.event('missing',{note:heldNote.index,key:inputKey});
   setTimeout(()=>{const run=runRef.current;if(run!==current||run.finished||run.missingHeld?.get(inputKey)!==since)return;run.missingHeld.delete(inputKey);if(!run.activeTouchInputs.has(inputKey))return;run.activeTouchInputs.delete(inputKey);run.outsideStartInputs?.delete(inputKey);inputEnds([{inputKey}]);},RHYTHM_MISSING_TOUCH_CONFIRM_MS);}return;}
+/* 自分の離しの合図なしに一覧から消えた指を覚える(戻ってきたら「押し直していない」と分かるように。上の ownStart のところ) */
+if(!ownEnd){current.droppedNoEnd=current.droppedNoEnd||new Map();if(current.droppedNoEnd.size>32)current.droppedNoEnd.clear();current.droppedNoEnd.set(inputKey,performance.now());}else{current.droppedNoEnd?.delete(inputKey);const m=/^touch:(-?\d+)$/.exec(String(inputKey));if(m)RHYTHM_TOUCH_BRIDGE.forgetTouch(Number(m[1]));}
 current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey);current.outsideStartInputs?.delete(inputKey);ended.push({inputKey});});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingBottom:'var(--mh-sa-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
   // ===== タイミング合わせのリザルト(2026-09-13・ユーザー指摘「設定にもなってない」) =====
