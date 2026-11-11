@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1eb9f7acebe8d9a1
+// source-sha256: 873c3bd20ffdf56c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118752,6 +118752,29 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  if (fullSrc) {
+    return React.createElement("div", {
+      ref: boxRef,
+      className: "pointer-events-none absolute inset-0 overflow-hidden",
+      "data-assistant-life-profile-stand": who.id,
+      "data-assistant-life-profile-fullbody": fullSrc
+    }, React.createElement("img", {
+      src: fullSrc,
+      alt: who.name,
+      draggable: false,
+      className: "absolute",
+      style: {
+        left: 0,
+        right: 0,
+        bottom: '2%',
+        width: '100%',
+        height: '96%',
+        objectFit: 'contain',
+        objectPosition: 'center bottom'
+      }
+    }));
+  }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
   const len = typeof ASSISTANT_LIFE_STAND_FACE_LEN !== 'undefined' ? ASSISTANT_LIFE_STAND_FACE_LEN : 2.63;
   const rule = size && size.h > 0 && art && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({

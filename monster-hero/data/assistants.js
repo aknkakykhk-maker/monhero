@@ -773,6 +773,29 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
     || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 
+// 社長の全身画(2026-11-11 社長「全身画作ってるから…助手の紹介ページに使って」)。キーは「助手id」か「助手id:服の名前」。
+//   絵の仕上げ: tools/assistant/life-fullbody-art.py(元の絵 tools/art-sources/assistant-fullbody/received-v1/)。まだ絵の無い助手・服はここに無い=今の立ち絵のまま。
+//   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
+const ASSISTANT_FULLBODY_ART = Object.freeze({
+  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
+  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido',
+  erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
+});
+// 表情ごとの全身画(社長「時間があったら全身画の8表情を作りたい」)。届いたら、上の名前をキーに、あるぶんの表情名を足すだけ(絵は <名前>__<表情>.png)。
+//   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
+const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({});
+// その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す(画像のパスはここに集める)。服の全身画が無いときは null(今の立ち絵へ)
+const assistantFullBodyImage = (who, expression = 'happy') => {
+  if (!who || !who.id) return null;
+  let outfit = '';
+  try { const c = typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null; if (c && c.imageDir) outfit = String(c.imageDir).split('/').pop(); } catch (_) { outfit = ''; }
+  const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
+  if (!name) return null;
+  const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
+  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
+};
+
+
 // ---------- 親密度(みゅあとの仲良し度) ----------
 // 遊ぶほどみゅあと打ち解けていく。呼び方・話し方・出るセリフが少しずつ変わる。
 // 恋愛ものではなく「一緒にモンスターヒーローを遊ぶ相棒」の距離感にする。
