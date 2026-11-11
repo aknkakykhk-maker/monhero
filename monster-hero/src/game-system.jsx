@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 24ad20e89041f3f3
+// generated-sha256: 1d78c14201815010
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55166,13 +55166,16 @@ const RHYTHM_MULTI = (() => {
   // スコア・コンボ・判定の数・ライフ・曲の位置を読んで pg に足して送る。観戦の人がいなければ何もしない(印を読むだけ)。
   // 観戦の人は部屋のメンバーではない(hb を送らない。5人の枠・結果・報酬・ランキングに入らない)
   let watchTimer = null; let watchAdTimer = null; let watchAdSocket = null; let watchFeed = null;
-  let watchAllow = true; let watchAllowLoaded = false;
+  let watchAllow = true; let watchAllowLoaded = false; let watchAllowPromise = null;
+  // 保存の読み込みは1回。画面のつまみの表示を、読み終えてから合わせられるよう Promise を返す
   const loadWatchAllow = () => {
-    if (watchAllowLoaded) return;
+    if (watchAllowLoaded) return watchAllowPromise;
     watchAllowLoaded = true;
-    Promise.resolve().then(() => storeGet(RHYTHM_WATCH_KEY, null)).then((saved) => {
+    watchAllowPromise = Promise.resolve().then(() => storeGet(RHYTHM_WATCH_KEY, null)).then((saved) => {
       watchAllow = !(saved && typeof saved === 'object' && saved.allow === false);
-    }).catch(() => {});
+      return watchAllow;
+    }).catch(() => watchAllow);
+    return watchAllowPromise;
   };
   const watchersNow = () => {
     if (!s || !s.watchers) return [];
@@ -55206,8 +55209,10 @@ const RHYTHM_MULTI = (() => {
     // 端末の重さ: 1秒でフレームが何枚進んだか。40枚/秒を切る状態が2回続いたら、譜面は送らず数字だけにする(その回の終わりまで)
     if (watch && typeof watch.frames === 'number') {
       if (watchFrames >= 0 && now > watchFramesAt) {
-        const fps = (watch.frames - watchFrames) * 1000 / (now - watchFramesAt);
-        watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
+        const moved = watch.frames - watchFrames;
+        const fps = moved * 1000 / (now - watchFramesAt);
+        // フレームが1枚も進んでいない間(曲の紹介・読み込み・ポーズ)は、重い端末とは数えない
+        if (moved > 0) watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
         if (watchLowCount >= 2) watchLite = true;
       }
       watchFrames = watch.frames; watchFramesAt = now;
@@ -55239,6 +55244,7 @@ const RHYTHM_MULTI = (() => {
     if (!id || id === s.selfId) return;
     if (!watchAllow && !s.members[id]) return;   // 観戦を許していない部屋でも、部屋のメンバー(待機中の人)には見せる
     const now = Date.now();
+    Object.keys(s.watchers).forEach((wid) => { if (s.watchers[wid].until <= now) delete s.watchers[wid]; });   // 期限が切れた人は消してから数える(戻ってきた人も10人の数え直しを通る)
     let w = s.watchers[id];
     if (!w) {
       if (watchersNow().length >= RHYTHM_WATCH_MAX) { if (s.live && !s.live.done) socket.send({ t: 'wi', id: s.selfId, to: id, full: 1 }); return; }
@@ -55249,16 +55255,19 @@ const RHYTHM_MULTI = (() => {
     w.f = rhythmMultiText(raw.f, 40);
     if (s.live && !s.live.done && now - w.repliedAt >= 4000) {
       w.repliedAt = now;
+      // 顔ぶれ(pt)は、その人への最初の1回と、回が変わったときだけ。ふだんの返事は曲と自分の点だけ(量を減らす)
+      const sendPt = w.ptRound !== s.live.round;
+      w.ptRound = s.live.round;
       // 値が変わらないあいだ pg は送らないので、新しく見に来た人が全員の点を知れるよう、自分のいまの点も添える
       const watchGlobal = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const nowHud = watchGlobal && watchGlobal.hud ? watchGlobal.hud.get() : null;
       socket.send({
         t: 'wi', id: s.selfId, to: id, r: s.live.round, sg: s.room.songId,
         ...(nowHud ? { sc: rhythmMultiInt(nowHud.score, RHYTHM_MULTI_LIVE_SCORE_MAX), cb: rhythmMultiInt(nowHud.combo, RHYTHM_MULTI_LIVE_COMBO_MAX) } : {}),
-        pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map((pid) => {
+        ...(sendPt ? { pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map((pid) => {
           const m = s.members[pid] || {};
           return { i: pid, n: rhythmMultiText(m.name, 12), a: rhythmMultiText(m.icon, 60), f: rhythmMultiText(m.frame, 40), d: rhythmMultiText(m.diff, 20) };
-        }),
+        }) } : {}),
       });
     }
     watchSync();
@@ -55791,6 +55800,7 @@ const RHYTHM_MULTI = (() => {
     onLive(fn) { liveListeners.add(fn); return () => liveListeners.delete(fn); },
     // 観戦(2026-11-11)。観戦を許すか(部屋の上の帯のつまみ)。保存は新しいキー(RHYTHM_WATCH_KEY)だけ
     watchAllowed() { return watchAllow; },
+    loadWatchAllow() { return loadWatchAllow(); },
     setWatchAllow(v) {
       watchAllow = v !== false;
       try { void storeSet(RHYTHM_WATCH_KEY, { allow: watchAllow }); } catch (_) { /* 保存できなくても、この起動のうちは効く */ }
@@ -56127,14 +56137,17 @@ const RHYTHM_WATCH = (() => {
         id: rhythmMultiText(x && x.i, 40), name: rhythmMultiText(x && x.n, 12) || '名無しのブリーダー', icon: rhythmMultiText(x && x.a, 60),
         frame: rhythmMultiText(x && x.f, 40), diff: rhythmMultiText(x && x.d, 20),
       })).filter((x) => x.id);
-      if (!round || !people.length) return;
+      if (!round) return;
+      // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
+      if (!people.length && !(st.round === round && st.people.length)) return;
       if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; }
-      st.songId = rhythmMultiText(raw.sg, 60); st.people = people;
-      if (!st.focus || !people.some((x) => x.id === st.focus)) { st.focus = people[0].id; ping(); }
+      st.songId = rhythmMultiText(raw.sg, 60);
+      if (people.length) st.people = people;
+      if (!st.focus || !st.people.some((x) => x.id === st.focus)) { st.focus = st.people[0].id; ping(); }
       st.phase = 'playing'; st.lastPg = now;
       // 送ってきた人のいまの点(新しく見に来た人でも全員の行が出るように)
       const from = rhythmMultiText(raw.id, 40);
-      if (raw.sc != null && people.some((x) => x.id === from)) {
+      if (raw.sc != null && st.people.some((x) => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = { ...prev, s: intOf(raw.sc, RHYTHM_MULTI_LIVE_SCORE_MAX), c: intOf(raw.cb, RHYTHM_MULTI_LIVE_COMBO_MAX), p: prev.p || 0, l: prev.l == null ? null : prev.l, k: prev.k || null, at: prev.at || now };
       }
@@ -57830,6 +57843,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   }, [view && view.code, view && view.room.phase, view && view.room.round]);
   React.useEffect(() => () => { RHYTHM_WATCH.stop(); }, []);
   const [watchAllowUi, setWatchAllowUi] = React.useState(() => RHYTHM_MULTI.watchAllowed());
+  // 保存の読み込みが済んだら、つまみの表示を保存に合わせる(読み込みは部屋に入るまで遅れるので)
+  React.useEffect(() => { let alive = true; Promise.resolve(RHYTHM_MULTI.loadWatchAllow()).then((v) => { if (alive && typeof v === 'boolean') setWatchAllowUi(v); }); return () => { alive = false; }; }, []);
   const toggleWatchAllow = () => { const next = !watchAllowUi; RHYTHM_MULTI.setWatchAllow(next); setWatchAllowUi(next); };
   useModeSelectStageCss();
   const difficultyIds = difficultyList.map((d) => d.id);

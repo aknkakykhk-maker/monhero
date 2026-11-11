@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8e3da11a41812e79
+// source-sha256: e322165b584aa595
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92609,12 +92609,15 @@ const RHYTHM_MULTI = (() => {
   let watchFeed = null;
   let watchAllow = true;
   let watchAllowLoaded = false;
+  let watchAllowPromise = null;
   const loadWatchAllow = () => {
-    if (watchAllowLoaded) return;
+    if (watchAllowLoaded) return watchAllowPromise;
     watchAllowLoaded = true;
-    Promise.resolve().then(() => storeGet(RHYTHM_WATCH_KEY, null)).then(saved => {
+    watchAllowPromise = Promise.resolve().then(() => storeGet(RHYTHM_WATCH_KEY, null)).then(saved => {
       watchAllow = !(saved && typeof saved === 'object' && saved.allow === false);
-    }).catch(() => {});
+      return watchAllow;
+    }).catch(() => watchAllow);
+    return watchAllowPromise;
   };
   const watchersNow = () => {
     if (!s || !s.watchers) return [];
@@ -92675,8 +92678,9 @@ const RHYTHM_MULTI = (() => {
     if (h.counts) msg.k = RHYTHM_MULTI_JUDGMENT_IDS.map(id => rhythmMultiInt(h.counts[id], 100000));
     if (watch && typeof watch.frames === 'number') {
       if (watchFrames >= 0 && now > watchFramesAt) {
-        const fps = (watch.frames - watchFrames) * 1000 / (now - watchFramesAt);
-        watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
+        const moved = watch.frames - watchFrames;
+        const fps = moved * 1000 / (now - watchFramesAt);
+        if (moved > 0) watchLowCount = fps < 40 ? watchLowCount + 1 : 0;
         if (watchLowCount >= 2) watchLite = true;
       }
       watchFrames = watch.frames;
@@ -92710,6 +92714,9 @@ const RHYTHM_MULTI = (() => {
     if (!id || id === s.selfId) return;
     if (!watchAllow && !s.members[id]) return;
     const now = Date.now();
+    Object.keys(s.watchers).forEach(wid => {
+      if (s.watchers[wid].until <= now) delete s.watchers[wid];
+    });
     let w = s.watchers[id];
     if (!w) {
       if (watchersNow().length >= RHYTHM_WATCH_MAX) {
@@ -92733,6 +92740,8 @@ const RHYTHM_MULTI = (() => {
     w.f = rhythmMultiText(raw.f, 40);
     if (s.live && !s.live.done && now - w.repliedAt >= 4000) {
       w.repliedAt = now;
+      const sendPt = w.ptRound !== s.live.round;
+      w.ptRound = s.live.round;
       const watchGlobal = typeof RHYTHM_PLAY_WATCH !== 'undefined' ? RHYTHM_PLAY_WATCH : null;
       const nowHud = watchGlobal && watchGlobal.hud ? watchGlobal.hud.get() : null;
       socket.send({
@@ -92745,16 +92754,18 @@ const RHYTHM_MULTI = (() => {
           sc: rhythmMultiInt(nowHud.score, RHYTHM_MULTI_LIVE_SCORE_MAX),
           cb: rhythmMultiInt(nowHud.combo, RHYTHM_MULTI_LIVE_COMBO_MAX)
         } : {}),
-        pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map(pid => {
-          const m = s.members[pid] || {};
-          return {
-            i: pid,
-            n: rhythmMultiText(m.name, 12),
-            a: rhythmMultiText(m.icon, 60),
-            f: rhythmMultiText(m.frame, 40),
-            d: rhythmMultiText(m.diff, 20)
-          };
-        })
+        ...(sendPt ? {
+          pt: s.live.ids.slice(0, RHYTHM_MULTI_ROOM_MAX).map(pid => {
+            const m = s.members[pid] || {};
+            return {
+              i: pid,
+              n: rhythmMultiText(m.name, 12),
+              a: rhythmMultiText(m.icon, 60),
+              f: rhythmMultiText(m.frame, 40),
+              d: rhythmMultiText(m.diff, 20)
+            };
+          })
+        } : {})
       });
     }
     watchSync();
@@ -93692,6 +93703,9 @@ const RHYTHM_MULTI = (() => {
     watchAllowed() {
       return watchAllow;
     },
+    loadWatchAllow() {
+      return loadWatchAllow();
+    },
     setWatchAllow(v) {
       watchAllow = v !== false;
       try {
@@ -94246,22 +94260,23 @@ const RHYTHM_WATCH = (() => {
         frame: rhythmMultiText(x && x.f, 40),
         diff: rhythmMultiText(x && x.d, 20)
       })).filter(x => x.id);
-      if (!round || !people.length) return;
+      if (!round) return;
+      if (!people.length && !(st.round === round && st.people.length)) return;
       if (st.round !== round) {
         st.round = round;
         st.rows = {};
         st.judged = {};
       }
       st.songId = rhythmMultiText(raw.sg, 60);
-      st.people = people;
-      if (!st.focus || !people.some(x => x.id === st.focus)) {
-        st.focus = people[0].id;
+      if (people.length) st.people = people;
+      if (!st.focus || !st.people.some(x => x.id === st.focus)) {
+        st.focus = st.people[0].id;
         ping();
       }
       st.phase = 'playing';
       st.lastPg = now;
       const from = rhythmMultiText(raw.id, 40);
-      if (raw.sc != null && people.some(x => x.id === from)) {
+      if (raw.sc != null && st.people.some(x => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = {
           ...prev,
@@ -97174,6 +97189,15 @@ function RhythmMultiScreenBody({
     RHYTHM_WATCH.stop();
   }, []);
   const [watchAllowUi, setWatchAllowUi] = React.useState(() => RHYTHM_MULTI.watchAllowed());
+  React.useEffect(() => {
+    let alive = true;
+    Promise.resolve(RHYTHM_MULTI.loadWatchAllow()).then(v => {
+      if (alive && typeof v === 'boolean') setWatchAllowUi(v);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const toggleWatchAllow = () => {
     const next = !watchAllowUi;
     RHYTHM_MULTI.setWatchAllow(next);
