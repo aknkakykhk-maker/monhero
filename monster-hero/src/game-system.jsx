@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f2fbf8d2cd40c5b0
+// generated-sha256: fe09a67638eaf5d3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6632,6 +6632,8 @@ const Audio_ = (() => {
         start:()=>{if(playing||stopped||naturallyEnded)return playing;return startSource(0);},
         started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
+        // 元の時計(なめらかにする前)。診断で「止まったコマ」を数えるためだけに使う(2026-11-11。画面・判定は songTimeMs のまま)
+        rawSongTimeMs:()=>rawSongTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
         info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
         durationMs:buffer.duration*1000,
@@ -25962,7 +25964,7 @@ if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){con
     //   この枠でタッチが RHYTHM_TOUCH_FIX_LATE_BURST 回以上 50ms 以上遅れて届いていたら、同じ道で演出を一段下げる
     const lateNow=RHYTHM_TOUCH_BRIDGE.lateCount(),lateBurst=rhythmTouchFixOn('lateInputEffectDown')&&lateNow-(ae.late||0)>=RHYTHM_TOUCH_FIX_LATE_BURST;ae.late=lateNow;
     if(ae.settle>0)ae.settle--;else if(!qualityFirst&&((ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO)||lateBurst)&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep(lateBurst?'演出(タッチの遅れ)':'演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
-if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0,traceGround=0,traceSky=0;updateJudgmentBand(travel,travelMs);
+if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=typeof performance!=='undefined'&&performance.now?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);RHYTHM_TIMING_DIAG.frame(songTimeMs,typeof run.audio.rawSongTimeMs==='function'?run.audio.rawSongTimeMs():null);/* 取りこぼしの回収の長さ。直し方 inputAgeCap を入れた端末では、遅れて届く入力を待つぶん長い(入れていなければ、これまでと同じ値の定数) */const RHYTHM_MISS_RECLAIM_MS=rhythmMissReclaimMs();const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0,traceGround=0,traceSky=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
    間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
@@ -26622,7 +26624,10 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
       if(!playing())return;
       const now=nowMs();
       RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length||0);
-      Array.from(e.changedTouches||[]).forEach(t=>{if(inArea(t.target))RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier,t.clientX,t.clientY,e.timeStamp,now,now-e.timeStamp);});
+      // 先に別の指の合図で見えていた指(lateFollow)は、数え直さない。ふちからの近さ・ほかの指の有無は診断に足すだけ(2026-11-11)
+      const vw=typeof window!=='undefined'?Number(window.innerWidth)||0:0,vh=typeof window!=='undefined'?Number(window.innerHeight)||0:0,live=e.touches?.length||0;
+      Array.from(e.changedTouches||[]).forEach(t=>{if(!inArea(t.target)||RHYTHM_TOUCH_BRIDGE.lateFollow(t.identifier,e.timeStamp))return;
+        RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier,t.clientX,t.clientY,e.timeStamp,now,now-e.timeStamp,{edgePx:vw>0&&vh>0?Math.max(0,Math.min(t.clientX,vw-t.clientX,t.clientY,vh-t.clientY)):NaN,live});});
       sweep();
     };
     const onTouchCancel=e=>{if(playing())RHYTHM_TOUCH_BRIDGE.touchCancel(e.changedTouches?.length||0);};
@@ -26654,7 +26659,16 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
         /* 道の外(余白の外)に降りた指が、そのあと道の中へ滑ってきたときは、サブレーンを RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES 本ぶん中へ入ってから、押した指として扱う(2026-10-07・ユーザー指示)。
            これまでは降りた場所が外だと、道へ滑っても音も光も判定も出なかった。入ってすぐは拾わない(手のひら・指のつけ根の接触で、意図しない押下にしないため) */
         if(current.outsideStartInputs?.has(inputKey)&&movedTouchInputs?.has(inputKey)&&lane!==null&&subLaneCoordinate!==null&&subLaneCoordinate>=RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES&&subLaneCoordinate<=RHYTHM_SUB_LANE_COUNT-RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES){current.outsideStartInputs.delete(inputKey);starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect)});return;}
-        if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(e.type!=='touchstart'){RHYTHM_TOUCH_BRIDGE.lateStart();const nowPerf=typeof performance!=='undefined'?performance.now():Date.now();RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier,touch.clientX,touch.clientY,e.timeStamp,nowPerf,null);}if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect)});else{RHYTHM_PERF.touchIgnored();(current.outsideStartInputs=current.outsideStartInputs||new Set()).add(inputKey);}});liveTouchSubLanesRef.current=liveSubLanes;liveTouchSkySubLanesRef.current=liveSkySubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(live.has(inputKey)){current.missingHeld?.delete(inputKey);return;}
+        if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);
+/* 【2026-11-11・同期の総点検】自分の touchstart なしに見えた指(別の指の合図の指の一覧で初めて見えた)。
+   そのうち「自分の離しの合図なしに一覧から消えていた、同じ番号の指」が戻っただけのものは、押し直していない(iPhone は指ごとに番号が1回きりなので、同じ番号は同じ接触)。
+   iPhone では、それを新しく押した扱いにしない(押していないのに空打ち・早取りになるのを防ぐ)。判定の窓・スコアの数え方は変えない。Android は番号を使い回すので数えるだけ */
+const ownStart=e.type==='touchstart'&&Array.from(e.changedTouches||[]).some(t=>t.identifier===touch.identifier);
+if(!ownStart){const nowPerf=typeof performance!=='undefined'?performance.now():Date.now(),droppedAt=current.droppedNoEnd?.get(inputKey),back=droppedAt!==undefined&&nowPerf-droppedAt<=RHYTHM_TOUCH_BACK_MS,guarded=back&&rhythmTouchPlatform()==='ios';
+  current.droppedNoEnd?.delete(inputKey);
+  RHYTHM_TOUCH_BRIDGE.lateStart({id:touch.identifier,type:e.type,stamp:e.timeStamp,back,guarded});
+  if(guarded){RHYTHM_INPUT_REC.event('back',{key:inputKey});return;}
+  if(!back&&e.type!=='touchstart')RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier,touch.clientX,touch.clientY,e.timeStamp,nowPerf,null);}if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect)});else{RHYTHM_PERF.touchIgnored();(current.outsideStartInputs=current.outsideStartInputs||new Set()).add(inputKey);}});liveTouchSubLanesRef.current=liveSubLanes;liveTouchSkySubLanesRef.current=liveSkySubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(live.has(inputKey)){current.missingHeld?.delete(inputKey);return;}
 /* ★ロング(ホールド・スライド)を押さえている指が、自分の離しの合図(touchend/touchcancel の changedTouches)なしに指の一覧から消えたときは、
    すぐ離した扱いにせず RHYTHM_MISSING_TOUCH_CONFIRM_MS だけ待つ。そのあいだに一覧へ戻れば押さえたまま続ける(2026-10-15 社長「空スライド中に別の指でタップ・フリックすると空スライドが外れる」)。
    iPhone は別の指の合図の中で、押さえている指を一覧から一瞬落とすことがある(別の指の合図で初めて見える指が 1000タッチに約13回)。それで押さえている帯が離した扱いになり、暗くなる・切れる経路を塞ぐ */
@@ -26662,6 +26676,8 @@ const ownEnd=(e.type==='touchend'||e.type==='touchcancel')&&Array.from(e.changed
 const heldIndex=current.activePointers.get(inputKey),heldNote=heldIndex===undefined?null:current.notes[heldIndex];
 if(!ownEnd&&heldNote&&!heldNote.done&&heldNote.type==='HOLD'){current.missingHeld=current.missingHeld||new Map();if(!current.missingHeld.has(inputKey)){const since=performance.now();current.missingHeld.set(inputKey,since);RHYTHM_INPUT_REC.event('missing',{note:heldNote.index,key:inputKey});
   setTimeout(()=>{const run=runRef.current;if(run!==current||run.finished||run.missingHeld?.get(inputKey)!==since)return;run.missingHeld.delete(inputKey);if(!run.activeTouchInputs.has(inputKey))return;run.activeTouchInputs.delete(inputKey);run.outsideStartInputs?.delete(inputKey);inputEnds([{inputKey}]);},RHYTHM_MISSING_TOUCH_CONFIRM_MS);}return;}
+/* 自分の離しの合図なしに一覧から消えた指を覚える(戻ってきたら「押し直していない」と分かるように。上の ownStart のところ) */
+if(!ownEnd){current.droppedNoEnd=current.droppedNoEnd||new Map();if(current.droppedNoEnd.size>32)current.droppedNoEnd.clear();current.droppedNoEnd.set(inputKey,performance.now());}else{current.droppedNoEnd?.delete(inputKey);const m=/^touch:(-?\d+)$/.exec(String(inputKey));if(m)RHYTHM_TOUCH_BRIDGE.forgetTouch(Number(m[1]));}
 current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey);current.outsideStartInputs?.delete(inputKey);ended.push({inputKey});});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingBottom:'var(--mh-sa-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
   // ===== タイミング合わせのリザルト(2026-09-13・ユーザー指摘「設定にもなってない」) =====
@@ -63678,7 +63694,9 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {ppl && state.sleep && <div className="off" style={{ background: night ? 'rgba(3,5,16,.6)' : 'rgba(30,27,75,.35)' }}/>}
       {!ppl && met && <div className="off" style={night ? { background: 'rgba(3,5,16,.72)' } : undefined}/>}
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
-        <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/></span>) : null; })}</div>}
+        <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid} style={{ position: 'relative' }}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/>
+          {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」・顔の枠の線2pxの内側)。部屋の「寝ている」印で決める(フレンドの家も同じ) */}
+          {met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => { const sz = Math.round(Math.min(40, h * .44)) - 4; return <AssistantLifeSleepEyes pid={pid} src={assistantFaceSrc(who, null)} w={sz} h={sz} style={{ left: 2, top: 2 }}/>; })()}</span>) : null; })}</div>}
       {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
@@ -63829,7 +63847,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     ? Object.entries(assistantLifeRoomOf(id).put || {}).filter(([, k]) => k).map(([slot, k]) => { const f = assistantLifeFurnOf(k); return f ? { slot, key: k, emoji: f.emoji, name: f.name } : null; }).filter(Boolean) : [];
   const rvTeam = typeof assistantLifeRoomMasmons === 'function' ? assistantLifeRoomMasmons(id, life) : [];
   const rvAct = (k, label, cls, fn, dis = false) => <button key={k} type="button" data-assistant-life-roomview-act={k} disabled={dis} onClick={fn} className={`rounded-xl px-1 py-2 min-h-[44px] text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
-  const rvDock = land ? null : (
+  const rvDock = land || uiV2 ? null : (
     <div className="grid grid-cols-3 gap-1.5" data-assistant-life-roomview-dock>
       {rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet)}
       {rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => (onChat ? onChat(id, null) : toSheet()), !onChat && !home)}
@@ -63844,6 +63862,43 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     <AssistantLifeRoomScene id={id} look={typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon'} land={land} people={people} sleepIds={sleepIds} away={away} team={rvTeam} furn={rvFurn}
       bubble={follow && follow.text ? follow.text : ''} title={`${who.name}の部屋`} sub={`${lv != null ? `💗 仲良し度 Lv${lv} ・ ` : ''}${where}`}
       onPerson={() => toSheet()} onMasmon={onMasmon ? () => onMasmon(id) : null} dock={rvDock} padLeft={78}/>) : null;
+  const followCard = (follow && onChat && (
+            <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
+              {/* 言葉の切れ目で折る(かぎかっこだけが1行に割れないよう、名前と台詞をひとつの文として折る・ミハリ 2026-11-08) */}
+              <p className={`${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`} style={JA_WRAP_STYLE}>{jaWrap(`${who.name}「${follow.text}」`)}</p>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                <button type="button" className="mhl-btn bg-pink-500" data-assistant-life-room-follow-chat onClick={() => onChat(id, follow)}>💬 おしゃべりする</button>
+                <button type="button" className="mhl-btn bg-slate-700" data-assistant-life-room-follow-bye onClick={() => onFollowDone && onFollowDone()}>またね</button>
+              </div>
+            </div>));
+  // 新UI(2026-11-11 社長 STEP1・56-assistant-life-ux.jsx): 「その助手とできること」を1列に。縦も横も同じ並び。行ごとに押すと上がるもの
+  const cardSpent = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) ? assistantLifeCardSpent(id) : null;
+  const canCardNow = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id);
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && !!onGiveFurn;
+  const beatRow = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <AssistantLifeDoRow k="beat" icon="🎵" label={asleep ? '起こしてモンヒロビートに誘う' : atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う'} sub={atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)'} gain={atBeat && beatFree ? '券なし' : ''} on={() => onBeat(id)}/>;
+  const cardRow = canCardNow && <AssistantLifeDoRow k={cardSpent ? 'card-spent' : 'card'} icon="🃏" label="MFバトルカードで対戦する" sub="カード部屋にいる助手と対戦すると、ごほうびアップ" gain="ごほうび 1.5倍" on={() => onCard(id)} disabled={!!cardSpent} why={cardSpent ? (typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました') : ''}/>;
+  // その場所ならではの得がある行(カード部屋での対戦・ビートで券なし)は、いちばん上に
+  const hotBeat = !!(atBeat && beatFree && !asleep), hotCard = !!(canCardNow && !cardSpent);
+  const doList = uiV2 && typeof AssistantLifeDoRow === 'function' ? (
+    <div data-assistant-life-room-do-list>
+      {typeof AssistantLifeBondRoad === 'function' && <AssistantLifeBondRoad id={id} points={typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null} level={lv} land={land}/>}
+      <p className="mt-3 text-[12px] font-black text-amber-200">{who.name}とできること</p>
+      {follow && onChat && followCard}
+      {hotCard && cardRow}
+      {hotBeat && beatRow}
+      {onChat && !follow && <AssistantLifeDoRow k="chat" icon={asleep ? '💤' : '💬'} label={asleep ? '起こしておしゃべりする' : 'おしゃべりする'} sub="話すと仲良し度が少し上がる(1日の上限あり)" gain="💗 +" on={() => onChat(id, null)}/>}
+      {soloOn && <AssistantLifeDoRow k="give-solo" icon="🎁" label={w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`} sub="好きなものは 1.5倍・苦手なものは半分" gain="💗 +" on={() => onGiveSolo(id, w && w.group ? w.group.ids : [id])} disabled={!canGiveSolo} why="今日はもう贈れません"/>}
+      {w && w.group && <AssistantLifeDoRow k="give" icon="🎁" label={soloOn ? `${w.group.ids.length}人に贈る` : '贈る'} sub="一緒にいる組に贈る" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onGive(w.group)} disabled={!canGive} why="今日はもう贈れません"/>}
+      {w && w.group
+        ? <AssistantLifeDoRow k="watch" icon="👀" label={home ? '見守る' : '見守りに行く'} sub="組のおしゃべりを見る(同じ組は時間帯に1回)" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onWatch(w.group)} disabled={!canWatch} why="この時間帯はもう見守りました"/>
+        : <AssistantLifeDoRow k="peek" icon="👀" label="ようすを見る" sub="ひとりごとや、あなたへのひとこと(時間帯に1回)" on={() => onPeek(id)} disabled={!canWatch} why="この時間帯はもう見ました"/>}
+      {(!w || !w.group || soloOn) && <AssistantLifeDoRow k="invite" icon="📣" label={asleep ? 'そっと声をかける' : '声をかける'} sub="さみしそうなときは、次の時間にだれかのところへ行く" on={() => onInvite(id)} disabled={!!(w && w.reason === 'distance')} why="いまは遠くにいて声が届きません"/>}
+      {!hotBeat && beatRow}
+      {!hotCard && cardRow}
+      <AssistantLifeDoRow k="masmon" icon="🐾" label={`${who.name}のマスモン${rvTeam.length ? ` ${rvTeam.length}体` : ''}`} sub="育ち方・編成を見る" on={onMasmon ? () => onMasmon(id) : null} why="まだ見られません"/>
+      {furnOn && <AssistantLifeDoRow k="furn" icon="🪑" label="部屋の家具" sub={`置いてある家具 ${rvFurn.length}個`} on={() => setFurnOpen(true)}/>}
+      <p className="mt-3 text-[11px] font-black text-slate-300">くわしく</p>
+    </div>) : null;
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
       <button type="button" aria-label={returnToMap ? '地図へ戻る' : '家へ戻る'} data-assistant-life-roomview-close onClick={onClose} className="absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
@@ -63851,17 +63906,19 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }}>{rvScene}</div>) : null}
       <div ref={scrollRef} className={land ? 'contents' : 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]'} data-assistant-life-roomview-scroll>
       {/* 縦の部屋の高さは幅に合わせる(画面いっぱいだと上が大きく空いた・2026-11-08 社長「画面変」)。すぐ下に中身が見え始める */}
-      {!land && rvScene && <div style={{ height: 'min(calc(100% - 52px), max(470px, 132vw))' }}>{rvScene}</div>}
+      {!land && rvScene && <div style={{ height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))' }}>{rvScene}</div>}
       <div ref={sheetRef} className="mhl-sheet" style={land ? { left: 'auto', width: rvSheetW, top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : { position: 'relative', maxHeight: 'none', zIndex: 1 }}>
-        <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>
-        <p className="text-[21px] font-black">{who.name}の部屋</p>
+        {/* 新UIは部屋の絵の上に名前が出ているので、同じ題を2度出さない */}
+        {!uiV2 && <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>}
+        {!uiV2 && <p className="text-[21px] font-black">{who.name}の部屋</p>}
         <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ wordBreak: 'auto-phrase', ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
         {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate}/>}
-        <div className={land ? 'mt-2' : 'mt-8'}>
-          {lv != null && <div className="mhl-row"><span className="k">💗 仲良し度</span><b>Lv{lv}</b></div>}
+        {doList}
+        <div className={uiV2 ? 'mt-1' : land ? 'mt-2' : 'mt-8'}>
+          {lv != null && !uiV2 && <div className="mhl-row"><span className="k">💗 仲良し度</span><b>Lv{lv}</b></div>}
           <div className="mhl-row"><span className="k">🤝 友情Lv</span><span className="flex flex-wrap gap-x-3 text-[11px]">{friends.map(f => <span key={f.id}>{assistantLifeName(f.id)} <b className={f.lv >= 5 ? 'text-pink-300' : f.lv >= 3 ? 'text-amber-300' : ''}>Lv{f.lv}</b></span>)}</span></div>
           {typeof AssistantLifeGiftLikesRow === 'function' && <AssistantLifeGiftLikesRow id={id} compact={land}/>}
           {typeof AssistantMasmonRoomRow === 'function' && <AssistantMasmonRoomRow id={id} onOpen={onMasmon}/>}
@@ -63873,17 +63930,10 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           </div>
         </div>
         {/* 横は狭いので、ボタンをシートの下に止めて、いつも全部見えるようにする(2026-11-08 窓口) */}
-        <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4, boxShadow: '0 -14px 12px #0b1020' } : undefined}>
+        <div className="mt-2 grid grid-cols-2 gap-1.5" data-assistant-life-room-acts style={land && !uiV2 ? { position: 'sticky', bottom: -10, zIndex: 6, background: '#0b1020', paddingTop: 6, paddingBottom: 6, marginBottom: -4, boxShadow: '0 -14px 12px #0b1020' } : undefined}>
           {/* 声をかけたあとの続き(2026-11-08 社長 ❼A・❾A)。ボタンの段のいちばん上(横はボタンの段が下に止まるので、段の外だと隠れる) */}
-          {follow && onChat && (
-            <div className="col-span-2 rounded-2xl border-2 border-pink-300 bg-slate-950/95 px-3 py-2" data-assistant-life-room-follow={follow.kind}>
-              {/* 言葉の切れ目で折る(かぎかっこだけが1行に割れないよう、名前と台詞をひとつの文として折る・ミハリ 2026-11-08) */}
-              <p className={`${land ? 'text-[11px]' : 'text-[12px]'} font-bold leading-snug text-pink-50`} style={JA_WRAP_STYLE}>{jaWrap(`${who.name}「${follow.text}」`)}</p>
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                <button type="button" className="mhl-btn bg-pink-500" data-assistant-life-room-follow-chat onClick={() => onChat(id, follow)}>💬 おしゃべりする</button>
-                <button type="button" className="mhl-btn bg-slate-700" data-assistant-life-room-follow-bye onClick={() => onFollowDone && onFollowDone()}>またね</button>
-              </div>
-            </div>)}
+          {!uiV2 && followCard}
+          {!uiV2 && (<>
           {w && w.group
             ? <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="watch" disabled={!canWatch} onClick={() => onWatch(w.group)}>{canWatch ? (home ? '👀 見守る' : '👀 見守りに行く') : (uiV2 ? '今日は見守り済み' : '見守りました')}</button>
             : <button type="button" className="mhl-btn mhl-watch" data-assistant-life-room-act="peek" disabled={!canWatch} onClick={() => onPeek(id)}>{canWatch ? '👀 ようすを見る' : (uiV2 ? '今日は確認済み' : '見た')}</button>}
@@ -63905,6 +63955,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (assistantLifeCardSpent(id)
             ? <button type="button" disabled className="mhl-btn col-span-2 cursor-not-allowed bg-slate-600 text-slate-200 opacity-80" data-assistant-life-room-act="card-spent">{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(assistantLifeCardSpent(id)) : '🃏 ごほうびアップは使い切りました'}</button>
             : <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 カード部屋で対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
+          </>)}
           {/* はっきり分かる閉じるボタン(家具のシートと同じ形。2026-11-08 窓口)。横はボタンの段ごと下に止まるので、いつも見える */}
           <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
         </div>
@@ -64038,6 +64089,7 @@ function AssistantLifeStands({ ids, sleepIds = [] }) {
         style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
           clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
           ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
+      {zz && p && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={p.width} h={p.height} style={{ left: p.left, top: p.top, filter, zIndex: 1 }}/>}
       {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
     </React.Fragment>); })}</>);
 }
@@ -64706,6 +64758,8 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
         <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
+        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top: -b.t * ih, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
@@ -65059,19 +65113,32 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
 // 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
 //   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
-//   描くのは目を開いた絵の きき・ももすけ・あつ だけ(みゅあ・きゅうこ・ソラシド・えるびんは元から目を閉じた絵、ドラは眼鏡)。
+//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡、えるびんは社長「そのままでいい」)。
+//   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)の絵の表も持つ。
+//   ベッドだけでなく、家の部屋の顔・場面の立ち絵・地図の全身(寝ている姿が出る所すべて)に重ねる
 //   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
 const ASSISTANT_LIFE_SLEEP_EYES = Object.freeze({
   kiki: { ang: -3, line: '#4a2030', eyes: [[0.4492, 0.4868, 0.0579, 0.0703, '#fccfc3'], [0.5592, 0.4766, 0.0579, 0.0664, '#fddbcf']] },
   momosuke: { ang: -17, line: '#5a3a28', eyes: [[0.4254, 0.4363, 0.0918, 0.0781, '#e8b8b2'], [0.5967, 0.3836, 0.0918, 0.0859, '#fcece4']] },
   atsu: { ang: -27, line: '#3a1f2a', eyes: [[0.4188, 0.3125, 0.0768, 0.0391, '#efa696'], [0.5661, 0.2553, 0.0911, 0.0342, '#f9ccb8']] },
+  mua: { ang: 8, line: '#5a3a2a', eyes: [[0.46, 0.334, 0.043, 0.048, '#fef3e7'], [0.524, 0.347, 0.032, 0.046, '#fae2d3']] },
+  kyuko: { ang: -10, line: '#4a2418', eyes: [[0.342, 0.415, 0.117, 0.072, '#f9c7b0'], [0.579, 0.383, 0.142, 0.075, '#fbd6bf']] },
+});
+// 顔アイコン(face の ◯◯_normal の絵)の目。測り方は全身と同じ(目盛りつきで切り出して手で読んだ・2026-11-11)
+const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
+  mua: { ang: 10, line: '#5a3a2a', eyes: [[0.375, 0.49, 0.14, 0.10, '#fbe5d6'], [0.61, 0.53, 0.115, 0.095, '#fae4d5']] },
+  kiki: { ang: -2, line: '#4a2030', eyes: [[0.37, 0.555, 0.135, 0.085, '#fbcabd'], [0.645, 0.545, 0.145, 0.105, '#fdd4c8']] },
+  momosuke: { ang: -19, line: '#5a3a28', eyes: [[0.39, 0.53, 0.11, 0.095, '#f8cac1'], [0.605, 0.455, 0.125, 0.09, '#fad0c7']] },
+  atsu: { ang: -30, line: '#3a1f2a', eyes: [[0.35, 0.60, 0.095, 0.05, '#f6baa7'], [0.56, 0.48, 0.12, 0.06, '#f8c7b3']] },
+  kyuko: { ang: -11, line: '#4a2418', eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']] },
 });
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
-  const def = ASSISTANT_LIFE_SLEEP_EYES[pid];
+  const isFace = /\/face\//.test(String(src || ''));
+  const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
   if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
-  const fid = `mhlse-${pid}`;
+  const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
   return (
     <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
       <defs><filter id={fid} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={Math.max(0.6, w * 0.006)}/></filter></defs>
@@ -65262,6 +65329,59 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {tip && <p className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/90 px-3 py-1 text-[11px] font-black text-white" style={{ top: topH + 6 }} data-assistant-life-roomview-tip>{tip}</p>}
       {dock && <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b1020f2] via-[#0b1020d0] to-transparent px-3 pt-4" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{dock}</div>}
     </div>);
+}
+
+// ---- part: 56-assistant-life-ux.jsx ----
+// ===== 助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)。新UI(mh_assistant_life_ui_v2 が入)のときだけ使う部品 =====
+//   STEP1: 部屋は「その助手とできること」を1列に並べる(縦も横も同じ並び)。行ごとに、押すと何が上がるかを出す。
+//          いちばん上に、あなたとの仲良し度の道のり(次の Lv まであといくつ・そこで何が開くか)。
+//   何も保存しない。数字はどれも今ある決まり(仲良し度の段階・ごほうびの表・贈り物の好み)をそのまま読むだけ
+
+// 仲良し度の道のり。points … その助手の仲良し度の点数(無ければ Lv だけ)
+function AssistantLifeBondRoad({ id, points = null, level = null, land = false }) {
+  const pts = Number.isFinite(points) ? points : null;
+  const lv = pts != null && typeof assistantBondLevel === 'function' ? assistantBondLevel(pts) : level;
+  if (lv == null) return null;
+  const next = pts != null && typeof assistantBondNext === 'function' ? assistantBondNext(pts) : null;
+  const from = pts != null && typeof assistantBondStage === 'function' ? (assistantBondStage(pts).need || 0) : 0;
+  const pct = next ? Math.max(0, Math.min(100, Math.round(((pts - from) / Math.max(1, next.need - from)) * 100))) : 100;
+  // 次の Lv で開くもの(プロフィールの「ごほうび一覧」と同じ表)
+  let opens = [];
+  if (next && typeof assistantBondRewardRows === 'function') {
+    try {
+      const row = (assistantBondRewardRows(id) || []).find(r => r.level === next.level);
+      if (row) {
+        if (row.title) opens.push(`「${row.title}」の話し方`);
+        if (row.callStyle) opens.push('呼び方の相談');
+        if (row.frames && row.frames.length) opens.push('飾り枠');
+        opens = opens.concat((row.rewards || []).slice(0, 2));
+      }
+    } catch (_) { opens = []; }
+  }
+  return (
+    <div className={`rounded-2xl border border-pink-300/70 bg-pink-950/60 px-3 py-2 ${land ? 'mt-1.5' : 'mt-2'}`} data-assistant-life-bond-road={lv}>
+      <p className="flex items-baseline gap-2 text-[13px] font-black text-pink-50">💗 仲良し度 <b className="text-[16px]">Lv{lv}</b>
+        {next && <span className="ml-auto text-[11.5px] font-bold text-pink-200" data-assistant-life-bond-road-remain={next.remain}>あと {next.remain} で Lv{next.level}</span>}
+        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">いちばん上まで来ました</span>}
+      </p>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><i className="block h-full rounded-full bg-pink-400" style={{ width: `${pct}%` }}/></div>
+      {next && opens.length > 0 && <p className="mt-1 text-[11.5px] font-bold leading-snug text-pink-100" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-bond-road-opens>Lv{next.level} で: {opens.join('・')}</p>}
+    </div>);
+}
+
+// 「その助手とできること」の1行。gain … 押すと上がるもの(右に出す)/why … 押せないわけ(押せないときだけ)
+function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, disabled = false, why = '', tone = '' }) {
+  const off = disabled || typeof on !== 'function';
+  return (
+    <button type="button" data-assistant-life-room-act={k} data-assistant-life-room-do={k} disabled={off} onClick={off ? undefined : on}
+      className={`mt-1.5 flex w-full min-h-[48px] items-center gap-2.5 rounded-2xl border px-3 py-2 text-left active:scale-[.98] ${off ? 'border-white/10 bg-white/5 opacity-55' : `border-white/20 bg-white/10 ${tone}`}`}>
+      <span className="w-7 shrink-0 text-center text-[22px] leading-none" aria-hidden="true">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <b className="block text-[14px] leading-tight text-white">{label}</b>
+        {(off && why ? why : sub) && <small className="block text-[11.5px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'auto-phrase' }}>{off && why ? why : sub}</small>}
+      </span>
+      {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
+    </button>);
 }
 
 // ---- part: 56-assistant-life-rel.jsx ----

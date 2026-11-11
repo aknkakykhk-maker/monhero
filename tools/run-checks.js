@@ -662,6 +662,11 @@ async function main() {
     fs.writeFileSync(opts.json, JSON.stringify({ at: new Date().toISOString(), areas: wanted, totalSec, results: results.map(r => ({ command: r.command, status: r.status, sec: Math.round(r.sec * 10) / 10, ...(['OK', 'SKIP'].includes(r.status) ? {} : { output: String(r.output || '').slice(-6000) }), needsServer: r.needsServer, needsPlaywright: r.needsPlaywright, tail: r.status === 'OK' ? undefined : r.output.trim().split('\n').slice(-8) })) }, null, 2));
     console.log(`\n結果を書き出した: ${opts.json}`);
   }
+  // 確認の段数(2026-11-11): ミハリ(検査部)の確認が要る変更かを、変えたファイルと差分から出す。
+  // 出すだけで、検査の結果・終了コードは変えない(tools/team/review-gate.js)
+  if (opts.changed) {
+    try { const gate = require('./team/review-gate.js'); console.log('\n' + gate.format(gate.judge({ base: opts.base || undefined }))); } catch (e) { /* 判定が出せなくても検査の結果はそのまま */ }
+  }
   process.exit(bad.length ? 1 : 0);
 }
 
