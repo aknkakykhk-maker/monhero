@@ -223,8 +223,9 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         ) : who.map(id => { const a = assistantById(id); if (!a) return null; const w = assistantLifeWhereOf(life, id); const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
           return (
             <button key={id} type="button" aria-label={`${a.name}・${d ? d.label : ''}${spentOf(id, place) ? '(対戦のごほうび済み)' : ''}`} data-assistant-life-map-who={id} data-assistant-life-map-spent={spentOf(id, place) ? '1' : undefined} onClick={() => setSheet(place)} className="flex flex-col items-center px-[1px]">
-              <AssistantLifeMapFig who={a} h={figH} sleep={!!(w && w.doing === 'sleep')} spent={spentOf(id, place)}/>
-              <span className="mhl-map-name" data-assistant-life-map-name>{w && ASSISTANT_LIFE_DOING_ICON[w.doing]}{a.name}</span>
+              {(() => { const town = typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id); return (<>
+              <span className="block" style={town ? { filter: 'grayscale(.55) brightness(.85)' } : undefined} data-assistant-life-map-town={town ? id : undefined}><AssistantLifeMapFig who={a} h={figH} sleep={!!(w && w.doing === 'sleep')} spent={spentOf(id, place)}/></span>
+              <span className="mhl-map-name" data-assistant-life-map-name>{w && ASSISTANT_LIFE_DOING_ICON[w.doing]}{a.name}{town ? '・町の人' : ''}</span></>); })()}
             </button>); })}
       </div>);
   };
@@ -240,12 +241,16 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
     const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null; // { next } か null
     return (
       <div key={id} className={`mt-2 flex items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`} data-assistant-life-map-sheet-selected={initialAssistantId === id ? "1" : undefined} data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
-        <AssistantFace who={a} size={36} accent={a.accent}/>
+        <span className="shrink-0" style={typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? { filter: 'grayscale(.55) brightness(.85)' } : undefined}><AssistantFace who={a} size={36} accent={a.accent}/></span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-black text-white">{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
           <p className="text-[10.5px] font-bold text-slate-300">{town ? `${assistantLifeMapSpotWord(place)}で ` : ''}{w && ASSISTANT_LIFE_DOING_ICON[w.doing]} {withNames}{d ? d.label : '過ごしている'}{w && w.reason === 'lonely' ? '(さみしそう)' : ''}</p>
           {spent && <p className="text-[10.5px] font-bold text-amber-200" style={{ wordBreak: 'auto-phrase' }} data-assistant-life-map-sheet-next>{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から'}</p>}
         </div>
+        {typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? (
+        <div className="flex shrink-0 flex-col gap-1">
+          <button type="button" data-assistant-life-map-act="town" onClick={() => { setSheet(null); if (typeof assistantLifeShowTownPerson === 'function') assistantLifeShowTownPerson(id); }} className="rounded-xl border border-slate-400/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-slate-100 active:scale-95">🔒 町の人 ›</button>
+        </div>) : (
         <div className="flex shrink-0 flex-col gap-1">
           {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { setSheet(null); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
           {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { setSheet(null); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🃏 対戦する</button>}
@@ -256,7 +261,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           })()}
           {typeof onView === 'function' && <button type="button" data-assistant-life-map-act="view" onClick={() => onView(id)} className="rounded-xl border border-sky-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-sky-100 active:scale-95">💬 詳細を見る</button>}
           <button type="button" data-assistant-life-map-act="room" onClick={() => { setSheet(null); onPick(id); }} className="rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
-        </div>
+        </div>)}
       </div>);
   };
   return (
@@ -310,6 +315,13 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
             <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100">{ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]}</p>
             {sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : <p className="mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300" data-assistant-life-map-sheet-none>いまはだれもいません</p>}
+            {/* 行き先の予定(入口①。印 assistantLifePlan が偽・予定に入れられない場所・今日の移動が残っていないときは出さない) */}
+            {typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && (
+              <button type="button" data-assistant-life-map-plan={sheetPlace} onClick={() => assistantLifePlanOpen({ place: sheetPlace })}
+                className="mt-2 flex min-h-[44px] w-full items-center gap-1.5 rounded-xl border border-dashed border-sky-300/80 bg-slate-900/85 px-2 text-left">
+                <span className="min-w-0 flex-1 text-[12px] font-black leading-snug text-white">📍 次の移動({assistantLifeSlotOfAbs(assistantLifePlanSlotsLeft()[0]).from}時)で、ここへ来てもらう<span className="block text-[10.5px] font-bold text-emerald-300">助手を選ぶ → たいてい来てくれます</span></span>
+                <span className="shrink-0 rounded-xl bg-amber-400 px-2 py-1 text-[11.5px] font-black text-slate-900">選ぶ</span>
+              </button>)}
             {/* 家の札には、町の場所にいる助手も並べる(HOME の「助手ライフ」の札の下の顔と同じ顔ぶれになる) */}
             {sheetTown.length > 0 && (<>
               <p className="mt-3 text-[11px] font-black text-amber-200" data-assistant-life-map-sheet-town>📍 町にいる助手(HOME ではこの札の下に顔が出ます)</p>

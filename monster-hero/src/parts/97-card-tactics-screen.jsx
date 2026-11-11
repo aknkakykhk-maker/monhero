@@ -291,6 +291,11 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const [detail, setDetail] = useState(null); // めくったカードを押すと全文
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // 演出・強め(MFバトルカードのパックと同じ。2026-11-11 社長「戦術カードも MF 並みに」)。設定「パックを開ける演出」(87 の cardPackFxOn)の入切が効く。
+  //   SR は裏のまま光が2段上がってからめくれる / 破るときは中に SR があれば金色で光る / 札が大きく紙吹雪 / 画面がふるえる。中身・確率は変えない
+  const [fx] = useState(cardPackFxOn);
+  const [climb, setClimb] = useState(null);
+  const rootRef = useRef(null);
   const listRef = useRef(null);
   const [listH, setListH] = useState(0);
   useEffect(() => {
@@ -308,20 +313,45 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const cards = packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
   const last = pi >= packs.length - 1;
-  const tear = () => { if (phase !== 'closed') return; se('special'); setPhase('tearing'); later(() => se('crit'), 520); later(() => setPhase('open'), CARD_TACTIC_TEAR_MS); };
+  const tear = () => {
+    if (phase !== 'closed') return;
+    se('special'); setPhase('tearing'); later(() => se('crit'), 520);
+    if (fx) { cardPackQuake(rootRef.current, 1); later(() => cardPackQuake(rootRef.current, 2), 640); }
+    later(() => setPhase('open'), CARD_TACTIC_TEAR_MS);
+  };
   const spotOff = () => { setSpot((sp) => (sp && !sp.leaving ? { ...sp, leaving: true } : sp)); later(() => setSpot(null), CARD_TACTIC_SPOT_BACK_MS); };
-  const reveal = (i) => {
-    se('card');
+  const climbSteps = (c) => (fx && c && c.r === 'SR' ? 2 : 0);
+  const spotMs = () => (fx ? CARD_PACK_SPOT_ALT_FX_MS : CARD_TACTIC_SPOT_MS);
+  const turn = (i) => {
+    se('card'); setClimb(null);
     setFlipped((f) => (f.includes(i) ? f : [...f, i]));
-    if (cards[i] && cards[i].r === 'SR') { later(() => { setFlash((n) => n + 1); setSpot({ i, leaving: false }); se('crit'); se('fusion'); }, 380); later(spotOff, 380 + CARD_TACTIC_SPOT_MS); }
+    if (cards[i] && cards[i].r === 'SR') {
+      later(() => { setFlash((n) => n + 1); setSpot({ i, leaving: false }); se('crit'); se('fusion'); if (fx) { cardPackQuake(rootRef.current, 2); cardPackBuzz([50, 30, 50]); } }, 380);
+      later(spotOff, 380 + spotMs());
+    }
   };
-  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot) return; reveal(i); };
+  const reveal = (i) => {
+    const steps = climbSteps(cards[i]);
+    if (!steps) { turn(i); return; }
+    for (let k = 0; k < steps; k++) later(() => { setClimb((x) => ({ i, k, n: ((x && x.n) || 0) + 1 })); se('tap'); cardPackQuake(rootRef.current, k + 1); cardPackBuzz(15 + k * 15); }, k * CARD_PACK_CLIMB_MS);
+    later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
+  };
+  const flip = (i) => { if (flipped.includes(i) || phase !== 'open' || spot || climb) return; reveal(i); };
   const flipAll = () => {
-    if (spot) return;
+    if (spot || climb) return;
     let at = 0;
-    cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i) => { later(() => reveal(i), at); at += cards[i].r === 'SR' ? 380 + CARD_TACTIC_SPOT_MS + CARD_TACTIC_SPOT_BACK_MS + 120 : 140; });
+    cards.map((_, i) => i).filter((i) => !flipped.includes(i)).forEach((i) => { later(() => reveal(i), at); at += cards[i].r === 'SR' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs() + CARD_TACTIC_SPOT_BACK_MS + 120 : 140; });
   };
-  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
+  // 連続で開けるとき(2パック目から)は、ふつうのカードを自動で一気にめくり、SR だけ残して止まる。「とばす」は残りを演出なしで全部めくる(2026-11-11 社長)
+  const quick = fx && pi > 0 && packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => { if (c.r !== 'SR') later(() => setFlipped((f) => (f.includes(i) ? f : [...f, i])), 160 + i * 70); });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => { timers.current.forEach(clearTimeout); timers.current = []; se('card'); setSpot(null); setClimb(null); setFlipped(cards.map((_, i) => i)); };
+  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); setClimb(null); };
+  const omen = fx && cards.some((c) => c.r === 'SR') ? 'kira' : null;
   // 並べ方はブースターパックと同じ: 背の高い画面は3列(カードを大きく)、低い画面は4列。カードの大きさは並べる所の高さに合わせる
   const cols = !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
   const rows = Math.ceil(cards.length / cols);
@@ -330,7 +360,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
   const spotCard = spot ? cardTacticOf(cards[spot.i].id) : null;
   const shards = cards.filter((c) => c.dup).length;
   return (
-    <div data-mh-screen data-card-tactic-open data-card-tactic-open-phase={phase} className={SCREEN_SHELL_CLASS}>
+    <div ref={rootRef} data-mh-screen data-card-tactic-open data-card-tactic-open-phase={phase} data-card-tactic-fx={fx ? 'on' : 'off'} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="戦術カードパック" accent="text-amber-200" note={packs.length > 1 ? `${pi + 1} / ${packs.length}パック` : ''}/>
       <div ref={listRef} className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
         {phase !== 'open' ? (
@@ -339,6 +369,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-pillar"/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
+            {phase === 'tearing' && omen && <div aria-hidden="true" data-card-tactic-omen={omen} className={`mh-pack-omen mh-pack-omen-${omen}`}/>}
             {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
         ) : (
@@ -347,11 +378,16 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
               const card = cardTacticOf(c.id);
               const on = flipped.includes(i);
               const sr = c.r === 'SR';
+              const cl = climb && climb.i === i ? climb : null;
+              // 格上げに見せる SR は、めくる前の裏が光らず、段が上がると金に光り出す(87 の cardPackSurprise。中身は変えない)
+              const sur = fx && sr && cardPackSurprise({ rarity: 'kira' }, i, pi);
+              const glow = sr && !on && (!sur || (cl && cl.k >= 1));
               return (
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
-                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} onClick={() => (on ? setDetail(card) : flip(i))} className="mh-pack-card relative w-full active:scale-95">
+                  <button type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={on ? '1' : '0'} data-card-tactic-surprise={sur ? 1 : undefined} data-card-tactic-climb={cl ? cl.k + 1 : undefined} onClick={() => (on ? setDetail(card) : flip(i))} className={`mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`}>
+                    {cl && <span key={cl.n} aria-hidden="true" className="mh-pack-climb-burst" style={{ '--c': CARD_PACK_CLIMB[cl.k][0], '--s': `${CARD_PACK_CLIMB[cl.k][1]}px` }}/>}
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div data-card-tactic-back className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`}>
+                      <div data-card-tactic-back className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${glow ? 'mh-pack-kira-back' : ''}`}>
                         <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
                       </div>
                       <div className={`mh-pack-face mh-pack-front ${sr ? 'mh-pack-kira-front' : ''}`}>{card && <CardTacticFront card={card}/>}</div>
@@ -380,15 +416,19 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
       {spotCard && (
         <button type="button" data-card-tactic-spot aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70" style={cardSafePad('0px')}>
           <div aria-hidden="true" className="mh-pack-spot-rays"/>
+          {fx && !spot.leaving && <div aria-hidden="true" className="mh-pack-spot-burst"/>}
+          {fx && !spot.leaving && <div aria-hidden="true" className="mh-pack-shock"/>}
+          {fx && !spot.leaving && <div aria-hidden="true" className="mh-pack-vignette"/>}
+          {fx && <CardPackConfetti key={`cf-${spot.i}`} n={60}/>}
           <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
             <div className="mh-pack-kira-front relative aspect-[5/7] w-full"><CardTacticFront card={spotCard} big/></div>
           </div>
-          <span className={`relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${spot.leaving ? 'opacity-0' : ''}`}>SR!</span>
+          <span data-card-tactic-label={fx ? 'big' : 'normal'} className={`relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${fx ? 'mh-pack-label-big' : ''} ${spot.leaving ? 'opacity-0' : ''}`}>SR!</span>
         </button>
       )}
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
-          : !allOpen ? <button type="button" data-card-tactic-open-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
+          : !allOpen ? <div className="flex gap-2"><button type="button" data-card-tactic-open-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-tactic-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
           : !last ? <button type="button" data-card-tactic-open-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
           : <button type="button" data-card-tactic-open-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>とじる</button>}
       </div>
