@@ -2317,6 +2317,41 @@
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
+  },
+  "lamia/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 9,
+   "heldHandSwitch": 0
+  },
+  "lamia/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 30,
+   "heldHandSwitch": 0
+  },
+  "lamia/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 43,
+   "heldHandSwitch": 0
+  },
+  "lamia/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 15,
+   "heldHandSwitch": 0
+  },
+  "lamia/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 27,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -2374,6 +2409,11 @@
    "at": "2026-11-11T13:35",
    "reason": "2026-11-11 社長「全部変えていいけど告知はして」: 公開中の問題のある譜面の見直し(40曲の EASY〜MASTER を今の道具で作り直し・ヒューマノイドは位置だけ直し・Rebellion short は前と同じ Lv.42 へ)。HELL と Sheriruth・Grievous Lady の譜面は変えない",
    "changed": 294
+  },
+  {
+   "at": "2026-11-12T01:09",
+   "reason": "新曲 LAMIA を公開(LAMIA の5行だけ足した)",
+   "changed": 5
   }
  ]
 }

@@ -8609,3 +8609,19 @@ songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuk
 - **rebellion_short の歯ごたえ**: そのまま作り直すと MASTER が 772→565ノーツ・Lv.42→32 と大きく軽くなった。社長が「前と同じ Lv.42 前後(約780ノーツ)」を選んだので、
   `rhythm-chart-tune.js --target MASTER:level=42` の候補から `challengeFactor:1.08`・`masterDensity:1.2`(`chartIntensityByDifficulty:{MASTER:'strong'}` は前から)を書いた。結果 MASTER 780ノーツ・Lv.42
 - **makutsu_no_senritsu**: そのままだと EXPERT 473 > MASTER 470 で段が逆になるので `sustainScale:{MASTER:0.2}`(MASTER 536ノーツ・Lv.27 は前と同じ)
+
+## 「LAMIA」をモンヒロビートへ足した（2026-11-11）
+
+社長の依頼(窓口経由・mp4 とジャケット)「新曲追加。高難易度曲。曲にあわせて止まったり戻ったりとか変動型」。BlackY の `LAMIA`。songId `lamia`、bgmTrackId `melo_lamia`、マーカー `lamia-v3`。
+
+- **ジャケット**: 1254×1254 を 512×512 に(78KB)
+- **音源**: 頭に3.3秒の無音があり、最初のノーツが4.4〜5.3秒になった(「3秒以内」の検査に落ちた)ので、頭の無音を2.4秒削った(`--from 2.4`)。×0.6577 で **-14.00 LUFS / -2.38 dBTP**(2分23秒)。元の mp4 は `tools/art-sources/song-audio/lamia/`
+- **テンポ**: 自動判定 161.41 BPM は外れ。区間ごとの局所テンポでは 133.5 と 200.5 が交互に出たが(比 1.5)、低音を除いた打点では全区間 199 BPM・ずれ ±11ms 以内で、
+  **199.03 BPM・4拍子・拍の頭 155.9ms**(削る前は 1350ms)。±15ms 59%(161.41 は 34%)。`tempo-unstable` は低音の遅れ 48.6ms(16分の半分以上)の読み違い
+- **出荷の関門の直し**: 生成器は低音の遅れを差し引いて1格子前へ置き直すのに、パイプラインの「鳴っていない場所」の関門がそれを数えていなかった(各難易度30〜49件で止まった)。関門も同じ格子を数えるようにした(公開中の譜面は変わらない)
+- **歯ごたえ**(社長「高難易度曲」・`rhythm-chart-tune.js` で狙いの Lv. から探した): `chartIntensity:'extreme'`・`chartIntensityByDifficulty:{HARD:'strong',EXPERT:'mild'}`・
+  `sustainScale:{MASTER:0.3,EASY:0.2}`・`hellDensity:1.6`。社長の選択は削る前の案A(13/18/24/32/50/HELL 68)、削って作り直したあとの「このまま」
+  EASY 13 / NORMAL 19 / HARD 25 / EXPERT 34 / MASTER 51 / HELL 78、ノーツ 362 / 442 / 495 / 617 / 797 / 728
+- **HELL**: `hellDensity` は 1.0 で Lv.61〜62、1.05 以上で 78〜82 と段差になり、その間は作れなかった。社長が 78(`variant` 2)を選んだ
+- **変動(止まる・戻る・速さ)**: ヘンドウの口 `rhythmScrollFxChart(譜面, LAMIA_SCROLL_FX)` で6譜面とも包んだ(9か所。構成の解析は `docs/progress/beat-lamia/STRUCTURE.md`)
+- 公開前に MASTER の2か所を位置だけ直した(85.47秒の帯の中のタップを左へ・131.7〜133.0秒の2本のスライドの交差をやめて左右に分けた)

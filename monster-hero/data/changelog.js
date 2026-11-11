@@ -35,6 +35,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-11 社長「新曲追加。高難易度曲。曲にあわせて止まったり戻ったりとか変動型」。BlackY。文は社長の「この文で」(Lv.・ノーツ数は作り直したあとの値)
+    date: "2026-11-12 02:08", type:'update', group:'rhythm', title:'新曲「LAMIA」を追加しました', status:'new',
+    image:'images/song-art/lamia.jpg?v=fc61230a48ac',
+    items:[
+      'モンヒロビートに「LAMIA」（2分23秒）を追加しました。曲えらびからすぐ遊べます。',
+      '流れてくるノーツが曲に合わせて止まったり、戻ったり、速さが変わったりする譜面です。',
+      'レベルは EASY Lv.13 ／ NORMAL Lv.19 ／ HARD Lv.25 ／ EXPERT Lv.34 ／ MASTER Lv.51 ／ HELL Lv.78 です。',
+      'ノーツ数は 362 ／ 442 ／ 495 ／ 617 ／ 797 ／ 728 です。',
+    ],
+    assistantNotice:{ id:'update_notice_lamia_v1', type:'content' },
+  },  {
     // 場所の得をその場で(2026-11-11 ミヤスサ点検 ①。文は社長「この文で」)
     date: "2026-11-12 01:28", type:'update', group:'assistant', title:'助手ライフで、場所ごとの得がその場で分かるようになりました', status:'new',
     items:[
@@ -51,6 +62,7 @@ const CHANGELOG = [
       'ホーム画面のアイコンから開いたら、遊び始める前に、タイトルの設定から記録を戻してください。',
     ],
   },
+
   {
     date: "2026-11-12 01:01", type:'fix', group:'other', title:'新しく始めた端末にデータを戻すと、はじめて遊ぶ人の扱いが残ることがある不具合を直しました', status:'new',
     items:[
