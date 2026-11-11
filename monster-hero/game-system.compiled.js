@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 543f69ebdd8225c6
+// source-sha256: f38f74844ebe03e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117173,7 +117173,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily-title": true
   }, "「", plan.title, "」")) : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
     className: "block text-[11px] text-emerald-300"
-  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
+  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}(1日 +12 まで)` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
     className: "block text-[11px] text-pink-200"
   }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && (plan ? React.createElement("button", {
     type: "button",
@@ -117374,13 +117374,18 @@ const assistantLifeDailyAlbumTalks = () => {
 const assistantLifeDailyFinish = async (plan, slotId) => {
   const r = await assistantLifeDailyListen(slotId);
   let bond = 0;
+  const gains = {};
   if (r.added && plan) {
     bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
     if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+      const pts = id => typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
       for (const id of plan.ids) {
+        const before = pts(id);
         try {
           assistantPeerPlayerBondAdder(id, 'lifeDaily', bond);
         } catch (_) {}
+        const after = pts(id);
+        gains[id] = Number.isFinite(before) && Number.isFinite(after) ? Math.max(0, after - before) : bond;
       }
     }
     if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') {
@@ -117395,7 +117400,8 @@ const assistantLifeDailyFinish = async (plan, slotId) => {
   return {
     added: r.added,
     got: r.got,
-    bond
+    bond,
+    gains
   };
 };
 function AssistantLifeDailySceneView({
@@ -117523,7 +117529,11 @@ function AssistantLifeDailySceneView({
     "data-assistant-life-daily-result": true
   }, res && React.createElement("p", {
     className: "mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700"
-  }, res.added ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
+  }, res.added ? ['🤝 ふれあい1回', (() => {
+    const g = res.gains || {};
+    const up = plan.ids.filter(id => (g[id] || 0) > 0);
+    return up.length ? up.map(id => `💗 ${assistantLifeName(id)} +${g[id]}`).join(' ') : res.bond > 0 ? '💗 今日の仲良し度はここまで' : '';
+  })(), plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
     type: "button",
     "data-assistant-life-daily-scene-close": true,
     onClick: ev => {
@@ -117560,8 +117570,7 @@ function AssistantLifeTopStrip({
   let next = null;
   try {
     const s = assistantLifeSlotAt();
-    const d = ASSISTANT_LIFE_SLOTS[s.i];
-    next = d && Number.isFinite(d.to) ? d.to % 24 : null;
+    next = Number.isFinite(s.to) ? s.to % 24 : null;
   } catch (_) {
     next = null;
   }
