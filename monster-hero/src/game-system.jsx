@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e047d6eee5b8915
+// generated-sha256: fcde78cee651b4f3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -45,7 +45,10 @@ const MH_SCREEN_TRAIL=(()=>{
       //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
       document.addEventListener('visibilitychange',()=>{last=0;});
-      setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -277,6 +280,9 @@ const normalizeBattleFxSettings = (value) => {
     resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
     countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
     endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
+    // 当たりの間(2026-11-11 社長「当たりの間は入れる・設定で切れる・はじめは入」)。攻撃が当たった瞬間に、画面の動きを一瞬だけ止める。
+    // ★足す前に保存した人(hitStop が無い)は ON(入れる)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    hitStop: v.hitStop === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -301,6 +307,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'hitStop', title:'当たりの間',
+    desc:'攻撃が当たった瞬間に、画面の動きをほんの一瞬だけ止めて、当たった手ごたえを出します。会心の一撃と、敵を倒したときは少し長く止まります。バトルの速さを上げているときは、そのぶん短くなります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'入れる', note:'当たった手ごたえが出る' }, { id:'OFF', label:'入れない', note:'止めずに流す' }] },
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
@@ -18144,6 +18153,152 @@ const TapRippleLayer = ({ spawnRef }) => {
   );
 };
 
+// ---- part: 24-battle-hit-feel.jsx ----
+// バトルの「手ごたえ」(2026-11-11 社長が選んだ形: 案A キレを土台 + 会心と撃破だけ案B ドカン + 効果の知らせは案C の札。
+// 「当たりの間は入れる・設定で切れる・はじめは入」)。資料: docs/progress/battle-feel/README.md
+//
+// ★見た目と間だけ。ダメージ・命中・会心の判定・スコア・ランキング・勝敗・ターンの進み・AUTO の回し方には一切触れない。
+//   この部品は「敵に出た数字の札」と「敵のライフ」を読むだけで、何も書き戻さない。
+//   「当たりの間」は CSS のアニメーションを一瞬止めるだけ(#root の data-feel-stop)。ゲームの時計(battleWait)は止めない。
+// ★React の state は持たない(ref と DOM だけ)。当たるたびにアプリ全体を描き直させないため。
+// ★動かすのは transform / opacity / translate / scale だけ(描き直しにならない)。
+
+// 当たりの間の長さ(ms・×1速のとき)。速さを上げているときは同じ割合で短くする
+const BATTLE_FEEL_STOP_MS = Object.freeze({ normal: 50, crit: 110, defeat: 140, chain: 30 });
+
+// 札の文から、効果の種類を決める(色と印を付けるだけ。案C)。当てはまらなければ undefined(いままでの見た目)
+const battleFeelKindOf = (text) => {
+  const s = String(text == null ? '' : text);
+  if (/反射/.test(s)) return 'reflect';
+  if (/吸収|ドレイン/.test(s)) return 'absorb';
+  if (/回避|かわし|MISS/i.test(s)) return 'evade';
+  if (/会心/.test(s)) return 'crit';
+  if (/撃破/.test(s)) return 'defeat';
+  return undefined;
+};
+
+// 敵に出た数字の札が「1発ぶんのダメージ」かどうか。会心は 60-app が末尾に「!!」を付けている
+const battleFeelTierOf = (text) => {
+  const s = String(text == null ? '' : text);
+  if (!/^\d[\d,]*!*$/.test(s)) return null;
+  return /!!$/.test(s) ? 'crit' : 'normal';
+};
+
+// popups … 敵に出ている数字の札(効果の小さな札を除いたもの)。enemyHp … 敵のライフ(0 になった瞬間を「倒した」とする)
+// speed … バトルの速さ(×1・×2…)。stopOn / shakeOn / defeatOn / richOn … 設定。off … 軽量表示・省エネ(何もしない)
+function BattleHitFeel({ popups, enemyHp, speed = 1, stopOn = true, shakeOn = true, defeatOn = true, richOn = true, off = false }) {
+  const hostRef = React.useRef(null);
+  const seenRef = React.useRef(undefined);
+  const hpRef = React.useRef(enemyHp);
+  const lastHitAtRef = React.useRef(0);
+  const stopTimerRef = React.useRef(0);
+  const last = Array.isArray(popups) && popups.length ? popups[popups.length - 1] : null;
+  const lastId = last ? last.id : null;
+  const lastText = last ? last.text : '';
+
+  React.useEffect(() => () => {
+    clearTimeout(stopTimerRef.current);
+    try { document.getElementById('root')?.removeAttribute('data-feel-stop'); } catch (e) {}
+  }, []);
+
+  React.useEffect(() => {
+    const prevHp = hpRef.current;
+    hpRef.current = enemyHp;
+    const first = seenRef.current === undefined;
+    const fresh = lastId != null && lastId !== seenRef.current;
+    seenRef.current = lastId;
+    if (first || off) return;
+    const defeated = Number.isFinite(enemyHp) && Number.isFinite(prevHp) && enemyHp <= 0 && prevHp > 0;
+    let tier = fresh ? battleFeelTierOf(lastText) : null;
+    if (defeated && defeatOn) tier = 'defeat';
+    if (!tier) return;
+    const host = hostRef.current;
+    if (!host) return;
+    let reduce = false;
+    try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    if (reduce) return;
+    const k = 1 / Math.max(1, Number(speed) || 1);
+    const now = Date.now();
+    const chain = tier === 'normal' && now - lastHitAtRef.current < 220;   // 連撃の2発目から先は短く
+    lastHitAtRef.current = now;
+    const made = [];
+    const run = (el, frames, opts) => {
+      if (!el || typeof el.animate !== 'function') return null;
+      try { const a = el.animate(frames, { fill: 'both', easing: 'cubic-bezier(.2,.9,.3,1)', ...opts, duration: Math.max(60, (opts.duration || 200) * k), delay: (opts.delay || 0) * k }); made.push(a); return a; } catch (e) { return null; }
+    };
+    const piece = (css) => {
+      const d = document.createElement('div');
+      d.style.cssText = `position:absolute;left:50%;top:50%;pointer-events:none;${css}`;
+      host.appendChild(d);
+      return d;
+    };
+    const fade = (d, a, ms) => { if (a) a.onfinish = () => d.remove(); else d.remove(); setTimeout(() => d.remove(), ms * k + 400); };
+    const T = (s) => `translate(-50%,-50%) ${s}`;
+    const burst = (color, n, len) => {
+      for (let i = 0; i < n; i += 1) {
+        const deg = i * 360 / n + 8;
+        const d = piece(`width:${len}px;height:4px;border-radius:2px;transform-origin:0 50%;background:linear-gradient(90deg,${color},rgba(255,255,255,0));`);
+        fade(d, run(d, [{ opacity: 1, transform: `translate(0,-50%) rotate(${deg}deg) translateX(20px) scaleX(.3)` }, { opacity: 0, transform: `translate(0,-50%) rotate(${deg}deg) translateX(${len + 30}px) scaleX(1)` }], { duration: 300, easing: 'ease-out' }), 300);
+      }
+    };
+    const ring = (color, size, to) => {
+      const d = piece(`width:${size}px;height:${size}px;border-radius:50%;border:3px solid ${color};`);
+      fade(d, run(d, [{ opacity: .95, transform: T('scale(.45)') }, { opacity: 0, transform: T(`scale(${to})`) }], { duration: 420, easing: 'ease-out' }), 420);
+    };
+    const flash = (css, peak, ms) => {
+      const d = piece(css);
+      fade(d, run(d, [{ opacity: peak }, { opacity: 0 }], { duration: ms, easing: 'ease-out' }), ms);
+    };
+    const stamp = (text, color, size, dx, dy, hold) => {
+      const d = piece(`margin-left:${dx}px;margin-top:${dy}px;white-space:nowrap;font-weight:900;line-height:1;font-size:${size}px;color:${color};letter-spacing:.06em;text-shadow:0 2px 0 #000,0 -1px 0 #000,2px 0 0 #000,-2px 0 0 #000,0 4px 10px rgba(0,0,0,.7);`);
+      d.textContent = text;
+      d.setAttribute('data-feel-stamp', tier);
+      run(d, [{ opacity: 0, transform: T('scale(2.6) rotate(-12deg)') }, { opacity: 1, transform: T('scale(.92) rotate(-6deg)'), offset: .7 }, { opacity: 1, transform: T('scale(1) rotate(-6deg)') }], { duration: 200 });
+      fade(d, run(d, [{ opacity: 1 }, { opacity: 0 }], { duration: 240, delay: hold, easing: 'linear', fill: 'forwards' }), hold + 240);
+    };
+    // 敵の舞台(この部品の親)を揺らす・寄せる。transform は使わず translate / scale で足す(舞台の元の位置を壊さない)
+    const stage = host.parentElement;
+    const shake = (amp, ms) => {
+      if (!shakeOn) return;
+      const pts = [[0, 0], [-1, .5], [1, -.6], [-.8, -.5], [.7, .5], [-.4, .2], [0, 0]];
+      run(stage, pts.map(([x, y], i) => ({ translate: `${(x * amp * (1 - i / 9)).toFixed(1)}px ${(y * amp * (1 - i / 9)).toFixed(1)}px` })), { duration: ms, easing: 'linear', fill: 'none' });
+    };
+
+    if (tier === 'crit') {
+      // 会心(案B): 白い光・光の筋・金の輪・「会心!!」・舞台が少し寄る。画面全体の揺れは今までどおり 60-app が出す
+      if (richOn) { flash('width:4000px;height:4000px;margin-left:-2000px;margin-top:-2000px;background:#fff;', .42, 150); burst('#fde047', 12, 80); }
+      ring('#fde047', 80, 2.6);
+      stamp('会心!!', '#fde047', 20, -64, -58, 620);
+      if (shakeOn) run(stage, [{ scale: '1.07' }, { scale: '1' }], { duration: 240, fill: 'none' });
+    } else if (tier === 'defeat') {
+      // 撃破(案B): 敵が白く光る・光の筋・「撃破!」の判・強い揺れ
+      flash('width:120%;height:120%;margin-left:-60%;margin-top:-60%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0%,rgba(255,255,255,0) 70%);', 1, 300);
+      if (richOn) burst('#ffffff', 14, 90);
+      stamp('撃破!', '#fca5a5', 40, 0, 12, 750);
+      shake(9, 420);
+    } else if (!chain) {
+      shake(2.5, 160);
+    }
+
+    // 当たりの間: CSS のアニメーションだけを一瞬止める(70-bootstrap の #root[data-feel-stop])。自前の演出も一緒に止めて、同じ絵で固める
+    if (stopOn) {
+      const ms = (chain ? BATTLE_FEEL_STOP_MS.chain : BATTLE_FEEL_STOP_MS[tier]) * k;
+      const root = document.getElementById('root');
+      if (root && ms >= 12) {
+        root.setAttribute('data-feel-stop', tier);
+        made.forEach((a) => { try { a.pause(); } catch (e) {} });
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = setTimeout(() => {
+          root.removeAttribute('data-feel-stop');
+          made.forEach((a) => { try { if (a.playState === 'paused') a.play(); } catch (e) {} });
+        }, ms);
+      }
+    }
+  }, [lastId, enemyHp]);
+
+  return <div ref={hostRef} data-battle-hit-feel={off ? 'OFF' : 'ON'} aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 49 }}></div>;
+}
+
 // ---- part: 24-sorashido-copy-view.jsx ----
 // ===== ソラシドの自動化(アシカ copy_sorashido・2026-10-27 社長の決定)の見せ方の部品 =====
 // 計算は 32-sorashido-copy.jsx、バトルへの組み込み(5人目の枠・出す/消す時期)はバトル部。ここは見た目だけで、状態を持たない。
@@ -22146,8 +22301,9 @@ const rhythmScoreFitSize=(text,maxPx,minPx)=>{
 // タブは4つ(2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」)。保存キー・値は変えず、並べ替えと見出しだけ。
 // id は前のまま使う(live=演奏 / volume=音 / system=軽さ・演出)。display(表示)はライブにあった表示の項目を分けたもの
 const RHYTHM_OPTION_TABS=Object.freeze([['live','演奏'],['display','表示'],['volume','音'],['system','軽さ・演出']]);
-const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{
-  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null,onPreview=null,initialDraft=null})=>{
+  // 「▶ 見てみる」の見本から戻ったときは、そのときの下書き(initialDraft)から続ける(保存前の変更を消さない。2026-11-11)
+  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(initialDraft||value));
   const [message,setMessage]=useState('');
   // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
   const [leaveAsk,setLeaveAsk]=useState(false);
@@ -22312,7 +22468,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+        {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
+        {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
+          className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
+          <span>▶ 見てみる</span>{!wide&&<small className="text-[10px] font-bold text-cyan-200/90">いまの設定で演奏画面</small>}</button>}</header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
       <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-4 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
@@ -24821,6 +24981,11 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
   ];
   // 試す段階(保存したあと)は、操作パネルを出さない。右上の一時停止の下に小さく「位置を直す」「終わる」だけを置く
   //   (2026-10-14 社長「位置調整してるときにノーツ落ちてくるのも邪魔」「試しにやるにも左の設定邪魔」)
+  // オプションの「▶ 見てみる」の見本(2026-11-11)。自動で叩いて流すだけなので、右上は「設定へ戻る」だけ(保存前の設定のまま戻る)
+  if(adjust.preview)return <div data-rhythm-option-preview-panel className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
+    <button type="button" data-rhythm-option-preview-back onClick={adjust.onEnd} className="min-h-[44px] rounded-xl border border-white/30 bg-slate-900/90 px-3 text-[12px] font-black text-white">設定へ戻る</button>
+    <span data-rhythm-option-preview-note className="max-w-[160px] rounded-lg bg-violet-900/85 px-2 py-1 text-right text-[10px] font-bold leading-snug text-violet-50">見本(自動で叩きます)<br/>保存前の設定で表示中</span>
+  </div>;
   if(adjust.phase==='try')return <div data-rhythm-line-adjust-panel data-phase="try" className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
     <button type="button" data-rhythm-line-adjust-fix onClick={adjust.onFix} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100">位置を直す</button>
     <button type="button" data-rhythm-line-adjust-end onClick={adjust.onEnd} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white">終わる</button>
@@ -24853,6 +25018,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
   const lineAdjustRef=useRef(lineAdjust);lineAdjustRef.current=lineAdjust;
+  // オプションの「▶ 見てみる」の見本は、曲が流れはじめたら自動で叩く(30-rhythm-preview-hands.jsx。ふつうの指と同じ合図を送るだけ)
+  const previewHands=!!(lineAdjust&&lineAdjust.preview);
   const lineHeightOverride=lineAdjust&&Number.isFinite(Number(lineAdjust.ground))?Number(lineAdjust.ground):null;
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
@@ -26570,6 +26737,12 @@ scheduleTick();};
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
+  useEffect(()=>{
+    if(!previewHands||typeof window==='undefined'||typeof rhythmPreviewHandsStart!=='function')return undefined;
+    let stop=null;
+    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current);clearInterval(wait);}},100);
+    return()=>{clearInterval(wait);if(stop)stop();};
+  },[previewHands]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);if(!(lineAdjust&&lineAdjust.phase==='set'))beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   // 演奏中にアプリを離れた(画面が隠れた)回数を診断で数える。直し方 autoPauseOnHidden を入れた端末では、離れた時点で自動で一時停止する
   // (既定は切ってある。入れる前は、Androidは裏でも曲が進んで戻ると大量のMISSになる・iOSは時計が止まる、という推測を診断で確かめる段階。2026-10-07)
@@ -27277,6 +27450,80 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
 <p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</>}</button></div>}</div></main>;
+};
+
+// ---- part: 30-rhythm-preview-hands.jsx ----
+// ===== オプションの「▶ 見てみる」で、見本の譜面を自動で叩く手(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) =====
+// 本物の演奏画面へ、ふつうの指と同じポインタの合図(pointerdown・pointermove・pointerup)を送るだけ。判定・譜面・音の同期には触らない
+// (プレイボットの「理想の人の手」tools/playbot/rhythm-ideal-hands.js と同じ叩き方を、見本の短い譜面向けに小さくしたもの)。
+//   タップ … 時刻ちょうどに押して 40ms で離す / フリック … 押して上(向きのあるものはその向き)へ払う
+//   ホールド・スライド … 押さえたまま帯をなぞり、終わりで離す(終点フリックは終わりで上へ払う)
+// 使うのは見本(from:'preview')の演奏だけ。曲の時刻は演奏画面の読み取り口(window.__mhTestHooks.rhythmSongMs)から読む。
+// 返す stop() で止める(画面を閉じたとき・流し直すとき)。
+const rhythmPreviewHandsStart = (area) => {
+  if (typeof window === 'undefined' || !area) return () => {};
+  const hooks = () => window.__mhTestHooks || {};
+  let stopped = false, raf = 0, k = 0, ids = 900;
+  const timers = new Set();
+  const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); if (!stopped) fn(); }, Math.max(0, ms)); timers.add(id); };
+  const lineR = () => (typeof RHYTHM_JUDGMENT_LINE_Y !== 'undefined' ? RHYTHM_JUDGMENT_LINE_Y.ratio : 0.82);
+  const rectOf = () => (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(area) : area.getBoundingClientRect());
+  // 演奏画面が回してある(🔄横)ときは、回した器の中の座標を、画面の座標へ戻して送る
+  const toClient = (x, y) => { if (typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.unpoint) { const c = RHYTHM_VIEW_ROTATION.unpoint(x, y); return { x: c.clientX, y: c.clientY }; } return { x, y }; };
+  const pt = (c, sky) => { const r = rectOf(); const lr = lineR(); const lift = sky > 0 && typeof RHYTHM_SKY_LIFT !== 'undefined' ? RHYTHM_SKY_LIFT.ratio * sky : 0;
+    return { x: r.left + r.width * rhythmProjectBoundary(c, lr), y: r.top + r.height * (lr - lift) }; }; // 器の中の座標(払う向きもこの座標で足す)
+  const spanAt = (n, t) => {
+    if (rhythmNoteIsSlide(n)) return { c: rhythmSlideExpectedLane(n, t) + 0.5, sky: rhythmSlideHasSky(n) ? rhythmSlideSkyAt(n, t) : 0 };
+    const sky = rhythmNoteSkyHeight(n);
+    if (n.subLane != null && Number.isFinite(Number(n.subLane))) {
+      const sp = rhythmNoteHasHoldPoints(n) ? rhythmHoldSpanAt(n, t) : { subLane: Number(n.subLane), subLaneWidth: Number(n.subLaneWidth) || 2 };
+      return { c: (sp.subLane + sp.subLaneWidth / 2) / 2, sky };
+    }
+    return { c: (Number(n.lane) || 0) + 0.5, sky };
+  };
+  const posOf = (n, t) => { const s = spanAt(n, t); return pt(s.c, s.sky); };
+  const send = (type, id, p) => {
+    const c = toClient(p.x, p.y);
+    try { area.dispatchEvent(new window.PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: c.x, clientY: c.y, buttons: type === 'pointerup' ? 0 : 1 })); } catch (_) {}
+  };
+  const notes = (() => { try { return ((hooks().rhythmNotes && hooks().rhythmNotes()) || []).slice().sort((a, b) => a.timeMs - b.timeMs); } catch (_) { return []; } })();
+  const isLong = n => (n.type === 'HOLD' || n.type === 'SLIDE') && Number(n.endTimeMs) > Number(n.timeMs);
+  const flickVec = n => { const d = typeof rhythmFlickDir === 'function' ? rhythmFlickDir(n) : ''; return d === 'left' ? [-1, 0] : d === 'right' ? [1, 0] : [0, -1]; };
+  const events = [], follows = [];
+  for (const n of notes) {
+    const t = Number(n.timeMs), id = ++ids;
+    if (isLong(n)) {
+      const e = Number(n.endTimeMs), fo = { id, n, from: t, until: n.endFlick === true ? e - 40 : e - 5, on: false };
+      follows.push(fo);
+      events.push({ at: t, f: () => { fo.on = true; send('pointerdown', id, posOf(n, t)); } });
+      if (n.endFlick === true) {
+        events.push({ at: e - 40, f: () => { fo.on = false; const q = posOf(n, e); send('pointermove', id, { x: q.x, y: q.y - 30 }); } });
+        events.push({ at: e - 20, f: () => { const q = posOf(n, e); send('pointermove', id, { x: q.x, y: q.y - 70 }); } });
+        events.push({ at: e, f: () => { const q = posOf(n, e); send('pointerup', id, { x: q.x, y: q.y - 70 }); } });
+      } else events.push({ at: e - 5, f: () => { fo.on = false; send('pointerup', id, posOf(n, e)); } });
+    } else if (n.type === 'FLICK') {
+      const v = flickVec(n);
+      events.push({ at: t, f: () => send('pointerdown', id, posOf(n, t)) });
+      events.push({ at: t + 25, f: () => { const p = posOf(n, t); send('pointermove', id, { x: p.x + v[0] * 30, y: p.y + v[1] * 30 }); } });
+      events.push({ at: t + 45, f: () => { const p = posOf(n, t); send('pointermove', id, { x: p.x + v[0] * 60, y: p.y + v[1] * 60 }); } });
+      events.push({ at: t + 46, f: () => { const p = posOf(n, t); send('pointerup', id, { x: p.x + v[0] * 60, y: p.y + v[1] * 60 }); } });
+    } else {
+      events.push({ at: t, f: () => send('pointerdown', id, posOf(n, t)) });
+      events.push({ at: t + 40, f: () => send('pointerup', id, posOf(n, t)) });
+    }
+  }
+  events.sort((a, b) => a.at - b.at);
+  const tick = () => {
+    if (stopped) return;
+    const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null) {
+      while (k < events.length && events[k].at <= ms + 17) { const ev = events[k++]; const wait = ev.at - ms; if (wait > 1) later(wait, ev.f); else ev.f(); }
+      for (const f of follows) if (f.on && ms > f.from && ms < f.until) send('pointermove', f.id, posOf(f.n, ms));
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => { stopped = true; if (raf) cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); };
 };
 
 // ---- part: 31-debug-ui.jsx ----
@@ -32212,77 +32459,77 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']],
   },
   sorashido: {
-    join: [['happy', 'うぉぉぉ！俺も参戦するぜ・・・！'], ['happy', '今日はオリヒメの曲あるかな！？ 楽しみだぜ笑']],
-    first: [['excited', 'はじめての曲か。今から計算するぜ・・・！'], ['excited', '初見は燃えるな！ ちばりよー、俺！']],
-    like: [['happy', 'この曲は全ノーツ計算済みだぜ笑']],
-    dislike: [['troubled', 'ゆっくりの曲は、計算が合わなくてそわそわするぜ笑']],
-    combo: [['excited', 'うぉぉぉ！計算どおりだぜ・・・！'], ['excited', 'うまい！ 今の、でーじきれいだった笑'], ['excited', 'このまま最後まで行く計算だぜ・・・！']],
-    miss: [['normal', 'ここから巻き返す計算だぜ笑'], ['normal', '俺もさっき1個落とした笑 気にすんな！']],
-    climax: [['excited', 'うぉぉぉ！ここだぜ！'], ['excited', 'サビの密度、計算済みだぜ笑'], ['excited', 'なんくるないさ〜、ここは楽しむところだぜ！']],
-    last: [['normal', '残り10秒、計算どおりに締めるぜ笑'], ['normal', 'ラストまで全部拾うぞ！']],
-    mvp: [['wink', 'MVPは計算済みだったぜ・・・！'], ['wink', 'まじか、俺がMVP！？ 表に太字で書いとく笑']],
-    high: [['happy', '計算どおりの名演だぜ・・・！'], ['happy', '今の数字、表に残しておきたいぜ笑']],
-    mid: [['happy', '悪くない数字だぜ。次はもっと上がる計算だ'], ['happy', 'もう一曲いこう！ 次は勝つ笑']],
-    low: [['troubled', '次は全ノーツ計算して挑むぜ笑'], ['crying', 'くっそー！ 悔しい……次は上がるぜ・・・！']],
-    fc: [['surprise', 'うぉぉぉ！フルコンだぜ笑'], ['surprise', '計算を超えてきたぜ笑']],
-    levelup: [['happy', 'セッションLvアップだぜ・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりだぜ笑']],
-    likeup: [['wink', 'この曲、何回もやってたら好きになってきた笑']],
-    overcome: [['happy', 'ゆっくりの曲も、計算が合ったぜ！'], ['happy', 'そわそわしたけど、乗りこえたぜ笑']],
-    'song:monster_hero': [['happy', 'Monster Hero は全ノーツ計算済みだぜ！']],
-    'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちだぜ笑']],
-    'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないぜ！']],
-    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきったぜ笑']],
-    'sp50': [['excited', 'セッションLv.50だぜ！表に太字で書いとくぜ笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあるぜ・・・！']],
-    'sp80': [['excited', 'Lv.80！誤差がほとんど無くなってきたぜ！'], ['happy', 'この伸び方、グラフにしたらきれいだぜ笑']],
-    'sp100': [['excited', 'うぉぉぉ！Lv.100、セッションマスターだぜ・・・！'], ['happy', 'ここまでの記録、全部宝物だぜ笑']],
-    woke: [['surprise', '…うぉっ！？ 起きたぜ、行くさ！'], ['normal', '寝起きの指でも、計算どおり叩くぜ'], ['happy', 'ふぁ…目ざましより効いたさ笑']],
-    refuse: [['normal', '…表の…3行目…むにゃ…'], ['troubled', '…すまん…朝は弱いのさ…'], ['happy', '…なんくるないさ…すぅ…']],
-    'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツだぜ・・・！ サビは1:48からな笑']],
-    'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%だぜ・・・！ 553ノーツ、全部数えたい笑']],
-    'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりだぜ笑']],
-    'listen:six_eternel_remix': [['normal', '強い音35%・軽い音4%で、まざってるタイプだぜ。BPMはおよそ160笑']],
-    'listen:six_eternel_beat': [['excited', '816ノーツ・BPMおよそ276だぜ・・・！ 数字だけで燃えるな笑']],
-    'listen:stay_with_me': [['happy', '704ノーツで4:34。長さのわりに落ち着いた数だぜ笑']],
-    'listen:kiki_issen': [['excited', '882ノーツは、前半の23曲でいちばん多いぜ・・・！']],
-    'listen:kaze_ga_soyogu': [['troubled', 'BPMおよそ119、193ノーツ……ゆっくりの曲は、そわそわするんだよな笑']],
-    'listen:close_to_your_heart': [['happy', '軽い音が11%で、前半の曲の中では多いほうだぜ笑']],
-    'listen:eiki_boss_remix': [['normal', '強い音52%、BPMはおよそ154。綺季一閃の別の顔だぜ笑']],
-    'listen:pandora_boss_remix': [['excited', '強く打つ音61%だぜ・・・！ 前半の曲でも強い音が多いほう笑']],
-    'listen:dullahan': [['normal', '強い音17%・軽い音4%。強い音が少なめの、めずらしい曲だぜ笑']],
-    'listen:dullahan_clockwork': [['happy', '強く打つ音57%・軽い音2%だぜ。352ノーツで2分ちょい笑']],
-    'listen:toriko': [['happy', '159ノーツ・Lv.17。短いから、全部拾えたら気持ちいいぜ笑']],
-    'listen:4u_hitasura': [['normal', 'BPMおよそ145、296ノーツ。数字はやさしめだぜ笑']],
-    'listen:kindan_no_resistance': [['excited', 'Lv.28で650ノーツだぜ・・・！ BPMもおよそ180笑']],
-    'listen:crossing_field': [['excited', '強く打つ音60%・軽い音2%！ 強い音ばっかりだぜ・・・！']],
-    'listen:nothing_without_you': [['normal', '強い音32%・軽い音8%でまざってるタイプ。BPMはおよそ194だぜ笑']],
-    'listen:freedom_dive': [['excited', '強く打つ音75%だぜ・・・！ 前半の曲でいちばん強い音が多い笑']],
-    'listen:the_city_beneath_the_comets': [['excited', '強く打つ音60%・BPMはおよそ170だぜ・・・！']],
-    'listen:mou_hitotsu_no_sekai_e': [['normal', '強い音59%・軽い音1%。744ノーツで、BPMはおよそ188だぜ笑']],
-    'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いぜ笑']],
-    'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけだぜ。短いけど濃い笑']],
-    'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいぜ・・・！']],
-    'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34だ。2分25秒でこの数は、でーじ多い笑']],
-    'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もあるな笑']],
-    'listen:haruka': [['excited', 'BPM200で451ノーツ、Lv.33。数字だけでも燃えてくる笑']],
-    'listen:crazy_party_night': [['normal', 'Lv.23で307ノーツ。はじめての人にも、ちょうどいい数だな']],
-    'listen:emerald_rush': [['happy', '415ノーツでLv.25。BPM152だから、落ち着いて数えられるぞ']],
-    'listen:wrath_of_the_thorn_king': [['normal', '229ノーツでLv.22。強い音が半分だから、一打一打が重いな']],
-    'listen:monster': [['happy', '4:25で675ノーツ。長いけど、BPM135だから数えやすいぞ']],
-    'listen:anima': [['excited', 'BPM184で567ノーツ、Lv.44。数字が全部でかいぜ・・・！']],
-    'listen:journey': [['surprise', 'BPM128なのに731ノーツ、Lv.36。ゆっくりなのに多いのが不思議だ笑']],
-    'listen:sheriruth': [['normal', '642ノーツでLv.35。サビが5秒しかないのは、表にしても珍しいぞ']],
-    'listen:against_my_own_shadow': [['normal', 'BPM143で397ノーツ、Lv.29だ。強い音が52%あるぞ']],
-    'listen:grievous_lady': [['excited', 'BPM210・636ノーツ・Lv.50。どの数字も手ごわいぜ・・・！']],
-    'listen:rose': [['normal', 'BPM125で533ノーツ、Lv.30。ゆっくりでも数はしっかりあるぞ']],
-    'listen:sad_song': [['happy', '3:39で742ノーツ、Lv.29。長いぶん、数もしっかりあるな笑']],
-    'listen:toward_the_stars_short': [['normal', 'BPM143で481ノーツ、Lv.37。強い音が48%だぞ']],
-    'listen:black_shout': [['happy', '445ノーツでLv.33。強い音が62%、数えてて手が熱くなるな笑']],
-    'listen:light_player': [['surprise', '1060ノーツだぜ・・・！ 4:29あるとはいえ、数がすごい']],
-    'listen:tsuki_ga_michiru_mae_ni': [['happy', '1210ノーツ、強い音が67%。数えるのが楽しくなる曲だ笑']],
-    'listen:rebellion': [['excited', '1299ノーツ、Lv.44。数えがいがあるぜ・・・！']],
-    'listen:altar_world_tree': [['normal', '6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けるぞ']],
-    'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いな']],
-    'listen:humanoid': [['excited', '好きな曲だ！ BPM159で606ノーツ、Lv.50。全部計算済みだぜ・・・！']],
+    join: [['happy', '自分も参戦します！ よろしくお願いします笑'], ['happy', '今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑']],
+    first: [['excited', 'はじめての曲ですね。今から計算します・・・！'], ['excited', '初見は燃えますねー！ ちばりよー、自分！']],
+    like: [['happy', 'この曲は全ノーツ計算済みです笑']],
+    dislike: [['troubled', 'ゆっくりの曲は、計算が合わなくてそわそわします笑']],
+    combo: [['excited', 'ほほー！ 計算どおりです・・・！'], ['excited', 'うまい！ 今の、でーじきれいでした笑'], ['excited', 'このまま最後まで行く計算です・・・！']],
+    miss: [['normal', 'ここから巻き返す計算です笑'], ['normal', '自分もさっき1個落としました笑 気にしないでいきましょう！']],
+    climax: [['excited', 'うぉぉぉ！ ここですね！'], ['excited', 'サビの密度、計算済みです笑'], ['excited', 'なんくるないさ〜、ここは楽しむところですよ！']],
+    last: [['normal', '残り10秒、計算どおりに締めます笑'], ['normal', 'ラストまで全部拾いましょう！']],
+    mvp: [['wink', 'MVPは計算済みでした・・・！笑'], ['wink', 'え、自分がMVPですか！？ 表に太字で書いておきます笑']],
+    high: [['happy', '計算どおりの名演でしたねー！'], ['happy', '今の数字、表に残しておきたいです笑']],
+    mid: [['happy', '悪くない数字ですね。次はもっと上がる計算です'], ['happy', 'もう一曲いきましょう！ 次は勝ちます笑']],
+    low: [['troubled', '次は全ノーツ計算して挑みます笑'], ['crying', 'くやしい・・・！ 次は上げます！']],
+    fc: [['surprise', 'フルコンですねー！ すごいです笑'], ['surprise', '計算を超えてきましたね笑']],
+    levelup: [['happy', 'セッションLvアップです・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりですね笑']],
+    likeup: [['wink', 'この曲、何回もやってたら好きになってきました笑']],
+    overcome: [['happy', 'ゆっくりの曲も、計算が合いました！'], ['happy', 'そわそわしましたけど、乗りこえました笑']],
+    'song:monster_hero': [['happy', 'Monster Hero は全ノーツ計算済みです！']],
+    'song:freedom_dive': [['happy', 'FREEDOM DiVE↓、速さも計算のうちですね笑']],
+    'song:humanoid': [['happy', 'ヒューマノイド、ノーツの多さがたまらないです！']],
+    'song:kaze_ga_soyogu': [['happy', '風がそよぐ場所、ゆっくりでも合わせきりました笑']],
+    'sp50': [['excited', 'セッションLv.50です！ 表に太字で書いておきます笑'], ['happy', 'ここまでの演奏回数、ちゃんと数えてあります・・・！']],
+    'sp80': [['excited', 'Lv.80！ 誤差がほとんど無くなってきましたねー！'], ['happy', 'この伸び方、グラフにしたらきれいです笑']],
+    'sp100': [['excited', 'うぉぉぉ！ Lv.100、セッションマスターです・・・！'], ['happy', 'ここまでの記録、全部宝物です笑']],
+    woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
+    refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
+    'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
+    'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
+    'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
+    'listen:six_eternel_remix': [['normal', '強い音35%・軽い音4%で、まざってるタイプです。BPMはおよそ160です笑']],
+    'listen:six_eternel_beat': [['excited', '816ノーツ・BPMおよそ276です・・・！ 数字だけで燃えますね笑']],
+    'listen:stay_with_me': [['happy', '704ノーツで4:34。長さのわりに落ち着いた数です笑']],
+    'listen:kiki_issen': [['excited', '882ノーツは、前半の23曲でいちばん多いです・・・！']],
+    'listen:kaze_ga_soyogu': [['troubled', 'BPMおよそ119、193ノーツ・・・ゆっくりの曲は、そわそわするんですよね笑']],
+    'listen:close_to_your_heart': [['happy', '軽い音が11%で、前半の曲の中では多いほうです笑']],
+    'listen:eiki_boss_remix': [['normal', '強い音52%、BPMはおよそ154。綺季一閃の別の顔ですね笑']],
+    'listen:pandora_boss_remix': [['excited', '強く打つ音61%です・・・！ 前半の曲でも強い音が多いほうです笑']],
+    'listen:dullahan': [['normal', '強い音17%・軽い音4%。強い音が少なめの、めずらしい曲です笑']],
+    'listen:dullahan_clockwork': [['happy', '強く打つ音57%・軽い音2%です。352ノーツで2分ちょいです笑']],
+    'listen:toriko': [['happy', '159ノーツ・Lv.17。短いので、全部拾えたら気持ちいいです笑']],
+    'listen:4u_hitasura': [['normal', 'BPMおよそ145、296ノーツ。数字はやさしめです笑']],
+    'listen:kindan_no_resistance': [['excited', 'Lv.28で650ノーツです・・・！ BPMもおよそ180です笑']],
+    'listen:crossing_field': [['excited', '強く打つ音60%・軽い音2%！ 強い音ばっかりです・・・！']],
+    'listen:nothing_without_you': [['normal', '強い音32%・軽い音8%でまざってるタイプです。BPMはおよそ194です笑']],
+    'listen:freedom_dive': [['excited', '強く打つ音75%です・・・！ 前半の曲でいちばん強い音が多いです笑']],
+    'listen:the_city_beneath_the_comets': [['excited', '強く打つ音60%・BPMはおよそ170です・・・！']],
+    'listen:mou_hitotsu_no_sekai_e': [['normal', '強い音59%・軽い音1%。744ノーツで、BPMはおよそ188です笑']],
+    'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いです笑']],
+    'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけです。短いけど濃いです笑']],
+    'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
+    'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
+    'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
+    'listen:haruka': [['excited', 'BPM200で451ノーツ、Lv.33。数字だけでも燃えてきます笑']],
+    'listen:crazy_party_night': [['normal', 'Lv.23で307ノーツ。はじめての人にも、ちょうどいい数ですね']],
+    'listen:emerald_rush': [['happy', '415ノーツでLv.25。BPM152なので、落ち着いて数えられますよ']],
+    'listen:wrath_of_the_thorn_king': [['normal', '229ノーツでLv.22。強い音が半分なので、一打一打が重いですね']],
+    'listen:monster': [['happy', '4:25で675ノーツ。長いけど、BPM135なので数えやすいです']],
+    'listen:anima': [['excited', 'BPM184で567ノーツ、Lv.44。数字が全部でかいですね・・・！']],
+    'listen:journey': [['surprise', 'BPM128なのに731ノーツ、Lv.36。ゆっくりなのに多いのが不思議です笑']],
+    'listen:sheriruth': [['normal', '642ノーツでLv.35。サビが5秒しかないのは、表にしても珍しいです']],
+    'listen:against_my_own_shadow': [['normal', 'BPM143で397ノーツ、Lv.29です。強い音が52%ありますよ']],
+    'listen:grievous_lady': [['excited', 'BPM210・636ノーツ・Lv.50。どの数字も手ごわいですね・・・！']],
+    'listen:rose': [['normal', 'BPM125で533ノーツ、Lv.30。ゆっくりでも数はしっかりありますよ']],
+    'listen:sad_song': [['happy', '3:39で742ノーツ、Lv.29。長いぶん、数もしっかりありますね笑']],
+    'listen:toward_the_stars_short': [['normal', 'BPM143で481ノーツ、Lv.37。強い音が48%です']],
+    'listen:black_shout': [['happy', '445ノーツでLv.33。強い音が62%、数えてて手が熱くなりますね笑']],
+    'listen:light_player': [['surprise', '1060ノーツです・・・！ 4:29あるとはいえ、数がすごいです']],
+    'listen:tsuki_ga_michiru_mae_ni': [['happy', '1210ノーツ、強い音が67%。数えるのが楽しくなる曲です笑']],
+    'listen:rebellion': [['excited', '1299ノーツ、Lv.44。数えがいがありますね・・・！']],
+    'listen:altar_world_tree': [['normal', '6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けますよ']],
+    'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね']],
+    'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']],
   },
   erubin: {
     join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
@@ -32390,9 +32637,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['atsu', 'excited', '{c}、ここ決めるぞ笑'], ['mua', 'excited', 'りょ！いっくよ〜♪']]],
   },
   'atsu-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここのノーツ、気持ちいいぜ・・・！'], ['atsu', 'happy', 'さすがだな笑']], [['sorashido', 'happy', '{c}との差、今日は2点だぜ笑'], ['atsu', 'happy', '細かすぎだろ笑']]],
-    result: [[['sorashido', 'happy', '2人で最高値だぜ・・・！'], ['atsu', 'wink', 'いい数字だったな笑']]],
-    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ここだぜ！']]],
+    play: [[['sorashido', 'happy', '{c}、ここのノーツ、気持ちいいですねー！'], ['atsu', 'happy', 'さすがだな笑']], [['sorashido', 'happy', '{c}との差、今日は2点です笑'], ['atsu', 'happy', '細かすぎだろ笑']]],
+    result: [[['sorashido', 'happy', '2人で最高値ですね・・・！'], ['atsu', 'wink', 'いい数字だったな笑']]],
+    gattai: [[['atsu', 'excited', '{c}、いくぞ！'], ['sorashido', 'excited', 'うぉぉぉ！ ここですね！']]],
   },
   'dra-erubin': {
     play: [[['erubin', 'happy', '{c}、無理しないでね'], ['dra', 'happy', '大丈夫だぞ、楽しいからな']], [['dra', 'happy', '{c}、カードと同じで、リズムも慣れだからな'], ['erubin', 'happy', 'ありがとね、先生']]],
@@ -32420,9 +32667,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、いっくよ〜！'], ['dra', 'excited', 'おでも全力だからな！']]],
   },
   'dra-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここの密度、すごいぜ・・・！'], ['dra', 'happy', 'おでも負けないからな']], [['dra', 'happy', '{c}、楽しそうだな'], ['sorashido', 'happy', '楽しいぜ笑']]],
-    result: [[['sorashido', 'happy', '2人の数字、いい感じだぜ・・・！'], ['dra', 'wink', 'えへへ、うれしいな']]],
-    gattai: [[['sorashido', 'excited', 'いくぜ、{c}！最高値を出すぜ笑'], ['dra', 'excited', 'おう、ワイもいくぞ！']]],
+    play: [[['sorashido', 'happy', '{c}、ここの密度、すごいです・・・！'], ['dra', 'happy', 'おでも負けないからな']], [['dra', 'happy', '{c}、楽しそうだな'], ['sorashido', 'happy', '楽しいです笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、いい感じですねー！'], ['dra', 'wink', 'えへへ、うれしいな']]],
+    gattai: [[['sorashido', 'excited', 'いきましょう、{c}！ 最高値を出します笑'], ['dra', 'excited', 'おう、ワイもいくぞ！']]],
   },
   'erubin-kiki': {
     play: [[['erubin', 'happy', '{c}、無理してないかな？'], ['kiki', 'happy', '大丈夫でつ、楽しいです♪']], [['kiki', 'happy', '{c}、ここは静かにきれいにいきましょう'], ['erubin', 'happy', 'うん、そうしよう']]],
@@ -32445,9 +32692,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、いくよ！'], ['erubin', 'excited', 'うん、一緒にね']]],
   },
   'erubin-sorashido': {
-    play: [[['sorashido', 'happy', 'ここからが山場だ！ うぉぉぉ！'], ['erubin', 'happy', '頼もしいね']], [['erubin', 'happy', '{c}、楽しそうだね'], ['sorashido', 'happy', '楽しいぜ笑']]],
-    result: [[['sorashido', 'happy', '2人のデータ、最高だぜ・・・！'], ['erubin', 'wink', 'うん、さすがだね笑']]],
-    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、合わせるぜ！'], ['erubin', 'excited', 'うん、一緒にいこう']]],
+    play: [[['sorashido', 'happy', 'ここからが山場です！ うぉぉぉ！'], ['erubin', 'happy', '頼もしいね']], [['erubin', 'happy', '{c}、楽しそうだね'], ['sorashido', 'happy', '楽しいです笑']]],
+    result: [[['sorashido', 'happy', '2人のデータ、最高です・・・！'], ['erubin', 'wink', 'うん、さすがだね笑']]],
+    gattai: [[['sorashido', 'excited', '{c}、合わせます！ いきましょう！'], ['erubin', 'excited', 'うん、一緒にいこう']]],
   },
   'kiki-kyuko': {
     play: [[['kyuko', 'happy', '{c}、ここから盛り上がるよ〜'], ['kiki', 'happy', 'はい、ついていきまつ♪']], [['kiki', 'happy', '叩くのは私、読むのは{c}でつ♪'], ['kyuko', 'happy', 'おけ〜、次はサビ前だよ〜']]],
@@ -32465,9 +32712,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、いくよ！'], ['kiki', 'excited', 'せーの、でつ♪']]],
   },
   'kiki-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここの判定、ぴったりだぜ！'], ['kiki', 'happy', 'ほんとですか？うれしいでつ♪']], [['kiki', 'happy', '{c}、次はどう来ますか？'], ['sorashido', 'happy', '計算済みだぜ、右から来るぜ笑']]],
-    result: [[['sorashido', 'happy', '2人の数字、きれいにそろったぜ・・・！'], ['kiki', 'wink', '計算どおりでしたか？♪']]],
-    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、ここだぜ！'], ['kiki', 'excited', 'はい、いきまつ♪']]],
+    play: [[['sorashido', 'happy', '{c}、ここの判定、ぴったりです！'], ['kiki', 'happy', 'ほんとですか？うれしいでつ♪']], [['kiki', 'happy', '{c}、次はどう来ますか？'], ['sorashido', 'happy', '計算済みです。右から来ますよ笑']]],
+    result: [[['sorashido', 'happy', '2人の数字、きれいにそろいましたねー！'], ['kiki', 'wink', '計算どおりでしたか？♪']]],
+    gattai: [[['sorashido', 'excited', '{c}、ここです！ いきましょう！'], ['kiki', 'excited', 'はい、いきまつ♪']]],
   },
   'kyuko-momosuke': {
     play: [[['kyuko', 'happy', '{c}、ここサビ前だよ〜'], ['momosuke', 'happy', '知ってる！！ももが一番かわいくなるとこ♡']], [['momosuke', 'happy', '{c}、もものダンスどう？'], ['kyuko', 'happy', 'ほい、リズムぴったりだよ〜']]],
@@ -32480,9 +32727,9 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['kyuko', 'excited', '{c}、ここだよ〜'], ['mua', 'excited', 'まかせて！せーの♪']]],
   },
   'kyuko-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここの構成、計算どおりだぜ・・・！'], ['kyuko', 'happy', '読みどおりだね〜']], [['kyuko', 'happy', 'だいたいこのへんでサビだよぉ'], ['sorashido', 'happy', '正確には3小節あとだぜ笑']]],
-    result: [[['kyuko', 'happy', '構成も計算もぴったりだったね〜'], ['sorashido', 'wink', 'うぉぉぉ！最高のデータだぜ・・・！']]],
-    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['sorashido', 'excited', 'うぉぉぉ！いくぜ！']]],
+    play: [[['sorashido', 'happy', '{c}、ここの構成、計算どおりです・・・！'], ['kyuko', 'happy', '読みどおりだね〜']], [['kyuko', 'happy', 'だいたいこのへんでサビだよぉ'], ['sorashido', 'happy', '正確には3小節あとですね笑']]],
+    result: [[['kyuko', 'happy', '構成も計算もぴったりだったね〜'], ['sorashido', 'wink', 'ほほー！ 最高のデータです・・・！']]],
+    gattai: [[['kyuko', 'excited', '{c}、いくよ〜'], ['sorashido', 'excited', 'はい、いきます！']]],
   },
   'momosuke-mua': {
     play: [[['momosuke', 'happy', '{c}、ももについてきてね！！'], ['mua', 'happy', 'えー、あたしが先頭なんだけどｗ']], [['mua', 'wink', '{c}、そのポーズあたしが教えたやつぢゃん？ｗ'], ['momosuke', 'happy', 'ももがアレンジしたから、もものだよ！！']]],
@@ -32490,14 +32737,14 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['mua', 'excited', '{c}、ここで決めよ！'], ['momosuke', 'excited', 'ダブルセンターいくよ！！']]],
   },
   'momosuke-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここ、でーじ盛り上がるぞ笑'], ['momosuke', 'happy', 'ももが盛り上げるから計算いらないよw']], [['sorashido', 'happy', '{c}のミス、今日はまだ0だぜ！'], ['momosuke', 'troubled', '数えなくていいから！！w']]],
-    result: [[['sorashido', 'happy', '今日のステージ、表にしたら満点だぜ・・・！'], ['momosuke', 'wink', '当然でしょ！！♡']]],
-    gattai: [[['sorashido', 'excited', '{c}、ここが計算の答えだぜ！'], ['momosuke', 'excited', 'ももの見せ場だよ！！']]],
+    play: [[['sorashido', 'happy', '{c}、ここ、でーじ盛り上がりますよ笑'], ['momosuke', 'happy', 'ももが盛り上げるから計算いらないよw']], [['sorashido', 'happy', '{c}のミス、今日はまだ0です！'], ['momosuke', 'troubled', '数えなくていいから！！w']]],
+    result: [[['sorashido', 'happy', '今日のステージ、表にしたら満点ですね・・・！'], ['momosuke', 'wink', '当然でしょ！！♡']]],
+    gattai: [[['sorashido', 'excited', '{c}、ここが計算の答えです！'], ['momosuke', 'excited', 'ももの見せ場だよ！！']]],
   },
   'mua-sorashido': {
-    play: [[['sorashido', 'happy', '{c}、ここから密度が上がるぜ！'], ['mua', 'happy', 'まぢ！？がんばる♪']], [['sorashido', 'happy', '{c}の勝ち数、表に足しとくぜ笑'], ['mua', 'excited', 'やった！今日も勝つ♪']]],
-    result: [[['sorashido', 'happy', '今日の2人、表にしたら最高値だぜ！'], ['mua', 'wink', 'すごっ！また一緒にやろ♪']]],
-    gattai: [[['sorashido', 'excited', 'うぉぉぉ！{c}、いくぜ！'], ['mua', 'excited', 'いっくよ〜♪']]],
+    play: [[['sorashido', 'happy', '{c}、ここから密度が上がりますよ！'], ['mua', 'happy', 'まぢ！？がんばる♪']], [['sorashido', 'happy', '{c}の勝ち数、表に足しておきます笑'], ['mua', 'excited', 'やった！今日も勝つ♪']]],
+    result: [[['sorashido', 'happy', '今日の2人、表にしたら最高値です！'], ['mua', 'wink', 'すごっ！また一緒にやろ♪']]],
+    gattai: [[['sorashido', 'excited', '{c}、いきましょう！ うぉぉぉ！'], ['mua', 'excited', 'いっくよ〜♪']]],
   },
 });
 
@@ -40622,7 +40869,7 @@ const MISSION_DAILY_LINE_FALLBACK = Object.freeze({
   dra:       '今日は{day}曜日だな。{task}と、{reward}がもらえるからな。えへへ',
   atsu:      '今日は{day}曜日！ とりあえず{task}と{reward}もらえるよ笑',
   kyuko:     'ほい！ 今日は{day}曜日ぃ。{task}と{reward}もらえるよ〜',
-  sorashido: 'うぉぉぉ！ 今日は{day}曜日だぜ・・・！ {task}と{reward}がもらえるぜ笑',
+  sorashido: '今日は{day}曜日ですねー！ {task}と{reward}がもらえます笑',
   erubin:    '今日は{day}曜日だね。{task}と、{reward}がもらえるよ。無理しない程度にね',
 });
 // 報酬を文の中で読む形(「ビートP150」「カードパック券1枚」)。数はゲームの表のまま
@@ -47882,7 +48129,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
-  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  sorashido: (who) => `${who}からフレンド申請が来てますよ！ 見にいきましょう笑`,
   // えるびん(2026-11-05・公開前)。穏やかな大人の口調
   erubin: (who) => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`,
 });
@@ -50721,16 +50968,18 @@ function BattleScreen({
     const popupGridStyle={display:'grid',gridTemplateColumns:`repeat(${popupCols}, max-content)`,justifyContent:'center',alignContent:'start',columnGap:'.35em',rowGap:0,paddingTop:`${popupTop}px`};
     // ★効果の小さな札は上の端へ1列に並べ、大きなダメージの数字はその下へ置く。縦の流れにするので重ならない
     //   (下の端へ置くと、盤面の上の縁に出る「合計DMG」の予測や味方の枠の裏に隠れた)
-    return (
+    return (<>
+      {/* 手ごたえ(当たりの間・会心と撃破の見せ方)。数字の札とライフを読むだけ(24-battle-hit-feel.jsx)。★数字の札の div より前に置く(CSS が隣を見て数字の出方を変える) */}
+      <BattleHitFeel popups={enemyPopups} enemyHp={enemy?.hp} speed={battleSpeed} stopOn={battleFx.hitStop!=='OFF'} shakeOn={!shakeOff} defeatOn={battleFx.defeatFx!=='OFF'} richOn={fxLoad==='RICH'||fxLoad==='STANDARD'} off={!!(liteBattleView||ecoBattleView)} />
       <div data-enemy-popups className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5 [container-type:size]">
         {enemyFxPopups.length>0&&<div data-enemy-fx-chips className="flex flex-col items-center gap-0.5 px-2">
-          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
+          {enemyFxPopups.map(p=>(<div key={p.id} data-enemy-fx-chip data-feel-kind={battleFeelKindOf(p.text)} className={`max-w-full truncate rounded-full border border-white/25 bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black leading-tight shadow-[0_2px_8px_rgba(0,0,0,.7)] ${enemyFxChipTone(p.color)}`}>{p.text}</div>))}
         </div>}
         <div data-enemy-popup-grid={popupCols} style={popupGridStyle}>
           {enemyPopups.map((p,idx)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} data-enemy-popup={idx} style={popupFit(p)} className={`text-center ${p.color} font-black whitespace-nowrap ${popupCols===2?'':'px-4'} ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
         </div>
       </div>
-    );
+    </>);
   })()}
           </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
@@ -50996,7 +51245,7 @@ function BattleScreen({
             <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-[30px] flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
               {/* 誰のものでもない知らせ(回避の名乗り・合計など)。上へ積むと2枚目が強化の札の列(♥20%・⚡15%・詳細)に重なっていた(2026-11-01 イルミネの回避)。
                   強化の札の列の上(盤面の上の縁から30px上)から上へ積む。横1列にすると左右の「ステータス」「次の行動」の札にかかるので縦のまま */}
-              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined}
+              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-feel-kind={battleFeelKindOf(p.text)} data-lite-damage={liteBattleView?'true':undefined}
                 className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[13px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
                 style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
             </div>
@@ -51371,7 +51620,7 @@ function BattleScreen({
                   {slotFxEl}
                   {/* 枠が狭く、長い吹き出し(「セレーネチェイサー! 連撃…」「会心率+1.0% 会心ダメ+1…」)が途中で切れていた(ふつうの縦でも)。
                       最初の区切りまで(技名・最初の効果)だけ出す。全部の文はバトルの記録で読める(2026-11-01 社長「技名だけにする案でよい」) */}
-                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
+                  {ownPopups.map(p=>{const short=tacticsPopupShortText(p.text);return(<div key={p.id} data-feel-kind={battleFeelKindOf(p.text)} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
                     style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{short!==p.text?<span data-tactics-popup-short title={p.text}>{short}</span>:p.text}</div>);})}
                 </div>);
                 })()}
@@ -56446,13 +56695,15 @@ const RHYTHM_MODE_SELECT_CSS = `
 // ももすけ・ドラの絵は正方形で、ももすけは右端に別の絵のかけらが入っている。顔の位置(cx, cy・絵の幅と高さに対する割合)を
 // 枠の真ん中(横)・top(縦)に合わせ、枠の幅の zoom 倍に広げて、かけらを枠の外へ出す
 // (高さで合わせると、縦画面の縦長の枠で大きくなりすぎて耳が切れた)
+// 表に無い助手(みゅあ・きき・ソラシド・えるびん・着替えの絵)は、枠いっぱいに広げて切り出す。縦長の絵(高さ÷幅 1.1 より大きい)は、あふれる分をほぼ下へ逃がす(--mhms-y 0.03)。
+//   横・横小・🔄横で ソラシド・えるびんの頭のてっぺん、ハロウィンのみゅあの帽子が切れていた(2026-11-11)
 // show … 枠の背が低いときも、絵の高さのうち少なくともこの割合は枠に入れる(2026-10-26 社長「小さいスマホで立ち絵が頭だけ」)。
 //   絵の幅は「いつもの幅(zoom)」と「絵の高さ×show が枠の高さに収まる幅」の小さいほう。枠が十分に高ければ今までと同じ見え方
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
-  // ももすけは表情ごとに体の位置が違い、かけらも左(angry・happy)と右(crying・wink)にある。
-  // 透明でない部分を数えて決めた体の真ん中(cxBy)へ合わせ、体の幅だけが入る 1.5 倍に広げる(2026-10-03)
-  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42, show: 0.55,
-    cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
+  // ももすけ: いまの絵(512×512・体は真ん中・耳が左右の端まで)に合わせた(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+  //   前は、右や左の端に別の絵のかけらが入っていた古い絵に合わせて 1.5倍に広げ、表情ごとに横へずらしていた(cxBy)。絵を差し替えたあともその寄せ方が残り、
+  //   耳が上で切れ(14〜24%)、横・横小・🔄横では顔だけの大写しになっていた。きゅうこと同じ置き方(絵の上端を枠の上から 2%・幅は枠いっぱい)にする
+  momosuke: { zoom: 1, cx: 0.5, cy: 0, top: 0.02, show: 0.8 },
   dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4, show: 0.75 },
   // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上・頭に王冠)。絵の上端(王冠のてっぺん)を枠の上から3%に置き、頭の中心(絵の幅の48%)を真ん中へ。
   // 社長「左肩切れてるように見える」→ 引いて下と左右をぼかした形 →「もっとアップにして切れてる感じ無くしたほうがいい」で、
@@ -56545,7 +56796,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
           <div className="mhms-float pointer-events-none absolute inset-0">
             {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
               ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
-              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
+              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
       )}
@@ -59934,7 +60185,7 @@ const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
   dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
   atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
   kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
-  sorashido: 'うぉぉぉ！俺たち助手も呼べるようになったぜ！{name}、一緒に演奏だぜ笑',
+  sorashido: 'うぉぉぉ！ 自分たち助手も呼べるようになりました！ {name}、一緒に演奏しましょう笑',
   erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね',
 });
 function RhythmAssistSessionGuide({ assistantId = '' }) {
@@ -62546,15 +62797,34 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
 
 // ---------- 思い出アルバム(ペアごと) ----------
 // ツーショット写真(ASSISTANT_PEER_PHOTOS の段ごとに1枚。2人の立ち絵を並べて作る)と、見た掛け合いの一覧。押すと見返せる
+//   2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」: それまでは絵を枠の 56%×170% に object-cover で入れていて、
+//   絵ごとの余白のちがいで 2人の顔が重なり・横が切れ(最大33%)、顔だけの絵のドラは枠より大きくなって下が切れていた。
+//   場面の立ち絵と同じ表と決まり(assistantLifeStandFace・assistantLifeStandBox・assistantLifeStandRule)で、2人の顔を同じ大きさ・同じ高さで左右に並べる:
+//   頭(てっぺんから顎)が写真の高さの 45%・頭のてっぺんは上から 24%(うさ耳・王冠が入る)・2人の体の真ん中は左右 27% と 73%。置き場所は写真の大きさに対する割合で持つ(写真の大きさが変わっても同じ見え方)
+const ASSISTANT_PEER_PHOTO_W = 400, ASSISTANT_PEER_PHOTO_H = 300;
 function AssistantPeerPhoto({ pair, photo, open }) {
   const [a, b] = pair.map(id => assistantById(id));
+  const srcs = open ? [assistantFullImage(a, photo.e[0]), assistantFullImage(b, photo.e[1])] : [];
+  const canFit = typeof assistantLifeStandBox === 'function' && typeof assistantLifeStandRule === 'function' && typeof assistantLifeStandFace === 'function';
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (canFit && typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; if (canFit && srcs.length) Promise.all(srcs.map(s => assistantLifeStandBox(s))).then(l => { if (alive) setBoxes(l); }); return () => { alive = false; }; }, [key]);
+  const W = ASSISTANT_PEER_PHOTO_W, H = ASSISTANT_PEER_PHOTO_H;
+  const fit = (i) => {
+    if (!canFit || !boxes[i]) return null;
+    const r = assistantLifeStandRule({ face: assistantLifeStandFace(pair[i], srcs[i]), box: boxes[i], F: (H * 0.45) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * 0.24, cx: W * (i ? 0.73 : 0.27) });
+    return r ? { left: `${(r.left / W) * 100}%`, top: `${(r.top / H) * 100}%`, width: `${(r.width / W) * 100}%`, height: `${(r.height / H) * 100}%`, maxWidth: 'none' } : null;
+  };
+  const stand = (i) => { const f = fit(i);
+    return f ? <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" draggable={false} className="absolute" style={f}/>
+      : <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" className={`absolute ${i ? 'right-[-2%]' : 'left-[-2%]'} top-[6%] h-[170%] w-[56%]`} style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>; };
   return (
     <div data-assistant-peer-photo={photo.lv} data-assistant-peer-photo-open={open ? '1' : '0'}
       className="relative overflow-hidden rounded-xl border-2" style={{ aspectRatio: '4 / 3', borderColor: open ? '#fcd34d' : 'rgba(255,255,255,.12)', background: open ? `linear-gradient(135deg, ${a.accent}55, ${b.accent}55)` : 'rgba(15,23,42,.8)' }}>
       {open ? (<>
         {/* 立ち絵の上のほう(顔から胸まで)を寄りで並べる */}
-        <img src={assistantFullImage(a, photo.e[0])} alt="" loading="lazy" decoding="async" className="absolute left-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
-        <img src={assistantFullImage(b, photo.e[1])} alt="" loading="lazy" decoding="async" className="absolute right-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
+        {stand(0)}
+        {stand(1)}
         <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100">{assistantPeerPhotoTitle(photo)}</span>
       </>) : (
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
@@ -63087,32 +63357,33 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
   idle:     { label: 'ぼーっと',   te: 'ぼーっとして',   group: false, places: ['home', 'hill', 'garden'] },
   sleep:    { label: 'おやすみ',     te: '寝て',           group: false, places: ['home'] },
   read:     { label: '読書',       te: '本を読んで',     group: false, places: ['library'] },
+  battle:   { label: 'バトル',     te: 'バトルして',     group: true,  places: ['battle'] }, // モンヒロバトル(2026-11-11 社長「MB管理とモンバトは別」。助手のマスモンの修行はここで行う)
 });
 // 場所。台本の {place} に入る言葉(穴の言葉の一覧は docs/progress/assistant-peer/LIFE-WORDS.md)
 const ASSISTANT_LIFE_PLACES = Object.freeze({
   home: '家', plaza: '広場', cafe: 'おやつ屋さん', studio: '練習スタジオ', ranch: '育成場',
-  cardroom: 'カード部屋', library: '図書室', market: 'マーケット', hill: 'ひなたの丘', garden: '中庭',
+  cardroom: 'カード部屋', library: '図書室', market: 'マーケット', hill: 'ひなたの丘', garden: '中庭', battle: 'モンヒロバトル',
 });
 // 1人ずつの好み(したいことの好みの表。コトバの気持ちの紙・3人組の案もこの表を元にする)
 //   social … だれかといたい気持ちの強さ(0〜1)/ fav … 好きな場所(ひとりごとの場所の型「好きな場所」)
 //   w … したいことの重み / slot … 時間ごとに重みへ掛ける数 / solo … ひとりが好きな時間 / caring … さみしそうな助手のそばへ行きやすい
 //   clingy … ごろごろ・昼寝をしていても、だれかに来てほしい(来ないとさみしくなる)
 const ASSISTANT_LIFE_PREFS = Object.freeze({
-  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0 },
+  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0, battle: 1 },
                slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き' },
-  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1 },
+  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 1.5 },
                slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり' },
-  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0 },
+  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 1.5 },
                slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
-  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0 },
+  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 0.5 },
                slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, clingy: true, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
-  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0 },
+  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 3 },
                slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い' },
-  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3 },
+  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 1 },
                slot: { afternoon: { read: 3, cards: 1.5 } }, solo: ['afternoon'], note: '午後は図書室でひとりの時間。カードの研究も好き' },
-  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1 },
+  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 2 },
                slot: { night: { cards: 2 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
-  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1 },
+  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 3 },
                slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
 // 1人ずつの生活のリズム(2026-11-07 社長「夜は家に帰る人が増えたり夜ふかしとか性格によって変えてもいい」)。
@@ -63197,7 +63468,7 @@ const ASSISTANT_LIFE_MOOD_MOD = Object.freeze({
   restless: { social: 1.0, w: { walk: 2, practice: 1.3 } },
   sulky:    { social: 0.4, w: { idle: 2 } },
   sleepy:   { social: 0.5, w: { sleep: 3, idle: 2 } },
-  eager:    { social: 1.0, w: { practice: 2, training: 2, cards: 1.3 } },
+  eager:    { social: 1.0, w: { practice: 2, training: 2, cards: 1.3, battle: 1.5 } },
 });
 
 // にぎわい(その日に遊んだ量)。4つの段(2026-11-07 社長: 静か×1・ふつう×1.25・にぎやか×1.5・お祭り×2、1日の上限 20/30/45/60)
@@ -63530,6 +63801,8 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   assistantLifeSaveLife();
   // 今日あったこと(家の掲示板)へ、この時間の過ごし方を書く(56-assistant-life-house.jsx)
   if (typeof assistantLifeDiaryOnSlot === 'function') { try { assistantLifeDiaryOnSlot(life, slot, now); } catch {} }
+  // その時間モンヒロバトルにいた助手のマスモンが修行する(シュギョウ。印 assistantMasmonTrain が偽なら何もしない・2026-11-11)
+  if (typeof amgtOnLifeSlot === 'function') { try { amgtOnLifeSlot(life, slot, now); } catch {} }
   // フレンドの家との行き来(控えを送る・ときどき助手が自分で遊びに行く。56-assistant-life-friend.jsx。印が偽なら何もしない)
   if (typeof assistantLifeFriendOnSlot === 'function') { try { void assistantLifeFriendOnSlot(life, slot, now); } catch {} }
   if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(now); } catch {} } // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
@@ -64301,15 +64574,15 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨' });
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️' });
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', battle: 'モンヒロバトル', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 // 場所 → HOME の札(地図 56-assistant-life-map.jsx と同じ表。HOME の顔と地図の全身が同じ時刻に同じ場所に出る・2026-11-08 社長「矛盾のない作り」)。
 //   町だけの場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)と家は「🏡 助手ライフ」
-const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', home: 'life' });
+const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
 //   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
@@ -64369,12 +64642,12 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([
   { id:'life-sleep-kyuko-004', kind:'life-sleep', who:'kyuko', line:'talk', lv:null, lines:[{ who:'kyuko', e:'happy', t:'…ほい…ありがとん…すぅ' }] },
   { id:'life-sleep-kyuko-005', kind:'life-sleep', who:'kyuko', line:'talk', lv:null, lines:[{ who:'kyuko', e:'normal', t:'…だいたい…97点…' }] },
   { id:'life-sleep-kyuko-006', kind:'life-sleep', who:'kyuko', line:'talk', lv:null, lines:[{ who:'kyuko', e:'happy', t:'…{name}…イルミネ、きれいだねぇ…' }] },
-  { id:'life-sleep-sorashido-001', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'…表の…3行目…ずれてる…' }] },
-  { id:'life-sleep-sorashido-002', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'…うぉぉぉ…新記録…むにゃ' }] },
-  { id:'life-sleep-sorashido-003', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'…なんくるないさ…すぅ…' }] },
-  { id:'life-sleep-sorashido-004', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'…確率…でーじ…高い…' }] },
-  { id:'life-sleep-sorashido-005', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'…攻略本…完成…だぜ…' }] },
-  { id:'life-sleep-sorashido-006', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'…{name}…ちばりよー…' }] },
+  { id:'life-sleep-sorashido-001', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'・・・表の・・・3行目・・・ずれてる・・・' }] },
+  { id:'life-sleep-sorashido-002', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'・・・うぉぉぉ・・・新記録・・・むにゃ' }] },
+  { id:'life-sleep-sorashido-003', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'・・・なんくるないさ・・・すぅ・・・' }] },
+  { id:'life-sleep-sorashido-004', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'・・・確率・・・でーじ・・・高い・・・' }] },
+  { id:'life-sleep-sorashido-005', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'normal', t:'・・・攻略本・・・完成・・・です・・・' }] },
+  { id:'life-sleep-sorashido-006', kind:'life-sleep', who:'sorashido', line:'talk', lv:null, lines:[{ who:'sorashido', e:'happy', t:'・・・{name}・・・ちばりよー・・・' }] },
   { id:'life-sleep-erubin-001', kind:'life-sleep', who:'erubin', line:'talk', lv:null, lines:[{ who:'erubin', e:'normal', t:'…すぅ…デュラハン…いけ…' }] },
   { id:'life-sleep-erubin-002', kind:'life-sleep', who:'erubin', line:'talk', lv:null, lines:[{ who:'erubin', e:'happy', t:'…みんな…おやすみ…' }] },
   { id:'life-sleep-erubin-003', kind:'life-sleep', who:'erubin', line:'talk', lv:null, lines:[{ who:'erubin', e:'normal', t:'…もう1戦…いいね…' }] },
@@ -64405,10 +64678,10 @@ const ASSISTANT_LIFE_SLEEP_TALKS = Object.freeze([
   { id:'life-sleep-kyuko-008', kind:'life-sleep', who:'kyuko', line:'woken', lv:'1-4', lines:[{ who:'kyuko', e:'troubled', t:'…ん…朝はまだ、むりぃ…' }] },
   { id:'life-sleep-kyuko-009', kind:'life-sleep', who:'kyuko', line:'woken', lv:'5-10', lines:[{ who:'kyuko', e:'troubled', t:'…{name}ぉ…いま、本の夢見てたのにぃ' }, { who:'kyuko', e:'happy', t:'…ま、いっか。ほい、起きたよ笑' }] },
   { id:'life-sleep-kyuko-010', kind:'life-sleep', who:'kyuko', line:'woken', lv:'5-10', lines:[{ who:'kyuko', e:'normal', t:'…ぐぬぬぬ…起こされたぁ。ありがとん…なのかなぁ' }] },
-  { id:'life-sleep-sorashido-007', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'surprise', t:'…うぉっ！？ {name}か…寝ぼけてたぜ' }] },
-  { id:'life-sleep-sorashido-008', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'troubled', t:'…まだ10時前だろ…朝は弱いのさ…' }] },
-  { id:'life-sleep-sorashido-009', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'troubled', t:'…{name}…いま、表の夢の途中だったんだぜ…' }, { who:'sorashido', e:'happy', t:'…まあいいさ。起きたからには、計算するぜ' }] },
-  { id:'life-sleep-sorashido-010', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'happy', t:'…ふぁ…{name}の声なら、目ざましより効くさ' }] },
+  { id:'life-sleep-sorashido-007', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'surprise', t:'・・・はっ！？ {name}ですか・・・寝ぼけてました' }] },
+  { id:'life-sleep-sorashido-008', kind:'life-sleep', who:'sorashido', line:'woken', lv:'1-4', lines:[{ who:'sorashido', e:'troubled', t:'・・・まだ10時前ですよね・・・朝は弱いんです・・・' }] },
+  { id:'life-sleep-sorashido-009', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'troubled', t:'・・・{name}・・・いま、表の夢の途中だったんですよ・・・' }, { who:'sorashido', e:'happy', t:'・・・まあいいです。起きたからには、計算しますねー' }] },
+  { id:'life-sleep-sorashido-010', kind:'life-sleep', who:'sorashido', line:'woken', lv:'5-10', lines:[{ who:'sorashido', e:'happy', t:'・・・ふぁ・・・{name}の声なら、目ざましより効きますね笑' }] },
   { id:'life-sleep-erubin-007', kind:'life-sleep', who:'erubin', line:'woken', lv:'1-4', lines:[{ who:'erubin', e:'surprise', t:'…あ、{name}。ごめんね、寝てたみたい' }] },
   { id:'life-sleep-erubin-008', kind:'life-sleep', who:'erubin', line:'woken', lv:'1-4', lines:[{ who:'erubin', e:'normal', t:'…ん…どうしたの？ 何かあった？' }] },
   { id:'life-sleep-erubin-009', kind:'life-sleep', who:'erubin', line:'woken', lv:'5-10', lines:[{ who:'erubin', e:'troubled', t:'…{name}…もう23時すぎてるよ…' }, { who:'erubin', e:'happy', t:'…でも、顔見られてよかった。少しだけ話そっか' }] },
@@ -64459,6 +64732,10 @@ const assistantLifeBeatIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLi
 //   印が偽・いまの時間の様子がまだ無いときは false/[]。図書室でのカード研究は入れない。組で来ていれば全員。
 //   カード部は assistantLifeNow を呼ばない(様子を決め直して保存するため)。ごほうびは「対戦を始めた時点でいたか」で決める(カード部の案)
 const assistantLifeAtCard = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'cards' && w.place === 'cardroom'); } catch (_) { return false; } };
+// いまモンヒロバトルにいる助手(読むだけ。助手のマスモンの修行は、助手がここにいる回に行う・2026-11-11 社長「MB管理とモンバトは別」)。
+//   印が偽・いまの時間の様子がまだ無いときは false/[]。組で来ていれば全員
+const assistantLifeAtBattle = (id) => { try { const w = assistantLifeWhereOf(assistantLifeCurrent(), id); return !!(w && w.doing === 'battle' && w.place === 'battle'); } catch (_) { return false; } };
+const assistantLifeBattleIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtBattle);
 const assistantLifeCardIds = () => ASSISTANT_LIFE_HOUSE_ORDER.filter(assistantLifeAtCard);
 // 家にいる組は、だれかひとりの部屋に集まる(家が好きな助手 → 並びの先)
 const assistantLifeHostOf = (ids) => ids.find(id => ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav === 'home') || [...ids].sort((a, b) => ASSISTANT_LIFE_HOUSE_ORDER.indexOf(a) - ASSISTANT_LIFE_HOUSE_ORDER.indexOf(b))[0];
@@ -64767,7 +65044,7 @@ function AssistantLifeHouseArt({ width, land, look, rooms, metSet, onOpen, diary
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
             <b className="flex items-center gap-1">📌 今日あったこと{items.length > 0 && <span className="mhl-board-more" data-assistant-life-board-more={restN}>{restN > 0 ? `ほか${restN}件 ›` : '全部 ›'}</span>}</b>
-            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>まだ何もありません</p>}
+            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>👀 見守ると ここに残ります</p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
           <span className="absolute text-[24px]" style={{ left: width * (land ? .62 : .66) + 46, bottom: 6 }} aria-hidden="true">🛋️</span>
@@ -65037,10 +65314,24 @@ const ASSISTANT_LIFE_STAND_EC = 0.1639;
 //   同じ高さの枠に入れる(下の 顔0.45個ぶんで消していく)
 const ASSISTANT_LIFE_STAND_FACE_LEN = 2.63;
 const ASSISTANT_LIFE_STAND_CUT = Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 });
+// 着替えの絵の顔の点(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+//   それまで着替えの絵にも ふだんの服の点を当てていて、帽子や羽のぶん顔が小さく・ずれて出ていた(相手と顔の大きさが 1.4倍ちがった)。
+//   キーは絵の置き場所の名前(助手の絵のフォルダの中の、服ごとのフォルダ名)。測り方は上の表と同じ(見えている体の上を0・下を1。top は帽子・耳・頭布の飾りを除いた頭のてっぺん)。
+//   above … 頭のてっぺんの上を、顔の何個ぶんまで見せるか(魔女の帽子・大きなうさ耳が切れないように。無ければ ASSISTANT_LIFE_STAND_CUT.above)
+//   m は、同じ助手の ふだんの服の m に「目から顎」の長さの比を掛けたもの(同じ顔なので、頬の幅も同じ比で変わる)。測り絵: docs/progress/assistant-art/
+const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
+  halloween: { mua: { top: 0.2, eye: 0.358, chin: 0.433, m: 0.557, above: 0.85 }, kiki: { top: 0.217, eye: 0.412, chin: 0.498, m: 0.54, above: 0.95 }, momosuke: { top: 0.065, eye: 0.39, chin: 0.508, m: 0.846 } },
+  'card-master': { mua: { top: 0.09, eye: 0.22, chin: 0.295, m: 0.55 } },
+  sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
+});
+// 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
+const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const own = who && who.imagePrefix && String(src || '').includes(`/${who.imagePrefix}_`);
+  const outfit = own ? assistantLifeStandOutfitOf(src) : null;
+  if (outfit) return (ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit] && ASSISTANT_LIFE_STAND_FACE_OUTFIT[outfit][pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
   return (own && ASSISTANT_LIFE_STAND_FACE[pid]) || { top: 0.05, eye: 0.33, chin: 0.47, m: 1 };
 };
 // 見えている体の高さ(px)。F … m=1 の人の「目から顎」の長さ(px)。顔の大きさがそろう
@@ -65053,7 +65344,7 @@ const assistantLifeStandRule = ({ face, box, F, topY, cx = 0 }) => {
   const vh = assistantLifeStandVisH(face, F), ih = vh / (box.b - box.t), iw = ih * box.ar;
   const visTop = topY - (face.top || 0) * vh, imgTop = visTop - box.t * ih;
   const U = F * ASSISTANT_LIFE_STAND_FACE_LEN;
-  const frameTop = topY - ASSISTANT_LIFE_STAND_CUT.above * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
+  const frameTop = topY - (face.above || ASSISTANT_LIFE_STAND_CUT.above) * U, frameBottom = topY + ASSISTANT_LIFE_STAND_CUT.below * U;
   const clip = [Math.max(0, frameTop - imgTop), Math.max(0, imgTop + ih - frameBottom)];
   const fade = face.head ? null : [Math.max(0, (frameBottom - ASSISTANT_LIFE_STAND_CUT.fade * U - imgTop) / ih), Math.min(1, (frameBottom - imgTop) / ih)];
   return { top: imgTop, height: ih, width: iw, left: cx - ((box.l + box.r) / 2) * iw, clip, fade, frameTop, frameBottom, visTop, visBottom: visTop + vh, U };
@@ -65439,11 +65730,11 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
       <button type="button" className="mhl-tile mhl-watch flex-1" data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => unwatched[0] && watch(unwatched[0])}>
         {/* 1日の上限はなくした(2026-11-08 社長)。いま見守れる組の数を出す */}
-        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small>{unwatched.length ? '時間帯ごとに1回' : '次の時間帯に'}</small></button>
+        <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small data-assistant-life-today-gain="watch">{uiV2 ? (unwatched.length ? '🤝💗 アップ' : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に') : (unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length} onClick={() => { if (uiV2) { setCallPicker(true); return; } const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0]; if (id) setRoomId(id); }}>
         <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!uiV2 && (!canGive || (!giveGroup && !giveSoloId))} onClick={() => { if (uiV2) { setGiftItemsOpen(false); setGiftOpen(true); return; } if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]); else setTab('items'); }}>
-        <em>{soloOn ? itemsLeft + soloLeft : itemsLeft}回</em><i>🎁</i><b>贈る</b><small>道具 {itemsHave}個</small></button>
+        <em>{soloOn ? itemsLeft + soloLeft : itemsLeft}回</em><i>🎁</i><b>贈る</b><small data-assistant-life-today-gain="give">{!uiV2 ? `道具 ${itemsHave}個` : (soloOn ? itemsLeft + soloLeft : itemsLeft) <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える'}</small></button>
       <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
         <i>🎵</i><b>モンヒロビート</b><small>{beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも'}</small></button>
     </div>);
@@ -65469,7 +65760,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
       <p className="mt-0.5 text-[10px] font-bold text-slate-200" data-assistant-life-clock>{assistantLifeTodLabel()} ・ <span data-assistant-life-next-slot className="whitespace-nowrap">{assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</span></p>
       <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
-        <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>
+        {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
         <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : 'いちばん上'}</span>
       </div>
@@ -65586,7 +65877,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mt-1.5">{icons}</div>
           </div>
         </>)}
-        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[55vh] overflow-y-auto">{Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => <button type="button" key={id} className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left" onClick={() => { setCallPicker(false); setRoomId(id); }}><span>{nameOf(id)}</span><span className="text-xs text-slate-300">{life.solo[id]?.reason === 'lonely' ? 'さみしそう' : 'ひとりで過ごしている'} ›</span></button>)}</div></div></div>}
+        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[46vh] overflow-y-auto">{Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => <button type="button" key={id} className="mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left" onClick={() => { setCallPicker(false); setRoomId(id); }}><span>{nameOf(id)}</span><span className="text-xs text-slate-300">{life.solo[id]?.reason === 'lonely' ? '💭 さみしそう・声をかけよう' : 'ひとりで過ごしている'} ›</span></button>)}</div><p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" data-assistant-life-call-hint>💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)</p></div></div>}
         {uiV2 && tab === 'where' && note && !roomId && <p data-assistant-life-note className="absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100" style={{ bottom: 'calc(44px + env(safe-area-inset-bottom))' }}>{note}</p>}
         {giftOpen && uiV2 && !roomId && !give && (
           <div className="absolute inset-0" style={{ zIndex: 21 }} data-assistant-life-gift-sheet>
@@ -65608,7 +65899,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p><p className="text-[10.5px] font-bold text-slate-400" data-assistant-life-diary-count>全部で{(diary.items || []).length}件・新しい順</p>
-              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <p className="mt-2 text-[12px] text-slate-400">まだ何もありません</p>}
+              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <div className="mt-2" data-assistant-life-diary-empty><p className="text-[12px] font-bold leading-snug text-slate-300">まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)</p>{uiV2 && unwatched[0] && <button type="button" data-assistant-life-diary-watch onClick={() => { setBoardOpen(false); watch(unwatched[0]); }} className="mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]">👀 いまいる組を見守る(🤝💗 アップ)</button>}</div>}
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
@@ -65637,7 +65928,7 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
 // 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
 // HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', life: 'main.mh-home-scene .mh-home-facility.life' });
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
 const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
@@ -65733,7 +66024,7 @@ function AssistantLifeHomeFaces({ metIds }) {
 // 何も保存しない
 
 // 場所ごとの HOME の札(fac)。町だけの場所は HOME では「🏡 助手ライフ」の札の下に顔が出る(assistantLifeFacilityOf と同じ表)
-const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
 // 町だけの場所の札を置く所(絵の幅・高さに対する割合。札の真ん中)。絵ごとに建物の位置がちがうので、絵ごとに持つ
 //   classic … 村の広場(941×1672)/ halloween … ハロウィン(縦)/ halloweenWide … ハロウィン(横長)
@@ -65745,7 +66036,7 @@ const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
 });
 const assistantLifeMapArtOf = (src) => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
 // していることの短い印(地図の名札の頭に付ける)
-const ASSISTANT_LIFE_DOING_ICON = Object.freeze({ snack: '🍰', practice: '🎵', training: '🥚', cards: '🃏', walk: '🚶', idle: '💭', sleep: '💤', read: '📖' });
+const ASSISTANT_LIFE_DOING_ICON = Object.freeze({ snack: '🍰', practice: '🎵', training: '🥚', cards: '🃏', walk: '🚶', idle: '💭', sleep: '💤', read: '📖', battle: '⚔️' });
 // 場所を押したときの一言(できること)。数字・ネタバレは書かない
 const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
@@ -65753,6 +66044,7 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   cardroom: 'MFバトルカードの研究をしている助手。いる助手と対戦すると、ごほうびが上がります',
   ranch: 'M/B管理でモンスターを育てている助手',
   temple: '神殿にいる助手',
+  battle: 'モンヒロバトルで戦っている助手。いる助手は、マスモンを連れて修行をしています',
   market: 'マーケットにいる助手',
   library: '図書室で本を読んだり、カードを研究したりしている助手',
   cafe: 'おやつ屋さんでおやつを食べている助手',
@@ -65761,7 +66053,7 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   plaza: '広場を散歩している助手',
 });
 // HOME の札の名前(地図のシートに「HOME の◯◯の札」と出す)
-const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
+const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', battle: 'モンヒロバトル', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
 const assistantLifeMapSpotWord = (place) => `${ASSISTANT_LIFE_PLACE_ICON[place] || '📍'} ${place === 'home' ? 'みんなの家' : assistantLifePlaceShow(place)}`;
 
 // HOME の画面の大きさ・位置合わせの値・絵を読む(HOME が無いとき・🔄横で回しているときは、この画面の大きさと既定の絵)
@@ -65789,17 +66081,23 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   React.useEffect(() => { let alive = true; assistantLifeStandBox(src).then(b => { if (alive) setBox(b); }); return () => { alive = false; }; }, [src]);
   // 測り終えるまでの仮の形。絵は object-fit:contain なので、仮の比が違っても縦横に伸びない(2026-11-09 社長「画面バグってる」)
   const b = box || { t: 0, b: 1, l: 0, r: 1, ar: 0.6 };
-  const ih = h / Math.max(0.2, b.b - b.t), iw = ih * (b.ar || 0.6);
+  // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
+  //   顔だけの絵=ドラ が 11px と 2.8倍ちがい、羽や耳のある絵は左右も切れていた)。場面の立ち絵と同じ表(assistantLifeStandFace)と決まり(assistantLifeStandRule)を使う:
+  //   頭(てっぺんから顎)が箱の高さの半分・頭のてっぺんは上から 25%(うさ耳が入る。魔女の帽子・大きな耳の着替え=above のある絵は 38% まで下げる)・胸から下は箱の下でぼかして消す。測れないうちは今までの出し方
+  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
+  const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
   const cx = ((b.l + b.r) / 2) * iw;
+  const top = rule ? rule.top : -b.t * ih;
   const mask = 'linear-gradient(#000 74%,transparent)';
   // 印(💤・ごほうび済み)は、下をぼかした絵の外側に重ねる(ぼかしに消されない)
   return (
     <span className="relative block shrink-0" style={{ width: w, height: h }}>
       <span className="absolute inset-0 overflow-hidden" style={{ WebkitMaskImage: mask, maskImage: mask }} data-assistant-life-map-fig>
-        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top: -b.t * ih, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
+        <img src={src} alt="" draggable={false} style={{ position: 'absolute', height: ih, width: iw, maxWidth: 'none', objectFit: 'contain', top, left: w / 2 - cx, filter: sleep ? 'brightness(.62) saturate(.7)' : 'drop-shadow(0 2px 3px #0009)' }}/>
         {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
-        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top: -b.t * ih, filter: 'brightness(.62) saturate(.7)' }}/>}
+        {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
@@ -65978,11 +66276,12 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
-        {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること */}
+        {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること。下の案内は、HOME の下にあるモンヒロバトルの札と重ならないよう札の上に置く(2026-11-11) */}
         <nav className="mh-home-facilities" aria-label="町の場所">
           {facBtn('ranch', 'management', 'M/B管理', <span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span>)}
           {facBtn('temple', 'temple', '神殿', <span><Sparkles size={18}/>神殿</span>)}
           {facBtn('market', 'market', 'マーケット', <span><ShoppingBag size={17}/>マーケット</span>)}
+          {facBtn('battle', 'battle', 'モンヒロバトル', <span><Sword size={25}/>モンヒロバトル</span>)}
           {facBtn('home', 'life', '助手ライフ みんなの家', <span><span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>🏡</span><b className="mh-home-facility-label">助手ライフ<small>みんなの家</small></b></span>)}
           {facBtn('studio', 'rhythm', 'モンヒロビート', <span>🎵 モンヒロビート</span>)}
         </nav>
@@ -66003,7 +66302,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           </div>
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}
         </div>
-        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }} data-assistant-life-map-hint>場所を押すと、いる助手とできること</p>
+        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ bottom: land ? 68 : 'calc(68px + env(safe-area-inset-bottom))' }} data-assistant-life-map-hint>場所を押すと、いる助手とできること</p>
       </div>
       </div>
       {list && <div ref={listRef} className="relative bg-[#0b1020]" data-assistant-life-map-below>{list}</div>}
@@ -66637,15 +66936,15 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-fight-dra-mua-1', kind:'fight', ppl:['dra', 'mua'], keys:{ cause:'snack' }, lines:[{ who:'mua', e:'angry', t:'ちょっと！ あたしのプリン、なんでないの！？' }, { who:'dra', e:'troubled', t:'えへへ…名前が書いてなかったからな' }, { who:'mua', e:'angry', t:'冷蔵庫のいちばん奥、あたしの場所ぢゃん！' }, { who:'dra', e:'troubled', t:'そ、そうだったのか…' }], distance:[{ who:'mua', e:'troubled', t:'…プリンくらいで怒りすぎたかな' }, { who:'dra', e:'troubled', t:'おで、悪いことしたな' }], makeup:[{ who:'dra', e:'normal', t:'{c}、プリン2つ買ってきた。1つ多めだ' }, { who:'mua', e:'happy', t:'…2つ！？ もう、ゆるすしかないぢゃん♪' }, { who:'dra', e:'happy', t:'次からは名前を書いてくれよな' }] },
   { id:'rel-fight-dra-mua-2', kind:'fight', ppl:['dra', 'mua'], keys:{ cause:'tidy' }, lines:[{ who:'mua', e:'troubled', t:'{c}、居間にカードの箱、出しっぱなしだよ〜' }, { who:'dra', e:'normal', t:'あとで片づけるからな。いま、いいところなんだ' }, { who:'mua', e:'angry', t:'それ、昨日も言ってたぢゃん！ あたし、つまずいたんだけど！' }, { who:'dra', e:'troubled', t:'う…すまん' }], distance:[{ who:'dra', e:'troubled', t:'おで、片づけは苦手なんだよな…' }, { who:'mua', e:'normal', t:'言い方、ちょっときつかったかも' }], makeup:[{ who:'dra', e:'happy', t:'{c}、箱、ぜんぶ部屋にしまったぞ。見てくれ' }, { who:'mua', e:'excited', t:'わ、ほんとだ！ ありがと！ あたしもいっしょに棚ふくね' }, { who:'dra', e:'happy', t:'2人だと早いな、えへへ' }] },
   { id:'rel-fight-dra-mua-3', kind:'fight', ppl:['dra', 'mua'], keys:{ cause:'promise' }, lines:[{ who:'mua', e:'angry', t:'{c}、昨日いっしょに広場いくって言ったのに、寝てたぢゃん！' }, { who:'dra', e:'troubled', t:'昼寝のつもりが…起きたら夜だったんだ' }, { who:'mua', e:'angry', t:'あたし、ずっと待ってたんだからね！' }], distance:[{ who:'mua', e:'troubled', t:'…ひとりでおしゃべりしても、つまんなかったな' }, { who:'dra', e:'troubled', t:'おで、またやっちまった…' }], makeup:[{ who:'dra', e:'normal', t:'{c}、今日は寝ないで広場いくぞ。ほら、もう靴はいた' }, { who:'mua', e:'happy', t:'…目、半分閉じてるけど？ｗ' }, { who:'dra', e:'happy', t:'広場に着いたら開くからな' }] },
-  { id:'rel-fight-atsu-sorashido-1', kind:'fight', ppl:['atsu', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'うぉぉぉ！ これで俺の51勝50敗だぜ・・・！' }, { who:'atsu', e:'angry', t:'待て待て、今のはノーカンだろ笑' }, { who:'sorashido', e:'angry', t:'表にちゃんと書いてあるんだぜ！ 数字はうそつかないさ' }, { who:'atsu', e:'angry', t:'表を書いてるのがそっちなんだよな！？' }], distance:[{ who:'atsu', e:'troubled', t:'…1勝くらいで熱くなりすぎたか…' }, { who:'sorashido', e:'troubled', t:'数え方、先に決めておけばよかったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、数え方の決まり、2人で書こうぜ' }, { who:'atsu', e:'happy', t:'おう、じゃあ今日のは引き分けってことで笑' }, { who:'sorashido', e:'happy', t:'引き分けか…しょうがない、なんくるないさ〜' }] },
-  { id:'rel-fight-atsu-sorashido-2', kind:'fight', ppl:['atsu', 'sorashido'], keys:{ cause:'late' }, lines:[{ who:'atsu', e:'normal', t:'{c}、朝6時に育成って約束したよな？ もう8時だぞ…' }, { who:'sorashido', e:'troubled', t:'ご、ごめんだぜ… 3時まで表を作ってたら、寝坊したさ' }, { who:'atsu', e:'angry', t:'ドラゴンも待ってたんだけど！？' }, { who:'sorashido', e:'angry', t:'夜のほうが計算がはかどるんだって！' }], distance:[{ who:'atsu', e:'troubled', t:'…朝に合わせろってのも、勝手だったか…' }, { who:'sorashido', e:'troubled', t:'俺、約束したのに言い返しちまったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、明日は寝ないで行く…のは無理だから、9時でどうだ？' }, { who:'atsu', e:'happy', t:'9時な笑 じゃあ俺は先に軽く走っとく！' }, { who:'sorashido', e:'excited', t:'決まりだぜ！ ちばりよー！' }] },
-  { id:'rel-fight-atsu-sorashido-3', kind:'fight', ppl:['atsu', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、カード部屋の机、表の紙で埋まってるんだけど！？' }, { who:'sorashido', e:'normal', t:'全部、大事な表なんだぜ。並べ方にも意味があるさ' }, { who:'atsu', e:'angry', t:'デッキ広げる場所がないって笑 ちょっとどけるぞ！' }, { who:'sorashido', e:'angry', t:'あっ！ 順番がくずれる！' }], distance:[{ who:'sorashido', e:'troubled', t:'…並べ方、俺にしか分からないもんな' }, { who:'atsu', e:'troubled', t:'勝手にさわったのは、俺が悪かったな…' }], makeup:[{ who:'atsu', e:'normal', t:'さっきはごめんな！ 紙、どこに戻せばいい？' }, { who:'sorashido', e:'happy', t:'俺もごめんだぜ。いっそ、表を1冊にまとめるさ' }, { who:'atsu', e:'happy', t:'それなら机も広いな笑' }] },
-  { id:'rel-fight-kiki-sorashido-1', kind:'fight', ppl:['kiki', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'kiki', e:'troubled', t:'{c}、図書室の机に、表の紙が広がったままでつ' }, { who:'sorashido', e:'normal', t:'あとで続きをやるから、そのままにしといたんだぜ' }, { who:'kiki', e:'angry', t:'図書室は、みんなの机なんです。少しお片づけをお願いします' }, { who:'sorashido', e:'troubled', t:'う…分かってはいるんだけどさ' }], distance:[{ who:'sorashido', e:'troubled', t:'言われたとおりだよな…' }, { who:'kiki', e:'normal', t:'少しきつく聞こえたでしょうか…' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、紙は全部ファイルに入れたぜ。机、ぴかぴかさ' }, { who:'kiki', e:'happy', t:'ありがとうございまつ。私も、続きの場所をとっておきまつね♪' }, { who:'sorashido', e:'excited', t:'それは助かるぜ・・・！' }] },
-  { id:'rel-fight-kiki-sorashido-2', kind:'fight', ppl:['kiki', 'sorashido'], keys:{ cause:'late' }, lines:[{ who:'kiki', e:'normal', t:'{c}、朝の散歩、5時半の約束でしたよね' }, { who:'sorashido', e:'troubled', t:'……いま、何時さ？' }, { who:'kiki', e:'troubled', t:'7時でつ。お日さま、もうすっかり昇りました' }, { who:'sorashido', e:'angry', t:'5時半は、俺にとっては真夜中なんだぜ！' }], distance:[{ who:'kiki', e:'troubled', t:'朝が苦手なのを、知っていたのに…' }, { who:'sorashido', e:'troubled', t:'寝ぼけて、きつく言っちまったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきはごめん。夕方の散歩なら、絶対起きてるさ' }, { who:'kiki', e:'happy', t:'では夕焼けの散歩にしましょう。私も、少し夜ふかししてみまつ♪' }, { who:'sorashido', e:'happy', t:'{c}の夜ふかし、何時までもつか計算しとくぜ笑' }] },
-  { id:'rel-fight-kiki-sorashido-3', kind:'fight', ppl:['kiki', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今のカード勝負、計算どおり俺の勝ちだぜ！' }, { who:'kiki', e:'angry', t:'…もう一回お願いします。今のは、火力が足りませんでした' }, { who:'sorashido', e:'normal', t:'何回やっても、表の上では俺が有利さ' }, { who:'kiki', e:'angry', t:'では、表をこえる火力を出しまつ' }], distance:[{ who:'kiki', e:'troubled', t:'少しむきになってしまいました…' }, { who:'sorashido', e:'troubled', t:'有利とか、言わなきゃよかったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきの一言はなしだぜ。次は真剣勝負、受けて立つさ' }, { who:'kiki', e:'happy', t:'はい。ちから全開で、いきまつね♪' }, { who:'sorashido', e:'excited', t:'うぉぉぉ！ そう来なくちゃ！' }] },
-  { id:'rel-fight-erubin-sorashido-1', kind:'fight', ppl:['erubin', 'sorashido'], keys:{ cause:'promise' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、今日カードの研究会って言ってたよな？' }, { who:'erubin', e:'surprise', t:'あ…ごめん、明日だと思ってた' }, { who:'sorashido', e:'angry', t:'表、2人ぶん作って待ってたんだぜ！' }, { who:'erubin', e:'troubled', t:'ほんとにごめん。でも、そんなに怒らなくても…' }], distance:[{ who:'sorashido', e:'troubled', t:'言いすぎた…楽しみにしてただけなんだよな' }, { who:'erubin', e:'normal', t:'待たせたのは、俺のほうなのにね' }], makeup:[{ who:'erubin', e:'normal', t:'{c}、いまからでも研究会、まだ間に合う？' }, { who:'sorashido', e:'happy', t:'もちろんだぜ！ 表は消えないさ' }, { who:'erubin', e:'happy', t:'よかった。今度は、カレンダーに書いとくね' }] },
-  { id:'rel-fight-erubin-sorashido-2', kind:'fight', ppl:['erubin', 'sorashido'], keys:{ cause:'snack' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、さっきのクッキー、最後の1枚食べた？' }, { who:'sorashido', e:'surprise', t:'あれ、だれのでもないと思って…計算中は手が止まらないんだぜ' }, { who:'erubin', e:'troubled', t:'みんなで分けようと思って、残しておいたんだけどな' }, { who:'sorashido', e:'angry', t:'だったら、書いといてくれよな！' }], distance:[{ who:'erubin', e:'normal', t:'言わなかった俺も、悪かったかな' }, { who:'sorashido', e:'troubled', t:'言い返すことじゃなかったさ…' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、クッキー焼いてみたぜ。形はちょっと計算外だけどさ笑' }, { who:'erubin', e:'happy', t:'わ、手作りだ。いいね、みんなで食べよう' }, { who:'sorashido', e:'happy', t:'今度は、ちゃんと人数ぶんあるぜ' }] },
-  { id:'rel-fight-erubin-sorashido-3', kind:'fight', ppl:['erubin', 'sorashido'], keys:{ cause:'song' }, lines:[{ who:'sorashido', e:'excited', t:'練習の曲、ぜんぶアップテンポにしようぜ！' }, { who:'erubin', e:'troubled', t:'俺、落ち着いた曲も入れたいな' }, { who:'sorashido', e:'normal', t:'でも速い曲のほうが、スコアが伸びるって表に出てるさ' }, { who:'erubin', e:'troubled', t:'スコアだけで選ぶのは、ちょっとさみしいかな' }], distance:[{ who:'sorashido', e:'troubled', t:'…たしかに、楽しいかどうかは表に入れてなかったな' }, { who:'erubin', e:'normal', t:'言い方、もう少し考えればよかった' }], makeup:[{ who:'erubin', e:'normal', t:'{c}、速い曲と落ち着いた曲、半分ずつにしない？' }, { who:'sorashido', e:'happy', t:'いいぜ！ 半分ずつなら計算も楽さ笑' }, { who:'erubin', e:'happy', t:'さすが{c}。じゃあ1曲目、選んでいいよ' }] },
+  { id:'rel-fight-atsu-sorashido-1', kind:'fight', ppl:['atsu', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'よし！ これで自分の51勝50敗ですねー！' }, { who:'atsu', e:'angry', t:'待て待て、今のはノーカンだろ笑' }, { who:'sorashido', e:'angry', t:'表にちゃんと書いてあるんですよ！ 数字はうそつかないので' }, { who:'atsu', e:'angry', t:'表を書いてるのがそっちなんだよな！？' }], distance:[{ who:'atsu', e:'troubled', t:'…1勝くらいで熱くなりすぎたか…' }, { who:'sorashido', e:'troubled', t:'数え方、先に決めておけばよかったな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、数え方の決まり、2人で書きませんか' }, { who:'atsu', e:'happy', t:'おう、じゃあ今日のは引き分けってことで笑' }, { who:'sorashido', e:'happy', t:'引き分けですか・・・しょうがないですね、なんくるないさ〜' }] },
+  { id:'rel-fight-atsu-sorashido-2', kind:'fight', ppl:['atsu', 'sorashido'], keys:{ cause:'late' }, lines:[{ who:'atsu', e:'normal', t:'{c}、朝6時に育成って約束したよな？ もう8時だぞ…' }, { who:'sorashido', e:'troubled', t:'す、すみません・・・3時まで表を作ってたら、寝坊しました💦' }, { who:'atsu', e:'angry', t:'ドラゴンも待ってたんだけど！？' }, { who:'sorashido', e:'angry', t:'夜のほうが計算がはかどるんですって！' }], distance:[{ who:'atsu', e:'troubled', t:'…朝に合わせろってのも、勝手だったか…' }, { who:'sorashido', e:'troubled', t:'約束したのに、言い返しちゃったな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、明日は寝ないで行く・・・のは無理なので、9時でどうですか？' }, { who:'atsu', e:'happy', t:'9時な笑 じゃあ俺は先に軽く走っとく！' }, { who:'sorashido', e:'excited', t:'決まりですね！ ちばりよー！' }] },
+  { id:'rel-fight-atsu-sorashido-3', kind:'fight', ppl:['atsu', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、カード部屋の机、表の紙で埋まってるんだけど！？' }, { who:'sorashido', e:'normal', t:'全部、大事な表なんですよ。並べ方にも意味があるので' }, { who:'atsu', e:'angry', t:'デッキ広げる場所がないって笑 ちょっとどけるぞ！' }, { who:'sorashido', e:'angry', t:'あっ！ 順番がくずれます！' }], distance:[{ who:'sorashido', e:'troubled', t:'・・・並べ方、自分にしか分からないもんな' }, { who:'atsu', e:'troubled', t:'勝手にさわったのは、俺が悪かったな…' }], makeup:[{ who:'atsu', e:'normal', t:'さっきはごめんな！ 紙、どこに戻せばいい？' }, { who:'sorashido', e:'happy', t:'自分もすみません。いっそ、表を1冊にまとめますね' }, { who:'atsu', e:'happy', t:'それなら机も広いな笑' }] },
+  { id:'rel-fight-kiki-sorashido-1', kind:'fight', ppl:['kiki', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'kiki', e:'troubled', t:'{c}、図書室の机に、表の紙が広がったままでつ' }, { who:'sorashido', e:'normal', t:'あとで続きをやるので、そのままにしておいたんです' }, { who:'kiki', e:'angry', t:'図書室は、みんなの机なんです。少しお片づけをお願いします' }, { who:'sorashido', e:'troubled', t:'う・・・分かってはいるんですけどね' }], distance:[{ who:'sorashido', e:'troubled', t:'言われたとおりだよな・・・' }, { who:'kiki', e:'normal', t:'少しきつく聞こえたでしょうか…' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、紙は全部ファイルに入れました。机、ぴかぴかです' }, { who:'kiki', e:'happy', t:'ありがとうございまつ。私も、続きの場所をとっておきまつね♪' }, { who:'sorashido', e:'excited', t:'それは助かります・・・！' }] },
+  { id:'rel-fight-kiki-sorashido-2', kind:'fight', ppl:['kiki', 'sorashido'], keys:{ cause:'late' }, lines:[{ who:'kiki', e:'normal', t:'{c}、朝の散歩、5時半の約束でしたよね' }, { who:'sorashido', e:'troubled', t:'・・・いま、何時ですか？' }, { who:'kiki', e:'troubled', t:'7時でつ。お日さま、もうすっかり昇りました' }, { who:'sorashido', e:'angry', t:'5時半は、自分にとっては真夜中なんですよ！' }], distance:[{ who:'kiki', e:'troubled', t:'朝が苦手なのを、知っていたのに…' }, { who:'sorashido', e:'troubled', t:'寝ぼけて、きつく言っちゃったな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきはすみません。夕方の散歩なら、絶対起きてます' }, { who:'kiki', e:'happy', t:'では夕焼けの散歩にしましょう。私も、少し夜ふかししてみまつ♪' }, { who:'sorashido', e:'happy', t:'{c}の夜ふかし、何時までもつか計算しておきますね笑' }] },
+  { id:'rel-fight-kiki-sorashido-3', kind:'fight', ppl:['kiki', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今のカード勝負、計算どおり自分の勝ちですね！' }, { who:'kiki', e:'angry', t:'…もう一回お願いします。今のは、火力が足りませんでした' }, { who:'sorashido', e:'normal', t:'何回やっても、表の上では自分が有利なので' }, { who:'kiki', e:'angry', t:'では、表をこえる火力を出しまつ' }], distance:[{ who:'kiki', e:'troubled', t:'少しむきになってしまいました…' }, { who:'sorashido', e:'troubled', t:'有利とか、言わなきゃよかったな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきの一言はなしでお願いします。次は真剣勝負、受けて立ちます' }, { who:'kiki', e:'happy', t:'はい。ちから全開で、いきまつね♪' }, { who:'sorashido', e:'excited', t:'ほほー！ そう来なくちゃですね！' }] },
+  { id:'rel-fight-erubin-sorashido-1', kind:'fight', ppl:['erubin', 'sorashido'], keys:{ cause:'promise' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、今日カードの研究会って言ってましたよね？' }, { who:'erubin', e:'surprise', t:'あ…ごめん、明日だと思ってた' }, { who:'sorashido', e:'angry', t:'表、2人ぶん作って待ってたんですよ！' }, { who:'erubin', e:'troubled', t:'ほんとにごめん。でも、そんなに怒らなくても…' }], distance:[{ who:'sorashido', e:'troubled', t:'言いすぎた・・・楽しみにしてただけなんだよな' }, { who:'erubin', e:'normal', t:'待たせたのは、俺のほうなのにね' }], makeup:[{ who:'erubin', e:'normal', t:'{c}、いまからでも研究会、まだ間に合う？' }, { who:'sorashido', e:'happy', t:'もちろんです！ 表は消えないので' }, { who:'erubin', e:'happy', t:'よかった。今度は、カレンダーに書いとくね' }] },
+  { id:'rel-fight-erubin-sorashido-2', kind:'fight', ppl:['erubin', 'sorashido'], keys:{ cause:'snack' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、さっきのクッキー、最後の1枚食べた？' }, { who:'sorashido', e:'surprise', t:'あれ、だれのでもないと思って・・・計算中は手が止まらないんです' }, { who:'erubin', e:'troubled', t:'みんなで分けようと思って、残しておいたんだけどな' }, { who:'sorashido', e:'angry', t:'だったら、書いておいてくださいよ！' }], distance:[{ who:'erubin', e:'normal', t:'言わなかった俺も、悪かったかな' }, { who:'sorashido', e:'troubled', t:'言い返すことじゃなかったな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、クッキーを焼いてみました。形はちょっと計算外ですけど笑' }, { who:'erubin', e:'happy', t:'わ、手作りだ。いいね、みんなで食べよう' }, { who:'sorashido', e:'happy', t:'今度は、ちゃんと人数ぶんあります' }] },
+  { id:'rel-fight-erubin-sorashido-3', kind:'fight', ppl:['erubin', 'sorashido'], keys:{ cause:'song' }, lines:[{ who:'sorashido', e:'excited', t:'練習の曲、ぜんぶアップテンポにしませんか！' }, { who:'erubin', e:'troubled', t:'俺、落ち着いた曲も入れたいな' }, { who:'sorashido', e:'normal', t:'でも速い曲のほうが、スコアが伸びるって表に出てるんですよ' }, { who:'erubin', e:'troubled', t:'スコアだけで選ぶのは、ちょっとさみしいかな' }], distance:[{ who:'sorashido', e:'troubled', t:'・・・たしかに、楽しいかどうかは表に入れてなかったな' }, { who:'erubin', e:'normal', t:'言い方、もう少し考えればよかった' }], makeup:[{ who:'erubin', e:'normal', t:'{c}、速い曲と落ち着いた曲、半分ずつにしない？' }, { who:'sorashido', e:'happy', t:'いいですね！ 半分ずつなら計算も楽です笑' }, { who:'erubin', e:'happy', t:'さすが{c}。じゃあ1曲目、選んでいいよ' }] },
   { id:'rel-fight-kiki-momosuke-1', kind:'fight', ppl:['kiki', 'momosuke'], keys:{ cause:'song' }, lines:[{ who:'kiki', e:'troubled', t:'{c}、夜の練習の音、少しだけ小さくしていただけますか' }, { who:'momosuke', e:'angry', t:'えー！！ 小さくしたらリズムが聞こえないじゃん！！' }, { who:'kiki', e:'troubled', t:'私、22時には休みたいんでつ…' }, { who:'momosuke', e:'angry', t:'もも、夜しか集中できないんだもん！！' }], distance:[{ who:'momosuke', e:'troubled', t:'…ずっと、がまんさせてたのかな' }, { who:'kiki', e:'troubled', t:'練習のじゃまをしたかったわけでは、ないのですけれど' }], makeup:[{ who:'momosuke', e:'normal', t:'{c}、ヘッドホン買った！！ これなら音もれしないよ♡' }, { who:'kiki', e:'happy', t:'まあ、ありがとうございまつ。今夜はぐっすりでつね♪' }, { who:'momosuke', e:'wink', t:'そのかわり、朝の散歩でももを起こさないでねw' }] },
   { id:'rel-fight-kiki-momosuke-2', kind:'fight', ppl:['kiki', 'momosuke'], keys:{ cause:'tidy' }, lines:[{ who:'kiki', e:'troubled', t:'{c}、私の本のしおり、ちがうページに挟まっていまつ' }, { who:'momosuke', e:'troubled', t:'あ、それもも！！ 読みかけっぽかったから、挟みなおしてあげたの' }, { who:'kiki', e:'angry', t:'挟んであったのを、抜いてしまったのでつね…' }, { who:'momosuke', e:'angry', t:'よかれと思ったのに！！' }], distance:[{ who:'kiki', e:'troubled', t:'親切のつもりだったのに、強く言ってしまいました' }, { who:'momosuke', e:'troubled', t:'勝手にさわったの、ももが悪いよね…' }], makeup:[{ who:'momosuke', e:'normal', t:'{c}、しおり、ももが作ったの！！ かわりに使って♡' }, { who:'kiki', e:'happy', t:'かわいいでつね。大事にしまつ' }, { who:'momosuke', e:'excited', t:'次はさわる前に聞くね！！' }] },
   { id:'rel-fight-kiki-momosuke-3', kind:'fight', ppl:['kiki', 'momosuke'], keys:{ cause:'snack' }, lines:[{ who:'momosuke', e:'angry', t:'{c}！！ ももが残しておいたシュークリーム、食べた！？' }, { who:'kiki', e:'surprise', t:'まあ…2つあったので、1つは私のぶんかと' }, { who:'momosuke', e:'angry', t:'2つとも、もものなの！！' }, { who:'kiki', e:'troubled', t:'それは失礼しました。でも、名前がなかったので…' }], distance:[{ who:'kiki', e:'troubled', t:'おやつのことで、悲しい顔をさせてしまいました' }, { who:'momosuke', e:'troubled', t:'言い方、きつかったかも…' }], makeup:[{ who:'kiki', e:'normal', t:'{c}、駅前のシュークリームでつ。3つ買ってきました♪' }, { who:'momosuke', e:'excited', t:'3つ！？ じゃあ1つは{c}のぶんね！！' }, { who:'kiki', e:'happy', t:'では、いっしょにいただきまつ' }] },
@@ -66664,12 +66963,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-fight-erubin-kyuko-1', kind:'fight', ppl:['erubin', 'kyuko'], keys:{ cause:'late' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、また3時まで起きてたでしょ。目が赤いよ' }, { who:'kyuko', e:'troubled', t:'えぇ、いいとこだったんだもん、あの本' }, { who:'erubin', e:'troubled', t:'毎日だと、体が心配なんだよ' }, { who:'kyuko', e:'angry', t:'心配しすぎだってぇ。俺、夜のほうが元気なんだから' }], distance:[{ who:'erubin', e:'troubled', t:'…言いすぎたかな。おせっかいだったね' }, { who:'kyuko', e:'troubled', t:'心配してくれてたのに、きつく返しちゃったなぁ' }], makeup:[{ who:'kyuko', e:'normal', t:'{c}、さっきはごめん。今日は1時に寝るよ。1時ね笑' }, { who:'erubin', e:'happy', t:'ありがとう。1時なら、俺も安心かな' }, { who:'kyuko', e:'happy', t:'おやすみの前に、おすすめの本1冊わたすね' }] },
   { id:'rel-fight-erubin-kyuko-2', kind:'fight', ppl:['erubin', 'kyuko'], keys:{ cause:'promise' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、お気に入りの丘、案内してくれるって言ってたよねぇ' }, { who:'erubin', e:'surprise', t:'あ…ごめん、カードの大会と重なっちゃって' }, { who:'kyuko', e:'angry', t:'俺、お弁当まで用意してたんだよぉ' }, { who:'erubin', e:'troubled', t:'ほんとにごめん。言うのが遅かったね' }], distance:[{ who:'kyuko', e:'troubled', t:'…お弁当、ひとりで食べちゃった' }, { who:'erubin', e:'troubled', t:'楽しみにしてくれてたのにな…' }], makeup:[{ who:'erubin', e:'normal', t:'{c}、今日こそ丘に行こう。お弁当は俺が作ってきたよ' }, { who:'kyuko', e:'happy', t:'えぇ、ほんとに！？ ありがとん笑' }, { who:'erubin', e:'happy', t:'景色のいい場所、とっておきのを教えるね' }] },
   { id:'rel-fight-erubin-kyuko-3', kind:'fight', ppl:['erubin', 'kyuko'], keys:{ cause:'tidy' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、居間に本が積まれて、通れなくなってるよ' }, { who:'kyuko', e:'normal', t:'あ、それ順番に読むやつ。動かさないでぇ' }, { who:'erubin', e:'troubled', t:'でも、みんなつまずいちゃうからさ' }, { who:'kyuko', e:'angry', t:'順番、くずしたら分からなくなるんだってぇ' }], distance:[{ who:'erubin', e:'normal', t:'大事な並びだったんだね' }, { who:'kyuko', e:'troubled', t:'居間は、みんなの場所なのになぁ…' }], makeup:[{ who:'kyuko', e:'normal', t:'{c}、本、部屋に運んだよ。順番そのままで笑' }, { who:'erubin', e:'happy', t:'ありがとう。運ぶの手伝えばよかったね' }, { who:'kyuko', e:'happy', t:'じゃあ次は、いっしょに運んでぇ' }] },
-  { id:'rel-fight-dra-sorashido-1', kind:'fight', ppl:['dra', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今のカード勝負、表で見ても俺の作戦勝ちだぜ！' }, { who:'dra', e:'angry', t:'いや、おでの引きが悪かっただけだぞ' }, { who:'sorashido', e:'normal', t:'引きも計算のうちさ。確率の表、見るか？' }, { who:'dra', e:'angry', t:'表はいい！ もう1回だ！' }], distance:[{ who:'dra', e:'troubled', t:'負けると、ついむきになるな…' }, { who:'sorashido', e:'troubled', t:'勝ったあとに表は、ちょっと意地悪だったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきはごめんだぜ。もう1回、表なしでやろう' }, { who:'dra', e:'happy', t:'おう。今度はおでの読みを見せてやるからな' }, { who:'sorashido', e:'excited', t:'望むところだぜ！' }] },
-  { id:'rel-fight-dra-sorashido-2', kind:'fight', ppl:['dra', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'dra', e:'troubled', t:'{c}、おでの部屋の前まで、表の紙が並んでるんだが' }, { who:'sorashido', e:'normal', t:'廊下がいちばん長いから、つなげて並べたんだぜ' }, { who:'dra', e:'angry', t:'寝ぼけて踏んだら、破れちまうだろ' }, { who:'sorashido', e:'angry', t:'踏まないように歩いてくれよ！' }], distance:[{ who:'sorashido', e:'troubled', t:'…廊下は、みんなの通り道だよな' }, { who:'dra', e:'troubled', t:'寝ぼけるおでも、悪いんだがな…' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、表は巻物にしてまとめたぜ。廊下、すっきりさ' }, { who:'dra', e:'happy', t:'おお、巻物か。広げるのはおでが手伝うぞ' }, { who:'sorashido', e:'happy', t:'それなら、いっしょに読もうぜ' }] },
-  { id:'rel-fight-dra-sorashido-3', kind:'fight', ppl:['dra', 'sorashido'], keys:{ cause:'promise' }, lines:[{ who:'dra', e:'troubled', t:'{c}、攻略本の説明、今日いっしょに書くって言ってたよな' }, { who:'sorashido', e:'surprise', t:'あっ…表の計算に夢中で、すっかりだぜ' }, { who:'dra', e:'angry', t:'おで、説明の下書き、3ページ書いて待ってたんだぞ' }, { who:'sorashido', e:'troubled', t:'3ページも…！？' }], distance:[{ who:'dra', e:'troubled', t:'…言いすぎたな。待つのは苦手でな' }, { who:'sorashido', e:'troubled', t:'約束より、表を選んじまった…' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、下書き読んだぜ。わかりやすくて、でーじいいさ！' }, { who:'dra', e:'happy', t:'そ、そうか？ えへへ' }, { who:'sorashido', e:'excited', t:'今日は表より先に、説明を仕上げるぜ' }] },
-  { id:'rel-fight-kyuko-sorashido-1', kind:'fight', ppl:['kyuko', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今のスコア、俺が12点上だぜ・・・！' }, { who:'kyuko', e:'angry', t:'ぐぬぬぬ…でも俺のほうが、ミスは少なかったよ' }, { who:'sorashido', e:'normal', t:'勝ち負けは点で決めるって表にあるさ' }, { who:'kyuko', e:'angry', t:'その表、だれが作ったのぉ笑' }], distance:[{ who:'kyuko', e:'troubled', t:'12点で、すねすぎたかなぁ' }, { who:'sorashido', e:'troubled', t:'表をたてに、言いすぎたな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、ミスの少なさ部門も表に足したぜ。そっちは{c}の勝ちさ' }, { who:'kyuko', e:'happy', t:'えぇ、ありがとん笑 じゃあ1勝1敗だね' }, { who:'sorashido', e:'excited', t:'決着は次の1曲だぜ！' }] },
-  { id:'rel-fight-kyuko-sorashido-2', kind:'fight', ppl:['kyuko', 'sorashido'], keys:{ cause:'song' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、練習の曲、たまには落ち着いたのにしない？' }, { who:'sorashido', e:'normal', t:'いや、速い曲のほうが計算しがいがあるんだぜ' }, { who:'kyuko', e:'troubled', t:'毎回それだと、俺の指がもたないってぇ' }, { who:'sorashido', e:'angry', t:'指も鍛えれば、速くなるさ！' }], distance:[{ who:'sorashido', e:'troubled', t:'…自分の好みばっかり押しつけたな' }, { who:'kyuko', e:'troubled', t:'言い方、もうちょっとあったなぁ' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、ゆっくりの曲、1曲選んでくれよ。その次は俺の' }, { who:'kyuko', e:'happy', t:'ほい！ じゃあ、とっておきの1曲ね' }, { who:'sorashido', e:'happy', t:'交代ばんこ、表に書いとくぜ' }] },
-  { id:'rel-fight-kyuko-sorashido-3', kind:'fight', ppl:['kyuko', 'sorashido'], keys:{ cause:'snack' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、俺のポテチ、最後の1袋あけた？' }, { who:'sorashido', e:'surprise', t:'計算してたら、つい手がのびたんだぜ…' }, { who:'kyuko', e:'angry', t:'作戦会議用に、とっといたのにぃ' }, { who:'sorashido', e:'angry', t:'言ってくれたら、食べなかったさ！' }], distance:[{ who:'kyuko', e:'troubled', t:'ポテチで怒るの、ちょっとはずかしいなぁ' }, { who:'sorashido', e:'troubled', t:'言い返しちまったけど、食べたのは俺だよな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、ポテチ、3袋買ってきたぜ！ 味もちがうのにしたさ' }, { who:'kyuko', e:'excited', t:'えぇ、3袋も！？ ありがとん笑' }, { who:'sorashido', e:'happy', t:'どの味が勝つか、表にしようぜ' }] },
+  { id:'rel-fight-dra-sorashido-1', kind:'fight', ppl:['dra', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今のカード勝負、表で見ても自分の作戦勝ちですね！' }, { who:'dra', e:'angry', t:'いや、おでの引きが悪かっただけだぞ' }, { who:'sorashido', e:'normal', t:'引きも計算のうちですよ。確率の表、見ますか？' }, { who:'dra', e:'angry', t:'表はいい！ もう1回だ！' }], distance:[{ who:'dra', e:'troubled', t:'負けると、ついむきになるな…' }, { who:'sorashido', e:'troubled', t:'勝ったあとに表は、ちょっと意地悪だったな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきはすみません。もう1回、表なしでやりましょう' }, { who:'dra', e:'happy', t:'おう。今度はおでの読みを見せてやるからな' }, { who:'sorashido', e:'excited', t:'望むところです！' }] },
+  { id:'rel-fight-dra-sorashido-2', kind:'fight', ppl:['dra', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'dra', e:'troubled', t:'{c}、おでの部屋の前まで、表の紙が並んでるんだが' }, { who:'sorashido', e:'normal', t:'廊下がいちばん長いので、つなげて並べたんです' }, { who:'dra', e:'angry', t:'寝ぼけて踏んだら、破れちまうだろ' }, { who:'sorashido', e:'angry', t:'踏まないように歩いてくださいよ！' }], distance:[{ who:'sorashido', e:'troubled', t:'・・・廊下は、みんなの通り道だよな' }, { who:'dra', e:'troubled', t:'寝ぼけるおでも、悪いんだがな…' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、表は巻物にしてまとめました。廊下、すっきりです' }, { who:'dra', e:'happy', t:'おお、巻物か。広げるのはおでが手伝うぞ' }, { who:'sorashido', e:'happy', t:'それなら、いっしょに読みましょう' }] },
+  { id:'rel-fight-dra-sorashido-3', kind:'fight', ppl:['dra', 'sorashido'], keys:{ cause:'promise' }, lines:[{ who:'dra', e:'troubled', t:'{c}、攻略本の説明、今日いっしょに書くって言ってたよな' }, { who:'sorashido', e:'surprise', t:'あっ・・・表の計算に夢中で、すっかり忘れてました💦' }, { who:'dra', e:'angry', t:'おで、説明の下書き、3ページ書いて待ってたんだぞ' }, { who:'sorashido', e:'troubled', t:'3ページも・・・！？' }], distance:[{ who:'dra', e:'troubled', t:'…言いすぎたな。待つのは苦手でな' }, { who:'sorashido', e:'troubled', t:'約束より、表を選んじゃった・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、下書き読みました。わかりやすくて、でーじいいです！' }, { who:'dra', e:'happy', t:'そ、そうか？ えへへ' }, { who:'sorashido', e:'excited', t:'今日は表より先に、説明を仕上げます' }] },
+  { id:'rel-fight-kyuko-sorashido-1', kind:'fight', ppl:['kyuko', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今のスコア、自分が12点上ですねー！' }, { who:'kyuko', e:'angry', t:'ぐぬぬぬ…でも俺のほうが、ミスは少なかったよ' }, { who:'sorashido', e:'normal', t:'勝ち負けは点で決めるって、表にあるので' }, { who:'kyuko', e:'angry', t:'その表、だれが作ったのぉ笑' }], distance:[{ who:'kyuko', e:'troubled', t:'12点で、すねすぎたかなぁ' }, { who:'sorashido', e:'troubled', t:'表をたてに、言いすぎたな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、ミスの少なさ部門も表に足しました。そっちは{c}の勝ちです' }, { who:'kyuko', e:'happy', t:'えぇ、ありがとん笑 じゃあ1勝1敗だね' }, { who:'sorashido', e:'excited', t:'決着は次の1曲ですね！' }] },
+  { id:'rel-fight-kyuko-sorashido-2', kind:'fight', ppl:['kyuko', 'sorashido'], keys:{ cause:'song' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、練習の曲、たまには落ち着いたのにしない？' }, { who:'sorashido', e:'normal', t:'いや、速い曲のほうが計算しがいがあるんですよ' }, { who:'kyuko', e:'troubled', t:'毎回それだと、俺の指がもたないってぇ' }, { who:'sorashido', e:'angry', t:'指も鍛えれば、速くなりますって！' }], distance:[{ who:'sorashido', e:'troubled', t:'・・・自分の好みばっかり押しつけたな' }, { who:'kyuko', e:'troubled', t:'言い方、もうちょっとあったなぁ' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、ゆっくりの曲、1曲選んでください。その次は自分の番で' }, { who:'kyuko', e:'happy', t:'ほい！ じゃあ、とっておきの1曲ね' }, { who:'sorashido', e:'happy', t:'交代ばんこ、表に書いておきますね' }] },
+  { id:'rel-fight-kyuko-sorashido-3', kind:'fight', ppl:['kyuko', 'sorashido'], keys:{ cause:'snack' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、俺のポテチ、最後の1袋あけた？' }, { who:'sorashido', e:'surprise', t:'計算してたら、つい手がのびたんです・・・' }, { who:'kyuko', e:'angry', t:'作戦会議用に、とっといたのにぃ' }, { who:'sorashido', e:'angry', t:'言ってくれたら、食べなかったですよ！' }], distance:[{ who:'kyuko', e:'troubled', t:'ポテチで怒るの、ちょっとはずかしいなぁ' }, { who:'sorashido', e:'troubled', t:'言い返しちゃったけど、食べたのは自分だよな・・・' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、ポテチ、3袋買ってきました！ 味もちがうのにしてあります' }, { who:'kyuko', e:'excited', t:'えぇ、3袋も！？ ありがとん笑' }, { who:'sorashido', e:'happy', t:'どの味が勝つか、表にしましょう' }] },
   { id:'rel-fight-dra-kyuko-1', kind:'fight', ppl:['dra', 'kyuko'], keys:{ cause:'snack' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、冷蔵庫のケーキ、半分なくなってるんだけどぉ' }, { who:'dra', e:'troubled', t:'半分は、おでの分かと思ってな' }, { who:'kyuko', e:'angry', t:'あれ、みんなの分なんだってぇ' }, { who:'dra', e:'angry', t:'書いてなかったぞ！' }], distance:[{ who:'dra', e:'troubled', t:'…半分は、さすがに食べすぎたか' }, { who:'kyuko', e:'troubled', t:'書いておけば、よかったなぁ' }], makeup:[{ who:'dra', e:'normal', t:'{c}、ケーキ、まるごと1つ買ってきたぞ' }, { who:'kyuko', e:'happy', t:'えぇ、まるごと！？ ありがとん笑' }, { who:'dra', e:'happy', t:'みんなで分けような。今度はおでが切るぞ' }] },
   { id:'rel-fight-dra-kyuko-2', kind:'fight', ppl:['dra', 'kyuko'], keys:{ cause:'late' }, lines:[{ who:'dra', e:'normal', t:'{c}、昼の作戦会議、もう2時だぞ…' }, { who:'kyuko', e:'troubled', t:'ごめぇ…夜ふかしして、起きたらお昼すぎてたぁ' }, { who:'dra', e:'angry', t:'おで、昼寝もしないで待ってたんだからな' }, { who:'kyuko', e:'angry', t:'{c}だって、よく昼寝で遅れるっしょぉ' }], distance:[{ who:'kyuko', e:'troubled', t:'…言い返すことじゃなかったなぁ' }, { who:'dra', e:'troubled', t:'おでも、人のこと言えないな' }], makeup:[{ who:'kyuko', e:'normal', t:'{c}、さっきはごめん。おわびに、山札チェックは俺がやるよ' }, { who:'dra', e:'happy', t:'おう、助かるぞ。じゃあおでは説明係だな' }, { who:'kyuko', e:'happy', t:'ほい、役割分担〜' }] },
   { id:'rel-fight-dra-kyuko-3', kind:'fight', ppl:['dra', 'kyuko'], keys:{ cause:'promise' }, lines:[{ who:'dra', e:'troubled', t:'{c}、新しいデッキ、見てくれるって言ってたよな' }, { who:'kyuko', e:'surprise', t:'あ…ごめん、本のつづきが気になって忘れてたぁ' }, { who:'dra', e:'angry', t:'おで、1枚決まらないままで待ってたんだぞ' }, { who:'kyuko', e:'troubled', t:'ぐぬぬぬ…それは悪いことしたなぁ' }], distance:[{ who:'dra', e:'troubled', t:'1枚くらい、自分で決めればよかったか' }, { who:'kyuko', e:'troubled', t:'約束、本に負けちゃったなぁ' }], makeup:[{ who:'kyuko', e:'normal', t:'{c}、いまから見るよ。その1枚、いっしょに決めよ' }, { who:'dra', e:'happy', t:'おう！ 助かるな' }, { who:'kyuko', e:'happy', t:'理由もちゃんと書いとくね笑' }] },
@@ -66679,15 +66978,15 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend-dra-mua-1', kind:'mend', ppl:['dra', 'mua'], keys:{ how:'apology' }, lines:[{ who:'dra', e:'troubled', t:'{c}…その、なんだ' }, { who:'mua', e:'normal', t:'ん？ なに〜？' }, { who:'dra', e:'troubled', t:'昨日は、おでが悪かった。すまん' }, { who:'mua', e:'happy', t:'もう、言うのおそいぢゃん！ でも、ありがと♪' }, { who:'dra', e:'happy', t:'ほっとしたぞ' }] },
   { id:'rel-mend-dra-mua-2', kind:'mend', ppl:['dra', 'mua'], keys:{ how:'gift' }, lines:[{ who:'mua', e:'normal', t:'{c}、{name}からドーナツ届いたよ。2個ある' }, { who:'dra', e:'troubled', t:'…おで、もらっていいのか？' }, { who:'mua', e:'wink', t:'いっしょに食べたら仲直りってことで！ｗ' }, { who:'dra', e:'happy', t:'おう。昨日はすまんかったな' }, { who:'mua', e:'happy', t:'あたしも、言いすぎてごめん！' }] },
   { id:'rel-mend-dra-mua-3', kind:'mend', ppl:['dra', 'mua'], keys:{ how:'player' }, lines:[{ who:'mua', e:'troubled', t:'{name}に「ちゃんと話しな」って言われた…' }, { who:'dra', e:'troubled', t:'おでもだ。{name}に言われたら、しょうがないな' }, { who:'mua', e:'normal', t:'…じゃあ、せーので謝ろ。せーの、ごめん！' }, { who:'dra', e:'happy', t:'ごめん！ …声がそろったな、えへへ' }] },
-  { id:'rel-mend-atsu-sorashido-1', kind:'mend', ppl:['atsu', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'atsu', e:'normal', t:'{c}、ちょっといいか？' }, { who:'sorashido', e:'normal', t:'お、どうしたんだぜ？' }, { who:'atsu', e:'troubled', t:'昨日はムキになって悪かった！ ごめん！' }, { who:'sorashido', e:'happy', t:'俺もだぜ。言いすぎたって、ずっと思ってたさ' }, { who:'atsu', e:'happy', t:'だよな笑 じゃあ1戦いくか！' }] },
-  { id:'rel-mend-atsu-sorashido-2', kind:'mend', ppl:['atsu', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}から差し入れのおにぎりだぜ' }, { who:'atsu', e:'troubled', t:'…お、おう！ ありがと…' }, { who:'sorashido', e:'happy', t:'腹がへってると言い合いになるって、表にも出てるさ笑' }, { who:'atsu', e:'happy', t:'そんな表あるのかよ笑 昨日はごめんな！' }, { who:'sorashido', e:'happy', t:'俺もごめんだぜ。食べたら協力プレイな' }] },
-  { id:'rel-mend-atsu-sorashido-3', kind:'mend', ppl:['atsu', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'atsu', e:'troubled', t:'{name}に、ちゃんと話せって言われちまった…' }, { who:'sorashido', e:'troubled', t:'俺もさ。{name}に言われたら、しょうがないさ' }, { who:'atsu', e:'normal', t:'じゃあ…昨日のは、おあいこってことで！' }, { who:'sorashido', e:'happy', t:'おあいこ、表に書いとくぜ！' }] },
-  { id:'rel-mend-kiki-sorashido-1', kind:'mend', ppl:['kiki', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、昨日の…あれ、俺が悪かったんだぜ' }, { who:'kiki', e:'surprise', t:'まあ、わざわざ言いにきてくださったんでつね' }, { who:'sorashido', e:'troubled', t:'言わないと、表の計算も手につかなくてさ' }, { who:'kiki', e:'happy', t:'私も言いすぎました。仲直りでつ♪' }, { who:'sorashido', e:'excited', t:'うぉぉぉ、ほっとしたぜ！' }] },
-  { id:'rel-mend-kiki-sorashido-2', kind:'mend', ppl:['kiki', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'kiki', e:'normal', t:'{c}、{name}から、お茶とお団子をいただきました' }, { who:'sorashido', e:'troubled', t:'…俺、もらっていいのか？' }, { who:'kiki', e:'happy', t:'もちろんでつ。いっしょにいただきましょう' }, { who:'sorashido', e:'happy', t:'昨日はごめんだぜ。お団子、ちょうど2人ぶんさ' }, { who:'kiki', e:'happy', t:'私もごめんなさい。{name}に感謝でつね' }] },
-  { id:'rel-mend-kiki-sorashido-3', kind:'mend', ppl:['kiki', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'kiki', e:'troubled', t:'{name}に、話してきてくださいと言われました' }, { who:'sorashido', e:'troubled', t:'俺もさ。{name}に言われたら、断れないぜ' }, { who:'kiki', e:'normal', t:'では…昨日のことは、なかったことにしまつか？' }, { who:'sorashido', e:'happy', t:'いや、仲直りしたことを表に残すぜ！' }, { who:'kiki', e:'happy', t:'ふふ、それはいいでつね♪' }] },
-  { id:'rel-mend-erubin-sorashido-1', kind:'mend', ppl:['erubin', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'erubin', e:'normal', t:'{c}、昨日はごめんね。ちゃんと謝りたくて' }, { who:'sorashido', e:'surprise', t:'お、俺から言おうと思ってたのに、先をこされたぜ' }, { who:'erubin', e:'happy', t:'じゃあ、おあいこだね笑' }, { who:'sorashido', e:'happy', t:'おあいこだぜ！ カード、1戦やろうさ' }] },
-  { id:'rel-mend-erubin-sorashido-2', kind:'mend', ppl:['erubin', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}がクッキーくれたぜ。人数ぶん、ぴったりさ' }, { who:'erubin', e:'happy', t:'ほんとだ。{name}、気がきくね' }, { who:'sorashido', e:'troubled', t:'昨日は、言い返してごめんだぜ' }, { who:'erubin', e:'happy', t:'俺も言いすぎたよ。食べながら研究会しよっか' }] },
-  { id:'rel-mend-erubin-sorashido-3', kind:'mend', ppl:['erubin', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'erubin', e:'troubled', t:'{name}に、もう仲直りしなよって言われちゃった' }, { who:'sorashido', e:'troubled', t:'俺も言われたさ。{name}には、かなわないぜ' }, { who:'erubin', e:'normal', t:'しょうがないね。ごめんね、{c}' }, { who:'sorashido', e:'happy', t:'俺もごめんだぜ。これで元どおりさ' }] },
+  { id:'rel-mend-atsu-sorashido-1', kind:'mend', ppl:['atsu', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'atsu', e:'normal', t:'{c}、ちょっといいか？' }, { who:'sorashido', e:'normal', t:'お、どうしました？' }, { who:'atsu', e:'troubled', t:'昨日はムキになって悪かった！ ごめん！' }, { who:'sorashido', e:'happy', t:'自分もです。言いすぎたって、ずっと思ってました' }, { who:'atsu', e:'happy', t:'だよな笑 じゃあ1戦いくか！' }] },
+  { id:'rel-mend-atsu-sorashido-2', kind:'mend', ppl:['atsu', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}から差し入れのおにぎりです' }, { who:'atsu', e:'troubled', t:'…お、おう！ ありがと…' }, { who:'sorashido', e:'happy', t:'お腹がへってると言い合いになるって、表にも出てるんですよ笑' }, { who:'atsu', e:'happy', t:'そんな表あるのかよ笑 昨日はごめんな！' }, { who:'sorashido', e:'happy', t:'自分もすみません。食べたら協力プレイしましょう' }] },
+  { id:'rel-mend-atsu-sorashido-3', kind:'mend', ppl:['atsu', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'atsu', e:'troubled', t:'{name}に、ちゃんと話せって言われちまった…' }, { who:'sorashido', e:'troubled', t:'自分もです。{name}に言われたら、しょうがないですね' }, { who:'atsu', e:'normal', t:'じゃあ…昨日のは、おあいこってことで！' }, { who:'sorashido', e:'happy', t:'おあいこ、表に書いておきます！' }] },
+  { id:'rel-mend-kiki-sorashido-1', kind:'mend', ppl:['kiki', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、昨日の・・・あれ、自分が悪かったです' }, { who:'kiki', e:'surprise', t:'まあ、わざわざ言いにきてくださったんでつね' }, { who:'sorashido', e:'troubled', t:'言わないと、表の計算も手につかなくて' }, { who:'kiki', e:'happy', t:'私も言いすぎました。仲直りでつ♪' }, { who:'sorashido', e:'excited', t:'ほっとしましたー！' }] },
+  { id:'rel-mend-kiki-sorashido-2', kind:'mend', ppl:['kiki', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'kiki', e:'normal', t:'{c}、{name}から、お茶とお団子をいただきました' }, { who:'sorashido', e:'troubled', t:'・・・自分、もらっていいんですか？' }, { who:'kiki', e:'happy', t:'もちろんでつ。いっしょにいただきましょう' }, { who:'sorashido', e:'happy', t:'昨日はすみません。お団子、ちょうど2人ぶんです' }, { who:'kiki', e:'happy', t:'私もごめんなさい。{name}に感謝でつね' }] },
+  { id:'rel-mend-kiki-sorashido-3', kind:'mend', ppl:['kiki', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'kiki', e:'troubled', t:'{name}に、話してきてくださいと言われました' }, { who:'sorashido', e:'troubled', t:'自分もです。{name}に言われたら、断れないですね' }, { who:'kiki', e:'normal', t:'では…昨日のことは、なかったことにしまつか？' }, { who:'sorashido', e:'happy', t:'いや、仲直りしたことを表に残します！' }, { who:'kiki', e:'happy', t:'ふふ、それはいいでつね♪' }] },
+  { id:'rel-mend-erubin-sorashido-1', kind:'mend', ppl:['erubin', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'erubin', e:'normal', t:'{c}、昨日はごめんね。ちゃんと謝りたくて' }, { who:'sorashido', e:'surprise', t:'じ、自分から言おうと思ってたのに、先をこされました' }, { who:'erubin', e:'happy', t:'じゃあ、おあいこだね笑' }, { who:'sorashido', e:'happy', t:'おあいこですね！ カード、1戦やりましょう' }] },
+  { id:'rel-mend-erubin-sorashido-2', kind:'mend', ppl:['erubin', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}がクッキーをくれました。人数ぶん、ぴったりです' }, { who:'erubin', e:'happy', t:'ほんとだ。{name}、気がきくね' }, { who:'sorashido', e:'troubled', t:'昨日は、言い返してすみません' }, { who:'erubin', e:'happy', t:'俺も言いすぎたよ。食べながら研究会しよっか' }] },
+  { id:'rel-mend-erubin-sorashido-3', kind:'mend', ppl:['erubin', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'erubin', e:'troubled', t:'{name}に、もう仲直りしなよって言われちゃった' }, { who:'sorashido', e:'troubled', t:'自分も言われました。{name}には、かなわないですね' }, { who:'erubin', e:'normal', t:'しょうがないね。ごめんね、{c}' }, { who:'sorashido', e:'happy', t:'自分もすみません。これで元どおりですね' }] },
   { id:'rel-mend-kiki-momosuke-1', kind:'mend', ppl:['kiki', 'momosuke'], keys:{ how:'apology' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}…あの、昨日の……' }, { who:'kiki', e:'normal', t:'はい、どうしましたか？' }, { who:'momosuke', e:'troubled', t:'……ごめんなさい！！ もも、言いすぎた！！' }, { who:'kiki', e:'happy', t:'私もでつ。言いにきてくれて、うれしいでつ♪' }, { who:'momosuke', e:'happy', t:'よかったぁ…！！' }] },
   { id:'rel-mend-kiki-momosuke-2', kind:'mend', ppl:['kiki', 'momosuke'], keys:{ how:'gift' }, lines:[{ who:'kiki', e:'normal', t:'{c}、{name}から、いちごのパフェが届きました' }, { who:'momosuke', e:'troubled', t:'…ももの分も、あるの？' }, { who:'kiki', e:'happy', t:'ありまつよ。いっしょに食べたら、仲直りでつ' }, { who:'momosuke', e:'happy', t:'うん！！ 昨日はごめんね、{c}♡' }] },
   { id:'rel-mend-kiki-momosuke-3', kind:'mend', ppl:['kiki', 'momosuke'], keys:{ how:'player' }, lines:[{ who:'momosuke', e:'troubled', t:'{name}に「話しておいで」って言われた…' }, { who:'kiki', e:'normal', t:'私もでつ。{name}に言われたら、しょうがありませんね' }, { who:'momosuke', e:'troubled', t:'じゃあ…ごめんね' }, { who:'kiki', e:'happy', t:'はい、私もごめんなさい。これでおしまいでつ♪' }, { who:'momosuke', e:'excited', t:'おしまい！！ 練習いこ！！' }] },
@@ -66706,12 +67005,12 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend-erubin-kyuko-1', kind:'mend', ppl:['erubin', 'kyuko'], keys:{ how:'apology' }, lines:[{ who:'erubin', e:'normal', t:'{c}、昨日はごめんね。言い方、きつかったよね' }, { who:'kyuko', e:'troubled', t:'ううん、俺もきつく返しちゃったぁ' }, { who:'erubin', e:'happy', t:'それなら、おたがいさまだね' }, { who:'kyuko', e:'happy', t:'うん。また夜のおすすめ、教えるね笑' }] },
   { id:'rel-mend-erubin-kyuko-2', kind:'mend', ppl:['erubin', 'kyuko'], keys:{ how:'gift' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、{name}がお弁当くれたよぉ。2つ' }, { who:'erubin', e:'happy', t:'ほんとだ。丘で食べよっか' }, { who:'kyuko', e:'troubled', t:'…昨日はごめんね' }, { who:'erubin', e:'happy', t:'こちらこそ。景色、いっしょに見よう' }] },
   { id:'rel-mend-erubin-kyuko-3', kind:'mend', ppl:['erubin', 'kyuko'], keys:{ how:'player' }, lines:[{ who:'erubin', e:'troubled', t:'{name}に、もう話しておいでって言われたよ' }, { who:'kyuko', e:'troubled', t:'俺もぉ…{name}に言われたら、しょうがないなぁ' }, { who:'erubin', e:'normal', t:'俺から言うね。ごめんね、{c}' }, { who:'kyuko', e:'happy', t:'ほい、俺もごめん。これで元どおり〜' }] },
-  { id:'rel-mend-dra-sorashido-1', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、昨日のこと…俺が悪かったんだぜ' }, { who:'dra', e:'normal', t:'いや、おでもむきになりすぎた' }, { who:'sorashido', e:'happy', t:'じゃあ、仲直りの記録をつけとくさ' }, { who:'dra', e:'happy', t:'記録するのか。まあ、いいけどな' }] },
-  { id:'rel-mend-dra-sorashido-2', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'dra', e:'normal', t:'{c}、{name}がサーターアンダギーくれたぞ' }, { who:'sorashido', e:'excited', t:'うぉぉぉ、でーじうれしいぜ！' }, { who:'dra', e:'troubled', t:'…昨日は、すまんかったな' }, { who:'sorashido', e:'happy', t:'俺もごめんだぜ。半分ずつ食べようさ' }] },
-  { id:'rel-mend-dra-sorashido-3', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'dra', e:'troubled', t:'{name}に、もう仲直りしろって言われちまった' }, { who:'sorashido', e:'troubled', t:'俺もさ。{name}にそう言われたら、しょうがないぜ' }, { who:'dra', e:'normal', t:'じゃあ、攻略本のつづきを書くか' }, { who:'sorashido', e:'happy', t:'おう！ 説明は{c}、表は俺だぜ' }] },
-  { id:'rel-mend-kyuko-sorashido-1', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、昨日はすねちゃってごめぇ' }, { who:'sorashido', e:'surprise', t:'俺のほうこそ、言いすぎてごめんだぜ' }, { who:'kyuko', e:'happy', t:'じゃあ、次の勝負で決着ね笑' }, { who:'sorashido', e:'excited', t:'望むところだぜ・・・！' }] },
-  { id:'rel-mend-kyuko-sorashido-2', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}からポテチの差し入れだぜ。3つの味さ' }, { who:'kyuko', e:'happy', t:'えぇ、ちょうど食べたかったやつぅ' }, { who:'sorashido', e:'troubled', t:'昨日は、ごめんだぜ' }, { who:'kyuko', e:'happy', t:'俺もごめん。どれから食べるか、作戦会議ね' }] },
-  { id:'rel-mend-kyuko-sorashido-3', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'kyuko', e:'troubled', t:'{name}に、2人で話しなよって言われちゃったぁ' }, { who:'sorashido', e:'troubled', t:'俺も言われたぜ。{name}の言うことなら、聞くしかないさ' }, { who:'kyuko', e:'normal', t:'じゃあ…ごめんね' }, { who:'sorashido', e:'happy', t:'俺もごめんだぜ。攻略メモ、また見せてくれよ' }] },
+  { id:'rel-mend-dra-sorashido-1', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、昨日のこと・・・自分が悪かったです' }, { who:'dra', e:'normal', t:'いや、おでもむきになりすぎた' }, { who:'sorashido', e:'happy', t:'じゃあ、仲直りの記録をつけておきます' }, { who:'dra', e:'happy', t:'記録するのか。まあ、いいけどな' }] },
+  { id:'rel-mend-dra-sorashido-2', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'dra', e:'normal', t:'{c}、{name}がサーターアンダギーくれたぞ' }, { who:'sorashido', e:'excited', t:'うわ、でーじうれしいです！' }, { who:'dra', e:'troubled', t:'…昨日は、すまんかったな' }, { who:'sorashido', e:'happy', t:'自分もすみません。半分ずつ食べましょう' }] },
+  { id:'rel-mend-dra-sorashido-3', kind:'mend', ppl:['dra', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'dra', e:'troubled', t:'{name}に、もう仲直りしろって言われちまった' }, { who:'sorashido', e:'troubled', t:'自分もです。{name}にそう言われたら、しょうがないですね' }, { who:'dra', e:'normal', t:'じゃあ、攻略本のつづきを書くか' }, { who:'sorashido', e:'happy', t:'はい！ 説明は{c}、表は自分ですね' }] },
+  { id:'rel-mend-kyuko-sorashido-1', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、昨日はすねちゃってごめぇ' }, { who:'sorashido', e:'surprise', t:'自分のほうこそ、言いすぎてすみません' }, { who:'kyuko', e:'happy', t:'じゃあ、次の勝負で決着ね笑' }, { who:'sorashido', e:'excited', t:'望むところです・・・！' }] },
+  { id:'rel-mend-kyuko-sorashido-2', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、{name}からポテチの差し入れです。3つの味ですよ' }, { who:'kyuko', e:'happy', t:'えぇ、ちょうど食べたかったやつぅ' }, { who:'sorashido', e:'troubled', t:'昨日は、すみません' }, { who:'kyuko', e:'happy', t:'俺もごめん。どれから食べるか、作戦会議ね' }] },
+  { id:'rel-mend-kyuko-sorashido-3', kind:'mend', ppl:['kyuko', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'kyuko', e:'troubled', t:'{name}に、2人で話しなよって言われちゃったぁ' }, { who:'sorashido', e:'troubled', t:'自分も言われました。{name}の言うことなら、聞くしかないですね' }, { who:'kyuko', e:'normal', t:'じゃあ…ごめんね' }, { who:'sorashido', e:'happy', t:'自分もすみません。攻略メモ、また見せてください' }] },
   { id:'rel-mend-dra-kyuko-1', kind:'mend', ppl:['dra', 'kyuko'], keys:{ how:'apology' }, lines:[{ who:'dra', e:'troubled', t:'{c}、昨日のこと、すまんかったな' }, { who:'kyuko', e:'surprise', t:'えぇ、先に言われちゃったぁ。俺もごめん' }, { who:'dra', e:'happy', t:'じゃあ、これでいつもどおりだな' }, { who:'kyuko', e:'happy', t:'ほい！ 山札チェック、いこっか' }] },
   { id:'rel-mend-dra-kyuko-2', kind:'mend', ppl:['dra', 'kyuko'], keys:{ how:'gift' }, lines:[{ who:'kyuko', e:'normal', t:'{c}、{name}からケーキ届いたよぉ' }, { who:'dra', e:'troubled', t:'…おで、昨日のこと、まだ言えてないんだが' }, { who:'kyuko', e:'happy', t:'食べながらでいいよぉ笑' }, { who:'dra', e:'happy', t:'すまんかったな。今度はおでが切るぞ' }, { who:'kyuko', e:'happy', t:'ありがとん。俺もごめんね' }] },
   { id:'rel-mend-dra-kyuko-3', kind:'mend', ppl:['dra', 'kyuko'], keys:{ how:'player' }, lines:[{ who:'kyuko', e:'troubled', t:'{name}に、ちゃんと話しなって言われたぁ' }, { who:'dra', e:'troubled', t:'おでもだ。{name}にああ言われちゃ、しょうがないな' }, { who:'kyuko', e:'normal', t:'……ごめんね' }, { who:'dra', e:'happy', t:'おう、おでもすまん。作戦会議、いっしょにやろうな' }] },
@@ -66720,57 +67019,57 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-secret-dra-mua-1', kind:'secret', ppl:['dra', 'mua'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'（小声で）{c}、新ネタなんだが…（ごにょごにょ）' }, { who:'mua', e:'surprise', t:'…ぷっ！ 今のはずるいｗ' }, { who:'dra', e:'happy', t:'まだ早いか？ 本番は明日だぞ' }, { who:'mua', e:'wink', t:'明日まで、あたし笑うのがまんする！' }] },
   { id:'rel-secret-atsu-mua-1', kind:'secret', ppl:['atsu', 'mua'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'（ひそひそ）{c}、例の作戦、明日いけるか？' }, { who:'mua', e:'wink', t:'（ひそひそ）ばっちり！ 合図は手をたたく、でいい？' }, { who:'atsu', e:'happy', t:'それでいこう笑' }, { who:'mua', e:'surprise', t:'あっ、{name}…！ な、なんの話もしてないよ？ｗ' }] },
   { id:'rel-secret-kyuko-mua-1', kind:'secret', ppl:['kyuko', 'mua'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）…でさ、計算すると、ここが一番きれいに見えるんだよねぇ' }, { who:'mua', e:'excited', t:'まぢで！？ 夜、そこ行こ！' }, { who:'kyuko', e:'happy', t:'うん。でも、着くまでは何するか言わないでね笑' }, { who:'mua', e:'wink', t:'わかった！ びっくりさせよ♪' }] },
-  { id:'rel-secret-mua-sorashido-1', kind:'secret', ppl:['mua', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんだぜ' }, { who:'mua', e:'surprise', t:'え、3年！？ だれの？' }, { who:'sorashido', e:'wink', t:'それは、渡すときのお楽しみさ' }, { who:'mua', e:'happy', t:'気になるぅ！ でも待ってる♪' }] },
+  { id:'rel-secret-mua-sorashido-1', kind:'secret', ppl:['mua', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、記録の表、こっそり3年ぶん作ったんです' }, { who:'mua', e:'surprise', t:'え、3年！？ だれの？' }, { who:'sorashido', e:'wink', t:'それは、渡すときのお楽しみです' }, { who:'mua', e:'happy', t:'気になるぅ！ でも待ってる♪' }] },
   { id:'rel-secret-erubin-mua-1', kind:'secret', ppl:['erubin', 'mua'], keys:{  }, lines:[{ who:'mua', e:'normal', t:'（ひそひそ）{c}、あれ、ちゃんと選んできた？' }, { who:'erubin', e:'happy', t:'（ひそひそ）うん。色は、{c}が言ってたほうにしたよ' }, { who:'mua', e:'excited', t:'さすが！ 渡すの、いつにする？' }, { who:'erubin', e:'surprise', t:'…あ、{name}が来た。この話は、またあとでね' }] },
   { id:'rel-secret-kiki-momosuke-1', kind:'secret', ppl:['kiki', 'momosuke'], keys:{  }, lines:[{ who:'momosuke', e:'normal', t:'（ひそひそ）{c}、あの曲のサビ、どうだった？' }, { who:'kiki', e:'wink', t:'（ひそひそ）とても上手でつ。本番で、みんなびっくりしまつね' }, { who:'momosuke', e:'excited', t:'ほんと！？ じゃあ、もうちょっとだけ練習する！！' }, { who:'kiki', e:'happy', t:'あら、{name}。いま、お茶の話をしていたんでつよ♪' }] },
   { id:'rel-secret-dra-kiki-1', kind:'secret', ppl:['dra', 'kiki'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'（小声で）{c}、教えたギャグ、覚えたか？' }, { who:'kiki', e:'wink', t:'（小声で）はい。ここぞというときに使いまつ' }, { who:'dra', e:'happy', t:'おでより先に言うなよ' }, { who:'kiki', e:'happy', t:'もちろんでつ。…{name}、いまの、聞こえていましたか？' }] },
   { id:'rel-secret-atsu-kiki-1', kind:'secret', ppl:['atsu', 'kiki'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'（ひそひそ）{c}、明日のボス、2人で先に行くぞ…' }, { who:'kiki', e:'wink', t:'（ひそひそ）ちから全開で、まいりましょう' }, { who:'atsu', e:'happy', t:'決まりだな笑' }, { who:'kiki', e:'surprise', t:'…あら、{name}。聞こえてしまいましたか？' }] },
   { id:'rel-secret-kiki-kyuko-1', kind:'secret', ppl:['kiki', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）{c}、図書室の奥の棚、見つけちゃった' }, { who:'kiki', e:'surprise', t:'（ひそひそ）まあ、あの古い地図の棚でつか？' }, { who:'kyuko', e:'happy', t:'うん。明日、2人で行こ' }, { who:'kiki', e:'happy', t:'…ふふ。{name}にも、いつか教えてあげましょうね' }] },
-  { id:'rel-secret-kiki-sorashido-1', kind:'secret', ppl:['kiki', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、例の数字、出たぜ・・・！' }, { who:'kiki', e:'surprise', t:'（ひそひそ）まあ…そんなに大きく？' }, { who:'sorashido', e:'excited', t:'ああ、表の新記録さ' }, { who:'kiki', e:'happy', t:'発表の日まで、静かにしておきまつね♪' }] },
+  { id:'rel-secret-kiki-sorashido-1', kind:'secret', ppl:['kiki', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、例の数字、出ました・・・！' }, { who:'kiki', e:'surprise', t:'（ひそひそ）まあ…そんなに大きく？' }, { who:'sorashido', e:'excited', t:'はい、表の新記録です' }, { who:'kiki', e:'happy', t:'発表の日まで、静かにしておきまつね♪' }] },
   { id:'rel-secret-erubin-kiki-1', kind:'secret', ppl:['erubin', 'kiki'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'（小声で）{c}、明日の朝、いつものベンチで' }, { who:'kiki', e:'wink', t:'（小声で）はい。お茶は私が持っていきまつ' }, { who:'erubin', e:'happy', t:'6時でいいかな' }, { who:'kiki', e:'happy', t:'6時でつね。…あら、{name}。朝のお茶の相談でつよ♪' }] },
   { id:'rel-secret-dra-momosuke-1', kind:'secret', ppl:['dra', 'momosuke'], keys:{  }, lines:[{ who:'momosuke', e:'normal', t:'（ひそひそ）{c}、2人のお笑いの名前、決めた？' }, { who:'dra', e:'normal', t:'（ひそひそ）おでは、これがいいと思うんだ…（ごにょごにょ）' }, { who:'momosuke', e:'excited', t:'それ、ありかも！！' }, { who:'dra', e:'happy', t:'発表は、ライブの日だぞ' }] },
   { id:'rel-secret-atsu-momosuke-1', kind:'secret', ppl:['atsu', 'momosuke'], keys:{  }, lines:[{ who:'momosuke', e:'wink', t:'（ひそひそ）{c}、明日の勝負、あの曲でいこ' }, { who:'atsu', e:'happy', t:'（ひそひそ）おう、HELLのやつな笑' }, { who:'momosuke', e:'excited', t:'みんなには、当日まで言わないでねw' }, { who:'atsu', e:'wink', t:'わかってる！ …って、{name}いたのかよ笑' }] },
   { id:'rel-secret-kyuko-momosuke-1', kind:'secret', ppl:['kyuko', 'momosuke'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）{c}、ドリーミィの新しい技、見たい？' }, { who:'momosuke', e:'excited', t:'（ひそひそ）見たい見たい！！' }, { who:'kyuko', e:'happy', t:'じゃあ夜、図書室の裏でね笑' }, { who:'momosuke', e:'wink', t:'もも、絶対行く♡' }] },
-  { id:'rel-secret-momosuke-sorashido-1', kind:'secret', ppl:['momosuke', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、ミスの数、先週の半分になってたぜ' }, { who:'momosuke', e:'surprise', t:'ほんと！？ まだ言わないで！！' }, { who:'sorashido', e:'wink', t:'ゼロになったら、みんなの前で発表さ' }, { who:'momosuke', e:'excited', t:'それまで、2人で数えよ！！' }] },
+  { id:'rel-secret-momosuke-sorashido-1', kind:'secret', ppl:['momosuke', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、ミスの数、先週の半分になってましたよ' }, { who:'momosuke', e:'surprise', t:'ほんと！？ まだ言わないで！！' }, { who:'sorashido', e:'wink', t:'ゼロになったら、みんなの前で発表ですね' }, { who:'momosuke', e:'excited', t:'それまで、2人で数えよ！！' }] },
   { id:'rel-secret-erubin-momosuke-1', kind:'secret', ppl:['erubin', 'momosuke'], keys:{  }, lines:[{ who:'momosuke', e:'normal', t:'（ひそひそ）{c}、ライブの日、一番前に来てくれる？' }, { who:'erubin', e:'happy', t:'（ひそひそ）もちろん。手作りのうちわも用意してるよ' }, { who:'momosuke', e:'surprise', t:'え、うちわ！？ 見たい！！' }, { who:'erubin', e:'wink', t:'それは、当日のお楽しみね' }] },
   { id:'rel-secret-atsu-dra-1', kind:'secret', ppl:['atsu', 'dra'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'（ひそひそ）{c}、今夜の作戦会議、いつもの場所な…' }, { who:'dra', e:'normal', t:'（ひそひそ）おう。決勝のときの作戦、持っていくぞ' }, { who:'atsu', e:'happy', t:'あれか笑' }, { who:'dra', e:'happy', t:'寝ないで行くからな。…たぶん' }] },
   { id:'rel-secret-dra-kyuko-1', kind:'secret', ppl:['dra', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）{c}、山札の最後の1枚、決まったよ' }, { who:'dra', e:'surprise', t:'（ひそひそ）ほんとか。どれにした？' }, { who:'kyuko', e:'wink', t:'それは、対戦で見せるねぇ笑' }, { who:'dra', e:'happy', t:'楽しみにしとくぞ' }] },
-  { id:'rel-secret-dra-sorashido-1', kind:'secret', ppl:['dra', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、攻略本の表紙、こんな感じでどうだ？' }, { who:'dra', e:'surprise', t:'（ひそひそ）おお…いいな、それ' }, { who:'sorashido', e:'excited', t:'完成するまで、だれにも見せないぜ' }, { who:'dra', e:'happy', t:'おでも、説明の最後のページ、がんばるぞ' }] },
+  { id:'rel-secret-dra-sorashido-1', kind:'secret', ppl:['dra', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、攻略本の表紙、こんな感じでどうですか？' }, { who:'dra', e:'surprise', t:'（ひそひそ）おお…いいな、それ' }, { who:'sorashido', e:'excited', t:'完成するまで、だれにも見せません' }, { who:'dra', e:'happy', t:'おでも、説明の最後のページ、がんばるぞ' }] },
   { id:'rel-secret-dra-erubin-1', kind:'secret', ppl:['dra', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'（小声で）{c}、デュラハンの新しい組み方、思いついたんだ' }, { who:'dra', e:'surprise', t:'（小声で）お、聞かせてくれ' }, { who:'erubin', e:'happy', t:'…（ごにょごにょ）…って感じ' }, { who:'dra', e:'happy', t:'対戦で、まんまとやられそうだな、えへへ' }] },
   { id:'rel-secret-atsu-kyuko-1', kind:'secret', ppl:['atsu', 'kyuko'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'（ひそひそ）{c}、ランキングの作戦、例のやつでいくか？' }, { who:'kyuko', e:'wink', t:'（ひそひそ）ほい。理由は、あとで紙で渡すね' }, { who:'atsu', e:'happy', t:'頼んだ笑' }, { who:'kyuko', e:'surprise', t:'…あ、{name}。いまのは、ただの雑談〜' }] },
-  { id:'rel-secret-atsu-sorashido-1', kind:'secret', ppl:['atsu', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、協力プレイの合図、決めようぜ' }, { who:'atsu', e:'happy', t:'（ひそひそ）指2本で「いけ」、な笑' }, { who:'sorashido', e:'excited', t:'それだぜ！ 見ても分からないさ' }, { who:'atsu', e:'wink', t:'本番まで、だれにも言うなよ笑' }] },
+  { id:'rel-secret-atsu-sorashido-1', kind:'secret', ppl:['atsu', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、協力プレイの合図、決めませんか' }, { who:'atsu', e:'happy', t:'（ひそひそ）指2本で「いけ」、な笑' }, { who:'sorashido', e:'excited', t:'それです！ 見ても分からないですね' }, { who:'atsu', e:'wink', t:'本番まで、だれにも言うなよ笑' }] },
   { id:'rel-secret-atsu-erubin-1', kind:'secret', ppl:['atsu', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'（小声で）{c}、明日、みんなに差し入れ持っていこうと思うんだ' }, { who:'atsu', e:'happy', t:'（小声で）いいな笑 俺も半分出す！' }, { who:'erubin', e:'happy', t:'ありがとう。何がいいかな' }, { who:'atsu', e:'normal', t:'おにぎりだろ！ …あ、{name}、聞こえた？笑' }] },
-  { id:'rel-secret-kyuko-sorashido-1', kind:'secret', ppl:['kyuko', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）{c}、たまには攻略じゃない話してもいい？' }, { who:'sorashido', e:'surprise', t:'（ひそひそ）お、なんだぜ？' }, { who:'kyuko', e:'happy', t:'…（ごにょごにょ）…ってことがあってさぁ' }, { who:'sorashido', e:'happy', t:'それは、表にしないでおくさ' }] },
+  { id:'rel-secret-kyuko-sorashido-1', kind:'secret', ppl:['kyuko', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）{c}、たまには攻略じゃない話してもいい？' }, { who:'sorashido', e:'surprise', t:'（ひそひそ）お、なんですか？' }, { who:'kyuko', e:'happy', t:'…（ごにょごにょ）…ってことがあってさぁ' }, { who:'sorashido', e:'happy', t:'それは、表にしないでおきます' }] },
   { id:'rel-secret-erubin-kyuko-1', kind:'secret', ppl:['erubin', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'（ひそひそ）{c}、夜の図書室、星が見える窓があるんだよぉ' }, { who:'erubin', e:'surprise', t:'（ひそひそ）へえ、そんなところが' }, { who:'kyuko', e:'happy', t:'今度、23時より前に見に行こ笑' }, { who:'erubin', e:'happy', t:'うん。俺が寝る前に、ね' }] },
-  { id:'rel-secret-erubin-sorashido-1', kind:'secret', ppl:['erubin', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、次の大会のデッキ、2人で組まないか？' }, { who:'erubin', e:'happy', t:'（ひそひそ）いいね。デュラハンも入れていい？' }, { who:'sorashido', e:'excited', t:'もちろんだぜ。でーじ強くなるさ' }, { who:'erubin', e:'wink', t:'当日まで、2人で研究だね' }] },
+  { id:'rel-secret-erubin-sorashido-1', kind:'secret', ppl:['erubin', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'（ひそひそ）{c}、次の大会のデッキ、2人で組みませんか？' }, { who:'erubin', e:'happy', t:'（ひそひそ）いいね。デュラハンも入れていい？' }, { who:'sorashido', e:'excited', t:'もちろんです。でーじ強くなりますよ' }, { who:'erubin', e:'wink', t:'当日まで、2人で研究だね' }] },
   { id:'rel-consult-mua-kiki-1', kind:'consult', ppl:['mua', 'kiki'], keys:{ mood:'lonely' }, lines:[{ who:'mua', e:'troubled', t:'{c}…今日、広場にだれもいなくてさ' }, { who:'kiki', e:'normal', t:'それは、さみしかったでつね' }, { who:'mua', e:'troubled', t:'うん。あたし、ひとりだとしゃべる相手いないし…' }, { who:'kiki', e:'happy', t:'では、今からお茶にしましょう。私でよければ、聞きまつよ♪' }, { who:'mua', e:'happy', t:'…うん！ {c}、ありがと♪' }] },
   { id:'rel-consult-momosuke-mua-1', kind:'consult', ppl:['momosuke', 'mua'], keys:{ mood:'restless' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}、なんか今日、そわそわして練習に集中できない…' }, { who:'mua', e:'normal', t:'あるある！ そういう日は、外で思いっきり踊ろ！' }, { who:'momosuke', e:'surprise', t:'練習しないで？' }, { who:'mua', e:'wink', t:'体動かすと、すっきりするって！ あたしもいっしょに行く♪' }, { who:'momosuke', e:'happy', t:'…うん、行く！！' }] },
   { id:'rel-consult-dra-mua-1', kind:'consult', ppl:['dra', 'mua'], keys:{ mood:'lonely' }, lines:[{ who:'dra', e:'troubled', t:'{c}…みんな出かけてて、家がしーんとしてるんだ' }, { who:'mua', e:'surprise', t:'え、ずっとひとりだったの？' }, { who:'dra', e:'troubled', t:'昼寝しても、起きたらまだしーんとしててな' }, { who:'mua', e:'happy', t:'じゃあ今から、あたしと広場いこ！ ギャグも聞いてあげる！' }, { who:'dra', e:'happy', t:'…おう。ありがとな' }] },
   { id:'rel-consult-mua-atsu-1', kind:'consult', ppl:['mua', 'atsu'], keys:{ mood:'sulky' }, lines:[{ who:'mua', e:'angry', t:'{c}、聞いて！ 今日のビート、3回ともフルコン逃したの！' }, { who:'atsu', e:'normal', t:'そりゃくやしいな…' }, { who:'mua', e:'troubled', t:'あたし、むいてないのかも…' }, { who:'atsu', e:'happy', t:'3回とも最後まで行けたなら、むいてるだろ笑 明日いっしょにやるぞ！' }, { who:'mua', e:'happy', t:'…うん！ 一曲だけね！ｗ' }] },
   { id:'rel-consult-kyuko-mua-1', kind:'consult', ppl:['kyuko', 'mua'], keys:{ mood:'restless' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、作戦がまとまらなくて、頭がぐるぐるしてるんだよねぇ' }, { who:'mua', e:'normal', t:'そういうときは、考えるのやめちゃお！' }, { who:'kyuko', e:'surprise', t:'えぇ、やめるの？' }, { who:'mua', e:'wink', t:'うん、なんかいい感じのほう選べば、だいたい当たるって！ｗ' }, { who:'kyuko', e:'happy', t:'…たしかに、{c}の勘って当たるんだよなぁ笑' }] },
-  { id:'rel-consult-sorashido-mua-1', kind:'consult', ppl:['sorashido', 'mua'], keys:{ mood:'sulky' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、俺の表、だれも最後まで読んでくれないんだぜ…' }, { who:'mua', e:'surprise', t:'え、そうなの？ あたし見たい！' }, { who:'sorashido', e:'troubled', t:'長すぎるって、言われちまってさ' }, { who:'mua', e:'happy', t:'じゃあ、あたしが見出し付けたげる！ そしたら読みやすいぢゃん♪' }, { who:'sorashido', e:'excited', t:'…うぉぉぉ、それだぜ！' }] },
+  { id:'rel-consult-sorashido-mua-1', kind:'consult', ppl:['sorashido', 'mua'], keys:{ mood:'sulky' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、自分の表、だれも最後まで読んでくれないんですよ・・・' }, { who:'mua', e:'surprise', t:'え、そうなの？ あたし見たい！' }, { who:'sorashido', e:'troubled', t:'長すぎるって、言われちゃいまして' }, { who:'mua', e:'happy', t:'じゃあ、あたしが見出し付けたげる！ そしたら読みやすいぢゃん♪' }, { who:'sorashido', e:'excited', t:'・・・ほほー、それです！' }] },
   { id:'rel-consult-erubin-mua-1', kind:'consult', ppl:['erubin', 'mua'], keys:{ mood:'lonely' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、この町にもだいぶ慣れたけど、ときどき、まだかなって思うんだ' }, { who:'mua', e:'normal', t:'うんうん' }, { who:'erubin', e:'troubled', t:'ちょっとだけ、さみしくなる日があってさ' }, { who:'mua', e:'happy', t:'じゃあ、明日いっしょにコーデ選ぼ！ あたし、毎日でも誘いにいくから！' }, { who:'erubin', e:'happy', t:'…ありがとう。{c}の元気に、いつも助けられてるよ' }] },
   { id:'rel-consult-momosuke-kiki-1', kind:'consult', ppl:['momosuke', 'kiki'], keys:{ mood:'sulky' }, lines:[{ who:'momosuke', e:'angry', t:'{c}、聞いて！！ 今日の練習、ぜんぶうまくいかなかった！！' }, { who:'kiki', e:'normal', t:'まあ、それはくやしかったでつね' }, { who:'momosuke', e:'troubled', t:'もも、むいてないのかなぁ…' }, { who:'kiki', e:'happy', t:'うまくいかない日も、練習した日でつ。明日の{c}は、きっと強いでつよ♪' }, { who:'momosuke', e:'happy', t:'…うん！！ 明日、見ててね！！' }] },
   { id:'rel-consult-kiki-dra-1', kind:'consult', ppl:['kiki', 'dra'], keys:{ mood:'restless' }, lines:[{ who:'kiki', e:'troubled', t:'{c}、少しよろしいですか。今日はなんだか、落ち着かなくて' }, { who:'dra', e:'normal', t:'おう、どうした？' }, { who:'kiki', e:'troubled', t:'理由は分からないのでつけれど…胸がそわそわするんでつ' }, { who:'dra', e:'happy', t:'そういう日は、ギャグを1つ聞くといいぞ。…アルミ缶の上にあるみかん' }, { who:'kiki', e:'happy', t:'……ふふ。少しだけ、落ち着きました' }] },
   { id:'rel-consult-atsu-kiki-1', kind:'consult', ppl:['atsu', 'kiki'], keys:{ mood:'restless' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、なんか今日、じっとしてられないんだよな…' }, { who:'kiki', e:'normal', t:'では、ボスにでも挑みまつか？' }, { who:'atsu', e:'surprise', t:'いきなりボスかよ笑' }, { who:'kiki', e:'happy', t:'ちから全開で動けば、そわそわも消えまつよ♪' }, { who:'atsu', e:'happy', t:'たしかに！ 行くか笑' }] },
   { id:'rel-consult-kyuko-kiki-1', kind:'consult', ppl:['kyuko', 'kiki'], keys:{ mood:'lonely' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、図書室で読んでたら、急にさみしくなっちゃってさぁ' }, { who:'kiki', e:'normal', t:'ひとりの時間が、長かったのでつね' }, { who:'kyuko', e:'troubled', t:'うん…本はおもしろいんだけどねぇ' }, { who:'kiki', e:'happy', t:'では、となりの席で私も読みまつ。話さなくても、いっしょでつよ' }, { who:'kyuko', e:'happy', t:'…ありがとん。それがいちばんいいかも笑' }] },
-  { id:'rel-consult-sorashido-kiki-1', kind:'consult', ppl:['sorashido', 'kiki'], keys:{ mood:'restless' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、計算が合わなくて、ずっと落ち着かないんだぜ…' }, { who:'kiki', e:'normal', t:'どこが合わないのでつか？' }, { who:'sorashido', e:'troubled', t:'火力の数字が、思ったより高く出るんだ' }, { who:'kiki', e:'wink', t:'それは、私が強いからでつ♪ 計算は合っていまつよ' }, { who:'sorashido', e:'surprise', t:'…そういうことか！ 笑うしかないぜ笑' }] },
+  { id:'rel-consult-sorashido-kiki-1', kind:'consult', ppl:['sorashido', 'kiki'], keys:{ mood:'restless' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、計算が合わなくて、ずっと落ち着かないんです・・・' }, { who:'kiki', e:'normal', t:'どこが合わないのでつか？' }, { who:'sorashido', e:'troubled', t:'火力の数字が、思ったより高く出るんですよ' }, { who:'kiki', e:'wink', t:'それは、私が強いからでつ♪ 計算は合っていまつよ' }, { who:'sorashido', e:'surprise', t:'・・・そういうことですか！ 笑うしかないです笑' }] },
   { id:'rel-consult-kiki-erubin-1', kind:'consult', ppl:['kiki', 'erubin'], keys:{ mood:'lonely' }, lines:[{ who:'kiki', e:'troubled', t:'{c}…今日は、みんな出かけているみたいでつね' }, { who:'erubin', e:'normal', t:'うん。さみしい？' }, { who:'kiki', e:'troubled', t:'少しだけ。見守る相手がいないと、手持ちぶさたでつ' }, { who:'erubin', e:'happy', t:'じゃあ、今日は俺が{c}を見守るね。お茶、いれてくるよ' }, { who:'kiki', e:'happy', t:'…まあ。では、お言葉に甘えまつ♪' }] },
   { id:'rel-consult-momosuke-dra-1', kind:'consult', ppl:['momosuke', 'dra'], keys:{ mood:'lonely' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}…みんな、ももの練習見にきてくれない…' }, { who:'dra', e:'normal', t:'おでが見るぞ。いちばん前でな' }, { who:'momosuke', e:'troubled', t:'ほんと？ 寝ない？' }, { who:'dra', e:'happy', t:'寝ないぞ。…たぶんな。ほら、行くぞ' }, { who:'momosuke', e:'happy', t:'…うん！！ ちゃんと起きててね♡' }] },
   { id:'rel-consult-atsu-momosuke-1', kind:'consult', ppl:['atsu', 'momosuke'], keys:{ mood:'sulky' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、今日の勝負、ぜんぶ負けた…' }, { who:'momosuke', e:'surprise', t:'えー！！ めずらしいじゃん！！' }, { who:'atsu', e:'troubled', t:'調子出ない日もあるよな…' }, { who:'momosuke', e:'wink', t:'負けた日の{c}、ちょっとかわいいw でも明日はリベンジだよ！！' }, { who:'atsu', e:'happy', t:'かわいいって言うな笑 でも、ありがと！' }] },
   { id:'rel-consult-momosuke-kyuko-1', kind:'consult', ppl:['momosuke', 'kyuko'], keys:{ mood:'restless' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}、新しい編成の名前、決まらなくてそわそわする！！' }, { who:'kyuko', e:'normal', t:'えぇ、それでそわそわしてたの笑' }, { who:'momosuke', e:'troubled', t:'だって大事じゃん！！' }, { who:'kyuko', e:'happy', t:'じゃあ候補、3つ出して。俺が理由つけて選ぶよ' }, { who:'momosuke', e:'excited', t:'それいい！！ ちょっと待ってて！！' }] },
-  { id:'rel-consult-momosuke-sorashido-1', kind:'consult', ppl:['momosuke', 'sorashido'], keys:{ mood:'sulky' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}…ミスの数、また増えてた…' }, { who:'sorashido', e:'normal', t:'増えた日もあるさ。表で見ると、ぐっと減ってるんだぜ' }, { who:'momosuke', e:'surprise', t:'ほんと！？ 見せて！！' }, { who:'sorashido', e:'happy', t:'ほら、先月の半分さ。ちばりよー！' }, { who:'momosuke', e:'happy', t:'…ほんとだ！！ 元気出た♡' }] },
+  { id:'rel-consult-momosuke-sorashido-1', kind:'consult', ppl:['momosuke', 'sorashido'], keys:{ mood:'sulky' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}…ミスの数、また増えてた…' }, { who:'sorashido', e:'normal', t:'増えた日もありますよ。表で見ると、ぐっと減ってるんです' }, { who:'momosuke', e:'surprise', t:'ほんと！？ 見せて！！' }, { who:'sorashido', e:'happy', t:'ほら、先月の半分です。ちばりよー！' }, { who:'momosuke', e:'happy', t:'…ほんとだ！！ 元気出た♡' }] },
   { id:'rel-consult-momosuke-erubin-1', kind:'consult', ppl:['momosuke', 'erubin'], keys:{ mood:'lonely' }, lines:[{ who:'momosuke', e:'troubled', t:'{c}、夜の練習って、ひとりだと静かすぎるんだよね…' }, { who:'erubin', e:'normal', t:'そっか。夜は、みんな寝ちゃうもんね' }, { who:'momosuke', e:'troubled', t:'うん、ちょっとさみしい…' }, { who:'erubin', e:'happy', t:'俺が起きてる時間なら、聞きにいくよ。23時までだけどね笑' }, { who:'momosuke', e:'happy', t:'じゃあ、23時までにいちばんいい曲やる！！' }] },
   { id:'rel-consult-atsu-dra-1', kind:'consult', ppl:['atsu', 'dra'], keys:{ mood:'lonely' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、みんな忙しそうで、勝負の相手がいないんだよな…' }, { who:'dra', e:'normal', t:'おでがいるぞ' }, { who:'atsu', e:'surprise', t:'いいのかよ笑' }, { who:'dra', e:'happy', t:'決勝のつづき、まだ終わってないからな' }, { who:'atsu', e:'happy', t:'…だな！ 今日こそ決着つけるぞ！' }] },
   { id:'rel-consult-dra-kyuko-1', kind:'consult', ppl:['dra', 'kyuko'], keys:{ mood:'restless' }, lines:[{ who:'dra', e:'troubled', t:'{c}、デッキの1枚が決まらなくて、落ち着かないんだ' }, { who:'kyuko', e:'normal', t:'候補、何枚あるのぉ？' }, { who:'dra', e:'troubled', t:'3枚だ。どれもいいんだよな' }, { who:'kyuko', e:'happy', t:'じゃあ、相手のデッキで分けよっか。理由があれば、決めやすいっしょ' }, { who:'dra', e:'happy', t:'おお、なるほどな。さすがだぞ' }] },
-  { id:'rel-consult-sorashido-dra-1', kind:'consult', ppl:['sorashido', 'dra'], keys:{ mood:'lonely' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、カード部屋、今日はだれも来ないんだぜ…' }, { who:'dra', e:'normal', t:'おでが来たぞ' }, { who:'sorashido', e:'surprise', t:'お、ほんとだぜ！' }, { who:'dra', e:'happy', t:'長い表、最後まで読んでやるからな' }, { who:'sorashido', e:'excited', t:'うぉぉぉ、でーじうれしいさ！' }] },
+  { id:'rel-consult-sorashido-dra-1', kind:'consult', ppl:['sorashido', 'dra'], keys:{ mood:'lonely' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、カード部屋、今日はだれも来ないんですよ・・・' }, { who:'dra', e:'normal', t:'おでが来たぞ' }, { who:'sorashido', e:'surprise', t:'お、ほんとですね！' }, { who:'dra', e:'happy', t:'長い表、最後まで読んでやるからな' }, { who:'sorashido', e:'excited', t:'でーじうれしいです！' }] },
   { id:'rel-consult-erubin-dra-1', kind:'consult', ppl:['erubin', 'dra'], keys:{ mood:'restless' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、次の対戦のこと考えると、そわそわしちゃって' }, { who:'dra', e:'normal', t:'緊張してるのか' }, { who:'erubin', e:'troubled', t:'うん、少し。負けたくないなって' }, { who:'dra', e:'happy', t:'おでが教えたことを思い出せばいいぞ。{c}はもう強いからな' }, { who:'erubin', e:'happy', t:'…ありがとう、先生。がんばるね' }] },
   { id:'rel-consult-kyuko-atsu-1', kind:'consult', ppl:['kyuko', 'atsu'], keys:{ mood:'sulky' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}…作戦立てたのに、だれも聞いてくれなかったんだよねぇ' }, { who:'atsu', e:'surprise', t:'まじか！ 俺に聞かせろよ！' }, { who:'kyuko', e:'normal', t:'えぇ、いいのぉ？' }, { who:'atsu', e:'happy', t:'{c}の作戦なら、全力で走るだけだ笑' }, { who:'kyuko', e:'happy', t:'…ありがとん。じゃあ、最初からね' }] },
-  { id:'rel-consult-atsu-sorashido-1', kind:'consult', ppl:['atsu', 'sorashido'], keys:{ mood:'sulky' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、最近、2点差で負けてばっかだよな…' }, { who:'sorashido', e:'normal', t:'表で見ると、3回に1回は勝ってるさ' }, { who:'atsu', e:'troubled', t:'それ、なぐさめになってるか？笑' }, { who:'sorashido', e:'happy', t:'前は5回に1回だったんだぜ。伸びてるさ！' }, { who:'atsu', e:'happy', t:'…まじか！ じゃあもう1戦だ！' }] },
+  { id:'rel-consult-atsu-sorashido-1', kind:'consult', ppl:['atsu', 'sorashido'], keys:{ mood:'sulky' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、最近、2点差で負けてばっかだよな…' }, { who:'sorashido', e:'normal', t:'表で見ると、3回に1回は勝ってますよ' }, { who:'atsu', e:'troubled', t:'それ、なぐさめになってるか？笑' }, { who:'sorashido', e:'happy', t:'前は5回に1回だったんです。伸びてますね！' }, { who:'atsu', e:'happy', t:'…まじか！ じゃあもう1戦だ！' }] },
   { id:'rel-consult-atsu-erubin-1', kind:'consult', ppl:['atsu', 'erubin'], keys:{ mood:'lonely' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、ちょっといいか… 今日、なんか疲れたんだよな…' }, { who:'erubin', e:'normal', t:'うん。顔に出てたよ' }, { who:'atsu', e:'troubled', t:'みんなの前だと、弱いとこ見せたくなくてさ…' }, { who:'erubin', e:'happy', t:'俺の前なら、いいよ。今日はゆっくり休もう' }, { who:'atsu', e:'happy', t:'…助かる！ ありがとな笑' }] },
-  { id:'rel-consult-sorashido-kyuko-1', kind:'consult', ppl:['sorashido', 'kyuko'], keys:{ mood:'restless' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、表が1行ずれてて、気になって眠れないんだぜ…' }, { who:'kyuko', e:'normal', t:'それ、明日でもよくない？' }, { who:'sorashido', e:'troubled', t:'いや、ずれてると落ち着かないのさ' }, { who:'kyuko', e:'happy', t:'じゃあ俺が読むから、直してこ。2人なら5分っしょ笑' }, { who:'sorashido', e:'excited', t:'助かるぜ・・・！' }] },
+  { id:'rel-consult-sorashido-kyuko-1', kind:'consult', ppl:['sorashido', 'kyuko'], keys:{ mood:'restless' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、表が1行ずれてて、気になって眠れないんです・・・' }, { who:'kyuko', e:'normal', t:'それ、明日でもよくない？' }, { who:'sorashido', e:'troubled', t:'いや、ずれてると落ち着かないんですよ' }, { who:'kyuko', e:'happy', t:'じゃあ俺が読むから、直してこ。2人なら5分っしょ笑' }, { who:'sorashido', e:'excited', t:'助かります・・・！' }] },
   { id:'rel-consult-kyuko-erubin-1', kind:'consult', ppl:['kyuko', 'erubin'], keys:{ mood:'lonely' }, lines:[{ who:'kyuko', e:'troubled', t:'{c}、夜ふかししてると、ときどきさみしくなるんだよねぇ' }, { who:'erubin', e:'normal', t:'みんな寝ちゃってるもんね' }, { who:'kyuko', e:'troubled', t:'うん。起きてるのが、俺だけみたいでさぁ' }, { who:'erubin', e:'happy', t:'寝る前に、おやすみって言いに行くね。それなら少しは、ね' }, { who:'kyuko', e:'happy', t:'…ありがとん。それ、うれしいなぁ' }] },
-  { id:'rel-consult-erubin-sorashido-1', kind:'consult', ppl:['erubin', 'sorashido'], keys:{ mood:'sulky' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、今日の対戦、デュラハンが全然活躍できなくて…' }, { who:'sorashido', e:'normal', t:'表で見ると、相手との相性が悪かったんだぜ' }, { who:'erubin', e:'troubled', t:'そっか…ちょっと落ちこんだよ' }, { who:'sorashido', e:'happy', t:'相性のいい相手の表、作っといたさ。次はここで出すんだぜ' }, { who:'erubin', e:'happy', t:'…さすが。ありがとう、元気出た' }] },
+  { id:'rel-consult-erubin-sorashido-1', kind:'consult', ppl:['erubin', 'sorashido'], keys:{ mood:'sulky' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、今日の対戦、デュラハンが全然活躍できなくて…' }, { who:'sorashido', e:'normal', t:'表で見ると、相手との相性が悪かったんですよ' }, { who:'erubin', e:'troubled', t:'そっか…ちょっと落ちこんだよ' }, { who:'sorashido', e:'happy', t:'相性のいい相手の表、作っておきました。次はここで出しましょう' }, { who:'erubin', e:'happy', t:'…さすが。ありがとう、元気出た' }] },
   { id:'rel-tease-mua-kiki-1', kind:'tease', ppl:['mua', 'kiki'], keys:{  }, lines:[{ who:'mua', e:'wink', t:'{c}、今日のリボン、かわいすぎぢゃない？' }, { who:'kiki', e:'surprise', t:'ま、まあ…そんなに見られると、照れまつ' }, { who:'mua', e:'excited', t:'照れてる{c}、レアだ〜！ｗ' }] },
   { id:'rel-tease-kiki-mua-1', kind:'tease', ppl:['kiki', 'mua'], keys:{  }, lines:[{ who:'kiki', e:'wink', t:'{c}、さっき転びそうになったところ、見ていましたよ♪' }, { who:'mua', e:'troubled', t:'えっ、見てたの！？ わすれて〜！' }, { who:'kiki', e:'happy', t:'立て直したのは、見事でつ♪' }] },
   { id:'rel-tease-mua-momosuke-1', kind:'tease', ppl:['mua', 'momosuke'], keys:{  }, lines:[{ who:'mua', e:'wink', t:'{c}、今日のメイク、あたしが教えたやつぢゃん？' }, { who:'momosuke', e:'troubled', t:'ち、ちがうもん！！ 自分で考えたの！！' }, { who:'mua', e:'happy', t:'はいはい、そういうことにしとこｗ 似合ってる♪' }] },
@@ -66781,8 +67080,8 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-tease-atsu-mua-1', kind:'tease', ppl:['atsu', 'mua'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、また「一曲だけ」って言って5曲やってたな笑' }, { who:'mua', e:'troubled', t:'う…だって楽しかったんだもん！' }, { who:'atsu', e:'happy', t:'まあ、5曲とも上手かったけどな笑' }] },
   { id:'rel-tease-mua-kyuko-1', kind:'tease', ppl:['mua', 'kyuko'], keys:{  }, lines:[{ who:'mua', e:'wink', t:'{c}、作戦の説明してるとき、目がきらきらしてたよ！' }, { who:'kyuko', e:'troubled', t:'えぇ、そんなことないってぇ…' }, { who:'mua', e:'happy', t:'あるある！ ああいうときの{c}、いいなって思う♪' }] },
   { id:'rel-tease-kyuko-mua-1', kind:'tease', ppl:['kyuko', 'mua'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}の「なんかいい」、今日も当たってたねぇ笑' }, { who:'mua', e:'troubled', t:'えっ…そんなにほめられると、照れるぢゃん！' }, { who:'kyuko', e:'happy', t:'照れてる{c}、めずらしいねぇ笑' }] },
-  { id:'rel-tease-mua-sorashido-1', kind:'tease', ppl:['mua', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'wink', t:'{c}、表を作ってるときの顔、まぢ真剣ぢゃん！' }, { who:'sorashido', e:'troubled', t:'そ、そんなに見てたのか…照れるぜ' }, { who:'mua', e:'happy', t:'かっこいいってことだよ♪' }] },
-  { id:'rel-tease-sorashido-mua-1', kind:'tease', ppl:['sorashido', 'mua'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}の今月の勝ち数、表でいちばん伸びてるぜ・・・！' }, { who:'mua', e:'troubled', t:'えっ、ほんと！？ …なんか照れるｗ' }, { who:'sorashido', e:'happy', t:'数字は、うそつかないさ' }] },
+  { id:'rel-tease-mua-sorashido-1', kind:'tease', ppl:['mua', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'wink', t:'{c}、表を作ってるときの顔、まぢ真剣ぢゃん！' }, { who:'sorashido', e:'troubled', t:'そ、そんなに見てたんですか・・・照れますね' }, { who:'mua', e:'happy', t:'かっこいいってことだよ♪' }] },
+  { id:'rel-tease-sorashido-mua-1', kind:'tease', ppl:['sorashido', 'mua'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}の今月の勝ち数、表でいちばん伸びてますよ・・・！' }, { who:'mua', e:'troubled', t:'えっ、ほんと！？ …なんか照れるｗ' }, { who:'sorashido', e:'happy', t:'数字は、うそつかないので' }] },
   { id:'rel-tease-mua-erubin-1', kind:'tease', ppl:['mua', 'erubin'], keys:{  }, lines:[{ who:'mua', e:'wink', t:'{c}、今日のコーデ、あたしが選んだのより似合ってるかもｗ' }, { who:'erubin', e:'troubled', t:'え、そうかな…照れるね' }, { who:'mua', e:'happy', t:'ちょっとくやしいけど、ほめてる♪' }] },
   { id:'rel-tease-erubin-mua-1', kind:'tease', ppl:['erubin', 'mua'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}が選んでくれた服、みんなにほめられたよ' }, { who:'mua', e:'troubled', t:'え、ほんと！？ …なんか、照れるぢゃん' }, { who:'erubin', e:'happy', t:'{c}のおかげだね。ありがとう' }] },
   { id:'rel-tease-kiki-momosuke-1', kind:'tease', ppl:['kiki', 'momosuke'], keys:{  }, lines:[{ who:'kiki', e:'wink', t:'{c}、さっきのサビ、とても輝いていましたよ♪' }, { who:'momosuke', e:'troubled', t:'え、えっ…きゅ、急にほめないで！！' }, { who:'kiki', e:'happy', t:'照れている{c}も、かわいいでつね♪' }] },
@@ -66793,8 +67092,8 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-tease-atsu-kiki-1', kind:'tease', ppl:['atsu', 'kiki'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、ボスの前だと目つき変わるよな笑' }, { who:'kiki', e:'troubled', t:'…そんなに変わりまつか？' }, { who:'atsu', e:'happy', t:'変わる変わる！ 頼もしすぎるって笑' }] },
   { id:'rel-tease-kiki-kyuko-1', kind:'tease', ppl:['kiki', 'kyuko'], keys:{  }, lines:[{ who:'kiki', e:'wink', t:'{c}、本を読むとき、口が少し動いていまつね♪' }, { who:'kyuko', e:'troubled', t:'えぇ、うそぉ… 声出てた？' }, { who:'kiki', e:'happy', t:'出ていませんよ。とても楽しそうでした' }] },
   { id:'rel-tease-kyuko-kiki-1', kind:'tease', ppl:['kyuko', 'kiki'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}、火力の話になると、声がちょっと大きくなるよねぇ笑' }, { who:'kiki', e:'troubled', t:'…気づかれていましたか' }, { who:'kyuko', e:'happy', t:'わかりやすくて、いいと思うよ笑' }] },
-  { id:'rel-tease-kiki-sorashido-1', kind:'tease', ppl:['kiki', 'sorashido'], keys:{  }, lines:[{ who:'kiki', e:'wink', t:'{c}の表、今日は誤字がひとつもありませんでした♪' }, { who:'sorashido', e:'troubled', t:'そ、そんなに細かく読んでくれてたのか…' }, { who:'kiki', e:'happy', t:'はい。1行目から最後まででつ' }] },
-  { id:'rel-tease-sorashido-kiki-1', kind:'tease', ppl:['sorashido', 'kiki'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、さっきの一撃、表の数字をこえてたぜ・・・！' }, { who:'kiki', e:'troubled', t:'まあ…そんなに言われると、照れてしまいまつ' }, { who:'sorashido', e:'happy', t:'次の表は、{c}のために1列ふやすさ' }] },
+  { id:'rel-tease-kiki-sorashido-1', kind:'tease', ppl:['kiki', 'sorashido'], keys:{  }, lines:[{ who:'kiki', e:'wink', t:'{c}の表、今日は誤字がひとつもありませんでした♪' }, { who:'sorashido', e:'troubled', t:'そ、そんなに細かく読んでくれてたんですか・・・' }, { who:'kiki', e:'happy', t:'はい。1行目から最後まででつ' }] },
+  { id:'rel-tease-sorashido-kiki-1', kind:'tease', ppl:['sorashido', 'kiki'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、さっきの一撃、表の数字をこえてました・・・！' }, { who:'kiki', e:'troubled', t:'まあ…そんなに言われると、照れてしまいまつ' }, { who:'sorashido', e:'happy', t:'次の表は、{c}のために1列ふやしますね' }] },
   { id:'rel-tease-kiki-erubin-1', kind:'tease', ppl:['kiki', 'erubin'], keys:{  }, lines:[{ who:'kiki', e:'wink', t:'{c}、ベンチで寝ていたの、私は見ていましたよ♪' }, { who:'erubin', e:'troubled', t:'あ…起こしてくれればよかったのに' }, { who:'kiki', e:'happy', t:'気持ちよさそうだったので、見守っていました' }] },
   { id:'rel-tease-erubin-kiki-1', kind:'tease', ppl:['erubin', 'kiki'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}のいれるお茶、やっぱりいちばんおいしいね' }, { who:'kiki', e:'troubled', t:'まあ…そんな、ふつうのお茶でつよ' }, { who:'erubin', e:'happy', t:'ふつうでも、いちばんだよ' }] },
   { id:'rel-tease-momosuke-dra-1', kind:'tease', ppl:['momosuke', 'dra'], keys:{  }, lines:[{ who:'momosuke', e:'wink', t:'{c}、昼寝のいびき、リズムぴったりだったよw' }, { who:'dra', e:'troubled', t:'ほ、ほんとか…はずかしいな' }, { who:'momosuke', e:'happy', t:'ももの練習のメトロノームにしたい♡' }] },
@@ -66803,33 +67102,33 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-tease-atsu-momosuke-1', kind:'tease', ppl:['atsu', 'momosuke'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、HELLのフルコン、ほんとにすげえよ！' }, { who:'momosuke', e:'troubled', t:'……え、なに、急に！！' }, { who:'atsu', e:'happy', t:'照れてんの？笑 珍しいな！' }] },
   { id:'rel-tease-momosuke-kyuko-1', kind:'tease', ppl:['momosuke', 'kyuko'], keys:{  }, lines:[{ who:'momosuke', e:'wink', t:'{c}、ドリーミィ見せるとき、すごい自慢げだよねw' }, { who:'kyuko', e:'troubled', t:'えぇ、そう見えるぅ？' }, { who:'momosuke', e:'happy', t:'自慢していいよ♡ ほんとにかわいいもん！！' }] },
   { id:'rel-tease-kyuko-momosuke-1', kind:'tease', ppl:['kyuko', 'momosuke'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}が決めた編成の名前、みんなに好評だったよぉ' }, { who:'momosuke', e:'troubled', t:'え、ほんと！？ …もも、照れちゃう…' }, { who:'kyuko', e:'happy', t:'次の名前も、頼むね笑' }] },
-  { id:'rel-tease-momosuke-sorashido-1', kind:'tease', ppl:['momosuke', 'sorashido'], keys:{  }, lines:[{ who:'momosuke', e:'wink', t:'{c}、ミス数えるとき、ちょっと楽しそうだよねw' }, { who:'sorashido', e:'troubled', t:'ば、ばれてたか…記録するのが好きなんだぜ' }, { who:'momosuke', e:'happy', t:'じゃあ、減ってくところも楽しんでね♡' }] },
-  { id:'rel-tease-sorashido-momosuke-1', kind:'tease', ppl:['sorashido', 'momosuke'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、今日はミスが2つだけだったぜ。新記録さ！' }, { who:'momosuke', e:'troubled', t:'え、数えてたの！？ …うれしいけど、はずかしい！！' }, { who:'sorashido', e:'happy', t:'ちゃんと表に残しとくさ' }] },
+  { id:'rel-tease-momosuke-sorashido-1', kind:'tease', ppl:['momosuke', 'sorashido'], keys:{  }, lines:[{ who:'momosuke', e:'wink', t:'{c}、ミス数えるとき、ちょっと楽しそうだよねw' }, { who:'sorashido', e:'troubled', t:'ば、ばれてましたか・・・記録するのが好きなんです' }, { who:'momosuke', e:'happy', t:'じゃあ、減ってくところも楽しんでね♡' }] },
+  { id:'rel-tease-sorashido-momosuke-1', kind:'tease', ppl:['sorashido', 'momosuke'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、今日はミスが2つだけでしたよ。新記録です！' }, { who:'momosuke', e:'troubled', t:'え、数えてたの！？ …うれしいけど、はずかしい！！' }, { who:'sorashido', e:'happy', t:'ちゃんと表に残しておきます' }] },
   { id:'rel-tease-momosuke-erubin-1', kind:'tease', ppl:['momosuke', 'erubin'], keys:{  }, lines:[{ who:'momosuke', e:'wink', t:'{c}、うちわ振るの、すっごい一生けんめいだったw' }, { who:'erubin', e:'troubled', t:'見えてた？ ちょっとはずかしいな' }, { who:'momosuke', e:'happy', t:'うれしかったから、また振ってね♡' }] },
   { id:'rel-tease-erubin-momosuke-1', kind:'tease', ppl:['erubin', 'momosuke'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}のステージ、今日もきらきらしてたね' }, { who:'momosuke', e:'troubled', t:'そ、そう？ …えっと、ありがと…' }, { who:'erubin', e:'happy', t:'照れてるのも、いいね笑' }] },
   { id:'rel-tease-dra-atsu-1', kind:'tease', ppl:['dra', 'atsu'], keys:{  }, lines:[{ who:'dra', e:'happy', t:'{c}、決勝のときの顔、今でも覚えてるぞ' }, { who:'atsu', e:'troubled', t:'それ、もう言うなって笑' }, { who:'dra', e:'happy', t:'かっこよかったからな' }] },
   { id:'rel-tease-atsu-dra-1', kind:'tease', ppl:['atsu', 'dra'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、さっきの読み、完全にやられたわ笑' }, { who:'dra', e:'troubled', t:'そ、そうか？ 照れるな…' }, { who:'atsu', e:'happy', t:'次は負けないけどな！' }] },
   { id:'rel-tease-dra-kyuko-1', kind:'tease', ppl:['dra', 'kyuko'], keys:{  }, lines:[{ who:'dra', e:'happy', t:'{c}、今日も寝ぐせ、ぴょんってなってるぞ' }, { who:'kyuko', e:'troubled', t:'えぇ、うそぉ…さっき直したのにぃ' }, { who:'dra', e:'happy', t:'似合ってるから、いいと思うぞ' }] },
   { id:'rel-tease-kyuko-dra-1', kind:'tease', ppl:['kyuko', 'dra'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}の説明、俺のメモよりわかりやすいんだよねぇ笑' }, { who:'dra', e:'troubled', t:'ほ、ほめても何も出ないぞ' }, { who:'kyuko', e:'happy', t:'ほい、じゃあもう1回説明して笑' }] },
-  { id:'rel-tease-dra-sorashido-1', kind:'tease', ppl:['dra', 'sorashido'], keys:{  }, lines:[{ who:'dra', e:'happy', t:'{c}の表、今日は最後まで読んだぞ。いい表だったな' }, { who:'sorashido', e:'troubled', t:'……でーじ照れるぜ' }, { who:'dra', e:'happy', t:'誤字もなかったぞ' }] },
-  { id:'rel-tease-sorashido-dra-1', kind:'tease', ppl:['sorashido', 'dra'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}の説明を表に入れたら、見やすさ倍増だぜ・・・！' }, { who:'dra', e:'troubled', t:'そ、そんなにか…' }, { who:'sorashido', e:'happy', t:'攻略本の主役は、{c}の説明さ' }] },
+  { id:'rel-tease-dra-sorashido-1', kind:'tease', ppl:['dra', 'sorashido'], keys:{  }, lines:[{ who:'dra', e:'happy', t:'{c}の表、今日は最後まで読んだぞ。いい表だったな' }, { who:'sorashido', e:'troubled', t:'・・・でーじ照れます' }, { who:'dra', e:'happy', t:'誤字もなかったぞ' }] },
+  { id:'rel-tease-sorashido-dra-1', kind:'tease', ppl:['sorashido', 'dra'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}の説明を表に入れたら、見やすさ倍増でした・・・！' }, { who:'dra', e:'troubled', t:'そ、そんなにか…' }, { who:'sorashido', e:'happy', t:'攻略本の主役は、{c}の説明ですよ' }] },
   { id:'rel-tease-dra-erubin-1', kind:'tease', ppl:['dra', 'erubin'], keys:{  }, lines:[{ who:'dra', e:'wink', t:'{c}、今日も石油王みたいな服だな' }, { who:'erubin', e:'troubled', t:'そんなことないよ笑 ふつうの服だって' }, { who:'dra', e:'happy', t:'えへへ、似合ってるってことだぞ' }] },
   { id:'rel-tease-erubin-dra-1', kind:'tease', ppl:['erubin', 'dra'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}に教わったカード、今日も勝てたよ。先生のおかげだね' }, { who:'dra', e:'troubled', t:'せ、先生はやめてくれ…照れるだろ' }, { who:'erubin', e:'happy', t:'じゃあ、照れてる先生だね笑' }] },
   { id:'rel-tease-atsu-kyuko-1', kind:'tease', ppl:['atsu', 'kyuko'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、無課金でその順位、ほんとにすげえよな笑' }, { who:'kyuko', e:'troubled', t:'えぇ、たまたまだってぇ' }, { who:'atsu', e:'happy', t:'たまたまで毎回上位は無理だろ！' }] },
   { id:'rel-tease-kyuko-atsu-1', kind:'tease', ppl:['kyuko', 'atsu'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}、さっき転びそうになって、何もなかった顔してたよねぇ笑' }, { who:'atsu', e:'troubled', t:'…見てたのかよ！' }, { who:'kyuko', e:'happy', t:'ほい、見てた〜。かっこよく立て直してたよ笑' }] },
-  { id:'rel-tease-atsu-sorashido-1', kind:'tease', ppl:['atsu', 'sorashido'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、2点差で勝ったとき、表より先に叫んでたな笑' }, { who:'sorashido', e:'troubled', t:'う…つい、うれしくてさ' }, { who:'atsu', e:'happy', t:'俺もうれしかったけどな！' }] },
-  { id:'rel-tease-sorashido-atsu-1', kind:'tease', ppl:['sorashido', 'atsu'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、今日の勝率、俺の表でいちばん高いぜ・・・！' }, { who:'atsu', e:'troubled', t:'そ、そうか…なんか照れるな笑' }, { who:'sorashido', e:'happy', t:'次は俺が上をいくさ' }] },
+  { id:'rel-tease-atsu-sorashido-1', kind:'tease', ppl:['atsu', 'sorashido'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、2点差で勝ったとき、表より先に叫んでたな笑' }, { who:'sorashido', e:'troubled', t:'う・・・つい、うれしくて' }, { who:'atsu', e:'happy', t:'俺もうれしかったけどな！' }] },
+  { id:'rel-tease-sorashido-atsu-1', kind:'tease', ppl:['sorashido', 'atsu'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、今日の勝率、自分の表でいちばん高いです・・・！' }, { who:'atsu', e:'troubled', t:'そ、そうか…なんか照れるな笑' }, { who:'sorashido', e:'happy', t:'次は自分が上をいきます' }] },
   { id:'rel-tease-atsu-erubin-1', kind:'tease', ppl:['atsu', 'erubin'], keys:{  }, lines:[{ who:'atsu', e:'wink', t:'{c}、また俺より先に、俺の疲れに気づいてたな笑' }, { who:'erubin', e:'troubled', t:'…ばれてた？' }, { who:'atsu', e:'happy', t:'助かってるって意味だぞ！' }] },
   { id:'rel-tease-erubin-atsu-1', kind:'tease', ppl:['erubin', 'atsu'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}が前にいると、安心するんだよね' }, { who:'atsu', e:'troubled', t:'…急になんだよ、照れるだろ笑' }, { who:'erubin', e:'happy', t:'ほんとのことだよ' }] },
-  { id:'rel-tease-kyuko-sorashido-1', kind:'tease', ppl:['kyuko', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}、俺のメモ、こっそりきれいな表にしてくれてたんだねぇ笑' }, { who:'sorashido', e:'troubled', t:'……見つかったか' }, { who:'kyuko', e:'happy', t:'ありがとん。うれしいよ' }] },
-  { id:'rel-tease-sorashido-kyuko-1', kind:'tease', ppl:['sorashido', 'kyuko'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}の「だいたい」、計算したら97点だったぜ・・・！' }, { who:'kyuko', e:'troubled', t:'えぇ、そんなに？ なんか照れるなぁ' }, { who:'sorashido', e:'happy', t:'だいたいで97点は、才能さ' }] },
+  { id:'rel-tease-kyuko-sorashido-1', kind:'tease', ppl:['kyuko', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}、俺のメモ、こっそりきれいな表にしてくれてたんだねぇ笑' }, { who:'sorashido', e:'troubled', t:'・・・見つかりましたか' }, { who:'kyuko', e:'happy', t:'ありがとん。うれしいよ' }] },
+  { id:'rel-tease-sorashido-kyuko-1', kind:'tease', ppl:['sorashido', 'kyuko'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}の「だいたい」、計算したら97点でした・・・！' }, { who:'kyuko', e:'troubled', t:'えぇ、そんなに？ なんか照れるなぁ' }, { who:'sorashido', e:'happy', t:'だいたいで97点は、才能ですよ' }] },
   { id:'rel-tease-kyuko-erubin-1', kind:'tease', ppl:['kyuko', 'erubin'], keys:{  }, lines:[{ who:'kyuko', e:'wink', t:'{c}、カード部屋で寝ちゃってたでしょ笑' }, { who:'erubin', e:'troubled', t:'…23時すぎてたからね' }, { who:'kyuko', e:'happy', t:'寝顔、デュラハンみたいにりりしかったよ笑' }] },
   { id:'rel-tease-erubin-kyuko-1', kind:'tease', ppl:['erubin', 'kyuko'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}に教わった場所、ほんとにきれいだったよ' }, { who:'kyuko', e:'troubled', t:'えぇ、そう？ よかったぁ…照れる' }, { who:'erubin', e:'happy', t:'また教えてね' }] },
-  { id:'rel-tease-sorashido-erubin-1', kind:'tease', ppl:['sorashido', 'erubin'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、カードを引くとき、ちょっと祈ってるだろ笑' }, { who:'erubin', e:'troubled', t:'ばれてた？ 癖なんだよね' }, { who:'sorashido', e:'happy', t:'祈ったときの勝率、表にしとくぜ' }] },
-  { id:'rel-tease-erubin-sorashido-1', kind:'tease', ppl:['erubin', 'sorashido'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}の表のおかげで、今日は勝てたよ' }, { who:'sorashido', e:'troubled', t:'お、おう…照れるぜ' }, { who:'erubin', e:'happy', t:'さすが{c}だね' }] },
-  { id:'rel-fight-mua-sorashido-1', kind:'fight', ppl:['mua', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'sorashido', e:'troubled', t:'……あれ、ここに置いてた表がない' }, { who:'mua', e:'normal', t:'散らかってたから、まとめて棚に入れといたよ♪' }, { who:'sorashido', e:'angry', t:'順番どおりに並べてたんだよ！ 全部ばらばらだ…' }, { who:'mua', e:'angry', t:'えー！ 片づけてあげたのに！' }], distance:[{ who:'mua', e:'troubled', t:'……よかれと思ったんだけどな' }, { who:'sorashido', e:'normal', t:'……並べ直すか' }], makeup:[{ who:'sorashido', e:'troubled', t:'さっきは大きい声出して悪かった。片づけてくれたのは助かったよ' }, { who:'mua', e:'happy', t:'あたしも、勝手にさわってごめん' }, { who:'sorashido', e:'happy', t:'じゃあ、一緒に並べ直そう。順番を教えるよ笑' }, { who:'mua', e:'excited', t:'覚えたら、次からはちゃんと並べるね♪' }] },
-  { id:'rel-fight-mua-sorashido-2', kind:'fight', ppl:['mua', 'sorashido'], keys:{ cause:'snack' }, lines:[{ who:'mua', e:'excited', t:'あーっ、最後のちんすこう食べたでしょ！' }, { who:'sorashido', e:'surprise', t:'え、残ってたから、いらないのかと思って…' }, { who:'mua', e:'angry', t:'あたし、最後に食べようと思って取っといたの！' }, { who:'sorashido', e:'troubled', t:'それなら、先に言ってくれよ！' }], distance:[{ who:'sorashido', e:'troubled', t:'……数えておけばよかったな' }, { who:'mua', e:'normal', t:'……べつにー' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、新しいの買ってきた。さっきはごめんな' }, { who:'mua', e:'surprise', t:'え、わざわざ？' }, { who:'mua', e:'happy', t:'……あたしこそ、大きい声出してごめん。一緒に食べよ♪' }] },
-  { id:'rel-fight-mua-sorashido-3', kind:'fight', ppl:['mua', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'よし、今のは俺の勝ちだな！ 表に書いとくぜ・・・！' }, { who:'mua', e:'angry', t:'今のはなし！ 指がすべったの！' }, { who:'sorashido', e:'troubled', t:'すべっても、勝ちは勝ちだぞ' }, { who:'mua', e:'angry', t:'もう一回！ もう一回やったら勝つもん！' }], distance:[{ who:'mua', e:'troubled', t:'……くやしいー' }, { who:'sorashido', e:'normal', t:'……ちょっと言いすぎたか' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、もう一回やろう。さっきのは、表に書かないでおく' }, { who:'mua', e:'happy', t:'ほんと！？ ……あたしも、ムキになってごめんね' }, { who:'sorashido', e:'happy', t:'次は勝っても負けても、2人で笑おうな笑' }, { who:'mua', e:'excited', t:'のった！ｗ' }] },
+  { id:'rel-tease-sorashido-erubin-1', kind:'tease', ppl:['sorashido', 'erubin'], keys:{  }, lines:[{ who:'sorashido', e:'wink', t:'{c}、カードを引くとき、ちょっと祈ってますよね笑' }, { who:'erubin', e:'troubled', t:'ばれてた？ 癖なんだよね' }, { who:'sorashido', e:'happy', t:'祈ったときの勝率、表にしておきます' }] },
+  { id:'rel-tease-erubin-sorashido-1', kind:'tease', ppl:['erubin', 'sorashido'], keys:{  }, lines:[{ who:'erubin', e:'happy', t:'{c}の表のおかげで、今日は勝てたよ' }, { who:'sorashido', e:'troubled', t:'は、はい・・・照れますね' }, { who:'erubin', e:'happy', t:'さすが{c}だね' }] },
+  { id:'rel-fight-mua-sorashido-1', kind:'fight', ppl:['mua', 'sorashido'], keys:{ cause:'tidy' }, lines:[{ who:'sorashido', e:'troubled', t:'・・・あれ、ここに置いてた表がない' }, { who:'mua', e:'normal', t:'散らかってたから、まとめて棚に入れといたよ♪' }, { who:'sorashido', e:'angry', t:'順番どおりに並べてたんですよ！ 全部ばらばらだ・・・' }, { who:'mua', e:'angry', t:'えー！ 片づけてあげたのに！' }], distance:[{ who:'mua', e:'troubled', t:'……よかれと思ったんだけどな' }, { who:'sorashido', e:'normal', t:'・・・並べ直すか' }], makeup:[{ who:'sorashido', e:'troubled', t:'さっきは大きい声を出してすみません。片づけてくれたのは助かりました' }, { who:'mua', e:'happy', t:'あたしも、勝手にさわってごめん' }, { who:'sorashido', e:'happy', t:'じゃあ、一緒に並べ直しましょう。順番を教えますね笑' }, { who:'mua', e:'excited', t:'覚えたら、次からはちゃんと並べるね♪' }] },
+  { id:'rel-fight-mua-sorashido-2', kind:'fight', ppl:['mua', 'sorashido'], keys:{ cause:'snack' }, lines:[{ who:'mua', e:'excited', t:'あーっ、最後のちんすこう食べたでしょ！' }, { who:'sorashido', e:'surprise', t:'え、残ってたから、いらないのかと思って・・・' }, { who:'mua', e:'angry', t:'あたし、最後に食べようと思って取っといたの！' }, { who:'sorashido', e:'troubled', t:'それなら、先に言ってくださいよ！' }], distance:[{ who:'sorashido', e:'troubled', t:'・・・数えておけばよかったな' }, { who:'mua', e:'normal', t:'……べつにー' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、新しいのを買ってきました。さっきはすみません' }, { who:'mua', e:'surprise', t:'え、わざわざ？' }, { who:'mua', e:'happy', t:'……あたしこそ、大きい声出してごめん。一緒に食べよ♪' }] },
+  { id:'rel-fight-mua-sorashido-3', kind:'fight', ppl:['mua', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'よし、今のは自分の勝ちですね！ 表に書いておきます' }, { who:'mua', e:'angry', t:'今のはなし！ 指がすべったの！' }, { who:'sorashido', e:'troubled', t:'すべっても、勝ちは勝ちですよ' }, { who:'mua', e:'angry', t:'もう一回！ もう一回やったら勝つもん！' }], distance:[{ who:'mua', e:'troubled', t:'……くやしいー' }, { who:'sorashido', e:'normal', t:'・・・ちょっと言いすぎたか' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、もう一回やりましょう。さっきのは、表に書かないでおきます' }, { who:'mua', e:'happy', t:'ほんと！？ ……あたしも、ムキになってごめんね' }, { who:'sorashido', e:'happy', t:'次は勝っても負けても、2人で笑いましょう笑' }, { who:'mua', e:'excited', t:'のった！ｗ' }] },
   { id:'rel-fight-atsu-mua-1', kind:'fight', ppl:['atsu', 'mua'], keys:{ cause:'late' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、朝の育成、一緒にやるって言ったじゃん！' }, { who:'mua', e:'troubled', t:'ごめん、起きたら9時だった…' }, { who:'atsu', e:'angry', t:'6時から待ってたんだけど！' }, { who:'mua', e:'angry', t:'だって朝はまぢで無理なんだもん！' }], distance:[{ who:'atsu', e:'normal', t:'……ひとりでやるか笑' }, { who:'mua', e:'troubled', t:'……せっかく誘ってくれたのにな' }], makeup:[{ who:'mua', e:'normal', t:'{c}、さっきはごめん。明日は目覚まし3つかける！' }, { who:'atsu', e:'happy', t:'俺もごめん笑 てか、朝じゃなくて昼にしよ！' }, { who:'mua', e:'excited', t:'昼なら、ぜったい起きてる♪' }] },
   { id:'rel-fight-atsu-mua-2', kind:'fight', ppl:['atsu', 'mua'], keys:{ cause:'win' }, lines:[{ who:'atsu', e:'wink', t:'今のスコア、俺の勝ち笑' }, { who:'mua', e:'angry', t:'今のは{c}が横で笑わせたからだもん！' }, { who:'atsu', e:'troubled', t:'えー、それ関係ある！？' }, { who:'mua', e:'angry', t:'ある！ もう一回！' }], distance:[{ who:'mua', e:'troubled', t:'……あたしだって勝ちたいのに' }, { who:'atsu', e:'troubled', t:'……ちょっと、からかいすぎたかな…' }], makeup:[{ who:'atsu', e:'normal', t:'{c}、さっきはごめん！ もう一回、今度は静かにやる笑' }, { who:'mua', e:'happy', t:'……うん！ あたしもムキになってごめん' }, { who:'atsu', e:'happy', t:'勝ったら、ほんとにすごいって言うから！' }, { who:'mua', e:'excited', t:'ぜったい言わせるかんね！ｗ' }] },
   { id:'rel-fight-atsu-mua-3', kind:'fight', ppl:['atsu', 'mua'], keys:{ cause:'promise' }, lines:[{ who:'mua', e:'troubled', t:'{c}、今日いっしょにマーケット行くって言ったよね？' }, { who:'atsu', e:'surprise', t:'え、あっ…！ 練習に夢中で忘れてた！' }, { who:'mua', e:'angry', t:'ずっと待ってたんだけど！' }, { who:'atsu', e:'troubled', t:'ごめん、ほんとに頭から抜けてた…' }], distance:[{ who:'mua', e:'normal', t:'……べつにー。ひとりで見てくるし' }, { who:'atsu', e:'troubled', t:'……やらかした…' }], makeup:[{ who:'atsu', e:'normal', t:'{c}、今から行こ！ 荷物は全部俺が持つ！' }, { who:'mua', e:'surprise', t:'……全部？' }, { who:'mua', e:'happy', t:'しょうがないなぁ！ ぢゃあ、ゆるしてあげる♪' }] },
@@ -66839,9 +67138,9 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-fight-atsu-kiki-1', kind:'fight', ppl:['atsu', 'kiki'], keys:{ cause:'win' }, lines:[{ who:'atsu', e:'excited', t:'今の、俺の勝ちだよね笑' }, { who:'kiki', e:'normal', t:'いえ、あと少しで私が倒していました' }, { who:'atsu', e:'angry', t:'倒してないなら負けじゃん！' }, { who:'kiki', e:'angry', t:'負けてません。引き分けでつ' }], distance:[{ who:'atsu', e:'normal', t:'……ちょっと頭冷やそ笑' }, { who:'kiki', e:'normal', t:'……そうですか。わかりました' }], makeup:[{ who:'kiki', e:'troubled', t:'{c}、さっきは意地をはってごめんなさい' }, { who:'atsu', e:'happy', t:'俺こそ！ {c}が強いから、ムキになっちゃった笑' }, { who:'kiki', e:'happy', t:'では、決着は次の勝負でつね♪' }, { who:'atsu', e:'excited', t:'望むところ！' }] },
   { id:'rel-fight-atsu-kiki-2', kind:'fight', ppl:['atsu', 'kiki'], keys:{ cause:'snack' }, lines:[{ who:'kiki', e:'normal', t:'{c}、そのおまんじゅう、私のでつよ' }, { who:'atsu', e:'surprise', t:'え、机の上にあったから、みんなのかと…' }, { who:'kiki', e:'angry', t:'楽しみにしてたんでつ' }, { who:'atsu', e:'troubled', t:'ごめん！ でも、もう食べちゃった…' }], distance:[{ who:'kiki', e:'normal', t:'……もう、いいでつ' }, { who:'atsu', e:'troubled', t:'……どうしよ笑' }], makeup:[{ who:'atsu', e:'normal', t:'{c}、新しいの買ってきた！ 2つ！' }, { who:'kiki', e:'surprise', t:'2つも、でつか？' }, { who:'kiki', e:'happy', t:'……では、一つずつ食べましょう。私も言いすぎました' }, { who:'atsu', e:'happy', t:'よかった〜笑' }] },
   { id:'rel-fight-atsu-kiki-3', kind:'fight', ppl:['atsu', 'kiki'], keys:{ cause:'promise' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、朝の散歩、一緒に行くって言ってたよね？' }, { who:'kiki', e:'surprise', t:'あっ…私、先に一人で行ってしまいました' }, { who:'atsu', e:'angry', t:'6時に待ってたのに！' }, { who:'kiki', e:'troubled', t:'5時に目が覚めて、つい…ごめんなさい' }], distance:[{ who:'atsu', e:'normal', t:'……ひとりで育成しとこ笑' }, { who:'kiki', e:'troubled', t:'……早起きしすぎるのも、考えものでつね' }], makeup:[{ who:'kiki', e:'normal', t:'{c}、明日は5時半に、扉の前で待ってまつ' }, { who:'atsu', e:'surprise', t:'え、迎えに来てくれるの！？' }, { who:'atsu', e:'happy', t:'それなら絶対行く！ ありがと笑' }, { who:'kiki', e:'happy', t:'はい。今度は約束どおりに♪' }] },
-  { id:'rel-fight-momosuke-sorashido-1', kind:'fight', ppl:['momosuke', 'sorashido'], keys:{ cause:'song' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、次は歌える曲にしよ！！' }, { who:'sorashido', e:'normal', t:'いや、今日は速い曲で計算したいんだ' }, { who:'momosuke', e:'angry', t:'えー！！ 練習なんだから、ももの好きな曲がいい！！' }, { who:'sorashido', e:'angry', t:'練習だからこそ、速い曲なんだぞ' }], distance:[{ who:'momosuke', e:'troubled', t:'……ももは、ひとりで歌うもん' }, { who:'sorashido', e:'troubled', t:'……くっそー、言い方まずかったか' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、交代にしよう。1曲目は、{c}の好きな曲だ' }, { who:'momosuke', e:'surprise', t:'ほんと！？' }, { who:'momosuke', e:'happy', t:'じゃあ2曲目は、{c}の速いのね！！ ももも一緒にやる♡' }, { who:'sorashido', e:'happy', t:'了解だ笑' }] },
-  { id:'rel-fight-momosuke-sorashido-2', kind:'fight', ppl:['momosuke', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今日のスコア、俺が3点上だぜ・・・！' }, { who:'momosuke', e:'angry', t:'3点なんて、ほぼ同じじゃん！！' }, { who:'sorashido', e:'normal', t:'数字は数字だ。勝ちは勝ちだぞ' }, { who:'momosuke', e:'angry', t:'もう、{c}きびしすぎ！！' }], distance:[{ who:'momosuke', e:'troubled', t:'……くやしい……' }, { who:'sorashido', e:'troubled', t:'……3点くらい、言わなくてもよかったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきのは、ほんとはほぼ引き分けだ。ごめんな' }, { who:'momosuke', e:'happy', t:'……ももも、ムキになってごめんね' }, { who:'sorashido', e:'happy', t:'次は2人で合わせて、最高点を出そう笑' }, { who:'momosuke', e:'excited', t:'それならぜったい勝てる！！' }] },
-  { id:'rel-fight-momosuke-sorashido-3', kind:'fight', ppl:['momosuke', 'sorashido'], keys:{ cause:'late' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、合わせ練習の時間、とっくにすぎてるぞ' }, { who:'momosuke', e:'troubled', t:'ごめん…夜の練習が長引いて、起きられなかった' }, { who:'sorashido', e:'angry', t:'待ってるあいだに、表が3枚できたぞ' }, { who:'momosuke', e:'angry', t:'表を作ってたなら、いいじゃん！！' }], distance:[{ who:'sorashido', e:'normal', t:'……計算どおりにいかないな' }, { who:'momosuke', e:'troubled', t:'……言い返さなきゃよかった' }], makeup:[{ who:'momosuke', e:'normal', t:'{c}、さっきはごめん！！ 寝坊したの、ももなのに' }, { who:'sorashido', e:'happy', t:'いいさ。夜も練習してたんだもんな' }, { who:'momosuke', e:'happy', t:'明日は、ももが先に待ってるからね！！' }] },
+  { id:'rel-fight-momosuke-sorashido-1', kind:'fight', ppl:['momosuke', 'sorashido'], keys:{ cause:'song' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、次は歌える曲にしよ！！' }, { who:'sorashido', e:'normal', t:'いや、今日は速い曲で計算したいんです' }, { who:'momosuke', e:'angry', t:'えー！！ 練習なんだから、ももの好きな曲がいい！！' }, { who:'sorashido', e:'angry', t:'練習だからこそ、速い曲なんですよ' }], distance:[{ who:'momosuke', e:'troubled', t:'……ももは、ひとりで歌うもん' }, { who:'sorashido', e:'troubled', t:'・・・うわ、言い方まずかったか' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、交代にしましょう。1曲目は、{c}の好きな曲で' }, { who:'momosuke', e:'surprise', t:'ほんと！？' }, { who:'momosuke', e:'happy', t:'じゃあ2曲目は、{c}の速いのね！！ ももも一緒にやる♡' }, { who:'sorashido', e:'happy', t:'了解です笑' }] },
+  { id:'rel-fight-momosuke-sorashido-2', kind:'fight', ppl:['momosuke', 'sorashido'], keys:{ cause:'win' }, lines:[{ who:'sorashido', e:'excited', t:'今日のスコア、自分が3点上ですねー！' }, { who:'momosuke', e:'angry', t:'3点なんて、ほぼ同じじゃん！！' }, { who:'sorashido', e:'normal', t:'数字は数字です。勝ちは勝ちですよ' }, { who:'momosuke', e:'angry', t:'もう、{c}きびしすぎ！！' }], distance:[{ who:'momosuke', e:'troubled', t:'……くやしい……' }, { who:'sorashido', e:'troubled', t:'・・・3点くらい、言わなくてもよかったな' }], makeup:[{ who:'sorashido', e:'normal', t:'{c}、さっきのは、ほんとはほぼ引き分けです。すみません' }, { who:'momosuke', e:'happy', t:'……ももも、ムキになってごめんね' }, { who:'sorashido', e:'happy', t:'次は2人で合わせて、最高点を出しましょう笑' }, { who:'momosuke', e:'excited', t:'それならぜったい勝てる！！' }] },
+  { id:'rel-fight-momosuke-sorashido-3', kind:'fight', ppl:['momosuke', 'sorashido'], keys:{ cause:'late' }, lines:[{ who:'sorashido', e:'troubled', t:'{c}、合わせ練習の時間、とっくにすぎてますよ' }, { who:'momosuke', e:'troubled', t:'ごめん…夜の練習が長引いて、起きられなかった' }, { who:'sorashido', e:'angry', t:'待ってるあいだに、表が3枚できました' }, { who:'momosuke', e:'angry', t:'表を作ってたなら、いいじゃん！！' }], distance:[{ who:'sorashido', e:'normal', t:'・・・計算どおりにいかないな' }, { who:'momosuke', e:'troubled', t:'……言い返さなきゃよかった' }], makeup:[{ who:'momosuke', e:'normal', t:'{c}、さっきはごめん！！ 寝坊したの、ももなのに' }, { who:'sorashido', e:'happy', t:'大丈夫ですよ。夜も練習してたんですもんね' }, { who:'momosuke', e:'happy', t:'明日は、ももが先に待ってるからね！！' }] },
   { id:'rel-fight-dra-kiki-1', kind:'fight', ppl:['dra', 'kiki'], keys:{ cause:'late' }, lines:[{ who:'kiki', e:'normal', t:'{c}、お茶の時間、もう1時間すぎてまつ' }, { who:'dra', e:'troubled', t:'昼寝してたら、つい…な' }, { who:'kiki', e:'angry', t:'お茶、冷めてしまいましたよ' }, { who:'dra', e:'troubled', t:'冷めたお茶も、おでは嫌いじゃないぞ…？' }], distance:[{ who:'kiki', e:'normal', t:'……そうでつか。では、ひとりで飲みまつ' }, { who:'dra', e:'troubled', t:'……冗談を言う場面じゃなかったな' }], makeup:[{ who:'dra', e:'normal', t:'{c}、さっきは悪かった。今度のお茶は、おでがいれるからな' }, { who:'kiki', e:'surprise', t:'{c}が、でつか？' }, { who:'kiki', e:'happy', t:'……では、楽しみにしてまつ♪' }] },
   { id:'rel-fight-dra-kiki-2', kind:'fight', ppl:['dra', 'kiki'], keys:{ cause:'snack' }, lines:[{ who:'dra', e:'happy', t:'このせんべい、全部おでがもらってもいいか？' }, { who:'kiki', e:'troubled', t:'半分は、私が買ってきたものでつよ' }, { who:'dra', e:'troubled', t:'え、そうだったのか？ もう半分食べちゃったぞ' }, { who:'kiki', e:'angry', t:'残りは、私がいただきます' }], distance:[{ who:'dra', e:'troubled', t:'……おで、食い意地はりすぎたな' }, { who:'kiki', e:'normal', t:'……少し、言い方がきつかったでしょうか' }], makeup:[{ who:'kiki', e:'normal', t:'{c}、残りのせんべい、半分こしましょう' }, { who:'dra', e:'surprise', t:'いいのか？' }, { who:'dra', e:'happy', t:'{c}、ありがとな。次はおでが買ってくる' }, { who:'kiki', e:'wink', t:'では、そのときは私が全部いただきまつ♪' }] },
   { id:'rel-fight-dra-kiki-3', kind:'fight', ppl:['dra', 'kiki'], keys:{ cause:'tidy' }, lines:[{ who:'kiki', e:'normal', t:'{c}、お部屋に毛布が出しっぱなしでつよ' }, { who:'dra', e:'normal', t:'昼寝のあと、すぐ使うからいいんだよ' }, { who:'kiki', e:'angry', t:'毎回そう言って、たたまないじゃないですか' }, { who:'dra', e:'troubled', t:'毎回は言いすぎだろ…' }], distance:[{ who:'dra', e:'normal', t:'……たたむくらい、できるんだけどな' }, { who:'kiki', e:'troubled', t:'……言い方が、きつかったでしょうか' }], makeup:[{ who:'dra', e:'normal', t:'{c}、毛布、たたんだぞ。……角がちょっとずれてるけど' }, { who:'kiki', e:'happy', t:'ふふ、十分でつ。さっきは、すみませんでした' }, { who:'kiki', e:'wink', t:'次は、私が角のそろえ方を教えまつね♪' }] },
@@ -66869,9 +67168,9 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-fight-atsu-erubin-1', kind:'fight', ppl:['atsu', 'erubin'], keys:{ cause:'promise' }, lines:[{ who:'erubin', e:'troubled', t:'{c}、今日はみんなでお昼の約束だったよね' }, { who:'atsu', e:'surprise', t:'あっ！ 練習してたら、時間すぎてた！' }, { who:'erubin', e:'angry', t:'みんな、ずっと待ってたんだよ' }, { who:'atsu', e:'troubled', t:'ごめん！ ほんとに忘れてた！' }], distance:[{ who:'atsu', e:'normal', t:'……完全に忘れてた…' }, { who:'erubin', e:'troubled', t:'……少し強く言いすぎたかな' }], makeup:[{ who:'atsu', e:'normal', t:'{c}、みんなにも謝ってきた！ ごめん！' }, { who:'erubin', e:'happy', t:'うん、えらいね。みんなも笑ってたよ' }, { who:'atsu', e:'happy', t:'次は俺が、全員の分の席取っとく笑' }] },
   { id:'rel-fight-atsu-erubin-2', kind:'fight', ppl:['atsu', 'erubin'], keys:{ cause:'late' }, lines:[{ who:'atsu', e:'troubled', t:'{c}、6時の育成、めずらしく遅刻じゃん！' }, { who:'erubin', e:'troubled', t:'ごめんね…夜に本を読んでたら、寝坊しちゃって' }, { who:'atsu', e:'angry', t:'めっちゃ待ったんだけど！' }, { who:'erubin', e:'troubled', t:'少し遅れただけだよ…' }], distance:[{ who:'atsu', e:'normal', t:'……言いすぎたかな…' }, { who:'erubin', e:'normal', t:'……俺が悪かったのに' }], makeup:[{ who:'erubin', e:'normal', t:'{c}、さっきはごめんね。言い訳しちゃった' }, { who:'atsu', e:'happy', t:'俺こそ！ {c}がいつも時間守るから、びっくりしただけ笑' }, { who:'erubin', e:'happy', t:'明日は、5分前に行くね' }, { who:'atsu', e:'excited', t:'じゃあ俺は10分前！' }] },
   { id:'rel-fight-atsu-erubin-3', kind:'fight', ppl:['atsu', 'erubin'], keys:{ cause:'win' }, lines:[{ who:'atsu', e:'excited', t:'今の対戦、俺の勝ち笑' }, { who:'erubin', e:'troubled', t:'最後の一手、待ってって言ったよね？' }, { who:'atsu', e:'troubled', t:'言ってた！？ 聞こえなかった！' }, { who:'erubin', e:'angry', t:'ちゃんと言ったよ…' }], distance:[{ who:'erubin', e:'normal', t:'……少し、悔しかったのかも' }, { who:'atsu', e:'troubled', t:'……勝ち急ぎすぎたかな…' }], makeup:[{ who:'atsu', e:'normal', t:'{c}、さっきはごめん！ もう一回、ゆっくりやろ！' }, { who:'erubin', e:'happy', t:'うん。俺も、ムキになってごめんね' }, { who:'atsu', e:'happy', t:'今度は、待ってって言われたら待つ笑' }] },
-  { id:'rel-mend-mua-sorashido-1', kind:'mend', ppl:['mua', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'……{c}、その、さっきは……' }, { who:'mua', e:'normal', t:'なに？' }, { who:'sorashido', e:'normal', t:'……ごめん。言いすぎた' }, { who:'mua', e:'happy', t:'……もう！ あたしも、ごめんね♪' }] },
-  { id:'rel-mend-mua-sorashido-2', kind:'mend', ppl:['mua', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'mua', e:'normal', t:'{name}から差し入れもらったの。……一緒に食べる？' }, { who:'sorashido', e:'surprise', t:'いいのか？' }, { who:'sorashido', e:'happy', t:'ありがとな。……さっきは悪かった' }, { who:'mua', e:'wink', t:'おいしいから、ゆるすｗ' }] },
-  { id:'rel-mend-mua-sorashido-3', kind:'mend', ppl:['mua', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'mua', e:'troubled', t:'{name}に「仲直りしなよ」って言われちゃった' }, { who:'sorashido', e:'troubled', t:'……{name}に言われたら、しょうがないな' }, { who:'mua', e:'happy', t:'ぢゃあ、仲直りの一曲いこ♪' }, { who:'sorashido', e:'happy', t:'おう。記録は、なしでな笑' }] },
+  { id:'rel-mend-mua-sorashido-1', kind:'mend', ppl:['mua', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'troubled', t:'・・・{c}、その、さっきは・・・' }, { who:'mua', e:'normal', t:'なに？' }, { who:'sorashido', e:'normal', t:'・・・すみません。言いすぎました' }, { who:'mua', e:'happy', t:'……もう！ あたしも、ごめんね♪' }] },
+  { id:'rel-mend-mua-sorashido-2', kind:'mend', ppl:['mua', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'mua', e:'normal', t:'{name}から差し入れもらったの。……一緒に食べる？' }, { who:'sorashido', e:'surprise', t:'いいんですか？' }, { who:'sorashido', e:'happy', t:'ありがとうございます。・・・さっきはすみませんでした' }, { who:'mua', e:'wink', t:'おいしいから、ゆるすｗ' }] },
+  { id:'rel-mend-mua-sorashido-3', kind:'mend', ppl:['mua', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'mua', e:'troubled', t:'{name}に「仲直りしなよ」って言われちゃった' }, { who:'sorashido', e:'troubled', t:'・・・{name}に言われたら、しょうがないですね' }, { who:'mua', e:'happy', t:'ぢゃあ、仲直りの一曲いこ♪' }, { who:'sorashido', e:'happy', t:'はい。記録は、なしで笑' }] },
   { id:'rel-mend-atsu-mua-1', kind:'mend', ppl:['atsu', 'mua'], keys:{ how:'apology' }, lines:[{ who:'atsu', e:'normal', t:'{c}、さっきはごめん！' }, { who:'mua', e:'normal', t:'……ほんとに思ってる？' }, { who:'atsu', e:'happy', t:'思ってる！ だから、今日のおやつおごる笑' }, { who:'mua', e:'excited', t:'それなら、ゆるす♪' }] },
   { id:'rel-mend-atsu-mua-2', kind:'mend', ppl:['atsu', 'mua'], keys:{ how:'gift' }, lines:[{ who:'atsu', e:'happy', t:'{name}から差し入れだって！ {c}の好きないちごのやつ！' }, { who:'mua', e:'surprise', t:'え、ほんとだ！' }, { who:'mua', e:'happy', t:'……一緒に食べよ。さっきはごめんね' }, { who:'atsu', e:'happy', t:'俺も笑 半分こね！' }] },
   { id:'rel-mend-atsu-mua-3', kind:'mend', ppl:['atsu', 'mua'], keys:{ how:'player' }, lines:[{ who:'mua', e:'troubled', t:'{name}に「もういいでしょ」って言われちゃった' }, { who:'atsu', e:'happy', t:'言われた笑 じゃあ、もういいってことで！' }, { who:'mua', e:'wink', t:'……しょうがないなぁ。{name}に免じて、ゆるす♪' }] },
@@ -66881,9 +67180,9 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend-atsu-kiki-1', kind:'mend', ppl:['atsu', 'kiki'], keys:{ how:'apology' }, lines:[{ who:'kiki', e:'normal', t:'{c}、少しいいですか' }, { who:'atsu', e:'surprise', t:'え、なに？' }, { who:'kiki', e:'troubled', t:'……さっきは、意地をはってしまいました。ごめんなさい' }, { who:'atsu', e:'happy', t:'俺も！ {c}が謝る前に言おうと思ってたのに笑' }] },
   { id:'rel-mend-atsu-kiki-2', kind:'mend', ppl:['atsu', 'kiki'], keys:{ how:'gift' }, lines:[{ who:'atsu', e:'happy', t:'{c}、{name}から差し入れのお茶うけだって！' }, { who:'kiki', e:'surprise', t:'あれま。私の好きなものでつ' }, { who:'atsu', e:'normal', t:'……一緒に食べよ！ さっきはごめん！' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさいでつ♪' }] },
   { id:'rel-mend-atsu-kiki-3', kind:'mend', ppl:['atsu', 'kiki'], keys:{ how:'player' }, lines:[{ who:'atsu', e:'troubled', t:'{name}に「早く仲直りしなよ笑」って言われた笑' }, { who:'kiki', e:'normal', t:'私も、言われました' }, { who:'kiki', e:'happy', t:'{name}に言われたら、断れませんね' }, { who:'atsu', e:'happy', t:'じゃ、仲直りの一戦ね笑' }] },
-  { id:'rel-mend-momosuke-sorashido-1', kind:'mend', ppl:['momosuke', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、さっきは悪かった' }, { who:'momosuke', e:'troubled', t:'……ほんとに悪いと思ってる？' }, { who:'sorashido', e:'happy', t:'思ってる。表にも書いた。「俺が悪い」って笑' }, { who:'momosuke', e:'excited', t:'なにそれw ……ももも、ごめんね！！' }] },
-  { id:'rel-mend-momosuke-sorashido-2', kind:'mend', ppl:['momosuke', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、{name}から差し入れのドーナツ！！' }, { who:'sorashido', e:'surprise', t:'お、2つあるな' }, { who:'momosuke', e:'wink', t:'1つ、あげる。……さっきはごめんね♡' }, { who:'sorashido', e:'happy', t:'ありがとな。俺もごめん。数えずに食べるよ笑' }] },
-  { id:'rel-mend-momosuke-sorashido-3', kind:'mend', ppl:['momosuke', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'sorashido', e:'troubled', t:'{name}に「計算より先に謝りな」って言われたぜ・・・' }, { who:'momosuke', e:'happy', t:'{name}、いいこと言う！！' }, { who:'sorashido', e:'normal', t:'……{c}、ごめん' }, { who:'momosuke', e:'excited', t:'うん！！ ももも、ごめんね♡' }] },
+  { id:'rel-mend-momosuke-sorashido-1', kind:'mend', ppl:['momosuke', 'sorashido'], keys:{ how:'apology' }, lines:[{ who:'sorashido', e:'normal', t:'{c}、さっきはすみませんでした' }, { who:'momosuke', e:'troubled', t:'……ほんとに悪いと思ってる？' }, { who:'sorashido', e:'happy', t:'思ってます。表にも書きました。「自分が悪い」って笑' }, { who:'momosuke', e:'excited', t:'なにそれw ……ももも、ごめんね！！' }] },
+  { id:'rel-mend-momosuke-sorashido-2', kind:'mend', ppl:['momosuke', 'sorashido'], keys:{ how:'gift' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、{name}から差し入れのドーナツ！！' }, { who:'sorashido', e:'surprise', t:'お、2つありますね' }, { who:'momosuke', e:'wink', t:'1つ、あげる。……さっきはごめんね♡' }, { who:'sorashido', e:'happy', t:'ありがとうございます。自分もすみません。数えずに食べます笑' }] },
+  { id:'rel-mend-momosuke-sorashido-3', kind:'mend', ppl:['momosuke', 'sorashido'], keys:{ how:'player' }, lines:[{ who:'sorashido', e:'troubled', t:'{name}に「計算より先に謝りな」って言われました・・・' }, { who:'momosuke', e:'happy', t:'{name}、いいこと言う！！' }, { who:'sorashido', e:'normal', t:'・・・{c}、すみません' }, { who:'momosuke', e:'excited', t:'うん！！ ももも、ごめんね♡' }] },
   { id:'rel-mend-dra-kiki-1', kind:'mend', ppl:['dra', 'kiki'], keys:{ how:'apology' }, lines:[{ who:'dra', e:'troubled', t:'{c}、その…さっきのことなんだが' }, { who:'kiki', e:'normal', t:'はい' }, { who:'dra', e:'normal', t:'……悪かった。ギャグでごまかさずに言うぞ' }, { who:'kiki', e:'happy', t:'……ちゃんと伝わりました。私も、ごめんなさいでつ' }] },
   { id:'rel-mend-dra-kiki-2', kind:'mend', ppl:['dra', 'kiki'], keys:{ how:'gift' }, lines:[{ who:'kiki', e:'normal', t:'{c}、{name}から差し入れのおせんべいです' }, { who:'dra', e:'surprise', t:'お、おでの好きなやつだ' }, { who:'kiki', e:'happy', t:'半分こしましょう。さっきは、すみませんでした' }, { who:'dra', e:'happy', t:'おでも悪かった。……うまいな、これ' }] },
   { id:'rel-mend-dra-kiki-3', kind:'mend', ppl:['dra', 'kiki'], keys:{ how:'player' }, lines:[{ who:'dra', e:'troubled', t:'{name}に「いいかげん仲直りしな」って言われたぞ' }, { who:'kiki', e:'normal', t:'私もです' }, { who:'kiki', e:'wink', t:'{name}に言われたら、しょうがないでつね♪' }, { who:'dra', e:'happy', t:'じゃあ、仲直りだな。えへへ' }] },
@@ -66911,38 +67210,38 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend-atsu-erubin-1', kind:'mend', ppl:['atsu', 'erubin'], keys:{ how:'apology' }, lines:[{ who:'atsu', e:'normal', t:'{c}、さっきはごめん！' }, { who:'erubin', e:'happy', t:'うん。分かってるよ' }, { who:'atsu', e:'surprise', t:'え、怒ってないの！？' }, { who:'erubin', e:'happy', t:'{c}が謝りに来てくれたから、もう大丈夫だよ' }] },
   { id:'rel-mend-atsu-erubin-2', kind:'mend', ppl:['atsu', 'erubin'], keys:{ how:'gift' }, lines:[{ who:'erubin', e:'normal', t:'{c}、{name}から差し入れのおにぎりだよ' }, { who:'atsu', e:'excited', t:'まじ！？ 腹へってた！' }, { who:'erubin', e:'happy', t:'一緒に食べよう。さっきはごめんね' }, { who:'atsu', e:'happy', t:'俺こそ！ ありがと笑' }] },
   { id:'rel-mend-atsu-erubin-3', kind:'mend', ppl:['atsu', 'erubin'], keys:{ how:'player' }, lines:[{ who:'atsu', e:'troubled', t:'{name}に「{c}に早く謝りな」って言われた笑' }, { who:'erubin', e:'happy', t:'俺も「{c}を許してあげて」って言われたよ' }, { who:'atsu', e:'happy', t:'{name}に言われたら、しょうがない！ ごめん！' }, { who:'erubin', e:'happy', t:'うん、仲直りだね' }] },
-  { id:'rel-mend3-erubin-mua-sorashido-1', kind:'mend3', ppl:['erubin', 'mua', 'sorashido'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'{c:mua}、{c:sorashido}、まだ口をきいてないのかな？' }, { who:'mua', e:'troubled', t:'……だって' }, { who:'sorashido', e:'troubled', t:'……きっかけがなくてな' }, { who:'erubin', e:'happy', t:'じゃあ、俺がお茶をいれるから、3人で飲もうか。それがきっかけだね' }] },
+  { id:'rel-mend3-erubin-mua-sorashido-1', kind:'mend3', ppl:['erubin', 'mua', 'sorashido'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'{c:mua}、{c:sorashido}、まだ口をきいてないのかな？' }, { who:'mua', e:'troubled', t:'……だって' }, { who:'sorashido', e:'troubled', t:'・・・きっかけがなくて' }, { who:'erubin', e:'happy', t:'じゃあ、俺がお茶をいれるから、3人で飲もうか。それがきっかけだね' }] },
   { id:'rel-mend3-erubin-atsu-dra-1', kind:'mend3', ppl:['erubin', 'atsu', 'dra'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'二人とも、背中合わせで座ってるね笑' }, { who:'atsu', e:'troubled', t:'……ちょっと気まずくて…' }, { who:'dra', e:'troubled', t:'……おでもだ' }, { who:'erubin', e:'happy', t:'じゃあ、俺が審判で一戦やろうか。終わったら握手ね' }, { who:'atsu', e:'happy', t:'……のった笑' }] },
   { id:'rel-mend3-erubin-momosuke-kyuko-1', kind:'mend3', ppl:['erubin', 'momosuke', 'kyuko'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'{c:momosuke}、{c:kyuko}、二人とも相手のほうをちらちら見てるよ' }, { who:'momosuke', e:'surprise', t:'え、見てないもん！！' }, { who:'kyuko', e:'troubled', t:'……見てたかもぉ' }, { who:'erubin', e:'happy', t:'二人とも、本当はもう仲直りしたいんだよね' }, { who:'momosuke', e:'happy', t:'……うん。{c:kyuko}、ごめんね！！' }] },
   { id:'rel-mend3-erubin-atsu-mua-1', kind:'mend3', ppl:['erubin', 'atsu', 'mua'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'{c:atsu}、{c:mua}、一曲だけ一緒にやってみない？' }, { who:'mua', e:'troubled', t:'……一曲だけなら' }, { who:'atsu', e:'normal', t:'俺も、一曲だけ！' }, { who:'erubin', e:'happy', t:'終わるころには、いつもの二人に戻ってると思うな' }] },
   { id:'rel-mend3-kiki-mua-momosuke-1', kind:'mend3', ppl:['kiki', 'mua', 'momosuke'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:mua}、{c:momosuke}、お茶が入りましたよ' }, { who:'mua', e:'troubled', t:'……いまは、いい' }, { who:'kiki', e:'wink', t:'三人分いれてしまったので、飲んでもらわないと困りまつ♪' }, { who:'momosuke', e:'happy', t:'……{c:kiki}がそう言うなら' }, { who:'mua', e:'happy', t:'……しょうがないなぁ。{c:momosuke}、さっきはごめん' }] },
   { id:'rel-mend3-kiki-atsu-kyuko-1', kind:'mend3', ppl:['kiki', 'atsu', 'kyuko'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:atsu}、{c:kyuko}。作戦会議の続き、私も入っていいですか' }, { who:'kyuko', e:'troubled', t:'……{c:kiki}が入るなら' }, { who:'atsu', e:'happy', t:'俺も、{c:kiki}の意見聞きたい！' }, { who:'kiki', e:'happy', t:'では、攻撃は全部私が考えまつね♪' }, { who:'kyuko', e:'surprise', t:'そこは相談させてよぉ笑' }] },
-  { id:'rel-mend3-kiki-dra-sorashido-1', kind:'mend3', ppl:['kiki', 'dra', 'sorashido'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:dra}、{c:sorashido}。二人とも、さっきから同じ本を読んでますね' }, { who:'dra', e:'surprise', t:'……ばれたか' }, { who:'sorashido', e:'troubled', t:'……話しかけるきっかけを探してたんだ' }, { who:'kiki', e:'happy', t:'では、私が読み上げましょう。二人で聞いてくださいね' }] },
+  { id:'rel-mend3-kiki-dra-sorashido-1', kind:'mend3', ppl:['kiki', 'dra', 'sorashido'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:dra}、{c:sorashido}。二人とも、さっきから同じ本を読んでますね' }, { who:'dra', e:'surprise', t:'……ばれたか' }, { who:'sorashido', e:'troubled', t:'・・・話しかけるきっかけを探してたんです' }, { who:'kiki', e:'happy', t:'では、私が読み上げましょう。二人で聞いてくださいね' }] },
   { id:'rel-mend3-kiki-atsu-momosuke-1', kind:'mend3', ppl:['kiki', 'atsu', 'momosuke'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:momosuke}、{c:atsu}。二人の勝負、私が見届けてもいいですか' }, { who:'momosuke', e:'wink', t:'……{c:kiki}が見てるなら、ちゃんとやる！！' }, { who:'atsu', e:'happy', t:'俺も！ 文句なしの一回勝負ね笑' }, { who:'kiki', e:'happy', t:'終わったら、勝っても負けても握手でつよ♪' }] },
   { id:'rel-mend3-momosuke-mua-kiki-1', kind:'mend3', ppl:['momosuke', 'mua', 'kiki'], keys:{  }, lines:[{ who:'momosuke', e:'excited', t:'{c:mua}、{c:kiki}、ももの新しいダンス見て！！' }, { who:'mua', e:'troubled', t:'……いまは…' }, { who:'kiki', e:'troubled', t:'……少しだけなら' }, { who:'momosuke', e:'happy', t:'二人が並んで見てくれないと、踊れないの！！ ほら、もっとくっついて♡' }, { who:'mua', e:'happy', t:'……もう、{c:momosuke}ってば。{c:kiki}、さっきはごめんね' }] },
   { id:'rel-mend3-momosuke-dra-atsu-1', kind:'mend3', ppl:['momosuke', 'dra', 'atsu'], keys:{  }, lines:[{ who:'momosuke', e:'excited', t:'{c:dra}、{c:atsu}、ももが審判やるから勝負して！！' }, { who:'dra', e:'troubled', t:'……いま、ちょっと気まずくてな' }, { who:'atsu', e:'troubled', t:'……俺も笑' }, { who:'momosuke', e:'wink', t:'だから勝負するの！！ 終わったら、ぜったい笑ってるから♡' }, { who:'atsu', e:'happy', t:'……{c:momosuke}に言われたら、やるしかないね笑' }] },
-  { id:'rel-mend3-momosuke-sorashido-kyuko-1', kind:'mend3', ppl:['momosuke', 'sorashido', 'kyuko'], keys:{  }, lines:[{ who:'momosuke', e:'normal', t:'{c:sorashido}、{c:kyuko}、なんで黙ってるの？' }, { who:'sorashido', e:'troubled', t:'……ちょっと、言い合いになってな' }, { who:'kyuko', e:'troubled', t:'……ムキになっちゃったぁ' }, { who:'momosuke', e:'happy', t:'じゃあ、今日は数字禁止！！ 3人でおやつ食べよ♡' }, { who:'sorashido', e:'happy', t:'……それは、いい案だな笑' }] },
+  { id:'rel-mend3-momosuke-sorashido-kyuko-1', kind:'mend3', ppl:['momosuke', 'sorashido', 'kyuko'], keys:{  }, lines:[{ who:'momosuke', e:'normal', t:'{c:sorashido}、{c:kyuko}、なんで黙ってるの？' }, { who:'sorashido', e:'troubled', t:'・・・ちょっと、言い合いになりまして' }, { who:'kyuko', e:'troubled', t:'……ムキになっちゃったぁ' }, { who:'momosuke', e:'happy', t:'じゃあ、今日は数字禁止！！ 3人でおやつ食べよ♡' }, { who:'sorashido', e:'happy', t:'・・・それは、いい案ですね笑' }] },
   { id:'rel-mend3-momosuke-erubin-dra-1', kind:'mend3', ppl:['momosuke', 'erubin', 'dra'], keys:{  }, lines:[{ who:'momosuke', e:'excited', t:'{c:erubin}、{c:dra}、ももがおやつ持ってきたよ！！' }, { who:'erubin', e:'troubled', t:'……ありがとう、{c:momosuke}' }, { who:'dra', e:'troubled', t:'……おう' }, { who:'momosuke', e:'wink', t:'二人とも元気ない！！ はい、ちゃんと半分こして食べてね♡' }, { who:'dra', e:'happy', t:'……{c:erubin}、半分どうぞ' }, { who:'erubin', e:'happy', t:'ありがとう、{c:dra}。さっきはごめんね' }] },
-  { id:'rel-mend3-mua-atsu-sorashido-1', kind:'mend3', ppl:['mua', 'atsu', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'excited', t:'{c:atsu}、{c:sorashido}、3人で写真撮ろ！' }, { who:'atsu', e:'troubled', t:'……いま？笑' }, { who:'sorashido', e:'troubled', t:'……ちょっと、気まずいんだが' }, { who:'mua', e:'wink', t:'だから撮るの！ はい、2人とも笑って〜♪' }, { who:'atsu', e:'happy', t:'……笑っちゃった笑 {c:sorashido}、ごめん！' }, { who:'sorashido', e:'happy', t:'俺もだ。……いい写真になったな' }] },
+  { id:'rel-mend3-mua-atsu-sorashido-1', kind:'mend3', ppl:['mua', 'atsu', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'excited', t:'{c:atsu}、{c:sorashido}、3人で写真撮ろ！' }, { who:'atsu', e:'troubled', t:'……いま？笑' }, { who:'sorashido', e:'troubled', t:'・・・ちょっと、気まずいんですけど' }, { who:'mua', e:'wink', t:'だから撮るの！ はい、2人とも笑って〜♪' }, { who:'atsu', e:'happy', t:'……笑っちゃった笑 {c:sorashido}、ごめん！' }, { who:'sorashido', e:'happy', t:'自分もです。・・・いい写真になりましたね' }] },
   { id:'rel-mend3-mua-kiki-dra-1', kind:'mend3', ppl:['mua', 'kiki', 'dra'], keys:{  }, lines:[{ who:'mua', e:'happy', t:'{c:kiki}、{c:dra}、まだ仲直りしてないの？' }, { who:'dra', e:'troubled', t:'……タイミングがな' }, { who:'kiki', e:'troubled', t:'……私もです' }, { who:'mua', e:'excited', t:'ぢゃあ、あたしが「せーの」って言うから、一緒にごめんって言お！ せーの！' }, { who:'kiki', e:'happy', t:'……ごめんなさい' }, { who:'dra', e:'happy', t:'……すまん。……えへへ、同時だったな' }] },
   { id:'rel-mend3-mua-kyuko-momosuke-1', kind:'mend3', ppl:['mua', 'kyuko', 'momosuke'], keys:{  }, lines:[{ who:'mua', e:'normal', t:'{c:kyuko}、{c:momosuke}、ずっと離れて座ってるぢゃん' }, { who:'kyuko', e:'troubled', t:'……ちょっと、ねぇ' }, { who:'momosuke', e:'troubled', t:'……うん' }, { who:'mua', e:'happy', t:'ほら、真ん中にあたしが座るから、2人とも寄って！' }, { who:'kyuko', e:'happy', t:'……{c:mua}には、かなわないなぁ笑 {c:momosuke}、ごめんねぇ' }] },
-  { id:'rel-mend3-atsu-dra-sorashido-1', kind:'mend3', ppl:['atsu', 'dra', 'sorashido'], keys:{  }, lines:[{ who:'atsu', e:'happy', t:'{c:dra}、{c:sorashido}、3人で対戦しよ笑' }, { who:'dra', e:'troubled', t:'……{c:sorashido}とは、いま、ちょっとな' }, { who:'sorashido', e:'troubled', t:'……ああ' }, { who:'atsu', e:'wink', t:'じゃあ、2人で組んで俺と勝負して！ 組めば話すでしょ笑' }, { who:'sorashido', e:'happy', t:'……{c:dra}、作戦、聞いてもいいか' }, { who:'dra', e:'happy', t:'おう。……さっきは悪かったな' }] },
+  { id:'rel-mend3-atsu-dra-sorashido-1', kind:'mend3', ppl:['atsu', 'dra', 'sorashido'], keys:{  }, lines:[{ who:'atsu', e:'happy', t:'{c:dra}、{c:sorashido}、3人で対戦しよ笑' }, { who:'dra', e:'troubled', t:'……{c:sorashido}とは、いま、ちょっとな' }, { who:'sorashido', e:'troubled', t:'・・・はい' }, { who:'atsu', e:'wink', t:'じゃあ、2人で組んで俺と勝負して！ 組めば話すでしょ笑' }, { who:'sorashido', e:'happy', t:'・・・{c:dra}、作戦、聞いてもいいですか' }, { who:'dra', e:'happy', t:'おう。……さっきは悪かったな' }] },
   { id:'rel-mend3-atsu-mua-kyuko-1', kind:'mend3', ppl:['atsu', 'mua', 'kyuko'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'{c:mua}、{c:kyuko}、なんか空気重くない？笑' }, { who:'mua', e:'troubled', t:'……ちょっとね' }, { who:'kyuko', e:'troubled', t:'……うん' }, { who:'atsu', e:'happy', t:'とりあえず、3人で一曲いこ！ 終わったら、きっと話せる！' }, { who:'mua', e:'happy', t:'……一曲だけね。{c:kyuko}、さっきはごめん' }] },
   { id:'rel-mend3-atsu-kiki-erubin-1', kind:'mend3', ppl:['atsu', 'kiki', 'erubin'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'{c:kiki}、{c:erubin}、2人がけんかとか、めずらしいね！' }, { who:'kiki', e:'troubled', t:'……譲り合っていたら、こじれてしまって' }, { who:'erubin', e:'troubled', t:'……そうなんだ' }, { who:'atsu', e:'happy', t:'じゃあ、俺が決める！ 2人とも同時に謝って笑' }, { who:'kiki', e:'happy', t:'……ごめんなさい' }, { who:'erubin', e:'happy', t:'……ごめんね。{c:atsu}、ありがとう' }] },
   { id:'rel-mend3-dra-momosuke-mua-1', kind:'mend3', ppl:['dra', 'momosuke', 'mua'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:momosuke}、{c:mua}、おでのギャグを聞け' }, { who:'momosuke', e:'troubled', t:'……いまそれ？' }, { who:'mua', e:'troubled', t:'……ほんとに、いま？' }, { who:'dra', e:'wink', t:'「仲直りは、なかなかおりあえない」' }, { who:'mua', e:'surprise', t:'……さむっｗ' }, { who:'momosuke', e:'happy', t:'……でも笑っちゃった。{c:mua}、ごめんね！！' }] },
   { id:'rel-mend3-dra-kyuko-atsu-1', kind:'mend3', ppl:['dra', 'kyuko', 'atsu'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:kyuko}、{c:atsu}、二人とも、おでの部屋で昼寝していけ' }, { who:'kyuko', e:'surprise', t:'昼寝？' }, { who:'atsu', e:'surprise', t:'え、いま！？笑' }, { who:'dra', e:'happy', t:'寝て起きたら、たいていのことは忘れてるからな' }, { who:'kyuko', e:'happy', t:'……{c:dra}らしいなぁ笑 {c:atsu}、ごめんねぇ' }, { who:'atsu', e:'happy', t:'俺も笑' }] },
-  { id:'rel-mend3-kyuko-atsu-sorashido-1', kind:'mend3', ppl:['kyuko', 'atsu', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:atsu}、{c:sorashido}、二人のけんか、理由を整理してみたんだぁ' }, { who:'atsu', e:'surprise', t:'え、整理したの！？' }, { who:'sorashido', e:'surprise', t:'……表まであるのか' }, { who:'kyuko', e:'wink', t:'結論。「どっちも勝ちたかっただけ」笑' }, { who:'atsu', e:'happy', t:'……それな笑 {c:sorashido}、ごめん！' }, { who:'sorashido', e:'happy', t:'俺もだ。ごめんな' }] },
+  { id:'rel-mend3-kyuko-atsu-sorashido-1', kind:'mend3', ppl:['kyuko', 'atsu', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:atsu}、{c:sorashido}、二人のけんか、理由を整理してみたんだぁ' }, { who:'atsu', e:'surprise', t:'え、整理したの！？' }, { who:'sorashido', e:'surprise', t:'・・・表まであるんですか' }, { who:'kyuko', e:'wink', t:'結論。「どっちも勝ちたかっただけ」笑' }, { who:'atsu', e:'happy', t:'……それな笑 {c:sorashido}、ごめん！' }, { who:'sorashido', e:'happy', t:'自分もです。すみません' }] },
   { id:'rel-mend3-kyuko-mua-erubin-1', kind:'mend3', ppl:['kyuko', 'mua', 'erubin'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:mua}、{c:erubin}、ちょっと聞いてほしい曲があるんだぁ' }, { who:'mua', e:'troubled', t:'……いま？' }, { who:'erubin', e:'troubled', t:'……うん' }, { who:'kyuko', e:'happy', t:'静かな曲だから、二人並んで聞いてねぇ' }, { who:'mua', e:'happy', t:'……いい曲。{c:erubin}、さっきはごめんね' }, { who:'erubin', e:'happy', t:'ううん。俺もごめんね' }] },
-  { id:'rel-mend3-sorashido-atsu-kiki-1', kind:'mend3', ppl:['sorashido', 'atsu', 'kiki'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'{c:atsu}、{c:kiki}。計算したら、二人が仲直りする確率は100%だった' }, { who:'atsu', e:'surprise', t:'計算したの！？笑' }, { who:'kiki', e:'surprise', t:'あれま' }, { who:'sorashido', e:'happy', t:'だから、早めに済ませたほうが得だぞ笑' }, { who:'kiki', e:'happy', t:'……では。{c:atsu}、ごめんなさい' }, { who:'atsu', e:'happy', t:'俺も！ {c:sorashido}、ありがと笑' }] },
-  { id:'rel-mend3-sorashido-momosuke-dra-1', kind:'mend3', ppl:['sorashido', 'momosuke', 'dra'], keys:{  }, lines:[{ who:'sorashido', e:'excited', t:'{c:momosuke}、{c:dra}、3人でスコア勝負しないか' }, { who:'momosuke', e:'troubled', t:'……{c:dra}と一緒に？' }, { who:'dra', e:'troubled', t:'……おでもか' }, { who:'sorashido', e:'happy', t:'2人の点を足して、俺と勝負だ。チームなら話すしかないぜ・・・！' }, { who:'momosuke', e:'happy', t:'……{c:dra}、やろ！！ さっきはごめん！！' }, { who:'dra', e:'happy', t:'おう。{c:momosuke}、おでも悪かった' }] },
+  { id:'rel-mend3-sorashido-atsu-kiki-1', kind:'mend3', ppl:['sorashido', 'atsu', 'kiki'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'{c:atsu}、{c:kiki}。計算したら、二人が仲直りする確率は100%でした' }, { who:'atsu', e:'surprise', t:'計算したの！？笑' }, { who:'kiki', e:'surprise', t:'あれま' }, { who:'sorashido', e:'happy', t:'なので、早めに済ませたほうが得ですよ笑' }, { who:'kiki', e:'happy', t:'……では。{c:atsu}、ごめんなさい' }, { who:'atsu', e:'happy', t:'俺も！ {c:sorashido}、ありがと笑' }] },
+  { id:'rel-mend3-sorashido-momosuke-dra-1', kind:'mend3', ppl:['sorashido', 'momosuke', 'dra'], keys:{  }, lines:[{ who:'sorashido', e:'excited', t:'{c:momosuke}、{c:dra}、3人でスコア勝負しませんか' }, { who:'momosuke', e:'troubled', t:'……{c:dra}と一緒に？' }, { who:'dra', e:'troubled', t:'……おでもか' }, { who:'sorashido', e:'happy', t:'2人の点を足して、自分と勝負です。チームなら話すしかないですよね！' }, { who:'momosuke', e:'happy', t:'……{c:dra}、やろ！！ さっきはごめん！！' }, { who:'dra', e:'happy', t:'おう。{c:momosuke}、おでも悪かった' }] },
   { id:'rel-mend3-erubin-kiki-kyuko-1', kind:'mend3', ppl:['erubin', 'kiki', 'kyuko'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'{c:kiki}、{c:kyuko}、図書室がいつもより静かだね' }, { who:'kiki', e:'troubled', t:'……少し、気まずくて' }, { who:'kyuko', e:'troubled', t:'……うん' }, { who:'erubin', e:'happy', t:'じゃあ、二人の好きな本を一冊ずつ紹介してほしいな' }, { who:'kyuko', e:'happy', t:'……{c:kiki}のから聞きたいなぁ' }, { who:'kiki', e:'happy', t:'……では。{c:kyuko}、さっきはすみませんでした' }] },
-  { id:'rel-mend3-kiki-erubin-sorashido-1', kind:'mend3', ppl:['kiki', 'erubin', 'sorashido'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:erubin}、{c:sorashido}。お茶を三つ、いれました' }, { who:'erubin', e:'troubled', t:'……ありがとう' }, { who:'sorashido', e:'troubled', t:'……ありがとう、{c:kiki}' }, { who:'kiki', e:'wink', t:'熱いうちに。冷めたら、二人のせいにしまつよ♪' }, { who:'sorashido', e:'happy', t:'……それは困るな笑 {c:erubin}、さっきは悪かった' }, { who:'erubin', e:'happy', t:'ううん。俺もごめんね、{c:sorashido}' }] },
+  { id:'rel-mend3-kiki-erubin-sorashido-1', kind:'mend3', ppl:['kiki', 'erubin', 'sorashido'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:erubin}、{c:sorashido}。お茶を三つ、いれました' }, { who:'erubin', e:'troubled', t:'……ありがとう' }, { who:'sorashido', e:'troubled', t:'・・・ありがとうございます、{c:kiki}' }, { who:'kiki', e:'wink', t:'熱いうちに。冷めたら、二人のせいにしまつよ♪' }, { who:'sorashido', e:'happy', t:'・・・それは困りますね笑 {c:erubin}、さっきはすみません' }, { who:'erubin', e:'happy', t:'ううん。俺もごめんね、{c:sorashido}' }] },
   { id:'rel-mend3-momosuke-atsu-erubin-1', kind:'mend3', ppl:['momosuke', 'atsu', 'erubin'], keys:{  }, lines:[{ who:'momosuke', e:'excited', t:'{c:atsu}、{c:erubin}、ももの新曲の振り付け、2人で見て！！' }, { who:'atsu', e:'troubled', t:'……2人で？' }, { who:'erubin', e:'troubled', t:'……そうだね' }, { who:'momosuke', e:'wink', t:'ラストのポーズ、2人で手を合わせてやってほしいの♡' }, { who:'atsu', e:'happy', t:'……{c:erubin}、手、出して笑 さっきはごめん！' }, { who:'erubin', e:'happy', t:'うん。ごめんね、{c:atsu}' }] },
   { id:'rel-mend3-dra-kiki-mua-1', kind:'mend3', ppl:['dra', 'kiki', 'mua'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:kiki}、{c:mua}、おで、今日はギャグを封印する' }, { who:'kiki', e:'surprise', t:'……どうしたんですか' }, { who:'mua', e:'surprise', t:'え、{c:dra}が！？' }, { who:'dra', e:'troubled', t:'二人が仲直りするまでな。……おで、つらいんだぞ' }, { who:'mua', e:'happy', t:'……もう、ずるいｗ {c:kiki}、ごめんね' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさいでつ' }] },
   { id:'rel-mend3-atsu-dra-mua-1', kind:'mend3', ppl:['atsu', 'dra', 'mua'], keys:{  }, lines:[{ who:'atsu', e:'happy', t:'{c:dra}、{c:mua}、HARDで一曲いこ笑 膝にやさしいやつ！' }, { who:'mua', e:'troubled', t:'……{c:dra}と一緒に？' }, { who:'dra', e:'troubled', t:'……おでもか' }, { who:'atsu', e:'wink', t:'一緒に叩いたら、すぐ戻るって笑' }, { who:'mua', e:'happy', t:'……しょうがないなぁ。{c:dra}、さっきはごめんね' }, { who:'dra', e:'happy', t:'おう。おでも悪かった。えへへ' }] },
   { id:'rel-mend3-mua-kiki-momosuke-1', kind:'mend3', ppl:['mua', 'kiki', 'momosuke'], keys:{  }, lines:[{ who:'mua', e:'excited', t:'{c:kiki}、{c:momosuke}、3人でおそろいのリボンつけよ♪' }, { who:'kiki', e:'troubled', t:'……いまでつか' }, { who:'momosuke', e:'troubled', t:'……うん、いま？' }, { who:'mua', e:'wink', t:'おそろいにしたら、もうけんかできないぢゃん♪' }, { who:'momosuke', e:'happy', t:'……{c:kiki}、ごめんね！！' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさい♪' }] },
-  { id:'rel-mend3-kyuko-kiki-sorashido-1', kind:'mend3', ppl:['kyuko', 'kiki', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:kiki}、{c:sorashido}、二人とも同じ表を見てるのに、黙ってるねぇ' }, { who:'sorashido', e:'troubled', t:'……話すきっかけがなくてな' }, { who:'kiki', e:'troubled', t:'……私もでつ' }, { who:'kyuko', e:'wink', t:'じゃあ俺が質問ねぇ。この表、どこがいちばんいい？' }, { who:'sorashido', e:'happy', t:'……{c:kiki}の攻めの列だな' }, { who:'kiki', e:'happy', t:'……では、私も。{c:sorashido}、さっきはすみませんでした' }] },
-  { id:'rel-mend3-mua-momosuke-sorashido-1', kind:'mend3', ppl:['mua', 'momosuke', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'happy', t:'{c:momosuke}、{c:sorashido}、今日はあたしが記録係やる♪' }, { who:'momosuke', e:'surprise', t:'{c:mua}が？' }, { who:'sorashido', e:'surprise', t:'……数え方、分かるのか？' }, { who:'mua', e:'wink', t:'分かんないから、二人で教えて！ｗ' }, { who:'momosuke', e:'happy', t:'……しょうがないなぁ。{c:sorashido}、一緒に教えよ！！' }, { who:'sorashido', e:'happy', t:'おう。{c:momosuke}、さっきは悪かったな' }] },
+  { id:'rel-mend3-kyuko-kiki-sorashido-1', kind:'mend3', ppl:['kyuko', 'kiki', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:kiki}、{c:sorashido}、二人とも同じ表を見てるのに、黙ってるねぇ' }, { who:'sorashido', e:'troubled', t:'・・・話すきっかけがなくて' }, { who:'kiki', e:'troubled', t:'……私もでつ' }, { who:'kyuko', e:'wink', t:'じゃあ俺が質問ねぇ。この表、どこがいちばんいい？' }, { who:'sorashido', e:'happy', t:'・・・{c:kiki}の攻めの列ですね' }, { who:'kiki', e:'happy', t:'……では、私も。{c:sorashido}、さっきはすみませんでした' }] },
+  { id:'rel-mend3-mua-momosuke-sorashido-1', kind:'mend3', ppl:['mua', 'momosuke', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'happy', t:'{c:momosuke}、{c:sorashido}、今日はあたしが記録係やる♪' }, { who:'momosuke', e:'surprise', t:'{c:mua}が？' }, { who:'sorashido', e:'surprise', t:'・・・数え方、分かるんですか？' }, { who:'mua', e:'wink', t:'分かんないから、二人で教えて！ｗ' }, { who:'momosuke', e:'happy', t:'……しょうがないなぁ。{c:sorashido}、一緒に教えよ！！' }, { who:'sorashido', e:'happy', t:'はい。{c:momosuke}、さっきはすみませんでした' }] },
   { id:'rel-mend3-dra-erubin-momosuke-1', kind:'mend3', ppl:['dra', 'erubin', 'momosuke'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:erubin}、{c:momosuke}、二人がしゃべらないと、おでの膝が痛むらしい' }, { who:'momosuke', e:'surprise', t:'なにそれw' }, { who:'erubin', e:'troubled', t:'……それは大変だね笑' }, { who:'dra', e:'wink', t:'だから、早く仲直りしてくれ' }, { who:'momosuke', e:'happy', t:'……{c:erubin}、ごめんね！！ {c:dra}の膝のために！！' }, { who:'erubin', e:'happy', t:'うん、俺もごめんね。膝のためにね笑' }] },
   { id:'rel-mend3-erubin-dra-kyuko-1', kind:'mend3', ppl:['erubin', 'dra', 'kyuko'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'{c:dra}、{c:kyuko}、二人とも、同じデッキの前で黙ってるね' }, { who:'kyuko', e:'troubled', t:'……1枚、どっちにするかで、ちょっとねぇ' }, { who:'dra', e:'troubled', t:'……おでも、ゆずれなくてな' }, { who:'erubin', e:'happy', t:'じゃあ、両方入れて試してみようか。決めるのは、そのあとでいいよ' }, { who:'kyuko', e:'happy', t:'……それ、いちばんいい答えだねぇ。{c:dra}、ごめんねぇ' }, { who:'dra', e:'happy', t:'おう。おでも悪かったな' }] },
   { id:'rel-mend3-kiki-erubin-kyuko-1', kind:'mend3', ppl:['kiki', 'erubin', 'kyuko'], keys:{  }, lines:[{ who:'kiki', e:'normal', t:'{c:erubin}、{c:kyuko}。お茶をいれたので、並んで座ってください' }, { who:'erubin', e:'troubled', t:'……うん。いい香りだね' }, { who:'kyuko', e:'troubled', t:'……ほい' }, { who:'kiki', e:'wink', t:'並んで座ったら、もう半分は仲直りでつ♪' }, { who:'kyuko', e:'happy', t:'……{c:erubin}、さっきはごめんねぇ' }, { who:'erubin', e:'happy', t:'ううん。俺こそ、ごめんね' }] },
@@ -66950,32 +67249,32 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-jealous-dra-momosuke-erubin-2', kind:'jealous', ppl:['dra', 'momosuke', 'erubin'], keys:{ lv:'7-10' }, lines:[{ who:'dra', e:'normal', t:'二人の話、おでには入れないくらい楽しそうだな' }, { who:'momosuke', e:'wink', t:'{c:dra}、聞いてたの？w じゃあ入って！！' }, { who:'erubin', e:'happy', t:'ちょうど、{c:dra}の話をしてたんだよ' }, { who:'dra', e:'surprise', t:'……おでの？ ……なら、聞かないわけにいかないな' }] },
   { id:'rel-jealous-mua-kiki-erubin-1', kind:'jealous', ppl:['mua', 'kiki', 'erubin'], keys:{ lv:'4-6' }, lines:[{ who:'mua', e:'troubled', t:'{c:kiki}と{c:erubin}、ベンチで仲良しぢゃん……' }, { who:'kiki', e:'surprise', t:'{c:mua}、どうしました？' }, { who:'erubin', e:'happy', t:'{c:mua}も座らない？ 真ん中、空いてるよ' }, { who:'mua', e:'excited', t:'……真ん中！？ 座る座る♪' }] },
   { id:'rel-jealous-mua-kiki-erubin-2', kind:'jealous', ppl:['mua', 'kiki', 'erubin'], keys:{ lv:'7-10' }, lines:[{ who:'mua', e:'normal', t:'二人って、なんにも言わなくても通じてるよね。ちょっとうらやましいかも' }, { who:'kiki', e:'happy', t:'{c:mua}とも、もう通じてまつよ' }, { who:'erubin', e:'wink', t:'今、三人とも同じこと考えてるんじゃないかな。おやつのこと' }, { who:'mua', e:'excited', t:'……当たりｗ 3人で行こ♪' }] },
-  { id:'rel-jealous-momosuke-mua-sorashido-1', kind:'jealous', ppl:['momosuke', 'mua', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'momosuke', e:'troubled', t:'{c:mua}と{c:sorashido}、また二人で表見てる……' }, { who:'mua', e:'surprise', t:'{c:momosuke}？ どしたの？' }, { who:'sorashido', e:'happy', t:'{c:momosuke}の欄も作ったんだ。見てくれ' }, { who:'momosuke', e:'excited', t:'え、ももの欄！？ 見る見る！！' }] },
-  { id:'rel-jealous-momosuke-mua-sorashido-2', kind:'jealous', ppl:['momosuke', 'mua', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'momosuke', e:'normal', t:'……二人とも、ももがいなくても楽しそうだね' }, { who:'sorashido', e:'surprise', t:'そんなことないぞ。さっきから「{c:momosuke}がいたら」って話してた' }, { who:'mua', e:'happy', t:'ほんとだよ！ ほら、3人でポーズ撮ろ♪' }, { who:'momosuke', e:'happy', t:'……えへへ、じゃあ真ん中ね♡' }] },
+  { id:'rel-jealous-momosuke-mua-sorashido-1', kind:'jealous', ppl:['momosuke', 'mua', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'momosuke', e:'troubled', t:'{c:mua}と{c:sorashido}、また二人で表見てる……' }, { who:'mua', e:'surprise', t:'{c:momosuke}？ どしたの？' }, { who:'sorashido', e:'happy', t:'{c:momosuke}の欄も作ったんです。見てください' }, { who:'momosuke', e:'excited', t:'え、ももの欄！？ 見る見る！！' }] },
+  { id:'rel-jealous-momosuke-mua-sorashido-2', kind:'jealous', ppl:['momosuke', 'mua', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'momosuke', e:'normal', t:'……二人とも、ももがいなくても楽しそうだね' }, { who:'sorashido', e:'surprise', t:'そんなことないですよ。さっきから「{c:momosuke}がいたら」って話してました' }, { who:'mua', e:'happy', t:'ほんとだよ！ ほら、3人でポーズ撮ろ♪' }, { who:'momosuke', e:'happy', t:'……えへへ、じゃあ真ん中ね♡' }] },
   { id:'rel-jealous-kyuko-kiki-atsu-1', kind:'jealous', ppl:['kyuko', 'kiki', 'atsu'], keys:{ lv:'4-6' }, lines:[{ who:'kyuko', e:'normal', t:'{c:kiki}と{c:atsu}、また二人で突っこむ作戦かぁ……' }, { who:'atsu', e:'surprise', t:'{c:kyuko}、どしたの笑' }, { who:'kiki', e:'happy', t:'{c:kyuko}がいないと、作戦が雑になるんでつ。来てください' }, { who:'kyuko', e:'happy', t:'……ほい！ しょうがないなぁ笑' }] },
   { id:'rel-jealous-kyuko-kiki-atsu-2', kind:'jealous', ppl:['kyuko', 'kiki', 'atsu'], keys:{ lv:'7-10' }, lines:[{ who:'kyuko', e:'troubled', t:'二人の息、ぴったりすぎて、俺いらないかもねぇ' }, { who:'atsu', e:'happy', t:'いや、ぜんぜんいる！ {c:kyuko}がいないと勝てない笑' }, { who:'kiki', e:'wink', t:'考えるのは、{c:kyuko}の役目でつ♪' }, { who:'kyuko', e:'happy', t:'……そっかぁ。ありがとん笑' }] },
   { id:'rel-jealous-kiki-mua-kyuko-1', kind:'jealous', ppl:['kiki', 'mua', 'kyuko'], keys:{ lv:'4-6' }, lines:[{ who:'kiki', e:'normal', t:'{c:mua}と{c:kyuko}、楽しそうでつね……' }, { who:'mua', e:'surprise', t:'{c:kiki}、元気ない？' }, { who:'kyuko', e:'happy', t:'{c:kiki}も、作戦会議に入ってよぉ。攻撃の担当がいないんだぁ' }, { who:'kiki', e:'happy', t:'……では、攻撃は全部、私が♪' }] },
   { id:'rel-jealous-kiki-mua-kyuko-2', kind:'jealous', ppl:['kiki', 'mua', 'kyuko'], keys:{ lv:'7-10' }, lines:[{ who:'kiki', e:'troubled', t:'二人の話、早くてついていけないでつ' }, { who:'mua', e:'happy', t:'{c:kiki}のペースでいいの！ ゆっくり話そ♪' }, { who:'kyuko', e:'wink', t:'俺もゆっくりのほうが落ち着くよぉ' }, { who:'kiki', e:'happy', t:'……ありがとうございまつ。では、お茶をいれますね' }] },
-  { id:'rel-jealous-atsu-dra-sorashido-1', kind:'jealous', ppl:['atsu', 'dra', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'atsu', e:'troubled', t:'{c:dra}と{c:sorashido}、俺ぬきで対戦してる…笑' }, { who:'dra', e:'surprise', t:'お、{c:atsu}。見てたのか' }, { who:'sorashido', e:'happy', t:'ちょうどいい。3人で総当たりにしようぜ・・・！' }, { who:'atsu', e:'excited', t:'のった！ 全勝する笑' }] },
-  { id:'rel-jealous-atsu-dra-sorashido-2', kind:'jealous', ppl:['atsu', 'dra', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'atsu', e:'normal', t:'二人の勝負、俺のときより楽しそうじゃない？笑' }, { who:'sorashido', e:'surprise', t:'そんなことないぞ。{c:atsu}との勝負が一番燃える' }, { who:'dra', e:'happy', t:'おでもだ。だから、早く入れ' }, { who:'atsu', e:'happy', t:'……そう言われたら、入るしかないじゃん笑' }] },
-  { id:'rel-jealous-sorashido-kyuko-atsu-1', kind:'jealous', ppl:['sorashido', 'kyuko', 'atsu'], keys:{ lv:'4-6' }, lines:[{ who:'sorashido', e:'troubled', t:'{c:kyuko}と{c:atsu}、二人でランキングの話か……' }, { who:'kyuko', e:'surprise', t:'{c:sorashido}、どしたのぉ' }, { who:'atsu', e:'happy', t:'ちょうど、{c:sorashido}に数字を出してほしかったの！' }, { who:'sorashido', e:'excited', t:'……任せろ！ すぐ表にするぜ・・・！' }] },
-  { id:'rel-jealous-sorashido-kyuko-atsu-2', kind:'jealous', ppl:['sorashido', 'kyuko', 'atsu'], keys:{ lv:'7-10' }, lines:[{ who:'sorashido', e:'normal', t:'二人の作戦、俺の表がなくても勝てそうだな' }, { who:'kyuko', e:'happy', t:'表があるから、安心して考えられるんだよぉ' }, { who:'atsu', e:'wink', t:'{c:sorashido}いないと、俺ら数字見ないし笑' }, { who:'sorashido', e:'happy', t:'……なんくるないさ〜。じゃあ、一緒にやるか笑' }] },
+  { id:'rel-jealous-atsu-dra-sorashido-1', kind:'jealous', ppl:['atsu', 'dra', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'atsu', e:'troubled', t:'{c:dra}と{c:sorashido}、俺ぬきで対戦してる…笑' }, { who:'dra', e:'surprise', t:'お、{c:atsu}。見てたのか' }, { who:'sorashido', e:'happy', t:'ちょうどいいですね。3人で総当たりにしましょう！' }, { who:'atsu', e:'excited', t:'のった！ 全勝する笑' }] },
+  { id:'rel-jealous-atsu-dra-sorashido-2', kind:'jealous', ppl:['atsu', 'dra', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'atsu', e:'normal', t:'二人の勝負、俺のときより楽しそうじゃない？笑' }, { who:'sorashido', e:'surprise', t:'そんなことないですよ。{c:atsu}との勝負が一番燃えます' }, { who:'dra', e:'happy', t:'おでもだ。だから、早く入れ' }, { who:'atsu', e:'happy', t:'……そう言われたら、入るしかないじゃん笑' }] },
+  { id:'rel-jealous-sorashido-kyuko-atsu-1', kind:'jealous', ppl:['sorashido', 'kyuko', 'atsu'], keys:{ lv:'4-6' }, lines:[{ who:'sorashido', e:'troubled', t:'{c:kyuko}と{c:atsu}、二人でランキングの話か・・・' }, { who:'kyuko', e:'surprise', t:'{c:sorashido}、どしたのぉ' }, { who:'atsu', e:'happy', t:'ちょうど、{c:sorashido}に数字を出してほしかったの！' }, { who:'sorashido', e:'excited', t:'・・・任せてください！ すぐ表にします！' }] },
+  { id:'rel-jealous-sorashido-kyuko-atsu-2', kind:'jealous', ppl:['sorashido', 'kyuko', 'atsu'], keys:{ lv:'7-10' }, lines:[{ who:'sorashido', e:'normal', t:'二人の作戦、自分の表がなくても勝てそうだな・・・' }, { who:'kyuko', e:'happy', t:'表があるから、安心して考えられるんだよぉ' }, { who:'atsu', e:'wink', t:'{c:sorashido}いないと、俺ら数字見ないし笑' }, { who:'sorashido', e:'happy', t:'・・・なんくるないさ〜。じゃあ、一緒にやりましょう笑' }] },
   { id:'rel-jealous-erubin-atsu-dra-1', kind:'jealous', ppl:['erubin', 'atsu', 'dra'], keys:{ lv:'4-6' }, lines:[{ who:'erubin', e:'normal', t:'{c:atsu}と{c:dra}、今日も熱い勝負だね……' }, { who:'atsu', e:'surprise', t:'{c:erubin}、ちょっとさみしそう？' }, { who:'dra', e:'happy', t:'{c:erubin}、次はおでと組め。{c:atsu}に二人で挑むぞ' }, { who:'erubin', e:'happy', t:'……うん。それ、楽しそうだね' }] },
   { id:'rel-jealous-erubin-atsu-dra-2', kind:'jealous', ppl:['erubin', 'atsu', 'dra'], keys:{ lv:'7-10' }, lines:[{ who:'erubin', e:'troubled', t:'二人の話、昔の大会のことばかりで、少し入りにくいかな' }, { who:'dra', e:'surprise', t:'……そうか、悪かった' }, { who:'atsu', e:'happy', t:'じゃあ今日は、{c:erubin}との初めての対戦の話しよ！' }, { who:'erubin', e:'happy', t:'……覚えててくれたんだね。うれしいな' }] },
   { id:'rel-jealous-mua-momosuke-atsu-1', kind:'jealous', ppl:['mua', 'momosuke', 'atsu'], keys:{ lv:'4-6' }, lines:[{ who:'mua', e:'troubled', t:'{c:momosuke}と{c:atsu}、また煽り合ってる…あたしもまぜてよ〜' }, { who:'momosuke', e:'excited', t:'{c:mua}も来て！！ 3人で勝負！！' }, { who:'atsu', e:'wink', t:'{c:mua}が入ると、2対1になりそう笑' }, { who:'mua', e:'happy', t:'ぢゃあ、{c:momosuke}側につく♪' }] },
   { id:'rel-jealous-mua-momosuke-atsu-2', kind:'jealous', ppl:['mua', 'momosuke', 'atsu'], keys:{ lv:'7-10' }, lines:[{ who:'mua', e:'normal', t:'二人って、言い合ってても楽しそうでいいなぁ' }, { who:'atsu', e:'happy', t:'{c:mua}ともやってるじゃん笑' }, { who:'momosuke', e:'wink', t:'{c:mua}が一番にぎやかだもんw' }, { who:'mua', e:'angry', t:'ちょっと！ｗ ……でも、うれしいかも' }] },
   { id:'rel-jealous-momosuke-kyuko-erubin-1', kind:'jealous', ppl:['momosuke', 'kyuko', 'erubin'], keys:{ lv:'4-6' }, lines:[{ who:'momosuke', e:'troubled', t:'{c:kyuko}と{c:erubin}、静かに楽しそう……' }, { who:'erubin', e:'surprise', t:'{c:momosuke}、どうしたの？' }, { who:'kyuko', e:'happy', t:'{c:momosuke}、ドリーミィ見に来る？ ちょうど起きたとこだよぉ' }, { who:'momosuke', e:'excited', t:'行く！！' }] },
   { id:'rel-jealous-momosuke-kyuko-erubin-2', kind:'jealous', ppl:['momosuke', 'kyuko', 'erubin'], keys:{ lv:'7-10' }, lines:[{ who:'momosuke', e:'normal', t:'……二人とも、ももより落ち着いてて、大人っぽいなぁ' }, { who:'erubin', e:'happy', t:'{c:momosuke}がいると、明るくなるから助かってるんだよ' }, { who:'kyuko', e:'wink', t:'俺らだけだと、ずっと黙ってるしねぇ笑' }, { who:'momosuke', e:'happy', t:'……じゃあ、いっぱいしゃべってあげる♡' }] },
-  { id:'rel-jealous-dra-atsu-sorashido-1', kind:'jealous', ppl:['dra', 'atsu', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'dra', e:'troubled', t:'{c:atsu}と{c:sorashido}、また二人で勝負か。おでは、膝でもさするか' }, { who:'atsu', e:'happy', t:'{c:dra}、解説して笑 {c:dra}の解説ないと盛り上がらない！' }, { who:'sorashido', e:'happy', t:'そうだ。{c:dra}の解説、表にも書いてるんだ' }, { who:'dra', e:'happy', t:'……そうか？ じゃあ、本気で解説してやるか' }] },
-  { id:'rel-jealous-dra-atsu-sorashido-2', kind:'jealous', ppl:['dra', 'atsu', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'dra', e:'normal', t:'二人とも強くなったな。おでの出番、もうないんじゃないか' }, { who:'sorashido', e:'surprise', t:'そんなことない。{c:dra}の説明で、俺は強くなったんだ' }, { who:'atsu', e:'happy', t:'俺も笑 {c:dra}がいないと、つまんない！' }, { who:'dra', e:'happy', t:'……えへへ。おで、照れるだろ' }] },
-  { id:'rel-jealous-kyuko-mua-sorashido-1', kind:'jealous', ppl:['kyuko', 'mua', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'kyuko', e:'normal', t:'{c:mua}と{c:sorashido}、盛り上がってるねぇ…' }, { who:'mua', e:'surprise', t:'{c:kyuko}！ 来て来て♪' }, { who:'sorashido', e:'happy', t:'{c:kyuko}の組み方、表にしたかったんだ' }, { who:'kyuko', e:'happy', t:'……ほい。じゃあ、ちょっとだけねぇ笑' }] },
-  { id:'rel-jealous-kyuko-mua-sorashido-2', kind:'jealous', ppl:['kyuko', 'mua', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'kyuko', e:'troubled', t:'二人の声、大きくて楽しそう。俺は静かすぎるかなぁ' }, { who:'mua', e:'happy', t:'{c:kyuko}が静かだから、あたしたち落ち着けるの♪' }, { who:'sorashido', e:'normal', t:'{c:kyuko}がいると、話がまとまるんだぞ' }, { who:'kyuko', e:'happy', t:'……そっかぁ。ありがとん笑' }] },
-  { id:'rel-jealous-kiki-erubin-sorashido-1', kind:'jealous', ppl:['kiki', 'erubin', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'kiki', e:'normal', t:'{c:erubin}と{c:sorashido}、カードの話でつか……' }, { who:'erubin', e:'happy', t:'{c:kiki}、ちょうど攻撃のカードで迷ってたんだ' }, { who:'sorashido', e:'happy', t:'{c:kiki}の意見、聞きたいぞ' }, { who:'kiki', e:'happy', t:'……では、攻撃に全部振りましょう♪' }] },
-  { id:'rel-jealous-kiki-erubin-sorashido-2', kind:'jealous', ppl:['kiki', 'erubin', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'kiki', e:'troubled', t:'お二人とも、私よりカードにくわしくて、少しさみしいでつ' }, { who:'sorashido', e:'surprise', t:'{c:kiki}の攻め方、表でも一番強いんだぞ' }, { who:'erubin', e:'happy', t:'俺たち、{c:kiki}の攻め方を勉強してたんだよ' }, { who:'kiki', e:'happy', t:'……そうでしたか。では、教えてあげまつ♪' }] },
+  { id:'rel-jealous-dra-atsu-sorashido-1', kind:'jealous', ppl:['dra', 'atsu', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'dra', e:'troubled', t:'{c:atsu}と{c:sorashido}、また二人で勝負か。おでは、膝でもさするか' }, { who:'atsu', e:'happy', t:'{c:dra}、解説して笑 {c:dra}の解説ないと盛り上がらない！' }, { who:'sorashido', e:'happy', t:'そうなんです。{c:dra}の解説、表にも書いてるんですよ' }, { who:'dra', e:'happy', t:'……そうか？ じゃあ、本気で解説してやるか' }] },
+  { id:'rel-jealous-dra-atsu-sorashido-2', kind:'jealous', ppl:['dra', 'atsu', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'dra', e:'normal', t:'二人とも強くなったな。おでの出番、もうないんじゃないか' }, { who:'sorashido', e:'surprise', t:'そんなことないです。{c:dra}の説明で、自分は強くなったんです' }, { who:'atsu', e:'happy', t:'俺も笑 {c:dra}がいないと、つまんない！' }, { who:'dra', e:'happy', t:'……えへへ。おで、照れるだろ' }] },
+  { id:'rel-jealous-kyuko-mua-sorashido-1', kind:'jealous', ppl:['kyuko', 'mua', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'kyuko', e:'normal', t:'{c:mua}と{c:sorashido}、盛り上がってるねぇ…' }, { who:'mua', e:'surprise', t:'{c:kyuko}！ 来て来て♪' }, { who:'sorashido', e:'happy', t:'{c:kyuko}の組み方、表にしたかったんですよ' }, { who:'kyuko', e:'happy', t:'……ほい。じゃあ、ちょっとだけねぇ笑' }] },
+  { id:'rel-jealous-kyuko-mua-sorashido-2', kind:'jealous', ppl:['kyuko', 'mua', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'kyuko', e:'troubled', t:'二人の声、大きくて楽しそう。俺は静かすぎるかなぁ' }, { who:'mua', e:'happy', t:'{c:kyuko}が静かだから、あたしたち落ち着けるの♪' }, { who:'sorashido', e:'normal', t:'{c:kyuko}がいると、話がまとまるんですよね' }, { who:'kyuko', e:'happy', t:'……そっかぁ。ありがとん笑' }] },
+  { id:'rel-jealous-kiki-erubin-sorashido-1', kind:'jealous', ppl:['kiki', 'erubin', 'sorashido'], keys:{ lv:'4-6' }, lines:[{ who:'kiki', e:'normal', t:'{c:erubin}と{c:sorashido}、カードの話でつか……' }, { who:'erubin', e:'happy', t:'{c:kiki}、ちょうど攻撃のカードで迷ってたんだ' }, { who:'sorashido', e:'happy', t:'{c:kiki}の意見、聞きたいです' }, { who:'kiki', e:'happy', t:'……では、攻撃に全部振りましょう♪' }] },
+  { id:'rel-jealous-kiki-erubin-sorashido-2', kind:'jealous', ppl:['kiki', 'erubin', 'sorashido'], keys:{ lv:'7-10' }, lines:[{ who:'kiki', e:'troubled', t:'お二人とも、私よりカードにくわしくて、少しさみしいでつ' }, { who:'sorashido', e:'surprise', t:'{c:kiki}の攻め方、表でも一番強いんですよ' }, { who:'erubin', e:'happy', t:'俺たち、{c:kiki}の攻め方を勉強してたんだよ' }, { who:'kiki', e:'happy', t:'……そうでしたか。では、教えてあげまつ♪' }] },
   { id:'rel-jealous-atsu-mua-momosuke-1', kind:'jealous', ppl:['atsu', 'mua', 'momosuke'], keys:{ lv:'4-6' }, lines:[{ who:'atsu', e:'troubled', t:'{c:mua}とも、二人でダンスしてる笑 俺、踊れないんだけど！' }, { who:'momosuke', e:'excited', t:'{c:atsu}は手拍子係ね！！' }, { who:'mua', e:'happy', t:'{c:atsu}のリズム、いちばん正確だもん♪' }, { who:'atsu', e:'happy', t:'……それならやる笑' }] },
   { id:'rel-jealous-atsu-mua-momosuke-2', kind:'jealous', ppl:['atsu', 'mua', 'momosuke'], keys:{ lv:'7-10' }, lines:[{ who:'atsu', e:'normal', t:'二人、ほんと仲いいよね笑 ちょっとうらやましい笑' }, { who:'mua', e:'surprise', t:'{c:atsu}が？ めずらしい！' }, { who:'momosuke', e:'wink', t:'{c:atsu}も、もうこっち側だよw' }, { who:'atsu', e:'happy', t:'……そっか笑 ありがと！' }] },
-  { id:'rel-jealous-sorashido-dra-erubin-1', kind:'jealous', ppl:['sorashido', 'dra', 'erubin'], keys:{ lv:'4-6' }, lines:[{ who:'sorashido', e:'troubled', t:'{c:dra}と{c:erubin}、二人でデュラハンの研究か…' }, { who:'dra', e:'happy', t:'{c:sorashido}、ちょうど数字がほしかったんだ' }, { who:'erubin', e:'happy', t:'{c:sorashido}の表があると、話が早いんだよね' }, { who:'sorashido', e:'excited', t:'……まかせろ！ うぉぉぉ！' }] },
-  { id:'rel-jealous-sorashido-dra-erubin-2', kind:'jealous', ppl:['sorashido', 'dra', 'erubin'], keys:{ lv:'7-10' }, lines:[{ who:'sorashido', e:'normal', t:'二人の組み方、もう俺の計算はいらないかもな' }, { who:'erubin', e:'happy', t:'そんなことないよ。{c:sorashido}の表で、最後に確かめてるんだ' }, { who:'dra', e:'happy', t:'おでたちの答え合わせは、{c:sorashido}の係だぞ' }, { who:'sorashido', e:'happy', t:'……でーじうれしいな笑' }] },
+  { id:'rel-jealous-sorashido-dra-erubin-1', kind:'jealous', ppl:['sorashido', 'dra', 'erubin'], keys:{ lv:'4-6' }, lines:[{ who:'sorashido', e:'troubled', t:'{c:dra}と{c:erubin}、二人でデュラハンの研究か・・・' }, { who:'dra', e:'happy', t:'{c:sorashido}、ちょうど数字がほしかったんだ' }, { who:'erubin', e:'happy', t:'{c:sorashido}の表があると、話が早いんだよね' }, { who:'sorashido', e:'excited', t:'・・・任せてください！ うぉぉぉ！' }] },
+  { id:'rel-jealous-sorashido-dra-erubin-2', kind:'jealous', ppl:['sorashido', 'dra', 'erubin'], keys:{ lv:'7-10' }, lines:[{ who:'sorashido', e:'normal', t:'二人の組み方、もう自分の計算はいらないかもな・・・' }, { who:'erubin', e:'happy', t:'そんなことないよ。{c:sorashido}の表で、最後に確かめてるんだ' }, { who:'dra', e:'happy', t:'おでたちの答え合わせは、{c:sorashido}の係だぞ' }, { who:'sorashido', e:'happy', t:'・・・でーじうれしいです笑' }] },
   { id:'rel-jealous-erubin-kiki-kyuko-1', kind:'jealous', ppl:['erubin', 'kiki', 'kyuko'], keys:{ lv:'4-6' }, lines:[{ who:'erubin', e:'normal', t:'{c:kiki}と{c:kyuko}、図書室で楽しそうだね' }, { who:'kiki', e:'happy', t:'{c:erubin}も、どうぞ。静かに座れる席がありまつよ' }, { who:'kyuko', e:'happy', t:'3人なら、もっと静かに楽しめるよぉ笑' }, { who:'erubin', e:'happy', t:'……うん。じゃあ、お邪魔しようかな' }] },
   { id:'rel-jealous-erubin-kiki-kyuko-2', kind:'jealous', ppl:['erubin', 'kiki', 'kyuko'], keys:{ lv:'7-10' }, lines:[{ who:'erubin', e:'troubled', t:'二人の静かな時間、じゃましないほうがいいかな' }, { who:'kyuko', e:'surprise', t:'{c:erubin}がいたほうが、落ち着くんだけどなぁ' }, { who:'kiki', e:'happy', t:'見守り係がいないと、さみしいでつ' }, { who:'erubin', e:'happy', t:'……そっか。じゃあ、ここにいるね' }] },
   { id:'rel-jealous-mua-dra-momosuke-1', kind:'jealous', ppl:['mua', 'dra', 'momosuke'], keys:{ lv:'4-6' }, lines:[{ who:'mua', e:'troubled', t:'{c:dra}と{c:momosuke}で、ギャグの採点してる…あたしも採点したい！' }, { who:'momosuke', e:'excited', t:'{c:mua}も審査員ね！！' }, { who:'dra', e:'happy', t:'審査員が増えたら、おでのギャグも本気だな' }, { who:'mua', e:'happy', t:'ぢゃあ、きびしめでいくよｗ' }] },
@@ -66986,23 +67285,23 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-jealous-kyuko-dra-kiki-2', kind:'jealous', ppl:['kyuko', 'dra', 'kiki'], keys:{ lv:'7-10' }, lines:[{ who:'kyuko', e:'troubled', t:'二人のゆっくりした時間に、俺だけ速すぎるかなぁ' }, { who:'dra', e:'happy', t:'{c:kyuko}の話は、ゆっくり聞きたいんだよ' }, { who:'kiki', e:'happy', t:'私もでつ。座ってくださいな' }, { who:'kyuko', e:'happy', t:'……ありがとん。じゃあ、ちょっと休むねぇ' }] },
   { id:'rel-jealous-dra-mua-atsu-1', kind:'jealous', ppl:['dra', 'mua', 'atsu'], keys:{ lv:'4-6' }, lines:[{ who:'dra', e:'troubled', t:'{c:mua}と{c:atsu}、二人で一曲だけって、もう五曲目だな……' }, { who:'mua', e:'surprise', t:'{c:dra}、見てたの！？' }, { who:'atsu', e:'happy', t:'{c:dra}も一曲いこ笑 HARDでいいから！' }, { who:'dra', e:'happy', t:'……膝にやさしいやつな' }] },
   { id:'rel-jealous-dra-mua-atsu-2', kind:'jealous', ppl:['dra', 'mua', 'atsu'], keys:{ lv:'7-10' }, lines:[{ who:'dra', e:'normal', t:'二人の勢いには、おではついていけないな' }, { who:'mua', e:'happy', t:'{c:dra}の説明があるから、あたしたち勢いでいけるの♪' }, { who:'atsu', e:'wink', t:'{c:dra}がいないと、俺ら止まらないし笑' }, { who:'dra', e:'happy', t:'……おでは、ブレーキ役か。まあ、悪くないな' }] },
-  { id:'rel-rival-atsu-sorashido-1', kind:'rival', ppl:['atsu', 'sorashido'], keys:{ game:'beat' }, lines:[{ who:'sorashido', e:'excited', t:'よし、今日は2点差で俺の勝ちだぜ・・・！' }, { who:'atsu', e:'angry', t:'くっそ〜！ 2点って一番くやしいやつ笑' }, { who:'sorashido', e:'happy', t:'次も2点差で勝つ' }, { who:'atsu', e:'excited', t:'次は俺が2点差で勝つ！ 明日の同じ時間ね！' }] },
-  { id:'rel-rival-atsu-sorashido-2', kind:'rival', ppl:['atsu', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'atsu', e:'wink', t:'今日は俺の勝ち笑' }, { who:'sorashido', e:'troubled', t:'……くっそー！ 計算では勝ってたのに' }, { who:'atsu', e:'happy', t:'計算より、勢い笑' }, { who:'sorashido', e:'excited', t:'次までに、勢いも計算に入れてくる！' }] },
+  { id:'rel-rival-atsu-sorashido-1', kind:'rival', ppl:['atsu', 'sorashido'], keys:{ game:'beat' }, lines:[{ who:'sorashido', e:'excited', t:'よし、今日は2点差で自分の勝ちですねー！' }, { who:'atsu', e:'angry', t:'くっそ〜！ 2点って一番くやしいやつ笑' }, { who:'sorashido', e:'happy', t:'次も2点差で勝ちます' }, { who:'atsu', e:'excited', t:'次は俺が2点差で勝つ！ 明日の同じ時間ね！' }] },
+  { id:'rel-rival-atsu-sorashido-2', kind:'rival', ppl:['atsu', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'atsu', e:'wink', t:'今日は俺の勝ち笑' }, { who:'sorashido', e:'troubled', t:'・・・くやしい！ 計算では勝ってたのに' }, { who:'atsu', e:'happy', t:'計算より、勢い笑' }, { who:'sorashido', e:'excited', t:'次までに、勢いも計算に入れてきます！' }] },
   { id:'rel-rival-atsu-dra-1', kind:'rival', ppl:['atsu', 'dra'], keys:{ game:'card' }, lines:[{ who:'dra', e:'happy', t:'今日はおでの勝ちだな' }, { who:'atsu', e:'troubled', t:'うわ〜、最後の一枚、読まれてた！' }, { who:'dra', e:'wink', t:'何回おまえと勝負してると思ってるんだ' }, { who:'atsu', e:'excited', t:'じゃあ次は、読まれない手で行く！ 今夜な！' }] },
   { id:'rel-rival-atsu-dra-2', kind:'rival', ppl:['atsu', 'dra'], keys:{ game:'beat' }, lines:[{ who:'atsu', e:'happy', t:'今日のスコア、俺の勝ち笑' }, { who:'dra', e:'troubled', t:'……膝が、あと少しもってくれたらな' }, { who:'atsu', e:'wink', t:'膝のせいにしない笑' }, { who:'dra', e:'happy', t:'次は膝を温めてくる。覚悟しとけよ' }] },
   { id:'rel-rival-atsu-momosuke-1', kind:'rival', ppl:['atsu', 'momosuke'], keys:{ game:'beat' }, lines:[{ who:'momosuke', e:'excited', t:'{c}に勝った！！ 初めて勝った！！' }, { who:'atsu', e:'surprise', t:'まじか！ くやしいけど、うれしい笑' }, { who:'momosuke', e:'wink', t:'次も勝っちゃうかもね〜w' }, { who:'atsu', e:'excited', t:'次は負けない！ 明日、もう一回！' }] },
   { id:'rel-rival-atsu-momosuke-2', kind:'rival', ppl:['atsu', 'momosuke'], keys:{ game:'card' }, lines:[{ who:'atsu', e:'happy', t:'今日のカード、俺の勝ち笑' }, { who:'momosuke', e:'angry', t:'くやしい〜！！ キラキラのカードで勝ちたかったのに！！' }, { who:'atsu', e:'wink', t:'キラキラでも勝てるように、教えよっか？' }, { who:'momosuke', e:'excited', t:'教わってから、ぜったいリベンジする！！' }] },
-  { id:'rel-rival-mua-sorashido-1', kind:'rival', ppl:['mua', 'sorashido'], keys:{ game:'beat' }, lines:[{ who:'mua', e:'excited', t:'やった！ 今日はあたしの勝ち♪' }, { who:'sorashido', e:'troubled', t:'……くっそー！ 表に「負け」って書くのは久しぶりだ笑' }, { who:'mua', e:'wink', t:'次も書かせてあげる♪' }, { who:'sorashido', e:'excited', t:'次は勝ちの欄だ！ 明日、もう一回な' }] },
-  { id:'rel-rival-mua-sorashido-2', kind:'rival', ppl:['mua', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'sorashido', e:'happy', t:'今日のカードは俺の勝ちだな' }, { who:'mua', e:'angry', t:'えー！ 直感で選んだのに！' }, { who:'sorashido', e:'normal', t:'{c}の直感、半分は当たってたぞ' }, { who:'mua', e:'excited', t:'ぢゃあ次は、残りの半分も当てる！ 明日ね！' }] },
+  { id:'rel-rival-mua-sorashido-1', kind:'rival', ppl:['mua', 'sorashido'], keys:{ game:'beat' }, lines:[{ who:'mua', e:'excited', t:'やった！ 今日はあたしの勝ち♪' }, { who:'sorashido', e:'troubled', t:'・・・くやしい！ 表に「負け」って書くのは久しぶりです笑' }, { who:'mua', e:'wink', t:'次も書かせてあげる♪' }, { who:'sorashido', e:'excited', t:'次は勝ちの欄ですね！ 明日、もう一回お願いします' }] },
+  { id:'rel-rival-mua-sorashido-2', kind:'rival', ppl:['mua', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'sorashido', e:'happy', t:'今日のカードは自分の勝ちですね' }, { who:'mua', e:'angry', t:'えー！ 直感で選んだのに！' }, { who:'sorashido', e:'normal', t:'{c}の直感、半分は当たってましたよ' }, { who:'mua', e:'excited', t:'ぢゃあ次は、残りの半分も当てる！ 明日ね！' }] },
   { id:'rel-rival-dra-erubin-1', kind:'rival', ppl:['dra', 'erubin'], keys:{ game:'card' }, lines:[{ who:'erubin', e:'happy', t:'{c}、今日は俺の勝ちだね' }, { who:'dra', e:'surprise', t:'……教えた相手に負けるとはな' }, { who:'erubin', e:'wink', t:'先生がよかったからだよ笑' }, { who:'dra', e:'happy', t:'言ったな。次は本気の先生で行くぞ' }] },
   { id:'rel-rival-dra-erubin-2', kind:'rival', ppl:['dra', 'erubin'], keys:{ game:'beat' }, lines:[{ who:'dra', e:'happy', t:'{c}、今日のスコア、おでの勝ちだ' }, { who:'erubin', e:'troubled', t:'最後の連打、取りこぼしちゃったかな' }, { who:'dra', e:'wink', t:'まだまだだな。えへへ' }, { who:'erubin', e:'happy', t:'次は、連打を練習してから挑むね' }] },
   { id:'rel-rival-atsu-kyuko-1', kind:'rival', ppl:['atsu', 'kyuko'], keys:{ game:'card' }, lines:[{ who:'kyuko', e:'wink', t:'作戦どおり、今日は俺の勝ちだねぇ' }, { who:'atsu', e:'angry', t:'くそ〜！ また読まれた笑' }, { who:'kyuko', e:'happy', t:'{c}、突っこむ前に一瞬止まるくせがあるんだよぉ' }, { who:'atsu', e:'excited', t:'それ、次までに直す！ 明日もやろ！' }] },
   { id:'rel-rival-atsu-kyuko-2', kind:'rival', ppl:['atsu', 'kyuko'], keys:{ game:'beat' }, lines:[{ who:'atsu', e:'happy', t:'今日のスコア、俺の勝ち笑' }, { who:'kyuko', e:'troubled', t:'ぐぬぬぬ…最後の速いとこで崩れたぁ' }, { who:'atsu', e:'wink', t:'理屈で直せる？笑' }, { who:'kyuko', e:'happy', t:'ほい、手の順番、考えてくるよぉ。次は勝つ' }] },
   { id:'rel-rival-atsu-kiki-1', kind:'rival', ppl:['atsu', 'kiki'], keys:{ game:'card' }, lines:[{ who:'kiki', e:'happy', t:'{c}、今日は私の勝ちでつ' }, { who:'atsu', e:'surprise', t:'最初の一手から全部攻め！？ 止められなかった笑' }, { who:'kiki', e:'wink', t:'先手必勝でつ♪' }, { who:'atsu', e:'excited', t:'次は先に攻める！ 明日、勝負ね！' }] },
   { id:'rel-rival-atsu-kiki-2', kind:'rival', ppl:['atsu', 'kiki'], keys:{ game:'beat' }, lines:[{ who:'atsu', e:'happy', t:'{c}、今日は俺の勝ち笑' }, { who:'kiki', e:'troubled', t:'……くやしいでつ。押しの強さでは負けてないのに' }, { who:'atsu', e:'wink', t:'押しすぎて、ちょっとずれてたかも笑' }, { who:'kiki', e:'happy', t:'では、次はまっすぐ押しまつ。もう一度お願いします' }] },
-  { id:'rel-rival-momosuke-sorashido-1', kind:'rival', ppl:['momosuke', 'sorashido'], keys:{ game:'beat' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、今日はももの勝ち！！' }, { who:'sorashido', e:'troubled', t:'……ミスの数は、俺のほうが少ないのにな' }, { who:'momosuke', e:'wink', t:'スコアはももが上だもん♡' }, { who:'sorashido', e:'excited', t:'次は、ミスもスコアも勝つぞ。もう一回だ！' }] },
-  { id:'rel-rival-kyuko-sorashido-1', kind:'rival', ppl:['kyuko', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'sorashido', e:'excited', t:'今日のカード、俺の勝ちだな！ 計算どおりだ' }, { who:'kyuko', e:'troubled', t:'ぐぬぬぬ…{c}の計算、こわいなぁ' }, { who:'sorashido', e:'happy', t:'{c}の組み方も、表で読めるようになったんだ笑' }, { who:'kyuko', e:'wink', t:'じゃあ次は、表にのらない組み方を考えてくるねぇ' }] },
-  { id:'rel-rival-erubin-sorashido-1', kind:'rival', ppl:['erubin', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'erubin', e:'happy', t:'{c}、今日は俺の勝ちだね' }, { who:'sorashido', e:'surprise', t:'デュラハンの守り、計算より固かったぞ…' }, { who:'erubin', e:'wink', t:'数字にならない守りかな笑' }, { who:'sorashido', e:'excited', t:'次までに、数字にしてくる！ もう一回だ！' }] },
+  { id:'rel-rival-momosuke-sorashido-1', kind:'rival', ppl:['momosuke', 'sorashido'], keys:{ game:'beat' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、今日はももの勝ち！！' }, { who:'sorashido', e:'troubled', t:'・・・ミスの数は、自分のほうが少ないのにな' }, { who:'momosuke', e:'wink', t:'スコアはももが上だもん♡' }, { who:'sorashido', e:'excited', t:'次は、ミスもスコアも勝ちます。もう一回です！' }] },
+  { id:'rel-rival-kyuko-sorashido-1', kind:'rival', ppl:['kyuko', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'sorashido', e:'excited', t:'今日のカード、自分の勝ちですね！ 計算どおりです' }, { who:'kyuko', e:'troubled', t:'ぐぬぬぬ…{c}の計算、こわいなぁ' }, { who:'sorashido', e:'happy', t:'{c}の組み方も、表で読めるようになったんですよ笑' }, { who:'kyuko', e:'wink', t:'じゃあ次は、表にのらない組み方を考えてくるねぇ' }] },
+  { id:'rel-rival-erubin-sorashido-1', kind:'rival', ppl:['erubin', 'sorashido'], keys:{ game:'card' }, lines:[{ who:'erubin', e:'happy', t:'{c}、今日は俺の勝ちだね' }, { who:'sorashido', e:'surprise', t:'デュラハンの守り、計算より固かったです・・・' }, { who:'erubin', e:'wink', t:'数字にならない守りかな笑' }, { who:'sorashido', e:'excited', t:'次までに、数字にしてきます！ もう一回です！' }] },
   { id:'rel-rival-dra-kiki-1', kind:'rival', ppl:['dra', 'kiki'], keys:{ game:'card' }, lines:[{ who:'kiki', e:'happy', t:'{c}、今日は私の勝ちでつ' }, { who:'dra', e:'troubled', t:'……{c}、攻めしかしないのに、なんで勝てるんだ' }, { who:'kiki', e:'wink', t:'攻めしかしないからでつ♪' }, { who:'dra', e:'happy', t:'言ったな。次は守りで受けきってやるからな' }] },
   { id:'rel-rival-atsu-mua-1', kind:'rival', ppl:['atsu', 'mua'], keys:{ game:'beat' }, lines:[{ who:'mua', e:'excited', t:'{c}に勝った！ 一曲目で！' }, { who:'atsu', e:'surprise', t:'まじで！？ くやしい笑' }, { who:'mua', e:'wink', t:'もう一曲いこ？ｗ' }, { who:'atsu', e:'excited', t:'いく！ 次は俺が勝つ！' }] },
   { id:'rel-rival-momosuke-mua-1', kind:'rival', ppl:['momosuke', 'mua'], keys:{ game:'beat' }, lines:[{ who:'momosuke', e:'excited', t:'{c}、今日のスコア、ももの勝ち！！' }, { who:'mua', e:'troubled', t:'くやし〜！ 最後のポーズ、決まってたのに！' }, { who:'momosuke', e:'wink', t:'ポーズは点数に入らないんだよw' }, { who:'mua', e:'excited', t:'ぢゃあ次は、点数でも勝つ！ 明日ね♪' }] },
@@ -67011,29 +67310,29 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-awkward-mua-dra-1', kind:'awkward', ppl:['mua', 'dra'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'……お、{c}。元気だったか' }, { who:'mua', e:'normal', t:'……うん。{c}も？' }, { who:'dra', e:'troubled', t:'……膝は、あいかわらずだ' }, { who:'mua', e:'happy', t:'それ聞いたら、安心したｗ いつもの{c}だ♪' }] },
   { id:'rel-awkward-mua-atsu-1', kind:'awkward', ppl:['mua', 'atsu'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'……あ、{c}！ 会うの、けっこう空いたね笑' }, { who:'mua', e:'normal', t:'……うん。ちょっと会わなかったね' }, { who:'atsu', e:'troubled', t:'なんか、緊張するね笑' }, { who:'mua', e:'happy', t:'……一曲だけ、やろっか♪' }, { who:'atsu', e:'happy', t:'それ！ 一曲だけね笑' }] },
   { id:'rel-awkward-mua-kyuko-1', kind:'awkward', ppl:['mua', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'……おっと、{c}だぁ' }, { who:'mua', e:'normal', t:'……う、うん。久しぶり' }, { who:'kyuko', e:'troubled', t:'……話が飛ばない{c}、めずらしいなぁ' }, { who:'mua', e:'happy', t:'……あはは！ ぢゃあ、飛ばすよ？ 昨日見た夢の話なんだけどｗ' }] },
-  { id:'rel-awkward-mua-sorashido-1', kind:'awkward', ppl:['mua', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'……{c}、元気だったか' }, { who:'mua', e:'normal', t:'……うん。何日ぶりだっけ' }, { who:'sorashido', e:'happy', t:'5日ぶりだ。ちゃんと数えてた笑' }, { who:'mua', e:'excited', t:'数えてたの！？ ……いつもの{c}ぢゃんｗ' }] },
+  { id:'rel-awkward-mua-sorashido-1', kind:'awkward', ppl:['mua', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'・・・{c}、元気でしたか' }, { who:'mua', e:'normal', t:'……うん。何日ぶりだっけ' }, { who:'sorashido', e:'happy', t:'5日ぶりです。ちゃんと数えてました笑' }, { who:'mua', e:'excited', t:'数えてたの！？ ……いつもの{c}ぢゃんｗ' }] },
   { id:'rel-awkward-mua-erubin-1', kind:'awkward', ppl:['mua', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'……{c}、少し会わなかったね' }, { who:'mua', e:'normal', t:'……うん。{c}、元気だった？' }, { who:'erubin', e:'troubled', t:'少しさみしかったかな' }, { who:'mua', e:'happy', t:'……ぢゃあ、今日はいっぱいしゃべろ♪' }] },
   { id:'rel-awkward-kiki-momosuke-1', kind:'awkward', ppl:['kiki', 'momosuke'], keys:{  }, lines:[{ who:'momosuke', e:'normal', t:'……{c}だ。会うの、久しぶり' }, { who:'kiki', e:'normal', t:'……そうでつね、{c}' }, { who:'momosuke', e:'troubled', t:'なんか、静かすぎて落ち着かない…！！' }, { who:'kiki', e:'happy', t:'では、いつもみたいに、にぎやかにしてくださいな♪' }] },
   { id:'rel-awkward-kiki-dra-1', kind:'awkward', ppl:['kiki', 'dra'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'……お、{c}か。何日ぶりだ' }, { who:'kiki', e:'normal', t:'……{c}も、お変わりなく' }, { who:'dra', e:'troubled', t:'……ギャグ、言っていいのか分からなくなった' }, { who:'kiki', e:'wink', t:'今日は、5回まで聞きまつよ♪' }] },
   { id:'rel-awkward-kiki-atsu-1', kind:'awkward', ppl:['kiki', 'atsu'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'……{c}！ なんか会うの、久しぶりじゃない？笑' }, { who:'kiki', e:'normal', t:'……はい、少しぶりでつね' }, { who:'atsu', e:'troubled', t:'なんか、ちょっと遠慮しちゃうね笑' }, { who:'kiki', e:'happy', t:'では、遠慮なく一戦。全力でいきまつ♪' }] },
   { id:'rel-awkward-kiki-kyuko-1', kind:'awkward', ppl:['kiki', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'……あ、{c}。図書室で会うの、久しぶりだねぇ' }, { who:'kiki', e:'normal', t:'……はい' }, { who:'kyuko', e:'troubled', t:'……沈黙、いつもより長くない？笑' }, { who:'kiki', e:'happy', t:'いつもの静かさに戻っただけでつよ。安心しました' }] },
-  { id:'rel-awkward-kiki-sorashido-1', kind:'awkward', ppl:['kiki', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'……{c}。何日ぶりか、数えてなかったな' }, { who:'kiki', e:'normal', t:'……めずらしいでつね、{c}' }, { who:'sorashido', e:'troubled', t:'……何を話そうか、表にしてくればよかったな' }, { who:'kiki', e:'happy', t:'では、新しい表の話を聞かせてください♪' }] },
+  { id:'rel-awkward-kiki-sorashido-1', kind:'awkward', ppl:['kiki', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'・・・{c}。何日ぶりか、数えてなかったな' }, { who:'kiki', e:'normal', t:'……めずらしいでつね、{c}' }, { who:'sorashido', e:'troubled', t:'・・・何を話そうか、表にしてくればよかったですね' }, { who:'kiki', e:'happy', t:'では、新しい表の話を聞かせてください♪' }] },
   { id:'rel-awkward-kiki-erubin-1', kind:'awkward', ppl:['kiki', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'……{c}。ここで会うの、少しぶりだね' }, { who:'kiki', e:'normal', t:'……はい。ベンチ、空いてまつよ' }, { who:'erubin', e:'happy', t:'……ありがとう。座るとすぐ、いつもどおりだね' }, { who:'kiki', e:'happy', t:'はい。ここに来ると、落ち着きまつ' }] },
   { id:'rel-awkward-momosuke-dra-1', kind:'awkward', ppl:['momosuke', 'dra'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'……お、{c}。しばらくだな' }, { who:'momosuke', e:'normal', t:'……{c}、元気だった？' }, { who:'dra', e:'troubled', t:'……なんか、ちょっと照れるな' }, { who:'momosuke', e:'wink', t:'{c}が照れてるw ……いつもの{c}だ！！' }] },
   { id:'rel-awkward-momosuke-atsu-1', kind:'awkward', ppl:['momosuke', 'atsu'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'……{c}！ 会うの、ちょっと空いたね笑' }, { who:'momosuke', e:'normal', t:'……うん、{c}も元気そう' }, { who:'atsu', e:'troubled', t:'煽り方、忘れたかも笑' }, { who:'momosuke', e:'wink', t:'じゃあ、ももから煽るね！！ まだフルコンできてないの〜？w' }, { who:'atsu', e:'happy', t:'……それそれ笑 いつもの{c}！' }] },
   { id:'rel-awkward-momosuke-kyuko-1', kind:'awkward', ppl:['momosuke', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'……{c}、なんか久しぶりだねぇ' }, { who:'momosuke', e:'normal', t:'……{c}、だ' }, { who:'kyuko', e:'troubled', t:'……なんか、ちょっと間があいちゃったねぇ' }, { who:'momosuke', e:'excited', t:'……ドリーミィ、元気！？' }, { who:'kyuko', e:'happy', t:'ほい、元気だよぉ。……やっぱり、そこから聞くんだねぇ笑' }] },
-  { id:'rel-awkward-momosuke-sorashido-1', kind:'awkward', ppl:['momosuke', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'……{c}、少し会わなかったな' }, { who:'momosuke', e:'normal', t:'……{c}、元気そう' }, { who:'sorashido', e:'troubled', t:'……会ってないあいだのミスの数、聞いてもいいか' }, { who:'momosuke', e:'wink', t:'……いつもの{c}だw 3つ！！' }] },
+  { id:'rel-awkward-momosuke-sorashido-1', kind:'awkward', ppl:['momosuke', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'・・・{c}、少し会わなかったですね' }, { who:'momosuke', e:'normal', t:'……{c}、元気そう' }, { who:'sorashido', e:'troubled', t:'・・・会ってないあいだのミスの数、聞いてもいいですか' }, { who:'momosuke', e:'wink', t:'……いつもの{c}だw 3つ！！' }] },
   { id:'rel-awkward-momosuke-erubin-1', kind:'awkward', ppl:['momosuke', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'……{c}、なんだか久しぶりな気がするね' }, { who:'momosuke', e:'troubled', t:'……{c}、話したいこと、たまりすぎて何から言えばいいか…' }, { who:'erubin', e:'happy', t:'じゃあ、ひとつ目から、ゆっくり聞くよ' }, { who:'momosuke', e:'excited', t:'うん！！ えっとね、まずは…！！' }] },
   { id:'rel-awkward-dra-atsu-1', kind:'awkward', ppl:['dra', 'atsu'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'……{c}、元気だった？笑' }, { who:'dra', e:'normal', t:'……まあな、{c}' }, { who:'atsu', e:'troubled', t:'なんか、勝負しないで話すの、変な感じ笑' }, { who:'dra', e:'happy', t:'じゃあ、一戦やるか。そのほうが、おでたちらしいな' }] },
   { id:'rel-awkward-dra-kyuko-1', kind:'awkward', ppl:['dra', 'kyuko'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'……あ、{c}だぁ' }, { who:'dra', e:'normal', t:'……お、{c}か' }, { who:'kyuko', e:'wink', t:'……寝ぐせ、ひさしぶりに見たぁ笑' }, { who:'dra', e:'troubled', t:'……そこからか。でも、なんか安心したな' }] },
-  { id:'rel-awkward-dra-sorashido-1', kind:'awkward', ppl:['dra', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'……{c}、会うのは5日ぶりだな' }, { who:'dra', e:'normal', t:'……数えてたのか、{c}' }, { who:'sorashido', e:'troubled', t:'会ってないあいだに、表が30ページたまったんだが…' }, { who:'dra', e:'happy', t:'……全部、読んでやる。座れ' }] },
+  { id:'rel-awkward-dra-sorashido-1', kind:'awkward', ppl:['dra', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'・・・{c}、会うのは5日ぶりですね' }, { who:'dra', e:'normal', t:'……数えてたのか、{c}' }, { who:'sorashido', e:'troubled', t:'会ってないあいだに、表が30ページたまったんですけど・・・' }, { who:'dra', e:'happy', t:'……全部、読んでやる。座れ' }] },
   { id:'rel-awkward-dra-erubin-1', kind:'awkward', ppl:['dra', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'……{c}、元気にしてたかな' }, { who:'dra', e:'normal', t:'……おう。{c}もな' }, { who:'erubin', e:'troubled', t:'なんだか、少し緊張しちゃうね' }, { who:'dra', e:'happy', t:'……おでもだ。カード、持ってきたか？ じゃあ、いつもどおりだな' }] },
   { id:'rel-awkward-atsu-kyuko-1', kind:'awkward', ppl:['atsu', 'kyuko'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'……{c}！ なんか久しぶり笑' }, { who:'kyuko', e:'normal', t:'……{c}、だぁ' }, { who:'atsu', e:'troubled', t:'ランキング見てなかったから、話のきっかけないかも笑' }, { who:'kyuko', e:'wink', t:'じゃあ、今から一緒に見よぉ。きっかけ、できたねぇ' }] },
-  { id:'rel-awkward-atsu-sorashido-1', kind:'awkward', ppl:['atsu', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'……{c}、しばらくぶりだな' }, { who:'atsu', e:'normal', t:'……{c}、元気？笑' }, { who:'sorashido', e:'troubled', t:'勝ち負けの数、どっちが上だったか忘れたな' }, { who:'atsu', e:'happy', t:'じゃあ、今日からまた数えよ笑' }] },
+  { id:'rel-awkward-atsu-sorashido-1', kind:'awkward', ppl:['atsu', 'sorashido'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'・・・{c}、しばらくぶりですね' }, { who:'atsu', e:'normal', t:'……{c}、元気？笑' }, { who:'sorashido', e:'troubled', t:'勝ち負けの数、どっちが上だったか忘れちゃいました' }, { who:'atsu', e:'happy', t:'じゃあ、今日からまた数えよ笑' }] },
   { id:'rel-awkward-atsu-erubin-1', kind:'awkward', ppl:['atsu', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'……{c}、少しぶりだね' }, { who:'atsu', e:'normal', t:'……{c}！' }, { who:'erubin', e:'troubled', t:'少し、ぎこちないかな笑' }, { who:'atsu', e:'happy', t:'俺が前、{c}が後ろ！ ……ほら、もういつもどおり笑' }] },
-  { id:'rel-awkward-kyuko-sorashido-1', kind:'awkward', ppl:['kyuko', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'……{c}、元気だったぁ？' }, { who:'sorashido', e:'normal', t:'……ああ。{c}も' }, { who:'kyuko', e:'troubled', t:'……メモ、たまっちゃったぁ' }, { who:'sorashido', e:'happy', t:'……全部、表にしよう。久しぶりの共同作業だな笑' }] },
+  { id:'rel-awkward-kyuko-sorashido-1', kind:'awkward', ppl:['kyuko', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'……{c}、元気だったぁ？' }, { who:'sorashido', e:'normal', t:'・・・はい。{c}も' }, { who:'kyuko', e:'troubled', t:'……メモ、たまっちゃったぁ' }, { who:'sorashido', e:'happy', t:'・・・全部、表にしましょう。久しぶりの共同作業ですね笑' }] },
   { id:'rel-awkward-kyuko-erubin-1', kind:'awkward', ppl:['kyuko', 'erubin'], keys:{  }, lines:[{ who:'erubin', e:'normal', t:'……{c}、会うの久しぶりだね' }, { who:'kyuko', e:'normal', t:'……{c}、だぁ' }, { who:'erubin', e:'troubled', t:'夜ふかし、してなかったかな？' }, { who:'kyuko', e:'happy', t:'……してたぁ笑 ……なんか、そう聞かれると落ち着くなぁ' }] },
-  { id:'rel-awkward-sorashido-erubin-1', kind:'awkward', ppl:['sorashido', 'erubin'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'……{c}、少し会わなかったな' }, { who:'erubin', e:'normal', t:'……そうだね、{c}' }, { who:'sorashido', e:'troubled', t:'……何から話せばいいか、計算できない' }, { who:'erubin', e:'happy', t:'じゃあ、デュラハンの話からにしようか。それなら、すぐだよね' }] },
+  { id:'rel-awkward-sorashido-erubin-1', kind:'awkward', ppl:['sorashido', 'erubin'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'・・・{c}、少し会わなかったですね' }, { who:'erubin', e:'normal', t:'……そうだね、{c}' }, { who:'sorashido', e:'troubled', t:'・・・何から話せばいいか、計算できないです' }, { who:'erubin', e:'happy', t:'じゃあ、デュラハンの話からにしようか。それなら、すぐだよね' }] },
 ]);
 // <life-rel-talks:end>
 
@@ -67791,9 +68090,10 @@ function AssistantLifeGiftWeight({ w, tone, gainText, kind }) {
         <span className={col[0]} style={{ width: `${w.now * 100}%` }}/>
         <span className={`${col[1]} animate-pulse`} style={{ width: `${Math.min(1 - w.now, w.add) * 100}%` }}/>
       </div>
-      <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
-        {w.reach ? <b className="text-amber-200">この1回で Lv{w.next} に！</b> : <span className="inline-block">Lv{w.lv}→{w.next} まで あと{w.left}・<wbr/>この1回で段の{w.pct}{w.maybe ? '(好きなら届く)' : ''}</span>}
-        {gainText ? <>{' '}<span className="inline-block text-slate-400">／ Lv{w.next}: {gainText}</span></> : null}
+      {/* 2026-11-11 社長「贈るやつも見た目とか分かりにくい」: 「段の25〜75%」は棒の明るい所が同じことを言うので字から外し、「あと◯で LvN → 起きること」の1行に */}
+      <p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+        {w.reach ? <b className="text-amber-200">この1回で Lv{w.next} に！</b> : <span className="inline-block">あと{w.left}で Lv{w.next}{w.maybe ? <b className="text-amber-200">(好きなら この1回で届く)</b> : ''}</span>}
+        {gainText ? <>{' '}<span className="inline-block text-slate-400">→ {gainText}</span></> : null}
       </p>
     </div>);
 }
@@ -67909,9 +68209,25 @@ function AssistantLifeBuyConfirm({ item, to, gains = [], check, give, onClose })
 // 友情Lv・仲良し度の短い説明(道具の一覧の上と贈るシート)
 function AssistantLifeGiftExplain({ compact = false }) {
   return (
-    <div data-assistant-life-gift-explain className={`rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[10px]' : 'text-[10.5px]'}`} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+    <div data-assistant-life-gift-explain className={`rounded-xl bg-slate-950/85 px-2 py-1 leading-snug ${compact ? 'text-[11px]' : 'text-[10.5px]'}`} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
       <p><b className="text-orange-300">🤝 友情Lv</b><span className="text-slate-200">=贈った2人の助手どうしの仲。<wbr/>上がると2人の掛け合いや特別なお話が増える</span></p>
       <p><b className="text-pink-200">💗 仲良し度</b><span className="text-slate-200">=あなたとその助手の仲。<wbr/>上がると呼び方や会話が変わり、ごほうびが届く</span></p>
+    </div>);
+}
+// 贈るのきまり(「？」で開く。2026-11-11 社長「贈るやつも見た目とか分かりにくい仕様」: 窓の上と下に散っていた説明を1か所に畳む。きまりそのものは変えていない)
+function AssistantLifeGiftRules({ solo = false }) {
+  const like = assistantLifeGiftMult('like'), bad = assistantLifeGiftMult('bad');
+  const rows = [
+    ['🤝 2人に贈る', '2人の友情Lv と、2人それぞれの仲良し度が上がる'],
+    ...(solo ? [['💗 1人に贈る', 'その助手の仲良し度だけが上がる(量は2人に贈ったときの1人ぶんと同じ)']] : []),
+    ['回数', solo ? '2人に1⁠日3回・1人に1⁠日3回(別々に数える)' : '合わせて1⁠日3回'],
+    ['同じ道具', solo ? '1⁠日1回(2人に贈っても1人に贈っても、その日はおしまい)' : '1⁠日1回'],
+    ['好み', `💗好きな物は ×${like}・💧苦手な物は ×${bad}(それでも必ず上がる)。好みは贈ると分かる`],
+    ['戻る時刻', '回数は朝4時に戻る'],
+  ];
+  return (
+    <div data-assistant-life-gift-rules className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11px] leading-snug text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      {rows.map(([k, v]) => <p key={k} className="flex gap-1.5"><b className="w-[5.2rem] shrink-0 text-amber-200">{k}</b><span className="min-w-0 flex-1">{v}</span></p>)}
     </div>);
 }
 
@@ -67921,6 +68237,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const st = useAssistantLifeGiftState();
   const beatP = useAssistantLifeBeatPoints();
   const [buying, setBuying] = React.useState(false);
+  const [help, setHelp] = React.useState(false);
   const soloOn = assistantLifeSoloOn();
   const soloWho = soloOn && give.solo ? give.solo : null;
   const gifts = (soloWho ? assistantLifeSoloKinds() : assistantLifeGiftKinds()).map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
@@ -67950,7 +68267,6 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
   const playerText = (i) => (soloWho ? (shown[i] === 'unknown' ? `+${soloRange[0]}〜${soloRange[1]}` : `+${assistantLifeSoloAmount(soloWho, info.key)}`)
     : !amt ? '' : shown[i] === 'unknown' ? `+${amt.range.player[0]}〜${amt.range.player[1]}` : `+${amt.player[i]}`);
   const peerText = !amt ? '' : lifeOn ? assistantLifeGiftPeerShown(info, shown) : `+${amt.peer}`;
-  const mark = (s) => (s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '');
   // 数字の重み(好みが分からない人は幅のまま。隠れた好みが数字から分からないようにする)
   const bondLv = typeof ASSISTANT_BOND_LEVELS !== 'undefined' ? ASSISTANT_BOND_LEVELS : [];
   const peerLv = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
@@ -67960,72 +68276,99 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
     return assistantLifeWeightOf(assistantLifeBondPointsOf(pair[i]), lo, hi, bondLv, 'need'); };
   const peerNums = String(peerText).replace(/\+/g, '').split('〜').map(Number).filter(Number.isFinite);
   const peerW = amt && hint && peerNums.length ? assistantLifeWeightOf(hint.pts, peerNums[0], peerNums[peerNums.length - 1], peerLv, 'min') : null;
+  // ---- 見せ方(2026-11-11 社長「贈るやつも見た目とか分かりにくい仕様だから、全体的にそのへんも見直して」。きまり・量・保存は変えていない) ----
+  // 回数は「2人に」「1人に」の2本を並べて出す/説明ときまりは「？」に畳む/道具の札に 持っている数・値段・今日は済み を出す
+  const pairLeft = lifeOn ? assistantLifeGiftLeft(peerSt, st) : null;
+  const soloLeft = lifeOn && soloOn ? assistantLifeSoloLeft(st) : null;
+  const usedToday = lifeOn ? { ...assistantLifeGiftUsedMap(peerSt, st), ...(soloOn ? assistantLifeSoloUsedMap(st) : {}) } : {};
+  const anyUnknown = lifeOn && shown.includes('unknown');
+  const short = buyable && Number.isFinite(beatP) && info.cost > beatP ? info.cost - beatP : 0;
+  const leftPill = (on, n, text, attr) => (
+    <span {...attr} className={`shrink-0 whitespace-nowrap rounded-full px-2 text-[11px] font-black leading-[24px] ${on ? (n > 0 ? 'bg-amber-400/25 text-amber-100 ring-1 ring-amber-300/70' : 'bg-rose-500/20 text-rose-200 ring-1 ring-rose-300/60') : 'bg-slate-800 text-slate-400'}`}>{text} {n > 0 ? `あと${n}回` : '今日はおしまい'}</span>);
   return (
     <div data-assistant-life-give-sheet={info.kind} className="absolute inset-0 flex items-end justify-center bg-black/70" style={{ zIndex: 30 }} onClick={() => setGive(null)}>
       <div className="max-h-full w-full max-w-md overflow-y-auto rounded-t-3xl border-t-2 border-amber-300/60 bg-slate-900 p-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-[14px] font-black text-white" data-assistant-life-give-title>{soloWho ? `🎁 ${nameOf(soloWho)}に贈る` : '🎁 2人に贈る'}</p>
-          {leftToday != null && <span data-assistant-life-give-left={leftToday} className="shrink-0 rounded-full bg-slate-800 px-2 text-[10.5px] font-black leading-[22px] text-amber-200">今日あと {leftToday}回</span>}
           <AssistantLifeFaces ids={people} size={30}/>
+          <p className="min-w-0 flex-1 text-[15px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }} data-assistant-life-give-title>🎁 {soloWho ? `${nameOf(soloWho)}に贈る` : pair.length === 2 ? <>{nameOf(pair[0])}と<wbr/>{nameOf(pair[1])}に贈る</> : '2人に贈る'}</p>
+          {lifeOn && <button type="button" data-assistant-life-give-help aria-expanded={help} onClick={() => setHelp(v => !v)}
+            className={`min-h-[44px] shrink-0 rounded-full border px-3 text-[12px] font-black active:scale-95 ${help ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/25 text-slate-200'}`}>？ きまり</button>}
         </div>
-        {lifeOn && <div className="mt-1.5"><AssistantLifeGiftExplain compact/></div>}
+        {lifeOn && <div className="mt-1.5 flex flex-wrap items-center gap-1.5" data-assistant-life-give-lefts>
+          {leftPill(!soloWho, pairLeft, '🤝 2人に', soloWho ? { 'data-assistant-life-give-left-other': pairLeft } : { 'data-assistant-life-give-left': pairLeft })}
+          {soloLeft != null && leftPill(!!soloWho, soloLeft, '💗 1人に', soloWho ? { 'data-assistant-life-give-left': soloLeft } : { 'data-assistant-life-give-left-other': soloLeft })}
+          <span className="text-[11px] font-bold text-slate-400">同じ道具は1⁠日1回・朝4時に戻る</span>
+        </div>}
+        {!lifeOn && leftToday != null && <span data-assistant-life-give-left={leftToday} className="mt-1 inline-block rounded-full bg-slate-800 px-2 text-[11px] font-black leading-[22px] text-amber-200">今日あと {leftToday}回</span>}
+        {lifeOn && help && <div className="mt-1.5" data-assistant-life-give-help-body><AssistantLifeGiftExplain compact/><AssistantLifeGiftRules solo={soloOn}/></div>}
         {(pairs.length > 1 || (soloOn && give.ids.length >= 1 && (pairs.length || give.ids.length > 1))) && (
-          <div className="mt-1.5 flex flex-wrap gap-1.5" data-assistant-life-give-who>
-            {pairs.map(p => (
-              <button key={p.join('-')} type="button" data-assistant-life-give-pair={p.join('-')} aria-pressed={samePair(p)} onClick={() => toPair(p)}
-                className={`min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`}>🤝 {p.map(nameOf).join('と')}に</button>))}
-            {soloOn && give.ids.map(id => (
-              <button key={id} type="button" data-assistant-life-give-solo={id} aria-pressed={soloWho === id} onClick={() => toSolo(id)}
-                className={`min-h-[34px] rounded-full border px-2.5 text-[11px] font-black active:scale-95 ${soloWho === id ? 'border-pink-300 bg-pink-400/25 text-white' : 'border-white/15 text-slate-300'}`}>💗 {nameOf(id)}だけに</button>))}
+          <div className="mt-2" data-assistant-life-give-who>
+            <p className="text-[11px] font-black text-slate-300">だれに贈る？</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {pairs.map(p => (
+                <button key={p.join('-')} type="button" data-assistant-life-give-pair={p.join('-')} aria-pressed={samePair(p)} onClick={() => toPair(p)}
+                  className={`min-h-[44px] rounded-full border px-3 text-[12px] font-black active:scale-95 ${samePair(p) ? 'border-amber-300 bg-amber-400/25 text-white' : 'border-white/15 text-slate-300'}`}>🤝 {p.map(nameOf).join('と')}に</button>))}
+              {soloOn && give.ids.map(id => (
+                <button key={id} type="button" data-assistant-life-give-solo={id} aria-pressed={soloWho === id} onClick={() => toSolo(id)}
+                  className={`min-h-[44px] rounded-full border px-3 text-[12px] font-black active:scale-95 ${soloWho === id ? 'border-pink-300 bg-pink-400/25 text-white' : 'border-white/15 text-slate-300'}`}>💗 {nameOf(id)}だけに</button>))}
+            </div>
           </div>)}
-        <div className="mt-2 grid grid-cols-5 gap-1" role="tablist">
+        <p className="mt-2 text-[11px] font-black text-slate-300">どれを贈る？</p>
+        <div className="mt-1 grid grid-cols-5 gap-1" role="tablist">
           {gifts.map(x => {
             const on = x.kind === info.kind;
             const n = haveOf(x.kind);
+            const done = !!usedToday[x.kind];
             const ls = people.map(id => (lifeOn ? assistantLifeGiftShownLike(id, x.key, st) : 'mid'));
+            // 好みの印は、分かっている 好き・苦手 だけ(分からない「?」を全部の札に並べない。分からないことは下の行の「好み ？」で言う)
+            const marks = ls.some(l => l === 'like' || l === 'bad') ? ls.map(l => (l === 'like' ? '💗' : l === 'bad' ? '💧' : '・')).join('') : '';
             return (
-              <button key={x.kind} type="button" role="tab" aria-selected={on} data-assistant-life-give-kind={x.kind} onClick={() => setGive({ ...give, kind: x.kind })}
-                className={`relative min-h-[54px] rounded-xl border px-0.5 pb-0.5 pt-1 text-center active:scale-[.97] ${on ? 'border-amber-300 bg-amber-400/20' : 'border-white/10 bg-slate-800/60'} ${n <= 0 ? 'opacity-50' : ''}`}>
-                <span className="block text-[20px] leading-none" aria-hidden="true">{x.emoji}</span>
-                <span className="mt-0.5 block text-[9.5px] font-black leading-[1.15] text-white" style={{ wordBreak: 'keep-all', minHeight: '2.3em' }} data-assistant-life-give-kind-name>{assistantLifeGiftWrapName(x).map((w, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{w}</React.Fragment>)}</span>
-                <span className="block text-[9px] font-black leading-tight text-slate-300">{lifeOn && people.length ? ls.map(mark).map(m => m || '・').join(' ') : ''}</span>
-                <em className="absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[8.5px] font-black not-italic text-slate-200">×{n}</em>
+              <button key={x.kind} type="button" role="tab" aria-selected={on} data-assistant-life-give-kind={x.kind} data-assistant-life-give-kind-state={done ? 'done' : n > 0 ? 'have' : 'none'} onClick={() => setGive({ ...give, kind: x.kind })}
+                className={`relative min-h-[64px] rounded-xl border px-0.5 pb-0.5 pt-1 text-center active:scale-[.97] ${on ? 'border-amber-300 bg-amber-400/20' : 'border-white/10 bg-slate-800/60'}`}>
+                <span className={`block text-[20px] leading-none ${done || n <= 0 ? 'opacity-50' : ''}`} aria-hidden="true">{x.emoji}</span>
+                <span className={`mt-0.5 block text-[10px] font-black leading-[1.15] ${done || n <= 0 ? 'text-slate-400' : 'text-white'}`} style={{ wordBreak: 'keep-all', minHeight: '2.3em' }} data-assistant-life-give-kind-name>{assistantLifeGiftWrapName(x).map((w, i) => <React.Fragment key={i}>{i > 0 && <wbr/>}{w}</React.Fragment>)}</span>
+                <span className={`block whitespace-nowrap text-[10px] font-black leading-tight ${done ? 'text-slate-400' : n > 0 ? 'text-amber-200' : 'text-violet-300'}`}>{done ? '今日は済み' : n > 0 ? `持ち ${n}` : lifeOn && x.cost != null ? `🛒${x.cost}P` : '持ち 0'}</span>
+                {marks && <em className="absolute right-0.5 top-0.5 rounded-full bg-slate-950/90 px-1 text-[10px] font-black not-italic leading-[14px]">{marks}</em>}
               </button>); })}
         </div>
         <div className="mt-2 flex items-center gap-2">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/5 text-[28px] [[data-assistant-life-land='1']_&]:hidden" aria-hidden="true">{info.emoji}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-black text-white" data-assistant-life-give-name>{info.name}</p>
-            <p className="text-[10.5px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{info.what}</p>
+            <p className="text-[14px] font-black text-white"><span data-assistant-life-give-name>{info.name}</span> <span className={`whitespace-nowrap text-[11px] ${have > 0 ? 'text-amber-200' : 'text-violet-300'}`} data-assistant-life-give-have={have}>{have > 0 ? `持っている ${have}個` : '持っていない'}</span>{info.cost != null && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400"> ビートP交換所 {info.cost}P</span>}</p>
+            <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{info.what}</p>
           </div>
         </div>
-        <div className="mt-1.5 space-y-1 text-[11px]">
+        <div className="mt-1.5 space-y-1 text-[12px]">
           {people.map((id, i) => (
             <div key={id} className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-person={`${id}:${shown[i]}`}>
               <div className="flex items-center gap-2">
-                <span className="w-[4.5rem] shrink-0 truncate font-black text-white">{nameOf(id)}</span>
-                {lifeOn && <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-black ${tagCls[shown[i]]}`}>{shown[i] === 'unknown' ? '好み ?' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]}</span>}
-                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 {playerText(i)}</span>
+                <span className="min-w-0 shrink truncate font-black text-white">{nameOf(id)}</span>
+                {lifeOn && <span className={`shrink-0 rounded-full px-1.5 text-[11px] font-black ${tagCls[shown[i]]}`}>{shown[i] === 'unknown' ? '好み ？' : ASSISTANT_LIFE_GIFT_LABEL[shown[i]]}</span>}
+                <span className="ml-auto whitespace-nowrap font-black text-pink-200">💗 あなたとの仲良し度 <b className="text-[14px] text-white">{playerText(i)}</b></span>
               </div>
               {lifeOn && <AssistantLifeGiftWeight w={playerW(i)} tone="player" kind={`player-${id}`} gainText={(() => { const w = playerW(i); return w && !w.max ? assistantLifeBondLvGain(w.next) : ''; })()}/>}
             </div>))}
           {!soloWho && <div className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-peer>
             <div className="flex items-center gap-2">
               <span className="min-w-0 truncate font-black text-white">{pair.length === 2 ? pair.map(nameOf).join('と') : '2人'}</span>
-              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv {peerText}{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
+              <span className="ml-auto whitespace-nowrap font-black text-orange-300">🤝 2人の友情Lv <b className="text-[14px] text-white">{peerText}</b>{!lifeOn && hint && left != null ? `(あと${left}で Lv${hint.lv + 1})` : ''}</span>
             </div>
             {lifeOn && <AssistantLifeGiftWeight w={peerW} tone="peer" kind="peer" gainText={peerW && !peerW.max ? ASSISTANT_LIFE_PEER_LV_GAIN[peerW.next] || '' : ''}/>}
           </div>}
         </div>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">{soloWho ? '1人に贈ると、その助手の好みで仲良し度だけが上がります(友情Lv は上がりません)。1人には1⁠日3回・同じ道具は1⁠日1回(朝4時に戻る)' : lifeOn ? '💗好き=多め・💧苦手=少なめ(それでも必ず上がる)・?=贈ると分かる。同じ道具は1⁠日1回・合わせて1⁠日3回(朝4時に戻る)' : '1⁠日1回(朝4時に戻る)'}・持っている {have}個{info.cost != null ? `・ビートP交換所 ${info.cost}P` : ''}</p>
-        {buyable && <p data-assistant-life-give-buy-hint className="mt-1.5 rounded-xl bg-violet-500/15 px-2 py-1 text-[11px] font-black leading-snug text-violet-100">持っていない道具も、ここで買ってそのまま贈れます(所持ビートP {Number.isFinite(beatP) ? beatP.toLocaleString() : '…'})</p>}
+        {anyUnknown && <p data-assistant-life-give-unknown className="mt-1 text-[11px] font-bold leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">「好み ？」の助手は、贈ると好みが分かります(💗好きなら多め・💧苦手なら少なめ)</p>}
+        {soloWho && <p className="mt-1 text-[11px] font-bold leading-snug text-slate-400 [[data-assistant-life-land='1']_&]:hidden">1人に贈ると、上がるのは仲良し度だけです(友情Lv は2人に贈ると上がります)</p>}
+        {!lifeOn && <p className="mt-1 text-[10px] leading-snug text-slate-400">1⁠日1回(朝4時に戻る)・持っている {have}個</p>}
+        {buyable && (short > 0
+          ? <p data-assistant-life-give-buy-hint data-assistant-life-give-buy-short={short} className="mt-1.5 rounded-xl bg-rose-500/15 px-2 py-1 text-[11.5px] font-black leading-snug text-rose-200">ビートPが足りません(所持 {beatP.toLocaleString()}P・あと{short.toLocaleString()}P)。ビートPはモンヒロビートやバトルカードで貯まります</p>
+          : <p data-assistant-life-give-buy-hint className="mt-1.5 rounded-xl bg-violet-500/15 px-2 py-1 text-[11.5px] font-black leading-snug text-violet-100">持っていない道具も、ここで買ってそのまま贈れます(所持ビートP {Number.isFinite(beatP) ? beatP.toLocaleString() : '…'})</p>)}
         {reason && !buyable && <p data-assistant-life-give-reason className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{reason}</p>}
         {lifeOn && have <= 0 && !buyable && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
         {/* やめる・贈るは、シートを下へ送らなくても押せるように下に貼り付ける(横で説明と重みが増えても隠れない) */}
         <div className="sticky -mx-3 mt-2 flex gap-2 bg-slate-900 px-3 pb-3 pt-1.5" data-assistant-life-give-actions style={{ bottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', marginBottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
           <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
-          {buyable ? <button type="button" data-assistant-life-give-buy={info.kind} onClick={() => setBuying(true)}
-            className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[14px] font-black text-white active:scale-[.98]">{assistantLifeBuyLabel(info)}</button>
+          {buyable ? <button type="button" data-assistant-life-give-buy={info.kind} disabled={short > 0} onClick={() => setBuying(true)}
+            className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[14px] font-black text-white active:scale-[.98] disabled:opacity-40">{assistantLifeBuyLabel(info)}</button>
           : <button type="button" data-assistant-life-give-go disabled={!!reason || (!soloWho && pair.length !== 2)} onClick={() => onGive()}
             className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[14px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40">{info.emoji} 贈る</button>}
         </div>
@@ -68354,7 +68697,6 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   const furnGainText = (k) => { const s = shown(k); if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
     const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${Math.round(base * assistantLifeGiftMult('bad'))}〜${Math.round(base * assistantLifeGiftMult('like'))}`; };
   const shown = (k) => assistantLifeGiftShownLike(id, k, st);
-  const mark = (s) => (s === 'like' ? '💗' : s === 'bad' ? '💧' : s === 'unknown' ? '?' : '');
   const give = async (k, bought = false) => {
     if (busy) return; setBusy(true);
     const talk = typeof onGiveFurn === 'function' ? await onGiveFurn(id, k) : null;
@@ -68366,32 +68708,37 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
     setMsg(text);
     if (typeof onTalk === 'function') onTalk(talk, text);
   };
-  const row = (f, act) => (
+  // 行: 名前/置く場所・(まだ贈っていない家具は)上がる量と好み。「?」だけの印はやめて字で言う(2026-11-11 社長「贈るやつも見た目とか分かりにくい」)
+  const tagCls = { like: 'bg-pink-600 text-white', mid: 'bg-slate-600 text-white', bad: 'bg-cyan-700 text-white', unknown: 'bg-slate-700 text-slate-200' };
+  const row = (f, act, gain = false) => { const s = shown(f.key); return (
     <div key={f.key} className="flex items-center gap-2 rounded-xl bg-slate-800/80 px-2 py-1" data-assistant-life-furn-row={f.key}>
-      <span className="text-[22px] leading-none" aria-hidden="true">{f.emoji}</span>
+      <span className="text-[24px] leading-none" aria-hidden="true">{f.emoji}</span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-black text-white">{f.name} <span className="text-[10px] text-slate-300">{ASSISTANT_LIFE_FURN_SLOTS[f.slot].label}</span> <span className="text-[10.5px]">{mark(shown(f.key))}</span></p>
+        <p className="text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{f.name}</p>
+        <p className="text-[11px] font-bold leading-snug text-slate-300"><span className="whitespace-nowrap">{ASSISTANT_LIFE_FURN_SLOTS[f.slot].label}に置く</span>{gain && <>・<span className="whitespace-nowrap text-pink-200">💗 {furnGainText(f.key)}</span></>} <span className={`whitespace-nowrap rounded-full px-1.5 text-[10.5px] font-black ${tagCls[s]}`}>{s === 'unknown' ? '好み ？' : ASSISTANT_LIFE_GIFT_LABEL[s]}</span></p>
       </div>
       {act}
-    </div>);
-  const btn = (label, onClick, cls, data) => <button type="button" {...data} disabled={busy} onClick={onClick} className={`min-h-[36px] shrink-0 rounded-lg border px-2 text-[11px] font-black active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
+    </div>); };
+  const btn = (label, onClick, cls, data) => <button type="button" {...data} disabled={busy} onClick={onClick} className={`min-h-[44px] min-w-[56px] shrink-0 rounded-xl border px-2 text-[11.5px] font-black active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
   return (
     <div className="absolute inset-0" style={{ zIndex: 32 }} data-assistant-life-furn-sheet={id}>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={onClose}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #fbbf24', paddingTop: 10 } : { borderTopColor: '#fbbf24' }}>
         <p className="mhl-en">FURNITURE · {String(id).toUpperCase()}</p>
         <p className="text-[18px] font-black text-white">🪑 {who.name}の部屋の家具</p>
-        <p className="text-[10.5px] font-bold leading-snug text-slate-300">置けるのは天井・壁・床に1つずつ。ほかは押し入れにしまえます。好きな家具なら仲良し度が多めに上がります(1つの家具は1回)</p>
+        <p className="text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>家具を贈ると、<wbr/>その家具の初めての1回だけ <b className="text-pink-200">💗 仲良し度</b>が上がります<wbr/>(好きな家具は多め)。<wbr/>置けるのは 天井・壁・床に1つずつ。<wbr/>ほかは押し入れにしまえます</p>
+        {/* 道具(1日の回数あり)との違いを一目で(2026-11-11 社長: 家具は「同じ家具を同じ助手には一度だけ・1日の上限なし」のまま) */}
+        <p data-assistant-life-furn-rule className="mt-1 flex flex-wrap gap-1 text-[11px] font-black"><span className="whitespace-nowrap rounded-full bg-amber-400/20 px-2 leading-[22px] text-amber-100">🪑 家具は1⁠日に何個でも贈れる</span><span className="whitespace-nowrap rounded-full bg-slate-800 px-2 leading-[22px] text-slate-200">同じ家具は1人に1つ</span></p>
         {msg && <p data-assistant-life-furn-msg className="mt-1.5 rounded-xl bg-amber-300/15 px-2 py-1 text-[11px] font-black leading-snug text-amber-100">{msg}</p>}
         <p className="mt-2 text-[11px] font-black text-amber-200">🎁 贈れる家具</p>
         <div className="mt-1 space-y-1">
-          {canGive.length ? canGive.map(f => row(f, <>{<span className="shrink-0 text-[10px] font-bold text-slate-300">×{furnItems[f.key]}</span>}{btn('贈る', () => give(f.key), 'border-amber-300/70 bg-amber-400/20 text-amber-100', { 'data-assistant-life-furn-give': f.key })}</>))
+          {canGive.length ? canGive.map(f => row(f, <>{<span className="shrink-0 whitespace-nowrap text-[11px] font-bold text-amber-200">持ち {furnItems[f.key]}</span>}{btn('贈る', () => give(f.key), 'border-amber-300/70 bg-amber-400/20 text-amber-100', { 'data-assistant-life-furn-give': f.key })}</>, true))
             : <p className="rounded-xl bg-slate-800/80 px-2 py-1 text-[11px] font-bold text-slate-300">{toBuy.length ? '持っている家具はありません。下の「まだ持っていない家具」から、買ってそのまま贈れます' : '贈れる家具がありません。モンヒロビートの「ビートP交換所」の「家具」で手に入ります'}</p>}
         </div>
         {toBuy.length > 0 && (<>
           <p className="mt-2 text-[11px] font-black text-violet-200">🛒 まだ持っていない家具 <span className="text-slate-300">(買ってそのまま贈れます)</span></p>
           <div className="mt-1 space-y-1" data-assistant-life-furn-tobuy>
-            {toBuy.map(f => row(f, btn(<>🛒 {f.cost}P<br/>で買って贈る</>, () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 leading-tight text-white', { 'data-assistant-life-furn-buy': f.key, 'aria-label': `${f.name}を${f.cost}Pで買って贈る` })))}
+            {toBuy.map(f => row(f, btn(<>🛒 {f.cost}P<br/>で買って贈る</>, () => setBuyKey(f.key), 'border-violet-300/80 bg-violet-600 leading-tight text-white', { 'data-assistant-life-furn-buy': f.key, 'aria-label': `${f.name}を${f.cost}Pで買って贈る` }), true))}
           </div>
         </>)}
         <div className="mt-1"><AssistantLifeShopButton tab="furniture" who={id} label="🛒 交換所の家具の棚へ"/></div>
@@ -69223,7 +69570,7 @@ const ASSISTANT_MASMON_ASK_LINES = Object.freeze({
   dra: { yes: 'おう、そうしてみるぞ。えへへ', some: 'ちょっとだけ変えてみたぞ', no: 'それはちょっとなあ…ごめんな', talk: 'ん？どうしたいのか、もうちょい教えてくれ', ng: 'その言葉は名前にできないぞ…別のにしてくれ', think: 'ちょっと考えとくぞ' },
   atsu: { yes: 'いいね、そうしてみるわ笑', some: 'ちょっとだけ取り入れてみたわ笑', no: 'それはちょっと違うかな笑 ごめんね(｡-人-｡)', talk: 'ん？どうしたいか教えて笑', ng: 'その名前は付けられないんだわ笑 別のにしよ', think: 'ちょっと考えとくわ笑' },
   kyuko: { yes: 'ほい、そうしてみるよぉ笑', some: 'ちょっとだけ変えてみたよぉ笑', no: 'それはちょっとなぁ…ごめんねぇ笑', talk: 'ん〜？どうしたいか教えてよぉ笑', ng: 'その名前は付けられないんだよぉ笑 別のにしよぉ', think: 'ちょっと考えとくよぉ笑' },
-  sorashido: { yes: '了解・・・！そうしてみるぜ笑', some: '少しだけ取り入れてみたぜ・・・！', no: 'それは計算に合わないぜ・・・ごめんな', talk: 'どうしたいか、もう少し教えてくれ・・・！', ng: 'その言葉は名前に使えないぜ・・・別の名前にしてくれ笑', think: '少し考えておくぜ・・・！' },
+  sorashido: { yes: 'なるほど了解です！ そうしてみます笑', some: '少しだけ取り入れてみました・・・！', no: 'それは計算に合わないんです・・・すみません', talk: 'どうしたいか、もう少し教えてください・・・！', ng: 'その言葉は名前に使えないんです・・・別の名前でお願いします笑', think: '少し考えておきますね・・・！' },
   erubin: { yes: 'うん、そうしてみるね笑', some: 'ちょっとだけ取り入れてみたよ笑', no: 'それはちょっと…ごめんね🤔', talk: 'どうしたいか、もうちょっと教えてね🤔', ng: 'その名前は付けられないみたい…別のにしよ🤔', think: 'ちょっと考えとくね🤔' },
 });
 // ng(名前として通さない言葉)・think(受けたが今回は変えない)は、AI の返事を使わず用意した台詞だけ
@@ -69569,7 +69916,7 @@ const ASSISTANT_MASMON_WELCOME_LINES = Object.freeze({
   dra: 'おう、{name}。新しいマスモンが来たぞ。{mon}の「{nick}」だ。のんびり育てていくからな',
   atsu: '{name}！ 新しい仲間が来た笑 {mon}の「{nick}」、よろしく頼む！',
   kyuko: 'ほい、{name}。新しいマスモン迎えたよ〜。{mon}の「{nick}」、仲良くしてねぇ',
-  sorashido: 'うぉぉぉ！{name}、新しい仲間だぜ・・・！ {mon}の「{nick}」、表にも足しとくな笑',
+  sorashido: '{name}、新しい仲間が来ましたよー！ {mon}の「{nick}」、表にも足しておきますね笑',
   erubin: '{name}、新しい仲間を迎えたよ。{mon}の「{nick}」。仲良くしてくれるとうれしいな',
 });
 // 名前を付け直したあとの1回だけ(同じくコトバ・ツムギ。社長の「この文で」待ち)
@@ -69580,7 +69927,7 @@ const ASSISTANT_MASMON_RENAMED_LINES = Object.freeze({
   dra: '{name}、マスモンたちに新しい名前を付けたぞ。見てやってくれ',
   atsu: '{name}、マスモンたちに新しい名前付けた笑 見てって！',
   kyuko: 'ほい、{name}。マスモンたちに新しい名前付けたよ〜。見てみてねぇ',
-  sorashido: '{name}、マスモンたちに新しい名前を付けたぜ・・・！ 見てくれ笑',
+  sorashido: '{name}、マスモンたちに新しい名前を付けました・・・！ 見てください笑',
   erubin: '{name}、マスモンたちに新しい名前を付けたんだ。見てくれるかな',
 });
 const assistantMasmonRenamedLine = (aid) => { const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(aid) : 'あなた'; return String(ASSISTANT_MASMON_RENAMED_LINES[aid] || '{name}、マスモンたちに新しい名前を付けたよ').split('{name}').join(call); };
@@ -69761,8 +70108,9 @@ function AssistantMasmonDeckAsk({ who, onAsk }) {
     </div>);
 }
 // 提案のシート(自由に書いて送る → 助手の返事・変わった所)。印 assistantMasmonSuggest が偽のときは開くボタン自体を出さない
-function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose }) {
-  const [text, setText] = React.useState('');
+// initialText: 文をあらかじめ入れて開く(対戦の振り返りの「💡 ◯◯を鍛えてと提案する」から・ミセカタ 11-11)。送るのはプレイヤーが押したとき
+function AssistantMasmonAskSheet({ who, from, t = null, land = false, onClose, initialText = '' }) {
+  const [text, setText] = React.useState(typeof initialText === 'string' ? initialText.slice(0, 100) : '');
   const [busy, setBusy] = React.useState(false);
   const [out, setOut] = React.useState(null);
   useAssistantMasmonSave();
@@ -69918,12 +70266,15 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   const p = assistantMasmonPlanOf(id);
   if (!who || !p) return null;
   const team = assistantMasmonTeam(p), bench = assistantMasmonBench(p, save), all = [...team, ...bench], waiting = assistantMasmonWaiting(p, save);
+  const waitSorted = waiting.slice().sort((a, b) => (a.welcome || 0) - (b.welcome || 0)), waitNext = waitSorted[0] || null, waitRest = waitSorted.slice(1); // 🔒の枠は次の1体だけ大きく、残りは1行(通し点検の改善案9)
   const fav = tab === 'deck' ? assistantMasmonFavCard(id) : null;
   let body = null;
   if (tab === 'mons') {
     body = (<>
       {renamed && <p className="mhm-card mb-2 text-[11.5px] font-bold leading-snug text-slate-100" data-assistant-masmon-renamed>{who.name}「{assistantMasmonRenamedLine(id)}」</p>}
-      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waiting.map(t => <AssistantMasmonWaitCard key={t.monster} t={t} land={land}/>)}</div>
+      {waitNext && <p className="mhm-card mb-2 text-[12px] font-black text-pink-100" data-assistant-masmon-next-lv>💗 {Number.isFinite(bondLv) && waitNext.welcome > bondLv ? `あと仲良し度 ${waitNext.welcome - bondLv} Lv で、次のマスモンを迎えます` : `仲良し度 Lv${waitNext.welcome} で、次のマスモンを迎えます`}</p>}
+      <div className={land ? 'grid grid-cols-3 gap-2' : 'flex flex-col gap-2'}>{all.map(t => <AssistantMasmonRow key={t.monster} t={t} land={land} onOpen={setDetail} aid={id} amg={amgSt}/>)}{waitNext && <AssistantMasmonWaitCard key={waitNext.monster} t={waitNext} land={land}/>}</div>
+      {waitRest.length > 0 && <p className="mt-2 rounded-xl border border-dashed border-slate-600 px-3 py-2 text-[11px] font-bold text-slate-400" data-assistant-masmon-wait-rest={waitRest.length}>🔒 ほかに {waitRest.length} 体(仲良し度 {waitRest.map(t => `Lv${t.welcome}`).join('・')} で迎えます)</p>}
       {p.v2 && <AssistantMasmonStyleRow who={who}/>}
       {p.v2 && waiting.length > 0 && <AssistantMasmonWishRow who={who} onAsk={(from) => setAsk({ from })}/>}
       <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-400">🐾 {who.name}が自分で育てて、自分の好きな色に染めているマスモンです。押すと詳しく見られます。</p>
@@ -70404,7 +70755,7 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-panel{position:absolute;left:0;right:0;bottom:0;top:5%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1f1640,#0b1020 70%);border-top:2px solid #f9a8d4;border-radius:22px 22px 0 0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));color:#fff}
 .mhm-panel.is-land{top:0;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));border:2px solid #f9a8d4;border-bottom:0;padding:8px 14px 8px}
 .mhm-body{flex:1;min-height:0;overflow-y:auto;padding:2px 2px 6px}
-.mhm-tab{border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.mhm-tab{min-height:44px;border-radius:999px;background:#1e293b;padding:6px 2px;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
 .mhm-tab.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
 .mhm-card{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.85);border-radius:14px;padding:8px 10px}
 .mhm-pic{flex-shrink:0;border-radius:10px;background:radial-gradient(circle at 50% 40%,#94a3b8,#475569);overflow:hidden;margin:0 auto}
@@ -70521,7 +70872,7 @@ const AMG_CARE = Object.freeze({
 });
 const AMG_LV_MAX = 99; // Lv は育成の経験(訓練で上がる・社長 11-11)
 const amgLvNeed = (lv) => 10 + lv; // 次の Lv までの経験
-const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0 });
+const AMG_XP = Object.freeze({ light: 1, heavy: 2, real: 3, joint: 2, focus: 2, weak: 2, rest: 0, play: 0, shugyo: 2 }); // shugyo = 修行(第②段階・シュギョウ)
 const AMG_CATCH_UP = 6; // 閉じていた分をまとめて決める回数の上限(2日分)
 const AMG_LOG = 21;
 const AMG_PERIOD_NAME = Object.freeze(['朝', '昼', '夜']);
@@ -70544,7 +70895,7 @@ const normalizeAssistantMasmonGrow = (raw) => {
       const ind = {}; for (const k of AMG_KEYS) ind[k] = amgNum(e.ind && e.ind[k], 0, -1, 1);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && typeof x.a === 'string').slice(-AMG_LOG)
         .map(x => ({ s: x.s, a: x.a.slice(0, 12), k: AMG_KEYS.includes(x.k) ? x.k : '', g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => AMG_KEYS.includes(k) && Number.isFinite(n)).map(([k, n]) => [k, amgClamp(Math.round(n), -99, 99)])), ...(x.f ? { f: 1 } : {}), ...(x.p ? { p: 1 } : {}), ...(x.r ? { r: 1 } : {}) }));
-      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999) };
+      one[key] = { st, fat: amgNum(e.fat, 0, 0, 100), str: amgNum(e.str, 0, 0, 100), ind, log, src: 'init_v1', dg: { d: amgNum(e.dg && e.dg.d, 0, 0, 1e7), n: amgNum(e.dg && e.dg.n, 0, 0, 999) }, lv: amgNum(e.lv, 1, 1, AMG_LV_MAX), xp: amgNum(e.xp, 0, 0, 9999), cg: Object.fromEntries(['view', 'pick', 'ask', 'ranch'].map(k => [k, Number.isFinite(Number(e.cg && e.cg[k])) ? Math.max(0, Math.min(1e6, Number(e.cg[k]))) : 0])) };
     }
     out.mons[aid] = one;
   }
@@ -70587,11 +70938,13 @@ const amgInitial = (row, rnd) => {
 };
 const amgRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 // 1回分の行動を選ぶ(仕様書 §8: 能力・適性・疲労・ストレス・性格・助言から)
-const amgChoose = (aid, e, row, rnd, focusK, restReq) => {
+const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   if (restReq) return { a: 'rest' };
   if (e.fat >= T.rest) return { a: 'rest' };
   if (e.str >= 50) return { a: 'play' };
+  // 修行の回(第②段階の受け口・シュギョウ)。修行の印が偽なら null を返し、rnd も引かない
+  if (typeof amgtChoose === 'function') { const x = amgtChoose(aid, e, row, rnd, slot); if (x) return x; }
   const apt = amgAptOf(row.monster);
   const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row.grow) : String(row.grow || '').split('(')[0]] || [];
   // 伸ばしたい能力: 相談で頼まれた能力 → なければ、方針・性格の好み・適性に比べて低い能力に点を付けて選ぶ
@@ -70621,22 +70974,32 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
+  // 助手のブリーダー能力(第②段階の受け口・シュギョウ)。印が偽なら 1
+  const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
+  const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
+  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const up = (v) => (v > 0 ? Math.round(v * sm) : v); // ストレスが増える分だけに掛ける
+  // 関わって伸びた分(ミセカタ 11-11): 関わりの倍率で上乗せになった伸びを、効いた関わりに振り分けて数える
+  const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
+  const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult;
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n; g[k] = (g[k] || 0) + n; e.dg = { d: day, n: (e.dg.d === day ? e.dg.n : 0) + n };
+    if (lnAll > 0) { const extra = n - n / mult; e.cg = { ...(e.cg || {}) }; for (const [key, m] of parts) e.cg[key] = Math.round(((e.cg[key] || 0) + extra * Math.log(m) / lnAll) * 100) / 100; }
   };
-  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1);
+  const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
   if (act.a === 'rest') { e.fat = amgClamp(e.fat - 30, 0, 100); e.str = amgClamp(e.str - 5, 0, 100); }
   else if (act.a === 'play') { e.fat = amgClamp(e.fat - 10, 0, 100); e.str = amgClamp(e.str - 15, 0, 100); }
-  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + (fail ? 6 : 1), 0, 100); }
-  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + (fail ? 9 : 4), 0, 100); }
+  else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + up(fail ? 6 : 1), 0, 100); }
+  else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + up(fail ? 9 : 4), 0, 100); }
+  else if (act.a === 'shugyo' && typeof amgtDo === 'function') { amgtDo(aid, e, row, rnd, slot, act, add, failChance); } // 修行(第②段階・シュギョウ)。伸びは add を通る
   else { // 特殊訓練
     fail = rnd() < failChance(0.03);
     const others = AMG_KEYS.filter(k => k !== act.k); const sub = others[Math.floor(rnd() * others.length)];
     add(act.k, 4, 9); add(sub, 2, 5);
-    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + (act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
+    e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
   // 経験と Lv(訓練をすると上がる)
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
@@ -70665,7 +71028,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
-      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot]);
+      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
       if (!pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
@@ -70676,7 +71039,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
   if (!changed && !reset && (state.done[aid] === nowSlot || (Number.isInteger(last) && last > nowSlot))) return state; // 何も変わらないときは同じものを返す(書き直さない)
   return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
 };
-const amgActName = (x) => (x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
+const amgActName = (x) => (x.a === 'shugyo' ? (typeof amgtActName === 'function' ? amgtActName(x) : '修行') : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, subs: new Set(),
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
   load() { // 読み込みは1回だけ(2か所から同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
@@ -70737,6 +71100,8 @@ const assistantMasmonTrainBoost = (aid, opts = {}, now = Date.now()) => {
 };
 // ナカヨシ10 の受け口(M/B管理): ASSISTANT_LIFE_LINKS.masmonTrainBoost(id, { source: 'ranch' }) から呼べるようにつなぐ(2026-11-11)
 try { if (typeof ASSISTANT_LIFE_LINKS === 'object' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.masmonTrainBoost = assistantMasmonTrainBoost; } catch (_) {}
+// 関わって伸びた分の合計(対戦の振り返りから読む・ミセカタ)。{ total, view, pick, ask, ranch }(点・整数)
+const amgCareGainOf = (e) => { const c = (e && e.cg) || {}; const o = { view: Math.round(c.view || 0), pick: Math.round(c.pick || 0), ask: Math.round(c.ask || 0), ranch: Math.round(c.ranch || 0) }; return { total: Math.round((c.view || 0) + (c.pick || 0) + (c.ask || 0) + (c.ranch || 0)), ...o }; };
 const amgEntryOf = (aid, t, st = AMG_STORE.state) => (t && st.mons[aid] ? st.mons[aid][amgMonKey(t.slot, t.monster)] : null) || null;
 // 相談(「◯◯を鍛えて」=3日間その能力を優先/「休ませて」=次の回は休む/「任せる」=優先を外す)
 const amgAdvise = (aid, slot, what, now = Date.now()) => {
@@ -70814,6 +71179,7 @@ function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
         : <p className="text-[10.5px] font-bold text-slate-400">まだ今日の育成はありません(朝4:00・昼12:00・夜18:00に{who.name}が育てます)</p>}
       {(amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot]) && <p className="mt-1 text-[10px] font-bold text-pink-200" data-amg-viewed>👀 今日は様子を見に来たので、いつもより伸びやすい</p>}
       <AmgPickRow who={who} t={t} e={e} st={amgSt}/>
+      {typeof AmgtCard === 'function' && <AmgtCard who={who} t={t} e={e}/>}
     </div>);
 }
 
@@ -72551,7 +72917,7 @@ const ALF_GO_LINES = Object.freeze({
   dra:       ['よっ、{f}。遊びに来たからな、えへへ', '{h}さんの家、いい匂いするな。おやつあるか？'],
   atsu:      ['とりあえず来てみた笑 {f}、元気？', '{h}さんの家、居心地いいな笑'],
   kyuko:     ['ほい！{f}、遊びに来たよ〜', '{h}さんの家、片づいてて動きやすいねぇ。'],
-  sorashido: ['うぉぉぉ！{f}、来たぜ・・・！', '{h}さんの家、でーじいい感じだな笑'],
+  sorashido: ['{f}、来ましたよー！ おじゃまします笑', '{h}さんの家、でーじいい感じですね笑'],
   erubin:    ['こんにちは、{f}。おじゃまするね', '{h}さんの家、あったかい感じがするね。'],
 });
 // 相手の家の助手の返事(その助手の口調)。{v} … 来た助手の名前
@@ -72562,31 +72928,31 @@ const ALF_REPLY_LINES = Object.freeze({
   dra:       ['おっ、{v}か。上がってけよな', 'おやつ、半分こしような'],
   atsu:      ['{v}じゃん、いらっしゃい笑', 'てか座って座って笑'],
   kyuko:     ['おけ〜、{v}いらっしゃい！', 'ちょうどひと息つくとこだったんだぁ。'],
-  sorashido: ['{v}！よく来たぜ・・・！', 'なんくるないさ〜、くつろいでけ笑'],
+  sorashido: ['{v}！ よく来てくれましたねー！', 'なんくるないさ〜、くつろいでいってください笑'],
   erubin:    ['{v}、来てくれたんだね', '寒くなかった？ゆっくりしてね'],
 });
 // 同じ助手どうしが会ったとき(❹ A)
 const ALF_SAME_LINES = Object.freeze({
   mua: 'もうひとりのあたし！？まぢ！？', kiki: '私がもうひとり…ふしぎな気分でつ。', momosuke: 'ももが2人！？かわいさも2倍じゃん！！',
   dra: 'おでがもうひとりいるな…えへへ', atsu: '俺がいる笑 なんか照れるな笑', kyuko: 'え、俺？ぐぬぬぬ、どっちが本物だぁ',
-  sorashido: 'うぉぉぉ！俺がもうひとりいるぜ・・・！', erubin: '自分と会うって、なんだかくすぐったいね',
+  sorashido: 'うぉぉぉ！ 自分がもうひとりいます・・・！', erubin: '自分と会うって、なんだかくすぐったいね',
 });
 // 帰ってきたとき(おかえり)
 const ALF_BACK_LINES = Object.freeze({
   mua: 'ただいま〜！{h}さんの家、楽しかったぢゃん♪', kiki: 'ただいま戻りました。{h}さんのお家、素敵でしたよ。', momosuke: 'ただいま！！{name}、おみやげあるよ♡',
   dra: 'ただいまだな。{h}さんの家、また行きたいな', atsu: 'ただいま笑 {h}さんの家、よかったよ笑', kyuko: 'ただいまぁ。{h}さんの家で、いい話できたよ〜',
-  sorashido: 'ただいまだぜ！{h}さんの家、でーじ楽しかった笑', erubin: 'ただいま。{h}さんの家の話、聞いてくれる？',
+  sorashido: 'ただいまです！ {h}さんの家、でーじ楽しかったです笑', erubin: 'ただいま。{h}さんの家の話、聞いてくれる？',
 });
 // フレンドの助手が来たとき: 来た助手のあいさつ/迎えた自分の助手
 const ALF_GUEST_LINES = Object.freeze({
   mua: '{h}さんちから遊びに来たよ♪', kiki: '{h}さんのところから参りました。おじゃまします。', momosuke: '{h}さんちのももだよ！！遊びに来た！',
   dra: '{h}さんちから来たからな。おじゃまするぞ', atsu: '{h}さんちから来た笑 おじゃまします笑', kyuko: 'ほい！{h}さんちから来たよ〜',
-  sorashido: '{h}さんちから来たぜ・・・！', erubin: '{h}さんの家から来たよ。おじゃまするね',
+  sorashido: '{h}さんの家から来ました！ おじゃまします笑', erubin: '{h}さんの家から来たよ。おじゃまするね',
 });
 const ALF_WELCOME_LINES = Object.freeze({
   mua: 'いらっしゃーい♪ ゆっくりしてってね！', kiki: 'ようこそ。お茶をどうぞ♪', momosuke: 'いらっしゃい！！ももの家、すごいでしょ♡',
   dra: 'よく来たな。おやつあるぞ', atsu: 'いらっしゃい笑 座って座って笑', kyuko: 'いらっしゃ〜い！ちょうどお茶いれたとこ〜',
-  sorashido: 'うぉぉぉ！いらっしゃいだぜ・・・！', erubin: 'いらっしゃい。来てくれてうれしいな',
+  sorashido: 'いらっしゃいませー！ 来てくれてうれしいです笑', erubin: 'いらっしゃい。来てくれてうれしいな',
 });
 // プレイヤーがフレンドの家で相手の助手に声をかけたとき(その助手の口調。{name} はプレイヤー)
 const ALF_TALK_LINES = Object.freeze({
@@ -72596,20 +72962,20 @@ const ALF_TALK_LINES = Object.freeze({
   dra:       ['おっ、お客さんだな。いらっしゃい', 'おやつ食べてくか？えへへ', 'また来いよな'],
   atsu:      ['お、いらっしゃい笑', '{h}さんの友だちなら大歓迎笑', 'また来てね笑'],
   kyuko:     ['ほい！いらっしゃ〜い', '{h}さんの友だちかぁ、ありがとん笑', 'またねぇ〜'],
-  sorashido: ['うぉぉぉ！お客さんだぜ・・・！', 'ちばりよー！応援してるぜ笑', 'また来いよ笑'],
+  sorashido: ['お客さんですねー！ いらっしゃい笑', 'ちばりよー！ 応援してます笑', 'また来てくださいね笑'],
   erubin:    ['いらっしゃい。来てくれてありがとう', '{h}さんの家、居心地いいでしょ', '気をつけて帰ってね'],
 });
 // 訪ねた家の台本(2026-11-08 コトバ・ツムギ。docs/progress/assistant-peer/lines/friend-*.txt・注文書 ORDER-FRIEND.md)
 //   greet … {name}(訪ねてきたプレイヤー)を迎える/doing … 部屋でしていることごとの迎え/reply … 返事への答え/sleep … 寝ている部屋の寝言
-const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["うぉぉぉ！ お客さんだ！ よく来てくれたな", "{name}、いらっしゃい！ くつろいでくれ笑", "{h}さんの友だちか。ゆっくりしていけよ"], "doing": {"snack": "ちょうどちんすこう食べてたんだ。一緒にどうだ？", "practice": "いま練習してたんだ！ 聞いていくか？", "training": "育成の記録をつけてたとこだ。ちょっと待っててくれ", "cards": "新しい表を作ってたんだぜ・・・！ 見ていくか？", "read": "本を読んでたんだ。いいところで来たな笑", "idle": "考えごとしてたんだ。話し相手ができてうれしいぞ"}, "reply": ["ありがとな！ でーじうれしいぞ笑", "そう言ってもらえると、表を作ったかいがあるな", "気をつかわなくていいぞ。ゆっくりしてくれ"], "sleep": ["……うぉぉ……むにゃ……表が……", "……なんくるないさ〜……すぅ……"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
+const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"], "doing": {"snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？", "practice": "いま練習してたんですよ！ 聞いていきますか？", "training": "育成の記録をつけてたところです。ちょっと待っててくださいね", "cards": "新しい表を作ってたんです・・・！ 見ていきますか？", "read": "本を読んでたんです。いいところで来ましたね笑", "idle": "考えごとをしてたんです。話し相手ができてうれしいです"}, "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"], "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
 // フレンドの家へ行ったとき・迎えるときに足す台本(前からの ALF_GO_LINES・ALF_WELCOME_LINES と合わせて選ぶ)
-const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来たぞ！ 今日はなにする？", "{h}さんの部屋、でーじ落ち着くな笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
-const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来たな！ {f}、待ってたぞ", "いらっしゃい！ ゆっくりしていけよ笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
+const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
+const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
 // 置き手紙の決まった一言(番号は表に残す。0〜11)とお礼(0〜5)
 const ALF_WORD_TEXTS = Object.freeze(['楽しかった！', 'また来るね', 'おじゃましました', 'おやつおいしかった', 'いい部屋だったよ', 'また遊ぼうね',
   'ゆっくりできた', 'ありがとう', 'お話しできてうれしかった', 'みんな元気そうだった', 'また会いたいな', 'お留守のあいだにおじゃましました']);
 const ALF_THANKS_TEXTS = Object.freeze(['来てくれてありがとう！', 'またいつでも来てね', 'うれしかったよ', '今度はこっちから行くね', 'みんな喜んでたよ', 'おつかれさま！']);
-const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中' });
+const ALF_DOING_ROOM = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究中', walk: '散歩中', idle: 'のんびり中', sleep: 'おやすみ中', read: '読書中', battle: 'バトル中' });
 // name … {name} に入れる呼び方を決めて渡すとき(よその家の助手が、訪ねてきたプレイヤーを呼ぶ: 「◯◯さん」)
 const alfFill = (text, { f = '', h = '', v = '', who = null, name = null } = {}) => String(text || '')
   .replace(/\{f\}/g, f).replace(/\{h\}/g, h).replace(/\{v\}/g, v)
@@ -73069,23 +73435,32 @@ function AssistantLifeFriendPage({ life }) {
   };
   const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
   const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  // まだ何も起きていない(フレンドの家も行き来も置き手紙も無い)ときは、空の箱を並べずに案内1つにする(2026-11-11 社長「わかりづらさをどんどん改善して」・ナカヨシ12)
+  const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
+  const hideIfEmpty = alfEmpty ? { display: 'none' } : undefined;
   return (
     <div className="px-3 pb-3 pt-1" data-alf-page="on">
-      {!s.intro && (
+      {alfEmpty && (
+        <div className={card} data-alf-empty-guide>
+          <p className="text-[13px] font-black text-amber-200">🏘 フレンドができると、ここがにぎやかになります</p>
+          <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
+        </div>)}
+      {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 rounded-xl bg-amber-300 px-3 py-1 text-[11px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
+          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
         </div>)}
-      <p className={sec}>🏘 いまの行き来</p>
-      <div className={card} data-alf-now>
+      <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
+      <div className={card} data-alf-now style={hideIfEmpty}>
         {st.out && <div className="flex items-center gap-2" data-alf-now-out>{st.out.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.out.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{st.out.name}さんの家へ</span></p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="out" onClick={() => openScene('out')}>▶ 様子</button></div>}
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
         {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}/{lim.look}</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
-      <p className={sec}>✉️ 置き手紙</p>
-      <div className={card} data-alf-notes>
+      <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
+      <div className={card} data-alf-notes style={hideIfEmpty}>
         {notes.length ? notes.slice(0, 12).map(n => (
           <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
             <p className="text-[11px] leading-snug text-slate-100">
@@ -73104,8 +73479,8 @@ function AssistantLifeFriendPage({ life }) {
               : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
           </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
       </div>
-      <p className={sec}>🏠 フレンドの家</p>
-      <div data-alf-houses>
+      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
@@ -73133,9 +73508,9 @@ function AssistantLifeFriendPage({ life }) {
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
         {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
-          <label key={k} className="flex items-center justify-between gap-2 py-1 text-[11.5px] text-slate-100" data-alf-setting={k}>
+          <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
             <span>{label}</span>
-            <input type="checkbox" checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
+            <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
           </label>))}
         {s.settings.muted.length > 0 && <button type="button" className="mt-1 text-[10.5px] text-amber-200 underline" data-alf-unmute onClick={() => assistantLifeFriendSetSettings({ muted: [] })}>来ないようにした家({s.settings.muted.length}軒)を戻す</button>}
       </div>
@@ -77547,21 +77922,21 @@ const CARD_BATTLE_LINES = Object.freeze({
   },
   // ソラシド(2026-10-27 社長「この形で入れる」。案はフキダシくん docs/progress/card-sorashido-lines.md v3)。公開の印が立つまで画面には出ない
   sorashido: {
-    challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
-    start: [['デッキは組み直してきた。今日の俺は強いぜ・・・！', 'happy'], ['よろしく！ 様子見…と見せかけて攻める笑', 'wink'], ['いくぜ・・・！ 最初の1手が大事なんだよな', 'excited'], ['三線みたいに、気持ちよく勝ちたいね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいぜ・・・！', 'happy']],
-    big: [['うぉぉぉ！ ここで大技いくぜ・・・！', 'excited'], ['ガッツためといた甲斐があった笑', 'happy'], ['この流れ、攻略まとめに書いとこ笑', 'wink'], ['読みどおり！ 一気に押し込むぜ・・・！', 'excited']],
-    bigHit: [['なに！？ 今のは効いた…笑', 'surprise'], ['うわ、それ持ってたの！？ やられた笑', 'surprise'], ['痛っ…でも次の手はもう考えてあるぜ・・・！', 'troubled'], ['なんくるないさ〜。まだ巻き返せる笑', 'normal']],
-    guardMine: [['その手、読めてたぜ・・・！', 'happy'], ['守り、残しといて正解だった笑', 'wink'], ['はい、よけた！ 計算どおり笑', 'excited']],
-    guardTheirs: [['なに！？ そこで守るの！？', 'surprise'], ['読みが深いな…やるじゃん笑', 'troubled'], ['次は守りにくい手でいくぜ・・・！', 'normal']],
-    myKo: [['ごめんな…あとは俺が取り返すぜ・・・！', 'crying'], ['なに！？ ここで倒れるのかよ…笑', 'surprise'], ['まだまだ！ 作戦はここからだぜ・・・！', 'angry']],
-    theirKo: [['うぉぉぉ！ 1体いただき！', 'excited'], ['弱ってたの、見逃さないぜ・・・！', 'wink'], ['よし！ 計算どおり笑', 'happy']],
-    lastMine: [['残り1体…ここからひっくり返すのが楽しいんだよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託すぜ・・・！', 'troubled']],
-    lastTheirs: [['あと1体！ 最後まで読み切るぜ・・・！', 'excited'], ['詰めの手順、もう見えてる笑', 'wink']],
-    deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
-    deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
-    win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
-    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
-    winQuick: [['え、もう終わり！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じか・・・！ 次はがっつりやろうぜ笑', 'wink']],
+    challenge: [['カード勝負ですね。受けて立ちます！', 'wink'], ['対戦しましょう！ 攻略まとめ、もう頭に入ってます笑', 'happy'], ['手加減なしでいきます！ 勝ち負けは本気なので笑', 'excited'], ['どんなデッキでくるか、楽しみすぎます笑', 'wink']],
+    start: [['デッキは組み直してきました。今日の自分は強いですよ笑', 'happy'], ['よろしくお願いします！ 様子見・・・と見せかけて攻めます笑', 'wink'], ['いきます！ 最初の1手が大事なんですよね', 'excited'], ['三線みたいに、気持ちよく勝ちたいですね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいです・・・！', 'happy']],
+    big: [['うぉぉぉ！ ここで大技いきます！', 'excited'], ['ガッツをためておいた甲斐がありました笑', 'happy'], ['この流れ、攻略まとめに書いておきます笑', 'wink'], ['読みどおり！ 一気に押し込みます！', 'excited']],
+    bigHit: [['今のは効きました・・・！笑', 'surprise'], ['うわ、それ持ってたんですか！？ やられました笑', 'surprise'], ['痛っ・・・でも次の手はもう考えてあります', 'troubled'], ['なんくるないさ〜。まだ巻き返せます笑', 'normal']],
+    guardMine: [['その手、読めてました！', 'happy'], ['守り、残しておいて正解でした笑', 'wink'], ['はい、よけました！ 計算どおりです笑', 'excited']],
+    guardTheirs: [['そこで守るんですか・・・！', 'surprise'], ['読みが深いですね・・・やりますね笑', 'troubled'], ['次は守りにくい手でいきます！', 'normal']],
+    myKo: [['ごめん・・・あとは自分が取り返します！', 'crying'], ['ここで倒れるのか・・・！笑', 'surprise'], ['まだまだ！ 作戦はここからです！', 'angry']],
+    theirKo: [['よし！ 1体いただきました！', 'excited'], ['弱ってたの、見逃さないですよ笑', 'wink'], ['よし！ 計算どおりです笑', 'happy']],
+    lastMine: [['残り1体・・・ここからひっくり返すのが楽しいんですよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託します！', 'troubled']],
+    lastTheirs: [['あと1体！ 最後まで読み切ります！', 'excited'], ['詰めの手順、もう見えてます笑', 'wink']],
+    deckMine: [['山札やばい・・・！ 急がないと笑', 'surprise'], ['ガッツにしすぎました・・・計算ミスです笑', 'troubled']],
+    deckTheirs: [['そっちの山札、もう少ないですよね？笑', 'wink'], ['山札切れも勝ち筋のひとつですからね！', 'happy']],
+    win: [['読みどおり！ いい勝負でした笑', 'happy'], ['作戦がきれいにはまりました！ もう1戦だけやりましょう笑', 'excited'], ['楽しかったです！ 気づいたら朝になりそうです笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかったです笑', 'excited']],
+    lose: [['そこでそれですか・・・！ 悔しいですけど、今のはうまいです', 'crying'], ['完敗です！ 今の対戦、攻略まとめにして研究します笑', 'troubled'], ['なんくるないさ〜。次はデッキを組み直してきます笑', 'happy']],
+    winQuick: [['え、もう終わりですか！？ ここからが本番だったのに笑', 'surprise'], ['今回は手札がかみ合わなかった感じですかね・・・！ 次はがっつりやりましょう笑', 'wink']],
   },
   // えるびん(2026-11-05 案・ルールくん。口調は docs/progress/tempo-2026-11-05/erubin-split.md)。こっちで覚えてはまったカード・デュラハン好き・組み方をいくつも持つ。公開の印が立つまで画面には出ない
   erubin: {
@@ -78651,7 +79026,7 @@ const CARD_AI_DECK_VS_LINES = Object.freeze({
   kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
   dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
   atsu: '今日は『{name}』でいくわ笑 全力な！',
-  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  sorashido: '今日は『{name}』でいきます！ 計算済みです笑',
   erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑',
 });
 // 提案のデッキで初めて戦うとき(1回だけ・AI のひとことより先)。2026-11-08 部長の案・社長「やる」
@@ -78662,7 +79037,7 @@ const CARD_AI_DECK_WISH_LINES = Object.freeze({
   kyuko: 'ほい、考えてくれた『{name}』でいくよぉ笑 ありがとね',
   dra: 'おで、考えてくれた『{name}』でいくぞ。えへへ、うれしいな。手加減しないからな',
   atsu: '考えてくれた『{name}』でいくわ笑 全力な！',
-  sorashido: '考えてくれた『{name}』でいくぜ・・・！ これも計算済み笑',
+  sorashido: '考えてくれた『{name}』でいきます！ これも計算済みです笑',
   erubin: '考えてくれた『{name}』でいこうかな🤔 ありがとね笑',
 });
 const cardAiDeckVsLine = (who, pick) => {
@@ -78745,11 +79120,11 @@ const CARD_VS_LINES = Object.freeze({
     master: { e: 'wink', t: '本気のあつだ。一気に終わらせるぞ！' },
   },
   sorashido: {   // 2026-10-27 社長「この形で入れる」(フキダシくんの案 v3)
-    easy: { e: 'happy', t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！' },
-    normal: { e: 'wink', t: '浜の風みたいに、さらっと勝たせてもらう笑' },
-    hard: { e: 'excited', t: 'ここからは本気の読み合いだぜ・・・！' },
-    expert: { e: 'excited', t: '攻略班の作戦、ぜんぶ試させてもらう笑' },
-    master: { e: 'angry', t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！' },
+    easy: { e: 'happy', t: 'ゆるっといきましょう！ でも読みは手を抜かないですよ笑' },
+    normal: { e: 'wink', t: '浜の風みたいに、さらっと勝たせてもらいます笑' },
+    hard: { e: 'excited', t: 'ここからは本気の読み合いですね・・・！' },
+    expert: { e: 'excited', t: '攻略班の作戦、ぜんぶ試させてもらいます笑' },
+    master: { e: 'angry', t: 'うぉぉぉ！ 自分の全力、受けてみてください・・・！' },
   },
   erubin: {   // 2026-11-05 社長「この文で」(ルールくんの案)。公開の印が立つまで画面には出ない
     easy: { e: 'happy', t: 'のんびりいこうか。楽しむのが一番だよね☺️' },
@@ -78846,6 +79221,9 @@ const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
 const CARD_VS_CSS = `
 /* 背の低い縦の画面(390×600 など)では、相手の立ち絵とモンスターの絵を小さくして高さに収める(はみ出して頭が切れ、「あなた」と「タップで始める」が重なっていた。2026-11-01 見た目の点検) */
 @media (orientation: portrait) and (max-height: 700px) { [data-card-vs] { --mh-vs-foe-h: 18vh; --mh-vs-mon-h: 15vh; } }
+/* 背の低い横の画面(568×320 など)では、相手の立ち絵とモンスターの絵・ひとことの字を少し小さくして高さに収める(ひとことが4〜5行・今日のデッキの名前が2段になると、
+   相手の欄が画面より高くなり、名前の字が上で切れていた。2026-11-11 助手の立ち絵の見直し) */
+@media (orientation: landscape) and (max-height: 360px) { [data-card-vs] { --mh-vs-foe-h: 26vh; --mh-vs-mon-h: 16vh; } [data-card-vs] [data-card-vs-line] { font-size: 11px; line-height: 1.25; padding-top: 3px; padding-bottom: 3px; } }
 @keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
@@ -78955,7 +79333,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
           <div className="flex w-full max-w-[420px] items-end gap-2">
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, var(--mh-vs-foe-h, 30vh), 150px)' }}>
               {who
-                ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
+                // 助手の立ち絵は、相手えらび・結果と同じ部品で収める(顔の大きさを助手どうしでそろえる。2026-11-11)。部品がまだ無いときだけ今までの収め方
+                ? (typeof CardAssistantArt === 'function'
+                  ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
+                  : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
                 : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
@@ -82787,6 +83168,14 @@ const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
+// 絵の場所から、その助手の顔の点(頭のてっぺん・目・顎・顔の大きさ)を引く。助手の絵でなければ null。着替えの絵は着替えの行(56-assistant-life-house.jsx の表)
+const cardArtFaceBySrc = (src) => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS) || typeof assistantLifeStandFace !== 'function') return null;
+  const m = /\/([a-z]+)_[a-z]+\.png$/i.exec(src.split('?')[0]);
+  const who = m ? ASSISTANTS.find((x) => x && x.imagePrefix === m[1]) : null;
+  if (!who || /\/(face|temp)\//.test(src)) return null;
+  try { return assistantLifeStandFace(who.id, src); } catch (_) { return null; }
+};
 // knownBox … 測ってある輪郭(cardArtKnownBox)。渡さなくても、標準の服の絵なら絵の場所から引く(cardArtKnownBoxBySrc)。あれば canvas で調べずに使う
 // 枠の大きさが決まったとき・変わったとき(画面の向き・大きさ)も ResizeObserver で合わせ直す(最初に 0 だと合わせないままだった)
 const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = null }) => {
@@ -82816,10 +83205,25 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
     const sc = Math.min(H / box.h, W / box.w);
+    // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
+    //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
+    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 18% に置く。
+    //   羽・肩は枠の外へ出てよい(顔は切らない)。今までの収め方より小さくなる絵(ソラシド・えるびん・きゅうこ)と、顔だけの絵(ドラ)は今までどおり
+    const face = cardArtFaceBySrc(src);
+    if (face && !face.head && typeof assistantLifeStandRule === 'function') {
+      const lb = { t: box.y / box.nh, b: (box.y + box.h) / box.nh, l: box.x / box.nw, r: (box.x + box.w) / box.nw, ar: box.nw / box.nh };
+      const U = Math.min(H * 0.44, W * 0.95);
+      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
+      if (r && r.width > box.nw * sc * 1.02) {
+        const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
+        const visW = (lb.r - lb.l) * r.width;
+        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+      }
+    }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };
   })();
   return (
-    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
+    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} data-card-art-by-face={fit && fit.byFace ? '1' : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
       {fit
         ? <img src={src} alt={alt} draggable={false} className="absolute max-w-none" style={{ width: `${fit.width}px`, left: `${fit.left}px`, top: `${fit.top}px` }}/>
         : <img src={src} alt={alt} draggable={false} className="h-full w-full object-contain object-bottom"/>}
@@ -87456,9 +87860,9 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']],
   },
   sorashido: {   // 2026-10-27 社長「この形で入れる」(フキダシくんの案 v3)。公開の印が立つまで、自分の助手に選べないので出ない
-    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
-    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
-    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']],
+    win: [['勝ちましたね！ 今の組み方、最高でした笑', 'happy'], ['ナイスです！ 読み合い、完全に勝ってました！', 'excited'], ['いい勝ち方ですね！ 攻略まとめに残したいくらいです笑', 'wink']],
+    lose: [['惜しい・・・！ 次はどう組むか考えてみませんか', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になりました笑', 'normal'], ['相手も強かったですね！ もう1戦いっておきますか？笑', 'happy']],
+    left: [['あれ、相手がいなくなりましたね？ 決着つけたかったです笑', 'surprise'], ['電波ですかね？ 次の相手をさがしてみますか！', 'normal'], ['勝ちは勝ちですけど・・・ちょっと物足りないですね', 'troubled']],
   },
   erubin: {   // 2026-11-05 案(ルールくん)。公開の印が立つまで、自分の助手に選べないので出ない
     win: [['勝ったね！ さすが、最後の一手がきれいだったよ☺️', 'happy'], ['いいね！ 見ててこっちまで楽しかったー！', 'excited'], ['おめでとう！ その組み方、俺も参考にしたいな笑', 'wink']],
@@ -95767,7 +96171,7 @@ function MonsterHeroGame() {
     // (2026-10-01・ユーザー指示「超省エネをもっと画面情報減らしてエコに。VICTORY!とかの表示はなしでいい」)。
     // 保存した設定は書き換えない。この値を読む側(WaveIntro・EnemyDefeatFx・PhaseBanner・resultFxMs など)がそのまま効く
     const base = (ecoMode === 'ultra' && autoRepeat === true)
-      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF' }
+      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF', hitStop: 'OFF' }
       : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
@@ -97337,6 +97741,18 @@ function MonsterHeroGame() {
   // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  // ログインボーナスの窓は、助手の案内(村の案内・れんしゅうの誘い)とバトルのれんしゅうが終わってから出す(2026-11-11 社長・最初の30分の改善案1)。
+  // はじめての人は、名前を決めた直後にこの窓が出たまま案内が始まり、案内が指す建物も、れんしゅうの「押してみて」で光る所も
+  // 窓の下に隠れて進めなくなっていた(tools/boot/first-30min-walk.js の [隠れ])。
+  // 案内から次の案内へ移る一瞬に窓がちらつかないよう、案内が終わって少し(0.7秒)たってから出す。
+  // 受け取りそのもの(ギフトボックスへ送る)は今までどおりで、変えるのは窓を出す時機だけ。案内が出ない人には何も変わらない
+  const loginBonusGuideBusy = tutorialStep != null || battleTutorialStep != null;
+  const [loginBonusGuideClear, setLoginBonusGuideClear] = useState(true);
+  useEffect(() => {
+    if (loginBonusGuideBusy) { setLoginBonusGuideClear(false); return undefined; }
+    const timer = setTimeout(() => setLoginBonusGuideClear(true), 700);
+    return () => clearTimeout(timer);
+  }, [loginBonusGuideBusy]);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
@@ -106935,6 +107351,26 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_PLAY');
   };
   const leaveRhythmLineAdjust = () => { setRhythmLineAdjust(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  // ===== オプションの「▶ 見てみる」(2026-11-11 社長「モンビーのオプションで、現在の設定での画面が分からないから見れるようにしたい」・案A・音は鳴らす) =====
+  // 本物の演奏画面で、**保存前の設定(下書き)のまま**見本の譜面を自動で叩いて流す。曲の終わりで最初から流し直す。
+  //   記録・ランキング・ライフには何も残さない(判定ラインの位置の合わせの「試す」と同じ扱い)。譜面・判定・音の同期は変えない。
+  //   「設定へ戻る」で、下書きのままオプションへ戻る(rhythmOptionsDraft を渡して下書きを作り直さない)
+  const [rhythmPreview, setRhythmPreview] = useState(null);       // { draft, key }
+  const [rhythmOptionsDraft, setRhythmOptionsDraft] = useState(null); // 見本から戻ったときに、オプションの下書きへ戻す値
+  const startRhythmOptionPreview = (draft) => {
+    const settings = normalizeRhythmSettings(draft);
+    if (settings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmOptionsDraft(settings);
+    setRhythmPreview({ draft:settings, key:0 });
+    setRhythmPlay({ song:RHYTHM_OPTION_PREVIEW_SONG, difficulty:RHYTHM_OPTION_PREVIEW_DIFFICULTY, from:'preview' });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmOptionPreview = () => { setRhythmPreview(null); setRhythmPlay(null); setGameState('RHYTHM_OPTIONS'); };
+  const rhythmPreviewProps = rhythmPreview ? {
+    phase:'try', preview:true, key:rhythmPreview.key, ground:rhythmPreview.draft.judgmentLineHeight,
+    onEnd: leaveRhythmOptionPreview, onFix: leaveRhythmOptionPreview,
+    onLoop: () => setRhythmPreview(p => p ? { ...p, key:p.key + 1 } : p),
+  } : null;
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -111366,11 +111802,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retryRhythm = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS);   // 目印をモンヒロビートの始め直しとして分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
   // ===== MFバトルカードを開いたら自動で∞周回を始める・負けたら始め直す(社長 2026-10-25「モンヒロビートと同じように」) =====
@@ -114697,7 +115134,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
             報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
             (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
-        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&!loginBonusGuideBusy&&loginBonusGuideClear&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(()=>{
           /* 行き先が名前だけでは分からなかったので、デバッグ画面の DebugMenuRow と同じ
@@ -116281,13 +116718,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
           if(rhythmPlay.from==='proto')return;
           // 判定ラインの位置の合わせも、何も残さない(練習と同じ扱い)
           if(rhythmPlay.from==='lineAdjust')return;
+          // オプションの「▶ 見てみる」の見本も、何も残さない
+          if(rhythmPlay.from==='preview')return;
           // レイドバトルのモンヒロビート挑戦: ジャックへのダメージの処理を始めたうえで、ふつうの演奏と同じく
           // 周回の報酬・自己ベスト・クリア回数・実績・全国ランキングにも入れる(2026-10-07・ユーザー指示「両方つなげる」)。
           // 下の共通の処理へそのまま進む(アシストモードは、共通の処理が記録も送信もしない)
@@ -116375,7 +116814,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home'||RHYTHM_HELL_STORY_TRIGGER==='release')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:null} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}if(rhythmPlay.from==='preview')setRhythmPreview(null);const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'||rhythmPlay.from==='preview'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:rhythmPlay.from==='preview'?rhythmPreviewProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -116467,7 +116906,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 部屋の上に重ねるソロと同じオプション。タイミング調整・判定ラインを実際の画面で合わせる、は演奏を始めるので部屋の中では出さない */}
           <RhythmOptions value={rhythmSettings} onBack={()=>setRhythmMultiOptionsOpen(false)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>
         </div>}
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} onLineAdjust={startRhythmLineAdjust} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} initialDraft={rhythmOptionsDraft} onPreview={startRhythmOptionPreview} onBack={()=>{setRhythmOptionsDraft(null);setGameState(rhythmOptionsBack);}} onCalibrate={()=>{setRhythmOptionsDraft(null);startRhythmCalibration();}} onLineAdjust={()=>{setRhythmOptionsDraft(null);startRhythmLineAdjust();}} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);setRhythmOptionsDraft(null);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
@@ -124858,6 +125297,22 @@ const createAnimationStyle = () => {
       [data-tactics-look] [data-em-idle]:not([data-enemy-skill]):not([data-enemy-hurt]) > span > img { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
+    /* 手ごたえ(2026-11-11 社長が選んだ形。部品は 24-battle-hit-feel.jsx・資料は docs/progress/battle-feel/)。動かすのは transform と opacity だけ */
+    /* 敵に出るダメージの数字: 大きく出て、縮んで止まる(連撃で2列のときは控えめ)。そのあとの弾み(animate-bounce)は今までどおり */
+    @keyframes mhFeelNumPop { 0% { opacity: 1; transform: scale(var(--feel-from, 1.6)); } 55% { opacity: 1; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup]:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup].animate-bounce:not([data-lite-damage]) { animation: mhFeelNumPop 180ms cubic-bezier(.2,.9,.3,1) both, bounce 1s 180ms infinite; }
+    [data-battle-hit-feel="ON"] + [data-enemy-popups] [data-enemy-popup-grid="2"] [data-enemy-popup] { --feel-from: 1.3; }
+    /* 当たりの間: CSS のアニメーションだけを一瞬止める(ゲームの時計は止めない。付け外しは 24-battle-hit-feel.jsx) */
+    #root[data-feel-stop] *, #root[data-feel-stop] *::before, #root[data-feel-stop] *::after { animation-play-state: paused !important; }
+    /* 効果の札の種類(案C): 何が起きたかを色の縁と印で知らせる。文と出る場所・時間は今までどおり */
+    [data-feel-kind] { border-width: 2px; }
+    [data-feel-kind]::before { margin-right: .3em; }
+    [data-feel-kind="reflect"] { border-color: #d8b4fe; } [data-feel-kind="reflect"]::before { content: "↩"; color: #d8b4fe; }
+    [data-feel-kind="absorb"] { border-color: #86efac; } [data-feel-kind="absorb"]::before { content: "♥"; color: #86efac; }
+    [data-feel-kind="evade"] { border-color: #bae6fd; } [data-feel-kind="evade"]::before { content: "≫"; color: #bae6fd; }
+    [data-feel-kind="crit"] { border-color: #fde047; } [data-feel-kind="crit"]::before { content: "★"; color: #fde047; }
+    [data-feel-kind="defeat"] { border-color: #fca5a5; } [data-feel-kind="defeat"]::before { content: "✕"; color: #fca5a5; }
     @keyframes tacticsPopupRise {
       0% { opacity: 0; transform: translateY(6px) scale(0.92); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
