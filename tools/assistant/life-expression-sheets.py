@@ -116,6 +116,18 @@ def bbox(im):
     return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
 
 
+def smooth2x(im):
+    """場面用の立ち絵は、元の絵が小さいので、先に2倍へ補間して輪郭をなめらかにする(細かさが増えるわけではない。
+    画面に大きく出したとき、ブラウザの拡大でギザギザに見えるのを和らげるため)。"""
+    from PIL import ImageFilter
+    w, h = im.size
+    rgb = im.convert('RGB').resize((w * 2, h * 2), Image.LANCZOS)
+    a = im.getchannel('A').resize((w * 2, h * 2), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.8))
+    out = rgb.convert('RGBA')
+    out.putalpha(a)
+    return out
+
+
 def save_png(im, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
@@ -141,7 +153,7 @@ def write_all(key, cfg, cells):
         canvas.paste(c.crop((x0, y0, x1, y1)), (m, m))
         tot_full += save_png(canvas, os.path.join(fb.OUT, '%s__%s.png' % (name, e)))
         # 2) 場面用の立ち絵(胸から上)
-        st = c.crop(win)
+        st = smooth2x(c.crop(win))
         tot_stand += save_png(st, os.path.join(ROOT, 'monster-hero/images/assistant', stand, '%s_%s.png' % (prefix, e)))
     # 顔の表(normal の切り出しで測る。見えている体の上を0・下を1)
     st = cells[0].crop(win)
