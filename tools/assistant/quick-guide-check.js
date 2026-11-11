@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // クイック・AUTO設定・裏周回の案内(2026-11-07 社長。monster-hero/src/parts/56-quick-guide.jsx)を確かめる。
 //   ① どの画面で・だれに・どの案内を出すか(quickGuidePick)。お話・おしゃべり・ほかの案内・演奏中・れんしゅう中は出さない
 //   ② 一度きり(一度出したら、最後まで見ても・「あとで」でも・閉じずに出ていっても、二度と自動では出ない。2026-11-07 社長)・誘導は1日1回・合計3回・クイックを一度クリアしたら出ない
@@ -23,6 +24,8 @@ const app = read('monster-hero/src/parts/60-app.jsx');
 const help = read('monster-hero/data/help.js');
 
 // ---- ① ② 決まりごと(画面の部品より前の、ふつうの JS の部分だけを動かす) ----
+// 裏クイックをどこでも回す公開の印(17-release)。真ならモードえらびの g3c は出さない
+const QUICK_ANYWHERE = /const QUICK_RUN_ANYWHERE_RELEASE = true;/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8'));
 const pure = guideSrc.slice(0, guideSrc.indexOf('// 光らせる所。'));
 const linesStart = assistantsSrc.indexOf('const ASSISTANT_QUICK_GUIDE_LINES = {');
 const linesEnd = assistantsSrc.indexOf('\n};', linesStart);
@@ -333,7 +336,9 @@ const browser = async () => {
       for (let k = 0; k < 20 && !opened; k++) { opened = await toBeat(); if (!opened) await page.waitForTimeout(500); }
       await page.waitForTimeout(1800);
       const gc = await guide();
-      check(`${T}裏周回のままモンヒロビートを開くと、モードえらびの案内(g3c)が出る`, opened && gc && gc.id === 'g3c', JSON.stringify({ opened, gc }));
+      // 裏クイックをどこでも回すとき(2026-11-11)は、モードえらびの左上がふつうの「←」になる(出ても周回は続く)ので、「⏹ 終了」の案内(g3c)は出さない
+      if (QUICK_ANYWHERE) check(`${T}裏クイックをどこでも回すときは、モードえらびの「⏹ 終了」の案内(g3c)を出さない`, opened && !(gc && gc.id === 'g3c'), JSON.stringify({ opened, gc }));
+      else check(`${T}裏周回のままモンヒロビートを開くと、モードえらびの案内(g3c)が出る`, opened && gc && gc.id === 'g3c', JSON.stringify({ opened, gc }));
       if (gc) await click('[data-quick-guide-next]');
       await page.waitForTimeout(400);
       await tapSel('[data-rhythm-mode-solo]'); await page.waitForTimeout(1800);
@@ -352,7 +357,7 @@ const browser = async () => {
       }
       check(`${T}一度閉じたら、モードえらび・曲えらびを何回行き来しても裏周回の案内は出ない`, again.every((x) => x.back && x.solo && !x.mode && !x.song), JSON.stringify(again));
       const seenBeat = (await store('mh_quick_guide_seen_v1')).seen || [];
-      check(`${T}「あとで」で閉じた曲えらびの案内にも見た印が付く`, seenBeat.includes('g3b') && seenBeat.includes('g3c'), JSON.stringify(seenBeat));
+      check(`${T}「あとで」で閉じた曲えらびの案内にも見た印が付く`, seenBeat.includes('g3b') && (QUICK_ANYWHERE || seenBeat.includes('g3c')), JSON.stringify(seenBeat));
     }
     // 裏周回していないときは、モンヒロビートを開いても裏周回の案内は出ない(見た印を消して確かめる)
     await page.evaluate(() => localStorage.setItem('mh_quick_guide_seen_v1', JSON.stringify({ v: 1, seen: ['g1a', 'g1b', 'g2', 'auto', 'g3a'] })));

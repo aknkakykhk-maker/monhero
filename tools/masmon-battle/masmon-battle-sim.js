@@ -77,6 +77,24 @@ const out = {};
   }
 }
 
+// ③-2 つまみ(A/B/C)ごとの +10% の勝率
+{
+  out.balance = {};
+  for (const b of ['A', 'B', 'C']) {
+    const rng = engine.makeRng('sim-bal');
+    let w = 0;
+    const M = Math.floor(N / 2);
+    for (let i = 0; i < M; i++) {
+      const sf = i % 2 === 0;
+      const strong = { assistantId: 'atsu', tactics: 50, members: team(rng, 3, { total: 1980 }) };
+      const weak = { assistantId: 'atsu', tactics: 50, members: team(rng, 3, { total: 1800 }) };
+      const r = engine.simulate({ seed: `bal-${i}`, catalog, balance: b, teamA: sf ? strong : weak, teamB: sf ? weak : strong });
+      if (r.winner === (sf ? 'A' : 'B')) w++;
+    }
+    out.balance[b] = w / M;
+  }
+}
+
 // ④ 戦術経験 100 対 0(同じ編成を入れ替えて2回)
 {
   const rng = engine.makeRng('sim-tactics');
@@ -126,8 +144,8 @@ const out = {};
   for (let x = 0; x < ids.length; x++) for (let y = x + 1; y < ids.length; y++) for (let i = 0; i < M; i++) {
     for (const sw of [false, true]) {
       const [p, q] = sw ? [ids[y], ids[x]] : [ids[x], ids[y]];
-      const r = run(`sp-${x}-${y}-${i}-${sw}`, { assistantId: 'atsu', tactics: 50, members: [{ species: p, lv: 50, stats: flat }] },
-        { assistantId: 'atsu', tactics: 50, members: [{ species: q, lv: 50, stats: flat }] });
+      const r = run(`sp-${x}-${y}-${i}-${sw}`, { assistantId: 'atsu', tactics: 50, members: [{ species: p, lv: 50, stats: flat, techs: catalog.species[p].techs.map(t => t.id) }] },
+        { assistantId: 'atsu', tactics: 50, members: [{ species: q, lv: 50, stats: flat, techs: catalog.species[q].techs.map(t => t.id) }] });
       g[p]++; g[q]++;
       if (r.winner === 'A') w[p]++; else if (r.winner === 'B') w[q]++; else { w[p] += 0.5; w[q] += 0.5; }
     }
@@ -141,6 +159,7 @@ console.log(`① 先後の偏り: A ${pct(out.side.A)} / B ${pct(out.side.B)} / 
 console.log('② 性格ごとの勝率(総当たり・編成入れ替え):');
 for (const s of STYLE_IDS) console.log(`   ${s.padEnd(10)} ${engine.STYLES[s].label.padEnd(6, '　')} ${pct(out.style[s])}`);
 console.log('③ 能力の合計が多い側の勝率: ' + Object.entries(out.statGap).map(([k, v]) => `${k} → ${pct(v)}`).join(' / '));
+console.log('③-2 つまみごと(合計+10%の側の勝率): ' + Object.entries(out.balance).map(([k, v]) => `${k} ${pct(v)}`).join(' / '));
 console.log(`④ 戦術経験 100 対 0 の勝率: ${pct(out.tactics)}`);
 console.log('⑤ 形ごと:');
 for (const [k, v] of Object.entries(out.formats)) {

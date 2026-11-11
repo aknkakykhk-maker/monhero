@@ -55,7 +55,9 @@ const selectSong=(page,songId)=>page.evaluate((songId)=>{
 // 演奏と関係なく時間で書き直す値は突き合わせから外す。ゲームの記録ではない:
 //   mhdev_*        … 遊んでいるあいだ15秒ごとに書き直す診断用の印(50-error-boundary.jsx)
 //   mh_playtime_v1 … 画面が見えているあいだ数えて60秒ごとに保存する「遊んだ時間」(どの画面にいても増える)
-const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^mhdev_/.test(k)||k==='mh_playtime_v1')continue;o[k]=localStorage.getItem(k);}return o;});
+//   mh_screen_trail_v1 … 画面の出来事の記録(最近30件・2026-11-07 #4832・10-core.jsx の MH_SCREEN_TRAIL)。演奏を始めた・画面を離れたなどを、どの演奏でも残す診断の記録で、
+//                        遊びの保存値(自己ベスト・クリア回数・実績・ビートP・ミッション)ではない。ここで見たいのは遊びの保存値が変わらないことなので、比べる対象から外す(2026-11-11)
+const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^mhdev_/.test(k)||k==='mh_playtime_v1'||k==='mh_screen_trail_v1')continue;o[k]=localStorage.getItem(k);}return o;});
 
 (async()=>{
   const browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});

@@ -34,6 +34,9 @@ const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data
 // 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
 //   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
+// 裏クイックをどこでも回しているあいだ(右下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
+//   (2026-11-11 社長「ホームにいなくても出るときがある」。HOME へ戻ったときにまとめて出す)
+const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;      // 文の一行の札(読む時間をとる)
 const GROWTH_FX_ITEM_MS = 3400;
@@ -70,7 +73,9 @@ const growthFxPush = (ev) => {
     // 同じ値の Lvアップが続いたら(貯めているあいだに2つ上がったなど)、新しいほうへまとめる(from は古いほうのまま)
     const sheets = GROWTH_FX_STORE.sheets;
     const mergeKey = tier === 'level' ? String(ev.key || `${ev.kind}:${ev.who || ''}`) : null;
-    const prev = mergeKey ? sheets.find((s, i) => i > 0 && s.tier === 'level' && s.key === mergeKey) : null;
+    // ★出している最中のもの(先頭)にもまとめる。先頭を外していたため、一気に上がると同じ Lvアップが2回出ていた(2026-11-11 社長「一気に上がるときに2回表示される」)。
+    //   まとめた先頭はそのまま描き直され、「Lv.元 → Lv.いま」になる(id は変えないので、閉じるまで1枚のまま)
+    const prev = mergeKey ? sheets.find((s) => s.tier === 'level' && s.key === mergeKey) : null;
     // セッションLv は、助手ごとに「Lv.◯ → ◯」の1行へまとめ直す(行を足し重ねない。2026-11-08 社長「一気に上がったときは…まとめて出す」)
     if (prev && Array.isArray(prev.sessionUps) && Array.isArray(ev.sessionUps)) Object.assign(prev, growthFxSessionSheet([...prev.sessionUps, ...ev.sessionUps]), { tier, key: mergeKey });
     else if (prev) Object.assign(prev, { ...ev, tier, key: mergeKey, levelFrom: prev.levelFrom, gains: [...(prev.gains || []), ...(ev.gains || [])] });
@@ -137,10 +142,10 @@ const growthFxAssistantBond = (assistantId, beforePoints, afterPoints) => {
     face: growthFxAssistantFace(assistantId, 'excited'), gains });
 };
 // マスモンに絆経験値のアイテムを使った(60-app.jsx の useBondXpTickets から)
-const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after }) => {
+const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gain, before, after, note = '' }) => {
   if (!before || !after || !(growthFxNum(gain) > 0)) return;
   const pct = (info) => growthFxPct((growthFxNum(info.xpIntoLevel) / Math.max(1, growthFxNum(info.xpForNext))) * 100);
-  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`,
+  growthFxPush({ tier: 'item', kind: 'star', title: `${masuName} に ${itemName}！`, item: `${itemEmoji || ''} ${itemName} ×${count}`, sub: note ? String(note) : undefined,
     faces: image ? [image] : [], faceRound: true,
     rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
 };
@@ -383,9 +388,11 @@ const ensureGrowthFxCss = () => {
 
 // いま出してよいか(画面と、画面の上に出ているもの)。tools/ui/growth-fx-check.js が確かめる
 //   all … 札も含めて出す / sheet … 真ん中のカード・Lvアップも出す
+//   level … Lvアップの全面も出す(裏クイックをどこでも回しているあいだは HOME だけ)
 const growthFxVisible = (screen, domHold = {}) => {
   const all = GROWTH_FX_CALM_SCREENS.has(screen) && !domHold.all;
-  return { all, sheet: all && !domHold.sheet };
+  const sheet = all && !domHold.sheet;
+  return { all, sheet, level: sheet && !(domHold.quickAnywhere && screen !== 'HOME') };
 };
 // 軽さ: 端末の「動きを減らす」と最軽量は minimal、標準・軽めは reduced、豪華は full
 const growthFxLevelOf = (load) => {
@@ -479,6 +486,7 @@ const GrowthFxItemCard = ({ sheet, level, onClose }) => {
         {(sheet.faces || []).length > 0 && <div className="faces">{sheet.faces.map((src, i) => <img key={i} src={src} alt="" className={sheet.faceRound ? 'round' : ''} style={{ animationDelay: `${0.4 + i * 0.15}s` }}/>)}</div>}
         <div className="ttl">{sheet.title}{reaction && <span className={`tag ${reaction}`}>{reaction === 'like' ? '大好き！' : 'ちょっと苦手…'}</span>}</div>
         {sheet.item && <div className="itm">{sheet.item}</div>}
+        {sheet.sub && <div className="itm" data-growth-fx-note>{sheet.sub}</div>}
         {(sheet.rows || []).map((row, i) => {
           const rk = growthFxKind(row.kind);
           const lvUp = growthFxNum(row.levelTo) > growthFxNum(row.levelFrom);
@@ -510,12 +518,15 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
   // 押すと先へ: 演出中 → 最後の形 → 閉じる(開いた直後の押し間違いでは閉じない)
   const next = () => { if (Date.now() - opened.current < 250) return; if (!done) setDone(true); else onClose(); };
   const gains = Array.isArray(sheet.gains) ? sheet.gains : [];
-  const label = `${k.label}が Lv.${sheet.levelTo} に上がりました`;
+  // 一気に2つ以上上がったときは「Lv.元 → Lv.いま」を出す(2026-11-11 社長「元のレベルとどこまで上がったかを見せて」)
+  const jumpFrom = growthFxNum(sheet.levelFrom), jumpTo = growthFxNum(sheet.levelTo);
+  const jump = jumpFrom > 0 && jumpTo - jumpFrom >= 2;
+  const label = jump ? `${k.label}が Lv.${jumpFrom} から Lv.${jumpTo} に上がりました` : `${k.label}が Lv.${sheet.levelTo} に上がりました`;
   if (level === 'minimal') {
     return (
       <div className="mh-gfx-sheet level-mini mh-gfx-minimal" data-growth-fx-sheet="level" data-growth-fx-kind={sheet.kind} role="dialog" aria-label={label}
         style={{ '--gc': k.color, background: '#0b102699' }} onClick={onClose}>
-        <div className="mh-gfx-band"><span className="big">{cardIconNode(k.icon, 20)} {k.label} Lv.{sheet.levelTo}</span>
+        <div className="mh-gfx-band"><span className="big">{cardIconNode(k.icon, 20)} {k.label} {jump ? `Lv.${jumpFrom} → ` : ''}Lv.{sheet.levelTo}</span>
           <small>{sheet.sub}{gains.length ? ` ・ ${gains.map(g => g.text).join('・')}` : ''}</small><small>押すと閉じる</small></div>
       </div>
     );
@@ -543,6 +554,7 @@ const GrowthFxLevelUp = ({ sheet, level, onClose }) => {
             <div className="mh-gfx-ring" aria-hidden="true"/>
           </div>
           <div className="ttl">{sheet.title || `${k.label} UP!`}</div>
+          {jump && <div className="sub" data-growth-fx-level-jump><b>Lv.{jumpFrom} → Lv.{jumpTo}</b></div>}
           {sheet.sub && <div className="sub">{sheet.sub}</div>}
         </div>
         {gains.length > 0 && <ul className="mh-gfx-gains" aria-label="新しく開いたもの">
@@ -682,7 +694,7 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
 // 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
 const GrowthFxLayer = ({ screen, load }) => {
   const [, setTick] = useState(0);
-  const [domHold, setDomHold] = useState({ all: false, sheet: false });
+  const [domHold, setDomHold] = useState({ all: false, sheet: false, quickAnywhere: false });
   useEffect(() => { ensureGrowthFxCss(); return growthFxSubscribe(() => setTick(t => t + 1)); }, []);
   const small = GROWTH_FX_STORE.small, sheets = GROWTH_FX_STORE.sheets;
   const pending = small.length + sheets.length;
@@ -692,7 +704,8 @@ const GrowthFxLayer = ({ screen, load }) => {
     const check = () => {
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
-      setDomHold(prev => (prev.all === all && prev.sheet === sheet ? prev : { all, sheet }));
+      const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
+      setDomHold(prev => (prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : { all, sheet, quickAnywhere }));
     };
     check();
     const t = setInterval(check, 600);
@@ -703,7 +716,8 @@ const GrowthFxLayer = ({ screen, load }) => {
   const holdAll = !vis.all;
   const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? sheets[0] : null;
+  // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
+  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
