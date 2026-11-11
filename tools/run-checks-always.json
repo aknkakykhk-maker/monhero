@@ -280,6 +280,7 @@
   "mode/rhythm-run-progress-static-check.js",
   "mode/rhythm-run-stop-check.js",
   "mode/rhythm-scroll-back-check.js",
+  "mode/rhythm-scroll-fx-check.js",
   "mode/rhythm-side-flick-check.js",
   "mode/rhythm-side-monster-check.js",
   "mode/rhythm-side-monster-size-check.js",
