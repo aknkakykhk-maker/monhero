@@ -50,6 +50,7 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
       const page=await ctx.newPage();
       await page.addInitScript(()=>{window.__mhSupabaseStubbed=true;});
+      await page.route(/supabase|functions\/v1/,r=>r.fulfill({status:200,contentType:'application/json',body:'[]'}));   // 本番へ書かない
       await page.addInitScript(seed);
       if(standalone)await page.addInitScript(()=>{Object.defineProperty(Navigator.prototype,'standalone',{configurable:true,get:()=>true});});
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
