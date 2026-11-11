@@ -39,7 +39,7 @@ create table if not exists public.masmon_pvp_entries (
   updated_at    timestamptz not null default now(),
   constraint masmon_pvp_entries_pkey primary key (owner_id, assistant_id),
   constraint masmon_pvp_entries_shape check (owner_id ~ '^[A-Za-z0-9_-]{1,64}$' and assistant_id ~ '^[a-z]{2,16}$'
-    and length(user_name) <= 40 and octet_length(team::text) <= 3000),
+    and length(user_name) <= 40 and octet_length(team::text) <= 6000),
   constraint masmon_pvp_entries_counts check (version between 1 and 1000000 and team_total between 0 and 20000 and tactics_first between 0 and 100)
 );
 create index if not exists masmon_pvp_entries_updated_idx on public.masmon_pvp_entries (active, updated_at desc);
@@ -71,6 +71,8 @@ create table if not exists public.masmon_pvp_matches (
   b_assistant    text        not null,
   seed           text        not null,
   engine_version integer     not null,
+  tech_version   integer     not null default 0,
+  balance        text        not null default 'A',
   team_a         jsonb       not null,
   team_b         jsonb       not null,
   winner         text        not null,
@@ -80,8 +82,8 @@ create table if not exists public.masmon_pvp_matches (
   a_delta        integer     not null default 0,
   b_delta        integer     not null default 0,
   constraint masmon_pvp_matches_shape check (division in ('raw', 'fair') and size between 1 and 3 and winner in ('A', 'B', 'draw')
-    and reason in ('wipe', 'judge') and a_owner <> b_owner and seed ~ '^[A-Za-z0-9_-]{8,64}$' and digest ~ '^[0-9a-f]{1,16}$'
-    and octet_length(team_a::text) <= 3000 and octet_length(team_b::text) <= 3000)
+    and reason in ('wipe', 'judge') and balance in ('A', 'B', 'C') and a_owner <> b_owner and seed ~ '^[A-Za-z0-9_-]{8,64}$' and digest ~ '^[0-9a-f]{1,16}$'
+    and octet_length(team_a::text) <= 6000 and octet_length(team_b::text) <= 6000)
 );
 create index if not exists masmon_pvp_matches_a_idx on public.masmon_pvp_matches (a_owner, at desc);
 create index if not exists masmon_pvp_matches_b_idx on public.masmon_pvp_matches (b_owner, at desc);
@@ -140,7 +142,7 @@ do $$ begin
 end $$;
 grant select (owner_id, assistant_id, user_name, icon, team, team_total, version, active, updated_at)
   on public.masmon_pvp_entries to anon, authenticated;
-grant select (id, day, at, division, size, rated, a_owner, a_assistant, b_owner, b_assistant, seed, engine_version,
+grant select (id, day, at, division, size, rated, a_owner, a_assistant, b_owner, b_assistant, seed, engine_version, tech_version, balance,
   team_a, team_b, winner, reason, rounds, digest, a_delta, b_delta)
   on public.masmon_pvp_matches to anon, authenticated;
 grant select (division, owner_id, assistant_id, user_name, icon, rating, best, wins, losses, draws, matches, updated_at)
@@ -191,7 +193,7 @@ create or replace function public.masmon_pvp_record(
   p_division text, p_size int,
   p_a_owner text, p_a_assistant text, p_a_name text, p_a_icon text,
   p_b_owner text, p_b_assistant text, p_b_name text, p_b_icon text,
-  p_seed text, p_engine_version int, p_team_a jsonb, p_team_b jsonb,
+  p_seed text, p_engine_version int, p_tech_version int, p_balance text, p_team_a jsonb, p_team_b jsonb,
   p_winner text, p_reason text, p_rounds int, p_digest text,
   p_pair_limit int, p_k int)
 returns jsonb language plpgsql security definer set search_path = public as $$
@@ -232,9 +234,9 @@ begin
       user_name = left(coalesce(p_b_name, user_name), 40), icon = coalesce(left(p_b_icon, 64), icon), updated_at = now()
       where division = p_division and owner_id = p_b_owner and assistant_id = p_b_assistant;
   end if;
-  insert into public.masmon_pvp_matches (day, division, size, rated, a_owner, a_assistant, b_owner, b_assistant, seed, engine_version,
+  insert into public.masmon_pvp_matches (day, division, size, rated, a_owner, a_assistant, b_owner, b_assistant, seed, engine_version, tech_version, balance,
       team_a, team_b, winner, reason, rounds, digest, a_delta, b_delta)
-    values (v_day, p_division, p_size, v_rated, p_a_owner, p_a_assistant, p_b_owner, p_b_assistant, p_seed, p_engine_version,
+    values (v_day, p_division, p_size, v_rated, p_a_owner, p_a_assistant, p_b_owner, p_b_assistant, p_seed, p_engine_version, p_tech_version, p_balance,
       p_team_a, p_team_b, p_winner, p_reason, p_rounds, p_digest, da, db)
     returning id into mid;
   return jsonb_build_object('id', mid, 'rated', v_rated,
@@ -246,9 +248,9 @@ revoke all on function public.masmon_pvp_today() from public;
 revoke all on function public.masmon_pvp_owner_check(text, text) from public, anon, authenticated;
 revoke all on function public.masmon_pvp_take(text, int) from public, anon, authenticated;
 revoke all on function public.masmon_pvp_refund(text) from public, anon, authenticated;
-revoke all on function public.masmon_pvp_record(text, int, text, text, text, text, text, text, text, text, text, int, jsonb, jsonb, text, text, int, text, int, int) from public, anon, authenticated;
+revoke all on function public.masmon_pvp_record(text, int, text, text, text, text, text, text, text, text, text, int, int, text, jsonb, jsonb, text, text, int, text, int, int) from public, anon, authenticated;
 grant execute on function public.masmon_pvp_today() to anon, authenticated, service_role;
 grant execute on function public.masmon_pvp_owner_check(text, text) to service_role;
 grant execute on function public.masmon_pvp_take(text, int) to service_role;
 grant execute on function public.masmon_pvp_refund(text) to service_role;
-grant execute on function public.masmon_pvp_record(text, int, text, text, text, text, text, text, text, text, text, int, jsonb, jsonb, text, text, int, text, int, int) to service_role;
+grant execute on function public.masmon_pvp_record(text, int, text, text, text, text, text, text, text, text, text, int, int, text, jsonb, jsonb, text, text, int, text, int, int) to service_role;

@@ -5,7 +5,7 @@
 // 表と関数: supabase/migrations/202611110001_masmon_pvp.sql。設計: docs/spec/MASMON_PVP_SERVER.md
 // ★記録に書くのは件数・エラーの種類だけ
 import { CHALLENGE_DAILY_LIMIT, PAIR_RATED_DAILY_LIMIT, handle } from "./core.js";
-import { ASSISTANT_MASMON_BATTLE as engine, MASMON_PVP_CATALOG as catalog } from "./engine.js";
+import { ASSISTANT_MASMON_BATTLE as engine, MASMON_PVP_CATALOG as catalog, MASMON_PVP_LEARN as learn } from "./engine.js";
 
 export function start({ createClient }) {
   const supabase = createClient(
@@ -31,6 +31,8 @@ export function start({ createClient }) {
   const limits = {
     challengeDaily: envInt("MASMON_PVP_CHALLENGE_DAILY_LIMIT", CHALLENGE_DAILY_LIMIT),
     pairRated: envInt("MASMON_PVP_PAIR_RATED_DAILY_LIMIT", PAIR_RATED_DAILY_LIMIT),
+    // 能力の差の効き方(A|B|C)。社長が観戦して決めたら、ここ(または core.js の BALANCE)で替える
+    balance: Deno.env.get("MASMON_PVP_BALANCE") ?? undefined,
   };
 
   const must = (r, step) => {
@@ -89,7 +91,7 @@ export function start({ createClient }) {
     if (!origin || !origins.includes(origin)) return new Response(JSON.stringify({ ok: false, error: "origin" }), { status: 403, headers });
     let body = null;
     try { body = await req.json(); } catch { /* 下で bad_request */ }
-    const result = await handle({ body, db, engine, catalog, nowMs: Date.now(), newSeed, log, limits });
+    const result = await handle({ body, db, engine, catalog, learn, nowMs: Date.now(), newSeed, log, limits });
     return new Response(JSON.stringify(result.json), { status: result.status, headers });
   });
 }

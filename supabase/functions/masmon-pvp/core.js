@@ -32,6 +32,10 @@ export const CHALLENGE_DAILY_LIMIT = 20;                     // 仮。1人1日�
 export const PAIR_RATED_DAILY_LIMIT = 3;                     // 仮。同じ2人の試合をランキングに数えるのは1日3回まで(3対3だけ)
 export const ELO_K = 32;
 export const DIVISIONS = Object.freeze(['raw', 'fair']);
+// 能力の差の効き方(計算の balance 'A'|'B'|'C')。社長が観戦してから決める。決まるまで A。試合の行に残す
+export const BALANCE = 'A';
+export const MASTERY_MAX = 100;
+const MASTERY_EXTRA = ['guard', 'dist', 'swap'];
 
 const MS_DAY = 86400000;
 const OWNER_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -58,7 +62,7 @@ export const nameProblem = (s) => {
 };
 
 // 登録の形を確かめる(数字の上限はまだ見ない)。返り値 { team } か { error }
-export const parseTeam = (raw, engine, catalog) => {
+export const parseTeam = (raw, engine, catalog, learn = {}) => {
   const keys = engine.STAT_KEYS;
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.members)) return { error: 'shape' };
   const ms = raw.members;
@@ -80,7 +84,27 @@ export const parseTeam = (raw, engine, catalog) => {
       if (!isInt(st[k]) || st[k] < 0 || st[k] > STAT_ABS_MAX) return { error: 'stats' };
       stats[k] = st[k];
     }
-    members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats });
+    // 覚えた技: 無ければ初めからの技。その種の技表にある id だけ・重ならない・習得条件(能力の下限・前の技の熟練)を満たすこと
+    const spTechs = catalog.species[m.species].techs || [];
+    const ids = new Set(spTechs.map((t) => t.id));
+    const techs = m.techs == null ? spTechs.filter((t) => t.start).map((t) => t.id) : m.techs;
+    if (!Array.isArray(techs) || techs.length < 1 || techs.length > spTechs.length || new Set(techs).size !== techs.length
+      || !techs.every((id) => typeof id === 'string' && ids.has(id))) return { error: 'techs' };
+    // 熟練: 技 id(覚えた技だけ)と guard・dist・swap。0〜100 の整数
+    const rawM = m.mastery == null ? {} : m.mastery;
+    if (!rawM || typeof rawM !== 'object' || Array.isArray(rawM)) return { error: 'mastery' };
+    const mastery = {};
+    for (const [k, v] of Object.entries(rawM)) {
+      if (!(techs.includes(k) || MASTERY_EXTRA.includes(k)) || !isInt(v) || v < 0 || v > MASTERY_MAX) return { error: 'mastery' };
+      if (v > 0) mastery[k] = v;
+    }
+    for (const id of techs) {
+      const l = learn[id];
+      if (!l || l.start) continue;
+      if (l.st && Object.entries(l.st).some(([k, min]) => !(stats[k] >= min))) return { error: 'learn' };
+      if (l.need && Object.entries(l.need).some(([tid, min]) => !techs.includes(tid) || !((mastery[tid] || 0) >= min))) return { error: 'learn' };
+    }
+    members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats, techs: [...techs], mastery });
   }
   return { team: { tactics: raw.tactics, members } };
 };
@@ -134,12 +158,14 @@ export const fairUnit = (u, keys) => {
   }
   const stats = {};
   keys.forEach((k, i) => { stats[k] = base[i]; });
-  return { species: u.species, name: u.name, lv: FAIR_LV, stats };
+  // 覚えた技と熟練はそのまま(育てた戦い方で勝負)。能力と Lv だけそろえる
+  return { species: u.species, name: u.name, lv: FAIR_LV, stats, techs: u.techs, mastery: u.mastery };
 };
 
 // 計算に渡す編成(区分と体数で作る)。登録の team はそのまま変えない
 export const battleTeam = ({ assistantId, team, division, size, engine }) => {
-  const list = team.members.slice(0, size).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats } }));
+  const list = team.members.slice(0, size).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats },
+    techs: Array.isArray(m.techs) ? [...m.techs] : undefined, mastery: m.mastery ? { ...m.mastery } : undefined }));
   return {
     assistantId,
     tactics: team.tactics,
@@ -156,10 +182,10 @@ const ownerOk = async (db, owner, key) => {
   return db.ownerCheck(owner, key);
 };
 
-const doRegister = async ({ body, db, engine, catalog, nowMs, log }) => {
+const doRegister = async ({ body, db, engine, catalog, learn, nowMs, log }) => {
   const { owner, key, assistant } = body;
   if (typeof assistant !== 'string' || !ASSISTANT_RE.test(assistant) || !engine.STYLES[assistant]) return fail(400, 'assistant');
-  const parsed = parseTeam(body.team, engine, catalog);
+  const parsed = parseTeam(body.team, engine, catalog, learn);
   if (parsed.error) return fail(400, 'team', { detail: parsed.error });
   const who = await ownerOk(db, owner, key);
   if (who === 'bad') return fail(400, 'owner');
@@ -203,7 +229,7 @@ const doUnregister = async ({ body, db, log }) => {
   return okRes({ status: 'ok' });
 };
 
-const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits }) => {
+const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits, balance }) => {
   const { owner, key, assistant, opp_owner: oppOwner, opp_assistant: oppAssistant } = body;
   const division = body.division;
   const size = body.size == null ? 3 : body.size;
@@ -228,7 +254,7 @@ const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits }) 
   const seed = newSeed();
   let r;
   try {
-    r = engine.simulate({ seed, catalog, teamA, teamB });
+    r = engine.simulate({ seed, catalog, teamA, teamB, balance });
   } catch (e) {
     await db.refund(owner).catch(() => {});
     log({ step: 'challenge', result: 'engine_error' });
@@ -238,7 +264,8 @@ const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits }) 
     p_division: division, p_size: size,
     p_a_owner: owner, p_a_assistant: assistant, p_a_name: mine.user_name, p_a_icon: mine.icon,
     p_b_owner: oppOwner, p_b_assistant: oppAssistant, p_b_name: theirs.user_name, p_b_icon: theirs.icon,
-    p_seed: seed, p_engine_version: r.version, p_team_a: teamA, p_team_b: teamB,
+    p_seed: seed, p_engine_version: r.version, p_tech_version: Number(catalog.techVersion) || 0, p_balance: r.balance || balance,
+    p_team_a: teamA, p_team_b: teamB,
     p_winner: r.winner, p_reason: r.reason, p_rounds: r.rounds, p_digest: r.digest,
     p_pair_limit: limits.pairRated, p_k: ELO_K,
   });
@@ -246,21 +273,22 @@ const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits }) 
   // 端末へは「同じ計算で見返すのに要るもの」と結果を返す。端末は同じ種・同じ編成で simulate し、digest が合うかを見る
   return okRes({
     match: {
-      id: rec && rec.id, division, size, rated: !!(rec && rec.rated), seed, version: r.version,
+      id: rec && rec.id, division, size, rated: !!(rec && rec.rated), seed, version: r.version, techVersion: catalog.techVersion, balance: r.balance || balance,
       teamA, teamB, winner: r.winner, reason: r.reason, rounds: r.rounds, digest: r.digest,
       a: rec && rec.a, b: rec && rec.b, remaining: took.remaining,
     },
   });
 };
 
-export const handle = async ({ body, db, engine, catalog, nowMs, newSeed, log = (_entry) => {}, limits = {} }) => {
+export const handle = async ({ body, db, engine, catalog, learn = {}, nowMs, newSeed, log = (_entry) => {}, limits = {} }) => {
   const lim = { challengeDaily: limits.challengeDaily ?? CHALLENGE_DAILY_LIMIT, pairRated: limits.pairRated ?? PAIR_RATED_DAILY_LIMIT };
+  const balance = ['A', 'B', 'C'].includes(limits.balance) ? limits.balance : BALANCE;
   if (!body || typeof body !== 'object') return fail(400, 'bad_request');
   try {
     switch (body.action) {
-      case 'register': return await doRegister({ body, db, engine, catalog, nowMs, log });
+      case 'register': return await doRegister({ body, db, engine, catalog, learn, nowMs, log });
       case 'unregister': return await doUnregister({ body, db, log });
-      case 'challenge': return await doChallenge({ body, db, engine, catalog, nowMs, newSeed, log, limits: lim });
+      case 'challenge': return await doChallenge({ body, db, engine, catalog, nowMs, newSeed, log, limits: lim, balance });
       default: return fail(400, 'action');
     }
   } catch (e) {

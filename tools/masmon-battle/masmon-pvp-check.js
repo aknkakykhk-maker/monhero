@@ -29,6 +29,7 @@ const check = (name, ok, extra) => {
   const bundle = await import(pathToFileURL(path.join(FN, 'engine.js')).href);
   const engine = bundle.ASSISTANT_MASMON_BATTLE;
   const catalog = bundle.MASMON_PVP_CATALOG;
+  const learn = bundle.MASMON_PVP_LEARN;
   const client = require('./load.js').load();
   const SPEC = Object.keys(catalog.species);
   const K = engine.STAT_KEYS;
@@ -62,7 +63,7 @@ const check = (name, ok, extra) => {
   const member = (slot, species, o = {}) => ({ slot, species, name: o.name ?? 'もち', lv: o.lv || 10, stats: o.stats || st(300) });
   const team3 = (o = {}) => ({ tactics: o.tactics ?? 10, members: [member(0, SPEC[0], o), member(1, SPEC[1], o), member(2, SPEC[2], o)] });
   let seedN = 0;
-  const call = (db, body, nowMs = T0) => core.handle({ body, db, engine, catalog, nowMs, newSeed: () => 'mptestseed' + (++seedN), limits: {} });
+  const call = (db, body, nowMs = T0) => core.handle({ body, db, engine, catalog, learn, nowMs, newSeed: () => 'mptestseed' + (++seedN), limits: {} });
 
   // ---- B ----
   {
@@ -80,8 +81,29 @@ const check = (name, ok, extra) => {
 
   // ---- C ----
   {
-    const bad = (t, why) => core.parseTeam(t, engine, catalog).error === why;
-    check('C 正しい3体は通る', !core.parseTeam(team3(), engine, catalog).error);
+    const bad = (t, why) => core.parseTeam(t, engine, catalog, learn).error === why;
+    check('C 正しい3体は通る', !core.parseTeam(team3(), engine, catalog, learn).error);
+    {
+      const sp = SPEC[0];
+      const ts = catalog.species[sp].techs;
+      const start = ts.filter((t) => t.start).map((t) => t.id);
+      const later = ts.find((t) => !t.start && learn[t.id] && learn[t.id].st && !learn[t.id].need);
+      const needT = ts.find((t) => learn[t.id] && learn[t.id].need);
+      const P = (o) => core.parseTeam({ tactics: 0, members: [{ ...member(0, sp), ...o }] }, engine, catalog, learn);
+      const def = P({});
+      check('C 技を送らなければ初めからの技になる', !def.error && def.team.members[0].techs.join() === start.join());
+      check('C ほかの種の技・知らない技ははじく', P({ techs: [...start, catalog.species[SPEC[1]].techs[0].id] }).error === 'techs' && P({ techs: ['nope'] }).error === 'techs');
+      check('C 同じ技を2回ははじく', P({ techs: [start[0], start[0]] }).error === 'techs');
+      const lowSt = Object.fromEntries(K.map((k) => [k, 0]));
+      check('C 能力の下限に届かない技ははじく(技の習得条件)', P({ techs: [...start, later.id], stats: lowSt }).error === 'learn');
+      check('C 能力の下限に届いていれば通る', !P({ techs: [...start, later.id], stats: st(999) }).error);
+      const needOk = Object.entries(learn[needT.id].need).every(([tid]) => true);
+      const pre = Object.keys(learn[needT.id].need);
+      check('C 前の技の熟練が足りない技ははじく', needOk && P({ techs: [...new Set([...start, ...pre, needT.id])], stats: st(999) }).error === 'learn');
+      check('C 前の技の熟練が足りていれば通る', !P({ techs: [...new Set([...start, ...pre, needT.id])], stats: st(999),
+        mastery: Object.fromEntries(pre.map((t) => [t, 100])) }).error);
+      check('C 覚えていない技の熟練・101 ははじく', P({ mastery: { [later.id]: 10 } }).error === 'mastery' && P({ mastery: { guard: 101 } }).error === 'mastery');
+    }
     check('C 実装されていない種ははじく', bad({ tactics: 0, members: [member(0, 'NotAMonster')] }, 'species'));
     check('C Lv が上限を超えたらはじく', bad({ tactics: 0, members: [member(0, SPEC[0], { lv: core.LV_CAP + 1 })] }, 'lv'));
     check('C 能力が 999 を超えたらはじく', bad({ tactics: 0, members: [member(0, SPEC[0], { stats: { ...st(100), pow: 1000 } })] }, 'stats'));
@@ -157,7 +179,8 @@ const check = (name, ok, extra) => {
     check('F 端末が送った種・勝ち負けは使わない', m && m.seed !== 'cheat' && /^mptestseed/.test(m.seed));
     const rec = db.s.matches[db.s.matches.length - 1];
     check('F 記録の勝ち負けはサーバの計算と同じ', rec && rec.p_winner === m.winner && rec.p_digest === m.digest && rec.p_seed === m.seed);
-    const replay = client.engine.simulate({ seed: m.seed, catalog: client.catalog, teamA: m.teamA, teamB: m.teamB });
+    check('F 記録に計算の版・技表の版・balance が残る', rec && rec.p_engine_version === engine.VERSION && rec.p_tech_version === catalog.techVersion && rec.p_balance === 'A' && m.balance === 'A');
+    const replay = client.engine.simulate({ seed: m.seed, catalog: client.catalog, teamA: m.teamA, teamB: m.teamB, balance: m.balance });
     check('F 端末が返ってきた種と編成で見返すと同じ指紋', replay.digest === m.digest && replay.winner === m.winner);
     r = await ch({ division: 'fair' });
     const fm = r.json.match;
@@ -196,7 +219,7 @@ const check = (name, ok, extra) => {
     const coreSrc = fs.readFileSync(path.join(FN, 'core.js'), 'utf8');
     const recCall = (coreSrc.match(/db\.record\(\{([\s\S]*?)\}\);/) || [])[1] || '';
     const jsNames = [...recCall.matchAll(/\b(p_\w+):/g)].map((m) => m[1]).sort();
-    check('G masmon_pvp_record の引数がサーバの呼び方と合う', sqlNames.length === 20 && sqlNames.join() === jsNames.join(), `${sqlNames.length}/${jsNames.length}`);
+    check('G masmon_pvp_record の引数がサーバの呼び方と合う', sqlNames.length === 22 && sqlNames.join() === jsNames.join(), `${sqlNames.length}/${jsNames.length}`);
     const idx = fs.readFileSync(path.join(FN, 'serve.js'), 'utf8');
     const entry = fs.readFileSync(path.join(FN, 'index.ts'), 'utf8');
     check('G index.ts は serve.js を読む数行だけ(配り直しの形・docs/rules/EDGE_REDEPLOY.md)', entry.split('"./serve.js"').length === 2 && entry.split('\n').filter((l) => l.trim() && !l.startsWith('//')).length <= 4);
