@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "37f0884c08a8",
-  "packs": {"beat":{"bytes":136587687,"count":103},"battle":{"bytes":125534505,"count":800},"card":{"bytes":37779758,"count":1048},"all":{"bytes":299901950,"count":1951},"core":{"bytes":20284780,"count":23}},
+  "id": "9b88656600bc",
+  "packs": {"beat":{"bytes":136587687,"count":103},"battle":{"bytes":125534505,"count":800},"card":{"bytes":37779758,"count":1048},"all":{"bytes":299901950,"count":1951},"core":{"bytes":20284779,"count":23}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1956,7 +1956,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"648289c1f323","size":302617,"pack":"core"},
+    "tailwind.css": {"v":"33996cab3c10","size":302617,"pack":"core"},
     "data/images/images-ally.js": {"v":"4c0cc620fa70","size":73532,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -1976,6 +1976,6 @@
     "data/assistants.js": {"v":"4eeb89f48b0c","size":2137778,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"d41ea5fd44c9","size":10196860,"pack":"core"}
+    "game-system.compiled.js": {"v":"c923a6091acb","size":10196859,"pack":"core"}
   }
 }

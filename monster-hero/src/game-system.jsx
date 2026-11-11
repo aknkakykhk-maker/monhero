@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bb91478f72ea116a
+// generated-sha256: f9bd2684f2bac275
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9735,7 +9735,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   偽のあいだは、はじめての人も今までどおり全員を選べる(助手えらびで mode:'earn' を書かない・案内の文も出さない)。
   //   すでに遊んでいる人の「全員が助手」(mode:'all')の一度きりの判定は、偽のあいだも書く(公開の前から遊んでいた人を守る)。
   //   ミハリの確認と Fable の最終確認のあと、窓口が真にする
-  assistantPartnerUnlock: false,
+  assistantPartnerUnlock: true, // 2026-11-11 Fable の最終確認のあと公開(窓口)
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
