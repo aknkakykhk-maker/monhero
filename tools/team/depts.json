@@ -181,7 +181,7 @@
       "部長": "オトズレ",
       "受け持ち": "フレンドの家(助手の行き来・場面)とフレンド機能(一覧・申請・通信)",
       "語": ["フレンド", "訪問", "行き来", "オトズレ"],
-      "files": ["P/56-assistant-life-friend.jsx", "P/34-friends-api.jsx", "P/75-screen-friends.jsx", "tools/friends/*"],
+      "files": ["P/56-assistant-life-friend.jsx", "P/56-assistant-life-friend-*.jsx", "P/34-friends-api.jsx", "P/75-screen-friends.jsx", "tools/friends/*"],
       "入口": ["AssistantLifeFriendPage", "AlfFriendHouseView", "FriendsScreen"],
       "検査": ["node tools/run-checks.js --changed(tools/friends・tools/assistant から選ばれる)"],
       "資料": ["docs/spec/FRIENDS.md", "docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md", "docs/progress/assistant-peer/FRIEND-VISIT-BUILD.md"],
