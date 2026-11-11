@@ -38,6 +38,10 @@ const CASES = [
   ['新しい遊び方の設計の案を出す', 'claude-opus-5-5'],
   ['新機能の公開前の最終確認', 'claude-fable-5-2'],
   ['なんでもない頼み', 'claude-sonnet-5-5'],
+  // 道具を作る・強化するのは最新モデル(1回)、できた道具を回してまとめるのは安いモデル(2026-11-11 社長)
+  ['譜面の全曲点検の道具を作る', 'claude-fable-5-2'],
+  ['rhythm-chart-review.js を回して全曲点検の結果をまとめる', 'claude-sonnet-5-5'],
+  ['全譜面の MISS になる所を洗い出してまとめる', 'claude-sonnet-5-5'],
 ];
 for (const [text, want] of CASES) { const got = model(text); ok(got === want, `① 「${text}」は ${want} のはずが ${got}`); }
 ok(model('モンスターノーツのかくつきを直す', { failed: 2 }) === 'claude-fable-5-2', '① 2回直して直らない不具合は claude-fable-5-2');

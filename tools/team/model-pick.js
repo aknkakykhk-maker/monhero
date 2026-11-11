@@ -3,7 +3,7 @@
 //
 //   node tools/ctx.js model "<仕事の文>"          … 種類・モデル・理由を1行ずつ
 //   node tools/ctx.js model "<仕事の文>" --failed 2 … 同じ不具合を直した回数(2回直して直らないなら要所のモデルへ)
-//   node tools/ctx.js model --kind design          … 種類を自分で決めて引く(watch / small / build / design / final)
+//   node tools/ctx.js model --kind design          … 種類を自分で決めて引く(watch / small / run / build / design / final / tool)
 //   node tools/ctx.js model --table                … 表の全体
 //
 // 【なぜあるか】
@@ -28,10 +28,13 @@ function pick(text, { failed = 0, kind } = {}) {
   const score = R['種類'].map(k => ({ k, hits: k['語'].filter(w => t.includes(w)) }));
   const fin = score.find(s => s.k.id === 'final');
   if (fin.hits.length) return { kind: byId.final, why: `語: ${fin.hits.join('・')}` };
+  // 道具を作る・強化する1回は最新モデル。できた道具を回すだけの点検(run)とは分ける
+  const tool = score.find(s => s.k.id === 'tool');
+  if (tool && tool.hits.length) return { kind: byId.tool, why: `語: ${tool.hits.join('・')}` };
   const guard = ALWAYS_DESIGN.filter(w => t.includes(w));
   if (guard.length) return { kind: byId.design, why: `壊すと戻せない所の語: ${guard.join('・')}` };
   // 上のモデルほど「語が多く当たったとき」だけ選ぶ。同点なら安いほう(表の並びが安い順)
-  const best = score.filter(s => s.k.id !== 'final').sort((a, b) => b.hits.length - a.hits.length)[0];
+  const best = score.filter(s => !['final', 'tool'].includes(s.k.id)).sort((a, b) => b.hits.length - a.hits.length)[0];
   if (!best.hits.length) return { kind: byId[R['既定']], why: '当たる語が無いので既定' };
   return { kind: best.k, why: `語: ${best.hits.join('・')}` };
 }
@@ -54,7 +57,7 @@ function main() {
   console.log(`種類: ${r.kind['名前']}(${r.kind.id})`);
   console.log(`モデル: ${r.kind.model}`);
   console.log(`理由: ${r.why} / ${r.kind['いつ']}`);
-  if (r.kind.id !== 'final') console.log('上げる条件: 同じ不具合を2回直して直らない → --failed 2(claude-fable-5-2)。新機能の公開前の最終確認 → --kind final');
+  if (!['final', 'tool'].includes(r.kind.id)) console.log('上げる条件: 同じ不具合を2回直して直らない → --failed 2(claude-fable-5-2)。新機能の公開前の最終確認 → --kind final');
 }
 
 if (require.main === module) main();

@@ -3,7 +3,7 @@
 //
 //   node tools/ctx.js newsession <部> "<仕事の文>"            … title / model / prompt を出す
 //   node tools/ctx.js newsession <部> "<仕事>" --name ナカヨシ10 … 会話の名前(担当の名前)
-//   node tools/ctx.js newsession <部> "<仕事>" --kind design   … 種類を自分で決める(watch / small / build / design / final)
+//   node tools/ctx.js newsession <部> "<仕事>" --kind design   … 種類を自分で決める(watch / small / run / build / design / final / tool)
 //   node tools/ctx.js newsession <部> "<仕事>" --failed 2      … 同じ不具合を直した回数
 //   node tools/ctx.js newsession <部> "<仕事>" --to <session>  … 報告先(既定は窓口。社員なら部長の会話)
 //
@@ -41,6 +41,8 @@ function build(d, job, { name, kind, failed, to } = {}) {
   P.push('・公開の前に node tools/ctx.js gate。「要る」と出たら、マージの前に窓口へ知らせる(ミハリが確認する)。「要らない」なら検査が通りしだい公開');
   P.push(`・同じ不具合を2回直して直らなかったら、3回目を自分でやらず窓口へ知らせる(要所のモデルの会話に替える)`);
   P.push(`・「会話が長くなった」という知らせが出たら、区切りで node tools/ctx.js handoff ${d.id} --write → 窓口へ`);
+  if (r.kind.id === 'run') P.push('・道具の出力は全部読まない(問題の大きい順の上位・件数だけ。2>&1 | tail)。道具が足りない・直したいときは自分で作り込まず窓口へ(道具づくりは別の会話)');
+  if (r.kind.id === 'tool') P.push('・道具の出力は小さく作る(既定は要約・件数・問題の大きい順の上位だけ。全部は --all や --json で)。回す側は安いモデルなので、読む量がそのまま費用になる。作り終えたら回し方を1行で報告する');
   P.push('');
   P.push(`■報告: send_message で ${to || HQ} へ。短く「何を直したか・PR番号・更新履歴の要否(要るなら文案)・本番で見る所」`);
   return {
