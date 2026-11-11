@@ -1,3 +1,4 @@
+// バトル画面の描き直しを部品ごとに数える計測用フック。ページ読み込み前に差し込み、React の commit ごとに描き直された部品を数える(render-count-run.js が使う)。
 (() => {
   const C = window.__rc = { commits: 0, names: {}, battle: 0, on: false };
   let prev = new WeakSet();

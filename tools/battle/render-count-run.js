@@ -1,3 +1,4 @@
+// バトル画面(タクティクスプロ)をオートで流し、描き直された部品の数を出す計測道具。INIT_JS=tools/battle/render-count-hook.js を付けて動かす。
 const { openTacticsBattle } = require('./lib/tactics-battle-page');
 (async () => {
   const run = await openTacticsBattle({ root: '/home/user/monhero', port: 8991, storage: { mh_battle_fx_v1: { load: 'RICH', autoLoad: 'OFF' } } });
