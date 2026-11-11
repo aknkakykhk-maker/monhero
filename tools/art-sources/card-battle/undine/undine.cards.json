@@ -1,0 +1,187 @@
+{
+  "id": "undine",
+  "name": "ウンディーネ",
+  "status": "最終版",
+  "updated": "2026-11-11",
+  "monster": {
+    "no": "C-U01",
+    "type": "water",
+    "life": 6
+  },
+  "noBase": 921,
+  "cards": [
+    {
+      "id": "U01",
+      "name": "アイスブレード",
+      "kind": "pow",
+      "damage": 2,
+      "guts": 1,
+      "text": "",
+      "effects": []
+    },
+    {
+      "id": "U02",
+      "name": "ドルフィンブロー",
+      "kind": "pow",
+      "damage": 3,
+      "guts": 2,
+      "text": "",
+      "effects": []
+    },
+    {
+      "id": "U03",
+      "name": "アクアウェイブ",
+      "kind": "int",
+      "damage": 2,
+      "guts": 2,
+      "text": "この技でダメージを受けたモンスターは、次の相手のターン、ちから技とかしこさ技の消費ガッツが+1になる。",
+      "effects": [
+        {
+          "t": "costUpOnHit",
+          "n": 1
+        }
+      ]
+    },
+    {
+      "id": "U04",
+      "name": "アイスアロー",
+      "kind": "int",
+      "damage": 2,
+      "guts": 2,
+      "text": "この技でダメージを受けたモンスターは次のターン攻撃できない。",
+      "effects": [
+        {
+          "t": "stunOnHit"
+        }
+      ]
+    },
+    {
+      "id": "U05",
+      "name": "アクアキッス",
+      "kind": "int",
+      "damage": 1,
+      "guts": 3,
+      "star": true,
+      "text": "この技でダメージを与えた場合、相手ブリーダーはガッツを全て失う。",
+      "effects": [
+        {
+          "t": "gutsLossOnHit",
+          "n": "all"
+        }
+      ]
+    },
+    {
+      "id": "U06",
+      "name": "アクアブラスト",
+      "kind": "int",
+      "damage": 3,
+      "guts": 3,
+      "text": "この技は回避されない。",
+      "effects": [
+        {
+          "t": "noEvade"
+        }
+      ]
+    },
+    {
+      "id": "U07",
+      "name": "アイスコフィン",
+      "kind": "int",
+      "damage": 3,
+      "guts": 3,
+      "star": true,
+      "text": "この技でダメージを受けたモンスターは次のターン攻撃できない。",
+      "effects": [
+        {
+          "t": "stunOnHit"
+        }
+      ]
+    },
+    {
+      "id": "U08",
+      "name": "クリスタルアロー",
+      "kind": "int",
+      "damage": 5,
+      "guts": 4,
+      "text": "",
+      "effects": []
+    },
+    {
+      "id": "U09",
+      "name": "クリスタルレイン",
+      "kind": "int",
+      "damage": 2,
+      "guts": 4,
+      "text": "この技は全ての相手モンスターにダメージを与える。この技でダメージを受けたモンスターは、次の相手のターン、ちから技とかしこさ技の消費ガッツが+1になる。",
+      "effects": [
+        {
+          "t": "area",
+          "who": "enemies"
+        },
+        {
+          "t": "costUpOnHit",
+          "n": 1
+        }
+      ]
+    },
+    {
+      "id": "U10",
+      "name": "ホワイトエレジー",
+      "kind": "int",
+      "damage": 6,
+      "guts": 5,
+      "text": "",
+      "effects": []
+    },
+    {
+      "id": "U11",
+      "name": "アクアドーム",
+      "kind": "spe",
+      "damage": null,
+      "guts": 2,
+      "star": true,
+      "text": "次の相手のターン、水中にいない全ての相手モンスターは、ちから技とかしこさ技の消費ガッツが+2になる。",
+      "effects": [
+        {
+          "t": "costUpAll",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "U12",
+      "name": "潜る",
+      "kind": "dge",
+      "damage": null,
+      "guts": 0,
+      "text": "2以上のガッツを消費する、ちから技かかしこさ技を回避する。",
+      "effects": [
+        {
+          "t": "evade",
+          "kinds": [
+            "pow",
+            "int"
+          ],
+          "minGuts": 2
+        }
+      ]
+    },
+    {
+      "id": "U13",
+      "name": "深く潜る",
+      "kind": "dge",
+      "damage": null,
+      "guts": 1,
+      "text": "ちから技か、かしこさ技を回避する。",
+      "effects": [
+        {
+          "t": "evade",
+          "kinds": [
+            "pow",
+            "int"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -87,6 +87,49 @@ const r2BarScale=(r2,bar,barStartMs)=>{
   return s?s.scale:1;
 };
 
+// R6: 盛り上がりに合わせてノーツの量を配る(2026-11-11・R2 を全難易度・全区切りへ広げたもの。曲全体のノーツ数は変えない・配り方だけ)
+//   生成器の取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」なので、刻みの細かい静かな区切りが重く、音数の少ないサビが軽くなる曲がある
+//   (点検の「静かなのに重い」「盛り上がるのに軽い」)。区切りを盛り上がりの低い順に並べ、1秒あたりの取り分がその順に増えていない所だけを直す:
+//   順が逆になっている隣どうしを、長さで重みを付けた平均へそろえる(順序を保つ直し方のうち、動かす量がいちばん少ない)。
+//   もう順どおりの区切りは動かさない。山と谷の差そのものは広げも縮めもしない
+//   (最初の作りは「山を1・いちばん静かな所を0.45倍」という決まった形へ寄せたが、今の配り方より平らで、合い方が 0.62→0.56 に下がった)。
+//   使う: 区切りが3つ以上あり、5%以上動く区切りがある曲。倍率は 0.6〜1.5 に収める(その小節に無い音は叩かせないのは生成器の側が守る)
+//   weightRate(fromMs,toMs) … いちど作った譜面の実際の密度(1秒あたりのノーツ数)。取り分ではなく、置けた数で見る
+//   strong … 谷もはっきり: 順をそろえたあと、静かな区切りを「いちばん濃い所 ×(ENERGY_FLOOR+(1−ENERGY_FLOOR)×盛り上がりの比)」まで軽くする
+//            (盛り上がりが山の2割の区切りなら、いちばん濃い所の6割まで)。曲全体のノーツ数は、ほかの区切りに拾える音が残っていなければ減る
+const ENERGY_SCALE_MIN=.6,ENERGY_SCALE_MAX=1.5,ENERGY_DEAD=.05,ENERGY_FLOOR=.5;
+const chooseEnergySpread=(audio,difficulty,{weightRate=null,strong=false}={})=>{
+  const S=songShape(audio);if(!S||S.sections.length<3||!weightRate)return {id:'R6',use:false,reason:'区切りが3つ未満で、配り直す相手がいない'};
+  const rows=S.sections.map(s=>({s,rate:weightRate(s.startMs,s.endMs),seconds:Math.max(.001,(s.endMs-s.startMs)/1000)}))
+    .filter(r=>r.rate>0&&(r.s.endBarExclusive-r.s.startBar)>=2)
+    .sort((x,y)=>Number(x.s.intensity)-Number(y.s.intensity)||x.s.startMs-y.s.startMs);
+  if(rows.length<3)return {id:'R6',use:false,reason:'取り分のある区切りが3つ未満'};
+  // 盛り上がりの低い順に、取り分が減らない並びへ(隣どうしで逆になっている組を平均へそろえる)
+  const blocks=[];
+  for(const r of rows){
+    blocks.push({sum:r.rate*r.seconds,seconds:r.seconds,rows:[r]});
+    while(blocks.length>1&&blocks[blocks.length-2].sum/blocks[blocks.length-2].seconds>blocks[blocks.length-1].sum/blocks[blocks.length-1].seconds){
+      const last=blocks.pop(),prev=blocks[blocks.length-1];prev.sum+=last.sum;prev.seconds+=last.seconds;prev.rows.push(...last.rows);}
+  }
+  const sections=[];
+  const top=Math.max(...blocks.map(block=>block.sum/block.seconds));
+  for(const block of blocks){
+    for(const r of block.rows){
+      let level=block.sum/block.seconds;
+      if(strong&&S.maxI>0)level=Math.min(level,top*(ENERGY_FLOOR+(1-ENERGY_FLOOR)*clamp(Number(r.s.intensity)/S.maxI,0,1)));
+      const raw=level/r.rate;if(Math.abs(raw-1)<ENERGY_DEAD)continue;
+      sections.push({startBar:r.s.startBar,endBarExclusive:r.s.endBarExclusive,scale:round(clamp(raw,ENERGY_SCALE_MIN,ENERGY_SCALE_MAX))});}}
+  if(!sections.length)return {id:'R6',use:false,reason:'どの区切りも、もう盛り上がりの順どおりの量になっている'};
+  sections.sort((x,y)=>x.startBar-y.startBar);
+  const lighter=sections.filter(x=>x.scale<1).length,heavier=sections.length-lighter;
+  return {id:'R6',use:true,strong:!!strong,sections,reason:`${strong?'盛り上がりの順に量をそろえ、谷もはっきりさせる':'盛り上がりの順に量をそろえる'}(軽くする区切り ${lighter}・重くする区切り ${heavier}・倍率 ${sections.map(x=>'×'+x.scale).join('/')})`};
+};
+const energySpreadBarScale=(spread,bar)=>{
+  if(!spread||!spread.use)return 1;
+  const s=spread.sections.find(x=>bar>=x.startBar&&bar<x.endBarExclusive);
+  return s?s.scale:1;
+};
+
 // R4: 片手地上・片手空中の流れを長めに(HELL)
 //   使う区切り: 入りのあとの、8小節以上続き、盛り上がりが本編の中央以上(同じ勢いが続く所)。その中は2小節ごとに「左手が空 ⇄ 右手が空」だけを回す
 //   使わない: 入門の HELL(gentle)・そういう区切りが無い曲
@@ -135,4 +178,4 @@ const chooseR5=(audio,slides,lastNoteMs,{gentle=false}={})=>{
 
 const drawerLine=d=>`${d.id} ${d.use?'使う':'使わない'}: ${d.reason}`;
 
-module.exports={songShape,densityShape,REFERENCE_SHAPE,chooseR2,r2BarScale,chooseR3,chooseR4,chooseR5,drawerLine};
+module.exports={songShape,densityShape,REFERENCE_SHAPE,chooseR2,r2BarScale,chooseEnergySpread,energySpreadBarScale,ENERGY_FLOOR,chooseR3,chooseR4,chooseR5,drawerLine};

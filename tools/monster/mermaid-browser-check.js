@@ -104,7 +104,7 @@ const MARKET_ITEMS = [
   // 売り場の中から別の売り場へは、見出しの「戻る」でマーケットの入口へ戻ってから入り直す
   await clickAria('マーケット');
   const openSection = async (tab) => {
-    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.querySelector('[data-market-section]')) b.click(); });
     await page.waitForTimeout(600);
     // 入口の名前は2行に分けて書いてある(「ダイヤ／ショップ」)ので、文字ではなく data-market-section で押す
     const entry = tab === 'アイコン' || tab === '円盤石アイコン' ? 'breeder' : 'diamond';
