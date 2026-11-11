@@ -363,7 +363,9 @@ async function walk(browser, base, orient) {
   fs.mkdirSync(OUT, { recursive: true });
   const server = await startServer();
   const base = `http://localhost:${server.address().port}`;
-  const browser = await playwright.chromium.launch();
+  // クラウドの作業場には決まった場所にブラウザが入っている(ほかのブラウザ検査と同じ)。無ければ Playwright の既定
+  const PRE = '/opt/pw-browsers/chromium';
+  const browser = await playwright.chromium.launch(fs.existsSync(PRE) ? { executablePath: PRE } : {});
   const results = [];
   try {
     for (const orient of ORIENTS) {
