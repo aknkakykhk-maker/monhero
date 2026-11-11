@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6a8f637a1259f28d
+// source-sha256: d0221061096617bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110673,7 +110673,32 @@ function AssistantLifeRoomSheet({
     sub: "育ち方・編成を見る",
     on: onMasmon ? () => onMasmon(id) : null,
     why: "まだ見られません"
-  }), furnOn && React.createElement(AssistantLifeDoRow, {
+  }), (() => {
+    let bi = null;
+    try {
+      bi = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+    } catch (_) {
+      bi = null;
+    }
+    if (!bi || !(typeof assistantMasmonBattleOpen === 'function')) return null;
+    return React.createElement(AssistantLifeDoRow, {
+      k: "masmon-battle",
+      icon: "⚔",
+      label: bi.label || 'マスモンで対戦(β)',
+      sub: bi.sub || '',
+      gain: bi.gain || '',
+      on: () => {
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      },
+      disabled: !!bi.disabled,
+      why: bi.why || ''
+    });
+  })(), furnOn && React.createElement(AssistantLifeDoRow, {
     k: "furn",
     icon: "🪑",
     label: "部屋の家具",
