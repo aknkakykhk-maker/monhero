@@ -1,14 +1,14 @@
-// MFバトルカード: カード部屋の 1.5倍の回数(1つの時間帯で、助手1人につき1回。2026-11-08 社長 Q1 A・Q2 A)。本物の画面を縦・横で触る。
+// MFバトルカード: カード部屋の 1.375倍の回数(1つの時間帯で、助手1人につき1回。2026-11-08 社長 Q1 A・Q2 A)。本物の画面を縦・横で触る。
 //
 //   node tools/card/card-life-limit-browser-check.js        (SHOT_DIR=<フォルダ> で止め絵を残す)
 //
 // 土台は card-life-reward-browser-check.js と同じ(助手ライフの様子を書きかえ、ソラシド・えるびんだけをカード部屋に置く)
 //
 // 見ているもの(縦 390×844・横 844×390)
-//   ① ソラシドと MASTER で勝つ: 300(1.5倍)。保存 mh_card_life_reward_v1 が { slot: 今の時間帯, used: { sorashido: 1 } }
+//   ① ソラシドと MASTER で勝つ: 275(1.375倍。2026-11-11 移動12回で 1.5 → 1.375)。保存 mh_card_life_reward_v1 が { slot: 今の時間帯, used: { sorashido: 1 } }
 //   ② 「もう一度」でまた勝つ: 200(ふだん)・帯なし。保存の数は1のまま(2回目は数えない)
 //   ③ 相手えらび: ソラシドの印は灰色の「🃏済」、えるびんは「🃏UP」。帯は「いまカード部屋にいる助手: えるびん」と
-//      「🃏 ソラシドのごほうびアップは使い切りました…次は◯時から」(◯は次の時間帯の始まり)。字が切れず、札・画面からはみ出さない
+//      「🃏 ソラシドのごほうびアップは使い切りました…次は◯時から」(◯は次の区切りの始まり。2時間ごと)。字が切れず、札・画面からはみ出さない
 //   ④ えるびんとすぐ投了(もらえる数 0): 数えない(保存にえるびんが無い・印は「🃏UP」のまま)
 //   ⑤ HOME: MFバトルカードの横にソラシドの顔は残り「済」の印(2026-11-08 社長「HOMEも地図も出す」で前の「消える」を改めた)、えるびんと「UP」も残る
 //   ⑥ 助手ライフの家: ソラシドの部屋は灰色の押せないボタン「🃏 ごほうびアップは使い切りました…次は◯時から」、えるびんの部屋はふだんのボタン。画面に入り、字が切れない
@@ -110,7 +110,7 @@ const run = async (browser, mode, errors) => {
   };
   const stored = () => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_card_life_reward_v1')); } catch (_) { return 'こわれ'; } });
   const slotNow = () => page.evaluate(() => assistantLifeSlotAt()); // eslint-disable-line no-undef
-  const nextHour = () => page.evaluate(() => { const s = assistantLifeSlotAt(); return ASSISTANT_LIFE_SLOTS[(s.i + 1) % ASSISTANT_LIFE_SLOTS.length].from; }); // eslint-disable-line no-undef
+  const nextHour = () => page.evaluate(() => { const s = assistantLifeSlotAt(); return s.to % 24; }); // 12区切り(2時間ごと): 次の区切りの始まり = いまの区切りの終わり // eslint-disable-line no-undef
   // 字が切れていない(はみ出し・… が無い)・画面に入っている
   const textFits = (sel) => page.evaluate((s) => { const out = []; for (const el of document.querySelectorAll(s)) { const r = el.getBoundingClientRect(); if (el.scrollWidth > el.clientWidth + 1) out.push(`横にはみ出す ${el.textContent.slice(0, 20)}`);
     if (/…$|\.\.\.$/.test(el.textContent) && !/使い切りました…/.test(el.textContent)) out.push(`… で切れる ${el.textContent.slice(0, 20)}`); if (r.left < -1 || r.right > window.innerWidth + 1) out.push(`画面の外 ${el.textContent.slice(0, 20)}`); }
@@ -186,7 +186,7 @@ const run = async (browser, mode, errors) => {
     await page.locator('[data-card-start]').click();
     const r1 = await toResult();
     const s1 = await stored();
-    check(`① ${mode.label} ソラシドと MASTER で勝つ: 300(1.5倍)・保存に今の時間帯で sorashido 1回`, r1.outcome === 'win' && r1.gain === 300 && r1.band && s1 && s1.slot === slot && JSON.stringify(s1.used) === '{"sorashido":1}', `${JSON.stringify(r1)} ${JSON.stringify(s1)}`);
+    check(`① ${mode.label} ソラシドと MASTER で勝つ: 275(1.375倍)・保存に今の時間帯で sorashido 1回`, r1.outcome === 'win' && r1.gain === 275 && r1.band && s1 && s1.slot === slot && JSON.stringify(s1.used) === '{"sorashido":1}', `${JSON.stringify(r1)} ${JSON.stringify(s1)}`);
     // ② もう一度
     await page.getByRole('button', { name: 'もう一度' }).click();
     const r2 = await toResult();
@@ -305,6 +305,6 @@ const run = async (browser, mode, errors) => {
     }
     check('⑩ 実行時エラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
   } finally { await browser.close(); server.close(); }
-  if (failed) { console.log(`カード部屋の 1.5倍の回数(画面): NG ${failed}件`); process.exit(1); }
-  console.log('カード部屋の 1.5倍の回数(画面): すべてOK');
+  if (failed) { console.log(`カード部屋の 1.375倍の回数(画面): NG ${failed}件`); process.exit(1); }
+  console.log('カード部屋の 1.375倍の回数(画面): すべてOK');
 })();

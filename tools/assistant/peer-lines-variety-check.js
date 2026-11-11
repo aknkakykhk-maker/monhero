@@ -62,18 +62,18 @@ const KINDS = { solo: 1, invite: 2, pair: 2, trio: 3, quarrel: 2, breeder: 1,
 const NOWHO_KINDS = ['gift', 'hint', 'furn', 'furnuse'];
 // 好みの表(ORDER-GIFT.md・ORDER-SOLO.md のとおり)。like= と、hint の品物(好きなものだけ)を見張る
 const GIFT_LIKES = {
-  mua: { like: 'misanga cake cheki keyholder', bad: 'puzzle sleeve omamori', flike: 'bear heartmirror mirrorball', fbad: 'bookshelf' },
-  kiki: { like: 'tea puzzle flower letter', bad: 'onigiri earphone candy', flike: 'plant bookshelf windbell', fbad: 'mirrorball' },
-  momosuke: { like: 'cake earphone cheki candy', bad: 'tea puzzle omamori', flike: 'record heartmirror mirrorball', fbad: 'plant' },
-  dra: { like: 'basket cake onigiri candy', bad: 'puzzle flower letter', flike: 'sofa bear nyacushion', fbad: 'trophy' },
-  atsu: { like: 'misanga onigiri earphone omamori', bad: 'tea flower letter', flike: 'sofa record trophy', fbad: 'heartmirror' },
-  kyuko: { like: 'tea earphone puzzle letter', bad: 'basket cheki keyholder', flike: 'nyacushion starpic bookshelf', fbad: 'mirrorball' },
-  sorashido: { like: 'onigiri puzzle sleeve keyholder', bad: 'tea flower letter', flike: 'starpic trophy lantern', fbad: 'bear' },
-  erubin: { like: 'tea sleeve flower letter', bad: 'cake earphone candy', flike: 'plant lantern windbell', fbad: 'mirrorball' },
+  mua: { like: 'misanga cake cheki keyholder', bad: 'puzzle sleeve omamori', flike: 'bear heartmirror mirrorball windowflower', fbad: 'bookshelf' },
+  kiki: { like: 'tea puzzle flower letter', bad: 'onigiri earphone candy', flike: 'plant bookshelf windbell clock', fbad: 'mirrorball tv' },
+  momosuke: { like: 'cake earphone cheki candy', bad: 'tea puzzle omamori', flike: 'record heartmirror mirrorball guitar', fbad: 'plant' },
+  dra: { like: 'basket cake onigiri candy', bad: 'puzzle flower letter', flike: 'sofa bear nyacushion tv', fbad: 'trophy clock' },
+  atsu: { like: 'misanga onigiri earphone omamori', bad: 'tea flower letter', flike: 'sofa record trophy guitar', fbad: 'heartmirror windowflower' },
+  kyuko: { like: 'tea earphone puzzle letter', bad: 'basket cheki keyholder', flike: 'nyacushion starpic bookshelf fishbowl', fbad: 'mirrorball' },
+  sorashido: { like: 'onigiri puzzle sleeve keyholder', bad: 'tea flower letter', flike: 'starpic trophy lantern map', fbad: 'bear' },
+  erubin: { like: 'tea sleeve flower letter', bad: 'cake earphone candy', flike: 'plant lantern windbell pendant', fbad: 'mirrorball garland' },
 };
 const GIFT_ITEMS = 'basket misanga cake onigiri tea earphone puzzle sleeve cheki flower'.split(' ');
 const SOLO_ITEMS = 'letter candy keyholder omamori'.split(' ');
-const FURN_ITEMS = 'sofa bear plant record nyacushion starpic trophy bookshelf heartmirror lantern mirrorball windbell'.split(' ');
+const FURN_ITEMS = 'sofa bear plant record nyacushion starpic trophy bookshelf heartmirror lantern mirrorball windbell clock map guitar tv windowflower fishbowl pendant garland'.split(' ');
 const giftLike = (who, item, furn) => { const g = GIFT_LIKES[who]; const has = (k) => g[k].split(' ').includes(item); return furn ? (has('flike') ? 'like' : has('fbad') ? 'bad' : 'mid') : (has('like') ? 'like' : has('bad') ? 'bad' : 'mid'); };
 const TRIO_KINDS = ['trio', 'mend3', 'jealous'];
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
@@ -84,7 +84,7 @@ const KEYS = {
   doing: ['snack', 'practice', 'training', 'cards', 'walk', 'idle', 'sleep', 'read'], lv: ['1-3', '4-6', '7-10', '1-4', '5-10'],
   air: ['normal', 'after', 'makeup'], answer: ['glad', 'decline', 'shy'], line: ['scene', 'feel', 'talk', 'woken'],
   cause: ['tidy', 'snack', 'song', 'win', 'late', 'promise'], how: ['apology', 'gift', 'player'], game: ['beat', 'card'], slot: ['evening', 'night'], shift: ['night', 'morning'],
-  item: [...'basket misanga cake onigiri tea earphone puzzle sleeve cheki flower letter candy keyholder omamori sofa bear plant record nyacushion starpic trophy bookshelf heartmirror lantern mirrorball windbell'.split(' ')], like: ['like', 'mid', 'bad'],
+  item: [...'basket misanga cake onigiri tea earphone puzzle sleeve cheki flower letter candy keyholder omamori sofa bear plant record nyacushion starpic trophy bookshelf heartmirror lantern mirrorball windbell clock map guitar tv windowflower fishbowl pendant garland'.split(' ')], like: ['like', 'mid', 'bad'],
   // けんかのたね(lines/FEELINGS.md): おやつ・順番・寝ぐせや服・作戦の好み・遅れた・うるさい/夜ふかし・メモを見た・勝負の結果
   seed: ['snack', 'order', 'look', 'plan', 'late', 'noise', 'peek', 'score'],
 };
