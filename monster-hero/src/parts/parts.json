@@ -404,6 +404,10 @@
       "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },
     {
+      "file": "56-assistant-life-partner.jsx",
+      "role": "助手ライフの「町の人」(2026-11-11 社長の決め E・開発部カイホウ docs/progress/assistant-unlock/DESIGN.md): 助手になる前の助手は町・家に出るが、押すと小窓(一言と解放までのあと何回)・話す/贈る/部屋は🔒。判定は開発部の口 assistantPartnerOkNow(無いあいだは全員関われる)。新UIだけ。何も保存しない"
+    },
+    {
       "file": "56-assistant-life-rel.jsx",
       "role": "助手ライフの人間らしい関係の出来事(けんか・仲直り・やきもち・ないしょ話・相談・からかう・ライバル心・久しぶりの気まずさ)と家での見せ方(扉を閉める・居間で離れて座る・仲直りの札)。台本は tools/assistant/life-rel-talks-import.js が書く。公開の印 assistantLife の後ろ。保存は mh_assistant_life_rel_v1 の新しいキーだけ"
     },

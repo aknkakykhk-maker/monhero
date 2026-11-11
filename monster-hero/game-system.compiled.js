@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa37b2b5088c6a8b
+// source-sha256: c6bc442d12277870
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110208,7 +110208,14 @@ function AssistantLifeRoom({
     }
   })), React.createElement("span", {
     className: "pl"
-  }, met ? assistantLifeName(id) : '？'), v2 && met && ppl && ppl.includes(id) && React.createElement("span", {
+  }, met ? assistantLifeName(id) : '？'), v2 && met && !other && typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) && React.createElement("span", {
+    className: "absolute z-[3] rounded-full bg-slate-700/95 px-1.5 text-[9.5px] font-black leading-[15px] text-slate-100",
+    style: {
+      left: 4,
+      top: 24
+    },
+    "data-assistant-life-room-town": id
+  }, "町の人"), v2 && met && ppl && ppl.includes(id) && React.createElement("span", {
     className: `meet${state.sleep ? ' zz' : ''}`,
     "data-assistant-life-room-meet": id,
     style: w >= 150 ? {
@@ -110252,7 +110259,10 @@ function AssistantLifeRoom({
       className: state.lonely && pid === id ? 'lonely' : state.after ? 'after' : '',
       "data-assistant-life-room-face": pid,
       style: {
-        position: 'relative'
+        position: 'relative',
+        ...(v2 && !other && typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(pid) ? {
+          filter: 'grayscale(.55) brightness(.85)'
+        } : {})
       }
     }, React.createElement(AssistantFace, {
       who: who,
@@ -111727,6 +111737,9 @@ function AssistantLifeHouse({
   }, [!!(st.open && st.loaded)]);
   const [roomId, setRoomId] = React.useState(st.focus || null);
   React.useEffect(() => {
+    if (roomId && typeof assistantLifeTownPersonGuard === 'function' && assistantLifeTownPersonGuard(roomId)) setRoomId(null);
+  }, [roomId]);
+  React.useEffect(() => {
     if (typeof friendsSetLifeSpot !== 'function') return;
     if (uiV2 && tab === 'items') return;
     friendsSetLifeSpot({
@@ -111827,6 +111840,7 @@ function AssistantLifeHouse({
   const life = st.life || {};
   const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
   const metSet = new Set(ids);
+  const partnerOk = pid => typeof assistantLifePartnerOk !== 'function' || assistantLifePartnerOk(pid);
   const slot = assistantLifeSlotAt();
   const look = assistantLifeTimeLook();
   const day = assistantLifeDayKey();
@@ -112086,7 +112100,7 @@ function AssistantLifeHouse({
   };
   const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
   const awayFriend = id => typeof assistantLifeFriendAwayOf === 'function' && !!assistantLifeFriendAwayOf(id);
-  const lonely = Object.entries(life.solo || {}).find(([id, s]) => s.reason === 'lonely' && !awayFriend(id));
+  const lonely = Object.entries(life.solo || {}).find(([id, s]) => s.reason === 'lonely' && !awayFriend(id) && partnerOk(id));
   const beatIds = ids.filter(id => {
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
@@ -112118,13 +112132,13 @@ function AssistantLifeHouse({
     type: "button",
     className: "mhl-tile mhl-call flex-1",
     "data-assistant-life-today-act": "call",
-    disabled: !Object.keys(life.solo || {}).filter(id => !awayFriend(id)).length,
+    disabled: !Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).length,
     onClick: () => {
       if (uiV2) {
         setCallPicker(true);
         return;
       }
-      const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id))[0];
+      const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id))[0];
       if (id) setRoomId(id);
     }
   }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", {
@@ -112417,12 +112431,12 @@ function AssistantLifeHouse({
   }) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, uiV2 && typeof AssistantLifeRewardRoad === 'function' && React.createElement(AssistantLifeRewardRoad, {
-    ids: ids,
+    ids: ids.filter(partnerOk),
     peerSt: peerSt,
     nameOf: nameOf,
     onRoom: setRoomId
   }), uiV2 && typeof AssistantLifeIntroduceCard === 'function' && React.createElement(AssistantLifeIntroduceCard, {
-    ids: ids,
+    ids: ids.filter(partnerOk),
     life: life
   }), typeof AssistantPeerMap === 'function' && React.createElement(AssistantPeerMap, {
     metIds: metIds,
@@ -112548,7 +112562,7 @@ function AssistantLifeHouse({
     onClick: () => setCallPicker(false)
   }, "閉じる ✕")), React.createElement("div", {
     className: "max-h-[46vh] overflow-y-auto"
-  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id)).map(id => React.createElement("button", {
+  }, Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).map(id => React.createElement("button", {
     type: "button",
     key: id,
     className: "mb-2 flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/20 bg-slate-800 px-3 text-left",
@@ -112601,8 +112615,8 @@ function AssistantLifeHouse({
     groups: (life.groups || []).map(g => ({
       ...g,
       ids: (g.ids || []).filter(id => metSet.has(id))
-    })).filter(g => g.ids.length >= 2),
-    soloIds: ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id) && !awayFriend(id)),
+    })).filter(g => g.ids.length >= 2 && g.ids.every(partnerOk)),
+    soloIds: ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id) && !awayFriend(id) && partnerOk(id)),
     pairLeft: typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0,
     soloLeft: soloLeft,
     canPair: canGive,
@@ -112628,7 +112642,7 @@ function AssistantLifeHouse({
     className: "text-[11px] font-bold text-amber-200"
   }, giftItemsOpen ? '閉じる ▲' : '見る ▼')), giftItemsOpen && React.createElement("div", {
     className: "-mx-3"
-  }, itemsBody))), roomId && React.createElement(AssistantLifeRoomSheet, {
+  }, itemsBody))), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     id: roomId,
     uiV2: uiV2,
@@ -112675,6 +112689,9 @@ function AssistantLifeHouse({
     land: land,
     bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(masmonId) : null,
     onClose: () => setMasmonId(null)
+  }), typeof AssistantLifeTownPersonCard === 'function' && React.createElement(AssistantLifeTownPersonCard, {
+    life: life,
+    land: land
   }), boardOpen && React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -113457,15 +113474,24 @@ function AssistantLifeTownMap({
         "data-assistant-life-map-spent": spentOf(id, place) ? '1' : undefined,
         onClick: () => setSheet(place),
         className: "flex flex-col items-center px-[1px]"
-      }, React.createElement(AssistantLifeMapFig, {
-        who: a,
-        h: figH,
-        sleep: !!(w && w.doing === 'sleep'),
-        spent: spentOf(id, place)
-      }), React.createElement("span", {
-        className: "mhl-map-name",
-        "data-assistant-life-map-name": true
-      }, w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name));
+      }, (() => {
+        const town = typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id);
+        return React.createElement(React.Fragment, null, React.createElement("span", {
+          className: "block",
+          style: town ? {
+            filter: 'grayscale(.55) brightness(.85)'
+          } : undefined,
+          "data-assistant-life-map-town": town ? id : undefined
+        }, React.createElement(AssistantLifeMapFig, {
+          who: a,
+          h: figH,
+          sleep: !!(w && w.doing === 'sleep'),
+          spent: spentOf(id, place)
+        })), React.createElement("span", {
+          className: "mhl-map-name",
+          "data-assistant-life-map-name": true
+        }, w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name, town ? '・町の人' : ''));
+      })());
     }));
   };
   const sheetPlace = sheet;
@@ -113487,11 +113513,16 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-sheet-selected": initialAssistantId === id ? "1" : undefined,
       "data-assistant-life-map-sheet-who": id,
       "data-assistant-life-map-sheet-at": place
+    }, React.createElement("span", {
+      className: "shrink-0",
+      style: typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? {
+        filter: 'grayscale(.55) brightness(.85)'
+      } : undefined
     }, React.createElement(AssistantFace, {
       who: a,
       size: 36,
       accent: a.accent
-    }), React.createElement("div", {
+    })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("p", {
       className: "text-[13px] font-black text-white"
@@ -113506,7 +113537,17 @@ function AssistantLifeTownMap({
         wordBreak: 'auto-phrase'
       },
       "data-assistant-life-map-sheet-next": true
-    }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')), React.createElement("div", {
+    }, typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')), typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? React.createElement("div", {
+      className: "flex shrink-0 flex-col gap-1"
+    }, React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "town",
+      onClick: () => {
+        setSheet(null);
+        if (typeof assistantLifeShowTownPerson === 'function') assistantLifeShowTownPerson(id);
+      },
+      className: "rounded-xl border border-slate-400/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-slate-100 active:scale-95"
+    }, "🔒 町の人 ›")) : React.createElement("div", {
       className: "flex shrink-0 flex-col gap-1"
     }, place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && React.createElement("button", {
       type: "button",
@@ -115976,6 +116017,142 @@ function AssistantLifeFirstGuide({
     onClick: onClose,
     className: "min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]"
   }, "わかった")));
+}
+const assistantLifePartnerOk = id => {
+  try {
+    return typeof assistantPartnerOkNow !== 'function' || assistantPartnerOkNow(id) !== false;
+  } catch (_) {
+    return true;
+  }
+};
+const assistantLifePartnerProgress = id => {
+  try {
+    const p = typeof assistantPartnerProgressNow === 'function' ? assistantPartnerProgressNow(id) : null;
+    if (!p || typeof p !== 'object') return null;
+    const need = Number.isFinite(Number(p.need)) && Number(p.need) > 0 ? Math.floor(Number(p.need)) : 40;
+    const count = Number.isFinite(Number(p.count)) ? Math.max(0, Math.min(need, Math.floor(Number(p.count)))) : 0;
+    return {
+      count,
+      need,
+      cardName: typeof p.cardName === 'string' ? p.cardName : '',
+      cardOwned: p.cardOwned !== false
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const ASSISTANT_LIFE_TOWN_PERSON_LINES = Object.freeze({});
+const ASSISTANT_LIFE_TOWN_PERSON = {
+  id: null,
+  subs: new Set()
+};
+const assistantLifeShowTownPerson = id => {
+  ASSISTANT_LIFE_TOWN_PERSON.id = id || null;
+  for (const f of ASSISTANT_LIFE_TOWN_PERSON.subs) {
+    try {
+      f(ASSISTANT_LIFE_TOWN_PERSON.id);
+    } catch (_) {}
+  }
+};
+const assistantLifeTownPersonGuard = id => {
+  if (!id || assistantLifePartnerOk(id)) return false;
+  assistantLifeShowTownPerson(id);
+  return true;
+};
+function AssistantLifeTownPersonCard({
+  life = null,
+  land = false
+}) {
+  const [id, setId] = React.useState(ASSISTANT_LIFE_TOWN_PERSON.id);
+  React.useEffect(() => {
+    const f = v => setId(v);
+    ASSISTANT_LIFE_TOWN_PERSON.subs.add(f);
+    return () => {
+      ASSISTANT_LIFE_TOWN_PERSON.subs.delete(f);
+    };
+  }, []);
+  React.useEffect(() => () => {
+    ASSISTANT_LIFE_TOWN_PERSON.id = null;
+  }, []);
+  const who = id && typeof assistantById === 'function' ? assistantById(id) : null;
+  if (!who) return null;
+  const close = () => assistantLifeShowTownPerson(null);
+  const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+  const d = w && typeof ASSISTANT_LIFE_DOINGS !== 'undefined' ? ASSISTANT_LIFE_DOINGS[w.doing] : null;
+  const placeText = !w ? '' : w.place === 'home' ? `いまは 🏡 部屋で${d ? d.label : '過ごしています'}` : `いまは ${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(w.place) : ''}にいます`;
+  const line = ASSISTANT_LIFE_TOWN_PERSON_LINES[id] || '';
+  const p = assistantLifePartnerProgress(id);
+  const jw = t => typeof jaWrap === 'function' ? jaWrap(t) : t;
+  const ja = typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
+  const lock = (k, label) => React.createElement("button", {
+    key: k,
+    type: "button",
+    disabled: true,
+    "data-assistant-life-town-lock": k,
+    className: "min-h-[44px] flex-1 rounded-xl border border-white/10 bg-slate-800/80 text-[12.5px] font-black text-slate-400"
+  }, label, " 🔒");
+  return React.createElement("div", {
+    className: "absolute inset-0 z-[40] flex items-end justify-center bg-black/60",
+    "data-assistant-life-town-person": id,
+    onClick: close
+  }, React.createElement("div", {
+    className: "w-full max-w-[480px] rounded-t-2xl border border-white/15 bg-slate-950 p-3",
+    style: {
+      paddingBottom: land ? 12 : 'calc(12px + env(safe-area-inset-bottom))'
+    },
+    onClick: e => e.stopPropagation(),
+    role: "dialog",
+    "aria-label": `${who.name}(町の人)`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, React.createElement("span", {
+    className: "shrink-0",
+    style: {
+      filter: 'grayscale(.55) brightness(.85)'
+    }
+  }, typeof AssistantFace === 'function' && React.createElement(AssistantFace, {
+    who: who,
+    size: 52,
+    accent: "#64748b",
+    expression: "normal"
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "flex flex-wrap items-center gap-1.5 text-[15px] font-black",
+    style: {
+      color: who.accent
+    }
+  }, who.name, React.createElement("span", {
+    className: "rounded-full bg-slate-700 px-2 py-0.5 text-[10px] font-black text-slate-100",
+    "data-assistant-life-town-tag": true
+  }, "町の人・まだ助手ではありません")), placeText && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, placeText)), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-town-close": true,
+    onClick: close,
+    "aria-label": "閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[18px] text-slate-200 active:bg-white/10"
+  }, "✕")), line && React.createElement("p", {
+    "data-assistant-life-town-line": true,
+    className: "mt-2 rounded-xl bg-slate-800/90 px-3 py-2 text-[12.5px] font-bold leading-relaxed text-slate-100",
+    style: ja
+  }, jw(`${who.name}「${line}」`)), p && React.createElement("div", {
+    className: "mt-2",
+    "data-assistant-life-town-progress": `${p.count}/${p.need}`
+  }, React.createElement("p", {
+    className: "text-[11.5px] font-bold leading-snug text-slate-200",
+    style: ja
+  }, jw(`${p.cardName ? `「${p.cardName}」` : `${who.name}のアシストカード`}をモンヒロバトルで ${p.need}回 使うと、助手として選べるようになります(いま ${p.count} / ${p.need}${p.cardOwned ? '' : '・カードはダイヤショップ'})`)), React.createElement("div", {
+    className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-700"
+  }, React.createElement("i", {
+    className: "block h-full rounded-full bg-gradient-to-r from-sky-400 to-violet-500",
+    style: {
+      width: `${Math.round(p.count / p.need * 100)}%`
+    }
+  }))), React.createElement("div", {
+    className: "mt-2.5 flex gap-1.5"
+  }, lock('talk', '💬 話す'), lock('give', '🎁 贈る'), lock('room', '🏠 部屋'))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
