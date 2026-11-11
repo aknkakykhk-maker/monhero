@@ -35,7 +35,8 @@ const LEAN = Number(arg('lean', 0)), END_FLICK = arg('end-flick', 'keep'), REUSE
 const FROM = Number(arg('from', -1e9)), TO = Number(arg('to', 1e12));
 const JSON_OUT = arg('json'), LIST = flag('list');
 const W = 844, H = 390;
-const { chromium } = require(path.join(ROOT_DEFAULT, 'tools/node_modules/playwright'));
+// tools/node_modules に無い環境(クラウドの作業場など)では、入っている playwright を使う
+const { chromium } = (() => { try { return require(path.join(ROOT_DEFAULT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/fake-supabase.js'));
 const { touchInputSource } = require(path.join(ROOT_DEFAULT, 'tools/playbot/lib/touch-input.js'));
 const { eventStorySeed } = require(path.join(ROOT_DEFAULT, 'tools/boot/quiet-boot-seed.js'));
@@ -213,7 +214,12 @@ const launch = async () => {
     await clickText('モンヒロビート$'); await page.waitForTimeout(2500); await closeDialogs(6);
     await clickText('ソロライブ'); await page.waitForTimeout(2500); await closeDialogs(3);
     // 曲は id で(版ちがいの同じ曲名があるため)、難易度は data-rhythm-difficulty で選ぶ
-    await page.evaluate((id) => document.querySelector(`[data-rhythm-song-row="${id}"]`)?.click(), SONG); await page.waitForTimeout(1200);
+    // 版のある曲(remix・short ver.・フル)は代表の1行にまとまるので、代表の行を押してから版のボタンで選ぶ(2026-11-11)
+    await page.evaluate((id) => {
+      const head = typeof rhythmSongVersionHead === 'function' ? rhythmSongVersionHead(id) : id;
+      (document.querySelector(`[data-rhythm-song-row="${id}"]`) || document.querySelector(`[data-rhythm-song-row="${head}"]`))?.click();
+    }, SONG); await page.waitForTimeout(1200);
+    await page.evaluate((id) => { const b = document.querySelector(`[data-rhythm-song-version="${id}"]`); if (b && b.getAttribute('aria-pressed') !== 'true') b.click(); }, SONG); await page.waitForTimeout(800);
     const diffState = await page.evaluate((d) => { const b = document.querySelector(`[data-rhythm-difficulty="${d}"]`); if (!b) return 'ない'; if (b.disabled) return '鍵つき'; b.click(); return 'ok'; }, DIFF);
     if (diffState !== 'ok') throw new Error(`難易度 ${DIFF} を選べない(${diffState})`);
     await page.waitForTimeout(800);
