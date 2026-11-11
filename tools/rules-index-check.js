@@ -17,6 +17,7 @@
 //        ことばごとに「どこに残っているべきか」を持たせ、移した先で消えても気づけるようにしている）
 //   5. tools/ 直下のスクリプトが tools/README.md に載っているか
 //      （直下は CLAUDE.md と CI が名指しする場所。ここだけは掲載を必須にする）
+//   7. 部署別の手引き(docs/depts/)が正本(tools/team/depts.json)と合っていて、書いてあるファイル・関数・資料が実在するか
 //   6. tools/ のスクリプト全部が、先頭に「何をするものか」の1行を持っているか
 //      （node tools/ctx.js checks がそこを読んで検査を探す。説明が無い＝日本語で探しても
 //        見つからない、という取りこぼしになる。手書きの README より、こちらを正本にする）
@@ -28,8 +29,9 @@ const CLAUDE_MD = path.join(ROOT, 'CLAUDE.md');
 const RULES_DIR = path.join(ROOT, 'docs/rules');
 
 // 2026-09-17に 42650 → 22780 バイトへ寄せた。2026-10-09 に場面が限られる節を移して 25237 → 15528 バイト。
+// 2026-11-11 に ⑪(トークン節約の仕組み)を足したうえで 16465 → 14.5KB(部ごとの話は docs/depts/ へ)。
 // 余白は少しだけ持たせ、また膨らむのは止める（上限を上げるのではなく、場面が限られる決まりは下の PLACES へ移す）。
-const MAX_BYTES = 16500;
+const MAX_BYTES = 15000;
 
 // ルートから移した節の置き場所。サブフォルダの CLAUDE.md は、Claude Code がそのフォルダのファイルを
 // 読んだときに読み込む（2026-10-09 に tools/mode と monster-hero/data で確かめた）。
@@ -42,6 +44,12 @@ const PLACES = {
   mode: 'tools/mode/CLAUDE.md',
   changelogSkill: '.claude/skills/changelog-help-update/SKILL.md',
   songSkill: '.claude/skills/rhythm-song-add/SKILL.md',
+  // 2026-11-11 トークン節約の仕組み(CLAUDE.md ⑪ から指す本文)
+  gate: 'docs/rules/REVIEW_GATE.md',
+  routing: 'docs/rules/MODEL_ROUTING.md',
+  handoff: 'docs/rules/SESSION_HANDOFF.md',
+  redeploy: 'docs/rules/EDGE_REDEPLOY.md',
+  beatGuide: 'docs/depts/beat.md',
 };
 // サブフォルダの CLAUDE.md の上限（読み込まれるのはその場所を触るときだけだが、それでも膨らませない）
 const SUB_MAX_BYTES = 4500;
@@ -138,6 +146,30 @@ const MUST_KEEP = [
   ['chartRevision', '⑩-2リビジョンを上げる', 'mode'],
   ['japanese-only-check.js', '会話言語のフック'],
   ['AskUserQuestion', '返事待ちは選択式'],
+  // ⑪ トークンを無駄に使わない(2026-11-11)
+  ['tools/ctx.js decisions', '台帳は絞り込んで読む'],
+  ['PRESIDENT_DECISIONS.md', '社長の決めごとの台帳'],
+  ['その場で台帳に1行足す', '社長が決めたら台帳へ'],
+  ['新機能・保存データ・ランキングに関わる変更だけ', '⑪ミハリの確認が要る変更'],
+  ['REVIEW_GATE.md', '⑪確認の段数'],
+  ['SESSION_HANDOFF.md', '⑪会話の区切り'],
+  ['MODEL_ROUTING.md', '⑪モデルの使い分け'],
+  ['EDGE_REDEPLOY.md', '⑪配り直し'],
+  ['docs/depts/', '部署別の手引き'],
+  ['検査は減らさない', '⑪品質は落とさない', 'gate'],
+  ['迷う変更は「要る」に倒', '⑪迷ったら確認する', 'gate'],
+  ['claude-sonnet-5-5', '⑪小さな直し・文言・検査のモデル', 'routing'],
+  ['claude-opus-5-5', '⑪設計・原因不明の不具合のモデル', 'routing'],
+  ['claude-haiku-5-5', '⑪見張り・読むだけのモデル', 'routing'],
+  ['claude-fable-5-2', '⑪要所だけのモデル', 'routing'],
+  ['使うのは次の2つだけ', '⑪要所のモデルを呼ぶ条件', 'routing'],
+  ['やりかけの仕事は先に終わらせる', '⑪途中で切らない', 'handoff'],
+  ['jsdelivr は使わない', '⑪配り直しは raw だけ', 'redeploy'],
+  ['400 `bad_request`', '⑪配ったあとの確かめ', 'redeploy'],
+  // ルートから部の手引きへ移した一言(⑩-2・⑥-3・⑥-4)
+  ['配信中の曲の譜面を作り直さない', '⑩-2', 'beatGuide'],
+  ['聞き返すのは難易度だけ', '⑥-3', 'beatGuide'],
+  ['開催中に触らない', '⑥-4', 'beatGuide'],
 ];
 
 const problems = [];
@@ -205,6 +237,7 @@ if (fs.existsSync(RULES_DIR)) {
   for (const rel of Object.values(PLACES)) {
     if (rel === 'CLAUDE.md') continue;
     if (rel.endsWith('CLAUDE.md') && !rootLinks.has(path.normalize(rel))) problems.push(`${rel} がルートの CLAUDE.md からリンクされていません（場面の表から移した先へたどれるようにする）。`);
+    if (rel.startsWith('docs/depts/')) continue; // 部の手引きは下の 7 で実在と食い違いを見る
     if (!readmeLinks.has(path.normalize(rel))) problems.push(`${rel} が docs/rules/README.md「節の置き場所」に載っていません。`);
   }
 }
@@ -256,10 +289,18 @@ let scripts = 0, noDesc = 0;
 })(TOOLS_DIR, 0);
 if (noDesc > 10) problems.push(`… ほか ${noDesc - 10} 本にも先頭の1行がありません。`);
 
+// 7. 部署別の手引き(docs/depts/)が、正本(tools/team/depts.json)と合っているか。書いてあるファイル・入口の関数・資料が実在するか
+let deptCount = 0;
+try {
+  const r = require('./team/dept-guide.js').check();
+  deptCount = r.depts;
+  for (const p of r.problems) problems.push(p);
+} catch (e) { problems.push(`部署別の手引きの検査が動きません: ${e && e.message}`); }
+
 const kb = (bytes / 1024).toFixed(1);
 if (problems.length) {
   console.error(`NG: ルールの索引に ${problems.length} 件の問題`);
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
-console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 移した先 ${Object.keys(PLACES).length - 1} か所 / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み / スクリプト ${scripts} 本すべて説明つき`);
+console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 移した先 ${Object.keys(PLACES).length - 1} か所 / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み / スクリプト ${scripts} 本すべて説明つき / 部の手引き ${deptCount} 部`);

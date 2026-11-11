@@ -18,6 +18,7 @@
 - 質問には答えるだけ。調査を広げない(CLAUDE.md ⑩)。
 - 部署はサブエージェントを使わない。
 - 仕上がりは、社長に報告する前にカゲあつくん(社長代理)に見てもらう。カゲあつくんは見るだけで、決めない・コミットしない。
+- **2026-11-11 トークンを無駄に使わない仕組み(案A〜F)を全部採用し、システム化する。** 社長「トークンを無駄に使わない仕組みづくりにかかりたい。これは完全にシステム化してほしい」「開発品質は落としたくない」「新しいモデルを有効活用したい」。A 会話の区切り(フックが知らせる → `node tools/ctx.js handoff`)/B・C モデルの使い分け(`node tools/ctx.js newsession`・表は docs/rules/MODEL_ROUTING.md。要所だけ claude-fable-5-2)/D ミハリの確認は新機能・保存データ・ランキングだけ(`node tools/ctx.js gate`)/E assistant-chat の配り直しは数行(`node tools/ctx.js redeploy assistant-chat`)/F 部署別の手引き(docs/depts/)と、この台帳の絞り込み(`node tools/ctx.js decisions <部>`)。検査(run-checks --changed)は減らさない(CLAUDE.md ⑪)。
 
 ## 中身の決めごと
 

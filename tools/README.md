@@ -84,6 +84,10 @@ node tools/build.js --check
 | `node ctx.js checks [語]` | **検査スクリプトを名前と説明から引く。** スクリプト自身の先頭コメントを読む。520本すべてが説明を持っていることを `rules-index-check.js` が保証しているので、ここからなら取りこぼさない（このREADMEの一覧は520本中333本ぶん）。 |
 | `node ctx.js rules [語]` | `CLAUDE.md` / `AGENTS.md` / `docs/rules/` を横断して、その語に触れている節だけを出す。 |
 | `node ctx.js diff [パス…]` | 生成物を除いた差分。素の `git diff` の代わり(`--staged` `--base <ref>` `--all`)。 |
+| `node ctx.js dept [部]` / `decisions <部>` | 部署別の手引き(`docs/depts/`)/社長の決めごと台帳から「進め方」と自分の部に関わる行だけ(台帳は300KB超。全文を開かない)。 |
+| `node ctx.js gate` | いまの変更にミハリ(検査部)の確認が要るかを、変えたファイルと差分から判定(`run-checks.js --changed` の最後にも出る)。 |
+| `node ctx.js handoff <部> [--write]` / `newsession <部> "<仕事>"` / `model "<仕事>"` | 会話を替えるときの引き継ぎメモの下書き/新しい会話のモデルと依頼文/モデルだけ引く。本体は `tools/team/`(正本は `depts.json`・`routing.json`)。 |
+| `node ctx.js redeploy assistant-chat` | Edge Function の配り直しで窓口が渡す数行を作る(`tools/assistant/edge-redeploy.js`)。 |
 | `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
 | `node memory-soak.js --mode quick\|auto\|rhythm\|idle` | **長く遊んだときに、メモリが増え続けていないかを測る。**合格・不合格の検査ではなく数字を出す道具。1回ごとに強制的にごみを片付けてから、JSのヒープ・ブラウザ全体のメモリ・DOMの数・イベントの数・解いた音の本数を出す。`auto` はクイックをAUTOで回し続け、`rhythm` は曲を続けて演奏する。別の窓で `python3 tools/serve.py 8899` を起動しておく。ブラウザは1つだけ動かす(全体のメモリが混ざるため)。 |
 | `node check-drift.js <検査>` | **落ちた検査が探している本体の文字の並びのうち、今は無いものと、本体でいちばん似ている行を並べる。**「書き方が変わっただけ」か「本当に消えた」かの見分けに使う(読むだけ)。 |
