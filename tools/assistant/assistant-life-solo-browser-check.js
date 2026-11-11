@@ -7,7 +7,7 @@
 //   ③ 1人に贈るシート: 題が「◯◯に贈る」・友情Lv の行が無い・道具は14種類・重みは1行。縦 390・横 844・🔄横 667 で切れない・「贈る」が押せる
 //   ④ 1人に贈ると: 持ち物が1つ減る・1人の記録(mh_assistant_life_solo_gift_v1)・友情Lv(mh_assistant_peer_bond_v1)は動かない・お知らせの帯に量
 //   ⑤ 1人には1日3回(2人に贈る3回とは別 ❶B)。同じ道具は、1人に贈ったら2人にも贈れない
-//   ⑥ 思い出チェキを1人に贈ると、その助手の部屋にひとりのチェキ(❸A)。好きなものは「分かった ◯/14」(❹A)
+//   ⑥ 思い出チェキを1人に贈ると、その助手の部屋にひとりのチェキ(❸A)。贈り物の好みは「14種類のうち ◯ 分かった」(❹A)
 //   ⑦ 道具タブに「💗 1人に贈る道具」・交換所の「アイテム」に1人用の4種類
 //   ⑧ ページのエラーが出ない
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -143,7 +143,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.locator(`[data-assistant-life-room="${id}"]`).click(); await page.waitForTimeout(300);
       check('⑥ 1人に贈ったチェキが、その助手の部屋に出る(❸A)', (await page.locator(`[data-assistant-life-cheki="${id}"]`).count()) === 1);
       const likes = await page.locator(`[data-assistant-life-gift-likes="${id}"]`).innerText().catch(() => '');
-      check('⑥ 好きなものは「分かった ◯/14」(❹A)', /分かった \d+\/14/.test(likes), likes.replace(/\s+/g, ' ').slice(0, 40));
+      check("⑥ 贈り物の好みは「14種類のうち ◯ 分かった」(❹A)", /14種類のうち \d+ 分かった/.test(likes), likes.replace(/\s+/g, ' ').slice(0, 40));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'tate-5-room-after.png') });
       await page.locator('[data-assistant-life-roomview-close]').click({ timeout: 2000 }).catch(() => page.mouse.click(20, 60)); await page.waitForTimeout(200); // 部屋は大きな部屋になったので「← 家へ」で閉じる(2026-11-08)
       // ⑦ 道具タブ・交換所

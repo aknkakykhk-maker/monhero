@@ -218,7 +218,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
     // 助手1人に贈る(印 assistantLifeSolo・2026-11-08)が開いていれば、1人用の4種類も並んで14種類(❹A)
     const likeWant = (await page.evaluate(() => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true)) ? 14 : 10;
-    check('⑩ 部屋を押すと「🎁 好きなもの」(10種類・1人に贈るが開いていれば14種類・分かっていない物は ?)', /好きなもの/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === likeWant
+    check('⑩ 部屋を押すと「🎁 贈り物の好み」(10種類・1人に贈るが開いていれば14種類・分かっていない物は ?)', /贈り物の好み/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === likeWant
       && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like$=":unknown"]').count()) === likeWant);
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
     // ⑪ 声をかける(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手だけが {name} に話す・場面にいない助手が出ない

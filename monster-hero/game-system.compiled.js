@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9930ac4335db56c
+// source-sha256: 008824269bb827f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -213,6 +213,34 @@ const MH_PAGE_OFFSET_GUARD = (() => {
   return {
     state,
     check: soon
+  };
+})();
+function mhIsIosHomeScreenApp() {
+  try {
+    return typeof window !== 'undefined' && !!window.navigator && window.navigator.standalone === true;
+  } catch (_) {
+    return false;
+  }
+}
+const MH_TOUCH_MENU_GUARD = (() => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+  let lastTouch = false;
+  document.addEventListener('pointerdown', e => {
+    lastTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  }, {
+    capture: true,
+    passive: true
+  });
+  document.addEventListener('contextmenu', e => {
+    const t = e.target;
+    if (t && typeof t.closest === 'function' && t.closest('input,textarea,[contenteditable]:not([contenteditable="false"]),.select-text')) return;
+    const byFinger = e.pointerType === 'touch' || e.pointerType === 'pen' || !e.pointerType && lastTouch;
+    if (byFinger && e.cancelable) e.preventDefault();
+  }, {
+    capture: true
+  });
+  return {
+    byFinger: () => lastTouch
   };
 })();
 const _LI = {};
@@ -13853,7 +13881,7 @@ const RELEASE_FLAGS = {
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
   assistantMasmonBattlePvp: true,
-  assistantLifePlan: false,
+  assistantLifePlan: true,
   assistantMasmonTrain: true,
   assistantMasmonCheer: false,
   assistantMasmonSuggest: true,
@@ -13864,7 +13892,7 @@ const RELEASE_FLAGS = {
   assistantSorashido: true,
   assistantErubin: true,
   assistantLifeProfile: true,
-  assistantPartnerUnlock: false,
+  assistantPartnerUnlock: true,
   cardBattle: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
@@ -80673,7 +80701,8 @@ function HomeScreen({
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
       ranch: onOpenManagement,
       temple: onOpenTemple,
-      market: onOpenMarket
+      market: onOpenMarket,
+      battle: onOpenBattle
     };
   });
   const homeSceneRef = React.useRef(null);
@@ -111677,6 +111706,7 @@ function AssistantLifeRoom({
   }), typeof AssistantLifeRoomFurn === 'function' && React.createElement(AssistantLifeRoomFurn, {
     id: id,
     put: other ? other.put || {} : null,
+    layoutItems: other && Array.isArray(other.layout) ? other.layout : null,
     w: w,
     h: h,
     faces: ppl ? ppl.length : 0,
@@ -112114,6 +112144,14 @@ function AssistantLifeRoomSheet({
     } : null;
   }).filter(Boolean) : [];
   const rvTeam = typeof assistantLifeRoomMasmons === 'function' ? assistantLifeRoomMasmons(id, life) : [];
+  const allTeamN = (() => {
+    try {
+      const t = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
+      return Array.isArray(t) ? t.length : 0;
+    } catch (_) {
+      return 0;
+    }
+  })();
   const rvAct = (k, label, cls, fn, dis = false) => React.createElement("button", {
     key: k,
     type: "button",
@@ -112127,7 +112165,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-dock": true
   }, rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet), rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => onChat ? onChat(id, null) : toSheet(), !onChat && !home), rvAct('give', '🎁 贈る', 'bg-pink-600', () => {
     if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]);else if (w && w.group && canGive) onGive(w.group);else toSheet();
-  }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${rvTeam.length || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
+  }), rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn)), rvAct('masmon', `🐾 マスモン ${allTeamN || ''}`.trim(), 'bg-teal-600', () => onMasmon ? onMasmon(id) : toSheet(), !onMasmon), rvAct('beat', atBeat ? '🎵 会いに行く' : '🎵 ビート', 'bg-gradient-to-br from-violet-500 to-pink-500', () => onBeat(id), typeof ASSISTANT_LIFE_LINKS.beatInvite !== 'function'));
   const rvSheetW = land && typeof window !== 'undefined' && window.innerWidth < 760 ? '50%' : '42%';
   const rvScene = typeof AssistantLifeRoomScene === 'function' ? React.createElement(AssistantLifeRoomScene, {
     id: id,
@@ -112251,7 +112289,7 @@ function AssistantLifeRoomSheet({
   }), !hotBeat && beatRow, !hotCard && cardRow, React.createElement(AssistantLifeDoRow, {
     k: "masmon",
     icon: "🐾",
-    label: `${who.name}のマスモン${rvTeam.length ? ` ${rvTeam.length}体` : ''}`,
+    label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`,
     sub: "育ち方・編成を見る",
     on: onMasmon ? () => onMasmon(id) : null,
     why: "まだ見られません"
@@ -113591,6 +113629,8 @@ function AssistantLifeHouse({
     const w = assistantLifeWhereOf(life, id);
     return w && w.doing === 'practice';
   });
+  const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
+  const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
   const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
@@ -113642,9 +113682,9 @@ function AssistantLifeHouse({
       }
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
-  }, React.createElement("em", null, soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
+  }, React.createElement("em", null, uiV2 ? giveLeftAll : soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
     "data-assistant-life-today-gain": "give"
-  }, !uiV2 ? `道具 ${itemsHave}個` : (soloOn ? itemsLeft + soloLeft : itemsLeft) <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
+  }, !uiV2 ? `道具 ${itemsHave}個` : giveLeftAll <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
@@ -113861,7 +113901,9 @@ function AssistantLifeHouse({
     },
     watchNow: unwatched.length,
     watchDone: (life.watched || []).length > 0,
-    giveLeft: soloOn ? itemsLeft + soloLeft : itemsLeft,
+    giveLeft: giveLeftAll,
+    giveGroupLeft: groupLeft,
+    giveSoloLeft: soloOn ? soloLeft : null,
     onWatch: () => {
       if (unwatched[0]) watch(unwatched[0]);
     },
@@ -114703,6 +114745,7 @@ function AssistantLifeTownMap({
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
+  const [cheerMsg, setCheerMsg] = React.useState(null);
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
   React.useEffect(() => {
@@ -114934,7 +114977,7 @@ function AssistantLifeTownMap({
   };
   const PERK_WORD = {
     studio: '券なし',
-    cardroom: '×1.5'
+    cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}`
   };
   const perkOf = place => {
     try {
@@ -115051,9 +115094,42 @@ function AssistantLifeTownMap({
     const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
     const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null;
+    let ti = null;
+    if (place === 'battle') {
+      try {
+        ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+      } catch (_) {
+        ti = null;
+      }
+    }
+    let bi = null;
+    if (place === 'battle') {
+      try {
+        bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+      } catch (_) {
+        bi = null;
+      }
+    }
+    const battleBtn = bi && React.createElement("button", {
+      type: "button",
+      disabled: !!bi.disabled,
+      title: bi.disabled ? bi.why || '' : bi.sub || '',
+      "data-assistant-life-map-act": "masmon-battle",
+      onClick: () => {
+        setSheet(null);
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'place'
+          });
+        } catch (_) {}
+      },
+      className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
+    }, bi.label || '⚔ マスモンで対戦(β)');
+    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
     return React.createElement("div", {
       key: id,
-      className: `mt-2 flex items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
+      className: `mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
       "data-assistant-life-map-sheet-selected": initialAssistantId === id ? "1" : undefined,
       "data-assistant-life-map-sheet-who": id,
       "data-assistant-life-map-sheet-at": place
@@ -115075,7 +115151,13 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-sheet-spent": true
     }, "済 ごほうび済み")), React.createElement("p", {
       className: "text-[10.5px] font-bold text-slate-300"
-    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), spent && React.createElement("p", {
+    }, town ? `${assistantLifeMapSpotWord(place)}で ` : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", withNames, d ? d.label : '過ごしている', w && w.reason === 'lonely' ? '(さみしそう)' : ''), tiLine && React.createElement("p", {
+      className: "text-[10.5px] font-bold text-emerald-200",
+      style: {
+        wordBreak: 'auto-phrase'
+      },
+      "data-assistant-life-map-train-line": id
+    }, tiLine), spent && React.createElement("p", {
       className: "text-[10.5px] font-bold text-amber-200",
       style: {
         wordBreak: 'auto-phrase'
@@ -115109,31 +115191,7 @@ function AssistantLifeTownMap({
         onCard(id);
       },
       className: "rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95"
-    }, "🃏 対戦する"), place === 'battle' && (() => {
-      let info = null;
-      try {
-        info = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
-      } catch (_) {
-        info = null;
-      }
-      if (!info || !(typeof assistantMasmonBattleOpen === 'function')) return null;
-      return React.createElement("button", {
-        type: "button",
-        disabled: !!info.disabled,
-        title: info.disabled ? info.why || '' : info.sub || '',
-        "data-assistant-life-map-act": "masmon-battle",
-        onClick: () => {
-          setSheet(null);
-          try {
-            assistantMasmonBattleOpen({
-              assistantId: id,
-              from: 'place'
-            });
-          } catch (_) {}
-        },
-        className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
-      }, info.label || '⚔ マスモンで対戦(β)');
-    })(), typeof onView === 'function' && React.createElement("button", {
+    }, "🃏 対戦する"), place === 'battle' && !ti && battleBtn, typeof onView === 'function' && React.createElement("button", {
       type: "button",
       "data-assistant-life-map-act": "view",
       onClick: () => onView(id),
@@ -115146,13 +115204,57 @@ function AssistantLifeTownMap({
         onPick(id);
       },
       className: "rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95"
-    }, "🏡 部屋へ ›")));
+    }, "🏡 部屋へ ›")), ti && React.createElement("div", {
+      className: "grid w-full gap-1",
+      style: {
+        gridTemplateColumns: battleBtn ? '1fr 1fr 1fr' : '1fr 1fr'
+      },
+      "data-assistant-life-map-train-acts": id
+    }, React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "train-watch",
+      onClick: () => {
+        try {
+          assistantMasmonTrainWatchOpen(id);
+        } catch (_) {}
+      },
+      className: "rounded-xl bg-sky-700 min-h-[44px] px-1 py-1 text-[12px] font-black text-white active:scale-95"
+    }, "👀 修行を見る"), React.createElement("button", {
+      type: "button",
+      "data-assistant-life-map-act": "cheer",
+      disabled: !ti.canCheer,
+      title: ti.why || '',
+      onClick: () => {
+        let r = null;
+        try {
+          r = assistantMasmonCheer(id);
+        } catch (_) {
+          r = null;
+        }
+        setCheerMsg(r && r.ok ? {
+          id,
+          text: `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}`
+        } : {
+          id,
+          text: r && r.why || ti.why || ''
+        });
+      },
+      className: "rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50"
+    }, "📣 応援する", React.createElement("span", {
+      className: "block text-[10px] font-bold"
+    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), ti && !ti.canCheer && ti.why && React.createElement("p", {
+      className: "w-full text-[10.5px] font-bold text-slate-300",
+      "data-assistant-life-map-cheer-why": id
+    }, ti.why), cheerMsg && cheerMsg.id === id && cheerMsg.text && React.createElement("p", {
+      className: "w-full rounded-lg bg-emerald-900/70 px-2 py-1 text-[11px] font-black text-emerald-100",
+      "data-assistant-life-map-cheer-msg": id
+    }, cheerMsg.text));
   };
   return React.createElement("div", {
     className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
     "data-assistant-life-where": true,
     "data-assistant-life-map-art": art
-  }, React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+  }, typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:10px;font-weight:900;line-height:${small ? 13 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
@@ -115314,7 +115416,9 @@ function AssistantLifeTownMap({
     "data-assistant-life-map-sheet-home": true
   }, ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
-  }, ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
+  }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, "MFバトルカードの研究をしている助手。いる助手と対戦すると、", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]), sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true
   }, "いまはだれもいません"), typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
@@ -116703,6 +116807,24 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     go: typeof go.temple === 'function' ? go.temple : null
   });
   try {
+    const bt = typeof amgtRoomLine === 'function' ? assistantLifeAtPlace(life, ids, 'battle').filter(id => {
+      let t = null;
+      try {
+        t = amgtRoomLine(id);
+      } catch (_) {
+        t = null;
+      }
+      return typeof t === 'string' && t.indexOf('いま') === 0;
+    }) : [];
+    if (bt.length) rows.push({
+      k: 'battle',
+      place: 'battle',
+      icon: '⚔',
+      text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`,
+      go: typeof go.battle === 'function' ? go.battle : null
+    });
+  } catch (_) {}
+  try {
     const mk = assistantLifeAtPlace(life, ids, 'market');
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
     if (pk && !pk.used && pk.itemName) rows.push({
@@ -117173,7 +117295,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily-title": true
   }, "「", plan.title, "」")) : said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`, !done && React.createElement("span", {
     className: "block text-[11px] text-emerald-300"
-  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
+  }, plan ? `→ 見ると 🤝 ふれあい1回 ・ 💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}(1日 +12 まで)` : '→ 聞くと 🤝 ふれあい1回(ミッション「助手とふれあう」)'), got && React.createElement("span", {
     className: "block text-[11px] text-pink-200"
   }, "🧺 おやつバスケットを1個もらいました！(持ち物へ)")), !done && (plan ? React.createElement("button", {
     type: "button",
@@ -117374,13 +117496,18 @@ const assistantLifeDailyAlbumTalks = () => {
 const assistantLifeDailyFinish = async (plan, slotId) => {
   const r = await assistantLifeDailyListen(slotId);
   let bond = 0;
+  const gains = {};
   if (r.added && plan) {
     bond = ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0;
     if (bond > 0 && typeof assistantPeerPlayerBondAdder !== 'undefined' && assistantPeerPlayerBondAdder) {
+      const pts = id => typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
       for (const id of plan.ids) {
+        const before = pts(id);
         try {
           assistantPeerPlayerBondAdder(id, 'lifeDaily', bond);
         } catch (_) {}
+        const after = pts(id);
+        gains[id] = Number.isFinite(before) && Number.isFinite(after) ? Math.max(0, after - before) : bond;
       }
     }
     if (plan.kind === 'rare' && typeof assistantPeerAlbumAdd === 'function') {
@@ -117395,7 +117522,8 @@ const assistantLifeDailyFinish = async (plan, slotId) => {
   return {
     added: r.added,
     got: r.got,
-    bond
+    bond,
+    gains
   };
 };
 function AssistantLifeDailySceneView({
@@ -117523,7 +117651,11 @@ function AssistantLifeDailySceneView({
     "data-assistant-life-daily-result": true
   }, res && React.createElement("p", {
     className: "mt-1 rounded-xl bg-pink-50 px-2 py-1 text-[11.5px] font-black text-pink-700"
-  }, res.added ? ['🤝 ふれあい1回', res.bond > 0 ? `💗 ${plan.ids.map(assistantLifeName).join('・')} +${res.bond}` : '', plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
+  }, res.added ? ['🤝 ふれあい1回', (() => {
+    const g = res.gains || {};
+    const up = plan.ids.filter(id => (g[id] || 0) > 0);
+    return up.length ? up.map(id => `💗 ${assistantLifeName(id)} +${g[id]}`).join(' ') : res.bond > 0 ? '💗 今日の仲良し度はここまで' : '';
+  })(), plan.kind === 'rare' ? '✨ 思い出アルバムに1枚' : '', res.got ? '🧺 おやつバスケットを1個もらいました！' : ''].filter(Boolean).join(' ・ ') : 'この時間帯のできごとは見ました'), React.createElement("button", {
     type: "button",
     "data-assistant-life-daily-scene-close": true,
     onClick: ev => {
@@ -117560,8 +117692,7 @@ function AssistantLifeTopStrip({
   let next = null;
   try {
     const s = assistantLifeSlotAt();
-    const d = ASSISTANT_LIFE_SLOTS[s.i];
-    next = d && Number.isFinite(d.to) ? d.to % 24 : null;
+    next = Number.isFinite(s.to) ? s.to % 24 : null;
   } catch (_) {
     next = null;
   }
@@ -117743,6 +117874,8 @@ function AssistantLifeBenefitBoard({
   watchNow = 0,
   watchDone = false,
   giveLeft = 0,
+  giveGroupLeft = null,
+  giveSoloLeft = null,
   onWatch = null,
   onGive = null,
   onRoad = null,
@@ -117765,7 +117898,7 @@ function AssistantLifeBenefitBoard({
     }
   })();
   const todayClick = watchNow > 0 && onWatch ? onWatch : giveLeft > 0 && onGive ? onGive : null;
-  const todayParts = [watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し', giveLeft > 0 ? `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み'];
+  const todayParts = [watchNow > 0 ? `👀 見守る 今${watchNow}組` : watchDone ? '👀 見守る ✓ 済み(次の時間帯に)' : '👀 見守る いまは無し', giveLeft > 0 ? Number.isFinite(giveGroupLeft) && Number.isFinite(giveSoloLeft) ? `🎁 贈る 2人に${giveGroupLeft}・1人に${giveSoloLeft}回` : `🎁 贈る 今日あと${giveLeft}回` : '🎁 贈る ✓ 今日は済み'];
   const shown = more ? rows : rows.slice(0, 1);
   return React.createElement("section", {
     className: `mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`,
@@ -131497,11 +131630,11 @@ function AssistantLifeGiftLikesRow({
     "aria-expanded": showAll
   }, React.createElement("span", {
     className: "shrink-0"
-  }, "🎁 好きなもの"), compact && React.createElement("span", {
+  }, "🎁 贈り物の好み"), compact && React.createElement("span", {
     className: "min-w-0 truncate text-[11px]"
   }, liked.length ? liked.map(g => g.emoji).join('') : ''), React.createElement("span", {
     className: "ml-auto shrink-0 text-[10px] font-bold text-slate-400"
-  }, "分かった ", known, "/", gifts.length, compact ? showAll ? ' ▲' : ' ▼' : '')), hint && React.createElement("button", {
+  }, gifts.length, "種類のうち ", known, " 分かった", compact ? showAll ? ' ▲' : ' ▼' : '')), hint && React.createElement("button", {
     type: "button",
     "data-assistant-life-gift-told": told.key,
     onClick: () => assistantLifeGiftToldSeen(id),
@@ -134859,9 +134992,11 @@ const normalizeAssistantMasmonSave = raw => {
     pickNameDay: '',
     renamed2: {},
     asked: [],
-    mine: {}
+    mine: {},
+    nickFix1: false
   };
   if (raw && typeof raw === 'object') {
+    out.nickFix1 = raw.nickFix1 === true;
     if (typeof raw.seed === 'string' && /^[\w-]{4,60}$/.test(raw.seed)) out.seed = raw.seed;
     out.made = normalizeAssistantMasmonMade(raw.made);
     out.named = raw.named === true;
@@ -135905,7 +136040,7 @@ const assistantMasmonChooseAt = (aid, slot, have, ctx, seed, day) => {
     role,
     welcome: assistantMasmonWelcomeLv(slot),
     colors: assistantMasmonDyeMake2(aid, p, best.c.t.monster, role, rnd),
-    ai: false,
+    ai: !!(typeof best.c.t.nick === 'string' && best.c.t.nick),
     reason,
     at: day
   };
@@ -136069,10 +136204,80 @@ const assistantMasmonEnsureMade = async () => {
       } catch (_) {}
     }
   } catch (_) {}
+  try {
+    const st = ASSISTANT_MASMON_STORE.state;
+    const next = assistantMasmonNickFix1(st);
+    if (next !== st) {
+      ASSISTANT_MASMON_STORE.set(next);
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_KEY, next, false);
+      } catch (_) {}
+    }
+  } catch (_) {}
   void assistantMasmonAskNames();
 };
-let _assistantMasmonNamesBusy = false;
+const assistantMasmonIsMonName = n => {
+  try {
+    return typeof ALL_PLAYER_MONSTERS !== 'undefined' && Object.values(ALL_PLAYER_MONSTERS).some(m => m && m.name === n);
+  } catch (_) {
+    return false;
+  }
+};
+const assistantMasmonNickFix1 = st => {
+  if (!st || st.nickFix1 || !st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V) return st;
+  const pick = {
+    ...(st.pick || {})
+  };
+  for (const aid of Object.keys(pick)) {
+    const base = assistantMasmonBasePlanOf(aid);
+    if (!base || !pick[aid]) continue;
+    const pool = assistantMasmonDrawPool(aid, base);
+    const all = [...pool.likes, ...pool.more, ...pool.rest];
+    const mine = assistantMasmonMineOf(st, aid);
+    const pk = {
+      ...pick[aid]
+    };
+    for (const k of Object.keys(pk)) {
+      const t = pk[k];
+      const mon = assistantMasmonMon(t.monster);
+      if (!mon || t.nick !== mon.name || (mine.names[t.slot] || []).length) continue;
+      const src = all.find(x => x.monster === t.monster && typeof x.nick === 'string' && x.nick);
+      if (!src || assistantMasmonRowsOf({
+        ...st,
+        pick: {
+          ...pick,
+          [aid]: pk
+        }
+      }, aid).some(y => y.nick === src.nick)) continue;
+      pk[k] = {
+        ...t,
+        nick: src.nick,
+        ai: true
+      };
+    }
+    pick[aid] = pk;
+  }
+  return {
+    ...st,
+    pick,
+    nickFix1: true
+  };
+};
+let _assistantMasmonNamesBusy = false,
+  _assistantMasmonNamesAgain = false;
 const assistantMasmonAskNames = async () => {
+  if (_assistantMasmonNamesBusy) {
+    _assistantMasmonNamesAgain = true;
+    return 'skip';
+  }
+  const r = await assistantMasmonAskNamesOnce();
+  if (_assistantMasmonNamesAgain) {
+    _assistantMasmonNamesAgain = false;
+    if (r !== 'failed' && r !== 'tired') return assistantMasmonAskNamesOnce();
+  }
+  return r;
+};
+const assistantMasmonAskNamesOnce = async () => {
   const st = ASSISTANT_MASMON_STORE.state;
   const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
   if (!st.draw || st.draw.v !== ASSISTANT_MASMON_DRAW_V || _assistantMasmonNamesBusy || !day || st.pickNameDay === day) return 'skip';
@@ -136156,7 +136361,7 @@ const assistantMasmonAskNames = async () => {
         if (t.ai) return t;
         const n = typeof got[t.slot] === 'string' ? got[t.slot].trim() : '';
         const styled = !!assistantMasmonMineOf(cur, a).nameStyle;
-        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n);
+        const ok = (styled ? assistantMasmonAskNameOk(n) : /^[ぁ-ゖァ-ヺー一-龠々・]{2,8}$/u.test(n)) && !used.has(n) && !assistantMasmonIsMonName(n);
         if (!ok) return t;
         used.add(n);
         changed = true;
@@ -136802,6 +137007,9 @@ const assistantMasmonAskApply = (aid, r, outcome, t) => {
       }
     }));
     if (!r.name) void assistantMasmonAskNames();
+    try {
+      if (typeof amgTick === 'function') void amgTick(aid);
+    } catch (_) {}
     return {
       changed: true,
       what: `${row.nick}を${monName(r.monster)}に入れ替え`
@@ -137335,6 +137543,17 @@ const assistantMasmonLineage = mid => {
     const l = typeof monsterLineageOf === 'function' ? monsterLineageOf(mid) : null;
     const m = l && l.main;
     return (m && typeof m === 'object' ? m.id : m) || null;
+  } catch (_) {
+    return null;
+  }
+};
+const assistantMasmonLineageRep = lin => {
+  try {
+    if (!lin || typeof ALL_PLAYER_MONSTERS === 'undefined') return null;
+    const id = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[lin] ? MONSTER_LINEAGES[lin].monId : '';
+    if (id && ALL_PLAYER_MONSTERS[id]) return ALL_PLAYER_MONSTERS[id];
+    const k = Object.keys(ALL_PLAYER_MONSTERS).find(m => assistantMasmonLineage(m) === lin);
+    return k ? ALL_PLAYER_MONSTERS[k] : null;
   } catch (_) {
     return null;
   }
@@ -138063,6 +138282,11 @@ function AssistantMasmonSheet({
         lv = Number(bondLv);
       if (p0 && p0.v2) {
         const got = await assistantMasmonWelcomeDue(id, lv);
+        if (got.length && typeof amgTick === 'function') {
+          try {
+            await amgTick(id);
+          } catch (_) {}
+        }
         if (got.length && alive) setWelcome(got[got.length - 1]);
       } else {
         const due = p0 && Number.isFinite(lv) ? (p0.extra || []).filter(t => assistantMasmonMonOk(t) && Number.isFinite(t.welcome) && lv >= t.welcome && !assistantMasmonWelcomed(id)[t.monster]) : [];
@@ -138320,7 +138544,7 @@ function AssistantMasmonSheet({
     const line = (x, kind) => {
       const name = assistantMasmonTasteName(x);
       if (!name) return null;
-      const m = x.monster ? assistantMasmonMon(x.monster) : null;
+      const m = x.monster ? assistantMasmonMon(x.monster) : x.lineage ? assistantMasmonLineageRep(x.lineage) : null;
       const spread = kind === 'like' ? assistantMasmonSpread(x) : '';
       return React.createElement("div", {
         key: `${kind}-${x.monster || x.lineage}`,
@@ -141030,6 +141254,14 @@ const assistantLifePlanOn = () => {
 };
 const assistantLifePlanOkId = id => typeof id === 'string' && typeof ASSISTANT_LIFE_PREFS !== 'undefined' && !!ASSISTANT_LIFE_PREFS[id];
 const assistantLifePlanOkPlace = p => ASSISTANT_LIFE_PLAN_PLACES.includes(p);
+const assistantLifePlanCanAsk = id => {
+  if (!assistantLifePlanOkId(id)) return false;
+  try {
+    return typeof assistantPartnerOkNow !== 'function' || assistantPartnerOkNow(id) === true;
+  } catch (_) {
+    return false;
+  }
+};
 const normalizeAssistantLifePlan = (raw, day) => {
   const out = {
     day: Number.isInteger(day) ? day : null,
@@ -141230,7 +141462,7 @@ const assistantLifePlanSave = data => {
   } catch (_) {}
 };
 const assistantLifePlanSet = (abs, id, place, now = Date.now()) => {
-  if (!assistantLifePlanOn() || !Number.isInteger(abs) || !assistantLifePlanOkId(id)) return false;
+  if (!assistantLifePlanOn() || !Number.isInteger(abs) || !assistantLifePlanCanAsk(id)) return false;
   const cur = assistantLifeSlotAt(now).abs;
   if (abs <= cur || Math.floor(abs / 12) !== Math.floor(cur / 12) || abs % 12 < ASSISTANT_LIFE_PLAN_FIRST_J) return false;
   if (place != null && !assistantLifePlanOkPlace(place)) return false;
@@ -141279,7 +141511,9 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     if (!assistantLifePlanOn() || !ASSISTANT_LIFE_PLAN_STORE.state.loaded || !decided) return decided;
     const d = ASSISTANT_LIFE_PLAN_STORE.state.data;
     if (!d || d.day !== Math.floor(decided.abs / 12)) return decided;
-    const want = d.plan[String(decided.abs)];
+    const want0 = d.plan[String(decided.abs)] || {};
+    const want = {};
+    for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length) return decided;
     const trust = {};
     for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
@@ -141349,7 +141583,7 @@ const assistantLifePlanClose = () => ASSISTANT_LIFE_PLAN_STORE.set({
   open: null
 });
 const assistantLifePlanRowInfo = id => {
-  if (!assistantLifePlanOn()) return null;
+  if (!assistantLifePlanOn() || !assistantLifePlanCanAsk(id)) return null;
   const left = assistantLifePlanSlotsLeft();
   if (!left.length) return null;
   const next = left[0];
@@ -141365,7 +141599,7 @@ const assistantLifePlanFreeCount = ids => {
   if (!assistantLifePlanOn()) return 0;
   const left = assistantLifePlanSlotsLeft();
   let n = 0;
-  for (const abs of left) if ((ids || []).some(id => !assistantLifePlanOf(abs, id))) n++;
+  for (const abs of left) if ((ids || []).filter(assistantLifePlanCanAsk).some(id => !assistantLifePlanOf(abs, id))) n++;
   return n;
 };
 const assistantLifePlanUse = () => {
@@ -141612,7 +141846,7 @@ function AssistantLifePlanHost({
   }, [open, land]);
   if (!assistantLifePlanOn() || !open) return null;
   const cur = assistantLifeSlotAt().abs;
-  const list = (ids || []).filter(assistantLifePlanOkId);
+  const list = (ids || []).filter(assistantLifePlanCanAsk);
   const lv = who ? assistantLifePlanLvOf(who) : null;
   return React.createElement("div", {
     className: "absolute inset-0 grid place-items-center bg-black/60 p-2",
@@ -145134,9 +145368,13 @@ const alfBuildMore = ids => {
       const p = {};
       for (const [k, sl] of [['c', 'ceil'], ['w', 'wall'], ['f', 'floor']]) if (typeof room.put[sl] === 'string') p[k] = room.put[sl];
       const k = (room.kept || []).filter(x => typeof x === 'string').slice(0, 12);
-      if (Object.keys(p).length || k.length) fu[id] = {
+      const l = typeof assistantLifeLayoutPack === 'function' ? assistantLifeLayoutPack(id) : null;
+      if (Object.keys(p).length || k.length || l) fu[id] = {
         p,
-        k
+        k,
+        ...(l ? {
+          l
+        } : {})
       };
     } catch {}
   }
@@ -145171,9 +145409,39 @@ const alfMoreChars = o => {
   const t = JSON.stringify(o);
   return t.length + (t.match(/[:,]/g) || []).length;
 };
+const alfTrimLayout = (more, floor = 0) => {
+  const fu = {};
+  for (const [id, x] of Object.entries(more.fu || {})) fu[id] = x;
+  const total = () => alfMoreChars({
+    ...more,
+    fu
+  });
+  for (let guard = 0; guard < 200; guard++) {
+    if (total() <= ALF_MORE_FIT) break;
+    let best = null;
+    for (const [id, x] of Object.entries(fu)) if (Array.isArray(x.l) && x.l.length && x.l.length > floor && (!best || x.l.length > fu[best].l.length)) best = id;
+    if (!best) break;
+    const l = fu[best].l;
+    let lo = 0;
+    for (let i = 1; i < l.length; i++) if ((l[i][10] || 0) < (l[lo][10] || 0)) lo = i;
+    const rest = l.filter((_, i) => i !== lo);
+    const {
+      l: _drop,
+      ...keep
+    } = fu[best];
+    fu[best] = rest.length ? {
+      ...keep,
+      l: rest
+    } : keep;
+  }
+  return {
+    ...more,
+    fu
+  };
+};
 const alfFitMasmon = (more, ms) => {
-  if (!ms || !Object.keys(ms).length) return more;
-  for (const [n, allColor] of [[8, true], [8, false], [4, false], [2, false], [1, false]]) {
+  const withMs = (base, n, allColor) => {
+    if (!ms || !Object.keys(ms).length) return base;
     const cut = {};
     const mn = {};
     for (const [id, list] of Object.entries(ms)) {
@@ -145183,16 +145451,32 @@ const alfFitMasmon = (more, ms) => {
       });
       if (list.length > n) mn[id] = list.length;
     }
-    const next = {
-      ...more,
+    return {
+      ...base,
       ms: cut,
       ...(Object.keys(mn).length ? {
         mn
       } : {})
     };
-    if (alfMoreChars(next) <= ALF_MORE_FIT) return next;
+  };
+  const dyOf = n => ({
+    ...more,
+    dy: (more.dy || []).slice(0, n)
+  });
+  const ok = o => alfMoreChars(o) <= ALF_MORE_FIT;
+  let next = withMs(more, 8, true);
+  if (ok(next)) return next;
+  next = withMs(more, 8, false);
+  if (ok(next)) return next;
+  for (const n of [4, 0]) {
+    next = withMs(dyOf(n), 8, false);
+    if (ok(next)) return next;
   }
-  return more;
+  for (const n of [8, 4, 2, 1]) {
+    next = alfTrimLayout(withMs(dyOf(0), n, false), 8);
+    if (ok(next)) return next;
+  }
+  return alfTrimLayout(withMs(dyOf(0), 1, false));
 };
 const ALF_ACT_KEY = 'mh_assistant_life_friend_activity_v1';
 const ALF_ACT_MAX = 6;
@@ -145300,7 +145584,12 @@ const assistantLifeFriendNormalizeMore = raw => {
       if (f && f.slot === sl) p[k] = f.key;
     }
     const k = [...new Set((Array.isArray(x.k) ? x.k : []).filter(key => furn.some(y => y.key === key)))].slice(0, 12);
-    fu[id] = {
+    const l = (Array.isArray(x.l) ? x.l : []).slice(0, 20).filter(a => Array.isArray(a) && a.length === 11 && furn.some(y => y.key === a[0]) && a.slice(1).every(v => Number.isFinite(v)));
+    fu[id] = l.length ? {
+      p,
+      k,
+      l
+    } : {
       p,
       k
     };
@@ -147059,7 +147348,13 @@ function AlfFriendHouseView({
     const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(k) : null;
     return f ? `${f.emoji} ${f.name}` : null;
   };
+  const layoutOf = id => {
+    const l = more && more.fu[id] && Array.isArray(more.fu[id].l) && typeof assistantLifeLayoutUnpack === 'function' ? assistantLifeLayoutUnpack(more.fu[id].l) : null;
+    return l && l.length ? l : null;
+  };
   const furnNames = id => {
+    const lay = layoutOf(id);
+    if (lay && lay.length) return [...new Set(lay.map(it => fname(it.k)).filter(Boolean))];
     const fu = putOf(id);
     return fu ? ['c', 'w', 'f'].map(k => fu[k] && fname(fu[k])).filter(Boolean) : [];
   };
@@ -147084,7 +147379,8 @@ function AlfFriendHouseView({
         ceil: more.fu[id].p.c || null,
         wall: more.fu[id].p.w || null,
         floor: more.fu[id].p.f || null
-      }
+      },
+      layout: layoutOf(id)
     };
     return o;
   })();
@@ -147272,6 +147568,7 @@ function AlfFriendHouseView({
     } : null,
     team: rvTeam,
     furn: rvFurn,
+    layoutItems: layoutOf(roomId),
     bubble: talk && talk.aid === roomId ? talk.text : '',
     title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
     sub: `🏘 ${friend.name}さんの家`,
@@ -170610,6 +170907,14 @@ const cardPackQuake = (el, lv) => {
     easing: 'linear'
   });
 };
+const cardPackBuzz = ms => {
+  try {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    navigator.vibrate(ms);
+  } catch (e) {}
+};
+const cardPackSurprise = (c, i, pi) => !!c && c.rarity !== 'normal' && (pi * 3 + i * 5 + (c.rarity === 'alt' ? 1 : 0)) % 10 < 3;
 const CardPackConfetti = ({
   n,
   again = 0
@@ -170694,8 +170999,9 @@ const CardPackOpen = ({
     if (fx) {
       cardPackQuake(rootRef.current, 1);
       later(() => cardPackQuake(rootRef.current, 2), 640);
+      cardPackBuzz(omen ? [30, 40, 30] : 20);
     }
-    later(() => setPhase('open'), CARD_PACK_TEAR_MS);
+    later(() => setPhase('open'), CARD_PACK_TEAR_MS + (fx ? omen === 'alt' ? 500 : omen === 'kira' ? 250 : 0 : 0));
   };
   const spotOff = () => {
     setSpot(sp => sp && !sp.leaving ? {
@@ -170724,7 +171030,10 @@ const CardPackOpen = ({
         });
         se('crit');
         if (c.rarity === 'alt') se('fusion');else se('levelUp');
-        if (fx) cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
+        if (fx) {
+          cardPackQuake(rootRef.current, c.rarity === 'alt' ? 3 : 2);
+          cardPackBuzz(c.rarity === 'alt' ? [60, 40, 60, 40, 120] : [50, 30, 50]);
+        }
       }, 380);
       later(spotOff, 380 + spotMs(c));
     }
@@ -170744,6 +171053,7 @@ const CardPackOpen = ({
         }));
         se('tap');
         cardPackQuake(rootRef.current, k + 1);
+        cardPackBuzz(15 + k * 15);
       }, k * CARD_PACK_CLIMB_MS);
     }
     later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
@@ -170759,6 +171069,22 @@ const CardPackOpen = ({
       later(() => reveal(i), at);
       at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
+  };
+  const quick = fx && !kit && pi > 0 && result.packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => {
+      if (c.rarity === 'normal') later(() => setFlipped(f => f.includes(i) ? f : [...f, i]), 160 + i * 70);
+    });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    se('card');
+    setSpot(null);
+    setClimb(null);
+    setFlipped(cards.map((_, i) => i));
   };
   const next = () => {
     Audio_.fgSe.tap();
@@ -170858,6 +171184,8 @@ const CardPackOpen = ({
     const name = card ? card.name : m ? m.name : c.no;
     const rare = c.rarity !== 'normal';
     const cl = climb && climb.i === i ? climb : null;
+    const sur = fx && cardPackSurprise(c, i, pi);
+    const backRar = !rare || on ? null : sur ? cl ? cl.k >= 2 ? 'alt' : cl.k >= 1 ? 'kira' : null : null : c.rarity;
     return React.createElement("div", {
       key: `${pi}-${i}`,
       className: "mh-pack-deal flex flex-col items-center",
@@ -170867,6 +171195,7 @@ const CardPackOpen = ({
     }, React.createElement("button", _extends({
       type: "button",
       "data-card-pack-card": i,
+      "data-card-pack-surprise": sur ? 1 : undefined,
       "data-card-pack-flipped": on ? 1 : 0,
       "data-card-pack-rarity": c.rarity,
       "data-card-pack-climb": cl ? cl.k + 1 : undefined
@@ -170889,7 +171218,7 @@ const CardPackOpen = ({
     }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
-      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${backRar ? backRar === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
       style: {
         containerType: 'inline-size'
       }
@@ -170978,6 +171307,13 @@ const CardPackOpen = ({
     }), fx && !spot.leaving && React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-spot-burst ${alt ? 'alt' : ''}`
+    }), fx && !spot.leaving && React.createElement("div", {
+      "aria-hidden": "true",
+      "data-card-pack-shock": true,
+      className: `mh-pack-shock ${alt ? 'alt' : ''}`
+    }), fx && !spot.leaving && React.createElement("div", {
+      "aria-hidden": "true",
+      className: `mh-pack-vignette ${alt ? 'alt' : ''}`
     }), fx && React.createElement(CardPackConfetti, {
       key: `cf-${spot.i}`,
       n: alt ? 130 : 24,
@@ -171009,12 +171345,19 @@ const CardPackOpen = ({
     className: SCREEN_FOOTER_CLASS
   }, phase !== 'open' ? React.createElement("div", {
     className: "text-center text-[12px] font-bold text-slate-400"
-  }, kit ? 'キットをタップしてください' : 'パックをタップしてください') : !allOpen ? React.createElement("button", {
+  }, kit ? 'キットをタップしてください' : 'パックをタップしてください') : !allOpen ? React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("button", {
     type: "button",
     "data-card-pack-flip-all": true,
-    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    className: "mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]",
     onClick: flipAll
-  }, "全部めくる") : !last ? React.createElement("button", {
+  }, "全部めくる"), fx && React.createElement("button", {
+    type: "button",
+    "data-card-pack-skip": true,
+    className: "mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]",
+    onClick: skipAll
+  }, "とばす")) : !last ? React.createElement("button", {
     type: "button",
     "data-card-pack-next": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
@@ -182831,6 +183174,9 @@ const CardTacticPackOpen = ({
   const [detail, setDetail] = useState(null);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const [fx] = useState(cardPackFxOn);
+  const [climb, setClimb] = useState(null);
+  const rootRef = useRef(null);
   const listRef = useRef(null);
   const [listH, setListH] = useState(0);
   useEffect(() => {
@@ -182862,6 +183208,10 @@ const CardTacticPackOpen = ({
     se('special');
     setPhase('tearing');
     later(() => se('crit'), 520);
+    if (fx) {
+      cardPackQuake(rootRef.current, 1);
+      later(() => cardPackQuake(rootRef.current, 2), 640);
+    }
     later(() => setPhase('open'), CARD_TACTIC_TEAR_MS);
   };
   const spotOff = () => {
@@ -182871,8 +183221,11 @@ const CardTacticPackOpen = ({
     } : sp);
     later(() => setSpot(null), CARD_TACTIC_SPOT_BACK_MS);
   };
-  const reveal = i => {
+  const climbSteps = c => fx && c && c.r === 'SR' ? 2 : 0;
+  const spotMs = () => fx ? CARD_PACK_SPOT_ALT_FX_MS : CARD_TACTIC_SPOT_MS;
+  const turn = i => {
     se('card');
+    setClimb(null);
     setFlipped(f => f.includes(i) ? f : [...f, i]);
     if (cards[i] && cards[i].r === 'SR') {
       later(() => {
@@ -182883,21 +183236,59 @@ const CardTacticPackOpen = ({
         });
         se('crit');
         se('fusion');
+        if (fx) {
+          cardPackQuake(rootRef.current, 2);
+          cardPackBuzz([50, 30, 50]);
+        }
       }, 380);
-      later(spotOff, 380 + CARD_TACTIC_SPOT_MS);
+      later(spotOff, 380 + spotMs());
     }
   };
+  const reveal = i => {
+    const steps = climbSteps(cards[i]);
+    if (!steps) {
+      turn(i);
+      return;
+    }
+    for (let k = 0; k < steps; k++) later(() => {
+      setClimb(x => ({
+        i,
+        k,
+        n: (x && x.n || 0) + 1
+      }));
+      se('tap');
+      cardPackQuake(rootRef.current, k + 1);
+      cardPackBuzz(15 + k * 15);
+    }, k * CARD_PACK_CLIMB_MS);
+    later(() => turn(i), steps * CARD_PACK_CLIMB_MS);
+  };
   const flip = i => {
-    if (flipped.includes(i) || phase !== 'open' || spot) return;
+    if (flipped.includes(i) || phase !== 'open' || spot || climb) return;
     reveal(i);
   };
   const flipAll = () => {
-    if (spot) return;
+    if (spot || climb) return;
     let at = 0;
     cards.map((_, i) => i).filter(i => !flipped.includes(i)).forEach(i => {
       later(() => reveal(i), at);
-      at += cards[i].r === 'SR' ? 380 + CARD_TACTIC_SPOT_MS + CARD_TACTIC_SPOT_BACK_MS + 120 : 140;
+      at += cards[i].r === 'SR' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs() + CARD_TACTIC_SPOT_BACK_MS + 120 : 140;
     });
+  };
+  const quick = fx && pi > 0 && packs.length > 1;
+  useEffect(() => {
+    if (phase !== 'open' || !quick) return;
+    cards.forEach((c, i) => {
+      if (c.r !== 'SR') later(() => setFlipped(f => f.includes(i) ? f : [...f, i]), 160 + i * 70);
+    });
+    later(() => se('card'), 160);
+  }, [phase, pi]);
+  const skipAll = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    se('card');
+    setSpot(null);
+    setClimb(null);
+    setFlipped(cards.map((_, i) => i));
   };
   const next = () => {
     Audio_.fgSe.tap();
@@ -182907,7 +183298,9 @@ const CardTacticPackOpen = ({
     setPhase('closed');
     setFlipped([]);
     setSpot(null);
+    setClimb(null);
   };
+  const omen = fx && cards.some(c => c.r === 'SR') ? 'kira' : null;
   const cols = !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
   const rows = Math.ceil(cards.length / cols);
   const gridMaxW = listH > 0 ? Math.max(200, Math.floor(((listH - 52) / rows - 24) * 5 / 7 * cols + 8 * (cols - 1) + 8)) : null;
@@ -182915,9 +183308,11 @@ const CardTacticPackOpen = ({
   const spotCard = spot ? cardTacticOf(cards[spot.i].id) : null;
   const shards = cards.filter(c => c.dup).length;
   return React.createElement("div", {
+    ref: rootRef,
     "data-mh-screen": true,
     "data-card-tactic-open": true,
     "data-card-tactic-open-phase": phase,
+    "data-card-tactic-fx": fx ? 'on' : 'off',
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
     title: "戦術カードパック",
@@ -182949,6 +183344,10 @@ const CardTacticPackOpen = ({
   }), phase === 'tearing' && React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-burst"
+  }), phase === 'tearing' && omen && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-card-tactic-omen": omen,
+    className: `mh-pack-omen mh-pack-omen-${omen}`
   }), phase === 'closed' && React.createElement("span", {
     className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
@@ -182961,6 +183360,11 @@ const CardTacticPackOpen = ({
     const card = cardTacticOf(c.id);
     const on = flipped.includes(i);
     const sr = c.r === 'SR';
+    const cl = climb && climb.i === i ? climb : null;
+    const sur = fx && sr && cardPackSurprise({
+      rarity: 'kira'
+    }, i, pi);
+    const glow = sr && !on && (!sur || cl && cl.k >= 1);
     return React.createElement("div", {
       key: `${pi}-${i}`,
       className: "mh-pack-deal flex flex-col items-center",
@@ -182971,13 +183375,23 @@ const CardTacticPackOpen = ({
       type: "button",
       "data-card-tactic-open-card": i,
       "data-card-tactic-open-flipped": on ? '1' : '0',
+      "data-card-tactic-surprise": sur ? 1 : undefined,
+      "data-card-tactic-climb": cl ? cl.k + 1 : undefined,
       onClick: () => on ? setDetail(card) : flip(i),
-      className: "mh-pack-card relative w-full active:scale-95"
-    }, React.createElement("div", {
+      className: `mh-pack-card relative w-full active:scale-95 ${cl ? `mh-pack-climb mh-pack-climb-${cl.k + 1}` : ''}`
+    }, cl && React.createElement("span", {
+      key: cl.n,
+      "aria-hidden": "true",
+      className: "mh-pack-climb-burst",
+      style: {
+        '--c': CARD_PACK_CLIMB[cl.k][0],
+        '--s': `${CARD_PACK_CLIMB[cl.k][1]}px`
+      }
+    }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
       "data-card-tactic-back": true,
-      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${glow ? 'mh-pack-kira-back' : ''}`
     }, React.createElement("img", {
       src: CARD_BACK_IMG(),
       alt: "",
@@ -183023,6 +183437,18 @@ const CardTacticPackOpen = ({
   }, React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-spot-rays"
+  }), fx && !spot.leaving && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-spot-burst"
+  }), fx && !spot.leaving && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-shock"
+  }), fx && !spot.leaving && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-vignette"
+  }), fx && React.createElement(CardPackConfetti, {
+    key: `cf-${spot.i}`,
+    n: 60
   }), React.createElement("div", {
     className: `relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`,
     style: {
@@ -183034,17 +183460,25 @@ const CardTacticPackOpen = ({
     card: spotCard,
     big: true
   }))), React.createElement("span", {
-    className: `relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${spot.leaving ? 'opacity-0' : ''}`
+    "data-card-tactic-label": fx ? 'big' : 'normal',
+    className: `relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${fx ? 'mh-pack-label-big' : ''} ${spot.leaving ? 'opacity-0' : ''}`
   }, "SR!")), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, phase !== 'open' ? React.createElement("div", {
     className: "text-center text-[12px] font-bold text-slate-400"
-  }, "パックをタップしてください") : !allOpen ? React.createElement("button", {
+  }, "パックをタップしてください") : !allOpen ? React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("button", {
     type: "button",
     "data-card-tactic-open-all": true,
-    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    className: "mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]",
     onClick: flipAll
-  }, "全部めくる") : !last ? React.createElement("button", {
+  }, "全部めくる"), fx && React.createElement("button", {
+    type: "button",
+    "data-card-tactic-skip": true,
+    className: "mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]",
+    onClick: skipAll
+  }, "とばす")) : !last ? React.createElement("button", {
     type: "button",
     "data-card-tactic-open-next": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
@@ -194683,6 +195117,7 @@ function MonsterHeroGame() {
   gameStateForBackRef.current = gameState;
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (mhIsIosHomeScreenApp()) return;
     let armed = false;
     const arm = () => {
       try {
@@ -197276,6 +197711,13 @@ function MonsterHeroGame() {
         return;
       }
       keys.forEach(k => window.localStorage.setItem(k, data[k]));
+      if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
+        v: 1,
+        mode: 'all',
+        first: null,
+        unlocked: [],
+        noticed: []
+      }));
       setRestoreMsg('復元しました。再読み込みします...');
       setTimeout(() => window.location.reload(), 900);
     } catch {
@@ -197366,6 +197808,13 @@ function MonsterHeroGame() {
           const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
           if (!keys.length) throw new Error('no-save-keys');
           keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          if (!keys.includes('mh_assistant_partner_v1')) window.localStorage.setItem('mh_assistant_partner_v1', JSON.stringify({
+            v: 1,
+            mode: 'all',
+            first: null,
+            unlocked: [],
+            noticed: []
+          }));
           setRestoreMsg('復元しました。再読み込みします...');
           setTimeout(() => window.location.reload(), 900);
         } catch {
@@ -222344,7 +222793,7 @@ function MonsterHeroGame() {
         }, "まだ助手ではありません")), React.createElement("small", {
           className: "block text-[9px] text-slate-400 leading-tight mt-0.5"
         }, owned ? React.createElement(React.Fragment, null, "「", cardName, "」をモンヒロバトルで使った回数 ", React.createElement("b", {
-          className: "text-slate-200 tabular-nums"
+          className: "text-slate-200 tabular-nums whitespace-nowrap"
         }, n, " / ", need)) : React.createElement(React.Fragment, null, "「", cardName, "」を手に入れて、モンヒロバトルで", need, "回使うと選べます")), owned && React.createElement("span", {
           className: "block h-1.5 rounded-full bg-slate-800 overflow-hidden mt-1"
         }, React.createElement("span", {
@@ -232223,7 +232672,16 @@ const createAnimationStyle = () => {
     .mh-pack-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
     .mh-pack-confetti > i { position: absolute; top: -14px; height: 12px; opacity: 0; animation: mhPackConfetti 2.4s linear forwards; }
     @keyframes mhPackConfetti { 0% { opacity: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 1; translate: 0 110vh; rotate: 720deg; } }
+    /* 格上げ・もう一段の派手さ(2026-11-11 社長): 札が出た瞬間に光の輪が広がり、画面のふちがその色に染まる */
+    .mh-pack-shock { position: absolute; left: 50%; top: 46%; width: 120px; height: 120px; border-radius: 50%; pointer-events: none; border: 6px solid #fff; box-shadow: 0 0 24px 6px rgba(255,200,40,.9), inset 0 0 24px 4px rgba(255,200,40,.8);
+      transform: translate(-50%, -50%) scale(.3); animation: mhPackShock .8s ease-out forwards; }
+    .mh-pack-shock.alt { box-shadow: 0 0 30px 8px rgba(255,80,200,.9), 0 0 50px 12px rgba(80,200,255,.8), inset 0 0 24px 4px rgba(255,80,200,.7); border-color: #fff; }
+    @keyframes mhPackShock { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.3); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(6); } }
+    .mh-pack-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 24px rgba(255,200,40,.8); animation: mhPackVignette 1.2s ease-out forwards; }
+    .mh-pack-vignette.alt { box-shadow: inset 0 0 110px 30px rgba(255,80,200,.75), inset 0 0 160px 50px rgba(80,200,255,.55); }
+    @keyframes mhPackVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .5; } }
     @media (prefers-reduced-motion: reduce) {
+      .mh-pack-shock, .mh-pack-vignette { display: none; }
       .mh-pack-confetti, .mh-pack-rpillar, .mh-pack-climb-burst, .mh-pack-spot-burst { display: none; }
       .mh-pack-cflash { animation-duration: .3s; }
       .mh-pack-label-big, .mh-pack-label-big.alt { animation: none; transform: rotate(-6deg); }

@@ -39,7 +39,7 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':MIME[path.extname(f).toLowerCase()]||'application/octet-stream'});
   if(rel.endsWith('index.html')){
     let body=html.replace(', maximum-scale=1.0, user-scalable=no','');
-    if(old)body=body.replace(RULE,'');
+    if(old)body=body.replace(RULE,'').replace(':where(body *) { touch-action: pan-x pan-y; }','');   // 2026-11-11 箱の中の縛り(browser-gesture-guard-check)も外す
     res.end(body);return;
   }
   fs.createReadStream(f).pipe(res);});s.listen(PORT,()=>r(s));});
