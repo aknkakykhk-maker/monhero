@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 697b52ffc78ff5ac
+// source-sha256: 9cba6dfe300c24c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113325,6 +113325,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     }) : [];
     if (beat.length) rows.push({
       k: 'beat',
+      place: 'studio',
       icon: '🎵',
       text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`,
       go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null
@@ -113334,6 +113335,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
     if (card.length) rows.push({
       k: 'card',
+      place: 'cardroom',
       icon: '🃏',
       text: `${nm(card)}とカードで対戦すると、ごほうび1.5倍`,
       go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null
@@ -113342,6 +113344,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({
     k: 'temple',
+    place: 'temple',
     icon: '✨',
     text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`,
     go: typeof go.temple === 'function' ? go.temple : null
@@ -113351,6 +113354,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     const pk = mk.length && typeof L.marketPerkToday === 'function' ? L.marketPerkToday() : null;
     if (pk && !pk.used && pk.itemName) rows.push({
       k: 'market',
+      place: 'market',
       icon: '🛍',
       text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`,
       go: typeof go.market === 'function' ? go.market : null
@@ -113359,11 +113363,21 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
   if (ranch.length) rows.push({
     k: 'ranch',
+    place: 'ranch',
     icon: '🥚',
     text: `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`,
     go: typeof go.ranch === 'function' ? go.ranch : null
   });
   return rows;
+};
+const assistantLifePerkAt = (place, life = null, ids = null) => {
+  try {
+    const lf = life || (typeof assistantLifeCurrent === 'function' ? assistantLifeCurrent() : null);
+    const who = ids || (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
+    return assistantLifePerkRows(lf, who, x => x).some(r => r.place === place);
+  } catch (_) {
+    return false;
+  }
 };
 function AssistantLifeNowPerks({
   life,

@@ -123,6 +123,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     await page.waitForTimeout(5200);
     const mk = await page.evaluate(() => ({ who: assistantLifeMarketWho(), perk: ASSISTANT_LIFE_LINKS.marketPerkToday ? ASSISTANT_LIFE_LINKS.marketPerkToday() : 'なし', row: !!document.querySelector('[data-assistant-life-now-perk="market"]'), more: !!document.querySelector('[data-assistant-life-now-perks-more]'), keys: [...document.querySelectorAll('[data-assistant-life-now-perk]')].map(x => x.getAttribute('data-assistant-life-now-perk')) }));
     check('⑨ 助手がマーケットにいるとき assistantLifeMarketWho が助手を返す', mk.who === 'atsu', JSON.stringify(mk));
+    check('⑨ 場所の判定 assistantLifePerkAt が帯と同じ(神殿は受け取り済みなので無し・マーケットは助手がいてできるときだけ)', await page.evaluate(() => assistantLifePerkAt('temple') === false && assistantLifePerkAt('ranch') === false && assistantLifePerkAt('market') === !!(ASSISTANT_LIFE_LINKS.marketPerkToday && (p => p && !p.used)(ASSISTANT_LIFE_LINKS.marketPerkToday()))));
     check('⑨ マーケットのおすすめが出せるとき、帯に🛍の行(3行を超えるときは「ほか」の中)', !mk.perk || mk.perk === 'なし' || mk.perk.used || mk.row || mk.more, JSON.stringify(mk));
     check('⑧ 神殿にいる助手との仲良し度が上がる(1回目)・2回目は上がらない(1日1回)', t.a === 'kyuko' && t.up > 0 && t.b === null && t.again === 0, JSON.stringify(t));
     check('⑧ 「神殿でその日もう受け取ったか」は新しいキー mh_assistant_life_perks_v1 に保存', /kyuko/.test(t.saved), t.saved);
