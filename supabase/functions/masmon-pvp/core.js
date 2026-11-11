@@ -277,15 +277,23 @@ const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits, ba
     log({ step: 'challenge', result: 'engine_error' });
     return fail(500, 'engine');
   }
-  const rec = await db.record({
-    p_division: division, p_size: size,
-    p_a_owner: owner, p_a_assistant: assistant, p_a_name: mine.user_name, p_a_icon: mine.icon,
-    p_b_owner: oppOwner, p_b_assistant: oppAssistant, p_b_name: theirs.user_name, p_b_icon: theirs.icon,
-    p_seed: seed, p_engine_version: r.version, p_tech_version: Number(catalog.techVersion) || 0, p_balance: r.balance || balance,
-    p_team_a: teamA, p_team_b: teamB,
-    p_winner: r.winner, p_reason: r.reason, p_rounds: r.rounds, p_digest: r.digest,
-    p_pair_limit: limits.pairRated, p_k: ELO_K,
-  });
+  // 記録が失敗したら(表が無い・通信が切れた など)、使った回数を戻す。試合はなかったことにする
+  let rec;
+  try {
+    rec = await db.record({
+      p_division: division, p_size: size,
+      p_a_owner: owner, p_a_assistant: assistant, p_a_name: mine.user_name, p_a_icon: mine.icon,
+      p_b_owner: oppOwner, p_b_assistant: oppAssistant, p_b_name: theirs.user_name, p_b_icon: theirs.icon,
+      p_seed: seed, p_engine_version: r.version, p_tech_version: Number(catalog.techVersion) || 0, p_balance: r.balance || balance,
+      p_team_a: teamA, p_team_b: teamB,
+      p_winner: r.winner, p_reason: r.reason, p_rounds: r.rounds, p_digest: r.digest,
+      p_pair_limit: limits.pairRated, p_k: ELO_K,
+    });
+  } catch (e) {
+    await db.refund(owner).catch(() => {});
+    log({ step: 'challenge', result: 'record_error' });
+    return fail(500, 'server');
+  }
   log({ step: 'challenge', result: 'ok', division, size, rated: !!(rec && rec.rated), rounds: r.rounds });
   // 端末へは「同じ計算で見返すのに要るもの」と結果を返す。端末は同じ種・同じ編成で simulate し、digest が合うかを見る
   return okRes({
