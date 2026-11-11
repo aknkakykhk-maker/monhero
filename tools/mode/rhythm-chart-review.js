@@ -38,6 +38,9 @@ const round=(v,d=2)=>Number.isFinite(v)?Math.round(v*10**d)/10**d:null;
 const dashedOf=track=>String(track).replace(/_/g,'-');
 
 // ── 読む ─────────────────────────────────────────────────────────────
+// 音の層の解析(あれば・いまの解析ファイルに合うものだけ)。サビ見つけが歌の帯を読むのに使う
+const readLayers=track=>{try{const a=path.join(AUTHORING,`${dashedOf(track)}-v3-audio.json`),d=JSON.parse(fs.readFileSync(path.join(AUTHORING,`${dashedOf(track)}-v3-layers.json`),'utf8'));
+  return d.basedOn&&d.basedOn.sha256===require('crypto').createHash('sha256').update(fs.readFileSync(a)).digest('hex')?d:null;}catch(e){return null;}};
 const readAudio=track=>{const f=path.join(AUTHORING,`${dashedOf(track)}-v3-audio.json`);return fs.existsSync(f)?JSON.parse(fs.readFileSync(f,'utf8')):null;};
 // 作った譜面(格子)を、ゲームが読む形(ms)へ。書き出しの道(rhythm-chart-v3-pipeline.js の runtimeRow)と同じ時刻の出し方
 const toRuntimeChart=(chart,audio)=>{
@@ -64,7 +67,7 @@ const loadAuthoring=(track,{dir=null,source='fixed',difficulties=DIFFS}={})=>{
     if(!file)continue;
     out[d]=toRuntimeChart(JSON.parse(fs.readFileSync(file,'utf8')),audio);
   }
-  return {audio,charts:out,formula:'v3'};
+  return {audio,layers:readLayers(track),charts:out,formula:'v3'};
 };
 let runtimeCache=null;
 const loadReleased=(songId,{track=null,difficulties=DIFFS}={})=>{
@@ -75,7 +78,8 @@ const loadReleased=(songId,{track=null,difficulties=DIFFS}={})=>{
   if(difficulties.includes('HELL')&&!out.HELL){const proto=(rt.RHYTHM_PROTO_SONGS||[]).find(s=>s&&String(s.songId).startsWith(`${songId}_hell`));
     const c=proto&&proto.difficulties&&(proto.difficulties.HELL||Object.values(proto.difficulties)[0]);
     if(c&&Array.isArray(c.notes)&&c.notes.length>=8)out.HELL={notes:c.notes.slice().sort((a,b)=>a.timeMs-b.timeMs),laneCount:c.laneCount||6};}
-  return {audio:readAudio(track||RELEASED_TRACKS[songId]||songId),charts:out,formula:levelFormulaFor(songId)};
+  const tr=track||RELEASED_TRACKS[songId]||songId;
+  return {audio:readAudio(tr),layers:readLayers(tr),charts:out,formula:levelFormulaFor(songId)};
 };
 
 // ── 測る ─────────────────────────────────────────────────────────────
@@ -89,7 +93,7 @@ const spearman=(xs,ys)=>{const rank=a=>{const o=a.map((v,i)=>[v,i]).sort((p,q)=>
   if(xs.length<4)return null;const a=rank(xs),b=rank(ys),m=(a.length-1)/2;let sab=0,saa=0,sbb=0;
   for(let i=0;i<a.length;i++){sab+=(a[i]-m)*(b[i]-m);saa+=(a[i]-m)**2;sbb+=(b[i]-m)**2;}return saa&&sbb?sab/Math.sqrt(saa*sbb):null;};
 
-const measureChart=(chart,audio,{formula='v3',difficulty=''}={})=>{
+const measureChart=(chart,audio,{formula='v3',difficulty='',layers=null}={})=>{
   const notes=onSixLanes(chart),beatMs=audio?audio.timing.beatMs:500,issues=[];
   const starts=notes.map(n=>n.timeMs),first=starts[0],last=Math.max(...notes.map(n=>Number(n.endTimeMs)||n.timeMs));
   const seconds=Math.max(1,(last-first)/1000);
@@ -138,7 +142,12 @@ const measureChart=(chart,audio,{formula='v3',difficulty=''}={})=>{
     // 逆になっている区切り: 静かなのに重い(+)・盛り上がるのに軽い(−)。入りを軽くする引き出し R2 の分は「軽い」に出るが、狙いどおり
     for(const s of secs)if(Math.abs(s.gap)>=.4&&s.endMs-s.startMs>=8000)issues.push({timeMs:Math.round(s.startMs),kind:'energy',lane:null,
       detail:`区切り${s.label}(${fmt(s.startMs)}〜${fmt(s.endMs)}): ${s.gap>0?'静かなのに重い':'盛り上がるのに軽い'}(盛り上がり ${round(s.intensity/maxI)}・密度 ${round(s.density/maxD)})`});
-    energy={corr:round(spearman(xs,ys)),sections:secs};
+    // サビ(rhythm-chart-chorus.js がはっきり見つけたとき)と、サビ以外の密度の比。人の譜面はサビが濃い(1より大きい)
+    let chorusLift=null,chorus=[];
+    try{const c=require('./rhythm-chart-chorus.js').detectChorus(audio,layers);if(c.confident){chorus=c.sections.filter(x=>x.chorus).map(x=>[x.startMs,x.endMs]);
+      const inC=n=>chorus.some(([a,b])=>n.timeMs>=a&&n.timeMs<b),cSec=chorus.reduce((a,[x,y])=>a+Math.max(0,Math.min(y,last)-Math.max(x,first)),0)/1000,cN=notes.filter(inC).length;
+      if(cSec>4&&seconds-cSec>4&&notes.length>cN)chorusLift=round((cN/cSec)/((notes.length-cN)/(seconds-cSec)));}}catch(e){}
+    energy={corr:round(spearman(xs,ys)),sections:secs,chorusLift,chorus};
   }
   const n100=v=>round(v/notes.length*100,1),count=k=>issues.filter(i=>i.kind===k).length;
   return {difficulty,notes:notes.length,types,sky:notes.filter(isSky).length,seconds:round(seconds,1),nps:round(notes.length/seconds),peak4s,peakAtMs:peakAt,minGapMs:Math.round(minGapMs),level,
@@ -147,7 +156,7 @@ const measureChart=(chart,audio,{formula='v3',difficulty=''}={})=>{
     flowRatio:round(flowRatio,3),jump:flow.jump,jack:flow.jack,jumpRate:round(flow.fast?flow.jump/flow.fast:0,3),jackRate:round(flow.fast?flow.jack/flow.fast:0,3),fast:flow.fast,
     oneHandRun,noRestSec:round(noRestMs/1000,1),heldBand:held.length,widthJumps,monsters,
     longShare:round((types.HOLD+types.SLIDE)/notes.length,3),flickShare:round(types.FLICK/notes.length,3),
-    energyCorr:energy?energy.corr:null,sections:energy?energy.sections:[],issues:issues.sort((a,b)=>a.timeMs-b.timeMs)};
+    energyCorr:energy?energy.corr:null,chorusLift:energy?energy.chorusLift:null,chorus:energy?energy.chorus:[],sections:energy?energy.sections:[],issues:issues.sort((a,b)=>a.timeMs-b.timeMs)};
 };
 // となりの難易度との差
 const ladderOf=byDiff=>{const out=[],ds=DIFFS.filter(d=>byDiff[d]);
@@ -186,10 +195,10 @@ const outOfBand=(key,value,band)=>{if(!band||!Number.isFinite(value))return '';c
 // ── 出す ─────────────────────────────────────────────────────────────
 function fmt(ms){const s=Math.max(0,ms)/1000;return `${Math.floor(s/60)}:${(s%60).toFixed(1).padStart(4,'0')}`;}
 const LABEL={notes:'ノーツ',level:'Lv.',nps:'毎秒',peak4s:'最密4秒',minGapMs:'最短ms',impossible:'押せない',cross:'交差',reach:'届きにくい',crossPer100:'交差/100',reachPer100:'届きにくい/100',flowRatio:'流れの割合',jump:'跳び',jack:'連打',jumpRate:'跳びの割合',jackRate:'連打の割合',
-  oneHandRun:'片手の続き',noRestSec:'休みなし秒',heldBand:'帯の中',widthJumps:'太さの飛び',monsters:'モンスター',longShare:'長押しの割合',flickShare:'フリックの割合',energyCorr:'盛り上がりとの合い方',sky:'空中',
+  oneHandRun:'片手の続き',noRestSec:'休みなし秒',heldBand:'帯の中',widthJumps:'太さの飛び',monsters:'モンスター',longShare:'長押しの割合',flickShare:'フリックの割合',energyCorr:'盛り上がりとの合い方',chorusLift:'サビ/ほかの密度',sky:'空中',
   notesRatio:'ノーツ数の比',peakRatio:'最密4秒の比',levelStep:'Lv.の差'};
 const KIND_LABEL={impossible:'押せない',cross:'交差',reach:'届きにくい',jump:'跳び',onehand:'片手の続き',heldband:'帯の中',widthjump:'太さの飛び',energy:'盛り上がりと密度'};
-const SHOW=['notes','level','nps','peak4s','minGapMs','impossible','cross','reach','flowRatio','jump','jack','oneHandRun','noRestSec','heldBand','widthJumps','monsters','longShare','flickShare','energyCorr'];
+const SHOW=['notes','level','nps','peak4s','minGapMs','impossible','cross','reach','flowRatio','jump','jack','oneHandRun','noRestSec','heldBand','widthJumps','monsters','longShare','flickShare','energyCorr','chorusLift'];
 const printReview=(title,byDiff,bands,{top=8}={})=>{
   const ds=DIFFS.filter(d=>byDiff[d]),flags=[];
   console.log(`\n■ ${title}`);
@@ -234,7 +243,7 @@ const pictureSvg=(panels,audio,title)=>{
   const bars=audio&&audio.structure?audio.structure.bars:[],secs=audio&&audio.structure?audio.structure.sections||[]:[];
   const o=[`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H+TOP+26}" viewBox="0 0 ${W} ${H+TOP+26}" font-family="sans-serif">`,
     `<rect width="100%" height="100%" fill="#0f172a"/>`,`<text x="10" y="18" fill="#e2e8f0" font-size="13">${esc(title)}</text>`,
-    `<text x="10" y="35" fill="#94a3b8" font-size="10">下→上へ進む・1本=8小節 / 青TAP 桃FLICK 緑HOLD 紫SLIDE 黄=空中 橙=モンスター / 左の灰=盛り上がり / 右の印: 赤 押せない・帯の中 / 橙 交差・太さの飛び / 紫 跳び / 緑 片手の続き / 黄 届きにくい</text>`];
+    `<text x="10" y="35" fill="#94a3b8" font-size="10">下→上へ進む・1本=8小節 / 青TAP 桃FLICK 緑HOLD 紫SLIDE 黄=空中 橙=モンスター / 左の灰=盛り上がり / ★=サビと見た区切り / 右の印: 赤 押せない・帯の中 / 橙 交差・太さの飛び / 紫 跳び / 緑 片手の続き / 黄 届きにくい</text>`];
   for(let c=0;c<cols;c++){
     const x0=10+c*COLW,from=zero+(firstBar+c*BARS)*barMs,yOf=t=>TOP+H-(t-from)/barMs*BH,inCol=t=>t>=from-1&&t<from+BARS*barMs;
     for(const b of bars)if(inCol(b.startMs)){o.push(`<rect x="${x0}" y="${round(Math.max(TOP,yOf(b.startMs)-BH+1))}" width="${round(EN*b.intensity,1)}" height="${BH-2}" fill="#64748b"/>`);}
@@ -259,7 +268,7 @@ const pictureSvg=(panels,audio,title)=>{
       if(c===0||panels.length>1)o.push(`<text x="${px}" y="${TOP+H+12}" fill="#94a3b8" font-size="8">${esc(p.label)}</text>`);
     });
     o.push(`<text x="${x0+EN+2}" y="${TOP+H+22}" fill="#cbd5e1" font-size="9">${fmt(from)}</text>`);
-    for(const s of secs)if(inCol(s.startMs))o.push(`<text x="${x0+COLW-GAP-24}" y="${round(yOf(s.startMs)-2,1)}" fill="#f1f5f9" font-size="9">▸${esc(s.label)}</text>`);
+    for(const s of secs)if(inCol(s.startMs)){const star=(panels[0].metrics.chorus||[]).some(([a])=>Math.abs(a-s.startMs)<5);o.push(`<text x="${x0+COLW-GAP-24}" y="${round(yOf(s.startMs)-2,1)}" fill="${star?'#fde047':'#f1f5f9'}" font-size="9">▸${esc(s.label)}${star?'★':''}</text>`);}
   }
   o.push('</svg>');return o.join('\n');
 };
@@ -277,7 +286,7 @@ const writePicture=async(file,svg)=>{
   return [`${file}.svg`,`${file}.png`];
 };
 
-const reviewOf=(loaded,difficulties)=>{const by={};for(const d of DIFFS){if(!loaded.charts[d]||(difficulties&&!difficulties.includes(d)))continue;by[d]=measureChart(loaded.charts[d],loaded.audio,{formula:loaded.formula,difficulty:d});}return by;};
+const reviewOf=(loaded,difficulties)=>{const by={};for(const d of DIFFS){if(!loaded.charts[d]||(difficulties&&!difficulties.includes(d)))continue;by[d]=measureChart(loaded.charts[d],loaded.audio,{formula:loaded.formula,difficulty:d,layers:loaded.layers});}return by;};
 
 module.exports={launchChromium,writePicture,measureChart,ladderOf,hotSpots,toRuntimeChart,loadAuthoring,loadReleased,reviewOf,calibrate,readBands,outOfBand,pictureSvg,BAND_KEYS,BANDS_FILE,DIFFS};
 

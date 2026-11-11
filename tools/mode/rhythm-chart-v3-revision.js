@@ -134,6 +134,11 @@
 //        ・モンスターノーツの仕上げ: 4個置いたあとの手直しで枠の付いたノーツが消えた譜面に、欠けた枠だけを付け直す(生成器の最後)
 //        ・自動修正(step7)がレーンを動かしたあと、押さえている帯の中へ戻ったタップ・フリックを帯の外へ出し直す(時刻・ノーツ数は変えない)
 //        どちらも起きていない譜面は Rev.36 までと同じ。配信中の譜面は変えていない(36 は遊んだ記録・重みの学び直しの番号)
+//   38 … 曲の形に合わせる(2026-11-11 社長「1→2→3 の順で」)。曲の一覧に musicShape:true を書いた曲だけ(書いていない曲は Rev.37 と同じ譜面)。
+//        ・サビ見つけ(rhythm-chart-chorus.js): 見せ場の区切りを、音の大きさの順位ではなく「サビらしさ」(大きさ・繰り返し・歌の帯・厚み・位置)で決める。
+//          はっきりしない曲では決めつけず、今までの見方へ戻る
+//        ・盛り上がりに合わせた配り: 小節ごとの取り分の盛り上がりにサビらしさを混ぜ、持ち上げ幅を [.45,1.35] → [.35,1.5] に広げる(曲全体の数の決め方は同じ)
+//        ・同じ動機は同じ手: 繰り返しを2小節でも見分け、元と同じ位置に置けない写しは、同じ形のまま左右へ1〜2レーンずらして置く
 //   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
@@ -145,7 +150,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=37;
+const CHART_REVISION_CODE_LATEST=38;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
