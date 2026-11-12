@@ -12,6 +12,7 @@ const MSX_ASSIST_SRC = 'data/monhero-success-assist.js'; // アシスト能力�
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
+const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・頂への道の相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中
@@ -58,7 +59,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST'), msxLoadScript(MSX_ARC_SRC, 'MONHERO_SUCCESS_ARC')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
@@ -70,6 +71,7 @@ const msxLoad = () => {
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
           assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null, // 第2版の表(無ければ芯は第1版で動く)
+          arc: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ARC || null : null, // 助手1人分のストーリー(無ければ固有イベントなし・相手えらびは今までの並び)
         });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;
