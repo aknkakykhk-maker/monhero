@@ -123,3 +123,10 @@
 1. 試算(30・90・180日・計画あり/なし)→ 数字を決める
 2. 本体 `56-assistant-life-masmon-plan.jsx`・保存キー・検査 `tools/assistant/assistant-masmon-plan-check.js`(印は偽で main へ)
 3. 止め絵と更新履歴・ヘルプの文を社長に「この文で」をもらう → ミハリ → 公開
+
+## 作った(2026-11-12 キズナ・印 assistantMasmonPlan は偽)
+
+- 本体 `monster-hero/src/parts/56-assistant-life-masmon-plan.jsx`・検査 `tools/assistant/assistant-masmon-note-check.js`(`--sim 30 90` で試算)
+- 試算(ゴーレム・攻撃型・5回の平均): 30日 計画なし 合計+330 / 休みを入れた計画 +517(けが等 0)/ 重い訓練を週3日 +389(けが 2.6)/ 重い訓練ばかり +414(けが 4.4・病気 0.4)。90日では ちから が 999 に届き、同じ能力を続ける計画は伸びが止まる(組み直しはプレイヤーの役目)
+- 病院: ナカヨシの口 `assistantLifeHospitalSlotsOf(aid)` を読む形まで入れた(1回ずつ・残り1日短く+ストレス−10・看病と重ねてよい・家出は戻らない)。けが・病気の「重さ」と高い治療はナカヨシの案が決まってから
+- 冬眠の案: `HIBERNATE.md`・止め絵 `mock-sleep.png`

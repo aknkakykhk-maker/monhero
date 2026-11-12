@@ -202,7 +202,7 @@ const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
 const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const apt = amgAptOf(row.monster); const g = {}; let fail = false;
   const day = amgSlotDay(slot);
-  const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
+  const cap = care.viewed || care.plan ? AMG_CARE.viewCap : AMG_DAY_CAP; // 育成ノートの計画の回も 20 まで(上限そのものは上げない)
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
   // 助手のブリーダー能力(第②段階の受け口・シュギョウ)。印が偽なら 1
@@ -221,7 +221,9 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     if (lnAll > 0) { const extra = n - n / mult; e.cg = { ...(e.cg || {}) }; for (const [key, m] of parts) e.cg[key] = Math.round(((e.cg[key] || 0) + extra * Math.log(m) / lnAll) * 100) / 100; }
   };
   const failChance = (extra) => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
-  if (act.a === 'rest') { e.fat = amgClamp(e.fat - 30, 0, 100); e.str = amgClamp(e.str - 5, 0, 100); }
+  const idle = typeof AMGP_IDLE !== 'undefined' ? AMGP_IDLE[act.a] : null; // 育成ノート: サボり・けが・病気・家出(伸びなし)
+  if (idle) { e.fat = amgClamp(e.fat + idle.fat, 0, 100); e.str = amgClamp(e.str + idle.str, 0, 100); }
+  else if (act.a === 'rest') { e.fat = amgClamp(e.fat - 30, 0, 100); e.str = amgClamp(e.str - 5, 0, 100); }
   else if (act.a === 'play') { e.fat = amgClamp(e.fat - 10, 0, 100); e.str = amgClamp(e.str - 15, 0, 100); }
   else if (act.a === 'light') { fail = rnd() < failChance(0); add(act.k, 3, 6); e.fat = amgClamp(e.fat + 5, 0, 100); e.str = amgClamp(e.str + up(fail ? 6 : 1), 0, 100); }
   else if (act.a === 'heavy') { fail = rnd() < failChance(0.05); add(act.k, 7, 12); add(AMG_SUB[act.k], 1, 3); e.fat = amgClamp(e.fat + 14, 0, 100); e.str = amgClamp(e.str + up(fail ? 9 : 4), 0, 100); }
@@ -236,7 +238,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
   while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) { e.xp -= amgLvNeed(e.lv); e.lv += 1; }
   e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}), ...(care.ranch ? { r: 1 } : {}) }].slice(-AMG_LOG);
-  if (act.a !== 'shugyo' && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot); // 修行(第②段階)の助手の腕に経験。印が偽なら何もしない
+  if (act.a !== 'shugyo' && !idle && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot); // 修行(第②段階)の助手の腕に経験。印が偽なら何もしない
   return e;
 };
 // まだの回をまとめて決める。rows = その助手のいまのマスモン(assistantMasmonRowsOf)。初めての助手は、今の回から数える(さかのぼって育てない)
@@ -260,18 +262,21 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
-      const act = pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
-      if (!pl && f && act.k === f) act.asked = true;
+      // 育成ノート(56-assistant-life-masmon-plan.jsx)の予定・けが/病気/家出。印が偽なら null で、今までと全く同じ
+      const pp = typeof amgpActAt === 'function' ? amgpActAt(aid, row, s, e, seed) : null;
+      const act = pp ? pp.act : pl ? { a: pl.a, k: pl.k, picked: true } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
+      if (!pp && !pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
-      mons[key] = amgDo(aid, e, row, rnd, s, act, { viewed: care.d === amgSlotDay(s) && !!care.view[row.slot], ranch: !!(state.boost[aid] && state.boost[aid].s === s) });
+      mons[key] = amgDo(aid, e, row, rnd, s, act, { viewed: care.d === amgSlotDay(s) && !!care.view[row.slot], ranch: !!(state.boost[aid] && state.boost[aid].s === s), plan: !!(pp && pp.plan) });
+      if (pp && typeof amgpAfterAct === 'function') amgpAfterAct(aid, row, s, mons[key], pp, seed);
     }
     changed = true;
   }
   if (!changed && !reset && (state.done[aid] === nowSlot || (Number.isInteger(last) && last > nowSlot))) return state; // 何も変わらないときは同じものを返す(書き直さない)
   return { ...state, mons: { ...state.mons, [aid]: mons }, done: { ...state.done, [aid]: reset ? nowSlot : Math.max(nowSlot, state.done[aid] || 0) }, focus: { ...state.focus, [aid]: focus }, rest: { ...state.rest, [aid]: rest }, plan: { ...state.plan, [aid]: plan } };
 };
-const amgActName = (x) => (x.a === 'shugyo' ? (typeof amgtActName === 'function' ? amgtActName(x) : '修行') : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : x.a === 'tkt' ? `${AMG_LIGHT[x.k] || ''}(あなたのトレーニングチケット)` : x.a === 'tktH' ? `${AMG_HEAVY[x.k] || ''}(あなたの重トレーニングチケット)` : AMG_SPECIAL[x.a]) || '';
+const amgActName = (x) => (typeof amgpActName === 'function' && amgpActName(x)) || (x.a === 'shugyo' ? (typeof amgtActName === 'function' ? amgtActName(x) : '修行') : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : x.a === 'tkt' ? `${AMG_LIGHT[x.k] || ''}(あなたのトレーニングチケット)` : x.a === 'tktH' ? `${AMG_HEAVY[x.k] || ''}(あなたの重トレーニングチケット)` : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = { state: normalizeAssistantMasmonGrow(null), loaded: false, subs: new Set(),
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
   load() { // 読み込みは1回だけ(2か所から同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
@@ -291,6 +296,7 @@ try { setTimeout(() => { try { if (amgOn()) void AMG_STORE.load(); } catch (_) {
 const amgTick = async (aid, now = Date.now()) => {
   if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
   await ASSISTANT_MASMON_STORE.load(); await AMG_STORE.load();
+  if (typeof amgpLoad === 'function') await amgpLoad(); // 育成ノートの予定を読んでから回を決める
   const ms = ASSISTANT_MASMON_STORE.state; if (!ms.seed) return null;
   const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
   if (!rows.length) return null;
@@ -371,6 +377,7 @@ const AMG_PICK_OPTIONS = Object.freeze([
   { v: 'rest:', label: '休養' }, { v: 'play:', label: '遊び' },
 ]);
 function AmgPickRow({ who, t, e, st }) {
+  if (typeof amgpOn === 'function' && amgpOn()) return <AmgpPickMoved who={who}/>; // 育成ノートの印が真なら、指定は計画に一本化(保存は消さない)
   const next = amgSlotOf() + 1;
   const pl = st.plan[who.id] && st.plan[who.id][t.slot] && st.plan[who.id][t.slot].s === next ? st.plan[who.id][t.slot] : null;
   const [v, setV] = React.useState(pl ? `${pl.a}:${pl.k}` : `light:${AMG_KEYS.reduce((a, b) => (e.st[b] < e.st[a] ? b : a))}`);
@@ -387,6 +394,13 @@ function AmgPickRow({ who, t, e, st }) {
           </select>
           <button type="button" className="mhl-btn px-3 text-[11px]" disabled={left <= 0} onClick={pick} data-amg-pick-go>決める</button>
         </div>}
+    </div>);
+}
+function AmgpPickMoved({ who }) {
+  return (
+    <div className="mt-1.5 rounded-xl border border-white/10 p-2" data-amg-pick-moved>
+      <p className="text-[10.5px] font-bold text-slate-300">🗓 訓練の予定は「📒 育成ノート」で組めます(計画して育てるマスモン・次の回だけ変える)</p>
+      {typeof assistantMasmonNoteOpen === 'function' && <button type="button" className="mt-1 min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black" onClick={() => assistantMasmonNoteOpen(who && who.id)} data-amg-pick-note>📒 育成ノートを開く</button>}
     </div>);
 }
 function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
