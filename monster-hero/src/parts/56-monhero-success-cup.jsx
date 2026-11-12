@@ -554,6 +554,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
   const [out, setOut] = useState(startAt === 'win' ? (previewOut || {}) : null); // startAt・previewOut は止め絵を撮るときだけ
   const rootRef = useRef(null);
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true); // 大会のあいだはバトルの曲(組み合わせ表〜優勝/負け)
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((x) => { if (!alive) return; if (x) setEngine(x); else setFailed(true); });
