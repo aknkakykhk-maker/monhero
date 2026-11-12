@@ -124,6 +124,8 @@ const advance = (page, react) => page.evaluate((react) => {
   const ask = root.querySelector('.msx-btn.go'); if (ask && /はい|する|使う|やめる/.test(ask.innerText) && ask.closest('[class*="ask"], [class*="modal"], [class*="sheet"]')) return press(ask, 'ask');
   // 叱る・褒める
   const ch = by(react === 'scold' ? /^📣 叱る/ : /^👏 褒める/, '.v-ch'); if (ch) return press(ch, react);
+  // 出来事(ランダムイベント・助手の連続イベント・2026-11-12 回2): 1つ目の選択肢を選ぶ
+  const opt = root.querySelector('.v-opts .v-opt:not([disabled])'); if (opt) return press(opt, 'event');
   // 期末の大会(デバッグ)
   const win = by(/勝ったことにする/); if (win) return press(win, 'win');
   // デビュー戦の再挑戦・体調が悪い
