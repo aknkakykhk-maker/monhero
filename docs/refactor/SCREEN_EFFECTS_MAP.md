@@ -210,6 +210,8 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |
 | `timers.push(setTimeout(place, 60))` | screen | 止める | HOMEのジャックの吹き出しの置き場所を、みゅあの吹き出しが伸び縮みしたあと測り直す(69-screen-home.jsx。2026-10-24) |
 | `setTimeout(run, 600 + Math.floor(Math.random() * 1800)` | progress | 投げっぱなし | モンヒロビートのフリーマッチで、CPUの発言を少し遅らせて部屋へ送る(77-screen-rhythm-multi.jsx)。止めるとほかの人に届かない |
+| `watchAdTimer = setTimeout(() => {` | progress | 止める | モンヒロビートのフリーマッチの部屋を、ロビーへ知らせる前の4秒の待ち(77-screen-rhythm-multi.jsx)。`watchAdStop()` が止める |
+| `setLinkWatch('');` | screen | 止める | リンクから入った部屋に8秒たってもだれもいないとき、分かる言葉で知らせる待ち(77-screen-rhythm-multi.jsx)。effect の後始末で `clearTimeout` |
 | `setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get())` | progress | 止める | 相棒の返金のお知らせを、期限が来たら消す(80-screen-rhythm-buddy.jsx)。止めると出たまま(`setCopied` と同じ) |
 | `persistQuickGuideSeen(id); }, QUICK_GUIDE_SEEN_AFTER_MS)` | screen | 止める | クイック・AUTO設定・裏周回の案内が1.2秒見えたら「見た」を保存する待ち(#4837)。案内が替わる・画面を離れると effect の後始末で `clearTimeout`(見えていない案内は数えない) |
 
