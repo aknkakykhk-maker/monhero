@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: be433e442530acd8
+// source-sha256: 1591e5799a5de389
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159171,6 +159171,13 @@ const MSX_CSS = `
 .msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
+/* 社長「育成中のメイン・訓練の画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+.msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
+.msx span.mon{display:block}
+.msx .mon.msx-live{animation:none;filter:none}
+/* 演出の部品が無いときだけの跳ね(小さく4回・5回目に大きく)。translate だけを動かすので、位置の transform とぶつからない */
+.msx .mon.msx-hop{animation:msx-hop 3.4s ease-in-out infinite}
+@keyframes msx-hop{0%,14%,28%,42%,56%,100%{translate:0 0}7%,21%,35%,49%{translate:0 -5%}70%{translate:0 -16%}84%{translate:0 0}}
 .msx-pop{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1)}
 @keyframes msx-breathe{0%,100%{scale:1}50%{scale:1.025}}
 @keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
@@ -159194,7 +159201,7 @@ const MSX_KEYS = Object.freeze({
   meta: 'mh_monsuc_meta_v1'
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
-const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_SCENES_SRC = 'data/success-scenes.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
@@ -159280,7 +159287,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -159510,58 +159517,51 @@ const msxVenueBg = venue => {
 };
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = r => `rk r${String(r || 'G').replace(/\+/g, '')}`;
-const msxPickLine = (ctx, scene, opt = {}) => {
-  const sc = msxSuc && msxSuc.script;
-  if (!sc) return null;
-  const aid = opt.who || ctx.aid;
-  const pools = [];
-  if (opt.bondLv != null && opt.bondLv <= 2 && Array.isArray(sc.turnBond12)) pools.push(sc.turnBond12);
-  pools.push(sc.turn, sc.issa, sc.mon, sc.cheer, sc.random, sc.scenario);
-  let rows = [];
-  for (const pool of pools) {
-    if (!Array.isArray(pool)) continue;
-    rows = pool.filter(r => r && typeof r.id === 'string' && r.id.slice(0, r.id.lastIndexOf('.')) === scene && (aid === '*' || r.who === aid));
-    if (rows.length) break;
-  }
-  if (!rows.length) return null;
-  const rng = msxSuc.core.rngOf(ctx.id || 'run', ctx.turn || 0, 'line', scene, opt.salt || '');
-  const r = rows[Math.floor(rng() * rows.length)];
-  return {
-    ...r,
-    t: msxFill(r.t, ctx)
-  };
+const msxScriptLoad = aid => {
+  const se = msxSuc && msxSuc.script;
+  return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false);
 };
-const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
-  if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'モンスター';
-  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
-  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
-  if (k === 'stat') return ctx.stat || '能力';
-  if (k === 'train') return ctx.train || '訓練';
-  if (k === 'tech') return ctx.tech || '技';
-  if (k === 'cup') return ctx.cup || '大会';
-  if (k === 'cry') {
-    const sc = msxSuc && msxSuc.script;
-    const c = sc && Array.isArray(sc.mon) ? sc.mon.find(r => r.id === `mon.cry.${ctx.species}`) : null;
-    return c ? c.t : '…';
+const msxPickLine = (ctx, scene, opt = {}) => {
+  const se = msxSuc && msxSuc.script;
+  if (!se || typeof se.say !== 'function') return null;
+  const c = {
+    ...ctx,
+    bond: opt.bondLv != null ? opt.bondLv : ctx.bond
+  };
+  try {
+    if (opt.who === '*') return se.say(scene, c, {
+      who: 'narr',
+      salt: opt.salt
+    }) || se.say(scene, c, {
+      salt: opt.salt
+    });
+    return se.say(scene, c, {
+      who: opt.who,
+      salt: opt.salt
+    });
+  } catch (e) {
+    return null;
   }
-  return '';
-});
+};
+const msxFill = (t, ctx) => {
+  const se = msxSuc && msxSuc.script;
+  return se && typeof se.fill === 'function' ? se.fill(t, ctx) : String(t || '');
+};
 const msxStartScene = s => {
-  if (!s) return 'turn.start.normal';
-  const r = s.hpMax > 0 ? s.hp / s.hpMax : 0;
-  if (r < 0.25) return 'turn.start.worn';
-  if (s.stress >= 60) return 'turn.start.stress';
-  if (r < 0.45) return 'turn.start.tired';
-  if (r >= 0.85 && s.stress < 20) return 'turn.start.great';
-  if (r >= 0.65) return 'turn.start.good';
-  return 'turn.start.normal';
+  const se = msxSuc && msxSuc.script;
+  return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal';
 };
 function MonheroSuccessDebugEntry({
   callNameOf,
-  bondLvOf
+  bondLvOf,
+  onOpenChange
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (onOpenChange) onOpenChange(open);
+    } catch (e) {}
+  }, [open]);
   return React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
     "data-debug-monhero-success": true,
@@ -160413,6 +160413,13 @@ const MSX_LOT = Object.freeze({
   tip: 'tip',
   friend: 'friend'
 });
+const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+const MSX_RES_SOUND = Object.freeze({
+  great: 'trainGreat',
+  ok: 'trainOk',
+  fail: 'trainFail',
+  sab: 'trainSkip'
+});
 const msxLayout = () => {
   if (typeof window === 'undefined') return '';
   const w = window.innerWidth;
@@ -160553,15 +160560,49 @@ function MsxPf({
     }
   })));
 }
+const msxMoodOf = s => {
+  if (!s) return 'calm';
+  if (typeof msxFxMoodOf === 'function') {
+    try {
+      const m = msxFxMoodOf(s);
+      if (m) return m;
+    } catch (e) {}
+  }
+  const r = s.hpMax > 0 ? s.hp / s.hpMax : 1;
+  if (s.yosu && s.yosu.utsu) return 'sad';
+  if (r < 0.3) return 'tired';
+  if (s.stress >= 60) return 'sulky';
+  if (r >= 0.85 && s.stress < 20) return 'joy';
+  return 'calm';
+};
 function MsxMonArt({
   run,
   className,
-  style
+  style,
+  live = false,
+  react = null
 }) {
   const sp = run.s.species;
+  if (live && typeof MsxLiveMon === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    return React.createElement("span", {
+      className: `${className || ''} msx-live`,
+      style: style
+    }, React.createElement(MsxLiveMon, {
+      species: sp,
+      colors: run.colors,
+      mood: msxMoodOf(run.s),
+      season: scn.season,
+      time: scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night',
+      react: react,
+      seed: run.id,
+      pyoko: true
+    }));
+  }
+  const cls = `${className || ''}${live ? ' msx-hop' : ''}`;
   if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
     return React.createElement("span", {
-      className: className,
+      className: cls,
       style: style
     }, React.createElement(DyedMonsterImage, {
       baseId: sp,
@@ -160577,7 +160618,7 @@ function MsxMonArt({
     }));
   }
   return React.createElement("img", {
-    className: className,
+    className: cls,
     style: style,
     src: msxMonImg(sp),
     alt: ""
@@ -160926,6 +160967,20 @@ function MsxPlay({
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
   const [sheet, setSheet] = useState(null);
+  const [, setScriptTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    msxScriptLoad(s.aid).then(() => {
+      if (alive) setScriptTick(n => n + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [s.aid]);
+  const soundId = run.phase === 'result' && run.out && run.out.result ? run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  msxUseSound(soundId, {
+    season: msxCalendar(s.turn).season
+  });
   const tagAt = SUC.BOND && SUC.BOND.tag || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
   const ctx = {
@@ -161089,6 +161144,11 @@ function MsxPlay({
     }), React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
+      live: typeof MsxLiveMon === 'function',
+      react: isTrain ? {
+        kind: o.result,
+        id: s.turn
+      } : null,
       style: {
         left: '62%',
         bottom: '14%',
@@ -161501,7 +161561,8 @@ function MsxPlay({
       className: "gr",
       style: {
         left: '30%',
-        bottom: 'calc(34% - 5px)'
+        bottom: 'calc(34% - 5px)',
+        width: '20%'
       }
     }), React.createElement(MsxMonArt, {
       run: run,
@@ -161509,8 +161570,9 @@ function MsxPlay({
       style: {
         left: '30%',
         bottom: '34%',
-        height: '40%'
-      }
+        height: '28%'
+      },
+      live: true
     }), React.createElement("div", {
       className: "v-chips",
       style: {
@@ -161646,7 +161708,8 @@ function MsxPlay({
       className: "gr"
     }), React.createElement(MsxMonArt, {
       run: run,
-      className: `mon${low ? ' low' : ''}`
+      className: `mon${low ? ' low' : ''}`,
+      live: true
     }), React.createElement("div", {
       className: "v-party"
     }, React.createElement("small", null, "編成"), s.team.map((m, i) => React.createElement(MsxPf, {
@@ -212795,9 +212858,10 @@ function MonsterHeroGame() {
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   useEffect(() => {
-    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet);
-  }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet]);
+    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
+  }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
@@ -236311,6 +236375,7 @@ function MonsterHeroGame() {
     }, "🖌️ 染色マスク編集", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement(MonheroSuccessDebugEntry, {
+      onOpenChange: setSuccessScreenOpen,
       callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
       bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
     }), React.createElement(DebugMenuRow, {

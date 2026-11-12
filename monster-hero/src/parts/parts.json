@@ -534,7 +534,7 @@
     },
     {
       "file": "56-monhero-success-store.jsx",
-      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本 data/monhero-success-script.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
+      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本エンジン data/monhero-success-script-engine.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
     },
     {
       "file": "56-monhero-success-start.jsx",

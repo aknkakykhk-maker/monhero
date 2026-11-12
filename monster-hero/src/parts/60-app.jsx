@@ -6673,7 +6673,9 @@ function MonsterHeroGame() {
   // モンヒロビートの結果の画面でランクアップの演出のあいだ(上の effect)は効果音の音量を戻すので、裏の周回のバトルの音まで表へ出てしまう
   //   (2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」。演出の音は fgSe から鳴るので、モンビーで周回が残っているあいだも裏の音だけ止める印を立てる)
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
-  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet]);
+  // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
@@ -22315,7 +22317,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🆕 新モンスター確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
                   <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🖌️ 染色マスク編集<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全ベースモンを選択して直接描画・PNG出力</small></button>
                   {/* モンヒロサクセス(回2・公開の印 monheroSuccess が偽のあいだの試し口。デバッグ専用なので更新履歴・ヘルプには載せない) */}
-                  <MonheroSuccessDebugEntry callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>
+                  <MonheroSuccessDebugEntry onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>
                   {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
                   <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
                   <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>

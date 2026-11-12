@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 64695c60e9203fcf
+// generated-sha256: 163909b845a33963
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83118,6 +83118,13 @@ const MSX_CSS = `
 .msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
+/* 社長「育成中のメイン・訓練の画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+.msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
+.msx span.mon{display:block}
+.msx .mon.msx-live{animation:none;filter:none}
+/* 演出の部品が無いときだけの跳ね(小さく4回・5回目に大きく)。translate だけを動かすので、位置の transform とぶつからない */
+.msx .mon.msx-hop{animation:msx-hop 3.4s ease-in-out infinite}
+@keyframes msx-hop{0%,14%,28%,42%,56%,100%{translate:0 0}7%,21%,35%,49%{translate:0 -5%}70%{translate:0 -16%}84%{translate:0 0}}
 .msx-pop{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1)}
 @keyframes msx-breathe{0%,100%{scale:1}50%{scale:1.025}}
 @keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
@@ -83141,12 +83148,13 @@ const MSX_CSS = `
 // 計画: docs/progress/player-raise/PLAN.md(§1・§9・§10)。画面は 56-monhero-success-start.jsx / 56-monhero-success-main.jsx
 // ★公開の印 RELEASE_FLAGS.monheroSuccess は偽のまま。入口はデバッグ設定だけ(MonheroSuccessDebugEntry)。
 // ★計算は data/monhero-success.js(計算の芯・別の会話のクラフトが受け持つ)の create() を呼ぶだけ。ここで伸びの式は書かない。
-//   芯と台本(data/monhero-success-script.js)は index.html では読まず、この画面を開いたときにだけ読む。
+//   芯と台本エンジン(data/monhero-success-script-engine.js・キズナ)は index.html では読まず、この画面を開いたときにだけ読む。
+//   台本の中身(共通 + 選んだ助手の分)は、エンジンの load(助手) が必要になったときに読む。
 // ★保存は新しいキー3つだけ(CLAUDE.md ⑦・PLAN §9)。既存のキー(mh_unlocked_monsters・助手の仲良し度など)は読むだけ。
 //   読み込みは必ず msxNorm* を通す。壊れていたら「途中の育成なし・保存枠は空」として扱い、元の値は消さない(上書きは新しく始めたときだけ)。
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
-const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
@@ -83194,7 +83202,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
@@ -83325,52 +83333,27 @@ const msxVenueBg = (venue) => { const f = typeof window !== 'undefined' && typeo
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = (r) => `rk r${String(r || 'G').replace(/\+/g, '')}`;
 
-// ---- 台詞(台本から1本。同じ場面に2本以上あれば、育成の id + ターン + 場面 で決まった1本) ----
+// ---- 台詞(台本エンジン MONHERO_SUCCESS_SCRIPT_ENGINE から1本。並びは育成の id + 場面で決まり、ターンでずれる) ----
+// msxScriptLoad(助手) … 共通 + その助手の台本を読む(2回目からはすぐ)。読み終わるまで台詞は null(画面は代わりの一言を出す)
+const msxScriptLoad = (aid) => { const se = msxSuc && msxSuc.script; return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false); };
 const msxPickLine = (ctx, scene, opt = {}) => {
-  const sc = msxSuc && msxSuc.script; if (!sc) return null;
-  const aid = opt.who || ctx.aid;
-  const pools = [];
-  if (opt.bondLv != null && opt.bondLv <= 2 && Array.isArray(sc.turnBond12)) pools.push(sc.turnBond12);
-  pools.push(sc.turn, sc.issa, sc.mon, sc.cheer, sc.random, sc.scenario);
-  let rows = [];
-  for (const pool of pools) {
-    if (!Array.isArray(pool)) continue;
-    rows = pool.filter((r) => r && typeof r.id === 'string' && r.id.slice(0, r.id.lastIndexOf('.')) === scene && (aid === '*' || r.who === aid));
-    if (rows.length) break;
-  }
-  if (!rows.length) return null;
-  const rng = msxSuc.core.rngOf(ctx.id || 'run', ctx.turn || 0, 'line', scene, opt.salt || '');
-  const r = rows[Math.floor(rng() * rows.length)];
-  return { ...r, t: msxFill(r.t, ctx) };
+  const se = msxSuc && msxSuc.script; if (!se || typeof se.say !== 'function') return null;
+  const c = { ...ctx, bond: opt.bondLv != null ? opt.bondLv : ctx.bond };
+  try {
+    if (opt.who === '*') return se.say(scene, c, { who: 'narr', salt: opt.salt }) || se.say(scene, c, { salt: opt.salt });
+    return se.say(scene, c, { who: opt.who, salt: opt.salt });
+  } catch (e) { return null; }
 };
-const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
-  if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'モンスター';
-  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
-  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
-  if (k === 'stat') return ctx.stat || '能力';
-  if (k === 'train') return ctx.train || '訓練';
-  if (k === 'tech') return ctx.tech || '技';
-  if (k === 'cup') return ctx.cup || '大会';
-  if (k === 'cry') { const sc = msxSuc && msxSuc.script; const c = sc && Array.isArray(sc.mon) ? sc.mon.find((r) => r.id === `mon.cry.${ctx.species}`) : null; return c ? c.t : '…'; }
-  return '';
-});
-// ターンのはじめの様子(数字は言わない)
-const msxStartScene = (s) => {
-  if (!s) return 'turn.start.normal';
-  const r = s.hpMax > 0 ? s.hp / s.hpMax : 0;
-  if (r < 0.25) return 'turn.start.worn';
-  if (s.stress >= 60) return 'turn.start.stress';
-  if (r < 0.45) return 'turn.start.tired';
-  if (r >= 0.85 && s.stress < 20) return 'turn.start.great';
-  if (r >= 0.65) return 'turn.start.good';
-  return 'turn.start.normal';
-};
+const msxFill = (t, ctx) => { const se = msxSuc && msxSuc.script; return se && typeof se.fill === 'function' ? se.fill(t, ctx) : String(t || ''); };
+// ターンのはじめの様子(数字は言わない)。場面の決め方はエンジンの SCENE.start
+const msxStartScene = (s) => { const se = msxSuc && msxSuc.script; return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal'; };
 
 // ---- デバッグ設定からの入口(公開の印が偽のあいだの試し口)。60-app.jsx のデバッグの「⭐ よく使う」に置く ----
 // callNameOf(aid) / bondLvOf(aid) は本体から渡す(プレイヤーの呼び方と助手の仲良し度 Lv)
-function MonheroSuccessDebugEntry({ callNameOf, bondLvOf }) {
+function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);
+  // 開いているあいだを本体へ知らせる(裏の周回のバトルの効果音を止めるため・60-app.jsx の successScreenOpen)
+  useEffect(() => { try { if (onOpenChange) onOpenChange(open); } catch (e) {} }, [open]);
   return (
     <>
       <button type="button" data-debug-monhero-success onClick={() => { msxDebugOpened = true; setOpen(true); }}
@@ -83653,6 +83636,9 @@ const MSX_ISSA_KEYS = Object.freeze([
 ]);
 const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 'tip', friend: 'friend' });
 
+// 音(14-success-sound.jsx の useSuccessSound)。無いときは何もしない(フックの数は変わらない)
+const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+const MSX_RES_SOUND = Object.freeze({ great: 'trainGreat', ok: 'trainOk', fail: 'trainFail', sab: 'trainSkip' });
 const msxLayout = () => {
   if (typeof window === 'undefined') return '';
   const w = window.innerWidth; const h = window.innerHeight;
@@ -83706,12 +83692,29 @@ function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const r = m.kind === 'base' ? 'G' : m.rank;
   return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}><img src={msxMonThumb(m.species)} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
 }
-function MsxMonArt({ run, className, style }) {
+// 育てるモンスターの絵。live のときは演出の部品 MsxLiveMon(#5752・待機のぴょこぴょこ・気分・反応)を箱いっぱいに置く。
+//   部品が無いときは絵だけ(live なら CSS で小さく弾む .msx-hop)。箱の大きさは className / style で決まる
+const msxMoodOf = (s) => {
+  if (!s) return 'calm';
+  if (typeof msxFxMoodOf === 'function') { try { const m = msxFxMoodOf(s); if (m) return m; } catch (e) {} }
+  const r = s.hpMax > 0 ? s.hp / s.hpMax : 1;
+  if (s.yosu && s.yosu.utsu) return 'sad';
+  if (r < 0.3) return 'tired';
+  if (s.stress >= 60) return 'sulky';
+  if (r >= 0.85 && s.stress < 20) return 'joy';
+  return 'calm';
+};
+function MsxMonArt({ run, className, style, live = false, react = null }) {
   const sp = run.s.species;
-  if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
-    return <span className={className} style={style}><DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>;
+  if (live && typeof MsxLiveMon === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    return <span className={`${className || ''} msx-live`} style={style}><MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/></span>;
   }
-  return <img className={className} style={style} src={msxMonImg(sp)} alt=""/>;
+  const cls = `${className || ''}${live ? ' msx-hop' : ''}`;
+  if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
+    return <span className={cls} style={style}><DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>;
+  }
+  return <img className={cls} style={style} src={msxMonImg(sp)} alt=""/>;
 }
 function MsxSay({ aid, ex = 'happy', text }) {
   return <div className="v-sayrow"><img className="fc" src={msxFace(aid, ex)} alt=""/><div className="bub">{text}</div></div>;
@@ -83830,6 +83833,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
+  const [, setScriptTick] = useState(0);
+  // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
+  useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
+  const soundId = run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  msxUseSound(soundId, { season: msxCalendar(s.turn).season });
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
   const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '' };
@@ -83883,7 +83891,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
         {isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
         <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
-        <MsxMonArt run={run} className="mon" style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>
+        <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>
         <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
           {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>
         {members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
@@ -84003,7 +84011,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
-        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '40%' }}/>
+        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)', width: '20%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '28%' }} live/>
         <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw">{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
@@ -84040,7 +84048,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxSay aid={s.aid} ex={yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
-        <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`}/>
+        <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
         <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
@@ -114371,7 +114379,9 @@ function MonsterHeroGame() {
   // モンヒロビートの結果の画面でランクアップの演出のあいだ(上の effect)は効果音の音量を戻すので、裏の周回のバトルの音まで表へ出てしまう
   //   (2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」。演出の音は fgSe から鳴るので、モンビーで周回が残っているあいだも裏の音だけ止める印を立てる)
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
-  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet]);
+  // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
@@ -130013,7 +130023,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🆕 新モンスター確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
                   <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🖌️ 染色マスク編集<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全ベースモンを選択して直接描画・PNG出力</small></button>
                   {/* モンヒロサクセス(回2・公開の印 monheroSuccess が偽のあいだの試し口。デバッグ専用なので更新履歴・ヘルプには載せない) */}
-                  <MonheroSuccessDebugEntry callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>
+                  <MonheroSuccessDebugEntry onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>
                   {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
                   <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
                   <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>
