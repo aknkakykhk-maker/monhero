@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 91bee68d8ea70c7e
+// generated-sha256: de9572cbf28abc26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69193,7 +69193,7 @@ function assistantLifePreloadFullBodies(metIds) {
       if (src && !ASSISTANT_FULLBODY_PRELOADED.has(src) && !todo.includes(src)) todo.push(src);
     });
     if (!todo.length || assistantFullBodyPreloadTimer) return;
-    const later = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 8000 }) : setTimeout(fn, 2500));
+    const later = (fn) => (typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(fn, { timeout: 8000 }) : setTimeout(fn, 2500));
     const next = () => {
       const src = todo.shift();
       if (!src) { assistantFullBodyPreloadTimer = null; return; }

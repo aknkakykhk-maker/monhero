@@ -168,7 +168,7 @@ function assistantLifePreloadFullBodies(metIds) {
       if (src && !ASSISTANT_FULLBODY_PRELOADED.has(src) && !todo.includes(src)) todo.push(src);
     });
     if (!todo.length || assistantFullBodyPreloadTimer) return;
-    const later = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 8000 }) : setTimeout(fn, 2500));
+    const later = (fn) => (typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(fn, { timeout: 8000 }) : setTimeout(fn, 2500));
     const next = () => {
       const src = todo.shift();
       if (!src) { assistantFullBodyPreloadTimer = null; return; }
