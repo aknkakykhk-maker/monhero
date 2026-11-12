@@ -30,6 +30,36 @@
 | `asst-erubin.js`(第4弾) | えるびんの分(ききと同じ形。見守りの大会 ★ と ★★ の前後)。最後が `erubin1` | EVENTS ②・TOURNAMENT §4b |
 | `heads.js`(第2弾) | 出来事の見出しの分け方(id の頭 → 育成イベント/編成の子のイベント/メインのお話/なし) | VIDEO-REF 参考動画2 |
 
+## ゲームで使う形(台本エンジン・2026-11-12 キズナ)
+
+ここの台本が**正本**。ゲームが読むのは生成物で、手で直さない。台本を直したら `node tools/success/build-script.js` を打つ。
+
+| ファイル | 中身 |
+| --- | --- |
+| `tools/success/build-script.js` | 台本 → `monster-hero/data/monhero-success-script-<common|助手>.js`(`--check` で食い違いだけ見る) |
+| `monster-hero/data/monhero-success-script-common.js` | 地の文・札・イッサ博士・モンスターの声・ライバルの持ち主の行・見出しの表 |
+| `monster-hero/data/monhero-success-script-<助手>.js` | その助手の行とシナリオの話(選んだ助手の分だけ読む) |
+| `monster-hero/data/monhero-success-script-engine.js` | 台本エンジン `MONHERO_SUCCESS_SCRIPT_ENGINE`(手で書くコード) |
+| `tools/success/success-script-engine-check.js` | 見張り(生成物のそろい・全場面に台詞・差しこみ漏れ・決まった乱数) |
+
+画面からの呼び方:
+
+```js
+const SE = MONHERO_SUCCESS_SCRIPT_ENGINE;           // engine.js を読んだあと
+await SE.load(s.aid);                               // 共通 + その助手(配列で複数も可)。2回目からはすぐ返る
+const ctx = { id: s.id, turn: s.turn, aid: s.aid, bond: 仲良し度Lv, callName, mon, species, cup, rival, owner, cheer, stat, train, tech, food };
+SE.say(SE.SCENE.start(s), ctx)          // 1本 { id, who, e, t, head, label, … } か null(助手の台詞)
+SE.say('issa.offer', ctx, { who: 'issa' }) // 話す人を変える(issa / mon / ライバルの持ち主の助手)
+SE.event('ev.daily.nut', ctx)           // { head, label, lines, choices:[{c,t}], after }(地の文→助手→札)
+SE.event('ev.daily.nut.a', ctx)         // 選んだあと。4話は SE.event(SE.SCENE.story(aid, 4)) のあと `.good` / `.bitter`
+SE.mon('joy', ctx)                      // モンスターの声({cry} は種ごとの鳴き声)
+```
+
+- 選び方: 場面 id(最後の「.」より前)・話す人・仲良し度の段(`bond` の版 b/c/d。合う版が無ければ元の行)・見出し(id の頭)
+- くじ: 育成の id + 場面 で並びを決め、ターンで1つずつずらす(同じ育成・同じターンは同じ1本。続くターンで同じ台詞にならない)。`opt.recent`(`SE.remember` で作る)で最近の行も避けられる
+- 差しこみが渡されないときは「きみ」「モンスター」「大会」などで埋める(「{」「}」は出さない)
+- 場面 id の作り方は `SE.SCENE`(start・result・react・story・storyCup・cheer・lottery・rest・retire・cond・rival・rivalOwner・issa)
+
 ## 1行の形
 
 ```js
