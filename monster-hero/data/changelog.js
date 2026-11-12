@@ -56,6 +56,20 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_monsaku_soon2_v1', type:'content' },
   },
   {
+    // 2026-11-12 新曲「メガロバニア」2曲(サンズ戦・スマブラver)。社長「新曲実装。これも急いでやらせて」(Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-12 20:02", type:'update', group:'rhythm', title:'新曲「メガロバニア」2曲を追加しました', status:'new',
+    image:'images/song-art/megalovania-sans.jpg?v=5884e2ecbb01',
+    items:[
+      'モンヒロビートに「メガロバニア（サンズ戦）」（2分37秒・作：ねるかめちゃん）と「MEGALOVANIA（スマブラver）」（4分36秒・作：暇人[もちゃ]）を追加しました。曲えらびからすぐ遊べます。',
+      '【サンズ戦】レベルは EASY Lv.12 ／ NORMAL Lv.15 ／ HARD Lv.21 ／ EXPERT Lv.29 ／ MASTER Lv.43 ／ HELL Lv.77 です。',
+      '【サンズ戦】ノーツ数は 425 ／ 487 ／ 610 ／ 732 ／ 846 ／ 971 です。',
+      '【スマブラver】レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.30 ／ HELL Lv.44 です。',
+      '【スマブラver】ノーツ数は 430 ／ 493 ／ 674 ／ 813 ／ 937 ／ 1090 です。',
+    ],
+    gallery:[{ image:'images/song-art/megalovania-smash.jpg?v=1923d225d33a', caption:'スマブラver のジャケット' }],
+    assistantNotice:{ id:'update_notice_megalovania_v1', type:'content' },
+  },
+  {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
     assistantNotice:{ id:'update_notice_masmon_sleep_fuse_v1', type:'content' },
     items:[
