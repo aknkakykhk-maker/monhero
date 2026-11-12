@@ -34,9 +34,10 @@ const amgbNormOne = (x) => {
   };
 };
 const normalizeAssistantMasmonBond = (raw) => {
-  const out = { v: 1, start: -1, mons: {} };
+  const out = { v: 1, start: -1, mons: {}, bt: [] };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   out.start = amgbInt(raw.start, -1, -1, 1e7);
+  out.bt = (Array.isArray(raw.bt) ? raw.bt : []).filter(x => typeof x === 'string' && x.length <= 120).slice(-60); // 人気を数えた対戦(二重に数えない)
   if (raw.mons && typeof raw.mons === 'object' && !Array.isArray(raw.mons)) for (const [k, x] of Object.entries(raw.mons)) { if (!amgbKeyOk(k)) continue; const one = amgbNormOne(x); if (one) out.mons[k] = one; }
   return out;
 };
@@ -170,6 +171,41 @@ const assistantMasmonBondBattle = (aid, row, kind, win, now = Date.now()) => {
   return amgbSave(amgbPut(st, aid, row, { ...b0, pop: MASMON_CALC.popAfterBattle(b0.pop, kind, !!win), fight: amgSlotDay(amgSlotOf(now)) }));
 };
 
+// ---- 冬眠・合体(56-assistant-life-masmon-sleep.jsx)から呼ぶ口。冬眠の行に絆の写し bd を持たせる ----
+// 眠らせる子・前にいた子の写し(無い・読み込み前は null)
+const amgbCopyOf = (aid, slot, monster) => { if (!AMGB_STORE.loaded) return null; const x = AMGB_STORE.state.mons[amgbKey(aid, slot, monster)]; return x ? { ...x, sc: { ...x.sc }, rs: [...x.rs] } : null; };
+const amgbBedOk = (x) => amgbNormOne(x);
+// 起こしたとき: 眠らせた子の行(outMonster)は消し、起きた子の行へ写しを戻す。眠っていた日は年齢も寿命も進めず、関わらない日にも数えない
+const amgbWake = (aid, slot, outMonster, inMonster, bd, now = Date.now()) => {
+  if (!AMGB_STORE.loaded) return false;
+  const day = amgSlotDay(amgSlotOf(now));
+  const mons = { ...AMGB_STORE.state.mons }; delete mons[amgbKey(aid, slot, outMonster)];
+  if (bd) mons[amgbKey(aid, slot, inMonster)] = { ...bd, last: bd.last < 0 ? -1 : day, touch: Math.max(bd.touch, day), fight: Math.max(bd.fight, day) };
+  else delete mons[amgbKey(aid, slot, inMonster)];
+  return amgbSave({ ...AMGB_STORE.state, mons });
+};
+// 合体の子: 忠誠=主・人気=2体の高い方の半分・方針=主(点は0)・型=主・年齢と寿命は0(POWER.md 保存の節)
+const amgbFuseChild = (aid, mainRow, mainBd, matBd) => {
+  const m = mainBd || amgbNormOne({ gt: amgbTypeFor(aid, mainRow) }); const pops = [mainBd ? mainBd.pop : 0, matBd ? matBd.pop : 0];
+  return amgbNormOne({ loy: m.loy, pop: Math.max(...pops) / 2, pol: m.pol, pp: 0, gt: m.gt, age: 0, life: 0, last: -1, touch: -1, fight: -1 });
+};
+// 冬眠の行の総合力(育成の写し g・修行の写し t・絆の写し bd から)
+const amgbBedPower = (bed) => {
+  if (typeof MASMON_CALC === 'undefined' || !bed || !bed.g || !bed.g.st) return null;
+  const t = bed.t; const ms = t && Array.isArray(t.learn) ? t.learn.map(id => Number(t.m && t.m[id]) || 0) : [];
+  const power = MASMON_CALC.power({ stats: bed.g.st, masteries: ms, lv: bed.g.lv, loyal: bed.bd ? bed.bd.loy : AMGB_NUM.loy0, pop: bed.bd ? bed.bd.pop : 0 });
+  return { power, rank: MASMON_CALC.rankOf(power) };
+};
+
+// 対戦の振り返りから(1戦に1回だけ)。rows = 出たマスモンの行。kind = 'pvp'|'peer'|'spar'
+const amgbBattleOnce = (id, aid, rows, kind, win, now = Date.now()) => {
+  if (!amgbLive() || typeof id !== 'string' || !id || !Array.isArray(rows)) return false;
+  const st0 = AMGB_STORE.state; const bid = id.slice(0, 120); if (st0.bt.includes(bid)) return false;
+  const day = amgSlotDay(amgSlotOf(now)); let st = { ...st0, bt: [...st0.bt, bid].slice(-60) };
+  for (const row of rows) { if (!row || !Number.isInteger(row.slot) || !row.monster) continue; const b0 = st.mons[amgbKey(aid, row.slot, row.monster)] || amgbEntryOf(aid, row); st = amgbPut(st, aid, row, { ...b0, pop: MASMON_CALC.popAfterBattle(b0.pop, kind, !!win), fight: day }); }
+  return amgbSave(st);
+};
+
 // ---- 総合力とランク(表示だけ・保存しない) ----
 const amgbMasteriesOf = (aid, row) => {
   try {
@@ -207,6 +243,13 @@ function AmgbPowerTag({ aid, row }) {
   const p = amgPowerOf(aid, row);
   if (!p) return <span className="text-[10px] font-bold text-slate-400" data-amgb-power="none">総合力 —</span>;
   return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
+}
+// 冬眠の行に置く「ランク + 総合力」
+function AmgbBedTag({ bed }) {
+  if (!amgbOn()) return null;
+  const p = amgbBedPower(bed);
+  if (!p) return null;
+  return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
 }
 // くわしい画面の「絆」(総合力・忠誠度・人気・方針・年齢・型・訓練の結果と叱る/褒める)
 function AmgbPanel({ who, t }) {
