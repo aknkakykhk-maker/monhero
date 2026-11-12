@@ -90,7 +90,7 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
     const art = document.querySelector('[data-assistant-life-where]').getAttribute('data-assistant-life-map-art');
     const town = ASSISTANT_LIFE_MAP_TOWN[art];
     const facOf = Object.fromEntries(Object.keys(ASSISTANT_LIFE_PLACE_ICON).map(p => [p, assistantLifeFacilityOf({ place: p })]));
-    return { W: S.clientWidth, H: S.clientHeight, fromHome: S.getAttribute('data-assistant-life-map-from-home') === '1', places, crowds, bar, hint, ib, town, facOf, allPlaces: Object.keys(ASSISTANT_LIFE_PLACE_ICON) };
+    return { W: S.clientWidth, H: S.clientHeight, fromHome: S.getAttribute('data-assistant-life-map-from-home') === '1', places, crowds, bar, hint, ib, town, facOf, allPlaces: typeof assistantLifeMapOrderNow === 'function' ? [...assistantLifeMapOrderNow()] : Object.keys(ASSISTANT_LIFE_PLACE_ICON) }; // 🏥 病院は印 assistantLifeBody が真のときだけ地図に出る
   });
   const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
   const FAC_CLASS = { management: 'mh-home-facility management', temple: 'mh-home-facility temple', market: 'mh-home-facility market', battle: 'mh-home-facility battle', life: 'mh-home-facility life', rhythm: 'mh-home-facility rhythm', card: 'mh-home-card-battle' };

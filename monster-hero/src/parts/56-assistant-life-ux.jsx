@@ -109,7 +109,8 @@ const assistantLifePlacePerkTail = (place) => {
   if (place === 'studio') return '券なしで一緒に遊べる';
   if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'ranch') return typeof amgrOn === 'function' && amgrOn() ? '助手のマスモンにトレーニングチケットを使ってあげられる' : 'トレーニングすると、その助手のマスモンも育つ';
-  return '';
+  // 町の場所・家・病院の得(助手の疲れ・ストレス・56-assistant-life-body.jsx。印 assistantLifeBody が偽なら空)
+  return typeof assistantLifeBodyPerk === 'function' ? assistantLifeBodyPerk(place) : '';
 };
 
 // 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
