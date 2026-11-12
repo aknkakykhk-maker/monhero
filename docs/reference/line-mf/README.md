@@ -15,3 +15,4 @@
 | `assist-cards.json` / `assist-effects.json` | アシストカード100枚と効果1084件の一覧(攻略サイトのデータ) | ASSIST-REF.md |
 
 この日より前に送られた参考画像(大会の一覧・育成の流れ16枚など)は、窓口の手元に名前の分かる形で残っていないので入れていない。要るときは送り直してもらう。
+| `taikai-bracket.png` / `taikai-card.png` | 参考動画2から切り出した、大会の組み合わせ表と試合前の能力の比べ | TOURNAMENT.md §15 |
