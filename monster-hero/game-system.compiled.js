@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7356e1787fa3f0f
+// source-sha256: 0c3daf5ab4aa703b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162336,18 +162336,21 @@ const msxR3Fight = (engine, SUC, run) => {
   };
   const mods = typeof SUC.battleBuffs === 'function' ? SUC.battleBuffs(s) || {} : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
+  const input = {
+    seed,
+    catalog: cat,
+    teamA,
+    teamB,
+    ...(mods && Object.keys(mods).length ? {
+      buffs: {
+        A: mods
+      }
+    } : {})
+  };
   let r = null;
   try {
     r = engine.simulate({
-      seed,
-      catalog: cat,
-      teamA,
-      teamB,
-      ...(mods && Object.keys(mods).length ? {
-        buffs: {
-          A: mods
-        }
-      } : {}),
+      ...input,
       trace: true
     });
   } catch (e) {
@@ -162356,6 +162359,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const st = r.log && r.log[0] || {};
   return {
     r,
+    input,
     opp,
     teamA,
     teamB,
