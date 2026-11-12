@@ -21,7 +21,7 @@ create table if not exists public.monsuc_finishes (
   child_name     text        not null default '',
   species        text        not null,
   lineage        text        not null,
-  dye            jsonb       not null default '{}'::jsonb,
+  dye            jsonb       not null default '[]'::jsonb,
   stats          jsonb       not null,
   techs          jsonb       not null default '[]'::jsonb,
   lv             integer     not null default 1,
@@ -89,7 +89,7 @@ returns text language sql immutable set search_path = public as $$
               when p_power >= 3000 then 'E' when p_power >= 2000 then 'F' else 'G' end
 $$;
 
--- 1件を入れる。p_row = { run_id, user_name, child_name, species, lineage, dye, stats:{life,pow,wise,hit,eva,tough}, techs:[熟練…], lv, loyal, pop, engine_version }
+-- 1件を入れる。p_row = { run_id, user_name, child_name, species, lineage, dye:[部位ごとの色の id(6つまで・40字まで)], stats:{life,pow,wise,hit,eva,tough}, techs:[熟練…], lv, loyal, pop, engine_version }
 create or replace function public.monsuc_rank_submit(p_owner text, p_key text, p_row jsonb)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -136,7 +136,9 @@ begin
   if v_lv not between 1 and 99 or v_loy not between 0 and 100 or v_pop not between 0 and 100 then return jsonb_build_object('ok', false, 'reason', 'bad'); end if;
   if coalesce(p_row->>'species', '') !~ '^[A-Za-z]{2,32}$' or coalesce(v_lin, '') !~ '^[A-Za-z_]{1,32}$'
      or length(coalesce(p_row->>'user_name', '')) > 40 or length(coalesce(p_row->>'child_name', '')) > 24
-     or (p_row ? 'dye' and jsonb_typeof(p_row->'dye') not in ('object', 'array')) or octet_length(coalesce(p_row->'dye', '{}'::jsonb)::text) > 2000 then
+     or (p_row ? 'dye' and case when jsonb_typeof(p_row->'dye') <> 'array' then true
+                            else jsonb_array_length(p_row->'dye') > 6
+                              or exists (select 1 from jsonb_array_elements(p_row->'dye') c where jsonb_typeof(c) not in ('string', 'null') or length(c #>> '{}') > 40) end) then
     return jsonb_build_object('ok', false, 'reason', 'bad');
   end if;
   v_ver := case when jsonb_typeof(p_row->'engine_version') = 'number' then least(greatest(round((p_row->>'engine_version')::numeric)::int, 1), 1000) else 1 end;
@@ -153,7 +155,7 @@ begin
 
   insert into public.monsuc_finishes (run_id, owner_id, user_name, child_name, species, lineage, dye, stats, techs, lv, loyal, pop, power, grade, engine_version)
   values (v_run, p_owner, coalesce(p_row->>'user_name', ''), coalesce(p_row->>'child_name', ''), p_row->>'species', v_lin,
-          coalesce(p_row->'dye', '{}'::jsonb),
+          coalesce(p_row->'dye', '[]'::jsonb),
           jsonb_build_object('life', (v_stats->>'life')::int, 'pow', (v_stats->>'pow')::int, 'wise', (v_stats->>'wise')::int,
                              'hit', (v_stats->>'hit')::int, 'eva', (v_stats->>'eva')::int, 'tough', (v_stats->>'tough')::int),
           v_techs, v_lv, v_loy, v_pop, v_power, v_grade, v_ver)

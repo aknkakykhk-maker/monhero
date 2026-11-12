@@ -43,7 +43,14 @@ const monsucRankLineageName = (id) => {
 };
 // 計算の芯(data/monhero-success.js)の版。読み込まれていなければ 1
 const monsucRankEngineVersion = () => { const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null; return S && Number.isInteger(S.VERSION) ? S.VERSION : 1; };
-const monsucRankMonOf = (species) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && Array.isArray(ALL_PLAYER_MONSTERS) ? ALL_PLAYER_MONSTERS.find(m => m && m.id === species) : null) || null;
+// ALL_PLAYER_MONSTERS は種族名をキーにしたオブジェクト(data/ally-monsters.js)
+const monsucRankMonOf = (species) => {
+  if (typeof species !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS || typeof ALL_PLAYER_MONSTERS !== 'object') return null;
+  const m = Object.prototype.hasOwnProperty.call(ALL_PLAYER_MONSTERS, species) ? ALL_PLAYER_MONSTERS[species] : null;
+  return m && typeof m === 'object' ? m : null;
+};
+// 染めた色は「部位ごとの色の id の配列」(DyedMonsterImage の masuColors の形)だけ通す。ほかの人の行はだれでも入れられるので、読む側でも必ず整える
+const monsucRankDyeOf = (dye) => (Array.isArray(dye) ? dye.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : null);
 // 育成の id(英数字だけ・6〜32字)。計算の芯の s.id をもとに作り、持ち主の番号を前に付ける
 const monsucRankRunId = (owner, rawId) => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
@@ -80,9 +87,7 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
-  const dye = colors && typeof colors === 'object' ? colors : {};
-  let dyeOk = dye;
-  try { if (JSON.stringify(dye).length > 1800) dyeOk = {}; } catch (_) { dyeOk = {}; }
+  const dyeOk = monsucRankDyeOf(colors) || [];
   return {
     run_id: monsucRankRunId(owner, run.id),
     user_name: String(userName || '').slice(0, 40),
@@ -195,7 +200,7 @@ function MonsucRankMonImg({ species, dye, size = 36 }) {
   const mon = monsucRankMonOf(species);
   if (!mon) return <div style={{ width: size, height: size }} className="rounded-lg bg-slate-700/60 flex items-center justify-center text-slate-400 text-xs">？</div>;
   return <div style={{ width: size, height: size }} className="shrink-0 flex items-center justify-center">
-    <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name || ''} masuColors={dye && typeof dye === 'object' ? dye : null} className="w-full h-full object-contain" draggable={false} />
+    <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name || ''} masuColors={monsucRankDyeOf(dye)} className="w-full h-full object-contain" draggable={false} />
   </div>;
 }
 function MonsucRankGrade({ grade }) {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a80c664b673f98a3
+// source-sha256: 65f4ef5eb07e07d3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156111,7 +156111,12 @@ const monsucRankEngineVersion = () => {
   const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null;
   return S && Number.isInteger(S.VERSION) ? S.VERSION : 1;
 };
-const monsucRankMonOf = species => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && Array.isArray(ALL_PLAYER_MONSTERS) ? ALL_PLAYER_MONSTERS.find(m => m && m.id === species) : null) || null;
+const monsucRankMonOf = species => {
+  if (typeof species !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS || typeof ALL_PLAYER_MONSTERS !== 'object') return null;
+  const m = Object.prototype.hasOwnProperty.call(ALL_PLAYER_MONSTERS, species) ? ALL_PLAYER_MONSTERS[species] : null;
+  return m && typeof m === 'object' ? m : null;
+};
+const monsucRankDyeOf = dye => Array.isArray(dye) ? dye.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : null;
 const monsucRankRunId = (owner, rawId) => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
   if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
@@ -156165,13 +156170,7 @@ const monsucRankRowOf = ({
   const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
-  const dye = colors && typeof colors === 'object' ? colors : {};
-  let dyeOk = dye;
-  try {
-    if (JSON.stringify(dye).length > 1800) dyeOk = {};
-  } catch (_) {
-    dyeOk = {};
-  }
+  const dyeOk = monsucRankDyeOf(colors) || [];
   return {
     run_id: monsucRankRunId(owner, run.id),
     user_name: String(userName || '').slice(0, 40),
@@ -156405,7 +156404,7 @@ function MonsucRankMonImg({
     baseId: mon.id,
     src: mon.iconUrl || mon.imgUrl,
     alt: mon.name || '',
-    masuColors: dye && typeof dye === 'object' ? dye : null,
+    masuColors: monsucRankDyeOf(dye),
     className: "w-full h-full object-contain",
     draggable: false
   }));
