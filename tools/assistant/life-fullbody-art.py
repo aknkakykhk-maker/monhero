@@ -26,6 +26,8 @@ ART = {
     'atsu': 'atsu_transparent_fixed.png',
     'kiki': 'kiki_transparent_fixed.png',
     'kiki:halloween': 'kiki_halloween_transparent_fixed.png',
+    # ききの8表情(2026-11-12 社長から。枝 hq/incoming-kiki-fullbody8 の incoming/kiki-fullbody/ をそのまま置いた)
+    **{'kiki@%s' % e: 'kiki__%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')},
     'kyuko': 'kyuuko_transparent_fixed.png',
     'momosuke': 'msg1-pink-bunny.png',
     'momosuke:halloween': 'msg5-pink-bunny-devil-halloween.png',
@@ -36,6 +38,30 @@ ART = {
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',
 }
+# 2×2 に4表情ずつ描かれたシート(2026-11-12 社長から。枝 hq/incoming-kiki-halloween-fullbody8)。表情なしの絵のキー → [(シート, [左上, 右上, 左下, 右下])]
+#   切る位置は、体と体のあいだの空いた行・列(元のシートで調べた。上の段の体は 706〜738 で終わり、下の段の帽子は 730〜755 から始まる)
+SPLIT_SHEETS = {
+    'kiki:halloween': [
+        ('kiki-halloween-8expressions-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 720, 500),
+        ('kiki-halloween-8expressions-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 748, (500, 460)),
+    ],
+}
+
+
+def split_cells(file, cut_y, cut_x):
+    """2×2 のシートを、空いた行 cut_y と空いた列 cut_x(上の段・下の段で違うときは (上, 下))で4つに分ける。"""
+    a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
+    h, w = a.shape[:2]
+    xs = cut_x if isinstance(cut_x, tuple) else (cut_x, cut_x)
+    out = []
+    for r, (y0, y1) in enumerate(((0, cut_y), (cut_y, h))):
+        for x0, x1 in ((0, xs[r]), (xs[r], w)):
+            c = np.zeros_like(a)
+            c[y0:y1, x0:x1] = a[y0:y1, x0:x1]  # 元の大きさのまま、ほかの3体を消す(倍率を表情なしの絵とそろえるため)
+            out.append(c)
+    return out
+
+
 # 囲まれた背景の残り(腕と頭のあいだ・両足のあいだなど、外から切り抜いても抜けない白)。
 #   キー → 元の絵の上の座標 (x, y) の一覧。その点からつながる白い所を透明にする(服の白は座標を入れないので残る)
 POCKETS = {
@@ -328,15 +354,24 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     return Image.fromarray(out[:h0, :w0], 'RGBA')
 
 
-def fit(im, out_w=None, out_h=None):
-    out_w, out_h = out_w or OUT_W, out_h or OUT_H
+def fit_box(im):
     a = np.array(im)[..., 3]
     ys, xs = np.nonzero(a > 24)
-    box = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
     pad = 4  # うすいふちを切り落とさない
-    box = (max(0, box[0] - pad), max(0, box[1] - pad), min(im.width, box[2] + pad), min(im.height, box[3] + pad))
-    c = im.crop(box)
-    s = min((out_w - 2 * MARGIN) / c.width, (out_h - 2 * MARGIN) / c.height, 1.0)  # 元より大きくはしない
+    return (max(0, xs.min() - pad), max(0, ys.min() - pad), min(im.width, xs.max() + 1 + pad), min(im.height, ys.max() + 1 + pad))
+
+
+def fit_scale(im, out_w=None, out_h=None):
+    """切り詰めた体を枠へ収める倍率(元より大きくはしない)。"""
+    out_w, out_h = out_w or OUT_W, out_h or OUT_H
+    b = fit_box(im)
+    return min((out_w - 2 * MARGIN) / (b[2] - b[0]), (out_h - 2 * MARGIN) / (b[3] - b[1]), 1.0)
+
+
+def fit(im, out_w=None, out_h=None, scale=None):
+    """scale … 倍率を決めて縮める(表情の絵を、表情なしの絵と同じ大きさにそろえるとき)。None なら枠に収まる倍率"""
+    c = im.crop(fit_box(im))
+    s = fit_scale(im, out_w, out_h) if scale is None else min(scale, 1.0)
     if s < 1.0:
         c = c.resize((max(1, round(c.width * s)), max(1, round(c.height * s))), Image.LANCZOS)
     # 体の大きさのまま、縦横の比を保って、まわりに余白だけ足す(枠いっぱいには引き伸ばさない)
@@ -387,6 +422,16 @@ def drop_border_bits(im):
     return Image.fromarray(a, 'RGBA')
 
 
+def drop_specks(im, min_px=8):
+    """縮めたあとに残った、ばらばらの小さな点(元絵のちぎれた欠片の名残)を消す。記号(びっくりマーク・うずまき)はこれより大きい"""
+    a = np.array(im)
+    a[a[..., 3] <= 8, 3] = 0  # 見えないほど薄い所は透明に(減色で少し濃くなって点に見えるので)
+    for P in white_comps(a[..., 3] > 0):
+        if len(P) < min_px:
+            a[P[:, 0], P[:, 1], 3] = 0
+    return Image.fromarray(a, 'RGBA')
+
+
 def main():
     """全身画を全部(1人ずつの絵 + みゅあの8表情のシート)作り直す。--only <名前> で1枚だけ(例 kiki・mua__happy)。
     場面用の立ち絵(胸から上)は作らない(それは life-expression-sheets.py)。"""
@@ -395,18 +440,41 @@ def main():
     tiles = []
     total = 0
     jobs = []
-    for key, f in ART.items():
+    made = {}
+
+    def make_art(key):
+        if key not in made:
+            # 表情の絵は、記号(うずまき・びっくりマーク)が体から離れているので、小さな塊も残す(ごみは別に消える量で)
+            #   表情の絵の元絵はふちが硬め(半透明が少ない)なので、書き出しで約 0.6 画素になる量でぼかす
+            made[key] = clean(os.path.join(SRC, ART[key]), min_frac=0.004 if '@' in key else 0.03, seeds=POCKETS.get(key),
+                              soft=1.2 if '@' in key else None,
+                              flood=key in FLOOD, boxes=AUTO_POCKETS.get(key), halo=key in HALO)
+        return made[key]
+
+    for key in ART:
         name = key.replace('@', '__').replace(':', '_')
-        jobs.append((name, lambda key=key, f=f: clean(os.path.join(SRC, f), seeds=POCKETS.get(key), flood=key in FLOOD, boxes=AUTO_POCKETS.get(key), halo=key in HALO)))
+        # 表情の絵(キーに @)は、表情なしの絵と同じ倍率で縮める(立ち姿の大きさをそろえる)
+        base = key.split('@')[0] if '@' in key else None
+        jobs.append((name, lambda key=key: make_art(key), (lambda base=base: fit_scale(make_art(base))) if base else None))
+    for key, sheets in SPLIT_SHEETS.items():
+        base_name = key.replace(':', '_')
+        for file, exprs, cy, cx in sheets:
+            for e, arr in zip(exprs, split_cells(file, cy, cx)):
+                # 元のシートは1体が小さい(縦 約 740)ので、縮めずにそのまま(表情なしの絵 768 とほぼ同じ高さ)。体のまわりの薄い光は消す
+                jobs.append(('%s__%s' % (base_name, e),
+                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=0.0),
+                             (lambda key=key: fit_scale(make_art(key)) * 2.0)))
     if not only or '__' in only:
         cells, _ = sheet_cells()
         for base, rows in cells.items():
             for e, c in rows:
-                jobs.append(('%s__%s' % (base, e), lambda c=c: drop_border_bits(c)))
-    for name, make in jobs:
-        if only and name != only:
+                jobs.append(('%s__%s' % (base, e), lambda c=c: drop_border_bits(c), None))
+    for name, make, scale in jobs:
+        if only and name != only and not name.startswith(only + '__'):
             continue
-        im = fit(make())
+        im = fit(make(), scale=scale() if scale else None)
+        if '__' in name and scale:  # 表情の絵(1枚ずつの元絵・2×2のシート)だけ
+            im = drop_specks(im)
         n = save(im, os.path.join(OUT, name + '.png'))
         total += n
         tiles.append(Image.open(os.path.join(OUT, name + '.png')).convert('RGBA'))
