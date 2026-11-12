@@ -163,12 +163,13 @@
     itawari: { name: 'いたわり', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
     shugyo: { name: '修行の手ほどき', type: 'stay', v: [10, 18, 25], cost: [24, 48, 80] },
     hitonatsu: { name: '人なつっこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
-    // 助手のお話のひらめきで取れる5つ(data/monhero-success-assist.js と同じ数字・どれもいるだけ型)
-    gatsu: { name: '試合のはじめのガッツ', type: 'stay', v: [3, 6, 10], cost: [24, 48, 80], hint: 'atsu' },        // 大会の試合のはじめのガッツ +
-    miseba: { name: '見せ場', type: 'stay', v: [1.2, 1.35, 1.5], cost: [24, 48, 80], hint: 'momosuke' },        // 人気の上がり ×
-    mitate: { name: '見立て', type: 'stay', v: [10, 20, 30], cost: [24, 48, 80], hint: 'kyuko' },               // 大会でもらう能力ポイント +%
-    kensho: { name: '検証', type: 'stay', v: [20, 35, 50], cost: [24, 48, 80], hint: 'sorashido' },             // けが・博士の失敗の悪いようすの起きる率 −%
-    mimamori: { name: '見守り', type: 'stay', v: [1.2, 1.4, 1.6], cost: [24, 48, 80], hint: 'erubin' },         // 褒める/叱るで上がる忠誠 ×
+    // 助手のお話のひらめきで取れる5つ(型 battle・社長 2026-11-12): 編成にいると、育てる子の大会の試合で効く(いちばん高い段の1つだけ)。訓練には効かない
+    //   数字は data/monhero-success-assist.js と同じ(buff は対戦の芯の buffs の形)
+    gatsu: { name: '試合のはじめのガッツ', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'atsu', buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }] },
+    miseba: { name: '見せ場', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'momosuke', buff: [{ crit: 0.03 }, { crit: 0.05 }, { crit: 0.08 }] },
+    mitate: { name: '見立て', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'kyuko', buff: [{ eva: 0.03 }, { eva: 0.05 }, { eva: 0.08 }] },
+    kensho: { name: '検証', type: 'battle', v: [15, 25, 35], cost: [24, 48, 80], hint: 'sorashido', buff: [{ missCut: 0.15 }, { missCut: 0.25 }, { missCut: 0.35 }] },
+    mimamori: { name: '見守り', type: 'battle', v: [5, 10, 10], cost: [24, 48, 80], hint: 'erubin', buff: [{ hit1: 0.05 }, { hit1: 0.10 }, { hit1: 0.10, noSulk: true }] },
   });
   const ASSIST_MAX = 4;
   const assistPointsOf = (power) => clamp(Math.floor(num(power) / 50), 20, 400);
@@ -573,7 +574,7 @@
     const condRoll = (s, rng, kind) => {
       // けが(体力が少ないときの訓練)・病気(ストレス)・家出(忠誠が低くストレスが高い)
       const ratio = s.hp / s.hpMax; const soft = s.aid === 'sorashido' ? COND.sorashido : 1;
-      if (kind === 'train' && ratio < COND.injLowHp && rng() < COND.injTrain * soft * (1 - stayV(s, 'kensho') / 100)) {
+      if (kind === 'train' && ratio < COND.injLowHp && rng() < COND.injTrain * soft) {
         let len = rng() < 0.5 ? COND.injLen[0] : COND.injLen[1]; if (s.aid === 'erubin') len = Math.max(1, len - 1);
         return { kind: 'injury', left: len };
       }
@@ -706,7 +707,7 @@
       if (!s.last || !['train', 'shugyo'].includes(s.last.kind) || s.reacted) return { state: s, out: { ok: false } };
       const good = s.last.res === 'great' || s.last.res === 'ok';
       s.reacted = true;
-      const mm = stayV(s, 'mimamori') || 1; const up = (x) => (x > 0 ? x * mm : x); // 見守り: 褒める/叱るで上がる忠誠 ×
+      const up = (x) => x;
       if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), up(d[1])); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
@@ -720,10 +721,9 @@
       s.issaDone = true; s.issaMet += 1;
       if (!ISSA.choices[key] || key === 'none') { s.log.issa.push('none'); return { state: s, out: { ok: true, choice: 'none' } }; }
       const p = s.issaSure ? 1 : issaRate(s, key); const win = rngOf(s.id, s.turn, 'issa')() < p; s.issaSure = false;
-      const guard = () => rngOf(s.id, s.turn, 'issa-kensho')() < stayV(s, 'kensho') / 100; // 検証: 悪いようすを防ぐ
-      if (key === 'stat') { KEYS.forEach(k => addStat(s, k, win ? 50 : -10)); if (!win && !guard()) s.yosu.sabori = { visits: 0 }; else if (!s.titles.includes('秘めた力')) s.titles.push('秘めた力'); }
+      if (key === 'stat') { KEYS.forEach(k => addStat(s, k, win ? 50 : -10)); if (!win) s.yosu.sabori = { visits: 0 }; else if (!s.titles.includes('秘めた力')) s.titles.push('秘めた力'); }
       else if (key === 'hpmax') { if (win) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + 20); s.hp = Math.min(s.hpMax, s.hp + 20); } else s.hp = clamp(s.hp - 20, 0, s.hpMax); }
-      else if (key === 'hp') { if (win) recover(s, 0.8); else { s.hp = clamp(s.hp - 30, 0, s.hpMax); if (!guard()) s.yosu.utsu = { visits: 0 }; } }
+      else if (key === 'hp') { if (win) recover(s, 0.8); else { s.hp = clamp(s.hp - 30, 0, s.hpMax); s.yosu.utsu = { visits: 0 }; } }
       else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } else addLoyalRaw(s, -3, -2); }
       else if (key === 'pop') s.pop = clamp(s.pop + (win ? 15 : -5), 0, 100);
       if (win) s.issaWon += 1;
@@ -859,9 +859,16 @@
     const battleMods = (s) => (s.special && s.battle && s.battle.kind === 'summit' && s.battle.round === 0 && ASST_STORY[s.aid] ? { ...ASST_STORY[s.aid].special } : {});
     // 対戦の芯にそのまま渡す上乗せ(育てる子の側 A)。画面・サクセス側の印は外す。何も無ければ undefined(今までと同じ試合)
     const BUFF_KEYS = ['guts', 'hit1', 'crit', 'missCut', 'eva', 'noSulk'];
-    const battleBuffs = (s) => { const m = { ...battleMods(s) }; const g = s.battle ? stayV(s, 'gatsu') : 0; if (g) m.guts = num(m.guts) + g; const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
+    // 編成のひらめきのアシスト(型 battle・いちばん高い段の1つだけ)+特別な1話を足し合わせ、対戦の芯の範囲で切る
+    const BUFF_RANGE = { guts: [0, 50], hit1: [0, 0.5], crit: [0, 0.5], missCut: [0, 0.9], eva: [0, 0.5] };
+    const battleBuffs = (s) => {
+      if (!s.battle) return undefined;
+      const m = {}; const put = (b) => Object.keys(b || {}).forEach(k => { if (k === 'noSulk') { if (b[k] === true) m.noSulk = true; return; } const r = BUFF_RANGE[k]; if (!r || !Number.isFinite(Number(b[k]))) return; const v = clamp(num(m[k]) + Number(b[k]), r[0], r[1]); m[k] = k === 'guts' ? Math.round(v) : Math.round(v * 1000) / 1000; });
+      Object.keys(ASSISTS).filter(id => ASSISTS[id].type === 'battle').forEach(id => { const lv = stayLv(s.team, id); if (lv) put(ASSISTS[id].buff[lv - 1]); });
+      put(battleMods(s));
+      const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
     const stayV = (s, id) => { const lv = stayLv(s.team, id); return lv ? ASSISTS[id].v[lv - 1] : 0; };
-    const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1) * (stayV(s, 'miseba') || 1));
+    const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1));
     // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)
     const useItem = (s0, key) => {
       const s = clone(s0); const it = ITEMS[key];
@@ -1068,7 +1075,7 @@
       if (won) { KEYS.forEach(k => addStat(s, k, f.all)); gainPts(s, f.pts); s.pop = clamp(s.pop + popGain(s, f.pop), 0, 100); s.titles.push(f.title); if (f.crown) { s.crowns += 1; s.items[REMATCH.crownWin] += 1; } }
       s.turn += 1; return { state: s, out };
     };
-    const gainPts = (s, v0) => { const v = Math.round(v0 * (1 + stayV(s, 'mitate') / 100)); const room = PTS.hold - s.pts; const g = Math.max(0, Math.min(room, v)); s.pts += g; s.ptsLost += v - g; };
+    const gainPts = (s, v) => { const room = PTS.hold - s.pts; const g = Math.max(0, Math.min(room, v)); s.pts += g; s.ptsLost += v - g; };
 
     // ---- 能力ポイント(TOURNAMENT §7b): 1点で +1・期の目安を超えると 2点で +1 ----
     const ptsCost = (s, k) => (s.stats[k] >= PTS.line[periodOf(s.turn).key] ? 2 : 1);

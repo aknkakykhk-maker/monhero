@@ -432,17 +432,19 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const g = (p) => SUC.gradeOf(p).label;
   ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'M1' && g(25100) === 'M12' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 25100].map(g)}`);
   ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === null, '次の番号までの数がずれている');
-  ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'stay'), 'ひらめきのアシスト5つ(いるだけ型)がない');
+  ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'battle'), 'ひらめきのアシスト5つ(型 battle)がない');
   const st = { life: 600, pow: 700, wise: 300, hit: 500, eva: 400, tough: 600 };
-  const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }] });
+  const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });
   const plain = mk([]); const all = mk([{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'mimamori', lv: 3 }]);
-  const pb = SUC.settle({ ...plain, turn: 41, battle: { kind: 'pro', round: 0 } }, true).state; const ab = SUC.settle({ ...all, turn: 41, battle: { kind: 'pro', round: 0 } }, true).state;
-  ok(ab.pts === Math.round(20 * 1.3) && pb.pts === 20, `見立てで大会の能力ポイントが +30% にならない: ${ab.pts}`);
-  ok(ab.pop === Math.round(8 * 1.5) && pb.pop === 8, `見せ場で人気の上がりが ×1.5 にならない: ${ab.pop}`);
-  ok(SUC.battleBuffs({ ...all, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }).A.guts === 10 && SUC.battleBuffs({ ...plain, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }) === undefined, '試合のはじめのガッツが大会の試合に渡らない');
-  const rp = SUC.react({ ...plain, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise').state; const ra = SUC.react({ ...all, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise').state;
-  ok(ra.ama > rp.ama, '見守りで褒めたときの忠誠の上がりが大きくならない');
-  const kz = mk([{ id: 'kensho', lv: 3 }]); ok(SUC.stayV(kz, 'kensho') === 50, '検証の値が取れない');
+  const cup = { kind: 'cup', sys: 'str', star: 1, round: 0 };
+  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(いちばん高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
+  ok(JSON.stringify(SUC.battleBuffs({ ...plain, battle: cup })) === '{"A":{"guts":3}}' && SUC.battleBuffs(all) === undefined, '大会の試合のときだけ上乗せが付く になっていない');
+  // 訓練には効かない
+  const tp = SUC.act(plain, { kind: 'train', stat: 'pow' }); const ta = SUC.act(all, { kind: 'train', stat: 'pow' });
+  ok(JSON.stringify(tp.out.gain) === JSON.stringify(ta.out.gain), 'ひらめきのアシスト(型 battle)が訓練に効いている');
+  // 特別な1話と足し合わせて範囲で切る
+  const sp = SUC.markSpecial({ ...SUC.newRun({ id: 'h2', species: 'Mocchi', aid: 'atsu', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 3 }] }] }), turn: 44 }).state;
+  ok(SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 0 } }).A.guts === 18, '特別な1話とひらめきのガッツが足し合わさらない');
 }
 
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
