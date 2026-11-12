@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c06ec6d963358707
+// source-sha256: 9e7afd884f222ae1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -65816,10 +65816,14 @@ const GrowthFxLayer = ({
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const quickAnywhereFloatStyle = spot => {
-  const s = {
+  const s = spot.hidden ? {
+    visibility: 'hidden',
+    pointerEvents: 'none'
+  } : {};
+  Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
-  };
+  });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
 };
@@ -65868,7 +65872,8 @@ const quickAnywhereFloatPick = el => {
   }
   return {
     side: 'right',
-    lift: 0
+    lift: 0,
+    hidden: true
   };
 };
 const QuickAnywhereFloat = ({
@@ -65885,7 +65890,7 @@ const QuickAnywhereFloat = ({
   React.useLayoutEffect(() => {
     const place = () => {
       if (!ref.current) return;
-      setSpot(prev => quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+      setSpot(prev => !prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
     };
     const fresh = () => {
       if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
@@ -65903,7 +65908,7 @@ const QuickAnywhereFloat = ({
   return React.createElement("button", _extends({
     ref: ref,
     type: "button",
-    "data-quick-anywhere-spot": `${spot.side}-${spot.lift}`
+    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`
   }, rest, {
     style: {
       ...(style || {}),
