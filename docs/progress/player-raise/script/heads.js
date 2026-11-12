@@ -12,6 +12,7 @@ const MONSUC_SCRIPT_HEADS = Object.freeze([
   { prefix:'issa.', head:'train', label:'育成イベント' },
   { prefix:'turn.', head:'none', label:'' },
   { prefix:'mon.', head:'none', label:'' },
+  { prefix:'item.', head:'none', label:'' },
 ]);
 
 // 行の id から見出しを引く(上から順に、最初に当たったもの)
