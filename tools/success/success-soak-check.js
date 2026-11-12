@@ -269,15 +269,12 @@ const play = (c, opts = {}) => {
   if (fin.pts < 0) fail(`${c.id}: 自動で振ったあとの能力ポイントが負`);
   return { s: fin, ev, st, snaps, steps: n };
 };
-// ---- 既知の不具合(作者へ知らせ済み・2026-11-12)----
+// ---- 既知の不具合(作者へ知らせ済みのもの)----
 // 芯が直るまでは警告にとどめ、その項目だけ保存した値を戻してから続ける(ほかの違いは今までどおり NG にする)。
 // 直ると「直った」と出るので、この表から外す。
-const KNOWN = [
-  { key: 'team', label: 'restore で編成の育てた子の熟練(masteries)が消え、総合力・ランク・タッグ・伸びが変わる(再開後の6能力が変わる)',
-    hit: (raw, back) => JSON.stringify(sortKeys(raw.team)) !== JSON.stringify(sortKeys(back.team)) },
-  { key: 'log', label: 'restore で記録の数(log.meal・items・rematch・astory)が消える',
-    hit: (raw, back) => ['meal', 'items', 'rematch', 'astory'].some(k => raw.log && raw.log[k] !== undefined && back.log[k] !== raw.log[k]) },
-];
+// 2026-11-12 の2件(restore で編成の熟練が消える・記録の数が消える)は芯で直ったので外した。
+// 新しく見つけたら { key, label, hit(raw, back) } の形で足す(key は保存した値を戻す項目)。
+const KNOWN = [];
 const knownSeen = new Map(); KNOWN.forEach(k => knownSeen.set(k.key, 0));
 const patchKnown = (raw, back) => {
   KNOWN.forEach(k => { if (k.hit(raw, back)) { knownSeen.set(k.key, knownSeen.get(k.key) + 1); back[k.key] = JSON.parse(JSON.stringify(raw[k.key])); } });
