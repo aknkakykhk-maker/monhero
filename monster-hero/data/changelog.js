@@ -35,6 +35,30 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
+    date: "2026-11-12 21:00", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスが始まりました',
+    image: 'images/events/monsaku-open.jpg?v=4e899510ba1c',
+    assistantNotice:{ id:'update_notice_monsaku_v1', type:'content' },
+    items:[
+      'モンスターを1体、デビューからヒーローの頂まで最大46ターンかけて育てる、新しい遊び「モンヒロサクセス」が始まりました。',
+      '毎ターン、訓練・休む・遊ぶ・修行・通院・大会の中からひとつ選んで進めます。助手を1人選んで、いっしょに育てます。',
+      '編成のマスモン6体がそれぞれ得意な訓練に集まります。仲良くなった仲間と同じ訓練をすると「友情タッグ」になり、大きく伸びます。',
+      '訓練の結果は、大成功・成功・失敗・サボりの4種類です。結果のあとに「叱る」「褒める」を選ぶと、モンスターの気持ちが変わります。',
+      '期の終わりには大会があります。一度勝った大会は、次からスキップできます。負けたときは「時渡りの砂時計」でやり直せます。',
+      '育て終えたモンスターは保存枠に残り、次の育成の編成に連れていったり、フレンドに貸したり、合体させて新しいモンスターを生んだりできます。',
+      '育て終えた総合力はランキングに載ります。「全モンスター」と「血統別」の2つがあります。',
+      '遊びかたは、ヘルプ(攻略情報局)の「モンヒロサクセス」にまとめています。',
+    ],
+  },
+  {
+    date: "2026-11-12 20:33", type:'fix', title:'助手の紹介の全身の絵が、ふちまできれいに見えるようになりました', status:'new', group:'assistant',
+    items:[
+      '助手の紹介で出る全身の絵の、髪・羽・服のふちがギザギザに見えていたのを直しました。',
+      '暗い背景でも明るい背景でも、ふちがなめらかに見えます。みゅあの表情ごとの絵も同じように直しています。',
+    ],
+  },
+  {
     // 2026-11-12 社長「今ある画面で第2弾の開発中だけど告知画像あげて。第1弾の告知と同じとこにあげて」「第2弾はもっと別の画面みせて」。画像は回3(craft/monsuc-r3)の実際の画面6枚(tools 外の一回きりの合成)
     date: "2026-11-12 20:02", type:'content', title:'新コンテンツ「モンヒロサクセス」開発中・第2弾', status:'new', group:'success',
     image: 'images/events/monsaku-teaser2.jpg?v=173560d714c1',
@@ -54,6 +78,21 @@ const CHANGELOG = [
       { caption:'負けても砂時計でやり直せる', image:'images/events/monsaku-teaser2-hourglass.jpg?v=23244a819a0d' },
     ],
     assistantNotice:{ id:'update_notice_monsaku_soon2_v1', type:'content' },
+    unreleasedFlag:'monheroSuccess', // 公開したら消える(第1弾の予告と同じ)
+  },
+  {
+    // 2026-11-12 新曲「メガロバニア」2曲(サンズ戦・スマブラver)。社長「新曲実装。これも急いでやらせて」(Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-12 20:02", type:'update', group:'rhythm', title:'新曲「メガロバニア」2曲を追加しました', status:'new',
+    image:'images/song-art/megalovania-sans.jpg?v=5884e2ecbb01',
+    items:[
+      'モンヒロビートに「メガロバニア（サンズ戦）」（2分37秒・作：ねるかめちゃん）と「MEGALOVANIA（スマブラver）」（4分36秒・作：暇人[もちゃ]）を追加しました。曲えらびからすぐ遊べます。',
+      '【サンズ戦】レベルは EASY Lv.12 ／ NORMAL Lv.15 ／ HARD Lv.21 ／ EXPERT Lv.29 ／ MASTER Lv.43 ／ HELL Lv.77 です。',
+      '【サンズ戦】ノーツ数は 425 ／ 487 ／ 610 ／ 732 ／ 846 ／ 971 です。',
+      '【スマブラver】レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.30 ／ HELL Lv.44 です。',
+      '【スマブラver】ノーツ数は 430 ／ 493 ／ 674 ／ 813 ／ 937 ／ 1090 です。',
+    ],
+    gallery:[{ image:'images/song-art/megalovania-smash.jpg?v=1923d225d33a', caption:'スマブラver のジャケット' }],
+    assistantNotice:{ id:'update_notice_megalovania_v1', type:'content' },
   },
   {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
@@ -125,6 +164,19 @@ const CHANGELOG = [
       '近日公開予定です。お楽しみに！',
     ],
     assistantNotice:{ id:'update_notice_monsaku_soon_v1', type:'content' },
+    unreleasedFlag:'monheroSuccess', // 公開したら、下の「紹介」に入れ替わる
+  },
+  {
+    // 予告の項目の公開後の姿(同じ既読の印 fixedId のまま、「近日公開」の2行を外して題を「紹介」に直した)。印が真のときだけ出る
+    date: "2026-11-12 12:40", type:'content', title:'新コンテンツ「モンヒロサクセス」の紹介', idTitle:'新コンテンツ「モンヒロサクセス」開発中・近日公開', fixedId:'content-14esu53', status:'new', group:'success', releaseFlag:'monheroSuccess',
+    image: 'images/events/monsaku-teaser.jpg?v=8c2f0382ad8a',
+    items:[
+      '助手を選び、育てたモンスターたちを編成に連れて、モンスターを一から育てる新コンテンツ「モンヒロサクセス」です。',
+      '週ごとにトレーニング・修行・休養・大会を選んで育てます。仲良くなった仲間と一緒にトレーニングすると、友情タッグで大きく伸びます。',
+      '育て終えたモンスターは、バトルに出したり、合体させて新しいモンスターとして育て直したりできます。',
+      '名前と染色は、育てはじめるときにも、育て終えたあとにも決められます。',
+      'いまは遊べるようになりました。',
+    ],
   },
   {
     // 育成ノート(助手のマスモンを計画して育てる・キズナ #5527。ミハリ5 OK)
