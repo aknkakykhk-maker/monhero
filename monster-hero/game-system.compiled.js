@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 79ffc743871fd281
+// source-sha256: 053a4d93d18558ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108196,7 +108196,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 0,
-      battle: 3
+      battle: 3,
+      checkup: 0
     },
     slot: {
       noon: {
@@ -108220,7 +108221,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 2,
       sleep: 1,
       read: 1,
-      battle: 4.5
+      battle: 4.5,
+      checkup: 0
     },
     slot: {
       morning: {
@@ -108244,7 +108246,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 0,
-      battle: 4.5
+      battle: 4.5,
+      checkup: 0
     },
     slot: {
       evening: {
@@ -108268,7 +108271,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 2,
       sleep: 4,
       read: 0,
-      battle: 1.5
+      battle: 1.5,
+      checkup: 0
     },
     slot: {
       noon: {
@@ -108293,7 +108297,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 0,
-      battle: 9
+      battle: 9,
+      checkup: 0
     },
     slot: {
       morning: {
@@ -108317,7 +108322,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 3,
-      battle: 3
+      battle: 3,
+      checkup: 0
     },
     slot: {
       afternoon: {
@@ -108340,7 +108346,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 1,
-      battle: 6
+      battle: 6,
+      checkup: 0
     },
     slot: {
       night: {
@@ -108365,7 +108372,8 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       idle: 1,
       sleep: 1,
       read: 1,
-      battle: 9
+      battle: 9,
+      checkup: 0
     },
     slot: {
       morning: {
@@ -110550,7 +110558,8 @@ const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
   hill: '🌄',
   garden: '🌷',
   temple: '✨',
-  battle: '⚔️'
+  battle: '⚔️',
+  clinic: '🏥'
 });
 const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
   studio: 'モンヒロビート',
@@ -114919,7 +114928,7 @@ const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
     cafe: [0.9, 0.29],
     garden: [0.8, 0.44],
     plaza: [0.5, 0.465],
-    clinic: [0.22, 0.3]
+    clinic: [0.62, 0.56]
   },
   halloween: {
     hill: [0.5, 0.085],
@@ -114927,7 +114936,7 @@ const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
     cafe: [0.9, 0.27],
     garden: [0.82, 0.45],
     plaza: [0.5, 0.465],
-    clinic: [0.22, 0.28]
+    clinic: [0.62, 0.56]
   },
   halloweenWide: {
     hill: [0.5, 0.17],
@@ -114935,7 +114944,7 @@ const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
     cafe: [0.84, 0.22],
     garden: [0.76, 0.4],
     plaza: [0.47, 0.54],
-    clinic: [0.3, 0.24]
+    clinic: [0.84, 0.62]
   }
 });
 const assistantLifeMapArtOf = src => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';

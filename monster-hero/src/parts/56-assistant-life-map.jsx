@@ -16,9 +16,9 @@ const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', '
 //   classic … 村の広場(941×1672)/ halloween … ハロウィン(縦)/ halloweenWide … ハロウィン(横長)
 //   図書室=金の塔/おやつ屋さん=右上の青い屋根の石の家/ひなたの丘=湖と滝/中庭=泉と屋台のあいだの芝生/広場=方位の印
 const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
-  classic:       { hill: [0.47, 0.115], library: [0.72, 0.205], cafe: [0.9, 0.29], garden: [0.8, 0.44], plaza: [0.5, 0.465], clinic: [0.22, 0.3] },
-  halloween:     { hill: [0.5, 0.085], library: [0.7, 0.2], cafe: [0.9, 0.27], garden: [0.82, 0.45], plaza: [0.5, 0.465], clinic: [0.22, 0.28] },
-  halloweenWide: { hill: [0.5, 0.17], library: [0.62, 0.27], cafe: [0.84, 0.22], garden: [0.76, 0.4], plaza: [0.47, 0.54], clinic: [0.3, 0.24] },
+  classic:       { hill: [0.47, 0.115], library: [0.72, 0.205], cafe: [0.9, 0.29], garden: [0.8, 0.44], plaza: [0.5, 0.465], clinic: [0.62, 0.56] },
+  halloween:     { hill: [0.5, 0.085], library: [0.7, 0.2], cafe: [0.9, 0.27], garden: [0.82, 0.45], plaza: [0.5, 0.465], clinic: [0.62, 0.56] },
+  halloweenWide: { hill: [0.5, 0.17], library: [0.62, 0.27], cafe: [0.84, 0.22], garden: [0.76, 0.4], plaza: [0.47, 0.54], clinic: [0.84, 0.62] },
 });
 const assistantLifeMapArtOf = (src) => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
 // していることの短い印(地図の名札の頭に付ける)
