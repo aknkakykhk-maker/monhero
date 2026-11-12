@@ -45,6 +45,7 @@
 | `register` | owner・key・assistant・name・icon・team `{tactics, members:[{slot, species, name, lv, stats}]}` | 形と上限を見て、通れば登録(登録し直しも同じ) |
 | `unregister` | owner・key・assistant | 登録をやめる(行は残す) |
 | `challenge` | owner・key・assistant・opp_owner・opp_assistant・division(`raw`/`fair`)・size(1〜3。既定3) | フレンドか・両方登録済みか・回数を見て、**サーバが種を作って回し**、記録とランキングを書いて返す |
+| `lend_set`・`lend_clear`・`lend_use`・`lend_claim` | owner・key ほか | モンヒロサクセスのフレンドからのレンタル(2026-11-12 オトズレ)。本体は `lend.js`・表は `202611120002_monsuc_lend.sql`・決まりは docs/progress/player-raise/PLAN.md §2 |
 
 `challenge` の返り: `match = { id, division, size, rated, seed, version, teamA, teamB, winner, reason, rounds, digest, a:{delta, rating}, b:{…}, remaining }`。
 端末は `simulate({ seed, catalog, teamA, teamB })` を同じ計算で回して見返す(観戦)。`digest` が合わなければ「版がちがう」と出す(`version` を見る)。
