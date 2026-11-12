@@ -38,7 +38,7 @@ const CHANGELOG = [
     // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
     date: "2026-11-12 19:40", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスが始まりました',
-    image: 'images/events/monsaku-open.jpg?v=1c2683834879',
+    image: 'images/events/monsaku-open.jpg?v=4e899510ba1c',
     assistantNotice:{ id:'update_notice_monsaku_v1', type:'content' },
     items:[
       'モンスターを1体、デビューからヒーローの頂まで最大46ターンかけて育てる、新しい遊び「モンヒロサクセス」が始まりました。',

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "64080640697f",
-  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":146616472,"count":916},"card":{"bytes":37779758,"count":1048},"all":{"bytes":329178014,"count":2073},"core":{"bytes":20924639,"count":23}},
+  "id": "a77b6c0ecd6d",
+  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":146619558,"count":916},"card":{"bytes":37779758,"count":1048},"all":{"bytes":329181100,"count":2073},"core":{"bytes":20924639,"count":23}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1533,7 +1533,7 @@
     "images/events/monbeat-event-2026-09-11.jpg": {"v":"bdcbebca070b","size":146353,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17-wide.jpg": {"v":"b2ff791693ca","size":153034,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17.jpg": {"v":"29df7296db9b","size":146816,"pack":"battle"},
-    "images/events/monsaku-open.jpg": {"v":"1c2683834879","size":84567,"pack":"battle"},
+    "images/events/monsaku-open.jpg": {"v":"4e899510ba1c","size":87653,"pack":"battle"},
     "images/events/monsaku-teaser.jpg": {"v":"8c2f0382ad8a","size":174803,"pack":"battle"},
     "images/events/orihime-dye-preview.jpg": {"v":"fee8c692d78b","size":119964,"pack":"battle"},
     "images/events/orihime-profile.jpg": {"v":"901fad80f508","size":135278,"pack":"battle"},
@@ -2091,7 +2091,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"54980ffcb59f","size":96654,"pack":"core"},
-    "data/changelog.js": {"v":"5e303afe81f4","size":1700357,"pack":"core"},
+    "data/changelog.js": {"v":"7526611ccb9e","size":1700357,"pack":"core"},
     "data/help.js": {"v":"f0e6dddbef11","size":824632,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
