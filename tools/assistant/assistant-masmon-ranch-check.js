@@ -107,7 +107,9 @@ const dg0 = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].dg);
 {
   const n = T.normalizeAssistantMasmonRanch({ used: { kiki: [1, 'x', 2, 2], BAD: [1] }, mon: { kiki: { '1:Golem': 3, 'zz': 4 } }, last: { kiki: { a: 5, nick: 'ごろべえ', kind: 'heavy', rows: [{ k: 'pow', from: 1, to: 2000 }, { k: 'nope', from: 1, to: 2 }] } } });
   check('⑥ 正規化: 変な値を落とし、形をそろえる', JSON.stringify(n.used) === '{"kiki":[1,2]}' && JSON.stringify(n.mon) === '{"kiki":{"1:Golem":3}}' && n.last.kiki.rows.length === 1 && n.last.kiki.rows[0].to === 999);
-  check('⑥ 正規化: 無い・壊れた保存は既定値', JSON.stringify(T.normalizeAssistantMasmonRanch('x')) === '{"v":1,"used":{},"mon":{},"last":{}}');
+  check('⑥ 正規化: 無い・壊れた保存は既定値', JSON.stringify(T.normalizeAssistantMasmonRanch('x')) === '{"v":1,"used":{},"mon":{},"gain":{},"last":{}}');
+  const ng2 = T.normalizeAssistantMasmonRanch({ gain: { kiki: { '1:Golem': { d: 3, n: 12.4 }, '2:Pixie': { d: -1, n: 5 }, 'zz': { d: 1, n: 1 } }, BAD: { '1:Golem': { d: 1, n: 1 } } } });
+  check('⑥ 正規化: 同じ日の合計(gain)は正しい形だけ残す', JSON.stringify(ng2.gain) === '{"kiki":{"1:Golem":{"d":3,"n":12}}}', JSON.stringify(ng2.gain));
 }
 // ⑧ 1枚で上がる分の合計は 20 まで(自主育成の最大 20 と重なってもサーバの1日 40 を超えない)
 {
@@ -131,6 +133,23 @@ const dg0 = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].dg);
   const r2 = T.assistantMasmonRanchUse('kiki', '2:Pixie', 'light', 'pow', now + 86400000 * 80);
   check('⑨ 寿命が来ていない子にはいつもどおり使える', r2.ok && tickets.training_ticket === 0, JSON.stringify(r2).slice(0, 80));
   delete ctx.amgbLifeOver;
+}
+// ⑩ 同じマスモンに同じ日にチケットで上がる合計は、サーバの1日の上限 − 自主育成の最大 まで(2026-11-12 同じ子の制限をなくしたため・ミハリ5の気づき)
+{
+  const day = 7000; const t = Date.UTC(2026, 10, 30, 1, 0);
+  let sum = 0; let blocked = null;
+  for (let i = 0; i < 6; i++) {
+    ctx.ASSISTANT_LIFE_STORE.state.life.abs = 3000 + i; tickets.training_ticket_l = 1;
+    const e = T.AMG_STORE.state.mons.kiki['2:Pixie']; e.st = { life: 300, pow: 300, wise: 300, hit: 300, eva: 300, tough: 300 };
+    const r = T.assistantMasmonRanchUse('kiki', '2:Pixie', 'heavy', 'pow', t);
+    if (!r.ok) { blocked = r; break; }
+    sum += r.rows.filter(x => x.to > x.from).reduce((a, x) => a + x.to - x.from, 0);
+  }
+  check('⑩ 同じ日・同じマスモンに何枚使っても、上がる合計は 20 まで', sum <= 20 && sum > 0, `合計 +${sum}`);
+  check('⑩ 合計に届いたら「今日はもう十分」で止まり、チケットは減らない', blocked && /今日はもう十分/.test(blocked.why) && tickets.training_ticket_l === 1, blocked && blocked.why);
+  ctx.ASSISTANT_LIFE_STORE.state.life.abs = 3100;
+  const r2 = T.assistantMasmonRanchUse('kiki', '2:Pixie', 'heavy', 'pow', t + 86400000);
+  check('⑩ 次の日はまた使える', r2.ok, JSON.stringify(r2).slice(0, 80));
 }
 // ⑦ 印が真なら旧 1.2倍 は受けない・印が偽なら何もしない
 {

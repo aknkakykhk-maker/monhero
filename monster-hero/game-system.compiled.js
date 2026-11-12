@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 82e04f63d7eee123
+// source-sha256: a68b561888e00bbc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150155,6 +150155,7 @@ const normalizeAssistantMasmonRanch = raw => {
     v: 1,
     used: {},
     mon: {},
+    gain: {},
     last: {}
   };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
@@ -150166,6 +150167,15 @@ const normalizeAssistantMasmonRanch = raw => {
     const o = {};
     for (const [key, d] of Object.entries(m).slice(-16)) if (/^[1-8]:\w{2,40}$/.test(key) && Number.isInteger(d) && d >= 0) o[key] = d;
     out.mon[aid] = o;
+  }
+  if (raw.gain && typeof raw.gain === 'object' && !Array.isArray(raw.gain)) for (const [aid, m] of Object.entries(raw.gain)) {
+    if (!amgrOkAid(aid) || !m || typeof m !== 'object' || Array.isArray(m)) continue;
+    const o = {};
+    for (const [key, x] of Object.entries(m).slice(-16)) if (/^[1-8]:\w{2,40}$/.test(key) && x && Number.isInteger(x.d) && x.d >= 0 && Number.isFinite(x.n) && x.n >= 0) o[key] = {
+      d: x.d,
+      n: Math.min(9999, Math.round(x.n))
+    };
+    out.gain[aid] = o;
   }
   if (raw.last && typeof raw.last === 'object' && !Array.isArray(raw.last)) for (const [aid, x] of Object.entries(raw.last)) {
     if (!amgrOkAid(aid) || !x || typeof x !== 'object' || !Number.isInteger(x.a)) continue;
@@ -150407,6 +150417,14 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
     ok: false,
     why: `${AMGR_TICKET_NAME[kind]}が足りません`
   };
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1;
+  const dayCap = Math.max(1, (pace > 1 ? AMGR_NUM.serverDayBond : AMGR_NUM.serverDay) - (Number(AMG_CARE.viewCap) || 20) * pace);
+  const g0 = ((R.gain || {})[aid] || {})[key];
+  const prior = g0 && g0.d === day ? g0.n : 0;
+  if (prior >= dayCap) return {
+    ok: false,
+    why: `${row.nick || 'このマスモン'}は今日はもう十分きたえました(明日また使えます)`
+  };
   const prevR = R;
   if (!amgrSave({
     ...R,
@@ -150464,10 +150482,9 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
       to
     });
   };
-  const pace = typeof amgbPace === 'function' ? amgbPace() : 1;
   const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0)) * pace));
   const plan = amgrPlanOf(kind, k);
-  const room = Math.max(1, (pace > 1 ? AMGR_NUM.serverDayBond : AMGR_NUM.serverDay) - (Number(AMG_CARE.viewCap) || 20) * pace);
+  const room = Math.max(1, dayCap - prior);
   if (kind === 'heavy') {
     const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room);
     bump(plan.main, main);
@@ -150495,8 +150512,19 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
     }
   });
   const R2 = AMGR_STORE.state;
+  const up = Object.values(g).reduce((a, n) => a + Math.max(0, n), 0);
   amgrSave({
     ...R2,
+    gain: {
+      ...(R2.gain || {}),
+      [aid]: {
+        ...((R2.gain || {})[aid] || {}),
+        [key]: {
+          d: day,
+          n: prior + up
+        }
+      }
+    },
     last: {
       ...R2.last,
       [aid]: {
