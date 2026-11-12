@@ -14,7 +14,7 @@
 """
 import os, sys
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SRC = os.path.join(ROOT, 'tools/art-sources/assistant-fullbody/received-v1')
@@ -66,6 +66,10 @@ def split_cells(file, cut_y, cut_x):
 #   「上から下へ不透明の少ない道すじ(縫い目)」でたどって切る。表情なしの絵のキー → [(シート, 段の切れ目の行の一覧, [表情…(左上から横へ)], 1段の人数)]
 #   例: 'atsu': [('atsu-8expressions-sheet.png', [775], [表情×8], 4)] … 4×2 のシートで、段の切れ目が 775 行目
 SEAM_SHEETS = {
+    'atsu': [('atsu-8expressions-sheet.png', [775], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 4)],
+    # ソラシド(2026-11-12 社長から。横に4人ずつ・1人 約 440×887)。袖・羽織のすその透ける布は不透明(252前後)で描かれているので、薄い光を消しても残る
+    'sorashido': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                  ('sorashido-8expressions-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     # キュウコ(2026-11-12 社長から。横に8人・1人 約 220×887)。となりと横の範囲が重なるが、体どうしはくっついていない(縫い目は不透明を横切らない)
     'kyuko': [('kyuko-8expressions-sheet.png', [], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 8)],
 }
@@ -98,6 +102,172 @@ def seam_path(al, x0, x1, bias=0.02):
     return np.array(path[::-1]) + x0
 
 
+HEM_MEND = {'atsu-8expressions-sheet.png'}  # 縫い目がすそ(重なった布)を縦に切るシート。切れた所の先を描き足す
+
+
+def mend_hem(cell, sheet, path, ya, yb, side):
+    """縫い目が布を ya〜yb 行で縦に切った所を描き足す(side=+1 はこの子の右のすそ、-1 は左のすそ)。
+    切れた区間の前後で布の外のふちをたどり、外から見た凸の包みを新しいふちにする。くぼみと縦の切れ目は
+    「上の布から下のすその先へ斜めに流れる線」になる。足した所の色は、元のシートで重なっていたこげ茶の布・金を
+    そのまま使い(となりの子の赤い裏地は拾わない)、使えない所は同じ行のすぐ内側の色を外へのばす。
+    新しいふちには、まわりの金のふち取りの色で細い線を引く。cell・sheet は段の帯(同じ高さ)の配列。"""
+    h, w = cell.shape[:2]
+    L = yb - ya + 1
+    al = cell[..., 3]
+    reach = int(L * 1.2)
+    ys = []
+    es = []
+    for y in range(max(0, ya - int(0.5 * L)), min(h, yb + int(0.35 * L))):
+        c0 = int(path[y])
+        if side > 0:
+            xs = np.nonzero(al[y, max(0, c0 - reach):c0 + 2] >= 128)[0]
+            e = (xs.max() + max(0, c0 - reach)) if len(xs) else None
+        else:
+            xs = np.nonzero(al[y, max(0, c0 - 1):min(w, c0 + reach)] >= 128)[0]
+            e = (xs.min() + max(0, c0 - 1)) if len(xs) else None
+        if e is None:
+            if ys and y > yb:
+                break  # 布が終わった(すその先の下)
+            continue
+        ys.append(y); es.append(float(e))
+    if len(ys) < 3:
+        return
+    ys = np.array(ys); es = np.array(es)
+    # 外から見た凸の包み(side=+1 なら x の上側の包み)
+    v = es * side
+    hull = []
+    for k in range(len(ys)):
+        while len(hull) >= 2:
+            (y1, v1), (y2, v2) = hull[-2], hull[-1]
+            if (v2 - v1) * (ys[k] - y1) <= (v[k] - v1) * (y2 - y1):
+                hull.pop()
+            else:
+                break
+        hull.append((ys[k], v[k]))
+    hy = np.array([p[0] for p in hull], float); hv = np.array([p[1] for p in hull], float)
+    env = np.interp(ys.astype(float), hy, hv) * side  # 新しいふち(各行の x)
+    # 金の色・こげ茶の色
+    box = sheet[max(0, ya - L):min(h, yb + L), max(0, int(es.min()) - L):min(w, int(es.max()) + L)].reshape(-1, 4).astype(int)
+    g = box[(box[:, 3] > 200) & (box[:, 0] > 170) & (box[:, 1] > 110) & (box[:, 2] < 110) & (box[:, 0] - box[:, 2] > 90)]
+    gold = np.median(g[:, :3], axis=0) if len(g) else np.array([214, 160, 70])
+    dark = box[(box[:, 3] > 200) & (box[:, 0] < 110) & (box[:, 0] - box[:, 2] < 60)]
+    base = np.median(dark[:, :3], axis=0) if len(dark) else np.array([52, 36, 32])
+
+    def usable(px):
+        return px[3] >= 200 and not (int(px[0]) > 110 and int(px[0]) - int(px[1]) > 60)  # 赤い裏地は使わない
+
+    S = 4
+    orig = cell.copy()
+    addm = np.zeros((h, w), bool)  # 足した画素
+    # 描き足す行を決める: ふちが赤い裏地の行はのばさない(裏地は切れていない)。ただし前後3行以内に
+    #   のばす行があれば、すき間(背景が横線に見える)を作らないようにつなぐ。続けて8行に満たない所・幅より低い所はのばさない
+    cand = side * (env - es) >= 0.5
+    okr = cand & np.array([usable(cell[y, int(e)]) for y, e in zip(ys, es)])
+    fill = okr.copy()
+    idx = np.nonzero(okr)[0]
+    for a_, b_ in zip(idx, idx[1:]):
+        if 1 < b_ - a_ <= 4:
+            fill[a_:b_] = cand[a_:b_] | fill[a_:b_]
+    k = 0
+    while k < len(fill):
+        if fill[k]:
+            k2 = k
+            while k2 < len(fill) and fill[k2]:
+                k2 += 1
+            wid = float(np.max(side * (env[k:k2] - es[k:k2])))
+            if k2 - k < max(8, wid):  # 低くて横に長い帯は横線に見えるので、のばさない
+                fill[k:k2] = False
+            k = k2
+        else:
+            k += 1
+    for y, e, n, f in zip(ys, es, env, fill):
+        if not f:
+            continue
+        a_lo, a_hi = (e + 1, n + 0.5) if side > 0 else (n - 0.5, e - 1)
+        for x in range(int(np.floor(a_lo)), int(np.ceil(a_hi)) + 1):
+            if x < 0 or x >= w:
+                continue
+            # 画素のうち、新しいふちの内側にある割合(ふちをなめらかに)
+            cov = np.clip((n + 0.5 - x) if side > 0 else (x - (n - 0.5)), 0, 1)
+            if cov <= 0 or al[y, x] >= 250:
+                continue
+            if al[y, x] >= 128:  # もとの半透明のふち: 色はそのままで不透明にそろえる
+                cell[y, x, 3] = max(int(al[y, x]), int(cov * 255))
+                continue
+            src = sheet[y, x]
+            if usable(src):
+                rgb = src[:3]
+            else:
+                # 同じ行のすぐ内側(ふちから1〜3画素)の色を外へのばす
+                ins = [cell[y, int(e) - side * k] for k in (1, 2, 3) if 0 <= int(e) - side * k < w]
+                ins = [q[:3].astype(int) for q in ins if usable(q)]
+                rgb = np.mean(ins, axis=0) if ins else base
+            na = max(int(al[y, x]), int(cov * 255))
+            addm[y, x] = True
+            cell[y, x, :3] = np.asarray(rgb).astype(np.uint8)
+            cell[y, x, 3] = na
+    # 縦に3行以上続かない描き足し(1〜2行だけの細い横線)は元に戻す
+    up = np.zeros_like(addm); up[:-1] = addm[1:]
+    dn = np.zeros_like(addm); dn[1:] = addm[:-1]
+    core = addm & up & dn
+    keep = core.copy(); keep[:-1] |= core[1:]; keep[1:] |= core[:-1]
+    back = addm & ~keep
+    cell[back] = orig[back]
+    addm &= keep
+    # 新しいふちに金のふち取り(足した所の行だけ)
+    added = side * (env - es) >= 0.5
+    if not added.any():
+        return
+    k0, k1 = np.nonzero(added)[0][[0, -1]]
+    k0 = max(0, k0 - 2); k1 = min(len(ys) - 1, k1 + 2)
+    x0 = int(max(0, min(env[k0:k1 + 1]) - 4)); x1 = int(min(w, max(env[k0:k1 + 1]) + 5))
+    y0 = int(ys[k0]); y1 = int(ys[k1]) + 1
+    big = Image.new('L', ((x1 - x0) * S, (y1 - y0) * S), 0)
+    d = ImageDraw.Draw(big)
+    pts = [((env[k] - side * 0.6 - x0 + 0.5) * S, (ys[k] - y0 + 0.5) * S) for k in range(k0, k1 + 1)]
+    d.line(pts, fill=255, width=int(1.6 * S), joint='curve')
+    lm = np.array(big.resize((x1 - x0, y1 - y0), Image.BOX)).astype(np.float32) / 255.0 * 0.85
+    sub = cell[y0:y1, x0:x1].astype(np.float32)
+    lm = lm * (sub[..., 3] > 60) * dil(addm, 1)[y0:y1, x0:x1]  # 足した所とそのすぐ隣だけ
+    sub[..., :3] = sub[..., :3] * (1 - lm[..., None]) + gold[None, None, :] * lm[..., None]
+    cell[y0:y1, x0:x1] = np.clip(sub, 0, 255).astype(np.uint8)
+
+
+HAIR_DEHAZE = {'sorashido'}  # 髪のふちに元絵の青白い光(もや)が残る子。ふちを髪の内側の色で塗り直す
+
+
+def dehaze_hair(arr, head_frac=0.15, band=10):
+    """髪のふち(体の上 head_frac・ふちから band 画素)に残った青白いもやを直す。
+    白っぽく明るい(青 >= 赤-5・平均 140 より上)か、はっきり青い(青 > 赤+20・平均 70 より上)で、
+    肌色(赤が青より 15 以上大きい)でない画素をもやとみなし、
+    不透明度 160 未満は消し、それ以上は内側の髪の色で塗り直す(毛先の形は残す)。着物は範囲の外なので触らない。
+    体(いちばん大きい塊)だけを見るので、離れた涙・汗の記号は触らない。"""
+    ai = arr.astype(np.int32)
+    al = ai[..., 3]
+    ys = np.nonzero((al > 128).any(axis=1))[0]
+    if not len(ys):
+        return arr
+    head = np.zeros(al.shape, bool)
+    head[ys[0]:ys[0] + int((ys[-1] - ys[0]) * head_frac)] = True
+    o = al >= 128
+    r, g, b = ai[..., 0], ai[..., 1], ai[..., 2]
+    lum = (r + g + b) / 3
+    edge = (al > 8) & ~ero(o, band) & head
+    body = label_keep(o & head, 0.5)  # 体(いちばん大きい塊)だけ。涙・汗の記号は離れた塊なので触らない
+    pale = edge & dil(body, 1) & (((b >= r - 5) & (lum > 140)) | ((b > r + 20) & (lum > 70))) & ~(r > b + 15)
+    out = arr.copy()
+    out[..., 3] = np.where(pale & (al < 160), 0, out[..., 3])
+    keep = pale & (al >= 160)
+    known = o & ~pale & head & (r >= b - 10)  # 塗り直しの色は青くない髪から広げる
+    col = fill_colors(arr[..., :3].astype(np.float32), known, band + 4)
+    # 色は内側の髪から、明るさは元の画素から(毛の筋の濃淡を残す)
+    fl = col.mean(axis=2) + 1e-3
+    k = np.clip(lum / fl, 0.6, 1.4)[..., None]
+    # 消す画素も色を塗り直す(縮めるときに、透明な画素の青白い色がふちへにじまないように)
+    out[..., :3] = np.where(pale[..., None], np.clip(col * k, 0, 255).astype(np.uint8), out[..., :3])
+    return out
+
+
 def seam_cells(file, row_cuts, per_row):
     """シートを段の切れ目で分け、各段を縫い目で per_row 人に分ける。元の大きさのまま、ほかの人を消した絵を返す。"""
     a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
@@ -118,6 +288,18 @@ def seam_cells(file, row_cuts, per_row):
             m = (xx[None, :] >= cuts[i][:, None]) & (xx[None, :] < cuts[i + 1][:, None])
             c[y0:y1][m] = a[y0:y1][m]
             out.append(c)
+        if file in HEM_MEND:
+            band_cells = out[-per_row:]
+            for i in range(1, per_row):
+                p = cuts[i]
+                op = np.nonzero(al[y0:y1][np.arange(y1 - y0), p] >= 128)[0]
+                if len(op) < 8:
+                    continue
+                ya, yb = int(op.min()), int(op.max())
+                for k, side in ((i - 1, 1), (i, -1)):
+                    seg = band_cells[k][y0:y1]
+                    mend_hem(seg, a[y0:y1], p, ya, yb, side)
+                    band_cells[k][y0:y1] = seg
     return out
 
 
@@ -526,6 +708,8 @@ def main():
             if True:
                 # 体の不透明度が 252〜253 の絵なので、245 以上は 255 にそろえる(ほんの少し透けるのを防ぐ)。体のまわりの光も消す
                 arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
+                if key in HAIR_DEHAZE:
+                    arr[...] = dehaze_hair(arr)
                 jobs.append(('%s__%s' % (key, e),
                              lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio)))
