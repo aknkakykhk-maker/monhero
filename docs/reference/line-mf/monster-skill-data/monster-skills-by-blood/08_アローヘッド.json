@@ -1,0 +1,728 @@
+{
+  "blood": "アローヘッド",
+  "counts": {
+    "skills": 18
+  },
+  "skills": [
+    {
+      "skillId": "sk-0308",
+      "name": "怪光弾",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0808",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 21,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0309",
+      "name": "爪",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 12,
+      "damage": "D+",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0805",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0815",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 22,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0310",
+      "name": "拳",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 8,
+      "damage": "F+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0804",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 23,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0311",
+      "name": "跳爪",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "B+",
+      "accuracy": "F",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0805",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0820",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0851",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 24,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0312",
+      "name": "針",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0343",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": {
+            "monsterId": "0852",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0255",
+          "unlock": {
+            "monsterId": "0852",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0804",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0852",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 25,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0313",
+      "name": "避雷針",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "遠",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0344",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0850",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 26,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0314",
+      "name": "地爆",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0343",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0815",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0817",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 27,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0315",
+      "name": "瞬突針",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "A+",
+      "gutsDown": "E",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0343",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0817",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0851",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 28,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0316",
+      "name": "回転突爆",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "近",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "A",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0820",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "0820",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0820",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 29,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0317",
+      "name": "地雷針",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 31,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0345",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0852",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0850",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 30,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0318",
+      "name": "針束爆",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0346",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0343",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0852",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 31,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0319",
+      "name": "怪光インパクト",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "零",
+      "rank": 4,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 37,
+      "damage": "S+",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0347",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0086",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0817",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 32,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0320",
+      "name": "地来襲",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "B",
+      "accuracy": "A+",
+      "gutsDown": "E",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0348",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0349",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0820",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 33,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0321",
+      "name": "超怪光弾",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "S+",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0350",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0238",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "0851",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "0851",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0851",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 34,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0322",
+      "name": "三極魔鉱砲",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "A",
+      "accuracy": "C+",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0351",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0348",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0850",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0850",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0850",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 35,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0667",
+      "name": "怪光弾・黒",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0850",
+        "0817"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 36,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0668",
+      "name": "回転突爆・毒",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "近",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "B",
+      "accuracy": "C+",
+      "gutsDown": "C+",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0284",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0850"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 37,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0669",
+      "name": "地雷毒針",
+      "version": 1,
+      "blood": "アローヘッド",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 33,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "B+",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0345",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0817"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 38,
+      "status": "verified"
+    }
+  ]
+}

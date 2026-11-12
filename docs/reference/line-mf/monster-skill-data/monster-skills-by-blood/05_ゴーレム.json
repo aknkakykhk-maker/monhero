@@ -1,0 +1,989 @@
+{
+  "blood": "ゴーレム",
+  "counts": {
+    "skills": 23
+  },
+  "skills": [
+    {
+      "skillId": "sk-0292",
+      "name": "のびーるパンチ",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0505",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0508",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0511",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0553",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0550",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 204,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0293",
+      "name": "でこぴん",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "D+",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0521",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0524",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 205,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0294",
+      "name": "キック",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "C",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0517",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0552",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 206,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0295",
+      "name": "地震",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0321",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0517",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 207,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0296",
+      "name": "大ビンタ",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0323",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0502",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 208,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0297",
+      "name": "アッパー",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0524",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0551",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 209,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0298",
+      "name": "ビンタ",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "0511",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0298",
+          "unlock": {
+            "monsterId": "0511",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0511",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0525",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0550",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0554",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 210,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0299",
+      "name": "大でこぴん",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 31,
+      "damage": "A",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0502",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 211,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0300",
+      "name": "フライングプレス",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "S",
+      "accuracy": "F+",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0525",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 212,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0301",
+      "name": "合掌",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "B+",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0550",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "0550",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0550",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0554",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 213,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0302",
+      "name": "ハエたたき",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0552",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0553",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0551",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 214,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0303",
+      "name": "竜巻アタック",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 39,
+      "damage": "S",
+      "accuracy": "E+",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0325",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0326",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "0502",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "0502",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0502",
+          "rarity": 5
+        },
+        {
+          "monsterId": "0525",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 215,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0304",
+      "name": "ぐるぐるアタック",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "S+",
+      "accuracy": "D+",
+      "gutsDown": "A",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0327",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0326",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0552",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "0552",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0552",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 216,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0305",
+      "name": "大ハエタタキ",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 41,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "S",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0328",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0326",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0551",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 217,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0306",
+      "name": "大キック",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "S+",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0329",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0326",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0553",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "0553",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0553",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 218,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0307",
+      "name": "掌打",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 48,
+      "damage": "S+",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0330",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0331",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0554",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0554",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0554",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 219,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0652",
+      "name": "アイスビンタ",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0323",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0553"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 220,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0653",
+      "name": "アイスでこぴん",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 31,
+      "damage": "A",
+      "accuracy": "F",
+      "gutsDown": "E",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0322",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0553"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 221,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0654",
+      "name": "雄叫び",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "G",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0600",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0601",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0551"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 222,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0655",
+      "name": "硬質化パンチ",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "中",
+      "rank": 4,
+      "moveTo": "遠",
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0602",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0372",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0551"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 223,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0656",
+      "name": "大岩落とし",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S+",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0603",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0604",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0551"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 224,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0657",
+      "name": "トレインアタック",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "近",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "A",
+      "accuracy": "C+",
+      "gutsDown": "F",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0605",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0326",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0554"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 225,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0658",
+      "name": "でこぴん・腐",
+      "version": 1,
+      "blood": "ゴーレム",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0025",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0550"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 226,
+      "status": "verified"
+    }
+  ]
+}

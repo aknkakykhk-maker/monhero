@@ -1,0 +1,1158 @@
+{
+  "blood": "ユグドラシル",
+  "counts": {
+    "skills": 30
+  },
+  "skills": [
+    {
+      "skillId": "sk-0573",
+      "name": "空中脳天撃",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "D",
+      "accuracy": "C+",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0528",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2823",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2852",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 809,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0574",
+      "name": "グリーンライト",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2850",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 810,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0575",
+      "name": "スターボム",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0529",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2813",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 811,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0576",
+      "name": "頭突き",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "零",
+      "rank": 1,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2851",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 812,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0577",
+      "name": "ワンダーブレイズ",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 15,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0530",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2827",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 813,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0578",
+      "name": "ぴろぴろ舌",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": {
+            "monsterId": "2823",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0255",
+          "unlock": {
+            "monsterId": "2823",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2823",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 814,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0579",
+      "name": "メニーウィング",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2809",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2828",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 815,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0580",
+      "name": "月面水爆",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "D+",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0413",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0531",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2809",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2813",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 816,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0581",
+      "name": "大玉転がし",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "C",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0354",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2851",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 817,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0582",
+      "name": "メテオストーム",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0532",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2827",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2828",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2850",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2852",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 818,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0583",
+      "name": "ヘビーレイン",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0533",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0534",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "2828",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "2828",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2828",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 819,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0584",
+      "name": "パピヨンバースト",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "A",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0535",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0536",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "2813",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2813",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2813",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 820,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0585",
+      "name": "キャンディボム",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "C",
+      "accuracy": "A+",
+      "gutsDown": "S",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0537",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0538",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "2827",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "2827",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2827",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 821,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0586",
+      "name": "苺大噴",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "A",
+      "accuracy": "B+",
+      "gutsDown": "E",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0539",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0540",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2823",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 822,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0587",
+      "name": "シャドウレギオン",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "A+",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0541",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0542",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2852",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 823,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0588",
+      "name": "エターナルアーク",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 39,
+      "damage": "B+",
+      "accuracy": "B",
+      "gutsDown": "S+",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0543",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0544",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2850",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 824,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0589",
+      "name": "コスモフルーツ",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 41,
+      "damage": "S+",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0545",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0282",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2851",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2851",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2851",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 825,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0590",
+      "name": "オーロラハック",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "S+",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0546",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0547",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2809",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2809",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2809",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 826,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0783",
+      "name": "「増殖」",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "E",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0689",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2850"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 827,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0784",
+      "name": "“飛び回る蜂”",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0286",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2850"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 828,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0785",
+      "name": "メニーウィング・翠",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "B+",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2850",
+        "2851"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 829,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0786",
+      "name": "「光華」",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0690",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0691",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2850"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 830,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0787",
+      "name": "ライスシャワー",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "F",
+      "accuracy": "C+",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0692",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2851"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 831,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0788",
+      "name": "ケーキ入刀",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0548",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0364",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2851"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 832,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0789",
+      "name": "絶望のオーラ",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0693",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0694",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2852"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 833,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0790",
+      "name": "グレートソード",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 39,
+      "damage": "A",
+      "accuracy": "C+",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0695",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0696",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2852"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 834,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0791",
+      "name": "ニャニャーレイン",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0697",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0086",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2813"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 835,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0792",
+      "name": "メテオボム",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2827"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 836,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0793",
+      "name": "メテオシャワー",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "A",
+      "accuracy": "B+",
+      "gutsDown": "F+",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0698",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0699",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2827"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 837,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0794",
+      "name": "空中氷天撃",
+      "version": 1,
+      "blood": "ユグドラシル",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 14,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0700",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2809"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 838,
+      "status": "verified"
+    }
+  ]
+}

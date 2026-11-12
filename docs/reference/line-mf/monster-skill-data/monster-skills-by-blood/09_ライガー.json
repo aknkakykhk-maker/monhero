@@ -1,0 +1,1115 @@
+{
+  "blood": "ライガー",
+  "counts": {
+    "skills": 28
+  },
+  "skills": [
+    {
+      "skillId": "sk-0384",
+      "name": "体当たり",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "D+",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0352",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0906",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0909",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 473,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0385",
+      "name": "ひっかき",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "F",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0354",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0910",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0911",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 474,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0386",
+      "name": "かみつき",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "E",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "0919",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "0919",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0919",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0921",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 475,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0387",
+      "name": "影撃",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0930",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 476,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0388",
+      "name": "冷気弾",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "E",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0906",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0923",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0928",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0950",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 477,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0389",
+      "name": "ワンツー",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "C+",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0355",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0910",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0924",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 478,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0390",
+      "name": "雷撃",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0356",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0357",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0911",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 479,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0391",
+      "name": "空中回転アタック",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "近",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C+",
+      "accuracy": "S",
+      "gutsDown": "F",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0358",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0359",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0924",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 480,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0392",
+      "name": "コンビネーション",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0354",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0360",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0950",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 481,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0393",
+      "name": "超雷撃",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0361",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0357",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0930",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 482,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0394",
+      "name": "雷撃コンボ",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 29,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0362",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0357",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0928",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 483,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0395",
+      "name": "ブリザード",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0199",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0924",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 484,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0396",
+      "name": "突き刺し",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "B+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0363",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0364",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0923",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "0923",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0923",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 485,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0397",
+      "name": "落雷共鳴",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 48,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0365",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0366",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0930",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "0930",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0930",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 486,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0398",
+      "name": "ライジングブースト",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 49,
+      "damage": "B+",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0367",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0316",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0950",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 487,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0399",
+      "name": "終狼咆哮",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "B+",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0368",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0369",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0928",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0928",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0928",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 488,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0670",
+      "name": "炎斬",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0018",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0930",
+        "0990"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 489,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0671",
+      "name": "羅生門召喚",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 33,
+      "damage": "A",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0100",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0612",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0930"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 490,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0672",
+      "name": "雷撃20ギガ",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0357",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0356",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 491,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0673",
+      "name": "つながるワンツー",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "B",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0613",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 492,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0674",
+      "name": "メリハリ冷気弾",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 29,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 493,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0675",
+      "name": "無制限バースト",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0014",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 494,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0676",
+      "name": "王狼爪",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 1,
+      "moveTo": "遠",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0614",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0990"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 495,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0677",
+      "name": "王狼炎翔",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "遠",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 51,
+      "damage": "A+",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "SS",
+      "abilities": [
+        {
+          "abilityId": "sab-0615",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0616",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0990",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0990",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0990"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 496,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0678",
+      "name": "神喰牙",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 13,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0353",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0928"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 497,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0679",
+      "name": "復活の竜炎",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "近",
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "E",
+      "accuracy": "B+",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0617",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0950"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 498,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0680",
+      "name": "希望と勝利の伝説",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "B",
+      "accuracy": "C+",
+      "gutsDown": "S",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0618",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0619",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0950"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 499,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0681",
+      "name": "B・W・F",
+      "version": 1,
+      "blood": "ライガー",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "S+",
+      "accuracy": "C",
+      "gutsDown": "B+",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0620",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0621",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0950"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 500,
+      "status": "verified"
+    }
+  ]
+}
