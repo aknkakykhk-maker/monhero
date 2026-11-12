@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d12099dbd5f497e
+// source-sha256: eca793fd686f7c77
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117854,6 +117854,78 @@ function AssistantLifeRoomBed({
   }, "💤"));
 }
 const U0 = F => F * 2.63;
+const assistantLifeMiniExpr = pid => {
+  try {
+    const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[pid] : null;
+    return {
+      happy: 'happy',
+      lonely: 'troubled',
+      restless: 'surprise',
+      sulky: 'angry',
+      sleepy: 'normal',
+      eager: 'excited'
+    }[m] || 'happy';
+  } catch (_) {
+    return 'happy';
+  }
+};
+function AssistantLifeRoomMini({
+  who,
+  src,
+  g,
+  calm,
+  delay = 0,
+  onPress = null,
+  noTouch = false
+}) {
+  const h = Math.round(g.s * 1.3),
+    w = Math.round(h * 0.5);
+  return React.createElement("button", {
+    type: "button",
+    "data-assistant-life-roomview-mini": who.id,
+    "aria-label": who.name,
+    onClick: onPress || undefined,
+    className: "absolute",
+    style: {
+      left: Math.max(2, g.left + (g.s - w) / 2),
+      top: g.y + g.s - h,
+      width: w,
+      height: h,
+      padding: 0,
+      background: 'none',
+      border: 0,
+      cursor: onPress ? 'pointer' : 'default',
+      pointerEvents: noTouch ? 'none' : undefined
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: -4,
+      right: -4,
+      bottom: -3,
+      height: 10,
+      borderRadius: '50%',
+      background: 'radial-gradient(#0006,transparent 70%)'
+    }
+  }), React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: 0,
+      height: '100%',
+      width: 'auto',
+      maxWidth: 'none',
+      transform: 'translateX(-50%)',
+      transformOrigin: '50% 100%',
+      filter: 'drop-shadow(0 0 .6px #2a1414cc)',
+      animation: calm ? 'none' : `mhlRvBob 2.6s ease-in-out ${delay}s infinite`
+    }
+  }));
+}
 function AssistantLifeRoomScene({
   id,
   look = 'noon',
@@ -117956,11 +118028,39 @@ function AssistantLifeRoomScene({
   const asleep = people.length > 0 && people.every(x => sleepIds.includes(x));
   const frontKind = asleep ? 'bed' : ASSISTANT_LIFE_ROOM_FRONT[id] || 'desk';
   const frontW = Math.min(W - 24, lay ? Math.round(Math.max(...lay.map(p => p.cx + p.w / 2)) - Math.min(...lay.map(p => p.cx - p.w / 2)) + 60) : Math.round(W * 0.6));
-  const mN = team.length,
+  const minis = !asleep ? people.slice(0, 4).filter(pid => !sleepIds.includes(pid)).map(pid => {
+    const a = assistantById(pid);
+    const ex = assistantLifeMiniExpr(pid);
+    const src = a && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(a, ex) : null;
+    return src ? {
+      pid,
+      who: a,
+      src
+    } : null;
+  }).filter(Boolean) : [];
+  const miniN = minis.length,
+    mN = team.length + miniN,
     rows = mN > 4 ? 2 : 1,
     perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  const rvSlot = j => {
+    const row = rows === 2 && j < perRow ? 0 : 1,
+      k = rows === 2 && j >= perRow ? j - perRow : j,
+      cnt = rows === 2 ? row === 0 ? perRow : mN - perRow : mN;
+    const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
+    const span = W - 24,
+      x = 12 + span / cnt * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
+    const yTop = asleep ? floorY + 70 : floorY + 18;
+    const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4)));
+    const d = Math.round((j % 2 ? -1 : 1) * Math.min(28, span / cnt / 3));
+    return {
+      s,
+      y,
+      d,
+      left: Math.max(4, Math.min(W - s - 4, x))
+    };
+  };
   const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = {
     W,
@@ -117989,7 +118089,7 @@ function AssistantLifeRoomScene({
     style: {
       background: `linear-gradient(${roomLook.wall[0]},${roomLook.wall[1]})`
     }
-  }, React.createElement("style", null, `@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`), React.createElement("div", {
+  }, React.createElement("style", null, `@keyframes mhlRvBob{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.025)}}@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`), React.createElement("div", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -118008,7 +118108,7 @@ function AssistantLifeRoomScene({
       right: 0,
       top: floorY,
       bottom: 0,
-      background: 'repeating-linear-gradient(90deg,#a8713f 0 64px,#9a6538 64px 66px),linear-gradient(#b07a4a,#7d5230)',
+      background: 'repeating-linear-gradient(90deg,#c4895a 0 64px,#b87c4d 64px 66px),linear-gradient(#cf9562,#9a6a40)',
       backgroundBlendMode: 'multiply',
       borderTop: '4px solid #6b4426'
     }
@@ -118082,54 +118182,7 @@ function AssistantLifeRoomScene({
     className: "whitespace-nowrap text-[14px] font-black text-white"
   }, away.title), away.sub && React.createElement("p", {
     className: "whitespace-nowrap text-[10.5px] font-bold text-slate-300"
-  }, away.sub)), team.map((t, i) => {
-    const row = rows === 2 && i < perRow ? 0 : rows === 2 ? 1 : 1,
-      k = rows === 2 && i >= perRow ? i - perRow : i,
-      cnt = rows === 2 ? row === 0 ? perRow : mN - perRow : mN;
-    const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
-    const span = W - 24,
-      x = 12 + span / cnt * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
-    const yTop = asleep ? floorY + 70 : floorY + 18;
-    const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4)));
-    const d = Math.round((i % 2 ? -1 : 1) * Math.min(28, span / cnt / 3));
-    const mt = {
-      monster: t.monster,
-      nick: t.nick,
-      dye: {
-        colors: t.colors || []
-      }
-    };
-    return React.createElement("button", {
-      key: `${t.monster}-${i}`,
-      type: "button",
-      "data-assistant-life-roomview-masmon": i,
-      "aria-label": t.nick || 'マスモン',
-      onClick: () => onMasmon ? onMasmon(i) : setTip(t.nick),
-      className: "absolute",
-      style: {
-        left: Math.max(4, Math.min(W - s - 4, x)),
-        top: y,
-        width: s,
-        height: s,
-        '--d': `${d}px`,
-        animation: calm ? 'none' : `mhlRvWalk ${7 + i % 3 * 2}s ease-in-out ${i * 0.7}s infinite`
-      }
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      style: {
-        position: 'absolute',
-        left: 6,
-        right: 6,
-        bottom: -3,
-        height: 10,
-        borderRadius: '50%',
-        background: 'radial-gradient(#0006,transparent 70%)'
-      }
-    }), typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
-      t: mt,
-      size: s
-    }) : null);
-  }), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
+  }, away.sub)), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
     items: layoutEdit.items,
     geom: layoutGeom,
     sel: layoutEdit.sel,
@@ -118157,6 +118210,70 @@ function AssistantLifeRoomScene({
     style: {
       background: '#ff8a3018'
     }
+  }), people.length > 0 && !asleep && minis.length > 0 && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-assistant-life-roomview-floorlight": true,
+    className: "pointer-events-none absolute inset-x-0",
+    style: {
+      top: floorY,
+      height: Math.max(60, H - dockH - floorY),
+      background: night ? 'linear-gradient(#ffd99a88,#ffd99a50 55%,transparent)' : 'linear-gradient(#fff3d052,#fff3d022 55%,transparent)'
+    }
+  }), team.map((t, i) => {
+    const g = rvSlot(i + miniN),
+      s = g.s,
+      y = g.y,
+      d = g.d;
+    const mt = {
+      monster: t.monster,
+      nick: t.nick,
+      dye: {
+        colors: t.colors || []
+      }
+    };
+    return React.createElement("button", {
+      key: `${t.monster}-${i}`,
+      type: "button",
+      "data-assistant-life-roomview-masmon": i,
+      "aria-label": t.nick || 'マスモン',
+      onClick: () => onMasmon ? onMasmon(i) : setTip(t.nick),
+      className: "absolute",
+      style: {
+        left: g.left,
+        top: y,
+        width: s,
+        height: s,
+        pointerEvents: layoutOn && layoutEdit ? 'none' : undefined,
+        '--d': `${d}px`,
+        animation: calm ? 'none' : `mhlRvWalk ${7 + i % 3 * 2}s ease-in-out ${i * 0.7}s infinite`
+      }
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      style: {
+        position: 'absolute',
+        left: 6,
+        right: 6,
+        bottom: -3,
+        height: 10,
+        borderRadius: '50%',
+        background: 'radial-gradient(#0006,transparent 70%)'
+      }
+    }), typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
+      t: mt,
+      size: s
+    }) : null);
+  }), minis.map((m, j) => {
+    const g = rvSlot(j);
+    return React.createElement(AssistantLifeRoomMini, {
+      key: m.pid,
+      who: m.who,
+      src: m.src,
+      g: g,
+      calm: calm,
+      delay: j * 0.6,
+      noTouch: !!(layoutOn && layoutEdit),
+      onPress: onPerson ? () => onPerson(m.pid) : null
+    });
   }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? null : React.createElement(AssistantLifeRoomFigure, {
     key: x.pid,
     who: x.who,
