@@ -532,6 +532,141 @@ grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デ�
   <li>ごはんは<b>大会のあとのごほうび</b>であげる。メインのボタンにもターンのはじめにも置かない</li>
   <li>結果(優勝・賞金・ごほうび)の上に小窓が出て、3つから1つ選ぶ(あげなくてもよい)。値段(名声)と効き目を先に見せる。物と数字は仮</li></ul>`);
 
+// ================= 8. 回3以降の止め絵(2026-11-12 窓口の依頼): 組み合わせ表・勝利と賞品・最終評価と能力ポイント・総合力ランキング・ゲームオーバー・博士の導き書とルーペ =================
+// 8体の大会の組み合わせ表。[名前, 絵, 総合力, 印] 印: me=自分 rv=ライバル ch=王者
+const BR = [['もちまる', 'mocchi', '6,240', 'me'], ['ぷるぷる', 'ham', '5,120', ''], ['らんぽ', 'tiger', '5,880', ''], ['こんこ', 'kyubi', '6,010', 'rv'], ['いわお', 'golem', '6,410', 'ch'], ['ミケ', 'suezo', '4,990', ''], ['すいすい', 'monol', '5,430', ''], ['ぴくる', 'pixie', '5,200', '']];
+const brCell = ([n, m, p, k], i) => `<div class="v-bc ${k}" style="grid-row:${i + 1};grid-column:1"><img src="${M(m + '.png')}"><div><b>${n}</b><small>${p}</small></div>${k === 'rv' ? '<span class="mk rv"><img src="' + F('kiki', 'happy') + '">ライバル</span>' : ''}${k === 'ch' ? '<span class="mk ch">👑 王者</span>' : ''}</div>`;
+const brSlot = (col, row, span, cls = '', txt = '?') => `<div class="v-bs ${cls}" style="grid-row:${row} / span ${span};grid-column:${col}">${txt}</div>`;
+const bracket = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
+  ${band()}
+  <div class="v-h">🌸 春の大会 ★★★ の組み合わせ<small>8体のトーナメント・勝ち進むと3試合・出ると1ターン使う</small></div>
+  <div class="v-brh"><span>1回戦</span><span>準決勝</span><span>決勝</span><span>優勝</span></div>
+  <div class="v-brk">${BR.map(brCell).join('')}
+    ${[1, 3, 5, 7].map((r, i) => brSlot(2, r, 2, i === 0 ? 'me' : '', i === 0 ? 'もちまる' : '?')).join('')}
+    ${[1, 5].map((r, i) => brSlot(3, r, 4, i === 0 ? 'me' : '', i === 0 ? 'もちまる' : '?')).join('')}
+    ${brSlot(4, 1, 8, 'win', '🏆<small>優勝は<br>だれ?</small>')}
+  </div>
+  <div class="v-bleg"><span><b class="rvd"></b>ライバル(自分の助手のフレンドの子・ごほうび大)</span><span><b class="chd"></b>王者(前の大会の優勝)</span></div>
+  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「1回戦は ぷるぷる! 勝ったら準決勝で ライバルの こんこ だよ。<em style="font-style:normal;color:#be185d">王者のいわお</em>は決勝まで当たらないね」</div></div></div>
+</div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 1回戦へ</span></div>`;
+// 試合のあとの勝利と賞品
+const PRZ = [['🏅', '称号', '「春の覇者」を手に入れた!', 'new', 'NEW'], ['🔷', '能力ポイント', '+10(いま 24 → 34)', '', ''], ['🎫', '修行チケット', '+1(3枚 → 4枚)', '', ''], ['💰', '賞金', '+750(名声 320 → 1,070)', '', ''], ['⭐', '人気', '+4(45 → 49)', '', ''], ['💪', 'ちから', '+6', '', '']];
+const prize = `${hdr('💰 名声 1,070', '中断')}<div class="v-body">
+  ${band({ hp: 41, st: 40, pow: '6,330' })}
+  ${scene({ bg: 'monhero_plaza_evening', back: '<div class="v-burst"></div>', monStyle: 'bottom:40%;height:34%', grStyle: 'bottom:calc(40% - 5px)', inner: `
+    <div class="v-stamp" style="top:4%;font-size:46px">優勝!<small>🌸 春の大会 ★★★ ・ 決勝で いわお に 3−1</small></div>
+    <div class="v-rvw"><img src="${F('kiki', 'happy')}">ライバルの こんこ にも 勝った!<b>ごほうび大</b></div>
+    <div class="v-trophy">🏆</div>` })}
+  <div class="v-prz">${PRZ.map(([e, n, t, c, nw]) => `<div class="${c}"><span class="e">${e}</span><b>${n}</b><span class="t">${t}</span>${nw ? `<i>${nw}</i>` : ''}</div>`).join('')}</div>
+  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ライバルに勝ったから、ごほうびがいつもの倍! つぎは ごはんだよ!」</div></div></div>
+</div><div class="v-ft"><span>おぼえる(称号のきろく)</span><span class="go">🍽 ごはんへ ▶</span></div>`;
+grp('B', '8a. 大会の組み合わせ表と、勝ったあとの賞品', '大会の受付のあと、能力の比べの前に「組み合わせ表」(8体のトーナメント)。自分は黄色の枠、ライバルは顔の丸の印、王者(前の優勝)は王冠の印。勝ったあとは賞品の画面(称号・能力ポイント・修行チケット・賞金・人気・能力)で、そのあと「ごはん」(C3)へ。', [
+  { id: 'B1', label: '大会の組み合わせ表(8体・ライバル・王者)', html: bracket },
+  { id: 'B2', label: '優勝のあと(称号・能力ポイント・修行チケットの賞品)', html: prize },
+], `<h3>組み合わせ表(B1)</h3><ul>
+  <li>左の列が1回戦の8体(絵・名前・総合力)。右へ 準決勝 → 決勝 → 優勝 と狭まる。自分の勝ち上がりの道だけ黄色い線</li>
+  <li><b>ライバル</b>: 札と同じ「顔の丸+ライバル」の印(C1と同じ)。<b>王者</b>: 前の大会の優勝者に👑の印。当たる順が分かるよう、下に助手が一言</li>
+  <li>ボタンは「結果だけ見る」と「1回戦へ」(観戦)</li></ul>
+  <h3>勝利と賞品(B2)</h3><ul>
+  <li>称号が新しいときだけ「NEW」。能力ポイントは足したあとの数も見せる(使い道は能力ボタンと引退のとき)。修行チケットは枚数の変化つき</li>
+  <li>ライバルに勝ったときは、景色の上に小さな札「ごほうび大」(賞品が倍になる印)。数字は仮</li>
+  <li>つぎは「ごはんへ」で、大会のあとのごはん(C3)</li></ul>`);
+
+// ---- 引退: 最終評価(C〜S)・能力ポイントをまとめて使う
+const GR = ['C', 'B', 'A', 'S'];
+const grade = `${hdr('46 / 46ターン', 'とじる', '')}<div class="v-body">
+  <div class="v-h">🎓 最終の評価<small>育成のおわりに、総合力で C 〜 S が決まる</small></div>
+  <div class="v-rank"><img class="mon2" src="${M('mocchi.png')}"><div class="tx"><small>最終の評価</small><div class="L">A</div></div><div class="tx"><small>総合力</small><b>11,480</b><small style="color:#cbd5e1;margin-top:3px">S まで あと 2,520</small></div></div>
+  <div class="v-gl">${GR.map((g, i) => `<div class="${i === 2 ? 'now' : i < 2 ? 'ok' : ''}"><b>${g}</b><small>${['〜 7,999', '8,000 〜', '11,000 〜', '14,000 〜'][i]}</small></div>`).join('')}</div>
+  ${stRow(null, -1, FIN)}
+  <div class="v-card pk"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「A だよ A! あと ちょっとで S だったね。能力ポイントが残ってるから、使い切ってからおわろ!」</div></div></div>
+  <div class="v-card"><div class="v-kv"><b>残りポイント</b><span><b class="yel">34</b>(使うと総合力が上がる)</span></div><div class="v-kv"><b>そのあと</b><span>アシスト能力をポイントで取る → 保存枠へ</span></div></div>
+  <div style="flex:1"></div>
+  <div class="v-big">🔷 能力ポイントを使う(34)</div>
+</div>`;
+const pt = `${hdr('46 / 46ターン', 'もどる', '')}<div class="v-body">
+  <div class="v-pt"><div class="n">能力ポイント<b>6<small style="font-size:11px;color:#cbd5e1"> / 34</small></b></div><div class="r">使った <span class="yel">28</span>・残り 6<br>総合力 11,480 → <span class="yel">11,712</span> <i class="rk rA">A</i></div></div>
+  <div class="v-pq"><span>まとめて</span><i>全部ちから</i><i>弱いところ</i><i class="on">バランス</i><i>もどす</i></div>
+  <div class="v-pa">${ST.map((s, i) => { const add = [4, 8, 4, 6, 2, 4][i]; return `<div><span class="nm">${s[1]} ${SHORT[i]}</span><span class="v0">${FIN[i]}</span><span class="ad">${add ? '+' + add * 10 : ''}</span><span class="st"><i>−</i><b>${add}</b><i>＋</i></span><span class="cs">1pt = +10</span></div>`; }).join('')}</div>
+  <div class="v-card"><div class="v-kv"><b>伸びすぎ注意</b><span>能力は 999 まで。ちからは あと 231</span></div></div>
+  <div style="flex:1"></div>
+</div><div class="v-ft"><span>やり直す</span><span class="go">これで決める ▶</span></div>`;
+GROUPS.find((g) => g.id === 'E').phones.unshift({ id: 'E0', label: '最終の評価(C〜S)と能力ポイントの案内', html: grade });
+GROUPS.find((g) => g.id === 'E').phones.splice(1, 0, { id: 'E3', label: '能力ポイントをまとめて使う', html: pt });
+GROUPS.find((g) => g.id === 'E').notes += `<h3>最終の評価と能力ポイント(2026-11-12・E0・E3)</h3><ul>
+  <li>E0: 評価は C・B・A・S の4段。総合力のしきい値をはしごで見せ、いまの段が光る。残りの能力ポイントがあると、下の大きなボタンが「能力ポイントを使う」になる</li>
+  <li>E3: 6つの能力に、ポイントを+/−で振る。上に「まとめて」の4つ(全部ちから・弱いところ・バランス・もどす)。総合力と評価が決める前に見える。決めたあとは変えられない。数字は仮</li></ul>`;
+
+// ---- 総合力ランキング
+const RK = [['1', 'mocchi', 'S', '16,420', 'もちまる', 'ゆうた', 20], ['2', 'tiger', 'S', '15,880', 'とらきち', 'あやか', 200], ['3', 'golem', 'A', '14,950', 'いわお', 'そうた', 140], ['4', 'monol', 'A', '14,310', 'すいすい', 'みどり', 300], ['5', 'kyubi', 'A', '13,900', 'こんこ', 'ゆうた', 330], ['6', 'suezo', 'B', '12,260', 'ミケ', 'たくみ', 60], ['7', 'pixie', 'B', '11,980', 'ぴくる', 'ひなた', 270], ['8', 'ham', 'B', '11,500', 'ぷるぷる', 'れん', 100], ['9', 'ghost', 'B', '11,210', 'ふわり', 'さくら', 240], ['10', 'dreamy', 'B', '10,940', 'ゆめこ', 'だいき', 310], ['11', 'golem', 'C', '10,300', 'ごろん', 'ななみ', 180], ['12', 'suezo', 'C', '9,870', 'めだま', 'けん', 120]];
+const VALX = [[880, 912, 640, 801, 560, 777]];
+const rkRow = ([n, m, g, p, nm, who, hue], i, open) => `<div class="v-rr${i === 0 ? ' top' : ''}${open === i ? ' open' : ''}"><div class="r1"><b class="no">${n}</b><span class="im"><img src="${M(m + '.png')}" style="filter:hue-rotate(${hue}deg)"></span><div class="nm"><b>${nm}</b><small>育てた人: ${who}</small></div><span class="gd">${rk(g)}</span><span class="pw">${p}</span></div>${open === i ? `<div class="r2">${ST.map((s, k) => `<span><small>${s[1]}${SHORT[k]}</small><b>${[880, 912, 640, 801, 560, 777][k]}</b></span>`).join('')}</div>` : ''}</div>`;
+const rankHead = (tab, sub) => `${hdr('', 'もどる', '')}<div class="v-body">
+  <div class="v-h">🏆 総合力ランキング<small>育て終えた子の、育てたときの総合力。1人1体まで・助手マスモンのランキングとは別</small></div>
+  <div class="v-tabs"><span class="${tab === 0 ? 'on' : ''}">全モンスター</span><span class="${tab === 1 ? 'on' : ''}">血統別</span></div>${sub}`;
+const rankAll = `${rankHead(0, '<div class="v-rsel">全体 <b>1,284体</b>・あなたの順位 <b class="yel">86位</b></div>')}
+  <div class="v-rl">${RK.map((r, i) => rkRow(r, i, 2)).join('')}</div>
+  <div class="v-rme"><b class="no">86</b><span class="im"><img src="${M('mocchi.png')}" style="filter:hue-rotate(20deg)"></span><div class="nm"><b>もちまる</b><small>育てた人: あなた</small></div><span class="gd">${rk('A')}</span><span class="pw">11,480</span></div>
+</div><div class="v-ft"><span>← もどる</span><span class="on" style="flex:1.6">押すと6能力が開く</span></div>`;
+const rankLine = `${rankHead(1, '<div class="v-lines">' + ['もっち系', 'ゴーレム系', 'ピクシー系', 'ドラゴン系', 'ゴースト系', '…'].map((n, i) => `<i class="${i === 0 ? 'on' : ''}">${n}</i>`).join('') + '</div><div class="v-rsel">もっち系 <b>203体</b>・あなたの順位 <b class="yel">12位</b></div>')}
+  <div class="v-rl">${RK.map((r, i) => rkRow([r[0], 'mocchi', r[2], r[3], r[4], r[5], r[6]], i, -1)).join('')}</div>
+  <div class="v-rme"><b class="no">12</b><span class="im"><img src="${M('mocchi.png')}" style="filter:hue-rotate(20deg)"></span><div class="nm"><b>もちまる</b><small>育てた人: あなた</small></div><span class="gd">${rk('A')}</span><span class="pw">11,480</span></div>
+</div><div class="v-ft"><span>← もどる</span><span class="on" style="flex:1.6">血統は 種類のまとまり</span></div>`;
+grp('R', '8b. 総合力ランキング(血統別・全モンスター)', '育て終えた子の総合力のランキング。上の切り替えで「全モンスター」と「血統別」。行は 順位・染めた姿・子の名前・評価・総合力・育てた人の名前。押すと6能力が開く。いちばん下に自分の順位を固定。助手マスモンのランキングとは別の表。', [
+  { id: 'R1', label: '全モンスター(3位の行が開いて6能力)', html: rankAll },
+  { id: 'R2', label: '血統別(上で血統をえらぶ)', html: rankLine },
+], `<h3>見せ方</h3><ul>
+  <li>切り替えは「全モンスター / 血統別」の2つ。血統別のときだけ、血統のえらぶ札の列が出る(横にスクロール)</li>
+  <li>1行: 順位(1〜3位は金・銀・銅の色)・染めた姿(染色したまま)・子の名前+育てた人の名前・評価(C〜S)・総合力</li>
+  <li>行を押すと下に6能力が開く(1行だけ)。自分の子はいつも下に固定</li>
+  <li>名前・順位・数字は仮。育てた人の名前は表の名前(個人の情報は載せない)</li></ul>`);
+
+// ---- デビュー戦3回負け
+const gameover = `${hdr('💰 名声 320', 'とじる')}<div class="v-body">
+  ${band({ hp: 22, st: 78, left: 0, all: 41, ph: 'デビュー期', ym: '1年目 3月', now: 0, fill: 90, pow: '1,980', rank: 'G' })}
+  ${scene({ bg: 'monhero_plaza_evening', cls: 'dk', monStyle: 'bottom:36%;height:30%;filter:grayscale(.6) drop-shadow(0 8px 5px #0009);transform:translateX(-50%) rotate(-8deg)', grStyle: 'bottom:calc(36% - 5px)', inner: `
+    <div class="v-stamp ng" style="top:5%;font-size:40px">育成は ここまで…<small>デビュー戦に 3回 負けた</small></div>
+    <div class="v-lives"><i></i><i></i><i></i><span>デビュー戦 0 / 3 のこり</span></div>` })}
+  <div class="v-card"><div class="v-kv"><b>やり直し</b><span>砂時計 ${hg(0, 16)} のこり <b>0 / 3</b>(つかいきった)</span></div><div class="v-kv"><b>記録</b><span>6ターン・訓練 4回・デビュー戦 0勝3敗</span></div><div class="v-kv"><b>もちかえり</b><span>名声はそのまま・使ったアイテムは戻らない(仮)</span></div></div>
+  <div class="v-card pk"><div class="row"><img class="fc" src="${F('myua', 'troubled')}"><div class="bub f1">「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! もちまるも、がんばったよ」</div></div></div>
+  <div style="flex:1"></div>
+</div><div class="v-ft"><span>きろくを見る</span><span class="go">もう1回 はじめから ▶</span></div>`;
+grp('G', '8c. デビュー戦に3回負けたとき(ゲームオーバー)', 'デビュー期のデビュー戦に3回負けると育成はおわり。砂時計(1回の育成で3回まで)も使い切った状態。叱るでも責めるでもなく、「もう1回はじめから」へすぐ戻れる。', [
+  { id: 'G1', label: 'ゲームオーバー(デビュー戦3回負け)', html: gameover },
+], `<h3>見せ方</h3><ul>
+  <li>暗い景色に沈んだ子と「育成は ここまで…」。デビュー戦の3つの印(のこりの回数)が全部消えた表示</li>
+  <li>やり直しの砂時計・この育成の記録・もちかえるもの(仮)を短く。助手は責めず、次へ向けた一言</li>
+  <li>ボタンは「もう1回 はじめから」(始めるまでの6段へ)と「きろくを見る」</li></ul>
+  <h3>社長に聞きたいこと</h3><ul><li>3回負けたときに「もちかえるもの」の扱い(使ったアイテム・名声・チケットを戻すか戻さないか)。この絵は戻さない案</li></ul>`);
+
+// ---- イッサ博士: 博士の導き書・博士のルーペを使ったとき
+const issa3 = `${hdr('💰 名声 320', '中断')}<div class="v-body">
+  ${band()}
+  ${issaScene(`<img class="v-issa" src="../art/issa-hakase.png">
+    <div class="v-itemfx">${icon('guide')}<small>博士の導き書<br>1度だけ 博士が現れる</small></div>
+    <div class="v-ev-h" style="top:auto;bottom:8px;border-radius:0 99px 99px 0"><small>導き書の力・1回だけ</small>イッサ博士があらわれた!</div>
+    <div class="v-ibub">「おや、ぼくの書類じゃないか! よく拾ってくれたねぇ。お礼に<b>実験</b>、やってく?」</div>`)}
+  <div class="v-card" style="border-color:#fde047"><div class="row"><span style="width:34px;height:34px;flex:none">${ICON.guide}</span><div class="f1 sub"><b style="color:#fde047">博士の導き書を使った</b>: 持ち物から使うと、そのターンの合間に 博士が1度だけ 現れる。使うと なくなる(×44 → ×43)</div></div></div>
+  <div class="v-card pk"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「博士が来た! いつもは ふいに来るけど、今日は呼べたね!」</div></div></div>
+  <div style="flex:1"></div>
+</div>${footGo('実験をする ▶', '⏩ とばす')}`;
+const IXL = IX.map((x) => [...x]);
+const dotsFull = '<span class="pr">成功<i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>';
+const issa4 = `${hdr('💰 名声 320', '中断')}<div class="v-body">
+  ${band()}
+  ${issaScene(`<img class="v-issa" src="../art/issa-hakase.png">
+    <div class="v-machine">⚙️💡<small>のびのび装置</small><img src="${M('mocchi.png')}" style="height:46%;aspect-ratio:1;object-fit:contain"></div>
+    <div class="v-itemfx lp">${icon('loupe')}<small>博士のルーペ<br>実験が成功する</small></div>
+    <div class="v-ibub">「そのルーペ、ぼくのお気に入り! それなら どれを選んでも <b>ばっちり成功</b>するよ!」</div>`)}
+  <div class="v-six">${IX.map(([n, d, ok, ng, c]) => `<div class="v-ix ${c} lp">${n}${dotsFull}<span class="ok">⭕ ${ok}</span><span class="ng">❌ ${ng}</span></div>`).join('')}
+    <div class="v-ix no">🙅 何もしない<span class="ok" style="color:#cbd5e1">ことわる。ルーペは なくならない</span></div></div>
+  <div class="v-card" style="border-color:#fde047;padding:5px 8px"><div class="row"><span style="width:28px;height:28px;flex:none">${ICON.loupe}</span><div class="f1 sub"><b style="color:#fde047">博士のルーペを使うと</b> この実験は成功の点が全部そろう。選んだあと はじめて なくなる</div></div></div>
+</div>${footGo('💪 ステータスアップを受ける', '← 考え直す')}`;
+GROUPS.find((g) => g.id === 'I').phones.push({ id: 'I3', label: '博士の導き書を使ったとき(博士が現れる)', html: issa3 }, { id: 'I4', label: '博士のルーペを使ったとき(6つとも成功)', html: issa4 });
+GROUPS.find((g) => g.id === 'I').notes += `<h3>博士の導き書・博士のルーペ(2026-11-12・I3・I4)</h3><ul>
+  <li><b>導き書(I3)</b>: 持ち物から使うと、そのターンの合間にイッサ博士が1度だけ現れる。名前は「博士の導き書」(参考のまま・社長)。使うと1つなくなる</li>
+  <li><b>ルーペ(I4)</b>: 実験の6つの選択の前に使う。成功の点が全部そろい(点が金色)、どれを選んでも成功。選んだあとにルーペがなくなる。「何もしない」ならなくならない</li></ul>`;
+
 // ================= 7. 横と小さい画面 =================
 grp('L', '7. 横(844×390)と、小さい画面(幅320)', '同じ部品のまま、横は「左に住む場所・右に帯と能力と行動のボタン」、幅320は字とすき間を詰める。はみ出し・字の切れがないことを撮るときに確かめている。', [
   { id: 'L1', label: '横 メイン', html: mainHtml(false), cls: 'land' },
