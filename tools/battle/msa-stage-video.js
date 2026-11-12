@@ -68,11 +68,18 @@ const server = http.createServer((req, res) => {
     await page.evaluate(() => new Promise((done) => {
       const { r, teamA, teamB } = window.__v;
       const frames = ambwFramesOf(r.log); const last = r.log.length - 1;
-      let d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#14102a;padding:200px 10px 0';
+      // 観戦の画面と同じ並び(上に相手の帯・まん中に場・下に自分の帯)。帯の部品が無い前の版は場だけ
+      let d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#221a44,#141026 40%);padding:120px 10px 0;color:#fff;font-weight:700';
       document.body.appendChild(d);
       const root = ReactDOM.createRoot(d);
-      const show = (pos, ended) => root.render(React.createElement('div', { className: 'msa' }, React.createElement('style', null, typeof MSA_CSS === 'string' ? MSA_CSS : ''),
-        React.createElement(MsaStage, { log: r.log, frames, pos, teams: { A: teamA, B: teamB }, venueImg: typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null, ended, win: ended ? r.winner : null, sound: false })));
+      const st = r.log[0] || {}; const maxHp = { A: st.aHp || [], B: st.bHp || [] };
+      const h = React.createElement;
+      const panel = (side, f, e) => (typeof AmbwPanel === 'function' ? h(AmbwPanel, { side, team: side === 'A' ? teamA : teamB, frame: f, maxHp, moves: side === 'A' ? st.aMoves || [] : st.bMoves || [], lastMove: e.side === side && e.ev === 'tech' ? e.move : null, mine: side === 'A' }) : null);
+      const show = (pos, ended) => { const f = frames[Math.min(pos, frames.length - 1)]; const e = r.log[pos] || {};
+        root.render(h('div', { className: 'ambw-in' }, h('style', null, (typeof AMBW_CSS === 'string' ? AMBW_CSS.replace(/\.ambw\{[^}]*\}/, '') : '') + (typeof MSA_CSS === 'string' ? MSA_CSS : '')),
+          panel('B', f, e),
+          h('div', { className: 'msa', style: { marginTop: 8 } }, h(MsaStage, { log: r.log, frames, pos, teams: { A: teamA, B: teamB }, venueImg: typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null, ended, win: ended ? r.winner : null, sound: false, introTitle: 'マスモン対戦' })),
+          panel('A', f, e))); };
       let pos = 0; show(0, false);
       const step = () => {
         const cur = r.log[pos] || {};

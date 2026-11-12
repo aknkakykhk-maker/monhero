@@ -561,7 +561,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         {typeof MsaStage === 'function' ? (
           <div className="msa" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
             <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null}
-              ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}/>
+              ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}
+              introTitle={battle.pvp ? 'フレンド対戦' : 'マスモン対戦'} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1}/>
           </div>
         ) : (
         <div className="ambw-ring">
