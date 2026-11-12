@@ -108,6 +108,7 @@
 | `mh_assistant_life_friend_fav_v1` | object | お気に入りの棚(2026-11-11) `{ on(フレンドに見せる), a(好きな助手), m:{aid,mo}(自慢のマスモン), s(好きな曲・30字), fn(集めた家具の数を見せる) }` |
 | `mh_alf_sent_notes_v1` | object[] / `[]` | 自分がフレンドの家に残した置き手紙の控え(2026-11-12) `[{ host(フレンドのID), day(朝4時区切り), at, word(決まった一言の番号・12は自由文だけ), name(その時の名前・20字), to(あて先の助手・無ければ null), note(自由文・40字) }]`。新しい順に30日・50通まで(古いものから消える)。同じ家・同じ日は1つ。壊れた値は空(56-assistant-life-friend-sent.jsx) |
 | `mh_alf_masmon_share_sent_v1` | object | フレンドに見せる助手のマスモンを、前に送った中身の指紋と時刻(2026-11-12) `{ v:1, at:{ 助手id: 時刻 }, sig:{ 助手id: 指紋 } }`。変わった助手の行だけ送るために使う。壊れていれば空(全部送り直すだけ) |
+| `mh_monsuc_record_v1` | object / 空の記録帳 | モンヒロサクセスの育成の記録帳(2026-11-12・まだ画面から使われない)`{ v:1, list:[{ id, species, nick, rank, power, sum, titles, aid, endAt, gen, best }], total }`。新しい順・200件まで(total は数え続ける)。同じ育成の id は2度入れない。保存枠から子が外れても消さない。形と読み込み: `data/monhero-success-record.js` |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
@@ -152,6 +153,8 @@
 | `mh_monsuc_run_v1` | object | モンヒロサクセスの途中の育成1つ(2026-11-12・回2・56-monhero-success-store.jsx)。`{ v:1, id, s:芯の状態, nick, colors, from, items, used, phase, out, log:[直近20], startAt }`。1つ進むたびに書く。読めない・形が違えば「途中の育成なし」(値は消さない・上書きは新しく始めたときだけ)。公開の印 monheroSuccess(偽) |
 | `mh_monsuc_box_v1` | object | モンヒロサクセスの保存枠 `{ v:1, cap, mons:[…], memory:[…] }`(PLAN.md §9)。回2は読むだけ(書くのは回3の引退・合体)。壊れていれば空 |
 | `mh_monsuc_meta_v1` | object | モンヒロサクセスの記録 `{ v:1, team:いつもの編成, items:{持ちこみの数}, runs, picked:{種:選んだ回数}, best, titles, seen, lend, gift }`。壊れていれば既定 |
+| `mh_monsuc_rank_sent_v1` | string[](新しい50件)/ `monsucRankSentList` | モンヒロサクセスの総合力ランキング(2026-11-12・56-monsuc-rank.jsx)へ送れた育成の id(`持ち主の番号-英数字`)。二重に送らない印と「自分の行」の見分けに使う。無い・壊れている → 空。保存枠 mh_monsuc_box_v1 は読み書きしない |
+| `mh_monsuc_rank_queue_v1` | object[](5件まで)/ `monsucRankQueue` | 同じランキングへ送れなかった1件ずつの中身(電波・混雑)。開いたときに `monsucRankFlush` が1件ずつ送り直し、送れたら外す。形・上限で断られたものは積まない。無い・壊れている → 空 |
 | `mh_card_rented_deck_v1` | object / `cardRentedNormalize` | MFバトルカードのみんなのデッキで借りているデッキ(2026-10-29・95-card-deck-share.jsx)。1組だけ `{ ownerId, name, icon, frame, version, deckName, deck:{monsters, cards}, at }`・返すと null。助手と対戦のデッキ選び(87)に並ぶ。マルチでは使えない。壊れた値は「借りていない」 |
 | `mh_card_deck_reward_v1` | array / `cardShareNormalizeClaims` | MFバトルカードのみんなのデッキの報酬を、端末のビートPに足した日の一覧(2026-10-29・95/84)。`['2026-10-29', …]`・新しい60日まで。サーバ(card_deck_rewards)で受け取った日のうち、ここに無い日だけを足す(二重に足さない・端末の保存に失敗しても次に開いたときに足し直せる)。壊れた値のときは何も足さない |
 | `mh_card_tour_claimed_v1` | array / `cardTourNormalizeClaimed` | MFバトルカード大会のごほうびを受け取った記録(2026-10-30・99/84)。`[{ id, place, point, at }]`(ごほうびはビートPだけ)・新しい100件まで。サーバ(card_tournament_claim)が1回だけ渡したごほうびのビートPを、この記録と同じ取引で足す。ここにある大会は「受け取りました」と出す。壊れた値のときは何も足さない |
