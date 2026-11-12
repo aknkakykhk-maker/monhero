@@ -200,7 +200,7 @@
       "部長": "キズナ",
       "受け持ち": "助手のマスモン(名前・染め方・育て方)・育つ助手・「助手に提案する」",
       "語": ["マスモン", "提案", "育つ助手", "キズナ", "染め方", "引き直し"],
-      "files": ["P/56-assistant-life-masmon.jsx", "P/56-assistant-life-masmon-*.jsx", "P/56-assistant-masmon-battle-view.jsx", "P/56-assistant-masmon-battle-beta.jsx", "P/56-assistant-masmon-pvp.jsx", "supabase/functions/masmon-pvp/*", "supabase/migrations/202611110001_masmon_pvp.sql", "monster-hero/data/assistant-masmon-battle.js", "monster-hero/data/assistant-masmon-techs.js", "tools/assistant/assistant-masmon-*", "tools/masmon-battle/*"],
+      "files": ["P/56-assistant-life-masmon.jsx", "P/56-assistant-life-masmon-*.jsx", "P/56-assistant-masmon-battle-view.jsx", "P/56-assistant-masmon-battle-beta.jsx", "P/56-assistant-masmon-pvp.jsx", "P/56-monsuc-*.jsx", "supabase/functions/masmon-pvp/*", "supabase/migrations/202611110001_masmon_pvp.sql", "monster-hero/data/assistant-masmon-battle.js", "monster-hero/data/assistant-masmon-techs.js", "tools/assistant/assistant-masmon-*", "tools/masmon-battle/*"],
       "入口": ["AssistantMasmonSheet", "AssistantMasmonAskSheet"],
       "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)", "node tools/assistant/assistant-chat-check.js --unit(中継役の masmon_names・masmon_suggest を触ったとき)"],
       "資料": ["docs/spec/ASSISTANT_CHAT.md", "docs/progress/assistant-peer/STATUS.md"],
