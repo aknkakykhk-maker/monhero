@@ -67,7 +67,17 @@ def split_cells(file, cut_y, cut_x):
 #   (2026-11-12 社長から あつの8表情。4×2・1体 約 256×768。コートのすそが重なる所は縫い目が少し横切る)
 SEAM_SHEETS = {
     'atsu': [('atsu-8expressions-sheet.png', [775], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 4)],
+    # ソラシド(2026-11-12 社長から。横に4人ずつ・1人 約 440×887)。袖・羽織のすその透ける布は不透明(252前後)で描かれているので、薄い光を消しても残る
+    'sorashido': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                  ('sorashido-8expressions-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
+    # キュウコ(2026-11-12 社長から。横に8人・1人 約 220×887)。となりと横の範囲が重なるが、体どうしはくっついていない(縫い目は不透明を横切らない)
+    'kyuko': [('kyuko-8expressions-sheet.png', [], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 8)],
 }
+
+
+def body_height(arr):
+    ys = np.nonzero((arr[..., 3] > 128).any(axis=1))[0]
+    return (ys.max() - ys.min() + 1) if len(ys) else 0
 
 
 def seam_path(al, x0, x1, bias=0.02):
@@ -510,13 +520,19 @@ def main():
         base = key.split('@')[0] if '@' in key else None
         jobs.append((name, lambda key=key: make_art(key), (lambda base=base: fit_scale(make_art(base))) if base else None))
     for key, sheets in SEAM_SHEETS.items():
-        for file, rows, exprs, per_row in sheets:
-            for e, arr in zip(exprs, seam_cells(file, rows, per_row)):
+        if only and key.replace(':', '_') != only:
+            continue
+        cells = [(e, arr) for file, rows, exprs, per_row in sheets for e, arr in zip(exprs, seam_cells(file, rows, per_row))]
+        # 倍率: 表情なしの元絵の体の高さ ÷ シートの体の高さ(8人の真ん中の値。手や足を上げた子に引っぱられないように)
+        ratio = body_height(np.array(Image.open(os.path.join(SRC, ART[key])).convert('RGBA'))) / float(np.median([body_height(a) for _, a in cells]))
+        print('%s: シートの体を表情なしの絵の %.2f 倍の大きさとして縮める' % (key, ratio))
+        for e, arr in cells:
+            if True:
                 # 体の不透明度が 252〜253 の絵なので、245 以上は 255 にそろえる(ほんの少し透けるのを防ぐ)。体のまわりの光も消す
                 arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
                 jobs.append(('%s__%s' % (key, e),
                              lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
-                             (lambda key=key: fit_scale(make_art(key)) * 2.0)))
+                             (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio)))
     for key, sheets in SPLIT_SHEETS.items():
         base_name = key.replace(':', '_')
         for file, exprs, cy, cx in sheets:
