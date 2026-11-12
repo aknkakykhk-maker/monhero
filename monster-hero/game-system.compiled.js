@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c3daf5ab4aa703b
+// source-sha256: d14ce370b0e07260
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153155,6 +153155,347 @@ function AmgsFuseSheet({
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
 }
+const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
+const MONSUC_FUSE_LOG = 50;
+const MONSUC_MEMORY_MAX = 100;
+const monsucFuseOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+let monsucFuseCoreCache = null;
+const monsucFuseCore = () => {
+  if (monsucFuseCoreCache) return monsucFuseCoreCache;
+  try {
+    const core = typeof globalThis !== 'undefined' ? globalThis.MONHERO_SUCCESS : null;
+    if (!core || typeof core.create !== 'function' || typeof MASMON_CALC === 'undefined') return null;
+    monsucFuseCoreCache = core.create({
+      calc: MASMON_CALC,
+      apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {},
+      init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
+      techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
+      monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
+      lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {},
+      types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {}
+    });
+  } catch (_) {
+    monsucFuseCoreCache = null;
+  }
+  return monsucFuseCoreCache;
+};
+const normalizeMonsucFuse = raw => {
+  const out = {
+    v: 1,
+    seq: 0,
+    log: []
+  };
+  if (!raw || typeof raw !== 'object') return out;
+  out.seq = Number.isFinite(raw.seq) ? Math.max(0, Math.floor(raw.seq)) : 0;
+  for (const x of (Array.isArray(raw.log) ? raw.log : []).slice(-MONSUC_FUSE_LOG)) {
+    if (!x || typeof x !== 'object' || typeof x.child !== 'string') continue;
+    out.log.push({
+      at: typeof x.at === 'string' ? x.at.slice(0, 16) : '',
+      child: x.child.slice(0, 40),
+      species: typeof x.species === 'string' ? x.species : '',
+      parents: Array.isArray(x.parents) ? x.parents.filter(p => p && typeof p === 'object').slice(0, 2) : []
+    });
+  }
+  return out;
+};
+const monsucFuseNick = m => m && typeof m.nick === 'string' && m.nick || (typeof ALL_PLAYER_MONSTERS !== 'undefined' && m && ALL_PLAYER_MONSTERS[m.species] || {}).name || '';
+const monsucFuseSpName = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] || {}).name || sp || '';
+const monsucBoxMons = box => box && Array.isArray(box.mons) ? box.mons.filter(m => m && typeof m === 'object' && typeof m.id === 'string') : [];
+const monsucFuseApply = (box, plan, at) => {
+  if (!plan || !plan.ok || !box || typeof box !== 'object') return null;
+  const mons = monsucBoxMons(box);
+  if (mons.some(m => m.id === plan.child.id)) return null;
+  const ids = plan.child.parents.slice();
+  if (!ids.every(id => mons.some(m => m.id === id))) return null;
+  const gone = mons.filter(m => ids.includes(m.id));
+  const parentAt = id => gone.find(m => m.id === id) || {};
+  const colors = plan.child.species === parentAt(ids[0]).species ? parentAt(ids[0]).colors || null : null;
+  const child = {
+    ...plan.child,
+    colors,
+    rank: null,
+    score: 0,
+    loy: 0,
+    pop: 0,
+    fav: [],
+    coach: null,
+    endAt: null,
+    paid: false,
+    over: null,
+    assists: [],
+    titles: [],
+    from: null,
+    bornAt: at || ''
+  };
+  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({
+    nick: monsucFuseNick(m),
+    species: m.species,
+    rank: typeof m.rank === 'string' ? m.rank : null,
+    gen: Number.isFinite(m.gen) ? m.gen : 1,
+    at: at || ''
+  }))].slice(-MONSUC_MEMORY_MAX);
+  return {
+    ...box,
+    mons: [...mons.filter(m => !ids.includes(m.id)), child],
+    memory
+  };
+};
+let monsucFuseBusy = false;
+const monsucFuse = async ({
+  box,
+  saveBox: saveBox0,
+  onSave,
+  readBox,
+  mainId,
+  matId,
+  locked,
+  suc,
+  at,
+  io
+}) => {
+  const SUC = suc || monsucFuseCore();
+  const saveBox = typeof saveBox0 === 'function' ? saveBox0 : onSave;
+  if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
+  if (monsucFuseBusy) return '合体しています';
+  const lock = new Set(Array.isArray(locked) ? locked : []);
+  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
+  const mons = monsucBoxMons(box);
+  const main = mons.find(m => m.id === mainId);
+  const mat = mons.find(m => m.id === matId);
+  const plan = SUC.fusePlan(main, mat);
+  if (!plan.ok) return plan.why;
+  if (mons.some(m => m.id === plan.child.id)) return 'この2体はもう合体しています';
+  const get = io && io.get || (typeof storeGet === 'function' ? storeGet : null);
+  const set = io && io.set || (typeof storeSet === 'function' ? storeSet : null);
+  if (!get || !set) return 'まだ使えません';
+  monsucFuseBusy = true;
+  try {
+    const day = at || (() => {
+      try {
+        const d = new Date(Date.now() + 9 * 3600 * 1000);
+        return d.toISOString().slice(0, 16).replace('T', ' ');
+      } catch (_) {
+        return '';
+      }
+    })();
+    let cur = box;
+    if (typeof readBox === 'function') {
+      try {
+        const r = await readBox();
+        if (r && typeof r === 'object' && Array.isArray(r.mons)) cur = r;
+      } catch (_) {}
+    }
+    const fresh = monsucBoxMons(cur);
+    if (fresh.some(m => m.id === plan.child.id)) return 'この2体はもう合体しています';
+    if (![mainId, matId].every(id => fresh.some(m => m.id === id))) return '保存枠が変わりました。選び直してください';
+    const next = monsucFuseApply(cur, plan, day);
+    if (!next) return 'この2体はもう合体しています';
+    let raw = null;
+    try {
+      raw = await get(MONSUC_FUSE_KEY, null, false);
+    } catch (_) {}
+    const fs = normalizeMonsucFuse(raw);
+    const rec = {
+      at: day,
+      child: plan.child.id,
+      species: plan.child.species,
+      parents: [main, mat].map(m => JSON.parse(JSON.stringify(m)))
+    };
+    let logged = false;
+    try {
+      logged = await set(MONSUC_FUSE_KEY, {
+        ...fs,
+        seq: fs.seq + 1,
+        log: [...fs.log, rec].slice(-MONSUC_FUSE_LOG)
+      }, false);
+    } catch (_) {
+      logged = false;
+    }
+    if (logged !== true) return '保存できませんでした。2体ともそのままです';
+    let saved = false;
+    try {
+      saved = await saveBox(next);
+    } catch (_) {
+      saved = false;
+    }
+    if (saved !== true) return '保存できませんでした。2体ともそのままです';
+    return true;
+  } finally {
+    monsucFuseBusy = false;
+  }
+};
+function MonsucFuseSheet({
+  box,
+  saveBox,
+  onSave,
+  readBox,
+  locked = [],
+  onDone,
+  onClose,
+  suc = null
+}) {
+  const SUC = suc || monsucFuseCore();
+  const [mainId, setMain] = React.useState(null);
+  const [matId, setMat] = React.useState(null);
+  const [sure, setSure] = React.useState(0);
+  const [err, setErr] = React.useState('');
+  const [done, setDone] = React.useState(null);
+  const [ready, setReady] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const lock = new Set(Array.isArray(locked) ? locked : []);
+  const mons = monsucBoxMons(box);
+  const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  const main = mons.find(m => m.id === mainId) || null;
+  const mat = mons.find(m => m.id === matId) || null;
+  const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
+  const names = SUC ? SUC.STAT_NAMES : {};
+  const keys = SUC ? SUC.KEYS : [];
+  const sum = st => keys.reduce((a, k) => a + (Number(st && st[k]) || 0), 0);
+  const card = (m, on, tone) => React.createElement("button", {
+    key: m.id,
+    type: "button",
+    onClick: on,
+    "data-monsuc-fuse-pick": m.id,
+    className: `mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-2 text-left ${tone}`
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(m.species) : null, React.createElement("span", {
+    className: "min-w-0 flex-1 text-[12px] font-black"
+  }, monsucFuseNick(m), " ", React.createElement("small", {
+    className: "text-[10px] text-slate-300"
+  }, monsucFuseSpName(m.species), m.rank ? ` ・ ランク ${m.rank}` : '', " ・ ", Number.isFinite(m.gen) ? m.gen : 1, "代目"), React.createElement("small", {
+    className: "block text-[10px] text-slate-300"
+  }, "6能力の合計 ", sum(m.st))));
+  const go = async () => {
+    if (!ready || busy || !plan || !plan.ok) return;
+    if (sure < 1) {
+      setSure(1);
+      setReady(false);
+      setTimeout(() => setReady(true), 800);
+      return;
+    }
+    setBusy(true);
+    const r = await monsucFuse({
+      box,
+      saveBox,
+      onSave,
+      readBox,
+      mainId: main.id,
+      matId: mat.id,
+      locked,
+      suc: SUC
+    });
+    setBusy(false);
+    if (r === true) {
+      setDone({
+        child: plan.child,
+        lost: [monsucFuseNick(main), monsucFuseNick(mat)]
+      });
+      setErr('');
+      if (typeof onDone === 'function') onDone(plan.child);
+    } else {
+      setErr(r);
+      setSure(0);
+    }
+  };
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60",
+    "data-monsuc-fuse": true
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white",
+    style: {
+      maxHeight: '92dvh',
+      overflowY: 'auto'
+    }
+  }, React.createElement("p", {
+    className: "text-[16px] font-black"
+  }, "🧬 合体する"), !SUC ? React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400"
+  }, "まだ使えません") : done ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-2 rounded-xl bg-fuchsia-950 p-3",
+    "data-monsuc-fuse-done": true
+  }, React.createElement("p", {
+    className: "flex items-center gap-2 text-[14px] font-black"
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null, monsucFuseSpName(done.child.species), "が生まれました(", done.child.gen, "代目)"), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200"
+  }, "保存枠に入りました。まだ育てていないので、このまま育成を始められます"), React.createElement("small", {
+    className: "mt-1 block text-[11px] font-bold text-slate-300"
+  }, done.lost.join('と'), "は、思い出に名前・ランク・代が残ります")), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "① 主の親を選んでください。生まれるモンスターの主血統と型は、主の親から受け継ぎます"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400",
+    "data-monsuc-fuse-none": true
+  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "③ 生まれるモンスターの見通し"), React.createElement("div", {
+    className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
+    "data-monsuc-fuse-child": plan.child.species
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {
+    className: "text-[13px] font-black"
+  }, monsucFuseSpName(plan.child.species), " ", React.createElement("small", {
+    className: "text-[11px] text-amber-200"
+  }, plan.child.gen, "代目 ・ 未育成"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-300"
+  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', plan.typeChanged ? '(主の親とは別の型になりました)' : '(主の親から)'))), React.createElement("div", {
+    className: "mt-1 rounded-xl bg-slate-800 p-2",
+    "data-monsuc-fuse-plan": true
+  }, React.createElement("p", {
+    className: "mb-1 text-[10.5px] font-bold text-slate-300"
+  }, monsucFuseSpName(plan.child.species), "のはじめの能力に、2体の強さに応じた上乗せが付きます"), keys.map(k => React.createElement("p", {
+    key: k,
+    className: "flex justify-between text-[12px] font-black"
+  }, React.createElement("span", null, names[k]), React.createElement("span", null, plan.base[k], " → ", React.createElement("b", {
+    className: "text-amber-200"
+  }, plan.child.st[k]), " ", React.createElement("small", {
+    className: "text-fuchsia-200"
+  }, "(+", plan.add[k], ")"))))), React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-slate-300"
+  }, "2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)"), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200",
+    "data-monsuc-fuse-techs": true
+  }, "受け継ぐ技: ", plan.child.techs.length ? plan.child.techs.map(t => {
+    const x = SUC.techsOf(plan.child.species).find(y => y.id === t);
+    return x ? x.name : t;
+  }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("div", {
+    className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
+    "data-monsuc-fuse-lose": true
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-rose-100"
+  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、保存枠からいなくなります。元に戻せません"), React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
+  }, "思い出に名前・ランク・代が残ります")), err && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-rose-200",
+    "data-monsuc-fuse-err": true
+  }, err), React.createElement("button", {
+    type: "button",
+    onClick: go,
+    disabled: !ready || busy,
+    "data-monsuc-fuse-go": sure,
+    "data-monsuc-fuse-ready": ready ? 1 : 0,
+    className: `mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+  }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'), React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setMat(null);
+      setSure(0);
+      setErr('');
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "選び直す")) : React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400",
+    "data-monsuc-fuse-err": true
+  }, plan && plan.why || 'この2体では合体できません'), !done && React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "やめる")));
+}
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
 const ALF_KNOWN_KEY = 'mh_assistant_life_friend_known_v1';
@@ -158830,6 +159171,13 @@ const MSX_CSS = `
 .msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
+/* 社長「育成中のメイン・訓練の画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+.msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
+.msx span.mon{display:block}
+.msx .mon.msx-live{animation:none;filter:none}
+/* 演出の部品が無いときだけの跳ね(小さく4回・5回目に大きく)。translate だけを動かすので、位置の transform とぶつからない */
+.msx .mon.msx-hop{animation:msx-hop 3.4s ease-in-out infinite}
+@keyframes msx-hop{0%,14%,28%,42%,56%,100%{translate:0 0}7%,21%,35%,49%{translate:0 -5%}70%{translate:0 -16%}84%{translate:0 0}}
 .msx-pop{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1)}
 @keyframes msx-breathe{0%,100%{scale:1}50%{scale:1.025}}
 @keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
@@ -158853,7 +159201,7 @@ const MSX_KEYS = Object.freeze({
   meta: 'mh_monsuc_meta_v1'
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
-const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_SCENES_SRC = 'data/success-scenes.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
@@ -158939,7 +159287,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -159169,58 +159517,51 @@ const msxVenueBg = venue => {
 };
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = r => `rk r${String(r || 'G').replace(/\+/g, '')}`;
-const msxPickLine = (ctx, scene, opt = {}) => {
-  const sc = msxSuc && msxSuc.script;
-  if (!sc) return null;
-  const aid = opt.who || ctx.aid;
-  const pools = [];
-  if (opt.bondLv != null && opt.bondLv <= 2 && Array.isArray(sc.turnBond12)) pools.push(sc.turnBond12);
-  pools.push(sc.turn, sc.issa, sc.mon, sc.cheer, sc.random, sc.scenario);
-  let rows = [];
-  for (const pool of pools) {
-    if (!Array.isArray(pool)) continue;
-    rows = pool.filter(r => r && typeof r.id === 'string' && r.id.slice(0, r.id.lastIndexOf('.')) === scene && (aid === '*' || r.who === aid));
-    if (rows.length) break;
-  }
-  if (!rows.length) return null;
-  const rng = msxSuc.core.rngOf(ctx.id || 'run', ctx.turn || 0, 'line', scene, opt.salt || '');
-  const r = rows[Math.floor(rng() * rows.length)];
-  return {
-    ...r,
-    t: msxFill(r.t, ctx)
-  };
+const msxScriptLoad = aid => {
+  const se = msxSuc && msxSuc.script;
+  return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false);
 };
-const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
-  if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'モンスター';
-  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
-  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
-  if (k === 'stat') return ctx.stat || '能力';
-  if (k === 'train') return ctx.train || '訓練';
-  if (k === 'tech') return ctx.tech || '技';
-  if (k === 'cup') return ctx.cup || '大会';
-  if (k === 'cry') {
-    const sc = msxSuc && msxSuc.script;
-    const c = sc && Array.isArray(sc.mon) ? sc.mon.find(r => r.id === `mon.cry.${ctx.species}`) : null;
-    return c ? c.t : '…';
+const msxPickLine = (ctx, scene, opt = {}) => {
+  const se = msxSuc && msxSuc.script;
+  if (!se || typeof se.say !== 'function') return null;
+  const c = {
+    ...ctx,
+    bond: opt.bondLv != null ? opt.bondLv : ctx.bond
+  };
+  try {
+    if (opt.who === '*') return se.say(scene, c, {
+      who: 'narr',
+      salt: opt.salt
+    }) || se.say(scene, c, {
+      salt: opt.salt
+    });
+    return se.say(scene, c, {
+      who: opt.who,
+      salt: opt.salt
+    });
+  } catch (e) {
+    return null;
   }
-  return '';
-});
+};
+const msxFill = (t, ctx) => {
+  const se = msxSuc && msxSuc.script;
+  return se && typeof se.fill === 'function' ? se.fill(t, ctx) : String(t || '');
+};
 const msxStartScene = s => {
-  if (!s) return 'turn.start.normal';
-  const r = s.hpMax > 0 ? s.hp / s.hpMax : 0;
-  if (r < 0.25) return 'turn.start.worn';
-  if (s.stress >= 60) return 'turn.start.stress';
-  if (r < 0.45) return 'turn.start.tired';
-  if (r >= 0.85 && s.stress < 20) return 'turn.start.great';
-  if (r >= 0.65) return 'turn.start.good';
-  return 'turn.start.normal';
+  const se = msxSuc && msxSuc.script;
+  return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal';
 };
 function MonheroSuccessDebugEntry({
   callNameOf,
-  bondLvOf
+  bondLvOf,
+  onOpenChange
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (onOpenChange) onOpenChange(open);
+    } catch (e) {}
+  }, [open]);
   return React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
     "data-debug-monhero-success": true,
@@ -160072,6 +160413,13 @@ const MSX_LOT = Object.freeze({
   tip: 'tip',
   friend: 'friend'
 });
+const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+const MSX_RES_SOUND = Object.freeze({
+  great: 'trainGreat',
+  ok: 'trainOk',
+  fail: 'trainFail',
+  sab: 'trainSkip'
+});
 const msxLayout = () => {
   if (typeof window === 'undefined') return '';
   const w = window.innerWidth;
@@ -160212,15 +160560,49 @@ function MsxPf({
     }
   })));
 }
+const msxMoodOf = s => {
+  if (!s) return 'calm';
+  if (typeof msxFxMoodOf === 'function') {
+    try {
+      const m = msxFxMoodOf(s);
+      if (m) return m;
+    } catch (e) {}
+  }
+  const r = s.hpMax > 0 ? s.hp / s.hpMax : 1;
+  if (s.yosu && s.yosu.utsu) return 'sad';
+  if (r < 0.3) return 'tired';
+  if (s.stress >= 60) return 'sulky';
+  if (r >= 0.85 && s.stress < 20) return 'joy';
+  return 'calm';
+};
 function MsxMonArt({
   run,
   className,
-  style
+  style,
+  live = false,
+  react = null
 }) {
   const sp = run.s.species;
+  if (live && typeof MsxLiveMon === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    return React.createElement("span", {
+      className: `${className || ''} msx-live`,
+      style: style
+    }, React.createElement(MsxLiveMon, {
+      species: sp,
+      colors: run.colors,
+      mood: msxMoodOf(run.s),
+      season: scn.season,
+      time: scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night',
+      react: react,
+      seed: run.id,
+      pyoko: true
+    }));
+  }
+  const cls = `${className || ''}${live ? ' msx-hop' : ''}`;
   if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
     return React.createElement("span", {
-      className: className,
+      className: cls,
       style: style
     }, React.createElement(DyedMonsterImage, {
       baseId: sp,
@@ -160236,7 +160618,7 @@ function MsxMonArt({
     }));
   }
   return React.createElement("img", {
-    className: className,
+    className: cls,
     style: style,
     src: msxMonImg(sp),
     alt: ""
@@ -160264,20 +160646,6 @@ function MonheroSuccessScreen({
   debug = false
 }) {
   const [view, setView] = useState('loading');
-  useEffect(() => {
-    try {
-      window.dispatchEvent(new CustomEvent('mh-success-screen', {
-        detail: true
-      }));
-    } catch (e) {}
-    return () => {
-      try {
-        window.dispatchEvent(new CustomEvent('mh-success-screen', {
-          detail: false
-        }));
-      } catch (e) {}
-    };
-  }, []);
   const [data, setData] = useState(null);
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
@@ -160599,6 +160967,20 @@ function MsxPlay({
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
   const [sheet, setSheet] = useState(null);
+  const [, setScriptTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    msxScriptLoad(s.aid).then(() => {
+      if (alive) setScriptTick(n => n + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [s.aid]);
+  const soundId = run.phase === 'result' && run.out && run.out.result ? run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  msxUseSound(soundId, {
+    season: msxCalendar(s.turn).season
+  });
   const tagAt = SUC.BOND && SUC.BOND.tag || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
   const ctx = {
@@ -160762,6 +161144,11 @@ function MsxPlay({
     }), React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
+      live: typeof MsxLiveMon === 'function',
+      react: isTrain ? {
+        kind: o.result,
+        id: s.turn
+      } : null,
       style: {
         left: '62%',
         bottom: '14%',
@@ -161174,7 +161561,8 @@ function MsxPlay({
       className: "gr",
       style: {
         left: '30%',
-        bottom: 'calc(34% - 5px)'
+        bottom: 'calc(34% - 5px)',
+        width: '20%'
       }
     }), React.createElement(MsxMonArt, {
       run: run,
@@ -161182,8 +161570,9 @@ function MsxPlay({
       style: {
         left: '30%',
         bottom: '34%',
-        height: '40%'
-      }
+        height: '28%'
+      },
+      live: true
     }), React.createElement("div", {
       className: "v-chips",
       style: {
@@ -161319,7 +161708,8 @@ function MsxPlay({
       className: "gr"
     }), React.createElement(MsxMonArt, {
       run: run,
-      className: `mon${low ? ' low' : ''}`
+      className: `mon${low ? ' low' : ''}`,
+      live: true
     }), React.createElement("div", {
       className: "v-party"
     }, React.createElement("small", null, "編成"), s.team.map((m, i) => React.createElement(MsxPf, {
@@ -165132,6 +165522,7 @@ function MsxR3Box({
     return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement(MonsucFuseSheet, {
       box: box,
       locked: locked,
+      readBox: msxR3ReadBox,
       onSave: n => storeSet(MSX_KEYS.box, n),
       onDone: () => {
         msxR3ReadBox().then(setBox);
@@ -165565,6 +165956,188 @@ const monsucLendClaim = async () => {
     fame
   };
 };
+const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
+const MSX_MANUAL_CSS = `
+.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:9px;margin-top:8px;color:#fff;font-weight:700}
+.msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
+.msxm-top b{color:#fff}
+.msxm-g{flex:1;height:8px;border-radius:8px;background:#334155;overflow:hidden}.msxm-g i{display:block;height:100%;background:linear-gradient(90deg,#fde047,#facc15)}
+.msxm-sec{margin-top:8px}
+.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:4px}
+.msxm-row{display:flex;flex-wrap:wrap;gap:6px}
+.msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:6px 8px;text-align:left;line-height:1.25}
+.msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+.msxm-btn:disabled{opacity:.38}
+.msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
+.msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
+.msxm-none{font-size:11px;color:#94a3b8}
+.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
+.msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
+.msxm-swap{font-size:11px}
+`;
+const msxManualOpen = (engine, input, choices) => {
+  if (!engine || typeof engine.createMatch !== 'function' || !input) return null;
+  try {
+    const inp = {
+      ...input,
+      control: {
+        A: 'human'
+      }
+    };
+    if (Array.isArray(choices) && choices.length && typeof engine.replay === 'function') {
+      const r = engine.replay(inp, choices);
+      return r && r.match ? r.match : null;
+    }
+    return engine.createMatch(inp);
+  } catch (e) {
+    return null;
+  }
+};
+function useMsxManualMatch(engine, input, choices, key) {
+  const [match, setMatch] = useState(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    setMatch(msxManualOpen(engine, input, choices));
+    setTick(0);
+  }, [engine, key]);
+  const pick = useCallback(c => {
+    if (!match) return false;
+    const r = match.choose(c);
+    if (r && r.ok) setTick(t => t + 1);
+    return !!(r && r.ok);
+  }, [match]);
+  const toAuto = useCallback(() => {
+    if (!match) return;
+    match.auto('A');
+    setTick(t => t + 1);
+  }, [match]);
+  const log = match ? match.log.slice() : [];
+  return {
+    match,
+    tick,
+    log,
+    pending: match ? match.pending() : null,
+    done: !!(match && match.done()),
+    result: match ? match.result() : null,
+    choices: match ? match.choices() : [],
+    pick,
+    toAuto
+  };
+}
+function MsxManualBar({
+  opt,
+  onPick,
+  onAuto,
+  busy
+}) {
+  if (!opt) return null;
+  const isHint = c => !!(opt.hint && opt.hint.type === c.type && (c.key == null || opt.hint.key === c.key) && (c.step == null || opt.hint.step === c.step) && (c.to == null || opt.hint.to === c.to));
+  const go = c => {
+    if (!busy && onPick) onPick(c);
+  };
+  if (opt.kind === 'enter') {
+    return React.createElement("div", {
+      className: "msxm",
+      "data-msxm": "enter"
+    }, React.createElement("style", null, MSX_MANUAL_CSS), React.createElement("div", {
+      className: "msxm-h"
+    }, "次に出すモンスターを選んでください"), React.createElement("div", {
+      className: "msxm-row"
+    }, opt.enter.map(x => React.createElement("button", {
+      key: x.to,
+      type: "button",
+      className: "msxm-btn",
+      disabled: !x.ok || busy,
+      onClick: () => go({
+        type: 'enter',
+        to: x.to
+      })
+    }, x.name, React.createElement("small", null, "ライフ ", x.hp, "/", x.maxHp)))));
+  }
+  const reach = opt.tech.filter(t => t.reach);
+  return React.createElement("div", {
+    className: "msxm",
+    "data-msxm": "act"
+  }, React.createElement("style", null, MSX_MANUAL_CSS), React.createElement("div", {
+    className: "msxm-top"
+  }, React.createElement("span", null, "あなたの番"), React.createElement("b", null, "間合い ", MSX_MANUAL_DIST[opt.dist]), React.createElement("div", {
+    className: "msxm-g"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.min(100, opt.guts))}%`
+    }
+  })), React.createElement("b", null, "ガッツ ", Math.round(opt.guts))), React.createElement("div", {
+    className: "msxm-sec"
+  }, React.createElement("div", {
+    className: "msxm-h"
+  }, "⚔ 攻撃"), reach.length ? React.createElement("div", {
+    className: "msxm-row"
+  }, reach.map(t => React.createElement("button", {
+    key: t.key,
+    type: "button",
+    className: `msxm-btn atk ${isHint(t) ? 'hint' : ''}`,
+    disabled: !t.ok || busy,
+    "data-msxm-tech": t.key,
+    onClick: () => go({
+      type: 'tech',
+      key: t.key
+    })
+  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, t.ok ? `ガッツ${t.guts}・命中${Math.round(t.p)}%` : `ガッツ${t.guts}(あと${t.need})`)))) : React.createElement("div", {
+    className: "msxm-none"
+  }, "この間合いでは届く技がありません")), React.createElement("div", {
+    className: "msxm-sec"
+  }, React.createElement("div", {
+    className: "msxm-h"
+  }, "🛡 防御・↔ 移動・💪 ガッツ回復"), React.createElement("div", {
+    className: "msxm-row"
+  }, React.createElement("button", {
+    type: "button",
+    className: `msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`,
+    disabled: busy,
+    onClick: () => go({
+      type: 'guard'
+    })
+  }, "🛡 ガード", React.createElement("small", null, "受けるダメージを減らす")), React.createElement("button", {
+    type: "button",
+    className: `msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`,
+    disabled: !opt.charge.ok || busy,
+    onClick: () => go({
+      type: 'charge'
+    })
+  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン')), opt.move.map(mv => React.createElement("button", {
+    key: mv.step,
+    type: "button",
+    className: `msxm-btn ${isHint(mv) ? 'hint' : ''}`,
+    disabled: !mv.ok || busy,
+    onClick: () => go({
+      type: 'move',
+      step: mv.step
+    })
+  }, mv.step < 0 ? '◀ 前へ' : '後ろへ ▶', React.createElement("small", null, mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'))))), opt.swap.length ? React.createElement("div", {
+    className: "msxm-sec"
+  }, React.createElement("div", {
+    className: "msxm-h"
+  }, "🔁 交代", opt.swapWait > 0 ? `(あと${opt.swapWait}手番)` : ''), React.createElement("div", {
+    className: "msxm-row"
+  }, opt.swap.map(s => React.createElement("button", {
+    key: s.to,
+    type: "button",
+    className: `msxm-btn msxm-swap ${isHint(s) ? 'hint' : ''}`,
+    disabled: !s.ok || busy,
+    onClick: () => go({
+      type: 'swap',
+      to: s.to
+    })
+  }, s.name, React.createElement("small", null, "ライフ ", s.hp, "/", s.maxHp))))) : null, React.createElement("div", {
+    className: "msxm-foot"
+  }, React.createElement("span", {
+    className: "msxm-none"
+  }, opt.hint ? '黄色のふちは助手のおすすめ' : ''), onAuto ? React.createElement("button", {
+    type: "button",
+    className: "msxm-auto",
+    onClick: () => !busy && onAuto()
+  }, "オートにする") : null));
+}
 const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
 const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
 const MONSUC_RANK_SENT_MAX = 50;
@@ -212657,11 +213230,6 @@ function MonsterHeroGame() {
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   useEffect(() => {
-    const on = e => setSuccessScreenOpen(!!(e && e.detail));
-    window.addEventListener('mh-success-screen', on);
-    return () => window.removeEventListener('mh-success-screen', on);
-  }, []);
-  useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
   }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
@@ -236177,6 +236745,7 @@ function MonsterHeroGame() {
     }, "🖌️ 染色マスク編集", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement(MonheroSuccessDebugEntry, {
+      onOpenChange: setSuccessScreenOpen,
       callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
       bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
     }), React.createElement(DebugMenuRow, {

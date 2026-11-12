@@ -501,6 +501,10 @@
       "role": "部品: 助手のマスモンの冬眠(育てた中身を写して箱にしまい、眠らせた助手の枠へ起こす・入れ替えで外れた前の子も並べる・はじめ10体〜育成ノートの段で最大30体)。口 amgsSwap・amgsSyncFormer、画面 AmgsSection・AmgsDetail・AmgsSleepButton(育成ノートの一覧から)。masmon 側の入れ替えは assistantMasmonSleepSwap。公開の印 assistantMasmonSleep。保存は新しいキー mh_assistant_masmon_sleep_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/HIBERNATE.md"
     },
     {
+      "file": "56-monsuc-fuse.jsx",
+      "role": "部品: モンヒロサクセスの合体(保存枠の育て終えた子どうし)。計算は芯 MONHERO_SUCCESS の fusePlan。画面 MonsucFuseSheet({ box, saveBox, locked, onDone, onClose })・口 monsucFuse・monsucFuseApply。箱 mh_monsuc_box_v1 の読み書きは保存枠の部品から受け取る。記録は新しいキー mh_monsuc_fuse_v1 を先に書く。公開の印 monheroSuccess。案 docs/progress/player-raise/PLAN.md §3"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },
@@ -530,7 +534,7 @@
     },
     {
       "file": "56-monhero-success-store.jsx",
-      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本 data/monhero-success-script.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
+      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本エンジン data/monhero-success-script-engine.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
     },
     {
       "file": "56-monhero-success-start.jsx",
@@ -563,6 +567,10 @@
     {
       "file": "56-assistant-life-friend-monsuc-lend.jsx",
       "role": "部品: モンヒロサクセスのフレンドからのレンタル(段取りの回5・オトズレ)の端末の口。画面は持たない(編成・保存枠の画面は開発部)。サーバの関数 masmon-pvp の lend_* を呼ぶ monsucLendSet/monsucLendClear/monsucLendUse/monsucLendClaim と、表 monsuc_lend を読む monsucLendFriends、借りた子を編成の1枠にする monsucLendMember(アシストのポイントを確かめる)。持ち主の鍵は masmon-pvp と同じ。新しい保存キーなし。公開の印 monheroSuccess が真のときだけ通信"
+    },
+    {
+      "file": "56-monhero-success-manual.jsx",
+      "role": "モンヒロサクセス: 自分で操作するバトルの手を選ぶ帯 MsxManualBar(⚔攻撃・🛡防御・↔移動・💪ガッツ回復・交代・オートにする)と進め方 useMsxManualMatch・msxManualOpen。計算は芯 ASSISTANT_MASMON_BATTLE.createMatch/replay。試合の画面(MonsucArena)の下に差す。保存なし。公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-rank.jsx",
