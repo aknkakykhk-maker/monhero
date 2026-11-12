@@ -72,7 +72,7 @@ const monsucCupTitle = (suc, s) => {
   if (b.kind === 'cup') {
     const list = typeof suc.cupsOf === 'function' ? (() => { try { return suc.cupsOf({ ...s, battle: null, over: null }); } catch (_) { return []; } })() : [];
     const hit = list.find(c => c.id === b.id);
-    const name = hit ? hit.name : (typeof MONSUC_REGULAR_CUPS !== 'undefined' && MONSUC_REGULAR_CUPS[b.sys]) || '大会';
+    const name = hit ? hit.name : (typeof globalThis !== 'undefined' && globalThis.MONSUC_REGULAR_CUPS && globalThis.MONSUC_REGULAR_CUPS[b.sys]) || '大会';
     return { name, star: b.star, venue: String(b.sys || '').startsWith('hero') || b.star >= 4 ? 'hero' : 'cup' };
   }
   const f = suc.FORCED[b.kind] || {};

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d3d576db686703d2
+// generated-sha256: a9c12d1c38e9fae2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77355,7 +77355,7 @@ const monsucCupTitle = (suc, s) => {
   if (b.kind === 'cup') {
     const list = typeof suc.cupsOf === 'function' ? (() => { try { return suc.cupsOf({ ...s, battle: null, over: null }); } catch (_) { return []; } })() : [];
     const hit = list.find(c => c.id === b.id);
-    const name = hit ? hit.name : (typeof MONSUC_REGULAR_CUPS !== 'undefined' && MONSUC_REGULAR_CUPS[b.sys]) || '大会';
+    const name = hit ? hit.name : (typeof globalThis !== 'undefined' && globalThis.MONSUC_REGULAR_CUPS && globalThis.MONSUC_REGULAR_CUPS[b.sys]) || '大会';
     return { name, star: b.star, venue: String(b.sys || '').startsWith('hero') || b.star >= 4 ? 'hero' : 'cup' };
   }
   const f = suc.FORCED[b.kind] || {};
