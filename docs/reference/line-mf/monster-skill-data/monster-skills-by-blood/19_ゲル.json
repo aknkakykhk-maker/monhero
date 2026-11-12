@@ -1,0 +1,994 @@
+{
+  "blood": "ゲル",
+  "counts": {
+    "skills": 23
+  },
+  "skills": [
+    {
+      "skillId": "sk-0323",
+      "name": "ハエタタキ",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0374",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": {
+            "monsterId": "1919",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "1919",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1911",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1919",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 160,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0324",
+      "name": "ムチ",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0374",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "1952",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "1952",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1905",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1923",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1952",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 161,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0325",
+      "name": "突き刺し",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0375",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1906",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1910",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1922",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1951",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 162,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0326",
+      "name": "コマアタック",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0376",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0023",
+          "unlock": {
+            "monsterId": "1953",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0205",
+          "unlock": {
+            "monsterId": "1953",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1910",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1924",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1953",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 163,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0327",
+      "name": "パラボラビーム",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0376",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1915",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1950",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 164,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0328",
+      "name": "くし刺し",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "D+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0376",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1911",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1921",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1923",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 165,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0329",
+      "name": "大砲",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 33,
+      "damage": "S",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0377",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1915",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1922",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1953",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 166,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0330",
+      "name": "ハエスパイク",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "B+",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0378",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0377",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1921",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "1921",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1921",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 167,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0331",
+      "name": "G・キューブ",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0377",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "1924",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "1924",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1924",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1950",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 168,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0332",
+      "name": "ゲルフーセン",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0377",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0379",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1952",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1951",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 169,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0333",
+      "name": "ガトリング",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "B+",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0380",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0381",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "1915",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "1915",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1915",
+          "rarity": 5
+        },
+        {
+          "monsterId": "1921",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 170,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0334",
+      "name": "超パラボラビーム",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0382",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0381",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1924",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 171,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0335",
+      "name": "ゲルプレス",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0383",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0381",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1951",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 172,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0336",
+      "name": "マナドレイン",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "A+",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0384",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0381",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1953",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 173,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0337",
+      "name": "ゲルコプター",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 50,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0385",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0386",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1922",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1922",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1922",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 174,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0734",
+      "name": "M・キューブ",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0655",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0377",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1922"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 175,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0735",
+      "name": "餅つき",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 14,
+      "damage": "D",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0375",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0374",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1952"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 176,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0736",
+      "name": "初日の出",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0377",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0379",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1952"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 177,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0737",
+      "name": "カガミ開き",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "C+",
+      "accuracy": "B+",
+      "gutsDown": "E",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0656",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0381",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1952"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 178,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0738",
+      "name": "神芹リッタ",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1950",
+        "1951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 179,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0739",
+      "name": "“無慈悲な太陽”",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0252",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 180,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0740",
+      "name": "“微塵切り”",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0657",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0658",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0659",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1951"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 181,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0741",
+      "name": "毒刺し",
+      "version": 1,
+      "blood": "ゲル",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0376",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0660",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1922",
+        "1924"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 182,
+      "status": "verified"
+    }
+  ]
+}

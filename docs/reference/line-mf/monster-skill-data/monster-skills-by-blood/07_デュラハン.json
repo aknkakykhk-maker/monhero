@@ -1,0 +1,982 @@
+{
+  "blood": "デュラハン",
+  "counts": {
+    "skills": 25
+  },
+  "skills": [
+    {
+      "skillId": "sk-0275",
+      "name": "地走り",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0753",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 114,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0276",
+      "name": "まっぷたつ",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0702",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0709",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 115,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0277",
+      "name": "居合い斬り",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0750",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 116,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0278",
+      "name": "大車輪",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0707",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0752",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 117,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0279",
+      "name": "ダッシュ斬り",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 12,
+      "damage": "E",
+      "accuracy": "A+",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0702",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0709",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0751",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 118,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0280",
+      "name": "Vの字斬り",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0754",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 119,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0281",
+      "name": "フルスイング",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0701",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 120,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0282",
+      "name": "雷神剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "A",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0332",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0754",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 121,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0283",
+      "name": "風神剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0333",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": {
+            "monsterId": "0709",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0308",
+          "unlock": {
+            "monsterId": "0709",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0701",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0707",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0709",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0751",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 122,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0284",
+      "name": "五月雨斬り",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0334",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0753",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0752",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0750",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 123,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0285",
+      "name": "真・風神剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0032",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0040",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "0754",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "0754",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0754",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 124,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0286",
+      "name": "秘技・黒影剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 31,
+      "damage": "B",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0335",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0702",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 125,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0287",
+      "name": "剣閃百撃",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0128",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "0701",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "0701",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0701",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 126,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0288",
+      "name": "最終奥義",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0336",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0337",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0707",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 127,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0289",
+      "name": "終ノ光",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 55,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0338",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0339",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0750",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0750",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0750",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 128,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0290",
+      "name": "ダイセツダン",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 47,
+      "damage": "S+",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0100",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0340",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0753",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0753",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0753",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 129,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0291",
+      "name": "冥王剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "S+",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0341",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0342",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0752",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 130,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0659",
+      "name": "真・炎神剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0332",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0701"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 131,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0660",
+      "name": "ヒトダマ豪速球",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0751",
+        "0752"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 132,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0661",
+      "name": "真空仏陀斬り",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "B+",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0606",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0751",
+        "0752"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 133,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0662",
+      "name": "大後光刃",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "A",
+      "accuracy": "S",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0607",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0608",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0752"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 134,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0663",
+      "name": "フォーク",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "遠",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0750"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 135,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0664",
+      "name": "チェック",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0609",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0750"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 136,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0665",
+      "name": "秘技・雷鳴剣",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "D+",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0610",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0335",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0753"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 137,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0666",
+      "name": "最終奥義・万緑",
+      "version": 1,
+      "blood": "デュラハン",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0611",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0754"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 138,
+      "status": "verified"
+    }
+  ]
+}

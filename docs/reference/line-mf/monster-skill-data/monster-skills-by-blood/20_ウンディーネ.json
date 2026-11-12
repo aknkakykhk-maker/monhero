@@ -1,0 +1,1209 @@
+{
+  "blood": "ウンディーネ",
+  "counts": {
+    "skills": 30
+  },
+  "skills": [
+    {
+      "skillId": "sk-0475",
+      "name": "アクアウェイブ",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0452",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2054",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2051",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 761,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0476",
+      "name": "アクアウィップ",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0452",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2020",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 762,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0477",
+      "name": "アイスブレード",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "F",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0453",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0454",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2016",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2052",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 763,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0478",
+      "name": "ダブルバレッド",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2016",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2052",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 764,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0479",
+      "name": "アイスアロー",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0453",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0454",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2017",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 765,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0480",
+      "name": "アクアキッス",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "G",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0452",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2020",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 766,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0481",
+      "name": "スプラッシュ",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2001",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2018",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2053",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2050",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 767,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0482",
+      "name": "クリスタルレイン",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0453",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0454",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "2001",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "2001",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2001",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2018",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2054",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 768,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0483",
+      "name": "アイスコフィン",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "F",
+      "gutsDown": "E",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0453",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0454",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2053",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2050",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 769,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0484",
+      "name": "ドルフィンブロー",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0455",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2017",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2051",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 770,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0485",
+      "name": "ブラッドミスト",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "A+",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0456",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "2016",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "2016",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2016",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 771,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0486",
+      "name": "クリスタルアロー",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 37,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0457",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0453",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "2017",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "2017",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2017",
+          "rarity": 5
+        },
+        {
+          "monsterId": "2018",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 772,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0487",
+      "name": "アクアブラスト",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 29,
+      "damage": "D",
+      "accuracy": "S",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0284",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "2052",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2052",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2052",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 773,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0488",
+      "name": "ホワイトストーム",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": "遠",
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0458",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0453",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2054",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 774,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0489",
+      "name": "アクアウォール",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "2053",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "2053",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2053",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 775,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0490",
+      "name": "ホワイトエレジー",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 48,
+      "damage": "A+",
+      "accuracy": "B+",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0459",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0460",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2051",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 776,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0491",
+      "name": "アクアドーム",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 5,
+      "moveTo": "遠",
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "S",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0461",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0462",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2050",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2050",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2050",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 777,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0742",
+      "name": "プレゼントキッス",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0452",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2054"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 778,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0743",
+      "name": "ジングルベル",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2054"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 779,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0744",
+      "name": "メリークリスマス",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0371",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2054"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 780,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0745",
+      "name": "ヴェールターン",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "遠",
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0661",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0025",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2052"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 781,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0746",
+      "name": "ブーケトス",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "C+",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0662",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0455",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2052"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 782,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0747",
+      "name": "エンゲージリング",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0663",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0664",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2052"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 783,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0748",
+      "name": "デスキッス",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0452",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2050",
+        "2017"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 784,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0749",
+      "name": "シャークアロー",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "A",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0665",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0666",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 785,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0750",
+      "name": "オケアノスアロー",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0371",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2053"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 786,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0751",
+      "name": "ダークブラスト",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "A+",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0284",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2017"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 787,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0814",
+      "name": "我等の忠義",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "C",
+      "accuracy": "B+",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0710",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2051"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 788,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0815",
+      "name": "虫けらが!!",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 36,
+      "damage": "B+",
+      "accuracy": "A+",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0711",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2051"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 789,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0816",
+      "name": "弱っ…豆腐みたい",
+      "version": 1,
+      "blood": "ウンディーネ",
+      "range": "近",
+      "rank": 1,
+      "moveTo": "遠",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2051"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 790,
+      "status": "verified"
+    }
+  ]
+}

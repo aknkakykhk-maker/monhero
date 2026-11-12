@@ -1,0 +1,907 @@
+{
+  "blood": "ナーガ",
+  "counts": {
+    "skills": 21
+  },
+  "skills": [
+    {
+      "skillId": "sk-0527",
+      "name": "しっぽアタック",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 11,
+      "damage": "C",
+      "accuracy": "F",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0086",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": {
+            "monsterId": "2423",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "2423",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2405",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2423",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 578,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0528",
+      "name": "くしざし",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0497",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2410",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2421",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2422",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2424",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 579,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0529",
+      "name": "ボディーブロー",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 8,
+      "damage": "F+",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0497",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "2415",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "2415",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2411",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2415",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2419",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 580,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0530",
+      "name": "魔眼光",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0501",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2410",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2422",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2451",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2450",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 581,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0531",
+      "name": "ドリルアタック",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "近",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "B",
+      "accuracy": "F",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2409",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2453",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 582,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0532",
+      "name": "毒霧",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2405",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2415",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2421",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2452",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 583,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0533",
+      "name": "魔空斬爪",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0502",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0497",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2452",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2451",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 584,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0534",
+      "name": "デッドリーブロー",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "C+",
+      "accuracy": "S",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0499",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2409",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2450",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 585,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0535",
+      "name": "スラッシュクロー",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0503",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0498",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2411",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2453",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 586,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0536",
+      "name": "魔空爆裂弾",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 39,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0504",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0505",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2452",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 587,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0537",
+      "name": "デスリーパー",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": "近",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0506",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0500",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "2409",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2409",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2409",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 588,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0538",
+      "name": "真空魔空弾",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 37,
+      "damage": "B",
+      "accuracy": "B+",
+      "gutsDown": "S",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0504",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0507",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2411",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 589,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0539",
+      "name": "ジーザスクロー",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0508",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0509",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0135",
+          "unlock": {
+            "monsterId": "2451",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "2451",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2451",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 590,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0540",
+      "name": "赫焔螺斬牙",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "A",
+      "accuracy": "C+",
+      "gutsDown": "D",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0510",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0511",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2453",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2453",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2453",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 591,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0541",
+      "name": "無貌の讃歌",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "S+",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0512",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0513",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2450",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2450",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2450",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 592,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0761",
+      "name": "魔斬覇",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "D+",
+      "accuracy": "C+",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0497",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0501",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2453"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 593,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0762",
+      "name": "裾払い",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2451"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 594,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0763",
+      "name": "三極蒼爆",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "S+",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0676",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2451"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 595,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0766",
+      "name": "デッドリーブロー・剃",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 34,
+      "damage": "C+",
+      "accuracy": "S",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0499",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2411"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 596,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0808",
+      "name": "正気検閲",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "A+",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0724",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0501",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2450"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 597,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0809",
+      "name": "狂夢螺旋",
+      "version": 1,
+      "blood": "ナーガ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": "近",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0725",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0345",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2450"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 598,
+      "status": "verified"
+    }
+  ]
+}

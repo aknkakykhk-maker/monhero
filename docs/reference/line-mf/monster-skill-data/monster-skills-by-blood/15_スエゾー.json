@@ -1,0 +1,764 @@
+{
+  "blood": "スエゾー",
+  "counts": {
+    "skills": 20
+  },
+  "skills": [
+    {
+      "skillId": "sk-0460",
+      "name": "テレポート",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1501",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1515",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 741,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0461",
+      "name": "ツバはき",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 15,
+      "damage": "F",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1505",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1523",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 742,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0462",
+      "name": "しっぽアタック",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1506",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1509",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 743,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0463",
+      "name": "テレパシー",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0411",
+          "unlock": {
+            "monsterId": "1521",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0255",
+          "unlock": {
+            "monsterId": "1521",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1521",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 744,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0464",
+      "name": "かみつき",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1506",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1523",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1552",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 745,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0465",
+      "name": "キッス",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 31,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1509",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1514",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1550",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1551",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 746,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0466",
+      "name": "熱視線",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 33,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0229",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1521",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1550",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 747,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0467",
+      "name": "サイコキネシス",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1514",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1551",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 748,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0468",
+      "name": "なめる",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1553",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 749,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0469",
+      "name": "ベロビンタ",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "A",
+      "accuracy": "F",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1552",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 750,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0470",
+      "name": "歌う",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "S",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0332",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1514",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 751,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0471",
+      "name": "クロノキネシス",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0412",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1551",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 752,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0472",
+      "name": "食う",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0413",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1552",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1552",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1552",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 753,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0473",
+      "name": "ラブインパクト",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0414",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "1553",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "1553",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1553",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 754,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0474",
+      "name": "超熱視線",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0415",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0416",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1550",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 755,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0709",
+      "name": "炎かみつき",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1514"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 756,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0710",
+      "name": "付呪",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1551"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 757,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0711",
+      "name": "「希望」",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0638",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1551"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 758,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0712",
+      "name": "テレキネシス",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 29,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "F+",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1552"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 759,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0713",
+      "name": "ファー",
+      "version": 1,
+      "blood": "スエゾー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0639",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1553"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 760,
+      "status": "verified"
+    }
+  ]
+}
