@@ -355,7 +355,7 @@ function AmgpBars({ st, add = null }) {
 }
 const amgpLevelColor = (v) => (v >= 70 ? 'text-rose-300' : v >= 60 ? 'text-amber-300' : 'text-slate-200');
 function AssistantMasmonNote({ readOnly = false, data = null, ownerName = '', onClose, aid = null, land = false }) {
-  if (readOnly) return <AmgpReadOnly data={data} ownerName={ownerName} onClose={onClose} land={land}/>;
+  if (readOnly) return <AmgpReadOnly data={data} ownerName={ownerName} onClose={onClose} land={land} aid={aid}/>;
   return <AmgpMine onClose={onClose} aid={aid} land={land}/>;
 }
 function AmgpMine({ onClose, aid = null, land = false }) {
@@ -551,7 +551,7 @@ function AmgpLogTab({ x, nameOf, pickSel }) {
 }
 // 見る専用(フレンドの家・オトズレ)。data = alfMsNormalize の { off, ms:[{ monster, nick, colors, lead, slot, lv, grow, growMine, stats, why }], dk:[…], wt }
 //   自分の保存キーを読まない・書かない。ボタンは閉じるとタブだけ
-function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
+function AmgpReadOnly({ data, ownerName = '', onClose, land = false, aid = null }) {
   const [tab, setTab] = React.useState('list');
   const [sel, setSel] = React.useState(0);
   const d = data && typeof data === 'object' ? data : null;
@@ -575,7 +575,9 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
     <p className="mt-3 rounded-xl bg-slate-800 p-2 text-[10.5px] font-bold text-slate-400">見るだけです(計画・チケット・修行のボタンは出しません)</p>
   </>);
   else body = (<>
-    {dk.length ? dk.map((x, i) => <div key={i} className="mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgp-ro-deck={x.face}>
+    {/* デッキの中身はカード部の部品で、自分のデッキと同じ形に出す(2026-11-12 窓口 案A・オトズレ)。3体はカードのモンスター番号。部品が無ければ下の1行 */}
+    {dk.length && typeof CardAssistantDeckView === 'function' && typeof cardAssistantDeckViewOn === 'function' && cardAssistantDeckViewOn() ? dk.map((x, i) => <div key={i} className="mt-1.5" data-amgp-ro-deck={x.face}><CardAssistantDeckView who={aid} deck={x} land={land}/></div>)
+    : dk.length ? dk.map((x, i) => <div key={i} className="mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgp-ro-deck={x.face}>
       <p className="text-[13px] font-black">🃏 {x.name || 'デッキ'}</p>
       {x.line && <p className="text-[11px] font-bold text-slate-300">{x.line}</p>}
       <p className="mt-1 text-[11px] font-bold text-slate-200">{(x.monsters || []).map(monName).filter(Boolean).join('・')}{x.ace ? ` ・ エース ${x.ace}` : ''}</p>

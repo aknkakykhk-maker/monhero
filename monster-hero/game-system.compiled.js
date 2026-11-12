@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2e9567e2375a038
+// source-sha256: 4fba25a7770b7f32
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147365,7 +147365,8 @@ function AssistantMasmonNote({
     data: data,
     ownerName: ownerName,
     onClose: onClose,
-    land: land
+    land: land,
+    aid: aid
   });
   return React.createElement(AmgpMine, {
     onClose: onClose,
@@ -147839,7 +147840,8 @@ function AmgpReadOnly({
   data,
   ownerName = '',
   onClose,
-  land = false
+  land = false,
+  aid = null
 }) {
   const [tab, setTab] = React.useState('list');
   const [sel, setSel] = React.useState(0);
@@ -147882,7 +147884,15 @@ function AmgpReadOnly({
     className: "mt-1 text-[11px] font-bold text-slate-300"
   }, cur.why)), React.createElement("p", {
     className: "mt-3 rounded-xl bg-slate-800 p-2 text-[10.5px] font-bold text-slate-400"
-  }, "見るだけです(計画・チケット・修行のボタンは出しません)"));else body = React.createElement(React.Fragment, null, dk.length ? dk.map((x, i) => React.createElement("div", {
+  }, "見るだけです(計画・チケット・修行のボタンは出しません)"));else body = React.createElement(React.Fragment, null, dk.length && typeof CardAssistantDeckView === 'function' && typeof cardAssistantDeckViewOn === 'function' && cardAssistantDeckViewOn() ? dk.map((x, i) => React.createElement("div", {
+    key: i,
+    className: "mt-1.5",
+    "data-amgp-ro-deck": x.face
+  }, React.createElement(CardAssistantDeckView, {
+    who: aid,
+    deck: x,
+    land: land
+  }))) : dk.length ? dk.map((x, i) => React.createElement("div", {
     key: i,
     className: "mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2",
     "data-amgp-ro-deck": x.face
@@ -153116,6 +153126,7 @@ function AlfMsRoomLink({
     readOnly: true,
     data: data,
     ownerName: friend.name,
+    aid: aid,
     land: land,
     onClose: () => setOpen(false)
   }))));

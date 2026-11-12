@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1d9b643328907c18
+// generated-sha256: 758f431db1cd8d92
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77180,7 +77180,7 @@ function AmgpBars({ st, add = null }) {
 }
 const amgpLevelColor = (v) => (v >= 70 ? 'text-rose-300' : v >= 60 ? 'text-amber-300' : 'text-slate-200');
 function AssistantMasmonNote({ readOnly = false, data = null, ownerName = '', onClose, aid = null, land = false }) {
-  if (readOnly) return <AmgpReadOnly data={data} ownerName={ownerName} onClose={onClose} land={land}/>;
+  if (readOnly) return <AmgpReadOnly data={data} ownerName={ownerName} onClose={onClose} land={land} aid={aid}/>;
   return <AmgpMine onClose={onClose} aid={aid} land={land}/>;
 }
 function AmgpMine({ onClose, aid = null, land = false }) {
@@ -77376,7 +77376,7 @@ function AmgpLogTab({ x, nameOf, pickSel }) {
 }
 // 見る専用(フレンドの家・オトズレ)。data = alfMsNormalize の { off, ms:[{ monster, nick, colors, lead, slot, lv, grow, growMine, stats, why }], dk:[…], wt }
 //   自分の保存キーを読まない・書かない。ボタンは閉じるとタブだけ
-function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
+function AmgpReadOnly({ data, ownerName = '', onClose, land = false, aid = null }) {
   const [tab, setTab] = React.useState('list');
   const [sel, setSel] = React.useState(0);
   const d = data && typeof data === 'object' ? data : null;
@@ -77400,7 +77400,9 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
     <p className="mt-3 rounded-xl bg-slate-800 p-2 text-[10.5px] font-bold text-slate-400">見るだけです(計画・チケット・修行のボタンは出しません)</p>
   </>);
   else body = (<>
-    {dk.length ? dk.map((x, i) => <div key={i} className="mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgp-ro-deck={x.face}>
+    {/* デッキの中身はカード部の部品で、自分のデッキと同じ形に出す(2026-11-12 窓口 案A・オトズレ)。3体はカードのモンスター番号。部品が無ければ下の1行 */}
+    {dk.length && typeof CardAssistantDeckView === 'function' && typeof cardAssistantDeckViewOn === 'function' && cardAssistantDeckViewOn() ? dk.map((x, i) => <div key={i} className="mt-1.5" data-amgp-ro-deck={x.face}><CardAssistantDeckView who={aid} deck={x} land={land}/></div>)
+    : dk.length ? dk.map((x, i) => <div key={i} className="mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgp-ro-deck={x.face}>
       <p className="text-[13px] font-black">🃏 {x.name || 'デッキ'}</p>
       {x.line && <p className="text-[11px] font-bold text-slate-300">{x.line}</p>}
       <p className="mt-1 text-[11px] font-bold text-slate-200">{(x.monsters || []).map(monName).filter(Boolean).join('・')}{x.ace ? ` ・ エース ${x.ace}` : ''}</p>
@@ -79756,6 +79758,9 @@ const alfMsFetch = async (hostId, aid) => {
   } catch (e) { if (e && e.missing) _alfMsMissing = true; return null; }
 };
 
+// ---- part: 56-assistant-life-friend-masmon-view.jsx ----
+// 助手ライフ: フレンドの家で、その人の助手のマスモン・デッキを見る入口(2026-11-12・案 docs/progress/assistant-peer/FRIEND-SHOWCASE-PLAN.md)。
+// 読むのは 56-assistant-life-friend-masmon-share の alfMsFetch。画面はキズナの <AssistantMasmonNote readOnly/>。保存はしない
 // ---------- 見る側の入口(フレンドの家の部屋のシート)----------
 // 「🐾 ◯◯のマスモン ›」→ 表から1人ぶんを読む → キズナの見る専用 <AssistantMasmonNote readOnly/>。
 // 公開の印 alfMasmonShareSend が偽のあいだは出さない(送る側と同じ印。見る画面だけ先に出すと、だれも送っていないため)
@@ -79772,7 +79777,7 @@ function AlfMsRoomLink({ friend, aid, land = false }) {
     {open && alfLayer(<div className="absolute inset-0" style={{ zIndex: 46 }} data-alf-ms-view={aid}>
       {data === undefined
         ? <div className="absolute inset-0 flex items-center justify-center bg-black/60"><p className="rounded-xl bg-slate-900 px-4 py-2 text-[12px] font-bold text-slate-200">読んでいます…</p></div>
-        : <AssistantMasmonNote readOnly data={data} ownerName={friend.name} land={land} onClose={() => setOpen(false)}/>}
+        : <AssistantMasmonNote readOnly data={data} ownerName={friend.name} aid={aid} land={land} onClose={() => setOpen(false)}/>}
     </div>)}
   </>);
 }
