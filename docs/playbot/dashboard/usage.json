@@ -833,6 +833,131 @@
      "used_tokens": 522351
     }
    }
+  },
+  {
+   "at": "2026-11-12 20:20",
+   "sessions": {
+    "session_014GTmSNS2ae9tRr57k3zFjC": {
+     "name": "窓口 統括部長モンヒロくん",
+     "dept": "窓口",
+     "cost_usd": 2530.76300802,
+     "used_tokens": 167166
+    },
+    "session_01SG7SEGSmUcyxyymHyDVipd": {
+     "name": "ビート部 部長テンポくん",
+     "dept": "ビート部",
+     "cost_usd": 1650.04022438,
+     "used_tokens": 764450
+    },
+    "session_01WaDzrhPE2Q6PDmeAgFPTwG": {
+     "name": "ビート部 オンプくん",
+     "dept": "ビート部",
+     "cost_usd": 162.43875976,
+     "used_tokens": 776460
+    },
+    "session_01JgrcvWE4GJff7cTHDPoecb": {
+     "name": "ビート部 マクアケくん",
+     "dept": "ビート部",
+     "cost_usd": 257.12905586,
+     "used_tokens": 541643
+    },
+    "session_01DfgZpuPHnVgxrwQiurqUQ1": {
+     "name": "ビート部 リバースくん",
+     "dept": "ビート部",
+     "cost_usd": 476.91125078,
+     "used_tokens": 345004
+    },
+    "session_01CDD9oDTcNPzYzw1txYJndF": {
+     "name": "ビート部 カゲくん",
+     "dept": "ビート部",
+     "cost_usd": 104.3419971,
+     "used_tokens": 452950
+    },
+    "session_01JVCTL76hMSV1TP5Z9RMnui": {
+     "name": "バトル部 部長ブレイブくん",
+     "dept": "バトル部",
+     "cost_usd": 1088.16481132,
+     "used_tokens": 303945
+    },
+    "session_01PHekXAt2C5NAZBXL1sh5gG": {
+     "name": "見回り部 部長マップくん",
+     "dept": "見回り部",
+     "cost_usd": 33.3614523,
+     "used_tokens": 668994
+    },
+    "session_012TESL6HTwLnNNvrMJLnHAN": {
+     "name": "守り部 部長ガードくん",
+     "dept": "守り部",
+     "cost_usd": 23.61048062,
+     "used_tokens": 517198
+    },
+    "session_01911k2UUtVGudFqekCw9DB9": {
+     "name": "研究所 部長ハカセくん",
+     "dept": "研究所",
+     "cost_usd": 387.9211304,
+     "used_tokens": 453727
+    },
+    "session_01DT3gL9ZEpezajUTxh9fEfB": {
+     "name": "研究所 ダイスくん",
+     "dept": "研究所",
+     "cost_usd": 210.71193872,
+     "used_tokens": 596111
+    },
+    "session_01GC6TmQQkN6wfT4a8EymrPz": {
+     "name": "研究所 アリーナくん",
+     "dept": "研究所",
+     "cost_usd": 179.42054004,
+     "used_tokens": 201239
+    },
+    "session_013j3vPELgtDfDhHcSzW81PR": {
+     "name": "研究所 レフェリーくん",
+     "dept": "研究所",
+     "cost_usd": 570.5626712,
+     "used_tokens": 731507
+    },
+    "session_01VKTcSbgZtBChiibCjAYVgW": {
+     "name": "研究所 セコンドくん",
+     "dept": "研究所",
+     "cost_usd": 561.14763674,
+     "used_tokens": 239163
+    },
+    "session_01VRYhgmPT7CS6iFeyRbpz1p": {
+     "name": "開発部 クラフトくん",
+     "dept": "開発部",
+     "cost_usd": 942.10482008,
+     "used_tokens": 248414
+    },
+    "session_01QSmyXKq2qGHrvHDTCv2h2g": {
+     "name": "修理部 部長ドライバーくん",
+     "dept": "修理部",
+     "cost_usd": 306.97951172,
+     "used_tokens": 698268
+    },
+    "session_01Wyn2J3kuKNp9MmbffDj3oc": {
+     "name": "修理部 ヤスリくん",
+     "dept": "修理部",
+     "cost_usd": 141.19506896,
+     "used_tokens": 607855
+    },
+    "session_01SPwyyGL5vwYvuDU9Bzts2t": {
+     "name": "修理部 ピンセットくん",
+     "dept": "修理部",
+     "cost_usd": 108.92018376,
+     "used_tokens": 342848
+    },
+    "session_0169T9CNRwoH1QW1vKpEsUy5": {
+     "name": "修理部 ストックくん",
+     "dept": "修理部",
+     "cost_usd": 95.28766592,
+     "used_tokens": 370584
+    },
+    "session_013PjVKh5sdbiJbni1W5pZhr": {
+     "name": "改善部 部長ダメダシくん",
+     "dept": "改善部",
+     "cost_usd": 217.87080654,
+     "used_tokens": 522351
+    }
+   }
   }
  ]
 }
