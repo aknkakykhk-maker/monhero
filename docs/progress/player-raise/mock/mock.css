@@ -1,0 +1,129 @@
+/* モンヒロサクセス 止め絵(方向を決める用)。色・角・ボタンは助手マスモンの画面と観戦(ambw-*)に合わせた */
+*{box-sizing:border-box}
+body{margin:0;background:#ecebf5;color:#1e1b4b;font-family:'MockJP','Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP','Yu Gothic',system-ui,sans-serif;font-weight:700}
+img{display:block}
+section.scr{padding:22px 24px 26px;border-bottom:2px dashed #c7c3e6;width:max-content;min-width:100%}
+section.scr>h2{margin:0 0 4px;font-size:22px;font-weight:900}
+section.scr>p.lead{margin:0 0 14px;font-size:13px;color:#4c4780;font-weight:500;max-width:1100px;line-height:1.6}
+.rowp{display:flex;gap:22px;align-items:flex-start}
+.pw{flex:none}
+.pw>.cap{font-size:13px;font-weight:900;margin:0 0 6px;color:#3b3566}
+.note{width:330px;flex:none;background:#fff;border-radius:14px;border:1px solid #c7c3e6;padding:12px 14px;font-size:12.5px;line-height:1.65;font-weight:500}
+.note h3{margin:0 0 6px;font-size:13px;font-weight:900;color:#be185d}
+.note h3+ul{margin-top:0}
+.note ul{margin:0 0 10px;padding-left:18px}
+.note code{background:#f1f0fa;border-radius:5px;padding:0 4px;font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+.note b{font-weight:900}
+
+/* ---- スマホ ---- */
+.phone{width:390px;height:844px;position:relative;overflow:hidden;color:#fff;font-weight:700;font-size:12px;line-height:1.45;
+  background:linear-gradient(180deg,#1d1740 0,#151130 45%,#0f0d24 100%);border-radius:26px;box-shadow:0 8px 24px #1e1b4b40}
+.sheet .phone{border-radius:14px}
+.in{padding:10px 12px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;height:38px}
+.hd .bk{background:#2b3348;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:900;white-space:nowrap}
+.hd .ti{font-size:13px;font-weight:900;color:#f9a8d4;white-space:nowrap}
+.hd .rt{background:#3b3566;border-radius:99px;padding:4px 11px;font-size:12px;font-weight:900;white-space:nowrap}
+.card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:10px;margin-top:8px;position:relative}
+.card.pk{border-color:#f472b6aa}.card.sk{border-color:#38bdf8aa}.card.yl{border-color:#fde047;box-shadow:0 0 14px #fde04755}
+.card.dash{border-style:dashed;background:#1e1a3680}
+.sub{font-size:11px;color:#cbd5e1;font-weight:500}.dim{color:#94a3b8}.yel{color:#fde047}.pnk{color:#f9a8d4}.sky{color:#7dd3fc}.grn{color:#86efac}
+.h1{font-size:17px;font-weight:900}.h2{font-size:14px;font-weight:900}
+.row{display:flex;align-items:center;gap:8px}.wrap{flex-wrap:wrap}.f1{flex:1;min-width:0}.ctr{text-align:center}.nw{white-space:nowrap}
+.btn,.btn2,.btn3{display:block;border-radius:999px;padding:11px 14px;font-weight:900;font-size:14px;text-align:center;color:#fff;white-space:nowrap}
+.btn{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d66}
+.btn2{background:#334155}.btn3{background:#1e293b;border:1px solid #475569;color:#cbd5e1}
+.btn.sm,.btn2.sm,.btn3.sm{padding:7px 10px;font-size:12px}
+.tabs{display:flex;gap:6px;margin-top:8px}
+.tabs span{flex:1;text-align:center;font-size:12px;font-weight:900;padding:8px 4px;border-radius:99px;background:#1e293b;color:#94a3b8;white-space:nowrap}
+.tabs span.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.tabs.y span{border-radius:10px;border:1px solid #475569}.tabs.y span.on{background:#fde047;color:#422006;border-color:#fde047}
+.chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
+.chip.on{background:#fde047;color:#422006;border-color:#fde047}.chip.p{background:#f472b6;border-color:#f472b6;color:#fff}
+.chip.g{background:#064e3b;border-color:#34d399;color:#a7f3d0}.chip.s{background:#0c4a6e;border-color:#38bdf8;color:#bae6fd}
+.fc{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff3;background:#312e5a;flex:none}
+.bub{background:#fff;color:#1e1b4b;border-radius:12px;padding:7px 10px;font-size:12.5px;font-weight:800;line-height:1.5;position:relative}
+.bar{height:8px;border-radius:9px;background:#334155;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.bar.g i{background:linear-gradient(90deg,#34d399,#a3e635)}.bar.p i{background:linear-gradient(90deg,#f472b6,#fb923c)}
+/* 6能力 */
+.sts{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
+.st1{display:flex;align-items:center;gap:5px;font-size:11px}
+.st1 .nm{width:56px;white-space:nowrap;color:#e2e8f0}.st1 .bar{flex:1;height:7px}.st1 b{width:27px;text-align:right;font-size:12px}
+.st1 em{font-style:normal;color:#86efac;font-size:11px;font-weight:900;width:26px}
+.st1 .ap{width:14px;text-align:center;font-size:11px;color:#fde047}
+/* ランクの札 */
+.rk{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 5px;border-radius:6px;font-size:11px;font-weight:900;color:#0f172a;background:#94a3b8;font-style:normal}
+.rk.rG,.rk.rF{background:#94a3b8}.rk.rE{background:#4ade80}.rk.rD{background:#2dd4bf}.rk.rC{background:#38bdf8}.rk.rB{background:#a78bfa}
+.rk.rA{background:#f472b6}.rk.rS{background:#fbbf24}.rk.rSS{background:#fb923c}.rk.rSSS{background:#f87171}
+.rk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa);color:#1e1b4b}
+.rk.big{height:26px;min-width:34px;font-size:16px;border-radius:8px}
+/* 応援の顔 */
+.cf{position:relative;width:30px;height:30px;flex:none}
+.cf img{width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
+.cf.rE img,.cf.rD img{border-color:#2dd4bf}.cf.rC img{border-color:#38bdf8}.cf.rB img{border-color:#a78bfa}.cf.rA img{border-color:#f472b6}.cf.rS img{border-color:#fbbf24}.cf.rM img{border-color:#fde047}
+.cf.base img{opacity:.55;border-style:dashed}
+.cf.fav::after{content:'★';position:absolute;right:-4px;top:-6px;font-size:11px;color:#fde047;text-shadow:0 1px 0 #422006}
+.cf.fr::before{content:'🤝';position:absolute;left:-5px;bottom:-5px;font-size:10px}
+.cf.lg{width:46px;height:46px}.cf.lg img{width:46px;height:46px;border-radius:12px}
+/* 訓練の札 */
+.tg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.tc{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 5px 5px;text-align:center;position:relative;min-height:82px}
+.tc .ic{font-size:19px;line-height:1.1}.tc .nm{font-size:11.5px;font-weight:900}.tc .ex{font-size:10px;color:#86efac;font-weight:900}
+.tc .fs{display:flex;justify-content:center;gap:2px;margin-top:4px;min-height:24px}
+.tc .fs .cf,.tc .fs .cf img{width:24px;height:24px;border-radius:7px}
+.tc.fav{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}
+.tc.party{border-color:#f472b6;background:linear-gradient(160deg,#4a1d5c,#3b2f0b);box-shadow:0 0 14px #f472b699}
+.tc .rib{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;font-size:9.5px;font-weight:900;padding:1px 8px;white-space:nowrap}
+.tc.none .fs{opacity:.5;font-size:10px;color:#64748b;align-items:center}
+.cmd{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.cmd div{background:#334155;border-radius:14px;padding:7px 2px;text-align:center;font-size:12px;font-weight:900;line-height:1.3}
+.cmd div small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.cmd div.off{background:#1e293b;color:#64748b}.cmd div.off small{color:#64748b}.cmd div.hot{background:linear-gradient(90deg,#f472b6,#fb923c)}
+/* 舞台 */
+.stage{position:relative;border-radius:14px;border:1px solid #3b3566;overflow:hidden;margin-top:8px;
+  background:radial-gradient(ellipse at 50% 88%,#4c3f8f 0,#241d4a 55%,#171230 100%)}
+.stage .mon{position:absolute;object-fit:contain;filter:drop-shadow(0 8px 5px #0009)}
+.stage .tag{position:absolute;font-size:10.5px;font-weight:900;background:#0009;border-radius:7px;padding:1px 8px;white-space:nowrap}
+.bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.shade{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2455,#0f0d24dd)}
+.cut{position:absolute;left:-6px;right:30px;padding:5px 20px;background:linear-gradient(90deg,#a855f7,#6366f1 70%,#6366f100)}
+.cut.pow{background:linear-gradient(90deg,#f97316,#ef4444 70%,#ef444400)}.cut.gold{background:linear-gradient(90deg,#f59e0b,#fde047 60%,#fde04700);color:#422006}
+.cut.gray{background:linear-gradient(90deg,#475569,#334155 70%,#33415500)}.cut.sky{background:linear-gradient(90deg,#0ea5e9,#2563eb 70%,#2563eb00)}
+.cut b{display:block;font-size:19px;letter-spacing:.05em;text-shadow:0 2px 0 #0005}.cut small{font-size:10.5px;font-weight:900}
+.up{position:absolute;font-size:24px;font-weight:900;color:#fde047;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;white-space:nowrap}
+.up small{font-size:12px;color:#fff;text-shadow:0 1px 0 #0008}
+.modal{position:absolute;inset:0;background:#0b0920d9;display:flex;flex-direction:column;justify-content:center;padding:18px}
+.spark{position:absolute;font-size:18px}
+.ft{position:absolute;left:12px;right:12px;bottom:14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ph{background:#0f172a;border-radius:12px;object-fit:contain}
+.lk{filter:grayscale(1) brightness(.5)}
+.life{position:relative;height:12px;border-radius:9px;background:#334155;margin-top:5px}
+.life i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#34d399,#a3e635)}
+.life .pk{position:absolute;top:-2px;height:16px;border:1.5px dashed #fde047;border-radius:6px;background:#fde04722}
+.life u{position:absolute;top:-3px;width:2px;height:18px;background:#fff;border-radius:2px}
+.dots{display:flex;gap:5px}.dots i{width:22px;height:8px;border-radius:5px;background:#334155}.dots i.on{background:#fb923c}.dots i.ok{background:#34d399}
+table.t{width:100%;border-collapse:collapse;font-size:11.5px}table.t td{padding:4px 3px;border-bottom:1px solid #fff1;text-align:right}table.t td:first-child{text-align:left}
+
+/* ---- 動きの案(?play=1 で動く。止め絵では止めたコマ) ---- */
+@keyframes mkPop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1)}}
+@keyframes mkRise{0%{transform:translateY(14px);opacity:0}25%{opacity:1}100%{transform:translateY(-10px);opacity:1}}
+@keyframes mkHop{0%,100%{transform:translateY(0)}45%{transform:translateY(-12px)}}
+@keyframes mkCut{0%{transform:translateX(-110%)}100%{transform:translateX(0)}}
+@keyframes mkShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}50%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
+@keyframes mkGlow{0%,100%{box-shadow:0 0 6px #fde04755}50%{box-shadow:0 0 18px #fde047cc}}
+@keyframes mkSpin{0%{transform:rotateY(0)}100%{transform:rotateY(720deg)}}
+@keyframes mkMerge{0%{transform:translateX(var(--dx)) scale(1);opacity:1}100%{transform:translateX(0) scale(.2);opacity:0}}
+.play .a-pop{animation:mkPop .45s ease-out both}.play .a-rise{animation:mkRise .9s ease-out both}
+.play .a-hop{animation:mkHop .5s ease-in-out 3}.play .a-cut{animation:mkCut .22s ease-out both}
+.play .a-shake{animation:mkShake .4s ease-out}.play .a-glow{animation:mkGlow 1.4s ease-in-out infinite}
+.play .a-spin{animation:mkSpin 1.2s cubic-bezier(.2,.7,.2,1) both}
+
+/* ---- 一覧の1枚 ---- */
+.sheet{padding:26px 28px}
+.sheet h1{font-size:30px;margin:0 0 4px;font-weight:900}.sheet p{margin:0 0 18px;font-size:15px;font-weight:500;color:#4c4780}
+.sheet .sg{display:grid;grid-template-columns:repeat(7,196px);gap:20px 16px}
+.sheet .it{width:196px}.sheet .it .z{width:195px;height:422px;overflow:hidden}.sheet .it .z .phone{transform:scale(.5);transform-origin:0 0;box-shadow:none}
+.sheet .it>b{display:block;font-size:13px;font-weight:900;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg.tall .tc{min-height:98px;padding-top:9px}.tg.tall .tc .fs{margin-top:7px}

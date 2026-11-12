@@ -8,6 +8,8 @@
 //   ⑥ 印が偽なら何もしない(様子はそのまま・保存を読まない・書かない・画面の口は空)。予定表の一覧に病院が出ない
 //   ⑦ assistantLifeNow: 印が真なら1回ぶん進めて保存・同じ回では二度進めない。口 assistantLifeHospitalSlotsOf が病院の回を返す
 //   ⑧ おまかせの助手だけで30日回しても、けが・病気はまれ(疲れ・ストレスがたまり続けない)
+//   ⑩ 特別な治療(life_cure): 病院にいる回でけが・病気が残っているときだけ使える・使うと治って記録が 'cure'・口 assistantLifeHospitalCureSlotsOf が返す
+//      交換所に 300P・印 assistantLifeBody つきで並ぶ・品物の説明がある・60-app は減らしてから治し、治せなければ戻す
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -190,6 +192,31 @@ const fixed = (v) => () => v;
     // 修行は1日3回まで(シュギョウ)。その日に修行できた回の合計で比べる
     const sum3 = (m) => Object.values(m).reduce((t, n) => t + Math.min(3, n), 0); on = sum3(onD); off = sum3(offD);
     check('⑨ 修行できた回(1日3回まで)は、印が偽のときの9割より多い', on > off * 0.9, `${on} / ${off}`);
+  }
+  // ⑩ 特別な治療
+  {
+    const A = 12 * 1100 + 6;
+    const base = G('normalizeAssistantLifeBody')(null);
+    const sick = { k: 'sick', sev: 'heavy', left: 50, visits: 2 };
+    const at = (place, cond = sick, abs = A) => G('ASSISTANT_LIFE_BODY_STORE').set({ data: { ...base, at: A, s: { kiki: { fat: 30, st: 30, cond } }, log: { kiki: [{ abs: A - 1, place: 'home', ev: '' }, { abs, place, ev: 'clinic' }] } } });
+    const can = G('assistantLifeBodyCanCure');
+    at('clinic'); check('⑩ 病院にいる回・病気が残っている → 使える', can('kiki', A) === true);
+    at('home'); check('⑩ 家にいる回 → 使えない', can('kiki', A) === false);
+    at('clinic', null); check('⑩ けが・病気がない → 使えない', can('kiki', A) === false);
+    at('clinic'); check('⑩ ちがう回(前の回の画面のまま) → 使えない', can('kiki', A + 1) === false && can('mua', A) === false);
+    flags.assistantLifeBody = false; check('⑩ 印が偽 → 使えない', can('kiki', A) === false); flags.assistantLifeBody = true;
+    at('clinic');
+    const w = writes.length;
+    const ok = G('assistantLifeBodyCure')('kiki', A);
+    const D = G('ASSISTANT_LIFE_BODY_STORE.state.data');
+    check('⑩ 使うと重い病気でもその場で治り、記録が cure になって保存される', ok === true && D.s.kiki.cond === null && D.log.kiki.slice(-1)[0].ev === 'cure' && writes.length > w && mem.mh_assistant_life_body_v1.s.kiki.cond === null);
+    check('⑩ 口 assistantLifeHospitalCureSlotsOf がその回を返す・二度は使えない', JSON.stringify(G('assistantLifeHospitalCureSlotsOf')('kiki')) === `[${A}]` && G('assistantLifeBodyCure')('kiki', A) === false);
+    const shop = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-event.js'), 'utf8');
+    check('⑩ 交換所に 300P・印 assistantLifeBody つきで並ぶ', /id:'life_cure'[^\n]*cost:300, releaseFlag:'assistantLifeBody'/.test(shop));
+    check('⑩ 品物の説明がある', /id:'life_cure', name:"特別な治療"/.test(fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8')));
+    const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+    const fn = (app.match(/const cureAssistantLifeBody = async[\s\S]*?\n  \};/) || [''])[0];
+    check('⑩ 60-app は使えるか確かめ → 1枚減らして保存 → 治す → 治せなければ戻す', fn.indexOf('assistantLifeBodyCanCure') > 0 && fn.indexOf('have - 1') > fn.indexOf('assistantLifeBodyCanCure') && fn.indexOf("storeSet('mh_owned_items'") < fn.indexOf('assistantLifeBodyCure(who') && /\+ 1 \}/.test(fn));
   }
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
