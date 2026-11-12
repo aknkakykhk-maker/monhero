@@ -13,6 +13,7 @@
 | `assist-card-1〜3.png` | アシストカードの詳細(基本の数値・アシスト効果) | ASSIST-REF.md |
 | `assist-card-4-event.png` | アシストカードのイベントの一覧 | ASSIST-REF.md |
 | `assist-cards.json` / `assist-effects.json` | アシストカード100枚と効果1084件の一覧(攻略サイトのデータ) | ASSIST-REF.md |
+| `battle-video-2026-11-13.mp4` | 対戦(デュエルカップ)の入り〜試合前の比べ・戦術の設定〜READY〜バトル〜WON〜リザルトの動画(68秒) | マスモン対戦βの作り込み(バトル部の引き継ぎメモ) |
 | `taikai-bracket.png` / `taikai-card.png` | 参考動画2から切り出した、大会の組み合わせ表と試合前の能力の比べ | TOURNAMENT.md §15 |
 
 この日より前に送られた参考画像(大会の一覧・育成の流れ16枚など)は、窓口の手元に名前の分かる形で残っていないので入れていない。要るときは送り直してもらう。
