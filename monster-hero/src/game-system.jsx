@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 06d82b9003350e1c
+// generated-sha256: 8e740dd32d20731e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67276,7 +67276,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
   'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 } },
-  'stand-card-master': { mua: { top: 0.1134, eye: 0.2267, chin: 0.2947, m: 0.506, above: 0.75 } },
+  'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
