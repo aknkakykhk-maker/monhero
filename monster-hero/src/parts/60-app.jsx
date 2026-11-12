@@ -2288,6 +2288,30 @@ function MonsterHeroGame() {
     try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
     return assistantLifeFurnGive(who, key);
   };
+  // 🏥 特別な治療を1枚使う(2026-11-12 社長・ビートP交換所 300P)。病院の回でけが・病気が残っているかを先に確かめ、持ち物を1枚減らして保存できたときだけ治す。
+  //   治せなかったときは1枚戻す(56-assistant-life-body.jsx の assistantLifeBodyCure)
+  const cureAssistantLifeBody = async (who, abs) => {
+    if (typeof assistantLifeBodyCanCure !== 'function' || !assistantLifeBodyCanCure(who, abs)) return false;
+    const itemId = ASSISTANT_LIFE_BODY_CURE_ITEM;
+    const have = ownedItemCount(ownedItemsRef.current, itemId);
+    if (have <= 0) return false;
+    const before = ownedItemsRef.current;
+    const nextItems = { ...before, [itemId]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try { await storeSet('mh_owned_items', nextItems, false); } catch { ownedItemsRef.current = before; setOwnedItems(before); return false; }
+    if (assistantLifeBodyCure(who, abs)) return true;
+    const back = { ...ownedItemsRef.current, [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1 };
+    ownedItemsRef.current = back;
+    setOwnedItems(back);
+    try { await storeSet('mh_owned_items', back, false); } catch {}
+    return false;
+  };
+  // 予定表の体の窓が、持っている数と「使う」口を読む(印 assistantLifeBody が偽なら窓が出ないので使われない)
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_BODY_CURE_HOOK === 'undefined') return;
+    ASSISTANT_LIFE_BODY_CURE_HOOK.set({ have: ownedItemCount(ownedItems, ASSISTANT_LIFE_BODY_CURE_ITEM), use: cureAssistantLifeBody });
+  }, [ownedItems]);
   // 助手1人に道具を贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)。贈れるか確かめてから持ち物を1つ減らし、減らせたときだけ記録・仲良し度を入れる
   const giveAssistantLifeSolo = async (who, kind) => {
     if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
