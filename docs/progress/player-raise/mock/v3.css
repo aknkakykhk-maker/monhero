@@ -418,3 +418,15 @@
 .v-bracket{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-size:10px;font-weight:900;white-space:nowrap}
 .v-bracket span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:2px 8px}.v-bracket span.me{border-color:#fde047;color:#fde047}
 .v-bracket em{font-style:normal;color:#94a3b8;font-size:9px}.v-bracket u{text-decoration:none;color:#f9a8d4;font-size:9px;margin:0 4px}
+
+/* メインの子はもっと小さく(社長 2026-11-12) */
+.v-scene.home .mon{height:34%}.v-scene.home .gr{width:24%}
+.phone.land .v-scene.home .mon{height:40%}.phone.s320 .v-scene.home .mon{height:36%}
+/* 大会のあとのごはん(小窓) */
+.v-meal{position:absolute;left:8px;right:8px;bottom:8px;background:#151130f2;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;box-shadow:0 0 18px #fde04766}
+.v-meal .t{font-size:13px;font-weight:900;text-align:center;line-height:1.35}.v-meal .t small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.v-meal .ms{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.v-ml{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 3px;text-align:center;line-height:1.3;min-width:0}
+.v-ml .e{font-size:30px;line-height:1.1}.v-ml b{display:block;font-size:11.5px;white-space:nowrap}
+.v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.v-ml small{display:block;font-size:9px;color:#86efac;font-weight:800}
+.v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}
