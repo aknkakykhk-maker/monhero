@@ -77,16 +77,50 @@ const hg = (niji, size = 34) => `<svg class="v-hg" width="${size}" height="${siz
   <path d="M12 9h16c0 7-5 9-6 11 1 2 6 4 6 11H12c0-7 5-9 6-11-1-2-6-4-6-11z" fill="#f8fafc" fill-opacity=".9" stroke="${niji ? '#312e81' : '#92400e'}" stroke-width="1.5" stroke-linejoin="round"/>
   <path d="M15 12h10c-1 4-4 5-5 7-1-2-4-3-5-7z" fill="${niji ? '#a78bfa' : '#fbbf24'}"/><path d="M14.5 30c1-4 4-5 5.5-6 1.500 1 4.500 2 5.500 6z" fill="${niji ? '#f472b6' : '#f59e0b'}"/><rect x="19.400" y="19" width="1.200" height="6" fill="${niji ? '#f472b6' : '#f59e0b'}"/>
   ${niji ? '<path d="M33 6l1.200 2.800L37 10l-2.800 1.200L33 14l-1.200-2.800L29 10l2.800-1.200z" fill="#fff"/>' : ''}</svg>`;
-// 持ち物: [絵, 名前, 数, 状態]
-const BAG = [['🍱', 'とくせい弁当', 1, 'sel'], ['🧸', 'おもちゃ', 2, ''], ['📕', '技の書', 1, ''], [hg(0), '時渡りの砂時計', 2, 'no'], [hg(1), '虹の時渡りの砂時計', 1, 'no'], ['🎫', '修行チケット', 3, 'no'], ['🧿', '体力のおまもり', 1, 'no']];
+// 持ちこみアイテム12種のアイコン(この見本のために新しく描いた仮の絵・参考のゲームの絵は写していない)
+const ic = (b) => `<svg class="v-ic" viewBox="0 0 40 40" width="100%" height="100%">${b}</svg>`;
+const ICON = {
+  guide: ic('<rect x="8" y="6" width="24" height="29" rx="3" fill="#1e3a8a" stroke="#93c5fd" stroke-width="1.5"/><rect x="11" y="9" width="18" height="23" rx="1.5" fill="#dbeafe"/><circle cx="20" cy="17" r="4" fill="#fbbf24"/><path d="M14 27h12M14 30h8" stroke="#64748b" stroke-width="1.5"/><path d="M30 5l1 2.500 2.500 1-2.500 1-1 2.500-1-2.500-2.500-1 2.500-1z" fill="#fde047"/>'),
+  loupe: ic('<circle cx="17" cy="17" r="10" fill="#bae6fd" fill-opacity=".55" stroke="#f59e0b" stroke-width="3.500"/><path d="M11 13a8 8 0 0 1 6-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M25 25l9 9" stroke="#92400e" stroke-width="5" stroke-linecap="round"/><path d="M33 6l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="#fde047"/>'),
+  band: ic('<path d="M5 15c5-5 25-5 30 0v10c-5-5-25-5-30 0z" fill="#f9a8d4" stroke="#be185d" stroke-width="1.5"/><path d="M9 17l3 5M16 17l3 5M23 17l3 5M30 17l-3 5" stroke="#fde047" stroke-width="2"/><circle cx="20" cy="30" r="3" fill="#a78bfa"/><circle cx="12" cy="31" r="2" fill="#7dd3fc"/><circle cx="28" cy="31" r="2" fill="#86efac"/>'),
+  mag: ic('<rect x="7" y="5" width="26" height="31" rx="2.500" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/><rect x="10" y="8" width="20" height="9" rx="1.500" fill="#fb923c"/><path d="M13 12h14" stroke="#fff" stroke-width="2.500"/><path d="M11 21h18M11 25h18M11 29h11" stroke="#a16207" stroke-width="1.600"/>'),
+  hachi: ic('<path d="M4 17c8-6 24-6 32 0v7c-8-6-24-6-32 0z" fill="#ef4444" stroke="#7f1d1d" stroke-width="1.500"/><circle cx="20" cy="19" r="4.500" fill="#fef9c3" stroke="#b45309" stroke-width="1.200"/><path d="M20 16l1.200 2.800 2.800.2-2.200 1.800.8 2.800-2.600-1.600-2.600 1.600.8-2.800L16 19l2.800-.2z" fill="#f59e0b"/><path d="M33 22l5 10M30 23l2 11" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>'),
+  omamori: ic('<path d="M20 4l-2 5h4z" fill="#a78bfa"/><rect x="9" y="8" width="22" height="28" rx="5" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="1.500"/><path d="M20 28c-5-4-7-6-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 3-2 5-7 9z" fill="#f472b6"/><path d="M9 14h22" stroke="#1d4ed8" stroke-width="1.500"/><path d="M20 36v3" stroke="#60a5fa" stroke-width="2"/>'),
+  dango: ic('<ellipse cx="20" cy="31" rx="13" ry="4.500" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.200"/><circle cx="13" cy="24" r="6.500" fill="#fbcfe8" stroke="#db2777" stroke-width="1.200"/><circle cx="27" cy="24" r="6.500" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.200"/><circle cx="20" cy="15" r="6.500" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.200"/><path d="M20 4v8" stroke="#92400e" stroke-width="2"/>'),
+  grass: ic('<path d="M20 36V18" stroke="#16a34a" stroke-width="2.500"/><path d="M20 24c-8 0-11-6-11-12 7 0 11 4 11 12z" fill="#86efac" stroke="#15803d" stroke-width="1.200"/><path d="M20 20c7 0 10-5 10-11-6 0-10 4-10 11z" fill="#bbf7d0" stroke="#15803d" stroke-width="1.200"/><circle cx="20" cy="12" r="3.500" fill="#fff" stroke="#a78bfa" stroke-width="1.200"/><path d="M13 36h14" stroke="#92400e" stroke-width="3" stroke-linecap="round"/>'),
+  juice: ic('<path d="M13 9h14l-2 27H15z" fill="#bbf7d0" stroke="#15803d" stroke-width="1.500"/><path d="M14 20h12l-1 16H15z" fill="#4ade80"/><rect x="12" y="5" width="16" height="5" rx="2" fill="#a16207"/><path d="M27 8l5-5" stroke="#16a34a" stroke-width="2.500" stroke-linecap="round"/><circle cx="20" cy="28" r="3.500" fill="#fff" fill-opacity=".8"/><path d="M20 26v4M18 28h4" stroke="#16a34a" stroke-width="1.200"/>'),
+  powder: ic('<path d="M10 14h20l3 22H7z" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1.500"/><path d="M13 10h14l3 5H10z" fill="#a5b4fc" stroke="#4f46e5" stroke-width="1.500"/><path d="M15 25l3 3 7-7" stroke="#16a34a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="31" cy="8" r="1.500" fill="#fde047"/><circle cx="8" cy="9" r="1.200" fill="#fde047"/>'),
+  license: ic('<rect x="4" y="9" width="32" height="22" rx="3" fill="#fef3c7" stroke="#b45309" stroke-width="1.500"/><circle cx="14" cy="18" r="4.500" fill="#f9a8d4"/><path d="M8 29c1-5 11-5 12 0z" fill="#f9a8d4"/><path d="M24 15h9M24 19h9M24 23h6" stroke="#a16207" stroke-width="1.800"/><path d="M29 26l1 2.500 2.500.3-1.900 1.700.6 2.500-2.200-1.300-2.200 1.300.6-2.500-1.900-1.700 2.500-.3z" fill="#f59e0b"/>'),
+  pack: ic('<rect x="6" y="14" width="28" height="22" rx="4" fill="#fde68a" stroke="#b45309" stroke-width="1.500"/><path d="M6 21h28" stroke="#b45309" stroke-width="1.500"/><path d="M13 14c-2-6 3-9 7-5 4-4 9-1 7 5" fill="#86efac" stroke="#15803d" stroke-width="1.200"/><rect x="15" y="24" width="10" height="8" rx="3" fill="#fb923c"/><path d="M17 27h6" stroke="#fff" stroke-width="1.500"/>'),
+};
+// 持ちこみ12種: [id, 絵, 名前, 一行の説明, いつ使う(before=はじめる前に持っていく / both=育成中にも使える), 持っている数]
+// 効き目は参考のゲームのまま。名前はモンヒロに合わせた仮(参考の人物はイッサ博士に読みかえ)。数字は仮
+const ITEMS = [
+  ['guide', '博士の導き書', 'イッサ博士の大事な書類。1度、イッサ博士が現れる', 'before', 44],
+  ['loupe', '博士のルーペ', 'イッサ博士のお気に入り。イッサ博士の実験が成功する', 'both', 54],
+  ['band', '出会いのミサンガ', '交流を増やすミサンガ。ようす「イベントメーカー」が付く', 'before', 131],
+  ['mag', '週刊!トレーニング', 'ハウツー雑誌。ようす「トレーニング得意」が付く', 'before', 99],
+  ['hachi', '修行のハチマキ', '気合いが入るハチマキ。ようす「修行得意」が付く', 'before', 87],
+  ['omamori', '縁結びのお守り', '良縁に恵まれるお守り。ようす「スターの素質○」が付く', 'before', 66],
+  ['dango', 'モモのキビダンゴ', '食べるとスタミナがつく。体力の最大値が はじめから上がる', 'before', 97],
+  ['grass', 'うけつぎ草', '伝授でいい結果が出る草。ようす「うけつぐ魂」が付く', 'before', 26],
+  ['juice', 'ガロエ印の野菜ジュース', '体力を完全に回復する', 'both', 79],
+  ['powder', '悪様散', '悪いようすを治して、体力を回復する', 'both', 118],
+  ['license', 'ブリーダーライセンス', '忠誠度が一定数 上がる', 'both', 9],
+  ['pack', 'オイリーパック', 'オイル2個と薬草の詰め合わせ', 'both', 66],
+];
+const IT = Object.fromEntries(ITEMS.map((t) => [t[0], t]));
+const icon = (k) => `<span class="v-icw">${ICON[k]}</span>`;
+// 持ち物の小窓(育成中): [絵, 名前, 数, 状態]。使えるのは「育成中にも使える」物だけ
+const BAG = [['juice', 3, 'sel'], ['powder', 2, ''], ['license', 1, ''], ['pack', 1, ''], ['loupe', 1, '']].map(([k, c, st]) => [icon(k), IT[k][1], c, st]).concat([[hg(0), '時渡りの砂時計', 2, 'no'], [hg(1), '虹の時渡りの砂時計', 1, 'no'], ['🎫', '修行チケット', 3, 'no']]);
 const bagHtml = `${hdr()}<div class="v-body">
   ${band({ heal: 48 })}
-  ${mainSay(false).replace(/<div class="bub">.*<\/div><\/div>$/, '<div class="bub">体力がへってきたね。<em>とくせい弁当</em>、いま使っちゃう?</div></div>')}
+  ${mainSay(false).replace(/<div class="bub">.*<\/div><\/div>$/, '<div class="bub">体力がへってきたね。<em>野菜ジュース</em>、いま使っちゃう?</div></div>')}
   ${scene({ cls: 'home dk', noMon: 1, inner: `<div class="v-bagw"><div class="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><i>✕</i></div>
-    <div class="v-bsel"><span class="e">🍱</span><div><b>とくせい弁当 <span class="yel">×1</span></b><small>ほかほかの特別なお弁当。体力を 50 回復する</small><small class="lim">いつ使える: 自分のターン</small></div></div>
+    <div class="v-bsel"><span class="e">${icon('juice')}</span><div><b>ガロエ印の野菜ジュース <span class="yel">×3</span></b><small>体力を完全に回復する(育成中にも使える)</small><small class="lim">いつ使える: 自分のターン</small></div></div>
     <div class="v-bgrid">${BAG.map(([e, n, c, st]) => `<div class="${st}"><span class="e">${e}</span><i>×${c}</i><small>${n}</small></div>`).join('')}</div>
-    <div class="v-bnote">${hg(0, 20)} 時渡りの砂時計: バトルに敗北したときにやり直せる<br>${hg(1, 20)} 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br><span class="dim2">(うすい物は、ここでは使わない。負けたとき・修行のボタンなどで使う)</span></div>
-    <div class="v-big" style="font-size:14px;padding:9px;margin-top:0;color:#fff">🍱 とくせい弁当を使う(体力 62 → 110)</div></div>` })}
+    <div class="v-bnote">${hg(0, 20)} 時渡りの砂時計: バトルに敗北したときにやり直せる<br>${hg(1, 20)} 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br><span class="dim2">(うすい物は、ここでは使わない。負けたとき・修行のボタンなどで使う。はじめる前に使う物は、持ちこんだときに効いている)</span></div>
+    <div class="v-big" style="font-size:14px;padding:9px;margin-top:0;color:#fff">🥤 野菜ジュースを使う(体力 62 → 110)</div></div>` })}
   ${stRow()}
 </div>${foot}`;
 
@@ -273,18 +307,18 @@ const s3 = `${sHd(2)}<div class="v-body">${steps(2)}
     <div class="row" style="margin-top:auto"><img class="fc" src="${F('myua', 'wink')}"><div class="bub f1">「いっしょに てっぺん めざそ! まぢで楽しいから!」</div></div>
   </div>
 </div>${footGo('みゅあ編ではじめる ▶')}`;
+// S4 持ちこみ: 12種のうち2つまで。選んだ物 = 体力アップ・トレ得意
+const S4SEL = ['dango', 'mag'];
 const s4 = `${sHd(3)}<div class="v-body">${steps(3)}
-  <div class="v-h">持ちこみ(3つまで)<small>名声で手に入れた物を、育成に持っていける。持っていかなくてもよい</small></div>
-  <div class="v-bag"><div class="in">🧿<small>体力のおまもり</small></div><div class="in">🍱<small>とくせい弁当</small></div><div>＋<small style="color:#94a3b8">空き</small></div></div>
-  <div class="v-item sel"><span class="e">🧿</span><div>体力のおまもり<small>体力の上限 +10(育成のあいだずっと)</small></div><span class="pr">✅ 持っていく・あと2</span></div>
-  <div class="v-item sel"><span class="e">🍱</span><div>とくせい弁当<small>好きなターンに1回、体力を50回復</small></div><span class="pr">✅ 持っていく・あと4</span></div>
-  <div class="v-item"><span class="e">📘</span><div>特訓の手引き<small>はじめの5ターン、訓練の伸び +10%</small></div><span class="pr">持っている 1</span></div>
-  <div class="v-item"><span class="e">🎀</span><div>なかよしリボン<small>編成みんなの はじめの親密度 +5</small></div><span class="pr">持っている 3</span></div>
-  <div class="v-item"><span class="e">🏥</span><div>診察券<small>通院が1回、かならず治る</small></div><span class="pr">持っている 0</span></div>
-  <div class="v-item"><span class="e">🧸</span><div>お気に入りのおもちゃ<small>遊ぶと、ストレスがさらに 10 減る</small></div><span class="pr">持っている 2</span></div>
+  <div class="v-h">持ちこみ(2つまで)<small>名声で手に入れた物を、育成に持っていける。持っていかなくてもよい</small></div>
+  <div class="v-bag">${[0, 1].map((i) => S4SEL[i] ? `<div class="in">${icon(S4SEL[i])}<small>${IT[S4SEL[i]][1].replace('週刊!', '')}</small></div>` : '<div>＋<small style="color:#94a3b8">空き</small></div>').join('')}</div>
+  <div class="v-igrid">${ITEMS.map((t) => `<div class="${S4SEL.includes(t[0]) ? 'in' : ''}${t[3] === 'both' ? ' bo' : ''}">${icon(t[0])}<i>×${t[4]}</i><small>${t[1].replace('ガロエ印の', '')}</small>${S4SEL.includes(t[0]) ? '<u>✔</u>' : ''}</div>`).join('')}</div>
+  <div class="v-ileg"><span><b class="sw1"></b>はじめる前に効く物</span><span><b class="sw2"></b>育成中にも使える物(1ターン1個まで)</span></div>
+  <div class="v-item sel">${icon('dango')}<div>モモのキビダンゴ<small>${IT.dango[2]}</small></div><span class="pr">✅ 持っていく・あと97</span></div>
+  <div class="v-item sel">${icon('mag')}<div>週刊!トレーニング<small>${IT.mag[2]}</small></div><span class="pr">✅ 持っていく・あと99</span></div>
   <div style="flex:1"></div>
-  <div class="v-card pk"><div class="sub" style="color:#f9a8d4;font-weight:900">持っていくと</div><div class="v-kv"><b>体力の上限</b><span>100 → <span class="yel">110</span></span></div><div class="v-kv"><b>使える物</b><span>🍱 とくせい弁当 ×1(メニューから)</span></div>
-    <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「おまもりがあると、訓練を続けやすいよ!」</div></div></div>
+  <div class="v-card pk"><div class="sub" style="color:#f9a8d4;font-weight:900">持っていくと</div><div class="v-kv"><b>体力の上限</b><span>100 → <span class="yel">110</span></span></div><div class="v-kv"><b>最初から付く ようす</b><span class="yel">トレーニング得意</span></div>
+    <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「キビダンゴで体力もりもり! トレもはかどるね!」</div></div></div>
 </div>${footGo('これでいく ▶')}`;
 const sw = (cols, on) => cols.map((c, i) => `<i class="${i === on ? 'on' : ''}" style="background:${c}"></i>`).join('');
 const s5 = `${sHd(4)}<div class="v-body">${steps(4)}
@@ -302,8 +336,8 @@ const s6 = `${sHd(5)}<div class="v-body">${steps(5)}
   ${scene({ monStyle: 'left:36%;bottom:16%;height:62%', grStyle: 'left:36%;bottom:calc(16% - 5px)', inner: `<span class="v-nm" style="left:36%;bottom:6px">もちまる<small>モッチー・晩成</small></span><img src="${BODY('mua__happy')}" style="position:absolute;right:-9%;bottom:-22%;height:84%">` })}
   <div class="v-sum"><span class="k">編成</span>${['d', 'a', 'b', 'c', 'e', 'f'].map((k) => pf(k, 'sm').replace(/ tag/, '').replace(/<i class="af">.*?<\/i>/, '')).join('')}<span class="ed">変える</span></div>
   <div class="v-sum"><span class="k">助手</span><span>みゅあ編「いっしょに、てっぺんへ!」</span><span class="ed">変える</span></div>
-  <div class="v-sum"><span class="k">持ちこみ</span><span>🧿 体力のおまもり・🍱 とくせい弁当</span><span class="ed">変える</span></div>
-  <div class="v-sum"><span class="k">はじめの上乗せ</span><span>編成から ちから +24・かしこさ +67 ほか/体力の上限 110</span></div>
+  <div class="v-sum"><span class="k">持ちこみ</span><span class="v-ics">${icon('dango')}${icon('mag')} キビダンゴ・週刊!トレーニング</span><span class="ed">変える</span></div>
+  <div class="v-sum"><span class="k">はじめの上乗せ</span><span>編成から ちから +24・かしこさ +67 ほか/体力の上限 110/ようす: トレーニング得意</span></div>
   <div class="v-big">🌱 育成をはじめる</div>
 </div>`;
 
@@ -432,7 +466,7 @@ grp('Q', '6a. 修行(技を選ぶ → 結果)', '参考動画の3本目の流れ
 // ================= 6b. 大会(受付 → 能力の比べ) =================
 // 札: [絵文字, 名前, 星, 系統, 賞金, ごほうび, 状態, 出る条件]
 const CUPS = [['💪', 'ちから自慢の大会', '★★', '自慢', '312', '人気 +2・ちから +6', 'sel', 'ちから 400 以上 ✔'], ['🌸', '春の大会', '★★★', '四季', '750', '能力ポイント +10・人気 +4', 'rv', 'ライバル: ゆうた の こんこ'], ['🏟', 'ふつうの大会', '★', 'ふつう', '125', 'なし', 'won', '👑 優勝したことがある → ⏩ スキップできる'], ['🧠', 'かしこさ自慢の大会', '★★', '自慢', '312', '人気 +2・かしこさ +6', 'ng', 'かしこさ 400 以上 ✖(いま 233)']];
-const cup = ([e, n, st, kind, g, rw, c, cond]) => `<div class="v-cup ${c}"><div class="e">${e}</div><div class="tx"><b>${n}</b><small>${cond}</small><span class="rw">🎁 ${rw}</span></div><div class="rt"><span class="st">${st}</span><span class="g">💰 ${g}</span><span class="kd">${kind}</span></div>${c === 'rv' ? '<span class="rvb">🔥 ライバルあり・ごほうび大</span>' : ''}</div>`;
+const cup = ([e, n, st, kind, g, rw, c, cond]) => `<div class="v-cup ${c}"><div class="e">${e}</div><div class="tx"><b>${n}</b><small>${cond}</small><span class="rw">🎁 ${rw}</span></div><div class="rt"><span class="st">${st}</span><span class="g">💰 ${g}</span><span class="kd">${kind}</span></div>${c === 'rv' ? `<span class="rvi"><img src="${F('kiki', 'happy')}"><b>ライバル</b></span><span class="rvb">ごほうび大</span>` : ''}</div>`;
 const entry = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band()}
   ${scene({ bg: 'monhero_town', cls: 'low', noMon: 1, inner: `<img src="${BODY('mua__happy')}" style="position:absolute;left:-2%;bottom:-98%;height:190%">
@@ -484,7 +518,7 @@ grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デ�
   { id: 'C4', label: '負けたとき(再戦する/あきらめる)', html: lose },
 ], `<h3>受付</h3><ul>
   <li>助手が受付の役。今月出られる大会を札で並べる: 名前・星・系統・賞金(名声)・ごほうび・出る条件(✔/✖)</li>
-  <li><b>ライバルがいる大会</b>は赤い帯で「ごほうび大」。条件に届かない大会は薄く、何が足りないかを数字で</li>
+  <li><b>ライバルがいる大会</b>は札の左上に<b>ライバルのアイコン(顔の小さな丸+「ライバル」の印)</b>が付き、右上に「ごほうび大」の小さな札(社長 2026-11-12)。条件に届かない大会は薄く、何が足りないかを数字で</li>
   <li>下に「出ると1ターン使う・何試合・体力がどれくらい減るか」。強制大会までの残りも</li></ul>
   <h3>能力の比べ</h3><ul>
   <li>左が自分・右が相手。6能力・人気・忠誠を、まん中から左右にのびる棒で並べ、勝っている方の数字を黄色に</li>
