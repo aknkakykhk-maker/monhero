@@ -44,6 +44,9 @@ export function start({ createClient }) {
       must(await supabase.rpc("masmon_pvp_owner_check", { p_owner: owner, p_key: key }), "ownerCheck"),
     getEntry: async (owner, assistant) =>
       must(await supabase.from("masmon_pvp_entries").select("*").eq("owner_id", owner).eq("assistant_id", assistant).maybeSingle(), "getEntry"),
+    // 戦績(区分ごとの勝ち・負け・引き分け)。人気をサーバで出すのに使う(2026-11-12 キズナ・表は今のまま)
+    getRecords: async (owner, assistant) =>
+      must(await supabase.from("masmon_pvp_ratings").select("wins, losses, draws").eq("owner_id", owner).eq("assistant_id", assistant), "getRecords") ?? [],
     getAnchors: async (owner, assistant, keys) => {
       if (!keys.length) return {};
       const rows = must(await supabase.from("masmon_pvp_anchors").select("unit_key, first_day, first_stats, first_total, first_lv")

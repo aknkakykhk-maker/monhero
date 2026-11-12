@@ -10,7 +10,7 @@
 
 // ---- 決めた数字(仮の数字は 仮 と書く。変えるのはここだけ) ----
 // 1体の6能力の合計が1日に伸びてよい量(社長「関わった最大=1日20」)
-export const DAILY_GROWTH_CAP = 40; // 2026-11-11 20→40: M/B管理で助手のマスモンにチケットを使う分(自主育成の上限の外・1体1日1枚)を入れる(ボクジョウ・社長が案Aを選択)
+export const DAILY_GROWTH_CAP = 200; // 2026-11-12 40→200: 助手マスモンの育ちの速さ ×3(計画60 × ピーク1.7 × 方針1.18 ≒ 120 + チケット・POWER.md 7章・社長 ×3)。以前: 40; // 2026-11-11 20→40: M/B管理で助手のマスモンにチケットを使う分(自主育成の上限の外・1体1日1枚)を入れる(ボクジョウ・社長が案Aを選択)
 // 初めて登録する1体の上限(移行で作る初めの値: ライフ・ちから・丈夫さ ≦ 600、かしこさ・命中・回避 ≦ 300 を Lv で少し上げる。GROW-BASE-PLAN)
 export const INITIAL_STAT_CAP = Object.freeze({ life: 600, pow: 600, wise: 400, hit: 400, eva: 400, tough: 600 });
 export const INITIAL_TOTAL_CAP = 3000;                       // 仮
@@ -19,7 +19,7 @@ export const GROW_EPOCH = '2026-11-11';
 export const STAT_ABS_MAX = 999;
 export const LV_CAP = 99;                                    // 育成の Lv(56-assistant-life-masmon-grow の AMG_LV_MAX)。迎えたときの Lv は 1〜30
 export const LV_INITIAL_CAP = 30;                            // 迎えたときの Lv の上限
-export const LV_DAILY_CAP = 2;                               // 育成の Lv が1日に上がってよい数(経験は1回1〜3・次の Lv に 11 以上要る。閉じていた分のまとめも入れて多めに)
+export const LV_DAILY_CAP = 6;  // 2026-11-12 2→6(育成の経験 ×3・POWER.md 7章)。以前: 2;                               // 育成の Lv が1日に上がってよい数(経験は1回1〜3・次の Lv に 11 以上要る。閉じていた分のまとめも入れて多めに)
 export const TACTICS_INITIAL_CAP = 20;                       // 仮。戦術経験(0〜100)の初めの上限
 export const TACTICS_DAILY_CAP = 5;                          // 仮。戦術経験が1日に増えてよい量
 export const NAME_MAX = 12;                                  // マスモンの名前(提案の決まり 1〜12字)
@@ -108,7 +108,10 @@ export const parseTeam = (raw, engine, catalog, learn = {}) => {
       if (l.st && Object.entries(l.st).some(([k, min]) => !(stats[k] >= min))) return { error: 'learn' };
       if (l.need && Object.entries(l.need).some(([tid, min]) => !techs.includes(tid) || !((mastery[tid] || 0) >= min))) return { error: 'learn' };
     }
-    members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats, techs: [...techs], mastery });
+    // 忠誠度・人気(助手の絆・無くてよい)。0〜100 の整数だけ。忠誠度はそのまま使う(低いほど不利)・人気は戦績から出す値を超えては使わない(battleTeam)
+    if (m.loy != null && (!isInt(m.loy) || m.loy < 0 || m.loy > 100)) return { error: 'loy' };
+    if (m.pop != null && (!isInt(m.pop) || m.pop < 0 || m.pop > 100)) return { error: 'pop' };
+    members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats, techs: [...techs], mastery, ...(m.loy != null ? { loy: m.loy } : {}), ...(m.pop != null ? { pop: m.pop } : {}) });
   }
   // 作戦(plan)・交代の早さ(swapPace)。無くてよい。計算の表にある名前だけ
   const team = { tactics: raw.tactics, members };
@@ -174,13 +177,22 @@ export const fairUnit = (u, keys) => {
   const stats = {};
   keys.forEach((k, i) => { stats[k] = base[i]; });
   // 覚えた技と熟練はそのまま(育てた戦い方で勝負)。能力と Lv だけそろえる
-  return { species: u.species, name: u.name, lv: FAIR_LV, stats, techs: u.techs, mastery: u.mastery };
+  return { species: u.species, name: u.name, lv: FAIR_LV, stats, techs: u.techs, mastery: u.mastery, ...(u.loy != null ? { loy: u.loy } : {}), ...(u.pop != null ? { pop: u.pop } : {}) };
 };
 
 // 計算に渡す編成(区分と体数で作る)。登録の team はそのまま変えない
-export const battleTeam = ({ assistantId, team, division, size, engine }) => {
+// 人気は有利なので、端末の値を使わず戦績から出す(フレンド対戦の勝ち +2・負けと引き分け +0.5・上限100。助手側の MASMON_CALC.POP と同じ数)。端末の値の方が低ければそれ
+export const POP_WIN = 2;
+export const POP_LOSE = 0.5;
+export const popFromRecord = (rows) => {
+  let p = 0;
+  for (const r of Array.isArray(rows) ? rows : []) p += (Number(r && r.wins) || 0) * POP_WIN + ((Number(r && r.losses) || 0) + (Number(r && r.draws) || 0)) * POP_LOSE;
+  return Math.max(0, Math.min(100, Math.floor(p)));
+};
+export const battleTeam = ({ assistantId, team, division, size, engine, pop = 0 }) => {
   const list = team.members.slice(0, size).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats },
-    techs: Array.isArray(m.techs) ? [...m.techs] : undefined, mastery: m.mastery ? { ...m.mastery } : undefined }));
+    techs: Array.isArray(m.techs) ? [...m.techs] : undefined, mastery: m.mastery ? { ...m.mastery } : undefined,
+    ...(m.loy != null ? { loy: m.loy } : {}), ...(m.pop != null && pop > 0 ? { pop: Math.min(m.pop, pop) } : {}) }));
   return {
     assistantId,
     tactics: team.tactics,
@@ -266,8 +278,9 @@ const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits, ba
   if (mine.team.members.length < size || theirs.team.members.length < size) return fail(409, 'size_short');
   const took = await db.take(owner, limits.challengeDaily);
   if (!took || !took.ok) return fail(429, 'limit', { remaining: 0 });
-  const teamA = battleTeam({ assistantId: assistant, team: mine.team, division, size, engine });
-  const teamB = battleTeam({ assistantId: oppAssistant, team: theirs.team, division, size, engine });
+  const popOf = async (o, a) => { try { return typeof db.getRecords === 'function' ? popFromRecord(await db.getRecords(o, a)) : 0; } catch (_) { return 0; } };
+  const teamA = battleTeam({ assistantId: assistant, team: mine.team, division, size, engine, pop: await popOf(owner, assistant) });
+  const teamB = battleTeam({ assistantId: oppAssistant, team: theirs.team, division, size, engine, pop: await popOf(oppOwner, oppAssistant) });
   const seed = newSeed();
   let r;
   try {

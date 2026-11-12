@@ -49,7 +49,7 @@ const ambbPvpMemberOf = (u) => {
   const mastery = {};
   for (const [k, v] of Object.entries(x.mastery || {})) { const n = Math.round(Number(v)); if (keep.has(k) && Number.isFinite(n) && n > 0) mastery[k] = Math.min(100, n); }
   const name = (typeof x.name === 'string' && x.name.trim()) || ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[x.species] && ALL_PLAYER_MONSTERS[x.species].name) || x.species);
-  return { slot: u.row.slot, species: x.species, name: String(name).slice(0, 24), lv: x.lv, stats: x.stats, ...(techs ? { techs } : {}), mastery };
+  return { slot: u.row.slot, species: x.species, name: String(name).slice(0, 24), lv: x.lv, stats: x.stats, ...(techs ? { techs } : {}), mastery, ...(Number.isInteger(x.loy) ? { loy: x.loy } : {}), ...(Number.isInteger(x.pop) ? { pop: x.pop } : {}) };
 };
 const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattleBeta === true && RELEASE_FLAGS.assistantMasmonGrow === true;
 
@@ -118,7 +118,8 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map((row) => {
   const entry = typeof amgEntryOf === 'function' ? amgEntryOf(aid, row) : null;
   let train;
   try { if (typeof amgtBattleOf === 'function') train = amgtBattleOf(aid, row, entry && entry.lv); } catch (_) { train = undefined; }
-  const u = engine.unitFromGrow(row, entry, train);
+  let bond; try { if (typeof amgbOn === 'function' && amgbOn() && typeof amgbEntryOf === 'function') bond = amgbEntryOf(aid, row) || undefined; } catch (_) { bond = undefined; } // 絆の忠誠度・人気(印が偽なら渡さない = 忠誠100・人気0)
+  const u = engine.unitFromGrow(row, entry, train, bond);
   return { row, entry, unit: u, total: entry && entry.st ? Object.values(entry.st).reduce((a, b) => a + (Number(b) || 0), 0) : 0 };
 });
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -322,6 +323,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
       const k = battle.r.winner === 'A' ? 'w' : battle.r.winner === 'B' ? 'l' : 'd';
       return { ...s, rec: { ...s.rec, [meId]: { ...rc, [k]: rc[k] + 1 } }, done: [...s.done, battle.id] };
     });
+  }, [phase, battle]);
+  // 絆(56-assistant-life-masmon-bond.jsx): 出たマスモンの人気。フレンド対戦 勝ち+2・負け+0.5/助手どうし 勝ち+1・負け+0.2。1戦に1回だけ(印が偽なら何もしない)
+  useEffect(() => {
+    if (phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    try { amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A'); } catch (_) {}
   }, [phase, battle]);
 
   // もしも: 自分の3体のある能力があと1割高かったら、同じ相手に20戦で何勝するか
