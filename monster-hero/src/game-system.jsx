@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a25deb63d53fe376
+// generated-sha256: 8abc9e3c296c5ec8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66360,7 +66360,7 @@ function AssistantLifeHouseArt({ width, land: landIn, look, rooms, metSet, onOpe
   const g4 = grid4 && !landIn, land = landIn || g4;
   const wall = 6, cols = land ? 4 : 2, rows = land ? 2 : 4;
   const rw = (width - wall * (cols + 1)) / cols;
-  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.round(rw * 0.74) : Math.round(rw * 0.5);
+  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.round(rw * 0.46) : Math.round(rw * 0.5);
   const lh = land ? 62 : 78, roofH = g4 ? 40 : land ? 44 : 64;
   const bodyH = wall + rows * (rh + wall) + lh + wall, ly = wall + rows * (rh + wall);
   const night = look === 'night';
@@ -67121,7 +67121,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // ひとりの助手しかいない時間も、1人に贈れる(❶B: 1人には別に1日3回)
   const giveSoloId = soloOn ? (Object.keys(life.solo || {}).find(id => !awayFriend(id)) || (giveGroup && giveGroup.ids[0]) || null) : null;
   const pad = 12;
-  const houseW = land ? Math.min(560, Math.round(vw * 0.40) - pad * 2) : Math.min(380, vw - pad * 2);
+  const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = (
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
       <button type="button" className={`mhl-tile mhl-watch flex-1${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`} data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => { if (guideSeen === false) markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}>
