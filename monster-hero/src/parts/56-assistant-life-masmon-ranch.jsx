@@ -12,6 +12,7 @@ const AMGR_NUM = Object.freeze({
   light: [3, 6], // トレーニングチケット: 選んだ能力(× 伸びやすさ)
   heavyMain: [8, 12], heavySub: [2, 4], heavyDown: [2, 4], // 重トレーニングチケット: 大きく上がる・少し上がる(× 伸びやすさ)・下がる(そのまま)
   heavyFat: 10, // 重トレーニングの疲れ
+  serverDayBond: 200, // 絆(育ちの速さ ×3)の印を真にしたあとの masmon-pvp の DAILY_GROWTH_CAP(POWER.md 7章・配り直しは窓口)
   serverDay: 40, // フレンド対戦のサーバの1日の上限(masmon-pvp の DAILY_GROWTH_CAP)。1枚で上がる分の合計は、これから自主育成の1日の最大(AMG_CARE.viewCap)を引いた分まで(同じ日に重なっても超えない・窓口 11-12)
 });
 const AMGR_TICKET = Object.freeze({ light: 'training_ticket', heavy: 'training_ticket_l' });
@@ -151,9 +152,10 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const e = { ...e0, st: { ...e0.st }, cg: { ...(e0.cg || {}) } };
   const g = {}; const rows = [];
   const bump = (s, n) => { const from = e.st[s]; const to = amgClamp(from + n, 1, AMG_MAX); if (to === from) return; e.st[s] = to; g[s] = (g[s] || 0) + (to - from); rows.push({ k: s, from, to }); };
-  const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0))));
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1; // 絆: 育ちの速さ ×3(印が偽なら 1)
+  const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0)) * pace));
   const plan = amgrPlanOf(kind, k);
-  const room = Math.max(1, AMGR_NUM.serverDay - (Number(AMG_CARE.viewCap) || 20)); // 1枚で上がる分の合計の上限
+  const room = Math.max(1, (pace > 1 ? AMGR_NUM.serverDayBond : AMGR_NUM.serverDay) - (Number(AMG_CARE.viewCap) || 20) * pace); // 1枚で上がる分の合計の上限
   if (kind === 'heavy') { const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room); bump(plan.main, main); bump(plan.sub, Math.min(upOf(plan.sub, AMGR_NUM.heavySub), Math.max(0, room - main))); bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1])); e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100); }
   else bump(plan.main, Math.min(upOf(plan.main, AMGR_NUM.light), room));
   const net = Object.values(g).reduce((a, n) => a + n, 0);

@@ -278,7 +278,9 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1; // 練習の相手がいないときの伸び(56-assistant-life-masmon-cheer.jsx・印が偽なら 1)
   const g = {};
   const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
+  const over = typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row); // 絆: 寿命が来た子は熟練も伸びない(印が偽なら false)
   const up = (k, lo, hi) => {
+    if (over) return;
     const cur = me.m[k] || 0;
     const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
