@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df2f843257f63a86
+// source-sha256: 583f81985f5d808d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156723,7 +156723,7 @@ const msxLoadConstScript = (src, check) => new Promise(res => {
   s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
+const msxRegularsOk = () => typeof window !== 'undefined' && !!window.MONSUC_REGULARS && !!window.MONSUC_REGULAR_CUPS;
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
@@ -156746,8 +156746,8 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null,
-          cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null
+          regulars: regOk ? window.MONSUC_REGULARS : null,
+          cupNames: regOk ? window.MONSUC_REGULAR_CUPS : null
         });
         msxSuc = {
           core,
@@ -160011,7 +160011,7 @@ const MSX_R3_CUP_ICON = Object.freeze({
 });
 const msxR3Stars = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1));
 const msxR3CupName = sys => {
-  const names = typeof MONSUC_REGULAR_CUPS !== 'undefined' && MONSUC_REGULAR_CUPS ? MONSUC_REGULAR_CUPS : {};
+  const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, m => m === '自慢' ? '自慢の大会' : m);
   const S = msxSuc && msxSuc.SUC;
   const aid = typeof sys === 'string' && sys.startsWith('sc') ? sys.slice(2) : '';
@@ -160092,7 +160092,14 @@ const msxR3Fight = (engine, SUC, run) => {
     tactics: opp.tactics || 10,
     members: [o]
   };
-  const mods = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  const base = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  let mods = base;
+  try {
+    if (AT && typeof AT.battleBuffs === 'function') mods = AT.battleBuffs((Array.isArray(s.team) ? s.team : []).map(m => m && Array.isArray(m.assists) ? m.assists : []), base);
+  } catch (e) {
+    mods = base;
+  }
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   let r = null;
   try {
@@ -160653,11 +160660,12 @@ function MsxR3Watch({
       return () => clearTimeout(t);
     }
     const sp = AMBW_SPEEDS.find(x => x.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
+    const msxR3Step = () => {
       let n = pos + 1;
       if (speed === 'hl') while (n < len - 1 && !ambwIsHighlight(log[n], fight.maxHp)) n++;
       setPos(n);
-    }, sp.ms);
+    };
+    const t = setTimeout(msxR3Step, sp.ms);
     return () => clearTimeout(t);
   }, [pos, speed]);
   const e = log[pos] || {};
@@ -160760,21 +160768,23 @@ function MsxR3Battle({
   const st3 = run.out && run.out.r3 ? run.out.r3 : null;
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
+  const [tables, setTables] = useState(false);
   const [step, setStep] = useState(() => run.r3skip ? 'auto' : 'bracket');
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
   useEffect(() => {
     let alive = true;
-    if (!engine) msxR3LoadEngine().then(e => {
+    Promise.all([engine ? Promise.resolve(engine) : msxR3LoadEngine(), msxR3LoadTables()]).then(([e]) => {
       if (!alive) return;
+      setTables(true);
       if (e) setEngine(e);else setFailed(true);
     });
     return () => {
       alive = false;
     };
   }, []);
-  const fight = useMemo(() => engine && b ? msxR3Fight(engine, SUC, run) : null, [engine, b && b.kind, b && b.again, b && b.reroll, b && b.round, b && b.retry, s.turn]);
+  const fight = useMemo(() => engine && tables && b ? msxR3Fight(engine, SUC, run) : null, [engine, tables, b && b.kind, b && b.again, b && b.reroll, b && b.round, b && b.retry, s.turn]);
   const name = b ? msxR3BattleName(SUC, b) : st3 ? st3.name : '';
   const settle = won => {
     const before = s;
@@ -161662,7 +161672,7 @@ function MsxR3Shugyo({
       key: k
     }, i ? '・' : '', MSX_STAT_NAME[k], " ", React.createElement("b", {
       className: "gu"
-    }, "+", g))) : '能力は上がらなかった', helpers.length ? React.createElement(React.Fragment, null, "(編成の子 ", React.createElement("b", {
+    }, "+", g))) : '能力は上がらなかった', helpers.length ? React.createElement(React.Fragment, null, "(編成のモンスター ", React.createElement("b", {
       className: "ga"
     }, helpers.length, "体"), " がいっしょに修行した)") : null, React.createElement("br", null), "体力が ", React.createElement("b", {
       className: "gd"
@@ -161810,7 +161820,7 @@ function MsxR3Shugyo({
     }, t.name, React.createElement("b", null, got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'));
   }))) : React.createElement("div", {
     className: "sub"
-  }, "この子の技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
+  }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "sub"
   }, "前の修行で覚えられなかった技は、覚える率が上がっている。助手がドラだと、さらに覚えやすい")));
   const foot = React.createElement("div", {
@@ -161951,7 +161961,7 @@ function MsxR3GameOver({
   }, React.createElement("b", null, "もちかえり"), React.createElement("span", null, "持ちこみ・使ったアイテム・修行チケットは戻らない。保存枠には入らない"))), React.createElement(MsxSay, {
     aid: s.aid,
     ex: "troubled",
-    text: `「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! ${run.nick || 'この子'}も、がんばったよ」`
+    text: `「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`
   }), log ? React.createElement("div", {
     className: "v-card"
   }, (run.log || []).length ? run.log.slice().reverse().map((l, i) => React.createElement("div", {
@@ -162057,7 +162067,7 @@ function MsxR3Retire({
     }), React.createElement(MsxSay, {
       aid: s.aid,
       ex: "excited",
-      text: ws.pts > 0 ? `「${grade.g} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.g} だよ! ${run.nick || 'この子'}、よくがんばったね!」`
+      text: ws.pts > 0 ? `「${grade.g} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.g} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`
     }), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
@@ -162271,7 +162281,7 @@ function MsxR3Retire({
       className: "v-rec"
     }, React.createElement("div", null, React.createElement("small", null, "🏆 大会"), cupWins + cupLoss, "戦 ", cupWins, "勝", ws.crowns || 0 ? `・👑 ${ws.crowns}回` : ''), React.createElement("div", null, React.createElement("small", null, "🤝 忠誠 / ⭐ 人気"), ev.loyal, " / ", ws.pop), React.createElement("div", null, React.createElement("small", null, "📯 集まりやすい訓練(上位3つ)"), (ev.top || []).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')), mem ? React.createElement("div", null, React.createElement("small", null, "💥 編成での補正"), (mem.top || []).map(k => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')) : null, mem ? React.createElement("div", null, React.createElement("small", null, "🧩 アシストの基本値"), "親密度 ", mem.bond0, "・タッグ +", mem.tag, "%・得意率 ", Math.round((mem.fav || 0) * 100), "%") : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 はじめの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
       const band = Math.max(1, MSX_R3_GRADES.findIndex(g => g.g === grade.g) + 1);
-      const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'この子'}、まぢでがんばったね! 次の子の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`);
+      const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`);
       return React.createElement(MsxSay, {
         aid: ws.aid,
         ex: l.e || 'excited',

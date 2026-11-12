@@ -17,7 +17,7 @@ const MSX_R3_CUP_ICON = Object.freeze({
 });
 const msxR3Stars = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1)));
 const msxR3CupName = (sys) => {
-  const names = typeof MONSUC_REGULAR_CUPS !== 'undefined' && MONSUC_REGULAR_CUPS ? MONSUC_REGULAR_CUPS : {};
+  const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, (m) => (m === '自慢' ? '自慢の大会' : m));
   const S = msxSuc && msxSuc.SUC; const aid = typeof sys === 'string' && sys.startsWith('sc') ? sys.slice(2) : '';
   if (aid && S && S.SC_NAME && S.SC_NAME[aid]) return S.SC_NAME[aid];
@@ -56,7 +56,11 @@ const msxR3Fight = (engine, SUC, run) => {
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
-  const mods = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  const base = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  // 試合型のアシスト(編成の子が持つ・#5749)を、特別な1話の上乗せと合わせて buffs.A へ(表が読めていなければ芯の分だけ)
+  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  let mods = base;
+  try { if (AT && typeof AT.battleBuffs === 'function') mods = AT.battleBuffs((Array.isArray(s.team) ? s.team : []).map((m) => (m && Array.isArray(m.assists) ? m.assists : [])), base); } catch (e) { mods = base; }
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   let r = null;
   try { r = engine.simulate({ seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}), trace: true }); } catch (e) { return null; }

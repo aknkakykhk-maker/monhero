@@ -46,7 +46,7 @@ const msxLoadConstScript = (src, check) => new Promise((res) => {
   s.onload = () => res(check()); s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
+const msxRegularsOk = () => typeof window !== 'undefined' && !!window.MONSUC_REGULARS && !!window.MONSUC_REGULAR_CUPS; // 表の最後で window に載せている(const だけでは載らない)
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
@@ -62,7 +62,7 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null, cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null,
+          regulars: regOk ? window.MONSUC_REGULARS : null, cupNames: regOk ? window.MONSUC_REGULAR_CUPS : null,
         });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;

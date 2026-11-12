@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a12d1afb80f823a1
+// generated-sha256: 52167fb7d0c84316
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81819,7 +81819,7 @@ const msxLoadConstScript = (src, check) => new Promise((res) => {
   s.onload = () => res(check()); s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
+const msxRegularsOk = () => typeof window !== 'undefined' && !!window.MONSUC_REGULARS && !!window.MONSUC_REGULAR_CUPS; // 表の最後で window に載せている(const だけでは載らない)
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
@@ -81835,7 +81835,7 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null, cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null,
+          regulars: regOk ? window.MONSUC_REGULARS : null, cupNames: regOk ? window.MONSUC_REGULAR_CUPS : null,
         });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;
@@ -83037,7 +83037,7 @@ const MSX_R3_CUP_ICON = Object.freeze({
 });
 const msxR3Stars = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1)));
 const msxR3CupName = (sys) => {
-  const names = typeof MONSUC_REGULAR_CUPS !== 'undefined' && MONSUC_REGULAR_CUPS ? MONSUC_REGULAR_CUPS : {};
+  const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, (m) => (m === '自慢' ? '自慢の大会' : m));
   const S = msxSuc && msxSuc.SUC; const aid = typeof sys === 'string' && sys.startsWith('sc') ? sys.slice(2) : '';
   if (aid && S && S.SC_NAME && S.SC_NAME[aid]) return S.SC_NAME[aid];
@@ -83076,7 +83076,11 @@ const msxR3Fight = (engine, SUC, run) => {
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
-  const mods = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  const base = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  // 試合型のアシスト(編成の子が持つ・#5749)を、特別な1話の上乗せと合わせて buffs.A へ(表が読めていなければ芯の分だけ)
+  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  let mods = base;
+  try { if (AT && typeof AT.battleBuffs === 'function') mods = AT.battleBuffs((Array.isArray(s.team) ? s.team : []).map((m) => (m && Array.isArray(m.assists) ? m.assists : [])), base); } catch (e) { mods = base; }
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   let r = null;
   try { r = engine.simulate({ seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}), trace: true }); } catch (e) { return null; }
@@ -83333,11 +83337,12 @@ function MsxR3Watch({ fight, onDone }) {
   useEffect(() => {
     if (pos >= len - 1) { const t = setTimeout(() => onDone(), 900); return () => clearTimeout(t); }
     const sp = AMBW_SPEEDS.find((x) => x.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
+    const msxR3Step = () => {
       let n = pos + 1;
       if (speed === 'hl') while (n < len - 1 && !ambwIsHighlight(log[n], fight.maxHp)) n++;
       setPos(n);
-    }, sp.ms);
+    };
+    const t = setTimeout(msxR3Step, sp.ms);
     return () => clearTimeout(t);
   }, [pos, speed]);
   const e = log[pos] || {}; const f = fight.frames[pos] || fight.frames[0]; const foeSide = e.side === 'A' ? 'B' : 'A';
@@ -83378,16 +83383,18 @@ function MsxR3Battle({ run, setRun, v, ev, onPause }) {
   const s = run.s; const b = s.battle; const st3 = run.out && run.out.r3 ? run.out.r3 : null; // 勝ち負けを付けたあとの段
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
+  const [tables, setTables] = useState(false);
   const [step, setStep] = useState(() => (run.r3skip ? 'auto' : 'bracket'));
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
   useEffect(() => {
     let alive = true;
-    if (!engine) msxR3LoadEngine().then((e) => { if (!alive) return; if (e) setEngine(e); else setFailed(true); });
+    // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
+    Promise.all([engine ? Promise.resolve(engine) : msxR3LoadEngine(), msxR3LoadTables()]).then(([e]) => { if (!alive) return; setTables(true); if (e) setEngine(e); else setFailed(true); });
     return () => { alive = false; };
   }, []);
-  const fight = useMemo(() => (engine && b ? msxR3Fight(engine, SUC, run) : null), [engine, b && b.kind, b && b.again, b && b.reroll, b && b.round, b && b.retry, s.turn]);
+  const fight = useMemo(() => (engine && tables && b ? msxR3Fight(engine, SUC, run) : null), [engine, tables, b && b.kind, b && b.again, b && b.reroll, b && b.round, b && b.retry, s.turn]);
   const name = b ? msxR3BattleName(SUC, b) : st3 ? st3.name : '';
   // 勝ち負けを付ける(負けのときは、やり直さないと決めたあと)
   const settle = (won) => {
@@ -83620,7 +83627,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       <MsxStRow stats={s.stats} ups={gains}/>
       <div className="v-log"><span className="hd2">⚔ 修行のけっか({R.word})</span><br/>
         {Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">+{g}</b></span>) : '能力は上がらなかった'}
-        {helpers.length ? <>(編成の子 <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>
+        {helpers.length ? <>(編成のモンスター <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>
         体力が <b className="gd">{Math.max(0, res.hp0 - s.hp)}</b> 下がった
         {learned ? <>/技「<b className="ga">{learned.name}</b>」を覚えた!</> : null}
         {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}</div>
@@ -83649,7 +83656,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         <div key={g.dn} className="v-tk"><i>{g.dn}</i>{g.list.map((t) => {
           const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null;
           return <span key={t.id} className={got ? 'got' : want.includes(t.id) ? 'sel' : ''} onClick={() => (ok && !got ? toggle(t.id) : null)} style={{ opacity: got || ok ? 1 : 0.45 }} data-msx-r3-tech={t.id}>{t.name}<b>{got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'}</b></span>;
-        })}</div>)) : <div className="sub">この子の技の表がまだありません(能力だけ上がる)</div>}
+        })}</div>)) : <div className="sub">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
       <div className="sub">前の修行で覚えられなかった技は、覚える率が上がっている。助手がドラだと、さらに覚えやすい</div>
     </div>
   </>);
@@ -83703,7 +83710,7 @@ function MsxR3GameOver({ run, setRun, onPause }) {
       <div className="v-kv"><b>やり直し</b><span>砂時計 のこり <b>{Math.max(0, left)} / 3</b></span></div>
       <div className="v-kv"><b>記録</b><span>{s.turn}ターン・訓練 {(s.log && s.log.train) || 0}回・デビュー戦 0勝{s.debutLoss || 3}敗</span></div>
       <div className="v-kv"><b>もちかえり</b><span>持ちこみ・使ったアイテム・修行チケットは戻らない。保存枠には入らない</span></div></div>
-    <MsxSay aid={s.aid} ex="troubled" text={`「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! ${run.nick || 'この子'}も、がんばったよ」`}/>
+    <MsxSay aid={s.aid} ex="troubled" text={`「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`}/>
     {log ? <div className="v-card">{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</div> : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={() => setLog(!log)}>📖 きろくを見る</button><button type="button" className="go" disabled={busy} onClick={again} data-msx-r3-again>もう1回 はじめから ▶</button></div>;
@@ -83741,7 +83748,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="tx"><small>総合力</small><b>{msxFmt(ev.power)}</b><small style={{ color: '#cbd5e1', marginTop: 3 }}>{nextG ? `${nextG.g} まで あと ${msxFmt(nextG.from - ev.power)}` : 'いちばん上の評価!'}</small></div></div>
       <div className="v-gl">{MSX_R3_GRADES.map((g) => <div key={g.g} className={g.g === grade.g ? 'now' : g.from < grade.from ? 'ok' : ''}><b>{g.g}</b><small>{g.label}</small></div>)}</div>
       <MsxStRow stats={ws.stats}/>
-      <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? `「${grade.g} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.g} だよ! ${run.nick || 'この子'}、よくがんばったね!」`}/>
+      <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? `「${grade.g} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.g} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`}/>
       <div className="v-card"><div className="v-kv"><b>残りポイント</b><span><b className="yel">{ws.pts}</b>(使うと総合力が上がる)</span></div><div className="v-kv"><b>そのあと</b><span>アシスト能力をポイントで取る → 保存枠へ</span></div></div>
       <div style={{ flex: 1 }}/>
     </>);
@@ -83798,7 +83805,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         {mem ? <div><small>🧩 アシストの基本値</small>親密度 {mem.bond0}・タッグ +{mem.tag}%・得意率 {Math.round((mem.fav || 0) * 100)}%</div> : null}
         {mem && mem.startAdd ? <div><small>📈 はじめの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
       </div>
-      {(() => { const band = Math.max(1, MSX_R3_GRADES.findIndex((g) => g.g === grade.g) + 1); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'この子'}、まぢでがんばったね! 次の子の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
+      {(() => { const band = Math.max(1, MSX_R3_GRADES.findIndex((g) => g.g === grade.g) + 1); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
         <div className="v-kv"><b>名声</b><span>合計 {msxFmt(ws.fameTotal || 0)}</span></div>
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>

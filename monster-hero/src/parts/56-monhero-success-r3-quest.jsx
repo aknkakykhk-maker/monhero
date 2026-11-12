@@ -47,7 +47,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       <MsxStRow stats={s.stats} ups={gains}/>
       <div className="v-log"><span className="hd2">⚔ 修行のけっか({R.word})</span><br/>
         {Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">+{g}</b></span>) : '能力は上がらなかった'}
-        {helpers.length ? <>(編成の子 <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>
+        {helpers.length ? <>(編成のモンスター <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>
         体力が <b className="gd">{Math.max(0, res.hp0 - s.hp)}</b> 下がった
         {learned ? <>/技「<b className="ga">{learned.name}</b>」を覚えた!</> : null}
         {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}</div>
@@ -76,7 +76,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         <div key={g.dn} className="v-tk"><i>{g.dn}</i>{g.list.map((t) => {
           const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null;
           return <span key={t.id} className={got ? 'got' : want.includes(t.id) ? 'sel' : ''} onClick={() => (ok && !got ? toggle(t.id) : null)} style={{ opacity: got || ok ? 1 : 0.45 }} data-msx-r3-tech={t.id}>{t.name}<b>{got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'}</b></span>;
-        })}</div>)) : <div className="sub">この子の技の表がまだありません(能力だけ上がる)</div>}
+        })}</div>)) : <div className="sub">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
       <div className="sub">前の修行で覚えられなかった技は、覚える率が上がっている。助手がドラだと、さらに覚えやすい</div>
     </div>
   </>);

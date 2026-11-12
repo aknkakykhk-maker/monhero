@@ -102,11 +102,12 @@ function MsxR3Watch({ fight, onDone }) {
   useEffect(() => {
     if (pos >= len - 1) { const t = setTimeout(() => onDone(), 900); return () => clearTimeout(t); }
     const sp = AMBW_SPEEDS.find((x) => x.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
+    const msxR3Step = () => {
       let n = pos + 1;
       if (speed === 'hl') while (n < len - 1 && !ambwIsHighlight(log[n], fight.maxHp)) n++;
       setPos(n);
-    }, sp.ms);
+    };
+    const t = setTimeout(msxR3Step, sp.ms);
     return () => clearTimeout(t);
   }, [pos, speed]);
   const e = log[pos] || {}; const f = fight.frames[pos] || fight.frames[0]; const foeSide = e.side === 'A' ? 'B' : 'A';
@@ -147,16 +148,18 @@ function MsxR3Battle({ run, setRun, v, ev, onPause }) {
   const s = run.s; const b = s.battle; const st3 = run.out && run.out.r3 ? run.out.r3 : null; // 勝ち負けを付けたあとの段
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
+  const [tables, setTables] = useState(false);
   const [step, setStep] = useState(() => (run.r3skip ? 'auto' : 'bracket'));
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
   useEffect(() => {
     let alive = true;
-    if (!engine) msxR3LoadEngine().then((e) => { if (!alive) return; if (e) setEngine(e); else setFailed(true); });
+    // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
+    Promise.all([engine ? Promise.resolve(engine) : msxR3LoadEngine(), msxR3LoadTables()]).then(([e]) => { if (!alive) return; setTables(true); if (e) setEngine(e); else setFailed(true); });
     return () => { alive = false; };
   }, []);
-  const fight = useMemo(() => (engine && b ? msxR3Fight(engine, SUC, run) : null), [engine, b && b.kind, b && b.again, b && b.reroll, b && b.round, b && b.retry, s.turn]);
+  const fight = useMemo(() => (engine && tables && b ? msxR3Fight(engine, SUC, run) : null), [engine, tables, b && b.kind, b && b.again, b && b.reroll, b && b.round, b && b.retry, s.turn]);
   const name = b ? msxR3BattleName(SUC, b) : st3 ? st3.name : '';
   // 勝ち負けを付ける(負けのときは、やり直さないと決めたあと)
   const settle = (won) => {
