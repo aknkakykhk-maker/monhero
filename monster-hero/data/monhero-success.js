@@ -320,6 +320,9 @@
   // ライバル(TOURNAMENT §8b・社長 2026-11-12): 月のはじめに決まる・札にアイコン・ごほうびが大きい
   const RIVAL = Object.freeze({ rate: 0.25, str: 1.1, prize: 1.5, all: 12, tickets: 1, title: 'ライバルに勝った' }); // ごほうびの主は全能力 +12(社長 2026-11-12)
   const OPP_JITTER = 0.08;
+  // 大会の相手の人気・忠誠度 [人気, 忠誠](期の基準)と上乗せ。忠誠は高め(言うことを聞かない番が多すぎると相手が弱くなりすぎる)・人気は期とともに上がる
+  const OPP_POPLOY = Object.freeze({ debut: [10, 60], junior: [20, 65], middle: [35, 70], pro: [50, 75], final: [65, 80] });
+  const OPP_POPLOY_ADD = Object.freeze({ champ: [20, 15], rival: [10, 5] });
   const OPP_GEAR = Object.freeze({ debut: { techs: 2, mastery: 10, tactics: 5 }, junior: { techs: 2, mastery: 20, tactics: 10 }, middle: { techs: 3, mastery: 40, tactics: 20 }, pro: { techs: 4, mastery: 60, tactics: 30 }, final: { techs: 5, mastery: 80, tactics: 40 } });
 
   const create = (deps) => {
@@ -988,7 +991,15 @@
       const w = KEYS.map(k => (rv && rv.stats ? Math.max(1, num(rv.stats[k], 100)) : aptMult(sp, k) * (0.85 + rng() * 0.3)) * (sy.stat === k ? 1.15 : 1));
       const ws = w.reduce((a, x) => a + x, 0);
       const stats = {}; KEYS.forEach((k, i) => { stats[k] = clamp(Math.round(total * w[i] / ws), 1, STAT_MAX); });
-      return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0,
+      // 人気と忠誠度(社長 2026-11-12「敵も人気と忠誠度を設定して」): 期の基準 + 王者/ライバル/頂への道の上乗せ + ±5 のくじ。
+      //   忠誠度は試合の「言うことを聞かない番」、人気は会心に効く(育てる子と同じ)。乱数は能力を決めたあとに引く(能力は今までと同じ)
+      const pk0 = b.kind === 'summit' ? 'final' : b.kind === 'cup' ? periodOf(s.turn).key : b.kind;
+      const OP = OPP_POPLOY[pk0] || OPP_POPLOY.junior;
+      const plus = (who && who.champ ? OPP_POPLOY_ADD.champ : rv ? OPP_POPLOY_ADD.rival : [0, 0]);
+      const jit = () => Math.round((rng() * 2 - 1) * 5);
+      const pop = clamp(rv && Number.isFinite(rv.pop) ? Math.round(rv.pop) : OP[0] + plus[0] + jit(), 0, 100);
+      const loy = clamp(rv && Number.isFinite(rv.loy) ? Math.round(rv.loy) : OP[1] + plus[1] + jit(), 0, 100);
+      return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0, pop, loy,
         name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null }];
     };
 
@@ -1099,6 +1110,60 @@
       return { state: s, out: { ok: true } };
     };
 
+    // ---- 合体(PLAN.md §3「合体」・段取りの回3・2026-11-12 開発部) ----
+    // 保存枠の「育て終えた子」2体から、未育成の子を1体つくる。ここは計算だけ(保存・画面はゲーム本体の部品)。
+    //   種類: 子の主血統 = 主の親の主血統・子の副血統 = もう一方の親の主血統か副血統(くじ)。その組み合わせのモンスターがいればその種類、
+    //         いなければ主の親の種類。血統の正本は data/lineages.js の MONSTER_LINEAGE_MAP(deps.lineage で受け取る・読むだけ)
+    //   6能力: 生まれた種類の初期値 + 上乗せ(助手マスモンの合体と同じ MASMON_CALC.fuseBonus。2体の平均を元に・そろいで効く・上限なし)
+    //   技: 親の技のうち生まれた種類でも覚えられる技を2つまで(熟練は0から・mast は techs と同じ順の配列。保存枠の形は回3 56-monhero-success-r3-store.jsx) / 型: 主の親の型(くじで少し別の型) / 世代: 親の大きい方 + 1
+    //   くじは2体の id から作る決まった乱数なので、見通しと本番が同じになる(押し直しても変わらない)
+    const LINEAGE = (deps && deps.lineage) || {};
+    const FUSE = Object.freeze({ techs: 2, typeChange: 0.1, genMax: 999 });
+    const lineOf = (sp) => { const x = LINEAGE[sp]; return x && typeof x.main === 'string' ? { main: x.main, sub: typeof x.sub === 'string' ? x.sub : x.main } : null; };
+    const fuseId = (a, b) => 'f' + hashStr(`${a}|${b}`).toString(36) + hashStr(`${b}#${a}`).toString(36).slice(0, 3);
+    const boxSt = (m) => normStats(m && m.st, m && m.species);
+    const fuseOk = (a, b) => {
+      if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return '2体を選んでください';
+      if (!a.id || a.id === b.id) return '同じモンスターどうしでは合体できません';
+      if (!speciesList.includes(a.species) || !speciesList.includes(b.species)) return 'このモンスターは合体に使えません';
+      if (a.raised !== true || b.raised !== true) return '育て終えたモンスターどうしだけ合体できます';
+      return true;
+    };
+    // 子の種類の候補(くじの前): [{ species, sub, chance }]。同じ血統の組に複数の種類がいれば、主の親と同じ種類を先にし、なければ名前順の先頭
+    const fuseKinds = (mainSp, matSp) => {
+      const lm = lineOf(mainSp); const lt = lineOf(matSp);
+      if (!lm || !lt) return [{ species: mainSp, sub: null, chance: 1 }];
+      const subs = [lt.main, lt.sub].filter((v, i, a) => a.indexOf(v) === i);
+      const pick = (sub) => {
+        const hit = speciesList.filter(sp => { const l = lineOf(sp); return l && l.main === lm.main && l.sub === sub; }).sort();
+        return hit.includes(mainSp) ? mainSp : (hit[0] || mainSp);
+      };
+      return subs.map(sub => ({ species: pick(sub), sub, chance: 1 / subs.length }));
+    };
+    const fusePlan = (a, b) => {
+      const okv = fuseOk(a, b); if (okv !== true) return { ok: false, why: okv };
+      const r = rngOf('fuse', a.id, b.id);
+      const kinds = fuseKinds(a.species, b.species);
+      const kind = kinds[Math.min(kinds.length - 1, Math.floor(r() * kinds.length))];
+      const species = kind.species;
+      const base = initStats(species);
+      const sa = boxSt(a); const sb = boxSt(b); const st = {}; const add = {};
+      KEYS.forEach(k => { add[k] = C.fuseBonus(sa[k], sb[k]); st[k] = clamp(base[k] + add[k], 1, STAT_MAX); });
+      const own = (m) => (Array.isArray(m.techs) ? m.techs.filter(t => typeof t === 'string') : []);
+      const techs = [...own(a), ...own(b)].filter((t, i, arr) => arr.indexOf(t) === i).filter(t => techById(species, t) && !(techById(species, t).learn || {}).start).slice(0, FUSE.techs);
+      const t0 = Number.isInteger(a.gt) ? clamp(a.gt, 0, 5) : C.typeFromApt(aptStr(species), r());
+      const typeRoll = r(); const changed = typeRoll < FUSE.typeChange;
+      const gt = changed ? C.typeFromApt(aptStr(species), r()) : t0;
+      const gen = clamp(Math.max(Math.round(num(a.gen, 1)), Math.round(num(b.gen, 1)), 1) + 1, 2, FUSE.genMax);
+      const parentOf = (m) => ({ id: String(m.id), species: m.species, nick: typeof m.nick === 'string' ? m.nick.slice(0, 16) : '', rank: typeof m.rank === 'string' ? m.rank : null, gen: Math.max(1, Math.round(num(m.gen, 1))) });
+      return {
+        ok: true, kinds, sub: kind.sub, base, add,
+        typeChanged: changed && gt !== t0,
+        parentInfo: [parentOf(a), parentOf(b)],
+        child: { id: fuseId(a.id, b.id), species, nick: species === a.species && typeof a.nick === 'string' ? a.nick.slice(0, 16) : '', gen, st, techs, mast: techs.map(() => 0), gt, lv: 1, raised: false, parents: [String(a.id), String(b.id)] },
+      };
+    };
+
     // ---- 評価(引退): 総合力・ランク・アシストポイント・上位3つ ----
     // 評価の表示(社長 2026-11-12: ランク表は助手マスモンと同じ・500ごとに番号。C は 6,000/6,500/7,000/7,500 で C1〜C4・M は上限なしで M1・M2…)
     const GRADE_STEP = 500;
@@ -1123,6 +1188,7 @@
       ASSISTS, ISSA, PTS, XP, SHUGYO, ITEMS, GOOD, CARRY_MAX, useItem, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
+      FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
     });
   };
 
