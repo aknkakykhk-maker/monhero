@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b78fd1c553c7b31b
+// generated-sha256: 66d15ec78af8c047
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9743,6 +9743,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   窓口が中継役を配ったのを確かめてから真にする。偽・失敗のあいだは表の名前のまま(56-assistant-life-masmon.jsx)
   assistantMasmonBattleBeta: true, // 2026-11-11 助手マスモンの対戦 β その1(端末の中の対戦・ミセカタ2)。社長「この文で」・ミハリと Fable の最終確認のあと真にした(本番の関数の通しは省く・社長の決め)
   assistantMasmonBattlePvp: true, // 2026-11-11 助手マスモンの対戦 β その2(フレンド対戦+ランキング)。タイセンの表と関数(masmon-pvp)が本番に入ったあと真にした(本番の通しは省く・社長の決め 2026-11-11)
+  assistantLifeBody: false, // 2026-11-12 助手の疲れ・ストレス・けが・病気と🏥病院(56-assistant-life-body.jsx・ナカヨシ)。社長の選択(窓口経由)のあと、ミハリと窓口の最終確認で真にする
   assistantLifePlan: true, // 2026-11-11 助手の行き先の予定(📅 今日の予定表・ナカヨシ19・台帳 #5301)。止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと真にする
   assistantMasmonTrain: true, // 2026-11-11 助手のマスモンの修行と助手の成長(仕様書の第②段階・シュギョウ)。2026-11-11 ミハリの最終確認と直した所の確認(ミハリ3)が OK・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonCheer: true, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。ミハリ3 OK・地図の窓 #5448・更新履歴とヘルプは社長「この文で」で公開
@@ -64647,32 +64648,34 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
   sleep:    { label: 'おやすみ',     te: '寝て',           group: false, places: ['home'] },
   read:     { label: '読書',       te: '本を読んで',     group: false, places: ['library'] },
   battle:   { label: 'バトル',     te: 'バトルして',     group: true,  places: ['battle'] }, // モンヒロバトル(2026-11-11 社長「MB管理とモンバトは別」。助手のマスモンの修行はここで行う)
+  checkup:  { label: '診察',       te: '診てもらって',   group: false, places: ['clinic'] }, // 病院(56-assistant-life-body.jsx)。8人の好みの重みは0なので、ふだんは選ばれない
 });
 // 場所。台本の {place} に入る言葉(穴の言葉の一覧は docs/progress/assistant-peer/LIFE-WORDS.md)
 const ASSISTANT_LIFE_PLACES = Object.freeze({
   home: '家', plaza: '広場', cafe: 'おやつ屋さん', studio: '練習スタジオ', ranch: '育成場',
   cardroom: 'カード部屋', library: '図書室', market: 'マーケット', hill: 'ひなたの丘', garden: '中庭', battle: 'モンヒロバトル',
+  clinic: '病院', // 2026-11-12 助手の病院(56-assistant-life-body.jsx・印 assistantLifeBody)。ふだんの決め方では選ばれない(けが・病気・予定のときだけ)
 });
 // 1人ずつの好み(したいことの好みの表。コトバの気持ちの紙・3人組の案もこの表を元にする)
 //   social … だれかといたい気持ちの強さ(0〜1)/ fav … 好きな場所(ひとりごとの場所の型「好きな場所」)
 //   w … したいことの重み / slot … 時間ごとに重みへ掛ける数 / solo … ひとりが好きな時間 / caring … さみしそうな助手のそばへ行きやすい
 //   clingy … ごろごろ・昼寝をしていても、だれかに来てほしい(来ないとさみしくなる)
 const ASSISTANT_LIFE_PREFS = Object.freeze({
-  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0, battle: 3 },
+  mua:       { social: 0.85, fav: 'plaza',   w: { snack: 4, practice: 2, training: 2, cards: 1, walk: 3, idle: 1, sleep: 1, read: 0, battle: 3, checkup: 0 },
                slot: { noon: { snack: 1.5 }, evening: { walk: 1.5 } }, note: 'にぎやかなのが好き。人が集まる広場。おやつと散歩、マーケットをのぞくのも好き' },
-  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 4.5 },
+  kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 4.5, checkup: 0 },
                slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり' },
-  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 4.5 },
+  momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 4.5, checkup: 0 },
                slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
-  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 1.5 },
+  dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 1.5, checkup: 0 },
                slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, clingy: true, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
-  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 9 },
+  atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 9, checkup: 0 },
                slot: { morning: { training: 1.5 }, afternoon: { practice: 1.3 } }, note: 'ビートの練習(HELL)とドラゴンの育成。カードも強い' },
-  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 3 },
+  kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 3, checkup: 0 },
                slot: { afternoon: { read: 3, cards: 1.5 } }, solo: ['afternoon'], note: '午後は図書室でひとりの時間。カードの研究も好き' },
-  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 6 },
+  sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 6, checkup: 0 },
                slot: { night: { cards: 2, battle: 0.5 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
-  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 9 },
+  erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 9, checkup: 0 },
                slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
 // 1人ずつの生活のリズム(2026-11-07 社長「夜は家に帰る人が増えたり夜ふかしとか性格によって変えてもいい」)。
@@ -65111,7 +65114,10 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   const decided0 = assistantLifeDecide({ abs: slot.abs, members: ids, bond, prev, recent: cur.recent, nudges: cur.nudges, tier, salt: cur.salt, rhythmShift });
   // 行き先の予定(📅 今日の予定表・56-assistant-life-plan.jsx。印 assistantLifePlan が偽・予定なしなら そのまま)
   if (typeof ASSISTANT_LIFE_PLAN_STORE !== 'undefined' && typeof assistantLifePlanOn === 'function' && assistantLifePlanOn()) { try { await ASSISTANT_LIFE_PLAN_STORE.load(); } catch {} }
-  const decided = typeof assistantLifePlanOnDecide === 'function' ? assistantLifePlanOnDecide(decided0, cur.salt) : decided0;
+  const decided1 = typeof assistantLifePlanOnDecide === 'function' ? assistantLifePlanOnDecide(decided0, cur.salt) : decided0;
+  // 助手の疲れ・ストレス・けが・病気(56-assistant-life-body.jsx。印 assistantLifeBody が偽なら decided1 のまま)
+  if (typeof ASSISTANT_LIFE_BODY_STORE !== 'undefined' && typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) { try { await ASSISTANT_LIFE_BODY_STORE.load(); } catch {} }
+  const decided = typeof assistantLifeBodyOnDecide === 'function' ? assistantLifeBodyOnDecide(decided1, cur.salt) : decided1;
   const keep = (n) => n.abs >= slot.abs;
   const life = { ...cur, ...decided, watched: [], recent: cur.recent.filter(r => slot.abs - r.abs <= ASSISTANT_LIFE_RECENT_SLOTS),
     nudges: { invite: cur.nudges.invite.filter(keep), introduce: cur.nudges.introduce.filter(keep) } };
@@ -65119,6 +65125,8 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   assistantLifeSaveLife();
   // 今日あったこと(家の掲示板)へ、この時間の過ごし方を書く(56-assistant-life-house.jsx)
   if (typeof assistantLifeDiaryOnSlot === 'function') { try { assistantLifeDiaryOnSlot(life, slot, now); } catch {} }
+  // その回の場所で疲れ・ストレスを動かし、けが・病気を決める(56-assistant-life-body.jsx。印が偽なら何もしない)
+  if (typeof assistantLifeBodyOnSlot === 'function') { try { assistantLifeBodyOnSlot(life, slot); } catch {} }
   // その時間モンヒロバトルにいた助手のマスモンが修行する(シュギョウ。印 assistantMasmonTrain が偽なら何もしない・2026-11-11)
   if (typeof amgtOnLifeSlot === 'function') { try { amgtOnLifeSlot(life, slot, now); } catch {} }
   // フレンドの家との行き来(控えを送る・ときどき助手が自分で遊びに行く。56-assistant-life-friend.jsx。印が偽なら何もしない)
@@ -65898,7 +65906,7 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️' });
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️', clinic: '🏥' });
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
@@ -67160,7 +67168,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           const w = assistantLifeWhereOf(life, id);
           const groupIds = w && w.group && Array.isArray(w.group.ids) ? w.group.ids : [];
           const peers = groupIds.filter(x => x !== id && metSet.has(x));
-          const mapPlace = w && ASSISTANT_LIFE_MAP_ORDER.includes(w.place) ? w.place : 'home';
+          const mapPlace = w && (typeof assistantLifeMapOrderNow === 'function' ? assistantLifeMapOrderNow() : ASSISTANT_LIFE_MAP_ORDER).includes(w.place) ? w.place : 'home';
           const place = w ? assistantLifePlaceShow(w.place) : '家';
           const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
           return <div key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-1 py-1">
@@ -67177,6 +67185,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const houseView = (
     <div className="relative pt-1">
       {uiV2 && typeof AssistantLifeFirstGuide === 'function' && (guideSeen === false || guideOpen) && <AssistantLifeFirstGuide land={land} canWatch={!!unwatched.length} onClose={markGuideSeen} onWatch={() => { markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}/>}
+      {topOn && typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札は家の上(PLAN・fable の指摘 11-12 キズナ) */}
       {topOn && <div className="mb-1 flex justify-center" data-assistant-life-top-house><AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2 grid4/></div>}
       {topOn && typeof AssistantLifeTopStrip === 'function' && <AssistantLifeTopStrip life={life} ids={ids} evIds={evIds} onPlace={(p, id) => { setMapFocusPlace(ASSISTANT_LIFE_MAP_ORDER.includes(p) ? p : 'home'); setMapFocusAssistantId(id); setTab('where'); }}/>}
       {topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
@@ -67185,7 +67194,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         onWatch={() => { if (unwatched[0]) watch(unwatched[0]); }} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }} onRoad={() => setTab('friends')} onGuide={() => setGuideOpen(true)}/>}
       {uiV2 && !topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
       {uiV2 && typeof AssistantLifePlanBand === 'function' && <AssistantLifePlanBand ids={ids} land={land}/>}
-      {typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札(キズナ・印 assistantMasmonPlan が偽なら何も出さない) */}
+      {!topOn && typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札(キズナ・印 assistantMasmonPlan が偽なら何も出さない。新UIの家は家の上に出す) */}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       {/* トップの家を出すときは、下の家の絵と「みんなの今」の一覧は出さない(同じものが上にある。2026-11-11 社長「部屋の列は外す」) */}
       {!topOn && <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>}
@@ -67410,17 +67419,21 @@ function AssistantLifeHomeFaces({ metIds }) {
 // 場所ごとの HOME の札(fac)。町だけの場所は HOME では「🏡 助手ライフ」の札の下に顔が出る(assistantLifeFacilityOf と同じ表)
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
+// 🏥 病院(56-assistant-life-body.jsx)は印 assistantLifeBody が真のときだけ地図に足す(偽のあいだは札も人もシートも出さない・ミハリ5)
+const assistantLifeMapClinicOn = () => { try { return typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn(); } catch (_) { return false; } };
+const assistantLifeMapOrderNow = () => (assistantLifeMapClinicOn() ? [...ASSISTANT_LIFE_MAP_ORDER, 'clinic'] : ASSISTANT_LIFE_MAP_ORDER);
+const assistantLifeMapTownOnlyNow = () => (assistantLifeMapClinicOn() ? [...ASSISTANT_LIFE_MAP_TOWN_ONLY, 'clinic'] : ASSISTANT_LIFE_MAP_TOWN_ONLY);
 // 町だけの場所の札を置く所(絵の幅・高さに対する割合。札の真ん中)。絵ごとに建物の位置がちがうので、絵ごとに持つ
 //   classic … 村の広場(941×1672)/ halloween … ハロウィン(縦)/ halloweenWide … ハロウィン(横長)
 //   図書室=金の塔/おやつ屋さん=右上の青い屋根の石の家/ひなたの丘=湖と滝/中庭=泉と屋台のあいだの芝生/広場=方位の印
 const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
-  classic:       { hill: [0.47, 0.115], library: [0.72, 0.205], cafe: [0.9, 0.29], garden: [0.8, 0.44], plaza: [0.5, 0.465] },
-  halloween:     { hill: [0.5, 0.085], library: [0.7, 0.2], cafe: [0.9, 0.27], garden: [0.82, 0.45], plaza: [0.5, 0.465] },
-  halloweenWide: { hill: [0.5, 0.17], library: [0.62, 0.27], cafe: [0.84, 0.22], garden: [0.76, 0.4], plaza: [0.47, 0.54] },
+  classic:       { hill: [0.47, 0.115], library: [0.72, 0.205], cafe: [0.9, 0.29], garden: [0.8, 0.44], plaza: [0.5, 0.465], clinic: [0.62, 0.56] },
+  halloween:     { hill: [0.5, 0.085], library: [0.7, 0.2], cafe: [0.9, 0.27], garden: [0.82, 0.45], plaza: [0.5, 0.465], clinic: [0.62, 0.56] },
+  halloweenWide: { hill: [0.5, 0.17], library: [0.62, 0.27], cafe: [0.84, 0.22], garden: [0.76, 0.4], plaza: [0.47, 0.54], clinic: [0.84, 0.62] },
 });
 const assistantLifeMapArtOf = (src) => /halloween-wide/.test(String(src || '')) ? 'halloweenWide' : /halloween/.test(String(src || '')) ? 'halloween' : 'classic';
 // していることの短い印(地図の名札の頭に付ける)
-const ASSISTANT_LIFE_DOING_ICON = Object.freeze({ snack: '🍰', practice: '🎵', training: '🥚', cards: '🃏', walk: '🚶', idle: '💭', sleep: '💤', read: '📖', battle: '⚔️' });
+const ASSISTANT_LIFE_DOING_ICON = Object.freeze({ snack: '🍰', practice: '🎵', training: '🥚', cards: '🃏', walk: '🚶', idle: '💭', sleep: '💤', read: '📖', battle: '⚔️', checkup: '🏥' });
 // 場所を押したときの一言(できること)。数字・ネタバレは書かない
 const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   home: '家で過ごしている助手。部屋をのぞいて、声をかけられます',
@@ -67435,6 +67448,7 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
   hill: 'ひなたの丘でのんびりしている助手',
   garden: '中庭で過ごしている助手',
   plaza: '広場を散歩している助手',
+  clinic: '病院で診てもらっている助手。けがや病気が早く治ります',
 });
 // HOME の札の名前(地図のシートに「HOME の◯◯の札」と出す)
 const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', battle: 'モンヒロバトル', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
@@ -67494,7 +67508,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
 function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
-  const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
+  const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   const [cheerMsg, setCheerMsg] = React.useState(null); // 📣 応援したときの短い知らせ { id, text }(シュギョウ2の口 assistantMasmonCheer)
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
@@ -67634,7 +67648,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   const sheetPlace = sheet;
   const sheetWho = sheetPlace ? (at[sheetPlace] || []) : [];
   const fac = sheetPlace ? assistantLifeFacilityOf({ place: sheetPlace }) : null;
-  const sheetTown = sheetPlace === 'home' ? ASSISTANT_LIFE_MAP_TOWN_ONLY.flatMap(p => (at[p] || []).map(id => [id, p])) : [];
+  const sheetTown = sheetPlace === 'home' ? assistantLifeMapTownOnlyNow().flatMap(p => (at[p] || []).map(id => [id, p])) : [];
   // シートの1行(顔・名前・だれと何をしているか・できること)。town … 町の場所の人を家の札のシートに並べるとき(場所の名前も出す)
   const row = (id, place, town) => {
     const a = assistantById(id); if (!a) return null;
@@ -67706,10 +67720,10 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         </nav>
         <button type="button" className={home.card} aria-label={`MFバトルカード(${cardN ? `${cardN}人` : 'だれもいない'})`} data-assistant-life-map-place="cardroom" data-assistant-life-map-empty={cardN ? '0' : '1'} style={cardN ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet('cardroom')}><span>🃏 MFバトルカード</span>{perkMark('cardroom')}</button>
         {/* HOME に札の無い町の場所 */}
-        {ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => { const n = (at[p] || []).length; return (
+        {assistantLifeMapTownOnlyNow().map(p => { const n = (at[p] || []).length; return (
           <button key={p} type="button" className="mhl-map-town" style={{ visibility: 'hidden', left: 0, top: 0 }} aria-label={`${assistantLifePlaceShow(p)}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={p} data-assistant-life-map-town data-assistant-life-map-empty={n ? '0' : '1'} onClick={() => setSheet(p)}>
             <span>{ASSISTANT_LIFE_PLACE_ICON[p]} {assistantLifePlaceShow(p)}</span></button>); })}
-        {ASSISTANT_LIFE_MAP_ORDER.map(crowd)}
+        {assistantLifeMapOrderNow().map(crowd)}
         {/* 上の帯: 家へ戻る・題・時間帯・一覧へ */}
         <div className="absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3" style={{ paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))', paddingLeft: 'calc(8px + env(safe-area-inset-left))', paddingRight: 'calc(8px + env(safe-area-inset-right))' }} data-assistant-life-map-bar>
           {/* 新UI(nav あり): 「家へ」と「一覧」の代わりに、ほかの画面と同じ4つのタブ(家・町・きずな・フレンド) */}
@@ -67731,7 +67745,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : undefined}>
             <p className="mhl-en">WHERE · {String(sheetPlace).toUpperCase()}</p>
             <p className="text-[18px] font-black" data-assistant-life-map-sheet-title>{assistantLifeMapSpotWord(sheetPlace)}</p>
-            <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
+            <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
             <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100">{sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? <>MFバトルカードの研究をしている助手。いる助手と対戦すると、<span className="whitespace-nowrap">ごほうび {CARD_LIFE_UP_LABEL}</span></> : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]}</p>
             {typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && <AssistantLifePlacePerk life={life} ids={sheetWho} place={sheetPlace} land={land} onGo={onGo ? (fn) => { setSheet(null); onGo(fn); } : null}/>}
             {sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : <p className="mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300" data-assistant-life-map-sheet-none>いまはだれもいません</p>}
@@ -68260,7 +68274,8 @@ const assistantLifePlacePerkTail = (place) => {
   if (place === 'studio') return '券なしで一緒に遊べる';
   if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'ranch') return typeof amgrOn === 'function' && amgrOn() ? '助手のマスモンにトレーニングチケットを使ってあげられる' : 'トレーニングすると、その助手のマスモンも育つ';
-  return '';
+  // 町の場所・家・病院の得(助手の疲れ・ストレス・56-assistant-life-body.jsx。印 assistantLifeBody が偽なら空)
+  return typeof assistantLifeBodyPerk === 'function' ? assistantLifeBodyPerk(place) : '';
 };
 
 // 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
@@ -74777,7 +74792,8 @@ function AmgtCard({ who, t, e }) {
 //   日が替わったら捨てる(次の日の予定は持たない)。壊れていれば空
 const ASSISTANT_LIFE_PLAN_KEY = 'mh_assistant_life_plan_v1';
 // 予定に入れられる場所(その場所でできる「していること」があるところ。マーケットは助手が行かない)
-const ASSISTANT_LIFE_PLAN_PLACES = Object.freeze(['cafe', 'plaza', 'garden', 'hill', 'studio', 'ranch', 'cardroom', 'library', 'battle', 'home']);
+// clinic(病院)は印 assistantLifeBody が真のときだけ画面に出す(assistantLifeBodyPlaces)
+const ASSISTANT_LIFE_PLAN_PLACES = Object.freeze(['cafe', 'plaza', 'garden', 'hill', 'studio', 'ranch', 'cardroom', 'library', 'battle', 'home', 'clinic']);
 const ASSISTANT_LIFE_PLAN_FIRST_J = 2; // 4〜6時の回から(0〜4時の深夜は出さない)
 const ASSISTANT_LIFE_PLAN_TRUST = Object.freeze({ base: 0.65, perLv: 0.01, max: 0.93 });
 
@@ -74942,7 +74958,8 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     const want0 = d.plan[String(decided.abs)] || {};
     const want = {}; for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
-    const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
+    // 疲れ・ストレス(56-assistant-life-body.jsx): ひなたの丘の次の回は聞きやすく・ストレスが高いと聞きにくい。印が偽なら 0
+    const trust = {}; for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {}; for (const [id, v] of Object.entries(r.result)) if (v === 'no') { const g = (r.life.groups || []).find(x => x.ids.includes(id)); const pl = g ? g.place : (r.life.solo[id] || {}).place; if (pl) went[id] = pl; }
     assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result }, went: { ...(d.went || {}), [String(decided.abs)]: went } });
@@ -74992,7 +75009,7 @@ const assistantLifePlanUse = () => {
   React.useEffect(() => { const fn = (s) => setSt(s); ASSISTANT_LIFE_PLAN_STORE.listeners.add(fn); void ASSISTANT_LIFE_PLAN_STORE.load(); return () => { ASSISTANT_LIFE_PLAN_STORE.listeners.delete(fn); }; }, []);
   return st;
 };
-const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({ cafe: '🍰', plaza: '⛲', garden: '🌷', hill: '🌄', studio: '🎵', ranch: '🐾', cardroom: '🃏', library: '📚', battle: '⚔', home: '🏡' });
+const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({ cafe: '🍰', plaza: '⛲', garden: '🌷', hill: '🌄', studio: '🎵', ranch: '🐾', cardroom: '🃏', library: '📚', battle: '⚔', home: '🏡', clinic: '🏥' });
 // 行き先えらびの「得:」の文。地図の場所の窓・家の帯の「いま行くと得」と同じ文(assistantLifePlacePerkTail)を使う。効果の無い場所は空(何も出さない)
 const assistantLifePlanPerk = (place) => {
   if (place === 'battle') return 'マスモンが修行する';
@@ -75004,17 +75021,19 @@ const assistantLifePlanName = (id) => { try { return typeof assistantLifeName ==
 function AssistantLifePlanPicker({ id, abs, onDone }) {
   const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
   const cur = assistantLifePlanOf(abs, id);
-  const list = [...ASSISTANT_LIFE_PLAN_PLACES].sort((a, b) => (assistantLifePlanPerk(b) ? 1 : 0) - (assistantLifePlanPerk(a) ? 1 : 0));
+  const places = typeof assistantLifeBodyPlaces === 'function' ? assistantLifeBodyPlaces(ASSISTANT_LIFE_PLAN_PLACES) : ASSISTANT_LIFE_PLAN_PLACES.filter(p => p !== 'clinic');
+  const list = [...places].sort((a, b) => (assistantLifePlanPerk(b) ? 1 : 0) - (assistantLifePlanPerk(a) ? 1 : 0));
   const h = assistantLifeSlotOfAbs(abs).from;
   return (
     <div className="mt-1 rounded-xl border border-sky-300/60 bg-slate-900/95 p-1.5" data-assistant-life-plan-picker={abs}>
       <p className="px-1 text-[11.5px] font-black text-sky-200">{assistantLifePlanName(id)}に {h}〜{(h + 2) % 24}時 に行ってもらう場所</p>
       <div className="mt-1 grid grid-cols-2 gap-1">
         {list.map(p => (
-          <button key={p} type="button" data-assistant-life-plan-place={p} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
-            className={`min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95`}>
-            {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{p === fav ? ' ♥' : ''}
+          <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
+            className={`min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95 disabled:opacity-35`}>
+            {ASSISTANT_LIFE_PLAN_ICON[p]} {(typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p)) ? <>{assistantLifeBodyLabel(p)[0]} <span className="text-[10px] font-bold text-slate-400">{assistantLifeBodyLabel(p)[1]}</span></> : ASSISTANT_LIFE_PLACES[p]}{p === fav ? ((typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) ? ' ♥ 好きな場所' : ' ♥') : ''}
             {assistantLifePlanPerk(p) && <span className="block text-[10px] font-bold text-amber-200">得: {assistantLifePlanPerk(p)}</span>}
+            {typeof AssistantLifeBodyPlaceStat === 'function' && <AssistantLifeBodyPlaceStat place={p} abs={abs}/>}
           </button>))}
         <button type="button" data-assistant-life-plan-place="auto" onClick={() => { assistantLifePlanSet(abs, id, null); onDone && onDone(); }} className="col-span-2 min-h-[44px] rounded-xl bg-white/5 text-[12px] font-black text-slate-200 active:scale-95">おまかせにもどす</button>
       </div>
@@ -75042,7 +75061,7 @@ function AssistantLifePlanWho({ id, cur }) {
         {pick === abs && <AssistantLifePlanPicker id={id} abs={abs} onDone={() => setPick(null)}/>}
       </div>);
   }
-  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{rows}</div>;
+  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{typeof AssistantLifeBodyPanel === 'function' && <AssistantLifeBodyPanel id={id} cur={cur}/>}{rows}</div>;
 }
 
 // 8人×4回の表(横)
@@ -75131,6 +75150,369 @@ function AssistantLifePlanBand({ ids = [], land = false }) {
       <span className="shrink-0 rounded-xl bg-amber-400 px-2 py-1 text-[11.5px] font-black text-slate-900">開く</span>
     </button>);
 }
+
+// ---- part: 56-assistant-life-body.jsx ----
+// ===== 助手ライフ: 助手の疲れ・ストレス・けが・病気と 🏥 病院(ナカヨシ 2026-11-12)=====
+// 社長 2026-11-12「どこに行っても意味があるように(寝る以外)」「助手にも疲れ・ストレス。けがとか」「助手専用の病院」。
+//   答え(窓口経由): 呼び名は助手も「疲れ・ストレス」(たまると悪い・マスモンと同じ線)/けが・病気はいつでも起きる(おまかせの回は
+//   助手が自分で休みを選びやすい)/病院は基本無料で予定の1マスを使う・重いと何回か通う(ビートPの上の治療は次の段)
+//   案と止め絵 docs/progress/assistant-peer/life-places/PLAN.md。検査 tools/assistant/life-body-check.js
+// 作り:
+//   ・生活は「開いたときに今の回だけ決める」(assistantLifeNow)。ここはその2か所に差し込むだけ:
+//     assistantLifeBodyOnDecide … 決めた様子を直す(けが・病気の助手は家か病院・サボった助手は家へ帰る・疲れた助手は自分で休む)
+//     assistantLifeBodyOnSlot   … その回の場所で疲れ・ストレスを動かし、けが・病気を決めて保存する
+//   ・サボり・けが・病気は「家にいる」で表す → ビート・カード・修行・M/B管理の得は、場所を見ている今の仕組みのまま自然に止まる
+//   ・見ていない回(アプリを開いていない間)は「おまかせで休んでいた」として少しずつ戻す(さかのぼって疲れさせない)
+//   ・決まり方は回ごとの決まった乱数(開き直しても変わらない)
+// 保存(新しいキーだけ。既存のキーは読むだけ・CLAUDE.md ⑦):
+//   mh_assistant_life_body_v1 = { v:1, at: 最後に進めた回(abs), s: { [助手id]: { fat, st, cond: { k:'hurt'|'sick', sev:'light'|'heavy', left: 自然に治るまでの回, visits: あと何回病院 } | null } },
+//                                 log: { [助手id]: [{ abs, place, ev }] }(最近36回) }
+//   読めない・壊れている → はじめの値(疲れ20・ストレス20・何も起きていない)
+// 公開の印 RELEASE_FLAGS.assistantLifeBody の後ろ。偽のあいだは何もしない・何も読まない・何も出さない
+
+const ASSISTANT_LIFE_BODY_KEY = 'mh_assistant_life_body_v1';
+// 場所ごとの1回(2時間)の動き。fat … 疲れ / st … ストレス(どちらも 0〜100・たまると悪い)/ hard … 体を使う(けがが起きうる)
+const ASSISTANT_LIFE_BODY_PLACE = Object.freeze({
+  battle:   { fat: 12,  st: 5,   hard: true },
+  studio:   { fat: 10,  st: -5,  hard: true },
+  ranch:    { fat: 10,  st: 5,   hard: true },
+  plaza:    { fat: 3,   st: -8,  hard: true },
+  cardroom: { fat: 5,   st: 3 },
+  library:  { fat: 3,   st: 3 },
+  cafe:     { fat: -5,  st: -15 },
+  garden:   { fat: -5,  st: -10 },
+  hill:     { fat: -10, st: -10 },
+  home:     { fat: -10, st: -5 },
+  clinic:   { fat: -15, st: 0 },
+  temple:   { fat: 0,   st: -5 },
+  market:   { fat: 3,   st: -3 },
+});
+const ASSISTANT_LIFE_BODY_SLEEP_FAT = -25; // 家で寝ている回
+const ASSISTANT_LIFE_BODY_FAV_ST = -5;     // 好きな場所へ行くと、さらにストレスが下がる
+const ASSISTANT_LIFE_BODY_START = Object.freeze({ fat: 20, st: 20 });
+// 線はマスモン(育成ノートの疲れ・ストレス)と同じ: 疲れ60で黄・70で赤/ストレス50で黄・60で赤
+const ASSISTANT_LIFE_BODY_LINE = Object.freeze({ fatWarn: 60, fatBad: 70, stWarn: 50, stBad: 60, sulky: 80 });
+// けが・病気の重さ。slots … 自然に治るまでの回(12回=1日) / visits … 病院へ何回行けば治るか
+const ASSISTANT_LIFE_BODY_COND = Object.freeze({
+  hurt: { light: { slots: 24, visits: 1 }, heavy: { slots: 48, visits: 2 } },
+  sick: { light: { slots: 36, visits: 2 }, heavy: { slots: 60, visits: 3 } },
+});
+const ASSISTANT_LIFE_BODY_GAP = Object.freeze({ fat: -8, st: -3, max: 84 }); // 見ていない1回ごと(7日まで)
+const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']); // 休む場所(ここではサボらない)
+const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
+// 予定表で出す名前(施設の名前を先に。台詞の {place} は今の ASSISTANT_LIFE_PLACES のまま)
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({ studio: ['モンヒロビート', '練習スタジオ'], ranch: ['M/B管理', '育成場'], cardroom: ['MFバトルカード', 'カード部屋'] });
+// 得の1行(町の場所・家・病院)。ビート・カード・M/B管理の文は assistantLifePlacePerkTail(56-assistant-life-ux.jsx)のまま。
+//   そこの最後からここを呼ぶので、予定表・地図の場所の窓・家の帯の「いま行くと得」が同じ文になる
+const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
+  cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
+  plaza: 'ほかの助手と会いやすい・なかよく',
+  garden: 'マスモンが遊んでストレスが下がる',
+  hill: 'ごきげんに(次のお願いが通りやすい)',
+  library: 'マスモンの技が少し伸びる',
+  home: '疲れがいちばん取れる(寝ると たくさん)',
+  clinic: 'けが・病気を治す(マスモンも)',
+});
+// 一緒に過ごすと助手どうしのきずなが上がる場所(1回 +2・1日 4 まで。data/assistants.js の outing)
+const ASSISTANT_LIFE_BODY_OUTING = Object.freeze(['cafe', 'plaza']);
+
+const assistantLifeBodyOn = () => {
+  try { return typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeBody === true; } catch (_) { return false; }
+};
+const assistantLifeBodyClamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
+const assistantLifeBodyOkId = (id) => typeof id === 'string' && typeof ASSISTANT_LIFE_PREFS !== 'undefined' && !!ASSISTANT_LIFE_PREFS[id];
+const assistantLifeBodyFresh = () => ({ fat: ASSISTANT_LIFE_BODY_START.fat, st: ASSISTANT_LIFE_BODY_START.st, cond: null });
+const normalizeAssistantLifeBodyCond = (c) => {
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  if (!ASSISTANT_LIFE_BODY_COND[c.k] || !ASSISTANT_LIFE_BODY_COND[c.k][c.sev]) return null;
+  const left = Number(c.left), visits = Number(c.visits);
+  if (!Number.isInteger(left) || left <= 0 || !Number.isInteger(visits) || visits <= 0) return null;
+  return { k: c.k, sev: c.sev, left: Math.min(left, 120), visits: Math.min(visits, 5) };
+};
+// 保存の値を形へ(壊れている → 空)
+const normalizeAssistantLifeBody = (raw) => {
+  const out = { v: 1, at: null, s: {}, log: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (Number.isInteger(raw.at) && raw.at >= 0) out.at = raw.at;
+  if (raw.s && typeof raw.s === 'object' && !Array.isArray(raw.s)) {
+    for (const [id, e] of Object.entries(raw.s)) {
+      if (!assistantLifeBodyOkId(id) || !e || typeof e !== 'object' || Array.isArray(e)) continue;
+      const fat = typeof e.fat === 'number' ? e.fat : NaN, st = typeof e.st === 'number' ? e.st : NaN;
+      out.s[id] = { fat: Number.isFinite(fat) ? assistantLifeBodyClamp(fat) : ASSISTANT_LIFE_BODY_START.fat, st: Number.isFinite(st) ? assistantLifeBodyClamp(st) : ASSISTANT_LIFE_BODY_START.st, cond: normalizeAssistantLifeBodyCond(e.cond) };
+    }
+  }
+  if (raw.log && typeof raw.log === 'object' && !Array.isArray(raw.log)) {
+    for (const [id, list] of Object.entries(raw.log)) {
+      if (!assistantLifeBodyOkId(id) || !Array.isArray(list)) continue;
+      const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({ abs: r.abs, place: r.place, ev: typeof r.ev === 'string' ? r.ev : '' }));
+      if (ok.length) out.log[id] = ok.slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
+    }
+  }
+  return out;
+};
+
+// ---------- 計算(純粋な関数。検査が直接呼ぶ) ----------
+// 1人の1回ぶん。place・doing … その回の居場所 / fav … 好きな場所 / rand … 0〜1 を返す関数(けが・病気を決める)
+// 返す: { e: 次の値, ev: ''|'hurt'|'sick'|'healed'|'clinic' }
+const assistantLifeBodyStepOne = (e0, place, doing, fav, rand) => {
+  const e = { fat: e0.fat, st: e0.st, cond: e0.cond ? { ...e0.cond } : null };
+  const P = ASSISTANT_LIFE_BODY_PLACE[place] || { fat: 0, st: 0 };
+  e.fat = assistantLifeBodyClamp(e.fat + (place === 'home' && doing === 'sleep' ? ASSISTANT_LIFE_BODY_SLEEP_FAT : P.fat));
+  e.st = assistantLifeBodyClamp(e.st + P.st + (place === fav && place !== 'home' ? ASSISTANT_LIFE_BODY_FAV_ST : 0));
+  let ev = '';
+  if (e.cond) {
+    e.cond.left -= 1;
+    if (place === 'clinic') { e.cond.visits -= 1; ev = 'clinic'; }
+    if (e.cond.k === 'sick') e.st = assistantLifeBodyClamp(e.st - 5); // 病気の間はストレスが少しずつ下がる
+    if (e.cond.left <= 0 || e.cond.visits <= 0) { e.cond = null; ev = 'healed'; }
+    return { e, ev };
+  }
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const r = rand();
+  const pHurt = P.hard && e.fat >= L.fatBad ? Math.min(0.3, (e.fat - L.fatBad) * 0.015) : 0;
+  const pSick = e.st >= L.stBad && place !== 'clinic' ? Math.min(0.3, (e.st - L.stBad) * 0.01) : 0;
+  let k = null, over = 0;
+  if (r < pHurt) { k = 'hurt'; over = e.fat - L.fatBad; }
+  else if (r < pHurt + pSick) { k = 'sick'; over = e.st - L.stBad; }
+  if (k) {
+    const sev = rand() < Math.min(0.6, over * 0.03) ? 'heavy' : 'light';
+    const c = ASSISTANT_LIFE_BODY_COND[k][sev];
+    e.cond = { k, sev, left: c.slots, visits: c.visits };
+    ev = k;
+  }
+  return { e, ev };
+};
+// 見ていない回(n回)。おまかせで休んでいたとして少しずつ戻し、けが・病気は自然に治っていく
+const assistantLifeBodyGapOne = (e0, n) => {
+  const m = Math.max(0, Math.min(ASSISTANT_LIFE_BODY_GAP.max, Math.floor(n)));
+  if (!m) return e0;
+  const e = { fat: assistantLifeBodyClamp(e0.fat + ASSISTANT_LIFE_BODY_GAP.fat * m), st: assistantLifeBodyClamp(e0.st + ASSISTANT_LIFE_BODY_GAP.st * m), cond: e0.cond ? { ...e0.cond } : null };
+  if (e.cond) { e.cond.left -= m; if (e.cond.left <= 0) e.cond = null; }
+  return e;
+};
+// サボる見込み(0〜0.35)。休む場所ではサボらない
+const assistantLifeBodySkipChance = (e, place) => {
+  if (!e || ASSISTANT_LIFE_BODY_REST.includes(place)) return 0;
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  return Math.min(0.35, Math.max(0, e.fat - L.fatWarn) * 0.01 + Math.max(0, e.st - L.stWarn) * 0.01);
+};
+// けがの見込み(その場所の回の終わりの値で)
+const assistantLifeBodyHurtChance = (fat, place) => {
+  const P = ASSISTANT_LIFE_BODY_PLACE[place];
+  return P && P.hard && fat >= ASSISTANT_LIFE_BODY_LINE.fatBad ? Math.min(0.3, (fat - ASSISTANT_LIFE_BODY_LINE.fatBad) * 0.015) : 0;
+};
+const assistantLifeBodySickChance = (st, place) => (st >= ASSISTANT_LIFE_BODY_LINE.stBad && place !== 'clinic' ? Math.min(0.3, (st - ASSISTANT_LIFE_BODY_LINE.stBad) * 0.01) : 0);
+// 1つの場所へ行ったら値がどうなるか(見通し・乱数なし)。寝るかは時間で(夜・深夜の家は寝る)
+const assistantLifeBodyPreview = (e, place, abs, fav) => {
+  const s = typeof assistantLifeSlotOfAbs === 'function' ? assistantLifeSlotOfAbs(abs) : null;
+  const sleep = place === 'home' && s && (s.id === 'late' || s.id === 'night');
+  const P = ASSISTANT_LIFE_BODY_PLACE[place] || { fat: 0, st: 0 };
+  const fat = assistantLifeBodyClamp(e.fat + (sleep ? ASSISTANT_LIFE_BODY_SLEEP_FAT : P.fat));
+  const st = assistantLifeBodyClamp(e.st + P.st + (place === fav && place !== 'home' ? ASSISTANT_LIFE_BODY_FAV_ST : 0));
+  return { fat, st, skip: assistantLifeBodySkipChance(e, place), hurt: assistantLifeBodyHurtChance(fat, place), sick: assistantLifeBodySickChance(st, place) };
+};
+
+// ---------- 保存 ----------
+const ASSISTANT_LIFE_BODY_STORE = {
+  state: { loaded: false, data: normalizeAssistantLifeBody(null) }, listeners: new Set(), loading: null,
+  set(patch) { this.state = { ...this.state, ...patch }; for (const fn of this.listeners) { try { fn(this.state); } catch (_) {} } },
+  load() {
+    if (this.state.loaded) return Promise.resolve(this.state);
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      let raw = null; try { raw = await storeGet(ASSISTANT_LIFE_BODY_KEY, null, false); } catch (_) { raw = null; }
+      this.set({ loaded: true, data: normalizeAssistantLifeBody(raw) });
+      return this.state;
+    })();
+    return this.loading;
+  },
+};
+const assistantLifeBodySave = (data) => { ASSISTANT_LIFE_BODY_STORE.set({ data }); try { storeSet(ASSISTANT_LIFE_BODY_KEY, data, false); } catch (_) {} };
+// 今の値(印が偽・読み込み前 → null)
+const assistantLifeBodyOf = (id) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !assistantLifeBodyOkId(id)) return null;
+  return ASSISTANT_LIFE_BODY_STORE.state.data.s[id] || assistantLifeBodyFresh();
+};
+const assistantLifeBodyCondOf = (id) => { const e = assistantLifeBodyOf(id); return e ? e.cond : null; };
+
+// ---------- 生活への差し込み ----------
+const assistantLifeBodyWhere = (life, id) => {
+  const g = (life.groups || []).find(x => x.ids.includes(id));
+  if (g) return { place: g.place, doing: g.doing };
+  const s = (life.solo || {})[id]; return s ? { place: s.place, doing: s.doing } : null;
+};
+// assistantLifeNow から: 決めた様子(予定を当てたあと)を体の状態で直す。印が偽なら decided のまま
+const assistantLifeBodyOnDecide = (decided, salt = '') => {
+  try {
+    if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !decided || typeof assistantLifePlanApply !== 'function') return decided;
+    const abs = decided.abs;
+    const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+    const gap = Number.isInteger(D.at) && abs > D.at ? abs - D.at - 1 : 0;
+    const ids = [...new Set([...(decided.groups || []).flatMap(g => g.ids), ...Object.keys(decided.solo || {})])].sort();
+    const slot = assistantLifeSlotOfAbs(abs);
+    const day = slot.id !== 'late' && slot.id !== 'night';
+    const want = {};
+    for (const id of ids) {
+      const e = assistantLifeBodyGapOne(D.s[id] || assistantLifeBodyFresh(), gap);
+      const w = assistantLifeBodyWhere(decided, id); if (!w) continue;
+      const asked = typeof assistantLifePlanResultOf === 'function' && assistantLifePlanResultOf(abs, id) === 'ok';
+      const rand = assistantLifeRng(`${salt}|body-go|${abs}|${id}`);
+      if (e.cond) {
+        // けが・病気: 予定で病院なら病院。おまかせでも昼のあいだはときどき自分で病院へ。それ以外は家で休む
+        if (asked && w.place === 'clinic') continue;
+        want[id] = day && rand() < 0.35 ? 'clinic' : 'home';
+        continue;
+      }
+      if (rand() < assistantLifeBodySkipChance(e, w.place)) { want[id] = 'home'; continue; } // サボって家へ帰る
+      if (!asked) { // おまかせの回は、疲れ・ストレスがたまっていれば自分で休む所を選びやすい
+        // 休みたくなる見込み: 疲れ50・ストレス45から、高いほど強く(最大95%)
+        const pf = e.fat >= 50 ? Math.min(0.95, 0.5 + (e.fat - 50) * 0.03) : 0;
+        const ps = e.st >= 45 ? Math.min(0.95, 0.5 + (e.st - 45) * 0.03) : 0;
+        if (ASSISTANT_LIFE_BODY_REST.includes(w.place)) { /* もう休んでいる */ }
+        else if (pf && rand() < pf) want[id] = 'home';
+        else if (ps && rand() < ps) want[id] = rand() < 0.5 ? 'cafe' : 'hill';
+      }
+    }
+    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) delete want[id];
+    if (!Object.keys(want).length) return decided;
+    const trust = {}; for (const id of Object.keys(want)) trust[id] = 1;
+    return assistantLifePlanApply(decided, want, trust, `${salt}|body`).life;
+  } catch (_) { return decided; }
+};
+// assistantLifeNow から: その回の場所で値を進め、保存する(同じ回は二度進めない)
+const assistantLifeBodyOnSlot = (life, slot) => {
+  try {
+    if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !life || !slot) return null;
+    const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+    if (Number.isInteger(D.at) && D.at === slot.abs) return null; // 同じ回は二度進めない
+    // 端末の時刻を先へ進めてから戻したとき(D.at が今より先)は、今の回に置き直して進める(育成の amgCatchUp と同じ守り・ミハリ5)
+    const gap = Number.isInteger(D.at) && D.at < slot.abs ? slot.abs - D.at - 1 : 0; // はじめての回はさかのぼらない
+    const ids = [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])].filter(assistantLifeBodyOkId).sort();
+    const s = { ...D.s }; const log = { ...D.log }; const evs = {};
+    for (const id of ids) {
+      const w = assistantLifeBodyWhere(life, id); if (!w) continue;
+      const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
+      const r = assistantLifeBodyStepOne(assistantLifeBodyGapOne(s[id] || assistantLifeBodyFresh(), gap), w.place, w.doing, fav, assistantLifeRng(`${life.salt || ''}|body|${slot.abs}|${id}`));
+      s[id] = r.e; evs[id] = r.ev;
+      log[id] = [...(log[id] || []), { abs: slot.abs, place: w.place, ev: r.ev }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
+    }
+    assistantLifeBodySave({ v: 1, at: slot.abs, s, log });
+    // おやつ屋さん・広場で一緒にいた2人は、助手どうしのきずなが少し上がる(1日の上限は outing の dailyMax)
+    if (typeof assistantPeerGain === 'function') {
+      for (const g of life.groups || []) {
+        if (!ASSISTANT_LIFE_BODY_OUTING.includes(g.place)) continue;
+        for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) { try { void assistantPeerGain(g.ids[i], g.ids[j], 'outing'); } catch (_) {} }
+      }
+    }
+    return evs;
+  } catch (_) { return null; }
+};
+// 予定のお願いの聞きやすさの足し引き(ひなたの丘の次の回 +10%・ストレス80以上 −30%)
+const assistantLifeBodyTrustAdj = (id, abs) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return 0;
+  const e = assistantLifeBodyOf(id); if (!e) return 0;
+  const last = (ASSISTANT_LIFE_BODY_STORE.state.data.log[id] || []).slice(-1)[0];
+  let n = 0;
+  if (last && last.place === 'hill' && last.abs === abs - 1) n += 0.1;
+  if (e.st >= ASSISTANT_LIFE_BODY_LINE.sulky) n -= 0.3;
+  return n;
+};
+// マスモン(育成ノート・キズナ)が読む口: その助手が その場所にいた回(abs)の配列(最近36回)
+const assistantLifePlaceSlotsOf = (aid, place) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
+  return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
+};
+const assistantLifeHospitalSlotsOf = (aid) => assistantLifePlaceSlotsOf(aid, 'clinic');
+// 特別な治療(ビートPの品物・次の段)を使った回。記録の ev が 'cure' の回(キズナと合意: その回に助手のマスモンのけが・病気も残り0に)。まだ使う口が無いので空
+const assistantLifeHospitalCureSlotsOf = (aid) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
+  return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === 'clinic' && r.ev === 'cure').map(r => r.abs);
+};
+
+// ---------- 予定表への口(56-assistant-life-plan.jsx から呼ぶ) ----------
+const assistantLifeBodyPerk = (place) => (assistantLifeBodyOn() ? (ASSISTANT_LIFE_BODY_PERK[place] || '') : '');
+const assistantLifeBodyPlaces = (list) => (assistantLifeBodyOn() ? [...list.filter(p => p !== 'clinic'), 'clinic'] : list.filter(p => p !== 'clinic'));
+const assistantLifeBodyLabel = (place) => (assistantLifeBodyOn() && ASSISTANT_LIFE_BODY_LABEL[place]) || null;
+// けが・病気の助手に選べる場所(家・病院だけ)
+const assistantLifeBodyCanGo = (id, place) => { const c = assistantLifeBodyCondOf(id); return !c || place === 'home' || place === 'clinic'; };
+const assistantLifeBodyUse = () => {
+  const [st, setSt] = React.useState(ASSISTANT_LIFE_BODY_STORE.state);
+  React.useEffect(() => { const fn = (s) => setSt(s); ASSISTANT_LIFE_BODY_STORE.listeners.add(fn); void ASSISTANT_LIFE_BODY_STORE.load(); return () => { ASSISTANT_LIFE_BODY_STORE.listeners.delete(fn); }; }, []);
+  return st;
+};
+const ASSISTANT_LIFE_BODY_COND_NAME = Object.freeze({ hurt: '🤕 けが', sick: '🤒 病気' });
+const assistantLifeBodyCondText = (c) => {
+  if (!c) return '';
+  const d = Math.floor(c.left / 12), h = (c.left % 12) * 2;
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家で休んでいます(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
+};
+const assistantLifeBodyDelta = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
+// 場所の小さな札(疲れ・ストレスの動き)。疲れ・ストレスは増えると悪いので、増える=赤・減る=緑
+function AssistantLifeBodyPlaceStat({ place, abs }) {
+  if (!assistantLifeBodyOn()) return null;
+  const P = ASSISTANT_LIFE_BODY_PLACE[place]; if (!P) return null;
+  const s = Number.isInteger(abs) && typeof assistantLifeSlotOfAbs === 'function' ? assistantLifeSlotOfAbs(abs) : null;
+  const fat = place === 'home' && s && (s.id === 'late' || s.id === 'night') ? ASSISTANT_LIFE_BODY_SLEEP_FAT : P.fat;
+  const cls = (n) => (n > 0 ? 'text-rose-300' : n < 0 ? 'text-emerald-300' : 'text-slate-400');
+  return <span className="block text-[10px] font-bold leading-tight" data-assistant-life-body-place={place}><span className={cls(fat)}>疲れ{assistantLifeBodyDelta(fat)}</span> <span className={cls(P.st)}>ストレス{assistantLifeBodyDelta(P.st)}</span></span>;
+}
+// 1本の棒(線つき)
+function AssistantLifeBodyBar({ label, v, warn, bad, color }) {
+  const tone = v >= bad ? 'text-rose-300' : v >= warn ? 'text-amber-300' : 'text-slate-100';
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] font-black">
+      <span className="w-[64px] shrink-0">{label}</span>
+      <span className="relative block h-2.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+        <span className="block h-full rounded-full" style={{ width: `${v}%`, background: v >= bad ? '#f87171' : v >= warn ? '#fbbf24' : color }}/>
+        <span className="absolute inset-y-0 w-0.5 bg-amber-300" style={{ left: `${warn}%` }}/>
+        <span className="absolute inset-y-0 w-0.5 bg-rose-400" style={{ left: `${bad}%` }}/>
+      </span>
+      <span className={`w-[28px] shrink-0 text-right ${tone}`}>{v}</span>
+    </div>);
+}
+// 予定表の上: その助手の疲れ・ストレス・けが・病気と、今日の予定どおりならの見通し
+function AssistantLifeBodyPanel({ id, cur }) {
+  assistantLifeBodyUse();
+  const e = assistantLifeBodyOf(id);
+  if (!e) return null;
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
+  const note = e.cond ? assistantLifeBodyCondText(e.cond)
+    : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう`
+    : '元気です';
+  // 見通し: 次の回から、予定のある回を順に当てる(おまかせの回は「?」で止める)
+  const rows = [];
+  if (!e.cond && Number.isInteger(cur) && typeof assistantLifePlanOf === 'function') {
+    let v = { fat: e.fat, st: e.st };
+    for (let a = cur + 1; a < Math.floor(cur / 12) * 12 + 12; a++) {
+      const p = assistantLifePlanOf(a, id); if (!p) break;
+      const pv = assistantLifeBodyPreview(v, p, a, fav);
+      rows.push({ abs: a, place: p, fat: pv.fat, st: pv.st, risk: Math.max(pv.hurt, pv.sick, pv.skip), kind: pv.hurt >= pv.sick && pv.hurt >= pv.skip ? 'けが' : pv.sick >= pv.skip ? '病気' : 'サボり' });
+      v = { fat: pv.fat, st: pv.st };
+    }
+  }
+  return (
+    <div className="mb-1.5 rounded-xl border border-white/15 bg-slate-900/80 p-1.5" data-assistant-life-body-panel={id}>
+      <AssistantLifeBodyBar label="😮‍💨 疲れ" v={e.fat} warn={L.fatWarn} bad={L.fatBad} color="#38bdf8"/>
+      <div className="mt-0.5"><AssistantLifeBodyBar label="💢 ストレス" v={e.st} warn={L.stWarn} bad={L.stBad} color="#c084fc"/></div>
+      <p className={`mt-1 text-[11px] font-bold leading-snug ${e.cond ? 'text-rose-200' : 'text-indigo-200'}`} data-assistant-life-body-note>{note}</p>
+      {rows.length > 0 && <div className="mt-1 flex flex-col gap-0.5" data-assistant-life-body-forecast>
+        {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
+          <p key={r.abs} className="flex items-center gap-1 text-[10.5px] font-bold text-slate-200">
+            <span className="w-[58px] shrink-0 text-sky-200">{s.from}〜{(s.from + 2) % 24}時</span>
+            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと 疲れ{r.fat}・ストレス{r.st}</span>
+            {r.risk > 0 && <span className="shrink-0 text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
+          </p>); })}
+      </div>}
+    </div>);
+}
+// 家の断面図・地図の名札に付ける小さな印(黄・赤・けが・病気のときだけ。それ以外は '')
+const assistantLifeBodyBadge = (id) => {
+  const e = assistantLifeBodyOf(id); if (!e) return '';
+  if (e.cond) return e.cond.k === 'hurt' ? '🤕' : '🤒';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  return e.fat >= L.fatBad || e.st >= L.stBad ? '💤' : '';
+};
 
 // ---- part: 56-assistant-masmon-battle-view.jsx ----
 // ===== 助手のマスモンの対戦を「観戦」する試作(2026-11-11 ミセカタ) =====
@@ -77114,15 +77496,20 @@ const amgpGainOf = (row, e, code, fat, mult = AMG_CARE.pickMult) => {
   else if (/^H:/.test(code)) { add(code.slice(2), 7, 12); add(AMG_SUB[code.slice(2)], 1, 3); }
   return g;
 };
-// 1日(3回)の見通し。codes は朝昼夜の3つ。まかせる(A)は助手の決め方に近い形で見込む
-const amgpForecastDay = (aid, row, e, codes, fat0, str0) => {
-  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu; let fat = fat0, str = str0; let left = 20; const out = [];
-  for (const c0 of codes) {
+// 1日(3回)の見通し。codes は朝昼夜の3つ(null = もう過ぎた回で数えない)。まかせる(A)は助手の決め方に近い形で見込む
+//   opt.key・opt.slots があれば、けが・病気・家出の回は訓練しない(休み扱い・灰色)。opt.used = その日にもう伸びた分(1日の上限20から引く)
+const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
+  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu; let fat = fat0, str = str0; let leftHi = Math.max(0, AMG_CARE.viewCap - (opt.used || 0)); let leftLo = leftHi; const out = [];
+  for (let p = 0; p < codes.length; p++) {
+    const c0 = codes[p];
+    if (!c0) { out.push(null); continue; }
+    const cond = opt.key && opt.slots ? amgpCondAt(opt.key, opt.slots[p]) : null;
+    if (cond) { fat = amgClamp(fat - 30, 0, 100); str = amgClamp(str - 5, 0, 100); out.push({ code: c0, as: 'X', cond: cond.k, auto: false, fat, str, sab: 0, hurt: 0, sick: 0, away: 0, g: {} }); continue; }
     let code = c0; let auto = false;
     if (code === 'A') { auto = true; code = fat >= T.rest ? 'R' : str >= 50 ? 'P' : `L:${amgpPolicyKey(row, e)}`; }
     const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
     const g0 = amgpGainOf(row, e, code, fat, auto ? 1 : AMG_CARE.pickMult); const g = {};
-    for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, left); if (bb > 0) g[k] = [Math.min(a, bb), bb]; left -= g[k] ? g[k][0] : 0; }
+    for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, leftHi); if (bb > 0) { const aa = Math.min(a, bb, leftLo); g[k] = [aa, bb]; leftHi -= bb; leftLo -= aa; } }
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100); str = amgClamp(str + ds, 0, 100);
     const a = code[0] === 'H' ? 'heavy' : code[0] === 'S' ? 'shugyo' : code[0] === 'R' ? 'rest' : code[0] === 'P' ? 'play' : 'light';
@@ -77139,7 +77526,7 @@ const amgpForecastWeek = (aid, row, e, key, now = Date.now()) => {
     const startFat = fat, startStr = str;
     // 今日の、もう過ぎた回は数えない
     const live = codes.map((c, p) => (i === 0 && day * 3 + p <= s0 ? null : c));
-    const f = amgpForecastDay(aid, row, e, live.map(c => c || 'A'), fat, str).map((x, p) => (live[p] ? x : null));
+    const f = amgpForecastDay(aid, row, e, live, fat, str, { key, slots: [0, 1, 2].map(p => day * 3 + p), used: i === 0 && e.dg && e.dg.d === day ? e.dg.n : 0 });
     for (const x of f) if (x) { fat = x.fat; str = x.str; for (const [k, [a, b]] of Object.entries(x.g)) total[k] = [(total[k] ? total[k][0] : 0) + a, (total[k] ? total[k][1] : 0) + b]; }
     days.push({ day, wd: amgpWeekday(day), codes, f, startFat, startStr, fat, str });
   }
@@ -77164,7 +77551,8 @@ function AssistantMasmonNoteHost({ land = false }) {
 // 家の上に出す札(家の「いま行くと得なこと」の並びの近く)
 function AssistantMasmonNoteBand({ land = false }) {
   const [st, setSt] = React.useState(AMGP_STORE.state);
-  React.useEffect(() => { AMGP_STORE.subs.add(setSt); if (amgpOn()) void amgpLoad(); return () => { AMGP_STORE.subs.delete(setSt); }; }, []);
+  const [, setCs] = React.useState(0); // けが・病気が起きたら札の数をすぐ変える(fable の指摘 11-12)
+  React.useEffect(() => { const f = () => setCs(n => n + 1); AMGP_STORE.subs.add(setSt); AMGP_CSTORE.subs.add(f); if (amgpOn()) void amgpLoad(); return () => { AMGP_STORE.subs.delete(setSt); AMGP_CSTORE.subs.delete(f); }; }, []);
   if (!amgpOn()) return null;
   const sg = amgpStageOf(st.days); const hurt = Object.values(AMGP_CSTORE.state.mons).filter(c => c.until >= amgSlotOf()).length;
   return (
@@ -77200,13 +77588,15 @@ function AmgpShell({ title, sub, tabs, tab, setTab, onClose, land, children, ro 
   return (
     <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/60" data-amgp-note={ro ? 'readonly' : 'mine'}>
       <div className="flex w-full max-w-md flex-col rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 text-white" style={{ height: land ? '96dvh' : '92dvh' }}>
-        <div className="flex items-center gap-2 px-3 pt-3">
-          <button type="button" onClick={onClose} data-mhl-sheet-close className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black">閉じる</button>
-          <div className="min-w-0 flex-1"><p className="truncate text-[16px] font-black">📒 {title}</p><p className="truncate text-[10.5px] font-bold text-slate-300">{sub}</p></div>
+        {/* 横向きは頭と切り替えを1行にまとめ、予定の見える高さを広げる(fable の指摘 11-12・568×320 で約190px だった) */}
+        <div className={`flex items-center gap-2 px-3 ${land ? 'pt-1.5' : 'pt-3'}`}>
+          <button type="button" onClick={onClose} data-mhl-sheet-close className={`${land ? 'min-h-[40px]' : 'min-h-[44px]'} shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black`}>閉じる</button>
+          <div className="min-w-0 flex-1"><p className={`truncate font-black ${land ? 'text-[14px]' : 'text-[16px]'}`}>📒 {title}</p>{!land && <p className="truncate text-[10.5px] font-bold text-slate-300">{sub}</p>}</div>
+          {land && <div className="flex shrink-0 gap-1" role="tablist">{tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} data-amgp-tab={k} onClick={() => setTab(k)} className={`min-h-[40px] rounded-xl px-2.5 text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>)}</div>}
         </div>
-        <div className="mt-2 flex gap-1 px-3" role="tablist">
+        {!land && <div className="mt-2 flex gap-1 px-3" role="tablist">
           {tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} data-amgp-tab={k} onClick={() => setTab(k)} className={`min-h-[40px] flex-1 rounded-xl text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>)}
-        </div>
+        </div>}
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-2">{children}</div>
       </div>
     </div>);
@@ -77358,7 +77748,7 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
         <span/>{AMG_PERIOD_NAME.map(p => <span key={p} className="text-center text-[10px] font-black text-slate-400">{p}</span>)}<span className="text-center text-[10px] font-black text-slate-400">疲/ス</span>
         {fw.days.map((dd, i) => (<React.Fragment key={dd.day}>
           <span className={`flex items-center justify-center rounded-lg text-[11px] font-black ${i === 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`}>{AMGP_DAY_NAME[dd.wd]}</span>
-          {dd.codes.map((c, p) => <button key={p} type="button" onClick={() => { setDi(i); setMode('day'); }} data-amgp-cell={dd.wd * 3 + p} className={`min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`}>{amgpCodeIcon(c)}{amgpCodeName(c)}</button>)}
+          {dd.codes.map((c, p) => <button key={p} type="button" onClick={() => { setDi(i); setMode('day'); }} data-amgp-cell={dd.wd * 3 + p} className={`min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${dd.f[p] && dd.f[p].cond ? 'bg-slate-700 text-slate-300' : c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`} data-amgp-cond={dd.f[p] && dd.f[p].cond ? dd.f[p].cond : undefined}>{dd.f[p] && dd.f[p].cond && AMGP_COND[dd.f[p].cond] ? `${AMGP_COND[dd.f[p].cond].icon}${AMGP_COND[dd.f[p].cond].name}` : <>{amgpCodeIcon(c)}{amgpCodeName(c)}</>}</button>)}
           <span className={`flex items-center justify-center rounded-lg text-[10.5px] font-black ${dd.fat >= 70 || dd.str >= 70 ? 'bg-rose-700' : dd.fat >= 60 || dd.str >= 60 ? 'bg-amber-700' : 'bg-slate-800'}`} data-amgp-day-end={dd.wd}>{dd.fat}/{dd.str}</span>
         </React.Fragment>))}
       </div>
@@ -77375,7 +77765,7 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
         <div key={p} className={`mt-1.5 rounded-xl border p-2 ${f && !f.auto && (f.sab > 0 || f.hurt > 0 || f.sick > 0) ? 'border-rose-300/70' : 'border-white/10'} bg-slate-800/70`} data-amgp-slot={p}>
           <div className="flex items-center gap-2"><b className="w-[64px] shrink-0 text-[12px]">{AMG_PERIOD_NAME[p]} {['4:00', '12:00', '18:00'][p]}</b>
             <span className="min-w-0 flex-1">{sel(code, (c) => amgpSetCells(x.key, { [wd * 3 + p]: c }), { 'data-amgp-slot-select': p })}</span></div>
-          <p className="mt-0.5 text-[10.5px] font-bold text-slate-300">{f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'}</p>
+          <p className="mt-0.5 text-[10.5px] font-bold text-slate-300">{f && f.cond && AMGP_COND[f.cond] ? `${AMGP_COND[f.cond].icon} ${AMGP_COND[f.cond].name}のあいだは訓練しません(休み) ・ ${fsTxt(f)}` : f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'}</p>
         </div>); })}
       <p className="mt-2 text-[11px] font-black text-slate-300">6能力と、この日の見通し(黄=伸びる分)</p>
       {(() => { const g = {}; for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b]; return <div className="mt-1"><AmgpBars st={x.e.st} add={g}/></div>; })()}
