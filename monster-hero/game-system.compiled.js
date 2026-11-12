@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6dabc8debb50a9f4
+// source-sha256: 1c9644c7329dc9c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153282,7 +153282,8 @@ const monsucFuseCore = () => {
       techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
       monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
       lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {},
-      types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {}
+      types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {},
+      assist: typeof globalThis !== 'undefined' ? globalThis.MONHERO_SUCCESS_ASSIST || null : null
     });
   } catch (_) {
     monsucFuseCoreCache = null;
@@ -159311,6 +159312,7 @@ const MSX_KEYS = Object.freeze({
   meta: 'mh_monsuc_meta_v1'
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_ASSIST_SRC = 'data/monhero-success-assist.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js';
 const MSX_SCENES_SRC = 'data/success-scenes.js';
@@ -159398,7 +159400,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -159416,7 +159418,8 @@ const msxLoad = () => {
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null,
-          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null
+          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
+          assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null
         });
         msxSuc = {
           core,
