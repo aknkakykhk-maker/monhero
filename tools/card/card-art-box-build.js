@@ -34,6 +34,14 @@ const measure = async (file) => {
     const box = await measure(path.join(DIR, f));
     if (box) lines.push(`  ${f.replace(/\.PNG$/, '')}: [${box.join(', ')}],`);
   }
+  // 全身画から切り出した立ち絵(ふだんの服。ASSISTANT_STAND_ART の 'stand-normal')。着替え(stand-halloween など)は測らない
+  const STAND = path.join(DIR, 'stand-normal');
+  if (fs.existsSync(STAND)) {
+    for (const f of fs.readdirSync(STAND).filter((x) => /^[a-z]+_[a-z]+\.png$/.test(x)).sort()) {
+      const box = await measure(path.join(STAND, f));
+      if (box) lines.push(`  'stand-normal/${f.replace(/\.png$/, '')}': [${box.join(', ')}],`);
+    }
+  }
   const block = [BEGIN, ...lines, END].join('\n');
   const src = fs.readFileSync(P84, 'utf8');
   const a = src.indexOf(BEGIN), b = src.indexOf(END);

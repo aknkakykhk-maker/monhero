@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8ce881426a36ae6
+// source-sha256: 8d12099dbd5f497e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108962,7 +108962,7 @@ function MsxFxMoment({
     className: "msxfx-plate"
   }, React.createElement("div", {
     className: "msxfx-icon"
-  }, K.icon), React.createElement("div", {
+  }, cardIconNode(K.icon, 28)), React.createElement("div", {
     className: "msxfx-head"
   }, K.head), title ? React.createElement("div", {
     className: "msxfx-title"
@@ -118364,7 +118364,7 @@ const assistantLifeRanchPerk = () => {
     return '';
   }
 };
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() {
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
@@ -118372,7 +118372,7 @@ const assistantLifeMarketWho = () => {
   } catch (_) {
     return null;
   }
-};
+}
 const assistantLifePlacePerkTail = place => {
   if (place === 'studio') return '券なしで一緒に遊べる';
   if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
@@ -118488,7 +118488,7 @@ function AssistantLifePlacePerk({
     }
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
+  }, isImageIconValue(r.icon) ? cardIconNode(r.icon, 16) : r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
     type: "button",
     "data-assistant-life-place-perk-go": r.k,
     onClick: () => onGo(r.go),
@@ -162111,7 +162111,7 @@ function MsxPlay({
     }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map(b => React.createElement("span", {
       key: b.k,
       className: "v-chip ylw"
-    }, b.icon, " ", b.name)) : null), React.createElement("span", {
+    }, cardIconNode(b.icon, 14), " ", b.name)) : null), React.createElement("span", {
       className: "v-nm"
     }, run.nick, React.createElement("small", null, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3])), React.createElement("div", {
       className: "v-side"
@@ -162762,7 +162762,7 @@ function MsxIssa({
       key: x.key,
       className: `v-ix${pick === x.key ? ' sel' : ''}`,
       onClick: () => setPick(x.key)
-    }, x.icon, " ", x.name, React.createElement("span", {
+    }, cardIconNode(x.icon, 16), " ", x.name, React.createElement("span", {
       className: "pr"
     }, "成功", [0, 1, 2, 3].map(i => React.createElement("i", {
       key: i,
@@ -164236,7 +164236,7 @@ function MsxR3Battle({
           top: '4%',
           fontSize: 42
         }
-      }, "優勝!", React.createElement("small", null, st3.icon, " ", st3.name, st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival ? React.createElement("div", {
+      }, "優勝!", React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival ? React.createElement("div", {
         className: "v-rvw"
       }, React.createElement("img", {
         src: st3.foe ? msxMonThumb(st3.foe.species) : '',
@@ -164343,7 +164343,7 @@ function MsxR3Battle({
         top: '4%',
         fontSize: st3.won ? 42 : 34
       }
-    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, st3.icon, " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
+    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
       className: "v-meal"
     }, React.createElement("div", {
       className: "t"
@@ -165968,7 +165968,7 @@ function MsxR3Retire({
       "data-msx-r3-assist": id
     }, React.createElement("div", {
       className: "nm"
-    }, a.icon, " ", a.name, AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? React.createElement("small", {
+    }, cardIconNode(a.icon, 16), " ", a.name, AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? React.createElement("small", {
       style: {
         fontSize: 9,
         color: '#94a3b8',
@@ -179406,7 +179406,15 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'ワンツーパンチ': 4,
   'マシンガンパンチ': 5,
   'ピコピコハンマー': 4,
-  'ゴーストラッシュ': 4
+  'ゴーストラッシュ': 4,
+  'アイスブレード': 3,
+  'ドルフィンブロー': 5,
+  'クリスタルレイン': 5,
+  'ホワイトエレジー': 4,
+  'アクアウェイブ': 3,
+  'アクアブラスト': 3,
+  'アイスコフィン': 3,
+  'クリスタルアロー': 4
 });
 const cardNameScript = c => /[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o';
 const cardNameSplit = text => {
@@ -184058,7 +184066,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_normal: [384, 512, 0, 0, 384, 512],
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510]
+  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
+  'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
+  'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
+  'stand-normal/myua_happy': [592, 672, 22, 9, 505, 663],
+  'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
+  'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
+  'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -184079,7 +184095,8 @@ const cardArtKnownBoxBySrc = src => {
     const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
     if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
   }
-  return null;
+  const sm = /(?:^|\/)(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
+  return sm ? cardArtBoxOf(CARD_ART_KNOWN_BOX[sm[1]]) : null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   if (!known) {
