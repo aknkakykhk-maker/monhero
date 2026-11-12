@@ -35,6 +35,21 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-12 社長「今ある画面で第2弾の開発中だけど告知画像あげて。第1弾の告知と同じとこにあげて」「第2弾はもっと別の画面みせて」。画像は回3(craft/monsuc-r3)の実際の画面6枚(tools 外の一回きりの合成)
+    date: "2026-11-12 20:02", type:'content', title:'新コンテンツ「モンヒロサクセス」開発中・第2弾', status:'new', group:'success',
+    image: 'images/events/monsaku-teaser2.jpg?v=6945f8e37200',
+    items:[
+      '開発中の新コンテンツ「モンヒロサクセス」の画面を、もう少しお見せします。',
+      '育てている途中で大会に出られます。試合の前に、相手との能力をバトルカードで見比べられます。',
+      '試合では、自分の番ごとに技や動きを選んで戦います。おまかせで戦わせることもできます。',
+      '大会に負けても、時渡りの砂時計で時をもどして、やり直せます。',
+      '修行に出ると、能力が上がるうえに、新しい技を覚えるチャンスがあります。',
+      '画像は開発中の画面です。公開までに変わることがあります。',
+      '近日公開予定です。お楽しみに！',
+    ],
+    assistantNotice:{ id:'update_notice_monsaku_soon2_v1', type:'content' },
+  },
+  {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
     assistantNotice:{ id:'update_notice_masmon_sleep_fuse_v1', type:'content' },
     items:[
