@@ -75,6 +75,11 @@ const N = 300;
   const bt = (pop) => core.battleTeam({ assistantId: 'kiki', team, division: 'raw', size: 1, engine, pop }).members[0];
   check('⑤ 人気は端末の値と戦績の小さい方・戦績が無ければ人気なし・忠誠はそのまま', bt(10).pop === 10 && bt(50).pop === 30 && !('pop' in bt(0)) && bt(0).loy === 40);
   check('⑤ 公平の区分でも忠誠度・人気は残る', core.battleTeam({ assistantId: 'kiki', team, division: 'fair', size: 1, engine, pop: 50 }).members[0].loy === 40);
+  const t0 = P({}).team; const bt0 = (division) => core.battleTeam({ assistantId: 'kiki', team: t0, division, size: 1, engine, pop: 0 }).members[0];
+  check('⑤ 忠誠度が無い編成は 50 とみなす(公平の区分でも)・試合の行の編成に 50 が残る', bt0('raw').loy === 50 && bt0('fair').loy === 50 && core.LOY_DEFAULT === 50);
+  { const A = core.battleTeam({ assistantId: 'kiki', team: t0, division: 'raw', size: 1, engine, pop: 0 }); const B = core.battleTeam({ assistantId: 'mua', team: t0, division: 'raw', size: 1, engine, pop: 0 });
+    const r1 = engine.simulate({ seed: 'loy50', catalog, teamA: A, teamB: B }); const r2 = engine.simulate({ seed: 'loy50', catalog, teamA: JSON.parse(JSON.stringify(A)), teamB: JSON.parse(JSON.stringify(B)) });
+    check('⑤ 50 とみなした試合は、行の編成で見返しても同じ(digest)・忠誠度が効く版', r1.digest === r2.digest && r1.version === engine.VERSION, `${r1.version}`); }
   check('⑤ サーバの計算の写しも同じ版(4)', (eng && eng.VERSION) === engine.VERSION || /VERSION = 4/.test(fs.readFileSync(path.join(ROOT, 'supabase', 'functions', 'masmon-pvp', 'engine.js'), 'utf8')));
   void cat;
   console.log(ng ? `NG ${ng} 件` : 'すべて OK');
