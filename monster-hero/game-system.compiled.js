@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ccda4c5eccf6e85
+// source-sha256: 41f49374440642c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148409,8 +148409,8 @@ const monsucTeams = (catalog, suc, s, info) => {
     stats: o.stats,
     techs,
     mastery,
-    loy: 100,
-    pop: o.champ ? 60 : o.rival ? 50 : 30
+    loy: Number.isFinite(Number(o.loy)) && o.loy != null ? Math.max(0, Math.min(100, Number(o.loy))) : 100,
+    pop: Number.isFinite(Number(o.pop)) && o.pop != null ? Math.max(0, Math.min(100, Number(o.pop))) : o.champ ? 60 : o.rival ? 50 : 30
   };
   const tac = mscNum(o.tactics, 20);
   return {
@@ -148426,8 +148426,8 @@ const monsucTeams = (catalog, suc, s, info) => {
     }
   };
 };
-const monsucCupMatch = (engine, catalog, suc, s, me) => {
-  const info = monsucCupInfo(suc, s, me);
+const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
+  const info = info0 || monsucCupInfo(suc, s, me);
   const {
     teamA,
     teamB
@@ -149299,11 +149299,20 @@ function MonsucCupShowInner({
       return null;
     }
   }, [engine]);
+  const fightRes = (() => {
+    if (typeof fight !== 'function') return undefined;
+    try {
+      return fight(s) || null;
+    } catch (_) {
+      return null;
+    }
+  })();
   const match = useMemo(() => {
     if (!info) return null;
     if (typeof fight === 'function') {
+      if (!fightRes) return null;
       try {
-        const f = fight(s) || {};
+        const f = fightRes;
         const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A');
         const input = !autoOnly && f.input && f.input.teamA && f.input.teamB ? f.input : null;
         return {
@@ -149318,7 +149327,7 @@ function MonsucCupShowInner({
     }
     if (!engine || !catalog) return null;
     try {
-      const m = monsucCupMatch(engine, catalog, suc, s, me);
+      const m = monsucCupMatch(engine, catalog, suc, s, me, info);
       const input = autoOnly ? null : {
         seed: m.seed,
         catalog,
@@ -149339,7 +149348,7 @@ function MonsucCupShowInner({
     } catch (_) {
       return null;
     }
-  }, [engine, catalog, info]);
+  }, [engine, catalog, info, fightRes]);
   const [played, setPlayed] = useState(null);
   const shown = played && played.result ? {
     ...match,
