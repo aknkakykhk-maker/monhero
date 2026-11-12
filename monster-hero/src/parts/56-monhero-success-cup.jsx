@@ -108,14 +108,17 @@ const monsucTeams = (catalog, suc, s, info) => {
   const n = Math.max(1, mscNum(o.techs, 2));
   const techs = all.slice(0, n).map(t => t.id);
   const mastery = {}; techs.forEach(id => { mastery[id] = mscNum(o.mastery, 0); }); ['guard', 'dist', 'swap'].forEach(k => { mastery[k] = mscNum(o.mastery, 0); });
-  const foe = { species: o.species, name: o.name || mscMonName(o.species), lv: 30, stats: o.stats, techs, mastery, loy: 100, pop: o.champ ? 60 : o.rival ? 50 : 30 };
+  // 相手の忠誠度・人気は芯(回3の流れ・opp)の値を使う。無ければ今までの決まった値
+  const foe = { species: o.species, name: o.name || mscMonName(o.species), lv: 30, stats: o.stats, techs, mastery,
+    loy: Number.isFinite(Number(o.loy)) && o.loy != null ? Math.max(0, Math.min(100, Number(o.loy))) : 100,
+    pop: Number.isFinite(Number(o.pop)) && o.pop != null ? Math.max(0, Math.min(100, Number(o.pop))) : o.champ ? 60 : o.rival ? 50 : 30 };
   const tac = mscNum(o.tactics, 20);
   return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
 };
 
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
-const monsucCupMatch = (engine, catalog, suc, s, me) => {
-  const info = monsucCupInfo(suc, s, me);
+const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
+  const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
   const { teamA, teamB } = monsucTeams(catalog, suc, s, info);
   const r = engine.simulate({ seed: info.seed, catalog, teamA, teamB, balance: 'A', trace: true, ...(info.buffs ? { buffs: { A: info.buffs } } : {}) });
   return { r, teamA, teamB, buffs: info.buffs, seed: info.seed, info };
@@ -570,23 +573,26 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
     if (!engine || typeof engine.buildCatalog !== 'function') return null;
     try { return engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (_) { return null; }
   }, [engine]);
+  // 回3の結果は毎回聞き直す(回3の計算の読み込みが終わるまでは null。null を「負け」として覚えない)
+  const fightRes = (() => { if (typeof fight !== 'function') return undefined; try { return fight(s) || null; } catch (_) { return null; } })();
   const match = useMemo(() => {
     if (!info) return null;
     if (typeof fight === 'function') {
       // 回3の結果: { won, r?, teamA?, teamB?, input? }。input があれば自分で操作・記録(r.log)と両チームがあれば観戦で再生・無ければ勝ち負けだけ
+      if (!fightRes) return null;   // まだ読み込み中
       try {
-        const f = fight(s) || {}; const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A');
+        const f = fightRes; const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A');
         const input = !autoOnly && f.input && f.input.teamA && f.input.teamB ? f.input : null;
         return { ...f, won, input, r: f.r && Array.isArray(f.r.log) && f.teamA && f.teamB ? f.r : null };
       } catch (_) { return null; }
     }
     if (!engine || !catalog) return null;
     try {
-      const m = monsucCupMatch(engine, catalog, suc, s, me);
+      const m = monsucCupMatch(engine, catalog, suc, s, me, info);
       const input = autoOnly ? null : { seed: m.seed, catalog, teamA: m.teamA, teamB: m.teamB, balance: 'A', ...(m.buffs ? { buffs: { A: m.buffs } } : {}) };
       return { ...m, won: m.r.winner === 'A', input };
     } catch (_) { return null; }
-  }, [engine, catalog, info]);
+  }, [engine, catalog, info, fightRes]);
   // 自分で操作した試合の結果(負けの画面の「何が効いたか」に使う)
   const [played, setPlayed] = useState(null);
   const shown = played && played.result ? { ...match, r: played.result } : match;
