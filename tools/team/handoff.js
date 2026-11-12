@@ -4,7 +4,7 @@
 //   node tools/ctx.js handoff <部>            … 下書きを画面に出す
 //   node tools/ctx.js handoff <部> --write    … docs/progress/handoff/<部>-<日付>.md に書く(「手で書く所」を埋めてコミット)
 //   node tools/ctx.js handoff <部> --latest   … いちばん新しい引き継ぎメモの場所を出す(新しい会話が読む)
-//   node tools/ctx.js handoff <部> --compact  … 同じ仕事が続くときの、要約(/compact)に添える指示文を出す
+//   node tools/ctx.js handoff <部> --compact  … 使わない(部署は要約しない。要約は窓口だけ)。打つと NG で止まる
 //
 // 【なぜあるか】
 // 会話が長いまま続くと、毎回その全部を読み直す(窓口は数日分)。区切りでメモ1枚にして新しい会話へ替える
@@ -68,8 +68,9 @@ function main() {
   const d = findDept(argv.find(a => !a.startsWith('--')));
   if (!d) { console.error(`NG: 部を指定してください(node tools/ctx.js handoff <部>)。\n${deptList()}`); process.exit(1); }
   if (argv.includes('--compact')) {
-    console.log(`/compact ${d['部']}の仕事を続ける。残すもの: ①いまの仕事と次の1手 ②やりかけのファイル名・関数名・ブランチ名・PR番号 ③社長・窓口の返事待ちと、この会話で社長が決めたこと(ことばどおり) ④はまった所・やってはいけないこと ⑤窓口に頼んだまま済んでいない配り直し・SQL。捨てるもの: 済んだ公開の経過・検査の出力・読んだファイルの中身・試してやめた案。決まりは CLAUDE.md と docs/depts/${d.id}.md にあるので写さない。`);
-    return;
+    // 要約は窓口の会話だけ(台帳 2026-11-11・2026-11-12 社長「ここ以外は要約しないんじゃないの？」)。部署は引き継ぎメモで会話を替える
+    console.error('NG: 部署の会話は要約(/compact)しません(要約は窓口だけ)。区切りで node tools/ctx.js handoff ' + d.id + ' --write → 窓口へ「会話を替えてほしい」と知らせてください。');
+    process.exit(1);
   }
   if (argv.includes('--latest')) { console.log(latest(d) || `(${d['部']}の引き継ぎメモはまだありません)`); return; }
   const text = draft(d);

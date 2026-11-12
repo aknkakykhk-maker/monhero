@@ -70,6 +70,9 @@ const GLOBALS = new Set([
 //   許すのは、ソースのどこかに「typeof 名前 === 'function'」がある名前だけ(確かめずに呼ぶ書き方は、ここに載っていても落とす)。
 //   定義が入ったら、この一覧から消してよい(消し忘れても、定義があれば許しは使われない)
 const LATER_HOOKS = {
+  assistantLifeHospitalSlotsOf: '助手専用の病院にいた生活の回(abs)の配列(ナカヨシが足す)。育成ノート(56-assistant-life-masmon-plan.jsx)がけが・病気を早く治すのに読む。2026-11-12 キズナ',
+  assistantLifeMasmonShareOf: 'フレンドに見せる助手のマスモン1人ぶんの形(キズナ・窓口の了承後に足す)。フレンドの家の送る側(56-assistant-life-friend-masmon-share)が呼ぶ。2026-11-12',
+  cardAssistantDeckShareOf: 'フレンドに見せる助手のデッキ1つの中身(カード部ツナグが足す)。フレンドの家の送る側(56-assistant-life-friend-masmon-share)が呼ぶ。2026-11-12',
   assistantLifeCardMood: '育つ助手の気分の言葉(助手部キズナ2が相談を作るときに足す。2026-11-08)',
   amgAdvise: '助手のマスモンの育成(第①段階・キズナ4)の相談の口。修行(第②段階・シュギョウ)の相談「休ませよう」から呼ぶ。2026-11-11',
   amgEntryOf: '助手のマスモンの育成(第①段階・キズナ4)の入れ物。修行の相談が疲れ具合を見るのに使う。2026-11-11',

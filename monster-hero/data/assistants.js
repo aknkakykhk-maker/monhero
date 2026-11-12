@@ -767,8 +767,27 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
     || `${who.imageDir}/face/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
 // 元の大きい立ち絵(今後、全身で出したい場面ができたときに使う)
+// 社長の「全身画の8表情」から胸から上を切り出した立ち絵(2026-11-11 社長「いま立ち絵を使っている所をすべて、この全身画の8表情に差し替える」)。
+//   キーは「助手id」か「助手id:服の名前」、値は絵のフォルダ(images/assistant/<値>/<接頭辞>_<表情>.png・8表情そろい)。
+//   無い助手・服は今までの立ち絵のまま。足すときは、絵を tools/assistant/life-expression-sheets.py で作り、ここへ1行と、顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT)へ顔の点を足す
+const ASSISTANT_STAND_ART = Object.freeze({
+  mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master',
+});
+const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
+// outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)
+const assistantStandArt = (who, expression, outfit = '') => {
+  if (!who || !who.id || !who.imagePrefix) return null;
+  const dir = ASSISTANT_STAND_ART[outfit ? `${who.id}:${outfit}` : who.id];
+  const ex = assistantExpressionName(who, expression);
+  return dir && ASSISTANT_STAND_EXPRESSIONS.includes(ex) ? `images/assistant/${dir}/${who.imagePrefix}_${ex}.png` : null;
+};
+// いま着ている服の名前(服の絵のフォルダの名前。ふだんの服は '')
+const assistantWornOutfitName = (who) => {
+  try { const c = who && typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null; return c && c.imageDir ? String(c.imageDir).split('/').pop() : ''; } catch (_) { return ''; }
+};
 const assistantFullImage = (who, expression) => (who && who.imagePrefix)
-  ? ((typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
+  ? (assistantStandArt(who, expression, assistantWornOutfitName(who))
+    || (typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
     || assistantTempImage(who, expression)
     || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
   : ASSISTANT_NO_IMAGE;
@@ -783,12 +802,13 @@ const ASSISTANT_FULLBODY_ART = Object.freeze({
 });
 // 表情ごとの全身画(社長「時間があったら全身画の8表情を作りたい」)。届いたら、上の名前をキーに、あるぶんの表情名を足すだけ(絵は <名前>__<表情>.png)。
 //   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
-const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({});
+const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
+  mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS,
+});
 // その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す(画像のパスはここに集める)。服の全身画が無いときは null(今の立ち絵へ)
 const assistantFullBodyImage = (who, expression = 'happy') => {
   if (!who || !who.id) return null;
-  let outfit = '';
-  try { const c = typeof assistantCostumeWornFor === 'function' ? assistantCostumeWornFor(who.id) : null; if (c && c.imageDir) outfit = String(c.imageDir).split('/').pop(); } catch (_) { outfit = ''; }
+  const outfit = assistantWornOutfitName(who);
   const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
   if (!name) return null;
   const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
