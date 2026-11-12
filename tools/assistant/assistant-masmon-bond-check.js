@@ -24,7 +24,7 @@ const make = (flags, withBond = true) => {
   const ctx = { console, RELEASE_FLAGS: flags, Promise, setTimeout: () => 0 };
   vm.createContext(ctx);
   vm.runInContext([rngLine, "const assistantMasmonGrowKind = (g) => String(g || '').split('(')[0];", calc, grow, plan, withBond ? bond : '', "const ASSISTANT_MASMON_STORE = { state: { seed: 'bond-check' } };",
-    `this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgSlotDay, AMG_STORE, AMG_KEYS, AMG_CARE, AMG_DAY_CAP, amgEntryOf, AMGP_STORE, AMGP_CSTORE, MASMON_CALC${withBond ? ', AMGB_STORE, AMGB_NUM, normalizeAssistantMasmonBond, amgbEntryOf, amgbReact, amgbSave, amgbKey, amgPowerOf, assistantMasmonBondBattle, amgbPendOf' : ''} };`].join('\n'), ctx);
+    `this.T = { normalizeAssistantMasmonGrow, amgCatchUp, amgSlotOf, amgSlotDay, AMG_STORE, AMG_KEYS, AMG_CARE, AMG_DAY_CAP, amgEntryOf, AMGP_STORE, AMGP_CSTORE, MASMON_CALC${withBond ? ', AMGB_STORE, AMGB_NUM, normalizeAssistantMasmonBond, amgbEntryOf, amgbReact, amgbSave, amgbKey, amgPowerOf, assistantMasmonBondBattle, amgbPendOf, amgbCopyOf, amgbWake, amgbFuseChild, amgbBedPower, amgbBattleOnce' : ''} };`].join('\n'), ctx);
   return ctx;
 };
 const ROW = { slot: 1, monster: 'Golem', lv: 20, grow: '攻撃型', nick: 'ゴロンタ' };
@@ -75,7 +75,7 @@ if (process.argv.includes('--sim')) {
   const b = n.mons['kiki:1:Golem'];
   check('② 値は範囲に収める(忠誠≤100・人気≥0・方針 −3〜3・点 −9〜9・寿命の進み ≤1000)', b.loy === 100 && b.pop === 0 && b.pol === 3 && b.pp === 9 && b.life === 1000 && b.age === 12);
   check('② 読めない型は「普通」・知らない結果は捨てる・おかしなキーは捨てる', b.gt === 2 && b.rs.length === 1 && Object.keys(n.mons).length === 1);
-  check('② 何も無い・壊れているときは空', JSON.stringify(T.normalizeAssistantMasmonBond('x')) === JSON.stringify({ v: 1, start: -1, mons: {} }));
+  check('② 何も無い・壊れているときは空', JSON.stringify(T.normalizeAssistantMasmonBond('x')) === JSON.stringify({ v: 1, start: -1, mons: {}, bt: [] }));
   const d = T.amgbEntryOf('kiki', ROW);
   check('② まだ無い子の既定(忠誠50・人気0・方針 普通・年齢0)', d.loy === 50 && d.pop === 0 && d.pol === 0 && d.age === 0 && d.life === 0);
 }
@@ -182,6 +182,33 @@ if (process.argv.includes('--sim')) {
   check('⑧ 総合力 = 6能力の合計×2.5 + 技 + Lv×15 + 忠誠×10 + 人気×10(技なし)', p && p.power === want, `${p && p.power} / ${want}`);
   check('⑧ ランクは区切りどおり', p && p.rank.key === T.MASMON_CALC.rankOf(want).key);
   check('⑧ 育成の値が無い子は null(「—」)', T.amgPowerOf('kiki', { slot: 7, monster: 'Golem' }) === null);
+}
+// ⑫ 冬眠・合体・対戦の人気
+{
+  const ctx = make(ON); const T = ctx.T; run(ctx, [ROW], 3 * 5);
+  const k1 = T.amgbKey('kiki', 1, 'Golem');
+  T.amgbSave({ ...T.AMGB_STORE.state, mons: { ...T.AMGB_STORE.state.mons, [k1]: { ...T.AMGB_STORE.state.mons[k1], loy: 77, pop: 40, pol: 2 } } });
+  const bd = T.amgbCopyOf('kiki', 1, 'Golem');
+  check('⑫ 眠らせる子の写しが取れる', bd && bd.loy === 77 && bd.age === 5);
+  T.amgbWake('kiki', 1, 'Golem', 'Pixie', { ...bd, age: 12, last: 3 }, slotAt(S0 + 30));
+  const w = T.AMGB_STORE.state.mons[T.amgbKey('kiki', 1, 'Pixie')];
+  check('⑫ 起こすと写しが戻り、眠らせた子の行は消える・眠っていた日は年齢に入れない(last=今日)', w && w.loy === 77 && w.age === 12 && w.last === Math.floor((S0 + 30) / 3) && !T.AMGB_STORE.state.mons[k1]);
+  T.amgbWake('kiki', 1, 'Pixie', 'Golem', null, slotAt(S0 + 30));
+  check('⑫ 写しの無い子を起こすと既定から(前の子の値を引き継がない)', !T.AMGB_STORE.state.mons[k1] && !T.AMGB_STORE.state.mons[T.amgbKey('kiki', 1, 'Pixie')]);
+  const c = T.amgbFuseChild('kiki', ROW, { ...bd, pop: 40 }, { ...bd, loy: 10, pop: 90, pol: -3 });
+  check('⑫ 合体の子: 忠誠=主・人気=高い方の半分・方針と型=主・年齢0', c.loy === 77 && c.pop === 45 && c.pol === 2 && c.pp === 0 && c.gt === bd.gt && c.age === 0 && c.life === 0 && c.last === -1);
+  const e = entry(T.AMG_STORE.state, ROW);
+  const bp = T.amgbBedPower({ g: e, t: { learn: ['a', 'b'], m: { a: 20, b: 0 } }, bd });
+  check('⑫ 冬眠の行の総合力(写しから)', bp && bp.power === Math.round(sumSt(e) * 2.5 + 220 + e.lv * 15 + 77 * 10 + 40 * 10), String(bp && bp.power));
+  check('⑫ 写しの無い冬眠の行は忠誠50・人気0で数える・育成の写しが無ければ null', T.amgbBedPower({ g: e }).power === Math.round(sumSt(e) * 2.5 + e.lv * 15 + 500) && T.amgbBedPower({}) === null);
+  const ctx2 = make(ON); const T2 = ctx2.T; run(ctx2, [ROW, ROW2], 3);
+  T2.amgbBattleOnce('pvp-1', 'kiki', [ROW, ROW2], 'pvp', true, slotAt(S0 + 3)); T2.amgbBattleOnce('pvp-1', 'kiki', [ROW, ROW2], 'pvp', true, slotAt(S0 + 3));
+  T2.amgbBattleOnce('ambb-2', 'kiki', [ROW], 'peer', false, slotAt(S0 + 3));
+  check('⑫ 対戦の人気は1戦に1回だけ(フレンド対戦の勝ち+2・助手どうしの負け+0.2)', T2.amgbEntryOf('kiki', ROW).pop === 2.2 && T2.amgbEntryOf('kiki', ROW2).pop === 2 && T2.AMGB_STORE.state.bt.length === 2);
+  const T3 = make(OFF).T; T3.AMGB_STORE.loaded = true;
+  check('⑫ 印が偽なら対戦の人気は数えない', T3.amgbBattleOnce('x', 'kiki', [ROW], 'pvp', true) === false);
+  const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'); const beta = read('monster-hero/src/parts/56-assistant-masmon-battle-beta.jsx');
+  check('⑫ 冬眠(正規化・前の子・入れ替え・合体・一覧)と対戦βの振り返りがつながっている', ["typeof amgbBedOk === 'function'", "typeof amgbCopyOf === 'function'", "typeof amgbWake === 'function'", "typeof amgbFuseChild === 'function'", "typeof AmgbBedTag === 'function'"].every(x => sleep.includes(x)) && beta.includes("typeof amgbBattleOnce !== 'function'"));
 }
 // ⑨ 同じ種なら同じ結果
 {
