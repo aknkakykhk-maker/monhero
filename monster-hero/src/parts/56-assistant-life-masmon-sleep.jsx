@@ -65,15 +65,18 @@ const amgsSyncFormer = () => {
   const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null; const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
   for (const [aid, m] of Object.entries((ms && ms.mine) || {})) for (const [sl, list] of Object.entries((m && m.former) || {})) {
     const slot = Number(sl);
-    for (const x of (Array.isArray(list) ? list : [])) {
+    const arr = Array.isArray(list) ? list : [];
+    for (const [i, x] of arr.entries()) {
       if (!x || !amgsMonOk(x.monster)) continue;
+      // 同じ「枠:種類」の前にいた子が2体以上いるときは、行は新しい方(後ろ)のもの。古い方には写さない(同じ中身を2体に写さない・窓口 B)
+      const newest = !arr.slice(i + 1).some(y => y && y.monster === x.monster);
       const sig = amgsFormerSig(aid, slot, x); if (st.seen[sig]) continue;
       const row = amgsRowOf(x); if (!row) continue;
       const key = `${slot}:${x.monster}`; const seq = st.seq + 1;
       // 同じ枠に同じ種類のマスモンが起きているときは、その行はいま起きているマスモンのもの(写さない・外さない)
-      const awake = typeof assistantMasmonRowsOf === 'function' && assistantMasmonRowsOf(ms, aid).some(r => r.slot === slot && r.monster === x.monster);
-      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: !awake && g && g.mons[aid] ? g.mons[aid][key] || null : null, t: !awake && tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null, ...(!awake && typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? { bd: amgbCopyOf(aid, slot, x.monster) } : {}) }] };
-      if (!awake) (drop[aid] = drop[aid] || []).push(key);
+      const skip = !newest || (typeof assistantMasmonRowsOf === 'function' && assistantMasmonRowsOf(ms, aid).some(r => r.slot === slot && r.monster === x.monster));
+      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: !skip && g && g.mons[aid] ? g.mons[aid][key] || null : null, t: !skip && tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null, ...(!skip && typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? { bd: amgbCopyOf(aid, slot, x.monster) } : {}) }] };
+      if (!skip) (drop[aid] = drop[aid] || []).push(key);
       changed = true;
     }
   }
@@ -88,6 +91,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
   if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) { void AMGT_STORE.load(); return '読み込み中です'; } // 技と熟練の写しを取り損ねない(ミハリ fable)
   if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) { void AMGB_STORE.load(); return '読み込み中です'; } // 絆の写しを取り損ねない
+  amgsSyncFormer(); // まだ並べていない前にいた子の中身を、行を外す前に先に写す(窓口 A)
   const st = AMGS_STORE.state; const bed = st.beds.find(b => b.id === bedId);
   if (!bed) return 'もういません';
   const ms = ASSISTANT_MASMON_STORE.state; const rows = assistantMasmonRowsOf(ms, bed.aid); const row = rows.find(r => r.slot === slot);
