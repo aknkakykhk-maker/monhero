@@ -386,3 +386,35 @@
 .phone.s320 .v-scene{--mb:37%}.phone.s320 .v-scene .mon{height:42%}
 .phone.s320 .v-chips .bad{display:none}.phone.s320 .v-side{bottom:48px}
 .phone.s320 .v-yousu{bottom:auto;top:52px;left:auto;right:7px;transform:none}
+
+/* ---- 大会(受付・能力の比べ) ---- */
+.v-scene.low{flex:0 0 220px}
+.v-cups{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:space-evenly}
+.v-cup{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-bottom-width:3px;border-radius:14px;padding:6px 9px;position:relative;min-width:0}
+.v-cup .e{font-size:26px;flex:none;width:34px;text-align:center}
+.v-cup .tx{flex:1;min-width:0;line-height:1.3}.v-cup .tx b{display:block;font-size:13.5px;white-space:nowrap}
+.v-cup .tx small{display:block;font-size:9.5px;color:#86efac;font-weight:800;white-space:nowrap}.v-cup .tx .rw{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.v-cup .rt{flex:none;text-align:right;line-height:1.3}.v-cup .rt span{display:block;white-space:nowrap}
+.v-cup .st{font-size:14px;color:#fde047;text-shadow:0 1px 0 #9a3412}.v-cup .g{font-size:12px;font-weight:900}.v-cup .kd{font-size:9px;color:#f9a8d4;font-weight:900}
+.v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
+.v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.v-cup.rv .tx small{color:#fca5a5}
+.v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.v-cup.ng{opacity:.55;border-style:dashed}.v-cup.ng .tx small{color:#fca5a5}
+.v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
+.v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.v-vsh .sd.op{justify-content:flex-end;text-align:right}
+.v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.v-vsh .sd.op img{transform:scaleX(-1)}
+.v-vsh .sd small{display:block;font-size:9px;color:#fde047;font-weight:900}.v-vsh .sd b{display:block;font-size:14px;white-space:nowrap}.v-vsh .sd span{display:block;font-size:9px;font-weight:800;white-space:nowrap}
+.v-vsh .vsm{flex:none;font-size:26px;font-weight:900;color:#fde047;text-shadow:0 3px 0 #9a3412,0 0 14px #fb923c;text-align:center;line-height:1}.v-vsh .vsm small{display:block;font-size:9px;color:#fff;text-shadow:none;margin-top:3px}
+.v-vs1{display:grid;grid-template-columns:32px 1fr 70px 1fr 32px;align-items:center;gap:5px;font-size:10.5px;font-weight:900}
+.v-vs1 span{text-align:center;white-space:nowrap}.v-vs1 b{font-size:13px;text-align:center;color:#cbd5e1}.v-vs1 b.w{color:#fde047}
+.v-vs1 i{height:10px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
+.v-vs1 i u{position:absolute;top:0;bottom:0;text-decoration:none}
+.v-vs1 i.l u{right:0;background:linear-gradient(270deg,#f472b6,#fb923c)}.v-vs1 i.r u{left:0;background:linear-gradient(90deg,#38bdf8,#6366f1)}
+.v-vs1 i.p{height:7px}
+.v-dist{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:5px;font-size:10.5px;font-weight:900;text-align:center}
+.v-dist div{display:flex;gap:3px;justify-content:center}
+.v-dist i{font-style:normal;width:24px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;background:#1e293b;color:#64748b}
+.v-dist i.a1{background:#3b2a52;color:#cbd5e1}.v-dist i.a2{background:#9d174d;color:#fff}.v-dist i.a3{background:#fde047;color:#422006;box-shadow:0 0 8px #fde047}
+.v-bracket{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-size:10px;font-weight:900;white-space:nowrap}
+.v-bracket span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:2px 8px}.v-bracket span.me{border-color:#fde047;color:#fde047}
+.v-bracket em{font-style:normal;color:#94a3b8;font-size:9px}.v-bracket u{text-decoration:none;color:#f9a8d4;font-size:9px;margin:0 4px}
