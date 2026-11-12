@@ -56,5 +56,8 @@ const lens = (load) => { const c = {}; for (let i = 0; i < 100; i++) { const n =
 const l70 = lens(70); const l95 = lens(95);
 check('けが等の長さ: 軽い1回〜重い6回(2日)・たまっているほど重い', Object.keys(l70).every(k => ['1', '3', '6'].includes(k)) && (l95[6] || 0) > (l70[6] || 0), `${JSON.stringify(l70)} / ${JSON.stringify(l95)}`);
 check('育ちの速さは ×3(社長)', C.PACE === 3);
+check('壊れた値でも止まらない: power(null)・power({stats:null})・resultOf(null)(ミハリ5)', (() => { try { return Number.isFinite(C.power(null)) && Number.isFinite(C.power({ stats: null })) && typeof C.resultOf(null) === 'string'; } catch (_) { return false; } })());
+check('null・空の文字は既定値: lifeStep(0, null) = 1/30・lifeLen(0, \'\') = 30(ミハリ5)', Math.abs(C.lifeStep(0, null) - 1 / 30) < 1e-9 && C.lifeLen(0, '') === 30);
+check('合体の上乗せは入力も 999 で切る(1e9 でも 999 と同じ・ミハリ5)', C.fuseBonus(1e9, 1e9) === C.fuseBonus(999, 999));
 console.log(ng ? `\n${ng}件のNGがあります` : '\nすべて OK');
 process.exit(ng ? 1 : 0);
