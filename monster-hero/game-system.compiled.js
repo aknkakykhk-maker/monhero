@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d14ce370b0e07260
+// source-sha256: 16f5586ac1ce8131
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162927,6 +162927,35 @@ const msxR3Farewell = async id => {
   await storeSet(MSX_KEYS.box, next);
   return next;
 };
+const msxR3EditMon = async (id, nick, colors) => {
+  const name = typeof msxNameGuard === 'function' ? msxNameGuard(nick) : typeof nick === 'string' && nick.trim() ? nick.trim().slice(0, 8) : null;
+  if (!name) return {
+    ok: false,
+    why: 'name'
+  };
+  const cols = (Array.isArray(colors) ? colors : []).slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null);
+  const box = await msxR3ReadBox();
+  const i = box.mons.findIndex(m => m.id === id);
+  if (i < 0) return {
+    ok: false,
+    why: 'gone'
+  };
+  const mon = {
+    ...box.mons[i],
+    nick: name,
+    colors: cols
+  };
+  const next = {
+    ...box,
+    mons: box.mons.map((m, j) => j === i ? mon : m)
+  };
+  await storeSet(MSX_KEYS.box, next);
+  return {
+    ok: true,
+    box: next,
+    mon
+  };
+};
 const msxR3RankRow = (run, s, ev, debug) => {
   const lin = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP && MONSTER_LINEAGE_MAP[s.species] ? MONSTER_LINEAGE_MAP[s.species] : null;
   return {
@@ -165450,6 +165479,24 @@ function MsxR3Box({
     };
   }, []);
   const cur = box && sel ? box.mons.find(m => m.id === sel) : null;
+  const saveEdit = async () => {
+    if (!cur || !edit) return;
+    const r = await msxR3EditMon(cur.id, edit.nick, edit.colors);
+    if (!r.ok) {
+      setEdit({
+        ...edit,
+        err: r.why === 'name' ? 'その名前は使えません。ほかの名前にしてね' : '保存できませんでした'
+      });
+      return;
+    }
+    setBox(r.box);
+    setEdit(null);
+    if (meta && meta.lend === cur.id && typeof monsucLendSet === 'function') {
+      try {
+        await monsucLendSet(r.mon, {});
+      } catch (e) {}
+    }
+  };
   const [meta, setMeta] = useState(null);
   const [fuse, setFuse] = useState(false);
   const [runFrom, setRunFrom] = useState(null);
@@ -165463,6 +165510,7 @@ function MsxR3Box({
     };
   }, []);
   const [lendMsg, setLendMsg] = useState('');
+  const [edit, setEdit] = useState(null);
   useEffect(() => {
     let alive = true;
     msxR3ReadMeta().then(m => {
@@ -165546,9 +165594,27 @@ function MsxR3Box({
     onClick: () => {
       setSel(m.id === sel ? null : m.id);
       setBye(0);
+      setEdit(null);
     },
     "data-msx-r3-boxmon": m.id
-  }, React.createElement("img", {
+  }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+    style: {
+      width: 38,
+      height: 38,
+      flex: 'none'
+    }
+  }, React.createElement(DyedMonsterImage, {
+    baseId: m.species,
+    src: msxMonImg(m.species),
+    masuColors: m.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  })) : React.createElement("img", {
     src: msxMonThumb(m.species),
     alt: ""
   }), React.createElement("div", {
@@ -165557,9 +165623,120 @@ function MsxR3Box({
     className: "pw"
   }, m.raised === false ? '' : msxFmt(m.score || 0)))) : React.createElement("div", {
     className: "msx-note"
-  }, "まだ誰もいません。育成を最後まで終えると、ここに入ります")), cur ? React.createElement("div", {
+  }, "まだ誰もいません。育成を最後まで終えると、ここに入ります")), cur && edit ? React.createElement("div", {
+    className: "v-card",
+    "data-msx-r3-editbox": true
+  }, React.createElement("div", {
+    className: "sub",
+    style: {
+      color: '#f9a8d4',
+      fontWeight: 900
+    }
+  }, "✏ 名前と染色を変える"), React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'center',
+      height: 110
+    }
+  }, edit.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: cur.species,
+    src: msxMonImg(cur.species),
+    masuColors: edit.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: msxMonImg(cur.species),
+    alt: "",
+    style: {
+      height: '100%',
+      objectFit: 'contain'
+    }
+  })), React.createElement("label", {
+    className: "v-inp",
+    style: {
+      display: 'flex'
+    }
+  }, React.createElement("input", {
+    type: "text",
+    value: edit.nick,
+    maxLength: typeof MSX_NAME_MAX !== 'undefined' ? MSX_NAME_MAX : 8,
+    onChange: e => setEdit({
+      ...edit,
+      nick: e.target.value.slice(0, typeof MSX_NAME_MAX !== 'undefined' ? MSX_NAME_MAX : 8),
+      err: ''
+    }),
+    "data-msx-r3-nick": true,
+    style: {
+      flex: 1,
+      minWidth: 0,
+      background: 'transparent',
+      border: 0,
+      outline: 'none',
+      color: '#1e1b4b',
+      font: 'inherit',
+      fontSize: 16
+    }
+  }), React.createElement("small", null, (edit.nick || '').length, " / ", typeof MSX_NAME_MAX !== 'undefined' ? MSX_NAME_MAX : 8, "文字")), edit.err ? React.createElement("div", {
+    className: "msx-note",
+    style: {
+      color: '#fca5a5'
+    }
+  }, edit.err) : null, typeof DyeRegionColorControls === 'function' ? React.createElement(DyeRegionColorControls, {
+    baseId: cur.species,
+    colors: edit.colors,
+    onChange: (idx, colorId) => {
+      const n = edit.colors.slice();
+      while (n.length <= idx) n.push(null);
+      n[idx] = colorId;
+      setEdit({
+        ...edit,
+        colors: n
+      });
+    },
+    onCustom: idx => {
+      const p = typeof _parseCustomColorId === 'function' ? _parseCustomColorId(edit.colors[idx]) : null;
+      const h = p ? (p.h + 40) % 360 : 200;
+      if (typeof _encodeCustomColorId === 'function') {
+        const n = edit.colors.slice();
+        while (n.length <= idx) n.push(null);
+        n[idx] = _encodeCustomColorId(h, 0.7, 0.85);
+        setEdit({
+          ...edit,
+          colors: n
+        });
+      }
+    },
+    big: true,
+    names: typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[cur.species] ? ASSISTANT_MASMON_DYE_PARTS[cur.species].map(x => x[0]) : null
+  }) : React.createElement("div", {
+    className: "msx-note"
+  }, "染色はこの端末では使えません"), React.createElement("div", {
+    className: "r3-bar"
+  }, React.createElement("button", {
+    type: "button",
+    className: "r3-chip",
+    onClick: () => setEdit(null)
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    className: "r3-chip on",
+    onClick: saveEdit,
+    "data-msx-r3-editsave": true
+  }, "これで決める"))) : cur ? React.createElement("div", {
     className: "v-card"
-  }, React.createElement(MsxStRow, {
+  }, React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: () => setEdit({
+      nick: cur.nick || msxMonName(cur.species),
+      colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [],
+      err: ''
+    }),
+    "data-msx-r3-edit": true
+  }, "✏ 名前と染色を変える"), React.createElement(MsxStRow, {
     stats: MSX_STATS.reduce((o, k) => ({
       ...o,
       [k]: Math.round(cur.st && cur.st[k] || 0)

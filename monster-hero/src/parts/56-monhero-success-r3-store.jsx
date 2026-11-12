@@ -147,6 +147,20 @@ const msxR3Farewell = async (id) => {
   return next;
 };
 
+// 保存枠の子の名前と染色をあとから変える(PLAN §1-5)。箱のその子の nick・colors だけを書き換える(ほかの項目・ほかの子はそのまま)。
+//   名前は回2と同じ見張り(msxNameGuard)を通す。色は6つまで・文字(色の id)か null。{ ok, box, mon } / { ok:false, why }
+const msxR3EditMon = async (id, nick, colors) => {
+  const name = typeof msxNameGuard === 'function' ? msxNameGuard(nick) : (typeof nick === 'string' && nick.trim() ? nick.trim().slice(0, 8) : null);
+  if (!name) return { ok: false, why: 'name' };
+  const cols = (Array.isArray(colors) ? colors : []).slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null));
+  const box = await msxR3ReadBox(); const i = box.mons.findIndex((m) => m.id === id);
+  if (i < 0) return { ok: false, why: 'gone' };
+  const mon = { ...box.mons[i], nick: name, colors: cols };
+  const next = { ...box, mons: box.mons.map((m, j) => (j === i ? mon : m)) };
+  await storeSet(MSX_KEYS.box, next);
+  return { ok: true, box: next, mon };
+};
+
 // ---- ランキングへ送る口(送る仕組みは別の会話。RANKING.md §1・§2 の列の形で渡す) ----
 const msxR3RankRow = (run, s, ev, debug) => {
   const lin = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP && MONSTER_LINEAGE_MAP[s.species] ? MONSTER_LINEAGE_MAP[s.species] : null; // 主血統(data/lineages.js)
