@@ -363,6 +363,46 @@ grp('E', '6. 引退と、アシスト能力をポイントで取る', '46ター�
   <li>下に「取るもの」のまとめと「決めたあとは変えられない」。おまかせ・やり直す・これで決める</li>
   <li>余りは「なくなる」と先に見せる</li></ul>`);
 
+// ================= 6b. 大会(受付 → 能力の比べ) =================
+// 札: [絵文字, 名前, 星, 系統, 賞金, ごほうび, 状態, 出る条件]
+const CUPS = [['💪', 'ちから自慢の大会', '★★', '自慢', '312', '人気 +2・ちから +6', 'sel', 'ちから 400 以上 ✔'], ['🌸', '春の大会', '★★★', '四季', '750', '能力ポイント +10・人気 +4', 'rv', 'ライバル: ゆうた の こんこ'], ['🏟', 'ふつうの大会', '★', 'ふつう', '125', 'なし', '', 'だれでも出られる'], ['🧠', 'かしこさ自慢の大会', '★★', '自慢', '312', '人気 +2・かしこさ +6', 'ng', 'かしこさ 400 以上 ✖(いま 233)']];
+const cup = ([e, n, st, kind, g, rw, c, cond]) => `<div class="v-cup ${c}"><div class="e">${e}</div><div class="tx"><b>${n}</b><small>${cond}</small><span class="rw">🎁 ${rw}</span></div><div class="rt"><span class="st">${st}</span><span class="g">💰 ${g}</span><span class="kd">${kind}</span></div>${c === 'rv' ? '<span class="rvb">🔥 ライバルあり・ごほうび大</span>' : ''}</div>`;
+const entry = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
+  ${band()}
+  ${scene({ bg: 'monhero_town', cls: 'low', noMon: 1, inner: `<img src="${BODY('mua__happy')}" style="position:absolute;left:-2%;bottom:-98%;height:190%">
+    <div class="v-ev-h"><small>3年目 6月・ミドル期</small>🏆 大会の受付</div>
+    <div class="v-ibub" style="left:38%;top:auto;bottom:10px">「今月は3つ出られるよ! 出ると<b>1ターン使う</b>から、訓練とどっちにするか考えてね」</div>` })}
+  <div class="v-cups">${CUPS.map(cup).join('')}</div>
+  <div class="v-card" style="padding:6px 9px"><div class="v-kv" style="margin:0"><b>出ると</b><span>2試合(準決勝・決勝)・体力 −20 くらい・勝つと賞金と人気。<span class="yel">期末の強制大会まで あと7ターン</span></span></div></div>
+</div><div class="v-ft"><span>← もどる</span><span>📅 予定</span><span class="go">💪 ちから自慢に出る ▶</span></div>`;
+// 比べ: [名前, 自分, 相手]
+const VS = [['❤️ ライフ', 412, 455], ['💪 ちから', 506, 472], ['🧠 かしこさ', 233, 180], ['🎯 命中', 380, 341], ['💨 回避', 198, 260], ['🛡️ 丈夫さ', 441, 498]];
+const vsRow = ([n, a, b]) => `<div class="v-vs1"><b class="${a >= b ? 'w' : ''}">${a}</b><i class="l"><u style="width:${a / 6}%"></u></i><span>${n}</span><i class="r"><u style="width:${b / 6}%"></u></i><b class="${b > a ? 'w' : ''}">${b}</b></div>`;
+const versus = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
+  ${band()}
+  <div class="v-vsh"><div class="sd me"><img src="${M('mocchi.png')}"><div><small>あなた</small><b>もちまる</b><span>6,240 ${rk("C")}</span></div></div><div class="vsm">VS<small>準決勝</small></div><div class="sd op"><div><small>1番人気</small><b>いわお</b><span>6,410 ${rk("C")}</span></div><img src="${M('golem.png')}"></div></div>
+  <div class="v-card" style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly">
+    ${VS.map(vsRow).join('')}
+    <div class="v-vs1"><b class="w">45</b><i class="l p"><u style="width:45%"></u></i><span>⭐ 人気</span><i class="r p"><u style="width:38%"></u></i><b>38</b></div>
+    <div class="v-vs1"><b class="w">72</b><i class="l p"><u style="width:72%"></u></i><span>🤝 忠誠</span><i class="r p"><u style="width:60%"></u></i><b>60</b></div>
+    <div class="v-dist"><div>${['零', '近', '中', '遠'].map((d, i) => `<i class="a${[1, 3, 2, 0][i]}">${d}</i>`).join('')}</div><span>間合いの適性</span><div>${['零', '近', '中', '遠'].map((d, i) => `<i class="a${[3, 2, 1, 0][i]}">${d}</i>`).join('')}</div></div>
+  </div>
+  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ちからと命中は勝ってる! <em style="font-style:normal;color:#be185d">近い間合い</em>で押しきろ!」</div></div></div>
+  <div class="v-bracket">${['もちまる', 'いわお', 'らんぽ', 'ミケ'].map((n, i) => `<span class="${i === 0 ? 'me' : ''}">${n}</span>${i === 1 ? '<u>決勝</u>' : i < 3 ? '<em>vs</em>' : ''}`).join('')}</div>
+</div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 準備完了</span></div>`;
+grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デビュー期の大会まで)の流れ「受付 → 組み合わせ → 能力の比べ → 試合 → 賞品」のうち、受付と能力の比べの2枚。上の帯(期・残りターン・総合力・体力)は大会の間もずっと出したまま。試合そのものは助手マスモン対戦の観戦の画面を使う。', [
+  { id: 'C1', label: '大会の受付(今月の大会の札)', html: entry },
+  { id: 'C2', label: '試合の前(自分と相手の能力の比べ)', html: versus },
+], `<h3>受付</h3><ul>
+  <li>助手が受付の役。今月出られる大会を札で並べる: 名前・星・系統・賞金(名声)・ごほうび・出る条件(✔/✖)</li>
+  <li><b>ライバルがいる大会</b>は赤い帯で「ごほうび大」。条件に届かない大会は薄く、何が足りないかを数字で</li>
+  <li>下に「出ると1ターン使う・何試合・体力がどれくらい減るか」。強制大会までの残りも</li></ul>
+  <h3>能力の比べ</h3><ul>
+  <li>左が自分・右が相手。6能力・人気・忠誠を、まん中から左右にのびる棒で並べ、勝っている方の数字を黄色に</li>
+  <li>間合いの適性(零・近・中・遠)は色の濃さで。地形は作らないので出さない</li>
+  <li>助手が「どこで勝っているか」を一言。下に小さな組み合わせ表</li>
+  <li>ボタンは「結果だけ見る」と「準備完了」(観戦する)の2つ</li></ul>`);
+
 // ================= 7. 横と小さい画面 =================
 grp('L', '7. 横(844×390)と、小さい画面(幅320)', '同じ部品のまま、横は「左に住む場所・右に帯と能力と行動のボタン」、幅320は字とすき間を詰める。はみ出し・字の切れがないことを撮るときに確かめている。', [
   { id: 'L1', label: '横 メイン', html: mainHtml(false), cls: 'land' },
