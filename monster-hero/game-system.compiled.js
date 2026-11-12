@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 26cb96337813009d
+// source-sha256: c005fd1cfcb361d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9953,6 +9953,7 @@ const Audio_ = (() => {
     }
   };
   return {
+    currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
     setStoryEndFade,
@@ -9987,6 +9988,119 @@ const Audio_ = (() => {
     setBackgroundSeQuiet
   };
 })();
+const SuccessSound = (() => {
+  let active = false;
+  let epoch = 0;
+  let beforeKey = null;
+  let beforeQuiet = false;
+  let curBgm = null;
+  const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
+  const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
+  const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const enter = () => {
+    const a = audio();
+    if (!a) return;
+    if (active) return;
+    active = true;
+    epoch += 1;
+    curBgm = null;
+    try {
+      beforeKey = a.currentBgmKey ? a.currentBgmKey() : null;
+    } catch (e) {
+      beforeKey = null;
+    }
+    try {
+      beforeQuiet = a.isBackgroundSeQuiet ? !!a.isBackgroundSeQuiet() : false;
+      if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(true);
+    } catch (e) {}
+  };
+  const leave = () => {
+    const a = audio();
+    if (!active) return;
+    active = false;
+    epoch += 1;
+    if (!a) {
+      curBgm = null;
+      return;
+    }
+    try {
+      if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(beforeQuiet);
+    } catch (e) {}
+    const wasMine = curBgm !== null;
+    curBgm = null;
+    if (wasMine) {
+      try {
+        if (beforeKey && knownTrack(beforeKey)) a.playBGM(beforeKey);else a.stopBGM();
+      } catch (e) {}
+    }
+    beforeKey = null;
+  };
+  const bgm = (sceneId, season) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    if (key === curBgm) return key;
+    curBgm = key;
+    try {
+      a.playBGM(key);
+    } catch (e) {}
+    return key;
+  };
+  const se = (sceneId, delayMs = 0) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const name = successSoundSe(sceneId);
+    if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
+    const my = epoch;
+    const fire = () => {
+      if (!active || my !== epoch) return;
+      try {
+        a.fgSe[name]();
+      } catch (e) {}
+    };
+    const wait = Number(delayMs);
+    if (Number.isFinite(wait) && wait > 0) {
+      setTimeout(fire, Math.min(wait, 10000));
+    } else {
+      fire();
+    }
+    return name;
+  };
+  const scene = (sceneId, opts = null) => {
+    if (!active) enter();
+    const season = opts && opts.season;
+    bgm(sceneId, season);
+    se(sceneId, opts && opts.delayMs);
+  };
+  return {
+    enter,
+    leave,
+    scene,
+    bgm,
+    se,
+    isActive: () => active
+  };
+})();
+const useSuccessSound = (sceneId, opts = null) => {
+  const on = !opts || opts.on !== false;
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!on || !sceneId) return undefined;
+    SuccessSound.scene(sceneId, {
+      season,
+      delayMs
+    });
+    return undefined;
+  }, [on, sceneId, season]);
+  useEffect(() => {
+    if (!on) return undefined;
+    return () => {
+      SuccessSound.leave();
+    };
+  }, [on]);
+};
 const MOO_IMG = "";
 const RANGE_LABELS = ["零", "近", "中", "遠"];
 const rangeAttackDamageMultiplier = (card, attackStartDist) => {

@@ -25,6 +25,10 @@
       "role": "Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口)"
     },
     {
+      "file": "14-success-sound.jsx",
+      "role": "モンヒロサクセスの音を鳴らす口(SuccessSound・useSuccessSound。割り当て表は data/success-sounds.js)"
+    },
+    {
       "file": "15-dye-and-art.jsx",
       "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
     },
