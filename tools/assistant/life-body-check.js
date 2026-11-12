@@ -10,6 +10,8 @@
 //   ⑧ おまかせの助手だけで30日回しても、けが・病気はまれ(疲れ・ストレスがたまり続けない)
 //   ⑩ 特別な治療(life_cure): 病院にいる回でけが・病気が残っているときだけ使える・使うと治って記録が 'cure'・口 assistantLifeHospitalCureSlotsOf が返す
 //      交換所に 300P・印 assistantLifeBody つきで並ぶ・品物の説明がある・60-app は減らしてから治し、治せなければ戻す
+//   ⑫ 体のせいで行き先が変わった回(サボり・けが病気)は記録に why を残し、予定表の結果の札がそれを出す
+//   ⑪ けが・病気が予定表の外でも見える(家の部屋・部屋のシート・町の名札)・横の8人の表から1人の表示(体の窓)へ行ける
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -217,6 +219,37 @@ const fixed = (v) => () => v;
     const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
     const fn = (app.match(/const cureAssistantLifeBody = async[\s\S]*?\n  \};/) || [''])[0];
     check('⑩ 60-app は使えるか確かめ → 1枚減らして保存 → 治す → 治せなければ戻す', fn.indexOf('assistantLifeBodyCanCure') > 0 && fn.indexOf('have - 1') > fn.indexOf('assistantLifeBodyCanCure') && fn.indexOf("storeSet('mh_owned_items'") < fn.indexOf('assistantLifeBodyCure(who') && /\+ 1 \}/.test(fn));
+  }
+  // ⑪ 予定表の外・横の表
+  {
+    const A = 12 * 1200 + 6;
+    G('ASSISTANT_LIFE_BODY_STORE').set({ data: { ...G('normalizeAssistantLifeBody')(null), at: A, s: { kiki: { fat: 30, st: 30, cond: { k: 'hurt', sev: 'light', left: 10, visits: 1 } } } } });
+    check('⑪ けが・病気の一言が出る・元気な助手は空', /けが/.test(G('assistantLifeBodyCondShort')('kiki')) && G('assistantLifeBodyCondShort')('mua') === '');
+    flags.assistantLifeBody = false; check('⑪ 印が偽なら一言は空', G('assistantLifeBodyCondShort')('kiki') === ''); flags.assistantLifeBody = true;
+    const rd = (f) => fs.readFileSync(path.join(root, 'monster-hero/src/parts', f), 'utf8');
+    check('⑪ 家の部屋・部屋のシート・町の名札が一言/印を出す', /data-assistant-life-room-body/.test(rd('56-assistant-life-house.jsx')) && /data-assistant-life-room-cond/.test(rd('56-assistant-life-house.jsx')) && /assistantLifeBodyCondShort\(id\) \? assistantLifeBodyBadge\(id\)/.test(rd('56-assistant-life-map.jsx')));
+    const plan = rd('56-assistant-life-plan.jsx');
+    check('⑪ 横の表の名前から1人の表示へ・表へ戻れる・けが病気の行き先えらびに理由', /data-assistant-life-plan-who-open/.test(plan) && /onWho=\{setWho\}/.test(plan) && /data-assistant-life-plan-back/.test(plan) && /data-assistant-life-plan-cond-note/.test(plan));
+  }
+  // ⑫ 行き先が変わった理由
+  {
+    const N = G('normalizeAssistantLifeBody');
+    const d = N({ at: 3, s: {}, log: { kiki: [{ abs: 2, place: 'home', ev: '', why: 'skip' }, { abs: 3, place: 'home', ev: '', why: 'bogus' }] } });
+    check('⑫ 読み: why は決まった語だけ残す', d.log.kiki[0].why === 'skip' && !('why' in d.log.kiki[1]));
+    // 疲れきった助手(サボる見込みが高い)に、予定で「モンヒロバトル」をお願いした回を多くの種で回す
+    let skips = 0, wrote = 0, n = 0;
+    for (let a = 12 * 1300; a < 12 * 1300 + 240; a++) {
+      const life = decide(a); const id = IDS.find(x => placeOf(life, x) === 'battle'); if (!id) continue;
+      G('ASSISTANT_LIFE_BODY_STORE').set({ data: { ...N(null), at: a - 1, s: { [id]: { fat: 95, st: 90, cond: null } } } });
+      const d2 = G('assistantLifeBodyOnDecide')(life, 'why');
+      const moved = placeOf(d2, id) !== 'battle';
+      G('assistantLifeBodyOnSlot')({ ...d2, salt: 'why' }, G('assistantLifeSlotOfAbs')(a));
+      const w = G('assistantLifeBodyWhyOf')(a, id); n++;
+      if (moved) { skips++; if (w && (w.why === 'skip' || w.why === 'rest' || w.why === 'cond')) wrote++; }
+      else if (w) wrote = -999;
+    }
+    check('⑫ 行き先が変わった回だけ why が残り、口 assistantLifeBodyWhyOf が返す', skips > 0 && wrote === skips, `${n}回中 変わった ${skips}・why あり ${wrote}`);
+    check('⑫ 予定表の結果の札が理由を出す(お願いどおりと出さない)', /data-assistant-life-plan-body-why/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-plan.jsx'), 'utf8')));
   }
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
