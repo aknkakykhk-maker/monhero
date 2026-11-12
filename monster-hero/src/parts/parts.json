@@ -497,6 +497,10 @@
       "role": "助手ライフ: フレンドの家で、その人の助手のマスモン(Lv・型・6能力・デッキ3つ)をくわしく見せるための送る側と受け取りの形。表 alf_masmon_share(足すだけ)。保存は mh_alf_masmon_share_sent_v1 の新しいキーだけ。公開の印 alfMasmonShareSend"
     },
     {
+      "file": "56-assistant-life-friend-masmon-view.jsx",
+      "role": "助手ライフ: フレンドの家の部屋のシートの「🐾 ◯◯のマスモン ›」。表 alf_masmon_share を読んで、キズナの見る専用 AssistantMasmonNote readOnly を出す。公開の印 alfMasmonShareSend の後ろ。保存はしない"
+    },
+    {
       "file": "56-assistant-masmon-pvp.jsx",
       "role": "部品: 助手のマスモンのフレンド対戦(非同期PvP・第④段階・タイセン)の端末の口。画面は持たない(画面はミセカタ)。サーバの関数 masmon-pvp を呼ぶ masmonPvpRegister/masmonPvpChallenge/masmonPvpUnregister と、表を読む masmonPvpRatings/masmonPvpFriends。保存は新しいキー mh_masmon_pvp_owner_key_v1(持ち主の鍵)だけ。公開の印 assistantMasmonBattlePvp が真のときだけ通信。設計 docs/spec/MASMON_PVP_SERVER.md"
     },

@@ -1123,6 +1123,16 @@ const assistantMasmonUndoSwap = (aid, slot) => {
   assistantMasmonSave({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [slot]: back } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
   return true;
 };
+// 合体(56-assistant-life-masmon-sleep.jsx・2026-11-12 キズナ)から呼ぶ: 合体に使った「前にいた子」を mine.former から1つ外す(前の子に戻すで、いなくなった子や合体前の子を出さない)
+const assistantMasmonFormerDrop = (aid, slot, monster, at) => {
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (!ASSISTANT_MASMON_STORE.loaded) return false;
+  const m = { ...assistantMasmonMineOf(st, aid) }; const list = [...((m.former || {})[slot] || [])];
+  const i = list.findIndex(x => x && x.monster === monster && x.at === at); if (i < 0) return true;
+  list.splice(i, 1); m.former = { ...(m.former || {}), [slot]: list };
+  assistantMasmonSave({ ...st, mine: { ...(st.mine || {}), [aid]: m } });
+  return true;
+};
 // 冬眠(56-assistant-life-masmon-sleep.jsx・2026-11-12 キズナ)から呼ぶ: 枠 slot の子を back(冬眠から起こす子)と入れ替える。
 //   出ていく子は mine.former に積まない(冬眠の箱へ入る)。back が「前にいた子」(mine.former)から来たときは former から1つ外す(前の子に戻すで二重に出さない)
 //   成功したら出ていった子の形 { monster, nick, lv, grow, why, role, welcome, colors, ai } を返す。だめなら null
@@ -1827,7 +1837,8 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
       const st = ASSISTANT_MASMON_STORE.state;
       const l0 = assistantMasmonDyeLog(who.id, t.slot)[0] || {}; const lastAsk = l0.why === 'ask' && !l0.undo; // 戻したあとは、もう出さない
       const prevName = (assistantMasmonMineOf(st, who.id).names[t.slot] || []).slice(-1)[0];
-      const prevMon = ((assistantMasmonMineOf(st, who.id).former || {})[t.slot] || []).slice(-1)[0];
+      // 冬眠が動いているときは、前にいた子は冬眠の一覧から起こす(ここで戻すと、冬眠の箱と起きている枠の両方に同じ子がいる形になる・キズナ 11-12)
+      const prevMon = typeof amgsOn === 'function' && amgsOn() ? null : ((assistantMasmonMineOf(st, who.id).former || {})[t.slot] || []).slice(-1)[0];
       return (
         <div className="mhm-card mt-2 flex flex-wrap items-center gap-2" data-assistant-masmon-detail-ask>
           <button type="button" className="mhl-btn px-3 text-[11.5px]" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)' }} onClick={() => onAsk(t)} data-assistant-masmon-ask-open="masmon">💡 {who.name}に提案する(名前・色・育て方)</button>

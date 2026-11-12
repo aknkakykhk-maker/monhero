@@ -1231,6 +1231,7 @@ function AlfFriendHouseView({ friend, onClose }) {
           : roomState === 'home' ? <button type="button" className="mhl-btn mt-2 w-full bg-sky-600" data-alf-visit-room={roomId} onClick={() => greet(roomId)}>💬 {assistantLifeName(roomId)}に話しかける</button>
           : <>{roomState === 'sleep' && vl(roomId).sleep.length > 0 && <p className="mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100" data-alf-visit-sleep>💤 {alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], { h: friend.name, who: roomId, name: visitor })}</p>}
             <p className="mt-2 text-[11px] text-slate-300">{roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'}</p></>}
+        {typeof AlfMsRoomLink === 'function' && <AlfMsRoomLink friend={friend} aid={roomId} land={land}/>}
         {can === 'ok' && !done && <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 text-slate-950" data-alf-visit-room-note={roomId} onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }}>✉️ {roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`}</button>}
       </div>
       </div>
