@@ -23,6 +23,10 @@ const path = require('path');
 
 function count(transcriptPath) {
   let prompts = 0, merges = 0, compacts = 0;
+  // 窓口はトークン数で数える(2026-11-12 社長「トークン数で管理するんじゃないの？」)。
+  //   tokens … いまの文脈の大きさ(最後の返事の usage: input + cache_read + cache_creation)
+  //   prevTokens … ひとつ前の頼みを受けた時点の文脈の大きさ(節目をまたいだ時だけ知らせるため)
+  let tokens = 0, prevTokens = 0;
   const text = fs.readFileSync(transcriptPath, 'utf8');
   for (const line of text.split('\n')) {
     if (!line) continue;
@@ -30,23 +34,29 @@ function count(transcriptPath) {
     const isUser = line.includes('"type":"user"');
     const isMerge = line.includes('merge_pull_request');
     const maybeCompact = line.includes('compact_boundary') || line.includes('isCompactSummary');
-    if (!isUser && !isMerge && !maybeCompact) continue;
+    const hasUsage = line.includes('"usage"');
+    if (!isUser && !isMerge && !maybeCompact && !hasUsage) continue;
     let e; try { e = JSON.parse(line); } catch (err) { continue; }
     // 要約の境目・要約文: 本文に「compact_boundary」と書いてあるだけの行(道具の結果・会話の文)は、外側の印を見るので当たらない
     if (e && ((e.type === 'system' && e.subtype === 'compact_boundary') || e.isCompactSummary === true)) {
       if (e.type === 'system') compacts++;
-      prompts = 0; merges = 0;
+      prompts = 0; merges = 0; tokens = 0; prevTokens = 0;
       continue;
     }
     const c = e && e.message && e.message.content;
     if (e.type === 'user' && !e.isMeta && !e.isSidechain) {
-      if (typeof c === 'string') prompts++;
-      else if (Array.isArray(c) && c.some(b => b && b.type === 'text') && !c.some(b => b && b.type === 'tool_result')) prompts++;
-    } else if (e.type === 'assistant' && Array.isArray(c)) {
-      for (const b of c) if (b && b.type === 'tool_use' && /merge_pull_request$/.test(String(b.name || ''))) merges++;
+      const isPrompt = typeof c === 'string' || (Array.isArray(c) && c.some(b => b && b.type === 'text') && !c.some(b => b && b.type === 'tool_result'));
+      if (isPrompt) { prompts++; prevTokens = tokens; }
+    } else if (e.type === 'assistant') {
+      if (Array.isArray(c)) for (const b of c) if (b && b.type === 'tool_use' && /merge_pull_request$/.test(String(b.name || ''))) merges++;
+      const u = e.message && e.message.usage;
+      if (u && !e.isSidechain) {
+        const t = (Number(u.input_tokens) || 0) + (Number(u.cache_read_input_tokens) || 0) + (Number(u.cache_creation_input_tokens) || 0);
+        if (t > 0) tokens = t;
+      }
     }
   }
-  return { prompts, merges, compacts };
+  return { prompts, merges, compacts, tokens, prevTokens };
 }
 
 // 部署: 目安を超えたら(または仕事の種類が変わったら)引き継ぎメモ1枚 → 新しい会話。要約は頼まない
@@ -63,10 +73,14 @@ function message(n, limit, opts) {
   const every = n.prompts % limit['くり返し'] === 0;
   const after = n.compacts > 0 ? '最後の要約のあと、' : ''; // 要約したあとの数だと分かるように
   if (opts && opts.hq) {
-    // 窓口: 「替える」は出さない。目安を超えたら、要約してよいかを社長に選択式で聞くことだけを知らせる
-    const hit = n.prompts >= limit['やりとり'] || n.merges >= limit['公開'];
-    if (!hit || (!every && n.prompts !== limit['やりとり'])) return '';
-    return `【窓口・会話が長くなってきた】この会話は ${after}やりとり ${n.prompts} 回・公開 ${n.merges} 件。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(700000)が走る。`;
+    // 窓口: 「替える」は出さない。トークン数が目安(routing.json「窓口の要約のトークン」)を超えたら、要約してよいかを社長に選択式で聞く
+    //   (2026-11-12 社長「トークン数で管理するんじゃないの？」→ 50万で聞く・そのあとは5万ごと)。目安の節目をまたいだ1回だけ出す
+    const first = Number(limit['窓口の要約のトークン']) || 500000;
+    const step = Number(limit['窓口の要約のくり返しトークン']) || 50000;
+    const band = (t) => (t >= first ? Math.floor((t - first) / step) + 1 : 0);
+    const t = Number(n.tokens) || 0;
+    if (!band(t) || band(t) <= band(Number(n.prevTokens) || 0)) return '';
+    return `【窓口・会話が長くなってきた】この会話の文脈は 約${Math.round(t / 10000)}万トークン(目安 ${Math.round(first / 10000)}万)。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(700000)が走る。`;
   }
   // 部署: 要約(/compact)は頼まない。要約は窓口の会話だけ(台帳 2026-11-11「各部署は長くなったら引き継ぎメモで会話を替える」・
   //   2026-11-12 社長「ここ以外は要約しないんじゃないの？」)。目安を超えたら、区切りで引き継ぎメモ → 窓口が新しい会話を作る
