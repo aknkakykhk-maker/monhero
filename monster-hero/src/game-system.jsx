@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3ece8a1e4827cb23
+// generated-sha256: 06b9e9bd5d77af1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78816,8 +78816,9 @@ let monsucFuseCoreCache = null;
 const monsucFuseCore = () => {
   if (monsucFuseCoreCache) return monsucFuseCoreCache;
   try {
-    if (typeof MONHERO_SUCCESS === 'undefined' || typeof MASMON_CALC === 'undefined') return null;
-    monsucFuseCoreCache = MONHERO_SUCCESS.create({ calc: MASMON_CALC, apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {}, init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
+    const core = typeof globalThis !== 'undefined' ? globalThis.MONHERO_SUCCESS : null; // 芯 data/monhero-success.js(読まれていなければ使えない)
+    if (!core || typeof core.create !== 'function' || typeof MASMON_CALC === 'undefined') return null;
+    monsucFuseCoreCache = core.create({ calc: MASMON_CALC, apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {}, init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
       techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null, monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
       lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {}, types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {} });
   } catch (_) { monsucFuseCoreCache = null; }

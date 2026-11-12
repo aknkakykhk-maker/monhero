@@ -17,8 +17,9 @@ let monsucFuseCoreCache = null;
 const monsucFuseCore = () => {
   if (monsucFuseCoreCache) return monsucFuseCoreCache;
   try {
-    if (typeof MONHERO_SUCCESS === 'undefined' || typeof MASMON_CALC === 'undefined') return null;
-    monsucFuseCoreCache = MONHERO_SUCCESS.create({ calc: MASMON_CALC, apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {}, init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
+    const core = typeof globalThis !== 'undefined' ? globalThis.MONHERO_SUCCESS : null; // 芯 data/monhero-success.js(読まれていなければ使えない)
+    if (!core || typeof core.create !== 'function' || typeof MASMON_CALC === 'undefined') return null;
+    monsucFuseCoreCache = core.create({ calc: MASMON_CALC, apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {}, init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
       techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null, monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
       lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {}, types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {} });
   } catch (_) { monsucFuseCoreCache = null; }
