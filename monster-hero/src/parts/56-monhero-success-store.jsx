@@ -8,6 +8,7 @@
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中
@@ -46,13 +47,15 @@ const msxLoadConstScript = (src, check) => new Promise((res) => {
   s.onload = () => res(check()); s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
+// 常連の表は開いたときに読む別ファイルの const なので、名前を直に書かず、読み終わってから大域の名前で引く
+const msxGlobalConst = (name) => { try { return new Function(`return typeof ${name} !== 'undefined' ? ${name} : null;`)(); } catch (e) { return null; } };
+const msxRegularsOk = () => !!msxGlobalConst('MONSUC_REGULARS') && !!msxGlobalConst('MONSUC_REGULAR_CUPS');
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
@@ -62,7 +65,7 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null, cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null,
+          regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
         });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;
@@ -161,13 +164,19 @@ const msxCalendar = (turn) => {
   return { year, month, season };
 };
 const MSX_SEASON = Object.freeze({ spring: '🌸 春', summer: '🌻 夏', autumn: '🍁 秋', winter: '⛄ 冬' });
-// 景色は季節と時間で替わる(社長 2026-11-12)。時間は端末の時計
-const msxSceneBg = () => {
-  let h = 12; try { h = new Date().getHours(); } catch (e) {}
-  if (h >= 5 && h < 16) return { bg: 'images/story-bg/monhero_plaza.jpg', time: '昼' };
-  if (h >= 16 && h < 19) return { bg: 'images/story-bg/monhero_plaza_evening.jpg', time: '夕方' };
-  return { bg: 'images/story-bg/monhero_night.jpg', time: '夜' };
+// 景色は季節と時間で替わる(社長の決め: 季節 = 月・時間 = ターン)。時間は ターンごとに 昼 → 夕方 → 夜 と進む。
+// 景色の表(data/success-scenes.js)が読めなければ、今ある町の背景で代わりにする
+const MSX_TIMES = Object.freeze([['day', '昼'], ['evening', '夕方'], ['night', '夜']]);
+const MSX_OLD_BG = Object.freeze({ day: 'images/story-bg/monhero_plaza.jpg', evening: 'images/story-bg/monhero_plaza_evening.jpg', night: 'images/story-bg/monhero_night.jpg' });
+const msxSceneBg = (turn = 1) => {
+  const t = Math.max(1, Math.round(msxNum(turn, 1)));
+  const [time, label] = MSX_TIMES[(t - 1) % 3];
+  const cal = msxCalendar(t);
+  const pick = typeof window !== 'undefined' && typeof window.successHomeScene === 'function' ? window.successHomeScene(cal.season, time) : null;
+  return { bg: pick && pick.image ? pick.image : MSX_OLD_BG[time], time: label, season: cal.season };
 };
+// 大会の会場(debut / cup / hero / summit)
+const msxVenueBg = (venue) => { const f = typeof window !== 'undefined' && typeof window.successSceneById === 'function' ? window.successSceneById(`venue-${venue}`) : null; return f && f.image ? f.image : 'images/story-bg/monhero_town.jpg'; };
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = (r) => `rk r${String(r || 'G').replace(/\+/g, '')}`;
 
@@ -191,9 +200,9 @@ const msxPickLine = (ctx, scene, opt = {}) => {
 };
 const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
   if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'この子';
-  if (k === 'cheer') return ctx.cheer || '編成の子';
-  if (k === 'cheer2') return ctx.cheer2 || '編成の子';
+  if (k === 'mon') return ctx.mon || 'モンスター';
+  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
+  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
   if (k === 'stat') return ctx.stat || '能力';
   if (k === 'train') return ctx.train || '訓練';
   if (k === 'tech') return ctx.tech || '技';

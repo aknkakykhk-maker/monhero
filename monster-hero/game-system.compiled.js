@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e7c2d3dc35e7b47
+// source-sha256: cb33c2529dd264aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9953,6 +9953,7 @@ const Audio_ = (() => {
     }
   };
   return {
+    currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
     setStoryEndFade,
@@ -9987,6 +9988,119 @@ const Audio_ = (() => {
     setBackgroundSeQuiet
   };
 })();
+const SuccessSound = (() => {
+  let active = false;
+  let epoch = 0;
+  let beforeKey = null;
+  let beforeQuiet = false;
+  let curBgm = null;
+  const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
+  const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
+  const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const enter = () => {
+    const a = audio();
+    if (!a) return;
+    if (active) return;
+    active = true;
+    epoch += 1;
+    curBgm = null;
+    try {
+      beforeKey = a.currentBgmKey ? a.currentBgmKey() : null;
+    } catch (e) {
+      beforeKey = null;
+    }
+    try {
+      beforeQuiet = a.isBackgroundSeQuiet ? !!a.isBackgroundSeQuiet() : false;
+      if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(true);
+    } catch (e) {}
+  };
+  const leave = () => {
+    const a = audio();
+    if (!active) return;
+    active = false;
+    epoch += 1;
+    if (!a) {
+      curBgm = null;
+      return;
+    }
+    try {
+      if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(beforeQuiet);
+    } catch (e) {}
+    const wasMine = curBgm !== null;
+    curBgm = null;
+    if (wasMine) {
+      try {
+        if (beforeKey && knownTrack(beforeKey)) a.playBGM(beforeKey);else a.stopBGM();
+      } catch (e) {}
+    }
+    beforeKey = null;
+  };
+  const bgm = (sceneId, season) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    if (key === curBgm) return key;
+    curBgm = key;
+    try {
+      a.playBGM(key);
+    } catch (e) {}
+    return key;
+  };
+  const se = (sceneId, delayMs = 0) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const name = successSoundSe(sceneId);
+    if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
+    const my = epoch;
+    const fire = () => {
+      if (!active || my !== epoch) return;
+      try {
+        a.fgSe[name]();
+      } catch (e) {}
+    };
+    const wait = Number(delayMs);
+    if (Number.isFinite(wait) && wait > 0) {
+      setTimeout(fire, Math.min(wait, 10000));
+    } else {
+      fire();
+    }
+    return name;
+  };
+  const scene = (sceneId, opts = null) => {
+    if (!active) enter();
+    const season = opts && opts.season;
+    bgm(sceneId, season);
+    se(sceneId, opts && opts.delayMs);
+  };
+  return {
+    enter,
+    leave,
+    scene,
+    bgm,
+    se,
+    isActive: () => active
+  };
+})();
+const useSuccessSound = (sceneId, opts = null) => {
+  const on = !opts || opts.on !== false;
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!on || !sceneId) return undefined;
+    SuccessSound.scene(sceneId, {
+      season,
+      delayMs
+    });
+    return undefined;
+  }, [on, sceneId, season]);
+  useEffect(() => {
+    if (!on) return undefined;
+    return () => {
+      SuccessSound.leave();
+    };
+  }, [on]);
+};
 const MOO_IMG = "";
 const RANGE_LABELS = ["零", "近", "中", "遠"];
 const rangeAttackDamageMultiplier = (card, attackStartDist) => {
@@ -147291,6 +147405,1245 @@ function AmbbRanking({
     onClick: onBack
   }, "← もどる")));
 }
+const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MSC_STAT_JP = Object.freeze({
+  life: 'ライフ',
+  pow: 'ちから',
+  wise: 'かしこさ',
+  hit: '命中',
+  eva: '回避',
+  tough: '丈夫さ'
+});
+const MSC_STAT_ICON = Object.freeze({
+  life: '❤️',
+  pow: '💪',
+  wise: '🧠',
+  hit: '🎯',
+  eva: '💨',
+  tough: '🛡️'
+});
+const MSC_STARS = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1)));
+const MSC_VENUE_IMG = Object.freeze({
+  debut: 'images/success/scenes/venue-debut.png',
+  cup: 'images/success/scenes/venue-cup.png',
+  hero: 'images/success/scenes/venue-hero.png',
+  summit: 'images/success/scenes/venue-summit.png'
+});
+const MSC_SPECIAL = Object.freeze({
+  mua: {
+    word: '声援!',
+    sub: 'みんなの声が 届いた'
+  },
+  atsu: {
+    word: '気合!',
+    sub: 'あつの特別な1話の効き目が かがやいた'
+  },
+  kiki: {
+    word: '集中!',
+    sub: 'ききの特別な1話の効き目が かがやいた'
+  },
+  momosuke: {
+    word: '見せ場!',
+    sub: 'ももすけの特別な1話の効き目が かがやいた'
+  },
+  dra: {
+    word: '直伝!',
+    sub: 'ドラの特別な1話の効き目が かがやいた'
+  },
+  kyuko: {
+    word: '見切り!',
+    sub: 'きゅうこの特別な1話の効き目が かがやいた'
+  },
+  sorashido: {
+    word: '計算どおり!',
+    sub: 'ソラシドの特別な1話の効き目が かがやいた'
+  },
+  erubin: {
+    word: '見守り!',
+    sub: 'エルビンの特別な1話の効き目が かがやいた'
+  }
+});
+const MSC_LINE = Object.freeze({
+  mua: '「みんな見てるよ! いつもどおりで だいじょうぶ!」',
+  atsu: '「最初から全開でいけ!」',
+  kiki: '「そのまま、まっすぐ…!」',
+  momosuke: '「ここが見せ場だよ! いちばん目立っちゃお!」',
+  dra: '「教えたとおりに。おまえならできる」',
+  kyuko: '「相手の動き、もう見えてるよ」',
+  sorashido: '「計算どおりっす! 落ち着いていきましょう!」',
+  erubin: '「ちゃんと見てるからね」'
+});
+const monsucBuffsOf = mods => {
+  const m = mods && typeof mods === 'object' ? mods : {};
+  const buffs = {};
+  const rows = [];
+  if (Number.isFinite(m.guts) && m.guts > 0) {
+    buffs.guts = m.guts;
+    rows.push(`試合のはじめから ガッツ +${m.guts}`);
+  }
+  if (Number.isFinite(m.firstHit) && m.firstHit > 0) {
+    buffs.hit1 = m.firstHit / 100;
+    rows.push('最初の技が 当たりやすい');
+  }
+  if (Number.isFinite(m.crit) && m.crit > 0) {
+    buffs.crit = m.crit / 100;
+    rows.push('会心が 出やすい');
+  }
+  if (Number.isFinite(m.eva) && m.eva > 0) {
+    buffs.eva = m.eva / 100;
+    rows.push('相手の技を かわしやすい');
+  }
+  if (Number.isFinite(m.techFail) && m.techFail < 0) {
+    buffs.missCut = Math.min(1, -m.techFail / 100);
+    rows.push('技の はずれが 減る');
+  }
+  if (m.noIdle) {
+    buffs.noSulk = true;
+    rows.push('そっぽを 向かない');
+  }
+  if (m.noInjury) rows.push('この試合では けがをしない');
+  if (m.showFirst) rows.push('相手の 最初の手が 見える');
+  if (m.line) rows.push('声援で 気持ちが落ち着く');
+  return {
+    buffs: Object.keys(buffs).length ? buffs : null,
+    rows
+  };
+};
+const mscNum = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+const mscMonName = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
+const mscMonImg = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+const mscAssistant = id => typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0] : null;
+const mscFace = (id, ex) => {
+  const a = mscAssistant(id);
+  return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : '';
+};
+const monsucCupTitle = (suc, s) => {
+  const b = s && s.battle;
+  if (!b) return {
+    name: '大会',
+    star: 1,
+    venue: 'cup'
+  };
+  if (b.kind === 'summit') return {
+    name: (suc.SUMMIT[b.round] || {}).name || '頂への道',
+    star: 4,
+    venue: 'summit'
+  };
+  if (b.kind === 'cup') {
+    const list = typeof suc.cupsOf === 'function' ? (() => {
+      try {
+        return suc.cupsOf({
+          ...s,
+          battle: null,
+          over: null
+        });
+      } catch (_) {
+        return [];
+      }
+    })() : [];
+    const hit = list.find(c => c.id === b.id);
+    const name = hit ? hit.name : typeof globalThis !== 'undefined' && globalThis.MONSUC_REGULAR_CUPS && globalThis.MONSUC_REGULAR_CUPS[b.sys] || '大会';
+    return {
+      name,
+      star: b.star,
+      venue: String(b.sys || '').startsWith('hero') || b.star >= 4 ? 'hero' : 'cup'
+    };
+  }
+  const f = suc.FORCED[b.kind] || {};
+  return {
+    name: f.name || '大会',
+    star: f.star || 1,
+    venue: b.kind === 'debut' ? 'debut' : 'cup'
+  };
+};
+const monsucCupInfo = (suc, s, me) => {
+  const b = s.battle || {};
+  const t = monsucCupTitle(suc, s);
+  const opp = (suc.opponents(s) || [])[0] || null;
+  const bracket = suc.bracketOf(s);
+  const mods = typeof suc.battleMods === 'function' ? suc.battleMods(s) : {};
+  const {
+    buffs,
+    rows
+  } = monsucBuffsOf(mods);
+  const seed = ['monsuc', s.id, s.turn, b.kind, b.id || '', b.round || 0, b.retry || 0, b.again || 0, b.reroll || 0].join('|');
+  const meName = me && me.name || mscMonName(s.species);
+  return {
+    title: t.name,
+    star: t.star,
+    venue: t.venue,
+    bracket,
+    opp,
+    mods,
+    buffs,
+    buffRows: rows,
+    seed,
+    meName,
+    rival: Boolean(opp && opp.rival),
+    champ: Boolean(opp && opp.champ)
+  };
+};
+const monsucTeams = (catalog, suc, s, info) => {
+  const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
+  const mine = {
+    species: s.species,
+    name: info.meName,
+    lv: mscNum(s.lv, 1),
+    stats: s.stats,
+    techs: Array.isArray(s.techs) ? s.techs.slice() : undefined,
+    mastery: s.mastery || {},
+    loy,
+    pop: mscNum(s.pop)
+  };
+  const o = info.opp || {
+    species: s.species,
+    stats: s.stats,
+    techs: 2,
+    mastery: 20,
+    tactics: 10
+  };
+  const all = catalog && catalog.species[o.species] && catalog.species[o.species].techs || [];
+  const n = Math.max(1, mscNum(o.techs, 2));
+  const techs = all.slice(0, n).map(t => t.id);
+  const mastery = {};
+  techs.forEach(id => {
+    mastery[id] = mscNum(o.mastery, 0);
+  });
+  ['guard', 'dist', 'swap'].forEach(k => {
+    mastery[k] = mscNum(o.mastery, 0);
+  });
+  const foe = {
+    species: o.species,
+    name: o.name || mscMonName(o.species),
+    lv: 30,
+    stats: o.stats,
+    techs,
+    mastery,
+    loy: 100,
+    pop: o.champ ? 60 : o.rival ? 50 : 30
+  };
+  const tac = mscNum(o.tactics, 20);
+  return {
+    teamA: {
+      assistantId: s.aid,
+      tactics: tac,
+      members: [mine]
+    },
+    teamB: {
+      assistantId: 'atsu',
+      tactics: tac,
+      members: [foe]
+    }
+  };
+};
+const monsucCupMatch = (engine, catalog, suc, s, me) => {
+  const info = monsucCupInfo(suc, s, me);
+  const {
+    teamA,
+    teamB
+  } = monsucTeams(catalog, suc, s, info);
+  const r = engine.simulate({
+    seed: info.seed,
+    catalog,
+    teamA,
+    teamB,
+    balance: 'A',
+    trace: true,
+    ...(info.buffs ? {
+      buffs: {
+        A: info.buffs
+      }
+    } : {})
+  });
+  return {
+    r,
+    teamA,
+    teamB,
+    buffs: info.buffs,
+    seed: info.seed,
+    info
+  };
+};
+const monsucPopOrder = (suc, s, entrants) => {
+  const rng = suc.rngOf(s.id, s.turn, 'pop');
+  const score = entrants.map((e, i) => ({
+    i,
+    v: e.champ ? 1000 : e.rival ? 900 : e.you ? 200 + mscNum(s.pop) * 5 : rng() * 600
+  }));
+  const order = score.slice().sort((a, b) => b.v - a.v);
+  const no = [];
+  order.forEach((x, k) => {
+    no[x.i] = k + 1;
+  });
+  return no;
+};
+const MSC_CSS = `
+.msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
+  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+.msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
+.msc-top{display:flex;align-items:center;gap:8px}
+.msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
+.msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
+.msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
+.msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
+.msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.msc-foot>*{flex:1}
+.msc-panel{border-radius:16px;overflow:hidden;background:#f6ead0;color:#3b2a14;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.msc-head{background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;text-align:center;font-weight:900;padding:7px 8px;font-size:14px;letter-spacing:.04em}
+.msc-bk{position:relative;padding:8px 6px 10px 8px}
+.msc-row{position:relative;display:flex;align-items:center;gap:5px;height:40px;transition:opacity .4s}
+.msc-row.out{opacity:.45}
+.msc-no{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:#fff;border:2px solid #d6a45a;color:#b45309;font-weight:900;font-size:13px;display:grid;place-items:center}
+.msc-name{flex:1 1 auto;width:auto;min-width:0;margin-right:6px;height:26px;border-radius:7px;background:#fffaf0;border:1.5px solid #e2c89a;display:flex;align-items:center;gap:4px;padding:0 6px;font-weight:800;font-size:13px}
+.msc-name span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-name.you{background:#fde68a;border-color:#f59e0b}
+.msc-name.foe{background:#fecdd3;border-color:#fb7185}
+.msc-tag{flex:0 0 auto;font-size:9.5px;font-weight:900;color:#fff;border-radius:5px;padding:1px 4px;background:#9a3412}
+.msc-tag.you{background:#f59e0b}.msc-tag.rv{background:#e11d48}.msc-tag.ch{background:#7c2d12}
+.msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
+.msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
+.msc-face img{width:120%;height:120%;object-fit:contain}
+.msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
+.msc-lines path{fill:none;stroke-linecap:round}
+.msc-lines .base{stroke:#cbb48b;stroke-width:2}
+.msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
+.msc-lines .win.me{stroke:#f43f5e}
+@keyframes msc-draw{to{stroke-dashoffset:0}}
+.msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
+.msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
+@keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
+.msc-note{font-size:12px;color:#fde68a;line-height:1.5}
+.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
+.msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
+.msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
+.msc-talk em{font-style:normal;color:#e11d48}
+.msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
+.msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
+.msc-vs .mon{position:absolute;z-index:1;bottom:26px;width:44%;height:150px;display:flex;align-items:flex-end;justify-content:center}
+.msc-vs .mon img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+.msc-vs .mon.a{left:2%;animation:msc-inL .5s ease-out both}.msc-vs .mon.b{right:2%;animation:msc-inR .5s ease-out both}
+.msc-vs .mon.a img{transform:scaleX(-1)}
+@keyframes msc-inL{from{transform:translateX(-60%);opacity:0}}@keyframes msc-inR{from{transform:translateX(60%);opacity:0}}
+.msc-vs .vs{position:absolute;z-index:2;left:50%;top:48%;transform:translate(-50%,-50%);font-size:44px;font-weight:900;font-style:italic;color:#e0e7ff;text-shadow:0 3px 0 #312e81,0 0 14px rgba(129,140,248,.8);animation:msc-pop .5s .35s ease-out both}
+@keyframes msc-pop{from{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+.msc-vs .nm{position:absolute;z-index:2;bottom:4px;display:flex;align-items:center;gap:4px;background:rgba(20,16,38,.85);border-radius:8px;padding:2px 8px;font-size:12.5px;font-weight:900;max-width:48%}
+.msc-vs .nm span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-vs .nm.a{left:6px}.msc-vs .nm.b{right:6px}
+.msc-tabs{display:flex;gap:6px}
+.msc-tabs button{flex:1;border:2px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-weight:900;font-size:13px;padding:7px 0;cursor:pointer;min-height:36px}
+.msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
+.msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
+.msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
+.msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
+.msc-bar{height:9px;border-radius:5px;background:#1e1b3a;overflow:hidden;position:relative}
+.msc-bar i{position:absolute;top:0;bottom:0;border-radius:5px;transform:scaleX(0);animation:msc-grow .8s ease-out forwards}
+.msc-bar.l i{right:0;background:linear-gradient(90deg,#f472b6,#fb923c);transform-origin:right}
+.msc-bar.r i{left:0;background:linear-gradient(90deg,#60a5fa,#3b82f6);transform-origin:left}
+@keyframes msc-grow{to{transform:scaleX(1)}}
+.msc-apt{display:flex;gap:3px;justify-content:center}
+.msc-apt span{width:21px;height:21px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:900;background:#1e293b;color:#64748b}
+.msc-apt span.S,.msc-apt span.A{background:#fde047;color:#3b2a05}.msc-apt span.B{background:#be123c;color:#fff}.msc-apt span.C{background:#4c1d95;color:#ddd6fe}
+.msc-aptrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px}
+.msc-aptrow .lab{font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
+.msc-tl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.msc-tl div{display:flex;flex-direction:column;gap:4px}
+.msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+.msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
+.msc-hint img{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.msc-hint em{font-style:normal;color:#fde047}
+.msc-stage{position:relative;border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
+.msc-stage .ambw-ring{background:linear-gradient(180deg,rgba(20,16,38,.15),rgba(20,16,38,.55))}
+.msc-mp{border-radius:12px;padding:7px 9px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b}
+.msc-mp.a{border-color:#f472b6}.msc-mp.b{border-color:#60a5fa}
+.msc-mp .h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:900;min-width:0}
+.msc-mp .h span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.msc-mp .h small{color:#94a3b8;font-size:10.5px;font-weight:700}
+.msc-mp .h img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.msc-mp .bars{display:flex;align-items:center;gap:6px;margin-top:4px}
+.msc-mp .bars>div{flex:1}
+.msc-mp .num{font-size:12px;font-weight:900;text-align:right;min-width:62px}
+.msc-mp .num small{color:#94a3b8;font-size:10px}
+.msc-buff{display:inline-flex;align-items:center;gap:3px;margin-left:4px;padding:1px 6px;border-radius:999px;background:#fde047;color:#3b2a05;font-size:10px;font-weight:900}
+.msc-speed{display:flex;gap:5px}
+.msc-speed button{flex:1;border:1.5px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-size:12px;font-weight:900;padding:6px 0;min-height:34px;cursor:pointer}
+.msc-speed button.on{background:#a5f3fc;color:#0c4a6e;border-color:#a5f3fc}
+.msc-end{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(10,8,24,.45);font-size:46px;font-weight:900;letter-spacing:.06em;animation:msc-fade .35s ease-out both}
+.msc-end.w{color:#fde047;text-shadow:0 4px 0 #9a3412,0 0 18px rgba(251,191,36,.9)}
+.msc-end.l{color:#cbd5e1;text-shadow:0 4px 0 #1e293b}
+@keyframes msc-fade{from{opacity:0;transform:scale(1.3)}}
+.msc-hero{position:relative;flex:1 1 auto;min-height:330px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-rays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg,rgba(253,224,71,.38) 0 9deg,rgba(253,186,116,.08) 9deg 18deg);animation:msc-spin 14s linear infinite}
+.msc-hero.lose .msc-rays{display:none}
+.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.55),rgba(15,23,42,.8))}
+@keyframes msc-spin{to{transform:rotate(360deg)}}
+.msc-hero .big{position:absolute;z-index:3;left:0;right:0;top:14px;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;animation:msc-fade .5s ease-out both}
+.msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
+.msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
+.msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
+.msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
+.msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-hero.win .who{height:46%}
+.msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
+.msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+@keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
+.msc-hero .rival{position:absolute;z-index:3;left:8px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px;border-radius:999px;background:rgba(76,5,25,.9);border:1.5px solid #fb7185;padding:5px 10px;font-size:12.5px;font-weight:900}
+.msc-hero .rival span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
+.msc-rw{display:flex;align-items:center;gap:8px;border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:9px 10px;font-size:13px;font-weight:800;animation:msc-fade .35s ease-out both}
+.msc-rw .i{font-size:20px;width:26px;text-align:center}
+.msc-rw .k{flex:0 0 auto;min-width:72px}
+.msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
+.msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
+.msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
+.msc-again h3{margin:0;text-align:center;font-size:15px;font-weight:900}
+.msc-again p{margin:0;text-align:center;font-size:11.5px;color:#cbd5e1}
+.msc-again p em{font-style:normal;color:#fde047;font-weight:900}
+.msc-pick{display:flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:9px 10px;color:#fff;font-weight:900;font-size:14px;text-align:left;cursor:pointer;min-height:48px}
+.msc-pick img{width:30px;height:30px;object-fit:contain;flex:0 0 auto}
+.msc-pick small{display:block;font-size:11px;font-weight:700;opacity:.9}
+.msc-pick.sand{background:linear-gradient(90deg,#ea580c,#f59e0b)}
+.msc-pick.rain{background:linear-gradient(90deg,#be185d,#6d28d9,#2563eb)}
+.msc-pick.quit{background:#334155;justify-content:center;font-size:13px}
+.msc-pick:disabled{opacity:.4;cursor:default}
+.msc-cut{position:relative;flex:1 1 auto;min-height:380px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-cut .word{position:absolute;z-index:3;left:0;right:0;top:20px;text-align:center;font-size:56px;font-weight:900;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.9);animation:msc-fade .45s ease-out both}
+.msc-cut .sub{position:absolute;z-index:3;left:8px;right:8px;top:94px;text-align:center;font-size:13px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.85)}
+.msc-cut .duo{position:absolute;z-index:2;left:0;right:0;bottom:80px;height:52%;display:flex;align-items:flex-end;justify-content:center;gap:2%}
+.msc-cut .duo img{max-width:46%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-cut .duo img.a{transform:scaleX(-1);filter:drop-shadow(0 0 14px rgba(253,224,71,.95)) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-cut .say{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;display:flex;align-items:center;gap:8px;border-radius:14px;background:rgba(15,12,34,.9);border:1.5px solid #fde047;padding:6px 10px}
+.msc-cut .say img{width:50px;height:50px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:2px solid #fde047}
+.msc-cut .say b{display:block;font-size:11px;color:#fde047}
+.msc-cut .say p{margin:0;font-size:13.5px;font-weight:800}
+.msc-eff{border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:8px 10px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+.msc-eff b{color:#fbcfe8;white-space:nowrap}
+@media (orientation:landscape) and (max-height:520px){
+  .msc-wrap{max-width:760px}
+  .msc-hero,.msc-cut{min-height:260px}
+  .msc-hero .who{height:50%}
+  .msc-cut .duo{bottom:70px;height:46%}
+  .msc-vs{height:170px}.msc-vs .mon{height:120px}
+}
+@media (max-width:340px){
+  .msc-name{font-size:12px}
+  .msc-tag{font-size:8.5px;padding:1px 3px}
+  .msc-st{grid-template-columns:30px 1fr 64px 1fr 30px;font-size:12px}
+  .msc-hero .big,.msc-cut .word{font-size:46px}
+}
+`;
+function MonsucBracket({
+  suc,
+  s,
+  info,
+  result,
+  onFight,
+  onResultOnly,
+  onClose,
+  canSkip
+}) {
+  const bk = info.bracket;
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  if (!bk) return null;
+  const E = bk.entrants;
+  const no = monsucPopOrder(suc, s, E);
+  const r1 = bk.rounds[0] || [];
+  const r2 = bk.rounds[1] || [];
+  const out = i => stage >= 1 && !r1.includes(i) || stage >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === 4 || result === 'lose' && i === 0;
+  const H = 40;
+  const yOf = i => i * H + H / 2;
+  const X = [0, 22, 44, 66, 80];
+  const W = 84;
+  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
+  const base = [];
+  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
+  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
+  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
+  base.push(pair(mid2[0], mid2[1], 2));
+  const mid3 = (mid2[0] + mid2[1]) / 2;
+  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const win = [];
+  if (stage >= 1) r1.forEach((i, k) => win.push({
+    d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`,
+    me: i === 0 || i === 4,
+    key: `a${i}`
+  }));
+  if (stage >= 2) r2.forEach((i, k) => win.push({
+    d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`,
+    me: true,
+    key: `b${i}`
+  }));
+  if (stage >= 3) {
+    win.push({
+      d: `M${X[2]} ${mid2[0]}H${X[3]}`,
+      me: true,
+      key: 'c0'
+    }, {
+      d: `M${X[2]} ${mid2[1]}H${X[3]}`,
+      me: true,
+      key: 'c1'
+    });
+  }
+  if (result === 'win') win.push({
+    d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`,
+    me: true,
+    key: 'f'
+  });
+  const champ = E.find(e => e.champ) || E[4];
+  const foe = E[4];
+  const nm = e => e.you ? info.meName : e.name || mscMonName(e.species);
+  const coach = mscAssistant(s.aid);
+  const champNo1 = no[E.indexOf(champ)] === 1;
+  const line = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は 王者の ", nm(champ), "! でも、") : null, info.meName, "の相手は ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。勝てば ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「1番人気は 王者の ", React.createElement("em", null, nm(foe)), "! ", info.meName, "が当たるのは 決勝。", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', "ここで勝てば 大金星だよ!」") : React.createElement(React.Fragment, null, "「", info.meName, "の相手は ", React.createElement("em", null, nm(foe)), "! あわてずに いこうね」");
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-bracket": true,
+    "data-msc-stage": stage
+  }, React.createElement("div", {
+    className: "msc-top"
+  }, React.createElement("button", {
+    className: "msc-btn g s",
+    "data-msc-close": true,
+    onClick: onClose
+  }, "← もどる"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+    className: "msc-panel"
+  }, React.createElement("div", {
+    className: "msc-head"
+  }, info.title, " ", MSC_STARS(info.star)), React.createElement("div", {
+    className: "msc-bk"
+  }, E.map((e, i) => React.createElement("div", {
+    key: i,
+    className: `msc-row ${out(i) ? 'out' : ''}`,
+    style: {
+      paddingRight: W
+    },
+    "data-msc-entrant": e.you ? 'you' : i === 4 ? 'foe' : i
+  }, React.createElement("span", {
+    className: "msc-no"
+  }, no[i]), React.createElement("span", {
+    className: `msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+  }, React.createElement("span", null, nm(e)), e.you && React.createElement("i", {
+    className: "msc-tag you"
+  }, "あなた"), e.rival && React.createElement("i", {
+    className: "msc-tag rv"
+  }, "ライバル"), e.champ && React.createElement("i", {
+    className: "msc-tag ch"
+  }, "👑王者")), React.createElement("span", {
+    className: `msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+  }, React.createElement("img", {
+    src: mscMonImg(e.species),
+    alt: ""
+  })))), React.createElement("svg", {
+    className: "msc-lines",
+    width: W,
+    height: H * 8,
+    viewBox: `0 0 ${W} ${H * 8}`,
+    style: {
+      width: W,
+      height: H * 8
+    }
+  }, base.map((d, k) => React.createElement("path", {
+    key: k,
+    className: "base",
+    d: d
+  })), win.map(w => React.createElement("path", {
+    key: w.key,
+    className: `win ${w.me ? 'me' : ''}`,
+    d: w.d,
+    pathLength: "1"
+  }))), React.createElement("div", {
+    className: `msc-cupbadge ${result === 'win' ? 'lit' : ''}`,
+    style: {
+      right: 4
+    }
+  }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
+    className: "msc-note"
+  }, "あなたの1戦は 赤い丸の2体のあいだ(", info.meName, " VS ", nm(foe), ")。", React.createElement("small", null, "ほかの試合の結果は、見せるだけの演出です")), React.createElement("div", {
+    className: "msc-talk"
+  }, React.createElement("img", {
+    src: mscFace(s.aid),
+    alt: ""
+  }), React.createElement("p", null, coach ? React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: 11,
+      color: '#b45309'
+    }
+  }, "解説 ", coach.name) : null, line)), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn y s",
+    "data-msc-quick": true,
+    onClick: onResultOnly
+  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'), React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-go": true,
+    onClick: onFight
+  }, "⚔ 1戦へ")));
+}
+function MonsucBattleCard({
+  suc,
+  s,
+  info,
+  catalog,
+  onReady,
+  onResultOnly,
+  onBack
+}) {
+  const [tab, setTab] = useState('st');
+  const o = info.opp || {};
+  const me = s.stats || {};
+  const op = o.stats || {};
+  const mx = Math.max(1, ...MSC_STAT_KEYS.map(k => Math.max(mscNum(me[k]), mscNum(op[k])))) * 1.08;
+  const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
+  const aptOf = sp => catalog && catalog.species[sp] && catalog.species[sp].apt || ['C', 'C', 'C', 'C'];
+  const techsOf = (sp, ids) => {
+    const all = catalog && catalog.species[sp] && catalog.species[sp].techs || [];
+    return ids.map(id => all.find(t => t.id === id)).filter(Boolean);
+  };
+  const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
+  const foeTechs = (catalog && catalog.species[o.species] && catalog.species[o.species].techs || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
+  const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
+  const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
+  const ahead = MSC_STAT_KEYS.map(k => ({
+    k,
+    d: mscNum(me[k]) - mscNum(op[k])
+  })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
+  const apt = aptOf(s.species);
+  const rankOf = g => ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g) < 0 ? 9 : ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g);
+  const bestD = apt.map((g, d) => ({
+    g,
+    d
+  })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || {
+    d: 1
+  };
+  const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
+  const hint = ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
+  const aptRow = sp => React.createElement("div", {
+    className: "msc-apt"
+  }, aptOf(sp).map((g, d) => React.createElement("span", {
+    key: d,
+    className: g
+  }, AMBW_DIST[d])));
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-card": true
+  }, React.createElement("div", {
+    className: "msc-top"
+  }, React.createElement("button", {
+    className: "msc-btn g s",
+    onClick: onBack
+  }, "← 表へ"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star), "・1戦")), React.createElement("div", {
+    className: "msc-vs",
+    style: {
+      backgroundImage: `url(${venue})`
+    }
+  }, React.createElement("div", {
+    className: "cap"
+  }, info.title, " ", MSC_STARS(info.star), "・1戦"), React.createElement("div", {
+    className: "mon a"
+  }, React.createElement("img", {
+    src: mscMonImg(s.species),
+    alt: ""
+  })), React.createElement("div", {
+    className: "mon b"
+  }, React.createElement("img", {
+    src: mscMonImg(o.species),
+    alt: ""
+  })), React.createElement("div", {
+    className: "vs"
+  }, "VS"), React.createElement("div", {
+    className: "nm a"
+  }, React.createElement("span", null, info.meName)), React.createElement("div", {
+    className: "nm b"
+  }, React.createElement("span", null, o.name || mscMonName(o.species)), o.champ && React.createElement("i", {
+    className: "msc-tag ch"
+  }, "👑王者"), o.rival && React.createElement("i", {
+    className: "msc-tag rv"
+  }, "ライバル"))), React.createElement("div", {
+    className: "msc-tabs"
+  }, [['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => React.createElement("button", {
+    key: k,
+    "data-msc-tab": k,
+    className: tab === k ? 'on' : '',
+    onClick: () => setTab(k)
+  }, l))), React.createElement("div", {
+    className: "msc-sheet",
+    key: tab
+  }, tab === 'st' && React.createElement(React.Fragment, null, MSC_STAT_KEYS.map((k, j) => {
+    const a = mscNum(me[k]);
+    const b = mscNum(op[k]);
+    return React.createElement("div", {
+      key: k,
+      className: "msc-st",
+      "data-msc-stat": k
+    }, React.createElement("b", {
+      className: a >= b ? 'up' : ''
+    }, a), React.createElement("div", {
+      className: "msc-bar l"
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(a / mx * 100)}%`,
+        animationDelay: `${j * 0.07}s`
+      }
+    })), React.createElement("span", {
+      className: "lab"
+    }, MSC_STAT_ICON[k], " ", MSC_STAT_JP[k]), React.createElement("div", {
+      className: "msc-bar r"
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(b / mx * 100)}%`,
+        animationDelay: `${j * 0.07}s`
+      }
+    })), React.createElement("b", {
+      className: b > a ? 'up' : ''
+    }, b));
+  }), React.createElement("div", {
+    className: "msc-st"
+  }, React.createElement("b", null, mscNum(s.pop)), React.createElement("div", {
+    className: "msc-bar l"
+  }, React.createElement("i", {
+    style: {
+      width: `${mscNum(s.pop)}%`,
+      animationDelay: '.45s'
+    }
+  })), React.createElement("span", {
+    className: "lab"
+  }, "⭐ 人気"), React.createElement("div", null), React.createElement("b", null)), React.createElement("div", {
+    className: "msc-st"
+  }, React.createElement("b", null, loy), React.createElement("div", {
+    className: "msc-bar l"
+  }, React.createElement("i", {
+    style: {
+      width: `${loy}%`,
+      animationDelay: '.5s'
+    }
+  })), React.createElement("span", {
+    className: "lab"
+  }, "🤝 忠誠"), React.createElement("div", null), React.createElement("b", null)), React.createElement("div", {
+    className: "msc-aptrow"
+  }, aptRow(s.species), React.createElement("span", {
+    className: "lab"
+  }, "間合いの適性"), aptRow(o.species))), tab === 'tech' && React.createElement("div", {
+    className: "msc-tl"
+  }, React.createElement("div", null, myTechs.length ? myTechs.map(t => React.createElement("span", {
+    key: t.id
+  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—")), React.createElement("div", null, foeTechs.length ? foeTechs.map(t => React.createElement("span", {
+    key: t.id
+  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—"))), tab === 'abl' && React.createElement("div", {
+    className: "msc-tl"
+  }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", null, o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
+    className: "msc-hint"
+  }, React.createElement("img", {
+    src: mscFace(s.aid),
+    alt: ""
+  }), React.createElement("span", null, hint)), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn y s",
+    "data-msc-quick": true,
+    onClick: onResultOnly
+  }, "⏩ 結果だけ見る"), React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-ready": true,
+    onClick: onReady
+  }, "準備完了")));
+}
+function MonsucCutin({
+  s,
+  info,
+  onGo
+}) {
+  const sp = MSC_SPECIAL[s.aid] || {
+    word: '集中!',
+    sub: '特別な1話の効き目が かがやいた'
+  };
+  const coach = mscAssistant(s.aid);
+  const o = info.opp || {};
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-cutin": true
+  }, React.createElement("div", {
+    className: "msc-cut",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "msc-rays"
+  }), React.createElement("div", {
+    className: "word"
+  }, sp.word), React.createElement("div", {
+    className: "sub"
+  }, sp.sub), React.createElement("div", {
+    className: "duo"
+  }, React.createElement("img", {
+    className: "a",
+    src: mscMonImg(s.species),
+    alt: ""
+  }), React.createElement("img", {
+    src: mscMonImg(o.species),
+    alt: ""
+  })), React.createElement("div", {
+    className: "say"
+  }, React.createElement("img", {
+    src: mscFace(s.aid, 'happy'),
+    alt: ""
+  }), React.createElement("div", null, React.createElement("b", null, coach ? coach.name : ''), React.createElement("p", null, MSC_LINE[s.aid] || '「いっしょに がんばろう!」')))), React.createElement("div", {
+    className: "msc-eff"
+  }, React.createElement("b", null, "効いているあいだ"), React.createElement("span", null, info.title, "の この1戦だけ"), React.createElement("b", null, "効き目"), React.createElement("span", null, info.buffRows.join('・') || '—')), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-go": true,
+    onClick: onGo
+  }, "試合へ ▶")));
+}
+function MscPanel({
+  side,
+  team,
+  frame,
+  maxHp,
+  info,
+  s,
+  buffed
+}) {
+  const i = frame.act[side];
+  const m = team.members[i] || team.members[0];
+  const hp = Math.max(0, frame.hp[side][i] || 0);
+  const mx = maxHp[side][i] || 1;
+  const g = frame.g[side];
+  const o = info.opp || {};
+  return React.createElement("div", {
+    className: `msc-mp ${side === 'A' ? 'a' : 'b'}`,
+    "data-msc-panel": side
+  }, React.createElement("div", {
+    className: "h"
+  }, side === 'A' ? React.createElement("img", {
+    src: mscFace(s.aid),
+    alt: ""
+  }) : null, React.createElement("span", null, m.name, side === 'B' && o.breeder ? React.createElement("small", null, " ・", o.breeder) : null, side === 'A' && buffed ? React.createElement("i", {
+    className: "msc-buff"
+  }, "✨ 特別な1話") : null)), React.createElement("div", {
+    className: "bars"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: `ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(hp / mx * 100)}%`
+    }
+  })), React.createElement("div", {
+    className: "ambw-gbar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.min(100, g))}%`
+    }
+  }), [25, 50, 75].map(x => React.createElement("u", {
+    key: x,
+    style: {
+      left: `${x}%`
+    }
+  })))), React.createElement("div", {
+    className: "num"
+  }, hp, React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("small", null, "ガッツ ", Math.round(g)))));
+}
+function MonsucMatch({
+  s,
+  info,
+  match,
+  onEnd
+}) {
+  const [pos, setPos] = useState(0);
+  const [speed, setSpeed] = useState('x2');
+  const [ended, setEnded] = useState(false);
+  const log = match.r.log;
+  const frames = useMemo(() => ambwFramesOf(log), [match]);
+  const st = log[0] || {};
+  const maxHp = {
+    A: st.aHp || [],
+    B: st.bHp || []
+  };
+  const won = match.r.winner === 'A';
+  useEffect(() => {
+    if (ended) return undefined;
+    if (pos >= log.length - 1) {
+      const t = setTimeout(() => setEnded(true), 600);
+      return () => clearTimeout(t);
+    }
+    const sp = AMBW_SPEEDS.find(x => x.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let n = pos + 1;
+      if (speed === 'hl') while (n < log.length - 1 && !ambwIsHighlight(log[n], maxHp)) n++;
+      setPos(n);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [pos, speed, ended]);
+  useEffect(() => {
+    if (!ended) return undefined;
+    const t = setTimeout(() => onEnd(won), 1400);
+    return () => clearTimeout(t);
+  }, [ended]);
+  const e = log[pos] || {};
+  const f = frames[pos] || frames[0];
+  const foeSide = e.side === 'A' ? 'B' : 'A';
+  const fighter = side => {
+    const team = side === 'A' ? match.teamA : match.teamB;
+    const m = team.members[f.act[side]] || team.members[0];
+    return React.createElement("div", {
+      key: `${side}-${pos}`,
+      className: `ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`
+    }, React.createElement("img", {
+      className: side === 'A' ? 'ambw-flip' : '',
+      src: mscMonImg(m.species),
+      alt: ""
+    }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
+      className: "ambw-dmg"
+    }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
+      className: "ambw-dmg miss"
+    }, "はずれ")));
+  };
+  const nm = side => (side === 'A' ? match.teamA : match.teamB).members[0].name;
+  const say = e.ev === 'tech' ? e.hit ? `${nm(e.side)}の ${e.name}${e.crit ? ' 会心!' : ''}` : `${nm(e.side)}の ${e.name} … はずれ` : e.ev === 'move' ? `${nm(e.side)}が ${AMBW_DIST[e.to]}の間合いへ` : e.ev === 'charge' ? e.why === 'sulk' ? `${nm(e.side)}は そっぽを向いた…` : `${nm(e.side)}は ガッツをためた` : e.ev === 'guard' ? `${nm(e.side)}は 身を守った` : e.ev === 'ko' ? `${e.name} は たおれた` : e.ev === 'start' ? '試合開始!' : '';
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-match": true,
+    "data-msc-pos": pos
+  }, React.createElement("div", {
+    className: "msc-top"
+  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star), "・R", f.r || 1)), React.createElement(MscPanel, {
+    side: "B",
+    team: match.teamB,
+    frame: f,
+    maxHp: maxHp,
+    info: info,
+    s: s
+  }), React.createElement("div", {
+    className: "msc-stage",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "ambw-ring"
+  }, React.createElement("div", {
+    className: "ambw-stage"
+  }, fighter('A'), React.createElement("div", {
+    className: "ambw-gap",
+    style: {
+      width: [6, 44, 92, 146][f.d] || 44
+    }
+  }), fighter('B')), React.createElement("div", {
+    className: "ambw-dist"
+  }, AMBW_DIST.map((n, d) => React.createElement("span", {
+    key: d,
+    className: d === f.d ? 'cur' : ''
+  }, n))), e.ev === 'tech' && React.createElement("div", {
+    key: `c-${pos}`,
+    className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`
+  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'), React.createElement("b", null, e.name))), ended && React.createElement("div", {
+    className: `msc-end ${won ? 'w' : 'l'}`,
+    "data-msc-end": won ? 'win' : 'lose'
+  }, won ? '勝ち!' : '負け…')), React.createElement(MscPanel, {
+    side: "A",
+    team: match.teamA,
+    frame: f,
+    maxHp: maxHp,
+    info: info,
+    s: s,
+    buffed: Boolean(info.buffs)
+  }), React.createElement("div", {
+    className: "msc-hint",
+    style: {
+      minHeight: 22
+    }
+  }, React.createElement("span", null, say)), React.createElement("div", {
+    className: "msc-speed"
+  }, AMBW_SPEEDS.map(x => React.createElement("button", {
+    key: x.id,
+    className: speed === x.id ? 'on' : '',
+    onClick: () => setSpeed(x.id)
+  }, x.label)), React.createElement("button", {
+    "data-msc-skip": true,
+    onClick: () => {
+      setPos(log.length - 1);
+    }
+  }, "⏭ とばす")));
+}
+function MonsucCupWin({
+  s,
+  info,
+  match,
+  out,
+  onNext
+}) {
+  const o = info.opp || {};
+  const rows = Array.isArray(out && out.rows) ? out.rows : [...(out && out.prize ? [{
+    i: '💰',
+    k: '賞金',
+    v: `+${out.prize}${info.rival ? '(ライバルに勝って ×1.5)' : ''}`,
+    big: info.rival
+  }] : []), ...(out && out.tickets ? [{
+    i: '🎫',
+    k: '修行チケット',
+    v: `+${out.tickets}`
+  }] : []), ...(out && out.title ? [{
+    i: '🏅',
+    k: '称号',
+    v: `「${out.title}」`
+  }] : [])];
+  const coach = mscAssistant(s.aid);
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-win": true
+  }, React.createElement("div", {
+    className: "msc-hero win",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "msc-rays"
+  }), React.createElement("div", {
+    className: "big"
+  }, "優勝!"), React.createElement("div", {
+    className: "sub"
+  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
+    className: "who"
+  }, React.createElement("img", {
+    src: mscMonImg(s.species),
+    alt: ""
+  })), info.rival && React.createElement("div", {
+    className: "rival"
+  }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
+    key: k,
+    className: `msc-rw ${r.big ? 'big' : ''}`,
+    style: {
+      animationDelay: `${0.3 + k * 0.12}s`
+    }
+  }, React.createElement("span", {
+    className: "i"
+  }, r.i), React.createElement("span", {
+    className: "k"
+  }, r.k), React.createElement("span", {
+    className: "v"
+  }, r.v))), React.createElement("div", {
+    className: "msc-talk"
+  }, React.createElement("img", {
+    src: mscFace(s.aid, 'happy'),
+    alt: ""
+  }), React.createElement("p", null, coach ? React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: 11,
+      color: '#b45309'
+    }
+  }, coach.name) : null, info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`)), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-next": true,
+    onClick: onNext
+  }, "次へ ▶")));
+}
+function MonsucCupLose({
+  suc,
+  s,
+  info,
+  match,
+  onRematch,
+  onGiveUp,
+  onSkipAnim
+}) {
+  const o = info.opp || {};
+  const b = s.battle || {};
+  const left = Math.max(0, mscNum(suc.REMATCH && suc.REMATCH.max, 3) - mscNum(s.rematchUsed));
+  const has = k => mscNum(s.items && s.items[k]);
+  const can = k => typeof suc.canRematch === 'function' ? suc.canRematch(s, k) : has(k) > 0 && left > 0;
+  const summit = b.kind === 'summit';
+  const coach = mscAssistant(s.aid);
+  const why = (() => {
+    if (!match) return '';
+    const t = match.r.log.filter(x => x.ev === 'tech' && x.side === 'B' && x.hit);
+    return t.length ? `${t[t.length - 1].name}が 効いてたね…` : 'あと少しだったね…';
+  })();
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-lose": true
+  }, React.createElement("div", {
+    className: "msc-hero lose",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "big"
+  }, "負けた…"), React.createElement("div", {
+    className: "sub"
+  }, info.title, " ", MSC_STARS(info.star), "・", o.name || mscMonName(o.species), " に 負け"), React.createElement("div", {
+    className: "who"
+  }, React.createElement("img", {
+    src: mscMonImg(s.species),
+    alt: ""
+  }))), React.createElement("div", {
+    className: "msc-again"
+  }, React.createElement("h3", null, "時をもどして、やり直す?"), React.createElement("p", null, "やり直せるのは 1回の育成で", mscNum(suc.REMATCH && suc.REMATCH.max, 3), "回まで・", React.createElement("em", null, "のこり ", left, "/", mscNum(suc.REMATCH && suc.REMATCH.max, 3))), React.createElement("button", {
+    className: "msc-pick sand",
+    "data-msc-rematch": "sand",
+    disabled: !can('sand'),
+    onClick: () => onRematch('sand')
+  }, React.createElement("img", {
+    src: "images/success/items/hourglass.png",
+    alt: ""
+  }), React.createElement("span", null, "時渡りの砂時計で やり直す", React.createElement("small", null, "同じ相手と もう一度(持っている ×", has('sand'), ")"))), React.createElement("button", {
+    className: "msc-pick rain",
+    "data-msc-rematch": "rainbow",
+    disabled: !can('rainbow'),
+    onClick: () => onRematch('rainbow')
+  }, React.createElement("img", {
+    src: "images/success/items/hourglass-rainbow.png",
+    alt: ""
+  }), React.createElement("span", null, "虹の時渡りの砂時計で 相手を変えて やり直す", React.createElement("small", null, info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える', "(持っている ×", has('rainbow'), ")"))), React.createElement("button", {
+    className: "msc-pick quit",
+    "data-msc-giveup": true,
+    onClick: onGiveUp
+  }, summit ? 'あきらめる(頂への道は ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる')), React.createElement("div", {
+    className: "msc-talk"
+  }, React.createElement("img", {
+    src: mscFace(s.aid, 'sad'),
+    alt: ""
+  }), React.createElement("p", null, coach ? React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: 11,
+      color: '#b45309'
+    }
+  }, coach.name) : null, "「おしかった! ", why, " もう1回 いく?」")));
+}
+function MonsucCupShow(props) {
+  const {
+    s
+  } = props;
+  const b = s && s.battle || {};
+  return React.createElement(MonsucCupShowInner, _extends({
+    key: [s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')
+  }, props));
+}
+function MonsucCupShowInner({
+  suc,
+  s,
+  me,
+  settle,
+  onRematch,
+  onNext,
+  onClose,
+  startAt,
+  previewOut
+}) {
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [failed, setFailed] = useState(false);
+  const [phase, setPhase] = useState(startAt || 'bracket');
+  const [out, setOut] = useState(startAt === 'win' ? previewOut || {} : null);
+  const rootRef = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then(x => {
+      if (!alive) return;
+      if (x) setEngine(x);else setFailed(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (rootRef.current) rootRef.current.scrollTop = 0;
+  }, [phase]);
+  const info = useMemo(() => s && s.battle ? monsucCupInfo(suc, s, me) : null, [suc, s]);
+  const catalog = useMemo(() => {
+    if (!engine || typeof engine.buildCatalog !== 'function') return null;
+    try {
+      return engine.buildCatalog({
+        ALL_PLAYER_MONSTERS,
+        ASSISTANT_MASMON_TECHS: ambwTechTable()
+      });
+    } catch (_) {
+      return null;
+    }
+  }, [engine]);
+  const match = useMemo(() => {
+    if (!engine || !catalog || !info) return null;
+    try {
+      return monsucCupMatch(engine, catalog, suc, s, me);
+    } catch (_) {
+      return null;
+    }
+  }, [engine, catalog, info]);
+  const finish = won => {
+    if (won) {
+      const o = typeof settle === 'function' ? settle(true) : null;
+      setOut(o || {});
+      setPhase('win');
+    } else setPhase('lose');
+  };
+  const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
+  let body = null;
+  if (!info) body = React.createElement("p", {
+    className: "msc-note"
+  }, "大会が見つかりませんでした");else if (phase === 'bracket') body = React.createElement(MonsucBracket, {
+    suc: suc,
+    s: s,
+    info: info,
+    canSkip: canSkip,
+    onClose: onClose,
+    onFight: () => setPhase('card'),
+    onResultOnly: () => match && finish(match.r.winner === 'A')
+  });else if (phase === 'card') body = React.createElement(MonsucBattleCard, {
+    suc: suc,
+    s: s,
+    info: info,
+    catalog: catalog,
+    onBack: () => setPhase('bracket'),
+    onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
+    onResultOnly: () => match && finish(match.r.winner === 'A')
+  });else if (phase === 'cutin') body = React.createElement(MonsucCutin, {
+    s: s,
+    info: info,
+    onGo: () => setPhase('match')
+  });else if (phase === 'match') body = match ? React.createElement(MonsucMatch, {
+    s: s,
+    info: info,
+    match: match,
+    onEnd: finish
+  }) : React.createElement("p", {
+    className: "msc-note"
+  }, failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…');else if (phase === 'win') body = React.createElement(MonsucCupWin, {
+    s: s,
+    info: info,
+    match: match,
+    out: out,
+    onNext: () => onNext && onNext(out)
+  });else if (phase === 'lose') body = React.createElement(MonsucCupLose, {
+    suc: suc,
+    s: s,
+    info: info,
+    match: match,
+    onRematch: k => onRematch && onRematch(k),
+    onGiveUp: () => {
+      const o = typeof settle === 'function' ? settle(false) : null;
+      if (onNext) onNext(o);
+    }
+  });
+  return React.createElement("div", {
+    className: "msc-root ambw-root",
+    ref: rootRef,
+    "data-msc-root": true,
+    "data-msc-phase": phase
+  }, React.createElement("style", null, AMBW_CSS, MSC_CSS), body);
+}
 const ASSISTANT_MASMON_CHEER_KEY = 'mh_assistant_masmon_cheer_v1';
 const AMGC_NUM = Object.freeze({
   mastery: 1,
@@ -156663,6 +158016,7 @@ const MSX_KEYS = Object.freeze({
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCENES_SRC = 'data/success-scenes.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 const MSX_SCENARIOS = Object.freeze([{
@@ -156734,13 +158088,20 @@ const msxLoadConstScript = (src, check) => new Promise(res => {
   s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
+const msxGlobalConst = name => {
+  try {
+    return new Function(`return typeof ${name} !== 'undefined' ? ${name} : null;`)();
+  } catch (e) {
+    return null;
+  }
+};
+const msxRegularsOk = () => !!msxGlobalConst('MONSUC_REGULARS') && !!msxGlobalConst('MONSUC_REGULAR_CUPS');
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -156757,8 +158118,8 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null,
-          cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null
+          regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null,
+          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null
         });
         msxSuc = {
           core,
@@ -156939,23 +158300,26 @@ const MSX_SEASON = Object.freeze({
   autumn: '🍁 秋',
   winter: '⛄ 冬'
 });
-const msxSceneBg = () => {
-  let h = 12;
-  try {
-    h = new Date().getHours();
-  } catch (e) {}
-  if (h >= 5 && h < 16) return {
-    bg: 'images/story-bg/monhero_plaza.jpg',
-    time: '昼'
-  };
-  if (h >= 16 && h < 19) return {
-    bg: 'images/story-bg/monhero_plaza_evening.jpg',
-    time: '夕方'
-  };
+const MSX_TIMES = Object.freeze([['day', '昼'], ['evening', '夕方'], ['night', '夜']]);
+const MSX_OLD_BG = Object.freeze({
+  day: 'images/story-bg/monhero_plaza.jpg',
+  evening: 'images/story-bg/monhero_plaza_evening.jpg',
+  night: 'images/story-bg/monhero_night.jpg'
+});
+const msxSceneBg = (turn = 1) => {
+  const t = Math.max(1, Math.round(msxNum(turn, 1)));
+  const [time, label] = MSX_TIMES[(t - 1) % 3];
+  const cal = msxCalendar(t);
+  const pick = typeof window !== 'undefined' && typeof window.successHomeScene === 'function' ? window.successHomeScene(cal.season, time) : null;
   return {
-    bg: 'images/story-bg/monhero_night.jpg',
-    time: '夜'
+    bg: pick && pick.image ? pick.image : MSX_OLD_BG[time],
+    time: label,
+    season: cal.season
   };
+};
+const msxVenueBg = venue => {
+  const f = typeof window !== 'undefined' && typeof window.successSceneById === 'function' ? window.successSceneById(`venue-${venue}`) : null;
+  return f && f.image ? f.image : 'images/story-bg/monhero_town.jpg';
 };
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = r => `rk r${String(r || 'G').replace(/\+/g, '')}`;
@@ -156982,9 +158346,9 @@ const msxPickLine = (ctx, scene, opt = {}) => {
 };
 const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
   if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'この子';
-  if (k === 'cheer') return ctx.cheer || '編成の子';
-  if (k === 'cheer2') return ctx.cheer2 || '編成の子';
+  if (k === 'mon') return ctx.mon || 'モンスター';
+  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
+  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
   if (k === 'stat') return ctx.stat || '能力';
   if (k === 'train') return ctx.train || '訓練';
   if (k === 'tech') return ctx.tech || '技';
@@ -157028,7 +158392,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const MSX_STEP_NAMES = Object.freeze(['育てる子', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
+const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 const MSX_ITEMS = Object.freeze([{
   id: 'guide',
   name: '博士の導き書',
@@ -157254,7 +158618,7 @@ function MsxStart({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(1).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -157310,7 +158674,7 @@ function MsxStart({
     const picked = meta.picked && meta.picked[species];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "だれを育てる?", React.createElement("small", null, "ベースモンか、合体で生まれた未育成の子から1体")), React.createElement("div", {
+    }, "だれを育てる?", React.createElement("small", null, "ベースモンか、合体で生まれた未育成のモンスターから1体")), React.createElement("div", {
       className: "v-tabs"
     }, React.createElement("button", {
       type: "button",
@@ -157320,7 +158684,7 @@ function MsxStart({
       type: "button",
       className: tab === 'fuse' ? 'on' : '',
       onClick: () => setTab('fuse')
-    }, "🧬 合体で生まれた子 ", unraised.length)), React.createElement("div", {
+    }, "🧬 合体で生まれたモンスター ", unraised.length)), React.createElement("div", {
       className: "v-grid6",
       style: {
         maxHeight: 148,
@@ -157369,12 +158733,12 @@ function MsxStart({
       key: k,
       className: apt[i] > 'B' ? 'lo' : ''
     }, MSX_STAT_NAME[k], React.createElement("b", null, apt[i]))))));
-    go = 'この子にする ▶';
+    go = 'このモンスターにする ▶';
   } else if (step === 1) {
     const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強い子ほど訓練がよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる")), React.createElement("div", {
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", {
       key: i,
@@ -157446,7 +158810,7 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "保存枠はまだ空です。育て終えた子がここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
+    }, "保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -157673,7 +159037,7 @@ function MsxStart({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(1).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158196,7 +159560,8 @@ function MonheroSuccessScreen({
       onYes: () => setView('start')
     }) : setView('start'),
     setMeta: setMeta,
-    onWipe: quit
+    onWipe: quit,
+    onRank: () => setView('rank')
   });else if (view === 'start') content = React.createElement(MsxStart, {
     data: data,
     SUC: msxSuc.SUC,
@@ -158218,7 +159583,9 @@ function MonheroSuccessScreen({
     "data-monhero-success": true,
     role: "dialog",
     "aria-label": "モンヒロサクセス"
-  }, React.createElement("style", null, MSX_CSS), React.createElement("div", {
+  }, React.createElement("style", null, MSX_CSS), view === 'rank' && typeof MonsucRankScreen === 'function' ? React.createElement(MonsucRankScreen, {
+    onBack: () => setView('home')
+  }) : null, React.createElement("div", {
     className: `msx v3 ${layout}`,
     "data-msx-view": view
   }, content, ask && React.createElement("div", {
@@ -158254,7 +159621,8 @@ function MsxHome({
   onContinue,
   onNew,
   setMeta,
-  onWipe
+  onWipe,
+  onRank
 }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
@@ -158272,7 +159640,7 @@ function MsxHome({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(s ? s.turn : 1).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -158299,13 +159667,17 @@ function MsxHome({
     className: "v-card"
   }, React.createElement("div", {
     className: "h2"
-  }, "育てる子を選んで、46ターンの育成をはじめよう"), React.createElement("div", {
+  }, "育てるモンスターを選んで、46ターンの育成をはじめよう"), React.createElement("div", {
     className: "sub"
   }, "編成の6体が集まった訓練ほど、よく伸びる")), React.createElement("button", {
     type: "button",
     className: "v-big",
     onClick: onNew
-  }, "🌱 新しく育成をはじめる"), debug && React.createElement("div", {
+  }, "🌱 新しく育成をはじめる"), typeof MonsucRankScreen === 'function' ? React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: onRank
+  }, "🏆 ランキング") : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
@@ -158808,7 +160180,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: "images/story-bg/monhero_town.jpg",
+      src: msxVenueBg(b.kind === 'summit' ? 'summit' : b.kind === 'debut' ? 'debut' : b.kind === 'pro' ? 'hero' : 'cup'),
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158855,7 +160227,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(s.turn).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158918,7 +160290,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(s.turn).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -159048,7 +160420,7 @@ function MsxPlay({
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
-    const scn = msxSceneBg();
+    const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
     const bag = Object.keys(s.bag || {}).filter(k => s.bag[k] > 0);
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -159359,7 +160731,7 @@ function MsxBag({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(s.turn).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -159782,6 +161154,844 @@ function MsxIssa({
     className: "go",
     onClick: choose
   }, pick === 'none' ? 'ことわる' : `${(MSX_ISSA_KEYS.find(x => x.key === pick) || {}).icon} ${(MSX_ISSA_KEYS.find(x => x.key === pick) || {}).name}を受ける`)));
+}
+const MONSUC_LEND_REASON_TEXT = Object.freeze({
+  off: 'フレンドからのレンタルは準備中です',
+  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  no_id: 'この端末ではまだ使えません',
+  locked: 'この貸し出しは別の端末で作られています',
+  mon: 'このマスモンは貸し出せません',
+  not_friend: 'フレンドのマスモンだけを借りられます',
+  no_lend: 'そのマスモンはもう貸し出されていません',
+  streak: '同じフレンドのマスモンは、続けて2回までです。ほかのフレンドのマスモンも借りてみよう',
+  self: '自分のマスモンは借りられません',
+  lender: 'そのマスモンは借りられません'
+});
+const monsucLendReasonText = reason => MONSUC_LEND_REASON_TEXT[reason] || MONSUC_LEND_REASON_TEXT.server;
+const monsucLendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const MONSUC_LEND_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const monsucLendPost = async body => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), 12000) : null;
+  try {
+    const r = await fetch(MASMON_PVP_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: ac ? ac.signal : undefined
+    });
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (_) {
+      j = null;
+    }
+    if (j && j.ok) return j;
+    const e = j && typeof j.error === 'string' ? j.error : r.status >= 500 ? 'server' : 'network';
+    return {
+      ok: false,
+      reason: MONSUC_LEND_REASON_TEXT[e] ? e : 'server'
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const monsucLendPayloadOf = child => {
+  const c = child && typeof child === 'object' ? child : null;
+  if (!c || typeof c.species !== 'string') return null;
+  const st = c.st && typeof c.st === 'object' ? c.st : c.stats && typeof c.stats === 'object' ? c.stats : null;
+  if (!st) return null;
+  const stats = {};
+  for (const k of MONSUC_LEND_STAT_KEYS) {
+    const v = Number(st[k]);
+    if (!Number.isFinite(v)) return null;
+    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+  }
+  const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
+  const assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({
+    id,
+    lv
+  }));
+  const nameRaw = typeof c.nick === 'string' && c.nick.trim() ? c.nick : typeof c.name === 'string' ? c.name : '';
+  const name = [...nameRaw.trim()].slice(0, 12).join('') || c.species.slice(0, 12);
+  const out = {
+    species: c.species,
+    name,
+    stats,
+    assists
+  };
+  const type = Number.isInteger(c.type) ? c.type : Number.isInteger(c.gt) ? c.gt : null;
+  if (type != null && type >= 0 && type <= 5) out.type = type;
+  if (c.colors && typeof c.colors === 'object') out.colors = c.colors;
+  return out;
+};
+const monsucLendMember = (row, SUC) => {
+  const r = row && typeof row === 'object' ? row : null;
+  const m = r && r.lend && typeof r.lend === 'object' ? r.lend : null;
+  if (!m || !SUC || !Array.isArray(SUC.speciesList) || !SUC.speciesList.includes(m.species)) return null;
+  const st = m.stats && typeof m.stats === 'object' ? m.stats : null;
+  if (!st) return null;
+  const stats = {};
+  for (const k of MONSUC_LEND_STAT_KEYS) {
+    const v = Number(st[k]);
+    if (!Number.isFinite(v)) return null;
+    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+  }
+  let assists = [];
+  const list = Array.isArray(m.assists) ? m.assists : [];
+  const known = SUC.ASSISTS && typeof SUC.ASSISTS === 'object' ? SUC.ASSISTS : {};
+  const okShape = list.length <= 4 && list.every(a => a && known[a.id] && Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3) && new Set(list.map(a => a.id)).size === list.length;
+  if (okShape && list.length) {
+    let budget = 0;
+    try {
+      const best = SUC.memberOf({
+        kind: 'raised',
+        species: m.species,
+        stats,
+        lv: 999,
+        loy: 100,
+        pop: 100,
+        masteries: [100, 100, 100, 100, 100, 100, 100, 100]
+      });
+      budget = SUC.assistPointsOf(best.power);
+    } catch (_) {
+      budget = 0;
+    }
+    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[a.lv - 1]) || 0), 0);
+    if (cost <= budget) assists = list.map(a => ({
+      id: a.id,
+      lv: a.lv
+    }));
+  }
+  const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  return {
+    kind: 'raised',
+    species: m.species,
+    name,
+    stats,
+    assists,
+    friend: {
+      id: typeof r.friendId === 'string' ? r.friendId : null,
+      name: typeof r.name === 'string' ? r.name.slice(0, 40) : ''
+    }
+  };
+};
+const monsucLendFriends = async () => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off',
+    rows: []
+  };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  if (!self || typeof sbFetchFriendRoster !== 'function') return {
+    ok: false,
+    reason: 'no_id',
+    rows: []
+  };
+  let roster = [];
+  try {
+    roster = await sbFetchFriendRoster(self);
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network',
+      rows: []
+    };
+  }
+  const ids = roster.map(f => masmonPvpSafeId(f.otherId)).filter(Boolean).slice(0, 100);
+  if (!ids.length) return {
+    ok: true,
+    rows: []
+  };
+  const got = await masmonPvpRead(`monsuc_lend?select=owner_id,mon,version,updated_at&active=eq.true&owner_id=in.(${ids.join(',')})`);
+  if (!got) return {
+    ok: false,
+    reason: 'network',
+    rows: []
+  };
+  const rows = roster.map(f => {
+    const e = got.find(x => x.owner_id === f.otherId);
+    if (!e || !e.mon || typeof e.mon !== 'object') return null;
+    const mon = e.mon;
+    return {
+      friendId: f.otherId,
+      name: f.userName,
+      icon: f.icon ?? null,
+      profileFrame: f.profileFrame || null,
+      lend: {
+        species: mon.species,
+        name: mon.name,
+        colors: Array.isArray(mon.colors) && mon.colors.every(c => typeof c === 'string') ? mon.colors.slice(0, 8) : null,
+        type: Number.isInteger(mon.type) ? mon.type : null,
+        stats: mon.stats,
+        assists: Array.isArray(mon.assists) ? mon.assists : [],
+        version: e.version,
+        updatedAt: Date.parse(e.updated_at) || 0
+      }
+    };
+  }).filter(Boolean);
+  return {
+    ok: true,
+    rows
+  };
+};
+const monsucLendSet = async (child, {
+  userName,
+  icon
+} = {}) => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const mon = monsucLendPayloadOf(child);
+  if (!mon) return {
+    ok: false,
+    reason: 'mon'
+  };
+  const me = await masmonPvpSelf(true);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const r = await monsucLendPost({
+    action: 'lend_set',
+    owner: me.owner,
+    key: me.key,
+    mon,
+    name: typeof userName === 'string' ? userName : '',
+    icon: typeof icon === 'string' ? icon : null
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const monsucLendClear = async () => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const r = await monsucLendPost({
+    action: 'lend_clear',
+    owner: me.owner,
+    key: me.key
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const monsucLendUse = async friendId => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const lender = masmonPvpSafeId(friendId);
+  if (!lender) return {
+    ok: false,
+    reason: 'lender'
+  };
+  const me = await masmonPvpSelf(true);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const r = await monsucLendPost({
+    action: 'lend_use',
+    owner: me.owner,
+    key: me.key,
+    lender
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const monsucLendClaim = async () => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off',
+    n: 0,
+    fame: 0
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: true,
+    n: 0,
+    paid: 0,
+    fame: 0
+  };
+  const r = await monsucLendPost({
+    action: 'lend_claim',
+    owner: me.owner,
+    key: me.key
+  });
+  if (!r.ok) return {
+    ok: false,
+    reason: r.reason,
+    n: 0,
+    fame: 0
+  };
+  const n = Number.isInteger(r.n) && r.n > 0 ? r.n : 0;
+  const paid = Number.isInteger(r.paid) && r.paid > 0 ? r.paid : 0;
+  const fame = Number.isInteger(r.fame) && r.fame > 0 ? r.fame : 0;
+  return {
+    ok: true,
+    n,
+    paid,
+    fame
+  };
+};
+const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
+const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
+const MONSUC_RANK_SENT_MAX = 50;
+const MONSUC_RANK_QUEUE_MAX = 5;
+const MONSUC_RANK_TIMEOUT_MS = 12000;
+const MONSUC_RANK_LIMIT_ALL = 100;
+const MONSUC_RANK_LIMIT_LINEAGE = 50;
+const MONSUC_RANK_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MONSUC_RANK_STAT_LABEL = {
+  life: '❤️ライフ',
+  pow: '💪ちから',
+  wise: '🧠かしこさ',
+  hit: '🎯命中',
+  eva: '💨回避',
+  tough: '🛡️丈夫さ'
+};
+const MONSUC_RANK_GRADE_COLOR = {
+  M: '#f472b6',
+  SSS: '#f472b6',
+  SS: '#fb923c',
+  S: '#fbbf24',
+  A: '#f472b6',
+  B: '#a78bfa',
+  C: '#38bdf8',
+  D: '#94a3b8',
+  E: '#94a3b8',
+  F: '#94a3b8',
+  G: '#94a3b8'
+};
+const MONSUC_RANK_REASON_TEXT = Object.freeze({
+  off: 'ランキングは準備中です',
+  network: 'つながりませんでした。次に開いたときにもう一度送ります',
+  busy: '少し待ってから送り直します',
+  bad: 'この記録はランキングに載せられませんでした',
+  locked: 'この端末ではランキングに送れません',
+  over_cap: 'この記録はランキングに載せられませんでした',
+  skip: 'この育成はランキングの対象外です',
+  no_id: 'この端末ではまだ送れません'
+});
+const monsucRankReasonText = reason => MONSUC_RANK_REASON_TEXT[reason] || MONSUC_RANK_REASON_TEXT.network;
+const monsucRankOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const monsucRankNum = (v, d = 0) => Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d;
+const monsucRankClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const monsucRankLineageOf = species => {
+  const m = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
+  return m && typeof m.main === 'string' ? m.main : 'unknown';
+};
+const monsucRankLineageName = id => {
+  const l = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES ? MONSTER_LINEAGES[id] : null;
+  return l && l.name ? l.name : '？？？';
+};
+const monsucRankEngineVersion = () => {
+  const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null;
+  return S && Number.isInteger(S.VERSION) ? S.VERSION : 1;
+};
+const monsucRankMonOf = species => {
+  if (typeof species !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS || typeof ALL_PLAYER_MONSTERS !== 'object') return null;
+  const m = Object.prototype.hasOwnProperty.call(ALL_PLAYER_MONSTERS, species) ? ALL_PLAYER_MONSTERS[species] : null;
+  return m && typeof m === 'object' ? m : null;
+};
+const monsucRankDyeOf = dye => Array.isArray(dye) ? dye.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : null;
+const monsucRankRunId = (owner, rawId) => {
+  let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
+  if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
+  return `${owner}-${tail}`;
+};
+const monsucRankSentList = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_SENT_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-MONSUC_RANK_SENT_MAX) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const monsucRankMarkSent = async runId => {
+  const list = await monsucRankSentList();
+  if (list.includes(runId)) return;
+  try {
+    await storeSet(MONSUC_RANK_SENT_KEY, list.concat([runId]).slice(-MONSUC_RANK_SENT_MAX), false);
+  } catch (_) {}
+};
+const monsucRankQueue = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_QUEUE_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && typeof x.run_id === 'string').slice(-MONSUC_RANK_QUEUE_MAX) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const monsucRankQueueSave = async list => {
+  try {
+    await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false);
+  } catch (_) {}
+};
+const monsucRankRowOf = ({
+  owner,
+  run,
+  ev,
+  name,
+  colors,
+  userName
+}) => {
+  if (!run || typeof run !== 'object') return null;
+  if (!['done', 'lost'].includes(run.over) && run.retired !== true) return null;
+  if (run.over === 'gameover') return null;
+  const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
+  const stats = {};
+  MONSUC_RANK_STAT_KEYS.forEach(k => {
+    stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999);
+  });
+  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
+  if (!species) return null;
+  const e = ev && typeof ev === 'object' ? ev : {};
+  const dyeOk = monsucRankDyeOf(colors) || [];
+  return {
+    run_id: monsucRankRunId(owner, run.id),
+    user_name: String(userName || '').slice(0, 40),
+    child_name: String(name || '').slice(0, 24),
+    species,
+    lineage: monsucRankLineageOf(species),
+    dye: dyeOk,
+    stats,
+    techs,
+    lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
+    loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
+    pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
+    engine_version: monsucRankEngineVersion()
+  };
+};
+const monsucRankPost = async (owner, key, row) => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), MONSUC_RANK_TIMEOUT_MS) : null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/monsuc_rank_submit`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        p_owner: owner,
+        p_key: key,
+        p_row: row
+      }),
+      signal: ac ? ac.signal : undefined
+    });
+    if (!r.ok) return {
+      ok: false,
+      reason: 'network'
+    };
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (_) {
+      j = null;
+    }
+    if (!j || typeof j !== 'object') return {
+      ok: false,
+      reason: 'network'
+    };
+    return j;
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const monsucRankSendRow = async (me, row) => {
+  const r = await monsucRankPost(me.owner, me.key, row);
+  const queue = (await monsucRankQueue()).filter(x => x.run_id !== row.run_id);
+  if (r.ok) {
+    await monsucRankMarkSent(row.run_id);
+    await monsucRankQueueSave(queue);
+    return {
+      ok: true,
+      power: r.power,
+      grade: r.grade,
+      placeAll: r.place_all || null,
+      placeLineage: r.place_lineage || null,
+      lineage: row.lineage
+    };
+  }
+  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankQueueSave(queue);else await monsucRankQueueSave(queue.concat([row]));
+  return {
+    ok: false,
+    reason: r.reason || 'network'
+  };
+};
+const monsucRankUserName = async () => {
+  try {
+    return String((await storeGet('mh_breeder_name', '', false)) || '');
+  } catch (_) {
+    return '';
+  }
+};
+const monsucRankSubmit = async ({
+  run,
+  ev,
+  name,
+  colors,
+  debug
+} = {}) => {
+  try {
+    if (!monsucRankOn()) return {
+      ok: false,
+      reason: 'off'
+    };
+    if (debug) return {
+      ok: false,
+      reason: 'skip'
+    };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
+    if (!me) return {
+      ok: false,
+      reason: 'no_id'
+    };
+    const row = monsucRankRowOf({
+      owner: me.owner,
+      run,
+      ev,
+      name,
+      colors,
+      userName: await monsucRankUserName()
+    });
+    if (!row) return {
+      ok: false,
+      reason: 'skip'
+    };
+    if ((await monsucRankSentList()).includes(row.run_id)) return {
+      ok: false,
+      reason: 'skip'
+    };
+    return await monsucRankSendRow(me, row);
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  }
+};
+const monsucRankFlush = async () => {
+  try {
+    if (!monsucRankOn()) return {
+      ok: false,
+      reason: 'off'
+    };
+    const queue = await monsucRankQueue();
+    if (queue.length === 0) return {
+      ok: true,
+      left: 0
+    };
+    const sent = await monsucRankSentList();
+    const rest = queue.filter(x => !sent.includes(x.run_id));
+    if (rest.length !== queue.length) await monsucRankQueueSave(rest);
+    if (rest.length === 0) return {
+      ok: true,
+      left: 0
+    };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(false) : null;
+    if (!me || !rest[0].run_id.startsWith(`${me.owner}-`)) return {
+      ok: false,
+      reason: 'no_id'
+    };
+    const r = await monsucRankSendRow(me, rest[0]);
+    return {
+      ...r,
+      left: Math.max(0, rest.length - 1)
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  }
+};
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+const monsucRankGet = async (path, withCount) => {
+  try {
+    const headers = withCount ? {
+      ...SB_HEADERS,
+      Prefer: 'count=exact'
+    } : SB_HEADERS;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers,
+      cache: 'no-store'
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return null;
+    let total = null;
+    if (withCount) {
+      const m = /\/(\d+)$/.exec(r.headers.get('content-range') || '');
+      total = m ? Number(m[1]) : null;
+    }
+    return {
+      rows,
+      total
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const monsucRankRead = async ({
+  lineage = null
+} = {}) => {
+  const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
+  const view = lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all';
+  const where = lin ? `&lineage=eq.${lin}` : '';
+  const limit = lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL;
+  const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  if (!top) return null;
+  const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
+  let mine = null;
+  if (sent.length > 0) {
+    const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${sent.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+    mine = m && m.rows[0] ? m.rows[0] : null;
+  }
+  return {
+    rows: top.rows,
+    total: top.total,
+    mine,
+    sent
+  };
+};
+function MonsucRankMonImg({
+  species,
+  dye,
+  size = 36
+}) {
+  const mon = monsucRankMonOf(species);
+  if (!mon) return React.createElement("div", {
+    style: {
+      width: size,
+      height: size
+    },
+    className: "rounded-lg bg-slate-700/60 flex items-center justify-center text-slate-400 text-xs"
+  }, "？");
+  return React.createElement("div", {
+    style: {
+      width: size,
+      height: size
+    },
+    className: "shrink-0 flex items-center justify-center"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.iconUrl || mon.imgUrl,
+    alt: mon.name || '',
+    masuColors: monsucRankDyeOf(dye),
+    className: "w-full h-full object-contain",
+    draggable: false
+  }));
+}
+function MonsucRankGrade({
+  grade
+}) {
+  const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G';
+  const letter = g.replace(/[0-9]+$/, '');
+  return React.createElement("span", {
+    className: "inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900",
+    style: {
+      background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8'
+    }
+  }, g);
+}
+function MonsucRankStats({
+  stats
+}) {
+  const st = stats && typeof stats === 'object' ? stats : {};
+  return React.createElement("div", {
+    className: "grid grid-cols-6 gap-1 mt-2"
+  }, MONSUC_RANK_STAT_KEYS.map(k => React.createElement("div", {
+    key: k,
+    className: "rounded-md bg-slate-950/60 py-1 text-center"
+  }, React.createElement("div", {
+    className: "text-[9px] text-slate-300 whitespace-nowrap"
+  }, MONSUC_RANK_STAT_LABEL[k]), React.createElement("div", {
+    className: "text-[13px] font-black text-white"
+  }, Math.round(monsucRankNum(st[k]))))));
+}
+function MonsucRankRow({
+  row,
+  open,
+  onToggle,
+  mine,
+  pinned
+}) {
+  const top = row.place <= 3;
+  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : open ? 'border-yellow-400/80 bg-yellow-900/30' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
+  return React.createElement("button", {
+    type: "button",
+    onClick: onToggle,
+    className: `w-full text-left rounded-xl border px-3 py-2 ${cls}`,
+    "aria-expanded": !!open
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("div", {
+    className: `w-8 text-center font-black ${top ? 'text-yellow-300 text-lg' : 'text-slate-200 text-base'}`
+  }, row.place), React.createElement(MonsucRankMonImg, {
+    species: row.species,
+    dye: row.dye
+  }), React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white truncate"
+  }, row.child_name || (monsucRankMonOf(row.species) || {}).name || '？？？'), React.createElement("div", {
+    className: "text-[10px] text-slate-300 truncate"
+  }, "育てた人: ", pinned ? 'あなた' : row.user_name || 'ななしのブリーダー')), React.createElement(MonsucRankGrade, {
+    grade: row.grade
+  }), React.createElement("div", {
+    className: "w-[64px] text-right text-[15px] font-black text-yellow-300"
+  }, Math.round(monsucRankNum(row.power)).toLocaleString())), open && React.createElement(MonsucRankStats, {
+    stats: row.stats
+  }));
+}
+const monsucRankLineageTabs = () => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
+  const out = [];
+  Object.keys(map).forEach(sp => {
+    const l = map[sp] && map[sp].main;
+    if (typeof l === 'string' && l !== 'unknown' && !out.includes(l) && monsucRankMonOf(sp)) out.push(l);
+  });
+  return out;
+};
+function MonsucRankScreen({
+  onBack
+}) {
+  const [tab, setTab] = React.useState('all');
+  const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
+  const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [open, setOpen] = React.useState(null);
+  const on = monsucRankOn();
+  React.useEffect(() => {
+    if (on) monsucRankFlush();
+  }, [on]);
+  React.useEffect(() => {
+    let alive = true;
+    if (!on) {
+      setLoading(false);
+      return undefined;
+    }
+    setLoading(true);
+    setOpen(null);
+    monsucRankRead({
+      lineage: tab === 'lineage' ? lineage : null
+    }).then(d => {
+      if (alive) {
+        setData(d);
+        setLoading(false);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [on, tab, lineage]);
+  const rows = data && Array.isArray(data.rows) ? data.rows : [];
+  const sent = data && Array.isArray(data.sent) ? data.sent : [];
+  const mine = data ? data.mine : null;
+  const scopeName = tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全体';
+  const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[60] flex flex-col text-white",
+    style: {
+      background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 px-3 pt-3"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onBack,
+    className: "rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold"
+  }, "← もどる"), React.createElement("div", {
+    className: "text-[13px] font-black text-pink-300"
+  }, "🌱 モンヒロサクセス")), React.createElement("div", {
+    className: "px-3 pt-2"
+  }, React.createElement("div", {
+    className: "text-[18px] font-black"
+  }, "🏆 総合力ランキング"), React.createElement("div", {
+    className: "text-[11px] text-slate-300 leading-snug"
+  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 mt-2"
+  }, [['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    onClick: () => setTab(k),
+    className: `rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
+  }, label))), tab === 'lineage' && React.createElement("div", {
+    className: "flex gap-1.5 overflow-x-auto mt-2 pb-1"
+  }, lineages.map(l => React.createElement("button", {
+    key: l,
+    type: "button",
+    onClick: () => setLineage(l),
+    className: `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
+  }, monsucRankLineageName(l), "系"))), React.createElement("div", {
+    className: "text-[12px] text-slate-200 mt-1.5"
+  }, scopeName, " ", totalText, mine ? React.createElement(React.Fragment, null, " ・ あなたの順位 ", React.createElement("span", {
+    className: "text-yellow-300 font-black"
+  }, mine.place, "位")) : null)), React.createElement("div", {
+    className: "flex-1 overflow-y-auto px-3 py-2 space-y-1.5"
+  }, !on && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, monsucRankReasonText('off')), on && loading && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, "読みこみ中…"), on && !loading && !data && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, "つながりませんでした。少し待ってからもう一度開いてね"), on && !loading && data && rows.length === 0 && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, "まだだれも載っていません。育て終えたモンスターが最初に載ります"), rows.map(r => React.createElement(MonsucRankRow, {
+    key: r.run_id,
+    row: r,
+    open: open === r.run_id,
+    mine: sent.includes(r.run_id),
+    onToggle: () => setOpen(o => o === r.run_id ? null : r.run_id)
+  }))), mine && React.createElement("div", {
+    className: "px-3 pb-1"
+  }, React.createElement(MonsucRankRow, {
+    row: mine,
+    pinned: true,
+    open: open === `me:${mine.run_id}`,
+    onToggle: () => setOpen(o => o === `me:${mine.run_id}` ? null : `me:${mine.run_id}`)
+  })), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 px-3 pb-3 pt-1"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onBack,
+    className: "rounded-full bg-slate-700/80 py-2 text-[13px] font-bold"
+  }, "← もどる"), React.createElement("div", {
+    className: "rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center"
+  }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く')));
 }
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;

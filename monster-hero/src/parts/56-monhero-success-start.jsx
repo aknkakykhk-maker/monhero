@@ -1,6 +1,6 @@
-// ===== モンヒロサクセス: 始めるまでの6段(育てる子 → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
+// ===== モンヒロサクセス: 始めるまでの6段(育てるモンスター → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
-const MSX_STEP_NAMES = Object.freeze(['育てる子', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
+const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
   { id: 'guide', name: '博士の導き書', desc: 'イッサ博士の大事な書類。1度、イッサ博士が現れる', when: 'before', e: '📘' },
@@ -61,7 +61,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const [tab, setTab] = useState('base');
   const [pick, setPick] = useState(() => ({ base: unlocked[0] || 'Mocchi' }));
   const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
-  // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てる子と同じ種 → 解放済みの種の順)
+  // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てるモンスターと同じ種 → 解放済みの種の順)
   const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter((t) => t && t.box && raised.some((m) => m.id === t.box)).map((t) => t.box).slice(0, 5));
   const team = useMemo(() => {
     const list = teamBox.map((id) => ({ box: id }));
@@ -90,7 +90,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const heat = MSX_STATS.map((k) => members.filter((m) => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => (
     <div className="v-scene" style={{ flex: '1 1 0' }}>
-      <img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/>
+      <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ bottom: `calc(${style.mb} - 5px)` }}/>
       {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
         ? <span className="mon" style={{ bottom: style.mb, height: style.h }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
@@ -105,10 +105,10 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       : unraised.map((m) => ({ key: m.id, sp: m.species, on: pick.box === m.id, pick: { box: m.id } }));
     const picked = meta.picked && meta.picked[species];
     body = (<>
-      <div className="v-h">だれを育てる?<small>ベースモンか、合体で生まれた未育成の子から1体</small></div>
+      <div className="v-h">だれを育てる?<small>ベースモンか、合体で生まれた未育成のモンスターから1体</small></div>
       <div className="v-tabs">
         <button type="button" className={tab === 'base' ? 'on' : ''} onClick={() => setTab('base')}>🌱 ベースモン {unlocked.length}</button>
-        <button type="button" className={tab === 'fuse' ? 'on' : ''} onClick={() => setTab('fuse')}>🧬 合体で生まれた子 {unraised.length}</button>
+        <button type="button" className={tab === 'fuse' ? 'on' : ''} onClick={() => setTab('fuse')}>🧬 合体で生まれたモンスター {unraised.length}</button>
       </div>
       <div className="v-grid6" style={{ maxHeight: 148, overflowY: 'auto' }}>
         {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><img src={msxMonThumb(x.sp)} alt={msxMonName(x.sp)}/></button>)
@@ -122,11 +122,11 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <div className="v-apt">{MSX_STATS.map((k, i) => <div key={k} className={apt[i] > 'B' ? 'lo' : ''}>{MSX_STAT_NAME[k]}<b>{apt[i]}</b></div>)}</div>
       </div>
     </>);
-    go = 'この子にする ▶';
+    go = 'このモンスターにする ▶';
   } else if (step === 1) {
     const toggleBox = (id) => setTeamBox((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 5 ? cur : [...cur, id]));
     body = (<>
-      <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強い子ほど訓練がよく伸びる</small></div>
+      <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる</small></div>
       <div className="v-slots">
         {members.map((m, i) => (
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}`}>
@@ -148,7 +148,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
             <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}</small></div>
             <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
           </button>
-        )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えた子がここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
+        )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
         <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体)<span className="msx-soon">準備中</span></div>
       </div>
     </>);
@@ -218,7 +218,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     body = (<>
       <div className="v-h">これで はじめる?<small>全46ターン・1回 約8〜15分。いつでも中断して続きから</small></div>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
-        <img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/>
+        <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '36%', bottom: 'calc(16% - 5px)' }}/>
         {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
           ? <span className="mon" style={{ left: '36%', bottom: '16%', height: '62%' }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
