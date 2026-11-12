@@ -35,6 +35,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
+    assistantNotice:{ id:'update_notice_masmon_sleep_fuse_v1', type:'content' },
+    items:[
+      '育成ノートの一覧で、助手のマスモンを「💤 眠らせる」と、冬眠中のマスモンと入れ替えられるようになりました。眠っている間は育たず、年もとりません。',
+      '冬眠中のマスモンも一覧に並び、くわしい画面で6能力・技と熟練・総合力・忠誠度・人気・年齢を見られます。「☀ 起こす」で、眠らせたときのまま同じ助手のもとへ戻ります。',
+      'しまえる数ははじめ10体で、育成ノートの段が上がるごとに増えます(最大30体)。提案の入れ替えで前にいたマスモンも、冬眠中に並びます。',
+      '同じ助手の冬眠中のマスモンどうしで「🧬 合体」ができるようになりました。残すマスモンは Lv 1・0歳から育て直しになり、2体がともに強いほど、はじめの能力に大きな上乗せが付きます。寿命が来たマスモンも、合体で新しく育て直せます(合わせたもう1体はいなくなります)。',
+    ],
+  },
+  {
     date: "2026-11-12 15:39", type:'content', title:'助手のマスモンに、総合力・忠誠度・人気・年齢が付きました', status:'new', group:'assistant', releaseFlag:'assistantMasmonBond',
     assistantNotice:{ id:'update_notice_masmon_bond_v1', type:'content' },
     items:[

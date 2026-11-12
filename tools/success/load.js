@@ -38,7 +38,7 @@ const loadDeps = () => {
   const tyCtx = vm.createContext({});
   vm.runInContext(sliceConst(fs.readFileSync(path.join(PARTS, '32-tactics-units.jsx'), 'utf8'), 'MONSTER_TYPE_OF') + '\n;globalThis.__ty = MONSTER_TYPE_OF;', tyCtx);
   const ALL_PLAYER_MONSTERS = require('../masmon-battle/load.js').load().data.ALL_PLAYER_MONSTERS;
-  const regFile = path.join(ROOT, 'docs', 'progress', 'player-raise', 'script', 'regulars.js');
+  const regFile = path.join(ROOT, 'monster-hero', 'data', 'monhero-success-regulars.js');
   const reg = fs.existsSync(regFile) ? require(regFile) : { MONSUC_REGULARS: [], MONSUC_REGULAR_CUPS: {} };
   return { ...ctx.__out, ASSISTANT_MASMON_TECHS: tctx.__t, MONSTER_TYPE_OF: tyCtx.__ty, ALL_PLAYER_MONSTERS, MONSUC_REGULARS: reg.MONSUC_REGULARS, MONSUC_REGULAR_CUPS: reg.MONSUC_REGULAR_CUPS };
 };
