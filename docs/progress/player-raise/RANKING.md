@@ -69,11 +69,11 @@
 
 ## 6. SQL(本文だけ・流すのは窓口)
 
-本文は `supabase/migrations/202611120001_monsuc_rank.sql`(同じものを `docs/sql/monsuc-rank/MONSUC_RANK_APPLY.sql` に置いた・確かめは `MONSUC_RANK_VERIFY.sql`)。
+本文は `supabase/migrations/202611120003_monsuc_rank.sql`(同じものを `docs/sql/monsuc-rank/MONSUC_RANK_APPLY.sql` に置いた・確かめは `MONSUC_RANK_VERIFY.sql`)。
 
 - **実装で変えたこと(第2版・2026-11-12 クラフト)**: Edge Function `monsuc-rank` は作らず、SQL の関数 `monsuc_rank_submit(owner, key, row)`(security definer・端末から rpc で呼ぶ)で受ける。
-  中で持ち主の鍵(`masmon_pvp_owner_check`)・形・総合力の出し直し(`monsuc_rank_power`・端末の `MASMON_CALC.power` と同じ式)・上限(6能力の合計 5,400・総合力 16,500)・1分に1回/1日50回・重複を全部見る。配り直しが要らない
-- 返り値に順位(全体・血統)を入れた(引退の画面の「ランキングに載りました」に使う)。同じ育成を送り直すと `dup` で前の順位を返す
+  中で持ち主の鍵(`masmon_pvp_owner_check`)・形・総合力の出し直し(`monsuc_rank_power`・端末の `MASMON_CALC.power` と同じ式)・上限(6能力の合計 5,994・総合力 40,000。評価の M は上限なしで M1・M2…と続くため、46ターンの見込みでは切らない)・1分に1回/1日50回・重複を全部見る。配り直しが要らない
+- 評価は段の下限から 500 ごとに数字を付けた形(C1・C2…・M は上限なし)でサーバが出す(`monsuc_rank_grade`)。返り値に順位(全体・血統)を入れた(引退の画面の「ランキングに載りました」に使う)。同じ育成を送り直すと `dup` で前の順位を返す
 - 端末の保存は `mh_monsuc_rank_sent_v1`(送れた id)と `mh_monsuc_rank_queue_v1`(送れなかった中身・5件まで)の2つ
 - 血統は端末が送る値をそのまま使う(サーバに種と血統の表を持たない)。偽っても他の血統の順位に入るだけで、全体の順位は変わらない
 - ローカルの Postgres 16 で、重複・別の鍵・上限超え・形違い・連打・anon が表を直接読めないことを確かめた

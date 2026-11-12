@@ -1,6 +1,6 @@
 // ===== モンヒロサクセス 育成完了時の総合力ランキング(2026-11-12 クラフト・設計 docs/progress/player-raise/RANKING.md) =====
 // 送る口・読む口・画面(R1 全モンスター / R2 血統別・行を押すと6能力)をここに閉じる。
-//   サーバ: supabase/migrations/202611120001_monsuc_rank.sql(表 monsuc_finishes・見え方 monsuc_rank_all / monsuc_rank_lineage・関数 monsuc_rank_submit)
+//   サーバ: supabase/migrations/202611120003_monsuc_rank.sql(表 monsuc_finishes・見え方 monsuc_rank_all / monsuc_rank_lineage・関数 monsuc_rank_submit)
 //   ★総合力と評価はサーバが出し直す。端末の値は表示の目安だけ
 //   ★持ち主の鍵は助手マスモン対戦の鍵(mh_masmon_pvp_owner_key_v1)をそのまま使う(56-assistant-masmon-pvp.jsx の masmonPvpSelf)
 //   保存(新しいキーだけ・CLAUDE.md ⑦):
@@ -204,8 +204,9 @@ function MonsucRankMonImg({ species, dye, size = 36 }) {
   </div>;
 }
 function MonsucRankGrade({ grade }) {
-  const g = typeof grade === 'string' ? grade : 'G';
-  return <span className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900" style={{ background: MONSUC_RANK_GRADE_COLOR[g] || '#94a3b8' }}>{g}</span>;
+  const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G'; // 評価は 500 ごとの数字つき(C2・M3 など)。色は字の部分で決める
+  const letter = g.replace(/[0-9]+$/, '');
+  return <span className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900" style={{ background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8' }}>{g}</span>;
 }
 function MonsucRankStats({ stats }) {
   const st = stats && typeof stats === 'object' ? stats : {};

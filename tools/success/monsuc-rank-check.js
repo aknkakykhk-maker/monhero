@@ -106,7 +106,7 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
 
   // ⑦ 総合力の式の重み(端末とサーバ)
   const calc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-masmon-calc.jsx'), 'utf8');
-  const sql = fs.readFileSync(path.join(root, 'supabase/migrations/202611120001_monsuc_rank.sql'), 'utf8');
+  const sql = fs.readFileSync(path.join(root, 'supabase/migrations/202611120003_monsuc_rank.sql'), 'utf8');
   check('⑦ 端末の重みが変わっていない', /POWER_W = Object\.freeze\(\{ stat: 2\.5, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 \}\)/.test(calc), '式を変えたら SQL の monsuc_rank_power も直す');
   check('⑦ SQL の式', sql.includes('* 2.5') && sql.includes('sum(100 + least(') && sql.includes('limit 8') && sql.includes('* 15 +') && /least\(greatest\(p_loyal, 0\), 100\) \* 10/.test(sql));
   const apply = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_APPLY.sql'), 'utf8');

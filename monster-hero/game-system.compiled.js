@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65f4ef5eb07e07d3
+// source-sha256: 16dcfe4251153bed
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156412,11 +156412,12 @@ function MonsucRankMonImg({
 function MonsucRankGrade({
   grade
 }) {
-  const g = typeof grade === 'string' ? grade : 'G';
+  const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G';
+  const letter = g.replace(/[0-9]+$/, '');
   return React.createElement("span", {
     className: "inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900",
     style: {
-      background: MONSUC_RANK_GRADE_COLOR[g] || '#94a3b8'
+      background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8'
     }
   }, g);
 }

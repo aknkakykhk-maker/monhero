@@ -514,7 +514,7 @@
     },
     {
       "file": "56-monsuc-rank.jsx",
-      "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120001)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
+      "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120003)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
     },
     {
       "file": "82-card-battle-core.jsx",

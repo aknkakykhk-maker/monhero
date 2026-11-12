@@ -11,7 +11,7 @@
 -- 関数(端末から呼べる)
 --   monsuc_rank_submit(owner, key, row) … 1件を入れる。総合力と評価はサーバが出し直す(端末の値は使わない)
 --     返り値 { ok, reason?, power, grade, place_all, place_lineage }
---     reason: 'bad'(形が違う) | 'locked'(別の端末の鍵) | 'over_cap'(上限を超えた) | 'busy'(1分に1回・1日50回を超えた) | 'dup'(同じ育成はもう入っている・ok は真)
+--     reason: 'bad'(形が違う) | 'locked'(別の端末の鍵) | 'over_cap'(総合力 40,000 を超えた) | 'busy'(1分に1回・1日50回を超えた) | 'dup'(同じ育成はもう入っている・ok は真)
 -- 日の区切りは朝4:00(JST)。ほかの回数の表と同じ。
 
 create table if not exists public.monsuc_finishes (
@@ -40,7 +40,7 @@ create table if not exists public.monsuc_finishes (
     and octet_length(dye::text) <= 2000 and octet_length(stats::text) <= 400 and octet_length(techs::text) <= 800),
   constraint monsuc_finishes_counts check (
     lv between 1 and 99 and loyal between 0 and 100 and pop between 0 and 100
-    and power between 0 and 16500 and grade in ('G','F','E','D','C','B','A','S','SS','SSS','M') and engine_version between 1 and 1000)
+    and power between 0 and 40000 and grade ~ '^(G|F|E|D|C|B|A|S|SS|SSS|M)[0-9]{1,3}$' and engine_version between 1 and 1000)
 );
 create index if not exists monsuc_finishes_power_idx on public.monsuc_finishes (hidden, power desc);
 create index if not exists monsuc_finishes_lineage_idx on public.monsuc_finishes (hidden, lineage, power desc);
@@ -81,12 +81,13 @@ returns integer language sql immutable set search_path = public as $$
     + coalesce((select sum(100 + least(greatest(coalesce(m.v::numeric, 0), 0), 100)) from (select value as v from jsonb_array_elements_text(p_techs) limit 8) m), 0)
     + least(greatest(p_lv, 1), 99) * 15 + least(greatest(p_loyal, 0), 100) * 10 + least(greatest(p_pop, 0), 100) * 10)::int
 $$;
--- 評価(助手マスモンのランクの区切りと同じ)
+-- 評価(助手マスモンのランクの区切りと同じ)。段の下限から 500 ごとに数字(C1 は 6,000〜・C2 は 6,500〜…)。M は上限なしで M1・M2…
 create or replace function public.monsuc_rank_grade(p_power int)
 returns text language sql immutable set search_path = public as $$
-  select case when p_power >= 19500 then 'M' when p_power >= 18000 then 'SSS' when p_power >= 16000 then 'SS' when p_power >= 14000 then 'S'
-              when p_power >= 11000 then 'A' when p_power >= 8000 then 'B' when p_power >= 6000 then 'C' when p_power >= 4500 then 'D'
-              when p_power >= 3000 then 'E' when p_power >= 2000 then 'F' else 'G' end
+  select t.k || (floor((greatest(p_power, 0) - t.lo) / 500.0)::int + 1)::text
+  from (values ('M', 19500, 1000000), ('SSS', 18000, 19500), ('SS', 16000, 18000), ('S', 14000, 16000), ('A', 11000, 14000), ('B', 8000, 11000),
+               ('C', 6000, 8000), ('D', 4500, 6000), ('E', 3000, 4500), ('F', 2000, 3000), ('G', 0, 2000)) t(k, lo, hi)
+  where greatest(p_power, 0) >= t.lo and greatest(p_power, 0) < t.hi
 $$;
 
 -- 1件を入れる。p_row = { run_id, user_name, child_name, species, lineage, dye:[部位ごとの色の id(6つまで・40字まで)], stats:{life,pow,wise,hit,eva,tough}, techs:[熟練…], lv, loyal, pop, engine_version }
@@ -143,9 +144,9 @@ begin
   end if;
   v_ver := case when jsonb_typeof(p_row->'engine_version') = 'number' then least(greatest(round((p_row->>'engine_version')::numeric)::int, 1), 1000) else 1 end;
 
-  -- 総合力はサーバで出し直す。46ターンで届く上限(6能力の合計 5,400・総合力 16,500)を超えたら弾く
+  -- 総合力はサーバで出し直す(6能力は 1つ 999 まで=合計 5,994 まで)。総合力は 40,000 を超えたら弾く(式の最大は 20,070。M が上限なしで続くので余裕を持たせた)
   v_power := public.monsuc_rank_power(v_stats, v_techs, v_lv, v_loy, v_pop);
-  if v_sum > 5400 or v_power > 16500 then return jsonb_build_object('ok', false, 'reason', 'over_cap'); end if;
+  if v_sum > 5994 or v_power > 40000 then return jsonb_build_object('ok', false, 'reason', 'over_cap'); end if;
   v_grade := public.monsuc_rank_grade(v_power);
 
   -- 1分に1回・1日50回まで
