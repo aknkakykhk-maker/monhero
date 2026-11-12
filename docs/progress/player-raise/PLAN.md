@@ -284,6 +284,8 @@
 - **技**: 親の技のうち、生まれた種類でも覚えられる技を2つまで(熟練は0から)
 - **型**: 主の親の型を受け継ぐ(くじで別の型になることも少し)
 - **世代**: 「◯代目」を数える
+- **作ったもの**(2026-11-12 開発部): 計算は芯の `fusePlan`(くじは親2体の id から決まるので見通しと結果が同じ)、画面は `56-monsuc-fuse.jsx` の `MonsucFuseSheet`(箱の読み書きは保存枠の部品から受け取る)。親に使えるのは育て終えた子(`raised:true`)だけ・編成/貸し出し/育成中の子は `locked` で外す。技の表は種類ごとなので、子が親と別の種類になると受け継ぐ技は無くなる
+
 - **生まれる子の種類**(決まった: 血統で決まる) ── 子の主血統=主の親の主血統、子の副血統=もう一方の親の主血統か副血統(くじ)。その組み合わせのモンスターがいればその種類、いなければ主の親の種類(例: ウンディーネ + モッチー → ヤオビクニ)。血統の正本 `monster-hero/data/lineages.js` を読むだけ
 
 ## 4. 助手(方針と話の役)
@@ -390,6 +392,7 @@
 | --- | --- |
 | `mh_monsuc_run_v1` | 途中の育成1つ: `{ v:1, id, from:{ base:種 } か { box:id }, species, nick, gen, turn, gt, pol, pp, st:{6能力}, fat, str, loy, pop, techs, mast, cond, coach, cheer:[6枠: { box:id } / { friend:写し } / { base:種 }], phase, cups, ap, fame, log:[直近20], seed, startAt }` |
 | `mh_monsuc_box_v1` | 保存枠: `{ v:1, cap:30, mons:[{ id, species, nick, colors, gen, st, techs, mast, loy, pop, gt, rank, score, fav:集まりやすい能力, raised:育てたか(未育成の合体の子は false), coach, parents, endAt, paid, bond, titles }], memory:[外れた子の 名前・種・ランク(新しい100件)] }` |
+| `mh_monsuc_fuse_v1` | 合体の記録(新しい50件): `{ v:1, seq, log:[{ at, child, species, parents:[親2体の行の写し] }] }`。合体では**これを先に書き**、書けたときだけ箱を1回で書く(2026-11-12 開発部・`56-monsuc-fuse.jsx`) |
 | `mh_monsuc_meta_v1` | 種ごとの最高・称号・見たイベントの印・いつもの編成・貸し出しの子・ごほうびの1日の量: `{ v:1, best:{}, titles:[], seen:{}, team:[], lend:id, gift:{ day, n } }` |
 | `mh_monsuc_record_v1` | 育成の記録帳(育て終えた子の記録・保存枠から外れても残る・200件まで): `{ v:1, list:[{ id, species, nick, rank, power, sum, titles, aid, endAt, gen, best }], total }`。形と部品は `data/monhero-success-record.js`・[TITLES.md](TITLES.md) §3 |
 
