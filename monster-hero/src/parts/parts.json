@@ -397,6 +397,10 @@
       "role": "クイック・AUTO設定・裏周回の一度きりの案内(QuickGuideOverlay・quickGuidePick)と誘導の回数。保存は mh_quick_guide_seen_v1・mh_quick_nudge_v1・mh_card_auto_intro_seen_v1 の新しいキーだけ"
     },
     {
+      "file": "56-monhero-success-fx.jsx",
+      "role": "モンヒロサクセスの育てる子の演出の部品(画面は持たない): MsxLiveMon(待機アニメのリグ+気分8つの姿勢・ときどきのしぐさ・訓練の結果/叱る/褒めるの反応・ふきだしの声)・MsxFxMoment(訓練Lvアップ・技を覚えた・大会の勝ち負け・ゲームオーバー・引退の短い演出)・MsxSceneLight(季節と時間の光)。1.2秒まで・押せばとばす・動きを減らす設定では止まった姿。保存なし"
+    },
+    {
       "file": "56-assistant-life.jsx",
       "role": "助手たちの今: 時間ごとに助手1人ずつの気分・したいこと・だれといるかを決める仕組みと、遊んだ量の「にぎわい」(段で助手どうしの仲良くなり方が変わる)。公開の印 assistantLife の後ろ。保存は mh_assistant_life_v1・mh_assistant_life_play_v1 だけ"
     },
