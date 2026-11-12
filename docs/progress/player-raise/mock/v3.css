@@ -547,7 +547,7 @@
 .v-prz .e{font-size:20px;width:26px;text-align:center;flex:none}.v-prz b{flex:none;width:76px}.v-prz .t{flex:1;color:#e2e8f0;font-weight:800;font-size:11px;white-space:nowrap;overflow:hidden}
 .v-prz .new{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}.v-prz i{font-style:normal;background:#ef4444;border-radius:99px;font-size:9px;padding:0 6px}
 /* 最終の評価・能力ポイント */
-.v-gl{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px;text-align:center}
+.v-gl{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:6px;text-align:center}
 .v-gl div{background:#13102b;border:1.5px solid #475569;border-radius:12px;padding:5px 2px;opacity:.7}.v-gl b{display:block;font-size:24px;line-height:1.1;color:#cbd5e1}.v-gl small{font-size:9px;color:#94a3b8;font-weight:800}
 .v-gl .ok{opacity:1;border-color:#64748b}.v-gl .now{opacity:1;border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}.v-gl .now b{color:#f472b6;-webkit-text-stroke:1px #fff}
 .v-pq{display:flex;gap:5px;align-items:center;margin-top:7px;font-size:10px;font-weight:900;color:#cbd5e1}.v-pq i{font-style:normal;background:#1e1a36;border:1.5px solid #64748b;border-radius:99px;padding:3px 9px;color:#fff}.v-pq i.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
@@ -663,3 +663,5 @@
 .v-tour .pg{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;color:#f9a8d4}.v-tour .pg i{width:8px;height:8px;border-radius:50%;background:#334155}.v-tour .pg i.on{background:#fde047}.v-tour .pg i.ok{background:#86efac}.v-tour .pg span{margin-left:6px}
 .v-tour .row{margin-top:5px}.v-tour .bub em{font-style:normal;color:#be185d}
 .v-tour .bt{display:flex;gap:8px;margin-top:7px;align-items:center}.v-tour .bt span{flex:none;text-align:center;font-size:11px;font-weight:800;color:#94a3b8;padding:6px 12px}.v-tour .bt .go{flex:1;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;color:#fff;font-size:14px;font-weight:900}
+
+.v-gl b{font-size:17px!important}.v-gl small{font-size:7px!important;white-space:nowrap}.v-gl div{padding:5px 0!important}

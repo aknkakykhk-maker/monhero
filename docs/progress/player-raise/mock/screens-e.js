@@ -549,7 +549,7 @@ const bracket = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   <div style="flex:1"></div><div class="v-ann"><div class="pic"><img src="${F('myua', 'excited')}"><span>解説</span></div><div class="tx">「<b>1番人気は 王者の いわお!</b> でも、もちまるの相手は ライバルの こんこ だよ。勝てば ごほうび大!」</div></div>
 </div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 1戦へ</span></div>`;
 // 試合のあとの勝利と賞品
-const PRZ = [['🏅', '称号', '「春の覇者」を手に入れた!', 'new', 'NEW'], ['🔷', '能力ポイント', '+10(いま 24 → 34)', '', ''], [tk(24), '修行チケット', '+1(3枚 → 4枚)', '', ''], ['💰', '賞金', '+750(名声 320 → 1,070)', '', ''], ['⭐', '人気', '+4(45 → 49)', '', ''], ['💪', 'ちから', '+6', '', '']];
+const PRZ = [['💪', '全能力', '+12(ライバルに勝った・主なごほうび)', 'new', '大'], ['🏅', '称号', '「春の覇者」「ライバルに勝った」', '', 'NEW'], ['🔷', '能力ポイント', '+10(いま 24 → 34)', '', ''], [tk(24), '修行チケット', '+1(3枚 → 4枚)', '', ''], ['💰', '賞金', '+750(×1.5・名声 320 → 1,070)', '', ''], ['⭐', '人気', '+4(45 → 49)', '', '']];
 const prize = `${hdr('💰 名声 1,070', '中断')}<div class="v-body">
   ${band({ hp: 41, st: 40, pow: '6,330' })}
   ${scene({ bg: 'monhero_plaza_evening', back: '<div class="v-burst"></div>', monStyle: 'bottom:40%;height:34%', grStyle: 'bottom:calc(40% - 5px)', inner: `
@@ -557,7 +557,7 @@ const prize = `${hdr('💰 名声 1,070', '中断')}<div class="v-body">
     <div class="v-rvw"><img src="${F('kiki', 'happy')}">ライバルの こんこ にも 勝った!<b>ごほうび大</b></div>
     <div class="v-trophy">🏆</div>` })}
   <div class="v-prz">${PRZ.map(([e, n, t, c, nw]) => `<div class="${c}"><span class="e">${e}</span><b>${n}</b><span class="t">${t}</span>${nw ? `<i>${nw}</i>` : ''}</div>`).join('')}</div>
-  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ライバルに勝ったから、ごほうびがいつもの倍! つぎは ごはんだよ!」</div></div></div>
+  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ライバルに勝ったから、全能力 +12! 賞金も ×1.5 だよ。つぎは ごはんだよ!」</div></div></div>
 </div><div class="v-ft"><span>おぼえる(称号のきろく)</span><span class="go">🍽 ごはんへ ▶</span></div>`;
 grp('B', '8a. 大会の組み合わせ表と、勝ったあとの賞品', '大会の受付のあと、能力の比べの前に「組み合わせ表」(8体の見た目・実際の試合はあなたの1戦だけ)。自分は黄色の帯、ライバルは赤の帯、王者(前の優勝)は王冠の印。勝ったあとは賞品の画面(称号・能力ポイント・修行チケット・賞金・人気・能力)で、そのあと「ごはん」(C3)へ。', [
   { id: 'B1', label: '大会の組み合わせ表(参考に寄せた形・1戦)', html: bracket },
@@ -568,15 +568,15 @@ grp('B', '8a. 大会の組み合わせ表と、勝ったあとの賞品', '大�
   <li>ライバルは顔の丸でなく帯の「ライバル」の印(C1と同じ色)、王者は「👑王者」。ボタンは「結果だけ見る」と「1戦へ」(観戦)</li></ul>
   <h3>勝利と賞品(B2)</h3><ul>
   <li>称号が新しいときだけ「NEW」。能力ポイントは足したあとの数も見せる(使い道は能力ボタンと引退のとき)。修行チケットは枚数の変化つき</li>
-  <li>ライバルに勝ったときは、景色の上に小さな札「ごほうび大」(賞品が倍になる印)。数字は仮</li>
+  <li>ライバルに勝ったときは、景色の上に小さな札「ごほうび大」(全能力 +12・賞金 ×1.5・修行チケット +1・称号「ライバルに勝った」の印)。数字は仮</li>
   <li>つぎは「ごはんへ」で、大会のあとのごはん(C3)</li><li>戦ったのは1戦だけなので、結果は「いわお に 3−1」のように1つだけ見せる</li></ul>`);
 
 // ---- 引退: 最終評価(C〜S)・能力ポイントをまとめて使う
-const GR = ['C', 'B', 'A', 'S'];
+const GR = ['C', 'B', 'A', 'S', 'SS', 'SSS', 'M'];
 const grade = `${hdr('46 / 46ターン', 'とじる', '')}<div class="v-body">
-  <div class="v-h">🎓 最終の評価<small>育成のおわりに、総合力で C 〜 S が決まる</small></div>
+  <div class="v-h">🎓 最終の評価<small>育成のおわりに、総合力で C・B・A・S・SS・SSS・M の7段が決まる</small></div>
   <div class="v-rank"><img class="mon2" src="${M('mocchi.png')}"><div class="tx"><small>最終の評価</small><div class="L">A</div></div><div class="tx"><small>総合力</small><b>11,480</b><small style="color:#cbd5e1;margin-top:3px">S まで あと 2,520</small></div></div>
-  <div class="v-gl">${GR.map((g, i) => `<div class="${i === 2 ? 'now' : i < 2 ? 'ok' : ''}"><b>${g}</b><small>${['〜 7,999', '8,000 〜', '11,000 〜', '14,000 〜'][i]}</small></div>`).join('')}</div>
+  <div class="v-gl">${GR.map((g, i) => `<div class="${i === 2 ? 'now' : i < 2 ? 'ok' : ''}"><b>${g}</b><small>${['〜7,999', '8,000〜', '11,000〜', '14,000〜', '16,000〜', '18,000〜', '20,000〜'][i]}</small></div>`).join('')}</div>
   ${stRow(null, -1, FIN)}
   <div class="v-card pk"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「A だよ A! あと ちょっとで S だったね。能力ポイントが残ってるから、使い切ってからおわろ!」</div></div></div>
   <div class="v-card"><div class="v-kv"><b>残りポイント</b><span><b class="yel">34</b>(使うと総合力が上がる)</span></div><div class="v-kv"><b>そのあと</b><span>アシスト能力をポイントで取る → 保存枠へ</span></div></div>
@@ -597,7 +597,7 @@ GROUPS.find((g) => g.id === 'E').notes += `<h3>最終の評価と能力ポイン
   <li>E3: 6つの能力に、ポイントを+/−で振る。上に「まとめて」の4つ(全部ちから・弱いところ・バランス・もどす)。総合力と評価が決める前に見える。決めたあとは変えられない。数字は仮</li></ul>`;
 
 // ---- 総合力ランキング
-const RK = [['1', 'mocchi', 'S', '16,420', 'もちまる', 'ゆうた', 20], ['2', 'tiger', 'S', '15,880', 'とらきち', 'あやか', 200], ['3', 'golem', 'A', '14,950', 'いわお', 'ゆうた', 140], ['4', 'monol', 'A', '14,310', 'すいすい', 'みどり', 300], ['5', 'kyubi', 'A', '13,900', 'こんこ', 'ゆうた', 330], ['6', 'suezo', 'B', '12,260', 'ミケ', 'たくみ', 60], ['7', 'pixie', 'B', '11,980', 'ぴくる', 'ひなた', 270], ['8', 'ham', 'B', '11,500', 'ぷるぷる', 'れん', 100], ['9', 'ghost', 'B', '11,210', 'ふわり', 'さくら', 240], ['10', 'dreamy', 'B', '10,940', 'ゆめこ', 'だいき', 310], ['11', 'golem', 'C', '10,300', 'ごろん', 'ななみ', 180], ['12', 'suezo', 'C', '9,870', 'めだま', 'けん', 120]];
+const RK = [['1', 'mocchi', 'M', '20,640', 'もちまる', 'ゆうた', 20], ['2', 'tiger', 'SSS', '18,420', 'とらきち', 'あやか', 200], ['3', 'golem', 'SS', '16,880', 'いわお', 'ゆうた', 140], ['4', 'monol', 'S', '15,310', 'すいすい', 'みどり', 300], ['5', 'kyubi', 'S', '14,260', 'こんこ', 'ゆうた', 330], ['6', 'suezo', 'A', '12,260', 'ミケ', 'たくみ', 60], ['7', 'pixie', 'A', '11,980', 'ぴくる', 'ひなた', 270], ['8', 'ham', 'A', '11,500', 'ぷるぷる', 'れん', 100], ['9', 'ghost', 'A', '11,210', 'ふわり', 'さくら', 240], ['10', 'dreamy', 'B', '10,940', 'ゆめこ', 'だいき', 310], ['11', 'golem', 'B', '10,300', 'ごろん', 'ななみ', 180], ['12', 'suezo', 'B', '9,870', 'めだま', 'けん', 120]];
 const VALX = [[880, 912, 640, 801, 560, 777]];
 const rkRow = ([n, m, g, p, nm, who, hue], i, open) => `<div class="v-rr${i === 0 ? ' top' : ''}${open === i ? ' open' : ''}"><div class="r1"><b class="no">${n}</b><span class="im"><img src="${M(m + '.png')}" style="filter:hue-rotate(${hue}deg)"></span><div class="nm"><b>${nm}</b><small>育てた人: ${who}</small></div><span class="gd">${rk(g)}</span><span class="pw">${p}</span></div>${open === i ? `<div class="r2">${ST.map((s, k) => `<span><small>${s[1]}${SHORT[k]}</small><b>${[880, 912, 640, 801, 560, 777][k]}</b></span>`).join('')}</div>` : ''}</div>`;
 const rankHead = (tab, sub) => `${hdr('', 'もどる', '')}<div class="v-body">
@@ -669,7 +669,7 @@ GROUPS.find((g) => g.id === 'I').notes += `<h3>博士の導き書・博士のル
 // ================= 9. 保存枠・サクセス杯・特別な1話の効き目・アイテムの小窓(2026-11-12 窓口の依頼) =================
 // ---- 保存枠(引退した子の一覧・合体への入口)。PLAN §3: はじめ30体・最大60体
 // [絵, 名前, 種類, 評価, 総合力, 色相, 代, 称号, 状態]  状態: ret=引退した子 new=合体で生まれた未育成の子
-const SV = [['mocchi', 'もちまる', 'モッチー', 'A', '11,480', 20, '3代目', 'サクセス杯 優勝', 'ret'], ['tiger', 'とらきち', 'タイガー', 'S', '15,880', 200, '2代目', '春の覇者', 'ret'], ['golem', 'いわお', 'ゴーレム', 'A', '14,950', 140, '1代目', '', 'ret'], ['kyubi', 'こんこ', 'キュービ', 'B', '12,260', 330, '1代目', '', 'ret'], ['pixie', 'ぴくる', 'ピクシー', 'B', '11,980', 270, '2代目', '', 'ret'], ['suezo', 'もるる', 'スエゾー', 'B', '11,420', 60, '1代目', '', 'ret'], ['ghost', 'ふわり', 'ゴースト', 'C', '10,870', 240, '2代目', '', 'ret'], ['dreamy', 'ゆめこ', 'ドリーミー', 'C', '10,310', 310, '1代目', '', 'ret'], ['ham', 'ぷるぷる', 'ハム', '', '—', 100, '3代目', '', 'new']];
+const SV = [['mocchi', 'もちまる', 'モッチー', 'A', '11,480', 20, '3代目', 'サクセス杯 優勝', 'ret'], ['tiger', 'とらきち', 'タイガー', 'S', '15,880', 200, '2代目', '春の覇者', 'ret'], ['golem', 'いわお', 'ゴーレム', 'S', '14,950', 140, '1代目', '', 'ret'], ['kyubi', 'こんこ', 'キュービ', 'A', '12,260', 330, '1代目', '', 'ret'], ['pixie', 'ぴくる', 'ピクシー', 'A', '11,980', 270, '2代目', '', 'ret'], ['suezo', 'もるる', 'スエゾー', 'A', '11,420', 60, '1代目', '', 'ret'], ['ghost', 'ふわり', 'ゴースト', 'B', '10,870', 240, '2代目', '', 'ret'], ['dreamy', 'ゆめこ', 'ドリーミー', 'B', '10,310', 310, '1代目', '', 'ret'], ['ham', 'ぷるぷる', 'ハム', '', '—', 100, '3代目', '', 'new']];
 const svRow = ([m, n, k, g, p, hue, gen, tt, st], i, o = {}) => `<div class="v-sv ${st}${o.sel === i ? ' sel' : ''}${o.sel2 === i ? ' sel2' : ''}"><span class="im"><img src="${M(m + '.png')}" style="filter:hue-rotate(${hue}deg)"></span><div class="nm"><b>${n}<small>${k}・${gen}</small></b>${tt ? `<em>🏅 ${tt}</em>` : st === 'new' ? '<em class="nw">未育成・合体で生まれた</em>' : ''}</div><div class="rg">${g ? rk(g) : '<i class="rk rn">—</i>'}<span>${p}</span></div>${o.pick ? `<i class="ck">${o.sel === i ? '主' : o.sel2 === i ? '従' : ''}</i>` : ''}</div>`;
 const svHead = (n) => `${hdr('', 'もどる', '')}<div class="v-body">
   <div class="v-h">📦 保存枠<small>引退した子と、合体で生まれた子が入る</small></div>
@@ -716,13 +716,13 @@ const cup1 = (m, n, k, g, hue, st, ok, why) => `<div class="v-cq ${ok ? '' : 'ng
 const cupPick = `${hdr('', 'もどる', '')}<div class="v-body">
   <div class="v-steps5">${['勇者モン', '置く距離', '供モン', '教えカード', 'WAVE'].map((s, i) => `<span class="${i === 0 ? 'on' : ''}">${i + 1} ${s}</span>`).join('')}</div>
   <div class="v-h">勇者モンを選ぶ<small>サクセス杯のあいだだけ、6能力がバトルの4能力に直って出る</small></div>
-  <div class="v-cql">${cup1('mocchi', 'もちまる', 'モッチー', 'A', 20, ' sel', 1)}${cup1('tiger', 'とらきち', 'タイガー', 'S', 200, '', 2)}${cup1('golem', 'いわお', 'ゴーレム', 'A', 140, '', 3)}${cup1('ham', 'ぷるぷる', 'ハム', '—', 100, '', 0, '未育成の合体の子は出られない')}${cup1('suezo', 'めだま', 'スエゾー', '—', 120, '', 0, '育成中は出られない')}</div>
+  <div class="v-cql">${cup1('mocchi', 'もちまる', 'モッチー', 'A', 20, ' sel', 1)}${cup1('tiger', 'とらきち', 'タイガー', 'S', 200, '', 2)}${cup1('golem', 'いわお', 'ゴーレム', 'S', 140, '', 3)}${cup1('ham', 'ぷるぷる', 'ハム', '—', 100, '', 0, '未育成の合体の子は出られない')}${cup1('suezo', 'めだま', 'スエゾー', '—', 120, '', 0, '育成中は出られない')}</div>
   <div class="v-card pk" style="padding:6px 9px"><div class="sub" style="color:#f9a8d4;font-weight:900">換算(6能力 → 4能力)</div><div class="v-kv"><b>もちまる</b><span>ライフ 720 → <span class="yel">1,180</span>・ちから 140 → <span class="yel">212</span> ほか(仮の式)</span></div><div class="v-kv"><b>持たないもの</b><span>強化ポイント・限界突破・魂格・継承技</span></div></div>
 </div><div class="v-ft"><span>← もどる</span><span class="go">この子で出る ▶</span></div>`;
 const cupSup = `${hdr('', 'もどる', '')}<div class="v-body">
   <div class="v-steps5">${['勇者モン', '置く距離', '供モン', '教えカード', 'WAVE'].map((s, i) => `<span class="${i < 2 ? 'ok' : i === 2 ? 'on' : ''}">${i + 1} ${s}</span>`).join('')}</div>
   <div class="v-h">供モンの候補<small>5体の中から選ぶ・足りないところはベースモンで埋まる(弱い)</small></div>
-  <div class="v-cql">${cup1('tiger', 'とらきち', 'タイガー', 'S', 200, ' sel', 2)}${cup1('golem', 'いわお', 'ゴーレム', 'A', 140, ' sel', 3)}${cup1('kyubi', 'こんこ', 'キュービ', 'B', 330, '', 1)}${cup1('pixie', 'ぴくる', 'ピクシー', 'B', 270, '', 2)}<div class="v-cq base"><span class="im"><img src="${M('mocchi.png')}" style="filter:grayscale(.7)"></span><div class="nm"><b>ベースモン</b><small>保存枠の子が足りないときの代わり</small></div><div class="why">弱い</div></div></div>
+  <div class="v-cql">${cup1('tiger', 'とらきち', 'タイガー', 'S', 200, ' sel', 2)}${cup1('golem', 'いわお', 'ゴーレム', 'S', 140, ' sel', 3)}${cup1('kyubi', 'こんこ', 'キュービ', 'A', 330, '', 1)}${cup1('pixie', 'ぴくる', 'ピクシー', 'A', 270, '', 2)}<div class="v-cq base"><span class="im"><img src="${M('mocchi.png')}" style="filter:grayscale(.7)"></span><div class="nm"><b>ベースモン</b><small>保存枠の子が足りないときの代わり</small></div><div class="why">弱い</div></div></div>
   <div class="v-card" style="padding:5px 9px;font-size:10.5px;font-weight:800">供モン 2 / 2 体えらんだ ✔ ・ いまのマスモン(助手マスモンのもの)は使わない</div>
 </div><div class="v-ft"><span>← もどる</span><span class="go">教えカードへ ▶</span></div>`;
 grp('U', '9b. サクセス杯(モンヒロバトルの新しい大会)', 'PLAN §5。モンヒロバトルのモード選択に新しいカード「サクセス杯」。出る子は保存枠の引退した子だけ(未育成・育成中は出られない)。流れはプロと同じ形(勇者モン → 置く距離 → 供モン5体 → 教えカード → WAVE)で、換算後の4能力を見せる。今のランキングには入れない。', [
@@ -789,7 +789,7 @@ const titles = `${hdr('', 'もどる', '')}<div class="v-body">
   <div class="v-card pk" style="padding:6px 9px"><div class="row"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「あと5つ! ◯◯の ★★★ 、まだ出てないよ!」</div></div></div>
 </div><div class="v-ft"><span>← もどる</span><span class="on" style="flex:1.6">🔍 取りかたを見る</span><span class="go">記録帳へ ▶</span></div>`;
 // ---- 記録帳(育て終えた子の記録): [日付, 名前, 種類, 評価, 総合力, 助手, 称号の数]
-const RC = [['2026/11/12', 'もちまる', 'mocchi', 20, 'A', '11,480', 'myua', 5], ['2026/11/10', 'とらきち', 'tiger', 200, 'S', '15,880', 'atsu', 7], ['2026/11/08', 'いわお', 'golem', 140, 'A', '14,950', 'kiki', 4], ['2026/11/05', 'こんこ', 'kyubi', 330, 'B', '12,260', 'momosuke', 3], ['2026/11/02', 'ぴくる', 'pixie', 270, 'B', '11,980', 'myua', 2], ['2026/10/30', 'めだま', 'suezo', 120, 'C', '9,870', 'dra', 1]];
+const RC = [['2026/11/12', 'もちまる', 'mocchi', 20, 'A', '11,480', 'myua', 5], ['2026/11/10', 'とらきち', 'tiger', 200, 'S', '15,880', 'atsu', 7], ['2026/11/08', 'いわお', 'golem', 140, 'S', '14,950', 'kiki', 4], ['2026/11/05', 'こんこ', 'kyubi', 330, 'A', '12,260', 'momosuke', 3], ['2026/11/02', 'ぴくる', 'pixie', 270, 'A', '11,980', 'myua', 2], ['2026/10/30', 'めだま', 'suezo', 120, 'B', '9,870', 'dra', 1]];
 const rcRow = ([d, n, m, hue, g, p, a, t], i) => `<div class="v-rc${i === 0 ? ' sel' : ''}"><span class="dt">${d}</span><span class="im"><img src="${M(m + '.png')}" style="filter:hue-rotate(${hue}deg)"></span><div class="nm"><b>${n}</b><small>🏅 ${t}</small></div><img class="as" src="${F(a, 'happy')}">${rk(g)}<span class="pw">${p}</span></div>`;
 const recbook = `${hdr('', 'もどる', '')}<div class="v-body">
   <div class="v-h">📖 記録帳<small>育て終えた子の記録(日付・名前・助手・評価・称号)</small></div>
