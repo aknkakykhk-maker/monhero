@@ -302,7 +302,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
 
 // ⑫ 種ごとのガッツのたまる速さは幅(GUTS_REGEN_MIN〜MAX)の整数(既存の baseGuts から。2026-11-13 社長「種の差も広げる」)・与ダメの補正は回復の速さと逆向き・等級 G〜S の表も読める
 {
-  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < engine.GUTS_REGEN_MIN || v.regen > engine.GUTS_REGEN_MAX || !(Math.abs((v.dmgMul || 0) - (1 - (v.regen - (engine.GUTS_REGEN_MIN + engine.GUTS_REGEN_MAX) / 2) / ((engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 2) * engine.REGEN_DMG_SWING)) < 0.002)).map(([k, v]) => `${k}:${v.regen}`);
+  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < engine.GUTS_REGEN_MIN || v.regen > engine.GUTS_REGEN_MAX || !(Math.abs((v.dmgMul || 0) - (1 - (v.regen - (engine.GUTS_REGEN_MIN + engine.GUTS_REGEN_MAX) / 2) / ((engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 2) * engine.REGEN_DMG_SWING)) <= 0.5 / ((engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 2) * engine.REGEN_DMG_SWING + 0.002)).map(([k, v]) => `${k}:${v.regen}`);
   const vals = new Set(Object.values(catalog.species).map(v => v.regen));
   // 等級: G〜A の7段を幅の両端へ等間隔(社長 2026-11-13)・S は1段の刻みのまま外へ・知らない等級は表が無いのと同じ
   const ks = Object.keys(catalog.species);
@@ -311,9 +311,15 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const gradeOk = engine.GUTS_REGEN_GRADES.join('') === 'GFEDCBA'
     && gc.species[ks[0]].regen === engine.GUTS_REGEN_MAX && Math.abs(gc.species[ks[0]].dmgMul - (1 - engine.REGEN_DMG_SWING)) < 0.002
     && gc.species[ks[1]].regen === engine.GUTS_REGEN_MIN && Math.abs(gc.species[ks[1]].dmgMul - (1 + engine.REGEN_DMG_SWING)) < 0.002
-    && gc.species[ks[2]].regen === catalog.species[ks[2]].regen
+    && Number.isInteger(gc.species[ks[2]].regen) && gc.species[ks[2]].regen >= engine.GUTS_REGEN_MIN && gc.species[ks[2]].regen <= engine.GUTS_REGEN_MAX
     && Math.abs(gc.species[ks[3]].dmgMul - 1) < 0.002
     && gc.species[ks[4]].regen === Math.round(engine.GUTS_REGEN_MAX + stepG) && gc.species[ks[4]].dmgMul < gc.species[ks[0]].dmgMul;
+  // 既定は種ごとの等級(資料の評価): ピクシー A=いちばん速い・ゴーレム F・表の全種がそろっている・移動速度とサイズも等級どおり
+  const T = engine.SPECIES_TRAITS; const stepD = (engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 6;
+  const traitBad = Object.keys(catalog.species).filter((k) => { const t = T[k]; const v = catalog.species[k]; if (!t) return true;
+    const gi = engine.GUTS_REGEN_GRADES.indexOf(t.g); const mi = engine.GUTS_REGEN_GRADES.indexOf(t.m);
+    return v.regen !== Math.round(engine.GUTS_REGEN_MIN + gi * stepD) || v.first !== (mi - 3) * engine.MOVE_SPEED_FIRST || v.size !== t.z; });
+  check('⑫ 種ごとの等級の表(ガッツ回復力・移動速度・サイズ)が全種にあり、回復・先手・サイズに写っている', !traitBad.length && catalog.species.Pixie.regen === engine.GUTS_REGEN_MAX && engine.SIZE_SMALL_EVADE > 0 && engine.SIZE_LARGE_CUT > 0, traitBad.join(' '));
   check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜A の表が幅の両端へ等間隔・S は外へ伸びる(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
 }
 

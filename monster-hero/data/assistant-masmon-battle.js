@@ -27,7 +27,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 6;           // 計算を変えたら上げる(6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜S からも)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION = 6;           // 計算を変えたら上げる(6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
   const VERSION_PLAIN = 6;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
@@ -46,6 +46,24 @@
   //   今後それより下か上が出たら、幅を広げる」)。S・SS は A から1段の刻みのまま外へ伸ばす(回復も与ダメの補正も同じ刻みで続く)
   const GUTS_REGEN_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A'];
   const GUTS_REGEN_GRADES_UP = ['S', 'SS'];
+  // 移動速度(先手)とサイズ(2026-11-13 社長「移動速度・サイズ・移動間合い・技能力の4つを、すべて入れます」「大きいほど受けるダメージを少し減らす」)
+  const MOVE_SPEED_FIRST = 6;    // 移動速度の1段ごとに、先手の決め方へ足す分(D が 0。A は +18・G は −18。能力と運の合計は数百。試算で速い側の得が +1〜2 ポイントに収まる量)
+  const SIZE_SMALL_EVADE = 0.02; // 小さい: 受ける技の命中 −2%(よける型)
+  const SIZE_LARGE_CUT = 0.05;   // 大きい: 受けるダメージ −5%(耐える型。試算で小さい・大きいのどちらにも偏らない組)
+  // 種ごとの等級(参考の資料の評価。gutsRecovery・moveSpeed・size)。資料に無いうちのオリジナルの5種は近い子からの案(社長に確認する)。
+  //   g … ガッツ回復力 / m … 移動速度 / z … サイズ(S 小さい・M ふつう・L 大きい)。表に無い種は回復が基礎ガッツから・移動 D・サイズ M
+  const SPECIES_TRAITS = Object.freeze({
+    Mocchi: { g: 'C', m: 'D', z: 'S' }, Suezo: { g: 'C', m: 'F', z: 'S' }, Golem: { g: 'F', m: 'F', z: 'L' }, Tiger: { g: 'B', m: 'B', z: 'S' },
+    Ham: { g: 'E', m: 'D', z: 'S' }, Pixie: { g: 'A', m: 'A', z: 'S' }, Mia: { g: 'A', m: 'A', z: 'S' }, Monol: { g: 'F', m: 'F', z: 'L' },
+    Oboro: { g: 'B', m: 'E', z: 'M' }, Plant: { g: 'A', m: 'F', z: 'M' }, Zan: { g: 'B', m: 'B', z: 'M' }, Mitarashi: { g: 'D', m: 'D', z: 'S' },
+    Ark: { g: 'A', m: 'A', z: 'M' }, Iblis: { g: 'A', m: 'C', z: 'M' }, Snegurochka: { g: 'B', m: 'A', z: 'S' }, Undine: { g: 'B', m: 'B', z: 'S' },
+    Yaobikuni: { g: 'B', m: 'B', z: 'S' }, Yggdrasil: { g: 'C', m: 'F', z: 'L' }, MelWhip: { g: 'B', m: 'C', z: 'L' }, Ghost: { g: 'A', m: 'A', z: 'S' },
+    Spooky: { g: 'A', m: 'A', z: 'S' }, Illumine: { g: 'B', m: 'A', z: 'M' }, Dreamy: { g: 'A', m: 'A', z: 'M' }, Kyubi: { g: 'A', m: 'B', z: 'S' },
+    Orihime: { g: 'A', m: 'A', z: 'S' },
+    // 資料に無い5種(案): エイキ=ザン寄りで速い/剣士モッチー=モッチー寄りで素早い/パンドラ=ピクシー寄り/メロディー・クロミー=ユグドラシルの小さめの子
+    Eiki: { g: 'B', m: 'A', z: 'M' }, KenshiMocchi: { g: 'C', m: 'B', z: 'S' }, Pandora: { g: 'A', m: 'B', z: 'S' }, Melody: { g: 'B', m: 'D', z: 'M' }, Kuromy: { g: 'B', m: 'C', z: 'S' },
+  });
+  const gradeIdx = (g) => { const t = typeof g === 'string' ? g.trim().toUpperCase() : ''; const i = GUTS_REGEN_GRADES.indexOf(t); if (i >= 0) return i; const u = GUTS_REGEN_GRADES_UP.indexOf(t); return u >= 0 ? GUTS_REGEN_GRADES.length + u : -1; };
   const GUTS_CHARGE = 22;     // 「ためる」で足す分(移動・ガードより多いまま)
   const GUTS_MOVE = 10;       // 移動・ガードで足す分
   const REGEN_DMG_SWING = 0.25; // 回復がいちばん速い種は与ダメ ×(1−これ)、いちばん遅い種は ×(1+これ)。真ん中は ×1(社長「×0.7〜×1.3 ぐらい差があってもよさそう」)
@@ -176,13 +194,14 @@
     //   与ダメの補正 dmgMul: 回復が速い種ほど少し下がり、遅い種ほど少し上がる(速さで得する分を威力で釣り合わせる)
     const gs = Object.values(species).map(v => v.baseGuts);
     const gMin = Math.min(...gs), gMax = Math.max(...gs);
-    const regenTable = s.ASSISTANT_MASMON_GUTS_REGEN && typeof s.ASSISTANT_MASMON_GUTS_REGEN === 'object' ? s.ASSISTANT_MASMON_GUTS_REGEN : {};
+    // 回復の表: 渡されたもの(試算・差し替え用)があればそれ、無ければ種ごとの等級(SPECIES_TRAITS の g)
+    const regenTable = s.ASSISTANT_MASMON_GUTS_REGEN && typeof s.ASSISTANT_MASMON_GUTS_REGEN === 'object' ? s.ASSISTANT_MASMON_GUTS_REGEN
+      : Object.fromEntries(Object.entries(SPECIES_TRAITS).map(([k, v]) => [k, v.g]));
     const half = (GUTS_REGEN_MAX - GUTS_REGEN_MIN) / 2;
     for (const [id, v] of Object.entries(species)) {
       // x … 回復の速さ(丸める前)。与ダメの補正は x から引く(等級の刻みどおりに等間隔)。回復そのものは整数に丸める
       const gTxt = typeof regenTable[id] === 'string' ? regenTable[id].trim().toUpperCase() : '';
-      const gi = GUTS_REGEN_GRADES.indexOf(gTxt) >= 0 ? GUTS_REGEN_GRADES.indexOf(gTxt)
-        : GUTS_REGEN_GRADES_UP.indexOf(gTxt) >= 0 ? GUTS_REGEN_GRADES.length + GUTS_REGEN_GRADES_UP.indexOf(gTxt) : -1;
+      const gi = gradeIdx(gTxt);
       const step = (GUTS_REGEN_MAX - GUTS_REGEN_MIN) / (GUTS_REGEN_GRADES.length - 1);
       const num = Number(regenTable[id]);
       const fixed = gi >= 0 ? GUTS_REGEN_MIN + gi * step : (typeof regenTable[id] === 'number' && Number.isFinite(num) ? clamp(num, 1, 30) : NaN);
@@ -190,6 +209,11 @@
         : gMax > gMin ? GUTS_REGEN_MIN + Math.round((v.baseGuts - gMin) / (gMax - gMin) * (GUTS_REGEN_MAX - GUTS_REGEN_MIN)) : GUTS_REGEN;
       const x = Number.isFinite(fixed) ? fixed : v.regen; // 表の等級・数は丸める前の値で補正を決める(等級ごとに等間隔)
       v.dmgMul = half > 0 ? Math.round(Math.max(0.3, 1 - (x - (GUTS_REGEN_MIN + half)) / half * REGEN_DMG_SWING) * 1000) / 1000 : 1;
+      // 移動速度(先手の足し分)とサイズ
+      const tr = SPECIES_TRAITS[id] || {};
+      const mi = gradeIdx(tr.m);
+      v.first = mi >= 0 ? (mi - GUTS_REGEN_GRADES.indexOf('D')) * MOVE_SPEED_FIRST : 0;
+      v.size = tr.z === 'S' || tr.z === 'L' ? tr.z : 'M';
       delete v.baseGuts;
     }
     const tv = s.ASSISTANT_MASMON_TECHS && Number(s.ASSISTANT_MASMON_TECHS.version);
@@ -276,14 +300,14 @@
   //   撃つときのガッツが多いほど当たりやすく(±5%)・重い(×0.9〜1.1)。g は撃つ前のガッツ(省くといまのガッツ)
   const gutsHit = (g) => (clamp(g, 0, GUTS_MAX) - 50) / 50 * 0.05;
   const gutsPow = (g) => 0.9 + clamp(g, 0, GUTS_MAX) / GUTS_MAX * 0.2;
-  const hitChance = (atkU, defU, mv, g) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit
+  const hitChance = (atkU, defU, mv, g) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit - (defU.size === 'S' ? SIZE_SMALL_EVADE : 0)
     + gutsHit(g == null ? atkU.guts : g), 0.15, 0.97);
   const rawDamage = (atkU, defU, mv, dist, g) => {
     const a = atkU.stats[mv.kind];
     const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g) * (atkU.dmgMul || 1);
     // 受ける側: 丈夫さ(×0.9)に、受ける技と同じ種類の能力(ちから技ならちから・かしこさ技ならかしこさ)を丈夫さの半分の効き目(×0.45)で足す
     //   (2026-11-12 社長「ちから技のダメージが増加する/相手のちから技によるダメージを軽減する。かしこさも同じ。被ダメにも影響ある」)
-    return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND);
+    return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND) * (defU.size === 'L' ? 1 - SIZE_LARGE_CUT : 1);
   };
   const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
@@ -452,7 +476,7 @@
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: catalog.species[m.species].apt,
-            moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1,
+            moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, size: catalog.species[m.species].size || 'M',
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, loy: m.loy, pop: m.pop };
         }),
       };
@@ -633,8 +657,8 @@
       }
       // 先に動く方: 回避+命中の半分が高い方(同じなら種で)
       const ua = unitOf('A'), ub = unitOf('B');
-      const sa = ua.stats.eva + ua.stats.hit * 0.5 + rng() * 60;
-      const sb = ub.stats.eva + ub.stats.hit * 0.5 + rng() * 60;
+      const sa = ua.stats.eva + ua.stats.hit * 0.5 + rng() * 60 + (ua.first || 0);   // 移動速度の足し分
+      const sb = ub.stats.eva + ub.stats.hit * 0.5 + rng() * 60 + (ub.first || 0);
       const order = sa >= sb ? ['A', 'B'] : ['B', 'A'];
       for (const side of order) {
         if (winner) break;
@@ -812,7 +836,7 @@
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, SIZE_SMALL_EVADE, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, buildCatalog, simulate, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
