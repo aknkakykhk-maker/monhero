@@ -8625,3 +8625,12 @@ songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuk
 - **HELL**: `hellDensity` は 1.0 で Lv.61〜62、1.05 以上で 78〜82 と段差になり、その間は作れなかった。社長が 78(`variant` 2)を選んだ
 - **変動(止まる・戻る・速さ)**: ヘンドウの口 `rhythmScrollFxChart(譜面, LAMIA_SCROLL_FX)` で6譜面とも包んだ(9か所。構成の解析は `docs/progress/beat-lamia/STRUCTURE.md`)
 - 公開前に MASTER の2か所を位置だけ直した(85.47秒の帯の中のタップを左へ・131.7〜133.0秒の2本のスライドの交差をやめて左右に分けた)
+
+## 「サウダージ」(通常版 saudade・short ver. saudade_short)をモンヒロビートへ足した（2026-11-11）
+
+社長の依頼(窓口経由・mp3 2本とジャケット2枚)「新曲 通常とショート版。ジャケット2枚あるからうまく活用して」。通常版 4:23・short ver. 1:36。ジャケットは通常=イラスト・short=写真(白い帯と左上のロゴを落として正方形に)。
+
+- **テンポ**: 120.091 BPM・4拍子(格子への乗り ±43ms で 89%。240・60・160 などの候補より 120 が一番乗る)。short は通常版の単純な切り抜きではなく頭30秒以外は並びが違う編集版なので、通常版とは独立に解析した(拍の頭 149.6ms・つなぎ目の補正なし)
+- **歯ごたえ(challengeFactor)**: 自動のままだと毎秒ノーツ 1.0〜2.2 で、既存曲の帯より低かった(ラテン調のノリのいい曲なのに MASTER Lv.20)。`challengeFactor:1.18`・`masterDensity:1.2` を2曲に書いた(`rhythm-chart-tune.js` の候補。社長が「これで」を選択)。通常版 6/7/12/18/29・HELL37、short 7/8/10/19/29・HELL37。点検の帯に収まり、押せない0・モンスター4個
+- **HELL**: variant は通常版 3・short 0(交差・届きにくいが少ない順)
+- 聞きどころ8行は `docs/progress/beat-assistant-session/lines/listen-saudade.txt`

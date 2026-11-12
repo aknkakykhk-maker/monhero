@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: de9572cbf28abc26
+// generated-sha256: ca2280956225aadf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4819,6 +4819,8 @@ const BGM_TRACKS = [
   // 2026-11-07 追加。ZUTOMAYO(ずっと真夜中でいいのに。)。表記はジャケットのとおり
   { id:'melo_humanoid', name:'ヒューマノイド', creator:'ZUTOMAYO', src:'audio/bgm-humanoid.mp3', gain:1, loop:true },
   { id:'melo_lamia', name:'LAMIA', creator:'BlackY', src:'audio/bgm-lamia.mp3', gain:1, loop:true },
+  { id:'melo_saudade', name:'サウダージ', creator:'ポルノグラフィティ', src:'audio/bgm-saudade.mp3', gain:1, loop:true },
+  { id:'melo_saudade_short', name:'サウダージ short ver.', creator:'ポルノグラフィティ', src:'audio/bgm-saudade-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -6263,6 +6265,8 @@ const Audio_ = (() => {
     "audio/bgm-rose.mp3": "1a030e41df75",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
+    "audio/bgm-saudade-short.mp3": "3491f3c33de4",
+    "audio/bgm-saudade.mp3": "463d9176b94f",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
@@ -9744,6 +9748,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonCheer: true, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。ミハリ3 OK・地図の窓 #5448・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonPlan: false, // 2026-11-12 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
+  assistantMasmonSleep: false, // 2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
@@ -32288,6 +32293,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['excited', '2:52からのサビ、最後にまぢ盛り上がる♪']],
     'listen:makutsu_no_senritsu': [['excited', '2:18でいちばん強くなるの！ 最後の最後でアゲる♪']],
     'listen:lamia': [['excited', '0:32から一気にいちばん強くなるの！ ここまぢでアガる♪']],
+    'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
@@ -32362,6 +32368,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '1:29と2:04に静かなところがありまつ。そこで息を整えましょう']],
     'listen:makutsu_no_senritsu': [['normal', '最初の40秒くらいは静かでつ。ゆっくり入っていけます']],
     'listen:lamia': [['normal', '最初の静かなところから少しずつ大きくなるの、きれいでつ']],
+    'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
@@ -32436,6 +32443,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['excited', '最後の2:52から一気に盛り上がるよ！！ ラストが見せ場♡']],
     'listen:makutsu_no_senritsu': [['excited', '2:18からのとこ、短いけどいちばん盛り上がるよ！！']],
     'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
+    'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
@@ -32510,6 +32518,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['happy', 'おでの好きな曲だ。強めと静かが入れ替わって、戦場を駆けてる感じがするんだよ']],
     'listen:makutsu_no_senritsu': [['happy', '静かに始まって、どんどん深くもぐっていく感じだな']],
     'listen:lamia': [['troubled', 'BPM199でLv.51だぞ。速すぎて、おでの冒険も駆け足だな']],
+    'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
     'listen:rising_hope': [['normal', 'テンポが190もあるからな。最初から最後まで走りっぱなしの冒険だ']],
@@ -32584,6 +32593,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['happy', 'サビは3:12まで！ 最後の20秒でぜんぶ締めよ笑']],
     'listen:makutsu_no_senritsu': [['wink', '2:25で静かになって終わるから、最後はきれいに止めよ笑']],
     'listen:lamia': [['happy', '2:08から静かに締めていくとこ、余韻あっていいよね笑']],
+    'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
@@ -32658,6 +32668,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '0:17でもう強め。静かを2回はさんで、2:52で一番上だよぉ']],
     'listen:makutsu_no_senritsu': [['normal', '1:13からずっと強めで、2:18で一番上。最後まで上がり続ける構成だねぇ']],
     'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜']],
+    'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
@@ -32732,6 +32743,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いです笑']],
     'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけです。短いけど濃いです笑']],
     'listen:lamia': [['normal', 'BPM199で797ノーツ、Lv.51。強く打つ音が56%です・・・！']],
+    'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
     'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
@@ -32806,6 +32818,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '2:04の静かなところで、ゆっくり落ち着こうか']],
     'listen:makutsu_no_senritsu': [['happy', 'はじめの静かなところで、ゆっくり気持ちを整えようか☺️']],
     'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
+    'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
     'listen:rising_hope': [['happy', '1:20でふつうに戻る所で、最後に少しほっとできるね']],
@@ -40530,7 +40543,8 @@ const GrowthFxLayer = ({ screen, load }) => {
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const quickAnywhereFloatStyle = (spot) => {
-  const s = { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` };
+  const s = spot.hidden ? { visibility: 'hidden', pointerEvents: 'none' } : {};
+  Object.assign(s, { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
   else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
@@ -40565,7 +40579,8 @@ const quickAnywhereFloatPick = (el) => {
       if (quickAnywhereFloatHits(el, spot) === 0) return spot;
     }
   }
-  return { side: 'right', lift: 0 };
+  // どこも空いていない(下から出るシート・確認の窓が画面を覆っている)ときは、ボタンの字を隠さないよう帯を隠す。閉じたら置き直して出る
+  return { side: 'right', lift: 0, hidden: true };
 };
 // screen … いまの gameState(変わったら置き直す)。children … 帯のボタンの中身。ほかの props はボタンへそのまま渡す
 const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
@@ -40573,14 +40588,14 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
   const [spot, setSpot] = useState({ side: 'right', lift: 0 });
   React.useLayoutEffect(() => {
     // いまの置き場所がまだ空いていれば動かさない(0.8秒ごとに行ったり来たりしない)
-    const place = () => { if (!ref.current) return; setSpot(prev => (quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current))); };
+    const place = () => { if (!ref.current) return; setSpot(prev => (!prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current))); };
     // 画面が変わったら、いちばん良い所(右下)から探し直す。中身が遅れて出る画面のため、少しおいてもう一度
     const fresh = () => { if (ref.current) setSpot(quickAnywhereFloatPick(ref.current)); };
     fresh();
     const t1 = setTimeout(fresh, 300), t2 = setTimeout(place, 1200), iv = setInterval(place, 800);
     return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); };
   }, [screen]);
-  return <button ref={ref} type="button" data-quick-anywhere-spot={`${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
+  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
@@ -68238,6 +68253,15 @@ const assistantLifeMarketWho = () => {
   } catch (_) { return null; }
 };
 
+// 場所ごとの「得」の文(2026-11-12 社長「これ全部効果書いて」)。予定表の行き先えらびの「得:」と、地図の場所の窓・家の帯の「いま行くと得」で同じ文を使う(二重に作らない)。
+//   いまある効果だけ(新しい効果は作らない)。数字は今の値から作る。効果の無い場所('' を返す)は何も出さない
+const assistantLifePlacePerkTail = (place) => {
+  if (place === 'studio') return '券なしで一緒に遊べる';
+  if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
+  if (place === 'ranch') return typeof amgrOn === 'function' && amgrOn() ? '助手のマスモンにトレーニングチケットを使ってあげられる' : 'トレーニングすると、その助手のマスモンも育つ';
+  return '';
+};
+
 // 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
 const assistantLifePerkRows = (life, ids, nameOf) => {
   const rows = [];
@@ -68247,11 +68271,11 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   const go = L.goPlace || {};
   try {
     const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } }) : [];
-    if (beat.length) rows.push({ k: 'beat', place: 'studio', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
+    if (beat.length) rows.push({ k: 'beat', place: 'studio', icon: '🎵', text: `${nm(beat)}がビートにいます。${assistantLifePlacePerkTail('studio')}`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
   } catch (_) {}
   try {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
-    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで${assistantLifePlacePerkTail('cardroom')}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', place: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
@@ -68267,7 +68291,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', place: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
   } catch (_) {}
   const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
-  if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: (typeof amgrOn === 'function' && amgrOn() ? `${nm(ranch)}がM/B管理にいます。助手のマスモンにトレーニングチケットを使ってあげられる` : `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`), go: typeof go.ranch === 'function' ? go.ranch : null });
+  if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。${assistantLifePlacePerkTail('ranch')}`, go: typeof go.ranch === 'function' ? go.ranch : null });
   return rows;
 };
 
@@ -72826,6 +72850,27 @@ const assistantMasmonUndoSwap = (aid, slot) => {
   assistantMasmonSave({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [slot]: back } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
   return true;
 };
+// 冬眠(56-assistant-life-masmon-sleep.jsx・2026-11-12 キズナ)から呼ぶ: 枠 slot の子を back(冬眠から起こす子)と入れ替える。
+//   出ていく子は mine.former に積まない(冬眠の箱へ入る)。back が「前にいた子」(mine.former)から来たときは former から1つ外す(前の子に戻すで二重に出さない)
+//   成功したら出ていった子の形 { monster, nick, lv, grow, why, role, welcome, colors, ai } を返す。だめなら null
+const assistantMasmonSleepSwap = (aid, slot, back, fromFormer = null) => {
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (!ASSISTANT_MASMON_STORE.loaded || !back || !assistantMasmonMon(back.monster)) return null;
+  const rows = assistantMasmonRowsOf(st, aid), row = rows.find(x => x.slot === slot);
+  if (!row || rows.some(x => x.slot !== slot && x.monster === back.monster)) return null;
+  const m = { ...assistantMasmonMineOf(st, aid) };
+  const colorsNow = assistantMasmonDyeNowOf(st, aid, slot, row.colors || []);
+  const out = { monster: row.monster, nick: row.nick, lv: row.lv, grow: row.grow, why: row.why || '', role: row.role || '', welcome: row.welcome || slot * 2 - 1, colors: [...colorsNow], ai: !!row.ai };
+  m.former = { ...(m.former || {}) };
+  if (fromFormer) { const list = [...(m.former[fromFormer.slot] || [])]; const i = list.findIndex(x => x && x.monster === back.monster && x.at === fromFormer.at); if (i >= 0) { list.splice(i, 1); m.former[fromFormer.slot] = list; } }
+  m.parts = { ...(m.parts || {}) }; delete m.parts[slot]; m.names = { ...(m.names || {}) }; delete m.names[slot]; if (m.grow) { m.grow = { ...m.grow }; delete m.grow[slot]; }
+  m.nameStyleBefore = { ...(m.nameStyleBefore || {}) }; delete m.nameStyleBefore[slot]; m.colorStyleBefore = { ...(m.colorStyleBefore || {}) }; delete m.colorStyleBefore[slot];
+  const day = assistantMasmonToday();
+  const nu = { slot, monster: back.monster, nick: back.nick, lv: back.lv, grow: back.grow, why: back.why || '', role: back.role || row.role || '', welcome: back.welcome || row.welcome || slot * 2 - 1, colors: [...(back.colors || [])], ai: !!back.ai, reason: 'ask', at: day };
+  const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [slot]: [...nu.colors] } }];
+  assistantMasmonSave({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [slot]: nu } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
+  return out;
+};
 const assistantMasmonUndoMine = (aid, key) => {
   const st = ASSISTANT_MASMON_STORE.state, m = { ...assistantMasmonMineOf(st, aid) };
   if (key === 'hero') m.hero = 0; else if (key === 'wish') { m.wish = ''; m.wishSoft = false; } else if (key === 'deck') m.deck = null; else return false;
@@ -74936,10 +74981,10 @@ const assistantLifePlanUse = () => {
   return st;
 };
 const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({ cafe: '🍰', plaza: '⛲', garden: '🌷', hill: '🌄', studio: '🎵', ranch: '🐾', cardroom: '🃏', library: '📚', battle: '⚔', home: '🏡' });
+// 行き先えらびの「得:」の文。地図の場所の窓・家の帯の「いま行くと得」と同じ文(assistantLifePlacePerkTail)を使う。効果の無い場所は空(何も出さない)
 const assistantLifePlanPerk = (place) => {
-  if (place === 'cardroom') return `対戦すると ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'battle') return 'マスモンが修行する';
-  return '';
+  return typeof assistantLifePlacePerkTail === 'function' ? assistantLifePlacePerkTail(place) : '';
 };
 const assistantLifePlanName = (id) => { try { return typeof assistantLifeName === 'function' ? assistantLifeName(id) : id; } catch (_) { return id; } };
 
@@ -77127,7 +77172,7 @@ const amgpUseStores = () => {
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     const f = () => setTick(n => n + 1);
-    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : [])];
+    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : []), ...(typeof AMGS_STORE !== 'undefined' && AMGS_STORE ? [AMGS_STORE] : [])];
     ss.forEach(s => s.subs.add(f));
     return () => { ss.forEach(s => s.subs.delete(f)); };
   }, []);
@@ -77229,6 +77274,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
           {isPick && <button type="button" onClick={() => { setSel(x.key); setTab('plan'); }} data-amgp-go-plan className="min-h-[40px] rounded-xl bg-emerald-600 px-3 text-[11.5px] font-black">🗓 予定を組む</button>}
           {isPick && <button type="button" onClick={() => amgpSetPick(x.aid, x.row, false)} data-amgp-unpick className="min-h-[40px] rounded-xl bg-slate-700 px-3 text-[11.5px] font-black">計画から外す</button>}
           {!isPick && <button type="button" disabled={st.picks.length >= sg.cap} onClick={() => amgpSetPick(x.aid, x.row, true)} data-amgp-pick className="min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">📌 計画して育てる</button>}
+          {typeof AmgsSleepButton === 'function' && <AmgsSleepButton aid={x.aid} row={x.row}/>}{/* 💤 冬眠(56-assistant-life-masmon-sleep.jsx・印が偽なら出ない) */}
           {c && c.k !== 'away' && <button type="button" disabled={c.care === today} onClick={() => amgpCare(x.key)} data-amgp-care className="min-h-[40px] rounded-xl bg-pink-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">{c.care === today ? '🩹 今日は看病した' : `🩹 ${amgpWhoName(x.aid)}に看病してもらう`}</button>}
           {c && c.k === 'away' && <button type="button" disabled={c.find === today} onClick={() => amgpFind(x.key)} data-amgp-find className="min-h-[40px] rounded-xl bg-sky-700 px-3 text-[11.5px] font-black disabled:bg-slate-700">🔎 {amgpWhoName(x.aid)}にさがしに行ってもらう</button>}
         </div>
@@ -77253,6 +77299,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
         {[null, ...ids.filter(id => all.some(x => x.aid === id))].map(id => <button key={id || 'all'} type="button" onClick={() => setFilter(id)} className={`min-h-[34px] rounded-full px-3 text-[11px] font-black ${filter === id ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`}>{id ? amgpWhoName(id) : '全員'}</button>)}
       </div>
       {others.map(x => card(x, false))}
+      {typeof AmgsSection === 'function' && <AmgsSection filter={filter}/>}
       {!all.length && <p className="mt-3 text-[11.5px] font-bold text-slate-300">まだ育成している助手のマスモンがいません</p>}
     </>);
   } else if (tab === 'plan') body = cur && picked.includes(cur) ? <AmgpPlanTab x={cur} nameOf={nameOf} pickSel={pickSel(cur)}/> : <p className="mt-4 text-[12px] font-bold text-slate-300" data-amgp-plan-empty>「一覧」で計画して育てるマスモンを選ぶと、ここで朝・昼・夜の予定を組めます</p>;
@@ -77395,6 +77442,188 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
     </div>) : <p className="mt-3 text-[11.5px] font-bold text-slate-300">見せているデッキはありません</p>}
   </>);
   return <AmgpShell ro title={`${owner}育成ノート`} sub={`見るだけ ・ 助手のマスモン ${ms.length}体`} tabs={AMGP_RO_TABS} tab={tab} setTab={setTab} onClose={onClose} land={land}>{body}</AmgpShell>;
+}
+
+// ---- part: 56-assistant-life-masmon-sleep.jsx ----
+// 助手のマスモンの「冬眠」(2026-11-12 キズナ・社長の答え 台帳 2026-11-12 マスモン部)。案 docs/progress/assistant-peer/masmon-plan/HIBERNATE.md
+//   育てた中身(名前・色・種類・Lv・型・6能力・育成Lv・疲れ・ストレス・技と熟練・けがの残り)を写して箱にしまい、あとで眠らせた助手の枠へ起こせる
+//   眠っている間は育たない・疲れ/ストレスも動かない・対戦に出ない(起きている枠にいないので、育成の計算にも対戦にも出ない)
+//   枠が空かないよう、眠らせるのは「冬眠中の子と入れ替える」形だけ(勇者モンの枠1も同じ)。提案の入れ替えで外れた「前にいた子」も冬眠の一覧に並ぶ
+//   保存できる数: はじめ10体・育成ノートの段ごとに+5(最大30・全助手で共通)。上限を超えた分も消さない(⑦)
+//   保存は新しいキー mh_assistant_masmon_sleep_v1 だけ。起きている子のキー(masmon・育成・修行)は形も意味も変えない(起こすときに、その子の行を書くだけ)
+//   公開の印 RELEASE_FLAGS.assistantMasmonSleep(と育成ノートの印)が真のときだけ動く
+const ASSISTANT_MASMON_SLEEP_KEY = 'mh_assistant_masmon_sleep_v1';
+const AMGS_CAP = Object.freeze([10, 15, 20, 25, 30]); // 育成ノートの段1〜5
+const AMGS_MAX_BEDS = 200; // 読み込みで捨てない上限(壊れた保存で膨らみすぎないように)
+const amgsOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantMasmonSleep === true && typeof amgpOn === 'function' && amgpOn();
+const amgsMonOk = (mo) => typeof mo === 'string' && /^\w{2,40}$/.test(mo) && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+const amgsRowOf = (r) => {
+  if (!r || typeof r !== 'object' || !amgsMonOk(r.monster)) return null;
+  const txt = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
+  return { monster: r.monster, nick: txt(r.nick, 16), lv: Number.isFinite(Number(r.lv)) ? Math.max(1, Math.min(999, Math.round(Number(r.lv)))) : 1, grow: txt(r.grow, 24), why: txt(r.why, 60), role: txt(r.role, 12), welcome: Number.isFinite(Number(r.welcome)) ? Math.round(Number(r.welcome)) : 1, colors: (Array.isArray(r.colors) ? r.colors : []).slice(0, 5).map(c => (typeof c === 'string' ? c.slice(0, 40) : null)), ai: !!r.ai };
+};
+// 育成・修行の1体ぶんの写しは、それぞれの正規化を通して確かめる(壊れていれば null)
+const amgsGrowOk = (aid, monster, g) => { try { if (!g || typeof normalizeAssistantMasmonGrow !== 'function') return null; const n = normalizeAssistantMasmonGrow({ mons: { [aid]: { [`1:${monster}`]: g } } }); return (n.mons[aid] || {})[`1:${monster}`] || null; } catch (_) { return null; } };
+const amgsTrainOk = (aid, monster, t) => { try { if (!t || typeof normalizeAssistantMasmonTrain !== 'function') return null; const n = normalizeAssistantMasmonTrain({ mons: { [aid]: { [`1:${monster}`]: t } } }); return (n.mons[aid] || {})[`1:${monster}`] || null; } catch (_) { return null; } };
+const normalizeAssistantMasmonSleep = (raw) => {
+  const out = { v: 1, beds: [], seen: {}, seq: 0 };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const ids = new Set();
+  for (const b of (Array.isArray(raw.beds) ? raw.beds : []).slice(-AMGS_MAX_BEDS)) {
+    if (!b || typeof b !== 'object' || typeof b.id !== 'string' || !/^b\d{1,9}$/.test(b.id) || ids.has(b.id) || typeof b.aid !== 'string' || !/^[a-z]{2,12}$/.test(b.aid) || !Number.isInteger(b.slot) || b.slot < 1 || b.slot > 8) continue;
+    const row = amgsRowOf(b.row); if (!row) continue;
+    ids.add(b.id);
+    out.beds.push({ id: b.id, aid: b.aid, slot: b.slot, src: b.src === 'former' ? 'former' : 'sleep', at: typeof b.at === 'string' ? b.at.slice(0, 10) : '', fat: typeof b.fat === 'string' ? b.fat.slice(0, 20) : '', row,
+      g: amgsGrowOk(b.aid, row.monster, b.g), t: amgsTrainOk(b.aid, row.monster, b.t),
+      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? { k: b.c.k, left: Math.min(30, b.c.left) } : null });
+  }
+  if (raw.seen && typeof raw.seen === 'object') for (const [k, v] of Object.entries(raw.seen).slice(-400)) if (v === true && /^[a-z]{2,12}:[1-8]:[\w-]{0,20}:\w{2,40}$/.test(k)) out.seen[k] = true;
+  out.seq = Number.isInteger(raw.seq) && raw.seq > 0 ? Math.min(raw.seq, 999999999) : out.beds.reduce((a, b) => Math.max(a, Number(b.id.slice(1))), 0);
+  return out;
+};
+const AMGS_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_SLEEP_KEY, normalizeAssistantMasmonSleep) : null;
+try { setTimeout(() => { try { if (amgsOn() && AMGS_STORE) void AMGS_STORE.load(); } catch (_) {} }, 0); } catch (_) {}
+const amgsCapOf = (days) => AMGS_CAP[Math.max(0, (typeof amgpStageOf === 'function' ? amgpStageOf(days).lv : 1) - 1)] || AMGS_CAP[0];
+const amgsCap = () => amgsCapOf(typeof AMGP_STORE !== 'undefined' ? AMGP_STORE.state.days : 0);
+const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').slice(0, 20)}:${x.monster}`;
+// 提案の入れ替えで外れた「前にいた子」を、冬眠の一覧へ1度ずつ並べる(元の mine.former はそのまま・見た印 seen で二重にしない)
+const amgsSyncFormer = () => {
+  if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  let st = AMGS_STORE.state; const ms = ASSISTANT_MASMON_STORE.state; let changed = false;
+  const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null; const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
+  for (const [aid, m] of Object.entries((ms && ms.mine) || {})) for (const [sl, list] of Object.entries((m && m.former) || {})) {
+    const slot = Number(sl);
+    for (const x of (Array.isArray(list) ? list : [])) {
+      if (!x || !amgsMonOk(x.monster)) continue;
+      const sig = amgsFormerSig(aid, slot, x); if (st.seen[sig]) continue;
+      const row = amgsRowOf(x); if (!row) continue;
+      const key = `${slot}:${x.monster}`; const seq = st.seq + 1;
+      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null }] };
+      changed = true;
+    }
+  }
+  return changed ? AMGS_STORE.save(st) : false;
+};
+// 起きている子(aid の枠 slot)と、冬眠中の子(bedId)を入れ替える。眠らせる・起こすはどちらもこれ。だめなら理由の文字、できたら true
+const amgsSwap = (bedId, slot, now = Date.now()) => {
+  if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
+  if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  const st = AMGS_STORE.state; const bed = st.beds.find(b => b.id === bedId);
+  if (!bed) return 'もういません';
+  const ms = ASSISTANT_MASMON_STORE.state; const rows = assistantMasmonRowsOf(ms, bed.aid); const row = rows.find(r => r.slot === slot);
+  if (!row) return '起こす枠がありません';
+  if (rows.some(r => r.slot !== slot && r.monster === bed.row.monster)) return '同じ種類のマスモンがほかの枠にいます';
+  const s = amgSlotOf(now); const outKey = amgMonKey(row.slot, row.monster); const inKey = amgMonKey(slot, bed.row.monster);
+  const gOut = (AMG_STORE.state.mons[bed.aid] || {})[outKey] || null;
+  const tOut = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? (AMGT_STORE.state.mons[bed.aid] || {})[outKey] || null : null;
+  const cKeyOut = amgpKey(bed.aid, row.slot, row.monster); const cOut = amgpCondAt(cKeyOut, s + 1);
+  const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? { slot: bed.slot, at: bed.fat } : null);
+  if (!out) return '入れ替えられませんでした';
+  // 起きた子の育成・修行の中身を、その枠の行へ戻す(眠らせたときのまま)
+  if (bed.g) { const gs = AMG_STORE.state; amgSave({ ...gs, mons: { ...gs.mons, [bed.aid]: { ...(gs.mons[bed.aid] || {}), [inKey]: { ...bed.g, dg: { d: 0, n: 0 } } } } }); }
+  if (bed.t && typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') { const ts = AMGT_STORE.state; amgtSave({ ...ts, mons: { ...ts.mons, [bed.aid]: { ...(ts.mons[bed.aid] || {}), [inKey]: bed.t } } }); }
+  // 計画の子だったら外す(予定は消さない)・けがの残りは眠らせた子へ写し、起きた子は残りから続ける
+  const ps = AMGP_STORE.state; if (ps.picks.some(p => p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) AMGP_STORE.save({ ...ps, picks: ps.picks.filter(p => !(p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) });
+  const cs = AMGP_CSTORE.state; const mons = { ...cs.mons };
+  if (cOut) mons[cKeyOut] = { ...cOut, until: s };
+  if (bed.c) mons[amgpKey(bed.aid, slot, bed.row.monster)] = { k: bed.c.k, from: s, until: s + bed.c.left, care: -1, find: -1, hosp: [] };
+  if (cOut || bed.c) AMGP_CSTORE.save({ ...cs, mons });
+  const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
+  const seq = st.seq + 1;
+  AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null }] });
+  try { if (typeof amgTick === 'function') void amgTick(bed.aid); } catch (_) {}
+  return true;
+};
+
+// ---------- 画面(公開の印が真のときだけ出す) ----------
+const amgsColorDots = (colors) => (colors || []).filter(Boolean).slice(0, 5).map((c, i) => <span key={i} className="inline-block h-3 w-3 rounded-full border border-white/40 align-middle" style={{ background: typeof assistantMasmonSwatch === 'function' ? assistantMasmonSwatch(c) : '#94a3b8' }}/>);
+// 育成ノートの一覧の下に並べる「💤 冬眠中」
+function AmgsSection({ filter = null }) {
+  const [st, setSt] = React.useState(AMGS_STORE ? AMGS_STORE.state : null);
+  const [open, setOpen] = React.useState(null); // 冬眠中の子のくわしい画面(bed id)
+  React.useEffect(() => {
+    if (!AMGS_STORE) return undefined;
+    AMGS_STORE.subs.add(setSt);
+    void AMGS_STORE.load().then(() => { amgsSyncFormer(); });
+    return () => { AMGS_STORE.subs.delete(setSt); };
+  }, []);
+  if (!amgsOn() || !st) return null;
+  const cap = amgsCap(); const beds = st.beds.filter(b => !filter || b.aid === filter);
+  const bed = st.beds.find(b => b.id === open) || null;
+  return (
+    <div className="mt-3" data-amgs-section={st.beds.length}>
+      <p className="text-[12px] font-black text-sky-200">💤 冬眠中({st.beds.length}/{cap}) <small className="text-[10px] font-bold text-slate-400">眠っている間は育たず、対戦にも出ません</small></p>
+      {st.beds.length > cap && <p className="text-[10.5px] font-bold text-amber-300" data-amgs-over>しまえる数を超えています(消えはしません)</p>}
+      {beds.map(b => { const m = ALL_PLAYER_MONSTERS[b.row.monster]; return (
+        <button key={b.id} type="button" onClick={() => setOpen(b.id)} data-amgs-bed={b.id} className="mt-1.5 flex w-full items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2 text-left">
+          {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}
+          <span className="min-w-0 flex-1"><b className="block truncate text-[13px] font-black">{b.row.nick || (m && m.name)} <small className="text-[10px] text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid}のマスモン</small></b>
+            <small className="block text-[10.5px] font-bold text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ {b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`}</small></span>
+          <span className="shrink-0 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-black text-blue-100">💤 冬眠中</span>
+        </button>); })}
+      {!beds.length && <p className="mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-400">冬眠中のマスモンはいません。助手のマスモンの「💤 眠らせる」で、冬眠中のマスモンと入れ替えられます</p>}
+      {bed && <AmgsDetail bed={bed} onClose={() => setOpen(null)}/>}
+    </div>);
+}
+// 冬眠中の子のくわしい画面(起きている子と同じ中身・💤の印)。ボタンは「起こす」と閉じるだけ
+function AmgsDetail({ bed, onClose }) {
+  const [pick, setPick] = React.useState(false); const [err, setErr] = React.useState('');
+  const m = ALL_PLAYER_MONSTERS[bed.row.monster] || {};
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, bed.aid) : [];
+  const techs = bed.t && typeof amgtTechsOf === 'function' ? amgtTechsOf(bed.row.monster).filter(x => bed.t.learn.includes(x.id)) : [];
+  const go = (slot) => { const r = amgsSwap(bed.id, slot); if (r === true) onClose(); else setErr(r); };
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-amgs-detail>
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-sky-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
+        <p className="text-[16px] font-black">💤 {bed.row.nick || m.name}(冬眠中)</p>
+        <p className="text-[10.5px] font-bold text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(bed.aid) : bed.aid}のマスモン ・ {bed.src === 'former' ? '入れ替えで前にいたマスモン' : `${String(bed.at).slice(5).replace('-', '/')} から眠っています`}</p>
+        <div className="mt-2 flex items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2">
+          {m.iconUrl ? <img src={m.iconUrl} alt="" className="h-16 w-16 object-contain"/> : null}
+          <div className="min-w-0 flex-1"><p className="text-[14px] font-black">{bed.row.nick || m.name} <span className="rounded-full bg-blue-900 px-2 py-0.5 text-[10px] text-blue-100">💤 冬眠中</span></p>
+            <p className="text-[11px] font-bold text-slate-300">{m.name} ・ Lv {bed.row.lv}{bed.row.grow ? ` ・ ${bed.row.grow}` : ''}{bed.g ? ` ・ 育成Lv.${bed.g.lv}` : ''}</p>
+            <p className="text-[11px] font-bold text-slate-300">色: {amgsColorDots(bed.row.colors)}</p></div>
+        </div>
+        <p className="mt-2 text-[12px] font-black text-amber-200">6能力(眠らせたときのまま)</p>
+        {bed.g ? <div className="mt-1">{typeof AmgpBars === 'function' && <AmgpBars st={bed.g.st}/>}</div> : <p className="text-[11px] font-bold text-slate-400">能力は、起こすと助手がはじめから育てます</p>}
+        {techs.length > 0 && <><p className="mt-2 text-[12px] font-black text-amber-200">技と熟練</p><p className="text-[11px] font-bold text-slate-200" data-amgs-techs>{techs.map(x => `${x.name} 熟練 ${typeof amgtRankOf === 'function' ? amgtRankOf(bed.t.m[x.id] || 0) : ''}`).join(' ・ ')}</p></>}
+        {bed.g && <p className="mt-2 text-[11px] font-bold text-slate-300">疲れ {bed.g.fat} ・ ストレス {bed.g.str}(眠っている間は動きません)</p>}
+        {bed.c && typeof AMGP_COND !== 'undefined' && <p className="text-[11px] font-bold text-rose-200">{AMGP_COND[bed.c.k].icon} {AMGP_COND[bed.c.k].name}の残りは、起きてから続きます</p>}
+        {!pick ? (<>
+          <button type="button" onClick={() => setPick(true)} data-amgs-wake className="mt-3 min-h-[48px] w-full rounded-xl bg-amber-400 text-[14px] font-black text-slate-900">☀ 起こす</button>
+          <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
+        </>) : (<>
+          <p className="mt-3 text-[12px] font-black text-amber-200">☀ どの枠に起こしますか</p>
+          <p className="text-[10.5px] font-bold text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(bed.aid) : ''}の枠に戻します。その枠にいたマスモンは、かわりに冬眠へ入ります</p>
+          {rows.map(r => { const rm = ALL_PLAYER_MONSTERS[r.monster] || {}; const dup = rows.some(x => x.slot !== r.slot && x.monster === bed.row.monster); return (
+            <button key={r.slot} type="button" disabled={dup} onClick={() => go(r.slot)} data-amgs-slot={r.slot} className="mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left disabled:opacity-40">
+              {rm.iconUrl ? <img src={rm.iconUrl} alt="" className="h-9 w-9 object-contain"/> : null}
+              <span className="min-w-0 flex-1 text-[12px] font-black">枠{r.slot} ・ {r.nick || rm.name}<small className="block text-[10px] text-slate-300">Lv {r.lv} ・ このマスモンが冬眠へ</small></span>
+              <span className="shrink-0 rounded-lg bg-amber-700 px-1.5 text-[10px] font-black">入れ替え</span>
+            </button>); })}
+          {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgs-err>{err}</p>}
+          <button type="button" onClick={() => setPick(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+        </>)}
+      </div>
+    </div>);
+}
+// 起きている子のカードに出す「💤 眠らせる」: 同じ助手の冬眠中の子を選んで入れ替える
+function AmgsSleepButton({ aid, row }) {
+  const [open, setOpen] = React.useState(false); const [err, setErr] = React.useState('');
+  if (!amgsOn() || !AMGS_STORE) return null;
+  const beds = AMGS_STORE.state.beds.filter(b => b.aid === aid);
+  return (<>
+    <button type="button" disabled={!beds.length} onClick={() => setOpen(true)} data-amgs-sleep className="min-h-[40px] rounded-xl bg-blue-800 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">💤 眠らせる{beds.length ? '' : '(入れ替える相手なし)'}</button>
+    {open && <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-amgs-sleep-sheet>
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-sky-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '80dvh', overflowY: 'auto' }}>
+        <p className="text-[15px] font-black">💤 {row.nick}を眠らせる</p>
+        <p className="text-[10.5px] font-bold text-slate-300">名前・色・6能力・Lv・技と熟練・疲れとストレスを、そのまま保っておきます。かわりに起こす冬眠中のマスモンを選んでください(枠は空けられません)</p>
+        {beds.map(b => <button key={b.id} type="button" onClick={() => { const r = amgsSwap(b.id, row.slot); if (r === true) setOpen(false); else setErr(r); }} data-amgs-sleep-with={b.id} className="mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left">
+          {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}<span className="text-[12px] font-black">{b.row.nick} を起こす<small className="block text-[10px] text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''}</small></span></button>)}
+        {err && <p className="mt-1 text-[11px] font-bold text-rose-200">{err}</p>}
+        <button type="button" onClick={() => setOpen(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+      </div>
+    </div>}
+  </>);
 }
 
 // ---- part: 56-assistant-life-friend.jsx ----
@@ -78116,6 +78345,8 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   if (word === ALF_WORD_FREE && !nc.text) return { ok: false, reason: '言葉を書くか、下の一言を選んでください' };
   const r = await alfPostVisitR({ kind: 'player', visitor: self, host: hostId, ids, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text, noteTo: alfValidId(noteTo) ? noteTo : null });
   if (!r.ok) return { ok: false, reason: r.reason };
+  // 自分が残した置き手紙の控え(30日・50通まで・56-assistant-life-friend-sent)
+  if (typeof alfSentRecord === 'function') void alfSentRecord({ host: hostId, name, to: alfValidId(noteTo) ? noteTo : null, word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1), note: nc.text });
   // ミッションの「フレンドの家へ行く」と「助手とふれあう」(2026-11-08)
   if (typeof missionNotify === 'function') { missionNotify('friendVisit'); missionNotify('assistantTouch'); }
   const cur = alfToday();
@@ -78461,6 +78692,8 @@ function AlfFriendHouseView({ friend, onClose }) {
   const [leaving, setLeaving] = React.useState(null); // 置き手紙のあて先(助手の id か '' = 家のみんなへ)
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
+  // 自由文を送る前の確認(2026-11-12 社長・自由文があるときだけ。決まった一言だけならすぐ送る)
+  const [confirm, setConfirm] = React.useState(null); // { word, warn, busy }
   const [boardOpen, setBoardOpen] = React.useState(false);
   const [bondOpen, setBondOpen] = React.useState(false); // 友情のシート(56-assistant-life-friend-bond・印が偽なら出ない)
   const bondMark = (task) => { if (typeof albMark === 'function') void albMark(friend.id, task); };
@@ -78495,12 +78728,16 @@ function AlfFriendHouseView({ friend, onClose }) {
   const reply = (i) => { if (!talk) return; bondMark('talk'); setTalked(t => [...new Set([...t, talk.aid])]); setTalk({ ...talk, step: 1, mine: ALF_PLAYER_REPLIES[i], text: alfFill(alfPickOne([lines(talk.aid)[1 + (i % 2)], ...vl(talk.aid).reply]), { h: friend.name, who: talk.aid, name: visitor }) }); };
   const leave = async (word) => {
     const to = leaving || null;
+    if (confirm) setConfirm(c => c && { ...c, busy: true });
     const r = await assistantLifeFriendLeaveNote(friend.id, { word, talked, name: friend.name, note: noteText, noteTo: to });
-    if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); return; }
+    if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) { setDone(null); setNoteWarn(r.reason); setConfirm(c => c && { ...c, busy: false, warn: r.reason }); return; }
+    setConfirm(null);
     setLeaving(null); setRoomId(null); setTalk(null); setNoteText('');
     if (r && r.ok) bondMark('note');
     setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
   };
+  // 自由文があるときは確認を出してから送る
+  const ask = (word) => { const c = alfNoteCheck(noteText); if (c.ok && c.text) { setNoteWarn(''); setConfirm({ word, warn: '', busy: false }); } else void leave(word); };
   // 置き手紙の1行(押す前に、何が届くか・今日できるかが分かるように)
   const noteLine = done ? done
     : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)`
@@ -78543,6 +78780,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <button type="button" className="mhl-tile mhl-give" disabled={can !== 'ok' || !!done} data-alf-visit-leave onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(''); }}><i>✉️</i><b>置き手紙</b><small>{done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'}</small></button>
       </div>
       <p className="mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100" data-alf-visit-note={done ? 'done' : can}>{noteLine}</p>
+      {typeof AlfSentHere === 'function' && <AlfSentHere friendId={friend.id}/>}
       <p className="mt-1 text-[9.5px] leading-snug text-slate-300">{friend.name}さんのセーブや、{friend.name}さんの助手の仲良し度は変わりません。</p>
     </div>);
   const board = diaryItems.length ? (
@@ -78640,9 +78878,9 @@ function AlfFriendHouseView({ friend, onClose }) {
           <span className="shrink-0 text-[10px] text-slate-400">{[...noteText].length}/{ALF_NOTE_MAX}</span>
         </div>
         {(() => { const c = alfNoteCheck(noteText); const warn = noteWarn || (!c.ok ? c.reason : ''); return warn ? <p className="mt-1 text-[10.5px] font-bold text-rose-300" data-alf-note-warn>⚠️ {warn}</p> : <p className="mt-1 text-[10px] text-slate-400">連絡先・住所・本名などは書けません。悪い言葉は●になります。{friend.name}さんは自由文を見ないようにもできます。</p>; })()}
-        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => leave(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
-        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'}</p>
-        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => leave(i)}>{t}</button>)}</div>
+        <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => ask(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
+        <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます(送る前に確かめられます)' : '💬 決まった一言で送る(押すと届きます)'}</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => ask(i)}>{t}</button>)}</div>
         <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
       </div>
     </div>) : null;
@@ -78675,6 +78913,8 @@ function AlfFriendHouseView({ friend, onClose }) {
         </>)}
         {sheet}
         {words}
+        {confirm && leaving != null && typeof AlfNoteConfirm === 'function' && <AlfNoteConfirm friend={friend} to={leaving || null} word={confirm.word} note={alfNoteCheck(noteText).text} selfName={selfName} warn={confirm.warn} busy={confirm.busy} land={land}
+          onFix={() => { if (!confirm.busy) setConfirm(null); }} onSend={() => { if (!confirm.busy) void leave(confirm.word); }} onCancel={() => { if (!confirm.busy) { setConfirm(null); setLeaving(null); setNoteWarn(''); } }}/>}
         {diarySheet}
         {bondOpen && typeof AlfBondSheet === 'function' && <AlfBondSheet friend={friend} more={more} land={land} onClose={() => setBondOpen(false)} onRoom={(id) => { setBondOpen(false); setRoomId(id); bondMark('find'); }}/>}
       </div>
@@ -78805,6 +79045,7 @@ function AssistantLifeFriendPage({ life }) {
             <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
           </div>))}
       </div>
+      {!alfEmpty && typeof AlfSentNotes === 'function' && <AlfSentNotes s={s} card={card} sec={sec} onVisit={setVisit}/>}
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
@@ -79244,6 +79485,153 @@ function AlfFavEditor({ s, card, sec }) {
       </> : null}
     </div>
   </>);
+}
+
+// ---- part: 56-assistant-life-friend-sent.jsx ----
+// 助手ライフ: 自分が残した置き手紙の見返しと、自由文を送る前の確認(2026-11-12 社長・案 docs/progress/assistant-peer/FRIEND-NOTE-REVIEW-PLAN.md)
+//   社長(2026-11-11)「フレンドの家に遊びに行ったときの残した置き手紙を確認できるようにしたい。また自由分を送るときは確認の画面もほしい」
+//   選択(2026-11-12): 残すのは30日・50通まで(古いものから消える)/確認は自由文があるときだけ/一覧は「🏘 フレンド」の家の一覧の下(全部)と家の中(その家の分)
+// 保存は新しいキー mh_alf_sent_notes_v1 だけ(今の mh_assistant_life_friend_v1 は形を変えない)。壊れた値は空の一覧。
+// 一覧は「端末の控え」と「行き来の表の自分が書いた行(7日分)」を合わせる(この機能より前に残した分・お礼が返ってきたかも見える)。
+// フレンドを解除した人・ブロックした人(フレンドの一覧にいない人)の分は出さない。SQL は要らない
+
+const ALF_SENT_KEY = 'mh_alf_sent_notes_v1';
+const ALF_SENT_MAX = Object.freeze({ days: 30, count: 50 });
+
+// ---------- 保存(無い・壊れているときは空) ----------
+const normalizeAlfSentNotes = (raw, now = Date.now()) => {
+  if (!Array.isArray(raw)) return [];
+  const from = now - ALF_SENT_MAX.days * 86400000;
+  const out = [];
+  const seen = new Set();
+  for (const v of raw) {
+    if (!v || typeof v !== 'object') continue;
+    const host = typeof v.host === 'string' && alfSafeOther(v.host) ? v.host : null;
+    const at = Number.isFinite(v.at) ? v.at : 0;
+    if (!host || at < from || at > now + 86400000) continue;
+    const day = typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : alfDay(at);
+    const k = `${host}|${day}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const word = v.word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(v.word, 0, ALF_WORDS - 1);
+    out.push({ host, day, at, word, name: alfStr(v.name, 20), to: alfValidId(v.to) ? v.to : null, note: typeof v.note === 'string' ? alfNoteShow(v.note) : '' });
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, ALF_SENT_MAX.count);
+};
+let _alfSentLoading = null;
+const alfSentLoad = () => {
+  if (Array.isArray(ALF_STORE.state.sent)) return Promise.resolve(ALF_STORE.state.sent);
+  if (_alfSentLoading) return _alfSentLoading;
+  _alfSentLoading = (async () => {
+    let raw = null;
+    try { raw = await storeGet(ALF_SENT_KEY, [], false); } catch { raw = null; }
+    const sent = normalizeAlfSentNotes(raw);
+    ALF_STORE.set({ sent });
+    return sent;
+  })();
+  return _alfSentLoading;
+};
+// 置き手紙を残せたときに1通ぶん控える(56-assistant-life-friend の assistantLifeFriendLeaveNote から)
+const alfSentRecord = async ({ host, name, to = null, word = 0, note = '' }) => {
+  if (!alfEnabled()) return;
+  const cur = await alfSentLoad();
+  const at = Date.now();
+  const sent = normalizeAlfSentNotes([{ host, name, to, word, note, at, day: alfDay(at) }, ...cur], at);
+  ALF_STORE.set({ sent });
+  try { storeSet(ALF_SENT_KEY, sent, false); } catch {}
+};
+
+// 見せる一覧(新しい順)。hostId を渡すとその家の分だけ
+const alfSentList = (s = ALF_STORE.state, hostId = null) => {
+  const self = s.selfId;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const rows = (s.visits || []).filter(v => self && v.visitor === self && v.kind === 'player');
+  const byKey = new Map();
+  for (const v of rows) byKey.set(`${v.host}|${v.day}`, { host: v.host, day: v.day, at: v.at, word: v.word, to: v.noteTo, note: v.note, thanks: v.thanks, name: '' });
+  for (const v of (Array.isArray(s.sent) ? s.sent : [])) {
+    const k = `${v.host}|${v.day}`;
+    const row = byKey.get(k);
+    byKey.set(k, row ? { ...v, thanks: row.thanks } : { ...v, thanks: null });
+  }
+  return [...byKey.values()]
+    .filter(v => names[v.host] && (!hostId || v.host === hostId))
+    .map(v => ({ ...v, name: names[v.host] }))
+    .sort((a, b) => b.at - a.at)
+    .slice(0, ALF_SENT_MAX.count);
+};
+
+// ---------- 画面 ----------
+// 1通ぶん(相手に届いた形に近い並び: いつ・だれの家・だれあて・一言・自由文)
+function AlfSentRow({ n, inHouse = false }) {
+  return (<>
+    <p className="text-[11px] leading-snug text-slate-100">
+      <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
+      {inHouse ? null : <span className="whitespace-nowrap font-bold">{n.name}さんの家</span>}
+      <span className="whitespace-nowrap">{inHouse ? '' : '・'}{n.to ? `${assistantLifeName(n.to)}あて` : 'みんなへ'}</span>{alfWordQuote(n.word)}
+    </p>
+    {n.note ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-sent-text>✏️ {n.note}</p> : null}
+    {n.thanks != null && ALF_THANKS_TEXTS[n.thanks] ? <p className="mt-0.5 text-[10px] text-amber-200" data-alf-sent-thanks>💌 お礼「{ALF_THANKS_TEXTS[n.thanks]}」が届きました</p> : null}
+  </>);
+}
+// 「🏘 フレンド」のページの、家の一覧の下(全部・押すとその家へ)
+function AlfSentNotes({ s, card, sec, onVisit }) {
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => { void alfSentLoad(); }, []);
+  const list = alfSentList(s);
+  if (!list.length) return null;
+  const houses = alfOpenHouses('look');
+  const shown = more ? list : list.slice(0, 5);
+  return (<>
+    <p className={sec}>📮 残した置き手紙</p>
+    <div className={card} data-alf-sent>
+      {shown.map(n => { const f = houses.find(h => h.id === n.host); return (
+        <button key={`${n.host}|${n.day}`} type="button" disabled={!f} className="block w-full border-b border-slate-700/60 py-1 text-left last:border-0 disabled:opacity-100" data-alf-sent-item={n.host} onClick={() => f && onVisit(f)}>
+          <AlfSentRow n={n}/>
+          <p className="mt-0.5 text-[10px] text-slate-400">{f ? <span className="text-amber-200">🚪 この家へ遊びに行く ›</span> : 'いまはこの家へ行けません(家がまだ届いていません)'}</p>
+        </button>); })}
+      {list.length > 5 && <button type="button" className="mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200" data-alf-sent-more onClick={() => setMore(!more)}>{more ? '少なく見る' : `ぜんぶ見る(${list.length}通)`}</button>}
+      <p className="mt-1 text-[9.5px] leading-snug text-slate-400">この端末に{ALF_SENT_MAX.days}日・{ALF_SENT_MAX.count}通まで残ります(古いものから消えます)</p>
+    </div>
+  </>);
+}
+// フレンドの家の中(その家に残した分だけ・小さく)
+function AlfSentHere({ friendId }) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => { void alfSentLoad(); }, []);
+  const list = alfSentList(s, friendId).slice(0, 3);
+  if (!list.length) return null;
+  return (
+    <div className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1" data-alf-sent-here>
+      <p className="text-[10px] font-black text-amber-200">📮 この家に残した置き手紙</p>
+      {list.map(n => <div key={n.day} className="mt-0.5"><AlfSentRow n={n} inHouse/></div>)}
+    </div>);
+}
+// 自由文を送る前の確認(あて先・相手に届く形・直す/送る)
+function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, onFix, onSend, onCancel }) {
+  const toText = to ? `${friend.name}さんの家の${assistantLifeName(to)}` : `${friend.name}さんの家のみんな`;
+  return (
+    <div className="absolute inset-0" style={{ zIndex: 32 }} data-alf-note-confirm>
+      <button type="button" aria-label="直す" className="absolute inset-0 bg-black/60" onClick={onFix}/>
+      <div className="mhl-sheet" style={land ? { left: 'auto', width: '44%', top: 0, maxHeight: '100%', paddingTop: 92, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
+        <p className="text-[15px] font-black text-amber-100">✉️ この置き手紙を送りますか？</p>
+        <p className="mt-1 text-[11px] font-bold text-slate-200">あて先: <span className="text-amber-100" data-alf-note-confirm-to>{toText}</span></p>
+        <p className="mt-2 text-[10.5px] font-bold text-slate-300">{friend.name}さんには、こう届きます</p>
+        <div className="mt-1 rounded-xl border border-amber-200/40 bg-slate-900/90 p-2" data-alf-note-confirm-preview>
+          <p className="text-[11px] leading-snug text-slate-100">
+            <span className="whitespace-nowrap text-slate-400">{alfAgoText(Date.now())}</span>{' '}
+            <span className="whitespace-nowrap">{selfName || 'あなた'}さん</span>が{to ? <span className="whitespace-nowrap">{assistantLifeName(to)}あてに</span> : '訪ねてくれた'}{alfWordQuote(word)}
+          </p>
+          <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50">✏️ {note}</p>
+        </div>
+        <p className="mt-1.5 text-[10px] leading-snug text-slate-300">・送ったあとは直せません<br/>・この家へは1日1通です。送ると、この家から帰ります(ビートP 50)</p>
+        {warn ? <p className="mt-1 text-[10.5px] font-bold text-rose-300" data-alf-note-confirm-warn>⚠️ {warn}</p> : null}
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button type="button" className="mhl-btn bg-slate-700" data-alf-note-confirm-fix onClick={onFix}>✏️ 直す</button>
+          <button type="button" className="mhl-btn bg-amber-500 text-slate-950 disabled:opacity-40" data-alf-note-confirm-send disabled={busy || !!warn} onClick={onSend}>{busy ? '送っています…' : '✉️ 送る'}</button>
+        </div>
+        <button type="button" data-mhl-sheet-close data-alf-note-confirm-cancel className="mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300" disabled={busy} onClick={onCancel}>やめる</button>
+      </div>
+    </div>);
 }
 
 // ---- part: 56-assistant-life-friend-masmon-share.jsx ----

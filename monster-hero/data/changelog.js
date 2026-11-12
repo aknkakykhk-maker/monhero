@@ -35,6 +35,34 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-12 09:30", type:'update', group:'assistant', title:'残した置き手紙を見返せるようになりました', status:'new',
+    items:[
+      'フレンドの家に残した置き手紙を、「🏘 フレンド」の「📮 残した置き手紙」で見返せます。押すとその家へ遊びに行けます。',
+      '訪ねた家の中にも、その家に残した置き手紙が出ます。',
+      '自由に書いた言葉を送る前に、あて先と相手に届く形を確かめられるようになりました。「✏️ 直す」で書き直せます。',
+    ],
+  },
+  {
+    date: "2026-11-12 09:02", type:'update', group:'assistant', title:'予定表の行き先に、場所の「得」が出るようになりました', status:'new',
+    items:[
+      '予定表で行き先を選ぶとき、練習スタジオ(券なしでビートを一緒に遊べる)と育成場(助手のマスモンにトレーニングチケットを使える)にも「得」が出るようになりました。',
+    ],
+  },
+  {
+    // 2026-11-12 新曲「サウダージ」(通常版・short ver.)。社長「新曲 通常とショート版。ジャケット2枚」(Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-12 06:48", type:'update', group:'rhythm', title:'新曲「サウダージ」を追加しました', status:'new',
+    image:'images/song-art/saudade.jpg?v=2fb12cbdc60a',
+    items:[
+      'モンヒロビートに「サウダージ」（4分23秒）と「サウダージ short ver.」（1分36秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.12 ／ EXPERT Lv.18 ／ MASTER Lv.29 ／ HELL Lv.37 です。',
+      '【通常版】ノーツ数は 329 ／ 376 ／ 515 ／ 618 ／ 866 ／ 853 です。',
+      '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.10 ／ EXPERT Lv.19 ／ MASTER Lv.29 ／ HELL Lv.37 です。',
+      '【short ver.】ノーツ数は 121 ／ 139 ／ 190 ／ 228 ／ 319 ／ 310 です。',
+    ],
+    gallery:[{ image:'images/song-art/saudade-short.jpg?v=5b73267eda1a', caption:'short ver. のジャケット' }],
+    assistantNotice:{ id:'update_notice_saudade_v1', type:'content' },
+  },
+  {
     // 町の地図の見やすさ(2026-11-11 ミヤスサ点検 ③ #5496。文は社長「この文で」)
     date: "2026-11-12 06:00", type:'update', group:'assistant', title:'町の地図が見やすくなりました', status:'new',
     items:[

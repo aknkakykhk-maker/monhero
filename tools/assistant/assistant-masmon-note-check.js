@@ -161,6 +161,32 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   check('見通し: 7日ぶん・重い訓練ばかりなら疲れが70を超える日がある', fw.days.length === 7 && fw.days.some(d => d.fat >= 70) && fw.total.pow && fw.total.pow[0] > 0);
 }
 
+// ⑫ 冬眠(56-assistant-life-masmon-sleep.jsx)
+{
+  const sleep = cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const ctx = make({ ...ON, assistantMasmonSleep: true });
+  vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {} };', 'var MS = { seed: "x", mine: { kiki: { former: { 2: [{ monster: "Tiger", nick: "トラ", lv: 28, colors: ["blue"], at: "2026-11-02" }] } } } };',
+    'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var ROWS = [{ slot: 1, monster: "Golem", nick: "ゴロ", lv: 20, grow: "攻撃型" }, { slot: 2, monster: "Pixie", nick: "ピピ", lv: 15 }];',
+    'var assistantMasmonRowsOf = () => ROWS;', 'var SW = []; var assistantMasmonSleepSwap = (aid, slot, back, ff) => { SW.push([aid, slot, back.monster, ff]); const r = ROWS.find(x => x.slot === slot); const out = { ...r }; ROWS = ROWS.map(x => (x.slot === slot ? { ...back, slot } : x)); return out; };',
+    sleep, 'this.S = { normalizeAssistantMasmonSleep, AMGS_STORE, amgsSyncFormer, amgsSwap, amgsCapOf };'].join('\n'), ctx);
+  const S = ctx.S; const T = ctx.T;
+  const n = S.normalizeAssistantMasmonSleep({ beds: [{ id: 'b1', aid: 'kiki', slot: 2, row: { monster: 'Tiger', nick: 'x' } }, { id: 'b1', aid: 'kiki', slot: 2, row: { monster: 'Tiger' } }, { id: 'b2', aid: 'kiki', slot: 9, row: { monster: 'Tiger' } }, { id: 'b3', aid: 'kiki', slot: 1, row: { monster: 'Nope' } }] });
+  check('⑫ 冬眠の保存: 同じ id・おかしな枠・知らない種類は捨てる', n.beds.length === 1 && n.seq === 1);
+  check('⑫ しまえる数は はじめ10・段ごとに+5・最大30', [0, 7, 21, 42, 70].map(S.amgsCapOf).join(',') === '10,15,20,25,30');
+  T.AMG_STORE.loaded = true; T.AMGP_STORE.loaded = true; T.AMGP_CSTORE.loaded = true; S.AMGS_STORE.loaded = true;
+  T.AMG_STORE.set(T.amgCatchUp(T.normalizeAssistantMasmonGrow(null), 'kiki', [ROW, ROW2], SEED, S0));
+  const a = S.amgsSyncFormer(); const b = S.amgsSyncFormer();
+  check('⑫ 前にいたマスモンは1度だけ冬眠の一覧に並ぶ(元の保存はそのまま)', a === true && b === false && S.AMGS_STORE.state.beds.length === 1 && ctx.MS.mine.kiki.former[2].length === 1);
+  const pow = entry(T.AMG_STORE.state, ROW2).st.pow;
+  const id = S.AMGS_STORE.state.beds[0].id;
+  const r = S.amgsSwap(id, 2, slotAt(S0)); if (r !== true) console.log('  理由:', r);
+  const bed = S.AMGS_STORE.state.beds.find(x => x.row.monster === 'Pixie');
+  check('⑫ 入れ替えると、出た子の6能力をそのまま写して眠らせる', r === true && bed && bed.g && bed.g.st.pow === pow && ctx.SW[0][3] && ctx.SW[0][3].at === '2026-11-02');
+  ctx.ROWS = ctx.ROWS; const r2 = S.amgsSwap(bed.id, 2, slotAt(S0));
+  check('⑫ 起こすと、眠らせたときの6能力に戻る', r2 === true && entry(T.AMG_STORE.state, ROW2).st.pow === pow);
+  check('⑫ もういない冬眠の子は起こせない', S.amgsSwap(id, 2) !== true);
+}
+
 // 試算(--sim): 計画なし/休みを入れた計画/重い訓練ばかり の 30・90 日
 if (process.argv.includes('--sim')) {
   const DAYS = process.argv.slice(process.argv.indexOf('--sim') + 1).map(Number).filter(n => n > 0);
