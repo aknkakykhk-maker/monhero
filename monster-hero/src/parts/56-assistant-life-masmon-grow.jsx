@@ -306,6 +306,7 @@ const amgTick = async (aid, now = Date.now()) => {
   if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
   await ASSISTANT_MASMON_STORE.load(); await AMG_STORE.load();
   if (typeof amgpLoad === 'function') await amgpLoad(); // 育成ノートの予定を読んでから回を決める
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined') await AMGB_STORE.load(); // 絆(×3・年齢など)を読んでから回を決める(ミハリ5)
   const ms = ASSISTANT_MASMON_STORE.state; if (!ms.seed) return null;
   const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
   if (!rows.length) return null;

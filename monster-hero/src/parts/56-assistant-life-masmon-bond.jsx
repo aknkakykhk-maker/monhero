@@ -18,8 +18,9 @@ const AMGB_RESULT_ICON = Object.freeze({ great: '🌟', ok: '⭕', fail: '❌', 
 const AMGB_RANK_COLOR = Object.freeze({ G: '#94a3b8', F: '#94a3b8', E: '#4ade80', D: '#4ade80', C: '#67e8f9', B: '#60a5fa', A: '#c084fc', S: '#facc15', SS: '#facc15', SSS: '#facc15', M: '#f472b6' });
 const amgbKey = (aid, slot, monster) => `${aid}:${slot}:${monster}`;
 const amgbKeyOk = (k) => typeof k === 'string' && /^[a-z]{2,12}:[1-8]:\w{2,40}$/.test(k);
-const amgbInt = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d);
-const amgbNum = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d);
+const amgbBlank = (v) => v === null || v === undefined || v === ''; // null・'' は既定値(Number(null)=0 にしない・ミハリ5)
+const amgbInt = (v, d, lo, hi) => (!amgbBlank(v) && Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d);
+const amgbNum = (v, d, lo, hi) => (!amgbBlank(v) && Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d);
 // 1体ぶんを読める形にそろえる(読めない値は既定: 忠誠50・人気0・方針 普通・年齢0)
 const amgbNormOne = (x) => {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
@@ -85,7 +86,9 @@ const amgbTick = (aid, row, slot) => {
   const b0 = st.mons[amgbKey(aid, row.slot, row.monster)];
   if (!b0) { amgbSave(amgbPut(st, aid, row, amgbNormOne({ gt: amgbTypeFor(aid, row), last: day, touch: day, fight: day }))); return true; }
   if (b0.last >= day) { if (st !== AMGB_STORE.state) amgbSave(st); return false; }
-  const d = Math.min(400, day - Math.max(b0.last, 0));
+  // まだ数え始めていない子(対戦などで先に記録だけできた・last が無い): 年齢は進めず、今日から数え始める(ミハリ5: 一度に400日進んで寿命にならないように)
+  if (b0.last < 0) { amgbSave(amgbPut(st, aid, row, { ...b0, last: day, touch: b0.touch < 0 ? day : b0.touch, fight: b0.fight < 0 ? day : b0.fight })); return true; }
+  const d = Math.min(400, day - b0.last);
   const b = { ...b0, sc: { ...b0.sc }, rs: [...b0.rs] };
   b.age = b0.age + d;
   b.life = Math.min(1000, Math.round(b0.life * 100 + Math.ceil(d * 1000 * MASMON_CALC.lifeStep(b0.pol, AMGB_NUM.baseLife) * 100)) / 100); // 小数2桁(切り上げで足し、寿命の日にちょうど1000へ届く)

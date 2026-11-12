@@ -97,6 +97,20 @@ if (process.argv.includes('--sim')) {
   const len = (pol) => ctx.T.MASMON_CALC.lifeLen(pol, 30);
   check('③ 寿命の長さ 超溺愛40日・普通30日・超スパルタ20日', len(-3) === 40 && len(0) === 30 && len(3) === 20);
 }
+// ③ 対戦が先でも・last が null でも、年齢が一度に進まない(ミハリ5)
+{
+  const ctx = make(ON); const T = ctx.T; T.AMG_STORE.loaded = true; T.AMGP_STORE.loaded = true; T.AMGP_CSTORE.loaded = true; T.AMGB_STORE.loaded = true;
+  T.assistantMasmonBondBattle('kiki', ROW, 'pvp', true, slotAt(S0));
+  T.amgCatchUp(T.normalizeAssistantMasmonGrow(null), 'kiki', [ROW], SEED, S0 + 1);
+  const b = T.amgbEntryOf('kiki', ROW);
+  check('③ 対戦の記録が先にできても、寿命が来ない(年齢0から数える)', b.age === 0 && b.life === 0 && b.pop === 2, `年齢 ${b.age}・進み ${b.life}`);
+  const n = T.normalizeAssistantMasmonBond({ mons: { 'kiki:1:Golem': { last: null, touch: '', fight: null, loy: null, age: null } } }).mons['kiki:1:Golem'];
+  check('③ last・touch が null や空なら「まだ」(-1)・忠誠 null は既定50', n.last === -1 && n.touch === -1 && n.fight === -1 && n.loy === 50 && n.age === 0);
+  T.AMGB_STORE.set({ v: 1, start: 1, mons: { 'kiki:1:Golem': n } });
+  T.amgCatchUp(T.AMG_STORE.state, 'kiki', [ROW], SEED, S0 + 2);
+  const b2 = T.amgbEntryOf('kiki', ROW);
+  check('③ last が null の子も年齢が飛ばない', b2.age === 0 && b2.life === 0, `年齢 ${b2.age}`);
+}
 // ④ 育ちの速さ ×3
 {
   const a = run(make(OFF), [ROW], 3 * 10); const ctx = make(ON); const b = run(ctx, [ROW], 3 * 10);

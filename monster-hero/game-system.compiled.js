@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ee2f99d73cf52a3
+// source-sha256: 309d943850c44f8b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140566,8 +140566,9 @@ const AMGB_RANK_COLOR = Object.freeze({
 });
 const amgbKey = (aid, slot, monster) => `${aid}:${slot}:${monster}`;
 const amgbKeyOk = k => typeof k === 'string' && /^[a-z]{2,12}:[1-8]:\w{2,40}$/.test(k);
-const amgbInt = (v, d, lo, hi) => Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d;
-const amgbNum = (v, d, lo, hi) => Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d;
+const amgbBlank = v => v === null || v === undefined || v === '';
+const amgbInt = (v, d, lo, hi) => !amgbBlank(v) && Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d;
+const amgbNum = (v, d, lo, hi) => !amgbBlank(v) && Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d;
 const amgbNormOne = x => {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
   const rs = (Array.isArray(x.rs) ? x.rs : []).filter(r => r && Number.isInteger(r.s) && AMGB_RESULT_ICON[r.r]).slice(-AMGB_NUM.log).map(r => ({
@@ -140706,7 +140707,16 @@ const amgbTick = (aid, row, slot) => {
     if (st !== AMGB_STORE.state) amgbSave(st);
     return false;
   }
-  const d = Math.min(400, day - Math.max(b0.last, 0));
+  if (b0.last < 0) {
+    amgbSave(amgbPut(st, aid, row, {
+      ...b0,
+      last: day,
+      touch: b0.touch < 0 ? day : b0.touch,
+      fight: b0.fight < 0 ? day : b0.fight
+    }));
+    return true;
+  }
+  const d = Math.min(400, day - b0.last);
   const b = {
     ...b0,
     sc: {
@@ -141759,6 +141769,7 @@ const amgTick = async (aid, now = Date.now()) => {
   await ASSISTANT_MASMON_STORE.load();
   await AMG_STORE.load();
   if (typeof amgpLoad === 'function') await amgpLoad();
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined') await AMGB_STORE.load();
   const ms = ASSISTANT_MASMON_STORE.state;
   if (!ms.seed) return null;
   const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
