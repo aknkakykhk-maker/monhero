@@ -17,3 +17,8 @@
 5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
 
 対応表: `docs/progress/player-raise/art/ITEMS.md`
+
+## 景色の絵(住む場所・大会の会場・修行の段)
+
+- `scene-art.js` … 景色(1080×1920)を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/scenes/`・表は `monster-hero/data/success-scenes.js`)
+- 足し方・画面の決まり・一覧の絵: `docs/progress/player-raise/art/SCENES.md`
