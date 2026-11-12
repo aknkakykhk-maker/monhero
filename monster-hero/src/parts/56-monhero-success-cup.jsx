@@ -16,9 +16,12 @@
 //     onRematch のあと新しい s を渡し直すと、組み合わせ表から始め直す(key に s.battle.again・reroll を使う)。
 //   追加の口(2026-11-12 窓口「試合の計算は回3の msxR3Fight を正に」): fight={(s) => ({ won, r?, teamA?, teamB? })} を渡すと、その結果を使う
 //     (r.log と teamA・teamB があれば観戦で再生・無ければ勝ち負けだけ)。opp={{ loy, pop, … }} で相手の値を上書き(バトルカードに人気・忠誠を出す)。
+//   自分で操作する試合(2026-11-12 社長「モンサクは自分操作にして」): fight の返り値に input(simulate に渡したのと同じ入力 { seed, catalog, teamA, teamB, buffs? })
+//     があれば、試合は MonsucArena(56-monhero-success-arena.jsx)で自分で手を選ぶ(オートにもできる)。勝ち負けは自分で戦った結果で決まる。
+//     fight を渡さないときも、こちらで input を作って自分で操作する。autoOnly を渡すと(ランキング・フレンド対戦)オートの記録を見せるだけ。
 //   monsucCupMatch(engine, catalog, suc, s, me) → { r, teamA, teamB, buffs, seed }   … 試合だけ回す(画面なし・スキップ用)
 //   monsucCupInfo(suc, s, me) → { title, venue, bracket, opp, me, mods, buffs, seed } … 画面に要るものをまとめる(純粋)
-//   部品だけ使うとき: MonsucBracket / MonsucBattleCard / MonsucMatch / MonsucCutin / MonsucCupWin / MonsucCupLose
+//   部品だけ使うとき: MonsucBracket / MonsucBattleCard / MonsucArena / MonsucCutin / MonsucCupWin / MonsucCupLose
 
 const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 const MSC_STAT_JP = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
@@ -105,14 +108,17 @@ const monsucTeams = (catalog, suc, s, info) => {
   const n = Math.max(1, mscNum(o.techs, 2));
   const techs = all.slice(0, n).map(t => t.id);
   const mastery = {}; techs.forEach(id => { mastery[id] = mscNum(o.mastery, 0); }); ['guard', 'dist', 'swap'].forEach(k => { mastery[k] = mscNum(o.mastery, 0); });
-  const foe = { species: o.species, name: o.name || mscMonName(o.species), lv: 30, stats: o.stats, techs, mastery, loy: 100, pop: o.champ ? 60 : o.rival ? 50 : 30 };
+  // 相手の忠誠度・人気は芯(回3の流れ・opp)の値を使う。無ければ今までの決まった値
+  const foe = { species: o.species, name: o.name || mscMonName(o.species), lv: 30, stats: o.stats, techs, mastery,
+    loy: Number.isFinite(Number(o.loy)) && o.loy != null ? Math.max(0, Math.min(100, Number(o.loy))) : 100,
+    pop: Number.isFinite(Number(o.pop)) && o.pop != null ? Math.max(0, Math.min(100, Number(o.pop))) : o.champ ? 60 : o.rival ? 50 : 30 };
   const tac = mscNum(o.tactics, 20);
   return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
 };
 
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
-const monsucCupMatch = (engine, catalog, suc, s, me) => {
-  const info = monsucCupInfo(suc, s, me);
+const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
+  const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
   const { teamA, teamB } = monsucTeams(catalog, suc, s, info);
   const r = engine.simulate({ seed: info.seed, catalog, teamA, teamB, balance: 'A', trace: true, ...(info.buffs ? { buffs: { A: info.buffs } } : {}) });
   return { r, teamA, teamB, buffs: info.buffs, seed: info.seed, info };
@@ -473,65 +479,7 @@ function MscPanel({ side, team, frame, maxHp, info, s, buffed }) {
   );
 }
 
-// ---- 試合(観戦の画面で記録を再生する)。終わったら onEnd(won) ----
-function MonsucMatch({ s, info, match, onEnd }) {
-  const [pos, setPos] = useState(0);
-  const [speed, setSpeed] = useState('x2');
-  const [ended, setEnded] = useState(false);
-  const log = match.r.log;
-  const frames = useMemo(() => ambwFramesOf(log), [match]);
-  const st = log[0] || {};
-  const maxHp = { A: st.aHp || [], B: st.bHp || [] };
-  const won = match.r.winner === 'A';
-  useEffect(() => {
-    if (ended) return undefined;
-    if (pos >= log.length - 1) { const t = setTimeout(() => setEnded(true), 600); return () => clearTimeout(t); }
-    const sp = AMBW_SPEEDS.find(x => x.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
-      let n = pos + 1;
-      if (speed === 'hl') while (n < log.length - 1 && !ambwIsHighlight(log[n], maxHp)) n++;
-      setPos(n);
-    }, sp.ms);
-    return () => clearTimeout(t);
-  }, [pos, speed, ended]);
-  useEffect(() => { if (!ended) return undefined; const t = setTimeout(() => onEnd(won), 1400); return () => clearTimeout(t); }, [ended]);
-  const e = log[pos] || {}; const f = frames[pos] || frames[0];
-  const foeSide = e.side === 'A' ? 'B' : 'A';
-  const fighter = (side) => {
-    const team = side === 'A' ? match.teamA : match.teamB; const m = team.members[f.act[side]] || team.members[0];
-    return (
-      <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
-        <img className={side === 'A' ? 'ambw-flip' : ''} src={mscMonImg(m.species)} alt=""/><em>{m.name}</em>
-        {e.ev === 'tech' && foeSide === side && (e.hit
-          ? <div className="ambw-dmg">{e.crit ? <small>会心!</small> : e.guarded ? <small>ガード!</small> : null}−{e.dmg}</div>
-          : <div className="ambw-dmg miss">はずれ</div>)}
-      </div>);
-  };
-  const nm = (side) => (side === 'A' ? match.teamA : match.teamB).members[0].name;
-  const say = e.ev === 'tech' ? (e.hit ? `${nm(e.side)}の ${e.name}${e.crit ? ' 会心!' : ''}` : `${nm(e.side)}の ${e.name} … はずれ`)
-    : e.ev === 'move' ? `${nm(e.side)}が ${AMBW_DIST[e.to]}の間合いへ` : e.ev === 'charge' ? (e.why === 'sulk' ? `${nm(e.side)}は そっぽを向いた…` : `${nm(e.side)}は ガッツをためた`)
-    : e.ev === 'guard' ? `${nm(e.side)}は 身を守った` : e.ev === 'ko' ? `${e.name} は たおれた` : e.ev === 'start' ? '試合開始!' : '';
-  return (
-    <div className="msc-wrap" data-msc-match data-msc-pos={pos}>
-      <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}・R{f.r || 1}</b></div>
-      <MscPanel side="B" team={match.teamB} frame={f} maxHp={maxHp} info={info} s={s}/>
-      <div className="msc-stage" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
-        <div className="ambw-ring">
-          <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
-          <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-          {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
-        </div>
-        {ended && <div className={`msc-end ${won ? 'w' : 'l'}`} data-msc-end={won ? 'win' : 'lose'}>{won ? '勝ち!' : '負け…'}</div>}
-      </div>
-      <MscPanel side="A" team={match.teamA} frame={f} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
-      <div className="msc-hint" style={{ minHeight: 22 }}><span>{say}</span></div>
-      <div className="msc-speed">
-        {AMBW_SPEEDS.map(x => <button key={x.id} className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
-        <button data-msc-skip onClick={() => { setPos(log.length - 1); }}>⏭ とばす</button>
-      </div>
-    </div>
-  );
-}
+// ---- 試合の画面は MonsucArena(56-monhero-success-arena.jsx)。自分で操作する・記録を再生する、どちらも同じ画面 ----
 
 // 記録の無い試合(回3の結果だけ)のときの短い間。少し待って勝ち負けへ
 function MonsucMatchSkip({ won, onEnd }) {
@@ -603,7 +551,7 @@ function MonsucCupShow(props) {
   const b = (s && s.battle) || {};
   return <MonsucCupShowInner key={[s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')} {...props}/>;
 }
-function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title }) {
+function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
@@ -625,16 +573,31 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
     if (!engine || typeof engine.buildCatalog !== 'function') return null;
     try { return engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (_) { return null; }
   }, [engine]);
+  // 回3の結果は毎回聞き直す(回3の計算の読み込みが終わるまでは null。null を「負け」として覚えない)
+  const fightRes = (() => { if (typeof fight !== 'function') return undefined; try { return fight(s) || null; } catch (_) { return null; } })();
   const match = useMemo(() => {
     if (!info) return null;
     if (typeof fight === 'function') {
-      // 回3の結果: { won, r?, teamA?, teamB? }。記録(r.log)と両チームがあれば観戦で再生し、無ければ勝ち負けだけ見せる
-      try { const f = fight(s) || {}; const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A'); return { ...f, won, r: f.r && Array.isArray(f.r.log) && f.teamA && f.teamB ? f.r : null }; } catch (_) { return null; }
+      // 回3の結果: { won, r?, teamA?, teamB?, input? }。input があれば自分で操作・記録(r.log)と両チームがあれば観戦で再生・無ければ勝ち負けだけ
+      if (!fightRes) return null;   // まだ読み込み中
+      try {
+        const f = fightRes; const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A');
+        const input = !autoOnly && f.input && f.input.teamA && f.input.teamB ? f.input : null;
+        return { ...f, won, input, r: f.r && Array.isArray(f.r.log) && f.teamA && f.teamB ? f.r : null };
+      } catch (_) { return null; }
     }
     if (!engine || !catalog) return null;
-    try { const m = monsucCupMatch(engine, catalog, suc, s, me); return { ...m, won: m.r.winner === 'A' }; } catch (_) { return null; }
-  }, [engine, catalog, info]);
-  const finish = (won) => {
+    try {
+      const m = monsucCupMatch(engine, catalog, suc, s, me, info);
+      const input = autoOnly ? null : { seed: m.seed, catalog, teamA: m.teamA, teamB: m.teamB, balance: 'A', ...(m.buffs ? { buffs: { A: m.buffs } } : {}) };
+      return { ...m, won: m.r.winner === 'A', input };
+    } catch (_) { return null; }
+  }, [engine, catalog, info, fightRes]);
+  // 自分で操作した試合の結果(負けの画面の「何が効いたか」に使う)
+  const [played, setPlayed] = useState(null);
+  const shown = played && played.result ? { ...match, r: played.result } : match;
+  const finish = (won, extra) => {
+    if (extra && extra.result) setPlayed(extra);
     if (won) { const o = typeof settle === 'function' ? settle(true) : null; setOut(o || {}); setPhase('win'); } else setPhase('lose');
   };
   const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
@@ -643,9 +606,15 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
   else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
-  else if (phase === 'match') body = match && !match.r ? <MonsucMatchSkip won={match.won} onEnd={finish}/> : match ? <MonsucMatch s={s} info={info} match={match} onEnd={finish}/> : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
-  else if (phase === 'win') body = <MonsucCupWin s={s} info={info} match={match} out={out} onNext={() => onNext && onNext(out)}/>;
-  else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={match} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
+  else if (phase === 'match') {
+    const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';
+    body = canPlay ? <MonsucArena s={s} info={info} engine={engine} input={match.input} onEnd={finish}/>
+      : match && match.r ? <MonsucArena s={s} info={info} watch={match} onEnd={finish}/>
+      : match ? <MonsucMatchSkip won={match.won} onEnd={finish}/>
+      : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
+  }
+  else if (phase === 'win') body = <MonsucCupWin s={s} info={info} match={shown} out={out} onNext={() => onNext && onNext(out)}/>;
+  else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={shown} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
   return (
     <div className="msc-root ambw-root" ref={rootRef} data-msc-root data-msc-phase={phase}>
       <style>{AMBW_CSS}{MSC_CSS}</style>
