@@ -291,5 +291,27 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const crown = SUC.settle({ ...s0, turn: 41, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state; ok(crown.items.sand === s0.items.sand + 1, '👑 に勝っても砂時計が増えない');
 }
 
+// ---- 持ちこみアイテム・よいようす(社長 2026-11-12・ITEMS-REF.md) ----
+{
+  ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 7, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 2)がずれている');
+  ok(Object.keys(SUC.GOOD).sort().join() === 'eventMaker,shugyoGood,star,trainGood,uketsugu', 'よいようすが5つでない');
+  const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['kibidango', 'weekly', 'hachimaki', 'misanga', 'juice'], bag: { juice: 1, pack: 1, weekly: 3 } });
+  ok(s0.carry.length === SUC.CARRY_MAX && !s0.carry.includes('juice') && s0.hpMax === 120 && s0.hp === 120 && s0.good.trainGood && s0.good.shugyoGood && !s0.good.eventMaker, `始める前の持ちこみ(3つまで・育成中の物は入らない)がずれている: ${s0.carry} ${s0.hpMax}`);
+  ok(!s0.bag.weekly && s0.bag.juice === 1, '始める前の物が育成中の袋に入っている');
+  const u1 = SUC.useItem({ ...s0, hp: 5 }, 'juice'); ok(u1.out.ok && u1.state.hp === 120, '野菜ジュースで体力が全部戻らない');
+  ok(!SUC.useItem(u1.state, 'pack').out.ok, '1ターンに2個使えてしまう');
+  const u2 = SUC.useItem({ ...u1.state, turn: 2 }, 'pack').state; ok(u2.bag.oil === 2 && u2.bag.herb === 1 && u2.bag.pack === 0, '詰め合わせの中身(オイル2・薬草1)が入らない');
+  const u3 = SUC.useItem({ ...u2, turn: 3, hp: 0, yosu: { sabori: { visits: 0 }, utsu: { visits: 0 } }, bag: { powder: 1 } }, 'powder').state; ok(!u3.yosu.sabori && !u3.yosu.utsu && u3.hp === 36, '粉薬で悪いようすが治らない・体力が戻らない');
+  const u4 = SUC.useItem({ ...s0, ama: 10, fear: 10, bag: { license: 1 } }, 'license').state; ok(SUC.loyalOf(u4) === 30, '育成ライセンスで忠誠度が上がらない');
+  // 研究ノート: 来られる最初のターンに博士が必ず来る/ルーペ: 実験が必ず成功
+  const note = { ...SUC.newRun({ id: 'note', species: 'Mocchi', aid: 'mua', carry: ['issaNote'] }), turn: 12, acted: true };
+  ok(SUC.issaComes(note) && !SUC.issaComes({ ...note, turn: 11 }), '研究ノートで博士が来ない(ジュニア期の7ターン目から)');
+  const lou = SUC.useItem({ ...note, bag: { issaLoupe: 1 } }, 'issaLoupe').state; const ex = SUC.issa(lou, 'stat'); ok(ex.out.win === true, 'ルーペを使ったのに博士の実験が失敗した');
+  // トレーニング得意で訓練の伸びが上がる
+  const t0 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua' }); const t1 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua', carry: ['weekly'] });
+  const a0 = SUC.act(t0, { kind: 'train', stat: 'pow' }); const a1 = SUC.act(t1, { kind: 'train', stat: 'pow' });
+  if (a0.out.result === 'ok' && a1.out.result === 'ok') ok(a1.out.gain.pow > a0.out.gain.pow, 'トレーニング得意で伸びが上がらない');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ');

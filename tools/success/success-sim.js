@@ -66,6 +66,7 @@ const VARIANTS = [
   { key: 'B6same', aidLv: 3 }, { key: 'B6sokoji', aidLv: 3 }, { key: 'S6', aidLv: 3 }, { key: 'M6', aidLv: 5 }, { key: 'S6aim', aidLv: 5 },
   { key: 'none', aidLv: 1, rematch: { sand: 2 }, label: '編成なし・時渡りの砂時計2つを持ちこみ' }, { key: 'B6', aidLv: 3, rematch: { sand: 2 }, label: 'B 6体・時渡りの砂時計2つを持ちこみ' },
   { key: 'B6', aidLv: 3, rematch: { rainbow: 2 }, label: 'B 6体・虹の時渡りの砂時計2つを持ちこみ' },
+  { key: 'B6', aidLv: 3, carry: ['weekly', 'hachimaki', 'kibidango'], bag: { juice: 2, license: 1 }, label: 'B 6体・持ちこみあり(週刊トレーニング・修行のハチマキ・きびだんご/ジュース2・ライセンス1)' },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
@@ -125,9 +126,9 @@ const chooseReact = (s) => {
   return 'scold';
 };
 
-const playRun = (id, preset, aidLv, species, aid, rematch) => {
+const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag) => {
   const rng = SUC.rngOf(id, 'team');
-  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {} });
+  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {}, carry: carry || [], bag: bag || {} });
   const trace = { loyal60: null, periodSums: {} };
   let guard = 0;
   while (!s.over && guard++ < 200) {
@@ -150,6 +151,8 @@ const playRun = (id, preset, aidLv, species, aid, rematch) => {
       }
       continue;
     }
+    // 育成中のアイテム(1ターン1個): 体力が3割を切ったらジュース・忠誠50未満ならライセンス
+    if (s.bag) { if (s.hp < s.hpMax * 0.3 && s.bag.juice) s = SUC.useItem(s, 'juice').state; else if (SUC.loyalOf(s) < 50 && s.bag.license) s = SUC.useItem(s, 'license').state; }
     const v = SUC.peek(s);
     const a = chooseAction(s, v);
     let r = SUC.act(s, a); s = r.state;
@@ -177,7 +180,7 @@ const runVariant = (vr) => {
   for (let i = 0; i < RUNS; i++) {
     const id = `${vr.key}-${vr.aidLv}-${i}`;
     const sp = SPECIES[i % SPECIES.length]; const aid = AIDS[i % AIDS.length];
-    const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid, vr.rematch);
+    const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid, vr.rematch, vr.carry, vr.bag);
     ranks[ev.rank] = (ranks[ev.rank] || 0) + 1; powers.push(ev.power); sums.push(ev.sum); loys.push(ev.loyal);
     if (trace.loyal60 !== null) loy60.push(trace.loyal60);
     s.log.tagTurns.forEach((n, j) => { tags[j] += n; });
