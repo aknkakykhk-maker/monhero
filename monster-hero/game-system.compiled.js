@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ab4311422fa3271
+// source-sha256: c88a04c3b065483f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13911,7 +13911,7 @@ const RELEASE_FLAGS = {
   assistantMasmonTrain: true,
   assistantMasmonCheer: true,
   assistantMasmonRanchTicket: true,
-  assistantMasmonPlan: false,
+  assistantMasmonPlan: true,
   assistantMasmonSleep: false,
   assistantMasmonFuse: false,
   assistantMasmonSuggest: true,
@@ -147524,7 +147524,7 @@ function AssistantMasmonRanchBand() {
 }
 const ASSISTANT_MASMON_PLAN_KEY = 'mh_assistant_masmon_plan_v1';
 const ASSISTANT_MASMON_COND_KEY = 'mh_assistant_masmon_cond_v1';
-const AMGP_STAGE_DAYS = Object.freeze([0, 7, 21, 42, 70]);
+const AMGP_STAGE_DAYS = Object.freeze([0, 5, 12, 20, 30]);
 const AMGP_MAX = AMGP_STAGE_DAYS.length;
 const AMGP_NUM = Object.freeze({
   sabFat: 60,
