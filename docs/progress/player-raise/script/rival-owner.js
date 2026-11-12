@@ -1,6 +1,6 @@
 // モンヒロサクセス 台本 第3弾: ライバルの持ち主の助手が話す行(仮)
 // ライバルが「ほかの助手のマスモン」のとき、その持ち主の助手が会場で会う・試合のあとに話す。rival.js の asst の場面に足して出す。
-// みゅあ・あつ以外の6人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
+// みゅあ・あつ・きき(第4弾で直した)以外の5人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
 // シナリオの助手が持ち主のとき(self)は rival.js の self の行を使い、ここの行は出さない。
 // 形は README.md。
 //   場面のid … ev.rival.owner.<助手>.<場面>
@@ -18,8 +18,9 @@ const MONSUC_SCRIPT_RIVAL_OWNER = Object.freeze([
   { id:'ev.rival.owner.atsu.win.atsu1', who:'atsu', e:'happy', t:'{rival}の勝ち笑 でも{mon}、いい根性してたよ！' },
   { id:'ev.rival.owner.atsu.lose.atsu1', who:'atsu', e:'surprise', t:'やるじゃん{mon}。うちの{rival}に勝つとはな笑' },
 
-  { id:'ev.rival.owner.kiki.meet.kiki1', who:'kiki', e:'normal', t:'あれま、{name}たちでつか。今日は{rival}で、えんりょなく押し切りまつよ ( ˘ω˘)9グッ!' },
-  { id:'ev.rival.owner.kiki.win.kiki1', who:'kiki', e:'happy', t:'火力で押し切れました♪♪ {mon}も、とっても強かったでつよ' },
+  // きき(第4弾で直した・asst-kiki.js と同じ口調。おとなしいまま火力で押し切る)
+  { id:'ev.rival.owner.kiki.meet.kiki1', who:'kiki', e:'normal', t:'あれま、{name}たちでつか。今日は私の{rival}が、えんりょなく押し切りまつよ ( ˘ω˘)9グッ!' },
+  { id:'ev.rival.owner.kiki.win.kiki1', who:'kiki', e:'happy', t:'倒される前に倒せました♪♪ {mon}も、とっても重い一撃でしたよ' },
   { id:'ev.rival.owner.kiki.lose.kiki1', who:'kiki', e:'surprise', t:'そなのか……{mon}、お見事でつ (´ー`*)ウンウン 次は、もっと火力を上げてきまつ' },
 
   { id:'ev.rival.owner.momosuke.meet.momosuke1', who:'momosuke', e:'wink', t:'え、{name}じゃん！ ももの{rival}、強いよ？ 負けても泣かないでね♡' },
