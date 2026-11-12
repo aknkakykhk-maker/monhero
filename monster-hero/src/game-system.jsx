@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72c0db122257ee42
+// generated-sha256: 01abdaea96e496e3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83851,6 +83851,9 @@ function MsxR3Box({ onClose }) {
   useEffect(() => { let alive = true; msxR3ReadBox().then((b) => { if (alive) setBox(b); }); return () => { alive = false; }; }, []);
   const cur = box && sel ? box.mons.find((m) => m.id === sel) : null;
   const [meta, setMeta] = useState(null);
+  const [fuse, setFuse] = useState(false);
+  const [runFrom, setRunFrom] = useState(null);
+  useEffect(() => { let alive = true; storeGet(MSX_KEYS.run, null).then((r) => { if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box); }).catch(() => {}); return () => { alive = false; }; }, []);
   const [lendMsg, setLendMsg] = useState('');
   useEffect(() => { let alive = true; msxR3ReadMeta().then((m) => { if (alive) setMeta(m); }); return () => { alive = false; }; }, []);
   const lendOn = typeof monsucLendSet === 'function';
@@ -83869,6 +83872,14 @@ function MsxR3Box({ onClose }) {
     if (lendId === cur.id) await unlend();
     const b = await msxR3Farewell(cur.id); setBox(b); setSel(null); setBye(0);
   };
+  // 合体(別の会話の部品 MonsucFuseSheet)。編成に入れている子・貸し出し中の子・育成中の子は選べない
+  if (fuse && box && typeof MonsucFuseSheet === 'function') {
+    const locked = [...((meta && Array.isArray(meta.team)) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : []), ...(meta && meta.lend ? [meta.lend] : []), ...(runFrom ? [runFrom] : [])];
+    return (<>
+      <style>{MSX_R3_CSS}</style>
+      <MonsucFuseSheet box={box} locked={locked} onSave={(n) => storeSet(MSX_KEYS.box, n)} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setFuse(false); msxR3ReadBox().then(setBox); }}/>
+    </>);
+  }
   const body = !box ? <div className="msx-note">読み込んでいます…</div> : (<>
     <div className="v-h">📦 保存枠<small>{box.mons.length} / {box.cap}体(引退10回ごとに +5・最大60)</small></div>
     <div className="r3-box">{box.mons.length ? box.mons.slice().reverse().map((m) => (
@@ -83890,7 +83901,7 @@ function MsxR3Box({ onClose }) {
     <style>{MSX_R3_CSS}</style>
     <MsxHd back="もどる" onBack={onClose}/>
     <div className="v-body r3">{body}</div>
-    <div className="v-ft"><button type="button" onClick={onClose}>← もどる</button></div>
+    <div className="v-ft"><button type="button" onClick={onClose}>← もどる</button>{typeof MonsucFuseSheet === 'function' ? <button type="button" className="go" onClick={() => setFuse(true)} disabled={!box || box.mons.length < 2} data-msx-r3-fuse>🧬 合体する</button> : null}</div>
   </>);
 }
 

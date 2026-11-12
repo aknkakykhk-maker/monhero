@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edfc9d3180108ff9
+// source-sha256: 8d9caf64d85c32ad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162515,6 +162515,17 @@ function MsxR3Box({
   }, []);
   const cur = box && sel ? box.mons.find(m => m.id === sel) : null;
   const [meta, setMeta] = useState(null);
+  const [fuse, setFuse] = useState(false);
+  const [runFrom, setRunFrom] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    storeGet(MSX_KEYS.run, null).then(r => {
+      if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [lendMsg, setLendMsg] = useState('');
   useEffect(() => {
     let alive = true;
@@ -162570,6 +162581,21 @@ function MsxR3Box({
     setSel(null);
     setBye(0);
   };
+  if (fuse && box && typeof MonsucFuseSheet === 'function') {
+    const locked = [...(meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : []), ...(meta && meta.lend ? [meta.lend] : []), ...(runFrom ? [runFrom] : [])];
+    return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement(MonsucFuseSheet, {
+      box: box,
+      locked: locked,
+      onSave: n => storeSet(MSX_KEYS.box, n),
+      onDone: () => {
+        msxR3ReadBox().then(setBox);
+      },
+      onClose: () => {
+        setFuse(false);
+        msxR3ReadBox().then(setBox);
+      }
+    }));
+  }
   const body = !box ? React.createElement("div", {
     className: "msx-note"
   }, "読み込んでいます…") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -162635,7 +162661,13 @@ function MsxR3Box({
   }, React.createElement("button", {
     type: "button",
     onClick: onClose
-  }, "← もどる")));
+  }, "← もどる"), typeof MonsucFuseSheet === 'function' ? React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => setFuse(true),
+    disabled: !box || box.mons.length < 2,
+    "data-msx-r3-fuse": true
+  }, "🧬 合体する") : null));
 }
 function MsxR3({
   kind,
