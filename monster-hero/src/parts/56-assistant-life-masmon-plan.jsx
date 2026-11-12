@@ -313,7 +313,7 @@ const amgpUseStores = () => {
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     const f = () => setTick(n => n + 1);
-    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : [])];
+    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : []), ...(typeof AMGS_STORE !== 'undefined' && AMGS_STORE ? [AMGS_STORE] : [])];
     ss.forEach(s => s.subs.add(f));
     return () => { ss.forEach(s => s.subs.delete(f)); };
   }, []);
@@ -415,6 +415,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
           {isPick && <button type="button" onClick={() => { setSel(x.key); setTab('plan'); }} data-amgp-go-plan className="min-h-[40px] rounded-xl bg-emerald-600 px-3 text-[11.5px] font-black">🗓 予定を組む</button>}
           {isPick && <button type="button" onClick={() => amgpSetPick(x.aid, x.row, false)} data-amgp-unpick className="min-h-[40px] rounded-xl bg-slate-700 px-3 text-[11.5px] font-black">計画から外す</button>}
           {!isPick && <button type="button" disabled={st.picks.length >= sg.cap} onClick={() => amgpSetPick(x.aid, x.row, true)} data-amgp-pick className="min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">📌 計画して育てる</button>}
+          {typeof AmgsSleepButton === 'function' && <AmgsSleepButton aid={x.aid} row={x.row}/>}{/* 💤 冬眠(56-assistant-life-masmon-sleep.jsx・印が偽なら出ない) */}
           {c && c.k !== 'away' && <button type="button" disabled={c.care === today} onClick={() => amgpCare(x.key)} data-amgp-care className="min-h-[40px] rounded-xl bg-pink-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">{c.care === today ? '🩹 今日は看病した' : `🩹 ${amgpWhoName(x.aid)}に看病してもらう`}</button>}
           {c && c.k === 'away' && <button type="button" disabled={c.find === today} onClick={() => amgpFind(x.key)} data-amgp-find className="min-h-[40px] rounded-xl bg-sky-700 px-3 text-[11.5px] font-black disabled:bg-slate-700">🔎 {amgpWhoName(x.aid)}にさがしに行ってもらう</button>}
         </div>
@@ -439,6 +440,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
         {[null, ...ids.filter(id => all.some(x => x.aid === id))].map(id => <button key={id || 'all'} type="button" onClick={() => setFilter(id)} className={`min-h-[34px] rounded-full px-3 text-[11px] font-black ${filter === id ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`}>{id ? amgpWhoName(id) : '全員'}</button>)}
       </div>
       {others.map(x => card(x, false))}
+      {typeof AmgsSection === 'function' && <AmgsSection filter={filter}/>}
       {!all.length && <p className="mt-3 text-[11.5px] font-bold text-slate-300">まだ育成している助手のマスモンがいません</p>}
     </>);
   } else if (tab === 'plan') body = cur && picked.includes(cur) ? <AmgpPlanTab x={cur} nameOf={nameOf} pickSel={pickSel(cur)}/> : <p className="mt-4 text-[12px] font-bold text-slate-300" data-amgp-plan-empty>「一覧」で計画して育てるマスモンを選ぶと、ここで朝・昼・夜の予定を組めます</p>;
