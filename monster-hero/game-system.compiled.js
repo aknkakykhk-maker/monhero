@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 946c66d5cec6b181
+// source-sha256: ec7c8a0ca0c0643a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114198,6 +114198,8 @@ function AssistantLifeHouse({
       markGuideSeen();
       if (unwatched[0]) watch(unwatched[0]);
     }
+  }), topOn && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
+    land: land
   }), topOn && React.createElement("div", {
     className: "mb-1 flex justify-center",
     "data-assistant-life-top-house": true
@@ -114267,7 +114269,7 @@ function AssistantLifeHouse({
   }), uiV2 && typeof AssistantLifePlanBand === 'function' && React.createElement(AssistantLifePlanBand, {
     ids: ids,
     land: land
-  }), typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
+  }), !topOn && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
     land: land
   }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
@@ -147125,13 +147127,38 @@ const amgpGainOf = (row, e, code, fat, mult = AMG_CARE.pickMult) => {
   }
   return g;
 };
-const amgpForecastDay = (aid, row, e, codes, fat0, str0) => {
+const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   let fat = fat0,
     str = str0;
-  let left = 20;
+  let leftHi = Math.max(0, AMG_CARE.viewCap - (opt.used || 0));
+  let leftLo = leftHi;
   const out = [];
-  for (const c0 of codes) {
+  for (let p = 0; p < codes.length; p++) {
+    const c0 = codes[p];
+    if (!c0) {
+      out.push(null);
+      continue;
+    }
+    const cond = opt.key && opt.slots ? amgpCondAt(opt.key, opt.slots[p]) : null;
+    if (cond) {
+      fat = amgClamp(fat - 30, 0, 100);
+      str = amgClamp(str - 5, 0, 100);
+      out.push({
+        code: c0,
+        as: 'X',
+        cond: cond.k,
+        auto: false,
+        fat,
+        str,
+        sab: 0,
+        hurt: 0,
+        sick: 0,
+        away: 0,
+        g: {}
+      });
+      continue;
+    }
     let code = c0;
     let auto = false;
     if (code === 'A') {
@@ -147142,9 +147169,13 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0) => {
     const g0 = amgpGainOf(row, e, code, fat, auto ? 1 : AMG_CARE.pickMult);
     const g = {};
     for (const [k, [a, b]] of Object.entries(g0)) {
-      const bb = Math.min(b, left);
-      if (bb > 0) g[k] = [Math.min(a, bb), bb];
-      left -= g[k] ? g[k][0] : 0;
+      const bb = Math.min(b, leftHi);
+      if (bb > 0) {
+        const aa = Math.min(a, bb, leftLo);
+        g[k] = [aa, bb];
+        leftHi -= bb;
+        leftLo -= aa;
+      }
     }
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100);
@@ -147179,7 +147210,11 @@ const amgpForecastWeek = (aid, row, e, key, now = Date.now()) => {
     const startFat = fat,
       startStr = str;
     const live = codes.map((c, p) => i === 0 && day * 3 + p <= s0 ? null : c);
-    const f = amgpForecastDay(aid, row, e, live.map(c => c || 'A'), fat, str).map((x, p) => live[p] ? x : null);
+    const f = amgpForecastDay(aid, row, e, live, fat, str, {
+      key,
+      slots: [0, 1, 2].map(p => day * 3 + p),
+      used: i === 0 && e.dg && e.dg.d === day ? e.dg.n : 0
+    });
     for (const x of f) if (x) {
       fat = x.fat;
       str = x.str;
@@ -147260,11 +147295,15 @@ function AssistantMasmonNoteBand({
   land = false
 }) {
   const [st, setSt] = React.useState(AMGP_STORE.state);
+  const [, setCs] = React.useState(0);
   React.useEffect(() => {
+    const f = () => setCs(n => n + 1);
     AMGP_STORE.subs.add(setSt);
+    AMGP_CSTORE.subs.add(f);
     if (amgpOn()) void amgpLoad();
     return () => {
       AMGP_STORE.subs.delete(setSt);
+      AMGP_CSTORE.subs.delete(f);
     };
   }, []);
   if (!amgpOn()) return null;
@@ -147353,19 +147392,30 @@ function AmgpShell({
       height: land ? '96dvh' : '92dvh'
     }
   }, React.createElement("div", {
-    className: "flex items-center gap-2 px-3 pt-3"
+    className: `flex items-center gap-2 px-3 ${land ? 'pt-1.5' : 'pt-3'}`
   }, React.createElement("button", {
     type: "button",
     onClick: onClose,
     "data-mhl-sheet-close": true,
-    className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black"
+    className: `${land ? 'min-h-[40px]' : 'min-h-[44px]'} shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black`
   }, "閉じる"), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
-    className: "truncate text-[16px] font-black"
-  }, "📒 ", title), React.createElement("p", {
+    className: `truncate font-black ${land ? 'text-[14px]' : 'text-[16px]'}`
+  }, "📒 ", title), !land && React.createElement("p", {
     className: "truncate text-[10.5px] font-bold text-slate-300"
-  }, sub))), React.createElement("div", {
+  }, sub)), land && React.createElement("div", {
+    className: "flex shrink-0 gap-1",
+    role: "tablist"
+  }, tabs.map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === k,
+    "data-amgp-tab": k,
+    onClick: () => setTab(k),
+    className: `min-h-[40px] rounded-xl px-2.5 text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`
+  }, label)))), !land && React.createElement("div", {
     className: "mt-2 flex gap-1 px-3",
     role: "tablist"
   }, tabs.map(([k, label]) => React.createElement("button", {
@@ -147759,8 +147809,9 @@ function AmgpPlanTab({
       setMode('day');
     },
     "data-amgp-cell": dd.wd * 3 + p,
-    className: `min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`
-  }, amgpCodeIcon(c), amgpCodeName(c))), React.createElement("span", {
+    className: `min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${dd.f[p] && dd.f[p].cond ? 'bg-slate-700 text-slate-300' : c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`,
+    "data-amgp-cond": dd.f[p] && dd.f[p].cond ? dd.f[p].cond : undefined
+  }, dd.f[p] && dd.f[p].cond && AMGP_COND[dd.f[p].cond] ? `${AMGP_COND[dd.f[p].cond].icon}${AMGP_COND[dd.f[p].cond].name}` : React.createElement(React.Fragment, null, amgpCodeIcon(c), amgpCodeName(c)))), React.createElement("span", {
     className: `flex items-center justify-center rounded-lg text-[10.5px] font-black ${dd.fat >= 70 || dd.str >= 70 ? 'bg-rose-700' : dd.fat >= 60 || dd.str >= 60 ? 'bg-amber-700' : 'bg-slate-800'}`,
     "data-amgp-day-end": dd.wd
   }, dd.fat, "/", dd.str)))), warn && React.createElement("p", {
@@ -147804,7 +147855,7 @@ function AmgpPlanTab({
       'data-amgp-slot-select': p
     }))), React.createElement("p", {
       className: "mt-0.5 text-[10.5px] font-bold text-slate-300"
-    }, f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'));
+    }, f && f.cond && AMGP_COND[f.cond] ? `${AMGP_COND[f.cond].icon} ${AMGP_COND[f.cond].name}のあいだは訓練しません(休み) ・ ${fsTxt(f)}` : f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'));
   }), React.createElement("p", {
     className: "mt-2 text-[11px] font-black text-slate-300"
   }, "6能力と、この日の見通し(黄=伸びる分)"), (() => {
