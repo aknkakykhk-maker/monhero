@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b09a8e5c5a5b6a3b
+// source-sha256: 702aa2e4da43d8e8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114189,7 +114189,7 @@ function AssistantLifeHouse({
     const w = assistantLifeWhereOf(life, id);
     const groupIds = w && w.group && Array.isArray(w.group.ids) ? w.group.ids : [];
     const peers = groupIds.filter(x => x !== id && metSet.has(x));
-    const mapPlace = w && ASSISTANT_LIFE_MAP_ORDER.includes(w.place) ? w.place : 'home';
+    const mapPlace = w && (typeof assistantLifeMapOrderNow === 'function' ? assistantLifeMapOrderNow() : ASSISTANT_LIFE_MAP_ORDER).includes(w.place) ? w.place : 'home';
     const place = w ? assistantLifePlaceShow(w.place) : '家';
     const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
     return React.createElement("div", {
@@ -114959,8 +114959,17 @@ function AssistantLifeHomeFaces({
     rect: rects.life
   }));
 }
-const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza', 'clinic']);
-const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza', 'clinic']);
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
+const assistantLifeMapClinicOn = () => {
+  try {
+    return typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn();
+  } catch (_) {
+    return false;
+  }
+};
+const assistantLifeMapOrderNow = () => assistantLifeMapClinicOn() ? [...ASSISTANT_LIFE_MAP_ORDER, 'clinic'] : ASSISTANT_LIFE_MAP_ORDER;
+const assistantLifeMapTownOnlyNow = () => assistantLifeMapClinicOn() ? [...ASSISTANT_LIFE_MAP_TOWN_ONLY, 'clinic'] : ASSISTANT_LIFE_MAP_TOWN_ONLY;
 const ASSISTANT_LIFE_MAP_TOWN = Object.freeze({
   classic: {
     hill: [0.47, 0.115],
@@ -115162,7 +115171,7 @@ function AssistantLifeTownMap({
   initialAssistantId = null
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
-  const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
+  const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   const [cheerMsg, setCheerMsg] = React.useState(null);
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
@@ -115504,7 +115513,7 @@ function AssistantLifeTownMap({
   const fac = sheetPlace ? assistantLifeFacilityOf({
     place: sheetPlace
   }) : null;
-  const sheetTown = sheetPlace === 'home' ? ASSISTANT_LIFE_MAP_TOWN_ONLY.flatMap(p => (at[p] || []).map(id => [id, p])) : [];
+  const sheetTown = sheetPlace === 'home' ? assistantLifeMapTownOnlyNow().flatMap(p => (at[p] || []).map(id => [id, p])) : [];
   const row = (id, place, town) => {
     const a = assistantById(id);
     if (!a) return null;
@@ -115763,7 +115772,7 @@ function AssistantLifeTownMap({
       filter: 'saturate(.5)'
     },
     onClick: () => setSheet('cardroom')
-  }, React.createElement("span", null, "🃏 MFバトルカード"), perkMark('cardroom')), ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => {
+  }, React.createElement("span", null, "🃏 MFバトルカード"), perkMark('cardroom')), assistantLifeMapTownOnlyNow().map(p => {
     const n = (at[p] || []).length;
     return React.createElement("button", {
       key: p,
@@ -115780,7 +115789,7 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-empty": n ? '0' : '1',
       onClick: () => setSheet(p)
     }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
-  }), ASSISTANT_LIFE_MAP_ORDER.map(crowd), React.createElement("div", {
+  }), assistantLifeMapOrderNow().map(crowd), React.createElement("div", {
     className: "absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3",
     style: {
       paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
@@ -115864,7 +115873,7 @@ function AssistantLifeTownMap({
   }, assistantLifeMapSpotWord(sheetPlace)), React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-home": true
-  }, ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
+  }, assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`), React.createElement("p", {
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100"
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, "MFバトルカードの研究をしている助手。いる助手と対戦すると、", React.createElement("span", {
     className: "whitespace-nowrap"
@@ -143118,8 +143127,8 @@ const assistantLifeBodyOnSlot = (life, slot) => {
   try {
     if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !life || !slot) return null;
     const D = ASSISTANT_LIFE_BODY_STORE.state.data;
-    if (Number.isInteger(D.at) && D.at >= slot.abs) return null;
-    const gap = Number.isInteger(D.at) ? slot.abs - D.at - 1 : 0;
+    if (Number.isInteger(D.at) && D.at === slot.abs) return null;
+    const gap = Number.isInteger(D.at) && D.at < slot.abs ? slot.abs - D.at - 1 : 0;
     const ids = [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])].filter(assistantLifeBodyOkId).sort();
     const s = {
       ...D.s

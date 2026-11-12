@@ -33,8 +33,8 @@ const ASSISTANT_LIFE_DOINGS = Object.freeze({
   idle:     { label: 'ぼーっと',   te: 'ぼーっとして',   group: false, places: ['home', 'hill', 'garden'] },
   sleep:    { label: 'おやすみ',     te: '寝て',           group: false, places: ['home'] },
   read:     { label: '読書',       te: '本を読んで',     group: false, places: ['library'] },
-  battle:   { label: 'バトル',     te: 'バトルして',     group: true,  places: ['battle'] },
-  checkup:  { label: '診察',       te: '診てもらって',   group: false, places: ['clinic'] }, // 病院(56-assistant-life-body.jsx)。好みの重みに無いので、ふだんは選ばれない // モンヒロバトル(2026-11-11 社長「MB管理とモンバトは別」。助手のマスモンの修行はここで行う)
+  battle:   { label: 'バトル',     te: 'バトルして',     group: true,  places: ['battle'] }, // モンヒロバトル(2026-11-11 社長「MB管理とモンバトは別」。助手のマスモンの修行はここで行う)
+  checkup:  { label: '診察',       te: '診てもらって',   group: false, places: ['clinic'] }, // 病院(56-assistant-life-body.jsx)。8人の好みの重みは0なので、ふだんは選ばれない
 });
 // 場所。台本の {place} に入る言葉(穴の言葉の一覧は docs/progress/assistant-peer/LIFE-WORDS.md)
 const ASSISTANT_LIFE_PLACES = Object.freeze({

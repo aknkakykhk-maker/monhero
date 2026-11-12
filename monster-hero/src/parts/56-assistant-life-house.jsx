@@ -1279,7 +1279,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           const w = assistantLifeWhereOf(life, id);
           const groupIds = w && w.group && Array.isArray(w.group.ids) ? w.group.ids : [];
           const peers = groupIds.filter(x => x !== id && metSet.has(x));
-          const mapPlace = w && ASSISTANT_LIFE_MAP_ORDER.includes(w.place) ? w.place : 'home';
+          const mapPlace = w && (typeof assistantLifeMapOrderNow === 'function' ? assistantLifeMapOrderNow() : ASSISTANT_LIFE_MAP_ORDER).includes(w.place) ? w.place : 'home';
           const place = w ? assistantLifePlaceShow(w.place) : '家';
           const doing = w ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
           return <div key={id} data-assistant-life-v2-status-id={id} className="flex min-h-[44px] w-full items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-1 py-1">

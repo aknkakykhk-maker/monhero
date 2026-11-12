@@ -10,8 +10,12 @@
 // 何も保存しない
 
 // 場所ごとの HOME の札(fac)。町だけの場所は HOME では「🏡 助手ライフ」の札の下に顔が出る(assistantLifeFacilityOf と同じ表)
-const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza', 'clinic']);
-const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza', 'clinic']);
+const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
+const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
+// 🏥 病院(56-assistant-life-body.jsx)は印 assistantLifeBody が真のときだけ地図に足す(偽のあいだは札も人もシートも出さない・ミハリ5)
+const assistantLifeMapClinicOn = () => { try { return typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn(); } catch (_) { return false; } };
+const assistantLifeMapOrderNow = () => (assistantLifeMapClinicOn() ? [...ASSISTANT_LIFE_MAP_ORDER, 'clinic'] : ASSISTANT_LIFE_MAP_ORDER);
+const assistantLifeMapTownOnlyNow = () => (assistantLifeMapClinicOn() ? [...ASSISTANT_LIFE_MAP_TOWN_ONLY, 'clinic'] : ASSISTANT_LIFE_MAP_TOWN_ONLY);
 // 町だけの場所の札を置く所(絵の幅・高さに対する割合。札の真ん中)。絵ごとに建物の位置がちがうので、絵ごとに持つ
 //   classic … 村の広場(941×1672)/ halloween … ハロウィン(縦)/ halloweenWide … ハロウィン(横長)
 //   図書室=金の塔/おやつ屋さん=右上の青い屋根の石の家/ひなたの丘=湖と滝/中庭=泉と屋台のあいだの芝生/広場=方位の印
@@ -97,7 +101,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
 function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
-  const [sheet, setSheet] = React.useState(() => initialPlace && ASSISTANT_LIFE_MAP_ORDER.includes(initialPlace) ? initialPlace : null);
+  const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   const [cheerMsg, setCheerMsg] = React.useState(null); // 📣 応援したときの短い知らせ { id, text }(シュギョウ2の口 assistantMasmonCheer)
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
@@ -237,7 +241,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   const sheetPlace = sheet;
   const sheetWho = sheetPlace ? (at[sheetPlace] || []) : [];
   const fac = sheetPlace ? assistantLifeFacilityOf({ place: sheetPlace }) : null;
-  const sheetTown = sheetPlace === 'home' ? ASSISTANT_LIFE_MAP_TOWN_ONLY.flatMap(p => (at[p] || []).map(id => [id, p])) : [];
+  const sheetTown = sheetPlace === 'home' ? assistantLifeMapTownOnlyNow().flatMap(p => (at[p] || []).map(id => [id, p])) : [];
   // シートの1行(顔・名前・だれと何をしているか・できること)。town … 町の場所の人を家の札のシートに並べるとき(場所の名前も出す)
   const row = (id, place, town) => {
     const a = assistantById(id); if (!a) return null;
@@ -309,10 +313,10 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         </nav>
         <button type="button" className={home.card} aria-label={`MFバトルカード(${cardN ? `${cardN}人` : 'だれもいない'})`} data-assistant-life-map-place="cardroom" data-assistant-life-map-empty={cardN ? '0' : '1'} style={cardN ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet('cardroom')}><span>🃏 MFバトルカード</span>{perkMark('cardroom')}</button>
         {/* HOME に札の無い町の場所 */}
-        {ASSISTANT_LIFE_MAP_TOWN_ONLY.map(p => { const n = (at[p] || []).length; return (
+        {assistantLifeMapTownOnlyNow().map(p => { const n = (at[p] || []).length; return (
           <button key={p} type="button" className="mhl-map-town" style={{ visibility: 'hidden', left: 0, top: 0 }} aria-label={`${assistantLifePlaceShow(p)}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={p} data-assistant-life-map-town data-assistant-life-map-empty={n ? '0' : '1'} onClick={() => setSheet(p)}>
             <span>{ASSISTANT_LIFE_PLACE_ICON[p]} {assistantLifePlaceShow(p)}</span></button>); })}
-        {ASSISTANT_LIFE_MAP_ORDER.map(crowd)}
+        {assistantLifeMapOrderNow().map(crowd)}
         {/* 上の帯: 家へ戻る・題・時間帯・一覧へ */}
         <div className="absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3" style={{ paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))', paddingLeft: 'calc(8px + env(safe-area-inset-left))', paddingRight: 'calc(8px + env(safe-area-inset-right))' }} data-assistant-life-map-bar>
           {/* 新UI(nav あり): 「家へ」と「一覧」の代わりに、ほかの画面と同じ4つのタブ(家・町・きずな・フレンド) */}
@@ -334,7 +338,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : undefined}>
             <p className="mhl-en">WHERE · {String(sheetPlace).toUpperCase()}</p>
             <p className="text-[18px] font-black" data-assistant-life-map-sheet-title>{assistantLifeMapSpotWord(sheetPlace)}</p>
-            <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{ASSISTANT_LIFE_MAP_TOWN_ONLY.includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
+            <p className="text-[10.5px] font-bold text-slate-300" data-assistant-life-map-sheet-home>{assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`}</p>
             <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100">{sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? <>MFバトルカードの研究をしている助手。いる助手と対戦すると、<span className="whitespace-nowrap">ごほうび {CARD_LIFE_UP_LABEL}</span></> : ASSISTANT_LIFE_MAP_ABOUT[sheetPlace]}</p>
             {typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && <AssistantLifePlacePerk life={life} ids={sheetWho} place={sheetPlace} land={land} onGo={onGo ? (fn) => { setSheet(null); onGo(fn); } : null}/>}
             {sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : <p className="mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300" data-assistant-life-map-sheet-none>いまはだれもいません</p>}

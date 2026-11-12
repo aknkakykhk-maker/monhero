@@ -230,8 +230,9 @@ const assistantLifeBodyOnSlot = (life, slot) => {
   try {
     if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !life || !slot) return null;
     const D = ASSISTANT_LIFE_BODY_STORE.state.data;
-    if (Number.isInteger(D.at) && D.at >= slot.abs) return null;
-    const gap = Number.isInteger(D.at) ? slot.abs - D.at - 1 : 0; // はじめての回はさかのぼらない
+    if (Number.isInteger(D.at) && D.at === slot.abs) return null; // 同じ回は二度進めない
+    // 端末の時刻を先へ進めてから戻したとき(D.at が今より先)は、今の回に置き直して進める(育成の amgCatchUp と同じ守り・ミハリ5)
+    const gap = Number.isInteger(D.at) && D.at < slot.abs ? slot.abs - D.at - 1 : 0; // はじめての回はさかのぼらない
     const ids = [...new Set([...(life.groups || []).flatMap(g => g.ids), ...Object.keys(life.solo || {})])].filter(assistantLifeBodyOkId).sort();
     const s = { ...D.s }; const log = { ...D.log }; const evs = {};
     for (const id of ids) {
