@@ -208,7 +208,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       </label>
       {nameErr && <div className="msx-note" style={{ color: '#fca5a5' }}>{nameErr}</div>}
       <div className="v-card" style={{ maxHeight: '34%', overflowY: 'auto' }}>
-        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom}/> : <div className="msx-note">染色はこの端末では使えません</div>}
+        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom} big names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map((x) => x[0]) : null}/> : <div className="msx-note">染色はこの端末では使えません</div>}
       </div>
     </>);
     go = 'これで決める ▶';
