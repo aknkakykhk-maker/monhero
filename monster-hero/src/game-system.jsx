@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c980e630fde13a3f
+// generated-sha256: 72e421b715c7a9b6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6961,8 +6961,111 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
+
+// ---- part: 14-success-sound.jsx ----
+// =====================================================================
+// モンヒロサクセスの音を鳴らす口(2026-11-12 開発部)
+// 割り当て表は data/success-sounds.js。ここは「場面の id を渡すと、表どおりに曲と効果音を鳴らす」だけ。
+// 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
+//
+// ★守っていること(tools/success/success-sound-check.js が見張る)
+//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet だけ。
+//     音量(setSeVolume・setBgmVolume)・消音(setEnabled)・モンヒロビートの再生(startRhythmTrack)・1回だけ流す曲(setBgmOnce)には触らない
+//   ・効果音は fgSe(表の画面の音)から鳴らす。音量・消音は Audio_ 側がそのまま効く
+//   ・画面を離れる(leave / useSuccessSound の後片付け)と、待たせていた効果音を捨て、入る前に鳴っていた曲へ戻す
+//   ・サクセスの画面にいるあいだ、裏の周回(クイック)のバトルの効果音は止める(setBackgroundSeQuiet)。
+//     60-app.jsx の同じ印の effect に successScreenOpen も足すこと(回2・回3。足さないと別の画面の都合で印が外れる)
+// =====================================================================
+const SuccessSound = (() => {
+  let active = false;      // 画面に入っていて、まだ離れていない
+  let epoch = 0;           // 入り直すたびに進める。古い呼び出し(待たせた効果音)を捨てる
+  let beforeKey = null;    // 入る前に鳴っていた曲(離れるときに戻す)
+  let beforeQuiet = false; // 入る前の「裏の音を止める印」
+  let curBgm = null;       // いまサクセスが流している曲
+
+  const audio = () => (typeof Audio_ !== 'undefined' ? Audio_ : null);
+  const knownTrack = (id) => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
+  const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+
+  // 画面に入る。入る前の曲と印を覚える。二重に入っても1回ぶんだけ覚える
+  const enter = () => {
+    const a = audio(); if (!a) return;
+    if (active) return;
+    active = true; epoch += 1; curBgm = null;
+    try { beforeKey = a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) { beforeKey = null; }
+    try { beforeQuiet = a.isBackgroundSeQuiet ? !!a.isBackgroundSeQuiet() : false; if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(true); } catch (e) {}
+  };
+
+  // 画面を離れる。待たせた効果音を捨て、印を元に戻し、サクセスが替えた曲だけ入る前の曲へ戻す
+  const leave = () => {
+    const a = audio();
+    if (!active) return;
+    active = false; epoch += 1;
+    if (!a) { curBgm = null; return; }
+    try { if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(beforeQuiet); } catch (e) {}
+    const wasMine = curBgm !== null;
+    curBgm = null;
+    if (wasMine) {
+      try {
+        if (beforeKey && knownTrack(beforeKey)) a.playBGM(beforeKey);
+        else a.stopBGM();
+      } catch (e) {}
+    }
+    beforeKey = null;
+  };
+
+  // 場面の曲を流す(曲を替えない場面・同じ曲が鳴っているときは何もしない)。消音・音量0は Audio_.playBGM が見る
+  const bgm = (sceneId, season) => {
+    const a = audio(); if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    if (key === curBgm) return key;
+    curBgm = key;
+    try { a.playBGM(key); } catch (e) {}
+    return key;
+  };
+
+  // 場面の効果音を1回鳴らす。delayMs で待たせたあと、画面を離れていたら鳴らさない
+  const se = (sceneId, delayMs = 0) => {
+    const a = audio(); if (!a || !active || !tableOk()) return null;
+    const name = successSoundSe(sceneId);
+    if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
+    const my = epoch;
+    const fire = () => { if (!active || my !== epoch) return; try { a.fgSe[name](); } catch (e) {} };
+    const wait = Number(delayMs);
+    if (Number.isFinite(wait) && wait > 0) { setTimeout(fire, Math.min(wait, 10000)); } else { fire(); }
+    return name;
+  };
+
+  // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
+  const scene = (sceneId, opts = null) => {
+    if (!active) enter();
+    const season = opts && opts.season;
+    bgm(sceneId, season);
+    se(sceneId, opts && opts.delayMs);
+  };
+
+  return { enter, leave, scene, bgm, se, isActive: () => active };
+})();
+
+// 画面の中で使う入り口。sceneId が替わるたびに鳴らし、画面を離れる(消える)と後片付けする。
+//   useSuccessSound(sceneId, { season, delayMs, on })  … on が false のあいだは何もしない(既定は true)
+const useSuccessSound = (sceneId, opts = null) => {
+  const on = !opts || opts.on !== false;
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!on || !sceneId) return undefined;
+    SuccessSound.scene(sceneId, { season, delayMs });
+    return undefined;
+  }, [on, sceneId, season]);
+  useEffect(() => {
+    if (!on) return undefined;
+    return () => { SuccessSound.leave(); };
+  }, [on]);
+};
 
 // ---- part: 15-dye-and-art.jsx ----
 const MOO_IMG = "";
@@ -9755,6 +9858,8 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonPlan: true, // 2026-11-12 ミハリ5 OK・窓口の最終確認のあと公開。 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSleep: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantMasmonBond: true, // 2026-11-12 助手のマスモンの総合力とランク・忠誠度・人気・育成方針と叱る/褒める・年齢と寿命・成長の型・育ちの速さ×3(56-assistant-life-masmon-bond.jsx・キズナ・案 masmon-plan/POWER.md 第3版)。保存 mh_assistant_masmon_bond_v1。真にするのは masmon-pvp の配り直し(DAILY_GROWTH_CAP 200)・止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと
+  // モンヒロサクセス(プレイヤー側のターン制の育成・PLAN.md)。回2(育成の画面)を作っている途中なので偽。入口はデバッグ設定の「🌱 モンヒロサクセス(試す)」だけ(56-monhero-success-*.jsx)
+  monheroSuccess: false,
   assistantMasmonFuse: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 冬眠中の助手のマスモンどうしの合体(56-assistant-life-masmon-sleep.jsx・キズナ・案 masmon-plan/FUSE.md 第2版)。保存 mh_assistant_masmon_fuse_v1。冬眠の印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
@@ -64635,6 +64740,334 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
   return target && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, target) : overlay;
 };
 
+// ---- part: 56-monhero-success-fx.jsx ----
+// ===== モンヒロサクセス: 育てる子が「生きている」ように見える演出(回2・回3の画面から呼ぶ部品) =====
+// 2026-11-12 窓口の依頼。絵は1枚のPNGのまま、今ある待機アニメのリグ(24-battle-fx.jsx の withMonsterIdleArt)に、
+// 気分の姿勢・ときどきのしぐさ・季節と時間の光・ふきだしの声(mon.js の {cry})を重ねる。
+//
+// 呼び方(画面の側は、置き場所の大きさだけ決めて渡す。正方形の箱は中で作る):
+//   <MsxLiveMon species="Mocchi" colors={run.colors} mood="joy" season="spring" time="昼"
+//               react={{ kind:'great', id: 1 }} onReactEnd={() => …} seed={run.id}/>
+//     mood  … 気分8つ joy/hype/calm/tired/sulky/sad/surprise/clingy。様子の5段や「うつ」は msxFxMoodOf() で直す
+//     react … 1回きりの反応。id が変わるたびに1回だけ動く。kind は MSXFX_REACT の名前
+//             (great 大成功で跳ねる/ok 成功で頷く/fail 失敗でしょんぼり/sab サボりでそっぽ/
+//              scold 叱られて縮む/scoldBad 合っていない叱り方でふてくされ/praise 褒められて甘える)
+//   <MsxFxMoment kind="lvup" title="ちから Lv3" sub="訓練の効果が上がった" onDone={…}/>
+//     節目の短い演出。kind: lvup 訓練Lvアップ/tech 修行の技を覚えた/win 大会に勝った/lose 大会に負けた/
+//     over ゲームオーバー/retire 引退。親は position:relative の画面(.msx)。画面いっぱいに重なる
+//     pose  … しぐさを出したままにする(止め絵・見本用)
+//     pyoko … ぴょこぴょこ(小さく弾み続け、ときどき大きく跳ねる。社長 2026-11-12「もっと小さくして、ぴょこぴょこ動くように」)。
+//             疲れ・しょんぼり・ふてくされはゆっくり低く、大はしゃぎは速く。反応の最中は止める。動きを減らす設定では動かさない。
+//             大きさは置き場所の箱で決まる(小さくするのは呼ぶ画面の側)
+//   <MsxSceneLight season time/> … 背景の上に重ねる季節と時間の光(押せない・動かない)
+//
+// 決まり: 演出は1.2秒まで・押せばとばせる・端末の「動きを減らす」(または calm)では動かさず止まった姿で出す。
+// ふきだしの声は台本エンジン(別の会話で作る monsucMonLine)があればそれを、無ければ画面が msxFxUseScript() で渡した
+// 台本 mon.js の行(回2なら msxSuc.script.mon)、それも無ければ下の仮の声から選ぶ。保存はしない。公開の印も見ない(呼ぶ画面が見る)。
+
+const MSXFX_MOODS = Object.freeze(['joy', 'hype', 'calm', 'tired', 'sulky', 'sad', 'surprise', 'clingy']);
+const MSXFX_MOOD_ALIAS = Object.freeze({
+  // ターンのはじめの様子(5段)と、気になる様子
+  great: 'hype', good: 'joy', normal: 'calm', tired: 'tired', worn: 'tired', stress: 'sulky', utsu: 'sad', sabori: 'sulky',
+  // ことばで来たとき
+  ごきげん: 'joy', ふつう: 'calm', 疲れ: 'tired', ふてくされ: 'sulky', うつ: 'sad',
+});
+const msxFxMoodOf = (m) => (MSXFX_MOODS.includes(m) ? m : (MSXFX_MOOD_ALIAS[m] || 'calm'));
+
+// 1回きりの反応: 動き(cls)と、ふきだしの声の気分(mon.js の「場面ごとの気分の目安」に合わせる)と、飛ぶ印
+const MSXFX_REACT = Object.freeze({
+  great: { cls: 'jump', mood: 'hype', fx: 'spark' },
+  ok: { cls: 'nod', mood: 'joy', fx: 'note' },
+  fail: { cls: 'droop', mood: 'sad', fx: 'drop' },
+  sab: { cls: 'away', mood: 'calm', fx: 'zzz' },
+  scold: { cls: 'shrink', mood: 'sad', fx: 'sweat' },
+  scoldBad: { cls: 'away', mood: 'sulky', fx: 'puff' },
+  praise: { cls: 'snuggle', mood: 'clingy', fx: 'heart' },
+  peak: { cls: 'jump', mood: 'surprise', fx: 'spark' },
+});
+// ときどきのしぐさ(気分ごと)。だいたい7秒に1回
+const MSXFX_GESTURE = Object.freeze({
+  joy: { cls: 'hop', fx: 'note' }, hype: { cls: 'hop2', fx: 'spark' }, calm: { cls: 'look', fx: '' },
+  tired: { cls: 'yawn', fx: 'zzz' }, sulky: { cls: 'huff', fx: 'puff' }, sad: { cls: 'shiver', fx: 'drop' },
+  surprise: { cls: 'jolt', fx: 'bang' }, clingy: { cls: 'lean', fx: 'heart' },
+});
+const MSXFX_PYOKO_SLOW = Object.freeze(['tired', 'sad', 'sulky']);
+const MSXFX_FX_CHAR = Object.freeze({ spark: '✦', note: '♪', drop: '💧', zzz: 'z', sweat: '💦', puff: '💢', heart: '♡', bang: '！' });
+
+// 動きを減らす設定(端末の設定。助手マスモンの部品と同じ見方)
+const msxFxCalm = () => { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; } };
+const msxFxHash = (s) => { let h = 2166136261; const t = String(s); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+
+// ---- 季節と時間の光 ----
+// time は '朝'/'昼'/'夕方'/'夜'(回2の msxSceneBg().time と同じことば)。無ければ端末の時計
+const msxFxTimeNow = () => { let h = 12; try { h = new Date().getHours(); } catch (_) {} return h >= 5 && h < 9 ? '朝' : h >= 9 && h < 16 ? '昼' : h >= 16 && h < 19 ? '夕方' : '夜'; };
+const MSXFX_TIME_LIGHT = Object.freeze({
+  朝: { sky: 'linear-gradient(180deg,#fff7d633 0,#ffe4b522 50%,#0000 100%)', mon: 'brightness(1.04) saturate(1.02)', rim: '#fff3c4' },
+  昼: { sky: 'linear-gradient(180deg,#ffffff1a 0,#0000 60%)', mon: 'none', rim: '#ffffff' },
+  夕方: { sky: 'linear-gradient(180deg,#ff9f4338 0,#f9731626 55%,#7c2d1222 100%)', mon: 'sepia(.18) saturate(1.1) brightness(.98) hue-rotate(-6deg)', rim: '#fdba74' },
+  夜: { sky: 'linear-gradient(180deg,#1e1b4b66 0,#312e8144 55%,#0f0d2455 100%)', mon: 'brightness(.82) saturate(.85) hue-rotate(8deg)', rim: '#a5b4fc' },
+});
+const MSXFX_SEASON_LIGHT = Object.freeze({
+  spring: 'radial-gradient(120% 70% at 20% 0,#f9a8d42e 0,#0000 60%)',
+  summer: 'radial-gradient(120% 70% at 80% 0,#fde0473a 0,#0000 60%)',
+  autumn: 'radial-gradient(120% 70% at 50% 0,#fb923c33 0,#0000 60%)',
+  winter: 'radial-gradient(120% 70% at 50% 0,#bae6fd38 0,#0000 60%)',
+});
+const msxFxLight = (season, time) => {
+  const t = MSXFX_TIME_LIGHT[time] || MSXFX_TIME_LIGHT[msxFxTimeNow()];
+  const s = MSXFX_SEASON_LIGHT[season] || '';
+  return { overlay: [s, t.sky].filter(Boolean).join(','), mon: t.mon, rim: t.rim };
+};
+function MsxSceneLight({ season, time }) {
+  msxFxEnsureCss();
+  return <div className="msxfx-light" aria-hidden="true" style={{ background: msxFxLight(season, time).overlay }}/>;
+}
+
+// ---- ふきだしの声 ----
+// 台本エンジンができるまでの仮の声(mon.js の共通の声から各気分2本)。鳴き声も無い種は「きゅ」
+const MSXFX_VOICE_FALLBACK = Object.freeze({
+  joy: ['{cry}♪', '{cry}〜♪'], hype: ['{cry}ーーっ！！', '{cry}！{cry}！{cry}！'], calm: ['{cry}', '{cry}？'],
+  tired: ['ぜぇ…ぜぇ…', '{cry}…'], sulky: ['むぅ…', '{cry}っ！ ぷいっ'], sad: ['{cry}…', 'しょぼ…'],
+  surprise: ['{cry}！？', '！？'], clingy: ['{cry}〜', '{cry}…♡'],
+});
+// 台本の行(mon.js の MONSUC_SCRIPT_MON と同じ形)。台本を読んだ画面が msxFxUseScript(rows) で渡す(回2なら msxSuc.script.mon)
+let msxFxScript = null;
+const msxFxUseScript = (rows) => { if (Array.isArray(rows)) msxFxScript = rows; };
+const msxFxScriptRows = () => msxFxScript;
+const msxFxCry = (species) => {
+  const rows = msxFxScriptRows(); const id = `mon.cry.${String(species || '').toLowerCase()}`;
+  const r = rows && rows.find((x) => x && x.id === id);
+  return r && typeof r.t === 'string' ? r.t : 'きゅ';
+};
+const msxFxVoice = (species, mood, seed = '') => {
+  const m = msxFxMoodOf(mood);
+  try { if (typeof monsucMonLine === 'function') { const r = monsucMonLine({ species, mood: m, seed }); if (r && typeof r === 'string') return r; if (r && typeof r.t === 'string') return r.t; } } catch (_) {}
+  const rows = msxFxScriptRows();
+  const pool = rows ? rows.filter((x) => x && typeof x.id === 'string' && x.id.startsWith(`mon.mood.${m}.`)).map((x) => x.t) : [];
+  const list = pool.length ? pool : MSXFX_VOICE_FALLBACK[m];
+  const t = list[msxFxHash(`${seed}|${m}`) % list.length];
+  const cry = msxFxCry(species);
+  return String(t).replace(/\{cry\}/g, cry);
+};
+
+// ---- 育てる子(待機アニメ+気分+しぐさ+反応+ふきだし) ----
+function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onReactEnd, seed = '', voice = true, calm, pose = false, pyoko = false, className = '', style, alt = '' }) {
+  msxFxEnsureCss();
+  const still = calm === true || msxFxCalm();
+  const m = msxFxMoodOf(mood);
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[species] : null;
+  // pose: しぐさを出したままにする(止め絵・見本用。ふだんの画面では使わない)
+  const [act, setAct] = React.useState(() => (pose ? { cls: MSXFX_GESTURE[m].cls, fx: MSXFX_GESTURE[m].fx, say: voice ? msxFxVoice(species, m, `${seed}|pose`) : '', n: 'pose' } : null)); // { cls, fx, say, n }
+  const timers = React.useRef([]);
+  const actRef = React.useRef(null); actRef.current = act;
+  const endRef = React.useRef(onReactEnd); endRef.current = onReactEnd;
+  const clear = () => { timers.current.forEach(clearTimeout); timers.current = []; };
+  const later = (f, ms) => { timers.current.push(setTimeout(f, ms)); };
+  React.useEffect(() => clear, []);
+  // 1回きりの反応(id が変わるたび)
+  const reactKey = react && react.kind ? `${react.kind}:${react.id != null ? react.id : ''}` : '';
+  React.useEffect(() => {
+    if (!reactKey) return;
+    const R = MSXFX_REACT[react.kind]; if (!R) return;
+    clear();
+    const say = voice ? msxFxVoice(species, R.mood, `${seed}|${reactKey}`) : '';
+    setAct({ cls: R.cls, fx: R.fx, say, n: reactKey, react: true });
+    later(() => { setAct(null); if (endRef.current) endRef.current(); }, still ? 700 : 1200);
+  }, [reactKey]);
+  // ときどきのしぐさ(反応の最中はしない)。止める設定ではしない
+  React.useEffect(() => {
+    if (still || pose) return undefined;
+    let n = 0; const base = 6200 + (msxFxHash(`${seed}|${species}`) % 2400);
+    const iv = setInterval(() => {
+      n++;
+      if (actRef.current && actRef.current.react) return;
+      const G = MSXFX_GESTURE[m]; const key = `g${n}`;
+      const say = voice && n % 2 === 1 ? msxFxVoice(species, m, `${seed}|${key}`) : '';
+      setAct({ cls: G.cls, fx: G.fx, say, n: key });
+      later(() => setAct((c) => (c && c.n === key ? null : c)), 1200);
+    }, base);
+    return () => clearInterval(iv);
+  }, [m, still, pose, species, seed, voice]);
+  const skip = () => { if (!act) return; const wasReact = act.react; clear(); setAct(null); if (wasReact && endRef.current) endRef.current(); };
+  const L = msxFxLight(season, time);
+  const img = mon && mon.imgUrl
+    ? (typeof DyedMonsterImage === 'function'
+      ? <DyedMonsterImage baseId={species} src={mon.imgUrl} alt={alt} masuColors={Array.isArray(colors) ? colors : []} draggable={false} className="w-full h-full object-contain" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+      : <img src={mon.imgUrl} alt={alt} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>)
+    : <span className="msxfx-emoji">{(mon && mon.emoji) || '❔'}</span>;
+  const art = !still && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(species, img, { fill: true, own: true }) : img;
+  const fxCh = act && act.fx ? MSXFX_FX_CHAR[act.fx] : '';
+  return (
+    <div className={`msxfx-live${still ? ' msxfx-calm' : ''}${pyoko ? ` msxfx-pyoko msxfx-py-${MSXFX_PYOKO_SLOW.includes(m) ? 'slow' : m === 'hype' ? 'fast' : 'mid'}${act && act.react ? ' msxfx-py-hold' : ''}` : ''} ${className}`} style={style} data-msxfx-mood={m} data-msxfx-act={act ? act.cls : ''} onClick={act ? skip : undefined}>
+      <div className="msxfx-shadow" aria-hidden="true"/>
+      <div className="msxfx-hop"><div className={`msxfx-pose msxfx-m-${m}`}>
+        <div key={act ? act.n : 'idle'} className={`msxfx-act${act ? ` msxfx-a-${act.cls}` : ''}`}>
+          <div className="msxfx-tint" style={{ filter: `${L.mon === 'none' ? '' : L.mon} drop-shadow(0 6px 5px #0008)`.trim(), '--msxfx-rim': L.rim }}>{art}</div>
+        </div>
+      </div></div>
+      {fxCh ? <div key={`fx-${act.n}`} className={`msxfx-fx msxfx-fx-${act.fx}`} aria-hidden="true">{[0, 1, 2].map((i) => <i key={i} style={{ '--i': i }}>{fxCh}</i>)}</div> : null}
+      {act && act.say ? <div key={`b-${act.n}`} className="msxfx-bub">{act.say}</div> : null}
+    </div>
+  );
+}
+
+// ---- 節目の短い演出 ----
+const MSXFX_MOMENT = Object.freeze({
+  lvup: { icon: '⬆️', head: '訓練Lvアップ！', tone: 'gold' },
+  tech: { icon: '📜', head: '技を覚えた！', tone: 'sky' },
+  win: { icon: '🏆', head: '優勝！', tone: 'gold' },
+  lose: { icon: '…', head: '負けてしまった', tone: 'gray' },
+  over: { icon: '🌧️', head: 'ゲームオーバー', tone: 'gray' },
+  retire: { icon: '🌸', head: '引退', tone: 'pink' },
+});
+function MsxFxMoment({ kind, title, sub, species, colors, onDone, calm }) {
+  msxFxEnsureCss();
+  const still = calm === true || msxFxCalm();
+  const K = MSXFX_MOMENT[kind] || MSXFX_MOMENT.lvup;
+  const doneRef = React.useRef(onDone); doneRef.current = onDone;
+  const fired = React.useRef(false);
+  const finish = () => { if (fired.current) return; fired.current = true; if (doneRef.current) doneRef.current(); };
+  React.useEffect(() => { const t = setTimeout(finish, 1200); return () => clearTimeout(t); }, []);
+  const mood = kind === 'win' ? 'great' : kind === 'lvup' || kind === 'tech' ? 'ok' : kind === 'retire' ? 'praise' : 'fail';
+  return (
+    <div className={`msxfx-moment msxfx-t-${K.tone} msxfx-k-${kind}${still ? ' msxfx-calm' : ''}`} onClick={finish} role="button" aria-label="とばす" data-msxfx-moment={kind}>
+      <div className="msxfx-rays" aria-hidden="true"/>
+      {kind === 'win' || kind === 'lvup' || kind === 'tech' ? <div className="msxfx-confetti" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <i key={i} style={{ '--i': i }}/>)}</div> : null}
+      {kind === 'lose' || kind === 'over' ? <div className="msxfx-rain" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ '--i': i }}/>)}</div> : null}
+      {species ? <div className="msxfx-mmon"><MsxLiveMon species={species} colors={colors} mood={MSXFX_REACT[mood].mood} react={{ kind: mood, id: kind }} voice={false} calm={still}/></div> : null}
+      <div className="msxfx-plate">
+        <div className="msxfx-icon">{K.icon}</div>
+        <div className="msxfx-head">{K.head}</div>
+        {title ? <div className="msxfx-title">{title}</div> : null}
+        {sub ? <div className="msxfx-sub">{sub}</div> : null}
+      </div>
+      <div className="msxfx-skip">タップでとばす</div>
+    </div>
+  );
+}
+
+// ---- 見た目(アニメの名前は msxfx- を頭に付ける) ----
+const MSXFX_CSS = `
+.msxfx-light{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;z-index:1}
+.msxfx-live{position:relative;height:100%;aspect-ratio:1/1;max-width:100%;margin:0 auto;-webkit-tap-highlight-color:transparent}
+.msxfx-shadow{position:absolute;left:22%;right:22%;bottom:3%;height:7%;border-radius:50%;background:radial-gradient(closest-side,#0008,#0000)}
+.msxfx-hop,.msxfx-pose,.msxfx-act,.msxfx-tint{position:absolute;inset:0;transform-origin:50% 92%}
+.msxfx-tint>*{display:block;width:100%;height:100%}
+.msxfx-emoji{display:flex!important;align-items:center;justify-content:center;font-size:64px}
+.msxfx-hop{position:absolute;inset:0;transform-origin:50% 96%}
+/* ぴょこぴょこ: 小さく4回弾んで、5回目に大きく跳ねる(1周 = 5拍) */
+.msxfx-pyoko{--py-beat:.62s;--py-h:-7%;--py-big:-20%}
+.msxfx-py-fast{--py-beat:.46s;--py-h:-9%;--py-big:-24%}
+.msxfx-py-slow{--py-beat:1s;--py-h:-3%;--py-big:-7%}
+.msxfx-pyoko .msxfx-hop{animation:msxfx-pyoko calc(var(--py-beat)*5) linear infinite}
+.msxfx-pyoko .msxfx-shadow{animation:msxfx-pyshadow calc(var(--py-beat)*5) linear infinite}
+.msxfx-py-hold .msxfx-hop,.msxfx-py-hold .msxfx-shadow{animation:none}
+@keyframes msxfx-pyoko{
+  0%,20%,40%,60%{transform:translateY(0) scale(1.06,.93);animation-timing-function:ease-out}
+  3%,23%,43%,63%{transform:translateY(0) scale(1);animation-timing-function:ease-out}
+  10%,30%,50%,70%{transform:translateY(var(--py-h)) scale(.97,1.04);animation-timing-function:ease-in}
+  17%,37%,57%{transform:translateY(0) scale(1.04,.95);animation-timing-function:ease-out}
+  77%{transform:translateY(0) scale(1.1,.88);animation-timing-function:ease-out}
+  89%{transform:translateY(var(--py-big)) scale(.93,1.08) rotate(-3deg);animation-timing-function:ease-in}
+  98%{transform:translateY(0) scale(1.08,.9)}
+  100%{transform:translateY(0) scale(1.06,.93)}}
+@keyframes msxfx-pyshadow{0%,3%,17%,20%,23%,37%,40%,43%,57%,60%,63%,77%,98%,100%{transform:scale(1);opacity:1}
+  10%,30%,50%,70%{transform:scale(.85);opacity:.8}89%{transform:scale(.6);opacity:.5}}
+/* 気分の姿勢(ずっと) */
+.msxfx-m-joy{animation:msxfx-bob 1.6s ease-in-out infinite}
+.msxfx-m-hype{animation:msxfx-bob .8s ease-in-out infinite}
+.msxfx-m-tired{transform:translateY(4%) scaleY(.95);filter:saturate(.85)}
+.msxfx-m-sulky{transform:scaleX(-1) rotate(-3deg)}
+.msxfx-m-sad{transform:translateY(5%) scale(.95) rotate(-2deg);filter:saturate(.7) brightness(.92)}
+.msxfx-m-surprise{transform:translateY(-2%) scale(1.02)}
+.msxfx-m-clingy{transform:rotate(4deg) translateX(-3%)}
+/* しぐさと反応(1.2秒まで) */
+.msxfx-a-hop{animation:msxfx-hop .6s ease-out 1}
+.msxfx-a-hop2{animation:msxfx-hop .45s ease-out 2}
+.msxfx-a-look{animation:msxfx-look 1.1s ease-in-out 1}
+.msxfx-a-yawn{animation:msxfx-yawn 1.1s ease-in-out 1}
+.msxfx-a-huff{animation:msxfx-huff .5s ease-in-out 2}
+.msxfx-a-shiver{animation:msxfx-shiver .12s linear 6}
+.msxfx-a-jolt{animation:msxfx-jolt .5s cubic-bezier(.2,1.6,.4,1) 1}
+.msxfx-a-lean{animation:msxfx-lean 1.1s ease-in-out 1}
+.msxfx-a-jump{animation:msxfx-jump 1s cubic-bezier(.3,1.4,.5,1) 1}
+.msxfx-a-nod{animation:msxfx-nod .5s ease-in-out 2}
+.msxfx-a-droop{animation:msxfx-droop 1.1s ease-out 1 forwards}
+.msxfx-a-away{animation:msxfx-away 1.1s ease-in-out 1 forwards}
+.msxfx-a-shrink{animation:msxfx-shrink 1.1s ease-out 1 forwards}
+.msxfx-a-snuggle{animation:msxfx-snuggle 1.1s ease-in-out 1}
+@keyframes msxfx-bob{0%,100%{translate:0 0}50%{translate:0 -2.5%}}
+@keyframes msxfx-hop{0%,100%{transform:translateY(0) scale(1)}15%{transform:translateY(0) scale(1.06,.92)}50%{transform:translateY(-14%) scale(.96,1.05)}85%{transform:translateY(0) scale(1.05,.95)}}
+@keyframes msxfx-look{0%,100%{transform:none}25%,45%{transform:scaleX(-1)}70%{transform:rotate(-6deg)}}
+@keyframes msxfx-yawn{0%,100%{transform:none}40%,60%{transform:scale(1.03,1.06) rotate(-3deg)}80%{transform:translateY(3%) scaleY(.96)}}
+@keyframes msxfx-huff{0%,100%{transform:none}50%{transform:scale(1.06,.96) translateX(3%)}}
+@keyframes msxfx-shiver{0%,100%{transform:translateX(0)}50%{transform:translateX(-1.5%)}}
+@keyframes msxfx-jolt{0%{transform:none}40%{transform:translateY(-12%) scale(1.08)}100%{transform:none}}
+@keyframes msxfx-lean{0%,100%{transform:none}40%,70%{transform:rotate(-9deg) translateX(-6%)}}
+@keyframes msxfx-jump{0%{transform:none}12%{transform:scale(1.12,.86)}40%{transform:translateY(-26%) scale(.92,1.1) rotate(-6deg)}62%{transform:translateY(0) scale(1.1,.9)}78%{transform:translateY(-6%)}100%{transform:none}}
+@keyframes msxfx-nod{0%,100%{transform:none}45%{transform:rotate(8deg) scaleY(.95)}}
+@keyframes msxfx-droop{0%{transform:none;filter:none}35%{transform:translateY(6%) scale(.96) rotate(-5deg)}100%{transform:translateY(8%) scale(.94) rotate(-7deg);filter:saturate(.55) brightness(.85)}}
+@keyframes msxfx-away{0%{transform:none}30%{transform:scaleX(.05)}55%,100%{transform:scaleX(-1) rotate(-4deg) translateY(2%)}}
+@keyframes msxfx-shrink{0%{transform:none}20%{transform:translateY(-4%) scale(1.04)}45%,100%{transform:translateY(6%) scale(.88,.86)}}
+@keyframes msxfx-snuggle{0%,100%{transform:none}25%{transform:rotate(-8deg) translateX(-4%)}50%{transform:rotate(6deg) translateX(3%) translateY(-6%)}75%{transform:rotate(-5deg)}}
+/* 飛ぶ印 */
+.msxfx-fx{position:absolute;left:50%;top:14%;width:0;height:0;pointer-events:none;z-index:2}
+.msxfx-fx i{position:absolute;font-style:normal;font-weight:900;font-size:22px;color:#fde047;text-shadow:0 1px 3px #0009;opacity:0;animation:msxfx-float 1.1s ease-out forwards;animation-delay:calc(var(--i)*.12s);left:calc((var(--i) - 1)*34px)}
+.msxfx-fx-heart i{color:#f472b6}.msxfx-fx-note i{color:#7dd3fc}.msxfx-fx-zzz i{color:#c7d2fe;font-size:18px}.msxfx-fx-puff i,.msxfx-fx-bang i{color:#fb7185}
+@keyframes msxfx-float{0%{opacity:0;transform:translateY(10px) scale(.6)}25%{opacity:1;transform:translateY(-4px) scale(1.1)}100%{opacity:0;transform:translateY(-34px) scale(1)}}
+/* ふきだし */
+/* 顔に重ならないよう、箱の上の外に出す(ミハリ5の気づき) */
+.msxfx-bub{position:absolute;left:50%;bottom:100%;margin-bottom:2px;transform:translateX(-50%);z-index:3;background:#fff;color:#1e1b4b;font-weight:900;font-size:13px;line-height:1.3;
+  padding:5px 11px;border-radius:14px;white-space:nowrap;max-width:180%;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 8px #0006;
+  animation:msxfx-bub 1.7s ease-out forwards;pointer-events:none}
+.msxfx-bub:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}
+@keyframes msxfx-bub{0%{opacity:0;transform:translateX(-50%) translateY(6px) scale(.8)}12%{opacity:1;transform:translateX(-50%) scale(1.05)}20%{transform:translateX(-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+/* 節目 */
+.msxfx-moment{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,#2b2457ee 0,#0f0d24f2 70%);animation:msxfx-in .18s ease-out;cursor:pointer}
+.msxfx-t-gray{background:radial-gradient(circle at 50% 45%,#2a2f3df0 0,#0b0d14f5 70%)}
+.msxfx-t-pink{background:radial-gradient(circle at 50% 40%,#5b2a4bee 0,#130d24f4 72%)}
+.msxfx-rays{position:absolute;left:50%;top:42%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;opacity:.35;
+  background:repeating-conic-gradient(#fde04755 0 8deg,#0000 8deg 22deg);animation:msxfx-spin 6s linear infinite;pointer-events:none}
+.msxfx-t-sky .msxfx-rays{background:repeating-conic-gradient(#7dd3fc55 0 8deg,#0000 8deg 22deg)}
+.msxfx-t-pink .msxfx-rays{background:repeating-conic-gradient(#f9a8d444 0 10deg,#0000 10deg 26deg)}
+.msxfx-t-gray .msxfx-rays{display:none}
+.msxfx-mmon{position:relative;height:min(34vh,190px);aspect-ratio:1/1}
+.msxfx-k-over .msxfx-mmon,.msxfx-k-lose .msxfx-mmon{filter:grayscale(.6) brightness(.8)}
+.msxfx-k-retire .msxfx-mmon{animation:msxfx-rise 1.2s ease-out forwards}
+.msxfx-plate{position:relative;text-align:center;color:#fff;animation:msxfx-pop .35s cubic-bezier(.2,1.5,.4,1)}
+.msxfx-icon{font-size:30px;line-height:1}
+.msxfx-head{font-size:22px;font-weight:900;letter-spacing:.04em;text-shadow:0 2px 0 #0008}
+.msxfx-t-gold .msxfx-head{color:#fde047}.msxfx-t-sky .msxfx-head{color:#7dd3fc}.msxfx-t-pink .msxfx-head{color:#f9a8d4}.msxfx-t-gray .msxfx-head{color:#cbd5e1}
+.msxfx-title{margin-top:4px;font-size:16px;font-weight:900;padding:4px 14px;border-radius:99px;background:#ffffff1f;display:inline-block;max-width:86vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msxfx-sub{margin-top:4px;font-size:12px;color:#cbd5e1;font-weight:700;max-width:86vw}
+.msxfx-skip{position:absolute;bottom:14px;right:14px;font-size:11px;color:#94a3b8;font-weight:700}
+.msxfx-confetti i{position:absolute;left:50%;top:44%;width:7px;height:11px;border-radius:2px;background:#fde047;opacity:0;
+  animation:msxfx-conf 1.1s ease-out forwards;animation-delay:calc(var(--i)*.02s);--a:calc(var(--i)*30deg)}
+.msxfx-confetti i:nth-child(3n){background:#f472b6}.msxfx-confetti i:nth-child(3n+1){background:#7dd3fc}
+@keyframes msxfx-conf{0%{opacity:1;transform:rotate(var(--a)) translateY(0)}100%{opacity:0;transform:rotate(var(--a)) translateY(-150px) rotate(220deg)}}
+.msxfx-rain i{position:absolute;top:-20%;left:calc(var(--i)*10% + 4%);width:2px;height:40px;background:linear-gradient(#94a3b800,#94a3b8aa);
+  animation:msxfx-rain .7s linear infinite;animation-delay:calc(var(--i)*-.07s)}
+@keyframes msxfx-rain{to{transform:translateY(140vh)}}
+@keyframes msxfx-spin{to{transform:rotate(360deg)}}
+@keyframes msxfx-in{from{opacity:0}to{opacity:1}}
+@keyframes msxfx-pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes msxfx-rise{0%{transform:none;opacity:1}100%{transform:translateY(-8%);opacity:.85;filter:brightness(1.25) drop-shadow(0 0 14px #fbcfe8)}}
+/* 動きを減らす: 止まった姿で出す(印とふきだしは出たまま) */
+.msxfx-calm,.msxfx-calm *{animation:none!important;transition:none!important}
+.msxfx-calm .msxfx-fx i{opacity:1;transform:translateY(-14px)}
+.msxfx-calm .msxfx-confetti,.msxfx-calm .msxfx-rain{display:none}
+@media (prefers-reduced-motion:reduce){.msxfx-live *,.msxfx-moment *{animation:none!important}.msxfx-fx i{opacity:1}}
+`;
+let msxFxCssDone = false;
+function msxFxEnsureCss() {
+  if (msxFxCssDone || typeof document === 'undefined') return;
+  try {
+    if (!document.getElementById('msxfx-css')) { const el = document.createElement('style'); el.id = 'msxfx-css'; el.textContent = MSXFX_CSS; document.head.appendChild(el); }
+    msxFxCssDone = true;
+  } catch (_) { /* 見た目だけなので落とさない */ }
+}
+
 // ---- part: 56-assistant-life.jsx ----
 // ===== 助手たちの今(2026-11-07 社長「もっと個々に意思を持たせて、決まりがないほうがいい」) =====
 // 設計: docs/progress/assistant-peer/LIFE-PLAN.md。様子を決める仕組み・にぎわい(段階1)と、画面「助手たちの今」・HOME の帯(段階2)・様子に合う台本(段階3)
@@ -77300,6 +77733,643 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
   );
 }
 
+// ---- part: 56-monhero-success-cup.jsx ----
+// ===== モンヒロサクセスの大会の「見せる」部品(2026-11-12 バトル部) =====
+// 社長の決め: 大会で戦うのは基本1戦。組み合わせ表(トーナメント)とほかの試合は演出(TOURNAMENT.md §9・§15)。
+// 見本: docs/progress/player-raise/mock/png/v3-phone-B1(組み合わせ表)・C2(バトルカード)・Y2(特別な1話のカットイン)・B2(優勝)・C4(負け)
+//
+// ★ここは「見せる」だけ。大会の流れ(いつ大会が立つ・settle・保存)は回3の画面が持つ。ここは何も保存しない。
+// ★公開の印は持たない(回3の画面の印の後ろでだけ開く)。プレイヤー向けの文に敵の数字は書かない。
+// ★試合は助手マスモン対戦の芯(data/assistant-masmon-battle.js)で1戦だけ回す。観戦は 56-assistant-masmon-battle-view.jsx の部品
+//   (ambwLoadEngine・ambwTechTable・ambwFramesOf・ambwIsHighlight・AMBW_CSS・AMBW_SPEEDS・AMBW_DIST)を使い回す。
+//   乱数の種は育成の id + ターン + 大会 + 再戦の回数で決まるので、「結果だけ見る」でも観戦しても、中断して続けても同じ結果になる。
+//
+// 回3から呼ぶ口:
+//   <MonsucCupShow suc={SUC} s={state} me={{ name }} settle={(won) => out} onRematch={(item) => …} onNext={(out) => …} onClose={() => …}/>
+//     s.battle が立っている状態で開く。組み合わせ表 → バトルカード → (特別な1話のカットイン) → 試合 → 優勝 / 負け の順に見せる。
+//     勝ったら settle(true) を呼んで出てきた out(賞金・チケットなど)で優勝の画面を出し、「次へ」で onNext(out)。
+//     負けたら やり直し(onRematch('sand' | 'rainbow'))か あきらめる(settle(false) → onNext(out))。
+//     onRematch のあと新しい s を渡し直すと、組み合わせ表から始め直す(key に s.battle.again・reroll を使う)。
+//   monsucCupMatch(engine, catalog, suc, s, me) → { r, teamA, teamB, buffs, seed }   … 試合だけ回す(画面なし・スキップ用)
+//   monsucCupInfo(suc, s, me) → { title, venue, bracket, opp, me, mods, buffs, seed } … 画面に要るものをまとめる(純粋)
+//   部品だけ使うとき: MonsucBracket / MonsucBattleCard / MonsucMatch / MonsucCutin / MonsucCupWin / MonsucCupLose
+
+const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MSC_STAT_JP = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
+const MSC_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
+const MSC_STARS = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1))));
+const MSC_VENUE_IMG = Object.freeze({
+  debut: 'images/success/scenes/venue-debut.png', cup: 'images/success/scenes/venue-cup.png',
+  hero: 'images/success/scenes/venue-hero.png', summit: 'images/success/scenes/venue-summit.png',
+});
+// 特別な1話の効き目(芯 ASST_STORY[aid].special)→ 対戦の芯の上乗せ(buffs)と、カットインの見え方
+const MSC_SPECIAL = Object.freeze({
+  mua: { word: '声援!', sub: 'みんなの声が 届いた' },
+  atsu: { word: '気合!', sub: 'あつの特別な1話の効き目が かがやいた' },
+  kiki: { word: '集中!', sub: 'ききの特別な1話の効き目が かがやいた' },
+  momosuke: { word: '見せ場!', sub: 'ももすけの特別な1話の効き目が かがやいた' },
+  dra: { word: '直伝!', sub: 'ドラの特別な1話の効き目が かがやいた' },
+  kyuko: { word: '見切り!', sub: 'きゅうこの特別な1話の効き目が かがやいた' },
+  sorashido: { word: '計算どおり!', sub: 'ソラシドの特別な1話の効き目が かがやいた' },
+  erubin: { word: '見守り!', sub: 'エルビンの特別な1話の効き目が かがやいた' },
+});
+const MSC_LINE = Object.freeze({
+  mua: '「みんな見てるよ! いつもどおりで だいじょうぶ!」', atsu: '「最初から全開でいけ!」', kiki: '「そのまま、まっすぐ…!」',
+  momosuke: '「ここが見せ場だよ! いちばん目立っちゃお!」', dra: '「教えたとおりに。おまえならできる」', kyuko: '「相手の動き、もう見えてるよ」',
+  sorashido: '「計算どおりっす! 落ち着いていきましょう!」', erubin: '「ちゃんと見てるからね」',
+});
+
+// 特別な1話の効き目を、対戦の芯の上乗せと説明の行に直す(芯の BUFF_LIMITS の中に収める)
+const monsucBuffsOf = (mods) => {
+  const m = mods && typeof mods === 'object' ? mods : {};
+  const buffs = {}; const rows = [];
+  if (Number.isFinite(m.guts) && m.guts > 0) { buffs.guts = m.guts; rows.push(`試合のはじめから ガッツ +${m.guts}`); }
+  if (Number.isFinite(m.firstHit) && m.firstHit > 0) { buffs.hit1 = m.firstHit / 100; rows.push('最初の技が 当たりやすい'); }
+  if (Number.isFinite(m.crit) && m.crit > 0) { buffs.crit = m.crit / 100; rows.push('会心が 出やすい'); }
+  if (Number.isFinite(m.eva) && m.eva > 0) { buffs.eva = m.eva / 100; rows.push('相手の技を かわしやすい'); }
+  if (Number.isFinite(m.techFail) && m.techFail < 0) { buffs.missCut = Math.min(1, -m.techFail / 100); rows.push('技の はずれが 減る'); }
+  if (m.noIdle) { buffs.noSulk = true; rows.push('そっぽを 向かない'); }
+  if (m.noInjury) rows.push('この試合では けがをしない');
+  if (m.showFirst) rows.push('相手の 最初の手が 見える');
+  if (m.line) rows.push('声援で 気持ちが落ち着く');
+  return { buffs: Object.keys(buffs).length ? buffs : null, rows };
+};
+
+const mscNum = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+const mscMonName = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
+const mscMonImg = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+const mscAssistant = (id) => (typeof ASSISTANT_LIST !== 'undefined' ? (ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0]) : null);
+const mscFace = (id, ex) => { const a = mscAssistant(id); return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : ''; };
+
+// 大会の名前と会場(芯の battle から)
+const monsucCupTitle = (suc, s) => {
+  const b = s && s.battle; if (!b) return { name: '大会', star: 1, venue: 'cup' };
+  if (b.kind === 'summit') return { name: (suc.SUMMIT[b.round] || {}).name || '頂への道', star: 4, venue: 'summit' };
+  if (b.kind === 'cup') {
+    const list = typeof suc.cupsOf === 'function' ? (() => { try { return suc.cupsOf({ ...s, battle: null, over: null }); } catch (_) { return []; } })() : [];
+    const hit = list.find(c => c.id === b.id);
+    const name = hit ? hit.name : (typeof globalThis !== 'undefined' && globalThis.MONSUC_REGULAR_CUPS && globalThis.MONSUC_REGULAR_CUPS[b.sys]) || '大会';
+    return { name, star: b.star, venue: String(b.sys || '').startsWith('hero') || b.star >= 4 ? 'hero' : 'cup' };
+  }
+  const f = suc.FORCED[b.kind] || {};
+  return { name: f.name || '大会', star: f.star || 1, venue: b.kind === 'debut' ? 'debut' : 'cup' };
+};
+
+// 画面に要るもの(純粋)。me は { name } を渡せる(無ければ種の名前)
+const monsucCupInfo = (suc, s, me) => {
+  const b = s.battle || {};
+  const t = monsucCupTitle(suc, s);
+  const opp = (suc.opponents(s) || [])[0] || null;
+  const bracket = suc.bracketOf(s);
+  const mods = typeof suc.battleMods === 'function' ? suc.battleMods(s) : {};
+  const { buffs, rows } = monsucBuffsOf(mods);
+  const seed = ['monsuc', s.id, s.turn, b.kind, b.id || '', b.round || 0, b.retry || 0, b.again || 0, b.reroll || 0].join('|');
+  const meName = (me && me.name) || mscMonName(s.species);
+  return { title: t.name, star: t.star, venue: t.venue, bracket, opp, mods, buffs, buffRows: rows, seed, meName, rival: Boolean(opp && opp.rival), champ: Boolean(opp && opp.champ) };
+};
+
+// 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
+const monsucTeams = (catalog, suc, s, info) => {
+  const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
+  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop) };
+  const o = info.opp || { species: s.species, stats: s.stats, techs: 2, mastery: 20, tactics: 10 };
+  const all = (catalog && catalog.species[o.species] && catalog.species[o.species].techs) || [];
+  const n = Math.max(1, mscNum(o.techs, 2));
+  const techs = all.slice(0, n).map(t => t.id);
+  const mastery = {}; techs.forEach(id => { mastery[id] = mscNum(o.mastery, 0); }); ['guard', 'dist', 'swap'].forEach(k => { mastery[k] = mscNum(o.mastery, 0); });
+  const foe = { species: o.species, name: o.name || mscMonName(o.species), lv: 30, stats: o.stats, techs, mastery, loy: 100, pop: o.champ ? 60 : o.rival ? 50 : 30 };
+  const tac = mscNum(o.tactics, 20);
+  return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
+};
+
+// 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
+const monsucCupMatch = (engine, catalog, suc, s, me) => {
+  const info = monsucCupInfo(suc, s, me);
+  const { teamA, teamB } = monsucTeams(catalog, suc, s, info);
+  const r = engine.simulate({ seed: info.seed, catalog, teamA, teamB, balance: 'A', trace: true, ...(info.buffs ? { buffs: { A: info.buffs } } : {}) });
+  return { r, teamA, teamB, buffs: info.buffs, seed: info.seed, info };
+};
+
+// 組み合わせ表の人気の番号(王者 1・ライバル 2・ほかは決まった乱数)。見せるだけ
+const monsucPopOrder = (suc, s, entrants) => {
+  const rng = suc.rngOf(s.id, s.turn, 'pop');
+  const score = entrants.map((e, i) => ({ i, v: e.champ ? 1000 : e.rival ? 900 : e.you ? 200 + mscNum(s.pop) * 5 : rng() * 600 }));
+  const order = score.slice().sort((a, b) => b.v - a.v);
+  const no = []; order.forEach((x, k) => { no[x.i] = k + 1; });
+  return no;
+};
+
+const MSC_CSS = `
+.msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
+  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+.msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
+.msc-top{display:flex;align-items:center;gap:8px}
+.msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
+.msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
+.msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
+.msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
+.msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.msc-foot>*{flex:1}
+.msc-panel{border-radius:16px;overflow:hidden;background:#f6ead0;color:#3b2a14;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.msc-head{background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;text-align:center;font-weight:900;padding:7px 8px;font-size:14px;letter-spacing:.04em}
+.msc-bk{position:relative;padding:8px 6px 10px 8px}
+.msc-row{position:relative;display:flex;align-items:center;gap:5px;height:40px;transition:opacity .4s}
+.msc-row.out{opacity:.45}
+.msc-no{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:#fff;border:2px solid #d6a45a;color:#b45309;font-weight:900;font-size:13px;display:grid;place-items:center}
+.msc-name{flex:1 1 auto;width:auto;min-width:0;margin-right:6px;height:26px;border-radius:7px;background:#fffaf0;border:1.5px solid #e2c89a;display:flex;align-items:center;gap:4px;padding:0 6px;font-weight:800;font-size:13px}
+.msc-name span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-name.you{background:#fde68a;border-color:#f59e0b}
+.msc-name.foe{background:#fecdd3;border-color:#fb7185}
+.msc-tag{flex:0 0 auto;font-size:9.5px;font-weight:900;color:#fff;border-radius:5px;padding:1px 4px;background:#9a3412}
+.msc-tag.you{background:#f59e0b}.msc-tag.rv{background:#e11d48}.msc-tag.ch{background:#7c2d12}
+.msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
+.msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
+.msc-face img{width:120%;height:120%;object-fit:contain}
+.msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
+.msc-lines path{fill:none;stroke-linecap:round}
+.msc-lines .base{stroke:#cbb48b;stroke-width:2}
+.msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
+.msc-lines .win.me{stroke:#f43f5e}
+@keyframes msc-draw{to{stroke-dashoffset:0}}
+.msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
+.msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
+@keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
+.msc-note{font-size:12px;color:#fde68a;line-height:1.5}
+.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
+.msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
+.msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
+.msc-talk em{font-style:normal;color:#e11d48}
+.msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
+.msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
+.msc-vs .mon{position:absolute;z-index:1;bottom:26px;width:44%;height:150px;display:flex;align-items:flex-end;justify-content:center}
+.msc-vs .mon img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+.msc-vs .mon.a{left:2%;animation:msc-inL .5s ease-out both}.msc-vs .mon.b{right:2%;animation:msc-inR .5s ease-out both}
+.msc-vs .mon.a img{transform:scaleX(-1)}
+@keyframes msc-inL{from{transform:translateX(-60%);opacity:0}}@keyframes msc-inR{from{transform:translateX(60%);opacity:0}}
+.msc-vs .vs{position:absolute;z-index:2;left:50%;top:48%;transform:translate(-50%,-50%);font-size:44px;font-weight:900;font-style:italic;color:#e0e7ff;text-shadow:0 3px 0 #312e81,0 0 14px rgba(129,140,248,.8);animation:msc-pop .5s .35s ease-out both}
+@keyframes msc-pop{from{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+.msc-vs .nm{position:absolute;z-index:2;bottom:4px;display:flex;align-items:center;gap:4px;background:rgba(20,16,38,.85);border-radius:8px;padding:2px 8px;font-size:12.5px;font-weight:900;max-width:48%}
+.msc-vs .nm span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-vs .nm.a{left:6px}.msc-vs .nm.b{right:6px}
+.msc-tabs{display:flex;gap:6px}
+.msc-tabs button{flex:1;border:2px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-weight:900;font-size:13px;padding:7px 0;cursor:pointer;min-height:36px}
+.msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
+.msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
+.msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
+.msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
+.msc-bar{height:9px;border-radius:5px;background:#1e1b3a;overflow:hidden;position:relative}
+.msc-bar i{position:absolute;top:0;bottom:0;border-radius:5px;transform:scaleX(0);animation:msc-grow .8s ease-out forwards}
+.msc-bar.l i{right:0;background:linear-gradient(90deg,#f472b6,#fb923c);transform-origin:right}
+.msc-bar.r i{left:0;background:linear-gradient(90deg,#60a5fa,#3b82f6);transform-origin:left}
+@keyframes msc-grow{to{transform:scaleX(1)}}
+.msc-apt{display:flex;gap:3px;justify-content:center}
+.msc-apt span{width:21px;height:21px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:900;background:#1e293b;color:#64748b}
+.msc-apt span.S,.msc-apt span.A{background:#fde047;color:#3b2a05}.msc-apt span.B{background:#be123c;color:#fff}.msc-apt span.C{background:#4c1d95;color:#ddd6fe}
+.msc-aptrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px}
+.msc-aptrow .lab{font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
+.msc-tl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.msc-tl div{display:flex;flex-direction:column;gap:4px}
+.msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+.msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
+.msc-hint img{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.msc-hint em{font-style:normal;color:#fde047}
+.msc-stage{position:relative;border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
+.msc-stage .ambw-ring{background:linear-gradient(180deg,rgba(20,16,38,.15),rgba(20,16,38,.55))}
+.msc-mp{border-radius:12px;padding:7px 9px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b}
+.msc-mp.a{border-color:#f472b6}.msc-mp.b{border-color:#60a5fa}
+.msc-mp .h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:900;min-width:0}
+.msc-mp .h span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.msc-mp .h small{color:#94a3b8;font-size:10.5px;font-weight:700}
+.msc-mp .h img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.msc-mp .bars{display:flex;align-items:center;gap:6px;margin-top:4px}
+.msc-mp .bars>div{flex:1}
+.msc-mp .num{font-size:12px;font-weight:900;text-align:right;min-width:62px}
+.msc-mp .num small{color:#94a3b8;font-size:10px}
+.msc-buff{display:inline-flex;align-items:center;gap:3px;margin-left:4px;padding:1px 6px;border-radius:999px;background:#fde047;color:#3b2a05;font-size:10px;font-weight:900}
+.msc-speed{display:flex;gap:5px}
+.msc-speed button{flex:1;border:1.5px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-size:12px;font-weight:900;padding:6px 0;min-height:34px;cursor:pointer}
+.msc-speed button.on{background:#a5f3fc;color:#0c4a6e;border-color:#a5f3fc}
+.msc-end{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(10,8,24,.45);font-size:46px;font-weight:900;letter-spacing:.06em;animation:msc-fade .35s ease-out both}
+.msc-end.w{color:#fde047;text-shadow:0 4px 0 #9a3412,0 0 18px rgba(251,191,36,.9)}
+.msc-end.l{color:#cbd5e1;text-shadow:0 4px 0 #1e293b}
+@keyframes msc-fade{from{opacity:0;transform:scale(1.3)}}
+.msc-hero{position:relative;flex:1 1 auto;min-height:330px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-rays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg,rgba(253,224,71,.38) 0 9deg,rgba(253,186,116,.08) 9deg 18deg);animation:msc-spin 14s linear infinite}
+.msc-hero.lose .msc-rays{display:none}
+.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.55),rgba(15,23,42,.8))}
+@keyframes msc-spin{to{transform:rotate(360deg)}}
+.msc-hero .big{position:absolute;z-index:3;left:0;right:0;top:14px;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;animation:msc-fade .5s ease-out both}
+.msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
+.msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
+.msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
+.msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
+.msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-hero.win .who{height:46%}
+.msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
+.msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+@keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
+.msc-hero .rival{position:absolute;z-index:3;left:8px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px;border-radius:999px;background:rgba(76,5,25,.9);border:1.5px solid #fb7185;padding:5px 10px;font-size:12.5px;font-weight:900}
+.msc-hero .rival span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
+.msc-rw{display:flex;align-items:center;gap:8px;border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:9px 10px;font-size:13px;font-weight:800;animation:msc-fade .35s ease-out both}
+.msc-rw .i{font-size:20px;width:26px;text-align:center}
+.msc-rw .k{flex:0 0 auto;min-width:72px}
+.msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
+.msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
+.msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
+.msc-again h3{margin:0;text-align:center;font-size:15px;font-weight:900}
+.msc-again p{margin:0;text-align:center;font-size:11.5px;color:#cbd5e1}
+.msc-again p em{font-style:normal;color:#fde047;font-weight:900}
+.msc-pick{display:flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:9px 10px;color:#fff;font-weight:900;font-size:14px;text-align:left;cursor:pointer;min-height:48px}
+.msc-pick img{width:30px;height:30px;object-fit:contain;flex:0 0 auto}
+.msc-pick small{display:block;font-size:11px;font-weight:700;opacity:.9}
+.msc-pick.sand{background:linear-gradient(90deg,#ea580c,#f59e0b)}
+.msc-pick.rain{background:linear-gradient(90deg,#be185d,#6d28d9,#2563eb)}
+.msc-pick.quit{background:#334155;justify-content:center;font-size:13px}
+.msc-pick:disabled{opacity:.4;cursor:default}
+.msc-cut{position:relative;flex:1 1 auto;min-height:380px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-cut .word{position:absolute;z-index:3;left:0;right:0;top:20px;text-align:center;font-size:56px;font-weight:900;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.9);animation:msc-fade .45s ease-out both}
+.msc-cut .sub{position:absolute;z-index:3;left:8px;right:8px;top:94px;text-align:center;font-size:13px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.85)}
+.msc-cut .duo{position:absolute;z-index:2;left:0;right:0;bottom:80px;height:52%;display:flex;align-items:flex-end;justify-content:center;gap:2%}
+.msc-cut .duo img{max-width:46%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-cut .duo img.a{transform:scaleX(-1);filter:drop-shadow(0 0 14px rgba(253,224,71,.95)) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-cut .say{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;display:flex;align-items:center;gap:8px;border-radius:14px;background:rgba(15,12,34,.9);border:1.5px solid #fde047;padding:6px 10px}
+.msc-cut .say img{width:50px;height:50px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:2px solid #fde047}
+.msc-cut .say b{display:block;font-size:11px;color:#fde047}
+.msc-cut .say p{margin:0;font-size:13.5px;font-weight:800}
+.msc-eff{border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:8px 10px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+.msc-eff b{color:#fbcfe8;white-space:nowrap}
+@media (orientation:landscape) and (max-height:520px){
+  .msc-wrap{max-width:760px}
+  .msc-hero,.msc-cut{min-height:260px}
+  .msc-hero .who{height:50%}
+  .msc-cut .duo{bottom:70px;height:46%}
+  .msc-vs{height:170px}.msc-vs .mon{height:120px}
+}
+@media (max-width:340px){
+  .msc-name{font-size:12px}
+  .msc-tag{font-size:8.5px;padding:1px 3px}
+  .msc-st{grid-template-columns:30px 1fr 64px 1fr 30px;font-size:12px}
+  .msc-hero .big,.msc-cut .word{font-size:46px}
+}
+`;
+
+// ---- 組み合わせ表(B1)。勝ち上がりの線が段ごとに伸びる。result が 'win' なら決勝の線が優勝まで伸びる ----
+function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, canSkip }) {
+  const bk = info.bracket;
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  if (!bk) return null;
+  const E = bk.entrants;
+  const no = monsucPopOrder(suc, s, E);
+  const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
+  const out = (i) => (stage >= 1 && !r1.includes(i)) || (stage >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === 4) || (result === 'lose' && i === 0);
+  // 線: 8行 × 40px。x は 0(顔の右)→ 22 → 44 → 66 → 優勝の札
+  const H = 40; const yOf = (i) => i * H + H / 2;
+  const X = [0, 22, 44, 66, 80];
+  const W = 84;
+  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
+  const base = [];
+  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
+  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
+  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
+  base.push(pair(mid2[0], mid2[1], 2));
+  const mid3 = (mid2[0] + mid2[1]) / 2;
+  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const win = [];
+  if (stage >= 1) r1.forEach((i, k) => win.push({ d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`, me: i === 0 || i === 4, key: `a${i}` }));
+  if (stage >= 2) r2.forEach((i, k) => win.push({ d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`, me: true, key: `b${i}` }));
+  if (stage >= 3) { win.push({ d: `M${X[2]} ${mid2[0]}H${X[3]}`, me: true, key: 'c0' }, { d: `M${X[2]} ${mid2[1]}H${X[3]}`, me: true, key: 'c1' }); }
+  if (result === 'win') win.push({ d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`, me: true, key: 'f' });
+  const champ = E.find(e => e.champ) || E[4];
+  const foe = E[4];
+  const nm = (e) => (e.you ? info.meName : e.name || mscMonName(e.species));
+  const coach = mscAssistant(s.aid);
+  const champNo1 = no[E.indexOf(champ)] === 1;
+  const line = foe.rival
+    ? <>「{champNo1 && champ !== foe ? <>1番人気は 王者の {nm(champ)}! でも、</> : null}{info.meName}の相手は <em>ライバルの {nm(foe)}</em> だよ。勝てば ごほうび大!」</>
+    : foe.champ
+      ? <>「1番人気は 王者の <em>{nm(foe)}</em>! {info.meName}が当たるのは 決勝。{info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}ここで勝てば 大金星だよ!」</>
+      : <>「{info.meName}の相手は <em>{nm(foe)}</em>! あわてずに いこうね」</>;
+  return (
+    <div className="msc-wrap" data-msc-bracket data-msc-stage={stage}>
+      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← もどる</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
+      <div className="msc-panel">
+        <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
+        <div className="msc-bk">
+          {E.map((e, i) => (
+            <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W }} data-msc-entrant={e.you ? 'you' : i === 4 ? 'foe' : i}>
+              <span className="msc-no">{no[i]}</span>
+              <span className={`msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><span>{nm(e)}</span>
+                {e.you && <i className="msc-tag you">あなた</i>}
+                {e.rival && <i className="msc-tag rv">ライバル</i>}
+                {e.champ && <i className="msc-tag ch">👑王者</i>}
+              </span>
+              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><img src={mscMonImg(e.species)} alt=""/></span>
+            </div>
+          ))}
+          <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
+            {base.map((d, k) => <path key={k} className="base" d={d}/>)}
+            {win.map(w => <path key={w.key} className={`win ${w.me ? 'me' : ''}`} d={w.d} pathLength="1"/>)}
+          </svg>
+          <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
+        </div>
+      </div>
+      <div className="msc-note">あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{line}</p></div>
+      <div className="msc-foot">
+        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
+        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 1戦へ</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
+function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack }) {
+  const [tab, setTab] = useState('st');
+  const o = info.opp || {};
+  const me = s.stats || {}; const op = o.stats || {};
+  const mx = Math.max(1, ...MSC_STAT_KEYS.map(k => Math.max(mscNum(me[k]), mscNum(op[k])))) * 1.08;
+  const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
+  const aptOf = (sp) => (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C'];
+  const techsOf = (sp, ids) => { const all = (catalog && catalog.species[sp] && catalog.species[sp].techs) || []; return ids.map(id => all.find(t => t.id === id)).filter(Boolean); };
+  const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
+  const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
+  const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
+  const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
+  // 勝っている能力の上位2つと、いちばん得意な間合い(コーチの一言)
+  const ahead = MSC_STAT_KEYS.map(k => ({ k, d: mscNum(me[k]) - mscNum(op[k]) })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
+  const apt = aptOf(s.species); const rankOf = (g) => ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g) < 0 ? 9 : ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g);
+  const bestD = apt.map((g, d) => ({ g, d })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || { d: 1 };
+  const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
+  const hint = ahead.length
+    ? <>{ahead.map(x => MSC_STAT_JP[x.k]).join('と')}は 勝ってる! <em>{distWord}</em> で押していこう!</>
+    : <>能力は 相手が上…。<em>{distWord}</em> で 技を当てていこう!</>;
+  const aptRow = (sp) => <div className="msc-apt">{aptOf(sp).map((g, d) => <span key={d} className={g}>{AMBW_DIST[d]}</span>)}</div>;
+  return (
+    <div className="msc-wrap" data-msc-card>
+      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
+      <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
+        <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
+        <div className="mon a"><img src={mscMonImg(s.species)} alt=""/></div>
+        <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="vs">VS</div>
+        <div className="nm a"><span>{info.meName}</span></div>
+        <div className="nm b"><span>{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
+      </div>
+      <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
+      <div className="msc-sheet" key={tab}>
+        {tab === 'st' && <>
+          {MSC_STAT_KEYS.map((k, j) => {
+            const a = mscNum(me[k]); const b = mscNum(op[k]);
+            return (
+              <div key={k} className="msc-st" data-msc-stat={k}>
+                <b className={a >= b ? 'up' : ''}>{a}</b>
+                <div className="msc-bar l"><i style={{ width: `${Math.round(a / mx * 100)}%`, animationDelay: `${j * 0.07}s` }}/></div>
+                <span className="lab">{MSC_STAT_ICON[k]} {MSC_STAT_JP[k]}</span>
+                <div className="msc-bar r"><i style={{ width: `${Math.round(b / mx * 100)}%`, animationDelay: `${j * 0.07}s` }}/></div>
+                <b className={b > a ? 'up' : ''}>{b}</b>
+              </div>);
+          })}
+          <div className="msc-st"><b>{mscNum(s.pop)}</b><div className="msc-bar l"><i style={{ width: `${mscNum(s.pop)}%`, animationDelay: '.45s' }}/></div><span className="lab">⭐ 人気</span><div/><b/></div>
+          <div className="msc-st"><b>{loy}</b><div className="msc-bar l"><i style={{ width: `${loy}%`, animationDelay: '.5s' }}/></div><span className="lab">🤝 忠誠</span><div/><b/></div>
+          <div className="msc-aptrow">{aptRow(s.species)}<span className="lab">間合いの適性</span>{aptRow(o.species)}</div>
+        </>}
+        {tab === 'tech' && <div className="msc-tl">
+          <div>{myTechs.length ? myTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
+          <div>{foeTechs.length ? foeTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
+        </div>}
+        {tab === 'abl' && <div className="msc-tl">
+          <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species)}</div>
+          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
+        </div>}
+      </div>
+      <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span>{hint}</span></div>
+      <div className="msc-foot">
+        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
+        <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- 特別な1話の効き目のカットイン(Y2) ----
+function MonsucCutin({ s, info, onGo }) {
+  const sp = MSC_SPECIAL[s.aid] || { word: '集中!', sub: '特別な1話の効き目が かがやいた' };
+  const coach = mscAssistant(s.aid);
+  const o = info.opp || {};
+  return (
+    <div className="msc-wrap" data-msc-cutin>
+      <div className="msc-cut" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
+        <div className="msc-rays"/>
+        <div className="word">{sp.word}</div>
+        <div className="sub">{sp.sub}</div>
+        <div className="duo"><img className="a" src={mscMonImg(s.species)} alt=""/><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="say"><img src={mscFace(s.aid, 'happy')} alt=""/><div><b>{coach ? coach.name : ''}</b><p>{MSC_LINE[s.aid] || '「いっしょに がんばろう!」'}</p></div></div>
+      </div>
+      <div className="msc-eff">
+        <b>効いているあいだ</b><span>{info.title}の この1戦だけ</span>
+        <b>効き目</b><span>{info.buffRows.join('・') || '—'}</span>
+      </div>
+      <div className="msc-foot"><button className="msc-btn" data-msc-go onClick={onGo}>試合へ ▶</button></div>
+    </div>
+  );
+}
+
+// 観戦の札(育てる子 = 手前。相手は育てた人の名前を出す)
+function MscPanel({ side, team, frame, maxHp, info, s, buffed }) {
+  const i = frame.act[side]; const m = team.members[i] || team.members[0];
+  const hp = Math.max(0, frame.hp[side][i] || 0); const mx = maxHp[side][i] || 1; const g = frame.g[side];
+  const o = info.opp || {};
+  return (
+    <div className={`msc-mp ${side === 'A' ? 'a' : 'b'}`} data-msc-panel={side}>
+      <div className="h">{side === 'A' ? <img src={mscFace(s.aid)} alt=""/> : null}<span>{m.name}{side === 'B' && o.breeder ? <small> ・{o.breeder}</small> : null}{side === 'A' && buffed ? <i className="msc-buff">✨ 特別な1話</i> : null}</span></div>
+      <div className="bars">
+        <div>
+          <div className={`ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`}><i style={{ width: `${Math.round(hp / mx * 100)}%` }}/></div>
+          <div className="ambw-gbar"><i style={{ width: `${Math.max(0, Math.min(100, g))}%` }}/>{[25, 50, 75].map(x => <u key={x} style={{ left: `${x}%` }}/>)}</div>
+        </div>
+        <div className="num">{hp}<small>/{mx}</small><br/><small>ガッツ {Math.round(g)}</small></div>
+      </div>
+    </div>
+  );
+}
+
+// ---- 試合(観戦の画面で記録を再生する)。終わったら onEnd(won) ----
+function MonsucMatch({ s, info, match, onEnd }) {
+  const [pos, setPos] = useState(0);
+  const [speed, setSpeed] = useState('x2');
+  const [ended, setEnded] = useState(false);
+  const log = match.r.log;
+  const frames = useMemo(() => ambwFramesOf(log), [match]);
+  const st = log[0] || {};
+  const maxHp = { A: st.aHp || [], B: st.bHp || [] };
+  const won = match.r.winner === 'A';
+  useEffect(() => {
+    if (ended) return undefined;
+    if (pos >= log.length - 1) { const t = setTimeout(() => setEnded(true), 600); return () => clearTimeout(t); }
+    const sp = AMBW_SPEEDS.find(x => x.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let n = pos + 1;
+      if (speed === 'hl') while (n < log.length - 1 && !ambwIsHighlight(log[n], maxHp)) n++;
+      setPos(n);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [pos, speed, ended]);
+  useEffect(() => { if (!ended) return undefined; const t = setTimeout(() => onEnd(won), 1400); return () => clearTimeout(t); }, [ended]);
+  const e = log[pos] || {}; const f = frames[pos] || frames[0];
+  const foeSide = e.side === 'A' ? 'B' : 'A';
+  const fighter = (side) => {
+    const team = side === 'A' ? match.teamA : match.teamB; const m = team.members[f.act[side]] || team.members[0];
+    return (
+      <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
+        <img className={side === 'A' ? 'ambw-flip' : ''} src={mscMonImg(m.species)} alt=""/><em>{m.name}</em>
+        {e.ev === 'tech' && foeSide === side && (e.hit
+          ? <div className="ambw-dmg">{e.crit ? <small>会心!</small> : e.guarded ? <small>ガード!</small> : null}−{e.dmg}</div>
+          : <div className="ambw-dmg miss">はずれ</div>)}
+      </div>);
+  };
+  const nm = (side) => (side === 'A' ? match.teamA : match.teamB).members[0].name;
+  const say = e.ev === 'tech' ? (e.hit ? `${nm(e.side)}の ${e.name}${e.crit ? ' 会心!' : ''}` : `${nm(e.side)}の ${e.name} … はずれ`)
+    : e.ev === 'move' ? `${nm(e.side)}が ${AMBW_DIST[e.to]}の間合いへ` : e.ev === 'charge' ? (e.why === 'sulk' ? `${nm(e.side)}は そっぽを向いた…` : `${nm(e.side)}は ガッツをためた`)
+    : e.ev === 'guard' ? `${nm(e.side)}は 身を守った` : e.ev === 'ko' ? `${e.name} は たおれた` : e.ev === 'start' ? '試合開始!' : '';
+  return (
+    <div className="msc-wrap" data-msc-match data-msc-pos={pos}>
+      <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}・R{f.r || 1}</b></div>
+      <MscPanel side="B" team={match.teamB} frame={f} maxHp={maxHp} info={info} s={s}/>
+      <div className="msc-stage" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
+        <div className="ambw-ring">
+          <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
+          <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
+          {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
+        </div>
+        {ended && <div className={`msc-end ${won ? 'w' : 'l'}`} data-msc-end={won ? 'win' : 'lose'}>{won ? '勝ち!' : '負け…'}</div>}
+      </div>
+      <MscPanel side="A" team={match.teamA} frame={f} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
+      <div className="msc-hint" style={{ minHeight: 22 }}><span>{say}</span></div>
+      <div className="msc-speed">
+        {AMBW_SPEEDS.map(x => <button key={x.id} className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
+        <button data-msc-skip onClick={() => { setPos(log.length - 1); }}>⏭ とばす</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- 優勝(B2) ----
+function MonsucCupWin({ s, info, match, out, onNext }) {
+  const o = info.opp || {};
+  const rows = Array.isArray(out && out.rows) ? out.rows : [
+    ...(out && out.prize ? [{ i: '💰', k: '賞金', v: `+${out.prize}${info.rival ? '(ライバルに勝って ×1.5)' : ''}`, big: info.rival }] : []),
+    ...(out && out.tickets ? [{ i: '🎫', k: '修行チケット', v: `+${out.tickets}` }] : []),
+    ...(out && out.title ? [{ i: '🏅', k: '称号', v: `「${out.title}」` }] : []),
+  ];
+  const coach = mscAssistant(s.aid);
+  return (
+    <div className="msc-wrap" data-msc-win>
+      <div className="msc-hero win" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
+        <div className="msc-rays"/>
+        <div className="big">優勝!</div>
+        <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match ? `(${match.r.rounds} ラウンド)` : ''}</div>
+        <div className="who"><img src={mscMonImg(s.species)} alt=""/></div>
+        {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
+      </div>
+      {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
+      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
+      <div className="msc-foot"><button className="msc-btn" data-msc-next onClick={onNext}>次へ ▶</button></div>
+    </div>
+  );
+}
+
+// ---- 負け(C4)。やり直し(砂時計)か あきらめる ----
+function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim }) {
+  const o = info.opp || {};
+  const b = s.battle || {};
+  const left = Math.max(0, mscNum(suc.REMATCH && suc.REMATCH.max, 3) - mscNum(s.rematchUsed));
+  const has = (k) => mscNum(s.items && s.items[k]);
+  const can = (k) => (typeof suc.canRematch === 'function' ? suc.canRematch(s, k) : has(k) > 0 && left > 0);
+  const summit = b.kind === 'summit';
+  const coach = mscAssistant(s.aid);
+  const why = (() => {
+    if (!match) return '';
+    const t = match.r.log.filter(x => x.ev === 'tech' && x.side === 'B' && x.hit);
+    return t.length ? `${t[t.length - 1].name}が 効いてたね…` : 'あと少しだったね…';
+  })();
+  return (
+    <div className="msc-wrap" data-msc-lose>
+      <div className="msc-hero lose" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
+        <div className="big">負けた…</div>
+        <div className="sub">{info.title} {MSC_STARS(info.star)}・{o.name || mscMonName(o.species)} に 負け</div>
+        <div className="who"><img src={mscMonImg(s.species)} alt=""/></div>
+      </div>
+      <div className="msc-again">
+        <h3>時をもどして、やり直す?</h3>
+        <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>のこり {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
+        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>同じ相手と もう一度(持っている ×{has('sand')})</small></span></button>
+        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}(持っている ×{has('rainbow')})</small></span></button>
+        <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(頂への道は ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>
+      </div>
+      <div className="msc-talk"><img src={mscFace(s.aid, 'sad')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}「おしかった! {why} もう1回 いく?」</p></div>
+    </div>
+  );
+}
+
+// ---- 入れ物: 組み合わせ表 → バトルカード → (カットイン) → 試合 → 優勝 / 負け ----
+function MonsucCupShow(props) {
+  const { s } = props;
+  const b = (s && s.battle) || {};
+  return <MonsucCupShowInner key={[s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')} {...props}/>;
+}
+function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut }) {
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [failed, setFailed] = useState(false);
+  const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
+  const [out, setOut] = useState(startAt === 'win' ? (previewOut || {}) : null); // startAt・previewOut は止め絵を撮るときだけ
+  const rootRef = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((x) => { if (!alive) return; if (x) setEngine(x); else setFailed(true); });
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => { if (rootRef.current) rootRef.current.scrollTop = 0; }, [phase]);
+  const info = useMemo(() => (s && s.battle ? monsucCupInfo(suc, s, me) : null), [suc, s]);
+  const catalog = useMemo(() => {
+    if (!engine || typeof engine.buildCatalog !== 'function') return null;
+    try { return engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (_) { return null; }
+  }, [engine]);
+  const match = useMemo(() => {
+    if (!engine || !catalog || !info) return null;
+    try { return monsucCupMatch(engine, catalog, suc, s, me); } catch (_) { return null; }
+  }, [engine, catalog, info]);
+  const finish = (won) => {
+    if (won) { const o = typeof settle === 'function' ? settle(true) : null; setOut(o || {}); setPhase('win'); } else setPhase('lose');
+  };
+  const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
+  let body = null;
+  if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
+  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.r.winner === 'A')}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.r.winner === 'A')}/>;
+  else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
+  else if (phase === 'match') body = match ? <MonsucMatch s={s} info={info} match={match} onEnd={finish}/> : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
+  else if (phase === 'win') body = <MonsucCupWin s={s} info={info} match={match} out={out} onNext={() => onNext && onNext(out)}/>;
+  else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={match} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
+  return (
+    <div className="msc-root ambw-root" ref={rootRef} data-msc-root data-msc-phase={phase}>
+      <style>{AMBW_CSS}{MSC_CSS}</style>
+      {body}
+    </div>
+  );
+}
+
 // ---- part: 56-assistant-life-masmon-cheer.jsx ----
 // 助手がモンヒロバトルにいるときにできること: 👀 修行を見る・📣 応援する(2026-11-11 シュギョウ2・台帳 #5350)
 //   設計と止め絵: docs/progress/assistant-peer/masmon-train/cheer/PLAN.md
@@ -81193,6 +82263,2158 @@ const masmonPvpFriends = async () => {
   try { if (friends.some((f) => f.registered) && typeof amgcNoteFriend === 'function') amgcNoteFriend(true); } catch (_) {}
   return { ok: true, friends, remaining };
 };
+
+// ---- part: 56-monhero-success-css.jsx ----
+// ===== モンヒロサクセス(育成の画面・回2)の見た目 =====
+// 見本(docs/progress/player-raise/mock/v3.css・mock.css)の部品を、この画面の中(.msx)だけに効くよう切り出したもの。
+// 見本の「スマホの枠」(.phone)は、ここでは画面いっぱいの .msx。横向きは .msx.land、幅340以下は .msx.s320。
+// アニメの名前は msx- を頭に付けて、ほかの画面とぶつからないようにした。下の「足したもの」はゲームの中で要った分
+const MSX_CSS = `
+
+.msx{position:relative;overflow:hidden;color:#fff;font-weight:700;font-size:12px;line-height:1.45;
+  background:linear-gradient(180deg,#1d1740 0,#151130 45%,#0f0d24 100%)}
+.msx .in{padding:10px 12px 0}
+.msx .hd{display:flex;align-items:center;justify-content:space-between;gap:8px;height:38px}
+.msx .hd .bk{background:#2b3348;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:900;white-space:nowrap}
+.msx .hd .ti{font-size:13px;font-weight:900;color:#f9a8d4;white-space:nowrap}
+.msx .hd .rt{background:#3b3566;border-radius:99px;padding:4px 11px;font-size:12px;font-weight:900;white-space:nowrap}
+.msx .card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:10px;margin-top:8px;position:relative}
+.msx .card.pk{border-color:#f472b6aa}.msx .card.sk{border-color:#38bdf8aa}.msx .card.yl{border-color:#fde047;box-shadow:0 0 14px #fde04755}
+.msx .card.dash{border-style:dashed;background:#1e1a3680}
+.msx .sub{font-size:11px;color:#cbd5e1;font-weight:500}.msx .dim{color:#94a3b8}.msx .yel{color:#fde047}.msx .pnk{color:#f9a8d4}.msx .sky{color:#7dd3fc}.msx .grn{color:#86efac}
+.msx .h1{font-size:17px;font-weight:900}.msx .h2{font-size:14px;font-weight:900}
+.msx .row{display:flex;align-items:center;gap:8px}.msx .wrap{flex-wrap:wrap}.msx .f1{flex:1;min-width:0}.msx .ctr{text-align:center}.msx .nw{white-space:nowrap}
+.msx .btn,.msx .btn2,.msx .btn3{display:block;border-radius:999px;padding:11px 14px;font-weight:900;font-size:14px;text-align:center;color:#fff;white-space:nowrap}
+.msx .btn{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d66}
+.msx .btn2{background:#334155}.msx .btn3{background:#1e293b;border:1px solid #475569;color:#cbd5e1}
+.msx .btn.sm,.msx .btn2.sm,.msx .btn3.sm{padding:7px 10px;font-size:12px}
+.msx .tabs{display:flex;gap:6px;margin-top:8px}
+.msx .tabs span{flex:1;text-align:center;font-size:12px;font-weight:900;padding:8px 4px;border-radius:99px;background:#1e293b;color:#94a3b8;white-space:nowrap}
+.msx .tabs span.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.msx .tabs.y span{border-radius:10px;border:1px solid #475569}.msx .tabs.y span.on{background:#fde047;color:#422006;border-color:#fde047}
+.msx .chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
+.msx .chip.on{background:#fde047;color:#422006;border-color:#fde047}.msx .chip.p{background:#f472b6;border-color:#f472b6;color:#fff}
+.msx .chip.g{background:#064e3b;border-color:#34d399;color:#a7f3d0}.msx .chip.s{background:#0c4a6e;border-color:#38bdf8;color:#bae6fd}
+.msx .fc{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff3;background:#312e5a;flex:none}
+.msx .bub{background:#fff;color:#1e1b4b;border-radius:12px;padding:7px 10px;font-size:12.5px;font-weight:800;line-height:1.5;position:relative}
+.msx .bar{height:8px;border-radius:9px;background:#334155;overflow:hidden;position:relative}
+.msx .bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.msx .bar.g i{background:linear-gradient(90deg,#34d399,#a3e635)}.msx .bar.p i{background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .sts{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
+.msx .st1{display:flex;align-items:center;gap:5px;font-size:11px}
+.msx .st1 .nm{width:56px;white-space:nowrap;color:#e2e8f0}.msx .st1 .bar{flex:1;height:7px}.msx .st1 b{width:27px;text-align:right;font-size:12px}
+.msx .st1 em{font-style:normal;color:#86efac;font-size:11px;font-weight:900;width:26px}
+.msx .st1 .ap{width:14px;text-align:center;font-size:11px;color:#fde047}
+.msx .rk{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 5px;border-radius:6px;font-size:11px;font-weight:900;color:#0f172a;background:#94a3b8;font-style:normal}
+.msx .rk.rG,.msx .rk.rF{background:#94a3b8}.msx .rk.rE{background:#4ade80}.msx .rk.rD{background:#2dd4bf}.msx .rk.rC{background:#38bdf8}.msx .rk.rB{background:#a78bfa}
+.msx .rk.rA{background:#f472b6}.msx .rk.rS{background:#fbbf24}.msx .rk.rSS{background:#fb923c}.msx .rk.rSSS{background:#f87171}
+.msx .rk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa);color:#1e1b4b}
+.msx .rk.big{height:26px;min-width:34px;font-size:16px;border-radius:8px}
+.msx .cf{position:relative;width:30px;height:30px;flex:none}
+.msx .cf img{width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
+.msx .cf.rE img,.msx .cf.rD img{border-color:#2dd4bf}.msx .cf.rC img{border-color:#38bdf8}.msx .cf.rB img{border-color:#a78bfa}.msx .cf.rA img{border-color:#f472b6}.msx .cf.rS img{border-color:#fbbf24}.msx .cf.rM img{border-color:#fde047}
+.msx .cf.base img{opacity:.55;border-style:dashed}
+.msx .cf.fav::after{content:'★';position:absolute;right:-4px;top:-6px;font-size:11px;color:#fde047;text-shadow:0 1px 0 #422006}
+.msx .cf.fr::before{content:'🤝';position:absolute;left:-5px;bottom:-5px;font-size:10px}
+.msx .cf.lg{width:46px;height:46px}.msx .cf.lg img{width:46px;height:46px;border-radius:12px}
+.msx .tg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.msx .tc{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 5px 5px;text-align:center;position:relative;min-height:82px}
+.msx .tc .ic{font-size:19px;line-height:1.1}.msx .tc .nm{font-size:11.5px;font-weight:900}.msx .tc .ex{font-size:10px;color:#86efac;font-weight:900}
+.msx .tc .fs{display:flex;justify-content:center;gap:2px;margin-top:4px;min-height:24px}
+.msx .tc .fs .cf,.msx .tc .fs .cf img{width:24px;height:24px;border-radius:7px}
+.msx .tc.fav{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}
+.msx .tc.party{border-color:#f472b6;background:linear-gradient(160deg,#4a1d5c,#3b2f0b);box-shadow:0 0 14px #f472b699}
+.msx .tc .rib{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;font-size:9.5px;font-weight:900;padding:1px 8px;white-space:nowrap}
+.msx .tc.none .fs{opacity:.5;font-size:10px;color:#64748b;align-items:center}
+.msx .cmd{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.msx .cmd div{background:#334155;border-radius:14px;padding:7px 2px;text-align:center;font-size:12px;font-weight:900;line-height:1.3}
+.msx .cmd div small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .cmd div.off{background:#1e293b;color:#64748b}.msx .cmd div.off small{color:#64748b}.msx .cmd div.hot{background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .stage{position:relative;border-radius:14px;border:1px solid #3b3566;overflow:hidden;margin-top:8px;
+  background:radial-gradient(ellipse at 50% 88%,#4c3f8f 0,#241d4a 55%,#171230 100%)}
+.msx .stage .mon{position:absolute;object-fit:contain;filter:drop-shadow(0 8px 5px #0009)}
+.msx .stage .tag{position:absolute;font-size:10.5px;font-weight:900;background:#0009;border-radius:7px;padding:1px 8px;white-space:nowrap}
+.msx .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.msx .shade{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2455,#0f0d24dd)}
+.msx .cut{position:absolute;left:-6px;right:30px;padding:5px 20px;background:linear-gradient(90deg,#a855f7,#6366f1 70%,#6366f100)}
+.msx .cut.pow{background:linear-gradient(90deg,#f97316,#ef4444 70%,#ef444400)}.msx .cut.gold{background:linear-gradient(90deg,#f59e0b,#fde047 60%,#fde04700);color:#422006}
+.msx .cut.gray{background:linear-gradient(90deg,#475569,#334155 70%,#33415500)}.msx .cut.sky{background:linear-gradient(90deg,#0ea5e9,#2563eb 70%,#2563eb00)}
+.msx .cut b{display:block;font-size:19px;letter-spacing:.05em;text-shadow:0 2px 0 #0005}.msx .cut small{font-size:10.5px;font-weight:900}
+.msx .up{position:absolute;font-size:24px;font-weight:900;color:#fde047;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;white-space:nowrap}
+.msx .up small{font-size:12px;color:#fff;text-shadow:0 1px 0 #0008}
+.msx .modal{position:absolute;inset:0;background:#0b0920d9;display:flex;flex-direction:column;justify-content:center;padding:18px}
+.msx .spark{position:absolute;font-size:18px}
+.msx .ft{position:absolute;left:12px;right:12px;bottom:14px}
+.msx .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.msx .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.msx .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.msx .ph{background:#0f172a;border-radius:12px;object-fit:contain}
+.msx .lk{filter:grayscale(1) brightness(.5)}
+.msx .life{position:relative;height:12px;border-radius:9px;background:#334155;margin-top:5px}
+.msx .life i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#34d399,#a3e635)}
+.msx .life .pk{position:absolute;top:-2px;height:16px;border:1.5px dashed #fde047;border-radius:6px;background:#fde04722}
+.msx .life u{position:absolute;top:-3px;width:2px;height:18px;background:#fff;border-radius:2px}
+.msx .dots{display:flex;gap:5px}.msx .dots i{width:22px;height:8px;border-radius:5px;background:#334155}.msx .dots i.on{background:#fb923c}.msx .dots i.ok{background:#34d399}
+.msx table.t{width:100%;border-collapse:collapse;font-size:11.5px}.msx table.t td{padding:4px 3px;border-bottom:1px solid #fff1;text-align:right}.msx table.t td:first-child{text-align:left}
+@keyframes msx-mkPop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1)}}
+@keyframes msx-mkRise{0%{transform:translateY(14px);opacity:0}25%{opacity:1}100%{transform:translateY(-10px);opacity:1}}
+@keyframes msx-mkHop{0%,100%{transform:translateY(0)}45%{transform:translateY(-12px)}}
+@keyframes msx-mkCut{0%{transform:translateX(-110%)}100%{transform:translateX(0)}}
+@keyframes msx-mkShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}50%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
+@keyframes msx-mkGlow{0%,100%{box-shadow:0 0 6px #fde04755}50%{box-shadow:0 0 18px #fde047cc}}
+@keyframes msx-mkSpin{0%{transform:rotateY(0)}100%{transform:rotateY(720deg)}}
+@keyframes msx-mkMerge{0%{transform:translateX(var(--dx)) scale(1);opacity:1}100%{transform:translateX(0) scale(.2);opacity:0}}
+.msx .tg.tall .tc{min-height:98px;padding-top:9px}.msx .tg.tall .tc .fs{margin-top:7px}
+.msx{display:flex;flex-direction:column;container-type:size;font-size:12px}
+.msx.s320{}
+.msx.land{}
+.msx .v-hd{flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:4px 10px 0}
+.msx .v-hd .bk{background:#2b3348;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-hd .ti{flex:1;min-width:0;font-size:12.5px;font-weight:900;color:#f9a8d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-hd .ti small{color:#cbd5e1;font-size:10px;font-weight:700;margin-left:4px}
+.msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
+.msx .v-body>*{flex:none}
+.msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
+.msx .v-b1{display:flex;align-items:center;gap:6px}
+.msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+.msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
+.msx .v-turn .ph small{display:block;font-size:8.5px;font-weight:700;opacity:.95}
+.msx .v-turn .n{font-size:11px;font-weight:900;white-space:nowrap;line-height:1}
+.msx .v-turn .n b{font-size:30px;color:#fde047;margin:0 2px;letter-spacing:-.02em;text-shadow:0 2px 0 #9a3412,0 0 12px #fde04766}
+.msx .v-turn .n small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:3px}
+.msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
+.msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
+.msx .v-pow small{display:block;font-size:8.5px;color:#f9a8d4;font-weight:900;white-space:nowrap}
+.msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
+.msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
+.msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.msx .v-ga{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
+.msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.msx .v-ga.hp .tr i{background:linear-gradient(180deg,#bef264,#22c55e)}
+.msx .v-ga.hp.low .tr i{background:linear-gradient(180deg,#fdba74,#ef4444)}
+.msx .v-ga.st .tr i{background:linear-gradient(180deg,#f9a8d4,#a855f7)}
+.msx .v-ga .tr u{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#ef4444 0 3px,#7f1d1d 3px 6px)}
+.msx .v-ga .tr u.add{background:repeating-linear-gradient(45deg,#e879f9 0 3px,#701a75 3px 6px)}
+.msx .v-ga .tr u.heal{background:repeating-linear-gradient(45deg,#86efac 0 3px,#166534 3px 6px)}
+.msx .v-ga .tr s{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed #fde047}
+.msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:9px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b small.cap{color:#fde047}
+.msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+.msx .v-track{display:flex;gap:2px;margin-top:5px}
+.msx .v-track span{height:5px;border-radius:3px;background:#334155;position:relative;overflow:hidden}
+.msx .v-track span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-track span.now{outline:1px solid #fde047}
+.msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
+.msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
+.msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
+.msx .v-scene.dk .sh{background:#0f0d2499}
+.msx .v-scene .mon{position:absolute;left:50%;transform:translateX(-50%);height:44%;aspect-ratio:1;object-fit:contain;bottom:var(--mb,25%);filter:drop-shadow(0 8px 5px #0009)}
+.msx .v-scene .gr{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 5px);width:30%;height:5%;border-radius:50%;background:radial-gradient(ellipse,#000a 0,#0000 70%)}
+.msx .v-chips{position:absolute;right:7px;top:7px;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.msx .v-chip{background:#0f0d24d0;border:1px solid #ffffff33;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.msx .v-chip.hot{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;box-shadow:0 2px 6px #0006}
+.msx .v-chip.bad{background:#7f1d1d;border-color:#fca5a5;color:#fee2e2}
+.msx .v-chip.ylw{background:#fde047;color:#422006;border-color:#0000}
+.msx .v-nm{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 26px);background:#0f0d24d9;border:1px solid #ffffff33;border-radius:99px;padding:2px 12px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.msx .v-nm small{color:#fde047;font-size:9.5px;margin-left:5px}
+.msx .v-yousu{position:absolute;left:50%;bottom:66%;transform:translateX(18%);background:#7f1d1d;border:1.5px solid #fca5a5;border-radius:12px 12px 12px 2px;padding:2px 8px;font-size:11px;font-weight:900;white-space:nowrap;box-shadow:0 0 10px #ef444488}
+.msx .v-party{position:absolute;left:6px;top:6px;background:#0f0d24d0;border:1px solid #ffffff2a;border-radius:12px;padding:4px 5px 5px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.msx .v-party>small{font-size:9px;font-weight:900;color:#f9a8d4;white-space:nowrap;line-height:1.2}
+.msx .v-pf{position:relative;display:block;width:30px;flex:none}
+.msx .v-pf img{display:block;width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
+.msx .v-pf.rD img{border-color:#2dd4bf}.msx .v-pf.rC img{border-color:#38bdf8}.msx .v-pf.rB img{border-color:#a78bfa}.msx .v-pf.rA img{border-color:#f472b6}.msx .v-pf.rS img{border-color:#fbbf24}.msx .v-pf.rM img{border-color:#fde047}
+.msx .v-pf.base img{border-style:dashed;opacity:.7}
+.msx .v-pf.as img{border-radius:50%;border-color:#f9a8d4;object-position:top}
+.msx .v-pf .af{display:block;height:4px;border-radius:3px;background:#334155;margin-top:2px;overflow:hidden;position:relative}
+.msx .v-pf .af b{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#f472b6)}
+.msx .v-pf.tag img{border-color:#fff;box-shadow:0 0 0 2px #fde047,0 0 10px 2px #fde047,0 0 16px 4px #fb923c}
+.msx .v-pf.tag .af b{background:linear-gradient(90deg,#fde047,#fb923c)}
+.msx .v-pf.tag::after{content:'🤝';position:absolute;right:-6px;top:-7px;font-size:11px;filter:drop-shadow(0 1px 0 #000)}
+.msx .v-pf.fr::before{content:'借';position:absolute;left:-4px;top:-5px;z-index:1;background:#38bdf8;color:#0f172a;font-size:8px;font-weight:900;border-radius:5px;padding:0 2px;line-height:1.4}
+.msx .v-pf.sm,.msx .v-pf.sm img{width:24px}.msx .v-pf.sm img{height:24px;border-radius:7px}
+.msx .v-pf.lg,.msx .v-pf.lg img{width:42px}.msx .v-pf.lg img{height:42px;border-radius:12px}
+.msx .v-say{position:absolute;left:7px;right:7px;bottom:6px;display:flex;align-items:center;gap:6px}
+.msx .v-say .fc{width:38px;height:38px;border-color:#f9a8d4}
+.msx .v-say .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:12px 12px 12px 3px}
+.msx .v-say .bub em{font-style:normal;color:#be185d}
+.msx .v-side{position:absolute;right:7px;bottom:54px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.msx .v-mini{background:#0f0d24d9;border:1px solid #475569;border-radius:10px;padding:2px 8px;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.3}
+.msx .v-mini b{color:#fde047}
+.msx .v-st{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px}
+.msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
+.msx .v-st small{display:block;font-size:9px;color:#e2e8f0;white-space:nowrap}
+.msx .v-st b{display:block;font-size:14px}
+.msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
+.msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
+.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
+.msx .v-st div.up.main em{font-size:13px;color:#fde047}
+.msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
+.msx .v-act{display:grid;gap:5px;margin-top:6px}
+.msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
+.msx .v-p .e{font-size:19px;line-height:1.1}.msx .v-p small{display:block;font-size:8.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.msx .v-p.main{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047;border-bottom-color:#9d174d;box-shadow:0 0 14px #f472b699;font-size:16px}
+.msx .v-p.main small{color:#fff;font-size:9px}
+.msx .v-p.off{background:#1e293b;border-color:#334155;color:#64748b}.msx .v-p.off small{color:#64748b}.msx .v-p.off .e{filter:grayscale(1);opacity:.6}
+.msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
+.msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:8.5px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
+.msx .v-p .bd.r{background:#ef4444;color:#fff}
+.msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:9.5px;white-space:nowrap}
+.msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
+.msx .v-gather .v-pf.tag::after{display:none}
+.msx .v-ft{flex:none;height:40px;background:#0b0920;border-top:1px solid #3b3566;display:flex;align-items:center;gap:5px;padding:0 10px}
+.msx .v-ft span,.msx .v-ft button{flex:1;text-align:center;background:#2b3348;border-radius:99px;padding:5px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.msx .v-ft span.on,.msx .v-ft button.on{background:#fde047;color:#422006}
+.msx .v-ft span.go,.msx .v-ft button.go{flex:2.4;background:linear-gradient(90deg,#f472b6,#fb923c);font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #9d174d}
+.msx .v-ft span.go2,.msx .v-ft button.go2{flex:2.4;background:#fde047;color:#422006;font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #a16207}
+.msx .v-tabs{display:flex;gap:5px;margin-top:6px}
+.msx .v-tabs span,.msx .v-tabs button{flex:1;text-align:center;font-size:11.5px;font-weight:900;padding:5px 2px;border-radius:10px;background:#1e293b;border:1px solid #475569;color:#94a3b8;white-space:nowrap}
+.msx .v-tabs span.on,.msx .v-tabs button.on{background:#fde047;color:#422006;border-color:#fde047}
+.msx .v-tabs span.on.hv,.msx .v-tabs button.on.hv{background:linear-gradient(90deg,#ef4444,#fb923c);color:#fff;border-color:#fecaca}
+.msx .v-trs{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin-top:4px;align-items:end}
+.msx .v-tr{text-align:center;position:relative;min-width:0;padding-top:16px}
+.msx .v-tr .fs{display:flex;justify-content:center;align-items:flex-end;min-height:30px}
+.msx .v-tr .fs .v-pf,.msx .v-tr .fs .v-pf img{width:22px}.msx .v-tr .fs .v-pf img{height:22px;border-radius:6px;border-width:1.5px}
+.msx .v-tr .fs .v-pf+.v-pf{margin-left:-5px}.msx .v-tr .fs .v-pf.tag{z-index:1}
+.msx .v-tr .fs .v-pf.tag::after{font-size:9px;right:-4px;top:-6px}
+.msx .v-tr .fs .no{font-size:8.5px;color:#64748b;font-weight:700;line-height:1.2;padding-bottom:3px}
+.msx .v-tr .o{width:48px;height:48px;max-width:100%;border-radius:50%;margin:3px auto 0;background:linear-gradient(180deg,#3b4a66,#1e293b);border:2px solid #64748b;border-bottom-width:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;line-height:1;position:relative}
+.msx .v-tr .o small{font-size:8.5px;font-weight:900;margin-top:2px;white-space:nowrap}
+.msx .v-tr .o .lv{position:absolute;left:-4px;top:-5px;background:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:8px;font-weight:900;padding:0 3px;line-height:1.4;font-style:normal}
+.msx .v-tr .x{font-size:10px;font-weight:900;color:#86efac;margin-top:1px;white-space:nowrap}
+.msx .v-tr.tag .o{border-color:#fde047;background:linear-gradient(180deg,#6b5310,#3b2f0b);box-shadow:0 0 0 2px #fde04755,0 0 12px #fde047}
+.msx .v-tr.tag .x{color:#fde047}
+.msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
+.msx .v-tr.sel .fs{transform:translateY(-5px)}
+.msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:8.5px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
+.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px}
+.msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
+.msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
+.msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
+.msx .v-cm .tx b{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cm .tx small{display:block;font-size:9px;color:#86efac;font-weight:900;white-space:nowrap}
+.msx .v-cm.tag .tx small{color:#fde047}
+.msx .v-cm .afl{display:flex;align-items:center;gap:3px;font-size:8.5px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-cm .afl i{flex:1;height:5px;border-radius:3px;background:#334155;overflow:hidden;position:relative}
+.msx .v-cm .afl i b{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#f472b6)}
+.msx .v-cm.tag .afl i b{background:linear-gradient(90deg,#fde047,#fb923c)}
+.msx .v-cm .afl i::after{content:'';position:absolute;left:80%;top:0;bottom:0;border-left:1px solid #fff}
+.msx .v-fx{position:absolute;left:6px;bottom:6px;right:6px;background:#0f0d24ee;border:1px solid #fde047;border-radius:13px;padding:5px 8px 6px;box-shadow:0 0 14px #fde04755}
+.msx .v-fx.plain{border-color:#475569;box-shadow:none}
+.msx .v-fx .t{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-fx .t .big{font-size:15px;color:#fde047;text-shadow:0 0 8px #fb923c}
+.msx .v-fx .t .fl{margin-left:auto;font-size:10px;color:#cbd5e1}.msx .v-fx .t .fl b{color:#86efac;font-size:12px}.msx .v-fx .t .fl b.warn{color:#fca5a5}
+.msx .v-fx .ch{display:flex;align-items:center;gap:3px;margin-top:4px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-fx .ch span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:1px 6px;line-height:1.5}
+.msx .v-fx .ch span.tgx{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-color:#0000}
+.msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
+.msx .v-fx .ch i{font-style:normal;color:#94a3b8}
+.msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
+.msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
+.msx .v-stamp{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;line-height:1;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 26px #fb923c,0 0 50px #fde047;transform:rotate(-4deg);white-space:nowrap}
+.msx .v-stamp small{display:block;font-size:13px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:8px;transform:rotate(4deg)}
+.msx .v-stamp.ok{color:#fff;-webkit-text-stroke:2px #be185d;text-shadow:0 4px 0 #9d174d,0 0 18px #f472b6;font-size:46px}
+.msx .v-stamp.ng{color:#cbd5e1;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b;font-size:46px;transform:rotate(3deg)}
+.msx .v-stamp.zz{color:#c4b5fd;-webkit-text-stroke:2px #4c1d95;text-shadow:0 4px 0 #4c1d95;font-size:46px;transform:rotate(-2deg)}
+.msx .v-prop{position:absolute;font-size:64px;line-height:1;filter:drop-shadow(0 6px 4px #0008)}
+.msx .v-log{background:#fff;color:#1e1b4b;border-radius:14px;padding:8px 12px;margin-top:6px;font-size:12.5px;font-weight:800;line-height:1.6;border:2px solid #f9a8d4}
+.msx .v-log b.gu{color:#be185d}.msx .v-log b.gd{color:#1d4ed8}.msx .v-log b.ga{color:#c2410c}
+.msx .v-log .hd2{font-size:10px;color:#be185d;font-weight:900}
+.msx .v-res3{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.msx .v-res3 .v-scene{margin-top:0}
+.msx .v-res3 .v-stamp{top:10%;font-size:34px!important;text-align:left;left:12px}
+.msx .v-res3 .mon{height:70%;bottom:6%;left:76%}
+.msx .v-res3 .cap{position:absolute;left:10px;bottom:7px;right:42%;background:#0f0d24e0;border-radius:10px;padding:4px 8px;font-size:10.5px;font-weight:800;line-height:1.4}
+.msx .v-res3 .cap b{color:#fde047}
+.msx .v-strip{position:absolute;left:-10%;right:-10%;top:16%;height:46%;background:linear-gradient(90deg,#f472b6,#fb923c);transform:rotate(-5deg);box-shadow:0 6px 0 #0005}
+.msx .v-body2{position:absolute;left:50%;transform:translateX(-50%);height:62%;top:6%;object-fit:contain;filter:drop-shadow(0 6px 4px #0008)}
+.msx .v-q{position:absolute;left:8px;right:8px;bottom:8px}
+.msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
+.msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.msx .v-ch{background:linear-gradient(180deg,#fff,#fde7f3);color:#1e1b4b;border:2px solid #f472b6;border-bottom-width:4px;border-radius:13px;padding:6px 6px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.25;min-width:0}
+.msx .v-ch small{display:block;font-size:9.5px;font-weight:800;color:#9d174d;white-space:nowrap}
+.msx .v-ch.b{border-color:#38bdf8;background:linear-gradient(180deg,#fff,#e0f2fe)}.msx .v-ch.b small{color:#075985}
+.msx .v-ch.n{grid-column:1/-1;background:#1e293b;color:#cbd5e1;border-color:#475569;font-size:11.5px;padding:4px}
+.msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
+.msx .v-pol .l{display:flex;justify-content:space-between;font-size:9px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-pol .m{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:3px 0}
+.msx .v-pol .m i{height:9px;border-radius:3px;background:#334155}.msx .v-pol .m i.on{background:#fde047;box-shadow:0 0 8px #fde047}
+.msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
+.msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.msx .v-ev-h small{display:block;font-size:9.5px;font-weight:800}
+.msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
+.msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
+.msx .v-talk .who{position:absolute;left:10px;top:-11px;background:#fb923c;color:#fff;border-radius:8px;padding:1px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-opts{display:grid;gap:6px;margin-top:6px}
+.msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
+.msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
+.msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
+.msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
+.msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
+.msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
+.msx .v-cal .old{font-size:11px;color:#94a3b8;padding-bottom:6px;font-weight:800}
+.msx .v-next{font-size:13px;font-weight:900;white-space:nowrap}.msx .v-next b{font-size:34px;color:#fde047;text-shadow:0 2px 0 #9a3412}.msx .v-next s{color:#94a3b8;font-size:18px;margin-right:4px}
+.msx .v-steps{display:flex;align-items:center;gap:3px;margin-top:5px}
+.msx .v-steps span{flex:none;width:22px;height:22px;border-radius:50%;background:#1e293b;border:1px solid #475569;color:#94a3b8;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.msx .v-steps span.ok{background:#3b3566;border-color:#f472b6;color:#f9a8d4}
+.msx .v-steps span.on{flex:1;width:auto;border-radius:99px;background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;color:#fff;font-size:12px;white-space:nowrap;padding:0 8px}
+.msx .v-steps u{flex:none;width:6px;height:2px;background:#475569;text-decoration:none}
+.msx .v-h{font-size:15px;font-weight:900;margin-top:8px;line-height:1.3}.msx .v-h small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+.msx .v-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;position:relative;min-width:0}
+.msx .v-card.sel{border-color:#fde047;box-shadow:0 0 12px #fde04766}
+.msx .v-card.pk{border-color:#f472b6aa}
+.msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
+.msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
+.msx .v-grid6 img{width:100%;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
+.msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
+.msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:8px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
+.msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:9px;font-weight:900}
+.msx .v-apt div{background:#0f172a;border-radius:8px;padding:3px 0;white-space:nowrap;line-height:1.3}.msx .v-apt b{display:block;font-size:13px;color:#fde047}.msx .v-apt div.lo b{color:#94a3b8}
+.msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.msx .v-sl{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative;min-width:0}
+.msx .v-sl .v-pf{margin:0 auto 3px}
+.msx .v-sl .t3{font-size:9px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:8.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
+.msx .v-sl.fr{border-color:#38bdf8;background:#0c2a4a}.msx .v-sl.base{border-style:dashed}.msx .v-sl.base .t3{color:#94a3b8}
+.msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:9px;font-weight:900}
+.msx .v-heat div{border-radius:8px;padding:3px 0;background:#0f172a;white-space:nowrap;line-height:1.3}
+.msx .v-heat div b{display:block;font-size:12px}
+.msx .v-heat .x3{background:#be185d}.msx .v-heat .x2{background:#7c2d5e}
+.msx .v-sc{display:flex;gap:8px;align-items:stretch}
+.msx .v-sc .pic{flex:none;width:38%;position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#f472b6,#fb923c);min-height:230px}
+.msx .v-sc .pic img{position:absolute;left:50%;transform:translateX(-50%);top:6px;height:150%;max-width:none}
+.msx .v-sc .tx{flex:1;min-width:0;font-size:11px;line-height:1.45;font-weight:700}
+.msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
+.msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
+.msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:9.5px}
+.msx .v-faces{display:flex;gap:5px;margin-top:6px}
+.msx .v-faces span,.msx .v-faces button{flex:1;min-width:0;position:relative}
+.msx .v-faces img{width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #475569;background:#312e5a}
+.msx .v-faces span.on img,.msx .v-faces button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047}
+.msx .v-faces span.lk img,.msx .v-faces button.lk img{filter:grayscale(1) brightness(.4)}
+.msx .v-item{display:flex;align-items:center;gap:8px;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 8px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.3}
+.msx .v-item .e{font-size:22px;flex:none;width:28px;text-align:center}.msx .v-item small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .v-item .pr{margin-left:auto;flex:none;font-size:10.5px;color:#fde047;white-space:nowrap}
+.msx .v-item.sel{border-color:#fde047;background:#3b2f0b}
+.msx .v-bag{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.msx .v-bag div{aspect-ratio:1.5;border-radius:12px;border:2px dashed #64748b;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;line-height:1.1}
+.msx .v-bag div small{font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-bag div.in{border:2px solid #fde047;background:#3b2f0b}
+.msx .v-inp{background:#fff;color:#1e1b4b;border-radius:11px;padding:8px 12px;font-size:16px;font-weight:900;margin-top:5px;display:flex;justify-content:space-between;align-items:center}
+.msx .v-inp small{font-size:10px;color:#94a3b8}
+.msx .v-sw{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:10.5px;font-weight:900}
+.msx .v-sw>b{width:52px;flex:none}
+.msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
+.msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
+.msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
+.msx .v-sum .k{width:46px;font-size:9.5px;color:#f9a8d4;flex:none}
+.msx .v-sum .ed{margin-left:auto;font-size:9.5px;color:#7dd3fc;flex:none}
+.msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
+.msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
+.msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
+.msx .v-machine small{font-size:9px;font-weight:900;color:#a5f3fc;white-space:nowrap}
+.msx .v-machine::before{content:'';position:absolute;left:14%;top:-9px;width:30%;height:10px;background:#d6b36a;transform:rotate(-8deg);border-radius:2px}
+.msx .v-ibub{position:absolute;right:6px;top:8px;left:55%;background:#fff;color:#1e1b4b;border-radius:14px 14px 14px 3px;padding:7px 10px;font-size:12px;font-weight:800;line-height:1.5}
+.msx .v-ibub b{color:#c2410c}
+.msx .v-six{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.msx .v-ix{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:5px 7px 5px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;position:relative}
+.msx .v-ix .ok,.msx .v-ix .ng{display:block;font-size:9.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-ix .ok{color:#86efac}.msx .v-ix .ng{color:#fca5a5}
+.msx .v-ix .pr{display:block;font-size:9px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-ix .pr i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#334155;margin-left:2px}.msx .v-ix .pr i.on{background:#fde047}
+.msx .v-ix.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04777}
+.msx .v-ix.no{border-style:dashed;color:#cbd5e1}
+.msx .v-rank{position:relative;border-radius:16px;overflow:hidden;margin-top:6px;border:1px solid #fde047;background:radial-gradient(circle at 28% 50%,#6b5310 0,#1e1a36 70%);display:flex;align-items:center;gap:8px;padding:8px 10px;min-height:118px}
+.msx .v-rank .mon2{height:104px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 6px 4px #0008)}
+.msx .v-rank .L{font-size:74px;font-weight:900;line-height:.95;color:#f472b6;-webkit-text-stroke:2px #fff;text-shadow:0 5px 0 #9d174d,0 0 30px #f472b6}
+.msx .v-rank .tx{flex:1;min-width:0;line-height:1.3}
+.msx .v-rank .tx small{display:block;font-size:10px;color:#f9a8d4;font-weight:900}
+.msx .v-rank .tx b{font-size:24px;color:#fde047}
+.msx .v-rec{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+.msx .v-rec div{background:#0f172a;border:1px solid #475569;border-radius:11px;padding:5px 8px;font-size:11px;font-weight:900;line-height:1.4;min-width:0}
+.msx .v-rec small{display:block;font-size:9px;color:#f9a8d4}
+.msx .v-pt{display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,#3b2f0b,#1e1a36);border:1px solid #fde047;border-radius:14px;padding:6px 10px;margin-top:6px}
+.msx .v-pt .n{font-size:10px;font-weight:900;color:#fde047;line-height:1.2;white-space:nowrap}.msx .v-pt .n b{display:block;font-size:26px;color:#fff;text-shadow:0 2px 0 #9a3412}
+.msx .v-pt .r{flex:1;min-width:0;font-size:10px;font-weight:800;line-height:1.4}
+.msx .v-pt .r .bar{height:7px;margin-top:3px}
+.msx .v-as{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0}
+.msx .v-a{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:5px 6px 6px;min-width:0;position:relative;display:flex;flex-direction:column;justify-content:center}
+.msx .v-a .nm{font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a .ex{font-size:9px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a .lv{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px}
+.msx .v-a .lv span{background:#0f172a;border:1px solid #64748b;border-radius:8px;text-align:center;font-size:9px;font-weight:900;line-height:1.25;padding:2px 0;white-space:nowrap}
+.msx .v-a .lv span b{display:block;font-size:11px;color:#fde047}
+.msx .v-a .lv span.on{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047}.msx .v-a .lv span.on b{color:#fff}
+.msx .v-a .lv span.no{opacity:.35}
+.msx .v-a.got{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04755}
+.msx .v-a.dim{opacity:.55}
+.msx .v-a.wide{grid-column:1/-1}
+.msx .v-pick{background:#0f172a;border:1px solid #f472b6;border-radius:12px;padding:5px 9px;margin-top:6px;font-size:10.5px;font-weight:800;line-height:1.5}
+.msx .v-pick b{color:#fde047}
+.msx.land .v-body{display:grid;grid-template-columns:40% 1fr;grid-template-rows:repeat(7,min-content) 1fr;column-gap:8px;padding-bottom:6px}
+.msx.land .v-body>*{grid-column:2}
+.msx.land .v-body>.v-scene{grid-column:1;grid-row:1/-1;height:auto;margin-top:5px}
+.msx.land .v-scene .mon{height:48%}
+.msx.land .v-ft{height:34px}
+.msx.land .v-come{width:50%}
+@container (max-width:340px){
+  .msx .v-hd .ti small{display:none}
+  .msx .v-body{padding:0 7px 6px}
+  .msx .v-hd{height:28px;padding:3px 7px 0}
+  .msx .v-band{padding:5px 6px}
+  .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
+  .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
+  .msx .v-ga{font-size:9px;gap:3px}.msx .v-ga b{font-size:11px;min-width:0}.msx .v-ga .tr{height:11px}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:8px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
+  .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:7.5px}.msx .v-p.main{font-size:14px}
+  .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:9px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
+  .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
+  .msx .v-party{gap:2px;padding:3px 4px}.msx .v-party>small{font-size:8px}
+  .msx .v-say .fc{width:32px;height:32px}.msx .v-say .bub{font-size:10.5px;padding:4px 7px}
+  .msx .v-chip,.msx .v-mini{font-size:9.5px;padding:1px 7px}
+  .msx .v-nm{font-size:10.5px}
+  .msx .v-tr .o{width:42px;height:42px;font-size:15px}.msx .v-tr .o small{font-size:7.5px}.msx .v-tr .x{font-size:9px}
+  .msx .v-tr .fs .v-pf,.msx .v-tr .fs .v-pf img{width:19px}.msx .v-tr .fs .v-pf img{height:19px}
+  .msx .v-tabs span,.msx .v-tabs button{font-size:10.5px;padding:4px 2px}
+  .msx .v-cm{padding:3px 5px;gap:4px}.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:22px}.msx .v-cm .v-pf img{height:22px}
+  .msx .v-cm .tx b{font-size:9.5px}.msx .v-cm .tx small{font-size:8px}
+  .msx .v-fx{padding:4px 6px 5px}.msx .v-fx .t{font-size:10px}.msx .v-fx .t .big{font-size:13px}.msx .v-fx .ch{font-size:8.5px;gap:2px}.msx .v-fx .ch span{padding:1px 4px}.msx .v-fx .ch span.res{font-size:10px}
+  .msx .v-a .nm{font-size:10.5px}.msx .v-a .ex{font-size:8px}.msx .v-a .lv span{font-size:8px}.msx .v-a .lv span b{font-size:10px}.msx .v-a{padding:4px 5px 5px}
+  .msx .v-as{gap:4px;margin-top:4px}.msx .v-pt{padding:4px 8px}.msx .v-pt .n b{font-size:21px}.msx .v-pick{font-size:9.5px;padding:4px 7px;margin-top:4px}
+  .msx .v-steps{margin-top:3px}
+}
+.msx .v-phs{display:flex;gap:3px;width:86%;margin-top:6px}
+.msx .v-phs span{position:relative;min-width:46px;height:26px;border-radius:7px;background:#334155;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx .v-phs span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-phs span b{position:relative;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-phs span.now{outline:2px solid #fde047}
+.msx .v-eps{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:2px}
+.msx .v-eps div{background:#0f172a;border:1px solid #475569;border-radius:9px;padding:3px 8px;font-size:10.5px;font-weight:800;white-space:nowrap;overflow:hidden}
+.msx .v-eps div b{color:#fde047;margin-right:5px;font-size:9.5px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
+.msx.land .v-party .v-pf,.msx.land .v-party .v-pf img{width:24px}.msx.land .v-party .v-pf img{height:24px;border-radius:7px}
+.msx.land .v-party{gap:3px}
+.msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
+.msx.s320 .v-party .v-pf,.msx.s320 .v-party .v-pf img{width:22px}.msx.s320 .v-party .v-pf img{height:22px}
+.msx.s320 .v-scene{--mb:37%}.msx.s320 .v-scene .mon{height:42%}
+.msx.s320 .v-chips .bad{display:none}.msx.s320 .v-side{bottom:48px}
+.msx.s320 .v-yousu{bottom:auto;top:52px;left:auto;right:7px;transform:none}
+.msx .v-scene.low{flex:0 0 220px}
+.msx .v-cups{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:space-evenly}
+.msx .v-cup{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-bottom-width:3px;border-radius:14px;padding:6px 9px;position:relative;min-width:0}
+.msx .v-cup .e{font-size:26px;flex:none;width:34px;text-align:center}
+.msx .v-cup .tx{flex:1;min-width:0;line-height:1.3}.msx .v-cup .tx b{display:block;font-size:13.5px;white-space:nowrap}
+.msx .v-cup .tx small{display:block;font-size:9.5px;color:#86efac;font-weight:800;white-space:nowrap}.msx .v-cup .tx .rw{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.msx .v-cup .rt{flex:none;text-align:right;line-height:1.3}.msx .v-cup .rt span{display:block;white-space:nowrap}
+.msx .v-cup .st{font-size:14px;color:#fde047;text-shadow:0 1px 0 #9a3412}.msx .v-cup .g{font-size:12px;font-weight:900}.msx .v-cup .kd{font-size:9px;color:#f9a8d4;font-weight:900}
+.msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
+.msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
+.msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
+.msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
+.msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
+.msx .v-vsh .sd small{display:block;font-size:9px;color:#fde047;font-weight:900}.msx .v-vsh .sd b{display:block;font-size:14px;white-space:nowrap}.msx .v-vsh .sd span{display:block;font-size:9px;font-weight:800;white-space:nowrap}
+.msx .v-vsh .vsm{flex:none;font-size:26px;font-weight:900;color:#fde047;text-shadow:0 3px 0 #9a3412,0 0 14px #fb923c;text-align:center;line-height:1}.msx .v-vsh .vsm small{display:block;font-size:9px;color:#fff;text-shadow:none;margin-top:3px}
+.msx .v-vs1{display:grid;grid-template-columns:32px 1fr 70px 1fr 32px;align-items:center;gap:5px;font-size:10.5px;font-weight:900}
+.msx .v-vs1 span{text-align:center;white-space:nowrap}.msx .v-vs1 b{font-size:13px;text-align:center;color:#cbd5e1}.msx .v-vs1 b.w{color:#fde047}
+.msx .v-vs1 i{height:10px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
+.msx .v-vs1 i u{position:absolute;top:0;bottom:0;text-decoration:none}
+.msx .v-vs1 i.l u{right:0;background:linear-gradient(270deg,#f472b6,#fb923c)}.msx .v-vs1 i.r u{left:0;background:linear-gradient(90deg,#38bdf8,#6366f1)}
+.msx .v-vs1 i.p{height:7px}
+.msx .v-dist{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:5px;font-size:10.5px;font-weight:900;text-align:center}
+.msx .v-dist div{display:flex;gap:3px;justify-content:center}
+.msx .v-dist i{font-style:normal;width:24px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;background:#1e293b;color:#64748b}
+.msx .v-dist i.a1{background:#3b2a52;color:#cbd5e1}.msx .v-dist i.a2{background:#9d174d;color:#fff}.msx .v-dist i.a3{background:#fde047;color:#422006;box-shadow:0 0 8px #fde047}
+.msx .v-bracket{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-bracket span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:2px 8px}.msx .v-bracket span.me{border-color:#fde047;color:#fde047}
+.msx .v-bracket em{font-style:normal;color:#94a3b8;font-size:9px}.msx .v-bracket u{text-decoration:none;color:#f9a8d4;font-size:9px;margin:0 4px}
+.msx .v-scene.home .mon{height:34%}.msx .v-scene.home .gr{width:24%}
+.msx.land .v-scene.home .mon{height:40%}.msx.s320 .v-scene.home .mon{height:36%}
+.msx .v-meal{position:absolute;left:8px;right:8px;bottom:8px;background:#151130f2;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;box-shadow:0 0 18px #fde04766}
+.msx .v-meal .t{font-size:13px;font-weight:900;text-align:center;line-height:1.35}.msx .v-meal .t small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .v-meal .ms{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.msx .v-ml{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 3px;text-align:center;line-height:1.3;min-width:0}
+.msx .v-ml .e{font-size:30px;line-height:1.1}.msx .v-ml b{display:block;font-size:11.5px;white-space:nowrap}
+.msx .v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.msx .v-ml small{display:block;font-size:9px;color:#86efac;font-weight:800}
+.msx .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}
+.msx .v-sayrow{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx .v-sayrow .fc{width:34px;height:34px;border-color:#f9a8d4}
+.msx .v-sayrow .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:3px 12px 12px 12px}.msx .v-sayrow .bub em{font-style:normal;color:#be185d}
+.msx .v-bagb{position:absolute;left:7px;bottom:7px;width:46px;height:46px;border-radius:14px;background:#0f0d24e0;border:1.5px solid #fde047;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;line-height:1.05}
+.msx .v-bagb small{font-size:8.5px;font-weight:900;white-space:nowrap}
+.msx .v-bagb i{position:absolute;right:-5px;top:-6px;background:#ef4444;border-radius:99px;font-style:normal;font-size:9.5px;font-weight:900;min-width:16px;text-align:center;line-height:16px}
+.msx .v-bagb.r{left:auto;right:7px;border-color:#64748b}
+.msx .v-scene.home{--mb:20%}.msx .v-scene.home .v-side{bottom:60px}
+.msx.s320 .v-scene.home{--mb:24%}.msx.s320 .v-bagb{width:38px;height:38px;font-size:16px;border-radius:11px}.msx.s320 .v-bagb small{font-size:7.5px}
+.msx.s320 .v-scene.home .v-side{bottom:50px}.msx.s320 .v-sayrow .fc{width:28px;height:28px}.msx.s320 .v-sayrow .bub{font-size:10px;padding:3px 7px}
+.msx .v-stg{display:flex;align-items:stretch;gap:4px;margin-top:6px}
+.msx .v-stg div{flex:1;min-width:0;background:#1e1a36;border:1px solid #fb923c;border-radius:11px;padding:4px 4px;text-align:center;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.35}
+.msx .v-stg div small{display:block;font-size:8.5px;color:#fdba74}.msx .v-stg i{align-self:center;font-style:normal;color:#94a3b8;font-size:10px}
+.msx .v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.msx .v-stg div.last small{color:#fde047}
+.msx .v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.msx .v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
+.msx .v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.msx .v-pick2 b{margin-left:auto;color:#fde047}
+.msx .v-tk{display:flex;align-items:center;gap:5px}
+.msx .v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.msx .v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
+.msx .v-tk span b{color:#86efac}.msx .v-tk span.sel{border-color:#fde047;background:#3b2f0b}.msx .v-tk span.sel b{color:#fde047}.msx .v-tk span.got{opacity:.45}.msx .v-tk span.got b{color:#94a3b8}
+.msx .v-bagw{position:absolute;left:8px;right:8px;top:8px;bottom:8px;background:#151130f5;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-evenly;box-shadow:0 0 18px #fde04755}
+.msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:9.5px;color:#fca5a5;font-weight:800}
+.msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
+.msx .v-bagw .v-item{margin-top:0}
+.msx .v-trs{gap:4px;margin-top:8px;align-items:start}
+.msx .v-tr{padding-top:0}
+.msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
+.msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:9px;font-weight:800;color:#94a3b8;line-height:1.3}
+.msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
+.msx .v-tr.tag .nm{color:#fde047}
+.msx .v-tr.sel .o{transform:scale(1.1)}
+.msx .v-tr.sel .nm{color:#fff}
+.msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-lvx b{color:#7dd3fc}.msx .v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
+.msx .v-lvx i u{position:absolute;left:0;top:0;bottom:0;background:#38bdf8}.msx .v-lvx i u.ad{background:#bae6fd}
+.msx .v-lvx span{color:#cbd5e1}.msx .v-lvx em{font-style:normal;color:#fde047}
+.msx .v-lvup{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:10px;padding:4px 10px;margin-bottom:5px;font-size:13px;font-weight:900;line-height:1.35;box-shadow:0 0 12px #fde047}
+.msx .v-lvup small{display:block;font-size:9.5px;font-weight:800}
+.msx .v-p.main small{font-size:10px;margin-top:2px}
+.msx .v-cup.won .tx small{color:#fde047}
+.msx .v-ft span.off,.msx .v-ft button.off{opacity:.45}
+.msx .v-rm{display:grid;grid-template-columns:1.25fr 1fr;gap:6px;margin-top:7px}
+.msx .v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
+.msx .v-rm div small{display:block;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:2px}
+.msx .v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.msx .v-rm div.re small{color:#fff}
+@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:9px}.msx .v-lvx{font-size:8.5px}}
+.msx .v-hg{display:inline-block;vertical-align:middle;flex:none}
+.msx .v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
+.msx .v-bsel .e{font-size:34px;line-height:1;flex:none}.msx .v-bsel b{display:block;font-size:13.5px}
+.msx .v-bsel small{display:block;font-size:10px;font-weight:700;color:#e2e8f0;line-height:1.4}.msx .v-bsel small.lim{color:#f9a8d4;font-weight:900}
+.msx .v-bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.msx .v-bgrid div,.msx .v-bgrid button{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:12px;padding:6px 2px 4px;text-align:center;min-width:0}
+.msx .v-bgrid .e{display:block;font-size:28px;line-height:34px;height:34px}
+.msx .v-bgrid i{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
+.msx .v-bgrid small{display:block;font-size:8.5px;font-weight:800;line-height:1.25;min-height:22px;margin-top:2px}
+.msx .v-bgrid div.sel,.msx .v-bgrid button.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
+.msx .v-bgrid div.no,.msx .v-bgrid button.no{opacity:.6}
+.msx .v-bnote{font-size:10px;font-weight:800;line-height:1.7}.msx .v-bnote .dim2{color:#94a3b8;font-size:9px}
+.msx .v-rm3{display:grid;gap:5px;margin-top:7px}
+.msx .v-rm3>div{display:flex;align-items:center;gap:8px;background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left}
+.msx .v-rm3 small{display:block;font-size:9px;font-weight:800;color:#e2e8f0}
+.msx .v-rm3 .re{background:linear-gradient(160deg,#f59e0b,#b45309);border-color:#fde68a;box-shadow:0 0 10px #f59e0b88}
+.msx .v-rm3 .nj{background:linear-gradient(120deg,#be185d,#7c3aed 55%,#2563eb);border-color:#fbcfe8;box-shadow:0 0 10px #a78bfa88}
+.msx .v-rm3 .gv{display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}.msx .v-rm3 .gv small{color:#94a3b8;display:inline;margin-left:6px}
+.msx .v-icw{display:inline-block;width:30px;height:30px;flex:none;vertical-align:middle}.msx .v-icw svg{display:block}
+.msx .v-item .v-icw{width:30px;height:30px}.msx .v-bag .v-icw{width:30px;height:30px}
+.msx .v-bgrid .v-icw{width:34px;height:34px;display:block;margin:0 auto}.msx .v-bsel .v-icw{width:40px;height:40px}
+.msx .v-igrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.msx .v-igrid div,.msx .v-igrid button{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:11px;padding:5px 1px 3px;text-align:center;min-width:0}
+.msx .v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
+.msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;font-weight:900;color:#fde047}
+.msx .v-igrid small{display:block;font-size:8px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
+.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
+.msx .v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
+.msx .v-ileg{display:flex;gap:10px;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
+.msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
+.msx .v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.msx .v-sum .v-ics .v-icw{width:20px;height:20px}
+.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
+.msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
+/* ---- 足したもの(ゲームの中で要った分) ---- */
+.msx-wrap{position:fixed;inset:0;z-index:9400;background:#0b0920;display:flex;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.msx.land{max-width:none}
+.msx img{display:block}
+.msx button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;-webkit-appearance:none;appearance:none}
+.msx button:active{transform:scale(.97)}
+.msx button[disabled]{opacity:.45;cursor:default}
+.msx .v-ft span,.msx .v-ft button{flex:1;text-align:center}
+.msx .v-ft button{display:block;border-radius:99px;padding:8px 6px;font-size:12px;font-weight:900;background:#2b3348;white-space:nowrap}
+.msx .v-ft button.go{background:linear-gradient(90deg,#f472b6,#fb923c);flex:2.2;font-size:13.5px;box-shadow:0 2px 0 #9d174d}
+.msx .v-ft button.on{background:#fde047;color:#1e1b4b}
+.msx-scroll{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.msx-ov{position:absolute;inset:0;z-index:40;background:#0b0920cc;display:flex;align-items:center;justify-content:center;padding:14px}
+.msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
+.msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
+.msx-row{display:flex;align-items:center;gap:6px}
+.msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
+.msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
+.msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
+.msx-note{font-size:10px;color:#cbd5e1;font-weight:700;line-height:1.5}
+.msx-soon{display:inline-block;margin-left:4px;padding:0 6px;border-radius:99px;background:#475569;color:#e2e8f0;font-size:9px;font-weight:900;vertical-align:middle}
+.msx-dbg{font-size:9px;color:#a3e635;font-weight:900}
+.msx .v-pf img{object-fit:contain;background:#0f172a}
+.msx .v-scene .mon{animation:msx-breathe 3.2s ease-in-out infinite}
+.msx .v-scene.home .mon.low{filter:drop-shadow(0 8px 5px #0009) saturate(.8);transform:translateX(-50%) rotate(4deg)}
+.msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
+.msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
+.msx-fade{animation:msx-fadein .18s ease-out}
+.msx-pop{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes msx-breathe{0%,100%{scale:1}50%{scale:1.025}}
+@keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+@keyframes msx-fadein{from{opacity:0}to{opacity:1}}
+@keyframes msx-popin{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.msx *{animation:none!important}}
+`;
+
+// ---- part: 56-monhero-success-store.jsx ----
+// ===== モンヒロサクセス(育成の画面・回2)の土台: 公開の印・計算の芯と台本の読み込み・保存・台詞 =====
+// 計画: docs/progress/player-raise/PLAN.md(§1・§9・§10)。画面は 56-monhero-success-start.jsx / 56-monhero-success-main.jsx
+// ★公開の印 RELEASE_FLAGS.monheroSuccess は偽のまま。入口はデバッグ設定だけ(MonheroSuccessDebugEntry)。
+// ★計算は data/monhero-success.js(計算の芯・別の会話のクラフトが受け持つ)の create() を呼ぶだけ。ここで伸びの式は書かない。
+//   芯と台本(data/monhero-success-script.js)は index.html では読まず、この画面を開いたときにだけ読む。
+// ★保存は新しいキー3つだけ(CLAUDE.md ⑦・PLAN §9)。既存のキー(mh_unlocked_monsters・助手の仲良し度など)は読むだけ。
+//   読み込みは必ず msxNorm* を通す。壊れていたら「途中の育成なし・保存枠は空」として扱い、元の値は消さない(上書きは新しく始めたときだけ)。
+const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
+const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
+const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
+const MSX_ISSA_ART = 'images/success/issa-hakase.png';
+// シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中
+const MSX_SCENARIOS = Object.freeze([
+  { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
+    perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
+  { aid: 'atsu', no: 2, title: '仕上げて、勝ちに行く', lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語', tag: 'ふつう',
+    perk: '訓練の組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
+]);
+const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
+const MSX_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
+const MSX_STAT_NAME = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
+const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
+const MSX_BOX_CAP0 = 30;
+
+// ---- 公開の印(偽のあいだはデバッグの入口から開いたときだけ) ----
+let msxDebugOpened = false;
+const msxReleased = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const msxOn = () => msxReleased() || msxDebugOpened;
+
+// ---- 計算の芯と台本の読み込み(1回だけ) ----
+const msxLoadScript = (src, globalName) => new Promise((res) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') { res(null); return; }
+  if (window[globalName]) { res(window[globalName]); return; }
+  const s = document.createElement('script');
+  s.src = src;
+  s.onload = () => res(window[globalName] || null);
+  s.onerror = () => res(null);
+  document.head.appendChild(s);
+});
+// const を置くだけのファイル(window に載らない)。読み終わったら check() で確かめる。2度読まない
+const msxLoadConstScript = (src, check) => new Promise((res) => {
+  if (check()) { res(true); return; }
+  if (typeof document === 'undefined') { res(false); return; }
+  const s = document.createElement('script'); s.src = src;
+  s.onload = () => res(check()); s.onerror = () => res(false);
+  document.head.appendChild(s);
+});
+// 常連の表は開いたときに読む別ファイルの const なので、名前を直に書かず、読み終わってから大域の名前で引く
+const msxGlobalConst = (name) => { try { return new Function(`return typeof ${name} !== 'undefined' ? ${name} : null;`)(); } catch (e) { return null; } };
+const msxRegularsOk = () => !!msxGlobalConst('MONSUC_REGULARS') && !!msxGlobalConst('MONSUC_REGULAR_CUPS');
+let msxLoading = null;
+let msxSuc = null;
+const msxLoad = () => {
+  if (msxSuc) return Promise.resolve(msxSuc);
+  if (!msxLoading) {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+      if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
+      if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
+      try {
+        // 大会名・相手の名前・技に要る表も渡す(無ければ芯が既定で動く)
+        const SUC = core.create({
+          calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT,
+          techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
+          types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
+          monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
+          regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
+        });
+        msxSuc = { core, SUC, script: script || null };
+        return msxSuc;
+      } catch (e) { msxLoading = null; return null; }
+    });
+  }
+  return msxLoading;
+};
+
+// ---- 正規化(壊れていても落ちない・知らない値は既定) ----
+const msxIsObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const msxNum = (v, d = 0) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d);
+const msxStr = (v, max = 40, d = '') => (typeof v === 'string' ? v.slice(0, max) : d);
+const msxColors = (v) => (Array.isArray(v) ? v.slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null)) : []);
+// 途中の育成。core の状態 s をそのまま持つ。芯に restore があればそれを通す(無ければ形だけ確かめる)
+const msxNormRun = (raw, SUC) => {
+  if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
+  let s = raw.s;
+  if (SUC && typeof SUC.restore === 'function') { try { s = SUC.restore(s); } catch (e) { s = null; } if (!s) return null; }
+  else {
+    const okStats = msxIsObj(s.stats) && MSX_STATS.every((k) => Number.isFinite(s.stats[k]));
+    const okTeam = Array.isArray(s.team) && s.team.length === 6 && Array.isArray(s.bond) && s.bond.length === 6;
+    if (s.v !== 1 || !Number.isFinite(s.turn) || s.turn < 1 || !okStats || !okTeam || !Number.isFinite(s.hp) || !Number.isFinite(s.hpMax)) return null;
+    if (SUC && Array.isArray(SUC.speciesList) && !SUC.speciesList.includes(s.species)) return null;
+  }
+  return {
+    v: 1, id: msxStr(raw.id, 64, s.id), s,
+    nick: msxStr(raw.nick, 8) || '', colors: msxColors(raw.colors),
+    from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
+    items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
+    used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over'].includes(raw.phase) ? raw.phase : 'main',
+    out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
+    log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
+    startAt: msxNum(raw.startAt, 0),
+  };
+};
+const msxNormBoxMon = (m) => {
+  if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
+  const st = {}; MSX_STATS.forEach((k) => { st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0)))); });
+  return {
+    id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
+    st, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
+    rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
+    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [], masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
+    coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
+  };
+};
+const msxNormBox = (raw) => {
+  const o = msxIsObj(raw) ? raw : {};
+  const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
+  return { v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
+};
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'hourglass', 'hourglass2', 'ticket']);
+const msxNormMeta = (raw) => {
+  const o = msxIsObj(raw) ? raw : {};
+  const items = {}; const src = msxIsObj(o.items) ? o.items : {};
+  MSX_ITEM_IDS.forEach((k) => { const n = Math.floor(msxNum(src[k], 0)); if (n > 0) items[k] = Math.min(999, n); });
+  const team = (Array.isArray(o.team) ? o.team : []).slice(0, 6).map((t) => (msxIsObj(t) && typeof t.box === 'string' ? { box: t.box.slice(0, 64) } : msxIsObj(t) && typeof t.base === 'string' ? { base: t.base.slice(0, 24) } : null));
+  return {
+    v: 1, best: msxIsObj(o.best) ? o.best : {}, titles: Array.isArray(o.titles) ? o.titles.filter((x) => typeof x === 'string').slice(0, 200) : [],
+    seen: msxIsObj(o.seen) ? o.seen : {}, team, lend: typeof o.lend === 'string' ? o.lend.slice(0, 64) : null,
+    gift: msxIsObj(o.gift) ? { day: msxStr(o.gift.day, 12), n: msxNum(o.gift.n, 0) } : { day: '', n: 0 },
+    items, runs: Math.max(0, Math.floor(msxNum(o.runs, 0))), picked: msxIsObj(o.picked) ? o.picked : {},
+    wonCups: Array.isArray(o.wonCups) ? o.wonCups.filter((x) => typeof x === 'string').slice(0, 500) : [], // 優勝ずみの大会(回3が書く・スキップ用)
+  };
+};
+
+const msxReadAll = async (SUC) => {
+  const [run, box, meta, unlocked] = await Promise.all([
+    storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null),
+  ]);
+  const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
+  const un = (Array.isArray(unlocked) ? unlocked : []).filter((id) => typeof id === 'string' && all[id] && list.includes(id));
+  return { run: msxNormRun(run, SUC), box: msxNormBox(box), meta: msxNormMeta(meta), unlocked: un.length ? Array.from(new Set(un)) : list.filter((id) => all[id]).slice(0, 1) };
+};
+const msxSaveRun = (run) => storeSet(MSX_KEYS.run, run);
+const msxSaveMeta = (meta) => storeSet(MSX_KEYS.meta, meta);
+
+// ---- 表示に使う小物 ----
+const msxMon = (id) => (typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[id]) || null;
+const msxMonName = (id) => { const m = msxMon(id); return m ? m.name : id; };
+const msxMonImg = (id) => { const m = msxMon(id); return m ? m.imgUrl : ''; };
+const msxMonThumb = (id) => { const m = msxMon(id); return m ? (m.faceIconUrl || m.iconUrl || m.imgUrl) : ''; };
+const msxWho = (aid) => (typeof assistantById === 'function' ? assistantById(aid) : null);
+const msxFace = (aid, ex = 'normal') => { const w = msxWho(aid); return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : ''; };
+const msxBody = (aid, ex = 'happy') => { const w = msxWho(aid); return w && typeof assistantFullImage === 'function' ? (assistantFullImage(w, ex) || msxFace(aid, ex)) : msxFace(aid, ex); };
+const msxAidName = (aid) => { const w = msxWho(aid); return w ? w.name : aid; };
+const msxFmt = (n) => Math.round(msxNum(n, 0)).toLocaleString('ja-JP');
+// ターン → 年と月(デビュー期は1年目の8月から・1ターン=1か月)・季節
+const msxCalendar = (turn) => {
+  const k = 7 + Math.max(0, turn - 1);
+  const month = (k % 12) + 1; const year = 1 + Math.floor(k / 12);
+  const season = month >= 3 && month <= 5 ? 'spring' : month >= 6 && month <= 8 ? 'summer' : month >= 9 && month <= 11 ? 'autumn' : 'winter';
+  return { year, month, season };
+};
+const MSX_SEASON = Object.freeze({ spring: '🌸 春', summer: '🌻 夏', autumn: '🍁 秋', winter: '⛄ 冬' });
+// 景色は季節と時間で替わる(社長の決め: 季節 = 月・時間 = ターン)。時間は ターンごとに 昼 → 夕方 → 夜 と進む。
+// 景色の表(data/success-scenes.js)が読めなければ、今ある町の背景で代わりにする
+const MSX_TIMES = Object.freeze([['day', '昼'], ['evening', '夕方'], ['night', '夜']]);
+const MSX_OLD_BG = Object.freeze({ day: 'images/story-bg/monhero_plaza.jpg', evening: 'images/story-bg/monhero_plaza_evening.jpg', night: 'images/story-bg/monhero_night.jpg' });
+const msxSceneBg = (turn = 1) => {
+  const t = Math.max(1, Math.round(msxNum(turn, 1)));
+  const [time, label] = MSX_TIMES[(t - 1) % 3];
+  const cal = msxCalendar(t);
+  const pick = typeof window !== 'undefined' && typeof window.successHomeScene === 'function' ? window.successHomeScene(cal.season, time) : null;
+  return { bg: pick && pick.image ? pick.image : MSX_OLD_BG[time], time: label, season: cal.season };
+};
+// 大会の会場(debut / cup / hero / summit)
+const msxVenueBg = (venue) => { const f = typeof window !== 'undefined' && typeof window.successSceneById === 'function' ? window.successSceneById(`venue-${venue}`) : null; return f && f.image ? f.image : 'images/story-bg/monhero_town.jpg'; };
+const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
+const msxRankCls = (r) => `rk r${String(r || 'G').replace(/\+/g, '')}`;
+
+// ---- 台詞(台本から1本。同じ場面に2本以上あれば、育成の id + ターン + 場面 で決まった1本) ----
+const msxPickLine = (ctx, scene, opt = {}) => {
+  const sc = msxSuc && msxSuc.script; if (!sc) return null;
+  const aid = opt.who || ctx.aid;
+  const pools = [];
+  if (opt.bondLv != null && opt.bondLv <= 2 && Array.isArray(sc.turnBond12)) pools.push(sc.turnBond12);
+  pools.push(sc.turn, sc.issa, sc.mon, sc.cheer, sc.random, sc.scenario);
+  let rows = [];
+  for (const pool of pools) {
+    if (!Array.isArray(pool)) continue;
+    rows = pool.filter((r) => r && typeof r.id === 'string' && r.id.slice(0, r.id.lastIndexOf('.')) === scene && (aid === '*' || r.who === aid));
+    if (rows.length) break;
+  }
+  if (!rows.length) return null;
+  const rng = msxSuc.core.rngOf(ctx.id || 'run', ctx.turn || 0, 'line', scene, opt.salt || '');
+  const r = rows[Math.floor(rng() * rows.length)];
+  return { ...r, t: msxFill(r.t, ctx) };
+};
+const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
+  if (k === 'name') return ctx.callName || 'きみ';
+  if (k === 'mon') return ctx.mon || 'モンスター';
+  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
+  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
+  if (k === 'stat') return ctx.stat || '能力';
+  if (k === 'train') return ctx.train || '訓練';
+  if (k === 'tech') return ctx.tech || '技';
+  if (k === 'cup') return ctx.cup || '大会';
+  if (k === 'cry') { const sc = msxSuc && msxSuc.script; const c = sc && Array.isArray(sc.mon) ? sc.mon.find((r) => r.id === `mon.cry.${ctx.species}`) : null; return c ? c.t : '…'; }
+  return '';
+});
+// ターンのはじめの様子(数字は言わない)
+const msxStartScene = (s) => {
+  if (!s) return 'turn.start.normal';
+  const r = s.hpMax > 0 ? s.hp / s.hpMax : 0;
+  if (r < 0.25) return 'turn.start.worn';
+  if (s.stress >= 60) return 'turn.start.stress';
+  if (r < 0.45) return 'turn.start.tired';
+  if (r >= 0.85 && s.stress < 20) return 'turn.start.great';
+  if (r >= 0.65) return 'turn.start.good';
+  return 'turn.start.normal';
+};
+
+// ---- デバッグ設定からの入口(公開の印が偽のあいだの試し口)。60-app.jsx のデバッグの「⭐ よく使う」に置く ----
+// callNameOf(aid) / bondLvOf(aid) は本体から渡す(プレイヤーの呼び方と助手の仲良し度 Lv)
+function MonheroSuccessDebugEntry({ callNameOf, bondLvOf }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" data-debug-monhero-success onClick={() => { msxDebugOpened = true; setOpen(true); }}
+        className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/60 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">
+        🌱 モンヒロサクセス(試す)
+        <small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の育成の画面(回2)。大会・修行・引退・合体の中身はまだ準備中。保存は新しいキー(mh_monsuc_*)だけ</small>
+      </button>
+      {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf} debug/>}
+    </>
+  );
+}
+
+// ---- part: 56-monhero-success-start.jsx ----
+// ===== モンヒロサクセス: 始めるまでの6段(育てるモンスター → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
+// 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
+const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
+// 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
+const MSX_ITEMS = Object.freeze([
+  { id: 'guide', name: '博士の導き書', desc: 'イッサ博士の大事な書類。1度、イッサ博士が現れる', when: 'before', e: '📘' },
+  { id: 'loupe', name: '博士のルーペ', desc: 'イッサ博士のお気に入り。イッサ博士の実験が成功する', when: 'both', e: '🔍' },
+  { id: 'band', name: '出会いのミサンガ', desc: '交流を増やすミサンガ。ようす「イベントメーカー」が付く', when: 'before', e: '🧶' },
+  { id: 'mag', name: '週刊!トレーニング', desc: 'ハウツー雑誌。ようす「トレーニング得意」が付く', when: 'before', e: '📰' },
+  { id: 'hachi', name: '修行のハチマキ', desc: '気合いが入るハチマキ。ようす「修行得意」が付く', when: 'before', e: '🎗️' },
+  { id: 'omamori', name: '縁結びのお守り', desc: '良縁に恵まれるお守り。ようす「スターの素質○」が付く', when: 'before', e: '🧧' },
+  { id: 'dango', name: 'モモのキビダンゴ', desc: '食べるとスタミナがつく。体力の最大値が はじめから上がる', when: 'before', e: '🍡' },
+  { id: 'grass', name: 'うけつぎ草', desc: '伝授でいい結果が出る草。ようす「うけつぐ魂」が付く', when: 'before', e: '🌿' },
+  { id: 'juice', name: 'ガロエ印の野菜ジュース', desc: '体力を完全に回復する', when: 'both', e: '🥤' },
+  { id: 'powder', name: '悪様散', desc: '悪いようすを治して、体力を回復する', when: 'both', e: '💊' },
+  { id: 'license', name: 'ブリーダーライセンス', desc: '忠誠度が一定数 上がる', when: 'both', e: '🪪' },
+  { id: 'pack', name: 'オイリーパック', desc: 'オイル2個と薬草の詰め合わせ', when: 'both', e: '🧴' },
+]);
+const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map((t) => [t.id, t])));
+const MSX_NAME_MAX = 8;
+// 名前の見張り(助手のあだ名と同じ言葉の決まりを使う)。通らなければ null
+const msxNameGuard = (raw) => {
+  const t = String(raw == null ? '' : raw).normalize('NFKC').trim();
+  if (!t || /\s|[<>{}\[\]\\`"]/.test(t) || t.length > MSX_NAME_MAX) return null;
+  if (typeof ASSISTANT_CALLNAME_BANNED_RE !== 'undefined' && ASSISTANT_CALLNAME_BANNED_RE.test(t)) return null;
+  if (typeof ASSISTANT_CALLNAME_PERSONAL_RE !== 'undefined' && ASSISTANT_CALLNAME_PERSONAL_RE.test(t)) return null;
+  return t;
+};
+const msxAptOf = (sp) => { const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC'; return a.split(''); };
+// 編成の1体の元 → 芯の memberOf に渡す形
+const msxTeamSrc = (slot, box) => {
+  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, assists: m.assists, boxId: m.id }; }
+  const sp = slot && slot.base ? slot.base : 'Mocchi';
+  return { kind: 'base', species: sp, name: msxMonName(sp) };
+};
+
+function MsxSteps({ n }) {
+  return (
+    <div className="v-steps">
+      {MSX_STEP_NAMES.map((s, i) => (
+        <React.Fragment key={s}>{i ? <u/> : null}<span className={i < n ? 'ok' : i === n ? 'on' : ''}>{i < n ? '✓' : i === n ? `${i + 1} ${s}` : i + 1}</span></React.Fragment>
+      ))}
+    </div>
+  );
+}
+function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, right }) {
+  return (
+    <div className="v-hd">
+      <button type="button" className="bk" onClick={onBack}>← {back}</button>
+      <span className="ti">{title}{sub ? <small>{sub}</small> : null}</span>
+      {right != null && <span className="rt">{right}</span>}
+    </div>
+  );
+}
+
+function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
+  const { box, meta, unlocked } = data;
+  const unraised = box.mons.filter((m) => !m.raised);
+  const raised = box.mons.filter((m) => m.raised);
+  const [step, setStep] = useState(0);
+  const [tab, setTab] = useState('base');
+  const [pick, setPick] = useState(() => ({ base: unlocked[0] || 'Mocchi' }));
+  const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
+  // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てるモンスターと同じ種 → 解放済みの種の順)
+  const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter((t) => t && t.box && raised.some((m) => m.id === t.box)).map((t) => t.box).slice(0, 5));
+  const team = useMemo(() => {
+    const list = teamBox.map((id) => ({ box: id }));
+    const bases = [species, ...unlocked.filter((id) => id !== species)];
+    let bi = 0; while (list.length < 6) { list.push({ base: bases[bi % bases.length] || species }); bi += 1; }
+    return list;
+  }, [teamBox, species, unlocked]);
+  const members = useMemo(() => team.map((t) => { const src = msxTeamSrc(t, box); const m = SUC.memberOf(src); return { ...m, name: src.name, boxId: src.boxId || null }; }), [team, box, SUC]);
+  const [aid, setAid] = useState('mua');
+  const [items, setItems] = useState([]);
+  const [nick, setNick] = useState('');
+  const [colors, setColors] = useState([]);
+  const [nameErr, setNameErr] = useState('');
+  const aidLv = Math.max(1, Math.min(10, Number(bondLvOf && bondLvOf(aid)) || 1));
+  const sc = MSX_SCENARIOS.find((x) => x.aid === aid) || MSX_SCENARIOS[0];
+
+  const next = () => setStep((n) => Math.min(5, n + 1));
+  const back = () => (step === 0 ? onCancel() : setStep((n) => n - 1));
+  const start = () => {
+    const name = msxNameGuard(nick || msxMonName(species).slice(0, MSX_NAME_MAX));
+    if (!name) { setStep(4); setNameErr('その名前は使えません。ほかの名前にしてね'); return; }
+    onStart({ species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => msxTeamSrc(t, box)), teamSlots: team, aid, aidBondLv: aidLv, items, nick: name, colors });
+  };
+
+  const apt = msxAptOf(species);
+  const heat = MSX_STATS.map((k) => members.filter((m) => Array.isArray(m.top) && m.top.includes(k)).length);
+  const scene = (style, inner) => (
+    <div className="v-scene" style={{ flex: '1 1 0' }}>
+      <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
+      <div className="gr" style={{ bottom: `calc(${style.mb} - 5px)` }}/>
+      {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+        ? <span className="mon" style={{ bottom: style.mb, height: style.h }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
+        : <img className="mon" src={msxMonImg(species)} alt="" style={{ bottom: style.mb, height: style.h }}/>}
+      {inner}
+    </div>
+  );
+
+  let body = null; let go = null;
+  if (step === 0) {
+    const list = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, on: !pick.box && pick.base === id, pick: { base: id } }))
+      : unraised.map((m) => ({ key: m.id, sp: m.species, on: pick.box === m.id, pick: { box: m.id } }));
+    const picked = meta.picked && meta.picked[species];
+    body = (<>
+      <div className="v-h">だれを育てる?<small>ベースモンか、合体で生まれた未育成のモンスターから1体</small></div>
+      <div className="v-tabs">
+        <button type="button" className={tab === 'base' ? 'on' : ''} onClick={() => setTab('base')}>🌱 ベースモン {unlocked.length}</button>
+        <button type="button" className={tab === 'fuse' ? 'on' : ''} onClick={() => setTab('fuse')}>🧬 合体で生まれたモンスター {unraised.length}</button>
+      </div>
+      <div className="v-grid6" style={{ maxHeight: 148, overflowY: 'auto' }}>
+        {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><img src={msxMonThumb(x.sp)} alt={msxMonName(x.sp)}/></button>)
+          : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>まだいません(合体はこれから作ります)</span>}
+      </div>
+      {scene({ mb: '12%', h: '62%' }, <div className="v-chips"><span className="v-chip ylw">{msxMonName(species)}</span>{picked ? <span className="v-chip">えらんだ回数 {picked}回</span> : null}</div>)}
+      <div className="v-card sel">
+        <div className="h1">{msxMonName(species)}</div>
+        <div className="v-kv"><b>成長の型</b><span>はじめるとくじで決まる <span className="yel">(早熟〜晩成)</span></span></div>
+        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>伸びやすさ(素質)</div>
+        <div className="v-apt">{MSX_STATS.map((k, i) => <div key={k} className={apt[i] > 'B' ? 'lo' : ''}>{MSX_STAT_NAME[k]}<b>{apt[i]}</b></div>)}</div>
+      </div>
+    </>);
+    go = 'このモンスターにする ▶';
+  } else if (step === 1) {
+    const toggleBox = (id) => setTeamBox((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 5 ? cur : [...cur, id]));
+    body = (<>
+      <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる</small></div>
+      <div className="v-slots">
+        {members.map((m, i) => (
+          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}`}>
+            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>
+            {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
+            <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
+            <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
+            <div className="ic">{m.kind === 'base' ? 'ベースモン' : ''}</div>
+          </div>
+        ))}
+      </div>
+      <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすい訓練</div>
+        <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></div>
+      <div className="v-card" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
+        <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>保存枠から選ぶ({teamBox.length}/5)</div>
+        {raised.length ? raised.map((m) => (
+          <button type="button" key={m.id} className={`v-item${teamBox.includes(m.id) ? ' sel' : ''}`} style={{ padding: '4px 8px', width: '100%' }} onClick={() => toggleBox(m.id)}>
+            <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
+            <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}</small></div>
+            <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
+          </button>
+        )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
+        <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体)<span className="msx-soon">準備中</span></div>
+      </div>
+    </>);
+    go = 'この編成でいく ▶';
+  } else if (step === 2) {
+    const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
+    body = (<>
+      <div className="v-h">だれの物語で育てる?<small>助手ごとに、筋書き・出来事・訓練の組み合わせが変わる</small></div>
+      <div className="v-faces">
+        {MSX_SCENARIOS.map((x) => <button type="button" key={x.aid} className={aid === x.aid ? 'on' : ''} onClick={() => setAid(x.aid)}><img src={msxFace(x.aid)} alt={msxAidName(x.aid)}/></button>)}
+        {MSX_SOON_AIDS.map((a) => <span key={a} className="lk"><img src={msxFace(a)} alt=""/></span>)}
+      </div>
+      <div className="v-card sel" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
+        <div className="v-sc"><div className="pic"><img src={msxBody(aid, 'happy')} alt=""/></div><div className="tx">
+          <h4><small>シナリオ {sc.no}・{msxAidName(aid)}編</small>{sc.title}</h4>
+          <div style={{ marginTop: 4 }}>{sc.lead}</div>
+          <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span> <span className="chip p">仲良し度 Lv{aidLv}</span></div></div></div>
+        <div className="v-kv"><b>助手の効き</b><span>{sc.perk}</span></div>
+        {combo && <div className="v-kv"><b>訓練の組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
+        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min(100, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 8))}(仲良し度 Lv{aidLv})。助手も訓練に来て、タッグになる</span></div>
+        <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
+        <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!'}」</div></div>
+      </div>
+    </>);
+    go = `${msxAidName(aid)}編ではじめる ▶`;
+  } else if (step === 3) {
+    const has = (id) => (meta.items && meta.items[id]) || 0;
+    const toggle = (id) => setItems((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]));
+    const coreItems = (id) => !!(SUC.ITEMS && SUC.ITEMS[id]);
+    body = (<>
+      <div className="v-h">持ちこみ(2つまで)<small>名声で手に入れた物を、育成に持っていける。持っていかなくてもよい</small></div>
+      <div className="v-bag">{[0, 1].map((i) => items[i] ? <div key={i} className="in"><span style={{ fontSize: 24 }}>{MSX_ITEM_BY_ID[items[i]].e}</span><small>{MSX_ITEM_BY_ID[items[i]].name}</small></div> : <div key={i}>＋<small style={{ color: '#94a3b8' }}>空き</small></div>)}</div>
+      <div className="v-igrid">
+        {MSX_ITEMS.map((t) => (
+          <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`} onClick={() => toggle(t.id)} disabled={!has(t.id) && !items.includes(t.id)}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small>{t.name.replace('ガロエ印の', '')}</small>{items.includes(t.id) ? <u>✔</u> : null}
+          </button>
+        ))}
+      </div>
+      <div className="v-ileg"><span><b className="sw1"/>はじめる前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
+      <div className="msx-scroll">
+        {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{MSX_ITEM_BY_ID[id].desc}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
+        {items.some((id) => !coreItems(id)) && <div className="msx-note" style={{ marginTop: 6 }}>まだ効き目が入っていない物があります(その物は持っていっても数は減りません)</div>}
+      </div>
+    </>);
+    go = 'これでいく ▶';
+  } else if (step === 4) {
+    const onDye = (idx, colorId) => setColors((cur) => { const n = cur.slice(); while (n.length <= idx) n.push(null); n[idx] = colorId; return n; });
+    const onCustom = (idx) => { const p = typeof _parseCustomColorId === 'function' ? _parseCustomColorId(colors[idx]) : null; const h = p ? (p.h + 40) % 360 : 200; if (typeof _encodeCustomColorId === 'function') onDye(idx, _encodeCustomColorId(h, 0.7, 0.85)); };
+    body = (<>
+      <div className="v-h">名前と染色<small>あとからいつでも変えられる</small></div>
+      {scene({ mb: '14%', h: '72%' }, <div className="v-chips"><span className="v-chip">成長の型: はじめるとくじで決まる</span></div>)}
+      <label className="v-inp" style={{ display: 'flex' }}>
+        <input type="text" value={nick} maxLength={MSX_NAME_MAX} placeholder={msxMonName(species).slice(0, MSX_NAME_MAX)} onChange={(e) => { setNick(e.target.value.slice(0, MSX_NAME_MAX)); setNameErr(''); }}
+          style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 'none', color: '#1e1b4b', font: 'inherit', fontSize: 16 }}/>
+        <small>{(nick || '').length} / {MSX_NAME_MAX}文字</small>
+      </label>
+      {nameErr && <div className="msx-note" style={{ color: '#fca5a5' }}>{nameErr}</div>}
+      <div className="v-card" style={{ maxHeight: '34%', overflowY: 'auto' }}>
+        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom}/> : <div className="msx-note">染色はこの端末では使えません</div>}
+      </div>
+    </>);
+    go = 'これで決める ▶';
+  } else {
+    const startAdd = {}; members.forEach((m) => { if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v; });
+    const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
+    body = (<>
+      <div className="v-h">これで はじめる?<small>全46ターン・1回 約8〜15分。いつでも中断して続きから</small></div>
+      <div className="v-scene" style={{ flex: '1 1 0' }}>
+        <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
+        <div className="gr" style={{ left: '36%', bottom: 'calc(16% - 5px)' }}/>
+        {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+          ? <span className="mon" style={{ left: '36%', bottom: '16%', height: '62%' }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
+          : <img className="mon" src={msxMonImg(species)} alt="" style={{ left: '36%', bottom: '16%', height: '62%' }}/>}
+        <span className="v-nm" style={{ left: '36%', bottom: 6 }}>{name}<small>{msxMonName(species)}</small></span>
+        <img src={msxBody(aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, width: '50%', height: '78%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
+      </div>
+      <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>)}<span className="ed">変える</span></button>
+      <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
+      <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span>{items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし'}</span><span className="ed">変える</span></button>
+      <div className="v-sum"><span className="k">はじめの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
+      <button type="button" className="v-big" onClick={start}>🌱 育成をはじめる</button>
+    </>);
+  }
+  return (
+    <>
+      <MsxHd back={step ? 'もどる' : 'やめる'} onBack={back} right={`${step + 1} / 6`}/>
+      <div className="v-body">
+        <MsxSteps n={step}/>
+        {body}
+      </div>
+      {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← もどる' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
+    </>
+  );
+}
+
+// ---- part: 56-monhero-success-main.jsx ----
+// ===== モンヒロサクセス: 育成の画面の本体(メイン・訓練を選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開) =====
+// 見本: docs/progress/player-raise/mock/png/v3-M・T・K・I.png。大会・修行・引退・合体の中身は回3(ボタンは置いて「準備中」)
+// 1ターンの流れ(芯の決まった順): act → (訓練なら)react → (来ていれば)issa → endTurn → (大会なら)settle
+// ★1つ進むたびに mh_monsuc_run_v1 へ保存する(phase も持つので、どこで閉じても同じ所から続く)
+const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
+const MSX_RES = Object.freeze({
+  great: { word: '大成功', cls: '', bg: 'forest_morning', icon: '🌟' },
+  ok: { word: '成功', cls: 'ok', bg: 'forest_morning', icon: '⭕' },
+  fail: { word: '失敗…', cls: 'ng', bg: 'forest_evening', icon: '❌' },
+  sab: { word: 'サボった', cls: 'zz', bg: 'monhero_plaza', icon: '💤' },
+});
+const MSX_COND = Object.freeze({ injury: 'けが', ill: '病気', away: '家出' });
+const MSX_ISSA_KEYS = Object.freeze([
+  { key: 'stat', icon: '💪', name: 'ステータスアップ', ok: '全能力 +50', ng: '全能力 −10・サボりグセ', line: 'stat' },
+  { key: 'hpmax', icon: '🔋', name: '体力上限アップ', ok: '体力の上限 +20', ng: '体力 −20', line: 'cap' },
+  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・うつ病', line: 'heal' },
+  { key: 'loyal', icon: '🤝', name: '忠誠度アップ', ok: '忠誠度 +15', ng: '忠誠度 −5', line: 'loy' },
+  { key: 'pop', icon: '⭐', name: '人気アップ', ok: '人気 +15', ng: '人気 −5', line: 'pop' },
+]);
+const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 'tip', friend: 'friend' });
+
+const msxLayout = () => {
+  if (typeof window === 'undefined') return '';
+  const w = window.innerWidth; const h = window.innerHeight;
+  if (w > h && h < 520) return 'land';
+  return w <= 340 ? 's320' : '';
+};
+// 訓練の札(芯が6枚の札にしたら 'train:<能力>'、いまは 'light:<能力>')
+const msxCardOf = (v, stat) => (v && v.cards ? (v.cards[`train:${stat}`] || v.cards[`light:${stat}`] || null) : null);
+const msxMemberName = (m) => (!m ? '' : m.kind === 'base' || !m.name || m.name === m.species ? msxMonName(m.species) : m.name);
+
+function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
+  const cal = msxCalendar(s.turn);
+  const max = Math.max(1, s.hpMax); const hp = Math.max(0, Math.min(max, s.hp));
+  const after = Math.max(0, hp - use);
+  const P = (msxSuc && msxSuc.core.PERIODS) || [];
+  const now = v.period.index;
+  return (
+    <div className="v-band">
+      <div className="v-b1">
+        <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
+          <div className="n">残り<b>{v.period.left}</b>ターン<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
+        <div className="v-pow"><div><small>総合力</small><b>{msxFmt(ev.power)}</b></div><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></div>
+      </div>
+      <div className="v-b2">
+        <div className={`v-ga hp${after < max * 0.3 ? ' low' : ''}`}><span>❤️ 体力</span>
+          <div className="tr"><i style={{ width: `${after / max * 100}%` }}/>{use ? <u style={{ left: `${after / max * 100}%`, width: `${Math.min(hp, use) / max * 100}%` }}/> : null}{max > 100 ? <s style={{ left: `${100 / max * 100}%` }}/> : null}</div>
+          {use ? <em>−{use}</em> : null}<b>{hp}<small className={max > 100 ? 'cap' : ''}>/{max}{max > 100 ? '▲' : ''}</small></b></div>
+        <div className="v-ga st"><span>💢 ストレス</span>
+          <div className="tr"><i style={{ width: `${s.stress}%` }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
+          {stAdd ? <em className="pl">+{stAdd}</em> : null}<b>{s.stress}<small>/100</small></b></div>
+      </div>
+      <div className="v-track">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === now ? 'now' : ''}><i style={{ width: `${i < now ? 100 : i === now ? (v.period.at - 1) / p.len * 100 : 0}%` }}/></span>)}</div>
+    </div>
+  );
+}
+function MsxStRow({ stats, ups, main }) {
+  return (
+    <div className="v-st">
+      {MSX_STATS.map((k) => {
+        const u = ups ? (ups[k] || 0) : 0;
+        return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
+          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{stats[k]}</b><u><i style={{ width: `${stats[k] / 9.99}%` }}/></u>
+          {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
+      })}
+    </div>
+  );
+}
+function MsxPf({ m, bond, tagAt, cls = '', aid }) {
+  const tag = bond >= tagAt;
+  if (aid) return <span className={`v-pf as${tag ? ' tag' : ''} ${cls}`}><img src={msxFace(aid, 'happy')} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
+  const r = m.kind === 'base' ? 'G' : m.rank;
+  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}><img src={msxMonThumb(m.species)} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
+}
+function MsxMonArt({ run, className, style }) {
+  const sp = run.s.species;
+  if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
+    return <span className={className} style={style}><DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>;
+  }
+  return <img className={className} style={style} src={msxMonImg(sp)} alt=""/>;
+}
+function MsxSay({ aid, ex = 'happy', text }) {
+  return <div className="v-sayrow"><img className="fc" src={msxFace(aid, ex)} alt=""/><div className="bub">{text}</div></div>;
+}
+
+// ---- 本体 ----
+function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) {
+  const [view, setView] = useState('loading');
+  const [data, setData] = useState(null);
+  const [run, setRunState] = useState(null);
+  const [layout, setLayout] = useState(msxLayout);
+  const [ask, setAsk] = useState(null); // 確かめの小窓 { text, yes, onYes }
+  useEffect(() => {
+    const on = () => setLayout(msxLayout());
+    window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
+    return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    msxLoad().then(async (L) => {
+      if (!alive) return;
+      if (!L) { setView('fail'); return; }
+      const d = await msxReadAll(L.SUC);
+      if (!alive) return;
+      setData(d); setRunState(d.run); setView('home');
+    });
+    return () => { alive = false; };
+  }, []);
+  const setRun = (r) => { setRunState(r); if (r) msxSaveRun(r); };
+  const setMeta = (meta) => { setData((d) => ({ ...d, meta })); msxSaveMeta(meta); };
+
+  const startRun = (cfg) => {
+    const { SUC } = msxSuc;
+    const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+    // 持ちこみ: はじめる前に効く物は carry、育成中に使う物は bag(芯の入口・合わせて2つまで)
+    const known = (k) => !!(SUC.ITEMS && SUC.ITEMS[k]);
+    const carry = cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
+    const bag = {}; cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach((k) => { bag[k] = 1; });
+    const s = SUC.newRun({ id, species: cfg.species, aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
+    const r = { v: 1, id, s, nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: 'main', out: null, log: [], startAt: Date.now() };
+    const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
+    // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
+    if (cfg.items.some(known)) { const it = { ...meta.items }; cfg.items.filter(known).forEach((k) => { it[k] = Math.max(0, (it[k] || 0) - 1); if (!it[k]) delete it[k]; }); meta.items = it; }
+    setMeta(meta); setRun(r); setView('play');
+  };
+  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(保存枠には入りません)', yes: 'やめる', onYes: async () => { await storeSet(MSX_KEYS.run, null); setRunState(null); setView('home'); } });
+
+  let content = null;
+  if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
+  else if (view === 'fail') content = (<><MsxHd back="とじる" onBack={onClose}/><div className="v-body"><div className="v-card">読み込めませんでした。通信のよいところで、もう一度開いてください</div></div></>);
+  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
+  else if (view === 'start') content = <MsxStart data={data} SUC={msxSuc.SUC} onCancel={() => setView('home')} onStart={startRun} bondLvOf={bondLvOf} callNameOf={callNameOf}/>;
+  else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={() => setView('home')} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug}/>;
+
+  const node = (
+    <div className="msx-wrap" data-monhero-success role="dialog" aria-label="モンヒロサクセス">
+      <style>{MSX_CSS}</style>
+      {/* ランキングの画面は Tailwind で組まれているので、.msx(ボタンの見た目を初期化している)の外に重ねる */}
+      {view === 'rank' && typeof MonsucRankScreen === 'function' ? <MonsucRankScreen onBack={() => setView('home')}/> : null}
+      <div className={`msx v3 ${layout}`} data-msx-view={view}>
+        {content}
+        {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
+          <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
+          <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>やめておく</button></div></div>}
+      </div>
+    </div>
+  );
+  return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(node, document.body) : node;
+}
+
+// ---- はじめの画面(続きから・新しく始める・デバッグの道具) ----
+function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe, onRank }) {
+  const SUC = msxSuc.SUC;
+  const s = run && run.s;
+  const v = s ? SUC.peek(s) : null;
+  return (
+    <>
+      <MsxHd back="とじる" onBack={onClose} right={`保存枠 ${data.box.mons.length}/${data.box.cap}`}/>
+      <div className="v-body">
+        <div className="v-scene" style={{ flex: '1 1 0' }}>
+          <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
+          {s ? <><div className="gr"/><MsxMonArt run={run} className="mon"/><span className="v-nm">{run.nick}<small>{msxMonName(s.species)}</small></span></> : null}
+          <div className="v-ev-h"><small>育成</small>🌱 モンヒロサクセス</div>
+        </div>
+        {s ? (
+          <div className="v-card pk">
+            <div className="h2">{s.over ? 'この育成は終わりました' : '途中の育成があります'}</div>
+            <div className="sub">{run.nick}({msxMonName(s.species)})・{msxAidName(s.aid)}編・{s.over ? '引退の画面は準備中です' : `${v.period.name} 残り${v.period.left}ターン(最後まで あと${v.toEnd})`}</div>
+            <button type="button" className="msx-btn go" onClick={onContinue}>{s.over ? '結果を見る' : '▶ 続きから'}</button>
+          </div>
+        ) : <div className="v-card"><div className="h2">育てるモンスターを選んで、46ターンの育成をはじめよう</div><div className="sub">編成の6体が集まった訓練ほど、よく伸びる</div></div>}
+        <button type="button" className="v-big" onClick={onNew}>🌱 新しく育成をはじめる</button>
+        {typeof MonsucRankScreen === 'function' ? <button type="button" className="msx-btn sub" onClick={onRank}>🏆 ランキング</button> : null}
+        {debug && (
+          <div className="v-card" style={{ borderColor: '#a3e63566' }}>
+            <div className="msx-dbg">デバッグ(公開の印が偽のあいだだけ・通常のプレイには出ない)</div>
+            <button type="button" className="msx-btn sub" onClick={() => { const it = { ...data.meta.items }; MSX_ITEMS.forEach((t) => { it[t.id] = Math.min(999, (it[t.id] || 0) + 3); }); setMeta({ ...data.meta, items: it }); }}>持ちこみの物を3つずつ足す</button>
+            {s && <button type="button" className="msx-btn sub" onClick={onWipe}>途中の育成を消す</button>}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---- 育成の1ターン ----
+function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) {
+  const { SUC } = msxSuc;
+  const s = run.s;
+  const v = useMemo(() => SUC.peek(s), [s]);
+  const ev = useMemo(() => SUC.evaluate(s), [s]);
+  const [sub, setSub] = useState('main');
+  const [sel, setSel] = useState(null);
+  const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
+  const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
+  const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
+  const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '' };
+  const line = (scene, fallback, extra = {}) => { const l = msxPickLine({ ...ctx, ...extra }, scene, { bondLv }); return l || { t: fallback, e: 'normal' }; };
+  const pushLog = (r, text) => ({ ...r, log: [...(r.log || []), { turn: s.turn, t: text }].slice(-20) });
+
+  // 次の段へ
+  const endTurnFlow = (r0) => {
+    const r = SUC.endTurn(r0.s);
+    if (!r.out.ok) { setRun({ ...r0, phase: 'main', out: null }); return; }
+    const st = r.state;
+    if (st.battle) setRun({ ...r0, s: st, phase: 'battle', out: null });
+    else if (st.over) setRun({ ...r0, s: st, phase: 'over', out: null });
+    else setRun({ ...r0, s: st, phase: 'turn', out: { from: r0.s.turn } });
+  };
+  const afterAct = (r0) => { const p = SUC.peek(r0.s); if (p.issa) setRun({ ...r0, phase: 'issa', out: null }); else endTurnFlow(r0); };
+  const doAct = (a) => {
+    const r = SUC.act(s, a);
+    if (!r.out.ok) return;
+    setSub('main'); setSel(null);
+    let next = { ...run, s: r.state, out: { ...r.out, kind: a.kind } };
+    if (a.kind === 'retry') { endTurnFlow(next); return; }
+    const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}の訓練: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
+    next = pushLog(next, text);
+    setRun({ ...next, phase: 'result' });
+  };
+
+  const phase = run.phase;
+  let body = null; let foot = null;
+  // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
+  //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
+  const r3 = typeof MsxR3 === 'function' ? ((phase === 'battle' && s.battle) ? 'battle' : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
+  if (r3) return <MsxR3 kind={r3} run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} debug={debug}
+    onBack={() => setSub('main')} onPause={onPause} onQuit={onQuit}
+    onActed={(next) => { setSub('main'); afterAct(next); }}/>;
+  const bandProps = {};
+
+  // ---- 結果 ----
+  if (phase === 'result' && run.out) {
+    const o = run.out; const isTrain = !!o.result;
+    const R = isTrain ? MSX_RES[o.result] : null;
+    const gains = o.gain || {};
+    const members = o.card && Array.isArray(o.card.members) ? o.card.members.map((i) => s.team[i]).filter(Boolean) : [];
+    const restName = o.rest && SUC.REST ? (SUC.REST.find((x) => x.key === o.rest) || {}).name : null;
+    const say = isTrain ? line(o.result === 'sab' ? 'turn.result.slack' : `turn.result.${o.result}`, '') : o.kind === 'rest' ? line(`turn.rest.${o.rest === 'poor' ? 'little' : o.rest === 'great' ? 'deep' : 'normal'}`, '') : o.kind === 'play' ? line('turn.play', '') : o.kind === 'clinic' ? line((o.cured || []).length ? 'turn.clinic.cured' : 'turn.clinic.again', '') : { t: '' };
+    const evMember = o.event && Number.isInteger(o.event.who) ? s.team[o.event.who] : null;
+    const evLine = o.event ? (o.event.story ? msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.base.ep${o.event.story}`, { who: 'narr' }) : msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, { who: '*' })) : null;
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene" style={{ flex: '1 1 0' }}>
+        <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
+        {isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
+        <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
+        <MsxMonArt run={run} className="mon" style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>
+        <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
+          {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>
+        {members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
+      </div>
+      {isTrain ? <MsxStRow stats={s.stats} ups={gains} main={o.card && o.card.stat}/> : null}
+      <div className="v-log">
+        {isTrain && o.lvUp ? <div className="v-lvup">⬆ 訓練Lvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}の訓練の基本の伸びが上がる</small></div> : null}
+        {isTrain ? <><span className="hd2">{MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]}の訓練</span><br/>
+          {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}</>
+          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>体力が回復した{(o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : ''}</>
+          : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{(o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る'}</>
+          : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
+        {o.event ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
+        {o.cond && isTrain ? <><br/><b style={{ color: '#fca5a5' }}>{MSX_COND[o.cond]}</b>をしてしまった…しばらく休み</> : null}
+      </div>
+      {say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+  }
+  // ---- 叱る/褒める ----
+  else if (phase === 'react') {
+    const good = s.last && (s.last.res === 'great' || s.last.res === 'ok');
+    const loy = SUC.loyalOf(s);
+    const pol = Math.max(-3, Math.min(3, s.pol || 0));
+    const choose = (how) => { const r = SUC.react(s, how); afterAct({ ...run, s: r.state, phase: 'main' }); };
+    const ask = line(good ? 'turn.praise.fit' : 'turn.scold.fit', good ? 'ほめてあげる?' : 'どうする?');
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene dk" style={{ flex: '1 1 0' }}>
+        <img className="bg" src={`images/story-bg/${(MSX_RES[s.last && s.last.res] || MSX_RES.ok).bg}.jpg`} alt=""/><div className="sh"/>
+        <div className="v-strip"/><img className="v-body2" src={msxBody(s.aid, good ? 'happy' : 'troubled')} alt=""/>
+        <div className="v-chips"><span className="v-chip ylw">{(MSX_RES[s.last && s.last.res] || MSX_RES.ok).icon} {(MSX_RES[s.last && s.last.res] || MSX_RES.ok).word}のあと</span></div>
+        <div className="v-q"><div className="ask">{msxAidName(s.aid)}「{good ? `${run.nick}、ほめてあげる?` : `${run.nick}、どうする?`}」</div>
+          <div className="bt">
+            <button type="button" className="v-ch" onClick={() => choose('praise')}>👏 褒める<small>甘え度 +・方針が甘いほうへ</small></button>
+            <button type="button" className="v-ch b" onClick={() => choose('scold')}>📣 叱る<small>恐れ度 +・方針が厳しいほうへ</small></button>
+            <button type="button" className="v-ch n" onClick={() => choose(null)}>なにもしない(方針はそのまま)</button>
+          </div></div>
+      </div>
+      <div className="v-pol"><div className="l"><span>超溺愛</span><span>甘い</span><span style={{ color: '#fde047' }}>いまの方針: {MSX_POLICY_SCALE[pol + 3]}</span><span>厳しい</span><span>超スパルタ</span></div>
+        <div className="m">{MSX_POLICY_SCALE.map((n, i) => <i key={n} className={i === pol + 3 ? 'on' : ''}/>)}</div>
+        <div className="two">
+          <div className="v-ga"><span>🥰 甘え度</span><div className="tr"><i style={{ width: `${s.ama * 2}%`, background: 'linear-gradient(180deg,#f9a8d4,#f472b6)' }}/></div><b>{s.ama}</b></div>
+          <div className="v-ga"><span>😨 恐れ度</span><div className="tr"><i style={{ width: `${s.fear * 2}%`, background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' }}/></div><b>{s.fear}</b></div></div>
+        <div style={{ fontSize: 9.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4 }}>忠誠度 {loy} = 甘え度 {s.ama} + 恐れ度 {s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい</div>
+        {ask && ask.t && ask.t !== 'ほめてあげる?' && ask.t !== 'どうする?' ? <div className="msx-note" style={{ marginTop: 4 }}>{msxAidName(s.aid)}「{ask.t}」</div> : null}</div>
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>えらんでね</button></div>;
+  }
+  // ---- イッサ博士 ----
+  else if (phase === 'issa') {
+    body = <MsxIssa run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} onDone={(r) => endTurnFlow({ ...r, phase: 'main', out: null })}/>;
+  }
+  // ---- ターンが進む ----
+  else if (phase === 'turn') {
+    const cal = msxCalendar(s.turn); const prev = msxCalendar(Math.max(1, s.turn - 1));
+    const P = msxSuc.core.PERIODS;
+    const seasonChanged = cal.season !== prev.season;
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene msx-fade" style={{ flex: '1 1 0' }}><div className="v-clock">
+        <div className="v-cal msx-pop"><div className="y">{v.period.name}・{cal.year}年目</div><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
+        <div className="v-next">この期の残り <b>{v.period.left}</b> ターン</div>
+        {v.period.key !== 'final' ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 期末の大会まで あと{v.period.left}ターン</div> : <div className="v-chip hot" style={{ position: 'static' }}>🏆 頂への道</div>}
+        {seasonChanged ? <div className="v-chip" style={{ position: 'static' }}>{MSX_SEASON[cal.season]}になった</div> : null}
+        <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
+      </div></div>
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={() => setRun({ ...run, phase: 'main', out: null })}>つぎへ ▶</button></div>;
+  }
+  // ---- 大会(中身は回3) ----
+  else if (phase === 'battle' && s.battle) {
+    const b = s.battle;
+    const opp = SUC.opponents(s);
+    const name = b.kind === 'summit' ? (SUC.SUMMIT[b.round] || {}).name : b.kind === 'debut' ? 'デビュー戦' : (SUC.FORCED[b.kind] || {}).name;
+    const settle = (win) => {
+      const r = SUC.settle(s, win ? opp.map(() => true) : [false]);
+      const next = pushLog({ ...run, s: r.state }, `${name}: ${r.out.won ? '優勝' : '負け'}`);
+      if (r.state.battle) setRun({ ...next, phase: 'battle' });
+      else if (r.state.over) setRun({ ...next, phase: 'over' });
+      else setRun({ ...next, phase: 'turn', out: { from: s.turn } });
+    };
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene" style={{ flex: '1 1 0' }}><img className="bg" src={msxVenueBg(b.kind === 'summit' ? 'summit' : b.kind === 'debut' ? 'debut' : b.kind === 'pro' ? 'hero' : 'cup')} alt=""/><div className="sh"/>
+        <div className="v-ev-h"><small>大会</small>🏆 {name}{b.retry ? `(再挑戦 ${b.retry}回目)` : ''}</div>
+        <div className="gr"/><MsxMonArt run={run} className="mon"/></div>
+      <div className="v-card pk"><div className="h2">{name}<span className="msx-soon">準備中</span></div>
+        <div className="sub">試合({opp.length}戦)と観戦の画面は、次の回で入ります。</div></div>
+    </>);
+    foot = debug ? <div className="v-ft"><button type="button" onClick={() => settle(false)}>負けたことにする</button><button type="button" className="go" onClick={() => settle(true)}>勝ったことにする(デバッグ)</button></div>
+      : <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button></div>;
+  }
+  // ---- 終わり(引退は回3) ----
+  else if (phase === 'over' || s.over) {
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/><div className="v-burst b2"/><div className="gr"/><MsxMonArt run={run} className="mon"/>
+        <div className="v-stamp ok msx-pop">{s.over === 'gameover' ? 'ここまで…' : s.over === 'lost' ? 'おつかれさま' : '育成おわり!'}<small>総合力 {msxFmt(ev.power)}・ランク {ev.rank}</small></div></div>
+      <MsxStRow stats={s.stats}/>
+      <div className="v-card"><div className="h2">引退<span className="msx-soon">準備中</span></div><div className="sub">振り返り・育成ランク・保存枠へ入れる画面は次の回で入ります。この育成はこのまま残しておきます</div></div>
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← もどる</button><button type="button" onClick={onQuit}>この育成を消す</button></div>;
+  }
+  // ---- 訓練を選ぶ ----
+  else if (sub === 'train') {
+    const pull = (k) => { const c = msxCardOf(v, k); return c ? c.tags.length * 10 + c.members.length + (c.aid ? 1 : 0) : 0; };
+    const stat = sel || MSX_STATS.slice().sort((a, b) => pull(b) - pull(a))[0];
+    const card = msxCardOf(v, stat);
+    const pv = card && typeof SUC.preview === 'function' ? SUC.preview(s, { kind: card.kind, stat }) : null;
+    const lvOf = (c) => (!c ? null : Number.isFinite(c.lv) ? c.lv : typeof SUC.trainLvOf === 'function' && s.trainXp ? SUC.trainLvOf(s.trainXp[`${c.kind}:${c.stat}`]) : null);
+    const tags = card ? card.tags : [];
+    const members = card ? card.members : [];
+    const trainLv = lvOf(card);
+    if (pv) { bandProps.use = Math.round(pv.hp || 0); bandProps.stAdd = Math.round(pv.stress || 0); }
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
+      <div className="v-scene" style={{ flex: '1 1 0' }}>
+        <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '40%' }}/>
+        <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw">{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</span></div>
+        <div className="v-come">
+          {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
+            <div key={i} className={`v-cm${tag ? ' tag' : ''}`}><MsxPf m={m} bond={s.bond[i]} tagAt={999}/>
+              <div className="tx"><b>{msxMemberName(m)}</b><small>{tag ? `🤝 タッグ +${m.tag}%` : `編成の効き +${Math.round(eff)}%`}</small><div className="afl">親密度<i><b style={{ width: `${s.bond[i]}%` }}/></i>{s.bond[i]}</div></div></div>); })}
+          {card && card.aid ? <div className={`v-cm${s.aidBond >= tagAt ? ' tag' : ''}`}><MsxPf aid={s.aid} bond={s.aidBond} tagAt={999}/><div className="tx"><b>{msxAidName(s.aid)}</b><small>{s.aidBond >= tagAt ? '🤝 タッグ' : '助手も来ている'}</small><div className="afl">親密度<i><b style={{ width: `${s.aidBond}%` }}/></i>{s.aidBond}</div></div></div> : null}
+        </div>
+        {card && <div className={`v-fx${tags.length ? '' : ' plain'}`}>
+          <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span>効果 ×{card.mult}</span><span className="fl">失敗 <b>{Math.round(card.fail * 100)}%</b></span></div>
+          <div className="ch"><span>基本</span><i>▶</i><span>編成 +{Math.round(card.add * 100)}%</span>{tags.length ? <><i>▶</i><span className="tgx">🤝×{tags.length} +{Math.round(card.tag * 100)}%</span></> : null}{pv && pv.gain ? <><i>▶</i><span className="res">{MSX_STAT_NAME[stat]} +{pv.gain[stat] || 0}</span></> : null}</div>
+          {trainLv ? <div className="v-lvx"><b>訓練Lv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
+        </div>}
+      </div>
+      <MsxStRow stats={s.stats} ups={pv ? pv.gain : null} main={stat}/>
+      <div className="v-trs">
+        {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
+          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b>{lv ? <i className="lv">Lv.{lv}</i> : null}</button>); })}
+      </div>
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← もどる</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練をする</button></div>;
+  }
+  // ---- メイン ----
+  else {
+    const can = v.can || [];
+    const anyTag = MSX_STATS.some((k) => { const c = msxCardOf(v, k); return c && c.tags.length; });
+    const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
+    const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const cal = msxCalendar(s.turn); const scn = msxSceneBg(s.turn);
+    const low = s.hp < s.hpMax * 0.3;
+    const bag = Object.keys(s.bag || {}).filter((k) => s.bag[k] > 0);
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <MsxSay aid={s.aid} ex={yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
+      <div className="v-scene home">
+        <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
+        <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`}/>
+        <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
+        <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
+          {v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
+          {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
+          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
+          {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}</div>
+        <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
+        <div className="v-side"><span className="v-mini">🤝 忠誠 <b>{SUC.loyalOf(s)}</b></span><span className="v-mini">⭐ 人気 <b>{s.pop}</b></span></div>
+        <button type="button" className="v-bagb" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
+        <button type="button" className="v-bagb r" onClick={() => setSub('stats')}>🔍<small>くわしく</small></button>
+      </div>
+      <MsxStRow stats={s.stats}/>
+      {can.includes('retry') ? (
+        <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'retry' })}>🏆 デビュー戦に再挑戦<small>勝つまで訓練はできない(負けるたび相手が少し弱くなる)</small></button></div>
+      ) : can.includes('cond') ? (
+        <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'cond' })}>🛌 休む<small>{MSX_COND[s.cond && s.cond.kind] || '体調'}のため、このターンは休み</small></button></div>
+      ) : (<>
+        <div className="v-act" style={{ gridTemplateColumns: '1fr 2.3fr 1fr' }}>
+          <button type="button" className="v-p" onClick={() => doAct({ kind: 'rest' })}><div className="e">🛌</div>休む<small>体力を回復</small></button>
+          <button type="button" className="v-p main" onClick={() => setSub('train')}>💪 訓練<small>{anyTag ? '🤝 友情タッグのチャンスあり' : '6つの訓練から選ぶ'}</small></button>
+          <button type="button" className="v-p" onClick={() => setSub('stats')}><div className="e">📊</div>能力<small>技・型・編成</small>{s.pts ? <span className="bd">能力P {s.pts}</span> : null}</button>
+        </div>
+        <div className="v-act" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+          <button type="button" className={`v-p ${yosu ? 'hosp' : 'off'}`} disabled={!can.includes('clinic')} onClick={() => doAct({ kind: 'clinic' })}><div className="e">🏥</div>通院<small>{yosu ? 'ようすを治す' : 'ようすなし'}</small>{yosu ? <span className="bd r">!</span> : null}</button>
+          <button type="button" className="v-p" onClick={() => doAct({ kind: 'play' })}><div className="e">🎈</div>遊ぶ<small>体力+・甘え+</small></button>
+          <button type="button" className="v-p" onClick={() => (typeof MsxR3 === 'function' ? setSub('shugyo') : setSheet({ soon: '⚔ 修行', text: '技を覚える修行は、次の回で入ります' }))}><div className="e">⚔</div>修行<small>技を覚える</small><span className="bd">準備中</span></button>
+          <button type="button" className="v-p" onClick={() => (typeof MsxR3 === 'function' ? setSub('cup') : setSheet({ soon: '🏆 大会', text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)' }))}><div className="e">🏆</div>大会<small>今月の大会</small><span className="bd">準備中</span></button>
+        </div>
+      </>)}
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 きろく</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
+    if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
+    if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
+    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← もどる</button></div>;
+  }
+
+  return (
+    <>
+      <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+      <div className="v-body">{body}</div>
+      {foot}
+      {sheet && (
+        <div className="msx-ov msx-fade" onClick={() => setSheet(null)}>
+          <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
+            {sheet === 'log' ? <><h3>📖 きろく</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
+              : sheet === 'menu' ? <><h3>☰ メニュー</h3>
+                <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(褒めると甘く・叱ると厳しくなる)</div>
+                <div className="msx-note">成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
+                <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onPause(); }}>中断する(続きから遊べる)</button>
+                <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onQuit(); }}>この育成をやめる</button></>
+              : <><h3>{sheet.soon}<span className="msx-soon">準備中</span></h3><div className="msx-note">{sheet.text}</div></>}
+            <button type="button" className="msx-btn" onClick={() => setSheet(null)}>とじる</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ---- 持ち物(1ターンに1個まで・ターンは進まない)。中身は芯の s.bag(育成中に使う物の数)と s.carry(はじめる前に効いている物) ----
+const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を少し回復する' }, herb: { e: '🌱', desc: 'ストレスを下げる' } });
+const msxItemView = (k) => {
+  const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
+  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: (base && base.desc) || (ex && ex.desc) || '', e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
+};
+function MsxBag({ run, setRun, v, ev, onClose }) {
+  const { SUC } = msxSuc;
+  const s = run.s;
+  const bagList = Object.keys(s.bag || {}).filter((k) => s.bag[k] > 0).map((k) => ({ ...msxItemView(k), n: s.bag[k] }));
+  const carryList = (Array.isArray(s.carry) ? s.carry : []).map((k) => ({ ...msxItemView(k), n: 0, carry: true }));
+  const sand = s.items ? (s.items.sand || 0) : 0; const rainbow = s.items ? (s.items.rainbow || 0) : 0;
+  const [pick, setPick] = useState(bagList.length ? bagList[0].id : null);
+  const usedNow = s.itemTurn === s.turn;
+  const t = pick ? bagList.find((x) => x.id === pick) || carryList.find((x) => x.id === pick) : null;
+  const use = () => {
+    if (!t || t.carry || usedNow || typeof SUC.useItem !== 'function') return;
+    const r = SUC.useItem(s, t.id);
+    if (!r || !r.out || !r.out.ok) return;
+    setRun({ ...run, s: r.state, log: [...(run.log || []), { turn: s.turn, t: `${t.name}を使った` }].slice(-20) });
+  };
+  return (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="v-scene home dk" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+      <div className="v-bagw">
+        <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i>✕</i></button></div>
+        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? 'はじめる前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
+        <div className="v-bgrid">
+          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small>{x.name}</small></button>)}
+          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small>{x.name}</small></button>)}
+          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small>時渡りの砂時計</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small>虹の時渡りの砂時計</small></div>
+        </div>
+        {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
+        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2">(うすい物はここでは使わない。砂時計は大会で負けたときに使う・大会は次の回で入ります)</span></div>
+        <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow} onClick={use}>
+          {usedNow ? 'このターンはもう使った' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
+      </div>
+    </div>
+    <MsxStRow stats={s.stats}/>
+  </>);
+}
+
+// ---- 能力(能力ポイントを振る・忠誠と方針・編成の親密度) ----
+function MsxStats({ run, setRun, v, ev, onClose }) {
+  const { SUC } = msxSuc;
+  const s = run.s;
+  const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
+  const spend = (k) => { const r = SUC.spendPts(s, k, 1); if (r.out.ok) setRun({ ...run, s: r.state }); };
+  const auto = () => { const r = SUC.autoPts(s); setRun({ ...run, s: r.state }); };
+  return (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="msx-scroll">
+      <div className="v-card pk"><div className="msx-row" style={{ justifyContent: 'space-between' }}><b className="h2">📊 能力ポイント {s.pts}</b>{s.pts ? <button type="button" className="chip on" onClick={auto}>おまかせで振る</button> : null}</div>
+        <div className="msx-note">大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)</div>
+        {MSX_STATS.map((k) => (
+          <div key={k} className="msx-row" style={{ marginTop: 5 }}>
+            <span style={{ width: 84, fontSize: 12, fontWeight: 900 }}>{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
+            <span className="bar" style={{ flex: 1 }}><i style={{ width: `${s.stats[k] / 9.99}%` }}/></span>
+            <b style={{ width: 34, textAlign: 'right' }}>{s.stats[k]}</b>
+            <button type="button" className="chip on" style={{ minWidth: 52 }} disabled={!s.pts || s.pts < SUC.ptsCost(s, k)} onClick={() => spend(k)}>+1<small style={{ fontSize: 8 }}>({SUC.ptsCost(s, k)}点)</small></button>
+          </div>
+        ))}
+      </div>
+      <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
+        <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}・成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div></div>
+      <div className="v-card"><div className="h2">編成の親密度<span className="sub">(80で友情タッグ)</span></div>
+        {s.team.map((m, i) => (
+          <div key={i} className="msx-row" style={{ marginTop: 4 }}><MsxPf m={m} bond={s.bond[i]} tagAt={tagAt} cls="sm"/><span style={{ flex: 1, fontSize: 11, fontWeight: 900 }}>{msxMemberName(m)}<small className="sub">{m.kind === 'base' ? ' ベースモン' : ` ${m.rank}`}・得意 {m.top.map((k) => MSX_STAT_NAME[k]).join('・')}</small></span><b>{s.bond[i]}</b></div>
+        ))}
+        <div className="msx-row" style={{ marginTop: 4 }}><MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt} cls="sm"/><span style={{ flex: 1, fontSize: 11, fontWeight: 900 }}>{msxAidName(s.aid)}<small className="sub"> 助手</small></span><b>{s.aidBond}</b></div>
+      </div>
+      <div className="v-card"><div className="h2">技<span className="msx-soon">準備中</span></div><div className="sub">技と修行は次の回で入ります</div></div>
+    </div>
+  </>);
+}
+
+// ---- イッサ博士(6つから1つ・結果) ----
+function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
+  const { SUC } = msxSuc;
+  const s = run.s;
+  const [pick, setPick] = useState('hp');
+  const res = run.out && run.out.issa ? run.out.issa : null;
+  const metScene = s.issaMet > 0 ? 'issa.meet.again' : 'issa.meet.first';
+  const meet = msxPickLine(ctx, metScene, { who: 'issa' });
+  const choose = () => {
+    const r = SUC.issa(s, pick);
+    if (!r.out.ok) { onDone(run); return; }
+    setRun({ ...run, s: r.state, out: { issa: r.out, before: s.stats }, log: [...(run.log || []), { turn: s.turn, t: `イッサ博士: ${pick === 'none' ? 'ことわった' : r.out.win ? '成功' : '失敗'}` }].slice(-20) });
+  };
+  if (res) {
+    const k = MSX_ISSA_KEYS.find((x) => x.key === res.choice);
+    const said = k ? msxPickLine(ctx, `issa.${res.win ? 'ok' : 'ng'}.${k.line}`, { who: 'issa' }) : msxPickLine(ctx, 'issa.bye', { who: 'issa' });
+    const ups = {}; if (run.out.before) MSX_STATS.forEach((x) => { const d = s.stats[x] - run.out.before[x]; if (d) ups[x] = d; });
+    return (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene" style={{ flex: '1 1 0' }}><img className="bg" src="images/story-bg/monhero_night.jpg" alt=""/><div className="sh" style={{ background: '#0f0d2466' }}/>
+        {res.win ? <div className="v-burst"/> : null}
+        <img className="v-issa" src={MSX_ISSA_ART} alt="イッサ博士" style={res.win ? undefined : { filter: 'grayscale(.4) brightness(.85)' }}/>
+        <MsxMonArt run={run} className="mon" style={{ left: '70%', bottom: '12%', height: '44%' }}/>
+        {k ? <div className={`v-stamp msx-pop ${res.win ? '' : 'ng'}`} style={{ top: '3%', fontSize: 40 }}>{res.win ? '大成功!' : '失敗…'}<small>{res.win ? '装置がぴかーっと光った' : '装置から煙が…'}</small></div> : null}
+        {said ? <div className="v-ibub" style={{ top: 'auto', bottom: 8, left: 8, right: '44%' }}>「{said.t}」</div> : null}
+      </div>
+      <MsxStRow stats={s.stats} ups={ups}/>
+      <div className="v-log"><span className="hd2">{k ? `${k.icon} ${k.name}` : '🙅 何もしない'}</span><br/>{k ? (res.win ? `⭕ ${k.ok}` : `❌ ${k.ng}`) : 'ことわった'}</div>
+      <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone({ ...run, out: null })}>つぎへ ▶</button></div>
+    </>);
+  }
+  return (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="v-scene" style={{ flex: '1 1 0' }}><img className="bg" src="images/story-bg/monhero_night.jpg" alt=""/><div className="sh" style={{ background: '#0f0d2466' }}/>
+      <img className="v-issa" src={MSX_ISSA_ART} alt="イッサ博士"/>
+      <div className="v-machine">⚙️💡<small>のびのび装置</small><MsxMonArt run={run} style={{ height: '46%', aspectRatio: '1', objectFit: 'contain' }}/></div>
+      <div className="v-ev-h" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }}><small>大きな賭け</small>イッサ博士があらわれた!</div>
+      <div className="v-ibub">「{meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」</div>
+    </div>
+    <div className="v-six">
+      {MSX_ISSA_KEYS.map((x) => { const p = SUC.issaRate(s, x.key); const dots = Math.max(1, Math.min(4, Math.round(p * 4))); return (
+        <button type="button" key={x.key} className={`v-ix${pick === x.key ? ' sel' : ''}`} onClick={() => setPick(x.key)}>{x.icon} {x.name}
+          <span className="pr">成功{[0, 1, 2, 3].map((i) => <i key={i} className={i < dots ? 'on' : ''}/>)}</span><span className="ok">⭕ {x.ok}</span><span className="ng">❌ {x.ng}</span></button>); })}
+      <button type="button" className={`v-ix no${pick === 'none' ? ' sel' : ''}`} onClick={() => setPick('none')}>🙅 何もしない<span className="ok" style={{ color: '#cbd5e1' }}>ことわる。損はない</span><span className="ng" style={{ color: '#94a3b8' }}>「えー、ノリ悪いなぁ」</span></button>
+    </div>
+    <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={choose}>{pick === 'none' ? 'ことわる' : `${(MSX_ISSA_KEYS.find((x) => x.key === pick) || {}).icon} ${(MSX_ISSA_KEYS.find((x) => x.key === pick) || {}).name}を受ける`}</button></div>
+  </>);
+}
+
+// ---- part: 56-assistant-life-friend-monsuc-lend.jsx ----
+// ===== モンヒロサクセス: フレンドからのレンタルの端末の口(段取りの回5・2026-11-12 オトズレ) =====
+// 画面は持たない(編成の画面・保存枠の画面は回2・開発部)。ここは「サーバの関数 masmon-pvp の lend_* を呼ぶ」「表 monsuc_lend を読む」だけ。
+//   サーバ: supabase/functions/masmon-pvp/lend.js・表 supabase/migrations/202611120002_monsuc_lend.sql・設計 docs/progress/player-raise/PLAN.md §2
+//   ★持ち主の鍵は助手のマスモンのフレンド対戦と同じ(mh_masmon_pvp_owner_key_v1・masmonPvpSelf)。ブリーダーIDと鍵は画面に出さない
+//   ★借りた子の能力は送られたまま信じない: ランク・効きは計算の芯(SUC.memberOf)が6能力から出し直す。
+//     アシストは「6能力から出せる最大の総合力」のポイント以内・4種類までかをここで確かめ、外れたら効かせない(ASSIST.md §3)
+//   保存: 新しいキーは作らない(貸し出しの子の id は mh_monsuc_meta_v1.lend に画面側が書く。借りた子は育成の cheer に写しで持つ)
+//   公開の印: RELEASE_FLAGS.monheroSuccess が真のときだけ通信する(偽なら reason 'off')
+// 返り値の reason は monsucLendReasonText で日本語にできる
+const MONSUC_LEND_REASON_TEXT = Object.freeze({
+  off: 'フレンドからのレンタルは準備中です',
+  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  no_id: 'この端末ではまだ使えません',
+  locked: 'この貸し出しは別の端末で作られています',
+  mon: 'このマスモンは貸し出せません',
+  not_friend: 'フレンドのマスモンだけを借りられます',
+  no_lend: 'そのマスモンはもう貸し出されていません',
+  streak: '同じフレンドのマスモンは、続けて2回までです。ほかのフレンドのマスモンも借りてみよう',
+  self: '自分のマスモンは借りられません',
+  lender: 'そのマスモンは借りられません',
+});
+const monsucLendReasonText = (reason) => MONSUC_LEND_REASON_TEXT[reason] || MONSUC_LEND_REASON_TEXT.server;
+const monsucLendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const MONSUC_LEND_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+
+// サーバの関数を呼ぶ(masmon-pvp と同じ口)。断りの種類をこの部品の言葉のまま返す。落ちない
+const monsucLendPost = async (body) => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), 12000) : null;
+  try {
+    const r = await fetch(MASMON_PVP_URL, {
+      method: 'POST', headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), signal: ac ? ac.signal : undefined,
+    });
+    let j = null;
+    try { j = await r.json(); } catch (_) { j = null; }
+    if (j && j.ok) return j;
+    const e = j && typeof j.error === 'string' ? j.error : (r.status >= 500 ? 'server' : 'network');
+    return { ok: false, reason: MONSUC_LEND_REASON_TEXT[e] ? e : 'server' };
+  } catch (_) {
+    return { ok: false, reason: 'network' };
+  } finally { if (timer) clearTimeout(timer); }
+};
+
+// 保存枠の1体(mh_monsuc_box_v1 の mons の1つ)から、送る中身を作る。送るのは 6能力・種・名前・色・型・アシストだけ
+const monsucLendPayloadOf = (child) => {
+  const c = child && typeof child === 'object' ? child : null;
+  if (!c || typeof c.species !== 'string') return null;
+  const st = c.st && typeof c.st === 'object' ? c.st : (c.stats && typeof c.stats === 'object' ? c.stats : null);
+  if (!st) return null;
+  const stats = {};
+  for (const k of MONSUC_LEND_STAT_KEYS) {
+    const v = Number(st[k]);
+    if (!Number.isFinite(v)) return null;
+    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+  }
+  const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
+  const assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({ id, lv }));
+  const nameRaw = typeof c.nick === 'string' && c.nick.trim() ? c.nick : (typeof c.name === 'string' ? c.name : '');
+  const name = [...nameRaw.trim()].slice(0, 12).join('') || c.species.slice(0, 12);
+  const out = { species: c.species, name, stats, assists };
+  const type = Number.isInteger(c.type) ? c.type : (Number.isInteger(c.gt) ? c.gt : null);
+  if (type != null && type >= 0 && type <= 5) out.type = type;
+  if (c.colors && typeof c.colors === 'object') out.colors = c.colors;
+  return out;
+};
+
+// 借りた子を、育成の編成の1枠(cheer の { friend: 写し })にする。SUC = MONHERO_SUCCESS.create(...) の結果
+//   返り値はそのまま SUC.memberOf / SUC.newRun({ team }) に渡せる形 { kind:'raised', species, name, stats, assists, friend:{ id, name } }
+//   アシストが「6能力から出せる最大の総合力」のポイントを超える・4種類を超える・知らない id → その子のアシストは空にする
+const monsucLendMember = (row, SUC) => {
+  const r = row && typeof row === 'object' ? row : null;
+  const m = r && r.lend && typeof r.lend === 'object' ? r.lend : null;
+  if (!m || !SUC || !Array.isArray(SUC.speciesList) || !SUC.speciesList.includes(m.species)) return null;
+  const st = m.stats && typeof m.stats === 'object' ? m.stats : null;
+  if (!st) return null;
+  const stats = {};
+  for (const k of MONSUC_LEND_STAT_KEYS) {
+    const v = Number(st[k]);
+    if (!Number.isFinite(v)) return null;
+    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+  }
+  let assists = [];
+  const list = Array.isArray(m.assists) ? m.assists : [];
+  const known = SUC.ASSISTS && typeof SUC.ASSISTS === 'object' ? SUC.ASSISTS : {};
+  const okShape = list.length <= 4 && list.every((a) => a && known[a.id] && Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3)
+    && new Set(list.map((a) => a.id)).size === list.length;
+  if (okShape && list.length) {
+    // 6能力から出せる最大の総合力(Lv・技の熟練・忠誠度・人気を全部いちばん上にしたとき)
+    let budget = 0;
+    try {
+      const best = SUC.memberOf({ kind: 'raised', species: m.species, stats, lv: 999, loy: 100, pop: 100, masteries: [100, 100, 100, 100, 100, 100, 100, 100] });
+      budget = SUC.assistPointsOf(best.power);
+    } catch (_) { budget = 0; }
+    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[a.lv - 1]) || 0), 0);
+    if (cost <= budget) assists = list.map((a) => ({ id: a.id, lv: a.lv }));
+  }
+  const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  return {
+    kind: 'raised', species: m.species, name, stats, assists,
+    friend: { id: typeof r.friendId === 'string' ? r.friendId : null, name: typeof r.name === 'string' ? r.name.slice(0, 40) : '' },
+  };
+};
+
+// フレンドが貸し出している子の一覧(1人1体・貸し出していない人は出さない)
+const monsucLendFriends = async () => {
+  if (!monsucLendOn()) return { ok: false, reason: 'off', rows: [] };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  if (!self || typeof sbFetchFriendRoster !== 'function') return { ok: false, reason: 'no_id', rows: [] };
+  let roster = [];
+  try { roster = await sbFetchFriendRoster(self); } catch (_) { return { ok: false, reason: 'network', rows: [] }; }
+  const ids = roster.map((f) => masmonPvpSafeId(f.otherId)).filter(Boolean).slice(0, 100);
+  if (!ids.length) return { ok: true, rows: [] };
+  const got = await masmonPvpRead(`monsuc_lend?select=owner_id,mon,version,updated_at&active=eq.true&owner_id=in.(${ids.join(',')})`);
+  if (!got) return { ok: false, reason: 'network', rows: [] };
+  const rows = roster.map((f) => {
+    const e = got.find((x) => x.owner_id === f.otherId);
+    if (!e || !e.mon || typeof e.mon !== 'object') return null;
+    const mon = e.mon;
+    return {
+      friendId: f.otherId, name: f.userName, icon: f.icon ?? null, profileFrame: f.profileFrame || null,
+      lend: {
+        species: mon.species, name: mon.name, colors: Array.isArray(mon.colors) && mon.colors.every((c) => typeof c === 'string') ? mon.colors.slice(0, 8) : null, type: Number.isInteger(mon.type) ? mon.type : null,
+        stats: mon.stats, assists: Array.isArray(mon.assists) ? mon.assists : [], version: e.version, updatedAt: Date.parse(e.updated_at) || 0,
+      },
+    };
+  }).filter(Boolean);
+  return { ok: true, rows };
+};
+
+// 自分の保存枠の子を「貸し出しの子」にする(置き直しも同じ)。child は mh_monsuc_box_v1 の1体
+const monsucLendSet = async (child, { userName, icon } = {}) => {
+  if (!monsucLendOn()) return { ok: false, reason: 'off' };
+  const mon = monsucLendPayloadOf(child);
+  if (!mon) return { ok: false, reason: 'mon' };
+  const me = await masmonPvpSelf(true);
+  if (!me) return { ok: false, reason: 'no_id' };
+  const r = await monsucLendPost({ action: 'lend_set', owner: me.owner, key: me.key, mon,
+    name: typeof userName === 'string' ? userName : '', icon: typeof icon === 'string' ? icon : null });
+  return r.ok ? { ok: true } : { ok: false, reason: r.reason };
+};
+
+// 貸し出しをやめる
+const monsucLendClear = async () => {
+  if (!monsucLendOn()) return { ok: false, reason: 'off' };
+  const me = await masmonPvpSelf(false);
+  if (!me) return { ok: false, reason: 'no_id' };
+  const r = await monsucLendPost({ action: 'lend_clear', owner: me.owner, key: me.key });
+  return r.ok ? { ok: true } : { ok: false, reason: r.reason };
+};
+
+// フレンドの子を借りた(育成を「はじめる」ときに1回)。'streak' で断られたらその枠を外す。network/off のときは借りずに始めてよい
+const monsucLendUse = async (friendId) => {
+  if (!monsucLendOn()) return { ok: false, reason: 'off' };
+  const lender = masmonPvpSafeId(friendId);
+  if (!lender) return { ok: false, reason: 'lender' };
+  const me = await masmonPvpSelf(true);
+  if (!me) return { ok: false, reason: 'no_id' };
+  const r = await monsucLendPost({ action: 'lend_use', owner: me.owner, key: me.key, lender });
+  return r.ok ? { ok: true } : { ok: false, reason: r.reason };
+};
+
+// 自分の子が借りられた回数(前に聞いてから)と、もらえる名声(1日の上限はサーバがかける)。名声の加算と知らせは画面側で
+const monsucLendClaim = async () => {
+  if (!monsucLendOn()) return { ok: false, reason: 'off', n: 0, fame: 0 };
+  const me = await masmonPvpSelf(false);
+  if (!me) return { ok: true, n: 0, paid: 0, fame: 0 }; // まだ鍵が無い = まだ一度も貸していない
+  const r = await monsucLendPost({ action: 'lend_claim', owner: me.owner, key: me.key });
+  if (!r.ok) return { ok: false, reason: r.reason, n: 0, fame: 0 };
+  const n = Number.isInteger(r.n) && r.n > 0 ? r.n : 0;
+  const paid = Number.isInteger(r.paid) && r.paid > 0 ? r.paid : 0;
+  const fame = Number.isInteger(r.fame) && r.fame > 0 ? r.fame : 0;
+  return { ok: true, n, paid, fame };
+};
+
+// ---- part: 56-monsuc-rank.jsx ----
+// ===== モンヒロサクセス 育成完了時の総合力ランキング(2026-11-12 クラフト・設計 docs/progress/player-raise/RANKING.md) =====
+// 送る口・読む口・画面(R1 全モンスター / R2 血統別・行を押すと6能力)をここに閉じる。
+//   サーバ: supabase/migrations/202611120003_monsuc_rank.sql(表 monsuc_finishes・見え方 monsuc_rank_all / monsuc_rank_lineage・関数 monsuc_rank_submit)
+//   ★総合力と評価はサーバが出し直す。端末の値は表示の目安だけ
+//   ★持ち主の鍵は助手マスモン対戦の鍵(mh_masmon_pvp_owner_key_v1)をそのまま使う(56-assistant-masmon-pvp.jsx の masmonPvpSelf)
+//   保存(新しいキーだけ・CLAUDE.md ⑦):
+//     mh_monsuc_rank_sent_v1  … 送れた育成の id の一覧(新しい50件)。二重に送らない印
+//     mh_monsuc_rank_queue_v1 … 送れなかった1件ずつの中身(5件まで)。開いたときに1件ずつ送り直す
+//   送らないもの: デビュー戦のゲームオーバー・まだ終わっていない育成・デバッグで進めた育成
+//   公開の印: RELEASE_FLAGS.monheroSuccess(モンヒロサクセス本体と同じ印)が真のときだけ通信する
+// 引退の画面からは  typeof monsucRankSubmit === 'function' && monsucRankSubmit({ run, ev, name, colors, debug })  で呼ぶ(待たなくてよい・落ちない)
+const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
+const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
+const MONSUC_RANK_SENT_MAX = 50;
+const MONSUC_RANK_QUEUE_MAX = 5;
+const MONSUC_RANK_TIMEOUT_MS = 12000;
+const MONSUC_RANK_LIMIT_ALL = 100;
+const MONSUC_RANK_LIMIT_LINEAGE = 50;
+const MONSUC_RANK_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MONSUC_RANK_STAT_LABEL = { life: '❤️ライフ', pow: '💪ちから', wise: '🧠かしこさ', hit: '🎯命中', eva: '💨回避', tough: '🛡️丈夫さ' };
+const MONSUC_RANK_GRADE_COLOR = { M: '#f472b6', SSS: '#f472b6', SS: '#fb923c', S: '#fbbf24', A: '#f472b6', B: '#a78bfa', C: '#38bdf8', D: '#94a3b8', E: '#94a3b8', F: '#94a3b8', G: '#94a3b8' };
+const MONSUC_RANK_REASON_TEXT = Object.freeze({
+  off: 'ランキングは準備中です',
+  network: 'つながりませんでした。次に開いたときにもう一度送ります',
+  busy: '少し待ってから送り直します',
+  bad: 'この記録はランキングに載せられませんでした',
+  locked: 'この端末ではランキングに送れません',
+  over_cap: 'この記録はランキングに載せられませんでした',
+  skip: 'この育成はランキングの対象外です',
+  no_id: 'この端末ではまだ送れません',
+});
+const monsucRankReasonText = (reason) => MONSUC_RANK_REASON_TEXT[reason] || MONSUC_RANK_REASON_TEXT.network;
+const monsucRankOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const monsucRankNum = (v, d = 0) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d);
+const monsucRankClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const monsucRankLineageOf = (species) => {
+  const m = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
+  return m && typeof m.main === 'string' ? m.main : 'unknown';
+};
+const monsucRankLineageName = (id) => {
+  const l = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES ? MONSTER_LINEAGES[id] : null;
+  return l && l.name ? l.name : '？？？';
+};
+// 計算の芯(data/monhero-success.js)の版。読み込まれていなければ 1
+const monsucRankEngineVersion = () => { const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null; return S && Number.isInteger(S.VERSION) ? S.VERSION : 1; };
+// ALL_PLAYER_MONSTERS は種族名をキーにしたオブジェクト(data/ally-monsters.js)
+const monsucRankMonOf = (species) => {
+  if (typeof species !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS || typeof ALL_PLAYER_MONSTERS !== 'object') return null;
+  const m = Object.prototype.hasOwnProperty.call(ALL_PLAYER_MONSTERS, species) ? ALL_PLAYER_MONSTERS[species] : null;
+  return m && typeof m === 'object' ? m : null;
+};
+// 染めた色は「部位ごとの色の id の配列」(DyedMonsterImage の masuColors の形)だけ通す。ほかの人の行はだれでも入れられるので、読む側でも必ず整える
+const monsucRankDyeOf = (dye) => (Array.isArray(dye) ? dye.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : null);
+// 育成の id(英数字だけ・6〜32字)。計算の芯の s.id をもとに作り、持ち主の番号を前に付ける
+const monsucRankRunId = (owner, rawId) => {
+  let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
+  if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
+  return `${owner}-${tail}`;
+};
+
+// ---- 保存(新しいキーだけ。無い・壊れている → 空) ----
+const monsucRankSentList = async () => {
+  try { const v = await storeGet(MONSUC_RANK_SENT_KEY, [], false); return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-MONSUC_RANK_SENT_MAX) : []; } catch (_) { return []; }
+};
+const monsucRankMarkSent = async (runId) => {
+  const list = await monsucRankSentList();
+  if (list.includes(runId)) return;
+  try { await storeSet(MONSUC_RANK_SENT_KEY, list.concat([runId]).slice(-MONSUC_RANK_SENT_MAX), false); } catch (_) {}
+};
+const monsucRankQueue = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_QUEUE_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && typeof x.run_id === 'string').slice(-MONSUC_RANK_QUEUE_MAX) : [];
+  } catch (_) { return []; }
+};
+const monsucRankQueueSave = async (list) => { try { await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false); } catch (_) {} };
+
+// 送る中身(サーバの monsuc_rank_submit の p_row の形)。送らない育成は null
+const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
+  if (!run || typeof run !== 'object') return null;
+  if (!['done', 'lost'].includes(run.over) && run.retired !== true) return null; // まだ終わっていない・デビュー戦のゲームオーバーは送らない
+  if (run.over === 'gameover') return null;
+  const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
+  const stats = {};
+  MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999); });
+  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
+  if (!species) return null;
+  const e = ev && typeof ev === 'object' ? ev : {};
+  const dyeOk = monsucRankDyeOf(colors) || [];
+  return {
+    run_id: monsucRankRunId(owner, run.id),
+    user_name: String(userName || '').slice(0, 40),
+    child_name: String(name || '').slice(0, 24),
+    species, lineage: monsucRankLineageOf(species), dye: dyeOk, stats, techs,
+    lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
+    loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
+    pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
+    engine_version: monsucRankEngineVersion(),
+  };
+};
+
+// サーバの関数を呼ぶ。落ちない(失敗は { ok:false, reason })
+const monsucRankPost = async (owner, key, row) => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), MONSUC_RANK_TIMEOUT_MS) : null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/monsuc_rank_submit`, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_owner: owner, p_key: key, p_row: row }), signal: ac ? ac.signal : undefined,
+    });
+    if (!r.ok) return { ok: false, reason: 'network' };
+    let j = null;
+    try { j = await r.json(); } catch (_) { j = null; }
+    if (!j || typeof j !== 'object') return { ok: false, reason: 'network' };
+    return j;
+  } catch (_) {
+    return { ok: false, reason: 'network' };
+  } finally { if (timer) clearTimeout(timer); }
+};
+// 1件を送り、結果で印と送り直しの列を整える
+const monsucRankSendRow = async (me, row) => {
+  const r = await monsucRankPost(me.owner, me.key, row);
+  const queue = (await monsucRankQueue()).filter(x => x.run_id !== row.run_id);
+  if (r.ok) {
+    await monsucRankMarkSent(row.run_id);
+    await monsucRankQueueSave(queue);
+    return { ok: true, power: r.power, grade: r.grade, placeAll: r.place_all || null, placeLineage: r.place_lineage || null, lineage: row.lineage };
+  }
+  // 形・上限・鍵で断られたものは送り直しても通らないので列から外す。電波・混雑は残す
+  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankQueueSave(queue);
+  else await monsucRankQueueSave(queue.concat([row]));
+  return { ok: false, reason: r.reason || 'network' };
+};
+const monsucRankUserName = async () => { try { return String((await storeGet('mh_breeder_name', '', false)) || ''); } catch (_) { return ''; } };
+
+// 引退して育成が完了したとき1回だけ呼ぶ。run = 計算の芯の状態 s・ev = SUC.evaluate(s)・name = 育てた子の名前・colors = 染めた色・debug = デバッグで進めた育成なら真
+//   返り値 { ok, placeAll, placeLineage, lineage, power, grade } か { ok:false, reason }
+const monsucRankSubmit = async ({ run, ev, name, colors, debug } = {}) => {
+  try {
+    if (!monsucRankOn()) return { ok: false, reason: 'off' };
+    if (debug) return { ok: false, reason: 'skip' };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
+    if (!me) return { ok: false, reason: 'no_id' };
+    const row = monsucRankRowOf({ owner: me.owner, run, ev, name, colors, userName: await monsucRankUserName() });
+    if (!row) return { ok: false, reason: 'skip' };
+    if ((await monsucRankSentList()).includes(row.run_id)) return { ok: false, reason: 'skip' }; // もう送った
+    return await monsucRankSendRow(me, row);
+  } catch (_) { return { ok: false, reason: 'network' }; }
+};
+// 送れなかったものを1件だけ送り直す(サーバは1分に1回まで。開いたときに呼ぶ)
+const monsucRankFlush = async () => {
+  try {
+    if (!monsucRankOn()) return { ok: false, reason: 'off' };
+    const queue = await monsucRankQueue();
+    if (queue.length === 0) return { ok: true, left: 0 };
+    const sent = await monsucRankSentList();
+    const rest = queue.filter(x => !sent.includes(x.run_id));
+    if (rest.length !== queue.length) await monsucRankQueueSave(rest);
+    if (rest.length === 0) return { ok: true, left: 0 };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(false) : null;
+    if (!me || !rest[0].run_id.startsWith(`${me.owner}-`)) return { ok: false, reason: 'no_id' };
+    const r = await monsucRankSendRow(me, rest[0]);
+    return { ...r, left: Math.max(0, rest.length - 1) };
+  } catch (_) { return { ok: false, reason: 'network' }; }
+};
+
+// ---- 読む(読むだけ)。失敗は null ----
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+const monsucRankGet = async (path, withCount) => {
+  try {
+    const headers = withCount ? { ...SB_HEADERS, Prefer: 'count=exact' } : SB_HEADERS;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers, cache: 'no-store' });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return null;
+    let total = null;
+    if (withCount) { const m = /\/(\d+)$/.exec(r.headers.get('content-range') || ''); total = m ? Number(m[1]) : null; }
+    return { rows, total };
+  } catch (_) { return null; }
+};
+// lineage を渡すと血統別。{ rows, total, mine }(mine = 自分の子のいちばん上の行)
+const monsucRankRead = async ({ lineage = null } = {}) => {
+  const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
+  const view = lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all';
+  const where = lin ? `&lineage=eq.${lin}` : '';
+  const limit = lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL;
+  const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  if (!top) return null;
+  const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
+  let mine = null;
+  if (sent.length > 0) {
+    const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${sent.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+    mine = m && m.rows[0] ? m.rows[0] : null;
+  }
+  return { rows: top.rows, total: top.total, mine, sent };
+};
+
+// ---- 画面 ----
+function MonsucRankMonImg({ species, dye, size = 36 }) {
+  const mon = monsucRankMonOf(species);
+  if (!mon) return <div style={{ width: size, height: size }} className="rounded-lg bg-slate-700/60 flex items-center justify-center text-slate-400 text-xs">？</div>;
+  return <div style={{ width: size, height: size }} className="shrink-0 flex items-center justify-center">
+    <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name || ''} masuColors={monsucRankDyeOf(dye)} className="w-full h-full object-contain" draggable={false} />
+  </div>;
+}
+function MonsucRankGrade({ grade }) {
+  const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G'; // 評価は 500 ごとの数字つき(C2・M3 など)。色は字の部分で決める
+  const letter = g.replace(/[0-9]+$/, '');
+  return <span className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900" style={{ background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8' }}>{g}</span>;
+}
+function MonsucRankStats({ stats }) {
+  const st = stats && typeof stats === 'object' ? stats : {};
+  return <div className="grid grid-cols-6 gap-1 mt-2">
+    {MONSUC_RANK_STAT_KEYS.map(k => <div key={k} className="rounded-md bg-slate-950/60 py-1 text-center">
+      <div className="text-[9px] text-slate-300 whitespace-nowrap">{MONSUC_RANK_STAT_LABEL[k]}</div>
+      <div className="text-[13px] font-black text-white">{Math.round(monsucRankNum(st[k]))}</div>
+    </div>)}
+  </div>;
+}
+function MonsucRankRow({ row, open, onToggle, mine, pinned }) {
+  const top = row.place <= 3;
+  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : open ? 'border-yellow-400/80 bg-yellow-900/30' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
+  return <button type="button" onClick={onToggle} className={`w-full text-left rounded-xl border px-3 py-2 ${cls}`} aria-expanded={!!open}>
+    <div className="flex items-center gap-2">
+      <div className={`w-8 text-center font-black ${top ? 'text-yellow-300 text-lg' : 'text-slate-200 text-base'}`}>{row.place}</div>
+      <MonsucRankMonImg species={row.species} dye={row.dye} />
+      <div className="flex-1 min-w-0">
+        <div className="text-[14px] font-black text-white truncate">{row.child_name || (monsucRankMonOf(row.species) || {}).name || '？？？'}</div>
+        <div className="text-[10px] text-slate-300 truncate">育てた人: {pinned ? 'あなた' : (row.user_name || 'ななしのブリーダー')}</div>
+      </div>
+      <MonsucRankGrade grade={row.grade} />
+      <div className="w-[64px] text-right text-[15px] font-black text-yellow-300">{Math.round(monsucRankNum(row.power)).toLocaleString()}</div>
+    </div>
+    {open && <MonsucRankStats stats={row.stats} />}
+  </button>;
+}
+// 血統の札(主血統のうち、遊べるモンスターがいるもの)
+const monsucRankLineageTabs = () => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
+  const out = [];
+  Object.keys(map).forEach(sp => { const l = map[sp] && map[sp].main; if (typeof l === 'string' && l !== 'unknown' && !out.includes(l) && monsucRankMonOf(sp)) out.push(l); });
+  return out;
+};
+
+// R1 全モンスター / R2 血統別。onBack で戻る
+function MonsucRankScreen({ onBack }) {
+  const [tab, setTab] = React.useState('all');
+  const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
+  const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [open, setOpen] = React.useState(null);
+  const on = monsucRankOn();
+  React.useEffect(() => { if (on) monsucRankFlush(); }, [on]);
+  React.useEffect(() => {
+    let alive = true;
+    if (!on) { setLoading(false); return undefined; }
+    setLoading(true); setOpen(null);
+    monsucRankRead({ lineage: tab === 'lineage' ? lineage : null }).then(d => { if (alive) { setData(d); setLoading(false); } });
+    return () => { alive = false; };
+  }, [on, tab, lineage]);
+  const rows = data && Array.isArray(data.rows) ? data.rows : [];
+  const sent = data && Array.isArray(data.sent) ? data.sent : [];
+  const mine = data ? data.mine : null;
+  const scopeName = tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全体';
+  const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
+  return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)' }}>
+    <div className="flex items-center gap-2 px-3 pt-3">
+      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← もどる</button>
+      <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
+    </div>
+    <div className="px-3 pt-2">
+      <div className="text-[18px] font-black">🏆 総合力ランキング</div>
+      <div className="text-[11px] text-slate-300 leading-snug">育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別</div>
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
+          className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
+      </div>
+      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto mt-2 pb-1">
+        {lineages.map(l => <button key={l} type="button" onClick={() => setLineage(l)}
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
+      </div>}
+      <div className="text-[12px] text-slate-200 mt-1.5">{scopeName} {totalText}{mine ? <> ・ あなたの順位 <span className="text-yellow-300 font-black">{mine.place}位</span></> : null}</div>
+    </div>
+    <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+      {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
+      {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
+      {on && !loading && !data && <div className="text-center text-slate-300 text-[13px] py-8">つながりませんでした。少し待ってからもう一度開いてね</div>}
+      {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8">まだだれも載っていません。育て終えたモンスターが最初に載ります</div>}
+      {rows.map(r => <MonsucRankRow key={r.run_id} row={r} open={open === r.run_id} mine={sent.includes(r.run_id)} onToggle={() => setOpen(o => (o === r.run_id ? null : r.run_id))} />)}
+    </div>
+    {mine && <div className="px-3 pb-1">
+      <MonsucRankRow row={mine} pinned open={open === `me:${mine.run_id}`} onToggle={() => setOpen(o => (o === `me:${mine.run_id}` ? null : `me:${mine.run_id}`))} />
+    </div>}
+    <div className="grid grid-cols-2 gap-2 px-3 pb-3 pt-1">
+      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← もどる</button>
+      <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く'}</div>
+    </div>
+  </div>;
+}
 
 // ---- part: 82-card-battle-core.jsx ----
 // ===== MFバトルカード: ルールの本体とコンピューターの考え方(純粋な計算) =====
@@ -125379,6 +128601,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       所持・解放・debugOnly を問わず全種を並べるので、実装したあとも消えない */}
                   <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🆕 新モンスター確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
                   <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🖌️ 染色マスク編集<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全ベースモンを選択して直接描画・PNG出力</small></button>
+                  {/* モンヒロサクセス(回2・公開の印 monheroSuccess が偽のあいだの試し口。デバッグ専用なので更新履歴・ヘルプには載せない) */}
+                  <MonheroSuccessDebugEntry callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>
                   {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
                   <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
                   <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>

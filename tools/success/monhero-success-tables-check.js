@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // モンヒロサクセスの称号の表(monhero-success-titles.js)とアシスト能力の表(monhero-success-assist.js)の見張り。画面は開かない(1秒ほど)。
-//   ・アシスト能力: 第1弾(from:'core')の数字・値段・型が芯の ASSISTS と同じ / 芯にある id が表から抜けていない / ポイントの式が芯と同じ
-//   ・アシスト能力: 説明に {v} が入っている / 値段は段が上がるほど高い / おまかせ・確かめ方が 4種類まで・ポイント以内
+//   ・アシスト能力(第2版): 30〜40種類・どれも5段・段ごとに効き目と値段が上がる・値段は値段の組のどれか / 芯(第1版)の id は名前・型が同じで残っている / ポイントの式が芯と同じ
+//   ・アシスト能力: 説明に {v} が入っている / おまかせ・確かめ方が 4種類まで・ポイント以内 / 試合型は対戦の芯の buffs の形
 //   ・称号: id と名前が重ならない / 芯が s.titles に積む文字(ソースの文字)がどれも表で引ける / finalize が id の配列を返し、知らない文字を消さない
 //   ・記録帳(monhero-success-record.js): 新しいキーだけ・壊れた値は空・同じ育成は1件・200件まで・localStorage に触らない
 //   ・どれも index.html から読まれていない(回3まで誰にも見えない約束)
@@ -17,34 +17,43 @@ const RB = require(path.join(ROOT, 'monster-hero', 'data', 'monhero-success-reco
 const errors = [];
 const ok = (cond, msg) => { if (!cond) errors.push(msg); };
 
-// ---- アシスト能力 ----
+// ---- アシスト能力(第2版: 40種類・5段。芯はまだ第1版なので、芯とは id・名前・型だけ比べる) ----
 const core = SUC.ASSISTS;
 for (const id of Object.keys(core)) {
   const a = AS.BY_ID[id];
-  ok(a && a.from === 'core', `芯のアシスト ${id} が表にない(または from が core でない)`);
+  // 芯の ASSISTS に hint(助手)が付いた物は、お話のひらめきで取れる5つ(表では from:'hint'・aid が同じ)
+  const want = core[id].hint ? 'hint' : 'core';
+  ok(a && a.from === want && (want === 'core' || a.aid === core[id].hint), `芯のアシスト ${id} が表にない(または from が ${want} でない)`);
   if (!a) continue;
   ok(a.name === core[id].name, `${id} の名前が芯と違う: ${a.name} / ${core[id].name}`);
-  ok(a.type === core[id].type, `${id} の型が芯と違う: ${a.type} / ${core[id].type}`);
-  ok(JSON.stringify(a.v) === JSON.stringify(core[id].v), `${id} の効き目が芯と違う: ${a.v} / ${core[id].v}`);
-  ok(JSON.stringify(a.cost) === JSON.stringify(core[id].cost), `${id} の値段が芯と違う: ${a.cost} / ${core[id].cost}`);
-  if (core[id].start) ok(JSON.stringify(a.start) === JSON.stringify(core[id].start), `${id} のはじめの親密度が芯と違う`);
+  // お話のひらめき5つは表(第2版)では試合型。芯はまだ第1版の「いるだけ型」で持っている(芯が表を読むように直すまで)
+  ok(a.type === core[id].type || (a.type === 'battle' && core[id].type === 'stay'), `${id} の型が芯と違う: ${a.type} / ${core[id].type}`);
 }
+ok(AS.LIST.length >= 30 && AS.LIST.length <= 40, `アシスト能力の数が30〜40でない(社長 2026-11-12): ${AS.LIST.length}`);
 for (const a of AS.LIST) {
   ok(/^[a-z]+$/.test(a.id), `アシストの id は英小文字だけ: ${a.id}`);
-  if (a.from === 'core') ok(core[a.id], `表の ${a.id} は from:'core' なのに芯にない`);
-  else ok(a.from === 'hint' && TT.ASSIST_NAMES[a.aid], `${a.id} の from / aid がおかしい`);
-  ok(a.v.length === 3 && a.cost.length === 3, `${a.id} の段が3つでない`);
-  ok(a.cost[0] < a.cost[1] && a.cost[1] < a.cost[2], `${a.id} の値段が段の順に上がっていない`);
+  if (a.from !== 'core') ok(a.from === 'hint' && TT.ASSIST_NAMES[a.aid], `${a.id} の from / aid がおかしい`);
+  ok(a.v.length === AS.LV_MAX && a.cost.length === AS.LV_MAX, `${a.id} の段が${AS.LV_MAX}つでない`);
+  ok(a.v.every((x, i) => i === 0 || x >= a.v[i - 1]), `${a.id} の効き目が段の順に上がっていない`);
+  ok(a.cost.every((x, i) => i === 0 || x > a.cost[i - 1]), `${a.id} の値段が段の順に上がっていない`);
+  ok(Object.values(AS.COST).some(c => c === a.cost), `${a.id} の値段が値段の組(COST)のどれでもない`);
+  ok(AS.SCENES.some(g => g.key === a.scene), `${a.id} の scene が知らないもの: ${a.scene}`);
   ok(a.text.includes('{v}'), `${a.id} の説明に {v} がない`);
-  ok(!AS.describe(a.id, 3).includes('{'), `${a.id} の説明に { が残る`);
-  ok(['with', 'self', 'stay'].includes(a.type), `${a.id} の型が知らないもの: ${a.type}`);
+  for (let lv = 1; lv <= AS.LV_MAX; lv++) ok(!AS.describe(a.id, lv).includes('{'), `${a.id} 段${lv} の説明に { が残る`);
+  ok(['with', 'self', 'stay', 'battle'].includes(a.type), `${a.id} の型が知らないもの: ${a.type}`);
+  ok((a.type === 'battle') === (a.from === 'hint'), `${a.id}: お話のひらめきは試合型、ほかは試合型でない(社長 2026-11-12)`);
+  if (a.type === 'battle') ok(Array.isArray(a.buff) && a.buff.length === AS.LV_MAX, `${a.id} に段ごとの buff がない`);
 }
+ok(new Set(AS.LIST.map(a => a.name)).size === AS.LIST.length, 'アシスト能力の名前が重なる');
+// 値段: いちばん安い段1はポイントの最低(20)で取れる / 高の段5は M でないと取れないほど高くない・G では取れない
+ok(Math.min(...AS.LIST.map(a => a.cost[0])) <= AS.POINTS_MIN, 'ポイント最低の子が1つも取れない');
+ok(AS.COST.high[4] <= AS.POINTS_MAX && AS.COST.high[4] > 160, '高の段5の値段が物差しから外れる(B では届かず A から届く)');
 const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'assist').map(s => s.good.name);
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
 ok(AS.MAX_KINDS === 4, '1体に持てる数が4でない');
 for (const p of [0, 999, 2000, 8000, 14000, 19500, 20070, 99999]) ok(AS.pointsOf(p) === SUC.assistPointsOf(p), `ポイントの式が芯と違う(総合力 ${p})`);
-ok(AS.describe('sokoji', 2) === 'この子がいっしょに訓練すると、伸びが7%上がる', '説明の差しこみがおかしい');
-for (const pts of [24, 40, 160, 288, 400]) {
+ok(AS.describe('sokoji', 2) === 'この子がいっしょに訓練すると、伸びが10%上がる', '説明の差しこみがおかしい');
+for (const pts of [20, 40, 160, 288, 400]) {
   const r = AS.autoPick(pts, []);
   ok(r.picks.length <= 4 && r.used <= pts && r.used > 0, `おまかせ(${pts})がポイント・4種類を超える/何も取らない`);
 }
@@ -52,8 +61,17 @@ const hinted = AS.autoPick(400, [{ type: 'assist', name: '見せ場' }]);
 ok(hinted.picks[0] && hinted.picks[0].id === 'miseba', 'おまかせがひらめきの候補を先に取っていない');
 ok(!AS.candidates([]).some(a => a.from === 'hint'), 'ひらめきが無いのに、お話の能力が候補に出る');
 const np = AS.normPicks([{ id: 'sokoji', lv: 9 }, { id: 'nai' }, { id: 'sokoji', lv: 1 }, { id: 'hirameki', lv: 3 }, { id: 'itawari', lv: 1 }, { id: 'ochitsuki', lv: 1 }, { id: 'atooshi', lv: 1 }], 400);
-ok(np.picks.length === 4 && np.picks[0].lv === 3 && np.used <= 400, '確かめ方(段の丸め・知らない id・4種類)がおかしい');
-ok(AS.normPicks([{ id: 'sokoji', lv: 3 }], 100).picks.length === 0, 'ポイントを超えた能力が残る');
+ok(np.picks.length === 4 && np.picks[0].lv === 5 && np.used <= 400, '確かめ方(段の丸め・知らない id・4種類)がおかしい');
+ok(AS.normPicks([{ id: 'sokoji', lv: 5 }], 200).picks.length === 0, 'ポイントを超えた能力が残る');
+
+// 試合型は対戦の芯の buffs に入る形・いちばん高い段だけ・範囲の中
+const BUFF_KEYS = ['guts', 'hit1', 'crit', 'missCut', 'eva', 'noSulk'];
+for (const a of AS.LIST.filter(x => x.type === 'battle')) for (const b of a.buff) ok(Object.keys(b).every(k => BUFF_KEYS.includes(k)), `${a.id} の buff に芯の知らない項目`);
+const bb = AS.battleBuffs([[{ id: 'gatsu', lv: 1 }], [{ id: 'gatsu', lv: 3 }, { id: 'sokoji', lv: 3 }], [{ id: 'mimamori', lv: 5 }]], { guts: 10, crit: 0.1 });
+ok(JSON.stringify(bb) === JSON.stringify({ guts: 16, hit1: 0.2, noSulk: true, crit: 0.1 }), `battleBuffs のまとめ方がおかしい: ${JSON.stringify(bb)}`);
+ok(JSON.stringify(AS.battleBuffs(null, null)) === '{}' && JSON.stringify(AS.battleBuffs([[{ id: 'sokoji', lv: 3 }]])) === '{}', '試合型が無いのに buffs が付く');
+ok(AS.stayValue([[{ id: 'gussuri', lv: 2 }], [{ id: 'gussuri', lv: 4 }]], 'gussuri') === 20 && AS.stayValue([], 'gussuri') === 0, 'stayValue がいちばん高い段を返さない');
+ok(AS.battleBuffs([[{ id: 'kensho', lv: 5 }]], { missCut: 0.9 }).missCut === 1, 'buffs が芯の範囲で切られていない');
 
 // ---- 称号 ----
 const ids = new Set(); const names = new Set();
@@ -103,4 +121,4 @@ const html = fs.readFileSync(path.join(ROOT, 'monster-hero', 'index.html'), 'utf
 ok(!['monhero-success-titles.js', 'monhero-success-assist.js', 'monhero-success-record.js'].some(f => html.includes(f)), '称号・アシスト・記録帳の表が index.html から読まれている(回3まで見えない約束)');
 
 if (errors.length) { console.error(`✗ モンヒロサクセスの表: ${errors.length}件`); errors.slice(0, 30).forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log(`✓ モンヒロサクセスの表: 称号 ${TT.TITLES.length}・アシスト能力 ${AS.LIST.length}(芯と同じ ${Object.keys(core).length})・記録帳 ${RB.KEY}`);
+console.log(`✓ モンヒロサクセスの表: 称号 ${TT.TITLES.length}・アシスト能力 ${AS.LIST.length}(芯の第1版 ${Object.keys(core).length})・記録帳 ${RB.KEY}`);
