@@ -351,6 +351,7 @@
 | `mh_monsuc_run_v1` | 途中の育成1つ: `{ v:1, id, from:{ base:種 } か { box:id }, species, nick, gen, turn, gt, pol, pp, st:{6能力}, fat, str, loy, pop, techs, mast, cond, coach, cheer:[6枠: { box:id } / { friend:写し } / { base:種 }], phase, cups, ap, fame, log:[直近20], seed, startAt }` |
 | `mh_monsuc_box_v1` | 保存枠: `{ v:1, cap:30, mons:[{ id, species, nick, colors, gen, st, techs, mast, loy, pop, gt, rank, score, fav:集まりやすい能力, raised:育てたか(未育成の合体の子は false), coach, parents, endAt, paid, bond, titles }], memory:[外れた子の 名前・種・ランク(新しい100件)] }` |
 | `mh_monsuc_meta_v1` | 種ごとの最高・称号・見たイベントの印・いつもの編成・貸し出しの子・ごほうびの1日の量: `{ v:1, best:{}, titles:[], seen:{}, team:[], lend:id, gift:{ day, n } }` |
+| `mh_monsuc_record_v1` | 育成の記録帳(育て終えた子の記録・保存枠から外れても残る・200件まで): `{ v:1, list:[{ id, species, nick, rank, power, sum, titles, aid, endAt, gen, best }], total }`。形と部品は `data/monhero-success-record.js`・[TITLES.md](TITLES.md) §3 |
 
 - 既存のキー(`mh_masu_mons`・`mh_unlocked_monsters`・助手ライフのキー)は**読むだけ**
 - 借りた子はその育成の `cheer` に写しとして持つだけ(保存枠には入れない)
