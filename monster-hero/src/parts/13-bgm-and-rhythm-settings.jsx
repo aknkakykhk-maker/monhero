@@ -775,7 +775,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig:'曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig:'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
