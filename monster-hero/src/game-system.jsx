@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7b356b021a7ebd7a
+// generated-sha256: 36d3ad9beb26e74d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84284,7 +84284,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
   if (opt.kind === 'enter') {
     return (
       <div className="msxm" data-msxm="enter"><style>{MSX_MANUAL_CSS}</style>
-        <div className="msxm-h">次に出す子を選んでください</div>
+        <div className="msxm-h">次に出すモンスターを選んでください</div>
         <div className="msxm-row">{opt.enter.map((x) => (
           <button key={x.to} type="button" className="msxm-btn" disabled={!x.ok || busy} onClick={() => go({ type: 'enter', to: x.to })}>
             {x.name}<small>ライフ {x.hp}/{x.maxHp}</small>

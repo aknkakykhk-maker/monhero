@@ -62,7 +62,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
   if (opt.kind === 'enter') {
     return (
       <div className="msxm" data-msxm="enter"><style>{MSX_MANUAL_CSS}</style>
-        <div className="msxm-h">次に出す子を選んでください</div>
+        <div className="msxm-h">次に出すモンスターを選んでください</div>
         <div className="msxm-row">{opt.enter.map((x) => (
           <button key={x.to} type="button" className="msxm-btn" disabled={!x.ok || busy} onClick={() => go({ type: 'enter', to: x.to })}>
             {x.name}<small>ライフ {x.hp}/{x.maxHp}</small>
