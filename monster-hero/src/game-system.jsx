@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a4f633e2a764506
+// generated-sha256: 15e10aedb8f39896
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -40543,7 +40543,8 @@ const GrowthFxLayer = ({ screen, load }) => {
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const quickAnywhereFloatStyle = (spot) => {
-  const s = { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` };
+  const s = spot.hidden ? { visibility: 'hidden', pointerEvents: 'none' } : {};
+  Object.assign(s, { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
   else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
@@ -40578,7 +40579,8 @@ const quickAnywhereFloatPick = (el) => {
       if (quickAnywhereFloatHits(el, spot) === 0) return spot;
     }
   }
-  return { side: 'right', lift: 0 };
+  // どこも空いていない(下から出るシート・確認の窓が画面を覆っている)ときは、ボタンの字を隠さないよう帯を隠す。閉じたら置き直して出る
+  return { side: 'right', lift: 0, hidden: true };
 };
 // screen … いまの gameState(変わったら置き直す)。children … 帯のボタンの中身。ほかの props はボタンへそのまま渡す
 const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
@@ -40586,14 +40588,14 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
   const [spot, setSpot] = useState({ side: 'right', lift: 0 });
   React.useLayoutEffect(() => {
     // いまの置き場所がまだ空いていれば動かさない(0.8秒ごとに行ったり来たりしない)
-    const place = () => { if (!ref.current) return; setSpot(prev => (quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current))); };
+    const place = () => { if (!ref.current) return; setSpot(prev => (!prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current))); };
     // 画面が変わったら、いちばん良い所(右下)から探し直す。中身が遅れて出る画面のため、少しおいてもう一度
     const fresh = () => { if (ref.current) setSpot(quickAnywhereFloatPick(ref.current)); };
     fresh();
     const t1 = setTimeout(fresh, 300), t2 = setTimeout(place, 1200), iv = setInterval(place, 800);
     return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(iv); };
   }, [screen]);
-  return <button ref={ref} type="button" data-quick-anywhere-spot={`${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
+  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
