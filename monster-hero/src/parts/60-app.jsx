@@ -5569,6 +5569,8 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   // MFバトルカードの画面が決めた曲(null なら HOME の曲)。保存はしない
   const [cardBgm, setCardBgm] = useState(null);
+  // 試合の画面(モンヒロサクセスの試合・助手マスモンの対戦)が開いているあいだはバトルの曲(56-monhero-success-arena.jsx の口。2026-11-12 社長「音楽もホームの音楽だし味気なさすぎる」)
+  const battleBgmOverlay = typeof useMhBattleBgmOverlay === 'function' ? useMhBattleBgmOverlay() : false;
   // MFバトルカードの助手と対戦の曲の並び(2026-10-26)。2曲以上なら、全部を1回ずつシャッフルで流し、流れ終わったら次へ(82 の cardPlaylistPlayer・14-audio の setBgmOnce)
   //   対戦の画面を出たら止める。古い読み込みがあとから終わっても、止めた並びは進めない。並びの曲が全部読めなければ BGM を止める(対戦は続く)
   const cardBgmRef = useRef(null);
@@ -6523,6 +6525,8 @@ function MonsterHeroGame() {
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
+    // 試合の画面の上は、BGMアレンジの「バトル」の曲(閉じたら下の決め方へ戻る)
+    if (battleBgmOverlay) return bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     // 助手ライフの画面(HOME・プロフィール・持ち物の上に開く)は「風がそよぐ場所」(2026-11-07 社長)
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
@@ -6646,7 +6650,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
