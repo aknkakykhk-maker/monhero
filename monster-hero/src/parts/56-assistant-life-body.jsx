@@ -268,6 +268,11 @@ const assistantLifePlaceSlotsOf = (aid, place) => {
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
 };
 const assistantLifeHospitalSlotsOf = (aid) => assistantLifePlaceSlotsOf(aid, 'clinic');
+// 特別な治療(ビートPの品物・次の段)を使った回。記録の ev が 'cure' の回(キズナと合意: その回に助手のマスモンのけが・病気も残り0に)。まだ使う口が無いので空
+const assistantLifeHospitalCureSlotsOf = (aid) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
+  return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === 'clinic' && r.ev === 'cure').map(r => r.abs);
+};
 
 // ---------- 予定表への口(56-assistant-life-plan.jsx から呼ぶ) ----------
 const assistantLifeBodyPerk = (place) => (assistantLifeBodyOn() ? (ASSISTANT_LIFE_BODY_PERK[place] || '') : '');
