@@ -430,3 +430,27 @@
 .v-ml .e{font-size:30px;line-height:1.1}.v-ml b{display:block;font-size:11.5px;white-space:nowrap}
 .v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.v-ml small{display:block;font-size:9px;color:#86efac;font-weight:800}
 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}
+
+/* 助手の一言は帯の下(社長の参考動画3本目)・景色の左下に持ち物の袋・右下にくわしく */
+.v-sayrow{display:flex;align-items:center;gap:6px;margin-top:5px}
+.v-sayrow .fc{width:34px;height:34px;border-color:#f9a8d4}
+.v-sayrow .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:3px 12px 12px 12px}.v-sayrow .bub em{font-style:normal;color:#be185d}
+.v-bagb{position:absolute;left:7px;bottom:7px;width:46px;height:46px;border-radius:14px;background:#0f0d24e0;border:1.5px solid #fde047;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;line-height:1.05}
+.v-bagb small{font-size:8.5px;font-weight:900;white-space:nowrap}
+.v-bagb i{position:absolute;right:-5px;top:-6px;background:#ef4444;border-radius:99px;font-style:normal;font-size:9.5px;font-weight:900;min-width:16px;text-align:center;line-height:16px}
+.v-bagb.r{left:auto;right:7px;border-color:#64748b}
+.v-scene.home{--mb:20%}.v-scene.home .v-side{bottom:60px}
+.phone.s320 .v-scene.home{--mb:24%}.phone.s320 .v-bagb{width:38px;height:38px;font-size:16px;border-radius:11px}.phone.s320 .v-bagb small{font-size:7.5px}
+.phone.s320 .v-scene.home .v-side{bottom:50px}.phone.s320 .v-sayrow .fc{width:28px;height:28px}.phone.s320 .v-sayrow .bub{font-size:10px;padding:3px 7px}
+/* 修行 */
+.v-stg{display:flex;align-items:stretch;gap:4px;margin-top:6px}
+.v-stg div{flex:1;min-width:0;background:#1e1a36;border:1px solid #fb923c;border-radius:11px;padding:4px 4px;text-align:center;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.35}
+.v-stg div small{display:block;font-size:8.5px;color:#fdba74}.v-stg i{align-self:center;font-style:normal;color:#94a3b8;font-size:10px}
+.v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.v-stg div.last small{color:#fde047}
+.v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
+.v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.v-pick2 b{margin-left:auto;color:#fde047}
+.v-tk{display:flex;align-items:center;gap:5px}
+.v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
+.v-tk span b{color:#86efac}.v-tk span.sel{border-color:#fde047;background:#3b2f0b}.v-tk span.sel b{color:#fde047}.v-tk span.got{opacity:.45}.v-tk span.got b{color:#94a3b8}
