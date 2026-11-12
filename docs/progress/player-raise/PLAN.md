@@ -216,7 +216,7 @@
 
 #### 作ったもの(回5・2026-11-12 オトズレ。印 `monheroSuccess` は偽のまま)
 
-- 表と関数: `supabase/migrations/202611120001_monsuc_lend.sql`(`monsuc_lend` 1人1行・`monsuc_lend_uses` 借りた記録。足すだけ。流すのは窓口)
+- 表と関数: `supabase/migrations/202611120002_monsuc_lend.sql`(`monsuc_lend` 1人1行・`monsuc_lend_uses` 借りた記録。足すだけ。流すのは窓口)
 - サーバの口: `masmon-pvp` に `lend_set`・`lend_clear`・`lend_use`・`lend_claim`(`supabase/functions/masmon-pvp/lend.js`。持ち主の鍵は対戦と同じ。配り直しは窓口)
 - 端末の口: `monster-hero/src/parts/56-assistant-life-friend-monsuc-lend.jsx`(画面なし)
   - `monsucLendFriends()` フレンドの貸し出しの子の一覧 / `monsucLendMember(row, SUC)` 借りた子を編成の1枠(cheer の `{ friend: 写し }`)に。アシストはポイントと4種類を確かめ、外れたら効かせない

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d351c2acc08b7db
+// source-sha256: 0a57f45cba797235
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156230,7 +156230,7 @@ const monsucLendFriends = async () => {
       lend: {
         species: mon.species,
         name: mon.name,
-        colors: mon.colors || null,
+        colors: Array.isArray(mon.colors) && mon.colors.every(c => typeof c === 'string') ? mon.colors.slice(0, 8) : null,
         type: Number.isInteger(mon.type) ? mon.type : null,
         stats: mon.stats,
         assists: Array.isArray(mon.assists) ? mon.assists : [],

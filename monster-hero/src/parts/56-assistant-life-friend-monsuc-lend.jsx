@@ -1,6 +1,6 @@
 // ===== モンヒロサクセス: フレンドからのレンタルの端末の口(段取りの回5・2026-11-12 オトズレ) =====
 // 画面は持たない(編成の画面・保存枠の画面は回2・開発部)。ここは「サーバの関数 masmon-pvp の lend_* を呼ぶ」「表 monsuc_lend を読む」だけ。
-//   サーバ: supabase/functions/masmon-pvp/lend.js・表 supabase/migrations/202611120001_monsuc_lend.sql・設計 docs/progress/player-raise/PLAN.md §2
+//   サーバ: supabase/functions/masmon-pvp/lend.js・表 supabase/migrations/202611120002_monsuc_lend.sql・設計 docs/progress/player-raise/PLAN.md §2
 //   ★持ち主の鍵は助手のマスモンのフレンド対戦と同じ(mh_masmon_pvp_owner_key_v1・masmonPvpSelf)。ブリーダーIDと鍵は画面に出さない
 //   ★借りた子の能力は送られたまま信じない: ランク・効きは計算の芯(SUC.memberOf)が6能力から出し直す。
 //     アシストは「6能力から出せる最大の総合力」のポイント以内・4種類までかをここで確かめ、外れたら効かせない(ASSIST.md §3)
@@ -121,7 +121,7 @@ const monsucLendFriends = async () => {
     return {
       friendId: f.otherId, name: f.userName, icon: f.icon ?? null, profileFrame: f.profileFrame || null,
       lend: {
-        species: mon.species, name: mon.name, colors: mon.colors || null, type: Number.isInteger(mon.type) ? mon.type : null,
+        species: mon.species, name: mon.name, colors: Array.isArray(mon.colors) && mon.colors.every((c) => typeof c === 'string') ? mon.colors.slice(0, 8) : null, type: Number.isInteger(mon.type) ? mon.type : null,
         stats: mon.stats, assists: Array.isArray(mon.assists) ? mon.assists : [], version: e.version, updatedAt: Date.parse(e.updated_at) || 0,
       },
     };

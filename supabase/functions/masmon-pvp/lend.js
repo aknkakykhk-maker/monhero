@@ -1,5 +1,5 @@
 // モンヒロサクセス: フレンドからのレンタルのサーバの口(段取りの回5・2026-11-12 オトズレ)。core.js の handle から呼ぶ。
-// 表と関数: supabase/migrations/202611120001_monsuc_lend.sql。設計: docs/progress/player-raise/PLAN.md §2「フレンドからのレンタル」
+// 表と関数: supabase/migrations/202611120002_monsuc_lend.sql。設計: docs/progress/player-raise/PLAN.md §2「フレンドからのレンタル」
 //   lend_set   … 自分の「貸し出しの子」を置く(置き直しも同じ)。持ち主の鍵は masmon_pvp_owners を使い回す
 //   lend_clear … 貸し出しをやめる
 //   lend_use   … フレンドの子を借りた(育成をはじめるときに1回)。フレンドどうしだけ・同じ人は続けて LEND_STREAK 回まで

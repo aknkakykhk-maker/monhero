@@ -76,7 +76,7 @@ export function start({ createClient }) {
     take: async (owner, limit) => must(await supabase.rpc("masmon_pvp_take", { p_owner: owner, p_limit: limit }), "take"),
     refund: async (owner) => { must(await supabase.rpc("masmon_pvp_refund", { p_owner: owner }), "refund"); },
     record: async (args) => must(await supabase.rpc("masmon_pvp_record", args), "record"),
-    // モンヒロサクセスのフレンドからのレンタル(lend.js・表は 202611120001_monsuc_lend.sql)
+    // モンヒロサクセスのフレンドからのレンタル(lend.js・表は 202611120002_monsuc_lend.sql)
     lendGet: async (owner) =>
       must(await supabase.from("monsuc_lend").select("owner_id, version, active").eq("owner_id", owner).maybeSingle(), "lendGet"),
     lendUpsert: async (row) => {

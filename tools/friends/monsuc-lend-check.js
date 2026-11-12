@@ -14,7 +14,7 @@ const { load, sliceConst } = require('../success/load.js');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const FN = path.join(ROOT, 'supabase', 'functions', 'masmon-pvp');
-const SQL = path.join(ROOT, 'supabase', 'migrations', '202611120001_monsuc_lend.sql');
+const SQL = path.join(ROOT, 'supabase', 'migrations', '202611120002_monsuc_lend.sql');
 const PART = path.join(ROOT, 'monster-hero', 'src', 'parts', '56-assistant-life-friend-monsuc-lend.jsx');
 
 let ng = 0;
