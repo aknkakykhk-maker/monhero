@@ -108,6 +108,7 @@
 | `mh_assistant_life_friend_fav_v1` | object | お気に入りの棚(2026-11-11) `{ on(フレンドに見せる), a(好きな助手), m:{aid,mo}(自慢のマスモン), s(好きな曲・30字), fn(集めた家具の数を見せる) }` |
 | `mh_alf_sent_notes_v1` | object[] / `[]` | 自分がフレンドの家に残した置き手紙の控え(2026-11-12) `[{ host(フレンドのID), day(朝4時区切り), at, word(決まった一言の番号・12は自由文だけ), name(その時の名前・20字), to(あて先の助手・無ければ null), note(自由文・40字) }]`。新しい順に30日・50通まで(古いものから消える)。同じ家・同じ日は1つ。壊れた値は空(56-assistant-life-friend-sent.jsx) |
 | `mh_alf_masmon_share_sent_v1` | object | フレンドに見せる助手のマスモンを、前に送った中身の指紋と時刻(2026-11-12) `{ v:1, at:{ 助手id: 時刻 }, sig:{ 助手id: 指紋 } }`。変わった助手の行だけ送るために使う。壊れていれば空(全部送り直すだけ) |
+| `mh_monsuc_record_v1` | object / 空の記録帳 | モンヒロサクセスの育成の記録帳(2026-11-12・まだ画面から使われない)`{ v:1, list:[{ id, species, nick, rank, power, sum, titles, aid, endAt, gen, best }], total }`。新しい順・200件まで(total は数え続ける)。同じ育成の id は2度入れない。保存枠から子が外れても消さない。形と読み込み: `data/monhero-success-record.js` |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_beat_shop_vip_letter_seen_v1` | boolean | お話「レジェンドブリーダーへの招待状」を本編で見たか(飛ばしても立つ・2026-11-05)。ブリーダーレベル1000以上の HOME で1回だけ流す。true の人だけ、ビートP交換所のダイヤ・トレーニングチケット・重トレーニングチケットが「優待パス還元」になる(値段は data/rhythm-event.js の LEGEND_BREEDER_PASS_OFFERS。保存しない)。回想・デバッグでは立てない |
