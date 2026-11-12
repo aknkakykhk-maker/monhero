@@ -64,10 +64,11 @@ const makeRun = async (kind) => {
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['C1', 'mid', ['cont', /^🏆大会/]],
-    ['B1', 'win', ['cont']], ['C2', 'win', ['cont', '@tocard']], ['W1', 'win', ['cont', '@tocard', '@ready']],
-    ['B2', 'win', ['cont', '@bresult']], ['C3', 'win', ['cont', '@bresult', '@next']], ['C3b', 'win', ['cont', '@bresult', '@next', '@meal=hp']],
-    ['C4', 'lose', ['cont', '@bresult']], ['C4r', 'lose', ['cont', '@bresult', '@sand']], ['C4g', 'lose', ['cont', '@bresult', '@giveup']],
-    ['C4d', 'debutlose', ['cont', '@bresult']],
+    // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
+    ['B1', 'win', ['cont']], ['C2', 'win', ['cont', '%go']], ['W1', 'win', ['cont', '%go', '%ready']],
+    ['B2', 'win', ['cont', '%quick']], ['C3', 'win', ['cont', '%quick', '%next']], ['C3b', 'win', ['cont', '%quick', '%next', '@meal=hp']],
+    ['C4', 'lose', ['cont', '%quick']], ['C4r', 'lose', ['cont', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '%quick', '%giveup']],
+    ['C4d', 'debutlose', ['cont', '%quick']],
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
     ['G1', 'gameover', ['cont']],
     ['E0', 'retire', ['cont']], ['E3', 'retire', ['cont', '@e0']], ['E3b', 'retire', ['cont', '@e0', '@bal']], ['E1', 'retire', ['cont', '@e0', '@bal', '@e3']],
@@ -100,11 +101,12 @@ const makeRun = async (kind) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
             const [k, val] = st.slice(1).split('=');
-            const b = document.querySelector(`[data-msx-r3-${k}${val ? `="${val}"` : ''}]`);
+            const pre = st[0] === '%' ? 'data-msc-' : 'data-msx-r3-';
+            const b = document.querySelector(`[${pre}${k}${val ? `="${val}"` : ''}]`);
             if (b && !b.disabled) b.click(); return !!(b && !b.disabled);
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
-          await page.waitForTimeout(st === '@ready' ? 2500 : 700);
+          await page.waitForTimeout(st === '%ready' ? 2500 : 700);
         }
         await page.waitForTimeout(500);
         const m = await page.evaluate(() => {
