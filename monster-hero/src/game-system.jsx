@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7b7934acf68fddc1
+// generated-sha256: a25deb63d53fe376
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67121,7 +67121,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // ひとりの助手しかいない時間も、1人に贈れる(❶B: 1人には別に1日3回)
   const giveSoloId = soloOn ? (Object.keys(life.solo || {}).find(id => !awayFriend(id)) || (giveGroup && giveGroup.ids[0]) || null) : null;
   const pad = 12;
-  const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
+  const houseW = land ? Math.min(560, Math.round(vw * 0.40) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = (
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
       <button type="button" className={`mhl-tile mhl-watch flex-1${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`} data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => { if (guideSeen === false) markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}>
@@ -68329,7 +68329,7 @@ function AssistantLifePlacePerk({ life, ids, place, onGo = null, land = false })
       <p className="text-[11px] font-black text-amber-300">✨ いま行くと得</p>
       {rows.map(r => (
         <div key={r.k} className="mt-0.5 flex items-center gap-2" data-assistant-life-place-perk-row={r.k}>
-          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
+          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{isImageIconValue(r.icon) ? cardIconNode(r.icon, 16) : r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
           {typeof r.go === 'function' && typeof onGo === 'function' && <button type="button" data-assistant-life-place-perk-go={r.k} onClick={() => onGo(r.go)}
             className="min-h-[44px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12.5px] font-black text-slate-900 active:scale-95">行く ›</button>}
         </div>))}
