@@ -507,3 +507,21 @@
 .v-rm3 .re{background:linear-gradient(160deg,#f59e0b,#b45309);border-color:#fde68a;box-shadow:0 0 10px #f59e0b88}
 .v-rm3 .nj{background:linear-gradient(120deg,#be185d,#7c3aed 55%,#2563eb);border-color:#fbcfe8;box-shadow:0 0 10px #a78bfa88}
 .v-rm3 .gv{display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}.v-rm3 .gv small{color:#94a3b8;display:inline;margin-left:6px}
+/* 持ちこみアイテムの絵(12種) */
+.v-icw{display:inline-block;width:30px;height:30px;flex:none;vertical-align:middle}.v-icw svg{display:block}
+.v-item .v-icw{width:30px;height:30px}.v-bag .v-icw{width:30px;height:30px}
+.v-bgrid .v-icw{width:34px;height:34px;display:block;margin:0 auto}.v-bsel .v-icw{width:40px;height:40px}
+.v-igrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.v-igrid div{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:11px;padding:5px 1px 3px;text-align:center;min-width:0}
+.v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
+.v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;font-weight:900;color:#fde047}
+.v-igrid small{display:block;font-size:8px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
+.v-igrid div.bo{border-color:#38bdf8}.v-igrid div.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
+.v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
+.v-ileg{display:flex;gap:10px;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
+.v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.v-ileg .sw1{background:#475569}.v-ileg .sw2{background:#38bdf8}
+.v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.v-sum .v-ics .v-icw{width:20px;height:20px}
+/* ライバルのいる大会の札 */
+.v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
+.v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
