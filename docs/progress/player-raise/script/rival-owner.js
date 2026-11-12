@@ -1,6 +1,6 @@
 // モンヒロサクセス 台本 第3弾: ライバルの持ち主の助手が話す行(仮)
 // ライバルが「ほかの助手のマスモン」のとき、その持ち主の助手が会場で会う・試合のあとに話す。rival.js の asst の場面に足して出す。
-// みゅあ・あつ・きき・ももすけ(第4弾で直した)以外の4人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
+// みゅあ・あつ・きき・ももすけ・ドラ(第4弾で直した)以外の3人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
 // シナリオの助手が持ち主のとき(self)は rival.js の self の行を使い、ここの行は出さない。
 // 形は README.md。
 //   場面のid … ev.rival.owner.<助手>.<場面>
@@ -28,8 +28,9 @@ const MONSUC_SCRIPT_RIVAL_OWNER = Object.freeze([
   { id:'ev.rival.owner.momosuke.win.momosuke1', who:'momosuke', e:'excited', t:'{rival}の勝ち〜！！ でも{mon}も結構やるじゃんw えらいえらい♡' },
   { id:'ev.rival.owner.momosuke.lose.momosuke1', who:'momosuke', e:'surprise', t:'え、負けた！？ {mon}つよすぎなんだけど w ……くやしいけど、えらい♡ 次はももが勝つから！！' },
 
-  { id:'ev.rival.owner.dra.meet.dra1', who:'dra', e:'happy', t:'お、{name}か。おでの{rival}は手ごわいぞ。……おでの膝ほどじゃないけどな、えへへ' },
-  { id:'ev.rival.owner.dra.win.dra1', who:'dra', e:'happy', t:'おでの{rival}の勝ちだな。{mon}もいい動きだったよ。くさ' },
+  // ドラ(第4弾で直した・asst-dra.js と同じ口調。技の「間」の話と膝の冗談)
+  { id:'ev.rival.owner.dra.meet.dra1', who:'dra', e:'happy', t:'お、{name}か。おでの{rival}は間がいいぞ。……膝の具合は悪いけどな。えへへ' },
+  { id:'ev.rival.owner.dra.win.dra1', who:'dra', e:'happy', t:'おでの{rival}の勝ちだな。{mon}もいい動きだったよ。あとは間だけだ' },
   { id:'ev.rival.owner.dra.lose.dra1', who:'dra', e:'surprise', t:'まじか、やられたわ。{mon}、強くなったな……えへへ' },
 
   { id:'ev.rival.owner.kyuko.meet.kyuko1', who:'kyuko', e:'normal', t:'ほい！ 今日は{rival}で行くよぉ。組み方には自信あるから笑' },
