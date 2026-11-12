@@ -49,7 +49,7 @@
 .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
-.v-scene.dim .sh{background:#0f0d2499}
+.v-scene.dk .sh{background:#0f0d2499}
 .v-scene .mon{position:absolute;left:50%;transform:translateX(-50%);height:44%;aspect-ratio:1;object-fit:contain;bottom:var(--mb,25%);filter:drop-shadow(0 8px 5px #0009)}
 .v-scene .gr{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 5px);width:30%;height:5%;border-radius:50%;background:radial-gradient(ellipse,#000a 0,#0000 70%)}
 .v-chips{position:absolute;right:7px;top:7px;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
@@ -460,3 +460,29 @@
 .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.v-bagw .t small{display:block;font-size:9.5px;color:#fca5a5;font-weight:800}
 .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
 .v-bagw .v-item{margin-top:0}
+
+/* 訓練のボタンはすっきり(社長 2026-11-12): 絵・名前・小さな Lv だけ。タッグは光で */
+.v-trs{gap:4px;margin-top:8px;align-items:start}
+.v-tr{padding-top:0}
+.v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
+.v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:9px;font-weight:800;color:#94a3b8;line-height:1.3}
+.v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
+.v-tr.tag .nm{color:#fde047}
+.v-tr.sel .o{transform:scale(1.1)}
+.v-tr.sel .nm{color:#fff}
+.v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.v-lvx b{color:#7dd3fc}.v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
+.v-lvx i u{position:absolute;left:0;top:0;bottom:0;background:#38bdf8}.v-lvx i u.ad{background:#bae6fd}
+.v-lvx span{color:#cbd5e1}.v-lvx em{font-style:normal;color:#fde047}
+.v-lvup{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:10px;padding:4px 10px;margin-bottom:5px;font-size:13px;font-weight:900;line-height:1.35;box-shadow:0 0 12px #fde047}
+.v-lvup small{display:block;font-size:9.5px;font-weight:800}
+.v-p.main small{font-size:10px;margin-top:2px}
+/* 大会: 優勝ずみ・スキップ・再戦 */
+.v-cup.won .tx small{color:#fde047}
+.v-ft span.off{opacity:.45}
+.v-rm{display:grid;grid-template-columns:1.25fr 1fr;gap:6px;margin-top:7px}
+.v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
+.v-rm div small{display:block;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:2px}
+.v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.v-rm div.re small{color:#fff}
+@container (max-width:340px){.v-tr .o{width:42px;height:42px;font-size:19px}.v-tr .nm{font-size:9px}.v-lvx{font-size:8.5px}}
