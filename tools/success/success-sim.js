@@ -46,6 +46,8 @@ const makeRaised = (rng, rank, topStats, assists) => {
 // よくあるアシストの持ち方(誰にでも効くもの・ポイントの予算内: M 約390・S 約280・B 約160)
 const AS_M = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 3 }, { id: 'kaketsuke', lv: 2 }]; // 128+80+80+64 = 352
 const AS_S = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'ochitsuki', lv: 1 }]; // 128+80+48+24 = 280
+const AS_MH = [{ id: 'sokoji', lv: 3 }, { id: 'atooshi', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'miseba', lv: 3 }]; // 128+80+80+80 = 368(ひらめきの2つ入り)
+const HINT5 = [[{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }], [{ id: 'mitate', lv: 3 }, { id: 'kensho', lv: 3 }], [{ id: 'mimamori', lv: 3 }]]; // ひらめき5つを段3で(編成の3体に分けて持たせる)
 const AS_B = [{ id: 'sokoji', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'kizuna', lv: 1 }]; // 80+48+40 = 168(B の上のほう)
 const PRESETS = {
   none: { name: '編成なし(ベースモン6枠)', team: () => [] },
@@ -57,6 +59,8 @@ const PRESETS = {
   M6: { name: 'M 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M')) },
   M6as: { name: 'M 6体・全員アシストあり(底力3・きずな2・後押し3・かけつけ2)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_M)) },
   S6as: { name: 'S 6体・全員アシストあり(底力3・きずな2・後押し2・落ち着き1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', null, AS_S)) },
+  B6hint5: { name: 'B 6体・ひらめき5つ段3(大会の試合だけに効く)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, HINT5[i] || [])) },
+  M6hint: { name: 'M 6体・アシストあり(底力3・後押し3・見立て3・見せ場3)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_MH)) },
   M6asAim: { name: 'M 6体・アシストあり・得意そろえ(ちから・命中・回避)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], AS_M)) },
   B6as: { name: 'B 6体・全員アシストあり(底力2・後押し2・きずな1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, AS_B)) },
   S6aim: { name: 'S 6体・得意そろえ・人なつっこさ段3+底力段3', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', ['pow', 'hit', 'eva'], [{ id: 'hitonatsu', lv: 3 }, { id: 'sokoji', lv: 3 }])) },
@@ -68,6 +72,8 @@ const VARIANTS = [
   { key: 'B6', aidLv: 3, rematch: { rainbow: 2 }, label: 'B 6体・虹の時渡りの砂時計2つを持ちこみ' },
   { key: 'B6', aidLv: 3, carry: ['mag', 'hachi'], label: 'B 6体・持ちこみ2つ(週刊!トレーニング・修行のハチマキ)' },
   { key: 'B6', aidLv: 3, cups: true, label: 'B 6体・ライバル2人(助手・フレンド)の大会に出る' },
+  { key: 'M6hint', aidLv: 5 },
+  { key: 'B6hint5', aidLv: 3 },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
@@ -201,7 +207,7 @@ const runVariant = (vr) => {
   const order = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'M'];
   return {
     label: vr.label || PRESETS[vr.key].name, aidLv: vr.aidLv,
-    rank: order.filter(k => ranks[k]).map(k => `${k} ${pct(ranks[k], RUNS)}%`).join(' / '),
+    rank: order.filter(k => ranks[k]).map(k => `${k} ${pct(ranks[k], RUNS)}%`).join(' / '), grade: SUC.gradeOf(median(powers)).label,
     powerMedian: median(powers), powerMean: mean(powers), sumMedian: median(sums), loyalMean: mean(loys),
     loyal60Turn: loy60.length ? median(loy60) : null, loyal60Rate: pct(loy60.length, RUNS),
     tagsPerRun: tags.map(n => Math.round(n / RUNS * 10) / 10),
@@ -247,7 +253,7 @@ const results = [];
 for (const v of list) {
   const r = runVariant(v); results.push(r);
   console.log(`■ ${r.label}(助手の仲良し Lv${r.aidLv}・${RUNS}回)`);
-  console.log(`  ランク: ${r.rank}`);
+  console.log(`  ランク: ${r.rank}(中央値の評価 ${r.grade})`);
   console.log(`  総合力 中央値 ${r.powerMedian}・6能力の合計 中央値 ${r.sumMedian}・忠誠 平均 ${r.loyalMean}(60に届く ${r.loyal60Rate}%・届くターン中央値 ${r.loyal60Turn})`);
   console.log(`  タッグ 0/1/2/3+ 体の訓練: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
   console.log(`  1回あたり: ${Object.entries(r.perRun).map(([k, v]) => `${k} ${v}`).join('・')}`);

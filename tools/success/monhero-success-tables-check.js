@@ -21,7 +21,9 @@ const ok = (cond, msg) => { if (!cond) errors.push(msg); };
 const core = SUC.ASSISTS;
 for (const id of Object.keys(core)) {
   const a = AS.BY_ID[id];
-  ok(a && a.from === 'core', `芯のアシスト ${id} が表にない(または from が core でない)`);
+  // 芯の ASSISTS に hint(助手)が付いた物は、お話のひらめきで取れる5つ(表では from:'hint'・aid が同じ)
+  const want = core[id].hint ? 'hint' : 'core';
+  ok(a && a.from === want && (want === 'core' || a.aid === core[id].hint), `芯のアシスト ${id} が表にない(または from が ${want} でない)`);
   if (!a) continue;
   ok(a.name === core[id].name, `${id} の名前が芯と違う: ${a.name} / ${core[id].name}`);
   ok(a.type === core[id].type, `${id} の型が芯と違う: ${a.type} / ${core[id].type}`);
@@ -31,7 +33,7 @@ for (const id of Object.keys(core)) {
 }
 for (const a of AS.LIST) {
   ok(/^[a-z]+$/.test(a.id), `アシストの id は英小文字だけ: ${a.id}`);
-  if (a.from === 'core') ok(core[a.id], `表の ${a.id} は from:'core' なのに芯にない`);
+  if (a.from === 'core') ok(core[a.id] && !core[a.id].hint, `表の ${a.id} は from:'core' なのに芯にない`);
   else ok(a.from === 'hint' && TT.ASSIST_NAMES[a.aid], `${a.id} の from / aid がおかしい`);
   ok(a.v.length === 3 && a.cost.length === 3, `${a.id} の段が3つでない`);
   ok(a.cost[0] < a.cost[1] && a.cost[1] < a.cost[2], `${a.id} の値段が段の順に上がっていない`);
