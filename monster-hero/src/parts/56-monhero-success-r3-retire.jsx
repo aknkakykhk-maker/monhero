@@ -251,7 +251,7 @@ function MsxR3Box({ onClose }) {
     const locked = [...((meta && Array.isArray(meta.team)) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : []), ...(meta && meta.lend ? [meta.lend] : []), ...(runFrom ? [runFrom] : [])];
     return (<>
       <style>{MSX_R3_CSS}</style>
-      <MonsucFuseSheet box={box} locked={locked} onSave={(n) => storeSet(MSX_KEYS.box, n)} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setFuse(false); msxR3ReadBox().then(setBox); }}/>
+      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onSave={(n) => storeSet(MSX_KEYS.box, n)} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setFuse(false); msxR3ReadBox().then(setBox); }}/>
     </>);
   }
   const body = !box ? <div className="msx-note">読み込んでいます…</div> : (<>
