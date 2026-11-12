@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8eb7d9845a7a5fa3
+// source-sha256: 219caa1bc27c2249
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112182,9 +112182,9 @@ function AssistantLifeHouseArt({
     cols = land ? 4 : 2,
     rows = land ? 2 : 4;
   const rw = (width - wall * (cols + 1)) / cols;
-  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.round(rw * 0.46) : Math.round(rw * 0.5);
-  const lh = land ? 62 : 78,
-    roofH = g4 ? 40 : land ? 44 : 64;
+  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.max(68, Math.round(rw * 0.46)) : Math.round(rw * 0.5);
+  const lh = land ? 50 : 78,
+    roofH = g4 ? 40 : land ? 34 : 64;
   const bodyH = wall + rows * (rh + wall) + lh + wall,
     ly = wall + rows * (rh + wall);
   const night = look === 'night';

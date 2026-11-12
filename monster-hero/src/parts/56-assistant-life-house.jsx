@@ -467,8 +467,8 @@ function AssistantLifeHouseArt({ width, land: landIn, look, rooms, metSet, onOpe
   const g4 = grid4 && !landIn, land = landIn || g4;
   const wall = 6, cols = land ? 4 : 2, rows = land ? 2 : 4;
   const rw = (width - wall * (cols + 1)) / cols;
-  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.round(rw * 0.46) : Math.round(rw * 0.5);
-  const lh = land ? 62 : 78, roofH = g4 ? 40 : land ? 44 : 64;
+  const rh = g4 ? Math.round(rw * 1.12) : land ? Math.max(68, Math.round(rw * 0.46)) : Math.round(rw * 0.5);
+  const lh = land ? 50 : 78, roofH = g4 ? 40 : land ? 34 : 64;
   const bodyH = wall + rows * (rh + wall) + lh + wall, ly = wall + rows * (rh + wall);
   const night = look === 'night';
   const items = (diary.items || []).slice(-3).reverse();
