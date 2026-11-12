@@ -168,6 +168,56 @@ function behaviours() {
     if (model('モンスターノーツのかくつきを直す', { failed: 1 }) === 'claude-fable-5-2') p.push('1回目の直しで claude-fable-5-2 が出る');
     return p;
   };
+  B['窓口の返事に表の記法が残ると止まる'] = () => {
+    const p = [];
+    const t = require('../hooks/hq-table-as-image.js');
+    if (!t.findTable('結果です。\n\n| 部 | 件数 |\n| --- | --- |\n| 開発 | 3 |')) p.push('表の記法(| --- | --- |)を見つけられない');
+    if (!t.findTable('a|b\n:--|--:\n1|2')) p.push('外枠の無い表の記法を見つけられない');
+    if (t.findTable('箇条書きです。\n- 開発 3件\n---\n次の話')) p.push('区切り線(---)や箇条書きを表と間違える');
+    if (t.findTable('```\n| a | b |\n| --- | --- |\n```')) p.push('コードブロックの中の表まで止めている');
+    const hq = R['窓口の会話'];
+    const hqEnv = { ...process.env, CLAUDE_CODE_REMOTE_SESSION_ID: 'cse_' + String(hq).replace(/^session_/, '') };
+    const deptEnv = { ...process.env, CLAUDE_CODE_REMOTE_SESSION_ID: 'cse_01BushoNoKaiwa' };
+    const os = require('os');
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-lock-'));
+    const tr = path.join(tmp, 't.jsonl');
+    const write = (reply) => fs.writeFileSync(tr, [
+      JSON.stringify({ type: 'user', message: { role: 'user', content: '一覧を見せて' } }),
+      JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: reply }] } }),
+    ].join('\n'));
+    const fire = (env, extra) => run('tools/hooks/hq-table-as-image.js', [], { input: JSON.stringify({ transcript_path: tr, ...extra }), env });
+    write('一覧です。\n\n| 部 | 件数 |\n| --- | --- |\n| 開発 | 3 |');
+    if (!/"decision":"block"/.test(fire(hqEnv).stdout || '')) p.push('窓口の返事に表の記法があっても止まらない');
+    if ((fire(deptEnv).stdout || '') !== '') p.push('部署の会話まで止めている(動くのは窓口の会話だけ)');
+    if (/"decision":"block"/.test(fire(hqEnv, { stop_hook_active: true }).stdout || '')) p.push('書き直しのあとも止め続ける(止まらなくなる)');
+    write('一覧です。\n- 開発 3件\n- ビート 2件');
+    if ((fire(hqEnv).stdout || '') !== '') p.push('表の無い返事まで止めている');
+    for (const input of ['', 'こわれた入力']) { const r = run('tools/hooks/hq-table-as-image.js', [], { input, env: hqEnv }); if (r.status !== 0 || r.stdout) p.push('こわれた入力でフックが会話を止めてしまう'); }
+    fs.rmSync(tmp, { recursive: true, force: true });
+    if (!JSON.stringify((settings.hooks && settings.hooks.Stop) || '').includes('hq-table-as-image.js')) p.push('.claude/settings.json の Stop に hq-table-as-image.js が登録されていない');
+    return p;
+  };
+  B['窓口の自動の要約の設定が違えば知らせる'] = () => {
+    const p = [];
+    const want = Number(limit['窓口の自動の要約']);
+    if (want !== 700000) p.push(`routing.json の「窓口の自動の要約」が台帳(700000)と違う: ${limit['窓口の自動の要約']}`);
+    const hq = { hq: true };
+    const n1 = { prompts: 1, merges: 0 };
+    if (typeof hook.autoCompactNotice !== 'function') return [...p, 'フックに、自動の要約の設定を見張る所(autoCompactNotice)が無い'];
+    if (hook.autoCompactNotice(700000, n1, limit, hq) !== '') p.push('設定が 700000 なのに知らせが出る');
+    for (const v of [undefined, 450000, 200000]) if (!/autoCompactWindow/.test(hook.autoCompactNotice(v, n1, limit, hq)) || !hook.autoCompactNotice(v, n1, limit, hq).includes('700000')) p.push(`設定が ${v} でも、窓口へ知らせが出ない`);
+    if (hook.autoCompactNotice(450000, n1, limit, {}) !== '') p.push('部署の会話にまで知らせが出る(動くのは窓口の会話だけ)');
+    if (hook.autoCompactNotice(450000, { prompts: 3, merges: 0 }, limit, hq) !== '') p.push('毎回の頼みで知らせが出る(最初と、くり返しの回だけ)');
+    if (!hook.autoCompactNotice(450000, { prompts: limit['くり返し'], merges: 0 }, limit, hq)) p.push('くり返しの回で知らせが出ない');
+    const os = require('os');
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-home-'));
+    if (hook.readAutoCompact(home) !== undefined) p.push('設定のファイルが無いのに値が読める');
+    fs.mkdirSync(path.join(home, '.claude'));
+    fs.writeFileSync(path.join(home, '.claude', 'settings.json'), JSON.stringify({ autoCompactWindow: 700000 }));
+    if (hook.readAutoCompact(home) !== 700000) p.push('ユーザー設定の autoCompactWindow が読めない');
+    fs.rmSync(home, { recursive: true, force: true });
+    return p;
+  };
   B['錠の検査がいつも回る一覧に入っている'] = () => {
     const always = JSON.parse(read('tools/run-checks-always.json')).checks || [];
     return always.includes('team/decision-lock-check.js') ? [] : ['tools/run-checks-always.json に team/decision-lock-check.js が無い(公開の前と CI で錠の検査が回らない)'];

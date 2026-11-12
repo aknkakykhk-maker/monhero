@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c88a04c3b065483f
+// source-sha256: 602e376a05e6c9b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -142894,6 +142894,7 @@ function AssistantLifePlanWho({
     className: "flex flex-col gap-1",
     "data-assistant-life-plan-who": id
   }, typeof AssistantLifeBodyPanel === 'function' && React.createElement(AssistantLifeBodyPanel, {
+    key: id,
     id: id,
     cur: cur
   }), rows);
@@ -143543,6 +143544,100 @@ const assistantLifeHospitalCureSlotsOf = aid => {
   if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === 'clinic' && r.ev === 'cure').map(r => r.abs);
 };
+const ASSISTANT_LIFE_BODY_CURE_ITEM = 'life_cure';
+const ASSISTANT_LIFE_BODY_CURE_HOOK = {
+  have: 0,
+  use: null,
+  listeners: new Set(),
+  set(patch) {
+    Object.assign(this, patch);
+    for (const fn of this.listeners) {
+      try {
+        fn(this.have);
+      } catch (_) {}
+    }
+  }
+};
+const assistantLifeBodyCanCure = (id, abs) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !assistantLifeBodyOkId(id) || !Number.isInteger(abs)) return false;
+  const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+  const e = D.s[id];
+  if (!e || !e.cond || D.at !== abs) return false;
+  const last = (D.log[id] || []).slice(-1)[0];
+  return !!last && last.abs === abs && last.place === 'clinic';
+};
+const assistantLifeBodyCure = (id, abs) => {
+  if (!assistantLifeBodyCanCure(id, abs)) return false;
+  const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+  const list = [...D.log[id]];
+  list[list.length - 1] = {
+    ...list[list.length - 1],
+    ev: 'cure'
+  };
+  assistantLifeBodySave({
+    ...D,
+    s: {
+      ...D.s,
+      [id]: {
+        ...D.s[id],
+        cond: null
+      }
+    },
+    log: {
+      ...D.log,
+      [id]: list
+    }
+  });
+  return true;
+};
+const assistantLifeBodyCureUse = () => {
+  const [have, setHave] = React.useState(ASSISTANT_LIFE_BODY_CURE_HOOK.have);
+  React.useEffect(() => {
+    const fn = n => setHave(n);
+    ASSISTANT_LIFE_BODY_CURE_HOOK.listeners.add(fn);
+    setHave(ASSISTANT_LIFE_BODY_CURE_HOOK.have);
+    return () => {
+      ASSISTANT_LIFE_BODY_CURE_HOOK.listeners.delete(fn);
+    };
+  }, []);
+  return have;
+};
+function AssistantLifeBodyCure({
+  id,
+  cur,
+  onCured
+}) {
+  const have = assistantLifeBodyCureUse();
+  const [busy, setBusy] = React.useState(false);
+  const can = assistantLifeBodyCanCure(id, cur);
+  if (!can) return React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold leading-snug text-slate-300",
+    "data-assistant-life-body-cure-hint": id
+  }, "🏥 病院にいる回なら「特別な治療」(ビートP交換所)で、その場で治せます", have > 0 ? `(持っている ${have}枚)` : '');
+  const use = ASSISTANT_LIFE_BODY_CURE_HOOK.use;
+  return React.createElement("div", {
+    className: "mt-1 rounded-lg border border-emerald-300/50 bg-emerald-950/60 p-1.5",
+    "data-assistant-life-body-cure": id
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-emerald-100"
+  }, "いま病院にいます。特別な治療を1枚使うと、重くてもその場で治ります(助手のマスモンも)"), React.createElement("button", {
+    type: "button",
+    disabled: busy || have <= 0 || typeof use !== 'function',
+    "data-assistant-life-body-cure-use": id,
+    onClick: async () => {
+      setBusy(true);
+      let ok = false;
+      try {
+        ok = await use(id, cur);
+      } catch (_) {
+        ok = false;
+      }
+      setBusy(false);
+      if (ok && onCured) onCured();
+    },
+    className: "mt-1 min-h-[44px] w-full rounded-xl bg-emerald-500 px-2 text-[12.5px] font-black text-slate-950 active:scale-95 disabled:opacity-40"
+  }, "🏥 特別な治療を使う(", have > 0 ? `持っている ${have}枚` : 'ビートP交換所 300P', ")"));
+}
 const assistantLifeBodyPerk = place => assistantLifeBodyOn() ? ASSISTANT_LIFE_BODY_PERK[place] || '' : '';
 const assistantLifeBodyPlaces = list => assistantLifeBodyOn() ? [...list.filter(p => p !== 'clinic'), 'clinic'] : list.filter(p => p !== 'clinic');
 const assistantLifeBodyLabel = place => assistantLifeBodyOn() && ASSISTANT_LIFE_BODY_LABEL[place] || null;
@@ -143566,11 +143661,11 @@ const ASSISTANT_LIFE_BODY_COND_NAME = Object.freeze({
   hurt: '🤕 けが',
   sick: '🤒 病気'
 });
-const assistantLifeBodyCondText = c => {
+const assistantLifeBodyCondText = (c, atClinic = false) => {
   if (!c) return '';
   const d = Math.floor(c.left / 12),
     h = c.left % 12 * 2;
-  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家で休んでいます(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・${atClinic ? '病院で診てもらっています' : '家で休んでいます'}(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
 };
 const assistantLifeBodyDelta = n => n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0';
 function AssistantLifeBodyPlaceStat({
@@ -143631,11 +143726,12 @@ function AssistantLifeBodyPanel({
   cur
 }) {
   assistantLifeBodyUse();
+  const [cured, setCured] = React.useState(false);
   const e = assistantLifeBodyOf(id);
   if (!e) return null;
   const L = ASSISTANT_LIFE_BODY_LINE;
   const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
-  const note = e.cond ? assistantLifeBodyCondText(e.cond) : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう` : '元気です';
+  const note = e.cond ? assistantLifeBodyCondText(e.cond, assistantLifeBodyCanCure(id, cur)) : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう` : '元気です';
   const rows = [];
   if (!e.cond && Number.isInteger(cur) && typeof assistantLifePlanOf === 'function') {
     let v = {
@@ -143680,7 +143776,14 @@ function AssistantLifeBodyPanel({
   })), React.createElement("p", {
     className: `mt-1 text-[11px] font-bold leading-snug ${e.cond ? 'text-rose-200' : 'text-indigo-200'}`,
     "data-assistant-life-body-note": true
-  }, note), rows.length > 0 && React.createElement("div", {
+  }, note), cured && !e.cond ? React.createElement("p", {
+    className: "mt-1 rounded-lg bg-emerald-900/70 px-1.5 py-1 text-[11px] font-black text-emerald-100",
+    "data-assistant-life-body-cured": id
+  }, "🏥 特別な治療で、すっかり治りました！") : e.cond && React.createElement(AssistantLifeBodyCure, {
+    id: id,
+    cur: cur,
+    onCured: () => setCured(true)
+  }), rows.length > 0 && React.createElement("div", {
     className: "mt-1 flex flex-col gap-0.5",
     "data-assistant-life-body-forecast": true
   }, rows.map(r => {
@@ -197007,6 +197110,44 @@ function MonsterHeroGame() {
     }
     return assistantLifeFurnGive(who, key);
   };
+  const cureAssistantLifeBody = async (who, abs) => {
+    if (typeof assistantLifeBodyCanCure !== 'function' || !assistantLifeBodyCanCure(who, abs)) return false;
+    const itemId = ASSISTANT_LIFE_BODY_CURE_ITEM;
+    const have = ownedItemCount(ownedItemsRef.current, itemId);
+    if (have <= 0) return false;
+    const before = ownedItemsRef.current;
+    const nextItems = {
+      ...before,
+      [itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      ownedItemsRef.current = before;
+      setOwnedItems(before);
+      return false;
+    }
+    if (assistantLifeBodyCure(who, abs)) return true;
+    const back = {
+      ...ownedItemsRef.current,
+      [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1
+    };
+    ownedItemsRef.current = back;
+    setOwnedItems(back);
+    try {
+      await storeSet('mh_owned_items', back, false);
+    } catch {}
+    return false;
+  };
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_BODY_CURE_HOOK === 'undefined') return;
+    ASSISTANT_LIFE_BODY_CURE_HOOK.set({
+      have: ownedItemCount(ownedItems, ASSISTANT_LIFE_BODY_CURE_ITEM),
+      use: cureAssistantLifeBody
+    });
+  }, [ownedItems]);
   const giveAssistantLifeSolo = async (who, kind) => {
     if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
     const def = assistantLifeGiftOf(kind);
