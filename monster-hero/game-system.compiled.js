@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 550f7edfe562db08
+// source-sha256: bde6bbe01aa0aaf5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167019,7 +167019,7 @@ const MSA_CSS = `
 /* 白飛びの直し: 閃光(msa-flash)は animation-delay の待ちの間も 0% のコマが当たる(fill both)。0% を透明にして当たる瞬間から光らせる */
 .msa-stage{background-color:#2a2147}
 .msa-cam{position:absolute;inset:0;transform-origin:50% 78%;will-change:transform}
-.msa-bg{position:absolute;inset:-16%;z-index:0;background:#2a2147 center/cover no-repeat}
+.msa-bg{position:absolute;inset:0;z-index:0;background:#2a2147 center/cover no-repeat}
 .msa-rnd{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:8;display:flex;flex-direction:column;align-items:center;line-height:1;pointer-events:none}
 .msa-rnd small{font-size:9px;font-weight:900;color:#fde68a;letter-spacing:.12em;background:#0f0b22aa;border-radius:99px;padding:1px 7px}
 .msa-rnd b{font-size:25px;font-weight:900;color:#fff;-webkit-text-stroke:1px #1e1b4b;text-shadow:0 2px 0 #1e1b4b}
@@ -167031,8 +167031,8 @@ const MSA_CSS = `
 .msa-band.old{opacity:.62}
 .msa-plate{position:absolute;bottom:3px;z-index:8;max-width:74%;padding:3px 18px 4px;background:linear-gradient(90deg,#0f172af2,#1e293be8);border:1.5px solid #94a3b8;pointer-events:none}
 .msa-plate>div{transform:skewX(12deg)}
-.msa-plate.A{left:-8px;padding-left:22px;border-left:none;transform:skewX(-12deg);animation:msaPlateL .3s cubic-bezier(.2,.9,.3,1) both}
-.msa-plate.B{right:-8px;padding-right:22px;border-right:none;text-align:right;transform:skewX(-12deg);animation:msaPlateR .3s cubic-bezier(.2,.9,.3,1) both}
+.msa-plate.A{left:5px;padding-left:22px;border-left:none;transform:skewX(-12deg);animation:msaPlateL .3s cubic-bezier(.2,.9,.3,1) both}
+.msa-plate.B{right:5px;padding-right:22px;border-right:none;text-align:right;transform:skewX(-12deg);animation:msaPlateR .3s cubic-bezier(.2,.9,.3,1) both}
 .msa-plate.pow{border-color:#fb923c}.msa-plate.wise{border-color:#67e8f9}
 .msa-plate small{display:block;font-size:10px;font-weight:900;color:#cbd5e1;white-space:nowrap}
 .msa-plate b{display:block;font-size:19px;font-weight:900;color:#fff;letter-spacing:.04em;white-space:nowrap;line-height:1.1}
@@ -167107,7 +167107,7 @@ const MSA_CSS = `
 .msa-aura.wind.pow{background:radial-gradient(circle,#fff6 0,#fb923caa 25%,#ef444455 50%,#ef444400 70%)}
 .msa-aura.wind.wise{background:radial-gradient(circle,#fff6 0,#67e8f9aa 25%,#818cf855 50%,#818cf800 70%)}
 .msa-aura.big.wise{background:radial-gradient(circle,#fff7 0,#a5f3fcaa 22%,#6366f1 45%,#6366f100 70%)}
-.msa-focus{position:absolute;inset:-20%;z-index:2;pointer-events:none;background:repeating-conic-gradient(from 0deg at calc(var(--msa-cx,30%) * .714 + 14.3%) 66%,#fff0 0 5deg,var(--msa-fc,#fde68a) 5deg 6deg);-webkit-mask:radial-gradient(circle at calc(var(--msa-cx,30%) * .714 + 14.3%) 66%,#0000 0 16%,#000 34%);mask:radial-gradient(circle at calc(var(--msa-cx,30%) * .714 + 14.3%) 66%,#0000 0 16%,#000 34%);animation:msaFocus var(--msa-pre,380ms) ease-out both}
+.msa-focus{position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-conic-gradient(from 0deg at var(--msa-cx,30%) 70%,#fff0 0 5deg,var(--msa-fc,#fde68a) 5deg 6deg);-webkit-mask:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0 16%,#000 34%);mask:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0 16%,#000 34%);animation:msaFocus var(--msa-pre,380ms) ease-out both}
 .msa-focus.pow{--msa-fc:#fdba7499}.msa-focus.wise{--msa-fc:#a5f3fc99}
 .msa-aim{position:absolute;bottom:58px;width:58px;height:58px;margin-left:-29px;z-index:5;border-radius:50%;border:2px solid var(--msa-ac,#fb923c);box-shadow:0 0 8px var(--msa-ac,#fb923c),inset 0 0 6px var(--msa-ac,#fb923c);pointer-events:none;animation:msaAim calc(var(--msa-pre,380ms) + 260ms) ease-out both}
 .msa-aim::before,.msa-aim::after{content:'';position:absolute;left:50%;top:50%;background:var(--msa-ac,#fb923c)}
@@ -167720,7 +167720,11 @@ const msaBandsOf = (log, frames, k) => {
     j
   }));
 };
-const msaCamAt = (x, s, w) => `translate(${Math.round((0.5 - x) * w * s * 0.55)}px,0px) scale(${s})`;
+const msaCamAt = (x, s, w) => {
+  const lim = Math.max(0, (s - 1) * w * 0.5 - 2);
+  const t = Math.max(-lim, Math.min(lim, (0.5 - x) * w * s * 0.55));
+  return `translate(${Math.round(t)}px,0px) scale(${s})`;
+};
 const msaCamFrames = (pts, total) => {
   const out = [{
     offset: 0,
