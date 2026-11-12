@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c9644c7329dc9c9
+// source-sha256: d0571bf420ce0dea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8072,7 +8072,7 @@ const Audio_ = (() => {
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
-    "audio/bgm-megalovania-smash.mp3": "831700bb0255",
+    "audio/bgm-megalovania-smash.mp3": "1bbb6aea8bb2",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
@@ -52710,7 +52710,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:makutsu_no_senritsu': [['excited', '2:18でいちばん強くなるの！ 最後の最後でアゲる♪']],
     'listen:lamia': [['excited', '0:32から一気にいちばん強くなるの！ ここまぢでアガる♪']],
     'listen:megalovania_sans': [['excited', '0:18からいきなりいちばん強いの！ ずっとドキドキだよ♪']],
-    'listen:megalovania_smash': [['excited', '0:10でもういちばん強くなるの！ 4分38秒たっぷりだよ♪']],
+    'listen:megalovania_smash': [['excited', '0:10でもういちばん強くなるの！ 2分半にぎゅっと詰まってるよ♪']],
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
@@ -52864,7 +52864,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:makutsu_no_senritsu': [['excited', '2:18からのとこ、短いけどいちばん盛り上がるよ！！']],
     'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
     'listen:megalovania_sans': [['excited', '0:52から1:18までいちばん強いのが続くよ♡ すごいね♡']],
-    'listen:megalovania_smash': [['excited', '2:23と4:01でいちばん強くなるよ♡ ぐっとくるね♡']],
+    'listen:megalovania_smash': [['excited', '1:08と1:49でいちばん強くなるよ♡ ぐっとくるね♡']],
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
@@ -53018,7 +53018,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:makutsu_no_senritsu': [['wink', '2:25で静かになって終わるから、最後はきれいに止めよ笑']],
     'listen:lamia': [['happy', '2:08から静かに締めていくとこ、余韻あっていいよね笑']],
     'listen:megalovania_sans': [['happy', '2:26でスッと静かになって終わるの、きれいだよね笑']],
-    'listen:megalovania_smash': [['happy', '4:26で静かに終わるの、余韻があっていいよね笑']],
+    'listen:megalovania_smash': [['happy', '2:11からすっと落ち着いて終わるの、余韻があっていいよね笑']],
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
@@ -53249,7 +53249,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:makutsu_no_senritsu': [['happy', 'はじめの静かなところで、ゆっくり気持ちを整えようか☺️']],
     'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
     'listen:megalovania_sans': [['normal', '1:22と1:26は少し落ち着くから、ひと息つけるね']],
-    'listen:megalovania_smash': [['normal', '3:26や3:55は静かになるから、ひと息つけるね']],
+    'listen:megalovania_smash': [['normal', '1:43で一度静かになるから、そこでひと息つけるね']],
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
@@ -66062,11 +66062,16 @@ const GrowthFxLayer = ({
 };
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
+const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({
+  TEMPLE: 'left'
+});
 const quickAnywhereFloatStyle = spot => {
   const s = spot.hidden ? {
     visibility: 'hidden',
     pointerEvents: 'none'
-  } : {};
+  } : {
+    opacity: 0.86
+  };
   Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
@@ -66074,8 +66079,7 @@ const quickAnywhereFloatStyle = spot => {
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
 };
-const quickAnywhereFloatHits = (el, spot) => {
-  if (typeof document === 'undefined' || !el) return 0;
+const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70,
     h = el.offsetHeight || 34;
   const css = getComputedStyle(document.documentElement);
@@ -66095,9 +66099,15 @@ const quickAnywhereFloatHits = (el, spot) => {
     right: left + w,
     bottom: top + h
   };
+  return R;
+};
+const quickAnywhereFloatHits = (el, spot, known = null) => {
+  if (typeof document === 'undefined' || !el) return 0;
+  const R = quickAnywhereFloatRect(el, spot);
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    if (known && known.has(o)) continue;
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
     const r = o.getBoundingClientRect();
@@ -66106,10 +66116,19 @@ const quickAnywhereFloatHits = (el, spot) => {
   }
   return hits;
 };
-const quickAnywhereFloatPick = el => {
+const quickAnywhereFloatPick = (el, screen) => {
+  const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
+  const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  for (const side of sides) {
+    const spot = {
+      side,
+      lift: 0
+    };
+    if (quickAnywhereFloatHits(el, spot) === 0) return spot;
+  }
   const maxLift = Math.max(0, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
-  for (const side of ['right', 'left']) {
-    for (let lift = 0; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
+  for (const side of sides) {
+    for (let lift = QUICK_ANYWHERE_FLOAT_STEP; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
       const spot = {
         side,
         lift
@@ -66118,7 +66137,7 @@ const quickAnywhereFloatPick = el => {
     }
   }
   return {
-    side: 'right',
+    side: first,
     lift: 0,
     hidden: true
   };
@@ -66131,25 +66150,75 @@ const QuickAnywhereFloat = ({
 }) => {
   const ref = useRef(null);
   const [spot, setSpot] = useState({
-    side: 'right',
+    side: QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right',
     lift: 0
   });
+  const knownRef = useRef(new WeakSet());
+  const placedRef = useRef(null);
   React.useLayoutEffect(() => {
-    const place = () => {
+    const remember = base => {
+      const set = new WeakSet();
+      const el = ref.current;
+      if (typeof document !== 'undefined' && el) {
+        const R = quickAnywhereFloatRect(el, base);
+        for (const o of document.querySelectorAll('button,a,[role=button]')) {
+          const r = o.getBoundingClientRect();
+          if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o);
+        }
+      }
+      knownRef.current = set;
+    };
+    const decide = () => {
       if (!ref.current) return;
-      setSpot(prev => !prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+      const next = quickAnywhereFloatPick(ref.current, screen);
+      const base = {
+        side: next.side,
+        lift: next.lift
+      };
+      placedRef.current = {
+        ...base,
+        fromHidden: !!next.hidden
+      };
+      remember(base);
+      setSpot(next.hidden ? {
+        ...base,
+        hidden: true
+      } : base);
     };
-    const fresh = () => {
-      if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
+    const watch = () => {
+      const el = ref.current,
+        placed = placedRef.current;
+      if (!el || !placed) return;
+      if (placed.fromHidden) {
+        decide();
+        return;
+      }
+      const base = {
+        side: placed.side,
+        lift: placed.lift
+      };
+      const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
+      setSpot(prev => !!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? {
+        ...base,
+        hidden: true
+      } : base);
     };
-    fresh();
-    const t1 = setTimeout(fresh, 300),
-      t2 = setTimeout(place, 1200),
-      iv = setInterval(place, 800);
+    decide();
+    const t1 = setTimeout(decide, 300),
+      t2 = setTimeout(decide, 1200),
+      iv = setInterval(watch, 800);
+    let rt = null;
+    const onResize = () => {
+      clearTimeout(rt);
+      rt = setTimeout(decide, 250);
+    };
+    if (typeof window !== 'undefined') window.addEventListener('resize', onResize);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(rt);
       clearInterval(iv);
+      if (typeof window !== 'undefined') window.removeEventListener('resize', onResize);
     };
   }, [screen]);
   return React.createElement("button", _extends({

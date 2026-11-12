@@ -6,6 +6,7 @@
 // テスターいちか「転生のすべて選択ボタンと被るから右下にしてほし〜」。帯は右下に置く。
 // HOME・神殿・転生・マーケット・ミッション・ギフト・プロフィールを、縦(390×844)・横(844×390)・横小(667×375)で開き、
 //   ① 帯が出ている ② 帯がほかの押せるもの(button・a・[role=button])と重ならない ③ 帯に WAVE が出ている(「◯周目 W◯/10」)
+//   ④ スクロールしても帯の置き場所・位置が変わらない(2026-11-12)
 // を見る。モンヒロビート・助手ライフの上では帯を出さない(それぞれの帯がある)ことも見る。
 'use strict';
 const http = require('http');
@@ -91,13 +92,27 @@ const seed = () => {
           if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits.push(((o.getAttribute('aria-label') || o.innerText || o.tagName) + '').replace(/\s+/g, ' ').slice(0, 24));
         }
         const inView = R.left >= 0 && R.top >= 0 && R.right <= innerWidth && R.bottom <= innerHeight;
-        return { name: nm, strip: el.innerText.replace(/\s+/g, ' '), rect: [Math.round(R.left), Math.round(R.top), Math.round(R.width), Math.round(R.height)], hits, inView };
+        return { name: nm, spot: el.getAttribute('data-quick-anywhere-spot'), strip: el.innerText.replace(/\s+/g, ' '), rect: [Math.round(R.left), Math.round(R.top), Math.round(R.width), Math.round(R.height)], hits, inView };
       }, name);
-      const results = [];
+      const results = [], scrollResults = [];
       const visit = async (name, steps) => {
         await goHome();
         for (const re of steps) { await clickText(re); await page.waitForTimeout(1200); for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300); }
         const m = await measure(name); results.push(m);
+        // スクロールしても帯が動かない(2026-11-12 社長「スクロールで変な動きしたりするから…固定で置いてほしい」)。
+        //   いちばん大きいスクロールする箱を少しずつ下へ動かしながら、帯の置き場所と位置が変わらないことを見る(1.2秒ごとに3回 = 0.8秒ごとの見張りをまたぐ)
+        if (m.strip) {
+          const before = { spot: m.spot, rect: m.rect }; const seen = [];
+          for (let k = 0; k < 3; k++) {
+            const moved = await page.evaluate(() => { let best = null; for (const e of document.querySelectorAll('*')) { const cs = getComputedStyle(e); if (!/(auto|scroll)/.test(cs.overflowY) || e.scrollHeight - e.clientHeight < 40) continue; if (!best || e.clientHeight * e.clientWidth > best.clientHeight * best.clientWidth) best = e; }
+              const t = best || document.scrollingElement; const was = t.scrollTop; t.scrollTop = was + Math.max(80, t.clientHeight * 0.35); return t.scrollTop !== was; });
+            await page.waitForTimeout(1200);
+            const now = await page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); if (!el) return null; const R = el.getBoundingClientRect(); return { spot: el.getAttribute('data-quick-anywhere-spot'), rect: [Math.round(R.left), Math.round(R.top), Math.round(R.width), Math.round(R.height)], moved: true }; });
+            seen.push({ ...(now || {}), scrolled: moved });
+          }
+          scrollResults.push({ name, before, seen });
+          await page.evaluate(() => { for (const e of document.querySelectorAll('*')) if (e.scrollTop) e.scrollTop = 0; });
+        }
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `${tag}-${name}.png`) }); }
       };
       await visit('HOME', []);
@@ -110,6 +125,10 @@ const seed = () => {
         check(`[${tag}] ${m.name}: 帯が出ていて、画面の中に収まる`, !!m.strip && m.inView, JSON.stringify(m));
         check(`[${tag}] ${m.name}: 帯がほかのボタンと重ならない`, !!m.strip && m.hits.length === 0, JSON.stringify({ rect: m.rect, hits: m.hits }));
         check(`[${tag}] ${m.name}: 帯に WAVE が出ている`, !!m.strip && /周目/.test(m.strip) && /W\d+\/10/.test(m.strip), m.strip || '');
+      }
+      for (const r of scrollResults) {
+        const same = r.seen.every((x) => x.spot === r.before.spot && x.rect && x.rect[0] === r.before.rect[0] && x.rect[1] === r.before.rect[1]);
+        check(`[${tag}] ${r.name}: スクロールしても帯の位置が変わらない`, same, JSON.stringify(r));
       }
       // 下から出るシート・確認の窓が画面の下半分を覆っているとき(M/B管理の「この1枚を使う」の窓など)は、帯はボタンの字を隠さないよう消える。
       //   本物のシートの代わりに、右下に大きなボタンを並べた窓を足して、帯が「重ならない」か「隠れる」のどちらかになることを見る
