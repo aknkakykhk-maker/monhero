@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DIR = path.resolve(__dirname, '../../docs/progress/player-raise/script');
-const FILES = ['turn.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js'];
+const FILES = ['turn.js', 'turn-bond12.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'mon.js'];
 const SHOW_COUNT = process.argv.includes('--count');
 
 let failed = 0;
@@ -40,9 +40,9 @@ for (const f of FILES) {
 }
 check('台本を読めた(200本以上)', rows.length >= 200, `${rows.length}本`);
 
-const WHO = new Set(['mua', 'atsu', 'issa', 'narr', 'choice']);
+const WHO = new Set(['mua', 'atsu', 'issa', 'narr', 'choice', 'mon']);
 const EXPR = new Set(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
-const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food']);
+const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry']);
 const seen = new Set();
 for (const r of rows) {
   if (!r.id || !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(r.id)) bad('id の形', r);
@@ -105,6 +105,24 @@ for (const r of rows) {
   if (/ブリーダー/.test(t)) bad('プレイヤーは {name}', r);
   if (/スタミナ|ＨＰ|(?<![A-Za-z])HP/.test(t)) bad('「体力」と呼ぶ', r);
 }
+
+// ⑦ 第2弾: みゅあの Lv1・2 版がターンごとのことばのみゅあの行を全部うめている・ていねい語になっている
+const turnMua = rows.filter(r => r.file === 'turn.js' && r.who === 'mua').map(r => r.id);
+const b12 = rows.filter(r => r.file === 'turn-bond12.js');
+const b12ids = new Set(b12.map(r => r.id));
+const missB12 = turnMua.filter(id => !b12ids.has(id + 'b'));
+check('みゅあ Lv1・2 版がターンごとのことばを全部うめている', b12.length > 0 && missB12.length === 0 && b12.length === turnMua.length, missB12.length ? `足りない ${missB12.slice(0, 3).join(', ')}` : `${b12.length}本`);
+for (const r of b12) {
+  if (!Array.isArray(r.bond) || r.bond.join() !== '1,2') bad('Lv1・2 版には bond:[1,2]', r);
+  if (!/です|ます|でした|ました|ません|ましょう|ください|でしょう/.test(r.t)) bad('Lv1・2 版はていねい語', r);
+}
+// ⑧ モンスターは言葉を話さない(短い声だけ)・30種の鳴き声がある
+for (const r of rows.filter(x => x.who === 'mon')) if (r.t.replace(/\{cry\}/g, '◯').length > 16) bad('モンスターの声は短く', r);
+check('種ごとの鳴き声が30種', rows.filter(r => r.id.startsWith('mon.cry.')).length === 30);
+// ⑨ 出来事の見出し(VIDEO-REF 参考動画2の3種類): どの行も見出しの表のどれかに当たる
+const { monsucScriptHeadOf } = require(path.join(DIR, 'heads.js'));
+const noHead = rows.filter(r => !monsucScriptHeadOf(r.id));
+check('どの行も見出し(育成イベント/編成の子のイベント/メインのお話/なし)に当たる', noHead.length === 0, noHead.slice(0, 3).map(r => r.id).join(', '));
 
 check('id・who・表情・差しこみ・口調・言葉', problems.length === 0, problems.length ? `${problems.length}件` : '');
 for (const p of problems.slice(0, 15)) console.log('  ' + p);
