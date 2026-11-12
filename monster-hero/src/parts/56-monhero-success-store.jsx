@@ -106,7 +106,12 @@ const msxNormRun = (raw, SUC) => {
 const msxNormBoxMon = (m) => {
   if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
   const st = {}; MSX_STATS.forEach((k) => { st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0)))); });
+  // 回3・合体・レンタルが足す項目(gen・techs・mast・gt・fav・titles・paid・parents ほか)も消さずに持つ(...m)
   return {
+    ...m,
+    gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))), techs: Array.isArray(m.techs) ? m.techs.filter((x) => typeof x === 'string').slice(0, 8) : [],
+    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [], fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
+    titles: Array.isArray(m.titles) ? m.titles.filter((x) => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
     st, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
     rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
@@ -117,7 +122,7 @@ const msxNormBoxMon = (m) => {
 const msxNormBox = (raw) => {
   const o = msxIsObj(raw) ? raw : {};
   const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
-  return { v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
+  return { ...o, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
 };
 const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = (raw) => {
@@ -126,6 +131,7 @@ const msxNormMeta = (raw) => {
   MSX_ITEM_IDS.forEach((k) => { const n = Math.floor(msxNum(src[k], 0)); if (n > 0) items[k] = Math.min(999, n); });
   const team = (Array.isArray(o.team) ? o.team : []).slice(0, 6).map((t) => (msxIsObj(t) && typeof t.box === 'string' ? { box: t.box.slice(0, 64) } : msxIsObj(t) && typeof t.base === 'string' ? { base: t.base.slice(0, 24) } : null));
   return {
+    ...o, // 回3が足す retired(引退の回数)などを消さずに持つ
     v: 1, best: msxIsObj(o.best) ? o.best : {}, titles: Array.isArray(o.titles) ? o.titles.filter((x) => typeof x === 'string').slice(0, 200) : [],
     seen: msxIsObj(o.seen) ? o.seen : {}, team, lend: typeof o.lend === 'string' ? o.lend.slice(0, 64) : null,
     gift: msxIsObj(o.gift) ? { day: msxStr(o.gift.day, 12), n: msxNum(o.gift.n, 0) } : { day: '', n: 0 },

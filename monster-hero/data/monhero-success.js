@@ -320,6 +320,9 @@
   // ライバル(TOURNAMENT §8b・社長 2026-11-12): 月のはじめに決まる・札にアイコン・ごほうびが大きい
   const RIVAL = Object.freeze({ rate: 0.25, str: 1.1, prize: 1.5, all: 12, tickets: 1, title: 'ライバルに勝った' }); // ごほうびの主は全能力 +12(社長 2026-11-12)
   const OPP_JITTER = 0.08;
+  // 大会の相手の人気・忠誠度 [人気, 忠誠](期の基準)と上乗せ。忠誠は高め(言うことを聞かない番が多すぎると相手が弱くなりすぎる)・人気は期とともに上がる
+  const OPP_POPLOY = Object.freeze({ debut: [10, 60], junior: [20, 65], middle: [35, 70], pro: [50, 75], final: [65, 80] });
+  const OPP_POPLOY_ADD = Object.freeze({ champ: [20, 15], rival: [10, 5] });
   const OPP_GEAR = Object.freeze({ debut: { techs: 2, mastery: 10, tactics: 5 }, junior: { techs: 2, mastery: 20, tactics: 10 }, middle: { techs: 3, mastery: 40, tactics: 20 }, pro: { techs: 4, mastery: 60, tactics: 30 }, final: { techs: 5, mastery: 80, tactics: 40 } });
 
   const create = (deps) => {
@@ -988,7 +991,15 @@
       const w = KEYS.map(k => (rv && rv.stats ? Math.max(1, num(rv.stats[k], 100)) : aptMult(sp, k) * (0.85 + rng() * 0.3)) * (sy.stat === k ? 1.15 : 1));
       const ws = w.reduce((a, x) => a + x, 0);
       const stats = {}; KEYS.forEach((k, i) => { stats[k] = clamp(Math.round(total * w[i] / ws), 1, STAT_MAX); });
-      return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0,
+      // 人気と忠誠度(社長 2026-11-12「敵も人気と忠誠度を設定して」): 期の基準 + 王者/ライバル/頂への道の上乗せ + ±5 のくじ。
+      //   忠誠度は試合の「言うことを聞かない番」、人気は会心に効く(育てる子と同じ)。乱数は能力を決めたあとに引く(能力は今までと同じ)
+      const pk0 = b.kind === 'summit' ? 'final' : b.kind === 'cup' ? periodOf(s.turn).key : b.kind;
+      const OP = OPP_POPLOY[pk0] || OPP_POPLOY.junior;
+      const plus = (who && who.champ ? OPP_POPLOY_ADD.champ : rv ? OPP_POPLOY_ADD.rival : [0, 0]);
+      const jit = () => Math.round((rng() * 2 - 1) * 5);
+      const pop = clamp(rv && Number.isFinite(rv.pop) ? Math.round(rv.pop) : OP[0] + plus[0] + jit(), 0, 100);
+      const loy = clamp(rv && Number.isFinite(rv.loy) ? Math.round(rv.loy) : OP[1] + plus[1] + jit(), 0, 100);
+      return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0, pop, loy,
         name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null }];
     };
 
