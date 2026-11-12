@@ -95,13 +95,13 @@ const assistantLifeRanchPerk = () => {
 
 // マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
 //   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() { // 関数宣言のまま(検査が window から差し替えられるように。const にすると差し替えが効かない)
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
   } catch (_) { return null; }
-};
+}
 
 // 場所ごとの「得」の文(2026-11-12 社長「これ全部効果書いて」)。予定表の行き先えらびの「得:」と、地図の場所の窓・家の帯の「いま行くと得」で同じ文を使う(二重に作らない)。
 //   いまある効果だけ(新しい効果は作らない)。数字は今の値から作る。効果の無い場所('' を返す)は何も出さない
@@ -160,7 +160,7 @@ function AssistantLifePlacePerk({ life, ids, place, onGo = null, land = false })
       <p className="text-[11px] font-black text-amber-300">✨ いま行くと得</p>
       {rows.map(r => (
         <div key={r.k} className="mt-0.5 flex items-center gap-2" data-assistant-life-place-perk-row={r.k}>
-          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
+          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{isImageIconValue(r.icon) ? cardIconNode(r.icon, 16) : r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
           {typeof r.go === 'function' && typeof onGo === 'function' && <button type="button" data-assistant-life-place-perk-go={r.k} onClick={() => onGo(r.go)}
             className="min-h-[44px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12.5px] font-black text-slate-900 active:scale-95">行く ›</button>}
         </div>))}

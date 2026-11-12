@@ -80,6 +80,10 @@ const ROOM = { mua: { put: { ceil: 'mirrorball', wall: 'heartmirror', floor: 'be
     await page.locator(v.land ? '[data-assistant-life-room-act="furn"], [data-assistant-life-do="furn"]' : '[data-assistant-life-roomview-act="furn"]').first().click(); await page.waitForTimeout(400);
     await page.locator('[data-assistant-life-furn-layout]').click(); await page.waitForTimeout(500);
     check(`${T}模様替えの画面が開く・道具と家具が画面の中`, (await inside(page)).length === 0, (await inside(page)).slice(0, 3).join(' / '));
+    { // 床の列のミニキャラ・マスモンが、家具のハンドルを押さえない(ハンドルの中心の点を押すと、ハンドルが受ける・2026-11-12 ミハリ6の注意)
+      const hit = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-layout-handle]')].map(h => { const r = h.getBoundingClientRect(), t = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2); return t && (h === t || h.contains(t)) ? null : `${h.getAttribute('data-assistant-life-layout-handle')}←${t ? (t.getAttribute('data-assistant-life-roomview-mini') || t.closest('[data-assistant-life-roomview-masmon]') ? 'ミニキャラ/マスモン' : t.tagName) : '無'}`; }).filter(Boolean));
+      check(`${T}模様替えの編集中、家具のハンドルはミニキャラ・マスモンに押さえられない`, hit.length === 0, hit.slice(0, 3).join(' / '));
+    }
     // 指でつまんで動かす(くまを右下へ)
     const h = page.locator('[data-assistant-life-layout-handle="bear"]'); const b = await h.boundingBox();
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.mouse.move(b.x + b.width / 2 + 90, b.y + b.height / 2 + 30, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(250);

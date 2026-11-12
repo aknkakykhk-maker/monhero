@@ -25,6 +25,7 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_breeder_icon', 'Mocchi');
     put('mh_onboarded', true);
     put('mh_tutorial_seen_v1', true);
+    put('mh_battle_tutorial_seen_v1', true); // 入口3画面の一言(2026-11-11)が下に出て波の行を覆うのを防ぐ(れんしゅうを全部見た人には出ない)
   });
   await page.addInitScript(eventStorySeed());
   // 新曲などの告知の会話が画面を覆うと、モンヒロバトルのボタンを押せずに止まる(2026-10-05)

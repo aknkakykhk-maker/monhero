@@ -200,7 +200,8 @@ const seed = (withAuto) => `(() => {
       await page.waitForTimeout(120);
       return art(page);
     };
-    const fits = (a) => !!a && a.boxH > 0 && Math.abs(a.artH - a.boxH) <= 2;
+    // 顔の大きさをそろえる収め方(2026-11-11 社長)で、絵は欄より最大1割ほど小さくなってよい(0px=絵が出ていない は不可)。欄より大きくはならない
+    const fits = (a) => !!a && a.boxH > 0 && a.artH >= a.boxH * 0.9 && a.artH <= a.boxH + 2;
     const show = (a) => (a ? `欄${a.boxH}px・絵${a.artH}px${a.known ? '・測った輪郭' : ''}` : 'なし');
     for (const mode of ['', 'canvasFail', 'costume']) {
       VIEW = { width: 390, height: 664 };

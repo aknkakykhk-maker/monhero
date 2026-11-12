@@ -245,7 +245,7 @@ function MsxFxMoment({ kind, title, sub, species, colors, skill, onDone, calm })
       {kind === 'lose' || kind === 'over' ? <div className="msxfx-rain" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ '--i': i }}/>)}</div> : null}
       {species ? <div className="msxfx-mmon"><MsxLiveMon species={species} colors={colors} mood={MSXFX_REACT[react.kind].mood} react={react} voice={false} calm={still}/></div> : null}
       <div className="msxfx-plate">
-        <div className="msxfx-icon">{K.icon}</div>
+        <div className="msxfx-icon">{cardIconNode(K.icon, 28)}</div>
         <div className="msxfx-head">{K.head}</div>
         {title ? <div className="msxfx-title">{title}</div> : null}
         {sub ? <div className="msxfx-sub">{sub}</div> : null}

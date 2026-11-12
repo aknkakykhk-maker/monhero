@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad9263b33d7dcdc7
+// generated-sha256: ac5e0d866b76558c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65223,7 +65223,7 @@ function MsxFxMoment({ kind, title, sub, species, colors, skill, onDone, calm })
       {kind === 'lose' || kind === 'over' ? <div className="msxfx-rain" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ '--i': i }}/>)}</div> : null}
       {species ? <div className="msxfx-mmon"><MsxLiveMon species={species} colors={colors} mood={MSXFX_REACT[react.kind].mood} react={react} voice={false} calm={still}/></div> : null}
       <div className="msxfx-plate">
-        <div className="msxfx-icon">{K.icon}</div>
+        <div className="msxfx-icon">{cardIconNode(K.icon, 28)}</div>
         <div className="msxfx-head">{K.head}</div>
         {title ? <div className="msxfx-title">{title}</div> : null}
         {sub ? <div className="msxfx-sub">{sub}</div> : null}
@@ -67294,7 +67294,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {(() => { // 助手マスモン対戦β(2026-11-12 見つけにくかったので、おしゃべりの次=画面の見える所へ上げた。ミセカタ2・マスモン部の口。RowInfo が null・口が無いときは出さない・2026-11-11 ナカヨシ13の引き継ぎ)
         let bi = null; try { bi = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; }
         if (!bi || !(typeof assistantMasmonBattleOpen === 'function')) return null;
-        return <AssistantLifeDoRow k="masmon-battle" icon="⚔" label={(bi.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, '')} sub={bi.sub || ''} gain={bi.gain || ''} on={() => { try { assistantMasmonBattleOpen({ assistantId: id, from: 'room' }); } catch (_) {} }} disabled={!!bi.disabled} why={bi.why || ''}/>;
+        return <AssistantLifeDoRow k="masmon-battle" icon="⚔" label={(bi.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, '')} sub={bi.sub || ''} on={() => { try { assistantMasmonBattleOpen({ assistantId: id, from: 'room' }); } catch (_) {} }} disabled={!!bi.disabled} why={bi.why || ''}/>;
       })()}
       {soloOn && <AssistantLifeDoRow k="give-solo" icon="🎁" label={w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`} sub="好きなものは 1.5倍・苦手なものは半分" gain="💗 +" on={() => onGiveSolo(id, w && w.group ? w.group.ids : [id])} disabled={!canGiveSolo} why="今日はもう贈れません"/>}
       {w && w.group && <AssistantLifeDoRow k="give" icon="🎁" label={soloOn ? `${w.group.ids.length}人に贈る` : '贈る'} sub="一緒にいる組に贈る" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onGive(w.group)} disabled={!canGive} why="今日はもう贈れません"/>}
@@ -68831,6 +68831,24 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
 }
 const U0 = (F) => F * 2.63;
 
+// ミニキャラの表情: その助手の今の気分から(全身画に表情が無い助手は、表情なしの絵になる)
+const assistantLifeMiniExpr = (pid) => {
+  try {
+    const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[pid] : null;
+    return ({ happy: 'happy', lonely: 'troubled', restless: 'surprise', sulky: 'angry', sleepy: 'normal', eager: 'excited' })[m] || 'happy';
+  } catch (_) { return 'happy'; }
+};
+// ミニキャラ1人: マスモンの箱(g.s)に立つ。高さはマスモンの1.3倍、足もとは箱の底にそろえる。待機のゆれ(上下に小さく)
+function AssistantLifeRoomMini({ who, src, g, calm, delay = 0, onPress = null, noTouch = false }) {
+  const h = Math.round(g.s * 1.3), w = Math.round(h * 0.5);
+  return (
+    <button type="button" data-assistant-life-roomview-mini={who.id} aria-label={who.name} onClick={onPress || undefined} className="absolute"
+      style={{ left: Math.max(2, g.left + (g.s - w) / 2), top: g.y + g.s - h, width: w, height: h, padding: 0, background: 'none', border: 0, cursor: onPress ? 'pointer' : 'default', pointerEvents: noTouch ? 'none' : undefined }}>
+      <span aria-hidden="true" style={{ position: 'absolute', left: -4, right: -4, bottom: -3, height: 10, borderRadius: '50%', background: 'radial-gradient(#0006,transparent 70%)' }}/>
+      <img src={src} alt="" draggable={false} style={{ position: 'absolute', left: '50%', bottom: 0, height: '100%', width: 'auto', maxWidth: 'none', transform: 'translateX(-50%)', transformOrigin: '50% 100%', filter: 'drop-shadow(0 0 .6px #2a1414cc)', animation: calm ? 'none' : `mhlRvBob 2.6s ease-in-out ${delay}s infinite` }}/>
+    </button>);
+}
+
 // 大きな部屋の絵。people … 部屋にいる助手(1〜4人)/away … 留守のときの札 { title, sub }/team … マスモン { monster, nick, colors }
 //   onPerson(id)・onMasmon(index)・onFurn(f) … 押したとき(無ければ押せない)。dock … 下に重ねる札の段(呼ぶ側の部品)
 function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], sleepIds = [], away = null, team = [], furn = [], bubble = '', title = '', sub = '', onBack = null, onPerson = null, onMasmon = null, dock = null, backLabel = '← 家へ', padLeft = 0, layoutWho = null, layoutEdit = null, layoutItems = null }) {
@@ -68865,9 +68883,21 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   const frontKind = asleep ? 'bed' : (ASSISTANT_LIFE_ROOM_FRONT[id] || 'desk');
   const frontW = Math.min(W - 24, lay ? Math.round(Math.max(...lay.map(p => p.cx + p.w / 2)) - Math.min(...lay.map(p => p.cx - p.w / 2)) + 60) : Math.round(W * 0.6));
   // マスモン: 手前の床に2列(4体までは1列)。奥の列は小さく
-  const mN = team.length, rows = mN > 4 ? 2 : 1, perRow = Math.ceil(mN / rows);
+  // ミニキャラ(2026-11-12 社長「今のアップも残しつつ、ミニキャラでモンスターと一緒に出す」): 起きている助手の全身画を、マスモンと同じ床の列に並べる。全身画が無い助手(ドラなど)は出さない
+  const minis = !asleep ? people.slice(0, 4).filter(pid => !sleepIds.includes(pid)).map(pid => { const a = assistantById(pid); const ex = assistantLifeMiniExpr(pid); const src = a && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(a, ex) : null; return src ? { pid, who: a, src } : null; }).filter(Boolean) : [];
+  const miniN = minis.length, mN = team.length + miniN, rows = mN > 4 ? 2 : 1, perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  // 床の列の j 番目の置き場所(ミニキャラもマスモンも同じ計算。足もとの高さは y + s)
+  const rvSlot = (j) => {
+    const row = rows === 2 && j < perRow ? 0 : 1, k = rows === 2 && j >= perRow ? j - perRow : j, cnt = rows === 2 ? (row === 0 ? perRow : mN - perRow) : mN;
+    const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
+    const span = W - 24, x = 12 + (span / cnt) * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
+    const yTop = asleep ? floorY + 70 : floorY + 18; // ベッドは床の手前まで出るので、マスモンはその下
+    const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4))); // 部屋の下にはみ出さない
+    const d = Math.round(((j % 2) ? -1 : 1) * Math.min(28, span / cnt / 3));
+    return { s, y, d, left: Math.max(4, Math.min(W - s - 4, x)) };
+  };
   // layoutWho … 自分の家の助手(保存してある並びで描く)/ layoutItems … よその家の並び(フレンドの家。assistantLifeLayoutUnpack の結果)/ layoutEdit … 模様替えの間
   const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = { W, top: topH, floorY, bottom: H - dockH };
@@ -68875,10 +68905,10 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   return (
     <div ref={ref} className="relative h-full w-full overflow-hidden" data-assistant-life-roomview={id} data-assistant-life-roomview-look={look}
       style={{ background: `linear-gradient(${roomLook.wall[0]},${roomLook.wall[1]})` }}>
-      <style>{`@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`}</style>
+      <style>{`@keyframes mhlRvBob{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.025)}}@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`}</style>
       {/* 腰板・床・窓 */}
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY - 64, height: 64, background: 'linear-gradient(#ffffff40,#00000018)', borderTop: '3px solid #00000022' }}/>
-      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY, bottom: 0, background: 'repeating-linear-gradient(90deg,#a8713f 0 64px,#9a6538 64px 66px),linear-gradient(#b07a4a,#7d5230)', backgroundBlendMode: 'multiply', borderTop: '4px solid #6b4426' }}/>
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY, bottom: 0, background: 'repeating-linear-gradient(90deg,#c4895a 0 64px,#b87c4d 64px 66px),linear-gradient(#cf9562,#9a6a40)', backgroundBlendMode: 'multiply', borderTop: '4px solid #6b4426' }}/>
       <div aria-hidden="true" style={{ position: 'absolute', right: W * 0.06, top: topH + usable * 0.06, width: Math.min(130, W * 0.3), height: Math.min(96, usable * 0.22), borderRadius: 8, border: '6px solid #ffffff99',
         background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}/>
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
@@ -68899,26 +68929,26 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
           {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
 
-      {/* マスモン(全部・歩く)。押すとくわしい画面 */}
-      {team.map((t, i) => {
-        const row = rows === 2 && i < perRow ? 0 : rows === 2 ? 1 : 1, k = rows === 2 && i >= perRow ? i - perRow : i, cnt = rows === 2 ? (row === 0 ? perRow : mN - perRow) : mN;
-        const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
-        const span = W - 24, x = 12 + (span / cnt) * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
-        const yTop = asleep ? floorY + 70 : floorY + 18; // ベッドは床の手前まで出るので、マスモンはその下
-        const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4))); // 部屋の下にはみ出さない
-        const d = Math.round(((i % 2) ? -1 : 1) * Math.min(28, span / cnt / 3));
-        const mt = { monster: t.monster, nick: t.nick, dye: { colors: t.colors || [] } };
-        return (
-          <button key={`${t.monster}-${i}`} type="button" data-assistant-life-roomview-masmon={i} aria-label={t.nick || 'マスモン'} onClick={() => (onMasmon ? onMasmon(i) : setTip(t.nick))} className="absolute"
-            style={{ left: Math.max(4, Math.min(W - s - 4, x)), top: y, width: s, height: s, '--d': `${d}px`, animation: calm ? 'none' : `mhlRvWalk ${7 + (i % 3) * 2}s ease-in-out ${i * 0.7}s infinite` }}>
-            <span aria-hidden="true" style={{ position: 'absolute', left: 6, right: 6, bottom: -3, height: 10, borderRadius: '50%', background: 'radial-gradient(#0006,transparent 70%)' }}/>
-            {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={mt} size={s}/> : null}
-          </button>); })}
       {/* 時間帯: 夜は暗く・灯り */}
       {layoutOn && layoutEdit && <AssistantLifeRoomLayoutHandles items={layoutEdit.items} geom={layoutGeom} sel={layoutEdit.sel} onSelect={layoutEdit.onSelect} onMove={layoutEdit.onMove} onDrop={layoutEdit.onDrop} onScale={layoutEdit.onScale}/>}
       {night && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
       {night && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
       {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}
+      {/* 床の列(マスモンとミニキャラが立つ所)は明るく: 夜の暗さの上に、あたたかい灯りの帯を重ねる(2026-11-12 社長「床の列を明るくしてから」) */}
+      {people.length > 0 && !asleep && minis.length > 0 && <div aria-hidden="true" data-assistant-life-roomview-floorlight className="pointer-events-none absolute inset-x-0" style={{ top: floorY, height: Math.max(60, H - dockH - floorY), background: night ? 'linear-gradient(#ffd99a88,#ffd99a50 55%,transparent)' : 'linear-gradient(#fff3d052,#fff3d022 55%,transparent)' }}/>}
+      {/* マスモン(全部・歩く)。押すとくわしい画面 */}
+      {team.map((t, i) => {
+        const g = rvSlot(i + miniN), s = g.s, y = g.y, d = g.d;
+        const mt = { monster: t.monster, nick: t.nick, dye: { colors: t.colors || [] } };
+        return (
+          <button key={`${t.monster}-${i}`} type="button" data-assistant-life-roomview-masmon={i} aria-label={t.nick || 'マスモン'} onClick={() => (onMasmon ? onMasmon(i) : setTip(t.nick))} className="absolute"
+            style={{ left: g.left, top: y, width: s, height: s, pointerEvents: layoutOn && layoutEdit ? 'none' : undefined, '--d': `${d}px`, animation: calm ? 'none' : `mhlRvWalk ${7 + (i % 3) * 2}s ease-in-out ${i * 0.7}s infinite` }}>
+            <span aria-hidden="true" style={{ position: 'absolute', left: 6, right: 6, bottom: -3, height: 10, borderRadius: '50%', background: 'radial-gradient(#0006,transparent 70%)' }}/>
+            {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={mt} size={s}/> : null}
+          </button>); })}
+      {/* ミニキャラ(夜の暗さの上=暗くしない) */}
+      {minis.map((m, j) => { const g = rvSlot(j); return (
+        <AssistantLifeRoomMini key={m.pid} who={m.who} src={m.src} g={g} calm={calm} delay={j * 0.6} noTouch={!!(layoutOn && layoutEdit)} onPress={onPerson ? () => onPerson(m.pid) : null}/>); })}
       {/* 起きている助手は、夜の暗さ・灯りより前に出す(暗くしない)。寝ている助手は上で、暗さの下に描いている */}
       {!asleep && lay && standItems.map((x, i) => (sleepIds.includes(x.pid)
         ? null : <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} onPress={onPerson ? () => onPerson(x.pid) : null}/>))}
@@ -69036,13 +69066,13 @@ const assistantLifeRanchPerk = () => {
 
 // マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
 //   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() { // 関数宣言のまま(検査が window から差し替えられるように。const にすると差し替えが効かない)
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
   } catch (_) { return null; }
-};
+}
 
 // 場所ごとの「得」の文(2026-11-12 社長「これ全部効果書いて」)。予定表の行き先えらびの「得:」と、地図の場所の窓・家の帯の「いま行くと得」で同じ文を使う(二重に作らない)。
 //   いまある効果だけ(新しい効果は作らない)。数字は今の値から作る。効果の無い場所('' を返す)は何も出さない
@@ -69101,7 +69131,7 @@ function AssistantLifePlacePerk({ life, ids, place, onGo = null, land = false })
       <p className="text-[11px] font-black text-amber-300">✨ いま行くと得</p>
       {rows.map(r => (
         <div key={r.k} className="mt-0.5 flex items-center gap-2" data-assistant-life-place-perk-row={r.k}>
-          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
+          <p className="min-w-0 flex-1 text-[12.5px] font-black leading-snug text-white" style={{ wordBreak: 'auto-phrase' }}><span aria-hidden="true">{isImageIconValue(r.icon) ? cardIconNode(r.icon, 16) : r.icon} </span>{String(r.text || '').replace(/。押すと[^。]*へ$/, '')}</p>
           {typeof r.go === 'function' && typeof onGo === 'function' && <button type="button" data-assistant-life-place-perk-go={r.k} onClick={() => onGo(r.go)}
             className="min-h-[44px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12.5px] font-black text-slate-900 active:scale-95">行く ›</button>}
         </div>))}
@@ -76984,7 +77014,7 @@ const ambwIsHighlight = (e, maxHp) => {
 };
 
 const AMBW_CSS = `
-.ambw{position:fixed;inset:0;z-index:9000;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
+.ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
 .ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
@@ -84359,7 +84389,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
-          {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{b.icon} {b.name}</span>) : null}</div>
+          {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
         <div className="v-side"><span className="v-mini">🤝 忠誠 <b>{SUC.loyalOf(s)}</b></span><span className="v-mini">⭐ 人気 <b>{s.pop}</b></span></div>
         <button type="button" className="v-bagb" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
@@ -84530,7 +84560,7 @@ function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     </div>
     <div className="v-six">
       {MSX_ISSA_KEYS.map((x) => { const p = SUC.issaRate(s, x.key); const dots = Math.max(1, Math.min(4, Math.round(p * 4))); return (
-        <button type="button" key={x.key} className={`v-ix${pick === x.key ? ' sel' : ''}`} onClick={() => setPick(x.key)}>{x.icon} {x.name}
+        <button type="button" key={x.key} className={`v-ix${pick === x.key ? ' sel' : ''}`} onClick={() => setPick(x.key)}>{cardIconNode(x.icon, 16)} {x.name}
           <span className="pr">成功{[0, 1, 2, 3].map((i) => <i key={i} className={i < dots ? 'on' : ''}/>)}</span><span className="ok">⭕ {x.ok}</span><span className="ng">❌ {x.ng}</span></button>); })}
       <button type="button" className={`v-ix no${pick === 'none' ? ' sel' : ''}`} onClick={() => setPick('none')}>🙅 何もしない<span className="ok" style={{ color: '#cbd5e1' }}>ことわる。損はない</span><span className="ng" style={{ color: '#94a3b8' }}>「えー、ノリ悪いなぁ」</span></button>
     </div>
@@ -85219,7 +85249,7 @@ function MsxR3Battle({ run, setRun, v, ev, onPause, debug }) {
         <MsxBand s={s} v={v} ev={ev}/>
         <div className="v-scene" style={{ flex: '1 1 0', minHeight: 150 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>
           <div className="gr" style={{ bottom: 'calc(30% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '30%', height: '40%' }}/>
-          <div className="v-stamp msx-pop" style={{ top: '4%', fontSize: 42 }}>優勝!<small>{st3.icon} {st3.name}{st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : ''}</small></div>
+          <div className="v-stamp msx-pop" style={{ top: '4%', fontSize: 42 }}>優勝!<small>{cardIconNode(st3.icon, 16)} {st3.name}{st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : ''}</small></div>
           {st3.rival ? <div className="v-rvw"><img src={st3.foe ? msxMonThumb(st3.foe.species) : ''} alt=""/>ライバルの {st3.rivalName} に 勝った!<b>ごほうび大</b></div> : null}
           <div className="v-trophy">🏆</div></div>
         <div className="v-prz">{rows.length ? rows.map(([e, n, t, c, nw], i) => <div key={i} className={c}><span className="e">{e}</span><b>{n}</b><span className="t">{t}</span>{nw ? <i>{nw}</i> : null}</div>) : <div><span className="e">🏆</span><b>優勝</b><span className="t">よくがんばった!</span></div>}</div>
@@ -85239,7 +85269,7 @@ function MsxR3Battle({ run, setRun, v, ev, onPause, debug }) {
       <MsxBand s={s} v={v} ev={ev}/>
       <div className={`v-scene ${st3.won ? '' : 'dk'}`} style={{ flex: '1 1 0', minHeight: 260 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/>{st3.won ? <div className="v-burst"/> : null}
         <div className="gr" style={{ bottom: 'calc(40% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '40%', height: '34%', ...(st3.won ? {} : { filter: 'grayscale(.5) drop-shadow(0 8px 5px #0009)' }) }}/>
-        <div className={`v-stamp ${st3.won ? '' : 'ng'}`} style={{ top: '4%', fontSize: st3.won ? 42 : 34 }}>{st3.won ? '優勝!' : '負けた…'}<small>{st3.icon} {st3.name}{d.fame ? `・賞金 💰${msxFmt(d.fame)}` : ''}</small></div>
+        <div className={`v-stamp ${st3.won ? '' : 'ng'}`} style={{ top: '4%', fontSize: st3.won ? 42 : 34 }}>{st3.won ? '優勝!' : '負けた…'}<small>{cardIconNode(st3.icon, 16)} {st3.name}{d.fame ? `・賞金 💰${msxFmt(d.fame)}` : ''}</small></div>
         {s.mealReady && !s.over ? (
           <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>大会のあとだけあげられる(1回){free ? '・今回はただ' : ''}</small></div>
             <div className="ms">{keys.map((k) => (
@@ -85690,7 +85720,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     <div className="v-as">{Object.keys(A).filter((id) => !AT || !A[id].scene || A[id].scene === (atab || (AT.SCENES && AT.SCENES[0] ? AT.SCENES[0].key : A[id].scene))).map((id, i, arr) => {
       const a = A[id]; const got = pick[id] || 0; const dim = !got && kinds >= maxKinds;
       return (<div key={id} className={`v-a${got ? ' got' : ''}${dim ? ' dim' : ''}${i === arr.length - 1 && arr.length % 2 ? ' wide' : ''}`} data-msx-r3-assist={id}>
-        <div className="nm">{a.icon} {a.name}{AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? <small style={{ fontSize: 9, color: '#94a3b8', marginLeft: 4 }}>{AT.TYPE_NAME[a.type]}</small> : null}</div><div className="ex">{a.ex[Math.max(0, Math.min(a.ex.length - 1, (got || 1) - 1))]}</div>
+        <div className="nm">{cardIconNode(a.icon, 16)} {a.name}{AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? <small style={{ fontSize: 9, color: '#94a3b8', marginLeft: 4 }}>{AT.TYPE_NAME[a.type]}</small> : null}</div><div className="ex">{a.ex[Math.max(0, Math.min(a.ex.length - 1, (got || 1) - 1))]}</div>
         <div className="lv" style={{ display: 'grid', gridTemplateColumns: `repeat(${a.cost.length},1fr)`, gap: 3 }}>{a.cost.map((p, j) => <span key={j} className={got === j + 1 ? 'on' : ''} onClick={() => tap(id, j + 1)}>段{j + 1}<b>{p}</b></span>)}</div></div>);
     })}</div>
     <div className="v-pick">取るもの({kinds} / {maxKinds}種類): {kinds ? Object.entries(pick).map(([id, lv], i) => <React.Fragment key={id}>{i ? '・' : ''}<b>{A[id] ? `${A[id].icon} ${A[id].name}` : id} 段{lv}</b></React.Fragment>) : 'まだ選んでいない'}<br/>⚠ 決めたあとは変えられない</div>
@@ -93580,6 +93610,7 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'ヒップアタック': 3, 'マッハトルネード': 3, 'デルタアタック': 3, 'スピンカッター': 3, 'ダブルチョップ': 3, 'ボディーブロー': 4,
   'ワンツーパンチ': 4, 'マシンガンパンチ': 5,
   'ピコピコハンマー': 4, 'ゴーストラッシュ': 4, // ゴースト(2026-10-27)
+  'アイスブレード': 3, 'ドルフィンブロー': 5, 'クリスタルレイン': 5, 'ホワイトエレジー': 4, 'アクアウェイブ': 3, 'アクアブラスト': 3, 'アイスコフィン': 3, 'クリスタルアロー': 4, // 水・氷のカード(切れ目が表に無く1語扱いで2行にならなかった)
 });
 const cardNameScript = (c) => (/[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o');
 const cardNameSplit = (text) => {
@@ -96424,6 +96455,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
+  'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
+  'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
+  'stand-normal/myua_happy': [592, 672, 22, 9, 505, 663],
+  'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
+  'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
+  'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -96440,7 +96479,9 @@ const cardArtKnownBoxBySrc = (src) => {
     const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
     if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
   }
-  return null;
+  // 全身画から切り出した立ち絵(ふだんの服・助手の絵の stand-normal/<接頭辞>_<表情>.png)。表のキーは 'stand-normal/<接頭辞>_<表情>'
+  const sm = /(?:^|\/)(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
+  return sm ? cardArtBoxOf(CARD_ART_KNOWN_BOX[sm[1]]) : null;
 };
 // 測ってある輪郭が、読み込んだ絵の大きさと合うか(絵が差し替わっていたら使わない)
 const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
