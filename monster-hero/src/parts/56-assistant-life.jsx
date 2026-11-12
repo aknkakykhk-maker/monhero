@@ -962,6 +962,10 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
 // ---------- 画面「助手たちの今」・HOME の帯(段階2) ----------
 const assistantLifeOpenScreen = () => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true }); };
 const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({ open: false });
+// 助手ライフを開いて、町の地図のその場所の窓(助手を選んだ状態)を出す。mapFocus は画面の中だけの値で保存しない
+//   (2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」。「いま行くと得」のモンヒロバトルの行が
+//    ふつうのモンヒロバトルの画面へ飛ぶだけで、👀 修行を見る・📣 応援するは地図の窓にしか無かった)
+const assistantLifeOpenMapAt = (place, id = null) => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true, mapFocus: { place, id: id || null, n: Date.now() } }); };
 // 段ごとのひとこと(上の帯)
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
   quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
