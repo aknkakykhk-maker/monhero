@@ -486,3 +486,24 @@
 .v-rm div small{display:block;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:2px}
 .v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.v-rm div.re small{color:#fff}
 @container (max-width:340px){.v-tr .o{width:42px;height:42px;font-size:19px}.v-tr .nm{font-size:9px}.v-lvx{font-size:8.5px}}
+
+/* 持ち物: 上に選んだ物の名前と説明・下に物の一覧と数 */
+.v-hg{display:inline-block;vertical-align:middle;flex:none}
+.v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
+.v-bsel .e{font-size:34px;line-height:1;flex:none}.v-bsel b{display:block;font-size:13.5px}
+.v-bsel small{display:block;font-size:10px;font-weight:700;color:#e2e8f0;line-height:1.4}.v-bsel small.lim{color:#f9a8d4;font-weight:900}
+.v-bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.v-bgrid div{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:12px;padding:6px 2px 4px;text-align:center;min-width:0}
+.v-bgrid .e{display:block;font-size:28px;line-height:34px;height:34px}
+.v-bgrid i{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
+.v-bgrid small{display:block;font-size:8.5px;font-weight:800;line-height:1.25;min-height:22px;margin-top:2px}
+.v-bgrid div.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
+.v-bgrid div.no{opacity:.6}
+.v-bnote{font-size:10px;font-weight:800;line-height:1.7}.v-bnote .dim2{color:#94a3b8;font-size:9px}
+/* 負けたとき: 砂時計2種類とあきらめる */
+.v-rm3{display:grid;gap:5px;margin-top:7px}
+.v-rm3>div{display:flex;align-items:center;gap:8px;background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left}
+.v-rm3 small{display:block;font-size:9px;font-weight:800;color:#e2e8f0}
+.v-rm3 .re{background:linear-gradient(160deg,#f59e0b,#b45309);border-color:#fde68a;box-shadow:0 0 10px #f59e0b88}
+.v-rm3 .nj{background:linear-gradient(120deg,#be185d,#7c3aed 55%,#2563eb);border-color:#fbcfe8;box-shadow:0 0 10px #a78bfa88}
+.v-rm3 .gv{display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}.v-rm3 .gv small{color:#94a3b8;display:inline;margin-left:6px}
