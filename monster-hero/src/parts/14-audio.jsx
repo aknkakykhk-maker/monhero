@@ -879,5 +879,5 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();

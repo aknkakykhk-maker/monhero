@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "a798d1b45469",
-  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":147436298,"count":916},"card":{"bytes":37779758,"count":1048},"all":{"bytes":329997840,"count":2073},"core":{"bytes":21101868,"count":23}},
+  "id": "fdfd2652780f",
+  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":147931686,"count":921},"card":{"bytes":37779758,"count":1048},"all":{"bytes":330493228,"count":2078},"core":{"bytes":21191039,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1534,6 +1534,11 @@
     "images/events/monbeat-event-2026-09-17-wide.jpg": {"v":"b2ff791693ca","size":153034,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17.jpg": {"v":"29df7296db9b","size":146816,"pack":"battle"},
     "images/events/monsaku-teaser.jpg": {"v":"8c2f0382ad8a","size":174803,"pack":"battle"},
+    "images/events/monsaku-teaser2-ascetic.jpg": {"v":"aa0e366357bb","size":103567,"pack":"battle"},
+    "images/events/monsaku-teaser2-bracket.jpg": {"v":"fe37a322b121","size":86668,"pack":"battle"},
+    "images/events/monsaku-teaser2-hourglass.jpg": {"v":"23244a819a0d","size":94339,"pack":"battle"},
+    "images/events/monsaku-teaser2-win.jpg": {"v":"58eaa0eb1301","size":105090,"pack":"battle"},
+    "images/events/monsaku-teaser2.jpg": {"v":"173560d714c1","size":105724,"pack":"battle"},
     "images/events/orihime-dye-preview.jpg": {"v":"fee8c692d78b","size":119964,"pack":"battle"},
     "images/events/orihime-profile.jpg": {"v":"901fad80f508","size":135278,"pack":"battle"},
     "images/events/pandora-wings-2026-wide.jpg": {"v":"f5e3cb59d945","size":136239,"pack":"battle"},
@@ -2078,7 +2083,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"3bab41ba9f63","size":304665,"pack":"core"},
+    "tailwind.css": {"v":"a1df173f59d1","size":304665,"pack":"core"},
     "data/images/images-ally.js": {"v":"390d485f128f","size":78261,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2091,13 +2096,14 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"54980ffcb59f","size":96654,"pack":"core"},
-    "data/changelog.js": {"v":"f8b11e99fa7e","size":1697607,"pack":"core"},
+    "data/changelog.js": {"v":"284fa81a1f7d","size":1699439,"pack":"core"},
     "data/help.js": {"v":"464fc774f1c4","size":802475,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"8a8aa7abd8fb","size":2144774,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"988b29f09d2a","size":10708839,"pack":"core"}
+    "data/success-sounds.js": {"v":"14cc928341aa","size":3695,"pack":"core"},
+    "game-system.compiled.js": {"v":"ff9f69e1c3bd","size":10792483,"pack":"core"}
   }
 }
