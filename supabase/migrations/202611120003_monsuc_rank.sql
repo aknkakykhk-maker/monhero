@@ -42,6 +42,12 @@ create table if not exists public.monsuc_finishes (
     lv between 1 and 99 and loyal between 0 and 100 and pop between 0 and 100
     and power between 0 and 40000 and grade ~ '^(G|F|E|D|C|B|A|S|SS|SSS|M)[0-9]{1,3}$' and engine_version between 1 and 1000)
 );
+-- 前の版(202611120001_・評価に数字なし・総合力 16,500 まで)を流してあっても同じ形にそろえる(何度流しても同じ)
+alter table public.monsuc_finishes drop constraint if exists monsuc_finishes_counts;
+alter table public.monsuc_finishes add constraint monsuc_finishes_counts check (
+  lv between 1 and 99 and loyal between 0 and 100 and pop between 0 and 100
+  and power between 0 and 40000 and grade ~ '^(G|F|E|D|C|B|A|S|SS|SSS|M)[0-9]{1,3}$' and engine_version between 1 and 1000);
+alter table public.monsuc_finishes alter column dye set default '[]'::jsonb;
 create index if not exists monsuc_finishes_power_idx on public.monsuc_finishes (hidden, power desc);
 create index if not exists monsuc_finishes_lineage_idx on public.monsuc_finishes (hidden, lineage, power desc);
 create index if not exists monsuc_finishes_owner_idx on public.monsuc_finishes (owner_id);
