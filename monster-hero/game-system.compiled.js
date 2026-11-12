@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c733f82daf9d5de
+// source-sha256: 25be3a0cc6a55194
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151053,6 +151053,7 @@ const monsucFuse = async ({
   box,
   saveBox: saveBox0,
   onSave,
+  readBox,
   mainId,
   matId,
   locked,
@@ -151085,7 +151086,17 @@ const monsucFuse = async ({
         return '';
       }
     })();
-    const next = monsucFuseApply(box, plan, day);
+    let cur = box;
+    if (typeof readBox === 'function') {
+      try {
+        const r = await readBox();
+        if (r && typeof r === 'object' && Array.isArray(r.mons)) cur = r;
+      } catch (_) {}
+    }
+    const fresh = monsucBoxMons(cur);
+    if (fresh.some(m => m.id === plan.child.id)) return 'この2体はもう合体しています';
+    if (![mainId, matId].every(id => fresh.some(m => m.id === id))) return '保存枠が変わりました。選び直してください';
+    const next = monsucFuseApply(cur, plan, day);
     if (!next) return 'この2体はもう合体しています';
     let raw = null;
     try {
@@ -151125,6 +151136,7 @@ function MonsucFuseSheet({
   box,
   saveBox,
   onSave,
+  readBox,
   locked = [],
   onDone,
   onClose,
@@ -151173,6 +151185,7 @@ function MonsucFuseSheet({
       box,
       saveBox,
       onSave,
+      readBox,
       mainId: main.id,
       matId: mat.id,
       locked,

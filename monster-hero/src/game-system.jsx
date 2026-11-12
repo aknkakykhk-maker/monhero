@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4e0a6abdf5284cc0
+// generated-sha256: 9df50f2ee37deac3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78802,6 +78802,7 @@ function AmgsFuseSheet({ beds, onClose }) {
 // ★この部品は保存枠(mh_monsuc_box_v1)の読み書きを持たない。箱は回3の保存枠の部品から受け取る:
 //     <MonsucFuseSheet box={msxR3ReadBox() の箱} onSave={(次の箱) => storeSet(MSX_KEYS.box, 次の箱)} locked={[編成・貸し出し・育成中の id]} onDone onClose/>
 //   (saveBox という名前でも受ける。保存の失敗は false でも例外でもよい)
+//   readBox={() => msxR3ReadBox()} を渡すと、書く直前に箱を読み直し、その箱に合体を当てて書く(開いたあとに箱が変わっても上書きで消さない・ミハリ5)
 //   箱の形は回3(56-monhero-success-r3-store.jsx・PLAN.md §9): { v:1, cap, mons:[{ id, species, nick, colors, gen, parents:[id,id], st, techs, mast:[techs と同じ順],
 //   loy, pop, lv, gt, rank, score, fav, raised, coach, endAt, paid, over, assists, titles, from }], memory:[{ nick, species, rank, gen, at }](新しい100件) }
 //   貸し出し中の子は locked に入れて使えなくする(お別れのように貸し出しを外すことはしない)
@@ -78858,7 +78859,7 @@ const monsucFuseApply = (box, plan, at) => {
 };
 let monsucFuseBusy = false;
 // 合体する: true / 断る理由の文字列。log と storeGet/storeSet は検査で差し替えられるよう引数でも受ける
-const monsucFuse = async ({ box, saveBox: saveBox0, onSave, mainId, matId, locked, suc, at, io }) => {
+const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, matId, locked, suc, at, io }) => {
   const SUC = suc || monsucFuseCore();
   const saveBox = typeof saveBox0 === 'function' ? saveBox0 : onSave;
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
@@ -78876,7 +78877,13 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, mainId, matId, locke
   monsucFuseBusy = true;
   try {
     const day = at || (() => { try { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 16).replace('T', ' '); } catch (_) { return ''; } })();
-    const next = monsucFuseApply(box, plan, day);
+    // 書く直前に箱を読み直す(読めなければ開いたときの箱)。親2体がもういない・子がもういる → 何もしない
+    let cur = box;
+    if (typeof readBox === 'function') { try { const r = await readBox(); if (r && typeof r === 'object' && Array.isArray(r.mons)) cur = r; } catch (_) {} }
+    const fresh = monsucBoxMons(cur);
+    if (fresh.some(m => m.id === plan.child.id)) return 'この2体はもう合体しています';
+    if (![mainId, matId].every(id => fresh.some(m => m.id === id))) return '保存枠が変わりました。選び直してください';
+    const next = monsucFuseApply(cur, plan, day);
     if (!next) return 'この2体はもう合体しています';
     let raw = null; try { raw = await get(MONSUC_FUSE_KEY, null, false); } catch (_) {}
     const fs = normalizeMonsucFuse(raw);
@@ -78889,7 +78896,7 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, mainId, matId, locke
   } finally { monsucFuseBusy = false; }
 };
 
-function MonsucFuseSheet({ box, saveBox, onSave, locked = [], onDone, onClose, suc = null }) {
+function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, onClose, suc = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
   const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null); const [ready, setReady] = React.useState(true); const [busy, setBusy] = React.useState(false);
@@ -78911,7 +78918,7 @@ function MonsucFuseSheet({ box, saveBox, onSave, locked = [], onDone, onClose, s
     if (!ready || busy || !plan || !plan.ok) return;
     if (sure < 1) { setSure(1); setReady(false); setTimeout(() => setReady(true), 800); return; }
     setBusy(true);
-    const r = await monsucFuse({ box, saveBox, onSave, mainId: main.id, matId: mat.id, locked, suc: SUC });
+    const r = await monsucFuse({ box, saveBox, onSave, readBox, mainId: main.id, matId: mat.id, locked, suc: SUC });
     setBusy(false);
     if (r === true) { setDone({ child: plan.child, lost: [monsucFuseNick(main), monsucFuseNick(mat)] }); setErr(''); if (typeof onDone === 'function') onDone(plan.child); }
     else { setErr(r); setSure(0); }

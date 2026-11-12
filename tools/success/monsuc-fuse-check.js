@@ -62,6 +62,17 @@ const ioOf = (failLog) => { const mem = {}; const order = []; return { mem, orde
     let got = null; const r2 = await F.monsucFuse({ box: boxOf(), onSave: async (n) => { got = n; return true; }, mainId: 'a', matId: 'b', suc: SUC, io: ioOf(false).io });
     ok(r2 === true && got && got.mons.some(m => m.id === SUC.fuseId('a', 'b') && Array.isArray(m.mast) && m.parents.join() === 'a,b'), 'onSave で合体できない・子の形が回3の箱と違う');
   }
+  // 書く直前に箱を読み直す: 開いたあとに足されたモンスターを消さない・親がもういなければ何もしない(ミハリ5)
+  {
+    const later = { ...boxOf(), mons: [...boxOf().mons, mk('e', 'Ham', 500)] };
+    let got = null;
+    const r = await F.monsucFuse({ box: boxOf(), readBox: async () => later, onSave: async (n) => { got = n; return true; }, mainId: 'a', matId: 'b', suc: SUC, io: ioOf(false).io });
+    ok(r === true && got && got.mons.some(m => m.id === 'e') && got.mons.length === 4, '開いたあとに箱へ足されたモンスターが合体で消える');
+    let wrote = false;
+    const gone = { ...boxOf(), mons: boxOf().mons.filter(m => m.id !== 'b') };
+    const r2 = await F.monsucFuse({ box: boxOf(), readBox: () => gone, onSave: async () => { wrote = true; return true; }, mainId: 'a', matId: 'b', suc: SUC, io: ioOf(false).io });
+    ok(r2 !== true && !wrote, '読み直した箱に親がいないのに合体する');
+  }
   // 使えない子
   {
     const t = ioOf(false); const box = boxOf(); const save = async () => true;
