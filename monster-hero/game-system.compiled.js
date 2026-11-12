@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2fda198046b8fc77
+// source-sha256: 9c0eaf85791b8076
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151065,7 +151065,7 @@ const monsucFuse = async ({
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
-  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中の子は合体に使えません';
+  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
   const mons = monsucBoxMons(box);
   const main = mons.find(m => m.id === mainId);
   const mat = mons.find(m => m.id === matId);
@@ -151211,7 +151211,7 @@ function MonsucFuseSheet({
     className: "flex items-center gap-2 text-[14px] font-black"
   }, typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null, monsucFuseSpName(done.child.species), "が生まれました(", done.child.gen, "代目)"), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-200"
-  }, "保存枠に入りました。まだ育てていない子なので、このまま育成を始められます"), React.createElement("small", {
+  }, "保存枠に入りました。まだ育てていないので、このまま育成を始められます"), React.createElement("small", {
     className: "mt-1 block text-[11px] font-bold text-slate-300"
   }, done.lost.join('と'), "は、思い出に名前・ランク・代が残ります")), React.createElement("button", {
     type: "button",
@@ -151220,14 +151220,14 @@ function MonsucFuseSheet({
     className: "mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "① 主の親を選んでください。生まれる子の主血統と型は、主の親から受け継ぎます"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
+  }, "① 主の親を選んでください。生まれるモンスターの主血統と型は、主の親から受け継ぎます"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
-  }, "育て終えた子が2体そろうと合体できます(編成・貸し出し中の子は使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "② もう一方の親を選んでください。生まれる子の副血統は、この子の血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "③ 生まれる子の見通し"), React.createElement("div", {
+  }, "③ 生まれるモンスターの見通し"), React.createElement("div", {
     className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
     "data-monsuc-fuse-child": plan.child.species
   }, typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {

@@ -13,6 +13,7 @@ node tools/ctx.js brief               いまの状態
 
 ## 受け持つファイル
 
+- `monster-hero/src/parts/56-monsuc-fuse.jsx`
 - `monster-hero/src/parts/10-core.jsx`
 - `monster-hero/src/parts/11-masu-progression.jsx`
 - `monster-hero/src/parts/12-training.jsx`

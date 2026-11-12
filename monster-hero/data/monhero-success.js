@@ -1083,9 +1083,9 @@
     const boxSt = (m) => normStats(m && m.st, m && m.species);
     const fuseOk = (a, b) => {
       if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return '2体を選んでください';
-      if (!a.id || a.id === b.id) return '同じ子どうしでは合体できません';
-      if (!speciesList.includes(a.species) || !speciesList.includes(b.species)) return 'この子は合体に使えません';
-      if (a.raised !== true || b.raised !== true) return '育て終えた子どうしだけ合体できます';
+      if (!a.id || a.id === b.id) return '同じモンスターどうしでは合体できません';
+      if (!speciesList.includes(a.species) || !speciesList.includes(b.species)) return 'このモンスターは合体に使えません';
+      if (a.raised !== true || b.raised !== true) return '育て終えたモンスターどうしだけ合体できます';
       return true;
     };
     // 子の種類の候補(くじの前): [{ species, sub, chance }]。同じ血統の組に複数の種類がいれば、主の親と同じ種類を先にし、なければ名前順の先頭

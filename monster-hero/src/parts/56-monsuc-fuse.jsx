@@ -65,7 +65,7 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, mainId, matId, locke
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
-  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中の子は合体に使えません';
+  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
   const mons = monsucBoxMons(box);
   const main = mons.find(m => m.id === mainId); const mat = mons.find(m => m.id === matId);
   const plan = SUC.fusePlan(main, mat);
@@ -125,20 +125,20 @@ function MonsucFuseSheet({ box, saveBox, onSave, locked = [], onDone, onClose, s
         : done ? (<>
           <div className="mt-2 rounded-xl bg-fuchsia-950 p-3" data-monsuc-fuse-done>
             <p className="flex items-center gap-2 text-[14px] font-black">{typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null}{monsucFuseSpName(done.child.species)}が生まれました({done.child.gen}代目)</p>
-            <p className="mt-1 text-[11px] font-bold text-slate-200">保存枠に入りました。まだ育てていない子なので、このまま育成を始められます</p>
+            <p className="mt-1 text-[11px] font-bold text-slate-200">保存枠に入りました。まだ育てていないので、このまま育成を始められます</p>
             <small className="mt-1 block text-[11px] font-bold text-slate-300">{done.lost.join('と')}は、思い出に名前・ランク・代が残ります</small>
           </div>
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
         </>) : !main ? (<>
-          <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれる子の主血統と型は、主の親から受け継ぎます</p>
+          <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統と型は、主の親から受け継ぎます</p>
           {usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
-          {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えた子が2体そろうと合体できます(編成・貸し出し中の子は使えません)</p>}
+          {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)</p>}
         </>) : !mat ? (<>
-          <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれる子の副血統は、この子の血統から決まります</p>
+          <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
           {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
           {usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
         </>) : plan && plan.ok ? (<>
-          <p className="text-[11px] font-bold text-slate-300">③ 生まれる子の見通し</p>
+          <p className="text-[11px] font-bold text-slate-300">③ 生まれるモンスターの見通し</p>
           <div className="mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
             {typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
             <p className="text-[13px] font-black">{monsucFuseSpName(plan.child.species)} <small className="text-[11px] text-amber-200">{plan.child.gen}代目 ・ 未育成</small>
