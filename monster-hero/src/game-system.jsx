@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2438666e21b0c165
+// generated-sha256: ac5e0d866b76558c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23490,7 +23490,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -23519,6 +23519,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 並び替えても**選んでいる曲は変わらない**(並びは見え方だけの話なので)。
   const song=playable.find(entry=>entry.songId===songId)||playable[0]||null;
   const available=song?(difficulties||[]).filter(difficulty=>rhythmChartPlayable(song,difficulty.id)):[];
+  // 有料の曲(2026-11-13・39-rhythm-song-owned.jsx)。songLock={owned,balance,onBuy(song)} を渡された画面(ソロの曲えらび)だけ、
+  // 持っていない有料の曲を「買う」に替える。選んで試し聴きはできるが、買うまで演奏は始められない。マルチ・デバッグは songLock を渡さないので何も変わらない
+  const lockedSong=item=>!!songLock&&!unlockAll&&!!item&&typeof rhythmSongLocked==='function'&&rhythmSongLocked(item.songId,songLock.owned);
+  const [buyAsk,setBuyAsk]=React.useState(null);
+  const [buyBusy,setBuyBusy]=React.useState(false);
+  const [buyError,setBuyError]=React.useState('');
+  const doBuy=async()=>{
+    if(!buyAsk||buyBusy||!songLock||typeof songLock.onBuy!=='function')return;
+    setBuyBusy(true);setBuyError('');
+    try{
+      const r=await songLock.onBuy(buyAsk);
+      if(r&&r.ok)setBuyAsk(null);else setBuyError(rhythmSongBuyReasonText(r&&r.reason));
+    }catch(_){setBuyError(rhythmSongBuyReasonText('save'));}
+    finally{setBuyBusy(false);}
+  };
   // EXPERT・MASTERは、その曲のHARDをクリアするまで選べない(2026-09-05 に1段ずつで始め、2026-10-10 から HARD で2つとも開く)。
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
   // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
@@ -23635,8 +23650,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   },[song?song.songId:'',songId]);
 
   const pickRandom=()=>{
-    if(!list.length)return;
-    const nextSong=list[Math.floor(Math.random()*list.length)];
+    // 買っていない有料の曲はランダムで選ばない(買うまで遊べないため)
+    const pool=list.filter(item=>!lockedSong(item));
+    if(!pool.length)return;
+    const nextSong=pool[Math.floor(Math.random()*pool.length)];
     // ★鍵のかかった難易度は選ばない。選ぶと画面の側がいちばん下の難易度へ戻すので、
     //   「ランダムを押したのにEASYになった」ように見えていた
     const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(nextSong,item.id)&&rhythmDifficultyUnlocked(nextSong.songId,item.id,bestRecords));
@@ -23854,6 +23871,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 はじめての1曲</small>}
+                  {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
@@ -23974,9 +23993,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
               className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
-            <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
+            {lockedSong(song)
+              ?<button type="button" data-rhythm-song-buy={song.songId} onClick={()=>{setBuyError('');setBuyAsk(song);}}
+                className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]">🔒 {rhythmSongPrice(song.songId).toLocaleString()}ビートPで買う</button>
+              :<button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>
+              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>}
             {/* actionExtra … 縦画面だけ、決定の右に置く小さなボタン(ソロの曲えらびのランキング・2026-10-19)。横は footer に置く */}
             {actionExtra&&<div data-rhythm-song-action-extra className="flex shrink-0 landscape:hidden">{actionExtra(song,difficulty)}</div>}
           </div>
@@ -23987,6 +24009,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
     </aside>
 
+    {/* 有料の曲を買う確認(ソロの曲えらびだけ)。買うとその曲は全難易度で遊べる */}
+    {buyAsk&&songLock&&<div data-rhythm-song-buy-modal role="dialog" aria-modal="true" aria-label="曲を買う"
+      className="fixed inset-0 z-[9000] flex items-center justify-center p-4" style={{position:'fixed',inset:0,zIndex:9000,backgroundColor:'rgba(0,0,0,0.75)'}}
+      onClick={()=>{if(!buyBusy)setBuyAsk(null);}}>
+      <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center" onClick={e=>e.stopPropagation()}>
+        <p style={JA_WRAP_STYLE} className="text-sm font-black text-white">{jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)}</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。`)}</p>
+        <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
+        {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
+        <div className="mt-3 flex gap-2">
+          <button type="button" disabled={buyBusy} onClick={()=>setBuyAsk(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40">やめる</button>
+          <button type="button" data-rhythm-song-buy-ok disabled={buyBusy} onClick={doBuy} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-sm font-black text-slate-950 disabled:opacity-40">{buyBusy?'買っています…':'買う'}</button>
+        </div>
+      </div>
+    </div>}
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
         並びを変えても、選んでいる曲・難易度・自己ベスト・全国ランキングは何も変わらない。 */}
     {/* ジャケットの拡大。曲えらびの上に重ねるだけで、選んでいる曲・難易度・再生中の曲は動かさない。
@@ -37209,6 +37246,134 @@ const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
 const sbFetchBeatRankMine = (breederId) => sbFetchPlayerRankMine('beat', breederId);
 const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 
+// ---- part: 39-rhythm-song-owned.jsx ----
+// ===== モンヒロビート: 新曲をビートPで1曲ずつ買う仕組み(2026-11-13・台帳 2026-11-08「新曲の購入(ビートP500)の細部」) =====
+//
+// 決まり(社長):
+//  ・今ある曲は無料。**有料の印を付けた曲だけ**買う(印 = 下の RHYTHM_SONG_PRICES に曲の id と値段を書くこと)。
+//    2026-11-13 の時点では、どの曲にも印は付けない(本オープン後の LAMIA・サウダージ2曲・メガロバニア2曲も無料のまま)
+//  ・買った曲は全難易度で遊べる。曲えらびとビートP交換所の「曲」の両方で買える。お試しは試し聴きだけ(買うまで演奏はできない)
+//  ・マルチは持っていない人もその回だけ遊べて、記録も載る(ここでは何も止めない)。総合・週間ランキングにもふつうに入る
+//  ・助手とのセッションは、無料の曲+持っている曲から選ぶ(rhythmSongPickable)
+//  ・値段は RHYTHM_SONG_PRICES の1か所で変える
+//  ・持っている曲は新しいキー mh_rhythm_owned_songs_v1(曲の id の配列)。データ引き継ぎは mh_ を全部写すので一緒に移る
+//
+// ★有料の曲の足し方は rhythm-song-add スキルの「有料の曲にするとき」。この表に1行足すだけで、画面・交換所・助手が従う
+const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
+const RHYTHM_SONG_DEFAULT_PRICE = 500;
+// 有料の曲: { 曲の id: ビートP }。いまは1曲もない(無料のまま)
+const RHYTHM_SONG_PRICES = Object.freeze({});
+
+const rhythmSongPrice = (songId) => {
+  const n = Math.floor(Number(RHYTHM_SONG_PRICES[String(songId || '')]));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const rhythmSongIsPaid = (songId) => rhythmSongPrice(songId) > 0;
+// 持っている曲の保存値を、曲の id の配列に直す(無い・壊れている → 空。重複と文字でない値は捨てる)
+const normalizeRhythmOwnedSongs = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter((id) => typeof id === 'string' && id))];
+};
+// 買わないと遊べない曲か(有料の印があり、まだ持っていない)
+const rhythmSongLocked = (songId, owned) => rhythmSongIsPaid(songId) && !normalizeRhythmOwnedSongs(owned).includes(String(songId || ''));
+// 有料の曲の一覧(公開している曲の中から。交換所の「曲」と、買える曲の数に使う)
+const rhythmPaidSongList = () => (typeof rhythmDemoSongs === 'function' && typeof RHYTHM_SONGS !== 'undefined' ? rhythmDemoSongs(RHYTHM_SONGS) : []).filter((song) => song && rhythmSongIsPaid(song.songId));
+
+// 端末の持っている曲(読んだ値を覚えておき、買ったら画面へ知らせる)
+const RHYTHM_SONG_OWNED = (() => {
+  let list = [];
+  let loading = null;
+  const subs = new Set();
+  const emit = () => subs.forEach((fn) => { try { fn(list); } catch (_) { /* 画面が消えたあと */ } });
+  const api = {
+    get: () => list,
+    replace(next) { list = normalizeRhythmOwnedSongs(next); emit(); },
+    // 保存から読み直す。同時に呼ばれたら1回にまとめる。読めなかったら今の値のまま
+    reload() {
+      if (!loading) {
+        loading = Promise.resolve().then(() => storeGet(RHYTHM_SONG_OWNED_KEY, [], false))
+          .then((v) => { list = normalizeRhythmOwnedSongs(v); emit(); })
+          .catch(() => {})
+          .then(() => { loading = null; return list; });
+      }
+      return loading;
+    },
+    subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
+  };
+  return api;
+})();
+// 画面から持っている曲を読む。開いたときに保存から読み直す(買ったら自動で描き直される)
+const useRhythmOwnedSongs = () => {
+  const [owned, setOwned] = React.useState(() => RHYTHM_SONG_OWNED.get());
+  React.useEffect(() => {
+    const off = RHYTHM_SONG_OWNED.subscribe(setOwned);
+    RHYTHM_SONG_OWNED.reload();
+    return off;
+  }, []);
+  return owned;
+};
+// 助手が選べる曲(無料の曲+持っている曲)。絞った結果が空になるときは、元のままにする(曲が選べなくならないように)
+const rhythmSongPickable = (songIds) => {
+  const ids = Array.isArray(songIds) ? songIds : [];
+  const owned = RHYTHM_SONG_OWNED.get();
+  const kept = ids.filter((id) => !rhythmSongLocked(id, owned));
+  return kept.length ? kept : ids;
+};
+
+// 曲を買う(曲えらびと交換所の両方から呼ぶ)。
+// ★保存されている値を読み直してから計算し、ビートPと持っている曲を1つの取引で保存する(失敗したら両方戻す)
+// 戻り値 { ok, reason: 'unknown'|'free'|'owned'|'points'|'save', eventPoints, cost }
+const rhythmSongBuy = async (songId) => {
+  const id = String(songId || '');
+  const price = rhythmSongPrice(id);
+  if (!id || !(typeof RHYTHM_SONGS !== 'undefined' && RHYTHM_SONGS.some((song) => song && song.songId === id))) return { ok: false, reason: 'unknown' };
+  if (!price) return { ok: false, reason: 'free' };
+  const beforePoints = await loadRhythmEventPoints();
+  const stored = await storeGet(RHYTHM_SONG_OWNED_KEY, [], false);
+  const cur = normalizeRhythmOwnedSongs(stored);
+  if (cur.includes(id)) return { ok: false, reason: 'owned', eventPoints: beforePoints };
+  if (!(beforePoints >= price)) return { ok: false, reason: 'points', eventPoints: beforePoints, cost: price };
+  const next = [...cur, id];
+  const nextPoints = beforePoints - price;
+  const saved = await saveStoredValuesOrRollback([
+    { key: RHYTHM_EVENT_POINTS_KEY, before: beforePoints, next: nextPoints },
+    { key: RHYTHM_SONG_OWNED_KEY, before: stored, next },
+  ], storeGet, storeSet);
+  if (!saved) return { ok: false, reason: 'save', eventPoints: beforePoints };
+  RHYTHM_SONG_OWNED.replace(next);
+  return { ok: true, eventPoints: nextPoints, cost: price };
+};
+const rhythmSongBuyReasonText = (reason) => (reason === 'points' ? 'ビートPが足りません。'
+  : reason === 'owned' ? 'この曲はもう持っています。'
+    : reason === 'save' ? '買うのを保存できませんでした。ビートPと持っている曲は変わっていません。'
+      : '買えませんでした。');
+
+// ビートP交換所の「曲」の売り場に並べる札(曲の絵・名前・値段)。有料の曲が1曲もなければ何も並ばない(タブも出ない)
+function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSheet, onExchange, onZoomIcon = null }) {
+  const owned = useRhythmOwnedSongs();
+  const songs = rhythmPaidSongList();
+  if (!songs.length) return null;
+  return <>
+    <p data-rhythm-song-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      買うと、その曲を全部の難易度で遊べます。みんなで対戦なら、持っていなくてもその回だけ遊べます
+    </p>
+    {songs.map((song) => {
+      const price = rhythmSongPrice(song.songId);
+      const has = owned.includes(song.songId);
+      const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: '新曲(全難易度で遊べます)' };
+      const offer = { id: `song_${song.songId}`, kind: 'song', songId: song.songId, cost: price };
+      return <MarketProductCard key={song.songId} dataAttrs={{ 'data-rhythm-song-offer': song.songId }}
+        item={item} owned={has} comingSoon={false}
+        canBuy={!has && points >= price && !busy}
+        disabled={disabled}
+        onZoom={() => onZoomIcon && src && onZoomIcon(item)}
+        onBuy={() => openSheet({ item, confirm: () => (onExchange ? onExchange(offer, 1) : false) })}
+      />;
+    })}
+  </>;
+}
+
 // ---- part: 39-multi-stamp.jsx ----
 // ---- マルチのスタンプ(モンヒロビートのマルチ・MFバトルカードのマルチ。2026-11-11 社長「チャットのほかにスタンプがほしい」) ----
 // 決めごと(台帳 2026-11-11 の2行・案 docs/progress/multi-stamp/PLAN.md):
@@ -41971,7 +42136,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'stamp',label:'スタンプ'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'stamp',label:'スタンプ'},...(typeof rhythmPaidSongList==='function'&&rhythmPaidSongList().length?[{key:'song',label:'曲'}]:[]),...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -42333,6 +42498,8 @@ function BreederMarketScreen({
             />;
           })}
           {/* マルチのスタンプ(2026-11-11 社長「いっぱい作って、カスタマイズできるようにしたい」「ビートPで買い足す」)。品と値段は 39-multi-stamp.jsx の表 */}
+          {/* 新曲(2026-11-13)。有料の印を付けた曲だけ並ぶ。印が1曲も無ければタブも出ない(39-rhythm-song-owned.jsx) */}
+          {eventTab==='song'&&<RhythmSongShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
           {eventTab==='stamp'&&<MultiStampShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
           {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
               服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
@@ -43593,6 +43760,9 @@ function RhythmSongSelectScreen({
         loadRhythmEventPoints().then(value=>{if(alive)setBeatPointBalance(value);}).catch(()=>{});
         return ()=>{alive=false;};
       },[beatPointReleased]);
+      // 持っている有料の曲(2026-11-13)。買うとビートPの表示も減らす。デバッグの全解放では何も止めない
+      const ownedSongs=useRhythmOwnedSongs();
+      const buySong=async song=>{const r=await rhythmSongBuy(song.songId);if(r&&typeof r.eventPoints==='number')setBeatPointBalance(r.eventPoints);return r;};
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -43918,6 +44088,7 @@ function RhythmSongSelectScreen({
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
           playLabel={debugAll?'決定(記録しない)':undefined}
+          songLock={debugAll?null:{owned:ownedSongs,balance:beatPointBalance,onBuy:buySong}}
           noticeHidden={foldedNoticeCount}
           toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
@@ -58282,6 +58453,8 @@ function RhythmMultiScreen(props) {
 function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   const watchV = useRhythmWatchView();
+  // 助手が選ぶ曲を「無料+持っている曲」にするため、持っている曲を先に読んでおく(2026-11-13。マルチで何かを止めるわけではない)
+  useRhythmOwnedSongs();
   // 観戦(2026-11-11): 誘われて入ったら演奏中だった人は、待機のあいだ、その演奏を見られる。入った直後と演奏中の部屋で、静かに「見ています」を送る
   // (演奏が見つからなければ何も出さない)。自分が演奏に入るときは止める。外から見ていた人が部屋へ入ったら、外からの観戦はやめる
   React.useEffect(() => {
@@ -61127,7 +61300,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
   pair(a, b) { return rhythmAssistSessionIdOf(a) || rhythmAssistSessionIdOf(b) ? 'banter' : brain.pair(a, b); },
   pick(catalog, masuId) {
     const aid = rhythmAssistSessionIdOf(masuId);
-    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, catalog) : brain.pick(catalog, masuId);
+    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, typeof rhythmSongPickable === 'function' ? rhythmSongPickable(catalog) : catalog) : brain.pick(catalog, masuId);
   },
 });
 
@@ -118088,6 +118261,20 @@ function MonsterHeroGame() {
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // マルチのスタンプ(2026-11-11)。ビートPとスタンプの持ち物(mh_multi_stamps_v1)を1つの取引で保存する(39-multi-stamp.jsx)
+    // 新曲(2026-11-13)。ビートPと持っている曲(mh_rhythm_owned_songs_v1)を1つの取引で保存する(39-rhythm-song-owned.jsx)
+    if (offer?.kind==='song') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await rhythmSongBuy(offer.songId);
+        if (r.ok) { setRhythmEventPoints(r.eventPoints); saveMissionProgress('market'); }
+        else setMarketExchangeError(rhythmSongBuyReasonText(r.reason));
+        return r;
+      } catch {
+        setMarketExchangeError(rhythmSongBuyReasonText('save'));
+        return { ok:false, reason:'save' };
+      } finally { marketPurchaseProcessingRef.current = false; }
+    }
     if (offer?.kind==='stamp') {
       marketPurchaseProcessingRef.current = true;
       setMarketExchangeError('');
@@ -130567,7 +130754,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
-            onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();if(raidRhythm){void startRaidJackRhythmPlay(song,difficulty);return;}setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
+            onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSongLocked(song.songId,RHYTHM_SONG_OWNED.get()))return;/* 買っていない有料の曲は始めない(画面でも止めているが、ここでも止める) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();if(raidRhythm){void startRaidJackRhythmPlay(song,difficulty);return;}setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
             quickClearCounts={quickClearCounts}
             quickRhythmBackgroundVisible={quickRhythmBackgroundVisible}
             rhythmSixLaneIntroVisible={rhythmSixLaneIntroVisible}

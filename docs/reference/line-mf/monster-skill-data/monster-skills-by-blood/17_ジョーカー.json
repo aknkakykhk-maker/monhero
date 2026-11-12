@@ -1,0 +1,1001 @@
+{
+  "blood": "ジョーカー",
+  "counts": {
+    "skills": 27
+  },
+  "skills": [
+    {
+      "skillId": "sk-0368",
+      "name": "デスカッター",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1753",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 364,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0369",
+      "name": "デスナックル",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "D",
+      "accuracy": "E",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1716",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1750",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 365,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0370",
+      "name": "デスパンチ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1711",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 366,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0371",
+      "name": "デスエナジー",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "E",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1717",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1750",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 367,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0372",
+      "name": "デスクロー",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0019",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1702",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1754",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1752",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 368,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0373",
+      "name": "デススラッシュ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1716",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1751",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 369,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0374",
+      "name": "ダークウィンド",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 33,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1717",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1753",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1754",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 370,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0375",
+      "name": "ダークフレイム",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0435",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1702",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1752",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1751",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 371,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0376",
+      "name": "カオススラッシュ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 29,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0436",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0309",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1711",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1750",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 372,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0377",
+      "name": "デスファイナル",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "S",
+      "accuracy": "F",
+      "gutsDown": "S",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0024",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1717",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 373,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0378",
+      "name": "デスゲート",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": "近",
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0014",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1702",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 374,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0379",
+      "name": "デスダンス",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "A",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0128",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1711",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1711",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1711",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 375,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0380",
+      "name": "アビススラッシュ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "D+",
+      "gutsDown": "S",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0437",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0309",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1754",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 376,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0381",
+      "name": "エクスキューション",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 50,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0175",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0438",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1753",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1753",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1753",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 377,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0382",
+      "name": "シンギュラリティ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 44,
+      "damage": "S+",
+      "accuracy": "B+",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0439",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0440",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1751",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 378,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0383",
+      "name": "ネクロスラッシュ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0441",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0309",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1752",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 379,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0720",
+      "name": "正義の刃",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1754"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 380,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0721",
+      "name": "革命の日",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1754"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 381,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0722",
+      "name": "ハドロン砲",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0040",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0647",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1754"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 382,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0723",
+      "name": "デススマッシュ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "F",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1753"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 383,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0724",
+      "name": "シャドウストライク",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "A",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0648",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0024",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1753"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 384,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0725",
+      "name": "ライトエナジー",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1711"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 385,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0726",
+      "name": "カオスエレメント",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 43,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0649",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0040",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1711"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 386,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0727",
+      "name": "心臓掌握",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0650",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0509",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1750",
+        "1751"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 387,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0801",
+      "name": "失墜する天空",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 48,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "S",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0714",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1751"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 388,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0802",
+      "name": "この先は修羅の道ぞ",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "S",
+      "gutsDown": "E+",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0715",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1752"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 389,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0803",
+      "name": "バロム砲",
+      "version": 1,
+      "blood": "ジョーカー",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 50,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0716",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0717",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1752"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 390,
+      "status": "verified"
+    }
+  ]
+}

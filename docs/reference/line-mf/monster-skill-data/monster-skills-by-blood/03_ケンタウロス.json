@@ -1,0 +1,947 @@
+{
+  "blood": "ケンタウロス",
+  "counts": {
+    "skills": 23
+  },
+  "skills": [
+    {
+      "skillId": "sk-0209",
+      "name": "ハンドパワー",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "F",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0309",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 39,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0210",
+      "name": "スパイラルスピア",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "近",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "F",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0302",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0305",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0308",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0350",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 40,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0211",
+      "name": "スマッシュ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0303",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 41,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0212",
+      "name": "ワープスピア",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0351",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0353",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 42,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0213",
+      "name": "スロウランサー",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "B",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0297",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0305",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0317",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 43,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0214",
+      "name": "パワーウェーブ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0302",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0303",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0304",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 44,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0215",
+      "name": "スマッシュコンボ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D+",
+      "accuracy": "B+",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0297",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "0303",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0298",
+          "unlock": {
+            "monsterId": "0303",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0309",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0352",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 45,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0216",
+      "name": "超ハンドパワー",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0299",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0353",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 46,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0217",
+      "name": "ラッシュスピア",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0304",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0350",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 47,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0218",
+      "name": "チャージラッシュ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0297",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "0308",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "0308",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0308",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 48,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0219",
+      "name": "アーススピア",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0317",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0352",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0351",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 49,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0220",
+      "name": "メテオドライブ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "A",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0300",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "0351",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "0351",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0351",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 50,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0221",
+      "name": "ブラッディクロス",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "B+",
+      "accuracy": "S",
+      "gutsDown": "C",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0301",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0297",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0304",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 51,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0222",
+      "name": "Zスマッシュ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "B",
+      "accuracy": "A+",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0302",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0303",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0352",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "0352",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0352",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 52,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0223",
+      "name": "フォトンドライブ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "A",
+      "accuracy": "B+",
+      "gutsDown": "B+",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0304",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0305",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0350",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0350",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0350",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 53,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0224",
+      "name": "ダークマター",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0306",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0307",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0353",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 54,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0632",
+      "name": "スピアドライブ",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "遠",
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0297",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "0303",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0298",
+          "unlock": {
+            "monsterId": "0303",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0351"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 55,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0633",
+      "name": "神槍グングニル",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 43,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0586",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0351"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 56,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0634",
+      "name": "神駆ノ陣",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "D",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0350"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 57,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0635",
+      "name": "破魔矢",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0587",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0350"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 58,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0636",
+      "name": "ハイパーミサイル",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "B",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0588",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0548",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0353"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 59,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0637",
+      "name": "ジェノサイド",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0589",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0590",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "0353",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "0353",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0353"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 60,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0638",
+      "name": "ブラッディクロス・赫",
+      "version": 1,
+      "blood": "ケンタウロス",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "S+",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0301",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0297",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0308"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 61,
+      "status": "verified"
+    }
+  ]
+}

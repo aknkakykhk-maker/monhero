@@ -1,0 +1,1408 @@
+{
+  "blood": "ピクシー",
+  "counts": {
+    "skills": 33
+  },
+  "skills": [
+    {
+      "skillId": "sk-0258",
+      "name": "レイ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0270",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": {
+            "monsterId": "0124",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "0124",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0101",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0124",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0151",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 646,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0259",
+      "name": "サンダー",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 13,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": {
+            "monsterId": "0109",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "0109",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0102",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0103",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0109",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 647,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0260",
+      "name": "はり手",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 10,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0115",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0155",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 648,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0261",
+      "name": "メガレイ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0270",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0103",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0109",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0111",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0121",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0125",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0155",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0152",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 649,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0262",
+      "name": "ライトニング",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0115",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0117",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0120",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0126",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 650,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0263",
+      "name": "ハイキック",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "C",
+      "accuracy": "C+",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0102",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0123",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0124",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0154",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0180",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0150",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 651,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0264",
+      "name": "なげキッス",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "G",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0271",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0117",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0151",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 652,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0265",
+      "name": "バン",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0272",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0273",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0111",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0120",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0126",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0154",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0152",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0180",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0150",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 653,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0266",
+      "name": "ヒールレイド",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0124",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0272",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0121",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0123",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0125",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 654,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0267",
+      "name": "ギガレイ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0270",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0154",
+          "rarity": 5
+        },
+        {
+          "monsterId": "0180",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 655,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0268",
+      "name": "ギガサンダー",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "C+",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0238",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0272",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "0123",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "0123",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0123",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 656,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0269",
+      "name": "ビッグバン",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "A",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0274",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "0126",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "0126",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0126",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 657,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0270",
+      "name": "投げ飛ばし",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": "遠",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0124",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0272",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "0125",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "0125",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0125",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 658,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0271",
+      "name": "アストラルレイ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 52,
+      "damage": "S+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0275",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0276",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0120",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0120",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0120",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 659,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0272",
+      "name": "コズミックバン",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "A",
+      "accuracy": "C+",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0277",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0278",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0151",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0151",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0151",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 660,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0273",
+      "name": "ファイトクラウド",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0279",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0280",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0150",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 661,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0274",
+      "name": "ギガライトニング",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "B+",
+      "accuracy": "S",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0238",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0281",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0152",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 662,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0600",
+      "name": "パンチ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0150",
+        "0152"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 663,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0601",
+      "name": "キック",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0567",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 664,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0602",
+      "name": "ドラゴ・バスター",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "E+",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0568",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0150",
+        "0152"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 665,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0603",
+      "name": "ドラゴ・ノヴァ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0569",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0124",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0150",
+        "0152"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 666,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0604",
+      "name": "破壊の暴君",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0570",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0571",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "0150",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "0150",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 667,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0605",
+      "name": "アクアキッス",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "F+",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0454",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0120"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 668,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0606",
+      "name": "シャインアクア",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 41,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0572",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0451",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0120"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 669,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0607",
+      "name": "神楽",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "C+",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0573",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0574",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0151"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 670,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0608",
+      "name": "ハッピートリック",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0154",
+        "0180"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 671,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0609",
+      "name": "スターレイ",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0270",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0154",
+        "0180"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 672,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0610",
+      "name": "トリートキッス",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0332",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0154",
+        "0180"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 673,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0611",
+      "name": "ハッピーハロウィン",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0575",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0154",
+        "0180"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 674,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0612",
+      "name": "王魔雷",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 13,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0270",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0190"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 675,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0613",
+      "name": "王魔彗覇",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "A",
+      "accuracy": "SS",
+      "gutsDown": "A",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0576",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0577",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0190",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0190",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0190"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 676,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0614",
+      "name": "メガレイ・O",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 29,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0153"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 677,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0615",
+      "name": "ライトニング・O",
+      "version": 1,
+      "blood": "ピクシー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0153"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 678,
+      "status": "verified"
+    }
+  ]
+}
