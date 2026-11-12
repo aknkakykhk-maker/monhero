@@ -31,8 +31,11 @@ const check = (label, ok, detail) => {
   const { SUC } = load();
 
   // ---- A ----
-  check('A アシストの id がサーバと計算の芯で同じ', lend.LEND_ASSIST_IDS.slice().sort().join() === Object.keys(SUC.ASSISTS).sort().join(),
-    `${lend.LEND_ASSIST_IDS.join(',')} / ${Object.keys(SUC.ASSISTS).join(',')}`);
+  // 2026-11-12: サーバは第2版の表(40種類・段1〜5)の id を受ける。芯が効き目を持つ種類はその中にある(新しい種類は効き目を作るまで芯が無視する)
+  const AT = require(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'monhero-success-assist.js'));
+  check('A アシストの id がサーバとアシストの表(第2版)で同じ・段の上限も同じ', lend.LEND_ASSIST_IDS.slice().sort().join() === AT.LIST.map((a) => a.id).sort().join() && lend.LEND_ASSIST_LV_MAX === AT.LV_MAX,
+    `${lend.LEND_ASSIST_IDS.length}種・段${lend.LEND_ASSIST_LV_MAX} / 表 ${AT.LIST.length}種・段${AT.LV_MAX}`);
+  check('A 芯が効き目を持つ種類は、どれもサーバが受ける', Object.keys(SUC.ASSISTS).every((id) => lend.LEND_ASSIST_IDS.includes(id)), Object.keys(SUC.ASSISTS).filter((id) => !lend.LEND_ASSIST_IDS.includes(id)).join(','));
   const missing = SUC.speciesList.filter((sp) => !catalog.species[sp]);
   check('A 育成できる種はサーバの図鑑に全部ある(貸し出せる)', missing.length === 0, missing.join(','));
   const sp = SUC.speciesList[0];
@@ -43,10 +46,11 @@ const check = (label, ok, detail) => {
   check('A 能力 1000 は断る', p({ ...good, stats: { ...good.stats, pow: 1000 } }).error === 'stats');
   check('A 能力が小数・文字は断る', p({ ...good, stats: { ...good.stats, pow: 1.5 } }).error === 'stats' && p({ ...good, stats: { ...good.stats, pow: '9' } }).error === 'stats');
   check('A 知らない種は断る', p({ ...good, species: 'NoSuchMon' }).error === 'species');
-  check('A アシスト5種類・同じ id 2つ・段4・知らない id は断る', [
+  check('A アシスト5種類・同じ id 2つ・段6・段0・知らない id は断る', [
     [{ id: 'sokoji', lv: 1 }, { id: 'kaketsuke', lv: 1 }, { id: 'hirameki', lv: 1 }, { id: 'atooshi', lv: 1 }, { id: 'kizuna', lv: 1 }],
-    [{ id: 'sokoji', lv: 1 }, { id: 'sokoji', lv: 2 }], [{ id: 'sokoji', lv: 4 }], [{ id: 'boost', lv: 1 }],
+    [{ id: 'sokoji', lv: 1 }, { id: 'sokoji', lv: 2 }], [{ id: 'sokoji', lv: 6 }], [{ id: 'sokoji', lv: 0 }], [{ id: 'boost', lv: 1 }],
   ].every((a) => p({ ...good, assists: a }).error === 'assists'));
+  check('A 段5・第2版の新しい種類は通る', !p({ ...good, assists: [{ id: 'sokoji', lv: 5 }, { id: 'miharu', lv: 3 }] }).error);
   check('A 名前に URL・長すぎ・< は断る', ['http://x', 'あ'.repeat(13), 'a<b'].every((n) => p({ ...good, name: n }).error === 'name'));
   check('A 色が長すぎ・< を含むと断る', p({ ...good, colors: { a: 'x'.repeat(500) } }).error === 'colors' && p({ ...good, colors: { a: '<script>' } }).error === 'colors');
 

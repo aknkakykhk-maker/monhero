@@ -11,8 +11,10 @@ export const LEND_FAME_DAILY_N = 10;     // 仮。貸した側が名声をもら
 export const LEND_FAME_EACH = 20;        // 仮。1回ごとの名声
 export const LEND_STAT_MAX = 999;
 export const LEND_ASSIST_MAX = 4;
-// monster-hero/data/monhero-success.js の ASSISTS と同じ id(tools/friends/monsuc-lend-check.js が食い違いを見張る)
-export const LEND_ASSIST_IDS = Object.freeze(['sokoji', 'kaketsuke', 'hirameki', 'atooshi', 'kizuna', 'ochitsuki', 'itawari', 'shugyo', 'hitonatsu']);
+// アシスト能力の表 monster-hero/data/monhero-success-assist.js(第2版・40種類・段1〜5)と同じ id と段の上限
+//   (tools/friends/monsuc-lend-check.js が表との食い違いを見張る。表を変えたらここも変えて配り直す)
+export const LEND_ASSIST_IDS = Object.freeze(['sokoji', 'kizuna', 'atooshi', 'hirameki', 'ochitsuki', 'itawari', 'miharu', 'kibarashi', 'kunpow', 'kunwise', 'kunhit', 'kuneva', 'kuntough', 'kunlife', 'kaketsuke', 'hitonatsu', 'shitashi', 'nakayoshi', 'tagpow', 'shitsuke', 'gussuri', 'asobi', 'kuishinbo', 'tsukisoi', 'genki', 'tairyoku', 'shugyo', 'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu', 'gatsu', 'miseba', 'mitate', 'kensho', 'mimamori']);
+export const LEND_ASSIST_LV_MAX = 5;
 const LEND_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 const SPECIES_RE = /^[A-Za-z0-9_]{1,40}$/;
 const COLORS_MAX = 400;                  // 色(染色)の写しの JSON の長さの上限
@@ -37,7 +39,7 @@ export const parseLend = (raw, catalog, nameProblem) => {
   const assists = [];
   const seen = new Set();
   for (const a of list) {
-    if (!a || typeof a !== 'object' || !LEND_ASSIST_IDS.includes(a.id) || seen.has(a.id) || !isInt(a.lv) || a.lv < 1 || a.lv > 3) return { error: 'assists' };
+    if (!a || typeof a !== 'object' || !LEND_ASSIST_IDS.includes(a.id) || seen.has(a.id) || !isInt(a.lv) || a.lv < 1 || a.lv > LEND_ASSIST_LV_MAX) return { error: 'assists' };
     seen.add(a.id);
     assists.push({ id: a.id, lv: a.lv });
   }
