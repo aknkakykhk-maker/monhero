@@ -41,11 +41,14 @@ const MONSUC_SCRIPT_RIVAL_OWNER = Object.freeze([
   // ソラシド(第4弾で直した・asst-sorashido.js と同じ段の決まり。bond の無い行は Lv4〜8 の形、b は Lv1〜3 の形。c は Lv9〜15 の形・d は Lv16〜 の形)
   { id:'ev.rival.owner.sorashido.meet.sorashido1', who:'sorashido', e:'normal', t:'{name}、今日は自分の{rival}で挑ませてもらいます。勝率は計算済みです笑' },
   { id:'ev.rival.owner.sorashido.meet.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'{name}、今日は俺の{rival}で挑ませてもらうっす。勝率は計算済みっす笑' },
+  { id:'ev.rival.owner.sorashido.meet.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'{name}、今日は俺の{rival}で挑ませてもらいます。勝率は計算済みだ笑' },
   { id:'ev.rival.owner.sorashido.win.sorashido1', who:'sorashido', e:'happy', t:'計算どおりですね笑 {mon}も想定より強かったです' },
   { id:'ev.rival.owner.sorashido.win.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'計算どおりっすね笑 {mon}も想定より強かったっす' },
+  { id:'ev.rival.owner.sorashido.win.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'計算どおりだ笑 {mon}も想定より強かったですよ' },
   { id:'ev.rival.owner.sorashido.lose.sorashido1', who:'sorashido', e:'surprise', t:'ほほー！ これは計算外でした・・・！ {mon}、強いですねー笑' },
   { id:'ev.rival.owner.sorashido.lose.sorashido1b', who:'sorashido', e:'surprise', bond:[1,3], t:'これは計算外でした・・・！ {mon}、強いですね笑' },
   { id:'ev.rival.owner.sorashido.lose.sorashido1c', who:'sorashido', e:'surprise', bond:[9,15], t:'ほほー！ これは計算外だった・・・！ {mon}、強いっすね笑' },
+  { id:'ev.rival.owner.sorashido.lose.sorashido1d', who:'sorashido', e:'surprise', bond:16, t:'ほほー！ これは計算外でした・・・！ {mon}、強いなー笑' },
 
   // えるびん(第4弾で直した・asst-erubin.js と同じ口調。見守る・けがを気づかう)
   { id:'ev.rival.owner.erubin.meet.erubin1', who:'erubin', e:'normal', t:'{name}、今日は{rival}が相手だよ。お互い、けがだけはしないようにね' },
