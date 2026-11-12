@@ -3151,6 +3151,8 @@ function RhythmMultiScreen(props) {
 function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   const watchV = useRhythmWatchView();
+  // 助手が選ぶ曲を「無料+持っている曲」にするため、持っている曲を先に読んでおく(2026-11-13。マルチで何かを止めるわけではない)
+  useRhythmOwnedSongs();
   // 観戦(2026-11-11): 誘われて入ったら演奏中だった人は、待機のあいだ、その演奏を見られる。入った直後と演奏中の部屋で、静かに「見ています」を送る
   // (演奏が見つからなければ何も出さない)。自分が演奏に入るときは止める。外から見ていた人が部屋へ入ったら、外からの観戦はやめる
   React.useEffect(() => {
