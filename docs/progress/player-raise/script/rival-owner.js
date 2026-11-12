@@ -1,6 +1,6 @@
 // モンヒロサクセス 台本 第3弾: ライバルの持ち主の助手が話す行(仮)
 // ライバルが「ほかの助手のマスモン」のとき、その持ち主の助手が会場で会う・試合のあとに話す。rival.js の asst の場面に足して出す。
-// みゅあ・あつ・きき・ももすけ・ドラ(第4弾で直した)以外の3人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
+// みゅあ・あつ・きき・ももすけ・ドラ・きゅうこ(第4弾で直した)以外の2人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
 // シナリオの助手が持ち主のとき(self)は rival.js の self の行を使い、ここの行は出さない。
 // 形は README.md。
 //   場面のid … ev.rival.owner.<助手>.<場面>
@@ -33,7 +33,8 @@ const MONSUC_SCRIPT_RIVAL_OWNER = Object.freeze([
   { id:'ev.rival.owner.dra.win.dra1', who:'dra', e:'happy', t:'おでの{rival}の勝ちだな。{mon}もいい動きだったよ。あとは間だけだ' },
   { id:'ev.rival.owner.dra.lose.dra1', who:'dra', e:'surprise', t:'まじか、やられたわ。{mon}、強くなったな……えへへ' },
 
-  { id:'ev.rival.owner.kyuko.meet.kyuko1', who:'kyuko', e:'normal', t:'ほい！ 今日は{rival}で行くよぉ。組み方には自信あるから笑' },
+  // きゅうこ(第4弾で直した・asst-kyuko.js と同じ口調。見立てと組み方)
+  { id:'ev.rival.owner.kyuko.meet.kyuko1', who:'kyuko', e:'normal', t:'ほい！ 今日は俺の{rival}が相手ね。組み方には自信あるよぉ' },
   { id:'ev.rival.owner.kyuko.win.kyuko1', who:'kyuko', e:'happy', t:'おけ〜、{rival}の勝ちぃ。{mon}の動きも悪くなかったよw' },
   { id:'ev.rival.owner.kyuko.lose.kyuko1', who:'kyuko', e:'crying', t:'ぐぬぬぬ…負けたぁ😭 {mon}、育て方うまいね。今度教えてぇ' },
 
