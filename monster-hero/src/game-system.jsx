@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cfa7b68ad8f73552
+// generated-sha256: 6afdaa0fb4bf2e7c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66346,6 +66346,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
           <b>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">{other ? 'まだいない' : 'まだ会っていない'}</span>}
       {met && state && state.ev && <span className="evm" data-assistant-life-room-ev={id} aria-label="いま、できごとがあります">❗</span>}
+      {met && !other && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <span className="evm" style={{ right: 'auto', left: 2 }} data-assistant-life-room-body={id} aria-label={assistantLifeBodyCondShort(id)}>{assistantLifeBodyBadge(id)}</span>}
     </button>);
 }
 
@@ -66566,6 +66567,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ wordBreak: 'auto-phrase', ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
+        {typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <p className="text-[11px] font-bold text-rose-200" data-assistant-life-room-cond={id}>{assistantLifeBodyCondShort(id)}</p>}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
         {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate}/>}
         {doList}
@@ -67642,7 +67644,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <button key={id} type="button" aria-label={`${a.name}・${d ? d.label : ''}${spentOf(id, place) ? '(対戦のごほうび済み)' : ''}`} data-assistant-life-map-who={id} data-assistant-life-map-spent={spentOf(id, place) ? '1' : undefined} onClick={() => setSheet(place)} className="flex flex-col items-center px-[1px]">
               {(() => { const town = typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id); return (<>
               <span className="block" style={town ? { filter: 'grayscale(.55) brightness(.85)' } : undefined} data-assistant-life-map-town={town ? id : undefined}><AssistantLifeMapFig who={a} h={figH} sleep={!!(w && w.doing === 'sleep')} spent={spentOf(id, place)}/></span>
-              <span className="mhl-map-name" data-assistant-life-map-name>{w && ASSISTANT_LIFE_DOING_ICON[w.doing]}{a.name}{town ? '・町の人' : ''}</span></>); })()}
+              <span className="mhl-map-name" data-assistant-life-map-name>{typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) ? assistantLifeBodyBadge(id) : w && ASSISTANT_LIFE_DOING_ICON[w.doing]}{a.name}{town ? '・町の人' : ''}</span></>); })()}
             </button>); })}
       </div>);
   };
@@ -74009,9 +74011,10 @@ const amgbNormOne = (x) => {
   };
 };
 const normalizeAssistantMasmonBond = (raw) => {
-  const out = { v: 1, start: -1, mons: {} };
+  const out = { v: 1, start: -1, mons: {}, bt: [] };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   out.start = amgbInt(raw.start, -1, -1, 1e7);
+  out.bt = (Array.isArray(raw.bt) ? raw.bt : []).filter(x => typeof x === 'string' && x.length <= 120).slice(-60); // 人気を数えた対戦(二重に数えない)
   if (raw.mons && typeof raw.mons === 'object' && !Array.isArray(raw.mons)) for (const [k, x] of Object.entries(raw.mons)) { if (!amgbKeyOk(k)) continue; const one = amgbNormOne(x); if (one) out.mons[k] = one; }
   return out;
 };
@@ -74145,6 +74148,41 @@ const assistantMasmonBondBattle = (aid, row, kind, win, now = Date.now()) => {
   return amgbSave(amgbPut(st, aid, row, { ...b0, pop: MASMON_CALC.popAfterBattle(b0.pop, kind, !!win), fight: amgSlotDay(amgSlotOf(now)) }));
 };
 
+// ---- 冬眠・合体(56-assistant-life-masmon-sleep.jsx)から呼ぶ口。冬眠の行に絆の写し bd を持たせる ----
+// 眠らせる子・前にいた子の写し(無い・読み込み前は null)
+const amgbCopyOf = (aid, slot, monster) => { if (!AMGB_STORE.loaded) return null; const x = AMGB_STORE.state.mons[amgbKey(aid, slot, monster)]; return x ? { ...x, sc: { ...x.sc }, rs: [...x.rs] } : null; };
+const amgbBedOk = (x) => amgbNormOne(x);
+// 起こしたとき: 眠らせた子の行(outMonster)は消し、起きた子の行へ写しを戻す。眠っていた日は年齢も寿命も進めず、関わらない日にも数えない
+const amgbWake = (aid, slot, outMonster, inMonster, bd, now = Date.now()) => {
+  if (!AMGB_STORE.loaded) return false;
+  const day = amgSlotDay(amgSlotOf(now));
+  const mons = { ...AMGB_STORE.state.mons }; delete mons[amgbKey(aid, slot, outMonster)];
+  if (bd) mons[amgbKey(aid, slot, inMonster)] = { ...bd, last: bd.last < 0 ? -1 : day, touch: Math.max(bd.touch, day), fight: Math.max(bd.fight, day) };
+  else delete mons[amgbKey(aid, slot, inMonster)];
+  return amgbSave({ ...AMGB_STORE.state, mons });
+};
+// 合体の子: 忠誠=主・人気=2体の高い方の半分・方針=主(点は0)・型=主・年齢と寿命は0(POWER.md 保存の節)
+const amgbFuseChild = (aid, mainRow, mainBd, matBd) => {
+  const m = mainBd || amgbNormOne({ gt: amgbTypeFor(aid, mainRow) }); const pops = [mainBd ? mainBd.pop : 0, matBd ? matBd.pop : 0];
+  return amgbNormOne({ loy: m.loy, pop: Math.max(...pops) / 2, pol: m.pol, pp: 0, gt: m.gt, age: 0, life: 0, last: -1, touch: -1, fight: -1 });
+};
+// 冬眠の行の総合力(育成の写し g・修行の写し t・絆の写し bd から)
+const amgbBedPower = (bed) => {
+  if (typeof MASMON_CALC === 'undefined' || !bed || !bed.g || !bed.g.st) return null;
+  const t = bed.t; const ms = t && Array.isArray(t.learn) ? t.learn.map(id => Number(t.m && t.m[id]) || 0) : [];
+  const power = MASMON_CALC.power({ stats: bed.g.st, masteries: ms, lv: bed.g.lv, loyal: bed.bd ? bed.bd.loy : AMGB_NUM.loy0, pop: bed.bd ? bed.bd.pop : 0 });
+  return { power, rank: MASMON_CALC.rankOf(power) };
+};
+
+// 対戦の振り返りから(1戦に1回だけ)。rows = 出たマスモンの行。kind = 'pvp'|'peer'|'spar'
+const amgbBattleOnce = (id, aid, rows, kind, win, now = Date.now()) => {
+  if (!amgbLive() || typeof id !== 'string' || !id || !Array.isArray(rows)) return false;
+  const st0 = AMGB_STORE.state; const bid = id.slice(0, 120); if (st0.bt.includes(bid)) return false;
+  const day = amgSlotDay(amgSlotOf(now)); let st = { ...st0, bt: [...st0.bt, bid].slice(-60) };
+  for (const row of rows) { if (!row || !Number.isInteger(row.slot) || !row.monster) continue; const b0 = st.mons[amgbKey(aid, row.slot, row.monster)] || amgbEntryOf(aid, row); st = amgbPut(st, aid, row, { ...b0, pop: MASMON_CALC.popAfterBattle(b0.pop, kind, !!win), fight: day }); }
+  return amgbSave(st);
+};
+
 // ---- 総合力とランク(表示だけ・保存しない) ----
 const amgbMasteriesOf = (aid, row) => {
   try {
@@ -74182,6 +74220,13 @@ function AmgbPowerTag({ aid, row }) {
   const p = amgPowerOf(aid, row);
   if (!p) return <span className="text-[10px] font-bold text-slate-400" data-amgb-power="none">総合力 —</span>;
   return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
+}
+// 冬眠の行に置く「ランク + 総合力」
+function AmgbBedTag({ bed }) {
+  if (!amgbOn()) return null;
+  const p = amgbBedPower(bed);
+  if (!p) return null;
+  return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
 }
 // くわしい画面の「絆」(総合力・忠誠度・人気・方針・年齢・型・訓練の結果と叱る/褒める)
 function AmgbPanel({ who, t }) {
@@ -75441,6 +75486,7 @@ function AssistantLifePlanPicker({ id, abs, onDone }) {
   return (
     <div className="mt-1 rounded-xl border border-sky-300/60 bg-slate-900/95 p-1.5" data-assistant-life-plan-picker={abs}>
       <p className="px-1 text-[11.5px] font-black text-sky-200">{assistantLifePlanName(id)}に {h}〜{(h + 2) % 24}時 に行ってもらう場所</p>
+      {typeof assistantLifeBodyCondOf === 'function' && assistantLifeBodyCondOf(id) && <p className="px-1 text-[11px] font-bold text-rose-200" data-assistant-life-plan-cond-note={id}>{ASSISTANT_LIFE_BODY_COND_NAME[assistantLifeBodyCondOf(id).k]}のあいだは、家と🏥病院だけ選べます</p>}
       <div className="mt-1 grid grid-cols-2 gap-1">
         {list.map(p => (
           <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
@@ -75463,7 +75509,9 @@ function AssistantLifePlanWho({ id, cur }) {
     const abs = day * 12 + j; const s = assistantLifeSlotOfAbs(abs); const p = assistantLifePlanOf(abs, id); const r = assistantLifePlanResultOf(abs, id);
     const past = abs < cur, now = abs === cur;
     let body;
-    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const ln = assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
+    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{(() => { const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
+          if (bw && bw.why !== 'rest') return <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100" data-assistant-life-plan-body-why={`${id}@${abs}`}>{bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`}</span>;
+          return <>{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}</>; })()}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const bw = typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null; const ln = bw && bw.why !== 'rest' ? null : assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
     else body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? <>📍 {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{assistantLifePlanPerk(p) && <span className="block text-[10.5px] text-emerald-300">{assistantLifePlanPerk(p)}</span>}</> : <span className="text-slate-400">おまかせ<span className="block text-[10.5px]">{assistantLifePlanName(id)}が自分で決める</span></span>}</span>;
     rows.push(
       <div key={abs} data-assistant-life-plan-row={abs} className={`rounded-xl border px-1.5 py-1 ${now ? 'border-amber-300 bg-amber-900/50' : 'border-white/15 bg-white/5'} ${past ? 'opacity-50' : ''}`}>
@@ -75479,7 +75527,7 @@ function AssistantLifePlanWho({ id, cur }) {
 }
 
 // 8人×4回の表(横)
-function AssistantLifePlanTable({ ids, cur, onCell }) {
+function AssistantLifePlanTable({ ids, cur, onCell, onWho = null }) {
   const left = assistantLifePlanSlotsLeft();
   const [page, setPage] = React.useState(0);
   const cols = left.slice(page * 4, page * 4 + 4);
@@ -75489,7 +75537,10 @@ function AssistantLifePlanTable({ ids, cur, onCell }) {
       <table className="w-full table-fixed border-separate" style={{ borderSpacing: 2 }}>
         <thead><tr><th className="w-[74px]"/>{cols.map(a => { const s = assistantLifeSlotOfAbs(a); return <th key={a} className="text-[10.5px] font-black text-sky-200">{s.from}〜{(s.from + 2) % 24}時 <span className="text-slate-400">{s.label}</span></th>; })}</tr></thead>
         <tbody>{ids.map(id => <tr key={id}>
-          <td className="truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</td>
+          <td className="p-0">{(() => { const bd = typeof assistantLifeBodyBadge === 'function' ? assistantLifeBodyBadge(id) : '';
+            return onWho && typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()
+              ? <button type="button" data-assistant-life-plan-who-open={id} aria-label={`${assistantLifePlanName(id)}の疲れ・ストレスと予定`} onClick={() => onWho(id)} className="h-[40px] w-full truncate rounded-lg bg-white/10 px-1 text-left text-[11.5px] font-black text-white active:scale-95">{bd}{assistantLifePlanName(id)} <span className="text-[10px] text-sky-200">▶</span></button>
+              : <span className="block truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</span>; })()}</td>
           {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'}</button></td>; })}
         </tr>)}</tbody>
       </table>
@@ -75532,16 +75583,17 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
       <div className="flex max-h-full w-full flex-col overflow-hidden rounded-2xl border-2 border-amber-300 bg-slate-950/95 p-2 text-white" style={{ maxWidth: land ? 820 : 460 }}>
         <div className="flex items-center gap-1.5">
           <p className="text-[15px] font-black text-amber-200">📅 今日の予定表</p>
-          {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">マスを押して、助手に行き先をお願いできます</p>}
+          {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">{typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'}</p>}
           <button type="button" aria-label="閉じる" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="ml-auto grid h-[40px] w-[44px] place-items-center rounded-xl bg-white/10 text-[17px] font-black text-amber-200">✕</button>
         </div>
         {!land && <p className="px-0.5 pb-1 text-[11.5px] font-bold leading-snug text-slate-300">次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。</p>}
         <div className="min-h-0 overflow-y-auto">
           {open.place ? <AssistantLifePlanPlace place={open.place} ids={list} cur={cur}/>
-            : land && !who ? (cell ? <AssistantLifePlanPicker id={cell.id} abs={cell.abs} onDone={() => setCell(null)}/> : <AssistantLifePlanTable ids={list} cur={cur} onCell={(id, abs) => setCell({ id, abs })}/>)
+            : land && !who ? (cell ? <AssistantLifePlanPicker id={cell.id} abs={cell.abs} onDone={() => setCell(null)}/> : <AssistantLifePlanTable ids={list} cur={cur} onCell={(id, abs) => setCell({ id, abs })} onWho={setWho}/>)
             : <>
               <div className="mb-1 flex gap-1 overflow-x-auto" data-assistant-life-plan-tabs>{list.map(id => (
                 <button key={id} type="button" data-assistant-life-plan-tab={id} onClick={() => setWho(id)} className={`min-h-[44px] shrink-0 rounded-xl border-2 px-2 text-[11.5px] font-black ${who === id ? 'border-pink-300 bg-pink-900/70' : 'border-transparent bg-white/10'}`}>{assistantLifePlanName(id)}</button>))}</div>
+              {land && who && <button type="button" data-assistant-life-plan-back onClick={() => setWho(null)} className="mb-1 min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-sky-100 active:scale-95">◀ 8人の表へ</button>}
               {who && <AssistantLifePlanWho id={who} cur={cur}/>}
               {who && <button type="button" data-assistant-life-plan-clear onClick={() => assistantLifePlanClearWho(who)} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100">{assistantLifePlanName(who)}を ぜんぶおまかせに</button>}
               {who && <p className="mt-1 text-[11px] font-bold text-pink-200">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約{Math.round(assistantLifePlanTrust(lv) * 100)}%)</p>}
@@ -75580,7 +75632,8 @@ function AssistantLifePlanBand({ ids = [], land = false }) {
 //   ・決まり方は回ごとの決まった乱数(開き直しても変わらない)
 // 保存(新しいキーだけ。既存のキーは読むだけ・CLAUDE.md ⑦):
 //   mh_assistant_life_body_v1 = { v:1, at: 最後に進めた回(abs), s: { [助手id]: { fat, st, cond: { k:'hurt'|'sick', sev:'light'|'heavy', left: 自然に治るまでの回, visits: あと何回病院 } | null } },
-//                                 log: { [助手id]: [{ abs, place, ev }] }(最近36回) }
+//                                 log: { [助手id]: [{ abs, place, ev, why? }] }(最近36回) }
+//     why … 体のせいで行き先が変わった回だけ: 'skip'(疲れてサボって家へ)/'cond'(けが・病気で家か病院へ)/'rest'(おまかせで自分で休んだ)
 //   読めない・壊れている → はじめの値(疲れ20・ストレス20・何も起きていない)
 // 公開の印 RELEASE_FLAGS.assistantLifeBody の後ろ。偽のあいだは何もしない・何も読まない・何も出さない
 
@@ -75614,6 +75667,7 @@ const ASSISTANT_LIFE_BODY_COND = Object.freeze({
 const ASSISTANT_LIFE_BODY_GAP = Object.freeze({ fat: -8, st: -3, max: 84 }); // 見ていない1回ごと(7日まで)
 const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']); // 休む場所(ここではサボらない)
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
+const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
 // 予定表で出す名前(施設の名前を先に。台詞の {place} は今の ASSISTANT_LIFE_PLACES のまま)
 const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({ studio: ['モンヒロビート', '練習スタジオ'], ranch: ['M/B管理', '育成場'], cardroom: ['MFバトルカード', 'カード部屋'] });
 // 得の1行(町の場所・家・病院)。ビート・カード・M/B管理の文は assistantLifePlacePerkTail(56-assistant-life-ux.jsx)のまま。
@@ -75658,7 +75712,7 @@ const normalizeAssistantLifeBody = (raw) => {
   if (raw.log && typeof raw.log === 'object' && !Array.isArray(raw.log)) {
     for (const [id, list] of Object.entries(raw.log)) {
       if (!assistantLifeBodyOkId(id) || !Array.isArray(list)) continue;
-      const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({ abs: r.abs, place: r.place, ev: typeof r.ev === 'string' ? r.ev : '' }));
+      const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({ abs: r.abs, place: r.place, ev: typeof r.ev === 'string' ? r.ev : '', ...(ASSISTANT_LIFE_BODY_WHY.includes(r.why) ? { why: r.why } : {}) }));
       if (ok.length) out.log[id] = ok.slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
     }
   }
@@ -75765,7 +75819,7 @@ const assistantLifeBodyOnDecide = (decided, salt = '') => {
     const ids = [...new Set([...(decided.groups || []).flatMap(g => g.ids), ...Object.keys(decided.solo || {})])].sort();
     const slot = assistantLifeSlotOfAbs(abs);
     const day = slot.id !== 'late' && slot.id !== 'night';
-    const want = {};
+    const want = {}; const why = {};
     for (const id of ids) {
       const e = assistantLifeBodyGapOne(D.s[id] || assistantLifeBodyFresh(), gap);
       const w = assistantLifeBodyWhere(decided, id); if (!w) continue;
@@ -75774,20 +75828,21 @@ const assistantLifeBodyOnDecide = (decided, salt = '') => {
       if (e.cond) {
         // けが・病気: 予定で病院なら病院。おまかせでも昼のあいだはときどき自分で病院へ。それ以外は家で休む
         if (asked && w.place === 'clinic') continue;
-        want[id] = day && rand() < 0.35 ? 'clinic' : 'home';
+        want[id] = day && rand() < 0.35 ? 'clinic' : 'home'; why[id] = 'cond';
         continue;
       }
-      if (rand() < assistantLifeBodySkipChance(e, w.place)) { want[id] = 'home'; continue; } // サボって家へ帰る
+      if (rand() < assistantLifeBodySkipChance(e, w.place)) { want[id] = 'home'; why[id] = 'skip'; continue; } // サボって家へ帰る
       if (!asked) { // おまかせの回は、疲れ・ストレスがたまっていれば自分で休む所を選びやすい
         // 休みたくなる見込み: 疲れ50・ストレス45から、高いほど強く(最大95%)
         const pf = e.fat >= 50 ? Math.min(0.95, 0.5 + (e.fat - 50) * 0.03) : 0;
         const ps = e.st >= 45 ? Math.min(0.95, 0.5 + (e.st - 45) * 0.03) : 0;
         if (ASSISTANT_LIFE_BODY_REST.includes(w.place)) { /* もう休んでいる */ }
-        else if (pf && rand() < pf) want[id] = 'home';
-        else if (ps && rand() < ps) want[id] = rand() < 0.5 ? 'cafe' : 'hill';
+        else if (pf && rand() < pf) { want[id] = 'home'; why[id] = 'rest'; }
+        else if (ps && rand() < ps) { want[id] = rand() < 0.5 ? 'cafe' : 'hill'; why[id] = 'rest'; }
       }
     }
-    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) delete want[id];
+    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) { delete want[id]; delete why[id]; }
+    ASSISTANT_LIFE_BODY_STORE.why = { abs, m: why }; // 次の assistantLifeBodyOnSlot が記録に書く(予定の保存の形は変えない)
     if (!Object.keys(want).length) return decided;
     const trust = {}; for (const id of Object.keys(want)) trust[id] = 1;
     return assistantLifePlanApply(decided, want, trust, `${salt}|body`).life;
@@ -75808,7 +75863,8 @@ const assistantLifeBodyOnSlot = (life, slot) => {
       const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
       const r = assistantLifeBodyStepOne(assistantLifeBodyGapOne(s[id] || assistantLifeBodyFresh(), gap), w.place, w.doing, fav, assistantLifeRng(`${life.salt || ''}|body|${slot.abs}|${id}`));
       s[id] = r.e; evs[id] = r.ev;
-      log[id] = [...(log[id] || []), { abs: slot.abs, place: w.place, ev: r.ev }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
+      const W = ASSISTANT_LIFE_BODY_STORE.why; const why = W && W.abs === slot.abs && W.m[id];
+      log[id] = [...(log[id] || []), { abs: slot.abs, place: w.place, ev: r.ev, ...(why ? { why } : {}) }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
     }
     assistantLifeBodySave({ v: 1, at: slot.abs, s, log });
     // おやつ屋さん・広場で一緒にいた2人は、助手どうしのきずなが少し上がる(1日の上限は outing の dailyMax)
@@ -75835,6 +75891,12 @@ const assistantLifeBodyTrustAdj = (id, abs) => {
 const assistantLifePlaceSlotsOf = (aid, place) => {
   if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
+};
+// その回、体のせいで行き先が変わったか(予定表の結果の札が読む)。{ why, place } か null
+const assistantLifeBodyWhyOf = (abs, id) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return null;
+  const r = (ASSISTANT_LIFE_BODY_STORE.state.data.log[id] || []).find(x => x.abs === abs);
+  return r && r.why ? { why: r.why, place: r.place } : null;
 };
 const assistantLifeHospitalSlotsOf = (aid) => assistantLifePlaceSlotsOf(aid, 'clinic');
 // 特別な治療(ビートPの品物)を使った回。記録の ev が 'cure' の回(キズナと合意: その回に助手のマスモンのけが・病気も残り0に)
@@ -75909,6 +75971,11 @@ const assistantLifeBodyCondText = (c, atClinic = false) => {
   const d = Math.floor(c.left / 12), h = (c.left % 12) * 2;
   return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・${atClinic ? '病院で診てもらっています' : '家で休んでいます'}(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
 };
+// 部屋のシート・町の名札の一言(けが・病気のときだけ。それ以外は '')
+const assistantLifeBodyCondShort = (id) => {
+  const c = assistantLifeBodyCondOf(id); if (!c) return '';
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家か🏥病院で休んでいます`;
+};
 const assistantLifeBodyDelta = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
 // 場所の小さな札(疲れ・ストレスの動き)。疲れ・ストレスは増えると悪いので、増える=赤・減る=緑
 function AssistantLifeBodyPlaceStat({ place, abs }) {
@@ -75964,10 +76031,11 @@ function AssistantLifeBodyPanel({ id, cur }) {
         : e.cond && <AssistantLifeBodyCure id={id} cur={cur} onCured={() => setCured(true)}/>}
       {rows.length > 0 && <div className="mt-1 flex flex-col gap-0.5" data-assistant-life-body-forecast>
         {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
-          <p key={r.abs} className="flex items-center gap-1 text-[10.5px] font-bold text-slate-200">
+          <p key={r.abs} className="flex flex-wrap items-center gap-x-1 text-[10.5px] font-bold leading-tight text-slate-200" data-assistant-life-body-forecast-row={r.abs}>
             <span className="w-[58px] shrink-0 text-sky-200">{s.from}〜{(s.from + 2) % 24}時</span>
-            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと 疲れ{r.fat}・ストレス{r.st}</span>
-            {r.risk > 0 && <span className="shrink-0 text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
+            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと</span>
+            <span className="shrink-0 whitespace-nowrap">疲れ{r.fat}・ストレス{r.st}</span>
+            {r.risk > 0 && <span className="shrink-0 whitespace-nowrap text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
           </p>); })}
       </div>}
     </div>);
@@ -76777,6 +76845,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
       const k = battle.r.winner === 'A' ? 'w' : battle.r.winner === 'B' ? 'l' : 'd';
       return { ...s, rec: { ...s.rec, [meId]: { ...rc, [k]: rc[k] + 1 } }, done: [...s.done, battle.id] };
     });
+  }, [phase, battle]);
+  // 絆(56-assistant-life-masmon-bond.jsx): 出たマスモンの人気。フレンド対戦 勝ち+2・負け+0.5/助手どうし 勝ち+1・負け+0.2。1戦に1回だけ(印が偽なら何もしない)
+  useEffect(() => {
+    if (phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    try { amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A'); } catch (_) {}
   }, [phase, battle]);
 
   // もしも: 自分の3体のある能力があと1割高かったら、同じ相手に20戦で何勝するか
@@ -78356,7 +78429,8 @@ const normalizeAssistantMasmonSleep = (raw) => {
     ids.add(b.id);
     out.beds.push({ id: b.id, aid: b.aid, slot: b.slot, src: b.src === 'former' ? 'former' : 'sleep', at: typeof b.at === 'string' ? b.at.slice(0, 10) : '', fat: typeof b.fat === 'string' ? b.fat.slice(0, 20) : '', row,
       g: amgsGrowOk(b.aid, row.monster, b.g), t: amgsTrainOk(b.aid, row.monster, b.t),
-      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? { k: b.c.k, left: Math.min(30, b.c.left) } : null });
+      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? { k: b.c.k, left: Math.min(30, b.c.left) } : null,
+      ...(b.bd && typeof amgbBedOk === 'function' && amgbBedOk(b.bd) ? { bd: amgbBedOk(b.bd) } : {}) }); // 絆の写し(忠誠・人気・方針・型・年齢・寿命・56-assistant-life-masmon-bond.jsx)
   }
   if (raw.seen && typeof raw.seen === 'object') for (const [k, v] of Object.entries(raw.seen).slice(-400)) if (v === true && /^[a-z]{2,12}:[1-8]:[\w-]{0,20}:\w{2,40}$/.test(k)) out.seen[k] = true;
   out.seq = Number.isInteger(raw.seq) && raw.seq > 0 ? Math.min(raw.seq, 999999999) : out.beds.reduce((a, b) => Math.max(a, Number(b.id.slice(1))), 0);
@@ -78379,7 +78453,7 @@ const amgsSyncFormer = () => {
       const sig = amgsFormerSig(aid, slot, x); if (st.seen[sig]) continue;
       const row = amgsRowOf(x); if (!row) continue;
       const key = `${slot}:${x.monster}`; const seq = st.seq + 1;
-      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null }] };
+      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null, ...(typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? { bd: amgbCopyOf(aid, slot, x.monster) } : {}) }] };
       changed = true;
     }
   }
@@ -78398,6 +78472,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   const gOut = (AMG_STORE.state.mons[bed.aid] || {})[outKey] || null;
   const tOut = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? (AMGT_STORE.state.mons[bed.aid] || {})[outKey] || null : null;
   const cKeyOut = amgpKey(bed.aid, row.slot, row.monster); const cOut = amgpCondAt(cKeyOut, s + 1);
+  const bdOut = typeof amgbCopyOf === 'function' ? amgbCopyOf(bed.aid, row.slot, row.monster) : null; // 絆の写し(眠らせる子)
   const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? { slot: bed.slot, at: bed.fat } : null);
   if (!out) return '入れ替えられませんでした';
   // 起きた子の育成・修行の中身を、その枠の行へ戻す(眠らせたときのまま)
@@ -78409,9 +78484,10 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (cOut) mons[cKeyOut] = { ...cOut, until: s };
   if (bed.c) mons[amgpKey(bed.aid, slot, bed.row.monster)] = { k: bed.c.k, from: s, until: s + bed.c.left, care: -1, find: -1, hosp: [] };
   if (cOut || bed.c) AMGP_CSTORE.save({ ...cs, mons });
+  if (typeof amgbWake === 'function') amgbWake(bed.aid, slot, row.monster, bed.row.monster, bed.bd || null, now); // 絆: 眠らせた子の行を消し、起きた子の写しを戻す(眠っていた日は年齢を進めない)
   const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
   const seq = st.seq + 1;
-  AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null }] });
+  AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null, ...(bdOut ? { bd: bdOut } : {}) }] });
   try { if (typeof amgTick === 'function') void amgTick(bed.aid); } catch (_) {}
   return true;
 };
@@ -78480,8 +78556,9 @@ const amgsFuse = (mainId, matId) => {
     for (const b of [main, mat]) if (b.src === 'former' && typeof assistantMasmonFormerDrop === 'function') assistantMasmonFormerDrop(b.aid, b.slot, b.row.monster, b.fat);
     const g = { ...main.g, st: plan.st, fat: 0, str: 0, log: [], dg: { d: 0, n: 0 }, lv: 1, xp: 0 };
     const t = amgsTrainOk(main.aid, main.row.monster, { ...(main.t || {}), m: plan.m, learn: plan.learn, day: { d: -1, n: 0 }, log: [] });
+    const bd = typeof amgbFuseChild === 'function' ? amgbFuseChild(main.aid, { slot: main.slot, monster: main.row.monster }, main.bd || null, mat.bd || null) : null; // 絆: 忠誠=主・人気=高い方の半分・方針と型=主・年齢0
     const seq = st.seq + 1;
-    AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== main.id && b.id !== mat.id), { id: `b${seq}`, aid: main.aid, slot: main.slot, src: 'sleep', at: day, fat: '', row: { ...main.row, lv: 1 }, g: amgsGrowOk(main.aid, main.row.monster, g), t, c: null }] });
+    AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== main.id && b.id !== mat.id), { id: `b${seq}`, aid: main.aid, slot: main.slot, src: 'sleep', at: day, fat: '', row: { ...main.row, lv: 1 }, g: amgsGrowOk(main.aid, main.row.monster, g), t, c: null, ...(bd ? { bd } : {}) }] });
     return true;
   } finally { amgsFuseBusy = false; }
 };
@@ -78511,7 +78588,7 @@ function AmgsSection({ filter = null }) {
         <button key={b.id} type="button" onClick={() => setOpen(b.id)} data-amgs-bed={b.id} className="mt-1.5 flex w-full items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2 text-left">
           {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}
           <span className="min-w-0 flex-1"><b className="block truncate text-[13px] font-black">{b.row.nick || (m && m.name)} <small className="text-[10px] text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid}のマスモン</small></b>
-            <small className="block text-[10.5px] font-bold text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ {b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`}</small></span>
+            <small className="block text-[10.5px] font-bold text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ {b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`}</small>{typeof AmgbBedTag === 'function' && <AmgbBedTag bed={b}/>}</span>
           <span className="shrink-0 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-black text-blue-100">💤 冬眠中</span>
         </button>); })}
       {!beds.length && <p className="mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-400">冬眠中のマスモンはいません。助手のマスモンの「💤 眠らせる」で、冬眠中のマスモンと入れ替えられます</p>}

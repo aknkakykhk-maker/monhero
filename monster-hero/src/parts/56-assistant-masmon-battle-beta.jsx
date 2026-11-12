@@ -324,6 +324,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
       return { ...s, rec: { ...s.rec, [meId]: { ...rc, [k]: rc[k] + 1 } }, done: [...s.done, battle.id] };
     });
   }, [phase, battle]);
+  // 絆(56-assistant-life-masmon-bond.jsx): 出たマスモンの人気。フレンド対戦 勝ち+2・負け+0.5/助手どうし 勝ち+1・負け+0.2。1戦に1回だけ(印が偽なら何もしない)
+  useEffect(() => {
+    if (phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    try { amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A'); } catch (_) {}
+  }, [phase, battle]);
 
   // もしも: 自分の3体のある能力があと1割高かったら、同じ相手に20戦で何勝するか
   useEffect(() => {
