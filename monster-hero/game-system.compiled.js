@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc7bac4c704ce932
+// source-sha256: 2213003da870f797
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42644,6 +42644,10 @@ const RhythmTapTest = ({
     run.combo = keptCombo;
     run.maxCombo = Math.max(run.maxCombo, keptCombo);
     run.counts[judgment]++;
+    if (preciseHit) run.precise++;
+    const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
+    if (side) run[side.toLowerCase()]++;
+    const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
     if (!run.fullComboBandShown && !assistOn && !tutorial && !calibrating && !lineAdjustRef.current && chart.totalNotes > 0 && RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(run.counts[id]) || 0), 0) >= chart.totalNotes) {
       run.fullComboBandShown = true;
       const ach = rhythmResultAchievements(run.counts, chart.totalNotes, run.tickRules ? run.tickMiss : 0);
@@ -42659,10 +42663,6 @@ const RhythmTapTest = ({
         bandEl.dataset.on = '1';
       }
     }
-    if (preciseHit) run.precise++;
-    const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
-    if (side) run[side.toLowerCase()]++;
-    const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
     const lifeBefore = run.life;
     run.life = tutorial || calibrating ? RHYTHM_LIFE_MAX : rhythmLifeAfterWithMonsterAbilities(run.life, judgment, run.abilities, songTimeMs);
     let revived = false,
