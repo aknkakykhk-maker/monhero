@@ -43,6 +43,10 @@ const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').sli
 // 提案の入れ替えで外れた「前にいた子」を、冬眠の一覧へ1度ずつ並べる(元の mine.former はそのまま・見た印 seen で二重にしない)
 const amgsSyncFormer = () => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  // 育成・修行・絆の保存を読み終える前は並べない(見た印 seen を付けたあとでは、写し損ねた中身を二度と取れないため・2026-11-12 キズナ)
+  if (typeof AMG_STORE !== 'undefined' && !AMG_STORE.loaded) return false;
+  if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) return false;
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) return false;
   let st = AMGS_STORE.state; const ms = ASSISTANT_MASMON_STORE.state; let changed = false;
   const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null; const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
   for (const [aid, m] of Object.entries((ms && ms.mine) || {})) for (const [sl, list] of Object.entries((m && m.former) || {})) {
@@ -173,7 +177,8 @@ function AmgsSection({ filter = null }) {
   React.useEffect(() => {
     if (!AMGS_STORE) return undefined;
     AMGS_STORE.subs.add(setSt);
-    void AMGS_STORE.load().then(() => { amgsSyncFormer(); });
+    const loads = [AMGS_STORE.load(), typeof AMG_STORE !== 'undefined' ? AMG_STORE.load() : null, typeof AMGT_STORE !== 'undefined' ? AMGT_STORE.load() : null, typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' ? AMGB_STORE.load() : null];
+    void Promise.all(loads).then(() => { amgsSyncFormer(); }).catch(() => {});
     if (AMGS_FSTORE && amgsFuseOn()) void AMGS_FSTORE.load();
     return () => { AMGS_STORE.subs.delete(setSt); };
   }, []);
@@ -279,7 +284,7 @@ function AmgsFuseSheet({ beds, onClose }) {
       <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
         <p className="text-[16px] font-black">🧬 合体する</p>
         {done ? (<>
-          <p className="mt-2 rounded-xl bg-fuchsia-950 p-3 text-[13px] font-black" data-amgs-fuse-done>{done.name}が生まれ変わりました。Lv 1 から育て直せます(冬眠中のまま)<small className="block text-[11px] font-bold text-slate-300">{done.lost}は、いなくなりました</small></p>
+          <p className="mt-2 rounded-xl bg-fuchsia-950 p-3 text-[13px] font-black" data-amgs-fuse-done>{done.name}が生まれ変わりました。Lv 1{typeof amgbOn === 'function' && amgbOn() ? '・0歳' : ''} から育て直せます(冬眠中のまま)<small className="block text-[11px] font-bold text-slate-300">{done.lost}は、いなくなりました</small></p>
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
         </>) : !main ? (<>
           <p className="text-[11px] font-bold text-slate-300">① 残すマスモン(主)を選んでください。種類・名前・色・型は主のままです</p>
@@ -297,6 +302,7 @@ function AmgsFuseSheet({ beds, onClose }) {
           <p className="mt-1 text-[10.5px] font-bold text-slate-300">2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200">技: {main.t ? `${nm(main)}の技は全部残ります` : '技はまだありません'}{plan.carried.length ? ` ・ 引き継ぐ技 ${plan.carried.join('・')}` : ''}(熟練は半分から)</p>
           <p className="text-[11px] font-bold text-slate-200">Lv・育成Lv は 1、疲れ・ストレスは 0 から</p>
+          {typeof AmgbFusePreview === 'function' && <AmgbFusePreview main={main} mat={mat} plan={plan}/>}{/* 絆: 年齢と寿命は新しく・忠誠度は主のまま・人気は高い方の半分・合体後の総合力(印が偽なら出ない) */}
           <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-amgs-fuse-lose>
             <p className="text-[12px] font-black text-rose-100">{nm(mat)}(Lv {mat.row.lv})はいなくなります。元に戻せません</p>
             {typeof AmgpBars === 'function' && <AmgpBars st={mat.g.st}/>}

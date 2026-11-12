@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6a0096cdff88bedc
+// source-sha256: 0c03377c1f64929c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -141064,13 +141064,68 @@ function AmgbBedTag({
   if (!amgbOn()) return null;
   const p = amgbBedPower(bed);
   if (!p) return null;
+  const over = !!(bed.bd && amgbLifeFrac(amgbNormOne(bed.bd)) >= 1);
   return React.createElement("span", {
     className: "inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100",
     "data-amgb-bed-power": p.power
   }, React.createElement(AmgbRankChip, {
     rank: p.rank,
     small: true
-  }), p.power.toLocaleString());
+  }), p.power.toLocaleString(), over && React.createElement("small", {
+    className: "rounded bg-slate-700 px-1 text-[9.5px] text-slate-200",
+    "data-amgb-bed-over": true
+  }, "⏳ 寿命"));
+}
+function AmgbFusePreview({
+  main,
+  mat,
+  plan
+}) {
+  if (!amgbOn() || typeof MASMON_CALC === 'undefined' || !main || !mat || !plan) return null;
+  const c = amgbFuseChild(main.aid, {
+    slot: main.slot,
+    monster: main.row.monster
+  }, main.bd || null, mat.bd || null);
+  const now = amgbBedPower(main);
+  const after = amgbBedPower({
+    g: {
+      st: plan.st,
+      lv: 1
+    },
+    t: {
+      learn: plan.learn,
+      m: plan.m
+    },
+    bd: c
+  });
+  const mb = main.bd && amgbNormOne(main.bd) || amgbNormOne({});
+  return React.createElement("div", {
+    className: "mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-200",
+    "data-amgb-fuse-preview": true
+  }, now && after && React.createElement("p", {
+    className: "flex items-center justify-between gap-1"
+  }, React.createElement("span", null, "総合力"), React.createElement("span", {
+    className: "inline-flex items-center gap-1"
+  }, React.createElement(AmgbRankChip, {
+    rank: now.rank,
+    small: true
+  }), now.power.toLocaleString(), " → ", React.createElement(AmgbRankChip, {
+    rank: after.rank,
+    small: true
+  }), React.createElement("b", {
+    className: "text-amber-200",
+    "data-amgb-fuse-power": after.power
+  }, after.power.toLocaleString()))), React.createElement("p", {
+    "data-amgb-fuse-age": true
+  }, "🎂 ", MASMON_CALC.ageLabel(mb.age), " → ", React.createElement("b", {
+    className: "text-amber-200"
+  }, MASMON_CALC.ageLabel(0)), "(寿命も新しくなります)"), React.createElement("p", null, "忠誠度 ", React.createElement("b", {
+    className: "text-amber-200",
+    "data-amgb-fuse-loy": Math.round(c.loy)
+  }, Math.round(c.loy)), "(主のまま) ・ 人気 ", React.createElement("b", {
+    className: "text-amber-200",
+    "data-amgb-fuse-pop": Math.round(c.pop)
+  }, Math.round(c.pop)), "(2体の高い方の半分)"));
 }
 function AmgbBedPanel({
   bed
@@ -150134,6 +150189,9 @@ const amgsCap = () => amgsCapOf(typeof AMGP_STORE !== 'undefined' ? AMGP_STORE.s
 const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').slice(0, 20)}:${x.monster}`;
 const amgsSyncFormer = () => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  if (typeof AMG_STORE !== 'undefined' && !AMG_STORE.loaded) return false;
+  if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) return false;
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) return false;
   let st = AMGS_STORE.state;
   const ms = ASSISTANT_MASMON_STORE.state;
   let changed = false;
@@ -150496,9 +150554,10 @@ function AmgsSection({
   React.useEffect(() => {
     if (!AMGS_STORE) return undefined;
     AMGS_STORE.subs.add(setSt);
-    void AMGS_STORE.load().then(() => {
+    const loads = [AMGS_STORE.load(), typeof AMG_STORE !== 'undefined' ? AMG_STORE.load() : null, typeof AMGT_STORE !== 'undefined' ? AMGT_STORE.load() : null, typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' ? AMGB_STORE.load() : null];
+    void Promise.all(loads).then(() => {
       amgsSyncFormer();
-    });
+    }).catch(() => {});
     if (AMGS_FSTORE && amgsFuseOn()) void AMGS_FSTORE.load();
     return () => {
       AMGS_STORE.subs.delete(setSt);
@@ -150767,7 +150826,7 @@ function AmgsFuseSheet({
   }, "🧬 合体する"), done ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "mt-2 rounded-xl bg-fuchsia-950 p-3 text-[13px] font-black",
     "data-amgs-fuse-done": true
-  }, done.name, "が生まれ変わりました。Lv 1 から育て直せます(冬眠中のまま)", React.createElement("small", {
+  }, done.name, "が生まれ変わりました。Lv 1", typeof amgbOn === 'function' && amgbOn() ? '・0歳' : '', " から育て直せます(冬眠中のまま)", React.createElement("small", {
     className: "block text-[11px] font-bold text-slate-300"
   }, done.lost, "は、いなくなりました")), React.createElement("button", {
     type: "button",
@@ -150798,7 +150857,11 @@ function AmgsFuseSheet({
     className: "mt-1 text-[11px] font-bold text-slate-200"
   }, "技: ", main.t ? `${nm(main)}の技は全部残ります` : '技はまだありません', plan.carried.length ? ` ・ 引き継ぐ技 ${plan.carried.join('・')}` : '', "(熟練は半分から)"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
-  }, "Lv・育成Lv は 1、疲れ・ストレスは 0 から"), React.createElement("div", {
+  }, "Lv・育成Lv は 1、疲れ・ストレスは 0 から"), typeof AmgbFusePreview === 'function' && React.createElement(AmgbFusePreview, {
+    main: main,
+    mat: mat,
+    plan: plan
+  }), React.createElement("div", {
     className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
     "data-amgs-fuse-lose": true
   }, React.createElement("p", {
