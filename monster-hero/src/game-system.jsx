@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3995babd6927c68a
+// generated-sha256: 52c3c5570a345bf4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75469,7 +75469,7 @@ function AssistantLifePlanWho({ id, cur }) {
         {pick === abs && <AssistantLifePlanPicker id={id} abs={abs} onDone={() => setPick(null)}/>}
       </div>);
   }
-  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{typeof AssistantLifeBodyPanel === 'function' && <AssistantLifeBodyPanel id={id} cur={cur}/>}{rows}</div>;
+  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{typeof AssistantLifeBodyPanel === 'function' && <AssistantLifeBodyPanel key={id} id={id} cur={cur}/>}{rows}</div>;
 }
 
 // 8人×4回の表(横)
@@ -75831,11 +75831,60 @@ const assistantLifePlaceSlotsOf = (aid, place) => {
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
 };
 const assistantLifeHospitalSlotsOf = (aid) => assistantLifePlaceSlotsOf(aid, 'clinic');
-// 特別な治療(ビートPの品物・次の段)を使った回。記録の ev が 'cure' の回(キズナと合意: その回に助手のマスモンのけが・病気も残り0に)。まだ使う口が無いので空
+// 特別な治療(ビートPの品物)を使った回。記録の ev が 'cure' の回(キズナと合意: その回に助手のマスモンのけが・病気も残り0に)
 const assistantLifeHospitalCureSlotsOf = (aid) => {
   if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === 'clinic' && r.ev === 'cure').map(r => r.abs);
 };
+
+// ---------- 🏥 特別な治療(2026-11-12 社長・台帳: ビートP交換所 300P・病院の回に1枚でその場で治る) ----------
+// 持ち物は既存の mh_owned_items に品物 life_cure を足すだけ(キーの意味は変えない)。減らすのは 60-app(cureAssistantLifeBody)。
+// 60-app が持っている数と「使う」口をここへ置き、予定表の体の窓が読む(予定表まで何段も受け渡さないため)
+const ASSISTANT_LIFE_BODY_CURE_ITEM = 'life_cure';
+const ASSISTANT_LIFE_BODY_CURE_HOOK = {
+  have: 0, use: null, listeners: new Set(),
+  set(patch) { Object.assign(this, patch); for (const fn of this.listeners) { try { fn(this.have); } catch (_) {} } },
+};
+// 今この回(abs)に その助手が病院にいて、けが・病気が残っているか(使えるのはこのときだけ)
+const assistantLifeBodyCanCure = (id, abs) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !assistantLifeBodyOkId(id) || !Number.isInteger(abs)) return false;
+  const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+  const e = D.s[id];
+  if (!e || !e.cond || D.at !== abs) return false;
+  const last = (D.log[id] || []).slice(-1)[0];
+  return !!last && last.abs === abs && last.place === 'clinic';
+};
+// 治す(持ち物はもう1枚減らしてある)。けが・病気を消し、その回の記録を 'cure' にする。治せなければ false
+const assistantLifeBodyCure = (id, abs) => {
+  if (!assistantLifeBodyCanCure(id, abs)) return false;
+  const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+  const list = [...D.log[id]];
+  list[list.length - 1] = { ...list[list.length - 1], ev: 'cure' };
+  assistantLifeBodySave({ ...D, s: { ...D.s, [id]: { ...D.s[id], cond: null } }, log: { ...D.log, [id]: list } });
+  return true;
+};
+const assistantLifeBodyCureUse = () => {
+  const [have, setHave] = React.useState(ASSISTANT_LIFE_BODY_CURE_HOOK.have);
+  React.useEffect(() => { const fn = (n) => setHave(n); ASSISTANT_LIFE_BODY_CURE_HOOK.listeners.add(fn); setHave(ASSISTANT_LIFE_BODY_CURE_HOOK.have); return () => { ASSISTANT_LIFE_BODY_CURE_HOOK.listeners.delete(fn); }; }, []);
+  return have;
+};
+// 体の窓の中の「特別な治療」の段(けが・病気のときだけ)
+function AssistantLifeBodyCure({ id, cur, onCured }) {
+  const have = assistantLifeBodyCureUse();
+  const [busy, setBusy] = React.useState(false);
+  const can = assistantLifeBodyCanCure(id, cur);
+  if (!can) return <p className="mt-1 text-[10.5px] font-bold leading-snug text-slate-300" data-assistant-life-body-cure-hint={id}>🏥 病院にいる回なら「特別な治療」(ビートP交換所)で、その場で治せます{have > 0 ? `(持っている ${have}枚)` : ''}</p>;
+  const use = ASSISTANT_LIFE_BODY_CURE_HOOK.use;
+  return (
+    <div className="mt-1 rounded-lg border border-emerald-300/50 bg-emerald-950/60 p-1.5" data-assistant-life-body-cure={id}>
+      <p className="text-[11px] font-bold leading-snug text-emerald-100">いま病院にいます。特別な治療を1枚使うと、重くてもその場で治ります(助手のマスモンも)</p>
+      <button type="button" disabled={busy || have <= 0 || typeof use !== 'function'} data-assistant-life-body-cure-use={id}
+        onClick={async () => { setBusy(true); let ok = false; try { ok = await use(id, cur); } catch (_) { ok = false; } setBusy(false); if (ok && onCured) onCured(); }}
+        className="mt-1 min-h-[44px] w-full rounded-xl bg-emerald-500 px-2 text-[12.5px] font-black text-slate-950 active:scale-95 disabled:opacity-40">
+        🏥 特別な治療を使う({have > 0 ? `持っている ${have}枚` : 'ビートP交換所 300P'})
+      </button>
+    </div>);
+}
 
 // ---------- 予定表への口(56-assistant-life-plan.jsx から呼ぶ) ----------
 const assistantLifeBodyPerk = (place) => (assistantLifeBodyOn() ? (ASSISTANT_LIFE_BODY_PERK[place] || '') : '');
@@ -75849,10 +75898,10 @@ const assistantLifeBodyUse = () => {
   return st;
 };
 const ASSISTANT_LIFE_BODY_COND_NAME = Object.freeze({ hurt: '🤕 けが', sick: '🤒 病気' });
-const assistantLifeBodyCondText = (c) => {
+const assistantLifeBodyCondText = (c, atClinic = false) => {
   if (!c) return '';
   const d = Math.floor(c.left / 12), h = (c.left % 12) * 2;
-  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家で休んでいます(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・${atClinic ? '病院で診てもらっています' : '家で休んでいます'}(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
 };
 const assistantLifeBodyDelta = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
 // 場所の小さな札(疲れ・ストレスの動き)。疲れ・ストレスは増えると悪いので、増える=赤・減る=緑
@@ -75881,11 +75930,12 @@ function AssistantLifeBodyBar({ label, v, warn, bad, color }) {
 // 予定表の上: その助手の疲れ・ストレス・けが・病気と、今日の予定どおりならの見通し
 function AssistantLifeBodyPanel({ id, cur }) {
   assistantLifeBodyUse();
+  const [cured, setCured] = React.useState(false);
   const e = assistantLifeBodyOf(id);
   if (!e) return null;
   const L = ASSISTANT_LIFE_BODY_LINE;
   const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
-  const note = e.cond ? assistantLifeBodyCondText(e.cond)
+  const note = e.cond ? assistantLifeBodyCondText(e.cond, assistantLifeBodyCanCure(id, cur))
     : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう`
     : '元気です';
   // 見通し: 次の回から、予定のある回を順に当てる(おまかせの回は「?」で止める)
@@ -75904,6 +75954,8 @@ function AssistantLifeBodyPanel({ id, cur }) {
       <AssistantLifeBodyBar label="😮‍💨 疲れ" v={e.fat} warn={L.fatWarn} bad={L.fatBad} color="#38bdf8"/>
       <div className="mt-0.5"><AssistantLifeBodyBar label="💢 ストレス" v={e.st} warn={L.stWarn} bad={L.stBad} color="#c084fc"/></div>
       <p className={`mt-1 text-[11px] font-bold leading-snug ${e.cond ? 'text-rose-200' : 'text-indigo-200'}`} data-assistant-life-body-note>{note}</p>
+      {cured && !e.cond ? <p className="mt-1 rounded-lg bg-emerald-900/70 px-1.5 py-1 text-[11px] font-black text-emerald-100" data-assistant-life-body-cured={id}>🏥 特別な治療で、すっかり治りました！</p>
+        : e.cond && <AssistantLifeBodyCure id={id} cur={cur} onCured={() => setCured(true)}/>}
       {rows.length > 0 && <div className="mt-1 flex flex-col gap-0.5" data-assistant-life-body-forecast>
         {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
           <p key={r.abs} className="flex items-center gap-1 text-[10.5px] font-bold text-slate-200">
@@ -105100,6 +105152,30 @@ function MonsterHeroGame() {
     try { await storeSet('mh_owned_items', nextItems, false); } catch { return null; }
     return assistantLifeFurnGive(who, key);
   };
+  // 🏥 特別な治療を1枚使う(2026-11-12 社長・ビートP交換所 300P)。病院の回でけが・病気が残っているかを先に確かめ、持ち物を1枚減らして保存できたときだけ治す。
+  //   治せなかったときは1枚戻す(56-assistant-life-body.jsx の assistantLifeBodyCure)
+  const cureAssistantLifeBody = async (who, abs) => {
+    if (typeof assistantLifeBodyCanCure !== 'function' || !assistantLifeBodyCanCure(who, abs)) return false;
+    const itemId = ASSISTANT_LIFE_BODY_CURE_ITEM;
+    const have = ownedItemCount(ownedItemsRef.current, itemId);
+    if (have <= 0) return false;
+    const before = ownedItemsRef.current;
+    const nextItems = { ...before, [itemId]: have - 1 };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try { await storeSet('mh_owned_items', nextItems, false); } catch { ownedItemsRef.current = before; setOwnedItems(before); return false; }
+    if (assistantLifeBodyCure(who, abs)) return true;
+    const back = { ...ownedItemsRef.current, [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1 };
+    ownedItemsRef.current = back;
+    setOwnedItems(back);
+    try { await storeSet('mh_owned_items', back, false); } catch {}
+    return false;
+  };
+  // 予定表の体の窓が、持っている数と「使う」口を読む(印 assistantLifeBody が偽なら窓が出ないので使われない)
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_BODY_CURE_HOOK === 'undefined') return;
+    ASSISTANT_LIFE_BODY_CURE_HOOK.set({ have: ownedItemCount(ownedItems, ASSISTANT_LIFE_BODY_CURE_ITEM), use: cureAssistantLifeBody });
+  }, [ownedItems]);
   // 助手1人に道具を贈る(2026-11-08 社長 SOLO-GIFT-PLAN.md)。贈れるか確かめてから持ち物を1つ減らし、減らせたときだけ記録・仲良し度を入れる
   const giveAssistantLifeSolo = async (who, kind) => {
     if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;

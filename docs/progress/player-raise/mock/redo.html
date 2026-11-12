@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モンヒロサクセス 止め絵の作り直し</title>
+<!-- 開き方: redo.html(作り直した画面+説明) / ?cmp=1(前の案Aと作り直し2案の比べ) / ?s=R4(1画面だけ) / &play=1 で動きの案が動く -->
+<link rel="stylesheet" href="mock.css"><link rel="stylesheet" href="redo.css"></head>
+<body><div id="root"></div>
+<script src="lib.js"></script><script src="screens-a.js"></script><script src="screens-d.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  if (q.get('play')) document.body.classList.add('play');
+  const root = document.getElementById('root');
+  const R = SCREENS.filter((s) => s.id[0] === 'R');
+  if (q.get('cmp')) {
+    const old = SCREENS.find((s) => s.id === '04').phones[0]; const r4 = R.find((s) => s.id === 'R4').phones;
+    const ph = (p, tag, cls, id) => `<div class="pw"><p class="cap"><b class="${cls}">${tag}</b>${p.label}</p><div class="phone" id="${id}">${p.html}</div></div>`;
+    root.className = 'cmp';
+    root.innerHTML = `<h1>育成のメイン画面 前の案と作り直しの比べ</h1>
+      <p>左が前の止め絵のおすすめ(4-A)。右の2つが作り直し。変えたのは組み立て方: ① 育てる子が住む場所を真ん中に大きく ② 上の帯に「あと何週・総合力・忠誠・人気・機嫌・寿命・げんき」をまとめる ③ 6能力は横一列 ④ 行動の口は下に大きなパネルでまとめる。色は今の助手マスモンの画面と同じ(暗い紺+ピンク・オレンジ・黄)。絵・文・数字は仮。</p>
+      <div class="rowp">${ph(old, '前', '', 'c0')}<div class="arrow">→</div>${ph(r4[0], '作り直し', 'new', 'c1')}${ph(r4[1], '作り直し', 'new', 'c2')}
+      <div class="note"><h3>前の案から変えた所</h3><ul>
+        <li>立ち絵は暗い箱の中 → <b>住む場所の景色の中</b>(季節と時間で替わる)</li>
+        <li>訓練の札6枚がいつも下半分 → 案Aは<b>行動のパネル7つ</b>にまとめ、訓練は押した先で選ぶ。案Bは<b>丸い口6つ</b>を同じ画面に</li>
+        <li>日付だけの帯 → <b>「引退まで あと52週」</b>を大きく。総合力・忠誠・人気・機嫌も帯へ</li>
+        <li>疲れはコーチの一言だけ → <b>げんき・ストレスの5段の目盛り</b>(数字なし)を足した</li>
+        <li>6能力は2列の棒 → <b>横一列</b>。訓練を選ぶと光って「↑19」</li></ul>
+        <h3>落としていない物</h3><ul><li>年・月・週と寿命の目盛り/立ち絵と機嫌/コーチの一言/応援の顔が集まった訓練/6能力・忠誠・人気・疲れ・ストレス/ごはん・修行・休む・遊ぶ・大会</li></ul></div></div>`;
+    return;
+  }
+  const only = q.get('s');
+  root.innerHTML = R.filter((s) => !only || s.id === only).map((s) =>
+    `<section class="scr" id="s${s.id}"><h2>${s.name}</h2><p class="lead">${s.lead}</p><div class="rowp">${s.phones.map((p) =>
+      `<div class="pw"><p class="cap">${p.id} ${p.label}</p><div class="phone" id="p${p.id}">${p.html}</div></div>`).join('')}<div class="note">${s.notes}</div></div></section>`).join('');
+})();
+</script></body></html>
