@@ -54,8 +54,6 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/72-*`
 - `monster-hero/src/parts/76-*`
 - `monster-hero/src/parts/81-*`
-- `monster-hero/src/parts/56-monhero-success-*`
-- `monster-hero/src/parts/56-monsuc-*`
 - `monster-hero/data/breeder.js`
 - `monster-hero/data/help.js`(0.8MB・開かない)
 - `monster-hero/data/changelog.js`(1.6MB・開かない)
