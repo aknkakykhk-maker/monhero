@@ -300,11 +300,14 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑪ 熟練の数字は社長の「中」(6%・15%・8%)', engine.MASTERY_HIT_MAX === 0.06 && engine.MASTERY_GUTS_CUT === 0.15 && engine.MASTERY_GUARD_ADD === 0.08);
 }
 
-// ⑫ 種ごとのガッツのたまる速さは 7〜13 の整数(既存の baseGuts から。2026-11-13 社長「種の差も広げる」)・与ダメの補正は回復の速さと逆向き
+// ⑫ 種ごとのガッツのたまる速さは幅(GUTS_REGEN_MIN〜MAX)の整数(既存の baseGuts から。2026-11-13 社長「種の差も広げる」)・与ダメの補正は回復の速さと逆向き・等級 G〜S の表も読める
 {
-  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < engine.GUTS_REGEN_MIN || v.regen > engine.GUTS_REGEN_MAX || !(Math.abs((v.dmgMul || 0) - (1 - (v.regen - 10) / 3 * engine.REGEN_DMG_SWING)) < 0.002)).map(([k, v]) => `${k}:${v.regen}`);
+  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < engine.GUTS_REGEN_MIN || v.regen > engine.GUTS_REGEN_MAX || !(Math.abs((v.dmgMul || 0) - (1 - (v.regen - (engine.GUTS_REGEN_MIN + engine.GUTS_REGEN_MAX) / 2) / ((engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 2) * engine.REGEN_DMG_SWING)) < 0.002)).map(([k, v]) => `${k}:${v.regen}`);
   const vals = new Set(Object.values(catalog.species).map(v => v.regen));
-  check('⑫ 種ごとのガッツのたまる速さは 7〜13(既存の baseGuts から)・種でちがう・速い種ほど与ダメが少し下がる', !bad.length && vals.size >= 5 && engine.GUTS_REGEN_MIN === 7 && engine.GUTS_REGEN_MAX === 13 && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
+  const gc = engine.buildCatalog({ ...data, ASSISTANT_MASMON_GUTS_REGEN: { [Object.keys(catalog.species)[0]]: 'S', [Object.keys(catalog.species)[1]]: 'g', [Object.keys(catalog.species)[2]]: 'X' } });
+  const gs = Object.keys(catalog.species).slice(0, 3).map((k) => gc.species[k].regen);
+  const gradeOk = gs[0] === engine.GUTS_REGEN_MAX && gs[1] === engine.GUTS_REGEN_MIN && gs[2] === catalog.species[Object.keys(catalog.species)[2]].regen;
+  check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜S の表が読める(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
 }
 
 // ⑬ 能力の差の効き方のつまみ(A/B/C。社長が観戦してから決める)

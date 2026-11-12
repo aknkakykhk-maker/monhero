@@ -3,13 +3,14 @@
 //   node tools/masmon-battle/masmon-guts-sim.js <戦数> '移動,ためる,回復の下,回復の上,与ダメの補正' ...
 //   例: node tools/masmon-battle/masmon-guts-sim.js 3000 '10,22,10,10,0' '10,22,7,13,0.1'
 // 芯の定数だけを差し替えた写しで、同じ能力・種だけ違う1対1を左右入れ替えて回す。
-//   「速い種の勝率」= 回復が速い側(いまの芯の 7〜13 の並びで決める)の勝率。'…,10,10,0'(回復の差なし)の値が種そのものの強さ
+//   「速い種の勝率」= 回復が速い側(いまの芯の並びで決める)の勝率。「差4以上」は回復の幅を 0〜6 にならした目盛りで4以上離れた組。'…,10,10,0'(回復の差なし)の値が種そのものの強さ
 'use strict';
 const fs=require('fs'),path=require('path');
 const W=path.resolve(__dirname,'..','..'); const N=Number(process.argv[2])||2000; const cfgs=process.argv.slice(3);
 const os=require('os'); const SIMDIR=fs.mkdtempSync(path.join(os.tmpdir(),'mgs-'));
 const { load, makeUnit } = require(path.join(W,'tools/masmon-battle/load.js'));
-const { data, engine: e0 } = load(); const REF=e0.buildCatalog(data).species;
+const { data, engine: e0 } = load(); const REF0=e0.buildCatalog(data).species; const REF={}; // 速い・遅いの並び(芯の幅を 0〜6 の目盛りにそろえる。「差4以上」はこの目盛りで)
+for (const k of Object.keys(REF0)) REF[k]={ regen: Math.round((REF0[k].regen-e0.GUTS_REGEN_MIN)/(e0.GUTS_REGEN_MAX-e0.GUTS_REGEN_MIN)*6) };
 const src=fs.readFileSync(path.join(W,'monster-hero/data/assistant-masmon-battle.js'),'utf8');
 for (const c of cfgs){
   const [mv,ch,mn,mx,sw]=c.split(',').map(Number);

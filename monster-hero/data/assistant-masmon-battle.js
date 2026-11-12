@@ -27,7 +27,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 6;           // 計算を変えたら上げる(6 = ガッツの回復を種ごとに広げ(7〜13)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION = 6;           // 計算を変えたら上げる(6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜S からも)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
   const VERSION_PLAIN = 6;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
@@ -40,11 +40,12 @@
   const GUTS_START = 50;
   const GUTS_REGEN = 10;      // 毎ラウンドの自然回復の真ん中(MF の「ガッツ回復」の考え方)
   // 2026-11-13 社長「移動を増やし、種の差も広げる」「回復が速い種ほど与ダメが少し下がり、遅い種ほど上がる」
-  const GUTS_REGEN_MIN = 7;   // 種ごとの毎ラウンドの自然回復の幅(いちばん遅い種)
-  const GUTS_REGEN_MAX = 13;  //                                  (いちばん速い種)
+  const GUTS_REGEN_MIN = 5;   // 種ごとの毎ラウンドの自然回復の幅(いちばん遅い種)
+  const GUTS_REGEN_MAX = 15;  //                                  (いちばん速い種)
+  const GUTS_REGEN_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S']; // ガッツ回復力の等級(G がいちばん遅い・S がいちばん速い)。幅の中へ等間隔に写す
   const GUTS_CHARGE = 22;     // 「ためる」で足す分(移動・ガードより多いまま)
   const GUTS_MOVE = 10;       // 移動・ガードで足す分
-  const REGEN_DMG_SWING = 0.1;  // 回復がいちばん速い種は与ダメ ×(1−これ)、いちばん遅い種は ×(1+これ)。真ん中は ×1
+  const REGEN_DMG_SWING = 0.25; // 回復がいちばん速い種は与ダメ ×(1−これ)、いちばん遅い種は ×(1+これ)。真ん中は ×1(社長「×0.7〜×1.3 ぐらい差があってもよさそう」)
   const GUTS_SWAP_IN = 40;    // 交代で出てきたときの最低ガッツ
   const ROUND_LIMIT = 150;    // これを超えたら判定(無限に続かない)
   const SWAP_COOLDOWN = 2;    // 出てきてから自分の手番2回は交代しない(行ったり来たりを防ぐ)
@@ -167,15 +168,16 @@
         ? m.distAptitude.map(g => (GRADES.includes(g) ? g : 'C')) : ['C', 'C', 'C', 'C'];
       species[id] = { name: String(m.name || id), apt, techs, baseGuts: Number(m.baseGuts) || 0 };
     }
-    // 種ごとのガッツのたまる速さ(毎ラウンドの自然回復): 表 ASSISTANT_MASMON_GUTS_REGEN(種 → 7〜13)があればそれ、
-    //   無ければモンヒロバトルの基礎ガッツ(baseGuts)の大きさで 7〜13 に並べる。
+    // 種ごとのガッツのたまる速さ(毎ラウンドの自然回復): 表 ASSISTANT_MASMON_GUTS_REGEN(種 → 等級 'G'〜'S' か 回復の数)があればそれ、
+    //   無ければモンヒロバトルの基礎ガッツ(baseGuts)の大きさで幅(GUTS_REGEN_MIN〜MAX)に並べる。
     //   与ダメの補正 dmgMul: 回復が速い種ほど少し下がり、遅い種ほど少し上がる(速さで得する分を威力で釣り合わせる)
     const gs = Object.values(species).map(v => v.baseGuts);
     const gMin = Math.min(...gs), gMax = Math.max(...gs);
     const regenTable = s.ASSISTANT_MASMON_GUTS_REGEN && typeof s.ASSISTANT_MASMON_GUTS_REGEN === 'object' ? s.ASSISTANT_MASMON_GUTS_REGEN : {};
     const half = (GUTS_REGEN_MAX - GUTS_REGEN_MIN) / 2;
     for (const [id, v] of Object.entries(species)) {
-      const fixed = Number(regenTable[id]);
+      const gi = typeof regenTable[id] === 'string' ? GUTS_REGEN_GRADES.indexOf(regenTable[id].trim().toUpperCase()) : -1;
+      const fixed = gi >= 0 ? GUTS_REGEN_MIN + gi / (GUTS_REGEN_GRADES.length - 1) * (GUTS_REGEN_MAX - GUTS_REGEN_MIN) : Number(regenTable[id]);
       v.regen = Number.isFinite(fixed) ? clamp(Math.round(fixed), GUTS_REGEN_MIN, GUTS_REGEN_MAX)
         : gMax > gMin ? GUTS_REGEN_MIN + Math.round((v.baseGuts - gMin) / (gMax - gMin) * (GUTS_REGEN_MAX - GUTS_REGEN_MIN)) : GUTS_REGEN;
       v.dmgMul = half > 0 ? Math.round((1 - (v.regen - (GUTS_REGEN_MIN + half)) / half * REGEN_DMG_SWING) * 1000) / 1000 : 1;
@@ -801,7 +803,7 @@
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, buildCatalog, simulate, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
