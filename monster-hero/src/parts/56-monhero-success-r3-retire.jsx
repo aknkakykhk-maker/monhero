@@ -14,9 +14,15 @@ const MSX_R3_ASSIST_TEXT = Object.freeze({
 const MSX_R3_ASSIST_ICON = Object.freeze({ sokoji: '🔥', kizuna: '💞', kaketsuke: '📯', hirameki: '✨', hitonatsu: '🤝', atooshi: '🎯', ochitsuki: '🧘', itawari: '🩹', shugyo: '⚔' });
 const MSX_R3_AUTO_ORDER = Object.freeze(['sokoji', 'hirameki', 'hitonatsu', 'atooshi', 'kaketsuke', 'kizuna', 'ochitsuki', 'itawari', 'shugyo']);
 
-function MsxR3Over({ run, setRun, onPause, debug }) {
+function MsxR3Over({ run, setRun, ctx, bondLv, onPause, debug }) {
   const { SUC } = msxSuc;
   const s = run.s;
+  // 頂への道の最後の試合のあとの掛け合い → エンディング・お祝い・特別演出(56-monhero-success-arc.jsx)→ 引退
+  if (s.over !== 'gameover' && (run.arcAfter || (s.ending && !s.ending.seen))) {
+    const v = SUC.peek(s); const ev = SUC.evaluate(s); const c = ctx || { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species };
+    if (run.arcAfter) return <MsxArcAfter run={run} v={v} ev={ev} onPause={onPause} ctx={c} bondLv={bondLv || 1} after={run.arcAfter} onDone={() => setRun({ ...run, arcAfter: undefined })}/>;
+    return <MsxArcEnding run={run} setRun={setRun} v={v} ev={ev} onPause={onPause} ctx={c} bondLv={bondLv || 1}/>;
+  }
   if (s.over === 'gameover') return <MsxR3GameOver run={run} setRun={setRun} onPause={onPause}/>;
   return <MsxR3Retire run={run} setRun={setRun} onPause={onPause} debug={debug} SUC={SUC}/>;
 }
@@ -326,10 +332,10 @@ function MsxR3Box({ onClose }) {
 
 // ---- 回2の MsxPlay から呼ぶ入口 ----
 // kind: 'battle'(期末・頂への道・月の大会の1戦。run.phase === 'battle')/'over'(引退・ゲームオーバー)/'cup'(受付)/'shugyo'(修行)
-function MsxR3({ kind, run, setRun, v, ev, debug, onBack, onPause, onActed }) {
+function MsxR3({ kind, run, setRun, v, ev, ctx, bondLv, debug, onBack, onPause, onActed }) {
   if (!msxSuc || !run || !run.s) return null;
-  if (kind === 'battle') return <MsxR3Battle run={run} setRun={setRun} v={v} ev={ev} onPause={onPause} debug={debug}/>;
-  if (kind === 'over') return <MsxR3Over run={run} setRun={setRun} onPause={onPause} debug={debug}/>;
+  if (kind === 'battle') return <MsxR3Battle run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} onPause={onPause} debug={debug}/>;
+  if (kind === 'over') return <MsxR3Over run={run} setRun={setRun} ctx={ctx} bondLv={bondLv} onPause={onPause} debug={debug}/>;
   if (kind === 'cup') return <MsxR3Cup run={run} setRun={setRun} v={v} ev={ev} onBack={onBack} onActed={onActed}/>;
   if (kind === 'shugyo') return <MsxR3Shugyo run={run} setRun={setRun} v={v} ev={ev} onBack={onBack} onPause={onPause}/>;
   return null;

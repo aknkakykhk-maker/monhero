@@ -50,7 +50,9 @@ const loadDeps = () => {
 const depsFor = (deps, extra) => ({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, techs: deps.ASSISTANT_MASMON_TECHS,
   types: deps.MONSTER_TYPE_OF, monsters: deps.ALL_PLAYER_MONSTERS, regulars: deps.MONSUC_REGULARS, cupNames: deps.MONSUC_REGULAR_CUPS, events: deps.MONSUC_EVENTS, lineage: deps.MONSTER_LINEAGE_MAP,
   // アシスト能力の表(第2版・段1〜5)。ゲームの入れ物(56-monhero-success-store.jsx)と同じく芯へ渡す(2026-11-12)
-  assist: require(path.join(ROOT, 'monster-hero', 'data', 'monhero-success-assist.js')), ...(extra || {}) });
+  assist: require(path.join(ROOT, 'monster-hero', 'data', 'monhero-success-assist.js')),
+  // 助手1人分のストーリーの表(固有イベント・頂への道の相手えらび・お祝い。2026-11-13)
+  arc: require(path.join(ROOT, 'monster-hero', 'data', 'monhero-success-arc.js')), ...(extra || {}) });
 const load = () => {
   if (cached) return cached;
   const deps = loadDeps();
