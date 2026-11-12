@@ -39,3 +39,14 @@
 - index.html に `data/success-items.js` を足し、絵は `SUCCESS_ITEMS[].image` から読む(`?v=` は stamp-version.js が付ける)
 - 検査の参照元(`tools/image-asset-check.js` の sources)と stamp-version.js の IMAGE_HOST_FILES にはもう足してある
 - 絵は事前ダウンロードの battle 組に入っている(起動時の読み込み core には入らない)
+
+## 新しいアイテムを足す手順(社長「今後新しいアイテムを作るときも同じ見た目で」)
+
+1. `monster-hero/data/success-items.js` の `SUCCESS_ITEMS` に1行足す(id は英小文字とハイフン・`image` は `images/success/items/<id>.png`)
+2. `tools/success/item-icons.js` の `ART['<id>']` に絵を1つ足す。そろえ方は次の部品を使えば自然にそろう
+   - ふちの線 `line`(こげ茶 #3d2618・太さ9)/ 細い線 `thin` / 足もとの影 `groundShadow()` / きらめき `sparkle()` / 星 `star5()` / 金 `GOLD`
+   - 光は左上: グラデーションは左上を明るく、白い半透明の筋を左上側に1本
+   - 中身は 512 の枠の 50〜460 に収める(余白1割)。文字・数字は入れない
+3. `node tools/success/item-icons.js` を打つ(SVG・PNG・一覧の絵がまとめて作り直される。表と絵の数が合わないと止まる)
+4. `items-sheet.png` を開いて、64px でも何の物か読めるか・ほかと並べて浮いていないかを見る
+5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
