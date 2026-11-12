@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc5b052142ad02a8
+// source-sha256: 326a9b3135ec45c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166948,11 +166948,50 @@ const MSA_CSS = `
 .msa-flash{position:absolute;inset:0;z-index:7;background:#fff;opacity:0;pointer-events:none;animation:msaFlash .32s ease-out both}
 .ambw-cut.big{top:6px;left:-6px;right:-6px;padding:6px 18px;background:linear-gradient(90deg,#f59e0b00,#f59e0b 12%,#b45309 50%,#f59e0b 88%,#f59e0b00)!important;text-align:center;border-top:2px solid #fde68a;border-bottom:2px solid #fde68a}
 .ambw-cut.big b{font-size:24px;color:#fff;-webkit-text-stroke:1px #78350f}
-.msa-end{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#0008,#0000 70%);pointer-events:none}
+.msa-end{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#000b,#0004 75%);pointer-events:none}
 .msa-end b{font-size:46px;font-weight:900;letter-spacing:.08em;animation:msaStamp .55s cubic-bezier(.2,1.6,.4,1) both}
 .msa-end.w b{color:#fde047;-webkit-text-stroke:2px #92400e;text-shadow:0 0 18px #fde047aa,0 4px 0 #92400e}
 .msa-end.l b{color:#e2e8f0;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b}
 .msa-end small{margin-top:4px;font-size:12px;font-weight:900;color:#fff;background:#0f172acc;border-radius:99px;padding:2px 10px}
+/* ---- アクセント(2026-11-12 社長「迫力とか見ごたえとか」) ---- */
+.msa-dim{position:absolute;inset:0;z-index:2;background:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0,#0003 16%,#000d 55%);pointer-events:none;animation:msaDim var(--msa-pre,420ms) ease-out both}
+.msa-aura.big{width:150px;height:150px;margin-left:-75px;background:radial-gradient(circle,#fff7 0,#fde047aa 22%,#f97316 45%,#f9731600 70%);animation:msaAuraBig var(--msa-pre,420ms) ease-in both}
+.msa-chargebig{animation:msaChargeBig var(--msa-pre,420ms) ease-in both}
+.msa-dmg.t1{font-size:22px}.msa-dmg.t2{font-size:30px}.msa-dmg.t3{font-size:40px;animation-name:msaPopBig}
+.msa-dmg.t4{font-size:52px;color:#fff;text-shadow:0 3px 0 #b91c1c,0 0 14px #f97316,0 0 26px #fde047;animation-name:msaPopBig}
+.msa-dmg.t4 small{font-size:14px;color:#fde047}
+.msa-shk.shake.s1{animation-name:msaShake1}.msa-shk.shake.s3{animation:msaShake3 .6s ease-out both}
+.msa-critcut{position:absolute;z-index:8;left:-10%;right:-10%;top:38%;height:46px;display:flex;align-items:center;justify-content:center;transform:rotate(-7deg);background:linear-gradient(90deg,#fff0,#fff 18%,#fef08a 50%,#fff 82%,#fff0);pointer-events:none;animation:msaCritCut .75s cubic-bezier(.2,.9,.3,1) both}
+.msa-critcut b{font-size:28px;font-weight:900;color:#b91c1c;letter-spacing:.12em;-webkit-text-stroke:1px #7f1d1d;text-shadow:0 2px 0 #fff}
+.msa-flash.big{animation:msaFlashBig .5s ease-out both}
+.msa-flash.fin{animation:msaFlashFin .45s ease-out both}
+@keyframes msaFlashFin{0%{opacity:.55}100%{opacity:0}}
+.msa-fin{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle,#fff0 30%,#7f1d1d66 100%);animation:msaFin .9s ease-out both}
+.msa-ko.big{font-size:54px;top:22%;-webkit-text-stroke:3px #b91c1c;text-shadow:0 4px 0 #7f1d1d,0 0 22px #f97316}
+.msa-burst{position:absolute;z-index:7;left:50%;top:44%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 7deg,#fde04799 7deg 10deg);-webkit-mask:radial-gradient(circle,#0000 22%,#000 30%,#0000 70%);mask:radial-gradient(circle,#0000 22%,#000 30%,#0000 70%);pointer-events:none;animation:msaBurst .8s ease-out both}
+.msa-f.slowko .mh-card-ko{animation-duration:1.5s!important}
+.msa-dust{position:absolute;z-index:4;bottom:-4px;width:34px;height:18px;border-radius:50%;background:radial-gradient(circle,#e7d7b8cc,#e7d7b800 70%);pointer-events:none;animation:msaDust .6s ease-out both}
+.msa-pant{position:absolute;z-index:7;top:6px;right:-6px;font-size:10.5px;font-weight:900;color:#bae6fd;background:#0f172acc;border-radius:99px;padding:0 6px;line-height:16px;white-space:nowrap;animation:msaPant 1.2s ease-in-out infinite}
+.msa-f.tired img.msa-img{animation:msaTired 1.4s ease-in-out infinite}
+.msa-end b{font-size:64px}
+.msa-end .msa-rays{position:absolute;left:50%;top:50%;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04733 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 20%,#0000 68%);mask:radial-gradient(circle,#000 20%,#0000 68%);animation:msaRays 6s linear infinite;z-index:-1}
+.msa-end.l .msa-rays{display:none}
+.msa-end .msa-ribbon{margin-top:2px;font-size:13px;font-weight:900;letter-spacing:.3em;color:#422006;background:linear-gradient(90deg,#fde04700,#fde047 20%,#fde047 80%,#fde04700);padding:2px 40px;animation:msaIn .5s .25s ease-out both}
+.msa-end.l .msa-ribbon{color:#e2e8f0;background:linear-gradient(90deg,#33415500,#334155 20%,#334155 80%,#33415500)}
+@keyframes msaDim{0%{opacity:0}35%{opacity:1}85%{opacity:1}100%{opacity:0}}
+@keyframes msaAuraBig{0%{opacity:0;transform:scale(1.6)}70%{opacity:1;transform:scale(.8)}88%{opacity:1;transform:scale(.8)}100%{opacity:0;transform:scale(1.9)}}
+@keyframes msaChargeBig{0%{transform:none}60%{transform:translateY(5px) scale(1.08,.9)}85%{transform:translateY(5px) scale(1.08,.9)}100%{transform:none}}
+@keyframes msaPopBig{0%{opacity:0;transform:translateY(14px) scale(.4)}30%{opacity:1;transform:translateY(-10px) scale(1.35)}50%{transform:translateY(-4px) scale(.95)}70%{transform:translateY(-12px) scale(1.06)}100%{opacity:1;transform:translateY(-14px) scale(1)}}
+@keyframes msaShake1{0%,100%{transform:none}30%{transform:translate(-3px,1px)}60%{transform:translate(2px,-1px)}}
+@keyframes msaShake3{0%,100%{transform:none}10%{transform:translate(-12px,5px) scale(1.03)}25%{transform:translate(10px,-5px) scale(1.03)}40%{transform:translate(-8px,3px)}55%{transform:translate(6px,-2px)}70%{transform:translate(-4px,1px)}85%{transform:translate(2px,0)}}
+@keyframes msaCritCut{0%{opacity:0;transform:rotate(-7deg) scaleY(0)}18%{opacity:1;transform:rotate(-7deg) scaleY(1.15)}30%{transform:rotate(-7deg) scaleY(1)}80%{opacity:1}100%{opacity:0;transform:rotate(-7deg) translateX(30px)}}
+@keyframes msaFlashBig{0%{opacity:1}30%{opacity:.7}100%{opacity:0}}
+@keyframes msaFin{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+@keyframes msaBurst{0%{opacity:0;transform:scale(.3) rotate(0)}30%{opacity:1}100%{opacity:0;transform:scale(1.3) rotate(25deg)}}
+@keyframes msaDust{0%{opacity:0;transform:translateX(0) scale(.4)}25%{opacity:1}100%{opacity:0;transform:translateX(var(--msa-dx,-18px)) translateY(-6px) scale(1.5)}}
+@keyframes msaPant{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes msaTired{0%,100%{transform:none}50%{transform:translateY(2px) scale(1.02,.97)}}
+@keyframes msaRays{to{transform:rotate(360deg)}}
 @keyframes msaStamp{0%{opacity:0;transform:translateX(var(--msa-tx,0)) scale(2.2) rotate(var(--msa-r,0deg))}100%{opacity:1;transform:translateX(var(--msa-tx,0)) scale(1) rotate(var(--msa-r,0deg))}}
 @keyframes msaFlash{0%{opacity:.85}100%{opacity:0}}
 @keyframes msaShake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(2px,0)}}
@@ -167062,12 +167101,44 @@ const msaMotionMs = kind => {
     hit: sp && sp.hit || 300
   };
 };
+const MSA_GUTS_TIRED = 15;
+const msaFxOf = (log, e, reduce) => {
+  const z = {
+    pre: 0,
+    stop: 0,
+    fin: false,
+    big: false
+  };
+  if (!e || e.ev !== 'tech') return z;
+  const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40;
+  const idx = Array.isArray(log) ? log.indexOf(e) : -1;
+  const nx = idx >= 0 ? log[idx + 1] : null;
+  const fin = Boolean(e.hit && nx && nx.ev === 'ko' && nx.side && nx.side !== e.side);
+  if (reduce) return {
+    ...z,
+    fin,
+    big
+  };
+  const stop = !e.hit ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
+  return {
+    pre: big ? 460 : 0,
+    stop,
+    fin,
+    big
+  };
+};
+const msaDmgTier = (dmg, maxHp, e, fx) => {
+  if (e.crit || fx.big || fx.fin) return 4;
+  const r = maxHp > 0 ? (Number(dmg) || 0) / maxHp : 0;
+  return r >= 0.25 ? 3 : r >= 0.1 ? 2 : 1;
+};
 const msaStepMs = (e, team, reduce, log) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   if (e.ev === 'tech') {
     const m = team && team.members && team.members[e.i] || {};
-    return msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).ms + 520;
+    const fx = msaFxOf(log, e, reduce);
+    return msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).ms + 520 + fx.pre + fx.stop + (fx.fin ? 450 : 0);
   }
   return {
     start: 700,
@@ -167076,7 +167147,7 @@ const msaStepMs = (e, team, reduce, log) => {
     guard: 750,
     charge: 800,
     swap: 700,
-    ko: 1100,
+    ko: 1500,
     end: 600
   }[e.ev] || 500;
 };
@@ -167100,8 +167171,18 @@ function MsaFighter({
   hpNow,
   reduce,
   idleOk,
-  gd
+  gd,
+  fx,
+  motionOn = true,
+  maxHp = 0,
+  gutsNow = null
 }) {
+  fx = fx || {
+    pre: 0,
+    stop: 0,
+    fin: false,
+    big: false
+  };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
   const img = React.createElement("img", {
@@ -167120,7 +167201,23 @@ function MsaFighter({
   let style = {
     left: `${x * 100}%`
   };
-  if (tech && me && !reduce) {
+  if (tech && me && !reduce && !motionOn) {
+    body = React.createElement("div", {
+      key: `pre-${e.k}`,
+      className: "flex items-end justify-center msa-chargebig",
+      style: {
+        '--msa-pre': `${fx.pre}ms`
+      }
+    }, img);
+    extra.push(React.createElement("span", {
+      key: `ab-${e.k}`,
+      className: "msa-aura big",
+      "aria-hidden": "true",
+      style: {
+        '--msa-pre': `${fx.pre}ms`
+      }
+    }));
+  } else if (tech && me && !reduce) {
     const kind = msaMotionKind(sp, e.tech);
     if (kind) {
       const w = foeX.w;
@@ -167139,7 +167236,7 @@ function MsaFighter({
       });
     }
   }
-  const delay = tech ? reduce ? 0 : msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const delay = tech ? reduce ? 0 : fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   if (tech && foe) {
     const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
     body = React.createElement("div", {
@@ -167167,8 +167264,9 @@ function MsaFighter({
     }));
     extra.push(e.hit ? React.createElement("div", {
       key: `d-${e.k}`,
-      className: "msa-dmg",
+      className: `msa-dmg t${msaDmgTier(e.dmg, maxHp, e, fx)}`,
       "data-msa-dmg": e.dmg,
+      "data-msa-tier": msaDmgTier(e.dmg, maxHp, e, fx),
       style: {
         animationDelay: `${delay}ms`
       }
@@ -167204,15 +167302,40 @@ function MsaFighter({
       }));
     }
   }
-  if (me && e.ev === 'move') cls = 'msa-step';
+  if (me && e.ev === 'move') {
+    cls = 'msa-step';
+    if (!reduce) [0, 1, 2].forEach(j => extra.push(React.createElement("i", {
+      key: `du-${e.k}-${j}`,
+      className: "msa-dust",
+      "aria-hidden": "true",
+      style: {
+        left: `${18 + j * 22}%`,
+        animationDelay: `${j * 60}ms`,
+        '--msa-dx': `${(j - 1) * 16}px`
+      }
+    })));
+  }
   if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
   const koNow = e && e.ev === 'ko' && e.side === side;
   if (down) cls = koNow ? 'mh-card-ko' : '';
-  if (koNow) extra.push(React.createElement("div", {
-    key: `k-${e.k}`,
-    className: "msa-ko",
-    "data-msa-ko": side
-  }, "KO!"));
+  if (koNow) {
+    extra.push(React.createElement("div", {
+      key: `k-${e.k}`,
+      className: "msa-ko big",
+      "data-msa-ko": side
+    }, "K.O.!"));
+    if (!reduce) extra.push(React.createElement("i", {
+      key: `bu-${e.k}`,
+      className: "msa-burst",
+      "aria-hidden": "true"
+    }));
+  }
+  const tired = !down && Number.isFinite(gutsNow) && gutsNow < MSA_GUTS_TIRED && !(me && e.ev === 'charge');
+  if (tired) extra.push(React.createElement("span", {
+    key: "pant",
+    className: "msa-pant",
+    "data-msa-tired": side
+  }, "💦 息切れ"));
   if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
     const n = Math.round(gd);
     extra.push(React.createElement("span", {
@@ -167232,7 +167355,7 @@ function MsaFighter({
     }, still);
   }
   return React.createElement("div", {
-    className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''}`,
+    className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`,
     style: style,
     "data-msa-fighter": side
   }, React.createElement("span", {
@@ -167262,7 +167385,7 @@ function useMsaSfx(log, pos, teams, reduce, on) {
     };
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
-      const hitMs = reduce ? 0 : msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
       if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
       later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
     } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') msaSe('trainingDecide');
@@ -167302,6 +167425,47 @@ function MsaStage({
     endSaid.current = true;
     if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
   }, [ended]);
+  const [preAt, setPreAt] = useState(-1);
+  const fxNow = msaFxOf(log, log[pos], reduce);
+  useEffect(() => {
+    if (!fxNow.pre) return undefined;
+    const t = setTimeout(() => setPreAt(pos), fxNow.pre);
+    return () => clearTimeout(t);
+  }, [pos, fxNow.pre]);
+  useEffect(() => {
+    const e1 = log[pos];
+    const el = stageRef.current;
+    if (!e1 || e1.ev !== 'tech' || !e1.hit || !fxNow.stop || !el || typeof el.getAnimations !== 'function') return undefined;
+    const m = teams[e1.side] && teams[e1.side].members && teams[e1.side].members[e1.i] || {};
+    const at = fxNow.pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e1))).hit;
+    let back = null;
+    const t = setTimeout(() => {
+      const inFighter = a => {
+        const t = a.effect && a.effect.target;
+        return !!(t && t.closest && (t.closest('.msa-f') || t.classList.contains('msa-shk')));
+      };
+      let list = [];
+      try {
+        list = el.getAnimations({
+          subtree: true
+        }).filter(a => a.playState === 'running' && inFighter(a));
+      } catch (_) {}
+      list.forEach(a => {
+        try {
+          a.pause();
+        } catch (_) {}
+      });
+      back = setTimeout(() => list.forEach(a => {
+        try {
+          a.play();
+        } catch (_) {}
+      }), fxNow.stop);
+    }, at);
+    return () => {
+      clearTimeout(t);
+      if (back) clearTimeout(back);
+    };
+  }, [pos]);
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
   if (!f) return null;
   const pf = frames[Math.max(0, Math.min(pos, frames.length - 1) - 1)] || f;
@@ -167329,10 +167493,19 @@ function MsaStage({
     if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return -Math.round(Number(e.gd));
     return null;
   };
+  const fx = msaFxOf(log, e0, reduce);
   const big = e.ev === 'tech' && (Number(e.tech.guts) || 0) >= 40;
-  const hitMs = e.ev === 'tech' && !reduce ? msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
-  const shake = e.ev === 'tech' && e.hit && (e.crit || big) && !reduce;
+  const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const foeSide = e.side === 'A' ? 'B' : 'A';
+  const maxHpOf = side => {
+    const f0 = frames[0];
+    return f0 && f0.hp && f0.hp[side] ? Number(f0.hp[side][f.act[side]]) || 0 : 0;
+  };
+  const tier = e.ev === 'tech' && e.hit ? msaDmgTier(e.dmg, maxHpOf(foeSide), e, fx) : 0;
+  const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0;
+  const shake = shakeLv > 0;
   const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
+  const gutsOf = side => f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null;
   return React.createElement("div", {
     className: "msa-stage",
     ref: stageRef,
@@ -167341,7 +167514,7 @@ function MsaStage({
       backgroundImage: venueImg ? `url(${venueImg})` : undefined
     }
   }, React.createElement("div", {
-    className: `msa-shk ${shake ? 'shake' : ''}`,
+    className: `msa-shk ${shake ? `shake s${shakeLv}` : ''}`,
     key: shake ? `sh-${pos}` : 'st',
     style: shake ? {
       animationDelay: `${hitMs}ms`
@@ -167363,7 +167536,15 @@ function MsaStage({
     style: {
       left: `${b * 100}%`
     }
-  }))), React.createElement(MsaFighter, {
+  }))), e.ev === 'tech' && fx.pre > 0 && preAt !== pos && React.createElement("i", {
+    key: `dim-${pos}`,
+    className: "msa-dim",
+    "aria-hidden": "true",
+    style: {
+      '--msa-pre': `${fx.pre}ms`,
+      '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%`
+    }
+  }), React.createElement(MsaFighter, {
     side: "A",
     member: memberOf('A'),
     x: xA,
@@ -167375,7 +167556,11 @@ function MsaStage({
     hpNow: hpOf('A'),
     reduce: reduce,
     idleOk: true,
-    gd: gdOf('A')
+    gd: gdOf('A'),
+    fx: fx,
+    motionOn: !fx.pre || preAt === pos,
+    maxHp: maxHpOf('A'),
+    gutsNow: gutsOf('A')
   }), React.createElement(MsaFighter, {
     side: "B",
     member: memberOf('B'),
@@ -167388,7 +167573,11 @@ function MsaStage({
     hpNow: hpOf('B'),
     reduce: reduce,
     idleOk: true,
-    gd: gdOf('B')
+    gd: gdOf('B'),
+    fx: fx,
+    motionOn: !fx.pre || preAt === pos,
+    maxHp: maxHpOf('B'),
+    gutsNow: gutsOf('B')
   }), React.createElement("div", {
     className: "msa-dist"
   }, AMBW_DIST.map((n, d) => React.createElement("span", {
@@ -167401,9 +167590,23 @@ function MsaStage({
       zIndex: 7
     },
     "data-msa-cut": p == null ? '' : p
-  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技', p != null ? `・命中 ${p}%` : '', big ? '・大技!' : ''), React.createElement("b", null, e.name)), e.ev === 'tech' && e.hit && e.crit && !reduce && React.createElement("i", {
+  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技', p != null ? `・命中 ${p}%` : '', big ? '・大技!' : ''), React.createElement("b", null, e.name)), e.ev === 'tech' && e.hit && (e.crit || fx.fin) && !reduce && React.createElement("i", {
     key: `fl-${pos}`,
-    className: "msa-flash",
+    className: `msa-flash ${e.crit ? 'big' : 'fin'}`,
+    "aria-hidden": "true",
+    style: {
+      animationDelay: `${hitMs}ms`
+    }
+  }), e.ev === 'tech' && e.hit && e.crit && !reduce && React.createElement("div", {
+    key: `cc-${pos}`,
+    className: "msa-critcut",
+    "data-msa-critcut": true,
+    style: {
+      animationDelay: `${hitMs + fx.stop}ms`
+    }
+  }, React.createElement("b", null, "会心の一撃!")), e.ev === 'tech' && fx.fin && !reduce && React.createElement("i", {
+    key: `fin-${pos}`,
+    className: "msa-fin",
     "aria-hidden": "true",
     style: {
       animationDelay: `${hitMs}ms`
@@ -167411,7 +167614,12 @@ function MsaStage({
   })), ended && React.createElement("div", {
     className: `msa-end ${win === 'A' ? 'w' : 'l'}`,
     "data-msc-end": win === 'A' ? 'win' : win === 'draw' ? 'draw' : 'lose'
-  }, React.createElement("b", null, win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'), endSub ? React.createElement("small", null, endSub) : null));
+  }, !reduce && React.createElement("i", {
+    className: "msa-rays",
+    "aria-hidden": "true"
+  }), React.createElement("b", null, win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'), React.createElement("span", {
+    className: "msa-ribbon"
+  }, win === 'A' ? 'WIN' : win === 'draw' ? 'DRAW' : 'LOSE'), endSub ? React.createElement("small", null, endSub) : null));
 }
 function MonsucArena({
   s,
