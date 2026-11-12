@@ -35,6 +35,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-12 22:15", type:'update', group:'assistant', status:'new',
+    title:'マスモンの対戦で、ちから・かしこさが受けるダメージも減らすようになりました',
+    items:[
+      '助手のマスモンの対戦で、ちからは相手のちから技、かしこさは相手のかしこさ技から受けるダメージも少し減らすようになりました。',
+      '丈夫さは、これまでどおり どちらの技のダメージも減らします。',
+      '受けるダメージが減るぶん、試合は少し長くなります。',
+    ],
+  },
+  {
     // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
     date: "2026-11-12 21:00", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスが始まりました',

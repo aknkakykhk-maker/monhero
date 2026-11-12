@@ -2899,6 +2899,7 @@ const HELP_CATEGORIES = [
           { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'重トレーニングチケット', text:'選んだ能力が大きく上がり、決まった能力も少し上がりますが、かわりに決まった能力が少し下がり、マスモンが少し疲れます。何が上がって何が下がるかは、使う前に表示されます。' },
           { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'自分のモンスターには入りません', text:'助手のマスモンに使ったチケットは、自分のマスモンの絆経験値にはなりません。絆ランキングにも効きません。上がった能力は、助手のマスモンのフレンド対戦にはそのまま入ります。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚔ マスモンで対戦(β)', text:'助手が育てているマスモンを、ほかの助手のマスモンと対戦させて観戦できます。' },
+          { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'💪 能力の効き方', text:'ちからはちから技、かしこさはかしこさ技のダメージを上げます。相手から同じ種類の技を受けたときは、そのダメージを少し減らします。丈夫さは、どちらの技のダメージも減らします。' },
           { t:'list', releaseFlag:'assistantMasmonBattleBeta', items:[
             'じゅんび: 「おまかせ」なら助手が3体と順番を決めます。「自分で決める」では、対戦の形(1対1〜3対3)・出す順番・作戦・交代の早さを選べます',
             '観戦: 速さは ×1・×2・×4・「★ 見せ場だけ」から選べます',
