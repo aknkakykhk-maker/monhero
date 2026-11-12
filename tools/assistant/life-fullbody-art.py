@@ -62,6 +62,59 @@ def split_cells(file, cut_y, cut_x):
     return out
 
 
+# 横に何人も並んで、となりと体(コートのすそなど)がくっついているシート。四角では切れないので、となりとの境目を
+#   「上から下へ不透明の少ない道すじ(縫い目)」でたどって切る。表情なしの絵のキー → [(シート, 段の切れ目の行の一覧, [表情…(左上から横へ)], 1段の人数)]
+#   (2026-11-12 社長から あつの8表情。4×2・1体 約 256×768。コートのすそが重なる所は縫い目が少し横切る)
+SEAM_SHEETS = {
+    'atsu': [('atsu-8expressions-sheet.png', [775], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 4)],
+}
+
+
+def seam_path(al, x0, x1, bias=0.02):
+    """al の x0〜x1 の帯で、上から下へ不透明の少ない道すじ(1行で左右1画素まで動ける)。真ん中から離れるほど少し高くする。"""
+    cost = al[:, x0:x1] / 255.0
+    c = (x1 - x0) / 2
+    cost = cost + bias * np.abs(np.arange(x1 - x0) - c) / c
+    h, w = cost.shape
+    acc = cost.copy()
+    back = np.zeros((h, w), int)
+    for y in range(1, h):
+        prev = acc[y - 1]
+        st = np.vstack([np.r_[np.inf, prev[:-1]], prev, np.r_[prev[1:], np.inf]])
+        k = st.argmin(0)
+        acc[y] += st.min(0)
+        back[y] = k - 1
+    x = int(acc[-1].argmin())
+    path = [x]
+    for y in range(h - 1, 0, -1):
+        x += back[y, x]
+        path.append(x)
+    return np.array(path[::-1]) + x0
+
+
+def seam_cells(file, row_cuts, per_row):
+    """シートを段の切れ目で分け、各段を縫い目で per_row 人に分ける。元の大きさのまま、ほかの人を消した絵を返す。"""
+    a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
+    h, w = a.shape[:2]
+    al = a[..., 3].astype(np.float32)
+    ys = [0] + list(row_cuts) + [h]
+    out = []
+    band = int(w / per_row * 0.35)
+    for y0, y1 in zip(ys, ys[1:]):
+        cuts = [np.zeros(y1 - y0, int)]
+        for i in range(1, per_row):
+            c = int(w * i / per_row)
+            cuts.append(seam_path(al[y0:y1], c - band, c + band))
+        cuts.append(np.full(y1 - y0, w))
+        xx = np.arange(w)
+        for i in range(per_row):
+            c = np.zeros_like(a)
+            m = (xx[None, :] >= cuts[i][:, None]) & (xx[None, :] < cuts[i + 1][:, None])
+            c[y0:y1][m] = a[y0:y1][m]
+            out.append(c)
+    return out
+
+
 # 囲まれた背景の残り(腕と頭のあいだ・両足のあいだなど、外から切り抜いても抜けない白)。
 #   キー → 元の絵の上の座標 (x, y) の一覧。その点からつながる白い所を透明にする(服の白は座標を入れないので残る)
 POCKETS = {
@@ -456,6 +509,14 @@ def main():
         # 表情の絵(キーに @)は、表情なしの絵と同じ倍率で縮める(立ち姿の大きさをそろえる)
         base = key.split('@')[0] if '@' in key else None
         jobs.append((name, lambda key=key: make_art(key), (lambda base=base: fit_scale(make_art(base))) if base else None))
+    for key, sheets in SEAM_SHEETS.items():
+        for file, rows, exprs, per_row in sheets:
+            for e, arr in zip(exprs, seam_cells(file, rows, per_row)):
+                # 体の不透明度が 252〜253 の絵なので、245 以上は 255 にそろえる(ほんの少し透けるのを防ぐ)。体のまわりの光も消す
+                arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
+                jobs.append(('%s__%s' % (key, e),
+                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
+                             (lambda key=key: fit_scale(make_art(key)) * 2.0)))
     for key, sheets in SPLIT_SHEETS.items():
         base_name = key.replace(':', '_')
         for file, exprs, cy, cx in sheets:
