@@ -2283,41 +2283,6 @@
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
-  "atsu_cup_theme_debug_short/EASY": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/NORMAL": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/HARD": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/EXPERT": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/MASTER": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
   "lamia/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -2351,6 +2316,111 @@
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 27,
+   "heldHandSwitch": 0
+  },
+  "saudade/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "saudade_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
    "heldHandSwitch": 0
   }
  },
@@ -2414,6 +2484,11 @@
    "at": "2026-11-12T01:09",
    "reason": "新曲 LAMIA を公開(LAMIA の5行だけ足した)",
    "changed": 5
+  },
+  {
+   "at": "2026-11-11T21:46",
+   "reason": "新曲 サウダージ(通常・short)を公開",
+   "changed": 10
   }
  ]
 }

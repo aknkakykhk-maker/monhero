@@ -54,6 +54,20 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-12 新曲「サウダージ」(通常版・short ver.)。社長「新曲 通常とショート版。ジャケット2枚」(Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-12 06:48", type:'update', group:'rhythm', title:'新曲「サウダージ」を追加しました', status:'new',
+    image:'images/song-art/saudade.jpg?v=2fb12cbdc60a',
+    items:[
+      'モンヒロビートに「サウダージ」（4分23秒）と「サウダージ short ver.」（1分36秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.12 ／ EXPERT Lv.18 ／ MASTER Lv.29 ／ HELL Lv.37 です。',
+      '【通常版】ノーツ数は 329 ／ 376 ／ 515 ／ 618 ／ 866 ／ 853 です。',
+      '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.10 ／ EXPERT Lv.19 ／ MASTER Lv.29 ／ HELL Lv.37 です。',
+      '【short ver.】ノーツ数は 121 ／ 139 ／ 190 ／ 228 ／ 319 ／ 310 です。',
+    ],
+    gallery:[{ image:'images/song-art/saudade-short.jpg?v=5b73267eda1a', caption:'short ver. のジャケット' }],
+    assistantNotice:{ id:'update_notice_saudade_v1', type:'content' },
+  },
+  {
     // 町の地図の見やすさ(2026-11-11 ミヤスサ点検 ③ #5496。文は社長「この文で」)
     date: "2026-11-12 06:00", type:'update', group:'assistant', title:'町の地図が見やすくなりました', status:'new',
     items:[
