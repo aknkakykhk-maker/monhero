@@ -184,6 +184,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   REWORKED_V3.push('lamia','lamia_hell_debug');
   // 2026-11-11 に足した新曲 サウダージ(通常版・short ver.。5難易度と HELL・v3 で測る)
   REWORKED_V3.push('saudade','saudade_short','saudade_hell_debug','saudade_short_hell_debug');
+  // 2026-11-12 に足した新曲 メガロバニア2曲(サンズ戦・スマブラver。5難易度と HELL・v3 で測る)
+  REWORKED_V3.push('megalovania_sans','megalovania_smash','megalovania_sans_hell_debug','megalovania_smash_hell_debug');
   check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面と、10/21 に足した HELL 2譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
     all.filter(song=>L.levelFormulaFor(song.songId)!==(REWORKED_V3.includes(song.songId)?'v3':'v1')).map(song=>song.songId).join(','));
   check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');

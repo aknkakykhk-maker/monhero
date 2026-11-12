@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // 2026-11-12 社長「今ある画面で第2弾の開発中だけど告知画像あげて。第1弾の告知と同じとこにあげて」「第2弾はもっと別の画面みせて」。画像は回3(craft/monsuc-r3)の実際の画面6枚(tools 外の一回きりの合成)
     date: "2026-11-12 20:02", type:'content', title:'新コンテンツ「モンヒロサクセス」開発中・第2弾', status:'new', group:'success',
-    image: 'images/events/monsaku-teaser2.jpg?v=6945f8e37200',
+    image: 'images/events/monsaku-teaser2.jpg?v=173560d714c1',
     items:[
       '開発中の新コンテンツ「モンヒロサクセス」の画面を、もう少しお見せします。',
       '育てている途中で大会に出られます。試合の前に、相手との能力をバトルカードで見比べられます。',
@@ -47,7 +47,27 @@ const CHANGELOG = [
       '画像は開発中の画面です。公開までに変わることがあります。',
       '近日公開予定です。お楽しみに！',
     ],
+    gallery:[
+      { caption:'大会の組み合わせ', image:'images/events/monsaku-teaser2-bracket.jpg?v=fe37a322b121' },
+      { caption:'大会で優勝！', image:'images/events/monsaku-teaser2-win.jpg?v=58eaa0eb1301' },
+      { caption:'修行に出る', image:'images/events/monsaku-teaser2-ascetic.jpg?v=aa0e366357bb' },
+      { caption:'負けても砂時計でやり直せる', image:'images/events/monsaku-teaser2-hourglass.jpg?v=23244a819a0d' },
+    ],
     assistantNotice:{ id:'update_notice_monsaku_soon2_v1', type:'content' },
+  },
+  {
+    // 2026-11-12 新曲「メガロバニア」2曲(サンズ戦・スマブラver)。社長「新曲実装。これも急いでやらせて」(Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-12 20:02", type:'update', group:'rhythm', title:'新曲「メガロバニア」2曲を追加しました', status:'new',
+    image:'images/song-art/megalovania-sans.jpg?v=5884e2ecbb01',
+    items:[
+      'モンヒロビートに「メガロバニア（サンズ戦）」（2分37秒・作：ねるかめちゃん）と「MEGALOVANIA（スマブラver）」（4分36秒・作：暇人[もちゃ]）を追加しました。曲えらびからすぐ遊べます。',
+      '【サンズ戦】レベルは EASY Lv.12 ／ NORMAL Lv.15 ／ HARD Lv.21 ／ EXPERT Lv.29 ／ MASTER Lv.43 ／ HELL Lv.77 です。',
+      '【サンズ戦】ノーツ数は 425 ／ 487 ／ 610 ／ 732 ／ 846 ／ 971 です。',
+      '【スマブラver】レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.30 ／ HELL Lv.44 です。',
+      '【スマブラver】ノーツ数は 430 ／ 493 ／ 674 ／ 813 ／ 937 ／ 1090 です。',
+    ],
+    gallery:[{ image:'images/song-art/megalovania-smash.jpg?v=1923d225d33a', caption:'スマブラver のジャケット' }],
+    assistantNotice:{ id:'update_notice_megalovania_v1', type:'content' },
   },
   {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
