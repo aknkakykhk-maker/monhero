@@ -658,9 +658,9 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const s = run.s;
   const se = msxSuc.script;
   const isStory = run.phase === 'story';
-  const isUniq = !isStory && o.ev && o.ev.kind === 'uniq'; // 助手の固有イベント(56-monhero-success-arc.jsx・data/monhero-success-arc.js)
   const o = run.out || {};
   const view = o.ev || null;
+  const isUniq = !isStory && !!view && view.kind === 'uniq'; // 助手の固有イベント(56-monhero-success-arc.jsx・data/monhero-success-arc.js)
   const scene = isStory ? (se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}`) : view && view.lines;
   const c2 = { ...ctx, bond: bondLv, cheer: view && view.cheerName, cheer2: view && view.cheer2Name, train: view && view.train ? MSX_STAT_NAME[view.train] : undefined };
   const evOf = (sc) => { try { return se && typeof se.event === 'function' && sc ? se.event(sc, c2) : null; } catch (e) { return null; } };

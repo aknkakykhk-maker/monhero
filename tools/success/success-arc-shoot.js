@@ -51,10 +51,10 @@ const makeRun = async (kind) => {
     ['U1', 'uniq', ['cont']], ['U2', 'uniq', ['cont', 'opt']],
     ['P1', 'pick1', ['cont']], ['P2', 'pick2', ['cont']], ['P3', 'pick3', ['cont']],
     ['A1', 'pick1', ['cont', '#next', '%quick', '%next']],
-    ['N1', 'bad', ['cont']], ['N2', 'bad', ['cont', '#next']],
-    ['G1', 'good', ['cont']], ['G2', 'good', ['cont', '#next']], ['G4', 'good', ['cont', '#next', '#next', '#next']],
-    ['S1', 'super', ['cont']], ['S2', 'super', ['cont', '#next']], ['S5', 'super', ['cont', '#next', '#next', '#next', '#next']],
-    ['S6', 'super', ['cont', '#next', '#next', '#next', '#next', 'wait', '#next', '#next']],
+    ['N1', 'bad', ['cont']], ['N2', 'bad', ['cont', '#next', '#next']],
+    ['G1', 'good', ['cont']], ['G2', 'good', ['cont', '#next', '#next']], ['G4', 'good', ['cont', '#next', '#next', '#next', '#next']],
+    ['S1', 'super', ['cont']], ['S2', 'super', ['cont', '#next', '#next']], ['S5', 'super', ['cont', '#next', '#next', '#next', '#next', '#next']],
+    ['S6', 'super', ['cont', '#next', '#next', '#next', '#next', '#next', 'wait', '#next', '#next']],
   ];
   try {
     for (const [w, h, tag] of sizes) {

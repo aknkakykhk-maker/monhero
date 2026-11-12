@@ -38,7 +38,7 @@ check('① 人なつっこさの「はじめの親密度」も第2版', same(S2.
 check('① 試合型5つ(ひらめき・保留中)は第1版のまま', BATTLE.every((id) => same(S2.ASSISTS[id], S1.ASSISTS[id])));
 check('② 表なしは第1版(3段)', V1_IDS.every((id) => S1.ASSISTS[id].v.length === 3));
 check('② 壊れた表の種類は第1版のまま', same(SB.ASSISTS.sokoji, S1.ASSISTS.sokoji));
-check('⑤ 芯の版は 5', mod.VERSION === 5 && S2.VERSION === 5);
+check('⑤ 芯の版は 5 以上(6 = 助手1人分のストーリー・2026-11-13)', mod.VERSION >= 5 && S2.VERSION === mod.VERSION);
 
 // ③ 保存データ
 const sp = S2.speciesList[0];

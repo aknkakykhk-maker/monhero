@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a54de6357ea3c7ad
+// source-sha256: 4a919653a551b685
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162821,9 +162821,9 @@ function MsxEvent({
   const s = run.s;
   const se = msxSuc.script;
   const isStory = run.phase === 'story';
-  const isUniq = !isStory && o.ev && o.ev.kind === 'uniq';
   const o = run.out || {};
   const view = o.ev || null;
+  const isUniq = !isStory && !!view && view.kind === 'uniq';
   const scene = isStory ? se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}` : view && view.lines;
   const c2 = {
     ...ctx,
