@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 66d15ec78af8c047
+// generated-sha256: 41eb0f726aa99918
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73846,6 +73846,129 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
 
+// ---- part: 56-assistant-life-masmon-calc.jsx ----
+// マスモンの育成の「計算だけの部品」(2026-11-12 キズナ・案 docs/progress/assistant-peer/masmon-plan/POWER.md 第3版・FUSE.md 第2版)
+//   窓口のお願い: 助手や保存キーに結びつけない。入力 = 値(能力・寿命の割合・方針など)、出力 = 結果。助手の側はこれを呼ぶだけ
+//   のちのプレイヤー側の育成(ターン制)からも使えるよう、年齢は日数ではなく「寿命のうち何割まで来たか(0〜1)」で受ける
+//   React・保存・Date・Math.random を使わない。乱数がいる所は 0〜1 の値 r を外から渡す(同じ入力なら同じ結果)
+const MASMON_CALC = (() => {
+  const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  const STAT_MAX = 999;
+
+  // ---- 総合力とランク(POWER.md 1・2章) ----
+  const POWER_W = Object.freeze({ stat: 2.5, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 });
+  // stats: { life, pow, ... } / masteries: 覚えた技ごとの熟練(0〜100)の配列 / lv / loyal / pop
+  const power = ({ stats = {}, masteries = [], lv = 1, loyal = 0, pop = 0 } = {}) => {
+    const sum = KEYS.reduce((a, k) => a + clamp(num(stats[k]), 0, STAT_MAX), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankOf = (p) => { const v = num(p); let i = 0; RANKS.forEach(([, min], j) => { if (v >= min) i = j; }); return { key: RANKS[i][0], min: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : null, index: i }; };
+
+  // ---- 合体の上乗せ(FUSE.md 第2版): 平均 × √(弱い方÷強い方) を効く値にし、200 ×(効く値÷999)^1.5 ----
+  const FUSE = Object.freeze({ top: 200, pow: 1.5, ref: 999 });
+  const fuseBonus = (a, b) => {
+    const x = Math.max(0, num(a)); const y = Math.max(0, num(b)); const hi = Math.max(x, y); const lo = Math.min(x, y);
+    if (hi <= 0) return 0;
+    return Math.round(FUSE.top * Math.pow((((x + y) / 2) * Math.sqrt(lo / hi)) / FUSE.ref, FUSE.pow));
+  };
+  // base(種類の初期値)+ 上乗せ。能力の上限 999 だけ守る
+  const fuseStats = (base, a, b) => { const st = {}; const add = {}; for (const k of KEYS) { add[k] = fuseBonus(a && a[k], b && b[k]); st[k] = clamp(Math.round(num(base && base[k]) + add[k]), 1, STAT_MAX); } return { st, add }; };
+
+  // ---- 育ちの速さ(POWER.md 7章・社長 ×3) ----
+  const PACE = 3;
+
+  // ---- 成長の型と、年齢(寿命の割合)での伸び(6章) ----
+  const GROW_TYPES = Object.freeze([
+    { key: 'vearly', name: '超早熟', c: [1.3, 1.7, 1.7, 1.4, 1.1, 0.9, 0.8, 0.7, 0.7, 0.6] },
+    { key: 'early', name: '早熟', c: [1.1, 1.4, 1.6, 1.6, 1.3, 1.0, 0.9, 0.8, 0.7, 0.6] },
+    { key: 'normal', name: '普通', c: [0.9, 1.0, 1.2, 1.4, 1.5, 1.4, 1.2, 1.0, 0.8, 0.7] },
+    { key: 'late', name: '晩成', c: [0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.5, 1.5, 1.2, 0.9] },
+    { key: 'vlate', name: '超晩成', c: [0.7, 0.8, 0.8, 0.9, 1.0, 1.1, 1.3, 1.5, 1.6, 1.4] },
+    { key: 'steady', name: '持続', c: [1.0, 1.1, 1.15, 1.15, 1.15, 1.15, 1.15, 1.15, 1.1, 1.0] },
+  ]);
+  const typeOf = (t) => GROW_TYPES[clamp(Math.round(num(t, 2)), 0, GROW_TYPES.length - 1)];
+  // frac = 寿命のうち何割まで来たか(0〜1)。1 以上 = 寿命(伸びは 0)
+  const ageMult = (t, frac) => { const f = num(frac); if (f >= 1) return 0; const c = typeOf(t).c; return c[clamp(Math.floor(Math.max(0, f) * 10), 0, 9)]; };
+  // いちばん伸びる区間(表示用): { from, to }(寿命の割合)と高さ
+  const peakOf = (t) => { const c = typeOf(t).c; const top = Math.max(...c); const idx = c.map((v, i) => (v === top ? i : -1)).filter(i => i >= 0); return { from: idx[0] / 10, to: (idx[idx.length - 1] + 1) / 10, mult: top }; };
+  // 迎えたときの型: 伸びやすさの字(A〜E の6文字)で出やすさを変える。どの型も出る。r は 0〜1
+  const typeFromApt = (apt, r) => {
+    const s = String(apt || ''); const hi = (s.match(/A/g) || []).length; const lo = (s.match(/[CDE]/g) || []).length;
+    const w = [1, 2, 3, 2, 1, 1]; // 超早熟・早熟・普通・晩成・超晩成・持続
+    if (hi >= 2) { w[0] += 1; w[1] += 2; } else if (lo >= 4) { w[3] += 2; w[4] += 1; }
+    const total = w.reduce((a, b) => a + b, 0); let x = clamp(num(r), 0, 0.999999) * total;
+    for (let i = 0; i < w.length; i++) { if (x < w[i]) return i; x -= w[i]; }
+    return 2;
+  };
+
+  // ---- 育成方針(5章): -3 超溺愛 〜 0 普通 〜 +3 超スパルタ ----
+  const POLICIES = Object.freeze([
+    { name: '超溺愛', life: 40, stress: 0.6, gain: 0.80, sab: 2.0 },
+    { name: '溺愛', life: 37, stress: 0.75, gain: 0.87, sab: 1.6 },
+    { name: '甘い', life: 33, stress: 0.9, gain: 0.94, sab: 1.3 },
+    { name: '普通', life: 30, stress: 1.0, gain: 1.00, sab: 1.0 },
+    { name: '厳しい', life: 27, stress: 1.15, gain: 1.06, sab: 0.8 },
+    { name: 'スパルタ', life: 23, stress: 1.3, gain: 1.12, sab: 0.6 },
+    { name: '超スパルタ', life: 20, stress: 1.5, gain: 1.18, sab: 0.4 },
+  ]);
+  const policyOf = (pol) => POLICIES[clamp(Math.round(num(pol)), -3, 3) + 3];
+  const POLICY_STEP = 10;
+  // 褒める(-1)・叱る(+1)で点が動き、10点で1段。逆へ押すと点が戻る。返り値 { pol, pp }
+  const policyMove = (pol, pp, dir) => {
+    let p = clamp(Math.round(num(pol)), -3, 3); let q = clamp(Math.round(num(pp)), -(POLICY_STEP - 1), POLICY_STEP - 1) + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
+    if (q >= POLICY_STEP) { if (p < 3) { p += 1; q = 0; } else q = POLICY_STEP - 1; }
+    if (q <= -POLICY_STEP) { if (p > -3) { p -= 1; q = 0; } else q = -(POLICY_STEP - 1); }
+    return { pol: p, pp: q };
+  };
+  // 寿命の進み: 1単位(助手は1日・プレイヤー側は1ターンなど)ごとに足す割合。base は「普通の方針の寿命」をその単位で
+  const lifeLen = (pol, base = 30) => (policyOf(pol).life / 30) * Math.max(1, num(base, 30)); // その方針の寿命(base と同じ単位)
+  const lifeStep = (pol, base = 30) => 1 / lifeLen(pol, base);
+  // 1日 = 1か月 として「◯歳◯か月」
+  const ageLabel = (months) => { const m = Math.max(0, Math.floor(num(months))); return `${Math.floor(m / 12)}歳${m % 12}か月`; };
+
+  // ---- 忠誠度と人気(3・4章) ----
+  const noActChance = (loyal) => (100 - clamp(num(loyal, 100), 0, 100)) * 0.0025; // 100で0・0で0.25
+  const critBonus = (pop) => clamp(num(pop), 0, 100) / 500; // 100で +0.20
+  const CRIT_CAP = 0.30;
+  const critOf = (base, pop) => Math.min(CRIT_CAP + critBonus(pop), Math.max(0, num(base)) + critBonus(pop));
+  const sabLoyalMult = (loyal) => 1.5 - clamp(num(loyal, 50), 0, 100) / 100;
+  const POP = Object.freeze({ pvpWin: 2, pvpLose: 0.5, peerWin: 1, peerLose: 0.2, spar: 0.2, idleDays: 7, idleDrop: 1 });
+  const popAfterBattle = (pop, kind, win) => { const d = kind === 'pvp' ? (win ? POP.pvpWin : POP.pvpLose) : kind === 'peer' ? (win ? POP.peerWin : POP.peerLose) : kind === 'spar' && win ? POP.spar : 0; return clamp(num(pop) + d, 0, 100); };
+
+  // ---- 訓練・修行の結果(9章) ----
+  const RESULTS = Object.freeze({ great: { name: '大成功', mult: 1.5, str: -3 }, ok: { name: '成功', mult: 1, str: 0 }, fail: { name: '失敗', mult: 0.3, str: 0 }, cheat: { name: 'ズル', mult: 0.2, str: 0, noFat: true }, skip: { name: 'サボり', mult: 0, fat: -5, str: -5 } });
+  // sab = 育成ノートのサボりの起きやすさ(0〜1・忠誠と方針をかける前)/fail = 失敗の起きやすさ/r = 0〜1
+  const resultOf = ({ loyal = 50, pol = 0, sab = 0, fail = 0, r = 0.5 } = {}) => {
+    const L = clamp(num(loyal, 50), 0, 100); const x = clamp(num(r), 0, 0.999999);
+    const pSkip = clamp(num(sab) * sabLoyalMult(L) * policyOf(pol).sab, 0, 0.9);
+    const pCheat = L < 50 ? Math.min(0.10, (50 - L) / 500) : 0;
+    const pFail = clamp(num(fail), 0, 0.9);
+    const pGreat = L >= 80 ? 0.11 : 0.08;
+    let a = pSkip; if (x < a) return 'skip';
+    a += pCheat; if (x < a) return 'cheat';
+    a += pFail; if (x < a) return 'fail';
+    a += pGreat; if (x < a) return 'great';
+    return 'ok';
+  };
+  // 叱る(scold)・褒める(praise)の結果: 忠誠度の増減と、方針の向き(+1 厳しい側・-1 甘い側)
+  const reactOf = (result, act) => {
+    const good = result === 'great' || result === 'ok'; const bad = result === 'cheat' || result === 'skip';
+    if (act === 'praise') return { loyal: good ? 3 : result === 'fail' ? 1 : bad ? -3 : 0, dir: -1 };
+    if (act === 'scold') return { loyal: bad ? 4 : result === 'fail' ? -2 : good ? -5 : 0, dir: 1 };
+    return { loyal: 0, dir: 0 };
+  };
+
+  // ---- けが・病気・家出の長さ(社長: 重さで幅): 軽い1回・ふつう3回・重い6回。疲れ・ストレスが高いほど重い ----
+  const condLen = (load, r) => { const v = clamp(num(load), 0, 100); const x = clamp(num(r), 0, 0.999999); const heavy = v >= 90 ? 0.3 : v >= 80 ? 0.15 : 0.05; const light = v >= 90 ? 0.2 : v >= 80 ? 0.35 : 0.5; return x < heavy ? 6 : x < heavy + light ? 1 : 3; };
+
+  return Object.freeze({ KEYS, STAT_MAX, POWER_W, power, RANKS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
+    POLICIES, policyOf, POLICY_STEP, policyMove, lifeLen, lifeStep, ageLabel, noActChance, critBonus, CRIT_CAP, critOf, sabLoyalMult, POP, popAfterBattle, RESULTS, resultOf, reactOf, condLen });
+})();
+
 // ---- part: 56-assistant-life-masmon-grow.jsx ----
 // 助手のマスモンの育成基盤(社長の仕様書 docs/progress/assistant-peer/ASSISTANT-MASMON-AUTOBATTLE-SPEC-v1.md の第①段階・2026-11-11 キズナ4)
 //   6能力(ライフ・ちから・かしこさ・命中・回避・丈夫さ)・疲労・ストレス・1日3回(朝・昼・夜)の自主育成。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md
@@ -77944,7 +78067,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
 //   種類・名前・色・型・伸びの個体差は主のまま。Lv・育成Lv は1、疲れ・ストレス・けがは0。技は主の全部+素材の技のうち主の種類でも覚えられる物、熟練は高い方の半分
 //   保存は新しいキー mh_assistant_masmon_fuse_v1(いなくなったマスモンの記録)。先に記録を書き、そのあと冬眠の箱を書く
 const ASSISTANT_MASMON_FUSE_KEY = 'mh_assistant_masmon_fuse_v1';
-const AMGS_FUSE = Object.freeze({ top: 200, pow: 1.5, ref: 999, log: 50 });
+const AMGS_FUSE = Object.freeze({ log: 50 });
 const amgsFuseOn = () => amgsOn() && RELEASE_FLAGS.assistantMasmonFuse === true;
 const amgsFuseSt = (o) => { const st = {}; for (const k of AMG_KEYS) st[k] = amgNum(o && o[k], 0, 0, AMG_MAX); return st; };
 const normalizeAssistantMasmonFuse = (raw) => {
@@ -77960,13 +78083,8 @@ const normalizeAssistantMasmonFuse = (raw) => {
   return out;
 };
 const AMGS_FSTORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_FUSE_KEY, normalizeAssistantMasmonFuse) : null;
-// 1つの能力の上乗せ: 平均 × √(弱い方÷強い方) を効く値にし、200 ×(効く値÷999)^1.5。片方だけ強いと小さい
-const amgsFuseBonus = (a, b) => {
-  const x = Math.max(0, Number(a) || 0); const y = Math.max(0, Number(b) || 0); const hi = Math.max(x, y); const lo = Math.min(x, y);
-  if (hi <= 0) return 0;
-  const eff = ((x + y) / 2) * Math.sqrt(lo / hi);
-  return Math.round(AMGS_FUSE.top * Math.pow(eff / AMGS_FUSE.ref, AMGS_FUSE.pow));
-};
+// 1つの能力の上乗せ: 計算は MASMON_CALC.fuseBonus(56-assistant-life-masmon-calc.jsx・助手に結びつけない部品)
+const amgsFuseBonus = (a, b) => MASMON_CALC.fuseBonus(a, b);
 const amgsFuseBase = (monster) => { const b = AMG_INIT[monster] || [110, 110, 110, 110, 110, 110]; const st = {}; AMG_KEYS.forEach((k, i) => { st[k] = amgClamp(Math.round(b[i]), Math.max(1, AMG_INIT_FLOOR), AMG_MAX); }); return st; };
 // 合体の見通し(画面と本体で同じ物を使う)。6能力が無い子(古い形)は null
 const amgsFusePlan = (main, mat) => {

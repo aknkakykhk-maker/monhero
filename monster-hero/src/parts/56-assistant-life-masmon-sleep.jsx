@@ -93,7 +93,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
 //   種類・名前・色・型・伸びの個体差は主のまま。Lv・育成Lv は1、疲れ・ストレス・けがは0。技は主の全部+素材の技のうち主の種類でも覚えられる物、熟練は高い方の半分
 //   保存は新しいキー mh_assistant_masmon_fuse_v1(いなくなったマスモンの記録)。先に記録を書き、そのあと冬眠の箱を書く
 const ASSISTANT_MASMON_FUSE_KEY = 'mh_assistant_masmon_fuse_v1';
-const AMGS_FUSE = Object.freeze({ top: 200, pow: 1.5, ref: 999, log: 50 });
+const AMGS_FUSE = Object.freeze({ log: 50 });
 const amgsFuseOn = () => amgsOn() && RELEASE_FLAGS.assistantMasmonFuse === true;
 const amgsFuseSt = (o) => { const st = {}; for (const k of AMG_KEYS) st[k] = amgNum(o && o[k], 0, 0, AMG_MAX); return st; };
 const normalizeAssistantMasmonFuse = (raw) => {
@@ -109,13 +109,8 @@ const normalizeAssistantMasmonFuse = (raw) => {
   return out;
 };
 const AMGS_FSTORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_FUSE_KEY, normalizeAssistantMasmonFuse) : null;
-// 1つの能力の上乗せ: 平均 × √(弱い方÷強い方) を効く値にし、200 ×(効く値÷999)^1.5。片方だけ強いと小さい
-const amgsFuseBonus = (a, b) => {
-  const x = Math.max(0, Number(a) || 0); const y = Math.max(0, Number(b) || 0); const hi = Math.max(x, y); const lo = Math.min(x, y);
-  if (hi <= 0) return 0;
-  const eff = ((x + y) / 2) * Math.sqrt(lo / hi);
-  return Math.round(AMGS_FUSE.top * Math.pow(eff / AMGS_FUSE.ref, AMGS_FUSE.pow));
-};
+// 1つの能力の上乗せ: 計算は MASMON_CALC.fuseBonus(56-assistant-life-masmon-calc.jsx・助手に結びつけない部品)
+const amgsFuseBonus = (a, b) => MASMON_CALC.fuseBonus(a, b);
 const amgsFuseBase = (monster) => { const b = AMG_INIT[monster] || [110, 110, 110, 110, 110, 110]; const st = {}; AMG_KEYS.forEach((k, i) => { st[k] = amgClamp(Math.round(b[i]), Math.max(1, AMG_INIT_FLOOR), AMG_MAX); }); return st; };
 // 合体の見通し(画面と本体で同じ物を使う)。6能力が無い子(古い形)は null
 const amgsFusePlan = (main, mat) => {

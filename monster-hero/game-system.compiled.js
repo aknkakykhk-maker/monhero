@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb2fcb1c7603bcd7
+// source-sha256: 0ab4311422fa3271
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140201,6 +140201,333 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
+const MASMON_CALC = (() => {
+  const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const num = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+  const STAT_MAX = 999;
+  const POWER_W = Object.freeze({
+    stat: 2.5,
+    tech: 100,
+    mastery: 1,
+    lv: 15,
+    loyal: 10,
+    pop: 10,
+    techMax: 8
+  });
+  const power = ({
+    stats = {},
+    masteries = [],
+    lv = 1,
+    loyal = 0,
+    pop = 0
+  } = {}) => {
+    const sum = KEYS.reduce((a, k) => a + clamp(num(stats[k]), 0, STAT_MAX), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankOf = p => {
+    const v = num(p);
+    let i = 0;
+    RANKS.forEach(([, min], j) => {
+      if (v >= min) i = j;
+    });
+    return {
+      key: RANKS[i][0],
+      min: RANKS[i][1],
+      next: RANKS[i + 1] ? RANKS[i + 1][1] : null,
+      index: i
+    };
+  };
+  const FUSE = Object.freeze({
+    top: 200,
+    pow: 1.5,
+    ref: 999
+  });
+  const fuseBonus = (a, b) => {
+    const x = Math.max(0, num(a));
+    const y = Math.max(0, num(b));
+    const hi = Math.max(x, y);
+    const lo = Math.min(x, y);
+    if (hi <= 0) return 0;
+    return Math.round(FUSE.top * Math.pow((x + y) / 2 * Math.sqrt(lo / hi) / FUSE.ref, FUSE.pow));
+  };
+  const fuseStats = (base, a, b) => {
+    const st = {};
+    const add = {};
+    for (const k of KEYS) {
+      add[k] = fuseBonus(a && a[k], b && b[k]);
+      st[k] = clamp(Math.round(num(base && base[k]) + add[k]), 1, STAT_MAX);
+    }
+    return {
+      st,
+      add
+    };
+  };
+  const PACE = 3;
+  const GROW_TYPES = Object.freeze([{
+    key: 'vearly',
+    name: '超早熟',
+    c: [1.3, 1.7, 1.7, 1.4, 1.1, 0.9, 0.8, 0.7, 0.7, 0.6]
+  }, {
+    key: 'early',
+    name: '早熟',
+    c: [1.1, 1.4, 1.6, 1.6, 1.3, 1.0, 0.9, 0.8, 0.7, 0.6]
+  }, {
+    key: 'normal',
+    name: '普通',
+    c: [0.9, 1.0, 1.2, 1.4, 1.5, 1.4, 1.2, 1.0, 0.8, 0.7]
+  }, {
+    key: 'late',
+    name: '晩成',
+    c: [0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.5, 1.5, 1.2, 0.9]
+  }, {
+    key: 'vlate',
+    name: '超晩成',
+    c: [0.7, 0.8, 0.8, 0.9, 1.0, 1.1, 1.3, 1.5, 1.6, 1.4]
+  }, {
+    key: 'steady',
+    name: '持続',
+    c: [1.0, 1.1, 1.15, 1.15, 1.15, 1.15, 1.15, 1.15, 1.1, 1.0]
+  }]);
+  const typeOf = t => GROW_TYPES[clamp(Math.round(num(t, 2)), 0, GROW_TYPES.length - 1)];
+  const ageMult = (t, frac) => {
+    const f = num(frac);
+    if (f >= 1) return 0;
+    const c = typeOf(t).c;
+    return c[clamp(Math.floor(Math.max(0, f) * 10), 0, 9)];
+  };
+  const peakOf = t => {
+    const c = typeOf(t).c;
+    const top = Math.max(...c);
+    const idx = c.map((v, i) => v === top ? i : -1).filter(i => i >= 0);
+    return {
+      from: idx[0] / 10,
+      to: (idx[idx.length - 1] + 1) / 10,
+      mult: top
+    };
+  };
+  const typeFromApt = (apt, r) => {
+    const s = String(apt || '');
+    const hi = (s.match(/A/g) || []).length;
+    const lo = (s.match(/[CDE]/g) || []).length;
+    const w = [1, 2, 3, 2, 1, 1];
+    if (hi >= 2) {
+      w[0] += 1;
+      w[1] += 2;
+    } else if (lo >= 4) {
+      w[3] += 2;
+      w[4] += 1;
+    }
+    const total = w.reduce((a, b) => a + b, 0);
+    let x = clamp(num(r), 0, 0.999999) * total;
+    for (let i = 0; i < w.length; i++) {
+      if (x < w[i]) return i;
+      x -= w[i];
+    }
+    return 2;
+  };
+  const POLICIES = Object.freeze([{
+    name: '超溺愛',
+    life: 40,
+    stress: 0.6,
+    gain: 0.80,
+    sab: 2.0
+  }, {
+    name: '溺愛',
+    life: 37,
+    stress: 0.75,
+    gain: 0.87,
+    sab: 1.6
+  }, {
+    name: '甘い',
+    life: 33,
+    stress: 0.9,
+    gain: 0.94,
+    sab: 1.3
+  }, {
+    name: '普通',
+    life: 30,
+    stress: 1.0,
+    gain: 1.00,
+    sab: 1.0
+  }, {
+    name: '厳しい',
+    life: 27,
+    stress: 1.15,
+    gain: 1.06,
+    sab: 0.8
+  }, {
+    name: 'スパルタ',
+    life: 23,
+    stress: 1.3,
+    gain: 1.12,
+    sab: 0.6
+  }, {
+    name: '超スパルタ',
+    life: 20,
+    stress: 1.5,
+    gain: 1.18,
+    sab: 0.4
+  }]);
+  const policyOf = pol => POLICIES[clamp(Math.round(num(pol)), -3, 3) + 3];
+  const POLICY_STEP = 10;
+  const policyMove = (pol, pp, dir) => {
+    let p = clamp(Math.round(num(pol)), -3, 3);
+    let q = clamp(Math.round(num(pp)), -(POLICY_STEP - 1), POLICY_STEP - 1) + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
+    if (q >= POLICY_STEP) {
+      if (p < 3) {
+        p += 1;
+        q = 0;
+      } else q = POLICY_STEP - 1;
+    }
+    if (q <= -POLICY_STEP) {
+      if (p > -3) {
+        p -= 1;
+        q = 0;
+      } else q = -(POLICY_STEP - 1);
+    }
+    return {
+      pol: p,
+      pp: q
+    };
+  };
+  const lifeLen = (pol, base = 30) => policyOf(pol).life / 30 * Math.max(1, num(base, 30));
+  const lifeStep = (pol, base = 30) => 1 / lifeLen(pol, base);
+  const ageLabel = months => {
+    const m = Math.max(0, Math.floor(num(months)));
+    return `${Math.floor(m / 12)}歳${m % 12}か月`;
+  };
+  const noActChance = loyal => (100 - clamp(num(loyal, 100), 0, 100)) * 0.0025;
+  const critBonus = pop => clamp(num(pop), 0, 100) / 500;
+  const CRIT_CAP = 0.30;
+  const critOf = (base, pop) => Math.min(CRIT_CAP + critBonus(pop), Math.max(0, num(base)) + critBonus(pop));
+  const sabLoyalMult = loyal => 1.5 - clamp(num(loyal, 50), 0, 100) / 100;
+  const POP = Object.freeze({
+    pvpWin: 2,
+    pvpLose: 0.5,
+    peerWin: 1,
+    peerLose: 0.2,
+    spar: 0.2,
+    idleDays: 7,
+    idleDrop: 1
+  });
+  const popAfterBattle = (pop, kind, win) => {
+    const d = kind === 'pvp' ? win ? POP.pvpWin : POP.pvpLose : kind === 'peer' ? win ? POP.peerWin : POP.peerLose : kind === 'spar' && win ? POP.spar : 0;
+    return clamp(num(pop) + d, 0, 100);
+  };
+  const RESULTS = Object.freeze({
+    great: {
+      name: '大成功',
+      mult: 1.5,
+      str: -3
+    },
+    ok: {
+      name: '成功',
+      mult: 1,
+      str: 0
+    },
+    fail: {
+      name: '失敗',
+      mult: 0.3,
+      str: 0
+    },
+    cheat: {
+      name: 'ズル',
+      mult: 0.2,
+      str: 0,
+      noFat: true
+    },
+    skip: {
+      name: 'サボり',
+      mult: 0,
+      fat: -5,
+      str: -5
+    }
+  });
+  const resultOf = ({
+    loyal = 50,
+    pol = 0,
+    sab = 0,
+    fail = 0,
+    r = 0.5
+  } = {}) => {
+    const L = clamp(num(loyal, 50), 0, 100);
+    const x = clamp(num(r), 0, 0.999999);
+    const pSkip = clamp(num(sab) * sabLoyalMult(L) * policyOf(pol).sab, 0, 0.9);
+    const pCheat = L < 50 ? Math.min(0.10, (50 - L) / 500) : 0;
+    const pFail = clamp(num(fail), 0, 0.9);
+    const pGreat = L >= 80 ? 0.11 : 0.08;
+    let a = pSkip;
+    if (x < a) return 'skip';
+    a += pCheat;
+    if (x < a) return 'cheat';
+    a += pFail;
+    if (x < a) return 'fail';
+    a += pGreat;
+    if (x < a) return 'great';
+    return 'ok';
+  };
+  const reactOf = (result, act) => {
+    const good = result === 'great' || result === 'ok';
+    const bad = result === 'cheat' || result === 'skip';
+    if (act === 'praise') return {
+      loyal: good ? 3 : result === 'fail' ? 1 : bad ? -3 : 0,
+      dir: -1
+    };
+    if (act === 'scold') return {
+      loyal: bad ? 4 : result === 'fail' ? -2 : good ? -5 : 0,
+      dir: 1
+    };
+    return {
+      loyal: 0,
+      dir: 0
+    };
+  };
+  const condLen = (load, r) => {
+    const v = clamp(num(load), 0, 100);
+    const x = clamp(num(r), 0, 0.999999);
+    const heavy = v >= 90 ? 0.3 : v >= 80 ? 0.15 : 0.05;
+    const light = v >= 90 ? 0.2 : v >= 80 ? 0.35 : 0.5;
+    return x < heavy ? 6 : x < heavy + light ? 1 : 3;
+  };
+  return Object.freeze({
+    KEYS,
+    STAT_MAX,
+    POWER_W,
+    power,
+    RANKS,
+    rankOf,
+    FUSE,
+    fuseBonus,
+    fuseStats,
+    PACE,
+    GROW_TYPES,
+    typeOf,
+    ageMult,
+    peakOf,
+    typeFromApt,
+    POLICIES,
+    policyOf,
+    POLICY_STEP,
+    policyMove,
+    lifeLen,
+    lifeStep,
+    ageLabel,
+    noActChance,
+    critBonus,
+    CRIT_CAP,
+    critOf,
+    sabLoyalMult,
+    POP,
+    popAfterBattle,
+    RESULTS,
+    resultOf,
+    reactOf,
+    condLen
+  });
+})();
 const ASSISTANT_MASMON_GROW_KEY = 'mh_assistant_masmon_grow_v1';
 const AMG_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
 const AMG_KEYS = AMG_STATS.map(x => x[0]);
@@ -148944,9 +149271,6 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
 };
 const ASSISTANT_MASMON_FUSE_KEY = 'mh_assistant_masmon_fuse_v1';
 const AMGS_FUSE = Object.freeze({
-  top: 200,
-  pow: 1.5,
-  ref: 999,
   log: 50
 });
 const amgsFuseOn = () => amgsOn() && RELEASE_FLAGS.assistantMasmonFuse === true;
@@ -148985,15 +149309,7 @@ const normalizeAssistantMasmonFuse = raw => {
   return out;
 };
 const AMGS_FSTORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_FUSE_KEY, normalizeAssistantMasmonFuse) : null;
-const amgsFuseBonus = (a, b) => {
-  const x = Math.max(0, Number(a) || 0);
-  const y = Math.max(0, Number(b) || 0);
-  const hi = Math.max(x, y);
-  const lo = Math.min(x, y);
-  if (hi <= 0) return 0;
-  const eff = (x + y) / 2 * Math.sqrt(lo / hi);
-  return Math.round(AMGS_FUSE.top * Math.pow(eff / AMGS_FUSE.ref, AMGS_FUSE.pow));
-};
+const amgsFuseBonus = (a, b) => MASMON_CALC.fuseBonus(a, b);
 const amgsFuseBase = monster => {
   const b = AMG_INIT[monster] || [110, 110, 110, 110, 110, 110];
   const st = {};

@@ -174,7 +174,7 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
 
 // ⑫ 冬眠(56-assistant-life-masmon-sleep.jsx)
 {
-  const sleep = cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-calc.jsx') + '\n' + cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
   const ctx = make({ ...ON, assistantMasmonSleep: true });
   vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {} };', 'var MS = { seed: "x", mine: { kiki: { former: { 2: [{ monster: "Tiger", nick: "トラ", lv: 28, colors: ["blue"], at: "2026-11-02" }] } } } };',
     'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var ROWS = [{ slot: 1, monster: "Golem", nick: "ゴロ", lv: 20, grow: "攻撃型" }, { slot: 2, monster: "Pixie", nick: "ピピ", lv: 15 }];',
@@ -200,7 +200,7 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
 
 // ⑬ 合体(56-assistant-life-masmon-sleep.jsx・FUSE.md 第2版)
 {
-  const sleep = cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-calc.jsx') + '\n' + cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
   const ctx = make({ ...ON, assistantMasmonSleep: true, assistantMasmonFuse: true });
   vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {}, Mocchi: {} };', 'var MS = { seed: "x", mine: { kiki: { former: { 2: [{ monster: "Tiger", nick: "トラ", lv: 28, at: "2026-11-02" }] } } } };',
     'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var DROP = []; var assistantMasmonFormerDrop = (aid, slot, mo, at) => { DROP.push([aid, slot, mo, at]); return true; };',
