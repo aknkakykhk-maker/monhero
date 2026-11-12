@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86a4e59ac3640076
+// source-sha256: 8d12099dbd5f497e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113659,7 +113659,6 @@ function AssistantLifeRoomSheet({
       icon: "⚔",
       label: (bi.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, ''),
       sub: bi.sub || '',
-      gain: bi.gain || '',
       on: () => {
         try {
           assistantMasmonBattleOpen({
@@ -146018,7 +146017,7 @@ const ambwIsHighlight = (e, maxHp) => {
   return false;
 };
 const AMBW_CSS = `
-.ambw{position:fixed;inset:0;z-index:9000;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
+.ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
 .ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
