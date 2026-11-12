@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b148e8c0c25b6dcd
+// source-sha256: d0571bf420ce0dea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -66062,11 +66062,16 @@ const GrowthFxLayer = ({
 };
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
+const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({
+  TEMPLE: 'left'
+});
 const quickAnywhereFloatStyle = spot => {
   const s = spot.hidden ? {
     visibility: 'hidden',
     pointerEvents: 'none'
-  } : {};
+  } : {
+    opacity: 0.86
+  };
   Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
@@ -66074,8 +66079,7 @@ const quickAnywhereFloatStyle = spot => {
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
 };
-const quickAnywhereFloatHits = (el, spot) => {
-  if (typeof document === 'undefined' || !el) return 0;
+const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70,
     h = el.offsetHeight || 34;
   const css = getComputedStyle(document.documentElement);
@@ -66095,9 +66099,15 @@ const quickAnywhereFloatHits = (el, spot) => {
     right: left + w,
     bottom: top + h
   };
+  return R;
+};
+const quickAnywhereFloatHits = (el, spot, known = null) => {
+  if (typeof document === 'undefined' || !el) return 0;
+  const R = quickAnywhereFloatRect(el, spot);
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    if (known && known.has(o)) continue;
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
     const r = o.getBoundingClientRect();
@@ -66106,10 +66116,19 @@ const quickAnywhereFloatHits = (el, spot) => {
   }
   return hits;
 };
-const quickAnywhereFloatPick = el => {
+const quickAnywhereFloatPick = (el, screen) => {
+  const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
+  const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  for (const side of sides) {
+    const spot = {
+      side,
+      lift: 0
+    };
+    if (quickAnywhereFloatHits(el, spot) === 0) return spot;
+  }
   const maxLift = Math.max(0, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
-  for (const side of ['right', 'left']) {
-    for (let lift = 0; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
+  for (const side of sides) {
+    for (let lift = QUICK_ANYWHERE_FLOAT_STEP; lift <= maxLift; lift += QUICK_ANYWHERE_FLOAT_STEP) {
       const spot = {
         side,
         lift
@@ -66118,7 +66137,7 @@ const quickAnywhereFloatPick = el => {
     }
   }
   return {
-    side: 'right',
+    side: first,
     lift: 0,
     hidden: true
   };
@@ -66131,25 +66150,75 @@ const QuickAnywhereFloat = ({
 }) => {
   const ref = useRef(null);
   const [spot, setSpot] = useState({
-    side: 'right',
+    side: QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right',
     lift: 0
   });
+  const knownRef = useRef(new WeakSet());
+  const placedRef = useRef(null);
   React.useLayoutEffect(() => {
-    const place = () => {
+    const remember = base => {
+      const set = new WeakSet();
+      const el = ref.current;
+      if (typeof document !== 'undefined' && el) {
+        const R = quickAnywhereFloatRect(el, base);
+        for (const o of document.querySelectorAll('button,a,[role=button]')) {
+          const r = o.getBoundingClientRect();
+          if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o);
+        }
+      }
+      knownRef.current = set;
+    };
+    const decide = () => {
       if (!ref.current) return;
-      setSpot(prev => !prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+      const next = quickAnywhereFloatPick(ref.current, screen);
+      const base = {
+        side: next.side,
+        lift: next.lift
+      };
+      placedRef.current = {
+        ...base,
+        fromHidden: !!next.hidden
+      };
+      remember(base);
+      setSpot(next.hidden ? {
+        ...base,
+        hidden: true
+      } : base);
     };
-    const fresh = () => {
-      if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
+    const watch = () => {
+      const el = ref.current,
+        placed = placedRef.current;
+      if (!el || !placed) return;
+      if (placed.fromHidden) {
+        decide();
+        return;
+      }
+      const base = {
+        side: placed.side,
+        lift: placed.lift
+      };
+      const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
+      setSpot(prev => !!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? {
+        ...base,
+        hidden: true
+      } : base);
     };
-    fresh();
-    const t1 = setTimeout(fresh, 300),
-      t2 = setTimeout(place, 1200),
-      iv = setInterval(place, 800);
+    decide();
+    const t1 = setTimeout(decide, 300),
+      t2 = setTimeout(decide, 1200),
+      iv = setInterval(watch, 800);
+    let rt = null;
+    const onResize = () => {
+      clearTimeout(rt);
+      rt = setTimeout(decide, 250);
+    };
+    if (typeof window !== 'undefined') window.addEventListener('resize', onResize);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(rt);
       clearInterval(iv);
+      if (typeof window !== 'undefined') window.removeEventListener('resize', onResize);
     };
   }, [screen]);
   return React.createElement("button", _extends({
