@@ -159,6 +159,17 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   const { T, st } = planned(Array(21).fill('H:pow'), 1);
   const fw = T.amgpForecastWeek('kiki', ROW, entry(st, ROW), 'kiki:1:Golem', slotAt(S0 + 1));
   check('見通し: 7日ぶん・重い訓練ばかりなら疲れが70を超える日がある', fw.days.length === 7 && fw.days.some(d => d.fat >= 70) && fw.total.pow && fw.total.pow[0] > 0);
+  // fable の指摘(11-12): ① 過ぎた回は数えない(まかせるで計算しない) ③ 1日の上の値も上限20まで・その日にもう伸びた分を引く ② けが等の回は訓練しない
+  const e = entry(st, ROW); const d0 = T.amgSlotDay(S0 + 1);
+  check('見通し: 今日の過ぎた回(朝・いまの昼)は数えず、夜の疲れは今の疲れから続ける', fw.days[0].f[0] === null && fw.days[0].f[1] === null && fw.days[0].f[2] && fw.days[0].f[2].fat === Math.min(100, e.fat + 14), `${e.fat}→${fw.days[0].f[2] && fw.days[0].f[2].fat}`);
+  const hiSum = (d) => d.f.reduce((a, f) => a + (f ? Object.values(f.g).reduce((x, [, b]) => x + b, 0) : 0), 0);
+  check('見通し: 1日の伸びの上の値は20まで', fw.days.every(d => hiSum(d) <= 20), fw.days.map(hiSum).join(','));
+  const fw2 = T.amgpForecastWeek('kiki', ROW, { ...e, dg: { d: d0, n: 15 } }, 'kiki:1:Golem', slotAt(S0 + 1));
+  check('見通し: 今日もう15伸びていたら、今日の見通しは残り5まで', hiSum(fw2.days[0]) <= 5 && hiSum(fw2.days[1]) > 5, `${hiSum(fw2.days[0])}/${hiSum(fw2.days[1])}`);
+  T.AMGP_CSTORE.set({ ...T.AMGP_CSTORE.state, mons: { 'kiki:1:Golem': { k: 'hurt', from: S0 + 1, until: S0 + 6, care: -1, find: -1, hosp: [] } } });
+  const fw3 = T.amgpForecastWeek('kiki', ROW, e, 'kiki:1:Golem', slotAt(S0 + 1));
+  const f3 = fw3.days[1].f[0];
+  check('見通し: けがの回は訓練しない(灰色・伸びなし・休みと同じ疲れの減り)', f3 && f3.cond === 'hurt' && Object.keys(f3.g).length === 0 && fw3.days[1].f.every(f => f && f.cond === 'hurt') && hiSum(fw3.days[2]) > 0);
 }
 
 // ⑫ 冬眠(56-assistant-life-masmon-sleep.jsx)
