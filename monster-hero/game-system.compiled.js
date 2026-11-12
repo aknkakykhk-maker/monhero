@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57dc58bddd87f949
+// source-sha256: 0c2e8d2618a9d9c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13906,7 +13906,7 @@ const RELEASE_FLAGS = {
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
   assistantMasmonBattlePvp: true,
-  assistantLifeBody: false,
+  assistantLifeBody: true,
   assistantLifePlan: true,
   assistantMasmonTrain: true,
   assistantMasmonCheer: true,
@@ -13987,6 +13987,11 @@ const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = tab => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
 const CHANGELOG_GROUPS = Object.freeze([{
+  id: 'success',
+  label: 'モンヒロサクセス',
+  emoji: '🌱',
+  match: /モンヒロサクセス/
+}, {
   id: 'monster',
   label: '新モンスター',
   emoji: '🐣',
