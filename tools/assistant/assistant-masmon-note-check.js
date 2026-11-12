@@ -129,6 +129,11 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   T.AMGP_CSTORE.set({ ...T.AMGP_CSTORE.state, mons: { [key]: { k: 'away', from: S0, until: S0 + 6, care: -1, find: -1, hosp: [] } } });
   T.amgpActAt('kiki', ROW, S0 + 3, e, SEED);
   check('⑧ 家出は病院では戻らない', T.AMGP_CSTORE.state.mons[key].until === S0 + 6);
+  // 特別な治療(記録が 'cure' の回): その回でけが・病気の残りが0になる。ふつうの病院の回は今のまま(上の1日短く)
+  vm.runInContext('var assistantLifeHospitalCureSlotsOf = (aid) => [this.H];', ctx); ctx.H = S0 + 2;
+  T.AMGP_CSTORE.set({ ...T.AMGP_CSTORE.state, mons: { [key]: { k: 'sick', from: S0, until: S0 + 9, care: -1, find: -1, hosp: [] } } });
+  const r0 = T.amgpActAt('kiki', ROW, S0 + 3, { ...e }, SEED);
+  check('⑧ 特別な治療の回でけが・病気の残りが0(その回から訓練に戻る)', T.AMGP_CSTORE.state.mons[key].until <= S0 + 2 && !T.amgpCondAt(key, S0 + 2) && !(r0 && r0.idle) && T.AMGP_CSTORE.state.log.some(l => l.t === 'cure'));
 }
 // ⑨ 指定の引き継ぎ
 {
@@ -174,7 +179,7 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
 
 // ⑫ 冬眠(56-assistant-life-masmon-sleep.jsx)
 {
-  const sleep = cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-calc.jsx') + '\n' + cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
   const ctx = make({ ...ON, assistantMasmonSleep: true });
   vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {} };', 'var MS = { seed: "x", mine: { kiki: { former: { 2: [{ monster: "Tiger", nick: "トラ", lv: 28, colors: ["blue"], at: "2026-11-02" }] } } } };',
     'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var ROWS = [{ slot: 1, monster: "Golem", nick: "ゴロ", lv: 20, grow: "攻撃型" }, { slot: 2, monster: "Pixie", nick: "ピピ", lv: 15 }];',
@@ -200,7 +205,7 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
 
 // ⑬ 合体(56-assistant-life-masmon-sleep.jsx・FUSE.md 第2版)
 {
-  const sleep = cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-calc.jsx') + '\n' + cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
   const ctx = make({ ...ON, assistantMasmonSleep: true, assistantMasmonFuse: true });
   vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {}, Mocchi: {} };', 'var MS = { seed: "x", mine: { kiki: { former: { 2: [{ monster: "Tiger", nick: "トラ", lv: 28, at: "2026-11-02" }] } } } };',
     'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var DROP = []; var assistantMasmonFormerDrop = (aid, slot, mo, at) => { DROP.push([aid, slot, mo, at]); return true; };',

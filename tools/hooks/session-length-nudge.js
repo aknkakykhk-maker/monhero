@@ -80,7 +80,7 @@ function message(n, limit, opts) {
     const band = (t) => (t >= first ? Math.floor((t - first) / step) + 1 : 0);
     const t = Number(n.tokens) || 0;
     if (!band(t) || band(t) <= band(Number(n.prevTokens) || 0)) return '';
-    return `【窓口・会話が長くなってきた】この会話の文脈は 約${Math.round(t / 10000)}万トークン(目安 ${Math.round(first / 10000)}万)。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(700000)が走る。`;
+    return `【窓口・会話が長くなってきた】この会話の文脈は 約${Math.round(t / 10000)}万トークン(目安 ${Math.round(first / 10000)}万)。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(${Number(limit['窓口の自動の要約']) || 700000})が走る。`;
   }
   // 部署: 要約(/compact)は頼まない。要約は窓口の会話だけ(台帳 2026-11-11「各部署は長くなったら引き継ぎメモで会話を替える」・
   //   2026-11-12 社長「ここ以外は要約しないんじゃないの？」)。目安を超えたら、区切りで引き継ぎメモ → 窓口が新しい会話を作る
@@ -92,6 +92,22 @@ function message(n, limit, opts) {
   return `【会話がとても長い】この会話は ${after}${over.join('・')}。いまの仕事の区切りがついたら、node tools/ctx.js handoff <自分の部> --write で引き継ぎメモを作り、窓口へ「会話を替えてほしい」と知らせる(docs/rules/SESSION_HANDOFF.md)。要約(/compact)は頼まない(要約は窓口の会話だけ)。作業の途中では替えない。やりかけの仕事は先に終わらせる。`;
 }
 
+// 窓口の自動の要約の設定を見張る(2026-11-12・決めごとの錠)。台帳 2026-11-11「窓口の autoCompactWindow は 700000」は
+// 窓口の端末のユーザー設定(~/.claude/settings.json)にあり、リポジトリの検査から見えない。入れ物が作り直されると設定が消えても
+// だれも気づかないので、窓口の会話でだけ、値が決めごとと違えば知らせる(最初の頼みと、そのあと「くり返し」回ごと)。
+//   value … いまの設定の値(無ければ undefined)
+function autoCompactNotice(value, n, limit, opts) {
+  if (!(opts && opts.hq)) return '';
+  const want = Number(limit['窓口の自動の要約']) || 700000;
+  if (Number(value) === want) return '';
+  const k = Number(n.prompts) || 0;
+  if (k !== 1 && k % limit['くり返し'] !== 0) return '';
+  return `【窓口・自動の要約の設定が決めごとと違う】ユーザー設定(~/.claude/settings.json)の autoCompactWindow は ${value === undefined ? '未設定' : value}。台帳の決めごとは ${want}(文脈がそこまでたまったら自動で要約)。設定を ${want} に直す(直せないときは、社長に選択式で知らせる)。`;
+}
+function readAutoCompact(home) {
+  try { return JSON.parse(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8')).autoCompactWindow; } catch (e) { return undefined; }
+}
+
 function main() {
   let input = '';
   try { input = fs.readFileSync(0, 'utf8'); } catch (e) { return; }
@@ -100,9 +116,11 @@ function main() {
   if (!p || !fs.existsSync(p)) return;
   const limit = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'team', 'routing.json'), 'utf8'))['区切り'];
   const routing = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'team', 'routing.json'), 'utf8'));
-  const msg = message(count(p), limit, { hq: isHq(routing['窓口の会話'], process.env) });
+  const n = count(p);
+  const opts = { hq: isHq(routing['窓口の会話'], process.env) };
+  const msg = [message(n, limit, opts), autoCompactNotice(readAutoCompact(require('os').homedir()), n, limit, opts)].filter(Boolean).join('\n');
   if (msg) process.stdout.write(msg + '\n');
 }
 
 if (require.main === module) { try { main(); } catch (e) { /* 知らせるだけの道具。失敗しても止めない */ } process.exit(0); }
-module.exports = { count, message, isHq };
+module.exports = { count, message, isHq, autoCompactNotice, readAutoCompact };

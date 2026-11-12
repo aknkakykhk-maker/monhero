@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 175aa675a61bfb49
+// source-sha256: 9735ac7171fa80de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13913,6 +13913,7 @@ const RELEASE_FLAGS = {
   assistantMasmonRanchTicket: true,
   assistantMasmonPlan: true,
   assistantMasmonSleep: false,
+  assistantMasmonBond: false,
   assistantMasmonFuse: false,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
@@ -140201,6 +140202,930 @@ const ASSISTANT_MASMON_CSS = `
 .mhm-bar{position:relative;flex:1;height:5px;border-radius:99px;background:#334155;overflow:hidden}
 .mhm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316)}
 `;
+const MASMON_CALC = (() => {
+  const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const num = (v, d = 0) => v === null || v === undefined || v === '' ? d : Number.isFinite(Number(v)) ? Number(v) : d;
+  const STAT_MAX = 999;
+  const POWER_W = Object.freeze({
+    stat: 2.5,
+    tech: 100,
+    mastery: 1,
+    lv: 15,
+    loyal: 10,
+    pop: 10,
+    techMax: 8
+  });
+  const power = o => {
+    const {
+      stats,
+      masteries,
+      lv = 1,
+      loyal = 0,
+      pop = 0
+    } = o && typeof o === 'object' ? o : {};
+    const st = stats && typeof stats === 'object' ? stats : {};
+    const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankOf = p => {
+    const v = num(p);
+    let i = 0;
+    RANKS.forEach(([, min], j) => {
+      if (v >= min) i = j;
+    });
+    return {
+      key: RANKS[i][0],
+      min: RANKS[i][1],
+      next: RANKS[i + 1] ? RANKS[i + 1][1] : null,
+      index: i
+    };
+  };
+  const FUSE = Object.freeze({
+    top: 200,
+    pow: 1.5,
+    ref: 999
+  });
+  const fuseBonus = (a, b) => {
+    const x = clamp(num(a), 0, STAT_MAX);
+    const y = clamp(num(b), 0, STAT_MAX);
+    const hi = Math.max(x, y);
+    const lo = Math.min(x, y);
+    if (hi <= 0) return 0;
+    return Math.round(FUSE.top * Math.pow((x + y) / 2 * Math.sqrt(lo / hi) / FUSE.ref, FUSE.pow));
+  };
+  const fuseStats = (base, a, b) => {
+    const st = {};
+    const add = {};
+    for (const k of KEYS) {
+      add[k] = fuseBonus(a && a[k], b && b[k]);
+      st[k] = clamp(Math.round(num(base && base[k]) + add[k]), 1, STAT_MAX);
+    }
+    return {
+      st,
+      add
+    };
+  };
+  const PACE = 3;
+  const GROW_TYPES = Object.freeze([{
+    key: 'vearly',
+    name: '超早熟',
+    c: [1.3, 1.7, 1.7, 1.4, 1.1, 0.9, 0.8, 0.7, 0.7, 0.6]
+  }, {
+    key: 'early',
+    name: '早熟',
+    c: [1.1, 1.4, 1.6, 1.6, 1.3, 1.0, 0.9, 0.8, 0.7, 0.6]
+  }, {
+    key: 'normal',
+    name: '普通',
+    c: [0.9, 1.0, 1.2, 1.4, 1.5, 1.4, 1.2, 1.0, 0.8, 0.7]
+  }, {
+    key: 'late',
+    name: '晩成',
+    c: [0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.5, 1.5, 1.2, 0.9]
+  }, {
+    key: 'vlate',
+    name: '超晩成',
+    c: [0.7, 0.8, 0.8, 0.9, 1.0, 1.1, 1.3, 1.5, 1.6, 1.4]
+  }, {
+    key: 'steady',
+    name: '持続',
+    c: [1.0, 1.1, 1.15, 1.15, 1.15, 1.15, 1.15, 1.15, 1.1, 1.0]
+  }]);
+  const typeOf = t => GROW_TYPES[clamp(Math.round(num(t, 2)), 0, GROW_TYPES.length - 1)];
+  const ageMult = (t, frac) => {
+    const f = num(frac);
+    if (f >= 1) return 0;
+    const c = typeOf(t).c;
+    return c[clamp(Math.floor(Math.max(0, f) * 10), 0, 9)];
+  };
+  const peakOf = t => {
+    const c = typeOf(t).c;
+    const top = Math.max(...c);
+    const idx = c.map((v, i) => v === top ? i : -1).filter(i => i >= 0);
+    return {
+      from: idx[0] / 10,
+      to: (idx[idx.length - 1] + 1) / 10,
+      mult: top
+    };
+  };
+  const typeFromApt = (apt, r) => {
+    const s = String(apt || '');
+    const hi = (s.match(/A/g) || []).length;
+    const lo = (s.match(/[CDE]/g) || []).length;
+    const w = [1, 2, 3, 2, 1, 1];
+    if (hi >= 2) {
+      w[0] += 1;
+      w[1] += 2;
+    } else if (lo >= 4) {
+      w[3] += 2;
+      w[4] += 1;
+    }
+    const total = w.reduce((a, b) => a + b, 0);
+    let x = clamp(num(r), 0, 0.999999) * total;
+    for (let i = 0; i < w.length; i++) {
+      if (x < w[i]) return i;
+      x -= w[i];
+    }
+    return 2;
+  };
+  const POLICIES = Object.freeze([{
+    name: '超溺愛',
+    life: 40,
+    stress: 0.6,
+    gain: 0.80,
+    sab: 2.0
+  }, {
+    name: '溺愛',
+    life: 37,
+    stress: 0.75,
+    gain: 0.87,
+    sab: 1.6
+  }, {
+    name: '甘い',
+    life: 33,
+    stress: 0.9,
+    gain: 0.94,
+    sab: 1.3
+  }, {
+    name: '普通',
+    life: 30,
+    stress: 1.0,
+    gain: 1.00,
+    sab: 1.0
+  }, {
+    name: '厳しい',
+    life: 27,
+    stress: 1.15,
+    gain: 1.06,
+    sab: 0.8
+  }, {
+    name: 'スパルタ',
+    life: 23,
+    stress: 1.3,
+    gain: 1.12,
+    sab: 0.6
+  }, {
+    name: '超スパルタ',
+    life: 20,
+    stress: 1.5,
+    gain: 1.18,
+    sab: 0.4
+  }]);
+  const policyOf = pol => POLICIES[clamp(Math.round(num(pol)), -3, 3) + 3];
+  const POLICY_STEP = 10;
+  const policyMove = (pol, pp, dir) => {
+    let p = clamp(Math.round(num(pol)), -3, 3);
+    let q = clamp(Math.round(num(pp)), -(POLICY_STEP - 1), POLICY_STEP - 1) + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
+    if (q >= POLICY_STEP) {
+      if (p < 3) {
+        p += 1;
+        q = 0;
+      } else q = POLICY_STEP - 1;
+    }
+    if (q <= -POLICY_STEP) {
+      if (p > -3) {
+        p -= 1;
+        q = 0;
+      } else q = -(POLICY_STEP - 1);
+    }
+    return {
+      pol: p,
+      pp: q
+    };
+  };
+  const lifeLen = (pol, base = 30) => policyOf(pol).life / 30 * Math.max(1, num(base, 30));
+  const lifeStep = (pol, base = 30) => 1 / lifeLen(pol, base);
+  const ageLabel = months => {
+    const m = Math.max(0, Math.floor(num(months)));
+    return `${Math.floor(m / 12)}歳${m % 12}か月`;
+  };
+  const noActChance = loyal => (100 - clamp(num(loyal, 100), 0, 100)) * 0.0025;
+  const critBonus = pop => clamp(num(pop), 0, 100) / 500;
+  const CRIT_CAP = 0.30;
+  const critOf = (base, pop) => Math.min(CRIT_CAP + critBonus(pop), Math.max(0, num(base)) + critBonus(pop));
+  const sabLoyalMult = loyal => 1.5 - clamp(num(loyal, 50), 0, 100) / 100;
+  const POP = Object.freeze({
+    pvpWin: 2,
+    pvpLose: 0.5,
+    peerWin: 1,
+    peerLose: 0.2,
+    spar: 0.2,
+    idleDays: 7,
+    idleDrop: 1
+  });
+  const popAfterBattle = (pop, kind, win) => {
+    const d = kind === 'pvp' ? win ? POP.pvpWin : POP.pvpLose : kind === 'peer' ? win ? POP.peerWin : POP.peerLose : kind === 'spar' && win ? POP.spar : 0;
+    return clamp(num(pop) + d, 0, 100);
+  };
+  const RESULTS = Object.freeze({
+    great: {
+      name: '大成功',
+      mult: 1.5,
+      str: -3
+    },
+    ok: {
+      name: '成功',
+      mult: 1,
+      str: 0
+    },
+    fail: {
+      name: '失敗',
+      mult: 0.3,
+      str: 0
+    },
+    cheat: {
+      name: 'ズル',
+      mult: 0.2,
+      str: 0,
+      noFat: true
+    },
+    skip: {
+      name: 'サボり',
+      mult: 0,
+      fat: -5,
+      str: -5
+    }
+  });
+  const resultOf = o => {
+    const {
+      loyal = 50,
+      pol = 0,
+      sab = 0,
+      fail = 0,
+      r = 0.5
+    } = o && typeof o === 'object' ? o : {};
+    const L = clamp(num(loyal, 50), 0, 100);
+    const x = clamp(num(r), 0, 0.999999);
+    const pSkip = clamp(num(sab) * sabLoyalMult(L) * policyOf(pol).sab, 0, 0.9);
+    const pCheat = L < 50 ? Math.min(0.10, (50 - L) / 500) : 0;
+    const pFail = clamp(num(fail), 0, 0.9);
+    const pGreat = L >= 80 ? 0.11 : 0.08;
+    let a = pSkip;
+    if (x < a) return 'skip';
+    a += pCheat;
+    if (x < a) return 'cheat';
+    a += pFail;
+    if (x < a) return 'fail';
+    a += pGreat;
+    if (x < a) return 'great';
+    return 'ok';
+  };
+  const reactOf = (result, act) => {
+    const good = result === 'great' || result === 'ok';
+    const bad = result === 'cheat' || result === 'skip';
+    if (act === 'praise') return {
+      loyal: good ? 3 : result === 'fail' ? 1 : bad ? -3 : 0,
+      dir: -1
+    };
+    if (act === 'scold') return {
+      loyal: bad ? 4 : result === 'fail' ? -2 : good ? -5 : 0,
+      dir: 1
+    };
+    return {
+      loyal: 0,
+      dir: 0
+    };
+  };
+  const condLen = (load, r) => {
+    const v = clamp(num(load), 0, 100);
+    const x = clamp(num(r), 0, 0.999999);
+    const heavy = v >= 90 ? 0.3 : v >= 80 ? 0.15 : 0.05;
+    const light = v >= 90 ? 0.2 : v >= 80 ? 0.35 : 0.5;
+    return x < heavy ? 6 : x < heavy + light ? 1 : 3;
+  };
+  return Object.freeze({
+    KEYS,
+    STAT_MAX,
+    POWER_W,
+    power,
+    RANKS,
+    rankOf,
+    FUSE,
+    fuseBonus,
+    fuseStats,
+    PACE,
+    GROW_TYPES,
+    typeOf,
+    ageMult,
+    peakOf,
+    typeFromApt,
+    POLICIES,
+    policyOf,
+    POLICY_STEP,
+    policyMove,
+    lifeLen,
+    lifeStep,
+    ageLabel,
+    noActChance,
+    critBonus,
+    CRIT_CAP,
+    critOf,
+    sabLoyalMult,
+    POP,
+    popAfterBattle,
+    RESULTS,
+    resultOf,
+    reactOf,
+    condLen
+  });
+})();
+const ASSISTANT_MASMON_BOND_KEY = 'mh_assistant_masmon_bond_v1';
+const AMGB_NUM = Object.freeze({
+  loy0: 50,
+  pop0: 0,
+  idleDays: 7,
+  scoldDay: 3,
+  scoldStr: 5,
+  warnDays: 5,
+  baseLife: 30,
+  log: 9
+});
+const AMGB_TRAIN_ACTS = Object.freeze(['light', 'heavy', 'real', 'focus', 'weak', 'joint', 'shugyo']);
+const AMGB_RESULT_ICON = Object.freeze({
+  great: '🌟',
+  ok: '⭕',
+  fail: '❌',
+  cheat: '🤫',
+  skip: '💤'
+});
+const AMGB_RANK_COLOR = Object.freeze({
+  G: '#94a3b8',
+  F: '#94a3b8',
+  E: '#4ade80',
+  D: '#4ade80',
+  C: '#67e8f9',
+  B: '#60a5fa',
+  A: '#c084fc',
+  S: '#facc15',
+  SS: '#facc15',
+  SSS: '#facc15',
+  M: '#f472b6'
+});
+const amgbKey = (aid, slot, monster) => `${aid}:${slot}:${monster}`;
+const amgbKeyOk = k => typeof k === 'string' && /^[a-z]{2,12}:[1-8]:\w{2,40}$/.test(k);
+const amgbBlank = v => v === null || v === undefined || v === '';
+const amgbInt = (v, d, lo, hi) => !amgbBlank(v) && Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d;
+const amgbNum = (v, d, lo, hi) => !amgbBlank(v) && Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d;
+const amgbNormOne = x => {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
+  const rs = (Array.isArray(x.rs) ? x.rs : []).filter(r => r && Number.isInteger(r.s) && AMGB_RESULT_ICON[r.r]).slice(-AMGB_NUM.log).map(r => ({
+    s: r.s,
+    r: r.r,
+    ...(r.a === 'praise' || r.a === 'scold' ? {
+      a: r.a
+    } : {})
+  }));
+  return {
+    loy: amgbNum(x.loy, AMGB_NUM.loy0, 0, 100),
+    pop: amgbNum(x.pop, AMGB_NUM.pop0, 0, 100),
+    pol: amgbInt(x.pol, 0, -3, 3),
+    pp: amgbInt(x.pp, 0, -9, 9),
+    gt: amgbInt(x.gt, 2, 0, 5),
+    age: amgbInt(x.age, 0, 0, 99999),
+    life: Math.round(amgbNum(x.life, 0, 0, 1000) * 100) / 100,
+    last: amgbInt(x.last, -1, -1, 1e7),
+    touch: amgbInt(x.touch, -1, -1, 1e7),
+    fight: amgbInt(x.fight, -1, -1, 1e7),
+    sc: {
+      d: amgbInt(x.sc && x.sc.d, -1, -1, 1e7),
+      n: amgbInt(x.sc && x.sc.n, 0, 0, 99)
+    },
+    rs
+  };
+};
+const normalizeAssistantMasmonBond = raw => {
+  const out = {
+    v: 1,
+    start: -1,
+    mons: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  out.start = amgbInt(raw.start, -1, -1, 1e7);
+  if (raw.mons && typeof raw.mons === 'object' && !Array.isArray(raw.mons)) for (const [k, x] of Object.entries(raw.mons)) {
+    if (!amgbKeyOk(k)) continue;
+    const one = amgbNormOne(x);
+    if (one) out.mons[k] = one;
+  }
+  return out;
+};
+const AMGB_STORE = {
+  state: normalizeAssistantMasmonBond(null),
+  loaded: false,
+  subs: new Set(),
+  dirty: false,
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_BOND_KEY, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(normalizeAssistantMasmonBond(raw));
+      return this.state;
+    })();
+    return this._p;
+  }
+};
+const amgbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBond === true;
+const amgbSave = next => {
+  if (!AMGB_STORE.loaded) return false;
+  AMGB_STORE.set(next);
+  if (!AMGB_STORE.dirty) {
+    AMGB_STORE.dirty = true;
+    Promise.resolve().then(() => {
+      AMGB_STORE.dirty = false;
+      try {
+        if (typeof storeSet === 'function') storeSet(ASSISTANT_MASMON_BOND_KEY, AMGB_STORE.state, false);
+      } catch (_) {}
+    });
+  }
+  return true;
+};
+try {
+  setTimeout(() => {
+    try {
+      if (amgbOn()) void AMGB_STORE.load();
+    } catch (_) {}
+  }, 0);
+} catch (_) {}
+const amgbLive = () => amgbOn() && AMGB_STORE.loaded && typeof MASMON_CALC !== 'undefined';
+const amgbSeed = () => typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.state && ASSISTANT_MASMON_STORE.state.seed || '';
+const amgbRng = text => typeof assistantMasmonRng === 'function' ? assistantMasmonRng(text) : () => 0.5;
+const amgbTypeFor = (aid, row) => MASMON_CALC.typeFromApt(typeof AMG_APT !== 'undefined' ? AMG_APT[row.monster] : '', amgbRng(`${amgbSeed()}|${aid}|bond-type|${row.slot}:${row.monster}`)());
+const amgbEntryOf = (aid, row, st = AMGB_STORE.state) => {
+  if (!row) return null;
+  const x = st.mons[amgbKey(aid, row.slot, row.monster)];
+  return x || amgbNormOne({
+    gt: amgbTypeFor(aid, row)
+  });
+};
+const amgbPut = (st, aid, row, x) => ({
+  ...st,
+  mons: {
+    ...st.mons,
+    [amgbKey(aid, row.slot, row.monster)]: x
+  }
+});
+const amgbLifeFrac = b => b ? Math.min(1, b.life / 1000) : 0;
+const amgbCondLen = (load, r) => amgbLive() ? MASMON_CALC.condLen(load, r) : null;
+const amgbLifeOver = (aid, row) => {
+  if (!amgbLive()) return false;
+  const b = amgbEntryOf(aid, row);
+  return !!b && b.life >= 1000;
+};
+const amgbTick = (aid, row, slot) => {
+  if (!amgbLive() || !row) return false;
+  const day = typeof amgSlotDay === 'function' ? amgSlotDay(slot) : Math.floor(slot / 3);
+  let st = AMGB_STORE.state;
+  if (st.start < 0) st = {
+    ...st,
+    start: day
+  };
+  const b0 = st.mons[amgbKey(aid, row.slot, row.monster)];
+  if (!b0) {
+    amgbSave(amgbPut(st, aid, row, amgbNormOne({
+      gt: amgbTypeFor(aid, row),
+      last: day,
+      touch: day,
+      fight: day
+    })));
+    return true;
+  }
+  if (b0.last >= day) {
+    if (st !== AMGB_STORE.state) amgbSave(st);
+    return false;
+  }
+  if (b0.last < 0) {
+    amgbSave(amgbPut(st, aid, row, {
+      ...b0,
+      last: day,
+      touch: b0.touch < 0 ? day : b0.touch,
+      fight: b0.fight < 0 ? day : b0.fight
+    }));
+    return true;
+  }
+  const d = Math.min(400, day - b0.last);
+  const b = {
+    ...b0,
+    sc: {
+      ...b0.sc
+    },
+    rs: [...b0.rs]
+  };
+  b.age = b0.age + d;
+  b.life = Math.min(1000, Math.round(b0.life * 100 + Math.ceil(d * 1000 * MASMON_CALC.lifeStep(b0.pol, AMGB_NUM.baseLife) * 100)) / 100);
+  const idleL = Math.max(0, day - b0.touch - AMGB_NUM.idleDays);
+  const prevL = Math.max(0, b0.last - b0.touch - AMGB_NUM.idleDays);
+  if (b0.touch >= 0 && idleL > prevL) b.loy = Math.max(0, b0.loy - (idleL - prevL));
+  const idleP = Math.max(0, day - b0.fight - AMGB_NUM.idleDays);
+  const prevP = Math.max(0, b0.last - b0.fight - AMGB_NUM.idleDays);
+  if (b0.fight >= 0 && idleP > prevP) b.pop = Math.max(0, b0.pop - (idleP - prevP));
+  b.last = day;
+  amgbSave(amgbPut(st, aid, row, b));
+  return true;
+};
+const amgbPre = (aid, row, slot, e, act, plan) => {
+  if (!amgbLive() || !row || !e || !act || !AMGB_TRAIN_ACTS.includes(act.a)) return null;
+  const b = amgbEntryOf(aid, row);
+  const sab = plan || typeof amgpSabChance !== 'function' ? 0 : amgpSabChance(e.fat, e.str);
+  const r = MASMON_CALC.resultOf({
+    loyal: b.loy,
+    pol: b.pol,
+    sab,
+    fail: 0,
+    r: amgbRng(`${amgbSeed()}|${aid}|bond-res|${row.slot}:${row.monster}|${slot}`)()
+  });
+  return r;
+};
+const amgbGainMult = (aid, row, pre) => {
+  if (!amgbLive() || !row) return 1;
+  const b = amgbEntryOf(aid, row);
+  const f = amgbLifeFrac(b);
+  if (f >= 1) return 0;
+  const res = MASMON_CALC.RESULTS[pre] && (pre === 'great' || pre === 'cheat') ? MASMON_CALC.RESULTS[pre].mult : 1;
+  return MASMON_CALC.PACE * MASMON_CALC.ageMult(b.gt, f) * MASMON_CALC.policyOf(b.pol).gain * res;
+};
+const amgbPace = () => amgbLive() ? MASMON_CALC.PACE : 1;
+const amgbSabMult = (aid, row) => {
+  if (!amgbLive() || !row) return 1;
+  const b = amgbEntryOf(aid, row);
+  return MASMON_CALC.sabLoyalMult(b.loy) * MASMON_CALC.policyOf(b.pol).sab;
+};
+const amgbStressMult = (aid, row) => {
+  if (!amgbLive() || !row) return 1;
+  return MASMON_CALC.policyOf(amgbEntryOf(aid, row).pol).stress;
+};
+const amgbAfter = (aid, row, slot, e, act, pre, failed, fat0) => {
+  if (!amgbLive() || !row || !e || !act) return;
+  let r = null;
+  if (act.a === 'saboru') r = 'skip';else if (AMGB_TRAIN_ACTS.includes(act.a)) r = failed ? 'fail' : pre === 'great' || pre === 'cheat' ? pre : 'ok';
+  if (!r) return;
+  if (r === 'cheat' && Number.isFinite(fat0)) e.fat = Math.min(e.fat, fat0);
+  if (r === 'great') e.str = Math.max(0, e.str + MASMON_CALC.RESULTS.great.str);
+  const st = AMGB_STORE.state;
+  const b0 = st.mons[amgbKey(aid, row.slot, row.monster)] || amgbEntryOf(aid, row);
+  if (b0.rs.some(x => x.s === slot)) return;
+  amgbSave(amgbPut(st, aid, row, {
+    ...b0,
+    rs: [...b0.rs, {
+      s: slot,
+      r
+    }].slice(-AMGB_NUM.log)
+  }));
+};
+const amgbTouch = (aid, row, now = Date.now()) => {
+  if (!amgbLive() || !row) return false;
+  const day = amgSlotDay(amgSlotOf(now));
+  const st = AMGB_STORE.state;
+  const b0 = st.mons[amgbKey(aid, row.slot, row.monster)];
+  if (!b0 || b0.touch >= day) return false;
+  return amgbSave(amgbPut(st, aid, row, {
+    ...b0,
+    touch: day
+  }));
+};
+const amgbPendOf = (b, now = Date.now()) => {
+  if (!b || !b.rs.length) return null;
+  const x = b.rs[b.rs.length - 1];
+  return !x.a && amgSlotDay(x.s) === amgSlotDay(amgSlotOf(now)) ? x : null;
+};
+const amgbReact = (aid, row, act, now = Date.now()) => {
+  if (!amgbLive() || !row || act !== 'praise' && act !== 'scold') return {
+    ok: false,
+    why: 'いまはできません'
+  };
+  const st = AMGB_STORE.state;
+  const key = amgbKey(aid, row.slot, row.monster);
+  const b0 = st.mons[key];
+  const p = amgbPendOf(b0, now);
+  if (!p) return {
+    ok: false,
+    why: '今日の訓練の結果がまだありません'
+  };
+  const day = amgSlotDay(amgSlotOf(now));
+  const fx = MASMON_CALC.reactOf(p.r, act);
+  const mv = MASMON_CALC.policyMove(b0.pol, b0.pp, fx.dir);
+  const sc = act === 'scold' ? {
+    d: day,
+    n: (b0.sc.d === day ? b0.sc.n : 0) + 1
+  } : b0.sc;
+  const b = {
+    ...b0,
+    loy: Math.max(0, Math.min(100, b0.loy + fx.loyal)),
+    pol: mv.pol,
+    pp: mv.pp,
+    sc,
+    touch: day,
+    rs: b0.rs.map(x => x === p ? {
+      ...x,
+      a: act
+    } : x)
+  };
+  if (!amgbSave({
+    ...st,
+    mons: {
+      ...st.mons,
+      [key]: b
+    }
+  })) return {
+    ok: false,
+    why: '読み込み中です'
+  };
+  if (act === 'scold' && sc.n >= AMGB_NUM.scoldDay && typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded) {
+    const S = AMG_STORE.state;
+    const mk = amgMonKey(row.slot, row.monster);
+    const e = S.mons[aid] && S.mons[aid][mk];
+    if (e) amgSave({
+      ...S,
+      mons: {
+        ...S.mons,
+        [aid]: {
+          ...S.mons[aid],
+          [mk]: {
+            ...e,
+            str: Math.min(100, e.str + AMGB_NUM.scoldStr)
+          }
+        }
+      }
+    });
+  }
+  return {
+    ok: true,
+    loy: b.loy,
+    dl: b.loy - b0.loy,
+    pol: b.pol,
+    moved: b.pol !== b0.pol,
+    r: p.r,
+    over: act === 'scold' && sc.n >= AMGB_NUM.scoldDay
+  };
+};
+const assistantMasmonBondBattle = (aid, row, kind, win, now = Date.now()) => {
+  if (!amgbLive() || !row) return false;
+  const st = AMGB_STORE.state;
+  const b0 = st.mons[amgbKey(aid, row.slot, row.monster)] || amgbEntryOf(aid, row);
+  return amgbSave(amgbPut(st, aid, row, {
+    ...b0,
+    pop: MASMON_CALC.popAfterBattle(b0.pop, kind, !!win),
+    fight: amgSlotDay(amgSlotOf(now))
+  }));
+};
+const amgbMasteriesOf = (aid, row) => {
+  try {
+    if (typeof AMGT_STORE === 'undefined') return [];
+    const me = (AMGT_STORE.state.mons[aid] || {})[`${row.slot}:${row.monster}`];
+    return me ? me.learn.map(id => Number(me.m[id]) || 0) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const amgPowerOf = (aid, row) => {
+  if (typeof MASMON_CALC === 'undefined' || !row || typeof amgEntryOf !== 'function') return null;
+  const e = amgEntryOf(aid, row);
+  if (!e || !e.st) return null;
+  const b = amgbEntryOf(aid, row);
+  const power = MASMON_CALC.power({
+    stats: e.st,
+    masteries: amgbMasteriesOf(aid, row),
+    lv: e.lv,
+    loyal: b ? b.loy : AMGB_NUM.loy0,
+    pop: b ? b.pop : 0
+  });
+  return {
+    power,
+    rank: MASMON_CALC.rankOf(power)
+  };
+};
+const amgbStars = pop => pop >= 90 ? '★★★' : pop >= 60 ? '★★' : pop >= 30 ? '★' : '';
+const useAmgbState = () => {
+  const [st, setSt] = React.useState(AMGB_STORE.state);
+  React.useEffect(() => {
+    AMGB_STORE.subs.add(setSt);
+    if (amgbOn()) void AMGB_STORE.load();
+    return () => {
+      AMGB_STORE.subs.delete(setSt);
+    };
+  }, []);
+  return st;
+};
+function AmgbRankChip({
+  rank,
+  small = false
+}) {
+  if (!rank) return null;
+  const c = AMGB_RANK_COLOR[rank.key] || '#94a3b8';
+  const frame = ['SS', 'SSS', 'M'].includes(rank.key);
+  return React.createElement("b", {
+    className: `inline-flex items-center justify-center rounded-md px-1 font-black leading-none ${small ? 'min-w-[22px] text-[10px] py-[2px]' : 'min-w-[30px] text-[13px] py-[3px]'}`,
+    style: {
+      color: '#0f172a',
+      background: rank.key === 'M' ? 'linear-gradient(90deg,#f472b6,#facc15,#4ade80,#60a5fa,#c084fc)' : c,
+      boxShadow: frame ? `0 0 0 2px #fde68a` : 'none'
+    },
+    "data-amgb-rank": rank.key
+  }, rank.key);
+}
+function AmgbPowerTag({
+  aid,
+  row
+}) {
+  useAmgbState();
+  if (!amgbOn()) return null;
+  const p = amgPowerOf(aid, row);
+  if (!p) return React.createElement("span", {
+    className: "text-[10px] font-bold text-slate-400",
+    "data-amgb-power": "none"
+  }, "総合力 —");
+  return React.createElement("span", {
+    className: "inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100",
+    "data-amgb-power": p.power
+  }, React.createElement(AmgbRankChip, {
+    rank: p.rank,
+    small: true
+  }), p.power.toLocaleString());
+}
+function AmgbPanel({
+  who,
+  t
+}) {
+  const bst = useAmgbState();
+  const [msg, setMsg] = React.useState('');
+  React.useEffect(() => {
+    if (amgbOn()) {
+      void AMGB_STORE.load().then(() => amgbTouch(who.id, t));
+    }
+  }, [who.id, t.slot, t.monster]);
+  if (!amgbOn()) return null;
+  const b = amgbEntryOf(who.id, t, bst);
+  const p = amgPowerOf(who.id, t);
+  if (!b) return null;
+  const pol = MASMON_CALC.policyOf(b.pol);
+  const gt = MASMON_CALC.typeOf(b.gt);
+  const f = amgbLifeFrac(b);
+  const lifeDays = MASMON_CALC.lifeLen(b.pol, AMGB_NUM.baseLife);
+  const left = Math.max(0, Math.ceil((1 - f) * lifeDays));
+  const pk = MASMON_CALC.peakOf(b.gt);
+  const mult = MASMON_CALC.ageMult(b.gt, f);
+  const inPeak = f < 1 && f >= pk.from && f < pk.to;
+  const toPeak = f < pk.from ? Math.ceil((pk.from - f) * lifeDays) : 0;
+  const pend = amgbPendOf(b);
+  const last = b.rs.length ? b.rs[b.rs.length - 1] : null;
+  const react = act => {
+    const r = amgbReact(who.id, t, act);
+    setMsg(r.ok ? `${act === 'praise' ? '👏 褒めた' : '📣 叱った'}: 忠誠度 ${r.dl >= 0 ? '+' : '−'}${Math.abs(r.dl)}${r.moved ? ` ・ 育成方針が「${MASMON_CALC.policyOf(r.pol).name}」になった` : ''}${r.over ? ' ・ 叱りすぎてストレスが少したまった' : ''}` : r.why);
+  };
+  const polBar = (b.pol + 3) / 6 * 100;
+  return React.createElement("div", {
+    className: "mhm-card mt-2",
+    "data-amgb-panel": true
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "総合力"), p ? React.createElement("p", {
+    className: "flex items-center gap-1.5 text-[18px] font-black text-amber-100",
+    "data-amgb-total": p.power
+  }, React.createElement(AmgbRankChip, {
+    rank: p.rank
+  }), p.power.toLocaleString()) : React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "—")), p && p.rank.next && React.createElement("p", {
+    className: "text-right text-[9.5px] font-bold text-slate-400"
+  }, "次のランクまで ", (p.rank.next - p.power).toLocaleString()), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[40px] shrink-0"
+  }, "忠誠度"), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${b.loy}%`,
+      background: 'linear-gradient(90deg,#34d399,#22d3ee)'
+    }
+  })), React.createElement("b", {
+    className: "w-[26px] text-right text-amber-200",
+    "data-amgb-loy": true
+  }, Math.round(b.loy))), React.createElement("div", {
+    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "w-[40px] shrink-0"
+  }, "人気"), React.createElement("span", {
+    className: "mhm-bar"
+  }, React.createElement("i", {
+    style: {
+      width: `${b.pop}%`,
+      background: 'linear-gradient(90deg,#f472b6,#facc15)'
+    }
+  })), React.createElement("b", {
+    className: "w-[26px] text-right text-amber-200",
+    "data-amgb-pop": true
+  }, Math.round(b.pop)))), React.createElement("p", {
+    className: "mt-1 text-[9.5px] font-bold text-slate-400"
+  }, "忠誠度が低いと対戦でそっぽを向く番が出ることがあります ・ 人気が高いほど会心の一撃が出やすくなります", amgbStars(b.pop) ? ` ・ 人気 ${amgbStars(b.pop)}` : ''), React.createElement("div", {
+    className: "mt-1.5 text-[10.5px] font-bold text-slate-200",
+    "data-amgb-policy": b.pol
+  }, React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, React.createElement("span", null, "🧭 育成方針: ", React.createElement("b", {
+    className: "text-amber-200"
+  }, pol.name)), React.createElement("small", {
+    className: "text-[9.5px] text-slate-400"
+  }, "褒める ← → 叱る")), React.createElement("div", {
+    className: "relative mt-1 h-[8px] rounded-full",
+    style: {
+      background: 'linear-gradient(90deg,#f9a8d4,#e2e8f0,#93c5fd)'
+    }
+  }, React.createElement("i", {
+    className: "absolute top-[-3px] h-[14px] w-[6px] rounded bg-slate-900 ring-2 ring-amber-200",
+    style: {
+      left: `calc(${polBar}% - 3px)`
+    }
+  })), React.createElement("p", {
+    className: "mt-0.5 text-[9.5px] text-slate-400"
+  }, "甘いほど寿命が長くストレスがたまりにくいけれど、サボりやすく伸びも少し落ちます。厳しいほどその逆です")), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-x-3 text-[10.5px] font-bold text-slate-200"
+  }, React.createElement("p", {
+    "data-amgb-age": b.age
+  }, "🎂 ", MASMON_CALC.ageLabel(b.age)), React.createElement("p", {
+    "data-amgb-life": b.life
+  }, f >= 1 ? '⏳ 寿命(もう伸びません)' : `⏳ 寿命まで あと約${left}日`)), React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-emerald-200",
+    "data-amgb-type": gt.key
+  }, "📊 成長の型: ", gt.name, f >= 1 ? '' : inPeak ? ` ・ いまピーク(伸び ×${mult})` : toPeak > 0 ? ` ・ ピークまで あと約${toPeak}日` : ` ・ 伸び ×${mult}`), React.createElement(AmgbCurve, {
+    gt: b.gt,
+    frac: f
+  }), f < 1 && left <= AMGB_NUM.warnDays && React.createElement("p", {
+    className: "mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100",
+    "data-amgb-warn": true
+  }, who.name || '助手', "「そろそろ伸びが止まりそう。合体も考えてみる?」"), f >= 1 && React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, "寿命が来ても、いなくなったりはしません。対戦にも出られます"), React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 p-2",
+    "data-amgb-result": true
+  }, React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-200"
+  }, last ? `いちばん新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'), pend && React.createElement("div", {
+    className: "mt-1.5 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    className: "min-h-[40px] flex-1 rounded-xl bg-sky-700 px-2 text-[12px] font-black",
+    onClick: () => react('scold'),
+    "data-amgb-act": "scold"
+  }, "📣 叱る"), React.createElement("button", {
+    type: "button",
+    className: "min-h-[40px] flex-1 rounded-xl bg-pink-600 px-2 text-[12px] font-black",
+    onClick: () => react('praise'),
+    "data-amgb-act": "praise"
+  }, "👏 褒める")), pend && React.createElement("p", {
+    className: "mt-1 text-[9.5px] font-bold text-slate-400"
+  }, "結果に合うほうを選ぶと忠誠度が上がります(しなくても大丈夫)"), msg && React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-amber-200",
+    "data-amgb-msg": true
+  }, msg)));
+}
+function AmgbCurve({
+  gt,
+  frac
+}) {
+  const c = MASMON_CALC.typeOf(gt).c;
+  const W = 200,
+    H = 34;
+  const top = 1.8;
+  const pts = c.map((v, i) => `${(i + 0.5) / 10 * W},${H - v / top * H}`).join(' ');
+  const x = Math.min(1, Math.max(0, frac)) * W;
+  return React.createElement("svg", {
+    viewBox: `0 0 ${W} ${H + 2}`,
+    className: "mt-1 h-[36px] w-full",
+    "aria-hidden": "true",
+    "data-amgb-curve": true
+  }, React.createElement("polyline", {
+    points: pts,
+    fill: "none",
+    stroke: "#6ee7b7",
+    strokeWidth: "2"
+  }), React.createElement("line", {
+    x1: x,
+    x2: x,
+    y1: "0",
+    y2: H,
+    stroke: "#fde68a",
+    strokeWidth: "2",
+    strokeDasharray: "3 2"
+  }));
+}
 const ASSISTANT_MASMON_GROW_KEY = 'mh_assistant_masmon_grow_v1';
 const AMG_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
 const AMG_KEYS = AMG_STATS.map(x => x[0]);
@@ -140607,17 +141532,30 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const g = {};
   let fail = false;
   const day = amgSlotDay(slot);
-  const cap = care.viewed || care.plan ? AMG_CARE.viewCap : AMG_DAY_CAP;
+  const pre = typeof amgbPre === 'function' ? amgbPre(aid, row, slot, e, act, !!care.plan) : null;
+  if (pre === 'skip') act = {
+    a: 'saboru',
+    k: act.k || ''
+  };
+  const fat0 = e.fat;
+  const sh0 = e.shugyo;
+  const bm = typeof amgbGainMult === 'function' ? amgbGainMult(aid, row, pre) : 1;
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1;
+  const cap = (care.viewed || care.plan ? AMG_CARE.viewCap : AMG_DAY_CAP) * pace;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
   const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
   const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
-  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const sm = (typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1) * (typeof amgbStressMult === 'function' ? amgbStressMult(aid, row) : 1);
   const up = v => v > 0 ? Math.round(v * sm) : v;
   const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
   const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
+    if (bm <= 0) {
+      amgRange(rnd, lo, hi);
+      return;
+    }
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead * bm;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n;
@@ -140667,8 +141605,9 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100);
     e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
-  e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0);
+  e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0) * pace;
   e.lv = e.lv || 1;
+  if (typeof amgbAfter === 'function') amgbAfter(aid, row, slot, e, act, pre, fail || !!(act.a === 'shugyo' && e.shugyo !== sh0 && e.shugyo && e.shugyo.f), fat0);
   while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) {
     e.xp -= amgLvNeed(e.lv);
     e.lv += 1;
@@ -140735,6 +141674,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
           ...e0.dg
         }
       };
+      if (typeof amgbTick === 'function') amgbTick(aid, row, s);
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
@@ -140829,6 +141769,7 @@ const amgTick = async (aid, now = Date.now()) => {
   await ASSISTANT_MASMON_STORE.load();
   await AMG_STORE.load();
   if (typeof amgpLoad === 'function') await amgpLoad();
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined') await AMGB_STORE.load();
   const ms = ASSISTANT_MASMON_STORE.state;
   if (!ms.seed) return null;
   const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
@@ -141171,7 +142112,7 @@ function AmgGrowCard({
     "data-amg-str": true
   }, e.str))), React.createElement("p", {
     className: "mt-1.5 text-[11px] font-bold text-amber-200"
-  }, "📈 育成方針: ", t.grow, " ・ 育成 Lv.", e.lv, React.createElement("small", {
+  }, "📈 ", typeof amgbOn === 'function' && amgbOn() ? '得意な伸ばし方' : '育成方針', ": ", t.grow, " ・ 育成 Lv.", e.lv, React.createElement("small", {
     className: "ml-1 text-[9.5px] text-slate-400"
   }, "(次まで ", amgLvNeed(e.lv) - e.xp, ")")), growMine && React.createElement("p", {
     className: "text-[10.5px] font-bold text-sky-200",
@@ -141198,6 +142139,9 @@ function AmgGrowCard({
     who: who,
     t: t,
     e: e
+  }), typeof AmgbPanel === 'function' && React.createElement(AmgbPanel, {
+    who: who,
+    t: t
   }));
 }
 const ASSISTANT_MASMON_TRAIN_KEY = 'mh_assistant_masmon_train_v1';
@@ -141707,7 +142651,9 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1;
   const g = {};
   const nameOf = k => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
+  const over = typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row);
   const up = (k, lo, hi) => {
+    if (over) return;
     const cur = me.m[k] || 0;
     const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) {
@@ -142567,6 +143513,7 @@ function AssistantLifePlanWho({
     className: "flex flex-col gap-1",
     "data-assistant-life-plan-who": id
   }, typeof AssistantLifeBodyPanel === 'function' && React.createElement(AssistantLifeBodyPanel, {
+    key: id,
     id: id,
     cur: cur
   }), rows);
@@ -143216,6 +144163,100 @@ const assistantLifeHospitalCureSlotsOf = aid => {
   if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === 'clinic' && r.ev === 'cure').map(r => r.abs);
 };
+const ASSISTANT_LIFE_BODY_CURE_ITEM = 'life_cure';
+const ASSISTANT_LIFE_BODY_CURE_HOOK = {
+  have: 0,
+  use: null,
+  listeners: new Set(),
+  set(patch) {
+    Object.assign(this, patch);
+    for (const fn of this.listeners) {
+      try {
+        fn(this.have);
+      } catch (_) {}
+    }
+  }
+};
+const assistantLifeBodyCanCure = (id, abs) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded || !assistantLifeBodyOkId(id) || !Number.isInteger(abs)) return false;
+  const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+  const e = D.s[id];
+  if (!e || !e.cond || D.at !== abs) return false;
+  const last = (D.log[id] || []).slice(-1)[0];
+  return !!last && last.abs === abs && last.place === 'clinic';
+};
+const assistantLifeBodyCure = (id, abs) => {
+  if (!assistantLifeBodyCanCure(id, abs)) return false;
+  const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+  const list = [...D.log[id]];
+  list[list.length - 1] = {
+    ...list[list.length - 1],
+    ev: 'cure'
+  };
+  assistantLifeBodySave({
+    ...D,
+    s: {
+      ...D.s,
+      [id]: {
+        ...D.s[id],
+        cond: null
+      }
+    },
+    log: {
+      ...D.log,
+      [id]: list
+    }
+  });
+  return true;
+};
+const assistantLifeBodyCureUse = () => {
+  const [have, setHave] = React.useState(ASSISTANT_LIFE_BODY_CURE_HOOK.have);
+  React.useEffect(() => {
+    const fn = n => setHave(n);
+    ASSISTANT_LIFE_BODY_CURE_HOOK.listeners.add(fn);
+    setHave(ASSISTANT_LIFE_BODY_CURE_HOOK.have);
+    return () => {
+      ASSISTANT_LIFE_BODY_CURE_HOOK.listeners.delete(fn);
+    };
+  }, []);
+  return have;
+};
+function AssistantLifeBodyCure({
+  id,
+  cur,
+  onCured
+}) {
+  const have = assistantLifeBodyCureUse();
+  const [busy, setBusy] = React.useState(false);
+  const can = assistantLifeBodyCanCure(id, cur);
+  if (!can) return React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold leading-snug text-slate-300",
+    "data-assistant-life-body-cure-hint": id
+  }, "🏥 病院にいる回なら「特別な治療」(ビートP交換所)で、その場で治せます", have > 0 ? `(持っている ${have}枚)` : '');
+  const use = ASSISTANT_LIFE_BODY_CURE_HOOK.use;
+  return React.createElement("div", {
+    className: "mt-1 rounded-lg border border-emerald-300/50 bg-emerald-950/60 p-1.5",
+    "data-assistant-life-body-cure": id
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold leading-snug text-emerald-100"
+  }, "いま病院にいます。特別な治療を1枚使うと、重くてもその場で治ります(助手のマスモンも)"), React.createElement("button", {
+    type: "button",
+    disabled: busy || have <= 0 || typeof use !== 'function',
+    "data-assistant-life-body-cure-use": id,
+    onClick: async () => {
+      setBusy(true);
+      let ok = false;
+      try {
+        ok = await use(id, cur);
+      } catch (_) {
+        ok = false;
+      }
+      setBusy(false);
+      if (ok && onCured) onCured();
+    },
+    className: "mt-1 min-h-[44px] w-full rounded-xl bg-emerald-500 px-2 text-[12.5px] font-black text-slate-950 active:scale-95 disabled:opacity-40"
+  }, "🏥 特別な治療を使う(", have > 0 ? `持っている ${have}枚` : 'ビートP交換所 300P', ")"));
+}
 const assistantLifeBodyPerk = place => assistantLifeBodyOn() ? ASSISTANT_LIFE_BODY_PERK[place] || '' : '';
 const assistantLifeBodyPlaces = list => assistantLifeBodyOn() ? [...list.filter(p => p !== 'clinic'), 'clinic'] : list.filter(p => p !== 'clinic');
 const assistantLifeBodyLabel = place => assistantLifeBodyOn() && ASSISTANT_LIFE_BODY_LABEL[place] || null;
@@ -143239,11 +144280,11 @@ const ASSISTANT_LIFE_BODY_COND_NAME = Object.freeze({
   hurt: '🤕 けが',
   sick: '🤒 病気'
 });
-const assistantLifeBodyCondText = c => {
+const assistantLifeBodyCondText = (c, atClinic = false) => {
   if (!c) return '';
   const d = Math.floor(c.left / 12),
     h = c.left % 12 * 2;
-  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家で休んでいます(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・${atClinic ? '病院で診てもらっています' : '家で休んでいます'}(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
 };
 const assistantLifeBodyDelta = n => n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0';
 function AssistantLifeBodyPlaceStat({
@@ -143304,11 +144345,12 @@ function AssistantLifeBodyPanel({
   cur
 }) {
   assistantLifeBodyUse();
+  const [cured, setCured] = React.useState(false);
   const e = assistantLifeBodyOf(id);
   if (!e) return null;
   const L = ASSISTANT_LIFE_BODY_LINE;
   const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
-  const note = e.cond ? assistantLifeBodyCondText(e.cond) : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう` : '元気です';
+  const note = e.cond ? assistantLifeBodyCondText(e.cond, assistantLifeBodyCanCure(id, cur)) : e.fat >= L.fatWarn || e.st >= L.stWarn ? `${e.fat >= L.fatWarn ? '疲れ' : 'ストレス'}がたまっています。休ませる回(家・ひなたの丘・おやつ屋さん)を入れましょう` : '元気です';
   const rows = [];
   if (!e.cond && Number.isInteger(cur) && typeof assistantLifePlanOf === 'function') {
     let v = {
@@ -143353,7 +144395,14 @@ function AssistantLifeBodyPanel({
   })), React.createElement("p", {
     className: `mt-1 text-[11px] font-bold leading-snug ${e.cond ? 'text-rose-200' : 'text-indigo-200'}`,
     "data-assistant-life-body-note": true
-  }, note), rows.length > 0 && React.createElement("div", {
+  }, note), cured && !e.cond ? React.createElement("p", {
+    className: "mt-1 rounded-lg bg-emerald-900/70 px-1.5 py-1 text-[11px] font-black text-emerald-100",
+    "data-assistant-life-body-cured": id
+  }, "🏥 特別な治療で、すっかり治りました！") : e.cond && React.createElement(AssistantLifeBodyCure, {
+    id: id,
+    cur: cur,
+    onCured: () => setCured(true)
+  }), rows.length > 0 && React.createElement("div", {
     className: "mt-1 flex flex-col gap-0.5",
     "data-assistant-life-body-forecast": true
   }, rows.map(r => {
@@ -146575,6 +147624,7 @@ const AMGR_NUM = Object.freeze({
   heavySub: [2, 4],
   heavyDown: [2, 4],
   heavyFat: 10,
+  serverDayBond: 200,
   serverDay: 40
 });
 const AMGR_TICKET = Object.freeze({
@@ -146909,9 +147959,10 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
       to
     });
   };
-  const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0))));
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1;
+  const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0)) * pace));
   const plan = amgrPlanOf(kind, k);
-  const room = Math.max(1, AMGR_NUM.serverDay - (Number(AMG_CARE.viewCap) || 20));
+  const room = Math.max(1, (pace > 1 ? AMGR_NUM.serverDayBond : AMGR_NUM.serverDay) - (Number(AMG_CARE.viewCap) || 20) * pace);
   if (kind === 'heavy') {
     const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room);
     bump(plan.main, main);
@@ -147327,7 +148378,7 @@ const normalizeAssistantMasmonCond = raw => {
       hosp: (Array.isArray(c.hosp) ? c.hosp : []).filter(Number.isInteger).slice(-30)
     };
   }
-  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'find'].includes(x.t)).slice(-40).map(x => ({
+  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'cure', 'find'].includes(x.t)).slice(-40).map(x => ({
     s: x.s,
     key: x.key,
     k: x.k,
@@ -147462,15 +148513,24 @@ const amgpHospital = (aid, key, slot, e) => {
     abs = [];
   }
   if (!Array.isArray(abs)) return false;
+  let cures = [];
+  try {
+    cures = typeof assistantLifeHospitalCureSlotsOf === 'function' ? assistantLifeHospitalCureSlotsOf(aid) : [];
+  } catch (_) {
+    cures = [];
+  }
+  const cureSet = new Set(Array.isArray(cures) ? cures.filter(Number.isInteger) : []);
+  abs = [...abs, ...cureSet].filter((a, i, l) => l.indexOf(a) === i);
   let c = c0;
   const log = [];
   for (const a of abs) {
     if (!Number.isInteger(a) || c.hosp.includes(a)) continue;
     const gs = amgpAbsToSlot(a);
     if (gs === null || gs < c.from || gs > slot || gs > c.until) continue;
+    const cure = cureSet.has(a);
     c = {
       ...c,
-      until: Math.max(gs, c.until - AMGP_NUM.hospSlots),
+      until: cure ? Math.max(c.from, gs - 1) : Math.max(gs, c.until - AMGP_NUM.hospSlots),
       hosp: [...c.hosp, a].slice(-30)
     };
     if (e) e.str = amgClamp(e.str - AMGP_NUM.hospStr, 0, 100);
@@ -147478,7 +148538,7 @@ const amgpHospital = (aid, key, slot, e) => {
       s: gs,
       key,
       k: c.k,
-      t: 'hosp'
+      t: cure ? 'cure' : 'hosp'
     });
   }
   if (c === c0) return false;
@@ -147508,7 +148568,7 @@ const amgpActAt = (aid, row, slot, e, seed) => {
   const code = amgpCodeAt(key, slot);
   if (code === 'A') return null;
   if (/^[LHS]/.test(code)) {
-    const p = amgpSabChance(e.fat, e.str);
+    const p = amgpSabChance(e.fat, e.str) * (typeof amgbSabMult === 'function' ? amgbSabMult(aid, row) : 1);
     if (p > 0 && typeof assistantMasmonRng === 'function' && assistantMasmonRng(`${seed}|${aid}|plan-sab|${key}|${slot}`)() < p) return {
       act: {
         a: 'saboru'
@@ -147558,6 +148618,7 @@ const amgpAfterAct = (aid, row, slot, e, pp, seed) => {
   let k = '';
   if (rnd() < amgpAwayChance(e.str)) k = 'away';else if (rnd() < amgpHurtChance(a, e.fat)) k = 'hurt';else if (rnd() < amgpSickChance(a, e.str)) k = 'sick';
   if (!k) return;
+  const len = typeof amgbCondLen === 'function' ? amgbCondLen(k === 'hurt' ? e.fat : e.str, rnd()) : null;
   const cs = AMGP_CSTORE.state;
   AMGP_CSTORE.save({
     ...cs,
@@ -147566,7 +148627,7 @@ const amgpAfterAct = (aid, row, slot, e, pp, seed) => {
       [pp.key]: {
         k,
         from: slot,
-        until: slot + AMGP_NUM[`${k}N`],
+        until: slot + (Number.isInteger(len) ? len : AMGP_NUM[`${k}N`]),
         care: -1,
         find: -1,
         hosp: []
@@ -147797,7 +148858,9 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
   const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
   let fat = fat0,
     str = str0;
-  let leftHi = Math.max(0, AMG_CARE.viewCap - (opt.used || 0));
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1;
+  const bm = typeof amgbGainMult === 'function' ? amgbGainMult(aid, row, null) : 1;
+  let leftHi = Math.max(0, AMG_CARE.viewCap * pace - (opt.used || 0));
   let leftLo = leftHi;
   const out = [];
   for (let p = 0; p < codes.length; p++) {
@@ -147832,7 +148895,7 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
       code = fat >= T.rest ? 'R' : str >= 50 ? 'P' : `L:${amgpPolicyKey(row, e)}`;
     }
     const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
-    const g0 = amgpGainOf(row, e, code, fat, auto ? 1 : AMG_CARE.pickMult);
+    const g0 = bm > 0 ? amgpGainOf(row, e, code, fat, (auto ? 1 : AMG_CARE.pickMult) * bm) : {};
     const g = {};
     for (const [k, [a, b]] of Object.entries(g0)) {
       const bb = Math.min(b, leftHi);
@@ -148236,13 +149299,16 @@ function AmgpMine({
       className: "truncate text-[13px] font-black"
     }, nameOf(x), " ", React.createElement("small", {
       className: "text-[10px] text-slate-300"
-    }, amgpWhoName(x.aid), "のマスモン・育成Lv.", x.e.lv)), React.createElement("p", {
+    }, amgpWhoName(x.aid), "のマスモン・育成Lv.", x.e.lv), typeof AmgbPowerTag === 'function' && React.createElement(React.Fragment, null, " ", React.createElement(AmgbPowerTag, {
+      aid: x.aid,
+      row: x.row
+    }))), React.createElement("p", {
       className: "text-[10.5px] font-bold text-slate-300"
     }, isPick ? `次の回: ${amgpCodeIcon(nextCode)} ${amgpCodeName(nextCode)} ・ ` : '', "疲れ ", React.createElement("b", {
       className: amgpLevelColor(x.e.fat)
     }, x.e.fat), " ・ ストレス ", React.createElement("b", {
       className: amgpLevelColor(x.e.str + 10)
-    }, x.e.str), " ・ 今日の伸び ", todayN(x), "/", isPick ? 20 : 15), c && React.createElement("p", {
+    }, x.e.str), " ・ 今日の伸び ", todayN(x), "/", (isPick ? 20 : 15) * (typeof amgbPace === 'function' ? amgbPace() : 1)), c && React.createElement("p", {
       className: "text-[11px] font-black text-rose-200",
       "data-amgp-cond": c.k
     }, AMGP_COND[c.k].icon, " ", AMGP_COND[c.k].name, "(あと", Math.max(1, Math.ceil((c.until - nowSlot) / 3)), "日くらい・対戦には出られます)")), isPick ? React.createElement("span", {
@@ -148582,6 +149648,7 @@ function AmgpLogTab({
     start: 'になった',
     care: 'を看病してもらった',
     hosp: 'で病院へ',
+    cure: 'が特別な治療で治った',
     find: 'から帰ってきた'
   };
   return React.createElement(React.Fragment, null, pickSel, React.createElement("p", {
@@ -148945,9 +150012,6 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
 };
 const ASSISTANT_MASMON_FUSE_KEY = 'mh_assistant_masmon_fuse_v1';
 const AMGS_FUSE = Object.freeze({
-  top: 200,
-  pow: 1.5,
-  ref: 999,
   log: 50
 });
 const amgsFuseOn = () => amgsOn() && RELEASE_FLAGS.assistantMasmonFuse === true;
@@ -148986,15 +150050,7 @@ const normalizeAssistantMasmonFuse = raw => {
   return out;
 };
 const AMGS_FSTORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_FUSE_KEY, normalizeAssistantMasmonFuse) : null;
-const amgsFuseBonus = (a, b) => {
-  const x = Math.max(0, Number(a) || 0);
-  const y = Math.max(0, Number(b) || 0);
-  const hi = Math.max(x, y);
-  const lo = Math.min(x, y);
-  if (hi <= 0) return 0;
-  const eff = (x + y) / 2 * Math.sqrt(lo / hi);
-  return Math.round(AMGS_FUSE.top * Math.pow(eff / AMGS_FUSE.ref, AMGS_FUSE.pow));
-};
+const amgsFuseBonus = (a, b) => MASMON_CALC.fuseBonus(a, b);
 const amgsFuseBase = monster => {
   const b = AMG_INIT[monster] || [110, 110, 110, 110, 110, 110];
   const st = {};
@@ -196697,6 +197753,44 @@ function MonsterHeroGame() {
     }
     return assistantLifeFurnGive(who, key);
   };
+  const cureAssistantLifeBody = async (who, abs) => {
+    if (typeof assistantLifeBodyCanCure !== 'function' || !assistantLifeBodyCanCure(who, abs)) return false;
+    const itemId = ASSISTANT_LIFE_BODY_CURE_ITEM;
+    const have = ownedItemCount(ownedItemsRef.current, itemId);
+    if (have <= 0) return false;
+    const before = ownedItemsRef.current;
+    const nextItems = {
+      ...before,
+      [itemId]: have - 1
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+    } catch {
+      ownedItemsRef.current = before;
+      setOwnedItems(before);
+      return false;
+    }
+    if (assistantLifeBodyCure(who, abs)) return true;
+    const back = {
+      ...ownedItemsRef.current,
+      [itemId]: ownedItemCount(ownedItemsRef.current, itemId) + 1
+    };
+    ownedItemsRef.current = back;
+    setOwnedItems(back);
+    try {
+      await storeSet('mh_owned_items', back, false);
+    } catch {}
+    return false;
+  };
+  useEffect(() => {
+    if (typeof ASSISTANT_LIFE_BODY_CURE_HOOK === 'undefined') return;
+    ASSISTANT_LIFE_BODY_CURE_HOOK.set({
+      have: ownedItemCount(ownedItems, ASSISTANT_LIFE_BODY_CURE_ITEM),
+      use: cureAssistantLifeBody
+    });
+  }, [ownedItems]);
   const giveAssistantLifeSolo = async (who, kind) => {
     if (typeof assistantLifeSoloGive !== 'function' || typeof assistantLifeSoloOn !== 'function' || !assistantLifeSoloOn()) return null;
     const def = assistantLifeGiftOf(kind);

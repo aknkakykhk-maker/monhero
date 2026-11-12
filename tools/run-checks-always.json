@@ -384,6 +384,7 @@
   "run/unique-skill-point-check.js",
   "supabase-apply-check.js",
   "teaching-roster-size-check.js",
+  "team/decision-lock-check.js",
   "update-notice-check.js",
   "viewport-height-check.js"
  ]

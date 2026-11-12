@@ -655,6 +655,8 @@ const BREEDER_MARKET_ITEMS = [
   { id:'solo_keyholder', name:"キーホルダー", type:'item', emoji:"🔑", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキーホルダー。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'solo_omamori', name:"小さなおまもり", type:'item', emoji:"🧿", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るおまもり。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'peer_flower', name:"ちいさな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  // 🏥 特別な治療(2026-11-12 社長)。ビートP交換所(300P)で手に入る。マーケットでは売らない。使うのは助手ライフの予定表(56-assistant-life-body.jsx)
+  { id:'life_cure', name:"特別な治療", type:'item', emoji:"🏥", cost:0, shop:false, usage:'assistantLife', desc:"助手の病院で受けられる特別な治療。「🏡 助手ライフ」の予定表で、病院にいる回の助手に1枚使うと、重いけが・病気でもその場で治る。その助手のマスモンのけが・病気も一緒に治る。" },
   // 助手ライフで1人に贈る家具(2026-11-08 社長・段階B)。ビートP交換所の「家具」で手に入る。マーケットでは売らない。好み・置き場所は assistants.js の ASSISTANT_LIFE_FURNITURE
   { id:'furn_sofa', name:"ふかふかソファ", type:'item', emoji:"🛋️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_bear', name:"くまのぬいぐるみ", type:'item', emoji:"🧸", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
