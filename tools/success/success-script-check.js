@@ -131,9 +131,9 @@ const { monsucScriptHeadOf } = require(path.join(DIR, 'heads.js'));
 const noHead = rows.filter(r => !monsucScriptHeadOf(r.id));
 check('どの行も見出し(育成イベント/編成の子のイベント/メインのお話/なし)に当たる', noHead.length === 0, noHead.slice(0, 3).map(r => r.id).join(', '));
 
-// ⑩ 大会の常連(regulars.js): 種は公開ずみの28種(コラボ・下書きを除く)・大会ごとに常連3+王者1・名前が重ならない
+// ⑩ 大会の常連(monster-hero/data/monhero-success-regulars.js・2026-11-12 data 側へ移した): 種は公開ずみの28種(コラボ・下書きを除く)・大会ごとに常連3+王者1・名前が重ならない
 {
-  const { MONSUC_REGULAR_CUPS: CUPS, MONSUC_REGULARS: REG } = require(path.join(DIR, 'regulars.js'));
+  const { MONSUC_REGULAR_CUPS: CUPS, MONSUC_REGULARS: REG } = require(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'monhero-success-regulars.js'));
   const OK_SPECIES = new Set(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Mia', 'Pandora', 'Monol', 'Oboro', 'Plant', 'Zan', 'Eiki',
     'KenshiMocchi', 'Mitarashi', 'Ark', 'Iblis', 'Snegurochka', 'Undine', 'Yaobikuni', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
   const regBad = [];
