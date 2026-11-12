@@ -1,0 +1,1799 @@
+{
+ "trackId": "saudade",
+ "source": "v3fixed",
+ "generatedAt": "deterministic",
+ "difficulties": {
+  "EASY": {
+   "difficulty": "EASY",
+   "noteCount": 329,
+   "seconds": 250.8,
+   "density": 1.31,
+   "pass": true,
+   "gate": {
+    "impossible": 0
+   },
+   "scores": {
+    "playability": 100,
+    "musicality": 96,
+    "readability": 100,
+    "flow": 100,
+    "variety": 100,
+    "difficultyFit": 100
+   },
+   "musicality": {
+    "onsetHitRate": 1,
+    "ghostNotes": 0,
+    "importantOnsets": 978,
+    "importantHit": 400,
+    "importantCoverage": 0.409,
+    "importantReach": 0.326,
+    "importantNeed": 0.326,
+    "beatShare": {
+     "beat": 0.862,
+     "eighth": 0.138,
+     "sixteenth": 0
+    },
+    "notesInSilence": 0,
+    "phraseTotal": 14,
+    "phraseSame": 9,
+    "motifGroups": 5,
+    "motifTotal": 7,
+    "motifSame": 3,
+    "phraseConsistency": 0.571,
+    "phraseEcho": 0.389,
+    "phraseEchoTotal": 162,
+    "phraseVariations": 3,
+    "mirrorRate": 0.318,
+    "intensityDensityAgreement": 0.871,
+    "sectionDensitySpread": 6.88,
+    "sectionVocabSpread": 7,
+    "sections": [
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.055,
+      "notes": 8,
+      "perSecond": 0.67,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 5
+     },
+     {
+      "label": "B",
+      "bars": 8,
+      "intensity": 0.255,
+      "notes": 14,
+      "perSecond": 0.88,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 6.14
+     },
+     {
+      "label": "C",
+      "bars": 9,
+      "intensity": 0.423,
+      "notes": 23,
+      "perSecond": 1.28,
+      "vocab": 5,
+      "chords": 1,
+      "widths": 6.26
+     },
+     {
+      "label": "D",
+      "bars": 7,
+      "intensity": 0.183,
+      "notes": 14,
+      "perSecond": 1,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 5.71
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.679,
+      "notes": 47,
+      "perSecond": 1.47,
+      "vocab": 8,
+      "chords": 2,
+      "widths": 5.36
+     },
+     {
+      "label": "C",
+      "bars": 4,
+      "intensity": 0.483,
+      "notes": 13,
+      "perSecond": 1.63,
+      "vocab": 2,
+      "chords": 1,
+      "widths": 5.54
+     },
+     {
+      "label": "F",
+      "bars": 8,
+      "intensity": 0.138,
+      "notes": 15,
+      "perSecond": 0.94,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 6.4
+     },
+     {
+      "label": "G",
+      "bars": 4,
+      "intensity": 0.371,
+      "notes": 9,
+      "perSecond": 1.13,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 6.11
+     },
+     {
+      "label": "E",
+      "bars": 20,
+      "intensity": 0.489,
+      "notes": 53,
+      "perSecond": 1.33,
+      "vocab": 9,
+      "chords": 2,
+      "widths": 5.09
+     },
+     {
+      "label": "H",
+      "bars": 9,
+      "intensity": 0.823,
+      "notes": 31,
+      "perSecond": 1.72,
+      "vocab": 4,
+      "chords": 1,
+      "widths": 5.35
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.737,
+      "notes": 47,
+      "perSecond": 1.47,
+      "vocab": 6,
+      "chords": 2,
+      "widths": 5.09
+     },
+     {
+      "label": "E",
+      "bars": 14,
+      "intensity": 0.751,
+      "notes": 43,
+      "perSecond": 1.54,
+      "vocab": 5,
+      "chords": 1,
+      "widths": 5.07
+     },
+     {
+      "label": "E",
+      "bars": 4,
+      "intensity": 0.742,
+      "notes": 9,
+      "perSecond": 1.13,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 4.78
+     },
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.032,
+      "notes": 3,
+      "perSecond": 0.25,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 7.33
+     }
+    ]
+   },
+   "vocabulary": {
+    "patternCounts": {
+     "stair_up": 15,
+     "fold_up": 9,
+     "stair_down": 12,
+     "trill": 13,
+     "jack": 14,
+     "plateau_up": 4,
+     "echo_up": 10,
+     "echo_down": 7,
+     "fold_down": 1,
+     "bounce": 2,
+     "stair_up_long": 1
+    },
+    "distinctPatterns": 11,
+    "topPattern": "stair_up",
+    "topShare": 0.17,
+    "fallbackShare": 0,
+    "maxSameRun": 3,
+    "localBias": 0.5,
+    "transitionKinds": 47,
+    "transitionTotal": 87,
+    "transitionEntropy": 5.3
+   },
+   "lanes": {
+    "laneShare": [
+     0.033,
+     0.271,
+     0.164,
+     0.198,
+     0.261,
+     0.073
+    ],
+    "leftRightBias": 0.064,
+    "centerShare": 0.362,
+    "edgeShare": 0.106,
+    "meanMove": 0,
+    "maxMove": 0,
+    "moveSpeedPerSecond": 0,
+    "hardJumps": 0,
+    "fastPairs": 40,
+    "fingerTravel": [
+     71.5,
+     99
+    ]
+   },
+   "types": {
+    "TAP": 304,
+    "HOLD": 25,
+    "SLIDE": 0,
+    "FLICK": 0,
+    "chords": 10,
+    "chordRuns": 0,
+    "sweeps": 0,
+    "crosses": 0,
+    "accents": 13,
+    "endFlicks": 0,
+    "tapers": 8,
+    "tapDuringHold": 0,
+    "tapDuringSlide": 0,
+    "expandCount": 0,
+    "contractCount": 0,
+    "chordShapes": {
+     "3w/4": 10
+    },
+    "slideShapes": {},
+    "slideWidthSequences": 0,
+    "slideVarying": 0,
+    "slideVariety": 1,
+    "rests": 278,
+    "longRests": 13,
+    "longestRestMs": 2998,
+    "hardWindows": 1,
+    "hardSectionMaxMs": 2000,
+    "restAfterHard": 1,
+    "peakWindowNotes": 6
+   },
+   "hand": {
+    "impossible": 0,
+    "strained": 0,
+    "strainedRate": 0,
+    "maxStrainStreakMs": 0,
+    "strainStreaks": 0,
+    "alternationRate": 1,
+    "alternationTotal": 0,
+    "sameFingerMinMs": 250,
+    "chordClearMinMs": 500,
+    "heldFreeOk": 0,
+    "heldFreeTotal": 0,
+    "issues": []
+   }
+  },
+  "NORMAL": {
+   "difficulty": "NORMAL",
+   "noteCount": 376,
+   "seconds": 250.8,
+   "density": 1.5,
+   "pass": true,
+   "gate": {
+    "impossible": 0
+   },
+   "scores": {
+    "playability": 100,
+    "musicality": 96,
+    "readability": 100,
+    "flow": 96,
+    "variety": 100,
+    "difficultyFit": 100
+   },
+   "musicality": {
+    "onsetHitRate": 1,
+    "ghostNotes": 0,
+    "importantOnsets": 978,
+    "importantHit": 449,
+    "importantCoverage": 0.459,
+    "importantReach": 0.37,
+    "importantNeed": 0.37,
+    "beatShare": {
+     "beat": 0.843,
+     "eighth": 0.157,
+     "sixteenth": 0
+    },
+    "notesInSilence": 0,
+    "phraseTotal": 10,
+    "phraseSame": 7,
+    "motifGroups": 8,
+    "motifTotal": 15,
+    "motifSame": 8,
+    "phraseConsistency": 0.6,
+    "phraseEcho": 0.396,
+    "phraseEchoTotal": 187,
+    "phraseVariations": 5,
+    "mirrorRate": 0.358,
+    "intensityDensityAgreement": 0.906,
+    "sectionDensitySpread": 8,
+    "sectionVocabSpread": 9,
+    "sections": [
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.055,
+      "notes": 8,
+      "perSecond": 0.67,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 4.13
+     },
+     {
+      "label": "B",
+      "bars": 8,
+      "intensity": 0.255,
+      "notes": 15,
+      "perSecond": 0.94,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 6.53
+     },
+     {
+      "label": "C",
+      "bars": 9,
+      "intensity": 0.423,
+      "notes": 27,
+      "perSecond": 1.5,
+      "vocab": 3,
+      "chords": 1,
+      "widths": 6.67
+     },
+     {
+      "label": "D",
+      "bars": 7,
+      "intensity": 0.183,
+      "notes": 15,
+      "perSecond": 1.07,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 5.73
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.679,
+      "notes": 56,
+      "perSecond": 1.75,
+      "vocab": 10,
+      "chords": 4,
+      "widths": 5.14
+     },
+     {
+      "label": "C",
+      "bars": 4,
+      "intensity": 0.483,
+      "notes": 13,
+      "perSecond": 1.63,
+      "vocab": 2,
+      "chords": 1,
+      "widths": 6
+     },
+     {
+      "label": "F",
+      "bars": 8,
+      "intensity": 0.138,
+      "notes": 16,
+      "perSecond": 1,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 7.06
+     },
+     {
+      "label": "G",
+      "bars": 4,
+      "intensity": 0.371,
+      "notes": 9,
+      "perSecond": 1.13,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 6.22
+     },
+     {
+      "label": "E",
+      "bars": 20,
+      "intensity": 0.489,
+      "notes": 60,
+      "perSecond": 1.5,
+      "vocab": 9,
+      "chords": 3,
+      "widths": 4.87
+     },
+     {
+      "label": "H",
+      "bars": 9,
+      "intensity": 0.823,
+      "notes": 36,
+      "perSecond": 2,
+      "vocab": 7,
+      "chords": 2,
+      "widths": 5
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.737,
+      "notes": 54,
+      "perSecond": 1.69,
+      "vocab": 9,
+      "chords": 1,
+      "widths": 4.96
+     },
+     {
+      "label": "E",
+      "bars": 14,
+      "intensity": 0.751,
+      "notes": 52,
+      "perSecond": 1.86,
+      "vocab": 9,
+      "chords": 2,
+      "widths": 4.96
+     },
+     {
+      "label": "E",
+      "bars": 4,
+      "intensity": 0.742,
+      "notes": 12,
+      "perSecond": 1.5,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 5
+     },
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.032,
+      "notes": 3,
+      "perSecond": 0.25,
+      "vocab": 1,
+      "chords": 0,
+      "widths": 7.33
+     }
+    ]
+   },
+   "vocabulary": {
+    "patternCounts": {
+     "alternate2": 11,
+     "trill": 8,
+     "fold_down": 5,
+     "jack": 5,
+     "stair2_up": 4,
+     "fold_up": 5,
+     "zigzag2_up": 9,
+     "expand": 1,
+     "stair_up": 14,
+     "echo_up": 10,
+     "contract": 9,
+     "stair_down": 7,
+     "echo_down": 5,
+     "stair2_down": 1,
+     "in_out_in": 1
+    },
+    "distinctPatterns": 15,
+    "topPattern": "stair_up",
+    "topShare": 0.147,
+    "fallbackShare": 0,
+    "maxSameRun": 2,
+    "localBias": 0.5,
+    "transitionKinds": 63,
+    "transitionTotal": 94,
+    "transitionEntropy": 5.82
+   },
+   "lanes": {
+    "laneShare": [
+     0.037,
+     0.215,
+     0.181,
+     0.213,
+     0.253,
+     0.101
+    ],
+    "leftRightBias": 0.133,
+    "centerShare": 0.394,
+    "edgeShare": 0.138,
+    "meanMove": 0.04,
+    "maxMove": 0.5,
+    "moveSpeedPerSecond": 0.01,
+    "hardJumps": 0,
+    "fastPairs": 75,
+    "fingerTravel": [
+     108,
+     108.5
+    ]
+   },
+   "types": {
+    "TAP": 317,
+    "HOLD": 29,
+    "SLIDE": 0,
+    "FLICK": 30,
+    "chords": 14,
+    "chordRuns": 0,
+    "sweeps": 0,
+    "crosses": 0,
+    "accents": 16,
+    "endFlicks": 5,
+    "tapers": 9,
+    "tapDuringHold": 0,
+    "tapDuringSlide": 0,
+    "expandCount": 1,
+    "contractCount": 10,
+    "chordShapes": {
+     "3w/4": 14
+    },
+    "slideShapes": {},
+    "slideWidthSequences": 0,
+    "slideVarying": 0,
+    "slideVariety": 1,
+    "rests": 286,
+    "longRests": 12,
+    "longestRestMs": 2748,
+    "hardWindows": 5,
+    "hardSectionMaxMs": 3000,
+    "restAfterHard": 4,
+    "peakWindowNotes": 7
+   },
+   "hand": {
+    "impossible": 0,
+    "strained": 0,
+    "strainedRate": 0,
+    "maxStrainStreakMs": 0,
+    "strainStreaks": 0,
+    "alternationRate": 1,
+    "alternationTotal": 0,
+    "sameFingerMinMs": 250,
+    "chordClearMinMs": 500,
+    "heldFreeOk": 0,
+    "heldFreeTotal": 0,
+    "issues": []
+   }
+  },
+  "HARD": {
+   "difficulty": "HARD",
+   "noteCount": 515,
+   "seconds": 250.8,
+   "density": 2.05,
+   "pass": true,
+   "gate": {
+    "impossible": 0
+   },
+   "scores": {
+    "playability": 100,
+    "musicality": 95,
+    "readability": 100,
+    "flow": 99,
+    "variety": 100,
+    "difficultyFit": 100
+   },
+   "musicality": {
+    "onsetHitRate": 1,
+    "ghostNotes": 0,
+    "importantOnsets": 978,
+    "importantHit": 566,
+    "importantCoverage": 0.579,
+    "importantReach": 0.509,
+    "importantNeed": 0.509,
+    "beatShare": {
+     "beat": 0.695,
+     "eighth": 0.279,
+     "sixteenth": 0.026
+    },
+    "notesInSilence": 0,
+    "phraseTotal": 7,
+    "phraseSame": 6,
+    "motifGroups": 4,
+    "motifTotal": 4,
+    "motifSame": 0,
+    "phraseConsistency": 0.545,
+    "phraseEcho": 0.47,
+    "phraseEchoTotal": 249,
+    "phraseVariations": 5,
+    "mirrorRate": 0.406,
+    "intensityDensityAgreement": 0.859,
+    "sectionDensitySpread": 16,
+    "sectionVocabSpread": 11,
+    "sections": [
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.055,
+      "notes": 12,
+      "perSecond": 1,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 3.83
+     },
+     {
+      "label": "B",
+      "bars": 8,
+      "intensity": 0.255,
+      "notes": 22,
+      "perSecond": 1.38,
+      "vocab": 5,
+      "chords": 0,
+      "widths": 5.27
+     },
+     {
+      "label": "C",
+      "bars": 9,
+      "intensity": 0.423,
+      "notes": 45,
+      "perSecond": 2.5,
+      "vocab": 5,
+      "chords": 5,
+      "widths": 4.76
+     },
+     {
+      "label": "D",
+      "bars": 7,
+      "intensity": 0.183,
+      "notes": 20,
+      "perSecond": 1.43,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 4.55
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.679,
+      "notes": 78,
+      "perSecond": 2.44,
+      "vocab": 9,
+      "chords": 5,
+      "widths": 4.63
+     },
+     {
+      "label": "C",
+      "bars": 4,
+      "intensity": 0.483,
+      "notes": 14,
+      "perSecond": 1.75,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 5.07
+     },
+     {
+      "label": "F",
+      "bars": 8,
+      "intensity": 0.138,
+      "notes": 24,
+      "perSecond": 1.5,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 4.88
+     },
+     {
+      "label": "G",
+      "bars": 4,
+      "intensity": 0.371,
+      "notes": 15,
+      "perSecond": 1.88,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 4.53
+     },
+     {
+      "label": "E",
+      "bars": 20,
+      "intensity": 0.489,
+      "notes": 76,
+      "perSecond": 1.9,
+      "vocab": 12,
+      "chords": 0,
+      "widths": 4.36
+     },
+     {
+      "label": "H",
+      "bars": 9,
+      "intensity": 0.823,
+      "notes": 44,
+      "perSecond": 2.45,
+      "vocab": 8,
+      "chords": 1,
+      "widths": 4.55
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.737,
+      "notes": 67,
+      "perSecond": 2.1,
+      "vocab": 9,
+      "chords": 4,
+      "widths": 3.97
+     },
+     {
+      "label": "E",
+      "bars": 14,
+      "intensity": 0.751,
+      "notes": 76,
+      "perSecond": 2.72,
+      "vocab": 10,
+      "chords": 0,
+      "widths": 4.33
+     },
+     {
+      "label": "E",
+      "bars": 4,
+      "intensity": 0.742,
+      "notes": 20,
+      "perSecond": 2.5,
+      "vocab": 3,
+      "chords": 2,
+      "widths": 4
+     },
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.032,
+      "notes": 2,
+      "perSecond": 0.17,
+      "vocab": 1,
+      "chords": 0,
+      "widths": 6.5
+     }
+    ]
+   },
+   "vocabulary": {
+    "patternCounts": {
+     "alternate2": 8,
+     "stair_up": 7,
+     "in_out_in": 11,
+     "echo_down": 3,
+     "stair_down": 3,
+     "zigzag2_down": 4,
+     "stair_down_long": 7,
+     "fold_up": 10,
+     "bounce": 4,
+     "echo_up": 13,
+     "zigzag2_up": 6,
+     "fold_down": 8,
+     "trill": 3,
+     "out_in_out": 9,
+     "stair_up_long": 1,
+     "jack": 3,
+     "contract": 1
+    },
+    "distinctPatterns": 17,
+    "topPattern": "echo_up",
+    "topShare": 0.129,
+    "fallbackShare": 0,
+    "maxSameRun": 2,
+    "localBias": 0.375,
+    "transitionKinds": 64,
+    "transitionTotal": 100,
+    "transitionEntropy": 5.82
+   },
+   "lanes": {
+    "laneShare": [
+     0.004,
+     0.272,
+     0.237,
+     0.202,
+     0.237,
+     0.049
+    ],
+    "leftRightBias": 0.025,
+    "centerShare": 0.439,
+    "edgeShare": 0.052,
+    "meanMove": 0.19,
+    "maxMove": 1.75,
+    "moveSpeedPerSecond": 0.17,
+    "hardJumps": 0,
+    "fastPairs": 232,
+    "fingerTravel": [
+     188.3,
+     169.5
+    ]
+   },
+   "types": {
+    "TAP": 422,
+    "HOLD": 29,
+    "SLIDE": 20,
+    "FLICK": 44,
+    "chords": 17,
+    "chordRuns": 0,
+    "sweeps": 2,
+    "crosses": 0,
+    "accents": 14,
+    "endFlicks": 4,
+    "tapers": 6,
+    "tapDuringHold": 0,
+    "tapDuringSlide": 0,
+    "expandCount": 9,
+    "contractCount": 12,
+    "chordShapes": {
+     "3w/2.5": 17
+    },
+    "slideShapes": {
+     "sweep": 2,
+     "line": 14,
+     "wave": 2,
+     "fold": 2
+    },
+    "slideWidthSequences": 16,
+    "slideVarying": 18,
+    "slideVariety": 0.97,
+    "rests": 265,
+    "longRests": 7,
+    "longestRestMs": 2248,
+    "hardWindows": 19,
+    "hardSectionMaxMs": 4500,
+    "restAfterHard": 18,
+    "peakWindowNotes": 8
+   },
+   "hand": {
+    "impossible": 0,
+    "strained": 0,
+    "strainedRate": 0,
+    "maxStrainStreakMs": 0,
+    "strainStreaks": 0,
+    "alternationRate": 1,
+    "alternationTotal": 10,
+    "sameFingerMinMs": 250,
+    "chordClearMinMs": 250,
+    "heldFreeOk": 0,
+    "heldFreeTotal": 0,
+    "issues": []
+   }
+  },
+  "EXPERT": {
+   "difficulty": "EXPERT",
+   "noteCount": 618,
+   "seconds": 250.8,
+   "density": 2.46,
+   "pass": true,
+   "gate": {
+    "impossible": 0
+   },
+   "scores": {
+    "playability": 100,
+    "musicality": 96,
+    "readability": 99,
+    "flow": 94,
+    "variety": 99,
+    "difficultyFit": 100
+   },
+   "musicality": {
+    "onsetHitRate": 1,
+    "ghostNotes": 0,
+    "importantOnsets": 978,
+    "importantHit": 594,
+    "importantCoverage": 0.607,
+    "importantReach": 0.59,
+    "importantNeed": 0.59,
+    "beatShare": {
+     "beat": 0.615,
+     "eighth": 0.308,
+     "sixteenth": 0.076
+    },
+    "notesInSilence": 0,
+    "phraseTotal": 14,
+    "phraseSame": 14,
+    "motifGroups": 5,
+    "motifTotal": 11,
+    "motifSame": 2,
+    "phraseConsistency": 0.64,
+    "phraseEcho": 0.322,
+    "phraseEchoTotal": 289,
+    "phraseVariations": 8,
+    "mirrorRate": 0.353,
+    "intensityDensityAgreement": 0.859,
+    "sectionDensitySpread": 19.71,
+    "sectionVocabSpread": 11,
+    "sections": [
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.055,
+      "notes": 16,
+      "perSecond": 1.33,
+      "vocab": 3,
+      "chords": 0,
+      "widths": 3.44
+     },
+     {
+      "label": "B",
+      "bars": 8,
+      "intensity": 0.255,
+      "notes": 21,
+      "perSecond": 1.31,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 4.67
+     },
+     {
+      "label": "C",
+      "bars": 9,
+      "intensity": 0.423,
+      "notes": 52,
+      "perSecond": 2.89,
+      "vocab": 6,
+      "chords": 3,
+      "widths": 4.96
+     },
+     {
+      "label": "D",
+      "bars": 7,
+      "intensity": 0.183,
+      "notes": 22,
+      "perSecond": 1.57,
+      "vocab": 4,
+      "chords": 0,
+      "widths": 4.59
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.679,
+      "notes": 107,
+      "perSecond": 3.35,
+      "vocab": 9,
+      "chords": 23,
+      "widths": 3.67
+     },
+     {
+      "label": "C",
+      "bars": 4,
+      "intensity": 0.483,
+      "notes": 21,
+      "perSecond": 2.63,
+      "vocab": 4,
+      "chords": 1,
+      "widths": 4.76
+     },
+     {
+      "label": "F",
+      "bars": 8,
+      "intensity": 0.138,
+      "notes": 25,
+      "perSecond": 1.56,
+      "vocab": 5,
+      "chords": 0,
+      "widths": 4.76
+     },
+     {
+      "label": "G",
+      "bars": 4,
+      "intensity": 0.371,
+      "notes": 19,
+      "perSecond": 2.38,
+      "vocab": 4,
+      "chords": 1,
+      "widths": 4.21
+     },
+     {
+      "label": "E",
+      "bars": 20,
+      "intensity": 0.489,
+      "notes": 86,
+      "perSecond": 2.15,
+      "vocab": 12,
+      "chords": 4,
+      "widths": 3.94
+     },
+     {
+      "label": "H",
+      "bars": 9,
+      "intensity": 0.823,
+      "notes": 55,
+      "perSecond": 3.06,
+      "vocab": 9,
+      "chords": 2,
+      "widths": 4.31
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.737,
+      "notes": 87,
+      "perSecond": 2.72,
+      "vocab": 9,
+      "chords": 5,
+      "widths": 3.9
+     },
+     {
+      "label": "E",
+      "bars": 14,
+      "intensity": 0.751,
+      "notes": 82,
+      "perSecond": 2.93,
+      "vocab": 9,
+      "chords": 0,
+      "widths": 4.04
+     },
+     {
+      "label": "E",
+      "bars": 4,
+      "intensity": 0.742,
+      "notes": 23,
+      "perSecond": 2.88,
+      "vocab": 3,
+      "chords": 2,
+      "widths": 3.57
+     },
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.032,
+      "notes": 2,
+      "perSecond": 0.17,
+      "vocab": 1,
+      "chords": 0,
+      "widths": 6.5
+     }
+    ]
+   },
+   "vocabulary": {
+    "patternCounts": {
+     "fold_up": 16,
+     "alternate2": 7,
+     "jack": 19,
+     "out_in_out": 15,
+     "trill": 3,
+     "stair_down": 22,
+     "stair_up": 16,
+     "zigzag2_up": 5,
+     "bounce": 6,
+     "plateau_up": 4,
+     "expand": 1,
+     "echo_down": 9,
+     "fold_down": 6,
+     "echo_up": 5,
+     "alternate3": 2,
+     "zigzag2_down": 3
+    },
+    "distinctPatterns": 16,
+    "topPattern": "stair_down",
+    "topShare": 0.158,
+    "fallbackShare": 0,
+    "maxSameRun": 3,
+    "localBias": 0.625,
+    "transitionKinds": 83,
+    "transitionTotal": 138,
+    "transitionEntropy": 6.04
+   },
+   "lanes": {
+    "laneShare": [
+     0.021,
+     0.233,
+     0.231,
+     0.236,
+     0.194,
+     0.084
+    ],
+    "leftRightBias": 0.029,
+    "centerShare": 0.468,
+    "edgeShare": 0.105,
+    "meanMove": 0.31,
+    "maxMove": 3,
+    "moveSpeedPerSecond": 0.41,
+    "hardJumps": 0,
+    "fastPairs": 336,
+    "fingerTravel": [
+     273.8,
+     287
+    ]
+   },
+   "types": {
+    "TAP": 494,
+    "HOLD": 51,
+    "SLIDE": 35,
+    "FLICK": 38,
+    "chords": 41,
+    "chordRuns": 7,
+    "sweeps": 5,
+    "crosses": 2,
+    "accents": 21,
+    "endFlicks": 6,
+    "tapers": 14,
+    "tapDuringHold": 5,
+    "tapDuringSlide": 30,
+    "expandCount": 16,
+    "contractCount": 0,
+    "chordShapes": {
+     "3w/2.5": 23,
+     "2w/2": 14,
+     "2w/4.5": 1,
+     "3w/2": 3
+    },
+    "slideShapes": {
+     "sweep": 7,
+     "fold": 8,
+     "line": 17,
+     "wave": 3
+    },
+    "slideWidthSequences": 24,
+    "slideVarying": 25,
+    "slideVariety": 0.914,
+    "rests": 236,
+    "longRests": 3,
+    "longestRestMs": 2498,
+    "hardWindows": 26,
+    "hardSectionMaxMs": 4000,
+    "restAfterHard": 20,
+    "peakWindowNotes": 11
+   },
+   "hand": {
+    "impossible": 0,
+    "strained": 11,
+    "strainedRate": 0.018,
+    "maxStrainStreakMs": 125,
+    "strainStreaks": 10,
+    "alternationRate": 0.881,
+    "alternationTotal": 51,
+    "sameFingerMinMs": 125,
+    "chordClearMinMs": 125,
+    "heldFreeOk": 35,
+    "heldFreeTotal": 35,
+    "issues": [
+     {
+      "severity": "strained",
+      "timeMs": 61823,
+      "bar": 30,
+      "type": "SLIDE",
+      "detail": "2.50レーンの移動が250ms(快適には250ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 76187,
+      "bar": 38,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 83431,
+      "bar": 41,
+      "type": "TAP",
+      "detail": "1.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 83556,
+      "bar": 41,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 84306,
+      "bar": 42,
+      "type": "TAP",
+      "detail": "1.75レーンの移動が125ms(快適には175ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 92674,
+      "bar": 46,
+      "type": "FLICK",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 176611,
+      "bar": 88,
+      "type": "TAP",
+      "detail": "1.75レーンの移動が125ms(快適には175ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 187978,
+      "bar": 94,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 212459,
+      "bar": 106,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 239314,
+      "bar": 119,
+      "type": "SLIDE",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 248432,
+      "bar": 124,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     }
+    ]
+   }
+  },
+  "MASTER": {
+   "difficulty": "MASTER",
+   "noteCount": 866,
+   "seconds": 250.8,
+   "density": 3.45,
+   "pass": true,
+   "gate": {
+    "impossible": 0
+   },
+   "scores": {
+    "playability": 100,
+    "musicality": 87,
+    "readability": 100,
+    "flow": 91,
+    "variety": 98,
+    "difficultyFit": 98
+   },
+   "musicality": {
+    "onsetHitRate": 1,
+    "ghostNotes": 0,
+    "importantOnsets": 978,
+    "importantHit": 692,
+    "importantCoverage": 0.708,
+    "importantReach": 0.813,
+    "importantNeed": 0.813,
+    "beatShare": {
+     "beat": 0.488,
+     "eighth": 0.33,
+     "sixteenth": 0.182
+    },
+    "notesInSilence": 0,
+    "phraseTotal": 21,
+    "phraseSame": 18,
+    "motifGroups": 20,
+    "motifTotal": 67,
+    "motifSame": 18,
+    "phraseConsistency": 0.409,
+    "phraseEcho": 0.209,
+    "phraseEchoTotal": 392,
+    "phraseVariations": 12,
+    "mirrorRate": 0.389,
+    "intensityDensityAgreement": 0.894,
+    "sectionDensitySpread": 18.52,
+    "sectionVocabSpread": 9,
+    "sections": [
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.055,
+      "notes": 20,
+      "perSecond": 1.67,
+      "vocab": 5,
+      "chords": 0,
+      "widths": 2.7
+     },
+     {
+      "label": "B",
+      "bars": 8,
+      "intensity": 0.255,
+      "notes": 30,
+      "perSecond": 1.88,
+      "vocab": 6,
+      "chords": 0,
+      "widths": 3.6
+     },
+     {
+      "label": "C",
+      "bars": 9,
+      "intensity": 0.423,
+      "notes": 73,
+      "perSecond": 4.06,
+      "vocab": 6,
+      "chords": 4,
+      "widths": 3.78
+     },
+     {
+      "label": "D",
+      "bars": 7,
+      "intensity": 0.183,
+      "notes": 31,
+      "perSecond": 2.22,
+      "vocab": 7,
+      "chords": 0,
+      "widths": 3.45
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.679,
+      "notes": 142,
+      "perSecond": 4.44,
+      "vocab": 11,
+      "chords": 28,
+      "widths": 3.03
+     },
+     {
+      "label": "C",
+      "bars": 4,
+      "intensity": 0.483,
+      "notes": 30,
+      "perSecond": 3.75,
+      "vocab": 4,
+      "chords": 1,
+      "widths": 3.43
+     },
+     {
+      "label": "F",
+      "bars": 8,
+      "intensity": 0.138,
+      "notes": 36,
+      "perSecond": 2.25,
+      "vocab": 6,
+      "chords": 0,
+      "widths": 3.61
+     },
+     {
+      "label": "G",
+      "bars": 4,
+      "intensity": 0.371,
+      "notes": 25,
+      "perSecond": 3.13,
+      "vocab": 6,
+      "chords": 1,
+      "widths": 3.24
+     },
+     {
+      "label": "E",
+      "bars": 20,
+      "intensity": 0.489,
+      "notes": 113,
+      "perSecond": 2.83,
+      "vocab": 11,
+      "chords": 5,
+      "widths": 2.96
+     },
+     {
+      "label": "H",
+      "bars": 9,
+      "intensity": 0.823,
+      "notes": 80,
+      "perSecond": 4.45,
+      "vocab": 11,
+      "chords": 1,
+      "widths": 3.14
+     },
+     {
+      "label": "E",
+      "bars": 16,
+      "intensity": 0.737,
+      "notes": 125,
+      "perSecond": 3.91,
+      "vocab": 10,
+      "chords": 17,
+      "widths": 2.82
+     },
+     {
+      "label": "E",
+      "bars": 14,
+      "intensity": 0.751,
+      "notes": 121,
+      "perSecond": 4.32,
+      "vocab": 11,
+      "chords": 9,
+      "widths": 2.81
+     },
+     {
+      "label": "E",
+      "bars": 4,
+      "intensity": 0.742,
+      "notes": 37,
+      "perSecond": 4.63,
+      "vocab": 5,
+      "chords": 5,
+      "widths": 2.7
+     },
+     {
+      "label": "A",
+      "bars": 6,
+      "intensity": 0.032,
+      "notes": 3,
+      "perSecond": 0.25,
+      "vocab": 2,
+      "chords": 0,
+      "widths": 4.33
+     }
+    ]
+   },
+   "vocabulary": {
+    "patternCounts": {
+     "fold_up": 10,
+     "stair_up": 26,
+     "bounce": 10,
+     "stair_down": 33,
+     "jack": 10,
+     "echo_down": 21,
+     "trill": 21,
+     "alternate2": 13,
+     "plateau_up": 14,
+     "zigzag2_up": 26,
+     "in_out_in": 6,
+     "contract": 4,
+     "zigzag2_down": 5,
+     "fold_down": 1,
+     "echo_up": 2,
+     "out_in_out": 1
+    },
+    "distinctPatterns": 16,
+    "topPattern": "stair_down",
+    "topShare": 0.163,
+    "fallbackShare": 0,
+    "maxSameRun": 3,
+    "localBias": 0.5,
+    "transitionKinds": 86,
+    "transitionTotal": 202,
+    "transitionEntropy": 6.1
+   },
+   "lanes": {
+    "laneShare": [
+     0.067,
+     0.259,
+     0.188,
+     0.203,
+     0.172,
+     0.111
+    ],
+    "leftRightBias": 0.028,
+    "centerShare": 0.391,
+    "edgeShare": 0.178,
+    "meanMove": 0.5,
+    "maxMove": 4.25,
+    "moveSpeedPerSecond": 1.23,
+    "hardJumps": 1,
+    "fastPairs": 618,
+    "fingerTravel": [
+     407.3,
+     434.5
+    ]
+   },
+   "types": {
+    "TAP": 743,
+    "HOLD": 58,
+    "SLIDE": 41,
+    "FLICK": 24,
+    "chords": 71,
+    "chordRuns": 14,
+    "sweeps": 5,
+    "crosses": 1,
+    "accents": 20,
+    "endFlicks": 3,
+    "tapers": 11,
+    "tapDuringHold": 7,
+    "tapDuringSlide": 32,
+    "expandCount": 1,
+    "contractCount": 10,
+    "chordShapes": {
+     "3w/2": 35,
+     "2w/2": 25,
+     "2w/3.5": 2,
+     "2w/4.5": 2,
+     "3w/1.5": 1,
+     "2w/2.5": 3,
+     "3w/2.5": 1,
+     "2w/3": 2
+    },
+    "slideShapes": {
+     "sweep": 12,
+     "line": 23,
+     "fold": 5,
+     "wave": 1
+    },
+    "slideWidthSequences": 21,
+    "slideVarying": 27,
+    "slideVariety": 0.898,
+    "rests": 170,
+    "longRests": 1,
+    "longestRestMs": 1998,
+    "hardWindows": 17,
+    "hardSectionMaxMs": 5500,
+    "restAfterHard": 9,
+    "peakWindowNotes": 15
+   },
+   "hand": {
+    "impossible": 0,
+    "strained": 39,
+    "strainedRate": 0.045,
+    "maxStrainStreakMs": 250,
+    "strainStreaks": 31,
+    "alternationRate": 0.899,
+    "alternationTotal": 240,
+    "sameFingerMinMs": 125,
+    "chordClearMinMs": 125,
+    "heldFreeOk": 39,
+    "heldFreeTotal": 39,
+    "issues": [
+     {
+      "severity": "strained",
+      "timeMs": 5115,
+      "bar": 2,
+      "type": "TAP",
+      "detail": "1.00レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 48583,
+      "bar": 24,
+      "type": "FLICK",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 68443,
+      "bar": 34,
+      "type": "TAP",
+      "detail": "1.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 68568,
+      "bar": 34,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 70566,
+      "bar": 35,
+      "type": "TAP",
+      "detail": "1.00レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 76187,
+      "bar": 38,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 83431,
+      "bar": 41,
+      "type": "TAP",
+      "detail": "1.00レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 83556,
+      "bar": 41,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 89552,
+      "bar": 44,
+      "type": "TAP",
+      "detail": "2.00レーンの移動が125ms(快適には200ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 92674,
+      "bar": 46,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 130896,
+      "bar": 65,
+      "type": "TAP",
+      "detail": "1.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 136891,
+      "bar": 68,
+      "type": "TAP",
+      "detail": "1.00レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 145010,
+      "bar": 72,
+      "type": "SLIDE",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 159999,
+      "bar": 80,
+      "type": "TAP",
+      "detail": "同じレーンの叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 169491,
+      "bar": 84,
+      "type": "TAP",
+      "detail": "1.00レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 187978,
+      "bar": 94,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 187978,
+      "bar": 94,
+      "type": "TAP",
+      "detail": "1.75レーンの移動が125ms(快適には175ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 188102,
+      "bar": 94,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 189476,
+      "bar": 94,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 190351,
+      "bar": 95,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 203466,
+      "bar": 101,
+      "type": "TAP",
+      "detail": "1.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 204340,
+      "bar": 102,
+      "type": "TAP",
+      "detail": "0.75レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 204465,
+      "bar": 102,
+      "type": "TAP",
+      "detail": "0.75レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 212459,
+      "bar": 106,
+      "type": "TAP",
+      "detail": "同じレーンの叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 214707,
+      "bar": 107,
+      "type": "TAP",
+      "detail": "2.00レーンの移動が125ms(快適には200ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 216456,
+      "bar": 108,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 217330,
+      "bar": 108,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 229072,
+      "bar": 114,
+      "type": "TAP",
+      "detail": "同じレーンの叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 229446,
+      "bar": 114,
+      "type": "TAP",
+      "detail": "同じレーンの叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 229571,
+      "bar": 114,
+      "type": "TAP",
+      "detail": "同じレーンの叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 229696,
+      "bar": 114,
+      "type": "TAP",
+      "detail": "1.00レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 239314,
+      "bar": 119,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 239439,
+      "bar": 119,
+      "type": "SLIDE",
+      "detail": "0.75レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 240313,
+      "bar": 120,
+      "type": "TAP",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 242062,
+      "bar": 121,
+      "type": "TAP",
+      "detail": "2.00レーンの移動が125ms(快適には200ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 246433,
+      "bar": 123,
+      "type": "SLIDE",
+      "detail": "0.25レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 247682,
+      "bar": 123,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 248432,
+      "bar": 124,
+      "type": "TAP",
+      "detail": "1.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     },
+     {
+      "severity": "strained",
+      "timeMs": 248807,
+      "bar": 124,
+      "type": "TAP",
+      "detail": "0.50レーンずれた場所の叩き直しが125ms(快適には150ms欲しい)"
+     }
+    ]
+   }
+  }
+ }
+}
