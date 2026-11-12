@@ -391,7 +391,7 @@ grp('I', '5. イッサ博士の出来事(大きな賭け)', 'ターンの合間�
 // ================= 6. 引退とアシスト能力 =================
 const FIN = [612, 768, 402, 655, 318, 590];
 const retire = `${hdr('46 / 46ターン', 'とじる', '')}<div class="v-body">
-  <div class="v-h">🎓 引退 ── もちまるの育成がおわった<small>みゅあ編「いっしょに、てっぺんへ!」・最後の期 決勝まで進んだ</small></div>
+  <div class="v-h">🎓 引退 ── もちまるの育成がおわった<small>みゅあ編「いっしょに、てっぺんへ!」・最後の期の大会に出た</small></div>
   <div class="v-rank"><img class="mon2" src="${M('mocchi.png')}"><div class="tx"><small>育成ランク</small><div class="L">A</div></div><div class="tx"><small>総合力</small><b>11,480</b><small style="color:#cbd5e1;margin-top:3px">次の S まで あと 2,520</small><small style="color:#86efac">自己ベスト更新!(前 9,210)</small></div></div>
   ${stRow(null, -1, FIN)}
   <div class="v-rec">
@@ -473,28 +473,32 @@ const entry = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
     <div class="v-ev-h"><small>3年目 6月・ミドル期</small>🏆 大会の受付</div>
     <div class="v-ibub" style="left:38%;top:auto;bottom:10px">「今月は3つ出られるよ! 出ると<b>1ターン使う</b>から、訓練とどっちにするか考えてね」</div>` })}
   <div class="v-cups">${CUPS.map(cup).join('')}</div>
-  <div class="v-card" style="padding:6px 9px"><div class="v-kv" style="margin:0"><b>出ると</b><span>2試合(準決勝・決勝)・体力 −20 くらい・勝つと賞金と人気。<span class="yel">期末の強制大会まで あと7ターン</span></span></div></div>
+  <div class="v-card" style="padding:6px 9px"><div class="v-kv" style="margin:0"><b>出ると</b><span>1戦だけ・体力 −20 くらい・勝つと賞金と人気。<span class="yel">期末の強制大会まで あと7ターン</span></span></div></div>
 </div><div class="v-ft"><span>← もどる</span><span class="off">⏩ スキップ</span><span class="go">💪 ちから自慢に出る ▶</span></div>`;
 // 比べ: [名前, 自分, 相手]
 const VS = [['❤️ ライフ', 412, 455], ['💪 ちから', 506, 472], ['🧠 かしこさ', 233, 180], ['🎯 命中', 380, 341], ['💨 回避', 198, 260], ['🛡️ 丈夫さ', 441, 498]];
 const vsRow = ([n, a, b]) => `<div class="v-vs1"><b class="${a >= b ? 'w' : ''}">${a}</b><i class="l"><u style="width:${a / 6}%"></u></i><span>${n}</span><i class="r"><u style="width:${b / 6}%"></u></i><b class="${b > a ? 'w' : ''}">${b}</b></div>`;
 const versus = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band()}
-  <div class="v-vsh"><div class="sd me"><img src="${M('mocchi.png')}"><div><small>あなた</small><b>もちまる</b><span>6,240 ${rk("C")}</span></div></div><div class="vsm">VS<small>準決勝</small></div><div class="sd op"><div><small>1番人気</small><b>いわお</b><span>6,410 ${rk("C")}</span></div><img src="${M('golem.png')}"></div></div>
-  <div class="v-card" style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly">
+  <div class="v-bcs"><img class="bg" src="${BG('monhero_plaza_evening')}"><div class="sh"></div>
+    <div class="ttl">春の大会 ★★★ ・ 1戦</div>
+    <img class="ml" src="${M('mocchi.png')}"><img class="mr" src="${M('golem.png')}"><div class="vsw">VS</div>
+    <div class="nb l"><b>もちまる</b><small>${rk('C')} 6,240</small></div><div class="nb r"><b>いわお</b><small>${rk('C')} 6,410・👑王者</small></div></div>
+  <div class="v-tabs t3"><span class="on">ステータス</span><span>技</span><span>能力</span></div>
+  <div class="v-card v-bcd" style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly">
     ${VS.map(vsRow).join('')}
     <div class="v-vs1"><b class="w">45</b><i class="l p"><u style="width:45%"></u></i><span>⭐ 人気</span><i class="r p"><u style="width:38%"></u></i><b>38</b></div>
     <div class="v-vs1"><b class="w">72</b><i class="l p"><u style="width:72%"></u></i><span>🤝 忠誠</span><i class="r p"><u style="width:60%"></u></i><b>60</b></div>
     <div class="v-dist"><div>${['零', '近', '中', '遠'].map((d, i) => `<i class="a${[1, 3, 2, 0][i]}">${d}</i>`).join('')}</div><span>間合いの適性</span><div>${['零', '近', '中', '遠'].map((d, i) => `<i class="a${[3, 2, 1, 0][i]}">${d}</i>`).join('')}</div></div>
+    <div class="v-szr"><b>ふつう</b><span>サイズ</span><b>大きい</b></div>
   </div>
-  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ちからと命中は勝ってる! <em style="font-style:normal;color:#be185d">近い間合い</em>で押しきろ!」</div></div></div>
-  <div class="v-bracket">${['もちまる', 'いわお', 'らんぽ', 'ミケ'].map((n, i) => `<span class="${i === 0 ? 'me' : ''}">${n}</span>${i === 1 ? '<u>決勝</u>' : i < 3 ? '<em>vs</em>' : ''}`).join('')}</div>
-</div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 準備完了</span></div>`;
+  <div class="v-hint"><img src="${F('myua', 'excited')}">ちからと命中は勝ってる! <em>近い間合い</em>で押しきろ!</div>
+</div><div class="v-ft"><span class="on" style="flex:1.2">結果だけ見る</span><span class="go" style="flex:1.2">準備完了</span></div>`;
 // 負けたとき: 砂時計で、1回の育成に3回までやり直せる(社長 2026-11-12。名前と効果は社長の指示で参考のゲームのものをそのまま・絵は新しく描く)
 const lose = `${hdr('💰 名声 320', '中断')}<div class="v-body">
   ${band({ hp: 30, st: 52 })}
   ${scene({ bg: 'monhero_plaza_evening', cls: 'dk', monStyle: 'bottom:44%;height:30%;filter:grayscale(.5) drop-shadow(0 8px 5px #0009);transform:translateX(-50%) rotate(-8deg)', grStyle: 'bottom:calc(44% - 5px)', inner: `
-    <div class="v-stamp ng" style="top:5%">負けた…<small>💪 ちから自慢の大会 ★★ 決勝・いわお に 2−3</small></div>
+    <div class="v-stamp ng" style="top:5%">負けた…<small>💪 ちから自慢の大会 ★★ いわお に 2−3</small></div>
     <div class="v-meal" style="border-color:#7dd3fc;box-shadow:0 0 18px #38bdf866"><div class="t">時をもどして、やり直す?<small>やり直せるのは 1回の育成で3回まで・<b style="color:#fde047">のこり 2 / 3</b></small></div>
       <div class="v-rm3"><div class="re">${hg(0, 30)}<div>時渡りの砂時計で やり直す<small>同じ相手ともう一度(持っている ×2)</small></div></div>
         <div class="nj">${hg(1, 30)}<div>虹の砂時計で 相手を変えて やり直す<small>ちがう相手と戦える(持っている ×1)</small></div></div>
@@ -513,15 +517,15 @@ const meal = `${hdr('💰 名声 632', '中断')}<div class="v-body">
 </div><div class="v-ft"><span>あげない</span><span class="go">🍖 ごちそうをあげる(💰120)</span></div>`;
 grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デビュー期の大会まで)の流れ「受付 → 組み合わせ → 能力の比べ → 試合 → 賞品」のうち、受付と能力の比べ、大会のあとのごほうびのごはん、負けたときの再戦の4枚。上の帯(期・残りターン・総合力・体力)は大会の間もずっと出したまま。試合そのものは助手マスモン対戦の観戦の画面を使う。', [
   { id: 'C1', label: '大会の受付(今月の大会の札)', html: entry },
-  { id: 'C2', label: '試合の前(自分と相手の能力の比べ)', html: versus },
+  { id: 'C2', label: '試合の前(バトルカード・参考に寄せた形)', html: versus },
   { id: 'C3', label: '大会のあと(ごほうびのごはん)', html: meal },
   { id: 'C4', label: '負けたとき(再戦する/あきらめる)', html: lose },
 ], `<h3>受付</h3><ul>
   <li>助手が受付の役。今月出られる大会を札で並べる: 名前・星・系統・賞金(名声)・ごほうび・出る条件(✔/✖)</li>
   <li><b>ライバルがいる大会</b>は札の左上に<b>ライバルのアイコン(顔の小さな丸+「ライバル」の印)</b>が付き、右上に「ごほうび大」の小さな札(社長 2026-11-12)。条件に届かない大会は薄く、何が足りないかを数字で</li>
-  <li>下に「出ると1ターン使う・何試合・体力がどれくらい減るか」。強制大会までの残りも</li></ul>
+  <li>下に「出ると1ターン使う・1戦だけ・体力がどれくらい減るか」。強制大会までの残りも</li></ul>
   <h3>能力の比べ</h3><ul>
-  <li>左が自分・右が相手。6能力・人気・忠誠を、まん中から左右にのびる棒で並べ、勝っている方の数字を黄色に</li>
+  <li>参考に寄せた形(社長 2026-11-12): 上に2体の絵と VS・名前の帯、タブ「ステータス/技/能力」、6能力の棒を左右に(勝っている方の数字を黄色に)、人気・忠誠・間合いの適性・サイズ、下に「結果だけ見る」「準備完了」</li>
   <li>間合いの適性(零・近・中・遠)は色の濃さで。地形は作らないので出さない</li>
   <li>助手が「どこで勝っているか」を一言。下に小さな組み合わせ表</li>
   <li>ボタンは「結果だけ見る」と「準備完了」(観戦する)の2つ</li></ul>
@@ -533,44 +537,42 @@ grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デ�
   <li>結果(優勝・賞金・ごほうび)の上に小窓が出て、3つから1つ選ぶ(あげなくてもよい)。値段(名声)と効き目を先に見せる。物と数字は仮</li></ul>`);
 
 // ================= 8. 回3以降の止め絵(2026-11-12 窓口の依頼): 組み合わせ表・勝利と賞品・最終評価と能力ポイント・総合力ランキング・ゲームオーバー・博士の導き書とルーペ =================
-// 8体の大会の組み合わせ表。[名前, 絵, 総合力, 印] 印: me=自分 rv=ライバル ch=王者
-const BR = [['もちまる', 'mocchi', '6,240', 'me'], ['ぷるぷる', 'ham', '5,120', ''], ['らんぽ', 'tiger', '5,880', ''], ['こんこ', 'kyubi', '6,010', 'rv'], ['いわお', 'golem', '6,410', 'ch'], ['ミケ', 'suezo', '4,990', ''], ['すいすい', 'monol', '5,430', ''], ['ぴくる', 'pixie', '5,200', '']];
-const brCell = ([n, m, p, k], i) => `<div class="v-bc ${k}" style="grid-row:${i + 1};grid-column:1"><img src="${M(m + '.png')}"><div><b>${n}</b><small>${p}</small></div>${k === 'rv' ? '<span class="mk rv"><img src="' + F('kiki', 'happy') + '">ライバル</span>' : ''}${k === 'ch' ? '<span class="mk ch">👑 王者</span>' : ''}</div>`;
-const brSlot = (col, row, span, cls = '', txt = '?') => `<div class="v-bs ${cls}" style="grid-row:${row} / span ${span};grid-column:${col}">${txt}</div>`;
+// 組み合わせ表(演出。実際に戦うのは あなたの1戦だけ)。人気順の番号・名前・顔
+const BR = [[1, 'いわお', 'golem', 'ch'], [5, 'ぷるぷる', 'ham', ''], [4, 'らんぽ', 'tiger', ''], [6, 'すいすい', 'monol', ''], [3, 'もちまる', 'mocchi', 'me'], [2, 'こんこ', 'kyubi', 'rv'], [7, 'ぴくる', 'pixie', ''], [8, 'ミケ', 'suezo', '']];
+const brRow = ([no, n, m, k], i) => `<div class="v-br ${k}${i === 4 || i === 5 ? ' mine' : ''}"><b class="no">${no}</b><span class="nm">${n}${k === 'ch' ? '<em class="mk ch">👑王者</em>' : ''}${k === 'rv' ? '<em class="mk rv">ライバル</em>' : ''}${k === 'me' ? '<em class="mk me">あなた</em>' : ''}</span><i class="cn"></i><span class="fc2"><img src="${M(m + '.png')}"></span></div>`;
+const brLines = `<svg class="v-brl" viewBox="0 0 64 272" preserveAspectRatio="none"><g fill="none" stroke="#a89a78" stroke-width="2">${[0, 1, 2, 3].map((q) => { const y1 = 17 + 68 * q, y2 = y1 + 34; return `<path d="M0 ${y1}H14V${y2}H0M14 ${(y1 + y2) / 2}H30"/>`; }).join('')}<path d="M30 34V102H46M30 170V238H46M46 68V204M46 136H64"/></g></svg>`;
 const bracket = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band()}
-  <div class="v-h">🌸 春の大会 ★★★ の組み合わせ<small>8体のトーナメント・勝ち進むと3試合・出ると1ターン使う</small></div>
-  <div class="v-brh"><span>1回戦</span><span>準決勝</span><span>決勝</span><span>優勝</span></div>
-  <div class="v-brk">${BR.map(brCell).join('')}
-    ${[1, 3, 5, 7].map((r, i) => brSlot(2, r, 2, i === 0 ? 'me' : '', i === 0 ? 'もちまる' : '?')).join('')}
-    ${[1, 5].map((r, i) => brSlot(3, r, 4, i === 0 ? 'me' : '', i === 0 ? 'もちまる' : '?')).join('')}
-    ${brSlot(4, 1, 8, 'win', '🏆<small>優勝は<br>だれ?</small>')}
+  <div class="v-bk1"><img class="bg" src="${BG('monhero_plaza_evening')}"><div class="sh"></div><div class="tt">春の大会 ★★★</div></div>
+  <div class="v-bkc">
+    <div class="rows">${BR.map(brRow).join('')}</div>
+    <div class="rt">${brLines}<div class="win"><span>🏆</span><b>優勝</b></div></div>
   </div>
-  <div class="v-bleg"><span><b class="rvd"></b>ライバル(自分の助手のフレンドの子・ごほうび大)</span><span><b class="chd"></b>王者(前の大会の優勝)</span></div>
-  <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「1回戦は ぷるぷる! 勝ったら準決勝で ライバルの こんこ だよ。<em style="font-style:normal;color:#be185d">王者のいわお</em>は決勝まで当たらないね」</div></div></div>
-</div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 1回戦へ</span></div>`;
+  <div class="v-bnt"><b>あなたの1戦</b>は 赤い丸の2体のあいだ(もちまる VS こんこ)。<span>ほかの試合の結果は、見せるだけの演出</span></div>
+  <div style="flex:1"></div><div class="v-ann"><div class="pic"><img src="${F('myua', 'excited')}"><span>解説</span></div><div class="tx">「<b>1番人気は 王者の いわお!</b> でも、もちまるの相手は ライバルの こんこ だよ。勝てば ごほうび大!」</div></div>
+</div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 1戦へ</span></div>`;
 // 試合のあとの勝利と賞品
 const PRZ = [['🏅', '称号', '「春の覇者」を手に入れた!', 'new', 'NEW'], ['🔷', '能力ポイント', '+10(いま 24 → 34)', '', ''], ['🎫', '修行チケット', '+1(3枚 → 4枚)', '', ''], ['💰', '賞金', '+750(名声 320 → 1,070)', '', ''], ['⭐', '人気', '+4(45 → 49)', '', ''], ['💪', 'ちから', '+6', '', '']];
 const prize = `${hdr('💰 名声 1,070', '中断')}<div class="v-body">
   ${band({ hp: 41, st: 40, pow: '6,330' })}
   ${scene({ bg: 'monhero_plaza_evening', back: '<div class="v-burst"></div>', monStyle: 'bottom:40%;height:34%', grStyle: 'bottom:calc(40% - 5px)', inner: `
-    <div class="v-stamp" style="top:4%;font-size:46px">優勝!<small>🌸 春の大会 ★★★ ・ 決勝で いわお に 3−1</small></div>
+    <div class="v-stamp" style="top:4%;font-size:46px">優勝!<small>🌸 春の大会 ★★★ ・ 1戦: いわお に 3−1</small></div>
     <div class="v-rvw"><img src="${F('kiki', 'happy')}">ライバルの こんこ にも 勝った!<b>ごほうび大</b></div>
     <div class="v-trophy">🏆</div>` })}
   <div class="v-prz">${PRZ.map(([e, n, t, c, nw]) => `<div class="${c}"><span class="e">${e}</span><b>${n}</b><span class="t">${t}</span>${nw ? `<i>${nw}</i>` : ''}</div>`).join('')}</div>
   <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ライバルに勝ったから、ごほうびがいつもの倍! つぎは ごはんだよ!」</div></div></div>
 </div><div class="v-ft"><span>おぼえる(称号のきろく)</span><span class="go">🍽 ごはんへ ▶</span></div>`;
-grp('B', '8a. 大会の組み合わせ表と、勝ったあとの賞品', '大会の受付のあと、能力の比べの前に「組み合わせ表」(8体のトーナメント)。自分は黄色の枠、ライバルは顔の丸の印、王者(前の優勝)は王冠の印。勝ったあとは賞品の画面(称号・能力ポイント・修行チケット・賞金・人気・能力)で、そのあと「ごはん」(C3)へ。', [
-  { id: 'B1', label: '大会の組み合わせ表(8体・ライバル・王者)', html: bracket },
+grp('B', '8a. 大会の組み合わせ表と、勝ったあとの賞品', '大会の受付のあと、能力の比べの前に「組み合わせ表」(8体の見た目・実際の試合はあなたの1戦だけ)。自分は黄色の帯、ライバルは赤の帯、王者(前の優勝)は王冠の印。勝ったあとは賞品の画面(称号・能力ポイント・修行チケット・賞金・人気・能力)で、そのあと「ごはん」(C3)へ。', [
+  { id: 'B1', label: '大会の組み合わせ表(参考に寄せた形・1戦)', html: bracket },
   { id: 'B2', label: '優勝のあと(称号・能力ポイント・修行チケットの賞品)', html: prize },
 ], `<h3>組み合わせ表(B1)</h3><ul>
-  <li>左の列が1回戦の8体(絵・名前・総合力)。右へ 準決勝 → 決勝 → 優勝 と狭まる。自分の勝ち上がりの道だけ黄色い線</li>
-  <li><b>ライバル</b>: 札と同じ「顔の丸+ライバル」の印(C1と同じ)。<b>王者</b>: 前の大会の優勝者に👑の印。当たる順が分かるよう、下に助手が一言</li>
-  <li>ボタンは「結果だけ見る」と「1回戦へ」(観戦)</li></ul>
+  <li>大会で実際に戦うのは<b>あなたの1戦だけ</b>(社長 2026-11-12・TOURNAMENT.md §15)。表は演出で、ほかの試合の結果は見せるだけ</li>
+  <li>参考に寄せた形: 左に<b>人気順の番号と名前の帯</b>・右に子の顔・線で結んで<b>優勝の札</b>・下に<b>解説の一言</b>。上は大会の景色。自分(黄)と相手(ライバル=赤)の帯は光らせる</li>
+  <li>ライバルは顔の丸でなく帯の「ライバル」の印(C1と同じ色)、王者は「👑王者」。ボタンは「結果だけ見る」と「1戦へ」(観戦)</li></ul>
   <h3>勝利と賞品(B2)</h3><ul>
   <li>称号が新しいときだけ「NEW」。能力ポイントは足したあとの数も見せる(使い道は能力ボタンと引退のとき)。修行チケットは枚数の変化つき</li>
   <li>ライバルに勝ったときは、景色の上に小さな札「ごほうび大」(賞品が倍になる印)。数字は仮</li>
-  <li>つぎは「ごはんへ」で、大会のあとのごはん(C3)</li></ul>`);
+  <li>つぎは「ごはんへ」で、大会のあとのごはん(C3)</li><li>戦ったのは1戦だけなので、結果は「いわお に 3−1」のように1つだけ見せる</li></ul>`);
 
 // ---- 引退: 最終評価(C〜S)・能力ポイントをまとめて使う
 const GR = ['C', 'B', 'A', 'S'];
