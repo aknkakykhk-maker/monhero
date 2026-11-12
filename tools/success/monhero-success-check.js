@@ -395,5 +395,29 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 0 } }).guts === 10 && !SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 1 } }).guts && !SUC.battleMods({ ...at('atsu', 44), battle: { kind: 'summit', round: 0 } }).guts, '特別な1話の効き目が頂への道の1回戦だけになっていない');
 }
 
+// ---- 助手の連続イベント(1〜4話・特別な1話) ----
+{
+  const due = (s, turns) => { for (const t of turns) { const x = { ...s, turn: t }; const d = SUC.storyDue(x); if (d !== null) return { d, t }; } return null; };
+  const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+  let s = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 100 };
+  const e1 = due(s, range(1, 5)); ok(e1 && e1.d === 1, 'デビュー期に1話が出ない');
+  s = SUC.storyStep({ ...s, turn: e1.t }, 'a').state; ok(s.astory.ep === 1, '1話のあとに話が進まない');
+  ok(due(s, range(1, 5)) === null, '1話のあとデビュー期に2話が出る');
+  const e2 = due(s, range(6, 17)); ok(e2 && e2.d === 2, 'ジュニア期に2話が出ない');
+  s = SUC.storyStep({ ...s, turn: e2.t }, 'b').state;
+  const e3 = due(s, range(18, 29)); s = SUC.storyStep({ ...s, turn: e3.t }, 'a').state; ok(s.astory.path === 'good', '3話の a でいい結末への道にならない');
+  const e4 = due(s, range(30, 41)); const before = s.stats.pow; s = SUC.storyStep({ ...s, turn: e4.t }, 'a').state;
+  ok(s.storyEnd === 'good' && s.stats.pow > before && s.hints.length === 1, '4話がいい結末にならない');
+  const sp = due(s, range(42, 43)); ok(sp && sp.d === 'special', '仲良し度 Lv5・いい結末で特別な1話が出ない');
+  s = SUC.storyStep({ ...s, turn: sp.t }, 'a').state; ok(s.special && s.astory.done && due(s, range(42, 46)) === null, '特別な1話のあとがずれている');
+  // 仲良し度の段で見られる話が変わる・親密度が足りないと出ない
+  const lv1 = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 1 }), aidBond: 100, astory: { ep: 1, path: null, done: false } };
+  ok(due(lv1, range(6, 17)) === null, '仲良し度 Lv1〜2 で2話が出る');
+  const low = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 10, astory: { ep: 1, path: null, done: false } };
+  ok(due(low, range(6, 17)) === null, '親密度 30 未満で2話が出る');
+  const bit = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 100, astory: { ep: 3, path: 'bitter', done: false } };
+  const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント');
