@@ -18,6 +18,8 @@ const MSX_MANUAL_CSS = `
 .msxm-btn:disabled{opacity:.38}
 .msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
 .msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
+.msxm-btn.far{background:#221d3d;border-style:dashed}
+.msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
@@ -71,7 +73,9 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
       </div>
     );
   }
-  const reach = opt.tech.filter((t) => t.reach);
+  // 技は全部並べる(届く技を先に)。撃つ前の命中%・使うガッツ・届く距離を出す(2026-11-12 社長「命中も技打つ前の技コマンドに出してほしい」)
+  const techs = opt.tech.filter((t) => t.reach).concat(opt.tech.filter((t) => !t.reach));
+  const distOf = (t) => (Array.isArray(t.dist) ? t.dist.map((d) => MSX_MANUAL_DIST[d]).join('・') : '');
   return (
     <div className="msxm" data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
       <div className="msxm-top">
@@ -81,15 +85,14 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
         <b>ガッツ {Math.round(opt.guts)}</b>
       </div>
       <div className="msxm-sec">
-        <div className="msxm-h">⚔ 攻撃</div>
-        {reach.length ? (
-          <div className="msxm-row">{reach.map((t) => (
-            <button key={t.key} type="button" className={`msxm-btn atk ${isHint(t) ? 'hint' : ''}`} disabled={!t.ok || busy} data-msxm-tech={t.key} onClick={() => go({ type: 'tech', key: t.key })}>
-              {t.kind === 'pow' ? '💪' : '🧠'}{t.name}
-              <small>{t.ok ? `ガッツ${t.guts}・命中${Math.round(t.p)}%` : `ガッツ${t.guts}(あと${t.need})`}</small>
-            </button>
-          ))}</div>
-        ) : <div className="msxm-none">この間合いでは届く技がありません</div>}
+        <div className="msxm-h">⚔ 攻撃{techs.some((t) => t.reach) ? '' : '(この間合いでは届く技がありません)'}</div>
+        <div className="msxm-row">{techs.map((t) => (
+          <button key={t.key} type="button" className={`msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`} disabled={!t.ok || busy} data-msxm-tech={t.key} data-msxm-reach={t.reach ? '1' : '0'} onClick={() => go({ type: 'tech', key: t.key })}>
+            {t.kind === 'pow' ? '💪' : '🧠'}{t.name}
+            <small className="p">命中 {Math.round(t.p)}%・ガッツ {t.guts}{t.reach && !t.ok ? `(あと${t.need})` : ''}</small>
+            <small>届く {distOf(t)}{t.reach ? '' : '(いまは届かない)'}</small>
+          </button>
+        ))}</div>
       </div>
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復</div>

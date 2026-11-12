@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 029c56fe3feb951a
+// generated-sha256: 8338301f0ef29b64
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5505,7 +5505,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig:'曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig:'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
@@ -25372,6 +25372,12 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
 const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Object.freeze({
   x:(k*37)%100, y:(k*53)%90, dur:6+(k*7)%6, delay:-((k*13)%11),
   color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
+/* 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」・キラメキ案 C2)。
+   'full' … 帯・虹色の文字・光の筋・紙ふぶき / 'modest' … 帯と文字だけ・短く(軽量モード・演出量「最小」・マルチの「軽さ優先」) / 'off' … 出さない
+   「フルコンボの大きな表示」を「なし」にしたときだけ出さない。おまかせでは、動きを減らす設定でも控えめな形で出す */
+const rhythmFullComboBandMode=settings=>{const v=rhythmFxPick(settings,'fullComboBig');if(v==='OFF'||v==='NONE')return 'off';
+  if(v==='AUTO'&&(settings&&settings.lightweightMode||settings&&settings.effectAmount==='MINIMAL'))return 'modest';return 'full';};
+const RHYTHM_FULLCOMBO_CONFETTI=Object.freeze(Array.from({length:22},(_,k)=>Object.freeze({x:((k*37)%100)+.5,h:(k*47)%360,d:((k*13)%9)/20,s:.8+((k*7)%5)/10,r:((k*29)%2)?1:-1})));
 const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
@@ -25638,7 +25644,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
+  const fullComboBandRef=useRef(null),sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
   useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
@@ -26408,6 +26414,12 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
 if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+/* 最後のノーツを取りきった瞬間、BAD・MISS・落とした刻みが無ければ演奏画面の上へ「FULL COMBO」の帯を出す(曲の終わりを待たない)。
+   判定・スコア・保存には触らない。称号の決め方はリザルトと同じ rhythmResultAchievements。アシスト・練習・タイミング合わせ・判定ラインの調整では出さない */
+if(!run.fullComboBandShown&&!assistOn&&!tutorial&&!calibrating&&!lineAdjustRef.current&&chart.totalNotes>0&&RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0)>=chart.totalNotes){run.fullComboBandShown=true;
+  const ach=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);const bandMode=rhythmFullComboBandMode(settingsLiveRef.current||settings);const bandEl=fullComboBandRef.current;
+  if(bandEl&&bandMode!=='off'&&(ach.fullCombo||ach.allExcellent||ach.allMarvelous)){const tier=ach.allMarvelous?'am':ach.allExcellent?'ae':'fc';const label=bandEl.querySelector('[data-rhythm-fullcombo-title]');if(label)label.textContent=tier==='am'?'ALL MARVELOUS':tier==='ae'?'ALL EXCELLENT':'FULL COMBO';
+    bandEl.dataset.tier=tier;bandEl.dataset.mode=bandMode;bandEl.hidden=false;bandEl.dataset.on='1';}}
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
@@ -27769,6 +27781,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ノーツの絵(canvas)は z-index 5・予備のノーツ(DOM)は 2 なので、その1つ下。空中の道(2)・押した光(3)よりは上。
     ★演奏の場所(data-rhythm-play-area)は isolation:isolate で重なりを中だけで決める箱なので、赤いふちも中に置く(外に置くと演奏の場所まるごとの上に来る) */}{lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0" style={{zIndex:canvasNotes?4:1}}/>}{/* 案Z: SKY / GROUND の字は無し(線の位置と影で高さを見せる) */}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
+{/* 最後のノーツのあとの「FULL COMBO」の帯(はじめは隠しておき、取りきった瞬間に判定の処理が出す。描き直しを起こさない) */}<div ref={fullComboBandRef} data-rhythm-fullcombo-band hidden aria-hidden="true"><i data-rhythm-fullcombo-sweep/><b data-rhythm-fullcombo-title>FULL COMBO</b><span data-rhythm-fullcombo-confetti>{RHYTHM_FULLCOMBO_CONFETTI.map((p,k)=><i key={k} style={{left:`${p.x}%`,'--h':p.h,'--d':`${p.d}s`,'--s':p.s,'--r':p.r}}/>)}</span></div>
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,...(prepareOn?{contain:'strict'}:{}),display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
 {/* 判定の文字(地上)。空中のある譜面でも、ふつうの難易度と同じ位置・大きさ・濃さ。
     2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」で、空中のある譜面だけ判定線の下へ小さく薄く出していた形(10-10・改善部 R3)をやめた。
@@ -66135,6 +66148,10 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
 // ---------- 画面「助手たちの今」・HOME の帯(段階2) ----------
 const assistantLifeOpenScreen = () => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true }); };
 const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({ open: false });
+// 助手ライフを開いて、町の地図のその場所の窓(助手を選んだ状態)を出す。mapFocus は画面の中だけの値で保存しない
+//   (2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」。「いま行くと得」のモンヒロバトルの行が
+//    ふつうのモンヒロバトルの画面へ飛ぶだけで、👀 修行を見る・📣 応援するは地図の窓にしか無かった)
+const assistantLifeOpenMapAt = (place, id = null) => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true, mapFocus: { place, id: id || null, n: Date.now() } }); };
 // 段ごとのひとこと(上の帯)
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
   quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
@@ -67036,6 +67053,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   //   いちばん前のボタンは「← 家へ」(閉じる)。縦は下へ送ると中身、横は右の欄が中身
   const scrollRef = React.useRef(null);
   const sheetRef = React.useRef(null);
+  const [cheerNote, setCheerNote] = React.useState(''); // 📣 応援したときの短い知らせ(モンヒロバトルにいる助手の部屋)
   const toSheet = () => { try { const box = scrollRef.current, el = sheetRef.current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
   const people = !w ? [id] : home ? (w.group ? w.group.ids.filter(x => ASSISTANT_LIFE_PREFS[x]) : [id]) : [];
   const sleepIds = people.filter(x => { const e = assistantLifeWhereOf(life, x); return e && e.doing === 'sleep'; });
@@ -67088,6 +67106,17 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {hotBeat && beatRow}
       {/* 施設にいる助手の部屋: その場所ならではの得をいちばん上に(神殿・M/B管理・マーケット・モンヒロバトル。カード部屋・ビートは上の行がある) */}
       {typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['cardroom', 'studio'].includes(w.place) && <AssistantLifePlacePerk life={life} ids={[id]} place={w.place} land={land} onGo={onGoPlace}/>}
+      {(() => { // モンヒロバトルにいる助手: 部屋からも 👀 修行を見る・📣 応援する(前は地図の窓だけで、部屋・HOME の顔から来ると見つからなかった・2026-11-12 社長「なにもないよ?」)
+        if (!w || w.place !== 'battle') return null;
+        let ti = null; try { ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null; } catch (_) { ti = null; }
+        if (!ti) return null;
+        return (<div data-assistant-life-room-train={id}>
+          <AssistantLifeDoRow k="train-watch" icon="👀" label="修行を見る" sub="マスモンの練習試合を見る(今日覚えた技・熟練の伸びが分かる)" on={typeof assistantMasmonTrainWatchOpen === 'function' ? () => { try { assistantMasmonTrainWatchOpen(id); } catch (_) {} } : null}/>
+          <AssistantLifeDoRow k="cheer" icon="📣" label={`応援する(今日${ti.perDay - ti.left}/${ti.perDay})`} sub="修行が少し進み、仲良し度も上がる(時間帯に1回)" gain="💗 +" disabled={!ti.canCheer} why={ti.why || ''}
+            on={typeof assistantMasmonCheer === 'function' ? () => { let r = null; try { r = assistantMasmonCheer(id); } catch (_) { r = null; } setCheerNote(r && r.ok ? `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` : ((r && r.why) || '')); } : null}/>
+          {cheerNote && <p className="mt-1 rounded-lg bg-emerald-900/70 px-2 py-1 text-[11.5px] font-black text-emerald-100" data-assistant-life-room-cheer-msg={id}>{cheerNote}</p>}
+        </div>);
+      })()}
       {onChat && !follow && <AssistantLifeDoRow k="chat" icon={asleep ? '💤' : '💬'} label={asleep ? '起こしておしゃべりする' : 'おしゃべりする'} sub="話すと仲良し度が少し上がる(1日の上限あり)" gain="💗 +" on={() => onChat(id, null)}/>}
       {(() => { // 助手マスモン対戦β(2026-11-12 見つけにくかったので、おしゃべりの次=画面の見える所へ上げた。ミセカタ2・マスモン部の口。RowInfo が null・口が無いときは出さない・2026-11-11 ナカヨシ13の引き継ぎ)
         let bi = null; try { bi = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; }
@@ -67454,6 +67483,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const markGuideSeen = () => { setGuideSeen(true); setGuideOpen(false); try { void storeSet(ASSISTANT_LIFE_GUIDE_KEY, true, false); } catch {} };
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
+  const [mapFocusKey, setMapFocusKey] = React.useState(0); // 同じ場所をもう一度開くときも窓を出し直す
   React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setUiV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, [!!(st.open && st.loaded)]); // 開くたびに読み直す(設定の「助手ライフの画面」で切り替えた分)
   const [roomId, setRoomId] = React.useState(st.focus || null);
   // 町の人(助手になる前の助手・56-assistant-life-partner.jsx)の部屋は開かず、小窓に替える。どこから開こうとしても(地図・家・札・道のり)ここで止める
@@ -67498,6 +67528,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   React.useEffect(() => { if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(); } catch {} } if (typeof ASSISTANT_LIFE_REL_STORE !== 'undefined') void ASSISTANT_LIFE_REL_STORE.load().then(() => { try { ASSISTANT_LIFE_STORE.emit(); } catch {} }); }, []); // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   React.useEffect(() => { if (roomId) setNote(''); }, [roomId]); // 別の部屋を開いたら前の一言を消す(ミハリ L13)
   React.useEffect(() => { if (st.focus) { setRoomId(st.focus); ASSISTANT_LIFE_STORE.set({ focus: null }); } }, [st.focus]);
+  // 地図のその場所の窓を開く(assistantLifeOpenMapAt。「いま行くと得」のモンヒロバトルの行など・2026-11-12 社長「タップ押しても何も起きない」)
+  React.useEffect(() => { const f = st.mapFocus; if (!f || !f.place) return; setRoomId(null); setScene(null); setMapFocusPlace(f.place); setMapFocusAssistantId(f.id || null); setMapFocusKey(k => k + 1); setTab('where'); ASSISTANT_LIFE_STORE.set({ mapFocus: null }); }, [st.mapFocus]);
   // 交換所から戻ったとき: 道具タブ(家具ならその助手の部屋と家具のシート)を開く(56-assistant-life-gifts.jsx の assistantLifeOpenShop)
   const [furnBack, setFurnBack] = React.useState(null);
   React.useEffect(() => { const b = ASSISTANT_LIFE_STORE.state.shopBack; if (!b) return; ASSISTANT_LIFE_STORE.set({ shopBack: null });
@@ -67798,7 +67830,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
         {tab === 'where' ? (
-          <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
+          <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} initialKey={mapFocusKey} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
             list={uiV2 ? null : <>
               {header}
               {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
@@ -67841,6 +67873,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               {giftItemsOpen && <div className="-mx-3">{itemsBody}</div>}
             </div>
           </div>)}
+        {/* 👀 修行を見るの入れ物。地図が出ているときは地図の中のものを使う(2つ重ねない) */}
+        {roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
         {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
           land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
@@ -67906,7 +67940,10 @@ function AssistantLifeHomeFaces({ metIds }) {
         const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
         let gap = vh - r.bottom;
         for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
-        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), right };
+        // 札の上のすき間も測る(下に余地が無い札=画面のいちばん下のモンヒロバトルは、顔を札の上に出す)
+        let up = r.top;
+        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.bottom <= r.top + 2 && b.r.right > x0 && b.r.left < x1) up = Math.min(up, r.top - b.r.bottom); }
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), up: Math.round(up), right };
       }
       setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
     };
@@ -67939,14 +67976,17 @@ function AssistantLifeHomeFaces({ metIds }) {
       // 顔は必ず札(名前)の下(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」。横へ逃がす形はやめた)。
       //   すき間は札の並び(70-bootstrap.jsx)であけてある。足りないときは顔を小さくする(12px まで)
       const side = false;
-      const size = Math.max(12, Math.min(20, r.gap - 3));
+      // 下のすき間が狭すぎる(16px 未満)ときは札の上へ。モンヒロバトルの札は画面の下端にあり、顔が 12px で下の帯にかかって
+      //   見えない・押せなかった(2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」)
+      const above = r.gap < 16 && Number.isFinite(r.up) && r.up >= 19;
+      const size = above ? Math.min(20, r.up - 3) : Math.max(12, Math.min(20, r.gap - 3));
       const step = size - 4; // 少し重ねる
       const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
       const rowW = size + (list.length - 1) * step + 6 + upW;
       const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
-      const top = side ? r.y + r.h / 2 - size / 2 : r.y + r.h + 1;
+      const top = side ? r.y + r.h / 2 - size / 2 : above ? r.y - size - 1 : r.y + r.h + 1;
       return (
-        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} data-assistant-life-home-face-above={above ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
           <div className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow">
             {list.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
@@ -68067,9 +68107,11 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null }) {
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
+  // 開いたままの地図へ、外から「この場所の窓を」と来たとき(部屋の「いま行くと得」の 行く › など)も窓を出す
+  React.useEffect(() => { if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace); }, [initialKey]);
   const [cheerMsg, setCheerMsg] = React.useState(null); // 📣 応援したときの短い知らせ { id, text }(シュギョウ2の口 assistantMasmonCheer)
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
@@ -68859,7 +68901,9 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   // ⚔ モンヒロバトル(社長 2026-11-11 A): 助手がモンヒロバトルでマスモンの修行をしているあいだ。修行が未公開のあいだ(amgtRoomLine が null)は出さない。得ではなく「いま会える場所」の案内
   try {
     const bt = typeof amgtRoomLine === 'function' ? assistantLifeAtPlace(life, ids, 'battle').filter(id => { let t = null; try { t = amgtRoomLine(id); } catch (_) { t = null; } return typeof t === 'string' && t.indexOf('いま') === 0; }) : [];
-    if (bt.length) rows.push({ k: 'battle', place: 'battle', icon: '⚔', text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`, go: typeof go.battle === 'function' ? go.battle : null });
+    // 押すと助手ライフの地図のモンヒロバトルの窓へ(👀 修行を見る・📣 応援する・⚔ 対戦がそこにある)。前はふつうのモンヒロバトルの画面へ飛ぶだけで、
+    //   そこには助手が何も出ず「なにもない」になっていた(2026-11-12 社長)。地図を開けないときだけ今までどおりモンヒロバトルへ
+    if (bt.length) rows.push({ k: 'battle', place: 'battle', icon: '⚔', text: `${nm(bt)}がモンヒロバトルで修行中です。👀 修行を見る・📣 応援するができます`, go: typeof assistantLifeOpenMapAt === 'function' ? () => assistantLifeOpenMapAt('battle', bt[0]) : typeof go.battle === 'function' ? go.battle : null });
   } catch (_) {}
   // 🛍 マーケット: 助手がいるあいだ、おすすめ品1つが1割引き(1日1回)。開発部が ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday と入れる。それが { itemName, discountedCost, used } を返す
   try {
@@ -77314,6 +77358,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   const [loadFailed, setLoadFailed] = useState(false);
   const [ticked, setTicked] = useState(false);
   const [phase, setPhase] = useState('prep');   // prep → watch → review / rank
+  // 観戦・振り返りのあいだはバトルの曲(56-monhero-success-arena.jsx の口)
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'review');
   const [battle, setBattle] = useState(null);
   const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -77429,11 +77475,16 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const log = battle.r.log;
     if (pos >= log.length - 1) { const t = setTimeout(() => setPhase('review'), 900); return () => clearTimeout(t); }
     const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
+    // 1行の長さは技の動きの長さに合わせる(試合の画面 MsaStage と同じ。×2・×4 は縮める。見せ場だけは今までどおり)
+    const cur = log[pos] || {};
+    const team = cur.side === 'A' ? battle.teamA : cur.side === 'B' ? battle.teamB : null;
+    const f = { x1: 1, x2: 0.55, x4: 0.3 }[speed];
+    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, typeof msaReduce === 'function' && msaReduce(), log) * f) : sp.ms;
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
       setPos(next);
-    }, sp.ms);
+    }, ms);
     return () => clearTimeout(t);
   }, [phase, battle, pos, paused, speed]);
 
@@ -77673,6 +77724,13 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           </div>
         )}
         <AmbwPanel side="B" team={battle.teamB} frame={f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
+        {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
+        {typeof MsaStage === 'function' ? (
+          <div className="msa" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
+            <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null}
+              ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}/>
+          </div>
+        ) : (
         <div className="ambw-ring">
           <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: gap }}/>{fighter('B')}</div>
           <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
@@ -77680,6 +77738,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             <div key={`cut-${pos}`} className={`ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`}><small>{cutSmall}</small><b>{cutText}</b></div>
           )}
         </div>
+        )}
         <AmbwPanel side="A" team={battle.teamA} frame={f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
         {!review && (
           <div className="ambw-card ambw-log">
@@ -78395,6 +78454,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
   const [out, setOut] = useState(startAt === 'win' ? (previewOut || {}) : null); // startAt・previewOut は止め絵を撮るときだけ
   const rootRef = useRef(null);
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true); // 大会のあいだはバトルの曲(組み合わせ表〜優勝/負け)
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((x) => { if (!alive) return; if (x) setEngine(x); else setFailed(true); });
@@ -78601,7 +78661,9 @@ const assistantMasmonTrainWatchOpen = (aid) => { if (!amgcOn() || !amgcOkAid(aid
 // 地図の中に1つだけ置く入れ物(ナカヨシ19)
 function AssistantMasmonTrainWatchHost() {
   const [open, setOpen] = useState(AMGC_HOST.open);
-  useEffect(() => { const f = (v) => setOpen(v); AMGC_HOST.subs.add(f); return () => { AMGC_HOST.subs.delete(f); }; }, []);
+  // 入れ物が消えるとき(画面を閉じた・タブを替えた)は「開いている」も消す。残ると、次に地図を開いたとき練習試合が勝手に始まっていた
+  //   (2026-11-12 社長「助手のオート対戦が気付いたらはじまってた」)
+  useEffect(() => { const f = (v) => setOpen(v); AMGC_HOST.subs.add(f); return () => { AMGC_HOST.subs.delete(f); if (!AMGC_HOST.subs.size) AMGC_HOST.open = null; }; }, []);
   if (!open) return null;
   return <AssistantMasmonTrainWatch key={open.at} assistantId={open.assistantId} onClose={() => AMGC_HOST.set(null)}/>;
 }
@@ -85768,6 +85830,8 @@ const MSX_MANUAL_CSS = `
 .msxm-btn:disabled{opacity:.38}
 .msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
 .msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
+.msxm-btn.far{background:#221d3d;border-style:dashed}
+.msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
@@ -85821,7 +85885,9 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
       </div>
     );
   }
-  const reach = opt.tech.filter((t) => t.reach);
+  // 技は全部並べる(届く技を先に)。撃つ前の命中%・使うガッツ・届く距離を出す(2026-11-12 社長「命中も技打つ前の技コマンドに出してほしい」)
+  const techs = opt.tech.filter((t) => t.reach).concat(opt.tech.filter((t) => !t.reach));
+  const distOf = (t) => (Array.isArray(t.dist) ? t.dist.map((d) => MSX_MANUAL_DIST[d]).join('・') : '');
   return (
     <div className="msxm" data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
       <div className="msxm-top">
@@ -85831,15 +85897,14 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
         <b>ガッツ {Math.round(opt.guts)}</b>
       </div>
       <div className="msxm-sec">
-        <div className="msxm-h">⚔ 攻撃</div>
-        {reach.length ? (
-          <div className="msxm-row">{reach.map((t) => (
-            <button key={t.key} type="button" className={`msxm-btn atk ${isHint(t) ? 'hint' : ''}`} disabled={!t.ok || busy} data-msxm-tech={t.key} onClick={() => go({ type: 'tech', key: t.key })}>
-              {t.kind === 'pow' ? '💪' : '🧠'}{t.name}
-              <small>{t.ok ? `ガッツ${t.guts}・命中${Math.round(t.p)}%` : `ガッツ${t.guts}(あと${t.need})`}</small>
-            </button>
-          ))}</div>
-        ) : <div className="msxm-none">この間合いでは届く技がありません</div>}
+        <div className="msxm-h">⚔ 攻撃{techs.some((t) => t.reach) ? '' : '(この間合いでは届く技がありません)'}</div>
+        <div className="msxm-row">{techs.map((t) => (
+          <button key={t.key} type="button" className={`msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`} disabled={!t.ok || busy} data-msxm-tech={t.key} data-msxm-reach={t.reach ? '1' : '0'} onClick={() => go({ type: 'tech', key: t.key })}>
+            {t.kind === 'pow' ? '💪' : '🧠'}{t.name}
+            <small className="p">命中 {Math.round(t.p)}%・ガッツ {t.guts}{t.reach && !t.ok ? `(あと${t.need})` : ''}</small>
+            <small>届く {distOf(t)}{t.reach ? '' : '(いまは届かない)'}</small>
+          </button>
+        ))}</div>
       </div>
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復</div>
@@ -85872,7 +85937,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
 }
 
 // ---- part: 56-monhero-success-arena.jsx ----
-// ===== モンヒロサクセス: 試合の画面 MonsucArena(2026-11-12 社長「モンサクは自分操作にして」) =====
+// ===== 試合の画面: 場 MsaStage(共通)と モンヒロサクセスの MonsucArena(2026-11-12 社長「モンサクは自分操作にして」) =====
 // 社長「バトルはモンバトやバトルカードの画面をある程度流用して、距離とかうまく使ったほうがいい。攻撃アクションとかもそのまま使えるはず」。
 //   ・場は横長。手前の子(A)が左・相手(B)が右に立ち、距離 零・近・中・遠 の4つの立ち位置で、実際に間が開いたり詰まったりする
 //   ・技の動きは 24-battle-fx.jsx の SkillFxMotion・SKILL_MOTION_SETS をそのまま使う(新しい動きは作らない)。
@@ -85882,13 +85947,16 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
 //     手を選ぶ → 伸びた記録(自分の手 → 相手の手)を1行ずつ見せる → 見せ終わったら次の手番(見せている間、帯は押せない)
 //   ・記録だけ渡されたとき(回3の結果・オート)は、同じ画面で記録を再生する
 //   ・動きを減らす設定(端末の prefers-reduced-motion)では、技の動き・揺れ・間合いの移動を止め、1行の間も短くする
+//   ・2026-11-12 社長「音もないし音楽もホームの音楽だし味気なさすぎる。ちゃんとバトル部分作りこんで」:
+//     場は共通の部品 MsaStage にして、助手マスモン対戦 β の観戦も同じ場を使う。効果音(Audio_.fgSe)・バトルの曲(useMhBattleBgmHold → 60-app)・
+//     技の名前の帯に命中%・大技(消費ガッツ40以上)の金の帯と揺れ・会心の白い光・ガッツの増減・KO・勝ち/負けの印
 // 計算・保存には触れない(勝ち負けを onEnd で返すだけ)。公開の印 monheroSuccess の後ろで使う。
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];            // 距離ごとの、2体の間(場の幅に対する割合)。零は触れ合うほど
 const MSA_SPEEDS = Object.freeze([{ id: 'x1', label: '×1', f: 1 }, { id: 'x2', label: '×2', f: 0.55 }, { id: 'x4', label: '×4', f: 0.3 }]);
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
-.msa-stage::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5));pointer-events:none}
+.msa-stage::after{content:'';position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5));pointer-events:none}
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
@@ -85916,6 +85984,22 @@ const MSA_CSS = `
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
+.msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
+.msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
+.msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
+.msa-shk{position:absolute;inset:0;z-index:1}
+.msa-shk.shake{animation:msaShake .42s ease-out both}
+.msa-flash{position:absolute;inset:0;z-index:7;background:#fff;opacity:0;pointer-events:none;animation:msaFlash .32s ease-out both}
+.ambw-cut.big{top:6px;left:-6px;right:-6px;padding:6px 18px;background:linear-gradient(90deg,#f59e0b00,#f59e0b 12%,#b45309 50%,#f59e0b 88%,#f59e0b00)!important;text-align:center;border-top:2px solid #fde68a;border-bottom:2px solid #fde68a}
+.ambw-cut.big b{font-size:24px;color:#fff;-webkit-text-stroke:1px #78350f}
+.msa-end{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#0008,#0000 70%);pointer-events:none}
+.msa-end b{font-size:46px;font-weight:900;letter-spacing:.08em;animation:msaStamp .55s cubic-bezier(.2,1.6,.4,1) both}
+.msa-end.w b{color:#fde047;-webkit-text-stroke:2px #92400e;text-shadow:0 0 18px #fde047aa,0 4px 0 #92400e}
+.msa-end.l b{color:#e2e8f0;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b}
+.msa-end small{margin-top:4px;font-size:12px;font-weight:900;color:#fff;background:#0f172acc;border-radius:99px;padding:2px 10px}
+@keyframes msaStamp{0%{opacity:0;transform:translateX(var(--msa-tx,0)) scale(2.2) rotate(var(--msa-r,0deg))}100%{opacity:1;transform:translateX(var(--msa-tx,0)) scale(1) rotate(var(--msa-r,0deg))}}
+@keyframes msaFlash{0%{opacity:.85}100%{opacity:0}}
+@keyframes msaShake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(2px,0)}}
 @keyframes msaPop{0%{opacity:0;transform:translateY(10px) scale(.7)}35%{opacity:1;transform:translateY(-4px) scale(1.12)}100%{opacity:1;transform:translateY(-12px) scale(1)}}
 @keyframes msaCharge{0%,100%{transform:none}30%{transform:translateY(4px) scale(1.05,.92)}60%{transform:translateY(-6px) scale(.97,1.06)}}
 @keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
@@ -85931,6 +86015,22 @@ const MSA_CSS = `
 const msaReduce = () => {
   try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
 };
+
+// ---- 音(2026-11-12 社長「音もないし音楽もホームの音楽だし味気なさすぎる」) ----
+// 効果音は今あるバトルの音(Audio_.fgSe。カードバトルと同じ、裏の周回の音止めに巻き込まれない口)をそのまま使う。消音の設定はそのまま効く
+const msaSe = (k) => { try { if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k](); } catch (_) {} };
+// 試合の画面が開いている間は、BGMアレンジの「バトル」の曲にする(60-app の bgmKeyForState が見る口)。閉じたら元の曲へ戻る
+const MH_BATTLE_BGM = { n: 0, on: false, subs: new Set() };
+const mhBattleBgmEmit = () => { const on = MH_BATTLE_BGM.n > 0; if (on === MH_BATTLE_BGM.on) return; MH_BATTLE_BGM.on = on; MH_BATTLE_BGM.subs.forEach((f) => { try { f(on); } catch (_) {} }); };
+const mhBattleBgmHold = () => { MH_BATTLE_BGM.n++; mhBattleBgmEmit(); let done = false; return () => { if (done) return; done = true; MH_BATTLE_BGM.n = Math.max(0, MH_BATTLE_BGM.n - 1); mhBattleBgmEmit(); }; };
+// 部品が使う: on のあいだバトルの曲
+function useMhBattleBgmHold(on) { useEffect(() => (on ? mhBattleBgmHold() : undefined), [on]); }
+// 60-app が使う: いまバトルの曲にするか
+function useMhBattleBgmOverlay() {
+  const [on, setOn] = useState(MH_BATTLE_BGM.on);
+  useEffect(() => { MH_BATTLE_BGM.subs.add(setOn); setOn(MH_BATTLE_BGM.on); return () => { MH_BATTLE_BGM.subs.delete(setOn); }; }, []);
+  return on;
+}
 
 // 技 → SkillFxMotion の動きの名前。① モンヒロに同じ名前の技(SKILL_MOTION_SETS の通常技・固有技) ② カードバトルと同じ決まった動き
 const msaMotionKind = (species, tech) => {
@@ -85948,16 +86048,24 @@ const msaMotionKind = (species, tech) => {
   const tier = g >= 40 ? 'L' : g >= 25 ? 'M' : 'S';
   return has(typeof cardMotionTiered === 'function' ? cardMotionTiered(base, tier) : base) || has(base);
 };
+// 記録の行の技(1行目の aMoves・bMoves から)。行の guts は「撃ったあとのガッツ」なので、技の重さ(消費ガッツ)はここから引く
+const msaTechOf = (log, e) => {
+  if (!e || e.ev !== 'tech' || !Array.isArray(log)) return null;
+  const st = log[0] || {}; const all = (e.side === 'A' ? st.aMoves : st.bMoves) || [];
+  const list = all[Number.isFinite(e.i) ? e.i : 0] || [];
+  return list.find((m) => m.id === e.move) || null;
+};
+const msaTechInfo = (log, e) => { const t = msaTechOf(log, e); return { name: e.name, kind: e.kind, guts: t ? t.guts : 0 }; };
 const msaMotionMs = (kind) => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
   return { ms: (sp && sp.ms) || 650, hit: (sp && sp.hit) || 300 };
 };
 
 // 1行を見せる長さ(ミリ秒・×1)。技は動きの長さ+数字を読む間
-const msaStepMs = (e, team, reduce) => {
+const msaStepMs = (e, team, reduce, log) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
-  if (e.ev === 'tech') { const m = (team && team.members && team.members[e.i]) || {}; return msaMotionMs(msaMotionKind(m.species, { name: e.name, kind: e.kind, guts: e.guts })).ms + 520; }
+  if (e.ev === 'tech') { const m = (team && team.members && team.members[e.i]) || {}; return msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).ms + 520; }
   return { start: 700, enter: 350, move: 650, guard: 750, charge: 800, swap: 700, ko: 1100, end: 600 }[e.ev] || 500;
 };
 
@@ -85975,7 +86083,8 @@ const msaSay = (e, nm) => {
 };
 
 // ---- 場の1体 ----
-function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk }) {
+//   gd … この行での自分のガッツの増減(ためる +・技を撃つ −・ガッツを削られた −)
+function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd }) {
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
   const img = <img className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`} src={src} alt={member ? member.name : ''} draggable={false}/>;
@@ -85987,18 +86096,18 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk }) {
   let style = { left: `${x * 100}%` };
   if (tech && me && !reduce) {
     // 攻める: 相手の位置まで(--atk-dx)。モンヒロのバトルと同じ動き
-    const kind = msaMotionKind(sp, { name: e.name, kind: e.kind, guts: e.guts });
+    const kind = msaMotionKind(sp, e.tech);
     if (kind) {
       const w = foeX.w; const dx = (foeX.x - x) * w;
       style = { ...style, ...(typeof attackAimVars === 'function' ? attackAimVars(dx, -8) : { '--atk-dx': `${Math.round(dx)}px`, '--atk-dy': '-8px' }) };
       body = <SkillFxMotion key={`m-${e.k}`} kind={kind} image={img}/>;
     }
   }
+  const delay = tech ? (reduce ? 0 : msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit) : 0;
   if (tech && foe) {
-    const hit = msaMotionMs(msaMotionKind(e.atkSp, { name: e.name, kind: e.kind, guts: e.guts })).hit;
-    const delay = reduce ? 0 : hit;
     const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
     body = <div key={`p-${e.k}`} className={`flex items-end justify-center ${pose}`} style={{ animationDelay: `${delay}ms` }}>{img}</div>;
+    if (!e.hit) extra.push(<div key={`a-${e.k}`} className="mh-card-afterimage" aria-hidden="true" style={{ animationDelay: `${delay}ms` }}>{img}</div>);
     if (e.guarded && e.hit) extra.push(<span key="s" className="mh-card-shield" aria-hidden="true" style={{ animationDelay: `${delay}ms` }}/>);
     extra.push(e.hit
       ? <div key={`d-${e.k}`} className="msa-dmg" data-msa-dmg={e.dmg} style={{ animationDelay: `${delay}ms` }}>{e.crit ? <small>会心!</small> : e.guarded ? <small>ガード!</small> : null}−{e.dmg}</div>
@@ -86007,11 +86116,18 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk }) {
   if (me && e.ev === 'guard') { cls = 'mh-card-guard'; extra.push(<span key="s" className="mh-card-shield" aria-hidden="true"/>); }
   if (me && e.ev === 'charge') {
     if (e.why === 'sulk') { cls = 'msa-sulk'; extra.push(<span key="t" className="msa-tag">そっぽ…</span>); }
-    else { cls = 'msa-charge'; extra.push(<span key="a" className="msa-aura" aria-hidden="true"/>, <span key="t" className="msa-tag">ガッツ +</span>); }
+    else { cls = 'msa-charge'; extra.push(<span key="a" className="msa-aura" aria-hidden="true"/>); }
   }
   if (me && e.ev === 'move') cls = 'msa-step';
   if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
-  if (down) cls = e && e.ev === 'ko' && e.side === side ? 'mh-card-ko' : '';
+  const koNow = e && e.ev === 'ko' && e.side === side;
+  if (down) cls = koNow ? 'mh-card-ko' : '';
+  if (koNow) extra.push(<div key={`k-${e.k}`} className="msa-ko" data-msa-ko={side}>KO!</div>);
+  // ガッツの増減(ためた・撃った・削られた)。削られたのは当たる瞬間に出す
+  if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
+    const n = Math.round(gd);
+    extra.push(<span key={`g-${e ? e.k : 0}`} className={`msa-gtag ${n > 0 ? 'up' : 'down'}`} data-msa-guts={n} style={{ animationDelay: `${tech && foe ? delay : 0}ms` }}>ガッツ {n > 0 ? `+${n}` : `−${-n}`}</span>);
+  }
   if (!body) {
     const still = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
     body = <div key={`b-${e ? e.k : 0}-${cls}`} className={`flex items-end justify-center ${cls}`}>{still}</div>;
@@ -86025,10 +86141,96 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk }) {
   );
 }
 
-// ---- 試合の画面 ----
+// 1行ぶんの効果音。pos が前へ進んだときだけ鳴らす(見返しで戻した・止めているときは鳴らさない)
+function useMsaSfx(log, pos, teams, reduce, on) {
+  const lastRef = useRef(-1);
+  const timers = useRef([]);
+  useEffect(() => () => { timers.current.forEach(clearTimeout); timers.current = []; }, []);
+  useEffect(() => {
+    const prev = lastRef.current; lastRef.current = pos;
+    if (!on || pos <= prev) return;
+    const e = log[pos]; if (!e) return;
+    const later = (ms, k) => { if (ms <= 0) { msaSe(k); return; } timers.current.push(setTimeout(() => msaSe(k), ms)); };
+    if (e.ev === 'tech') {
+      const m = (teams[e.side] && teams[e.side].members && teams[e.side].members[e.i]) || {};
+      const hitMs = reduce ? 0 : msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');      // 大技は出だしに溜めの音
+      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
+    } else if (e.ev === 'guard') msaSe('guard');
+    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');
+    else if (e.ev === 'move') msaSe('trainingMove');
+    else if (e.ev === 'swap') msaSe('join');
+    else if (e.ev === 'ko') msaSe('enemyCharge');
+    else if (e.ev === 'start') msaSe('trainingDecide');
+  }, [pos, on]);
+}
+
+// ---- 場(試合の画面の共通の部品。MonsucArena と 助手マスモン対戦 β の観戦が使う) ----
+//   log・frames(ambwFramesOf)・pos … いま見せている行 / teams … { A, B }(members に species・name)
+//   ended … 決着を見せる(勝ち負けの印と音) / win … 'A' | 'B' | 'draw' / endSub … 印の下の小さい字
+//   sound … 効果音を鳴らすか(止めて見返しているときなどは false)
+function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true }) {
+  const reduce = useMemo(() => msaReduce(), []);
+  const [stageW, setStageW] = useState(340);
+  const stageRef = useRef(null);
+  useEffect(() => {
+    const el = stageRef.current; if (!el) return undefined;
+    const fit = () => setStageW(el.clientWidth || 340);
+    fit();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit); }
+    const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  useMsaSfx(log, pos, teams, reduce, sound);
+  const endSaid = useRef(false);
+  useEffect(() => {
+    if (!ended || endSaid.current) return;
+    endSaid.current = true;
+    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+  }, [ended]);
+  const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
+  if (!f) return null;
+  const pf = frames[Math.max(0, Math.min(pos, frames.length - 1) - 1)] || f;
+  const e0 = log[pos] || {};
+  const memberOf = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; return ms[Number.isFinite(i) ? i : f.act[side]] || ms[0] || null; };
+  const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '', tech: msaTechInfo(log, e0) };
+  const gap = MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
+  const xA = 0.5 - gap / 2; const xB = 0.5 + gap / 2;
+  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
+  const hpOf = (side) => (f.hp[side] || [])[f.act[side]];
+  // ガッツの増減は、手を打った行(技・ためる)と、ガッツを削られた行だけ出す
+  const gdOf = (side) => {
+    if (!pos || !e.side) return null;
+    if (e.side === side && e.ev === 'tech') return e.tech.guts ? -e.tech.guts : null;            // 撃った: 技の消費ガッツ
+    if (e.side === side && e.ev === 'charge' && e.why !== 'sulk') return f.g[side] - pf.g[side];  // ためた: 増えた分
+    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return -Math.round(Number(e.gd)); // 削られた
+    return null;
+  };
+  const big = e.ev === 'tech' && (Number(e.tech.guts) || 0) >= 40;
+  const hitMs = e.ev === 'tech' && !reduce ? msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const shake = e.ev === 'tech' && e.hit && (e.crit || big) && !reduce;
+  const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
+  return (
+    <div className="msa-stage" ref={stageRef} data-msa-stage style={{ backgroundImage: venueImg ? `url(${venueImg})` : undefined }}>
+     <div className={`msa-shk ${shake ? 'shake' : ''}`} key={shake ? `sh-${pos}` : 'st'} style={shake ? { animationDelay: `${hitMs}ms` } : undefined}>
+      {e.ev !== 'tech' ? <div className="msa-round">ラウンド {f.r || 1}</div> : null}
+      <div className="msa-floor" aria-hidden="true"/>
+      {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
+      <MsaFighter side="A" member={memberOf('A')} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={gdOf('A')}/>
+      <MsaFighter side="B" member={memberOf('B')} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk gd={gdOf('B')}/>
+      <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
+      {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''} ${big ? 'big' : ''}`} style={{ zIndex: 7 }} data-msa-cut={p == null ? '' : p}>
+        <small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}{p != null ? `・命中 ${p}%` : ''}{big ? '・大技!' : ''}</small><b>{e.name}</b></div>}
+      {e.ev === 'tech' && e.hit && e.crit && !reduce && <i key={`fl-${pos}`} className="msa-flash" aria-hidden="true" style={{ animationDelay: `${hitMs}ms` }}/>}
+     </div>
+      {ended && <div className={`msa-end ${win === 'A' ? 'w' : 'l'}`} data-msc-end={win === 'A' ? 'win' : win === 'draw' ? 'draw' : 'lose'}><b>{win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'}</b>{endSub ? <small>{endSub}</small> : null}</div>}
+    </div>
+  );
+}
+
+// ---- 試合の画面(モンヒロサクセス) ----
 //   input … 芯 createMatch に渡す入力(simulate と同じ形)。あれば自分で操作する
 //   watch … { r, teamA, teamB }(記録だけ。オートの結果を見せる)
-//   onEnd(won, { choices, auto }) … 決着を見せ終わったら1回だけ
+//   onEnd(won, { choices, auto, result }) … 決着を見せ終わったら1回だけ
 function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const reduce = useMemo(() => msaReduce(), []);
   const manual = Boolean(input && engine && typeof engine.createMatch === 'function');
@@ -86039,16 +86241,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const [speed, setSpeed] = useState('x1');
   const [auto, setAuto] = useState(!manual);
   const [ended, setEnded] = useState(false);
-  const [stageW, setStageW] = useState(340);
-  const stageRef = useRef(null);
   const endRef = useRef(false);
-  useEffect(() => {
-    const el = stageRef.current; if (!el) return undefined;
-    const fit = () => setStageW(el.clientWidth || 340);
-    fit();
-    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit); }
-    const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
-  }, []);
+  useMhBattleBgmHold(true);
   const frames = useMemo(() => (log.length ? ambwFramesOf(log) : []), [log.length, manual ? mm.tick : 0]);
   const last = log.length - 1;
   const done = manual ? mm.done : log.length > 0;
@@ -86060,7 +86254,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     if (pos < last) {
       const cur = log[pos] || {};
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
-      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce) * sp.f));
+      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log) * sp.f));
       return () => clearTimeout(t);
     }
     if (done) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
@@ -86079,53 +86273,38 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   }, [barOn, pos]);
   useEffect(() => {
     if (!ended || endRef.current) return undefined;
-    const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1500);
+    const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
-  const e0 = log[pos] || {};
+  const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = { A: st.aHp || [], B: st.bHp || [] };
-  const memberOf = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; return ms[Number.isFinite(i) ? i : f.act[side]] || ms[0] || null; };
-  const nm = (side, i) => { const m = memberOf(side, i); return (m && m.name) || ''; };
-  const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '' };
-  const gap = MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
-  const xA = 0.5 - gap / 2; const xB = 0.5 + gap / 2;
-  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
-  const hpOf = (side) => (f.hp[side] || [])[f.act[side]];
-  const pick = (c) => { if (busy || !manual) return; if (mm.pick(c)) setPos(p => p + 1); }; // 選んだ手の行からすぐ見せる
-  const goAuto = () => { if (!manual) return; mm.toAuto(); setAuto(true); setSpeed('x2'); };
-  const skip = () => { if (manual && !done) return; setPos(last); };
+  const nm = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; const m = ms[Number.isFinite(i) ? i : f.act[side]] || ms[0]; return (m && m.name) || ''; };
+  const pick = (c) => { if (busy || !manual) return; msaSe('tap'); if (mm.pick(c)) setPos(p => p + 1); }; // 選んだ手の行からすぐ見せる
+  const goAuto = () => { if (!manual) return; msaSe('tap'); mm.toAuto(); setAuto(true); setSpeed('x2'); };
+  const skip = () => { if (manual && !done) return; msaSe('tap'); setPos(last); };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}</style>
       <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <MscPanel side="B" team={teams.B} frame={f} maxHp={maxHp} info={info} s={s}/>
-      <div className="msa-stage" ref={stageRef} style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
-        <div className="msa-round">ラウンド {f.r || 1}</div>
-        <div className="msa-floor" aria-hidden="true"/>
-        {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
-        <MsaFighter side="A" member={memberOf('A')} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk/>
-        <MsaFighter side="B" member={memberOf('B')} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk/>
-        <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-        {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`} style={{ zIndex: 7 }}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
-        {ended && <div className={`msc-end ${won ? 'w' : 'l'}`} data-msc-end={won ? 'win' : 'lose'} style={{ zIndex: 9 }}>{won ? '勝ち!' : '負け…'}</div>}
-      </div>
+      <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup} ended={ended} win={result ? result.winner : null}/>
       <MscPanel side="A" team={teams.A} frame={f} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
       <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
-      {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : '\u00a0'}</div> : null}
+      {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
       {(!manual || auto) && !ended ? (
         <div className="msa-tools">
-          {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
+          {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>{x.label}</button>)}
           <button type="button" data-msc-skip onClick={skip}>⏭ とばす</button>
         </div>
       ) : null}
       {manual && !auto && !ended ? (
         <div className="msa-tools">
-          {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>見せる速さ {x.label}</button>)}
+          {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>見せる速さ {x.label}</button>)}
         </div>
       ) : null}
     </div>
@@ -113874,6 +114053,8 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   // MFバトルカードの画面が決めた曲(null なら HOME の曲)。保存はしない
   const [cardBgm, setCardBgm] = useState(null);
+  // 試合の画面(モンヒロサクセスの試合・助手マスモンの対戦)が開いているあいだはバトルの曲(56-monhero-success-arena.jsx の口。2026-11-12 社長「音楽もホームの音楽だし味気なさすぎる」)
+  const battleBgmOverlay = typeof useMhBattleBgmOverlay === 'function' ? useMhBattleBgmOverlay() : false;
   // MFバトルカードの助手と対戦の曲の並び(2026-10-26)。2曲以上なら、全部を1回ずつシャッフルで流し、流れ終わったら次へ(82 の cardPlaylistPlayer・14-audio の setBgmOnce)
   //   対戦の画面を出たら止める。古い読み込みがあとから終わっても、止めた並びは進めない。並びの曲が全部読めなければ BGM を止める(対戦は続く)
   const cardBgmRef = useRef(null);
@@ -114828,6 +115009,8 @@ function MonsterHeroGame() {
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
+    // 試合の画面の上は、BGMアレンジの「バトル」の曲(閉じたら下の決め方へ戻る)
+    if (battleBgmOverlay) return bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     // 助手ライフの画面(HOME・プロフィール・持ち物の上に開く)は「風がそよぐ場所」(2026-11-07 社長)
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
@@ -114951,7 +115134,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
