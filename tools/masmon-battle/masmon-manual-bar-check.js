@@ -5,6 +5,7 @@
 //   ② 押せる/押せないが芯の ok と同じ(ガッツの足りない技・端の移動・満タンのためる・交代の待ち)
 //   ③ 帯のボタンを押した手を芯に渡すと、最後まで進む(選べない手を出さない)
 //   ④ 芯が無い・古いときは試合を作らない(null)
+//   2026-11-12 バトル部: 技は届かないものも押せない形で並べ、撃つ前の命中%・ガッツ・届く距離を出す(社長「命中も技打つ前の技コマンドに出して」)
 'use strict';
 const fs = require('fs'); const path = require('path');
 const babel = require(path.join(__dirname, '..', 'node_modules', '@babel', 'core'));
@@ -31,7 +32,7 @@ const input = (i, size) => {
   return { seed: `bar-${i}`, catalog, teamA: team(0), teamB: team(3) };
 };
 
-let heads = 0, autoBtn = 0, swapShown = 0, enterShown = 0, techMatch = 0, techN = 0, otherOk = 0, otherN = 0, ends = 0, bad = 0;
+let heads = 0, autoBtn = 0, swapShown = 0, enterShown = 0, techMatch = 0, techN = 0, otherOk = 0, otherN = 0, ends = 0, bad = 0, farN = 0, farOk = 0, pShown = 0;
 const N = 60;
 for (let i = 0; i < N; i++) {
   const size = 1 + (i % 3);
@@ -51,6 +52,8 @@ for (let i = 0; i < N; i++) {
     if (bs.some(b => b.text === 'オートにする')) autoBtn++;
     if (size > 1 && html.includes('🔁 交代')) swapShown++;
     for (const t of o.tech.filter(x => x.reach)) { techN++; const b = bs.find(x => x.tech === t.key); if (b && b.disabled === !t.ok) techMatch++; }
+    for (const t of o.tech.filter(x => !x.reach)) { farN++; const b = bs.find(x => x.tech === t.key); if (b && b.disabled && b.text.includes('いまは届かない')) farOk++; }
+    if (o.tech.every(t => { const b = bs.find(x => x.tech === t.key); return b && b.text.includes(`命中 ${Math.round(t.p)}%`) && b.text.includes(`ガッツ ${t.guts}`) && b.text.includes('届く'); })) pShown++;
     const ch = bs.find(b => b.text.startsWith('💪 ためる')); otherN++; if (ch && ch.disabled === !o.charge.ok) otherOk++;
     for (const mv of o.move) { otherN++; const b = bs.find(x => x.text.startsWith(mv.step < 0 ? '◀ 前へ' : '後ろへ')); if (b && b.disabled === !mv.ok) otherOk++; }
     // 押せるボタンの手を芯に渡す
@@ -64,6 +67,8 @@ const acts = autoBtn;
 check('① 帯に4つの見出しと「オートにする」が出る', heads === acts && acts > 0, `${heads}/${acts}`);
 check('① 3体なら交代の段、倒れたら次の子を選ぶ形', swapShown > 0 && enterShown > 0, `交代 ${swapShown}・次の子 ${enterShown}`);
 check('② 技のボタンの押せる/押せないが芯の ok と同じ', techMatch === techN && techN > 0, `${techMatch}/${techN}`);
+check('② 届かない技も押せない形で並ぶ', farN > 0 && farOk === farN, `${farOk}/${farN}`);
+check('② 技のボタンに撃つ前の命中%・使うガッツ・届く距離が出る', pShown === acts, `${pShown}/${acts}`);
 check('② ためる・前へ/後ろへの押せる/押せないが芯と同じ', otherOk === otherN, `${otherOk}/${otherN}`);
 check('③ 帯の手を渡して最後まで進む', ends === N && bad === 0, `${ends}/${N}・断られた ${bad}`);
 check('④ 芯が無い・古いときは null', msxManualOpen(null, input(0, 1)) === null && msxManualOpen({ simulate() {} }, input(0, 1)) === null);

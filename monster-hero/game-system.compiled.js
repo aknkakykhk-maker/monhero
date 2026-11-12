@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55641a638525877e
+// source-sha256: b148e8c0c25b6dcd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147020,6 +147020,7 @@ function AssistantMasmonBattleBeta({
   const [loadFailed, setLoadFailed] = useState(false);
   const [ticked, setTicked] = useState(false);
   const [phase, setPhase] = useState('prep');
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'review');
   const [battle, setBattle] = useState(null);
   const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -147279,11 +147280,19 @@ function AssistantMasmonBattleBeta({
       return () => clearTimeout(t);
     }
     const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
+    const cur = log[pos] || {};
+    const team = cur.side === 'A' ? battle.teamA : cur.side === 'B' ? battle.teamB : null;
+    const f = {
+      x1: 1,
+      x2: 0.55,
+      x4: 0.3
+    }[speed];
+    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, typeof msaReduce === 'function' && msaReduce(), log) * f) : sp.ms;
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
       setPos(next);
-    }, sp.ms);
+    }, ms);
     return () => clearTimeout(t);
   }, [phase, battle, pos, paused, speed]);
   useEffect(() => {
@@ -147847,7 +147856,25 @@ function AssistantMasmonBattleBeta({
       moves: battle.moves.B,
       lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
       mine: false
-    }), React.createElement("div", {
+    }), typeof MsaStage === 'function' ? React.createElement("div", {
+      className: "msa",
+      style: {
+        marginTop: 8
+      }
+    }, React.createElement("style", null, MSA_CSS), React.createElement(MsaStage, {
+      log: log,
+      frames: battle.frames,
+      pos: pos,
+      teams: {
+        A: battle.teamA,
+        B: battle.teamB
+      },
+      venueImg: typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null,
+      ended: review,
+      win: battle.r.winner,
+      endSub: review ? `${battle.r.rounds} ラウンド` : '',
+      sound: phase === 'watch' && !paused
+    })) : React.createElement("div", {
       className: "ambw-ring"
     }, React.createElement("div", {
       className: "ambw-stage"
@@ -149363,6 +149390,7 @@ function MonsucCupShowInner({
   const [phase, setPhase] = useState(startAt || 'bracket');
   const [out, setOut] = useState(startAt === 'win' ? previewOut || {} : null);
   const rootRef = useRef(null);
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true);
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then(x => {
@@ -153254,7 +153282,8 @@ const monsucFuseCore = () => {
       techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
       monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
       lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {},
-      types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {}
+      types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {},
+      assist: typeof globalThis !== 'undefined' ? globalThis.MONHERO_SUCCESS_ASSIST || null : null
     });
   } catch (_) {
     monsucFuseCoreCache = null;
@@ -159283,6 +159312,7 @@ const MSX_KEYS = Object.freeze({
   meta: 'mh_monsuc_meta_v1'
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_ASSIST_SRC = 'data/monhero-success-assist.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js';
 const MSX_SCENES_SRC = 'data/success-scenes.js';
@@ -159370,7 +159400,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -159388,7 +159418,8 @@ const msxLoad = () => {
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null,
-          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null
+          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
+          assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null
         });
         msxSuc = {
           core,
@@ -166623,6 +166654,8 @@ const MSX_MANUAL_CSS = `
 .msxm-btn:disabled{opacity:.38}
 .msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
 .msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
+.msxm-btn.far{background:#221d3d;border-style:dashed}
+.msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
@@ -166707,7 +166740,8 @@ function MsxManualBar({
       })
     }, x.name, React.createElement("small", null, "ライフ ", x.hp, "/", x.maxHp)))));
   }
-  const reach = opt.tech.filter(t => t.reach);
+  const techs = opt.tech.filter(t => t.reach).concat(opt.tech.filter(t => !t.reach));
+  const distOf = t => Array.isArray(t.dist) ? t.dist.map(d => MSX_MANUAL_DIST[d]).join('・') : '';
   return React.createElement("div", {
     className: "msxm",
     "data-msxm": "act"
@@ -166723,21 +166757,22 @@ function MsxManualBar({
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
-  }, "⚔ 攻撃"), reach.length ? React.createElement("div", {
+  }, "⚔ 攻撃", techs.some(t => t.reach) ? '' : '(この間合いでは届く技がありません)'), React.createElement("div", {
     className: "msxm-row"
-  }, reach.map(t => React.createElement("button", {
+  }, techs.map(t => React.createElement("button", {
     key: t.key,
     type: "button",
-    className: `msxm-btn atk ${isHint(t) ? 'hint' : ''}`,
+    className: `msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`,
     disabled: !t.ok || busy,
     "data-msxm-tech": t.key,
+    "data-msxm-reach": t.reach ? '1' : '0',
     onClick: () => go({
       type: 'tech',
       key: t.key
     })
-  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, t.ok ? `ガッツ${t.guts}・命中${Math.round(t.p)}%` : `ガッツ${t.guts}(あと${t.need})`)))) : React.createElement("div", {
-    className: "msxm-none"
-  }, "この間合いでは届く技がありません")), React.createElement("div", {
+  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", {
+    className: "p"
+  }, "命中 ", Math.round(t.p), "%・ガッツ ", t.guts, t.reach && !t.ok ? `(あと${t.need})` : ''), React.createElement("small", null, "届く ", distOf(t), t.reach ? '' : '(いまは届かない)'))))), React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
@@ -166808,7 +166843,7 @@ const MSA_SPEEDS = Object.freeze([{
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
-.msa-stage::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5));pointer-events:none}
+.msa-stage::after{content:'';position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5));pointer-events:none}
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
@@ -166836,6 +166871,22 @@ const MSA_CSS = `
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
+.msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
+.msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
+.msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
+.msa-shk{position:absolute;inset:0;z-index:1}
+.msa-shk.shake{animation:msaShake .42s ease-out both}
+.msa-flash{position:absolute;inset:0;z-index:7;background:#fff;opacity:0;pointer-events:none;animation:msaFlash .32s ease-out both}
+.ambw-cut.big{top:6px;left:-6px;right:-6px;padding:6px 18px;background:linear-gradient(90deg,#f59e0b00,#f59e0b 12%,#b45309 50%,#f59e0b 88%,#f59e0b00)!important;text-align:center;border-top:2px solid #fde68a;border-bottom:2px solid #fde68a}
+.ambw-cut.big b{font-size:24px;color:#fff;-webkit-text-stroke:1px #78350f}
+.msa-end{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#0008,#0000 70%);pointer-events:none}
+.msa-end b{font-size:46px;font-weight:900;letter-spacing:.08em;animation:msaStamp .55s cubic-bezier(.2,1.6,.4,1) both}
+.msa-end.w b{color:#fde047;-webkit-text-stroke:2px #92400e;text-shadow:0 0 18px #fde047aa,0 4px 0 #92400e}
+.msa-end.l b{color:#e2e8f0;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b}
+.msa-end small{margin-top:4px;font-size:12px;font-weight:900;color:#fff;background:#0f172acc;border-radius:99px;padding:2px 10px}
+@keyframes msaStamp{0%{opacity:0;transform:translateX(var(--msa-tx,0)) scale(2.2) rotate(var(--msa-r,0deg))}100%{opacity:1;transform:translateX(var(--msa-tx,0)) scale(1) rotate(var(--msa-r,0deg))}}
+@keyframes msaFlash{0%{opacity:.85}100%{opacity:0}}
+@keyframes msaShake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(2px,0)}}
 @keyframes msaPop{0%{opacity:0;transform:translateY(10px) scale(.7)}35%{opacity:1;transform:translateY(-4px) scale(1.12)}100%{opacity:1;transform:translateY(-12px) scale(1)}}
 @keyframes msaCharge{0%,100%{transform:none}30%{transform:translateY(4px) scale(1.05,.92)}60%{transform:translateY(-6px) scale(.97,1.06)}}
 @keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
@@ -166854,6 +166905,51 @@ const msaReduce = () => {
     return false;
   }
 };
+const msaSe = k => {
+  try {
+    if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k]();
+  } catch (_) {}
+};
+const MH_BATTLE_BGM = {
+  n: 0,
+  on: false,
+  subs: new Set()
+};
+const mhBattleBgmEmit = () => {
+  const on = MH_BATTLE_BGM.n > 0;
+  if (on === MH_BATTLE_BGM.on) return;
+  MH_BATTLE_BGM.on = on;
+  MH_BATTLE_BGM.subs.forEach(f => {
+    try {
+      f(on);
+    } catch (_) {}
+  });
+};
+const mhBattleBgmHold = () => {
+  MH_BATTLE_BGM.n++;
+  mhBattleBgmEmit();
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    MH_BATTLE_BGM.n = Math.max(0, MH_BATTLE_BGM.n - 1);
+    mhBattleBgmEmit();
+  };
+};
+function useMhBattleBgmHold(on) {
+  useEffect(() => on ? mhBattleBgmHold() : undefined, [on]);
+}
+function useMhBattleBgmOverlay() {
+  const [on, setOn] = useState(MH_BATTLE_BGM.on);
+  useEffect(() => {
+    MH_BATTLE_BGM.subs.add(setOn);
+    setOn(MH_BATTLE_BGM.on);
+    return () => {
+      MH_BATTLE_BGM.subs.delete(setOn);
+    };
+  }, []);
+  return on;
+}
 const msaMotionKind = (species, tech) => {
   if (!tech) return null;
   const has = k => typeof skillFxSpecOf === 'function' && skillFxSpecOf(k) ? k : null;
@@ -166875,6 +166971,21 @@ const msaMotionKind = (species, tech) => {
   const tier = g >= 40 ? 'L' : g >= 25 ? 'M' : 'S';
   return has(typeof cardMotionTiered === 'function' ? cardMotionTiered(base, tier) : base) || has(base);
 };
+const msaTechOf = (log, e) => {
+  if (!e || e.ev !== 'tech' || !Array.isArray(log)) return null;
+  const st = log[0] || {};
+  const all = (e.side === 'A' ? st.aMoves : st.bMoves) || [];
+  const list = all[Number.isFinite(e.i) ? e.i : 0] || [];
+  return list.find(m => m.id === e.move) || null;
+};
+const msaTechInfo = (log, e) => {
+  const t = msaTechOf(log, e);
+  return {
+    name: e.name,
+    kind: e.kind,
+    guts: t ? t.guts : 0
+  };
+};
 const msaMotionMs = kind => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
   return {
@@ -166882,16 +166993,12 @@ const msaMotionMs = kind => {
     hit: sp && sp.hit || 300
   };
 };
-const msaStepMs = (e, team, reduce) => {
+const msaStepMs = (e, team, reduce, log) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   if (e.ev === 'tech') {
     const m = team && team.members && team.members[e.i] || {};
-    return msaMotionMs(msaMotionKind(m.species, {
-      name: e.name,
-      kind: e.kind,
-      guts: e.guts
-    })).ms + 520;
+    return msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).ms + 520;
   }
   return {
     start: 700,
@@ -166923,7 +167030,8 @@ function MsaFighter({
   foeX,
   hpNow,
   reduce,
-  idleOk
+  idleOk,
+  gd
 }) {
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
@@ -166944,11 +167052,7 @@ function MsaFighter({
     left: `${x * 100}%`
   };
   if (tech && me && !reduce) {
-    const kind = msaMotionKind(sp, {
-      name: e.name,
-      kind: e.kind,
-      guts: e.guts
-    });
+    const kind = msaMotionKind(sp, e.tech);
     if (kind) {
       const w = foeX.w;
       const dx = (foeX.x - x) * w;
@@ -166966,13 +167070,8 @@ function MsaFighter({
       });
     }
   }
+  const delay = tech ? reduce ? 0 : msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   if (tech && foe) {
-    const hit = msaMotionMs(msaMotionKind(e.atkSp, {
-      name: e.name,
-      kind: e.kind,
-      guts: e.guts
-    })).hit;
-    const delay = reduce ? 0 : hit;
     const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
     body = React.createElement("div", {
       key: `p-${e.k}`,
@@ -166981,6 +167080,14 @@ function MsaFighter({
         animationDelay: `${delay}ms`
       }
     }, img);
+    if (!e.hit) extra.push(React.createElement("div", {
+      key: `a-${e.k}`,
+      className: "mh-card-afterimage",
+      "aria-hidden": "true",
+      style: {
+        animationDelay: `${delay}ms`
+      }
+    }, img));
     if (e.guarded && e.hit) extra.push(React.createElement("span", {
       key: "s",
       className: "mh-card-shield",
@@ -167025,15 +167132,29 @@ function MsaFighter({
         key: "a",
         className: "msa-aura",
         "aria-hidden": "true"
-      }), React.createElement("span", {
-        key: "t",
-        className: "msa-tag"
-      }, "ガッツ +"));
+      }));
     }
   }
   if (me && e.ev === 'move') cls = 'msa-step';
   if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
-  if (down) cls = e && e.ev === 'ko' && e.side === side ? 'mh-card-ko' : '';
+  const koNow = e && e.ev === 'ko' && e.side === side;
+  if (down) cls = koNow ? 'mh-card-ko' : '';
+  if (koNow) extra.push(React.createElement("div", {
+    key: `k-${e.k}`,
+    className: "msa-ko",
+    "data-msa-ko": side
+  }, "KO!"));
+  if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
+    const n = Math.round(gd);
+    extra.push(React.createElement("span", {
+      key: `g-${e ? e.k : 0}`,
+      className: `msa-gtag ${n > 0 ? 'up' : 'down'}`,
+      "data-msa-guts": n,
+      style: {
+        animationDelay: `${tech && foe ? delay : 0}ms`
+      }
+    }, "ガッツ ", n > 0 ? `+${n}` : `−${-n}`));
+  }
   if (!body) {
     const still = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
     body = React.createElement("div", {
@@ -167049,6 +167170,179 @@ function MsaFighter({
     className: "msa-shadow",
     "aria-hidden": "true"
   }), body, extra);
+}
+function useMsaSfx(log, pos, teams, reduce, on) {
+  const lastRef = useRef(-1);
+  const timers = useRef([]);
+  useEffect(() => () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+  useEffect(() => {
+    const prev = lastRef.current;
+    lastRef.current = pos;
+    if (!on || pos <= prev) return;
+    const e = log[pos];
+    if (!e) return;
+    const later = (ms, k) => {
+      if (ms <= 0) {
+        msaSe(k);
+        return;
+      }
+      timers.current.push(setTimeout(() => msaSe(k), ms));
+    };
+    if (e.ev === 'tech') {
+      const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
+      const hitMs = reduce ? 0 : msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
+      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
+    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') msaSe('trainingDecide');
+  }, [pos, on]);
+}
+function MsaStage({
+  log,
+  frames,
+  pos,
+  teams,
+  venueImg,
+  ended = false,
+  win = null,
+  endSub = '',
+  sound = true
+}) {
+  const reduce = useMemo(() => msaReduce(), []);
+  const [stageW, setStageW] = useState(340);
+  const stageRef = useRef(null);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return undefined;
+    const fit = () => setStageW(el.clientWidth || 340);
+    fit();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', fit);
+      return () => window.removeEventListener('resize', fit);
+    }
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useMsaSfx(log, pos, teams, reduce, sound);
+  const endSaid = useRef(false);
+  useEffect(() => {
+    if (!ended || endSaid.current) return;
+    endSaid.current = true;
+    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+  }, [ended]);
+  const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
+  if (!f) return null;
+  const pf = frames[Math.max(0, Math.min(pos, frames.length - 1) - 1)] || f;
+  const e0 = log[pos] || {};
+  const memberOf = (side, i) => {
+    const t = teams[side];
+    const ms = t && t.members || [];
+    return ms[Number.isFinite(i) ? i : f.act[side]] || ms[0] || null;
+  };
+  const e = {
+    ...e0,
+    k: pos,
+    atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '',
+    tech: msaTechInfo(log, e0)
+  };
+  const gap = MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
+  const xA = 0.5 - gap / 2;
+  const xB = 0.5 + gap / 2;
+  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
+  const hpOf = side => (f.hp[side] || [])[f.act[side]];
+  const gdOf = side => {
+    if (!pos || !e.side) return null;
+    if (e.side === side && e.ev === 'tech') return e.tech.guts ? -e.tech.guts : null;
+    if (e.side === side && e.ev === 'charge' && e.why !== 'sulk') return f.g[side] - pf.g[side];
+    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return -Math.round(Number(e.gd));
+    return null;
+  };
+  const big = e.ev === 'tech' && (Number(e.tech.guts) || 0) >= 40;
+  const hitMs = e.ev === 'tech' && !reduce ? msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const shake = e.ev === 'tech' && e.hit && (e.crit || big) && !reduce;
+  const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
+  return React.createElement("div", {
+    className: "msa-stage",
+    ref: stageRef,
+    "data-msa-stage": true,
+    style: {
+      backgroundImage: venueImg ? `url(${venueImg})` : undefined
+    }
+  }, React.createElement("div", {
+    className: `msa-shk ${shake ? 'shake' : ''}`,
+    key: shake ? `sh-${pos}` : 'st',
+    style: shake ? {
+      animationDelay: `${hitMs}ms`
+    } : undefined
+  }, e.ev !== 'tech' ? React.createElement("div", {
+    className: "msa-round"
+  }, "ラウンド ", f.r || 1) : null, React.createElement("div", {
+    className: "msa-floor",
+    "aria-hidden": "true"
+  }), spots.map(([a, b], d) => React.createElement(React.Fragment, {
+    key: d
+  }, React.createElement("i", {
+    className: `msa-spot ${d === f.d ? 'on' : ''}`,
+    style: {
+      left: `${a * 100}%`
+    }
+  }), React.createElement("i", {
+    className: `msa-spot ${d === f.d ? 'on' : ''}`,
+    style: {
+      left: `${b * 100}%`
+    }
+  }))), React.createElement(MsaFighter, {
+    side: "A",
+    member: memberOf('A'),
+    x: xA,
+    e: e,
+    foeX: {
+      x: xB,
+      w: stageW
+    },
+    hpNow: hpOf('A'),
+    reduce: reduce,
+    idleOk: true,
+    gd: gdOf('A')
+  }), React.createElement(MsaFighter, {
+    side: "B",
+    member: memberOf('B'),
+    x: xB,
+    e: e,
+    foeX: {
+      x: xA,
+      w: stageW
+    },
+    hpNow: hpOf('B'),
+    reduce: reduce,
+    idleOk: true,
+    gd: gdOf('B')
+  }), React.createElement("div", {
+    className: "msa-dist"
+  }, AMBW_DIST.map((n, d) => React.createElement("span", {
+    key: d,
+    className: d === f.d ? 'cur' : ''
+  }, n))), e.ev === 'tech' && React.createElement("div", {
+    key: `c-${pos}`,
+    className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''} ${big ? 'big' : ''}`,
+    style: {
+      zIndex: 7
+    },
+    "data-msa-cut": p == null ? '' : p
+  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技', p != null ? `・命中 ${p}%` : '', big ? '・大技!' : ''), React.createElement("b", null, e.name)), e.ev === 'tech' && e.hit && e.crit && !reduce && React.createElement("i", {
+    key: `fl-${pos}`,
+    className: "msa-flash",
+    "aria-hidden": "true",
+    style: {
+      animationDelay: `${hitMs}ms`
+    }
+  })), ended && React.createElement("div", {
+    className: `msa-end ${win === 'A' ? 'w' : 'l'}`,
+    "data-msc-end": win === 'A' ? 'win' : win === 'draw' ? 'draw' : 'lose'
+  }, React.createElement("b", null, win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'), endSub ? React.createElement("small", null, endSub) : null));
 }
 function MonsucArena({
   s,
@@ -167073,22 +167367,8 @@ function MonsucArena({
   const [speed, setSpeed] = useState('x1');
   const [auto, setAuto] = useState(!manual);
   const [ended, setEnded] = useState(false);
-  const [stageW, setStageW] = useState(340);
-  const stageRef = useRef(null);
   const endRef = useRef(false);
-  useEffect(() => {
-    const el = stageRef.current;
-    if (!el) return undefined;
-    const fit = () => setStageW(el.clientWidth || 340);
-    fit();
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', fit);
-      return () => window.removeEventListener('resize', fit);
-    }
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  useMhBattleBgmHold(true);
   const frames = useMemo(() => log.length ? ambwFramesOf(log) : [], [log.length, manual ? mm.tick : 0]);
   const last = log.length - 1;
   const done = manual ? mm.done : log.length > 0;
@@ -167099,7 +167379,7 @@ function MonsucArena({
     if (pos < last) {
       const cur = log[pos] || {};
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
-      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce) * sp.f));
+      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log) * sp.f));
       return () => clearTimeout(t);
     }
     if (done) {
@@ -167131,7 +167411,7 @@ function MonsucArena({
         auto,
         result
       });
-    }, 1500);
+    }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
   if (!log.length) return React.createElement("div", {
@@ -167144,43 +167424,33 @@ function MonsucArena({
     }
   }, "試合の準備をしています…"));
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
-  const e0 = log[pos] || {};
+  const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = {
     A: st.aHp || [],
     B: st.bHp || []
   };
-  const memberOf = (side, i) => {
+  const nm = (side, i) => {
     const t = teams[side];
     const ms = t && t.members || [];
-    return ms[Number.isFinite(i) ? i : f.act[side]] || ms[0] || null;
-  };
-  const nm = (side, i) => {
-    const m = memberOf(side, i);
+    const m = ms[Number.isFinite(i) ? i : f.act[side]] || ms[0];
     return m && m.name || '';
   };
-  const e = {
-    ...e0,
-    k: pos,
-    atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : ''
-  };
-  const gap = MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
-  const xA = 0.5 - gap / 2;
-  const xB = 0.5 + gap / 2;
-  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
-  const hpOf = side => (f.hp[side] || [])[f.act[side]];
   const pick = c => {
     if (busy || !manual) return;
+    msaSe('tap');
     if (mm.pick(c)) setPos(p => p + 1);
   };
   const goAuto = () => {
     if (!manual) return;
+    msaSe('tap');
     mm.toAuto();
     setAuto(true);
     setSpeed('x2');
   };
   const skip = () => {
     if (manual && !done) return;
+    msaSe('tap');
     setPos(last);
   };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
@@ -167198,71 +167468,15 @@ function MonsucArena({
     maxHp: maxHp,
     info: info,
     s: s
-  }), React.createElement("div", {
-    className: "msa-stage",
-    ref: stageRef,
-    style: {
-      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
-    }
-  }, React.createElement("div", {
-    className: "msa-round"
-  }, "ラウンド ", f.r || 1), React.createElement("div", {
-    className: "msa-floor",
-    "aria-hidden": "true"
-  }), spots.map(([a, b], d) => React.createElement(React.Fragment, {
-    key: d
-  }, React.createElement("i", {
-    className: `msa-spot ${d === f.d ? 'on' : ''}`,
-    style: {
-      left: `${a * 100}%`
-    }
-  }), React.createElement("i", {
-    className: `msa-spot ${d === f.d ? 'on' : ''}`,
-    style: {
-      left: `${b * 100}%`
-    }
-  }))), React.createElement(MsaFighter, {
-    side: "A",
-    member: memberOf('A'),
-    x: xA,
-    e: e,
-    foeX: {
-      x: xB,
-      w: stageW
-    },
-    hpNow: hpOf('A'),
-    reduce: reduce,
-    idleOk: true
-  }), React.createElement(MsaFighter, {
-    side: "B",
-    member: memberOf('B'),
-    x: xB,
-    e: e,
-    foeX: {
-      x: xA,
-      w: stageW
-    },
-    hpNow: hpOf('B'),
-    reduce: reduce,
-    idleOk: true
-  }), React.createElement("div", {
-    className: "msa-dist"
-  }, AMBW_DIST.map((n, d) => React.createElement("span", {
-    key: d,
-    className: d === f.d ? 'cur' : ''
-  }, n))), e.ev === 'tech' && React.createElement("div", {
-    key: `c-${pos}`,
-    className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`,
-    style: {
-      zIndex: 7
-    }
-  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'), React.createElement("b", null, e.name)), ended && React.createElement("div", {
-    className: `msc-end ${won ? 'w' : 'l'}`,
-    "data-msc-end": won ? 'win' : 'lose',
-    style: {
-      zIndex: 9
-    }
-  }, won ? '勝ち!' : '負け…')), React.createElement(MscPanel, {
+  }), React.createElement(MsaStage, {
+    log: log,
+    frames: frames,
+    pos: pos,
+    teams: teams,
+    venueImg: MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup,
+    ended: ended,
+    win: result ? result.winner : null
+  }), React.createElement(MscPanel, {
     side: "A",
     team: teams.A,
     frame: f,
@@ -167282,13 +167496,16 @@ function MonsucArena({
     busy: busy
   }) : null), manual && !auto && busy && !ended ? React.createElement("div", {
     className: "msa-wait"
-  }, e.side === 'B' ? '相手の番…' : '\u00a0') : null, (!manual || auto) && !ended ? React.createElement("div", {
+  }, e.side === 'B' ? '相手の番…' : ' ') : null, (!manual || auto) && !ended ? React.createElement("div", {
     className: "msa-tools"
   }, MSA_SPEEDS.map(x => React.createElement("button", {
     key: x.id,
     type: "button",
     className: speed === x.id ? 'on' : '',
-    onClick: () => setSpeed(x.id)
+    onClick: () => {
+      msaSe('tap');
+      setSpeed(x.id);
+    }
   }, x.label)), React.createElement("button", {
     type: "button",
     "data-msc-skip": true,
@@ -167299,7 +167516,10 @@ function MonsucArena({
     key: x.id,
     type: "button",
     className: speed === x.id ? 'on' : '',
-    onClick: () => setSpeed(x.id)
+    onClick: () => {
+      msaSe('tap');
+      setSpeed(x.id);
+    }
   }, "見せる速さ ", x.label))) : null);
 }
 const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
@@ -183707,6 +183927,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   atsu_excited: [768, 1024, 0, 4, 768, 1020],
   atsu_happy: [768, 1024, 0, 0, 768, 1024],
   atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_sleep: [768, 1024, 27, 0, 704, 798],
   atsu_surprise: [768, 1024, 0, 0, 768, 1024],
   atsu_troubled: [768, 1024, 0, 3, 768, 1021],
   atsu_wink: [768, 1024, 0, 14, 768, 1010],
@@ -183731,6 +183952,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
   kiki_happy: [1536, 1024, 486, 14, 573, 1010],
   kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_sleep: [1536, 1024, 456, 12, 582, 972],
   kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
   kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
   kiki_wink: [1536, 1024, 490, 7, 569, 1017],
@@ -183739,6 +183961,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   kyuko_excited: [384, 512, 0, 0, 384, 508],
   kyuko_happy: [384, 512, 3, 7, 381, 505],
   kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_sleep: [384, 512, 0, 7, 384, 505],
   kyuko_surprise: [384, 512, 4, 6, 375, 506],
   kyuko_troubled: [384, 512, 0, 2, 384, 506],
   kyuko_wink: [384, 512, 0, 6, 375, 502],
@@ -183747,6 +183970,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   momosuke_excited: [512, 512, 10, 6, 502, 506],
   momosuke_happy: [512, 512, 28, 14, 475, 498],
   momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_sleep: [512, 512, 21, 4, 473, 500],
   momosuke_surprise: [512, 512, 18, 7, 486, 505],
   momosuke_troubled: [512, 512, 32, 9, 459, 503],
   momosuke_wink: [512, 512, 0, 7, 512, 505],
@@ -183755,6 +183979,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_excited: [1536, 1024, 245, 15, 948, 1009],
   myua_happy: [1536, 1024, 360, 26, 783, 998],
   myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_sleep: [1536, 1024, 324, 30, 779, 841],
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
@@ -213338,6 +213563,7 @@ function MonsterHeroGame() {
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const [cardBgm, setCardBgm] = useState(null);
+  const battleBgmOverlay = typeof useMhBattleBgmOverlay === 'function' ? useMhBattleBgmOverlay() : false;
   const cardBgmRef = useRef(null);
   cardBgmRef.current = cardBgm;
   const cardPlaylistRef = useRef(null);
@@ -214280,6 +214506,7 @@ function MonsterHeroGame() {
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
+    if (battleBgmOverlay) return bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
     if (RAID_JACK_BGM_STATES.includes(state)) return RAID_JACK_BGM_TRACK;
@@ -214379,7 +214606,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);

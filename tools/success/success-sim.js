@@ -65,6 +65,9 @@ const PRESETS = {
   M6hint: { name: 'M 6体・アシストあり(底力3・後押し3・見立て3・見せ場3)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_MH)) },
   M6asAim: { name: 'M 6体・アシストあり・得意そろえ(ちから・命中・回避)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], AS_M)) },
   B6as: { name: 'B 6体・全員アシストあり(底力2・後押し2・きずな1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, AS_B)) },
+  // 段5(第2版・2026-11-12): いちばん強い形。総合力が狙いのランクを超えすぎないかを見る
+  B6sokoji5: { name: 'B 6体・全員 特訓の底力 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'sokoji', lv: 5 }])) },
+  M6as5: { name: 'M 6体・全員アシスト段5(底力・きずな・後押し・かけつけ)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kaketsuke', lv: 5 }])) },
   S6aim: { name: 'S 6体・得意そろえ・人なつっこさ段3+底力段3', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', ['pow', 'hit', 'eva'], [{ id: 'hitonatsu', lv: 3 }, { id: 'sokoji', lv: 3 }])) },
 };
 const VARIANTS = [
@@ -77,6 +80,7 @@ const VARIANTS = [
   { key: 'M6hint', aidLv: 5 },
   { key: 'B6hint5', aidLv: 3 },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
+  { key: 'B6sokoji5', aidLv: 3 }, { key: 'M6as5', aidLv: 5 }, // 段5(第2版・2026-11-12)
 ];
 
 // ---- 試合(助手マスモン対戦の芯で 1対1) ----
