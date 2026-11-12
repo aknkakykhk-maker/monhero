@@ -304,10 +304,17 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
 {
   const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < engine.GUTS_REGEN_MIN || v.regen > engine.GUTS_REGEN_MAX || !(Math.abs((v.dmgMul || 0) - (1 - (v.regen - (engine.GUTS_REGEN_MIN + engine.GUTS_REGEN_MAX) / 2) / ((engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 2) * engine.REGEN_DMG_SWING)) < 0.002)).map(([k, v]) => `${k}:${v.regen}`);
   const vals = new Set(Object.values(catalog.species).map(v => v.regen));
-  const gc = engine.buildCatalog({ ...data, ASSISTANT_MASMON_GUTS_REGEN: { [Object.keys(catalog.species)[0]]: 'S', [Object.keys(catalog.species)[1]]: 'g', [Object.keys(catalog.species)[2]]: 'X' } });
-  const gs = Object.keys(catalog.species).slice(0, 3).map((k) => gc.species[k].regen);
-  const gradeOk = gs[0] === engine.GUTS_REGEN_MAX && gs[1] === engine.GUTS_REGEN_MIN && gs[2] === catalog.species[Object.keys(catalog.species)[2]].regen;
-  check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜S の表が読める(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
+  // 等級: G〜A の7段を幅の両端へ等間隔(社長 2026-11-13)・S は1段の刻みのまま外へ・知らない等級は表が無いのと同じ
+  const ks = Object.keys(catalog.species);
+  const gc = engine.buildCatalog({ ...data, ASSISTANT_MASMON_GUTS_REGEN: { [ks[0]]: 'A', [ks[1]]: 'g', [ks[2]]: 'X', [ks[3]]: 'D', [ks[4]]: 'S' } });
+  const stepG = (engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 6;
+  const gradeOk = engine.GUTS_REGEN_GRADES.join('') === 'GFEDCBA'
+    && gc.species[ks[0]].regen === engine.GUTS_REGEN_MAX && Math.abs(gc.species[ks[0]].dmgMul - (1 - engine.REGEN_DMG_SWING)) < 0.002
+    && gc.species[ks[1]].regen === engine.GUTS_REGEN_MIN && Math.abs(gc.species[ks[1]].dmgMul - (1 + engine.REGEN_DMG_SWING)) < 0.002
+    && gc.species[ks[2]].regen === catalog.species[ks[2]].regen
+    && Math.abs(gc.species[ks[3]].dmgMul - 1) < 0.002
+    && gc.species[ks[4]].regen === Math.round(engine.GUTS_REGEN_MAX + stepG) && gc.species[ks[4]].dmgMul < gc.species[ks[0]].dmgMul;
+  check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜A の表が幅の両端へ等間隔・S は外へ伸びる(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
 }
 
 // ⑬ 能力の差の効き方のつまみ(A/B/C。社長が観戦してから決める)

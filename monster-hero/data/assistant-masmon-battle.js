@@ -42,7 +42,10 @@
   // 2026-11-13 社長「移動を増やし、種の差も広げる」「回復が速い種ほど与ダメが少し下がり、遅い種ほど上がる」
   const GUTS_REGEN_MIN = 5;   // 種ごとの毎ラウンドの自然回復の幅(いちばん遅い種)
   const GUTS_REGEN_MAX = 15;  //                                  (いちばん速い種)
-  const GUTS_REGEN_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S']; // ガッツ回復力の等級(G がいちばん遅い・S がいちばん速い)。幅の中へ等間隔に写す
+  // ガッツ回復力の等級。G〜A の7段を幅(MIN〜MAX)へ等間隔に写す(社長「いまは S が存在しないので、決めた補正は G〜A の中に合わせて。
+  //   今後それより下か上が出たら、幅を広げる」)。S・SS は A から1段の刻みのまま外へ伸ばす(回復も与ダメの補正も同じ刻みで続く)
+  const GUTS_REGEN_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A'];
+  const GUTS_REGEN_GRADES_UP = ['S', 'SS'];
   const GUTS_CHARGE = 22;     // 「ためる」で足す分(移動・ガードより多いまま)
   const GUTS_MOVE = 10;       // 移動・ガードで足す分
   const REGEN_DMG_SWING = 0.25; // 回復がいちばん速い種は与ダメ ×(1−これ)、いちばん遅い種は ×(1+これ)。真ん中は ×1(社長「×0.7〜×1.3 ぐらい差があってもよさそう」)
@@ -176,11 +179,17 @@
     const regenTable = s.ASSISTANT_MASMON_GUTS_REGEN && typeof s.ASSISTANT_MASMON_GUTS_REGEN === 'object' ? s.ASSISTANT_MASMON_GUTS_REGEN : {};
     const half = (GUTS_REGEN_MAX - GUTS_REGEN_MIN) / 2;
     for (const [id, v] of Object.entries(species)) {
-      const gi = typeof regenTable[id] === 'string' ? GUTS_REGEN_GRADES.indexOf(regenTable[id].trim().toUpperCase()) : -1;
-      const fixed = gi >= 0 ? GUTS_REGEN_MIN + gi / (GUTS_REGEN_GRADES.length - 1) * (GUTS_REGEN_MAX - GUTS_REGEN_MIN) : Number(regenTable[id]);
-      v.regen = Number.isFinite(fixed) ? clamp(Math.round(fixed), GUTS_REGEN_MIN, GUTS_REGEN_MAX)
+      // x … 回復の速さ(丸める前)。与ダメの補正は x から引く(等級の刻みどおりに等間隔)。回復そのものは整数に丸める
+      const gTxt = typeof regenTable[id] === 'string' ? regenTable[id].trim().toUpperCase() : '';
+      const gi = GUTS_REGEN_GRADES.indexOf(gTxt) >= 0 ? GUTS_REGEN_GRADES.indexOf(gTxt)
+        : GUTS_REGEN_GRADES_UP.indexOf(gTxt) >= 0 ? GUTS_REGEN_GRADES.length + GUTS_REGEN_GRADES_UP.indexOf(gTxt) : -1;
+      const step = (GUTS_REGEN_MAX - GUTS_REGEN_MIN) / (GUTS_REGEN_GRADES.length - 1);
+      const num = Number(regenTable[id]);
+      const fixed = gi >= 0 ? GUTS_REGEN_MIN + gi * step : (typeof regenTable[id] === 'number' && Number.isFinite(num) ? clamp(num, 1, 30) : NaN);
+      v.regen = Number.isFinite(fixed) ? Math.round(fixed)
         : gMax > gMin ? GUTS_REGEN_MIN + Math.round((v.baseGuts - gMin) / (gMax - gMin) * (GUTS_REGEN_MAX - GUTS_REGEN_MIN)) : GUTS_REGEN;
-      v.dmgMul = half > 0 ? Math.round((1 - (v.regen - (GUTS_REGEN_MIN + half)) / half * REGEN_DMG_SWING) * 1000) / 1000 : 1;
+      const x = Number.isFinite(fixed) ? fixed : v.regen; // 表の等級・数は丸める前の値で補正を決める(等級ごとに等間隔)
+      v.dmgMul = half > 0 ? Math.round(Math.max(0.3, 1 - (x - (GUTS_REGEN_MIN + half)) / half * REGEN_DMG_SWING) * 1000) / 1000 : 1;
       delete v.baseGuts;
     }
     const tv = s.ASSISTANT_MASMON_TECHS && Number(s.ASSISTANT_MASMON_TECHS.version);
@@ -803,7 +812,7 @@
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, buildCatalog, simulate, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
