@@ -62,8 +62,10 @@ const installRobot=()=>{
   const makeTouch=(id,p)=>new Touch({identifier:id,target:p.el,clientX:p.x,clientY:p.y,radiusX:8,radiusY:8,force:1});
   const perfSong=RHYTHM_PERF.songTime.bind(RHYTHM_PERF);
   // 演出の記録(盛り上がりの光が点いた・消えた時刻、叩いた場所の判定を出した数、ランクが上がったときの文字)
-  const fx=bot.fx={climax:[],tapJudgments:0,rankPops:[]};
+  const fx=bot.fx={climax:[],tapJudgments:0,rankPops:[],celebrate:null,band:null};
   new MutationObserver(records=>{for(const r of records){const el=r.target.nodeType===1?r.target:r.target.parentElement;if(!el)continue;
+    if(!fx.celebrate){const c=document.querySelector('[data-rhythm-celebrate]');if(c)fx.celebrate=(c.innerText||'').replace(/\s+/g,' ').trim().slice(0,40)||'(出た)';}
+    if(!fx.band&&r.type==='attributes'&&el.hasAttribute('data-rhythm-fullcombo-band')&&el.dataset.on==='1')fx.band={at:Math.round(bot.song||0),mode:el.dataset.mode,tier:el.dataset.tier,text:(el.textContent||'').trim()};
     if(r.type==='attributes'&&el.hasAttribute('data-rhythm-climax'))fx.climax.push([Math.round(bot.song||0),el.getAttribute('data-on')]);
     else if(r.type==='childList'&&el.tagName==='B'&&el.parentElement&&el.parentElement.hasAttribute('data-rhythm-tap-judgment'))fx.tapJudgments++;
     else if(el.closest&&el.closest('[data-rhythm-rank-pop]'))fx.rankPops.push([Math.round(bot.song||0),el.closest('[data-rhythm-rank-pop]').textContent]);}})
@@ -162,6 +164,9 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     if(SHOTS.length&&SHOT_DIR){fs.mkdirSync(SHOT_DIR,{recursive:true});
       for(const at of SHOTS){try{await page.waitForFunction(ms=>(window.__mhRobot&&window.__mhRobot.song||0)>=ms,at,{timeout:8*60*1000,polling:100});
         await page.screenshot({path:path.join(SHOT_DIR,`${songId}-${difficulty}-${at}.png`)});}catch(_){break;}}}
+    // --band-shot <png> … 最後のノーツのあとの「FULL COMBO」の帯が出た 0.6秒後を撮る
+    const bandShot=arg('--band-shot',null);
+    if(bandShot){try{await page.waitForSelector('[data-rhythm-fullcombo-band][data-on="1"]',{state:'attached',timeout:8*60*1000});await page.waitForTimeout(600);await page.screenshot({path:bandShot});}catch(_){}}
     // 曲が終わるまで待つ(結果の画面が出る・プレイエリアが消える)
     await page.waitForFunction(()=>!document.querySelector('[data-rhythm-play-area]')||/RESULT|リザルト|もう一度/.test(document.body.innerText),undefined,{timeout:8*60*1000,polling:1000});
     await page.waitForTimeout(500);
@@ -178,6 +183,7 @@ const summarize=result=>{
   const counts={};for(const r of rows)counts[r.judgment||'判定なし']=(counts[r.judgment||'判定なし']||0)+1;
   return `${result.songId} ${result.difficulty}: ${rows.length}ノーツ ${Object.entries(counts).map(([k,v])=>`${k}${v}`).join(' / ')}`
     +(bad.length?`\n    ${bad.slice(0,8).map(r=>`${(r.timeMs/1000).toFixed(2)}s ${r.type}${r.flickDir?`(${r.flickDir})`:''}${r.endFlick?'(終点フリック)':''} 幅${r.width??'-'} → ${r.judgment||'判定なし'}${Number.isFinite(r.delta)?` ${Math.round(r.delta)}ms`:''}`).join('\n    ')}${bad.length>8?`\n    ほか${bad.length-8}個`:''}`:'')
+    +(result.fx?`\n    最後のノーツのあとの帯: ${result.fx.band?`${result.fx.band.text}(${result.fx.band.mode}・${(result.fx.band.at/1000).toFixed(1)}s)`:'出ない'} / 曲の終わりのお祝い(FULL COMBO 等): ${result.fx.celebrate||'出ない'}`:'')
     +(result.log&&result.log.length?`\n    ロボットの失敗: ${result.log[0].split('\n')[0]}`:'')
     +(result.fx&&(result.fx.climax.length||result.fx.tapJudgments||result.fx.rankPops.length)?`\n    演出: 盛り上がりの光 ${result.fx.climax.map(([t,on])=>`${(t/1000).toFixed(1)}s${on==='1'?'点':'消'}`).join(' ')||'なし'} / 叩いた場所の判定 ${result.fx.tapJudgments}回 / ランク ${result.fx.rankPops.map(([t,x])=>`${(t/1000).toFixed(1)}s ${x}`).join(' ')||'なし'}`:'');
 };

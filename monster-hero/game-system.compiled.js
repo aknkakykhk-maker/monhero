@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fd41a4466dec11a
+// source-sha256: dc7bac4c704ce932
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7101,7 +7101,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash: 'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce: 'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100: 'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig: '曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。'
+  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。'
 });
 const normalizeRhythmFx = raw => {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -41004,6 +41004,21 @@ const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   delay: -(k * 13 % 11),
   color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
 })));
+const rhythmFullComboBandMode = settings => {
+  const v = rhythmFxPick(settings, 'fullComboBig');
+  if (v === 'OFF' || v === 'NONE') return 'off';
+  if (v === 'AUTO' && (settings && settings.lightweightMode || settings && settings.effectAmount === 'MINIMAL')) return 'modest';
+  return 'full';
+};
+const RHYTHM_FULLCOMBO_CONFETTI = Object.freeze(Array.from({
+  length: 22
+}, (_, k) => Object.freeze({
+  x: k * 37 % 100 + .5,
+  h: k * 47 % 360,
+  d: k * 13 % 9 / 20,
+  s: .8 + k * 7 % 5 / 10,
+  r: k * 29 % 2 ? 1 : -1
+})));
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -41488,7 +41503,8 @@ const RhythmTapTest = ({
     const slot = rhythmNoteMonsterSlot(note);
     return slot ? monstersRef.current[slot - 1] || null : null;
   };
-  const sideMonsterRefs = useRef([]),
+  const fullComboBandRef = useRef(null),
+    sideMonsterRefs = useRef([]),
     screenFlashRef = useRef(null),
     touchSweepRef = useRef(null),
     judgmentTextRef = useRef(null),
@@ -42628,6 +42644,21 @@ const RhythmTapTest = ({
     run.combo = keptCombo;
     run.maxCombo = Math.max(run.maxCombo, keptCombo);
     run.counts[judgment]++;
+    if (!run.fullComboBandShown && !assistOn && !tutorial && !calibrating && !lineAdjustRef.current && chart.totalNotes > 0 && RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(run.counts[id]) || 0), 0) >= chart.totalNotes) {
+      run.fullComboBandShown = true;
+      const ach = rhythmResultAchievements(run.counts, chart.totalNotes, run.tickRules ? run.tickMiss : 0);
+      const bandMode = rhythmFullComboBandMode(settingsLiveRef.current || settings);
+      const bandEl = fullComboBandRef.current;
+      if (bandEl && bandMode !== 'off' && (ach.fullCombo || ach.allExcellent || ach.allMarvelous)) {
+        const tier = ach.allMarvelous ? 'am' : ach.allExcellent ? 'ae' : 'fc';
+        const label = bandEl.querySelector('[data-rhythm-fullcombo-title]');
+        if (label) label.textContent = tier === 'am' ? 'ALL MARVELOUS' : tier === 'ae' ? 'ALL EXCELLENT' : 'FULL COMBO';
+        bandEl.dataset.tier = tier;
+        bandEl.dataset.mode = bandMode;
+        bandEl.hidden = false;
+        bandEl.dataset.on = '1';
+      }
+    }
     if (preciseHit) run.precise++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
@@ -46189,7 +46220,27 @@ const RhythmTapTest = ({
     style: {
       zIndex: canvasNotes ? 4 : 1
     }
-  }), countdownStep !== null && React.createElement("div", {
+  }), React.createElement("div", {
+    ref: fullComboBandRef,
+    "data-rhythm-fullcombo-band": true,
+    hidden: true,
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    "data-rhythm-fullcombo-sweep": true
+  }), React.createElement("b", {
+    "data-rhythm-fullcombo-title": true
+  }, "FULL COMBO"), React.createElement("span", {
+    "data-rhythm-fullcombo-confetti": true
+  }, RHYTHM_FULLCOMBO_CONFETTI.map((p, k) => React.createElement("i", {
+    key: k,
+    style: {
+      left: `${p.x}%`,
+      '--h': p.h,
+      '--d': `${p.d}s`,
+      '--s': p.s,
+      '--r': p.r
+    }
+  })))), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
