@@ -64,12 +64,8 @@ def split_cells(file, cut_y, cut_x):
 
 # 横に何人も並んで、となりと体(コートのすそなど)がくっついているシート。四角では切れないので、となりとの境目を
 #   「上から下へ不透明の少ない道すじ(縫い目)」でたどって切る。表情なしの絵のキー → [(シート, 段の切れ目の行の一覧, [表情…(左上から横へ)], 1段の人数)]
-#   (2026-11-12 社長から あつの8表情。4×2・1体 約 256×768。コートのすそが重なる所は縫い目が少し横切る)
+#   例: 'atsu': [('atsu-8expressions-sheet.png', [775], [表情×8], 4)] … 4×2 のシートで、段の切れ目が 775 行目
 SEAM_SHEETS = {
-    'atsu': [('atsu-8expressions-sheet.png', [775], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 4)],
-    # ソラシド(2026-11-12 社長から。横に4人ずつ・1人 約 440×887)。袖・羽織のすその透ける布は不透明(252前後)で描かれているので、薄い光を消しても残る
-    'sorashido': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
-                  ('sorashido-8expressions-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     # キュウコ(2026-11-12 社長から。横に8人・1人 約 220×887)。となりと横の範囲が重なるが、体どうしはくっついていない(縫い目は不透明を横切らない)
     'kyuko': [('kyuko-8expressions-sheet.png', [], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 8)],
 }
