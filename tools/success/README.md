@@ -1,6 +1,7 @@
 # tools/success/ (モンヒロサクセスの道具)
 
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
+- `monhero-success-events-check.js` … ランダムイベント(`monster-hero/data/monhero-success-events.js`)の表の形・台本との突き合わせ・決まった乱数・1回の育成の回数。試算は `success-sim.js --no-events` で出来事なしと比べられる
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
 
 ## 新しいアイテムの絵を1つ足す手順
