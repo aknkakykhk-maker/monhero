@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c33ea3e51e97bfe
+// generated-sha256: b78fd1c553c7b31b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77226,7 +77226,7 @@ function AmgpBars({ st, add = null }) {
 }
 const amgpLevelColor = (v) => (v >= 70 ? 'text-rose-300' : v >= 60 ? 'text-amber-300' : 'text-slate-200');
 function AssistantMasmonNote({ readOnly = false, data = null, ownerName = '', onClose, aid = null, land = false }) {
-  if (readOnly) return <AmgpReadOnly data={data} ownerName={ownerName} onClose={onClose} land={land}/>;
+  if (readOnly) return <AmgpReadOnly data={data} ownerName={ownerName} onClose={onClose} land={land} aid={aid}/>;
   return <AmgpMine onClose={onClose} aid={aid} land={land}/>;
 }
 function AmgpMine({ onClose, aid = null, land = false }) {
@@ -77422,7 +77422,7 @@ function AmgpLogTab({ x, nameOf, pickSel }) {
 }
 // 見る専用(フレンドの家・オトズレ)。data = alfMsNormalize の { off, ms:[{ monster, nick, colors, lead, slot, lv, grow, growMine, stats, why }], dk:[…], wt }
 //   自分の保存キーを読まない・書かない。ボタンは閉じるとタブだけ
-function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
+function AmgpReadOnly({ data, ownerName = '', onClose, land = false, aid = null }) {
   const [tab, setTab] = React.useState('list');
   const [sel, setSel] = React.useState(0);
   const d = data && typeof data === 'object' ? data : null;
@@ -77446,7 +77446,9 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
     <p className="mt-3 rounded-xl bg-slate-800 p-2 text-[10.5px] font-bold text-slate-400">見るだけです(計画・チケット・修行のボタンは出しません)</p>
   </>);
   else body = (<>
-    {dk.length ? dk.map((x, i) => <div key={i} className="mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgp-ro-deck={x.face}>
+    {/* デッキの中身はカード部の部品で、自分のデッキと同じ形に出す(2026-11-12 窓口 案A・オトズレ)。3体はカードのモンスター番号。部品が無ければ下の1行 */}
+    {dk.length && typeof CardAssistantDeckView === 'function' && typeof cardAssistantDeckViewOn === 'function' && cardAssistantDeckViewOn() ? dk.map((x, i) => <div key={i} className="mt-1.5" data-amgp-ro-deck={x.face}><CardAssistantDeckView who={aid} deck={x} land={land}/></div>)
+    : dk.length ? dk.map((x, i) => <div key={i} className="mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgp-ro-deck={x.face}>
       <p className="text-[13px] font-black">🃏 {x.name || 'デッキ'}</p>
       {x.line && <p className="text-[11px] font-bold text-slate-300">{x.line}</p>}
       <p className="mt-1 text-[11px] font-bold text-slate-200">{(x.monsters || []).map(monName).filter(Boolean).join('・')}{x.ace ? ` ・ エース ${x.ace}` : ''}</p>
@@ -79002,6 +79004,7 @@ function AlfFriendHouseView({ friend, onClose }) {
           : roomState === 'home' ? <button type="button" className="mhl-btn mt-2 w-full bg-sky-600" data-alf-visit-room={roomId} onClick={() => greet(roomId)}>💬 {assistantLifeName(roomId)}に話しかける</button>
           : <>{roomState === 'sleep' && vl(roomId).sleep.length > 0 && <p className="mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100" data-alf-visit-sleep>💤 {alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], { h: friend.name, who: roomId, name: visitor })}</p>}
             <p className="mt-2 text-[11px] text-slate-300">{roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'}</p></>}
+        {typeof AlfMsRoomLink === 'function' && <AlfMsRoomLink friend={friend} aid={roomId} land={land}/>}
         {can === 'ok' && !done && <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 text-slate-950" data-alf-visit-room-note={roomId} onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }}>✉️ {roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`}</button>}
       </div>
       </div>
@@ -79801,6 +79804,8 @@ let _alfMsMissing = false;
 
 const alfMsSendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.alfMasmonShareSend === true;
 const alfMsMonOk = (mo) => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+// デッキの3体はカードのモンスター番号(例 C-001・C-001S)。マスモンの種類(ALL_PLAYER_MONSTERS のキー)とは別の形(2026-11-12 突き合わせで分かった)
+const alfMsDeckMonOk = (no) => typeof no === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(no) && !(typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA && CARD_BATTLE_DATA.monsters && !CARD_BATTLE_DATA.monsters[no]);
 const alfMsCardOk = (id) => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
 const alfMsText = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '');
 const alfMsWord = (v, max) => { const t = alfMsText(v, max); return t && typeof alfNoteShow === 'function' ? alfNoteShow(t) : ''; };
@@ -79829,7 +79834,7 @@ const alfMsPackDeck = (face, d) => {
   return {
     f: face, nm: alfMsText(d.name, 24),
     ...(alfMsWord(d.line, 40) ? { ln: alfMsWord(d.line, 40) } : {}),
-    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsMonOk).slice(0, 3),
+    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsDeckMonOk).slice(0, 3),
     ...(alfMsText(d.ace, 20) ? { a: alfMsText(d.ace, 20) } : {}),
     cd: cards,
   };
@@ -79874,7 +79879,7 @@ const alfMsNormalize = (raw) => {
   const dk = (Array.isArray(raw.dk) ? raw.dk : []).slice(0, 3).map(d => {
     if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(d.f)) return null;
     const cards = (Array.isArray(d.cd) ? d.cd : []).map(x => (Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null)).filter(Boolean).slice(0, 50);
-    return cards.length ? { face: d.f, name: alfMsText(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
+    return cards.length ? { face: d.f, name: alfMsText(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsDeckMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
   }).filter(Boolean);
   return { off: false, ms, dk, wt: alfInt(raw.wt, 0, 20) };
 };
@@ -79928,6 +79933,30 @@ const alfMsFetch = async (hostId, aid) => {
     return Array.isArray(rows) && rows[0] ? alfMsNormalize(rows[0].body) : null;
   } catch (e) { if (e && e.missing) _alfMsMissing = true; return null; }
 };
+
+// ---- part: 56-assistant-life-friend-masmon-view.jsx ----
+// 助手ライフ: フレンドの家で、その人の助手のマスモン・デッキを見る入口(2026-11-12・案 docs/progress/assistant-peer/FRIEND-SHOWCASE-PLAN.md)。
+// 読むのは 56-assistant-life-friend-masmon-share の alfMsFetch。画面はキズナの <AssistantMasmonNote readOnly/>。保存はしない
+// ---------- 見る側の入口(フレンドの家の部屋のシート)----------
+// 「🐾 ◯◯のマスモン ›」→ 表から1人ぶんを読む → キズナの見る専用 <AssistantMasmonNote readOnly/>。
+// 公開の印 alfMasmonShareSend が偽のあいだは出さない(送る側と同じ印。見る画面だけ先に出すと、だれも送っていないため)
+function AlfMsRoomLink({ friend, aid, land = false }) {
+  const [open, setOpen] = React.useState(false);
+  const [data, setData] = React.useState(undefined); // undefined=読んでいない null=無い
+  if (!alfMsSendOn() || typeof AssistantMasmonNote !== 'function' || !friend || !alfSafeOther(friend.id) || !ALF_IDS.includes(aid)) return null;
+  const go = async () => {
+    setOpen(true);
+    if (data === undefined) { const d = await alfMsFetch(friend.id, aid); setData(d || null); }
+  };
+  return (<>
+    <button type="button" className="mhl-btn mt-2 w-full bg-emerald-700" data-alf-ms-open={aid} onClick={() => { void go(); }}>🐾 {assistantLifeName(aid)}のマスモン ›</button>
+    {open && alfLayer(<div className="absolute inset-0" style={{ zIndex: 46 }} data-alf-ms-view={aid}>
+      {data === undefined
+        ? <div className="absolute inset-0 flex items-center justify-center bg-black/60"><p className="rounded-xl bg-slate-900 px-4 py-2 text-[12px] font-bold text-slate-200">読んでいます…</p></div>
+        : <AssistantMasmonNote readOnly data={data} ownerName={friend.name} aid={aid} land={land} onClose={() => setOpen(false)}/>}
+    </div>)}
+  </>);
+}
 
 // ---- part: 56-assistant-masmon-pvp.jsx ----
 // ===== 助手のマスモンのフレンド対戦(非同期PvP・第④段階)の端末の口(2026-11-11 タイセン) =====
