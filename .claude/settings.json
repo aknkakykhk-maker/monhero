@@ -23,6 +23,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent|Task|Workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/hooks/no-subagent-in-dept.js\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   "permissions": {
