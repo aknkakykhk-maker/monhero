@@ -296,6 +296,16 @@
   "saudade_short/hard": "904e535b5e63ab1f",
   "saudade_short/expert": "7f887e83ff20990e",
   "saudade_short/master": "0c28a5770e1c8d19",
+  "megalovania_sans/easy": "75bb368c81cbcdc2",
+  "megalovania_sans/normal": "838888ddfc3d8192",
+  "megalovania_sans/hard": "89280838fe60c475",
+  "megalovania_sans/expert": "6189a193dbb80426",
+  "megalovania_sans/master": "ca67197450e275ce",
+  "megalovania_smash/easy": "3d402ddffa75d11a",
+  "megalovania_smash/normal": "a25e4a4c9c361dff",
+  "megalovania_smash/hard": "a7b72f36e66443cb",
+  "megalovania_smash/expert": "423e75942436b147",
+  "megalovania_smash/master": "7cb41e3ead42f6b6",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -354,7 +364,9 @@
   "humanoid/hell": "ee7be8fbe5d11239",
   "lamia/hell": "9774324d7ef3d0f1",
   "saudade/hell": "3a2d2867c16d1b95",
-  "saudade_short/hell": "135acd6a01c141da"
+  "saudade_short/hell": "135acd6a01c141da",
+  "megalovania_sans/hell": "b54acba215aae1da",
+  "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
  "history": [
   {
@@ -719,6 +731,36 @@
     "saudade_short/master",
     "saudade/hell",
     "saudade_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-12 20:42",
+   "reason": "新曲 メガロバニア2曲を公開",
+   "changed": [
+    "megalovania_sans/easy",
+    "megalovania_sans/normal",
+    "megalovania_sans/hard",
+    "megalovania_sans/expert",
+    "megalovania_sans/master",
+    "megalovania_smash/easy",
+    "megalovania_smash/normal",
+    "megalovania_smash/hard",
+    "megalovania_smash/expert",
+    "megalovania_smash/master",
+    "megalovania_sans/hell",
+    "megalovania_smash/hell"
+   ]
+  },
+  {
+   "at": "2026-11-12 23:47",
+   "reason": "2026-11-12 社長: メガロバニア スマブラver. の音源を2分25秒版へ差し替え、5難易度と HELL を作り直した",
+   "changed": [
+    "megalovania_smash/easy",
+    "megalovania_smash/normal",
+    "megalovania_smash/hard",
+    "megalovania_smash/expert",
+    "megalovania_smash/master",
+    "megalovania_smash/hell"
    ]
   }
  ]

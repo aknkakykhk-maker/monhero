@@ -24,12 +24,13 @@ EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'e
 SCRATCH = os.environ.get('SHEET_SCRATCH', '/tmp/sheet-scratch')
 
 # key … 全身画の名前(fullbody/<name>__<表情>.png)。stand … 立ち絵の置き場(images/assistant/<stand>/<prefix>_<表情>.png)
+# glow_cut … 元の絵が体のまわりに薄い光を描いているシート(体の芯から2画素より外の薄い所を消す)
 # cells … 8つの枠 [x0, y0, x1, y1](シートの画素)。札のあるシートは札を避けて切る
 SHEETS = {
-    'mua': dict(file='mua-normal-8expressions-sheet.png', name='mua', stand='stand-normal', prefix='myua', bg='alpha',
+    'mua': dict(file='mua-normal-8expressions-sheet.png', name='mua', stand='stand-normal', prefix='myua', bg='alpha', glow_cut=True,
                 head=dict(top=50, eye=106, chin=143, chin_frac=0.425, above=None),
                 cells=[[round(c * 295.5), r0, round((c + 1) * 295.5), r1] for r0, r1 in ((0, 580), (665, 1245)) for c in range(4)]),
-    'mua:halloween': dict(file='mua-halloween-8expressions-sheet.png', name='mua_halloween', stand='stand-halloween', prefix='myua', bg='alpha',
+    'mua:halloween': dict(file='mua-halloween-8expressions-sheet.png', name='mua_halloween', stand='stand-halloween', prefix='myua', bg='alpha', glow_cut=True,
                           head=dict(top=45, eye=100, chin=128, chin_frac=0.433, above=0.85),
                           cells=[[c * 384, r * 512, (c + 1) * 384, (r + 1) * 512] for r in range(2) for c in range(4)]),
     'mua:card-master': dict(file='mua-cardmaster-8expressions-sheet.png', name='mua_card-master', stand='stand-card-master', prefix='myua', bg='checker',
@@ -90,7 +91,9 @@ def cut_cells(cfg):
         arr = np.array(c.convert('RGBA'))
         if cfg['bg'] == 'checker':
             arr = key_checker(arr[..., :3])
-        out.append(fb.clean(None, min_frac=0.002, arr=arr))
+        out.append(fb.clean(None, min_frac=0.002, arr=arr, glow_cut=cfg.get('glow_cut', False)))
+        # カードマスターの市松(bg='checker')の抜き方は #5772 のまま(2026-11-12 #5793 で抜き直したら髪まで消えた・#5795 で絵を戻した)。
+        #   作り直すときは、市松を格子の模様として見分けて抜き、髪を1本も消さないこと(窓口)
     return out
 
 
@@ -146,12 +149,8 @@ def write_all(key, cfg, cells):
     win = (max(0, ux0 - M), max(0, uy0 - M), min(cells[0].width, ux1 + M), min(cells[0].height, bottom))
     tot_full = tot_stand = 0
     for e, c in zip(EXPR, cells):
-        # 1) 紹介ページ用の全身(体の見える範囲で切り詰め・余白は少し・拡大はしない)
-        x0, y0, x1, y1 = bbox(c)
-        m = 6
-        canvas = Image.new('RGBA', (x1 - x0 + 2 * m, y1 - y0 + 2 * m), (0, 0, 0, 0))
-        canvas.paste(c.crop((x0, y0, x1, y1)), (m, m))
-        tot_full += save_png(canvas, os.path.join(fb.OUT, '%s__%s.png' % (name, e)))
+        # 1) 紹介ページ用の全身(life-fullbody-art.py と同じ作り方: 切り詰め・余白は少し・拡大はしない・ふちの半透明を残して減色)
+        tot_full += fb.save(fb.fit(c), os.path.join(fb.OUT, '%s__%s.png' % (name, e))) // 1024
         # 2) 場面用の立ち絵(胸から上)
         st = smooth2x(c.crop(win))
         tot_stand += save_png(st, os.path.join(ROOT, 'monster-hero/images/assistant', stand, '%s_%s.png' % (prefix, e)))
