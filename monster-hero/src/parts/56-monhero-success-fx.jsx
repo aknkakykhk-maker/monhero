@@ -8,7 +8,10 @@
 //     mood  … 気分8つ joy/hype/calm/tired/sulky/sad/surprise/clingy。様子の5段や「うつ」は msxFxMoodOf() で直す
 //     react … 1回きりの反応。id が変わるたびに1回だけ動く。kind は MSXFX_REACT の名前
 //             (great 大成功で跳ねる/ok 成功で頷く/fail 失敗でしょんぼり/sab サボりでそっぽ/
-//              scold 叱られて縮む/scoldBad 合っていない叱り方でふてくされ/praise 褒められて甘える)
+//              scold 叱られて縮む/scoldBad 合っていない叱り方でふてくされ/praise 褒められて甘える/
+//              skill 修行・試合で技を見せる/win 大会に勝って固有技)。
+//             great・skill・win は図鑑の攻撃アクション(技ごとの動き)を流す。技は react.skill = { kind:'normal'|'unique', name }
+//             (名前は msxFxSkillName(species, kind, 段階) で引ける。無ければ図鑑と同じく最初の段階の動き)
 //   <MsxFxMoment kind="lvup" title="ちから Lv3" sub="訓練の効果が上がった" onDone={…}/>
 //     節目の短い演出。kind: lvup 訓練Lvアップ/tech 修行の技を覚えた/win 大会に勝った/lose 大会に負けた/
 //     over ゲームオーバー/retire 引退。親は position:relative の画面(.msx)。画面いっぱいに重なる
@@ -33,7 +36,8 @@ const msxFxMoodOf = (m) => (MSXFX_MOODS.includes(m) ? m : (MSXFX_MOOD_ALIAS[m] |
 
 // 1回きりの反応: 動き(cls)と、ふきだしの声の気分(mon.js の「場面ごとの気分の目安」に合わせる)と、飛ぶ印
 const MSXFX_REACT = Object.freeze({
-  great: { cls: 'jump', mood: 'hype', fx: 'spark' },
+  // skill: 図鑑の攻撃アクション(技ごとの動き)をそのまま流す。normal 通常技 / unique 固有技(タメ+共通演出つき)
+  great: { cls: 'jump', mood: 'hype', fx: 'spark', skill: 'normal' },
   ok: { cls: 'nod', mood: 'joy', fx: 'note' },
   fail: { cls: 'droop', mood: 'sad', fx: 'drop' },
   sab: { cls: 'away', mood: 'calm', fx: 'zzz' },
@@ -41,6 +45,8 @@ const MSXFX_REACT = Object.freeze({
   scoldBad: { cls: 'away', mood: 'sulky', fx: 'puff' },
   praise: { cls: 'snuggle', mood: 'clingy', fx: 'heart' },
   peak: { cls: 'jump', mood: 'surprise', fx: 'spark' },
+  skill: { cls: 'jump', mood: 'hype', fx: 'spark', skill: 'normal' }, // 修行・試合で技を見せる(react.skill で技を選ぶ)
+  win: { cls: 'jump', mood: 'hype', fx: 'spark', skill: 'unique' },   // 大会に勝った(固有技)
 });
 // ときどきのしぐさ(気分ごと)。だいたい7秒に1回
 const MSXFX_GESTURE = Object.freeze({
@@ -107,6 +113,30 @@ const msxFxVoice = (species, mood, seed = '') => {
   return String(t).replace(/\{cry\}/g, cry);
 };
 
+// ---- 図鑑の攻撃アクション(新しく作らず、図鑑と同じ手順・部品を呼ぶ) ----
+// 手順: 23-rpg-debug.jsx の attackMotionPreviewSequence / attackMotionUniquePreviewSequence(どの状態を何ms見せるか)
+// 絵: 24-battle-fx.jsx の BattleAttackMotionPreview(compact。図鑑の舞台と同じ)・固有技は SpecialMoveFx(compact)を重ねる
+// 待機アニメは図鑑と同じく monsterIdleAllowedDuring で、重ねてよい動きのときだけ重ねる
+const msxFxSkillSeq = (species, kind = 'normal', name = null) => {
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[species] : null;
+  if (!mon) return [];
+  const atk = mon.atkMotion || 'default';
+  try {
+    if (kind === 'unique' && typeof attackMotionUniquePreviewSequence === 'function') return attackMotionUniquePreviewSequence(atk, species, name) || [];
+    if (typeof attackMotionPreviewSequence === 'function') return attackMotionPreviewSequence(atk, species, name) || [];
+  } catch (_) { /* 動きが無ければ跳ねるだけ */ }
+  return [];
+};
+const msxFxSeqMs = (seq) => seq.reduce((a, st) => a + (Number.isFinite(st.ms) ? st.ms : 0), 0);
+// 技の名前(HERO_ATK_NAMES の段階 lv、固有技は unique.names)。無ければ null(図鑑と同じく最初の段階の動き)
+const msxFxSkillName = (species, kind = 'normal', lv = 0) => {
+  try {
+    const mon = ALL_PLAYER_MONSTERS[species];
+    const list = kind === 'unique' ? (mon && mon.unique && mon.unique.names) : (typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[species] : null);
+    return Array.isArray(list) && list.length ? list[Math.max(0, Math.min(list.length - 1, lv | 0))] : null;
+  } catch (_) { return null; }
+};
+
 // ---- 育てる子(待機アニメ+気分+しぐさ+反応+ふきだし) ----
 function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onReactEnd, seed = '', voice = true, calm, pose = false, pyoko = false, className = '', style, alt = '' }) {
   msxFxEnsureCss();
@@ -120,16 +150,31 @@ function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onRea
   const endRef = React.useRef(onReactEnd); endRef.current = onReactEnd;
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   const later = (f, ms) => { timers.current.push(setTimeout(f, ms)); };
-  React.useEffect(() => clear, []);
+  // 図鑑の攻撃アクションの再生(世代番号で、とばしたり次の反応が来たりしたら止める)
+  const [atk, setAtk] = React.useState(null); // { anim, kind, name }
+  const atkRun = React.useRef(0);
+  const stopAtk = () => { atkRun.current++; setAtk(null); };
+  const playSkill = (kind, name) => {
+    const seq = msxFxSkillSeq(species, kind, name); if (!seq.length || typeof BattleAttackMotionPreview !== 'function') return 0;
+    const run = ++atkRun.current; let t = 0;
+    seq.forEach((st) => { later(() => { if (run === atkRun.current) setAtk({ anim: st.anim, kind, name }); }, t); t += st.ms; });
+    later(() => { if (run === atkRun.current) setAtk(null); }, t);
+    return t;
+  };
+  React.useEffect(() => () => { clear(); atkRun.current++; }, []);
   // 1回きりの反応(id が変わるたび)
   const reactKey = react && react.kind ? `${react.kind}:${react.id != null ? react.id : ''}` : '';
   React.useEffect(() => {
     if (!reactKey) return;
     const R = MSXFX_REACT[react.kind]; if (!R) return;
-    clear();
+    clear(); stopAtk();
     const say = voice ? msxFxVoice(species, R.mood, `${seed}|${reactKey}`) : '';
-    setAct({ cls: R.cls, fx: R.fx, say, n: reactKey, react: true });
-    later(() => { setAct(null); if (endRef.current) endRef.current(); }, still ? 700 : 1200);
+    // 技の動きがある子は、跳ねる代わりに図鑑の攻撃アクションを流す(動きを減らす設定では流さない)
+    const sk = react.skill || {};
+    const skKind = sk.kind || R.skill;
+    const ms = !still && skKind ? playSkill(skKind, sk.name || null) : 0;
+    setAct({ cls: ms ? 'skill' : R.cls, fx: R.fx, say, n: reactKey, react: true });
+    later(() => { stopAtk(); setAct(null); if (endRef.current) endRef.current(); }, still ? 700 : Math.max(1200, ms + 120));
   }, [reactKey]);
   // ときどきのしぐさ(反応の最中はしない)。止める設定ではしない
   React.useEffect(() => {
@@ -145,14 +190,16 @@ function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onRea
     }, base);
     return () => clearInterval(iv);
   }, [m, still, pose, species, seed, voice]);
-  const skip = () => { if (!act) return; const wasReact = act.react; clear(); setAct(null); if (wasReact && endRef.current) endRef.current(); };
+  const skip = () => { if (!act) return; const wasReact = act.react; clear(); stopAtk(); setAct(null); if (wasReact && endRef.current) endRef.current(); };
   const L = msxFxLight(season, time);
   const img = mon && mon.imgUrl
     ? (typeof DyedMonsterImage === 'function'
       ? <DyedMonsterImage baseId={species} src={mon.imgUrl} alt={alt} masuColors={Array.isArray(colors) ? colors : []} draggable={false} className="w-full h-full object-contain" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
       : <img src={mon.imgUrl} alt={alt} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>)
     : <span className="msxfx-emoji">{(mon && mon.emoji) || '❔'}</span>;
-  const art = !still && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(species, img, { fill: true, own: true }) : img;
+  const idleOk = !still && typeof withMonsterIdleArt === 'function' && (!atk || typeof monsterIdleAllowedDuring !== 'function' || monsterIdleAllowedDuring(atk.anim));
+  const idleArt = idleOk ? withMonsterIdleArt(species, img, { fill: true, own: true }) : img;
+  const art = atk ? <BattleAttackMotionPreview image={idleArt} anim={atk.anim} compact baseId={species}/> : idleArt;
   const fxCh = act && act.fx ? MSXFX_FX_CHAR[act.fx] : '';
   return (
     <div className={`msxfx-live${still ? ' msxfx-calm' : ''}${pyoko ? ` msxfx-pyoko msxfx-py-${MSXFX_PYOKO_SLOW.includes(m) ? 'slow' : m === 'hype' ? 'fast' : 'mid'}${act && act.react ? ' msxfx-py-hold' : ''}` : ''} ${className}`} style={style} data-msxfx-mood={m} data-msxfx-act={act ? act.cls : ''} onClick={act ? skip : undefined}>
@@ -162,6 +209,7 @@ function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onRea
           <div className="msxfx-tint" style={{ filter: `${L.mon === 'none' ? '' : L.mon} drop-shadow(0 6px 5px #0008)`.trim(), '--msxfx-rim': L.rim }}>{art}</div>
         </div>
       </div></div>
+      {atk && atk.kind === 'unique' && atk.anim && typeof SpecialMoveFx === 'function' ? <div className="msxfx-special" aria-hidden="true"><SpecialMoveFx compact slotSkill={{ slotIndex: -1, name: atk.name || msxFxSkillName(species, 'unique') || '必殺技', type: 'unique', sig: !atk.name }} attackAnim={atk.anim} mon={mon} ownerId={species}/></div> : null}
       {fxCh ? <div key={`fx-${act.n}`} className={`msxfx-fx msxfx-fx-${act.fx}`} aria-hidden="true">{[0, 1, 2].map((i) => <i key={i} style={{ '--i': i }}>{fxCh}</i>)}</div> : null}
       {act && act.say ? <div key={`b-${act.n}`} className="msxfx-bub">{act.say}</div> : null}
     </div>
@@ -177,21 +225,25 @@ const MSXFX_MOMENT = Object.freeze({
   over: { icon: '🌧️', head: 'ゲームオーバー', tone: 'gray' },
   retire: { icon: '🌸', head: '引退', tone: 'pink' },
 });
-function MsxFxMoment({ kind, title, sub, species, colors, onDone, calm }) {
+// skill … tech(技を覚えた)で見せる技 { kind:'normal'|'unique', name }。win は固有技、lvup は通常技を見せる。
+//         技の動きがある節目は、その長さ(最大でおよそ1.6秒)まで出してから閉じる
+function MsxFxMoment({ kind, title, sub, species, colors, skill, onDone, calm }) {
   msxFxEnsureCss();
   const still = calm === true || msxFxCalm();
   const K = MSXFX_MOMENT[kind] || MSXFX_MOMENT.lvup;
   const doneRef = React.useRef(onDone); doneRef.current = onDone;
   const fired = React.useRef(false);
   const finish = () => { if (fired.current) return; fired.current = true; if (doneRef.current) doneRef.current(); };
-  React.useEffect(() => { const t = setTimeout(finish, 1200); return () => clearTimeout(t); }, []);
-  const mood = kind === 'win' ? 'great' : kind === 'lvup' || kind === 'tech' ? 'ok' : kind === 'retire' ? 'praise' : 'fail';
+  const react = kind === 'win' ? { kind: 'win', id: kind } : kind === 'tech' ? { kind: 'skill', id: kind, skill: skill || { kind: 'normal' } } : kind === 'lvup' ? { kind: 'great', id: kind }
+    : { kind: kind === 'retire' ? 'praise' : 'fail', id: kind };
+  const len = still || !species ? 1200 : Math.max(1200, Math.min(1700, msxFxSeqMs(react.kind === 'win' ? msxFxSkillSeq(species, 'unique') : react.skill ? msxFxSkillSeq(species, react.skill.kind, react.skill.name) : react.kind === 'great' ? msxFxSkillSeq(species, 'normal') : []) + 150));
+  React.useEffect(() => { const t = setTimeout(finish, len); return () => clearTimeout(t); }, []);
   return (
     <div className={`msxfx-moment msxfx-t-${K.tone} msxfx-k-${kind}${still ? ' msxfx-calm' : ''}`} onClick={finish} role="button" aria-label="とばす" data-msxfx-moment={kind}>
       <div className="msxfx-rays" aria-hidden="true"/>
       {kind === 'win' || kind === 'lvup' || kind === 'tech' ? <div className="msxfx-confetti" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <i key={i} style={{ '--i': i }}/>)}</div> : null}
       {kind === 'lose' || kind === 'over' ? <div className="msxfx-rain" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ '--i': i }}/>)}</div> : null}
-      {species ? <div className="msxfx-mmon"><MsxLiveMon species={species} colors={colors} mood={MSXFX_REACT[mood].mood} react={{ kind: mood, id: kind }} voice={false} calm={still}/></div> : null}
+      {species ? <div className="msxfx-mmon"><MsxLiveMon species={species} colors={colors} mood={MSXFX_REACT[react.kind].mood} react={react} voice={false} calm={still}/></div> : null}
       <div className="msxfx-plate">
         <div className="msxfx-icon">{K.icon}</div>
         <div className="msxfx-head">{K.head}</div>
@@ -212,6 +264,7 @@ const MSXFX_CSS = `
 .msxfx-tint>*{display:block;width:100%;height:100%}
 .msxfx-emoji{display:flex!important;align-items:center;justify-content:center;font-size:64px}
 .msxfx-hop{position:absolute;inset:0;transform-origin:50% 96%}
+.msxfx-special{position:absolute;inset:-20% -30%;pointer-events:none;z-index:2}
 /* ぴょこぴょこ: 小さく4回弾んで、5回目に大きく跳ねる(1周 = 5拍) */
 .msxfx-pyoko{--py-beat:.62s;--py-h:-7%;--py-big:-20%}
 .msxfx-py-fast{--py-beat:.46s;--py-h:-9%;--py-big:-24%}
