@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1573442ebf3f7231
+// source-sha256: 82e04f63d7eee123
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150390,10 +150390,6 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
     why: '選び直してください'
   };
   const day = amgrToday(now);
-  if ((R.mon[aid] || {})[key] === day) return {
-    ok: false,
-    why: `${row.nick || 'このマスモン'}には今日もう使いました`
-  };
   const e0 = (AMG_STORE.state.mons[aid] || {})[key];
   if (!e0) return {
     ok: false,
@@ -150604,9 +150600,8 @@ function AssistantMasmonRanchSheet({
   const apt = row ? amgAptOf(row.monster) : {};
   const plan = amgrPlanOf(kind, k);
   const name = who ? who.name : aid;
-  const monUsed = row && (AMGR_STORE.state.mon[aid] || {})[amgMonKey(row.slot, row.monster)] === amgrToday();
   const have = info ? info[kind] : 0;
-  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
+  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
   const use = () => {
     if (!row) return;
     const r = assistantMasmonRanchUse(aid, amgMonKey(row.slot, row.monster), kind, k);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // M/B管理にいる助手のマスモンにチケットを使ってあげる(56-assistant-life-masmon-ranch.jsx・ボクジョウ 2026-11-11)を、画面なしで確かめる。
-//   印が偽なら何もしない/M/B管理にいないと使えない/時間帯ごとに1人1枚/同じマスモンは1日1枚/チケットが無いと使えず印も残さない/
+//   印が偽なら何もしない/M/B管理にいないと使えない/時間帯ごとに1人1枚/同じマスモンにも別の時間帯なら使える(2026-11-12 社長「同じ子の制限をなくす」)/チケットが無いと使えず印も残さない/
 //   トレーニング=選んだ能力だけ上がる/重トレ=大きく上がる・少し上がる・下がる・疲れ/1日の上限(dg)を使わない/999で止まる/保存の正規化/旧 1.2倍 は止まる
 const fs = require('fs');
 const path = require('path');
@@ -75,11 +75,9 @@ const dg0 = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].dg);
   const info = T.assistantMasmonRanchRowInfo('kiki', now);
   check('② 使ったあとは used と結果(いくつ→いくつ)が出る', info.used && info.last && info.last.rows[0].k === 'pow');
 }
-// ③ 次の時間帯: 同じマスモンは1日1枚・別のマスモンには重トレ
+// ③ 次の時間帯: 別のマスモンには重トレ
 {
   ctx.ASSISTANT_LIFE_STORE.state.life.abs = 501;
-  const r = T.assistantMasmonRanchUse('kiki', '1:Golem', 'heavy', 'pow', now);
-  check('③ 同じマスモンには1日1枚', !r.ok && /今日もう/.test(r.why) && tickets.training_ticket_l === 1, r.why);
   const before = st('2:Pixie');
   const fat0 = T.AMG_STORE.state.mons.kiki['2:Pixie'].fat;
   const h = T.assistantMasmonRanchUse('kiki', '2:Pixie', 'heavy', 'pow', now);
@@ -102,8 +100,8 @@ const dg0 = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].dg);
   ctx.ASSISTANT_LIFE_STORE.state.life.abs = 503;
   const S = T.AMG_STORE.state; S.mons.kiki['1:Golem'].st.life = 998;
   tickets.training_ticket = 1;
-  const r = T.assistantMasmonRanchUse('kiki', '1:Golem', 'light', 'life', now + 86400000);
-  check('⑤ 上限 999 で止まる', r.ok && st('1:Golem').life === T.AMG_MAX, JSON.stringify(r.rows));
+  const r = T.assistantMasmonRanchUse('kiki', '1:Golem', 'light', 'life', now);
+  check('⑤ 上限 999 で止まる(同じ日・同じマスモンにも別の時間帯なら使える)', r.ok && st('1:Golem').life === T.AMG_MAX, JSON.stringify(r.rows));
 }
 // ⑥ 保存の正規化
 {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3fa888780211df5c
+// generated-sha256: fb59c184cf668302
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78743,7 +78743,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
 // ---- part: 56-assistant-life-masmon-ranch.jsx ----
 // M/B管理にいる助手のマスモンに、トレーニングチケット/重トレーニングチケットを使ってあげる(2026-11-11 ボクジョウ・台帳 #1184 と「表示だけ足すを取り消し、作り直す」)
 //   案と止め絵: docs/progress/assistant-peer/masmon-ranch-ticket/PLAN.md・mock.jpg(社長「この案のまま(A)」)
-//   ・助手が M/B管理にいる時間帯(生活の移動1回)ごとに、その助手1人につき1枚(どちらか1枚)。持ち越さない。同じマスモンには1日1枚まで
+//   ・助手が M/B管理にいる時間帯(生活の移動1回)ごとに、その助手1人につき1枚(どちらか1枚)。持ち越さない。同じマスモンにも時間帯が変われば使える(2026-11-12 社長「同じ子の制限をなくす」。前は1日1枚)
 //   ・トレーニング = 選んだ能力 +3〜6 × 伸びやすさ/重トレーニング = 選んだ能力 +8〜12・決まった副の能力 +2〜4(× 伸びやすさ)・決まった能力 −2〜4・疲れ +10
 //   ・自主育成の1日の上限の外に足す。プレイヤーのマスモンには入らない・絆ランキングに効かない
 //   公開の印 RELEASE_FLAGS.assistantMasmonRanchTicket が偽のあいだ、口はすべて null / 何もしない(いまの 1.2倍 の受け口のまま)
@@ -78884,7 +78884,6 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   if ((R.used[aid] || []).includes(life.abs)) return { ok: false, why: 'この時間帯はもう使いました' };
   const row = amgrRowsOf(aid).find(r => amgMonKey(r.slot, r.monster) === key); if (!row) return { ok: false, why: '選び直してください' };
   const day = amgrToday(now);
-  if ((R.mon[aid] || {})[key] === day) return { ok: false, why: `${row.nick || 'このマスモン'}には今日もう使いました` };
   const e0 = (AMG_STORE.state.mons[aid] || {})[key]; if (!e0) return { ok: false, why: '読み込み中です' };
   if (typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row)) return { ok: false, why: amgrLifeOverText(row) }; // 絆: 寿命が来た子は伸びない(チケットを減らす前に止める・社長「寿命が来たら伸びが止まるだけ」)
   if (e0.st[k] >= AMG_MAX) return { ok: false, why: `${amgrStatName(k)}はもう上限です` };
@@ -78953,9 +78952,8 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
   const apt = row ? amgAptOf(row.monster) : {};
   const plan = amgrPlanOf(kind, k);
   const name = who ? who.name : aid;
-  const monUsed = row && (AMGR_STORE.state.mon[aid] || {})[amgMonKey(row.slot, row.monster)] === amgrToday();
   const have = info ? info[kind] : 0;
-  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
+  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
   const use = () => {
     if (!row) return;
     const r = assistantMasmonRanchUse(aid, amgMonKey(row.slot, row.monster), kind, k);
