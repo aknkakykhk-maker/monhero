@@ -12,12 +12,16 @@
 //      「S」「ドS」と言わない・一人称は「俺」
 //   ⑤ イッサ博士: 一人称は「ぼく」・ていねい語(です・ます)をほぼ使わない
 //   ⑥ プレイヤー向けの言葉: 地の文・選択肢の札でモンスターを「子」と呼ばない(助手の「この子」だけ可)・
-//      プレイヤーを「ブリーダー」と直に書かない({name})・「スタミナ」「HP」ではなく「体力」・地の文と札に略称「モンサク」を書かない
+//      プレイヤーを「ブリーダー(さん)」と呼びかけない(話しかけるときは {name}。立場として「ブリーダーの{name}」と書くのはよい・社長 2026-11-12)・
+//      「スタミナ」「HP」ではなく「体力」・地の文と札に略称「モンサク」を書かない
+//   ⑪ 第4弾: 助手ごとのファイル(asst-<助手>.js)。その助手の口調・シナリオの話がそろっている・あつと同じ場面に行がある
 const fs = require('fs');
 const path = require('path');
 
 const DIR = path.resolve(__dirname, '../../docs/progress/player-raise/script');
-const FILES = ['turn.js', 'turn-bond12.js', 'turn2.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'rival-owner.js', 'events-bond12.js', 'items.js', 'mon.js'];
+// 第4弾から、残りの助手はひとり1ファイル(asst-<助手>.js)。あるものを全部読む
+const ASST_FILES = fs.readdirSync(DIR).filter(f => /^asst-[a-z]+\.js$/.test(f)).sort();
+const FILES = ['turn.js', 'turn-bond12.js', 'turn2.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'rival-owner.js', 'events-bond12.js', 'items.js', 'mon.js', ...ASST_FILES];
 const SHOW_COUNT = process.argv.includes('--count');
 
 let failed = 0;
@@ -103,7 +107,8 @@ for (const r of rows) {
     if (koOutside(t)) bad('地の文・札でモンスターを「子」と呼ばない', r);
     if (/モンサク|モンビー/.test(t)) bad('地の文・札は正式名称', r);
   } else if (koOutside(t.replace(/この子/g, ''))) bad('助手が言ってよいのは「この子」だけ', r);
-  if (/ブリーダー(?!ライセンス)/.test(t)) bad('プレイヤーは {name}', r);
+  // 「ブリーダー」は立場・肩書きとしてなら書いてよい(「ブリーダーの{name}」)。止めるのは呼びかけの形だけ(社長 2026-11-12「プレイヤーはブリーダー。でも呼び名は名前」)
+  if (/ブリーダー(さん|くん|ちゃん|様|殿)|(^|[\s。！？!?「…])ブリーダー(?=[、,！!？?…]|$)/.test(t)) bad('プレイヤーに「ブリーダー」と呼びかけない({name})', r);
   if (/スタミナ|ＨＰ|(?<![A-Za-z])HP/.test(t)) bad('「体力」と呼ぶ', r);
 }
 
@@ -145,6 +150,38 @@ check('どの行も見出し(育成イベント/編成の子のイベント/メ�
     if (list.filter(r => r.champ).length !== 1 || list.filter(r => !r.champ).length < 3) regBad.push(`${c} は常連3以上+王者1`);
   }
   check('大会の常連(公開ずみの種・大会ごとに常連3+王者1・名前が重ならない)', regBad.length === 0, regBad.length ? regBad.slice(0, 3).join(' / ') : `${Object.keys(CUPS).length}大会・${REG.length}体`);
+}
+
+// ⑪ 第4弾: 助手ごとのファイル(asst-<助手>.js)
+//   口調の決まり(assistants.js の speech): 助手ごとに「出ていないといけないくせ」の割合と「出てはいけない言い方」
+const VOICE = {
+  kiki: { must: /でつ|まつ/, mustRate: 0.5, mustName: '「でつ」「まつ」', ng: /あたし|俺|僕|おで(?!こ)|(?<![いけ])だよ|だね|してよ|ぢゃん|ｗ/, ngName: 'ききは敬語・一人称「私」(タメ口・ほかの助手の話し方にしない)' },
+};
+// あつの行がある場面(シナリオを除く)= シナリオの助手が話す場面。あつだけの場面(博士のかけ合いの組・受けて立った)は除く
+const sceneOf = id => id.replace(/\.[^.]+$/, '');
+const ATSU_ONLY = /^issa\.(tease\.|after\.fire)/;
+const needScenes = new Set(rows.filter(r => r.who === 'atsu' && !r.id.startsWith('scn.') && !r.id.startsWith('ev.rival.owner.') && !ATSU_ONLY.test(r.id)).map(r => sceneOf(r.id)));
+for (const f of ASST_FILES) {
+  const who = f.replace(/^asst-|\.js$/g, '');
+  const mine = rows.filter(r => r.file === f && r.who === who);
+  const v = VOICE[who];
+  const stray = rows.filter(r => r.file === f && !['narr', 'choice', 'issa', who].includes(r.who));
+  for (const r of stray) bad(`${f} に ${who} 以外の助手の行`, r);
+  let hit = 0;
+  for (const r of mine) {
+    if (v && v.must.test(r.t)) hit++;
+    if (v && v.ng.test(r.t)) bad(v.ngName, r);
+  }
+  const rate = mine.length ? hit / mine.length : 0;
+  const scenes = new Set(mine.map(r => sceneOf(r.id)));
+  const miss = [...needScenes].filter(s => !scenes.has(s));
+  const scn = ['ep1', 'ep2', 'ep3', 'ep4', 'sp', 'cup1', 'cup2'].filter(k => !rows.some(r => r.file === f && r.id.startsWith(`scn.${who}.${k}.`)));
+  const ends = ['good', 'bitter'].filter(k => !rows.some(r => r.file === f && r.id.startsWith(`scn.${who}.ep4.${k}.`)));
+  const okAll = (!v || rate >= v.mustRate) && miss.length === 0 && scn.length === 0 && ends.length === 0;
+  const detail = [`${mine.length}本`, v ? `${v.mustName} ${Math.round(rate * 100)}%` : '口調の決まりは未登録',
+    miss.length ? `場面が足りない ${miss.length}: ${miss.slice(0, 3).join(', ')}` : '',
+    scn.length ? `話が足りない: ${scn.join(',')}` : '', ends.length ? `4話の結末が足りない: ${ends.join(',')}` : ''].filter(Boolean).join(' / ');
+  check(`${f}(口調・シナリオの話・場面のそろい)`, okAll, detail);
 }
 
 check('id・who・表情・差しこみ・口調・言葉', problems.length === 0, problems.length ? `${problems.length}件` : '');
