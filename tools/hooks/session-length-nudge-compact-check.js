@@ -72,14 +72,22 @@ const write = (name, lines) => { const p = path.join(fs.mkdtempSync(path.join(os
   ok(rb.status === 0 && rb.stdout.includes('【会話がとても長い】'), '⑥ 要約の前の記録では、フックが知らせる', rb.stdout.slice(0, 50));
   ok(ra.status === 0 && ra.stdout.trim() === '', '⑥ 要約のあとの記録では、フックは何も出さない', ra.stdout.slice(0, 50));
 }
-// ⑦ 窓口の会話では「替える」を出さず、要約してよいかを社長に聞くことだけを知らせる(2026-11-12 社長)
+// ⑦ 窓口の会話では「替える」を出さず、トークン数が目安(50万)を超えたら要約してよいかを社長に聞くことだけを知らせる
+//   (2026-11-12 社長「やるときは質問で俺に聞いて」・「トークン数で管理するんじゃないの？」→ 50万・そのあと5万ごと)
 {
-  const n = { prompts: 110, merges: 11, compacts: 1 };
-  const m = hook.message(n, limit, { hq: true });
-  ok(m.includes('【窓口・会話が長くなってきた】') && m.includes('AskUserQuestion') && !m.includes('handoff') && !m.includes('新しい会話'), '⑦ 窓口では要約の問いだけ(引き継ぎメモ・新しい会話を勧めない)', m.slice(0, 60));
-  ok(hook.message({ prompts: 25, merges: 3, compacts: 0 }, limit, { hq: true }) === '', '⑦ 窓口は「替える」の目安(40回・5件)までは何も出さない');
-  ok(hook.message({ prompts: 41, merges: 0, compacts: 0 }, limit, { hq: true }) === '', '⑦ 窓口も毎回は出さない(10回ごとの節目だけ)');
+  const m = hook.message({ prompts: 3, merges: 0, compacts: 1, tokens: 510000, prevTokens: 490000 }, limit, { hq: true });
+  ok(m.includes('【窓口・会話が長くなってきた】') && m.includes('51万トークン') && m.includes('AskUserQuestion') && !m.includes('handoff') && !m.includes('新しい会話'), '⑦ 窓口は50万トークンをまたいだら要約の問いだけ(引き継ぎメモ・新しい会話を勧めない)', m.slice(0, 60));
+  ok(hook.message({ prompts: 200, merges: 30, compacts: 0, tokens: 310000, prevTokens: 300000 }, limit, { hq: true }) === '', '⑦ 窓口は回数・公開がいくら多くても、50万トークンまでは何も出さない');
+  ok(hook.message({ prompts: 5, merges: 0, compacts: 0, tokens: 520000, prevTokens: 515000 }, limit, { hq: true }) === '', '⑦ 窓口も毎回は出さない(節目をまたいだ1回だけ)');
+  ok(hook.message({ prompts: 5, merges: 0, compacts: 0, tokens: 552000, prevTokens: 548000 }, limit, { hq: true }) !== '', '⑦ 55万をまたいだらもう一度聞く');
+  // 記録から数える: 返事の usage(input + cache_read + cache_creation)を文脈の大きさにする
+  const asst = (t) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'はい' }], usage: { input_tokens: 2, cache_read_input_tokens: t - 102, cache_creation_input_tokens: 100 } } });
+  const n = hook.count(write('j.jsonl', [user('頼み1'), asst(480000), user('頼み2'), asst(505000)]));
+  ok(n.tokens === 505000 && n.prevTokens === 480000, '⑦ 記録の usage から文脈のトークン数を数える', JSON.stringify({ t: n.tokens, p: n.prevTokens }));
+  const z = hook.count(write('k.jsonl', [user('頼み1'), asst(650000), boundary(), summary(), user('あと')]));
+  ok(z.tokens === 0, '⑦ 要約の境目でトークン数も数え直す', String(z.tokens));
   const routing = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'team', 'routing.json'), 'utf8'));
+  ok(routing['区切り']['窓口の要約のトークン'] === 500000, '⑦ 目安は routing.json の「窓口の要約のトークン」(50万)');
   ok(hook.isHq(routing['窓口の会話'], { CLAUDE_CODE_REMOTE_SESSION_ID: 'cse_' + routing['窓口の会話'].replace(/^session_/, '') }), '⑦ 窓口の番号(cse_…)を窓口と見分ける');
   ok(!hook.isHq(routing['窓口の会話'], { CLAUDE_CODE_REMOTE_SESSION_ID: 'cse_ほかの部署' }) && !hook.isHq(routing['窓口の会話'], {}), '⑦ ほかの会話・番号が無いときは窓口にしない');
 }

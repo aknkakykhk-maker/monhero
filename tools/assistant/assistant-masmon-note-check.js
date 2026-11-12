@@ -5,7 +5,7 @@
 //   ① 印が偽なら育成の結果は今と全く同じ ② 保存の正規化(壊れた値・知らない予定は「まかせる」・計画の子は5体まで)
 //   ③ 段 7・21・42・70 日 ④ 計画の子の数は段まで・外しても予定は消さない ⑤ 計画の回は 1.3倍・失敗半分・1日20まで・自動で休まない
 //   ⑥ 同じ種なら同じ結果 ⑦ けが・病気・家出・サボりが起き、その間は伸びない・能力は下がらない ⑧ 看病・さがす・病院(1回ずつ)
-//   ⑨ 指定の引き継ぎは1度だけ・育成のキーは書き換えない ⑩ 次の回だけ変える ⑪ 読み込む前は書かない
+//   ⑨ 指定の引き継ぎは1度だけ・育成のキーは書き換えない ⑩ 次の回だけ変える ⑪ 読み込む前は書かない ⑫ 冬眠 ⑬ 合体
 'use strict';
 const fs = require('fs'); const path = require('path'); const vm = require('vm');
 const root = path.resolve(__dirname, '..', '..');
@@ -159,6 +159,17 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   const { T, st } = planned(Array(21).fill('H:pow'), 1);
   const fw = T.amgpForecastWeek('kiki', ROW, entry(st, ROW), 'kiki:1:Golem', slotAt(S0 + 1));
   check('見通し: 7日ぶん・重い訓練ばかりなら疲れが70を超える日がある', fw.days.length === 7 && fw.days.some(d => d.fat >= 70) && fw.total.pow && fw.total.pow[0] > 0);
+  // fable の指摘(11-12): ① 過ぎた回は数えない(まかせるで計算しない) ③ 1日の上の値も上限20まで・その日にもう伸びた分を引く ② けが等の回は訓練しない
+  const e = entry(st, ROW); const d0 = T.amgSlotDay(S0 + 1);
+  check('見通し: 今日の過ぎた回(朝・いまの昼)は数えず、夜の疲れは今の疲れから続ける', fw.days[0].f[0] === null && fw.days[0].f[1] === null && fw.days[0].f[2] && fw.days[0].f[2].fat === Math.min(100, e.fat + 14), `${e.fat}→${fw.days[0].f[2] && fw.days[0].f[2].fat}`);
+  const hiSum = (d) => d.f.reduce((a, f) => a + (f ? Object.values(f.g).reduce((x, [, b]) => x + b, 0) : 0), 0);
+  check('見通し: 1日の伸びの上の値は20まで', fw.days.every(d => hiSum(d) <= 20), fw.days.map(hiSum).join(','));
+  const fw2 = T.amgpForecastWeek('kiki', ROW, { ...e, dg: { d: d0, n: 15 } }, 'kiki:1:Golem', slotAt(S0 + 1));
+  check('見通し: 今日もう15伸びていたら、今日の見通しは残り5まで', hiSum(fw2.days[0]) <= 5 && hiSum(fw2.days[1]) > 5, `${hiSum(fw2.days[0])}/${hiSum(fw2.days[1])}`);
+  T.AMGP_CSTORE.set({ ...T.AMGP_CSTORE.state, mons: { 'kiki:1:Golem': { k: 'hurt', from: S0 + 1, until: S0 + 6, care: -1, find: -1, hosp: [] } } });
+  const fw3 = T.amgpForecastWeek('kiki', ROW, e, 'kiki:1:Golem', slotAt(S0 + 1));
+  const f3 = fw3.days[1].f[0];
+  check('見通し: けがの回は訓練しない(灰色・伸びなし・休みと同じ疲れの減り)', f3 && f3.cond === 'hurt' && Object.keys(f3.g).length === 0 && fw3.days[1].f.every(f => f && f.cond === 'hurt') && hiSum(fw3.days[2]) > 0);
 }
 
 // ⑫ 冬眠(56-assistant-life-masmon-sleep.jsx)
@@ -185,6 +196,41 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   ctx.ROWS = ctx.ROWS; const r2 = S.amgsSwap(bed.id, 2, slotAt(S0));
   check('⑫ 起こすと、眠らせたときの6能力に戻る', r2 === true && entry(T.AMG_STORE.state, ROW2).st.pow === pow);
   check('⑫ もういない冬眠の子は起こせない', S.amgsSwap(id, 2) !== true);
+}
+
+// ⑬ 合体(56-assistant-life-masmon-sleep.jsx・FUSE.md 第2版)
+{
+  const sleep = cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const ctx = make({ ...ON, assistantMasmonSleep: true, assistantMasmonFuse: true });
+  vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {}, Mocchi: {} };', 'var MS = { seed: "x", mine: { kiki: { former: { 2: [{ monster: "Tiger", nick: "トラ", lv: 28, at: "2026-11-02" }] } } } };',
+    'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var DROP = []; var assistantMasmonFormerDrop = (aid, slot, mo, at) => { DROP.push([aid, slot, mo, at]); return true; };',
+    'var AMGT_SENSE_KEYS = ["guard"]; var amgtTechsOf = (mo) => (mo === "Mocchi" ? [{ id: "mocchi_01", name: "たいあたり" }, { id: "mocchi_02", name: "ころがる" }] : [{ id: "tiger_01", name: "たいあたり" }, { id: "tiger_02", name: "かみつく" }]);',
+    'var normalizeAssistantMasmonTrain = (raw) => raw;',
+    sleep, 'this.S = { normalizeAssistantMasmonFuse, AMGS_STORE, AMGS_FSTORE, amgsFuse, amgsFuseBonus, amgsFusePlan };'].join('\n'), ctx);
+  const S = ctx.S;
+  const b = (v) => S.amgsFuseBonus(v, v);
+  check('⑬ 上乗せ: 平均999で+200・強いほど割合が大きい', b(999) === 200 && b(100) / 100 < b(500) / 500 && b(500) / 500 < b(999) / 999, `${b(100)}/${b(500)}/${b(999)}`);
+  check('⑬ 上乗せ: 片方だけ強い(999と100)は、中くらい2体(500)の4分の1以下', S.amgsFuseBonus(999, 100) * 4 <= b(500), `${S.amgsFuseBonus(999, 100)}`);
+  const st = (v) => ({ life: v, pow: v, wise: v, hit: v, eva: v, tough: v });
+  const g = (v, lv) => ({ st: st(v), fat: 40, str: 30, ind: { life: 1, pow: 0, wise: 0, hit: 0, eva: 0, tough: -1 }, log: [{ s: 1, a: 'light', k: 'pow', g: {} }], src: 'init_v1', dg: { d: 9, n: 3 }, lv, xp: 5 });
+  const beds = [
+    { id: 'b1', aid: 'kiki', slot: 3, src: 'sleep', at: '2026-11-10', fat: '', row: { monster: 'Mocchi', nick: 'もち', lv: 30, grow: '攻撃型', colors: ['red'] }, g: g(999, 40), t: { m: { guard: 80, mocchi_01: 60 }, learn: ['mocchi_01'], day: { d: 3, n: 1 }, log: [], src: 'init_v1' }, c: null },
+    { id: 'b2', aid: 'kiki', slot: 2, src: 'former', at: '2026-11-02', fat: '2026-11-02', row: { monster: 'Tiger', nick: 'トラ', lv: 28 }, g: g(999, 35), t: { m: { guard: 20, tiger_01: 90, tiger_02: 50 }, learn: ['tiger_01', 'tiger_02'], day: { d: 3, n: 1 }, log: [], src: 'init_v1' }, c: null },
+    { id: 'b3', aid: 'momo', slot: 2, src: 'sleep', at: '2026-11-02', fat: '', row: { monster: 'Golem', nick: 'ゴロ', lv: 10 }, g: g(300, 10), t: null, c: null },
+  ];
+  S.AMGS_STORE.loaded = true; S.AMGS_FSTORE.loaded = true; S.AMGS_STORE.set({ v: 1, beds, seen: {}, seq: 3 });
+  check('⑬ ほかの助手のマスモンとは合体できない', S.amgsFuse('b1', 'b3') !== true && S.AMGS_STORE.state.beds.length === 3);
+  check('⑬ 同じマスモンどうしでは合体できない', S.amgsFuse('b1', 'b1') !== true);
+  const r = S.amgsFuse('b1', 'b2'); if (r !== true) console.log('  理由:', r);
+  const nb = S.AMGS_STORE.state.beds; const out = nb.find(x => x.row.monster === 'Mocchi');
+  check('⑬ 素材はいなくなり、主は1体として残る', r === true && nb.length === 2 && !nb.some(x => x.id === 'b1' || x.id === 'b2') && !!out);
+  check('⑬ 6能力は 主の種類の初期値 + 上乗せ(モッチーのライフ 110+200)', out && out.g.st.life === 310 && out.g.st.pow === 300, out ? JSON.stringify(out.g.st) : '');
+  check('⑬ Lv・育成Lv は1、疲れ・ストレスは0、型・名前・色・個体差は主のまま', out && out.row.lv === 1 && out.g.lv === 1 && out.g.xp === 0 && out.g.fat === 0 && out.g.str === 0 && out.row.grow === '攻撃型' && out.row.nick === 'もち' && out.row.colors[0] === 'red' && out.g.ind.life === 1);
+  check('⑬ 技: 主の技は残り、素材の技は主の種類でも覚えられる物だけ・熟練は高い方の半分', out && out.t && out.t.learn.join() === 'mocchi_01' && out.t.m.mocchi_01 === 45 && out.t.m.guard === 40 && !out.t.learn.includes('tiger_02'), out && out.t ? JSON.stringify(out.t) : '');
+  check('⑬ 合体の記録を書き、前にいた子は元の記録からも外す', S.AMGS_FSTORE.state.log.length === 1 && S.AMGS_FSTORE.state.log[0].mat.monster === 'Tiger' && ctx.DROP.length === 1 && ctx.DROP[0][3] === '2026-11-02');
+  check('⑬ 二度押しても、いなくなった素材ではもう合体できない', S.amgsFuse('b1', 'b2') !== true && S.AMGS_STORE.state.beds.length === 2 && S.AMGS_FSTORE.state.log.length === 1);
+  const n = S.normalizeAssistantMasmonFuse({ log: [{ aid: 'kiki', main: { monster: 'Mocchi', st: { life: 5000 } }, mat: { monster: 'Nope' } }, { aid: 'kiki', main: { monster: 'Mocchi' }, mat: { monster: 'Tiger', st: { pow: 'x' } } }], seq: 'x' });
+  check('⑬ 合体の記録の保存: 知らない種類は捨て、壊れた値は既定へ', n.log.length === 1 && n.log[0].mat.st.pow === 0 && n.seq === 1);
 }
 
 // 試算(--sim): 計画なし/休みを入れた計画/重い訓練ばかり の 30・90 日

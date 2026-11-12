@@ -237,12 +237,30 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-note-free]').fill('ソファふかふかでよかった！');
       await shot(page, `${v.id}-6c-visit-free`);
       await page.locator('[data-alf-word="1"]').click();
+      // 自由文があるときは送る前に確認(2026-11-12 社長)。直す→もう一度→送る
+      await page.locator('[data-alf-note-confirm]').waitFor({ timeout: 5000 });
+      check(`⑲ 自由文のときは送る前に確認が出て、まだ送られていない・あて先と見本が出る(${v.id})`, posted.filter(p => p.kind === 'player').length === 0 && /ドラ/.test(await page.locator('[data-alf-note-confirm-to]').innerText()) && /ソファふかふか/.test(await page.locator('[data-alf-note-confirm-preview]').innerText()) && /また来るね/.test(await page.locator('[data-alf-note-confirm-preview]').innerText()));
+      { const ng = await textProblems(page, '[data-alf-note-confirm]'); check(`⑲ 確認の字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      await shot(page, `${v.id}-6e-visit-confirm`);
+      await page.locator('[data-alf-note-confirm-fix]').click();
+      check(`⑲ 「直す」で書く画面へ戻り、文が残っている(${v.id})`, (await page.locator('[data-alf-note-confirm]').count()) === 0 && (await page.locator('[data-alf-note-free]').inputValue()) === 'ソファふかふかでよかった！');
+      await page.locator('[data-alf-word="1"]').click();
+      await page.locator('[data-alf-note-confirm-send]').click();
       await page.locator('[data-alf-visit-note="done"]').waitFor({ timeout: 5000 });
+      await page.locator('[data-alf-sent-here]').waitFor({ timeout: 5000 }).catch(() => {});
+      check(`⑲ 送ったあと、家の中に「この家に残した置き手紙」が出る(${v.id})`, (await page.locator('[data-alf-sent-here]').count()) === 1 && /ソファふかふか/.test(await page.locator('[data-alf-sent-here]').innerText()));
+      { const saved = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_alf_sent_notes_v1') || 'null'); } catch { return 'broken'; } });
+        check(`⑲ 残した置き手紙が新しいキーに1通控えられる(${v.id})`, Array.isArray(saved) ? saved.length === 1 && saved[0].note === 'ソファふかふかでよかった！' && saved[0].to === 'dra' : true, JSON.stringify(saved).slice(0, 200)); }
       { const pl2 = posted.filter(p => p.kind === 'player'); check(`⑫ 置き手紙に自由文が乗る(あて先はドラ・家にいるのであて先つき)(${v.id})`, pl2.length === 1 && pl2[0].note === 'ソファふかふかでよかった！' && pl2[0].note_to === 'dra', JSON.stringify(pl2)); }
       const pl = posted.filter(p => p.kind === 'player');
       check(`⑥ 声をかける→返事→一言を選んで置き手紙(player・ドラ・一言1)(${v.id})`, pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl) + ' ' + calls.filter(c => /visits/.test(c)).map(c => c.slice(0, 60)).join(' | '));
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 置き手紙のあとも字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-7-visit-left`);
+      await page.locator('[data-alf-visit-close]').click();
+      await page.locator('[data-alf-sent-item="aoi-0001"]').waitFor({ timeout: 5000 }).catch(() => {});
+      check(`⑲ 「🏘 フレンド」の家の一覧の下に「残した置き手紙」が出て、押すとその家へ行ける(${v.id})`, (await page.locator('[data-alf-sent-item="aoi-0001"]').count()) === 1 && await page.locator('[data-alf-sent-item="aoi-0001"]').isEnabled() && /ソファふかふか/.test(await page.locator('[data-alf-sent]').innerText()));
+      await page.locator('[data-alf-sent]').scrollIntoViewIfNeeded().catch(() => {});
+      await shot(page, `${v.id}-8-sent-list`);
       check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }

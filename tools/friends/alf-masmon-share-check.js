@@ -18,6 +18,8 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
   const sb = {
     console, Date, Math, JSON, Object, Array, Number, String, Set,
     RELEASE_FLAGS: { alfMasmonShareSend: flag },
+    // デッキの3体はカードのモンスター番号(C-001 など)。マスモンの種類とは別の形(2026-11-12 突き合わせ)
+    CARD_BATTLE_DATA: { monsters: { 'C-001': {}, 'C-002S': {}, 'C-010': {} } },
     ALL_PLAYER_MONSTERS: { Golem: { name: 'ゴーレム' }, Melody: { name: 'メロディ' }, KenshiMocchi: { name: 'ケンシモッチー' } },
     ALF_IDS: ['mua', 'kiki'],
     ALF_COLOR_RE: /^([a-z][a-z0-9_]{0,20}|custom:\d{1,3}:\d{1,3}:\d{1,3})(@(100|[1-9][0-9]))?$/,
@@ -43,7 +45,7 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
       { monster: 'Golem', nick: 'ごろべえ', colors: [], slot: 2, lv: 19, grow: '攻撃型', stats: { life: 1, pow: 2, wise: 3, hit: 4, eva: 5, tough: 6 }, why: '連絡は090123456へ' },
       { monster: 'NotAMonster', nick: 'x' },
     ], waiting: 2 }),
-    cardAssistantDeckShareOf: decks ? (aid, face) => ({ name: `${face}のデッキ`, line: '今日はこれで攻めたい気分！', monsters: ['KenshiMocchi', 'Golem', 'Nope'], ace: 'まわしぎり',
+    cardAssistantDeckShareOf: decks ? (aid, face) => ({ name: `${face}のデッキ`, line: '今日はこれで攻めたい気分！', monsters: ['C-001', 'C-002S', 'C-999'], ace: 'まわしぎり',
       cards: [...Array.from({ length: 25 }, (_, i) => [`card_${i}`, 2]), ['<bad>', 3]] }) : undefined,
   };
   vm.createContext(sb);
@@ -69,7 +71,7 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
     check('知らないモンスターは送らない', body.ms.length === 2 && body.ms.every(t => t.mo !== 'NotAMonster'));
     check('連絡先のような理由は送らない', !body.ms[1].w && body.ms[0].w === '剣を持ったモッチーがかっこかわいい');
     check('6つの能力は決まった順の数字', JSON.stringify(body.ms[0].st) === JSON.stringify([312, 240, 178, 351, 402, 205]));
-    check('デッキは3つ・3体は実装済みだけ・壊れたカードidは捨てる', body.dk.length === 3 && body.dk[0].m.length === 2 && body.dk[0].cd.every(c => c[0] !== '<bad>'));
+    check('デッキは3つ・3体はカードのモンスター番号(知らない番号は捨てる)・壊れたカードidは捨てる', body.dk.length === 3 && JSON.stringify(body.dk[0].m) === '["C-001","C-002S"]' && body.dk[0].cd.every(c => c[0] !== '<bad>'));
     check('送った指紋を新しいキーに残す', store.mh_alf_masmon_share_sent_v1 && store.mh_alf_masmon_share_sent_v1.sig.mua);
     const n2 = await sb.alfMsPublish('me1', ['mua', 'kiki'], true, t0 + 60000);
     check('同じ中身は送り直さない', n2 === 0);
@@ -113,16 +115,16 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
     check('壊れた中身は null', n(null) === null && n([]) === null && n('x') === null);
     check('古い形(項目の無い行)でも空の一覧', JSON.stringify(n({ v: 1 })) === JSON.stringify({ off: false, ms: [], dk: [], wt: 0 }));
     check('見せていない人は off', n({ v: 1, off: 1 }).off === true);
-    const odd = n({ ms: [{ mo: 'Golem', n: '<b>ごろ</b>', st: [1, 2, 3], lv: -5, c: ['javascript:x', 'red'] }, { mo: 'Zzz' }, 'x'], dk: [{ f: 'evil', cd: [['a', 1]] }, { f: 'oshi', cd: [] }, { f: 'suki', cd: [['ok_1', 999]], m: ['Golem', 'Zzz'] }], wt: 999 });
+    const odd = n({ ms: [{ mo: 'Golem', n: '<b>ごろ</b>', st: [1, 2, 3], lv: -5, c: ['javascript:x', 'red'] }, { mo: 'Zzz' }, 'x'], dk: [{ f: 'evil', cd: [['a', 1]] }, { f: 'oshi', cd: [] }, { f: 'suki', cd: [['ok_1', 999]], m: ['C-010', 'C-999', 'Golem'] }], wt: 999 });
     check('受け取り: 知らないモンスターを捨て、能力の数が合わなければ出さない', odd.ms.length === 1 && odd.ms[0].stats === null && odd.ms[0].lv === 1);
     check('受け取り: 名前の < > を除く・色は決まった形だけ', !/[<>]/.test(odd.ms[0].nick) && odd.ms[0].colors[0] === null && odd.ms[0].colors[1] === 'red');
-    check('受け取り: 知らない型・空のデッキは捨て、枚数と数は丸める', odd.dk.length === 1 && odd.dk[0].face === 'suki' && odd.dk[0].cards[0][1] === 50 && odd.dk[0].monsters.length === 1 && odd.wt === 20);
+    check('受け取り: 知らない型・空のデッキは捨て、枚数と数は丸める', odd.dk.length === 1 && odd.dk[0].face === 'suki' && odd.dk[0].cards[0][1] === 50 && JSON.stringify(odd.dk[0].monsters) === '["C-010"]' && odd.wt === 20);
   }
   // 大きすぎる中身は表の決まりの内側に収める
   {
     const big = Array.from({ length: 8 }, (_, i) => ({ monster: 'Golem', nick: 'ながいなまえながいなまえながい', colors: ['red@90', 'red@90', 'red@90', 'red@90', 'red@90'], lead: i === 0, slot: i, lv: 99, grow: 'すばやさ型すばやさ型', growMine: '回避を伸ばす回避を伸ばす', stats: { life: 9999, pow: 9999, wise: 9999, hit: 9999, eva: 9999, tough: 9999 }, why: 'あ'.repeat(40) }));
     const { sb, rows } = make({ team: () => big });
-    sb.cardAssistantDeckShareOf = (aid, f) => ({ name: 'な'.repeat(24), line: 'い'.repeat(40), monsters: ['Golem', 'Golem', 'Golem'], ace: 'わ'.repeat(20), cards: Array.from({ length: 50 }, (_, i) => [`card_long_id_${i}_abcdefgh`, 1]) });
+    sb.cardAssistantDeckShareOf = (aid, f) => ({ name: 'な'.repeat(24), line: 'い'.repeat(40), monsters: ['C-001', 'C-002S', 'C-010'], ace: 'わ'.repeat(20), cards: Array.from({ length: 50 }, (_, i) => [`card_long_id_${i}_abcdefgh`, 1]) });
     await sb.alfMsPublish('me1', ['mua'], true, 1e9);
     const b = rows['me1|mua'];
     check('いちばん大きい中身でも5000字の内側(デッキから減らす)', b && JSON.stringify(b).length <= 4800 && b.ms.length >= 5, b ? String(JSON.stringify(b).length) : 'no row');
