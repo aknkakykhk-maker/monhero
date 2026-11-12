@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d5eab6e54473ca2
+// generated-sha256: b20cdf33afaf9ade
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80051,7 +80051,8 @@ const monsucFuseCore = () => {
     if (!core || typeof core.create !== 'function' || typeof MASMON_CALC === 'undefined') return null;
     monsucFuseCoreCache = core.create({ calc: MASMON_CALC, apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {}, init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
       techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null, monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
-      lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {}, types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {} });
+      lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {}, types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {},
+      assist: typeof globalThis !== 'undefined' ? globalThis.MONHERO_SUCCESS_ASSIST || null : null }); // 第2版の表(読まれていなければ第1版。持ち物の段は削らない)
   } catch (_) { monsucFuseCoreCache = null; }
   return monsucFuseCoreCache;
 };
@@ -83197,6 +83198,7 @@ const MSX_CSS = `
 //   読み込みは必ず msxNorm* を通す。壊れていたら「途中の育成なし・保存枠は空」として扱い、元の値は消さない(上書きは新しく始めたときだけ)。
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_ASSIST_SRC = 'data/monhero-success-assist.js'; // アシスト能力の表(第2版・段1〜5)。芯に渡す(2026-11-12)
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
@@ -83246,7 +83248,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
@@ -83257,6 +83259,7 @@ const msxLoad = () => {
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
+          assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null, // 第2版の表(無ければ芯は第1版で動く)
         });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;
@@ -96157,6 +96160,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   atsu_excited: [768, 1024, 0, 4, 768, 1020],
   atsu_happy: [768, 1024, 0, 0, 768, 1024],
   atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_sleep: [768, 1024, 27, 0, 704, 798],
   atsu_surprise: [768, 1024, 0, 0, 768, 1024],
   atsu_troubled: [768, 1024, 0, 3, 768, 1021],
   atsu_wink: [768, 1024, 0, 14, 768, 1010],
@@ -96181,6 +96185,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
   kiki_happy: [1536, 1024, 486, 14, 573, 1010],
   kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_sleep: [1536, 1024, 456, 12, 582, 972],
   kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
   kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
   kiki_wink: [1536, 1024, 490, 7, 569, 1017],
@@ -96189,6 +96194,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   kyuko_excited: [384, 512, 0, 0, 384, 508],
   kyuko_happy: [384, 512, 3, 7, 381, 505],
   kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_sleep: [384, 512, 0, 7, 384, 505],
   kyuko_surprise: [384, 512, 4, 6, 375, 506],
   kyuko_troubled: [384, 512, 0, 2, 384, 506],
   kyuko_wink: [384, 512, 0, 6, 375, 502],
@@ -96197,6 +96203,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   momosuke_excited: [512, 512, 10, 6, 502, 506],
   momosuke_happy: [512, 512, 28, 14, 475, 498],
   momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_sleep: [512, 512, 21, 4, 473, 500],
   momosuke_surprise: [512, 512, 18, 7, 486, 505],
   momosuke_troubled: [512, 512, 32, 9, 459, 503],
   momosuke_wink: [512, 512, 0, 7, 512, 505],
@@ -96205,6 +96212,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_excited: [1536, 1024, 245, 15, 948, 1009],
   myua_happy: [1536, 1024, 360, 26, 783, 998],
   myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_sleep: [1536, 1024, 324, 30, 779, 841],
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
