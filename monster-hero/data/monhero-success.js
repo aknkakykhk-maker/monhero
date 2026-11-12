@@ -13,7 +13,7 @@
 // 1ターンの進め方(画面からも試算からも同じ順で呼ぶ):
 //   let s = SUC.newRun({ id, species, aid, team, aidBondLv });
 //   const v = SUC.peek(s);                 // そのターンの札(編成の子が集まった訓練)・博士が来たか・できること
-//   s = SUC.act(s, { kind:'light', stat:'pow' }).state;   // 訓練(light/heavy)・rest・play・clinic・retry(デビュー戦の再挑戦)
+//   s = SUC.act(s, { kind:'train', stat:'pow' }).state;   // 訓練(6つ)・shugyo・rest・play・clinic・retry(デビュー戦の再挑戦)
 //   s = SUC.react(s, 'praise').state;      // 訓練の結果のあとに 褒める/叱る/なし(null)
 //   s = SUC.issa(s, 'hp').state;           // 博士が来ていれば(peek().issa)、選ぶ(none でもよい)
 //   s = SUC.endTurn(s).state;              // ターンを閉じる。期末・頂への道なら s.battle に「戦う大会」が入る
@@ -72,15 +72,14 @@
 
   // ---- 基礎数値(試算 tools/success/success-sim.js で合わせる。ASSIST.md §4 の「基礎数値」) ----
   const BASE = Object.freeze({
-    light: 9.5,                                    // 軽い訓練の主の能力の基礎(「軽い訓練1回ぶん」の物差しもこれ)
-    lightSub: [0.3, 0.1],                        // 軽い訓練のほか2つ(主に対する割合)
-    heavy: 1.7, heavySub: [0.45, 0.2],           // 重い訓練(主は軽いの 1.7 倍)
-    hpLight: 12, hpHeavy: 22,                    // 体力の減り
-    stLight: 3, stHeavy: 6,                      // ストレスの増え(方針の倍率をかける)
+    light: 11,                                     // 訓練の主の能力の基礎(出来事の「訓練1回ぶん」の物差しもこれ)
+    sub: [0.35, 0.15],                           // ほか2つ(主に対する割合)。訓練は1種類ずつ(軽い/重いの区別はなし・社長 2026-11-12)
+    hp: 16,                                      // 体力の減り
+    stress: 4,                                   // ストレスの増え(方針の倍率をかける)
   });
   // 訓練で能力は下がらない(社長 2026-11-12: 3能力が上がるだけ・マイナスはなし)
-  // 訓練Lv(社長 2026-11-12): 訓練ごと(軽い/重い × 6能力の12枚)にトレ経験値があり、踏むたびに +1。最大 Lv5。Lv ごとに基礎値が上がる
-  const TRAIN_LV = Object.freeze({ max: 5, need: [0, 3, 7, 12, 18], mult: [1, 1.08, 1.16, 1.25, 1.35] }); // need = その Lv に要る経験の合計
+  // 訓練Lv(社長 2026-11-12): 訓練ごと(6能力の6つ)にトレ経験値があり、踏むたびに +1。最大 Lv5。Lv ごとに基礎値が上がる
+  const TRAIN_LV = Object.freeze({ max: 5, need: [0, 4, 9, 15, 22], mult: [1, 1.08, 1.16, 1.25, 1.35] }); // 6つの訓練それぞれ。need = その Lv に要る経験の合計
   const trainLvOf = (xp) => { let lv = 1; for (let i = 1; i < TRAIN_LV.max; i++) if (num(xp) >= TRAIN_LV.need[i]) lv = i + 1; return lv; };
   // 1回の訓練で上がる3能力の組み合わせ(主 → [ほか1, ほか2])は助手ごとに違う(台帳 2026-11-12)
   const TRAIN_COMBO = Object.freeze({
@@ -123,7 +122,7 @@
 
   // ---- 体調(けが・病気・家出。長さはターン) ----
   const COND = Object.freeze({
-    injLowHp: 0.3, injHeavy: 0.12, injLight: 0.06, injLen: [1, 2],
+    injLowHp: 0.3, injTrain: 0.08, injLen: [1, 2],
     illStress: 70, illRate: 0.10, illLen: 1,
     awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: -8, awayFear: -4,
     rec: 0.3, sorashido: 0.7,
@@ -222,13 +221,13 @@
   const PTS = Object.freeze({ hold: 200, line: { debut: 300, junior: 300, middle: 500, pro: 700, final: 700 } });
 
   // ---- 経験と Lv(総合力の Lv × 15 に入る。助手マスモンとは別の速さ・案) ----
-  const XP = Object.freeze({ light: 2, heavy: 3, match: 2, need: (lv) => 3 + Math.floor(lv / 5) });
+  const XP = Object.freeze({ train: 2, shugyo: 3, match: 2, need: (lv) => 3 + Math.floor(lv / 5) });
   const LV_MAX = 99;
 
   // ---- 大会の相手(TOURNAMENT §9) ----
   // 基準の強さ B(6能力の合計)。試算(success-sim.js --calibrate)で「ふつうに育てた子」の勝率が
   // ★ 約80%・★★ 約60%・★★★ 約45%・👑 約30%・頂への道の決勝 約25% になるよう求めた値(TOURNAMENT §9 の 8)
-  const BENCH = Object.freeze({ debut: 700, junior: 980, middle: 1310, pro: 1640, summit: 1960 });
+  const BENCH = Object.freeze({ debut: 700, junior: 970, middle: 1290, pro: 1650, summit: 2000 });
   const STAR_MULT = Object.freeze({ 1: 0.75, 2: 0.95, 3: 1.1, 4: 1.25 });
   const ROUND_ADD = Object.freeze([0, 0.05, 0.10]); // 1回戦・準決勝・決勝(★★ は準決勝から)
   const OPP_JITTER = 0.08;
@@ -331,9 +330,9 @@
     const cardKey = (kind, stat) => `${kind}:${stat}`;
     const gatherOf = (s) => {
       const rng = rngOf(s.id, s.turn, 'gather');
-      const cards = {}; for (const kind of ['light', 'heavy']) for (const k of KEYS) cards[cardKey(kind, k)] = { kind, stat: k, members: [], aid: false };
+      const cards = {}; for (const k of KEYS) cards[cardKey('train', k)] = { kind: 'train', stat: k, members: [], aid: false };
       s.team.forEach((m, i) => {
-        const x = rng(); const kind = rng() < 0.5 ? 'light' : 'heavy'; const y = rng();
+        const x = rng(); const kind = 'train'; rng(); const y = rng(); // 2つ目の乱数は前の形(軽い/重い)の名残。並びを変えないため引くだけ
         const favUnit = m.fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]); const restUnit = (1 - m.fav) / (GATHER.else + GATHER.none);
         let a = 0; let stat = null;
         for (let j = 0; j < 3 && !stat; j++) { a += GATHER.top[j] * favUnit; if (x < a) stat = m.top[j]; }
@@ -421,7 +420,7 @@
       const view = {};
       for (const [key, c] of Object.entries(cards)) view[key] = { ...c, ...cardMult(s, c), fail: r2(failRateOf(s, c)), great: r2(greatRateOf(s, c)) };
       const retry = s.debutLoss > 0 && !s.debutWon;
-      const can = s.over ? [] : s.cond ? ['cond'] : retry ? ['retry'] : ['light', 'heavy', 'rest', 'play'].concat(shugyoLeft(s) > 0 ? ['shugyo'] : [], s.yosu.sabori || s.yosu.utsu ? ['clinic'] : []);
+      const can = s.over ? [] : s.cond ? ['cond'] : retry ? ['retry'] : ['train', 'rest', 'play'].concat(shugyoLeft(s) > 0 ? ['shugyo'] : [], s.yosu.sabori || s.yosu.utsu ? ['clinic'] : []);
       return { turn: s.turn, period: p, toEnd: TOTAL_TURNS - s.turn + 1, cards: view, sab: r2(sabRateOf(s)), can, shugyo: { left: shugyoLeft(s), tickets: s.tickets, techs: learnable(s) }, issa: !s.acted ? false : (!s.issaDone && issaComes(s)), retry, cond: s.cond };
     };
 
@@ -477,7 +476,7 @@
     const condRoll = (s, rng, kind) => {
       // けが(体力が少ないときの訓練)・病気(ストレス)・家出(忠誠が低くストレスが高い)
       const ratio = s.hp / s.hpMax; const soft = s.aid === 'sorashido' ? COND.sorashido : 1;
-      if ((kind === 'light' || kind === 'heavy') && ratio < COND.injLowHp && rng() < (kind === 'heavy' ? COND.injHeavy : COND.injLight) * soft) {
+      if (kind === 'train' && ratio < COND.injLowHp && rng() < COND.injTrain * soft) {
         let len = rng() < 0.5 ? COND.injLen[0] : COND.injLen[1]; if (s.aid === 'erubin') len = Math.max(1, len - 1);
         return { kind: 'injury', left: len };
       }
@@ -502,7 +501,7 @@
         s.acted = true; s.last = { kind: 'retry' }; return { state: s, out };
       }
       const rng = rngOf(s.id, s.turn, 'act');
-      if (kind === 'light' || kind === 'heavy') {
+      if (kind === 'train') {
         const stat = KEYS.includes(a.stat) ? a.stat : 'pow';
         const card = v.cards[cardKey(kind, stat)];
         const pS = sabRateOf(s); const pF = failRateOf(s, card); const pG = greatRateOf(s, card);
@@ -514,17 +513,17 @@
         const mult = BASE.light * TRAIN_LV.mult[tlv - 1] * pol.gain * ageOf(s) * R.mult * (1 + card.add) * (1 + card.tag) * loyalMult(loyalOf(s));
         s.trainXp[ck] = num(s.trainXp[ck]) + 1; out.trainLv = trainLvOf(s.trainXp[ck]); out.lvUp = out.trainLv > tlv;
         const combo = (TRAIN_COMBO[s.aid] || TRAIN_COMBO.mua)[stat];
-        const shares = kind === 'heavy' ? [BASE.heavy, BASE.heavy * BASE.heavySub[0], BASE.heavy * BASE.heavySub[1]] : [1, BASE.lightSub[0], BASE.lightSub[1]];
+        const shares = [1, BASE.sub[0], BASE.sub[1]];
         const gains = {};
         [stat, combo[0], combo[1]].forEach((k, j) => { const g = mult * shares[j] * aptMult(s.species, k); gains[k] = (gains[k] || 0) + g; });
         const before = { ...s.stats };
         Object.entries(gains).forEach(([k, g]) => addStat(s, k, g));
         let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += ASSISTS.itawari.v[lv - 1] / 100; });
-        const hpCost = (kind === 'heavy' ? BASE.hpHeavy : BASE.hpLight) * R.hp * (1 - Math.min(0.6, it)) * (kind === 'heavy' && s.aid === 'kiki' ? 0.85 : 1);
+        const hpCost = BASE.hp * R.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: 訓練の疲れ −15%
         s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
-        addStress(s, ((kind === 'heavy' ? BASE.stHeavy : BASE.stLight) * pol.stress) + R.stress);
+        addStress(s, (BASE.stress * pol.stress) + R.stress);
         card.members.forEach(i => addBond(s, i, BOND.train)); if (card.aid) addBond(s, 'aid', BOND.train);
-        addXp(s, kind === 'heavy' ? XP.heavy : XP.light);
+        addXp(s, XP.train);
         s.log.train += 1; s.log[res] += 1; s.log.tagTurns[Math.min(3, card.tags.length)] += 1;
         out.result = res; out.card = { kind, stat, add: card.add, tag: card.tag, tags: card.tags, members: card.members.slice() };
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
@@ -564,7 +563,7 @@
         let got = null; const tries = [];
         if (res !== 'sab') for (const t of want) { const p = techRate(s, t); const hit = rng() < p; tries.push({ id: t.id, rate: r2(p), hit }); if (hit) { got = t.id; break; } }
         if (got) { learnTech(s, got); s.pity = 0; s.log.learned += 1; } else if (want.length) s.pity += SHUGYO.pity;
-        addXp(s, XP.heavy); s.log.shugyo += 1; s.log.train += 1; s.log[res] += 1;
+        addXp(s, XP.shugyo); s.log.shugyo += 1; s.log.train += 1; s.log[res] += 1;
         out.result = res; out.course = course; out.learned = got; out.tries = tries;
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         s.last = { kind: 'shugyo', res }; s.acted = true; s.reacted = false;
@@ -601,7 +600,7 @@
     // 叱る・褒める(訓練の結果のあと1回。しなくてもよい)
     const react = (s0, how) => {
       const s = clone(s0);
-      if (!s.last || !['light', 'heavy', 'shugyo'].includes(s.last.kind) || s.reacted) return { state: s, out: { ok: false } };
+      if (!s.last || !['train', 'shugyo'].includes(s.last.kind) || s.reacted) return { state: s, out: { ok: false } };
       const good = s.last.res === 'great' || s.last.res === 'ok';
       s.reacted = true;
       if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, d[0] + (s.aid === 'mua' ? 1 : 0), d[1]); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }

@@ -113,9 +113,8 @@ const chooseAction = (s, v) => {
   const avg = K.reduce((a, k) => a + s.stats[k], 0) / 6;
   let best = null;
   for (const c of Object.values(v.cards)) {
-    if (c.kind === 'heavy' && ratio < 0.6) continue;
     const bal = Math.sqrt((avg + 50) / (s.stats[c.stat] + 50));
-    const sc = c.mult * SUC.aptMult(s.species, c.stat) * (c.kind === 'heavy' ? 1.45 : 1) * bal * (1 - c.fail);
+    const sc = c.mult * SUC.aptMult(s.species, c.stat) * bal * (1 - c.fail);
     if (!best || sc > best.sc) best = { sc, kind: c.kind, stat: c.stat };
   }
   return { kind: best.kind, stat: best.stat };
@@ -154,7 +153,7 @@ const playRun = (id, preset, aidLv, species, aid, rematch) => {
     const v = SUC.peek(s);
     const a = chooseAction(s, v);
     let r = SUC.act(s, a); s = r.state;
-    if (s.last && ['light', 'heavy', 'shugyo'].includes(s.last.kind)) s = SUC.react(s, chooseReact(s)).state;
+    if (s.last && ['train', 'shugyo'].includes(s.last.kind)) s = SUC.react(s, chooseReact(s)).state;
     if (SUC.issaComes(s)) s = SUC.issa(s, ISSA_PICK).state;
     const p = SUC.periodOf(s.turn);
     if (p.left === 1) trace.periodSums[p.key] = SUC.sumOf(s.stats);

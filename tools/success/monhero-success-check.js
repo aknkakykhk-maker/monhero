@@ -44,7 +44,7 @@ const play = (id, picks) => {
   }
   return s;
 };
-const picks = Array.from({ length: 30 }, (_, i) => (i % 4 === 3 ? { kind: 'rest' } : { kind: i % 2 ? 'heavy' : 'light', stat: K[i % 6] }));
+const picks = Array.from({ length: 30 }, (_, i) => (i % 4 === 3 ? { kind: 'rest' } : { kind: 'train', stat: K[i % 6] }));
 const a1 = play('same-id', picks); const a2 = play('same-id', picks); const b1 = play('other-id', picks);
 ok(JSON.stringify(a1) === JSON.stringify(a2), '同じ育成 id・同じ手なのに結果が違う(決まった乱数になっていない)');
 ok(JSON.stringify(a1.stats) !== JSON.stringify(b1.stats), '育成 id を変えても結果が同じ(乱数が id を見ていない)');
@@ -65,7 +65,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const seen = {};
   for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
     const t = { ...s, id: `mult-${i}`, hp: i % 2 ? 100 : 5 };
-    const r = SUC.act(t, { kind: 'light', stat: 'pow' });
+    const r = SUC.act(t, { kind: 'train', stat: 'pow' });
     const g = r.state.stats.pow - t.stats.pow; const res = r.out.result;
     if (!seen[res]) seen[res] = g;
   }
@@ -90,11 +90,11 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 
 // ---- 忠誠度 ----
 {
-  let s = { ...base, last: { kind: 'light', res: 'ok' }, reacted: false };
-  for (let i = 0; i < 40; i++) s = SUC.react({ ...s, last: { kind: 'light', res: 'ok' }, reacted: false, pol: 0, pp: 0 }, 'praise').state;
+  let s = { ...base, last: { kind: 'train', res: 'ok' }, reacted: false };
+  for (let i = 0; i < 40; i++) s = SUC.react({ ...s, last: { kind: 'train', res: 'ok' }, reacted: false, pol: 0, pp: 0 }, 'praise').state;
   ok(s.ama === 50 && s.fear === 10 && SUC.loyalOf(s) === 60, `甘え度が50で止まらない: ${s.ama}/${s.fear}`);
   ok(SUC.loyalMult(60) === 1.6 && SUC.loyalMult(100) === 1.6 && SUC.loyalMult(30) === 1.3 && SUC.loyalMult(0) === 1, '忠誠度の補正が 1+min(忠誠,60)/100 でない');
-  const u = SUC.react({ ...base, yosu: { utsu: { visits: 0 } }, last: { kind: 'light', res: 'ok' }, reacted: false }, 'praise').state;
+  const u = SUC.react({ ...base, yosu: { utsu: { visits: 0 } }, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise').state;
   ok(u.ama === base.ama && u.fear === base.fear, 'うつ病のあいだに忠誠度が動いた');
 }
 
@@ -122,7 +122,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   }
   ok(near(cnt.t1 / n, 0.3, 0.025) && near(cnt.t2 / n, 0.2, 0.025) && near(cnt.t3 / n, 0.15, 0.02) && near(cnt.other / n, 0.2, 0.025) && near(cnt.none / n, 0.15, 0.02), `集まり方が 30/20/15/20/15% でない: ${JSON.stringify(cnt)}`);
   // タッグは親密度80から
-  const card = { kind: 'light', stat: 'pow', members: [0], aid: false };
+  const card = { kind: 'train', stat: 'pow', members: [0], aid: false };
   ok(SUC.cardMult({ ...s, bond: [79, 0, 0, 0, 0, 0] }, card).tag === 0 && SUC.cardMult({ ...s, bond: [80, 0, 0, 0, 0, 0] }, card).tag > 0, '親密度80でタッグにならない');
   ok(SUC.assistPointsOf(8000) === 160 && SUC.assistPointsOf(100) === 20 && SUC.assistPointsOf(30000) === 400, 'アシストポイントが 総合力÷50(20〜400)でない');
 }
@@ -153,7 +153,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 負け → 再挑戦(訓練できない・相手は1割ずつ弱く)
   s = SUC.settle(s, [false]).state;
   ok(s.turn === 6 && !s.over && SUC.peek(s).can.join() === 'retry', '負けたあとのジュニア期が再挑戦だけになっていない');
-  ok(!SUC.act(s, { kind: 'light', stat: 'pow' }).out.ok, '再挑戦のターンに訓練できてしまう');
+  ok(!SUC.act(s, { kind: 'train', stat: 'pow' }).out.ok, '再挑戦のターンに訓練できてしまう');
   s = SUC.endTurn(SUC.act(s, { kind: 'retry' }).state).state;
   ok(s.battle && s.battle.kind === 'debut' && s.battle.retry === 1, '再挑戦の大会が立たない');
   const w1 = SUC.opponents(s)[0];
@@ -249,17 +249,17 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // ---- 訓練で能力が下がらない・訓練Lv(社長 2026-11-12) ----
 {
   let dropped = false;
-  for (let i = 0; i < 60 && !dropped; i++) { const t = { ...base, id: `nd-${i}` }; const r = SUC.act(t, { kind: 'heavy', stat: K[i % 6] }); if (K.some(k => r.state.stats[k] < t.stats[k])) dropped = true; }
+  for (let i = 0; i < 60 && !dropped; i++) { const t = { ...base, id: `nd-${i}` }; const r = SUC.act(t, { kind: 'train', stat: K[i % 6] }); if (K.some(k => r.state.stats[k] < t.stats[k])) dropped = true; }
   ok(!dropped, '訓練で下がる能力がある(社長: 3能力が上がるだけ)');
-  ok(SUC.trainLvOf(0) === 1 && SUC.trainLvOf(3) === 2 && SUC.trainLvOf(18) === 5 && SUC.trainLvOf(999) === 5, '訓練Lv が 1〜5 で上がらない');
+  ok(SUC.trainLvOf(0) === 1 && SUC.trainLvOf(4) === 2 && SUC.trainLvOf(22) === 5 && SUC.trainLvOf(999) === 5, '訓練Lv が 1〜5 で上がらない');
   ok(SUC.TRAIN_LV.mult.every((v, i, a) => i === 0 || v > a[i - 1]), '訓練Lv ごとに基礎値が上がらない');
   // 同じ札・同じ乱数で、Lv5 の訓練は Lv1 よりよく伸びる
   let lo = null; let hi = null;
   for (let i = 0; i < 80 && (lo === null || hi === null); i++) {
-    const t = { ...base, id: `tl-${i}` }; const r1 = SUC.act(t, { kind: 'light', stat: 'pow' }); if (r1.out.result !== 'ok') continue;
-    const r5 = SUC.act({ ...t, trainXp: { 'light:pow': 18 } }, { kind: 'light', stat: 'pow' });
+    const t = { ...base, id: `tl-${i}` }; const r1 = SUC.act(t, { kind: 'train', stat: 'pow' }); if (r1.out.result !== 'ok') continue;
+    const r5 = SUC.act({ ...t, trainXp: { 'train:pow': 22 } }, { kind: 'train', stat: 'pow' });
     lo = r1.out.gain.pow; hi = r5.out.gain.pow;
-    ok(r1.state.trainXp['light:pow'] === 1, '訓練を踏んでもトレ経験値が増えない');
+    ok(r1.state.trainXp['train:pow'] === 1, '訓練を踏んでもトレ経験値が増えない');
   }
   ok(hi > lo, `訓練Lv5 が Lv1 より伸びない: ${lo} → ${hi}`);
 }
