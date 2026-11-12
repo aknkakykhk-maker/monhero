@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f2b76533700925a
+// source-sha256: 8eb7d9845a7a5fa3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167340,7 +167340,15 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'ワンツーパンチ': 4,
   'マシンガンパンチ': 5,
   'ピコピコハンマー': 4,
-  'ゴーストラッシュ': 4
+  'ゴーストラッシュ': 4,
+  'アイスブレード': 3,
+  'ドルフィンブロー': 5,
+  'クリスタルレイン': 5,
+  'ホワイトエレジー': 4,
+  'アクアウェイブ': 3,
+  'アクアブラスト': 3,
+  'アイスコフィン': 3,
+  'クリスタルアロー': 4
 });
 const cardNameScript = c => /[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o';
 const cardNameSplit = text => {
@@ -171929,6 +171937,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   atsu_excited: [768, 1024, 0, 4, 768, 1020],
   atsu_happy: [768, 1024, 0, 0, 768, 1024],
   atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_sleep: [768, 1024, 27, 0, 704, 798],
   atsu_surprise: [768, 1024, 0, 0, 768, 1024],
   atsu_troubled: [768, 1024, 0, 3, 768, 1021],
   atsu_wink: [768, 1024, 0, 14, 768, 1010],
@@ -171953,6 +171962,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   kiki_excited: [1536, 1024, 495, 12, 556, 1012],
   kiki_happy: [1536, 1024, 486, 14, 573, 1010],
   kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_sleep: [1536, 1024, 456, 12, 582, 972],
   kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
   kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
   kiki_wink: [1536, 1024, 490, 7, 569, 1017],
@@ -171961,6 +171971,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   kyuko_excited: [384, 512, 0, 0, 384, 508],
   kyuko_happy: [384, 512, 3, 7, 381, 505],
   kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_sleep: [384, 512, 0, 7, 384, 505],
   kyuko_surprise: [384, 512, 4, 6, 375, 506],
   kyuko_troubled: [384, 512, 0, 2, 384, 506],
   kyuko_wink: [384, 512, 0, 6, 375, 502],
@@ -171969,6 +171980,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   momosuke_excited: [512, 512, 10, 6, 502, 506],
   momosuke_happy: [512, 512, 28, 14, 475, 498],
   momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_sleep: [512, 512, 21, 4, 473, 500],
   momosuke_surprise: [512, 512, 18, 7, 486, 505],
   momosuke_troubled: [512, 512, 32, 9, 459, 503],
   momosuke_wink: [512, 512, 0, 7, 512, 505],
@@ -171977,6 +171989,7 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_excited: [1536, 1024, 245, 15, 948, 1009],
   myua_happy: [1536, 1024, 360, 26, 783, 998],
   myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_sleep: [1536, 1024, 324, 30, 779, 841],
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
@@ -171987,7 +172000,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_normal: [384, 512, 0, 0, 384, 512],
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510]
+  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
+  'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
+  'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
+  'stand-normal/myua_happy': [592, 672, 22, 9, 505, 663],
+  'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
+  'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
+  'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -172008,7 +172029,8 @@ const cardArtKnownBoxBySrc = src => {
     const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
     if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
   }
-  return null;
+  const sm = /^images\/assistant\/(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
+  return sm ? cardArtBoxOf(CARD_ART_KNOWN_BOX[sm[1]]) : null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   if (!known) {
