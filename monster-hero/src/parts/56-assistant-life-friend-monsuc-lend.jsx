@@ -13,12 +13,12 @@ const MONSUC_LEND_REASON_TEXT = Object.freeze({
   server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
   no_id: 'この端末ではまだ使えません',
   locked: 'この貸し出しは別の端末で作られています',
-  mon: 'この子は貸し出せません',
-  not_friend: 'フレンドの子だけを借りられます',
-  no_lend: 'その子はもう貸し出されていません',
-  streak: '同じフレンドの子は、続けて2回までです。ほかのフレンドの子も借りてみよう',
-  self: '自分の子は借りられません',
-  lender: 'その子は借りられません',
+  mon: 'このマスモンは貸し出せません',
+  not_friend: 'フレンドのマスモンだけを借りられます',
+  no_lend: 'そのマスモンはもう貸し出されていません',
+  streak: '同じフレンドのマスモンは、続けて2回までです。ほかのフレンドのマスモンも借りてみよう',
+  self: '自分のマスモンは借りられません',
+  lender: 'そのマスモンは借りられません',
 });
 const monsucLendReasonText = (reason) => MONSUC_LEND_REASON_TEXT[reason] || MONSUC_LEND_REASON_TEXT.server;
 const monsucLendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
