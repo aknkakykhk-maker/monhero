@@ -48,10 +48,9 @@ const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden'
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
 // 予定表で出す名前(施設の名前を先に。台詞の {place} は今の ASSISTANT_LIFE_PLACES のまま)
 const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({ studio: ['モンヒロビート', '練習スタジオ'], ranch: ['M/B管理', '育成場'], cardroom: ['MFバトルカード', 'カード部屋'] });
-// 得の1行(予定表)。今ある得(カード・修行・ビート・M/B管理)は今の文に合わせる
+// 得の1行(町の場所・家・病院)。ビート・カード・M/B管理の文は assistantLifePlacePerkTail(56-assistant-life-ux.jsx)のまま。
+//   そこの最後からここを呼ぶので、予定表・地図の場所の窓・家の帯の「いま行くと得」が同じ文になる
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
-  studio: '券なしで一緒に遊べる',
-  ranch: 'マスモンにトレーニングチケットを使える',
   cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
   plaza: 'ほかの助手と会いやすい・なかよく',
   garden: 'マスモンが遊んでストレスが下がる',

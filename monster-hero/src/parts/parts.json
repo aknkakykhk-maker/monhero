@@ -473,12 +473,24 @@
       "role": "部品: M/B管理にいる助手のマスモンに、トレーニングチケット/重トレーニングチケットを使ってあげる(時間帯ごとに助手1人1枚・同じマスモンは1日1枚・重トレは上がる/少し上がる/下がる)。口 assistantMasmonRanchRowInfo・assistantMasmonRanchUse・assistantMasmonRanchOpen と入れ物 AssistantMasmonRanchHost(地図)・帯 AssistantMasmonRanchBand(M/B管理)。公開の印 assistantMasmonRanchTicket。保存は新しいキー mh_assistant_masmon_ranch_v1 と育成の st。案 docs/progress/assistant-peer/masmon-ranch-ticket/PLAN.md"
     },
     {
+      "file": "56-assistant-life-masmon-plan.jsx",
+      "role": "部品: 助手のマスモンの育成ノート(計画して育てる子 1〜5体・朝昼夜×7日の予定・疲れとストレスの見通し・けが/病気/家出/サボり・看病/さがす/病院)。育成の計算へは受け口 amgpActAt/amgpAfterAct。口 assistantMasmonNoteOpen と入れ物 AssistantMasmonNoteHost・札 AssistantMasmonNoteBand・部屋の近道 AssistantMasmonNoteRoomLink・見る専用 <AssistantMasmonNote readOnly data/>(フレンドの家)。公開の印 assistantMasmonPlan。保存は新しいキー mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-sleep.jsx",
+      "role": "部品: 助手のマスモンの冬眠(育てた中身を写して箱にしまい、眠らせた助手の枠へ起こす・入れ替えで外れた前の子も並べる・はじめ10体〜育成ノートの段で最大30体)。口 amgsSwap・amgsSyncFormer、画面 AmgsSection・AmgsDetail・AmgsSleepButton(育成ノートの一覧から)。masmon 側の入れ替えは assistantMasmonSleepSwap。公開の印 assistantMasmonSleep。保存は新しいキー mh_assistant_masmon_sleep_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/HIBERNATE.md"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },
     {
       "file": "56-assistant-life-friend-bond.jsx",
       "role": "助手ライフのフレンドの家の「行く意味・来てもらう意味」(友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳・来ている印)。56-assistant-life-friend.jsx が差しこむ。公開の印 assistantLifeFriendBond の後ろ。保存は mh_assistant_life_friend_bond_v1・_fav_v1 の新しいキーだけ。表は assistant_life_friend_likes(足すだけ)"
+    },
+    {
+      "file": "56-assistant-life-friend-sent.jsx",
+      "role": "助手ライフ: 自分が残した置き手紙の見返し(「🏘 フレンド」の家の一覧の下・家の中)と、自由文を送る前の確認。56-assistant-life-friend.jsx が差しこむ。保存は mh_alf_sent_notes_v1 の新しいキーだけ(30日・50通まで)。表は今の行き来の表を読むだけ"
     },
     {
       "file": "56-assistant-life-friend-masmon-share.jsx",

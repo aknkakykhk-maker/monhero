@@ -111,6 +111,26 @@ const seed = () => {
         check(`[${tag}] ${m.name}: 帯がほかのボタンと重ならない`, !!m.strip && m.hits.length === 0, JSON.stringify({ rect: m.rect, hits: m.hits }));
         check(`[${tag}] ${m.name}: 帯に WAVE が出ている`, !!m.strip && /周目/.test(m.strip) && /W\d+\/10/.test(m.strip), m.strip || '');
       }
+      // 下から出るシート・確認の窓が画面の下半分を覆っているとき(M/B管理の「この1枚を使う」の窓など)は、帯はボタンの字を隠さないよう消える。
+      //   本物のシートの代わりに、右下に大きなボタンを並べた窓を足して、帯が「重ならない」か「隠れる」のどちらかになることを見る
+      await goHome();
+      await page.evaluate(() => {
+        const d = document.createElement('div'); d.id = '__fakeSheet'; d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:70%;z-index:60;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;background:#0f172a';
+        for (let i = 0; i < 24; i++) { const b = document.createElement('button'); b.textContent = i === 23 ? 'この1枚を使う' : 'ボタン' + i; d.appendChild(b); }
+        document.body.appendChild(d);
+      });
+      await page.waitForTimeout(1500);
+      const sheet = await page.evaluate(() => {
+        const el = document.querySelector('[data-quick-anywhere]'); if (!el) return { gone: true };
+        const cs = getComputedStyle(el); if (cs.visibility === 'hidden') return { hidden: true };
+        const R = el.getBoundingClientRect(); const hits = [];
+        for (const o of document.querySelectorAll('#__fakeSheet button')) { const r = o.getBoundingClientRect(); if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits.push(o.textContent); }
+        return { hits };
+      });
+      check(`[${tag}] シートが開いている間、帯はシートのボタンに重ならない(隠れる)`, !!(sheet.gone || sheet.hidden || (sheet.hits && sheet.hits.length === 0)), JSON.stringify(sheet));
+      await page.evaluate(() => document.getElementById('__fakeSheet')?.remove());
+      await page.waitForTimeout(1500);
+      check(`[${tag}] シートを閉じると帯が戻る`, await page.evaluate(() => { const el = document.querySelector('[data-quick-anywhere]'); return !!el && getComputedStyle(el).visibility !== 'hidden'; }));
       // モンヒロビート・助手ライフの上では出さない(それぞれの帯がある)
       await goHome();
       await page.evaluate(() => { if (typeof assistantLifeOpenScreen === 'function') assistantLifeOpenScreen(); }); await page.waitForTimeout(1500);

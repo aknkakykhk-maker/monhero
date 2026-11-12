@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 053a4d93d18558ab
+// source-sha256: 9281a44d9432c5a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6250,6 +6250,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_saudade',
+  name: 'サウダージ',
+  creator: 'ポルノグラフィティ',
+  src: 'audio/bgm-saudade.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_saudade_short',
+  name: 'サウダージ short ver.',
+  creator: 'ポルノグラフィティ',
+  src: 'audio/bgm-saudade-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8065,6 +8079,8 @@ const Audio_ = (() => {
     "audio/bgm-rose.mp3": "1a030e41df75",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
+    "audio/bgm-saudade-short.mp3": "3491f3c33de4",
+    "audio/bgm-saudade.mp3": "463d9176b94f",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
@@ -13895,6 +13911,8 @@ const RELEASE_FLAGS = {
   assistantMasmonTrain: true,
   assistantMasmonCheer: true,
   assistantMasmonRanchTicket: true,
+  assistantMasmonPlan: false,
+  assistantMasmonSleep: false,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
   assistantMasmonNamesApi: true,
@@ -52486,6 +52504,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['excited', '2:52からのサビ、最後にまぢ盛り上がる♪']],
     'listen:makutsu_no_senritsu': [['excited', '2:18でいちばん強くなるの！ 最後の最後でアゲる♪']],
     'listen:lamia': [['excited', '0:32から一気にいちばん強くなるの！ ここまぢでアガる♪']],
+    'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
@@ -52560,6 +52579,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '1:29と2:04に静かなところがありまつ。そこで息を整えましょう']],
     'listen:makutsu_no_senritsu': [['normal', '最初の40秒くらいは静かでつ。ゆっくり入っていけます']],
     'listen:lamia': [['normal', '最初の静かなところから少しずつ大きくなるの、きれいでつ']],
+    'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
@@ -52634,6 +52654,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['excited', '最後の2:52から一気に盛り上がるよ！！ ラストが見せ場♡']],
     'listen:makutsu_no_senritsu': [['excited', '2:18からのとこ、短いけどいちばん盛り上がるよ！！']],
     'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
+    'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
@@ -52708,6 +52729,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['happy', 'おでの好きな曲だ。強めと静かが入れ替わって、戦場を駆けてる感じがするんだよ']],
     'listen:makutsu_no_senritsu': [['happy', '静かに始まって、どんどん深くもぐっていく感じだな']],
     'listen:lamia': [['troubled', 'BPM199でLv.51だぞ。速すぎて、おでの冒険も駆け足だな']],
+    'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
     'listen:rising_hope': [['normal', 'テンポが190もあるからな。最初から最後まで走りっぱなしの冒険だ']],
@@ -52782,6 +52804,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['happy', 'サビは3:12まで！ 最後の20秒でぜんぶ締めよ笑']],
     'listen:makutsu_no_senritsu': [['wink', '2:25で静かになって終わるから、最後はきれいに止めよ笑']],
     'listen:lamia': [['happy', '2:08から静かに締めていくとこ、余韻あっていいよね笑']],
+    'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
@@ -52856,6 +52879,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '0:17でもう強め。静かを2回はさんで、2:52で一番上だよぉ']],
     'listen:makutsu_no_senritsu': [['normal', '1:13からずっと強めで、2:18で一番上。最後まで上がり続ける構成だねぇ']],
     'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜']],
+    'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
@@ -52930,6 +52954,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いです笑']],
     'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけです。短いけど濃いです笑']],
     'listen:lamia': [['normal', 'BPM199で797ノーツ、Lv.51。強く打つ音が56%です・・・！']],
+    'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
     'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
@@ -53004,6 +53029,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '2:04の静かなところで、ゆっくり落ち着こうか']],
     'listen:makutsu_no_senritsu': [['happy', 'はじめの静かなところで、ゆっくり気持ちを整えようか☺️']],
     'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
+    'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
     'listen:rising_hope': [['happy', '1:20でふつうに戻る所で、最後に少しほっとできるね']],
@@ -65816,10 +65842,14 @@ const GrowthFxLayer = ({
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const quickAnywhereFloatStyle = spot => {
-  const s = {
+  const s = spot.hidden ? {
+    visibility: 'hidden',
+    pointerEvents: 'none'
+  } : {};
+  Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
-  };
+  });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
 };
@@ -65868,7 +65898,8 @@ const quickAnywhereFloatPick = el => {
   }
   return {
     side: 'right',
-    lift: 0
+    lift: 0,
+    hidden: true
   };
 };
 const QuickAnywhereFloat = ({
@@ -65885,7 +65916,7 @@ const QuickAnywhereFloat = ({
   React.useLayoutEffect(() => {
     const place = () => {
       if (!ref.current) return;
-      setSpot(prev => quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+      setSpot(prev => !prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
     };
     const fresh = () => {
       if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
@@ -65903,7 +65934,7 @@ const QuickAnywhereFloat = ({
   return React.createElement("button", _extends({
     ref: ref,
     type: "button",
-    "data-quick-anywhere-spot": `${spot.side}-${spot.lift}`
+    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`
   }, rest, {
     style: {
       ...(style || {}),
@@ -109999,6 +110030,9 @@ const useAssistantLifeNow = metIds => {
     }, 60000);
     return () => clearInterval(t);
   }, [key]);
+  React.useEffect(() => {
+    if (assistantLifeEnabled() && typeof assistantLifePreloadFullBodies === 'function') assistantLifePreloadFullBodies(metIds);
+  }, [key]);
   return st;
 };
 function AssistantLifeFaces({
@@ -112550,7 +112584,32 @@ function AssistantLifeRoomSheet({
     sub: "話すと仲良し度が少し上がる(1日の上限あり)",
     gain: "💗 +",
     on: () => onChat(id, null)
-  }), soloOn && React.createElement(AssistantLifeDoRow, {
+  }), (() => {
+    let bi = null;
+    try {
+      bi = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+    } catch (_) {
+      bi = null;
+    }
+    if (!bi || !(typeof assistantMasmonBattleOpen === 'function')) return null;
+    return React.createElement(AssistantLifeDoRow, {
+      k: "masmon-battle",
+      icon: "⚔",
+      label: (bi.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, ''),
+      sub: bi.sub || '',
+      gain: bi.gain || '',
+      on: () => {
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      },
+      disabled: !!bi.disabled,
+      why: bi.why || ''
+    });
+  })(), soloOn && React.createElement(AssistantLifeDoRow, {
     k: "give-solo",
     icon: "🎁",
     label: w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`,
@@ -112601,31 +112660,6 @@ function AssistantLifeRoomSheet({
     on: onMasmon ? () => onMasmon(id) : null,
     why: "まだ見られません"
   }), (() => {
-    let bi = null;
-    try {
-      bi = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null;
-    } catch (_) {
-      bi = null;
-    }
-    if (!bi || !(typeof assistantMasmonBattleOpen === 'function')) return null;
-    return React.createElement(AssistantLifeDoRow, {
-      k: "masmon-battle",
-      icon: "⚔",
-      label: bi.label || 'マスモンで対戦(β)',
-      sub: bi.sub || '',
-      gain: bi.gain || '',
-      on: () => {
-        try {
-          assistantMasmonBattleOpen({
-            assistantId: id,
-            from: 'room'
-          });
-        } catch (_) {}
-      },
-      disabled: !!bi.disabled,
-      why: bi.why || ''
-    });
-  })(), (() => {
     let pi = null;
     try {
       pi = typeof assistantLifePlanRowInfo === 'function' ? assistantLifePlanRowInfo(id) : null;
@@ -112754,6 +112788,8 @@ function AssistantLifeRoomSheet({
   }), typeof AssistantMasmonRoomRow === 'function' && React.createElement(AssistantMasmonRoomRow, {
     id: id,
     onOpen: onMasmon
+  }), typeof AssistantMasmonNoteRoomLink === 'function' && React.createElement(AssistantMasmonNoteRoomLink, {
+    id: id
   }), soloOn && typeof AssistantLifeChekiRow === 'function' && React.createElement(AssistantLifeChekiRow, {
     pair: [id]
   }), sess && React.createElement("div", {
@@ -114258,6 +114294,8 @@ function AssistantLifeHouse({
   }), uiV2 && typeof AssistantLifePlanBand === 'function' && React.createElement(AssistantLifePlanBand, {
     ids: ids,
     land: land
+  }), typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
+    land: land
   }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
     style: {
@@ -114625,6 +114663,8 @@ function AssistantLifeHouse({
     onChat: chatOn ? chat : null,
     follow: follow && follow.id === roomId ? follow : null,
     onFollowDone: () => setFollow(null)
+  }), typeof AssistantMasmonNoteHost === 'function' && React.createElement(AssistantMasmonNoteHost, {
+    land: land
   }), masmonId && typeof AssistantMasmonSheet === 'function' && React.createElement(AssistantMasmonSheet, {
     id: masmonId,
     land: land,
@@ -116032,7 +116072,7 @@ function AssistantLifeRoomFigure({
   sleep = false,
   onPress = null
 }) {
-  const night = look === 'night',
+  const night = look === 'night' && sleep,
     evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)' : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
@@ -116910,15 +116950,15 @@ function AssistantLifeRoomScene({
     floorY: floorY,
     sleepers: people,
     look: look
-  }), !asleep && lay && standItems.map((x, i) => React.createElement(AssistantLifeRoomFigure, {
+  }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? React.createElement(AssistantLifeRoomFigure, {
     key: x.pid,
     who: x.who,
     src: x.src,
     p: lay[i],
     look: look,
-    sleep: sleepIds.includes(x.pid),
+    sleep: true,
     onPress: onPerson ? () => onPerson(x.pid) : null
-  })), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
+  }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
     top: deskTop,
@@ -117015,7 +117055,14 @@ function AssistantLifeRoomScene({
     style: {
       background: '#ff8a3018'
     }
-  }), bubble && people.length > 0 && React.createElement("p", {
+  }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? null : React.createElement(AssistantLifeRoomFigure, {
+    key: x.pid,
+    who: x.who,
+    src: x.src,
+    p: lay[i],
+    look: look,
+    onPress: onPerson ? () => onPerson(x.pid) : null
+  })), bubble && people.length > 0 && React.createElement("p", {
     className: "absolute z-[6] max-w-[64%] rounded-2xl bg-white px-2.5 py-1.5 text-[12px] font-black leading-snug text-slate-900 shadow",
     style: {
       left: W * 0.24,
@@ -117224,6 +117271,12 @@ const assistantLifeMarketWho = () => {
     return null;
   }
 };
+const assistantLifePlacePerkTail = place => {
+  if (place === 'studio') return '券なしで一緒に遊べる';
+  if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
+  if (place === 'ranch') return typeof amgrOn === 'function' && amgrOn() ? '助手のマスモンにトレーニングチケットを使ってあげられる' : 'トレーニングすると、その助手のマスモンも育つ';
+  return typeof assistantLifeBodyPerk === 'function' ? assistantLifeBodyPerk(place) : '';
+};
 const assistantLifePerkRows = (life, ids, nameOf) => {
   const rows = [];
   if (!life) return rows;
@@ -117242,7 +117295,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'beat',
       place: 'studio',
       icon: '🎵',
-      text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`,
+      text: `${nm(beat)}がビートにいます。${assistantLifePlacePerkTail('studio')}`,
       go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null
     });
   } catch (_) {}
@@ -117252,7 +117305,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'card',
       place: 'cardroom',
       icon: '🃏',
-      text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
+      text: `${nm(card)}とカードで${assistantLifePlacePerkTail('cardroom')}`,
       go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null
     });
   } catch (_) {}
@@ -117298,7 +117351,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     k: 'ranch',
     place: 'ranch',
     icon: '🥚',
-    text: typeof amgrOn === 'function' && amgrOn() ? `${nm(ranch)}がM/B管理にいます。助手のマスモンにトレーニングチケットを使ってあげられる` : `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`,
+    text: `${nm(ranch)}がM/B管理にいます。${assistantLifePlacePerkTail('ranch')}`,
     go: typeof go.ranch === 'function' ? go.ranch : null
   });
   return rows;
@@ -118972,6 +119025,43 @@ const assistantLifeProfileRhythm = id => {
   const h = n => Number.isFinite(n) ? `${n}時` : '';
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
+const ASSISTANT_FULLBODY_PRELOADED = new Set();
+let assistantFullBodyPreloadTimer = null;
+function assistantLifePreloadFullBodies(metIds) {
+  try {
+    if (typeof Image === 'undefined' || typeof assistantFullBodyImage !== 'function' || typeof assistantById !== 'function') return;
+    const conn = typeof navigator !== 'undefined' ? navigator.connection : null;
+    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return;
+    const todo = [];
+    (metIds || []).forEach(id => {
+      const who = assistantById(id);
+      const src = who ? assistantFullBodyImage(who, 'happy') : null;
+      if (src && !ASSISTANT_FULLBODY_PRELOADED.has(src) && !todo.includes(src)) todo.push(src);
+    });
+    if (!todo.length || assistantFullBodyPreloadTimer) return;
+    const later = fn => typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(fn, {
+      timeout: 8000
+    }) : setTimeout(fn, 2500);
+    const next = () => {
+      const src = todo.shift();
+      if (!src) {
+        assistantFullBodyPreloadTimer = null;
+        return;
+      }
+      ASSISTANT_FULLBODY_PRELOADED.add(src);
+      const im = new Image();
+      im.decoding = 'async';
+      try {
+        im.fetchPriority = 'low';
+      } catch (_) {}
+      im.onload = im.onerror = () => {
+        assistantFullBodyPreloadTimer = later(next);
+      };
+      im.src = src;
+    };
+    assistantFullBodyPreloadTimer = later(next);
+  } catch (_) {}
+}
 function AssistantLifeProfileStand({
   who,
   head = 0.32,
@@ -137919,6 +138009,107 @@ const assistantMasmonUndoSwap = (aid, slot) => {
   });
   return true;
 };
+const assistantMasmonSleepSwap = (aid, slot, back, fromFormer = null) => {
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (!ASSISTANT_MASMON_STORE.loaded || !back || !assistantMasmonMon(back.monster)) return null;
+  const rows = assistantMasmonRowsOf(st, aid),
+    row = rows.find(x => x.slot === slot);
+  if (!row || rows.some(x => x.slot !== slot && x.monster === back.monster)) return null;
+  const m = {
+    ...assistantMasmonMineOf(st, aid)
+  };
+  const colorsNow = assistantMasmonDyeNowOf(st, aid, slot, row.colors || []);
+  const out = {
+    monster: row.monster,
+    nick: row.nick,
+    lv: row.lv,
+    grow: row.grow,
+    why: row.why || '',
+    role: row.role || '',
+    welcome: row.welcome || slot * 2 - 1,
+    colors: [...colorsNow],
+    ai: !!row.ai
+  };
+  m.former = {
+    ...(m.former || {})
+  };
+  if (fromFormer) {
+    const list = [...(m.former[fromFormer.slot] || [])];
+    const i = list.findIndex(x => x && x.monster === back.monster && x.at === fromFormer.at);
+    if (i >= 0) {
+      list.splice(i, 1);
+      m.former[fromFormer.slot] = list;
+    }
+  }
+  m.parts = {
+    ...(m.parts || {})
+  };
+  delete m.parts[slot];
+  m.names = {
+    ...(m.names || {})
+  };
+  delete m.names[slot];
+  if (m.grow) {
+    m.grow = {
+      ...m.grow
+    };
+    delete m.grow[slot];
+  }
+  m.nameStyleBefore = {
+    ...(m.nameStyleBefore || {})
+  };
+  delete m.nameStyleBefore[slot];
+  m.colorStyleBefore = {
+    ...(m.colorStyleBefore || {})
+  };
+  delete m.colorStyleBefore[slot];
+  const day = assistantMasmonToday();
+  const nu = {
+    slot,
+    monster: back.monster,
+    nick: back.nick,
+    lv: back.lv,
+    grow: back.grow,
+    why: back.why || '',
+    role: back.role || row.role || '',
+    welcome: back.welcome || row.welcome || slot * 2 - 1,
+    colors: [...(back.colors || [])],
+    ai: !!back.ai,
+    reason: 'ask',
+    at: day
+  };
+  const hist = [...(st.dyes && st.dyes[aid] || []), {
+    v: ASSISTANT_MASMON_DYE_V,
+    d: ASSISTANT_MASMON_DRAW_V,
+    why: 'ask',
+    at: day,
+    season: assistantMasmonSeasonKey(day),
+    fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)),
+    roles: {},
+    slots: {
+      [slot]: [...nu.colors]
+    }
+  }];
+  assistantMasmonSave({
+    ...st,
+    pick: {
+      ...(st.pick || {}),
+      [aid]: {
+        ...(st.pick && st.pick[aid] || {}),
+        [slot]: nu
+      }
+    },
+    dyes: {
+      ...(st.dyes || {}),
+      [aid]: hist.slice(-40)
+    },
+    mine: {
+      ...(st.mine || {}),
+      [aid]: m
+    }
+  });
+  return out;
+};
 const assistantMasmonUndoMine = (aid, key) => {
   const st = ASSISTANT_MASMON_STORE.state,
     m = {
@@ -137959,6 +138150,50 @@ const assistantLifeMasmonTeamOf = id => {
     }));
   } catch (_) {
     return [];
+  }
+};
+const assistantLifeMasmonShareOf = id => {
+  try {
+    const p = assistantMasmonPlanOf(id);
+    if (!p) return {
+      list: [],
+      waiting: 0
+    };
+    const growOn = typeof amgOn === 'function' && amgOn() && typeof amgEntryOf === 'function';
+    const statsOf = t => {
+      if (!growOn) return null;
+      const e = amgEntryOf(id, t);
+      if (!e || !e.st) return null;
+      const o = {};
+      for (const k of ['life', 'pow', 'wise', 'hit', 'eva', 'tough']) {
+        const v = Number(e.st[k]);
+        if (!Number.isFinite(v)) return null;
+        o[k] = Math.round(v);
+      }
+      return o;
+    };
+    const list = [...assistantMasmonTeam(p), ...assistantMasmonBench(p)].map(t => ({
+      monster: t.monster,
+      nick: t.nick,
+      colors: [...(t.dye && t.dye.colors || [])],
+      lead: !!t.lead,
+      slot: Number.isInteger(t.slot) ? t.slot : 0,
+      lv: Number.isFinite(Number(t.lv)) ? Number(t.lv) : 1,
+      grow: typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(t.grow) : String(t.grow || ''),
+      growMine: t.growMine && typeof t.growMine.kind === 'string' ? t.growMine.kind : '',
+      stats: statsOf(t),
+      why: typeof t.why === 'string' ? t.why : ''
+    }));
+    const waiting = Array.isArray(p.extra) ? p.extra.filter(t => t && t.unknown).length : 0;
+    return {
+      list,
+      waiting
+    };
+  } catch (_) {
+    return {
+      list: [],
+      waiting: 0
+    };
   }
 };
 const useAssistantMasmonSave = () => {
@@ -140337,7 +140572,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const g = {};
   let fail = false;
   const day = amgSlotDay(slot);
-  const cap = care.viewed ? AMG_CARE.viewCap : AMG_DAY_CAP;
+  const cap = care.viewed || care.plan ? AMG_CARE.viewCap : AMG_DAY_CAP;
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
   const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
@@ -140365,7 +140600,11 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     }
   };
   const failChance = extra => Math.min(0.4, e.str / 200 + extra) * (act.picked ? AMG_CARE.pickFail : 1) * failMul;
-  if (act.a === 'rest') {
+  const idle = typeof AMGP_IDLE !== 'undefined' ? AMGP_IDLE[act.a] : null;
+  if (idle) {
+    e.fat = amgClamp(e.fat + idle.fat, 0, 100);
+    e.str = amgClamp(e.str + idle.str, 0, 100);
+  } else if (act.a === 'rest') {
     e.fat = amgClamp(e.fat - 30, 0, 100);
     e.str = amgClamp(e.str - 5, 0, 100);
   } else if (act.a === 'play') {
@@ -140414,7 +140653,7 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
       r: 1
     } : {})
   }].slice(-AMG_LOG);
-  if (act.a !== 'shugyo' && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot);
+  if (act.a !== 'shugyo' && !idle && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot);
   return e;
 };
 const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
@@ -140464,18 +140703,21 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
-      const act = pl ? {
+      const pp = typeof amgpActAt === 'function' ? amgpActAt(aid, row, s, e, seed) : null;
+      const act = pp ? pp.act : pl ? {
         a: pl.a,
         k: pl.k,
         picked: true
       } : amgChoose(aid, e, row, rnd, f, !!rest[row.slot], s);
-      if (!pl && f && act.k === f) act.asked = true;
+      if (!pp && !pl && f && act.k === f) act.asked = true;
       if (rest[row.slot]) delete rest[row.slot];
       if (plan[row.slot] && plan[row.slot].s <= s) delete plan[row.slot];
       mons[key] = amgDo(aid, e, row, rnd, s, act, {
         viewed: care.d === amgSlotDay(s) && !!care.view[row.slot],
-        ranch: !!(state.boost[aid] && state.boost[aid].s === s)
+        ranch: !!(state.boost[aid] && state.boost[aid].s === s),
+        plan: !!(pp && pp.plan)
       });
+      if (pp && typeof amgpAfterAct === 'function') amgpAfterAct(aid, row, s, mons[key], pp, seed);
     }
     changed = true;
   }
@@ -140504,7 +140746,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     }
   };
 };
-const amgActName = x => (x.a === 'shugyo' ? typeof amgtActName === 'function' ? amgtActName(x) : '修行' : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : x.a === 'tkt' ? `${AMG_LIGHT[x.k] || ''}(あなたのトレーニングチケット)` : x.a === 'tktH' ? `${AMG_HEAVY[x.k] || ''}(あなたの重トレーニングチケット)` : AMG_SPECIAL[x.a]) || '';
+const amgActName = x => typeof amgpActName === 'function' && amgpActName(x) || (x.a === 'shugyo' ? typeof amgtActName === 'function' ? amgtActName(x) : '修行' : x.a === 'rest' ? '休養' : x.a === 'play' ? '遊び' : x.a === 'light' ? AMG_LIGHT[x.k] : x.a === 'heavy' ? AMG_HEAVY[x.k] : x.a === 'tkt' ? `${AMG_LIGHT[x.k] || ''}(あなたのトレーニングチケット)` : x.a === 'tktH' ? `${AMG_HEAVY[x.k] || ''}(あなたの重トレーニングチケット)` : AMG_SPECIAL[x.a]) || '';
 const AMG_STORE = {
   state: normalizeAssistantMasmonGrow(null),
   loaded: false,
@@ -140551,6 +140793,7 @@ const amgTick = async (aid, now = Date.now()) => {
   if (!amgOn() || typeof ASSISTANT_MASMON_STORE === 'undefined') return null;
   await ASSISTANT_MASMON_STORE.load();
   await AMG_STORE.load();
+  if (typeof amgpLoad === 'function') await amgpLoad();
   const ms = ASSISTANT_MASMON_STORE.state;
   if (!ms.seed) return null;
   const rows = typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, aid) : [];
@@ -140763,6 +141006,9 @@ function AmgPickRow({
   e,
   st
 }) {
+  if (typeof amgpOn === 'function' && amgpOn()) return React.createElement(AmgpPickMoved, {
+    who: who
+  });
   const next = amgSlotOf() + 1;
   const pl = st.plan[who.id] && st.plan[who.id][t.slot] && st.plan[who.id][t.slot].s === next ? st.plan[who.id][t.slot] : null;
   const [v, setV] = React.useState(pl ? `${pl.a}:${pl.k}` : `light:${AMG_KEYS.reduce((a, b) => e.st[b] < e.st[a] ? b : a)}`);
@@ -140818,6 +141064,21 @@ function AmgPickRow({
     onClick: pick,
     "data-amg-pick-go": true
   }, "決める")));
+}
+function AmgpPickMoved({
+  who
+}) {
+  return React.createElement("div", {
+    className: "mt-1.5 rounded-xl border border-white/10 p-2",
+    "data-amg-pick-moved": true
+  }, React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, "🗓 訓練の予定は「📒 育成ノート」で組めます(計画して育てるマスモン・次の回だけ変える)"), typeof assistantMasmonNoteOpen === 'function' && React.createElement("button", {
+    type: "button",
+    className: "mt-1 min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black",
+    onClick: () => assistantMasmonNoteOpen(who && who.id),
+    "data-amg-pick-note": true
+  }, "📒 育成ノートを開く"));
 }
 function AmgGrowCard({
   who,
@@ -142149,9 +142410,8 @@ const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({
   clinic: '🏥'
 });
 const assistantLifePlanPerk = place => {
-  if (place === 'cardroom') return `対戦すると ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'battle') return 'マスモンが修行する';
-  return typeof assistantLifeBodyPerk === 'function' ? assistantLifeBodyPerk(place) : '';
+  return typeof assistantLifePlacePerkTail === 'function' ? assistantLifePlacePerkTail(place) : '';
 };
 const assistantLifePlanName = id => {
   try {
@@ -142576,8 +142836,6 @@ const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({
   cardroom: ['MFバトルカード', 'カード部屋']
 });
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
-  studio: '券なしで一緒に遊べる',
-  ranch: 'マスモンにトレーニングチケットを使える',
   cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
   plaza: 'ほかの助手と会いやすい・なかよく',
   garden: 'マスモンが遊んでストレスが下がる',
@@ -146805,6 +147063,7 @@ function AssistantMasmonRanchSheet({
   }, React.createElement("span", null, "疲れ"), React.createElement("span", null, "+", res.fat)), React.createElement("button", {
     type: "button",
     onClick: onClose,
+    "data-mhl-sheet-close": true,
     className: `${btn} mt-3 w-full bg-slate-700`
   }, "閉じる")) : React.createElement(React.Fragment, null, rows.length > 1 && React.createElement("div", {
     className: "mt-2 flex flex-wrap gap-1.5",
@@ -146858,6 +147117,7 @@ function AssistantMasmonRanchSheet({
   }, React.createElement("button", {
     type: "button",
     onClick: onClose,
+    "data-mhl-sheet-close": true,
     className: `${btn} bg-slate-700`
   }, "やめる"), React.createElement("button", {
     type: "button",
@@ -146895,6 +147155,1909 @@ function AssistantMasmonRanchBand() {
   }, "🎫 助手のマスモンにチケットを使う(あと", open.length, "人)") : React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-300"
   }, "この時間帯はみんなに使いました")), React.createElement(AssistantMasmonRanchHost, null));
+}
+const ASSISTANT_MASMON_PLAN_KEY = 'mh_assistant_masmon_plan_v1';
+const ASSISTANT_MASMON_COND_KEY = 'mh_assistant_masmon_cond_v1';
+const AMGP_STAGE_DAYS = Object.freeze([0, 7, 21, 42, 70]);
+const AMGP_MAX = AMGP_STAGE_DAYS.length;
+const AMGP_NUM = Object.freeze({
+  sabFat: 60,
+  sabStr: 50,
+  sabMax: 0.35,
+  hurtFat: 70,
+  hurtPer: 0.015,
+  hurtMax: 0.30,
+  hurtN: 6,
+  sickStr: 60,
+  sickPer: 0.01,
+  sickMax: 0.30,
+  sickN: 9,
+  awayStr: 80,
+  awayBase: 0.03,
+  awayPer: 0.005,
+  awayN: 6,
+  careSlots: 3,
+  careStr: 10,
+  findStr: 40,
+  hospSlots: 3,
+  hospStr: 10
+});
+const AMGP_COND = Object.freeze({
+  hurt: {
+    icon: '🤕',
+    name: 'けが'
+  },
+  sick: {
+    icon: '🤒',
+    name: '病気'
+  },
+  away: {
+    icon: '🏃',
+    name: '家出'
+  }
+});
+const AMGP_IDLE = Object.freeze({
+  saboru: {
+    fat: -5,
+    str: -5
+  },
+  hurt: {
+    fat: -30,
+    str: -5
+  },
+  sick: {
+    fat: -30,
+    str: -10
+  },
+  away: {
+    fat: -30,
+    str: -5
+  }
+});
+const AMGP_IDLE_NAME = Object.freeze({
+  saboru: 'サボった',
+  hurt: 'けがで休み',
+  sick: '病気で休み',
+  away: '家出中'
+});
+const AMGP_CODE_RE = /^(A|R|P|S|[LH]:(life|pow|wise|hit|eva|tough))$/;
+const AMGP_DAY_NAME = Object.freeze(['月', '火', '水', '木', '金', '土', '日']);
+const amgpOkCode = c => typeof c === 'string' && AMGP_CODE_RE.test(c);
+const amgpKey = (aid, slot, monster) => `${aid}:${slot}:${monster}`;
+const amgpKeyOk = k => typeof k === 'string' && /^[a-z]{2,12}:[1-8]:\w{2,40}$/.test(k);
+const amgpSplitKey = k => {
+  const [aid, slot, monster] = String(k).split(':');
+  return {
+    aid,
+    slot: Number(slot),
+    monster
+  };
+};
+const amgpWeekday = day => (day % 7 + 7 + 3) % 7;
+const amgpCellOf = slot => amgpWeekday(Math.floor(slot / 3)) * 3 + slot % 3;
+const amgpBlankWeek = () => Array.from({
+  length: 21
+}, () => 'A');
+const normalizeAssistantMasmonPlan = raw => {
+  const out = {
+    v: 1,
+    picks: [],
+    week: {},
+    once: {},
+    days: 0,
+    dd: {},
+    done: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const p of (Array.isArray(raw.picks) ? raw.picks : []).slice(0, AMGP_MAX)) {
+    if (!p || typeof p !== 'object' || !Number.isInteger(p.slot)) continue;
+    const k = amgpKey(p.aid, p.slot, p.monster);
+    if (amgpKeyOk(k) && !out.picks.some(q => amgpKey(q.aid, q.slot, q.monster) === k)) out.picks.push({
+      aid: p.aid,
+      slot: p.slot,
+      monster: p.monster,
+      at: Number.isInteger(p.at) ? p.at : 0
+    });
+  }
+  if (raw.week && typeof raw.week === 'object') for (const [k, w] of Object.entries(raw.week).slice(-64)) if (amgpKeyOk(k) && Array.isArray(w) && w.length === 21) out.week[k] = w.map(c => amgpOkCode(c) ? c : 'A');
+  if (raw.once && typeof raw.once === 'object') for (const [k, x] of Object.entries(raw.once).slice(-64)) if (amgpKeyOk(k) && x && Number.isInteger(x.s) && amgpOkCode(x.c)) out.once[k] = {
+    s: x.s,
+    c: x.c
+  };
+  out.days = amgNum(raw.days, 0, 0, 1e6);
+  if (raw.dd && typeof raw.dd === 'object') for (const [k, d] of Object.entries(raw.dd).slice(-64)) if (amgpKeyOk(k) && Number.isInteger(d)) out.dd[k] = d;
+  if (raw.done && typeof raw.done === 'object' && raw.done.pickMoved_v1 === true) out.done.pickMoved_v1 = true;
+  return out;
+};
+const normalizeAssistantMasmonCond = raw => {
+  const out = {
+    v: 1,
+    mons: {},
+    log: []
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const int = (v, d) => Number.isInteger(v) ? v : d;
+  if (raw.mons && typeof raw.mons === 'object') for (const [k, c] of Object.entries(raw.mons).slice(-64)) {
+    if (!amgpKeyOk(k) || !c || typeof c !== 'object' || !AMGP_COND[c.k] || !Number.isInteger(c.from) || !Number.isInteger(c.until)) continue;
+    out.mons[k] = {
+      k: c.k,
+      from: c.from,
+      until: c.until,
+      care: int(c.care, -1),
+      find: int(c.find, -1),
+      hosp: (Array.isArray(c.hosp) ? c.hosp : []).filter(Number.isInteger).slice(-30)
+    };
+  }
+  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'find'].includes(x.t)).slice(-40).map(x => ({
+    s: x.s,
+    key: x.key,
+    k: x.k,
+    t: x.t
+  }));
+  return out;
+};
+const amgpMakeStore = (key, norm) => ({
+  key,
+  norm,
+  state: norm(null),
+  loaded: false,
+  subs: new Set(),
+  dirty: false,
+  set(next) {
+    this.state = next;
+    this.subs.forEach(f => {
+      try {
+        f(next);
+      } catch (_) {}
+    });
+  },
+  load() {
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null;
+      try {
+        raw = typeof storeGet === 'function' ? await storeGet(this.key, null, false) : null;
+      } catch (_) {}
+      this.loaded = true;
+      this.set(this.norm(raw));
+      return this.state;
+    })();
+    return this._p;
+  },
+  save(next) {
+    if (!this.loaded) return false;
+    this.set(next);
+    if (!this.dirty) {
+      this.dirty = true;
+      Promise.resolve().then(() => {
+        this.dirty = false;
+        try {
+          if (typeof storeSet === 'function') storeSet(this.key, this.state, false);
+        } catch (_) {}
+      });
+    }
+    return true;
+  }
+});
+const AMGP_STORE = amgpMakeStore(ASSISTANT_MASMON_PLAN_KEY, normalizeAssistantMasmonPlan);
+const AMGP_CSTORE = amgpMakeStore(ASSISTANT_MASMON_COND_KEY, normalizeAssistantMasmonCond);
+const amgpOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantMasmonPlan === true && typeof amgOn === 'function' && amgOn();
+const amgpLoad = () => Promise.all([AMGP_STORE.load(), AMGP_CSTORE.load()]);
+try {
+  setTimeout(() => {
+    try {
+      if (amgpOn()) void amgpLoad();
+    } catch (_) {}
+  }, 0);
+} catch (_) {}
+const amgpStageOf = days => {
+  const d = Number.isFinite(days) ? days : 0;
+  const lv = AMGP_STAGE_DAYS.filter(x => d >= x).length;
+  return {
+    lv,
+    cap: lv,
+    next: lv < AMGP_MAX ? AMGP_STAGE_DAYS[lv] : null
+  };
+};
+const amgpPickIndex = (aid, row, st = AMGP_STORE.state) => row ? st.picks.findIndex(p => p.aid === aid && p.slot === row.slot && p.monster === row.monster) : -1;
+const amgpCodeAt = (key, slot, st = AMGP_STORE.state) => st.once[key] && st.once[key].s === slot ? st.once[key].c : (st.week[key] || [])[amgpCellOf(slot)] || 'A';
+const amgpCondAt = (key, slot, cs = AMGP_CSTORE.state) => {
+  const c = cs.mons[key];
+  return c && c.from < slot && slot <= c.until ? c : null;
+};
+const amgpSabChance = (fat, str) => fat >= AMGP_NUM.sabFat || str >= AMGP_NUM.sabStr ? Math.min(AMGP_NUM.sabMax, Math.max(0, fat - AMGP_NUM.sabFat) / 100 + Math.max(0, str - AMGP_NUM.sabStr) / 100) : 0;
+const amgpHurtChance = (a, fat) => (a === 'heavy' || a === 'shugyo') && fat >= AMGP_NUM.hurtFat ? Math.min(AMGP_NUM.hurtMax, (fat - AMGP_NUM.hurtFat) * AMGP_NUM.hurtPer) : 0;
+const amgpSickChance = (a, str) => a !== 'rest' && str >= AMGP_NUM.sickStr ? Math.min(AMGP_NUM.sickMax, (str - AMGP_NUM.sickStr) * AMGP_NUM.sickPer) : 0;
+const amgpAwayChance = str => str >= AMGP_NUM.awayStr ? AMGP_NUM.awayBase + (str - AMGP_NUM.awayStr) * AMGP_NUM.awayPer : 0;
+const amgpPolicyKey = (row, e) => {
+  const pol = AMG_POLICY[typeof assistantMasmonGrowKind === 'function' ? assistantMasmonGrowKind(row && row.grow) : String(row && row.grow || '').split('(')[0]] || [];
+  return pol[0] || AMG_KEYS.reduce((a, b) => e && e.st[b] < e.st[a] ? b : a, AMG_KEYS[0]);
+};
+const amgpShugyoAct = (aid, row, e, slot, seed) => {
+  try {
+    if (typeof amgtOn !== 'function' || !amgtOn() || typeof AMGT_STORE === 'undefined' || !AMGT_STORE.loaded || typeof amgtWasAtPlace !== 'function' || !amgtWasAtPlace(aid, slot)) return null;
+    const me = (AMGT_STORE.state.mons[aid] || {})[`${row.slot}:${row.monster}`] || amgtInitMon(row.monster, e.lv, e.st);
+    if (me.day && me.day.d === amgSlotDay(slot) && me.day.n >= AMGT_NUM.perDay) return null;
+    return {
+      a: 'shugyo',
+      k: amgtPickKind(aid, me, amgtTechsOf(row.monster), e.st, amgtRngOf(`${seed}|${aid}|plan-shugyo|${row.slot}:${row.monster}|${slot}`), '')
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const amgpActOfCode = (aid, row, e, slot, code, seed) => {
+  if (code === 'R') return {
+    a: 'rest'
+  };
+  if (code === 'P') return {
+    a: 'play'
+  };
+  if (code === 'S') return amgpShugyoAct(aid, row, e, slot, seed) || {
+    a: 'light',
+    k: amgpPolicyKey(row, e)
+  };
+  const [t, k] = code.split(':');
+  return {
+    a: t === 'H' ? 'heavy' : 'light',
+    k
+  };
+};
+const amgpAbsToSlot = abs => {
+  try {
+    const s = typeof amgtLifeSlotsToGrow === 'function' ? amgtLifeSlotsToGrow(abs) : [];
+    return Number.isInteger(s[0]) ? s[0] : null;
+  } catch (_) {
+    return null;
+  }
+};
+const amgpHospital = (aid, key, slot, e) => {
+  if (!(typeof assistantLifeHospitalSlotsOf === 'function')) return false;
+  const cs = AMGP_CSTORE.state;
+  const c0 = cs.mons[key];
+  if (!c0 || c0.k === 'away' || c0.until < slot) return false;
+  let abs = [];
+  try {
+    abs = assistantLifeHospitalSlotsOf(aid);
+  } catch (_) {
+    abs = [];
+  }
+  if (!Array.isArray(abs)) return false;
+  let c = c0;
+  const log = [];
+  for (const a of abs) {
+    if (!Number.isInteger(a) || c.hosp.includes(a)) continue;
+    const gs = amgpAbsToSlot(a);
+    if (gs === null || gs < c.from || gs > slot || gs > c.until) continue;
+    c = {
+      ...c,
+      until: Math.max(gs, c.until - AMGP_NUM.hospSlots),
+      hosp: [...c.hosp, a].slice(-30)
+    };
+    if (e) e.str = amgClamp(e.str - AMGP_NUM.hospStr, 0, 100);
+    log.push({
+      s: gs,
+      key,
+      k: c.k,
+      t: 'hosp'
+    });
+  }
+  if (c === c0) return false;
+  AMGP_CSTORE.save({
+    ...cs,
+    mons: {
+      ...cs.mons,
+      [key]: c
+    },
+    log: [...cs.log, ...log].slice(-40)
+  });
+  return true;
+};
+const amgpActAt = (aid, row, slot, e, seed) => {
+  if (!amgpOn() || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded || !row || !e) return null;
+  const key = amgpKey(aid, row.slot, row.monster);
+  amgpHospital(aid, key, slot, e);
+  const c = amgpCondAt(key, slot);
+  if (c) return {
+    act: {
+      a: c.k
+    },
+    idle: true,
+    key
+  };
+  if (amgpPickIndex(aid, row) < 0) return null;
+  const code = amgpCodeAt(key, slot);
+  if (code === 'A') return null;
+  if (/^[LHS]/.test(code)) {
+    const p = amgpSabChance(e.fat, e.str);
+    if (p > 0 && typeof assistantMasmonRng === 'function' && assistantMasmonRng(`${seed}|${aid}|plan-sab|${key}|${slot}`)() < p) return {
+      act: {
+        a: 'saboru'
+      },
+      plan: true,
+      key,
+      code
+    };
+  }
+  return {
+    act: {
+      ...amgpActOfCode(aid, row, e, slot, code, seed),
+      picked: true
+    },
+    plan: true,
+    key,
+    code
+  };
+};
+const amgpAfterAct = (aid, row, slot, e, pp, seed) => {
+  if (!pp || !pp.plan || !amgpOn() || !e) return;
+  const st = AMGP_STORE.state;
+  const day = amgSlotDay(slot);
+  let next = st;
+  if (st.dd[pp.key] !== day) next = {
+    ...next,
+    days: next.days + 1,
+    dd: {
+      ...next.dd,
+      [pp.key]: day
+    }
+  };
+  if (next.once[pp.key] && next.once[pp.key].s <= slot) {
+    const once = {
+      ...next.once
+    };
+    delete once[pp.key];
+    next = {
+      ...next,
+      once
+    };
+  }
+  if (next !== st) AMGP_STORE.save(next);
+  const a = pp.act.a;
+  if (a === 'saboru' || typeof assistantMasmonRng !== 'function') return;
+  const rnd = assistantMasmonRng(`${seed}|${aid}|plan-ev|${pp.key}|${slot}`);
+  let k = '';
+  if (rnd() < amgpAwayChance(e.str)) k = 'away';else if (rnd() < amgpHurtChance(a, e.fat)) k = 'hurt';else if (rnd() < amgpSickChance(a, e.str)) k = 'sick';
+  if (!k) return;
+  const cs = AMGP_CSTORE.state;
+  AMGP_CSTORE.save({
+    ...cs,
+    mons: {
+      ...cs.mons,
+      [pp.key]: {
+        k,
+        from: slot,
+        until: slot + AMGP_NUM[`${k}N`],
+        care: -1,
+        find: -1,
+        hosp: []
+      }
+    },
+    log: [...cs.log, {
+      s: slot,
+      key: pp.key,
+      k,
+      t: 'start'
+    }].slice(-40)
+  });
+};
+const amgpLowerStr = (key, n) => {
+  if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded) return false;
+  const {
+    aid,
+    slot,
+    monster
+  } = amgpSplitKey(key);
+  const st = AMG_STORE.state;
+  const mk = amgMonKey(slot, monster);
+  const e = st.mons[aid] && st.mons[aid][mk];
+  if (!e) return false;
+  return amgSave({
+    ...st,
+    mons: {
+      ...st.mons,
+      [aid]: {
+        ...st.mons[aid],
+        [mk]: {
+          ...e,
+          str: amgClamp(e.str - n, 0, 100)
+        }
+      }
+    }
+  }) !== false;
+};
+const amgpCare = (key, now = Date.now()) => {
+  if (!amgpOn() || !AMGP_CSTORE.loaded) return false;
+  const s = amgSlotOf(now);
+  const day = amgSlotDay(s);
+  const cs = AMGP_CSTORE.state;
+  const c = cs.mons[key];
+  if (!c || c.k === 'away' || c.until < s || c.care === day) return false;
+  AMGP_CSTORE.save({
+    ...cs,
+    mons: {
+      ...cs.mons,
+      [key]: {
+        ...c,
+        until: Math.max(s, c.until - AMGP_NUM.careSlots),
+        care: day
+      }
+    },
+    log: [...cs.log, {
+      s,
+      key,
+      k: c.k,
+      t: 'care'
+    }].slice(-40)
+  });
+  amgpLowerStr(key, AMGP_NUM.careStr);
+  return true;
+};
+const amgpFind = (key, now = Date.now()) => {
+  if (!amgpOn() || !AMGP_CSTORE.loaded) return false;
+  const s = amgSlotOf(now);
+  const day = amgSlotDay(s);
+  const cs = AMGP_CSTORE.state;
+  const c = cs.mons[key];
+  if (!c || c.k !== 'away' || c.until < s || c.find === day) return false;
+  AMGP_CSTORE.save({
+    ...cs,
+    mons: {
+      ...cs.mons,
+      [key]: {
+        ...c,
+        until: s,
+        find: day
+      }
+    },
+    log: [...cs.log, {
+      s,
+      key,
+      k: c.k,
+      t: 'find'
+    }].slice(-40)
+  });
+  amgpLowerStr(key, AMGP_NUM.findStr);
+  return true;
+};
+const amgpSetPick = (aid, row, on, now = Date.now()) => {
+  if (!amgpOn() || !AMGP_STORE.loaded || !row) return false;
+  const st = AMGP_STORE.state;
+  const i = amgpPickIndex(aid, row, st);
+  const key = amgpKey(aid, row.slot, row.monster);
+  if (!on) {
+    if (i < 0) return false;
+    return AMGP_STORE.save({
+      ...st,
+      picks: st.picks.filter((_, j) => j !== i)
+    });
+  }
+  if (i >= 0 || st.picks.length >= amgpStageOf(st.days).cap || !amgpKeyOk(key)) return false;
+  return AMGP_STORE.save({
+    ...st,
+    picks: [...st.picks, {
+      aid,
+      slot: row.slot,
+      monster: row.monster,
+      at: amgSlotOf(now)
+    }],
+    week: st.week[key] ? st.week : {
+      ...st.week,
+      [key]: amgpBlankWeek()
+    }
+  });
+};
+const amgpSetCells = (key, cells) => {
+  if (!AMGP_STORE.loaded || !amgpKeyOk(key)) return false;
+  const st = AMGP_STORE.state;
+  const w = [...(st.week[key] || amgpBlankWeek())];
+  for (const [i, c] of Object.entries(cells)) {
+    const n = Number(i);
+    if (Number.isInteger(n) && n >= 0 && n < 21 && amgpOkCode(c)) w[n] = c;
+  }
+  return AMGP_STORE.save({
+    ...st,
+    week: {
+      ...st.week,
+      [key]: w
+    }
+  });
+};
+const amgpCopyDay = (key, from, to) => {
+  const w = AMGP_STORE.state.week[key] || amgpBlankWeek();
+  const days = to === 'weekday' ? [0, 1, 2, 3, 4] : to === 'holiday' ? [5, 6] : [0, 1, 2, 3, 4, 5, 6];
+  const cells = {};
+  for (const d of days) for (let p = 0; p < 3; p++) cells[d * 3 + p] = w[from * 3 + p];
+  return amgpSetCells(key, cells);
+};
+const amgpSetOnce = (key, code, now = Date.now()) => {
+  if (!AMGP_STORE.loaded || !amgpKeyOk(key)) return false;
+  const st = AMGP_STORE.state;
+  const once = {
+    ...st.once
+  };
+  if (code === 'clear') delete once[key];else if (amgpOkCode(code)) once[key] = {
+    s: amgSlotOf(now) + 1,
+    c: code
+  };else return false;
+  return AMGP_STORE.save({
+    ...st,
+    once
+  });
+};
+const amgpMigrate = (now = Date.now()) => {
+  if (!amgpOn() || !AMGP_STORE.loaded || AMGP_STORE.state.done.pickMoved_v1 || typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  let st = AMGP_STORE.state;
+  const nowSlot = amgSlotOf(now);
+  const g = AMG_STORE.state;
+  for (const [aid, p] of Object.entries(g.plan || {})) for (const [sl, x] of Object.entries(p || {})) {
+    if (!x || !Number.isInteger(x.s) || x.s <= nowSlot) continue;
+    const row = (typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid) : []).find(r => r.slot === Number(sl));
+    if (!row) continue;
+    const key = amgpKey(aid, row.slot, row.monster);
+    const code = x.a === 'rest' ? 'R' : x.a === 'play' ? 'P' : (x.a === 'light' || x.a === 'heavy') && AMG_KEYS.includes(x.k) ? `${x.a === 'heavy' ? 'H' : 'L'}:${x.k}` : '';
+    if (!code || !amgpKeyOk(key)) continue;
+    if (!st.picks.some(q => amgpKey(q.aid, q.slot, q.monster) === key)) {
+      if (st.picks.length >= amgpStageOf(st.days).cap) continue;
+      st = {
+        ...st,
+        picks: [...st.picks, {
+          aid,
+          slot: row.slot,
+          monster: row.monster,
+          at: nowSlot
+        }],
+        week: st.week[key] ? st.week : {
+          ...st.week,
+          [key]: amgpBlankWeek()
+        }
+      };
+    }
+    st = {
+      ...st,
+      once: {
+        ...st.once,
+        [key]: {
+          s: x.s,
+          c: code
+        }
+      }
+    };
+  }
+  return AMGP_STORE.save({
+    ...st,
+    done: {
+      ...st.done,
+      pickMoved_v1: true
+    }
+  });
+};
+const AMGP_FS = Object.freeze({
+  L: [5, 1],
+  H: [14, 4],
+  S: [12, 2],
+  R: [-30, -5],
+  P: [-10, -15]
+});
+const amgpGainOf = (row, e, code, fat, mult = AMG_CARE.pickMult) => {
+  const apt = amgAptOf(row.monster);
+  const g = {};
+  const add = (k, lo, hi) => {
+    const m = AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind && e.ind[k] || 0)) * (fat >= 50 ? 0.7 : 1) * mult;
+    const a = Math.max(1, Math.round(lo * m)),
+      b = Math.max(1, Math.round(hi * m));
+    g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b];
+  };
+  if (code === 'S') add(amgpPolicyKey(row, e), 2, 4);else if (/^L:/.test(code)) add(code.slice(2), 3, 6);else if (/^H:/.test(code)) {
+    add(code.slice(2), 7, 12);
+    add(AMG_SUB[code.slice(2)], 1, 3);
+  }
+  return g;
+};
+const amgpForecastDay = (aid, row, e, codes, fat0, str0) => {
+  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu;
+  let fat = fat0,
+    str = str0;
+  let left = 20;
+  const out = [];
+  for (const c0 of codes) {
+    let code = c0;
+    let auto = false;
+    if (code === 'A') {
+      auto = true;
+      code = fat >= T.rest ? 'R' : str >= 50 ? 'P' : `L:${amgpPolicyKey(row, e)}`;
+    }
+    const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
+    const g0 = amgpGainOf(row, e, code, fat, auto ? 1 : AMG_CARE.pickMult);
+    const g = {};
+    for (const [k, [a, b]] of Object.entries(g0)) {
+      const bb = Math.min(b, left);
+      if (bb > 0) g[k] = [Math.min(a, bb), bb];
+      left -= g[k] ? g[k][0] : 0;
+    }
+    const [df, ds] = AMGP_FS[code[0]] || [0, 0];
+    fat = amgClamp(fat + df, 0, 100);
+    str = amgClamp(str + ds, 0, 100);
+    const a = code[0] === 'H' ? 'heavy' : code[0] === 'S' ? 'shugyo' : code[0] === 'R' ? 'rest' : code[0] === 'P' ? 'play' : 'light';
+    out.push({
+      code: c0,
+      as: code,
+      auto,
+      fat,
+      str,
+      sab,
+      hurt: auto ? 0 : amgpHurtChance(a, fat),
+      sick: auto ? 0 : amgpSickChance(a, str),
+      away: auto ? 0 : amgpAwayChance(str),
+      g
+    });
+  }
+  return out;
+};
+const amgpForecastWeek = (aid, row, e, key, now = Date.now()) => {
+  const st = AMGP_STORE.state;
+  const s0 = amgSlotOf(now);
+  const day0 = amgSlotDay(s0);
+  let fat = e.fat,
+    str = e.str;
+  const days = [];
+  const total = {};
+  for (let i = 0; i < 7; i++) {
+    const day = day0 + i;
+    const codes = [0, 1, 2].map(p => amgpCodeAt(key, day * 3 + p, st));
+    const startFat = fat,
+      startStr = str;
+    const live = codes.map((c, p) => i === 0 && day * 3 + p <= s0 ? null : c);
+    const f = amgpForecastDay(aid, row, e, live.map(c => c || 'A'), fat, str).map((x, p) => live[p] ? x : null);
+    for (const x of f) if (x) {
+      fat = x.fat;
+      str = x.str;
+      for (const [k, [a, b]] of Object.entries(x.g)) total[k] = [(total[k] ? total[k][0] : 0) + a, (total[k] ? total[k][1] : 0) + b];
+    }
+    days.push({
+      day,
+      wd: amgpWeekday(day),
+      codes,
+      f,
+      startFat,
+      startStr,
+      fat,
+      str
+    });
+  }
+  return {
+    days,
+    total
+  };
+};
+const amgpCodeName = c => {
+  if (c === 'A') return 'まかせる';
+  if (c === 'R') return '休み';
+  if (c === 'P') return '遊び';
+  if (c === 'S') return '修行';
+  const [t, k] = String(c).split(':');
+  return t === 'H' ? AMG_HEAVY[k] : AMG_LIGHT[k];
+};
+const amgpCodeIcon = c => ({
+  A: '🍃',
+  R: '😴',
+  P: '🎈',
+  S: '⚔'
+})[c] || (String(c)[0] === 'H' ? '🏋' : '💪');
+const amgpStatName = k => (AMG_STATS.find(x => x[0] === k) || [])[1] || '';
+const amgpActName = x => x && AMGP_IDLE_NAME[x.a] || '';
+const AMGP_HOST = {
+  open: null,
+  subs: new Set(),
+  set(v) {
+    this.open = v;
+    this.subs.forEach(f => {
+      try {
+        f(v);
+      } catch (_) {}
+    });
+  }
+};
+const assistantMasmonNoteOpen = (aid = null) => {
+  if (!amgpOn()) return false;
+  AMGP_HOST.set({
+    aid: typeof aid === 'string' ? aid : null,
+    at: Date.now()
+  });
+  return true;
+};
+function AssistantMasmonNoteHost({
+  land = false
+}) {
+  const [open, setOpen] = React.useState(AMGP_HOST.open);
+  React.useEffect(() => {
+    const f = v => setOpen(v);
+    AMGP_HOST.subs.add(f);
+    return () => {
+      AMGP_HOST.subs.delete(f);
+    };
+  }, []);
+  if (!open || !amgpOn()) return null;
+  return React.createElement(AssistantMasmonNote, {
+    key: open.at,
+    aid: open.aid,
+    land: land,
+    onClose: () => AMGP_HOST.set(null)
+  });
+}
+function AssistantMasmonNoteBand({
+  land = false
+}) {
+  const [st, setSt] = React.useState(AMGP_STORE.state);
+  React.useEffect(() => {
+    AMGP_STORE.subs.add(setSt);
+    if (amgpOn()) void amgpLoad();
+    return () => {
+      AMGP_STORE.subs.delete(setSt);
+    };
+  }, []);
+  if (!amgpOn()) return null;
+  const sg = amgpStageOf(st.days);
+  const hurt = Object.values(AMGP_CSTORE.state.mons).filter(c => c.until >= amgSlotOf()).length;
+  return React.createElement("button", {
+    type: "button",
+    onClick: () => assistantMasmonNoteOpen(),
+    "data-amgp-band": true,
+    className: `mx-3 ${land ? 'mb-1' : 'mb-2'} flex min-h-[44px] w-[calc(100%-24px)] items-center gap-2 rounded-2xl border border-emerald-300/60 bg-slate-950/85 px-3 py-1.5 text-left text-white active:scale-[.98]`
+  }, React.createElement("span", {
+    className: "text-[20px]",
+    "aria-hidden": "true"
+  }, "📒"), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-emerald-200"
+  }, "育成ノート"), React.createElement("span", {
+    className: "block text-[11px] font-bold text-slate-200"
+  }, "計画中 ", st.picks.length, "/", sg.cap, "体", hurt ? ` ・ 休んでいるマスモン ${hurt}体` : '')), React.createElement("span", {
+    className: "text-[11px] font-black text-emerald-200",
+    "aria-hidden": "true"
+  }, "▶"));
+}
+function AssistantMasmonNoteRoomLink({
+  id
+}) {
+  if (!amgpOn()) return null;
+  return React.createElement("button", {
+    type: "button",
+    className: "mhl-row w-full text-left",
+    "data-amgp-room-link": true,
+    onClick: () => assistantMasmonNoteOpen(id)
+  }, React.createElement("span", {
+    className: "k"
+  }, "📒 育成ノート"), React.createElement("span", {
+    className: "min-w-0 text-[11px] font-bold"
+  }, "予定を組む・疲れとストレスを見る"), React.createElement("span", {
+    className: "ml-auto pl-1 text-[12px] font-black text-pink-300"
+  }, "›"));
+}
+const amgpUseStores = () => {
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const f = () => setTick(n => n + 1);
+    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : []), ...(typeof AMGS_STORE !== 'undefined' && AMGS_STORE ? [AMGS_STORE] : [])];
+    ss.forEach(s => s.subs.add(f));
+    return () => {
+      ss.forEach(s => s.subs.delete(f));
+    };
+  }, []);
+};
+const amgpMonIcon = monster => {
+  const m = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[monster] : null;
+  return m && m.iconUrl ? React.createElement("img", {
+    src: m.iconUrl,
+    alt: "",
+    className: "h-9 w-9 shrink-0 object-contain"
+  }) : React.createElement("span", {
+    className: "w-9 shrink-0 text-center text-[22px]"
+  }, "🐾");
+};
+const amgpWhoName = aid => typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid;
+const amgpPct = p => `${Math.round(p * 100)}%`;
+const AMGP_TABS = Object.freeze([['list', '一覧'], ['plan', '計画'], ['log', '記録'], ['train', '修行'], ['ticket', 'チケット']]);
+const AMGP_RO_TABS = Object.freeze([['list', '一覧'], ['deck', 'デッキ']]);
+const AMGP_OPTIONS = Object.freeze(['A', ...AMG_KEYS.map(k => `L:${k}`), ...AMG_KEYS.map(k => `H:${k}`), 'S', 'R', 'P']);
+const amgpOptionLabel = c => c === 'A' ? '🍃 助手にまかせる' : c === 'R' ? '😴 休み' : c === 'P' ? '🎈 遊び' : c === 'S' ? '⚔ 修行(いなければ軽い訓練)' : `${c[0] === 'H' ? '🏋 重' : '💪 軽'} ${amgpCodeName(c)}(${amgpStatName(c.slice(2))})`;
+function AmgpShell({
+  title,
+  sub,
+  tabs,
+  tab,
+  setTab,
+  onClose,
+  land,
+  children,
+  ro = false
+}) {
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[85] flex items-end justify-center bg-black/60",
+    "data-amgp-note": ro ? 'readonly' : 'mine'
+  }, React.createElement("div", {
+    className: "flex w-full max-w-md flex-col rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 text-white",
+    style: {
+      height: land ? '96dvh' : '92dvh'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 px-3 pt-3"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black"
+  }, "閉じる"), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[16px] font-black"
+  }, "📒 ", title), React.createElement("p", {
+    className: "truncate text-[10.5px] font-bold text-slate-300"
+  }, sub))), React.createElement("div", {
+    className: "mt-2 flex gap-1 px-3",
+    role: "tablist"
+  }, tabs.map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === k,
+    "data-amgp-tab": k,
+    onClick: () => setTab(k),
+    className: `min-h-[40px] flex-1 rounded-xl text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`
+  }, label))), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-2"
+  }, children)));
+}
+function AmgpBars({
+  st,
+  add = null
+}) {
+  return React.createElement("div", {
+    className: "grid gap-y-1",
+    "data-amgp-stats": true
+  }, AMG_STATS.map(([k, label]) => {
+    const v = Number(st && st[k]) || 0;
+    const g = add && add[k];
+    return React.createElement("div", {
+      key: k,
+      className: "flex items-center gap-1.5 text-[11px] font-bold"
+    }, React.createElement("span", {
+      className: "w-[48px] shrink-0"
+    }, label), React.createElement("span", {
+      className: "relative h-2 flex-1 overflow-hidden rounded bg-slate-700"
+    }, React.createElement("i", {
+      className: "absolute inset-y-0 left-0 bg-emerald-400",
+      style: {
+        width: `${Math.min(100, v / AMG_MAX * 100)}%`
+      }
+    }), g && React.createElement("i", {
+      className: "absolute inset-y-0 bg-amber-300",
+      style: {
+        left: `${Math.min(100, v / AMG_MAX * 100)}%`,
+        width: `${Math.min(100, g[1] / AMG_MAX * 100)}%`
+      }
+    })), React.createElement("b", {
+      className: "w-[30px] shrink-0 text-right text-amber-200"
+    }, v), add && React.createElement("span", {
+      className: "w-[54px] shrink-0 text-right text-[10px] text-amber-300",
+      "data-amgp-gain": k
+    }, g ? `+${g[0]}〜${g[1]}` : ''));
+  }));
+}
+const amgpLevelColor = v => v >= 70 ? 'text-rose-300' : v >= 60 ? 'text-amber-300' : 'text-slate-200';
+function AssistantMasmonNote({
+  readOnly = false,
+  data = null,
+  ownerName = '',
+  onClose,
+  aid = null,
+  land = false
+}) {
+  if (readOnly) return React.createElement(AmgpReadOnly, {
+    data: data,
+    ownerName: ownerName,
+    onClose: onClose,
+    land: land
+  });
+  return React.createElement(AmgpMine, {
+    onClose: onClose,
+    aid: aid,
+    land: land
+  });
+}
+function AmgpMine({
+  onClose,
+  aid = null,
+  land = false
+}) {
+  amgpUseStores();
+  const [tab, setTab] = React.useState('list');
+  const [filter, setFilter] = React.useState(aid);
+  const [sel, setSel] = React.useState(null);
+  const [ready, setReady] = React.useState(AMGP_STORE.loaded && AMGP_CSTORE.loaded);
+  const ids = typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : [];
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        await amgpLoad();
+        if (typeof ASSISTANT_MASMON_STORE !== 'undefined') await ASSISTANT_MASMON_STORE.load();
+        if (typeof AMG_STORE !== 'undefined') await AMG_STORE.load();
+        for (const id of ids) {
+          try {
+            if (typeof amgTick === 'function') await amgTick(id);
+          } catch (_) {}
+        }
+        amgpMigrate();
+      } catch (_) {}
+      if (alive) setReady(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!amgpOn()) return null;
+  const ms = typeof ASSISTANT_MASMON_STORE !== 'undefined' ? ASSISTANT_MASMON_STORE.state : null;
+  const all = [];
+  for (const id of ids) for (const row of ms && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ms, id) : []) {
+    const e = typeof amgEntryOf === 'function' ? amgEntryOf(id, row) : null;
+    if (e) all.push({
+      aid: id,
+      row,
+      e,
+      key: amgpKey(id, row.slot, row.monster)
+    });
+  }
+  const st = AMGP_STORE.state;
+  const sg = amgpStageOf(st.days);
+  const nowSlot = amgSlotOf();
+  const picked = st.picks.map(p => all.find(x => x.aid === p.aid && x.row.slot === p.slot && x.row.monster === p.monster)).filter(Boolean);
+  const others = all.filter(x => !picked.includes(x) && (!filter || x.aid === filter));
+  const cur = all.find(x => x.key === sel) || picked[0] || null;
+  const nameOf = x => x.row.nick || (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[x.row.monster] || {}).name || '';
+  const todayN = x => x.e.dg && x.e.dg.d === amgSlotDay(nowSlot) ? x.e.dg.n : 0;
+  const condTag = x => {
+    const c = amgpCondAt(x.key, nowSlot + 1) || amgpCondAt(x.key, nowSlot);
+    return c ? c : null;
+  };
+  const pickSel = x => React.createElement("div", {
+    className: "flex flex-wrap gap-1.5",
+    "data-amgp-pick-sel": true
+  }, (picked.length ? picked : all.slice(0, 8)).map(x => React.createElement("button", {
+    key: x.key,
+    type: "button",
+    onClick: () => setSel(x.key),
+    className: `flex min-h-[40px] items-center gap-1 rounded-xl border px-2 text-[11.5px] font-black ${cur && cur.key === x.key ? 'border-emerald-300 bg-emerald-900' : 'border-white/15 bg-slate-800'}`
+  }, nameOf(x), React.createElement("small", {
+    className: "text-[9.5px] text-slate-300"
+  }, amgpWhoName(x.aid)))));
+  const card = (x, isPick) => {
+    const c = condTag(x);
+    const today = amgSlotDay(nowSlot);
+    const nextCode = isPick ? amgpCodeAt(x.key, nowSlot + 1) : 'A';
+    return React.createElement("div", {
+      key: x.key,
+      className: `mt-1.5 rounded-2xl border p-2 ${isPick ? 'border-emerald-300 bg-emerald-950/70' : 'border-white/10 bg-slate-800/70'}`,
+      "data-amgp-mon": x.key
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, amgpMonIcon(x.row.monster), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "truncate text-[13px] font-black"
+    }, nameOf(x), " ", React.createElement("small", {
+      className: "text-[10px] text-slate-300"
+    }, amgpWhoName(x.aid), "のマスモン・育成Lv.", x.e.lv)), React.createElement("p", {
+      className: "text-[10.5px] font-bold text-slate-300"
+    }, isPick ? `次の回: ${amgpCodeIcon(nextCode)} ${amgpCodeName(nextCode)} ・ ` : '', "疲れ ", React.createElement("b", {
+      className: amgpLevelColor(x.e.fat)
+    }, x.e.fat), " ・ ストレス ", React.createElement("b", {
+      className: amgpLevelColor(x.e.str + 10)
+    }, x.e.str), " ・ 今日の伸び ", todayN(x), "/", isPick ? 20 : 15), c && React.createElement("p", {
+      className: "text-[11px] font-black text-rose-200",
+      "data-amgp-cond": c.k
+    }, AMGP_COND[c.k].icon, " ", AMGP_COND[c.k].name, "(あと", Math.max(1, Math.ceil((c.until - nowSlot) / 3)), "日くらい・対戦には出られます)")), isPick ? React.createElement("span", {
+      className: "shrink-0 rounded-lg bg-emerald-400 px-1.5 py-0.5 text-[10px] font-black text-emerald-950"
+    }, "計画中") : React.createElement("span", {
+      className: "shrink-0 rounded-lg bg-slate-600 px-1.5 py-0.5 text-[10px] font-black"
+    }, "まかせる")), React.createElement("div", {
+      className: "mt-1.5 flex flex-wrap gap-1.5"
+    }, isPick && React.createElement("button", {
+      type: "button",
+      onClick: () => {
+        setSel(x.key);
+        setTab('plan');
+      },
+      "data-amgp-go-plan": true,
+      className: "min-h-[40px] rounded-xl bg-emerald-600 px-3 text-[11.5px] font-black"
+    }, "🗓 予定を組む"), isPick && React.createElement("button", {
+      type: "button",
+      onClick: () => amgpSetPick(x.aid, x.row, false),
+      "data-amgp-unpick": true,
+      className: "min-h-[40px] rounded-xl bg-slate-700 px-3 text-[11.5px] font-black"
+    }, "計画から外す"), !isPick && React.createElement("button", {
+      type: "button",
+      disabled: st.picks.length >= sg.cap,
+      onClick: () => amgpSetPick(x.aid, x.row, true),
+      "data-amgp-pick": true,
+      className: "min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400"
+    }, "📌 計画して育てる"), typeof AmgsSleepButton === 'function' && React.createElement(AmgsSleepButton, {
+      aid: x.aid,
+      row: x.row
+    }), c && c.k !== 'away' && React.createElement("button", {
+      type: "button",
+      disabled: c.care === today,
+      onClick: () => amgpCare(x.key),
+      "data-amgp-care": true,
+      className: "min-h-[40px] rounded-xl bg-pink-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400"
+    }, c.care === today ? '🩹 今日は看病した' : `🩹 ${amgpWhoName(x.aid)}に看病してもらう`), c && c.k === 'away' && React.createElement("button", {
+      type: "button",
+      disabled: c.find === today,
+      onClick: () => amgpFind(x.key),
+      "data-amgp-find": true,
+      className: "min-h-[40px] rounded-xl bg-sky-700 px-3 text-[11.5px] font-black disabled:bg-slate-700"
+    }, "🔎 ", amgpWhoName(x.aid), "にさがしに行ってもらう")));
+  };
+  let body = null;
+  if (!ready) body = React.createElement("p", {
+    className: "mt-6 text-center text-[12px] font-bold text-slate-300"
+  }, "読み込み中…");else if (tab === 'list') {
+    const toNext = sg.next !== null ? sg.next - st.days : 0;
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "rounded-2xl border border-amber-300/50 bg-slate-950 p-2",
+      "data-amgp-stage": sg.lv
+    }, React.createElement("p", {
+      className: "text-[12px] font-black text-amber-200"
+    }, "📒 ノートの段 ", sg.lv, " ・ 計画で育てた日 ", st.days, sg.next !== null ? `/${sg.next}` : ''), React.createElement("span", {
+      className: "mt-1 block h-2 overflow-hidden rounded bg-slate-700"
+    }, React.createElement("i", {
+      className: "block h-full bg-amber-300",
+      style: {
+        width: `${sg.next === null ? 100 : Math.min(100, st.days / sg.next * 100)}%`
+      }
+    })), React.createElement("p", {
+      className: "mt-1 text-[10.5px] font-bold text-slate-300"
+    }, sg.next === null ? '最後の段です。5体まで計画して育てられます' : `あと${toNext}日で段${sg.lv + 1} → 計画できるマスモンが${sg.lv + 1}体に(計画のマスモンが予定で育った日を、1体ごとに数えます)`)), React.createElement("p", {
+      className: "mt-3 text-[12px] font-black text-emerald-200"
+    }, "📌 計画して育てるマスモン(", picked.length, "/", sg.cap, ")"), picked.map(x => card(x, true)), Array.from({
+      length: Math.max(0, AMGP_MAX - Math.max(sg.cap, picked.length))
+    }).slice(0, 1).map((_, i) => React.createElement("p", {
+      key: i,
+      className: "mt-1.5 rounded-2xl border-2 border-dashed border-white/20 p-2 text-center text-[11px] font-bold text-slate-400",
+      "data-amgp-locked": true
+    }, "🔒 ", sg.cap + 1, "体目は段", sg.cap + 1, "で(あと", toNext, "日)")), picked.length < sg.cap && React.createElement("p", {
+      className: "mt-1 text-[10.5px] font-bold text-slate-300"
+    }, "下の一覧の「📌 計画して育てる」で選べます(いつでも外せます)"), React.createElement("p", {
+      className: "mt-3 text-[12px] font-black text-slate-200"
+    }, "🍃 助手まかせ(自主育成) ", others.length, "体"), React.createElement("div", {
+      className: "mt-1 flex flex-wrap gap-1",
+      "data-amgp-filter": true
+    }, [null, ...ids.filter(id => all.some(x => x.aid === id))].map(id => React.createElement("button", {
+      key: id || 'all',
+      type: "button",
+      onClick: () => setFilter(id),
+      className: `min-h-[34px] rounded-full px-3 text-[11px] font-black ${filter === id ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`
+    }, id ? amgpWhoName(id) : '全員'))), others.map(x => card(x, false)), typeof AmgsSection === 'function' && React.createElement(AmgsSection, {
+      filter: filter
+    }), !all.length && React.createElement("p", {
+      className: "mt-3 text-[11.5px] font-bold text-slate-300"
+    }, "まだ育成している助手のマスモンがいません"));
+  } else if (tab === 'plan') body = cur && picked.includes(cur) ? React.createElement(AmgpPlanTab, {
+    x: cur,
+    nameOf: nameOf,
+    pickSel: pickSel(cur)
+  }) : React.createElement("p", {
+    className: "mt-4 text-[12px] font-bold text-slate-300",
+    "data-amgp-plan-empty": true
+  }, "「一覧」で計画して育てるマスモンを選ぶと、ここで朝・昼・夜の予定を組めます");else if (tab === 'log') body = cur ? React.createElement(AmgpLogTab, {
+    x: cur,
+    nameOf: nameOf,
+    pickSel: pickSel(cur)
+  }) : React.createElement("p", {
+    className: "mt-4 text-[12px] font-bold text-slate-300"
+  }, "記録はまだありません");else if (tab === 'train') {
+    const who = cur && typeof assistantById === 'function' ? assistantById(cur.aid) : null;
+    body = React.createElement(React.Fragment, null, pickSel(cur), cur && who && typeof AmgtCard === 'function' ? React.createElement("div", {
+      className: "mt-2"
+    }, React.createElement(AmgtCard, {
+      who: who,
+      t: cur.row,
+      e: cur.e
+    })) : React.createElement("p", {
+      className: "mt-3 text-[11.5px] font-bold text-slate-300"
+    }, "修行は、助手がモンヒロバトルにいる時間にできます。予定の「⚔ 修行」の回は、助手がいればその回に修行します"));
+  } else if (tab === 'ticket') {
+    const rows = ids.map(id => {
+      let info = null;
+      try {
+        info = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null;
+      } catch (_) {
+        info = null;
+      }
+      return info ? {
+        id,
+        info
+      } : null;
+    }).filter(Boolean);
+    body = React.createElement(React.Fragment, null, React.createElement("p", {
+      className: "text-[11.5px] font-bold text-slate-300"
+    }, "助手がM/B管理にいる時間帯に、その助手のマスモンへトレーニングチケットを使ってあげられます(時間帯ごとに助手1人1枚)"), rows.length ? rows.map(({
+      id,
+      info
+    }) => React.createElement("button", {
+      key: id,
+      type: "button",
+      disabled: info.used,
+      onClick: () => {
+        try {
+          assistantMasmonRanchOpen(id);
+        } catch (_) {}
+      },
+      "data-amgp-ticket": id,
+      className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-emerald-700 px-3 text-left text-[12px] font-black disabled:bg-slate-700 disabled:text-slate-400"
+    }, "🎫 ", amgpWhoName(id), "のマスモンに使う", info.used ? '(この時間帯は済み)' : '')) : React.createElement("p", {
+      className: "mt-2 rounded-xl bg-slate-800 p-2 text-[11.5px] font-bold text-slate-300",
+      "data-amgp-ticket-none": true
+    }, "いまM/B管理にいる助手はいません"), typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null));
+  }
+  return React.createElement(AmgpShell, {
+    title: "育成ノート",
+    sub: `助手のマスモン ${all.length}体 ・ 計画中 ${picked.length}/${sg.cap}体`,
+    tabs: AMGP_TABS,
+    tab: tab,
+    setTab: setTab,
+    onClose: onClose,
+    land: land
+  }, body);
+}
+function AmgpPlanTab({
+  x,
+  nameOf,
+  pickSel
+}) {
+  const [mode, setMode] = React.useState('week');
+  const now = Date.now();
+  const s0 = amgSlotOf(now);
+  const day0 = amgSlotDay(s0);
+  const [di, setDi] = React.useState(0);
+  const fw = amgpForecastWeek(x.aid, x.row, x.e, x.key, now);
+  const w = AMGP_STORE.state.week[x.key] || amgpBlankWeek();
+  const once = AMGP_STORE.state.once[x.key] && AMGP_STORE.state.once[x.key].s === s0 + 1 ? AMGP_STORE.state.once[x.key].c : '';
+  const d = fw.days[di];
+  const wd = d.wd;
+  const sel = (code, onChange, attr) => React.createElement("select", _extends({
+    className: "min-w-0 rounded-lg bg-slate-800 px-1.5 py-1 text-[11px] font-black text-white",
+    value: code,
+    onChange: ev => onChange(ev.target.value)
+  }, attr), AMGP_OPTIONS.map(c => React.createElement("option", {
+    key: c,
+    value: c,
+    disabled: c.length > 2 && x.e.st[c.slice(2)] >= AMG_MAX
+  }, amgpOptionLabel(c))));
+  const fsTxt = f => f ? `疲れ${f.fat}・ス${f.str}` : '';
+  const warn = fw.days.flatMap(dd => (dd.f || []).map((f, p) => f && !f.auto && (f.fat >= 70 || f.str >= 60 || f.sab > 0) ? {
+    dd,
+    p,
+    f
+  } : null)).filter(Boolean)[0];
+  return React.createElement(React.Fragment, null, pickSel, React.createElement("div", {
+    className: "mt-2 flex items-center gap-1.5"
+  }, [['week', '週'], ['day', '1日']].map(([k, l]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    onClick: () => setMode(k),
+    "data-amgp-mode": k,
+    className: `min-h-[36px] rounded-full px-4 text-[12px] font-black ${mode === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`
+  }, l)), React.createElement("span", {
+    className: "ml-auto truncate text-[11px] font-bold text-slate-300"
+  }, nameOf(x), "(", amgpWhoName(x.aid), ")")), React.createElement("div", {
+    className: "mt-2 rounded-xl border border-sky-300/40 bg-slate-950 p-2",
+    "data-amgp-once": true
+  }, React.createElement("p", {
+    className: "text-[10.5px] font-black text-sky-200"
+  }, "次の回(", AMG_PERIOD_NAME[(s0 + 1) % 3], ")だけ変える"), React.createElement("div", {
+    className: "mt-1 flex items-center gap-1.5"
+  }, sel(once || amgpCodeAt(x.key, s0 + 1), c => amgpSetOnce(x.key, c), {
+    'data-amgp-once-select': 1
+  }), once && React.createElement("button", {
+    type: "button",
+    onClick: () => amgpSetOnce(x.key, 'clear'),
+    className: "min-h-[34px] rounded-lg bg-slate-700 px-2 text-[11px] font-black"
+  }, "予定どおりに戻す"))), mode === 'week' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-2 grid gap-1",
+    style: {
+      gridTemplateColumns: '28px 1fr 1fr 1fr 52px'
+    },
+    "data-amgp-week": true
+  }, React.createElement("span", null), AMG_PERIOD_NAME.map(p => React.createElement("span", {
+    key: p,
+    className: "text-center text-[10px] font-black text-slate-400"
+  }, p)), React.createElement("span", {
+    className: "text-center text-[10px] font-black text-slate-400"
+  }, "疲/ス"), fw.days.map((dd, i) => React.createElement(React.Fragment, {
+    key: dd.day
+  }, React.createElement("span", {
+    className: `flex items-center justify-center rounded-lg text-[11px] font-black ${i === 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`
+  }, AMGP_DAY_NAME[dd.wd]), dd.codes.map((c, p) => React.createElement("button", {
+    key: p,
+    type: "button",
+    onClick: () => {
+      setDi(i);
+      setMode('day');
+    },
+    "data-amgp-cell": dd.wd * 3 + p,
+    className: `min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`
+  }, amgpCodeIcon(c), amgpCodeName(c))), React.createElement("span", {
+    className: `flex items-center justify-center rounded-lg text-[10.5px] font-black ${dd.fat >= 70 || dd.str >= 70 ? 'bg-rose-700' : dd.fat >= 60 || dd.str >= 60 ? 'bg-amber-700' : 'bg-slate-800'}`,
+    "data-amgp-day-end": dd.wd
+  }, dd.fat, "/", dd.str)))), warn && React.createElement("p", {
+    className: "mt-2 rounded-xl border border-rose-300/60 bg-rose-950/60 p-2 text-[11px] font-bold text-rose-100",
+    "data-amgp-warn": true
+  }, "⚠ ", AMGP_DAY_NAME[warn.dd.wd], "の", AMG_PERIOD_NAME[warn.p], ": 疲れ", warn.f.fat, "・ストレス", warn.f.str, warn.f.sab > 0 ? ` → サボり ${amgpPct(warn.f.sab)}` : '', warn.f.hurt > 0 ? ` ・ けが ${amgpPct(warn.f.hurt)}` : '', warn.f.sick > 0 ? ` ・ 病気 ${amgpPct(warn.f.sick)}` : '', warn.f.away > 0 ? ` ・ 家出 ${amgpPct(warn.f.away)}` : ''), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, "疲/ス = その日の終わりの疲れ/ストレス(60で黄・70で赤)。マスを押すとその日の「1日」の画面へ。7日でくり返します"), React.createElement("p", {
+    className: "mt-2 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-100",
+    "data-amgp-week-total": true
+  }, "見通し(この7日): ", Object.entries(fw.total).map(([k, [a, b]]) => `${amgpStatName(k)} +${a}〜${b}`).join(' ・ ') || '伸びなし')) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-2 flex items-center gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: di <= 0,
+    onClick: () => setDi(di - 1),
+    className: "min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40"
+  }, "‹"), React.createElement("span", {
+    className: "flex-1 text-center text-[13px] font-black"
+  }, AMGP_DAY_NAME[wd], "曜日", di === 0 ? '(今日)' : ''), React.createElement("button", {
+    type: "button",
+    disabled: di >= 6,
+    onClick: () => setDi(di + 1),
+    className: "min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40"
+  }, "›")), [0, 1, 2].map(p => {
+    const f = d.f[p];
+    const code = w[wd * 3 + p];
+    return React.createElement("div", {
+      key: p,
+      className: `mt-1.5 rounded-xl border p-2 ${f && !f.auto && (f.sab > 0 || f.hurt > 0 || f.sick > 0) ? 'border-rose-300/70' : 'border-white/10'} bg-slate-800/70`,
+      "data-amgp-slot": p
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("b", {
+      className: "w-[64px] shrink-0 text-[12px]"
+    }, AMG_PERIOD_NAME[p], " ", ['4:00', '12:00', '18:00'][p]), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, sel(code, c => amgpSetCells(x.key, {
+      [wd * 3 + p]: c
+    }), {
+      'data-amgp-slot-select': p
+    }))), React.createElement("p", {
+      className: "mt-0.5 text-[10.5px] font-bold text-slate-300"
+    }, f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'));
+  }), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-slate-300"
+  }, "6能力と、この日の見通し(黄=伸びる分)"), (() => {
+    const g = {};
+    for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b];
+    return React.createElement("div", {
+      className: "mt-1"
+    }, React.createElement(AmgpBars, {
+      st: x.e.st,
+      add: g
+    }));
+  })(), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-slate-300"
+  }, "疲れ・ストレスの見通し(回の終わり)"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1 text-center text-[10.5px] font-black",
+    "data-amgp-fs": true
+  }, React.createElement("span", {
+    className: "rounded-lg bg-slate-700 py-1"
+  }, "はじめ", React.createElement("br", null), d.startFat, "/", d.startStr), d.f.map((f, p) => React.createElement("span", {
+    key: p,
+    className: `rounded-lg py-1 ${f && (f.fat >= 70 || f.str >= 70) ? 'bg-rose-700' : f && (f.fat >= 60 || f.str >= 60) ? 'bg-amber-700' : 'bg-slate-700'}`
+  }, AMG_PERIOD_NAME[p], React.createElement("br", null), f ? `${f.fat}/${f.str}` : '—'))), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休みません"), React.createElement("div", {
+    className: "mt-2 flex flex-wrap gap-1.5",
+    "data-amgp-copy": true
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => amgpCopyDay(x.key, wd, 'all'),
+    className: "min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black"
+  }, "📄 この日を毎日に"), React.createElement("button", {
+    type: "button",
+    onClick: () => amgpCopyDay(x.key, wd, 'weekday'),
+    className: "min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black"
+  }, "🗓 平日(月〜金)ぜんぶに"), React.createElement("button", {
+    type: "button",
+    onClick: () => amgpCopyDay(x.key, wd, 'holiday'),
+    className: "min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black"
+  }, "🌴 休日(土日)に"))), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold text-slate-400"
+  }, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます"));
+}
+function AmgpLogTab({
+  x,
+  nameOf,
+  pickSel
+}) {
+  const nowSlot = amgSlotOf();
+  const from = nowSlot - 20;
+  const logs = x.e.log.filter(l => l.s >= from);
+  const sum = {};
+  for (const l of logs) for (const [k, n] of Object.entries(l.g || {})) sum[k] = (sum[k] || 0) + n;
+  const before = Object.fromEntries(AMG_KEYS.map(k => [k, x.e.st[k] - (sum[k] || 0)]));
+  const cg = typeof amgCareGainOf === 'function' ? amgCareGainOf(x.e) : null;
+  const ev = AMGP_CSTORE.state.log.filter(l => l.key === x.key && l.s >= from);
+  const when = s => `${AMGP_DAY_NAME[amgpWeekday(amgSlotDay(s))]} ${AMG_PERIOD_NAME[s % 3]}`;
+  const cTxt = {
+    start: 'になった',
+    care: 'を看病してもらった',
+    hosp: 'で病院へ',
+    find: 'から帰ってきた'
+  };
+  return React.createElement(React.Fragment, null, pickSel, React.createElement("p", {
+    className: "mt-2 text-[12px] font-black text-slate-200"
+  }, nameOf(x), "の、この7日の能力の変化"), React.createElement("div", {
+    className: "mt-1 grid gap-0.5",
+    "data-amgp-log-change": true
+  }, AMG_STATS.map(([k, label]) => React.createElement("p", {
+    key: k,
+    className: "flex justify-between text-[11.5px] font-bold"
+  }, React.createElement("span", null, label), React.createElement("span", null, before[k], " → ", React.createElement("b", {
+    className: "text-amber-200"
+  }, x.e.st[k]), sum[k] ? React.createElement("span", {
+    className: "ml-1 text-emerald-300"
+  }, "+", sum[k]) : null)))), React.createElement("p", {
+    className: "mt-3 text-[12px] font-black text-slate-200"
+  }, "できごと"), [...logs].reverse().map((l, i) => React.createElement("p", {
+    key: `${l.s}-${i}`,
+    className: "mt-0.5 flex justify-between gap-2 border-b border-white/5 py-0.5 text-[11px] font-bold",
+    "data-amgp-log": l.a
+  }, React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, when(l.s), " ", amgActName(l) || amgpActName(l), l.p ? '(計画)' : '', l.r ? '(M/B管理)' : '', l.f ? '(うまくいかなかった)' : ''), React.createElement("span", {
+    className: "shrink-0 text-emerald-300"
+  }, Object.entries(l.g || {}).map(([k, n]) => `${amgpStatName(k)} ${n >= 0 ? '+' : '−'}${Math.abs(n)}`).join(' ') || (AMGP_IDLE[l.a] ? '伸びなし' : '')))), ev.map((l, i) => React.createElement("p", {
+    key: `c${i}`,
+    className: "mt-0.5 text-[11px] font-bold text-rose-200",
+    "data-amgp-log-cond": l.t
+  }, when(l.s), " ", AMGP_COND[l.k].icon, " ", AMGP_COND[l.k].name, cTxt[l.t])), !logs.length && !ev.length && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400"
+  }, "まだ記録がありません"), cg && cg.total > 0 && React.createElement("p", {
+    className: "mt-2 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-sky-200",
+    "data-amgp-care-gain": true
+  }, "関わって伸びた分(これまで): 計画・指定 +", cg.pick, " ・ 見に来た +", cg.view, " ・ 相談 +", cg.ask, cg.ranch ? ` ・ M/B管理 +${cg.ranch}` : ''));
+}
+function AmgpReadOnly({
+  data,
+  ownerName = '',
+  onClose,
+  land = false
+}) {
+  const [tab, setTab] = React.useState('list');
+  const [sel, setSel] = React.useState(0);
+  const d = data && typeof data === 'object' ? data : null;
+  const ms = d && Array.isArray(d.ms) ? d.ms : [];
+  const dk = d && Array.isArray(d.dk) ? d.dk : [];
+  const owner = typeof ownerName === 'string' && ownerName ? `${ownerName.slice(0, 16)}さんの` : '';
+  const monName = mo => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[mo] || {}).name || '';
+  const cur = ms[Math.min(sel, Math.max(0, ms.length - 1))] || null;
+  let body;
+  if (!d || d.off) body = React.createElement("p", {
+    className: "mt-6 text-center text-[12px] font-bold text-slate-300",
+    "data-amgp-ro-off": true
+  }, d && d.off ? '見せない設定になっています' : 'まだ見られません');else if (tab === 'list') body = React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[12px] font-black text-emerald-200"
+  }, "🐾 マスモン ", ms.length, "体", d.wt ? `(ほかに まだ迎えていない枠 ${d.wt})` : ''), ms.map((t, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    onClick: () => setSel(i),
+    "data-amgp-ro-mon": i,
+    className: `mt-1.5 flex w-full items-center gap-2 rounded-2xl border p-2 text-left ${cur === t ? 'border-emerald-300 bg-emerald-950/70' : 'border-white/10 bg-slate-800/70'}`
+  }, amgpMonIcon(t.monster), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[13px] font-black"
+  }, t.nick || monName(t.monster), t.lead ? ' 👑' : ''), React.createElement("small", {
+    className: "block text-[10.5px] font-bold text-slate-300"
+  }, monName(t.monster), t.lv ? ` ・ Lv ${t.lv}` : '', t.grow ? ` ・ ${t.grow}` : '')))), cur && React.createElement("div", {
+    className: "mt-3 rounded-2xl border border-white/10 bg-slate-950 p-2",
+    "data-amgp-ro-detail": true
+  }, React.createElement("p", {
+    className: "text-[12px] font-black"
+  }, "6能力(", cur.nick || monName(cur.monster), ")"), cur.stats ? React.createElement("div", {
+    className: "mt-1"
+  }, React.createElement(AmgpBars, {
+    st: cur.stats
+  })) : React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-400"
+  }, "能力はまだ見られません"), cur.why && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-300"
+  }, cur.why)), React.createElement("p", {
+    className: "mt-3 rounded-xl bg-slate-800 p-2 text-[10.5px] font-bold text-slate-400"
+  }, "見るだけです(計画・チケット・修行のボタンは出しません)"));else body = React.createElement(React.Fragment, null, dk.length ? dk.map((x, i) => React.createElement("div", {
+    key: i,
+    className: "mt-1.5 rounded-2xl border border-white/10 bg-slate-800/70 p-2",
+    "data-amgp-ro-deck": x.face
+  }, React.createElement("p", {
+    className: "text-[13px] font-black"
+  }, "🃏 ", x.name || 'デッキ'), x.line && React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, x.line), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200"
+  }, (x.monsters || []).map(monName).filter(Boolean).join('・'), x.ace ? ` ・ エース ${x.ace}` : ''), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-400"
+  }, "カード ", (x.cards || []).reduce((a, c) => a + (Number(c[1]) || 0), 0), "枚"))) : React.createElement("p", {
+    className: "mt-3 text-[11.5px] font-bold text-slate-300"
+  }, "見せているデッキはありません"));
+  return React.createElement(AmgpShell, {
+    ro: true,
+    title: `${owner}育成ノート`,
+    sub: `見るだけ ・ 助手のマスモン ${ms.length}体`,
+    tabs: AMGP_RO_TABS,
+    tab: tab,
+    setTab: setTab,
+    onClose: onClose,
+    land: land
+  }, body);
+}
+const ASSISTANT_MASMON_SLEEP_KEY = 'mh_assistant_masmon_sleep_v1';
+const AMGS_CAP = Object.freeze([10, 15, 20, 25, 30]);
+const AMGS_MAX_BEDS = 200;
+const amgsOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantMasmonSleep === true && typeof amgpOn === 'function' && amgpOn();
+const amgsMonOk = mo => typeof mo === 'string' && /^\w{2,40}$/.test(mo) && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+const amgsRowOf = r => {
+  if (!r || typeof r !== 'object' || !amgsMonOk(r.monster)) return null;
+  const txt = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  return {
+    monster: r.monster,
+    nick: txt(r.nick, 16),
+    lv: Number.isFinite(Number(r.lv)) ? Math.max(1, Math.min(999, Math.round(Number(r.lv)))) : 1,
+    grow: txt(r.grow, 24),
+    why: txt(r.why, 60),
+    role: txt(r.role, 12),
+    welcome: Number.isFinite(Number(r.welcome)) ? Math.round(Number(r.welcome)) : 1,
+    colors: (Array.isArray(r.colors) ? r.colors : []).slice(0, 5).map(c => typeof c === 'string' ? c.slice(0, 40) : null),
+    ai: !!r.ai
+  };
+};
+const amgsGrowOk = (aid, monster, g) => {
+  try {
+    if (!g || typeof normalizeAssistantMasmonGrow !== 'function') return null;
+    const n = normalizeAssistantMasmonGrow({
+      mons: {
+        [aid]: {
+          [`1:${monster}`]: g
+        }
+      }
+    });
+    return (n.mons[aid] || {})[`1:${monster}`] || null;
+  } catch (_) {
+    return null;
+  }
+};
+const amgsTrainOk = (aid, monster, t) => {
+  try {
+    if (!t || typeof normalizeAssistantMasmonTrain !== 'function') return null;
+    const n = normalizeAssistantMasmonTrain({
+      mons: {
+        [aid]: {
+          [`1:${monster}`]: t
+        }
+      }
+    });
+    return (n.mons[aid] || {})[`1:${monster}`] || null;
+  } catch (_) {
+    return null;
+  }
+};
+const normalizeAssistantMasmonSleep = raw => {
+  const out = {
+    v: 1,
+    beds: [],
+    seen: {},
+    seq: 0
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const ids = new Set();
+  for (const b of (Array.isArray(raw.beds) ? raw.beds : []).slice(-AMGS_MAX_BEDS)) {
+    if (!b || typeof b !== 'object' || typeof b.id !== 'string' || !/^b\d{1,9}$/.test(b.id) || ids.has(b.id) || typeof b.aid !== 'string' || !/^[a-z]{2,12}$/.test(b.aid) || !Number.isInteger(b.slot) || b.slot < 1 || b.slot > 8) continue;
+    const row = amgsRowOf(b.row);
+    if (!row) continue;
+    ids.add(b.id);
+    out.beds.push({
+      id: b.id,
+      aid: b.aid,
+      slot: b.slot,
+      src: b.src === 'former' ? 'former' : 'sleep',
+      at: typeof b.at === 'string' ? b.at.slice(0, 10) : '',
+      fat: typeof b.fat === 'string' ? b.fat.slice(0, 20) : '',
+      row,
+      g: amgsGrowOk(b.aid, row.monster, b.g),
+      t: amgsTrainOk(b.aid, row.monster, b.t),
+      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? {
+        k: b.c.k,
+        left: Math.min(30, b.c.left)
+      } : null
+    });
+  }
+  if (raw.seen && typeof raw.seen === 'object') for (const [k, v] of Object.entries(raw.seen).slice(-400)) if (v === true && /^[a-z]{2,12}:[1-8]:[\w-]{0,20}:\w{2,40}$/.test(k)) out.seen[k] = true;
+  out.seq = Number.isInteger(raw.seq) && raw.seq > 0 ? Math.min(raw.seq, 999999999) : out.beds.reduce((a, b) => Math.max(a, Number(b.id.slice(1))), 0);
+  return out;
+};
+const AMGS_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_SLEEP_KEY, normalizeAssistantMasmonSleep) : null;
+try {
+  setTimeout(() => {
+    try {
+      if (amgsOn() && AMGS_STORE) void AMGS_STORE.load();
+    } catch (_) {}
+  }, 0);
+} catch (_) {}
+const amgsCapOf = days => AMGS_CAP[Math.max(0, (typeof amgpStageOf === 'function' ? amgpStageOf(days).lv : 1) - 1)] || AMGS_CAP[0];
+const amgsCap = () => amgsCapOf(typeof AMGP_STORE !== 'undefined' ? AMGP_STORE.state.days : 0);
+const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').slice(0, 20)}:${x.monster}`;
+const amgsSyncFormer = () => {
+  if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  let st = AMGS_STORE.state;
+  const ms = ASSISTANT_MASMON_STORE.state;
+  let changed = false;
+  const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null;
+  const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
+  for (const [aid, m] of Object.entries(ms && ms.mine || {})) for (const [sl, list] of Object.entries(m && m.former || {})) {
+    const slot = Number(sl);
+    for (const x of Array.isArray(list) ? list : []) {
+      if (!x || !amgsMonOk(x.monster)) continue;
+      const sig = amgsFormerSig(aid, slot, x);
+      if (st.seen[sig]) continue;
+      const row = amgsRowOf(x);
+      if (!row) continue;
+      const key = `${slot}:${x.monster}`;
+      const seq = st.seq + 1;
+      st = {
+        ...st,
+        seq,
+        seen: {
+          ...st.seen,
+          [sig]: true
+        },
+        beds: [...st.beds, {
+          id: `b${seq}`,
+          aid,
+          slot,
+          src: 'former',
+          at: String(x.at || '').slice(0, 10),
+          fat: String(x.at || '').slice(0, 20),
+          row,
+          g: g && g.mons[aid] ? g.mons[aid][key] || null : null,
+          t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null,
+          c: null
+        }]
+      };
+      changed = true;
+    }
+  }
+  return changed ? AMGS_STORE.save(st) : false;
+};
+const amgsSwap = (bedId, slot, now = Date.now()) => {
+  if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
+  if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  const st = AMGS_STORE.state;
+  const bed = st.beds.find(b => b.id === bedId);
+  if (!bed) return 'もういません';
+  const ms = ASSISTANT_MASMON_STORE.state;
+  const rows = assistantMasmonRowsOf(ms, bed.aid);
+  const row = rows.find(r => r.slot === slot);
+  if (!row) return '起こす枠がありません';
+  if (rows.some(r => r.slot !== slot && r.monster === bed.row.monster)) return '同じ種類のマスモンがほかの枠にいます';
+  const s = amgSlotOf(now);
+  const outKey = amgMonKey(row.slot, row.monster);
+  const inKey = amgMonKey(slot, bed.row.monster);
+  const gOut = (AMG_STORE.state.mons[bed.aid] || {})[outKey] || null;
+  const tOut = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? (AMGT_STORE.state.mons[bed.aid] || {})[outKey] || null : null;
+  const cKeyOut = amgpKey(bed.aid, row.slot, row.monster);
+  const cOut = amgpCondAt(cKeyOut, s + 1);
+  const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? {
+    slot: bed.slot,
+    at: bed.fat
+  } : null);
+  if (!out) return '入れ替えられませんでした';
+  if (bed.g) {
+    const gs = AMG_STORE.state;
+    amgSave({
+      ...gs,
+      mons: {
+        ...gs.mons,
+        [bed.aid]: {
+          ...(gs.mons[bed.aid] || {}),
+          [inKey]: {
+            ...bed.g,
+            dg: {
+              d: 0,
+              n: 0
+            }
+          }
+        }
+      }
+    });
+  }
+  if (bed.t && typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') {
+    const ts = AMGT_STORE.state;
+    amgtSave({
+      ...ts,
+      mons: {
+        ...ts.mons,
+        [bed.aid]: {
+          ...(ts.mons[bed.aid] || {}),
+          [inKey]: bed.t
+        }
+      }
+    });
+  }
+  const ps = AMGP_STORE.state;
+  if (ps.picks.some(p => p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) AMGP_STORE.save({
+    ...ps,
+    picks: ps.picks.filter(p => !(p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster))
+  });
+  const cs = AMGP_CSTORE.state;
+  const mons = {
+    ...cs.mons
+  };
+  if (cOut) mons[cKeyOut] = {
+    ...cOut,
+    until: s
+  };
+  if (bed.c) mons[amgpKey(bed.aid, slot, bed.row.monster)] = {
+    k: bed.c.k,
+    from: s,
+    until: s + bed.c.left,
+    care: -1,
+    find: -1,
+    hosp: []
+  };
+  if (cOut || bed.c) AMGP_CSTORE.save({
+    ...cs,
+    mons
+  });
+  const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
+  const seq = st.seq + 1;
+  AMGS_STORE.save({
+    ...st,
+    seq,
+    beds: [...st.beds.filter(b => b.id !== bedId), {
+      id: `b${seq}`,
+      aid: bed.aid,
+      slot,
+      src: 'sleep',
+      at: day,
+      fat: '',
+      row: amgsRowOf(out),
+      g: gOut,
+      t: tOut,
+      c: cOut ? {
+        k: cOut.k,
+        left: Math.max(1, cOut.until - s)
+      } : null
+    }]
+  });
+  try {
+    if (typeof amgTick === 'function') void amgTick(bed.aid);
+  } catch (_) {}
+  return true;
+};
+const amgsColorDots = colors => (colors || []).filter(Boolean).slice(0, 5).map((c, i) => React.createElement("span", {
+  key: i,
+  className: "inline-block h-3 w-3 rounded-full border border-white/40 align-middle",
+  style: {
+    background: typeof assistantMasmonSwatch === 'function' ? assistantMasmonSwatch(c) : '#94a3b8'
+  }
+}));
+function AmgsSection({
+  filter = null
+}) {
+  const [st, setSt] = React.useState(AMGS_STORE ? AMGS_STORE.state : null);
+  const [open, setOpen] = React.useState(null);
+  React.useEffect(() => {
+    if (!AMGS_STORE) return undefined;
+    AMGS_STORE.subs.add(setSt);
+    void AMGS_STORE.load().then(() => {
+      amgsSyncFormer();
+    });
+    return () => {
+      AMGS_STORE.subs.delete(setSt);
+    };
+  }, []);
+  if (!amgsOn() || !st) return null;
+  const cap = amgsCap();
+  const beds = st.beds.filter(b => !filter || b.aid === filter);
+  const bed = st.beds.find(b => b.id === open) || null;
+  return React.createElement("div", {
+    className: "mt-3",
+    "data-amgs-section": st.beds.length
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-sky-200"
+  }, "💤 冬眠中(", st.beds.length, "/", cap, ") ", React.createElement("small", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "眠っている間は育たず、対戦にも出ません")), st.beds.length > cap && React.createElement("p", {
+    className: "text-[10.5px] font-bold text-amber-300",
+    "data-amgs-over": true
+  }, "しまえる数を超えています(消えはしません)"), beds.map(b => {
+    const m = ALL_PLAYER_MONSTERS[b.row.monster];
+    return React.createElement("button", {
+      key: b.id,
+      type: "button",
+      onClick: () => setOpen(b.id),
+      "data-amgs-bed": b.id,
+      className: "mt-1.5 flex w-full items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2 text-left"
+    }, typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null, React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black"
+    }, b.row.nick || m && m.name, " ", React.createElement("small", {
+      className: "text-[10px] text-slate-300"
+    }, typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid, "のマスモン")), React.createElement("small", {
+      className: "block text-[10.5px] font-bold text-slate-300"
+    }, "Lv ", b.row.lv, b.row.grow ? ` ・ ${b.row.grow}` : '', " ・ ", b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`)), React.createElement("span", {
+      className: "shrink-0 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-black text-blue-100"
+    }, "💤 冬眠中"));
+  }), !beds.length && React.createElement("p", {
+    className: "mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-400"
+  }, "冬眠中のマスモンはいません。助手のマスモンの「💤 眠らせる」で、冬眠中のマスモンと入れ替えられます"), bed && React.createElement(AmgsDetail, {
+    bed: bed,
+    onClose: () => setOpen(null)
+  }));
+}
+function AmgsDetail({
+  bed,
+  onClose
+}) {
+  const [pick, setPick] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const m = ALL_PLAYER_MONSTERS[bed.row.monster] || {};
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, bed.aid) : [];
+  const techs = bed.t && typeof amgtTechsOf === 'function' ? amgtTechsOf(bed.row.monster).filter(x => bed.t.learn.includes(x.id)) : [];
+  const go = slot => {
+    const r = amgsSwap(bed.id, slot);
+    if (r === true) onClose();else setErr(r);
+  };
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60",
+    "data-amgs-detail": true
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-sky-300/70 bg-slate-900 p-3 pb-6 text-white",
+    style: {
+      maxHeight: '92dvh',
+      overflowY: 'auto'
+    }
+  }, React.createElement("p", {
+    className: "text-[16px] font-black"
+  }, "💤 ", bed.row.nick || m.name, "(冬眠中)"), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, typeof amgpWhoName === 'function' ? amgpWhoName(bed.aid) : bed.aid, "のマスモン ・ ", bed.src === 'former' ? '入れ替えで前にいたマスモン' : `${String(bed.at).slice(5).replace('-', '/')} から眠っています`), React.createElement("div", {
+    className: "mt-2 flex items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2"
+  }, m.iconUrl ? React.createElement("img", {
+    src: m.iconUrl,
+    alt: "",
+    className: "h-16 w-16 object-contain"
+  }) : null, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[14px] font-black"
+  }, bed.row.nick || m.name, " ", React.createElement("span", {
+    className: "rounded-full bg-blue-900 px-2 py-0.5 text-[10px] text-blue-100"
+  }, "💤 冬眠中")), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, m.name, " ・ Lv ", bed.row.lv, bed.row.grow ? ` ・ ${bed.row.grow}` : '', bed.g ? ` ・ 育成Lv.${bed.g.lv}` : ''), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "色: ", amgsColorDots(bed.row.colors)))), React.createElement("p", {
+    className: "mt-2 text-[12px] font-black text-amber-200"
+  }, "6能力(眠らせたときのまま)"), bed.g ? React.createElement("div", {
+    className: "mt-1"
+  }, typeof AmgpBars === 'function' && React.createElement(AmgpBars, {
+    st: bed.g.st
+  })) : React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-400"
+  }, "能力は、起こすと助手がはじめから育てます"), techs.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-2 text-[12px] font-black text-amber-200"
+  }, "技と熟練"), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-200",
+    "data-amgs-techs": true
+  }, techs.map(x => `${x.name} 熟練 ${typeof amgtRankOf === 'function' ? amgtRankOf(bed.t.m[x.id] || 0) : ''}`).join(' ・ '))), bed.g && React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-300"
+  }, "疲れ ", bed.g.fat, " ・ ストレス ", bed.g.str, "(眠っている間は動きません)"), bed.c && typeof AMGP_COND !== 'undefined' && React.createElement("p", {
+    className: "text-[11px] font-bold text-rose-200"
+  }, AMGP_COND[bed.c.k].icon, " ", AMGP_COND[bed.c.k].name, "の残りは、起きてから続きます"), !pick ? React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    onClick: () => setPick(true),
+    "data-amgs-wake": true,
+    className: "mt-3 min-h-[48px] w-full rounded-xl bg-amber-400 text-[14px] font-black text-slate-900"
+  }, "☀ 起こす"), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "閉じる")) : React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-3 text-[12px] font-black text-amber-200"
+  }, "☀ どの枠に起こしますか"), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, typeof amgpWhoName === 'function' ? amgpWhoName(bed.aid) : '', "の枠に戻します。その枠にいたマスモンは、かわりに冬眠へ入ります"), rows.map(r => {
+    const rm = ALL_PLAYER_MONSTERS[r.monster] || {};
+    const dup = rows.some(x => x.slot !== r.slot && x.monster === bed.row.monster);
+    return React.createElement("button", {
+      key: r.slot,
+      type: "button",
+      disabled: dup,
+      onClick: () => go(r.slot),
+      "data-amgs-slot": r.slot,
+      className: "mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left disabled:opacity-40"
+    }, rm.iconUrl ? React.createElement("img", {
+      src: rm.iconUrl,
+      alt: "",
+      className: "h-9 w-9 object-contain"
+    }) : null, React.createElement("span", {
+      className: "min-w-0 flex-1 text-[12px] font-black"
+    }, "枠", r.slot, " ・ ", r.nick || rm.name, React.createElement("small", {
+      className: "block text-[10px] text-slate-300"
+    }, "Lv ", r.lv, " ・ このマスモンが冬眠へ")), React.createElement("span", {
+      className: "shrink-0 rounded-lg bg-amber-700 px-1.5 text-[10px] font-black"
+    }, "入れ替え"));
+  }), err && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-rose-200",
+    "data-amgs-err": true
+  }, err), React.createElement("button", {
+    type: "button",
+    onClick: () => setPick(false),
+    "data-mhl-sheet-close": true,
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "やめる"))));
+}
+function AmgsSleepButton({
+  aid,
+  row
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  if (!amgsOn() || !AMGS_STORE) return null;
+  const beds = AMGS_STORE.state.beds.filter(b => b.aid === aid);
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    disabled: !beds.length,
+    onClick: () => setOpen(true),
+    "data-amgs-sleep": true,
+    className: "min-h-[40px] rounded-xl bg-blue-800 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400"
+  }, "💤 眠らせる", beds.length ? '' : '(入れ替える相手なし)'), open && React.createElement("div", {
+    className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60",
+    "data-amgs-sleep-sheet": true
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-sky-300/70 bg-slate-900 p-3 pb-6 text-white",
+    style: {
+      maxHeight: '80dvh',
+      overflowY: 'auto'
+    }
+  }, React.createElement("p", {
+    className: "text-[15px] font-black"
+  }, "💤 ", row.nick, "を眠らせる"), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300"
+  }, "名前・色・6能力・Lv・技と熟練・疲れとストレスを、そのまま保っておきます。かわりに起こす冬眠中のマスモンを選んでください(枠は空けられません)"), beds.map(b => React.createElement("button", {
+    key: b.id,
+    type: "button",
+    onClick: () => {
+      const r = amgsSwap(b.id, row.slot);
+      if (r === true) setOpen(false);else setErr(r);
+    },
+    "data-amgs-sleep-with": b.id,
+    className: "mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left"
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null, React.createElement("span", {
+    className: "text-[12px] font-black"
+  }, b.row.nick, " を起こす", React.createElement("small", {
+    className: "block text-[10px] text-slate-300"
+  }, "Lv ", b.row.lv, b.row.grow ? ` ・ ${b.row.grow}` : '')))), err && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-rose-200"
+  }, err), React.createElement("button", {
+    type: "button",
+    onClick: () => setOpen(false),
+    "data-mhl-sheet-close": true,
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "やめる"))));
 }
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
@@ -148290,6 +150453,13 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     ok: false,
     reason: r.reason
   };
+  if (typeof alfSentRecord === 'function') void alfSentRecord({
+    host: hostId,
+    name,
+    to: alfValidId(noteTo) ? noteTo : null,
+    word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1),
+    note: nc.text
+  });
   if (typeof missionNotify === 'function') {
     missionNotify('friendVisit');
     missionNotify('assistantTouch');
@@ -149011,6 +151181,7 @@ function AlfFriendHouseView({
   const [leaving, setLeaving] = React.useState(null);
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
+  const [confirm, setConfirm] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
   const [bondOpen, setBondOpen] = React.useState(false);
   const bondMark = task => {
@@ -149100,6 +151271,10 @@ function AlfFriendHouseView({
   };
   const leave = async word => {
     const to = leaving || null;
+    if (confirm) setConfirm(c => c && {
+      ...c,
+      busy: true
+    });
     const r = await assistantLifeFriendLeaveNote(friend.id, {
       word,
       talked,
@@ -149110,14 +151285,31 @@ function AlfFriendHouseView({
     if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) {
       setDone(null);
       setNoteWarn(r.reason);
+      setConfirm(c => c && {
+        ...c,
+        busy: false,
+        warn: r.reason
+      });
       return;
     }
+    setConfirm(null);
     setLeaving(null);
     setRoomId(null);
     setTalk(null);
     setNoteText('');
     if (r && r.ok) bondMark('note');
     setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+  };
+  const ask = word => {
+    const c = alfNoteCheck(noteText);
+    if (c.ok && c.text) {
+      setNoteWarn('');
+      setConfirm({
+        word,
+        warn: '',
+        busy: false
+      });
+    } else void leave(word);
   };
   const noteLine = done ? done : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)` : can === 'done' ? `✉️ この家には今日もう置き手紙を残しました。見て回るのは自由です` : `✉️ 今日はもう置き手紙を残せません(朝4時に戻ります)。見て回るのは自由です`;
   const r0 = roomId ? h.r[roomId] : null;
@@ -149243,7 +151435,9 @@ function AlfFriendHouseView({
   }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'))), React.createElement("p", {
     className: "mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100",
     "data-alf-visit-note": done ? 'done' : can
-  }, noteLine), React.createElement("p", {
+  }, noteLine), typeof AlfSentHere === 'function' && React.createElement(AlfSentHere, {
+    friendId: friend.id
+  }), React.createElement("p", {
     className: "mt-1 text-[9.5px] leading-snug text-slate-300"
   }, friend.name, "さんのセーブや、", friend.name, "さんの助手の仲良し度は変わりません。"));
   const board = diaryItems.length ? React.createElement("div", {
@@ -149585,11 +151779,11 @@ function AlfFriendHouseView({
     className: "mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40",
     "data-alf-note-send": true,
     disabled: !noteText.trim() || !alfNoteCheck(noteText).ok,
-    onClick: () => leave(ALF_WORD_FREE)
+    onClick: () => ask(ALF_WORD_FREE)
   }, "✉️ この言葉で送る"), React.createElement("p", {
     className: "mt-2.5 text-[10.5px] font-bold text-slate-200",
     "data-alf-word-hint": true
-  }, noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'), React.createElement("div", {
+  }, noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます(送る前に確かめられます)' : '💬 決まった一言で送る(押すと届きます)'), React.createElement("div", {
     className: "mt-1 flex flex-wrap gap-1.5"
   }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
     key: i,
@@ -149597,7 +151791,7 @@ function AlfFriendHouseView({
     className: "rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40",
     "data-alf-word": i,
     disabled: !alfNoteCheck(noteText).ok,
-    onClick: () => leave(i)
+    onClick: () => ask(i)
   }, t))), React.createElement("button", {
     type: "button",
     "data-mhl-sheet-close": true,
@@ -149693,7 +151887,29 @@ function AlfFriendHouseView({
     style: {
       paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
     }
-  }, tiles)), sheet, words, diarySheet, bondOpen && typeof AlfBondSheet === 'function' && React.createElement(AlfBondSheet, {
+  }, tiles)), sheet, words, confirm && leaving != null && typeof AlfNoteConfirm === 'function' && React.createElement(AlfNoteConfirm, {
+    friend: friend,
+    to: leaving || null,
+    word: confirm.word,
+    note: alfNoteCheck(noteText).text,
+    selfName: selfName,
+    warn: confirm.warn,
+    busy: confirm.busy,
+    land: land,
+    onFix: () => {
+      if (!confirm.busy) setConfirm(null);
+    },
+    onSend: () => {
+      if (!confirm.busy) void leave(confirm.word);
+    },
+    onCancel: () => {
+      if (!confirm.busy) {
+        setConfirm(null);
+        setLeaving(null);
+        setNoteWarn('');
+      }
+    }
+  }), diarySheet, bondOpen && typeof AlfBondSheet === 'function' && React.createElement(AlfBondSheet, {
     friend: friend,
     more: more,
     land: land,
@@ -150062,7 +152278,12 @@ function AssistantLifeFriendPage({
     className: "text-[10px] leading-snug text-slate-300"
   }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
     className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
-  }, "🚪 まだ")))), !alfEmpty && typeof AlfFavEditor === 'function' && React.createElement(AlfFavEditor, {
+  }, "🚪 まだ")))), !alfEmpty && typeof AlfSentNotes === 'function' && React.createElement(AlfSentNotes, {
+    s: s,
+    card: card,
+    sec: sec,
+    onVisit: setVisit
+  }), !alfEmpty && typeof AlfFavEditor === 'function' && React.createElement(AlfFavEditor, {
     s: s,
     card: card,
     sec: sec
@@ -151026,6 +153247,286 @@ function AlfFavEditor({
   })), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
   }, "選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
+}
+const ALF_SENT_KEY = 'mh_alf_sent_notes_v1';
+const ALF_SENT_MAX = Object.freeze({
+  days: 30,
+  count: 50
+});
+const normalizeAlfSentNotes = (raw, now = Date.now()) => {
+  if (!Array.isArray(raw)) return [];
+  const from = now - ALF_SENT_MAX.days * 86400000;
+  const out = [];
+  const seen = new Set();
+  for (const v of raw) {
+    if (!v || typeof v !== 'object') continue;
+    const host = typeof v.host === 'string' && alfSafeOther(v.host) ? v.host : null;
+    const at = Number.isFinite(v.at) ? v.at : 0;
+    if (!host || at < from || at > now + 86400000) continue;
+    const day = typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : alfDay(at);
+    const k = `${host}|${day}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const word = v.word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(v.word, 0, ALF_WORDS - 1);
+    out.push({
+      host,
+      day,
+      at,
+      word,
+      name: alfStr(v.name, 20),
+      to: alfValidId(v.to) ? v.to : null,
+      note: typeof v.note === 'string' ? alfNoteShow(v.note) : ''
+    });
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, ALF_SENT_MAX.count);
+};
+let _alfSentLoading = null;
+const alfSentLoad = () => {
+  if (Array.isArray(ALF_STORE.state.sent)) return Promise.resolve(ALF_STORE.state.sent);
+  if (_alfSentLoading) return _alfSentLoading;
+  _alfSentLoading = (async () => {
+    let raw = null;
+    try {
+      raw = await storeGet(ALF_SENT_KEY, [], false);
+    } catch {
+      raw = null;
+    }
+    const sent = normalizeAlfSentNotes(raw);
+    ALF_STORE.set({
+      sent
+    });
+    return sent;
+  })();
+  return _alfSentLoading;
+};
+const alfSentRecord = async ({
+  host,
+  name,
+  to = null,
+  word = 0,
+  note = ''
+}) => {
+  if (!alfEnabled()) return;
+  const cur = await alfSentLoad();
+  const at = Date.now();
+  const sent = normalizeAlfSentNotes([{
+    host,
+    name,
+    to,
+    word,
+    note,
+    at,
+    day: alfDay(at)
+  }, ...cur], at);
+  ALF_STORE.set({
+    sent
+  });
+  try {
+    storeSet(ALF_SENT_KEY, sent, false);
+  } catch {}
+};
+const alfSentList = (s = ALF_STORE.state, hostId = null) => {
+  const self = s.selfId;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const rows = (s.visits || []).filter(v => self && v.visitor === self && v.kind === 'player');
+  const byKey = new Map();
+  for (const v of rows) byKey.set(`${v.host}|${v.day}`, {
+    host: v.host,
+    day: v.day,
+    at: v.at,
+    word: v.word,
+    to: v.noteTo,
+    note: v.note,
+    thanks: v.thanks,
+    name: ''
+  });
+  for (const v of Array.isArray(s.sent) ? s.sent : []) {
+    const k = `${v.host}|${v.day}`;
+    const row = byKey.get(k);
+    byKey.set(k, row ? {
+      ...v,
+      thanks: row.thanks
+    } : {
+      ...v,
+      thanks: null
+    });
+  }
+  return [...byKey.values()].filter(v => names[v.host] && (!hostId || v.host === hostId)).map(v => ({
+    ...v,
+    name: names[v.host]
+  })).sort((a, b) => b.at - a.at).slice(0, ALF_SENT_MAX.count);
+};
+function AlfSentRow({
+  n,
+  inHouse = false
+}) {
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(n.at)), ' ', inHouse ? null : React.createElement("span", {
+    className: "whitespace-nowrap font-bold"
+  }, n.name, "さんの家"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, inHouse ? '' : '・', n.to ? `${assistantLifeName(n.to)}あて` : 'みんなへ'), alfWordQuote(n.word)), n.note ? React.createElement("p", {
+    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
+    "data-alf-sent-text": true
+  }, "✏️ ", n.note) : null, n.thanks != null && ALF_THANKS_TEXTS[n.thanks] ? React.createElement("p", {
+    className: "mt-0.5 text-[10px] text-amber-200",
+    "data-alf-sent-thanks": true
+  }, "💌 お礼「", ALF_THANKS_TEXTS[n.thanks], "」が届きました") : null);
+}
+function AlfSentNotes({
+  s,
+  card,
+  sec,
+  onVisit
+}) {
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => {
+    void alfSentLoad();
+  }, []);
+  const list = alfSentList(s);
+  if (!list.length) return null;
+  const houses = alfOpenHouses('look');
+  const shown = more ? list : list.slice(0, 5);
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    className: sec
+  }, "📮 残した置き手紙"), React.createElement("div", {
+    className: card,
+    "data-alf-sent": true
+  }, shown.map(n => {
+    const f = houses.find(h => h.id === n.host);
+    return React.createElement("button", {
+      key: `${n.host}|${n.day}`,
+      type: "button",
+      disabled: !f,
+      className: "block w-full border-b border-slate-700/60 py-1 text-left last:border-0 disabled:opacity-100",
+      "data-alf-sent-item": n.host,
+      onClick: () => f && onVisit(f)
+    }, React.createElement(AlfSentRow, {
+      n: n
+    }), React.createElement("p", {
+      className: "mt-0.5 text-[10px] text-slate-400"
+    }, f ? React.createElement("span", {
+      className: "text-amber-200"
+    }, "🚪 この家へ遊びに行く ›") : 'いまはこの家へ行けません(家がまだ届いていません)'));
+  }), list.length > 5 && React.createElement("button", {
+    type: "button",
+    className: "mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200",
+    "data-alf-sent-more": true,
+    onClick: () => setMore(!more)
+  }, more ? '少なく見る' : `ぜんぶ見る(${list.length}通)`), React.createElement("p", {
+    className: "mt-1 text-[9.5px] leading-snug text-slate-400"
+  }, "この端末に", ALF_SENT_MAX.days, "日・", ALF_SENT_MAX.count, "通まで残ります(古いものから消えます)")));
+}
+function AlfSentHere({
+  friendId
+}) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => {
+    void alfSentLoad();
+  }, []);
+  const list = alfSentList(s, friendId).slice(0, 3);
+  if (!list.length) return null;
+  return React.createElement("div", {
+    className: "mt-1 rounded-xl bg-slate-950/85 px-2 py-1",
+    "data-alf-sent-here": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-amber-200"
+  }, "📮 この家に残した置き手紙"), list.map(n => React.createElement("div", {
+    key: n.day,
+    className: "mt-0.5"
+  }, React.createElement(AlfSentRow, {
+    n: n,
+    inHouse: true
+  }))));
+}
+function AlfNoteConfirm({
+  friend,
+  to,
+  word,
+  note,
+  selfName,
+  warn,
+  busy,
+  land,
+  onFix,
+  onSend,
+  onCancel
+}) {
+  const toText = to ? `${friend.name}さんの家の${assistantLifeName(to)}` : `${friend.name}さんの家のみんな`;
+  return React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 32
+    },
+    "data-alf-note-confirm": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "直す",
+    className: "absolute inset-0 bg-black/60",
+    onClick: onFix
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
+  }, React.createElement("p", {
+    className: "text-[15px] font-black text-amber-100"
+  }, "✉️ この置き手紙を送りますか？"), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200"
+  }, "あて先: ", React.createElement("span", {
+    className: "text-amber-100",
+    "data-alf-note-confirm-to": true
+  }, toText)), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold text-slate-300"
+  }, friend.name, "さんには、こう届きます"), React.createElement("div", {
+    className: "mt-1 rounded-xl border border-amber-200/40 bg-slate-900/90 p-2",
+    "data-alf-note-confirm-preview": true
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(Date.now())), ' ', React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, selfName || 'あなた', "さん"), "が", to ? React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, assistantLifeName(to), "あてに") : '訪ねてくれた', alfWordQuote(word)), React.createElement("p", {
+    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50"
+  }, "✏️ ", note)), React.createElement("p", {
+    className: "mt-1.5 text-[10px] leading-snug text-slate-300"
+  }, "・送ったあとは直せません", React.createElement("br", null), "・この家へは1日1通です。送ると、この家から帰ります(ビートP 50)"), warn ? React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-rose-300",
+    "data-alf-note-confirm-warn": true
+  }, "⚠️ ", warn) : null, React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-slate-700",
+    "data-alf-note-confirm-fix": true,
+    onClick: onFix
+  }, "✏️ 直す"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-amber-500 text-slate-950 disabled:opacity-40",
+    "data-alf-note-confirm-send": true,
+    disabled: busy || !!warn,
+    onClick: onSend
+  }, busy ? '送っています…' : '✉️ 送る')), React.createElement("button", {
+    type: "button",
+    "data-mhl-sheet-close": true,
+    "data-alf-note-confirm-cancel": true,
+    className: "mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300",
+    disabled: busy,
+    onClick: onCancel
+  }, "やめる")));
 }
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
@@ -174287,6 +176788,58 @@ const cardAssistantDeckSummary = (who, styleId) => {
     return null;
   }
 };
+const cardAssistantDeckShareOf = (aid, face) => {
+  try {
+    if (!cardDeckIsFace(face) || typeof CARD_AI_FACES === 'undefined' || !CARD_AI_FACES[aid]) return null;
+    const s = cardAssistantDeckSummary(aid, face);
+    if (!s) return null;
+    return {
+      face,
+      name: s.name || '',
+      line: s.line || '',
+      monsters: s.monsters.map(m => m.no),
+      ace: s.ace ? s.ace.name : '',
+      cards: Object.keys(s.count).map(no => [no, s.count[no]])
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const cardAssistantDeckSummaryOfShare = deck => {
+  try {
+    if (!deck || typeof deck !== 'object' || typeof CARD_BATTLE_DATA === 'undefined' || !Array.isArray(deck.monsters) || !Array.isArray(deck.cards)) return null;
+    const db = CARD_BATTLE_DATA;
+    const face = cardDeckIsFace(deck.face) ? deck.face : 'oshi';
+    const monsters = deck.monsters.slice(0, 3).map(no => cardMonsterOf(db, no)).filter(Boolean);
+    const count = {};
+    deck.cards.slice(0, 60).forEach(e => {
+      const n = Array.isArray(e) ? Math.floor(Number(e[1])) : 0;
+      if (Array.isArray(e) && typeof e[0] === 'string' && n >= 1 && n <= 20 && cardOf(db, e[0])) count[e[0]] = (count[e[0]] || 0) + n;
+    });
+    const uniq = Object.keys(count).map(no => cardOf(db, no));
+    if (!monsters.length || !uniq.length) return null;
+    const byGuts = (a, b) => (b.guts || 0) - (a.guts || 0) || (b.damage || 0) - (a.damage || 0) || (a.no < b.no ? -1 : 1);
+    const aceName = typeof deck.ace === 'string' ? deck.ace : '';
+    const ace = uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts).find(c => !aceName || c.name === aceName) || uniq.filter(c => c.kind === 'pow' || c.kind === 'int').sort(byGuts)[0] || null;
+    const groups = CARD_DECK_KIND_GROUPS.map(([label, kinds]) => [label, uniq.filter(c => kinds.includes(c.kind)).sort(byGuts)]).filter(g => g[1].length);
+    return {
+      styleId: face,
+      monsters,
+      count,
+      ace,
+      groups,
+      total: Object.values(count).reduce((x, y) => x + y, 0),
+      name: typeof deck.name === 'string' && deck.name ? deck.name.slice(0, 20) : null,
+      line: typeof deck.line === 'string' && deck.line ? deck.line.slice(0, 60) : null,
+      at: null,
+      side: null,
+      past: false,
+      period: ''
+    };
+  } catch (_) {
+    return null;
+  }
+};
 const cardAssistantDeckAtText = at => {
   if (!Number.isFinite(at) || at <= 0) return '';
   const t = new Date(at);
@@ -174295,11 +176848,12 @@ const cardAssistantDeckAtText = at => {
 function CardAssistantDeckView({
   who,
   styleId,
-  land = false
+  land = false,
+  deck = null
 }) {
   const [detail, setDetail] = React.useState(null);
   if (!cardAssistantDeckViewOn()) return null;
-  const s = cardAssistantDeckSummary(who, styleId);
+  const s = deck ? cardAssistantDeckSummaryOfShare(deck) : cardAssistantDeckSummary(who, styleId);
   const a = typeof assistantById === 'function' ? assistantById(who) : null;
   if (!s) return React.createElement("div", {
     className: "mhm-card",

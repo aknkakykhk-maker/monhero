@@ -994,6 +994,8 @@ const useAssistantLifeNow = (metIds) => {
     const t = setInterval(() => { setTick(n => n + 1); void assistantLifeNow({ members: metIds }); }, 60000);
     return () => clearInterval(t);
   }, [key]);
+  // 紹介画面の全身画を、手の空いたときに裏で取っておく(開いた瞬間に出す)
+  React.useEffect(() => { if (assistantLifeEnabled() && typeof assistantLifePreloadFullBodies === 'function') assistantLifePreloadFullBodies(metIds); }, [key]);
   return st;
 };
 
