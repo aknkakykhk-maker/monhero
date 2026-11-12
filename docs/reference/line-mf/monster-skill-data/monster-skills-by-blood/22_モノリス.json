@@ -1,0 +1,1053 @@
+{
+  "blood": "モノリス",
+  "counts": {
+    "skills": 25
+  },
+  "skills": [
+    {
+      "skillId": "sk-0511",
+      "name": "おんば",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0029",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0477",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": {
+            "monsterId": "2215",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "2215",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2211",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2215",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2255",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 553,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0512",
+      "name": "たおれこみ",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 12,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2206",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2222",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2251",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 554,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0513",
+      "name": "体当たり",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 9,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2209",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2210",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2221",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2256",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 555,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0514",
+      "name": "わらわら",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0300",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2209",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2253",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2255",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 556,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0515",
+      "name": "トリオビームX",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0477",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2219",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2250",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 557,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0516",
+      "name": "ひっかき",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": {
+            "monsterId": "2210",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "2210",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2210",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2211",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2224",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2254",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 558,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0517",
+      "name": "針ぶっさし",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0478",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2221",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2252",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 559,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0518",
+      "name": "トリオビームY",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0477",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2255",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2250",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 560,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0519",
+      "name": "大たおれこみ",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2219",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2254",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2256",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 561,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0520",
+      "name": "超おんば",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0477",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0350",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2253",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 562,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0521",
+      "name": "超針ぶっさし",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "S",
+      "accuracy": "E",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0479",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2224",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2252",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2251",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 563,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0522",
+      "name": "トリオビームZ",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 37,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0480",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0477",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "2253",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "2253",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2253",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 564,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0523",
+      "name": "ドリルアタック",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "B",
+      "accuracy": "B+",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0481",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0086",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "2224",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2224",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2224",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 565,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0524",
+      "name": "オーロラゲート",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "零",
+      "rank": 4,
+      "moveTo": "遠",
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 34,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0482",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2254",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 566,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0525",
+      "name": "トリオビーム∞",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "B+",
+      "accuracy": "B+",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0483",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0484",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2250",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2250",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2250",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 567,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0526",
+      "name": "クリムゾンブレイク",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 41,
+      "damage": "B+",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0485",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0486",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2256",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2256",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2256",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 568,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0756",
+      "name": "一富士二鷹三茄子",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0670",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0477",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2254"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 569,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0757",
+      "name": "家畜の安寧",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 570,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0758",
+      "name": "虚偽の繁栄",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0671",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0672",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 571,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0759",
+      "name": "シールドブレイク",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0673",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 572,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0760",
+      "name": "ドロー",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "A+",
+      "gutsDown": "F",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0674",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 573,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0804",
+      "name": "転倒",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 12,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0286",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2256"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 574,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0805",
+      "name": "ドリンクバー",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 4,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 36,
+      "damage": "C+",
+      "accuracy": "B+",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0712",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0713",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2256"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 575,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0806",
+      "name": "星ぶっさし",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0721",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0722",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 576,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0807",
+      "name": "祝福の宇宙",
+      "version": 1,
+      "blood": "モノリス",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "A+",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0723",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0348",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 577,
+      "status": "verified"
+    }
+  ]
+}

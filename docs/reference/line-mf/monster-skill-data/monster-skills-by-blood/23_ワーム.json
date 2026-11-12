@@ -1,0 +1,713 @@
+{
+  "blood": "ワーム",
+  "counts": {
+    "skills": 18
+  },
+  "skills": [
+    {
+      "skillId": "sk-0557",
+      "name": "毒ガス",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 15,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0487",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2322",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2323",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2324",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 791,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0558",
+      "name": "牙斬り",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2305",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 792,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0559",
+      "name": "しっぽキック",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2306",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2315",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 793,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0560",
+      "name": "かみつき",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "F",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2309",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2311",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 794,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0561",
+      "name": "カースダイブ",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0208",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2350",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 795,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0562",
+      "name": "毒注射",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0488",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2309",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2311",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2322",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 796,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0563",
+      "name": "Wしっぽキック",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 29,
+      "damage": "C",
+      "accuracy": "S",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0489",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2351",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 797,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0564",
+      "name": "サマーソルト",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "2324",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0298",
+          "unlock": {
+            "monsterId": "2324",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2306",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2310",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2324",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 798,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0565",
+      "name": "バックドロップ",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "A",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2310",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2321",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 799,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0566",
+      "name": "くし刺し投げ",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2351",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 800,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0567",
+      "name": "Wサマーソルト",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0490",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2350",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 801,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0568",
+      "name": "シェルアタック",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0491",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2310",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 802,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0569",
+      "name": "ロイヤルアイズ",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0492",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0345",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "2350",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2350",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2350",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 803,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0570",
+      "name": "3連しっぽキック",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 39,
+      "damage": "A",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0493",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2351",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 804,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0571",
+      "name": "ハナツバミ",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "B",
+      "accuracy": "A+",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0494",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0348",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2321",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 805,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0572",
+      "name": "エヴォリューション",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": "近",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 53,
+      "damage": "S+",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "S+",
+      "abilities": [
+        {
+          "abilityId": "sab-0495",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0496",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "2321",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2321",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2321",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 806,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0764",
+      "name": "車輪",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2351"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 807,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0765",
+      "name": "エクスプレスボム",
+      "version": 1,
+      "blood": "ワーム",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0675",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2351"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 808,
+      "status": "verified"
+    }
+  ]
+}

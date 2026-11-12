@@ -1,0 +1,1259 @@
+{
+  "blood": "ドラゴン",
+  "counts": {
+    "skills": 33
+  },
+  "skills": [
+    {
+      "skillId": "sk-0225",
+      "name": "スカイアタック",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0282",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": {
+            "monsterId": "0209",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "0209",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0202",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0209",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0217",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 81,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0226",
+      "name": "ウィングアタック",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0201",
+          "rarity": 2
+        },
+        {
+          "monsterId": "0252",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 82,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0227",
+      "name": "しっぽ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0208",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 83,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0228",
+      "name": "ファイアブレス",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0252",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0201",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0222",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 84,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0229",
+      "name": "ひっかきコンボ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "B",
+      "accuracy": "F",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0283",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0205",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0208",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0250",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 85,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0230",
+      "name": "しっぽアタック",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0202",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0204",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0227",
+          "rarity": 3
+        },
+        {
+          "monsterId": "0253",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 86,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0231",
+      "name": "インフェルノ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "B+",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0284",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0285",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0013",
+          "unlock": {
+            "monsterId": "0205",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "0205",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0205",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0209",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0227",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0252",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0250",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 87,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0232",
+      "name": "ダークブレス",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0217",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0254",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 88,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0233",
+      "name": "ウィングコンボ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0286",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0204",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0251",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 89,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0234",
+      "name": "ドラゴンパンチ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0222",
+          "rarity": 4
+        },
+        {
+          "monsterId": "0253",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 90,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0235",
+      "name": "空中おとし",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "A+",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0287",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0288",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0251",
+          "rarity": 5
+        },
+        {
+          "monsterId": "0254",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 91,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0236",
+      "name": "ドラゴンラッシュ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 48,
+      "damage": "S",
+      "accuracy": "E",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0289",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0204",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 92,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0237",
+      "name": "ウィングトルネード",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0019",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0217",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 93,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0238",
+      "name": "クラッシュバースト",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0290",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0252",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 94,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0239",
+      "name": "ルインクロス",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "S+",
+      "accuracy": "B+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0291",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0292",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0251",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0251",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0251",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 95,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0240",
+      "name": "アクセルドライブ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0293",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0294",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0250",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 96,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0241",
+      "name": "クラッシュエンド",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0295",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0296",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "0227",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "0227",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "0227",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 97,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0616",
+      "name": "飛翔突撃破",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0254",
+        "0253"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 98,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0617",
+      "name": "呂号乙型特斬刀",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0254",
+        "0253"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 99,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0618",
+      "name": "回天打擲",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0254",
+        "0253"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 100,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0619",
+      "name": "特斬刀コンボ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0254",
+        "0253"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 101,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0620",
+      "name": "輻射波動",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0578",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0254"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 102,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0621",
+      "name": "スペース光線",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0284",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0227"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 103,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0622",
+      "name": "メタルコンボ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "B",
+      "accuracy": "A+",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0324",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0227"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 104,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0623",
+      "name": "スカイシャドウ",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 105,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0624",
+      "name": "パンゲアの嵐",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0579",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0580",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 106,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0625",
+      "name": "怒りの業火",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "B+",
+      "gutsDown": "G+",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0581",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 107,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0626",
+      "name": "闘志の一撃",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0581",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0582",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 108,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0627",
+      "name": "B・ファイアー",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "A+",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0583",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0584",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 109,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0628",
+      "name": "テツざんこう",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0455",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 110,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0629",
+      "name": "死を呼ぶ竜息",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "C+",
+      "accuracy": "A",
+      "gutsDown": "G+",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 111,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0630",
+      "name": "クロスファイア",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0323",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0585",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 112,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0631",
+      "name": "デスウィング",
+      "version": 1,
+      "blood": "ドラゴン",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "E",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "0217"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 113,
+      "status": "verified"
+    }
+  ]
+}
