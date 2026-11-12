@@ -195,5 +195,98 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b = SUC.autoPts({ ...base, pts: 7 }).state; ok(b.pts === 0, 'おまかせで点が残る');
 }
 
+// ---- 修行(社長 2026-11-12: チケット・2段で能力2つずつ・最後に技のくじ・外すと次の率が上がる) ----
+{
+  const s0 = SUC.newRun({ id: 'shu', species: 'Mocchi', aid: 'mua' });
+  ok(s0.techs.length === 2 && s0.tickets === SUC.SHUGYO.ticket0, `はじめの技(はじめから覚えている2つ)・チケットがずれている: ${s0.techs} ${s0.tickets}`);
+  ok(SUC.peek(s0).can.includes('shugyo') && SUC.shugyoLeft(s0) === s0.tickets, '修行がチケットの数だけ行けない(期ごとの回数は決めない)');
+  const j = { ...s0, turn: 8, tickets: 3 };
+  ok(SUC.shugyoLeft(j) === 3, 'チケット3枚で修行が3回できない');
+  ok(SUC.shugyoLeft({ ...j, tickets: 0 }) === 0, 'チケットが無いのに修行できる');
+  const r = SUC.act(j, { kind: 'shugyo', course: 'fire', techs: [] });
+  const up = Object.keys(r.out.gain).sort().join(',');
+  ok(r.out.result === 'fail' || r.out.result === 'sab' || up === 'eva,hit,life,tough', `修行の2段で4つの能力(命中・ライフ/丈夫さ・回避)が上がっていない: ${up}`);
+  ok(r.state.tickets === j.tickets - 1 && r.state.shugyoUsed.junior === 1 && r.state.hp <= j.hp - 9, 'チケット・期の回数・体力の減りがずれている');
+  ok(SUC.react(r.state, 'praise').out.ok, '修行のあとに褒める/叱るができない');
+  // 技の条件と、外したときの救い
+  const big = SUC.techsOf('Mocchi').find(t => t.role === 'big');
+  ok(!SUC.canLearn(j, big), '能力・熟練の条件を満たさない技が覚えられる');
+  const light = SUC.techsOf('Mocchi').find(t => t.role === 'skill');
+  ok(SUC.canLearn({ ...j, stats: { ...j.stats, wise: 999 } }, light), '条件を満たした技が覚えられない');
+  ok(near(SUC.techRate({ ...j, pity: 30 }, light) - SUC.techRate(j, light), 0.30, 1e-9), '外した分だけ次の率が上がらない');
+  let missSeen = false; let hitSeen = false;
+  for (let i = 0; i < 300 && !(missSeen && hitSeen); i++) {
+    const t = { ...j, id: `shu-${i}`, stats: { ...j.stats, wise: 999 }, pity: 0 };
+    const x = SUC.act(t, { kind: 'shugyo', course: 'star', techs: [light.id] });
+    if (x.out.result === 'sab') continue;
+    if (x.out.learned) { hitSeen = true; ok(x.state.techs.includes(light.id) && x.state.pity === 0 && x.state.mastery[light.id] === 0, '技を覚えたのに一覧・救い・熟練がずれている'); }
+    else { missSeen = true; ok(x.state.pity === SUC.SHUGYO.pity, '外したのに次の率が上がらない'); }
+  }
+  ok(missSeen && hitSeen, '修行の技のくじで、当たり・外れの両方が出ない');
+  // 編成の子からの伝授: 同じ種ならその技、違う種なら同じ役割の技
+  const sameSp = SUC.memberOf({ kind: 'raised', species: 'Mocchi', stats: { life: 300, pow: 500, wise: 300, hit: 300, eva: 300, tough: 300 }, techs: SUC.techsOf('Mocchi').map(t => t.id) });
+  const tid = SUC.teachFrom(j, sameSp); ok(tid && !j.techs.includes(tid) && SUC.techsOf('Mocchi').some(t => t.id === tid), `同じ種の子から技を教わらない: ${tid}`);
+  const other = SUC.memberOf({ kind: 'raised', species: 'Golem', stats: { life: 300, pow: 500, wise: 300, hit: 300, eva: 300, tough: 300 }, techs: SUC.techsOf('Golem').map(t => t.id) });
+  const tid2 = SUC.teachFrom(j, other); const role = (SUC.techsOf('Golem').find(t => SUC.techsOf('Mocchi').find(m => m.id === tid2 && m.role === t.role)) || null);
+  ok(tid2 && role, `違う種の子から同じ役割の技を教わらない: ${tid2}`);
+  // 大会に勝つとチケット(賞金が大きいほど多い)と名声。負けると準優勝などの一部の賞金だけ
+  const b = SUC.settle({ ...s0, turn: 5, acted: false, battle: { kind: 'debut', round: 0 } }, [true]).state;
+  ok(b.tickets === s0.tickets + 1 && b.fame === SUC.PRIZE.debut, 'デビュー戦に勝ってもチケット・名声が入らない');
+  const pro = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state;
+  ok(pro.tickets - s0.tickets > b.tickets - s0.tickets, '賞金の大きい大会ほどチケットが多くない');
+  const runner = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, false]).state;
+  ok(runner.tickets === s0.tickets && runner.fame === Math.round(SUC.PRIZE.pro * 0.4), '決勝で負けたとき準優勝の賞金(40%)だけになっていない');
+  // ごほうびのごはん(体力・忠誠度・能力の3種類・名声を使う・大会のあと1回だけ)
+  ok(Object.keys(SUC.MEALS).sort().join() === 'hp,loyal,stat', 'ごはんが体力・忠誠度・能力の3種類でない');
+  const mh = SUC.meal({ ...pro, hp: 10 }, 'hp'); ok(mh.out.ok && mh.state.hp === 50 && mh.state.fame === pro.fame - SUC.MEALS.hp.cost && !mh.state.mealReady, '体力のごはんの効き・値段がずれている');
+  ok(!SUC.meal(mh.state, 'stat').out.ok, 'ごはんが大会のあと2回食べられる');
+  const ml = SUC.meal({ ...pro, ama: 10, fear: 10 }, 'loyal').state; ok(SUC.loyalOf(ml) === 25, `忠誠のごはんで忠誠 +5 にならない: ${SUC.loyalOf(ml)}`);
+  const ms = SUC.meal(pro, 'stat').state; ok(K.every(k => ms.stats[k] > pro.stats[k] || pro.stats[k] >= 999), '能力のごはんで6能力が上がらない');
+  ok(!SUC.meal({ ...pro, fame: 10 }, 'hp').out.ok && !SUC.meal(s0, 'hp').out.ok, '名声が足りない・大会のあとでないのに食べられる');
+  ok(SUC.evaluate({ ...s0, techs: ['a', 'b', 'c'], mastery: { a: 50, b: 0, c: 100 } }).power > SUC.evaluate(s0).power, '覚えた技と熟練が総合力に入っていない');
+}
+
+// ---- 訓練で能力が下がらない・訓練Lv(社長 2026-11-12) ----
+{
+  let dropped = false;
+  for (let i = 0; i < 60 && !dropped; i++) { const t = { ...base, id: `nd-${i}` }; const r = SUC.act(t, { kind: 'heavy', stat: K[i % 6] }); if (K.some(k => r.state.stats[k] < t.stats[k])) dropped = true; }
+  ok(!dropped, '訓練で下がる能力がある(社長: 3能力が上がるだけ)');
+  ok(SUC.trainLvOf(0) === 1 && SUC.trainLvOf(3) === 2 && SUC.trainLvOf(18) === 5 && SUC.trainLvOf(999) === 5, '訓練Lv が 1〜5 で上がらない');
+  ok(SUC.TRAIN_LV.mult.every((v, i, a) => i === 0 || v > a[i - 1]), '訓練Lv ごとに基礎値が上がらない');
+  // 同じ札・同じ乱数で、Lv5 の訓練は Lv1 よりよく伸びる
+  let lo = null; let hi = null;
+  for (let i = 0; i < 80 && (lo === null || hi === null); i++) {
+    const t = { ...base, id: `tl-${i}` }; const r1 = SUC.act(t, { kind: 'light', stat: 'pow' }); if (r1.out.result !== 'ok') continue;
+    const r5 = SUC.act({ ...t, trainXp: { 'light:pow': 18 } }, { kind: 'light', stat: 'pow' });
+    lo = r1.out.gain.pow; hi = r5.out.gain.pow;
+    ok(r1.state.trainXp['light:pow'] === 1, '訓練を踏んでもトレ経験値が増えない');
+  }
+  ok(hi > lo, `訓練Lv5 が Lv1 より伸びない: ${lo} → ${hi}`);
+}
+
+// ---- 修行にも編成の補正がかかる ----
+{
+  const st = { life: 300, pow: 300, wise: 300, hit: 700, eva: 650, tough: 600 };
+  const t0 = { ...SUC.newRun({ id: 'sht', species: 'Mocchi', aid: 'mua' }), turn: 10, tickets: 1 };
+  const t1 = { ...SUC.newRun({ id: 'sht', species: 'Mocchi', aid: 'mua', team: Array.from({ length: 6 }, () => ({ kind: 'raised', species: 'Mocchi', stats: st, lv: 30, loy: 70 })) }), turn: 10, tickets: 1, stats: t0.stats };
+  const g0 = SUC.act(t0, { kind: 'shugyo', course: 'fire', techs: [] }); const g1 = SUC.act(t1, { kind: 'shugyo', course: 'fire', techs: [] });
+  if (g0.out.result === g1.out.result && g0.out.result === 'ok') ok(g1.out.gain.hit > g0.out.gain.hit && g1.out.stages[0].length > 0 && g1.out.stages[0].length <= SUC.SHUGYO.joinMax, `修行に編成の補正がかからない: ${g0.out.gain.hit} → ${g1.out.gain.hit}`);
+}
+
+// ---- 再戦の札・勝った大会のスキップ(社長 2026-11-12) ----
+{
+  const s0 = { ...SUC.newRun({ id: 'rem', species: 'Mocchi', aid: 'mua', rematch: 9, wonBefore: ['debut'] }), turn: 5, acted: false, battle: { kind: 'debut', round: 0 } };
+  ok(s0.rematch === SUC.REMATCH.carry, '再戦の札の持ちこみが上限で止まらない');
+  ok(SUC.canSkip(s0) && !SUC.canSkip({ ...s0, battle: { kind: 'junior', round: 0 } }), '前に勝った大会だけスキップできる になっていない');
+  let x = s0; let n = 0; while (SUC.canRematch(x)) { x = SUC.rematch(x).state; n += 1; }
+  ok(n === SUC.REMATCH.max && x.rematchUsed === 3 && x.battle.again === 3, `1回の育成で再戦が3回までになっていない: ${n}`);
+  ok(JSON.stringify(SUC.opponents(x)) === JSON.stringify(SUC.opponents(s0)), '再戦の相手が変わる(同じ相手ともう一度のはず)');
+  ok(!SUC.canRematch({ ...s0, rematch: 0 }), '札が無いのに再戦できる');
+  // デビュー戦: 再戦に勝てば負けに数えない
+  const w = SUC.settle(SUC.rematch(s0).state, [true]).state; ok(w.debutLoss === 0 && w.debutWon, '再戦で勝ったデビュー戦が負けに数えられた');
+  const won = SUC.settle({ ...s0, wonBefore: [] }, [true]).state; ok(won.wonNow.includes('debut'), '勝った大会が記録されない(次の育成でスキップに使う)');
+  const crown = SUC.settle({ ...s0, turn: 41, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state; ok(crown.rematch === s0.rematch + SUC.REMATCH.crownWin, '👑 に勝っても再戦の札が増えない');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ');

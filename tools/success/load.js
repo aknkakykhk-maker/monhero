@@ -31,14 +31,17 @@ const loadDeps = () => {
     'globalThis.__out = { MASMON_CALC, AMG_APT, AMG_INIT, AMG_APT_MULT };'].join('\n');
   const ctx = vm.createContext({});
   vm.runInContext(code, ctx, { filename: 'success-deps.js' });
-  return ctx.__out;
+  // 技表(助手マスモンの修行・対戦と同じ表)
+  const tctx = vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'monster-hero', 'data', 'assistant-masmon-techs.js'), 'utf8') + '\n;globalThis.__t = ASSISTANT_MASMON_TECHS;', tctx, { filename: 'assistant-masmon-techs.js' });
+  return { ...ctx.__out, ASSISTANT_MASMON_TECHS: tctx.__t };
 };
 const load = () => {
   if (cached) return cached;
   const deps = loadDeps();
   delete require.cache[CORE];
   const mod = require(CORE);
-  const SUC = mod.create({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT });
+  const SUC = mod.create({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, techs: deps.ASSISTANT_MASMON_TECHS });
   cached = { mod, SUC, deps };
   return cached;
 };

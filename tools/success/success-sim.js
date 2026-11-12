@@ -40,8 +40,13 @@ const makeRaised = (rng, rank, topStats, assists) => {
   if (topStats) topStats.forEach((k, i) => { w[k] = 1.8 - i * 0.15; });
   const ws = K.reduce((a, k) => a + w[k], 0);
   const stats = {}; K.forEach(k => { stats[k] = Math.min(999, Math.round(p.sum * w[k] / ws)); });
-  return { kind: 'raised', species, stats, lv: p.lv, masteries: Array(p.techs).fill(p.m), loy: p.loy, pop: p.pop, assists: assists || [] };
+  const techs = SUC.techsOf(species).slice(0, p.techs).map(t => t.id);
+  return { kind: 'raised', species, stats, lv: p.lv, masteries: Array(p.techs).fill(p.m), techs, loy: p.loy, pop: p.pop, assists: assists || [] };
 };
+// よくあるアシストの持ち方(誰にでも効くもの・ポイントの予算内: M 約390・S 約280・B 約160)
+const AS_M = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 3 }, { id: 'kaketsuke', lv: 2 }]; // 128+80+80+64 = 352
+const AS_S = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'ochitsuki', lv: 1 }]; // 128+80+48+24 = 280
+const AS_B = [{ id: 'sokoji', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'kizuna', lv: 1 }]; // 80+48+40 = 168(B の上のほう)
 const PRESETS = {
   none: { name: '編成なし(ベースモン6枠)', team: () => [] },
   C6: { name: 'C 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'C')) },
@@ -50,11 +55,17 @@ const PRESETS = {
   B6sokoji: { name: 'B 6体・全員 特訓の底力 段2', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'sokoji', lv: 2 }])) },
   S6: { name: 'S 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S')) },
   M6: { name: 'M 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M')) },
+  M6as: { name: 'M 6体・全員アシストあり(底力3・きずな2・後押し3・かけつけ2)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_M)) },
+  S6as: { name: 'S 6体・全員アシストあり(底力3・きずな2・後押し2・落ち着き1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', null, AS_S)) },
+  M6asAim: { name: 'M 6体・アシストあり・得意そろえ(ちから・命中・回避)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], AS_M)) },
+  B6as: { name: 'B 6体・全員アシストあり(底力2・後押し2・きずな1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, AS_B)) },
   S6aim: { name: 'S 6体・得意そろえ・人なつっこさ段3+底力段3', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', ['pow', 'hit', 'eva'], [{ id: 'hitonatsu', lv: 3 }, { id: 'sokoji', lv: 3 }])) },
 };
 const VARIANTS = [
   { key: 'none', aidLv: 1 }, { key: 'C6', aidLv: 3 }, { key: 'B6', aidLv: 3 }, { key: 'B6', aidLv: 5, label: 'B 6体・助手の仲良し Lv5(タッグあり)' },
   { key: 'B6same', aidLv: 3 }, { key: 'B6sokoji', aidLv: 3 }, { key: 'S6', aidLv: 3 }, { key: 'M6', aidLv: 5 }, { key: 'S6aim', aidLv: 5 },
+  { key: 'none', aidLv: 1, rematch: 2, label: '編成なし・再戦の札2枚を持ちこみ' }, { key: 'B6', aidLv: 3, rematch: 2, label: 'B 6体・再戦の札2枚を持ちこみ' },
+  { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
 // ---- 試合(助手マスモン対戦の芯で 1対1) ----
@@ -66,11 +77,14 @@ const unitOf = (sp0, stats, techs, mastery) => {
   return { species: sp, name: sp, lv: 1, stats, techs: ts, mastery: ms };
 };
 const fight = (s, opp, idx) => {
-  const g = GEAR[SUC.periodOf(s.turn).key]; // 育てる子も修行で同じだけ技を持つ仮定(修行は回3)
+  const g = GEAR[SUC.periodOf(s.turn).key];
   const loy = SUC.loyalOf(s);
-  const a = { ...unitOf(s.species, s.stats, g[0], g[1]), loy, pop: s.pop };
+  // 育てる子は、修行と連続イベントで覚えた技・熟練そのままで戦う
+  const sp = battleSp(s.species); const own = catalog.species[sp].techs.map(t => t.id);
+  const ts = s.techs.filter(t => own.includes(t));
+  const a = { species: sp, name: sp, lv: 1, stats: s.stats, techs: ts.length ? ts : undefined, mastery: Object.fromEntries(ts.map(t => [t, s.mastery[t] || 0])), loy, pop: s.pop };
   const b = unitOf(opp.species, opp.stats, opp.techs, opp.mastery);
-  const r = engine.simulate({ seed: `${s.id}:${s.turn}:${s.battle.kind}:${s.battle.retry || 0}:${s.battle.round}:${idx}`, catalog,
+  const r = engine.simulate({ seed: `${s.id}:${s.turn}:${s.battle.kind}:${s.battle.retry || 0}:${s.battle.round}:${idx}:${s.battle.again || 0}`, catalog,
     teamA: { assistantId: s.aid, tactics: g[2], members: [a] }, teamB: { assistantId: 'kiki', tactics: opp.tactics, members: [b] } });
   return r.winner === 'A';
 };
@@ -81,6 +95,18 @@ const chooseAction = (s, v) => {
   if (v.can.includes('retry')) return { kind: 'retry' };
   if (v.can.includes('clinic')) return { kind: 'clinic' };
   const ratio = s.hp / s.hpMax;
+  // 修行: 体力が上限の70%以上あれば行く。行き先は素質と低い能力に合うところ・技は「強さ × 覚える率」の上から2つ
+  // 修行はチケットの数だけ。札の倍率が低いとき(よく伸びる札が無い)か、いまより強い技を覚えられそうなときに行く
+  const bestMult = Math.max(...Object.values(v.cards).map(c => c.mult));
+  const knownPow = Math.max(0, ...s.techs.map(id => (SUC.techsOf(s.species).find(t => t.id === id) || {}).power || 0));
+  const goodTech = v.shugyo.techs.some(t => t.power > knownPow && t.rate >= 0.35);
+  if (v.can.includes('shugyo') && ratio >= 0.7 && (goodTech || bestMult < 1.5 || v.shugyo.tickets > 3)) {
+    const avg0 = K.reduce((x, k) => x + s.stats[k], 0) / 6;
+    let course = null; let cs = -1;
+    for (const [key, c] of Object.entries(SUC.SHUGYO.courses)) { const sc = c.stages.flat().reduce((x, k) => x + SUC.aptMult(s.species, k) * Math.sqrt((avg0 + 50) / (s.stats[k] + 50)), 0); if (sc > cs) { cs = sc; course = key; } }
+    const techs = v.shugyo.techs.slice().sort((x, y) => y.power * y.rate - x.power * x.rate).slice(0, 2).map(t => t.id);
+    return { kind: 'shugyo', course, techs };
+  }
   if (ratio < 0.45) return (s.stress >= 40) ? { kind: 'play' } : { kind: 'rest' };
   if (s.stress >= 60) return { kind: 'play' };
   const avg = K.reduce((a, k) => a + s.stats[k], 0) / 6;
@@ -99,23 +125,33 @@ const chooseReact = (s) => {
   return 'scold';
 };
 
-const playRun = (id, preset, aidLv, species, aid) => {
+const playRun = (id, preset, aidLv, species, aid, rematch) => {
   const rng = SUC.rngOf(id, 'team');
-  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv });
+  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, rematch: rematch || 0 });
   const trace = { loyal60: null, periodSums: {} };
   let guard = 0;
   while (!s.over && guard++ < 200) {
     if (s.battle) {
       if (CALIBRATE) SNAP.push(JSON.parse(JSON.stringify(s)));
       const opps = SUC.opponents(s); const wins = [];
-      for (let j = 0; j < opps.length; j++) { const w = fight(s, opps[j], j); wins.push(w); if (!w) break; }
+      for (let j = 0; j < opps.length; j++) {
+        let w = fight(s, opps[j], j);
+        while (!w && SUC.canRematch(s)) { s = SUC.rematch(s).state; w = fight(s, opps[j], j); } // 負けたら再戦の札を使う
+        wins.push(w); if (!w) break;
+      }
       trace.battles = trace.battles || []; trace.battles.push({ kind: s.battle.kind, round: s.battle.round, won: wins.every(Boolean) && wins.length === opps.length });
-      s = SUC.settle(s, wins).state; continue;
+      s = SUC.settle(s, wins).state;
+      // 大会のあとのごはん: 名声があれば 能力 → 体力(少ないとき)→ 忠誠(60未満)の順
+      if (s.mealReady && !s.over) {
+        const pick = s.fame >= SUC.MEALS.stat.cost ? 'stat' : (s.hp < s.hpMax * 0.6 && s.fame >= SUC.MEALS.hp.cost) ? 'hp' : (SUC.loyalOf(s) < 60 && s.fame >= SUC.MEALS.loyal.cost) ? 'loyal' : null;
+        if (pick) s = SUC.meal(s, pick).state;
+      }
+      continue;
     }
     const v = SUC.peek(s);
     const a = chooseAction(s, v);
     let r = SUC.act(s, a); s = r.state;
-    if (s.last && (s.last.kind === 'light' || s.last.kind === 'heavy')) s = SUC.react(s, chooseReact(s)).state;
+    if (s.last && ['light', 'heavy', 'shugyo'].includes(s.last.kind)) s = SUC.react(s, chooseReact(s)).state;
     if (SUC.issaComes(s)) s = SUC.issa(s, ISSA_PICK).state;
     const p = SUC.periodOf(s.turn);
     if (p.left === 1) trace.periodSums[p.key] = SUC.sumOf(s.stats);
@@ -123,8 +159,6 @@ const playRun = (id, preset, aidLv, species, aid) => {
     s = SUC.endTurn(s).state;
   }
   s = SUC.autoPts(s).state;
-  // 修行(回3)で技を覚える分は、まだ芯に無いので「各期1回の修行で技4つ・熟練30」と仮に置いて総合力に入れる
-  s.masteries = [30, 30, 30, 30];
   return { s, ev: SUC.evaluate(s), trace };
 };
 
@@ -136,18 +170,18 @@ const mean = (a) => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.leng
 
 const runVariant = (vr) => {
   const ranks = {}; const powers = []; const sums = []; const loy60 = []; const loys = []; const tags = [0, 0, 0, 0];
-  const lg = { train: 0, great: 0, fail: 0, sab: 0, events: 0, story: 0, cond: 0, rest: 0, play: 0, clinic: 0 };
-  const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; let issaMet = 0; let issaWon = 0; let pts = 0;
+  const lg = { rematch: 0, meal: 0, shugyo: 0, learned: 0, taught: 0, train: 0, great: 0, fail: 0, sab: 0, events: 0, story: 0, cond: 0, rest: 0, play: 0, clinic: 0 };
+  const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; const techN = []; let issaMet = 0; let issaWon = 0; let pts = 0;
   for (let i = 0; i < RUNS; i++) {
     const id = `${vr.key}-${vr.aidLv}-${i}`;
     const sp = SPECIES[i % SPECIES.length]; const aid = AIDS[i % AIDS.length];
-    const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid);
+    const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid, vr.rematch);
     ranks[ev.rank] = (ranks[ev.rank] || 0) + 1; powers.push(ev.power); sums.push(ev.sum); loys.push(ev.loyal);
     if (trace.loyal60 !== null) loy60.push(trace.loyal60);
     s.log.tagTurns.forEach((n, j) => { tags[j] += n; });
     Object.keys(lg).forEach(k => { lg[k] += s.log[k] || 0; });
     over[s.over] = (over[s.over] || 0) + 1;
-    story3 += s.story.filter(x => x >= 3).length; issaMet += s.issaMet; issaWon += s.issaWon; pts += s.pts + 0;
+    story3 += s.story.filter(x => x >= 3).length; techN.push(s.techs.length); issaMet += s.issaMet; issaWon += s.issaWon; pts += s.pts + 0;
     Object.entries(trace.periodSums).forEach(([k, v]) => { (per[k] = per[k] || []).push(v); });
     (trace.battles || []).forEach(b => { const key = b.kind === 'summit' ? `summit${b.round + 1}` : b.kind; bt[key] = bt[key] || [0, 0]; bt[key][0] += b.won ? 1 : 0; bt[key][1] += 1; });
   }
@@ -159,7 +193,7 @@ const runVariant = (vr) => {
     loyal60Turn: loy60.length ? median(loy60) : null, loyal60Rate: pct(loy60.length, RUNS),
     tagsPerRun: tags.map(n => Math.round(n / RUNS * 10) / 10),
     perRun: Object.fromEntries(Object.entries(lg).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])),
-    story3: Math.round(story3 / RUNS * 10) / 10, issa: `${Math.round(issaMet / RUNS * 100) / 100}回(成功 ${Math.round(issaWon / RUNS * 100) / 100})`,
+    story3: Math.round(story3 / RUNS * 10) / 10, techs: mean(techN), issa: `${Math.round(issaMet / RUNS * 100) / 100}回(成功 ${Math.round(issaWon / RUNS * 100) / 100})`,
     end: Object.fromEntries(Object.entries(over).map(([k, v]) => [k, pct(v, RUNS)])),
     battles: Object.fromEntries(Object.entries(bt).map(([k, [w, n]]) => [k, `${pct(w, n)}% (${n})`])),
     periodSumMedian: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, median(v)])),
@@ -202,7 +236,7 @@ for (const v of list) {
   console.log(`■ ${r.label}(助手の仲良し Lv${r.aidLv}・${RUNS}回)`);
   console.log(`  ランク: ${r.rank}`);
   console.log(`  総合力 中央値 ${r.powerMedian}・6能力の合計 中央値 ${r.sumMedian}・忠誠 平均 ${r.loyalMean}(60に届く ${r.loyal60Rate}%・届くターン中央値 ${r.loyal60Turn})`);
-  console.log(`  タッグ 0/1/2/3+ 体の訓練: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}`);
+  console.log(`  タッグ 0/1/2/3+ 体の訓練: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
   console.log(`  1回あたり: ${Object.entries(r.perRun).map(([k, v]) => `${k} ${v}`).join('・')}`);
   console.log(`  大会の勝率: ${Object.entries(r.battles).map(([k, v]) => `${k} ${v}`).join('・')}`);
   console.log(`  終わり方: ${Object.entries(r.end).map(([k, v]) => `${k} ${v}%`).join('・')}`);
