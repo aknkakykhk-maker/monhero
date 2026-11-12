@@ -1,0 +1,64 @@
+<!doctype html><meta charset="utf-8"><title>モンスター画面 案</title>
+<style>
+*{box-sizing:border-box;margin:0}body{background:#0b1020;font-family:'WenQuanYi Zen Hei','Noto Sans CJK JP',sans-serif;color:#e8ecff;padding:20px}
+h2{font-size:20px;margin:0 0 6px;color:#fbbf24}p.n{font-size:13px;color:#aab;margin-bottom:12px;width:1200px}
+.row{display:flex;gap:18px;margin-bottom:34px}
+.ph{width:390px;height:760px;background:#141a33;border:2px solid #2d3a6b;border-radius:18px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.hd{background:#1d2650;padding:10px 12px;display:flex;justify-content:space-between;font-weight:800;font-size:15px;border-bottom:2px solid #3a4a8a}
+.hd i{font-style:normal;color:#f9a8d4}
+.tabs{display:flex;gap:6px;padding:8px 10px}.tabs b{flex:1;text-align:center;padding:6px 0;border-radius:10px;background:#252e5c;font-size:13px;color:#aab}
+.tabs b.on{background:#f59e0b;color:#1a1200}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px 10px}
+.cd{background:#1f2a58;border:2px solid #3b4d96;border-radius:12px;padding:4px;text-align:center;font-size:10px;position:relative}
+.cd img{width:100%;height:62px;object-fit:contain}.cd .lv{display:block;color:#fde68a}
+.cd.base{border-style:dashed;border-color:#7dd3fc}.cd .bd{position:absolute;top:2px;left:2px;background:#0ea5e9;color:#fff;border-radius:6px;padding:0 4px;font-size:9px}
+.cd .gr{position:absolute;top:2px;right:3px;font-weight:900;color:#f472b6;font-size:11px}
+.box{margin:8px 10px;background:#1b2350;border-radius:12px;padding:10px;font-size:13px}
+.box h4{font-size:12px;color:#fbbf24;margin-bottom:6px}
+.st{display:grid;grid-template-columns:62px 1fr 46px 22px;gap:6px;align-items:center;margin:4px 0;font-size:12px}
+.bar{height:7px;background:#0d1230;border-radius:4px;overflow:hidden;position:relative}.bar i{display:block;height:100%;background:#34d399}
+.bar u{position:absolute;top:-2px;width:2px;height:11px;background:#7dd3fc}
+.g{display:inline-block;min-width:20px;text-align:center;font-weight:900;color:#f9a8d4}
+.wait{color:#8b95c9;font-size:11px}
+.pic{display:flex;gap:10px;padding:8px 10px}.pic img{width:120px;height:130px;object-fit:contain;background:#26316a;border-radius:12px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}.kv div{background:#232d60;border-radius:8px;padding:5px 7px;display:flex;justify-content:space-between}
+.chip{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800;margin-right:4px}
+.far{background:#3b82f6}.mid{background:#22c55e}.near{background:#f59e0b;color:#1a1200}.zero{background:#ef4444}
+.tech{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.tech div{background:#2a356c;border-radius:8px;padding:8px 0;text-align:center;font-size:10px}.tech .x{opacity:.3}
+.sw{display:flex;margin:8px 10px;background:#0d1230;border-radius:99px;padding:3px}.sw b{flex:1;text-align:center;padding:6px 0;border-radius:99px;font-size:13px;color:#aab}.sw b.on{background:#0ea5e9;color:#fff}
+.cmp{display:grid;grid-template-columns:62px 1fr 1fr 40px;gap:4px;font-size:12px;margin:5px 0;align-items:center}
+.up{color:#34d399;font-weight:800}.hdr{color:#8b95c9;font-size:11px}
+.door{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.door div{background:#2a356c;border:2px solid #4a5cb0;border-radius:14px;padding:18px 6px;text-align:center;font-weight:800;font-size:14px}
+.door .dim{opacity:.55}
+.bub{margin:10px;background:#f5ead0;color:#3b2a10;border-radius:12px;padding:10px;font-size:13px}
+.foot{margin-top:auto;padding:10px;text-align:center;background:#1d2650;font-size:13px}
+.tag{font-size:10px;background:#7c3aed;border-radius:6px;padding:1px 5px;margin-left:4px}
+</style>
+<body>
+<script>
+const T=n=>`../../../monster-hero/images/monster-thumbs/${n}.png`;
+const G=['G','F','E','D','C','B','A'];
+const stat=(n,v,w,g,mark)=>`<div class="st"><span>${n}</span><span class="bar"><i style="width:${v/9.99}%"></i>${mark!=null?`<u style="left:${mark/9.99}%"></u>`:''}</span><b>${v}</b><span class="g">${g}</span></div>`;
+const grid=(items)=>`<div class="grid">${items.map(i=>`<div class="cd ${i.b?'base':''}">${i.b?'<span class="bd">ベース</span>':'<span class="gr">'+i.r+'</span>'}<img src="${T(i.t)}"><span>${i.n}</span><span class="lv">${i.b?'もとの値':'Lv.'+i.lv}</span></div>`).join('')}</div>`;
+const mons=[['pixie','ぴくりん','A',50],['tiger','らいが','B',42],['golem','がんてつ','C',38],['undine','しずく','S',50],['kyubi','こんこ','M',50],['mocchi','もっち','D',31],['ham','はむ','E',27],['suezo','すえぞ','G',12]].map(a=>({t:a[0],n:a[1],r:a[2],lv:a[3]}));
+const bases=['pixie','tiger','golem','undine','kyubi','mocchi','ham','suezo'].map(t=>({t,n:{pixie:'ピクシー',tiger:'ライガー',golem:'ゴーレム',undine:'ウンディーネ',kyubi:'キュービ',mocchi:'モッチー',ham:'ハム',suezo:'スエゾー'}[t],b:1}));
+const apt=(a)=>`<div class="box"><h4>間合い適性</h4><div style="display:flex;justify-content:space-around">${['遠','中','近','零'].map((l,i)=>`<div style="text-align:center"><span class="chip ${['far','mid','near','zero'][i]}">${l}</span><br><span class="g" style="font-size:22px">${a[i]}</span></div>`).join('')}</div></div>`;
+const tech=`<div class="box"><h4>技(血統の技+オリジナル技)　<span class="wait">資料待ち</span></h4><div class="tech">${'<div>技1</div><div>技2</div><div>技3</div><div>技4</div><div>技5</div><div>技6</div><div class="x">×</div><div class="x">×</div>'}</div></div>`;
+const feat=(extra='')=>`<div class="box"><h4>特徴</h4><div class="kv"><div>ガッツ回復力<b class="wait">資料待ち</b></div><div>移動速度<b class="wait">資料待ち</b></div><div>サイズ<b class="wait">資料待ち</b></div><div>血統<b>ピクシー系</b></div>${extra}</div></div>`;
+const ph=(t,body,foot='')=>`<div class="ph"><div class="hd"><span>${t}</span><i>●</i></div>${body}${foot}</div>`;
+const door=()=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door"><div>モンスター<br><small>育てた子とベースモン</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
+const A=[
+ ph('研究所',door()),
+ ph('モンスター一覧',`<div class="tabs"><b class="on">育てた子 (8)</b><b>ベースモン (30)</b></div>${grid(mons)}${grid(mons.slice(0,4))}`),
+ ph('モンスター詳細',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A</div><div class="tabs" style="padding:6px 0"><b class="on">基礎</b><b>特徴</b><b>適性</b></div></div></div><div class="box"><h4>基礎ステータス</h4>${stat('ライフ',640,0,'D')}${stat('ちから',512,0,'E')}${stat('かしこさ',802,0,'B')}${stat('命中',455,0,'E')}${stat('回避',590,0,'D')}${stat('丈夫さ',210,0,'G')}</div><div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>経歴</b></div>${tech}`)];
+const B=[
+ ph('モンスター',`<div class="sw"><b class="on">育てた子</b><b>ベースモン</b></div><div class="box"><h4>ピクシー系統(3体)</h4><div style="display:flex;gap:8px"><div class="cd" style="width:84px"><span class="gr">A</span><img src="${T('pixie')}">ぴくりん</div><div class="cd" style="width:84px"><span class="gr">C</span><img src="${T('pixie')}">ぴこ</div><div class="cd" style="width:84px"><span class="gr">F</span><img src="${T('pixie')}">ぴぴ</div></div></div><div class="box"><h4>ライガー系統(2体)</h4><div style="display:flex;gap:8px"><div class="cd" style="width:84px"><span class="gr">B</span><img src="${T('tiger')}">らいが</div><div class="cd" style="width:84px"><span class="gr">D</span><img src="${T('tiger')}">とら</div></div></div>`),
+ ph('ぴくりん と ベースモン',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A</div></div></div><div class="box"><h4>能力くらべ</h4><div class="cmp hdr"><span></span><span>ベースモン</span><span>ぴくりん</span><span></span></div>${[['ライフ',250,640],['ちから',160,512],['かしこさ',50,802],['命中',100,455],['回避',90,590],['丈夫さ',50,210]].map(r=>`<div class="cmp"><span>${r[0]}</span><b>${r[1]}</b><b class="up">${r[2]} ▲${r[2]-r[1]}</b><span class="g">D</span></div>`).join('')}</div>${apt(['G','F','B','A'])}${feat()}`),
+ ph('ぴくりん の技',`<div class="sw"><b class="on">育てた子</b><b>ベースモン</b></div>${tech}<div class="box"><h4>技能力</h4><div class="wait">資料待ち(小さい効果が一部の技に付く)</div></div>`)];
+const C=[
+ ph('モンスター',`<div class="tabs"><b class="on">ベースモン</b><b>育てた子</b></div>${grid(bases)}${grid(bases.slice(0,4))}`),
+ ph('ピクシー(ベースモン)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ピクシー</div><div class="wait">種のもとの値</div></div></div><div class="box"><h4>基礎ステータス</h4>${stat('ライフ',250,0,'F')}${stat('ちから',160,0,'F')}${stat('かしこさ',50,0,'G')}${stat('ガッツ',170,0,'F')}${stat('丈夫さ',50,0,'G')}</div>${apt(['G','F','B','A'])}<div class="box"><h4>この種で育てた子</h4><div style="display:flex;gap:6px"><div class="cd" style="width:78px"><span class="gr">A</span><img src="${T('pixie')}">ぴくりん</div><div class="cd" style="width:78px"><span class="gr">C</span><img src="${T('pixie')}">ぴこ</div><div class="cd" style="width:78px"><span class="gr">F</span><img src="${T('pixie')}">ぴぴ</div></div></div>`),
+ ph('ぴくりん(育てた子)',`<div class="sw"><b>ベース</b><b class="on">ぴくりん</b><b>ぴこ</b></div><div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">引退 A / 総合 14,200</div></div></div><div class="box"><h4>基礎ステータス(青い線=ベースモン)</h4>${stat('ライフ',640,0,'D',250)}${stat('ちから',512,0,'E',160)}${stat('かしこさ',802,0,'B',50)}${stat('命中',455,0,'E',100)}${stat('回避',590,0,'D',90)}${stat('丈夫さ',210,0,'G',50)}</div>${feat()}`)];
+const sec=(t,n,a)=>`<h2>${t}</h2><p class="n">${n}</p><div class="row">${a.join('')}</div>`;
+document.body.innerHTML=sec('案A 参考ゲーム型: 入口 → 一覧 → 詳細タブ','研究所の入口から「モンスター」。一覧の上のタブで「育てた子/ベースモン」を切替。詳細は参考どおり 基礎・特徴・適性 のタブ+下に 技・能力・性格・経歴。いちばん参考に近く、迷いにくい。育てた子とベースモンの比較は別画面。',A)+sec('案B 比べる型: 育てた子とベースモンを並べる','一覧は血統ごとにまとめる。詳細の主役は「ベースモン vs 育てた子」の能力くらべ(伸びが▲で見える)。上のスイッチで技も2つを行き来。育てた子がどれだけ伸びたかが一目で分かる。',B)+sec('案C ベースモン起点: 種のページに育てた子がぶら下がる','まず種(ベースモン)を選ぶ。種のページに「この種で育てた子」が並び、子を選ぶと同じ画面が育てた子の値に変わる(青い線がベースモンの位置)。図鑑に近い歩き方で、種を集める楽しさが出る。',C);
+</script>
