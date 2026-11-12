@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f0492cd88eee3b25
+// generated-sha256: 64695c60e9203fcf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85309,7 +85309,7 @@ function MsxR3Box({ onClose }) {
     const locked = [...((meta && Array.isArray(meta.team)) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : []), ...(meta && meta.lend ? [meta.lend] : []), ...(runFrom ? [runFrom] : [])];
     return (<>
       <style>{MSX_R3_CSS}</style>
-      <MonsucFuseSheet box={box} locked={locked} onSave={(n) => storeSet(MSX_KEYS.box, n)} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setFuse(false); msxR3ReadBox().then(setBox); }}/>
+      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onSave={(n) => storeSet(MSX_KEYS.box, n)} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setFuse(false); msxR3ReadBox().then(setBox); }}/>
     </>);
   }
   const body = !box ? <div className="msx-note">読み込んでいます…</div> : (<>
