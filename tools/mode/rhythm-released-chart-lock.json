@@ -286,6 +286,16 @@
   "lamia/hard": "d2c57d8bcdd3a75e",
   "lamia/expert": "8c50f5c8636a1735",
   "lamia/master": "c25d0cd43bf2ec13",
+  "saudade/easy": "27fb38ded9cfa14b",
+  "saudade/normal": "3029053ab2648d67",
+  "saudade/hard": "d9e970a8d67c900c",
+  "saudade/expert": "267737e8e302f04c",
+  "saudade/master": "5fe2a89078bd61fa",
+  "saudade_short/easy": "975fe5414023611a",
+  "saudade_short/normal": "9aa6aab1e7816df6",
+  "saudade_short/hard": "904e535b5e63ab1f",
+  "saudade_short/expert": "7f887e83ff20990e",
+  "saudade_short/master": "0c28a5770e1c8d19",
   "mf_ichika_mix/hell": "fb44abd7b8b62f15",
   "monster_hero/hell": "5e9db00bf41b8e59",
   "monster_hero_another/hell": "5dc329f75601a73e",
@@ -342,7 +352,9 @@
   "altar_world_tree_short/hell": "02d22507dcb0689c",
   "evans/hell": "c6f47f64d053a04d",
   "humanoid/hell": "ee7be8fbe5d11239",
-  "lamia/hell": "9774324d7ef3d0f1"
+  "lamia/hell": "9774324d7ef3d0f1",
+  "saudade/hell": "3a2d2867c16d1b95",
+  "saudade_short/hell": "135acd6a01c141da"
  },
  "history": [
   {
@@ -689,6 +701,24 @@
     "lamia/expert",
     "lamia/master",
     "lamia/hell"
+   ]
+  },
+  {
+   "at": "2026-11-12 06:46",
+   "reason": "新曲 サウダージ(通常・short)を公開",
+   "changed": [
+    "saudade/easy",
+    "saudade/normal",
+    "saudade/hard",
+    "saudade/expert",
+    "saudade/master",
+    "saudade_short/easy",
+    "saudade_short/normal",
+    "saudade_short/hard",
+    "saudade_short/expert",
+    "saudade_short/master",
+    "saudade/hell",
+    "saudade_short/hell"
    ]
   }
  ]
