@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dbde7f287261984a
+// source-sha256: 9f2b76533700925a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117291,7 +117291,7 @@ const assistantLifeRanchPerk = () => {
     return '';
   }
 };
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() {
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
@@ -117299,7 +117299,7 @@ const assistantLifeMarketWho = () => {
   } catch (_) {
     return null;
   }
-};
+}
 const assistantLifePlacePerkTail = place => {
   if (place === 'studio') return '券なしで一緒に遊べる';
   if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
@@ -204325,7 +204325,9 @@ function MonsterHeroGame() {
       if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
       window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
-      setTimeout(() => window.location.reload(), 900);
+      setTimeout(() => {
+        window.location.reload();
+      }, 900);
     } catch {
       setRestoreMsg('コードが正しくありません');
     }

@@ -126,6 +126,8 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(resolve,step.ms)` | progress | await | 図鑑の攻撃プレビューの1コマ待ち。打ち切りは `dexAttackPreviewRunRef` が持っている |
 | `setTimeout(()=>setEffect(null),1200)` | progress | 投げっぱなし(65-screen-masu-enhance.jsx へ移動済み) | まとめて強化の演出を消す。止めると出たまま |
 | `setSlotSettle(i);` | progress | 投げっぱなし | タップで入れた枠の光を戻す。止めると光ったまま |
+| `setTimeout(() => { window.location.reload(); }, 900);` | 対象外 | 投げっぱなし | バックアップのコードから復元したあと、少し待って再読み込みする |
+| `          setTimeout(() => window.location.reload(), 900);` | 対象外 | 投げっぱなし | バックアップのファイルから復元したあと、少し待って再読み込みする |
 | `}, TACTICS_SLOT_FX_MS);` | progress | 止める(次を出すとき) | タクティクスの枠の出来事の札を消す。止めると出たまま |
 | `setTacticsExCutin(null); }, ms` | progress | 止める(次を出すとき) | EXのカットイン(教えカードの演出もここへまとまった)を消す。止めると出たまま |
 | `setEffect(null), TRANSCEND_ENHANCE_FX_MS` | progress | 投げっぱなし | 超越強化の演出を消す。止めると出たまま |

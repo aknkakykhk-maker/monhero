@@ -95,13 +95,13 @@ const assistantLifeRanchPerk = () => {
 
 // マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
 //   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() { // 関数宣言のまま(検査が window から差し替えられるように。const にすると差し替えが効かない)
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
   } catch (_) { return null; }
-};
+}
 
 // 場所ごとの「得」の文(2026-11-12 社長「これ全部効果書いて」)。予定表の行き先えらびの「得:」と、地図の場所の窓・家の帯の「いま行くと得」で同じ文を使う(二重に作らない)。
 //   いまある効果だけ(新しい効果は作らない)。数字は今の値から作る。効果の無い場所('' を返す)は何も出さない

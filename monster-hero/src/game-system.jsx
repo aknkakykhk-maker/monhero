@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8abc9e3c296c5ec8
+// generated-sha256: 4706984b52fda181
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -40873,7 +40873,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
   // ダウンロード(事前ダウンロード)も設定画面の中の1ページ。いつも出す(切のときは、ページの中に「使う」ボタンを出す)
   const [assetDownloadOpen, setAssetDownloadOpen] = useState(false);
-  // 「ホーム画面に追加」の案内(51-home-screen-guide.jsx。iPhone の Safari のときだけ入口を出す・2026-11-11)
+  // 「ホーム画面に追加」の案内(51-home-add-guide.jsx。iPhone の Safari のときだけ入口を出す・2026-11-11)
   const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   // 助手のひとことの出し方(21-assistant.jsx の ASSISTANT_BUBBLE_STORE。早期の return より前で読む)
   const assistantBubble = useAssistantBubbleState();
@@ -41121,7 +41121,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   );
 }
 
-// ---- part: 51-home-screen-guide.jsx ----
+// ---- part: 51-home-add-guide.jsx ----
 // ==== 「ホーム画面に追加」の案内(2026-11-11 社長の選択 B・窓口経由・アプリカ) ====
 // 社長「ブラウザだからかたまに画面の挙動がおかしい。ホームに追加しても、それでもブラウザのような挙動がある気がする」
 // → ホーム画面のアプリでは左端スワイプの戻るを出さなくした(#5455)。Safari で遊んでいる人には、ホーム画面に追加する案内を出す。
@@ -68266,13 +68266,13 @@ const assistantLifeRanchPerk = () => {
 
 // マーケットの得(開発部クラフトくんが assistantMarketPerkToday() を作る): いま market にいる起きている助手(新UIのときだけ)。いなければ null
 //   マーケット側はこの関数が null のときは割引きを出さない(助手がいるあいだだけの得)
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() { // 関数宣言のまま(検査が window から差し替えられるように。const にすると差し替えが効かない)
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
     return assistantLifeAtPlace(assistantLifeCurrent(), ids, 'market')[0] || null;
   } catch (_) { return null; }
-};
+}
 
 // 場所ごとの「得」の文(2026-11-12 社長「これ全部効果書いて」)。予定表の行き先えらびの「得:」と、地図の場所の窓・家の帯の「いま行くと得」で同じ文を使う(二重に作らない)。
 //   いまある効果だけ(新しい効果は作らない)。数字は今の値から作る。効果の無い場所('' を返す)は何も出さない
@@ -111435,7 +111435,7 @@ function MonsterHeroGame() {
       if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
       window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
-      setTimeout(() => window.location.reload(), 900);
+      setTimeout(() => { window.location.reload(); }, 900);
     } catch { setRestoreMsg('コードが正しくありません'); }
   };
 
@@ -124317,7 +124317,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="モンスター一覧" accent="text-cyan-400" onBack={returnToHome}/><div className="w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"><button onClick={()=>setGameState('OWNED_MONSTERS')} className="w-full min-h-[72px] bg-cyan-950/50 border border-cyan-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">ベースモン</button><button onClick={()=>setGameState('MASU_MONS')} className="w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">マスモン</button></div></div>
         )}
 
-        {/* 「ホーム画面に追加」の案内(iPhone の Safari だけ・しつこくしない回数で。51-home-screen-guide.jsx・2026-11-11) */}
+        {/* 「ホーム画面に追加」の案内(iPhone の Safari だけ・しつこくしない回数で。51-home-add-guide.jsx・2026-11-11) */}
         {gameState==='HOME'&&typeof HomeScreenGuideAuto==='function'&&(
           <HomeScreenGuideAuto onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}/>
         )}

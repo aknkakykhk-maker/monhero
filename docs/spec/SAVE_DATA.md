@@ -258,7 +258,7 @@
 
 | キー | 値・既定値 | 用途 |
 | --- | --- | --- |
-| `mh_home_screen_guide_v1` | object `{firstSeenAt, lastShownAt, autoCount, never}`(既定 0・0・0・false)/ `normalizeHomeScreenGuideState` | 「ホーム画面に追加」の案内(2026-11-11・51-home-screen-guide.jsx)。iPhone の Safari だけ。はじめて HOME に来た時刻・自動で出した時刻と回数(14日あけ・3回まで)・「もう表示しない」。**例外: localStorage を直接読み書き**(同期で小さい値だけ)。データ引き継ぎで運ばれても、ホーム画面のアプリでは案内を出さないので害はない |
+| `mh_home_screen_guide_v1` | object `{firstSeenAt, lastShownAt, autoCount, never}`(既定 0・0・0・false)/ `normalizeHomeScreenGuideState` | 「ホーム画面に追加」の案内(2026-11-11・51-home-add-guide.jsx)。iPhone の Safari だけ。はじめて HOME に来た時刻・自動で出した時刻と回数(14日あけ・3回まで)・「もう表示しない」。**例外: localStorage を直接読み書き**(同期で小さい値だけ)。データ引き継ぎで運ばれても、ホーム画面のアプリでは案内を出さないので害はない |
 | `mh_audio_muted` | boolean / `false` | ミュート状態 |
 | `mhdev_session_marker_v1` | object / 無し | **端末の中だけ**の「いま遊んでいる」印(`normalizeSessionMarker`)。起動から15秒ごとに書き直す(`startedAt`・`lastBeat`・`state` = `running`/`hidden`/`closed`・`screen`・`audioBuffers`・`heapMB`・`nav`、2026-10-12 から `audioMB`(持っている音の大きさ)・`decodedMB`(起動してから解いた合計)・`decodeCount`(解いた回数)。無い印は null として読む)。1件だけ。次の起動でこれを読み、正常に終わっていなければ `mhdev_reload_log_v1` へ足す。無い・壊れているときは何もしない。サーバーへは送らない。`localStorage` へ直接書く(`storeSet` は通さない)。**`mhdev_` なのでバックアップに入らない**(この端末の記録なので、別の端末へ引き継がない) |
 | `mhdev_reload_log_v1` | array / `[]` | **端末の中だけ**の「前回、途中で読み込み直された」記録(`normalizeReloadLog`)。直近 `RELOAD_LOG_LIMIT`(12)件まで、新しいものが先頭。`kind` は `foreground`(遊んでいる最中に止まった)/ `background`(裏に回ったあと)。音量設定の「🔧 音が出ないとき」の下で見られる。サーバーへは送らない。`localStorage` へ直接書く。**`mhdev_` なのでバックアップに入らない** |

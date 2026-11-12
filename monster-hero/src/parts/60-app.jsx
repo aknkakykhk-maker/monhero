@@ -8390,7 +8390,7 @@ function MonsterHeroGame() {
       if (typeof window.mhApplyBackupRestore !== 'function') throw new Error('restore-unavailable');
       window.mhApplyBackupRestore(data, keys);
       setRestoreMsg('復元しました。再読み込みします...');
-      setTimeout(() => window.location.reload(), 900);
+      setTimeout(() => { window.location.reload(); }, 900);
     } catch { setRestoreMsg('コードが正しくありません'); }
   };
 
@@ -21272,7 +21272,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="モンスター一覧" accent="text-cyan-400" onBack={returnToHome}/><div className="w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"><button onClick={()=>setGameState('OWNED_MONSTERS')} className="w-full min-h-[72px] bg-cyan-950/50 border border-cyan-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">ベースモン</button><button onClick={()=>setGameState('MASU_MONS')} className="w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">マスモン</button></div></div>
         )}
 
-        {/* 「ホーム画面に追加」の案内(iPhone の Safari だけ・しつこくしない回数で。51-home-screen-guide.jsx・2026-11-11) */}
+        {/* 「ホーム画面に追加」の案内(iPhone の Safari だけ・しつこくしない回数で。51-home-add-guide.jsx・2026-11-11) */}
         {gameState==='HOME'&&typeof HomeScreenGuideAuto==='function'&&(
           <HomeScreenGuideAuto onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}/>
         )}
