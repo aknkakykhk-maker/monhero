@@ -203,6 +203,32 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   check('⑫ もういない冬眠の子は起こせない', S.amgsSwap(id, 2) !== true);
 }
 
+// ⑫b 前にいた子の写し(窓口 A・B 2026-11-12): 同じ「枠:種類」が2体なら新しい方だけに写す/写しの無い子を起こす前に、まだ並べていない前にいた子の中身を先に写す
+for (const kind of ['B', 'A']) {
+  const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-calc.jsx') + '\n' + cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
+  const ctx = make({ ...ON, assistantMasmonSleep: true });
+  vm.runInContext(['var ALL_PLAYER_MONSTERS = { Golem: {}, Pixie: {}, Tiger: {} };',
+    `var MS = { seed: "x", mine: { kiki: { former: { 2: ${kind === 'B' ? '[{ monster: "Tiger", nick: "古いトラ", lv: 10, colors: [], at: "2026-11-01" }, { monster: "Tiger", nick: "新しいトラ", lv: 28, colors: [], at: "2026-11-03" }]' : '[{ monster: "Tiger", nick: "トラ", lv: 28, colors: [], at: "2026-11-03" }]'} } } } };`,
+    'var ASSISTANT_MASMON_STORE = { loaded: true, state: MS };', 'var ROWS = [{ slot: 1, monster: "Golem", nick: "ゴロ", lv: 20 }, { slot: 2, monster: "Pixie", nick: "ピピ", lv: 15 }];',
+    'var assistantMasmonRowsOf = () => ROWS;', 'var assistantMasmonSleepSwap = (aid, slot, back, ff) => { const r = ROWS.find(x => x.slot === slot); const out = { ...r }; ROWS = ROWS.map(x => (x.slot === slot ? { ...back, slot } : x)); return out; };',
+    sleep, 'this.S = { AMGS_STORE, amgsSyncFormer, amgsSwap };'].join('\n'), ctx);
+  const S = ctx.S; const T = ctx.T; const TIGER = { slot: 2, monster: 'Tiger', lv: 28, nick: 'トラ' };
+  T.AMG_STORE.loaded = true; T.AMGP_STORE.loaded = true; T.AMGP_CSTORE.loaded = true; S.AMGS_STORE.loaded = true;
+  T.AMG_STORE.set(T.amgCatchUp(T.normalizeAssistantMasmonGrow(null), 'kiki', [ROW, ROW2, TIGER], SEED, S0));
+  const pow = entry(T.AMG_STORE.state, TIGER).st.pow;
+  if (kind === 'B') {
+    S.amgsSyncFormer();
+    const beds = S.AMGS_STORE.state.beds; const old = beds.find(b => b.row.nick === '古いトラ'); const nu = beds.find(b => b.row.nick === '新しいトラ');
+    check('⑫b 同じ「枠:種類」の前にいた子が2体なら、行は新しい方だけに写す', beds.length === 2 && old && !old.g && nu && nu.g && nu.g.st.pow === pow && !entry(T.AMG_STORE.state, TIGER));
+  } else {
+    // 写しの無い冬眠の子(Tiger)を枠2へ起こす。前にいた子(Tiger)はまだ並べていない
+    S.AMGS_STORE.save({ ...S.AMGS_STORE.state, seq: 50, beds: [{ id: 'b50', aid: 'kiki', slot: 2, src: 'sleep', at: '2026-11-05', fat: '', row: { monster: 'Tiger', nick: '写しなし', lv: 3, colors: [] }, g: null, t: null, c: null }] });
+    const r = S.amgsSwap('b50', 2, slotAt(S0)); if (r !== true) console.log('  理由:', r);
+    const former = S.AMGS_STORE.state.beds.find(b => b.src === 'former');
+    check('⑫b 写しの無い子を起こす前に、前にいた子の中身を先に写す(行を外してから写さない)', r === true && former && former.g && former.g.st.pow === pow);
+  }
+}
+
 // ⑬ 合体(56-assistant-life-masmon-sleep.jsx・FUSE.md 第2版)
 {
   const sleep = read('monster-hero/src/parts/56-assistant-life-masmon-calc.jsx') + '\n' + cut(read('monster-hero/src/parts/56-assistant-life-masmon-sleep.jsx'));
