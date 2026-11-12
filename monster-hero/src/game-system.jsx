@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3eb3b8dc2ffe403c
+// generated-sha256: 2ea90d27b64fcfd0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73529,7 +73529,8 @@ function AssistantMasmonDetail({ who, p, t, land = false, onClose, onAsk = null 
       const st = ASSISTANT_MASMON_STORE.state;
       const l0 = assistantMasmonDyeLog(who.id, t.slot)[0] || {}; const lastAsk = l0.why === 'ask' && !l0.undo; // 戻したあとは、もう出さない
       const prevName = (assistantMasmonMineOf(st, who.id).names[t.slot] || []).slice(-1)[0];
-      const prevMon = ((assistantMasmonMineOf(st, who.id).former || {})[t.slot] || []).slice(-1)[0];
+      // 冬眠が動いているときは、前にいた子は冬眠の一覧から起こす(ここで戻すと、冬眠の箱と起きている枠の両方に同じ子がいる形になる・キズナ 11-12)
+      const prevMon = typeof amgsOn === 'function' && amgsOn() ? null : ((assistantMasmonMineOf(st, who.id).former || {})[t.slot] || []).slice(-1)[0];
       return (
         <div className="mhm-card mt-2 flex flex-wrap items-center gap-2" data-assistant-masmon-detail-ask>
           <button type="button" className="mhl-btn px-3 text-[11.5px]" style={{ background: 'linear-gradient(90deg,#f472b6,#fb923c)' }} onClick={() => onAsk(t)} data-assistant-masmon-ask-open="masmon">💡 {who.name}に提案する(名前・色・育て方)</button>
