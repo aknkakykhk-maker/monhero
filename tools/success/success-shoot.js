@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // モンヒロサクセス(育成の画面・回2)を本物のブラウザで開き、画面ごとの止め絵を撮る。あわせて「真っ白にならない・字が枠からはみ出さない」を見る。
+// あわせて、押せる大きさ・字の小ささ・横画面・大きい文字の見張りは success-layout-check.js が回す。
 //
 //   node tools/success/success-shoot.js                 … 縦390×844 で全部の画面を開いて確かめる(撮らない)
 //   SHOT_DIR=<フォルダ> node tools/success/success-shoot.js … 縦390×844・横844×390・幅320×568 で撮る
@@ -58,7 +59,8 @@ const makeRun = async (kind) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
-  const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320']] : [[390, 844, '']];
+  // [幅, 高さ, 名札, 文字の倍率]。大きい文字設定は、画面の中の文字を 1.3 倍にして真似る
+  const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // [名前, 作る育成, 開いたあとの操作]
   const SHOTS = [
     ['S1', null, ['new']], ['S2', null, ['new', 'next']], ['S3', null, ['new', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next']],
@@ -69,7 +71,7 @@ const makeRun = async (kind) => {
   ];
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    for (const [w, h, tag] of sizes) {
+    for (const [w, h, tag, fscale] of sizes) {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
@@ -115,14 +117,41 @@ const makeRun = async (kind) => {
           await page.waitForTimeout(350);
         }
         await page.waitForTimeout(900);
-        const m = await page.evaluate(() => {
+        const m = await page.evaluate((fscale) => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
+          if (fscale) { // 大きい文字設定の真似: 文字の大きさを倍にする(一度だけ)
+            if (!root.dataset.fs) { root.dataset.fs = '1'; const els = [root, ...root.querySelectorAll('*')]; const sz = els.map((e) => parseFloat(getComputedStyle(e).fontSize)); els.forEach((e, i) => { e.style.fontSize = `${sz[i] * fscale}px`; }); }
+          }
           const R = root.getBoundingClientRect();
-          // 中で送れる欄(overflow が auto/scroll)の中にあって隠れている物は数えない
           const clipped = (e) => { for (let p = e.parentElement; p && p !== root; p = p.parentElement) { const o = getComputedStyle(p).overflowY; if (o === 'auto' || o === 'scroll') return true; } return false; };
-          const over = [...root.querySelectorAll('button, .v-band, .v-st, .v-act, .v-ft')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && !clipped(e) && (r.right > R.right + 1 || r.left < R.left - 1 || r.bottom > R.bottom + 1); }).map((e) => (e.innerText || e.className).slice(0, 20));
-          return { ok: true, text: root.innerText.length, over };
-        });
+          const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0'; };
+          const lab = (e) => ((e.innerText || e.getAttribute('aria-label') || e.className || e.tagName) + '').replace(/\s+/g, ' ').slice(0, 14);
+          const over = [...root.querySelectorAll('button, .v-band, .v-st, .v-act, .v-ft')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && !clipped(e) && (r.right > R.right + 1 || r.left < R.left - 1 || r.bottom > R.bottom + 1); }).map(lab);
+          // 押せる物は 44px 以上(送れる欄の中の物も数える。入力欄・ボタン・role=button)
+          // 押せる範囲 = 見た目の枠と、::after で広げた範囲の大きいほう
+          const hit = (e) => { const r = e.getBoundingClientRect(); const a = getComputedStyle(e, '::after'); const aw = parseFloat(a.width) || 0; const ah = parseFloat(a.height) || 0; return { width: Math.max(r.width, a.content !== 'none' ? aw : 0), height: Math.max(r.height, a.content !== 'none' ? ah : 0) }; };
+          const taps = [...root.querySelectorAll('button, [role=button], input, select, textarea')].filter((e) => vis(e) && e.type !== 'range' && e.type !== 'hidden' && !e.disabled).filter((e) => { const r = hit(e); return r.width < 43.5 || r.height < 43.5; }).map((e) => { const r = hit(e); return `${lab(e)}(${Math.round(r.width)}x${Math.round(r.height)})`; });
+          // 字が切れる: 一行に収める枠で中身が枠より広い
+          const cut = [...root.querySelectorAll('*')].filter((e) => vis(e) && e.children.length === 0 && (e.innerText || '').trim() && e.scrollWidth > e.clientWidth + 2 && ['hidden', 'clip'].includes(getComputedStyle(e).overflowX) && !clipped(e)).map(lab);
+          // 字が極端に小さい(10px 未満。大きい文字設定では 13px 未満になっていないか)
+          const tiny = [...root.querySelectorAll('*')].filter((e) => vis(e) && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 10 * (fscale || 1) - 0.5).map((e) => `${lab(e)}(${Math.round(parseFloat(getComputedStyle(e).fontSize))}px)`);
+          // 横画面の上の空白: 見える中身のいちばん上が、枠の上から 50px より下
+          const kids = [...root.querySelectorAll('*')].filter((e) => vis(e) && (e.tagName === 'IMG' || e.tagName === 'BUTTON' || [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())));
+          const topBlank = kids.length ? Math.round(Math.min(...kids.map((e) => e.getBoundingClientRect().top)) - R.top) : 0;
+          // 重なり: 押せる物どうしが 6px 角以上かぶる
+          const bs = [...root.querySelectorAll('button')].filter((e) => vis(e) && !clipped(e)).map((e) => ({ e, r: e.getBoundingClientRect() }));
+          const lap = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i].r, b = bs[j].r; if (bs[i].e.contains(bs[j].e) || bs[j].e.contains(bs[i].e)) continue; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 6) lap.push(`${lab(bs[i].e)}×${lab(bs[j].e)}`); }
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, land: window.innerWidth > window.innerHeight };
+        }, fscale || 0);
+        const L = `${name}${tag ? `(${tag})` : ''}`;
+        const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
+        if (m.ok) {
+          check(`${L}: 押せる物が 44px 以上`, m.taps.length === 0, m.taps.slice(0, 4).join(' / '));
+          check(`${L}: 字が枠で切れない`, m.cut.length === 0, m.cut.slice(0, 4).join(' / '));
+          check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
+          check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
+          if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
+        }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
