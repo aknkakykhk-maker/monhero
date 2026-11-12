@@ -777,6 +777,101 @@ grp('W', '9d. 大会で もらったとき の小窓(修行チケット・砂時
   <li>修行チケットは「3枚 → 4枚」と増えたあとの数を見せる。砂時計は2種類を横に並べ、「1回の育成で3回まで」を添える</li>
   <li>M3(持ち物)・C4(負けたとき)・メインの修行ボタンの印・修行の画面の砂時計とチケットも、同じ絵に差し替えた</li></ul>`);
 
+// ================= 10. 称号の一覧と記録帳・季節×時間のメイン・助手のお話の結末(2026-11-12 窓口の依頼) =================
+// ---- 称号の一覧(TOURNAMENT.md §8)。[絵文字, 名前, どこでもらえるか, 取った/まだ]
+const TT = [['👣', 'はじめの一歩', 'デビュー戦に優勝', 1], ['💪', 'ちから自慢の頂点', 'ちから自慢の ★★★ に優勝', 1], ['🏹', '遠の間合いの名手', '間合いの ★★★ に優勝', 1], ['🛡️', 'タンクの誇り', 'タイプの ★★★ に優勝', 0], ['👑', 'ヒーロー記念の覇者', '👑の大会に優勝', 0], ['🌸', '四季を知る子', '四季の大会を制覇', 1], ['🔥', 'ライバルに勝った', 'ライバルのいる大会に優勝', 1], ['🌱', '遅咲きの一歩', 'デビュー戦の再挑戦で優勝', 0], ['🏔', '頂に立った子', '頂への道 優勝(ふつう)', 0], ['⭐', 'ヒーローの頂', '頂への道 優勝(大きいほう)', 0], ['🎓', 'みゅあと町を一周', 'みゅあの特別な1話を見た', 1], ['🏆', 'サクセス杯 優勝', 'サクセス杯で優勝', 1]];
+const ttCard = ([e, n, how, got]) => `<div class="v-tt ${got ? 'got' : ''}"><span class="e">${got ? e : '🔒'}</span><b>${got ? n : '？？？'}</b><small>${how}</small></div>`;
+const titles = `${hdr('', 'もどる', '')}<div class="v-body">
+  <div class="v-h">🏅 称号<small>育成で手に入れた称号の一覧(すべての育成のあわせ)</small></div>
+  <div class="v-svc"><div class="n"><b>7</b> / 12</div><i><u style="width:58%"></u></i><span>はじめて取った称号には NEW</span></div>
+  <div class="v-tabs t3"><span class="on">すべて</span><span>大会</span><span>助手</span></div>
+  <div class="v-ttg">${TT.map(ttCard).join('')}</div>
+  <div class="v-card pk" style="padding:6px 9px"><div class="row"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「あと5つ! ◯◯の ★★★ 、まだ出てないよ!」</div></div></div>
+</div><div class="v-ft"><span>← もどる</span><span class="on" style="flex:1.6">🔍 取りかたを見る</span><span class="go">記録帳へ ▶</span></div>`;
+// ---- 記録帳(育て終えた子の記録): [日付, 名前, 種類, 評価, 総合力, 助手, 称号の数]
+const RC = [['2026/11/12', 'もちまる', 'mocchi', 20, 'A', '11,480', 'myua', 5], ['2026/11/10', 'とらきち', 'tiger', 200, 'S', '15,880', 'atsu', 7], ['2026/11/08', 'いわお', 'golem', 140, 'A', '14,950', 'kiki', 4], ['2026/11/05', 'こんこ', 'kyubi', 330, 'B', '12,260', 'momosuke', 3], ['2026/11/02', 'ぴくる', 'pixie', 270, 'B', '11,980', 'myua', 2], ['2026/10/30', 'めだま', 'suezo', 120, 'C', '9,870', 'dra', 1]];
+const rcRow = ([d, n, m, hue, g, p, a, t], i) => `<div class="v-rc${i === 0 ? ' sel' : ''}"><span class="dt">${d}</span><span class="im"><img src="${M(m + '.png')}" style="filter:hue-rotate(${hue}deg)"></span><div class="nm"><b>${n}</b><small>🏅 ${t}</small></div><img class="as" src="${F(a, 'happy')}">${rk(g)}<span class="pw">${p}</span></div>`;
+const recbook = `${hdr('', 'もどる', '')}<div class="v-body">
+  <div class="v-h">📖 記録帳<small>育て終えた子の記録(日付・名前・助手・評価・称号)</small></div>
+  <div class="v-rch"><span>日付</span><span>子</span><span>助手</span><span>評価・総合力</span></div>
+  <div class="v-rcl">${RC.map(rcRow).join('')}</div>
+  <div class="v-svc"><div class="n"><b>6</b> 冊</div><i><u style="width:20%"></u></i><span>育てるたびに1冊ふえる(消えない)</span></div>
+</div><div class="v-ft"><span>← もどる</span><span class="on" style="flex:1.2">並べかえ: 日付 ▾</span><span class="go">ひらく ▶</span></div>`;
+const recpage = `${hdr('', 'もどる', '')}<div class="v-body">
+  <div class="v-h">📖 もちまる の記録<small>2026/11/12 に引退・全46ターン・みゅあ編「いっしょに、てっぺんへ!」</small></div>
+  <div class="v-rank"><img class="mon2" src="${M('mocchi.png')}" style="filter:hue-rotate(20deg)"><div class="tx"><small>育成ランク</small><div class="L">A</div></div><div class="tx"><small>総合力</small><b>11,480</b></div></div>
+  ${stRow(null, -1, FIN)}
+  <div class="v-card"><div class="sub" style="color:#f9a8d4;font-weight:900">🏅 この育成の称号(5)</div><div class="v-ttw">${['はじめの一歩', 'ちから自慢の頂点', '四季を知る子', 'ライバルに勝った', 'みゅあと町を一周'].map((t) => `<span>${t}</span>`).join('')}</div></div>
+  <div class="v-card"><div class="v-kv"><b>助手</b><span><img class="inl" src="${F('myua', 'happy')}">みゅあ(仲良し度 Lv5・特別な1話まで)</span></div><div class="v-kv"><b>大会</b><span>12戦9勝・優勝 2回</span></div><div class="v-kv"><b>日付</b><span>2026/10/28 はじめる → 2026/11/12 引退</span></div></div>
+  <div style="flex:1"></div>
+</div><div class="v-ft"><span>← 記録帳</span><span class="go">保存枠で見る ▶</span></div>`;
+grp('N', '10a. 称号の一覧と記録帳', '取った称号を並べた一覧(取れていないのは鍵と取りかた)と、育て終えた子の記録帳(日付・子・助手・評価・総合力・称号の数)。記録帳から1冊ひらくと、その育成の称号・助手・日付が出る。表そのものは別の担当が作っている途中なので、見た目の形だけを決める。', [
+  { id: 'N1', label: '称号の一覧(取った/まだ)', html: titles },
+  { id: 'N2', label: '記録帳(育て終えた子の記録の表)', html: recbook },
+  { id: 'N3', label: '記録の1冊(称号・助手・日付)', html: recpage },
+], `<h3>見せ方</h3><ul>
+  <li>N1: 12個ずつ2列。取った称号は金枠で絵と名前、まだのは鍵+「？？？」で取りかただけ見せる(ネタバレになる名前は伏せる)</li>
+  <li>N2: 1行 = 日付・子の絵と名前・称号の数・助手の顔・評価・総合力。新しい順(並べかえ可)。育てた分は消えない</li>
+  <li>N3: 記録の1ページ。評価・総合力・6能力・称号・助手・日付。ここから保存枠の子へも行ける。称号の名前は TOURNAMENT.md §8 のもの(数字・日付は仮)</li></ul>`);
+
+// ---- 季節×時間のメイン。絵は別の担当が monster-hero/images/success/scenes/ に描いている途中なので、いまは今ある景色に色をかけた仮
+const SEAS = [['🌸', '春', 'spring', 'hue-rotate(-25deg) saturate(1.1)'], ['☀️', '夏', 'summer', 'saturate(1.3) brightness(1.05)'], ['🍁', '秋', 'autumn', 'sepia(.5) hue-rotate(-20deg) saturate(1.3)'], ['❄️', '冬', 'winter', 'saturate(.5) brightness(1.1) hue-rotate(160deg)']];
+const TIMES = [['朝', 'forest_morning', 'brightness(1.1)'], ['昼', 'monhero_plaza', ''], ['夕', 'monhero_plaza_evening', ''], ['夜', 'monhero_night', '']];
+const mainSeason = (si, ti) => { const [e, sn, , sf] = SEAS[si]; const [tn, tb, tf] = TIMES[ti]; return `${hdr()}<div class="v-body">
+  ${band()}
+  ${mainSay(false)}
+  <div class="v-scene home"><img class="bg" src="${BG(tb)}" style="filter:${sf} ${tf}"><div class="sh"></div>${party}
+    <div class="v-chips"><span class="v-chip">${e} ${sn}・${tn}</span><span class="v-chip hot">🏆 期末の大会まで 7ターン</span></div>
+    <div class="gr"></div><img class="mon" src="${M('mocchi.png')}"><span class="v-nm">もちまる<small>方針: 普通</small></span>
+    <div class="v-side"><span class="v-mini">🤝 忠誠 <b>72</b></span><span class="v-mini">⭐ 人気 <b>45</b></span></div>
+    <div class="v-bagb">🎒<small>持ち物</small><i>2</i></div><div class="v-bagb r">🔍<small>くわしく</small></div></div>
+  ${stRow()}
+  ${acts(false)}
+</div>${foot}`; };
+const sceneTable = `${hdr('', 'もどる', '')}<div class="v-body">
+  <div class="v-h">🌸 季節と時間の景色<small>4つの季節 × 4つの時間(朝・昼・夕・夜)= 16まい。メインの住む場所の背景が、ターンと月で替わる</small></div>
+  <div class="v-sct"><span></span>${TIMES.map(([t]) => `<b>${t}</b>`).join('')}${SEAS.map(([e, s, , sf], si) => `<b>${e}${s}</b>${TIMES.map(([, tb, tf]) => `<i><img src="${BG(tb)}" style="filter:${sf} ${tf}"></i>`).join('')}`).join('')}</div>
+  <div class="v-card" style="padding:6px 9px;font-size:10.5px;font-weight:800;line-height:1.5">いまの見本は、今ある景色に色をかけた<b class="yel">仮</b>。できあがった絵は <code>monster-hero/images/success/scenes/</code> に入る予定で、入ったら差しかえる。季節は月で(春 3〜5・夏 6〜8・秋 9〜11・冬 12〜2)、時間はターンで替わる(案)</div>
+  <div style="flex:1"></div>
+</div>${footGo('もどる')}`;
+GROUPS.find((g) => g.id === 'M').phones.push({ id: 'M4', label: '季節×時間(夏・夕)', html: mainSeason(1, 2) }, { id: 'M5', label: '季節×時間(秋・夜)', html: mainSeason(2, 3) }, { id: 'M6', label: '季節×時間(冬・朝)', html: mainSeason(3, 0) }, { id: 'M7', label: '16まいの景色の一覧', html: sceneTable });
+GROUPS.find((g) => g.id === 'M').notes += `<h3>季節×時間の景色(2026-11-12・M4〜M7)</h3><ul>
+  <li>メインの住む場所の景色は、月(春夏秋冬)とターン(朝昼夕夜)で替わる。景色の左上の札に「🍁 秋・夜」と出る(いまの見本の札はこの形)</li>
+  <li>絵は別の担当が <code>monster-hero/images/success/scenes/</code> に描いている途中。いまは今ある景色に色をかけた<b>仮</b>。できたら差しかえる</li></ul>`;
+
+// ---- 助手のお話: 4話の結末(いい結末/ほろ苦い)と特別な1話の場面(みゅあの台本 script/scenario.js)
+const endScene = (kind) => `${hdr('💰 名声 1,070', '中断')}<div class="v-body">
+  ${band({ ph: 'プロ期', ym: '4年目 5月', pow: '9,320', rank: 'B', left: 4, all: 12, now: 3, fill: 60 })}
+  ${scene({ bg: 'monhero_plaza_evening', back: kind === 'good' ? '<div class="v-burst"></div>' : '', monStyle: 'left:30%;bottom:26%;height:44%', grStyle: 'left:30%;bottom:calc(26% - 5px)', inner: `
+    <img src="${BODY(kind === 'good' ? 'mua__excited' : 'mua__troubled')}" style="position:absolute;right:-10%;bottom:-24%;height:92%">
+    <div class="v-ev-h"><small>みゅあの話 4話「みんなの声」${kind === 'good' ? '・いい結末' : '・ほろ苦い結末'}</small>${kind === 'good' ? 'みゅあの声が、届いた' : '声は、歓声にのまれた'}</div>
+    <div class="v-ibub" style="left:6px;right:52%;top:auto;bottom:8px">${kind === 'good' ? '「届いた…まぢで届いたよ😭 最高のチームぢゃん!」' : '「…届かなかったかも。でも、ちゃんと戦ってた」'}</div>` })}
+  <div class="v-card ${kind === 'good' ? 'pk' : ''}"><div class="sub" style="color:${kind === 'good' ? '#fde047' : '#cbd5e1'};font-weight:900">${kind === 'good' ? '✨ いい結末のごほうび(特大)' : '☁ ほろ苦い結末のごほうび'}</div>
+    ${kind === 'good' ? `<div class="v-kv"><b>全能力</b><span class="yel">+40(特大)</span></div><div class="v-kv"><b>技</b><span>「みんなの声」系の ひらめき</span></div><div class="v-kv"><b>つぎは</b><span>最後の期に <b class="yel">特別な1話</b> が開く</span></div>` : `<div class="v-kv"><b>人気</b><span>+12(大)</span></div><div class="v-kv"><b>称号</b><span>「声なき声のファン」</span></div><div class="v-kv"><b>つぎは</b><span>特別な1話は開かない(ふだんの出来事に)</span></div>`}
+    <div class="v-kv"><b>3話の選びかた</b><span>${kind === 'good' ? '「いっしょに深呼吸」を選んだ' : '「お守りだけもらう」を選んだ'}</span></div></div>
+  ${stRow(kind === 'good' ? [40, 40, 40, 40, 40, 40] : [0, 0, 0, 0, 0, 0], -1, VAL.map((v) => v + (kind === 'good' ? 40 : 0)))}
+</div>${footGo('つぎへ ▶', '⏩ とばす')}`;
+const specialScene = `${hdr('💰 名声 1,070', '中断')}<div class="v-body">
+  ${band({ ph: '最後の期', ym: '5年目 2月', pow: '11,100', rank: 'A', left: 4, all: 4, now: 4, fill: 20 })}
+  ${scene({ bg: 'monhero_plaza_evening', cls: 'dk', monStyle: 'left:26%;bottom:30%;height:38%', grStyle: 'left:26%;bottom:calc(30% - 5px)', inner: `
+    <img src="${BODY('mua__happy')}" style="position:absolute;right:-6%;bottom:-18%;height:88%">
+    <div class="v-ev-h"><small>特別な1話・仲良し度 Lv5</small>ここまで来たぢゃん</div>
+    <div class="v-ibub" style="left:6px;right:48%;top:auto;bottom:8px">「あの日は ちっちゃかったのに…ここまで来たぢゃん😭」</div>` })}
+  <div class="v-card"><div class="v-spn">${['おやつ屋さん', '広場', 'ひなたの丘'].map((n, i) => `<span class="${i < 2 ? 'ok' : 'now'}">📍 ${n}</span>`).join('<i>›</i>')}</div>
+    <div class="sub" style="margin-top:4px">最後の期の夕方。みゅあに誘われて、ふたりで町を一周する。どこにも、ここまでの思い出がある。</div></div>
+  <div class="v-card pk"><div class="row"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「もちまる、ありがと。あたし、このチームで ほんとによかった♪」</div></div></div>
+  <div class="v-card" style="padding:5px 9px;font-size:10.5px;font-weight:800">この話を見ると、<b class="yel">引退の振り返りの最後の一言</b>が変わる。節目なので少し長め(5〜6秒・画面を暗く)</div>
+  <div style="flex:1"></div>
+</div>${footGo('つぎへ ▶', '⏩ とばす')}`;
+grp('A', '10b. 助手のお話の結末と特別な1話', 'みゅあの話の4話「みんなの声」の結末2通り(いい結末/ほろ苦い結末)と、最後の期の特別な1話「ここまで来たぢゃん」の場面。台詞は台本(script/scenario.js)のもの。3話の2択の選びかたで4話が分かれ、いい結末だけが特別な1話へつながる。', [
+  { id: 'A1', label: '4話の結末(いい結末)', html: endScene('good') },
+  { id: 'A2', label: '4話の結末(ほろ苦い結末)', html: endScene('bitter') },
+  { id: 'A3', label: '特別な1話の場面(町を一周)', html: specialScene },
+], `<h3>見せ方</h3><ul>
+  <li>どちらの結末も、大会の景色と助手の立ち絵+せりふ+ごほうびの札。いい結末は金色の放射と「特大」のごほうび、ほろ苦い結末は少し暗い色合いで、それでもごほうびがある(「見てた人がファンになった」)</li>
+  <li>特別な1話(A3): 夕方の町を3か所まわる(進み具合の「📍」)。画面を暗くして長めに。見たあと、引退の振り返りの最後の一言が変わる</li>
+  <li>ごほうびの数字・称号の名前は仮(EVENTS.md は「全能力 特大」「称号」としか決めていない)</li></ul>`);
+
 // ================= 7. 横と小さい画面 =================
 grp('L', '7. 横(844×390)と、小さい画面(幅320)', '同じ部品のまま、横は「左に住む場所・右に帯と能力と行動のボタン」、幅320は字とすき間を詰める。はみ出し・字の切れがないことを撮るときに確かめている。', [
   { id: 'L1', label: '横 メイン', html: mainHtml(false), cls: 'land' },
