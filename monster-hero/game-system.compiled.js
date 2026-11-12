@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 326a9b3135ec45c0
+// source-sha256: a6699d54741f7342
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166922,7 +166922,8 @@ const MSA_CSS = `
 .msa-f .msa-flip{transform:scaleX(-1)}
 .msa-f .msa-shadow{position:absolute;bottom:-5px;left:50%;width:62px;height:11px;margin-left:-31px;border-radius:50%;background:#0008;z-index:-1}
 .msa-f.down img.msa-img{filter:grayscale(1) brightness(.6)}
-.msa-dmg{position:absolute;z-index:8;top:24%;left:50%;width:130px;margin-left:-65px;text-align:center;font-size:30px;font-weight:900;color:#fde047;line-height:.95;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;animation:msaPop .55s ease-out both;pointer-events:none}
+.msa-dmgwrap{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;z-index:9;pointer-events:none}
+.msa-dmg{position:absolute;z-index:8;top:4%;left:50%;width:130px;margin-left:-65px;text-align:center;font-size:30px;font-weight:900;color:#fde047;line-height:.95;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;animation:msaPop .55s ease-out both;pointer-events:none}
 .msa-dmg small{display:block;font-size:12px;color:#fff;margin-bottom:2px}
 .msa-dmg.miss{color:#e2e8f0;font-size:20px;text-shadow:0 2px 0 #0f172a}
 .msa-tag{position:absolute;z-index:8;top:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:900;background:#0f172acc;border:1px solid #fde04788;color:#fde68a;animation:msaPop .4s ease-out both}
@@ -166963,7 +166964,7 @@ const MSA_CSS = `
 .msa-shk.shake.s1{animation-name:msaShake1}.msa-shk.shake.s3{animation:msaShake3 .6s ease-out both}
 .msa-critcut{position:absolute;z-index:8;left:-10%;right:-10%;top:38%;height:46px;display:flex;align-items:center;justify-content:center;transform:rotate(-7deg);background:linear-gradient(90deg,#fff0,#fff 18%,#fef08a 50%,#fff 82%,#fff0);pointer-events:none;animation:msaCritCut .75s cubic-bezier(.2,.9,.3,1) both}
 .msa-critcut b{font-size:28px;font-weight:900;color:#b91c1c;letter-spacing:.12em;-webkit-text-stroke:1px #7f1d1d;text-shadow:0 2px 0 #fff}
-.msa-flash.big{animation:msaFlashBig .5s ease-out both}
+.msa-flash.big{animation:msaFlashBig .38s ease-out both}
 .msa-flash.fin{animation:msaFlashFin .45s ease-out both}
 @keyframes msaFlashFin{0%{opacity:.55}100%{opacity:0}}
 .msa-fin{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle,#fff0 30%,#7f1d1d66 100%);animation:msaFin .9s ease-out both}
@@ -166985,7 +166986,7 @@ const MSA_CSS = `
 @keyframes msaShake1{0%,100%{transform:none}30%{transform:translate(-3px,1px)}60%{transform:translate(2px,-1px)}}
 @keyframes msaShake3{0%,100%{transform:none}10%{transform:translate(-12px,5px) scale(1.03)}25%{transform:translate(10px,-5px) scale(1.03)}40%{transform:translate(-8px,3px)}55%{transform:translate(6px,-2px)}70%{transform:translate(-4px,1px)}85%{transform:translate(2px,0)}}
 @keyframes msaCritCut{0%{opacity:0;transform:rotate(-7deg) scaleY(0)}18%{opacity:1;transform:rotate(-7deg) scaleY(1.15)}30%{transform:rotate(-7deg) scaleY(1)}80%{opacity:1}100%{opacity:0;transform:rotate(-7deg) translateX(30px)}}
-@keyframes msaFlashBig{0%{opacity:1}30%{opacity:.7}100%{opacity:0}}
+@keyframes msaFlashBig{0%{opacity:.75}25%{opacity:.45}100%{opacity:0}}
 @keyframes msaFin{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
 @keyframes msaBurst{0%{opacity:0;transform:scale(.3) rotate(0)}30%{opacity:1}100%{opacity:0;transform:scale(1.3) rotate(25deg)}}
 @keyframes msaDust{0%{opacity:0;transform:translateX(0) scale(.4)}25%{opacity:1}100%{opacity:0;transform:translateX(var(--msa-dx,-18px)) translateY(-6px) scale(1.5)}}
@@ -167101,7 +167102,7 @@ const msaMotionMs = kind => {
     hit: sp && sp.hit || 300
   };
 };
-const MSA_GUTS_TIRED = 15;
+const MSA_GUTS_TIRED = 10;
 const msaFxOf = (log, e, reduce) => {
   const z = {
     pre: 0,
@@ -167151,6 +167152,35 @@ const msaStepMs = (e, team, reduce, log) => {
     end: 600
   }[e.ev] || 500;
 };
+function MsaDmgLayer({
+  e,
+  x,
+  delay,
+  tier
+}) {
+  if (!e || e.ev !== 'tech') return null;
+  return React.createElement("div", {
+    className: "msa-dmgwrap",
+    style: {
+      left: `${x * 100}%`
+    },
+    "aria-hidden": "true"
+  }, e.hit ? React.createElement("div", {
+    key: `d-${e.k}`,
+    className: `msa-dmg t${tier}`,
+    "data-msa-dmg": e.dmg,
+    "data-msa-tier": tier,
+    style: {
+      animationDelay: `${delay}ms`
+    }
+  }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
+    key: `d-${e.k}`,
+    className: "msa-dmg miss",
+    style: {
+      animationDelay: `${delay}ms`
+    }
+  }, "よけた!"));
+}
 const msaSay = (e, nm) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
@@ -167262,21 +167292,6 @@ function MsaFighter({
         animationDelay: `${delay}ms`
       }
     }));
-    extra.push(e.hit ? React.createElement("div", {
-      key: `d-${e.k}`,
-      className: `msa-dmg t${msaDmgTier(e.dmg, maxHp, e, fx)}`,
-      "data-msa-dmg": e.dmg,
-      "data-msa-tier": msaDmgTier(e.dmg, maxHp, e, fx),
-      style: {
-        animationDelay: `${delay}ms`
-      }
-    }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
-      key: `d-${e.k}`,
-      className: "msa-dmg miss",
-      style: {
-        animationDelay: `${delay}ms`
-      }
-    }, "よけた!"));
   }
   if (me && e.ev === 'guard') {
     cls = 'mh-card-guard';
@@ -167578,6 +167593,12 @@ function MsaStage({
     motionOn: !fx.pre || preAt === pos,
     maxHp: maxHpOf('B'),
     gutsNow: gutsOf('B')
+  }), e.ev === 'tech' && React.createElement(MsaDmgLayer, {
+    key: `dl-${pos}`,
+    e: e,
+    x: e.side === 'A' ? xB : xA,
+    delay: hitMs,
+    tier: tier || 1
   }), React.createElement("div", {
     className: "msa-dist"
   }, AMBW_DIST.map((n, d) => React.createElement("span", {
