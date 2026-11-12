@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b78fd1c553c7b31b
+// generated-sha256: d4da9dd55c82c216
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79797,6 +79797,7 @@ function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, on
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
 const ALF_MS_GAP_MS = 10 * 60 * 1000;      // 変わってから送るまでの最短の間隔(助手ごと)
+const ALF_MS_RESEND_MS = 24 * 60 * 60 * 1000; // 中身が同じでも1日に1回は送り直す(だれでも書ける表なので、ほかの人に書き換えられても1日で元に戻す・ミハリ4)
 const ALF_MS_MAX_CHARS = 4800;             // 表の決まり(5000)より少し下
 const ALF_MS_FACES = Object.freeze(['oshi', 'suki', 'sugao']);
 const ALF_MS_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
@@ -79912,7 +79913,7 @@ const alfMsPublish = async (self, ids, show, now = Date.now(), { force = false }
     const body = show ? alfMsBuild(aid) : { v: 1, off: 1 };
     if (!body.off && !body.ms.length) continue;
     const sig = alfSig(JSON.stringify(body));
-    if (sig === sent.sig[aid]) continue;
+    if (sig === sent.sig[aid] && sent.at[aid] && now - sent.at[aid] < ALF_MS_RESEND_MS) continue;
     // 見せる/見せないを切り替えたぶんは間隔を待たない
     const flip = body.off || sent.sig[aid] === alfSig(JSON.stringify({ v: 1, off: 1 }));
     if (!force && !flip && sent.at[aid] && now - sent.at[aid] < ALF_MS_GAP_MS) continue;

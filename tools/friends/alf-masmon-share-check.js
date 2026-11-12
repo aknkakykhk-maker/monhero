@@ -88,6 +88,7 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
     const again = make(); Object.assign(again.store, store);
     sb.assistantLifeMasmonShareOf = undefined;
     check('次の起動でも同じ中身は送らない(新しいキーを読む)', (await again.sb.alfMsPublish('me1', ['kiki'], true, t0 + 20 * 60000)) === 0);
+    check('1日たてば同じ中身でも送り直す(ほかの人に書き換えられても戻す)', (await again.sb.alfMsPublish('me1', ['kiki'], true, t0 + 25 * 60 * 60000)) === 1);
     // 読む
     const got = await sb.alfMsFetch('me1', 'kiki');
     check('読む: 1人の助手の行を受け取りの形で返す', got && got.ms.length === 2 && got.ms[0].stats.eva === 402 && got.dk.length === 3 && got.wt === 2);

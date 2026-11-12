@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 946c66d5cec6b181
+// source-sha256: 1cd5dc19d56798c3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153238,6 +153238,7 @@ function AlfNoteConfirm({
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
 const ALF_MS_GAP_MS = 10 * 60 * 1000;
+const ALF_MS_RESEND_MS = 24 * 60 * 60 * 1000;
 const ALF_MS_MAX_CHARS = 4800;
 const ALF_MS_FACES = Object.freeze(['oshi', 'suki', 'sugao']);
 const ALF_MS_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
@@ -153429,7 +153430,7 @@ const alfMsPublish = async (self, ids, show, now = Date.now(), {
     };
     if (!body.off && !body.ms.length) continue;
     const sig = alfSig(JSON.stringify(body));
-    if (sig === sent.sig[aid]) continue;
+    if (sig === sent.sig[aid] && sent.at[aid] && now - sent.at[aid] < ALF_MS_RESEND_MS) continue;
     const flip = body.off || sent.sig[aid] === alfSig(JSON.stringify({
       v: 1,
       off: 1
