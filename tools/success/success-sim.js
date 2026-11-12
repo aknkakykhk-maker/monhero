@@ -51,6 +51,7 @@ const AS_S = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi',
 const AS_MH = [{ id: 'sokoji', lv: 3 }, { id: 'atooshi', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'miseba', lv: 3 }]; // 128+80+80+80 = 368(ひらめきの2つ入り)
 const HINT5 = [[{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }], [{ id: 'mitate', lv: 3 }, { id: 'kensho', lv: 3 }], [{ id: 'mimamori', lv: 3 }]]; // ひらめき5つを段3で(編成の3体に分けて持たせる)
 const AS_B = [{ id: 'sokoji', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'kizuna', lv: 1 }]; // 80+48+40 = 168(B の上のほう)
+const STAY7 = [[{ id: 'tairyoku', lv: 5 }, { id: 'gussuri', lv: 5 }, { id: 'kuishinbo', lv: 5 }, { id: 'shitsuke', lv: 5 }], [{ id: 'asobi', lv: 5 }, { id: 'genki', lv: 5 }, { id: 'tsukisoi', lv: 5 }]];
 const PRESETS = {
   none: { name: '編成なし(ベースモン6枠)', team: () => [] },
   C6: { name: 'C 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'C')) },
@@ -68,6 +69,14 @@ const PRESETS = {
   // 段5(第2版・2026-11-12): いちばん強い形。総合力が狙いのランクを超えすぎないかを見る
   B6sokoji5: { name: 'B 6体・全員 特訓の底力 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'sokoji', lv: 5 }])) },
   M6as5: { name: 'M 6体・全員アシスト段5(底力・きずな・後押し・かけつけ)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kaketsuke', lv: 5 }])) },
+  // 訓練に効く新しい11種 段5(第2版・依頼②・2026-11-12)
+  B6kun5: { name: 'B 6体・得意そろえ・全員 ちから/命中/回避特訓 段5+タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', ['pow', 'hit', 'eva'], [{ id: 'kunpow', lv: 5 }, { id: 'kunhit', lv: 5 }, { id: 'kuneva', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
+  B6care5: { name: 'B 6体・全員 見張り役・気晴らし・仲よし特訓・はじめの親しさ 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'miharu', lv: 5 }, { id: 'kibarashi', lv: 5 }, { id: 'nakayoshi', lv: 5 }, { id: 'shitashi', lv: 5 }])) },
+  M6new5: { name: 'M 6体・得意そろえ・全員 底力・後押し・ちから特訓・タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], [{ id: 'sokoji', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kunpow', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
+  // いるだけ型(体力・ようす・編成の7つ)段5(依頼③の1つ目)。いるだけ型は編成でいちばん高い段の1つだけなので、7つを4体と2体に分けて持たせる
+  B6stay5: { name: 'B 6体・いるだけ型7つ 段5(体力自慢・ぐっすり・食いしん坊・しつけ上手/遊び上手・元気のお守り・通院の付きそい)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, i < 4 ? STAY7[0] : STAY7[1])) },
+  M6stay5: { name: 'M 6体・底力 段5+いるだけ型7つ 段5', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'M', null, i < 4 ? STAY7[0] : [{ id: 'sokoji', lv: 5 }, ...STAY7[1]])) },
+  M6kun5: { name: 'M 6体・得意そろえ・全員 ちから/命中/回避特訓・タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], [{ id: 'kunpow', lv: 5 }, { id: 'kunhit', lv: 5 }, { id: 'kuneva', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
   S6aim: { name: 'S 6体・得意そろえ・人なつっこさ段3+底力段3', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', ['pow', 'hit', 'eva'], [{ id: 'hitonatsu', lv: 3 }, { id: 'sokoji', lv: 3 }])) },
 };
 const VARIANTS = [
@@ -81,6 +90,8 @@ const VARIANTS = [
   { key: 'B6hint5', aidLv: 3 },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
   { key: 'B6sokoji5', aidLv: 3 }, { key: 'M6as5', aidLv: 5 }, // 段5(第2版・2026-11-12)
+  { key: 'B6kun5', aidLv: 3 }, { key: 'B6care5', aidLv: 3 }, { key: 'M6kun5', aidLv: 5 }, { key: 'M6new5', aidLv: 5 }, // 訓練に効く新しい11種 段5(依頼②)
+  { key: 'B6stay5', aidLv: 3 }, { key: 'M6stay5', aidLv: 5 }, // いるだけ型7つ 段5(依頼③の1つ目)
 ];
 
 // ---- 試合(助手マスモン対戦の芯で 1対1) ----
