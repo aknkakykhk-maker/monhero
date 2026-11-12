@@ -424,7 +424,9 @@ const KNOWN_RELEASED_CROSS_EXCEPTIONS=Object.freeze([
   // 名前つきの既知の例外(曲 難易度 位置)。2026-11-13 窓口の決め: 公開中の譜面は作り直さない決まりのため、
   // 今週より前に公開した曲の今ある違反だけを認める。中身は「押さえっぱなしと逆の側にある、名ばかりのクロス」がほとんど
   // (押しにくくはなっていない)。直すかは社長に聞いてから決める。
-  // ★新曲(megalovania_sans・megalovania_smash・saudade_short・evans)は入れない: 新曲の違反は譜面の側を直す
+  // 新曲の7件(下の最後の2行)も同じ形(cross の印が付いたノーツが押さえっぱなしと逆の側にあるだけで、押しにくくはない)なので、
+  // 2026-11-13 窓口の判断で同じ理由で入れた。公開中の譜面は直さない。生成器(自動修正)の側の件は docs/progress/beat-cross-opposite-side.md
+  // ★これより後の新曲の違反は、ここへ足さずに譜面の側を直す
   'monster_hero_theme EXPERT 980',
   'monster_hero_theme_alt EXPERT 588', 'monster_hero_theme_alt MASTER 256',
   'six_eternel_remix_beat EXPERT 116', 'six_eternel_remix_beat MASTER 380', 'six_eternel_remix_beat MASTER 494', 'six_eternel_remix_beat MASTER 638',
@@ -458,6 +460,8 @@ const KNOWN_RELEASED_CROSS_EXCEPTIONS=Object.freeze([
   'rebellion_short MASTER 10', 'rebellion_short MASTER 114',
   'altar_world_tree EXPERT 1220', 'altar_world_tree EXPERT 1344', 'altar_world_tree EXPERT 2194', 'altar_world_tree MASTER 2254',
   'altar_world_tree_short EXPERT 612', 'altar_world_tree_short EXPERT 872',
+  'megalovania_sans EXPERT 174', 'megalovania_sans EXPERT 1480', 'megalovania_sans MASTER 1480', 'megalovania_smash EXPERT 528',
+  'saudade_short EXPERT 476', 'evans EXPERT 22', 'evans MASTER 22',
 ]);
 // 上のクロスの確かめは Monster Hero だけを見ていた。Rev.7で作り直したとき、自動修正が押さえっぱなしのHOLDの側を動かして
 // 交差を内側へ入れた譜面が10曲にあった(直したのは rhythm-chart-v2-step7-autofix.js の keepsCoveredCrosses・Rev.7から)。
