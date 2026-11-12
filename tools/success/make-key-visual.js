@@ -1,5 +1,5 @@
 // モンヒロサクセス公開用のキー画像(更新履歴・助手の告知の image)を作る道具。
-//   node tools/success/make-key-visual.js            → docs/progress/player-raise/art/monsaku-open.jpg(880×1000。公開の PR で monster-hero/images/events/ へ移す)
+//   node tools/success/make-key-visual.js            → monster-hero/images/events/monsaku-open.jpg(880×1000)
 // 景色は monster-hero/images/success/scenes/ の最初の画像があればそれを、無ければ story-bg の森を暗くして使う。
 // イッサ博士は docs/progress/player-raise/art/issa-hakase.png、アイテムは monster-hero/images/success/items/。
 const path = require('path');
@@ -46,7 +46,7 @@ const pickScene = () => {
     <rect x="${x0 - 18}" y="${y0 - 16}" width="${rowW + 36}" height="${size + 32}" rx="22" fill="#0f1b3d" fill-opacity=".55" stroke="#fb7185" stroke-opacity=".7" stroke-width="3"/>
   </svg>`);
   const rectLayer = text; // 枠はアイコンの下に敷きたいので先に重ねる
-  const out = path.join(root, 'docs/progress/player-raise/art/monsaku-open.jpg');
+  const out = path.join(root, 'monster-hero/images/events/monsaku-open.jpg');
   await sharp(bg).composite([
     { input: shade },
     { input: issa, left: W - im.width - 20, top: H - im.height - 215 },

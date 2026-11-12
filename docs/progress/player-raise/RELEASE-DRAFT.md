@@ -317,7 +317,7 @@
 
 ### 公開用の絵
 
-- いまは `docs/progress/player-raise/art/monsaku-open.jpg`(880×1000・約75KB・予告の絵と同じ大きさ)。**公開の PR で `monster-hero/images/events/monsaku-open.jpg` へ移し**(公開前に images/ へ置くと `image-asset-check` が「使われていない画像」と止める)、更新履歴の `image` にそのパスを書く(`?v=` は手で書かず `node tools/build.js` に任せる)
+- `monster-hero/images/events/monsaku-open.jpg`(本物のデータに入れた・PR「モンヒロサクセスの更新履歴・ヘルプ・告知を印つきで入れる」)(880×1000・約75KB・予告の絵と同じ大きさ)。**公開の PR で `monster-hero/images/events/monsaku-open.jpg` へ移し**(公開前に images/ へ置くと `image-asset-check` が「使われていない画像」と止める)、更新履歴の `image` にそのパスを書く(`?v=` は手で書かず `node tools/build.js` に任せる)
 - 作る道具: `node tools/success/make-key-visual.js`(何度でも作り直せる)。景色は `monster-hero/images/success/scenes/` に画像があればその最初の1枚、無ければ既存の森の背景(`story-bg/forest_deep.jpg`)を暗くして使う。イッサ博士(`docs/progress/player-raise/art/issa-hakase.png`)とアイテムの絵(`images/success/items/`)を重ね、題字は「モンヒロサクセス」と「最大46ターンの育成」、その下に期の流れ(デビュー期 5 → ジュニア期 12 → ミドル期 12 → プロ期 12 → 最後の期=頂への道)を並べた(社長の答え 2026-11-12。期の名前とターン数は PLAN・TOURNAMENT の正式な呼び方)。景色が届いたら道具を回し直すだけで差し替わる
 - ゲームに入れるときは `node tools/build.js` のあと `node tools/image-asset-check.js`
 

@@ -35,6 +35,23 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
+    date: "2026-11-12 19:40", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスが始まりました',
+    image: 'images/events/monsaku-open.jpg?v=1c2683834879',
+    assistantNotice:{ id:'update_notice_monsaku_v1', type:'content' },
+    items:[
+      'モンスターを1体、デビューからヒーローの頂まで最大46ターンかけて育てる、新しい遊び「モンヒロサクセス」が始まりました。',
+      '毎ターン、訓練・休む・遊ぶ・修行・通院・大会の中からひとつ選んで進めます。助手を1人選んで、いっしょに育てます。',
+      '編成のマスモン6体がそれぞれ得意な訓練に集まります。仲良くなった仲間と同じ訓練をすると「友情タッグ」になり、大きく伸びます。',
+      '訓練の結果は、大成功・成功・失敗・サボりの4種類です。結果のあとに「叱る」「褒める」を選ぶと、モンスターの気持ちが変わります。',
+      '期の終わりには大会があります。一度勝った大会は、次からスキップできます。負けたときは「時渡りの砂時計」でやり直せます。',
+      '育て終えたモンスターは保存枠に残り、次の育成の編成に連れていったり、フレンドに貸したり、合体させて新しいモンスターを生んだりできます。',
+      '育て終えた総合力はランキングに載ります。「全モンスター」と「血統別」の2つがあります。',
+      '遊びかたは、ヘルプ(攻略情報局)の「モンヒロサクセス」にまとめています。',
+    ],
+  },
+  {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
     assistantNotice:{ id:'update_notice_masmon_sleep_fuse_v1', type:'content' },
     items:[
@@ -104,6 +121,19 @@ const CHANGELOG = [
       '近日公開予定です。お楽しみに！',
     ],
     assistantNotice:{ id:'update_notice_monsaku_soon_v1', type:'content' },
+    unreleasedFlag:'monheroSuccess', // 公開したら、下の「紹介」に入れ替わる
+  },
+  {
+    // 予告の項目の公開後の姿(同じ既読の印 fixedId のまま、「近日公開」の2行を外して題を「紹介」に直した)。印が真のときだけ出る
+    date: "2026-11-12 12:40", type:'content', title:'新コンテンツ「モンヒロサクセス」の紹介', idTitle:'新コンテンツ「モンヒロサクセス」開発中・近日公開', fixedId:'content-14esu53', status:'new', group:'success', releaseFlag:'monheroSuccess',
+    image: 'images/events/monsaku-teaser.jpg?v=8c2f0382ad8a',
+    items:[
+      '助手を選び、育てたモンスターたちを編成に連れて、モンスターを一から育てる新コンテンツ「モンヒロサクセス」です。',
+      '週ごとにトレーニング・修行・休養・大会を選んで育てます。仲良くなった仲間と一緒にトレーニングすると、友情タッグで大きく伸びます。',
+      '育て終えたモンスターは、バトルに出したり、合体させて新しいモンスターとして育て直したりできます。',
+      '名前と染色は、育てはじめるときにも、育て終えたあとにも決められます。',
+      '今は遊べます。',
+    ],
   },
   {
     // 育成ノート(助手のマスモンを計画して育てる・キズナ #5527。ミハリ5 OK)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7b7934acf68fddc1
+// generated-sha256: 3b87a99fc2117c2e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9774,6 +9774,10 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
+  // モンヒロサクセス(2026-11-12〜作っている途中。下書き docs/progress/player-raise/RELEASE-DRAFT.md)。
+  //   偽のあいだは、更新履歴の項目・助手の告知・ヘルプのグループが出ない。予告の項目(update_notice_monsaku_soon_v1)は偽のあいだだけ出て、
+  //   真になると「紹介」に直した同じ項目へ入れ替わる(unreleasedFlag と releaseFlag の組)。ミハリ → 窓口の最終確認のあとに真にする
+  monheroSuccess: false,
   // MFバトルカードの助手のおしゃべり(AI)(2026-10-25 社長が3つとも選んだ)。中継役 card-assistant-talk を窓口が出して、社長が「公開」と言ったら真にする。
   //   偽のあいだは、デバッグ端末だけが呼べる(83-card-battle-talk-ai.jsx の cardTalkOpen)。オプションの入/切もデバッグ端末だけに出る
   cardAssistantTalk: true, // 2026-10-26 社長「公開する」
@@ -13926,6 +13930,22 @@ const helpDataRows = (id) => {
         .map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
     // 合体・転生の消費ダイヤ。単価を変えたときにヘルプだけ古くなることがないよう、
     // 実際に使っている定数からそのまま表を作る
+    // モンヒロサクセスの評価(2026-11-12)。助手マスモンと同じランクの表(MASMON_CALC.RANKS)をそのまま読む。500ごとの数字は本文で説明する
+    case 'monsakuRanks': {
+      // ★MASMON_CALC が見えない場面(ヘルプの検査の部品だけの読み込みなど)でも、行が空にならないよう1行だけ返す
+      const ranks = typeof MASMON_CALC !== 'undefined' && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : [];
+      if (ranks.length === 0) return [['評価', '最終の総合力で決まります']];
+      return ranks.map(([key, min], i, all) => [key, all[i + 1] ? `${min.toLocaleString()} 〜 ${(all[i + 1][1] - 1).toLocaleString()}` : `${min.toLocaleString()} 〜`]);
+    }
+    // モンヒロサクセスのアシスト能力。数は30〜40個に増える予定なので、書き写さず計算の芯(MONHERO_SUCCESS.ASSISTS)から作る。
+    // 芯が読み込まれていない・まだ一覧を出していないあいだは行が無く、ブロックごと出ない。2列目は短く(help-render-check)
+    case 'monsakuAssists': {
+      const list = (globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS) || null;
+      // ★計算の芯がゲームに読み込まれるまでは、実データの表が作れない。空のままだと表が丸ごと消えるので、1行だけ案内を返す
+      if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
+      return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost))
+        .map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
+    }
     case 'masuCosts':
       return [
         ['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`],
@@ -14145,6 +14165,8 @@ const HELP_DATA_TITLES = {
   missionsWeekly: 'ウィークリーミッション',
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
+  monsakuRanks: '評価のランク(総合力)',
+  monsakuAssists: 'アシスト能力の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
