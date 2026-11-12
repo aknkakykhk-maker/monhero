@@ -76,7 +76,7 @@
   add({ id: 'summit-big', group: 'summit', name: 'ヒーローの頂', how: '👑 を1つ以上勝つか制覇を2つ以上したうえで、頂への道で優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: 'ヒーローの頂', rare: 3 });
 
   // ---- ライバル(芯の RIVAL) ----
-  add({ id: 'rival', group: 'rival', name: 'ライバルに勝った', how: 'ライバルが出ている大会で優勝する', reward: '賞金 1.5倍・能力ポイント +5・修行チケット +1', match: 'ライバルに勝った', rare: 2 });
+  add({ id: 'rival', group: 'rival', name: 'ライバルに勝った', how: 'ライバルが出ている大会で優勝する', reward: '全能力 +12・賞金 1.5倍・修行チケット +1', match: 'ライバルに勝った', rare: 2 });
 
   // ---- 助手のお話(芯: '<aid>:お話の結末(いい結末)' / '(ほろ苦い結末)') ----
   Object.keys(STORY_TITLE).forEach(aid => {

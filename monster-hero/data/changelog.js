@@ -36,7 +36,7 @@
 const CHANGELOG = [
   {
     // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
-    date: "2026-11-12 19:40", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    date: "2026-11-12 21:00", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスが始まりました',
     image: 'images/events/monsaku-open.jpg?v=4e899510ba1c',
     assistantNotice:{ id:'update_notice_monsaku_v1', type:'content' },
@@ -50,6 +50,28 @@ const CHANGELOG = [
       '育て終えた総合力はランキングに載ります。「全モンスター」と「血統別」の2つがあります。',
       '遊びかたは、ヘルプ(攻略情報局)の「モンヒロサクセス」にまとめています。',
     ],
+  },
+  {
+    // 2026-11-12 社長「今ある画面で第2弾の開発中だけど告知画像あげて。第1弾の告知と同じとこにあげて」「第2弾はもっと別の画面みせて」。画像は回3(craft/monsuc-r3)の実際の画面6枚(tools 外の一回きりの合成)
+    date: "2026-11-12 20:02", type:'content', title:'新コンテンツ「モンヒロサクセス」開発中・第2弾', status:'new', group:'success',
+    image: 'images/events/monsaku-teaser2.jpg?v=173560d714c1',
+    items:[
+      '開発中の新コンテンツ「モンヒロサクセス」の画面を、もう少しお見せします。',
+      '育てている途中で大会に出られます。試合の前に、相手との能力をバトルカードで見比べられます。',
+      '試合では、自分の番ごとに技や動きを選んで戦います。おまかせで戦わせることもできます。',
+      '大会に負けても、時渡りの砂時計で時をもどして、やり直せます。',
+      '修行に出ると、能力が上がるうえに、新しい技を覚えるチャンスがあります。',
+      '画像は開発中の画面です。公開までに変わることがあります。',
+      '近日公開予定です。お楽しみに！',
+    ],
+    gallery:[
+      { caption:'大会の組み合わせ', image:'images/events/monsaku-teaser2-bracket.jpg?v=fe37a322b121' },
+      { caption:'大会で優勝！', image:'images/events/monsaku-teaser2-win.jpg?v=58eaa0eb1301' },
+      { caption:'修行に出る', image:'images/events/monsaku-teaser2-ascetic.jpg?v=aa0e366357bb' },
+      { caption:'負けても砂時計でやり直せる', image:'images/events/monsaku-teaser2-hourglass.jpg?v=23244a819a0d' },
+    ],
+    assistantNotice:{ id:'update_notice_monsaku_soon2_v1', type:'content' },
+    unreleasedFlag:'monheroSuccess', // 公開したら消える(第1弾の予告と同じ)
   },
   {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
@@ -132,7 +154,7 @@ const CHANGELOG = [
       '週ごとにトレーニング・修行・休養・大会を選んで育てます。仲良くなった仲間と一緒にトレーニングすると、友情タッグで大きく伸びます。',
       '育て終えたモンスターは、バトルに出したり、合体させて新しいモンスターとして育て直したりできます。',
       '名前と染色は、育てはじめるときにも、育て終えたあとにも決められます。',
-      '今は遊べます。',
+      'いまは遊べるようになりました。',
     ],
   },
   {

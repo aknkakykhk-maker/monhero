@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "215b05c5c1c0",
-  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":146619558,"count":916},"card":{"bytes":37779758,"count":1048},"all":{"bytes":329181100,"count":2073},"core":{"bytes":20924856,"count":23}},
+  "id": "4d8778815a81",
+  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":147205374,"count":922},"card":{"bytes":37779758,"count":1048},"all":{"bytes":329766916,"count":2079},"core":{"bytes":21219156,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1535,6 +1535,11 @@
     "images/events/monbeat-event-2026-09-17.jpg": {"v":"29df7296db9b","size":146816,"pack":"battle"},
     "images/events/monsaku-open.jpg": {"v":"4e899510ba1c","size":87653,"pack":"battle"},
     "images/events/monsaku-teaser.jpg": {"v":"8c2f0382ad8a","size":174803,"pack":"battle"},
+    "images/events/monsaku-teaser2-ascetic.jpg": {"v":"aa0e366357bb","size":103567,"pack":"battle"},
+    "images/events/monsaku-teaser2-bracket.jpg": {"v":"fe37a322b121","size":86668,"pack":"battle"},
+    "images/events/monsaku-teaser2-hourglass.jpg": {"v":"23244a819a0d","size":94339,"pack":"battle"},
+    "images/events/monsaku-teaser2-win.jpg": {"v":"58eaa0eb1301","size":105090,"pack":"battle"},
+    "images/events/monsaku-teaser2.jpg": {"v":"173560d714c1","size":105724,"pack":"battle"},
     "images/events/orihime-dye-preview.jpg": {"v":"fee8c692d78b","size":119964,"pack":"battle"},
     "images/events/orihime-profile.jpg": {"v":"901fad80f508","size":135278,"pack":"battle"},
     "images/events/pandora-wings-2026-wide.jpg": {"v":"f5e3cb59d945","size":136239,"pack":"battle"},
@@ -2004,6 +2009,7 @@
     "images/story-bg/monhero_plaza.jpg": {"v":"cbac85431b63","size":140543,"pack":"battle"},
     "images/story-bg/monhero_plaza_evening.jpg": {"v":"e6a0284956a1","size":127367,"pack":"battle"},
     "images/story-bg/monhero_town.jpg": {"v":"802681764caa","size":77045,"pack":"battle"},
+    "images/success/issa-hakase.png": {"v":"6dfe78a29017","size":90428,"pack":"battle"},
     "images/success/items/akusamasan.png": {"v":"77e0c02076ef","size":15126,"pack":"battle"},
     "images/success/items/bond-charm.png": {"v":"58236c39080e","size":15162,"pack":"battle"},
     "images/success/items/breeder-license.png": {"v":"f8010ded1ace","size":22908,"pack":"battle"},
@@ -2078,7 +2084,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"ba662a89778a","size":304282,"pack":"core"},
+    "tailwind.css": {"v":"a52aaaf48e91","size":304665,"pack":"core"},
     "data/images/images-ally.js": {"v":"129b766eeda6","size":78276,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2091,13 +2097,14 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"54980ffcb59f","size":96654,"pack":"core"},
-    "data/changelog.js": {"v":"7526611ccb9e","size":1700357,"pack":"core"},
+    "data/changelog.js": {"v":"9509f852467e","size":1702305,"pack":"core"},
     "data/help.js": {"v":"102df52c31e1","size":824849,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"d2e655ad2146","size":2146630,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"d82e163a1148","size":10505215,"pack":"core"}
+    "data/success-sounds.js": {"v":"14cc928341aa","size":3695,"pack":"core"},
+    "game-system.compiled.js": {"v":"66a852282744","size":10793489,"pack":"core"}
   }
 }

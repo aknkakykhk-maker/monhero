@@ -1,4 +1,4 @@
-# モンヒロサクセス 育成完了時の総合力ランキング(設計・第1版)
+# モンヒロサクセス 育成完了時の総合力ランキング(設計・第2版)
 
 クラフトくん 2026-11-12。**設計だけ**(コード・表はまだ作らない。SQL は本文を書くだけで、流すのは窓口)。段取りは PLAN.md §10 の 5a。
 
@@ -7,7 +7,7 @@
 1. **血統別** と **全モンスター** の2つ
 2. プレイヤー1人1件ではなく、**育てた子ごとに全部載せる**
 3. 期間は **ずっと(累計)だけ**
-4. 行に出すのは **育てた子の名前・染めた姿の絵・評価(C〜S)・総合力・育てた人の名前**(押すと6能力)
+4. 行に出すのは **育てた子の名前・染めた姿の絵・評価(G〜M の11段+数字。例 C3)・総合力・育てた人の名前**(押すと6能力)
 
 ## 1. 表の形(新しい表だけ・既存のランキングの表は触らない)
 
@@ -57,7 +57,7 @@
 
 - **モンヒロサクセスの入口の画面**(はじめる・保存枠・合体の並び)に「🏆 ランキング」のボタン
 - 開くと上にタブ「全モンスター」「血統別」。血統別は血統の札(主血統の一覧)を選んで切り替える
-- 1行: 順位・**染めた姿の絵**(種の絵に `dye` で色を付ける・今の染色の描き方)・**名前**・**評価**(C〜S の札の色)・**総合力**・**育てた人の名前**
+- 1行: 順位・**染めた姿の絵**(種の絵に `dye` で色を付ける・今の染色の描き方)・**名前**・**評価**(G〜M の札の色+数字)・**総合力**・**育てた人の名前**
 - 行を押すと下から板が出て、**6能力**(棒)と種・覚えた技の数を見せる
 - 自分の子の行は色を変え、「自分の子だけ」の絞りこみも置く
 - 引退の画面(振り返り)の最後に「ランキングに載りました: 全体 ◯位・◯◯血統 ◯位」を出す
@@ -69,94 +69,17 @@
 
 ## 6. SQL(本文だけ・流すのは窓口)
 
-```sql
--- モンヒロサクセス 育成完了時の総合力ランキング(足すだけ。既存の表・関数・ランキングには触らない。何度流しても同じ)
-create table if not exists public.monsuc_finishes (
-  run_id         text        not null,
-  owner_id       text        not null,
-  user_name      text        not null default '',
-  child_name     text        not null default '',
-  species        text        not null,
-  lineage        text        not null,
-  dye            jsonb       not null default '{}'::jsonb,
-  stats          jsonb       not null,
-  techs          jsonb       not null default '[]'::jsonb,
-  lv             integer     not null default 1,
-  loyal          integer     not null default 0,
-  pop            integer     not null default 0,
-  power          integer     not null,
-  grade          text        not null,
-  engine_version integer     not null default 1,
-  hidden         boolean     not null default false,
-  finished_at    timestamptz not null default now(),
-  constraint monsuc_finishes_pkey primary key (run_id),
-  constraint monsuc_finishes_shape check (
-    run_id ~ '^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$' and owner_id ~ '^[A-Za-z0-9_-]{1,64}$' and left(run_id, length(owner_id) + 1) = owner_id || '-'
-    and species ~ '^[A-Za-z]{2,32}$' and lineage ~ '^[A-Za-z_]{1,32}$'
-    and length(user_name) <= 40 and length(child_name) <= 24
-    and octet_length(dye::text) <= 2000 and octet_length(stats::text) <= 400 and octet_length(techs::text) <= 800),
-  constraint monsuc_finishes_counts check (
-    lv between 1 and 99 and loyal between 0 and 100 and pop between 0 and 100
-    and power between 0 and 16500 and grade in ('G','F','E','D','C','B','A','S','SS','SSS','M') and engine_version between 1 and 1000)
-);
-create index if not exists monsuc_finishes_power_idx on public.monsuc_finishes (hidden, power desc);
-create index if not exists monsuc_finishes_lineage_idx on public.monsuc_finishes (hidden, lineage, power desc);
+本文は `supabase/migrations/202611120003_monsuc_rank.sql`(同じものを `docs/sql/monsuc-rank/MONSUC_RANK_APPLY.sql` に置いた・確かめは `MONSUC_RANK_VERIFY.sql`)。
 
-create table if not exists public.monsuc_rank_usage (
-  owner_id  text        not null,
-  day       date        not null,
-  sent      integer     not null default 0,
-  last_at   timestamptz not null default now(),
-  constraint monsuc_rank_usage_pkey primary key (owner_id, day)
-);
-
-alter table public.monsuc_finishes   enable row level security;
-alter table public.monsuc_rank_usage enable row level security;
-revoke all on public.monsuc_finishes   from anon, authenticated;
-revoke all on public.monsuc_rank_usage from anon, authenticated;
-
--- 読むのは見え方だけ(hidden の行は出さない)
-create or replace view public.monsuc_rank_all as
-  select run_id, user_name, child_name, species, lineage, dye, stats, power, grade, finished_at,
-         rank() over (order by power desc, finished_at asc) as place
-  from public.monsuc_finishes where not hidden;
-create or replace view public.monsuc_rank_lineage as
-  select run_id, user_name, child_name, species, lineage, dye, stats, power, grade, finished_at,
-         rank() over (partition by lineage order by power desc, finished_at asc) as place
-  from public.monsuc_finishes where not hidden;
-revoke all on public.monsuc_rank_all     from anon, authenticated;
-revoke all on public.monsuc_rank_lineage from anon, authenticated;
-grant select on public.monsuc_rank_all     to anon, authenticated;
-grant select on public.monsuc_rank_lineage to anon, authenticated;
-
--- 1件を入れる(Edge Function monsuc-rank だけが呼ぶ。総合力・評価はサーバで出し直した値を渡す)
--- 返り値: 'ok' | 'dup'(同じ育成はもう入っている) | 'busy'(1分に1回・1日50回を超えた)
-create or replace function public.monsuc_rank_submit(p_row jsonb)
-returns text language plpgsql security definer set search_path = public as $$
-declare v_owner text := p_row->>'owner_id'; v_day date := (now() at time zone 'Asia/Tokyo' - interval '4 hours')::date; u record;
-begin
-  select * into u from public.monsuc_rank_usage where owner_id = v_owner and day = v_day;
-  if found and (u.sent >= 50 or u.last_at > now() - interval '1 minute') then return 'busy'; end if;
-  insert into public.monsuc_finishes (run_id, owner_id, user_name, child_name, species, lineage, dye, stats, techs, lv, loyal, pop, power, grade, engine_version)
-  values (p_row->>'run_id', v_owner, coalesce(p_row->>'user_name', ''), coalesce(p_row->>'child_name', ''), p_row->>'species', p_row->>'lineage',
-          coalesce(p_row->'dye', '{}'::jsonb), p_row->'stats', coalesce(p_row->'techs', '[]'::jsonb),
-          (p_row->>'lv')::int, (p_row->>'loyal')::int, (p_row->>'pop')::int, (p_row->>'power')::int, p_row->>'grade', coalesce((p_row->>'engine_version')::int, 1))
-  on conflict (run_id) do nothing;
-  if not found then return 'dup'; end if;
-  insert into public.monsuc_rank_usage (owner_id, day, sent, last_at) values (v_owner, v_day, 1, now())
-  on conflict (owner_id, day) do update set sent = public.monsuc_rank_usage.sent + 1, last_at = now();
-  return 'ok';
-end $$;
-revoke all on function public.monsuc_rank_submit(jsonb) from public, anon, authenticated;
-grant execute on function public.monsuc_rank_submit(jsonb) to service_role;
-```
-
-- 日の区切りは朝4:00(JST)。ほかの回数の表と同じ
-- 表・見え方の名前は `monsuc_` で始め、既存の名前とぶつからない
-- 流したあとの確かめ: `select count(*) from public.monsuc_finishes;`(0件)・`select * from public.monsuc_rank_all limit 1;`(空で通る)
+- **実装で変えたこと(第2版・2026-11-12 クラフト)**: Edge Function `monsuc-rank` は作らず、SQL の関数 `monsuc_rank_submit(owner, key, row)`(security definer・端末から rpc で呼ぶ)で受ける。
+  中で持ち主の鍵(`masmon_pvp_owner_check`)・形・総合力の出し直し(`monsuc_rank_power`・端末の `MASMON_CALC.power` と同じ式)・上限(6能力の合計 5,994・総合力 40,000。評価の M は上限なしで M1・M2…と続くため、46ターンの見込みでは切らない)・1分に1回/1日50回・重複を全部見る。配り直しが要らない
+- 評価は段の下限から 500 ごとに数字を付けた形(C1・C2…・M は上限なし)でサーバが出す(`monsuc_rank_grade`)。返り値に順位(全体・血統)を入れた(引退の画面の「ランキングに載りました」に使う)。同じ育成を送り直すと `dup` で前の順位を返す
+- 端末の保存は `mh_monsuc_rank_sent_v1`(送れた id)と `mh_monsuc_rank_queue_v1`(送れなかった中身・5件まで)の2つ
+- 血統は端末が送る値をそのまま使う(サーバに種と血統の表を持たない)。偽っても他の血統の順位に入るだけで、全体の順位は変わらない
+- ローカルの Postgres 16 で、重複・別の鍵・上限超え・形違い・連打・anon が表を直接読めないことを確かめた
 
 ## 7. 決まった(2026-11-12 社長・窓口経由)
 
 - **評価に関係なく全部載せる**(G〜D の子も。画面は上位だけ読む)
 - **名前を出さない設定は置かない**(育てた人の名前はそのまま出す)
-- 評価のしきい値: C 〜7,999 / B 8,000〜 / A 11,000〜 / S 14,000〜(助手マスモンのランクの区切りと同じ・窓口の判断)
+- 評価は助手マスモンと同じランク表(社長の最新 2026-11-12・前の「C〜S の4段」「M 20,000」は取り消し): G 0〜 / F 2,000〜 / E 3,000〜 / D 4,500〜 / C 6,000〜 / B 8,000〜 / A 11,000〜 / S 14,000〜 / SS 16,000〜 / SSS 18,000〜 / M 19,500〜(500ごとに下から数字。C1〜C4・M は上限なしで M1・M2…)
