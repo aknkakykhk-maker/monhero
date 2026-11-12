@@ -14,6 +14,8 @@
 //   r = SUC.events.open(s, 'after')            訓練の結果のあと(編成の出来事)
 //   r = SUC.events.open(s, 'cup', { won, kind })  大会の結果のあと(settle の out.won・out.kind)
 //   SUC.events.buffs(s)                         メイン画面の小さな印(ひとときの状態)
+//   台詞(台本エンジン MONHERO_SUCCESS_SCRIPT): event(ev.lines, ctx) で出し、選んだら event(out.next)・確率の結果は event(out.scene)。
+//   ctx の cheer / cheer2 には ev.cheerName / ev.cheer2Name、train には ev.train の能力名、cup には ev.cup を入れる
 //
 // 結果の書き方(fx): [項目, 対象, 大きさ] の並び。1つの選択肢で動くのは3項目まで(EVENTS §3)
 //   ['st', 対象, 訓練の回数]  対象 = 能力のキー / main(素質のいちばん高い能力)/ all / rand / cheer(編成の子の1位の能力)/ type(編成の子のタイプの能力)
@@ -384,7 +386,7 @@
       if (e.id === 'ev.body.healed' || e.id === 'ev.body.home') ev.healed = null;
       if (!ev.seen.includes(e.id)) ev.seen.push(e.id); // repeat の出来事も記録は残す(出すかどうかは when が決める)
       ev.pend = null; ev.gap = 0; ev.lastTurn = s.turn; ev.n += 1;
-      return { state: s, out: { ok: true, id: e.id, c: hasCh ? c : null, res, scene, delta } };
+      return { state: s, out: { ok: true, id: e.id, c: hasCh ? c : null, res, scene, next: hasCh ? `${e.id}.${c}` : null, delta } }; // 台本エンジン: event(next) → 結果があれば event(scene)
     };
 
     // ---- 芯が読む効き(ひとときの状態・旗) ----
