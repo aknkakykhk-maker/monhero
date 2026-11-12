@@ -213,6 +213,10 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-rhythm-song-owned.jsx",
+      "role": "モンヒロビートの新曲をビートPで1曲ずつ買う仕組み。有料の曲の表(RHYTHM_SONG_PRICES・いまは空)・持っている曲(mh_rhythm_owned_songs_v1)・買う処理・交換所の「曲」の売り場・助手が選べる曲"
+    },
+    {
       "file": "39-multi-stamp.jsx",
       "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
     },
