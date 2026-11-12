@@ -124,9 +124,8 @@ const trainHeavy = (cls = '') => `${hdr('💰 名声 320', 'もどる')}<div cla
     <div class="v-fx"><div class="t"><span class="big">🤝 友情タッグ ×2</span><span>効果 +51%</span><span class="fl">失敗 <b>6%</b></span></div>
       <div class="ch"><span>基本 +18</span><i>▶</i><span>編成 +41%</span><i>▶</i><span class="tgx">🤝×2 +51%</span><i>▶</i><span class="res">ちから +38</span></div>${lvx(3, 70, 30)}</div>` })}
   ${stRow([0, 38, 0, 7, 0, 5], 1)}
-  <div class="v-tabs"><span>💪 軽い訓練</span><span class="on hv">🔥 重い訓練</span></div>
   ${trs(1)}
-</div>${footGo('🔥 ちからの重い訓練をする')}`;
+</div>${footGo('💪 ちからの訓練をする')}`;
 const trainLight = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band({ use: 12, stAdd: 3 })}
   ${scene({ monStyle: 'left:30%;bottom:34%;height:40%', grStyle: 'left:30%;bottom:calc(34% - 5px)', inner: `
@@ -135,13 +134,12 @@ const trainLight = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
     <div class="v-fx plain"><div class="t"><span>タッグなし</span><span style="color:#cbd5e1;font-size:10px">こんこ あと8でタッグ</span><span class="fl">失敗 <b>2%</b></span></div>
       <div class="ch"><span>基本 +8</span><i>▶</i><span>編成 +33%</span><i>▶</i><span class="res">かしこさ +11</span></div>${lvx(1, 40, 20)}</div>` })}
   ${stRow([2, 0, 11, 3, 0, 0], 2)}
-  <div class="v-tabs"><span class="on">💪 軽い訓練</span><span>🔥 重い訓練</span></div>
   ${trs(2)}
-</div>${footGo('🧠 かしこさの軽い訓練をする', '← もどる', 'go2')}`;
+</div>${footGo('🧠 かしこさの訓練をする')}`;
 
-grp('T', '2. 訓練を選ぶ', 'メインの「訓練」を押すと、同じ景色のまま下が6つの訓練に替わる。ボタンは絵・名前・小さな Lv だけ(社長「ごちゃついてるから余計な表示はなくして」)。友情タッグがある訓練はボタンが金色に光る。選ぶと、右に来ている子と親密度のゲージ、下の札にタッグで効果が上がる流れと訓練Lv・トレ経験値、6能力の上に上がる量、上の帯に使う体力(赤いしま)と増えるストレス(紫のしま)を、決める前に見せる。訓練でマイナスになる能力はない(社長)。', [
-  { id: 'T1', label: '重い訓練・タッグ2体(ちから)', html: trainHeavy() },
-  { id: 'T2', label: '軽い訓練・タッグなし(かしこさ)', html: trainLight },
+grp('T', '2. 訓練を選ぶ', 'メインの「訓練」を押すと、同じ景色のまま下が6つの訓練に替わる。ボタンは絵・名前・小さな Lv だけ(社長「ごちゃついてるから余計な表示はなくして」)。友情タッグがある訓練はボタンが金色に光る。選ぶと、右に来ている子と親密度のゲージ、下の札にタッグで効果が上がる流れと訓練Lv・トレ経験値、6能力の上に上がる量、上の帯に使う体力(赤いしま)と増えるストレス(紫のしま)を、決める前に見せる。訓練でマイナスになる能力はない・軽い/重いの切り替えもない(社長)。', [
+  { id: 'T1', label: 'タッグ2体のとき(ちから)', html: trainHeavy() },
+  { id: 'T2', label: 'タッグなしのとき(かしこさ)', html: trainLight },
 ], `<h3>ボタンはすっきり</h3><ul>
   <li>6つの丸いボタンに出すのは <b>訓練の絵・名前・小さな Lv</b> だけ。来ている子の顔・数字・経験値の棒は載せない</li>
   <li><b>友情タッグがある訓練はボタンが金色に光る</b>(光で分かるので顔は出さない)</li></ul>
@@ -162,7 +160,7 @@ const resBigF = (lvup) => `${hdr('💰 名声 320', '中断')}<div class="v-body
     <div class="v-stamp">大成功<small>🤝 友情タッグ ×2・伸び ×1.5</small></div>
     <div class="v-chips" style="top:auto;bottom:8px">${['d', 'a', 'c'].map((k) => `<span class="v-chip">${CH[k].n} 親密度 +8</span>`).join('')}</div>` })}
   ${stRow([0, 57, 0, 10, 0, 7], 1, [412, 563, 233, 390, 198, 448])}
-  <div class="v-log">${lvup ? '<div class="v-lvup">⬆ 訓練Lvアップ! 💪 ちから <b>Lv.3 → Lv.4</b><small>次から、ちからの訓練の基本の伸びが上がる</small></div>' : ''}<span class="hd2">💪 ちからの重い訓練</span><br>ちからが <b class="gu">57</b> 上がった! 命中 <b class="gu">+10</b>・丈夫さ <b class="gu">+7</b><br>体力が <b class="gd">26</b> 下がった<br>らいが・しずく・ぴくりんの親密度が <b class="ga">8</b> 上がった</div>
+  <div class="v-log">${lvup ? '<div class="v-lvup">⬆ 訓練Lvアップ! 💪 ちから <b>Lv.3 → Lv.4</b><small>次から、ちからの訓練の基本の伸びが上がる</small></div>' : ''}<span class="hd2">💪 ちからの訓練</span><br>ちからが <b class="gu">57</b> 上がった! 命中 <b class="gu">+10</b>・丈夫さ <b class="gu">+7</b><br>体力が <b class="gd">26</b> 下がった<br>らいが・しずく・ぴくりんの親密度が <b class="ga">8</b> 上がった</div>
 </div>${footGo('つぎへ ▶', '⏩ とばす')}`;
 const res3 = (cls, word, sub, bg, mon, cap) => `<div class="v-scene" style="flex:1"><img class="bg" src="${BG(bg)}"><div class="sh"></div>${cls === 'ok' ? '<div class="v-burst b2"></div>' : ''}<img class="mon" src="${M('mocchi.png')}" style="${mon}"><div class="v-stamp ${cls}">${word}</div><div class="cap">${cap}</div></div>`;
 const resOthers = `${hdr('💰 名声 320', '中断')}<div class="v-body">
@@ -286,7 +284,7 @@ const s4 = `${sHd(3)}<div class="v-body">${steps(3)}
   <div class="v-item"><span class="e">🧸</span><div>お気に入りのおもちゃ<small>遊ぶと、ストレスがさらに 10 減る</small></div><span class="pr">持っている 2</span></div>
   <div style="flex:1"></div>
   <div class="v-card pk"><div class="sub" style="color:#f9a8d4;font-weight:900">持っていくと</div><div class="v-kv"><b>体力の上限</b><span>100 → <span class="yel">110</span></span></div><div class="v-kv"><b>使える物</b><span>🍱 とくせい弁当 ×1(メニューから)</span></div>
-    <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「おまもりがあると、重い訓練も続けやすいよ!」</div></div></div>
+    <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「おまもりがあると、訓練を続けやすいよ!」</div></div></div>
 </div>${footGo('これでいく ▶')}`;
 const sw = (cols, on) => cols.map((c, i) => `<i class="${i === on ? 'on' : ''}" style="background:${c}"></i>`).join('');
 const s5 = `${sHd(4)}<div class="v-body">${steps(4)}
