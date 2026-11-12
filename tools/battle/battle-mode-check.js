@@ -226,7 +226,8 @@ check('知らない難易度は今までどおり弾く', (() => { try { m.norma
 // 重複が無いこと(同じ行を2モードで奪い合わない)を見る。数は表から出して、検査へ書き写さない
 // ★タクティクスプロは本公開ぶんとβ版ぶんの2つを持つ(公開の前後でどちらも通るように)
 check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
-  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2
+    // ×3 = チャレンジ・プロ・サクセス杯(Suc<難易度>・2026-11-12)
+  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 3
     + m.TACTICS_DIFFICULTY_IDS.length * 3 + m.ALL_EXTREME_DIFFICULTIES.length);
 // タクティクスのキーも、素の難易度へ戻せて、プロ・極限の行とは混ざらない
 check('新モードの難易度キーが独立している',
@@ -550,7 +551,8 @@ check('モード選択は極限チャレンジもクイックも出さず、残�
 // 極限の一覧は「公開ぶんだけ」の共通定義(PUBLIC_EXTREME_DIFFICULTIES)へまとまった
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
   // タクティクスは記録の置き場も難易度の並びも違うので、その2つを差し替えてから最高スコアを出す
-  has('modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score')
+  // サクセス杯(2026-11-12)は記録をタクティクスと同じ入れ物(tacticsRecordsOf)に持つ
+  has('modeBestScore=ranked||isSuc?highestModeScore(isTacticsMode(m.id)||isSuc?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score')
     // 2026-11-01 冥界チャレンジ(#4437・社長の決め): 極限のモードカードの記録は、極限タブの ETERNAL までの9つから取る(冥界は別のタブ)
     && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting=>setting.id))')
     && has("ranked?'最高スコア'")
@@ -658,14 +660,14 @@ check('実際に開いて押せることを確かめる道具がある',
 // 編成はベースモンだけ。育てたマスモンは勇者モンにも供モンにも出さない
 check('プロの勇者モン選択はベースモンだけ',
   has("setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');")
-    && has("const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
-    && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
+    && has("const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProPickMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
+    && has('{!isProPickMode(runMode)&&<div className="flex gap-1.5">'));
 check('プロの勇者モン選択に編成タブを出さない',
-  has("isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)'"));
+  has("isProPickMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)'"));
 // 供モンの候補は「始める前に選んだ5体」からしか出さない
 check('ラン中の加入候補はモードで切り替える',
   has('if (!isProMode(runMode)) return getActiveMonsterList();')
-    && has('const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;'));
+    && has('const joinOfferSize = () => isProMode(runMode) || isSuccessMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;'));
 check('加入の抽選は2か所とも共通の入口を通る',
   // 強化フェーズの並びを組む postWaveJoinPossible(「このあと供モンが来るか」)が3か所目として足された。
   // 何か所あっても、呼び出しがすべて共通の入口(joinCandidatePool と joinOfferSize)を通っていることを見る
@@ -722,7 +724,7 @@ check('供モンの一覧に編成中の子を出さない',
     && has("const list=(pickMode==='ally'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];"));
 // 供モンの合流はバトルモード選択と同じ横スライドで見せる
 check('プロの供モン合流は横スライドで出す',
-  has("const allyCarousel=pickMode==='ally'&&isProMode(runMode);")
+  has("const allyCarousel=pickMode==='ally'&&isProPickMode(runMode);")
     && has('aria-label="前の供モン"') && has('aria-label="次の供モン"')
     // 2026-10-27: 縦並びの側(勇者モン)に横向き用のクラスが付き、文字列からテンプレートになった。横スライドの側はそのまま
     && has("allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':`grid grid-cols-2 gap-2.5"));
@@ -781,7 +783,7 @@ for (const [label, gameState, component] of [
   check(`${label}の画面は全画面でかぶせる`, overlaid, body ? '' : '画面が見つからない');
 }
 check('ベースモンが足りないときはプロを始められない',
-  has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')
+  has('getUnlockedBaseMonsterList()).length>=PRO_ALLY_POOL_SIZE+1;')
     && has("disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')}") && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));
 // マスモン登録・リザルトは既存のしくみをそのまま使う(プロ専用の分岐を作らない)
 check('マスモン登録は既存のしくみを使い回す',
