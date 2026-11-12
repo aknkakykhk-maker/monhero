@@ -138,7 +138,7 @@ const amgpActAt = (aid, row, slot, e, seed) => {
   const code = amgpCodeAt(key, slot);
   if (code === 'A') return null;
   if (/^[LHS]/.test(code)) {
-    const p = amgpSabChance(e.fat, e.str);
+    const p = amgpSabChance(e.fat, e.str) * (typeof amgbSabMult === 'function' ? amgbSabMult(aid, row) : 1); // 絆: 忠誠が低い・甘い方針ほどサボる(印が偽なら ×1)
     if (p > 0 && typeof assistantMasmonRng === 'function' && assistantMasmonRng(`${seed}|${aid}|plan-sab|${key}|${slot}`)() < p) return { act: { a: 'saboru' }, plan: true, key, code };
   }
   return { act: { ...amgpActOfCode(aid, row, e, slot, code, seed), picked: true }, plan: true, key, code };
@@ -159,8 +159,9 @@ const amgpAfterAct = (aid, row, slot, e, pp, seed) => {
   else if (rnd() < amgpHurtChance(a, e.fat)) k = 'hurt';
   else if (rnd() < amgpSickChance(a, e.str)) k = 'sick';
   if (!k) return;
+  const len = typeof amgbCondLen === 'function' ? amgbCondLen(k === 'hurt' ? e.fat : e.str, rnd()) : null; // 絆: 軽い1回・ふつう3回・重い6回(印が偽なら今の長さ)
   const cs = AMGP_CSTORE.state;
-  AMGP_CSTORE.save({ ...cs, mons: { ...cs.mons, [pp.key]: { k, from: slot, until: slot + AMGP_NUM[`${k}N`], care: -1, find: -1, hosp: [] } }, log: [...cs.log, { s: slot, key: pp.key, k, t: 'start' }].slice(-40) });
+  AMGP_CSTORE.save({ ...cs, mons: { ...cs.mons, [pp.key]: { k, from: slot, until: slot + (Number.isInteger(len) ? len : AMGP_NUM[`${k}N`]), care: -1, find: -1, hosp: [] } }, log: [...cs.log, { s: slot, key: pp.key, k, t: 'start' }].slice(-40) });
 };
 // 育成の値のストレスを下げる(看病・さがしに行く)
 const amgpLowerStr = (key, n) => {
@@ -246,7 +247,7 @@ const amgpGainOf = (row, e, code, fat, mult = AMG_CARE.pickMult) => {
 // 1日(3回)の見通し。codes は朝昼夜の3つ(null = もう過ぎた回で数えない)。まかせる(A)は助手の決め方に近い形で見込む
 //   opt.key・opt.slots があれば、けが・病気・家出の回は訓練しない(休み扱い・灰色)。opt.used = その日にもう伸びた分(1日の上限20から引く)
 const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
-  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu; let fat = fat0, str = str0; let leftHi = Math.max(0, AMG_CARE.viewCap - (opt.used || 0)); let leftLo = leftHi; const out = [];
+  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu; let fat = fat0, str = str0; const pace = typeof amgbPace === 'function' ? amgbPace() : 1; const bm = typeof amgbGainMult === 'function' ? amgbGainMult(aid, row, null) : 1; let leftHi = Math.max(0, AMG_CARE.viewCap * pace - (opt.used || 0)); let leftLo = leftHi; const out = [];
   for (let p = 0; p < codes.length; p++) {
     const c0 = codes[p];
     if (!c0) { out.push(null); continue; }
@@ -255,7 +256,7 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
     let code = c0; let auto = false;
     if (code === 'A') { auto = true; code = fat >= T.rest ? 'R' : str >= 50 ? 'P' : `L:${amgpPolicyKey(row, e)}`; }
     const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
-    const g0 = amgpGainOf(row, e, code, fat, auto ? 1 : AMG_CARE.pickMult); const g = {};
+    const g0 = bm > 0 ? amgpGainOf(row, e, code, fat, (auto ? 1 : AMG_CARE.pickMult) * bm) : {}; const g = {}; // 絆: 育ちの速さ・型と年齢・方針(印が偽なら ×1)
     for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, leftHi); if (bb > 0) { const aa = Math.min(a, bb, leftLo); g[k] = [aa, bb]; leftHi -= bb; leftLo -= aa; } }
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100); str = amgClamp(str + ds, 0, 100);
@@ -413,8 +414,8 @@ function AmgpMine({ onClose, aid = null, land = false }) {
         <div className="flex items-center gap-2">
           {amgpMonIcon(x.row.monster)}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-black">{nameOf(x)} <small className="text-[10px] text-slate-300">{amgpWhoName(x.aid)}のマスモン・育成Lv.{x.e.lv}</small></p>
-            <p className="text-[10.5px] font-bold text-slate-300">{isPick ? `次の回: ${amgpCodeIcon(nextCode)} ${amgpCodeName(nextCode)} ・ ` : ''}疲れ <b className={amgpLevelColor(x.e.fat)}>{x.e.fat}</b> ・ ストレス <b className={amgpLevelColor(x.e.str + 10)}>{x.e.str}</b> ・ 今日の伸び {todayN(x)}/{isPick ? 20 : 15}</p>
+            <p className="truncate text-[13px] font-black">{nameOf(x)} <small className="text-[10px] text-slate-300">{amgpWhoName(x.aid)}のマスモン・育成Lv.{x.e.lv}</small>{typeof AmgbPowerTag === 'function' && <> <AmgbPowerTag aid={x.aid} row={x.row}/></>}</p>
+            <p className="text-[10.5px] font-bold text-slate-300">{isPick ? `次の回: ${amgpCodeIcon(nextCode)} ${amgpCodeName(nextCode)} ・ ` : ''}疲れ <b className={amgpLevelColor(x.e.fat)}>{x.e.fat}</b> ・ ストレス <b className={amgpLevelColor(x.e.str + 10)}>{x.e.str}</b> ・ 今日の伸び {todayN(x)}/{(isPick ? 20 : 15) * (typeof amgbPace === 'function' ? amgbPace() : 1)}</p>
             {c && <p className="text-[11px] font-black text-rose-200" data-amgp-cond={c.k}>{AMGP_COND[c.k].icon} {AMGP_COND[c.k].name}(あと{Math.max(1, Math.ceil((c.until - nowSlot) / 3))}日くらい・対戦には出られます)</p>}
           </div>
           {isPick ? <span className="shrink-0 rounded-lg bg-emerald-400 px-1.5 py-0.5 text-[10px] font-black text-emerald-950">計画中</span> : <span className="shrink-0 rounded-lg bg-slate-600 px-1.5 py-0.5 text-[10px] font-black">まかせる</span>}

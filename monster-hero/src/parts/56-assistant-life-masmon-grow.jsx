@@ -202,19 +202,26 @@ const amgChoose = (aid, e, row, rnd, focusK, restReq, slot = 0) => {
 const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
   const apt = amgAptOf(row.monster); const g = {}; let fail = false;
   const day = amgSlotDay(slot);
-  const cap = care.viewed || care.plan ? AMG_CARE.viewCap : AMG_DAY_CAP; // 育成ノートの計画の回も 20 まで(上限そのものは上げない)
+  // 絆(56-assistant-life-masmon-bond.jsx・印 assistantMasmonBond): サボり・ズル・大成功・育ちの速さ×3・型と年齢・方針・寿命。印が偽なら pre=null・掛け算は 1 で今までと全く同じ
+  const pre = typeof amgbPre === 'function' ? amgbPre(aid, row, slot, e, act, !!care.plan) : null;
+  if (pre === 'skip') act = { a: 'saboru', k: act.k || '' };
+  const fat0 = e.fat; const sh0 = e.shugyo;
+  const bm = typeof amgbGainMult === 'function' ? amgbGainMult(aid, row, pre) : 1;
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1;
+  const cap = (care.viewed || care.plan ? AMG_CARE.viewCap : AMG_DAY_CAP) * pace; // 育成ノートの計画の回も 20 まで(上限そのものは上げない)
   const mult = (care.viewed ? AMG_CARE.viewMult : 1) * (act.picked ? AMG_CARE.pickMult : 1) * (act.asked ? AMG_CARE.askMult : 1) * (care.ranch ? AMG_CARE.ranchMult : 1);
   const left = () => Math.max(0, cap - (e.dg.d === day ? e.dg.n : 0));
   // 助手のブリーダー能力(第②段階の受け口・シュギョウ)。印が偽なら 1
   const lead = typeof amgtLeadMult === 'function' ? amgtLeadMult(aid) : 1;
   const failMul = typeof amgtFailMult === 'function' ? amgtFailMult(aid) : 1;
-  const sm = typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1;
+  const sm = (typeof amgtStressMult === 'function' ? amgtStressMult(aid) : 1) * (typeof amgbStressMult === 'function' ? amgbStressMult(aid, row) : 1);
   const up = (v) => (v > 0 ? Math.round(v * sm) : v); // ストレスが増える分だけに掛ける
   // 関わって伸びた分(ミセカタ 11-11): 関わりの倍率で上乗せになった伸びを、効いた関わりに振り分けて数える
   const parts = [['view', care.viewed ? AMG_CARE.viewMult : 1], ['pick', act.picked ? AMG_CARE.pickMult : 1], ['ask', act.asked ? AMG_CARE.askMult : 1], ['ranch', care.ranch ? AMG_CARE.ranchMult : 1]].filter(x => x[1] > 1);
   const lnAll = parts.reduce((a, x) => a + Math.log(x[1]), 0);
   const add = (k, lo, hi) => {
-    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead;
+    if (bm <= 0) { amgRange(rnd, lo, hi); return; } // 寿命が来た子は伸びない(乱数の数はそろえる)
+    const base = amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[k]] * (1 + 0.1 * (e.ind[k] || 0)) * (e.fat >= 50 ? 0.7 : 1) * (fail ? 0.5 : 1) * mult * lead * bm;
     const n = Math.min(Math.max(1, Math.round(base)), left(), AMG_MAX - e.st[k]);
     if (n <= 0) return;
     e.st[k] += n; g[k] = (g[k] || 0) + n; e.dg = { d: day, n: (e.dg.d === day ? e.dg.n : 0) + n };
@@ -235,7 +242,8 @@ const amgDo = (aid, e, row, rnd, slot, act, care = {}) => {
     e.fat = amgClamp(e.fat + amgRange(rnd, 10, 18), 0, 100); e.str = amgClamp(e.str + up(act.a === 'joint' ? -3 : fail ? 8 : 3), 0, 100);
   }
   // 経験と Lv(訓練をすると上がる)
-  e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0); e.lv = e.lv || 1;
+  e.xp = (e.xp || 0) + (AMG_XP[act.a] || 0) * pace; e.lv = e.lv || 1;
+  if (typeof amgbAfter === 'function') amgbAfter(aid, row, slot, e, act, pre, fail || !!(act.a === 'shugyo' && e.shugyo !== sh0 && e.shugyo && e.shugyo.f), fat0); // 結果の記録(叱る・褒めるの相手)
   while (e.lv < AMG_LV_MAX && e.xp >= amgLvNeed(e.lv)) { e.xp -= amgLvNeed(e.lv); e.lv += 1; }
   e.log = [...e.log, { s: slot, a: act.a, k: act.k || '', g, ...(fail ? { f: 1 } : {}), ...(act.picked ? { p: 1 } : {}), ...(care.ranch ? { r: 1 } : {}) }].slice(-AMG_LOG);
   if (act.a !== 'shugyo' && !idle && typeof amgtAfterAct === 'function') amgtAfterAct(aid, act, fail, slot); // 修行(第②段階)の助手の腕に経験。印が偽なら何もしない
@@ -259,6 +267,7 @@ const amgCatchUp = (state, aid, rows, seed, nowSlot) => {
     for (const row of rows) {
       const key = amgMonKey(row.slot, row.monster); const e0 = mons[key]; if (!e0) continue;
       const e = { ...e0, st: { ...e0.st }, dg: { ...e0.dg } };
+      if (typeof amgbTick === 'function') amgbTick(aid, row, s); // 絆: 日が変わったら年齢と寿命を進める(印が偽なら何もしない)
       const rnd = assistantMasmonRng(`${seed}|${aid}|grow|${key}|${s}`);
       const f = focus[row.slot] && focus[row.slot].until >= s ? focus[row.slot].k : '';
       const pl = plan[row.slot] && plan[row.slot].s === s ? plan[row.slot] : null;
@@ -417,7 +426,7 @@ function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
         <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[48px] shrink-0">疲労</span><span className="mhm-bar"><i style={{ width: `${e.fat}%`, background: 'linear-gradient(90deg,#fb7185,#f97316)' }}/></span><b className="w-[24px] text-right text-amber-200" data-amg-fat>{e.fat}</b></div>
         <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[48px] shrink-0">ストレス</span><span className="mhm-bar"><i style={{ width: `${e.str}%`, background: 'linear-gradient(90deg,#60a5fa,#a78bfa)' }}/></span><b className="w-[24px] text-right text-amber-200" data-amg-str>{e.str}</b></div>
       </div>
-      <p className="mt-1.5 text-[11px] font-bold text-amber-200">📈 育成方針: {t.grow} ・ 育成 Lv.{e.lv}<small className="ml-1 text-[9.5px] text-slate-400">(次まで {amgLvNeed(e.lv) - e.xp})</small></p>
+      <p className="mt-1.5 text-[11px] font-bold text-amber-200">📈 {typeof amgbOn === 'function' && amgbOn() ? '得意な伸ばし方' : '育成方針'}: {t.grow} ・ 育成 Lv.{e.lv}<small className="ml-1 text-[9.5px] text-slate-400">(次まで {amgLvNeed(e.lv) - e.xp})</small></p>
       {growMine && <p className="text-[10.5px] font-bold text-sky-200" data-assistant-masmon-grow-mine>🌱 育て方: {growMine.kind}({growMine.day ? `${growMine.day.slice(5).replace('-', '/')} ` : ''}あなたの提案)</p>}
       {kindText && <p className="text-[10.5px] font-bold text-slate-300">{kindText}</p>}
       <p className="mt-1.5 text-[10px] font-black text-slate-400">今日の育成({who.name}{T ? `・${T.name}` : ''})</p>
@@ -427,5 +436,6 @@ function AmgGrowCard({ who, t, e, kindText = '', growMine = null }) {
       {(amgSt.care[who.id] && amgSt.care[who.id].d === today && amgSt.care[who.id].view[t.slot]) && <p className="mt-1 text-[10px] font-bold text-pink-200" data-amg-viewed>👀 今日は様子を見に来たので、いつもより伸びやすい</p>}
       <AmgPickRow who={who} t={t} e={e} st={amgSt}/>
       {typeof AmgtCard === 'function' && <AmgtCard who={who} t={t} e={e}/>}
+      {typeof AmgbPanel === 'function' && <AmgbPanel who={who} t={t}/>}{/* 絆: 総合力とランク・忠誠度・人気・育成方針・年齢と寿命・成長の型・叱る/褒める(印 assistantMasmonBond が偽なら何も出さない) */}
     </div>);
 }
