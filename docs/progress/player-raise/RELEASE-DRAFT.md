@@ -15,14 +15,14 @@
 - `type:'content'`・`group:'success'`(🌱モンヒロサクセス)・`status:'new'`
 - 日時は**公開の直前に** `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M'` を取って書く(いまは入れない)
 - 公開の印(`RELEASE_FLAGS`)で出し入れする。名前の案 `monhero_success`(窓口で決める)。`releaseFlag` を付けると、公開まで一覧にも告知にも出ない
-- `image` は新しい公開用の絵(予告の `images/events/monsaku-teaser.jpg` は開発中の画面なので使い回さない。絵は社長が用意)
+- `image` は新しい公開用の絵(予告の `images/events/monsaku-teaser.jpg` は開発中の画面なので使い回さない。絵は作ってある)
 
 ```js
 {
   date: "<公開直前の実時刻>", type:'content', group:'success', status:'new',
   title:'モンヒロサクセスが始まりました',
   releaseFlag:'monhero_success',
-  image:'images/events/monsaku-open.jpg',   // 公開用の絵(社長の用意待ち)
+  image:'images/events/monsaku-open.jpg',   // 公開用の絵(作ってある・下の「公開用の絵」)
   assistantNotice:{ id:'update_notice_monsaku_v1', type:'content' },
   items:[
     'モンスターを1体、デビューからヒーローの頂まで46ターンかけて育てる、新しい遊び「モンヒロサクセス」が始まりました。',
@@ -305,15 +305,21 @@
 
 ---
 
-## 5. 窓口に決めてほしいこと(おすすめが先頭)
+## 5. 窓口の答え(2026-11-12・おすすめで進めた点)
 
-1. **予告の項目の扱い(§1)**: ①予告は残し、最後の2行を消し、題を「…の紹介」にして `idTitle` に元の題を残す(推奨)/②予告を `dev:true` で隠す/③そのまま放置(「近日公開予定」が嘘になるので非推奨)
-2. **公開の印の名前と、ヘルプのグループの出し入れ**: 案 `monhero_success`(`RELEASE_FLAGS`)。ヘルプのグループと更新履歴の項目と画面内案内を**同じ印**で出し入れする
-3. **イッサ博士の中身を、ヘルプにどこまで書くか**: ①選択肢と成功しやすさの表まで書く(推奨・社長の決めで「見える確率」の欄があるため)/②出会う人物とだけ書き、確率は書かない
-4. **ライバルの出る割合(約25%)・ごはんの名前と値段・評価の区切り・親密度の目安・フレンドの貸し出しの知らせ**: ヘルプの数字が**仮**のまま。公開の直前に芯と画面を見くらべる。ここで窓口が「書かない」を選んだものは削る
-5. **助手の告知の行き先**: `content` の告知のボタンがモンヒロサクセスの入口へ飛ぶ登録が要る(今の `content` の行き先に無ければ、作る側に頼む)
-6. **台本をどこまで足すか**: 全員ぶん(8人)/みゅあとドラだけ(推奨)/足さず `items` の読み上げだけ
-7. **公開用の絵**(`image`)は社長が用意(予告の絵は開発中の画面なので使い回さない)
+1. 予告は残し、最後の2行を消し、題を「…の紹介」に直して元の題を `idTitle` に残す(§1のとおり)
+2. 公開の印は `monhero_success`
+3. イッサ博士は選択肢と成功しやすさの表まで書く(§3-12のとおり)
+4. 仮の数字は、芯(モンヒロサクセスの計算の会話)の**最新の値**に合わせる。**公開の直前に必ずもう一度見くらべる**(手順: ①`monster-hero/data/monhero-success.js` の VERSION と §6 の表を突き合わせる ②「仮」の行を芯・画面・台帳と照らす ③`help-guide-check` が数値の食い違いを名指ししたら直す ④決まりのない数字は書かない)
+5. `content` の告知からモンヒロサクセスの入口へ飛ぶ行き先の登録は、**公開の PR でいっしょに入れる**前提(別の PR にしない)
+6. 台本は助手8人ぶん全部そろっている(`script/asst-*.js`)ので、**全員ぶんを前提**にする。§2 の「みゅあとドラだけ」の例は短い見本で、本番は8人ぶん `ASSISTANT_UPDATE_NOTICE_SCRIPTS['update_notice_monsaku_v1']` に入れる(口調と呼び方の決めは §2 のとおり)
+7. 公開用の絵は Claude で作った(下の「公開用の絵」)
+
+### 公開用の絵
+
+- いまは `docs/progress/player-raise/art/monsaku-open.jpg`(880×1000・約75KB・予告の絵と同じ大きさ)。**公開の PR で `monster-hero/images/events/monsaku-open.jpg` へ移し**(公開前に images/ へ置くと `image-asset-check` が「使われていない画像」と止める)、更新履歴の `image` にそのパスを書く(`?v=` は手で書かず `node tools/build.js` に任せる)
+- 作る道具: `node tools/success/make-key-visual.js`(何度でも作り直せる)。景色は `monster-hero/images/success/scenes/` に画像があればその最初の1枚、無ければ既存の森の背景(`story-bg/forest_deep.jpg`)を暗くして使う。イッサ博士(`docs/progress/player-raise/art/issa-hakase.png`)とアイテムの絵(`images/success/items/`)を重ね、題字は「モンヒロサクセス」。景色が届いたら道具を回し直すだけで差し替わる
+- ゲームに入れるときは `node tools/build.js` のあと `node tools/image-asset-check.js`
 
 ---
 
