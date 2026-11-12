@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56e86a12f29cc2be
+// source-sha256: 6deeb7325cca0e92
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150186,6 +150186,58 @@ try {
 } catch (_) {}
 const amgsCapOf = days => AMGS_CAP[Math.max(0, (typeof amgpStageOf === 'function' ? amgpStageOf(days).lv : 1) - 1)] || AMGS_CAP[0];
 const amgsCap = () => amgsCapOf(typeof AMGP_STORE !== 'undefined' ? AMGP_STORE.state.days : 0);
+const amgsDropRows = (aid, keys) => {
+  const run = () => {
+    try {
+      const live = new Set((typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid) : []).map(r => `${r.slot}:${r.monster}`));
+      const ks = [...new Set(keys)].filter(k => !live.has(k));
+      if (!ks.length) return;
+      if (typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded) {
+        const gs = AMG_STORE.state;
+        const m = {
+          ...(gs.mons[aid] || {})
+        };
+        let c = false;
+        for (const k of ks) if (m[k]) {
+          delete m[k];
+          c = true;
+        }
+        if (c) amgSave({
+          ...gs,
+          mons: {
+            ...gs.mons,
+            [aid]: m
+          }
+        });
+      }
+      if (typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') {
+        const ts = AMGT_STORE.state;
+        const m = {
+          ...(ts.mons[aid] || {})
+        };
+        let c = false;
+        for (const k of ks) if (m[k]) {
+          delete m[k];
+          c = true;
+        }
+        if (c) amgtSave({
+          ...ts,
+          mons: {
+            ...ts.mons,
+            [aid]: m
+          }
+        });
+      }
+    } catch (_) {}
+  };
+  if (typeof storeSet !== 'function' || !AMGS_STORE) {
+    run();
+    return;
+  }
+  void Promise.resolve().then(() => storeSet(ASSISTANT_MASMON_SLEEP_KEY, AMGS_STORE.state, false)).then(ok => {
+    if (ok !== false) run();
+  }).catch(() => {});
+};
 const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').slice(0, 20)}:${x.monster}`;
 const amgsSyncFormer = () => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
@@ -150195,6 +150247,7 @@ const amgsSyncFormer = () => {
   let st = AMGS_STORE.state;
   const ms = ASSISTANT_MASMON_STORE.state;
   let changed = false;
+  const drop = {};
   const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null;
   const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
   for (const [aid, m] of Object.entries(ms && ms.mine || {})) for (const [sl, list] of Object.entries(m && m.former || {})) {
@@ -150207,6 +150260,7 @@ const amgsSyncFormer = () => {
       if (!row) continue;
       const key = `${slot}:${x.monster}`;
       const seq = st.seq + 1;
+      const awake = typeof assistantMasmonRowsOf === 'function' && assistantMasmonRowsOf(ms, aid).some(r => r.slot === slot && r.monster === x.monster);
       st = {
         ...st,
         seq,
@@ -150222,22 +150276,30 @@ const amgsSyncFormer = () => {
           at: String(x.at || '').slice(0, 10),
           fat: String(x.at || '').slice(0, 20),
           row,
-          g: g && g.mons[aid] ? g.mons[aid][key] || null : null,
-          t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null,
+          g: !awake && g && g.mons[aid] ? g.mons[aid][key] || null : null,
+          t: !awake && tr && tr.mons[aid] ? tr.mons[aid][key] || null : null,
           c: null,
-          ...(typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? {
+          ...(!awake && typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? {
             bd: amgbCopyOf(aid, slot, x.monster)
           } : {})
         }]
       };
+      if (!awake) (drop[aid] = drop[aid] || []).push(key);
       changed = true;
     }
   }
-  return changed ? AMGS_STORE.save(st) : false;
+  if (!changed) return false;
+  const ok = AMGS_STORE.save(st);
+  if (ok) for (const [aid, keys] of Object.entries(drop)) amgsDropRows(aid, keys);
+  return ok;
 };
 const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
   if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) {
+    void AMGT_STORE.load();
+    return '読み込み中です';
+  }
   if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) {
     void AMGB_STORE.load();
     return '読み込み中です';
@@ -150263,35 +150325,33 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
     at: bed.fat
   } : null);
   if (!out) return '入れ替えられませんでした';
-  if (bed.g) {
+  {
     const gs = AMG_STORE.state;
+    const gm = {
+      ...(gs.mons[bed.aid] || {})
+    };
+    if (bed.g) gm[inKey] = {
+      ...bed.g
+    };else delete gm[inKey];
     amgSave({
       ...gs,
       mons: {
         ...gs.mons,
-        [bed.aid]: {
-          ...(gs.mons[bed.aid] || {}),
-          [inKey]: {
-            ...bed.g,
-            dg: {
-              d: 0,
-              n: 0
-            }
-          }
-        }
+        [bed.aid]: gm
       }
     });
   }
-  if (bed.t && typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') {
+  if (typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') {
     const ts = AMGT_STORE.state;
+    const tm = {
+      ...(ts.mons[bed.aid] || {})
+    };
+    if (bed.t) tm[inKey] = bed.t;else delete tm[inKey];
     amgtSave({
       ...ts,
       mons: {
         ...ts.mons,
-        [bed.aid]: {
-          ...(ts.mons[bed.aid] || {}),
-          [inKey]: bed.t
-        }
+        [bed.aid]: tm
       }
     });
   }
@@ -150345,6 +150405,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
       } : {})
     }]
   });
+  if (outKey !== inKey) amgsDropRows(bed.aid, [outKey]);
   try {
     if (typeof amgTick === 'function') void amgTick(bed.aid);
   } catch (_) {}
@@ -150779,6 +150840,7 @@ function AmgsFuseSheet({
   const [sure, setSure] = React.useState(0);
   const [err, setErr] = React.useState('');
   const [done, setDone] = React.useState(null);
+  const [ready, setReady] = React.useState(true);
   const all = AMGS_STORE ? AMGS_STORE.state.beds : beds;
   const main = all.find(b => b.id === mainId) || null;
   const mat = all.find(b => b.id === matId) || null;
@@ -150799,8 +150861,11 @@ function AmgsFuseSheet({
     className: "block text-[10px] text-slate-300"
   }, "Lv ", b.row.lv, b.row.grow ? ` ・ ${b.row.grow}` : '', " ・ 6能力の合計 ", AMG_KEYS.reduce((a, k) => a + (b.g.st[k] || 0), 0))));
   const go = () => {
+    if (!ready) return;
     if (sure < 1) {
       setSure(1);
+      setReady(false);
+      setTimeout(() => setReady(true), 800);
       return;
     }
     const r = amgsFuse(main.id, mat.id);
@@ -150874,8 +150939,10 @@ function AmgsFuseSheet({
   }, err), React.createElement("button", {
     type: "button",
     onClick: go,
+    disabled: !ready,
     "data-amgs-fuse-go": sure,
-    className: `mt-3 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+    "data-amgs-fuse-ready": ready ? 1 : 0,
+    className: `mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
   }, sure ? '本当に合体する' : '🧬 合体する'), React.createElement("button", {
     type: "button",
     onClick: () => {

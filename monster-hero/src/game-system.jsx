@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cbf02fee19a4fb90
+// generated-sha256: 1417513106b0162a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78489,6 +78489,20 @@ const AMGS_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT
 try { setTimeout(() => { try { if (amgsOn() && AMGS_STORE) void AMGS_STORE.load(); } catch (_) {} }, 0); } catch (_) {}
 const amgsCapOf = (days) => AMGS_CAP[Math.max(0, (typeof amgpStageOf === 'function' ? amgpStageOf(days).lv : 1) - 1)] || AMGS_CAP[0];
 const amgsCap = () => amgsCapOf(typeof AMGP_STORE !== 'undefined' ? AMGP_STORE.state.days : 0);
+// 箱へ写し終えた子の育成・修行の行を外す(箱が正)。冬眠の箱を書き終えてから外す(途中で止まっても中身を失わない・⑦)。
+//   外すのは、その時点で起きている枠にいない「枠:種類」だけ(同じ枠に同じ種類のマスモンが来たら、行を作り直させる・ミハリ fable の指摘)
+const amgsDropRows = (aid, keys) => {
+  const run = () => {
+    try {
+      const live = new Set((typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, aid) : []).map(r => `${r.slot}:${r.monster}`));
+      const ks = [...new Set(keys)].filter(k => !live.has(k)); if (!ks.length) return;
+      if (typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded) { const gs = AMG_STORE.state; const m = { ...(gs.mons[aid] || {}) }; let c = false; for (const k of ks) if (m[k]) { delete m[k]; c = true; } if (c) amgSave({ ...gs, mons: { ...gs.mons, [aid]: m } }); }
+      if (typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') { const ts = AMGT_STORE.state; const m = { ...(ts.mons[aid] || {}) }; let c = false; for (const k of ks) if (m[k]) { delete m[k]; c = true; } if (c) amgtSave({ ...ts, mons: { ...ts.mons, [aid]: m } }); }
+    } catch (_) {}
+  };
+  if (typeof storeSet !== 'function' || !AMGS_STORE) { run(); return; }
+  void Promise.resolve().then(() => storeSet(ASSISTANT_MASMON_SLEEP_KEY, AMGS_STORE.state, false)).then((ok) => { if (ok !== false) run(); }).catch(() => {});
+};
 const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').slice(0, 20)}:${x.monster}`;
 // 提案の入れ替えで外れた「前にいた子」を、冬眠の一覧へ1度ずつ並べる(元の mine.former はそのまま・見た印 seen で二重にしない)
 const amgsSyncFormer = () => {
@@ -78497,7 +78511,7 @@ const amgsSyncFormer = () => {
   if (typeof AMG_STORE !== 'undefined' && !AMG_STORE.loaded) return false;
   if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) return false;
   if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) return false;
-  let st = AMGS_STORE.state; const ms = ASSISTANT_MASMON_STORE.state; let changed = false;
+  let st = AMGS_STORE.state; const ms = ASSISTANT_MASMON_STORE.state; let changed = false; const drop = {};
   const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null; const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
   for (const [aid, m] of Object.entries((ms && ms.mine) || {})) for (const [sl, list] of Object.entries((m && m.former) || {})) {
     const slot = Number(sl);
@@ -78506,16 +78520,23 @@ const amgsSyncFormer = () => {
       const sig = amgsFormerSig(aid, slot, x); if (st.seen[sig]) continue;
       const row = amgsRowOf(x); if (!row) continue;
       const key = `${slot}:${x.monster}`; const seq = st.seq + 1;
-      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null, ...(typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? { bd: amgbCopyOf(aid, slot, x.monster) } : {}) }] };
+      // 同じ枠に同じ種類のマスモンが起きているときは、その行はいま起きているマスモンのもの(写さない・外さない)
+      const awake = typeof assistantMasmonRowsOf === 'function' && assistantMasmonRowsOf(ms, aid).some(r => r.slot === slot && r.monster === x.monster);
+      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: !awake && g && g.mons[aid] ? g.mons[aid][key] || null : null, t: !awake && tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null, ...(!awake && typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? { bd: amgbCopyOf(aid, slot, x.monster) } : {}) }] };
+      if (!awake) (drop[aid] = drop[aid] || []).push(key);
       changed = true;
     }
   }
-  return changed ? AMGS_STORE.save(st) : false;
+  if (!changed) return false;
+  const ok = AMGS_STORE.save(st);
+  if (ok) for (const [aid, keys] of Object.entries(drop)) amgsDropRows(aid, keys);
+  return ok;
 };
 // 起きている子(aid の枠 slot)と、冬眠中の子(bedId)を入れ替える。眠らせる・起こすはどちらもこれ。だめなら理由の文字、できたら true
 const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
   if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) { void AMGT_STORE.load(); return '読み込み中です'; } // 技と熟練の写しを取り損ねない(ミハリ fable)
   if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) { void AMGB_STORE.load(); return '読み込み中です'; } // 絆の写しを取り損ねない
   const st = AMGS_STORE.state; const bed = st.beds.find(b => b.id === bedId);
   if (!bed) return 'もういません';
@@ -78530,8 +78551,10 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? { slot: bed.slot, at: bed.fat } : null);
   if (!out) return '入れ替えられませんでした';
   // 起きた子の育成・修行の中身を、その枠の行へ戻す(眠らせたときのまま)
-  if (bed.g) { const gs = AMG_STORE.state; amgSave({ ...gs, mons: { ...gs.mons, [bed.aid]: { ...(gs.mons[bed.aid] || {}), [inKey]: { ...bed.g, dg: { d: 0, n: 0 } } } } }); }
-  if (bed.t && typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') { const ts = AMGT_STORE.state; amgtSave({ ...ts, mons: { ...ts.mons, [bed.aid]: { ...(ts.mons[bed.aid] || {}), [inKey]: bed.t } } }); }
+  //   その日の伸びの数え(dg)も眠らせたときのまま(眠らせて起こすたびに上限が数え直しにならない・日が替われば自然に数え直す・ミハリ fable)
+  //   写しが無い子(育成の前に外れた子)は、その枠に残っている別の子の行を受け継がないよう、行を外して初期値から作らせる
+  { const gs = AMG_STORE.state; const gm = { ...(gs.mons[bed.aid] || {}) }; if (bed.g) gm[inKey] = { ...bed.g }; else delete gm[inKey]; amgSave({ ...gs, mons: { ...gs.mons, [bed.aid]: gm } }); }
+  if (typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') { const ts = AMGT_STORE.state; const tm = { ...(ts.mons[bed.aid] || {}) }; if (bed.t) tm[inKey] = bed.t; else delete tm[inKey]; amgtSave({ ...ts, mons: { ...ts.mons, [bed.aid]: tm } }); }
   // 計画の子だったら外す(予定は消さない)・けがの残りは眠らせた子へ写し、起きた子は残りから続ける
   const ps = AMGP_STORE.state; if (ps.picks.some(p => p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) AMGP_STORE.save({ ...ps, picks: ps.picks.filter(p => !(p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) });
   const cs = AMGP_CSTORE.state; const mons = { ...cs.mons };
@@ -78542,6 +78565,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
   const seq = st.seq + 1;
   AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null, ...(bdOut ? { bd: bdOut } : {}) }] });
+  if (outKey !== inKey) amgsDropRows(bed.aid, [outKey]); // 眠った子の行は、箱を書き終えてから外す(同じ枠に同じ種類の別の子が来ても受け継がない)
   try { if (typeof amgTick === 'function') void amgTick(bed.aid); } catch (_) {}
   return true;
 };
@@ -78716,7 +78740,7 @@ function AmgsSleepButton({ aid, row }) {
 
 // 合体の画面: ①主を選ぶ ②素材を選ぶ(同じ助手) ③見通し ④素材がいなくなる確認(2回押す)
 function AmgsFuseSheet({ beds, onClose }) {
-  const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0); const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null);
+  const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0); const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null); const [ready, setReady] = React.useState(true);
   const all = AMGS_STORE ? AMGS_STORE.state.beds : beds;
   const main = all.find(b => b.id === mainId) || null; const mat = all.find(b => b.id === matId) || null;
   const plan = main && mat ? amgsFusePlan(main, mat) : null;
@@ -78728,7 +78752,8 @@ function AmgsFuseSheet({ beds, onClose }) {
       <span className="min-w-0 flex-1 text-[12px] font-black">{nm(b)} <small className="text-[10px] text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid}のマスモン</small>
         <small className="block text-[10px] text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ 6能力の合計 {AMG_KEYS.reduce((a, k) => a + (b.g.st[k] || 0), 0)}</small></span>
     </button>);
-  const go = () => { if (sure < 1) { setSure(1); return; } const r = amgsFuse(main.id, mat.id); if (r === true) { setDone({ name: nm(main), lost: nm(mat) }); setErr(''); } else setErr(r); };
+  // 2回目の「本当に合体する」は、少し待ってから押せる(すばやい2度押しで通らない・ミハリ fable)
+  const go = () => { if (!ready) return; if (sure < 1) { setSure(1); setReady(false); setTimeout(() => setReady(true), 800); return; } const r = amgsFuse(main.id, mat.id); if (r === true) { setDone({ name: nm(main), lost: nm(mat) }); setErr(''); } else setErr(r); };
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-amgs-fuse>
       <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
@@ -78758,7 +78783,7 @@ function AmgsFuseSheet({ beds, onClose }) {
             {typeof AmgpBars === 'function' && <AmgpBars st={mat.g.st}/>}
           </div>
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgs-fuse-err>{err}</p>}
-          <button type="button" onClick={go} data-amgs-fuse-go={sure} className={`mt-3 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{sure ? '本当に合体する' : '🧬 合体する'}</button>
+          <button type="button" onClick={go} disabled={!ready} data-amgs-fuse-go={sure} data-amgs-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{sure ? '本当に合体する' : '🧬 合体する'}</button>
           <button type="button" onClick={() => { setMat(null); setSure(0); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
         </>) : <p className="mt-2 text-[11px] font-bold text-slate-400">このマスモンどうしでは合体できません</p>}
         {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
