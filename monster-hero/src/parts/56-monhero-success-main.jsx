@@ -19,6 +19,9 @@ const MSX_ISSA_KEYS = Object.freeze([
 ]);
 const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 'tip', friend: 'friend' });
 
+// 音(14-success-sound.jsx の useSuccessSound)。無いときは何もしない(フックの数は変わらない)
+const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+const MSX_RES_SOUND = Object.freeze({ great: 'trainGreat', ok: 'trainOk', fail: 'trainFail', sab: 'trainSkip' });
 const msxLayout = () => {
   if (typeof window === 'undefined') return '';
   const w = window.innerWidth; const h = window.innerHeight;
@@ -72,12 +75,29 @@ function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const r = m.kind === 'base' ? 'G' : m.rank;
   return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}><img src={msxMonThumb(m.species)} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
 }
-function MsxMonArt({ run, className, style }) {
+// 育てるモンスターの絵。live のときは演出の部品 MsxLiveMon(#5752・待機のぴょこぴょこ・気分・反応)を箱いっぱいに置く。
+//   部品が無いときは絵だけ(live なら CSS で小さく弾む .msx-hop)。箱の大きさは className / style で決まる
+const msxMoodOf = (s) => {
+  if (!s) return 'calm';
+  if (typeof msxFxMoodOf === 'function') { try { const m = msxFxMoodOf(s); if (m) return m; } catch (e) {} }
+  const r = s.hpMax > 0 ? s.hp / s.hpMax : 1;
+  if (s.yosu && s.yosu.utsu) return 'sad';
+  if (r < 0.3) return 'tired';
+  if (s.stress >= 60) return 'sulky';
+  if (r >= 0.85 && s.stress < 20) return 'joy';
+  return 'calm';
+};
+function MsxMonArt({ run, className, style, live = false, react = null }) {
   const sp = run.s.species;
-  if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
-    return <span className={className} style={style}><DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>;
+  if (live && typeof MsxLiveMon === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    return <span className={`${className || ''} msx-live`} style={style}><MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/></span>;
   }
-  return <img className={className} style={style} src={msxMonImg(sp)} alt=""/>;
+  const cls = `${className || ''}${live ? ' msx-hop' : ''}`;
+  if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
+    return <span className={cls} style={style}><DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>;
+  }
+  return <img className={cls} style={style} src={msxMonImg(sp)} alt=""/>;
 }
 function MsxSay({ aid, ex = 'happy', text }) {
   return <div className="v-sayrow"><img className="fc" src={msxFace(aid, ex)} alt=""/><div className="bub">{text}</div></div>;
@@ -192,6 +212,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
+  const [, setScriptTick] = useState(0);
+  // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
+  useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
+  const soundId = run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  msxUseSound(soundId, { season: msxCalendar(s.turn).season });
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
   const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '' };
@@ -245,7 +270,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
         {isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
         <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
-        <MsxMonArt run={run} className="mon" style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>
+        <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>
         <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
           {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>
         {members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
@@ -365,7 +390,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
-        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '40%' }}/>
+        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)', width: '20%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '28%' }} live/>
         <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw">{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
@@ -402,7 +427,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxSay aid={s.aid} ex={yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
-        <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`}/>
+        <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
         <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}

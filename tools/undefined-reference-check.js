@@ -79,6 +79,8 @@ const LATER_HOOKS = {
   amgEntryOf: '助手のマスモンの育成(第①段階・キズナ4)の入れ物。修行の相談が疲れ具合を見るのに使う。2026-11-11',
   assistantPartnerLockedNow: '会っているがまだ助手でない助手(町の人)か(カイホウ 18-assistant-partner.jsx)。助手ライフの🔒の判定(56-assistant-life-partner.jsx)。2026-11-11',
   assistantPartnerProgressNow: '解放前の助手(町の人)の解放までの進み具合(カイホウ 18-assistant-partner.jsx)。助手ライフの町の人の小窓(56-assistant-life-partner.jsx)が「あと何回」に使う。2026-11-11',
+  MsxLiveMon: 'モンヒロサクセスの育てるモンスターの演出(待機のぴょこぴょこ・気分・反応。開発部 演出が 56-monhero-success-fx.jsx で足す・#5752)。育成の画面が typeof で確かめて置く。2026-11-12',
+  msxFxMoodOf: '同じ演出の部品の「芯の状態 → 気分8つ」(#5752)。無ければ育成の画面が自分で決める。2026-11-12',
   MsxR3: 'モンヒロサクセスの大会・修行・引退・ゲームオーバーの画面(回3のクラフトが 56-monsuc-r3-*.jsx で足す)。育成の画面(56-monhero-success-main.jsx)が typeof で確かめて渡す。2026-11-12',
   assistantPartnerOkNow: '解放前の助手に関われないようにする判定(カイホウ 18-assistant-partner.jsx)。モンヒロバトルの応援・修行を見るが通す。2026-11-11',
 };

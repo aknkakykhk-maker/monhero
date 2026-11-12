@@ -583,6 +583,13 @@ const MSX_CSS = `
 .msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
+/* 社長「育成中のメイン・訓練の画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+.msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
+.msx span.mon{display:block}
+.msx .mon.msx-live{animation:none;filter:none}
+/* 演出の部品が無いときだけの跳ね(小さく4回・5回目に大きく)。translate だけを動かすので、位置の transform とぶつからない */
+.msx .mon.msx-hop{animation:msx-hop 3.4s ease-in-out infinite}
+@keyframes msx-hop{0%,14%,28%,42%,56%,100%{translate:0 0}7%,21%,35%,49%{translate:0 -5%}70%{translate:0 -16%}84%{translate:0 0}}
 .msx-pop{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1)}
 @keyframes msx-breathe{0%,100%{scale:1}50%{scale:1.025}}
 @keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
