@@ -22,7 +22,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 3;   // 計算を変えたら上げる(ランキングの行に残る)。2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す(2026-11-12)
+  const VERSION = 4;   // 計算を変えたら上げる(ランキングの行に残る)。2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す(2026-11-12)
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
   const STAT_MAX = 999;
@@ -182,6 +182,11 @@
     kunpow: { type: 'with', stat: 'pow' }, kunwise: { type: 'with', stat: 'wise' }, kunhit: { type: 'with', stat: 'hit' },
     kuneva: { type: 'with', stat: 'eva' }, kuntough: { type: 'with', stat: 'tough' }, kunlife: { type: 'with', stat: 'life' },
     nakayoshi: { type: 'with' }, tagpow: { type: 'with' }, shitashi: { type: 'self' },
+    // いるだけ型(体力・ようす・編成の7つ・依頼③の1つ目)。編成でいちばん高い段の1つだけ効く(stayLv)
+    //   shitsuke: 褒める・叱るで上がる忠誠度 +v%/gussuri: 休んだときの体力の回復 +v%/asobi: 遊んだときの体力の回復と甘え度 +v%/
+    //   kuishinbo: ごはんの効き目 +v%/tsukisoi: 通院で治る率 +v点/genki: けが・病気・家出になる率 −v%/tairyoku: 体力の上限 +v(はじめから)
+    shitsuke: { type: 'stay' }, gussuri: { type: 'stay' }, asobi: { type: 'stay' }, kuishinbo: { type: 'stay' },
+    tsukisoi: { type: 'stay' }, genki: { type: 'stay' }, tairyoku: { type: 'stay' },
   });
   const ASSIST_MAX = 4;
   const ASSIST_LV_MAX = 5;   // 持ち物の段の上限(第2版)。表が第1版のときも段4・5の持ち物は削らない(効き目は表の段数で頭打ち)
@@ -430,6 +435,7 @@
       return r2(v);
     };
     const stayLv = (team, id) => team.reduce((a, m) => Math.max(a, assistLv(m, id)), 0); // いるだけ型は編成でいちばん高い段の1つだけ
+    const stayNum = (s, id) => { const lv = stayLv(s.team, id); return lv ? num(aOf(id, 'v', lv)) : 0; }; // その効き目の数(無ければ 0)
 
     // ---- はじめる ----
     const newRun = (o) => {
@@ -450,6 +456,7 @@
       if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { bag[k] = n; room -= n; } }
       const good = {}; let hpMax = HP_MAX0; let issaForce = false;
       carry.forEach(k => { const it = ITEMS[k]; if (it.good) good[it.good] = true; if (it.hpMax) hpMax = Math.min(HP_MAX_CAP, hpMax + it.hpMax); if (it.issaForce) issaForce = true; });
+      const ty = stayLv(team, 'tairyoku'); if (ty) hpMax = Math.min(HP_MAX_CAP, hpMax + num(aOf('tairyoku', 'v', ty))); // 💪体力自慢
       const hn = stayLv(team, 'hitonatsu');
       return {
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
@@ -619,13 +626,13 @@
 
     const condRoll = (s, rng, kind) => {
       // けが(体力が少ないときの訓練)・病気(ストレス)・家出(忠誠が低くストレスが高い)
-      const ratio = s.hp / s.hpMax; const soft = s.aid === 'sorashido' ? COND.sorashido : 1;
+      const ratio = s.hp / s.hpMax; const soft = (s.aid === 'sorashido' ? COND.sorashido : 1) * (1 - Math.min(0.8, stayNum(s, 'genki') / 100)); // 🍀元気のお守り
       if (kind === 'train' && ratio < COND.injLowHp && rng() < COND.injTrain * soft * (EV ? EV.mod(s, 'inj') : 1)) {
         let len = rng() < 0.5 ? COND.injLen[0] : COND.injLen[1]; if (s.aid === 'erubin') len = Math.max(1, len - 1);
         return { kind: 'injury', left: len };
       }
       if (s.stress >= COND.illStress && rng() < COND.illRate * soft) return { kind: 'ill', left: COND.illLen };
-      if (loyalOf(s) < COND.awayLoyal && s.stress >= COND.awayStress && rng() < COND.awayRate) { addLoyal(s, COND.awayAma, COND.awayFear); return { kind: 'away', left: COND.awayLen }; }
+      if (loyalOf(s) < COND.awayLoyal && s.stress >= COND.awayStress && rng() < COND.awayRate * (1 - Math.min(0.8, stayNum(s, 'genki') / 100))) { addLoyal(s, COND.awayAma, COND.awayFear); return { kind: 'away', left: COND.awayLen }; }
       return null;
     };
 
@@ -722,15 +729,16 @@
       }
       if (kind === 'rest') {
         let x = rng(); let pick = REST[1]; for (const r of REST) { if (x < r.p) { pick = r; break; } x -= r.p; }
-        recover(s, pick.rec); addStress(s, REST_STRESS * (s.aid === 'mua' ? 1.3 : 1));
+        recover(s, pick.rec * (1 + stayNum(s, 'gussuri') / 100)); addStress(s, REST_STRESS * (s.aid === 'mua' ? 1.3 : 1)); // 💤ぐっすり
         s.log.rest += 1; out.rest = pick.key; s.last = { kind }; s.acted = true;
         const cd = condRoll(s, rng, kind); if (cd) { s.cond = cd; out.cond = cd.kind; }
         return { state: s, out };
       }
       if (kind === 'play') {
-        recover(s, PLAY.rec); addStress(s, PLAY.stress * (s.aid === 'mua' ? 1.3 : 1));
+        const asb = 1 + stayNum(s, 'asobi') / 100; // 🪁遊び上手
+        recover(s, PLAY.rec * asb); addStress(s, PLAY.stress * (s.aid === 'mua' ? 1.3 : 1));
         if (s.yosu.utsu) { delete s.yosu.utsu; out.cured = ['utsu']; } // 遊ぶでうつ病が治る(先に治してから甘え度を足す)
-        addLoyal(s, PLAY.ama, 0);
+        addLoyal(s, PLAY.ama * asb, 0);
         s.log.play += 1; s.last = { kind }; s.acted = true;
         return { state: s, out };
       }
@@ -739,7 +747,7 @@
         const cured = [];
         for (const key of ['sabori', 'utsu']) {
           const y = s.yosu[key]; if (!y) continue;
-          const p = y.visits >= 1 ? 1 : CLINIC.first + (s.aid === 'erubin' ? CLINIC.erubinAdd : 0);
+          const p = y.visits >= 1 ? 1 : CLINIC.first + (s.aid === 'erubin' ? CLINIC.erubinAdd : 0) + stayNum(s, 'tsukisoi') / 100; // 🏥通院の付きそい
           if (rng() < p) { delete s.yosu[key]; cured.push(key); } else y.visits += 1;
         }
         recover(s, CLINIC.rec); s.log.clinic += 1; out.cured = cured; s.last = { kind }; s.acted = true;
@@ -754,7 +762,7 @@
       if (!s.last || !['train', 'shugyo'].includes(s.last.kind) || s.reacted) return { state: s, out: { ok: false } };
       const good = s.last.res === 'great' || s.last.res === 'ok';
       s.reacted = true;
-      const up = (x) => x;
+      const shk = 1 + stayNum(s, 'shitsuke') / 100; const up = (x) => (x > 0 ? x * shk : x); // 📏しつけ上手: 上がる分だけ増える
       if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0] + evMod(s, 'scold')), up(d[1])); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
@@ -786,9 +794,10 @@
       const free = s.freeMeal === true; // えるびんの見守りの大会: 次のごはんが1回ただ
       if (!s.mealReady || !m || (!free && s.fame < m.cost) || s.over) return { state: s0, out: { ok: false } };
       if (free) s.freeMeal = false; else s.fame -= m.cost; s.mealReady = false;
-      if (m.hp) recover(s, m.hp);
-      if (m.ama || m.fear) addLoyalRaw(s, m.ama || 0, m.fear || 0);
-      if (m.all) KEYS.forEach(k => addStat(s, k, unitOf(s, k) * m.all));
+      const kui = 1 + stayNum(s, 'kuishinbo') / 100; // 🍙食いしん坊: ごはんの効き目が増える
+      if (m.hp) recover(s, m.hp * kui);
+      if (m.ama || m.fear) addLoyalRaw(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
+      if (m.all) KEYS.forEach(k => addStat(s, k, unitOf(s, k) * m.all * kui));
       s.log.meal = (s.log.meal || 0) + 1;
       return { state: s, out: { ok: true, meal: key } };
     };
