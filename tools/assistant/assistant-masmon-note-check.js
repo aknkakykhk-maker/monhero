@@ -3,7 +3,7 @@
 //   node tools/assistant/assistant-masmon-note-check.js          検査
 //   node tools/assistant/assistant-masmon-note-sim.js 相当の試算は  --sim [日数...](30・90 日の計画あり/なしの差・けがなどの回数)
 //   ① 印が偽なら育成の結果は今と全く同じ ② 保存の正規化(壊れた値・知らない予定は「まかせる」・計画の子は5体まで)
-//   ③ 段 7・21・42・70 日 ④ 計画の子の数は段まで・外しても予定は消さない ⑤ 計画の回は 1.3倍・失敗半分・1日20まで・自動で休まない
+//   ③ 段 5・12・20・30 日 ④ 計画の子の数は段まで・外しても予定は消さない ⑤ 計画の回は 1.3倍・失敗半分・1日20まで・自動で休まない
 //   ⑥ 同じ種なら同じ結果 ⑦ けが・病気・家出・サボりが起き、その間は伸びない・能力は下がらない ⑧ 看病・さがす・病院(1回ずつ)
 //   ⑨ 指定の引き継ぎは1度だけ・育成のキーは書き換えない ⑩ 次の回だけ変える ⑪ 読み込む前は書かない ⑫ 冬眠 ⑬ 合体
 'use strict';
@@ -64,8 +64,8 @@ const ON = { assistantMasmonGrow: true, assistantMasmonPlan: true };
 // ③ 段
 {
   const T = make(ON).T;
-  const r = [0, 6, 7, 20, 21, 41, 42, 69, 70, 999].map(d => T.amgpStageOf(d).cap).join(',');
-  check('③ 段の区切りは 7・21・42・70 日(1体→5体)', r === '1,1,2,2,3,3,4,4,5,5', r);
+  const r = [0, 4, 5, 11, 12, 19, 20, 29, 30, 999].map(d => T.amgpStageOf(d).cap).join(',');
+  check('③ 段の区切りは 5・12・20・30 日(1体→5体)', r === '1,1,2,2,3,3,4,4,5,5', r);
 }
 // ④ 計画の子の数・外しても予定は残る
 {
@@ -159,6 +159,17 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   const { T, st } = planned(Array(21).fill('H:pow'), 1);
   const fw = T.amgpForecastWeek('kiki', ROW, entry(st, ROW), 'kiki:1:Golem', slotAt(S0 + 1));
   check('見通し: 7日ぶん・重い訓練ばかりなら疲れが70を超える日がある', fw.days.length === 7 && fw.days.some(d => d.fat >= 70) && fw.total.pow && fw.total.pow[0] > 0);
+  // fable の指摘(11-12): ① 過ぎた回は数えない(まかせるで計算しない) ③ 1日の上の値も上限20まで・その日にもう伸びた分を引く ② けが等の回は訓練しない
+  const e = entry(st, ROW); const d0 = T.amgSlotDay(S0 + 1);
+  check('見通し: 今日の過ぎた回(朝・いまの昼)は数えず、夜の疲れは今の疲れから続ける', fw.days[0].f[0] === null && fw.days[0].f[1] === null && fw.days[0].f[2] && fw.days[0].f[2].fat === Math.min(100, e.fat + 14), `${e.fat}→${fw.days[0].f[2] && fw.days[0].f[2].fat}`);
+  const hiSum = (d) => d.f.reduce((a, f) => a + (f ? Object.values(f.g).reduce((x, [, b]) => x + b, 0) : 0), 0);
+  check('見通し: 1日の伸びの上の値は20まで', fw.days.every(d => hiSum(d) <= 20), fw.days.map(hiSum).join(','));
+  const fw2 = T.amgpForecastWeek('kiki', ROW, { ...e, dg: { d: d0, n: 15 } }, 'kiki:1:Golem', slotAt(S0 + 1));
+  check('見通し: 今日もう15伸びていたら、今日の見通しは残り5まで', hiSum(fw2.days[0]) <= 5 && hiSum(fw2.days[1]) > 5, `${hiSum(fw2.days[0])}/${hiSum(fw2.days[1])}`);
+  T.AMGP_CSTORE.set({ ...T.AMGP_CSTORE.state, mons: { 'kiki:1:Golem': { k: 'hurt', from: S0 + 1, until: S0 + 6, care: -1, find: -1, hosp: [] } } });
+  const fw3 = T.amgpForecastWeek('kiki', ROW, e, 'kiki:1:Golem', slotAt(S0 + 1));
+  const f3 = fw3.days[1].f[0];
+  check('見通し: けがの回は訓練しない(灰色・伸びなし・休みと同じ疲れの減り)', f3 && f3.cond === 'hurt' && Object.keys(f3.g).length === 0 && fw3.days[1].f.every(f => f && f.cond === 'hurt') && hiSum(fw3.days[2]) > 0);
 }
 
 // ⑫ 冬眠(56-assistant-life-masmon-sleep.jsx)
@@ -172,7 +183,7 @@ const planned = (codes, slots, seed = SEED, extra = null) => {
   const S = ctx.S; const T = ctx.T;
   const n = S.normalizeAssistantMasmonSleep({ beds: [{ id: 'b1', aid: 'kiki', slot: 2, row: { monster: 'Tiger', nick: 'x' } }, { id: 'b1', aid: 'kiki', slot: 2, row: { monster: 'Tiger' } }, { id: 'b2', aid: 'kiki', slot: 9, row: { monster: 'Tiger' } }, { id: 'b3', aid: 'kiki', slot: 1, row: { monster: 'Nope' } }] });
   check('⑫ 冬眠の保存: 同じ id・おかしな枠・知らない種類は捨てる', n.beds.length === 1 && n.seq === 1);
-  check('⑫ しまえる数は はじめ10・段ごとに+5・最大30', [0, 7, 21, 42, 70].map(S.amgsCapOf).join(',') === '10,15,20,25,30');
+  check('⑫ しまえる数は はじめ10・段ごとに+5・最大30', [0, 5, 12, 20, 30].map(S.amgsCapOf).join(',') === '10,15,20,25,30');
   T.AMG_STORE.loaded = true; T.AMGP_STORE.loaded = true; T.AMGP_CSTORE.loaded = true; S.AMGS_STORE.loaded = true;
   T.AMG_STORE.set(T.amgCatchUp(T.normalizeAssistantMasmonGrow(null), 'kiki', [ROW, ROW2], SEED, S0));
   const a = S.amgsSyncFormer(); const b = S.amgsSyncFormer();
