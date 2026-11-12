@@ -1,0 +1,613 @@
+// モンヒロサクセス(プレイヤー側のターン制の育成)の「計算の芯」(段取りの回1・2026-11-12 クラフトくん)
+// 案: docs/progress/player-raise/PLAN.md(§1・§2)/ ASSIST.md(§0b〜§4)/ TOURNAMENT.md(§1・§1b・§6・§9・§12)/ EVENTS.md(4-⑥・§14)
+//
+// ★画面なし・保存なし・印なし。いまは index.html から読まれず、誰にも見えない(画面と保存は回2)。
+// ★React・window・localStorage・Date・Math.random を使わない。乱数は「育成の id + ターン + 用途」から作る決まった乱数だけ
+//   (同じ育成を同じ手で進めれば、端末が変わっても中断して続けても同じ結果になる)。
+// ★助手マスモンの計算(MASMON_CALC)と、種ごとの素質の表(AMG_APT・AMG_INIT)は写さずに使い回す。
+//   それらはゲーム本体(src/parts/56-assistant-life-masmon-*.jsx)にあるので、外から渡してもらう:
+//     const SUC = MONHERO_SUCCESS.create({ calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT });
+//   試算と検査(tools/success/)は Node で parts から取り出して渡す(tools/success/load.js)。
+// ★試合そのもの(助手マスモン対戦の芯)はここでは回さない。大会は「相手を作る」と「勝ち負けを受けて結果を付ける」だけ。
+//
+// 1ターンの進め方(画面からも試算からも同じ順で呼ぶ):
+//   let s = SUC.newRun({ id, species, aid, team, aidBondLv });
+//   const v = SUC.peek(s);                 // そのターンの札(編成の子が集まった訓練)・博士が来たか・できること
+//   s = SUC.act(s, { kind:'light', stat:'pow' }).state;   // 訓練(light/heavy)・rest・play・clinic・retry(デビュー戦の再挑戦)
+//   s = SUC.react(s, 'praise').state;      // 訓練の結果のあとに 褒める/叱る/なし(null)
+//   s = SUC.issa(s, 'hp').state;           // 博士が来ていれば(peek().issa)、選ぶ(none でもよい)
+//   s = SUC.endTurn(s).state;              // ターンを閉じる。期末・頂への道なら s.battle に「戦う大会」が入る
+//   while (s.battle) { const opp = SUC.opponents(s); /* 対戦の芯で戦う */ s = SUC.settle(s, wins).state; }
+//   if (s.over) { const ev = SUC.evaluate(s); }  // 引退(総合力・ランク・アシストポイント)
+(function (root) {
+  'use strict';
+
+  const VERSION = 1;
+  const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+  const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
+  const STAT_MAX = 999;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const num = (v, d = 0) => (v === null || v === undefined || v === '' ? d : Number.isFinite(Number(v)) ? Number(v) : d);
+  const r2 = (v) => Math.round(v * 100) / 100;
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  // ---- 決まった乱数(FNV-1a で種を作り、mulberry32 で並べる) ----
+  const hashStr = (s) => { let h = 0x811c9dc5; const t = String(s); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; };
+  const rngOf = (...parts) => {
+    let a = hashStr(parts.join('|'));
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  };
+
+  // ---- 期とターン(TOURNAMENT.md §1・46ターン固定) ----
+  const PERIODS = Object.freeze([
+    { key: 'debut', name: 'デビュー期', len: 5 },
+    { key: 'junior', name: 'ジュニア期', len: 12 },
+    { key: 'middle', name: 'ミドル期', len: 12 },
+    { key: 'pro', name: 'プロ期', len: 12 },
+    { key: 'final', name: '最後の期', len: 5 },
+  ]);
+  const TOTAL_TURNS = PERIODS.reduce((a, p) => a + p.len, 0); // 46
+  const periodOf = (turn) => {
+    let t = clamp(Math.round(num(turn, 1)), 1, TOTAL_TURNS); let start = 1;
+    for (let i = 0; i < PERIODS.length; i++) { const p = PERIODS[i]; if (t < start + p.len) return { index: i, key: p.key, name: p.name, len: p.len, start, at: t - start + 1, left: start + p.len - t }; start += p.len; }
+    const p = PERIODS[PERIODS.length - 1]; return { index: PERIODS.length - 1, key: p.key, name: p.name, len: p.len, start: TOTAL_TURNS - p.len + 1, at: p.len, left: 1 };
+  };
+  // 期末の強制大会(ターンを使わない)。星: 1=★ 2=★★ 3=★★★ 4=👑
+  const FORCED = Object.freeze({
+    debut: { key: 'debut', name: 'デビュー戦', star: 1, matches: 1, all: 0, pts: 5, pop: 3, title: 'はじめの一歩' },
+    junior: { key: 'junior', name: 'ジュニアしめくくり杯', star: 2, matches: 2, all: 2, pts: 5, pop: 2, title: 'ジュニアの星' },
+    middle: { key: 'middle', name: 'ミドルしめくくり杯', star: 3, matches: 3, all: 3, pts: 10, pop: 4, title: 'ミドルの星' },
+    pro: { key: 'pro', name: '冬のヒーロー記念', star: 4, matches: 3, all: 4, pts: 20, pop: 8, title: 'ヒーロー記念', crown: true },
+  });
+  // 頂への道(最後の期の 3・4・5ターン目の終わりに1戦ずつ・負けたら終わり)
+  const SUMMIT = Object.freeze([{ round: 1, name: '頂への道 1回戦', mult: 1.2 }, { round: 2, name: '頂への道 準決勝', mult: 1.3 }, { round: 3, name: '頂への道 決勝', mult: 1.4 }]);
+  const SUMMIT_FINAL = Object.freeze({ plain: { all: 8, pts: 30, pop: 10, title: '頂に立った子' }, big: { all: 15, pts: 60, pop: 20, title: 'ヒーローの頂' } });
+  const DEBUT_LOSS_MAX = 3;        // デビュー戦に3回負けたらゲームオーバー(§12 E)
+  const DEBUT_RETRY_WEAKEN = 0.1;  // 負けるたびに相手が1割ずつ弱く(§12 D)
+  const DEBUT_RETRY_FLOOR = 0.6;   // はじめの6割まで
+
+  // ---- 基礎数値(試算 tools/success/success-sim.js で合わせる。ASSIST.md §4 の「基礎数値」) ----
+  const BASE = Object.freeze({
+    light: 12,                                   // 軽い訓練の主の能力の基礎(「軽い訓練1回ぶん」の物差しもこれ)
+    lightSub: [0.3, 0.1],                        // 軽い訓練のほか2つ(主に対する割合)
+    heavy: 1.7, heavySub: [0.45, 0.2],           // 重い訓練(主は軽いの 1.7 倍)
+    heavyDrop: 0.3,                              // 重い訓練で少し下がる能力(主に対する割合)
+    hpLight: 12, hpHeavy: 22,                    // 体力の減り
+    stLight: 3, stHeavy: 6,                      // ストレスの増え(方針の倍率をかける)
+  });
+  // 重い訓練で少し下がる能力(主 → 下がる能力)
+  const HEAVY_DROP = Object.freeze({ life: 'eva', pow: 'eva', wise: 'pow', hit: 'tough', eva: 'tough', tough: 'eva' });
+  // 1回の訓練で上がる3能力の組み合わせ(主 → [ほか1, ほか2])は助手ごとに違う(台帳 2026-11-12)
+  const TRAIN_COMBO = Object.freeze({
+    mua: { life: ['pow', 'tough'], pow: ['life', 'hit'], wise: ['hit', 'eva'], hit: ['pow', 'eva'], eva: ['hit', 'life'], tough: ['life', 'pow'] },
+    kiki: { life: ['wise', 'tough'], pow: ['wise', 'tough'], wise: ['pow', 'hit'], hit: ['wise', 'pow'], eva: ['wise', 'hit'], tough: ['pow', 'life'] },
+    momosuke: { life: ['eva', 'wise'], pow: ['eva', 'life'], wise: ['eva', 'life'], hit: ['eva', 'wise'], eva: ['life', 'wise'], tough: ['eva', 'life'] },
+    dra: { life: ['tough', 'pow'], pow: ['tough', 'hit'], wise: ['tough', 'life'], hit: ['pow', 'tough'], eva: ['tough', 'pow'], tough: ['pow', 'life'] },
+    atsu: { life: ['wise', 'hit'], pow: ['life', 'eva'], wise: ['hit', 'life'], hit: ['eva', 'wise'], eva: ['hit', 'tough'], tough: ['life', 'wise'] },
+    kyuko: { life: ['wise', 'eva'], pow: ['wise', 'life'], wise: ['life', 'hit'], hit: ['wise', 'eva'], eva: ['wise', 'hit'], tough: ['wise', 'life'] },
+    sorashido: { life: ['hit', 'tough'], pow: ['hit', 'wise'], wise: ['hit', 'tough'], hit: ['wise', 'life'], eva: ['hit', 'wise'], tough: ['hit', 'eva'] },
+    erubin: { life: ['tough', 'eva'], pow: ['tough', 'life'], wise: ['life', 'tough'], hit: ['tough', 'eva'], eva: ['tough', 'life'], tough: ['life', 'eva'] },
+  });
+  const AIDS = Object.freeze(Object.keys(TRAIN_COMBO));
+
+  // ---- 結果(社長 2026-11-12: 大成功 ×1.5 / 成功 ×1 / 失敗 ×0 / サボり ×0.3) ----
+  const RESULTS = Object.freeze({
+    great: { name: '大成功', mult: 1.5, hp: 1, stress: -2 },
+    ok: { name: '成功', mult: 1, hp: 1, stress: 0 },
+    fail: { name: '失敗', mult: 0, hp: 1, stress: 2 },
+    sab: { name: 'サボり', mult: 0.3, hp: 0.3, stress: -3 },
+  });
+  const RATE = Object.freeze({
+    great: 0.08, greatLoyal80: 0.03,             // 大成功の土台・忠誠80〜で +3%(ASSIST §4c)
+    fail: 0.03,                                  // 失敗の土台(体力が十分なとき)
+    failHpFrom: 0.5,                             // 体力が上限のこの割合を下回ると失敗が増えはじめる
+    failHpTop: 0.7,                              // 体力0のときに足される失敗の率(二乗で増える = どんどん上がる)
+    saboriGuse: 0.05,                            // ようす「サボりグセ」= 失敗率の下限 +5%(台帳 2026-11-12)
+    sab: [0.04, 0.08, 0.12],                     // サボり: 甘い・溺愛・超溺愛(普通〜厳しい側では起きない)
+    sabAmaHi: 1.2,                               // 甘え度 40〜 で少し起きやすい
+    failFearHi: 0.9,                             // 恐れ度 40〜 で失敗が少し減る
+    failCap: 0.9,
+  });
+
+  // ---- 休む・遊ぶ・通院(社長 2026-11-12) ----
+  const REST = Object.freeze([{ key: 'poor', name: 'あんまり休めなかった', p: 0.1, rec: 0.5 }, { key: 'normal', name: '普通の休養', p: 0.7, rec: 0.7 }, { key: 'great', name: 'がっつり休めた', p: 0.2, rec: 0.9 }]);
+  const PLAY = Object.freeze({ rec: 0.5, ama: 5, stress: -20 });
+  const REST_STRESS = -10;
+  const CLINIC = Object.freeze({ first: 0.7, erubinAdd: 0.1, rec: 0.3 }); // 1回目70%・2回目は必ず(社長)・1ターンだけ
+  const HP_MAX0 = 100, HP_MAX_CAP = 160;
+
+  // ---- 体調(けが・病気・家出。長さはターン) ----
+  const COND = Object.freeze({
+    injLowHp: 0.3, injHeavy: 0.12, injLight: 0.06, injLen: [1, 2],
+    illStress: 70, illRate: 0.10, illLen: 1,
+    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: -8, awayFear: -4,
+    rec: 0.3, sorashido: 0.7,
+  });
+
+  // ---- 忠誠度 = 甘え度 + 恐れ度(各50まで・ASSIST §4c) ----
+  const LOYAL = Object.freeze({
+    half: 50, start: [10, 10], capBoost: 60, // 補正 = 1 + min(忠誠,60)/100
+    praiseGood: [4, 0], praiseBad: [2, -2], scoldBad: [0, 4], scoldGood: [-3, 1],
+    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [-1, -1],
+  });
+  // 方針の段(-3〜+3)で、甘え度・恐れ度の上がり方が変わる(甘い側ほど甘えが上がりやすい)
+  const POL_AMA = Object.freeze([1.5, 1.35, 1.2, 1, 0.8, 0.65, 0.5]);
+  const POL_FEAR = Object.freeze([0.5, 0.65, 0.8, 1, 1.2, 1.35, 1.5]);
+
+  // ---- 編成(ASSIST §0b・§4a・§4b) ----
+  const TEAM_SIZE = 6;
+  const RANK_KEYS = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'M'];
+  const RANK_ADD = Object.freeze({ G: 0, F: 0, E: 1, D: 1, C: 2, B: 3, A: 4, S: 5, SS: 6, SSS: 6, M: 8 });       // 能力の補正の上乗せ(%)
+  const TAG_POWER = Object.freeze({ base: 15, G: 20, F: 20, E: 22, D: 22, C: 24, B: 25, A: 27, S: 30, SS: 32, SSS: 32, M: 35, aid: 25 }); // タッグの強さ(%)
+  const BOND_START = Object.freeze({ base: 0, G: 10, F: 10, E: 15, D: 15, C: 20, B: 25, A: 30, S: 35, SS: 40, SSS: 40, M: 50 });
+  const POS_COEF = [1.0, 0.9, 0.8];
+  const GATHER = Object.freeze({ fav: 0.65, favCap: 0.9, top: [30, 20, 15], else: 20, none: 15, aidRate: 0.6, groupAdd: 0.10, groupMin: 3 });
+  const BOND = Object.freeze({ max: 100, tag: 80, train: 8, aidPerLv: 8, eventRate: 0.5 });
+  const STORY = Object.freeze([{ need: 0, p: 1, bond: 10 }, { need: 40, p: 0.7, bond: 10 }, { need: 60, p: 0.5, bond: 15 }]);
+  const LOTTERY = Object.freeze([{ key: 'self', p: 0.4 }, { key: 'rest', p: 0.25 }, { key: 'talk', p: 0.15 }, { key: 'tip', p: 0.1 }, { key: 'pal', p: 0.1 }]);
+  const START_STAT_DIV = 25; // はじめの能力 = 1位の値 ÷ 25
+
+  // ---- アシスト能力(ASSIST §1・§3) ----
+  const ASSISTS = Object.freeze({
+    sokoji: { name: '特訓の底力', type: 'with', v: [4, 7, 10], cost: [40, 80, 128] },
+    kaketsuke: { name: 'かけつけ', type: 'self', v: [8, 14, 20], cost: [32, 64, 104] },
+    hirameki: { name: 'ひらめき', type: 'with', v: [3, 5, 8], cost: [32, 64, 104] },
+    atooshi: { name: '得意の後押し', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
+    kizuna: { name: '信頼のきずな', type: 'with', v: [6, 10, 14], cost: [40, 80, 128] },
+    ochitsuki: { name: '落ち着き', type: 'with', v: [15, 25, 35], cost: [24, 48, 80] },
+    itawari: { name: 'いたわり', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
+    shugyo: { name: '修行の手ほどき', type: 'stay', v: [10, 18, 25], cost: [24, 48, 80] },
+    hitonatsu: { name: '人なつっこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
+  });
+  const ASSIST_MAX = 4;
+  const assistPointsOf = (power) => clamp(Math.floor(num(power) / 50), 20, 400);
+
+  // ---- イッサ博士(EVENTS.md 4-⑥・社長の確率どおり) ----
+  const ISSA = Object.freeze({
+    choices: Object.freeze({
+      stat: { name: 'ステータスアップ', p: 0.35 },
+      hpmax: { name: '体力上限アップ', p: 0.60 },
+      hp: { name: '体力回復', p: 0.90 },
+      loyal: { name: '忠誠度アップ', p: 0.75 },
+      pop: { name: '人気アップ', p: 0.75 },
+      none: { name: '何もしない', p: 0 },
+    }),
+    rate: 0.03, maxMeet: 3, stressNo: 70, // 出会う: ジュニア期の7ターン目〜プロ期の終わり・1ターン約3%・3回まで・ストレス70〜は来ない
+    upLoyal: 80, upHp: 0.7, upAgain: 0.05, up: 0.05, downHp: 0.3, downHpV: -0.10, downStress: 50, downStressV: -0.05, band: 0.10, top: 0.95,
+  });
+
+  // ---- 能力ポイント(TOURNAMENT §7b) ----
+  const PTS = Object.freeze({ hold: 200, line: { debut: 300, junior: 300, middle: 500, pro: 700, final: 700 } });
+
+  // ---- 経験と Lv(総合力の Lv × 15 に入る。助手マスモンとは別の速さ・案) ----
+  const XP = Object.freeze({ light: 2, heavy: 3, match: 2, need: (lv) => 3 + Math.floor(lv / 5) });
+  const LV_MAX = 99;
+
+  // ---- 大会の相手(TOURNAMENT §9) ----
+  // 基準の強さ B(6能力の合計)。試算(success-sim.js --calibrate)で「ふつうに育てた子」の勝率が
+  // ★ 約80%・★★ 約60%・★★★ 約45%・👑 約30%・頂への道の決勝 約25% になるよう求めた値(TOURNAMENT §9 の 8)
+  const BENCH = Object.freeze({ debut: 680, junior: 980, middle: 1440, pro: 1740, summit: 2050 });
+  const STAR_MULT = Object.freeze({ 1: 0.75, 2: 0.95, 3: 1.1, 4: 1.25 });
+  const ROUND_ADD = Object.freeze([0, 0.05, 0.10]); // 1回戦・準決勝・決勝(★★ は準決勝から)
+  const OPP_JITTER = 0.08;
+  const OPP_GEAR = Object.freeze({ debut: { techs: 2, mastery: 10, tactics: 5 }, junior: { techs: 2, mastery: 20, tactics: 10 }, middle: { techs: 3, mastery: 40, tactics: 20 }, pro: { techs: 4, mastery: 60, tactics: 30 }, final: { techs: 5, mastery: 80, tactics: 40 } });
+
+  const create = (deps) => {
+    const C = deps && deps.calc;
+    if (!C || typeof C.power !== 'function') throw new Error('monhero-success: calc(MASMON_CALC)が要る');
+    const APT = (deps && deps.apt) || {};
+    const BENCH_USE = Object.freeze({ ...BENCH, ...((deps && deps.bench) || {}) }); // 試算で基準を探すときだけ外から渡す
+    const INIT = (deps && deps.init) || {};
+    const APT_MULT = Object.freeze({ A: 1.3, B: 1.15, C: 1, D: 0.85, E: 0.7 }); // AMG_APT_MULT と同じ値
+    const speciesList = Object.keys(INIT).filter(k => Array.isArray(INIT[k]));
+    const aptStr = (sp) => (typeof APT[sp] === 'string' && APT[sp].length === 6 ? APT[sp] : 'CCCCCC');
+    const aptMult = (sp, k) => APT_MULT[aptStr(sp)[KEYS.indexOf(k)]] || 1;
+    const initStats = (sp) => { const a = Array.isArray(INIT[sp]) ? INIT[sp] : [100, 100, 100, 100, 100, 100]; const o = {}; KEYS.forEach((k, i) => { o[k] = clamp(Math.round(num(a[i], 100)), 0, STAT_MAX); }); return o; };
+    const normStats = (st, sp) => { const base = initStats(sp); const o = {}; KEYS.forEach(k => { o[k] = clamp(Math.round(num(st && st[k], base[k])), 0, STAT_MAX); }); return o; };
+    const sumOf = (st) => KEYS.reduce((a, k) => a + num(st[k]), 0);
+    const loyalOf = (s) => clamp(num(s.ama) + num(s.fear), 0, 100);
+    const loyalMult = (loy) => 1 + Math.min(num(loy), LOYAL.capBoost) / 100;
+
+    // 上位3つ(同じ値なら種の伸びやすさが高い方 → 能力の並び順)
+    const top3Of = (st, sp) => KEYS.slice().sort((a, b) => (st[b] - st[a]) || (aptMult(sp, b) - aptMult(sp, a)) || (KEYS.indexOf(a) - KEYS.indexOf(b))).slice(0, 3);
+    const aptTop3 = (sp) => KEYS.slice().sort((a, b) => (aptMult(sp, b) - aptMult(sp, a)) || (initStats(sp)[b] - initStats(sp)[a]) || (KEYS.indexOf(a) - KEYS.indexOf(b))).slice(0, 3);
+
+    // ---- 編成の1体(保存枠の子・フレンドの子・ベースモン)。6能力から毎回出し直す(送られた数字を信じない) ----
+    const normAssists = (list) => {
+      const out = []; const seen = {};
+      for (const a of Array.isArray(list) ? list : []) {
+        const id = a && typeof a === 'object' ? a.id : null; if (!ASSISTS[id] || seen[id]) continue;
+        out.push({ id, lv: clamp(Math.round(num(a.lv, 1)), 1, 3) }); seen[id] = true; if (out.length >= ASSIST_MAX) break;
+      }
+      return out;
+    };
+    const memberOf = (src) => {
+      const o = src && typeof src === 'object' ? src : {};
+      const sp = speciesList.includes(o.species) ? o.species : (speciesList[0] || 'Mocchi');
+      const base = o.kind !== 'raised';
+      const stats = base ? initStats(sp) : normStats(o.stats, sp);
+      const loy = base ? 0 : clamp(Math.round(num(o.loy)), 0, 100); const pop = base ? 0 : clamp(Math.round(num(o.pop)), 0, 100);
+      const lv = base ? 1 : clamp(Math.round(num(o.lv, 1)), 1, LV_MAX);
+      const masteries = base ? [] : (Array.isArray(o.masteries) ? o.masteries.slice(0, 8).map(m => clamp(num(m), 0, 100)) : []);
+      const power = C.power({ stats, masteries, lv, loyal: loy, pop });
+      const rank = base ? 'base' : C.rankOf(power).key;
+      const top = base ? aptTop3(sp) : top3Of(stats, sp);
+      const assists = base ? [] : normAssists(o.assists);
+      const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
+      const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[rank])); });
+      const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? ASSISTS.kaketsuke.v[kake - 1] / 100 : 0));
+      const hn = lvOf('hitonatsu');
+      return {
+        kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, rank, power, top, assists, bonus, fav,
+        tag: base ? TAG_POWER.base : TAG_POWER[rank], bond0: clamp((base ? BOND_START.base : BOND_START[rank]) + (hn ? ASSISTS.hitonatsu.start[hn - 1] : 0), 0, BOND.max),
+        startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
+      };
+    };
+    const assistLv = (m, id) => { const a = m.assists.find(x => x.id === id); return a ? a.lv : 0; };
+    // その子がその能力の訓練にいるときの効き(%)= 能力の補正 + いっしょ型アシスト
+    const memberEffect = (m, k, loy) => {
+      let v = m.bonus[k] || 0;
+      const so = assistLv(m, 'sokoji'); if (so) v += ASSISTS.sokoji.v[so - 1];
+      const at = assistLv(m, 'atooshi'); if (at && m.top[0] === k) v += ASSISTS.atooshi.v[at - 1];
+      const ki = assistLv(m, 'kizuna'); if (ki) v += ASSISTS.kizuna.v[ki - 1] * clamp(num(loy), 0, 100) / 100;
+      return r2(v);
+    };
+    const stayLv = (team, id) => team.reduce((a, m) => Math.max(a, assistLv(m, id)), 0); // いるだけ型は編成でいちばん高い段の1つだけ
+
+    // ---- はじめる ----
+    const newRun = (o) => {
+      const src = o && typeof o === 'object' ? o : {};
+      const id = typeof src.id === 'string' && src.id ? src.id.slice(0, 64) : 'run';
+      const species = speciesList.includes(src.species) ? src.species : (speciesList[0] || 'Mocchi');
+      const aid = AIDS.includes(src.aid) ? src.aid : 'mua';
+      const raw = Array.isArray(src.team) ? src.team.slice(0, TEAM_SIZE) : [];
+      while (raw.length < TEAM_SIZE) raw.push({ kind: 'base', species }); // 空いた枠はベースモン(育てる子と同じ種)
+      const team = raw.map(memberOf);
+      const typeIdx = Number.isInteger(src.type) ? clamp(src.type, 0, 5) : C.typeFromApt(aptStr(species), rngOf(id, 'type')());
+      const stats = initStats(species);
+      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v, 0, STAT_MAX); });
+      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
+      const hn = stayLv(team, 'hitonatsu');
+      return {
+        v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax: HP_MAX0, hp: HP_MAX0, stress: 0,
+        ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
+        team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? ASSISTS.hitonatsu.start[hn - 1] : 0), 0, BOND.max),
+        cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
+        debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
+        log: { train: 0, great: 0, ok: 0, fail: 0, sab: 0, rest: 0, play: 0, clinic: 0, cond: 0, events: 0, story: 0, lottery: 0, tagTurns: [0, 0, 0, 0], wins: 0, losses: 0, issa: [] },
+      };
+    };
+
+    // ---- そのターンの集まり(決まった乱数: 育成の id + ターン) ----
+    const cardKey = (kind, stat) => `${kind}:${stat}`;
+    const gatherOf = (s) => {
+      const rng = rngOf(s.id, s.turn, 'gather');
+      const cards = {}; for (const kind of ['light', 'heavy']) for (const k of KEYS) cards[cardKey(kind, k)] = { kind, stat: k, members: [], aid: false };
+      s.team.forEach((m, i) => {
+        const x = rng(); const kind = rng() < 0.5 ? 'light' : 'heavy'; const y = rng();
+        const favUnit = m.fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]); const restUnit = (1 - m.fav) / (GATHER.else + GATHER.none);
+        let a = 0; let stat = null;
+        for (let j = 0; j < 3 && !stat; j++) { a += GATHER.top[j] * favUnit; if (x < a) stat = m.top[j]; }
+        if (!stat) { a += GATHER.else * restUnit; if (x < a) { const others = KEYS.filter(k => !m.top.includes(k)); stat = others[Math.floor(y * others.length)]; } }
+        if (stat) cards[cardKey(kind, stat)].members.push(i);
+      });
+      if (rng() < GATHER.aidRate) { const all = Object.keys(cards); cards[all[Math.floor(rng() * all.length)]].aid = true; }
+      return cards;
+    };
+    // その札の「足し算」と「タッグ」(ASSIST §4)
+    const cardMult = (s, card) => {
+      const loy = loyalOf(s); let add = 0; let tag = 0; const tags = [];
+      card.members.forEach(i => { const m = s.team[i]; add += memberEffect(m, card.stat, loy) / 100; if (s.bond[i] >= BOND.tag) { tag += m.tag / 100; tags.push(i); } });
+      if (card.members.length >= GATHER.groupMin) add += GATHER.groupAdd;
+      if (card.aid && s.aidBond >= BOND.tag) { tag += TAG_POWER.aid / 100; tags.push('aid'); }
+      return { add: r2(add), tag: r2(tag), tags, mult: r2((1 + add) * (1 + tag)) };
+    };
+
+    // ---- 確率 ----
+    const failRateOf = (s, card) => {
+      const ratio = s.hpMax > 0 ? s.hp / s.hpMax : 0;
+      let f = RATE.fail + (s.yosu.sabori ? RATE.saboriGuse : 0);
+      if (ratio < RATE.failHpFrom) { const d = (RATE.failHpFrom - ratio) / RATE.failHpFrom; f += d * d * RATE.failHpTop; }
+      let cut = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], 'ochitsuki'); if (lv) cut += ASSISTS.ochitsuki.v[lv - 1] / 100; });
+      f *= 1 - Math.min(0.8, cut);
+      if (s.aid === 'dra') f *= 0.7;
+      if (num(s.fear) >= 40) f *= RATE.failFearHi;
+      return clamp(f, 0, RATE.failCap);
+    };
+    const sabRateOf = (s) => { if (s.pol >= 0) return 0; return RATE.sab[-s.pol - 1] * (num(s.ama) >= 40 ? RATE.sabAmaHi : 1); };
+    const greatRateOf = (s, card) => {
+      let g = RATE.great + (loyalOf(s) >= 80 ? RATE.greatLoyal80 : 0) + (s.hirameki ? 0.10 : 0);
+      if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], 'hirameki'); if (lv) g += ASSISTS.hirameki.v[lv - 1] / 100; });
+      return clamp(g, 0, 0.6);
+    };
+
+    // ---- そのターンの見通し(画面の札・試算の作戦が読む) ----
+    const issaComes = (s) => {
+      const p = periodOf(s.turn);
+      const inWindow = (p.key === 'junior' && p.at >= 7) || p.key === 'middle' || p.key === 'pro';
+      if (!inWindow || s.issaMet >= ISSA.maxMeet || s.stress >= ISSA.stressNo || s.cond || s.over) return false;
+      return rngOf(s.id, s.turn, 'issa-meet')() < ISSA.rate;
+    };
+    const issaRate = (s, key) => {
+      const c = ISSA.choices[key]; if (!c || key === 'none') return 0;
+      let d = 0;
+      if (loyalOf(s) >= ISSA.upLoyal) d += ISSA.up;
+      if (s.hp >= s.hpMax * ISSA.upHp) d += ISSA.up;
+      if (s.issaMet >= 2) d += ISSA.upAgain;
+      if (s.hp <= s.hpMax * ISSA.downHp) d += ISSA.downHpV;
+      if (s.stress >= ISSA.downStress) d += ISSA.downStressV;
+      d = clamp(d, -ISSA.band, ISSA.band);
+      return clamp(c.p + d, 0, ISSA.top);
+    };
+    const peek = (s) => {
+      const p = periodOf(s.turn);
+      const cards = gatherOf(s);
+      const view = {};
+      for (const [key, c] of Object.entries(cards)) view[key] = { ...c, ...cardMult(s, c), fail: r2(failRateOf(s, c)), great: r2(greatRateOf(s, c)) };
+      const retry = s.debutLoss > 0 && !s.debutWon;
+      const can = s.over ? [] : s.cond ? ['cond'] : retry ? ['retry'] : ['light', 'heavy', 'rest', 'play'].concat(s.yosu.sabori || s.yosu.utsu ? ['clinic'] : []);
+      return { turn: s.turn, period: p, toEnd: TOTAL_TURNS - s.turn + 1, cards: view, sab: r2(sabRateOf(s)), can, issa: !s.acted ? false : (!s.issaDone && issaComes(s)), retry, cond: s.cond };
+    };
+
+    // ---- 伸び(ASSIST §4 の1本の式) ----
+    const ageOf = (s) => C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+    const unitOf = (s, k) => BASE.light * aptMult(s.species, k) * ageOf(s); // 「軽い訓練1回ぶん」
+    const addStat = (s, k, v) => { s.stats[k] = clamp(Math.round(s.stats[k] + v), 0, STAT_MAX); };
+    const addLoyal = (s, ama, fear) => {
+      if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
+      const i = clamp(s.pol, -3, 3) + 3;
+      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : ama)), 0, LOYAL.half);
+      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : fear)), 0, LOYAL.half);
+    };
+    const addXp = (s, x) => { s.xp += x; while (s.lv < LV_MAX && s.xp >= XP.need(s.lv)) { s.xp -= XP.need(s.lv); s.lv += 1; } };
+    const recover = (s, frac) => { s.hp = clamp(Math.round(s.hp + s.hpMax * frac), 0, s.hpMax); };
+    const addStress = (s, v) => { s.stress = clamp(Math.round(s.stress + v), 0, 100); };
+    const addBond = (s, i, v) => {
+      const mult = v > 0 ? ([1, ...ASSISTS.hitonatsu.v][stayLv(s.team, 'hitonatsu')] || 1) : 1;
+      if (i === 'aid') s.aidBond = clamp(Math.round(s.aidBond + v * mult), 0, BOND.max); else s.bond[i] = clamp(Math.round(s.bond[i] + v * mult), 0, BOND.max);
+    };
+
+    // 編成の子との訓練イベント(1ターン1回まで・50%)。試算は1つ目の選択肢を選ぶ
+    const trainEvent = (s, card, rng, out) => {
+      if (!card.members.length || rng() >= BOND.eventRate) return;
+      // 話を進められる子を先に
+      const cand = card.members.slice().sort((a, b) => s.story[a] - s.story[b]);
+      const i = cand.find(j => s.story[j] < 3) !== undefined ? cand.find(j => s.story[j] < 3) : cand[0];
+      const m = s.team[i]; const fk = m.top[0];
+      const ep = s.story[i]; const st = STORY[ep];
+      s.log.events += 1;
+      if (st && s.bond[i] >= st.need && rng() < st.p) {
+        s.story[i] = ep + 1; s.log.story += 1; addBond(s, i, st.bond);
+        if (ep === 0) addStat(s, fk, unitOf(s, fk) * 0.5);
+        else if (ep === 1) { addStat(s, fk, unitOf(s, fk)); s.hp = clamp(s.hp - 10, 0, s.hpMax); }
+        else addStat(s, fk, unitOf(s, fk) * 2); // 技の伝授は回3(修行・技)で。いまは能力 大+ の形
+        out.event = { who: i, story: ep + 1 };
+        return;
+      }
+      s.log.lottery += 1;
+      let x = rng(); let pick = LOTTERY[LOTTERY.length - 1].key; for (const l of LOTTERY) { if (x < l.p) { pick = l.key; break; } x -= l.p; }
+      if (pick === 'self') { addStat(s, fk, unitOf(s, fk) * 0.5); addBond(s, i, 5); }
+      else if (pick === 'rest') s.hp = clamp(s.hp + 10, 0, s.hpMax);
+      else if (pick === 'talk') { addStress(s, -10); addBond(s, i, 5); }
+      else if (pick === 'tip') s.hirameki = true;
+      else addBond(s, i, 10);
+      out.event = { who: i, lottery: pick };
+    };
+
+    const condRoll = (s, rng, kind) => {
+      // けが(体力が少ないときの訓練)・病気(ストレス)・家出(忠誠が低くストレスが高い)
+      const ratio = s.hp / s.hpMax; const soft = s.aid === 'sorashido' ? COND.sorashido : 1;
+      if ((kind === 'light' || kind === 'heavy') && ratio < COND.injLowHp && rng() < (kind === 'heavy' ? COND.injHeavy : COND.injLight) * soft) {
+        let len = rng() < 0.5 ? COND.injLen[0] : COND.injLen[1]; if (s.aid === 'erubin') len = Math.max(1, len - 1);
+        return { kind: 'injury', left: len };
+      }
+      if (s.stress >= COND.illStress && rng() < COND.illRate * soft) return { kind: 'ill', left: COND.illLen };
+      if (loyalOf(s) < COND.awayLoyal && s.stress >= COND.awayStress && rng() < COND.awayRate) { addLoyal(s, COND.awayAma, COND.awayFear); return { kind: 'away', left: COND.awayLen }; }
+      return null;
+    };
+
+    // ---- 行動 ----
+    const act = (s0, a) => {
+      const s = clone(s0); const out = { ok: true };
+      if (s.over) return { state: s, out: { ok: false, why: 'over' } };
+      if (s.acted) return { state: s, out: { ok: false, why: 'acted' } };
+      const v = peek(s); const kind = a && a.kind;
+      const retry = s.debutLoss > 0 && !s.debutWon;
+      if (s.cond) { // 体調が悪いターンは休み扱い
+        recover(s, COND.rec); addStress(s, REST_STRESS); s.cond.left -= 1; out.cond = s.cond.kind; if (s.cond.left <= 0) s.cond = null;
+        s.log.cond += 1; s.acted = true; s.last = { kind: 'cond' }; return { state: s, out };
+      }
+      if (retry) { // デビュー戦の再挑戦: 訓練はできない。ターンの終わりに戦う
+        if (kind !== 'retry') return { state: s0, out: { ok: false, why: 'retry-only' } };
+        s.acted = true; s.last = { kind: 'retry' }; return { state: s, out };
+      }
+      const rng = rngOf(s.id, s.turn, 'act');
+      if (kind === 'light' || kind === 'heavy') {
+        const stat = KEYS.includes(a.stat) ? a.stat : 'pow';
+        const card = v.cards[cardKey(kind, stat)];
+        const pS = sabRateOf(s); const pF = failRateOf(s, card); const pG = greatRateOf(s, card);
+        const x = rng(); const res = x < pS ? 'sab' : x < pS + pF ? 'fail' : x < pS + pF + pG ? 'great' : 'ok';
+        s.hirameki = false;
+        const R = RESULTS[res];
+        const pol = C.policyOf(s.pol);
+        const mult = BASE.light * pol.gain * ageOf(s) * R.mult * (1 + card.add) * (1 + card.tag) * loyalMult(loyalOf(s));
+        const combo = (TRAIN_COMBO[s.aid] || TRAIN_COMBO.mua)[stat];
+        const shares = kind === 'heavy' ? [BASE.heavy, BASE.heavy * BASE.heavySub[0], BASE.heavy * BASE.heavySub[1]] : [1, BASE.lightSub[0], BASE.lightSub[1]];
+        const gains = {};
+        [stat, combo[0], combo[1]].forEach((k, j) => { const g = mult * shares[j] * aptMult(s.species, k); gains[k] = (gains[k] || 0) + g; });
+        if (kind === 'heavy' && R.mult > 0) { const dk = HEAVY_DROP[stat]; gains[dk] = (gains[dk] || 0) - BASE.light * BASE.heavy * BASE.heavyDrop * ageOf(s); }
+        const before = { ...s.stats };
+        Object.entries(gains).forEach(([k, g]) => addStat(s, k, g));
+        let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += ASSISTS.itawari.v[lv - 1] / 100; });
+        const hpCost = (kind === 'heavy' ? BASE.hpHeavy : BASE.hpLight) * R.hp * (1 - Math.min(0.6, it)) * (kind === 'heavy' && s.aid === 'kiki' ? 0.85 : 1);
+        s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
+        addStress(s, ((kind === 'heavy' ? BASE.stHeavy : BASE.stLight) * pol.stress) + R.stress);
+        card.members.forEach(i => addBond(s, i, BOND.train)); if (card.aid) addBond(s, 'aid', BOND.train);
+        addXp(s, kind === 'heavy' ? XP.heavy : XP.light);
+        s.log.train += 1; s.log[res] += 1; s.log.tagTurns[Math.min(3, card.tags.length)] += 1;
+        out.result = res; out.card = { kind, stat, add: card.add, tag: card.tag, tags: card.tags, members: card.members.slice() };
+        out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
+        trainEvent(s, card, rng, out);
+        const cd = condRoll(s, rng, kind); if (cd) { s.cond = cd; out.cond = cd.kind; }
+        s.last = { kind, res }; s.acted = true; s.reacted = false;
+        return { state: s, out };
+      }
+      if (kind === 'rest') {
+        let x = rng(); let pick = REST[1]; for (const r of REST) { if (x < r.p) { pick = r; break; } x -= r.p; }
+        recover(s, pick.rec); addStress(s, REST_STRESS * (s.aid === 'mua' ? 1.3 : 1));
+        s.log.rest += 1; out.rest = pick.key; s.last = { kind }; s.acted = true;
+        const cd = condRoll(s, rng, kind); if (cd) { s.cond = cd; out.cond = cd.kind; }
+        return { state: s, out };
+      }
+      if (kind === 'play') {
+        recover(s, PLAY.rec); addStress(s, PLAY.stress * (s.aid === 'mua' ? 1.3 : 1));
+        if (s.yosu.utsu) { delete s.yosu.utsu; out.cured = ['utsu']; } // 遊ぶでうつ病が治る(先に治してから甘え度を足す)
+        addLoyal(s, PLAY.ama, 0);
+        s.log.play += 1; s.last = { kind }; s.acted = true;
+        return { state: s, out };
+      }
+      if (kind === 'clinic') {
+        if (!s.yosu.sabori && !s.yosu.utsu) return { state: s0, out: { ok: false, why: 'no-yosu' } };
+        const cured = [];
+        for (const key of ['sabori', 'utsu']) {
+          const y = s.yosu[key]; if (!y) continue;
+          const p = y.visits >= 1 ? 1 : CLINIC.first + (s.aid === 'erubin' ? CLINIC.erubinAdd : 0);
+          if (rng() < p) { delete s.yosu[key]; cured.push(key); } else y.visits += 1;
+        }
+        recover(s, CLINIC.rec); s.log.clinic += 1; out.cured = cured; s.last = { kind }; s.acted = true;
+        return { state: s, out };
+      }
+      return { state: s0, out: { ok: false, why: 'unknown' } };
+    };
+
+    // 叱る・褒める(訓練の結果のあと1回。しなくてもよい)
+    const react = (s0, how) => {
+      const s = clone(s0);
+      if (!s.last || (s.last.kind !== 'light' && s.last.kind !== 'heavy') || s.reacted) return { state: s, out: { ok: false } };
+      const good = s.last.res === 'great' || s.last.res === 'ok';
+      s.reacted = true;
+      if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, d[0] + (s.aid === 'mua' ? 1 : 0), d[1]); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
+      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, d[0], d[1]); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
+      else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
+      return { state: s, out: { ok: true, loyal: loyalOf(s), pol: s.pol } };
+    };
+
+    // イッサ博士(peek().issa が真のターンだけ。ターンを使わない)
+    const issa = (s0, key) => {
+      const s = clone(s0);
+      if (s.issaDone || !issaComes(s)) return { state: s, out: { ok: false } };
+      s.issaDone = true; s.issaMet += 1;
+      if (!ISSA.choices[key] || key === 'none') { s.log.issa.push('none'); return { state: s, out: { ok: true, choice: 'none' } }; }
+      const p = issaRate(s, key); const win = rngOf(s.id, s.turn, 'issa')() < p;
+      if (key === 'stat') { KEYS.forEach(k => addStat(s, k, win ? 50 : -10)); if (!win) s.yosu.sabori = { visits: 0 }; else if (!s.titles.includes('秘めた力')) s.titles.push('秘めた力'); }
+      else if (key === 'hpmax') { if (win) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + 20); s.hp = Math.min(s.hpMax, s.hp + 20); } else s.hp = clamp(s.hp - 20, 0, s.hpMax); }
+      else if (key === 'hp') { if (win) recover(s, 0.8); else { s.hp = clamp(s.hp - 30, 0, s.hpMax); s.yosu.utsu = { visits: 0 }; } }
+      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } else addLoyalRaw(s, -3, -2); }
+      else if (key === 'pop') s.pop = clamp(s.pop + (win ? 15 : -5), 0, 100);
+      if (win) s.issaWon += 1;
+      s.log.issa.push(`${key}:${win ? 'win' : 'lose'}`);
+      return { state: s, out: { ok: true, choice: key, win, p: r2(p) } };
+    };
+    // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
+    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + ama, 0, LOYAL.half); s.fear = clamp(s.fear + fear, 0, LOYAL.half); };
+
+    // ---- ターンを閉じる(期末の強制大会・頂への道・デビュー戦の再挑戦をここで立てる) ----
+    const endTurn = (s0) => {
+      const s = clone(s0);
+      if (s.over || s.battle) return { state: s, out: { ok: false } };
+      if (!s.acted) return { state: s, out: { ok: false, why: 'not-acted' } };
+      const p = periodOf(s.turn);
+      if (s.last && s.last.kind === 'retry') s.battle = { kind: 'debut', retry: s.debutLoss, round: 0 };
+      else if (p.left === 1 && FORCED[p.key] && p.key !== 'final') s.battle = { kind: p.key, round: 0, wins: 0 };
+      else if (p.key === 'final' && p.at >= 3) s.battle = { kind: 'summit', round: p.at - 3 };
+      s.acted = false; s.reacted = false; s.issaDone = false; s.last = null;
+      if (!s.battle) s.turn += 1;
+      if (s.turn > TOTAL_TURNS) s.over = 'done';
+      return { state: s, out: { ok: true, battle: s.battle } };
+    };
+
+    // ---- 大会の相手(TOURNAMENT §9) ----
+    const benchOf = (key) => num(BENCH_USE[key], 1500);
+    const opponentsOf = (s) => {
+      const b = s.battle; if (!b) return [];
+      const rng = rngOf(s.id, s.turn, 'opp', b.kind, b.retry || 0, b.round || 0);
+      const list = [];
+      let sum; let gear; let n = 1; let star = 1;
+      if (b.kind === 'summit') { sum = benchOf('summit') * SUMMIT[b.round].mult; gear = OPP_GEAR.final; }
+      else if (b.kind === 'debut') { sum = benchOf('debut') * STAR_MULT[1] * Math.max(DEBUT_RETRY_FLOOR, 1 - DEBUT_RETRY_WEAKEN * (b.retry || 0)); gear = OPP_GEAR.debut; }
+      else { const f = FORCED[b.kind]; star = f.star; n = f.matches; sum = benchOf(b.kind) * STAR_MULT[star]; gear = OPP_GEAR[b.kind]; }
+      for (let j = 0; j < n; j++) {
+        const roundAdd = n === 1 ? 0 : ROUND_ADD[3 - n + j];
+        const total = sum * (1 + roundAdd) * (1 + (rng() * 2 - 1) * OPP_JITTER);
+        const sp = speciesList[Math.floor(rng() * speciesList.length)] || 'Mocchi';
+        const w = KEYS.map(k => aptMult(sp, k) * (0.85 + rng() * 0.3)); const ws = w.reduce((a, x) => a + x, 0);
+        const stats = {}; KEYS.forEach((k, i) => { stats[k] = clamp(Math.round(total * w[i] / ws), 1, STAT_MAX); });
+        list.push({ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: j });
+      }
+      return list;
+    };
+
+    // 大会の勝ち負けを受けて結果を付ける。wins は試合ごとの勝ち(true/false)の配列(はじめに負けた所まででよい)
+    const settle = (s0, wins) => {
+      const s = clone(s0); const b = s.battle; if (!b) return { state: s, out: { ok: false } };
+      const res = Array.isArray(wins) ? wins.map(Boolean) : [Boolean(wins)];
+      const out = { ok: true, kind: b.kind };
+      const opp = opponentsOf(s0); const need = opp.length;
+      let won = true; let played = 0; for (let j = 0; j < need; j++) { played += 1; if (!res[j]) { won = false; break; } }
+      addXp(s, XP.match * played); out.won = won;
+      if (won) { s.log.wins += 1; addLoyal(s, LOYAL.win[0], LOYAL.win[1]); } else s.log.losses += 1;
+      s.battle = null;
+      if (b.kind === 'debut') {
+        if (won) { s.debutWon = true; s.pop = clamp(s.pop + FORCED.debut.pop, 0, 100); gainPts(s, FORCED.debut.pts); s.titles.push(s.debutLoss ? '遅咲きの一歩' : FORCED.debut.title); }
+        else { s.debutLoss += 1; if (s.debutLoss >= DEBUT_LOSS_MAX) { s.over = 'gameover'; return { state: s, out: { ...out, gameover: true } }; } }
+        s.turn += 1; return { state: s, out };
+      }
+      if (b.kind === 'summit') {
+        if (!won) { s.over = 'lost'; out.end = true; return { state: s, out }; }
+        if (b.round === SUMMIT.length - 1) {
+          const g = s.crowns >= 1 ? SUMMIT_FINAL.big : SUMMIT_FINAL.plain;
+          KEYS.forEach(k => addStat(s, k, g.all)); gainPts(s, g.pts); s.pop = clamp(s.pop + g.pop, 0, 100); s.titles.push(g.title);
+        }
+        s.turn += 1; if (s.turn > TOTAL_TURNS) s.over = 'done';
+        return { state: s, out };
+      }
+      const f = FORCED[b.kind];
+      if (won) { KEYS.forEach(k => addStat(s, k, f.all)); gainPts(s, f.pts); s.pop = clamp(s.pop + f.pop, 0, 100); s.titles.push(f.title); if (f.crown) s.crowns += 1; }
+      s.turn += 1; return { state: s, out };
+    };
+    const gainPts = (s, v) => { const room = PTS.hold - s.pts; const g = Math.max(0, Math.min(room, v)); s.pts += g; s.ptsLost += v - g; };
+
+    // ---- 能力ポイント(TOURNAMENT §7b): 1点で +1・期の目安を超えると 2点で +1 ----
+    const ptsCost = (s, k) => (s.stats[k] >= PTS.line[periodOf(s.turn).key] ? 2 : 1);
+    const spendPts = (s0, k, times = 1) => {
+      const s = clone(s0); let n = 0;
+      for (let i = 0; i < times; i++) { if (!KEYS.includes(k) || s.stats[k] >= STAT_MAX) break; const c = ptsCost(s, k); if (s.pts < c) break; s.pts -= c; s.stats[k] += 1; n += 1; }
+      return { state: s, out: { ok: n > 0, n } };
+    };
+    // おまかせ: 低い能力から順に
+    const autoPts = (s0) => {
+      let s = clone(s0);
+      while (s.pts > 0) { const k = KEYS.slice().sort((a, b) => s.stats[a] - s.stats[b])[0]; const r = spendPts(s, k, 1); if (!r.out.ok) break; s = r.state; }
+      return { state: s, out: { ok: true } };
+    };
+
+    // ---- 評価(引退): 総合力・ランク・アシストポイント・上位3つ ----
+    const evaluate = (s) => {
+      const loy = loyalOf(s);
+      const power = C.power({ stats: s.stats, masteries: Array.isArray(s.masteries) ? s.masteries : [], lv: s.lv, loyal: loy, pop: s.pop });
+      const rank = C.rankOf(power);
+      return { power, rank: rank.key, points: assistPointsOf(power), top: top3Of(s.stats, s.species), sum: sumOf(s.stats), loyal: loy, ama: s.ama, fear: s.fear, pop: s.pop, lv: s.lv, over: s.over };
+    };
+
+    return Object.freeze({
+      VERSION, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
+      ASSISTS, ISSA, PTS, XP, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
+      rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
+      act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
+    });
+  };
+
+  const api = Object.freeze({ VERSION, KEYS, TOTAL_TURNS, PERIODS, create, rngOf, hashStr, periodOf, assistPointsOf });
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  if (root) root.MONHERO_SUCCESS = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);

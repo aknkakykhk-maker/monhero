@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>モンヒロサクセス 止め絵 第3版</title>
+<!-- 開き方: v3.html(全部+説明) / ?g=M(1つの組だけ。M T K S I E L) / ?cmp=1(前の見本と比べ) / ?sheet=1(一覧) -->
+<link rel="stylesheet" href="mock.css"><link rel="stylesheet" href="v3.css"></head>
+<body><div id="root"></div>
+<script src="lib.js"></script><script src="screens-e.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const root = document.getElementById('root');
+  const phone = (p, id) => `<div class="phone v3 ${p.cls || ''}" id="${id || 'p' + p.id}">${p.html}</div>`;
+  if (q.get('cmp')) {
+    const m = GROUPS.find((g) => g.id === 'M').phones; const t = GROUPS.find((g) => g.id === 'T').phones;
+    root.className = 'cmp3';
+    root.innerHTML = `<h1>モンヒロサクセス 育成のメイン 前の見本と描き直しの比べ</h1>
+      <p>左が前の見本(案A)。右の3つが描き直し。決まったことを入れた: 絵を小さく・「この期の残りターン」・体力とストレスは数字つきのゲージ(体力は上限が上がる)・呼び方は「編成」「助手」「体力」・編成の6体と親密度・友情タッグの光る枠・🏥通院(ようすがあるときだけ)・訓練を選ぶ前に上がる量/下がる量/使う体力。</p>
+      <div class="rowp"><div class="pw"><p class="cap"><b>前</b>案A(phone-R4-A)</p><img class="oldimg" src="png/phone-R4-A.png"></div><div class="arrow" style="align-self:center;font-size:44px;color:#be185d;font-weight:900">→</div>
+      ${[[m[0], 'c1'], [m[1], 'c2'], [t[0], 'c3']].map(([p, id]) => `<div class="pw"><p class="cap"><b class="new">描き直し</b>${p.label}</p>${phone(p, id)}</div>`).join('')}</div>`;
+    return;
+  }
+  if (q.get('sheet')) {
+    root.className = 'sheet3';
+    root.innerHTML = `<h1>モンヒロサクセス 止め絵 第3版の一覧(縦390の ${GROUPS.filter((g) => g.id !== 'L').reduce((n, g) => n + g.phones.length, 0)}コマ)</h1><div class="sg">${GROUPS.filter((g) => g.id !== 'L').map((g) => g.phones.map((p) =>
+      `<div class="it"><b>${p.id} ${p.label}</b><div class="z">${phone(p, 'z' + p.id)}</div></div>`).join('')).join('')}</div>`;
+    return;
+  }
+  const only = q.get('g');
+  root.innerHTML = GROUPS.filter((g) => !only || g.id === only).map((g) =>
+    `<section class="grp" id="g${g.id}"><h2>${g.name}</h2><p class="lead">${g.lead}</p><div class="rowp">${g.phones.map((p) =>
+      `<div class="pw"><p class="cap">${p.id} ${p.label}</p>${phone(p)}</div>`).join('')}<div class="note">${g.notes}</div></div></section>`).join('');
+})();
+</script></body></html>
