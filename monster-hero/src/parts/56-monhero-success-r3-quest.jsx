@@ -12,6 +12,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [course, setCourse] = useState(courses[0] || 'fire');
   const [want, setWant] = useState([]);
   const [res, setRes] = useState(null); // { out, before, after }
+  const [fxDone, setFxDone] = useState(false);
+  useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s0.species) : [];
   const rateOf = {}; ((v.shugyo && v.shugyo.techs) || []).forEach((t) => { rateOf[t.id] = t.rate; });
   const tickets = (v.shugyo && v.shugyo.tickets) || s0.tickets || 0;
@@ -53,7 +55,10 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}</div>
       {!learned && want.length ? <div className="v-card" style={{ borderColor: '#94a3b8', padding: '6px 9px' }}><div className="sub"><b style={{ color: '#cbd5e1' }}>おしい…</b> <span className="yel">次の修行で、えらんだ技の覚える率が上がる</span>(⬆)</div></div> : null}
     </>);
-    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={onBack} data-msx-r3-qnext>つぎへ ▶(叱る/褒める)</button></div>}/>;
+    // 技を覚えたら節目の演出(覚えた技の動き・押せばとばせる)
+    const fx = learned && !fxDone && typeof MsxFxMoment === 'function'
+      ? <MsxFxMoment kind="tech" title={learned.name} sub="技をおぼえた!" species={s.species} colors={run.colors} skill={{ kind: 'normal', name: learned.name }} onDone={() => setFxDone(true)}/> : null;
+    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={<>{body}{fx}</>} foot={<div className="v-ft"><button type="button" className="go" onClick={onBack} data-msx-r3-qnext>つぎへ ▶(叱る/褒める)</button></div>}/>;
   }
 
   // ---- 修行に出る(Q1) ----

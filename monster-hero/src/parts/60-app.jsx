@@ -6673,7 +6673,10 @@ function MonsterHeroGame() {
   // モンヒロビートの結果の画面でランクアップの演出のあいだ(上の effect)は効果音の音量を戻すので、裏の周回のバトルの音まで表へ出てしまう
   //   (2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」。演出の音は fgSe から鳴るので、モンビーで周回が残っているあいだも裏の音だけ止める印を立てる)
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
-  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet]);
+  // モンヒロサクセスの画面(56-monhero-success-main.jsx)が開いているあいだも止める。画面が 'mh-success-screen' で知らせる
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
+  useEffect(() => { const on = (e) => setSuccessScreenOpen(!!(e && e.detail)); window.addEventListener('mh-success-screen', on); return () => window.removeEventListener('mh-success-screen', on); }, []);
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。

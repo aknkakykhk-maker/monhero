@@ -86,6 +86,11 @@ function MsxSay({ aid, ex = 'happy', text }) {
 // ---- 本体 ----
 function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) {
   const [view, setView] = useState('loading');
+  // 開いているあいだ、本体へ知らせる(裏の周回のバトルの効果音を止める印 successScreenOpen・14-success-sound.jsx の約束)
+  useEffect(() => {
+    try { window.dispatchEvent(new CustomEvent('mh-success-screen', { detail: true })); } catch (e) {}
+    return () => { try { window.dispatchEvent(new CustomEvent('mh-success-screen', { detail: false })); } catch (e) {} };
+  }, []);
   const [data, setData] = useState(null);
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
