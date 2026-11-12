@@ -156,7 +156,7 @@
     { key: 'good', p: 0.55, fx: [['st', 'rand', S]] },
     { key: 'bad', p: 0.30, fx: [] }, // 損はしない(助手が笑い飛ばす)
   ]);
-  const HEAD = Object.freeze({ daily: '育成イベント', self: '育成イベント', goal: '育成イベント', season: '育成イベント', small: '育成イベント', body: '育成イベント', cup: '育成イベント', team: '編成の子のイベント' });
+  const HEAD = Object.freeze({ uniq: 'メインのお話', daily: '育成イベント', self: '育成イベント', goal: '育成イベント', season: '育成イベント', small: '育成イベント', body: '育成イベント', cup: '育成イベント', team: '編成の子のイベント' });
 
   // ---- 部品を作る(芯から呼ぶ)。h = 芯の内部の関数 ----
   const create = (h) => {
@@ -164,6 +164,19 @@
     const clone = (o) => JSON.parse(JSON.stringify(o));
     const RANKS = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'M'];
 
+    // 固有イベント(その助手だけの出来事・data/monhero-success-arc.js の uniq)。芯が h.arc に表を渡す。決まった期のどこかで1回だけ
+    const ARCS = h.arc && typeof h.arc === 'object' ? h.arc : {};
+    const UNIQ = Object.freeze([].concat(...Object.entries(ARCS).map(([aid, a]) => (a && Array.isArray(a.uniq) ? a.uniq : [])
+      .filter(u => u && typeof u.id === 'string' && u.ch).map(u => Object.freeze({ ...u, aid, kind: 'uniq', slot: 'fixed' })))));
+    const BYX = Object.freeze({ ...BY_ID, ...Object.fromEntries(UNIQ.map(u => [u.id, u])) });
+    const uniqDue = (s) => {
+      const ev = evOf(s);
+      for (const u of UNIQ) {
+        if (u.aid !== s.aid || ev.seen.includes(u.id) || s.turn < u.from || s.turn > u.to + 2) continue;
+        if (s.turn >= u.to || rngOf(s.id, s.turn, 'uniq', u.id)() < num(u.rate, 0.35)) return u;
+      }
+      return null;
+    };
     // 保存の形(s.ev)。読めない値は既定に直す(CLAUDE.md ⑦)
     const norm = (raw) => {
       const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -181,7 +194,7 @@
       if (o.boost && typeof o.boost === 'object') for (const [k, v] of Object.entries(o.boost)) if (/^[0-5]$/.test(k) && Number.isFinite(Number(v))) out.boost[k] = clamp(Number(v), 0, 10);
       if (o.rolled && typeof o.rolled === 'object') for (const sl of SLOTS) if (Number.isInteger(o.rolled[sl])) out.rolled[sl] = o.rolled[sl];
       if (o.seasons && typeof o.seasons === 'object') for (const y of ['junior', 'middle', 'pro']) if (Array.isArray(o.seasons[y])) out.seasons[y] = o.seasons[y].filter(m => SEASON_MONTHS.includes(m)).slice(0, 5);
-      if (o.pend && typeof o.pend === 'object' && BY_ID[o.pend.id] && SLOTS.includes(o.pend.slot)) {
+      if (o.pend && typeof o.pend === 'object' && BYX[o.pend.id] && SLOTS.includes(o.pend.slot)) {
         const p = o.pend; out.pend = { id: p.id, slot: p.slot, turn: n(p.turn, 1, 1, 99) };
         for (const k of ['cheer', 'cheer2']) if (Number.isInteger(p[k])) out.pend[k] = clamp(p[k], 0, 5);
         if (typeof p.won === 'boolean') out.pend.won = p.won;
@@ -223,10 +236,11 @@
     const fixedDue = (s) => {
       const ev = evOf(s); const p = periodOf(s.turn); const mo = monthOf(s.turn);
       const seen = (id) => ev.seen.includes(id);
-      for (const id of ['ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BY_ID[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
-      if (p.key === 'final') { for (const [m, id] of [[1, 'ev.season.finaljan'], [4, 'ev.season.finalapr']]) if ((mo === m || mo === m + 1) && !seen(id)) return BY_ID[id]; return null; }
+      for (const id of ['ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BYX[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
+      const uq = uniqDue(s); if (uq) return uq;
+      if (p.key === 'final') { for (const [m, id] of [[1, 'ev.season.finaljan'], [4, 'ev.season.finalapr']]) if ((mo === m || mo === m + 1) && !seen(id)) return BYX[id]; return null; }
       const y = yearOf(s); if (!y) return null;
-      for (const m of seasonsOf(s, p.key)) { const id = `ev.season.${SEASON_KEY[m]}${y}`; if ((mo === m || mo === m + 1) && !seen(id) && BY_ID[id]) return BY_ID[id]; }
+      for (const m of seasonsOf(s, p.key)) { const id = `ev.season.${SEASON_KEY[m]}${y}`; if ((mo === m || mo === m + 1) && !seen(id) && BYX[id]) return BYX[id]; }
       return null;
     };
 
@@ -249,6 +263,7 @@
       const view = { id: e.id, kind: e.kind, head: HEAD[e.kind] || '育成イベント', lines: e.id, watch: ch.length === 0, choices: ch, turn: s.turn };
       if (cast && Number.isInteger(cast.cheer)) { view.cheer = cast.cheer; view.cheerName = s.team[cast.cheer] && s.team[cast.cheer].name; }
       if (cast && Number.isInteger(cast.cheer2)) { view.cheer2 = cast.cheer2; view.cheer2Name = s.team[cast.cheer2] && s.team[cast.cheer2].name; }
+      if (e.kind === 'uniq') { view.aid = e.aid; view.title = e.title || ''; } // 固有イベント(助手1人分のストーリー)
       if (e.id === 'ev.self.favtrain') view.train = favCand(s);
       if (e.id === 'ev.goal.done' || e.id === 'ev.goal.miss') view.goal = o && o.goal;
       if (e.id === 'ev.cup.eve') { const p = periodOf(s.turn); view.cup = p.key === 'final' ? 'summit' : (FORCED[p.key] && FORCED[p.key].name) || null; }
@@ -272,8 +287,8 @@
       const rng = rngOf(s.id, s.turn, 'ev', slot);
       if (slot === 'cup') {
         if (typeof opt.won !== 'boolean') return null;
-        if (opt.kind && ['junior', 'middle', 'pro'].includes(opt.kind)) { const g = goalCheck(s, opt.kind, opt.won); if (g) return { e: BY_ID[g.ok ? 'ev.goal.done' : 'ev.goal.miss'], cast: {}, extra: { goal: g.goal, gkey: opt.kind } }; }
-        for (const id of ['ev.cup.interview', 'ev.cup.after']) { const e = BY_ID[id]; if (e.when(s, X, opt) && !ev.seen.includes(id) && rng() < (opt.won ? RATE.cupWin : RATE.cupLose)) return { e, cast: {} }; }
+        if (opt.kind && ['junior', 'middle', 'pro'].includes(opt.kind)) { const g = goalCheck(s, opt.kind, opt.won); if (g) return { e: BYX[g.ok ? 'ev.goal.done' : 'ev.goal.miss'], cast: {}, extra: { goal: g.goal, gkey: opt.kind } }; }
+        for (const id of ['ev.cup.interview', 'ev.cup.after']) { const e = BYX[id]; if (e.when(s, X, opt) && !ev.seen.includes(id) && rng() < (opt.won ? RATE.cupWin : RATE.cupLose)) return { e, cast: {} }; }
         return null;
       }
       if (s.battle || (slot === 'start' && (s.acted || s.cond)) || (slot === 'after' && !(s.last && ['train', 'shugyo'].includes(s.last.kind)))) return null;
@@ -296,7 +311,7 @@
       return pool[pool.length - 1];
     };
     const viewFromPend = (s, p) => {
-      const e = BY_ID[p.id]; const v = viewOf(e, s, { cheer: p.cheer, cheer2: p.cheer2 }, p.goal ? { goal: p.goal } : null);
+      const e = BYX[p.id]; const v = viewOf(e, s, { cheer: p.cheer, cheer2: p.cheer2 }, p.goal ? { goal: p.goal } : null);
       return { e, cast: { cheer: p.cheer, cheer2: p.cheer2 }, extra: p.goal ? { goal: p.goal, gkey: p.gkey } : null, view: v };
     };
     // 画面: その出来事を出す(選ぶ前に閉じても、同じ出来事がもう一度出るよう pend に残す)
@@ -363,7 +378,7 @@
     const pick = (s0, c) => {
       const s = clone(s0); const ev = evOf(s); const p = ev.pend;
       if (!p) return { state: s0, out: { ok: false, why: 'no-event' } };
-      const e = BY_ID[p.id]; const ctx = { cheer: p.cheer, cheer2: p.cheer2 };
+      const e = BYX[p.id]; const ctx = { cheer: p.cheer, cheer2: p.cheer2 };
       const hasCh = e.ch && (e.ch.a || e.ch.b);
       const choice = hasCh ? e.ch[c] : e.ch;
       if (hasCh && !choice) return { state: s0, out: { ok: false, why: 'bad-choice' } };
@@ -423,7 +438,7 @@
     };
     const buffs = (s) => (s && s.ev && Array.isArray(s.ev.buff) ? s.ev.buff.filter(b => BUFFS[b.k]).map(b => ({ k: b.k, icon: BUFFS[b.k].icon, name: BUFFS[b.k].name, text: BUFFS[b.k].text, left: b.k === 'hirameki' ? null : b.left, with: b.with })) : []);
 
-    return Object.freeze({ VERSION, LIST: EVENTS, BY_ID, BUFFS, EFFECT, RATE, OMIKUJI, GOAL_LINE, GOAL_REWARD, norm, due: peekDue, open, pick, mod, tick, buffs, STAT_TARGETS, lookOf });
+    return Object.freeze({ VERSION, LIST: EVENTS, BY_ID: BYX, UNIQ, BUFFS, EFFECT, RATE, OMIKUJI, GOAL_LINE, GOAL_REWARD, norm, due: peekDue, open, pick, mod, tick, buffs, STAT_TARGETS, lookOf });
   };
 
   const api = Object.freeze({ VERSION, LIST: EVENTS, BY_ID, BUFFS, RATE, SLOTS, create });
