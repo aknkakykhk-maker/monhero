@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 598649311388b14d
+// generated-sha256: c664555a04dc7382
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78047,7 +78047,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         {sheet}
         {words}
         {confirm && leaving != null && typeof AlfNoteConfirm === 'function' && <AlfNoteConfirm friend={friend} to={leaving || null} word={confirm.word} note={alfNoteCheck(noteText).text} selfName={selfName} warn={confirm.warn} busy={confirm.busy} land={land}
-          onFix={() => { if (!confirm.busy) setConfirm(null); }} onSend={() => { if (!confirm.busy) void leave(confirm.word); }}/>}
+          onFix={() => { if (!confirm.busy) setConfirm(null); }} onSend={() => { if (!confirm.busy) void leave(confirm.word); }} onCancel={() => { if (!confirm.busy) { setConfirm(null); setLeaving(null); setNoteWarn(''); } }}/>}
         {diarySheet}
         {bondOpen && typeof AlfBondSheet === 'function' && <AlfBondSheet friend={friend} more={more} land={land} onClose={() => setBondOpen(false)} onRoom={(id) => { setBondOpen(false); setRoomId(id); bondMark('find'); }}/>}
       </div>
@@ -78740,7 +78740,7 @@ function AlfSentHere({ friendId }) {
     </div>);
 }
 // 自由文を送る前の確認(あて先・相手に届く形・直す/送る)
-function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, onFix, onSend }) {
+function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, onFix, onSend, onCancel }) {
   const toText = to ? `${friend.name}さんの家の${assistantLifeName(to)}` : `${friend.name}さんの家のみんな`;
   return (
     <div className="absolute inset-0" style={{ zIndex: 32 }} data-alf-note-confirm>
@@ -78762,6 +78762,7 @@ function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, on
           <button type="button" className="mhl-btn bg-slate-700" data-alf-note-confirm-fix onClick={onFix}>✏️ 直す</button>
           <button type="button" className="mhl-btn bg-amber-500 text-slate-950 disabled:opacity-40" data-alf-note-confirm-send disabled={busy || !!warn} onClick={onSend}>{busy ? '送っています…' : '✉️ 送る'}</button>
         </div>
+        <button type="button" data-mhl-sheet-close data-alf-note-confirm-cancel className="mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300" disabled={busy} onClick={onCancel}>やめる</button>
       </div>
     </div>);
 }

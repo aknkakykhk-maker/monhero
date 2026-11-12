@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21be7463c7c66296
+// source-sha256: 68fea0c42136212a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149136,6 +149136,13 @@ function AlfFriendHouseView({
     },
     onSend: () => {
       if (!confirm.busy) void leave(confirm.word);
+    },
+    onCancel: () => {
+      if (!confirm.busy) {
+        setConfirm(null);
+        setLeaving(null);
+        setNoteWarn('');
+      }
     }
   }), diarySheet, bondOpen && typeof AlfBondSheet === 'function' && React.createElement(AlfBondSheet, {
     friend: friend,
@@ -150680,7 +150687,8 @@ function AlfNoteConfirm({
   busy,
   land,
   onFix,
-  onSend
+  onSend,
+  onCancel
 }) {
   const toText = to ? `${friend.name}さんの家の${assistantLifeName(to)}` : `${friend.name}さんの家のみんな`;
   return React.createElement("div", {
@@ -150746,7 +150754,14 @@ function AlfNoteConfirm({
     "data-alf-note-confirm-send": true,
     disabled: busy || !!warn,
     onClick: onSend
-  }, busy ? '送っています…' : '✉️ 送る'))));
+  }, busy ? '送っています…' : '✉️ 送る')), React.createElement("button", {
+    type: "button",
+    "data-mhl-sheet-close": true,
+    "data-alf-note-confirm-cancel": true,
+    className: "mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300",
+    disabled: busy,
+    onClick: onCancel
+  }, "やめる")));
 }
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
