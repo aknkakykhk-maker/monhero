@@ -261,9 +261,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   // ガッツの増減は、手を打った行(技・ためる)と、ガッツを削られた行だけ出す
   const gdOf = (side) => {
     if (!pos || !e.side) return null;
-    const d = f.g[side] - pf.g[side];
-    if (e.side === side && (e.ev === 'tech' || (e.ev === 'charge' && e.why !== 'sulk'))) return d;
-    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return d;
+    if (e.side === side && e.ev === 'tech') return e.tech.guts ? -e.tech.guts : null;            // 撃った: 技の消費ガッツ
+    if (e.side === side && e.ev === 'charge' && e.why !== 'sulk') return f.g[side] - pf.g[side];  // ためた: 増えた分
+    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return -Math.round(Number(e.gd)); // 削られた
     return null;
   };
   const big = e.ev === 'tech' && (Number(e.tech.guts) || 0) >= 40;
@@ -273,7 +273,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   return (
     <div className="msa-stage" ref={stageRef} data-msa-stage style={{ backgroundImage: venueImg ? `url(${venueImg})` : undefined }}>
      <div className={`msa-shk ${shake ? 'shake' : ''}`} key={shake ? `sh-${pos}` : 'st'} style={shake ? { animationDelay: `${hitMs}ms` } : undefined}>
-      <div className="msa-round">ラウンド {f.r || 1}</div>
+      {e.ev !== 'tech' ? <div className="msa-round">ラウンド {f.r || 1}</div> : null}
       <div className="msa-floor" aria-hidden="true"/>
       {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
       <MsaFighter side="A" member={memberOf('A')} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={gdOf('A')}/>

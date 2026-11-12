@@ -147,7 +147,7 @@ const seed = () => {
     await shot('2-prep-self');
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch]'), { timeout: 10000 }).catch(() => {});
-    await page.waitForFunction(() => !!document.querySelector('.ambw-dmg'), { timeout: 30000 }).catch(() => {});
+    await page.waitForFunction(() => !!document.querySelector('.ambw-dmg, .msa-dmg'), { timeout: 30000 }).catch(() => {});
     await clickSel('[data-ambb-pause]');
     check('観戦が始まり、手前は2体', await page.evaluate(() => !!document.querySelector('[data-ambb-watch]') && document.querySelectorAll('[data-ambw-panel="A"] .ambw-bn').length === 1));
     await shot('3-watch');

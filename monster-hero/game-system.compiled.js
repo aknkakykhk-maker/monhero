@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 41f49374440642c4
+// source-sha256: 57bc98178d03bb1e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167120,9 +167120,9 @@ function MsaStage({
   const hpOf = side => (f.hp[side] || [])[f.act[side]];
   const gdOf = side => {
     if (!pos || !e.side) return null;
-    const d = f.g[side] - pf.g[side];
-    if (e.side === side && (e.ev === 'tech' || e.ev === 'charge' && e.why !== 'sulk')) return d;
-    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return d;
+    if (e.side === side && e.ev === 'tech') return e.tech.guts ? -e.tech.guts : null;
+    if (e.side === side && e.ev === 'charge' && e.why !== 'sulk') return f.g[side] - pf.g[side];
+    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return -Math.round(Number(e.gd));
     return null;
   };
   const big = e.ev === 'tech' && (Number(e.tech.guts) || 0) >= 40;
@@ -167142,9 +167142,9 @@ function MsaStage({
     style: shake ? {
       animationDelay: `${hitMs}ms`
     } : undefined
-  }, React.createElement("div", {
+  }, e.ev !== 'tech' ? React.createElement("div", {
     className: "msa-round"
-  }, "ラウンド ", f.r || 1), React.createElement("div", {
+  }, "ラウンド ", f.r || 1) : null, React.createElement("div", {
     className: "msa-floor",
     "aria-hidden": "true"
   }), spots.map(([a, b], d) => React.createElement(React.Fragment, {
