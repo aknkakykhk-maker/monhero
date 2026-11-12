@@ -860,6 +860,22 @@ const helpDataRows = (id) => {
         .map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
     // 合体・転生の消費ダイヤ。単価を変えたときにヘルプだけ古くなることがないよう、
     // 実際に使っている定数からそのまま表を作る
+    // モンヒロサクセスの評価(2026-11-12)。助手マスモンと同じランクの表(MASMON_CALC.RANKS)をそのまま読む。500ごとの数字は本文で説明する
+    case 'monsakuRanks': {
+      // ★MASMON_CALC が見えない場面(ヘルプの検査の部品だけの読み込みなど)でも、行が空にならないよう1行だけ返す
+      const ranks = typeof MASMON_CALC !== 'undefined' && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : [];
+      if (ranks.length === 0) return [['評価', '最終の総合力で決まります']];
+      return ranks.map(([key, min], i, all) => [key, all[i + 1] ? `${min.toLocaleString()} 〜 ${(all[i + 1][1] - 1).toLocaleString()}` : `${min.toLocaleString()} 〜`]);
+    }
+    // モンヒロサクセスのアシスト能力。数は30〜40個に増える予定なので、書き写さず計算の芯(MONHERO_SUCCESS.ASSISTS)から作る。
+    // 芯が読み込まれていない・まだ一覧を出していないあいだは行が無く、ブロックごと出ない。2列目は短く(help-render-check)
+    case 'monsakuAssists': {
+      const list = (globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS) || null;
+      // ★計算の芯がゲームに読み込まれるまでは、実データの表が作れない。空のままだと表が丸ごと消えるので、1行だけ案内を返す
+      if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
+      return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost))
+        .map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
+    }
     case 'masuCosts':
       return [
         ['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`],
@@ -1079,6 +1095,8 @@ const HELP_DATA_TITLES = {
   missionsWeekly: 'ウィークリーミッション',
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
+  monsakuRanks: '評価のランク(総合力)',
+  monsakuAssists: 'アシスト能力の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
