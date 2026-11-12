@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 602e376a05e6c9b0
+// source-sha256: dcd5d595c18a6159
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147757,7 +147757,7 @@ const normalizeAssistantMasmonCond = raw => {
       hosp: (Array.isArray(c.hosp) ? c.hosp : []).filter(Number.isInteger).slice(-30)
     };
   }
-  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'find'].includes(x.t)).slice(-40).map(x => ({
+  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'cure', 'find'].includes(x.t)).slice(-40).map(x => ({
     s: x.s,
     key: x.key,
     k: x.k,
@@ -147892,15 +147892,24 @@ const amgpHospital = (aid, key, slot, e) => {
     abs = [];
   }
   if (!Array.isArray(abs)) return false;
+  let cures = [];
+  try {
+    cures = typeof assistantLifeHospitalCureSlotsOf === 'function' ? assistantLifeHospitalCureSlotsOf(aid) : [];
+  } catch (_) {
+    cures = [];
+  }
+  const cureSet = new Set(Array.isArray(cures) ? cures.filter(Number.isInteger) : []);
+  abs = [...abs, ...cureSet].filter((a, i, l) => l.indexOf(a) === i);
   let c = c0;
   const log = [];
   for (const a of abs) {
     if (!Number.isInteger(a) || c.hosp.includes(a)) continue;
     const gs = amgpAbsToSlot(a);
     if (gs === null || gs < c.from || gs > slot || gs > c.until) continue;
+    const cure = cureSet.has(a);
     c = {
       ...c,
-      until: Math.max(gs, c.until - AMGP_NUM.hospSlots),
+      until: cure ? Math.max(c.from, gs - 1) : Math.max(gs, c.until - AMGP_NUM.hospSlots),
       hosp: [...c.hosp, a].slice(-30)
     };
     if (e) e.str = amgClamp(e.str - AMGP_NUM.hospStr, 0, 100);
@@ -147908,7 +147917,7 @@ const amgpHospital = (aid, key, slot, e) => {
       s: gs,
       key,
       k: c.k,
-      t: 'hosp'
+      t: cure ? 'cure' : 'hosp'
     });
   }
   if (c === c0) return false;
@@ -149012,6 +149021,7 @@ function AmgpLogTab({
     start: 'になった',
     care: 'を看病してもらった',
     hosp: 'で病院へ',
+    cure: 'が特別な治療で治った',
     find: 'から帰ってきた'
   };
   return React.createElement(React.Fragment, null, pickSel, React.createElement("p", {

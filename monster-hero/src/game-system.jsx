@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25791bef54bb8207
+// generated-sha256: 9f939a10264e8ee3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77482,7 +77482,7 @@ const normalizeAssistantMasmonCond = (raw) => {
     if (!amgpKeyOk(k) || !c || typeof c !== 'object' || !AMGP_COND[c.k] || !Number.isInteger(c.from) || !Number.isInteger(c.until)) continue;
     out.mons[k] = { k: c.k, from: c.from, until: c.until, care: int(c.care, -1), find: int(c.find, -1), hosp: (Array.isArray(c.hosp) ? c.hosp : []).filter(Number.isInteger).slice(-30) };
   }
-  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'find'].includes(x.t)).slice(-40).map(x => ({ s: x.s, key: x.key, k: x.k, t: x.t }));
+  out.log = (Array.isArray(raw.log) ? raw.log : []).filter(x => x && Number.isInteger(x.s) && amgpKeyOk(x.key) && AMGP_COND[x.k] && ['start', 'care', 'hosp', 'cure', 'find'].includes(x.t)).slice(-40).map(x => ({ s: x.s, key: x.key, k: x.k, t: x.t }));
   return out;
 };
 // 保存の入れ物(読み込む前は書かない・まとめて1回書く)
@@ -77542,14 +77542,19 @@ const amgpHospital = (aid, key, slot, e) => {
   if (!c0 || c0.k === 'away' || c0.until < slot) return false;
   let abs = []; try { abs = assistantLifeHospitalSlotsOf(aid); } catch (_) { abs = []; }
   if (!Array.isArray(abs)) return false;
+  // 特別な治療(ビートPの品物・ナカヨシの口)を使った回は、その回でけが・病気の残りを0にする(2026-11-12 ナカヨシと合意)
+  let cures = []; try { cures = typeof assistantLifeHospitalCureSlotsOf === 'function' ? assistantLifeHospitalCureSlotsOf(aid) : []; } catch (_) { cures = []; }
+  const cureSet = new Set(Array.isArray(cures) ? cures.filter(Number.isInteger) : []);
+  abs = [...abs, ...cureSet].filter((a, i, l) => l.indexOf(a) === i);
   let c = c0; const log = [];
   for (const a of abs) {
     if (!Number.isInteger(a) || c.hosp.includes(a)) continue;
     const gs = amgpAbsToSlot(a);
     if (gs === null || gs < c.from || gs > slot || gs > c.until) continue;
-    c = { ...c, until: Math.max(gs, c.until - AMGP_NUM.hospSlots), hosp: [...c.hosp, a].slice(-30) };
+    const cure = cureSet.has(a);
+    c = { ...c, until: cure ? Math.max(c.from, gs - 1) : Math.max(gs, c.until - AMGP_NUM.hospSlots), hosp: [...c.hosp, a].slice(-30) };
     if (e) e.str = amgClamp(e.str - AMGP_NUM.hospStr, 0, 100);
-    log.push({ s: gs, key, k: c.k, t: 'hosp' });
+    log.push({ s: gs, key, k: c.k, t: cure ? 'cure' : 'hosp' });
   }
   if (c === c0) return false;
   AMGP_CSTORE.save({ ...cs, mons: { ...cs.mons, [key]: c }, log: [...cs.log, ...log].slice(-40) });
@@ -77967,7 +77972,7 @@ function AmgpLogTab({ x, nameOf, pickSel }) {
   const cg = typeof amgCareGainOf === 'function' ? amgCareGainOf(x.e) : null;
   const ev = AMGP_CSTORE.state.log.filter(l => l.key === x.key && l.s >= from);
   const when = (s) => `${AMGP_DAY_NAME[amgpWeekday(amgSlotDay(s))]} ${AMG_PERIOD_NAME[s % 3]}`;
-  const cTxt = { start: 'になった', care: 'を看病してもらった', hosp: 'で病院へ', find: 'から帰ってきた' };
+  const cTxt = { start: 'になった', care: 'を看病してもらった', hosp: 'で病院へ', cure: 'が特別な治療で治った', find: 'から帰ってきた' };
   return (<>
     {pickSel}
     <p className="mt-2 text-[12px] font-black text-slate-200">{nameOf(x)}の、この7日の能力の変化</p>
