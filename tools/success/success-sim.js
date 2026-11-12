@@ -7,6 +7,7 @@
 //   node tools/success/success-sim.js --calibrate     … 大会の相手の基準 B(期の終わりの6能力の合計)を測って出す
 //   node tools/success/success-sim.js --only none,B6 --issa stat
 //   node tools/success/success-sim.js --json <出力先>
+//   node tools/success/success-sim.js --no-events     … ランダムイベント(monhero-success-events.js)を起こさずに回す(くらべる用)
 'use strict';
 const fs = require('fs');
 const { load } = require('./load');
@@ -19,6 +20,7 @@ const ONLY = opt('--only', '');
 const ISSA_PICK = opt('--issa', 'hp');
 const CALIBRATE = args.includes('--calibrate');
 const JSON_OUT = opt('--json', '');
+const NO_EVENTS = args.includes('--no-events'); // ランダムイベント(monhero-success-events.js)を起こさない(くらべる用)
 
 const loaded = load();
 const { SUC } = loaded;
@@ -46,6 +48,8 @@ const makeRaised = (rng, rank, topStats, assists) => {
 // よくあるアシストの持ち方(誰にでも効くもの・ポイントの予算内: M 約390・S 約280・B 約160)
 const AS_M = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 3 }, { id: 'kaketsuke', lv: 2 }]; // 128+80+80+64 = 352
 const AS_S = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'ochitsuki', lv: 1 }]; // 128+80+48+24 = 280
+const AS_MH = [{ id: 'sokoji', lv: 3 }, { id: 'atooshi', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'miseba', lv: 3 }]; // 128+80+80+80 = 368(ひらめきの2つ入り)
+const HINT5 = [[{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }], [{ id: 'mitate', lv: 3 }, { id: 'kensho', lv: 3 }], [{ id: 'mimamori', lv: 3 }]]; // ひらめき5つを段3で(編成の3体に分けて持たせる)
 const AS_B = [{ id: 'sokoji', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'kizuna', lv: 1 }]; // 80+48+40 = 168(B の上のほう)
 const PRESETS = {
   none: { name: '編成なし(ベースモン6枠)', team: () => [] },
@@ -57,6 +61,8 @@ const PRESETS = {
   M6: { name: 'M 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M')) },
   M6as: { name: 'M 6体・全員アシストあり(底力3・きずな2・後押し3・かけつけ2)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_M)) },
   S6as: { name: 'S 6体・全員アシストあり(底力3・きずな2・後押し2・落ち着き1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', null, AS_S)) },
+  B6hint5: { name: 'B 6体・ひらめき5つ段3(大会の試合だけに効く)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, HINT5[i] || [])) },
+  M6hint: { name: 'M 6体・アシストあり(底力3・後押し3・見立て3・見せ場3)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_MH)) },
   M6asAim: { name: 'M 6体・アシストあり・得意そろえ(ちから・命中・回避)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], AS_M)) },
   B6as: { name: 'B 6体・全員アシストあり(底力2・後押し2・きずな1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, AS_B)) },
   S6aim: { name: 'S 6体・得意そろえ・人なつっこさ段3+底力段3', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', ['pow', 'hit', 'eva'], [{ id: 'hitonatsu', lv: 3 }, { id: 'sokoji', lv: 3 }])) },
@@ -68,6 +74,8 @@ const VARIANTS = [
   { key: 'B6', aidLv: 3, rematch: { rainbow: 2 }, label: 'B 6体・虹の時渡りの砂時計2つを持ちこみ' },
   { key: 'B6', aidLv: 3, carry: ['mag', 'hachi'], label: 'B 6体・持ちこみ2つ(週刊!トレーニング・修行のハチマキ)' },
   { key: 'B6', aidLv: 3, cups: true, label: 'B 6体・ライバル2人(助手・フレンド)の大会に出る' },
+  { key: 'M6hint', aidLv: 5 },
+  { key: 'B6hint5', aidLv: 3 },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
@@ -93,6 +101,21 @@ const fight = (s, opp, idx) => {
 };
 
 // ---- ふつうのプレイヤーの作戦 ----
+// ランダムイベント: ふつうのプレイヤーの選び方(体力が少なければ体力の戻る方・ストレスが高ければ下がる方・ほかは能力の上がる方・無ければ a)
+const EVT = { n: 0, st: 0, kinds: {} };
+const chooseEvent = (s, ev) => {
+  if (ev.watch) return null;
+  const ok = ev.choices.filter(c => c.ok);
+  const score = (c) => { const fx = c.fx || []; let v = 0; fx.forEach(([op, a, b]) => { if (op === 'st') v += (a === 'all' ? 6 : 1) * b * 10; if (op === 'hp' && s.hp < s.hpMax * 0.4) v += a; if (op === 'str' && s.stress >= 50) v -= a; if (op === 'loy' && SUC.loyalOf(s) < 60) v += a; }); if (c.p) v += c.p * 8; return v; };
+  return ok.slice().sort((x, y) => score(y) - score(x))[0].c;
+};
+const runEvent = (s, slot, o) => {
+  if (NO_EVENTS || !SUC.events) return s;
+  const r = SUC.events.open(s, slot, o); s = r.state; const ev = r.out.ev; if (!ev) return s;
+  const p = SUC.events.pick(s, chooseEvent(s, ev)); if (!p.out.ok) return s;
+  EVT.n += 1; EVT.kinds[ev.kind] = (EVT.kinds[ev.kind] || 0) + 1; EVT.st += Object.values(p.out.delta.stats || {}).reduce((x, y) => x + y, 0);
+  return p.state;
+};
 let CUP_MODE = false; // ライバルの大会に出る作戦(試算の行で切り替える)
 const chooseAction = (s, v) => {
   if (v.can.includes('cond')) return { kind: 'cond' };
@@ -149,6 +172,7 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
       trace.battles = trace.battles || []; trace.battles.push({ kind: s.battle.kind, round: s.battle.round, won: wins.every(Boolean) && wins.length === opps.length });
       const bk = s.battle.kind; const rv = Boolean(s.battle.rival);
       const st = SUC.settle(s, wins); s = st.state;
+      s = runEvent(s, 'cup', { won: st.out.won, kind: bk });
       if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
       // 大会のあとのごはん: 名声があれば 能力 → 体力(少ないとき)→ 忠誠(60未満)の順
       if (s.mealReady && !s.over) {
@@ -159,10 +183,11 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
     }
     // 育成中のアイテム(1ターン1個): 体力が3割を切ったらジュース・忠誠50未満ならライセンス
     if (s.bag) { if (s.hp < s.hpMax * 0.3 && s.bag.juice) s = SUC.useItem(s, 'juice').state; else if (SUC.loyalOf(s) < 50 && s.bag.license) s = SUC.useItem(s, 'license').state; }
+    s = runEvent(s, 'start');
     const v = SUC.peek(s);
     const a = chooseAction(s, v);
     let r = SUC.act(s, a); s = r.state;
-    if (s.last && ['train', 'shugyo'].includes(s.last.kind)) s = SUC.react(s, chooseReact(s)).state;
+    if (s.last && ['train', 'shugyo'].includes(s.last.kind)) { s = SUC.react(s, chooseReact(s)).state; s = runEvent(s, 'after'); }
     if (SUC.issaComes(s)) s = SUC.issa(s, ISSA_PICK).state;
     const p = SUC.periodOf(s.turn);
     if (p.left === 1) trace.periodSums[p.key] = SUC.sumOf(s.stats);
@@ -183,6 +208,7 @@ const runVariant = (vr) => {
   const ranks = {}; const powers = []; const sums = []; const loy60 = []; const loys = []; const tags = [0, 0, 0, 0];
   const lg = { rematch: 0, meal: 0, shugyo: 0, learned: 0, taught: 0, train: 0, great: 0, fail: 0, sab: 0, events: 0, story: 0, cond: 0, rest: 0, play: 0, clinic: 0 };
   const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; const techN = []; let rivalCups = 0; let rivalWins = 0; let issaMet = 0; let issaWon = 0; let pts = 0;
+  EVT.n = 0; EVT.st = 0; EVT.kinds = {};
   for (let i = 0; i < RUNS; i++) {
     const id = `${vr.key}-${vr.aidLv}-${i}`;
     const sp = SPECIES[i % SPECIES.length]; const aid = AIDS[i % AIDS.length];
@@ -201,13 +227,14 @@ const runVariant = (vr) => {
   const order = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'M'];
   return {
     label: vr.label || PRESETS[vr.key].name, aidLv: vr.aidLv,
-    rank: order.filter(k => ranks[k]).map(k => `${k} ${pct(ranks[k], RUNS)}%`).join(' / '),
+    rank: order.filter(k => ranks[k]).map(k => `${k} ${pct(ranks[k], RUNS)}%`).join(' / '), grade: SUC.gradeOf(median(powers)).label,
     powerMedian: median(powers), powerMean: mean(powers), sumMedian: median(sums), loyalMean: mean(loys),
     loyal60Turn: loy60.length ? median(loy60) : null, loyal60Rate: pct(loy60.length, RUNS),
     tagsPerRun: tags.map(n => Math.round(n / RUNS * 10) / 10),
     perRun: Object.fromEntries(Object.entries(lg).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])),
     story3: Math.round(story3 / RUNS * 10) / 10, techs: mean(techN), rival: rivalCups ? `${Math.round(rivalCups / RUNS * 10) / 10}回出て勝率 ${pct(rivalWins, rivalCups)}%` : null, issa: `${Math.round(issaMet / RUNS * 100) / 100}回(成功 ${Math.round(issaWon / RUNS * 100) / 100})`,
     end: Object.fromEntries(Object.entries(over).map(([k, v]) => [k, pct(v, RUNS)])),
+    randomEvents: { perRun: Math.round(EVT.n / RUNS * 10) / 10, statPerRun: Math.round(EVT.st / RUNS), kinds: Object.fromEntries(Object.entries(EVT.kinds).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])) },
     battles: Object.fromEntries(Object.entries(bt).map(([k, [w, n]]) => [k, `${pct(w, n)}% (${n})`])),
     periodSumMedian: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, median(v)])),
   };
@@ -247,12 +274,13 @@ const results = [];
 for (const v of list) {
   const r = runVariant(v); results.push(r);
   console.log(`■ ${r.label}(助手の仲良し Lv${r.aidLv}・${RUNS}回)`);
-  console.log(`  ランク: ${r.rank}`);
+  console.log(`  ランク: ${r.rank}(中央値の評価 ${r.grade})`);
   console.log(`  総合力 中央値 ${r.powerMedian}・6能力の合計 中央値 ${r.sumMedian}・忠誠 平均 ${r.loyalMean}(60に届く ${r.loyal60Rate}%・届くターン中央値 ${r.loyal60Turn})`);
   console.log(`  タッグ 0/1/2/3+ 体の訓練: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
   console.log(`  1回あたり: ${Object.entries(r.perRun).map(([k, v]) => `${k} ${v}`).join('・')}`);
   console.log(`  大会の勝率: ${Object.entries(r.battles).map(([k, v]) => `${k} ${v}`).join('・')}`);
   if (r.rival) console.log(`  ライバルの大会: ${r.rival}`);
+  if (!NO_EVENTS) console.log(`  ランダムイベント: 1回の育成で ${r.randomEvents.perRun}回(${Object.entries(r.randomEvents.kinds).map(([k, v]) => `${k} ${v}`).join('・')})・能力の合計 +${r.randomEvents.statPerRun}`);
   console.log(`  終わり方: ${Object.entries(r.end).map(([k, v]) => `${k} ${v}%`).join('・')}`);
 }
 if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ runs: RUNS, issa: ISSA_PICK, results }, null, 1));

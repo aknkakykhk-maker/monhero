@@ -337,7 +337,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(op.sum > plain.sum * 1.0 && op.sum < plain.sum * 1.35, `ライバルの強さが期の基準に寄っていない: ${op.sum} / ${plain.sum}`);
     ok(op.stats.pow > op.stats.wise, 'ライバルの6能力の形がもとの子のままでない');
     const w1 = SUC.settle(b, [true]).state; const w0 = SUC.settle({ ...b, battle: { ...b.battle, rival: null } }, [true]).state;
-    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts > w0.pts && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ってもごほうびが大きくない');
+    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts === w0.pts && K.every(k => w1.stats[k] === Math.min(999, w0.stats[k] + 12)) && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ったごほうび(賞金×1.5・チケット+1・全能力+12・称号)がずれている');
   }
   // 王者・常連・組み合わせ表
   const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };
@@ -427,6 +427,26 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
 }
 
+// ---- 評価の表示(gradeOf)・ひらめきのアシスト5つ ----
+{
+  const g = (p) => SUC.gradeOf(p).label;
+  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'M1' && g(25100) === 'M12' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 25100].map(g)}`);
+  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === null, '次の番号までの数がずれている');
+  ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'battle'), 'ひらめきのアシスト5つ(型 battle)がない');
+  const st = { life: 600, pow: 700, wise: 300, hit: 500, eva: 400, tough: 600 };
+  const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });
+  const plain = mk([]); const all = mk([{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'mimamori', lv: 3 }]);
+  const cup = { kind: 'cup', sys: 'str', star: 1, round: 0 };
+  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(いちばん高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
+  ok(JSON.stringify(SUC.battleBuffs({ ...plain, battle: cup })) === '{"A":{"guts":3}}' && SUC.battleBuffs(all) === undefined, '大会の試合のときだけ上乗せが付く になっていない');
+  // 訓練には効かない
+  const tp = SUC.act(plain, { kind: 'train', stat: 'pow' }); const ta = SUC.act(all, { kind: 'train', stat: 'pow' });
+  ok(JSON.stringify(tp.out.gain) === JSON.stringify(ta.out.gain), 'ひらめきのアシスト(型 battle)が訓練に効いている');
+  // 特別な1話と足し合わせて範囲で切る
+  const sp = SUC.markSpecial({ ...SUC.newRun({ id: 'h2', species: 'Mocchi', aid: 'atsu', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 3 }] }] }), turn: 44 }).state;
+  ok(SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 0 } }).A.guts === 18, '特別な1話とひらめきのガッツが足し合わさらない');
+}
+
 // ---- 合体(保存枠の育て終えた子どうし・PLAN.md §3) ----
 {
   const mk = (id, sp, v, extra) => ({ id, species: sp, raised: true, gen: 1, st: { life: v, pow: v, wise: v, hit: v, eva: v, tough: v }, techs: [], gt: 2, rank: 'B', ...(extra || {}) });
@@ -461,4 +481,4 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 }
 
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・合体');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・評価の番号とひらめきのアシスト・合体');

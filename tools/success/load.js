@@ -40,13 +40,15 @@ const loadDeps = () => {
   const ALL_PLAYER_MONSTERS = require('../masmon-battle/load.js').load().data.ALL_PLAYER_MONSTERS;
   const regFile = path.join(ROOT, 'monster-hero', 'data', 'monhero-success-regulars.js');
   const reg = fs.existsSync(regFile) ? require(regFile) : { MONSUC_REGULARS: [], MONSUC_REGULAR_CUPS: {} };
+  const evFile = path.join(ROOT, 'monster-hero', 'data', 'monhero-success-events.js');
+  const MONSUC_EVENTS = fs.existsSync(evFile) ? require(evFile) : null; // ランダムイベント(芯が create の中で作る)
   // 血統(合体の子の種類を決める・読むだけ)
   const lctx = vm.createContext({});
   vm.runInContext(sliceConst(fs.readFileSync(path.join(ROOT, 'monster-hero', 'data', 'lineages.js'), 'utf8'), 'MONSTER_LINEAGE_MAP') + '\n;globalThis.__l = MONSTER_LINEAGE_MAP;', lctx, { filename: 'lineages.js' });
-  return { ...ctx.__out, MONSTER_LINEAGE_MAP: lctx.__l, ASSISTANT_MASMON_TECHS: tctx.__t, MONSTER_TYPE_OF: tyCtx.__ty, ALL_PLAYER_MONSTERS, MONSUC_REGULARS: reg.MONSUC_REGULARS, MONSUC_REGULAR_CUPS: reg.MONSUC_REGULAR_CUPS };
+  return { ...ctx.__out, MONSTER_LINEAGE_MAP: lctx.__l, MONSUC_EVENTS, ASSISTANT_MASMON_TECHS: tctx.__t, MONSTER_TYPE_OF: tyCtx.__ty, ALL_PLAYER_MONSTERS, MONSUC_REGULARS: reg.MONSUC_REGULARS, MONSUC_REGULAR_CUPS: reg.MONSUC_REGULAR_CUPS };
 };
 const depsFor = (deps, extra) => ({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, techs: deps.ASSISTANT_MASMON_TECHS,
-  types: deps.MONSTER_TYPE_OF, monsters: deps.ALL_PLAYER_MONSTERS, regulars: deps.MONSUC_REGULARS, cupNames: deps.MONSUC_REGULAR_CUPS, lineage: deps.MONSTER_LINEAGE_MAP, ...(extra || {}) });
+  types: deps.MONSTER_TYPE_OF, monsters: deps.ALL_PLAYER_MONSTERS, regulars: deps.MONSUC_REGULARS, cupNames: deps.MONSUC_REGULAR_CUPS, events: deps.MONSUC_EVENTS, lineage: deps.MONSTER_LINEAGE_MAP, ...(extra || {}) });
 const load = () => {
   if (cached) return cached;
   const deps = loadDeps();
