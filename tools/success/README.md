@@ -1,6 +1,7 @@
 # tools/success/ (モンヒロサクセスの道具)
 
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
+- `monsuc-fuse-check.js` … 合体(56-monsuc-fuse.jsx)の保存の順番・失敗で何も消えない・二重押し / `monsuc-fuse-browser-check.js [--shots]` … 合体の画面を本物のゲームで(止め絵 docs/progress/player-raise/shots/fuse-*.png)
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
 
 ## 新しいアイテムの絵を1つ足す手順
@@ -17,4 +18,8 @@
 5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
 
 対応表: `docs/progress/player-raise/art/ITEMS.md`
-- `monsuc-fuse-check.js` … 合体(56-monsuc-fuse.jsx)の保存の順番・失敗で何も消えない・二重押し / `monsuc-fuse-browser-check.js [--shots]` … 合体の画面を本物のゲームで(止め絵 docs/progress/player-raise/shots/fuse-*.png)
+
+## 景色の絵(住む場所・大会の会場・修行の段)
+
+- `scene-art.js` … 景色(1080×1920)を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/scenes/`・表は `monster-hero/data/success-scenes.js`)
+- 足し方・画面の決まり・一覧の絵: `docs/progress/player-raise/art/SCENES.md`
