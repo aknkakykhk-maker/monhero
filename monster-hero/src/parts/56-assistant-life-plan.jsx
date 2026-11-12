@@ -11,7 +11,8 @@
 //   日が替わったら捨てる(次の日の予定は持たない)。壊れていれば空
 const ASSISTANT_LIFE_PLAN_KEY = 'mh_assistant_life_plan_v1';
 // 予定に入れられる場所(その場所でできる「していること」があるところ。マーケットは助手が行かない)
-const ASSISTANT_LIFE_PLAN_PLACES = Object.freeze(['cafe', 'plaza', 'garden', 'hill', 'studio', 'ranch', 'cardroom', 'library', 'battle', 'home']);
+// clinic(病院)は印 assistantLifeBody が真のときだけ画面に出す(assistantLifeBodyPlaces)
+const ASSISTANT_LIFE_PLAN_PLACES = Object.freeze(['cafe', 'plaza', 'garden', 'hill', 'studio', 'ranch', 'cardroom', 'library', 'battle', 'home', 'clinic']);
 const ASSISTANT_LIFE_PLAN_FIRST_J = 2; // 4〜6時の回から(0〜4時の深夜は出さない)
 const ASSISTANT_LIFE_PLAN_TRUST = Object.freeze({ base: 0.65, perLv: 0.01, max: 0.93 });
 
@@ -176,7 +177,8 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     const want0 = d.plan[String(decided.abs)] || {};
     const want = {}; for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
-    const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrust(assistantLifePlanLvOf(id));
+    // 疲れ・ストレス(56-assistant-life-body.jsx): ひなたの丘の次の回は聞きやすく・ストレスが高いと聞きにくい。印が偽なら 0
+    const trust = {}; for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {}; for (const [id, v] of Object.entries(r.result)) if (v === 'no') { const g = (r.life.groups || []).find(x => x.ids.includes(id)); const pl = g ? g.place : (r.life.solo[id] || {}).place; if (pl) went[id] = pl; }
     assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result }, went: { ...(d.went || {}), [String(decided.abs)]: went } });
@@ -226,7 +228,7 @@ const assistantLifePlanUse = () => {
   React.useEffect(() => { const fn = (s) => setSt(s); ASSISTANT_LIFE_PLAN_STORE.listeners.add(fn); void ASSISTANT_LIFE_PLAN_STORE.load(); return () => { ASSISTANT_LIFE_PLAN_STORE.listeners.delete(fn); }; }, []);
   return st;
 };
-const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({ cafe: '🍰', plaza: '⛲', garden: '🌷', hill: '🌄', studio: '🎵', ranch: '🐾', cardroom: '🃏', library: '📚', battle: '⚔', home: '🏡' });
+const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({ cafe: '🍰', plaza: '⛲', garden: '🌷', hill: '🌄', studio: '🎵', ranch: '🐾', cardroom: '🃏', library: '📚', battle: '⚔', home: '🏡', clinic: '🏥' });
 // 行き先えらびの「得:」の文。地図の場所の窓・家の帯の「いま行くと得」と同じ文(assistantLifePlacePerkTail)を使う。効果の無い場所は空(何も出さない)
 const assistantLifePlanPerk = (place) => {
   if (place === 'battle') return 'マスモンが修行する';
@@ -238,17 +240,19 @@ const assistantLifePlanName = (id) => { try { return typeof assistantLifeName ==
 function AssistantLifePlanPicker({ id, abs, onDone }) {
   const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
   const cur = assistantLifePlanOf(abs, id);
-  const list = [...ASSISTANT_LIFE_PLAN_PLACES].sort((a, b) => (assistantLifePlanPerk(b) ? 1 : 0) - (assistantLifePlanPerk(a) ? 1 : 0));
+  const places = typeof assistantLifeBodyPlaces === 'function' ? assistantLifeBodyPlaces(ASSISTANT_LIFE_PLAN_PLACES) : ASSISTANT_LIFE_PLAN_PLACES.filter(p => p !== 'clinic');
+  const list = [...places].sort((a, b) => (assistantLifePlanPerk(b) ? 1 : 0) - (assistantLifePlanPerk(a) ? 1 : 0));
   const h = assistantLifeSlotOfAbs(abs).from;
   return (
     <div className="mt-1 rounded-xl border border-sky-300/60 bg-slate-900/95 p-1.5" data-assistant-life-plan-picker={abs}>
       <p className="px-1 text-[11.5px] font-black text-sky-200">{assistantLifePlanName(id)}に {h}〜{(h + 2) % 24}時 に行ってもらう場所</p>
       <div className="mt-1 grid grid-cols-2 gap-1">
         {list.map(p => (
-          <button key={p} type="button" data-assistant-life-plan-place={p} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
-            className={`min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95`}>
-            {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{p === fav ? ' ♥' : ''}
+          <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
+            className={`min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95 disabled:opacity-35`}>
+            {ASSISTANT_LIFE_PLAN_ICON[p]} {(typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p)) ? <>{assistantLifeBodyLabel(p)[0]} <span className="text-[10px] font-bold text-slate-400">{assistantLifeBodyLabel(p)[1]}</span></> : ASSISTANT_LIFE_PLACES[p]}{p === fav ? ((typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) ? ' ♥ 好きな場所' : ' ♥') : ''}
             {assistantLifePlanPerk(p) && <span className="block text-[10px] font-bold text-amber-200">得: {assistantLifePlanPerk(p)}</span>}
+            {typeof AssistantLifeBodyPlaceStat === 'function' && <AssistantLifeBodyPlaceStat place={p} abs={abs}/>}
           </button>))}
         <button type="button" data-assistant-life-plan-place="auto" onClick={() => { assistantLifePlanSet(abs, id, null); onDone && onDone(); }} className="col-span-2 min-h-[44px] rounded-xl bg-white/5 text-[12px] font-black text-slate-200 active:scale-95">おまかせにもどす</button>
       </div>
@@ -276,7 +280,7 @@ function AssistantLifePlanWho({ id, cur }) {
         {pick === abs && <AssistantLifePlanPicker id={id} abs={abs} onDone={() => setPick(null)}/>}
       </div>);
   }
-  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{rows}</div>;
+  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{typeof AssistantLifeBodyPanel === 'function' && <AssistantLifeBodyPanel id={id} cur={cur}/>}{rows}</div>;
 }
 
 // 8人×4回の表(横)
