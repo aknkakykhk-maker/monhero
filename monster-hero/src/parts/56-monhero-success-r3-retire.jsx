@@ -283,7 +283,7 @@ function MsxR3Box({ onClose }) {
 // kind: 'battle'(期末・頂への道・月の大会の1戦。run.phase === 'battle')/'over'(引退・ゲームオーバー)/'cup'(受付)/'shugyo'(修行)
 function MsxR3({ kind, run, setRun, v, ev, debug, onBack, onPause, onActed }) {
   if (!msxSuc || !run || !run.s) return null;
-  if (kind === 'battle') return <MsxR3Battle run={run} setRun={setRun} v={v} ev={ev} onPause={onPause}/>;
+  if (kind === 'battle') return <MsxR3Battle run={run} setRun={setRun} v={v} ev={ev} onPause={onPause} debug={debug}/>;
   if (kind === 'over') return <MsxR3Over run={run} setRun={setRun} onPause={onPause} debug={debug}/>;
   if (kind === 'cup') return <MsxR3Cup run={run} setRun={setRun} v={v} ev={ev} onBack={onBack} onActed={onActed}/>;
   if (kind === 'shugyo') return <MsxR3Shugyo run={run} setRun={setRun} v={v} ev={ev} onBack={onBack} onPause={onPause}/>;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11122bd39d2bf996
+// source-sha256: 3f9a24c1c6b5ddb8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162737,7 +162737,8 @@ function MsxR3Battle({
   setRun,
   v,
   ev,
-  onPause
+  onPause,
+  debug
 }) {
   const {
     SUC
@@ -163019,10 +163020,9 @@ function MsxR3Battle({
     }, "あげない"), React.createElement("button", {
       type: "button",
       className: "go",
-      disabled: !mealPick || !can(mealPick),
-      onClick: give,
+      onClick: () => mealPick && can(mealPick) ? give() : finish(s),
       "data-msx-r3-give": true
-    }, mealPick ? `${M[mealPick].name}をあげる(${free ? 'ただ' : `💰${M[mealPick].cost}`})` : 'ごはんをえらぶ'));
+    }, mealPick && can(mealPick) ? `${M[mealPick].name}をあげる(${free ? 'ただ' : `💰${M[mealPick].cost}`})` : 'あげずに つぎへ ▶'));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
@@ -163493,7 +163493,22 @@ function MsxR3Battle({
     }, '');
     return l.t ? l.t : null;
   })() || (champ && !opp.champ ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は 王者の ", champ.name || msxMonName(champ.species), "!"), " でも、", run.nick, "の相手は ", opp.rival ? 'ライバルの ' : '', foeName, " だよ。」") : opp.champ ? React.createElement(React.Fragment, null, "「相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」")))));
-  const foot = React.createElement("div", {
+  const foot = debug ? React.createElement("div", {
+    className: "v-ft"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => settle(false)
+  }, "負けたことにする"), React.createElement("button", {
+    type: "button",
+    className: "on",
+    onClick: () => settle(true),
+    "data-msx-r3-dbgwin": true
+  }, "勝ったことにする(デバッグ)"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => setStep('card'),
+    "data-msx-r3-tocard": true
+  }, "⚔ 1戦へ")) : React.createElement("div", {
     className: "v-ft"
   }, skip ? React.createElement("button", {
     type: "button",
@@ -164771,7 +164786,8 @@ function MsxR3({
     setRun: setRun,
     v: v,
     ev: ev,
-    onPause: onPause
+    onPause: onPause,
+    debug: debug
   });
   if (kind === 'over') return React.createElement(MsxR3Over, {
     run: run,
