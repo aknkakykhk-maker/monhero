@@ -2,6 +2,7 @@
 
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
+- `success-r3-shoot.js` … 回3の画面(大会・修行・引退・ゲームオーバー・保存枠へしまう)を本物のブラウザで開き、真っ白・はみ出し・エラー・「保存枠に1回だけ入る」を見る(`SHOT_DIR=<フォルダ>` で撮る)
 
 ## 新しいアイテムの絵を1つ足す手順
 
@@ -17,8 +18,3 @@
 5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
 
 対応表: `docs/progress/player-raise/art/ITEMS.md`
-
-## 景色の絵(住む場所・大会の会場・修行の段)
-
-- `scene-art.js` … 景色(1080×1920)を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/scenes/`・表は `monster-hero/data/success-scenes.js`)
-- 足し方・画面の決まり・一覧の絵: `docs/progress/player-raise/art/SCENES.md`

@@ -108,6 +108,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   }, []);
   const setRun = (r) => { setRunState(r); if (r) msxSaveRun(r); };
   const setMeta = (meta) => { setData((d) => ({ ...d, meta })); msxSaveMeta(meta); };
+  // ホームへ戻るときは保存を読み直す(回3の引退で保存枠・meta が書き足されたあと、古い中身で上書きしないように)
+  const toHome = () => { msxReadAll(msxSuc.SUC).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
 
   const startRun = (cfg) => {
     const { SUC } = msxSuc;
@@ -128,9 +130,10 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   let content = null;
   if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
   else if (view === 'fail') content = (<><MsxHd back="とじる" onBack={onClose}/><div className="v-body"><div className="v-card">読み込めませんでした。通信のよいところで、もう一度開いてください</div></div></>);
-  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit}/>;
+  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit}/>;
   else if (view === 'start') content = <MsxStart data={data} SUC={msxSuc.SUC} onCancel={() => setView('home')} onStart={startRun} bondLvOf={bondLvOf} callNameOf={callNameOf}/>;
-  else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={() => setView('home')} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug}/>;
+  else if (view === 'box' && typeof MsxR3Box === 'function') content = <MsxR3Box onClose={toHome}/>;
+  else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={toHome} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug}/>;
 
   const node = (
     <div className="msx-wrap" data-monhero-success role="dialog" aria-label="モンヒロサクセス">
@@ -147,7 +150,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
 }
 
 // ---- はじめの画面(続きから・新しく始める・デバッグの道具) ----
-function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe }) {
+function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe, onBox }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
   const v = s ? SUC.peek(s) : null;
@@ -163,11 +166,12 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         {s ? (
           <div className="v-card pk">
             <div className="h2">{s.over ? 'この育成は終わりました' : '途中の育成があります'}</div>
-            <div className="sub">{run.nick}({msxMonName(s.species)})・{msxAidName(s.aid)}編・{s.over ? '引退の画面は準備中です' : `${v.period.name} 残り${v.period.left}ターン(最後まで あと${v.toEnd})`}</div>
+            <div className="sub">{run.nick}({msxMonName(s.species)})・{msxAidName(s.aid)}編・{s.over ? '引退の続きから' : `${v.period.name} 残り${v.period.left}ターン(最後まで あと${v.toEnd})`}</div>
             <button type="button" className="msx-btn go" onClick={onContinue}>{s.over ? '結果を見る' : '▶ 続きから'}</button>
           </div>
         ) : <div className="v-card"><div className="h2">育てる子を選んで、46ターンの育成をはじめよう</div><div className="sub">編成の6体が集まった訓練ほど、よく伸びる</div></div>}
         <button type="button" className="v-big" onClick={onNew}>🌱 新しく育成をはじめる</button>
+        {onBox ? <button type="button" className="msx-btn sub" onClick={onBox} data-msx-r3-openbox>📦 保存枠({data.box.mons.length}/{data.box.cap})</button> : null}
         {debug && (
           <div className="v-card" style={{ borderColor: '#a3e63566' }}>
             <div className="msx-dbg">デバッグ(公開の印が偽のあいだだけ・通常のプレイには出ない)</div>
@@ -220,7 +224,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   let body = null; let foot = null;
   // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
   //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
-  const r3 = typeof MsxR3 === 'function' ? ((phase === 'battle' && s.battle) ? 'battle' : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
+  const r3 = typeof MsxR3 === 'function' ? (phase === 'battle' ? 'battle' : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
   if (r3) return <MsxR3 kind={r3} run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} debug={debug}
     onBack={() => setSub('main')} onPause={onPause} onQuit={onQuit}
     onActed={(next) => { setSub('main'); afterAct(next); }}/>;

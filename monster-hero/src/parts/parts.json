@@ -529,6 +529,26 @@
       "role": "モンヒロサクセス: 育成の画面の本体 MonheroSuccessScreen(メイン・訓練を選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開)。大会・修行・引退・合体は回3で「準備中」"
     },
     {
+      "file": "56-monhero-success-r3-css.jsx",
+      "role": "モンヒロサクセス 回3(大会・修行・引退・保存枠)の見た目 MSX_R3_CSS。見本 mock/v3.css の「回3以降の止め絵」を .msx .r3 の中だけに効くよう切り出したもの"
+    },
+    {
+      "file": "56-monhero-success-r3-store.jsx",
+      "role": "モンヒロサクセス 回3の土台: 試合を1対1で回す(助手マスモン対戦の芯)・大会の名前・保存枠へしまう(mh_monsuc_box_v1 に足すだけ)・優勝ずみの大会(mh_monsuc_meta_v1 の wonCups)・称号/アシスト/記録帳の表を開いたときに読む・ランキングへ送る口(monsucRankSubmit があれば呼ぶ)"
+    },
+    {
+      "file": "56-monhero-success-r3-cup.jsx",
+      "role": "モンヒロサクセス 回3: 大会(受付 C1・組み合わせ表 B1・バトルカード C2・観戦・負け C4 の砂時計・賞品 B2・ごはん C3)。観戦は 56-assistant-masmon-battle-view.jsx の部品を使い回す"
+    },
+    {
+      "file": "56-monhero-success-r3-quest.jsx",
+      "role": "モンヒロサクセス 回3: 修行(Q1 コースと覚えたい技を選ぶ → Q2 結果)。芯の act({kind:'shugyo'}) を呼ぶだけ"
+    },
+    {
+      "file": "56-monhero-success-r3-retire.jsx",
+      "role": "モンヒロサクセス 回3: 引退(E0 評価・E3 能力ポイント・E1 振り返り・E2 アシスト能力 → 保存枠へ)・ゲームオーバー G1・保存枠の一覧 MsxR3Box(お別れ・フレンドへの貸し出し)・回2から呼ぶ入口 MsxR3"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true
