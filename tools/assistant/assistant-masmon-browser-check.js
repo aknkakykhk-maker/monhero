@@ -18,6 +18,7 @@ const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.reso
 const { MIME, STORY_IDS, seed, toHome, finishTalk } = require(path.resolve(__dirname, 'life-browser-shared'));
 const SHOTS = process.argv.includes('--shots');
 const GROW = !!process.env.MASMON_GROW; // 育成基盤(印 assistantMasmonGrow を真にして・2026-11-11 キズナ4)
+const BOND = !!process.env.MASMON_BOND; // 絆(印 assistantMasmonBond を真にして・くわしい画面の総合力・忠誠度・人気・方針・年齢・型・叱る/褒める・2026-11-12 キズナ)。--shots で masmon-bond-*.png
 const ASK = !!process.env.MASMON_ASK; // 「提案する」の流れも確かめる(2026-11-08 キズナ4)
 const shotDir = process.env.MASMON_SHOT_DIR ? path.resolve(process.env.MASMON_SHOT_DIR) : path.join(root, 'docs/progress/assistant-peer/shots');
 //   MASMON_SEED=◯◯ で、そのプレイヤーの種でマスモンを決めて開く(プレイヤーごとに違うマスモン ❶B の止め絵用)
@@ -98,7 +99,8 @@ const layoutProblems = (page) => page.evaluate(() => {
       });
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);
-      if (GROW) await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonGrow = true; });
+      if (GROW || BOND) await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonGrow = true; });
+      if (BOND) await page.evaluate(() => { RELEASE_FLAGS.assistantMasmonBond = true; });
       if (v.rot) {
         await page.locator('.mh-home-facility.rhythm').click({ timeout: 15000 }).catch(() => {});
         await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 }).catch(() => {});
@@ -215,6 +217,20 @@ const layoutProblems = (page) => page.evaluate(() => {
             await page.waitForTimeout(1200);
             const dt = await page.evaluate(() => { const d = document.querySelector('[data-assistant-masmon-detail]'); if (!d) return null; const ng = []; for (const t of d.querySelectorAll('.truncate')) if (t.scrollWidth > t.clientWidth + 1) ng.push(t.textContent.slice(0, 16)); const b = d.querySelector('.mhm-body'); if (b && b.scrollWidth > b.clientWidth + 1) ng.push('横にはみ出す'); return { ng, parts: ['stats', 'skills', 'dye', 'talk'].filter(k => d.querySelector(`[data-assistant-masmon-detail-${k}]`)).length }; });
             check(`${T}押すと詳細画面(能力・技・染めた色・ひとこと)・切れない`, dt && dt.parts === 4 && !dt.ng.length, dt ? `${dt.parts}つ ${dt.ng.join(' / ')}` : '開かない');
+            if (BOND) { // 絆: 総合力とランク・忠誠度・人気・方針・年齢・型の曲線・叱る/褒める(止め絵のため、見本の値を絆の保存に入れて見る)
+              await page.evaluate(async () => { await AMGB_STORE.load(); const aid = 'kiki'; const k = Object.keys(AMG_STORE.state.mons[aid] || {})[0]; if (!k) return; const [slot, monster] = k.split(':'); const key = `${aid}:${slot}:${monster}`;
+                const b = AMGB_STORE.state.mons[key] || {}; amgbSave({ ...AMGB_STORE.state, mons: { ...AMGB_STORE.state.mons, [key]: { ...b, loy: 72, pop: 64, pol: 1, pp: 4, gt: 1, age: 9, life: 300, last: amgSlotDay(amgSlotOf()), touch: amgSlotDay(amgSlotOf()), fight: amgSlotDay(amgSlotOf()), sc: { d: -1, n: 0 }, rs: [{ s: amgSlotOf(), r: 'great' }] } } }); });
+              await page.waitForTimeout(500);
+              const bp = await page.evaluate(() => { const p = document.querySelector('[data-amgb-panel]'); if (!p) return null; p.scrollIntoView({ block: 'center' }); const r = p.getBoundingClientRect(); const ng = []; if (r.right > window.innerWidth + 1 || r.left < -1) ng.push('はみ出す'); for (const t of p.querySelectorAll('p,span,b')) if (t.scrollWidth > t.clientWidth + 2 && getComputedStyle(t).overflow === 'hidden') ng.push(t.textContent.slice(0, 12));
+                return { total: !!p.querySelector('[data-amgb-total]'), rank: p.querySelector('[data-amgb-rank]')?.textContent || '', loy: p.querySelector('[data-amgb-loy]')?.textContent, pop: p.querySelector('[data-amgb-pop]')?.textContent, curve: !!p.querySelector('[data-amgb-curve]'), acts: p.querySelectorAll('[data-amgb-act]').length, ng }; });
+              check(`${T}絆: 総合力とランク・忠誠度・人気・型の曲線・叱る/褒めるが出て、はみ出さない`, bp && bp.total && bp.rank && bp.loy === '72' && bp.pop === '64' && bp.curve && bp.acts === 2 && !bp.ng.length, JSON.stringify(bp));
+              if (SHOTS) await page.locator('[data-amgb-panel]').screenshot({ path: path.join(shotDir, `masmon-bond-panel-${v.id}.png`) }).catch(() => {});
+              await page.locator('[data-amgb-act="praise"]').click({ timeout: 3000 }).catch(() => {});
+              await page.waitForTimeout(400);
+              const msg = await page.evaluate(() => document.querySelector('[data-amgb-msg]')?.textContent || '');
+              check(`${T}絆: 褒めると忠誠度が上がり、ボタンが消える`, /忠誠度 \+3/.test(msg) && (await page.locator('[data-amgb-act]').count()) === 0, msg);
+              if (SHOTS) await page.locator('[data-amgb-panel]').screenshot({ path: path.join(shotDir, `masmon-bond-praised-${v.id}.png`) }).catch(() => {});
+            }
             if (GROW) { // 育成基盤: 6能力・疲労・ストレス・今日の育成。一覧の札にも6能力
               const g = await page.evaluate(() => ({ stats: document.querySelectorAll('[data-assistant-masmon-detail] [data-amg-card] [data-amg-stat]').length, fat: !!document.querySelector('[data-amg-fat]'), str: !!document.querySelector('[data-amg-str]'), log: document.querySelectorAll('[data-amg-log]').length, saved: typeof AMG_STORE !== 'undefined' && Object.keys(AMG_STORE.state.mons || {}).length }));
               check(`${T}育成基盤: くわしい画面に6能力・疲労・ストレス・今日の育成`, g.stats === 6 && g.fat && g.str && g.log >= 1 && g.saved >= 1, JSON.stringify(g));
