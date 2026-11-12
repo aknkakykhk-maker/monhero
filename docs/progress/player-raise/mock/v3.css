@@ -525,3 +525,49 @@
 .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
 .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
 .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
+/* 回3以降の止め絵(2026-11-12) */
+/* 組み合わせ表 */
+.v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
+.v-brk{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;grid-template-rows:repeat(8,minmax(0,1fr));gap:4px 5px;flex:1 1 0;min-height:0;margin-top:3px}
+.v-bc{position:relative;display:flex;align-items:center;gap:5px;background:#1e1a36;border:1.5px solid #475569;border-radius:11px;padding:2px 6px;min-width:0}
+.v-bc>img{height:24px;width:24px;object-fit:contain;flex:none}.v-bc div{min-width:0;line-height:1.15}.v-bc b{display:block;font-size:11px;white-space:nowrap}.v-bc small{font-size:8.5px;color:#cbd5e1;font-weight:800}
+.v-bc.me{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04777}
+.v-bc.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.v-bc.ch{border-color:#fbbf24;background:linear-gradient(90deg,#3b2f0b,#1e1a36)}
+.v-bc .mk{position:absolute;right:3px;top:-7px;border-radius:99px;font-size:8.5px;font-weight:900;line-height:1.5;padding:0 6px 0 1px;white-space:nowrap;display:flex;align-items:center;gap:2px}
+.v-bc .mk.rv{background:linear-gradient(90deg,#ef4444,#fb923c)}.v-bc .mk.rv img{width:15px;height:15px;border-radius:50%;object-fit:cover;object-position:50% 20%;border:1px solid #fff}.v-bc .mk.ch{background:#92400e;border:1px solid #fde047;padding:0 6px;color:#fde047}
+.v-bs{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed #64748b;border-radius:11px;font-size:11px;font-weight:900;color:#94a3b8;background:#13102b}
+.v-bs.me{border:1.5px solid #fde047;color:#fde047;background:#3b2f0b}.v-bs.win{font-size:24px;border-color:#fde047;color:#fde047;line-height:1.1}.v-bs small{font-size:9px;color:#cbd5e1;font-weight:800;text-align:center}
+.v-bleg{display:flex;flex-direction:column;gap:2px;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:5px}.v-bleg b{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}.v-bleg .rvd{background:#ef4444}.v-bleg .chd{background:#fbbf24}
+/* 賞品 */
+.v-rvw{position:absolute;left:8px;right:8px;bottom:8px;background:#3b1220ee;border:1.5px solid #f87171;border-radius:99px;padding:3px 10px 3px 4px;font-size:11px;font-weight:900;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.v-rvw img{width:22px;height:22px;border-radius:50%;object-fit:cover;object-position:50% 20%;border:1.5px solid #fff}.v-rvw b{margin-left:auto;background:#3b2f0b;border:1px solid #fde047;color:#fde047;border-radius:99px;padding:0 7px;font-size:9px}
+.v-trophy{position:absolute;right:8%;bottom:30%;font-size:44px;filter:drop-shadow(0 4px 6px #000a)}
+.v-prz{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.v-prz>div{position:relative;display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-radius:12px;padding:5px 9px;font-size:12px;font-weight:900}
+.v-prz .e{font-size:20px;width:26px;text-align:center;flex:none}.v-prz b{flex:none;width:76px}.v-prz .t{flex:1;color:#e2e8f0;font-weight:800;font-size:11px;white-space:nowrap;overflow:hidden}
+.v-prz .new{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}.v-prz i{font-style:normal;background:#ef4444;border-radius:99px;font-size:9px;padding:0 6px}
+/* 最終の評価・能力ポイント */
+.v-gl{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px;text-align:center}
+.v-gl div{background:#13102b;border:1.5px solid #475569;border-radius:12px;padding:5px 2px;opacity:.7}.v-gl b{display:block;font-size:24px;line-height:1.1;color:#cbd5e1}.v-gl small{font-size:9px;color:#94a3b8;font-weight:800}
+.v-gl .ok{opacity:1;border-color:#64748b}.v-gl .now{opacity:1;border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}.v-gl .now b{color:#f472b6;-webkit-text-stroke:1px #fff}
+.v-pq{display:flex;gap:5px;align-items:center;margin-top:7px;font-size:10px;font-weight:900;color:#cbd5e1}.v-pq i{font-style:normal;background:#1e1a36;border:1.5px solid #64748b;border-radius:99px;padding:3px 9px;color:#fff}.v-pq i.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
+.v-pa{display:flex;flex-direction:column;gap:5px;margin-top:7px}.v-pa>div{display:grid;grid-template-columns:96px 38px 38px 1fr;gap:5px;align-items:center;background:#1e1a36;border:1.5px solid #475569;border-radius:12px;padding:4px 8px;font-size:11.5px;font-weight:900}
+.v-pa .v0{color:#cbd5e1;text-align:right}.v-pa .ad{color:#86efac}.v-pa .st{display:flex;align-items:center;justify-content:flex-end;gap:5px}.v-pa .st i{font-style:normal;width:22px;height:22px;border-radius:50%;background:#334155;text-align:center;line-height:22px}.v-pa .st b{min-width:16px;text-align:center;color:#fde047}.v-pa .cs{display:none}
+/* ランキング */
+.v-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}.v-tabs span{text-align:center;background:#1e1a36;border:1.5px solid #475569;border-radius:99px;padding:5px;font-size:12.5px;font-weight:900;color:#cbd5e1}.v-tabs .on{border-color:#fde047;background:#3b2f0b;color:#fde047}
+.v-rsel{margin-top:5px;font-size:11px;font-weight:800;color:#cbd5e1}.v-lines{display:flex;gap:4px;margin-top:5px;overflow:hidden}.v-lines i{font-style:normal;flex:none;background:#1e1a36;border:1.5px solid #475569;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:900;color:#cbd5e1;white-space:nowrap}.v-lines i.on{border-color:#fde047;color:#fde047;background:#3b2f0b}
+.v-rl{display:flex;flex-direction:column;gap:3px;margin-top:5px;flex:1 1 0;min-height:0;overflow:hidden}
+.v-rr,.v-rme{background:#1e1a36;border:1.5px solid #475569;border-radius:12px;padding:3px 8px}
+.v-rr .r1,.v-rme{display:flex;align-items:center;gap:6px;min-width:0}
+.v-rr .no,.v-rme .no{flex:none;width:22px;text-align:center;font-size:14px;font-weight:900;color:#cbd5e1}
+.v-rr.top .no{color:#fde047}.v-rr .im,.v-rme .im{flex:none;width:30px;height:30px}.v-rr .im img,.v-rme .im img{width:30px;height:30px;object-fit:contain}
+.v-rr .nm,.v-rme .nm{flex:1;min-width:0;line-height:1.2}.v-rr .nm b,.v-rme .nm b{display:block;font-size:12px;white-space:nowrap}.v-rr .nm small,.v-rme .nm small{font-size:9px;color:#cbd5e1;font-weight:800;white-space:nowrap}
+.v-rr .gd,.v-rme .gd{flex:none}.v-rr .pw,.v-rme .pw{flex:none;width:56px;text-align:right;font-size:12.5px;font-weight:900;color:#fde047}
+.v-rr.open{border-color:#fde047;background:#3b2f0b}.v-rr .r2{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:3px;text-align:center}.v-rr .r2 span{background:#0f172a;border-radius:8px;padding:2px 0}.v-rr .r2 small{display:block;font-size:7.5px;color:#cbd5e1;font-weight:800;white-space:nowrap}.v-rr .r2 b{font-size:11px}
+.v-rme{margin-top:5px;border-color:#f472b6;background:#3b1236}
+/* ゲームオーバー・博士のアイテム */
+.v-lives{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#cbd5e1}
+.v-lives i{width:14px;height:14px;border-radius:50%;border:2px solid #64748b;background:#1e293b}
+.v-itemfx{position:absolute;right:8px;bottom:8px;display:flex;align-items:center;gap:6px;background:#0f0d24ee;border:1.5px solid #fde047;border-radius:12px;padding:4px 8px;font-size:10px;font-weight:900;line-height:1.3;box-shadow:0 0 14px #fde04788}
+.v-itemfx svg{width:30px;height:30px;flex:none}.v-itemfx.lp{bottom:auto;top:8px;left:8px;right:auto}
+.v-ix.lp{border-color:#fde047}.v-ix.lp .pr i.on{background:#fde047;box-shadow:0 0 5px #fde047}
