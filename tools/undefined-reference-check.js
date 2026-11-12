@@ -79,6 +79,7 @@ const LATER_HOOKS = {
   amgEntryOf: '助手のマスモンの育成(第①段階・キズナ4)の入れ物。修行の相談が疲れ具合を見るのに使う。2026-11-11',
   assistantPartnerLockedNow: '会っているがまだ助手でない助手(町の人)か(カイホウ 18-assistant-partner.jsx)。助手ライフの🔒の判定(56-assistant-life-partner.jsx)。2026-11-11',
   assistantPartnerProgressNow: '解放前の助手(町の人)の解放までの進み具合(カイホウ 18-assistant-partner.jsx)。助手ライフの町の人の小窓(56-assistant-life-partner.jsx)が「あと何回」に使う。2026-11-11',
+  monsucMonLine: 'モンヒロサクセスの台本エンジンのモンスターの声(別の会話が足す)。育てる子の演出(56-monhero-success-fx.jsx)のふきだしが呼ぶ。2026-11-12',
   assistantPartnerOkNow: '解放前の助手に関われないようにする判定(カイホウ 18-assistant-partner.jsx)。モンヒロバトルの応援・修行を見るが通す。2026-11-11',
 };
 const laterOk = (name) => Object.prototype.hasOwnProperty.call(LATER_HOOKS, name) && source.includes(`typeof ${name} === 'function'`);

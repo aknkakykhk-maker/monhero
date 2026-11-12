@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a5d8ff202b9df35
+// generated-sha256: 806290b10fab992d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64634,8 +64634,8 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
 //   <MsxSceneLight season time/> … 背景の上に重ねる季節と時間の光(押せない・動かない)
 //
 // 決まり: 演出は1.2秒まで・押せばとばせる・端末の「動きを減らす」(または calm)では動かさず止まった姿で出す。
-// ふきだしの声は台本エンジン(別の会話で作る monsucMonLine)があればそれを、無ければ読み込んである台本 mon.js
-// (回2の msxSuc.script.mon)、それも無ければ下の仮の声から選ぶ。保存はしない。公開の印も見ない(呼ぶ画面が見る)。
+// ふきだしの声は台本エンジン(別の会話で作る monsucMonLine)があればそれを、無ければ画面が msxFxUseScript() で渡した
+// 台本 mon.js の行(回2なら msxSuc.script.mon)、それも無ければ下の仮の声から選ぶ。保存はしない。公開の印も見ない(呼ぶ画面が見る)。
 
 const MSXFX_MOODS = Object.freeze(['joy', 'hype', 'calm', 'tired', 'sulky', 'sad', 'surprise', 'clingy']);
 const MSXFX_MOOD_ALIAS = Object.freeze({
@@ -64701,11 +64701,10 @@ const MSXFX_VOICE_FALLBACK = Object.freeze({
   tired: ['ぜぇ…ぜぇ…', '{cry}…'], sulky: ['むぅ…', '{cry}っ！ ぷいっ'], sad: ['{cry}…', 'しょぼ…'],
   surprise: ['{cry}！？', '！？'], clingy: ['{cry}〜', '{cry}…♡'],
 });
-const msxFxScriptRows = () => {
-  try { if (typeof msxSuc !== 'undefined' && msxSuc && msxSuc.script && Array.isArray(msxSuc.script.mon)) return msxSuc.script.mon; } catch (_) {}
-  try { if (typeof MONSUC_SCRIPT_MON !== 'undefined' && Array.isArray(MONSUC_SCRIPT_MON)) return MONSUC_SCRIPT_MON; } catch (_) {}
-  return null;
-};
+// 台本の行(mon.js の MONSUC_SCRIPT_MON と同じ形)。台本を読んだ画面が msxFxUseScript(rows) で渡す(回2なら msxSuc.script.mon)
+let msxFxScript = null;
+const msxFxUseScript = (rows) => { if (Array.isArray(rows)) msxFxScript = rows; };
+const msxFxScriptRows = () => msxFxScript;
 const msxFxCry = (species) => {
   const rows = msxFxScriptRows(); const id = `mon.cry.${String(species || '').toLowerCase()}`;
   const r = rows && rows.find((x) => x && x.id === id);

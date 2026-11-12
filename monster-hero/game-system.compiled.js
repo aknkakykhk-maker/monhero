@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25df88ba16fd0742
+// source-sha256: 5968d9459a56641e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108290,15 +108290,11 @@ const MSXFX_VOICE_FALLBACK = Object.freeze({
   surprise: ['{cry}！？', '！？'],
   clingy: ['{cry}〜', '{cry}…♡']
 });
-const msxFxScriptRows = () => {
-  try {
-    if (typeof msxSuc !== 'undefined' && msxSuc && msxSuc.script && Array.isArray(msxSuc.script.mon)) return msxSuc.script.mon;
-  } catch (_) {}
-  try {
-    if (typeof MONSUC_SCRIPT_MON !== 'undefined' && Array.isArray(MONSUC_SCRIPT_MON)) return MONSUC_SCRIPT_MON;
-  } catch (_) {}
-  return null;
+let msxFxScript = null;
+const msxFxUseScript = rows => {
+  if (Array.isArray(rows)) msxFxScript = rows;
 };
+const msxFxScriptRows = () => msxFxScript;
 const msxFxCry = species => {
   const rows = msxFxScriptRows();
   const id = `mon.cry.${String(species || '').toLowerCase()}`;

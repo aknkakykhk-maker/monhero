@@ -73,6 +73,7 @@ const mount = (sheet) => {
       await page.waitForFunction(() => typeof MsxLiveMon === 'function' && typeof ALL_PLAYER_MONSTERS === 'object', undefined, { timeout: 90000 });
       // ふきだしの声は台本 mon.js から(回2の台本の束がまだ無い版でも、正本を読んで本物の鳴き声で撮る)
       await page.addScriptTag({ url: `http://localhost:${PORT}/docs/progress/player-raise/script/mon.js` });
+      await page.evaluate(() => msxFxUseScript(MONSUC_SCRIPT_MON)); // eslint-disable-line no-undef
       for (const sheet of ['moods', 'react', 'moment']) {
         const nm = `${sheet}${tag ? `(${tag})` : ''}`;
         await page.evaluate(() => { const s = document.getElementById('fx-pause'); if (s) s.remove(); });
