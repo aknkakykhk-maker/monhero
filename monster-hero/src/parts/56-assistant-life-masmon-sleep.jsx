@@ -28,7 +28,8 @@ const normalizeAssistantMasmonSleep = (raw) => {
     ids.add(b.id);
     out.beds.push({ id: b.id, aid: b.aid, slot: b.slot, src: b.src === 'former' ? 'former' : 'sleep', at: typeof b.at === 'string' ? b.at.slice(0, 10) : '', fat: typeof b.fat === 'string' ? b.fat.slice(0, 20) : '', row,
       g: amgsGrowOk(b.aid, row.monster, b.g), t: amgsTrainOk(b.aid, row.monster, b.t),
-      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? { k: b.c.k, left: Math.min(30, b.c.left) } : null });
+      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? { k: b.c.k, left: Math.min(30, b.c.left) } : null,
+      ...(b.bd && typeof amgbBedOk === 'function' && amgbBedOk(b.bd) ? { bd: amgbBedOk(b.bd) } : {}) }); // 絆の写し(忠誠・人気・方針・型・年齢・寿命・56-assistant-life-masmon-bond.jsx)
   }
   if (raw.seen && typeof raw.seen === 'object') for (const [k, v] of Object.entries(raw.seen).slice(-400)) if (v === true && /^[a-z]{2,12}:[1-8]:[\w-]{0,20}:\w{2,40}$/.test(k)) out.seen[k] = true;
   out.seq = Number.isInteger(raw.seq) && raw.seq > 0 ? Math.min(raw.seq, 999999999) : out.beds.reduce((a, b) => Math.max(a, Number(b.id.slice(1))), 0);
@@ -51,7 +52,7 @@ const amgsSyncFormer = () => {
       const sig = amgsFormerSig(aid, slot, x); if (st.seen[sig]) continue;
       const row = amgsRowOf(x); if (!row) continue;
       const key = `${slot}:${x.monster}`; const seq = st.seq + 1;
-      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null }] };
+      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null, ...(typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? { bd: amgbCopyOf(aid, slot, x.monster) } : {}) }] };
       changed = true;
     }
   }
@@ -70,6 +71,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   const gOut = (AMG_STORE.state.mons[bed.aid] || {})[outKey] || null;
   const tOut = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? (AMGT_STORE.state.mons[bed.aid] || {})[outKey] || null : null;
   const cKeyOut = amgpKey(bed.aid, row.slot, row.monster); const cOut = amgpCondAt(cKeyOut, s + 1);
+  const bdOut = typeof amgbCopyOf === 'function' ? amgbCopyOf(bed.aid, row.slot, row.monster) : null; // 絆の写し(眠らせる子)
   const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? { slot: bed.slot, at: bed.fat } : null);
   if (!out) return '入れ替えられませんでした';
   // 起きた子の育成・修行の中身を、その枠の行へ戻す(眠らせたときのまま)
@@ -81,9 +83,10 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (cOut) mons[cKeyOut] = { ...cOut, until: s };
   if (bed.c) mons[amgpKey(bed.aid, slot, bed.row.monster)] = { k: bed.c.k, from: s, until: s + bed.c.left, care: -1, find: -1, hosp: [] };
   if (cOut || bed.c) AMGP_CSTORE.save({ ...cs, mons });
+  if (typeof amgbWake === 'function') amgbWake(bed.aid, slot, row.monster, bed.row.monster, bed.bd || null, now); // 絆: 眠らせた子の行を消し、起きた子の写しを戻す(眠っていた日は年齢を進めない)
   const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
   const seq = st.seq + 1;
-  AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null }] });
+  AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null, ...(bdOut ? { bd: bdOut } : {}) }] });
   try { if (typeof amgTick === 'function') void amgTick(bed.aid); } catch (_) {}
   return true;
 };
@@ -152,8 +155,9 @@ const amgsFuse = (mainId, matId) => {
     for (const b of [main, mat]) if (b.src === 'former' && typeof assistantMasmonFormerDrop === 'function') assistantMasmonFormerDrop(b.aid, b.slot, b.row.monster, b.fat);
     const g = { ...main.g, st: plan.st, fat: 0, str: 0, log: [], dg: { d: 0, n: 0 }, lv: 1, xp: 0 };
     const t = amgsTrainOk(main.aid, main.row.monster, { ...(main.t || {}), m: plan.m, learn: plan.learn, day: { d: -1, n: 0 }, log: [] });
+    const bd = typeof amgbFuseChild === 'function' ? amgbFuseChild(main.aid, { slot: main.slot, monster: main.row.monster }, main.bd || null, mat.bd || null) : null; // 絆: 忠誠=主・人気=高い方の半分・方針と型=主・年齢0
     const seq = st.seq + 1;
-    AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== main.id && b.id !== mat.id), { id: `b${seq}`, aid: main.aid, slot: main.slot, src: 'sleep', at: day, fat: '', row: { ...main.row, lv: 1 }, g: amgsGrowOk(main.aid, main.row.monster, g), t, c: null }] });
+    AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== main.id && b.id !== mat.id), { id: `b${seq}`, aid: main.aid, slot: main.slot, src: 'sleep', at: day, fat: '', row: { ...main.row, lv: 1 }, g: amgsGrowOk(main.aid, main.row.monster, g), t, c: null, ...(bd ? { bd } : {}) }] });
     return true;
   } finally { amgsFuseBusy = false; }
 };
@@ -183,7 +187,7 @@ function AmgsSection({ filter = null }) {
         <button key={b.id} type="button" onClick={() => setOpen(b.id)} data-amgs-bed={b.id} className="mt-1.5 flex w-full items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2 text-left">
           {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}
           <span className="min-w-0 flex-1"><b className="block truncate text-[13px] font-black">{b.row.nick || (m && m.name)} <small className="text-[10px] text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid}のマスモン</small></b>
-            <small className="block text-[10.5px] font-bold text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ {b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`}</small></span>
+            <small className="block text-[10.5px] font-bold text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ {b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`}</small>{typeof AmgbBedTag === 'function' && <AmgbBedTag bed={b}/>}</span>
           <span className="shrink-0 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-black text-blue-100">💤 冬眠中</span>
         </button>); })}
       {!beds.length && <p className="mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-400">冬眠中のマスモンはいません。助手のマスモンの「💤 眠らせる」で、冬眠中のマスモンと入れ替えられます</p>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 133a9906a51ae11c
+// source-sha256: 2742690df43f7462
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140611,10 +140611,12 @@ const normalizeAssistantMasmonBond = raw => {
   const out = {
     v: 1,
     start: -1,
-    mons: {}
+    mons: {},
+    bt: []
   };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   out.start = amgbInt(raw.start, -1, -1, 1e7);
+  out.bt = (Array.isArray(raw.bt) ? raw.bt : []).filter(x => typeof x === 'string' && x.length <= 120).slice(-60);
   if (raw.mons && typeof raw.mons === 'object' && !Array.isArray(raw.mons)) for (const [k, x] of Object.entries(raw.mons)) {
     if (!amgbKeyOk(k)) continue;
     const one = amgbNormOne(x);
@@ -140892,6 +140894,91 @@ const assistantMasmonBondBattle = (aid, row, kind, win, now = Date.now()) => {
     fight: amgSlotDay(amgSlotOf(now))
   }));
 };
+const amgbCopyOf = (aid, slot, monster) => {
+  if (!AMGB_STORE.loaded) return null;
+  const x = AMGB_STORE.state.mons[amgbKey(aid, slot, monster)];
+  return x ? {
+    ...x,
+    sc: {
+      ...x.sc
+    },
+    rs: [...x.rs]
+  } : null;
+};
+const amgbBedOk = x => amgbNormOne(x);
+const amgbWake = (aid, slot, outMonster, inMonster, bd, now = Date.now()) => {
+  if (!AMGB_STORE.loaded) return false;
+  const day = amgSlotDay(amgSlotOf(now));
+  const mons = {
+    ...AMGB_STORE.state.mons
+  };
+  delete mons[amgbKey(aid, slot, outMonster)];
+  if (bd) mons[amgbKey(aid, slot, inMonster)] = {
+    ...bd,
+    last: bd.last < 0 ? -1 : day,
+    touch: Math.max(bd.touch, day),
+    fight: Math.max(bd.fight, day)
+  };else delete mons[amgbKey(aid, slot, inMonster)];
+  return amgbSave({
+    ...AMGB_STORE.state,
+    mons
+  });
+};
+const amgbFuseChild = (aid, mainRow, mainBd, matBd) => {
+  const m = mainBd || amgbNormOne({
+    gt: amgbTypeFor(aid, mainRow)
+  });
+  const pops = [mainBd ? mainBd.pop : 0, matBd ? matBd.pop : 0];
+  return amgbNormOne({
+    loy: m.loy,
+    pop: Math.max(...pops) / 2,
+    pol: m.pol,
+    pp: 0,
+    gt: m.gt,
+    age: 0,
+    life: 0,
+    last: -1,
+    touch: -1,
+    fight: -1
+  });
+};
+const amgbBedPower = bed => {
+  if (typeof MASMON_CALC === 'undefined' || !bed || !bed.g || !bed.g.st) return null;
+  const t = bed.t;
+  const ms = t && Array.isArray(t.learn) ? t.learn.map(id => Number(t.m && t.m[id]) || 0) : [];
+  const power = MASMON_CALC.power({
+    stats: bed.g.st,
+    masteries: ms,
+    lv: bed.g.lv,
+    loyal: bed.bd ? bed.bd.loy : AMGB_NUM.loy0,
+    pop: bed.bd ? bed.bd.pop : 0
+  });
+  return {
+    power,
+    rank: MASMON_CALC.rankOf(power)
+  };
+};
+const amgbBattleOnce = (id, aid, rows, kind, win, now = Date.now()) => {
+  if (!amgbLive() || typeof id !== 'string' || !id || !Array.isArray(rows)) return false;
+  const st0 = AMGB_STORE.state;
+  const bid = id.slice(0, 120);
+  if (st0.bt.includes(bid)) return false;
+  const day = amgSlotDay(amgSlotOf(now));
+  let st = {
+    ...st0,
+    bt: [...st0.bt, bid].slice(-60)
+  };
+  for (const row of rows) {
+    if (!row || !Number.isInteger(row.slot) || !row.monster) continue;
+    const b0 = st.mons[amgbKey(aid, row.slot, row.monster)] || amgbEntryOf(aid, row);
+    st = amgbPut(st, aid, row, {
+      ...b0,
+      pop: MASMON_CALC.popAfterBattle(b0.pop, kind, !!win),
+      fight: day
+    });
+  }
+  return amgbSave(st);
+};
 const amgbMasteriesOf = (aid, row) => {
   try {
     if (typeof AMGT_STORE === 'undefined') return [];
@@ -140961,6 +141048,20 @@ function AmgbPowerTag({
   return React.createElement("span", {
     className: "inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100",
     "data-amgb-power": p.power
+  }, React.createElement(AmgbRankChip, {
+    rank: p.rank,
+    small: true
+  }), p.power.toLocaleString());
+}
+function AmgbBedTag({
+  bed
+}) {
+  if (!amgbOn()) return null;
+  const p = amgbBedPower(bed);
+  if (!p) return null;
+  return React.createElement("span", {
+    className: "inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100",
+    "data-amgb-bed-power": p.power
   }, React.createElement(AmgbRankChip, {
     rank: p.rank,
     small: true
@@ -146083,6 +146184,12 @@ function AssistantMasmonBattleBeta({
     });
   }, [phase, battle]);
   useEffect(() => {
+    if (phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    try {
+      amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A');
+    } catch (_) {}
+  }, [phase, battle]);
+  useEffect(() => {
     if (phase !== 'review' || !battle || ifs) return undefined;
     const t = setTimeout(() => {
       const N = 20;
@@ -149927,7 +150034,10 @@ const normalizeAssistantMasmonSleep = raw => {
       c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? {
         k: b.c.k,
         left: Math.min(30, b.c.left)
-      } : null
+      } : null,
+      ...(b.bd && typeof amgbBedOk === 'function' && amgbBedOk(b.bd) ? {
+        bd: amgbBedOk(b.bd)
+      } : {})
     });
   }
   if (raw.seen && typeof raw.seen === 'object') for (const [k, v] of Object.entries(raw.seen).slice(-400)) if (v === true && /^[a-z]{2,12}:[1-8]:[\w-]{0,20}:\w{2,40}$/.test(k)) out.seen[k] = true;
@@ -149979,7 +150089,10 @@ const amgsSyncFormer = () => {
           row,
           g: g && g.mons[aid] ? g.mons[aid][key] || null : null,
           t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null,
-          c: null
+          c: null,
+          ...(typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? {
+            bd: amgbCopyOf(aid, slot, x.monster)
+          } : {})
         }]
       };
       changed = true;
@@ -150005,6 +150118,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
   const tOut = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? (AMGT_STORE.state.mons[bed.aid] || {})[outKey] || null : null;
   const cKeyOut = amgpKey(bed.aid, row.slot, row.monster);
   const cOut = amgpCondAt(cKeyOut, s + 1);
+  const bdOut = typeof amgbCopyOf === 'function' ? amgbCopyOf(bed.aid, row.slot, row.monster) : null;
   const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? {
     slot: bed.slot,
     at: bed.fat
@@ -150067,6 +150181,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
     ...cs,
     mons
   });
+  if (typeof amgbWake === 'function') amgbWake(bed.aid, slot, row.monster, bed.row.monster, bed.bd || null, now);
   const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
   const seq = st.seq + 1;
   AMGS_STORE.save({
@@ -150085,7 +150200,10 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
       c: cOut ? {
         k: cOut.k,
         left: Math.max(1, cOut.until - s)
-      } : null
+      } : null,
+      ...(bdOut ? {
+        bd: bdOut
+      } : {})
     }]
   });
   try {
@@ -150249,6 +150367,10 @@ const amgsFuse = (mainId, matId) => {
       },
       log: []
     });
+    const bd = typeof amgbFuseChild === 'function' ? amgbFuseChild(main.aid, {
+      slot: main.slot,
+      monster: main.row.monster
+    }, main.bd || null, mat.bd || null) : null;
     const seq = st.seq + 1;
     AMGS_STORE.save({
       ...st,
@@ -150266,7 +150388,10 @@ const amgsFuse = (mainId, matId) => {
         },
         g: amgsGrowOk(main.aid, main.row.monster, g),
         t,
-        c: null
+        c: null,
+        ...(bd ? {
+          bd
+        } : {})
       }]
     });
     return true;
@@ -150328,7 +150453,9 @@ function AmgsSection({
       className: "text-[10px] text-slate-300"
     }, typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid, "のマスモン")), React.createElement("small", {
       className: "block text-[10.5px] font-bold text-slate-300"
-    }, "Lv ", b.row.lv, b.row.grow ? ` ・ ${b.row.grow}` : '', " ・ ", b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`)), React.createElement("span", {
+    }, "Lv ", b.row.lv, b.row.grow ? ` ・ ${b.row.grow}` : '', " ・ ", b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`), typeof AmgbBedTag === 'function' && React.createElement(AmgbBedTag, {
+      bed: b
+    })), React.createElement("span", {
       className: "shrink-0 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-black text-blue-100"
     }, "💤 冬眠中"));
   }), !beds.length && React.createElement("p", {
