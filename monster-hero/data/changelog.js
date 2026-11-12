@@ -41,7 +41,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-11-12 08:24", type:'update', group:'assistant', title:'残した置き手紙を見返せるようになりました', status:'new',
+    date: "2026-11-12 09:30", type:'update', group:'assistant', title:'残した置き手紙を見返せるようになりました', status:'new',
     items:[
       'フレンドの家に残した置き手紙を、「🏘 フレンド」の「📮 残した置き手紙」で見返せます。押すとその家へ遊びに行けます。',
       '訪ねた家の中にも、その家に残した置き手紙が出ます。',
