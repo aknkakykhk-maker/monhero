@@ -69,10 +69,12 @@ const msxR3Fight = (engine, SUC, run) => {
   // 試合の上乗せ: 芯の battleBuffs(編成の試合型アシスト + 特別な1話)。古い芯なら battleMods だけ
   const mods = typeof SUC.battleBuffs === 'function' ? (SUC.battleBuffs(s) || {}) : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
+  // input: simulate に渡したものそのもの(trace なし)。バトル部の自分で操作する試合(MonsucArena の createMatch)がこれで同じ試合を始める
+  const input = { seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}) };
   let r = null;
-  try { r = engine.simulate({ seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}), trace: true }); } catch (e) { return null; }
+  try { r = engine.simulate({ ...input, trace: true }); } catch (e) { return null; }
   const st = (r.log && r.log[0]) || {};
-  return { r, opp, teamA, teamB, won: r.winner === 'A', frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [], maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] } };
+  return { r, input, opp, teamA, teamB, won: r.winner === 'A', frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [], maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] } };
 };
 
 // ---- 保存(足すだけ) ----
