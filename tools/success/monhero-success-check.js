@@ -337,7 +337,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(op.sum > plain.sum * 1.0 && op.sum < plain.sum * 1.35, `ライバルの強さが期の基準に寄っていない: ${op.sum} / ${plain.sum}`);
     ok(op.stats.pow > op.stats.wise, 'ライバルの6能力の形がもとの子のままでない');
     const w1 = SUC.settle(b, [true]).state; const w0 = SUC.settle({ ...b, battle: { ...b.battle, rival: null } }, [true]).state;
-    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts > w0.pts && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ってもごほうびが大きくない');
+    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts === w0.pts && K.every(k => w1.stats[k] === Math.min(999, w0.stats[k] + 12)) && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ったごほうび(賞金×1.5・チケット+1・全能力+12・称号)がずれている');
   }
   // 王者・常連・組み合わせ表
   const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };
@@ -362,6 +362,11 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mid = play('restore-id', picks);
   const back = SUC.restore(JSON.parse(JSON.stringify(mid)));
   ok(back && JSON.stringify(back.stats) === JSON.stringify(mid.stats) && back.turn === mid.turn && back.hp === mid.hp && JSON.stringify(back.trainXp) === JSON.stringify(mid.trainXp) && JSON.stringify(back.techs) === JSON.stringify(mid.techs), '保存から戻すと中身が変わる');
+  // 編成の育てた子の熟練が残る(総合力・ランク・タッグが変わらない)・途中で足される記録(ごはん・アイテム・再戦・お話)も残る
+  const tm = SUC.newRun({ id: 'rs-team', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: { life: 700, pow: 800, wise: 300, hit: 600, eva: 400, tough: 700 }, lv: 40, masteries: [80, 80, 80, 80, 80], loy: 80, pop: 50 }] });
+  const tb = SUC.restore(JSON.parse(JSON.stringify({ ...tm, log: { ...tm.log, meal: 2, items: 1, rematch: 1, astory: 3 } })));
+  ok(tb.team[0].power === tm.team[0].power && tb.team[0].rank === tm.team[0].rank && tb.team[0].tag === tm.team[0].tag, `保存から戻すと編成の子の総合力が変わる(熟練が消える): ${tm.team[0].power} → ${tb.team[0].power}`);
+  ok(tb.log.meal === 2 && tb.log.items === 1 && tb.log.rematch === 1 && tb.log.astory === 3, '保存から戻すと記録(ごはん・アイテム・再戦・お話)が消える');
   ok(SUC.restore(null) === null && SUC.restore([]) === null && SUC.restore({ id: 'x', species: 'NoSuch' }) === null, '壊れた保存を戻せてしまう');
   const bad = SUC.restore({ ...JSON.parse(JSON.stringify(mid)), hp: 'abc', stats: { pow: 5000 }, turn: -3, bond: 'x', techs: ['nope'] });
   ok(bad && bad.hp === bad.hpMax && bad.stats.pow === 999 && bad.turn === 1 && Array.isArray(bad.bond) && bad.techs.length === 0, '壊れた値が既定に戻らない');
@@ -392,6 +397,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b = SUC.storyEnd(at('atsu', 40), 'bitter').state; ok(b.pts === 10, 'ほろ苦い結末(あつ)で能力ポイント +10 が付かない');
   // 特別な1話: 頂への道の1回戦だけ
   const sp = SUC.markSpecial(at('atsu', 44)).state;
+  ok(JSON.stringify(SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 0 } })) === '{"A":{"guts":10}}' && SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 1 } }) === undefined, '対戦の芯に渡す上乗せ(buffs)の形がずれている');
+  const ky = SUC.markSpecial({ ...SUC.newRun({ id: 'k', species: 'Mocchi', aid: 'kyuko' }), turn: 44 }).state; const kb = SUC.battleBuffs({ ...ky, battle: { kind: 'summit', round: 0 } });
+  ok(kb && kb.A.eva === 0.1 && kb.A.showFirst === undefined, '画面の印(showFirst)が対戦の芯の上乗せに混ざっている');
   ok(SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 0 } }).guts === 10 && !SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 1 } }).guts && !SUC.battleMods({ ...at('atsu', 44), battle: { kind: 'summit', round: 0 } }).guts, '特別な1話の効き目が頂への道の1回戦だけになっていない');
 }
 
@@ -419,5 +427,25 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
 }
 
+// ---- 評価の表示(gradeOf)・ひらめきのアシスト5つ ----
+{
+  const g = (p) => SUC.gradeOf(p).label;
+  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'M1' && g(25100) === 'M12' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 25100].map(g)}`);
+  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === null, '次の番号までの数がずれている');
+  ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'battle'), 'ひらめきのアシスト5つ(型 battle)がない');
+  const st = { life: 600, pow: 700, wise: 300, hit: 500, eva: 400, tough: 600 };
+  const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });
+  const plain = mk([]); const all = mk([{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'mimamori', lv: 3 }]);
+  const cup = { kind: 'cup', sys: 'str', star: 1, round: 0 };
+  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(いちばん高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
+  ok(JSON.stringify(SUC.battleBuffs({ ...plain, battle: cup })) === '{"A":{"guts":3}}' && SUC.battleBuffs(all) === undefined, '大会の試合のときだけ上乗せが付く になっていない');
+  // 訓練には効かない
+  const tp = SUC.act(plain, { kind: 'train', stat: 'pow' }); const ta = SUC.act(all, { kind: 'train', stat: 'pow' });
+  ok(JSON.stringify(tp.out.gain) === JSON.stringify(ta.out.gain), 'ひらめきのアシスト(型 battle)が訓練に効いている');
+  // 特別な1話と足し合わせて範囲で切る
+  const sp = SUC.markSpecial({ ...SUC.newRun({ id: 'h2', species: 'Mocchi', aid: 'atsu', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 3 }] }] }), turn: 44 }).state;
+  ok(SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 0 } }).A.guts === 18, '特別な1話とひらめきのガッツが足し合わさらない');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・評価の番号とひらめきのアシスト');

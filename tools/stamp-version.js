@@ -100,6 +100,8 @@ const IMAGE_HOST_FILES = [
   'data/enemy-monsters.js',
   // モンヒロサクセスのアイテムの絵(images/success/items/…)。まだ index.html からは読まれない
   'data/success-items.js',
+  // モンヒロサクセスの景色(images/success/scenes/…)。まだ index.html からは読まれない
+  'data/success-scenes.js',
 ];
 let imageCount = 0, imageChanged = 0;
 for (const rel of IMAGE_HOST_FILES) {

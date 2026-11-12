@@ -25,6 +25,10 @@
       "role": "Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口)"
     },
     {
+      "file": "14-success-sound.jsx",
+      "role": "モンヒロサクセスの音を鳴らす口(SuccessSound・useSuccessSound。割り当て表は data/success-sounds.js)"
+    },
+    {
       "file": "15-dye-and-art.jsx",
       "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
     },
@@ -511,6 +515,30 @@
     {
       "file": "56-assistant-masmon-pvp.jsx",
       "role": "部品: 助手のマスモンのフレンド対戦(非同期PvP・第④段階・タイセン)の端末の口。画面は持たない(画面はミセカタ)。サーバの関数 masmon-pvp を呼ぶ masmonPvpRegister/masmonPvpChallenge/masmonPvpUnregister と、表を読む masmonPvpRatings/masmonPvpFriends。保存は新しいキー mh_masmon_pvp_owner_key_v1(持ち主の鍵)だけ。公開の印 assistantMasmonBattlePvp が真のときだけ通信。設計 docs/spec/MASMON_PVP_SERVER.md"
+    },
+    {
+      "file": "56-monhero-success-css.jsx",
+      "role": "モンヒロサクセス(育成の画面・回2)の見た目 MSX_CSS。見本 docs/progress/player-raise/mock/v3.css・mock.css を .msx の中だけに効くよう切り出したもの"
+    },
+    {
+      "file": "56-monhero-success-store.jsx",
+      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本 data/monhero-success-script.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
+    },
+    {
+      "file": "56-monhero-success-start.jsx",
+      "role": "モンヒロサクセス: 始めるまでの6段(育てる子・編成・助手(シナリオ)・持ちこみ・名前と染色・確認)。計算は芯の memberOf を呼ぶだけ"
+    },
+    {
+      "file": "56-monhero-success-main.jsx",
+      "role": "モンヒロサクセス: 育成の画面の本体 MonheroSuccessScreen(メイン・訓練を選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開)。大会・修行・引退・合体は回3で「準備中」"
+    },
+    {
+      "file": "56-assistant-life-friend-monsuc-lend.jsx",
+      "role": "部品: モンヒロサクセスのフレンドからのレンタル(段取りの回5・オトズレ)の端末の口。画面は持たない(編成・保存枠の画面は開発部)。サーバの関数 masmon-pvp の lend_* を呼ぶ monsucLendSet/monsucLendClear/monsucLendUse/monsucLendClaim と、表 monsuc_lend を読む monsucLendFriends、借りた子を編成の1枠にする monsucLendMember(アシストのポイントを確かめる)。持ち主の鍵は masmon-pvp と同じ。新しい保存キーなし。公開の印 monheroSuccess が真のときだけ通信"
+    },
+    {
+      "file": "56-monsuc-rank.jsx",
+      "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120003)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
     },
     {
       "file": "82-card-battle-core.jsx",
