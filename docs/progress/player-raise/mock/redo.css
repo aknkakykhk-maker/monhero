@@ -1,0 +1,109 @@
+/* モンヒロサクセス 止め絵の作り直し(2026-11-12)。mock.css に足して使う。育てる子が住む場所を真ん中に置く組み立て */
+/* 上の帯: あと◯週・年月週・総合力・忠誠・人気・機嫌・寿命の目盛り・げんき/ストレス */
+.rd-band{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:7px 9px 7px;margin-top:6px}
+.rd-b1{display:flex;align-items:stretch;gap:5px}
+.rd-turn{flex:1;min-width:0;line-height:1.15}
+.rd-turn small{font-size:9.5px;color:#f9a8d4;font-weight:900}
+.rd-turn div{font-size:12px;font-weight:900;white-space:nowrap}
+.rd-turn div b{font-size:27px;color:#fde047;margin:0 2px;letter-spacing:-.02em;text-shadow:0 2px 0 #9a3412}
+.rd-turn span{display:block;font-size:11px;font-weight:900;white-space:nowrap}.rd-turn span i{font-style:normal;color:#94a3b8;font-size:9.5px;font-weight:700}
+.rd-box{background:#0f172a;border:1px solid #475569;border-radius:10px;padding:3px 6px;text-align:center;min-width:48px;display:flex;flex-direction:column;justify-content:center;line-height:1.2}
+.rd-box small{font-size:9px;color:#cbd5e1;white-space:nowrap}.rd-box b{font-size:15px;white-space:nowrap}
+.rd-box.sum{border-color:#f472b6aa;min-width:66px}.rd-box.sum b{color:#fde047}
+.rd-mood{width:44px;text-align:center;font-size:24px;line-height:1.05;background:#3b2f0b;border:1px solid #fde047;border-radius:12px;padding-top:3px}
+.rd-mood small{display:block;font-size:8.5px;font-weight:900;color:#fde047;white-space:nowrap}
+.rd-b3{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10px;font-weight:900;white-space:nowrap}
+.rd-seg{display:flex;gap:2px;flex:1}.rd-seg i{flex:1;height:9px;border-radius:3px;background:#334155}
+.rd-seg.g i.on{background:linear-gradient(180deg,#a3e635,#34d399)}.rd-seg.s i.on{background:linear-gradient(180deg,#fb923c,#f472b6)}
+.rd-seg i.use{background:repeating-linear-gradient(45deg,#ef4444 0 3px,#7f1d1d 3px 6px);box-shadow:0 0 6px #ef4444}
+/* 画面の名前の札とコーチ */
+.rd-coach{display:flex;align-items:center;gap:6px;margin-top:6px}
+.rd-name{background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:8px 14px 14px 8px;padding:5px 12px 5px 9px;font-size:14px;font-weight:900;white-space:nowrap}
+.rd-hint{background:#0f172a;border:1px solid #475569;border-radius:99px;padding:3px 8px;font-size:10px;font-weight:900;white-space:nowrap;color:#fde047}
+.rd-coach .bub{font-size:11.5px;padding:5px 9px;line-height:1.4}
+.rd-coach .bub::after{content:'';position:absolute;right:-6px;top:50%;margin-top:-5px;border:5px solid transparent;border-left-color:#fff;border-right:0}
+/* 住む場所(景色+立ち絵) */
+.rd-home{position:relative;border-radius:16px;border:1px solid #3b3566;overflow:hidden;margin-top:6px}
+.rd-home .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 72%}
+.rd-home .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174066 0,#1d174000 34%,#0f0d2400 62%,#0f0d24aa 100%)}
+.rd-home .mon{position:absolute;left:50%;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 10px 6px #000a)}
+.rd-home .gr{position:absolute;left:50%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,#0009 0,#0000 70%)}
+.rd-chip{position:absolute;background:#0f0d24cc;border:1px solid #ffffff33;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.rd-chip.hot{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000}
+.rd-mini{position:absolute;background:#0f0d24d9;border:1px solid #475569;border-radius:12px;padding:5px 8px;font-size:11px;font-weight:900;white-space:nowrap;text-align:center;line-height:1.25}
+.rd-mini small{display:block;font-size:9px;color:#cbd5e1;font-weight:700}
+.rd-nm{position:absolute;left:50%;transform:translateX(-50%);background:#0f0d24cc;border-radius:99px;padding:2px 12px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.rd-cv{position:absolute;background:#0f0d24d9;border:1px solid #475569;border-radius:12px;padding:4px 7px 2px;font-size:9.5px;font-weight:900;line-height:1.2}
+/* 6能力の横一列 */
+.rd-st{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px}
+.rd-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:10px;padding:3px 2px 4px;text-align:center;line-height:1.15;position:relative}
+.rd-st small{display:block;font-size:9.5px;color:#e2e8f0;white-space:nowrap}
+.rd-st b{display:block;font-size:14.5px}
+.rd-st u{display:block;height:4px;border-radius:3px;background:#334155;margin:2px 5px 0;overflow:hidden;text-decoration:none}
+.rd-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.rd-st em{display:block;font-style:normal;font-size:10.5px;font-weight:900;color:#86efac;height:13px}
+.rd-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}.rd-st div.up b{color:#fde047}
+.rd-st div.dn em{color:#fca5a5}
+/* 行動の口(大きな角丸のパネル) */
+.rd-act{display:grid;gap:6px;margin-top:6px}
+.rd-p{background:linear-gradient(180deg,#3b4a66,#2b3348);border:1px solid #64748b;border-bottom:3px solid #0f172a;border-radius:16px;text-align:center;padding:6px 3px 5px;font-size:13px;font-weight:900;line-height:1.25;position:relative;display:flex;flex-direction:column;justify-content:center}
+.rd-p .e{font-size:20px;line-height:1.1}.rd-p small{display:block;font-size:9px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.rd-p.main{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047;border-bottom-color:#9d174d;box-shadow:0 0 12px #f472b688}
+.rd-p.main small{color:#fff}
+.rd-p.off{background:#1e293b;border-color:#334155;color:#64748b}.rd-p.off small{color:#64748b}.rd-p.off .e{filter:grayscale(1);opacity:.6}
+.rd-p .lk{position:absolute;right:5px;top:3px;font-size:10px;filter:none}
+.rd-p .bd{position:absolute;right:-3px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:9px;font-weight:900;padding:0 6px;white-space:nowrap}
+.rd-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:3px;background:#0f0d2466;border-radius:9px;padding:2px 4px;font-size:10px;white-space:nowrap}
+.rd-gather .cf,.rd-gather .cf img{width:22px;height:22px;border-radius:6px}
+/* 訓練の丸い口 */
+.rd-trs{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:4px;align-items:end}
+.rd-tr{text-align:center;position:relative}
+.rd-tr .fs{display:flex;justify-content:center;min-height:24px;align-items:flex-end}
+.rd-tr .fs .cf,.rd-tr .fs .cf img{width:22px;height:22px;border-radius:6px}.rd-tr .fs .cf+.cf{margin-left:-7px}
+.rd-tr .fs .no{font-size:8.5px;color:#64748b;font-weight:700}
+.rd-tr .o{width:52px;height:52px;border-radius:50%;margin:2px auto 0;background:linear-gradient(180deg,#3b4a66,#1e293b);border:2px solid #64748b;border-bottom-width:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:19px;line-height:1}
+.rd-tr .o small{font-size:9px;font-weight:900;margin-top:2px;white-space:nowrap}
+.rd-tr .x{font-size:10.5px;font-weight:900;color:#86efac;margin-top:1px}
+.rd-tr.fav .o{border-color:#fde047;background:linear-gradient(180deg,#6b5310,#3b2f0b);box-shadow:0 0 8px #fde04777}
+.rd-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 14px #f472b6;transform:translateY(-9px) scale(1.1)}
+.rd-tr.sel .fs{transform:translateY(-12px)}
+.rd-tr .tip{position:absolute;left:50%;transform:translateX(-50%);background:#fff;color:#1e1b4b;border-radius:9px;padding:2px 7px;font-size:9.5px;font-weight:900;white-space:nowrap;z-index:2}
+.rd-tr .tip::after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-top-color:#fff;border-bottom:0}
+.rd-rib{background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;font-size:9.5px;font-weight:900;padding:1px 8px;white-space:nowrap}
+/* 集まった応援の子(訓練を選ぶ画面の右) */
+.rd-ch{position:absolute;right:8px;width:108px;background:#0f0d24e0;border:1px solid #f472b6aa;border-radius:12px;padding:5px 6px}
+.rd-ch .r1{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:900;line-height:1.2}
+.rd-ch .r1 small{display:block;font-size:9px;color:#86efac}
+.rd-ch+.rd-ch{margin-top:4px}
+/* いちばん下の帯 */
+.rd-ft{position:absolute;left:0;right:0;bottom:0;height:46px;background:#0b0920;border-top:1px solid #3b3566;display:flex;align-items:center;gap:6px;padding:0 10px}
+.rd-ft span{flex:1;text-align:center;background:#2b3348;border-radius:99px;padding:6px 2px;font-size:11px;font-weight:900;white-space:nowrap}
+.rd-ft span.on{background:#fde047;color:#422006}
+/* 始めるまでの段 */
+.rd-steps{display:flex;gap:2px;margin-top:6px}
+.rd-steps span{flex:1;text-align:center;font-size:10px;font-weight:900;padding:5px 0 5px 6px;background:#1e293b;color:#94a3b8;white-space:nowrap;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)}
+.rd-steps span:first-child{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%);border-radius:8px 0 0 8px}
+.rd-steps span.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}.rd-steps span.ok{background:#3b3566;color:#f9a8d4}
+.rd-steps span.opt{background:repeating-linear-gradient(45deg,#1e293b 0 5px,#273449 5px 10px);color:#fde047}
+.rd-opt{border:1.5px dashed #fde047;background:#3b2f0b66;border-radius:12px;padding:6px 9px;margin-top:6px;font-size:11px;font-weight:700;line-height:1.45}
+.rd-opt b{color:#fde047}
+.rd-sp{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
+.rd-sp span{position:relative;display:block}
+.rd-sp img{width:100%;aspect-ratio:1;border-radius:12px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.rd-sp span.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
+.rd-sp span.lk2 img{filter:grayscale(1) brightness(.45)}
+.rd-sp .rk{position:absolute;left:-2px;top:-4px;height:15px;min-width:18px;font-size:9.5px}
+.rd-sp em{position:absolute;right:1px;bottom:1px;font-style:normal;font-size:10px;background:#0f0d24cc;border-radius:6px;padding:0 3px}
+.rd-slot{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative}
+.rd-slot .cf{margin:0 auto 2px}.rd-slot small{display:block;font-size:9.5px;color:#86efac}
+.rd-slot.fr{border-color:#38bdf8;background:#0c2a4a}.rd-slot.base{border-style:dashed;opacity:.8}
+.rd-sumrow{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:7px 9px;margin-top:6px}
+.rd-sumrow .k{width:52px;font-size:10px;color:#f9a8d4;font-weight:900;flex:none;line-height:1.3}
+/* 比べの1枚 */
+.cmp{padding:26px 28px;width:max-content}
+.cmp h1{font-size:28px;margin:0 0 4px;font-weight:900}.cmp>p{margin:0 0 16px;font-size:14px;font-weight:500;color:#4c4780;max-width:1500px;line-height:1.6}
+.cmp .cap b{display:inline-block;border-radius:99px;padding:1px 10px;margin-right:6px;font-size:12px;color:#fff;background:#64748b}
+.cmp .cap b.new{background:linear-gradient(90deg,#f472b6,#fb923c)}
+.cmp .arrow{align-self:center;font-size:44px;color:#be185d;font-weight:900}
+.rd-cv svg{display:block}
+.rd-ch .r1>div{white-space:nowrap}
