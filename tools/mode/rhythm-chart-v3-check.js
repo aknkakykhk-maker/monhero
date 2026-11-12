@@ -42,20 +42,28 @@ check('形の語彙を別ファイルへ分けてある',
   `${PATTERNS.length}種類`);
 
 // 生成が決定的か（2回走らせて同じになるか）
+// ★測る譜面は、この生成器の出力(1回目の一時出力 GEN_DIR)。配信済みの譜面(authoring の -fixed-)は、公開のあとに自動修正・
+//   手直しを重ねて Rev.38 になっており、V3 生成器の上限では測れない(公開中の曲の譜面は作り直さない決まり。2026-11-13 窓口の決め)。
+//   配信済みの譜面を見るのは、下の「公開中の全曲のクロス」だけ(既知の例外つき)
+let GEN_DIR=null;
+process.on('exit',()=>{if(GEN_DIR)try{fs.rmSync(GEN_DIR,{recursive:true,force:true});}catch(_){/* 一時出力の片づけ */}});
 {
   const tempDir=fs.mkdtempSync(path.join(require('os').tmpdir(),'rhythm-v3-check-'));
   const run=()=>spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),
     '--write','--output-dir',tempDir],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
   const first=run();
+  GEN_DIR=first.status===0?tempDir:null;
   const hashOf=()=>crypto.createHash('sha256').update(
     fs.readdirSync(tempDir).sort().map(f=>fs.readFileSync(path.join(tempDir,f))).reduce((a,b)=>Buffer.concat([a,b]),Buffer.alloc(0))
   ).digest('hex');
   const a=first.status===0?hashOf():null;
+  const firstFiles=first.status===0?fs.readdirSync(tempDir).sort().map(f=>[f,fs.readFileSync(path.join(tempDir,f))]):[];
   const second=run();
   const b=second.status===0?hashOf():null;
   check('2回走らせても同じ譜面になる（決定的）',first.status===0&&second.status===0&&a===b,
     a?`${a.slice(0,12)} / ${b?.slice(0,12)}`:(first.stderr||'').split('\n')[0]);
-  fs.rmSync(tempDir,{recursive:true,force:true});
+  // 2回目の出力で上書きされても同じ中身(決定的)だが、念のため1回目の中身を戻して、測るのは1回目の出力にする
+  for(const [f,buf] of firstFiles)fs.writeFileSync(path.join(tempDir,f),buf);
 }
 
 // --- 2. 出来上がった譜面を測る ---
@@ -68,9 +76,9 @@ const BEAT=audio.timing.subdivisionsPerBeat;
 
 const charts={};
 for(const difficulty of DIFFICULTIES){
-  const file=`tools/mode/authoring/monster-hero-theme-v3-fixed-${difficulty.toLowerCase()}.json`;
-  if(!fs.existsSync(path.join(ROOT,file))){check(`${difficulty}: 譜面がある`,false,file);continue;}
-  charts[difficulty]=readJson(file);
+  const file=GEN_DIR?path.join(GEN_DIR,`monster-hero-theme-v3-chart-${difficulty.toLowerCase()}.json`):'';
+  if(!file||!fs.existsSync(file)){check(`${difficulty}: 生成器の出力に譜面がある`,false,file||'生成できなかった');continue;}
+  charts[difficulty]=JSON.parse(fs.readFileSync(file,'utf8'));
 }
 check('5難易度そろっている',DIFFICULTIES.every(d=>charts[d]));
 if(!DIFFICULTIES.every(d=>charts[d])){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
@@ -412,6 +420,45 @@ for(const difficulty of DIFFICULTIES){
 }
 
 // --- 公開中の全曲の交差(2026-09-26) ---
+const KNOWN_RELEASED_CROSS_EXCEPTIONS=Object.freeze([
+  // 名前つきの既知の例外(曲 難易度 位置)。2026-11-13 窓口の決め: 公開中の譜面は作り直さない決まりのため、
+  // 今週より前に公開した曲の今ある違反だけを認める。中身は「押さえっぱなしと逆の側にある、名ばかりのクロス」がほとんど
+  // (押しにくくはなっていない)。直すかは社長に聞いてから決める。
+  // ★新曲(megalovania_sans・megalovania_smash・saudade_short・evans)は入れない: 新曲の違反は譜面の側を直す
+  'monster_hero_theme EXPERT 980',
+  'monster_hero_theme_alt EXPERT 588', 'monster_hero_theme_alt MASTER 256',
+  'six_eternel_remix_beat EXPERT 116', 'six_eternel_remix_beat MASTER 380', 'six_eternel_remix_beat MASTER 494', 'six_eternel_remix_beat MASTER 638',
+  'six_eternel_beat EXPERT 369', 'six_eternel_beat MASTER 369',
+  'pandora_boss EXPERT 196', 'pandora_boss EXPERT 776', 'pandora_boss MASTER 202', 'pandora_boss MASTER 776', 'pandora_boss MASTER 1254', 'pandora_boss MASTER 1413',
+  'eiki_boss EXPERT 169', 'eiki_boss EXPERT 288', 'eiki_boss MASTER 169', 'eiki_boss MASTER 288', 'eiki_boss MASTER 743', 'eiki_boss MASTER 880', 'eiki_boss MASTER 996', 'eiki_boss MASTER 1051',
+  'eiki_boss_remix EXPERT 76', 'eiki_boss_remix EXPERT 308', 'eiki_boss_remix MASTER 76', 'eiki_boss_remix MASTER 216', 'eiki_boss_remix MASTER 308', 'eiki_boss_remix MASTER 580', 'eiki_boss_remix MASTER 660', 'eiki_boss_remix MASTER 916', 'eiki_boss_remix MASTER 1300',
+  'pandora_boss_remix EXPERT 736', 'pandora_boss_remix EXPERT 904', 'pandora_boss_remix MASTER 736',
+  '4u_hitasura MASTER 372',
+  'crossing_field EXPERT 132', 'crossing_field MASTER 132',
+  'freedom_dive EXPERT 625',
+  'the_city_beneath_the_comets EXPERT 112', 'the_city_beneath_the_comets MASTER 112', 'the_city_beneath_the_comets MASTER 276', 'the_city_beneath_the_comets MASTER 770', 'the_city_beneath_the_comets MASTER 952',
+  'mou_hitotsu_no_sekai_e EXPERT 356', 'mou_hitotsu_no_sekai_e EXPERT 622', 'mou_hitotsu_no_sekai_e MASTER 508', 'mou_hitotsu_no_sekai_e MASTER 622', 'mou_hitotsu_no_sekai_e MASTER 856', 'mou_hitotsu_no_sekai_e MASTER 932', 'mou_hitotsu_no_sekai_e MASTER 1236',
+  'senjou_no_shippuu EXPERT 580', 'senjou_no_shippuu EXPERT 1362', 'senjou_no_shippuu MASTER 132', 'senjou_no_shippuu MASTER 580', 'senjou_no_shippuu MASTER 1362',
+  'makutsu_no_senritsu EXPERT 150', 'makutsu_no_senritsu EXPERT 234', 'makutsu_no_senritsu MASTER 234', 'makutsu_no_senritsu MASTER 806',
+  'haruka EXPERT 228',
+  'stay_with_me_short EXPERT 156', 'stay_with_me_short EXPERT 308', 'stay_with_me_short EXPERT 660', 'stay_with_me_short MASTER 308', 'stay_with_me_short MASTER 507', 'stay_with_me_short MASTER 813', 'stay_with_me_short MASTER 1194', 'stay_with_me_short MASTER 1373', 'stay_with_me_short MASTER 1840',
+  'kiki_issen_short EXPERT 492',
+  'crazy_party_night_full EXPERT 2046', 'crazy_party_night_full MASTER 2046',
+  'monster EXPERT 276', 'monster EXPERT 560', 'monster EXPERT 1648', 'monster MASTER 276', 'monster MASTER 580',
+  'anima EXPERT 900', 'anima MASTER 900', 'anima MASTER 1366',
+  'rose EXPERT 344',
+  'sad_song EXPERT 396', 'sad_song EXPERT 536', 'sad_song MASTER 216', 'sad_song MASTER 1792', 'sad_song MASTER 2356',
+  'sad_song_short EXPERT 216',
+  'toward_the_stars_short MASTER 280', 'toward_the_stars_short MASTER 746',
+  'black_shout MASTER 388',
+  'light_player EXPERT 344', 'light_player EXPERT 792', 'light_player EXPERT 1172', 'light_player MASTER 344', 'light_player MASTER 792', 'light_player MASTER 1172', 'light_player MASTER 1750', 'light_player MASTER 2068', 'light_player MASTER 2150', 'light_player MASTER 2378', 'light_player MASTER 2532',
+  'light_player_short EXPERT 222', 'light_player_short EXPERT 356', 'light_player_short EXPERT 1648', 'light_player_short MASTER 222',
+  'tsuki_ga_michiru_mae_ni EXPERT 1728', 'tsuki_ga_michiru_mae_ni EXPERT 2368', 'tsuki_ga_michiru_mae_ni MASTER 1344', 'tsuki_ga_michiru_mae_ni MASTER 2368',
+  'rebellion EXPERT 440', 'rebellion EXPERT 1112', 'rebellion MASTER 403', 'rebellion MASTER 1227',
+  'rebellion_short MASTER 10', 'rebellion_short MASTER 114',
+  'altar_world_tree EXPERT 1220', 'altar_world_tree EXPERT 1344', 'altar_world_tree EXPERT 2194', 'altar_world_tree MASTER 2254',
+  'altar_world_tree_short EXPERT 612', 'altar_world_tree_short EXPERT 872',
+]);
 // 上のクロスの確かめは Monster Hero だけを見ていた。Rev.7で作り直したとき、自動修正が押さえっぱなしのHOLDの側を動かして
 // 交差を内側へ入れた譜面が10曲にあった(直したのは rhythm-chart-v2-step7-autofix.js の keepsCoveredCrosses・Rev.7から)。
 // Rev.7以降の公開曲は、どの難易度でも交差が外側にあることを見る(Rev.6以前の譜面は作り直さないので対象にしない)
@@ -439,8 +486,17 @@ for(const difficulty of DIFFICULTIES){
       }
     }
   }
-  check('公開中の全曲(Rev.7以降): クロスが押さえっぱなしの外側にある',bad.length===0,
-    bad.length?bad.slice(0,4).join(' / '):`${total}箇所`);
+  if(process.env.V3_CHECK_LIST_BAD)console.log(bad.join('\n'));
+  // 既知の例外(曲・難易度・位置まで名前つき)。公開中の譜面は作り直さない決まりのため、今ある違反はそのまま認める。
+  // 一覧にない曲・難易度・位置の違反は、今までどおり落とす(新曲や、公開中の譜面を書き換えて増えた違反を見逃さない)。
+  // ★この一覧に足してよいのは「すでに公開されている譜面で、作り直せないもの」だけ。新曲の違反は譜面の側を直す
+  const unexpected=bad.filter(item=>!KNOWN_RELEASED_CROSS_EXCEPTIONS.includes(item));
+  const stale=KNOWN_RELEASED_CROSS_EXCEPTIONS.filter(item=>!bad.includes(item));
+  check('公開中の全曲(Rev.7以降): クロスが押さえっぱなしの外側にある(既知の例外を除く)',unexpected.length===0,
+    unexpected.length?unexpected.slice(0,4).join(' / '):`${total}箇所 / 既知の例外 ${KNOWN_RELEASED_CROSS_EXCEPTIONS.length-stale.length}件`);
+  // 譜面が直って例外が要らなくなったら、一覧から外す(古い例外を残さない)
+  check('既知の例外が、いまも実際に違反している(直ったものは一覧から外す)',stale.length===0,
+    stale.length?stale.slice(0,4).join(' / '):'');
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
