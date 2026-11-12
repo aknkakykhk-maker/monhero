@@ -35,6 +35,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-12 社長: スマブラver の音源を2分25秒版へ差し替え・メガロバニア2曲を1行にまとめる
+    date: "2026-11-12 23:48", type:'update', group:'rhythm', title:'「MEGALOVANIA（スマブラver）」を新しい音源にし、メガロバニア2曲を1つにまとめました', status:'new',
+    items:[
+      '「MEGALOVANIA（スマブラver）」の音源を新しくしました（2分25秒）。音源に合わせて、6つの難易度の譜面を作り直しています。自己ベスト・ランキング・フルコンボの記録はそのまま残ります。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.27 ／ HELL Lv.42 です。',
+      'ノーツ数は 224 ／ 261 ／ 361 ／ 427 ／ 497 ／ 587 です。',
+      '曲えらびでは「メガロバニア」の1行にまとまり、難易度ボタンの上の「原曲」「スマブラver.」で切り替えられます。',
+    ],
+  },
+  {
     // 2026-11-12 社長「同じのに1回しかつかえないの？」→「同じ子の制限をなくす」(時間帯ごとに助手1人1枚はそのまま)
     date: "2026-11-12 22:28", type:'update', group:'assistant', title:'M/B管理のチケットを、同じマスモンにも続けて使えるようになりました', status:'new',
     items:[
@@ -99,11 +109,11 @@ const CHANGELOG = [
     date: "2026-11-12 20:02", type:'update', group:'rhythm', title:'新曲「メガロバニア」2曲を追加しました', status:'new',
     image:'images/song-art/megalovania-sans.jpg?v=5884e2ecbb01',
     items:[
-      'モンヒロビートに「メガロバニア（サンズ戦）」（2分37秒・作：ねるかめちゃん）と「MEGALOVANIA（スマブラver）」（4分36秒・作：暇人[もちゃ]）を追加しました。曲えらびからすぐ遊べます。',
+      'モンヒロビートに「メガロバニア（サンズ戦）」（2分37秒・作：ねるかめちゃん）と「MEGALOVANIA（スマブラver）」（2分25秒・作：暇人[もちゃ]）を追加しました。曲えらびからすぐ遊べます。',
       '【サンズ戦】レベルは EASY Lv.12 ／ NORMAL Lv.15 ／ HARD Lv.21 ／ EXPERT Lv.29 ／ MASTER Lv.43 ／ HELL Lv.77 です。',
       '【サンズ戦】ノーツ数は 425 ／ 487 ／ 610 ／ 732 ／ 846 ／ 971 です。',
-      '【スマブラver】レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.30 ／ HELL Lv.44 です。',
-      '【スマブラver】ノーツ数は 430 ／ 493 ／ 674 ／ 813 ／ 937 ／ 1090 です。',
+      '【スマブラver】レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.27 ／ HELL Lv.42 です。',
+      '【スマブラver】ノーツ数は 224 ／ 261 ／ 361 ／ 427 ／ 497 ／ 587 です。',
     ],
     gallery:[{ image:'images/song-art/megalovania-smash.jpg?v=1923d225d33a', caption:'スマブラver のジャケット' }],
     assistantNotice:{ id:'update_notice_megalovania_v1', type:'content' },

@@ -1689,8 +1689,8 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-megalovania-smash.mp3",
    "chartRevision": 39,
-   "audioSha256": "831700bb02553b8223a18d53ba04ac870cf50fde775e75515914f6794d4f3d43",
-   "durationMs": 278178,
+   "audioSha256": "1bbb6aea8bb2fd82c6ad8855bc263f2e49230bab2319946f3a8852fbbb65f5a4",
+   "durationMs": 147331,
    "analyzedTiming": {
     "bpm": 160,
     "beatZeroMs": 761,
