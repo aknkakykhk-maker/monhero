@@ -513,6 +513,10 @@
       "role": "部品: 助手のマスモンのフレンド対戦(非同期PvP・第④段階・タイセン)の端末の口。画面は持たない(画面はミセカタ)。サーバの関数 masmon-pvp を呼ぶ masmonPvpRegister/masmonPvpChallenge/masmonPvpUnregister と、表を読む masmonPvpRatings/masmonPvpFriends。保存は新しいキー mh_masmon_pvp_owner_key_v1(持ち主の鍵)だけ。公開の印 assistantMasmonBattlePvp が真のときだけ通信。設計 docs/spec/MASMON_PVP_SERVER.md"
     },
     {
+      "file": "56-monsuc-rank.jsx",
+      "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120001)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true
