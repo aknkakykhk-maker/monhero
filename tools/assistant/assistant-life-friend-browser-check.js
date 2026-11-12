@@ -155,7 +155,9 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-page="on"]').waitFor({ timeout: 8000 });
       await page.locator('[data-alf-house]').first().waitFor({ timeout: 8000 }).catch(() => {});
       await page.locator('[data-alf-note]').first().waitFor({ timeout: 8000 }).catch(() => {});
-      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定5つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 5);
+      // 設定は5つ+助手のマスモンを見せる(印 alfMasmonShareSend が真のときだけ出る・#5602)
+      const setN = 5 + (await page.evaluate(() => (typeof alfMsSendOn === 'function' && alfMsSendOn() ? 1 : 0)));
+      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定${setN}つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === setN, String(await page.locator('[data-alf-setting]').count()));
       { const ng = await textProblems(page, '[data-alf-page]'); check(`③ ページがはみ出さない・字が切れない・言葉の途中で折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       check(`③ 置き手紙に「訪ねてくれた」「ドラと話した」とお礼の3択(${v.id})`, /訪ねてくれた/.test(await page.locator('[data-alf-notes]').innerText()) && /ドラと話した/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-thanks]').count()) === 3);
       check(`③ 家が届いていないフレンド(みお)は薄く並び「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, (await page.locator('[data-alf-house-waiting="mio-0001"]').count()) === 1 && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-house-waiting="mio-0001"]').innerText().catch(() => '')));
