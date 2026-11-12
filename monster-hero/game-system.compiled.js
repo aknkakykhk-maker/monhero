@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c2e8d2618a9d9c0
+// source-sha256: 6a0096cdff88bedc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140734,7 +140734,7 @@ const amgbTick = (aid, row, slot) => {
     }));
     return true;
   }
-  const d = Math.min(400, day - b0.last);
+  const d = Math.min(1, day - b0.last);
   const b = {
     ...b0,
     sc: {
@@ -141072,6 +141072,44 @@ function AmgbBedTag({
     small: true
   }), p.power.toLocaleString());
 }
+function AmgbBedPanel({
+  bed
+}) {
+  if (!amgbOn() || typeof MASMON_CALC === 'undefined' || !bed) return null;
+  const b = bed.bd && amgbNormOne(bed.bd) || amgbNormOne({});
+  const p = amgbBedPower(bed);
+  const f = amgbLifeFrac(b);
+  const left = Math.max(0, Math.ceil((1 - f) * MASMON_CALC.lifeLen(b.pol, AMGB_NUM.baseLife)));
+  return React.createElement("div", {
+    className: "mt-2 rounded-2xl border border-white/10 bg-slate-800/70 p-2",
+    "data-amgb-bed-panel": true
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "総合力"), p ? React.createElement("p", {
+    className: "flex items-center gap-1.5 text-[16px] font-black text-amber-100",
+    "data-amgb-bed-total": p.power
+  }, React.createElement(AmgbRankChip, {
+    rank: p.rank
+  }), p.power.toLocaleString()) : React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "—")), React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] font-bold text-slate-200"
+  }, React.createElement("p", null, "忠誠度 ", React.createElement("b", {
+    className: "text-amber-200",
+    "data-amgb-bed-loy": true
+  }, Math.round(b.loy))), React.createElement("p", null, "人気 ", React.createElement("b", {
+    className: "text-amber-200",
+    "data-amgb-bed-pop": true
+  }, Math.round(b.pop))), React.createElement("p", {
+    "data-amgb-bed-age": b.age
+  }, "🎂 ", MASMON_CALC.ageLabel(b.age)), React.createElement("p", {
+    "data-amgb-bed-life": b.life
+  }, f >= 1 ? '⏳ 寿命(もう伸びません)' : `⏳ 寿命まで あと約${left}日`)), React.createElement("p", {
+    className: "mt-0.5 text-[9.5px] font-bold text-slate-400"
+  }, "眠っている間は年をとりません"));
+}
 function AmgbPanel({
   who,
   t
@@ -141083,8 +141121,13 @@ function AmgbPanel({
       void AMGB_STORE.load().then(() => amgbTouch(who.id, t));
     }
   }, [who.id, t.slot, t.monster]);
+  const b0 = amgbOn() ? amgbEntryOf(who.id, t, bst) : null;
+  const lastS = b0 && b0.rs.length ? b0.rs[b0.rs.length - 1].s : -1;
+  React.useEffect(() => {
+    setMsg('');
+  }, [lastS, who.id, t.slot, t.monster]);
   if (!amgbOn()) return null;
-  const b = amgbEntryOf(who.id, t, bst);
+  const b = b0;
   const p = amgPowerOf(who.id, t);
   if (!b) return null;
   const pol = MASMON_CALC.policyOf(b.pol);
@@ -141221,18 +141264,20 @@ function AmgbCurve({
   const W = 200,
     H = 34;
   const top = 1.8;
-  const pts = c.map((v, i) => `${(i + 0.5) / 10 * W},${H - v / top * H}`).join(' ');
+  const pts = c.map((v, i) => `${i / 9 * W},${H - v / top * H}`).join(' ');
   const x = Math.min(1, Math.max(0, frac)) * W;
-  return React.createElement("svg", {
+  return React.createElement(React.Fragment, null, React.createElement("svg", {
     viewBox: `0 0 ${W} ${H + 2}`,
     className: "mt-1 h-[36px] w-full",
+    preserveAspectRatio: "none",
     "aria-hidden": "true",
     "data-amgb-curve": true
   }, React.createElement("polyline", {
     points: pts,
     fill: "none",
     stroke: "#6ee7b7",
-    strokeWidth: "2"
+    strokeWidth: "2",
+    vectorEffect: "non-scaling-stroke"
   }), React.createElement("line", {
     x1: x,
     x2: x,
@@ -141240,8 +141285,12 @@ function AmgbCurve({
     y2: H,
     stroke: "#fde68a",
     strokeWidth: "2",
-    strokeDasharray: "3 2"
-  }));
+    strokeDasharray: "3 2",
+    vectorEffect: "non-scaling-stroke"
+  })), React.createElement("div", {
+    className: "flex justify-between text-[9px] font-bold leading-none text-slate-400",
+    "data-amgb-curve-ends": true
+  }, React.createElement("span", null, "0歳"), React.createElement("span", null, "寿命")));
 }
 const ASSISTANT_MASMON_GROW_KEY = 'mh_assistant_masmon_grow_v1';
 const AMG_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
@@ -148059,6 +148108,7 @@ const amgrPlanOf = (kind, k) => kind === 'heavy' ? {
   sub: '',
   down: ''
 };
+const amgrLifeOverText = row => `${row && row.nick || 'このマスモン'}は寿命が来たので、もう能力は伸びません(対戦には出られます)`;
 const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   if (!amgrOn() || !amgrOkAid(aid)) return {
     ok: false,
@@ -148100,6 +148150,10 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   if (!e0) return {
     ok: false,
     why: '読み込み中です'
+  };
+  if (typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row)) return {
+    ok: false,
+    why: amgrLifeOverText(row)
   };
   if (e0.st[k] >= AMG_MAX) return {
     ok: false,
@@ -148304,7 +148358,7 @@ function AssistantMasmonRanchSheet({
   const name = who ? who.name : aid;
   const monUsed = row && (AMGR_STORE.state.mon[aid] || {})[amgMonKey(row.slot, row.monster)] === amgrToday();
   const have = info ? info[kind] : 0;
-  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
+  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
   const use = () => {
     if (!row) return;
     const r = assistantMasmonRanchUse(aid, amgMonKey(row.slot, row.monster), kind, k);
@@ -149502,11 +149556,17 @@ function AmgpMine({
       className: "flex items-center gap-2"
     }, amgpMonIcon(x.row.monster), React.createElement("div", {
       className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "flex min-w-0 items-center gap-1",
+      "data-amgp-name-row": true
     }, React.createElement("p", {
-      className: "truncate text-[13px] font-black"
+      className: "min-w-0 truncate text-[13px] font-black"
     }, nameOf(x), " ", React.createElement("small", {
       className: "text-[10px] text-slate-300"
-    }, amgpWhoName(x.aid), "のマスモン・育成Lv.", x.e.lv), typeof AmgbPowerTag === 'function' && React.createElement(React.Fragment, null, " ", React.createElement(AmgbPowerTag, {
+    }, amgpWhoName(x.aid), "のマスモン・育成Lv.", x.e.lv)), typeof AmgbPowerTag === 'function' && React.createElement("span", {
+      className: "shrink-0",
+      "data-amgp-power-tag": true
+    }, React.createElement(AmgbPowerTag, {
       aid: x.aid,
       row: x.row
     }))), React.createElement("p", {
@@ -150120,6 +150180,10 @@ const amgsSyncFormer = () => {
 const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
   if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) {
+    void AMGB_STORE.load();
+    return '読み込み中です';
+  }
   const st = AMGS_STORE.state;
   const bed = st.beds.find(b => b.id === bedId);
   if (!bed) return 'もういません';
@@ -150534,7 +150598,9 @@ function AmgsDetail({
     className: "text-[11px] font-bold text-slate-300"
   }, m.name, " ・ Lv ", bed.row.lv, bed.row.grow ? ` ・ ${bed.row.grow}` : '', bed.g ? ` ・ 育成Lv.${bed.g.lv}` : ''), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "色: ", amgsColorDots(bed.row.colors)))), React.createElement("p", {
+  }, "色: ", amgsColorDots(bed.row.colors)))), typeof AmgbBedPanel === 'function' && React.createElement(AmgbBedPanel, {
+    bed: bed
+  }), React.createElement("p", {
     className: "mt-2 text-[12px] font-black text-amber-200"
   }, "6能力(眠らせたときのまま)"), bed.g ? React.createElement("div", {
     className: "mt-1"

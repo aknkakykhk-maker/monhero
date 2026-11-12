@@ -188,7 +188,7 @@ const check = (name, ok, extra) => {
     check('F 端末が送った種・勝ち負けは使わない', m && m.seed !== 'cheat' && /^mptestseed/.test(m.seed));
     const rec = db.s.matches[db.s.matches.length - 1];
     check('F 記録の勝ち負けはサーバの計算と同じ', rec && rec.p_winner === m.winner && rec.p_digest === m.digest && rec.p_seed === m.seed);
-    check('F 記録に計算の版・技表の版・balance が残る', rec && rec.p_engine_version === (engine.VERSION_PLAIN || engine.VERSION) && rec.p_tech_version === catalog.techVersion && rec.p_balance === 'A' && m.balance === 'A');
+    check('F 記録に計算の版・技表の版・balance が残る', rec && rec.p_engine_version === engine.VERSION /* 忠誠度が無い編成は50とみなすので、忠誠度が効く版(2026-11-12) */ && rec.p_tech_version === catalog.techVersion && rec.p_balance === 'A' && m.balance === 'A');
     const replay = client.engine.simulate({ seed: m.seed, catalog: client.catalog, teamA: m.teamA, teamB: m.teamB, balance: m.balance });
     check('F 端末が返ってきた種と編成で見返すと同じ指紋', replay.digest === m.digest && replay.winner === m.winner);
     r = await ch({ division: 'fair' });

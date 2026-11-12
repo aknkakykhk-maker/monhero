@@ -127,6 +127,8 @@ const amgrPlanOf = (kind, k) => (kind === 'heavy'
   ? { name: AMG_HEAVY[k], main: k, sub: AMG_SUB[k], down: AMGR_DOWN[k] }
   : { name: AMG_LIGHT[k], main: k, sub: '', down: '' });
 
+// 寿命が来た子(絆・印 assistantMasmonBond)への案内
+const amgrLifeOverText = (row) => `${(row && row.nick) || 'このマスモン'}は寿命が来たので、もう能力は伸びません(対戦には出られます)`;
 // ---------- チケットを使う ----------
 // 返り: { ok:true, nick, kind, name, rows:[{k,from,to}], fat } か { ok:false, why }
 const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
@@ -141,6 +143,7 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const day = amgrToday(now);
   if ((R.mon[aid] || {})[key] === day) return { ok: false, why: `${row.nick || 'このマスモン'}には今日もう使いました` };
   const e0 = (AMG_STORE.state.mons[aid] || {})[key]; if (!e0) return { ok: false, why: '読み込み中です' };
+  if (typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row)) return { ok: false, why: amgrLifeOverText(row) }; // 絆: 寿命が来た子は伸びない(チケットを減らす前に止める・社長「寿命が来たら伸びが止まるだけ」)
   if (e0.st[k] >= AMG_MAX) return { ok: false, why: `${amgrStatName(k)}はもう上限です` };
   if (amgrTickets(kind) <= 0) return { ok: false, why: `${AMGR_TICKET_NAME[kind]}が足りません` };
   // 先に印を付ける(二重に上げない)→ チケットを減らす → 能力を足す
@@ -209,7 +212,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
   const name = who ? who.name : aid;
   const monUsed = row && (AMGR_STORE.state.mon[aid] || {})[amgMonKey(row.slot, row.monster)] === amgrToday();
   const have = info ? info[kind] : 0;
-  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
+  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
   const use = () => {
     if (!row) return;
     const r = assistantMasmonRanchUse(aid, amgMonKey(row.slot, row.monster), kind, k);

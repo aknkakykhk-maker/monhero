@@ -419,7 +419,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
         <div className="flex items-center gap-2">
           {amgpMonIcon(x.row.monster)}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-black">{nameOf(x)} <small className="text-[10px] text-slate-300">{amgpWhoName(x.aid)}のマスモン・育成Lv.{x.e.lv}</small>{typeof AmgbPowerTag === 'function' && <> <AmgbPowerTag aid={x.aid} row={x.row}/></>}</p>
+            <div className="flex min-w-0 items-center gap-1" data-amgp-name-row><p className="min-w-0 truncate text-[13px] font-black">{nameOf(x)} <small className="text-[10px] text-slate-300">{amgpWhoName(x.aid)}のマスモン・育成Lv.{x.e.lv}</small></p>{typeof AmgbPowerTag === 'function' && <span className="shrink-0" data-amgp-power-tag><AmgbPowerTag aid={x.aid} row={x.row}/></span>}</div>
             <p className="text-[10.5px] font-bold text-slate-300">{isPick ? `次の回: ${amgpCodeIcon(nextCode)} ${amgpCodeName(nextCode)} ・ ` : ''}疲れ <b className={amgpLevelColor(x.e.fat)}>{x.e.fat}</b> ・ ストレス <b className={amgpLevelColor(x.e.str + 10)}>{x.e.str}</b> ・ 今日の伸び {todayN(x)}/{(isPick ? 20 : 15) * (typeof amgbPace === 'function' ? amgbPace() : 1)}</p>
             {c && <p className="text-[11px] font-black text-rose-200" data-amgp-cond={c.k}>{AMGP_COND[c.k].icon} {AMGP_COND[c.k].name}(あと{Math.max(1, Math.ceil((c.until - nowSlot) / 3))}日くらい・対戦には出られます)</p>}
           </div>

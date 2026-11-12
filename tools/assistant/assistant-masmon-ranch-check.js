@@ -123,6 +123,17 @@ const dg0 = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].dg);
   }
   check('⑧ 重トレ1枚で上がる分の合計は 20 まで(伸びやすさ A・個体差いちばん上でも)', n >= 30 && worst <= 20, `${n}回 最大 +${worst}`);
 }
+// ⑨ 寿命が来た子(絆 amgbLifeOver)には使えない・チケットは減らない・印も付けない(社長「寿命が来たら伸びが止まるだけ」)
+{
+  ctx.ASSISTANT_LIFE_STORE.state.life.abs = 2000; tickets.training_ticket = 1;
+  ctx.amgbLifeOver = (aid, row) => row.monster === 'Golem';
+  const before = JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].st); const R0 = JSON.stringify(T.AMGR_STORE.state);
+  const r = T.assistantMasmonRanchUse('kiki', '1:Golem', 'light', 'pow', now + 86400000 * 80);
+  check('⑨ 寿命が来た子には使えない(「もう伸びません」)・チケットも印もそのまま', !r.ok && /寿命/.test(r.why) && tickets.training_ticket === 1 && JSON.stringify(T.AMG_STORE.state.mons.kiki['1:Golem'].st) === before && JSON.stringify(T.AMGR_STORE.state) === R0, r.why);
+  const r2 = T.assistantMasmonRanchUse('kiki', '2:Pixie', 'light', 'pow', now + 86400000 * 80);
+  check('⑨ 寿命が来ていない子にはいつもどおり使える', r2.ok && tickets.training_ticket === 0, JSON.stringify(r2).slice(0, 80));
+  delete ctx.amgbLifeOver;
+}
 // ⑦ 印が真なら旧 1.2倍 は受けない・印が偽なら何もしない
 {
   check('⑦ 印が真なら旧の 1.2倍(assistantMasmonTrainBoost)は受けない', T.assistantMasmonTrainBoost('kiki', { source: 'ranch' }, now) === false);
