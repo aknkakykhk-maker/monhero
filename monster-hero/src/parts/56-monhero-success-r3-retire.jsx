@@ -69,19 +69,21 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const ev = SUC.evaluate(ws); const ev0 = SUC.evaluate(s);
   const right = `${Math.min(s.turn, msxSuc.core.TOTAL_TURNS)} / ${msxSuc.core.TOTAL_TURNS}ターン`;
   const grade = msxR3Grade(ev.power);
-  const nextG = MSX_R3_GRADES.find((g) => g.from > ev.power);
+  const RK = msxR3Ranks(); const ri = Math.max(0, RK.findIndex(([k]) => k === grade.rank));
+  const near = RK.slice(Math.max(0, Math.min(ri - 1, RK.length - 4)), Math.max(0, Math.min(ri - 1, RK.length - 4)) + 4); // 1つ下・いま・上2つの4枚
+  const nextR = RK[ri + 1] || null;
 
   if (showBox) return <MsxR3Box onClose={() => { setShowBox(false); setRes(null); }}/>;
 
   // ---- E0 最終の評価 ----
   if (step === 'e0') {
     const body = (<>
-      <div className="v-h">🎓 最終の評価<small>育成のおわりに、総合力で C 〜 S が決まる</small></div>
-      <div className="v-rank"><MsxMonArt run={run} className="mon2"/><div className="tx"><small>最終の評価</small><div className="L">{grade.g}</div></div>
-        <div className="tx"><small>総合力</small><b>{msxFmt(ev.power)}</b><small style={{ color: '#cbd5e1', marginTop: 3 }}>{nextG ? `${nextG.g} まで あと ${msxFmt(nextG.from - ev.power)}` : 'いちばん上の評価!'}</small></div></div>
-      <div className="v-gl">{MSX_R3_GRADES.map((g) => <div key={g.g} className={g.g === grade.g ? 'now' : g.from < grade.from ? 'ok' : ''}><b>{g.g}</b><small>{g.label}</small></div>)}</div>
+      <div className="v-h">🎓 最終の評価<small>育成のおわりに、総合力で G 〜 M が決まる(500ごとに番号)</small></div>
+      <div className="v-rank"><MsxMonArt run={run} className="mon2"/><div className="tx"><small>最終の評価</small><div className="L">{grade.rank}<small style={{ fontSize: '40%', display: 'inline' }}>{grade.step}</small></div></div>
+        <div className="tx"><small>総合力</small><b>{msxFmt(ev.power)}</b><small style={{ color: '#cbd5e1', marginTop: 3 }}>{`${grade.label} → ${grade.rank}${grade.step + 1} まで あと ${msxFmt(grade.toNext)}`}{nextR ? `・${nextR[0]} まで あと ${msxFmt(nextR[1] - ev.power)}` : ''}</small></div></div>
+      <div className="v-gl">{near.map(([k, min]) => <div key={k} className={k === grade.rank ? 'now' : min < grade.min ? 'ok' : ''}><b>{k}</b><small>{msxFmt(min)} 〜</small></div>)}</div>
       <MsxStRow stats={ws.stats}/>
-      <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? `「${grade.g} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.g} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`}/>
+      <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? `「${grade.label} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.label} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`}/>
       <div className="v-card"><div className="v-kv"><b>残りポイント</b><span><b className="yel">{ws.pts}</b>(使うと総合力が上がる)</span></div><div className="v-kv"><b>そのあと</b><span>アシスト能力をポイントで取る → 保存枠へ</span></div></div>
       <div style={{ flex: 1 }}/>
     </>);
@@ -127,8 +129,8 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     const sc = (typeof MSX_SCENARIOS !== 'undefined' ? MSX_SCENARIOS : []).find((x) => x.aid === ws.aid);
     const body = (<>
       <div className="v-h">🎓 引退 ── {run.nick || msxMonName(ws.species)}の育成がおわった<small>{msxAidName(ws.aid)}編{sc ? `「${sc.title}」` : ''}・{ws.over === 'lost' ? '頂への道で負けた' : '最後まで走り切った'}</small></div>
-      <div className="v-rank"><MsxMonArt run={run} className="mon2"/><div className="tx"><small>育成ランク</small><div className="L">{ev.rank}</div></div>
-        <div className="tx"><small>総合力</small><b>{msxFmt(ev.power)}</b><small style={{ color: '#cbd5e1', marginTop: 3 }}>評価 {grade.g}</small></div></div>
+      <div className="v-rank"><MsxMonArt run={run} className="mon2"/><div className="tx"><small>育成ランク</small><div className="L">{grade.rank}<small style={{ fontSize: '40%', display: 'inline' }}>{grade.step}</small></div></div>
+        <div className="tx"><small>総合力</small><b>{msxFmt(ev.power)}</b><small style={{ color: '#cbd5e1', marginTop: 3 }}>評価 {grade.label}</small></div></div>
       <MsxStRow stats={ws.stats}/>
       <div className="v-rec">
         <div><small>🏆 大会</small>{cupWins + cupLoss}戦 {cupWins}勝{(ws.crowns || 0) ? `・👑 ${ws.crowns}回` : ''}</div>
@@ -138,7 +140,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         {mem ? <div><small>🧩 アシストの基本値</small>親密度 {mem.bond0}・タッグ +{mem.tag}%・得意率 {Math.round((mem.fav || 0) * 100)}%</div> : null}
         {mem && mem.startAdd ? <div><small>📈 はじめの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
       </div>
-      {(() => { const band = Math.max(1, MSX_R3_GRADES.findIndex((g) => g.g === grade.g) + 1); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
+      {(() => { const band = msxR3Band(grade.rank); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
         <div className="v-kv"><b>名声</b><span>合計 {msxFmt(ws.fameTotal || 0)}</span></div>
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>
@@ -190,7 +192,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     const body = (<>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 260 }}><img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/><div className="v-burst"/>
         <div className="gr"/><MsxMonArt run={run} className="mon"/>
-        <div className="v-stamp msx-pop" style={{ top: '6%', fontSize: 30 }}>保存枠に入った!<small>{run.nick || msxMonName(ws.species)}・ランク {ev.rank}・総合力 {msxFmt(ev.power)}</small></div></div>
+        <div className="v-stamp msx-pop" style={{ top: '6%', fontSize: 30 }}>保存枠に入った!<small>{run.nick || msxMonName(ws.species)}・評価 {grade.label}・総合力 {msxFmt(ev.power)}</small></div></div>
       <MsxSay aid={ws.aid} ex="happy" text="「おつかれさま! 次の育成で、編成に入れてあげてね」"/>
       <div className="v-card"><div className="v-kv"><b>保存枠</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
     </>);
@@ -256,7 +258,7 @@ function MsxR3Box({ onClose }) {
     <div className="v-h">📦 保存枠<small>{box.mons.length} / {box.cap}体(引退10回ごとに +5・最大60)</small></div>
     <div className="r3-box">{box.mons.length ? box.mons.slice().reverse().map((m) => (
       <button type="button" key={m.id} className={`r3-bm ${m.id === sel ? 'on' : ''}`} onClick={() => { setSel(m.id === sel ? null : m.id); setBye(0); }} data-msx-r3-boxmon={m.id}>
-        <img src={msxMonThumb(m.species)} alt=""/><div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{msxMonName(m.species)}・{m.raised === false ? '未育成' : `ランク ${m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
+        <img src={msxMonThumb(m.species)} alt=""/><div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
         <span className="pw">{m.raised === false ? '' : msxFmt(m.score || 0)}</span></button>)) : <div className="msx-note">まだ誰もいません。育成を最後まで終えると、ここに入ります</div>}</div>
     {cur ? <div className="v-card">
       <MsxStRow stats={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}/>

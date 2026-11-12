@@ -10,7 +10,9 @@
 // ★称号(data/monhero-success-titles.js)・アシスト能力(-assist.js)・育成の記録帳(-record.js・キー mh_monsuc_record_v1)は、
 //   引退の画面を開いたときにだけ読む(msxR3LoadTables)。読めなければ芯の表だけで動く。
 const MSX_R3_GEAR = Object.freeze({ debut: 5, junior: 10, middle: 20, pro: 30, final: 40 }); // 育てる子の作戦(試算の fight と同じ)
-const MSX_R3_GRADES = Object.freeze([{ g: 'C', from: 0, label: '〜 7,999' }, { g: 'B', from: 8000, label: '8,000 〜' }, { g: 'A', from: 11000, label: '11,000 〜' }, { g: 'S', from: 14000, label: '14,000 〜' }]);
+// 評価は助手マスモンと同じ11段(G〜M)+500ごとの番号(芯の gradeOf → { rank, step, label:'A2', min, next, toNext })。PLAN §1・RANKING §7
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const msxR3Ranks = () => (typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS);
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪', int: '🧠', aim: '🎯', dodge: '💨', hard: '🛡️', life: '❤️', dist0: '🤜', dist1: '👊', dist2: '🏹', dist3: '🔭',
   attacker: '⚔', tank: '🧱', supporter: '🎺', healer: '🌿', shadow: '🌑', spring: '🌸', summer: '🌻', autumn: '🍁', winter: '⛄', normal: '🏟', herosummer: '👑', herowinter: '👑', debut: '🎀', peak: '🗻',
@@ -31,7 +33,15 @@ const msxR3BattleName = (SUC, b) => {
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
 const msxR3BattleIcon = (b) => (!b ? '🏆' : b.kind === 'cup' ? (MSX_R3_CUP_ICON[b.sys] || '🏆') : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆');
-const msxR3Grade = (power) => { let g = MSX_R3_GRADES[0]; MSX_R3_GRADES.forEach((x) => { if (power >= x.from) g = x; }); return g; };
+const msxR3Grade = (power) => {
+  const S = msxSuc && msxSuc.SUC;
+  if (S && typeof S.gradeOf === 'function') return S.gradeOf(power);
+  const R = msxR3Ranks(); const p = Math.max(0, Number(power) || 0); let i = 0; R.forEach(([, min], j) => { if (p >= min) i = j; });
+  const min = R[i][1]; const step = Math.floor((p - min) / 500) + 1;
+  return { rank: R[i][0], step, label: `${R[i][0]}${step}`, min, next: R[i + 1] ? R[i + 1][1] : null, toNext: 500 - ((p - min) % 500) };
+};
+// 引退の台詞の帯(台本の r1〜r4): G〜D / C・B / A・S / SS 以上
+const msxR3Band = (rank) => (['G', 'F', 'E', 'D'].includes(rank) ? 1 : ['C', 'B'].includes(rank) ? 2 : ['A', 'S'].includes(rank) ? 3 : 4);
 
 // ---- 試合(1対1)。同じ育成・同じ大会・同じやり直しの回なら、何度開いても同じ試合 ----
 let msxR3CatCache = null;
@@ -53,14 +63,11 @@ const msxR3Fight = (engine, SUC, run) => {
   const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop,
     ...(ts.length ? { techs: ts, mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) } : {}) };
   const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
-  const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
+  const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
-  const base = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
-  // 試合型のアシスト(編成の子が持つ・#5749)を、特別な1話の上乗せと合わせて buffs.A へ(表が読めていなければ芯の分だけ)
-  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
-  let mods = base;
-  try { if (AT && typeof AT.battleBuffs === 'function') mods = AT.battleBuffs((Array.isArray(s.team) ? s.team : []).map((m) => (m && Array.isArray(m.assists) ? m.assists : [])), base); } catch (e) { mods = base; }
+  // 試合の上乗せ: 芯の battleBuffs(編成の試合型アシスト + 特別な1話)。古い芯なら battleMods だけ
+  const mods = typeof SUC.battleBuffs === 'function' ? (SUC.battleBuffs(s) || {}) : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   let r = null;
   try { r = engine.simulate({ seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}), trace: true }); } catch (e) { return null; }
@@ -98,7 +105,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   id: run.id, species: s.species, nick: run.nick || '', colors: Array.isArray(run.colors) ? run.colors.slice(0, 6) : [],
   gen: parent && Number.isFinite(parent.gen) ? parent.gen : 1, parents: parent && Array.isArray(parent.parents) ? parent.parents.slice(0, 2) : [],
   st: { ...s.stats }, techs: Array.isArray(s.techs) ? s.techs.slice(0, 8) : [], mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 8).map((t) => Math.round((s.mastery && s.mastery[t]) || 0)),
-  loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
+  loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: (assists || []).slice(0, 4),
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
@@ -133,7 +140,7 @@ const msxR3ClearRun = () => storeSet(MSX_KEYS.run, null);
 // 保存枠から外す(お別れ)。「思い出」に名前・種・ランクだけ残す(新しい100件)
 const msxR3Farewell = async (id) => {
   const box = await msxR3ReadBox(); const m = box.mons.find((x) => x.id === id); if (!m) return box;
-  const next = { ...box, mons: box.mons.filter((x) => x.id !== id), memory: [...box.memory, { nick: m.nick || '', species: m.species, rank: m.rank || '', gen: m.gen || 1, at: Date.now() }].slice(-100) };
+  const next = { ...box, mons: box.mons.filter((x) => x.id !== id), memory: [...box.memory, { nick: m.nick || '', species: m.species, rank: m.grade || m.rank || '', gen: m.gen || 1, at: Date.now() }].slice(-100) };
   await storeSet(MSX_KEYS.box, next);
   return next;
 };
@@ -145,7 +152,7 @@ const msxR3RankRow = (run, s, ev, debug) => {
     run_id: run.id, child_name: run.nick || '', species: s.species, lineage: lin && lin.main ? lin.main : null,
     dye: Array.isArray(run.colors) ? run.colors.slice(0, 6) : [], stats: { ...s.stats },
     techs: (Array.isArray(s.techs) ? s.techs : []).slice(0, 8).map((t) => Math.round((s.mastery && s.mastery[t]) || 0)),
-    lv: s.lv, loyal: ev.loyal, pop: s.pop, power: ev.power, grade: ev.rank,
+    lv: s.lv, loyal: ev.loyal, pop: s.pop, power: ev.power, grade: ev.rank, gradeLabel: msxR3Grade(ev.power).label,
     engine_version: msxSuc && msxSuc.core ? msxSuc.core.VERSION : null, over: s.over || 'done', debug: !!debug,
   };
 };

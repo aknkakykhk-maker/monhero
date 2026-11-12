@@ -92,7 +92,7 @@ const fight = (s, opp, idx) => {
   const sp = battleSp(s.species); const own = catalog.species[sp].techs.map(t => t.id);
   const ts = s.techs.filter(t => own.includes(t));
   const a = { species: sp, name: sp, lv: 1, stats: s.stats, techs: ts.length ? ts : undefined, mastery: Object.fromEntries(ts.map(t => [t, s.mastery[t] || 0])), loy, pop: s.pop };
-  const b = unitOf(opp.species, opp.stats, opp.techs, opp.mastery);
+  const b = { ...unitOf(opp.species, opp.stats, opp.techs, opp.mastery), ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}) }; // 相手の人気・忠誠(2026-11-12 社長)
   const r = engine.simulate({ seed: `${s.id}:${s.turn}:${s.battle.kind}:${s.battle.retry || 0}:${s.battle.round}:${idx}:${s.battle.again || 0}`, catalog,
     teamA: { assistantId: s.aid, tactics: g[2], members: [a] }, teamB: { assistantId: 'kiki', tactics: opp.tactics, members: [b] }, buffs: SUC.battleBuffs(s) });
   return r.winner === 'A';

@@ -292,8 +292,8 @@ function MsxR3Battle({ run, setRun, v, ev, onPause }) {
       <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly' }}>
         {tab === 'st' ? <>
           {rowsSt.map(([n, a, c]) => <div key={n} className="v-vs1"><b className={a >= c ? 'w' : ''}>{a}</b><i className="l"><u style={{ width: `${a / 10}%` }}/></i><span>{n}</span><i className="r"><u style={{ width: `${c / 10}%` }}/></i><b className={c > a ? 'w' : ''}>{c}</b></div>)}
-          <div className="v-vs1"><b>{s.pop}</b><i className="l p"><u style={{ width: `${s.pop}%` }}/></i><span>⭐ 人気</span><i className="r p"><u style={{ width: 0 }}/></i><b>—</b></div>
-          <div className="v-vs1"><b>{loyA}</b><i className="l p"><u style={{ width: `${loyA}%` }}/></i><span>🤝 忠誠</span><i className="r p"><u style={{ width: 0 }}/></i><b>—</b></div>
+          <div className="v-vs1"><b className={s.pop >= (opp.pop || 0) ? 'w' : ''}>{s.pop}</b><i className="l p"><u style={{ width: `${s.pop}%` }}/></i><span>⭐ 人気</span><i className="r p"><u style={{ width: `${opp.pop || 0}%` }}/></i><b className={(opp.pop || 0) > s.pop ? 'w' : ''}>{Number.isFinite(opp.pop) ? opp.pop : '—'}</b></div>
+          <div className="v-vs1"><b className={loyA >= (opp.loy || 0) ? 'w' : ''}>{loyA}</b><i className="l p"><u style={{ width: `${loyA}%` }}/></i><span>🤝 忠誠</span><i className="r p"><u style={{ width: `${opp.loy || 0}%` }}/></i><b className={(opp.loy || 0) > loyA ? 'w' : ''}>{Number.isFinite(opp.loy) ? opp.loy : '—'}</b></div>
           <div className="v-dist"><div>{['零', '近', '中', '遠'].map((dn, i) => <i key={dn} className={`a${lvA(distA[i])}`}>{dn}</i>)}</div><span>間合いの適性</span><div>{['零', '近', '中', '遠'].map((dn, i) => <i key={dn} className={`a${lvA(distB[i])}`}>{dn}</i>)}</div></div>
         </> : tab === 'tech' ? <>
           <div className="v-kv"><b>{run.nick}</b><span>{techA.length ? techA.join('・') : 'はじめから使える技'}</span></div>

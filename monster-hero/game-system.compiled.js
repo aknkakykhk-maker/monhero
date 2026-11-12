@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ff2801c87bf8d48
+// source-sha256: e09fd20d2f9a02cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159973,23 +159973,8 @@ const MSX_R3_GEAR = Object.freeze({
   pro: 30,
   final: 40
 });
-const MSX_R3_GRADES = Object.freeze([{
-  g: 'C',
-  from: 0,
-  label: '〜 7,999'
-}, {
-  g: 'B',
-  from: 8000,
-  label: '8,000 〜'
-}, {
-  g: 'A',
-  from: 11000,
-  label: '11,000 〜'
-}, {
-  g: 'S',
-  from: 14000,
-  label: '14,000 〜'
-}]);
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const msxR3Ranks = () => typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS;
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪',
   int: '🧠',
@@ -160033,12 +160018,26 @@ const msxR3BattleName = (SUC, b) => {
 };
 const msxR3BattleIcon = b => !b ? '🏆' : b.kind === 'cup' ? MSX_R3_CUP_ICON[b.sys] || '🏆' : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆';
 const msxR3Grade = power => {
-  let g = MSX_R3_GRADES[0];
-  MSX_R3_GRADES.forEach(x => {
-    if (power >= x.from) g = x;
+  const S = msxSuc && msxSuc.SUC;
+  if (S && typeof S.gradeOf === 'function') return S.gradeOf(power);
+  const R = msxR3Ranks();
+  const p = Math.max(0, Number(power) || 0);
+  let i = 0;
+  R.forEach(([, min], j) => {
+    if (p >= min) i = j;
   });
-  return g;
+  const min = R[i][1];
+  const step = Math.floor((p - min) / 500) + 1;
+  return {
+    rank: R[i][0],
+    step,
+    label: `${R[i][0]}${step}`,
+    min,
+    next: R[i + 1] ? R[i + 1][1] : null,
+    toNext: 500 - (p - min) % 500
+  };
 };
+const msxR3Band = rank => ['G', 'F', 'E', 'D'].includes(rank) ? 1 : ['C', 'B'].includes(rank) ? 2 : ['A', 'S'].includes(rank) ? 3 : 4;
 let msxR3CatCache = null;
 const msxR3Catalog = engine => {
   if (!msxR3CatCache && engine && typeof ambwTechTable === 'function') {
@@ -160087,6 +160086,12 @@ const msxR3Fight = (engine, SUC, run) => {
     lv: 1,
     stats: opp.stats,
     techs: ots,
+    ...(Number.isFinite(opp.loy) ? {
+      loy: opp.loy
+    } : {}),
+    ...(Number.isFinite(opp.pop) ? {
+      pop: opp.pop
+    } : {}),
     mastery: Object.fromEntries(ots.map(t => [t, opp.mastery || 0]))
   };
   const teamA = {
@@ -160099,14 +160104,7 @@ const msxR3Fight = (engine, SUC, run) => {
     tactics: opp.tactics || 10,
     members: [o]
   };
-  const base = typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
-  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
-  let mods = base;
-  try {
-    if (AT && typeof AT.battleBuffs === 'function') mods = AT.battleBuffs((Array.isArray(s.team) ? s.team : []).map(m => m && Array.isArray(m.assists) ? m.assists : []), base);
-  } catch (e) {
-    mods = base;
-  }
+  const mods = typeof SUC.battleBuffs === 'function' ? SUC.battleBuffs(s) || {} : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   let r = null;
   try {
@@ -160222,6 +160220,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   lv: s.lv,
   gt: s.type,
   rank: ev.rank,
+  grade: msxR3Grade(ev.power).label,
   score: ev.power,
   fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true,
@@ -160296,7 +160295,7 @@ const msxR3Farewell = async id => {
     memory: [...box.memory, {
       nick: m.nick || '',
       species: m.species,
-      rank: m.rank || '',
+      rank: m.grade || m.rank || '',
       gen: m.gen || 1,
       at: Date.now()
     }].slice(-100)
@@ -160321,6 +160320,7 @@ const msxR3RankRow = (run, s, ev, debug) => {
     pop: s.pop,
     power: ev.power,
     grade: ev.rank,
+    gradeLabel: msxR3Grade(ev.power).label,
     engine_version: msxSuc && msxSuc.core ? msxSuc.core.VERSION : null,
     over: s.over || 'done',
     debug: !!debug
@@ -161347,7 +161347,9 @@ function MsxR3Battle({
       className: c > a ? 'w' : ''
     }, c))), React.createElement("div", {
       className: "v-vs1"
-    }, React.createElement("b", null, s.pop), React.createElement("i", {
+    }, React.createElement("b", {
+      className: s.pop >= (opp.pop || 0) ? 'w' : ''
+    }, s.pop), React.createElement("i", {
       className: "l p"
     }, React.createElement("u", {
       style: {
@@ -161357,11 +161359,15 @@ function MsxR3Battle({
       className: "r p"
     }, React.createElement("u", {
       style: {
-        width: 0
+        width: `${opp.pop || 0}%`
       }
-    })), React.createElement("b", null, "—")), React.createElement("div", {
+    })), React.createElement("b", {
+      className: (opp.pop || 0) > s.pop ? 'w' : ''
+    }, Number.isFinite(opp.pop) ? opp.pop : '—')), React.createElement("div", {
       className: "v-vs1"
-    }, React.createElement("b", null, loyA), React.createElement("i", {
+    }, React.createElement("b", {
+      className: loyA >= (opp.loy || 0) ? 'w' : ''
+    }, loyA), React.createElement("i", {
       className: "l p"
     }, React.createElement("u", {
       style: {
@@ -161371,9 +161377,11 @@ function MsxR3Battle({
       className: "r p"
     }, React.createElement("u", {
       style: {
-        width: 0
+        width: `${opp.loy || 0}%`
       }
-    })), React.createElement("b", null, "—")), React.createElement("div", {
+    })), React.createElement("b", {
+      className: (opp.loy || 0) > loyA ? 'w' : ''
+    }, Number.isFinite(opp.loy) ? opp.loy : '—')), React.createElement("div", {
       className: "v-dist"
     }, React.createElement("div", null, ['零', '近', '中', '遠'].map((dn, i) => React.createElement("i", {
       key: dn,
@@ -162038,7 +162046,10 @@ function MsxR3Retire({
   const ev0 = SUC.evaluate(s);
   const right = `${Math.min(s.turn, msxSuc.core.TOTAL_TURNS)} / ${msxSuc.core.TOTAL_TURNS}ターン`;
   const grade = msxR3Grade(ev.power);
-  const nextG = MSX_R3_GRADES.find(g => g.from > ev.power);
+  const RK = msxR3Ranks();
+  const ri = Math.max(0, RK.findIndex(([k]) => k === grade.rank));
+  const near = RK.slice(Math.max(0, Math.min(ri - 1, RK.length - 4)), Math.max(0, Math.min(ri - 1, RK.length - 4)) + 4);
+  const nextR = RK[ri + 1] || null;
   if (showBox) return React.createElement(MsxR3Box, {
     onClose: () => {
       setShowBox(false);
@@ -162048,7 +162059,7 @@ function MsxR3Retire({
   if (step === 'e0') {
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "🎓 最終の評価", React.createElement("small", null, "育成のおわりに、総合力で C 〜 S が決まる")), React.createElement("div", {
+    }, "🎓 最終の評価", React.createElement("small", null, "育成のおわりに、総合力で G 〜 M が決まる(500ごとに番号)")), React.createElement("div", {
       className: "v-rank"
     }, React.createElement(MsxMonArt, {
       run: run,
@@ -162057,24 +162068,29 @@ function MsxR3Retire({
       className: "tx"
     }, React.createElement("small", null, "最終の評価"), React.createElement("div", {
       className: "L"
-    }, grade.g)), React.createElement("div", {
+    }, grade.rank, React.createElement("small", {
+      style: {
+        fontSize: '40%',
+        display: 'inline'
+      }
+    }, grade.step))), React.createElement("div", {
       className: "tx"
     }, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(ev.power)), React.createElement("small", {
       style: {
         color: '#cbd5e1',
         marginTop: 3
       }
-    }, nextG ? `${nextG.g} まで あと ${msxFmt(nextG.from - ev.power)}` : 'いちばん上の評価!'))), React.createElement("div", {
+    }, `${grade.label} → ${grade.rank}${grade.step + 1} まで あと ${msxFmt(grade.toNext)}`, nextR ? `・${nextR[0]} まで あと ${msxFmt(nextR[1] - ev.power)}` : ''))), React.createElement("div", {
       className: "v-gl"
-    }, MSX_R3_GRADES.map(g => React.createElement("div", {
-      key: g.g,
-      className: g.g === grade.g ? 'now' : g.from < grade.from ? 'ok' : ''
-    }, React.createElement("b", null, g.g), React.createElement("small", null, g.label)))), React.createElement(MsxStRow, {
+    }, near.map(([k, min]) => React.createElement("div", {
+      key: k,
+      className: k === grade.rank ? 'now' : min < grade.min ? 'ok' : ''
+    }, React.createElement("b", null, k), React.createElement("small", null, msxFmt(min), " 〜")))), React.createElement(MsxStRow, {
       stats: ws.stats
     }), React.createElement(MsxSay, {
       aid: s.aid,
       ex: "excited",
-      text: ws.pts > 0 ? `「${grade.g} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.g} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`
+      text: ws.pts > 0 ? `「${grade.label} だよ! 能力ポイントが残ってるから、使い切ってからおわろ!」` : `「${grade.label} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`
     }), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
@@ -162275,19 +162291,24 @@ function MsxR3Retire({
       className: "tx"
     }, React.createElement("small", null, "育成ランク"), React.createElement("div", {
       className: "L"
-    }, ev.rank)), React.createElement("div", {
+    }, grade.rank, React.createElement("small", {
+      style: {
+        fontSize: '40%',
+        display: 'inline'
+      }
+    }, grade.step))), React.createElement("div", {
       className: "tx"
     }, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(ev.power)), React.createElement("small", {
       style: {
         color: '#cbd5e1',
         marginTop: 3
       }
-    }, "評価 ", grade.g))), React.createElement(MsxStRow, {
+    }, "評価 ", grade.label))), React.createElement(MsxStRow, {
       stats: ws.stats
     }), React.createElement("div", {
       className: "v-rec"
     }, React.createElement("div", null, React.createElement("small", null, "🏆 大会"), cupWins + cupLoss, "戦 ", cupWins, "勝", ws.crowns || 0 ? `・👑 ${ws.crowns}回` : ''), React.createElement("div", null, React.createElement("small", null, "🤝 忠誠 / ⭐ 人気"), ev.loyal, " / ", ws.pop), React.createElement("div", null, React.createElement("small", null, "📯 集まりやすい訓練(上位3つ)"), (ev.top || []).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')), mem ? React.createElement("div", null, React.createElement("small", null, "💥 編成での補正"), (mem.top || []).map(k => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')) : null, mem ? React.createElement("div", null, React.createElement("small", null, "🧩 アシストの基本値"), "親密度 ", mem.bond0, "・タッグ +", mem.tag, "%・得意率 ", Math.round((mem.fav || 0) * 100), "%") : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 はじめの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
-      const band = Math.max(1, MSX_R3_GRADES.findIndex(g => g.g === grade.g) + 1);
+      const band = msxR3Band(grade.rank);
       const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`);
       return React.createElement(MsxSay, {
         aid: ws.aid,
@@ -162466,7 +162487,7 @@ function MsxR3Retire({
         top: '6%',
         fontSize: 30
       }
-    }, "保存枠に入った!", React.createElement("small", null, run.nick || msxMonName(ws.species), "・ランク ", ev.rank, "・総合力 ", msxFmt(ev.power)))), React.createElement(MsxSay, {
+    }, "保存枠に入った!", React.createElement("small", null, run.nick || msxMonName(ws.species), "・評価 ", grade.label, "・総合力 ", msxFmt(ev.power)))), React.createElement(MsxSay, {
       aid: ws.aid,
       ex: "happy",
       text: "「おつかれさま! 次の育成で、編成に入れてあげてね」"
@@ -162708,7 +162729,7 @@ function MsxR3Box({
     alt: ""
   }), React.createElement("div", {
     className: "nm"
-  }, React.createElement("b", null, m.nick || msxMonName(m.species)), React.createElement("small", null, msxMonName(m.species), "・", m.raised === false ? '未育成' : `ランク ${m.rank || '—'}`, m.gen > 1 ? `・${m.gen}代目` : '')), React.createElement("span", {
+  }, React.createElement("b", null, m.nick || msxMonName(m.species)), React.createElement("small", null, msxMonName(m.species), "・", m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`, m.gen > 1 ? `・${m.gen}代目` : '')), React.createElement("span", {
     className: "pw"
   }, m.raised === false ? '' : msxFmt(m.score || 0)))) : React.createElement("div", {
     className: "msx-note"
