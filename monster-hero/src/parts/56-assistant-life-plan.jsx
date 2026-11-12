@@ -246,6 +246,7 @@ function AssistantLifePlanPicker({ id, abs, onDone }) {
   return (
     <div className="mt-1 rounded-xl border border-sky-300/60 bg-slate-900/95 p-1.5" data-assistant-life-plan-picker={abs}>
       <p className="px-1 text-[11.5px] font-black text-sky-200">{assistantLifePlanName(id)}に {h}〜{(h + 2) % 24}時 に行ってもらう場所</p>
+      {typeof assistantLifeBodyCondOf === 'function' && assistantLifeBodyCondOf(id) && <p className="px-1 text-[11px] font-bold text-rose-200" data-assistant-life-plan-cond-note={id}>{ASSISTANT_LIFE_BODY_COND_NAME[assistantLifeBodyCondOf(id).k]}のあいだは、家と🏥病院だけ選べます</p>}
       <div className="mt-1 grid grid-cols-2 gap-1">
         {list.map(p => (
           <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
@@ -268,7 +269,9 @@ function AssistantLifePlanWho({ id, cur }) {
     const abs = day * 12 + j; const s = assistantLifeSlotOfAbs(abs); const p = assistantLifePlanOf(abs, id); const r = assistantLifePlanResultOf(abs, id);
     const past = abs < cur, now = abs === cur;
     let body;
-    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const ln = assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
+    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{(() => { const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
+          if (bw && bw.why !== 'rest') return <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100" data-assistant-life-plan-body-why={`${id}@${abs}`}>{bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`}</span>;
+          return <>{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}</>; })()}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const bw = typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null; const ln = bw && bw.why !== 'rest' ? null : assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
     else body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? <>📍 {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{assistantLifePlanPerk(p) && <span className="block text-[10.5px] text-emerald-300">{assistantLifePlanPerk(p)}</span>}</> : <span className="text-slate-400">おまかせ<span className="block text-[10.5px]">{assistantLifePlanName(id)}が自分で決める</span></span>}</span>;
     rows.push(
       <div key={abs} data-assistant-life-plan-row={abs} className={`rounded-xl border px-1.5 py-1 ${now ? 'border-amber-300 bg-amber-900/50' : 'border-white/15 bg-white/5'} ${past ? 'opacity-50' : ''}`}>
@@ -284,7 +287,7 @@ function AssistantLifePlanWho({ id, cur }) {
 }
 
 // 8人×4回の表(横)
-function AssistantLifePlanTable({ ids, cur, onCell }) {
+function AssistantLifePlanTable({ ids, cur, onCell, onWho = null }) {
   const left = assistantLifePlanSlotsLeft();
   const [page, setPage] = React.useState(0);
   const cols = left.slice(page * 4, page * 4 + 4);
@@ -294,7 +297,10 @@ function AssistantLifePlanTable({ ids, cur, onCell }) {
       <table className="w-full table-fixed border-separate" style={{ borderSpacing: 2 }}>
         <thead><tr><th className="w-[74px]"/>{cols.map(a => { const s = assistantLifeSlotOfAbs(a); return <th key={a} className="text-[10.5px] font-black text-sky-200">{s.from}〜{(s.from + 2) % 24}時 <span className="text-slate-400">{s.label}</span></th>; })}</tr></thead>
         <tbody>{ids.map(id => <tr key={id}>
-          <td className="truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</td>
+          <td className="p-0">{(() => { const bd = typeof assistantLifeBodyBadge === 'function' ? assistantLifeBodyBadge(id) : '';
+            return onWho && typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()
+              ? <button type="button" data-assistant-life-plan-who-open={id} aria-label={`${assistantLifePlanName(id)}の疲れ・ストレスと予定`} onClick={() => onWho(id)} className="h-[40px] w-full truncate rounded-lg bg-white/10 px-1 text-left text-[11.5px] font-black text-white active:scale-95">{bd}{assistantLifePlanName(id)} <span className="text-[10px] text-sky-200">▶</span></button>
+              : <span className="block truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</span>; })()}</td>
           {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'}</button></td>; })}
         </tr>)}</tbody>
       </table>
@@ -337,16 +343,17 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
       <div className="flex max-h-full w-full flex-col overflow-hidden rounded-2xl border-2 border-amber-300 bg-slate-950/95 p-2 text-white" style={{ maxWidth: land ? 820 : 460 }}>
         <div className="flex items-center gap-1.5">
           <p className="text-[15px] font-black text-amber-200">📅 今日の予定表</p>
-          {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">マスを押して、助手に行き先をお願いできます</p>}
+          {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">{typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'}</p>}
           <button type="button" aria-label="閉じる" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="ml-auto grid h-[40px] w-[44px] place-items-center rounded-xl bg-white/10 text-[17px] font-black text-amber-200">✕</button>
         </div>
         {!land && <p className="px-0.5 pb-1 text-[11.5px] font-bold leading-snug text-slate-300">次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。</p>}
         <div className="min-h-0 overflow-y-auto">
           {open.place ? <AssistantLifePlanPlace place={open.place} ids={list} cur={cur}/>
-            : land && !who ? (cell ? <AssistantLifePlanPicker id={cell.id} abs={cell.abs} onDone={() => setCell(null)}/> : <AssistantLifePlanTable ids={list} cur={cur} onCell={(id, abs) => setCell({ id, abs })}/>)
+            : land && !who ? (cell ? <AssistantLifePlanPicker id={cell.id} abs={cell.abs} onDone={() => setCell(null)}/> : <AssistantLifePlanTable ids={list} cur={cur} onCell={(id, abs) => setCell({ id, abs })} onWho={setWho}/>)
             : <>
               <div className="mb-1 flex gap-1 overflow-x-auto" data-assistant-life-plan-tabs>{list.map(id => (
                 <button key={id} type="button" data-assistant-life-plan-tab={id} onClick={() => setWho(id)} className={`min-h-[44px] shrink-0 rounded-xl border-2 px-2 text-[11.5px] font-black ${who === id ? 'border-pink-300 bg-pink-900/70' : 'border-transparent bg-white/10'}`}>{assistantLifePlanName(id)}</button>))}</div>
+              {land && who && <button type="button" data-assistant-life-plan-back onClick={() => setWho(null)} className="mb-1 min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-sky-100 active:scale-95">◀ 8人の表へ</button>}
               {who && <AssistantLifePlanWho id={who} cur={cur}/>}
               {who && <button type="button" data-assistant-life-plan-clear onClick={() => assistantLifePlanClearWho(who)} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100">{assistantLifePlanName(who)}を ぜんぶおまかせに</button>}
               {who && <p className="mt-1 text-[11px] font-bold text-pink-200">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約{Math.round(assistantLifePlanTrust(lv) * 100)}%)</p>}
