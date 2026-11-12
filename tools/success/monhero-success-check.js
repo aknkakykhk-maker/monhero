@@ -170,7 +170,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   let w = SUC.settle(s, [true]).state;
   ok(w.debutWon && w.titles.includes('遅咲きの一歩') && !w.over, '再挑戦に勝ったのに先へ進まない');
   w = toBattle(w);
-  ok(w.battle && w.battle.kind === 'junior' && w.turn === 17 && SUC.opponents(w).length === 2, `ジュニアしめくくり杯(2試合)が17ターン目の終わりに来ない: ${w.turn}`);
+  ok(w.battle && w.battle.kind === 'junior' && w.turn === 17 && SUC.opponents(w).length === 1, `ジュニアしめくくり杯(2試合)が17ターン目の終わりに来ない: ${w.turn}`);
   const before = { ...w.stats }; const pts = w.pts;
   w = SUC.settle(w, [true, true]).state;
   ok(w.stats.pow === Math.min(999, before.pow + 2) && w.pts === pts + 5 && w.turn === 18, '強制大会に勝ったごほうび(全能力+2・能力ポイント+5)がずれている');
@@ -234,8 +234,8 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(b.tickets === s0.tickets + 1 && b.fame === SUC.PRIZE.debut, 'デビュー戦に勝ってもチケット・名声が入らない');
   const pro = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state;
   ok(pro.tickets - s0.tickets > b.tickets - s0.tickets, '賞金の大きい大会ほどチケットが多くない');
-  const runner = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, false]).state;
-  ok(runner.tickets === s0.tickets && runner.fame === Math.round(SUC.PRIZE.pro * 0.4), '決勝で負けたとき準優勝の賞金(40%)だけになっていない');
+  const runner = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [false]).state;
+  ok(runner.tickets === s0.tickets && runner.fame === Math.round(SUC.PRIZE.pro * 0.4), 'ヒーロー記念で負けたとき準優勝の賞金(40%)だけになっていない');
   // ごほうびのごはん(体力・忠誠度・能力の3種類・名声を使う・大会のあと1回だけ)
   ok(Object.keys(SUC.MEALS).sort().join() === 'hp,loyal,stat', 'ごはんが体力・忠誠度・能力の3種類でない');
   const mh = SUC.meal({ ...pro, hp: 10 }, 'hp'); ok(mh.out.ok && mh.state.hp === 50 && mh.state.fame === pro.fame - SUC.MEALS.hp.cost && !mh.state.mealReady, '体力のごはんの効き・値段がずれている');
@@ -295,25 +295,78 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 {
   ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 7, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 2)がずれている');
   ok(Object.keys(SUC.GOOD).sort().join() === 'eventMaker,shugyoGood,star,trainGood,uketsugu', 'よいようすが5つでない');
-  const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['kibidango', 'weekly', 'hachimaki', 'juice'], bag: { juice: 1, pack: 1 } });
+  const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['dango', 'mag', 'hachi', 'juice'], bag: { juice: 1, pack: 1 } });
   ok(s0.carry.length === 2 && !s0.carry.includes('juice') && s0.hpMax === 120 && s0.good.trainGood && !s0.good.shugyoGood && Object.keys(s0.bag).length === 0, `持ちこみが2つまでになっていない: ${s0.carry} ${JSON.stringify(s0.bag)}`);
-  const s1 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['weekly'], bag: { juice: 3, pack: 1 } });
+  const s1 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['mag'], bag: { juice: 3, pack: 1 } });
   ok(s1.bag.juice === 1 && !s1.bag.pack, `始める前の物と育成中の袋を合わせて2つまでになっていない: ${JSON.stringify(s1.bag)}`);
-  ok(SUC.ITEMS.issaNote.name === '博士の導き書' && SUC.ITEMS.juice.name === 'ガロエ印の野菜ジュース' && SUC.ITEMS.kibidango.name === 'モモのキビダンゴ', 'アイテムの名前が参考のままでない');
+  ok(SUC.ITEMS.guide.name === '博士の導き書' && SUC.ITEMS.juice.name === 'ガロエ印の野菜ジュース' && SUC.ITEMS.dango.name === 'モモのキビダンゴ', 'アイテムの名前が参考のままでない');
   const u1 = SUC.useItem({ ...s0, hp: 5, bag: { juice: 1, pack: 1 } }, 'juice'); ok(u1.out.ok && u1.state.hp === 120, '野菜ジュースで体力が全部戻らない');
   ok(!SUC.useItem(u1.state, 'pack').out.ok, '1ターンに2個使えてしまう');
   const u2 = SUC.useItem({ ...u1.state, turn: 2 }, 'pack').state; ok(u2.bag.oil === 2 && u2.bag.herb === 1 && u2.bag.pack === 0, '詰め合わせの中身(オイル2・薬草1)が入らない');
   const u3 = SUC.useItem({ ...u2, turn: 3, hp: 0, yosu: { sabori: { visits: 0 }, utsu: { visits: 0 } }, bag: { powder: 1 } }, 'powder').state; ok(!u3.yosu.sabori && !u3.yosu.utsu && u3.hp === 36, '粉薬で悪いようすが治らない・体力が戻らない');
   const u4 = SUC.useItem({ ...s0, ama: 10, fear: 10, bag: { license: 1 } }, 'license').state; ok(SUC.loyalOf(u4) === 30, '育成ライセンスで忠誠度が上がらない');
   // 研究ノート: 来られる最初のターンに博士が必ず来る/ルーペ: 実験が必ず成功
-  const note = { ...SUC.newRun({ id: 'note', species: 'Mocchi', aid: 'mua', carry: ['issaNote'] }), turn: 12, acted: true };
+  const note = { ...SUC.newRun({ id: 'note', species: 'Mocchi', aid: 'mua', carry: ['guide'] }), turn: 12, acted: true };
   ok(SUC.issaComes(note) && !SUC.issaComes({ ...note, turn: 11 }), '研究ノートで博士が来ない(ジュニア期の7ターン目から)');
-  const lou = SUC.useItem({ ...note, bag: { issaLoupe: 1 } }, 'issaLoupe').state; const ex = SUC.issa(lou, 'stat'); ok(ex.out.win === true, 'ルーペを使ったのに博士の実験が失敗した');
+  const lou = SUC.useItem({ ...note, bag: { loupe: 1 } }, 'loupe').state; const ex = SUC.issa(lou, 'stat'); ok(ex.out.win === true, 'ルーペを使ったのに博士の実験が失敗した');
   // トレーニング得意で訓練の伸びが上がる
-  const t0 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua' }); const t1 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua', carry: ['weekly'] });
+  const t0 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua' }); const t1 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua', carry: ['mag'] });
   const a0 = SUC.act(t0, { kind: 'train', stat: 'pow' }); const a1 = SUC.act(t1, { kind: 'train', stat: 'pow' });
   if (a0.out.result === 'ok' && a1.out.result === 'ok') ok(a1.out.gain.pow > a0.out.gain.pow, 'トレーニング得意で伸びが上がらない');
 }
 
+// ---- 月の大会・常連と王者・ライバル・組み合わせ表(社長 2026-11-12: 大会は1戦・ほかの試合は演出) ----
+{
+  const s0 = SUC.newRun({ id: 'cup', species: 'Mocchi', aid: 'mua', rivals: [{ kind: 'aid', name: 'みゅあのマスモン', species: 'Golem', stats: { life: 900, pow: 999, wise: 100, hit: 500, eva: 300, tough: 900 } }] });
+  ok(SUC.cupsOf({ ...s0, turn: 3 }).length === 0, 'デビュー期に月の大会が並ぶ');
+  const j = { ...s0, turn: 6, stats: { ...s0.stats, pow: 200 } };
+  const cj = SUC.cupsOf(j); ok(cj.length === 2 && cj.every(c => c.star === 1) && cj[0].sys === 'str' && cj[0].entry.ok, `ジュニア1月の大会(ちから自慢・間合い 零 ★)がずれている: ${JSON.stringify(cj.map(c => c.id))}`);
+  ok(!SUC.canEnter({ ...j, stats: { ...j.stats, pow: 100 } }, cj[0]).ok, '自慢の大会の能力の条件(ジュニア 150)が効かない');
+  const mid = { ...s0, turn: 18, stats: { ...s0.stats, pow: 400 } }; const cm = SUC.cupsOf(mid);
+  ok(cm.length === 3 && cm[0].star === 2 && !cm[0].entry.ok && cm[0].entry.why === 'chain', 'ミドルの ★★ がジュニアで優勝していなくても出られる');
+  ok(SUC.cupsOf({ ...mid, wonNow: ['str:1'] })[0].entry.ok, 'ジュニアで優勝したのにミドルの ★★ に出られない');
+  const pro6 = SUC.cupsOf({ ...s0, turn: 35, fameTotal: 5000 }); ok(pro6.some(c => c.sys === 'herosummer' && c.star === 4), 'プロの6月に 👑(夏のヒーロー記念)が並ばない');
+  // ライバルは月のはじめに決まる(同じ月なら何度見ても同じ)・出るとごほうびが大きい
+  let rv = null; for (let t = 6; t <= 41 && !rv; t++) { const c = SUC.cupsOf({ ...s0, turn: t }).find(x => x.rival); if (c) rv = { t, c }; }
+  ok(Boolean(rv), 'ライバルの大会が1度も並ばない');
+  if (rv) {
+    ok(JSON.stringify(SUC.cupsOf({ ...s0, turn: rv.t })) === JSON.stringify(SUC.cupsOf({ ...s0, turn: rv.t })), 'ライバルが見るたびに変わる');
+    const b = { ...s0, turn: rv.t, battle: { kind: 'cup', id: rv.c.id, sys: rv.c.sys, star: rv.c.star, rival: rv.c.rival, round: 0 } };
+    const op = SUC.opponents(b)[0]; ok(op.rival && op.species === 'Golem' && op.name === 'みゅあのマスモン', 'ライバルの大会の相手がライバルでない');
+    const plain = SUC.opponents({ ...b, battle: { ...b.battle, rival: null } })[0];
+    ok(op.sum > plain.sum * 1.0 && op.sum < plain.sum * 1.35, `ライバルの強さが期の基準に寄っていない: ${op.sum} / ${plain.sum}`);
+    ok(op.stats.pow > op.stats.wise, 'ライバルの6能力の形がもとの子のままでない');
+    const w1 = SUC.settle(b, [true]).state; const w0 = SUC.settle({ ...b, battle: { ...b.battle, rival: null } }, [true]).state;
+    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts > w0.pts && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ってもごほうびが大きくない');
+  }
+  // 王者・常連・組み合わせ表
+  const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };
+  const od = SUC.opponents(d); ok(od.length === 1 && od[0].champ && od[0].name, 'デビュー戦の相手が王者1体になっていない');
+  const br = SUC.bracketOf(d); ok(br && br.entrants.length === 8 && br.entrants[0].you && br.entrants[4].name === od[0].name && br.final.join() === '0,4', '組み合わせ表(8人・決勝で自分と相手)がずれている');
+  ok(JSON.stringify(br) === JSON.stringify(SUC.bracketOf(d)), '組み合わせ表が決まった乱数になっていない');
+  const r1 = SUC.opponents(SUC.rematch({ ...d, items: { sand: 0, rainbow: 1 } }, 'rainbow').state)[0]; ok(r1.name !== od[0].name, '虹の砂時計で相手(王者)が変わらない');
+  // 月の大会に出る(ターンを使う・ターンの終わりに1戦)
+  const e = SUC.act(j, { kind: 'cup', id: cj[0].id }); ok(e.out.ok, '月の大会に出られない');
+  const eb = SUC.endTurn(e.state).state; ok(eb.battle && eb.battle.kind === 'cup' && eb.battle.star === 1, '月の大会の試合が立たない');
+  const ew = SUC.settle(eb, [true]).state; ok(ew.turn === 7 && ew.wonNow.includes('str:1') && ew.stats.pow === eb.stats.pow, '月の大会に勝ったあとがずれている(★ は能力のごほうびなし)');
+  const last = SUC.endTurn(SUC.act({ ...j, turn: 17, stats: { ...j.stats, pow: 300, life: 300 } }, { kind: 'cup', id: SUC.cupsOf({ ...j, turn: 17, stats: { ...j.stats, pow: 300, life: 300 } }).find(c => c.entry.ok).id }).state).state;
+  const after = SUC.settle(last, [true]).state; ok(after.battle && after.battle.kind === 'junior', '期の最後のターンに大会に出たあと、強制大会が続かない');
+}
+
+// ---- 決める前の見通し・保存から戻す(回2の画面のため) ----
+{
+  const s0 = SUC.newRun({ id: 'pv', species: 'Mocchi', aid: 'mua' });
+  const pv = SUC.preview(s0, { kind: 'train', stat: 'pow' }); const r = SUC.act(s0, { kind: 'train', stat: 'pow' });
+  ok(pv && pv.hp === 16 && pv.gain.pow > 0 && Object.keys(pv.gain).length === 3, `見通しの形がずれている: ${JSON.stringify(pv)}`);
+  if (r.out.result === 'ok') ok(Math.abs(pv.gain.pow - r.out.gain.pow) <= 1, `見通しと成功の伸びが合わない: ${pv.gain.pow} / ${r.out.gain.pow}`);
+  const mid = play('restore-id', picks);
+  const back = SUC.restore(JSON.parse(JSON.stringify(mid)));
+  ok(back && JSON.stringify(back.stats) === JSON.stringify(mid.stats) && back.turn === mid.turn && back.hp === mid.hp && JSON.stringify(back.trainXp) === JSON.stringify(mid.trainXp) && JSON.stringify(back.techs) === JSON.stringify(mid.techs), '保存から戻すと中身が変わる');
+  ok(SUC.restore(null) === null && SUC.restore([]) === null && SUC.restore({ id: 'x', species: 'NoSuch' }) === null, '壊れた保存を戻せてしまう');
+  const bad = SUC.restore({ ...JSON.parse(JSON.stringify(mid)), hp: 'abc', stats: { pow: 5000 }, turn: -3, bond: 'x', techs: ['nope'] });
+  ok(bad && bad.hp === bad.hpMax && bad.stats.pow === 999 && bad.turn === 1 && Array.isArray(bad.bond) && bad.techs.length === 0, '壊れた値が既定に戻らない');
+  const v = SUC.peek(s0).cards['train:pow']; ok(v.lv === 1 && v.xp === 0 && v.next === 4, `札の訓練Lv・経験・次までがない: ${JSON.stringify({ lv: v.lv, xp: v.xp, next: v.next })}`);
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す');
