@@ -189,10 +189,13 @@ export const popFromRecord = (rows) => {
   for (const r of Array.isArray(rows) ? rows : []) p += (Number(r && r.wins) || 0) * POP_WIN + ((Number(r && r.losses) || 0) + (Number(r && r.draws) || 0)) * POP_LOSE;
   return Math.max(0, Math.min(100, Math.floor(p)));
 };
+// 忠誠度が無い編成(絆の前の端末・絆を送ってこない登録)は、はじめの忠誠度 50 とみなす(窓口 2026-11-12・助手の絆の既定と同じ)。
+//   試合の行には battleTeam のあとの編成(loy 50 入り)を残すので、過去の試合の見返しは食い違わない
+export const LOY_DEFAULT = 50;
 export const battleTeam = ({ assistantId, team, division, size, engine, pop = 0 }) => {
   const list = team.members.slice(0, size).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats },
     techs: Array.isArray(m.techs) ? [...m.techs] : undefined, mastery: m.mastery ? { ...m.mastery } : undefined,
-    ...(m.loy != null ? { loy: m.loy } : {}), ...(m.pop != null && pop > 0 ? { pop: Math.min(m.pop, pop) } : {}) }));
+    loy: m.loy != null ? m.loy : LOY_DEFAULT, ...(m.pop != null && pop > 0 ? { pop: Math.min(m.pop, pop) } : {}) }));
   return {
     assistantId,
     tactics: team.tactics,

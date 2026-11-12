@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e871bae5e855d50f
+// generated-sha256: 08d02a3bcc41f98a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74069,7 +74069,10 @@ const amgbTick = (aid, row, slot) => {
   if (b0.last >= day) { if (st !== AMGB_STORE.state) amgbSave(st); return false; }
   // まだ数え始めていない子(対戦などで先に記録だけできた・last が無い): 年齢は進めず、今日から数え始める(ミハリ5: 一度に400日進んで寿命にならないように)
   if (b0.last < 0) { amgbSave(amgbPut(st, aid, row, { ...b0, last: day, touch: b0.touch < 0 ? day : b0.touch, fight: b0.fight < 0 ? day : b0.fight })); return true; }
-  const d = Math.min(400, day - b0.last);
+  // 育てた日だけ年をとる(社長 2026-11-12): 年齢と寿命は「育成の回が実際に進んだ日」だけ進める。
+  //   育成は閉じていた分を2日(6回)までしか追いつかないので、その外の日(開いていない日・冬眠・前の子に戻すまでの日)は数えない。
+  //   ここは育成の回ごとに呼ばれ、日が替わった最初の回で1日ぶん進む(=育成が進んだ日数・追いつきの上限と同じ2〜3日まで)
+  const d = Math.min(1, day - b0.last);
   const b = { ...b0, sc: { ...b0.sc }, rs: [...b0.rs] };
   b.age = b0.age + d;
   b.life = Math.min(1000, Math.round(b0.life * 100 + Math.ceil(d * 1000 * MASMON_CALC.lifeStep(b0.pol, AMGB_NUM.baseLife) * 100)) / 100); // 小数2桁(切り上げで足し、寿命の日にちょうど1000へ届く)
@@ -74231,13 +74234,37 @@ function AmgbBedTag({ bed }) {
   if (!p) return null;
   return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
 }
+// 冬眠中の子のくわしい画面に出す「絆」(眠らせたときの写し bd から・総合力・忠誠度・人気・年齢・寿命の残り。写しが無い子は既定値)
+function AmgbBedPanel({ bed }) {
+  if (!amgbOn() || typeof MASMON_CALC === 'undefined' || !bed) return null;
+  const b = (bed.bd && amgbNormOne(bed.bd)) || amgbNormOne({});
+  const p = amgbBedPower(bed); const f = amgbLifeFrac(b);
+  const left = Math.max(0, Math.ceil((1 - f) * MASMON_CALC.lifeLen(b.pol, AMGB_NUM.baseLife)));
+  return (
+    <div className="mt-2 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgb-bed-panel>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-black text-slate-400">総合力</p>
+        {p ? <p className="flex items-center gap-1.5 text-[16px] font-black text-amber-100" data-amgb-bed-total={p.power}><AmgbRankChip rank={p.rank}/>{p.power.toLocaleString()}</p> : <p className="text-[12px] font-bold text-slate-400">—</p>}
+      </div>
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] font-bold text-slate-200">
+        <p>忠誠度 <b className="text-amber-200" data-amgb-bed-loy>{Math.round(b.loy)}</b></p>
+        <p>人気 <b className="text-amber-200" data-amgb-bed-pop>{Math.round(b.pop)}</b></p>
+        <p data-amgb-bed-age={b.age}>🎂 {MASMON_CALC.ageLabel(b.age)}</p>
+        <p data-amgb-bed-life={b.life}>{f >= 1 ? '⏳ 寿命(もう伸びません)' : `⏳ 寿命まで あと約${left}日`}</p>
+      </div>
+      <p className="mt-0.5 text-[9.5px] font-bold text-slate-400">眠っている間は年をとりません</p>
+    </div>);
+}
 // くわしい画面の「絆」(総合力・忠誠度・人気・方針・年齢・型・訓練の結果と叱る/褒める)
 function AmgbPanel({ who, t }) {
   const bst = useAmgbState();
   const [msg, setMsg] = React.useState('');
   React.useEffect(() => { if (amgbOn()) { void AMGB_STORE.load().then(() => amgbTouch(who.id, t)); } }, [who.id, t.slot, t.monster]);
+  const b0 = amgbOn() ? amgbEntryOf(who.id, t, bst) : null;
+  const lastS = b0 && b0.rs.length ? b0.rs[b0.rs.length - 1].s : -1;
+  React.useEffect(() => { setMsg(''); }, [lastS, who.id, t.slot, t.monster]); // 結果が替わったら前の叱る/褒めるの文は消す(ミハリ)
   if (!amgbOn()) return null;
-  const b = amgbEntryOf(who.id, t, bst); const p = amgPowerOf(who.id, t);
+  const b = b0; const p = amgPowerOf(who.id, t);
   if (!b) return null;
   const pol = MASMON_CALC.policyOf(b.pol); const gt = MASMON_CALC.typeOf(b.gt); const f = amgbLifeFrac(b);
   const lifeDays = MASMON_CALC.lifeLen(b.pol, AMGB_NUM.baseLife); const left = Math.max(0, Math.ceil((1 - f) * lifeDays));
@@ -74286,13 +74313,15 @@ function AmgbPanel({ who, t }) {
 // 成長の型の曲線(10区間)と「いまここ」
 function AmgbCurve({ gt, frac }) {
   const c = MASMON_CALC.typeOf(gt).c; const W = 200, H = 34; const top = 1.8;
-  const pts = c.map((v, i) => `${(i + 0.5) / 10 * W},${H - v / top * H}`).join(' ');
+  const pts = c.map((v, i) => `${i / 9 * W},${H - v / top * H}`).join(' '); // 左端=0歳・右端=寿命
   const x = Math.min(1, Math.max(0, frac)) * W;
-  return (
-    <svg viewBox={`0 0 ${W} ${H + 2}`} className="mt-1 h-[36px] w-full" aria-hidden="true" data-amgb-curve>
-      <polyline points={pts} fill="none" stroke="#6ee7b7" strokeWidth="2"/>
-      <line x1={x} x2={x} y1="0" y2={H} stroke="#fde68a" strokeWidth="2" strokeDasharray="3 2"/>
-    </svg>);
+  return (<>
+    <svg viewBox={`0 0 ${W} ${H + 2}`} className="mt-1 h-[36px] w-full" preserveAspectRatio="none" aria-hidden="true" data-amgb-curve>
+      <polyline points={pts} fill="none" stroke="#6ee7b7" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
+      <line x1={x} x2={x} y1="0" y2={H} stroke="#fde68a" strokeWidth="2" strokeDasharray="3 2" vectorEffect="non-scaling-stroke"/>
+    </svg>
+    <div className="flex justify-between text-[9px] font-bold leading-none text-slate-400" data-amgb-curve-ends><span>0歳</span><span>寿命</span></div>
+    </>);
 }
 
 // ---- part: 56-assistant-life-masmon-grow.jsx ----
@@ -77642,6 +77671,8 @@ const amgrPlanOf = (kind, k) => (kind === 'heavy'
   ? { name: AMG_HEAVY[k], main: k, sub: AMG_SUB[k], down: AMGR_DOWN[k] }
   : { name: AMG_LIGHT[k], main: k, sub: '', down: '' });
 
+// 寿命が来た子(絆・印 assistantMasmonBond)への案内
+const amgrLifeOverText = (row) => `${(row && row.nick) || 'このマスモン'}は寿命が来たので、もう能力は伸びません(対戦には出られます)`;
 // ---------- チケットを使う ----------
 // 返り: { ok:true, nick, kind, name, rows:[{k,from,to}], fat } か { ok:false, why }
 const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
@@ -77656,6 +77687,7 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const day = amgrToday(now);
   if ((R.mon[aid] || {})[key] === day) return { ok: false, why: `${row.nick || 'このマスモン'}には今日もう使いました` };
   const e0 = (AMG_STORE.state.mons[aid] || {})[key]; if (!e0) return { ok: false, why: '読み込み中です' };
+  if (typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row)) return { ok: false, why: amgrLifeOverText(row) }; // 絆: 寿命が来た子は伸びない(チケットを減らす前に止める・社長「寿命が来たら伸びが止まるだけ」)
   if (e0.st[k] >= AMG_MAX) return { ok: false, why: `${amgrStatName(k)}はもう上限です` };
   if (amgrTickets(kind) <= 0) return { ok: false, why: `${AMGR_TICKET_NAME[kind]}が足りません` };
   // 先に印を付ける(二重に上げない)→ チケットを減らす → 能力を足す
@@ -77724,7 +77756,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
   const name = who ? who.name : aid;
   const monUsed = row && (AMGR_STORE.state.mon[aid] || {})[amgMonKey(row.slot, row.monster)] === amgrToday();
   const have = info ? info[kind] : 0;
-  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
+  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
   const use = () => {
     if (!row) return;
     const r = assistantMasmonRanchUse(aid, amgMonKey(row.slot, row.monster), kind, k);
@@ -78217,7 +78249,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
         <div className="flex items-center gap-2">
           {amgpMonIcon(x.row.monster)}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-black">{nameOf(x)} <small className="text-[10px] text-slate-300">{amgpWhoName(x.aid)}のマスモン・育成Lv.{x.e.lv}</small>{typeof AmgbPowerTag === 'function' && <> <AmgbPowerTag aid={x.aid} row={x.row}/></>}</p>
+            <div className="flex min-w-0 items-center gap-1" data-amgp-name-row><p className="min-w-0 truncate text-[13px] font-black">{nameOf(x)} <small className="text-[10px] text-slate-300">{amgpWhoName(x.aid)}のマスモン・育成Lv.{x.e.lv}</small></p>{typeof AmgbPowerTag === 'function' && <span className="shrink-0" data-amgp-power-tag><AmgbPowerTag aid={x.aid} row={x.row}/></span>}</div>
             <p className="text-[10.5px] font-bold text-slate-300">{isPick ? `次の回: ${amgpCodeIcon(nextCode)} ${amgpCodeName(nextCode)} ・ ` : ''}疲れ <b className={amgpLevelColor(x.e.fat)}>{x.e.fat}</b> ・ ストレス <b className={amgpLevelColor(x.e.str + 10)}>{x.e.str}</b> ・ 今日の伸び {todayN(x)}/{(isPick ? 20 : 15) * (typeof amgbPace === 'function' ? amgbPace() : 1)}</p>
             {c && <p className="text-[11px] font-black text-rose-200" data-amgp-cond={c.k}>{AMGP_COND[c.k].icon} {AMGP_COND[c.k].name}(あと{Math.max(1, Math.ceil((c.until - nowSlot) / 3))}日くらい・対戦には出られます)</p>}
           </div>
@@ -78466,6 +78498,7 @@ const amgsSyncFormer = () => {
 const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
   if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) { void AMGB_STORE.load(); return '読み込み中です'; } // 絆の写しを取り損ねない
   const st = AMGS_STORE.state; const bed = st.beds.find(b => b.id === bedId);
   if (!bed) return 'もういません';
   const ms = ASSISTANT_MASMON_STORE.state; const rows = assistantMasmonRowsOf(ms, bed.aid); const row = rows.find(r => r.slot === slot);
@@ -78618,6 +78651,7 @@ function AmgsDetail({ bed, onClose }) {
             <p className="text-[11px] font-bold text-slate-300">{m.name} ・ Lv {bed.row.lv}{bed.row.grow ? ` ・ ${bed.row.grow}` : ''}{bed.g ? ` ・ 育成Lv.${bed.g.lv}` : ''}</p>
             <p className="text-[11px] font-bold text-slate-300">色: {amgsColorDots(bed.row.colors)}</p></div>
         </div>
+        {typeof AmgbBedPanel === 'function' && <AmgbBedPanel bed={bed}/>}{/* 絆: 総合力・忠誠度・人気・年齢・寿命の残り(印が偽なら出ない) */}
         <p className="mt-2 text-[12px] font-black text-amber-200">6能力(眠らせたときのまま)</p>
         {bed.g ? <div className="mt-1">{typeof AmgpBars === 'function' && <AmgpBars st={bed.g.st}/>}</div> : <p className="text-[11px] font-bold text-slate-400">能力は、起こすと助手がはじめから育てます</p>}
         {techs.length > 0 && <><p className="mt-2 text-[12px] font-black text-amber-200">技と熟練</p><p className="text-[11px] font-bold text-slate-200" data-amgs-techs>{techs.map(x => `${x.name} 熟練 ${typeof amgtRankOf === 'function' ? amgtRankOf(bed.t.m[x.id] || 0) : ''}`).join(' ・ ')}</p></>}

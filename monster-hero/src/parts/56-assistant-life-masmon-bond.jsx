@@ -89,7 +89,10 @@ const amgbTick = (aid, row, slot) => {
   if (b0.last >= day) { if (st !== AMGB_STORE.state) amgbSave(st); return false; }
   // まだ数え始めていない子(対戦などで先に記録だけできた・last が無い): 年齢は進めず、今日から数え始める(ミハリ5: 一度に400日進んで寿命にならないように)
   if (b0.last < 0) { amgbSave(amgbPut(st, aid, row, { ...b0, last: day, touch: b0.touch < 0 ? day : b0.touch, fight: b0.fight < 0 ? day : b0.fight })); return true; }
-  const d = Math.min(400, day - b0.last);
+  // 育てた日だけ年をとる(社長 2026-11-12): 年齢と寿命は「育成の回が実際に進んだ日」だけ進める。
+  //   育成は閉じていた分を2日(6回)までしか追いつかないので、その外の日(開いていない日・冬眠・前の子に戻すまでの日)は数えない。
+  //   ここは育成の回ごとに呼ばれ、日が替わった最初の回で1日ぶん進む(=育成が進んだ日数・追いつきの上限と同じ2〜3日まで)
+  const d = Math.min(1, day - b0.last);
   const b = { ...b0, sc: { ...b0.sc }, rs: [...b0.rs] };
   b.age = b0.age + d;
   b.life = Math.min(1000, Math.round(b0.life * 100 + Math.ceil(d * 1000 * MASMON_CALC.lifeStep(b0.pol, AMGB_NUM.baseLife) * 100)) / 100); // 小数2桁(切り上げで足し、寿命の日にちょうど1000へ届く)
@@ -251,13 +254,37 @@ function AmgbBedTag({ bed }) {
   if (!p) return null;
   return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
 }
+// 冬眠中の子のくわしい画面に出す「絆」(眠らせたときの写し bd から・総合力・忠誠度・人気・年齢・寿命の残り。写しが無い子は既定値)
+function AmgbBedPanel({ bed }) {
+  if (!amgbOn() || typeof MASMON_CALC === 'undefined' || !bed) return null;
+  const b = (bed.bd && amgbNormOne(bed.bd)) || amgbNormOne({});
+  const p = amgbBedPower(bed); const f = amgbLifeFrac(b);
+  const left = Math.max(0, Math.ceil((1 - f) * MASMON_CALC.lifeLen(b.pol, AMGB_NUM.baseLife)));
+  return (
+    <div className="mt-2 rounded-2xl border border-white/10 bg-slate-800/70 p-2" data-amgb-bed-panel>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-black text-slate-400">総合力</p>
+        {p ? <p className="flex items-center gap-1.5 text-[16px] font-black text-amber-100" data-amgb-bed-total={p.power}><AmgbRankChip rank={p.rank}/>{p.power.toLocaleString()}</p> : <p className="text-[12px] font-bold text-slate-400">—</p>}
+      </div>
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] font-bold text-slate-200">
+        <p>忠誠度 <b className="text-amber-200" data-amgb-bed-loy>{Math.round(b.loy)}</b></p>
+        <p>人気 <b className="text-amber-200" data-amgb-bed-pop>{Math.round(b.pop)}</b></p>
+        <p data-amgb-bed-age={b.age}>🎂 {MASMON_CALC.ageLabel(b.age)}</p>
+        <p data-amgb-bed-life={b.life}>{f >= 1 ? '⏳ 寿命(もう伸びません)' : `⏳ 寿命まで あと約${left}日`}</p>
+      </div>
+      <p className="mt-0.5 text-[9.5px] font-bold text-slate-400">眠っている間は年をとりません</p>
+    </div>);
+}
 // くわしい画面の「絆」(総合力・忠誠度・人気・方針・年齢・型・訓練の結果と叱る/褒める)
 function AmgbPanel({ who, t }) {
   const bst = useAmgbState();
   const [msg, setMsg] = React.useState('');
   React.useEffect(() => { if (amgbOn()) { void AMGB_STORE.load().then(() => amgbTouch(who.id, t)); } }, [who.id, t.slot, t.monster]);
+  const b0 = amgbOn() ? amgbEntryOf(who.id, t, bst) : null;
+  const lastS = b0 && b0.rs.length ? b0.rs[b0.rs.length - 1].s : -1;
+  React.useEffect(() => { setMsg(''); }, [lastS, who.id, t.slot, t.monster]); // 結果が替わったら前の叱る/褒めるの文は消す(ミハリ)
   if (!amgbOn()) return null;
-  const b = amgbEntryOf(who.id, t, bst); const p = amgPowerOf(who.id, t);
+  const b = b0; const p = amgPowerOf(who.id, t);
   if (!b) return null;
   const pol = MASMON_CALC.policyOf(b.pol); const gt = MASMON_CALC.typeOf(b.gt); const f = amgbLifeFrac(b);
   const lifeDays = MASMON_CALC.lifeLen(b.pol, AMGB_NUM.baseLife); const left = Math.max(0, Math.ceil((1 - f) * lifeDays));
@@ -306,11 +333,13 @@ function AmgbPanel({ who, t }) {
 // 成長の型の曲線(10区間)と「いまここ」
 function AmgbCurve({ gt, frac }) {
   const c = MASMON_CALC.typeOf(gt).c; const W = 200, H = 34; const top = 1.8;
-  const pts = c.map((v, i) => `${(i + 0.5) / 10 * W},${H - v / top * H}`).join(' ');
+  const pts = c.map((v, i) => `${i / 9 * W},${H - v / top * H}`).join(' '); // 左端=0歳・右端=寿命
   const x = Math.min(1, Math.max(0, frac)) * W;
-  return (
-    <svg viewBox={`0 0 ${W} ${H + 2}`} className="mt-1 h-[36px] w-full" aria-hidden="true" data-amgb-curve>
-      <polyline points={pts} fill="none" stroke="#6ee7b7" strokeWidth="2"/>
-      <line x1={x} x2={x} y1="0" y2={H} stroke="#fde68a" strokeWidth="2" strokeDasharray="3 2"/>
-    </svg>);
+  return (<>
+    <svg viewBox={`0 0 ${W} ${H + 2}`} className="mt-1 h-[36px] w-full" preserveAspectRatio="none" aria-hidden="true" data-amgb-curve>
+      <polyline points={pts} fill="none" stroke="#6ee7b7" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
+      <line x1={x} x2={x} y1="0" y2={H} stroke="#fde68a" strokeWidth="2" strokeDasharray="3 2" vectorEffect="non-scaling-stroke"/>
+    </svg>
+    <div className="flex justify-between text-[9px] font-bold leading-none text-slate-400" data-amgb-curve-ends><span>0歳</span><span>寿命</span></div>
+    </>);
 }

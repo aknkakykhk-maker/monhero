@@ -92,7 +92,12 @@ if (process.argv.includes('--sim')) {
   check('③ 普通の方針で30日たつと寿命(進み1000)・その後は6能力が伸びない', b31.life === 1000 && JSON.stringify(e33.st) === before, `進み ${b31.life}`);
   // 開かない日も日付で進む(3日ぶりに開いた)
   const ctx3 = make(ON); run(ctx3, [ROW], 3 * 9, null, 9);
-  check('③ 何日か開かなくても、日付どおりに年齢が進む', ctx3.T.amgbEntryOf('kiki', ROW).age === 9);
+  check('③ 3日ごとに開くと、追いつきで育成が進んだ日だけ年齢が進む(27日で9)', ctx3.T.amgbEntryOf('kiki', ROW).age === 9);
+  // 育てた日だけ年をとる(社長 2026-11-12): 10日開かなかったら、育成が追いつく2日ぶん(+日が替わった回)だけ進む
+  const ctx4 = make(ON); run(ctx4, [ROW], 3 * 2); const a4 = ctx4.T.amgbEntryOf('kiki', ROW).age;
+  const st4 = ctx4.T.amgCatchUp(ctx4.T.AMG_STORE.state, 'kiki', [ROW], SEED, S0 + 3 * 12 + 2); ctx4.T.AMG_STORE.set(st4);
+  const b4 = ctx4.T.amgbEntryOf('kiki', ROW);
+  check('③ 10日開かなくても、年齢は育成が進んだ日(2日)だけ進む・寿命の進みも同じ', b4.age - a4 === 2 && Math.round(b4.life) === Math.round((a4 + 2) * 1000 / 30), `年齢 ${a4} → ${b4.age}・進み ${b4.life}`);
   // 超溺愛は40日・超スパルタは20日
   const len = (pol) => ctx.T.MASMON_CALC.lifeLen(pol, 30);
   check('③ 寿命の長さ 超溺愛40日・普通30日・超スパルタ20日', len(-3) === 40 && len(0) === 30 && len(3) === 20);

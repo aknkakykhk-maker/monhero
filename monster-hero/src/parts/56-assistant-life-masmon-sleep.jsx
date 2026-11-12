@@ -62,6 +62,7 @@ const amgsSyncFormer = () => {
 const amgsSwap = (bedId, slot, now = Date.now()) => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
   if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) { void AMGB_STORE.load(); return '読み込み中です'; } // 絆の写しを取り損ねない
   const st = AMGS_STORE.state; const bed = st.beds.find(b => b.id === bedId);
   if (!bed) return 'もういません';
   const ms = ASSISTANT_MASMON_STORE.state; const rows = assistantMasmonRowsOf(ms, bed.aid); const row = rows.find(r => r.slot === slot);
@@ -214,6 +215,7 @@ function AmgsDetail({ bed, onClose }) {
             <p className="text-[11px] font-bold text-slate-300">{m.name} ・ Lv {bed.row.lv}{bed.row.grow ? ` ・ ${bed.row.grow}` : ''}{bed.g ? ` ・ 育成Lv.${bed.g.lv}` : ''}</p>
             <p className="text-[11px] font-bold text-slate-300">色: {amgsColorDots(bed.row.colors)}</p></div>
         </div>
+        {typeof AmgbBedPanel === 'function' && <AmgbBedPanel bed={bed}/>}{/* 絆: 総合力・忠誠度・人気・年齢・寿命の残り(印が偽なら出ない) */}
         <p className="mt-2 text-[12px] font-black text-amber-200">6能力(眠らせたときのまま)</p>
         {bed.g ? <div className="mt-1">{typeof AmgpBars === 'function' && <AmgpBars st={bed.g.st}/>}</div> : <p className="text-[11px] font-bold text-slate-400">能力は、起こすと助手がはじめから育てます</p>}
         {techs.length > 0 && <><p className="mt-2 text-[12px] font-black text-amber-200">技と熟練</p><p className="text-[11px] font-bold text-slate-200" data-amgs-techs>{techs.map(x => `${x.name} 熟練 ${typeof amgtRankOf === 'function' ? amgtRankOf(bed.t.m[x.id] || 0) : ''}`).join(' ・ ')}</p></>}
