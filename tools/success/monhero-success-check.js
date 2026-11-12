@@ -337,7 +337,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(op.sum > plain.sum * 1.0 && op.sum < plain.sum * 1.35, `ライバルの強さが期の基準に寄っていない: ${op.sum} / ${plain.sum}`);
     ok(op.stats.pow > op.stats.wise, 'ライバルの6能力の形がもとの子のままでない');
     const w1 = SUC.settle(b, [true]).state; const w0 = SUC.settle({ ...b, battle: { ...b.battle, rival: null } }, [true]).state;
-    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts > w0.pts && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ってもごほうびが大きくない');
+    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts === w0.pts && K.every(k => w1.stats[k] === Math.min(999, w0.stats[k] + 12)) && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ったごほうび(賞金×1.5・チケット+1・全能力+12・称号)がずれている');
   }
   // 王者・常連・組み合わせ表
   const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };
@@ -427,5 +427,23 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
 }
 
+// ---- 評価の表示(gradeOf)・ひらめきのアシスト5つ ----
+{
+  const g = (p) => SUC.gradeOf(p).label;
+  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'M1' && g(25100) === 'M12' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 25100].map(g)}`);
+  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === null, '次の番号までの数がずれている');
+  ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'stay'), 'ひらめきのアシスト5つ(いるだけ型)がない');
+  const st = { life: 600, pow: 700, wise: 300, hit: 500, eva: 400, tough: 600 };
+  const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }] });
+  const plain = mk([]); const all = mk([{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'mimamori', lv: 3 }]);
+  const pb = SUC.settle({ ...plain, turn: 41, battle: { kind: 'pro', round: 0 } }, true).state; const ab = SUC.settle({ ...all, turn: 41, battle: { kind: 'pro', round: 0 } }, true).state;
+  ok(ab.pts === Math.round(20 * 1.3) && pb.pts === 20, `見立てで大会の能力ポイントが +30% にならない: ${ab.pts}`);
+  ok(ab.pop === Math.round(8 * 1.5) && pb.pop === 8, `見せ場で人気の上がりが ×1.5 にならない: ${ab.pop}`);
+  ok(SUC.battleBuffs({ ...all, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }).A.guts === 10 && SUC.battleBuffs({ ...plain, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }) === undefined, '試合のはじめのガッツが大会の試合に渡らない');
+  const rp = SUC.react({ ...plain, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise').state; const ra = SUC.react({ ...all, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise').state;
+  ok(ra.ama > rp.ama, '見守りで褒めたときの忠誠の上がりが大きくならない');
+  const kz = mk([{ id: 'kensho', lv: 3 }]); ok(SUC.stayV(kz, 'kensho') === 50, '検証の値が取れない');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・評価の番号とひらめきのアシスト');
