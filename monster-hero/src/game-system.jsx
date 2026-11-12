@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25791bef54bb8207
+// generated-sha256: 9b72ae516ee5ccb5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66345,6 +66345,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
           <b>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">{other ? 'まだいない' : 'まだ会っていない'}</span>}
       {met && state && state.ev && <span className="evm" data-assistant-life-room-ev={id} aria-label="いま、できごとがあります">❗</span>}
+      {met && !other && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <span className="evm" style={{ right: 'auto', left: 2 }} data-assistant-life-room-body={id} aria-label={assistantLifeBodyCondShort(id)}>{assistantLifeBodyBadge(id)}</span>}
     </button>);
 }
 
@@ -66565,6 +66566,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ wordBreak: 'auto-phrase', ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{where}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
+        {typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <p className="text-[11px] font-bold text-rose-200" data-assistant-life-room-cond={id}>{assistantLifeBodyCondShort(id)}</p>}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
         {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate}/>}
         {doList}
@@ -67641,7 +67643,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <button key={id} type="button" aria-label={`${a.name}・${d ? d.label : ''}${spentOf(id, place) ? '(対戦のごほうび済み)' : ''}`} data-assistant-life-map-who={id} data-assistant-life-map-spent={spentOf(id, place) ? '1' : undefined} onClick={() => setSheet(place)} className="flex flex-col items-center px-[1px]">
               {(() => { const town = typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id); return (<>
               <span className="block" style={town ? { filter: 'grayscale(.55) brightness(.85)' } : undefined} data-assistant-life-map-town={town ? id : undefined}><AssistantLifeMapFig who={a} h={figH} sleep={!!(w && w.doing === 'sleep')} spent={spentOf(id, place)}/></span>
-              <span className="mhl-map-name" data-assistant-life-map-name>{w && ASSISTANT_LIFE_DOING_ICON[w.doing]}{a.name}{town ? '・町の人' : ''}</span></>); })()}
+              <span className="mhl-map-name" data-assistant-life-map-name>{typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) ? assistantLifeBodyBadge(id) : w && ASSISTANT_LIFE_DOING_ICON[w.doing]}{a.name}{town ? '・町の人' : ''}</span></>); })()}
             </button>); })}
       </div>);
   };
@@ -75150,6 +75152,7 @@ function AssistantLifePlanPicker({ id, abs, onDone }) {
   return (
     <div className="mt-1 rounded-xl border border-sky-300/60 bg-slate-900/95 p-1.5" data-assistant-life-plan-picker={abs}>
       <p className="px-1 text-[11.5px] font-black text-sky-200">{assistantLifePlanName(id)}に {h}〜{(h + 2) % 24}時 に行ってもらう場所</p>
+      {typeof assistantLifeBodyCondOf === 'function' && assistantLifeBodyCondOf(id) && <p className="px-1 text-[11px] font-bold text-rose-200" data-assistant-life-plan-cond-note={id}>{ASSISTANT_LIFE_BODY_COND_NAME[assistantLifeBodyCondOf(id).k]}のあいだは、家と🏥病院だけ選べます</p>}
       <div className="mt-1 grid grid-cols-2 gap-1">
         {list.map(p => (
           <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
@@ -75188,7 +75191,7 @@ function AssistantLifePlanWho({ id, cur }) {
 }
 
 // 8人×4回の表(横)
-function AssistantLifePlanTable({ ids, cur, onCell }) {
+function AssistantLifePlanTable({ ids, cur, onCell, onWho = null }) {
   const left = assistantLifePlanSlotsLeft();
   const [page, setPage] = React.useState(0);
   const cols = left.slice(page * 4, page * 4 + 4);
@@ -75198,7 +75201,10 @@ function AssistantLifePlanTable({ ids, cur, onCell }) {
       <table className="w-full table-fixed border-separate" style={{ borderSpacing: 2 }}>
         <thead><tr><th className="w-[74px]"/>{cols.map(a => { const s = assistantLifeSlotOfAbs(a); return <th key={a} className="text-[10.5px] font-black text-sky-200">{s.from}〜{(s.from + 2) % 24}時 <span className="text-slate-400">{s.label}</span></th>; })}</tr></thead>
         <tbody>{ids.map(id => <tr key={id}>
-          <td className="truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</td>
+          <td className="p-0">{(() => { const bd = typeof assistantLifeBodyBadge === 'function' ? assistantLifeBodyBadge(id) : '';
+            return onWho && typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()
+              ? <button type="button" data-assistant-life-plan-who-open={id} aria-label={`${assistantLifePlanName(id)}の疲れ・ストレスと予定`} onClick={() => onWho(id)} className="h-[40px] w-full truncate rounded-lg bg-white/10 px-1 text-left text-[11.5px] font-black text-white active:scale-95">{bd}{assistantLifePlanName(id)} <span className="text-[10px] text-sky-200">▶</span></button>
+              : <span className="block truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</span>; })()}</td>
           {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'}</button></td>; })}
         </tr>)}</tbody>
       </table>
@@ -75241,16 +75247,17 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
       <div className="flex max-h-full w-full flex-col overflow-hidden rounded-2xl border-2 border-amber-300 bg-slate-950/95 p-2 text-white" style={{ maxWidth: land ? 820 : 460 }}>
         <div className="flex items-center gap-1.5">
           <p className="text-[15px] font-black text-amber-200">📅 今日の予定表</p>
-          {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">マスを押して、助手に行き先をお願いできます</p>}
+          {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">{typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'}</p>}
           <button type="button" aria-label="閉じる" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="ml-auto grid h-[40px] w-[44px] place-items-center rounded-xl bg-white/10 text-[17px] font-black text-amber-200">✕</button>
         </div>
         {!land && <p className="px-0.5 pb-1 text-[11.5px] font-bold leading-snug text-slate-300">次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。</p>}
         <div className="min-h-0 overflow-y-auto">
           {open.place ? <AssistantLifePlanPlace place={open.place} ids={list} cur={cur}/>
-            : land && !who ? (cell ? <AssistantLifePlanPicker id={cell.id} abs={cell.abs} onDone={() => setCell(null)}/> : <AssistantLifePlanTable ids={list} cur={cur} onCell={(id, abs) => setCell({ id, abs })}/>)
+            : land && !who ? (cell ? <AssistantLifePlanPicker id={cell.id} abs={cell.abs} onDone={() => setCell(null)}/> : <AssistantLifePlanTable ids={list} cur={cur} onCell={(id, abs) => setCell({ id, abs })} onWho={setWho}/>)
             : <>
               <div className="mb-1 flex gap-1 overflow-x-auto" data-assistant-life-plan-tabs>{list.map(id => (
                 <button key={id} type="button" data-assistant-life-plan-tab={id} onClick={() => setWho(id)} className={`min-h-[44px] shrink-0 rounded-xl border-2 px-2 text-[11.5px] font-black ${who === id ? 'border-pink-300 bg-pink-900/70' : 'border-transparent bg-white/10'}`}>{assistantLifePlanName(id)}</button>))}</div>
+              {land && who && <button type="button" data-assistant-life-plan-back onClick={() => setWho(null)} className="mb-1 min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-sky-100 active:scale-95">◀ 8人の表へ</button>}
               {who && <AssistantLifePlanWho id={who} cur={cur}/>}
               {who && <button type="button" data-assistant-life-plan-clear onClick={() => assistantLifePlanClearWho(who)} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100">{assistantLifePlanName(who)}を ぜんぶおまかせに</button>}
               {who && <p className="mt-1 text-[11px] font-bold text-pink-200">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約{Math.round(assistantLifePlanTrust(lv) * 100)}%)</p>}
@@ -75618,6 +75625,11 @@ const assistantLifeBodyCondText = (c, atClinic = false) => {
   const d = Math.floor(c.left / 12), h = (c.left % 12) * 2;
   return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・${atClinic ? '病院で診てもらっています' : '家で休んでいます'}(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
 };
+// 部屋のシート・町の名札の一言(けが・病気のときだけ。それ以外は '')
+const assistantLifeBodyCondShort = (id) => {
+  const c = assistantLifeBodyCondOf(id); if (!c) return '';
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家か🏥病院で休んでいます`;
+};
 const assistantLifeBodyDelta = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
 // 場所の小さな札(疲れ・ストレスの動き)。疲れ・ストレスは増えると悪いので、増える=赤・減る=緑
 function AssistantLifeBodyPlaceStat({ place, abs }) {
@@ -75673,10 +75685,11 @@ function AssistantLifeBodyPanel({ id, cur }) {
         : e.cond && <AssistantLifeBodyCure id={id} cur={cur} onCured={() => setCured(true)}/>}
       {rows.length > 0 && <div className="mt-1 flex flex-col gap-0.5" data-assistant-life-body-forecast>
         {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
-          <p key={r.abs} className="flex items-center gap-1 text-[10.5px] font-bold text-slate-200">
+          <p key={r.abs} className="flex flex-wrap items-center gap-x-1 text-[10.5px] font-bold leading-tight text-slate-200" data-assistant-life-body-forecast-row={r.abs}>
             <span className="w-[58px] shrink-0 text-sky-200">{s.from}〜{(s.from + 2) % 24}時</span>
-            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと 疲れ{r.fat}・ストレス{r.st}</span>
-            {r.risk > 0 && <span className="shrink-0 text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
+            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと</span>
+            <span className="shrink-0 whitespace-nowrap">疲れ{r.fat}・ストレス{r.st}</span>
+            {r.risk > 0 && <span className="shrink-0 whitespace-nowrap text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
           </p>); })}
       </div>}
     </div>);

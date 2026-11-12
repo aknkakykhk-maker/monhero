@@ -10,6 +10,7 @@
 //   ⑧ おまかせの助手だけで30日回しても、けが・病気はまれ(疲れ・ストレスがたまり続けない)
 //   ⑩ 特別な治療(life_cure): 病院にいる回でけが・病気が残っているときだけ使える・使うと治って記録が 'cure'・口 assistantLifeHospitalCureSlotsOf が返す
 //      交換所に 300P・印 assistantLifeBody つきで並ぶ・品物の説明がある・60-app は減らしてから治し、治せなければ戻す
+//   ⑪ けが・病気が予定表の外でも見える(家の部屋・部屋のシート・町の名札)・横の8人の表から1人の表示(体の窓)へ行ける
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -217,6 +218,17 @@ const fixed = (v) => () => v;
     const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
     const fn = (app.match(/const cureAssistantLifeBody = async[\s\S]*?\n  \};/) || [''])[0];
     check('⑩ 60-app は使えるか確かめ → 1枚減らして保存 → 治す → 治せなければ戻す', fn.indexOf('assistantLifeBodyCanCure') > 0 && fn.indexOf('have - 1') > fn.indexOf('assistantLifeBodyCanCure') && fn.indexOf("storeSet('mh_owned_items'") < fn.indexOf('assistantLifeBodyCure(who') && /\+ 1 \}/.test(fn));
+  }
+  // ⑪ 予定表の外・横の表
+  {
+    const A = 12 * 1200 + 6;
+    G('ASSISTANT_LIFE_BODY_STORE').set({ data: { ...G('normalizeAssistantLifeBody')(null), at: A, s: { kiki: { fat: 30, st: 30, cond: { k: 'hurt', sev: 'light', left: 10, visits: 1 } } } } });
+    check('⑪ けが・病気の一言が出る・元気な助手は空', /けが/.test(G('assistantLifeBodyCondShort')('kiki')) && G('assistantLifeBodyCondShort')('mua') === '');
+    flags.assistantLifeBody = false; check('⑪ 印が偽なら一言は空', G('assistantLifeBodyCondShort')('kiki') === ''); flags.assistantLifeBody = true;
+    const rd = (f) => fs.readFileSync(path.join(root, 'monster-hero/src/parts', f), 'utf8');
+    check('⑪ 家の部屋・部屋のシート・町の名札が一言/印を出す', /data-assistant-life-room-body/.test(rd('56-assistant-life-house.jsx')) && /data-assistant-life-room-cond/.test(rd('56-assistant-life-house.jsx')) && /assistantLifeBodyCondShort\(id\) \? assistantLifeBodyBadge\(id\)/.test(rd('56-assistant-life-map.jsx')));
+    const plan = rd('56-assistant-life-plan.jsx');
+    check('⑪ 横の表の名前から1人の表示へ・表へ戻れる・けが病気の行き先えらびに理由', /data-assistant-life-plan-who-open/.test(plan) && /onWho=\{setWho\}/.test(plan) && /data-assistant-life-plan-back/.test(plan) && /data-assistant-life-plan-cond-note/.test(plan));
   }
   console.log(failed ? `\n${failed} 件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);

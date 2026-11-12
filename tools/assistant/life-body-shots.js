@@ -5,6 +5,8 @@
 //     2-cured  … 使ったあと(すっかり治りました)
 //     3-tired  … 疲れ・ストレスがたまった助手の予定表(棒・注意の文)
 //     4-picker … 行き先えらび(得の1行・疲れ・ストレスの動き・🏥病院)
+//     5-table / 5-table-who … 横だけ: 8人の表(名前に印)→ 名前を押した1人の表示(体の窓・◀ 8人の表へ)
+//     6-room   … けが・病気の助手の部屋のシート(一言)
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9286;
 const OUTDIR = path.resolve(process.argv[2] || path.join(root, 'docs/progress/assistant-peer/life-places/release'));
@@ -80,6 +82,19 @@ const OUTDIR = path.resolve(process.argv[2] || path.join(root, 'docs/progress/as
       await shot(page, v, '3-tired');
       const edit = page.locator('[data-assistant-life-plan-edit]').first();
       if (await edit.count()) { await edit.click(); await scrollTo(page, '[data-assistant-life-plan-picker]'); await shot(page, v, '4-picker'); }
+      if (v.tag === 'yoko') {
+        await page.evaluate(() => { const D = ASSISTANT_LIFE_BODY_STORE.state.data; ASSISTANT_LIFE_BODY_STORE.set({ data: { ...D, s: { ...D.s, kiki: { ...D.s.kiki, cond: { k: 'hurt', sev: 'light', left: 20, visits: 1 } } } } }); });
+        await page.evaluate(() => assistantLifePlanClose()); await page.waitForTimeout(300);
+        await page.evaluate(() => assistantLifePlanOpen({})); await page.locator('[data-assistant-life-plan-table]').waitFor({ timeout: 5000 }).catch(() => {});
+        await shot(page, v, '5-table');
+        const nm = page.locator('[data-assistant-life-plan-who-open="kiki"]');
+        report.push(`yoko: 表の名前のボタン ${await nm.count() ? 'あり' : 'なし'}`);
+        if (await nm.count()) { await nm.click(); await page.waitForTimeout(400); report.push(`yoko: 名前→体の窓 ${await page.locator('[data-assistant-life-body-panel="kiki"]').count() ? 'あり' : 'なし'}・戻る ${await page.locator('[data-assistant-life-plan-back]').count() ? 'あり' : 'なし'}`); await shot(page, v, '5-table-who'); }
+      }
+      await page.evaluate(() => assistantLifePlanClose()); await page.waitForTimeout(300);
+      const room = page.locator('[data-assistant-life-room-body="kiki"]').first();
+      if (v.tag !== 'yoko') await page.evaluate(() => { const D = ASSISTANT_LIFE_BODY_STORE.state.data; ASSISTANT_LIFE_BODY_STORE.set({ data: { ...D, s: { ...D.s, kiki: { ...D.s.kiki, cond: { k: 'hurt', sev: 'light', left: 20, visits: 1 } } } } }); });
+      report.push(`${v.tag}: 家の部屋の印 ${await room.count() ? 'あり' : 'なし(描き直し前)'}`);
       await page.close();
     }
   } finally { await browser.close(); server.close(); }

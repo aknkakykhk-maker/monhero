@@ -341,6 +341,11 @@ const assistantLifeBodyCondText = (c, atClinic = false) => {
   const d = Math.floor(c.left / 12), h = (c.left % 12) * 2;
   return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・${atClinic ? '病院で診てもらっています' : '家で休んでいます'}(あと${d ? `${d}日` : ''}${h ? `${h}時間` : ''})・🏥 病院へあと${c.visits}回で治ります`;
 };
+// 部屋のシート・町の名札の一言(けが・病気のときだけ。それ以外は '')
+const assistantLifeBodyCondShort = (id) => {
+  const c = assistantLifeBodyCondOf(id); if (!c) return '';
+  return `${ASSISTANT_LIFE_BODY_COND_NAME[c.k]}(${c.sev === 'heavy' ? '重い' : '軽い'})・家か🏥病院で休んでいます`;
+};
 const assistantLifeBodyDelta = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
 // 場所の小さな札(疲れ・ストレスの動き)。疲れ・ストレスは増えると悪いので、増える=赤・減る=緑
 function AssistantLifeBodyPlaceStat({ place, abs }) {
@@ -396,10 +401,11 @@ function AssistantLifeBodyPanel({ id, cur }) {
         : e.cond && <AssistantLifeBodyCure id={id} cur={cur} onCured={() => setCured(true)}/>}
       {rows.length > 0 && <div className="mt-1 flex flex-col gap-0.5" data-assistant-life-body-forecast>
         {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
-          <p key={r.abs} className="flex items-center gap-1 text-[10.5px] font-bold text-slate-200">
+          <p key={r.abs} className="flex flex-wrap items-center gap-x-1 text-[10.5px] font-bold leading-tight text-slate-200" data-assistant-life-body-forecast-row={r.abs}>
             <span className="w-[58px] shrink-0 text-sky-200">{s.from}〜{(s.from + 2) % 24}時</span>
-            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと 疲れ{r.fat}・ストレス{r.st}</span>
-            {r.risk > 0 && <span className="shrink-0 text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
+            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと</span>
+            <span className="shrink-0 whitespace-nowrap">疲れ{r.fat}・ストレス{r.st}</span>
+            {r.risk > 0 && <span className="shrink-0 whitespace-nowrap text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
           </p>); })}
       </div>}
     </div>);
