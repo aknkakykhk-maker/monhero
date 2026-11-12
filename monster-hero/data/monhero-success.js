@@ -203,24 +203,24 @@
   });
   const TECH_MAX = 8;
 
-  // ---- 持ちこみアイテム(社長 2026-11-12・ITEMS-REF.md: 効果は参考のまま・名前はモンヒロに合わせる) ----
+  // ---- 持ちこみアイテム(社長 2026-11-12・ITEMS-REF.md: 効果も名前も参考のまま。博士はイッサ博士) ----
   //   before = 始める前に使う(その育成にかける)/ during = 育成中にも使える(1ターンに1個まで)
   //   よいようす(good): イベントメーカー・トレーニング得意・修行得意・スターの素質○・うけつぐ魂(育成のあいだずっと続く)
   const ITEMS = Object.freeze({
-    issaNote: { name: 'イッサ博士の研究ノート', use: 'before', issaForce: true },        // 1度、イッサ博士が現れる
-    issaLoupe: { name: 'イッサ博士のルーペ', use: 'during', issaSure: true },           // 博士の実験が成功する(博士が来たターンに使う)
+    issaNote: { name: '博士の導き書', use: 'before', issaForce: true },        // 1度、イッサ博士が現れる
+    issaLoupe: { name: '博士のルーペ', use: 'during', issaSure: true },           // 博士の実験が成功する(博士が来たターンに使う)
     misanga: { name: '出会いのミサンガ', use: 'before', good: 'eventMaker' },
     weekly: { name: '週刊!トレーニング', use: 'before', good: 'trainGood' },
     hachimaki: { name: '修行のハチマキ', use: 'before', good: 'shugyoGood' },
     omamori: { name: '縁結びのお守り', use: 'before', good: 'star' },
-    kibidango: { name: 'ももすけのきびだんご', use: 'before', hpMax: 20 },                // 体力の最大値が初めから上がる
+    kibidango: { name: 'モモのキビダンゴ', use: 'before', hpMax: 20 },                // 体力の最大値が初めから上がる
     uketsugi: { name: 'うけつぎ草', use: 'before', good: 'uketsugu' },
-    juice: { name: 'ミックス野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
-    powder: { name: 'すっきり粉薬', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
-    license: { name: 'ヒーロー育成ライセンス', use: 'during', loyal: 10 },               // 忠誠度が一定数上がる
-    pack: { name: 'オイルと薬草の詰め合わせ', use: 'during', gives: { oil: 2, herb: 1 } }, // 中身はオイル2個と薬草
-    oil: { name: '元気オイル', use: 'during', hp: 0.3 },                                 // 詰め合わせの中身(体力 上限の30%)
-    herb: { name: 'やすらぎ薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
+    juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
+    powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
+    license: { name: 'ブリーダーライセンス', use: 'during', loyal: 10 },               // 忠誠度が一定数上がる
+    pack: { name: 'オイリーパック', use: 'during', gives: { oil: 2, herb: 1 } }, // 中身はオイル2個と薬草
+    oil: { name: 'オイル', use: 'during', hp: 0.3 },                                 // 詰め合わせの中身(体力 上限の30%)
+    herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
   });
   const GOOD = Object.freeze({
     eventMaker: { name: 'イベントメーカー', eventRate: 0.15 },              // 編成の子との出来事 +15%(50% → 65%)
@@ -229,7 +229,7 @@
     star: { name: 'スターの素質○', pop: 1.5, bond: 1.2 },                // 人気の上がり ×1.5・親密度の上がり ×1.2(良縁)
     uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2 },               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
   });
-  const CARRY_MAX = 3; // 始める前に使える数(案)
+  const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
   // ---- 賞金(名声)と修行チケット(社長 2026-11-12: チケットは大会でもらい、賞金が大きい大会ほど多い) ----
   // 賞金は TOURNAMENT §2 の星の賞金 × 期の倍率(ジュニア ×1・ミドル ×1.25・プロ ×1.5)。頂への道は 800/1500/3000
@@ -343,7 +343,8 @@
       const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       // 持ちこみ: carry = 始める前に使う物(3つまで)・bag = 育成中に使う物の数
       const carry = (Array.isArray(src.carry) ? src.carry : []).filter(k => ITEMS[k] && ITEMS[k].use === 'before').filter((k, i, a) => a.indexOf(k) === i).slice(0, CARRY_MAX);
-      const bag = {}; if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during') bag[k] = clamp(Math.round(num(v)), 0, 9);
+      const bag = {}; let room = CARRY_MAX - carry.length;
+      if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { bag[k] = n; room -= n; } }
       const good = {}; let hpMax = HP_MAX0; let issaForce = false;
       carry.forEach(k => { const it = ITEMS[k]; if (it.good) good[it.good] = true; if (it.hpMax) hpMax = Math.min(HP_MAX_CAP, hpMax + it.hpMax); if (it.issaForce) issaForce = true; });
       const hn = stayLv(team, 'hitonatsu');

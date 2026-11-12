@@ -295,10 +295,12 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 {
   ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 7, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 2)がずれている');
   ok(Object.keys(SUC.GOOD).sort().join() === 'eventMaker,shugyoGood,star,trainGood,uketsugu', 'よいようすが5つでない');
-  const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['kibidango', 'weekly', 'hachimaki', 'misanga', 'juice'], bag: { juice: 1, pack: 1, weekly: 3 } });
-  ok(s0.carry.length === SUC.CARRY_MAX && !s0.carry.includes('juice') && s0.hpMax === 120 && s0.hp === 120 && s0.good.trainGood && s0.good.shugyoGood && !s0.good.eventMaker, `始める前の持ちこみ(3つまで・育成中の物は入らない)がずれている: ${s0.carry} ${s0.hpMax}`);
-  ok(!s0.bag.weekly && s0.bag.juice === 1, '始める前の物が育成中の袋に入っている');
-  const u1 = SUC.useItem({ ...s0, hp: 5 }, 'juice'); ok(u1.out.ok && u1.state.hp === 120, '野菜ジュースで体力が全部戻らない');
+  const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['kibidango', 'weekly', 'hachimaki', 'juice'], bag: { juice: 1, pack: 1 } });
+  ok(s0.carry.length === 2 && !s0.carry.includes('juice') && s0.hpMax === 120 && s0.good.trainGood && !s0.good.shugyoGood && Object.keys(s0.bag).length === 0, `持ちこみが2つまでになっていない: ${s0.carry} ${JSON.stringify(s0.bag)}`);
+  const s1 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['weekly'], bag: { juice: 3, pack: 1 } });
+  ok(s1.bag.juice === 1 && !s1.bag.pack, `始める前の物と育成中の袋を合わせて2つまでになっていない: ${JSON.stringify(s1.bag)}`);
+  ok(SUC.ITEMS.issaNote.name === '博士の導き書' && SUC.ITEMS.juice.name === 'ガロエ印の野菜ジュース' && SUC.ITEMS.kibidango.name === 'モモのキビダンゴ', 'アイテムの名前が参考のままでない');
+  const u1 = SUC.useItem({ ...s0, hp: 5, bag: { juice: 1, pack: 1 } }, 'juice'); ok(u1.out.ok && u1.state.hp === 120, '野菜ジュースで体力が全部戻らない');
   ok(!SUC.useItem(u1.state, 'pack').out.ok, '1ターンに2個使えてしまう');
   const u2 = SUC.useItem({ ...u1.state, turn: 2 }, 'pack').state; ok(u2.bag.oil === 2 && u2.bag.herb === 1 && u2.bag.pack === 0, '詰め合わせの中身(オイル2・薬草1)が入らない');
   const u3 = SUC.useItem({ ...u2, turn: 3, hp: 0, yosu: { sabori: { visits: 0 }, utsu: { visits: 0 } }, bag: { powder: 1 } }, 'powder').state; ok(!u3.yosu.sabori && !u3.yosu.utsu && u3.hp === 36, '粉薬で悪いようすが治らない・体力が戻らない');
