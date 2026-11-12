@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0966d2b2ec1325be
+// generated-sha256: 2d5eab6e54473ca2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5505,7 +5505,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig:'曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig:'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
@@ -25372,6 +25372,12 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
 const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Object.freeze({
   x:(k*37)%100, y:(k*53)%90, dur:6+(k*7)%6, delay:-((k*13)%11),
   color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
+/* 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」・キラメキ案 C2)。
+   'full' … 帯・虹色の文字・光の筋・紙ふぶき / 'modest' … 帯と文字だけ・短く(軽量モード・演出量「最小」・マルチの「軽さ優先」) / 'off' … 出さない
+   「フルコンボの大きな表示」を「なし」にしたときだけ出さない。おまかせでは、動きを減らす設定でも控えめな形で出す */
+const rhythmFullComboBandMode=settings=>{const v=rhythmFxPick(settings,'fullComboBig');if(v==='OFF'||v==='NONE')return 'off';
+  if(v==='AUTO'&&(settings&&settings.lightweightMode||settings&&settings.effectAmount==='MINIMAL'))return 'modest';return 'full';};
+const RHYTHM_FULLCOMBO_CONFETTI=Object.freeze(Array.from({length:22},(_,k)=>Object.freeze({x:((k*37)%100)+.5,h:(k*47)%360,d:((k*13)%9)/20,s:.8+((k*7)%5)/10,r:((k*29)%2)?1:-1})));
 const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
@@ -25638,7 +25644,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
+  const fullComboBandRef=useRef(null),sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
   useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
@@ -26408,6 +26414,12 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
 if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+/* 最後のノーツを取りきった瞬間、BAD・MISS・落とした刻みが無ければ演奏画面の上へ「FULL COMBO」の帯を出す(曲の終わりを待たない)。
+   判定・スコア・保存には触らない。称号の決め方はリザルトと同じ rhythmResultAchievements。アシスト・練習・タイミング合わせ・判定ラインの調整では出さない */
+if(!run.fullComboBandShown&&!assistOn&&!tutorial&&!calibrating&&!lineAdjustRef.current&&chart.totalNotes>0&&RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0)>=chart.totalNotes){run.fullComboBandShown=true;
+  const ach=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);const bandMode=rhythmFullComboBandMode(settingsLiveRef.current||settings);const bandEl=fullComboBandRef.current;
+  if(bandEl&&bandMode!=='off'&&(ach.fullCombo||ach.allExcellent||ach.allMarvelous)){const tier=ach.allMarvelous?'am':ach.allExcellent?'ae':'fc';const label=bandEl.querySelector('[data-rhythm-fullcombo-title]');if(label)label.textContent=tier==='am'?'ALL MARVELOUS':tier==='ae'?'ALL EXCELLENT':'FULL COMBO';
+    bandEl.dataset.tier=tier;bandEl.dataset.mode=bandMode;bandEl.hidden=false;bandEl.dataset.on='1';}}
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
@@ -27769,6 +27781,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ノーツの絵(canvas)は z-index 5・予備のノーツ(DOM)は 2 なので、その1つ下。空中の道(2)・押した光(3)よりは上。
     ★演奏の場所(data-rhythm-play-area)は isolation:isolate で重なりを中だけで決める箱なので、赤いふちも中に置く(外に置くと演奏の場所まるごとの上に来る) */}{lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0" style={{zIndex:canvasNotes?4:1}}/>}{/* 案Z: SKY / GROUND の字は無し(線の位置と影で高さを見せる) */}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
+{/* 最後のノーツのあとの「FULL COMBO」の帯(はじめは隠しておき、取りきった瞬間に判定の処理が出す。描き直しを起こさない) */}<div ref={fullComboBandRef} data-rhythm-fullcombo-band hidden aria-hidden="true"><i data-rhythm-fullcombo-sweep/><b data-rhythm-fullcombo-title>FULL COMBO</b><span data-rhythm-fullcombo-confetti>{RHYTHM_FULLCOMBO_CONFETTI.map((p,k)=><i key={k} style={{left:`${p.x}%`,'--h':p.h,'--d':`${p.d}s`,'--s':p.s,'--r':p.r}}/>)}</span></div>
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,...(prepareOn?{contain:'strict'}:{}),display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
 {/* 判定の文字(地上)。空中のある譜面でも、ふつうの難易度と同じ位置・大きさ・濃さ。
     2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」で、空中のある譜面だけ判定線の下へ小さく薄く出していた形(10-10・改善部 R3)をやめた。
@@ -66108,6 +66121,10 @@ const assistantLifeWatch = async (group, now = Date.now()) => {
 // ---------- 画面「助手たちの今」・HOME の帯(段階2) ----------
 const assistantLifeOpenScreen = () => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true }); };
 const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({ open: false });
+// 助手ライフを開いて、町の地図のその場所の窓(助手を選んだ状態)を出す。mapFocus は画面の中だけの値で保存しない
+//   (2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」。「いま行くと得」のモンヒロバトルの行が
+//    ふつうのモンヒロバトルの画面へ飛ぶだけで、👀 修行を見る・📣 応援するは地図の窓にしか無かった)
+const assistantLifeOpenMapAt = (place, id = null) => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true, mapFocus: { place, id: id || null, n: Date.now() } }); };
 // 段ごとのひとこと(上の帯)
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
   quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
@@ -67009,6 +67026,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   //   いちばん前のボタンは「← 家へ」(閉じる)。縦は下へ送ると中身、横は右の欄が中身
   const scrollRef = React.useRef(null);
   const sheetRef = React.useRef(null);
+  const [cheerNote, setCheerNote] = React.useState(''); // 📣 応援したときの短い知らせ(モンヒロバトルにいる助手の部屋)
   const toSheet = () => { try { const box = scrollRef.current, el = sheetRef.current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
   const people = !w ? [id] : home ? (w.group ? w.group.ids.filter(x => ASSISTANT_LIFE_PREFS[x]) : [id]) : [];
   const sleepIds = people.filter(x => { const e = assistantLifeWhereOf(life, x); return e && e.doing === 'sleep'; });
@@ -67061,6 +67079,17 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {hotBeat && beatRow}
       {/* 施設にいる助手の部屋: その場所ならではの得をいちばん上に(神殿・M/B管理・マーケット・モンヒロバトル。カード部屋・ビートは上の行がある) */}
       {typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['cardroom', 'studio'].includes(w.place) && <AssistantLifePlacePerk life={life} ids={[id]} place={w.place} land={land} onGo={onGoPlace}/>}
+      {(() => { // モンヒロバトルにいる助手: 部屋からも 👀 修行を見る・📣 応援する(前は地図の窓だけで、部屋・HOME の顔から来ると見つからなかった・2026-11-12 社長「なにもないよ?」)
+        if (!w || w.place !== 'battle') return null;
+        let ti = null; try { ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null; } catch (_) { ti = null; }
+        if (!ti) return null;
+        return (<div data-assistant-life-room-train={id}>
+          <AssistantLifeDoRow k="train-watch" icon="👀" label="修行を見る" sub="マスモンの練習試合を見る(今日覚えた技・熟練の伸びが分かる)" on={typeof assistantMasmonTrainWatchOpen === 'function' ? () => { try { assistantMasmonTrainWatchOpen(id); } catch (_) {} } : null}/>
+          <AssistantLifeDoRow k="cheer" icon="📣" label={`応援する(今日${ti.perDay - ti.left}/${ti.perDay})`} sub="修行が少し進み、仲良し度も上がる(時間帯に1回)" gain="💗 +" disabled={!ti.canCheer} why={ti.why || ''}
+            on={typeof assistantMasmonCheer === 'function' ? () => { let r = null; try { r = assistantMasmonCheer(id); } catch (_) { r = null; } setCheerNote(r && r.ok ? `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` : ((r && r.why) || '')); } : null}/>
+          {cheerNote && <p className="mt-1 rounded-lg bg-emerald-900/70 px-2 py-1 text-[11.5px] font-black text-emerald-100" data-assistant-life-room-cheer-msg={id}>{cheerNote}</p>}
+        </div>);
+      })()}
       {onChat && !follow && <AssistantLifeDoRow k="chat" icon={asleep ? '💤' : '💬'} label={asleep ? '起こしておしゃべりする' : 'おしゃべりする'} sub="話すと仲良し度が少し上がる(1日の上限あり)" gain="💗 +" on={() => onChat(id, null)}/>}
       {(() => { // 助手マスモン対戦β(2026-11-12 見つけにくかったので、おしゃべりの次=画面の見える所へ上げた。ミセカタ2・マスモン部の口。RowInfo が null・口が無いときは出さない・2026-11-11 ナカヨシ13の引き継ぎ)
         let bi = null; try { bi = typeof assistantMasmonBattleRowInfo === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; }
@@ -67427,6 +67456,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const markGuideSeen = () => { setGuideSeen(true); setGuideOpen(false); try { void storeSet(ASSISTANT_LIFE_GUIDE_KEY, true, false); } catch {} };
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
+  const [mapFocusKey, setMapFocusKey] = React.useState(0); // 同じ場所をもう一度開くときも窓を出し直す
   React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setUiV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, [!!(st.open && st.loaded)]); // 開くたびに読み直す(設定の「助手ライフの画面」で切り替えた分)
   const [roomId, setRoomId] = React.useState(st.focus || null);
   // 町の人(助手になる前の助手・56-assistant-life-partner.jsx)の部屋は開かず、小窓に替える。どこから開こうとしても(地図・家・札・道のり)ここで止める
@@ -67471,6 +67501,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   React.useEffect(() => { if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(); } catch {} } if (typeof ASSISTANT_LIFE_REL_STORE !== 'undefined') void ASSISTANT_LIFE_REL_STORE.load().then(() => { try { ASSISTANT_LIFE_STORE.emit(); } catch {} }); }, []); // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   React.useEffect(() => { if (roomId) setNote(''); }, [roomId]); // 別の部屋を開いたら前の一言を消す(ミハリ L13)
   React.useEffect(() => { if (st.focus) { setRoomId(st.focus); ASSISTANT_LIFE_STORE.set({ focus: null }); } }, [st.focus]);
+  // 地図のその場所の窓を開く(assistantLifeOpenMapAt。「いま行くと得」のモンヒロバトルの行など・2026-11-12 社長「タップ押しても何も起きない」)
+  React.useEffect(() => { const f = st.mapFocus; if (!f || !f.place) return; setRoomId(null); setScene(null); setMapFocusPlace(f.place); setMapFocusAssistantId(f.id || null); setMapFocusKey(k => k + 1); setTab('where'); ASSISTANT_LIFE_STORE.set({ mapFocus: null }); }, [st.mapFocus]);
   // 交換所から戻ったとき: 道具タブ(家具ならその助手の部屋と家具のシート)を開く(56-assistant-life-gifts.jsx の assistantLifeOpenShop)
   const [furnBack, setFurnBack] = React.useState(null);
   React.useEffect(() => { const b = ASSISTANT_LIFE_STORE.state.shopBack; if (!b) return; ASSISTANT_LIFE_STORE.set({ shopBack: null });
@@ -67771,7 +67803,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
         {tab === 'where' ? (
-          <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
+          <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} initialKey={mapFocusKey} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
             list={uiV2 ? null : <>
               {header}
               {note && <p data-assistant-life-note className="mx-3 mb-1 rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 text-[11px] font-bold text-sky-100">{note}</p>}
@@ -67814,6 +67846,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               {giftItemsOpen && <div className="-mx-3">{itemsBody}</div>}
             </div>
           </div>)}
+        {/* 👀 修行を見るの入れ物。地図が出ているときは地図の中のものを使う(2つ重ねない) */}
+        {roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
         {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
           land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
@@ -67879,7 +67913,10 @@ function AssistantLifeHomeFaces({ metIds }) {
         const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
         let gap = vh - r.bottom;
         for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
-        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), right };
+        // 札の上のすき間も測る(下に余地が無い札=画面のいちばん下のモンヒロバトルは、顔を札の上に出す)
+        let up = r.top;
+        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.bottom <= r.top + 2 && b.r.right > x0 && b.r.left < x1) up = Math.min(up, r.top - b.r.bottom); }
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), up: Math.round(up), right };
       }
       setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
     };
@@ -67912,14 +67949,17 @@ function AssistantLifeHomeFaces({ metIds }) {
       // 顔は必ず札(名前)の下(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」。横へ逃がす形はやめた)。
       //   すき間は札の並び(70-bootstrap.jsx)であけてある。足りないときは顔を小さくする(12px まで)
       const side = false;
-      const size = Math.max(12, Math.min(20, r.gap - 3));
+      // 下のすき間が狭すぎる(16px 未満)ときは札の上へ。モンヒロバトルの札は画面の下端にあり、顔が 12px で下の帯にかかって
+      //   見えない・押せなかった(2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」)
+      const above = r.gap < 16 && Number.isFinite(r.up) && r.up >= 19;
+      const size = above ? Math.min(20, r.up - 3) : Math.max(12, Math.min(20, r.gap - 3));
       const step = size - 4; // 少し重ねる
       const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
       const rowW = size + (list.length - 1) * step + 6 + upW;
       const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
-      const top = side ? r.y + r.h / 2 - size / 2 : r.y + r.h + 1;
+      const top = side ? r.y + r.h / 2 - size / 2 : above ? r.y - size - 1 : r.y + r.h + 1;
       return (
-        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} data-assistant-life-home-face-above={above ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
           <div className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow">
             {list.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
@@ -68040,9 +68080,11 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null }) {
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
+  // 開いたままの地図へ、外から「この場所の窓を」と来たとき(部屋の「いま行くと得」の 行く › など)も窓を出す
+  React.useEffect(() => { if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace); }, [initialKey]);
   const [cheerMsg, setCheerMsg] = React.useState(null); // 📣 応援したときの短い知らせ { id, text }(シュギョウ2の口 assistantMasmonCheer)
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
@@ -68832,7 +68874,9 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   // ⚔ モンヒロバトル(社長 2026-11-11 A): 助手がモンヒロバトルでマスモンの修行をしているあいだ。修行が未公開のあいだ(amgtRoomLine が null)は出さない。得ではなく「いま会える場所」の案内
   try {
     const bt = typeof amgtRoomLine === 'function' ? assistantLifeAtPlace(life, ids, 'battle').filter(id => { let t = null; try { t = amgtRoomLine(id); } catch (_) { t = null; } return typeof t === 'string' && t.indexOf('いま') === 0; }) : [];
-    if (bt.length) rows.push({ k: 'battle', place: 'battle', icon: '⚔', text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`, go: typeof go.battle === 'function' ? go.battle : null });
+    // 押すと助手ライフの地図のモンヒロバトルの窓へ(👀 修行を見る・📣 応援する・⚔ 対戦がそこにある)。前はふつうのモンヒロバトルの画面へ飛ぶだけで、
+    //   そこには助手が何も出ず「なにもない」になっていた(2026-11-12 社長)。地図を開けないときだけ今までどおりモンヒロバトルへ
+    if (bt.length) rows.push({ k: 'battle', place: 'battle', icon: '⚔', text: `${nm(bt)}がモンヒロバトルで修行中です。👀 修行を見る・📣 応援するができます`, go: typeof assistantLifeOpenMapAt === 'function' ? () => assistantLifeOpenMapAt('battle', bt[0]) : typeof go.battle === 'function' ? go.battle : null });
   } catch (_) {}
   // 🛍 マーケット: 助手がいるあいだ、おすすめ品1つが1割引き(1日1回)。開発部が ASSISTANT_LIFE_LINKS.marketPerkToday = assistantMarketPerkToday と入れる。それが { itemName, discountedCost, used } を返す
   try {
@@ -78590,7 +78634,9 @@ const assistantMasmonTrainWatchOpen = (aid) => { if (!amgcOn() || !amgcOkAid(aid
 // 地図の中に1つだけ置く入れ物(ナカヨシ19)
 function AssistantMasmonTrainWatchHost() {
   const [open, setOpen] = useState(AMGC_HOST.open);
-  useEffect(() => { const f = (v) => setOpen(v); AMGC_HOST.subs.add(f); return () => { AMGC_HOST.subs.delete(f); }; }, []);
+  // 入れ物が消えるとき(画面を閉じた・タブを替えた)は「開いている」も消す。残ると、次に地図を開いたとき練習試合が勝手に始まっていた
+  //   (2026-11-12 社長「助手のオート対戦が気付いたらはじまってた」)
+  useEffect(() => { const f = (v) => setOpen(v); AMGC_HOST.subs.add(f); return () => { AMGC_HOST.subs.delete(f); if (!AMGC_HOST.subs.size) AMGC_HOST.open = null; }; }, []);
   if (!open) return null;
   return <AssistantMasmonTrainWatch key={open.at} assistantId={open.assistantId} onClose={() => AMGC_HOST.set(null)}/>;
 }

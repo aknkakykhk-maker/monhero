@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57bc98178d03bb1e
+// source-sha256: 6c0574174d720752
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7101,7 +7101,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash: 'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce: 'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100: 'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig: '曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。'
+  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。'
 });
 const normalizeRhythmFx = raw => {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -41004,6 +41004,21 @@ const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   delay: -(k * 13 % 11),
   color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
 })));
+const rhythmFullComboBandMode = settings => {
+  const v = rhythmFxPick(settings, 'fullComboBig');
+  if (v === 'OFF' || v === 'NONE') return 'off';
+  if (v === 'AUTO' && (settings && settings.lightweightMode || settings && settings.effectAmount === 'MINIMAL')) return 'modest';
+  return 'full';
+};
+const RHYTHM_FULLCOMBO_CONFETTI = Object.freeze(Array.from({
+  length: 22
+}, (_, k) => Object.freeze({
+  x: k * 37 % 100 + .5,
+  h: k * 47 % 360,
+  d: k * 13 % 9 / 20,
+  s: .8 + k * 7 % 5 / 10,
+  r: k * 29 % 2 ? 1 : -1
+})));
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -41488,7 +41503,8 @@ const RhythmTapTest = ({
     const slot = rhythmNoteMonsterSlot(note);
     return slot ? monstersRef.current[slot - 1] || null : null;
   };
-  const sideMonsterRefs = useRef([]),
+  const fullComboBandRef = useRef(null),
+    sideMonsterRefs = useRef([]),
     screenFlashRef = useRef(null),
     touchSweepRef = useRef(null),
     judgmentTextRef = useRef(null),
@@ -42632,6 +42648,21 @@ const RhythmTapTest = ({
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
     const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
+    if (!run.fullComboBandShown && !assistOn && !tutorial && !calibrating && !lineAdjustRef.current && chart.totalNotes > 0 && RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(run.counts[id]) || 0), 0) >= chart.totalNotes) {
+      run.fullComboBandShown = true;
+      const ach = rhythmResultAchievements(run.counts, chart.totalNotes, run.tickRules ? run.tickMiss : 0);
+      const bandMode = rhythmFullComboBandMode(settingsLiveRef.current || settings);
+      const bandEl = fullComboBandRef.current;
+      if (bandEl && bandMode !== 'off' && (ach.fullCombo || ach.allExcellent || ach.allMarvelous)) {
+        const tier = ach.allMarvelous ? 'am' : ach.allExcellent ? 'ae' : 'fc';
+        const label = bandEl.querySelector('[data-rhythm-fullcombo-title]');
+        if (label) label.textContent = tier === 'am' ? 'ALL MARVELOUS' : tier === 'ae' ? 'ALL EXCELLENT' : 'FULL COMBO';
+        bandEl.dataset.tier = tier;
+        bandEl.dataset.mode = bandMode;
+        bandEl.hidden = false;
+        bandEl.dataset.on = '1';
+      }
+    }
     const lifeBefore = run.life;
     run.life = tutorial || calibrating ? RHYTHM_LIFE_MAX : rhythmLifeAfterWithMonsterAbilities(run.life, judgment, run.abilities, songTimeMs);
     let revived = false,
@@ -46189,7 +46220,27 @@ const RhythmTapTest = ({
     style: {
       zIndex: canvasNotes ? 4 : 1
     }
-  }), countdownStep !== null && React.createElement("div", {
+  }), React.createElement("div", {
+    ref: fullComboBandRef,
+    "data-rhythm-fullcombo-band": true,
+    hidden: true,
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    "data-rhythm-fullcombo-sweep": true
+  }), React.createElement("b", {
+    "data-rhythm-fullcombo-title": true
+  }, "FULL COMBO"), React.createElement("span", {
+    "data-rhythm-fullcombo-confetti": true
+  }, RHYTHM_FULLCOMBO_CONFETTI.map((p, k) => React.createElement("i", {
+    key: k,
+    style: {
+      left: `${p.x}%`,
+      '--h': p.h,
+      '--d': `${p.d}s`,
+      '--s': p.s,
+      '--r': p.r
+    }
+  })))), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
@@ -110871,6 +110922,16 @@ const assistantLifeOpenScreen = () => {
 const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({
   open: false
 });
+const assistantLifeOpenMapAt = (place, id = null) => {
+  if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({
+    open: true,
+    mapFocus: {
+      place,
+      id: id || null,
+      n: Date.now()
+    }
+  });
+};
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
   quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります',
   normal: 'いつもどおりの一日。みんな、それぞれ過ごしています',
@@ -113335,6 +113396,7 @@ function AssistantLifeRoomSheet({
   const where = !w ? '🏡 部屋で過ごしている' : home ? `🏡 部屋で${doing}${groupText}` : `${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}で${doing}${groupText}`;
   const scrollRef = React.useRef(null);
   const sheetRef = React.useRef(null);
+  const [cheerNote, setCheerNote] = React.useState('');
   const toSheet = () => {
     try {
       const box = scrollRef.current,
@@ -113466,7 +113528,49 @@ function AssistantLifeRoomSheet({
     place: w.place,
     land: land,
     onGo: onGoPlace
-  }), onChat && !follow && React.createElement(AssistantLifeDoRow, {
+  }), (() => {
+    if (!w || w.place !== 'battle') return null;
+    let ti = null;
+    try {
+      ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+    } catch (_) {
+      ti = null;
+    }
+    if (!ti) return null;
+    return React.createElement("div", {
+      "data-assistant-life-room-train": id
+    }, React.createElement(AssistantLifeDoRow, {
+      k: "train-watch",
+      icon: "👀",
+      label: "修行を見る",
+      sub: "マスモンの練習試合を見る(今日覚えた技・熟練の伸びが分かる)",
+      on: typeof assistantMasmonTrainWatchOpen === 'function' ? () => {
+        try {
+          assistantMasmonTrainWatchOpen(id);
+        } catch (_) {}
+      } : null
+    }), React.createElement(AssistantLifeDoRow, {
+      k: "cheer",
+      icon: "📣",
+      label: `応援する(今日${ti.perDay - ti.left}/${ti.perDay})`,
+      sub: "修行が少し進み、仲良し度も上がる(時間帯に1回)",
+      gain: "💗 +",
+      disabled: !ti.canCheer,
+      why: ti.why || '',
+      on: typeof assistantMasmonCheer === 'function' ? () => {
+        let r = null;
+        try {
+          r = assistantMasmonCheer(id);
+        } catch (_) {
+          r = null;
+        }
+        setCheerNote(r && r.ok ? `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` : r && r.why || '');
+      } : null
+    }), cheerNote && React.createElement("p", {
+      className: "mt-1 rounded-lg bg-emerald-900/70 px-2 py-1 text-[11.5px] font-black text-emerald-100",
+      "data-assistant-life-room-cheer-msg": id
+    }, cheerNote));
+  })(), onChat && !follow && React.createElement(AssistantLifeDoRow, {
     k: "chat",
     icon: asleep ? '💤' : '💬',
     label: asleep ? '起こしておしゃべりする' : 'おしゃべりする',
@@ -114493,6 +114597,7 @@ function AssistantLifeHouse({
   };
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
+  const [mapFocusKey, setMapFocusKey] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
@@ -114584,6 +114689,19 @@ function AssistantLifeHouse({
       });
     }
   }, [st.focus]);
+  React.useEffect(() => {
+    const f = st.mapFocus;
+    if (!f || !f.place) return;
+    setRoomId(null);
+    setScene(null);
+    setMapFocusPlace(f.place);
+    setMapFocusAssistantId(f.id || null);
+    setMapFocusKey(k => k + 1);
+    setTab('where');
+    ASSISTANT_LIFE_STORE.set({
+      mapFocus: null
+    });
+  }, [st.mapFocus]);
   const [furnBack, setFurnBack] = React.useState(null);
   React.useEffect(() => {
     const b = ASSISTANT_LIFE_STORE.state.shopBack;
@@ -115321,6 +115439,7 @@ function AssistantLifeHouse({
     },
     initialPlace: uiV2 ? mapFocusPlace : null,
     initialAssistantId: uiV2 ? mapFocusAssistantId : null,
+    initialKey: mapFocusKey,
     onBack: () => {
       if (uiV2) {
         setMapFocusPlace(null);
@@ -115509,7 +115628,7 @@ function AssistantLifeHouse({
     className: "text-[11px] font-bold text-amber-200"
   }, giftItemsOpen ? '閉じる ▲' : '見る ▼')), giftItemsOpen && React.createElement("div", {
     className: "-mx-3"
-  }, itemsBody))), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
+  }, itemsBody))), roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
     onGoPlace: fn => {
       try {
@@ -115743,12 +115862,18 @@ function AssistantLifeHomeFaces({
           if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue;
           if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom);
         }
+        let up = r.top;
+        for (const b of obs) {
+          if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue;
+          if (b.r.bottom <= r.top + 2 && b.r.right > x0 && b.r.left < x1) up = Math.min(up, r.top - b.r.bottom);
+        }
         o[k] = {
           x: r.left,
           y: r.top,
           w: r.width,
           h: r.height,
           gap: Math.round(gap),
+          up: Math.round(up),
           right
         };
       }
@@ -115781,17 +115906,19 @@ function AssistantLifeHomeFaces({
   return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
     const r = rects[f];
     const side = false;
-    const size = Math.max(12, Math.min(20, r.gap - 3));
+    const above = r.gap < 16 && Number.isFinite(r.up) && r.up >= 19;
+    const size = above ? Math.min(20, r.up - 3) : Math.max(12, Math.min(20, r.gap - 3));
     const step = size - 4;
     const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
     const rowW = size + (list.length - 1) * step + 6 + upW;
     const left = side ? r.right ? r.x - rowW - 4 : r.x + r.w + 4 : r.right ? Math.max(4, r.x + r.w - rowW) : r.x;
-    const top = side ? r.y + r.h / 2 - size / 2 : r.y + r.h + 1;
+    const top = side ? r.y + r.h / 2 - size / 2 : above ? r.y - size - 1 : r.y + r.h + 1;
     return React.createElement("div", {
       key: f,
       "data-assistant-life-home-faces": f,
       "data-assistant-life-home-face-size": size,
       "data-assistant-life-home-face-side": side ? '1' : '0',
+      "data-assistant-life-home-face-above": above ? '1' : '0',
       className: "pointer-events-none fixed",
       style: {
         zIndex: 40,
@@ -116062,10 +116189,14 @@ function AssistantLifeTownMap({
   nav = null,
   land = false,
   initialPlace = null,
-  initialAssistantId = null
+  initialAssistantId = null,
+  initialKey = 0
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
+  React.useEffect(() => {
+    if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace);
+  }, [initialKey]);
   const [cheerMsg, setCheerMsg] = React.useState(null);
   const sceneRef = React.useRef(null);
   const listRef = React.useRef(null);
@@ -118234,8 +118365,8 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'battle',
       place: 'battle',
       icon: '⚔',
-      text: `${nm(bt)}がモンヒロバトルで修行中です。押すとモンヒロバトルへ`,
-      go: typeof go.battle === 'function' ? go.battle : null
+      text: `${nm(bt)}がモンヒロバトルで修行中です。👀 修行を見る・📣 応援するができます`,
+      go: typeof assistantLifeOpenMapAt === 'function' ? () => assistantLifeOpenMapAt('battle', bt[0]) : typeof go.battle === 'function' ? go.battle : null
     });
   } catch (_) {}
   try {
@@ -149699,6 +149830,7 @@ function AssistantMasmonTrainWatchHost() {
     AMGC_HOST.subs.add(f);
     return () => {
       AMGC_HOST.subs.delete(f);
+      if (!AMGC_HOST.subs.size) AMGC_HOST.open = null;
     };
   }, []);
   if (!open) return null;
