@@ -42478,6 +42478,80 @@ const saudadeShortHellNotes=((t,h,f,s,T,F,S)=>[
 // </saudade-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const saudadeShortHellChart=mhChart(37,saudadeShortHellNotes,SAUDADE_SHORT_DURATION_MS,6);
+
+// ===== メガロバニア(サンズ戦)=====
+const MEGALOVANIA_SANS_DURATION_MS=158616;
+const megalovaniaSansEasyNotes=((t,h,f,s)=>[
+// <megalovania-sans-v3-easy-notes>
+// </megalovania-sans-v3-easy-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSansNormalNotes=((t,h,f,s)=>[
+// <megalovania-sans-v3-normal-notes>
+// </megalovania-sans-v3-normal-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSansHardNotes=((t,h,f,s)=>[
+// <megalovania-sans-v3-hard-notes>
+// </megalovania-sans-v3-hard-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSansExpertNotes=((t,h,f,s)=>[
+// <megalovania-sans-v3-expert-notes>
+// </megalovania-sans-v3-expert-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSansMasterNotes=((t,h,f,s)=>[
+// <megalovania-sans-v3-master-notes>
+// </megalovania-sans-v3-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSansCharts=Object.freeze({
+  EASY:mhChart(1,megalovaniaSansEasyNotes,MEGALOVANIA_SANS_DURATION_MS,6),
+  NORMAL:mhChart(3,megalovaniaSansNormalNotes,MEGALOVANIA_SANS_DURATION_MS,6),
+  HARD:mhChart(5,megalovaniaSansHardNotes,MEGALOVANIA_SANS_DURATION_MS,6),
+  EXPERT:mhChart(7,megalovaniaSansExpertNotes,MEGALOVANIA_SANS_DURATION_MS,6),
+  MASTER:mhChart(9,megalovaniaSansMasterNotes,MEGALOVANIA_SANS_DURATION_MS,6),
+});
+// 6段目 HELL。曲の解析から HELL 用に一から作る(MASTER の写しではない)。
+// tools/mode/rhythm-hell-mix.js --song megalovania_sans --write で目印の内側と Lv. を書く(手で書き換えない)
+const megalovaniaSansHellNotes=((t,h,f,s,T,F,S)=>[
+// <megalovania-sans-v3-hell-notes>
+// </megalovania-sans-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const megalovaniaSansHellChart=mhChart(1,megalovaniaSansHellNotes,MEGALOVANIA_SANS_DURATION_MS,6);
+
+// ===== MEGALOVANIA(大乱闘スマッシュブラザーズver)=====
+const MEGALOVANIA_SMASH_DURATION_MS=278178;
+const megalovaniaSmashEasyNotes=((t,h,f,s)=>[
+// <megalovania-smash-v3-easy-notes>
+// </megalovania-smash-v3-easy-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSmashNormalNotes=((t,h,f,s)=>[
+// <megalovania-smash-v3-normal-notes>
+// </megalovania-smash-v3-normal-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSmashHardNotes=((t,h,f,s)=>[
+// <megalovania-smash-v3-hard-notes>
+// </megalovania-smash-v3-hard-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSmashExpertNotes=((t,h,f,s)=>[
+// <megalovania-smash-v3-expert-notes>
+// </megalovania-smash-v3-expert-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSmashMasterNotes=((t,h,f,s)=>[
+// <megalovania-smash-v3-master-notes>
+// </megalovania-smash-v3-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const megalovaniaSmashCharts=Object.freeze({
+  EASY:mhChart(1,megalovaniaSmashEasyNotes,MEGALOVANIA_SMASH_DURATION_MS,6),
+  NORMAL:mhChart(3,megalovaniaSmashNormalNotes,MEGALOVANIA_SMASH_DURATION_MS,6),
+  HARD:mhChart(5,megalovaniaSmashHardNotes,MEGALOVANIA_SMASH_DURATION_MS,6),
+  EXPERT:mhChart(7,megalovaniaSmashExpertNotes,MEGALOVANIA_SMASH_DURATION_MS,6),
+  MASTER:mhChart(9,megalovaniaSmashMasterNotes,MEGALOVANIA_SMASH_DURATION_MS,6),
+});
+// 6段目 HELL。曲の解析から HELL 用に一から作る(MASTER の写しではない)。
+// tools/mode/rhythm-hell-mix.js --song megalovania_smash --write で目印の内側と Lv. を書く(手で書き換えない)
+const megalovaniaSmashHellNotes=((t,h,f,s,T,F,S)=>[
+// <megalovania-smash-v3-hell-notes>
+// </megalovania-smash-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const megalovaniaSmashHellChart=mhChart(1,megalovaniaSmashHellNotes,MEGALOVANIA_SMASH_DURATION_MS,6);
 // HELL(デバッグ専用・2026-10-11)。参考譜面の空中(空中のタップ・高さのあるスライド)を土台に、親指2本で押せる形へ直した譜面
 // (tools/mode/rhythm-ref-thumbfix.js。同じ親指が地上と空中を行き来する間は1.5拍以上・押せない0・指の交差0)。速さの演出と組は MASTER と同じ
 // 2026-10-13 社長の決定「案3 X のまま」: 上下に交わる3か所(15.4・67.7・135.7秒)で、右手の空中スライドも左へ1レーン動かし、左手の地上スライドとすれ違う X にした
@@ -44831,6 +44905,8 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   lamia:Object.freeze({EASY:13,NORMAL:19,HARD:25,EXPERT:34,MASTER:51}),
   saudade:Object.freeze({EASY:6,NORMAL:7,HARD:12,EXPERT:18,MASTER:29}),
   saudade_short:Object.freeze({EASY:7,NORMAL:8,HARD:10,EXPERT:19,MASTER:29}),
+  megalovania_sans:Object.freeze({EASY:1,NORMAL:3,HARD:5,EXPERT:7,MASTER:9}),
+  megalovania_smash:Object.freeze({EASY:1,NORMAL:3,HARD:5,EXPERT:7,MASTER:9}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
@@ -45642,6 +45718,28 @@ const RHYTHM_SONG_ENTRIES = [
     ])))
   }),
   Object.freeze({
+    songId:'megalovania_sans',
+    displayName:'メガロバニア',
+    subtitle:'サンズ戦',
+    bgmTrackId:'melo_megalovania_sans',
+    // 2026-11-12 追加。ねるかめちゃん。240BPM・4拍子(120BPMの16分を拍の4分割で数える)。音源の頭に2秒の無音を足した(最初のノーツを2秒より後に)。HELL あり。ジャケットは社長から(アニメ調のキー絵)
+    artwork:'images/song-art/megalovania-sans.jpg',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,megalovaniaSansCharts[id]||emptyRhythmChart()
+    ])))
+  }),
+  Object.freeze({
+    songId:'megalovania_smash',
+    displayName:'MEGALOVANIA',
+    subtitle:'大乱闘スマッシュブラザーズver',
+    bgmTrackId:'melo_megalovania_smash',
+    // 2026-11-12 追加。暇人[もちゃ]。160BPM・4拍子(3連の格子=120BPMの16分)。音源の頭に2秒の無音を足した。HELL あり。ジャケットは社長から(ソラシドの戦闘画面風の絵)
+    artwork:'images/song-art/megalovania-smash.jpg',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,megalovaniaSmashCharts[id]||emptyRhythmChart()
+    ])))
+  }),
+  Object.freeze({
     songId:'atsu_cup_theme_debug_short',
     displayName:'あつ杯テーマ DEBUG 60s',
     debugDescription:'約60秒の総合テスト（正式候補・WIDTH TESTとは別）',
@@ -45899,6 +45997,8 @@ const RHYTHM_SONG_BEATS=Object.freeze({
   lamia:[301.4621,155.9,4],
   saudade:[499.623,119.2,4],
   saudade_short:[499.621,149.6,4],
+  megalovania_sans:[250,200.5,4],
+  megalovania_smash:[375,761,4],
 });
 // 4つ目は曲のつなぎ目(2026-10-03・元の曲の録音を切り貼りした short ver.)。[[つなぎ目の時刻ms, そこから先の拍のずれms], …]。
 // 5つ目は拍のずれの曲線(2026-10-05・テンポが少しずつ変わる曲)。[[時刻ms, ずれms], …] を直線でつなぐ。
@@ -51098,7 +51198,7 @@ const monsterShortHellNotes=((t,h,f,s,T,F,S)=>[
 // </monster-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const monsterShortHellChart=mhChart(35,monsterShortHellNotes,MONSTER_SHORT_DURATION_MS,6);
-const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart,humanoid:humanoidHellChart,lamia:lamiaHellChart,saudade:saudadeHellChart,saudade_short:saudadeShortHellChart});
+const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart,humanoid:humanoidHellChart,lamia:lamiaHellChart,saudade:saudadeHellChart,saudade_short:saudadeShortHellChart,megalovania_sans:megalovaniaSansHellChart,megalovania_smash:megalovaniaSmashHellChart});
 // はじめての HELL の目安(2026-10-21 改善部 N6・社長の決定)。HELL は MASTER を1回クリアで開くが、MASTER と HELL の Lv. の差が大きい曲がある
 //   (デュラハンテーマ MASTER 25 → HELL 59 など)。HELL の譜面のうち Lv. がいちばん低い公開曲を、実データから選ぶ(曲名・Lv. を手で書かない)
 const rhythmHellEntrySong=()=>{
@@ -51804,6 +51904,26 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
       id,rhythmChartOnRoad(id==='HELL'?saudadeShortHellChart:emptyRhythmChart())
     ])))
   }),
+  Object.freeze({
+    songId:'megalovania_sans_hell_debug',
+    displayName:'メガロバニア',
+    subtitle:'HELL(サンズ戦)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面。遊んでも記録しない。',
+    bgmTrackId:'melo_megalovania_sans',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?megalovaniaSansHellChart:emptyRhythmChart())
+    ])))
+  }),
+  Object.freeze({
+    songId:'megalovania_smash_hell_debug',
+    displayName:'MEGALOVANIA',
+    subtitle:'HELL(大乱闘スマッシュブラザーズver)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面。遊んでも記録しない。',
+    bgmTrackId:'melo_megalovania_smash',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?megalovaniaSmashHellChart:emptyRhythmChart())
+    ])))
+  }),
   // BLACK SHOUT の HELL(2026-10-21)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
   Object.freeze({
     songId:'black_shout_hell_debug',
@@ -51985,6 +52105,9 @@ const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   // 2026-11-11 追加。「サウダージ」(通常版と short ver.)。120BPM・4拍子。HELL あり
   'saudade',
   'saudade_short',
+  // 2026-11-12 追加。メガロバニア2曲(サンズ戦・スマブラver)。HELL あり
+  'megalovania_sans',
+  'megalovania_smash',
 ]);
 // 同じ曲の別の版(2026-10-03・ユーザー指示「同じ曲でショートとかリミックスとか色々あるけど
 // これを同じとこにまとめて難易度とか選ぶあたりに切り替えられるように」)。
