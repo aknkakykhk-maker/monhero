@@ -159,6 +159,8 @@ const VOICE = {
   momosuke: { must: /w|♡|！！/, mustRate: 0.6, mustName: '「w」「♡」「！！」', ng: /私|あたし|俺|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|ぢゃん|まぢ|笑(?![顔っいわ])/, ngName: 'ももすけは一人称「もも」・笑いは半角の w(ほかの助手の話し方にしない)' },
   dra: { must: /おで|えへへ|くさ|ふむ|なるほど|たしかに|からな|だな|よな|わ(?=[。！？…]|$)/, mustRate: 0.5, mustName: 'ドラのくせ(おで・えへへ・からな・だな…)', ng: /私|あたし|俺|僕|でつ(?!か)|まつ|ｗ|(?<![A-Za-z])w(?![A-Za-z])|♡|ぢゃん|まぢ|ほんま|やな(?![い])|なんよ|んよ/, ngName: 'ドラは一人称「おで」・関西弁と「〜んよ」を使わない(ほかの助手の話し方にしない)' },
   kyuko: { must: /笑(?![顔っいわ])|(?<![A-Za-z])w(?![A-Za-z])|ほい|おけ|ありがとん|ぐぬぬ|[ぇぁぉ](?=[！？。w笑…〜\s]|$)|😭|🤣|🥺|🫂|💦/, mustRate: 0.7, mustName: 'きゅうこのくせ(笑・w・ぇぁぉ・ほい・おけ…)', ng: /私|あたし|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|♡|ぢゃん|まぢ|笑(?![顔っいわ]).*(?<![A-Za-z])w(?![A-Za-z])|(?<![A-Za-z])w(?![A-Za-z]).*笑(?![顔っいわ])/, ngName: 'きゅうこは一人称「俺」・1本に「笑」と「w」を両方付けない(ほかの助手の話し方にしない)' },
+  // ソラシドは仲良し度で話し方が変わる(Lv1〜3 / Lv4〜8 / Lv9〜15 / Lv16〜)。丁寧語が土台。「俺」「っす」は Lv9〜 の版だけ(下の段ごとの見張り)
+  sorashido: { must: /です|ます|でした|ました|ません|ましょう|ください/, mustRate: 0.85, mustName: '丁寧語', ng: /私|あたし|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|(?<![A-Za-z])w(?![A-Za-z])|♡|ぢゃん|まぢ|だぜ|ぜ(?=[。！？・]|$)/, ngName: 'ソラシドは丁寧語が土台・笑いは全角の「笑」・「〜ぜ」を使わない(ほかの助手の話し方にしない)' },
 };
 // あつの行がある場面(シナリオを除く)= シナリオの助手が話す場面。あつだけの場面(博士のかけ合いの組・受けて立った)は除く
 const sceneOf = id => id.replace(/\.[^.]+$/, '');
@@ -185,6 +187,24 @@ for (const f of ASST_FILES) {
     miss.length ? `場面が足りない ${miss.length}: ${miss.slice(0, 3).join(', ')}` : '',
     scn.length ? `話が足りない: ${scn.join(',')}` : '', ends.length ? `4話の結末が足りない: ${ends.join(',')}` : ''].filter(Boolean).join(' / ');
   check(`${f}(口調・シナリオの話・場面のそろい)`, okAll, detail);
+}
+
+// ⑫ ソラシドの段ごとの版(窓口 2026-11-12「仲良し度で話し方が変わる子は段ごとに持つ」)
+//   bond の無い行は Lv4〜8 の形。のばし・絵文字・「ほほー」がある行は、Lv1〜3 版(id の最後に b・bond:[1,3])が要る(4話・特別な1話・その大会は Lv5〜 だけなので除く)
+//   Lv1〜3 版はのばし・絵文字・「ほほー」なし。一人称「俺」と「っす」は Lv9〜 の版(bond の下が9以上)だけ
+{
+  const sora = rows.filter(r => r.who === 'sorashido' && r.file.startsWith('asst-'));
+  if (sora.length) {
+    const STRETCH = /[ねたしす]ー(?=[！。？\s]|$)|[🤔👀💦]|ほほー/u;
+    const ids = new Set(sora.map(r => r.id));
+    const lowOf = r => Array.isArray(r.bond) ? r.bond[0] : (typeof r.bond === 'number' ? r.bond : 0);
+    const missB = sora.filter(r => !r.bond && STRETCH.test(r.t.replace(/ちばりよー/g, '')) && !/^scn\.sorashido\.(ep4|sp|cup2)\./.test(r.id) && !ids.has(r.id + 'b'));
+    for (const r of sora) {
+      if (Array.isArray(r.bond) && r.bond.join() === '1,3' && STRETCH.test(r.t.replace(/ちばりよー/g, ''))) bad('ソラシドの Lv1〜3 版はのばし・絵文字・「ほほー」なし', r);
+      if (lowOf(r) < 9 && /俺|っす/.test(r.t)) bad('ソラシドの「俺」「っす」は Lv9〜 の版だけ', r);
+    }
+    check('ソラシドの段ごとの版(Lv1〜3 版がそろっている)', missB.length === 0, missB.length ? `足りない ${missB.length}本: ${missB.slice(0, 3).map(r => r.id).join(', ')}` : `Lv1〜3 版 ${sora.filter(r => Array.isArray(r.bond) && r.bond.join() === '1,3').length}本`);
+  }
 }
 
 check('id・who・表情・差しこみ・口調・言葉', problems.length === 0, problems.length ? `${problems.length}件` : '');
