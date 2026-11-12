@@ -219,7 +219,9 @@ def dematte(arr, k, flood=False, halo=False):
     B = max(2, int(round(3.5 * k)))   # ふちから何画素までを見るか(書き出しで約 3.5 画素)
     r = max(1, int(round(1.5 * k)))   # 細い・厚いの境(開く半径。書き出しで約 3 画素の太さより細い白を「線」とみる)
     band = dil(trans, B) & ~trans
-    light = (mn >= 150) & ((mx - mn) <= 60) & ~trans
+    # 白マットの候補: ほぼ真っ白か、色味の少ない明るい灰白だけ。肌(色味30前後)・爪・指輪は入れない
+    #   (2026-11-12 窓口の確認: 色味60まで入れていたら、あつのピースの指の肌が削れて暗いまだらが出た)
+    light = ((mn >= 235) | ((mn >= 150) & ((mx - mn) <= 20))) & ~trans
     thick = dil(ero(light, r), r)
     cand = band & light & ~thick
     if not cand.any():
@@ -271,7 +273,7 @@ def fill_colors(col, known, steps):
     return col
 
 
-def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, stats=None, boxes=None, halo=False):
+def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, stats=None, boxes=None, halo=False, glow_cut=False):
     """背景のもや・ごみを落とし、ふちの白いにじみを消す。ふちのアルファは2値に切らず、なめらかなまま残す
     (2026-11-12 社長「全身画の透過の荒さ直ってないね」: 前の作りはふちを 0/255 近くへ寄せていた)。
     soft … ふちのアルファをぼかす量(元の絵の画素)。None なら元の絵のふちが2値のときだけ、書き出しで約 0.6 画素になる量でぼかす。"""
@@ -303,6 +305,10 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     near = blur(dil(body, 2), 1.5)
     a2 = a * np.clip(near * 2.0, 0, 1)
     a2 = np.where(a2 >= 10, a2, 0)
+    if glow_cut:
+        # 元の絵が体のまわりに薄い光(アルファ 1〜30 ほどが 10 画素ほど外へ広がるぼかし)を描いているとき、体の芯から2画素より外の
+        #   薄い所(64 未満)を消す。残すと、暗い背景で髪のまわりが白っぽいもやに見える(2026-11-12 窓口「みゅあハロウィンの左の巻き髪のふちにもや」)
+        a2 = np.where((a2 < 64) & ~dil(core, 2), 0, a2)
     # 4) 元の絵のふちが2値(ほぼ 0 か 255)なら、少しぼかしてなめらかにする(高い解像度のうちに。縮めると 1 画素ほどの半透明になる)
     edge = (a > 0) & (a < 255) & dil(body, 2) & ~ero(body, 2)
     ring = dil(body, 1) & ~ero(body, 1)
