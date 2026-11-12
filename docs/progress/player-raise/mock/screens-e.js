@@ -71,13 +71,22 @@ const mainHtml = (yousu, cls = '') => `${hdr()}<div class="v-body">
   ${acts(yousu)}
 </div>${foot}`;
 
-const BAG = [['🍱', 'とくせい弁当', '体力を 50 回復', 1, 'sel'], ['🧸', 'お気に入りのおもちゃ', 'ストレスを 20 へらす', 2, ''], ['🎫', '修行チケット', '修行に1回行ける(修行のボタンで使う)', 3, 'no'], ['📕', '技の書', 'つぎの修行で技を覚える率 +15%', 1, ''], ['🧿', '体力のおまもり', '持っているあいだ 体力の上限 +10', 1, 'no']];
+// 砂時計のアイコン(この見本のために描いた仮の絵)。niji: 虹の砂時計
+const hg = (niji, size = 34) => `<svg class="v-hg" width="${size}" height="${size}" viewBox="0 0 40 40">${niji ? '<defs><linearGradient id="hgN" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset=".35" stop-color="#fde047"/><stop offset=".65" stop-color="#34d399"/><stop offset="1" stop-color="#60a5fa"/></linearGradient></defs><rect x="1" y="1" width="38" height="38" rx="9" fill="url(#hgN)" opacity=".55"/>' : ''}
+  <rect x="9" y="4" width="22" height="5" rx="2.5" fill="${niji ? '#4338ca' : '#b45309'}"/><rect x="9" y="31" width="22" height="5" rx="2.5" fill="${niji ? '#4338ca' : '#b45309'}"/>
+  <path d="M12 9h16c0 7-5 9-6 11 1 2 6 4 6 11H12c0-7 5-9 6-11-1-2-6-4-6-11z" fill="#f8fafc" fill-opacity=".9" stroke="${niji ? '#312e81' : '#92400e'}" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M15 12h10c-1 4-4 5-5 7-1-2-4-3-5-7z" fill="${niji ? '#a78bfa' : '#fbbf24'}"/><path d="M14.5 30c1-4 4-5 5.5-6 1.500 1 4.500 2 5.500 6z" fill="${niji ? '#f472b6' : '#f59e0b'}"/><rect x="19.400" y="19" width="1.200" height="6" fill="${niji ? '#f472b6' : '#f59e0b'}"/>
+  ${niji ? '<path d="M33 6l1.200 2.800L37 10l-2.800 1.200L33 14l-1.200-2.800L29 10l2.800-1.200z" fill="#fff"/>' : ''}</svg>`;
+// 持ち物: [絵, 名前, 数, 状態]
+const BAG = [['🍱', 'とくせい弁当', 1, 'sel'], ['🧸', 'おもちゃ', 2, ''], ['📕', '技の書', 1, ''], [hg(0), '時渡りの砂時計', 2, 'no'], [hg(1), '虹の時渡りの砂時計', 1, 'no'], ['🎫', '修行チケット', 3, 'no'], ['🧿', '体力のおまもり', 1, 'no']];
 const bagHtml = `${hdr()}<div class="v-body">
   ${band({ heal: 48 })}
   ${mainSay(false).replace(/<div class="bub">.*<\/div><\/div>$/, '<div class="bub">体力がへってきたね。<em>とくせい弁当</em>、いま使っちゃう?</div></div>')}
   ${scene({ cls: 'home dk', noMon: 1, inner: `<div class="v-bagw"><div class="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><i>✕</i></div>
-    ${BAG.map(([e, n, x, c, st]) => `<div class="v-item ${st === 'sel' ? 'sel' : ''}" style="${st === 'no' ? 'opacity:.6' : ''}"><span class="e">${e}</span><div>${n} <span class="yel">×${c}</span><small>${x}</small></div><span class="pr">${st === 'sel' ? 'えらび中' : st === 'no' ? 'ここでは使わない' : 'えらぶ'}</span></div>`).join('')}
-    <div class="v-big" style="font-size:14px;padding:9px;margin-top:8px;color:#fff">🍱 とくせい弁当を使う(体力 62 → 110)</div></div>` })}
+    <div class="v-bsel"><span class="e">🍱</span><div><b>とくせい弁当 <span class="yel">×1</span></b><small>ほかほかの特別なお弁当。体力を 50 回復する</small><small class="lim">いつ使える: 自分のターン</small></div></div>
+    <div class="v-bgrid">${BAG.map(([e, n, c, st]) => `<div class="${st}"><span class="e">${e}</span><i>×${c}</i><small>${n}</small></div>`).join('')}</div>
+    <div class="v-bnote">${hg(0, 20)} 時渡りの砂時計: バトルに敗北したときにやり直せる<br>${hg(1, 20)} 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br><span class="dim2">(うすい物は、ここでは使わない。負けたとき・修行のボタンなどで使う)</span></div>
+    <div class="v-big" style="font-size:14px;padding:9px;margin-top:0;color:#fff">🍱 とくせい弁当を使う(体力 62 → 110)</div></div>` })}
   ${stRow()}
 </div>${foot}`;
 
@@ -91,7 +100,8 @@ grp('M', '1. 育成のメイン(案A の描き直し)', '住む場所が大き�
   <li><b>行動のボタン</b>(2段): 上は 休む・訓練(大きく・友情タッグがあるときだけ一言)・能力(能力ポイントの数字つき)/下は 通院・遊ぶ・修行(チケットの枚数の印)・大会(出られる星の印)の4つ並び。<b>🏥通院はいつも置き、「ようす」が無いときは薄く</b>、あるときは水色に光って「!」(社長 2026-11-12)</li>
   <li>いちばん下: 中断・早送り・演出を短く・きろく・メニュー</li></ul>
   <h3>持ち物(M3)</h3><ul>
-  <li>メインの景色の上に小窓で開く。持ちこんだ物・大会や出来事でもらった物の一覧と説明、「使う」</li>
+  <li>メインの景色の上に小窓で開く。上に選んだ物の名前と説明、下に物の一覧と数、いちばん下に「使う」</li>
+  <li>砂時計2つ(時渡りの砂時計・虹の時渡りの砂時計)もここに並ぶ。使うのは負けたときの画面</li>
   <li><b>使えるのは1ターンに1個まで</b>(使うと行動は使わない)。使ったターンは残りが薄くなり「このターンはもう使えない」。物と数字は仮</li></ul>
   <h3>動き(ふだんは短く)</h3><ul>
   <li>立ち絵はゆっくり息をする。体力が3割を切るとゲージが赤くなり、立ち絵が少しうつむく</li>
@@ -448,13 +458,15 @@ const versus = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ちからと命中は勝ってる! <em style="font-style:normal;color:#be185d">近い間合い</em>で押しきろ!」</div></div></div>
   <div class="v-bracket">${['もちまる', 'いわお', 'らんぽ', 'ミケ'].map((n, i) => `<span class="${i === 0 ? 'me' : ''}">${n}</span>${i === 1 ? '<u>決勝</u>' : i < 3 ? '<em>vs</em>' : ''}`).join('')}</div>
 </div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 準備完了</span></div>`;
-// 負けたとき: 再戦の札で、1回の育成に3回まで再戦できる(社長 2026-11-12)
+// 負けたとき: 砂時計で、1回の育成に3回までやり直せる(社長 2026-11-12。名前と効果は社長の指示で参考のゲームのものをそのまま・絵は新しく描く)
 const lose = `${hdr('💰 名声 320', '中断')}<div class="v-body">
   ${band({ hp: 30, st: 52 })}
   ${scene({ bg: 'monhero_plaza_evening', cls: 'dk', monStyle: 'bottom:44%;height:30%;filter:grayscale(.5) drop-shadow(0 8px 5px #0009);transform:translateX(-50%) rotate(-8deg)', grStyle: 'bottom:calc(44% - 5px)', inner: `
     <div class="v-stamp ng" style="top:5%">負けた…<small>💪 ちから自慢の大会 ★★ 決勝・いわお に 2−3</small></div>
-    <div class="v-meal" style="border-color:#7dd3fc;box-shadow:0 0 18px #38bdf866"><div class="t">もう一度、いどむ?<small>再戦の札を1枚使うと、同じ相手ともう一度戦える(1回の育成で3回まで)</small></div>
-      <div class="v-rm"><div class="re">🎟 再戦する<small>札 ×1 使う・のこり 2 / 3</small></div><div>あきらめる<small>準優勝のごほうびをもらう(賞金 💰125)</small></div></div>
+    <div class="v-meal" style="border-color:#7dd3fc;box-shadow:0 0 18px #38bdf866"><div class="t">時をもどして、やり直す?<small>やり直せるのは 1回の育成で3回まで・<b style="color:#fde047">のこり 2 / 3</b></small></div>
+      <div class="v-rm3"><div class="re">${hg(0, 30)}<div>時渡りの砂時計で やり直す<small>同じ相手ともう一度(持っている ×2)</small></div></div>
+        <div class="nj">${hg(1, 30)}<div>虹の砂時計で 相手を変えて やり直す<small>ちがう相手と戦える(持っている ×1)</small></div></div>
+        <div class="gv">あきらめる<small>準優勝のごほうびをもらう(賞金 💰125)</small></div></div>
       <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'troubled')}"><div class="bub f1">「おしかった! 回避で負けてたね…。もう1回いく?」</div></div></div>` })}
 </div><div class="v-ft"><span>⏩ とばす</span><span class="on" style="flex:2">えらんでね</span></div>`;
 // 大会のあとのごほうびのごはん(社長 2026-11-12: ごはんは大会のあとのご褒美であげる)
@@ -483,7 +495,7 @@ grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デ�
   <li>ボタンは「結果だけ見る」と「準備完了」(観戦する)の2つ</li></ul>
   <h3>スキップと再戦(社長 2026-11-12)</h3><ul>
   <li><b>スキップ(結果だけ)</b>: 一度でも優勝したことのある大会(前の育成も数える)は、札に「⏩ スキップできる」。選ぶと下の「⏩ スキップ」が押せるようになる。中で試合は計算するので、結果の画面は出る</li>
-  <li><b>負けたとき</b>(C4): 「再戦する(🎟 札 ×1 使う・のこり ◯/3)」と「あきらめる」。1回の育成で3回まで</li></ul>
+  <li><b>負けたとき</b>(C4): 「⏳ 時渡りの砂時計で やり直す」(同じ相手)・「🌈 虹の砂時計で 相手を変えて やり直す」・「あきらめる」と、のこり ◯/3。1回の育成で3回まで。アイテムの名前と効果は社長の指示で参考のゲームのものをそのまま使い、絵は新しく描く(この見本の砂時計は仮の絵)</li></ul>
   <h3>大会のあとのごはん(社長 2026-11-12)</h3><ul>
   <li>ごはんは<b>大会のあとのごほうび</b>であげる。メインのボタンにもターンのはじめにも置かない</li>
   <li>結果(優勝・賞金・ごほうび)の上に小窓が出て、3つから1つ選ぶ(あげなくてもよい)。値段(名声)と効き目を先に見せる。物と数字は仮</li></ul>`);
