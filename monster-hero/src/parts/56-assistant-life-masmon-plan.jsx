@@ -592,5 +592,7 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false, aid = null 
       <p className="text-[10.5px] font-bold text-slate-400">カード {(x.cards || []).reduce((a, c) => a + (Number(c[1]) || 0), 0)}枚</p>
     </div>) : <p className="mt-3 text-[11.5px] font-bold text-slate-300">見せているデッキはありません</p>}
   </>);
-  return <AmgpShell ro title={`${owner}育成ノート`} sub={`見るだけ ・ 助手のマスモン ${ms.length}体`} tabs={AMGP_RO_TABS} tab={tab} setTab={setTab} onClose={onClose} land={land}>{body}</AmgpShell>;
+  // 見せない設定・まだの人は体数とタブを出さない(「0体」と出ると誤解する・ミハリ 最終確認)
+  const shown = !!d && !d.off;
+  return <AmgpShell ro title={`${owner}育成ノート`} sub={shown ? `見るだけ ・ 助手のマスモン ${ms.length}体` : '見るだけ'} tabs={shown ? AMGP_RO_TABS : []} tab={tab} setTab={setTab} onClose={onClose} land={land}>{body}</AmgpShell>;
 }

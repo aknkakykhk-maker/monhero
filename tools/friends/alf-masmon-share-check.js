@@ -26,6 +26,7 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
     alfSafeOther: (v) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(v) ? v : null),
     alfInt: (v, lo, hi, d = 0) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; },
     alfNoteShow: (t) => (/\d{3,}|@|http/.test(t) ? '' : t),
+    AMG_POLICY: { '攻撃型': ['pow', 'hit'], '防御型': ['tough', 'eva'], 'ライフ型': ['life'], 'ガッツ型': ['wise'], 'すばやさ型': ['eva', 'hit'] },
     alfSig: (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); },
     storeGet: async (k, d) => (k in store ? JSON.parse(JSON.stringify(store[k])) : d),
     storeSet: async (k, v) => { store[k] = JSON.parse(JSON.stringify(v)); return true; },
@@ -119,6 +120,9 @@ const make = ({ flag = true, missing = false, team = null, decks = true } = {}) 
     const odd = n({ ms: [{ mo: 'Golem', n: '<b>ごろ</b>', st: [1, 2, 3], lv: -5, c: ['javascript:x', 'red'] }, { mo: 'Zzz' }, 'x'], dk: [{ f: 'evil', cd: [['a', 1]] }, { f: 'oshi', cd: [] }, { f: 'suki', cd: [['ok_1', 999]], m: ['C-010', 'C-999', 'Golem'] }], wt: 999 });
     check('受け取り: 知らないモンスターを捨て、能力の数が合わなければ出さない', odd.ms.length === 1 && odd.ms[0].stats === null && odd.ms[0].lv === 1);
     check('受け取り: 名前の < > を除く・色は決まった形だけ', !/[<>]/.test(odd.ms[0].nick) && odd.ms[0].colors[0] === null && odd.ms[0].colors[1] === 'red');
+    { const bad = n({ ms: [{ mo: 'Golem', g: '連絡はこちらへどうぞ', gm: '攻撃型' }], dk: [{ f: 'oshi', nm: 'LINE ID abc12345 に連絡', cd: [['ok_1', 2]] }] });
+      check('受け取り: デッキの名前は言葉の見張りを通る(連絡先は出さない)', bad.dk.length === 1 && bad.dk[0].name === '');
+      check('受け取り: 型は知っている名前だけ(自由な字は空)', bad.ms[0].grow === '' && bad.ms[0].growMine === '攻撃型'); }
     check('受け取り: 知らない型・空のデッキは捨て、枚数と数は丸める', odd.dk.length === 1 && odd.dk[0].face === 'suki' && odd.dk[0].cards[0][1] === 50 && JSON.stringify(odd.dk[0].monsters) === '["C-010"]' && odd.wt === 20);
   }
   // 大きすぎる中身は表の決まりの内側に収める

@@ -153,6 +153,7 @@ const textProblems = (page, sel) => page.evaluate((s) => {
       await page.locator('[data-alf-ms-open="mua"]').click({ timeout: 3000 }).catch(() => {});
       await page.locator('[data-amgp-ro-off]').waitFor({ timeout: 4000 }).catch(() => {});
       check(`④ 見せない設定の人は「見せない設定になっています」(${v.id})`, /見せない設定になっています/.test(await page.locator('[data-amgp-ro-off]').innerText().catch(() => '')));
+      check(`④ 見せない設定の人は体数とタブを出さない(${v.id})`, !/0体/.test(await page.locator('[data-amgp-note="readonly"]').innerText().catch(() => '')) && (await page.locator('[data-amgp-note="readonly"] [data-amgp-tab]').count()) === 0);
       if (v.id === 'tate') await shot(page, `${v.id}-5-off`);
       check(`ページのエラーが無い(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();

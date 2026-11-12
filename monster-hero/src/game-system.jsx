@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dbdd85e446f81adc
+// generated-sha256: 4e9f1259895decb0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77845,7 +77845,9 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false, aid = null 
       <p className="text-[10.5px] font-bold text-slate-400">カード {(x.cards || []).reduce((a, c) => a + (Number(c[1]) || 0), 0)}枚</p>
     </div>) : <p className="mt-3 text-[11.5px] font-bold text-slate-300">見せているデッキはありません</p>}
   </>);
-  return <AmgpShell ro title={`${owner}育成ノート`} sub={`見るだけ ・ 助手のマスモン ${ms.length}体`} tabs={AMGP_RO_TABS} tab={tab} setTab={setTab} onClose={onClose} land={land}>{body}</AmgpShell>;
+  // 見せない設定・まだの人は体数とタブを出さない(「0体」と出ると誤解する・ミハリ 最終確認)
+  const shown = !!d && !d.off;
+  return <AmgpShell ro title={`${owner}育成ノート`} sub={shown ? `見るだけ ・ 助手のマスモン ${ms.length}体` : '見るだけ'} tabs={shown ? AMGP_RO_TABS : []} tab={tab} setTab={setTab} onClose={onClose} land={land}>{body}</AmgpShell>;
 }
 
 // ---- part: 56-assistant-life-masmon-sleep.jsx ----
@@ -80187,7 +80189,7 @@ function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, on
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
 const ALF_MS_GAP_MS = 10 * 60 * 1000;      // 変わってから送るまでの最短の間隔(助手ごと)
-const ALF_MS_RESEND_MS = 24 * 60 * 60 * 1000; // 中身が同じでも1日に1回は送り直す(だれでも書ける表なので、ほかの人に書き換えられても1日で元に戻す・ミハリ4)
+// 中身が同じでも日が替わったら1回は送り直す(だれでも書ける表なので、ほかの人に書き換えられても1日で元に戻す・ミハリ4/最終確認で「24時間」から日替わりへ)
 const ALF_MS_MAX_CHARS = 4800;             // 表の決まり(5000)より少し下
 const ALF_MS_FACES = Object.freeze(['oshi', 'suki', 'sugao']);
 const ALF_MS_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
@@ -80199,6 +80201,9 @@ const alfMsMonOk = (mo) => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS 
 const alfMsDeckMonOk = (no) => typeof no === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(no) && !(typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA && CARD_BATTLE_DATA.monsters && !CARD_BATTLE_DATA.monsters[no]);
 const alfMsCardOk = (id) => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
 const alfMsText = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '');
+// 型は知っている名前(AMG_POLICY のキー)だけ通す。だれでも書ける表なので、自由な字は出さない(ミハリ 最終確認)
+const alfMsKind = (v) => { const t = alfMsText(v, 16); return t && typeof AMG_POLICY !== 'undefined' && AMG_POLICY && Object.prototype.hasOwnProperty.call(AMG_POLICY, t) ? t : ''; };
+const alfMsDay = (t) => (typeof alfDay === 'function' ? alfDay(t) : new Date(Number(t) + 5 * 3600000).toISOString().slice(0, 10));
 const alfMsWord = (v, max) => { const t = alfMsText(v, max); return t && typeof alfNoteShow === 'function' ? alfNoteShow(t) : ''; };
 
 // 1体を送る形にする(壊れた値・知らないモンスターは null)
@@ -80211,8 +80216,8 @@ const alfMsPackMon = (t) => {
     ...(t.lead ? { l: 1 } : {}),
     ...(Number.isFinite(Number(t.slot)) ? { s: alfInt(t.slot, 0, 99) } : {}),
     ...(Number.isFinite(Number(t.lv)) ? { lv: alfInt(t.lv, 1, 999) } : {}),
-    ...(alfMsText(t.grow, 16) ? { g: alfMsText(t.grow, 16) } : {}),
-    ...(alfMsText(t.growMine, 16) ? { gm: alfMsText(t.growMine, 16) } : {}),
+    ...(alfMsKind(t.grow) ? { g: alfMsKind(t.grow) } : {}),
+    ...(alfMsKind(t.growMine) ? { gm: alfMsKind(t.growMine) } : {}),
     ...(st ? { st: ALF_MS_STATS.map(k => alfInt(st[k], 0, 9999)) } : {}),
     ...(alfMsWord(t.why, 40) ? { w: alfMsWord(t.why, 40) } : {}),
   };
@@ -80223,7 +80228,7 @@ const alfMsPackDeck = (face, d) => {
   const cards = (Array.isArray(d.cards) ? d.cards : []).map(x => (Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null)).filter(Boolean).slice(0, 50);
   if (!cards.length) return null;
   return {
-    f: face, nm: alfMsText(d.name, 24),
+    f: face, nm: alfMsWord(d.name, 24),
     ...(alfMsWord(d.line, 40) ? { ln: alfMsWord(d.line, 40) } : {}),
     m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsDeckMonOk).slice(0, 3),
     ...(alfMsText(d.ace, 20) ? { a: alfMsText(d.ace, 20) } : {}),
@@ -80264,13 +80269,13 @@ const alfMsNormalize = (raw) => {
     return {
       monster: t.mo, nick: alfMsWord(t.n, 16), colors: (Array.isArray(t.c) ? t.c : []).slice(0, 5).map(x => (typeof x === 'string' && ALF_COLOR_RE.test(x) ? x : null)),
       lead: t.l === 1, slot: Number.isFinite(Number(t.s)) ? alfInt(t.s, 0, 99) : null, lv: Number.isFinite(Number(t.lv)) ? alfInt(t.lv, 1, 999) : null,
-      grow: alfMsText(t.g, 16), growMine: alfMsText(t.gm, 16), stats: st, why: alfMsWord(t.w, 40),
+      grow: alfMsKind(t.g), growMine: alfMsKind(t.gm), stats: st, why: alfMsWord(t.w, 40),
     };
   }).filter(Boolean);
   const dk = (Array.isArray(raw.dk) ? raw.dk : []).slice(0, 3).map(d => {
     if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(d.f)) return null;
     const cards = (Array.isArray(d.cd) ? d.cd : []).map(x => (Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null)).filter(Boolean).slice(0, 50);
-    return cards.length ? { face: d.f, name: alfMsText(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsDeckMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
+    return cards.length ? { face: d.f, name: alfMsWord(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsDeckMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
   }).filter(Boolean);
   return { off: false, ms, dk, wt: alfInt(raw.wt, 0, 20) };
 };
@@ -80303,7 +80308,7 @@ const alfMsPublish = async (self, ids, show, now = Date.now(), { force = false }
     const body = show ? alfMsBuild(aid) : { v: 1, off: 1 };
     if (!body.off && !body.ms.length) continue;
     const sig = alfSig(JSON.stringify(body));
-    if (sig === sent.sig[aid] && sent.at[aid] && now - sent.at[aid] < ALF_MS_RESEND_MS) continue;
+    if (sig === sent.sig[aid] && sent.at[aid] && alfMsDay(sent.at[aid]) === alfMsDay(now)) continue;
     // 見せる/見せないを切り替えたぶんは間隔を待たない
     const flip = body.off || sent.sig[aid] === alfSig(JSON.stringify({ v: 1, off: 1 }));
     if (!force && !flip && sent.at[aid] && now - sent.at[aid] < ALF_MS_GAP_MS) continue;
