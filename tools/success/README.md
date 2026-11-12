@@ -2,6 +2,7 @@
 
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
 - `monsuc-fuse-check.js` … 合体(56-monsuc-fuse.jsx)の保存の順番・失敗で何も消えない・二重押し / `monsuc-fuse-browser-check.js [--shots]` … 合体の画面を本物のゲームで(止め絵 docs/progress/player-raise/shots/fuse-*.png)
+- `build-script.js` … 台本(docs の正本)→ ゲームが読む `data/monhero-success-script-*.js`。`success-script-engine-check.js` が台本エンジンを見張る
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
 
 ## 新しいアイテムの絵を1つ足す手順

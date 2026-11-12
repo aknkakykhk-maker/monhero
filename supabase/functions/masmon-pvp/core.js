@@ -10,6 +10,7 @@
 
 // ---- 決めた数字(仮の数字は 仮 と書く。変えるのはここだけ) ----
 // 1体の6能力の合計が1日に伸びてよい量(社長「関わった最大=1日20」)
+import { handleLend } from './lend.js';
 export const DAILY_GROWTH_CAP = 200; // 2026-11-12 40→200: 助手マスモンの育ちの速さ ×3(計画60 × ピーク1.7 × 方針1.18 ≒ 120 + チケット・POWER.md 7章・社長 ×3)。以前: 40; // 2026-11-11 20→40: M/B管理で助手のマスモンにチケットを使う分(自主育成の上限の外・1体1日1枚)を入れる(ボクジョウ・社長が案Aを選択)
 // 初めて登録する1体の上限(移行で作る初めの値: ライフ・ちから・丈夫さ ≦ 600、かしこさ・命中・回避 ≦ 300 を Lv で少し上げる。GROW-BASE-PLAN)
 export const INITIAL_STAT_CAP = Object.freeze({ life: 600, pow: 600, wise: 400, hit: 400, eva: 400, tough: 600 });
@@ -330,6 +331,9 @@ export const handle = async ({ body, db, engine, catalog, learn = {}, nowMs, new
       case 'register': return await doRegister({ body, db, engine, catalog, learn, nowMs, log });
       case 'unregister': return await doUnregister({ body, db, log });
       case 'challenge': return await doChallenge({ body, db, engine, catalog, nowMs, newSeed, log, limits: lim, balance });
+      // モンヒロサクセスのフレンドからのレンタル(lend.js・2026-11-12 オトズレ)。持ち主の鍵はここと同じものを使う
+      case 'lend_set': case 'lend_clear': case 'lend_use': case 'lend_claim':
+        return await handleLend({ body, db, catalog, log, ownerOk, fail, okRes, nameProblem, ownerRe: OWNER_RE });
       default: return fail(400, 'action');
     }
   } catch (e) {

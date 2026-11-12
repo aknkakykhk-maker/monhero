@@ -231,6 +231,13 @@ check('id・who・表情・差しこみ・口調・言葉', problems.length === 
 for (const p of problems.slice(0, 15)) console.log('  ' + p);
 if (problems.length > 15) console.log(`  … ほか ${problems.length - 15}件`);
 
+// ⑬ ゲームが読む生成物(monster-hero/data/monhero-success-script-*.js)が台本と同じ。台本を直したら node tools/success/build-script.js
+{
+  const { out } = require('./build-script.js').build();
+  const stale = Object.entries(out).filter(([p, text]) => !fs.existsSync(p) || fs.readFileSync(p, 'utf8') !== text).map(([p]) => path.basename(p));
+  check('ゲームが読む台本(生成物)が台本と同じ(node tools/success/build-script.js)', stale.length === 0, stale.join(', '));
+}
+
 if (SHOW_COUNT) {
   const byWho = {};
   for (const r of rows) byWho[r.who] = (byWho[r.who] || 0) + 1;
