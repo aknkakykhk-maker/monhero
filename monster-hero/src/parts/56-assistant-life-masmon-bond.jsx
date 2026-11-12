@@ -290,7 +290,7 @@ function AmgbPanel({ who, t }) {
       </div>
       <p className="mt-1 text-[10.5px] font-bold text-emerald-200" data-amgb-type={gt.key}>📊 成長の型: {gt.name}{f >= 1 ? '' : inPeak ? ` ・ いまピーク(伸び ×${mult})` : toPeak > 0 ? ` ・ ピークまで あと約${toPeak}日` : ` ・ 伸び ×${mult}`}</p>
       <AmgbCurve gt={b.gt} frac={f}/>
-      {f < 1 && left <= AMGB_NUM.warnDays && <p className="mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100" data-amgb-warn>{who.name || '助手'}「そろそろ伸びが止まりそう。合体も考えてみる?」</p>}
+      {f < 1 && left <= AMGB_NUM.warnDays && <p className="mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100" data-amgb-warn>{who.name || '助手'}「そろそろ伸びが止まりそう。{typeof amgsFuseOn === 'function' && amgsFuseOn() ? '合体も考えてみる?' : 'いまのうちに、たくさん鍛えておこうね'}」</p>}
       {f >= 1 && <p className="mt-1 text-[10px] font-bold text-slate-400">寿命が来ても、いなくなったりはしません。対戦にも出られます</p>}
       <div className="mt-2 rounded-xl border border-white/10 p-2" data-amgb-result>
         <p className="text-[10.5px] font-bold text-slate-200">{last ? `いちばん新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>

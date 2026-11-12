@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2742690df43f7462
+// source-sha256: 66975f6a0bb43a8d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -141182,7 +141182,7 @@ function AmgbPanel({
   }), f < 1 && left <= AMGB_NUM.warnDays && React.createElement("p", {
     className: "mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100",
     "data-amgb-warn": true
-  }, who.name || '助手', "「そろそろ伸びが止まりそう。合体も考えてみる?」"), f >= 1 && React.createElement("p", {
+  }, who.name || '助手', "「そろそろ伸びが止まりそう。", typeof amgsFuseOn === 'function' && amgsFuseOn() ? '合体も考えてみる?' : 'いまのうちに、たくさん鍛えておこうね', "」"), f >= 1 && React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400"
   }, "寿命が来ても、いなくなったりはしません。対戦にも出られます"), React.createElement("div", {
     className: "mt-2 rounded-xl border border-white/10 p-2",
