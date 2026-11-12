@@ -140,7 +140,7 @@ const fixed = (v) => () => v;
     check('⑥ 印が偽なら予定表に病院が出ない', !shown.includes('clinic') && shown.length === 10);
     flags.assistantLifeBody = true;
     check('⑥ 印が真なら予定表の最後に病院', G('assistantLifeBodyPlaces')(G('ASSISTANT_LIFE_PLAN_PLACES')).slice(-1)[0] === 'clinic');
-    check('⑥ ふだんの決め方では病院を選ばない(好みの重みに無い)', Object.values(G('ASSISTANT_LIFE_PREFS')).every(p => !('checkup' in p.w)));
+    check('⑥ ふだんの決め方では病院を選ばない(好みの重みが0)', Object.values(G('ASSISTANT_LIFE_PREFS')).every(p => !p.w.checkup));
   }
   // ⑦
   {
