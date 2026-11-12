@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4dfcec16de7568b8
+// generated-sha256: 471c995f4338163b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9744,6 +9744,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonCheer: true, // 2026-11-11 モンヒロバトルにいる助手の 👀 修行を見る・📣 応援する・一人修行の伸び(シュギョウ2)。ミハリ3 OK・地図の窓 #5448・更新履歴とヘルプは社長「この文で」で公開
   assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonPlan: false, // 2026-11-12 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
+  assistantMasmonSleep: false, // 2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
   assistantMasmonNamesApi: true, // 2026-11-08 assistant-chat v22(窓口が配った)を本番の形で1回呼んで名前が返るのを確かめた(キズナ3)
@@ -68236,6 +68237,15 @@ const assistantLifeMarketWho = () => {
   } catch (_) { return null; }
 };
 
+// 場所ごとの「得」の文(2026-11-12 社長「これ全部効果書いて」)。予定表の行き先えらびの「得:」と、地図の場所の窓・家の帯の「いま行くと得」で同じ文を使う(二重に作らない)。
+//   いまある効果だけ(新しい効果は作らない)。数字は今の値から作る。効果の無い場所('' を返す)は何も出さない
+const assistantLifePlacePerkTail = (place) => {
+  if (place === 'studio') return '券なしで一緒に遊べる';
+  if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
+  if (place === 'ranch') return typeof amgrOn === 'function' && amgrOn() ? '助手のマスモンにトレーニングチケットを使ってあげられる' : 'トレーニングすると、その助手のマスモンも育つ';
+  return '';
+};
+
 // 「いま行くと得なこと」の行を作る。{ k, icon, text, go } の並び(得の大きい順)。go … 押したときに施設へ行く(無ければ押せない)
 const assistantLifePerkRows = (life, ids, nameOf) => {
   const rows = [];
@@ -68245,11 +68255,11 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
   const go = L.goPlace || {};
   try {
     const beat = typeof rhythmAssistSessionVisitFree === 'function' ? assistantLifeAtPlace(life, ids, 'studio').filter(id => { try { return rhythmAssistSessionVisitFree(id) === true; } catch (_) { return false; } }) : [];
-    if (beat.length) rows.push({ k: 'beat', place: 'studio', icon: '🎵', text: `${nm(beat)}がビートにいます。券なしで一緒に遊べる`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
+    if (beat.length) rows.push({ k: 'beat', place: 'studio', icon: '🎵', text: `${nm(beat)}がビートにいます。${assistantLifePlacePerkTail('studio')}`, go: typeof L.beatInvite === 'function' ? () => L.beatInvite(beat[0]) : null });
   } catch (_) {}
   try {
     const card = typeof assistantLifeHouseCardIds === 'function' ? assistantLifeAtPlace(life, ids, 'cardroom').filter(id => assistantLifeHouseCardIds().includes(id) && !assistantLifeCardSpent(id)) : [];
-    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
+    if (card.length) rows.push({ k: 'card', place: 'cardroom', icon: '🃏', text: `${nm(card)}とカードで${assistantLifePlacePerkTail('cardroom')}`, go: typeof L.cardInvite === 'function' ? () => L.cardInvite(card[0]) : null });
   } catch (_) {}
   const temple = assistantLifeAtPlace(life, ids, 'temple');
   if (temple.length && !assistantLifeTempleDone()) rows.push({ k: 'temple', place: 'temple', icon: '✨', text: `${nm(temple)}が神殿にいます。合体や転生をすると仲良し度アップ(1日1回)`, go: typeof go.temple === 'function' ? go.temple : null });
@@ -68265,7 +68275,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
     if (pk && !pk.used && pk.itemName) rows.push({ k: 'market', place: 'market', icon: '🛍', text: `${nm(mk)}がマーケットにいます。おすすめの${pk.itemName}が1割引き(1日1回)`, go: typeof go.market === 'function' ? go.market : null });
   } catch (_) {}
   const ranch = typeof L.masmonTrainBoost === 'function' ? assistantLifeAtPlace(life, ids, 'ranch') : [];
-  if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: (typeof amgrOn === 'function' && amgrOn() ? `${nm(ranch)}がM/B管理にいます。助手のマスモンにトレーニングチケットを使ってあげられる` : `${nm(ranch)}がM/B管理にいます。トレーニングすると、その助手のマスモンも育つ`), go: typeof go.ranch === 'function' ? go.ranch : null });
+  if (ranch.length) rows.push({ k: 'ranch', place: 'ranch', icon: '🥚', text: `${nm(ranch)}がM/B管理にいます。${assistantLifePlacePerkTail('ranch')}`, go: typeof go.ranch === 'function' ? go.ranch : null });
   return rows;
 };
 
@@ -72792,6 +72802,27 @@ const assistantMasmonUndoSwap = (aid, slot) => {
   assistantMasmonSave({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [slot]: back } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
   return true;
 };
+// 冬眠(56-assistant-life-masmon-sleep.jsx・2026-11-12 キズナ)から呼ぶ: 枠 slot の子を back(冬眠から起こす子)と入れ替える。
+//   出ていく子は mine.former に積まない(冬眠の箱へ入る)。back が「前にいた子」(mine.former)から来たときは former から1つ外す(前の子に戻すで二重に出さない)
+//   成功したら出ていった子の形 { monster, nick, lv, grow, why, role, welcome, colors, ai } を返す。だめなら null
+const assistantMasmonSleepSwap = (aid, slot, back, fromFormer = null) => {
+  const st = ASSISTANT_MASMON_STORE.state;
+  if (!ASSISTANT_MASMON_STORE.loaded || !back || !assistantMasmonMon(back.monster)) return null;
+  const rows = assistantMasmonRowsOf(st, aid), row = rows.find(x => x.slot === slot);
+  if (!row || rows.some(x => x.slot !== slot && x.monster === back.monster)) return null;
+  const m = { ...assistantMasmonMineOf(st, aid) };
+  const colorsNow = assistantMasmonDyeNowOf(st, aid, slot, row.colors || []);
+  const out = { monster: row.monster, nick: row.nick, lv: row.lv, grow: row.grow, why: row.why || '', role: row.role || '', welcome: row.welcome || slot * 2 - 1, colors: [...colorsNow], ai: !!row.ai };
+  m.former = { ...(m.former || {}) };
+  if (fromFormer) { const list = [...(m.former[fromFormer.slot] || [])]; const i = list.findIndex(x => x && x.monster === back.monster && x.at === fromFormer.at); if (i >= 0) { list.splice(i, 1); m.former[fromFormer.slot] = list; } }
+  m.parts = { ...(m.parts || {}) }; delete m.parts[slot]; m.names = { ...(m.names || {}) }; delete m.names[slot]; if (m.grow) { m.grow = { ...m.grow }; delete m.grow[slot]; }
+  m.nameStyleBefore = { ...(m.nameStyleBefore || {}) }; delete m.nameStyleBefore[slot]; m.colorStyleBefore = { ...(m.colorStyleBefore || {}) }; delete m.colorStyleBefore[slot];
+  const day = assistantMasmonToday();
+  const nu = { slot, monster: back.monster, nick: back.nick, lv: back.lv, grow: back.grow, why: back.why || '', role: back.role || row.role || '', welcome: back.welcome || row.welcome || slot * 2 - 1, colors: [...(back.colors || [])], ai: !!back.ai, reason: 'ask', at: day };
+  const hist = [...((st.dyes && st.dyes[aid]) || []), { v: ASSISTANT_MASMON_DYE_V, d: ASSISTANT_MASMON_DRAW_V, why: 'ask', at: day, season: assistantMasmonSeasonKey(day), fav: assistantMasmonFavSig(assistantMasmonBasePlanOf(aid)), roles: {}, slots: { [slot]: [...nu.colors] } }];
+  assistantMasmonSave({ ...st, pick: { ...(st.pick || {}), [aid]: { ...((st.pick && st.pick[aid]) || {}), [slot]: nu } }, dyes: { ...(st.dyes || {}), [aid]: hist.slice(-40) }, mine: { ...(st.mine || {}), [aid]: m } });
+  return out;
+};
 const assistantMasmonUndoMine = (aid, key) => {
   const st = ASSISTANT_MASMON_STORE.state, m = { ...assistantMasmonMineOf(st, aid) };
   if (key === 'hero') m.hero = 0; else if (key === 'wish') { m.wish = ''; m.wishSoft = false; } else if (key === 'deck') m.deck = null; else return false;
@@ -74902,10 +74933,10 @@ const assistantLifePlanUse = () => {
   return st;
 };
 const ASSISTANT_LIFE_PLAN_ICON = Object.freeze({ cafe: '🍰', plaza: '⛲', garden: '🌷', hill: '🌄', studio: '🎵', ranch: '🐾', cardroom: '🃏', library: '📚', battle: '⚔', home: '🏡' });
+// 行き先えらびの「得:」の文。地図の場所の窓・家の帯の「いま行くと得」と同じ文(assistantLifePlacePerkTail)を使う。効果の無い場所は空(何も出さない)
 const assistantLifePlanPerk = (place) => {
-  if (place === 'cardroom') return `対戦すると ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
   if (place === 'battle') return 'マスモンが修行する';
-  return '';
+  return typeof assistantLifePlacePerkTail === 'function' ? assistantLifePlacePerkTail(place) : '';
 };
 const assistantLifePlanName = (id) => { try { return typeof assistantLifeName === 'function' ? assistantLifeName(id) : id; } catch (_) { return id; } };
 
@@ -77093,7 +77124,7 @@ const amgpUseStores = () => {
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     const f = () => setTick(n => n + 1);
-    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : [])];
+    const ss = [AMGP_STORE, AMGP_CSTORE, ...(typeof AMG_STORE !== 'undefined' ? [AMG_STORE] : []), ...(typeof ASSISTANT_MASMON_STORE !== 'undefined' ? [ASSISTANT_MASMON_STORE] : []), ...(typeof AMGS_STORE !== 'undefined' && AMGS_STORE ? [AMGS_STORE] : [])];
     ss.forEach(s => s.subs.add(f));
     return () => { ss.forEach(s => s.subs.delete(f)); };
   }, []);
@@ -77195,6 +77226,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
           {isPick && <button type="button" onClick={() => { setSel(x.key); setTab('plan'); }} data-amgp-go-plan className="min-h-[40px] rounded-xl bg-emerald-600 px-3 text-[11.5px] font-black">🗓 予定を組む</button>}
           {isPick && <button type="button" onClick={() => amgpSetPick(x.aid, x.row, false)} data-amgp-unpick className="min-h-[40px] rounded-xl bg-slate-700 px-3 text-[11.5px] font-black">計画から外す</button>}
           {!isPick && <button type="button" disabled={st.picks.length >= sg.cap} onClick={() => amgpSetPick(x.aid, x.row, true)} data-amgp-pick className="min-h-[40px] rounded-xl bg-emerald-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">📌 計画して育てる</button>}
+          {typeof AmgsSleepButton === 'function' && <AmgsSleepButton aid={x.aid} row={x.row}/>}{/* 💤 冬眠(56-assistant-life-masmon-sleep.jsx・印が偽なら出ない) */}
           {c && c.k !== 'away' && <button type="button" disabled={c.care === today} onClick={() => amgpCare(x.key)} data-amgp-care className="min-h-[40px] rounded-xl bg-pink-700 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">{c.care === today ? '🩹 今日は看病した' : `🩹 ${amgpWhoName(x.aid)}に看病してもらう`}</button>}
           {c && c.k === 'away' && <button type="button" disabled={c.find === today} onClick={() => amgpFind(x.key)} data-amgp-find className="min-h-[40px] rounded-xl bg-sky-700 px-3 text-[11.5px] font-black disabled:bg-slate-700">🔎 {amgpWhoName(x.aid)}にさがしに行ってもらう</button>}
         </div>
@@ -77219,6 +77251,7 @@ function AmgpMine({ onClose, aid = null, land = false }) {
         {[null, ...ids.filter(id => all.some(x => x.aid === id))].map(id => <button key={id || 'all'} type="button" onClick={() => setFilter(id)} className={`min-h-[34px] rounded-full px-3 text-[11px] font-black ${filter === id ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`}>{id ? amgpWhoName(id) : '全員'}</button>)}
       </div>
       {others.map(x => card(x, false))}
+      {typeof AmgsSection === 'function' && <AmgsSection filter={filter}/>}
       {!all.length && <p className="mt-3 text-[11.5px] font-bold text-slate-300">まだ育成している助手のマスモンがいません</p>}
     </>);
   } else if (tab === 'plan') body = cur && picked.includes(cur) ? <AmgpPlanTab x={cur} nameOf={nameOf} pickSel={pickSel(cur)}/> : <p className="mt-4 text-[12px] font-bold text-slate-300" data-amgp-plan-empty>「一覧」で計画して育てるマスモンを選ぶと、ここで朝・昼・夜の予定を組めます</p>;
@@ -77361,6 +77394,188 @@ function AmgpReadOnly({ data, ownerName = '', onClose, land = false }) {
     </div>) : <p className="mt-3 text-[11.5px] font-bold text-slate-300">見せているデッキはありません</p>}
   </>);
   return <AmgpShell ro title={`${owner}育成ノート`} sub={`見るだけ ・ 助手のマスモン ${ms.length}体`} tabs={AMGP_RO_TABS} tab={tab} setTab={setTab} onClose={onClose} land={land}>{body}</AmgpShell>;
+}
+
+// ---- part: 56-assistant-life-masmon-sleep.jsx ----
+// 助手のマスモンの「冬眠」(2026-11-12 キズナ・社長の答え 台帳 2026-11-12 マスモン部)。案 docs/progress/assistant-peer/masmon-plan/HIBERNATE.md
+//   育てた中身(名前・色・種類・Lv・型・6能力・育成Lv・疲れ・ストレス・技と熟練・けがの残り)を写して箱にしまい、あとで眠らせた助手の枠へ起こせる
+//   眠っている間は育たない・疲れ/ストレスも動かない・対戦に出ない(起きている枠にいないので、育成の計算にも対戦にも出ない)
+//   枠が空かないよう、眠らせるのは「冬眠中の子と入れ替える」形だけ(勇者モンの枠1も同じ)。提案の入れ替えで外れた「前にいた子」も冬眠の一覧に並ぶ
+//   保存できる数: はじめ10体・育成ノートの段ごとに+5(最大30・全助手で共通)。上限を超えた分も消さない(⑦)
+//   保存は新しいキー mh_assistant_masmon_sleep_v1 だけ。起きている子のキー(masmon・育成・修行)は形も意味も変えない(起こすときに、その子の行を書くだけ)
+//   公開の印 RELEASE_FLAGS.assistantMasmonSleep(と育成ノートの印)が真のときだけ動く
+const ASSISTANT_MASMON_SLEEP_KEY = 'mh_assistant_masmon_sleep_v1';
+const AMGS_CAP = Object.freeze([10, 15, 20, 25, 30]); // 育成ノートの段1〜5
+const AMGS_MAX_BEDS = 200; // 読み込みで捨てない上限(壊れた保存で膨らみすぎないように)
+const amgsOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantMasmonSleep === true && typeof amgpOn === 'function' && amgpOn();
+const amgsMonOk = (mo) => typeof mo === 'string' && /^\w{2,40}$/.test(mo) && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+const amgsRowOf = (r) => {
+  if (!r || typeof r !== 'object' || !amgsMonOk(r.monster)) return null;
+  const txt = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
+  return { monster: r.monster, nick: txt(r.nick, 16), lv: Number.isFinite(Number(r.lv)) ? Math.max(1, Math.min(999, Math.round(Number(r.lv)))) : 1, grow: txt(r.grow, 24), why: txt(r.why, 60), role: txt(r.role, 12), welcome: Number.isFinite(Number(r.welcome)) ? Math.round(Number(r.welcome)) : 1, colors: (Array.isArray(r.colors) ? r.colors : []).slice(0, 5).map(c => (typeof c === 'string' ? c.slice(0, 40) : null)), ai: !!r.ai };
+};
+// 育成・修行の1体ぶんの写しは、それぞれの正規化を通して確かめる(壊れていれば null)
+const amgsGrowOk = (aid, monster, g) => { try { if (!g || typeof normalizeAssistantMasmonGrow !== 'function') return null; const n = normalizeAssistantMasmonGrow({ mons: { [aid]: { [`1:${monster}`]: g } } }); return (n.mons[aid] || {})[`1:${monster}`] || null; } catch (_) { return null; } };
+const amgsTrainOk = (aid, monster, t) => { try { if (!t || typeof normalizeAssistantMasmonTrain !== 'function') return null; const n = normalizeAssistantMasmonTrain({ mons: { [aid]: { [`1:${monster}`]: t } } }); return (n.mons[aid] || {})[`1:${monster}`] || null; } catch (_) { return null; } };
+const normalizeAssistantMasmonSleep = (raw) => {
+  const out = { v: 1, beds: [], seen: {}, seq: 0 };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const ids = new Set();
+  for (const b of (Array.isArray(raw.beds) ? raw.beds : []).slice(-AMGS_MAX_BEDS)) {
+    if (!b || typeof b !== 'object' || typeof b.id !== 'string' || !/^b\d{1,9}$/.test(b.id) || ids.has(b.id) || typeof b.aid !== 'string' || !/^[a-z]{2,12}$/.test(b.aid) || !Number.isInteger(b.slot) || b.slot < 1 || b.slot > 8) continue;
+    const row = amgsRowOf(b.row); if (!row) continue;
+    ids.add(b.id);
+    out.beds.push({ id: b.id, aid: b.aid, slot: b.slot, src: b.src === 'former' ? 'former' : 'sleep', at: typeof b.at === 'string' ? b.at.slice(0, 10) : '', fat: typeof b.fat === 'string' ? b.fat.slice(0, 20) : '', row,
+      g: amgsGrowOk(b.aid, row.monster, b.g), t: amgsTrainOk(b.aid, row.monster, b.t),
+      c: b.c && typeof AMGP_COND !== 'undefined' && AMGP_COND[b.c.k] && Number.isInteger(b.c.left) && b.c.left > 0 ? { k: b.c.k, left: Math.min(30, b.c.left) } : null });
+  }
+  if (raw.seen && typeof raw.seen === 'object') for (const [k, v] of Object.entries(raw.seen).slice(-400)) if (v === true && /^[a-z]{2,12}:[1-8]:[\w-]{0,20}:\w{2,40}$/.test(k)) out.seen[k] = true;
+  out.seq = Number.isInteger(raw.seq) && raw.seq > 0 ? Math.min(raw.seq, 999999999) : out.beds.reduce((a, b) => Math.max(a, Number(b.id.slice(1))), 0);
+  return out;
+};
+const AMGS_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_MASMON_SLEEP_KEY, normalizeAssistantMasmonSleep) : null;
+try { setTimeout(() => { try { if (amgsOn() && AMGS_STORE) void AMGS_STORE.load(); } catch (_) {} }, 0); } catch (_) {}
+const amgsCapOf = (days) => AMGS_CAP[Math.max(0, (typeof amgpStageOf === 'function' ? amgpStageOf(days).lv : 1) - 1)] || AMGS_CAP[0];
+const amgsCap = () => amgsCapOf(typeof AMGP_STORE !== 'undefined' ? AMGP_STORE.state.days : 0);
+const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').slice(0, 20)}:${x.monster}`;
+// 提案の入れ替えで外れた「前にいた子」を、冬眠の一覧へ1度ずつ並べる(元の mine.former はそのまま・見た印 seen で二重にしない)
+const amgsSyncFormer = () => {
+  if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  let st = AMGS_STORE.state; const ms = ASSISTANT_MASMON_STORE.state; let changed = false;
+  const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null; const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
+  for (const [aid, m] of Object.entries((ms && ms.mine) || {})) for (const [sl, list] of Object.entries((m && m.former) || {})) {
+    const slot = Number(sl);
+    for (const x of (Array.isArray(list) ? list : [])) {
+      if (!x || !amgsMonOk(x.monster)) continue;
+      const sig = amgsFormerSig(aid, slot, x); if (st.seen[sig]) continue;
+      const row = amgsRowOf(x); if (!row) continue;
+      const key = `${slot}:${x.monster}`; const seq = st.seq + 1;
+      st = { ...st, seq, seen: { ...st.seen, [sig]: true }, beds: [...st.beds, { id: `b${seq}`, aid, slot, src: 'former', at: String(x.at || '').slice(0, 10), fat: String(x.at || '').slice(0, 20), row, g: g && g.mons[aid] ? g.mons[aid][key] || null : null, t: tr && tr.mons[aid] ? tr.mons[aid][key] || null : null, c: null }] };
+      changed = true;
+    }
+  }
+  return changed ? AMGS_STORE.save(st) : false;
+};
+// 起きている子(aid の枠 slot)と、冬眠中の子(bedId)を入れ替える。眠らせる・起こすはどちらもこれ。だめなら理由の文字、できたら true
+const amgsSwap = (bedId, slot, now = Date.now()) => {
+  if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof assistantMasmonSleepSwap !== 'function') return 'まだ使えません';
+  if (typeof AMG_STORE === 'undefined' || !AMG_STORE.loaded || !AMGP_STORE.loaded || !AMGP_CSTORE.loaded) return '読み込み中です';
+  const st = AMGS_STORE.state; const bed = st.beds.find(b => b.id === bedId);
+  if (!bed) return 'もういません';
+  const ms = ASSISTANT_MASMON_STORE.state; const rows = assistantMasmonRowsOf(ms, bed.aid); const row = rows.find(r => r.slot === slot);
+  if (!row) return '起こす枠がありません';
+  if (rows.some(r => r.slot !== slot && r.monster === bed.row.monster)) return '同じ種類のマスモンがほかの枠にいます';
+  const s = amgSlotOf(now); const outKey = amgMonKey(row.slot, row.monster); const inKey = amgMonKey(slot, bed.row.monster);
+  const gOut = (AMG_STORE.state.mons[bed.aid] || {})[outKey] || null;
+  const tOut = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? (AMGT_STORE.state.mons[bed.aid] || {})[outKey] || null : null;
+  const cKeyOut = amgpKey(bed.aid, row.slot, row.monster); const cOut = amgpCondAt(cKeyOut, s + 1);
+  const out = assistantMasmonSleepSwap(bed.aid, slot, bed.row, bed.src === 'former' ? { slot: bed.slot, at: bed.fat } : null);
+  if (!out) return '入れ替えられませんでした';
+  // 起きた子の育成・修行の中身を、その枠の行へ戻す(眠らせたときのまま)
+  if (bed.g) { const gs = AMG_STORE.state; amgSave({ ...gs, mons: { ...gs.mons, [bed.aid]: { ...(gs.mons[bed.aid] || {}), [inKey]: { ...bed.g, dg: { d: 0, n: 0 } } } } }); }
+  if (bed.t && typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded && typeof amgtSave === 'function') { const ts = AMGT_STORE.state; amgtSave({ ...ts, mons: { ...ts.mons, [bed.aid]: { ...(ts.mons[bed.aid] || {}), [inKey]: bed.t } } }); }
+  // 計画の子だったら外す(予定は消さない)・けがの残りは眠らせた子へ写し、起きた子は残りから続ける
+  const ps = AMGP_STORE.state; if (ps.picks.some(p => p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) AMGP_STORE.save({ ...ps, picks: ps.picks.filter(p => !(p.aid === bed.aid && p.slot === row.slot && p.monster === row.monster)) });
+  const cs = AMGP_CSTORE.state; const mons = { ...cs.mons };
+  if (cOut) mons[cKeyOut] = { ...cOut, until: s };
+  if (bed.c) mons[amgpKey(bed.aid, slot, bed.row.monster)] = { k: bed.c.k, from: s, until: s + bed.c.left, care: -1, find: -1, hosp: [] };
+  if (cOut || bed.c) AMGP_CSTORE.save({ ...cs, mons });
+  const day = typeof assistantMasmonToday === 'function' ? assistantMasmonToday() : '';
+  const seq = st.seq + 1;
+  AMGS_STORE.save({ ...st, seq, beds: [...st.beds.filter(b => b.id !== bedId), { id: `b${seq}`, aid: bed.aid, slot, src: 'sleep', at: day, fat: '', row: amgsRowOf(out), g: gOut, t: tOut, c: cOut ? { k: cOut.k, left: Math.max(1, cOut.until - s) } : null }] });
+  try { if (typeof amgTick === 'function') void amgTick(bed.aid); } catch (_) {}
+  return true;
+};
+
+// ---------- 画面(公開の印が真のときだけ出す) ----------
+const amgsColorDots = (colors) => (colors || []).filter(Boolean).slice(0, 5).map((c, i) => <span key={i} className="inline-block h-3 w-3 rounded-full border border-white/40 align-middle" style={{ background: typeof assistantMasmonSwatch === 'function' ? assistantMasmonSwatch(c) : '#94a3b8' }}/>);
+// 育成ノートの一覧の下に並べる「💤 冬眠中」
+function AmgsSection({ filter = null }) {
+  const [st, setSt] = React.useState(AMGS_STORE ? AMGS_STORE.state : null);
+  const [open, setOpen] = React.useState(null); // 冬眠中の子のくわしい画面(bed id)
+  React.useEffect(() => {
+    if (!AMGS_STORE) return undefined;
+    AMGS_STORE.subs.add(setSt);
+    void AMGS_STORE.load().then(() => { amgsSyncFormer(); });
+    return () => { AMGS_STORE.subs.delete(setSt); };
+  }, []);
+  if (!amgsOn() || !st) return null;
+  const cap = amgsCap(); const beds = st.beds.filter(b => !filter || b.aid === filter);
+  const bed = st.beds.find(b => b.id === open) || null;
+  return (
+    <div className="mt-3" data-amgs-section={st.beds.length}>
+      <p className="text-[12px] font-black text-sky-200">💤 冬眠中({st.beds.length}/{cap}) <small className="text-[10px] font-bold text-slate-400">眠っている間は育たず、対戦にも出ません</small></p>
+      {st.beds.length > cap && <p className="text-[10.5px] font-bold text-amber-300" data-amgs-over>しまえる数を超えています(消えはしません)</p>}
+      {beds.map(b => { const m = ALL_PLAYER_MONSTERS[b.row.monster]; return (
+        <button key={b.id} type="button" onClick={() => setOpen(b.id)} data-amgs-bed={b.id} className="mt-1.5 flex w-full items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2 text-left">
+          {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}
+          <span className="min-w-0 flex-1"><b className="block truncate text-[13px] font-black">{b.row.nick || (m && m.name)} <small className="text-[10px] text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(b.aid) : b.aid}のマスモン</small></b>
+            <small className="block text-[10.5px] font-bold text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''} ・ {b.src === 'former' ? '前にいたマスモン' : `${String(b.at).slice(5).replace('-', '/')}から`}</small></span>
+          <span className="shrink-0 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-black text-blue-100">💤 冬眠中</span>
+        </button>); })}
+      {!beds.length && <p className="mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-400">冬眠中のマスモンはいません。助手のマスモンの「💤 眠らせる」で、冬眠中のマスモンと入れ替えられます</p>}
+      {bed && <AmgsDetail bed={bed} onClose={() => setOpen(null)}/>}
+    </div>);
+}
+// 冬眠中の子のくわしい画面(起きている子と同じ中身・💤の印)。ボタンは「起こす」と閉じるだけ
+function AmgsDetail({ bed, onClose }) {
+  const [pick, setPick] = React.useState(false); const [err, setErr] = React.useState('');
+  const m = ALL_PLAYER_MONSTERS[bed.row.monster] || {};
+  const rows = typeof ASSISTANT_MASMON_STORE !== 'undefined' && typeof assistantMasmonRowsOf === 'function' ? assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, bed.aid) : [];
+  const techs = bed.t && typeof amgtTechsOf === 'function' ? amgtTechsOf(bed.row.monster).filter(x => bed.t.learn.includes(x.id)) : [];
+  const go = (slot) => { const r = amgsSwap(bed.id, slot); if (r === true) onClose(); else setErr(r); };
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-amgs-detail>
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-sky-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
+        <p className="text-[16px] font-black">💤 {bed.row.nick || m.name}(冬眠中)</p>
+        <p className="text-[10.5px] font-bold text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(bed.aid) : bed.aid}のマスモン ・ {bed.src === 'former' ? '入れ替えで前にいたマスモン' : `${String(bed.at).slice(5).replace('-', '/')} から眠っています`}</p>
+        <div className="mt-2 flex items-center gap-2 rounded-2xl border border-sky-300/60 bg-sky-950/70 p-2">
+          {m.iconUrl ? <img src={m.iconUrl} alt="" className="h-16 w-16 object-contain"/> : null}
+          <div className="min-w-0 flex-1"><p className="text-[14px] font-black">{bed.row.nick || m.name} <span className="rounded-full bg-blue-900 px-2 py-0.5 text-[10px] text-blue-100">💤 冬眠中</span></p>
+            <p className="text-[11px] font-bold text-slate-300">{m.name} ・ Lv {bed.row.lv}{bed.row.grow ? ` ・ ${bed.row.grow}` : ''}{bed.g ? ` ・ 育成Lv.${bed.g.lv}` : ''}</p>
+            <p className="text-[11px] font-bold text-slate-300">色: {amgsColorDots(bed.row.colors)}</p></div>
+        </div>
+        <p className="mt-2 text-[12px] font-black text-amber-200">6能力(眠らせたときのまま)</p>
+        {bed.g ? <div className="mt-1">{typeof AmgpBars === 'function' && <AmgpBars st={bed.g.st}/>}</div> : <p className="text-[11px] font-bold text-slate-400">能力は、起こすと助手がはじめから育てます</p>}
+        {techs.length > 0 && <><p className="mt-2 text-[12px] font-black text-amber-200">技と熟練</p><p className="text-[11px] font-bold text-slate-200" data-amgs-techs>{techs.map(x => `${x.name} 熟練 ${typeof amgtRankOf === 'function' ? amgtRankOf(bed.t.m[x.id] || 0) : ''}`).join(' ・ ')}</p></>}
+        {bed.g && <p className="mt-2 text-[11px] font-bold text-slate-300">疲れ {bed.g.fat} ・ ストレス {bed.g.str}(眠っている間は動きません)</p>}
+        {bed.c && typeof AMGP_COND !== 'undefined' && <p className="text-[11px] font-bold text-rose-200">{AMGP_COND[bed.c.k].icon} {AMGP_COND[bed.c.k].name}の残りは、起きてから続きます</p>}
+        {!pick ? (<>
+          <button type="button" onClick={() => setPick(true)} data-amgs-wake className="mt-3 min-h-[48px] w-full rounded-xl bg-amber-400 text-[14px] font-black text-slate-900">☀ 起こす</button>
+          <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
+        </>) : (<>
+          <p className="mt-3 text-[12px] font-black text-amber-200">☀ どの枠に起こしますか</p>
+          <p className="text-[10.5px] font-bold text-slate-300">{typeof amgpWhoName === 'function' ? amgpWhoName(bed.aid) : ''}の枠に戻します。その枠にいたマスモンは、かわりに冬眠へ入ります</p>
+          {rows.map(r => { const rm = ALL_PLAYER_MONSTERS[r.monster] || {}; const dup = rows.some(x => x.slot !== r.slot && x.monster === bed.row.monster); return (
+            <button key={r.slot} type="button" disabled={dup} onClick={() => go(r.slot)} data-amgs-slot={r.slot} className="mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left disabled:opacity-40">
+              {rm.iconUrl ? <img src={rm.iconUrl} alt="" className="h-9 w-9 object-contain"/> : null}
+              <span className="min-w-0 flex-1 text-[12px] font-black">枠{r.slot} ・ {r.nick || rm.name}<small className="block text-[10px] text-slate-300">Lv {r.lv} ・ このマスモンが冬眠へ</small></span>
+              <span className="shrink-0 rounded-lg bg-amber-700 px-1.5 text-[10px] font-black">入れ替え</span>
+            </button>); })}
+          {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgs-err>{err}</p>}
+          <button type="button" onClick={() => setPick(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+        </>)}
+      </div>
+    </div>);
+}
+// 起きている子のカードに出す「💤 眠らせる」: 同じ助手の冬眠中の子を選んで入れ替える
+function AmgsSleepButton({ aid, row }) {
+  const [open, setOpen] = React.useState(false); const [err, setErr] = React.useState('');
+  if (!amgsOn() || !AMGS_STORE) return null;
+  const beds = AMGS_STORE.state.beds.filter(b => b.aid === aid);
+  return (<>
+    <button type="button" disabled={!beds.length} onClick={() => setOpen(true)} data-amgs-sleep className="min-h-[40px] rounded-xl bg-blue-800 px-3 text-[11.5px] font-black disabled:bg-slate-700 disabled:text-slate-400">💤 眠らせる{beds.length ? '' : '(入れ替える相手なし)'}</button>
+    {open && <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-amgs-sleep-sheet>
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-sky-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '80dvh', overflowY: 'auto' }}>
+        <p className="text-[15px] font-black">💤 {row.nick}を眠らせる</p>
+        <p className="text-[10.5px] font-bold text-slate-300">名前・色・6能力・Lv・技と熟練・疲れとストレスを、そのまま保っておきます。かわりに起こす冬眠中のマスモンを選んでください(枠は空けられません)</p>
+        {beds.map(b => <button key={b.id} type="button" onClick={() => { const r = amgsSwap(b.id, row.slot); if (r === true) setOpen(false); else setErr(r); }} data-amgs-sleep-with={b.id} className="mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left">
+          {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}<span className="text-[12px] font-black">{b.row.nick} を起こす<small className="block text-[10px] text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''}</small></span></button>)}
+        {err && <p className="mt-1 text-[11px] font-bold text-rose-200">{err}</p>}
+        <button type="button" onClick={() => setOpen(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+      </div>
+    </div>}
+  </>);
 }
 
 // ---- part: 56-assistant-life-friend.jsx ----
