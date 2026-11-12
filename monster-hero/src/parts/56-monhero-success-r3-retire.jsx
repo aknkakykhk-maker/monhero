@@ -63,6 +63,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [res, setRes] = useState(null);
   const [showBox, setShowBox] = useState(false);
   const [, setTablesReady] = useState(0);
+  useMsxR3Lines(s.aid);
   useEffect(() => { let alive = true; msxR3ReadBox().then((b) => { if (alive) setBox(b); }); return () => { alive = false; }; }, [res]);
   useEffect(() => { let alive = true; msxR3LoadTables().then(() => { if (alive) setTablesReady((n) => n + 1); }); return () => { alive = false; }; }, []);
   const ev = SUC.evaluate(ws); const ev0 = SUC.evaluate(s);
@@ -137,7 +138,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         {mem ? <div><small>🧩 アシストの基本値</small>親密度 {mem.bond0}・タッグ +{mem.tag}%・得意率 {Math.round((mem.fav || 0) * 100)}%</div> : null}
         {mem && mem.startAdd ? <div><small>📈 はじめの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
       </div>
-      <MsxSay aid={ws.aid} ex="excited" text={`「${run.nick || 'この子'}、まぢでがんばったね! 次の子の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`}/>
+      {(() => { const band = Math.max(1, MSX_R3_GRADES.findIndex((g) => g.g === grade.g) + 1); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'この子'}、まぢでがんばったね! 次の子の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
         <div className="v-kv"><b>名声</b><span>合計 {msxFmt(ws.fameTotal || 0)}</span></div>
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>

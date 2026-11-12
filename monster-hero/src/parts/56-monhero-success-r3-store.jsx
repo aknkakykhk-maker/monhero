@@ -180,3 +180,30 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
     return r.added;
   } catch (e) { return false; }
 };
+
+// ---- 台詞(台本エンジン data/monhero-success-script-engine.js・キズナ #5747)。読めなければ画面の文(fallback)を出す ----
+const msxR3SE = () => (typeof window !== 'undefined' && window.MONHERO_SUCCESS_SCRIPT_ENGINE) || null;
+const msxR3SeLoading = {};
+const msxR3LoadSE = (aid) => {
+  if (!msxR3SeLoading[aid]) {
+    const get = msxR3SE() ? Promise.resolve(msxR3SE()) : typeof msxLoadScript === 'function' ? msxLoadScript('data/monhero-success-script-engine.js', 'MONHERO_SUCCESS_SCRIPT_ENGINE') : Promise.resolve(null);
+    msxR3SeLoading[aid] = get.then((SE) => (SE && typeof SE.load === 'function' ? SE.load(aid).then(() => SE) : null)).catch(() => null);
+  }
+  return msxR3SeLoading[aid];
+};
+// 開いたときに読み、読めたら描き直す
+const useMsxR3Lines = (aid) => {
+  const [, setN] = useState(0);
+  useEffect(() => { let alive = true; msxR3LoadSE(aid).then(() => { if (alive) setN((n) => n + 1); }); return () => { alive = false; }; }, [aid]);
+};
+const msxR3Q = (t) => { const x = String(t || ''); return /^[「『(]/.test(x) ? x : `「${x}」`; };
+const msxR3Line = (scene, run, extra, fallback, opt) => {
+  const SE = msxR3SE(); const s = run.s;
+  try {
+    if (SE) {
+      const l = SE.say(scene, { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick || '', species: s.species, ...(extra || {}) }, opt || {});
+      if (l && l.t) return { t: msxR3Q(l.t), e: l.e || null };
+    }
+  } catch (e) {}
+  return { t: fallback, e: null };
+};
