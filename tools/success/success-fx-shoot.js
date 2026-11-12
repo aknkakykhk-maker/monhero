@@ -7,7 +7,7 @@
 //
 // 撮るもの(1つの大きさにつき3枚): 気分8つ(しぐさを出したまま・季節と時間の光をそれぞれ替える)/
 // 訓練の結果・叱る・褒めるの反応7つ(動きの途中で止める)/ 節目の短い演出6つ /
-// ぴょこぴょこ(小さく置いて、小さく弾んだ所と大きく跳ねた所)
+// ぴょこぴょこ(小さく置いて、小さく弾んだ所と大きく跳ねた所)/ 図鑑の攻撃アクションの通常技(大成功・修行)と固有技(優勝)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -45,6 +45,11 @@ const mount = (sheet) => {
     const bgOf = (t) => (t === '夕方' ? 'images/story-bg/monhero_plaza_evening.jpg' : t === '夜' ? 'images/story-bg/monhero_night.jpg' : 'images/story-bg/monhero_plaza.jpg');
     cells = moods.map(([m, name, season, time], i) => cell(m, bgOf(time), [h(MsxSceneLight, { key: 'l', season, time }), label(`${name}・${season}/${time}`),
       monBox({ key: 'm', species: SP[i], mood: m, season, time, pose: true, seed: 'shot' })]));
+  } else if (sheet === 'skill' || sheet === 'win') {
+    // 図鑑の攻撃アクション(技ごとの動き)をつないだ反応。skill = 大成功・修行・試合の通常技 / win = 大会に勝った固有技
+    const ids = ['Tiger', 'Mia', 'Pandora', 'Zan', 'Eiki', 'Undine', 'Ark', 'KenshiMocchi', 'Mocchi', 'Pixie'].filter((x) => ALL_PLAYER_MONSTERS[x]).slice(0, 8);
+    cells = ids.map((id, i) => cell(id, 'images/story-bg/forest_morning.jpg', [label(`${sheet === 'win' ? '優勝・固有技' : i % 2 ? '修行・技' : '大成功・通常技'}・${ALL_PLAYER_MONSTERS[id].name}`),
+      monBox({ key: 'm', species: id, mood: 'hype', react: sheet === 'win' ? { kind: 'win', id: 1 } : i % 2 ? { kind: 'skill', id: 1, skill: { kind: 'normal', name: msxFxSkillName(id, 'normal', 3) } } : { kind: 'great', id: 1 }, seed: 'shot' })]));
   } else if (sheet === 'pyoko') {
     // 社長「もっと小さくして、ぴょこぴょこ」: 箱を小さく(高さ38%)置き、小さく弾んだ所(a)と大きく跳ねた所(b)で止める
     const ps = [['joy', 'ごきげん'], ['hype', '大はしゃぎ'], ['calm', 'ふつう'], ['tired', '疲れ']];
@@ -82,14 +87,18 @@ const mount = (sheet) => {
       // ふきだしの声は台本 mon.js から(回2の台本の束がまだ無い版でも、正本を読んで本物の鳴き声で撮る)
       await page.addScriptTag({ url: `http://localhost:${PORT}/docs/progress/player-raise/script/mon.js` });
       await page.evaluate(() => msxFxUseScript(MONSUC_SCRIPT_MON)); // eslint-disable-line no-undef
-      for (const sheet of ['moods', 'react', 'moment', 'pyoko']) {
+      for (const sheet of ['moods', 'react', 'moment', 'pyoko', 'skill', 'win']) {
         const nm = `${sheet}${tag ? `(${tag})` : ''}`;
         await page.evaluate(() => { const s = document.getElementById('fx-pause'); if (s) s.remove(); });
         await page.evaluate(`(${mount.toString()})(${JSON.stringify(sheet)})`);
         // 絵が読めるまで待ち、動きの途中(約0.45秒目)で止めて撮る
-        await page.waitForTimeout(sheet === 'moods' ? 900 : 120);
+        await page.waitForTimeout(sheet === 'moods' ? 900 : sheet === 'skill' ? 260 : sheet === 'win' ? 1000 : 120);
         await page.evaluate((late) => { const st = document.createElement('style'); st.id = 'fx-pause';
-          st.textContent = `.msxfx-live *,.msxfx-moment *{animation-play-state:paused!important;animation-delay:-${late}s!important}`; document.head.appendChild(st); }, sheet === 'moods' ? 0.5 : 0.45);
+          st.textContent = late < 0 ? '#fx-shot *{animation-play-state:paused!important}' : `.msxfx-live *,.msxfx-moment *{animation-play-state:paused!important;animation-delay:-${late}s!important}`; document.head.appendChild(st); }, sheet === 'moods' ? 0.5 : sheet === 'skill' || sheet === 'win' ? -1 : 0.45);
+        if (sheet === 'skill' || sheet === 'win') {
+          const n = await page.evaluate(() => document.querySelectorAll('#fx-shot [data-msxfx-act="skill"]').length);
+          check(`${nm}: 図鑑の攻撃アクションが流れる`, n >= 6, `${n}体`);
+        }
         if (sheet === 'pyoko') {
           // 1周 = 5拍。小さく弾んだ頂上は 10%、大きく跳ねた頂上は 89%(拍の長さは気分で違うので、枠ごとに式で止める)
           await page.evaluate(() => { const st = document.getElementById('fx-pause'); st.textContent = '';

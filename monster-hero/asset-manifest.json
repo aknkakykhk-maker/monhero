@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "fdfd2652780f",
-  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":147931686,"count":921},"card":{"bytes":37779758,"count":1048},"all":{"bytes":330493228,"count":2078},"core":{"bytes":21191039,"count":24}},
+  "id": "15a029d10c8e",
+  "packs": {"beat":{"bytes":151882145,"count":113},"battle":{"bytes":147931686,"count":921},"card":{"bytes":37779758,"count":1048},"all":{"bytes":337593589,"count":2082},"core":{"bytes":21353941,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -49,6 +49,8 @@
     "audio/bgm-light-player.mp3": {"v":"c07830c2e774","size":4301217,"pack":"beat"},
     "audio/bgm-makutsu-no-senritsu.mp3": {"v":"8db199451f0b","size":1783058,"pack":"beat"},
     "audio/bgm-market.mp3": {"v":"a85ba65f90e7","size":1310119,"pack":"battle"},
+    "audio/bgm-megalovania-sans.mp3": {"v":"6fafc978fa05","size":2537848,"pack":"beat"},
+    "audio/bgm-megalovania-smash.mp3": {"v":"831700bb0255","size":4450847,"pack":"beat"},
     "audio/bgm-menu.mp3": {"v":"a6aef603fd6a","size":741209,"pack":"battle"},
     "audio/bgm-monster-hero-theme-alt.mp3": {"v":"6b4eb065c2e2","size":1970778,"pack":"beat"},
     "audio/bgm-monster-hero-theme.mp3": {"v":"083a1d9db281","size":1973982,"pack":"beat"},
@@ -1972,6 +1974,8 @@
     "images/song-art/lamia.jpg": {"v":"fc61230a48ac","size":77766,"pack":"beat"},
     "images/song-art/light-player.jpg": {"v":"ee4b36415bac","size":60895,"pack":"beat"},
     "images/song-art/makutsu-no-senritsu.jpg": {"v":"fdac185e6f69","size":56456,"pack":"beat"},
+    "images/song-art/megalovania-sans.jpg": {"v":"5884e2ecbb01","size":71512,"pack":"beat"},
+    "images/song-art/megalovania-smash.jpg": {"v":"1923d225d33a","size":40154,"pack":"beat"},
     "images/song-art/mf-ichika-mix.jpg": {"v":"c2ae53aa90ca","size":59710,"pack":"beat"},
     "images/song-art/monster-hero.jpg": {"v":"8f7d0efd07fd","size":87684,"pack":"beat"},
     "images/song-art/monster.jpg": {"v":"61def8c02286","size":87175,"pack":"beat"},
@@ -2083,7 +2087,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"a1df173f59d1","size":304665,"pack":"core"},
+    "tailwind.css": {"v":"9531b03dc011","size":304665,"pack":"core"},
     "data/images/images-ally.js": {"v":"390d485f128f","size":78261,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2091,12 +2095,12 @@
     "data/breeder.js": {"v":"f72eb53f9a16","size":140539,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"30deea9bdebc","size":4653011,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"387645dcb80b","size":4808637,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"54980ffcb59f","size":96654,"pack":"core"},
-    "data/changelog.js": {"v":"284fa81a1f7d","size":1699439,"pack":"core"},
+    "data/changelog.js": {"v":"65f588ddf4b0","size":1700811,"pack":"core"},
     "data/help.js": {"v":"464fc774f1c4","size":802475,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
@@ -2104,6 +2108,6 @@
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
     "data/success-sounds.js": {"v":"14cc928341aa","size":3695,"pack":"core"},
-    "game-system.compiled.js": {"v":"ff9f69e1c3bd","size":10792483,"pack":"core"}
+    "game-system.compiled.js": {"v":"30d5c3b68d6b","size":10798387,"pack":"core"}
   }
 }
