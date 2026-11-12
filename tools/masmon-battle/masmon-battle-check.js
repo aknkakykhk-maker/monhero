@@ -109,9 +109,9 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
         } else if (e.ev === 'move') {
           if (Math.abs(e.to - dist) !== 1 || e.to < 0 || e.to > 3) { ng.dist.push(`${tag} r${e.r} ${dist}→${e.to}`); bad = 1; }
           dist = e.to;
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + 4);
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + engine.GUTS_MOVE);
         } else if (e.ev === 'guard') {
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + 4);
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + engine.GUTS_MOVE);
         } else if (e.ev === 'charge') {
           const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + 22);
         } else if (e.ev === 'swap' || (e.ev === 'enter' && e.r > 0)) {
@@ -300,11 +300,11 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑪ 熟練の数字は社長の「中」(6%・15%・8%)', engine.MASTERY_HIT_MAX === 0.06 && engine.MASTERY_GUTS_CUT === 0.15 && engine.MASTERY_GUARD_ADD === 0.08);
 }
 
-// ⑫ 種ごとのガッツのたまる速さは 8〜12 の整数(既存の baseGuts から)
+// ⑫ 種ごとのガッツのたまる速さは 7〜13 の整数(既存の baseGuts から。2026-11-13 社長「種の差も広げる」)・与ダメの補正は回復の速さと逆向き
 {
-  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < 8 || v.regen > 12).map(([k, v]) => `${k}:${v.regen}`);
+  const bad = Object.entries(catalog.species).filter(([, v]) => !Number.isInteger(v.regen) || v.regen < engine.GUTS_REGEN_MIN || v.regen > engine.GUTS_REGEN_MAX || !(Math.abs((v.dmgMul || 0) - (1 - (v.regen - 10) / 3 * engine.REGEN_DMG_SWING)) < 0.002)).map(([k, v]) => `${k}:${v.regen}`);
   const vals = new Set(Object.values(catalog.species).map(v => v.regen));
-  check('⑫ 種ごとのガッツのたまる速さは 8〜12(既存の baseGuts から)・種でちがう', !bad.length && vals.size >= 3, bad.join(' ') || [...vals].sort().join('・'));
+  check('⑫ 種ごとのガッツのたまる速さは 7〜13(既存の baseGuts から)・種でちがう・速い種ほど与ダメが少し下がる', !bad.length && vals.size >= 5 && engine.GUTS_REGEN_MIN === 7 && engine.GUTS_REGEN_MAX === 13 && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
 }
 
 // ⑬ 能力の差の効き方のつまみ(A/B/C。社長が観戦してから決める)
