@@ -22,6 +22,10 @@ const __mod = { exports: {} };
 //       stats:{ life:400, pow:420, wise:150, hit:260, eva:180, tough:390 } }] },
 //     teamB:{ ... } });
 //   r.winner('A'|'B'|'draw')・r.reason('wipe'|'judge')・r.log(1手ずつ)・r.digest(結果の指紋)
+//   その試合だけの上乗せ(モンヒロサクセスの特別な1話など・端末だけ): simulate({ ..., buffs:{ A:{ guts:10, hit1:0.15 } } })
+//     guts 始まりのガッツ+ / hit1 最初の攻撃の命中+ / crit 会心+ / missCut 外れる率を何割減らすか / eva 相手の命中− / noSulk 「動かない番」なし
+//     渡さない(または空)なら今までと1つも変わらない。サーバ(masmon-pvp)は buffs を渡さない=受け付けない
+//   1手目: ASSISTANT_MASMON_BATTLE.firstAction(r.log, 'B') → 相手の最初の行動の行(tech・move・guard・charge・swap)
 (function (root) {
   'use strict';
 
@@ -452,6 +456,34 @@ const __mod = { exports: {} };
 
   const ACTION_EVS = ['tech', 'move', 'guard', 'charge', 'swap'];
 
+  // ── その試合だけの上乗せ(buffs) ──
+  //   壊れた値・範囲外は切る。効くものが1つも無ければ null(= 今までと同じ計算の道)
+  const BUFF_LIMITS = Object.freeze({ guts: [0, 50], hit1: [0, 0.5], crit: [0, 0.5], missCut: [0, 1], eva: [0, 0.5] });
+  const normalizeBuffs = (b) => {
+    if (!b || typeof b !== 'object') return null;
+    const out = {};
+    for (const k of Object.keys(BUFF_LIMITS)) {
+      const n = Number(b[k]);
+      if (!Number.isFinite(n)) continue;
+      const v = k === 'guts' ? Math.round(clamp(n, BUFF_LIMITS[k][0], BUFF_LIMITS[k][1])) : clamp(n, BUFF_LIMITS[k][0], BUFF_LIMITS[k][1]);
+      if (v > 0) out[k] = v;
+    }
+    if (b.noSulk === true) out.noSulk = true;
+    return Object.keys(out).length ? out : null;
+  };
+  // 実際に当たるかの率に上乗せを足す(AI の見積もりには入れない)。上乗せが無いときは p をそのまま返す
+  const buffedHit = (p, bAtk, bDef, first) => {
+    if (!bAtk && !bDef) return p;
+    let q = p;
+    if (bAtk && first && bAtk.hit1) q += bAtk.hit1;
+    if (bDef && bDef.eva) q -= bDef.eva;
+    q = clamp(q, 0.05, 0.99);
+    if (bAtk && bAtk.missCut) q = 1 - (1 - q) * (1 - bAtk.missCut);
+    return clamp(q, 0.05, 0.99);
+  };
+  // 試合の記録から、最初の行動(tech・move・guard・charge・swap)の行を取り出す。side を渡すとその側の1手目
+  const firstAction = (log, side) => (Array.isArray(log) ? log : []).find(e => e && ACTION_EVS.includes(e.ev) && (!side || e.side === side)) || null;
+
   // ── 本体 ──
   const simulate = (input) => {
     const inp = input && typeof input === 'object' ? input : {};
@@ -462,6 +494,13 @@ const __mod = { exports: {} };
     const state = setupState(inp, catalog);
     const balance = BALANCE[inp.balance] != null ? inp.balance : 'A';
     applyBalance(state, BALANCE[balance]);
+    // 上乗せ(渡されたときだけ。乱数は引かない)
+    const buffs = { A: null, B: null };
+    if (inp.buffs && typeof inp.buffs === 'object') { buffs.A = normalizeBuffs(inp.buffs.A); buffs.B = normalizeBuffs(inp.buffs.B); }
+    const usedFirst = { A: false, B: false };
+    for (const side of ['A', 'B']) {
+      if (buffs[side] && buffs[side].guts) for (const x of state.teams[side].units) x.guts = Math.min(GUTS_MAX, x.guts + buffs[side].guts);
+    }
     state.dist = 1 + Math.floor(rng() * 2);
     const ctx = { state, rng, trace: !!inp.trace, lastCands: null };
     const log = [];
@@ -479,7 +518,8 @@ const __mod = { exports: {} };
     push({ ev: 'start', v: ver, balance,
       plan: { A: state.teams.A.plan, B: state.teams.B.plan }, swapPace: { A: state.teams.A.swapPace, B: state.teams.B.swapPace }, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
       aMoves: movesOf('A'), bMoves: movesOf('B'),
-      aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp) });
+      aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp),
+      ...(buffs.A || buffs.B ? { buffs: { A: buffs.A, B: buffs.B } } : {}) });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
@@ -491,7 +531,7 @@ const __mod = { exports: {} };
       const f = unitOf(foeSide);
       u.guarding = false;
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
-      if (u.loy < 100 && rng() < (100 - u.loy) * LOYAL_NOACT) {
+      if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; // 「ためる」と同じあと始末
@@ -502,11 +542,13 @@ const __mod = { exports: {} };
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
         u.guts -= mv.guts;
-        const p = hitChance(u, f, mv, g0);
+        const p = buffedHit(hitChance(u, f, mv, g0), buffs[side], buffs[foeSide], !usedFirst[side]);
+        usedFirst[side] = true;
         const hit = rng() < p;
         let dmg = 0, crit = false;
         if (hit) {
-          crit = rng() < critWithPop(mv.crit, u.pop || 0);
+          const cr = critWithPop(mv.crit, u.pop || 0);
+          crit = rng() < (buffs[side] && buffs[side].crit ? Math.min(1, cr + buffs[side].crit) : cr);
           const swing = 0.9 + rng() * 0.2;
           dmg = rawDamage(u, f, mv, state.dist, g0) * swing * (crit ? CRIT_MULT : 1) * (f.guarding ? 1 - guardCut(f) : 1);
           dmg = Math.max(1, Math.round(dmg));
@@ -597,12 +639,12 @@ const __mod = { exports: {} };
   const api = Object.freeze({
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
-    LV_MAX, buildCatalog, simulate, unitFromGrow, makeRng, hashSeed,
+    LV_MAX, BUFF_LIMITS, buildCatalog, simulate, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ' }),
     // 検査用(計算の部品)
-    _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
+    _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ASSISTANT_MASMON_BATTLE = api;
