@@ -131,8 +131,13 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   // ホームへ戻るときは保存を読み直す(回3の引退で保存枠・meta が書き足されたあと、古い中身で上書きしないように)
   const toHome = () => { msxReadAll(msxSuc.SUC).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
 
-  const startRun = (cfg) => {
+  const startRun = async (cfg) => {
     const { SUC } = msxSuc;
+    // フレンドから借りた子は、はじめるときに1回だけ知らせる。断られた(続けて借りすぎ streak・通信の失敗など)ら、借りずにその枠をベースモンで始める
+    if (cfg.friendId && typeof monsucLendUse === 'function') {
+      let r = null; try { r = await monsucLendUse(cfg.friendId); } catch (e) { r = { ok: false, reason: 'network' }; }
+      if (!r || !r.ok) cfg = { ...cfg, team: cfg.team.map((m) => (m && m.friend ? { kind: 'base', species: cfg.baseFill || cfg.species } : m)) };
+    }
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
     // 持ちこみ: はじめる前に効く物は carry、育成中に使う物は bag(芯の入口・合わせて2つまで)
     const known = (k) => !!(SUC.ITEMS && SUC.ITEMS[k]);
@@ -422,7 +427,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
-        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)', width: '20%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '28%' }} live/>
+        <div className="gr" style={{ left: '30%', bottom: 'calc(38% - 5px)', width: '14%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '38%', height: '16%' }} live/>
         <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw">{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
@@ -683,7 +688,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     <div className="v-scene" style={{ flex: '1 1 0' }}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
-      <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '24%' }} live/>
+      <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
       {cheerIdx != null && s.team[cheerIdx] ? <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>
         : isStory ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
       {(() => { const cat = isStory ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
