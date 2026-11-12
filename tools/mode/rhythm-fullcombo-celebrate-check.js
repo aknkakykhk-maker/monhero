@@ -107,6 +107,26 @@ check('スラムイン演出のCSSがある',html.includes('[data-rhythm-celebra
 check('動きを減らす設定の端末では動かさない',
   /@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-celebrate\]\{animation:none\}/.test(html));
 
+// --- 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」) ---
+// それまでの祝いは曲の音が終わってから・しかも演出量「最小」(マルチの既定の「軽さ優先」)では何も出なかった。
+// 最後のノーツを取りきった瞬間に演奏画面の上へ帯を出す。動きを減らす設定でも控えめな形で出す。
+// 本物のゲームで出ることは tools/mode/rhythm-robot-play.js(「最後のノーツのあとの帯」の行)で確かめる
+check('帯は判定の処理の中で、取った数が総ノーツ数に届いた瞬間に1回だけ出す',
+  game.includes('if(!run.fullComboBandShown&&!assistOn&&!tutorial&&!calibrating&&!lineAdjustRef.current&&chart.totalNotes>0&&RHYTHM_JUDGMENT_IDS.reduce(')
+  &&game.includes('>=chart.totalNotes){run.fullComboBandShown=true;'));
+check('帯の称号もリザルトと同じ rhythmResultAchievements(落とした刻みも見る)で決める',
+  game.includes('const ach=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);'));
+check('「フルコンボの大きな表示」を「なし」にしたときだけ出さず、軽量・最小でも控えめな形で出す',
+  /const rhythmFullComboBandMode=settings=>\{const v=rhythmFxPick\(settings,'fullComboBig'\);if\(v==='OFF'\|\|v==='NONE'\)return 'off';/.test(game)
+  &&game.includes("settings.effectAmount==='MINIMAL'))return 'modest';return 'full';"));
+check('帯は演奏の場所の中に置き、はじめは隠しておく(描き直しを起こさない)',
+  game.includes('<div ref={fullComboBandRef} data-rhythm-fullcombo-band hidden aria-hidden="true">'));
+check('帯はタップを通し、控えめな形では紙ふぶき・光の筋を出さない',
+  /\[data-rhythm-fullcombo-band\]\{position:absolute;inset:0;z-index:\d+;pointer-events:none;/.test(html)
+  &&html.includes('[data-rhythm-fullcombo-band][data-mode="modest"] [data-rhythm-fullcombo-confetti]{display:none}'));
+check('動きを減らす設定の端末では帯の文字を動かさない',
+  /@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-fullcombo-title\]\{animation:none\}/.test(html));
+
 // --- ヘルプ(遊び方として説明されているか) ---
 check('ヘルプにフルコンボ演出の説明がある',/フルコンボ|FULL COMBO/.test(help)&&help.includes('releaseFlag'));
 
