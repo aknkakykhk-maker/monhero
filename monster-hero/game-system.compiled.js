@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c983f008db0c1be
+// source-sha256: f9f40f44fe0aab68
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -65841,10 +65841,14 @@ const GrowthFxLayer = ({
 const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const quickAnywhereFloatStyle = spot => {
-  const s = {
+  const s = spot.hidden ? {
+    visibility: 'hidden',
+    pointerEvents: 'none'
+  } : {};
+  Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
-  };
+  });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
   return s;
 };
@@ -65893,7 +65897,8 @@ const quickAnywhereFloatPick = el => {
   }
   return {
     side: 'right',
-    lift: 0
+    lift: 0,
+    hidden: true
   };
 };
 const QuickAnywhereFloat = ({
@@ -65910,7 +65915,7 @@ const QuickAnywhereFloat = ({
   React.useLayoutEffect(() => {
     const place = () => {
       if (!ref.current) return;
-      setSpot(prev => quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
+      setSpot(prev => !prev.hidden && quickAnywhereFloatHits(ref.current, prev) === 0 ? prev : quickAnywhereFloatPick(ref.current));
     };
     const fresh = () => {
       if (ref.current) setSpot(quickAnywhereFloatPick(ref.current));
@@ -65928,7 +65933,7 @@ const QuickAnywhereFloat = ({
   return React.createElement("button", _extends({
     ref: ref,
     type: "button",
-    "data-quick-anywhere-spot": `${spot.side}-${spot.lift}`
+    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`
   }, rest, {
     style: {
       ...(style || {}),
@@ -109998,6 +110003,9 @@ const useAssistantLifeNow = metIds => {
     }, 60000);
     return () => clearInterval(t);
   }, [key]);
+  React.useEffect(() => {
+    if (assistantLifeEnabled() && typeof assistantLifePreloadFullBodies === 'function') assistantLifePreloadFullBodies(metIds);
+  }, [key]);
   return st;
 };
 function AssistantLifeFaces({
@@ -118984,6 +118992,43 @@ const assistantLifeProfileRhythm = id => {
   const h = n => Number.isFinite(n) ? `${n}時` : '';
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
+const ASSISTANT_FULLBODY_PRELOADED = new Set();
+let assistantFullBodyPreloadTimer = null;
+function assistantLifePreloadFullBodies(metIds) {
+  try {
+    if (typeof Image === 'undefined' || typeof assistantFullBodyImage !== 'function' || typeof assistantById !== 'function') return;
+    const conn = typeof navigator !== 'undefined' ? navigator.connection : null;
+    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return;
+    const todo = [];
+    (metIds || []).forEach(id => {
+      const who = assistantById(id);
+      const src = who ? assistantFullBodyImage(who, 'happy') : null;
+      if (src && !ASSISTANT_FULLBODY_PRELOADED.has(src) && !todo.includes(src)) todo.push(src);
+    });
+    if (!todo.length || assistantFullBodyPreloadTimer) return;
+    const later = fn => typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(fn, {
+      timeout: 8000
+    }) : setTimeout(fn, 2500);
+    const next = () => {
+      const src = todo.shift();
+      if (!src) {
+        assistantFullBodyPreloadTimer = null;
+        return;
+      }
+      ASSISTANT_FULLBODY_PRELOADED.add(src);
+      const im = new Image();
+      im.decoding = 'async';
+      try {
+        im.fetchPriority = 'low';
+      } catch (_) {}
+      im.onload = im.onerror = () => {
+        assistantFullBodyPreloadTimer = later(next);
+      };
+      im.src = src;
+    };
+    assistantFullBodyPreloadTimer = later(next);
+  } catch (_) {}
+}
 function AssistantLifeProfileStand({
   who,
   head = 0.32,
@@ -149755,6 +149800,13 @@ const assistantLifeFriendLeaveNote = async (hostId, {
     ok: false,
     reason: r.reason
   };
+  if (typeof alfSentRecord === 'function') void alfSentRecord({
+    host: hostId,
+    name,
+    to: alfValidId(noteTo) ? noteTo : null,
+    word: word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(word, 0, ALF_WORDS - 1),
+    note: nc.text
+  });
   if (typeof missionNotify === 'function') {
     missionNotify('friendVisit');
     missionNotify('assistantTouch');
@@ -150476,6 +150528,7 @@ function AlfFriendHouseView({
   const [leaving, setLeaving] = React.useState(null);
   const [done, setDone] = React.useState(null);
   const [noteWarn, setNoteWarn] = React.useState('');
+  const [confirm, setConfirm] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
   const [bondOpen, setBondOpen] = React.useState(false);
   const bondMark = task => {
@@ -150565,6 +150618,10 @@ function AlfFriendHouseView({
   };
   const leave = async word => {
     const to = leaving || null;
+    if (confirm) setConfirm(c => c && {
+      ...c,
+      busy: true
+    });
     const r = await assistantLifeFriendLeaveNote(friend.id, {
       word,
       talked,
@@ -150575,14 +150632,31 @@ function AlfFriendHouseView({
     if (!(r && r.ok) && r && /書けません|書き直/.test(r.reason || '')) {
       setDone(null);
       setNoteWarn(r.reason);
+      setConfirm(c => c && {
+        ...c,
+        busy: false,
+        warn: r.reason
+      });
       return;
     }
+    setConfirm(null);
     setLeaving(null);
     setRoomId(null);
     setTalk(null);
     setNoteText('');
     if (r && r.ok) bondMark('note');
     setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${r && r.reason || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+  };
+  const ask = word => {
+    const c = alfNoteCheck(noteText);
+    if (c.ok && c.text) {
+      setNoteWarn('');
+      setConfirm({
+        word,
+        warn: '',
+        busy: false
+      });
+    } else void leave(word);
   };
   const noteLine = done ? done : can === 'ok' ? `✉️ 置き手紙を残すと、${friend.name}さんに「あなたが訪ねてくれた」と一言が届きます(ビートP 50)` : can === 'done' ? `✉️ この家には今日もう置き手紙を残しました。見て回るのは自由です` : `✉️ 今日はもう置き手紙を残せません(朝4時に戻ります)。見て回るのは自由です`;
   const r0 = roomId ? h.r[roomId] : null;
@@ -150708,7 +150782,9 @@ function AlfFriendHouseView({
   }, React.createElement("i", null, "✉️"), React.createElement("b", null, "置き手紙"), React.createElement("small", null, done ? '残した' : can === 'ok' ? '1人に1日1通' : '今日は残した'))), React.createElement("p", {
     className: "mt-1.5 rounded-xl bg-slate-950/85 px-2 py-1 text-[10.5px] font-bold leading-snug text-amber-100",
     "data-alf-visit-note": done ? 'done' : can
-  }, noteLine), React.createElement("p", {
+  }, noteLine), typeof AlfSentHere === 'function' && React.createElement(AlfSentHere, {
+    friendId: friend.id
+  }), React.createElement("p", {
     className: "mt-1 text-[9.5px] leading-snug text-slate-300"
   }, friend.name, "さんのセーブや、", friend.name, "さんの助手の仲良し度は変わりません。"));
   const board = diaryItems.length ? React.createElement("div", {
@@ -151050,11 +151126,11 @@ function AlfFriendHouseView({
     className: "mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40",
     "data-alf-note-send": true,
     disabled: !noteText.trim() || !alfNoteCheck(noteText).ok,
-    onClick: () => leave(ALF_WORD_FREE)
+    onClick: () => ask(ALF_WORD_FREE)
   }, "✉️ この言葉で送る"), React.createElement("p", {
     className: "mt-2.5 text-[10.5px] font-bold text-slate-200",
     "data-alf-word-hint": true
-  }, noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます' : '💬 決まった一言で送る(押すと届きます)'), React.createElement("div", {
+  }, noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます(送る前に確かめられます)' : '💬 決まった一言で送る(押すと届きます)'), React.createElement("div", {
     className: "mt-1 flex flex-wrap gap-1.5"
   }, ALF_WORD_TEXTS.map((t, i) => React.createElement("button", {
     key: i,
@@ -151062,7 +151138,7 @@ function AlfFriendHouseView({
     className: "rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40",
     "data-alf-word": i,
     disabled: !alfNoteCheck(noteText).ok,
-    onClick: () => leave(i)
+    onClick: () => ask(i)
   }, t))), React.createElement("button", {
     type: "button",
     "data-mhl-sheet-close": true,
@@ -151158,7 +151234,29 @@ function AlfFriendHouseView({
     style: {
       paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
     }
-  }, tiles)), sheet, words, diarySheet, bondOpen && typeof AlfBondSheet === 'function' && React.createElement(AlfBondSheet, {
+  }, tiles)), sheet, words, confirm && leaving != null && typeof AlfNoteConfirm === 'function' && React.createElement(AlfNoteConfirm, {
+    friend: friend,
+    to: leaving || null,
+    word: confirm.word,
+    note: alfNoteCheck(noteText).text,
+    selfName: selfName,
+    warn: confirm.warn,
+    busy: confirm.busy,
+    land: land,
+    onFix: () => {
+      if (!confirm.busy) setConfirm(null);
+    },
+    onSend: () => {
+      if (!confirm.busy) void leave(confirm.word);
+    },
+    onCancel: () => {
+      if (!confirm.busy) {
+        setConfirm(null);
+        setLeaving(null);
+        setNoteWarn('');
+      }
+    }
+  }), diarySheet, bondOpen && typeof AlfBondSheet === 'function' && React.createElement(AlfBondSheet, {
     friend: friend,
     more: more,
     land: land,
@@ -151527,7 +151625,12 @@ function AssistantLifeFriendPage({
     className: "text-[10px] leading-snug text-slate-300"
   }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
     className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
-  }, "🚪 まだ")))), !alfEmpty && typeof AlfFavEditor === 'function' && React.createElement(AlfFavEditor, {
+  }, "🚪 まだ")))), !alfEmpty && typeof AlfSentNotes === 'function' && React.createElement(AlfSentNotes, {
+    s: s,
+    card: card,
+    sec: sec,
+    onVisit: setVisit
+  }), !alfEmpty && typeof AlfFavEditor === 'function' && React.createElement(AlfFavEditor, {
     s: s,
     card: card,
     sec: sec
@@ -152491,6 +152594,286 @@ function AlfFavEditor({
   })), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
   }, "選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
+}
+const ALF_SENT_KEY = 'mh_alf_sent_notes_v1';
+const ALF_SENT_MAX = Object.freeze({
+  days: 30,
+  count: 50
+});
+const normalizeAlfSentNotes = (raw, now = Date.now()) => {
+  if (!Array.isArray(raw)) return [];
+  const from = now - ALF_SENT_MAX.days * 86400000;
+  const out = [];
+  const seen = new Set();
+  for (const v of raw) {
+    if (!v || typeof v !== 'object') continue;
+    const host = typeof v.host === 'string' && alfSafeOther(v.host) ? v.host : null;
+    const at = Number.isFinite(v.at) ? v.at : 0;
+    if (!host || at < from || at > now + 86400000) continue;
+    const day = typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : alfDay(at);
+    const k = `${host}|${day}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const word = v.word === ALF_WORD_FREE ? ALF_WORD_FREE : alfInt(v.word, 0, ALF_WORDS - 1);
+    out.push({
+      host,
+      day,
+      at,
+      word,
+      name: alfStr(v.name, 20),
+      to: alfValidId(v.to) ? v.to : null,
+      note: typeof v.note === 'string' ? alfNoteShow(v.note) : ''
+    });
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, ALF_SENT_MAX.count);
+};
+let _alfSentLoading = null;
+const alfSentLoad = () => {
+  if (Array.isArray(ALF_STORE.state.sent)) return Promise.resolve(ALF_STORE.state.sent);
+  if (_alfSentLoading) return _alfSentLoading;
+  _alfSentLoading = (async () => {
+    let raw = null;
+    try {
+      raw = await storeGet(ALF_SENT_KEY, [], false);
+    } catch {
+      raw = null;
+    }
+    const sent = normalizeAlfSentNotes(raw);
+    ALF_STORE.set({
+      sent
+    });
+    return sent;
+  })();
+  return _alfSentLoading;
+};
+const alfSentRecord = async ({
+  host,
+  name,
+  to = null,
+  word = 0,
+  note = ''
+}) => {
+  if (!alfEnabled()) return;
+  const cur = await alfSentLoad();
+  const at = Date.now();
+  const sent = normalizeAlfSentNotes([{
+    host,
+    name,
+    to,
+    word,
+    note,
+    at,
+    day: alfDay(at)
+  }, ...cur], at);
+  ALF_STORE.set({
+    sent
+  });
+  try {
+    storeSet(ALF_SENT_KEY, sent, false);
+  } catch {}
+};
+const alfSentList = (s = ALF_STORE.state, hostId = null) => {
+  const self = s.selfId;
+  const names = Object.fromEntries((s.roster || []).map(f => [f.id, f.name]));
+  const rows = (s.visits || []).filter(v => self && v.visitor === self && v.kind === 'player');
+  const byKey = new Map();
+  for (const v of rows) byKey.set(`${v.host}|${v.day}`, {
+    host: v.host,
+    day: v.day,
+    at: v.at,
+    word: v.word,
+    to: v.noteTo,
+    note: v.note,
+    thanks: v.thanks,
+    name: ''
+  });
+  for (const v of Array.isArray(s.sent) ? s.sent : []) {
+    const k = `${v.host}|${v.day}`;
+    const row = byKey.get(k);
+    byKey.set(k, row ? {
+      ...v,
+      thanks: row.thanks
+    } : {
+      ...v,
+      thanks: null
+    });
+  }
+  return [...byKey.values()].filter(v => names[v.host] && (!hostId || v.host === hostId)).map(v => ({
+    ...v,
+    name: names[v.host]
+  })).sort((a, b) => b.at - a.at).slice(0, ALF_SENT_MAX.count);
+};
+function AlfSentRow({
+  n,
+  inHouse = false
+}) {
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(n.at)), ' ', inHouse ? null : React.createElement("span", {
+    className: "whitespace-nowrap font-bold"
+  }, n.name, "さんの家"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, inHouse ? '' : '・', n.to ? `${assistantLifeName(n.to)}あて` : 'みんなへ'), alfWordQuote(n.word)), n.note ? React.createElement("p", {
+    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
+    "data-alf-sent-text": true
+  }, "✏️ ", n.note) : null, n.thanks != null && ALF_THANKS_TEXTS[n.thanks] ? React.createElement("p", {
+    className: "mt-0.5 text-[10px] text-amber-200",
+    "data-alf-sent-thanks": true
+  }, "💌 お礼「", ALF_THANKS_TEXTS[n.thanks], "」が届きました") : null);
+}
+function AlfSentNotes({
+  s,
+  card,
+  sec,
+  onVisit
+}) {
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => {
+    void alfSentLoad();
+  }, []);
+  const list = alfSentList(s);
+  if (!list.length) return null;
+  const houses = alfOpenHouses('look');
+  const shown = more ? list : list.slice(0, 5);
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    className: sec
+  }, "📮 残した置き手紙"), React.createElement("div", {
+    className: card,
+    "data-alf-sent": true
+  }, shown.map(n => {
+    const f = houses.find(h => h.id === n.host);
+    return React.createElement("button", {
+      key: `${n.host}|${n.day}`,
+      type: "button",
+      disabled: !f,
+      className: "block w-full border-b border-slate-700/60 py-1 text-left last:border-0 disabled:opacity-100",
+      "data-alf-sent-item": n.host,
+      onClick: () => f && onVisit(f)
+    }, React.createElement(AlfSentRow, {
+      n: n
+    }), React.createElement("p", {
+      className: "mt-0.5 text-[10px] text-slate-400"
+    }, f ? React.createElement("span", {
+      className: "text-amber-200"
+    }, "🚪 この家へ遊びに行く ›") : 'いまはこの家へ行けません(家がまだ届いていません)'));
+  }), list.length > 5 && React.createElement("button", {
+    type: "button",
+    className: "mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200",
+    "data-alf-sent-more": true,
+    onClick: () => setMore(!more)
+  }, more ? '少なく見る' : `ぜんぶ見る(${list.length}通)`), React.createElement("p", {
+    className: "mt-1 text-[9.5px] leading-snug text-slate-400"
+  }, "この端末に", ALF_SENT_MAX.days, "日・", ALF_SENT_MAX.count, "通まで残ります(古いものから消えます)")));
+}
+function AlfSentHere({
+  friendId
+}) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => {
+    void alfSentLoad();
+  }, []);
+  const list = alfSentList(s, friendId).slice(0, 3);
+  if (!list.length) return null;
+  return React.createElement("div", {
+    className: "mt-1 rounded-xl bg-slate-950/85 px-2 py-1",
+    "data-alf-sent-here": true
+  }, React.createElement("p", {
+    className: "text-[10px] font-black text-amber-200"
+  }, "📮 この家に残した置き手紙"), list.map(n => React.createElement("div", {
+    key: n.day,
+    className: "mt-0.5"
+  }, React.createElement(AlfSentRow, {
+    n: n,
+    inHouse: true
+  }))));
+}
+function AlfNoteConfirm({
+  friend,
+  to,
+  word,
+  note,
+  selfName,
+  warn,
+  busy,
+  land,
+  onFix,
+  onSend,
+  onCancel
+}) {
+  const toText = to ? `${friend.name}さんの家の${assistantLifeName(to)}` : `${friend.name}さんの家のみんな`;
+  return React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 32
+    },
+    "data-alf-note-confirm": true
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "直す",
+    className: "absolute inset-0 bg-black/60",
+    onClick: onFix
+  }), React.createElement("div", {
+    className: "mhl-sheet",
+    style: land ? {
+      left: 'auto',
+      width: '44%',
+      top: 0,
+      maxHeight: '100%',
+      paddingTop: 92,
+      borderRadius: '22px 0 0 22px'
+    } : {
+      maxHeight: 'calc(100% - 96px)'
+    }
+  }, React.createElement("p", {
+    className: "text-[15px] font-black text-amber-100"
+  }, "✉️ この置き手紙を送りますか？"), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200"
+  }, "あて先: ", React.createElement("span", {
+    className: "text-amber-100",
+    "data-alf-note-confirm-to": true
+  }, toText)), React.createElement("p", {
+    className: "mt-2 text-[10.5px] font-bold text-slate-300"
+  }, friend.name, "さんには、こう届きます"), React.createElement("div", {
+    className: "mt-1 rounded-xl border border-amber-200/40 bg-slate-900/90 p-2",
+    "data-alf-note-confirm-preview": true
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(Date.now())), ' ', React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, selfName || 'あなた', "さん"), "が", to ? React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, assistantLifeName(to), "あてに") : '訪ねてくれた', alfWordQuote(word)), React.createElement("p", {
+    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50"
+  }, "✏️ ", note)), React.createElement("p", {
+    className: "mt-1.5 text-[10px] leading-snug text-slate-300"
+  }, "・送ったあとは直せません", React.createElement("br", null), "・この家へは1日1通です。送ると、この家から帰ります(ビートP 50)"), warn ? React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-rose-300",
+    "data-alf-note-confirm-warn": true
+  }, "⚠️ ", warn) : null, React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-slate-700",
+    "data-alf-note-confirm-fix": true,
+    onClick: onFix
+  }, "✏️ 直す"), React.createElement("button", {
+    type: "button",
+    className: "mhl-btn bg-amber-500 text-slate-950 disabled:opacity-40",
+    "data-alf-note-confirm-send": true,
+    disabled: busy || !!warn,
+    onClick: onSend
+  }, busy ? '送っています…' : '✉️ 送る')), React.createElement("button", {
+    type: "button",
+    "data-mhl-sheet-close": true,
+    "data-alf-note-confirm-cancel": true,
+    className: "mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300",
+    disabled: busy,
+    onClick: onCancel
+  }, "やめる")));
 }
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
