@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65e769c597eedb3a
+// source-sha256: d1107b143b57b304
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148235,27 +148235,32 @@ const monsucBuffsOf = mods => {
   const m = mods && typeof mods === 'object' ? mods : {};
   const buffs = {};
   const rows = [];
+  const frac = v => Number.isFinite(v) && v > 0 ? v > 1 ? v / 100 : v : 0;
   if (Number.isFinite(m.guts) && m.guts > 0) {
     buffs.guts = m.guts;
     rows.push(`試合のはじめから ガッツ +${m.guts}`);
   }
-  if (Number.isFinite(m.firstHit) && m.firstHit > 0) {
-    buffs.hit1 = m.firstHit / 100;
+  const hit1 = frac(m.hit1) || frac(m.firstHit);
+  if (hit1) {
+    buffs.hit1 = hit1;
     rows.push('最初の技が 当たりやすい');
   }
-  if (Number.isFinite(m.crit) && m.crit > 0) {
-    buffs.crit = m.crit / 100;
+  const crit = frac(m.crit);
+  if (crit) {
+    buffs.crit = crit;
     rows.push('会心が 出やすい');
   }
-  if (Number.isFinite(m.eva) && m.eva > 0) {
-    buffs.eva = m.eva / 100;
+  const eva = frac(m.eva);
+  if (eva) {
+    buffs.eva = eva;
     rows.push('相手の技を かわしやすい');
   }
-  if (Number.isFinite(m.techFail) && m.techFail < 0) {
-    buffs.missCut = Math.min(1, -m.techFail / 100);
+  const miss = frac(m.missCut) || (Number.isFinite(m.techFail) && m.techFail < 0 ? Math.min(1, -m.techFail / 100) : 0);
+  if (miss) {
+    buffs.missCut = miss;
     rows.push('技の はずれが 減る');
   }
-  if (m.noIdle) {
+  if (m.noSulk || m.noIdle) {
     buffs.noSulk = true;
     rows.push('そっぽを 向かない');
   }
@@ -148876,7 +148881,16 @@ function MonsucBattleCard({
     }
   })), React.createElement("span", {
     className: "lab"
-  }, "⭐ 人気"), React.createElement("div", null), React.createElement("b", null)), React.createElement("div", {
+  }, "⭐ 人気"), Number.isFinite(o.pop) ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msc-bar r"
+  }, React.createElement("i", {
+    style: {
+      width: `${o.pop}%`,
+      animationDelay: '.45s'
+    }
+  })), React.createElement("b", {
+    className: o.pop > mscNum(s.pop) ? 'up' : ''
+  }, o.pop)) : React.createElement(React.Fragment, null, React.createElement("div", null), React.createElement("b", null))), React.createElement("div", {
     className: "msc-st"
   }, React.createElement("b", null, loy), React.createElement("div", {
     className: "msc-bar l"
@@ -148887,7 +148901,16 @@ function MonsucBattleCard({
     }
   })), React.createElement("span", {
     className: "lab"
-  }, "🤝 忠誠"), React.createElement("div", null), React.createElement("b", null)), React.createElement("div", {
+  }, "🤝 忠誠"), Number.isFinite(o.loy) ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msc-bar r"
+  }, React.createElement("i", {
+    style: {
+      width: `${o.loy}%`,
+      animationDelay: '.5s'
+    }
+  })), React.createElement("b", {
+    className: o.loy > loy ? 'up' : ''
+  }, o.loy)) : React.createElement(React.Fragment, null, React.createElement("div", null), React.createElement("b", null))), React.createElement("div", {
     className: "msc-aptrow"
   }, aptRow(s.species), React.createElement("span", {
     className: "lab"
@@ -149134,6 +149157,25 @@ function MonsucMatch({
     }
   }, "⏭ とばす")));
 }
+function MonsucMatchSkip({
+  won,
+  onEnd
+}) {
+  useEffect(() => {
+    const t = setTimeout(() => onEnd(won), 900);
+    return () => clearTimeout(t);
+  }, []);
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-match-skip": true
+  }, React.createElement("p", {
+    className: "msc-note",
+    style: {
+      textAlign: 'center',
+      marginTop: 40
+    }
+  }, "試合中…"));
+}
 function MonsucCupWin({
   s,
   info,
@@ -149171,7 +149213,7 @@ function MonsucCupWin({
     className: "big"
   }, "優勝!"), React.createElement("div", {
     className: "sub"
-  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
+  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match && match.r ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
     className: "who"
   }, React.createElement("img", {
     src: mscMonImg(s.species),
@@ -149226,7 +149268,7 @@ function MonsucCupLose({
   const summit = b.kind === 'summit';
   const coach = mscAssistant(s.aid);
   const why = (() => {
-    if (!match) return '';
+    if (!match || !match.r) return '';
     const t = match.r.log.filter(x => x.ev === 'tech' && x.side === 'B' && x.hit);
     return t.length ? `${t[t.length - 1].name}が 効いてたね…` : 'あと少しだったね…';
   })();
@@ -149300,7 +149342,10 @@ function MonsucCupShowInner({
   onNext,
   onClose,
   startAt,
-  previewOut
+  previewOut,
+  fight,
+  opp,
+  title
 }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
@@ -149320,7 +149365,21 @@ function MonsucCupShowInner({
   useEffect(() => {
     if (rootRef.current) rootRef.current.scrollTop = 0;
   }, [phase]);
-  const info = useMemo(() => s && s.battle ? monsucCupInfo(suc, s, me) : null, [suc, s]);
+  const info = useMemo(() => {
+    if (!s || !s.battle) return null;
+    const i0 = monsucCupInfo(suc, s, me);
+    const i = title ? {
+      ...i0,
+      title
+    } : i0;
+    return opp && typeof opp === 'object' ? {
+      ...i,
+      opp: {
+        ...(i.opp || {}),
+        ...opp
+      }
+    } : i;
+  }, [suc, s]);
   const catalog = useMemo(() => {
     if (!engine || typeof engine.buildCatalog !== 'function') return null;
     try {
@@ -149333,9 +149392,27 @@ function MonsucCupShowInner({
     }
   }, [engine]);
   const match = useMemo(() => {
-    if (!engine || !catalog || !info) return null;
+    if (!info) return null;
+    if (typeof fight === 'function') {
+      try {
+        const f = fight(s) || {};
+        const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A');
+        return {
+          ...f,
+          won,
+          r: f.r && Array.isArray(f.r.log) && f.teamA && f.teamB ? f.r : null
+        };
+      } catch (_) {
+        return null;
+      }
+    }
+    if (!engine || !catalog) return null;
     try {
-      return monsucCupMatch(engine, catalog, suc, s, me);
+      const m = monsucCupMatch(engine, catalog, suc, s, me);
+      return {
+        ...m,
+        won: m.r.winner === 'A'
+      };
     } catch (_) {
       return null;
     }
@@ -149358,7 +149435,7 @@ function MonsucCupShowInner({
     canSkip: canSkip,
     onClose: onClose,
     onFight: () => setPhase('card'),
-    onResultOnly: () => match && finish(match.r.winner === 'A')
+    onResultOnly: () => match && finish(match.won)
   });else if (phase === 'card') body = React.createElement(MonsucBattleCard, {
     suc: suc,
     s: s,
@@ -149366,12 +149443,15 @@ function MonsucCupShowInner({
     catalog: catalog,
     onBack: () => setPhase('bracket'),
     onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
-    onResultOnly: () => match && finish(match.r.winner === 'A')
+    onResultOnly: () => match && finish(match.won)
   });else if (phase === 'cutin') body = React.createElement(MonsucCutin, {
     s: s,
     info: info,
     onGo: () => setPhase('match')
-  });else if (phase === 'match') body = match ? React.createElement(MonsucMatch, {
+  });else if (phase === 'match') body = match && !match.r ? React.createElement(MonsucMatchSkip, {
+    won: match.won,
+    onEnd: finish
+  }) : match ? React.createElement(MonsucMatch, {
     s: s,
     info: info,
     match: match,
