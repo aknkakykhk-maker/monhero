@@ -22,7 +22,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 4;   // 計算を変えたら上げる(ランキングの行に残る)。2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す(2026-11-12)
+  const VERSION = 5;   // 計算を変えたら上げる(ランキングの行に残る)。2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
   const STAT_MAX = 999;
@@ -187,6 +187,12 @@
     //   kuishinbo: ごはんの効き目 +v%/tsukisoi: 通院で治る率 +v点/genki: けが・病気・家出になる率 −v%/tairyoku: 体力の上限 +v(はじめから)
     shitsuke: { type: 'stay' }, gussuri: { type: 'stay' }, asobi: { type: 'stay' }, kuishinbo: { type: 'stay' },
     tsukisoi: { type: 'stay' }, genki: { type: 'stay' }, tairyoku: { type: 'stay' },
+    // いるだけ型(大会・出来事の8つ・依頼③の2つ目)
+    //   shokin: 大会の賞金(名声)+v%/kokoroe: 大会に勝ったときの能力ポイント +v%/ticket: 大会に勝ったとき v% で修行チケット +1/
+    //   rivaldamashii: ライバルに勝ったときの全能力 +v%/ninki: 人気の上がり +v%/yobimizu: 編成の子との出来事 +v点/
+    //   mejirushi: イッサ博士が来る率 1ターン +v点/joshu: イッサ博士の実験の成功 +v点(博士の上下の幅の外で足す)
+    shokin: { type: 'stay' }, kokoroe: { type: 'stay' }, ticket: { type: 'stay' }, rivaldamashii: { type: 'stay' },
+    ninki: { type: 'stay' }, yobimizu: { type: 'stay' }, mejirushi: { type: 'stay' }, joshu: { type: 'stay' },
   });
   const ASSIST_MAX = 4;
   const ASSIST_LV_MAX = 5;   // 持ち物の段の上限(第2版)。表が第1版のときも段4・5の持ち物は削らない(効き目は表の段数で頭打ち)
@@ -524,7 +530,7 @@
       if (!inWindow || s.issaMet >= ISSA.maxMeet || s.cond || s.over) return false;
       if (s.issaForce && s.issaMet === 0) return true; // イッサ博士の研究ノート: 1度は必ず来る(来られる最初のターン)
       if (s.stress >= ISSA.stressNo) return false;
-      return rngOf(s.id, s.turn, 'issa-meet')() < ISSA.rate;
+      return rngOf(s.id, s.turn, 'issa-meet')() < ISSA.rate + stayNum(s, 'mejirushi') / 100; // 🧪博士の目じるし
     };
     const issaRate = (s, key) => {
       const c = ISSA.choices[key]; if (!c || key === 'none') return 0;
@@ -536,7 +542,7 @@
       if (s.stress >= ISSA.downStress) d += ISSA.downStressV;
       d += evMod(s, 'issa'); // 🔥やる気満々 +5%・🌀ふてくされ −5%(EVENTS 4-⑥)
       d = clamp(d, -ISSA.band, ISSA.band);
-      return clamp(c.p + d, 0, ISSA.top);
+      return clamp(c.p + d + stayNum(s, 'joshu') / 100, 0, ISSA.top); // 🔬博士の助手(幅の外で足す・上限 95% はそのまま)
     };
     // ---- 技を覚える(修行のくじ・連続イベントの伝授) ----
     const techById = (sp, id) => techsOf(sp).find(t => t.id === id) || null;
@@ -595,7 +601,7 @@
 
     // 編成の子との訓練イベント(1ターン1回まで・50%)。試算は1つ目の選択肢を選ぶ
     const trainEvent = (s, card, rng, out) => {
-      if (!card.members.length || rng() >= BOND.eventRate + (s.good && s.good.eventMaker ? GOOD.eventMaker.eventRate : 0)) return;
+      if (!card.members.length || rng() >= BOND.eventRate + (s.good && s.good.eventMaker ? GOOD.eventMaker.eventRate : 0) + stayNum(s, 'yobimizu') / 100) return; // 💬出来事の呼び水
       // 話を進められる子を先に
       const cand = card.members.slice().sort((a, b) => s.story[a] - s.story[b]);
       const i = cand.find(j => s.story[j] < 3) !== undefined ? cand.find(j => s.story[j] < 3) : cand[0];
@@ -888,9 +894,9 @@
       else if (aid === 'kiki') { const top = top3Of(s.stats, s.species)[0]; addStat(s, top, 12); }
       else if (aid === 'momosuke') s.pop = clamp(s.pop + popGain(s, 10 * 1.5), 0, 100);
       else if (aid === 'dra') s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + 10, 0, 100); });
-      else if (aid === 'atsu') gainPts(s, 15);
+      else if (aid === 'atsu') gainWinPts(s, 15);
       else if (aid === 'kyuko') KEYS.forEach(k => addStat(s, k, 3));
-      else if (aid === 'sorashido') gainPts(s, 10);
+      else if (aid === 'sorashido') gainWinPts(s, 10);
       else if (aid === 'erubin') { addLoyal(s, 5, 0); s.freeMeal = true; }
       if (b.star >= 3) { const t = `${SC_NAME[aid]}の優勝`; if (!s.titles.includes(t)) s.titles.push(t); }
     };
@@ -925,7 +931,7 @@
       put(battleMods(s));
       const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
     const stayV = (s, id) => { const lv = stayLv(s.team, id); return lv ? aOf(id, 'v', lv) : 0; };
-    const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1));
+    const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1) * (v > 0 ? 1 + stayNum(s, 'ninki') / 100 : 1)); // 🌟人気者のお手本: 上がる分だけ
     // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)
     const useItem = (s0, key) => {
       const s = clone(s0); const it = ITEMS[key];
@@ -1103,13 +1109,17 @@
       let prize = won ? full : (star >= 2 && b.kind !== 'summit' ? Math.round(full * RUNNER_UP) : 0);
       if (b.sys === 'scatsu' && !won) prize = Math.round(full * 0.5); // 格上への挑戦: 負けても賞金の半分
       if (b.sys === 'scmua' && won) prize = Math.round(full * (1 + 0.3 * (1 - s.stress / 100))); // 笑顔の大会: 機嫌がよいほど賞金 ×1.0〜1.3
+      prize = Math.round(prize * (1 + stayNum(s, 'shokin') / 100)); // 💰賞金かせぎ
       s.fame += prize; s.fameTotal += prize; out.prize = prize;
-      if (won) { const t = ticketsOfPrize(full) + (b.rival ? RIVAL.tickets : 0); s.tickets += t; out.tickets = t; }
+      if (won) {
+        const tk = stayNum(s, 'ticket') / 100; const extra = tk > 0 && rngOf(s.id, s.turn, 'ticket', b.kind, num(b.round), num(b.retry), num(b.again))() < tk ? 1 : 0; // 🎫チケット運
+        const t = ticketsOfPrize(full) + (b.rival ? RIVAL.tickets : 0) + extra; s.tickets += t; out.tickets = t; if (extra) out.ticketLuck = true;
+      }
       s.mealReady = true;
       s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + 1, 0, 100); }); // 試合でも熟練が少し上がる
       s.battle = null;
       if (b.kind === 'debut') {
-        if (won) { s.debutWon = true; s.pop = clamp(s.pop + popGain(s, FORCED.debut.pop), 0, 100); gainPts(s, FORCED.debut.pts); s.titles.push(s.debutLoss ? '遅咲きの一歩' : FORCED.debut.title); }
+        if (won) { s.debutWon = true; s.pop = clamp(s.pop + popGain(s, FORCED.debut.pop), 0, 100); gainWinPts(s, FORCED.debut.pts); s.titles.push(s.debutLoss ? '遅咲きの一歩' : FORCED.debut.title); }
         else { s.debutLoss += 1; if (s.debutLoss >= DEBUT_LOSS_MAX) { s.over = 'gameover'; return { state: s, out: { ...out, gameover: true } }; } } // 持ちこみ・使ったアイテム・チケットは戻さない(社長)
         s.turn += 1; return { state: s, out };
       }
@@ -1117,7 +1127,7 @@
         if (!won) { s.over = 'lost'; out.end = true; return { state: s, out }; }
         if (b.round === SUMMIT.length - 1) {
           const g = s.crowns >= 1 ? SUMMIT_FINAL.big : SUMMIT_FINAL.plain;
-          KEYS.forEach(k => addStat(s, k, g.all)); gainPts(s, g.pts); s.pop = clamp(s.pop + popGain(s, g.pop), 0, 100); s.titles.push(g.title);
+          KEYS.forEach(k => addStat(s, k, g.all)); gainWinPts(s, g.pts); s.pop = clamp(s.pop + popGain(s, g.pop), 0, 100); s.titles.push(g.title);
         }
         s.turn += 1; if (s.turn > TOTAL_TURNS) s.over = 'done';
         return { state: s, out };
@@ -1125,12 +1135,12 @@
       if (b.kind === 'cup') {
         if (won) {
           const sy = CUP_SYS[b.sys] || {};
-          if (CUP_REWARD.pts[b.star]) gainPts(s, CUP_REWARD.pts[b.star]);
+          if (CUP_REWARD.pts[b.star]) gainWinPts(s, CUP_REWARD.pts[b.star]);
           if (CUP_REWARD.pop[b.star]) s.pop = clamp(s.pop + popGain(s, CUP_REWARD.pop[b.star]), 0, 100);
           if (sy.stat && CUP_REWARD.statUp[b.star]) addStat(s, sy.stat, CUP_REWARD.statUp[b.star]);
           if (b.star === 4) { KEYS.forEach(k => addStat(s, k, CUP_REWARD.crownAll)); s.crowns += 1; }
           if (b.sys && b.sys.startsWith('sc')) scenarioReward(s, b, out);
-          if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all)); if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; }
+          if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all * (1 + stayNum(s, 'rivaldamashii') / 100))); /* 🏁ライバル魂 */ if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; }
         }
         // 大会に出たターンが期の終わりなら、続けて強制大会
         const fb = forcedBattle(s); if (fb) { s.battle = fb; return { state: s, out }; }
@@ -1138,10 +1148,11 @@
         return { state: s, out };
       }
       const f = FORCED[b.kind];
-      if (won) { KEYS.forEach(k => addStat(s, k, f.all)); gainPts(s, f.pts); s.pop = clamp(s.pop + popGain(s, f.pop), 0, 100); s.titles.push(f.title); if (f.crown) { s.crowns += 1; s.items[REMATCH.crownWin] += 1; } }
+      if (won) { KEYS.forEach(k => addStat(s, k, f.all)); gainWinPts(s, f.pts); s.pop = clamp(s.pop + popGain(s, f.pop), 0, 100); s.titles.push(f.title); if (f.crown) { s.crowns += 1; s.items[REMATCH.crownWin] += 1; } }
       s.turn += 1; return { state: s, out };
     };
     const gainPts = (s, v) => { const room = PTS.hold - s.pts; const g = Math.max(0, Math.min(room, v)); s.pts += g; s.ptsLost += v - g; };
+    const gainWinPts = (s, v) => gainPts(s, Math.round(num(v) * (1 + stayNum(s, 'kokoroe') / 100))); // 📜勝負の心得: 大会に勝ったときの能力ポイント
 
     // ---- 能力ポイント(TOURNAMENT §7b): 1点で +1・期の目安を超えると 2点で +1 ----
     const ptsCost = (s, k) => (s.stats[k] >= PTS.line[periodOf(s.turn).key] ? 2 : 1);
