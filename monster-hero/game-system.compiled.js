@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5313bc42ae3faa8d
+// source-sha256: c06ea90062739c7e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108240,7 +108240,8 @@ const MSXFX_REACT = Object.freeze({
   great: {
     cls: 'jump',
     mood: 'hype',
-    fx: 'spark'
+    fx: 'spark',
+    skill: 'normal'
   },
   ok: {
     cls: 'nod',
@@ -108276,6 +108277,18 @@ const MSXFX_REACT = Object.freeze({
     cls: 'jump',
     mood: 'surprise',
     fx: 'spark'
+  },
+  skill: {
+    cls: 'jump',
+    mood: 'hype',
+    fx: 'spark',
+    skill: 'normal'
+  },
+  win: {
+    cls: 'jump',
+    mood: 'hype',
+    fx: 'spark',
+    skill: 'unique'
   }
 });
 const MSXFX_GESTURE = Object.freeze({
@@ -108437,6 +108450,26 @@ const msxFxVoice = (species, mood, seed = '') => {
   const cry = msxFxCry(species);
   return String(t).replace(/\{cry\}/g, cry);
 };
+const msxFxSkillSeq = (species, kind = 'normal', name = null) => {
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[species] : null;
+  if (!mon) return [];
+  const atk = mon.atkMotion || 'default';
+  try {
+    if (kind === 'unique' && typeof attackMotionUniquePreviewSequence === 'function') return attackMotionUniquePreviewSequence(atk, species, name) || [];
+    if (typeof attackMotionPreviewSequence === 'function') return attackMotionPreviewSequence(atk, species, name) || [];
+  } catch (_) {}
+  return [];
+};
+const msxFxSeqMs = seq => seq.reduce((a, st) => a + (Number.isFinite(st.ms) ? st.ms : 0), 0);
+const msxFxSkillName = (species, kind = 'normal', lv = 0) => {
+  try {
+    const mon = ALL_PLAYER_MONSTERS[species];
+    const list = kind === 'unique' ? mon && mon.unique && mon.unique.names : typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[species] : null;
+    return Array.isArray(list) && list.length ? list[Math.max(0, Math.min(list.length - 1, lv | 0))] : null;
+  } catch (_) {
+    return null;
+  }
+};
 function MsxLiveMon({
   species,
   colors,
@@ -108476,25 +108509,59 @@ function MsxLiveMon({
   const later = (f, ms) => {
     timers.current.push(setTimeout(f, ms));
   };
-  React.useEffect(() => clear, []);
+  const [atk, setAtk] = React.useState(null);
+  const atkRun = React.useRef(0);
+  const stopAtk = () => {
+    atkRun.current++;
+    setAtk(null);
+  };
+  const playSkill = (kind, name) => {
+    const seq = msxFxSkillSeq(species, kind, name);
+    if (!seq.length || typeof BattleAttackMotionPreview !== 'function') return 0;
+    const run = ++atkRun.current;
+    let t = 0;
+    seq.forEach(st => {
+      later(() => {
+        if (run === atkRun.current) setAtk({
+          anim: st.anim,
+          kind,
+          name
+        });
+      }, t);
+      t += st.ms;
+    });
+    later(() => {
+      if (run === atkRun.current) setAtk(null);
+    }, t);
+    return t;
+  };
+  React.useEffect(() => () => {
+    clear();
+    atkRun.current++;
+  }, []);
   const reactKey = react && react.kind ? `${react.kind}:${react.id != null ? react.id : ''}` : '';
   React.useEffect(() => {
     if (!reactKey) return;
     const R = MSXFX_REACT[react.kind];
     if (!R) return;
     clear();
+    stopAtk();
     const say = voice ? msxFxVoice(species, R.mood, `${seed}|${reactKey}`) : '';
+    const sk = react.skill || {};
+    const skKind = sk.kind || R.skill;
+    const ms = !still && skKind ? playSkill(skKind, sk.name || null) : 0;
     setAct({
-      cls: R.cls,
+      cls: ms ? 'skill' : R.cls,
       fx: R.fx,
       say,
       n: reactKey,
       react: true
     });
     later(() => {
+      stopAtk();
       setAct(null);
       if (endRef.current) endRef.current();
-    }, still ? 700 : 1200);
+    }, still ? 700 : Math.max(1200, ms + 120));
   }, [reactKey]);
   React.useEffect(() => {
     if (still || pose) return undefined;
@@ -108520,6 +108587,7 @@ function MsxLiveMon({
     if (!act) return;
     const wasReact = act.react;
     clear();
+    stopAtk();
     setAct(null);
     if (wasReact && endRef.current) endRef.current();
   };
@@ -108548,10 +108616,17 @@ function MsxLiveMon({
   }) : React.createElement("span", {
     className: "msxfx-emoji"
   }, mon && mon.emoji || '❔');
-  const art = !still && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(species, img, {
+  const idleOk = !still && typeof withMonsterIdleArt === 'function' && (!atk || typeof monsterIdleAllowedDuring !== 'function' || monsterIdleAllowedDuring(atk.anim));
+  const idleArt = idleOk ? withMonsterIdleArt(species, img, {
     fill: true,
     own: true
   }) : img;
+  const art = atk ? React.createElement(BattleAttackMotionPreview, {
+    image: idleArt,
+    anim: atk.anim,
+    compact: true,
+    baseId: species
+  }) : idleArt;
   const fxCh = act && act.fx ? MSXFX_FX_CHAR[act.fx] : '';
   return React.createElement("div", {
     className: `msxfx-live${still ? ' msxfx-calm' : ''}${pyoko ? ` msxfx-pyoko msxfx-py-${MSXFX_PYOKO_SLOW.includes(m) ? 'slow' : m === 'hype' ? 'fast' : 'mid'}${act && act.react ? ' msxfx-py-hold' : ''}` : ''} ${className}`,
@@ -108575,7 +108650,21 @@ function MsxLiveMon({
       filter: `${L.mon === 'none' ? '' : L.mon} drop-shadow(0 6px 5px #0008)`.trim(),
       '--msxfx-rim': L.rim
     }
-  }, art)))), fxCh ? React.createElement("div", {
+  }, art)))), atk && atk.kind === 'unique' && atk.anim && typeof SpecialMoveFx === 'function' ? React.createElement("div", {
+    className: "msxfx-special",
+    "aria-hidden": "true"
+  }, React.createElement(SpecialMoveFx, {
+    compact: true,
+    slotSkill: {
+      slotIndex: -1,
+      name: atk.name || msxFxSkillName(species, 'unique') || '必殺技',
+      type: 'unique',
+      sig: !atk.name
+    },
+    attackAnim: atk.anim,
+    mon: mon,
+    ownerId: species
+  })) : null, fxCh ? React.createElement("div", {
     key: `fx-${act.n}`,
     className: `msxfx-fx msxfx-fx-${act.fx}`,
     "aria-hidden": "true"
@@ -108627,6 +108716,7 @@ function MsxFxMoment({
   sub,
   species,
   colors,
+  skill,
   onDone,
   calm
 }) {
@@ -108641,11 +108731,27 @@ function MsxFxMoment({
     fired.current = true;
     if (doneRef.current) doneRef.current();
   };
+  const react = kind === 'win' ? {
+    kind: 'win',
+    id: kind
+  } : kind === 'tech' ? {
+    kind: 'skill',
+    id: kind,
+    skill: skill || {
+      kind: 'normal'
+    }
+  } : kind === 'lvup' ? {
+    kind: 'great',
+    id: kind
+  } : {
+    kind: kind === 'retire' ? 'praise' : 'fail',
+    id: kind
+  };
+  const len = still || !species ? 1200 : Math.max(1200, Math.min(1700, msxFxSeqMs(react.kind === 'win' ? msxFxSkillSeq(species, 'unique') : react.skill ? msxFxSkillSeq(species, react.skill.kind, react.skill.name) : react.kind === 'great' ? msxFxSkillSeq(species, 'normal') : []) + 150));
   React.useEffect(() => {
-    const t = setTimeout(finish, 1200);
+    const t = setTimeout(finish, len);
     return () => clearTimeout(t);
   }, []);
-  const mood = kind === 'win' ? 'great' : kind === 'lvup' || kind === 'tech' ? 'ok' : kind === 'retire' ? 'praise' : 'fail';
   return React.createElement("div", {
     className: `msxfx-moment msxfx-t-${K.tone} msxfx-k-${kind}${still ? ' msxfx-calm' : ''}`,
     onClick: finish,
@@ -108680,11 +108786,8 @@ function MsxFxMoment({
   }, React.createElement(MsxLiveMon, {
     species: species,
     colors: colors,
-    mood: MSXFX_REACT[mood].mood,
-    react: {
-      kind: mood,
-      id: kind
-    },
+    mood: MSXFX_REACT[react.kind].mood,
+    react: react,
     voice: false,
     calm: still
   })) : null, React.createElement("div", {
@@ -108709,6 +108812,7 @@ const MSXFX_CSS = `
 .msxfx-tint>*{display:block;width:100%;height:100%}
 .msxfx-emoji{display:flex!important;align-items:center;justify-content:center;font-size:64px}
 .msxfx-hop{position:absolute;inset:0;transform-origin:50% 96%}
+.msxfx-special{position:absolute;inset:-20% -30%;pointer-events:none;z-index:2}
 /* ぴょこぴょこ: 小さく4回弾んで、5回目に大きく跳ねる(1周 = 5拍) */
 .msxfx-pyoko{--py-beat:.62s;--py-h:-7%;--py-big:-20%}
 .msxfx-py-fast{--py-beat:.46s;--py-h:-9%;--py-big:-24%}
