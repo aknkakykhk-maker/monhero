@@ -24,6 +24,7 @@ EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'e
 SCRATCH = os.environ.get('SHEET_SCRATCH', '/tmp/sheet-scratch')
 
 # key … 全身画の名前(fullbody/<name>__<表情>.png)。stand … 立ち絵の置き場(images/assistant/<stand>/<prefix>_<表情>.png)
+# pockets … 背景の抜き残りの白い塊を抜く範囲(枠の中の座標。life-fullbody-art.py の AUTO_POCKETS と同じ見方)
 # cells … 8つの枠 [x0, y0, x1, y1](シートの画素)。札のあるシートは札を避けて切る
 SHEETS = {
     'mua': dict(file='mua-normal-8expressions-sheet.png', name='mua', stand='stand-normal', prefix='myua', bg='alpha',
@@ -34,6 +35,8 @@ SHEETS = {
                           cells=[[c * 384, r * 512, (c + 1) * 384, (r + 1) * 512] for r in range(2) for c in range(4)]),
     'mua:card-master': dict(file='mua-cardmaster-8expressions-sheet.png', name='mua_card-master', stand='stand-card-master', prefix='myua', bg='checker',
                             head=dict(top=50, eye=95, chin=122, chin_frac=0.295, above=0.75),
+                            # 市松を抜いた残りの白いもや(髪の左右・左下の巻き毛のわき)。枠の中の座標。帽子・リボン・羽の白は入れない
+                            pockets=[(98, 25, 150, 95), (228, 60, 262, 100), (75, 170, 100, 225)],
                             cells=[[c * 384, r * 512, (c + 1) * 384, (r + 1) * 512] for r in range(2) for c in range(4)]),
 }
 
@@ -90,7 +93,7 @@ def cut_cells(cfg):
         arr = np.array(c.convert('RGBA'))
         if cfg['bg'] == 'checker':
             arr = key_checker(arr[..., :3])
-        out.append(fb.clean(None, min_frac=0.002, arr=arr))
+        out.append(fb.clean(None, min_frac=0.002, arr=arr, boxes=cfg.get('pockets')))
     return out
 
 
