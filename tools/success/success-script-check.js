@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DIR = path.resolve(__dirname, '../../docs/progress/player-raise/script');
-const FILES = ['turn.js', 'turn-bond12.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'mon.js'];
+const FILES = ['turn.js', 'turn-bond12.js', 'turn2.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'rival-owner.js', 'events-bond12.js', 'items.js', 'mon.js'];
 const SHOW_COUNT = process.argv.includes('--count');
 
 let failed = 0;
@@ -40,7 +40,8 @@ for (const f of FILES) {
 }
 check('台本を読めた(200本以上)', rows.length >= 200, `${rows.length}本`);
 
-const WHO = new Set(['mua', 'atsu', 'issa', 'narr', 'choice', 'mon']);
+const ASSTS = new Set(['mua', 'atsu', 'kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
+const WHO = new Set([...ASSTS, 'issa', 'narr', 'choice', 'mon']);
 const EXPR = new Set(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry']);
 const seen = new Set();
@@ -49,7 +50,7 @@ for (const r of rows) {
   if (seen.has(r.id)) bad('id が重なる', r);
   seen.add(r.id);
   if (!WHO.has(r.who)) bad('who が決まった値でない', r);
-  if ((r.who === 'mua' || r.who === 'atsu') && !EXPR.has(r.e)) bad('表情が決まった値でない', r);
+  if (ASSTS.has(r.who) && !EXPR.has(r.e)) bad('表情が決まった値でない', r);
   if (typeof r.t !== 'string' || !r.t.trim()) { bad('台詞が空', r); continue; }
   for (const m of r.t.matchAll(/\{(\w+)\}/g)) if (!SLOTS.has(m[1])) bad(`知らない差しこみ {${m[1]}}`, r);
   if (/[{}]/.test(r.t.replace(/\{\w+\}/g, ''))) bad('「{」「}」が文字で出る', r);
@@ -102,18 +103,19 @@ for (const r of rows) {
     if (koOutside(t)) bad('地の文・札でモンスターを「子」と呼ばない', r);
     if (/モンサク|モンビー/.test(t)) bad('地の文・札は正式名称', r);
   } else if (koOutside(t.replace(/この子/g, ''))) bad('助手が言ってよいのは「この子」だけ', r);
-  if (/ブリーダー/.test(t)) bad('プレイヤーは {name}', r);
+  if (/ブリーダー(?!ライセンス)/.test(t)) bad('プレイヤーは {name}', r);
   if (/スタミナ|ＨＰ|(?<![A-Za-z])HP/.test(t)) bad('「体力」と呼ぶ', r);
 }
 
 // ⑦ 第2弾: みゅあの Lv1・2 版がターンごとのことばのみゅあの行を全部うめている・ていねい語になっている
-const turnMua = rows.filter(r => r.file === 'turn.js' && r.who === 'mua').map(r => r.id);
-const b12 = rows.filter(r => r.file === 'turn-bond12.js');
+// みゅあの行(シナリオの2話より先は Lv1・2 では見ないので除く)には、id の最後に b を付けた Lv1・2 版がある
+const needB = rows.filter(r => r.who === 'mua' && !r.bond && !(r.id.startsWith('scn.') && !r.id.startsWith('scn.mua.ep1.'))).map(r => r.id);
+const b12 = rows.filter(r => r.who === 'mua' && Array.isArray(r.bond));
 const b12ids = new Set(b12.map(r => r.id));
-const missB12 = turnMua.filter(id => !b12ids.has(id + 'b'));
-check('みゅあ Lv1・2 版がターンごとのことばを全部うめている', b12.length > 0 && missB12.length === 0 && b12.length === turnMua.length, missB12.length ? `足りない ${missB12.slice(0, 3).join(', ')}` : `${b12.length}本`);
+const missB12 = needB.filter(id => !b12ids.has(id + 'b'));
+check('みゅあ Lv1・2 版がそろっている(ターンごとのことば・出来事)', missB12.length === 0, missB12.length ? `足りない ${missB12.length}本: ${missB12.slice(0, 3).join(', ')}` : `${b12.length}本`);
 for (const r of b12) {
-  if (!Array.isArray(r.bond) || r.bond.join() !== '1,2') bad('Lv1・2 版には bond:[1,2]', r);
+  if (r.bond.join() !== '1,2') bad('Lv1・2 版には bond:[1,2]', r);
   if (!/です|ます|でした|ました|ません|ましょう|ください|でしょう/.test(r.t)) bad('Lv1・2 版はていねい語', r);
 }
 // ⑧ モンスターは言葉を話さない(短い声だけ)・30種の鳴き声がある
@@ -123,6 +125,27 @@ check('種ごとの鳴き声が30種', rows.filter(r => r.id.startsWith('mon.cry
 const { monsucScriptHeadOf } = require(path.join(DIR, 'heads.js'));
 const noHead = rows.filter(r => !monsucScriptHeadOf(r.id));
 check('どの行も見出し(育成イベント/編成の子のイベント/メインのお話/なし)に当たる', noHead.length === 0, noHead.slice(0, 3).map(r => r.id).join(', '));
+
+// ⑩ 大会の常連(regulars.js): 種は公開ずみの28種(コラボ・下書きを除く)・大会ごとに常連3+王者1・名前が重ならない
+{
+  const { MONSUC_REGULAR_CUPS: CUPS, MONSUC_REGULARS: REG } = require(path.join(DIR, 'regulars.js'));
+  const OK_SPECIES = new Set(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Mia', 'Pandora', 'Monol', 'Oboro', 'Plant', 'Zan', 'Eiki',
+    'KenshiMocchi', 'Mitarashi', 'Ark', 'Iblis', 'Snegurochka', 'Undine', 'Yaobikuni', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
+  const regBad = [];
+  const names = new Set();
+  for (const r of REG) {
+    if (!OK_SPECIES.has(r.species)) regBad.push(`${r.id} 種 ${r.species}`);
+    if (!CUPS[r.cup]) regBad.push(`${r.id} 大会 ${r.cup}`);
+    if (names.has(r.mon)) regBad.push(`${r.id} 名前が重なる ${r.mon}`);
+    names.add(r.mon);
+    if (/子/.test((r.mon + r.note).replace(/調子|様子/g, ''))) regBad.push(`${r.id} 「子」`);
+  }
+  for (const c of Object.keys(CUPS)) {
+    const list = REG.filter(r => r.cup === c);
+    if (list.filter(r => r.champ).length !== 1 || list.filter(r => !r.champ).length < 3) regBad.push(`${c} は常連3以上+王者1`);
+  }
+  check('大会の常連(公開ずみの種・大会ごとに常連3+王者1・名前が重ならない)', regBad.length === 0, regBad.length ? regBad.slice(0, 3).join(' / ') : `${Object.keys(CUPS).length}大会・${REG.length}体`);
+}
 
 check('id・who・表情・差しこみ・口調・言葉', problems.length === 0, problems.length ? `${problems.length}件` : '');
 for (const p of problems.slice(0, 15)) console.log('  ' + p);
