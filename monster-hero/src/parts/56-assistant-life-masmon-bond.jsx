@@ -252,7 +252,21 @@ function AmgbBedTag({ bed }) {
   if (!amgbOn()) return null;
   const p = amgbBedPower(bed);
   if (!p) return null;
-  return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
+  const over = !!(bed.bd && amgbLifeFrac(amgbNormOne(bed.bd)) >= 1);
+  return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}{over && <small className="rounded bg-slate-700 px-1 text-[9.5px] text-slate-200" data-amgb-bed-over>⏳ 寿命</small>}</span>;
+}
+// 合体の見通しに出す「絆」: 年齢と寿命は新しく(0歳)・忠誠度は主のまま・人気は2体の高い方の半分・合体後の総合力とランク(保存しない)
+function AmgbFusePreview({ main, mat, plan }) {
+  if (!amgbOn() || typeof MASMON_CALC === 'undefined' || !main || !mat || !plan) return null;
+  const c = amgbFuseChild(main.aid, { slot: main.slot, monster: main.row.monster }, main.bd || null, mat.bd || null);
+  const now = amgbBedPower(main); const after = amgbBedPower({ g: { st: plan.st, lv: 1 }, t: { learn: plan.learn, m: plan.m }, bd: c });
+  const mb = (main.bd && amgbNormOne(main.bd)) || amgbNormOne({});
+  return (
+    <div className="mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-200" data-amgb-fuse-preview>
+      {now && after && <p className="flex items-center justify-between gap-1"><span>総合力</span><span className="inline-flex items-center gap-1"><AmgbRankChip rank={now.rank} small/>{now.power.toLocaleString()} → <AmgbRankChip rank={after.rank} small/><b className="text-amber-200" data-amgb-fuse-power={after.power}>{after.power.toLocaleString()}</b></span></p>}
+      <p data-amgb-fuse-age>🎂 {MASMON_CALC.ageLabel(mb.age)} → <b className="text-amber-200">{MASMON_CALC.ageLabel(0)}</b>(寿命も新しくなります)</p>
+      <p>忠誠度 <b className="text-amber-200" data-amgb-fuse-loy={Math.round(c.loy)}>{Math.round(c.loy)}</b>(主のまま) ・ 人気 <b className="text-amber-200" data-amgb-fuse-pop={Math.round(c.pop)}>{Math.round(c.pop)}</b>(2体の高い方の半分)</p>
+    </div>);
 }
 // 冬眠中の子のくわしい画面に出す「絆」(眠らせたときの写し bd から・総合力・忠誠度・人気・年齢・寿命の残り。写しが無い子は既定値)
 function AmgbBedPanel({ bed }) {

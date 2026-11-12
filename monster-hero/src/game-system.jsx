@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39318822afb64156
+// generated-sha256: cbf02fee19a4fb90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74232,7 +74232,21 @@ function AmgbBedTag({ bed }) {
   if (!amgbOn()) return null;
   const p = amgbBedPower(bed);
   if (!p) return null;
-  return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}</span>;
+  const over = !!(bed.bd && amgbLifeFrac(amgbNormOne(bed.bd)) >= 1);
+  return <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-amber-100" data-amgb-bed-power={p.power}><AmgbRankChip rank={p.rank} small/>{p.power.toLocaleString()}{over && <small className="rounded bg-slate-700 px-1 text-[9.5px] text-slate-200" data-amgb-bed-over>⏳ 寿命</small>}</span>;
+}
+// 合体の見通しに出す「絆」: 年齢と寿命は新しく(0歳)・忠誠度は主のまま・人気は2体の高い方の半分・合体後の総合力とランク(保存しない)
+function AmgbFusePreview({ main, mat, plan }) {
+  if (!amgbOn() || typeof MASMON_CALC === 'undefined' || !main || !mat || !plan) return null;
+  const c = amgbFuseChild(main.aid, { slot: main.slot, monster: main.row.monster }, main.bd || null, mat.bd || null);
+  const now = amgbBedPower(main); const after = amgbBedPower({ g: { st: plan.st, lv: 1 }, t: { learn: plan.learn, m: plan.m }, bd: c });
+  const mb = (main.bd && amgbNormOne(main.bd)) || amgbNormOne({});
+  return (
+    <div className="mt-1 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-200" data-amgb-fuse-preview>
+      {now && after && <p className="flex items-center justify-between gap-1"><span>総合力</span><span className="inline-flex items-center gap-1"><AmgbRankChip rank={now.rank} small/>{now.power.toLocaleString()} → <AmgbRankChip rank={after.rank} small/><b className="text-amber-200" data-amgb-fuse-power={after.power}>{after.power.toLocaleString()}</b></span></p>}
+      <p data-amgb-fuse-age>🎂 {MASMON_CALC.ageLabel(mb.age)} → <b className="text-amber-200">{MASMON_CALC.ageLabel(0)}</b>(寿命も新しくなります)</p>
+      <p>忠誠度 <b className="text-amber-200" data-amgb-fuse-loy={Math.round(c.loy)}>{Math.round(c.loy)}</b>(主のまま) ・ 人気 <b className="text-amber-200" data-amgb-fuse-pop={Math.round(c.pop)}>{Math.round(c.pop)}</b>(2体の高い方の半分)</p>
+    </div>);
 }
 // 冬眠中の子のくわしい画面に出す「絆」(眠らせたときの写し bd から・総合力・忠誠度・人気・年齢・寿命の残り。写しが無い子は既定値)
 function AmgbBedPanel({ bed }) {
@@ -78479,6 +78493,10 @@ const amgsFormerSig = (aid, slot, x) => `${aid}:${slot}:${String(x.at || '').sli
 // 提案の入れ替えで外れた「前にいた子」を、冬眠の一覧へ1度ずつ並べる(元の mine.former はそのまま・見た印 seen で二重にしない)
 const amgsSyncFormer = () => {
   if (!amgsOn() || !AMGS_STORE || !AMGS_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return false;
+  // 育成・修行・絆の保存を読み終える前は並べない(見た印 seen を付けたあとでは、写し損ねた中身を二度と取れないため・2026-11-12 キズナ)
+  if (typeof AMG_STORE !== 'undefined' && !AMG_STORE.loaded) return false;
+  if (typeof AMGT_STORE !== 'undefined' && !AMGT_STORE.loaded) return false;
+  if (typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' && !AMGB_STORE.loaded) return false;
   let st = AMGS_STORE.state; const ms = ASSISTANT_MASMON_STORE.state; let changed = false;
   const g = typeof AMG_STORE !== 'undefined' && AMG_STORE.loaded ? AMG_STORE.state : null; const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
   for (const [aid, m] of Object.entries((ms && ms.mine) || {})) for (const [sl, list] of Object.entries((m && m.former) || {})) {
@@ -78609,7 +78627,8 @@ function AmgsSection({ filter = null }) {
   React.useEffect(() => {
     if (!AMGS_STORE) return undefined;
     AMGS_STORE.subs.add(setSt);
-    void AMGS_STORE.load().then(() => { amgsSyncFormer(); });
+    const loads = [AMGS_STORE.load(), typeof AMG_STORE !== 'undefined' ? AMG_STORE.load() : null, typeof AMGT_STORE !== 'undefined' ? AMGT_STORE.load() : null, typeof amgbOn === 'function' && amgbOn() && typeof AMGB_STORE !== 'undefined' ? AMGB_STORE.load() : null];
+    void Promise.all(loads).then(() => { amgsSyncFormer(); }).catch(() => {});
     if (AMGS_FSTORE && amgsFuseOn()) void AMGS_FSTORE.load();
     return () => { AMGS_STORE.subs.delete(setSt); };
   }, []);
@@ -78715,7 +78734,7 @@ function AmgsFuseSheet({ beds, onClose }) {
       <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
         <p className="text-[16px] font-black">🧬 合体する</p>
         {done ? (<>
-          <p className="mt-2 rounded-xl bg-fuchsia-950 p-3 text-[13px] font-black" data-amgs-fuse-done>{done.name}が生まれ変わりました。Lv 1 から育て直せます(冬眠中のまま)<small className="block text-[11px] font-bold text-slate-300">{done.lost}は、いなくなりました</small></p>
+          <p className="mt-2 rounded-xl bg-fuchsia-950 p-3 text-[13px] font-black" data-amgs-fuse-done>{done.name}が生まれ変わりました。Lv 1{typeof amgbOn === 'function' && amgbOn() ? '・0歳' : ''} から育て直せます(冬眠中のまま)<small className="block text-[11px] font-bold text-slate-300">{done.lost}は、いなくなりました</small></p>
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
         </>) : !main ? (<>
           <p className="text-[11px] font-bold text-slate-300">① 残すマスモン(主)を選んでください。種類・名前・色・型は主のままです</p>
@@ -78733,6 +78752,7 @@ function AmgsFuseSheet({ beds, onClose }) {
           <p className="mt-1 text-[10.5px] font-bold text-slate-300">2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200">技: {main.t ? `${nm(main)}の技は全部残ります` : '技はまだありません'}{plan.carried.length ? ` ・ 引き継ぐ技 ${plan.carried.join('・')}` : ''}(熟練は半分から)</p>
           <p className="text-[11px] font-bold text-slate-200">Lv・育成Lv は 1、疲れ・ストレスは 0 から</p>
+          {typeof AmgbFusePreview === 'function' && <AmgbFusePreview main={main} mat={mat} plan={plan}/>}{/* 絆: 年齢と寿命は新しく・忠誠度は主のまま・人気は高い方の半分・合体後の総合力(印が偽なら出ない) */}
           <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-amgs-fuse-lose>
             <p className="text-[12px] font-black text-rose-100">{nm(mat)}(Lv {mat.row.lv})はいなくなります。元に戻せません</p>
             {typeof AmgpBars === 'function' && <AmgpBars st={mat.g.st}/>}
