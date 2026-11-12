@@ -5,14 +5,15 @@
 const MASMON_CALC = (() => {
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  const num = (v, d = 0) => (v === null || v === undefined || v === '' ? d : Number.isFinite(Number(v)) ? Number(v) : d); // null・'' も既定値(Number(null)=0 にしない・ミハリ5)
   const STAT_MAX = 999;
 
   // ---- 総合力とランク(POWER.md 1・2章) ----
   const POWER_W = Object.freeze({ stat: 2.5, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 });
   // stats: { life, pow, ... } / masteries: 覚えた技ごとの熟練(0〜100)の配列 / lv / loyal / pop
-  const power = ({ stats = {}, masteries = [], lv = 1, loyal = 0, pop = 0 } = {}) => {
-    const sum = KEYS.reduce((a, k) => a + clamp(num(stats[k]), 0, STAT_MAX), 0);
+  const power = (o) => {
+    const { stats, masteries, lv = 1, loyal = 0, pop = 0 } = o && typeof o === 'object' ? o : {}; const st = stats && typeof stats === 'object' ? stats : {}; // どんな値でも数を返す(ミハリ5)
+    const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
@@ -21,8 +22,8 @@ const MASMON_CALC = (() => {
 
   // ---- 合体の上乗せ(FUSE.md 第2版): 平均 × √(弱い方÷強い方) を効く値にし、200 ×(効く値÷999)^1.5 ----
   const FUSE = Object.freeze({ top: 200, pow: 1.5, ref: 999 });
-  const fuseBonus = (a, b) => {
-    const x = Math.max(0, num(a)); const y = Math.max(0, num(b)); const hi = Math.max(x, y); const lo = Math.min(x, y);
+  const fuseBonus = (a, b) => { // 入力も 999 で切る(ミハリ5)
+    const x = clamp(num(a), 0, STAT_MAX); const y = clamp(num(b), 0, STAT_MAX); const hi = Math.max(x, y); const lo = Math.min(x, y);
     if (hi <= 0) return 0;
     return Math.round(FUSE.top * Math.pow((((x + y) / 2) * Math.sqrt(lo / hi)) / FUSE.ref, FUSE.pow));
   };
@@ -93,7 +94,8 @@ const MASMON_CALC = (() => {
   // ---- 訓練・修行の結果(9章) ----
   const RESULTS = Object.freeze({ great: { name: '大成功', mult: 1.5, str: -3 }, ok: { name: '成功', mult: 1, str: 0 }, fail: { name: '失敗', mult: 0.3, str: 0 }, cheat: { name: 'ズル', mult: 0.2, str: 0, noFat: true }, skip: { name: 'サボり', mult: 0, fat: -5, str: -5 } });
   // sab = 育成ノートのサボりの起きやすさ(0〜1・忠誠と方針をかける前)/fail = 失敗の起きやすさ/r = 0〜1
-  const resultOf = ({ loyal = 50, pol = 0, sab = 0, fail = 0, r = 0.5 } = {}) => {
+  const resultOf = (o) => {
+    const { loyal = 50, pol = 0, sab = 0, fail = 0, r = 0.5 } = o && typeof o === 'object' ? o : {};
     const L = clamp(num(loyal, 50), 0, 100); const x = clamp(num(r), 0, 0.999999);
     const pSkip = clamp(num(sab) * sabLoyalMult(L) * policyOf(pol).sab, 0, 0.9);
     const pCheat = L < 50 ? Math.min(0.10, (50 - L) / 500) : 0;
