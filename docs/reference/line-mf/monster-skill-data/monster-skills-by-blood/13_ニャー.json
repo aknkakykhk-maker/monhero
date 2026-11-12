@@ -1,0 +1,1024 @@
+{
+  "blood": "ニャー",
+  "counts": {
+    "skills": 24
+  },
+  "skills": [
+    {
+      "skillId": "sk-0432",
+      "name": "ボンバ",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0010",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1313",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1354",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1353",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 622,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0433",
+      "name": "ゴロゴロにゃー",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0387",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1301",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1352",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 623,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0434",
+      "name": "ポッコ",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 12,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "1309",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "1309",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1309",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 624,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0435",
+      "name": "のどじまん",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 34,
+      "damage": "B",
+      "accuracy": "E",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1301",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1326",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1350",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1380",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 625,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0436",
+      "name": "おつめミサイル",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0388",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1351",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 626,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0437",
+      "name": "ニャっかき",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0388",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1310",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1313",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 627,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0438",
+      "name": "メーム",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 34,
+      "damage": "A",
+      "accuracy": "D+",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0085",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1326",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1350",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1380",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1353",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 628,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0439",
+      "name": "10時10分",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0389",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0388",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1310",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 629,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0440",
+      "name": "ねこだまし",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0390",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1351",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "1351",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1351",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1354",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1352",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 630,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0441",
+      "name": "メーマ",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 44,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "A+",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0391",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0392",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1352",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 631,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0442",
+      "name": "ハワイにゃん",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 33,
+      "damage": "C",
+      "accuracy": "S",
+      "gutsDown": "S",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0393",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0394",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1326",
+          "rarity": 5
+        },
+        {
+          "monsterId": "1354",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 632,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0443",
+      "name": "ポカポカ",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0388",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0395",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1310",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1310",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1310",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 633,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0444",
+      "name": "バリバリニャー",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0396",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0397",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "1350",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "1350",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1350",
+          "rarity": 5
+        },
+        {
+          "monsterId": "1380",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 634,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0445",
+      "name": "にゃんぷうき",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 48,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0398",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0399",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1353",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 635,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0690",
+      "name": "Xmasキャロル",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0242",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1351"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 636,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0691",
+      "name": "プレゼントくまー",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0625",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0626",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1351"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 637,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0692",
+      "name": "10時10分・卵",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0627",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0389",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1350",
+        "1380"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 638,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0693",
+      "name": "イースターボンバ",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 41,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0628",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0002",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1350",
+        "1380"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 639,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0694",
+      "name": "ガトリング",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0629",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0630",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "1354",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0205",
+          "unlock": {
+            "monsterId": "1354",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1352",
+        "1354"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 640,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0695",
+      "name": "ライフル",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "D+",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0588",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1352",
+        "1354"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 641,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0696",
+      "name": "ミサイル",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "B+",
+      "gutsDown": "E+",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0588",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0087",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1352"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 642,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0697",
+      "name": "一斉射撃",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "B+",
+      "accuracy": "A+",
+      "gutsDown": "D",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0631",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0632",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1352",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1352",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1352"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 643,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0812",
+      "name": "ハンマー",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "E+",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0708",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0548",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1353"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 644,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0813",
+      "name": "カラタケワリ",
+      "version": 1,
+      "blood": "ニャー",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 39,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0709",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0632",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1353",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1353",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1353"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 645,
+      "status": "verified"
+    }
+  ]
+}

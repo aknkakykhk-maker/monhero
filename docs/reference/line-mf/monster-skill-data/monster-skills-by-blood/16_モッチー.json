@@ -1,0 +1,1039 @@
+{
+  "blood": "モッチー",
+  "counts": {
+    "skills": 24
+  },
+  "skills": [
+    {
+      "skillId": "sk-0400",
+      "name": "ローリンモッチ",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0417",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1609",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1616",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1653",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 529,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0401",
+      "name": "もちき",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1604",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1619",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 530,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0402",
+      "name": "もんた",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "1607",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "1607",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1607",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1625",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 531,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0403",
+      "name": "モッチ砲",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "C+",
+      "accuracy": "C+",
+      "gutsDown": "F",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0419",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1602",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1651",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 532,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0404",
+      "name": "さくら吹雪",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0420",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1654",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1652",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 533,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0405",
+      "name": "ぺろりん",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "G",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0017",
+          "unlock": {
+            "monsterId": "1609",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0255",
+          "unlock": {
+            "monsterId": "1609",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1609",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1619",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 534,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0406",
+      "name": "ガッチョ",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1604",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1650",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 535,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0407",
+      "name": "超ローリンモッチ",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 33,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1602",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "1602",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1602",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1607",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1653",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1650",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 536,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0408",
+      "name": "もっちゃん",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "F",
+      "gutsDown": "E",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0421",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1625",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1651",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1652",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 537,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0409",
+      "name": "ガッチャー",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0418",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0422",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1654",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 538,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0410",
+      "name": "大モッチ砲",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 38,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0423",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "1602",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "1602",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1602",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 539,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0411",
+      "name": "枝垂ざくら",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "A+",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0424",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0425",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "1607",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "1607",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1607",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 540,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0412",
+      "name": "もっさま",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0426",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0427",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1650",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1650",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1650",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 541,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0413",
+      "name": "超ガッチョ",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 33,
+      "damage": "B+",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0428",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0429",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1654",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 542,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0414",
+      "name": "超モッチ砲",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "S+",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0430",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0431",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1653",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 543,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0415",
+      "name": "宵闇ざくら",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0432",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0433",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1651",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1651",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1651",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 544,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0416",
+      "name": "もっさまん",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "B+",
+      "critical": "S+",
+      "abilities": [
+        {
+          "abilityId": "sab-0434",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0176",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1625",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1625",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1625",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 545,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0714",
+      "name": "ブレード飛ばし",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1652",
+        "1653"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 546,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0715",
+      "name": "サファイア砲",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C+",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0640",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0641",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1650"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 547,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0716",
+      "name": "高速回転斬り",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "D+",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0642",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1653"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 548,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0717",
+      "name": "高速乱れ斬り",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 48,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0643",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0644",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1653"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 549,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0718",
+      "name": "ガッチャー・黒",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "E",
+      "accuracy": "S",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0025",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1651"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 550,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0719",
+      "name": "ジェントル",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 50,
+      "damage": "A+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0645",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0646",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1651"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 551,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0800",
+      "name": "かっぱ巻き砲",
+      "version": 1,
+      "blood": "モッチー",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "C+",
+      "accuracy": "B+",
+      "gutsDown": "D+",
+      "critical": "G+",
+      "abilities": [
+        {
+          "abilityId": "sab-0707",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0419",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1625"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 552,
+      "status": "verified"
+    }
+  ]
+}
