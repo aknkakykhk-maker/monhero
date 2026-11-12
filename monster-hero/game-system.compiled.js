@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3470f06d4c52a235
+// source-sha256: c2e9567e2375a038
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151012,7 +151012,11 @@ function AlfFriendHouseView({
     name: visitor
   })), React.createElement("p", {
     className: "mt-2 text-[11px] text-slate-300"
-  }, roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。')), can === 'ok' && !done && React.createElement("button", {
+  }, roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。')), typeof AlfMsRoomLink === 'function' && React.createElement(AlfMsRoomLink, {
+    friend: friend,
+    aid: roomId,
+    land: land
+  }), can === 'ok' && !done && React.createElement("button", {
     type: "button",
     className: "mhl-btn mt-2 w-full bg-amber-500 text-slate-950",
     "data-alf-visit-room-note": roomId,
@@ -152844,6 +152848,7 @@ const ALF_MS_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough'
 let _alfMsMissing = false;
 const alfMsSendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.alfMasmonShareSend === true;
 const alfMsMonOk = mo => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+const alfMsDeckMonOk = no => typeof no === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(no) && !(typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA && CARD_BATTLE_DATA.monsters && !CARD_BATTLE_DATA.monsters[no]);
 const alfMsCardOk = id => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
 const alfMsText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '';
 const alfMsWord = (v, max) => {
@@ -152890,7 +152895,7 @@ const alfMsPackDeck = (face, d) => {
     ...(alfMsWord(d.line, 40) ? {
       ln: alfMsWord(d.line, 40)
     } : {}),
-    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsMonOk).slice(0, 3),
+    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsDeckMonOk).slice(0, 3),
     ...(alfMsText(d.ace, 20) ? {
       a: alfMsText(d.ace, 20)
     } : {}),
@@ -152977,7 +152982,7 @@ const alfMsNormalize = raw => {
       face: d.f,
       name: alfMsText(d.nm, 24),
       line: alfMsWord(d.ln, 40),
-      monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsMonOk).slice(0, 3),
+      monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsDeckMonOk).slice(0, 3),
       ace: alfMsText(d.a, 20),
       cards
     } : null;
@@ -153075,6 +153080,46 @@ const alfMsFetch = async (hostId, aid) => {
     return null;
   }
 };
+function AlfMsRoomLink({
+  friend,
+  aid,
+  land = false
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [data, setData] = React.useState(undefined);
+  if (!alfMsSendOn() || typeof AssistantMasmonNote !== 'function' || !friend || !alfSafeOther(friend.id) || !ALF_IDS.includes(aid)) return null;
+  const go = async () => {
+    setOpen(true);
+    if (data === undefined) {
+      const d = await alfMsFetch(friend.id, aid);
+      setData(d || null);
+    }
+  };
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-emerald-700",
+    "data-alf-ms-open": aid,
+    onClick: () => {
+      void go();
+    }
+  }, "🐾 ", assistantLifeName(aid), "のマスモン ›"), open && alfLayer(React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      zIndex: 46
+    },
+    "data-alf-ms-view": aid
+  }, data === undefined ? React.createElement("div", {
+    className: "absolute inset-0 flex items-center justify-center bg-black/60"
+  }, React.createElement("p", {
+    className: "rounded-xl bg-slate-900 px-4 py-2 text-[12px] font-bold text-slate-200"
+  }, "読んでいます…")) : React.createElement(AssistantMasmonNote, {
+    readOnly: true,
+    data: data,
+    ownerName: friend.name,
+    land: land,
+    onClose: () => setOpen(false)
+  }))));
+}
 const MASMON_PVP_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/masmon-pvp`;
 const MASMON_PVP_KEY = 'mh_masmon_pvp_owner_key_v1';
 const MASMON_PVP_TIMEOUT_MS = 12000;

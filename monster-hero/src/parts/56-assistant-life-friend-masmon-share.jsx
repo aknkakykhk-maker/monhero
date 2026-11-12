@@ -22,6 +22,8 @@ let _alfMsMissing = false;
 
 const alfMsSendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.alfMasmonShareSend === true;
 const alfMsMonOk = (mo) => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[mo];
+// デッキの3体はカードのモンスター番号(例 C-001・C-001S)。マスモンの種類(ALL_PLAYER_MONSTERS のキー)とは別の形(2026-11-12 突き合わせで分かった)
+const alfMsDeckMonOk = (no) => typeof no === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(no) && !(typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA && CARD_BATTLE_DATA.monsters && !CARD_BATTLE_DATA.monsters[no]);
 const alfMsCardOk = (id) => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
 const alfMsText = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '');
 const alfMsWord = (v, max) => { const t = alfMsText(v, max); return t && typeof alfNoteShow === 'function' ? alfNoteShow(t) : ''; };
@@ -50,7 +52,7 @@ const alfMsPackDeck = (face, d) => {
   return {
     f: face, nm: alfMsText(d.name, 24),
     ...(alfMsWord(d.line, 40) ? { ln: alfMsWord(d.line, 40) } : {}),
-    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsMonOk).slice(0, 3),
+    m: (Array.isArray(d.monsters) ? d.monsters : []).filter(alfMsDeckMonOk).slice(0, 3),
     ...(alfMsText(d.ace, 20) ? { a: alfMsText(d.ace, 20) } : {}),
     cd: cards,
   };
@@ -95,7 +97,7 @@ const alfMsNormalize = (raw) => {
   const dk = (Array.isArray(raw.dk) ? raw.dk : []).slice(0, 3).map(d => {
     if (!d || typeof d !== 'object' || !ALF_MS_FACES.includes(d.f)) return null;
     const cards = (Array.isArray(d.cd) ? d.cd : []).map(x => (Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null)).filter(Boolean).slice(0, 50);
-    return cards.length ? { face: d.f, name: alfMsText(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
+    return cards.length ? { face: d.f, name: alfMsText(d.nm, 24), line: alfMsWord(d.ln, 40), monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsDeckMonOk).slice(0, 3), ace: alfMsText(d.a, 20), cards } : null;
   }).filter(Boolean);
   return { off: false, ms, dk, wt: alfInt(raw.wt, 0, 20) };
 };
@@ -149,3 +151,24 @@ const alfMsFetch = async (hostId, aid) => {
     return Array.isArray(rows) && rows[0] ? alfMsNormalize(rows[0].body) : null;
   } catch (e) { if (e && e.missing) _alfMsMissing = true; return null; }
 };
+
+// ---------- 見る側の入口(フレンドの家の部屋のシート)----------
+// 「🐾 ◯◯のマスモン ›」→ 表から1人ぶんを読む → キズナの見る専用 <AssistantMasmonNote readOnly/>。
+// 公開の印 alfMasmonShareSend が偽のあいだは出さない(送る側と同じ印。見る画面だけ先に出すと、だれも送っていないため)
+function AlfMsRoomLink({ friend, aid, land = false }) {
+  const [open, setOpen] = React.useState(false);
+  const [data, setData] = React.useState(undefined); // undefined=読んでいない null=無い
+  if (!alfMsSendOn() || typeof AssistantMasmonNote !== 'function' || !friend || !alfSafeOther(friend.id) || !ALF_IDS.includes(aid)) return null;
+  const go = async () => {
+    setOpen(true);
+    if (data === undefined) { const d = await alfMsFetch(friend.id, aid); setData(d || null); }
+  };
+  return (<>
+    <button type="button" className="mhl-btn mt-2 w-full bg-emerald-700" data-alf-ms-open={aid} onClick={() => { void go(); }}>🐾 {assistantLifeName(aid)}のマスモン ›</button>
+    {open && alfLayer(<div className="absolute inset-0" style={{ zIndex: 46 }} data-alf-ms-view={aid}>
+      {data === undefined
+        ? <div className="absolute inset-0 flex items-center justify-center bg-black/60"><p className="rounded-xl bg-slate-900 px-4 py-2 text-[12px] font-bold text-slate-200">読んでいます…</p></div>
+        : <AssistantMasmonNote readOnly data={data} ownerName={friend.name} land={land} onClose={() => setOpen(false)}/>}
+    </div>)}
+  </>);
+}
