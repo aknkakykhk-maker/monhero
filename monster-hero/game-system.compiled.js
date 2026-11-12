@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 725b10f7a799b798
+// source-sha256: f7a4686e1de3c969
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -158408,6 +158408,17 @@ function MsxPlay({
   const phase = run.phase;
   let body = null;
   let foot = null;
+  const R3 = typeof MonsucR3Screen === 'function' ? MonsucR3Screen : null;
+  const r3Kind = phase === 'battle' && s.battle ? 'cup' : phase === 'over' || s.over ? s.over === 'gameover' ? 'gameover' : 'retire' : sub === 'r3:cup' ? 'cup' : sub === 'r3:quest' ? 'quest' : null;
+  if (R3 && r3Kind) return React.createElement(R3, {
+    kind: r3Kind,
+    run: run,
+    setRun: setRun,
+    onClose: () => {
+      setSub('main');
+    },
+    onPause: onPause
+  });
   const bandProps = {};
   if (phase === 'result' && run.out) {
     const o = run.out;
@@ -159134,7 +159145,7 @@ function MsxPlay({
     }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => setSheet({
+      onClick: () => R3 ? setSub('r3:quest') : setSheet({
         soon: '⚔ 修行',
         text: '技を覚える修行は、次の回で入ります'
       })
@@ -159145,7 +159156,7 @@ function MsxPlay({
     }, "準備中")), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => setSheet({
+      onClick: () => R3 ? setSub('r3:cup') : setSheet({
         soon: '🏆 大会',
         text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)'
       })

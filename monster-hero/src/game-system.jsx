@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ebfd80af1bb6410
+// generated-sha256: b49f533e5d85632e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -82453,6 +82453,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
 
   const phase = run.phase;
   let body = null; let foot = null;
+  // 回3(大会・修行・引退・ゲームオーバー)の画面が入っていれば、そちらへ渡す。setRun は保存も一緒にする・onClose でメインへ
+  const R3 = typeof MonsucR3Screen === 'function' ? MonsucR3Screen : null;
+  const r3Kind = phase === 'battle' && s.battle ? 'cup' : (phase === 'over' || s.over) ? (s.over === 'gameover' ? 'gameover' : 'retire') : sub === 'r3:cup' ? 'cup' : sub === 'r3:quest' ? 'quest' : null;
+  if (R3 && r3Kind) return <R3 kind={r3Kind} run={run} setRun={setRun} onClose={() => { setSub('main'); }} onPause={onPause}/>;
   const bandProps = {};
 
   // ---- 結果 ----
@@ -82654,8 +82658,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
         <div className="v-act" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
           <button type="button" className={`v-p ${yosu ? 'hosp' : 'off'}`} disabled={!can.includes('clinic')} onClick={() => doAct({ kind: 'clinic' })}><div className="e">🏥</div>通院<small>{yosu ? 'ようすを治す' : 'ようすなし'}</small>{yosu ? <span className="bd r">!</span> : null}</button>
           <button type="button" className="v-p" onClick={() => doAct({ kind: 'play' })}><div className="e">🎈</div>遊ぶ<small>体力+・甘え+</small></button>
-          <button type="button" className="v-p" onClick={() => setSheet({ soon: '⚔ 修行', text: '技を覚える修行は、次の回で入ります' })}><div className="e">⚔</div>修行<small>技を覚える</small><span className="bd">準備中</span></button>
-          <button type="button" className="v-p" onClick={() => setSheet({ soon: '🏆 大会', text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)' })}><div className="e">🏆</div>大会<small>今月の大会</small><span className="bd">準備中</span></button>
+          <button type="button" className="v-p" onClick={() => (R3 ? setSub('r3:quest') : setSheet({ soon: '⚔ 修行', text: '技を覚える修行は、次の回で入ります' }))}><div className="e">⚔</div>修行<small>技を覚える</small><span className="bd">準備中</span></button>
+          <button type="button" className="v-p" onClick={() => (R3 ? setSub('r3:cup') : setSheet({ soon: '🏆 大会', text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)' }))}><div className="e">🏆</div>大会<small>今月の大会</small><span className="bd">準備中</span></button>
         </div>
       </>)}
     </>);
