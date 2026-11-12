@@ -27,8 +27,9 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 4;           // 計算を変えたら上げる(サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心)
-  const VERSION_PLAIN = 3;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の試合は 3 のまま(版は指紋に入るので、今までの試合の見返しを食い違わせない)
+  const VERSION = 5;           // 計算を変えたら上げる(サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION_PLAIN = 5;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
+  const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
   const DIST_NAMES = ['零', '近', '中', '遠'];
@@ -258,7 +259,9 @@
   const rawDamage = (atkU, defU, mv, dist, g) => {
     const a = atkU.stats[mv.kind];
     const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g);
-    return base * 300 / (300 + defU.stats.tough * 0.9);
+    // 受ける側: 丈夫さ(×0.9)に、受ける技と同じ種類の能力(ちから技ならちから・かしこさ技ならかしこさ)を丈夫さの半分の効き目(×0.45)で足す
+    //   (2026-11-12 社長「ちから技のダメージが増加する/相手のちから技によるダメージを軽減する。かしこさも同じ。被ダメにも影響ある」)
+    return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND);
   };
   const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
