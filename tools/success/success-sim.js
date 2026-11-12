@@ -47,6 +47,7 @@ const makeRaised = (rng, rank, topStats, assists) => {
 const AS_M = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 3 }, { id: 'kaketsuke', lv: 2 }]; // 128+80+80+64 = 352
 const AS_S = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'ochitsuki', lv: 1 }]; // 128+80+48+24 = 280
 const AS_MH = [{ id: 'sokoji', lv: 3 }, { id: 'atooshi', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'miseba', lv: 3 }]; // 128+80+80+80 = 368(ひらめきの2つ入り)
+const HINT5 = [[{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }], [{ id: 'mitate', lv: 3 }, { id: 'kensho', lv: 3 }], [{ id: 'mimamori', lv: 3 }]]; // ひらめき5つを段3で(編成の3体に分けて持たせる)
 const AS_B = [{ id: 'sokoji', lv: 2 }, { id: 'atooshi', lv: 2 }, { id: 'kizuna', lv: 1 }]; // 80+48+40 = 168(B の上のほう)
 const PRESETS = {
   none: { name: '編成なし(ベースモン6枠)', team: () => [] },
@@ -58,6 +59,7 @@ const PRESETS = {
   M6: { name: 'M 6体(得意ばらばら)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M')) },
   M6as: { name: 'M 6体・全員アシストあり(底力3・きずな2・後押し3・かけつけ2)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_M)) },
   S6as: { name: 'S 6体・全員アシストあり(底力3・きずな2・後押し2・落ち着き1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', null, AS_S)) },
+  B6hint5: { name: 'B 6体・ひらめき5つ段3(大会の試合だけに効く)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, HINT5[i] || [])) },
   M6hint: { name: 'M 6体・アシストあり(底力3・後押し3・見立て3・見せ場3)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS_MH)) },
   M6asAim: { name: 'M 6体・アシストあり・得意そろえ(ちから・命中・回避)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], AS_M)) },
   B6as: { name: 'B 6体・全員アシストあり(底力2・後押し2・きずな1)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, AS_B)) },
@@ -71,6 +73,7 @@ const VARIANTS = [
   { key: 'B6', aidLv: 3, carry: ['mag', 'hachi'], label: 'B 6体・持ちこみ2つ(週刊!トレーニング・修行のハチマキ)' },
   { key: 'B6', aidLv: 3, cups: true, label: 'B 6体・ライバル2人(助手・フレンド)の大会に出る' },
   { key: 'M6hint', aidLv: 5 },
+  { key: 'B6hint5', aidLv: 3 },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
