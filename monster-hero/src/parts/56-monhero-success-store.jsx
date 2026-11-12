@@ -46,7 +46,9 @@ const msxLoadConstScript = (src, check) => new Promise((res) => {
   s.onload = () => res(check()); s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof window !== 'undefined' && !!window.MONSUC_REGULARS && !!window.MONSUC_REGULAR_CUPS; // 表の最後で window に載せている(const だけでは載らない)
+// 常連の表は開いたときに読む別ファイルの const なので、名前を直に書かず、読み終わってから大域の名前で引く
+const msxGlobalConst = (name) => { try { return new Function(`return typeof ${name} !== 'undefined' ? ${name} : null;`)(); } catch (e) { return null; } };
+const msxRegularsOk = () => !!msxGlobalConst('MONSUC_REGULARS') && !!msxGlobalConst('MONSUC_REGULAR_CUPS');
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
@@ -62,7 +64,7 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk ? window.MONSUC_REGULARS : null, cupNames: regOk ? window.MONSUC_REGULAR_CUPS : null,
+          regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
         });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;
@@ -197,9 +199,9 @@ const msxPickLine = (ctx, scene, opt = {}) => {
 };
 const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
   if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'この子';
-  if (k === 'cheer') return ctx.cheer || '編成の子';
-  if (k === 'cheer2') return ctx.cheer2 || '編成の子';
+  if (k === 'mon') return ctx.mon || 'モンスター';
+  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
+  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
   if (k === 'stat') return ctx.stat || '能力';
   if (k === 'train') return ctx.train || '訓練';
   if (k === 'tech') return ctx.tech || '技';

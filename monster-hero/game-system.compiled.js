@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 583f81985f5d808d
+// source-sha256: 4ff2801c87bf8d48
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156723,7 +156723,14 @@ const msxLoadConstScript = (src, check) => new Promise(res => {
   s.onerror = () => res(false);
   document.head.appendChild(s);
 });
-const msxRegularsOk = () => typeof window !== 'undefined' && !!window.MONSUC_REGULARS && !!window.MONSUC_REGULAR_CUPS;
+const msxGlobalConst = name => {
+  try {
+    return new Function(`return typeof ${name} !== 'undefined' ? ${name} : null;`)();
+  } catch (e) {
+    return null;
+  }
+};
+const msxRegularsOk = () => !!msxGlobalConst('MONSUC_REGULARS') && !!msxGlobalConst('MONSUC_REGULAR_CUPS');
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
@@ -156746,8 +156753,8 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
-          regulars: regOk ? window.MONSUC_REGULARS : null,
-          cupNames: regOk ? window.MONSUC_REGULAR_CUPS : null
+          regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null,
+          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null
         });
         msxSuc = {
           core,
@@ -156979,9 +156986,9 @@ const msxPickLine = (ctx, scene, opt = {}) => {
 };
 const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
   if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'この子';
-  if (k === 'cheer') return ctx.cheer || '編成の子';
-  if (k === 'cheer2') return ctx.cheer2 || '編成の子';
+  if (k === 'mon') return ctx.mon || 'モンスター';
+  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
+  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
   if (k === 'stat') return ctx.stat || '能力';
   if (k === 'train') return ctx.train || '訓練';
   if (k === 'tech') return ctx.tech || '技';
@@ -157025,7 +157032,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const MSX_STEP_NAMES = Object.freeze(['育てる子', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
+const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 const MSX_ITEMS = Object.freeze([{
   id: 'guide',
   name: '博士の導き書',
@@ -157307,7 +157314,7 @@ function MsxStart({
     const picked = meta.picked && meta.picked[species];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "だれを育てる?", React.createElement("small", null, "ベースモンか、合体で生まれた未育成の子から1体")), React.createElement("div", {
+    }, "だれを育てる?", React.createElement("small", null, "ベースモンか、合体で生まれた未育成のモンスターから1体")), React.createElement("div", {
       className: "v-tabs"
     }, React.createElement("button", {
       type: "button",
@@ -157317,7 +157324,7 @@ function MsxStart({
       type: "button",
       className: tab === 'fuse' ? 'on' : '',
       onClick: () => setTab('fuse')
-    }, "🧬 合体で生まれた子 ", unraised.length)), React.createElement("div", {
+    }, "🧬 合体で生まれたモンスター ", unraised.length)), React.createElement("div", {
       className: "v-grid6",
       style: {
         maxHeight: 148,
@@ -157366,12 +157373,12 @@ function MsxStart({
       key: k,
       className: apt[i] > 'B' ? 'lo' : ''
     }, MSX_STAT_NAME[k], React.createElement("b", null, apt[i]))))));
-    go = 'この子にする ▶';
+    go = 'このモンスターにする ▶';
   } else if (step === 1) {
     const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強い子ほど訓練がよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる")), React.createElement("div", {
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", {
       key: i,
@@ -157443,7 +157450,7 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "保存枠はまだ空です。育て終えた子がここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
+    }, "保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -158305,7 +158312,7 @@ function MsxHome({
     className: "v-card"
   }, React.createElement("div", {
     className: "h2"
-  }, "育てる子を選んで、46ターンの育成をはじめよう"), React.createElement("div", {
+  }, "育てるモンスターを選んで、46ターンの育成をはじめよう"), React.createElement("div", {
     className: "sub"
   }, "編成の6体が集まった訓練ほど、よく伸びる")), React.createElement("button", {
     type: "button",
