@@ -146,6 +146,8 @@ const FORCE_CHECKS = [
     checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
   // 助手の絵(立ち絵・顔)を差し替えた・足したとき、絵の置き方を持つ所を触ったときは、使う場面の全部で切れ・伸び・ばらつきを見る(2026-11-11)。
   // 絵の余白が変わるだけで、別の画面の寄せ方が合わなくなる(ももすけの絵の差し替えで、モードえらびが顔だけの大写しになっていた)。10分あまりかかるので名指しの所だけ
+  { re: /^(monster-hero\/images\/assistant\/fullbody\/.+\.png|tools\/assistant\/(life-fullbody-art\.py|life-expression-sheets\.py|life-fullbody-(edge|pocket)-check\.js))$/,
+    checks: ['assistant/life-fullbody-edge-check.js', 'assistant/life-fullbody-pocket-check.js'], why: '助手の全身画のふちの透過が2値(ギザギザ)に戻っていないか・囲まれた背景の残り' },
   { re: /^monster-hero\/(images\/assistant\/(?!face\/).+\.(png|PNG)|src\/parts\/(56-assistant-life-map|56-assistant-peer)\.jsx)$/,
     checks: ['assistant/assistant-art-scenes-check.js'], why: '助手の絵が使う場面の全部でうまく出ているか' },
   // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
