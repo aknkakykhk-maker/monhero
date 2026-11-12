@@ -395,7 +395,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
       <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProPickMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -406,7 +406,7 @@ function PickHeroAllyScreen({
       {/* プロモードの編成(枠を上に固定)は、一覧の場所を空けるため吹き出しを出さない(「主役になる子を選びましょ」は6体を選ぶ流れと合わない)。案内は枠の下の1行が持つ */}
       {/* 横向きの背の低い画面(844×390 など)の勇者モンえらびは、吹き出し・説明の行を畳み、タブを低くし、札を3列にする。
           見出しと吹き出しとタブで上の 210px を使い、札が1段の上半分しか見えなかった(2026-10-27 ジン)。チュートリアル中は畳まない */}
-      {!(pickMode==='hero'&&isProMode(runMode)&&!battleTutorial)&&<div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}${pickMode==='hero'&&!battleTutorial?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>}
+      {!(pickMode==='hero'&&isProPickMode(runMode)&&!battleTutorial)&&<div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}${pickMode==='hero'&&!battleTutorial?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>}
       {/* 供モン合流は「いま何がどれだけ増えるか」を選ぶ場面なので、トレーニング画面と同じ形で
           基準になる現在値をここに固定表示する。各カードは自分の変動しか出さないため、
           ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
@@ -477,36 +477,36 @@ function PickHeroAllyScreen({
       {pickMode==='hero'&&(
         <div className="shrink-0 w-full max-w-md mx-auto mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1">
           {/* プロモードはベースモンだけなので、編成との切替は出さない */}
-          {!isProMode(runMode)&&<div className="flex gap-1.5">
+          {!isProPickMode(runMode)&&<div className="flex gap-1.5">
             {[['roster','編成'],['base','ベースモン']].map(([key,label])=>(
               <button key={key} onClick={()=>{setHeroPickTab(key); setCurrentPickingMon(null);}} aria-pressed={heroPickTab===key} className={`flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab===key?'bg-indigo-600 border-indigo-300 text-white shadow-lg':'bg-slate-900 border-slate-700 text-slate-400'}`}>{label}</button>
             ))}
           </div>}
-          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${battleTutorial?'':' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`}>{isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
+          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProPickMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${battleTutorial?'':' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`}>{isSuccessMode(runMode)?'サクセス杯はモンヒロサクセスで育てたモンスターと、足りないぶんのベースモン(マスモンは連れていけません)':isProPickMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
         </div>
       )}
       {/* あふれる可能性のあるスクロール領域へ justify-center を付けると、あふれたぶんが
           上下へはみ出し、スクロールで追える下側と違って上側は永久に届かなくなる。
           内側を m-auto で寄せておけば、余っているときだけ中央、あふれたら先頭からたどれる */}
-      <div className={`flex-1 ${pickMode==='hero'&&isProMode(runMode)?'overflow-hidden':'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`}>
-       <div className={`w-full${pickMode==='ally'?' m-auto':''}${pickMode==='hero'&&isProMode(runMode)?' flex-1 min-h-0 flex flex-col':''}`}>
-        {pickMode==='ally'&&!isProMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
+      <div className={`flex-1 ${pickMode==='hero'&&isProPickMode(runMode)?'overflow-hidden':'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`}>
+       <div className={`w-full${pickMode==='ally'?' m-auto':''}${pickMode==='hero'&&isProPickMode(runMode)?' flex-1 min-h-0 flex flex-col':''}`}>
+        {pickMode==='ally'&&!isProPickMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
           <span>合流できる候補 {(monSelection||[]).filter(m=>m&&!slots.some(x=>x&&x.id===m.id)).length}体</span><span>カードを押すと詳細</span>
         </div>}
         {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
             外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
         {/* プロの供モン合流だけ、バトルモード選択と同じ横スライドで1体ずつ見せる。
             3体しか出ないので、2列に並べるより1体ずつ大きく見比べられるほうが選びやすい */}
-        {(()=>{const allyCarousel=pickMode==='ally'&&isProMode(runMode);
+        {(()=>{const allyCarousel=pickMode==='ally'&&isProPickMode(runMode);
           // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
           const inParty=slots.filter(x=>x).map(x=>x.id);
-          const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;
+          const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProPickMode(runMode))?getUnlockedBaseMonsterList():monSelection;
           const rawList=pickMode==='hero'?debugHeroMonsterList(savedRawList):savedRawList;
           const list=(pickMode==='ally'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];
           const stepAlly=(delta)=>{const root=allyCarouselRef.current;if(!root)return;const next=Math.max(0,Math.min(list.length-1,allyCardIndex+delta));setAllyCardIndex(next);centerCarouselChild(root,next,'smooth');};
           // プロモードの勇者モン選びは、顔アイコンのグリッド + 下の詳細パネル(ProMonsterGridPicker)
           // チュートリアルは今までの1体えらび(指の案内がこの形に合わせてある)。ふだんは編成の枠を上に固定した ProPartyPicker
-          if(pickMode==='hero'&&isProMode(runMode)&&!battleTutorial&&typeof setProAllyPool==='function') return (
+          if(pickMode==='hero'&&isProPickMode(runMode)&&!battleTutorial&&typeof setProAllyPool==='function') return (
             <ProPartyPicker list={list} need={1+Math.min(PRO_ALLY_POOL_SIZE,Math.max(0,list.length-1))}
               initialIds={proHeroPreset?.heroBaseId?[proHeroPreset.heroBaseId,...(proAllyPool||[]).map(m=>m&&m.id)]
                 :currentPickingMon&&(proAllyPool||[]).length?[currentPickingMon.id,...proAllyPool.map(m=>m&&m.id)]   // 配置画面から「選び直す」で戻ったとき
@@ -515,7 +515,7 @@ function PickHeroAllyScreen({
               onDone={(hero,allies)=>{setProAllyPool(allies.filter(Boolean));setProHeroPreset(null);setCurrentPickingMon(hero);advanceRunStage('PICK_SLOT');}}
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
-          if(pickMode==='hero'&&isProMode(runMode)) return (
+          if(pickMode==='hero'&&isProPickMode(runMode)) return (
             <ProMonsterGridPicker list={list} selectedId={proHeroPreset?.heroBaseId||null} accent="indigo"
               instant={!!battleTutorial} isDisabled={m=>!scenarioPicksHero(m.id)} spotClassFor={m=>battleTutorialSpotClass('monCards')}
               confirmLabel="このモンスターで挑む" confirmAria={m=>`${m.name}を勇者モンに選ぶ`}
@@ -530,7 +530,7 @@ function PickHeroAllyScreen({
         </div>}
         <div ref={allyCarousel?allyCarouselRef:null} onScroll={allyCarousel?(e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(best!==allyCardIndex)setAllyCardIndex(best);}):undefined}
              className={allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':`grid grid-cols-2 gap-2.5${pickMode==='hero'?' [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-2':''}`}
-             style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:pickMode==='hero'&&isProMode(runMode)?{display:'flex',flexDirection:'column'}:undefined}>
+             style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:pickMode==='hero'&&isProPickMode(runMode)?{display:'flex',flexDirection:'column'}:undefined}>
         {list.map((m,cardIndex)=>{const isSel=currentPickingMon?.id===m.id;const focused=allyCarousel&&cardIndex===allyCardIndex;
           // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
           // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、

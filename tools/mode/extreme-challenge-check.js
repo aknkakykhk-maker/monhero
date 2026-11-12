@@ -120,7 +120,8 @@ assert(source.includes("if (text.startsWith(EXTREME_RANKING_PREFIX)) return text
 const submitArgs = [...source.matchAll(/submitLocalScore\(([^,]+),/g)].map(match => match[1].trim());
 // 5つ目は 2026-09-20 に足したタクティクスバトルのスコア送信(submitTacticsScoreOnce)。
 // ここを増やすときは、必ず rankingDifficultyForMode を通したキーであることを確かめること
-assert(submitArgs.length === 5, `submitLocalScore call sites: ${submitArgs.length}`);
+// 6つ目は 2026-11-12 に足したサクセス杯(Suc<難易度>・rankingDifficultyForMode を通す)
+assert(submitArgs.length === 6, `submitLocalScore call sites: ${submitArgs.length}`);
 assert(submitArgs.every(arg => arg === 'difficulty' || arg === 'diff' || arg.startsWith('rankingDifficultyForMode(')), 'no other ranking submission path may be introduced');
 // ★種族チャレンジは2つある(クラシック / タクティクス)ので、どちらのランかを
 //   speciesChallengeRunMode(run) が決めて、そこからキーを作る(2026-09-20)

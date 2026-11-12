@@ -224,7 +224,8 @@ check('難易度の一覧はタクティクス用の14段階から作る',
   has('const tacticsDiff=isTacticsMode(battleMode);')
     && has("?(species?SPECIES_CHALLENGE_DIFFICULTY_IDS:TACTICS_DIFFICULTY_IDS).map(id=>[id,speciesSetting(id)])"));
 check('極限タブは専用画面へ飛ばさない',
-  has('const challengeExtremeTab=!species&&!quick&&!tacticsDiff&&!isProMode(battleMode);'));
+  // サクセス杯(2026-11-12)にも極限タブは出さないので、末尾に1つ条件が増えた
+  has('const challengeExtremeTab=!species&&!quick&&!tacticsDiff&&!isProMode(battleMode)&&!isSuccessMode(battleMode);'));
 check('極限を選んだら極限ランとして始める',
   has('const tacticsExtreme=tacticsDiff&&isExtremeDifficultyId(key);')
     && has("setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);")

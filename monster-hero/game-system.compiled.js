@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ecd7711d66c0912
+// source-sha256: 6835dcfe1e226978
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -790,6 +790,9 @@ const TACTICS_PRO_MODE = Object.freeze({
   points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['❤️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'], ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', '難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'], ['🏆', 'スコアと記録', 'スコアはこのモード専用の全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。加わるとそのぶん敵も強くなります。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに、その場の判断だけで勝ちたい人向けです。']]
 });
 const BATTLE_MODE_PRO = 'pro';
+const BATTLE_MODE_SUCCESS = 'success';
+const isSuccessMode = mode => mode === BATTLE_MODE_SUCCESS;
+const isProPickMode = mode => isProMode(mode) || mode === BATTLE_MODE_SUCCESS;
 const normalizeBattleMode = value => value === BATTLE_MODE_QUICK || value === BATTLE_MODE_PRO ? value : BATTLE_MODE_CHALLENGE;
 const QUICK_REWARD_MULT = 1.5;
 const PRO_BOND_XP_MULT = 3;
@@ -843,7 +846,7 @@ const applyQuickXpPolicy = (value, mode, policy) => isQuickMode(mode) && normali
 const applyQuickPsychePolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? value * 2 : value;
 const applyQuickDiamondPolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_DIAMOND ? value * 2 : value;
 const modeBreederXpMult = mode => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BREEDER_XP_MULT : 1;
-const modeBondXpMult = mode => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
+const modeBondXpMult = mode => typeof isSuccessMode === 'function' && isSuccessMode(mode) ? 0 : isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
 const modeGoldMult = mode => isQuickMode(mode) ? QUICK_REWARD_MULT : 1;
 const applyModeReward = (value, mult) => mult === 1 ? value : Math.floor(value * mult);
 const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), modeBreederXpMult(mode));
@@ -864,7 +867,7 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveBondXpGainInMode(w, mult, mode);
   return sum;
 };
-const modeKeyPrefix = mode => isRaidJackMode(mode) ? 'mh_raid_jack_unused_' : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_' : isTacticsMode(mode) ? 'mh_tactics_' : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
+const modeKeyPrefix = mode => isRaidJackMode(mode) ? 'mh_raid_jack_unused_' : typeof isSuccessMode === 'function' && isSuccessMode(mode) ? 'mh_suc_' : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_' : isTacticsMode(mode) ? 'mh_tactics_' : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
@@ -967,7 +970,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   highlights: Object.freeze([Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']), Object.freeze(['🃏', 'カードと間合いを選んで戦う']), Object.freeze(['📈', 'WAVEのたびに強化を選んで積み上げる'])]),
   note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
   points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとそのモンスターのぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにしたモンスターの特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
-  modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
+  modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO, 'success'])
 }), Object.freeze({
   id: BATTLE_SYSTEM_TACTICS,
   label: 'タクティクスバトル',
@@ -998,6 +1001,7 @@ const battleModePlayable = (id, {
 } = {}) => {
   if (debugBattle) return true;
   if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  if (id === 'success') return typeof SUCCESS_CUP_PUBLIC_RELEASE !== 'undefined' && SUCCESS_CUP_PUBLIC_RELEASE === true;
   if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
   if (isRaidJackMode(id)) return typeof RAID_JACK_PUBLIC_RELEASE !== 'undefined' && RAID_JACK_PUBLIC_RELEASE === true;
   if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
@@ -1043,6 +1047,7 @@ const battleModeInfo = mode => {
   if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
   if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
+  if (mode === 'success' && typeof SUCCESS_CUP_MODE !== 'undefined') return SUCCESS_CUP_MODE;
   if (mode === BATTLE_MODE_RAID_JACK_A) return {
     id: mode,
     short: 'レイドバトル',
@@ -1058,7 +1063,7 @@ const battleModeInfo = mode => {
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 const PUBLIC_BATTLE_MODES = BATTLE_MODES;
-const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE) && !isRaidJackMode(mode) && (!isTacticsMode(mode) || battleModePlayable(mode));
+const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE) && !isRaidJackMode(mode) && (!(typeof isSuccessMode === 'function' && isSuccessMode(mode)) || battleModePlayable(mode)) && (!isTacticsMode(mode) || battleModePlayable(mode));
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 const battleModeAssistantScene = mode => mode === EXTREME_MODE.id ? 'extremeChallenge' : isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
 const isClassicSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE;
@@ -18773,6 +18778,233 @@ const CLEAR_PSYCHE_REWARD = Object.freeze({
 });
 const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'assist' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
+const SUCCESS_CUP_PUBLIC_RELEASE = false;
+const SUC_BOX_KEY = 'mh_monsuc_box_v1';
+const SUC_CUP_KEY = 'mh_suc_cup_v1';
+const SUC_STAT_KEYS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
+const SUC_STAT_MAX = 999;
+const SUC_RATIO_MIN = 0.8;
+const SUC_RATIO_MAX = 1.6;
+const SUC_CUP_TITLE = 'サクセス杯 優勝';
+const sucNum = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+const sucClampStat = value => Math.max(0, Math.min(SUC_STAT_MAX, sucNum(value, 0)));
+const sucStatRatio = value => SUC_RATIO_MIN + sucClampStat(value) / SUC_STAT_MAX * (SUC_RATIO_MAX - SUC_RATIO_MIN);
+const normalizeSucBoxMon = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const id = typeof raw.id === 'string' || Number.isFinite(raw.id) ? String(raw.id) : '';
+  const species = typeof raw.species === 'string' ? raw.species : '';
+  if (!id || !species) return null;
+  const src = raw.st && typeof raw.st === 'object' ? raw.st : raw.stats && typeof raw.stats === 'object' ? raw.stats : null;
+  if (!src) return null;
+  const st = {};
+  for (const key of SUC_STAT_KEYS) st[key] = sucClampStat(src[key]);
+  const techs = Array.isArray(raw.techs) ? raw.techs.filter(t => typeof t === 'string') : [];
+  const mastSrc = raw.mast && typeof raw.mast === 'object' ? raw.mast : raw.mastery && typeof raw.mastery === 'object' ? raw.mastery : {};
+  const mast = Array.isArray(raw.mast) ? raw.mast.slice(0, techs.length).map(v => Math.max(0, Math.min(100, sucNum(v, 0)))) : techs.map(t => Math.max(0, Math.min(100, sucNum(mastSrc[t], 0))));
+  return {
+    id,
+    species,
+    nick: typeof raw.nick === 'string' && raw.nick.trim() ? raw.nick.trim().slice(0, 20) : '',
+    st,
+    techs,
+    mast,
+    raised: raw.raised !== false,
+    rank: typeof raw.rank === 'string' ? raw.rank : '',
+    gen: Math.max(1, Math.floor(sucNum(raw.gen, 1))),
+    titles: Array.isArray(raw.titles) ? raw.titles.filter(t => typeof t === 'string') : [],
+    sucNormalized: true
+  };
+};
+const readSucBoxMons = boxRaw => {
+  const mons = boxRaw && typeof boxRaw === 'object' && Array.isArray(boxRaw.mons) ? boxRaw.mons : [];
+  return mons.map(normalizeSucBoxMon).filter(m => m && m.raised);
+};
+const sucUniqueLevelOf = mon => {
+  const list = Array.isArray(mon?.mast) ? mon.mast : [];
+  if (!list.length) return 0;
+  const avg = list.reduce((sum, v) => sum + sucNum(v, 0), 0) / list.length;
+  return Math.max(0, Math.min(8, Math.round(avg / 100 * 8)));
+};
+const sucBattleRatios = st => {
+  const s = st || {};
+  const hi = Math.max(sucClampStat(s.pow), sucClampStat(s.wise));
+  const lo = Math.min(sucClampStat(s.pow), sucClampStat(s.wise));
+  return {
+    hp: sucStatRatio(s.life),
+    atk: sucStatRatio(hi * 0.7 + lo * 0.3),
+    def: sucStatRatio(s.tough),
+    guts: sucStatRatio((sucClampStat(s.hit) + sucClampStat(s.eva)) / 2)
+  };
+};
+const convertSucMonToBattle = (boxMon, all = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null) => {
+  const mon = boxMon && boxMon.sucNormalized ? boxMon : normalizeSucBoxMon(boxMon);
+  const base = mon && all ? all[mon.species] : null;
+  if (!mon || !base || base.debugOnly) return null;
+  const r = sucBattleRatios(mon.st);
+  const mul = (value, ratio) => Math.max(1, Math.round(sucNum(value, 0) * ratio));
+  const plus = base.plusStats || {};
+  const lv = sucUniqueLevelOf(mon);
+  return {
+    ...base,
+    name: mon.nick || base.name,
+    baseHp: mul(base.baseHp, r.hp),
+    baseAtk: mul(base.baseAtk, r.atk),
+    baseDef: mul(base.baseDef, r.def),
+    baseGuts: mul(base.baseGuts, r.guts),
+    plusStats: {
+      hp: mul(plus.hp, r.hp),
+      atk: mul(plus.atk, r.atk),
+      def: mul(plus.def, r.def),
+      guts: mul(plus.guts, r.guts)
+    },
+    unique: typeof uniqueSkillAtLevel === 'function' ? uniqueSkillAtLevel(base.unique, lv) : base.unique,
+    inheritedUniques: [],
+    sucBoxId: mon.id,
+    sucRank: mon.rank,
+    sucUniqueLv: lv + 1
+  };
+};
+const sucBattlePower = mon => sucNum(mon?.baseHp) / 5 + sucNum(mon?.baseAtk) + sucNum(mon?.baseDef) + sucNum(mon?.baseGuts);
+const successCupPickList = (boxMons, baseList) => {
+  const bySpecies = new Map();
+  for (const raw of Array.isArray(boxMons) ? boxMons : []) {
+    const mon = convertSucMonToBattle(raw);
+    if (!mon) continue;
+    const cur = bySpecies.get(mon.id);
+    if (!cur || sucBattlePower(mon) > sucBattlePower(cur)) bySpecies.set(mon.id, mon);
+  }
+  const box = [...bySpecies.values()].sort((a, b) => sucBattlePower(b) - sucBattlePower(a));
+  const fill = (Array.isArray(baseList) ? baseList : []).filter(m => m && !bySpecies.has(m.id) && m.masuId == null);
+  return [...box, ...fill];
+};
+const isSucBoxBattleMon = mon => !!(mon && typeof mon.sucBoxId === 'string' && mon.sucBoxId);
+const SUC_CUP_RUNS_MAX = 50;
+const normalizeSucCupRecord = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const wins = {};
+  if (src.wins && typeof src.wins === 'object' && !Array.isArray(src.wins)) {
+    for (const [id, n] of Object.entries(src.wins)) {
+      const v = Math.floor(sucNum(n, 0));
+      if (id && v > 0) wins[id] = v;
+    }
+  }
+  return {
+    v: 1,
+    wins,
+    fame: Math.max(0, Math.floor(sucNum(src.fame, 0))),
+    runs: Array.isArray(src.runs) ? src.runs.filter(r => typeof r === 'string').slice(-SUC_CUP_RUNS_MAX) : []
+  };
+};
+const sucCupFameFor = difficulty => {
+  const order = typeof DIFFICULTY_SETTINGS === 'object' && DIFFICULTY_SETTINGS ? Object.keys(DIFFICULTY_SETTINGS) : [];
+  return 10 + Math.max(0, order.indexOf(difficulty));
+};
+const addSucCupWin = (raw, {
+  runId,
+  boxIds = [],
+  difficulty
+} = {}) => {
+  const rec = normalizeSucCupRecord(raw);
+  const id = typeof runId === 'string' && runId ? runId : '';
+  if (!id || rec.runs.includes(id)) return {
+    record: rec,
+    added: false
+  };
+  const wins = {
+    ...rec.wins
+  };
+  for (const boxId of [...new Set(boxIds.filter(b => typeof b === 'string' && b))]) wins[boxId] = (wins[boxId] || 0) + 1;
+  return {
+    record: {
+      v: 1,
+      wins,
+      fame: rec.fame + sucCupFameFor(difficulty),
+      runs: [...rec.runs, id].slice(-SUC_CUP_RUNS_MAX)
+    },
+    added: true
+  };
+};
+const sucCupTitlesOf = (boxId, cupRaw, boxTitles = []) => {
+  const rec = normalizeSucCupRecord(cupRaw);
+  const titles = Array.isArray(boxTitles) ? boxTitles.slice() : [];
+  if ((rec.wins[boxId] || 0) > 0 && !titles.includes(SUC_CUP_TITLE)) titles.push(SUC_CUP_TITLE);
+  return titles;
+};
+const SUC_DEMO_BOX = Object.freeze({
+  v: 1,
+  cap: 30,
+  mons: Object.freeze([{
+    id: 'demo-mocchi-500',
+    species: 'Mocchi',
+    nick: 'もちまる',
+    st: {
+      life: 500,
+      pow: 500,
+      wise: 500,
+      hit: 500,
+      eva: 500,
+      tough: 500
+    },
+    techs: ['a', 'b'],
+    mast: {
+      a: 50,
+      b: 50
+    },
+    raised: true,
+    rank: 'B',
+    gen: 1,
+    titles: []
+  }, {
+    id: 'demo-golem-999',
+    species: 'Golem',
+    nick: 'ゴロン',
+    st: {
+      life: 999,
+      pow: 999,
+      wise: 400,
+      hit: 999,
+      eva: 999,
+      tough: 999
+    },
+    techs: ['a'],
+    mast: {
+      a: 100
+    },
+    raised: true,
+    rank: 'S',
+    gen: 2,
+    titles: []
+  }, {
+    id: 'demo-kyubi-0',
+    species: 'Kyubi',
+    nick: 'こん',
+    st: {
+      life: 0,
+      pow: 0,
+      wise: 0,
+      hit: 0,
+      eva: 0,
+      tough: 0
+    },
+    techs: [],
+    mast: {},
+    raised: true,
+    rank: 'G',
+    gen: 1,
+    titles: []
+  }])
+});
+const SUCCESS_CUP_MODE = Object.freeze({
+  id: 'success',
+  label: 'サクセス杯',
+  cardLabel: 'サクセス杯',
+  short: 'サクセス杯',
+  emoji: '🎖️',
+  color: '#34d399',
+  tagline: 'モンヒロサクセスで育てたモンスターが出られる大会',
+  highlights: Object.freeze([Object.freeze(['🎖️', '育てたモンスターが4能力で出る']), Object.freeze(['💎', '経験値・ダイヤは難易度どおり']), Object.freeze(['📊', 'サクセス杯専用のスコアランキング'])]),
+  points: Object.freeze([Object.freeze(['⚔️', '編成', 'モンヒロサクセスで育てて引退したモンスターが、勇者モンにも供モンにもなれます。足りない枠はベースモンで埋まるので、引退したモンスターが1体でもいれば出られます。今のマスモンは連れていけません。']), Object.freeze(['🔁', '能力の換算', '6つの能力は、この大会のときだけライフ・ちから・丈夫さ・ガッツの4つに換算されます。ライフはライフ、ちからはちからとかしこさの高いほう、丈夫さは丈夫さ、ガッツは命中と回避から決まります。固有技のレベルは、覚えた技の熟練から決まります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。']), Object.freeze(['👹', '難しさ', '9段階の難易度から選べます。敵の強さは難易度どおりです。']), Object.freeze(['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値とダイヤは難易度の設定どおりです。マスモンではないので絆経験値は入りません。']), Object.freeze(['🏆', 'スコアと記録', 'スコアはサクセス杯専用のランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。優勝すると、出たモンスターに「サクセス杯 優勝」の称号が付きます。']), Object.freeze(['🤝', '供モンの加入', 'プロモードと同じで、始める前に供モンの候補を5体選びます。加入候補として出るのは、その5体からランダムに選ばれた3体です。']), Object.freeze(['⭐', 'マスモン登録', 'ありません。出たモンスターはモンヒロサクセスの保管場所に残ったままです。']), Object.freeze(['⏩', 'スキップチケット', '使えません。']), Object.freeze(['🎯', 'こんな人におすすめ', 'モンヒロサクセスで育てたモンスターの強さを、モンヒロバトルで試したい人向けです。'])])
+});
 const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';
 const MARKET_ICON_SIZE = {
   disc: 'w-12 h-12',
@@ -31893,10 +32125,11 @@ try {
 const PRO_RANKING_PREFIX = 'Pro';
 const EXTREME_RANKING_PREFIX = 'Extreme';
 const TACTICS_RANKING_PREFIX = 'Tactics';
+const SUC_RANKING_PREFIX = 'Suc';
 const TACTICS_PRO_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`;
 const TACTICS_PRO_BETA_SUFFIX = 'Beta';
 const tacticsProRankingPrefix = () => TACTICS_MODE_PUBLIC_RELEASE ? TACTICS_PRO_RANKING_PREFIX : `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`;
-const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}${key}`), ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`)]);
+const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${SUC_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}${key}`), ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`)]);
 const SPECIES_RANKING_PREFIX = 'Species';
 const SPECIES_RANKING_SEPARATOR = '-';
 const TACTICS_SPECIES_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${SPECIES_RANKING_PREFIX}`;
@@ -31959,6 +32192,7 @@ const rankingDifficultyForMode = (mode, diff, speciesId = null) => {
     return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
   }
   if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
+  if (mode === 'success') return `${SUC_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 const rankingDifficultyBase = key => {
@@ -31971,6 +32205,7 @@ const rankingDifficultyBase = key => {
   }
   if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
   if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
+  if (text.startsWith(SUC_RANKING_PREFIX)) return text.slice(SUC_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = value => {
@@ -78335,7 +78570,7 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProPickMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。このモンスターの勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
@@ -78348,7 +78583,7 @@ function PickHeroAllyScreen({
       plan: phasePlan,
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
-    }))), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
+    }))), !(pickMode === 'hero' && isProPickMode(runMode) && !battleTutorial) && React.createElement("div", {
       className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}${pickMode === 'hero' && !battleTutorial ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
@@ -78449,7 +78684,7 @@ function PickHeroAllyScreen({
       }, formatAptPct(cur)));
     })))), pickMode === 'hero' && React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1"
-    }, !isProMode(runMode) && React.createElement("div", {
+    }, !isProPickMode(runMode) && React.createElement("div", {
       className: "flex gap-1.5"
     }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => React.createElement("button", {
       key: key,
@@ -78460,17 +78695,17 @@ function PickHeroAllyScreen({
       "aria-pressed": heroPickTab === key,
       className: `flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), React.createElement("div", {
-      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${battleTutorial ? '' : ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`
-    }, isProMode(runMode) ? 'プロモードはベースモンだけ(育てたマスモンは連れていけません)' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
-      className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
+      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProPickMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${battleTutorial ? '' : ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`
+    }, isSuccessMode(runMode) ? 'サクセス杯はモンヒロサクセスで育てたモンスターと、足りないぶんのベースモン(マスモンは連れていけません)' : isProPickMode(runMode) ? 'プロモードはベースモンだけ(育てたマスモンは連れていけません)' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
+      className: `flex-1 ${pickMode === 'hero' && isProPickMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
-      className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}${pickMode === 'hero' && isProMode(runMode) ? ' flex-1 min-h-0 flex flex-col' : ''}`
-    }, pickMode === 'ally' && !isProMode(runMode) && React.createElement("div", {
+      className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}${pickMode === 'hero' && isProPickMode(runMode) ? ' flex-1 min-h-0 flex flex-col' : ''}`
+    }, pickMode === 'ally' && !isProPickMode(runMode) && React.createElement("div", {
       className: "mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]"
     }, React.createElement("span", null, "合流できる候補 ", (monSelection || []).filter(m => m && !slots.some(x => x && x.id === m.id)).length, "体"), React.createElement("span", null, "カードを押すと詳細")), (() => {
-      const allyCarousel = pickMode === 'ally' && isProMode(runMode);
+      const allyCarousel = pickMode === 'ally' && isProPickMode(runMode);
       const inParty = slots.filter(x => x).map(x => x.id);
-      const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
+      const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProPickMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
       const rawList = pickMode === 'hero' ? debugHeroMonsterList(savedRawList) : savedRawList;
       const list = (pickMode === 'ally' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
       const stepAlly = delta => {
@@ -78480,7 +78715,7 @@ function PickHeroAllyScreen({
         setAllyCardIndex(next);
         centerCarouselChild(root, next, 'smooth');
       };
-      if (pickMode === 'hero' && isProMode(runMode) && !battleTutorial && typeof setProAllyPool === 'function') return React.createElement(ProPartyPicker, {
+      if (pickMode === 'hero' && isProPickMode(runMode) && !battleTutorial && typeof setProAllyPool === 'function') return React.createElement(ProPartyPicker, {
         list: list,
         need: 1 + Math.min(PRO_ALLY_POOL_SIZE, Math.max(0, list.length - 1)),
         initialIds: proHeroPreset?.heroBaseId ? [proHeroPreset.heroBaseId, ...(proAllyPool || []).map(m => m && m.id)] : currentPickingMon && (proAllyPool || []).length ? [currentPickingMon.id, ...proAllyPool.map(m => m && m.id)] : readProPickPrefs().recent,
@@ -78493,7 +78728,7 @@ function PickHeroAllyScreen({
         },
         onDetail: m => setCurrentPickingMon(m)
       });
-      if (pickMode === 'hero' && isProMode(runMode)) return React.createElement(ProMonsterGridPicker, {
+      if (pickMode === 'hero' && isProPickMode(runMode)) return React.createElement(ProMonsterGridPicker, {
         list: list,
         selectedId: proHeroPreset?.heroBaseId || null,
         accent: "indigo",
@@ -78544,7 +78779,7 @@ function PickHeroAllyScreen({
           paddingLeft: '18%',
           paddingRight: '18%',
           touchAction: 'pan-x pinch-zoom'
-        } : pickMode === 'hero' && isProMode(runMode) ? {
+        } : pickMode === 'hero' && isProPickMode(runMode) ? {
           display: 'flex',
           flexDirection: 'column'
         } : undefined
@@ -196698,6 +196933,8 @@ function MonsterHeroGame() {
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster');
   const [proAllyPool, setProAllyPool] = useState([]);
+  const [sucBoxRaw, setSucBoxRaw] = useState(null);
+  const [sucCupRaw, setSucCupRaw] = useState(null);
   const [proAllyDetail, setProAllyDetail] = useState(null);
   const [proEditingAllyIndex, setProEditingAllyIndex] = useState(null);
   const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
@@ -202539,6 +202776,10 @@ function MonsterHeroGame() {
         normal: 'extremeBattle',
         dullahan: 'extremeDullahan',
         moo: 'extremeMoo'
+      } : isSuccessMode(runMode) ? {
+        normal: 'proBattle',
+        dullahan: 'proDullahan',
+        moo: 'proMoo'
       } : isProMode(runMode) ? {
         normal: 'proBattle',
         dullahan: 'proDullahan',
@@ -203524,6 +203765,28 @@ function MonsterHeroGame() {
           waves
         };
       }));
+      {
+        const hs = {};
+        const clears = {};
+        const waves = {};
+        await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
+          hs[d] = await storeGet(bestScoreKey(BATTLE_MODE_SUCCESS, d), 0, false);
+          clears[d] = await storeGet(clearCountKey(BATTLE_MODE_SUCCESS, d), 0, false);
+          waves[d] = await storeGet(bestWaveKey(BATTLE_MODE_SUCCESS, d), 0, false);
+        }));
+        tacticsLoaded[BATTLE_MODE_SUCCESS] = {
+          hs,
+          clears,
+          waves
+        };
+      }
+      try {
+        setSucBoxRaw(await storeGet(SUC_BOX_KEY, null, false));
+        setSucCupRaw(await storeGet(SUC_CUP_KEY, null, false));
+      } catch (e) {
+        setSucBoxRaw(null);
+        setSucCupRaw(null);
+      }
       const loadedExtremeScores = {};
       const loadedExtremeClears = {};
       await Promise.all(ALL_EXTREME_DIFFICULTIES.map(async setting => {
@@ -204075,6 +204338,34 @@ function MonsterHeroGame() {
         return result;
       } catch (e) {
         console.error('[result] extreme score submit failed:', e && e.message ? e.message : e);
+        return;
+      }
+    }
+    if (isSuccessMode(runMode)) {
+      try {
+        let result = null;
+        if (modeHasRanking(runMode)) {
+          result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_SUCCESS, difficulty), score, runIdRef.current);
+          if (!result?.nationalSaved) {
+            console.error('[result] success cup score save failed:', result?.error?.message || 'unknown ranking error');
+            setRunHighlights(prev => ({
+              ...prev,
+              rankingFailed: true
+            }));
+            return result;
+          }
+        }
+        if (score > (Number(tacticsRecordsOf(runMode).hs[difficulty]) || 0)) {
+          bumpTacticsRecord(runMode, 'hs', difficulty, score);
+          await storeSet(bestScoreKey(BATTLE_MODE_SUCCESS, difficulty), score, false);
+          setRunHighlights(prev => ({
+            ...prev,
+            newRecord: true
+          }));
+        }
+        return result;
+      } catch (e) {
+        console.error('[result] success cup score submit failed:', e && e.message ? e.message : e);
         return;
       }
     }
@@ -204763,10 +205054,17 @@ function MonsterHeroGame() {
   const joinCandidatePool = () => {
     const speciesPool = speciesChallengeJoinPool();
     if (speciesPool) return speciesPool;
+    if (isSuccessMode(runMode)) return proAllyPool.length > 0 ? proAllyPool : getSuccessCupPickList();
     if (!isProMode(runMode)) return getActiveMonsterList();
     return proAllyPool.length > 0 ? proAllyPool : getUnlockedBaseMonsterList();
   };
-  const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
+  const joinOfferSize = () => isProMode(runMode) || isSuccessMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
+  const sucBoxMonsNow = () => {
+    const mons = readSucBoxMons(sucBoxRaw);
+    return mons.length > 0 || !debugBattleRef.current ? mons : readSucBoxMons(SUC_DEMO_BOX);
+  };
+  const getSuccessCupPickList = () => successCupPickList(sucBoxMonsNow(), getUnlockedBaseMonsterList());
+  const getProPickBaseList = () => isSuccessMode(runMode) ? getSuccessCupPickList() : getUnlockedBaseMonsterList();
   const getActiveTeachingCards = () => {
     if (debugUnlockAllRef.current) return TEACHING_CARDS.filter(t => t && !t.debugOnly);
     const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
@@ -208516,6 +208814,7 @@ function MonsterHeroGame() {
   const masuRegisterWithPartnerNode = () => React.createElement(React.Fragment, null, masuRegisterButtonNode(), assistantPartnerRunNode());
   const masuRegisterButtonNode = () => {
     if (debugBattle || mainHero?.debugOnly) return null;
+    if (isSuccessMode(runMode)) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
     if (masuRegisteredThisRun) return React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"
@@ -209091,6 +209390,33 @@ function MonsterHeroGame() {
       addAssistantBond('clear');
       return;
     }
+    if (isSuccessMode(runMode)) {
+      const nextSuc = (Number(tacticsRecordsOf(runMode).clears[difficulty]) || 0) + 1;
+      bumpTacticsRecord(runMode, 'clears', difficulty, nextSuc);
+      await storeSet(clearCountKey(BATTLE_MODE_SUCCESS, difficulty), nextSuc, false);
+      if (!debugBattleRef.current) {
+        try {
+          const boxIds = [mainHero, ...(Array.isArray(slots) ? slots : [])].filter(isSucBoxBattleMon).map(m => m.sucBoxId);
+          const latest = await storeGet(SUC_CUP_KEY, null, false);
+          const {
+            record,
+            added
+          } = addSucCupWin(latest, {
+            runId: String(runIdRef.current || ''),
+            boxIds,
+            difficulty
+          });
+          if (added) {
+            await storeSet(SUC_CUP_KEY, record, false);
+            setSucCupRaw(record);
+          }
+        } catch (e) {
+          console.error('[success-cup] win save failed:', e && e.message ? e.message : e);
+        }
+      }
+      addAssistantBond('clear');
+      return;
+    }
     if (extremeRunRef.current) {
       const currentCount = extremeClearCounts[extremeDifficulty] || 0;
       const nextExtreme = (Number(currentCount) || 0) + 1;
@@ -209570,6 +209896,10 @@ function MonsterHeroGame() {
   const isQuickRepeatTemplate = template => !!template && !template.extremeRun && isQuickMode(template.runMode);
   const repeatTemplateForNewRun = () => isQuickRepeatTemplate(repeatRunTemplateRef.current) ? repeatRunTemplateRef.current : repeatTemplateFromAutoSettings();
   const resolveRepeatRunTemplate = template => {
+    if (template && isSuccessMode(template.runMode)) return {
+      ok: false,
+      reason: 'success-cup-no-repeat'
+    };
     if (!template || !Number.isInteger(template.initialDistance) || template.initialDistance < 0 || template.initialDistance > 3) return {
       ok: false,
       reason: 'invalid-template'
@@ -216085,6 +216415,11 @@ function MonsterHeroGame() {
           }));
           storeSet(bestWaveKey(BATTLE_MODE_QUICK, difficulty), w, false);
         }
+      } else if (isSuccessMode(runMode)) {
+        if (w > (Number(tacticsRecordsOf(runMode).waves[difficulty]) || 0)) {
+          bumpTacticsRecord(runMode, 'waves', difficulty, w);
+          storeSet(bestWaveKey(BATTLE_MODE_SUCCESS, difficulty), w, false);
+        }
       } else if (isProMode(runMode)) {
         if (w > (proHighestWaves[difficulty] || 0)) {
           setProHighestWaves(prev => ({
@@ -217453,7 +217788,7 @@ function MonsterHeroGame() {
       setGuts(Math.floor(m.baseGuts * 0.5));
       setAtk(m.baseAtk);
       setDef(m.baseDef);
-      if (isProMode(runMode)) {
+      if (isProMode(runMode) || isSuccessMode(runMode)) {
         setCurrentPickingMon(null);
         setProHeroPreset(null);
         setProAllyPool(prev => prev.filter(mon => mon.id !== m.id));
@@ -217624,6 +217959,13 @@ function MonsterHeroGame() {
   };
   const confirmProParty = () => {
     if (!mainHero || proAllyPool.length !== PRO_ALLY_POOL_SIZE) return;
+    if (isSuccessMode(runMode)) {
+      tacticsProLogRef.current = null;
+      repeatRunTemplateRef.current = null;
+      setTeachingPool([...getActiveTeachingCards()]);
+      advanceRunStage('PICK_TEACHING');
+      return;
+    }
     const confirmedParty = normalizeProLastParty({
       heroBaseId: mainHero.id,
       heroDistance: initialBattleDistanceRef.current,
@@ -220194,7 +220536,7 @@ function MonsterHeroGame() {
       className: `shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
     }, detailMember ? '詳細 ›' : '記録なし')));
   };
-  const modeRecordFor = (mode, diff) => isTacticsMode(mode) ? {
+  const modeRecordFor = (mode, diff) => isTacticsMode(mode) || isSuccessMode(mode) ? {
     score: tacticsRecordsOf(mode).hs[diff] || 0,
     wave: tacticsRecordsOf(mode).waves[diff] || 0,
     clears: tacticsRecordsOf(mode).clears[diff] || 0
@@ -222752,7 +223094,9 @@ function MonsterHeroGame() {
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
           ranked = !isExtreme && !isSpecies && modeHasRanking(m.id),
-          modeBestScore = ranked ? highestModeScore(isTacticsMode(m.id) ? tacticsRecordsOf(m.id).hs : isProMode(m.id) ? proHighScores : highScores, isTacticsMode(m.id) ? TACTICS_DIFFICULTY_IDS : Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
+          isSuc = isSuccessMode(m.id),
+          sucLocked = isSuc && readSucBoxMons(sucBoxRaw).length === 0 && !debugBattle,
+          modeBestScore = ranked || isSuc ? highestModeScore(isTacticsMode(m.id) || isSuc ? tacticsRecordsOf(m.id).hs : isProMode(m.id) ? proHighScores : highScores, isTacticsMode(m.id) ? TACTICS_DIFFICULTY_IDS : Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
         return React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           "data-battle-mode": m.id,
@@ -222776,7 +223120,7 @@ function MonsterHeroGame() {
           className: "mhbt-score"
         }, React.createElement("b", null, "遊べません"), React.createElement("small", null, "準備中 ・ 遊べるようになったらお知らせします")) : React.createElement("div", {
           className: "mhbt-score"
-        }, React.createElement("b", null, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`, " ・ ", isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("ul", {
+        }, isSuc ? React.createElement(React.Fragment, null, React.createElement("b", null, sucLocked ? '🔒 まだ出られません' : `${modeBestScore.toLocaleString()} pt`), React.createElement("small", null, sucLocked ? 'モンヒロサクセスで育てたモンスターが出られる大会です' : `最高スコア ・ 出られるモンスター ${readSucBoxMons(sucBoxRaw).length}体${modeHasRanking(m.id) ? '' : ' ・ 🧪 DEBUG・一般公開前'}`)) : React.createElement(React.Fragment, null, React.createElement("b", null, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`, " ・ ", isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`))), React.createElement("ul", {
           className: "mhbt-feats [@media(orientation:landscape)_and_(max-height:520px)]:mt-4 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start"
         }, m.highlights.map(([icon, text]) => React.createElement("li", {
           key: text
@@ -222809,7 +223153,11 @@ function MonsterHeroGame() {
           disabled: !!battleTutorial,
           onClick: () => openModeScoreRanking(m.id, safeDifficulty, 'BATTLE_MODE_SELECT'),
           className: "mhbt-pb disabled:opacity-40"
-        }, "🏆 ランキング")), React.createElement("button", {
+        }, "🏆 ランキング")), sucLocked ? React.createElement("button", {
+          "data-success-cup-locked": true,
+          disabled: true,
+          className: "mhbt-go w-full disabled:opacity-40"
+        }, "まだ出られません") : React.createElement("button", {
           "data-battle-mode-soon": modeSoon ? '1' : undefined,
           disabled: extremeLocked || speciesLocked || modeSoon || !!battleTutorial && m.id !== battleTutorialMode,
           onClick: () => {
@@ -223113,7 +223461,7 @@ function MonsterHeroGame() {
       const speciesSetting = id => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
       const allDifficulties = species || tacticsDiff ? (species ? SPECIES_CHALLENGE_DIFFICULTY_IDS : TACTICS_DIFFICULTY_IDS).map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
       const difficultyGroups = splitDifficultyEntries(allDifficulties);
-      const challengeExtremeTab = !species && !quick && !tacticsDiff && !isProMode(battleMode);
+      const challengeExtremeTab = !species && !quick && !tacticsDiff && !isProMode(battleMode) && !isSuccessMode(battleMode);
       const hasExtremeTab = difficultyGroups.extreme.length > 0 || challengeExtremeTab;
       const activeDifficultyTab = hasExtremeTab && !challengeExtremeTab ? difficultySelectTab : DIFFICULTY_TAB_NORMAL;
       const difficulties = activeDifficultyTab === DIFFICULTY_TAB_EXTREME ? difficultyGroups.extreme : difficultyGroups.normal;
@@ -223132,12 +223480,13 @@ function MonsterHeroGame() {
         centerCarouselChild(modeDifficultyCarouselRef.current, safe, behavior);
       };
       const mode = battleModeInfo(battleMode),
-        pro = isProMode(battleMode),
+        suc = isSuccessMode(battleMode),
+        pro = isProMode(battleMode) || suc,
         ranked = modeHasRanking(battleMode);
-      const proReady = getUnlockedBaseMonsterList().length >= PRO_ALLY_POOL_SIZE + 1;
+      const proReady = (suc ? successCupPickList(readSucBoxMons(debugBattle && readSucBoxMons(sucBoxRaw).length === 0 ? SUC_DEMO_BOX : sucBoxRaw), getUnlockedBaseMonsterList()) : getUnlockedBaseMonsterList()).length >= PRO_ALLY_POOL_SIZE + 1;
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
       const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.xp || setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
-      const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
+      const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : suc ? '育てたモンスターが4能力に換算されて出る／絆経験値なし' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
       const speciesRecord = difficultyId => speciesChallengeRecord(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
@@ -223402,13 +223751,13 @@ function MonsterHeroGame() {
             setDebugBattle(debugUnlockAllRef.current);
             setExtremeRun(tacticsExtreme);
             setDebugOutcome(null);
-            const baseMons = pro ? getUnlockedBaseMonsterList() : [];
-            const savedHero = pro ? baseMons.find(mon => mon.id === lastProParty.heroBaseId) : null;
+            const baseMons = suc ? successCupPickList(readSucBoxMons(debugUnlockAllRef.current && readSucBoxMons(sucBoxRaw).length === 0 ? SUC_DEMO_BOX : sucBoxRaw), getUnlockedBaseMonsterList()) : pro ? getUnlockedBaseMonsterList() : [];
+            const savedHero = pro && !suc ? baseMons.find(mon => mon.id === lastProParty.heroBaseId) : null;
             setProHeroPreset(savedHero && lastProParty.heroDistance !== null ? {
               heroBaseId: savedHero.id,
               heroDistance: lastProParty.heroDistance
             } : null);
-            setProAllyPool(pro ? lastProParty.allyBaseIds.map(id => baseMons.find(mon => mon.id === id)).filter(mon => mon && mon.id !== savedHero?.id) : []);
+            setProAllyPool(pro && !suc ? lastProParty.allyBaseIds.map(id => baseMons.find(mon => mon.id === id)).filter(mon => mon && mon.id !== savedHero?.id) : []);
             setMonSelection(pro ? baseMons : getActiveMonsterList());
             setHeroPickTab(pro ? 'base' : 'roster');
             advanceRunStage('PICK_HERO');
@@ -231058,7 +231407,7 @@ function MonsterHeroGame() {
       extremeDifficulty: extremeDifficulty,
       extremeRunRef: extremeRunRef,
       getMasuMon: getMasuMon,
-      getUnlockedBaseMonsterList: getUnlockedBaseMonsterList,
+      getUnlockedBaseMonsterList: getProPickBaseList,
       heroPickTab: heroPickTab,
       maxGuts: maxGuts,
       maxHp: maxHp,
@@ -231097,7 +231446,7 @@ function MonsterHeroGame() {
       advanceRunStage: advanceRunStage,
       clearSlotUniqueSelection: clearSlotUniqueSelection,
       confirmProParty: confirmProParty,
-      getUnlockedBaseMonsterList: getUnlockedBaseMonsterList,
+      getUnlockedBaseMonsterList: getProPickBaseList,
       initialBattleDistanceRef: initialBattleDistanceRef,
       mainHero: mainHero,
       proAllyDetail: proAllyDetail,

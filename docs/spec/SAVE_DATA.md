@@ -275,6 +275,9 @@
 | `mh_battle_score_shrink_migrated_v1` | boolean / `false` | スコアを全モード 1/1000 にした(2026-10-03)ときの、端末に残した数字の一度きりの移行が済んだか。縮めるのは `mh_hs_*` / `mh_quick_hs_*` / `mh_pro_hs_*` / `mh_extreme_hs_*` / `mh_species_challenge_progress_v1` の `bestScore` / 送信待ちの `mh_rank_<難易度>`(タクティクス・モンヒロビートは除く)。`mh_ranking_cache` は捨てて取り直させる。縮めた値とこのフラグは1つの取引で書く(途中で止まっても二重に縮まない)。ランキング側の数字は `docs/sql/rankings/SCORE_SHRINK_*.sql` で別に縮める |
 | `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
 | `mh_pro_pick_prefs_v1` | object / `{recent:[],fav:[]}` | プロモードの勇者モン・供モンえらびの「前回使った子」(`recent`・最大8)と「お気に入り」(`fav`)。モンスターIDの配列。壊れている・無いときは空で読む(`readProPickPrefs`) |
+| `mh_suc_hs_<難易度>` / `mh_suc_clears_<難易度>` / `mh_suc_highest_wave_<難易度>` | number / `0` | サクセス杯(モンヒロバトルの大会・`modeKeyPrefix('success')` = `mh_suc_`)の自己ベスト・クリア回数・最高到達WAVE。チャレンジ・プロの記録とは別 |
+| `mh_suc_cup_v1` | object / `{v:1,wins:{},fame:0,runs:[]}` | サクセス杯の成績。`wins` は保存枠の子の id ごとの優勝回数(称号「サクセス杯 優勝」の元)、`fame` は名声(仮)、`runs` は記録した周回 id(新しい50件・同じ周回を二度足さない)。壊れているときは空から(`normalizeSucCupRecord`) |
+| `mh_monsuc_box_v1` | object(モンヒロサクセスが書く) | モンヒロサクセスの保存枠。サクセス杯は**読むだけ**(`readSucBoxMons`・壊れているときは空の一覧) |
 | `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
 | `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |
 | `mh_monster_list_settings` | object / `DEFAULT_MONSTER_LIST_SETTINGS` | マスモン一覧の並び・絞り込み |

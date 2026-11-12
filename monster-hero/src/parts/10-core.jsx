@@ -665,6 +665,13 @@ const TACTICS_PRO_MODE = Object.freeze({
 // 「記録の置き場(mh_pro_* とプロ専用ランキング)」だけ。
 // 画面はまだデバッグからしか開けない(本番のバトル導線は従来どおり)
 const BATTLE_MODE_PRO = 'pro';
+// サクセス杯(モンヒロサクセスの保存枠の子が4能力に換算されて出る大会・19-success-cup.jsx)。
+// 流れはプロと同じだが、記録(mh_suc_*)・ランキング(Suc<難易度>)・倍率はプロと別。
+// ★normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、id そのものを見る(isSuccessMode)
+const BATTLE_MODE_SUCCESS = 'success';
+const isSuccessMode = (mode) => mode === BATTLE_MODE_SUCCESS;
+// 勇者モン＋供モン候補5体を先に組む「プロの形」の選ぶ画面を使うモード(プロ・タクティクスプロ・サクセス杯)
+const isProPickMode = (mode) => isProMode(mode) || mode === BATTLE_MODE_SUCCESS;
 const normalizeBattleMode = (value) => (value === BATTLE_MODE_QUICK || value === BATTLE_MODE_PRO) ? value : BATTLE_MODE_CHALLENGE;
 // クイックモードで経験値・ダイヤにかかる倍率(スコアにはかけない)
 const QUICK_REWARD_MULT = 1.5;
@@ -726,7 +733,8 @@ const applyQuickDiamondPolicy = (value, mode, policy) => isQuickMode(mode) && no
 // 倍率はブリーダー経験値・絆経験値・ダイヤで別々に決める。
 // プロは絆だけ3倍・ブリーダーは1.5倍で、ダイヤとスコアはチャレンジと同じ
 const modeBreederXpMult = (mode) => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BREEDER_XP_MULT : 1;
-const modeBondXpMult = (mode) => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
+// サクセス杯は絆経験値なし(出る子はマスモンではないため。PLAN §5)
+const modeBondXpMult = (mode) => (typeof isSuccessMode === 'function' && isSuccessMode(mode)) ? 0 : isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
 const modeGoldMult = (mode) => isQuickMode(mode) ? QUICK_REWARD_MULT : 1;
 const applyModeReward = (value, mult) => mult === 1 ? value : Math.floor(value * mult);
 const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), modeBreederXpMult(mode));
@@ -755,7 +763,9 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
 // ★ジャックは isTacticsMode より前に見る。あとに置くと mh_tactics_ になり、通常タクティクスの自己ベストと同じキーを指す。
 //   ジャック戦は記録を書かないので、この接頭辞は使われない(万一書いても通常の記録とは別のキーへ行く保険)
+// サクセス杯は mh_suc_ (チャレンジ・プロのキーには触らない)
 const modeKeyPrefix = (mode) => isRaidJackMode(mode) ? 'mh_raid_jack_unused_'
+  : (typeof isSuccessMode === 'function' && isSuccessMode(mode)) ? 'mh_suc_'
   : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
   : isTacticsMode(mode) ? 'mh_tactics_'
   : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
@@ -1043,7 +1053,7 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
       Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
     ]),
-    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
+    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO, 'success']), // 'success' = BATTLE_MODE_SUCCESS(サクセス杯)
   }),
   Object.freeze({
     id: BATTLE_SYSTEM_TACTICS, label: 'タクティクスバトル', short: 'タクティクス', emoji: '🎯', color: '#fb923c',
@@ -1097,6 +1107,8 @@ const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(mod
 const battleModePlayable = (id, { debugBattle = false } = {}) => {
   if (debugBattle) return true;
   if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  // サクセス杯は印(19-success-cup.jsx)が偽のあいだはデバッグからだけ
+  if (id === 'success') return typeof SUCCESS_CUP_PUBLIC_RELEASE !== 'undefined' && SUCCESS_CUP_PUBLIC_RELEASE === true;
   // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
   if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
   // ジャックは専用の公開フラグだけで決める(タクティクスの公開とは別。typeof は検査の切り出しで未定義になるため)
@@ -1153,6 +1165,7 @@ const battleModeInfo = (mode) => {
   if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
   if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
+  if (mode === 'success' && typeof SUCCESS_CUP_MODE !== 'undefined') return SUCCESS_CUP_MODE;
   // イベント・レイドボス「ジャック」: 画面の上部に「チャレンジ」と出ないよう、専用の名前と色を返す
   if (mode === BATTLE_MODE_RAID_JACK_A) return { id: mode, short: 'レイドバトル', label: 'レイドバトル', color: '#fb923c' };
   if (mode === BATTLE_MODE_RAID_JACK_B) return { id: mode, short: 'グランドスラム', label: 'グランドスラム', color: '#fbbf24' };
@@ -1171,6 +1184,7 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 const modeHasRanking = (mode) => !isQuickMode(mode)
   && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
   && !isRaidJackMode(mode)
+  && (!(typeof isSuccessMode === 'function' && isSuccessMode(mode)) || battleModePlayable(mode))
   && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ

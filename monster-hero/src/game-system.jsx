@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7b7934acf68fddc1
+// generated-sha256: af5516dba9f6e73e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -672,6 +672,13 @@ const TACTICS_PRO_MODE = Object.freeze({
 // 「記録の置き場(mh_pro_* とプロ専用ランキング)」だけ。
 // 画面はまだデバッグからしか開けない(本番のバトル導線は従来どおり)
 const BATTLE_MODE_PRO = 'pro';
+// サクセス杯(モンヒロサクセスの保存枠の子が4能力に換算されて出る大会・19-success-cup.jsx)。
+// 流れはプロと同じだが、記録(mh_suc_*)・ランキング(Suc<難易度>)・倍率はプロと別。
+// ★normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、id そのものを見る(isSuccessMode)
+const BATTLE_MODE_SUCCESS = 'success';
+const isSuccessMode = (mode) => mode === BATTLE_MODE_SUCCESS;
+// 勇者モン＋供モン候補5体を先に組む「プロの形」の選ぶ画面を使うモード(プロ・タクティクスプロ・サクセス杯)
+const isProPickMode = (mode) => isProMode(mode) || mode === BATTLE_MODE_SUCCESS;
 const normalizeBattleMode = (value) => (value === BATTLE_MODE_QUICK || value === BATTLE_MODE_PRO) ? value : BATTLE_MODE_CHALLENGE;
 // クイックモードで経験値・ダイヤにかかる倍率(スコアにはかけない)
 const QUICK_REWARD_MULT = 1.5;
@@ -733,7 +740,8 @@ const applyQuickDiamondPolicy = (value, mode, policy) => isQuickMode(mode) && no
 // 倍率はブリーダー経験値・絆経験値・ダイヤで別々に決める。
 // プロは絆だけ3倍・ブリーダーは1.5倍で、ダイヤとスコアはチャレンジと同じ
 const modeBreederXpMult = (mode) => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BREEDER_XP_MULT : 1;
-const modeBondXpMult = (mode) => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
+// サクセス杯は絆経験値なし(出る子はマスモンではないため。PLAN §5)
+const modeBondXpMult = (mode) => (typeof isSuccessMode === 'function' && isSuccessMode(mode)) ? 0 : isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
 const modeGoldMult = (mode) => isQuickMode(mode) ? QUICK_REWARD_MULT : 1;
 const applyModeReward = (value, mult) => mult === 1 ? value : Math.floor(value * mult);
 const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), modeBreederXpMult(mode));
@@ -762,7 +770,9 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
 // ★ジャックは isTacticsMode より前に見る。あとに置くと mh_tactics_ になり、通常タクティクスの自己ベストと同じキーを指す。
 //   ジャック戦は記録を書かないので、この接頭辞は使われない(万一書いても通常の記録とは別のキーへ行く保険)
+// サクセス杯は mh_suc_ (チャレンジ・プロのキーには触らない)
 const modeKeyPrefix = (mode) => isRaidJackMode(mode) ? 'mh_raid_jack_unused_'
+  : (typeof isSuccessMode === 'function' && isSuccessMode(mode)) ? 'mh_suc_'
   : mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
   : isTacticsMode(mode) ? 'mh_tactics_'
   : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
@@ -1050,7 +1060,7 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
       Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
     ]),
-    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
+    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO, 'success']), // 'success' = BATTLE_MODE_SUCCESS(サクセス杯)
   }),
   Object.freeze({
     id: BATTLE_SYSTEM_TACTICS, label: 'タクティクスバトル', short: 'タクティクス', emoji: '🎯', color: '#fb923c',
@@ -1104,6 +1114,8 @@ const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(mod
 const battleModePlayable = (id, { debugBattle = false } = {}) => {
   if (debugBattle) return true;
   if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  // サクセス杯は印(19-success-cup.jsx)が偽のあいだはデバッグからだけ
+  if (id === 'success') return typeof SUCCESS_CUP_PUBLIC_RELEASE !== 'undefined' && SUCCESS_CUP_PUBLIC_RELEASE === true;
   // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
   if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
   // ジャックは専用の公開フラグだけで決める(タクティクスの公開とは別。typeof は検査の切り出しで未定義になるため)
@@ -1160,6 +1172,7 @@ const battleModeInfo = (mode) => {
   if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
   if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
+  if (mode === 'success' && typeof SUCCESS_CUP_MODE !== 'undefined') return SUCCESS_CUP_MODE;
   // イベント・レイドボス「ジャック」: 画面の上部に「チャレンジ」と出ないよう、専用の名前と色を返す
   if (mode === BATTLE_MODE_RAID_JACK_A) return { id: mode, short: 'レイドバトル', label: 'レイドバトル', color: '#fb923c' };
   if (mode === BATTLE_MODE_RAID_JACK_B) return { id: mode, short: 'グランドスラム', label: 'グランドスラム', color: '#fbbf24' };
@@ -1178,6 +1191,7 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 const modeHasRanking = (mode) => !isQuickMode(mode)
   && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
   && !isRaidJackMode(mode)
+  && (!(typeof isSuccessMode === 'function' && isSuccessMode(mode)) || battleModePlayable(mode))
   && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
@@ -13063,6 +13077,216 @@ const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' &&
   .filter(i => i.type === 'disc' || i.type === 'assist' || i.type === 'item')
   .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
+// ---- part: 19-success-cup.jsx ----
+// ===== サクセス杯(モンヒロバトルの新しい大会・モンヒロサクセス 段取りの回5b) =====
+// 案: docs/progress/player-raise/PLAN.md §5「サクセス杯」・§9 保存・§11 の1
+// モンヒロサクセスの保存枠にいる「引退した子」が、この大会のときだけ
+// 今のモンヒロバトルの4能力(ライフ・ちから・丈夫さ・ガッツ)に換算されて出る。
+// 流れはプロと同じ(勇者モン → 置く距離 → 供モンの候補5体 → アシストカード → WAVE1〜10)。
+//
+// ★ほかのモンヒロバトル(チャレンジ・クイック・プロ・極限)と既存のランキングには入れない。
+//   記録は mh_suc_* (modeKeyPrefix)、ランキングは difficulty の先頭に Suc を付けた別の行(プロの Pro と同じやり方。
+//   Supabase の列も表も増やさない)。チャレンジ・プロの自己ベストは読みも書きもしない。
+// ★保存枠(mh_monsuc_box_v1)は回3(モンヒロサクセスの保存枠)が書く。ここは**読むだけ**。
+//   サクセス杯の成績(優勝の回数・名声)は、保存枠を書き換えずに新しいキー mh_suc_cup_v1 へ別に持つ。
+// ★足りない枠はベースモンで埋める(§11 の1 の推奨)。引退した子が1体でもいれば出られる。
+// ★この部品は純粋(保存・画面なし)。読み書きは 60-app.jsx が storeGet/storeSet で行う。
+// ★換算の幅(×0.8〜×1.6)は仮。測って決めるのは窓口の了解のあと(PLAN §5)。
+//   PLAN の例「6能力みな500 → 基礎の約1.4倍」は式と合わない(式どおりだと 0.8 + 500/999×0.8 ≒ ×1.2)。ここは式に従う。
+
+// 公開の印。偽のあいだはデバッグのバトル入口からだけ遊べ、ランキングにも送らない
+const SUCCESS_CUP_PUBLIC_RELEASE = false;
+// 回3の保存枠(読むだけ)
+const SUC_BOX_KEY = 'mh_monsuc_box_v1';
+// サクセス杯の成績(新しいキー): { v:1, wins:{ [保存枠の子のid]: 回数 }, fame:名声, runs:[記録した周回id(新しい50件)] }
+const SUC_CUP_KEY = 'mh_suc_cup_v1';
+// 6能力のキー(monster-hero/data/monhero-success.js の KEYS と同じ並び)
+const SUC_STAT_KEYS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
+const SUC_STAT_MAX = 999;
+// 換算の幅(仮)。0 で ×SUC_RATIO_MIN、999 で ×SUC_RATIO_MAX
+const SUC_RATIO_MIN = 0.8;
+const SUC_RATIO_MAX = 1.6;
+const SUC_CUP_TITLE = 'サクセス杯 優勝';
+
+const sucNum = (value, fallback = 0) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+const sucClampStat = (value) => Math.max(0, Math.min(SUC_STAT_MAX, sucNum(value, 0)));
+// 割合(x) = 0.8 + (その能力 ÷ 999) × 0.8
+const sucStatRatio = (value) => SUC_RATIO_MIN + (sucClampStat(value) / SUC_STAT_MAX) * (SUC_RATIO_MAX - SUC_RATIO_MIN);
+
+// 保存枠の子1体を読む。読めないものは null(落とすだけで、保存は書き換えない)。
+// 6能力は st(PLAN §9 の形) を先に、無ければ stats(計算の芯の育成の形)を見る。熟練も mast → mastery の順
+const normalizeSucBoxMon = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const id = typeof raw.id === 'string' || Number.isFinite(raw.id) ? String(raw.id) : '';
+  const species = typeof raw.species === 'string' ? raw.species : '';
+  if (!id || !species) return null;
+  const src = raw.st && typeof raw.st === 'object' ? raw.st : raw.stats && typeof raw.stats === 'object' ? raw.stats : null;
+  if (!src) return null;
+  const st = {};
+  for (const key of SUC_STAT_KEYS) st[key] = sucClampStat(src[key]);
+  const techs = Array.isArray(raw.techs) ? raw.techs.filter(t => typeof t === 'string') : [];
+  const mastSrc = raw.mast && typeof raw.mast === 'object' ? raw.mast : raw.mastery && typeof raw.mastery === 'object' ? raw.mastery : {};
+  // 読み直し済みの形(mast が技と同じ並びの配列)もそのまま通す
+  const mast = Array.isArray(raw.mast) ? raw.mast.slice(0, techs.length).map(v => Math.max(0, Math.min(100, sucNum(v, 0))))
+    : techs.map(t => Math.max(0, Math.min(100, sucNum(mastSrc[t], 0))));
+  return {
+    id, species,
+    nick: typeof raw.nick === 'string' && raw.nick.trim() ? raw.nick.trim().slice(0, 20) : '',
+    st, techs, mast,
+    // 未育成の合体の子(raised:false)は出られない。raised が無い古い形は引退した子として扱う
+    raised: raw.raised !== false,
+    rank: typeof raw.rank === 'string' ? raw.rank : '',
+    gen: Math.max(1, Math.floor(sucNum(raw.gen, 1))),
+    titles: Array.isArray(raw.titles) ? raw.titles.filter(t => typeof t === 'string') : [],
+    sucNormalized: true,
+  };
+};
+// 保存枠から、サクセス杯に出られる子(引退した子)だけを並べる
+const readSucBoxMons = (boxRaw) => {
+  const mons = boxRaw && typeof boxRaw === 'object' && Array.isArray(boxRaw.mons) ? boxRaw.mons : [];
+  return mons.map(normalizeSucBoxMon).filter(m => m && m.raised);
+};
+// 固有技の Lv: 覚えた技の熟練の平均から(熟練0 → Lv1・100 → Lv9)。技が無ければ Lv1
+const sucUniqueLevelOf = (mon) => {
+  const list = Array.isArray(mon?.mast) ? mon.mast : [];
+  if (!list.length) return 0;
+  const avg = list.reduce((sum, v) => sum + sucNum(v, 0), 0) / list.length;
+  return Math.max(0, Math.min(8, Math.round(avg / 100 * 8)));
+};
+// 4能力の倍率(PLAN §5 の式)
+const sucBattleRatios = (st) => {
+  const s = st || {};
+  const hi = Math.max(sucClampStat(s.pow), sucClampStat(s.wise));
+  const lo = Math.min(sucClampStat(s.pow), sucClampStat(s.wise));
+  return {
+    hp: sucStatRatio(s.life),
+    atk: sucStatRatio(hi * 0.7 + lo * 0.3),
+    def: sucStatRatio(s.tough),
+    guts: sucStatRatio((sucClampStat(s.hit) + sucClampStat(s.eva)) / 2),
+  };
+};
+// 保存枠の子を、モンヒロバトルの「モンスターらしいオブジェクト」へ換算する。
+// id は種のまま(勇者特性・絵・技の判定を壊さないため)。マスモンではないので masuId は持たない。
+// 強化ポイント・限界突破・魂格・継承技は持たない
+const convertSucMonToBattle = (boxMon, all = (typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null)) => {
+  const mon = boxMon && boxMon.sucNormalized ? boxMon : normalizeSucBoxMon(boxMon);
+  const base = mon && all ? all[mon.species] : null;
+  if (!mon || !base || base.debugOnly) return null;
+  const r = sucBattleRatios(mon.st);
+  const mul = (value, ratio) => Math.max(1, Math.round(sucNum(value, 0) * ratio));
+  const plus = base.plusStats || {};
+  const lv = sucUniqueLevelOf(mon);
+  return {
+    ...base,
+    name: mon.nick || base.name,
+    baseHp: mul(base.baseHp, r.hp),
+    baseAtk: mul(base.baseAtk, r.atk),
+    baseDef: mul(base.baseDef, r.def),
+    baseGuts: mul(base.baseGuts, r.guts),
+    plusStats: { hp: mul(plus.hp, r.hp), atk: mul(plus.atk, r.atk), def: mul(plus.def, r.def), guts: mul(plus.guts, r.guts) },
+    unique: typeof uniqueSkillAtLevel === 'function' ? uniqueSkillAtLevel(base.unique, lv) : base.unique,
+    inheritedUniques: [],
+    sucBoxId: mon.id,
+    sucRank: mon.rank,
+    sucUniqueLv: lv + 1,
+  };
+};
+// 換算した子の強さのめやす(同じ種が何体もいるとき、いちばん強い子を代表にする)
+const sucBattlePower = (mon) => sucNum(mon?.baseHp) / 5 + sucNum(mon?.baseAtk) + sucNum(mon?.baseDef) + sucNum(mon?.baseGuts);
+// サクセス杯で選べる子の一覧。先に保存枠の引退した子(種ごとにいちばん強い1体)、
+// そのあとに、その種がいないベースモンで埋める(§11 の1)。
+// ★プロの選ぶ画面は種の id で子を見分けるので、同じ種は1体にそろえる
+const successCupPickList = (boxMons, baseList) => {
+  const bySpecies = new Map();
+  for (const raw of Array.isArray(boxMons) ? boxMons : []) {
+    const mon = convertSucMonToBattle(raw);
+    if (!mon) continue;
+    const cur = bySpecies.get(mon.id);
+    if (!cur || sucBattlePower(mon) > sucBattlePower(cur)) bySpecies.set(mon.id, mon);
+  }
+  const box = [...bySpecies.values()].sort((a, b) => sucBattlePower(b) - sucBattlePower(a));
+  const fill = (Array.isArray(baseList) ? baseList : []).filter(m => m && !bySpecies.has(m.id) && m.masuId == null);
+  return [...box, ...fill];
+};
+const isSucBoxBattleMon = (mon) => !!(mon && typeof mon.sucBoxId === 'string' && mon.sucBoxId);
+
+// サクセス杯の成績(mh_suc_cup_v1)の読み直し。壊れているときは空から
+const SUC_CUP_RUNS_MAX = 50;
+const normalizeSucCupRecord = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const wins = {};
+  if (src.wins && typeof src.wins === 'object' && !Array.isArray(src.wins)) {
+    for (const [id, n] of Object.entries(src.wins)) {
+      const v = Math.floor(sucNum(n, 0));
+      if (id && v > 0) wins[id] = v;
+    }
+  }
+  return {
+    v: 1,
+    wins,
+    fame: Math.max(0, Math.floor(sucNum(src.fame, 0))),
+    runs: Array.isArray(src.runs) ? src.runs.filter(r => typeof r === 'string').slice(-SUC_CUP_RUNS_MAX) : [],
+  };
+};
+// 名声(仮): 優勝で 10 + 難易度の段(Beginner 0 〜 Legend 8)。数字は窓口の了解で決め直す
+const sucCupFameFor = (difficulty) => {
+  const order = typeof DIFFICULTY_SETTINGS === 'object' && DIFFICULTY_SETTINGS ? Object.keys(DIFFICULTY_SETTINGS) : [];
+  return 10 + Math.max(0, order.indexOf(difficulty));
+};
+// 優勝を1回ぶん足す。同じ周回(runId)は二度足さない
+const addSucCupWin = (raw, { runId, boxIds = [], difficulty } = {}) => {
+  const rec = normalizeSucCupRecord(raw);
+  const id = typeof runId === 'string' && runId ? runId : '';
+  if (!id || rec.runs.includes(id)) return { record: rec, added: false };
+  const wins = { ...rec.wins };
+  for (const boxId of [...new Set(boxIds.filter(b => typeof b === 'string' && b))]) wins[boxId] = (wins[boxId] || 0) + 1;
+  return {
+    record: { v: 1, wins, fame: rec.fame + sucCupFameFor(difficulty), runs: [...rec.runs, id].slice(-SUC_CUP_RUNS_MAX) },
+    added: true,
+  };
+};
+// その子が持つ称号(保存枠の titles + サクセス杯の優勝)
+const sucCupTitlesOf = (boxId, cupRaw, boxTitles = []) => {
+  const rec = normalizeSucCupRecord(cupRaw);
+  const titles = Array.isArray(boxTitles) ? boxTitles.slice() : [];
+  if ((rec.wins[boxId] || 0) > 0 && !titles.includes(SUC_CUP_TITLE)) titles.push(SUC_CUP_TITLE);
+  return titles;
+};
+
+// 保存枠がまだ空のとき、デバッグのバトル入口からだけ使う仮の子(保存はしない)。
+// 6能力が 0・500・999 の3パターン(PLAN §5 で測るときの最小の組)
+const SUC_DEMO_BOX = Object.freeze({
+  v: 1, cap: 30,
+  mons: Object.freeze([
+    { id: 'demo-mocchi-500', species: 'Mocchi', nick: 'もちまる', st: { life: 500, pow: 500, wise: 500, hit: 500, eva: 500, tough: 500 }, techs: ['a', 'b'], mast: { a: 50, b: 50 }, raised: true, rank: 'B', gen: 1, titles: [] },
+    { id: 'demo-golem-999', species: 'Golem', nick: 'ゴロン', st: { life: 999, pow: 999, wise: 400, hit: 999, eva: 999, tough: 999 }, techs: ['a'], mast: { a: 100 }, raised: true, rank: 'S', gen: 2, titles: [] },
+    { id: 'demo-kyubi-0', species: 'Kyubi', nick: 'こん', st: { life: 0, pow: 0, wise: 0, hit: 0, eva: 0, tough: 0 }, techs: [], mast: {}, raised: true, rank: 'G', gen: 1, titles: [] },
+  ]),
+});
+
+// モード選択のカードと「？」の説明。形は BATTLE_MODES と同じ
+const SUCCESS_CUP_MODE = Object.freeze({
+  id: 'success', label: 'サクセス杯', cardLabel: 'サクセス杯', short: 'サクセス杯', emoji: '🎖️', color: '#34d399',
+  tagline: 'モンヒロサクセスで育てたモンスターが出られる大会',
+  highlights: Object.freeze([
+    Object.freeze(['🎖️', '育てたモンスターが4能力で出る']),
+    Object.freeze(['💎', '経験値・ダイヤは難易度どおり']),
+    Object.freeze(['📊', 'サクセス杯専用のスコアランキング']),
+  ]),
+  points: Object.freeze([
+    Object.freeze(['⚔️', '編成', 'モンヒロサクセスで育てて引退したモンスターが、勇者モンにも供モンにもなれます。足りない枠はベースモンで埋まるので、引退したモンスターが1体でもいれば出られます。今のマスモンは連れていけません。']),
+    Object.freeze(['🔁', '能力の換算', '6つの能力は、この大会のときだけライフ・ちから・丈夫さ・ガッツの4つに換算されます。ライフはライフ、ちからはちからとかしこさの高いほう、丈夫さは丈夫さ、ガッツは命中と回避から決まります。固有技のレベルは、覚えた技の熟練から決まります。']),
+    Object.freeze(['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。']),
+    Object.freeze(['👹', '難しさ', '9段階の難易度から選べます。敵の強さは難易度どおりです。']),
+    Object.freeze(['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値とダイヤは難易度の設定どおりです。マスモンではないので絆経験値は入りません。']),
+    Object.freeze(['🏆', 'スコアと記録', 'スコアはサクセス杯専用のランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。優勝すると、出たモンスターに「サクセス杯 優勝」の称号が付きます。']),
+    Object.freeze(['🤝', '供モンの加入', 'プロモードと同じで、始める前に供モンの候補を5体選びます。加入候補として出るのは、その5体からランダムに選ばれた3体です。']),
+    Object.freeze(['⭐', 'マスモン登録', 'ありません。出たモンスターはモンヒロサクセスの保管場所に残ったままです。']),
+    Object.freeze(['⏩', 'スキップチケット', '使えません。']),
+    Object.freeze(['🎯', 'こんな人におすすめ', 'モンヒロサクセスで育てたモンスターの強さを、モンヒロバトルで試したい人向けです。']),
+  ]),
+});
+
 // ---- part: 20-market-notices-help.jsx ----
 // マーケットは1行に3商品ずつ並べる。4つだと幅360pxの端末で1枚76pxしか取れず、
 // そのせいで商品名が9px・購入ボタンが30pxまで縮んでいた(2026-09-18)。3つなら1枚約103px。
@@ -19422,6 +19646,9 @@ const EXTREME_RANKING_PREFIX = 'Extreme';
 // (例: TacticsHard / TacticsEXTREME)。Pro / Extreme とは先頭が違うので取り違えは起きない。
 // チャレンジ・プロ・極限の行は読みも書きもしない
 const TACTICS_RANKING_PREFIX = 'Tactics';
+// サクセス杯(19-success-cup.jsx)も同じやり方。難易度キーの先頭へ Suc を付ける(例: SucHard)。
+// 'Species-…'(種族チャレンジ)とは綴りも区切りも違うので取り違えは起きない
+const SUC_RANKING_PREFIX = 'Suc';
 // ★タクティクスプロは、β版のあいだだけ別の行(TacticsProBeta<難易度>)へ送る。
 //   本公開でキーが TacticsPro<難易度> へ切り替わり、本番の順位は空から始まる。
 //   β版の行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)
@@ -19432,6 +19659,7 @@ const tacticsProRankingPrefix = () => (TACTICS_MODE_PUBLIC_RELEASE
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+  ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${SUC_RANKING_PREFIX}${key}`),
   // タクティクスは通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS が正本)。
   // 極限もモードの中の難易度なので、極限チャレンジの Extreme* とは別の行になる
   ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`),
@@ -19539,6 +19767,7 @@ const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
     return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
   }
   if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
+  if (mode === 'success') return `${SUC_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
@@ -19554,6 +19783,7 @@ const rankingDifficultyBase = (key) => {
   }
   if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
   if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
+  if (text.startsWith(SUC_RANKING_PREFIX)) return text.slice(SUC_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = (value) => {
@@ -47033,7 +47263,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
       <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProPickMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -47044,7 +47274,7 @@ function PickHeroAllyScreen({
       {/* プロモードの編成(枠を上に固定)は、一覧の場所を空けるため吹き出しを出さない(「主役になる子を選びましょ」は6体を選ぶ流れと合わない)。案内は枠の下の1行が持つ */}
       {/* 横向きの背の低い画面(844×390 など)の勇者モンえらびは、吹き出し・説明の行を畳み、タブを低くし、札を3列にする。
           見出しと吹き出しとタブで上の 210px を使い、札が1段の上半分しか見えなかった(2026-10-27 ジン)。チュートリアル中は畳まない */}
-      {!(pickMode==='hero'&&isProMode(runMode)&&!battleTutorial)&&<div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}${pickMode==='hero'&&!battleTutorial?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>}
+      {!(pickMode==='hero'&&isProPickMode(runMode)&&!battleTutorial)&&<div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}${pickMode==='hero'&&!battleTutorial?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>}
       {/* 供モン合流は「いま何がどれだけ増えるか」を選ぶ場面なので、トレーニング画面と同じ形で
           基準になる現在値をここに固定表示する。各カードは自分の変動しか出さないため、
           ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
@@ -47115,36 +47345,36 @@ function PickHeroAllyScreen({
       {pickMode==='hero'&&(
         <div className="shrink-0 w-full max-w-md mx-auto mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1">
           {/* プロモードはベースモンだけなので、編成との切替は出さない */}
-          {!isProMode(runMode)&&<div className="flex gap-1.5">
+          {!isProPickMode(runMode)&&<div className="flex gap-1.5">
             {[['roster','編成'],['base','ベースモン']].map(([key,label])=>(
               <button key={key} onClick={()=>{setHeroPickTab(key); setCurrentPickingMon(null);}} aria-pressed={heroPickTab===key} className={`flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab===key?'bg-indigo-600 border-indigo-300 text-white shadow-lg':'bg-slate-900 border-slate-700 text-slate-400'}`}>{label}</button>
             ))}
           </div>}
-          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${battleTutorial?'':' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`}>{isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
+          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProPickMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${battleTutorial?'':' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`}>{isSuccessMode(runMode)?'サクセス杯はモンヒロサクセスで育てたモンスターと、足りないぶんのベースモン(マスモンは連れていけません)':isProPickMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
         </div>
       )}
       {/* あふれる可能性のあるスクロール領域へ justify-center を付けると、あふれたぶんが
           上下へはみ出し、スクロールで追える下側と違って上側は永久に届かなくなる。
           内側を m-auto で寄せておけば、余っているときだけ中央、あふれたら先頭からたどれる */}
-      <div className={`flex-1 ${pickMode==='hero'&&isProMode(runMode)?'overflow-hidden':'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`}>
-       <div className={`w-full${pickMode==='ally'?' m-auto':''}${pickMode==='hero'&&isProMode(runMode)?' flex-1 min-h-0 flex flex-col':''}`}>
-        {pickMode==='ally'&&!isProMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
+      <div className={`flex-1 ${pickMode==='hero'&&isProPickMode(runMode)?'overflow-hidden':'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`}>
+       <div className={`w-full${pickMode==='ally'?' m-auto':''}${pickMode==='hero'&&isProPickMode(runMode)?' flex-1 min-h-0 flex flex-col':''}`}>
+        {pickMode==='ally'&&!isProPickMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
           <span>合流できる候補 {(monSelection||[]).filter(m=>m&&!slots.some(x=>x&&x.id===m.id)).length}体</span><span>カードを押すと詳細</span>
         </div>}
         {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
             外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
         {/* プロの供モン合流だけ、バトルモード選択と同じ横スライドで1体ずつ見せる。
             3体しか出ないので、2列に並べるより1体ずつ大きく見比べられるほうが選びやすい */}
-        {(()=>{const allyCarousel=pickMode==='ally'&&isProMode(runMode);
+        {(()=>{const allyCarousel=pickMode==='ally'&&isProPickMode(runMode);
           // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
           const inParty=slots.filter(x=>x).map(x=>x.id);
-          const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;
+          const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProPickMode(runMode))?getUnlockedBaseMonsterList():monSelection;
           const rawList=pickMode==='hero'?debugHeroMonsterList(savedRawList):savedRawList;
           const list=(pickMode==='ally'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];
           const stepAlly=(delta)=>{const root=allyCarouselRef.current;if(!root)return;const next=Math.max(0,Math.min(list.length-1,allyCardIndex+delta));setAllyCardIndex(next);centerCarouselChild(root,next,'smooth');};
           // プロモードの勇者モン選びは、顔アイコンのグリッド + 下の詳細パネル(ProMonsterGridPicker)
           // チュートリアルは今までの1体えらび(指の案内がこの形に合わせてある)。ふだんは編成の枠を上に固定した ProPartyPicker
-          if(pickMode==='hero'&&isProMode(runMode)&&!battleTutorial&&typeof setProAllyPool==='function') return (
+          if(pickMode==='hero'&&isProPickMode(runMode)&&!battleTutorial&&typeof setProAllyPool==='function') return (
             <ProPartyPicker list={list} need={1+Math.min(PRO_ALLY_POOL_SIZE,Math.max(0,list.length-1))}
               initialIds={proHeroPreset?.heroBaseId?[proHeroPreset.heroBaseId,...(proAllyPool||[]).map(m=>m&&m.id)]
                 :currentPickingMon&&(proAllyPool||[]).length?[currentPickingMon.id,...proAllyPool.map(m=>m&&m.id)]   // 配置画面から「選び直す」で戻ったとき
@@ -47153,7 +47383,7 @@ function PickHeroAllyScreen({
               onDone={(hero,allies)=>{setProAllyPool(allies.filter(Boolean));setProHeroPreset(null);setCurrentPickingMon(hero);advanceRunStage('PICK_SLOT');}}
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
-          if(pickMode==='hero'&&isProMode(runMode)) return (
+          if(pickMode==='hero'&&isProPickMode(runMode)) return (
             <ProMonsterGridPicker list={list} selectedId={proHeroPreset?.heroBaseId||null} accent="indigo"
               instant={!!battleTutorial} isDisabled={m=>!scenarioPicksHero(m.id)} spotClassFor={m=>battleTutorialSpotClass('monCards')}
               confirmLabel="このモンスターで挑む" confirmAria={m=>`${m.name}を勇者モンに選ぶ`}
@@ -47168,7 +47398,7 @@ function PickHeroAllyScreen({
         </div>}
         <div ref={allyCarousel?allyCarouselRef:null} onScroll={allyCarousel?(e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(best!==allyCardIndex)setAllyCardIndex(best);}):undefined}
              className={allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':`grid grid-cols-2 gap-2.5${pickMode==='hero'?' [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-2':''}`}
-             style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:pickMode==='hero'&&isProMode(runMode)?{display:'flex',flexDirection:'column'}:undefined}>
+             style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:pickMode==='hero'&&isProPickMode(runMode)?{display:'flex',flexDirection:'column'}:undefined}>
         {list.map((m,cardIndex)=>{const isSel=currentPickingMon?.id===m.id;const focused=allyCarousel&&cardIndex===allyCardIndex;
           // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
           // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
@@ -104019,6 +104249,9 @@ function MonsterHeroGame() {
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
+  // サクセス杯(19-success-cup.jsx): モンヒロサクセスの保存枠(読むだけ)と、サクセス杯の成績(mh_suc_cup_v1)
+  const [sucBoxRaw, setSucBoxRaw] = useState(null);
+  const [sucCupRaw, setSucCupRaw] = useState(null);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
   const [proEditingAllyIndex, setProEditingAllyIndex] = useState(null); // null=編成確認、数値=その供モン枠だけ変更
   // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
@@ -109624,6 +109857,9 @@ function MonsterHeroGame() {
         ? { normal:'speciesBattle', dullahan:'speciesDullahan', moo:'speciesMoo' }
         : extremeRunRef.current
         ? { normal:'extremeBattle', dullahan:'extremeDullahan', moo:'extremeMoo' }
+        // サクセス杯はプロと同じ曲(BGMアレンジの枠は増やさない)
+        : isSuccessMode(runMode)
+          ? { normal:'proBattle', dullahan:'proDullahan', moo:'proMoo' }
         : isProMode(runMode)
           ? { normal:'proBattle', dullahan:'proDullahan', moo:'proMoo' }
           : isQuickMode(runMode)
@@ -110648,6 +110884,20 @@ function MonsterHeroGame() {
         }));
         tacticsLoaded[mode] = { hs, clears, waves };
       }));
+      // サクセス杯の記録(mh_suc_*)。入れ物はタクティクスと同じモードidごとの表を使う(難易度は通常9段階)
+      {
+        const hs = {}; const clears = {}; const waves = {};
+        await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
+          hs[d] = await storeGet(bestScoreKey(BATTLE_MODE_SUCCESS, d), 0, false);
+          clears[d] = await storeGet(clearCountKey(BATTLE_MODE_SUCCESS, d), 0, false);
+          waves[d] = await storeGet(bestWaveKey(BATTLE_MODE_SUCCESS, d), 0, false);
+        }));
+        tacticsLoaded[BATTLE_MODE_SUCCESS] = { hs, clears, waves };
+      }
+      try {
+        setSucBoxRaw(await storeGet(SUC_BOX_KEY, null, false));
+        setSucCupRaw(await storeGet(SUC_CUP_KEY, null, false));
+      } catch (e) { setSucBoxRaw(null); setSucCupRaw(null); }
       // 極限チャレンジの記録は難易度定義から共通生成する。未公開段階も先に読み込むが、
       // ランキングとプロフィールの表示対象は available の難易度だけに限定する。
       const loadedExtremeScores = {};
@@ -111181,6 +111431,30 @@ function MonsterHeroGame() {
         return result;
       } catch (e) {
         console.error('[result] extreme score submit failed:', e && e.message ? e.message : e);
+        return;
+      }
+    }
+    // サクセス杯は Suc<難易度> の別の行へ送り、自己ベストは mh_suc_hs_* へだけ残す。
+    // 公開の印が偽のあいだ(modeHasRanking が偽)は送らない。チャレンジ・プロの記録は読みも書きもしない
+    if (isSuccessMode(runMode)) {
+      try {
+        let result = null;
+        if (modeHasRanking(runMode)) {
+          result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_SUCCESS, difficulty), score, runIdRef.current);
+          if (!result?.nationalSaved) {
+            console.error('[result] success cup score save failed:', result?.error?.message || 'unknown ranking error');
+            setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
+            return result;
+          }
+        }
+        if (score > (Number(tacticsRecordsOf(runMode).hs[difficulty]) || 0)) {
+          bumpTacticsRecord(runMode, 'hs', difficulty, score);
+          await storeSet(bestScoreKey(BATTLE_MODE_SUCCESS, difficulty), score, false);
+          setRunHighlights(prev => ({ ...prev, newRecord: true }));
+        }
+        return result;
+      } catch (e) {
+        console.error('[result] success cup score submit failed:', e && e.message ? e.message : e);
         return;
       }
     }
@@ -111818,13 +112092,23 @@ function MonsterHeroGame() {
     // 編成にいるだけの他種族モンスターがAUTO経由で紛れ込むことはない
     const speciesPool = speciesChallengeJoinPool();
     if (speciesPool) return speciesPool;
+    if (isSuccessMode(runMode)) return proAllyPool.length > 0 ? proAllyPool : getSuccessCupPickList();
     if (!isProMode(runMode)) return getActiveMonsterList();
     // 始める前に選んだ5体。何かの拍子に空のまま始まっていても、育てたマスモンが
     // 混ざらないようベースモンへ落とす(プロの「ベースモンだけ」という約束を必ず守る)
     return proAllyPool.length > 0 ? proAllyPool : getUnlockedBaseMonsterList();
   };
   // 一度に見せる候補の数。プロは5体からランダムに3体だけ見せる
-  const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
+  const joinOfferSize = () => isProMode(runMode) || isSuccessMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
+  // サクセス杯で選べる子(保存枠の引退した子 → 足りないぶんはベースモン)。
+  // 保存枠が空のときは、デバッグのバトル入口からだけ仮の子(SUC_DEMO_BOX)で試せる(保存はしない)
+  const sucBoxMonsNow = () => {
+    const mons = readSucBoxMons(sucBoxRaw);
+    return mons.length > 0 || !debugBattleRef.current ? mons : readSucBoxMons(SUC_DEMO_BOX);
+  };
+  const getSuccessCupPickList = () => successCupPickList(sucBoxMonsNow(), getUnlockedBaseMonsterList());
+  // プロの形の選ぶ画面(勇者モン＋供モン候補5体)へ渡す一覧。サクセス杯のときだけ中身が替わる
+  const getProPickBaseList = () => isSuccessMode(runMode) ? getSuccessCupPickList() : getUnlockedBaseMonsterList();
   const getActiveTeachingCards = () => {
     // 「すべて解放してバトル」のあいだは、全アシストカードを持っていることにする(保存はしない)
     if (debugUnlockAllRef.current) return TEACHING_CARDS.filter(t => t && !t.debugOnly);
@@ -114120,6 +114404,8 @@ function MonsterHeroGame() {
   const masuRegisterWithPartnerNode = () => <>{masuRegisterButtonNode()}{assistantPartnerRunNode()}</>;
   const masuRegisterButtonNode = () => {
     if (debugBattle || mainHero?.debugOnly) return null;
+    // サクセス杯に出た子は保存枠の子なので、マスモン登録はない
+    if (isSuccessMode(runMode)) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
     if (masuRegisteredThisRun) return <div className="text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"><Heart size={11}/>マスモンとして登録しました！</div>;
     // 見落とされやすいので、ただのボタンではなく枠つきの案内にして光らせる
@@ -114660,6 +114946,23 @@ function MonsterHeroGame() {
       addAssistantBond('clear');
       return;
     }
+    // サクセス杯のクリア回数は mh_suc_clears_* へ。チャレンジ・プロの通算クリア数とミッションは動かさない。
+    // 優勝は出た保存枠の子ごとに mh_suc_cup_v1 へ1回だけ足す(保存枠そのものは書き換えない・デバッグの周回は足さない)
+    if (isSuccessMode(runMode)) {
+      const nextSuc = (Number(tacticsRecordsOf(runMode).clears[difficulty]) || 0) + 1;
+      bumpTacticsRecord(runMode, 'clears', difficulty, nextSuc);
+      await storeSet(clearCountKey(BATTLE_MODE_SUCCESS, difficulty), nextSuc, false);
+      if (!debugBattleRef.current) {
+        try {
+          const boxIds = [mainHero, ...(Array.isArray(slots) ? slots : [])].filter(isSucBoxBattleMon).map(m => m.sucBoxId);
+          const latest = await storeGet(SUC_CUP_KEY, null, false);
+          const { record, added } = addSucCupWin(latest, { runId: String(runIdRef.current || ''), boxIds, difficulty });
+          if (added) { await storeSet(SUC_CUP_KEY, record, false); setSucCupRaw(record); }
+        } catch (e) { console.error('[success-cup] win save failed:', e && e.message ? e.message : e); }
+      }
+      addAssistantBond('clear');
+      return;
+    }
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
       const currentCount = extremeClearCounts[extremeDifficulty] || 0;
@@ -115073,6 +115376,8 @@ function MonsterHeroGame() {
   // 保存したIDを毎回いまのroster/マスモン正本へ引き直す。消失・利用不可・Pro制約違反は
   // 別個体で補完せず、5BがAUTO∞を停止できる失敗値として返す。
   const resolveRepeatRunTemplate = (template) => {
+    // サクセス杯は∞周回のテンプレートを使わない(normalizeBattleMode を通すとチャレンジに落ちてマスモンを連れていけるため)
+    if (template && isSuccessMode(template.runMode)) return { ok:false, reason:'success-cup-no-repeat' };
     if (!template || !Number.isInteger(template.initialDistance) || template.initialDistance < 0 || template.initialDistance > 3) return { ok:false, reason:'invalid-template' };
     const mode=template.runMode === EXTREME_MODE.id ? EXTREME_MODE.id : normalizeBattleMode(template.runMode);
     const pro=isProMode(mode);
@@ -120471,6 +120776,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setQuickHighestWaves(prev=>({...prev,[difficulty]:w}));
           storeSet(bestWaveKey(BATTLE_MODE_QUICK,difficulty),w,false);
         }
+      } else if (isSuccessMode(runMode)) {
+        if (w>(Number(tacticsRecordsOf(runMode).waves[difficulty])||0)) {
+          bumpTacticsRecord(runMode,'waves',difficulty,w);
+          storeSet(bestWaveKey(BATTLE_MODE_SUCCESS,difficulty),w,false);
+        }
       } else if (isProMode(runMode)) {
         if (w>(proHighestWaves[difficulty]||0)) {
           setProHighestWaves(prev=>({...prev,[difficulty]:w}));
@@ -121467,7 +121777,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ここで早く返すので、関数の最後にある setCurrentPickingMon(null) を通らない。
       // 消し忘れると、選んだ勇者モンの詳細が開いたまま残り、
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
-      if (isProMode(runMode)) {
+      if (isProMode(runMode) || isSuccessMode(runMode)) {
         setCurrentPickingMon(null);
         setProHeroPreset(null);
         // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
@@ -121550,6 +121860,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 「この編成で開始」で確定した6枠だけを次回用に保存する。個別変更の途中では更新しない。
   const confirmProParty = () => {
     if (!mainHero || proAllyPool.length !== PRO_ALLY_POOL_SIZE) return;
+    // サクセス杯はプロの「前回の編成」(mh_pro_last_party)を書き換えない
+    if (isSuccessMode(runMode)) {
+      tacticsProLogRef.current = null;
+      repeatRunTemplateRef.current = null;
+      setTeachingPool([...getActiveTeachingCards()]);
+      advanceRunStage('PICK_TEACHING');
+      return;
+    }
     const confirmedParty = normalizeProLastParty({
       heroBaseId:mainHero.id,
       heroDistance:initialBattleDistanceRef.current,
@@ -122875,7 +123193,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
-  const modeRecordFor = (mode, diff) => isTacticsMode(mode)
+  const modeRecordFor = (mode, diff) => isTacticsMode(mode) || isSuccessMode(mode)
     ? { score: tacticsRecordsOf(mode).hs[diff]||0, wave: tacticsRecordsOf(mode).waves[diff]||0, clears: tacticsRecordsOf(mode).clears[diff]||0 }
     : isQuickMode(mode)
       ? { score: quickHighScores[diff]||0, wave: quickHighestWaves[diff]||0, clears: quickClearCounts[diff]||0 }
@@ -123994,7 +124312,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20"><ChevronLeft size={18}/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_TAB_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),isSuc=isSuccessMode(m.id),sucLocked=isSuc&&readSucBoxMons(sucBoxRaw).length===0&&!debugBattle,modeBestScore=ranked||isSuc?highestModeScore(isTacticsMode(m.id)||isSuc?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} data-battle-mode={m.id} className={`mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px] px-4 pt-3.5 pb-4 [@media(orientation:landscape)_and_(max-height:520px)]:h-auto [@media(orientation:landscape)_and_(max-height:520px)]:pt-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:content-start transition-all flex flex-col ${active?'on scale-100 opacity-100':'scale-[.92] opacity-45'}`} style={{'--acc':m.color}}>
                         <span aria-hidden="true" className="mhbt-mark">{String(m.id).replace(/([A-Z])/g,' $1').toUpperCase()}</span>
                         <div className="mhbt-eyebrow">BATTLE MODE</div>
@@ -124006,7 +124324,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {modeSoon?(
                         <div className="mhbt-score"><b>遊べません</b><small>準備中 ・ 遊べるようになったらお知らせします</small></div>
                         ):(
-                        <div className="mhbt-score"><b>{isSpecies?(speciesLocked?'🔒 未解放':`${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組`):isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b><small>{isSpecies?(speciesLocked?'解放条件':'クリアした種族×難易度'):isExtreme?(extremeLocked?'解放条件':'最高スコア'):ranked?'最高スコア':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`} ・ {isSpecies?(speciesLocked?SPECIES_CHALLENGE_UNLOCK_TEXT:modeHasRanking(m.id)?`全${speciesChallengeLineages().length*SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中`:'🧪 DEBUG・一般公開前'):isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small></div>)}
+                        <div className="mhbt-score">{isSuc?<><b>{sucLocked?'🔒 まだ出られません':`${modeBestScore.toLocaleString()} pt`}</b><small>{sucLocked?'モンヒロサクセスで育てたモンスターが出られる大会です':`最高スコア ・ 出られるモンスター ${readSucBoxMons(sucBoxRaw).length}体${modeHasRanking(m.id)?'':' ・ 🧪 DEBUG・一般公開前'}`}</small></>:<><b>{isSpecies?(speciesLocked?'🔒 未解放':`${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組`):isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b><small>{isSpecies?(speciesLocked?'解放条件':'クリアした種族×難易度'):isExtreme?(extremeLocked?'解放条件':'最高スコア'):ranked?'最高スコア':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`} ・ {isSpecies?(speciesLocked?SPECIES_CHALLENGE_UNLOCK_TEXT:modeHasRanking(m.id)?`全${speciesChallengeLineages().length*SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中`:'🧪 DEBUG・一般公開前'):isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small></>}</div>)}
                         {/* カードへ出す3行。どのモードも【売り】→【報酬】→【記録】の順でそろえてある。細かい説明は「？」で全部読める */}
                         <ul className="mhbt-feats [@media(orientation:landscape)_and_(max-height:520px)]:mt-4 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start">{m.highlights.map(([icon,text])=>(
                           <li key={text}><span aria-hidden="true">{icon}</span><span className="truncate">{text}</span></li>
@@ -124020,7 +124338,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {isSpecies&&!modeSoon&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="mhbt-pb disabled:opacity-40">🏆 記録</button>}
                           {ranked&&<button data-mode-ranking-link={m.id} disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="mhbt-pb disabled:opacity-40">🏆 ランキング</button>}
                         </div>
-                          <button data-battle-mode-soon={modeSoon?'1':undefined} disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==battleTutorialMode)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`mhbt-go w-full disabled:opacity-40${m.id===battleTutorialMode?battleTutorialSpotClass('modeStart'):''}`}>{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
+                          {/* サクセス杯は、保存枠に引退した子が1体もいないあいだは始められない(デバッグの入口からは仮の子で試せる) */}
+                          {sucLocked?<button data-success-cup-locked disabled className="mhbt-go w-full disabled:opacity-40">まだ出られません</button>:
+                          <button data-battle-mode-soon={modeSoon?'1':undefined} disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==battleTutorialMode)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`mhbt-go w-full disabled:opacity-40${m.id===battleTutorialMode?battleTutorialSpotClass('modeStart'):''}`}>{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>}
                         </div>
                       </article>
                     );})}
@@ -124153,7 +124473,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   先に参照すると初期化前アクセスになり、難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
           // ★タクティクスバトルの極限は、同じ画面のタブにそのまま並べる(専用画面へ移らない)。
           //   移してしまうと、押した先がクラシックバトルの極限チャレンジになってしまう
-          const challengeExtremeTab=!species&&!quick&&!tacticsDiff&&!isProMode(battleMode);
+          const challengeExtremeTab=!species&&!quick&&!tacticsDiff&&!isProMode(battleMode)&&!isSuccessMode(battleMode);
           const hasExtremeTab=difficultyGroups.extreme.length>0||challengeExtremeTab;
           const activeDifficultyTab=hasExtremeTab&&!challengeExtremeTab?difficultySelectTab:DIFFICULTY_TAB_NORMAL;
           const difficulties=activeDifficultyTab===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
@@ -124161,16 +124481,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const selectedIndex=Math.max(0,difficulties.findIndex(([key])=>key===selectedDifficulty));
           const chooseDifficulty=id=>species?setSpeciesChallengeSelection(current=>({...current,difficultyId:id,heroId:'',allyIds:[],run:null})):setDifficulty(id);
           const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));chooseDifficulty(difficulties[safe][0]);centerCarouselChild(modeDifficultyCarouselRef.current,safe,behavior);};
-          const mode=battleModeInfo(battleMode),pro=isProMode(battleMode),ranked=modeHasRanking(battleMode);
+          const mode=battleModeInfo(battleMode),suc=isSuccessMode(battleMode),pro=isProMode(battleMode)||suc,ranked=modeHasRanking(battleMode);
           // プロは勇者モン1体＋供モン候補5体をベースモンだけで組むので、それだけの種が解放されている必要がある
-          const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;
+          // サクセス杯は保存枠の引退した子＋足りないぶんのベースモンで数える
+          const proReady=(suc?successCupPickList(readSucBoxMons(debugBattle&&readSucBoxMons(sucBoxRaw).length===0?SUC_DEMO_BOX:sucBoxRaw),getUnlockedBaseMonsterList()):getUnlockedBaseMonsterList()).length>=PRO_ALLY_POOL_SIZE+1;
           // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
           // クイックはスコアを競わないのでスコアの代わりに経験値を出す
           const bonusLabel=(value)=>`×${Math.round(value*QUICK_REWARD_MULT*100)/100}`;
           const rateCells=(setting)=>quick
             ? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.xp||setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]
             : [['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['ダイヤ',`×${setting.gold}`,false]];
-          const noteText=species?'初回クリアで超越の実／難易度は種族ごとに解放':quick?'経験値・ダイヤのみ1.5倍':pro?'絆経験値3倍・ブリーダー経験値1.5倍':'スコアがランキングに登録される';
+          const noteText=species?'初回クリアで超越の実／難易度は種族ごとに解放':quick?'経験値・ダイヤのみ1.5倍':suc?'育てたモンスターが4能力に換算されて出る／絆経験値なし':pro?'絆経験値3倍・ブリーダー経験値1.5倍':'スコアがランキングに登録される';
           // 種族チャレンジの記録は種族×難易度で分かれる。選択中の種族のぶんだけを引く
           const speciesRecord=difficultyId=>speciesChallengeRecord(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           // 初回クリア報酬(超越の実)を受け取り済みかどうか。2回目以降はもらえないので、
@@ -124277,7 +124598,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             // debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
                             // 難易度を確定したら、そのまま種族チャレンジの勇者選択へ戻す
                             if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
-                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=debugUnlockAllRef.current;extremeRunRef.current=tacticsExtreme;setDebugBattle(debugUnlockAllRef.current);setExtremeRun(tacticsExtreme);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`mhbt-go w-full ${!quickUnlocked||(pro&&!proReady)?'sm':''} disabled:opacity-40${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`}>{!quickUnlocked?lockText:pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=debugUnlockAllRef.current;extremeRunRef.current=tacticsExtreme;setDebugBattle(debugUnlockAllRef.current);setExtremeRun(tacticsExtreme);setDebugOutcome(null);const baseMons=suc?successCupPickList(readSucBoxMons(debugUnlockAllRef.current&&readSucBoxMons(sucBoxRaw).length===0?SUC_DEMO_BOX:sucBoxRaw),getUnlockedBaseMonsterList()):pro?getUnlockedBaseMonsterList():[];const savedHero=pro&&!suc?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro&&!suc?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`mhbt-go w-full ${!quickUnlocked||(pro&&!proReady)?'sm':''} disabled:opacity-40${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`}>{!quickUnlocked?lockText:pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
                           {quick&&(()=>{const tid=SKIP_TICKETS[key];if(!tid)return null;const have=ownedItems[tid]||0;const policyOk=skipAllowedByPolicy(quickRewardPolicy);if(!policyOk)return(<div className="min-h-[40px] rounded-xl bg-white/40 flex items-center justify-center px-2 text-[10px] font-black text-slate-700 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);return(
                             <div className="flex gap-1.5"><button disabled={!quickUnlocked||have<=0||!!battleTutorial} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked&&have>0?'bg-slate-900 text-white active:scale-95':'bg-white/40 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked&&have>0?'bg-white/20 text-teal-100':'bg-white/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-white/45 text-slate-900 font-black active:scale-95">？</button></div>
@@ -127691,7 +128012,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           battleTutorialSpotClass={battleTutorialSpotClass} currentPickingMon={currentPickingMon}
           debugHeroMonsterList={debugHeroMonsterList} def={def} difficulty={difficulty}
           distTotalBonus={distTotalBonus} extremeDifficulty={extremeDifficulty} extremeRunRef={extremeRunRef}
-          getMasuMon={getMasuMon} getUnlockedBaseMonsterList={getUnlockedBaseMonsterList}
+          getMasuMon={getMasuMon} getUnlockedBaseMonsterList={getProPickBaseList}
           heroPickTab={heroPickTab} maxGuts={maxGuts} maxHp={maxHp} monSelection={monSelection}
           phasePlan={gameState==='PICK_ALLY'?phasePlan:null} wave={wave}
           tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
@@ -127709,7 +128030,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {gameState==='PICK_PRO_ALLIES'&&(
         <PickProAlliesScreen
           advanceRunStage={advanceRunStage} clearSlotUniqueSelection={clearSlotUniqueSelection}
-          confirmProParty={confirmProParty} getUnlockedBaseMonsterList={getUnlockedBaseMonsterList}
+          confirmProParty={confirmProParty} getUnlockedBaseMonsterList={getProPickBaseList}
           initialBattleDistanceRef={initialBattleDistanceRef} mainHero={mainHero}
           proAllyDetail={proAllyDetail} proAllyPool={proAllyPool} proEditingAllyIndex={proEditingAllyIndex}
           renderMonsterDetailModal={renderMonsterDetailModal} renderProMonsterRow={renderProMonsterRow}

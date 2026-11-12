@@ -69,6 +69,9 @@ const EXTREME_RANKING_PREFIX = 'Extreme';
 // (例: TacticsHard / TacticsEXTREME)。Pro / Extreme とは先頭が違うので取り違えは起きない。
 // チャレンジ・プロ・極限の行は読みも書きもしない
 const TACTICS_RANKING_PREFIX = 'Tactics';
+// サクセス杯(19-success-cup.jsx)も同じやり方。難易度キーの先頭へ Suc を付ける(例: SucHard)。
+// 'Species-…'(種族チャレンジ)とは綴りも区切りも違うので取り違えは起きない
+const SUC_RANKING_PREFIX = 'Suc';
 // ★タクティクスプロは、β版のあいだだけ別の行(TacticsProBeta<難易度>)へ送る。
 //   本公開でキーが TacticsPro<難易度> へ切り替わり、本番の順位は空から始まる。
 //   β版の行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)
@@ -79,6 +82,7 @@ const tacticsProRankingPrefix = () => (TACTICS_MODE_PUBLIC_RELEASE
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+  ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${SUC_RANKING_PREFIX}${key}`),
   // タクティクスは通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS が正本)。
   // 極限もモードの中の難易度なので、極限チャレンジの Extreme* とは別の行になる
   ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`),
@@ -186,6 +190,7 @@ const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
     return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
   }
   if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
+  if (mode === 'success') return `${SUC_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
@@ -201,6 +206,7 @@ const rankingDifficultyBase = (key) => {
   }
   if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
   if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
+  if (text.startsWith(SUC_RANKING_PREFIX)) return text.slice(SUC_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = (value) => {
