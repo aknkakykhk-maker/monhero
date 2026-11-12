@@ -195,6 +195,22 @@ const MSA_CSS = `
 @keyframes msaBarShake{0%,100%{transform:none;box-shadow:0 0 10px #ef4444}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,0)}}
 @keyframes msaBarHit{0%{box-shadow:0 0 8px #f87171}100%{box-shadow:0 0 0 #f8717100}}
 @keyframes msaBarGlow{0%{box-shadow:0 0 0 #fde04700}30%{box-shadow:0 0 10px #fde047,inset 0 0 4px #fff}100%{box-shadow:0 0 0 #fde04700}}
+/* ---- 撃つ前の構えの一拍(2026-11-13 社長「攻撃前にもう1アクセントほしいね」) ---- */
+.msa-wind{animation:msaWind var(--msa-pre,380ms) ease-in both}
+.msa-aura.wind{width:130px;height:130px;margin-left:-65px;bottom:-6px;animation:msaAuraWind var(--msa-pre,380ms) ease-out both}
+@keyframes msaAuraWind{0%{opacity:0;transform:scale(1.5)}25%{opacity:1;transform:scale(.95)}85%{opacity:1;transform:scale(.85)}100%{opacity:0;transform:scale(1.7)}}
+.msa-aura.wind.pow{background:radial-gradient(circle,#fff6 0,#fb923caa 25%,#ef444455 50%,#ef444400 70%)}
+.msa-aura.wind.wise{background:radial-gradient(circle,#fff6 0,#67e8f9aa 25%,#818cf855 50%,#818cf800 70%)}
+.msa-aura.big.wise{background:radial-gradient(circle,#fff7 0,#a5f3fcaa 22%,#6366f1 45%,#6366f100 70%)}
+.msa-focus{position:absolute;inset:-20%;z-index:2;pointer-events:none;background:repeating-conic-gradient(from 0deg at calc(var(--msa-cx,30%) * .714 + 14.3%) 66%,#fff0 0 5deg,var(--msa-fc,#fde68a) 5deg 6deg);-webkit-mask:radial-gradient(circle at calc(var(--msa-cx,30%) * .714 + 14.3%) 66%,#0000 0 16%,#000 34%);mask:radial-gradient(circle at calc(var(--msa-cx,30%) * .714 + 14.3%) 66%,#0000 0 16%,#000 34%);animation:msaFocus var(--msa-pre,380ms) ease-out both}
+.msa-focus.pow{--msa-fc:#fdba7499}.msa-focus.wise{--msa-fc:#a5f3fc99}
+.msa-aim{position:absolute;bottom:58px;width:58px;height:58px;margin-left:-29px;z-index:5;border-radius:50%;border:2px solid var(--msa-ac,#fb923c);box-shadow:0 0 8px var(--msa-ac,#fb923c),inset 0 0 6px var(--msa-ac,#fb923c);pointer-events:none;animation:msaAim calc(var(--msa-pre,380ms) + 260ms) ease-out both}
+.msa-aim::before,.msa-aim::after{content:'';position:absolute;left:50%;top:50%;background:var(--msa-ac,#fb923c)}
+.msa-aim::before{width:76px;height:2px;margin:-1px 0 0 -38px}.msa-aim::after{width:2px;height:76px;margin:-38px 0 0 -1px}
+.msa-aim.pow{--msa-ac:#fb923c}.msa-aim.wise{--msa-ac:#22d3ee}
+@keyframes msaWind{0%{transform:none;filter:none}55%{transform:translateY(4px) scale(1.06,.9);filter:brightness(1.25)}85%{transform:translateY(4px) scale(1.06,.9);filter:brightness(1.35)}100%{transform:none;filter:none}}
+@keyframes msaFocus{0%{opacity:0;transform:scale(1.25)}40%{opacity:1}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@keyframes msaAim{0%{opacity:0;transform:scale(2.2) rotate(-60deg)}45%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(.6)}}
 @media (max-height:420px) and (orientation:landscape){.msa-stage{height:180px}.msa-f{height:100px}.msa-f img.msa-img{max-height:92px}}
 @media (prefers-reduced-motion: reduce){
   .msa *,.msa *::before,.msa *::after{animation:none!important;transition:none!important}
@@ -253,7 +269,10 @@ const msaMotionMs = (kind) => {
 // 技の行のアクセント(ため・止め・とどめ)。動きを減らす設定では、どれも 0(待ち時間を足さない)
 //   pre … 大技(消費ガッツ40以上)の前のため/stop … 当たった瞬間に場を止める長さ(ヒットストップ)/fin … この技でとどめ(次の行が相手の KO)
 const MSA_GUTS_TIRED = 10; // ガッツがこれより少ないと息切れの表示
-const msaFxOf = (log, e, reduce) => {
+// 2026-11-13 社長「攻撃前にもう1アクセントほしいね」: どの技にも撃つ前の構えの一拍(大技は長め)。sf … 見せる速さ(×2 は 0.55。×4 はふつうの技の一拍を省く)
+const MSA_WIND_MS = 380;
+const MSA_WIND_BIG_MS = 620;
+const msaFxOf = (log, e, reduce, sf = 1) => {
   const z = { pre: 0, stop: 0, fin: false, big: false };
   if (!e || e.ev !== 'tech') return z;
   const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40;
@@ -262,7 +281,9 @@ const msaFxOf = (log, e, reduce) => {
   const fin = Boolean(e.hit && nx && nx.ev === 'ko' && nx.side && nx.side !== e.side);
   if (reduce) return { ...z, fin, big };
   const stop = !e.hit ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
-  return { pre: big ? 460 : 0, stop, fin, big };
+  const f = Number(sf) || 1;
+  const pre = big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f);
+  return { pre, stop, fin, big };
 };
 // ダメージの数字の大きさ(1〜4)。威力 = 相手のはじめの体力に対する割合。会心・大技・とどめはいちばん大きく
 const msaDmgTier = (dmg, maxHp, e, fx) => {
@@ -275,11 +296,16 @@ const msaDmgTier = (dmg, maxHp, e, fx) => {
 const MSA_INTRO_MS = 2600;
 const MSA_AFTER_HIT = 1250;  // 当たってから次の手まで(×1)
 const MSA_AFTER_MISS = 800;
-const msaStepMs = (e, team, reduce, log) => {
+const msaStepMs = (e, team, reduce, log, sf = 1) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   // 技: 当たってから、数字が出てライフの棒が減りきるまでの間(MSA_AFTER_HIT)をとってから次の手へ(2026-11-13 社長「相手がすぐ動き出す」)
-  if (e.ev === 'tech') { const m = (team && team.members && team.members[e.i]) || {}; const fx = msaFxOf(log, e, reduce); const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))); return fx.pre + Math.max(mm.ms + 300, mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS)) + fx.stop + (fx.fin ? 450 : 0); }
+  //   sf を渡すと、その速さで実際にかかる長さ ÷ sf を返す(呼ぶ側が sf を掛ける)。技の動きそのものは縮まないので、当たるところまでは必ず見せる
+  if (e.ev === 'tech') {
+    const f = Number(sf) || 1; const m = (team && team.members && team.members[e.i]) || {}; const fx = msaFxOf(log, e, reduce, f); const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
+    const real = fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
+    return real / f;
+  }
   return { start: MSA_INTRO_MS, enter: 350, move: 650, guard: 750, charge: 800, swap: 700, ko: 1500, end: 600 }[e.ev] || 500;
 };
 
@@ -324,9 +350,10 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
   let body = null; let cls = ''; const extra = [];
   let style = { left: `${x * 100}%` };
   if (tech && me && !reduce && !motionOn) {
-    // 大技の前のため: 身をかがめて光を集める(このあいだ場が暗くなる)
-    body = <div key={`pre-${e.k}`} className="flex items-end justify-center msa-chargebig" style={{ '--msa-pre': `${fx.pre}ms` }}>{img}</div>;
-    extra.push(<span key={`ab-${e.k}`} className="msa-aura big" aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms` }}/>);
+    // 撃つ前の構え: 身を沈めて、技種の色(ちから=橙・かしこさ=青)の光を集める。大技は大きく(このあいだ場が暗くなる)
+    const kd = e.tech && e.tech.kind === 'wise' ? 'wise' : 'pow';
+    body = <div key={`pre-${e.k}`} className={`flex items-end justify-center ${fx.big ? 'msa-chargebig' : 'msa-wind'}`} style={{ '--msa-pre': `${fx.pre}ms` }}>{img}</div>;
+    extra.push(<span key={`ab-${e.k}`} className={`msa-aura ${fx.big ? 'big' : 'wind'} ${kd}`} aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms` }}/>);
   } else if (tech && me && !reduce) {
     // 攻める: 相手の位置まで(--atk-dx)。モンヒロのバトルと同じ動き
     const kind = msaMotionKind(sp, e.tech);
@@ -382,7 +409,7 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
 }
 
 // 1行ぶんの効果音。pos が前へ進んだときだけ鳴らす(見返しで戻した・止めているときは鳴らさない)
-function useMsaSfx(log, pos, teams, reduce, on) {
+function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
   const lastRef = useRef(-1);
   const timers = useRef([]);
   useEffect(() => () => { timers.current.forEach(clearTimeout); timers.current = []; }, []);
@@ -393,7 +420,7 @@ function useMsaSfx(log, pos, teams, reduce, on) {
     const later = (ms, k) => { if (ms <= 0) { msaSe(k); return; } timers.current.push(setTimeout(() => msaSe(k), ms)); };
     if (e.ev === 'tech') {
       const m = (teams[e.side] && teams[e.side].members && teams[e.side].members[e.i]) || {};
-      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
       if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');      // 大技は出だしに溜めの音
       later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
     } else if (e.ev === 'guard') msaSe('guard');
@@ -473,12 +500,12 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
 };
 
 // 上下の欄に出すコマ: 技の行は、当たる瞬間までは前のコマ(ライフ・ガッツが先に減って見えないように)
-function useMsaShownFrame(log, frames, pos, teams) {
+function useMsaShownFrame(log, frames, pos, teams, sf = 1) {
   const reduce = useMemo(() => msaReduce(), []);
   const [hitAt, setHitAt] = useState(-1);
   const e = (log && log[pos]) || {};
   const m = e.side && teams && teams[e.side] && teams[e.side].members ? teams[e.side].members[e.i] || {} : {};
-  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit : 0;
+  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit : 0;
   useEffect(() => { if (!at) return undefined; const t = setTimeout(() => setHitAt(pos), at); return () => clearTimeout(t); }, [pos, at]);
   const k = Math.min(pos, frames.length - 1);
   return frames[at && hitAt !== pos && k > 0 ? k - 1 : k] || frames[0];
@@ -532,7 +559,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit); }
     const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
   }, []);
-  useMsaSfx(log, pos, teams, reduce, sound);
+  useMsaSfx(log, pos, teams, reduce, sound, Number(speedF) || 1);
   const endSaid = useRef(false);
   useEffect(() => {
     if (!ended || endSaid.current) return;
@@ -541,7 +568,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   }, [ended]);
   // 大技のため: ため終わるまで技の動きを出さない(pos ごとに数え直す)
   const [preAt, setPreAt] = useState(-1);
-  const fxNow = msaFxOf(log, log[pos], reduce);
+  const fxNow = msaFxOf(log, log[pos], reduce, Number(speedF) || 1);
   useEffect(() => {
     if (!fxNow.pre) return undefined;
     const t = setTimeout(() => setPreAt(pos), fxNow.pre); return () => clearTimeout(t);
@@ -569,21 +596,23 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '', tech: msaTechInfo(log, e0) };
   const gap = f && MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
   const xA = 0.5 - gap / 2; const xB = 0.5 + gap / 2;
-  const fx = msaFxOf(log, e0, reduce);
+  const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   // カメラ: 行ごとに1回。技は攻め手へ寄る → 当たる瞬間に受け手へ振る/KO は倒れた子へ/守る・ためる・動くは軽く寄る
   useEffect(() => {
     const el = camRef.current; const e1 = log[pos];
     if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
-    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log) * (Number(speedF) || 1));
+    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
     const sx = (sd) => (sd === 'A' ? xA : xB);
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined; // 速くしていて間に合わないときは寄せない
       const s1 = fx.big ? 1.34 : 1.2; const ax = sx(e1.side); const dx = sx(e1.side === 'A' ? 'B' : 'A');
+      const sw = fx.big ? 1.5 : 1.36; // 構えの一拍は攻め手にぐっと寄る
       kf = msaCamFrames([
-        [Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)],
+        ...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []),
+        [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)],
         [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)],
         [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)],
         [total - 280, msaCamAt(dx, s1 - 0.04, w)],
@@ -619,7 +648,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   // 効果の帯: 直近の数行から、左右それぞれ新しい2本まで
   const bands = { A: [], B: [] };
   if (pos > 0 && !ended) {
-    for (let k = Math.max(1, pos - 3); k <= pos; k++) msaBandsOf(log, frames, k).forEach((b) => { if (bands[b.side]) bands[b.side].push(b); });
+    for (let k = Math.max(1, pos - 3); k <= pos; k++) if ((frames[k] || {}).r === f.r) msaBandsOf(log, frames, k).forEach((b) => { if (bands[b.side]) bands[b.side].push(b); });
     ['A', 'B'].forEach((sd) => { bands[sd] = bands[sd].slice(-2).reverse(); });
   }
   const intro = pos === 0 && e.ev === 'start' && !reduce && !ended;
@@ -644,7 +673,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       <div className="msa-bg" aria-hidden="true" style={{ backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined }}/>
       <div className="msa-floor" aria-hidden="true"/>
       {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
-      {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
+      {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`fo-${pos}`} className={`msa-focus ${e.kind}`} aria-hidden="true" data-msa-wind style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
+      {e.ev === 'tech' && fx.pre > 0 && <i key={`aim-${pos}`} className={`msa-aim ${e.kind}`} aria-hidden="true" style={{ left: `${(e.side === 'A' ? xB : xA) * 100}%`, '--msa-pre': `${fx.pre}ms` }}/>}
+      {e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
       <MsaFighter side="A" member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
       <MsaFighter side="B" member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
       {e.ev === 'tech' && <MsaDmgLayer key={`dl-${pos}`} e={e} x={e.side === 'A' ? xB : xA} delay={hitMs} tier={tier || 1}/>}
@@ -705,7 +736,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     if (pos < last) {
       const cur = log[pos] || {};
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
-      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log) * sp.f));
+      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
       return () => clearTimeout(t);
     }
     if (done) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
@@ -727,7 +758,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
-  const fShowH = useMsaShownFrame(log, frames, pos, teams);
+  const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
   const fShow = fShowH || f;

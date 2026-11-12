@@ -75,6 +75,12 @@ const server = http.createServer((req, res) => {
         const { r } = window.__v; const frames = ambwFramesOf(r.log); const out = [];
         const hitAt = (e) => { const m = ((e.side === 'A' ? window.__v.teamA : window.__v.teamB).members[e.i] || {}); return msaFxOf(r.log, e, false).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(r.log, e))).hit; };
         const big = r.log.findIndex((e) => e.ev === 'tech' && e.hit && e.dmg >= 150);
+        // 撃つ前の構えの一拍(ふつうの技・大技)
+        const gOf = (e) => (msaTechInfo(r.log, e).guts || 0);
+        const nw = r.log.findIndex((e) => e.ev === 'tech' && gOf(e) < 40);
+        if (nw > 0) out.push({ pos: nw, at: 120, name: '0a-windup' });
+        const bw = r.log.findIndex((e) => e.ev === 'tech' && gOf(e) >= 40);
+        if (bw > 0) out.push({ pos: bw, at: 430, name: '0b-windup-big' });
         if (big > 0) { out.push({ pos: big, at: hitAt(r.log[big]) + 300, name: '1-life-drop' }); out.push({ pos: big, at: hitAt(r.log[big]) + 1100, name: '2-life-after' }); }
         const ch = r.log.findIndex((e) => e.ev === 'charge' && e.why !== 'sulk');
         if (ch > 0) out.push({ pos: ch, at: 250, name: '3-guts-charge' });
