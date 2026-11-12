@@ -1,5 +1,6 @@
 # tools/success/ (モンヒロサクセスの道具)
 
+- `success-sound-check.js` … 音の割り当て表(`data/success-sounds.js`)と鳴らす口の見張り
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
 
