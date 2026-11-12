@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7dded8bd295d9caf
+// source-sha256: a80c664b673f98a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156107,6 +156107,10 @@ const monsucRankLineageName = id => {
   const l = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES ? MONSTER_LINEAGES[id] : null;
   return l && l.name ? l.name : '？？？';
 };
+const monsucRankEngineVersion = () => {
+  const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null;
+  return S && Number.isInteger(S.VERSION) ? S.VERSION : 1;
+};
 const monsucRankMonOf = species => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && Array.isArray(ALL_PLAYER_MONSTERS) ? ALL_PLAYER_MONSTERS.find(m => m && m.id === species) : null) || null;
 const monsucRankRunId = (owner, rawId) => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
@@ -156180,7 +156184,7 @@ const monsucRankRowOf = ({
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
-    engine_version: typeof MONHERO_SUCCESS !== 'undefined' && MONHERO_SUCCESS && Number.isInteger(MONHERO_SUCCESS.VERSION) ? MONHERO_SUCCESS.VERSION : 1
+    engine_version: monsucRankEngineVersion()
   };
 };
 const monsucRankPost = async (owner, key, row) => {
@@ -156533,7 +156537,7 @@ function MonsucRankScreen({
     className: "text-[18px] font-black"
   }, "🏆 総合力ランキング"), React.createElement("div", {
     className: "text-[11px] text-slate-300 leading-snug"
-  }, "育て終えた子の、育てたときの総合力。育てた子ごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("div", {
+  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("div", {
     className: "grid grid-cols-2 gap-2 mt-2"
   }, [['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => React.createElement("button", {
     key: k,
@@ -156561,7 +156565,7 @@ function MonsucRankScreen({
     className: "text-center text-slate-300 text-[13px] py-8"
   }, "つながりませんでした。少し待ってからもう一度開いてね"), on && !loading && data && rows.length === 0 && React.createElement("div", {
     className: "text-center text-slate-300 text-[13px] py-8"
-  }, "まだだれも載っていません。育て終えた子が最初に載ります"), rows.map(r => React.createElement(MonsucRankRow, {
+  }, "まだだれも載っていません。育て終えたモンスターが最初に載ります"), rows.map(r => React.createElement(MonsucRankRow, {
     key: r.run_id,
     row: r,
     open: open === r.run_id,

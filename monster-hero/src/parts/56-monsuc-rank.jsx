@@ -41,6 +41,8 @@ const monsucRankLineageName = (id) => {
   const l = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES ? MONSTER_LINEAGES[id] : null;
   return l && l.name ? l.name : '？？？';
 };
+// 計算の芯(data/monhero-success.js)の版。読み込まれていなければ 1
+const monsucRankEngineVersion = () => { const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null; return S && Number.isInteger(S.VERSION) ? S.VERSION : 1; };
 const monsucRankMonOf = (species) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && Array.isArray(ALL_PLAYER_MONSTERS) ? ALL_PLAYER_MONSTERS.find(m => m && m.id === species) : null) || null;
 // 育成の id(英数字だけ・6〜32字)。計算の芯の s.id をもとに作り、持ち主の番号を前に付ける
 const monsucRankRunId = (owner, rawId) => {
@@ -89,7 +91,7 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
-    engine_version: typeof MONHERO_SUCCESS !== 'undefined' && MONHERO_SUCCESS && Number.isInteger(MONHERO_SUCCESS.VERSION) ? MONHERO_SUCCESS.VERSION : 1,
+    engine_version: monsucRankEngineVersion(),
   };
 };
 
@@ -263,7 +265,7 @@ function MonsucRankScreen({ onBack }) {
     </div>
     <div className="px-3 pt-2">
       <div className="text-[18px] font-black">🏆 総合力ランキング</div>
-      <div className="text-[11px] text-slate-300 leading-snug">育て終えた子の、育てたときの総合力。育てた子ごとに全部載る(同じ人が何体でも)・助手マスモンとは別</div>
+      <div className="text-[11px] text-slate-300 leading-snug">育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別</div>
       <div className="grid grid-cols-2 gap-2 mt-2">
         {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
           className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
@@ -278,7 +280,7 @@ function MonsucRankScreen({ onBack }) {
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
       {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
       {on && !loading && !data && <div className="text-center text-slate-300 text-[13px] py-8">つながりませんでした。少し待ってからもう一度開いてね</div>}
-      {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8">まだだれも載っていません。育て終えた子が最初に載ります</div>}
+      {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8">まだだれも載っていません。育て終えたモンスターが最初に載ります</div>}
       {rows.map(r => <MonsucRankRow key={r.run_id} row={r} open={open === r.run_id} mine={sent.includes(r.run_id)} onToggle={() => setOpen(o => (o === r.run_id ? null : r.run_id))} />)}
     </div>
     {mine && <div className="px-3 pb-1">
