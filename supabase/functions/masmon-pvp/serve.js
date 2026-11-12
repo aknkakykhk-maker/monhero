@@ -76,6 +76,22 @@ export function start({ createClient }) {
     take: async (owner, limit) => must(await supabase.rpc("masmon_pvp_take", { p_owner: owner, p_limit: limit }), "take"),
     refund: async (owner) => { must(await supabase.rpc("masmon_pvp_refund", { p_owner: owner }), "refund"); },
     record: async (args) => must(await supabase.rpc("masmon_pvp_record", args), "record"),
+    // モンヒロサクセスのフレンドからのレンタル(lend.js・表は 202611120001_monsuc_lend.sql)
+    lendGet: async (owner) =>
+      must(await supabase.from("monsuc_lend").select("owner_id, version, active").eq("owner_id", owner).maybeSingle(), "lendGet"),
+    lendUpsert: async (row) => {
+      const cur = must(await supabase.from("monsuc_lend").select("version").eq("owner_id", row.owner_id).maybeSingle(), "lendVersion");
+      const version = cur ? Math.min(1000000, Number(cur.version) + 1) : 1;
+      must(await supabase.from("monsuc_lend").upsert({ ...row, version, active: true, updated_at: new Date().toISOString() },
+        { onConflict: "owner_id" }), "lendUpsert");
+    },
+    lendDeactivate: async (owner) => {
+      must(await supabase.from("monsuc_lend").update({ active: false, updated_at: new Date().toISOString() }).eq("owner_id", owner), "lendDeactivate");
+    },
+    lendUse: async (borrower, lender, streak) =>
+      must(await supabase.rpc("monsuc_lend_use", { p_borrower: borrower, p_lender: lender, p_streak: streak }), "lendUse"),
+    lendClaim: async (owner, dailyN, fameEach) =>
+      must(await supabase.rpc("monsuc_lend_claim", { p_owner: owner, p_daily_n: dailyN, p_fame_each: fameEach }), "lendClaim"),
   };
 
   // 種はサーバが作る(端末からは受け取らない)
