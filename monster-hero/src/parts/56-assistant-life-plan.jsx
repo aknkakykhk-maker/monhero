@@ -280,7 +280,7 @@ function AssistantLifePlanWho({ id, cur }) {
         {pick === abs && <AssistantLifePlanPicker id={id} abs={abs} onDone={() => setPick(null)}/>}
       </div>);
   }
-  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{typeof AssistantLifeBodyPanel === 'function' && <AssistantLifeBodyPanel id={id} cur={cur}/>}{rows}</div>;
+  return <div className="flex flex-col gap-1" data-assistant-life-plan-who={id}>{typeof AssistantLifeBodyPanel === 'function' && <AssistantLifeBodyPanel key={id} id={id} cur={cur}/>}{rows}</div>;
 }
 
 // 8人×4回の表(横)
