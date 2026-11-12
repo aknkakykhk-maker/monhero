@@ -1,0 +1,1400 @@
+{
+  "blood": "プラント",
+  "counts": {
+    "skills": 34
+  },
+  "skills": [
+    {
+      "skillId": "sk-0446",
+      "name": "種ガン",
+      "version": 1,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2110",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2111",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 679,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0447",
+      "name": "つっつき",
+      "version": 1,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "F",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2121",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2123",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2124",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 680,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0448",
+      "name": "根っこ",
+      "version": 1,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2105",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2115",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 681,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0449",
+      "name": "種マシンガン",
+      "version": 1,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "中",
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "D",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2106",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2111",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 682,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0450",
+      "name": "ミツ",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "2119",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0443",
+          "unlock": {
+            "monsterId": "2119",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2119",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 683,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0451",
+      "name": "葉っぱブレード",
+      "version": 1,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "F",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2110",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2151",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2150",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 684,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0452",
+      "name": "連続根っこ",
+      "version": 1,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "近",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2101",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2105",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2123",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 685,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0453",
+      "name": "フラワービーム",
+      "version": 1,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 42,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0463",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2106",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2151",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 686,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0454",
+      "name": "花吹雪",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 39,
+      "damage": "A",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2101",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2150",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 687,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0455",
+      "name": "連続つっつき",
+      "version": 1,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2119",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 688,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0456",
+      "name": "乱れ咲き",
+      "version": 1,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 43,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0413",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0464",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2101",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 689,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0457",
+      "name": "捕食",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 44,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0465",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "2111",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2111",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2111",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 690,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0458",
+      "name": "コンビネーション",
+      "version": 1,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 33,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0468",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0466",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "2150",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "2150",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2150",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 691,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0459",
+      "name": "蒼花爆散",
+      "version": 1,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0467",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2151",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 692,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0752",
+      "name": "花粉",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "S",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2151"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 693,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0753",
+      "name": "キラキラボシ",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "S",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0667",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 694,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0754",
+      "name": "クリスマスツリー",
+      "version": 1,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 43,
+      "damage": "S",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0668",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0669",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 695,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0755",
+      "name": "キンプン",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2111"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 696,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0821",
+      "name": "踏みつけ",
+      "version": 1,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0732",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2152"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 697,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0822",
+      "name": "噛みつき",
+      "version": 1,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0733",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0734",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2152"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 698,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0823",
+      "name": "引力光線",
+      "version": 1,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 44,
+      "damage": "B+",
+      "accuracy": "B+",
+      "gutsDown": "B",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0735",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0736",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0173",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0174",
+          "unlock": {
+            "monsterId": "2152",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "2152",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2152"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 699,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0448",
+      "name": "根っこ",
+      "version": 2,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0737",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2105",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2115",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 700,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0452",
+      "name": "連続根っこ",
+      "version": 2,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "近",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0737",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2101",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2105",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2123",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 701,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0459",
+      "name": "蒼花爆散",
+      "version": 2,
+      "blood": "プラント",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "D",
+      "accuracy": "S",
+      "gutsDown": "A+",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0738",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0467",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": {
+            "monsterId": "2151",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "2151",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2151",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 702,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0447",
+      "name": "つっつき",
+      "version": 2,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0737",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "2124",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "2124",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2121",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2123",
+          "rarity": 2
+        },
+        {
+          "monsterId": "2124",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 703,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0455",
+      "name": "連続つっつき",
+      "version": 2,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "C+",
+      "accuracy": "B",
+      "gutsDown": "C+",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0737",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2119",
+          "rarity": 4
+        },
+        {
+          "monsterId": "2152",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 704,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0450",
+      "name": "ミツ",
+      "version": 2,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "F",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0739",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "2119",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0308",
+          "unlock": {
+            "monsterId": "2119",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2119",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2152",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 705,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0457",
+      "name": "捕食",
+      "version": 2,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0740",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0741",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "2111",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "2111",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2111",
+          "rarity": 5
+        },
+        {
+          "monsterId": "2106",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 706,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0449",
+      "name": "種マシンガン",
+      "version": 2,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "中",
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0739",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2106",
+          "rarity": 3
+        },
+        {
+          "monsterId": "2111",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 707,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0456",
+      "name": "乱れ咲き",
+      "version": 2,
+      "blood": "プラント",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "C",
+      "accuracy": "S+",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0742",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0464",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "2101",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "2101",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2101",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 708,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0824",
+      "name": "デスブルーム",
+      "version": 1,
+      "blood": "プラント",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "B+",
+      "accuracy": "S+",
+      "gutsDown": "A",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0743",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0744",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "2152",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 709,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0752",
+      "name": "花粉",
+      "version": 2,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "S",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0667",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0739",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2151"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 710,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0753",
+      "name": "キラキラボシ",
+      "version": 2,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "S",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0667",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0739",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 711,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0755",
+      "name": "キンプン",
+      "version": 2,
+      "blood": "プラント",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0739",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "2111"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 712,
+      "status": "verified"
+    }
+  ]
+}

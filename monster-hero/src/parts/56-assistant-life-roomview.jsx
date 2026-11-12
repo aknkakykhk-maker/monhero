@@ -285,6 +285,24 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
 }
 const U0 = (F) => F * 2.63;
 
+// ミニキャラの表情: その助手の今の気分から(全身画に表情が無い助手は、表情なしの絵になる)
+const assistantLifeMiniExpr = (pid) => {
+  try {
+    const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[pid] : null;
+    return ({ happy: 'happy', lonely: 'troubled', restless: 'surprise', sulky: 'angry', sleepy: 'normal', eager: 'excited' })[m] || 'happy';
+  } catch (_) { return 'happy'; }
+};
+// ミニキャラ1人: マスモンの箱(g.s)に立つ。高さはマスモンの1.3倍、足もとは箱の底にそろえる。待機のゆれ(上下に小さく)
+function AssistantLifeRoomMini({ who, src, g, calm, delay = 0, onPress = null, noTouch = false }) {
+  const h = Math.round(g.s * 1.3), w = Math.round(h * 0.5);
+  return (
+    <button type="button" data-assistant-life-roomview-mini={who.id} aria-label={who.name} onClick={onPress || undefined} className="absolute"
+      style={{ left: Math.max(2, g.left + (g.s - w) / 2), top: g.y + g.s - h, width: w, height: h, padding: 0, background: 'none', border: 0, cursor: onPress ? 'pointer' : 'default', pointerEvents: noTouch ? 'none' : undefined }}>
+      <span aria-hidden="true" style={{ position: 'absolute', left: -4, right: -4, bottom: -3, height: 10, borderRadius: '50%', background: 'radial-gradient(#0006,transparent 70%)' }}/>
+      <img src={src} alt="" draggable={false} style={{ position: 'absolute', left: '50%', bottom: 0, height: '100%', width: 'auto', maxWidth: 'none', transform: 'translateX(-50%)', transformOrigin: '50% 100%', filter: 'drop-shadow(0 0 .6px #2a1414cc)', animation: calm ? 'none' : `mhlRvBob 2.6s ease-in-out ${delay}s infinite` }}/>
+    </button>);
+}
+
 // 大きな部屋の絵。people … 部屋にいる助手(1〜4人)/away … 留守のときの札 { title, sub }/team … マスモン { monster, nick, colors }
 //   onPerson(id)・onMasmon(index)・onFurn(f) … 押したとき(無ければ押せない)。dock … 下に重ねる札の段(呼ぶ側の部品)
 function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], sleepIds = [], away = null, team = [], furn = [], bubble = '', title = '', sub = '', onBack = null, onPerson = null, onMasmon = null, dock = null, backLabel = '← 家へ', padLeft = 0, layoutWho = null, layoutEdit = null, layoutItems = null }) {
@@ -319,9 +337,21 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   const frontKind = asleep ? 'bed' : (ASSISTANT_LIFE_ROOM_FRONT[id] || 'desk');
   const frontW = Math.min(W - 24, lay ? Math.round(Math.max(...lay.map(p => p.cx + p.w / 2)) - Math.min(...lay.map(p => p.cx - p.w / 2)) + 60) : Math.round(W * 0.6));
   // マスモン: 手前の床に2列(4体までは1列)。奥の列は小さく
-  const mN = team.length, rows = mN > 4 ? 2 : 1, perRow = Math.ceil(mN / rows);
+  // ミニキャラ(2026-11-12 社長「今のアップも残しつつ、ミニキャラでモンスターと一緒に出す」): 起きている助手の全身画を、マスモンと同じ床の列に並べる。全身画が無い助手(ドラなど)は出さない
+  const minis = !asleep ? people.slice(0, 4).filter(pid => !sleepIds.includes(pid)).map(pid => { const a = assistantById(pid); const ex = assistantLifeMiniExpr(pid); const src = a && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(a, ex) : null; return src ? { pid, who: a, src } : null; }).filter(Boolean) : [];
+  const miniN = minis.length, mN = team.length + miniN, rows = mN > 4 ? 2 : 1, perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  // 床の列の j 番目の置き場所(ミニキャラもマスモンも同じ計算。足もとの高さは y + s)
+  const rvSlot = (j) => {
+    const row = rows === 2 && j < perRow ? 0 : 1, k = rows === 2 && j >= perRow ? j - perRow : j, cnt = rows === 2 ? (row === 0 ? perRow : mN - perRow) : mN;
+    const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
+    const span = W - 24, x = 12 + (span / cnt) * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
+    const yTop = asleep ? floorY + 70 : floorY + 18; // ベッドは床の手前まで出るので、マスモンはその下
+    const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4))); // 部屋の下にはみ出さない
+    const d = Math.round(((j % 2) ? -1 : 1) * Math.min(28, span / cnt / 3));
+    return { s, y, d, left: Math.max(4, Math.min(W - s - 4, x)) };
+  };
   // layoutWho … 自分の家の助手(保存してある並びで描く)/ layoutItems … よその家の並び(フレンドの家。assistantLifeLayoutUnpack の結果)/ layoutEdit … 模様替えの間
   const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = { W, top: topH, floorY, bottom: H - dockH };
@@ -329,10 +359,10 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   return (
     <div ref={ref} className="relative h-full w-full overflow-hidden" data-assistant-life-roomview={id} data-assistant-life-roomview-look={look}
       style={{ background: `linear-gradient(${roomLook.wall[0]},${roomLook.wall[1]})` }}>
-      <style>{`@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`}</style>
+      <style>{`@keyframes mhlRvBob{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.025)}}@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`}</style>
       {/* 腰板・床・窓 */}
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY - 64, height: 64, background: 'linear-gradient(#ffffff40,#00000018)', borderTop: '3px solid #00000022' }}/>
-      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY, bottom: 0, background: 'repeating-linear-gradient(90deg,#a8713f 0 64px,#9a6538 64px 66px),linear-gradient(#b07a4a,#7d5230)', backgroundBlendMode: 'multiply', borderTop: '4px solid #6b4426' }}/>
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY, bottom: 0, background: 'repeating-linear-gradient(90deg,#c4895a 0 64px,#b87c4d 64px 66px),linear-gradient(#cf9562,#9a6a40)', backgroundBlendMode: 'multiply', borderTop: '4px solid #6b4426' }}/>
       <div aria-hidden="true" style={{ position: 'absolute', right: W * 0.06, top: topH + usable * 0.06, width: Math.min(130, W * 0.3), height: Math.min(96, usable * 0.22), borderRadius: 8, border: '6px solid #ffffff99',
         background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}/>
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
@@ -353,26 +383,26 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
           {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
 
-      {/* マスモン(全部・歩く)。押すとくわしい画面 */}
-      {team.map((t, i) => {
-        const row = rows === 2 && i < perRow ? 0 : rows === 2 ? 1 : 1, k = rows === 2 && i >= perRow ? i - perRow : i, cnt = rows === 2 ? (row === 0 ? perRow : mN - perRow) : mN;
-        const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
-        const span = W - 24, x = 12 + (span / cnt) * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
-        const yTop = asleep ? floorY + 70 : floorY + 18; // ベッドは床の手前まで出るので、マスモンはその下
-        const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4))); // 部屋の下にはみ出さない
-        const d = Math.round(((i % 2) ? -1 : 1) * Math.min(28, span / cnt / 3));
-        const mt = { monster: t.monster, nick: t.nick, dye: { colors: t.colors || [] } };
-        return (
-          <button key={`${t.monster}-${i}`} type="button" data-assistant-life-roomview-masmon={i} aria-label={t.nick || 'マスモン'} onClick={() => (onMasmon ? onMasmon(i) : setTip(t.nick))} className="absolute"
-            style={{ left: Math.max(4, Math.min(W - s - 4, x)), top: y, width: s, height: s, '--d': `${d}px`, animation: calm ? 'none' : `mhlRvWalk ${7 + (i % 3) * 2}s ease-in-out ${i * 0.7}s infinite` }}>
-            <span aria-hidden="true" style={{ position: 'absolute', left: 6, right: 6, bottom: -3, height: 10, borderRadius: '50%', background: 'radial-gradient(#0006,transparent 70%)' }}/>
-            {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={mt} size={s}/> : null}
-          </button>); })}
       {/* 時間帯: 夜は暗く・灯り */}
       {layoutOn && layoutEdit && <AssistantLifeRoomLayoutHandles items={layoutEdit.items} geom={layoutGeom} sel={layoutEdit.sel} onSelect={layoutEdit.onSelect} onMove={layoutEdit.onMove} onDrop={layoutEdit.onDrop} onScale={layoutEdit.onScale}/>}
       {night && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
       {night && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
       {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}
+      {/* 床の列(マスモンとミニキャラが立つ所)は明るく: 夜の暗さの上に、あたたかい灯りの帯を重ねる(2026-11-12 社長「床の列を明るくしてから」) */}
+      {people.length > 0 && !asleep && minis.length > 0 && <div aria-hidden="true" data-assistant-life-roomview-floorlight className="pointer-events-none absolute inset-x-0" style={{ top: floorY, height: Math.max(60, H - dockH - floorY), background: night ? 'linear-gradient(#ffd99a88,#ffd99a50 55%,transparent)' : 'linear-gradient(#fff3d052,#fff3d022 55%,transparent)' }}/>}
+      {/* マスモン(全部・歩く)。押すとくわしい画面 */}
+      {team.map((t, i) => {
+        const g = rvSlot(i + miniN), s = g.s, y = g.y, d = g.d;
+        const mt = { monster: t.monster, nick: t.nick, dye: { colors: t.colors || [] } };
+        return (
+          <button key={`${t.monster}-${i}`} type="button" data-assistant-life-roomview-masmon={i} aria-label={t.nick || 'マスモン'} onClick={() => (onMasmon ? onMasmon(i) : setTip(t.nick))} className="absolute"
+            style={{ left: g.left, top: y, width: s, height: s, pointerEvents: layoutOn && layoutEdit ? 'none' : undefined, '--d': `${d}px`, animation: calm ? 'none' : `mhlRvWalk ${7 + (i % 3) * 2}s ease-in-out ${i * 0.7}s infinite` }}>
+            <span aria-hidden="true" style={{ position: 'absolute', left: 6, right: 6, bottom: -3, height: 10, borderRadius: '50%', background: 'radial-gradient(#0006,transparent 70%)' }}/>
+            {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={mt} size={s}/> : null}
+          </button>); })}
+      {/* ミニキャラ(夜の暗さの上=暗くしない) */}
+      {minis.map((m, j) => { const g = rvSlot(j); return (
+        <AssistantLifeRoomMini key={m.pid} who={m.who} src={m.src} g={g} calm={calm} delay={j * 0.6} noTouch={!!(layoutOn && layoutEdit)} onPress={onPerson ? () => onPerson(m.pid) : null}/>); })}
       {/* 起きている助手は、夜の暗さ・灯りより前に出す(暗くしない)。寝ている助手は上で、暗さの下に描いている */}
       {!asleep && lay && standItems.map((x, i) => (sleepIds.includes(x.pid)
         ? null : <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} onPress={onPerson ? () => onPerson(x.pid) : null}/>))}

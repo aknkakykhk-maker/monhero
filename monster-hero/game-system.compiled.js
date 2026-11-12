@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a919653a551b685
+// source-sha256: f4326661484ebb6a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108962,7 +108962,7 @@ function MsxFxMoment({
     className: "msxfx-plate"
   }, React.createElement("div", {
     className: "msxfx-icon"
-  }, K.icon), React.createElement("div", {
+  }, cardIconNode(K.icon, 28)), React.createElement("div", {
     className: "msxfx-head"
   }, K.head), title ? React.createElement("div", {
     className: "msxfx-title"
@@ -113659,7 +113659,6 @@ function AssistantLifeRoomSheet({
       icon: "⚔",
       label: (bi.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, ''),
       sub: bi.sub || '',
-      gain: bi.gain || '',
       on: () => {
         try {
           assistantMasmonBattleOpen({
@@ -117855,6 +117854,78 @@ function AssistantLifeRoomBed({
   }, "💤"));
 }
 const U0 = F => F * 2.63;
+const assistantLifeMiniExpr = pid => {
+  try {
+    const m = typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.life && ASSISTANT_LIFE_STORE.state.life.moods ? ASSISTANT_LIFE_STORE.state.life.moods[pid] : null;
+    return {
+      happy: 'happy',
+      lonely: 'troubled',
+      restless: 'surprise',
+      sulky: 'angry',
+      sleepy: 'normal',
+      eager: 'excited'
+    }[m] || 'happy';
+  } catch (_) {
+    return 'happy';
+  }
+};
+function AssistantLifeRoomMini({
+  who,
+  src,
+  g,
+  calm,
+  delay = 0,
+  onPress = null,
+  noTouch = false
+}) {
+  const h = Math.round(g.s * 1.3),
+    w = Math.round(h * 0.5);
+  return React.createElement("button", {
+    type: "button",
+    "data-assistant-life-roomview-mini": who.id,
+    "aria-label": who.name,
+    onClick: onPress || undefined,
+    className: "absolute",
+    style: {
+      left: Math.max(2, g.left + (g.s - w) / 2),
+      top: g.y + g.s - h,
+      width: w,
+      height: h,
+      padding: 0,
+      background: 'none',
+      border: 0,
+      cursor: onPress ? 'pointer' : 'default',
+      pointerEvents: noTouch ? 'none' : undefined
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: -4,
+      right: -4,
+      bottom: -3,
+      height: 10,
+      borderRadius: '50%',
+      background: 'radial-gradient(#0006,transparent 70%)'
+    }
+  }), React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: 0,
+      height: '100%',
+      width: 'auto',
+      maxWidth: 'none',
+      transform: 'translateX(-50%)',
+      transformOrigin: '50% 100%',
+      filter: 'drop-shadow(0 0 .6px #2a1414cc)',
+      animation: calm ? 'none' : `mhlRvBob 2.6s ease-in-out ${delay}s infinite`
+    }
+  }));
+}
 function AssistantLifeRoomScene({
   id,
   look = 'noon',
@@ -117957,11 +118028,39 @@ function AssistantLifeRoomScene({
   const asleep = people.length > 0 && people.every(x => sleepIds.includes(x));
   const frontKind = asleep ? 'bed' : ASSISTANT_LIFE_ROOM_FRONT[id] || 'desk';
   const frontW = Math.min(W - 24, lay ? Math.round(Math.max(...lay.map(p => p.cx + p.w / 2)) - Math.min(...lay.map(p => p.cx - p.w / 2)) + 60) : Math.round(W * 0.6));
-  const mN = team.length,
+  const minis = !asleep ? people.slice(0, 4).filter(pid => !sleepIds.includes(pid)).map(pid => {
+    const a = assistantById(pid);
+    const ex = assistantLifeMiniExpr(pid);
+    const src = a && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(a, ex) : null;
+    return src ? {
+      pid,
+      who: a,
+      src
+    } : null;
+  }).filter(Boolean) : [];
+  const miniN = minis.length,
+    mN = team.length + miniN,
     rows = mN > 4 ? 2 : 1,
     perRow = Math.ceil(mN / rows);
   const mBig = Math.round(Math.min(78, (W - 24) / Math.max(4, perRow) * 0.9, (H - dockH - floorY - 40) / (rows === 2 ? 1.9 : 1.15)));
   const calm = assistantLifeRoomCalm();
+  const rvSlot = j => {
+    const row = rows === 2 && j < perRow ? 0 : 1,
+      k = rows === 2 && j >= perRow ? j - perRow : j,
+      cnt = rows === 2 ? row === 0 ? perRow : mN - perRow : mN;
+    const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
+    const span = W - 24,
+      x = 12 + span / cnt * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
+    const yTop = asleep ? floorY + 70 : floorY + 18;
+    const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4)));
+    const d = Math.round((j % 2 ? -1 : 1) * Math.min(28, span / cnt / 3));
+    return {
+      s,
+      y,
+      d,
+      left: Math.max(4, Math.min(W - s - 4, x))
+    };
+  };
   const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = {
     W,
@@ -117990,7 +118089,7 @@ function AssistantLifeRoomScene({
     style: {
       background: `linear-gradient(${roomLook.wall[0]},${roomLook.wall[1]})`
     }
-  }, React.createElement("style", null, `@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`), React.createElement("div", {
+  }, React.createElement("style", null, `@keyframes mhlRvBob{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.025)}}@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`), React.createElement("div", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -118009,7 +118108,7 @@ function AssistantLifeRoomScene({
       right: 0,
       top: floorY,
       bottom: 0,
-      background: 'repeating-linear-gradient(90deg,#a8713f 0 64px,#9a6538 64px 66px),linear-gradient(#b07a4a,#7d5230)',
+      background: 'repeating-linear-gradient(90deg,#c4895a 0 64px,#b87c4d 64px 66px),linear-gradient(#cf9562,#9a6a40)',
       backgroundBlendMode: 'multiply',
       borderTop: '4px solid #6b4426'
     }
@@ -118083,54 +118182,7 @@ function AssistantLifeRoomScene({
     className: "whitespace-nowrap text-[14px] font-black text-white"
   }, away.title), away.sub && React.createElement("p", {
     className: "whitespace-nowrap text-[10.5px] font-bold text-slate-300"
-  }, away.sub)), team.map((t, i) => {
-    const row = rows === 2 && i < perRow ? 0 : rows === 2 ? 1 : 1,
-      k = rows === 2 && i >= perRow ? i - perRow : i,
-      cnt = rows === 2 ? row === 0 ? perRow : mN - perRow : mN;
-    const s = row === 0 && rows === 2 ? Math.round(mBig * 0.8) : mBig;
-    const span = W - 24,
-      x = 12 + span / cnt * (k + 0.5) - s / 2 + (row === 1 && rows === 2 ? span / cnt / 4 : 0);
-    const yTop = asleep ? floorY + 70 : floorY + 18;
-    const y = Math.min(H - dockH - s - 6, row === 0 && rows === 2 ? yTop : yTop + (rows === 2 ? s * 0.85 : Math.max(6, (H - dockH - yTop - s) * 0.4)));
-    const d = Math.round((i % 2 ? -1 : 1) * Math.min(28, span / cnt / 3));
-    const mt = {
-      monster: t.monster,
-      nick: t.nick,
-      dye: {
-        colors: t.colors || []
-      }
-    };
-    return React.createElement("button", {
-      key: `${t.monster}-${i}`,
-      type: "button",
-      "data-assistant-life-roomview-masmon": i,
-      "aria-label": t.nick || 'マスモン',
-      onClick: () => onMasmon ? onMasmon(i) : setTip(t.nick),
-      className: "absolute",
-      style: {
-        left: Math.max(4, Math.min(W - s - 4, x)),
-        top: y,
-        width: s,
-        height: s,
-        '--d': `${d}px`,
-        animation: calm ? 'none' : `mhlRvWalk ${7 + i % 3 * 2}s ease-in-out ${i * 0.7}s infinite`
-      }
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      style: {
-        position: 'absolute',
-        left: 6,
-        right: 6,
-        bottom: -3,
-        height: 10,
-        borderRadius: '50%',
-        background: 'radial-gradient(#0006,transparent 70%)'
-      }
-    }), typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
-      t: mt,
-      size: s
-    }) : null);
-  }), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
+  }, away.sub)), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
     items: layoutEdit.items,
     geom: layoutGeom,
     sel: layoutEdit.sel,
@@ -118158,6 +118210,70 @@ function AssistantLifeRoomScene({
     style: {
       background: '#ff8a3018'
     }
+  }), people.length > 0 && !asleep && minis.length > 0 && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-assistant-life-roomview-floorlight": true,
+    className: "pointer-events-none absolute inset-x-0",
+    style: {
+      top: floorY,
+      height: Math.max(60, H - dockH - floorY),
+      background: night ? 'linear-gradient(#ffd99a88,#ffd99a50 55%,transparent)' : 'linear-gradient(#fff3d052,#fff3d022 55%,transparent)'
+    }
+  }), team.map((t, i) => {
+    const g = rvSlot(i + miniN),
+      s = g.s,
+      y = g.y,
+      d = g.d;
+    const mt = {
+      monster: t.monster,
+      nick: t.nick,
+      dye: {
+        colors: t.colors || []
+      }
+    };
+    return React.createElement("button", {
+      key: `${t.monster}-${i}`,
+      type: "button",
+      "data-assistant-life-roomview-masmon": i,
+      "aria-label": t.nick || 'マスモン',
+      onClick: () => onMasmon ? onMasmon(i) : setTip(t.nick),
+      className: "absolute",
+      style: {
+        left: g.left,
+        top: y,
+        width: s,
+        height: s,
+        pointerEvents: layoutOn && layoutEdit ? 'none' : undefined,
+        '--d': `${d}px`,
+        animation: calm ? 'none' : `mhlRvWalk ${7 + i % 3 * 2}s ease-in-out ${i * 0.7}s infinite`
+      }
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      style: {
+        position: 'absolute',
+        left: 6,
+        right: 6,
+        bottom: -3,
+        height: 10,
+        borderRadius: '50%',
+        background: 'radial-gradient(#0006,transparent 70%)'
+      }
+    }), typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
+      t: mt,
+      size: s
+    }) : null);
+  }), minis.map((m, j) => {
+    const g = rvSlot(j);
+    return React.createElement(AssistantLifeRoomMini, {
+      key: m.pid,
+      who: m.who,
+      src: m.src,
+      g: g,
+      calm: calm,
+      delay: j * 0.6,
+      noTouch: !!(layoutOn && layoutEdit),
+      onPress: onPerson ? () => onPerson(m.pid) : null
+    });
   }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? null : React.createElement(AssistantLifeRoomFigure, {
     key: x.pid,
     who: x.who,
@@ -118365,7 +118481,7 @@ const assistantLifeRanchPerk = () => {
     return '';
   }
 };
-const assistantLifeMarketWho = () => {
+function assistantLifeMarketWho() {
   try {
     if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || typeof assistantLifeCurrent !== 'function') return null;
     const ids = (typeof ASSISTANT_LIFE_HOUSE_ORDER !== 'undefined' ? ASSISTANT_LIFE_HOUSE_ORDER : []).filter(id => typeof assistantLifeBondPointsOf === 'function' && Number.isFinite(assistantLifeBondPointsOf(id)));
@@ -118373,7 +118489,7 @@ const assistantLifeMarketWho = () => {
   } catch (_) {
     return null;
   }
-};
+}
 const assistantLifePlacePerkTail = place => {
   if (place === 'studio') return '券なしで一緒に遊べる';
   if (place === 'cardroom') return `対戦すると、ごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`;
@@ -118489,7 +118605,7 @@ function AssistantLifePlacePerk({
     }
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
+  }, isImageIconValue(r.icon) ? cardIconNode(r.icon, 16) : r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
     type: "button",
     "data-assistant-life-place-perk-go": r.k,
     onClick: () => onGo(r.go),
@@ -146018,7 +146134,7 @@ const ambwIsHighlight = (e, maxHp) => {
   return false;
 };
 const AMBW_CSS = `
-.ambw{position:fixed;inset:0;z-index:9000;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
+.ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
 .ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
@@ -162114,7 +162230,7 @@ function MsxPlay({
     }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map(b => React.createElement("span", {
       key: b.k,
       className: "v-chip ylw"
-    }, b.icon, " ", b.name)) : null), React.createElement("span", {
+    }, cardIconNode(b.icon, 14), " ", b.name)) : null), React.createElement("span", {
       className: "v-nm"
     }, run.nick, React.createElement("small", null, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3])), React.createElement("div", {
       className: "v-side"
@@ -162765,7 +162881,7 @@ function MsxIssa({
       key: x.key,
       className: `v-ix${pick === x.key ? ' sel' : ''}`,
       onClick: () => setPick(x.key)
-    }, x.icon, " ", x.name, React.createElement("span", {
+    }, cardIconNode(x.icon, 16), " ", x.name, React.createElement("span", {
       className: "pr"
     }, "成功", [0, 1, 2, 3].map(i => React.createElement("i", {
       key: i,
@@ -164269,7 +164385,7 @@ function MsxR3Battle({
           top: '4%',
           fontSize: 42
         }
-      }, "優勝!", React.createElement("small", null, st3.icon, " ", st3.name, st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival ? React.createElement("div", {
+      }, "優勝!", React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival ? React.createElement("div", {
         className: "v-rvw"
       }, React.createElement("img", {
         src: st3.foe ? msxMonThumb(st3.foe.species) : '',
@@ -164376,7 +164492,7 @@ function MsxR3Battle({
         top: '4%',
         fontSize: st3.won ? 42 : 34
       }
-    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, st3.icon, " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
+    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
       className: "v-meal"
     }, React.createElement("div", {
       className: "t"
@@ -166051,7 +166167,7 @@ function MsxR3Retire({
       "data-msx-r3-assist": id
     }, React.createElement("div", {
       className: "nm"
-    }, a.icon, " ", a.name, AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? React.createElement("small", {
+    }, cardIconNode(a.icon, 16), " ", a.name, AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? React.createElement("small", {
       style: {
         fontSize: 9,
         color: '#94a3b8',
@@ -179939,7 +180055,15 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'ワンツーパンチ': 4,
   'マシンガンパンチ': 5,
   'ピコピコハンマー': 4,
-  'ゴーストラッシュ': 4
+  'ゴーストラッシュ': 4,
+  'アイスブレード': 3,
+  'ドルフィンブロー': 5,
+  'クリスタルレイン': 5,
+  'ホワイトエレジー': 4,
+  'アクアウェイブ': 3,
+  'アクアブラスト': 3,
+  'アイスコフィン': 3,
+  'クリスタルアロー': 4
 });
 const cardNameScript = c => /[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o';
 const cardNameSplit = text => {
@@ -184591,7 +184715,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_normal: [384, 512, 0, 0, 384, 512],
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510]
+  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
+  'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
+  'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
+  'stand-normal/myua_happy': [592, 672, 22, 9, 505, 663],
+  'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
+  'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
+  'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -184612,7 +184744,8 @@ const cardArtKnownBoxBySrc = src => {
     const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
     if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
   }
-  return null;
+  const sm = /(?:^|\/)(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
+  return sm ? cardArtBoxOf(CARD_ART_KNOWN_BOX[sm[1]]) : null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   if (!known) {
