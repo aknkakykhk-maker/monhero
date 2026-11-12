@@ -67,6 +67,9 @@ def split_cells(file, cut_y, cut_x):
 #   例: 'atsu': [('atsu-8expressions-sheet.png', [775], [表情×8], 4)] … 4×2 のシートで、段の切れ目が 775 行目
 SEAM_SHEETS = {
     'atsu': [('atsu-8expressions-sheet.png', [775], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 4)],
+    # ソラシド(2026-11-12 社長から。横に4人ずつ・1人 約 440×887)。袖・羽織のすその透ける布は不透明(252前後)で描かれているので、薄い光を消しても残る
+    'sorashido': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                  ('sorashido-8expressions-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     # キュウコ(2026-11-12 社長から。横に8人・1人 約 220×887)。となりと横の範囲が重なるが、体どうしはくっついていない(縫い目は不透明を横切らない)
     'kyuko': [('kyuko-8expressions-sheet.png', [], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 8)],
 }
@@ -228,6 +231,41 @@ def mend_hem(cell, sheet, path, ya, yb, side):
     lm = lm * (sub[..., 3] > 60) * dil(addm, 1)[y0:y1, x0:x1]  # 足した所とそのすぐ隣だけ
     sub[..., :3] = sub[..., :3] * (1 - lm[..., None]) + gold[None, None, :] * lm[..., None]
     cell[y0:y1, x0:x1] = np.clip(sub, 0, 255).astype(np.uint8)
+
+
+HAIR_DEHAZE = {'sorashido'}  # 髪のふちに元絵の青白い光(もや)が残る子。ふちを髪の内側の色で塗り直す
+
+
+def dehaze_hair(arr, head_frac=0.15, band=10):
+    """髪のふち(体の上 head_frac・ふちから band 画素)に残った青白いもやを直す。
+    白っぽく明るい(青 >= 赤-5・平均 140 より上)か、はっきり青い(青 > 赤+20・平均 70 より上)で、
+    肌色(赤が青より 15 以上大きい)でない画素をもやとみなし、
+    不透明度 160 未満は消し、それ以上は内側の髪の色で塗り直す(毛先の形は残す)。着物は範囲の外なので触らない。
+    体(いちばん大きい塊)だけを見るので、離れた涙・汗の記号は触らない。"""
+    ai = arr.astype(np.int32)
+    al = ai[..., 3]
+    ys = np.nonzero((al > 128).any(axis=1))[0]
+    if not len(ys):
+        return arr
+    head = np.zeros(al.shape, bool)
+    head[ys[0]:ys[0] + int((ys[-1] - ys[0]) * head_frac)] = True
+    o = al >= 128
+    r, g, b = ai[..., 0], ai[..., 1], ai[..., 2]
+    lum = (r + g + b) / 3
+    edge = (al > 8) & ~ero(o, band) & head
+    body = label_keep(o & head, 0.5)  # 体(いちばん大きい塊)だけ。涙・汗の記号は離れた塊なので触らない
+    pale = edge & dil(body, 1) & (((b >= r - 5) & (lum > 140)) | ((b > r + 20) & (lum > 70))) & ~(r > b + 15)
+    out = arr.copy()
+    out[..., 3] = np.where(pale & (al < 160), 0, out[..., 3])
+    keep = pale & (al >= 160)
+    known = o & ~pale & head & (r >= b - 10)  # 塗り直しの色は青くない髪から広げる
+    col = fill_colors(arr[..., :3].astype(np.float32), known, band + 4)
+    # 色は内側の髪から、明るさは元の画素から(毛の筋の濃淡を残す)
+    fl = col.mean(axis=2) + 1e-3
+    k = np.clip(lum / fl, 0.6, 1.4)[..., None]
+    # 消す画素も色を塗り直す(縮めるときに、透明な画素の青白い色がふちへにじまないように)
+    out[..., :3] = np.where(pale[..., None], np.clip(col * k, 0, 255).astype(np.uint8), out[..., :3])
+    return out
 
 
 def seam_cells(file, row_cuts, per_row):
@@ -670,6 +708,8 @@ def main():
             if True:
                 # 体の不透明度が 252〜253 の絵なので、245 以上は 255 にそろえる(ほんの少し透けるのを防ぐ)。体のまわりの光も消す
                 arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
+                if key in HAIR_DEHAZE:
+                    arr[...] = dehaze_hair(arr)
                 jobs.append(('%s__%s' % (key, e),
                              lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio)))
