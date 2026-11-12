@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a18465c6c19b9293
+// source-sha256: 4624471a7863e8b4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108962,7 +108962,7 @@ function MsxFxMoment({
     className: "msxfx-plate"
   }, React.createElement("div", {
     className: "msxfx-icon"
-  }, K.icon), React.createElement("div", {
+  }, cardIconNode(K.icon, 28)), React.createElement("div", {
     className: "msxfx-head"
   }, K.head), title ? React.createElement("div", {
     className: "msxfx-title"
@@ -162112,7 +162112,7 @@ function MsxPlay({
     }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map(b => React.createElement("span", {
       key: b.k,
       className: "v-chip ylw"
-    }, b.icon, " ", b.name)) : null), React.createElement("span", {
+    }, cardIconNode(b.icon, 14), " ", b.name)) : null), React.createElement("span", {
       className: "v-nm"
     }, run.nick, React.createElement("small", null, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3])), React.createElement("div", {
       className: "v-side"
@@ -162763,7 +162763,7 @@ function MsxIssa({
       key: x.key,
       className: `v-ix${pick === x.key ? ' sel' : ''}`,
       onClick: () => setPick(x.key)
-    }, x.icon, " ", x.name, React.createElement("span", {
+    }, cardIconNode(x.icon, 16), " ", x.name, React.createElement("span", {
       className: "pr"
     }, "成功", [0, 1, 2, 3].map(i => React.createElement("i", {
       key: i,
@@ -164237,7 +164237,7 @@ function MsxR3Battle({
           top: '4%',
           fontSize: 42
         }
-      }, "優勝!", React.createElement("small", null, st3.icon, " ", st3.name, st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival ? React.createElement("div", {
+      }, "優勝!", React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival ? React.createElement("div", {
         className: "v-rvw"
       }, React.createElement("img", {
         src: st3.foe ? msxMonThumb(st3.foe.species) : '',
@@ -164344,7 +164344,7 @@ function MsxR3Battle({
         top: '4%',
         fontSize: st3.won ? 42 : 34
       }
-    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, st3.icon, " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
+    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
       className: "v-meal"
     }, React.createElement("div", {
       className: "t"
@@ -165969,7 +165969,7 @@ function MsxR3Retire({
       "data-msx-r3-assist": id
     }, React.createElement("div", {
       className: "nm"
-    }, a.icon, " ", a.name, AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? React.createElement("small", {
+    }, cardIconNode(a.icon, 16), " ", a.name, AT && AT.TYPE_NAME && AT.TYPE_NAME[a.type] ? React.createElement("small", {
       style: {
         fontSize: 9,
         color: '#94a3b8',
@@ -184096,7 +184096,7 @@ const cardArtKnownBoxBySrc = src => {
     const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
     if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
   }
-  const sm = /^images\/assistant\/(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
+  const sm = /(?:^|\/)(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
   return sm ? cardArtBoxOf(CARD_ART_KNOWN_BOX[sm[1]]) : null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {

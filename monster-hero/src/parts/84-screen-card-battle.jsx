@@ -2958,8 +2958,8 @@ const cardArtKnownBoxBySrc = (src) => {
     const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
     if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
   }
-  // 全身画から切り出した立ち絵(ふだんの服・images/assistant/stand-normal/<接頭辞>_<表情>.png)。表のキーは 'stand-normal/<接頭辞>_<表情>'
-  const sm = /^images\/assistant\/(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
+  // 全身画から切り出した立ち絵(ふだんの服・助手の絵の stand-normal/<接頭辞>_<表情>.png)。表のキーは 'stand-normal/<接頭辞>_<表情>'
+  const sm = /(?:^|\/)(stand-normal\/[a-z]+_[a-z]+)\.png(?:\?.*)?$/.exec(src);
   return sm ? cardArtBoxOf(CARD_ART_KNOWN_BOX[sm[1]]) : null;
 };
 // 測ってある輪郭が、読み込んだ絵の大きさと合うか(絵が差し替わっていたら使わない)
