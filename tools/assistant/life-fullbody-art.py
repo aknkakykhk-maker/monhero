@@ -38,6 +38,30 @@ ART = {
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',
 }
+# 2×2 に4表情ずつ描かれたシート(2026-11-12 社長から。枝 hq/incoming-kiki-halloween-fullbody8)。表情なしの絵のキー → [(シート, [左上, 右上, 左下, 右下])]
+#   切る位置は、体と体のあいだの空いた行・列(元のシートで調べた。上の段の体は 706〜738 で終わり、下の段の帽子は 730〜755 から始まる)
+SPLIT_SHEETS = {
+    'kiki:halloween': [
+        ('kiki-halloween-8expressions-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 720, 500),
+        ('kiki-halloween-8expressions-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 748, (500, 460)),
+    ],
+}
+
+
+def split_cells(file, cut_y, cut_x):
+    """2×2 のシートを、空いた行 cut_y と空いた列 cut_x(上の段・下の段で違うときは (上, 下))で4つに分ける。"""
+    a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
+    h, w = a.shape[:2]
+    xs = cut_x if isinstance(cut_x, tuple) else (cut_x, cut_x)
+    out = []
+    for r, (y0, y1) in enumerate(((0, cut_y), (cut_y, h))):
+        for x0, x1 in ((0, xs[r]), (xs[r], w)):
+            c = np.zeros_like(a)
+            c[y0:y1, x0:x1] = a[y0:y1, x0:x1]  # 元の大きさのまま、ほかの3体を消す(倍率を表情なしの絵とそろえるため)
+            out.append(c)
+    return out
+
+
 # 囲まれた背景の残り(腕と頭のあいだ・両足のあいだなど、外から切り抜いても抜けない白)。
 #   キー → 元の絵の上の座標 (x, y) の一覧。その点からつながる白い所を透明にする(服の白は座標を入れないので残る)
 POCKETS = {
@@ -401,7 +425,8 @@ def drop_border_bits(im):
 def drop_specks(im, min_px=8):
     """縮めたあとに残った、ばらばらの小さな点(元絵のちぎれた欠片の名残)を消す。記号(びっくりマーク・うずまき)はこれより大きい"""
     a = np.array(im)
-    for P in white_comps(a[..., 3] > 8):  # 減色で薄い点が少し濃くなるので、薄い所まで含めて数える
+    a[a[..., 3] <= 8, 3] = 0  # 見えないほど薄い所は透明に(減色で少し濃くなって点に見えるので)
+    for P in white_comps(a[..., 3] > 0):
         if len(P) < min_px:
             a[P[:, 0], P[:, 1], 3] = 0
     return Image.fromarray(a, 'RGBA')
@@ -431,6 +456,14 @@ def main():
         # 表情の絵(キーに @)は、表情なしの絵と同じ倍率で縮める(立ち姿の大きさをそろえる)
         base = key.split('@')[0] if '@' in key else None
         jobs.append((name, lambda key=key: make_art(key), (lambda base=base: fit_scale(make_art(base))) if base else None))
+    for key, sheets in SPLIT_SHEETS.items():
+        base_name = key.replace(':', '_')
+        for file, exprs, cy, cx in sheets:
+            for e, arr in zip(exprs, split_cells(file, cy, cx)):
+                # 元のシートは1体が小さい(縦 約 740)ので、縮めずにそのまま(表情なしの絵 768 とほぼ同じ高さ)。体のまわりの薄い光は消す
+                jobs.append(('%s__%s' % (base_name, e),
+                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=0.0),
+                             (lambda key=key: fit_scale(make_art(key)) * 2.0)))
     if not only or '__' in only:
         cells, _ = sheet_cells()
         for base, rows in cells.items():
@@ -440,7 +473,7 @@ def main():
         if only and name != only and not name.startswith(only + '__'):
             continue
         im = fit(make(), scale=scale() if scale else None)
-        if '__' in name and scale:  # 表情の絵(1枚ずつの元絵)だけ
+        if '__' in name and scale:  # 表情の絵(1枚ずつの元絵・2×2のシート)だけ
             im = drop_specks(im)
         n = save(im, os.path.join(OUT, name + '.png'))
         total += n

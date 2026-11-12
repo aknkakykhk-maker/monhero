@@ -815,7 +815,7 @@ const ASSISTANT_FULLBODY_ART = Object.freeze({
 //   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
 const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS,
-  kiki: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだんの服だけ。ハロウィンの服は表情なしの絵のまま)
+  kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
 });
 // その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す(画像のパスはここに集める)。服の全身画が無いときは null(今の立ち絵へ)
 const assistantFullBodyImage = (who, expression = 'happy') => {
