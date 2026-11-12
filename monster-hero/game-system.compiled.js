@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 26cb96337813009d
+// source-sha256: 798b4033eb49bc0c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6264,6 +6264,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_megalovania_sans',
+  name: 'メガロバニア（サンズ戦）',
+  creator: 'ねるかめちゃん',
+  src: 'audio/bgm-megalovania-sans.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_megalovania_smash',
+  name: 'MEGALOVANIA（スマブラver）',
+  creator: '暇人[もちゃ]',
+  src: 'audio/bgm-megalovania-smash.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8057,6 +8071,8 @@ const Audio_ = (() => {
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
+    "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
+    "audio/bgm-megalovania-smash.mp3": "831700bb0255",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
@@ -9953,6 +9969,7 @@ const Audio_ = (() => {
     }
   };
   return {
+    currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
     setStoryEndFade,
@@ -9987,6 +10004,119 @@ const Audio_ = (() => {
     setBackgroundSeQuiet
   };
 })();
+const SuccessSound = (() => {
+  let active = false;
+  let epoch = 0;
+  let beforeKey = null;
+  let beforeQuiet = false;
+  let curBgm = null;
+  const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
+  const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
+  const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const enter = () => {
+    const a = audio();
+    if (!a) return;
+    if (active) return;
+    active = true;
+    epoch += 1;
+    curBgm = null;
+    try {
+      beforeKey = a.currentBgmKey ? a.currentBgmKey() : null;
+    } catch (e) {
+      beforeKey = null;
+    }
+    try {
+      beforeQuiet = a.isBackgroundSeQuiet ? !!a.isBackgroundSeQuiet() : false;
+      if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(true);
+    } catch (e) {}
+  };
+  const leave = () => {
+    const a = audio();
+    if (!active) return;
+    active = false;
+    epoch += 1;
+    if (!a) {
+      curBgm = null;
+      return;
+    }
+    try {
+      if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(beforeQuiet);
+    } catch (e) {}
+    const wasMine = curBgm !== null;
+    curBgm = null;
+    if (wasMine) {
+      try {
+        if (beforeKey && knownTrack(beforeKey)) a.playBGM(beforeKey);else a.stopBGM();
+      } catch (e) {}
+    }
+    beforeKey = null;
+  };
+  const bgm = (sceneId, season) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    if (key === curBgm) return key;
+    curBgm = key;
+    try {
+      a.playBGM(key);
+    } catch (e) {}
+    return key;
+  };
+  const se = (sceneId, delayMs = 0) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const name = successSoundSe(sceneId);
+    if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
+    const my = epoch;
+    const fire = () => {
+      if (!active || my !== epoch) return;
+      try {
+        a.fgSe[name]();
+      } catch (e) {}
+    };
+    const wait = Number(delayMs);
+    if (Number.isFinite(wait) && wait > 0) {
+      setTimeout(fire, Math.min(wait, 10000));
+    } else {
+      fire();
+    }
+    return name;
+  };
+  const scene = (sceneId, opts = null) => {
+    if (!active) enter();
+    const season = opts && opts.season;
+    bgm(sceneId, season);
+    se(sceneId, opts && opts.delayMs);
+  };
+  return {
+    enter,
+    leave,
+    scene,
+    bgm,
+    se,
+    isActive: () => active
+  };
+})();
+const useSuccessSound = (sceneId, opts = null) => {
+  const on = !opts || opts.on !== false;
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!on || !sceneId) return undefined;
+    SuccessSound.scene(sceneId, {
+      season,
+      delayMs
+    });
+    return undefined;
+  }, [on, sceneId, season]);
+  useEffect(() => {
+    if (!on) return undefined;
+    return () => {
+      SuccessSound.leave();
+    };
+  }, [on]);
+};
 const MOO_IMG = "";
 const RANGE_LABELS = ["零", "近", "中", "遠"];
 const rangeAttackDamageMultiplier = (card, attackStartDist) => {
@@ -12335,7 +12465,8 @@ const DyeRegionColorControls = ({
   onChange,
   onCustom,
   only = null,
-  big = false
+  big = false,
+  names = null
 }) => {
   const regionCount = dyeRegionCount(baseId);
   const regionLabels = DYE_REGION_LABELS;
@@ -12347,8 +12478,8 @@ const DyeRegionColorControls = ({
     key: idx,
     className: "bg-black/30 rounded-xl p-2 border border-white/5"
   }, React.createElement("div", {
-    className: "text-[8px] text-fuchsia-300 font-black uppercase mb-1"
-  }, regionCount > 1 ? `染色${regionLabels[idx] || idx + 1}` : '染色'), React.createElement("div", {
+    className: names ? 'text-[12px] text-fuchsia-200 font-black mb-1' : 'text-[8px] text-fuchsia-300 font-black uppercase mb-1'
+  }, names && names[idx] ? `${regionLabels[idx] || idx + 1} ${names[idx]}` : regionCount > 1 ? `染色${regionLabels[idx] || idx + 1}` : '染色'), React.createElement("div", {
     className: big ? 'grid grid-cols-5 gap-1 [&>button]:min-h-[48px] [&>button>span:last-child]:text-[10px] [&>button>span:first-child]:w-5 [&>button>span:first-child]:h-5' : 'grid grid-cols-6 gap-0.5'
   }, React.createElement("button", {
     onClick: () => onChange(idx, null),
@@ -13926,6 +14057,7 @@ const RELEASE_FLAGS = {
   assistantLifeProfile: true,
   assistantPartnerUnlock: true,
   cardBattle: true,
+  monheroSuccess: false,
   cardAssistantTalk: true,
   missionDailyLine: true,
   cardGrowStyle: true,
@@ -20081,6 +20213,18 @@ const helpDataRows = id => {
       return Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => [setting.label, `クリアで ${clearPsycheReward(key)} 個`]);
     case 'loginBonus':
       return (typeof LOGIN_BONUS_REWARDS !== 'undefined' && LOGIN_BONUS_REWARDS || []).map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
+    case 'monsakuRanks':
+      {
+        const ranks = typeof MASMON_CALC !== 'undefined' && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : [];
+        if (ranks.length === 0) return [['評価', '最終の総合力で決まります']];
+        return ranks.map(([key, min], i, all) => [key, all[i + 1] ? `${min.toLocaleString()} 〜 ${(all[i + 1][1] - 1).toLocaleString()}` : `${min.toLocaleString()} 〜`]);
+      }
+    case 'monsakuAssists':
+      {
+        const list = globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS || null;
+        if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
+        return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost)).map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
+      }
     case 'masuCosts':
       return [['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`], ['合体（技継承なし）', '0 ダイヤ'], ['合体（技継承あり）', `${FUSION_INHERIT_COST} ダイヤ`], ['限界突破', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）']];
     case 'assistantBond':
@@ -20245,6 +20389,8 @@ const HELP_DATA_TITLES = {
   missionsWeekly: 'ウィークリーミッション',
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
+  monsakuRanks: '評価のランク(総合力)',
+  monsakuAssists: 'アシスト能力の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
@@ -52512,6 +52658,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['excited', '2:52からのサビ、最後にまぢ盛り上がる♪']],
     'listen:makutsu_no_senritsu': [['excited', '2:18でいちばん強くなるの！ 最後の最後でアゲる♪']],
     'listen:lamia': [['excited', '0:32から一気にいちばん強くなるの！ ここまぢでアガる♪']],
+    'listen:megalovania_sans': [['excited', '0:18からいきなりいちばん強いの！ ずっとドキドキだよ♪']],
+    'listen:megalovania_smash': [['excited', '0:10でもういちばん強くなるの！ 4分38秒たっぷりだよ♪']],
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
@@ -52587,6 +52735,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '1:29と2:04に静かなところがありまつ。そこで息を整えましょう']],
     'listen:makutsu_no_senritsu': [['normal', '最初の40秒くらいは静かでつ。ゆっくり入っていけます']],
     'listen:lamia': [['normal', '最初の静かなところから少しずつ大きくなるの、きれいでつ']],
+    'listen:megalovania_sans': [['normal', '最初の静かなところと、2:26の終わりぎわ、すてきでつ']],
+    'listen:megalovania_smash': [['normal', '1:14と1:43の静かなところ、すーっと入ってすてきでつ']],
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
@@ -52662,6 +52812,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['excited', '最後の2:52から一気に盛り上がるよ！！ ラストが見せ場♡']],
     'listen:makutsu_no_senritsu': [['excited', '2:18からのとこ、短いけどいちばん盛り上がるよ！！']],
     'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
+    'listen:megalovania_sans': [['excited', '0:52から1:18までいちばん強いのが続くよ♡ すごいね♡']],
+    'listen:megalovania_smash': [['excited', '2:23と4:01でいちばん強くなるよ♡ ぐっとくるね♡']],
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
@@ -52737,6 +52889,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['happy', 'おでの好きな曲だ。強めと静かが入れ替わって、戦場を駆けてる感じがするんだよ']],
     'listen:makutsu_no_senritsu': [['happy', '静かに始まって、どんどん深くもぐっていく感じだな']],
     'listen:lamia': [['troubled', 'BPM199でLv.51だぞ。速すぎて、おでの冒険も駆け足だな']],
+    'listen:megalovania_sans': [['happy', '2分39秒、ずっと強い音で押してくるな。戦いの前みたいだぞ']],
+    'listen:megalovania_smash': [['happy', 'BPM160で強く打つ音が多いな。長い冒険みたいで元気が出るぞ']],
     'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
@@ -52812,6 +52966,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['happy', 'サビは3:12まで！ 最後の20秒でぜんぶ締めよ笑']],
     'listen:makutsu_no_senritsu': [['wink', '2:25で静かになって終わるから、最後はきれいに止めよ笑']],
     'listen:lamia': [['happy', '2:08から静かに締めていくとこ、余韻あっていいよね笑']],
+    'listen:megalovania_sans': [['happy', '2:26でスッと静かになって終わるの、きれいだよね笑']],
+    'listen:megalovania_smash': [['happy', '4:26で静かに終わるの、余韻があっていいよね笑']],
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
@@ -52887,6 +53043,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '0:17でもう強め。静かを2回はさんで、2:52で一番上だよぉ']],
     'listen:makutsu_no_senritsu': [['normal', '1:13からずっと強めで、2:18で一番上。最後まで上がり続ける構成だねぇ']],
     'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜']],
+    'listen:megalovania_sans': [['happy', '1:22でひと息ついて、1:38からまた上げていくのがいいんだよね〜']],
+    'listen:megalovania_smash': [['happy', '1:08で上げて、1:14で一回落とす緩急がいいんだよね〜']],
     'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
@@ -52962,6 +53120,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', 'BPMおよそ140で661ノーツ。長さのわりに数は多いです笑']],
     'listen:makutsu_no_senritsu': [['normal', 'サビは2:18から2:25の7秒だけです。短いけど濃いです笑']],
     'listen:lamia': [['normal', 'BPM199で797ノーツ、Lv.51。強く打つ音が56%です・・・！']],
+    'listen:megalovania_sans': [['normal', 'BPM240です。強く打つ音が43%・・・！ 速くて力強いです']],
+    'listen:megalovania_smash': [['normal', 'BPM160です。強く打つ音が64%・・・！ かなり力強いです']],
     'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
@@ -53037,6 +53197,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:senjou_no_shippuu': [['normal', '2:04の静かなところで、ゆっくり落ち着こうか']],
     'listen:makutsu_no_senritsu': [['happy', 'はじめの静かなところで、ゆっくり気持ちを整えようか☺️']],
     'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
+    'listen:megalovania_sans': [['normal', '1:22と1:26は少し落ち着くから、ひと息つけるね']],
+    'listen:megalovania_smash': [['normal', '3:26や3:55は静かになるから、ひと息つけるね']],
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
@@ -108105,6 +108267,717 @@ const QuickGuideOverlay = ({
   const target = quickGuidePortalTarget();
   return target && typeof ReactDOM === 'object' && ReactDOM.createPortal ? ReactDOM.createPortal(overlay, target) : overlay;
 };
+const MSXFX_MOODS = Object.freeze(['joy', 'hype', 'calm', 'tired', 'sulky', 'sad', 'surprise', 'clingy']);
+const MSXFX_MOOD_ALIAS = Object.freeze({
+  great: 'hype',
+  good: 'joy',
+  normal: 'calm',
+  tired: 'tired',
+  worn: 'tired',
+  stress: 'sulky',
+  utsu: 'sad',
+  sabori: 'sulky',
+  ごきげん: 'joy',
+  ふつう: 'calm',
+  疲れ: 'tired',
+  ふてくされ: 'sulky',
+  うつ: 'sad'
+});
+const msxFxMoodOf = m => MSXFX_MOODS.includes(m) ? m : MSXFX_MOOD_ALIAS[m] || 'calm';
+const MSXFX_REACT = Object.freeze({
+  great: {
+    cls: 'jump',
+    mood: 'hype',
+    fx: 'spark',
+    skill: 'normal'
+  },
+  ok: {
+    cls: 'nod',
+    mood: 'joy',
+    fx: 'note'
+  },
+  fail: {
+    cls: 'droop',
+    mood: 'sad',
+    fx: 'drop'
+  },
+  sab: {
+    cls: 'away',
+    mood: 'calm',
+    fx: 'zzz'
+  },
+  scold: {
+    cls: 'shrink',
+    mood: 'sad',
+    fx: 'sweat'
+  },
+  scoldBad: {
+    cls: 'away',
+    mood: 'sulky',
+    fx: 'puff'
+  },
+  praise: {
+    cls: 'snuggle',
+    mood: 'clingy',
+    fx: 'heart'
+  },
+  peak: {
+    cls: 'jump',
+    mood: 'surprise',
+    fx: 'spark'
+  },
+  skill: {
+    cls: 'jump',
+    mood: 'hype',
+    fx: 'spark',
+    skill: 'normal'
+  },
+  win: {
+    cls: 'jump',
+    mood: 'hype',
+    fx: 'spark',
+    skill: 'unique'
+  }
+});
+const MSXFX_GESTURE = Object.freeze({
+  joy: {
+    cls: 'hop',
+    fx: 'note'
+  },
+  hype: {
+    cls: 'hop2',
+    fx: 'spark'
+  },
+  calm: {
+    cls: 'look',
+    fx: ''
+  },
+  tired: {
+    cls: 'yawn',
+    fx: 'zzz'
+  },
+  sulky: {
+    cls: 'huff',
+    fx: 'puff'
+  },
+  sad: {
+    cls: 'shiver',
+    fx: 'drop'
+  },
+  surprise: {
+    cls: 'jolt',
+    fx: 'bang'
+  },
+  clingy: {
+    cls: 'lean',
+    fx: 'heart'
+  }
+});
+const MSXFX_PYOKO_SLOW = Object.freeze(['tired', 'sad', 'sulky']);
+const MSXFX_FX_CHAR = Object.freeze({
+  spark: '✦',
+  note: '♪',
+  drop: '💧',
+  zzz: 'z',
+  sweat: '💦',
+  puff: '💢',
+  heart: '♡',
+  bang: '！'
+});
+const msxFxCalm = () => {
+  try {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  } catch (_) {
+    return false;
+  }
+};
+const msxFxHash = s => {
+  let h = 2166136261;
+  const t = String(s);
+  for (let i = 0; i < t.length; i++) {
+    h ^= t.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+};
+const msxFxTimeNow = () => {
+  let h = 12;
+  try {
+    h = new Date().getHours();
+  } catch (_) {}
+  return h >= 5 && h < 9 ? '朝' : h >= 9 && h < 16 ? '昼' : h >= 16 && h < 19 ? '夕方' : '夜';
+};
+const MSXFX_TIME_LIGHT = Object.freeze({
+  朝: {
+    sky: 'linear-gradient(180deg,#fff7d633 0,#ffe4b522 50%,#0000 100%)',
+    mon: 'brightness(1.04) saturate(1.02)',
+    rim: '#fff3c4'
+  },
+  昼: {
+    sky: 'linear-gradient(180deg,#ffffff1a 0,#0000 60%)',
+    mon: 'none',
+    rim: '#ffffff'
+  },
+  夕方: {
+    sky: 'linear-gradient(180deg,#ff9f4338 0,#f9731626 55%,#7c2d1222 100%)',
+    mon: 'sepia(.18) saturate(1.1) brightness(.98) hue-rotate(-6deg)',
+    rim: '#fdba74'
+  },
+  夜: {
+    sky: 'linear-gradient(180deg,#1e1b4b66 0,#312e8144 55%,#0f0d2455 100%)',
+    mon: 'brightness(.82) saturate(.85) hue-rotate(8deg)',
+    rim: '#a5b4fc'
+  }
+});
+const MSXFX_SEASON_LIGHT = Object.freeze({
+  spring: 'radial-gradient(120% 70% at 20% 0,#f9a8d42e 0,#0000 60%)',
+  summer: 'radial-gradient(120% 70% at 80% 0,#fde0473a 0,#0000 60%)',
+  autumn: 'radial-gradient(120% 70% at 50% 0,#fb923c33 0,#0000 60%)',
+  winter: 'radial-gradient(120% 70% at 50% 0,#bae6fd38 0,#0000 60%)'
+});
+const msxFxLight = (season, time) => {
+  const t = MSXFX_TIME_LIGHT[time] || MSXFX_TIME_LIGHT[msxFxTimeNow()];
+  const s = MSXFX_SEASON_LIGHT[season] || '';
+  return {
+    overlay: [s, t.sky].filter(Boolean).join(','),
+    mon: t.mon,
+    rim: t.rim
+  };
+};
+function MsxSceneLight({
+  season,
+  time
+}) {
+  msxFxEnsureCss();
+  return React.createElement("div", {
+    className: "msxfx-light",
+    "aria-hidden": "true",
+    style: {
+      background: msxFxLight(season, time).overlay
+    }
+  });
+}
+const MSXFX_VOICE_FALLBACK = Object.freeze({
+  joy: ['{cry}♪', '{cry}〜♪'],
+  hype: ['{cry}ーーっ！！', '{cry}！{cry}！{cry}！'],
+  calm: ['{cry}', '{cry}？'],
+  tired: ['ぜぇ…ぜぇ…', '{cry}…'],
+  sulky: ['むぅ…', '{cry}っ！ ぷいっ'],
+  sad: ['{cry}…', 'しょぼ…'],
+  surprise: ['{cry}！？', '！？'],
+  clingy: ['{cry}〜', '{cry}…♡']
+});
+let msxFxScript = null;
+const msxFxUseScript = rows => {
+  if (Array.isArray(rows)) msxFxScript = rows;
+};
+const msxFxScriptRows = () => msxFxScript;
+const msxFxCry = species => {
+  const rows = msxFxScriptRows();
+  const id = `mon.cry.${String(species || '').toLowerCase()}`;
+  const r = rows && rows.find(x => x && x.id === id);
+  return r && typeof r.t === 'string' ? r.t : 'きゅ';
+};
+const msxFxVoice = (species, mood, seed = '') => {
+  const m = msxFxMoodOf(mood);
+  try {
+    if (typeof monsucMonLine === 'function') {
+      const r = monsucMonLine({
+        species,
+        mood: m,
+        seed
+      });
+      if (r && typeof r === 'string') return r;
+      if (r && typeof r.t === 'string') return r.t;
+    }
+  } catch (_) {}
+  const rows = msxFxScriptRows();
+  const pool = rows ? rows.filter(x => x && typeof x.id === 'string' && x.id.startsWith(`mon.mood.${m}.`)).map(x => x.t) : [];
+  const list = pool.length ? pool : MSXFX_VOICE_FALLBACK[m];
+  const t = list[msxFxHash(`${seed}|${m}`) % list.length];
+  const cry = msxFxCry(species);
+  return String(t).replace(/\{cry\}/g, cry);
+};
+const msxFxSkillSeq = (species, kind = 'normal', name = null) => {
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[species] : null;
+  if (!mon) return [];
+  const atk = mon.atkMotion || 'default';
+  try {
+    if (kind === 'unique' && typeof attackMotionUniquePreviewSequence === 'function') return attackMotionUniquePreviewSequence(atk, species, name) || [];
+    if (typeof attackMotionPreviewSequence === 'function') return attackMotionPreviewSequence(atk, species, name) || [];
+  } catch (_) {}
+  return [];
+};
+const msxFxSeqMs = seq => seq.reduce((a, st) => a + (Number.isFinite(st.ms) ? st.ms : 0), 0);
+const msxFxSkillName = (species, kind = 'normal', lv = 0) => {
+  try {
+    const mon = ALL_PLAYER_MONSTERS[species];
+    const list = kind === 'unique' ? mon && mon.unique && mon.unique.names : typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[species] : null;
+    return Array.isArray(list) && list.length ? list[Math.max(0, Math.min(list.length - 1, lv | 0))] : null;
+  } catch (_) {
+    return null;
+  }
+};
+function MsxLiveMon({
+  species,
+  colors,
+  mood = 'calm',
+  season,
+  time,
+  react,
+  onReactEnd,
+  seed = '',
+  voice = true,
+  calm,
+  pose = false,
+  pyoko = false,
+  className = '',
+  style,
+  alt = ''
+}) {
+  msxFxEnsureCss();
+  const still = calm === true || msxFxCalm();
+  const m = msxFxMoodOf(mood);
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[species] : null;
+  const [act, setAct] = React.useState(() => pose ? {
+    cls: MSXFX_GESTURE[m].cls,
+    fx: MSXFX_GESTURE[m].fx,
+    say: voice ? msxFxVoice(species, m, `${seed}|pose`) : '',
+    n: 'pose'
+  } : null);
+  const timers = React.useRef([]);
+  const actRef = React.useRef(null);
+  actRef.current = act;
+  const endRef = React.useRef(onReactEnd);
+  endRef.current = onReactEnd;
+  const clear = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
+  const later = (f, ms) => {
+    timers.current.push(setTimeout(f, ms));
+  };
+  const [atk, setAtk] = React.useState(null);
+  const atkRun = React.useRef(0);
+  const stopAtk = () => {
+    atkRun.current++;
+    setAtk(null);
+  };
+  const playSkill = (kind, name) => {
+    const seq = msxFxSkillSeq(species, kind, name);
+    if (!seq.length || typeof BattleAttackMotionPreview !== 'function') return 0;
+    const run = ++atkRun.current;
+    let t = 0;
+    seq.forEach(st => {
+      later(() => {
+        if (run === atkRun.current) setAtk({
+          anim: st.anim,
+          kind,
+          name
+        });
+      }, t);
+      t += st.ms;
+    });
+    later(() => {
+      if (run === atkRun.current) setAtk(null);
+    }, t);
+    return t;
+  };
+  React.useEffect(() => () => {
+    clear();
+    atkRun.current++;
+  }, []);
+  const reactKey = react && react.kind ? `${react.kind}:${react.id != null ? react.id : ''}` : '';
+  React.useEffect(() => {
+    if (!reactKey) return;
+    const R = MSXFX_REACT[react.kind];
+    if (!R) return;
+    clear();
+    stopAtk();
+    const say = voice ? msxFxVoice(species, R.mood, `${seed}|${reactKey}`) : '';
+    const sk = react.skill || {};
+    const skKind = sk.kind || R.skill;
+    const ms = !still && skKind ? playSkill(skKind, sk.name || null) : 0;
+    setAct({
+      cls: ms ? 'skill' : R.cls,
+      fx: R.fx,
+      say,
+      n: reactKey,
+      react: true
+    });
+    later(() => {
+      stopAtk();
+      setAct(null);
+      if (endRef.current) endRef.current();
+    }, still ? 700 : Math.max(1200, ms + 120));
+  }, [reactKey]);
+  React.useEffect(() => {
+    if (still || pose) return undefined;
+    let n = 0;
+    const base = 6200 + msxFxHash(`${seed}|${species}`) % 2400;
+    const iv = setInterval(() => {
+      n++;
+      if (actRef.current && actRef.current.react) return;
+      const G = MSXFX_GESTURE[m];
+      const key = `g${n}`;
+      const say = voice && n % 2 === 1 ? msxFxVoice(species, m, `${seed}|${key}`) : '';
+      setAct({
+        cls: G.cls,
+        fx: G.fx,
+        say,
+        n: key
+      });
+      later(() => setAct(c => c && c.n === key ? null : c), 1200);
+    }, base);
+    return () => clearInterval(iv);
+  }, [m, still, pose, species, seed, voice]);
+  const skip = () => {
+    if (!act) return;
+    const wasReact = act.react;
+    clear();
+    stopAtk();
+    setAct(null);
+    if (wasReact && endRef.current) endRef.current();
+  };
+  const L = msxFxLight(season, time);
+  const img = mon && mon.imgUrl ? typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: species,
+    src: mon.imgUrl,
+    alt: alt,
+    masuColors: Array.isArray(colors) ? colors : [],
+    draggable: false,
+    className: "w-full h-full object-contain",
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: mon.imgUrl,
+    alt: alt,
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("span", {
+    className: "msxfx-emoji"
+  }, mon && mon.emoji || '❔');
+  const idleOk = !still && typeof withMonsterIdleArt === 'function' && (!atk || typeof monsterIdleAllowedDuring !== 'function' || monsterIdleAllowedDuring(atk.anim));
+  const idleArt = idleOk ? withMonsterIdleArt(species, img, {
+    fill: true,
+    own: true
+  }) : img;
+  const art = atk ? React.createElement(BattleAttackMotionPreview, {
+    image: idleArt,
+    anim: atk.anim,
+    compact: true,
+    baseId: species
+  }) : idleArt;
+  const fxCh = act && act.fx ? MSXFX_FX_CHAR[act.fx] : '';
+  return React.createElement("div", {
+    className: `msxfx-live${still ? ' msxfx-calm' : ''}${pyoko ? ` msxfx-pyoko msxfx-py-${MSXFX_PYOKO_SLOW.includes(m) ? 'slow' : m === 'hype' ? 'fast' : 'mid'}${act && act.react ? ' msxfx-py-hold' : ''}` : ''} ${className}`,
+    style: style,
+    "data-msxfx-mood": m,
+    "data-msxfx-act": act ? act.cls : '',
+    onClick: act ? skip : undefined
+  }, React.createElement("div", {
+    className: "msxfx-shadow",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "msxfx-hop"
+  }, React.createElement("div", {
+    className: `msxfx-pose msxfx-m-${m}`
+  }, React.createElement("div", {
+    key: act ? act.n : 'idle',
+    className: `msxfx-act${act ? ` msxfx-a-${act.cls}` : ''}`
+  }, React.createElement("div", {
+    className: "msxfx-tint",
+    style: {
+      filter: `${L.mon === 'none' ? '' : L.mon} drop-shadow(0 6px 5px #0008)`.trim(),
+      '--msxfx-rim': L.rim
+    }
+  }, art)))), atk && atk.kind === 'unique' && atk.anim && typeof SpecialMoveFx === 'function' ? React.createElement("div", {
+    className: "msxfx-special",
+    "aria-hidden": "true"
+  }, React.createElement(SpecialMoveFx, {
+    compact: true,
+    slotSkill: {
+      slotIndex: -1,
+      name: atk.name || msxFxSkillName(species, 'unique') || '必殺技',
+      type: 'unique',
+      sig: !atk.name
+    },
+    attackAnim: atk.anim,
+    mon: mon,
+    ownerId: species
+  })) : null, fxCh ? React.createElement("div", {
+    key: `fx-${act.n}`,
+    className: `msxfx-fx msxfx-fx-${act.fx}`,
+    "aria-hidden": "true"
+  }, [0, 1, 2].map(i => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }, fxCh))) : null, act && act.say ? React.createElement("div", {
+    key: `b-${act.n}`,
+    className: "msxfx-bub"
+  }, act.say) : null);
+}
+const MSXFX_MOMENT = Object.freeze({
+  lvup: {
+    icon: '⬆️',
+    head: '訓練Lvアップ！',
+    tone: 'gold'
+  },
+  tech: {
+    icon: '📜',
+    head: '技を覚えた！',
+    tone: 'sky'
+  },
+  win: {
+    icon: '🏆',
+    head: '優勝！',
+    tone: 'gold'
+  },
+  lose: {
+    icon: '…',
+    head: '負けてしまった',
+    tone: 'gray'
+  },
+  over: {
+    icon: '🌧️',
+    head: 'ゲームオーバー',
+    tone: 'gray'
+  },
+  retire: {
+    icon: '🌸',
+    head: '引退',
+    tone: 'pink'
+  }
+});
+function MsxFxMoment({
+  kind,
+  title,
+  sub,
+  species,
+  colors,
+  skill,
+  onDone,
+  calm
+}) {
+  msxFxEnsureCss();
+  const still = calm === true || msxFxCalm();
+  const K = MSXFX_MOMENT[kind] || MSXFX_MOMENT.lvup;
+  const doneRef = React.useRef(onDone);
+  doneRef.current = onDone;
+  const fired = React.useRef(false);
+  const finish = () => {
+    if (fired.current) return;
+    fired.current = true;
+    if (doneRef.current) doneRef.current();
+  };
+  const react = kind === 'win' ? {
+    kind: 'win',
+    id: kind
+  } : kind === 'tech' ? {
+    kind: 'skill',
+    id: kind,
+    skill: skill || {
+      kind: 'normal'
+    }
+  } : kind === 'lvup' ? {
+    kind: 'great',
+    id: kind
+  } : {
+    kind: kind === 'retire' ? 'praise' : 'fail',
+    id: kind
+  };
+  const len = still || !species ? 1200 : Math.max(1200, Math.min(1700, msxFxSeqMs(react.kind === 'win' ? msxFxSkillSeq(species, 'unique') : react.skill ? msxFxSkillSeq(species, react.skill.kind, react.skill.name) : react.kind === 'great' ? msxFxSkillSeq(species, 'normal') : []) + 150));
+  React.useEffect(() => {
+    const t = setTimeout(finish, len);
+    return () => clearTimeout(t);
+  }, []);
+  return React.createElement("div", {
+    className: `msxfx-moment msxfx-t-${K.tone} msxfx-k-${kind}${still ? ' msxfx-calm' : ''}`,
+    onClick: finish,
+    role: "button",
+    "aria-label": "とばす",
+    "data-msxfx-moment": kind
+  }, React.createElement("div", {
+    className: "msxfx-rays",
+    "aria-hidden": "true"
+  }), kind === 'win' || kind === 'lvup' || kind === 'tech' ? React.createElement("div", {
+    className: "msxfx-confetti",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 12
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))) : null, kind === 'lose' || kind === 'over' ? React.createElement("div", {
+    className: "msxfx-rain",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 10
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))) : null, species ? React.createElement("div", {
+    className: "msxfx-mmon"
+  }, React.createElement(MsxLiveMon, {
+    species: species,
+    colors: colors,
+    mood: MSXFX_REACT[react.kind].mood,
+    react: react,
+    voice: false,
+    calm: still
+  })) : null, React.createElement("div", {
+    className: "msxfx-plate"
+  }, React.createElement("div", {
+    className: "msxfx-icon"
+  }, K.icon), React.createElement("div", {
+    className: "msxfx-head"
+  }, K.head), title ? React.createElement("div", {
+    className: "msxfx-title"
+  }, title) : null, sub ? React.createElement("div", {
+    className: "msxfx-sub"
+  }, sub) : null), React.createElement("div", {
+    className: "msxfx-skip"
+  }, "タップでとばす"));
+}
+const MSXFX_CSS = `
+.msxfx-light{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;z-index:1}
+.msxfx-live{position:relative;height:100%;aspect-ratio:1/1;max-width:100%;margin:0 auto;-webkit-tap-highlight-color:transparent}
+.msxfx-shadow{position:absolute;left:22%;right:22%;bottom:3%;height:7%;border-radius:50%;background:radial-gradient(closest-side,#0008,#0000)}
+.msxfx-hop,.msxfx-pose,.msxfx-act,.msxfx-tint{position:absolute;inset:0;transform-origin:50% 92%}
+.msxfx-tint>*{display:block;width:100%;height:100%}
+.msxfx-emoji{display:flex!important;align-items:center;justify-content:center;font-size:64px}
+.msxfx-hop{position:absolute;inset:0;transform-origin:50% 96%}
+.msxfx-special{position:absolute;inset:-20% -30%;pointer-events:none;z-index:2}
+/* ぴょこぴょこ: 小さく4回弾んで、5回目に大きく跳ねる(1周 = 5拍) */
+.msxfx-pyoko{--py-beat:.62s;--py-h:-7%;--py-big:-20%}
+.msxfx-py-fast{--py-beat:.46s;--py-h:-9%;--py-big:-24%}
+.msxfx-py-slow{--py-beat:1s;--py-h:-3%;--py-big:-7%}
+.msxfx-pyoko .msxfx-hop{animation:msxfx-pyoko calc(var(--py-beat)*5) linear infinite}
+.msxfx-pyoko .msxfx-shadow{animation:msxfx-pyshadow calc(var(--py-beat)*5) linear infinite}
+.msxfx-py-hold .msxfx-hop,.msxfx-py-hold .msxfx-shadow{animation:none}
+@keyframes msxfx-pyoko{
+  0%,20%,40%,60%{transform:translateY(0) scale(1.06,.93);animation-timing-function:ease-out}
+  3%,23%,43%,63%{transform:translateY(0) scale(1);animation-timing-function:ease-out}
+  10%,30%,50%,70%{transform:translateY(var(--py-h)) scale(.97,1.04);animation-timing-function:ease-in}
+  17%,37%,57%{transform:translateY(0) scale(1.04,.95);animation-timing-function:ease-out}
+  77%{transform:translateY(0) scale(1.1,.88);animation-timing-function:ease-out}
+  89%{transform:translateY(var(--py-big)) scale(.93,1.08) rotate(-3deg);animation-timing-function:ease-in}
+  98%{transform:translateY(0) scale(1.08,.9)}
+  100%{transform:translateY(0) scale(1.06,.93)}}
+@keyframes msxfx-pyshadow{0%,3%,17%,20%,23%,37%,40%,43%,57%,60%,63%,77%,98%,100%{transform:scale(1);opacity:1}
+  10%,30%,50%,70%{transform:scale(.85);opacity:.8}89%{transform:scale(.6);opacity:.5}}
+/* 気分の姿勢(ずっと) */
+.msxfx-m-joy{animation:msxfx-bob 1.6s ease-in-out infinite}
+.msxfx-m-hype{animation:msxfx-bob .8s ease-in-out infinite}
+.msxfx-m-tired{transform:translateY(4%) scaleY(.95);filter:saturate(.85)}
+.msxfx-m-sulky{transform:scaleX(-1) rotate(-3deg)}
+.msxfx-m-sad{transform:translateY(5%) scale(.95) rotate(-2deg);filter:saturate(.7) brightness(.92)}
+.msxfx-m-surprise{transform:translateY(-2%) scale(1.02)}
+.msxfx-m-clingy{transform:rotate(4deg) translateX(-3%)}
+/* しぐさと反応(1.2秒まで) */
+.msxfx-a-hop{animation:msxfx-hop .6s ease-out 1}
+.msxfx-a-hop2{animation:msxfx-hop .45s ease-out 2}
+.msxfx-a-look{animation:msxfx-look 1.1s ease-in-out 1}
+.msxfx-a-yawn{animation:msxfx-yawn 1.1s ease-in-out 1}
+.msxfx-a-huff{animation:msxfx-huff .5s ease-in-out 2}
+.msxfx-a-shiver{animation:msxfx-shiver .12s linear 6}
+.msxfx-a-jolt{animation:msxfx-jolt .5s cubic-bezier(.2,1.6,.4,1) 1}
+.msxfx-a-lean{animation:msxfx-lean 1.1s ease-in-out 1}
+.msxfx-a-jump{animation:msxfx-jump 1s cubic-bezier(.3,1.4,.5,1) 1}
+.msxfx-a-nod{animation:msxfx-nod .5s ease-in-out 2}
+.msxfx-a-droop{animation:msxfx-droop 1.1s ease-out 1 forwards}
+.msxfx-a-away{animation:msxfx-away 1.1s ease-in-out 1 forwards}
+.msxfx-a-shrink{animation:msxfx-shrink 1.1s ease-out 1 forwards}
+.msxfx-a-snuggle{animation:msxfx-snuggle 1.1s ease-in-out 1}
+@keyframes msxfx-bob{0%,100%{translate:0 0}50%{translate:0 -2.5%}}
+@keyframes msxfx-hop{0%,100%{transform:translateY(0) scale(1)}15%{transform:translateY(0) scale(1.06,.92)}50%{transform:translateY(-14%) scale(.96,1.05)}85%{transform:translateY(0) scale(1.05,.95)}}
+@keyframes msxfx-look{0%,100%{transform:none}25%,45%{transform:scaleX(-1)}70%{transform:rotate(-6deg)}}
+@keyframes msxfx-yawn{0%,100%{transform:none}40%,60%{transform:scale(1.03,1.06) rotate(-3deg)}80%{transform:translateY(3%) scaleY(.96)}}
+@keyframes msxfx-huff{0%,100%{transform:none}50%{transform:scale(1.06,.96) translateX(3%)}}
+@keyframes msxfx-shiver{0%,100%{transform:translateX(0)}50%{transform:translateX(-1.5%)}}
+@keyframes msxfx-jolt{0%{transform:none}40%{transform:translateY(-12%) scale(1.08)}100%{transform:none}}
+@keyframes msxfx-lean{0%,100%{transform:none}40%,70%{transform:rotate(-9deg) translateX(-6%)}}
+@keyframes msxfx-jump{0%{transform:none}12%{transform:scale(1.12,.86)}40%{transform:translateY(-26%) scale(.92,1.1) rotate(-6deg)}62%{transform:translateY(0) scale(1.1,.9)}78%{transform:translateY(-6%)}100%{transform:none}}
+@keyframes msxfx-nod{0%,100%{transform:none}45%{transform:rotate(8deg) scaleY(.95)}}
+@keyframes msxfx-droop{0%{transform:none;filter:none}35%{transform:translateY(6%) scale(.96) rotate(-5deg)}100%{transform:translateY(8%) scale(.94) rotate(-7deg);filter:saturate(.55) brightness(.85)}}
+@keyframes msxfx-away{0%{transform:none}30%{transform:scaleX(.05)}55%,100%{transform:scaleX(-1) rotate(-4deg) translateY(2%)}}
+@keyframes msxfx-shrink{0%{transform:none}20%{transform:translateY(-4%) scale(1.04)}45%,100%{transform:translateY(6%) scale(.88,.86)}}
+@keyframes msxfx-snuggle{0%,100%{transform:none}25%{transform:rotate(-8deg) translateX(-4%)}50%{transform:rotate(6deg) translateX(3%) translateY(-6%)}75%{transform:rotate(-5deg)}}
+/* 飛ぶ印 */
+.msxfx-fx{position:absolute;left:50%;top:14%;width:0;height:0;pointer-events:none;z-index:2}
+.msxfx-fx i{position:absolute;font-style:normal;font-weight:900;font-size:22px;color:#fde047;text-shadow:0 1px 3px #0009;opacity:0;animation:msxfx-float 1.1s ease-out forwards;animation-delay:calc(var(--i)*.12s);left:calc((var(--i) - 1)*34px)}
+.msxfx-fx-heart i{color:#f472b6}.msxfx-fx-note i{color:#7dd3fc}.msxfx-fx-zzz i{color:#c7d2fe;font-size:18px}.msxfx-fx-puff i,.msxfx-fx-bang i{color:#fb7185}
+@keyframes msxfx-float{0%{opacity:0;transform:translateY(10px) scale(.6)}25%{opacity:1;transform:translateY(-4px) scale(1.1)}100%{opacity:0;transform:translateY(-34px) scale(1)}}
+/* ふきだし */
+/* 顔に重ならないよう、箱の上の外に出す(ミハリ5の気づき) */
+.msxfx-bub{position:absolute;left:50%;bottom:100%;margin-bottom:2px;transform:translateX(-50%);z-index:3;background:#fff;color:#1e1b4b;font-weight:900;font-size:13px;line-height:1.3;
+  padding:5px 11px;border-radius:14px;white-space:nowrap;max-width:180%;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 8px #0006;
+  animation:msxfx-bub 1.7s ease-out forwards;pointer-events:none}
+.msxfx-bub:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}
+@keyframes msxfx-bub{0%{opacity:0;transform:translateX(-50%) translateY(6px) scale(.8)}12%{opacity:1;transform:translateX(-50%) scale(1.05)}20%{transform:translateX(-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+/* 節目 */
+.msxfx-moment{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,#2b2457ee 0,#0f0d24f2 70%);animation:msxfx-in .18s ease-out;cursor:pointer}
+.msxfx-t-gray{background:radial-gradient(circle at 50% 45%,#2a2f3df0 0,#0b0d14f5 70%)}
+.msxfx-t-pink{background:radial-gradient(circle at 50% 40%,#5b2a4bee 0,#130d24f4 72%)}
+.msxfx-rays{position:absolute;left:50%;top:42%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;opacity:.35;
+  background:repeating-conic-gradient(#fde04755 0 8deg,#0000 8deg 22deg);animation:msxfx-spin 6s linear infinite;pointer-events:none}
+.msxfx-t-sky .msxfx-rays{background:repeating-conic-gradient(#7dd3fc55 0 8deg,#0000 8deg 22deg)}
+.msxfx-t-pink .msxfx-rays{background:repeating-conic-gradient(#f9a8d444 0 10deg,#0000 10deg 26deg)}
+.msxfx-t-gray .msxfx-rays{display:none}
+.msxfx-mmon{position:relative;height:min(34vh,190px);aspect-ratio:1/1}
+.msxfx-k-over .msxfx-mmon,.msxfx-k-lose .msxfx-mmon{filter:grayscale(.6) brightness(.8)}
+.msxfx-k-retire .msxfx-mmon{animation:msxfx-rise 1.2s ease-out forwards}
+.msxfx-plate{position:relative;text-align:center;color:#fff;animation:msxfx-pop .35s cubic-bezier(.2,1.5,.4,1)}
+.msxfx-icon{font-size:30px;line-height:1}
+.msxfx-head{font-size:22px;font-weight:900;letter-spacing:.04em;text-shadow:0 2px 0 #0008}
+.msxfx-t-gold .msxfx-head{color:#fde047}.msxfx-t-sky .msxfx-head{color:#7dd3fc}.msxfx-t-pink .msxfx-head{color:#f9a8d4}.msxfx-t-gray .msxfx-head{color:#cbd5e1}
+.msxfx-title{margin-top:4px;font-size:16px;font-weight:900;padding:4px 14px;border-radius:99px;background:#ffffff1f;display:inline-block;max-width:86vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msxfx-sub{margin-top:4px;font-size:12px;color:#cbd5e1;font-weight:700;max-width:86vw}
+.msxfx-skip{position:absolute;bottom:14px;right:14px;font-size:11px;color:#94a3b8;font-weight:700}
+.msxfx-confetti i{position:absolute;left:50%;top:44%;width:7px;height:11px;border-radius:2px;background:#fde047;opacity:0;
+  animation:msxfx-conf 1.1s ease-out forwards;animation-delay:calc(var(--i)*.02s);--a:calc(var(--i)*30deg)}
+.msxfx-confetti i:nth-child(3n){background:#f472b6}.msxfx-confetti i:nth-child(3n+1){background:#7dd3fc}
+@keyframes msxfx-conf{0%{opacity:1;transform:rotate(var(--a)) translateY(0)}100%{opacity:0;transform:rotate(var(--a)) translateY(-150px) rotate(220deg)}}
+.msxfx-rain i{position:absolute;top:-20%;left:calc(var(--i)*10% + 4%);width:2px;height:40px;background:linear-gradient(#94a3b800,#94a3b8aa);
+  animation:msxfx-rain .7s linear infinite;animation-delay:calc(var(--i)*-.07s)}
+@keyframes msxfx-rain{to{transform:translateY(140vh)}}
+@keyframes msxfx-spin{to{transform:rotate(360deg)}}
+@keyframes msxfx-in{from{opacity:0}to{opacity:1}}
+@keyframes msxfx-pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes msxfx-rise{0%{transform:none;opacity:1}100%{transform:translateY(-8%);opacity:.85;filter:brightness(1.25) drop-shadow(0 0 14px #fbcfe8)}}
+/* 動きを減らす: 止まった姿で出す(印とふきだしは出たまま) */
+.msxfx-calm,.msxfx-calm *{animation:none!important;transition:none!important}
+.msxfx-calm .msxfx-fx i{opacity:1;transform:translateY(-14px)}
+.msxfx-calm .msxfx-confetti,.msxfx-calm .msxfx-rain{display:none}
+@media (prefers-reduced-motion:reduce){.msxfx-live *,.msxfx-moment *{animation:none!important}.msxfx-fx i{opacity:1}}
+`;
+let msxFxCssDone = false;
+function msxFxEnsureCss() {
+  if (msxFxCssDone || typeof document === 'undefined') return;
+  try {
+    if (!document.getElementById('msxfx-css')) {
+      const el = document.createElement('style');
+      el.id = 'msxfx-css';
+      el.textContent = MSXFX_CSS;
+      document.head.appendChild(el);
+    }
+    msxFxCssDone = true;
+  } catch (_) {}
+}
 const ASSISTANT_LIFE_STORE_KEY = 'mh_assistant_life_v1';
 const ASSISTANT_LIFE_PLAY_KEY = 'mh_assistant_life_play_v1';
 const ASSISTANT_LIFE_SLOTS = Object.freeze([{
@@ -147290,6 +148163,1245 @@ function AmbbRanking({
     onClick: onBack
   }, "← もどる")));
 }
+const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MSC_STAT_JP = Object.freeze({
+  life: 'ライフ',
+  pow: 'ちから',
+  wise: 'かしこさ',
+  hit: '命中',
+  eva: '回避',
+  tough: '丈夫さ'
+});
+const MSC_STAT_ICON = Object.freeze({
+  life: '❤️',
+  pow: '💪',
+  wise: '🧠',
+  hit: '🎯',
+  eva: '💨',
+  tough: '🛡️'
+});
+const MSC_STARS = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1)));
+const MSC_VENUE_IMG = Object.freeze({
+  debut: 'images/success/scenes/venue-debut.png',
+  cup: 'images/success/scenes/venue-cup.png',
+  hero: 'images/success/scenes/venue-hero.png',
+  summit: 'images/success/scenes/venue-summit.png'
+});
+const MSC_SPECIAL = Object.freeze({
+  mua: {
+    word: '声援!',
+    sub: 'みんなの声が 届いた'
+  },
+  atsu: {
+    word: '気合!',
+    sub: 'あつの特別な1話の効き目が かがやいた'
+  },
+  kiki: {
+    word: '集中!',
+    sub: 'ききの特別な1話の効き目が かがやいた'
+  },
+  momosuke: {
+    word: '見せ場!',
+    sub: 'ももすけの特別な1話の効き目が かがやいた'
+  },
+  dra: {
+    word: '直伝!',
+    sub: 'ドラの特別な1話の効き目が かがやいた'
+  },
+  kyuko: {
+    word: '見切り!',
+    sub: 'きゅうこの特別な1話の効き目が かがやいた'
+  },
+  sorashido: {
+    word: '計算どおり!',
+    sub: 'ソラシドの特別な1話の効き目が かがやいた'
+  },
+  erubin: {
+    word: '見守り!',
+    sub: 'エルビンの特別な1話の効き目が かがやいた'
+  }
+});
+const MSC_LINE = Object.freeze({
+  mua: '「みんな見てるよ! いつもどおりで だいじょうぶ!」',
+  atsu: '「最初から全開でいけ!」',
+  kiki: '「そのまま、まっすぐ…!」',
+  momosuke: '「ここが見せ場だよ! いちばん目立っちゃお!」',
+  dra: '「教えたとおりに。おまえならできる」',
+  kyuko: '「相手の動き、もう見えてるよ」',
+  sorashido: '「計算どおりっす! 落ち着いていきましょう!」',
+  erubin: '「ちゃんと見てるからね」'
+});
+const monsucBuffsOf = mods => {
+  const m = mods && typeof mods === 'object' ? mods : {};
+  const buffs = {};
+  const rows = [];
+  if (Number.isFinite(m.guts) && m.guts > 0) {
+    buffs.guts = m.guts;
+    rows.push(`試合のはじめから ガッツ +${m.guts}`);
+  }
+  if (Number.isFinite(m.firstHit) && m.firstHit > 0) {
+    buffs.hit1 = m.firstHit / 100;
+    rows.push('最初の技が 当たりやすい');
+  }
+  if (Number.isFinite(m.crit) && m.crit > 0) {
+    buffs.crit = m.crit / 100;
+    rows.push('会心が 出やすい');
+  }
+  if (Number.isFinite(m.eva) && m.eva > 0) {
+    buffs.eva = m.eva / 100;
+    rows.push('相手の技を かわしやすい');
+  }
+  if (Number.isFinite(m.techFail) && m.techFail < 0) {
+    buffs.missCut = Math.min(1, -m.techFail / 100);
+    rows.push('技の はずれが 減る');
+  }
+  if (m.noIdle) {
+    buffs.noSulk = true;
+    rows.push('そっぽを 向かない');
+  }
+  if (m.noInjury) rows.push('この試合では けがをしない');
+  if (m.showFirst) rows.push('相手の 最初の手が 見える');
+  if (m.line) rows.push('声援で 気持ちが落ち着く');
+  return {
+    buffs: Object.keys(buffs).length ? buffs : null,
+    rows
+  };
+};
+const mscNum = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+const mscMonName = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
+const mscMonImg = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+const mscAssistant = id => typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0] : null;
+const mscFace = (id, ex) => {
+  const a = mscAssistant(id);
+  return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : '';
+};
+const monsucCupTitle = (suc, s) => {
+  const b = s && s.battle;
+  if (!b) return {
+    name: '大会',
+    star: 1,
+    venue: 'cup'
+  };
+  if (b.kind === 'summit') return {
+    name: (suc.SUMMIT[b.round] || {}).name || '頂への道',
+    star: 4,
+    venue: 'summit'
+  };
+  if (b.kind === 'cup') {
+    const list = typeof suc.cupsOf === 'function' ? (() => {
+      try {
+        return suc.cupsOf({
+          ...s,
+          battle: null,
+          over: null
+        });
+      } catch (_) {
+        return [];
+      }
+    })() : [];
+    const hit = list.find(c => c.id === b.id);
+    const name = hit ? hit.name : typeof globalThis !== 'undefined' && globalThis.MONSUC_REGULAR_CUPS && globalThis.MONSUC_REGULAR_CUPS[b.sys] || '大会';
+    return {
+      name,
+      star: b.star,
+      venue: String(b.sys || '').startsWith('hero') || b.star >= 4 ? 'hero' : 'cup'
+    };
+  }
+  const f = suc.FORCED[b.kind] || {};
+  return {
+    name: f.name || '大会',
+    star: f.star || 1,
+    venue: b.kind === 'debut' ? 'debut' : 'cup'
+  };
+};
+const monsucCupInfo = (suc, s, me) => {
+  const b = s.battle || {};
+  const t = monsucCupTitle(suc, s);
+  const opp = (suc.opponents(s) || [])[0] || null;
+  const bracket = suc.bracketOf(s);
+  const mods = typeof suc.battleMods === 'function' ? suc.battleMods(s) : {};
+  const {
+    buffs,
+    rows
+  } = monsucBuffsOf(mods);
+  const seed = ['monsuc', s.id, s.turn, b.kind, b.id || '', b.round || 0, b.retry || 0, b.again || 0, b.reroll || 0].join('|');
+  const meName = me && me.name || mscMonName(s.species);
+  return {
+    title: t.name,
+    star: t.star,
+    venue: t.venue,
+    bracket,
+    opp,
+    mods,
+    buffs,
+    buffRows: rows,
+    seed,
+    meName,
+    rival: Boolean(opp && opp.rival),
+    champ: Boolean(opp && opp.champ)
+  };
+};
+const monsucTeams = (catalog, suc, s, info) => {
+  const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
+  const mine = {
+    species: s.species,
+    name: info.meName,
+    lv: mscNum(s.lv, 1),
+    stats: s.stats,
+    techs: Array.isArray(s.techs) ? s.techs.slice() : undefined,
+    mastery: s.mastery || {},
+    loy,
+    pop: mscNum(s.pop)
+  };
+  const o = info.opp || {
+    species: s.species,
+    stats: s.stats,
+    techs: 2,
+    mastery: 20,
+    tactics: 10
+  };
+  const all = catalog && catalog.species[o.species] && catalog.species[o.species].techs || [];
+  const n = Math.max(1, mscNum(o.techs, 2));
+  const techs = all.slice(0, n).map(t => t.id);
+  const mastery = {};
+  techs.forEach(id => {
+    mastery[id] = mscNum(o.mastery, 0);
+  });
+  ['guard', 'dist', 'swap'].forEach(k => {
+    mastery[k] = mscNum(o.mastery, 0);
+  });
+  const foe = {
+    species: o.species,
+    name: o.name || mscMonName(o.species),
+    lv: 30,
+    stats: o.stats,
+    techs,
+    mastery,
+    loy: 100,
+    pop: o.champ ? 60 : o.rival ? 50 : 30
+  };
+  const tac = mscNum(o.tactics, 20);
+  return {
+    teamA: {
+      assistantId: s.aid,
+      tactics: tac,
+      members: [mine]
+    },
+    teamB: {
+      assistantId: 'atsu',
+      tactics: tac,
+      members: [foe]
+    }
+  };
+};
+const monsucCupMatch = (engine, catalog, suc, s, me) => {
+  const info = monsucCupInfo(suc, s, me);
+  const {
+    teamA,
+    teamB
+  } = monsucTeams(catalog, suc, s, info);
+  const r = engine.simulate({
+    seed: info.seed,
+    catalog,
+    teamA,
+    teamB,
+    balance: 'A',
+    trace: true,
+    ...(info.buffs ? {
+      buffs: {
+        A: info.buffs
+      }
+    } : {})
+  });
+  return {
+    r,
+    teamA,
+    teamB,
+    buffs: info.buffs,
+    seed: info.seed,
+    info
+  };
+};
+const monsucPopOrder = (suc, s, entrants) => {
+  const rng = suc.rngOf(s.id, s.turn, 'pop');
+  const score = entrants.map((e, i) => ({
+    i,
+    v: e.champ ? 1000 : e.rival ? 900 : e.you ? 200 + mscNum(s.pop) * 5 : rng() * 600
+  }));
+  const order = score.slice().sort((a, b) => b.v - a.v);
+  const no = [];
+  order.forEach((x, k) => {
+    no[x.i] = k + 1;
+  });
+  return no;
+};
+const MSC_CSS = `
+.msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
+  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+.msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
+.msc-top{display:flex;align-items:center;gap:8px}
+.msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
+.msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
+.msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
+.msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
+.msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.msc-foot>*{flex:1}
+.msc-panel{border-radius:16px;overflow:hidden;background:#f6ead0;color:#3b2a14;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.msc-head{background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;text-align:center;font-weight:900;padding:7px 8px;font-size:14px;letter-spacing:.04em}
+.msc-bk{position:relative;padding:8px 6px 10px 8px}
+.msc-row{position:relative;display:flex;align-items:center;gap:5px;height:40px;transition:opacity .4s}
+.msc-row.out{opacity:.45}
+.msc-no{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:#fff;border:2px solid #d6a45a;color:#b45309;font-weight:900;font-size:13px;display:grid;place-items:center}
+.msc-name{flex:1 1 auto;width:auto;min-width:0;margin-right:6px;height:26px;border-radius:7px;background:#fffaf0;border:1.5px solid #e2c89a;display:flex;align-items:center;gap:4px;padding:0 6px;font-weight:800;font-size:13px}
+.msc-name span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-name.you{background:#fde68a;border-color:#f59e0b}
+.msc-name.foe{background:#fecdd3;border-color:#fb7185}
+.msc-tag{flex:0 0 auto;font-size:9.5px;font-weight:900;color:#fff;border-radius:5px;padding:1px 4px;background:#9a3412}
+.msc-tag.you{background:#f59e0b}.msc-tag.rv{background:#e11d48}.msc-tag.ch{background:#7c2d12}
+.msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
+.msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
+.msc-face img{width:120%;height:120%;object-fit:contain}
+.msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
+.msc-lines path{fill:none;stroke-linecap:round}
+.msc-lines .base{stroke:#cbb48b;stroke-width:2}
+.msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
+.msc-lines .win.me{stroke:#f43f5e}
+@keyframes msc-draw{to{stroke-dashoffset:0}}
+.msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
+.msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
+@keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
+.msc-note{font-size:12px;color:#fde68a;line-height:1.5}
+.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
+.msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
+.msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
+.msc-talk em{font-style:normal;color:#e11d48}
+.msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
+.msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
+.msc-vs .mon{position:absolute;z-index:1;bottom:26px;width:44%;height:150px;display:flex;align-items:flex-end;justify-content:center}
+.msc-vs .mon img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+.msc-vs .mon.a{left:2%;animation:msc-inL .5s ease-out both}.msc-vs .mon.b{right:2%;animation:msc-inR .5s ease-out both}
+.msc-vs .mon.a img{transform:scaleX(-1)}
+@keyframes msc-inL{from{transform:translateX(-60%);opacity:0}}@keyframes msc-inR{from{transform:translateX(60%);opacity:0}}
+.msc-vs .vs{position:absolute;z-index:2;left:50%;top:48%;transform:translate(-50%,-50%);font-size:44px;font-weight:900;font-style:italic;color:#e0e7ff;text-shadow:0 3px 0 #312e81,0 0 14px rgba(129,140,248,.8);animation:msc-pop .5s .35s ease-out both}
+@keyframes msc-pop{from{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+.msc-vs .nm{position:absolute;z-index:2;bottom:4px;display:flex;align-items:center;gap:4px;background:rgba(20,16,38,.85);border-radius:8px;padding:2px 8px;font-size:12.5px;font-weight:900;max-width:48%}
+.msc-vs .nm span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-vs .nm.a{left:6px}.msc-vs .nm.b{right:6px}
+.msc-tabs{display:flex;gap:6px}
+.msc-tabs button{flex:1;border:2px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-weight:900;font-size:13px;padding:7px 0;cursor:pointer;min-height:36px}
+.msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
+.msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
+.msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
+.msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
+.msc-bar{height:9px;border-radius:5px;background:#1e1b3a;overflow:hidden;position:relative}
+.msc-bar i{position:absolute;top:0;bottom:0;border-radius:5px;transform:scaleX(0);animation:msc-grow .8s ease-out forwards}
+.msc-bar.l i{right:0;background:linear-gradient(90deg,#f472b6,#fb923c);transform-origin:right}
+.msc-bar.r i{left:0;background:linear-gradient(90deg,#60a5fa,#3b82f6);transform-origin:left}
+@keyframes msc-grow{to{transform:scaleX(1)}}
+.msc-apt{display:flex;gap:3px;justify-content:center}
+.msc-apt span{width:21px;height:21px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:900;background:#1e293b;color:#64748b}
+.msc-apt span.S,.msc-apt span.A{background:#fde047;color:#3b2a05}.msc-apt span.B{background:#be123c;color:#fff}.msc-apt span.C{background:#4c1d95;color:#ddd6fe}
+.msc-aptrow{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px}
+.msc-aptrow .lab{font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
+.msc-tl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.msc-tl div{display:flex;flex-direction:column;gap:4px}
+.msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+.msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
+.msc-hint img{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.msc-hint em{font-style:normal;color:#fde047}
+.msc-stage{position:relative;border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
+.msc-stage .ambw-ring{background:linear-gradient(180deg,rgba(20,16,38,.15),rgba(20,16,38,.55))}
+.msc-mp{border-radius:12px;padding:7px 9px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b}
+.msc-mp.a{border-color:#f472b6}.msc-mp.b{border-color:#60a5fa}
+.msc-mp .h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:900;min-width:0}
+.msc-mp .h span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.msc-mp .h small{color:#94a3b8;font-size:10.5px;font-weight:700}
+.msc-mp .h img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.msc-mp .bars{display:flex;align-items:center;gap:6px;margin-top:4px}
+.msc-mp .bars>div{flex:1}
+.msc-mp .num{font-size:12px;font-weight:900;text-align:right;min-width:62px}
+.msc-mp .num small{color:#94a3b8;font-size:10px}
+.msc-buff{display:inline-flex;align-items:center;gap:3px;margin-left:4px;padding:1px 6px;border-radius:999px;background:#fde047;color:#3b2a05;font-size:10px;font-weight:900}
+.msc-speed{display:flex;gap:5px}
+.msc-speed button{flex:1;border:1.5px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-size:12px;font-weight:900;padding:6px 0;min-height:34px;cursor:pointer}
+.msc-speed button.on{background:#a5f3fc;color:#0c4a6e;border-color:#a5f3fc}
+.msc-end{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(10,8,24,.45);font-size:46px;font-weight:900;letter-spacing:.06em;animation:msc-fade .35s ease-out both}
+.msc-end.w{color:#fde047;text-shadow:0 4px 0 #9a3412,0 0 18px rgba(251,191,36,.9)}
+.msc-end.l{color:#cbd5e1;text-shadow:0 4px 0 #1e293b}
+@keyframes msc-fade{from{opacity:0;transform:scale(1.3)}}
+.msc-hero{position:relative;flex:1 1 auto;min-height:330px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-rays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg,rgba(253,224,71,.38) 0 9deg,rgba(253,186,116,.08) 9deg 18deg);animation:msc-spin 14s linear infinite}
+.msc-hero.lose .msc-rays{display:none}
+.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.55),rgba(15,23,42,.8))}
+@keyframes msc-spin{to{transform:rotate(360deg)}}
+.msc-hero .big{position:absolute;z-index:3;left:0;right:0;top:14px;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;animation:msc-fade .5s ease-out both}
+.msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
+.msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
+.msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
+.msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
+.msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-hero.win .who{height:46%}
+.msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
+.msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+@keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
+.msc-hero .rival{position:absolute;z-index:3;left:8px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px;border-radius:999px;background:rgba(76,5,25,.9);border:1.5px solid #fb7185;padding:5px 10px;font-size:12.5px;font-weight:900}
+.msc-hero .rival span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
+.msc-rw{display:flex;align-items:center;gap:8px;border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:9px 10px;font-size:13px;font-weight:800;animation:msc-fade .35s ease-out both}
+.msc-rw .i{font-size:20px;width:26px;text-align:center}
+.msc-rw .k{flex:0 0 auto;min-width:72px}
+.msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
+.msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
+.msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
+.msc-again h3{margin:0;text-align:center;font-size:15px;font-weight:900}
+.msc-again p{margin:0;text-align:center;font-size:11.5px;color:#cbd5e1}
+.msc-again p em{font-style:normal;color:#fde047;font-weight:900}
+.msc-pick{display:flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:9px 10px;color:#fff;font-weight:900;font-size:14px;text-align:left;cursor:pointer;min-height:48px}
+.msc-pick img{width:30px;height:30px;object-fit:contain;flex:0 0 auto}
+.msc-pick small{display:block;font-size:11px;font-weight:700;opacity:.9}
+.msc-pick.sand{background:linear-gradient(90deg,#ea580c,#f59e0b)}
+.msc-pick.rain{background:linear-gradient(90deg,#be185d,#6d28d9,#2563eb)}
+.msc-pick.quit{background:#334155;justify-content:center;font-size:13px}
+.msc-pick:disabled{opacity:.4;cursor:default}
+.msc-cut{position:relative;flex:1 1 auto;min-height:380px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
+.msc-cut .word{position:absolute;z-index:3;left:0;right:0;top:20px;text-align:center;font-size:56px;font-weight:900;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.9);animation:msc-fade .45s ease-out both}
+.msc-cut .sub{position:absolute;z-index:3;left:8px;right:8px;top:94px;text-align:center;font-size:13px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.85)}
+.msc-cut .duo{position:absolute;z-index:2;left:0;right:0;bottom:80px;height:52%;display:flex;align-items:flex-end;justify-content:center;gap:2%}
+.msc-cut .duo img{max-width:46%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-cut .duo img.a{transform:scaleX(-1);filter:drop-shadow(0 0 14px rgba(253,224,71,.95)) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-cut .say{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;display:flex;align-items:center;gap:8px;border-radius:14px;background:rgba(15,12,34,.9);border:1.5px solid #fde047;padding:6px 10px}
+.msc-cut .say img{width:50px;height:50px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:2px solid #fde047}
+.msc-cut .say b{display:block;font-size:11px;color:#fde047}
+.msc-cut .say p{margin:0;font-size:13.5px;font-weight:800}
+.msc-eff{border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:8px 10px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+.msc-eff b{color:#fbcfe8;white-space:nowrap}
+@media (orientation:landscape) and (max-height:520px){
+  .msc-wrap{max-width:760px}
+  .msc-hero,.msc-cut{min-height:260px}
+  .msc-hero .who{height:50%}
+  .msc-cut .duo{bottom:70px;height:46%}
+  .msc-vs{height:170px}.msc-vs .mon{height:120px}
+}
+@media (max-width:340px){
+  .msc-name{font-size:12px}
+  .msc-tag{font-size:8.5px;padding:1px 3px}
+  .msc-st{grid-template-columns:30px 1fr 64px 1fr 30px;font-size:12px}
+  .msc-hero .big,.msc-cut .word{font-size:46px}
+}
+`;
+function MonsucBracket({
+  suc,
+  s,
+  info,
+  result,
+  onFight,
+  onResultOnly,
+  onClose,
+  canSkip
+}) {
+  const bk = info.bracket;
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  if (!bk) return null;
+  const E = bk.entrants;
+  const no = monsucPopOrder(suc, s, E);
+  const r1 = bk.rounds[0] || [];
+  const r2 = bk.rounds[1] || [];
+  const out = i => stage >= 1 && !r1.includes(i) || stage >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === 4 || result === 'lose' && i === 0;
+  const H = 40;
+  const yOf = i => i * H + H / 2;
+  const X = [0, 22, 44, 66, 80];
+  const W = 84;
+  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
+  const base = [];
+  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
+  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
+  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
+  base.push(pair(mid2[0], mid2[1], 2));
+  const mid3 = (mid2[0] + mid2[1]) / 2;
+  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const win = [];
+  if (stage >= 1) r1.forEach((i, k) => win.push({
+    d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`,
+    me: i === 0 || i === 4,
+    key: `a${i}`
+  }));
+  if (stage >= 2) r2.forEach((i, k) => win.push({
+    d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`,
+    me: true,
+    key: `b${i}`
+  }));
+  if (stage >= 3) {
+    win.push({
+      d: `M${X[2]} ${mid2[0]}H${X[3]}`,
+      me: true,
+      key: 'c0'
+    }, {
+      d: `M${X[2]} ${mid2[1]}H${X[3]}`,
+      me: true,
+      key: 'c1'
+    });
+  }
+  if (result === 'win') win.push({
+    d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`,
+    me: true,
+    key: 'f'
+  });
+  const champ = E.find(e => e.champ) || E[4];
+  const foe = E[4];
+  const nm = e => e.you ? info.meName : e.name || mscMonName(e.species);
+  const coach = mscAssistant(s.aid);
+  const champNo1 = no[E.indexOf(champ)] === 1;
+  const line = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は 王者の ", nm(champ), "! でも、") : null, info.meName, "の相手は ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。勝てば ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「1番人気は 王者の ", React.createElement("em", null, nm(foe)), "! ", info.meName, "が当たるのは 決勝。", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', "ここで勝てば 大金星だよ!」") : React.createElement(React.Fragment, null, "「", info.meName, "の相手は ", React.createElement("em", null, nm(foe)), "! あわてずに いこうね」");
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-bracket": true,
+    "data-msc-stage": stage
+  }, React.createElement("div", {
+    className: "msc-top"
+  }, React.createElement("button", {
+    className: "msc-btn g s",
+    "data-msc-close": true,
+    onClick: onClose
+  }, "← もどる"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+    className: "msc-panel"
+  }, React.createElement("div", {
+    className: "msc-head"
+  }, info.title, " ", MSC_STARS(info.star)), React.createElement("div", {
+    className: "msc-bk"
+  }, E.map((e, i) => React.createElement("div", {
+    key: i,
+    className: `msc-row ${out(i) ? 'out' : ''}`,
+    style: {
+      paddingRight: W
+    },
+    "data-msc-entrant": e.you ? 'you' : i === 4 ? 'foe' : i
+  }, React.createElement("span", {
+    className: "msc-no"
+  }, no[i]), React.createElement("span", {
+    className: `msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+  }, React.createElement("span", null, nm(e)), e.you && React.createElement("i", {
+    className: "msc-tag you"
+  }, "あなた"), e.rival && React.createElement("i", {
+    className: "msc-tag rv"
+  }, "ライバル"), e.champ && React.createElement("i", {
+    className: "msc-tag ch"
+  }, "👑王者")), React.createElement("span", {
+    className: `msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+  }, React.createElement("img", {
+    src: mscMonImg(e.species),
+    alt: ""
+  })))), React.createElement("svg", {
+    className: "msc-lines",
+    width: W,
+    height: H * 8,
+    viewBox: `0 0 ${W} ${H * 8}`,
+    style: {
+      width: W,
+      height: H * 8
+    }
+  }, base.map((d, k) => React.createElement("path", {
+    key: k,
+    className: "base",
+    d: d
+  })), win.map(w => React.createElement("path", {
+    key: w.key,
+    className: `win ${w.me ? 'me' : ''}`,
+    d: w.d,
+    pathLength: "1"
+  }))), React.createElement("div", {
+    className: `msc-cupbadge ${result === 'win' ? 'lit' : ''}`,
+    style: {
+      right: 4
+    }
+  }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
+    className: "msc-note"
+  }, "あなたの1戦は 赤い丸の2体のあいだ(", info.meName, " VS ", nm(foe), ")。", React.createElement("small", null, "ほかの試合の結果は、見せるだけの演出です")), React.createElement("div", {
+    className: "msc-talk"
+  }, React.createElement("img", {
+    src: mscFace(s.aid),
+    alt: ""
+  }), React.createElement("p", null, coach ? React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: 11,
+      color: '#b45309'
+    }
+  }, "解説 ", coach.name) : null, line)), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn y s",
+    "data-msc-quick": true,
+    onClick: onResultOnly
+  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'), React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-go": true,
+    onClick: onFight
+  }, "⚔ 1戦へ")));
+}
+function MonsucBattleCard({
+  suc,
+  s,
+  info,
+  catalog,
+  onReady,
+  onResultOnly,
+  onBack
+}) {
+  const [tab, setTab] = useState('st');
+  const o = info.opp || {};
+  const me = s.stats || {};
+  const op = o.stats || {};
+  const mx = Math.max(1, ...MSC_STAT_KEYS.map(k => Math.max(mscNum(me[k]), mscNum(op[k])))) * 1.08;
+  const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
+  const aptOf = sp => catalog && catalog.species[sp] && catalog.species[sp].apt || ['C', 'C', 'C', 'C'];
+  const techsOf = (sp, ids) => {
+    const all = catalog && catalog.species[sp] && catalog.species[sp].techs || [];
+    return ids.map(id => all.find(t => t.id === id)).filter(Boolean);
+  };
+  const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
+  const foeTechs = (catalog && catalog.species[o.species] && catalog.species[o.species].techs || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
+  const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
+  const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
+  const ahead = MSC_STAT_KEYS.map(k => ({
+    k,
+    d: mscNum(me[k]) - mscNum(op[k])
+  })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
+  const apt = aptOf(s.species);
+  const rankOf = g => ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g) < 0 ? 9 : ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g);
+  const bestD = apt.map((g, d) => ({
+    g,
+    d
+  })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || {
+    d: 1
+  };
+  const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
+  const hint = ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
+  const aptRow = sp => React.createElement("div", {
+    className: "msc-apt"
+  }, aptOf(sp).map((g, d) => React.createElement("span", {
+    key: d,
+    className: g
+  }, AMBW_DIST[d])));
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-card": true
+  }, React.createElement("div", {
+    className: "msc-top"
+  }, React.createElement("button", {
+    className: "msc-btn g s",
+    onClick: onBack
+  }, "← 表へ"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star), "・1戦")), React.createElement("div", {
+    className: "msc-vs",
+    style: {
+      backgroundImage: `url(${venue})`
+    }
+  }, React.createElement("div", {
+    className: "cap"
+  }, info.title, " ", MSC_STARS(info.star), "・1戦"), React.createElement("div", {
+    className: "mon a"
+  }, React.createElement("img", {
+    src: mscMonImg(s.species),
+    alt: ""
+  })), React.createElement("div", {
+    className: "mon b"
+  }, React.createElement("img", {
+    src: mscMonImg(o.species),
+    alt: ""
+  })), React.createElement("div", {
+    className: "vs"
+  }, "VS"), React.createElement("div", {
+    className: "nm a"
+  }, React.createElement("span", null, info.meName)), React.createElement("div", {
+    className: "nm b"
+  }, React.createElement("span", null, o.name || mscMonName(o.species)), o.champ && React.createElement("i", {
+    className: "msc-tag ch"
+  }, "👑王者"), o.rival && React.createElement("i", {
+    className: "msc-tag rv"
+  }, "ライバル"))), React.createElement("div", {
+    className: "msc-tabs"
+  }, [['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => React.createElement("button", {
+    key: k,
+    "data-msc-tab": k,
+    className: tab === k ? 'on' : '',
+    onClick: () => setTab(k)
+  }, l))), React.createElement("div", {
+    className: "msc-sheet",
+    key: tab
+  }, tab === 'st' && React.createElement(React.Fragment, null, MSC_STAT_KEYS.map((k, j) => {
+    const a = mscNum(me[k]);
+    const b = mscNum(op[k]);
+    return React.createElement("div", {
+      key: k,
+      className: "msc-st",
+      "data-msc-stat": k
+    }, React.createElement("b", {
+      className: a >= b ? 'up' : ''
+    }, a), React.createElement("div", {
+      className: "msc-bar l"
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(a / mx * 100)}%`,
+        animationDelay: `${j * 0.07}s`
+      }
+    })), React.createElement("span", {
+      className: "lab"
+    }, MSC_STAT_ICON[k], " ", MSC_STAT_JP[k]), React.createElement("div", {
+      className: "msc-bar r"
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(b / mx * 100)}%`,
+        animationDelay: `${j * 0.07}s`
+      }
+    })), React.createElement("b", {
+      className: b > a ? 'up' : ''
+    }, b));
+  }), React.createElement("div", {
+    className: "msc-st"
+  }, React.createElement("b", null, mscNum(s.pop)), React.createElement("div", {
+    className: "msc-bar l"
+  }, React.createElement("i", {
+    style: {
+      width: `${mscNum(s.pop)}%`,
+      animationDelay: '.45s'
+    }
+  })), React.createElement("span", {
+    className: "lab"
+  }, "⭐ 人気"), React.createElement("div", null), React.createElement("b", null)), React.createElement("div", {
+    className: "msc-st"
+  }, React.createElement("b", null, loy), React.createElement("div", {
+    className: "msc-bar l"
+  }, React.createElement("i", {
+    style: {
+      width: `${loy}%`,
+      animationDelay: '.5s'
+    }
+  })), React.createElement("span", {
+    className: "lab"
+  }, "🤝 忠誠"), React.createElement("div", null), React.createElement("b", null)), React.createElement("div", {
+    className: "msc-aptrow"
+  }, aptRow(s.species), React.createElement("span", {
+    className: "lab"
+  }, "間合いの適性"), aptRow(o.species))), tab === 'tech' && React.createElement("div", {
+    className: "msc-tl"
+  }, React.createElement("div", null, myTechs.length ? myTechs.map(t => React.createElement("span", {
+    key: t.id
+  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—")), React.createElement("div", null, foeTechs.length ? foeTechs.map(t => React.createElement("span", {
+    key: t.id
+  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—"))), tab === 'abl' && React.createElement("div", {
+    className: "msc-tl"
+  }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", null, o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
+    className: "msc-hint"
+  }, React.createElement("img", {
+    src: mscFace(s.aid),
+    alt: ""
+  }), React.createElement("span", null, hint)), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn y s",
+    "data-msc-quick": true,
+    onClick: onResultOnly
+  }, "⏩ 結果だけ見る"), React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-ready": true,
+    onClick: onReady
+  }, "準備完了")));
+}
+function MonsucCutin({
+  s,
+  info,
+  onGo
+}) {
+  const sp = MSC_SPECIAL[s.aid] || {
+    word: '集中!',
+    sub: '特別な1話の効き目が かがやいた'
+  };
+  const coach = mscAssistant(s.aid);
+  const o = info.opp || {};
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-cutin": true
+  }, React.createElement("div", {
+    className: "msc-cut",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "msc-rays"
+  }), React.createElement("div", {
+    className: "word"
+  }, sp.word), React.createElement("div", {
+    className: "sub"
+  }, sp.sub), React.createElement("div", {
+    className: "duo"
+  }, React.createElement("img", {
+    className: "a",
+    src: mscMonImg(s.species),
+    alt: ""
+  }), React.createElement("img", {
+    src: mscMonImg(o.species),
+    alt: ""
+  })), React.createElement("div", {
+    className: "say"
+  }, React.createElement("img", {
+    src: mscFace(s.aid, 'happy'),
+    alt: ""
+  }), React.createElement("div", null, React.createElement("b", null, coach ? coach.name : ''), React.createElement("p", null, MSC_LINE[s.aid] || '「いっしょに がんばろう!」')))), React.createElement("div", {
+    className: "msc-eff"
+  }, React.createElement("b", null, "効いているあいだ"), React.createElement("span", null, info.title, "の この1戦だけ"), React.createElement("b", null, "効き目"), React.createElement("span", null, info.buffRows.join('・') || '—')), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-go": true,
+    onClick: onGo
+  }, "試合へ ▶")));
+}
+function MscPanel({
+  side,
+  team,
+  frame,
+  maxHp,
+  info,
+  s,
+  buffed
+}) {
+  const i = frame.act[side];
+  const m = team.members[i] || team.members[0];
+  const hp = Math.max(0, frame.hp[side][i] || 0);
+  const mx = maxHp[side][i] || 1;
+  const g = frame.g[side];
+  const o = info.opp || {};
+  return React.createElement("div", {
+    className: `msc-mp ${side === 'A' ? 'a' : 'b'}`,
+    "data-msc-panel": side
+  }, React.createElement("div", {
+    className: "h"
+  }, side === 'A' ? React.createElement("img", {
+    src: mscFace(s.aid),
+    alt: ""
+  }) : null, React.createElement("span", null, m.name, side === 'B' && o.breeder ? React.createElement("small", null, " ・", o.breeder) : null, side === 'A' && buffed ? React.createElement("i", {
+    className: "msc-buff"
+  }, "✨ 特別な1話") : null)), React.createElement("div", {
+    className: "bars"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: `ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.round(hp / mx * 100)}%`
+    }
+  })), React.createElement("div", {
+    className: "ambw-gbar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.min(100, g))}%`
+    }
+  }), [25, 50, 75].map(x => React.createElement("u", {
+    key: x,
+    style: {
+      left: `${x}%`
+    }
+  })))), React.createElement("div", {
+    className: "num"
+  }, hp, React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("small", null, "ガッツ ", Math.round(g)))));
+}
+function MonsucMatch({
+  s,
+  info,
+  match,
+  onEnd
+}) {
+  const [pos, setPos] = useState(0);
+  const [speed, setSpeed] = useState('x2');
+  const [ended, setEnded] = useState(false);
+  const log = match.r.log;
+  const frames = useMemo(() => ambwFramesOf(log), [match]);
+  const st = log[0] || {};
+  const maxHp = {
+    A: st.aHp || [],
+    B: st.bHp || []
+  };
+  const won = match.r.winner === 'A';
+  useEffect(() => {
+    if (ended) return undefined;
+    if (pos >= log.length - 1) {
+      const t = setTimeout(() => setEnded(true), 600);
+      return () => clearTimeout(t);
+    }
+    const sp = AMBW_SPEEDS.find(x => x.id === speed) || AMBW_SPEEDS[0];
+    const t = setTimeout(() => {
+      let n = pos + 1;
+      if (speed === 'hl') while (n < log.length - 1 && !ambwIsHighlight(log[n], maxHp)) n++;
+      setPos(n);
+    }, sp.ms);
+    return () => clearTimeout(t);
+  }, [pos, speed, ended]);
+  useEffect(() => {
+    if (!ended) return undefined;
+    const t = setTimeout(() => onEnd(won), 1400);
+    return () => clearTimeout(t);
+  }, [ended]);
+  const e = log[pos] || {};
+  const f = frames[pos] || frames[0];
+  const foeSide = e.side === 'A' ? 'B' : 'A';
+  const fighter = side => {
+    const team = side === 'A' ? match.teamA : match.teamB;
+    const m = team.members[f.act[side]] || team.members[0];
+    return React.createElement("div", {
+      key: `${side}-${pos}`,
+      className: `ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`
+    }, React.createElement("img", {
+      className: side === 'A' ? 'ambw-flip' : '',
+      src: mscMonImg(m.species),
+      alt: ""
+    }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
+      className: "ambw-dmg"
+    }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
+      className: "ambw-dmg miss"
+    }, "はずれ")));
+  };
+  const nm = side => (side === 'A' ? match.teamA : match.teamB).members[0].name;
+  const say = e.ev === 'tech' ? e.hit ? `${nm(e.side)}の ${e.name}${e.crit ? ' 会心!' : ''}` : `${nm(e.side)}の ${e.name} … はずれ` : e.ev === 'move' ? `${nm(e.side)}が ${AMBW_DIST[e.to]}の間合いへ` : e.ev === 'charge' ? e.why === 'sulk' ? `${nm(e.side)}は そっぽを向いた…` : `${nm(e.side)}は ガッツをためた` : e.ev === 'guard' ? `${nm(e.side)}は 身を守った` : e.ev === 'ko' ? `${e.name} は たおれた` : e.ev === 'start' ? '試合開始!' : '';
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-match": true,
+    "data-msc-pos": pos
+  }, React.createElement("div", {
+    className: "msc-top"
+  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star), "・R", f.r || 1)), React.createElement(MscPanel, {
+    side: "B",
+    team: match.teamB,
+    frame: f,
+    maxHp: maxHp,
+    info: info,
+    s: s
+  }), React.createElement("div", {
+    className: "msc-stage",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "ambw-ring"
+  }, React.createElement("div", {
+    className: "ambw-stage"
+  }, fighter('A'), React.createElement("div", {
+    className: "ambw-gap",
+    style: {
+      width: [6, 44, 92, 146][f.d] || 44
+    }
+  }), fighter('B')), React.createElement("div", {
+    className: "ambw-dist"
+  }, AMBW_DIST.map((n, d) => React.createElement("span", {
+    key: d,
+    className: d === f.d ? 'cur' : ''
+  }, n))), e.ev === 'tech' && React.createElement("div", {
+    key: `c-${pos}`,
+    className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`
+  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'), React.createElement("b", null, e.name))), ended && React.createElement("div", {
+    className: `msc-end ${won ? 'w' : 'l'}`,
+    "data-msc-end": won ? 'win' : 'lose'
+  }, won ? '勝ち!' : '負け…')), React.createElement(MscPanel, {
+    side: "A",
+    team: match.teamA,
+    frame: f,
+    maxHp: maxHp,
+    info: info,
+    s: s,
+    buffed: Boolean(info.buffs)
+  }), React.createElement("div", {
+    className: "msc-hint",
+    style: {
+      minHeight: 22
+    }
+  }, React.createElement("span", null, say)), React.createElement("div", {
+    className: "msc-speed"
+  }, AMBW_SPEEDS.map(x => React.createElement("button", {
+    key: x.id,
+    className: speed === x.id ? 'on' : '',
+    onClick: () => setSpeed(x.id)
+  }, x.label)), React.createElement("button", {
+    "data-msc-skip": true,
+    onClick: () => {
+      setPos(log.length - 1);
+    }
+  }, "⏭ とばす")));
+}
+function MonsucCupWin({
+  s,
+  info,
+  match,
+  out,
+  onNext
+}) {
+  const o = info.opp || {};
+  const rows = Array.isArray(out && out.rows) ? out.rows : [...(out && out.prize ? [{
+    i: '💰',
+    k: '賞金',
+    v: `+${out.prize}${info.rival ? '(ライバルに勝って ×1.5)' : ''}`,
+    big: info.rival
+  }] : []), ...(out && out.tickets ? [{
+    i: '🎫',
+    k: '修行チケット',
+    v: `+${out.tickets}`
+  }] : []), ...(out && out.title ? [{
+    i: '🏅',
+    k: '称号',
+    v: `「${out.title}」`
+  }] : [])];
+  const coach = mscAssistant(s.aid);
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-win": true
+  }, React.createElement("div", {
+    className: "msc-hero win",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "msc-rays"
+  }), React.createElement("div", {
+    className: "big"
+  }, "優勝!"), React.createElement("div", {
+    className: "sub"
+  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
+    className: "who"
+  }, React.createElement("img", {
+    src: mscMonImg(s.species),
+    alt: ""
+  })), info.rival && React.createElement("div", {
+    className: "rival"
+  }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
+    key: k,
+    className: `msc-rw ${r.big ? 'big' : ''}`,
+    style: {
+      animationDelay: `${0.3 + k * 0.12}s`
+    }
+  }, React.createElement("span", {
+    className: "i"
+  }, r.i), React.createElement("span", {
+    className: "k"
+  }, r.k), React.createElement("span", {
+    className: "v"
+  }, r.v))), React.createElement("div", {
+    className: "msc-talk"
+  }, React.createElement("img", {
+    src: mscFace(s.aid, 'happy'),
+    alt: ""
+  }), React.createElement("p", null, coach ? React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: 11,
+      color: '#b45309'
+    }
+  }, coach.name) : null, info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`)), React.createElement("div", {
+    className: "msc-foot"
+  }, React.createElement("button", {
+    className: "msc-btn",
+    "data-msc-next": true,
+    onClick: onNext
+  }, "次へ ▶")));
+}
+function MonsucCupLose({
+  suc,
+  s,
+  info,
+  match,
+  onRematch,
+  onGiveUp,
+  onSkipAnim
+}) {
+  const o = info.opp || {};
+  const b = s.battle || {};
+  const left = Math.max(0, mscNum(suc.REMATCH && suc.REMATCH.max, 3) - mscNum(s.rematchUsed));
+  const has = k => mscNum(s.items && s.items[k]);
+  const can = k => typeof suc.canRematch === 'function' ? suc.canRematch(s, k) : has(k) > 0 && left > 0;
+  const summit = b.kind === 'summit';
+  const coach = mscAssistant(s.aid);
+  const why = (() => {
+    if (!match) return '';
+    const t = match.r.log.filter(x => x.ev === 'tech' && x.side === 'B' && x.hit);
+    return t.length ? `${t[t.length - 1].name}が 効いてたね…` : 'あと少しだったね…';
+  })();
+  return React.createElement("div", {
+    className: "msc-wrap",
+    "data-msc-lose": true
+  }, React.createElement("div", {
+    className: "msc-hero lose",
+    style: {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    }
+  }, React.createElement("div", {
+    className: "big"
+  }, "負けた…"), React.createElement("div", {
+    className: "sub"
+  }, info.title, " ", MSC_STARS(info.star), "・", o.name || mscMonName(o.species), " に 負け"), React.createElement("div", {
+    className: "who"
+  }, React.createElement("img", {
+    src: mscMonImg(s.species),
+    alt: ""
+  }))), React.createElement("div", {
+    className: "msc-again"
+  }, React.createElement("h3", null, "時をもどして、やり直す?"), React.createElement("p", null, "やり直せるのは 1回の育成で", mscNum(suc.REMATCH && suc.REMATCH.max, 3), "回まで・", React.createElement("em", null, "のこり ", left, "/", mscNum(suc.REMATCH && suc.REMATCH.max, 3))), React.createElement("button", {
+    className: "msc-pick sand",
+    "data-msc-rematch": "sand",
+    disabled: !can('sand'),
+    onClick: () => onRematch('sand')
+  }, React.createElement("img", {
+    src: "images/success/items/hourglass.png",
+    alt: ""
+  }), React.createElement("span", null, "時渡りの砂時計で やり直す", React.createElement("small", null, "同じ相手と もう一度(持っている ×", has('sand'), ")"))), React.createElement("button", {
+    className: "msc-pick rain",
+    "data-msc-rematch": "rainbow",
+    disabled: !can('rainbow'),
+    onClick: () => onRematch('rainbow')
+  }, React.createElement("img", {
+    src: "images/success/items/hourglass-rainbow.png",
+    alt: ""
+  }), React.createElement("span", null, "虹の時渡りの砂時計で 相手を変えて やり直す", React.createElement("small", null, info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える', "(持っている ×", has('rainbow'), ")"))), React.createElement("button", {
+    className: "msc-pick quit",
+    "data-msc-giveup": true,
+    onClick: onGiveUp
+  }, summit ? 'あきらめる(頂への道は ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる')), React.createElement("div", {
+    className: "msc-talk"
+  }, React.createElement("img", {
+    src: mscFace(s.aid, 'sad'),
+    alt: ""
+  }), React.createElement("p", null, coach ? React.createElement("b", {
+    style: {
+      display: 'block',
+      fontSize: 11,
+      color: '#b45309'
+    }
+  }, coach.name) : null, "「おしかった! ", why, " もう1回 いく?」")));
+}
+function MonsucCupShow(props) {
+  const {
+    s
+  } = props;
+  const b = s && s.battle || {};
+  return React.createElement(MonsucCupShowInner, _extends({
+    key: [s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')
+  }, props));
+}
+function MonsucCupShowInner({
+  suc,
+  s,
+  me,
+  settle,
+  onRematch,
+  onNext,
+  onClose,
+  startAt,
+  previewOut
+}) {
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [failed, setFailed] = useState(false);
+  const [phase, setPhase] = useState(startAt || 'bracket');
+  const [out, setOut] = useState(startAt === 'win' ? previewOut || {} : null);
+  const rootRef = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then(x => {
+      if (!alive) return;
+      if (x) setEngine(x);else setFailed(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (rootRef.current) rootRef.current.scrollTop = 0;
+  }, [phase]);
+  const info = useMemo(() => s && s.battle ? monsucCupInfo(suc, s, me) : null, [suc, s]);
+  const catalog = useMemo(() => {
+    if (!engine || typeof engine.buildCatalog !== 'function') return null;
+    try {
+      return engine.buildCatalog({
+        ALL_PLAYER_MONSTERS,
+        ASSISTANT_MASMON_TECHS: ambwTechTable()
+      });
+    } catch (_) {
+      return null;
+    }
+  }, [engine]);
+  const match = useMemo(() => {
+    if (!engine || !catalog || !info) return null;
+    try {
+      return monsucCupMatch(engine, catalog, suc, s, me);
+    } catch (_) {
+      return null;
+    }
+  }, [engine, catalog, info]);
+  const finish = won => {
+    if (won) {
+      const o = typeof settle === 'function' ? settle(true) : null;
+      setOut(o || {});
+      setPhase('win');
+    } else setPhase('lose');
+  };
+  const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
+  let body = null;
+  if (!info) body = React.createElement("p", {
+    className: "msc-note"
+  }, "大会が見つかりませんでした");else if (phase === 'bracket') body = React.createElement(MonsucBracket, {
+    suc: suc,
+    s: s,
+    info: info,
+    canSkip: canSkip,
+    onClose: onClose,
+    onFight: () => setPhase('card'),
+    onResultOnly: () => match && finish(match.r.winner === 'A')
+  });else if (phase === 'card') body = React.createElement(MonsucBattleCard, {
+    suc: suc,
+    s: s,
+    info: info,
+    catalog: catalog,
+    onBack: () => setPhase('bracket'),
+    onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
+    onResultOnly: () => match && finish(match.r.winner === 'A')
+  });else if (phase === 'cutin') body = React.createElement(MonsucCutin, {
+    s: s,
+    info: info,
+    onGo: () => setPhase('match')
+  });else if (phase === 'match') body = match ? React.createElement(MonsucMatch, {
+    s: s,
+    info: info,
+    match: match,
+    onEnd: finish
+  }) : React.createElement("p", {
+    className: "msc-note"
+  }, failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…');else if (phase === 'win') body = React.createElement(MonsucCupWin, {
+    s: s,
+    info: info,
+    match: match,
+    out: out,
+    onNext: () => onNext && onNext(out)
+  });else if (phase === 'lose') body = React.createElement(MonsucCupLose, {
+    suc: suc,
+    s: s,
+    info: info,
+    match: match,
+    onRematch: k => onRematch && onRematch(k),
+    onGiveUp: () => {
+      const o = typeof settle === 'function' ? settle(false) : null;
+      if (onNext) onNext(o);
+    }
+  });
+  return React.createElement("div", {
+    className: "msc-root ambw-root",
+    ref: rootRef,
+    "data-msc-root": true,
+    "data-msc-phase": phase
+  }, React.createElement("style", null, AMBW_CSS, MSC_CSS), body);
+}
 const ASSISTANT_MASMON_CHEER_KEY = 'mh_assistant_masmon_cheer_v1';
 const AMGC_NUM = Object.freeze({
   mastery: 1,
@@ -156112,11 +158224,11 @@ const MSX_CSS = `
 .msx .tc .fs .cf,.msx .tc .fs .cf img{width:24px;height:24px;border-radius:7px}
 .msx .tc.fav{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}
 .msx .tc.party{border-color:#f472b6;background:linear-gradient(160deg,#4a1d5c,#3b2f0b);box-shadow:0 0 14px #f472b699}
-.msx .tc .rib{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;font-size:9.5px;font-weight:900;padding:1px 8px;white-space:nowrap}
+.msx .tc .rib{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;font-size:10px;font-weight:900;padding:1px 8px;white-space:nowrap}
 .msx .tc.none .fs{opacity:.5;font-size:10px;color:#64748b;align-items:center}
 .msx .cmd{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
 .msx .cmd div{background:#334155;border-radius:14px;padding:7px 2px;text-align:center;font-size:12px;font-weight:900;line-height:1.3}
-.msx .cmd div small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .cmd div small{display:block;font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .cmd div.off{background:#1e293b;color:#64748b}.msx .cmd div.off small{color:#64748b}.msx .cmd div.hot{background:linear-gradient(90deg,#f472b6,#fb923c)}
 .msx .stage{position:relative;border-radius:14px;border:1px solid #3b3566;overflow:hidden;margin-top:8px;
   background:radial-gradient(ellipse at 50% 88%,#4c3f8f 0,#241d4a 55%,#171230 100%)}
@@ -156165,13 +158277,13 @@ const MSX_CSS = `
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
 .msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
-.msx .v-turn .ph small{display:block;font-size:8.5px;font-weight:700;opacity:.95}
+.msx .v-turn .ph small{display:block;font-size:10px;font-weight:700;opacity:.95}
 .msx .v-turn .n{font-size:11px;font-weight:900;white-space:nowrap;line-height:1}
 .msx .v-turn .n b{font-size:30px;color:#fde047;margin:0 2px;letter-spacing:-.02em;text-shadow:0 2px 0 #9a3412,0 0 12px #fde04766}
-.msx .v-turn .n small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:3px}
+.msx .v-turn .n small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;margin-top:3px}
 .msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
 .msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
-.msx .v-pow small{display:block;font-size:8.5px;color:#f9a8d4;font-weight:900;white-space:nowrap}
+.msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
 .msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
@@ -156185,7 +158297,7 @@ const MSX_CSS = `
 .msx .v-ga .tr u.add{background:repeating-linear-gradient(45deg,#e879f9 0 3px,#701a75 3px 6px)}
 .msx .v-ga .tr u.heal{background:repeating-linear-gradient(45deg,#86efac 0 3px,#166534 3px 6px)}
 .msx .v-ga .tr s{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed #fde047}
-.msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:9px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
 .msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-track{display:flex;gap:2px;margin-top:5px}
@@ -156204,10 +158316,10 @@ const MSX_CSS = `
 .msx .v-chip.bad{background:#7f1d1d;border-color:#fca5a5;color:#fee2e2}
 .msx .v-chip.ylw{background:#fde047;color:#422006;border-color:#0000}
 .msx .v-nm{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 26px);background:#0f0d24d9;border:1px solid #ffffff33;border-radius:99px;padding:2px 12px;font-size:11.5px;font-weight:900;white-space:nowrap}
-.msx .v-nm small{color:#fde047;font-size:9.5px;margin-left:5px}
+.msx .v-nm small{color:#fde047;font-size:10px;margin-left:5px}
 .msx .v-yousu{position:absolute;left:50%;bottom:66%;transform:translateX(18%);background:#7f1d1d;border:1.5px solid #fca5a5;border-radius:12px 12px 12px 2px;padding:2px 8px;font-size:11px;font-weight:900;white-space:nowrap;box-shadow:0 0 10px #ef444488}
 .msx .v-party{position:absolute;left:6px;top:6px;background:#0f0d24d0;border:1px solid #ffffff2a;border-radius:12px;padding:4px 5px 5px;display:flex;flex-direction:column;gap:4px;align-items:center}
-.msx .v-party>small{font-size:9px;font-weight:900;color:#f9a8d4;white-space:nowrap;line-height:1.2}
+.msx .v-party>small{font-size:10px;font-weight:900;color:#f9a8d4;white-space:nowrap;line-height:1.2}
 .msx .v-pf{position:relative;display:block;width:30px;flex:none}
 .msx .v-pf img{display:block;width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
 .msx .v-pf.rD img{border-color:#2dd4bf}.msx .v-pf.rC img{border-color:#38bdf8}.msx .v-pf.rB img{border-color:#a78bfa}.msx .v-pf.rA img{border-color:#f472b6}.msx .v-pf.rS img{border-color:#fbbf24}.msx .v-pf.rM img{border-color:#fde047}
@@ -156218,7 +158330,7 @@ const MSX_CSS = `
 .msx .v-pf.tag img{border-color:#fff;box-shadow:0 0 0 2px #fde047,0 0 10px 2px #fde047,0 0 16px 4px #fb923c}
 .msx .v-pf.tag .af b{background:linear-gradient(90deg,#fde047,#fb923c)}
 .msx .v-pf.tag::after{content:'🤝';position:absolute;right:-6px;top:-7px;font-size:11px;filter:drop-shadow(0 1px 0 #000)}
-.msx .v-pf.fr::before{content:'借';position:absolute;left:-4px;top:-5px;z-index:1;background:#38bdf8;color:#0f172a;font-size:8px;font-weight:900;border-radius:5px;padding:0 2px;line-height:1.4}
+.msx .v-pf.fr::before{content:'借';position:absolute;left:-4px;top:-5px;z-index:1;background:#38bdf8;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 2px;line-height:1.4}
 .msx .v-pf.sm,.msx .v-pf.sm img{width:24px}.msx .v-pf.sm img{height:24px;border-radius:7px}
 .msx .v-pf.lg,.msx .v-pf.lg img{width:42px}.msx .v-pf.lg img{height:42px;border-radius:12px}
 .msx .v-say{position:absolute;left:7px;right:7px;bottom:6px;display:flex;align-items:center;gap:6px}
@@ -156230,7 +158342,7 @@ const MSX_CSS = `
 .msx .v-mini b{color:#fde047}
 .msx .v-st{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px}
 .msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
-.msx .v-st small{display:block;font-size:9px;color:#e2e8f0;white-space:nowrap}
+.msx .v-st small{display:block;font-size:10px;color:#e2e8f0;white-space:nowrap}
 .msx .v-st b{display:block;font-size:14px}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
 .msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
@@ -156240,14 +158352,14 @@ const MSX_CSS = `
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
-.msx .v-p .e{font-size:19px;line-height:1.1}.msx .v-p small{display:block;font-size:8.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.msx .v-p .e{font-size:19px;line-height:1.1}.msx .v-p small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}
 .msx .v-p.main{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047;border-bottom-color:#9d174d;box-shadow:0 0 14px #f472b699;font-size:16px}
-.msx .v-p.main small{color:#fff;font-size:9px}
+.msx .v-p.main small{color:#fff;font-size:10px}
 .msx .v-p.off{background:#1e293b;border-color:#334155;color:#64748b}.msx .v-p.off small{color:#64748b}.msx .v-p.off .e{filter:grayscale(1);opacity:.6}
 .msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
-.msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:8.5px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
+.msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:10px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
-.msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:9.5px;white-space:nowrap}
+.msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:10px;white-space:nowrap}
 .msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
 .msx .v-gather .v-pf.tag::after{display:none}
 .msx .v-ft{flex:none;height:40px;background:#0b0920;border-top:1px solid #3b3566;display:flex;align-items:center;gap:5px;padding:0 10px}
@@ -156264,25 +158376,25 @@ const MSX_CSS = `
 .msx .v-tr .fs{display:flex;justify-content:center;align-items:flex-end;min-height:30px}
 .msx .v-tr .fs .v-pf,.msx .v-tr .fs .v-pf img{width:22px}.msx .v-tr .fs .v-pf img{height:22px;border-radius:6px;border-width:1.5px}
 .msx .v-tr .fs .v-pf+.v-pf{margin-left:-5px}.msx .v-tr .fs .v-pf.tag{z-index:1}
-.msx .v-tr .fs .v-pf.tag::after{font-size:9px;right:-4px;top:-6px}
-.msx .v-tr .fs .no{font-size:8.5px;color:#64748b;font-weight:700;line-height:1.2;padding-bottom:3px}
+.msx .v-tr .fs .v-pf.tag::after{font-size:10px;right:-4px;top:-6px}
+.msx .v-tr .fs .no{font-size:10px;color:#64748b;font-weight:700;line-height:1.2;padding-bottom:3px}
 .msx .v-tr .o{width:48px;height:48px;max-width:100%;border-radius:50%;margin:3px auto 0;background:linear-gradient(180deg,#3b4a66,#1e293b);border:2px solid #64748b;border-bottom-width:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;line-height:1;position:relative}
-.msx .v-tr .o small{font-size:8.5px;font-weight:900;margin-top:2px;white-space:nowrap}
-.msx .v-tr .o .lv{position:absolute;left:-4px;top:-5px;background:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:8px;font-weight:900;padding:0 3px;line-height:1.4;font-style:normal}
+.msx .v-tr .o small{font-size:10px;font-weight:900;margin-top:2px;white-space:nowrap}
+.msx .v-tr .o .lv{position:absolute;left:-4px;top:-5px;background:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:10px;font-weight:900;padding:0 3px;line-height:1.4;font-style:normal}
 .msx .v-tr .x{font-size:10px;font-weight:900;color:#86efac;margin-top:1px;white-space:nowrap}
 .msx .v-tr.tag .o{border-color:#fde047;background:linear-gradient(180deg,#6b5310,#3b2f0b);box-shadow:0 0 0 2px #fde04755,0 0 12px #fde047}
 .msx .v-tr.tag .x{color:#fde047}
 .msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
 .msx .v-tr.sel .fs{transform:translateY(-5px)}
-.msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:8.5px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
+.msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
 .msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px}
 .msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
 .msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
 .msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
 .msx .v-cm .tx b{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.msx .v-cm .tx small{display:block;font-size:9px;color:#86efac;font-weight:900;white-space:nowrap}
+.msx .v-cm .tx small{display:block;font-size:10px;color:#86efac;font-weight:900;white-space:nowrap}
 .msx .v-cm.tag .tx small{color:#fde047}
-.msx .v-cm .afl{display:flex;align-items:center;gap:3px;font-size:8.5px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-cm .afl{display:flex;align-items:center;gap:3px;font-size:10px;color:#cbd5e1;font-weight:900;white-space:nowrap}
 .msx .v-cm .afl i{flex:1;height:5px;border-radius:3px;background:#334155;overflow:hidden;position:relative}
 .msx .v-cm .afl i b{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#f472b6)}
 .msx .v-cm.tag .afl i b{background:linear-gradient(90deg,#fde047,#fb923c)}
@@ -156292,7 +158404,7 @@ const MSX_CSS = `
 .msx .v-fx .t{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;white-space:nowrap}
 .msx .v-fx .t .big{font-size:15px;color:#fde047;text-shadow:0 0 8px #fb923c}
 .msx .v-fx .t .fl{margin-left:auto;font-size:10px;color:#cbd5e1}.msx .v-fx .t .fl b{color:#86efac;font-size:12px}.msx .v-fx .t .fl b.warn{color:#fca5a5}
-.msx .v-fx .ch{display:flex;align-items:center;gap:3px;margin-top:4px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-fx .ch{display:flex;align-items:center;gap:3px;margin-top:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-fx .ch span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:1px 6px;line-height:1.5}
 .msx .v-fx .ch span.tgx{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-color:#0000}
 .msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
@@ -156320,16 +158432,16 @@ const MSX_CSS = `
 .msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
 .msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .msx .v-ch{background:linear-gradient(180deg,#fff,#fde7f3);color:#1e1b4b;border:2px solid #f472b6;border-bottom-width:4px;border-radius:13px;padding:6px 6px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.25;min-width:0}
-.msx .v-ch small{display:block;font-size:9.5px;font-weight:800;color:#9d174d;white-space:nowrap}
+.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:nowrap}
 .msx .v-ch.b{border-color:#38bdf8;background:linear-gradient(180deg,#fff,#e0f2fe)}.msx .v-ch.b small{color:#075985}
 .msx .v-ch.n{grid-column:1/-1;background:#1e293b;color:#cbd5e1;border-color:#475569;font-size:11.5px;padding:4px}
 .msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
-.msx .v-pol .l{display:flex;justify-content:space-between;font-size:9px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-pol .l{display:flex;justify-content:space-between;font-size:10px;color:#cbd5e1;font-weight:900;white-space:nowrap}
 .msx .v-pol .m{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:3px 0}
 .msx .v-pol .m i{height:9px;border-radius:3px;background:#334155}.msx .v-pol .m i.on{background:#fde047;box-shadow:0 0 8px #fde047}
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
-.msx .v-ev-h small{display:block;font-size:9.5px;font-weight:800}
+.msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
 .msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
 .msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
@@ -156358,15 +158470,15 @@ const MSX_CSS = `
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
-.msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:8px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
-.msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:9px;font-weight:900}
+.msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
+.msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-apt div{background:#0f172a;border-radius:8px;padding:3px 0;white-space:nowrap;line-height:1.3}.msx .v-apt b{display:block;font-size:13px;color:#fde047}.msx .v-apt div.lo b{color:#94a3b8}
 .msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
 .msx .v-sl{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative;min-width:0}
 .msx .v-sl .v-pf{margin:0 auto 3px}
-.msx .v-sl .t3{font-size:9px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:8.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
+.msx .v-sl .t3{font-size:10px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
 .msx .v-sl.fr{border-color:#38bdf8;background:#0c2a4a}.msx .v-sl.base{border-style:dashed}.msx .v-sl.base .t3{color:#94a3b8}
-.msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:9px;font-weight:900}
+.msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-heat div{border-radius:8px;padding:3px 0;background:#0f172a;white-space:nowrap;line-height:1.3}
 .msx .v-heat div b{display:block;font-size:12px}
 .msx .v-heat .x3{background:#be185d}.msx .v-heat .x2{background:#7c2d5e}
@@ -156376,19 +158488,19 @@ const MSX_CSS = `
 .msx .v-sc .tx{flex:1;min-width:0;font-size:11px;line-height:1.45;font-weight:700}
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
-.msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:9.5px}
+.msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
 .msx .v-faces{display:flex;gap:5px;margin-top:6px}
 .msx .v-faces span,.msx .v-faces button{flex:1;min-width:0;position:relative}
 .msx .v-faces img{width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #475569;background:#312e5a}
 .msx .v-faces span.on img,.msx .v-faces button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047}
 .msx .v-faces span.lk img,.msx .v-faces button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-item{display:flex;align-items:center;gap:8px;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 8px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.3}
-.msx .v-item .e{font-size:22px;flex:none;width:28px;text-align:center}.msx .v-item small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .v-item .e{font-size:22px;flex:none;width:28px;text-align:center}.msx .v-item small{display:block;font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-item .pr{margin-left:auto;flex:none;font-size:10.5px;color:#fde047;white-space:nowrap}
 .msx .v-item.sel{border-color:#fde047;background:#3b2f0b}
 .msx .v-bag{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 .msx .v-bag div{aspect-ratio:1.5;border-radius:12px;border:2px dashed #64748b;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;line-height:1.1}
-.msx .v-bag div small{font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-bag div small{font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-bag div.in{border:2px solid #fde047;background:#3b2f0b}
 .msx .v-inp{background:#fff;color:#1e1b4b;border-radius:11px;padding:8px 12px;font-size:16px;font-weight:900;margin-top:5px;display:flex;justify-content:space-between;align-items:center}
 .msx .v-inp small{font-size:10px;color:#94a3b8}
@@ -156397,20 +158509,20 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{width:46px;font-size:9.5px;color:#f9a8d4;flex:none}
-.msx .v-sum .ed{margin-left:auto;font-size:9.5px;color:#7dd3fc;flex:none}
+.msx .v-sum .k{width:46px;font-size:10px;color:#f9a8d4;flex:none}
+.msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
-.msx .v-machine small{font-size:9px;font-weight:900;color:#a5f3fc;white-space:nowrap}
+.msx .v-machine small{font-size:10px;font-weight:900;color:#a5f3fc;white-space:nowrap}
 .msx .v-machine::before{content:'';position:absolute;left:14%;top:-9px;width:30%;height:10px;background:#d6b36a;transform:rotate(-8deg);border-radius:2px}
 .msx .v-ibub{position:absolute;right:6px;top:8px;left:55%;background:#fff;color:#1e1b4b;border-radius:14px 14px 14px 3px;padding:7px 10px;font-size:12px;font-weight:800;line-height:1.5}
 .msx .v-ibub b{color:#c2410c}
 .msx .v-six{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
 .msx .v-ix{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:5px 7px 5px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;position:relative}
-.msx .v-ix .ok,.msx .v-ix .ng{display:block;font-size:9.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-ix .ok,.msx .v-ix .ng{display:block;font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-ix .ok{color:#86efac}.msx .v-ix .ng{color:#fca5a5}
-.msx .v-ix .pr{display:block;font-size:9px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-ix .pr{display:block;font-size:10px;color:#cbd5e1;font-weight:900;white-space:nowrap}
 .msx .v-ix .pr i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#334155;margin-left:2px}.msx .v-ix .pr i.on{background:#fde047}
 .msx .v-ix.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04777}
 .msx .v-ix.no{border-style:dashed;color:#cbd5e1}
@@ -156422,7 +158534,7 @@ const MSX_CSS = `
 .msx .v-rank .tx b{font-size:24px;color:#fde047}
 .msx .v-rec{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
 .msx .v-rec div{background:#0f172a;border:1px solid #475569;border-radius:11px;padding:5px 8px;font-size:11px;font-weight:900;line-height:1.4;min-width:0}
-.msx .v-rec small{display:block;font-size:9px;color:#f9a8d4}
+.msx .v-rec small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-pt{display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,#3b2f0b,#1e1a36);border:1px solid #fde047;border-radius:14px;padding:6px 10px;margin-top:6px}
 .msx .v-pt .n{font-size:10px;font-weight:900;color:#fde047;line-height:1.2;white-space:nowrap}.msx .v-pt .n b{display:block;font-size:26px;color:#fff;text-shadow:0 2px 0 #9a3412}
 .msx .v-pt .r{flex:1;min-width:0;font-size:10px;font-weight:800;line-height:1.4}
@@ -156430,9 +158542,9 @@ const MSX_CSS = `
 .msx .v-as{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0}
 .msx .v-a{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:5px 6px 6px;min-width:0;position:relative;display:flex;flex-direction:column;justify-content:center}
 .msx .v-a .nm{font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.msx .v-a .ex{font-size:9px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a .ex{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-a .lv{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px}
-.msx .v-a .lv span{background:#0f172a;border:1px solid #64748b;border-radius:8px;text-align:center;font-size:9px;font-weight:900;line-height:1.25;padding:2px 0;white-space:nowrap}
+.msx .v-a .lv span{background:#0f172a;border:1px solid #64748b;border-radius:8px;text-align:center;font-size:10px;font-weight:900;line-height:1.25;padding:2px 0;white-space:nowrap}
 .msx .v-a .lv span b{display:block;font-size:11px;color:#fde047}
 .msx .v-a .lv span.on{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047}.msx .v-a .lv span.on b{color:#fff}
 .msx .v-a .lv span.no{opacity:.35}
@@ -156454,33 +158566,33 @@ const MSX_CSS = `
   .msx .v-band{padding:5px 6px}
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
-  .msx .v-ga{font-size:9px;gap:3px}.msx .v-ga b{font-size:11px;min-width:0}.msx .v-ga .tr{height:11px}
-  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:8px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
-  .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:7.5px}.msx .v-p.main{font-size:14px}
-  .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:9px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
+  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;min-width:0}.msx .v-ga .tr{height:11px}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
+  .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
+  .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
   .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
-  .msx .v-party{gap:2px;padding:3px 4px}.msx .v-party>small{font-size:8px}
+  .msx .v-party{gap:2px;padding:3px 4px}.msx .v-party>small{font-size:10px}
   .msx .v-say .fc{width:32px;height:32px}.msx .v-say .bub{font-size:10.5px;padding:4px 7px}
-  .msx .v-chip,.msx .v-mini{font-size:9.5px;padding:1px 7px}
+  .msx .v-chip,.msx .v-mini{font-size:10px;padding:1px 7px}
   .msx .v-nm{font-size:10.5px}
-  .msx .v-tr .o{width:42px;height:42px;font-size:15px}.msx .v-tr .o small{font-size:7.5px}.msx .v-tr .x{font-size:9px}
+  .msx .v-tr .o{width:42px;height:42px;font-size:15px}.msx .v-tr .o small{font-size:10px}.msx .v-tr .x{font-size:10px}
   .msx .v-tr .fs .v-pf,.msx .v-tr .fs .v-pf img{width:19px}.msx .v-tr .fs .v-pf img{height:19px}
   .msx .v-tabs span,.msx .v-tabs button{font-size:10.5px;padding:4px 2px}
   .msx .v-cm{padding:3px 5px;gap:4px}.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:22px}.msx .v-cm .v-pf img{height:22px}
-  .msx .v-cm .tx b{font-size:9.5px}.msx .v-cm .tx small{font-size:8px}
-  .msx .v-fx{padding:4px 6px 5px}.msx .v-fx .t{font-size:10px}.msx .v-fx .t .big{font-size:13px}.msx .v-fx .ch{font-size:8.5px;gap:2px}.msx .v-fx .ch span{padding:1px 4px}.msx .v-fx .ch span.res{font-size:10px}
-  .msx .v-a .nm{font-size:10.5px}.msx .v-a .ex{font-size:8px}.msx .v-a .lv span{font-size:8px}.msx .v-a .lv span b{font-size:10px}.msx .v-a{padding:4px 5px 5px}
-  .msx .v-as{gap:4px;margin-top:4px}.msx .v-pt{padding:4px 8px}.msx .v-pt .n b{font-size:21px}.msx .v-pick{font-size:9.5px;padding:4px 7px;margin-top:4px}
+  .msx .v-cm .tx b{font-size:10px}.msx .v-cm .tx small{font-size:10px}
+  .msx .v-fx{padding:4px 6px 5px}.msx .v-fx .t{font-size:10px}.msx .v-fx .t .big{font-size:13px}.msx .v-fx .ch{font-size:10px;gap:2px}.msx .v-fx .ch span{padding:1px 4px}.msx .v-fx .ch span.res{font-size:10px}
+  .msx .v-a .nm{font-size:10.5px}.msx .v-a .ex{font-size:10px}.msx .v-a .lv span{font-size:10px}.msx .v-a .lv span b{font-size:10px}.msx .v-a{padding:4px 5px 5px}
+  .msx .v-as{gap:4px;margin-top:4px}.msx .v-pt{padding:4px 8px}.msx .v-pt .n b{font-size:21px}.msx .v-pick{font-size:10px;padding:4px 7px;margin-top:4px}
   .msx .v-steps{margin-top:3px}
 }
 .msx .v-phs{display:flex;gap:3px;width:86%;margin-top:6px}
 .msx .v-phs span{position:relative;min-width:46px;height:26px;border-radius:7px;background:#334155;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .msx .v-phs span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
-.msx .v-phs span b{position:relative;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-phs span b{position:relative;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-phs span.now{outline:2px solid #fde047}
 .msx .v-eps{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:2px}
 .msx .v-eps div{background:#0f172a;border:1px solid #475569;border-radius:9px;padding:3px 8px;font-size:10.5px;font-weight:800;white-space:nowrap;overflow:hidden}
-.msx .v-eps div b{color:#fde047;margin-right:5px;font-size:9.5px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
+.msx .v-eps div b{color:#fde047;margin-right:5px;font-size:10px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
 .msx.land .v-party .v-pf,.msx.land .v-party .v-pf img{width:24px}.msx.land .v-party .v-pf img{height:24px;border-radius:7px}
 .msx.land .v-party{gap:3px}
 .msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
@@ -156493,18 +158605,18 @@ const MSX_CSS = `
 .msx .v-cup{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-bottom-width:3px;border-radius:14px;padding:6px 9px;position:relative;min-width:0}
 .msx .v-cup .e{font-size:26px;flex:none;width:34px;text-align:center}
 .msx .v-cup .tx{flex:1;min-width:0;line-height:1.3}.msx .v-cup .tx b{display:block;font-size:13.5px;white-space:nowrap}
-.msx .v-cup .tx small{display:block;font-size:9.5px;color:#86efac;font-weight:800;white-space:nowrap}.msx .v-cup .tx .rw{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.msx .v-cup .tx small{display:block;font-size:10px;color:#86efac;font-weight:800;white-space:nowrap}.msx .v-cup .tx .rw{display:block;font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}
 .msx .v-cup .rt{flex:none;text-align:right;line-height:1.3}.msx .v-cup .rt span{display:block;white-space:nowrap}
-.msx .v-cup .st{font-size:14px;color:#fde047;text-shadow:0 1px 0 #9a3412}.msx .v-cup .g{font-size:12px;font-weight:900}.msx .v-cup .kd{font-size:9px;color:#f9a8d4;font-weight:900}
+.msx .v-cup .st{font-size:14px;color:#fde047;text-shadow:0 1px 0 #9a3412}.msx .v-cup .g{font-size:12px;font-weight:900}.msx .v-cup .kd{font-size:10px;color:#f9a8d4;font-weight:900}
 .msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
 .msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
-.msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
 .msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
-.msx .v-vsh .sd small{display:block;font-size:9px;color:#fde047;font-weight:900}.msx .v-vsh .sd b{display:block;font-size:14px;white-space:nowrap}.msx .v-vsh .sd span{display:block;font-size:9px;font-weight:800;white-space:nowrap}
-.msx .v-vsh .vsm{flex:none;font-size:26px;font-weight:900;color:#fde047;text-shadow:0 3px 0 #9a3412,0 0 14px #fb923c;text-align:center;line-height:1}.msx .v-vsh .vsm small{display:block;font-size:9px;color:#fff;text-shadow:none;margin-top:3px}
+.msx .v-vsh .sd small{display:block;font-size:10px;color:#fde047;font-weight:900}.msx .v-vsh .sd b{display:block;font-size:14px;white-space:nowrap}.msx .v-vsh .sd span{display:block;font-size:10px;font-weight:800;white-space:nowrap}
+.msx .v-vsh .vsm{flex:none;font-size:26px;font-weight:900;color:#fde047;text-shadow:0 3px 0 #9a3412,0 0 14px #fb923c;text-align:center;line-height:1}.msx .v-vsh .vsm small{display:block;font-size:10px;color:#fff;text-shadow:none;margin-top:3px}
 .msx .v-vs1{display:grid;grid-template-columns:32px 1fr 70px 1fr 32px;align-items:center;gap:5px;font-size:10.5px;font-weight:900}
 .msx .v-vs1 span{text-align:center;white-space:nowrap}.msx .v-vs1 b{font-size:13px;text-align:center;color:#cbd5e1}.msx .v-vs1 b.w{color:#fde047}
 .msx .v-vs1 i{height:10px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
@@ -156517,29 +158629,29 @@ const MSX_CSS = `
 .msx .v-dist i.a1{background:#3b2a52;color:#cbd5e1}.msx .v-dist i.a2{background:#9d174d;color:#fff}.msx .v-dist i.a3{background:#fde047;color:#422006;box-shadow:0 0 8px #fde047}
 .msx .v-bracket{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-bracket span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:2px 8px}.msx .v-bracket span.me{border-color:#fde047;color:#fde047}
-.msx .v-bracket em{font-style:normal;color:#94a3b8;font-size:9px}.msx .v-bracket u{text-decoration:none;color:#f9a8d4;font-size:9px;margin:0 4px}
+.msx .v-bracket em{font-style:normal;color:#94a3b8;font-size:10px}.msx .v-bracket u{text-decoration:none;color:#f9a8d4;font-size:10px;margin:0 4px}
 .msx .v-scene.home .mon{height:34%}.msx .v-scene.home .gr{width:24%}
 .msx.land .v-scene.home .mon{height:40%}.msx.s320 .v-scene.home .mon{height:36%}
 .msx .v-meal{position:absolute;left:8px;right:8px;bottom:8px;background:#151130f2;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;box-shadow:0 0 18px #fde04766}
-.msx .v-meal .t{font-size:13px;font-weight:900;text-align:center;line-height:1.35}.msx .v-meal .t small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .v-meal .t{font-size:13px;font-weight:900;text-align:center;line-height:1.35}.msx .v-meal .t small{display:block;font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-meal .ms{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 .msx .v-ml{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 3px;text-align:center;line-height:1.3;min-width:0}
 .msx .v-ml .e{font-size:30px;line-height:1.1}.msx .v-ml b{display:block;font-size:11.5px;white-space:nowrap}
-.msx .v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.msx .v-ml small{display:block;font-size:9px;color:#86efac;font-weight:800}
+.msx .v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.msx .v-ml small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}
 .msx .v-sayrow{display:flex;align-items:center;gap:6px;margin-top:5px}
 .msx .v-sayrow .fc{width:34px;height:34px;border-color:#f9a8d4}
 .msx .v-sayrow .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:3px 12px 12px 12px}.msx .v-sayrow .bub em{font-style:normal;color:#be185d}
 .msx .v-bagb{position:absolute;left:7px;bottom:7px;width:46px;height:46px;border-radius:14px;background:#0f0d24e0;border:1.5px solid #fde047;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;line-height:1.05}
-.msx .v-bagb small{font-size:8.5px;font-weight:900;white-space:nowrap}
-.msx .v-bagb i{position:absolute;right:-5px;top:-6px;background:#ef4444;border-radius:99px;font-style:normal;font-size:9.5px;font-weight:900;min-width:16px;text-align:center;line-height:16px}
+.msx .v-bagb small{font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-bagb i{position:absolute;right:-5px;top:-6px;background:#ef4444;border-radius:99px;font-style:normal;font-size:10px;font-weight:900;min-width:16px;text-align:center;line-height:16px}
 .msx .v-bagb.r{left:auto;right:7px;border-color:#64748b}
 .msx .v-scene.home{--mb:20%}.msx .v-scene.home .v-side{bottom:60px}
-.msx.s320 .v-scene.home{--mb:24%}.msx.s320 .v-bagb{width:38px;height:38px;font-size:16px;border-radius:11px}.msx.s320 .v-bagb small{font-size:7.5px}
+.msx.s320 .v-scene.home{--mb:24%}.msx.s320 .v-bagb{width:38px;height:38px;font-size:16px;border-radius:11px}.msx.s320 .v-bagb small{font-size:10px}
 .msx.s320 .v-scene.home .v-side{bottom:50px}.msx.s320 .v-sayrow .fc{width:28px;height:28px}.msx.s320 .v-sayrow .bub{font-size:10px;padding:3px 7px}
 .msx .v-stg{display:flex;align-items:stretch;gap:4px;margin-top:6px}
 .msx .v-stg div{flex:1;min-width:0;background:#1e1a36;border:1px solid #fb923c;border-radius:11px;padding:4px 4px;text-align:center;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.35}
-.msx .v-stg div small{display:block;font-size:8.5px;color:#fdba74}.msx .v-stg i{align-self:center;font-style:normal;color:#94a3b8;font-size:10px}
+.msx .v-stg div small{display:block;font-size:10px;color:#fdba74}.msx .v-stg i{align-self:center;font-style:normal;color:#94a3b8;font-size:10px}
 .msx .v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.msx .v-stg div.last small{color:#fde047}
 .msx .v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .msx .v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
@@ -156549,32 +158661,32 @@ const MSX_CSS = `
 .msx .v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
 .msx .v-tk span b{color:#86efac}.msx .v-tk span.sel{border-color:#fde047;background:#3b2f0b}.msx .v-tk span.sel b{color:#fde047}.msx .v-tk span.got{opacity:.45}.msx .v-tk span.got b{color:#94a3b8}
 .msx .v-bagw{position:absolute;left:8px;right:8px;top:8px;bottom:8px;background:#151130f5;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-evenly;box-shadow:0 0 18px #fde04755}
-.msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:9.5px;color:#fca5a5;font-weight:800}
+.msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:10px;color:#fca5a5;font-weight:800}
 .msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
 .msx .v-bagw .v-item{margin-top:0}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
 .msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
-.msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:9px;font-weight:800;color:#94a3b8;line-height:1.3}
+.msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
 .msx .v-tr.sel .o{transform:scale(1.1)}
 .msx .v-tr.sel .nm{color:#fff}
-.msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-lvx b{color:#7dd3fc}.msx .v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
 .msx .v-lvx i u{position:absolute;left:0;top:0;bottom:0;background:#38bdf8}.msx .v-lvx i u.ad{background:#bae6fd}
 .msx .v-lvx span{color:#cbd5e1}.msx .v-lvx em{font-style:normal;color:#fde047}
 .msx .v-lvup{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:10px;padding:4px 10px;margin-bottom:5px;font-size:13px;font-weight:900;line-height:1.35;box-shadow:0 0 12px #fde047}
-.msx .v-lvup small{display:block;font-size:9.5px;font-weight:800}
+.msx .v-lvup small{display:block;font-size:10px;font-weight:800}
 .msx .v-p.main small{font-size:10px;margin-top:2px}
 .msx .v-cup.won .tx small{color:#fde047}
 .msx .v-ft span.off,.msx .v-ft button.off{opacity:.45}
 .msx .v-rm{display:grid;grid-template-columns:1.25fr 1fr;gap:6px;margin-top:7px}
 .msx .v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
-.msx .v-rm div small{display:block;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:2px}
+.msx .v-rm div small{display:block;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:2px}
 .msx .v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.msx .v-rm div.re small{color:#fff}
-@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:9px}.msx .v-lvx{font-size:8.5px}}
+@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:10px}.msx .v-lvx{font-size:10px}}
 .msx .v-hg{display:inline-block;vertical-align:middle;flex:none}
 .msx .v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
 .msx .v-bsel .e{font-size:34px;line-height:1;flex:none}.msx .v-bsel b{display:block;font-size:13.5px}
@@ -156583,13 +158695,13 @@ const MSX_CSS = `
 .msx .v-bgrid div,.msx .v-bgrid button{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:12px;padding:6px 2px 4px;text-align:center;min-width:0}
 .msx .v-bgrid .e{display:block;font-size:28px;line-height:34px;height:34px}
 .msx .v-bgrid i{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
-.msx .v-bgrid small{display:block;font-size:8.5px;font-weight:800;line-height:1.25;min-height:22px;margin-top:2px}
+.msx .v-bgrid small{display:block;font-size:10px;font-weight:800;line-height:1.25;min-height:22px;margin-top:2px}
 .msx .v-bgrid div.sel,.msx .v-bgrid button.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
 .msx .v-bgrid div.no,.msx .v-bgrid button.no{opacity:.6}
-.msx .v-bnote{font-size:10px;font-weight:800;line-height:1.7}.msx .v-bnote .dim2{color:#94a3b8;font-size:9px}
+.msx .v-bnote{font-size:10px;font-weight:800;line-height:1.7}.msx .v-bnote .dim2{color:#94a3b8;font-size:10px}
 .msx .v-rm3{display:grid;gap:5px;margin-top:7px}
 .msx .v-rm3>div{display:flex;align-items:center;gap:8px;background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left}
-.msx .v-rm3 small{display:block;font-size:9px;font-weight:800;color:#e2e8f0}
+.msx .v-rm3 small{display:block;font-size:10px;font-weight:800;color:#e2e8f0}
 .msx .v-rm3 .re{background:linear-gradient(160deg,#f59e0b,#b45309);border-color:#fde68a;box-shadow:0 0 10px #f59e0b88}
 .msx .v-rm3 .nj{background:linear-gradient(120deg,#be185d,#7c3aed 55%,#2563eb);border-color:#fbcfe8;box-shadow:0 0 10px #a78bfa88}
 .msx .v-rm3 .gv{display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}.msx .v-rm3 .gv small{color:#94a3b8;display:inline;margin-left:6px}
@@ -156599,14 +158711,14 @@ const MSX_CSS = `
 .msx .v-igrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
 .msx .v-igrid div,.msx .v-igrid button{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:11px;padding:5px 1px 3px;text-align:center;min-width:0}
 .msx .v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
-.msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;font-weight:900;color:#fde047}
-.msx .v-igrid small{display:block;font-size:8px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
+.msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
+.msx .v-igrid small{display:block;font-size:10px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
 .msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
 .msx .v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
-.msx .v-ileg{display:flex;gap:10px;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
+.msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
 .msx .v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.msx .v-sum .v-ics .v-icw{width:20px;height:20px}
-.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
 .msx .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
@@ -156630,8 +158742,8 @@ const MSX_CSS = `
 .msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
 .msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
 .msx-note{font-size:10px;color:#cbd5e1;font-weight:700;line-height:1.5}
-.msx-soon{display:inline-block;margin-left:4px;padding:0 6px;border-radius:99px;background:#475569;color:#e2e8f0;font-size:9px;font-weight:900;vertical-align:middle}
-.msx-dbg{font-size:9px;color:#a3e635;font-weight:900}
+.msx-soon{display:inline-block;margin-left:4px;padding:0 6px;border-radius:99px;background:#475569;color:#e2e8f0;font-size:10px;font-weight:900;vertical-align:middle}
+.msx-dbg{font-size:10px;color:#a3e635;font-weight:900}
 .msx .v-pf img{object-fit:contain;background:#0f172a}
 .msx .v-scene .mon{animation:msx-breathe 3.2s ease-in-out infinite}
 .msx .v-scene.home .mon.low{filter:drop-shadow(0 8px 5px #0009) saturate(.8);transform:translateX(-50%) rotate(4deg)}
@@ -156643,6 +158755,16 @@ const MSX_CSS = `
 @keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
 @keyframes msx-fadein{from{opacity:0}to{opacity:1}}
 @keyframes msx-popin{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+/* 押せる大きさ: 見た目は変えず、押せる範囲だけ 44px 四方まで広げる(見張り: tools/success/success-shoot.js) */
+.msx button,.msx [role=button]{position:relative;min-height:0}
+.msx button:not(:disabled)::after,.msx [role=button]::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+/* 横画面・大きい文字で中身が縦にあふれるときは、本体の中で送れるようにする(下のボタンは貼りつけて残す) */
+.msx.land .v-body,.msx.s320 .v-body{overflow-y:auto;overscroll-behavior:contain}
+.msx.land .v-ft{position:sticky;bottom:0;z-index:3}
+.msx .v-inp{padding-top:0;padding-bottom:0}.msx .v-inp input{min-height:44px;align-self:stretch}
+.msx .v-ft,.msx.land .v-ft{height:auto;min-height:48px;padding-top:2px;padding-bottom:2px}
+.msx .v-ft button{min-height:40px}
+.msx .v-hd{height:auto;min-height:32px}
 @media (prefers-reduced-motion:reduce){.msx *{animation:none!important}}
 `;
 const MSX_KEYS = Object.freeze({
@@ -156652,6 +158774,7 @@ const MSX_KEYS = Object.freeze({
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCENES_SRC = 'data/success-scenes.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 const MSX_SCENARIOS = Object.freeze([{
@@ -156736,7 +158859,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -156935,23 +159058,26 @@ const MSX_SEASON = Object.freeze({
   autumn: '🍁 秋',
   winter: '⛄ 冬'
 });
-const msxSceneBg = () => {
-  let h = 12;
-  try {
-    h = new Date().getHours();
-  } catch (e) {}
-  if (h >= 5 && h < 16) return {
-    bg: 'images/story-bg/monhero_plaza.jpg',
-    time: '昼'
-  };
-  if (h >= 16 && h < 19) return {
-    bg: 'images/story-bg/monhero_plaza_evening.jpg',
-    time: '夕方'
-  };
+const MSX_TIMES = Object.freeze([['day', '昼'], ['evening', '夕方'], ['night', '夜']]);
+const MSX_OLD_BG = Object.freeze({
+  day: 'images/story-bg/monhero_plaza.jpg',
+  evening: 'images/story-bg/monhero_plaza_evening.jpg',
+  night: 'images/story-bg/monhero_night.jpg'
+});
+const msxSceneBg = (turn = 1) => {
+  const t = Math.max(1, Math.round(msxNum(turn, 1)));
+  const [time, label] = MSX_TIMES[(t - 1) % 3];
+  const cal = msxCalendar(t);
+  const pick = typeof window !== 'undefined' && typeof window.successHomeScene === 'function' ? window.successHomeScene(cal.season, time) : null;
   return {
-    bg: 'images/story-bg/monhero_night.jpg',
-    time: '夜'
+    bg: pick && pick.image ? pick.image : MSX_OLD_BG[time],
+    time: label,
+    season: cal.season
   };
+};
+const msxVenueBg = venue => {
+  const f = typeof window !== 'undefined' && typeof window.successSceneById === 'function' ? window.successSceneById(`venue-${venue}`) : null;
+  return f && f.image ? f.image : 'images/story-bg/monhero_town.jpg';
 };
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = r => `rk r${String(r || 'G').replace(/\+/g, '')}`;
@@ -157250,7 +159376,7 @@ function MsxStart({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(1).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -157647,7 +159773,9 @@ function MsxStart({
       baseId: species,
       colors: colors,
       onChange: onDye,
-      onCustom: onCustom
+      onCustom: onCustom,
+      big: true,
+      names: typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map(x => x[0]) : null
     }) : React.createElement("div", {
       className: "msx-note"
     }, "染色はこの端末では使えません")));
@@ -157667,7 +159795,7 @@ function MsxStart({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(1).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158190,7 +160318,8 @@ function MonheroSuccessScreen({
       onYes: () => setView('start')
     }) : setView('start'),
     setMeta: setMeta,
-    onWipe: quit
+    onWipe: quit,
+    onRank: () => setView('rank')
   });else if (view === 'start') content = React.createElement(MsxStart, {
     data: data,
     SUC: msxSuc.SUC,
@@ -158212,7 +160341,9 @@ function MonheroSuccessScreen({
     "data-monhero-success": true,
     role: "dialog",
     "aria-label": "モンヒロサクセス"
-  }, React.createElement("style", null, MSX_CSS), React.createElement("div", {
+  }, React.createElement("style", null, MSX_CSS), view === 'rank' && typeof MonsucRankScreen === 'function' ? React.createElement(MonsucRankScreen, {
+    onBack: () => setView('home')
+  }) : null, React.createElement("div", {
     className: `msx v3 ${layout}`,
     "data-msx-view": view
   }, content, ask && React.createElement("div", {
@@ -158248,7 +160379,8 @@ function MsxHome({
   onContinue,
   onNew,
   setMeta,
-  onWipe
+  onWipe,
+  onRank
 }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
@@ -158266,7 +160398,7 @@ function MsxHome({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(s ? s.turn : 1).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -158299,7 +160431,11 @@ function MsxHome({
     type: "button",
     className: "v-big",
     onClick: onNew
-  }, "🌱 新しく育成をはじめる"), debug && React.createElement("div", {
+  }, "🌱 新しく育成をはじめる"), typeof MonsucRankScreen === 'function' ? React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: onRank
+  }, "🏆 ランキング") : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
@@ -158664,7 +160800,7 @@ function MsxPlay({
       }
     })), React.createElement("b", null, s.fear))), React.createElement("div", {
       style: {
-        fontSize: 9.5,
+        fontSize: 10.5,
         color: '#cbd5e1',
         fontWeight: 700,
         marginTop: 4
@@ -158802,7 +160938,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: "images/story-bg/monhero_town.jpg",
+      src: msxVenueBg(b.kind === 'summit' ? 'summit' : b.kind === 'debut' ? 'debut' : b.kind === 'pro' ? 'hero' : 'cup'),
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158849,7 +160985,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(s.turn).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158912,7 +161048,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(s.turn).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -159042,7 +161178,7 @@ function MsxPlay({
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
-    const scn = msxSceneBg();
+    const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
     const bag = Object.keys(s.bag || {}).filter(k => s.bag[k] > 0);
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -159353,7 +161489,7 @@ function MsxBag({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(s.turn).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -159509,7 +161645,7 @@ function MsxStats({
     onClick: () => spend(k)
   }, "+1", React.createElement("small", {
     style: {
-      fontSize: 8
+      fontSize: 10
     }
   }, "(", SUC.ptsCost(s, k), "点)"))))), React.createElement("div", {
     className: "v-card"

@@ -165,6 +165,8 @@ const Audio_ = (() => {
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
+    "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
+    "audio/bgm-megalovania-smash.mp3": "831700bb0255",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
@@ -879,5 +881,5 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();

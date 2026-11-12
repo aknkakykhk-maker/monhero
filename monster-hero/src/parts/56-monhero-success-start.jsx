@@ -90,7 +90,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const heat = MSX_STATS.map((k) => members.filter((m) => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => (
     <div className="v-scene" style={{ flex: '1 1 0' }}>
-      <img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/>
+      <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ bottom: `calc(${style.mb} - 5px)` }}/>
       {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
         ? <span className="mon" style={{ bottom: style.mb, height: style.h }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
@@ -208,7 +208,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       </label>
       {nameErr && <div className="msx-note" style={{ color: '#fca5a5' }}>{nameErr}</div>}
       <div className="v-card" style={{ maxHeight: '34%', overflowY: 'auto' }}>
-        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom}/> : <div className="msx-note">染色はこの端末では使えません</div>}
+        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom} big names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map((x) => x[0]) : null}/> : <div className="msx-note">染色はこの端末では使えません</div>}
       </div>
     </>);
     go = 'これで決める ▶';
@@ -218,7 +218,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     body = (<>
       <div className="v-h">これで はじめる?<small>全46ターン・1回 約8〜15分。いつでも中断して続きから</small></div>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
-        <img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/>
+        <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '36%', bottom: 'calc(16% - 5px)' }}/>
         {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
           ? <span className="mon" style={{ left: '36%', bottom: '16%', height: '62%' }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>

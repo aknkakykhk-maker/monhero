@@ -40,10 +40,12 @@ const loadDeps = () => {
   const ALL_PLAYER_MONSTERS = require('../masmon-battle/load.js').load().data.ALL_PLAYER_MONSTERS;
   const regFile = path.join(ROOT, 'monster-hero', 'data', 'monhero-success-regulars.js');
   const reg = fs.existsSync(regFile) ? require(regFile) : { MONSUC_REGULARS: [], MONSUC_REGULAR_CUPS: {} };
-  return { ...ctx.__out, ASSISTANT_MASMON_TECHS: tctx.__t, MONSTER_TYPE_OF: tyCtx.__ty, ALL_PLAYER_MONSTERS, MONSUC_REGULARS: reg.MONSUC_REGULARS, MONSUC_REGULAR_CUPS: reg.MONSUC_REGULAR_CUPS };
+  const evFile = path.join(ROOT, 'monster-hero', 'data', 'monhero-success-events.js');
+  const MONSUC_EVENTS = fs.existsSync(evFile) ? require(evFile) : null; // ランダムイベント(芯が create の中で作る)
+  return { ...ctx.__out, MONSUC_EVENTS, ASSISTANT_MASMON_TECHS: tctx.__t, MONSTER_TYPE_OF: tyCtx.__ty, ALL_PLAYER_MONSTERS, MONSUC_REGULARS: reg.MONSUC_REGULARS, MONSUC_REGULAR_CUPS: reg.MONSUC_REGULAR_CUPS };
 };
 const depsFor = (deps, extra) => ({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, techs: deps.ASSISTANT_MASMON_TECHS,
-  types: deps.MONSTER_TYPE_OF, monsters: deps.ALL_PLAYER_MONSTERS, regulars: deps.MONSUC_REGULARS, cupNames: deps.MONSUC_REGULAR_CUPS, ...(extra || {}) });
+  types: deps.MONSTER_TYPE_OF, monsters: deps.ALL_PLAYER_MONSTERS, regulars: deps.MONSUC_REGULARS, cupNames: deps.MONSUC_REGULAR_CUPS, events: deps.MONSUC_EVENTS, ...(extra || {}) });
 const load = () => {
   if (cached) return cached;
   const deps = loadDeps();
