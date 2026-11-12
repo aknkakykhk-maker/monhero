@@ -1848,12 +1848,12 @@ const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, 
 };
 // only: その部位だけを出す(染色の画面の部位タブ) / big: 色のボタンを大きくする(高さ48px・色の名前10px)。
 // どちらも省けば今までどおり(図鑑の「染めてみる」は全部位を並べる)
-const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom, only = null, big = false }) => {
+const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom, only = null, big = false, names = null }) => {
   const regionCount = dyeRegionCount(baseId);
   const regionLabels = DYE_REGION_LABELS;
   return <div className="space-y-2">{Array.from({length:regionCount},(_,i)=>i).filter(i=>only==null||i===only).map((idx)=>(
     <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
-      <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
+      <div className={names?'text-[12px] text-fuchsia-200 font-black mb-1':'text-[8px] text-fuchsia-300 font-black uppercase mb-1'}>{names&&names[idx]?`${regionLabels[idx]||idx+1} ${names[idx]}`:regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
       <div className={big?'grid grid-cols-5 gap-1 [&>button]:min-h-[48px] [&>button>span:last-child]:text-[10px] [&>button>span:first-child]:w-5 [&>button>span:first-child]:h-5':'grid grid-cols-6 gap-0.5'}>
         <button onClick={()=>onChange(idx,null)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7}/></span><span className="text-[5.5px] font-black">元の色</span></button>
         {/* 色を選び直しても濃さは引き継ぐ(色だけ変えたいときに毎回つまみを直さなくてよいように) */}
