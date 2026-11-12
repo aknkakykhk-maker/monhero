@@ -164,10 +164,15 @@ const VIEW={width:390,height:844};
         if(measured){
           // ★ここが本体。ステータスバー(上59px)・ホームインジケータ(下34px)へ
           //   1pxでも入っていたら、その端末では押せない
+          // 戻るボタンのある側(90度は端末の上=ステータスバー・270度は端末の下=ホームバー)だけ余白を取る。
+          // 反対側まで取ると、画面の端に何も描かれていない帯ができて全体が小さく見えた(2026-11-12 社長「また」)
           ok(`  ${angle}度: 「戻る」がSafe Areaの内側にある(端末の端に埋まらない)`,
-            measured.top>=INSET.top&&measured.bottom<=measured.vh-INSET.bottom
+            (angle===90?measured.top>=INSET.top:measured.bottom<=measured.vh-INSET.bottom)
             &&measured.left>=INSET.left&&measured.right<=measured.vw-INSET.right,
             `上端=${measured.top.toFixed(1)}px(>=${INSET.top}) / 下端=${measured.bottom.toFixed(1)}px(<=${measured.vh-INSET.bottom})`);
+          const band=await page.evaluate(a=>{const f=document.querySelector('[data-mh-view-rotation="true"]');if(!f)return null;const r=f.getBoundingClientRect();const m=document.querySelector('[data-rhythm-song-select]');const mr=m?m.getBoundingClientRect():null;return mr?{top:mr.top,bottom:window.innerHeight-mr.bottom}:null;},angle);
+          ok(`  ${angle}度: 戻るボタンと反対の端(ホームバー側など)に、何も描かない帯を作らない`,
+            !!band&&(angle===90?band.bottom<=1:band.top<=1),JSON.stringify(band));
           // 回転のぶん当たり判定がずれていないか(押した場所にその要素が居るか)
           ok(`  ${angle}度: 「戻る」の真ん中を押すとその要素に当たる`,measured.reachable);
         }

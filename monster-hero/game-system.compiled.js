@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66975f6a0bb43a8d
+// source-sha256: 57dc58bddd87f949
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13902,7 +13902,7 @@ const RELEASE_FLAGS = {
   assistantLifeTopHouse: true,
   assistantLifeDailyScene: true,
   assistantLifeFriend: true,
-  alfMasmonShareSend: false,
+  alfMasmonShareSend: true,
   assistantLifeFriendBond: true,
   assistantMasmonBattleBeta: true,
   assistantMasmonBattlePvp: true,
@@ -145306,7 +145306,7 @@ function AssistantMasmonBattleWatch({
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
-      if (x.ev === 'charge') return `${n}は ガッツをためた`;
+      if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は そっぽを向いた…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
       if (x.ev === 'swap') return `交代! ${who(x.side, x.from)} → ${n}`;
       if (x.ev === 'ko') return `${x.name} は たおれた`;
@@ -145644,7 +145644,13 @@ const ambbPvpMemberOf = u => {
     ...(techs ? {
       techs
     } : {}),
-    mastery
+    mastery,
+    ...(Number.isInteger(x.loy) ? {
+      loy: x.loy
+    } : {}),
+    ...(Number.isInteger(x.pop) ? {
+      pop: x.pop
+    } : {})
   };
 };
 const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattleBeta === true && RELEASE_FLAGS.assistantMasmonGrow === true;
@@ -145761,7 +145767,13 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map(row => {
   } catch (_) {
     train = undefined;
   }
-  const u = engine.unitFromGrow(row, entry, train);
+  let bond;
+  try {
+    if (typeof amgbOn === 'function' && amgbOn() && typeof amgbEntryOf === 'function') bond = amgbEntryOf(aid, row) || undefined;
+  } catch (_) {
+    bond = undefined;
+  }
+  const u = engine.unitFromGrow(row, entry, train, bond);
   return {
     row,
     entry,
@@ -202397,9 +202409,10 @@ function MonsterHeroGame() {
       Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
+  const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   useEffect(() => {
-    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen);
-  }, [cardScreenOpen, quickAnywhereScreenOpen]);
+    if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet);
+  }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);

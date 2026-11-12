@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 74d3986162f6fc51
+// generated-sha256: 957813d0b2710214
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9736,7 +9736,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
-  alfMasmonShareSend: false, // 2026-11-12 フレンドの家で助手のマスモンをくわしく見せる(送る側・56-assistant-life-friend-masmon-share)。表 alf_masmon_share を窓口が流したあと、ミハリの確認を経て真にする(オトズレ)
+  alfMasmonShareSend: true, // 2026-11-12 社長「この文で」・ミハリ最終確認の4件を直してから真にした(#5596)。 フレンドの家で助手のマスモンをくわしく見せる(送る側・56-assistant-life-friend-masmon-share)。表 alf_masmon_share を窓口が流したあと、ミハリの確認を経て真にする(オトズレ)
   assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
@@ -76412,7 +76412,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
-      if (x.ev === 'charge') return `${n}は ガッツをためた`;
+      if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は そっぽを向いた…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
       if (x.ev === 'swap') return `交代! ${who(x.side, x.from)} → ${n}`;
       if (x.ev === 'ko') return `${x.name} は たおれた`;
@@ -76571,7 +76571,7 @@ const ambbPvpMemberOf = (u) => {
   const mastery = {};
   for (const [k, v] of Object.entries(x.mastery || {})) { const n = Math.round(Number(v)); if (keep.has(k) && Number.isFinite(n) && n > 0) mastery[k] = Math.min(100, n); }
   const name = (typeof x.name === 'string' && x.name.trim()) || ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[x.species] && ALL_PLAYER_MONSTERS[x.species].name) || x.species);
-  return { slot: u.row.slot, species: x.species, name: String(name).slice(0, 24), lv: x.lv, stats: x.stats, ...(techs ? { techs } : {}), mastery };
+  return { slot: u.row.slot, species: x.species, name: String(name).slice(0, 24), lv: x.lv, stats: x.stats, ...(techs ? { techs } : {}), mastery, ...(Number.isInteger(x.loy) ? { loy: x.loy } : {}), ...(Number.isInteger(x.pop) ? { pop: x.pop } : {}) };
 };
 const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattleBeta === true && RELEASE_FLAGS.assistantMasmonGrow === true;
 
@@ -76640,7 +76640,8 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map((row) => {
   const entry = typeof amgEntryOf === 'function' ? amgEntryOf(aid, row) : null;
   let train;
   try { if (typeof amgtBattleOf === 'function') train = amgtBattleOf(aid, row, entry && entry.lv); } catch (_) { train = undefined; }
-  const u = engine.unitFromGrow(row, entry, train);
+  let bond; try { if (typeof amgbOn === 'function' && amgbOn() && typeof amgbEntryOf === 'function') bond = amgbEntryOf(aid, row) || undefined; } catch (_) { bond = undefined; } // 絆の忠誠度・人気(印が偽なら渡さない = 忠誠100・人気0)
+  const u = engine.unitFromGrow(row, entry, train, bond);
   return { row, entry, unit: u, total: entry && entry.st ? Object.values(entry.st).reduce((a, b) => a + (Number(b) || 0), 0) : 0 };
 });
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -109628,7 +109629,10 @@ function MonsterHeroGame() {
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
   // 超省エネの「効果音を0にする」も、カードの画面にいるあいだは外す(カードの音まで消えるため)。音量の保存値は変えない
   // 裏クイックが HOME などで回っているあいだも同じ(裏のバトルの音だけ止める。ボタンの音は下の「全ボタンのタップ」が fgSe で鳴らす。2026-11-11)
-  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen]);
+  // モンヒロビートの結果の画面でランクアップの演出のあいだ(上の effect)は効果音の音量を戻すので、裏の周回のバトルの音まで表へ出てしまう
+  //   (2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」。演出の音は fgSe から鳴るので、モンビーで周回が残っているあいだも裏の音だけ止める印を立てる)
+  const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
+  useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。

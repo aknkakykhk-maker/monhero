@@ -1122,7 +1122,6 @@ const RHYTHM_VIEW_ROTATION=(()=>{
   const frameStyle=()=>{
     if(!active())return null;
     const forLeft=angle===90?'top':'bottom';     // 器の左 ← 端末の(上 / 下)
-    const forRight=angle===90?'bottom':'top';   // 器の右 ← 端末の(下 / 上)
     const forTop=angle===90?'right':'left';     // 器の上 ← 端末の(右 / 左)
     const forBottom=angle===90?'left':'right';  // 器の下 ← 端末の(左 / 右)
     return{
@@ -1140,7 +1139,9 @@ const RHYTHM_VIEW_ROTATION=(()=>{
       '--mh-vw':`${vh()}px`,
       // 大きさは画面ぴったりのまま、内側だけ削る(box-sizing:border-box)
       boxSizing:'border-box',
-      paddingLeft:safeInset(forLeft),paddingRight:safeInset(forRight),
+      // 右(戻るボタンのある左の反対側)は余白を取らない。端末のホームバー側の余白まで取ると、画面の端に何も描かれていない帯ができて
+      // 全体が小さく見えた(2026-11-12 社長「また」。2026-09-12 に四方へ取ったうち、戻るボタンが隠れるのは左だけ)
+      paddingLeft:safeInset(forLeft),paddingRight:0,
       paddingTop:safeInset(forTop),paddingBottom:safeInset(forBottom),
       transform:angle===90?'rotate(90deg) translateY(-100%)':'rotate(-90deg) translateX(-100%)',
       transformOrigin:'0 0',

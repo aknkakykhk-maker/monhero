@@ -323,7 +323,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
     if (r0.digest === rA.digest && rX.digest === rA.digest) sameA++;
     for (const b of ['A', 'B', 'C']) {
       const r = b === 'A' ? rA : engine.simulate(Object.assign({}, base, { balance: b }));
-      if (r.balance === b && r.log[0].balance === b && r.log[0].v === engine.VERSION) okLog++;
+      if (r.balance === b && r.log[0].balance === b && r.log[0].v === engine.VERSION_PLAIN && r.version === engine.VERSION_PLAIN) okLog++; // 忠誠度・人気が効かない編成は版3のまま(2026-11-12・効く編成は版4: masmon-bond-battle-check)
       if (r.winner === (sf ? 'A' : 'B')) w[b]++;
     }
   }
