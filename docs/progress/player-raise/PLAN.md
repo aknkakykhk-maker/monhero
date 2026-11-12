@@ -253,6 +253,18 @@
   3. サーバの見張り: 6能力 0〜999・種は実装済み・合計の上限。M の効き(+30%)が上限なので、盛っても ×2.5 の上限を超えない
 - Supabase には今は触らない(段取り5で、足すだけの表を窓口の判断で)
 
+#### 作ったもの(回5・2026-11-12 オトズレ。印 `monheroSuccess` は偽のまま)
+
+- 表と関数: `supabase/migrations/202611120002_monsuc_lend.sql`(`monsuc_lend` 1人1行・`monsuc_lend_uses` 借りた記録。足すだけ。流すのは窓口)
+- サーバの口: `masmon-pvp` に `lend_set`・`lend_clear`・`lend_use`・`lend_claim`(`supabase/functions/masmon-pvp/lend.js`。持ち主の鍵は対戦と同じ。配り直しは窓口)
+- 端末の口: `monster-hero/src/parts/56-assistant-life-friend-monsuc-lend.jsx`(画面なし)
+  - `monsucLendFriends()` フレンドの貸し出しの子の一覧 / `monsucLendMember(row, SUC)` 借りた子を編成の1枠(cheer の `{ friend: 写し }`)に。アシストはポイントと4種類を確かめ、外れたら効かせない
+  - `monsucLendUse(friendId)` 育成をはじめるときに1回(同じ人は続けて2回まで・3回目は `streak`)
+  - `monsucLendSet(保存枠の子)`・`monsucLendClear()` 貸し出しの子を置く/やめる(`mh_monsuc_meta_v1.lend` に id を書くのは画面側)
+  - `monsucLendClaim()` 借りられた回数と名声(1回 20・1日 10回ぶんまで・仮)。加算と「あなたの◯◯が◯回編成に入りました」は画面側
+- 借りた子のランク・効きは送られた6能力だけから出す(Lv・技の熟練・忠誠度・人気は送らないので、持ち主が使うときより少し低いランクになることがある)
+- 検査: `node tools/friends/monsuc-lend-check.js`
+
 ## 3. 保存枠と合体
 
 ### 保存枠
