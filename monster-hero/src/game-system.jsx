@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e030b5f10e8ba4f
+// generated-sha256: 39318822afb64156
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76880,7 +76880,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   }, [phase, battle]);
   // 絆(56-assistant-life-masmon-bond.jsx): 出たマスモンの人気。フレンド対戦 勝ち+2・負け+0.5/助手どうし 勝ち+1・負け+0.2。1戦に1回だけ(印が偽なら何もしない)
   useEffect(() => {
-    if (phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    if (preview || phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return; // 確かめ(デバッグ)では保存しない
     try { amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A'); } catch (_) {}
   }, [phase, battle]);
 
