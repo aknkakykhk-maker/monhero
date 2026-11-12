@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 44dae53178b2055f
+// generated-sha256: 200cfc11a9d3b5ce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77827,9 +77827,12 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
 //     onRematch のあと新しい s を渡し直すと、組み合わせ表から始め直す(key に s.battle.again・reroll を使う)。
 //   追加の口(2026-11-12 窓口「試合の計算は回3の msxR3Fight を正に」): fight={(s) => ({ won, r?, teamA?, teamB? })} を渡すと、その結果を使う
 //     (r.log と teamA・teamB があれば観戦で再生・無ければ勝ち負けだけ)。opp={{ loy, pop, … }} で相手の値を上書き(バトルカードに人気・忠誠を出す)。
+//   自分で操作する試合(2026-11-12 社長「モンサクは自分操作にして」): fight の返り値に input(simulate に渡したのと同じ入力 { seed, catalog, teamA, teamB, buffs? })
+//     があれば、試合は MonsucArena(56-monhero-success-arena.jsx)で自分で手を選ぶ(オートにもできる)。勝ち負けは自分で戦った結果で決まる。
+//     fight を渡さないときも、こちらで input を作って自分で操作する。autoOnly を渡すと(ランキング・フレンド対戦)オートの記録を見せるだけ。
 //   monsucCupMatch(engine, catalog, suc, s, me) → { r, teamA, teamB, buffs, seed }   … 試合だけ回す(画面なし・スキップ用)
 //   monsucCupInfo(suc, s, me) → { title, venue, bracket, opp, me, mods, buffs, seed } … 画面に要るものをまとめる(純粋)
-//   部品だけ使うとき: MonsucBracket / MonsucBattleCard / MonsucMatch / MonsucCutin / MonsucCupWin / MonsucCupLose
+//   部品だけ使うとき: MonsucBracket / MonsucBattleCard / MonsucArena / MonsucCutin / MonsucCupWin / MonsucCupLose
 
 const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 const MSC_STAT_JP = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
@@ -78284,65 +78287,7 @@ function MscPanel({ side, team, frame, maxHp, info, s, buffed }) {
   );
 }
 
-// ---- 試合(観戦の画面で記録を再生する)。終わったら onEnd(won) ----
-function MonsucMatch({ s, info, match, onEnd }) {
-  const [pos, setPos] = useState(0);
-  const [speed, setSpeed] = useState('x2');
-  const [ended, setEnded] = useState(false);
-  const log = match.r.log;
-  const frames = useMemo(() => ambwFramesOf(log), [match]);
-  const st = log[0] || {};
-  const maxHp = { A: st.aHp || [], B: st.bHp || [] };
-  const won = match.r.winner === 'A';
-  useEffect(() => {
-    if (ended) return undefined;
-    if (pos >= log.length - 1) { const t = setTimeout(() => setEnded(true), 600); return () => clearTimeout(t); }
-    const sp = AMBW_SPEEDS.find(x => x.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
-      let n = pos + 1;
-      if (speed === 'hl') while (n < log.length - 1 && !ambwIsHighlight(log[n], maxHp)) n++;
-      setPos(n);
-    }, sp.ms);
-    return () => clearTimeout(t);
-  }, [pos, speed, ended]);
-  useEffect(() => { if (!ended) return undefined; const t = setTimeout(() => onEnd(won), 1400); return () => clearTimeout(t); }, [ended]);
-  const e = log[pos] || {}; const f = frames[pos] || frames[0];
-  const foeSide = e.side === 'A' ? 'B' : 'A';
-  const fighter = (side) => {
-    const team = side === 'A' ? match.teamA : match.teamB; const m = team.members[f.act[side]] || team.members[0];
-    return (
-      <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
-        <img className={side === 'A' ? 'ambw-flip' : ''} src={mscMonImg(m.species)} alt=""/><em>{m.name}</em>
-        {e.ev === 'tech' && foeSide === side && (e.hit
-          ? <div className="ambw-dmg">{e.crit ? <small>会心!</small> : e.guarded ? <small>ガード!</small> : null}−{e.dmg}</div>
-          : <div className="ambw-dmg miss">はずれ</div>)}
-      </div>);
-  };
-  const nm = (side) => (side === 'A' ? match.teamA : match.teamB).members[0].name;
-  const say = e.ev === 'tech' ? (e.hit ? `${nm(e.side)}の ${e.name}${e.crit ? ' 会心!' : ''}` : `${nm(e.side)}の ${e.name} … はずれ`)
-    : e.ev === 'move' ? `${nm(e.side)}が ${AMBW_DIST[e.to]}の間合いへ` : e.ev === 'charge' ? (e.why === 'sulk' ? `${nm(e.side)}は そっぽを向いた…` : `${nm(e.side)}は ガッツをためた`)
-    : e.ev === 'guard' ? `${nm(e.side)}は 身を守った` : e.ev === 'ko' ? `${e.name} は たおれた` : e.ev === 'start' ? '試合開始!' : '';
-  return (
-    <div className="msc-wrap" data-msc-match data-msc-pos={pos}>
-      <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}・R{f.r || 1}</b></div>
-      <MscPanel side="B" team={match.teamB} frame={f} maxHp={maxHp} info={info} s={s}/>
-      <div className="msc-stage" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
-        <div className="ambw-ring">
-          <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
-          <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-          {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
-        </div>
-        {ended && <div className={`msc-end ${won ? 'w' : 'l'}`} data-msc-end={won ? 'win' : 'lose'}>{won ? '勝ち!' : '負け…'}</div>}
-      </div>
-      <MscPanel side="A" team={match.teamA} frame={f} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
-      <div className="msc-hint" style={{ minHeight: 22 }}><span>{say}</span></div>
-      <div className="msc-speed">
-        {AMBW_SPEEDS.map(x => <button key={x.id} className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
-        <button data-msc-skip onClick={() => { setPos(log.length - 1); }}>⏭ とばす</button>
-      </div>
-    </div>
-  );
-}
+// ---- 試合の画面は MonsucArena(56-monhero-success-arena.jsx)。自分で操作する・記録を再生する、どちらも同じ画面 ----
 
 // 記録の無い試合(回3の結果だけ)のときの短い間。少し待って勝ち負けへ
 function MonsucMatchSkip({ won, onEnd }) {
@@ -78414,7 +78359,7 @@ function MonsucCupShow(props) {
   const b = (s && s.battle) || {};
   return <MonsucCupShowInner key={[s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')} {...props}/>;
 }
-function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title }) {
+function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
@@ -78439,13 +78384,25 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const match = useMemo(() => {
     if (!info) return null;
     if (typeof fight === 'function') {
-      // 回3の結果: { won, r?, teamA?, teamB? }。記録(r.log)と両チームがあれば観戦で再生し、無ければ勝ち負けだけ見せる
-      try { const f = fight(s) || {}; const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A'); return { ...f, won, r: f.r && Array.isArray(f.r.log) && f.teamA && f.teamB ? f.r : null }; } catch (_) { return null; }
+      // 回3の結果: { won, r?, teamA?, teamB?, input? }。input があれば自分で操作・記録(r.log)と両チームがあれば観戦で再生・無ければ勝ち負けだけ
+      try {
+        const f = fight(s) || {}; const won = Boolean(f.won != null ? f.won : f.r && f.r.winner === 'A');
+        const input = !autoOnly && f.input && f.input.teamA && f.input.teamB ? f.input : null;
+        return { ...f, won, input, r: f.r && Array.isArray(f.r.log) && f.teamA && f.teamB ? f.r : null };
+      } catch (_) { return null; }
     }
     if (!engine || !catalog) return null;
-    try { const m = monsucCupMatch(engine, catalog, suc, s, me); return { ...m, won: m.r.winner === 'A' }; } catch (_) { return null; }
+    try {
+      const m = monsucCupMatch(engine, catalog, suc, s, me);
+      const input = autoOnly ? null : { seed: m.seed, catalog, teamA: m.teamA, teamB: m.teamB, balance: 'A', ...(m.buffs ? { buffs: { A: m.buffs } } : {}) };
+      return { ...m, won: m.r.winner === 'A', input };
+    } catch (_) { return null; }
   }, [engine, catalog, info]);
-  const finish = (won) => {
+  // 自分で操作した試合の結果(負けの画面の「何が効いたか」に使う)
+  const [played, setPlayed] = useState(null);
+  const shown = played && played.result ? { ...match, r: played.result } : match;
+  const finish = (won, extra) => {
+    if (extra && extra.result) setPlayed(extra);
     if (won) { const o = typeof settle === 'function' ? settle(true) : null; setOut(o || {}); setPhase('win'); } else setPhase('lose');
   };
   const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
@@ -78454,9 +78411,15 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
   else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
-  else if (phase === 'match') body = match && !match.r ? <MonsucMatchSkip won={match.won} onEnd={finish}/> : match ? <MonsucMatch s={s} info={info} match={match} onEnd={finish}/> : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
-  else if (phase === 'win') body = <MonsucCupWin s={s} info={info} match={match} out={out} onNext={() => onNext && onNext(out)}/>;
-  else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={match} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
+  else if (phase === 'match') {
+    const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';
+    body = canPlay ? <MonsucArena s={s} info={info} engine={engine} input={match.input} onEnd={finish}/>
+      : match && match.r ? <MonsucArena s={s} info={info} watch={match} onEnd={finish}/>
+      : match ? <MonsucMatchSkip won={match.won} onEnd={finish}/>
+      : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
+  }
+  else if (phase === 'win') body = <MonsucCupWin s={s} info={info} match={shown} out={out} onNext={() => onNext && onNext(out)}/>;
+  else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={shown} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
   return (
     <div className="msc-root ambw-root" ref={rootRef} data-msc-root data-msc-phase={phase}>
       <style>{AMBW_CSS}{MSC_CSS}</style>
@@ -78743,7 +78706,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
 // ---- part: 56-assistant-life-masmon-ranch.jsx ----
 // M/B管理にいる助手のマスモンに、トレーニングチケット/重トレーニングチケットを使ってあげる(2026-11-11 ボクジョウ・台帳 #1184 と「表示だけ足すを取り消し、作り直す」)
 //   案と止め絵: docs/progress/assistant-peer/masmon-ranch-ticket/PLAN.md・mock.jpg(社長「この案のまま(A)」)
-//   ・助手が M/B管理にいる時間帯(生活の移動1回)ごとに、その助手1人につき1枚(どちらか1枚)。持ち越さない。同じマスモンには1日1枚まで
+//   ・助手が M/B管理にいる時間帯(生活の移動1回)ごとに、その助手1人につき1枚(どちらか1枚)。持ち越さない。同じマスモンにも時間帯が変われば使える(2026-11-12 社長「同じ子の制限をなくす」。前は1日1枚)
 //   ・トレーニング = 選んだ能力 +3〜6 × 伸びやすさ/重トレーニング = 選んだ能力 +8〜12・決まった副の能力 +2〜4(× 伸びやすさ)・決まった能力 −2〜4・疲れ +10
 //   ・自主育成の1日の上限の外に足す。プレイヤーのマスモンには入らない・絆ランキングに効かない
 //   公開の印 RELEASE_FLAGS.assistantMasmonRanchTicket が偽のあいだ、口はすべて null / 何もしない(いまの 1.2倍 の受け口のまま)
@@ -78765,9 +78728,9 @@ const AMGR_DOWN = Object.freeze({ life: 'wise', pow: 'eva', wise: 'pow', hit: 't
 const amgrOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonRanchTicket === true && typeof amgOn === 'function' && amgOn();
 const amgrOkAid = (aid) => typeof aid === 'string' && /^[a-z]{2,12}$/.test(aid);
 const amgrStatName = (k) => (AMG_STATS.find(s => s[0] === k) || [])[1] || '';
-// 形: { v:1, used: { [助手]: [使った生活の回 abs] }, mon: { [助手]: { [枠:種族]: 使った日 } }, last: { [助手]: { a: abs, nick, kind, rows:[{k,from,to}] } } }
+// 形: { v:1, used: { [助手]: [使った生活の回 abs] }, mon: { [助手]: { [枠:種族]: 使った日 } }, gain: { [助手]: { [枠:種族]: { d: 日, n: その日にチケットで上がった合計 } } }, last: { [助手]: { a: abs, nick, kind, rows:[{k,from,to}] } } }
 const normalizeAssistantMasmonRanch = (raw) => {
-  const out = { v: 1, used: {}, mon: {}, last: {} };
+  const out = { v: 1, used: {}, mon: {}, gain: {}, last: {} };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   if (raw.used && typeof raw.used === 'object' && !Array.isArray(raw.used)) for (const [aid, xs] of Object.entries(raw.used)) {
     if (amgrOkAid(aid) && Array.isArray(xs)) out.used[aid] = [...new Set(xs.filter(n => Number.isInteger(n) && n >= 0))].slice(-12);
@@ -78776,6 +78739,12 @@ const normalizeAssistantMasmonRanch = (raw) => {
     if (!amgrOkAid(aid) || !m || typeof m !== 'object' || Array.isArray(m)) continue;
     const o = {}; for (const [key, d] of Object.entries(m).slice(-16)) if (/^[1-8]:\w{2,40}$/.test(key) && Number.isInteger(d) && d >= 0) o[key] = d;
     out.mon[aid] = o;
+  }
+  // 同じマスモンに同じ日にチケットで上がった合計(2026-11-12 同じ子の制限をなくしたので、サーバの1日の上限を超えないよう合計で止める)
+  if (raw.gain && typeof raw.gain === 'object' && !Array.isArray(raw.gain)) for (const [aid, m] of Object.entries(raw.gain)) {
+    if (!amgrOkAid(aid) || !m || typeof m !== 'object' || Array.isArray(m)) continue;
+    const o = {}; for (const [key, x] of Object.entries(m).slice(-16)) if (/^[1-8]:\w{2,40}$/.test(key) && x && Number.isInteger(x.d) && x.d >= 0 && Number.isFinite(x.n) && x.n >= 0) o[key] = { d: x.d, n: Math.min(9999, Math.round(x.n)) };
+    out.gain[aid] = o;
   }
   if (raw.last && typeof raw.last === 'object' && !Array.isArray(raw.last)) for (const [aid, x] of Object.entries(raw.last)) {
     if (!amgrOkAid(aid) || !x || typeof x !== 'object' || !Number.isInteger(x.a)) continue;
@@ -78874,6 +78843,9 @@ const amgrPlanOf = (kind, k) => (kind === 'heavy'
 const amgrLifeOverText = (row) => `${(row && row.nick) || 'このマスモン'}は寿命が来たので、もう能力は伸びません(対戦には出られます)`;
 // ---------- チケットを使う ----------
 // 返り: { ok:true, nick, kind, name, rows:[{k,from,to}], fat } か { ok:false, why }
+// 同じ日・同じマスモンにチケットで上げられる残り(0 なら今日はもう使えない)
+const amgrDayCap = () => { const pace = typeof amgbPace === 'function' ? amgbPace() : 1; return Math.max(1, (pace > 1 ? AMGR_NUM.serverDayBond : AMGR_NUM.serverDay) - (Number(AMG_CARE.viewCap) || 20) * pace); };
+const amgrDayPrior = (aid, key, day) => { const g0 = ((AMGR_STORE.state.gain || {})[aid] || {})[key]; return g0 && g0.d === day ? g0.n : 0; };
 const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   if (!amgrOn() || !amgrOkAid(aid)) return { ok: false, why: 'off' };
   if (!AMGR_STORE.loaded || !AMG_STORE.loaded) return { ok: false, why: '読み込み中です' };
@@ -78884,11 +78856,14 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   if ((R.used[aid] || []).includes(life.abs)) return { ok: false, why: 'この時間帯はもう使いました' };
   const row = amgrRowsOf(aid).find(r => amgMonKey(r.slot, r.monster) === key); if (!row) return { ok: false, why: '選び直してください' };
   const day = amgrToday(now);
-  if ((R.mon[aid] || {})[key] === day) return { ok: false, why: `${row.nick || 'このマスモン'}には今日もう使いました` };
   const e0 = (AMG_STORE.state.mons[aid] || {})[key]; if (!e0) return { ok: false, why: '読み込み中です' };
   if (typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row)) return { ok: false, why: amgrLifeOverText(row) }; // 絆: 寿命が来た子は伸びない(チケットを減らす前に止める・社長「寿命が来たら伸びが止まるだけ」)
   if (e0.st[k] >= AMG_MAX) return { ok: false, why: `${amgrStatName(k)}はもう上限です` };
   if (amgrTickets(kind) <= 0) return { ok: false, why: `${AMGR_TICKET_NAME[kind]}が足りません` };
+  // 同じマスモンに同じ日にチケットで上がる合計は、サーバの1日の上限から自主育成の1日の最大を引いた分まで(枚数の制限はない・2026-11-12)
+  const pace = typeof amgbPace === 'function' ? amgbPace() : 1; // 絆: 育ちの速さ ×3(印が偽なら 1)
+  const dayCap = amgrDayCap(); const prior = amgrDayPrior(aid, key, day);
+  if (prior >= dayCap) return { ok: false, why: `${row.nick || 'このマスモン'}は今日はもう十分きたえました(明日また使えます)` };
   // 先に印を付ける(二重に上げない)→ チケットを減らす → 能力を足す
   const prevR = R;
   if (!amgrSave({ ...R, used: { ...R.used, [aid]: [...(R.used[aid] || []), life.abs].slice(-12) }, mon: { ...R.mon, [aid]: { ...(R.mon[aid] || {}), [key]: day } } })) return { ok: false, why: '読み込み中です' };
@@ -78898,10 +78873,9 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const e = { ...e0, st: { ...e0.st }, cg: { ...(e0.cg || {}) } };
   const g = {}; const rows = [];
   const bump = (s, n) => { const from = e.st[s]; const to = amgClamp(from + n, 1, AMG_MAX); if (to === from) return; e.st[s] = to; g[s] = (g[s] || 0) + (to - from); rows.push({ k: s, from, to }); };
-  const pace = typeof amgbPace === 'function' ? amgbPace() : 1; // 絆: 育ちの速さ ×3(印が偽なら 1)
   const upOf = (s, [lo, hi]) => Math.max(1, Math.round(amgRange(rnd, lo, hi) * AMG_APT_MULT[apt[s]] * (1 + 0.1 * (e.ind[s] || 0)) * pace));
   const plan = amgrPlanOf(kind, k);
-  const room = Math.max(1, (pace > 1 ? AMGR_NUM.serverDayBond : AMGR_NUM.serverDay) - (Number(AMG_CARE.viewCap) || 20) * pace); // 1枚で上がる分の合計の上限
+  const room = Math.max(1, dayCap - prior); // この1枚で上がる分の合計の上限(同じ日の残り)
   if (kind === 'heavy') { const main = Math.min(upOf(plan.main, AMGR_NUM.heavyMain), room); bump(plan.main, main); bump(plan.sub, Math.min(upOf(plan.sub, AMGR_NUM.heavySub), Math.max(0, room - main))); bump(plan.down, -amgRange(rnd, AMGR_NUM.heavyDown[0], AMGR_NUM.heavyDown[1])); e.fat = amgClamp(e.fat + AMGR_NUM.heavyFat, 0, 100); }
   else bump(plan.main, Math.min(upOf(plan.main, AMGR_NUM.light), room));
   const net = Object.values(g).reduce((a, n) => a + n, 0);
@@ -78910,7 +78884,8 @@ const assistantMasmonRanchUse = (aid, key, kind, k, now = Date.now()) => {
   const S = AMG_STORE.state;
   amgSave({ ...S, mons: { ...S.mons, [aid]: { ...(S.mons[aid] || {}), [key]: e } } });
   const R2 = AMGR_STORE.state;
-  amgrSave({ ...R2, last: { ...R2.last, [aid]: { a: life.abs, nick: row.nick || '', kind, rows } } });
+  const up = Object.values(g).reduce((a, n) => a + Math.max(0, n), 0);
+  amgrSave({ ...R2, gain: { ...(R2.gain || {}), [aid]: { ...((R2.gain || {})[aid] || {}), [key]: { d: day, n: prior + up } } }, last: { ...R2.last, [aid]: { a: life.abs, nick: row.nick || '', kind, rows } } });
   return { ok: true, nick: row.nick || '', kind, name: plan.name, rows, fat: kind === 'heavy' ? AMGR_NUM.heavyFat : 0 };
 };
 
@@ -78953,9 +78928,9 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
   const apt = row ? amgAptOf(row.monster) : {};
   const plan = amgrPlanOf(kind, k);
   const name = who ? who.name : aid;
-  const monUsed = row && (AMGR_STORE.state.mon[aid] || {})[amgMonKey(row.slot, row.monster)] === amgrToday();
   const have = info ? info[kind] : 0;
-  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : monUsed && !res ? `${row.nick || 'このマスモン'}には今日もう使いました` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
+  const dayFull = row && amgrDayPrior(aid, amgMonKey(row.slot, row.monster), amgrToday()) >= amgrDayCap();
+  const block = !info ? `${name}はもうM/B管理にいません` : info.used && !res ? 'この時間帯はもう使いました(次は M/B管理に来たときに)' : !ready || !e ? '読み込み中です' : dayFull && !res ? `${row.nick || 'このマスモン'}は今日はもう十分きたえました(明日また使えます)` : !res && typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row) ? amgrLifeOverText(row) : e.st[k] >= AMG_MAX ? `${amgrStatName(k)}はもう上限です` : have <= 0 ? `${AMGR_TICKET_NAME[kind]}がありません` : '';
   const use = () => {
     if (!row) return;
     const r = assistantMasmonRanchUse(aid, amgMonKey(row.slot, row.monster), kind, k);
@@ -83155,6 +83130,7 @@ const MSX_CSS = `
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
+const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
@@ -83202,7 +83178,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
@@ -83244,7 +83220,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -83432,13 +83408,23 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
   // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てるモンスターと同じ種 → 解放済みの種の順)
   const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter((t) => t && t.box && raised.some((m) => m.id === t.box)).map((t) => t.box).slice(0, 5));
+  // フレンドから借りた子(回5・オトズレの部品 monsucLendMember の写し)。6枠目に入る
+  const [friend, setFriend] = useState(null);
+  const [lendList, setLendList] = useState(null); // null | 'loading' | { ok, rows, reason }
   const team = useMemo(() => {
     const list = teamBox.map((id) => ({ box: id }));
     const bases = [species, ...unlocked.filter((id) => id !== species)];
-    let bi = 0; while (list.length < 6) { list.push({ base: bases[bi % bases.length] || species }); bi += 1; }
+    const room = friend ? 5 : 6;
+    let bi = 0; while (list.length < room) { list.push({ base: bases[bi % bases.length] || species }); bi += 1; }
+    if (friend) list.push({ friend });
     return list;
-  }, [teamBox, species, unlocked]);
-  const members = useMemo(() => team.map((t) => { const src = msxTeamSrc(t, box); const m = SUC.memberOf(src); return { ...m, name: src.name, boxId: src.boxId || null }; }), [team, box, SUC]);
+  }, [teamBox, species, unlocked, friend]);
+  const members = useMemo(() => team.map((t) => { const src = t.friend ? t.friend : msxTeamSrc(t, box); const m = SUC.memberOf(src); return { ...m, name: src.name, boxId: src.boxId || null, friend: t.friend ? t.friend.friend : null }; }), [team, box, SUC]);
+  const openLend = async () => {
+    if (typeof monsucLendFriends !== 'function') return;
+    setLendList('loading');
+    try { const r = await monsucLendFriends(); setLendList(r && typeof r === 'object' ? r : { ok: false, reason: 'server', rows: [] }); } catch (e) { setLendList({ ok: false, reason: 'network', rows: [] }); }
+  };
   const [aid, setAid] = useState('mua');
   const [items, setItems] = useState([]);
   const [nick, setNick] = useState('');
@@ -83452,7 +83438,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const start = () => {
     const name = msxNameGuard(nick || msxMonName(species).slice(0, MSX_NAME_MAX));
     if (!name) { setStep(4); setNameErr('その名前は使えません。ほかの名前にしてね'); return; }
-    onStart({ species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => msxTeamSrc(t, box)), teamSlots: team, aid, aidBondLv: aidLv, items, nick: name, colors });
+    onStart({ species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => (t.friend ? t.friend : msxTeamSrc(t, box))), teamSlots: team.filter((t) => !t.friend), aid, aidBondLv: aidLv, items, nick: name, colors,
+      friendId: friend && friend.friend ? friend.friend.id : null, baseFill: [species, ...unlocked.filter((id) => id !== species)][5 % Math.max(1, unlocked.length)] || species });
   };
 
   const apt = msxAptOf(species);
@@ -83498,12 +83485,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる</small></div>
       <div className="v-slots">
         {members.map((m, i) => (
-          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}`}>
+          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`}>
             <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
             <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
             <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
-            <div className="ic">{m.kind === 'base' ? 'ベースモン' : ''}</div>
+            <div className="ic">{m.kind === 'base' ? 'ベースモン' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : ''}</div>
           </div>
         ))}
       </div>
@@ -83518,7 +83505,20 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
             <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
           </button>
         )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
-        <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体)<span className="msx-soon">準備中</span></div>
+        <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体){typeof monsucLendFriends !== 'function' ? <span className="msx-soon">準備中</span> : null}</div>
+        {typeof monsucLendFriends === 'function' ? (<>
+          {friend ? <button type="button" className="v-item sel" style={{ padding: '4px 8px', width: '100%' }} onClick={() => setFriend(null)}>
+            <img src={msxMonThumb(friend.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
+            <div>{(friend.friend && friend.friend.name) || 'フレンド'} の {friend.name}<small>{msxMonName(friend.species)}</small></div><span className="pr">✅ 借りている(外す)</span></button> : null}
+          {lendList === null ? <button type="button" className="msx-btn sub" onClick={openLend}>貸してくれるモンスターを見る</button>
+            : lendList === 'loading' ? <div className="msx-note">さがしています…</div>
+            : !lendList.ok ? <div className="msx-note">{typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません'}</div>
+            : !lendList.rows.length ? <div className="msx-note">貸し出しているフレンドはいません</div>
+            : lendList.rows.map((row) => { const m = monsucLendMember(row, SUC); if (!m) return null; const on = friend && friend.friend && friend.friend.id === row.friendId; return (
+              <button type="button" key={row.friendId} className={`v-item${on ? ' sel' : ''}`} style={{ padding: '4px 8px', width: '100%' }} onClick={() => setFriend(on ? null : m)}>
+                <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
+                <div>{row.name} の {m.name}<small>{msxMonName(m.species)}</small></div><span className="pr">{on ? '✅ 借りている' : '借りる'}</span></button>); })}
+        </>) : null}
       </div>
     </>);
     go = 'この編成でいく ▶';
@@ -83748,15 +83748,20 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   // ホームへ戻るときは保存を読み直す(回3の引退で保存枠・meta が書き足されたあと、古い中身で上書きしないように)
   const toHome = () => { msxReadAll(msxSuc.SUC).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
 
-  const startRun = (cfg) => {
+  const startRun = async (cfg) => {
     const { SUC } = msxSuc;
+    // フレンドから借りた子は、はじめるときに1回だけ知らせる。断られた(続けて借りすぎ streak・通信の失敗など)ら、借りずにその枠をベースモンで始める
+    if (cfg.friendId && typeof monsucLendUse === 'function') {
+      let r = null; try { r = await monsucLendUse(cfg.friendId); } catch (e) { r = { ok: false, reason: 'network' }; }
+      if (!r || !r.ok) cfg = { ...cfg, team: cfg.team.map((m) => (m && m.friend ? { kind: 'base', species: cfg.baseFill || cfg.species } : m)) };
+    }
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
     // 持ちこみ: はじめる前に効く物は carry、育成中に使う物は bag(芯の入口・合わせて2つまで)
     const known = (k) => !!(SUC.ITEMS && SUC.ITEMS[k]);
     const carry = cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
     const bag = {}; cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach((k) => { bag[k] = 1; });
     const s = SUC.newRun({ id, species: cfg.species, aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
-    const r = { v: 1, id, s, nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: 'main', out: null, log: [], startAt: Date.now() };
+    const r = { v: 1, id, s, nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: 'begin', out: null, log: [], startAt: Date.now() };
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
     if (cfg.items.some(known)) { const it = { ...meta.items }; cfg.items.filter(known).forEach((k) => { it[k] = Math.max(0, (it[k] || 0) - 1); if (!it[k]) delete it[k]; }); meta.items = it; }
@@ -83853,7 +83858,27 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
     else if (st.over) setRun({ ...r0, s: st, phase: 'over', out: null });
     else setRun({ ...r0, s: st, phase: 'turn', out: { from: r0.s.turn } });
   };
-  const afterAct = (r0) => { const p = SUC.peek(r0.s); if (p.issa) setRun({ ...r0, phase: 'issa', out: null }); else endTurnFlow(r0); };
+  // 訓練の結果のあと: 編成の出来事(ランダムイベント 'after')→ イッサ博士 → ターンを閉じる
+  const afterIssa = (r0) => { const p = SUC.peek(r0.s); if (p.issa) setRun({ ...r0, phase: 'issa', out: null }); else endTurnFlow(r0); };
+  const afterAct = (r0) => {
+    if (SUC.events && r0.s.last && r0.s.last.kind === 'train') {
+      const o = SUC.events.open(r0.s, 'after');
+      if (o.out && o.out.ev) { setRun({ ...r0, s: o.state, phase: 'event', out: { ev: o.out.ev, slot: 'after' } }); return; }
+      r0 = { ...r0, s: o.state };
+    }
+    afterIssa(r0);
+  };
+  // ターンのはじめ: 助手の連続イベント(芯の peek().story)→ ランダムイベント('start')→ メイン
+  const toMain = (r0, skipStory = false) => {
+    const p = SUC.peek(r0.s);
+    if (!skipStory && p.story != null && typeof SUC.storyStep === 'function') { setRun({ ...r0, phase: 'story', out: { ep: p.story } }); return; }
+    if (SUC.events && !r0.s.over) {
+      const o = SUC.events.open(r0.s, 'start');
+      if (o.out && o.out.ev) { setRun({ ...r0, s: o.state, phase: 'event', out: { ev: o.out.ev, slot: 'start' } }); return; }
+      r0 = { ...r0, s: o.state };
+    }
+    setRun({ ...r0, phase: 'main', out: null });
+  };
   const doAct = (a) => {
     const r = SUC.act(s, a);
     if (!r.out.ok) return;
@@ -83867,6 +83892,9 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
 
   const phase = run.phase;
   let body = null; let foot = null;
+  // はじめたばかりの育成は、1ターン目のはじめの出来事を立ててからメインへ(描いている途中で保存を書き換えないよう、あとで1回だけ)
+  useEffect(() => { if (run.phase === 'begin') toMain({ ...run, out: null }); }, [run.phase]);
+  if (phase === 'begin') return <><MsxHd back="中断" onBack={onPause}/><div className="v-body"/></>;
   // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
   //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
   const r3 = typeof MsxR3 === 'function' ? (phase === 'battle' ? 'battle' : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
@@ -83910,6 +83938,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       {say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+  }
+  // ---- 出来事(ランダムイベント・助手の連続イベント) ----
+  else if ((phase === 'event' && run.out && run.out.ev) || (phase === 'story' && run.out && run.out.ep != null)) {
+    body = <MsxEvent run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv}
+      onDone={(r) => { const slot = run.phase === 'event' ? run.out.slot : 'story'; const next = { ...r, out: null }; if (slot === 'after') afterIssa(next); else if (slot === 'story') toMain(next, true); else setRun({ ...next, phase: 'main' }); }}/>;
   }
   // ---- 叱る/褒める ----
   else if (phase === 'react') {
@@ -83960,7 +83993,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={() => setRun({ ...run, phase: 'main', out: null })}>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>つぎへ ▶</button></div>;
   }
   // ---- 大会(中身は回3) ----
   else if (phase === 'battle' && s.battle) {
@@ -84011,7 +84044,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
-        <div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)', width: '20%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '28%' }} live/>
+        <div className="gr" style={{ left: '30%', bottom: 'calc(38% - 5px)', width: '14%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '38%', height: '16%' }} live/>
         <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw">{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
@@ -84054,7 +84087,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
           {v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
-          {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}</div>
+          {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
+          {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{b.icon} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
         <div className="v-side"><span className="v-mini">🤝 忠誠 <b>{SUC.loyalOf(s)}</b></span><span className="v-mini">⭐ 人気 <b>{s.pop}</b></span></div>
         <button type="button" className="v-bagb" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
@@ -84230,6 +84264,61 @@ function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <button type="button" className={`v-ix no${pick === 'none' ? ' sel' : ''}`} onClick={() => setPick('none')}>🙅 何もしない<span className="ok" style={{ color: '#cbd5e1' }}>ことわる。損はない</span><span className="ng" style={{ color: '#94a3b8' }}>「えー、ノリ悪いなぁ」</span></button>
     </div>
     <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={choose}>{pick === 'none' ? 'ことわる' : `${(MSX_ISSA_KEYS.find((x) => x.key === pick) || {}).icon} ${(MSX_ISSA_KEYS.find((x) => x.key === pick) || {}).name}を受ける`}</button></div>
+  </>);
+}
+
+// ---- 出来事の画面(見本 v3-K の K4 の形)。ランダムイベント(芯の SUC.events)と助手の連続イベント(芯の storyStep)の両方をここで出す ----
+//   台詞は台本エンジンの event(場面)。選ぶ前に閉じても、芯が出来事を覚えている(s.ev.pend)ので同じ物がもう一度出る
+const MSX_LOOK = Object.freeze({ safe: '', good: '🙂 いけそう', even: '🤔 五分五分', risky: '😰 ちょっとあぶない' });
+function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
+  const { SUC } = msxSuc;
+  const s = run.s;
+  const se = msxSuc.script;
+  const isStory = run.phase === 'story';
+  const o = run.out || {};
+  const view = o.ev || null;
+  const scene = isStory ? (se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}`) : view && view.lines;
+  const c2 = { ...ctx, bond: bondLv, cheer: view && view.cheerName, cheer2: view && view.cheer2Name, train: view && view.train ? MSX_STAT_NAME[view.train] : undefined };
+  const evOf = (sc) => { try { return se && typeof se.event === 'function' && sc ? se.event(sc, c2) : null; } catch (e) { return null; } };
+  const main = evOf(scene) || { lines: [], choices: [], after: [], head: null, label: '' };
+  const picked = o.picked || null;
+  const choices = isStory ? (main.choices.length ? main.choices : [{ c: 'a', t: 'いっしょにがんばる' }, { c: 'b', t: 'ゆっくりいこう' }])
+    : (view && view.choices ? view.choices.map((ch) => ({ ...ch, t: (main.choices.find((x) => x.c === ch.c) || {}).t || ch.c })) : []);
+  const choose = (c) => {
+    if (isStory) {
+      const r = SUC.storyStep(s, c); if (!r.out || !r.out.ok) { onDone(run); return; }
+      const tail = r.out.ep === 4 && r.out.end ? `${scene}.${r.out.end}` : `${scene}.${c}`;
+      setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [tail], before: s.stats } } });
+      return;
+    }
+    const r = SUC.events.pick(s, c); if (!r.out || !r.out.ok) return;
+    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res } } });
+  };
+  const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
+  const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
+  const shown = (picked ? afterLines : main.lines).slice(0, 4);
+  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : (view && view.head) || main.label || '育成イベント';
+  const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
+  const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who));
+  return (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="v-scene" style={{ flex: '1 1 0' }}>
+      <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+      <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
+      <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
+      {cheerIdx != null && s.team[cheerIdx] ? <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>
+        : isStory ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
+      {(() => { const cat = isStory ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
+      <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? 'いい時間になった。' : 'なにか起きそうだ…'}</div>}</div>
+    </div>
+    {picked ? (<>
+      {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
+    </>) : choices.length ? (
+      <div className="v-opts">{choices.map((ch) => <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>)}</div>
+    ) : (
+      <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => (isStory ? choose('a') : choose(null))}>つぎへ ▶</button></div>
+    )}
   </>);
 }
 
@@ -84551,6 +84640,20 @@ const msxR3Farewell = async (id) => {
   const next = { ...box, mons: box.mons.filter((x) => x.id !== id), memory: [...box.memory, { nick: m.nick || '', species: m.species, rank: m.grade || m.rank || '', gen: m.gen || 1, at: Date.now() }].slice(-100) };
   await storeSet(MSX_KEYS.box, next);
   return next;
+};
+
+// 保存枠の子の名前と染色をあとから変える(PLAN §1-5)。箱のその子の nick・colors だけを書き換える(ほかの項目・ほかの子はそのまま)。
+//   名前は回2と同じ見張り(msxNameGuard)を通す。色は6つまで・文字(色の id)か null。{ ok, box, mon } / { ok:false, why }
+const msxR3EditMon = async (id, nick, colors) => {
+  const name = typeof msxNameGuard === 'function' ? msxNameGuard(nick) : (typeof nick === 'string' && nick.trim() ? nick.trim().slice(0, 8) : null);
+  if (!name) return { ok: false, why: 'name' };
+  const cols = (Array.isArray(colors) ? colors : []).slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null));
+  const box = await msxR3ReadBox(); const i = box.mons.findIndex((m) => m.id === id);
+  if (i < 0) return { ok: false, why: 'gone' };
+  const mon = { ...box.mons[i], nick: name, colors: cols };
+  const next = { ...box, mons: box.mons.map((m, j) => (j === i ? mon : m)) };
+  await storeSet(MSX_KEYS.box, next);
+  return { ok: true, box: next, mon };
 };
 
 // ---- ランキングへ送る口(送る仕組みは別の会話。RANKING.md §1・§2 の列の形で渡す) ----
@@ -85336,11 +85439,20 @@ function MsxR3Box({ onClose }) {
   const [bye, setBye] = useState(0);
   useEffect(() => { let alive = true; msxR3ReadBox().then((b) => { if (alive) setBox(b); }); return () => { alive = false; }; }, []);
   const cur = box && sel ? box.mons.find((m) => m.id === sel) : null;
+  const saveEdit = async () => {
+    if (!cur || !edit) return;
+    const r = await msxR3EditMon(cur.id, edit.nick, edit.colors);
+    if (!r.ok) { setEdit({ ...edit, err: r.why === 'name' ? 'その名前は使えません。ほかの名前にしてね' : '保存できませんでした' }); return; }
+    setBox(r.box); setEdit(null);
+    // 貸し出し中の子なら、フレンドに見える姿も新しい名前と色にする
+    if (meta && meta.lend === cur.id && typeof monsucLendSet === 'function') { try { await monsucLendSet(r.mon, {}); } catch (e) {} }
+  };
   const [meta, setMeta] = useState(null);
   const [fuse, setFuse] = useState(false);
   const [runFrom, setRunFrom] = useState(null);
   useEffect(() => { let alive = true; storeGet(MSX_KEYS.run, null).then((r) => { if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box); }).catch(() => {}); return () => { alive = false; }; }, []);
   const [lendMsg, setLendMsg] = useState('');
+  const [edit, setEdit] = useState(null); // { nick, colors, err } 名前と染色を変えている途中
   useEffect(() => { let alive = true; msxR3ReadMeta().then((m) => { if (alive) setMeta(m); }); return () => { alive = false; }; }, []);
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
@@ -85369,10 +85481,33 @@ function MsxR3Box({ onClose }) {
   const body = !box ? <div className="msx-note">読み込んでいます…</div> : (<>
     <div className="v-h">📦 保存枠<small>{box.mons.length} / {box.cap}体(引退10回ごとに +5・最大60)</small></div>
     <div className="r3-box">{box.mons.length ? box.mons.slice().reverse().map((m) => (
-      <button type="button" key={m.id} className={`r3-bm ${m.id === sel ? 'on' : ''}`} onClick={() => { setSel(m.id === sel ? null : m.id); setBye(0); }} data-msx-r3-boxmon={m.id}>
-        <img src={msxMonThumb(m.species)} alt=""/><div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
+      <button type="button" key={m.id} className={`r3-bm ${m.id === sel ? 'on' : ''}`} onClick={() => { setSel(m.id === sel ? null : m.id); setBye(0); setEdit(null); }} data-msx-r3-boxmon={m.id}>
+        {Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+          ? <span style={{ width: 38, height: 38, flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
+          : <img src={msxMonThumb(m.species)} alt=""/>}<div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
         <span className="pw">{m.raised === false ? '' : msxFmt(m.score || 0)}</span></button>)) : <div className="msx-note">まだ誰もいません。育成を最後まで終えると、ここに入ります</div>}</div>
-    {cur ? <div className="v-card">
+    {cur && edit ? <div className="v-card" data-msx-r3-editbox>
+      <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>✏ 名前と染色を変える</div>
+      <div style={{ display: 'flex', justifyContent: 'center', height: 110 }}>
+        {edit.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+          ? <DyedMonsterImage baseId={cur.species} src={msxMonImg(cur.species)} masuColors={edit.colors} alt="" draggable={false} style={{ height: '100%', objectFit: 'contain' }}/>
+          : <img src={msxMonImg(cur.species)} alt="" style={{ height: '100%', objectFit: 'contain' }}/>}
+      </div>
+      <label className="v-inp" style={{ display: 'flex' }}>
+        <input type="text" value={edit.nick} maxLength={typeof MSX_NAME_MAX !== 'undefined' ? MSX_NAME_MAX : 8} onChange={(e) => setEdit({ ...edit, nick: e.target.value.slice(0, typeof MSX_NAME_MAX !== 'undefined' ? MSX_NAME_MAX : 8), err: '' })} data-msx-r3-nick
+          style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 'none', color: '#1e1b4b', font: 'inherit', fontSize: 16 }}/>
+        <small>{(edit.nick || '').length} / {typeof MSX_NAME_MAX !== 'undefined' ? MSX_NAME_MAX : 8}文字</small>
+      </label>
+      {edit.err ? <div className="msx-note" style={{ color: '#fca5a5' }}>{edit.err}</div> : null}
+      {typeof DyeRegionColorControls === 'function'
+        ? <DyeRegionColorControls baseId={cur.species} colors={edit.colors}
+          onChange={(idx, colorId) => { const n = edit.colors.slice(); while (n.length <= idx) n.push(null); n[idx] = colorId; setEdit({ ...edit, colors: n }); }}
+          onCustom={(idx) => { const p = typeof _parseCustomColorId === 'function' ? _parseCustomColorId(edit.colors[idx]) : null; const h = p ? (p.h + 40) % 360 : 200; if (typeof _encodeCustomColorId === 'function') { const n = edit.colors.slice(); while (n.length <= idx) n.push(null); n[idx] = _encodeCustomColorId(h, 0.7, 0.85); setEdit({ ...edit, colors: n }); } }}
+          big names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[cur.species] ? ASSISTANT_MASMON_DYE_PARTS[cur.species].map((x) => x[0]) : null}/>
+        : <div className="msx-note">染色はこの端末では使えません</div>}
+      <div className="r3-bar"><button type="button" className="r3-chip" onClick={() => setEdit(null)}>やめる</button><button type="button" className="r3-chip on" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>
+    </div> : cur ? <div className="v-card">
+      <button type="button" className="msx-btn sub" onClick={() => setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' })} data-msx-r3-edit>✏ 名前と染色を変える</button>
       <MsxStRow stats={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}/>
       <div className="v-kv"><b>忠誠 / 人気</b><span>{Math.round(cur.loy || 0)} / {Math.round(cur.pop || 0)}</span></div>
       <div className="v-kv"><b>アシスト能力</b><span>{Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => `${(msxSuc && msxSuc.SUC.ASSISTS[a.id] || {}).name || a.id} 段${a.lv}`).join('・') : 'なし'}</span></div>
@@ -85699,6 +85834,267 @@ function MsxManualBar({ opt, onPick, onAuto, busy }) {
         <span className="msxm-none">{opt.hint ? '黄色のふちは助手のおすすめ' : ''}</span>
         {onAuto ? <button type="button" className="msxm-auto" onClick={() => !busy && onAuto()}>オートにする</button> : null}
       </div>
+    </div>
+  );
+}
+
+// ---- part: 56-monhero-success-arena.jsx ----
+// ===== モンヒロサクセス: 試合の画面 MonsucArena(2026-11-12 社長「モンサクは自分操作にして」) =====
+// 社長「バトルはモンバトやバトルカードの画面をある程度流用して、距離とかうまく使ったほうがいい。攻撃アクションとかもそのまま使えるはず」。
+//   ・場は横長。手前の子(A)が左・相手(B)が右に立ち、距離 零・近・中・遠 の4つの立ち位置で、実際に間が開いたり詰まったりする
+//   ・技の動きは 24-battle-fx.jsx の SkillFxMotion・SKILL_MOTION_SETS をそのまま使う(新しい動きは作らない)。
+//     モンヒロに同じ名前の技があればその子の動き、無ければカードバトルと同じ決まった動き(85 の cardMotionTiered)
+//   ・受ける・防ぐ・よける・倒れるは、カードバトルの CSS(mh-card-hit / guard / dodge / ko)。止まっている間は待機アニメ(withMonsterIdleArt)
+//   ・自分で操作する試合は、芯 createMatch を進める useMsxManualMatch と帯 MsxManualBar(56-monhero-success-manual.jsx)を下に差す。
+//     手を選ぶ → 伸びた記録(自分の手 → 相手の手)を1行ずつ見せる → 見せ終わったら次の手番(見せている間、帯は押せない)
+//   ・記録だけ渡されたとき(回3の結果・オート)は、同じ画面で記録を再生する
+//   ・動きを減らす設定(端末の prefers-reduced-motion)では、技の動き・揺れ・間合いの移動を止め、1行の間も短くする
+// 計算・保存には触れない(勝ち負けを onEnd で返すだけ)。公開の印 monheroSuccess の後ろで使う。
+const MSA_GAP = [0.13, 0.32, 0.5, 0.68];            // 距離ごとの、2体の間(場の幅に対する割合)。零は触れ合うほど
+const MSA_SPEEDS = Object.freeze([{ id: 'x1', label: '×1', f: 1 }, { id: 'x2', label: '×2', f: 0.55 }, { id: 'x4', label: '×4', f: 0.3 }]);
+const MSA_CSS = `
+.msa{display:flex;flex-direction:column;gap:6px}
+.msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
+.msa-stage::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5));pointer-events:none}
+.msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
+.msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
+.msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
+.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .45s cubic-bezier(.3,.8,.4,1)}
+.msa-f.act{z-index:6}
+.msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
+.msa-f .msa-flip{transform:scaleX(-1)}
+.msa-f .msa-shadow{position:absolute;bottom:-5px;left:50%;width:62px;height:11px;margin-left:-31px;border-radius:50%;background:#0008;z-index:-1}
+.msa-f.down img.msa-img{filter:grayscale(1) brightness(.6)}
+.msa-dmg{position:absolute;z-index:8;top:24%;left:50%;width:130px;margin-left:-65px;text-align:center;font-size:30px;font-weight:900;color:#fde047;line-height:.95;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;animation:msaPop .55s ease-out both;pointer-events:none}
+.msa-dmg small{display:block;font-size:12px;color:#fff;margin-bottom:2px}
+.msa-dmg.miss{color:#e2e8f0;font-size:20px;text-shadow:0 2px 0 #0f172a}
+.msa-tag{position:absolute;z-index:8;top:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:900;background:#0f172acc;border:1px solid #fde04788;color:#fde68a;animation:msaPop .4s ease-out both}
+.msa-charge{animation:msaCharge .7s ease-out both}
+.msa-aura{position:absolute;left:50%;bottom:0;width:90px;height:90px;margin-left:-45px;border-radius:50%;background:radial-gradient(circle,#fde04788 0,#f9731644 45%,#f9731600 70%);animation:msaAura .7s ease-out both;z-index:-1;pointer-events:none}
+.msa-sulk{animation:msaSulk .7s ease-in-out both}
+.msa-step{animation:msaStep .45s ease-out both}
+.msa-in{animation:msaIn .45s ease-out both}
+.msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
+.msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
+.msa-dist span.cur{background:#fde047;color:#422006}
+.msa-round{position:absolute;left:8px;top:6px;z-index:2;font-size:11px;font-weight:900;color:#fde68a;background:#0f0b2299;border-radius:99px;padding:1px 8px}
+.msa-say{min-height:22px;font-size:12.5px;font-weight:800;text-align:center;color:#fff}
+.msa-tools{display:flex;gap:5px;align-items:center}
+.msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
+.msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
+.msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
+@keyframes msaPop{0%{opacity:0;transform:translateY(10px) scale(.7)}35%{opacity:1;transform:translateY(-4px) scale(1.12)}100%{opacity:1;transform:translateY(-12px) scale(1)}}
+@keyframes msaCharge{0%,100%{transform:none}30%{transform:translateY(4px) scale(1.05,.92)}60%{transform:translateY(-6px) scale(.97,1.06)}}
+@keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
+@keyframes msaSulk{0%,100%{transform:none}30%,70%{transform:rotate(-8deg) translateX(-4px)}}
+@keyframes msaStep{0%{transform:none}45%{transform:translateY(-14px)}100%{transform:none}}
+@keyframes msaIn{0%{opacity:0;transform:translateY(16px) scale(.8)}100%{opacity:1;transform:none}}
+@media (max-height:420px) and (orientation:landscape){.msa-stage{height:180px}.msa-f{height:100px}.msa-f img.msa-img{max-height:92px}}
+@media (prefers-reduced-motion: reduce){
+  .msa *,.msa *::before,.msa *::after{animation:none!important;transition:none!important}
+}
+`;
+
+const msaReduce = () => {
+  try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
+};
+
+// 技 → SkillFxMotion の動きの名前。① モンヒロに同じ名前の技(SKILL_MOTION_SETS の通常技・固有技) ② カードバトルと同じ決まった動き
+const msaMotionKind = (species, tech) => {
+  if (!tech) return null;
+  const has = (k) => (typeof skillFxSpecOf === 'function' && skillFxSpecOf(k) ? k : null);
+  const names = typeof HERO_ATK_NAMES !== 'undefined' ? HERO_ATK_NAMES[species] : null;
+  const set = typeof SKILL_MOTION_SETS !== 'undefined' ? SKILL_MOTION_SETS[species] : null;
+  const i = Array.isArray(names) ? names.indexOf(tech.name) : -1;
+  if (i >= 0 && set && set.normal && set.normal[i] && set.normal[i] !== SKM_SIG) { const k = has(`${species}-n${i}`); if (k) return k; }
+  const u = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[species] ? ALL_PLAYER_MONSTERS[species].unique : null;
+  const ui = u && Array.isArray(u.names) ? u.names.indexOf(tech.name) : -1;
+  if (ui >= 0 && set && set.unique && set.unique[ui] && set.unique[ui] !== SKM_SIG) { const k = has(`${species}-u${ui}`); if (k) return k; }
+  const base = tech.kind === 'pow' ? 'cardBash' : 'cardOrb';
+  const g = Number(tech.guts) || 0;
+  const tier = g >= 40 ? 'L' : g >= 25 ? 'M' : 'S';
+  return has(typeof cardMotionTiered === 'function' ? cardMotionTiered(base, tier) : base) || has(base);
+};
+const msaMotionMs = (kind) => {
+  const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
+  return { ms: (sp && sp.ms) || 650, hit: (sp && sp.hit) || 300 };
+};
+
+// 1行を見せる長さ(ミリ秒・×1)。技は動きの長さ+数字を読む間
+const msaStepMs = (e, team, reduce) => {
+  if (!e) return 300;
+  if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
+  if (e.ev === 'tech') { const m = (team && team.members && team.members[e.i]) || {}; return msaMotionMs(msaMotionKind(m.species, { name: e.name, kind: e.kind, guts: e.guts })).ms + 520; }
+  return { start: 700, enter: 350, move: 650, guard: 750, charge: 800, swap: 700, ko: 1100, end: 600 }[e.ev] || 500;
+};
+
+// 実況の1行
+const msaSay = (e, nm) => {
+  if (!e) return '';
+  if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
+  if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
+  if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は そっぽを向いた…` : `${nm(e.side, e.i)}は ガッツをためた`;
+  if (e.ev === 'guard') return `${nm(e.side, e.i)}は 身を守った`;
+  if (e.ev === 'swap') return `${nm(e.side, e.i)}に 交代!`;
+  if (e.ev === 'ko') return `${e.name} は たおれた`;
+  if (e.ev === 'start') return '試合開始!';
+  return '';
+};
+
+// ---- 場の1体 ----
+function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk }) {
+  const sp = member ? member.species : '';
+  const src = mscMonImg(sp);
+  const img = <img className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`} src={src} alt={member ? member.name : ''} draggable={false}/>;
+  const down = hpNow <= 0;
+  const me = e && e.side === side;
+  const foe = e && e.side && e.side !== side;
+  const tech = e && e.ev === 'tech';
+  let body = null; let cls = ''; const extra = [];
+  let style = { left: `${x * 100}%` };
+  if (tech && me && !reduce) {
+    // 攻める: 相手の位置まで(--atk-dx)。モンヒロのバトルと同じ動き
+    const kind = msaMotionKind(sp, { name: e.name, kind: e.kind, guts: e.guts });
+    if (kind) {
+      const w = foeX.w; const dx = (foeX.x - x) * w;
+      style = { ...style, ...(typeof attackAimVars === 'function' ? attackAimVars(dx, -8) : { '--atk-dx': `${Math.round(dx)}px`, '--atk-dy': '-8px' }) };
+      body = <SkillFxMotion key={`m-${e.k}`} kind={kind} image={img}/>;
+    }
+  }
+  if (tech && foe) {
+    const hit = msaMotionMs(msaMotionKind(e.atkSp, { name: e.name, kind: e.kind, guts: e.guts })).hit;
+    const delay = reduce ? 0 : hit;
+    const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
+    body = <div key={`p-${e.k}`} className={`flex items-end justify-center ${pose}`} style={{ animationDelay: `${delay}ms` }}>{img}</div>;
+    if (e.guarded && e.hit) extra.push(<span key="s" className="mh-card-shield" aria-hidden="true" style={{ animationDelay: `${delay}ms` }}/>);
+    extra.push(e.hit
+      ? <div key={`d-${e.k}`} className="msa-dmg" data-msa-dmg={e.dmg} style={{ animationDelay: `${delay}ms` }}>{e.crit ? <small>会心!</small> : e.guarded ? <small>ガード!</small> : null}−{e.dmg}</div>
+      : <div key={`d-${e.k}`} className="msa-dmg miss" style={{ animationDelay: `${delay}ms` }}>よけた!</div>);
+  }
+  if (me && e.ev === 'guard') { cls = 'mh-card-guard'; extra.push(<span key="s" className="mh-card-shield" aria-hidden="true"/>); }
+  if (me && e.ev === 'charge') {
+    if (e.why === 'sulk') { cls = 'msa-sulk'; extra.push(<span key="t" className="msa-tag">そっぽ…</span>); }
+    else { cls = 'msa-charge'; extra.push(<span key="a" className="msa-aura" aria-hidden="true"/>, <span key="t" className="msa-tag">ガッツ +</span>); }
+  }
+  if (me && e.ev === 'move') cls = 'msa-step';
+  if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
+  if (down) cls = e && e.ev === 'ko' && e.side === side ? 'mh-card-ko' : '';
+  if (!body) {
+    const still = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
+    body = <div key={`b-${e ? e.k : 0}-${cls}`} className={`flex items-end justify-center ${cls}`}>{still}</div>;
+  }
+  return (
+    <div className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''}`} style={style} data-msa-fighter={side}>
+      <span className="msa-shadow" aria-hidden="true"/>
+      {body}
+      {extra}
+    </div>
+  );
+}
+
+// ---- 試合の画面 ----
+//   input … 芯 createMatch に渡す入力(simulate と同じ形)。あれば自分で操作する
+//   watch … { r, teamA, teamB }(記録だけ。オートの結果を見せる)
+//   onEnd(won, { choices, auto }) … 決着を見せ終わったら1回だけ
+function MonsucArena({ s, info, engine, input, watch, onEnd }) {
+  const reduce = useMemo(() => msaReduce(), []);
+  const manual = Boolean(input && engine && typeof engine.createMatch === 'function');
+  const mm = useMsxManualMatch(manual ? engine : null, manual ? input : null, null, info.seed);
+  const log = manual ? mm.log : (watch && watch.r && Array.isArray(watch.r.log) ? watch.r.log : []);
+  const teams = manual ? { A: input.teamA, B: input.teamB } : { A: watch && watch.teamA, B: watch && watch.teamB };
+  const [pos, setPos] = useState(0);
+  const [speed, setSpeed] = useState('x1');
+  const [auto, setAuto] = useState(!manual);
+  const [ended, setEnded] = useState(false);
+  const [stageW, setStageW] = useState(340);
+  const stageRef = useRef(null);
+  const endRef = useRef(false);
+  useEffect(() => {
+    const el = stageRef.current; if (!el) return undefined;
+    const fit = () => setStageW(el.clientWidth || 340);
+    fit();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit); }
+    const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const frames = useMemo(() => (log.length ? ambwFramesOf(log) : []), [log.length, manual ? mm.tick : 0]);
+  const last = log.length - 1;
+  const done = manual ? mm.done : log.length > 0;
+  const result = manual ? mm.result : (watch && watch.r) || null;
+  const busy = pos < last;
+  // 1行ずつ進める。追いついたら、手番を待つ(自分操作)か、決着を見せる
+  useEffect(() => {
+    if (!log.length || ended) return undefined;
+    if (pos < last) {
+      const cur = log[pos] || {};
+      const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
+      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce) * sp.f));
+      return () => clearTimeout(t);
+    }
+    if (done) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
+    return undefined;
+  }, [pos, last, speed, done, ended]);
+  const won = Boolean(result && result.winner === 'A');
+  // 手を選ぶ帯が出たら、帯が見える所まで入れ物(縦にだけ動く)を送る(横向きでは場の下に隠れるため)。横へは動かさない
+  const barRef = useRef(null);
+  const barOn = Boolean(manual && !auto && pos >= last && !ended && mm.pending);
+  useEffect(() => {
+    const el = barRef.current; if (!barOn || !el) return;
+    const box = el.closest ? el.closest('[data-msc-root]') : null; if (!box) return;
+    const r = el.getBoundingClientRect(); const b = box.getBoundingClientRect();
+    const over = r.bottom - b.bottom + 8;
+    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
+  }, [barOn, pos]);
+  useEffect(() => {
+    if (!ended || endRef.current) return undefined;
+    const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1500);
+    return () => clearTimeout(t);
+  }, [ended]);
+  if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
+  const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
+  const e0 = log[pos] || {};
+  const st = log[0] || {};
+  const maxHp = { A: st.aHp || [], B: st.bHp || [] };
+  const memberOf = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; return ms[Number.isFinite(i) ? i : f.act[side]] || ms[0] || null; };
+  const nm = (side, i) => { const m = memberOf(side, i); return (m && m.name) || ''; };
+  const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '' };
+  const gap = MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
+  const xA = 0.5 - gap / 2; const xB = 0.5 + gap / 2;
+  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
+  const hpOf = (side) => (f.hp[side] || [])[f.act[side]];
+  const pick = (c) => { if (busy || !manual) return; if (mm.pick(c)) setPos(p => p + 1); }; // 選んだ手の行からすぐ見せる
+  const goAuto = () => { if (!manual) return; mm.toAuto(); setAuto(true); setSpeed('x2'); };
+  const skip = () => { if (manual && !done) return; setPos(last); };
+  const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
+  return (
+    <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
+      <style>{MSA_CSS}</style>
+      <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}</b></div>
+      <MscPanel side="B" team={teams.B} frame={f} maxHp={maxHp} info={info} s={s}/>
+      <div className="msa-stage" ref={stageRef} style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
+        <div className="msa-round">ラウンド {f.r || 1}</div>
+        <div className="msa-floor" aria-hidden="true"/>
+        {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
+        <MsaFighter side="A" member={memberOf('A')} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk/>
+        <MsaFighter side="B" member={memberOf('B')} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk/>
+        <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
+        {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`} style={{ zIndex: 7 }}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
+        {ended && <div className={`msc-end ${won ? 'w' : 'l'}`} data-msc-end={won ? 'win' : 'lose'} style={{ zIndex: 9 }}>{won ? '勝ち!' : '負け…'}</div>}
+      </div>
+      <MscPanel side="A" team={teams.A} frame={f} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
+      <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
+      <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
+      {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : '\u00a0'}</div> : null}
+      {(!manual || auto) && !ended ? (
+        <div className="msa-tools">
+          {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
+          <button type="button" data-msc-skip onClick={skip}>⏭ とばす</button>
+        </div>
+      ) : null}
+      {manual && !auto && !ended ? (
+        <div className="msa-tools">
+          {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => setSpeed(x.id)}>見せる速さ {x.label}</button>)}
+        </div>
+      ) : null}
     </div>
   );
 }

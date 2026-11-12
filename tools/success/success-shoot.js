@@ -68,6 +68,7 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
+    ['E1', 'mid', ['cont', 'event']],
   ];
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -102,6 +103,19 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 訓練/);
             if (st === 'go') return click(/の訓練をする$/);
             if (st === 'praise') return click(/褒める/);
+            if (st === 'event') {
+              // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
+              const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
+              if (!SUC.events) return false;
+              let hit = false;
+              for (let i = 0; i < 400 && !hit; i++) { const s0 = { ...raw.s, id: `shot-ev-${i}`, acted: false }; const o = SUC.events.open(s0, 'start'); if (o.out && o.out.ev && o.out.ev.choices && o.out.ev.choices.length) { raw.s = o.state; raw.phase = 'event'; raw.out = { ev: o.out.ev, slot: 'start' }; hit = true; } }
+              if (!hit) return false;
+              localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 600));
+              return click(/続きから/);
+            }
             if (st === 'issa') {
               // 博士が来るターンを芯で探して、その場面を開く(ふだんは 3% なので、撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
