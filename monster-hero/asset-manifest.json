@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "46e706177d39",
-  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":144742990,"count":896},"card":{"bytes":37779758,"count":1048},"all":{"bytes":327304532,"count":2053},"core":{"bytes":20913439,"count":23}},
+  "id": "c3b3227f210a",
+  "packs": {"beat":{"bytes":144781784,"count":109},"battle":{"bytes":146531905,"count":915},"card":{"bytes":37779758,"count":1048},"all":{"bytes":329093447,"count":2072},"core":{"bytes":20942617,"count":23}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -2018,6 +2018,25 @@
     "images/success/items/training-ticket.png": {"v":"0fc3257c41b8","size":19730,"pack":"battle"},
     "images/success/items/uketsugi-grass.png": {"v":"480c71c413b8","size":21229,"pack":"battle"},
     "images/success/items/weekly-training.png": {"v":"29cd2c1dda64","size":16411,"pack":"battle"},
+    "images/success/scenes/home-autumn-day.png": {"v":"a1663d245c0c","size":74339,"pack":"battle"},
+    "images/success/scenes/home-autumn-evening.png": {"v":"ee76f03012a1","size":93345,"pack":"battle"},
+    "images/success/scenes/home-autumn-night.png": {"v":"f026f8e98113","size":151544,"pack":"battle"},
+    "images/success/scenes/home-spring-day.png": {"v":"5b224376d4f7","size":67416,"pack":"battle"},
+    "images/success/scenes/home-spring-evening.png": {"v":"9d01bf0c359a","size":94283,"pack":"battle"},
+    "images/success/scenes/home-spring-night.png": {"v":"eb206ae81e1c","size":139308,"pack":"battle"},
+    "images/success/scenes/home-summer-day.png": {"v":"3a6e3153a942","size":71779,"pack":"battle"},
+    "images/success/scenes/home-summer-evening.png": {"v":"2a946dacfc89","size":89036,"pack":"battle"},
+    "images/success/scenes/home-summer-night.png": {"v":"96e2204eb287","size":150230,"pack":"battle"},
+    "images/success/scenes/home-winter-day.png": {"v":"4c2d319c36e9","size":91142,"pack":"battle"},
+    "images/success/scenes/home-winter-evening.png": {"v":"1a33e9d8f74e","size":99783,"pack":"battle"},
+    "images/success/scenes/home-winter-night.png": {"v":"674d19a1870b","size":162379,"pack":"battle"},
+    "images/success/scenes/training-iceberg.png": {"v":"b60828f16f37","size":82608,"pack":"battle"},
+    "images/success/scenes/training-volcano.png": {"v":"bce3b23cbc0b","size":78665,"pack":"battle"},
+    "images/success/scenes/training-waterfall.png": {"v":"a5dd08d94443","size":54217,"pack":"battle"},
+    "images/success/scenes/venue-cup.png": {"v":"c9cdfad7c777","size":37868,"pack":"battle"},
+    "images/success/scenes/venue-debut.png": {"v":"d2380d73411c","size":57558,"pack":"battle"},
+    "images/success/scenes/venue-hero.png": {"v":"f9559904e91d","size":107923,"pack":"battle"},
+    "images/success/scenes/venue-summit.png": {"v":"c9cd61050084","size":85492,"pack":"battle"},
     "images/ui/battle-cards/atk-1.webp": {"v":"665df968b172","size":8700,"pack":"battle"},
     "images/ui/battle-cards/atk-2.webp": {"v":"96d0c562a41e","size":9126,"pack":"battle"},
     "images/ui/battle-cards/atk-3.webp": {"v":"78ec160b4a65","size":9772,"pack":"battle"},
@@ -2058,7 +2077,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"beffd12be85d","size":304282,"pack":"core"},
+    "tailwind.css": {"v":"ef45b7283bf2","size":304665,"pack":"core"},
     "data/images/images-ally.js": {"v":"129b766eeda6","size":78276,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2078,6 +2097,6 @@
     "data/assistants.js": {"v":"8a8aa7abd8fb","size":2144774,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
-    "game-system.compiled.js": {"v":"c8a0da35c95e","size":10521277,"pack":"core"}
+    "game-system.compiled.js": {"v":"aaca1864b31b","size":10550072,"pack":"core"}
   }
 }
