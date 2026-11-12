@@ -300,13 +300,16 @@ check('モンビーを開いている間はバトルのSEを鳴らさない',
   source.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume);'));
 // MFバトルカードは同じ効果音を使うので、音量ではなく「裏の周回の効果音だけ止める印」で止める。カードの画面は印を受けない fgSe で鳴らす
 check('MFバトルカードにいる間は、裏の周回の効果音だけを止める',
-  source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet);')
+  source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet') // 後ろに successScreenOpen(モンヒロサクセス)が続く
   && source.includes('(...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))')
   && source.includes('if (!enabled || !src || backgroundSeQuiet) return null;'));
 // 2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」: 結果のランク演出のあいだ効果音の音量を戻すため、裏のバトルの音まで鳴っていた
 check('モンビーで周回が残っているあいだは、効果音の音量を戻す演出中も裏の周回の効果音だけ止める',
   source.includes('const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;')
-  && source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet)'));
+  && source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet'));
+// 2026-11-12 モンヒロサクセスの画面にいるあいだも、裏の周回の効果音を止める(14-success-sound.jsx の約束・画面が mh-success-screen で知らせる)
+check('モンヒロサクセスの画面にいるあいだも、裏の周回の効果音だけ止める',
+  source.includes('|| rhythmRunBackgroundQuiet || successScreenOpen)') && source.includes("window.addEventListener('mh-success-screen', on)"));
 check('MFバトルカードの画面の効果音は、印を受けない Audio_.fgSe から鳴らす',
   fs.readdirSync(path.join(root, 'monster-hero/src/parts')).filter(name => /^(8[2-9]|9[0-9])-card/.test(name) || name === '84-screen-card-battle.jsx')
     .every(name => !/Audio_\.se[.\[]/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts', name), 'utf8'))));
