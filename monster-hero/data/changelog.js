@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-12 20:33", type:'fix', title:'助手の紹介の全身の絵が、ふちまできれいに見えるようになりました', status:'new', group:'assistant',
+    items:[
+      '助手の紹介で出る全身の絵の、髪・羽・服のふちがギザギザに見えていたのを直しました。',
+      '暗い背景でも明るい背景でも、ふちがなめらかに見えます。みゅあの表情ごとの絵も同じように直しています。',
+    ],
+  },
+  {
     date: "2026-11-12 18:25", type:'content', title:'助手のマスモンの「冬眠」と「合体」', status:'new', group:'assistant', releaseFlag:'assistantMasmonSleep',
     assistantNotice:{ id:'update_notice_masmon_sleep_fuse_v1', type:'content' },
     items:[
