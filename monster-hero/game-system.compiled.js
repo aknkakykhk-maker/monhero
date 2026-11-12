@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac1b755c0d00eaff
+// source-sha256: 0ee2f99d73cf52a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140205,7 +140205,7 @@ const ASSISTANT_MASMON_CSS = `
 const MASMON_CALC = (() => {
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const num = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+  const num = (v, d = 0) => v === null || v === undefined || v === '' ? d : Number.isFinite(Number(v)) ? Number(v) : d;
   const STAT_MAX = 999;
   const POWER_W = Object.freeze({
     stat: 2.5,
@@ -140216,14 +140216,16 @@ const MASMON_CALC = (() => {
     pop: 10,
     techMax: 8
   });
-  const power = ({
-    stats = {},
-    masteries = [],
-    lv = 1,
-    loyal = 0,
-    pop = 0
-  } = {}) => {
-    const sum = KEYS.reduce((a, k) => a + clamp(num(stats[k]), 0, STAT_MAX), 0);
+  const power = o => {
+    const {
+      stats,
+      masteries,
+      lv = 1,
+      loyal = 0,
+      pop = 0
+    } = o && typeof o === 'object' ? o : {};
+    const st = stats && typeof stats === 'object' ? stats : {};
+    const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
@@ -140247,8 +140249,8 @@ const MASMON_CALC = (() => {
     ref: 999
   });
   const fuseBonus = (a, b) => {
-    const x = Math.max(0, num(a));
-    const y = Math.max(0, num(b));
+    const x = clamp(num(a), 0, STAT_MAX);
+    const y = clamp(num(b), 0, STAT_MAX);
     const hi = Math.max(x, y);
     const lo = Math.min(x, y);
     if (hi <= 0) return 0;
@@ -140447,13 +140449,14 @@ const MASMON_CALC = (() => {
       str: -5
     }
   });
-  const resultOf = ({
-    loyal = 50,
-    pol = 0,
-    sab = 0,
-    fail = 0,
-    r = 0.5
-  } = {}) => {
+  const resultOf = o => {
+    const {
+      loyal = 50,
+      pol = 0,
+      sab = 0,
+      fail = 0,
+      r = 0.5
+    } = o && typeof o === 'object' ? o : {};
     const L = clamp(num(loyal, 50), 0, 100);
     const x = clamp(num(r), 0, 0.999999);
     const pSkip = clamp(num(sab) * sabLoyalMult(L) * policyOf(pol).sab, 0, 0.9);
