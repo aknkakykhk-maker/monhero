@@ -66,7 +66,8 @@ const VARIANTS = [
   { key: 'B6same', aidLv: 3 }, { key: 'B6sokoji', aidLv: 3 }, { key: 'S6', aidLv: 3 }, { key: 'M6', aidLv: 5 }, { key: 'S6aim', aidLv: 5 },
   { key: 'none', aidLv: 1, rematch: { sand: 2 }, label: '編成なし・時渡りの砂時計2つを持ちこみ' }, { key: 'B6', aidLv: 3, rematch: { sand: 2 }, label: 'B 6体・時渡りの砂時計2つを持ちこみ' },
   { key: 'B6', aidLv: 3, rematch: { rainbow: 2 }, label: 'B 6体・虹の時渡りの砂時計2つを持ちこみ' },
-  { key: 'B6', aidLv: 3, carry: ['weekly', 'hachimaki'], label: 'B 6体・持ちこみ2つ(週刊!トレーニング・修行のハチマキ)' },
+  { key: 'B6', aidLv: 3, carry: ['mag', 'hachi'], label: 'B 6体・持ちこみ2つ(週刊!トレーニング・修行のハチマキ)' },
+  { key: 'B6', aidLv: 3, cups: true, label: 'B 6体・ライバル2人(助手・フレンド)の大会に出る' },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
@@ -92,10 +93,12 @@ const fight = (s, opp, idx) => {
 };
 
 // ---- ふつうのプレイヤーの作戦 ----
+let CUP_MODE = false; // ライバルの大会に出る作戦(試算の行で切り替える)
 const chooseAction = (s, v) => {
   if (v.can.includes('cond')) return { kind: 'cond' };
   if (v.can.includes('retry')) return { kind: 'retry' };
   if (v.can.includes('clinic')) return { kind: 'clinic' };
+  if (CUP_MODE && v.can.includes('cup') && s.hp >= s.hpMax * 0.5) { const c = v.cups.find(x => x.rival && x.entry.ok); if (c) return { kind: 'cup', id: c.id }; }
   const ratio = s.hp / s.hpMax;
   // 修行: 体力が上限の70%以上あれば行く。行き先は素質と低い能力に合うところ・技は「強さ × 覚える率」の上から2つ
   // 修行はチケットの数だけ。札の倍率が低いとき(よく伸びる札が無い)か、いまより強い技を覚えられそうなときに行く
@@ -126,9 +129,10 @@ const chooseReact = (s) => {
   return 'scold';
 };
 
-const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag) => {
+const RIVALS = (rng) => [0, 1].map(i => { const r = makeRaised(rng, 'B'); return { kind: i ? 'friend' : 'aid', name: i ? 'フレンドの子' : '助手のマスモン', species: r.species, stats: r.stats }; });
+const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) => {
   const rng = SUC.rngOf(id, 'team');
-  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {}, carry: carry || [], bag: bag || {} });
+  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {}, carry: carry || [], bag: bag || {}, rivals: rivals ? RIVALS(rng) : [] });
   const trace = { loyal60: null, periodSums: {} };
   let guard = 0;
   while (!s.over && guard++ < 200) {
@@ -143,7 +147,9 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag) => {
         wins.push(w); if (!w) break;
       }
       trace.battles = trace.battles || []; trace.battles.push({ kind: s.battle.kind, round: s.battle.round, won: wins.every(Boolean) && wins.length === opps.length });
-      s = SUC.settle(s, wins).state;
+      const bk = s.battle.kind; const rv = Boolean(s.battle.rival);
+      const st = SUC.settle(s, wins); s = st.state;
+      if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
       // 大会のあとのごはん: 名声があれば 能力 → 体力(少ないとき)→ 忠誠(60未満)の順
       if (s.mealReady && !s.over) {
         const pick = s.fame >= SUC.MEALS.stat.cost ? 'stat' : (s.hp < s.hpMax * 0.6 && s.fame >= SUC.MEALS.hp.cost) ? 'hp' : (SUC.loyalOf(s) < 60 && s.fame >= SUC.MEALS.loyal.cost) ? 'loyal' : null;
@@ -176,11 +182,13 @@ const mean = (a) => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.leng
 const runVariant = (vr) => {
   const ranks = {}; const powers = []; const sums = []; const loy60 = []; const loys = []; const tags = [0, 0, 0, 0];
   const lg = { rematch: 0, meal: 0, shugyo: 0, learned: 0, taught: 0, train: 0, great: 0, fail: 0, sab: 0, events: 0, story: 0, cond: 0, rest: 0, play: 0, clinic: 0 };
-  const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; const techN = []; let issaMet = 0; let issaWon = 0; let pts = 0;
+  const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; const techN = []; let rivalCups = 0; let rivalWins = 0; let issaMet = 0; let issaWon = 0; let pts = 0;
   for (let i = 0; i < RUNS; i++) {
     const id = `${vr.key}-${vr.aidLv}-${i}`;
     const sp = SPECIES[i % SPECIES.length]; const aid = AIDS[i % AIDS.length];
-    const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid, vr.rematch, vr.carry, vr.bag);
+    CUP_MODE = Boolean(vr.cups);
+    const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid, vr.rematch, vr.carry, vr.bag, vr.cups);
+    rivalCups += trace.rivalCups || 0; rivalWins += trace.rivalWins || 0;
     ranks[ev.rank] = (ranks[ev.rank] || 0) + 1; powers.push(ev.power); sums.push(ev.sum); loys.push(ev.loyal);
     if (trace.loyal60 !== null) loy60.push(trace.loyal60);
     s.log.tagTurns.forEach((n, j) => { tags[j] += n; });
@@ -198,7 +206,7 @@ const runVariant = (vr) => {
     loyal60Turn: loy60.length ? median(loy60) : null, loyal60Rate: pct(loy60.length, RUNS),
     tagsPerRun: tags.map(n => Math.round(n / RUNS * 10) / 10),
     perRun: Object.fromEntries(Object.entries(lg).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])),
-    story3: Math.round(story3 / RUNS * 10) / 10, techs: mean(techN), issa: `${Math.round(issaMet / RUNS * 100) / 100}回(成功 ${Math.round(issaWon / RUNS * 100) / 100})`,
+    story3: Math.round(story3 / RUNS * 10) / 10, techs: mean(techN), rival: rivalCups ? `${Math.round(rivalCups / RUNS * 10) / 10}回出て勝率 ${pct(rivalWins, rivalCups)}%` : null, issa: `${Math.round(issaMet / RUNS * 100) / 100}回(成功 ${Math.round(issaWon / RUNS * 100) / 100})`,
     end: Object.fromEntries(Object.entries(over).map(([k, v]) => [k, pct(v, RUNS)])),
     battles: Object.fromEntries(Object.entries(bt).map(([k, [w, n]]) => [k, `${pct(w, n)}% (${n})`])),
     periodSumMedian: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, median(v)])),
@@ -212,7 +220,7 @@ if (CALIBRATE) {
   const TARGET = { debut: 0.8, junior: 0.6, middle: 0.45, pro: 0.3, summit: 0.25 };
   const { mod, deps } = loaded;
   const winRate = (key, bench) => {
-    const S2 = mod.create({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, bench: { [key]: bench } });
+    const S2 = mod.create(require('./load').depsFor(deps, { bench: { [key]: bench } }));
     let w = 0; let n = 0;
     for (const s0 of SNAP) {
       const kind = s0.battle.kind; if (kind !== key) continue;
@@ -244,6 +252,7 @@ for (const v of list) {
   console.log(`  タッグ 0/1/2/3+ 体の訓練: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
   console.log(`  1回あたり: ${Object.entries(r.perRun).map(([k, v]) => `${k} ${v}`).join('・')}`);
   console.log(`  大会の勝率: ${Object.entries(r.battles).map(([k, v]) => `${k} ${v}`).join('・')}`);
+  if (r.rival) console.log(`  ライバルの大会: ${r.rival}`);
   console.log(`  終わり方: ${Object.entries(r.end).map(([k, v]) => `${k} ${v}%`).join('・')}`);
 }
 if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ runs: RUNS, issa: ISSA_PICK, results }, null, 1));

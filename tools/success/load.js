@@ -34,16 +34,24 @@ const loadDeps = () => {
   // 技表(助手マスモンの修行・対戦と同じ表)
   const tctx = vm.createContext({});
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'monster-hero', 'data', 'assistant-masmon-techs.js'), 'utf8') + '\n;globalThis.__t = ASSISTANT_MASMON_TECHS;', tctx, { filename: 'assistant-masmon-techs.js' });
-  return { ...ctx.__out, ASSISTANT_MASMON_TECHS: tctx.__t };
+  // タイプの表(タクティクスの MONSTER_TYPE_OF)・図鑑(間合いの適性・下書きの印)・大会の常連(台本 第3弾)
+  const tyCtx = vm.createContext({});
+  vm.runInContext(sliceConst(fs.readFileSync(path.join(PARTS, '32-tactics-units.jsx'), 'utf8'), 'MONSTER_TYPE_OF') + '\n;globalThis.__ty = MONSTER_TYPE_OF;', tyCtx);
+  const ALL_PLAYER_MONSTERS = require('../masmon-battle/load.js').load().data.ALL_PLAYER_MONSTERS;
+  const regFile = path.join(ROOT, 'docs', 'progress', 'player-raise', 'script', 'regulars.js');
+  const reg = fs.existsSync(regFile) ? require(regFile) : { MONSUC_REGULARS: [], MONSUC_REGULAR_CUPS: {} };
+  return { ...ctx.__out, ASSISTANT_MASMON_TECHS: tctx.__t, MONSTER_TYPE_OF: tyCtx.__ty, ALL_PLAYER_MONSTERS, MONSUC_REGULARS: reg.MONSUC_REGULARS, MONSUC_REGULAR_CUPS: reg.MONSUC_REGULAR_CUPS };
 };
+const depsFor = (deps, extra) => ({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, techs: deps.ASSISTANT_MASMON_TECHS,
+  types: deps.MONSTER_TYPE_OF, monsters: deps.ALL_PLAYER_MONSTERS, regulars: deps.MONSUC_REGULARS, cupNames: deps.MONSUC_REGULAR_CUPS, ...(extra || {}) });
 const load = () => {
   if (cached) return cached;
   const deps = loadDeps();
   delete require.cache[CORE];
   const mod = require(CORE);
-  const SUC = mod.create({ calc: deps.MASMON_CALC, apt: deps.AMG_APT, init: deps.AMG_INIT, techs: deps.ASSISTANT_MASMON_TECHS });
+  const SUC = mod.create(depsFor(deps));
   cached = { mod, SUC, deps };
   return cached;
 };
 
-module.exports = { ROOT, CORE, load, loadDeps, sliceConst };
+module.exports = { ROOT, CORE, load, loadDeps, sliceConst, depsFor };

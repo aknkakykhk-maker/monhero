@@ -1,6 +1,6 @@
-// モンヒロサクセス 台本 第3弾: ライバルの持ち主の助手が話す行(仮)
+// モンヒロサクセス 台本 第3弾: ライバルの持ち主の助手が話す行(第4弾で6人を直した)
 // ライバルが「ほかの助手のマスモン」のとき、その持ち主の助手が会場で会う・試合のあとに話す。rival.js の asst の場面に足して出す。
-// みゅあ・あつ・きき・ももすけ・ドラ・きゅうこ(第4弾で直した)以外の2人は仮(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
+// 第4弾で8人とも直した(仮はもう無い)(その助手のシナリオを書くとき・PLAN §10 の7〜 に直す)。口調は assistants.js の speech に合わせた。
 // シナリオの助手が持ち主のとき(self)は rival.js の self の行を使い、ここの行は出さない。
 // 形は README.md。
 //   場面のid … ev.rival.owner.<助手>.<場面>
@@ -38,13 +38,16 @@ const MONSUC_SCRIPT_RIVAL_OWNER = Object.freeze([
   { id:'ev.rival.owner.kyuko.win.kyuko1', who:'kyuko', e:'happy', t:'おけ〜、{rival}の勝ちぃ。{mon}の動きも悪くなかったよw' },
   { id:'ev.rival.owner.kyuko.lose.kyuko1', who:'kyuko', e:'crying', t:'ぐぬぬぬ…負けたぁ😭 {mon}、育て方うまいね。今度教えてぇ' },
 
+  // ソラシド(第4弾で直した・asst-sorashido.js と同じ段の決まり。bond の無い行は Lv4〜8 の形、b は Lv1〜3 の形。Lv9〜 の版は asst-sorashido.js といっしょに足す)
   { id:'ev.rival.owner.sorashido.meet.sorashido1', who:'sorashido', e:'normal', t:'{name}、今日は自分の{rival}で挑ませてもらいます。勝率は計算済みです笑' },
   { id:'ev.rival.owner.sorashido.win.sorashido1', who:'sorashido', e:'happy', t:'計算どおりですね笑 {mon}も想定より強かったです' },
-  { id:'ev.rival.owner.sorashido.lose.sorashido1', who:'sorashido', e:'surprise', t:'ほほー！ これは計算外でした・・・！ {mon}、強いですね笑' },
+  { id:'ev.rival.owner.sorashido.lose.sorashido1', who:'sorashido', e:'surprise', t:'ほほー！ これは計算外でした・・・！ {mon}、強いですねー笑' },
+  { id:'ev.rival.owner.sorashido.lose.sorashido1b', who:'sorashido', e:'surprise', bond:[1,3], t:'これは計算外でした・・・！ {mon}、強いですね笑' },
 
+  // えるびん(第4弾で直した・asst-erubin.js と同じ口調。見守る・けがを気づかう)
   { id:'ev.rival.owner.erubin.meet.erubin1', who:'erubin', e:'normal', t:'{name}、今日は{rival}が相手だよ。お互い、けがだけはしないようにね' },
   { id:'ev.rival.owner.erubin.win.erubin1', who:'erubin', e:'happy', t:'{rival}の勝ちだね。{mon}もよくがんばってたよね' },
-  { id:'ev.rival.owner.erubin.lose.erubin1', who:'erubin', e:'happy', t:'{mon}の勝ちだね。ほんとに強くなったよね、見てて分かるよ' },
+  { id:'ev.rival.owner.erubin.lose.erubin1', who:'erubin', e:'happy', t:'{mon}の勝ちだね。ほんとに強くなったよね、見てて分かるよ☺️' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_RIVAL_OWNER };
