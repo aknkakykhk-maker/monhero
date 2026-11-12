@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c06ec6d963358707
+// source-sha256: 1bb4aefd4072b581
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109973,6 +109973,9 @@ const useAssistantLifeNow = metIds => {
     }, 60000);
     return () => clearInterval(t);
   }, [key]);
+  React.useEffect(() => {
+    if (assistantLifeEnabled() && typeof assistantLifePreloadFullBodies === 'function') assistantLifePreloadFullBodies(metIds);
+  }, [key]);
   return st;
 };
 function AssistantLifeFaces({
@@ -118953,6 +118956,43 @@ const assistantLifeProfileRhythm = id => {
   const h = n => Number.isFinite(n) ? `${n}時` : '';
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
+const ASSISTANT_FULLBODY_PRELOADED = new Set();
+let assistantFullBodyPreloadTimer = null;
+function assistantLifePreloadFullBodies(metIds) {
+  try {
+    if (typeof Image === 'undefined' || typeof assistantFullBodyImage !== 'function' || typeof assistantById !== 'function') return;
+    const conn = typeof navigator !== 'undefined' ? navigator.connection : null;
+    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return;
+    const todo = [];
+    (metIds || []).forEach(id => {
+      const who = assistantById(id);
+      const src = who ? assistantFullBodyImage(who, 'happy') : null;
+      if (src && !ASSISTANT_FULLBODY_PRELOADED.has(src) && !todo.includes(src)) todo.push(src);
+    });
+    if (!todo.length || assistantFullBodyPreloadTimer) return;
+    const later = fn => typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, {
+      timeout: 8000
+    }) : setTimeout(fn, 2500);
+    const next = () => {
+      const src = todo.shift();
+      if (!src) {
+        assistantFullBodyPreloadTimer = null;
+        return;
+      }
+      ASSISTANT_FULLBODY_PRELOADED.add(src);
+      const im = new Image();
+      im.decoding = 'async';
+      try {
+        im.fetchPriority = 'low';
+      } catch (_) {}
+      im.onload = im.onerror = () => {
+        assistantFullBodyPreloadTimer = later(next);
+      };
+      im.src = src;
+    };
+    assistantFullBodyPreloadTimer = later(next);
+  } catch (_) {}
+}
 function AssistantLifeProfileStand({
   who,
   head = 0.32,

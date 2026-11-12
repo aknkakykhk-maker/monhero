@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4dfcec16de7568b8
+// generated-sha256: 91bee68d8ea70c7e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65584,6 +65584,8 @@ const useAssistantLifeNow = (metIds) => {
     const t = setInterval(() => { setTick(n => n + 1); void assistantLifeNow({ members: metIds }); }, 60000);
     return () => clearInterval(t);
   }, [key]);
+  // 紹介画面の全身画を、手の空いたときに裏で取っておく(開いた瞬間に出す)
+  React.useEffect(() => { if (assistantLifeEnabled() && typeof assistantLifePreloadFullBodies === 'function') assistantLifePreloadFullBodies(metIds); }, [key]);
   return st;
 };
 
@@ -69173,6 +69175,38 @@ const assistantLifeProfileRhythm = (id) => {
   const h = (n) => (Number.isFinite(n) ? `${n}時` : '');
   return `${r.label}(${h(r.bed)}ごろ寝て、${h(r.wake)}ごろ起きる)`;
 };
+
+// 全身画の先読み(2026-11-12 社長「表示が遅い」: 紹介を開いてから取りに行っていた)。助手ライフ・HOMEで落ち着いたあと、手の空いたときに
+//   1枚ずつ裏で取っておく(通信や最初の表示を邪魔しない)。取った絵はブラウザと Service Worker(mh-assets)に残るので、紹介を開いた瞬間に出る。
+//   データ節約・低速回線・先読みの失敗は何もしない(開いたときに、ふつうに取りに行くだけ)。保存データには触れない
+const ASSISTANT_FULLBODY_PRELOADED = new Set();
+let assistantFullBodyPreloadTimer = null;
+function assistantLifePreloadFullBodies(metIds) {
+  try {
+    if (typeof Image === 'undefined' || typeof assistantFullBodyImage !== 'function' || typeof assistantById !== 'function') return;
+    const conn = typeof navigator !== 'undefined' ? navigator.connection : null;
+    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return;
+    const todo = [];
+    (metIds || []).forEach((id) => {
+      const who = assistantById(id);
+      const src = who ? assistantFullBodyImage(who, 'happy') : null;
+      if (src && !ASSISTANT_FULLBODY_PRELOADED.has(src) && !todo.includes(src)) todo.push(src);
+    });
+    if (!todo.length || assistantFullBodyPreloadTimer) return;
+    const later = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 8000 }) : setTimeout(fn, 2500));
+    const next = () => {
+      const src = todo.shift();
+      if (!src) { assistantFullBodyPreloadTimer = null; return; }
+      ASSISTANT_FULLBODY_PRELOADED.add(src);
+      const im = new Image();
+      im.decoding = 'async';
+      try { im.fetchPriority = 'low'; } catch (_) { /* 古い端末は付けない */ }
+      im.onload = im.onerror = () => { assistantFullBodyPreloadTimer = later(next); };
+      im.src = src;
+    };
+    assistantFullBodyPreloadTimer = later(next);
+  } catch (_) { /* 先読みは、できなくても困らない */ }
+}
 
 // 紹介の立ち絵。助手ごとに絵の余白・全身か顔だけかが違うので、町の人形と同じ決まり(顔の表 assistantLifeStandFace と assistantLifeStandRule)で
 //   「頭(てっぺんから顎)の長さ」と「頭のてっぺんの高さ」をそろえる(2026-11-11 社長「助手ごとのサイズ感がばらばら」)。測れるまでは出さない

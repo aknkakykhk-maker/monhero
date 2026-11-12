@@ -33,6 +33,11 @@ ART = {
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',
 }
+# 囲まれた背景の残り(腕と頭のあいだ・両足のあいだなど、外から切り抜いても抜けない白)。
+#   キー → 元の絵の上の座標 (x, y) の一覧。その点からつながる白い所を透明にする(服の白は座標を入れないので残る)
+POCKETS = {
+    'atsu': [(518, 1170), (620, 232), (576, 166)],
+}
 OUT_W, OUT_H = 512, 768
 MARGIN = 6  # 切り詰めのあとの余白(出力の画素)
 
@@ -83,8 +88,36 @@ def label_keep(m, min_frac=0.03):
     return keep[lab]
 
 
-def clean(path, min_frac=0.03, arr=None):
-    im = (np.array(Image.open(path).convert('RGBA')) if arr is None else arr).astype(np.float32)
+def drop_pockets(arr, seeds):
+    """seeds の点からつながる、白に近い所(囲まれた背景の残り)を透明にする。ふちの白いにじみも少し削る。"""
+    a = arr.copy()
+    rgb = a[..., :3].astype(int)
+    white = (a[..., 3] > 0) & (rgb.min(axis=2) >= 190) & ((rgb.max(axis=2) - rgb.min(axis=2)) <= 30)
+    h, w = white.shape
+    pocket = np.zeros_like(white)
+    for sx, sy in seeds:
+        if not white[sy, sx]:
+            raise SystemExit('座標 (%d,%d) が白ではありません' % (sx, sy))
+        stack = [(sy, sx)]
+        pocket[sy, sx] = True
+        while stack:
+            y, x = stack.pop()
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < h and 0 <= xx < w and white[yy, xx] and not pocket[yy, xx]:
+                    pocket[yy, xx] = True
+                    stack.append((yy, xx))
+    # 輪郭線とのさかいの、白が混ざった画素も外へ(明るい所だけ・2画素まで)
+    grow = dil(pocket, 3)
+    mix = grow & ~pocket & (rgb.min(axis=2) >= 120) & ((rgb.max(axis=2) - rgb.min(axis=2)) <= 40)
+    a[pocket | mix, 3] = 0
+    return a
+
+
+def clean(path, min_frac=0.03, arr=None, seeds=None):
+    im = (np.array(Image.open(path).convert('RGBA')) if arr is None else arr)
+    if seeds:
+        im = drop_pockets(im, seeds)
+    im = im.astype(np.float32)
     h0, w0 = im.shape[:2]
     # 4の倍数に足りない分は透明で足す(4分の1の大きさで塊を数えるため)
     ph, pw = (-h0) % 4, (-w0) % 4
@@ -148,7 +181,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     tiles = []
     for key, f in ART.items():
-        im = fit(clean(os.path.join(SRC, f)))
+        im = fit(clean(os.path.join(SRC, f), seeds=POCKETS.get(key)))
         name = key.replace('@', '__').replace(':', '_') + '.png'
         q = quant(im)
         q.save(os.path.join(OUT, name), optimize=True)
