@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b05c359fe0d89be
+// source-sha256: 4f3d355271209560
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159742,29 +159742,54 @@ function MsxStart({
   }));
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
   const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter(t => t && t.box && raised.some(m => m.id === t.box)).map(t => t.box).slice(0, 5));
+  const [friend, setFriend] = useState(null);
+  const [lendList, setLendList] = useState(null);
   const team = useMemo(() => {
     const list = teamBox.map(id => ({
       box: id
     }));
     const bases = [species, ...unlocked.filter(id => id !== species)];
+    const room = friend ? 5 : 6;
     let bi = 0;
-    while (list.length < 6) {
+    while (list.length < room) {
       list.push({
         base: bases[bi % bases.length] || species
       });
       bi += 1;
     }
+    if (friend) list.push({
+      friend
+    });
     return list;
-  }, [teamBox, species, unlocked]);
+  }, [teamBox, species, unlocked, friend]);
   const members = useMemo(() => team.map(t => {
-    const src = msxTeamSrc(t, box);
+    const src = t.friend ? t.friend : msxTeamSrc(t, box);
     const m = SUC.memberOf(src);
     return {
       ...m,
       name: src.name,
-      boxId: src.boxId || null
+      boxId: src.boxId || null,
+      friend: t.friend ? t.friend.friend : null
     };
   }), [team, box, SUC]);
+  const openLend = async () => {
+    if (typeof monsucLendFriends !== 'function') return;
+    setLendList('loading');
+    try {
+      const r = await monsucLendFriends();
+      setLendList(r && typeof r === 'object' ? r : {
+        ok: false,
+        reason: 'server',
+        rows: []
+      });
+    } catch (e) {
+      setLendList({
+        ok: false,
+        reason: 'network',
+        rows: []
+      });
+    }
+  };
   const [aid, setAid] = useState('mua');
   const [items, setItems] = useState([]);
   const [nick, setNick] = useState('');
@@ -159788,13 +159813,15 @@ function MsxStart({
       } : {
         base: species
       },
-      team: team.map(t => msxTeamSrc(t, box)),
-      teamSlots: team,
+      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box)),
+      teamSlots: team.filter(t => !t.friend),
       aid,
       aidBondLv: aidLv,
       items,
       nick: name,
-      colors
+      colors,
+      friendId: friend && friend.friend ? friend.friend.id : null,
+      baseFill: [species, ...unlocked.filter(id => id !== species)][5 % Math.max(1, unlocked.length)] || species
     });
   };
   const apt = msxAptOf(species);
@@ -159930,7 +159957,7 @@ function MsxStart({
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", {
       key: i,
-      className: `v-sl${m.kind === 'base' ? ' base' : ''}`
+      className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`
     }, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, React.createElement("img", {
@@ -159944,7 +159971,7 @@ function MsxStart({
       className: "bs"
     }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? 'ベースモン' : '')))), React.createElement("div", {
+    }, m.kind === 'base' ? 'ベースモン' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '')))), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
       className: "sub",
@@ -160005,9 +160032,65 @@ function MsxStart({
         fontWeight: 900,
         marginTop: 8
       }
-    }, "🤝 フレンドから借りる(1体)", React.createElement("span", {
+    }, "🤝 フレンドから借りる(1体)", typeof monsucLendFriends !== 'function' ? React.createElement("span", {
       className: "msx-soon"
-    }, "準備中"))));
+    }, "準備中") : null), typeof monsucLendFriends === 'function' ? React.createElement(React.Fragment, null, friend ? React.createElement("button", {
+      type: "button",
+      className: "v-item sel",
+      style: {
+        padding: '4px 8px',
+        width: '100%'
+      },
+      onClick: () => setFriend(null)
+    }, React.createElement("img", {
+      src: msxMonThumb(friend.species),
+      alt: "",
+      style: {
+        width: 30,
+        height: 30,
+        borderRadius: 9,
+        objectFit: 'contain',
+        background: '#0f172a'
+      }
+    }), React.createElement("div", null, friend.friend && friend.friend.name || 'フレンド', " の ", friend.name, React.createElement("small", null, msxMonName(friend.species))), React.createElement("span", {
+      className: "pr"
+    }, "✅ 借りている(外す)")) : null, lendList === null ? React.createElement("button", {
+      type: "button",
+      className: "msx-btn sub",
+      onClick: openLend
+    }, "貸してくれるモンスターを見る") : lendList === 'loading' ? React.createElement("div", {
+      className: "msx-note"
+    }, "さがしています…") : !lendList.ok ? React.createElement("div", {
+      className: "msx-note"
+    }, typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません') : !lendList.rows.length ? React.createElement("div", {
+      className: "msx-note"
+    }, "貸し出しているフレンドはいません") : lendList.rows.map(row => {
+      const m = monsucLendMember(row, SUC);
+      if (!m) return null;
+      const on = friend && friend.friend && friend.friend.id === row.friendId;
+      return React.createElement("button", {
+        type: "button",
+        key: row.friendId,
+        className: `v-item${on ? ' sel' : ''}`,
+        style: {
+          padding: '4px 8px',
+          width: '100%'
+        },
+        onClick: () => setFriend(on ? null : m)
+      }, React.createElement("img", {
+        src: msxMonThumb(m.species),
+        alt: "",
+        style: {
+          width: 30,
+          height: 30,
+          borderRadius: 9,
+          objectFit: 'contain',
+          background: '#0f172a'
+        }
+      }), React.createElement("div", null, row.name, " の ", m.name, React.createElement("small", null, msxMonName(m.species))), React.createElement("span", {
+        className: "pr"
+      }, on ? '✅ 借りている' : '借りる'));
+    })) : null));
     go = 'この編成でいく ▶';
   } else if (step === 2) {
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
@@ -160696,10 +160779,28 @@ function MonheroSuccessScreen({
     }).catch(() => {});
     setView('home');
   };
-  const startRun = cfg => {
+  const startRun = async cfg => {
     const {
       SUC
     } = msxSuc;
+    if (cfg.friendId && typeof monsucLendUse === 'function') {
+      let r = null;
+      try {
+        r = await monsucLendUse(cfg.friendId);
+      } catch (e) {
+        r = {
+          ok: false,
+          reason: 'network'
+        };
+      }
+      if (!r || !r.ok) cfg = {
+        ...cfg,
+        team: cfg.team.map(m => m && m.friend ? {
+          kind: 'base',
+          species: cfg.baseFill || cfg.species
+        } : m)
+      };
+    }
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
     const known = k => !!(SUC.ITEMS && SUC.ITEMS[k]);
     const carry = cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
@@ -161652,16 +161753,16 @@ function MsxPlay({
       className: "gr",
       style: {
         left: '30%',
-        bottom: 'calc(34% - 5px)',
-        width: '20%'
+        bottom: 'calc(38% - 5px)',
+        width: '14%'
       }
     }), React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
       style: {
         left: '30%',
-        bottom: '34%',
-        height: '28%'
+        bottom: '38%',
+        height: '16%'
       },
       live: true
     }), React.createElement("div", {
@@ -162648,7 +162749,7 @@ function MsxEvent({
     style: {
       left: '30%',
       bottom: '30%',
-      height: '24%'
+      height: '17%'
     },
     live: true
   }), cheerIdx != null && s.team[cheerIdx] ? React.createElement("img", {
