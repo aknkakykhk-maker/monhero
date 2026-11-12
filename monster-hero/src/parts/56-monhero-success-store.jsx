@@ -2,12 +2,13 @@
 // 計画: docs/progress/player-raise/PLAN.md(§1・§9・§10)。画面は 56-monhero-success-start.jsx / 56-monhero-success-main.jsx
 // ★公開の印 RELEASE_FLAGS.monheroSuccess は偽のまま。入口はデバッグ設定だけ(MonheroSuccessDebugEntry)。
 // ★計算は data/monhero-success.js(計算の芯・別の会話のクラフトが受け持つ)の create() を呼ぶだけ。ここで伸びの式は書かない。
-//   芯と台本(data/monhero-success-script.js)は index.html では読まず、この画面を開いたときにだけ読む。
+//   芯と台本エンジン(data/monhero-success-script-engine.js・キズナ)は index.html では読まず、この画面を開いたときにだけ読む。
+//   台本の中身(共通 + 選んだ助手の分)は、エンジンの load(助手) が必要になったときに読む。
 // ★保存は新しいキー3つだけ(CLAUDE.md ⑦・PLAN §9)。既存のキー(mh_unlocked_monsters・助手の仲良し度など)は読むだけ。
 //   読み込みは必ず msxNorm* を通す。壊れていたら「途中の育成なし・保存枠は空」として扱い、元の値は消さない(上書きは新しく始めたときだけ)。
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
-const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
@@ -55,7 +56,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
@@ -186,52 +187,27 @@ const msxVenueBg = (venue) => { const f = typeof window !== 'undefined' && typeo
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = (r) => `rk r${String(r || 'G').replace(/\+/g, '')}`;
 
-// ---- 台詞(台本から1本。同じ場面に2本以上あれば、育成の id + ターン + 場面 で決まった1本) ----
+// ---- 台詞(台本エンジン MONHERO_SUCCESS_SCRIPT_ENGINE から1本。並びは育成の id + 場面で決まり、ターンでずれる) ----
+// msxScriptLoad(助手) … 共通 + その助手の台本を読む(2回目からはすぐ)。読み終わるまで台詞は null(画面は代わりの一言を出す)
+const msxScriptLoad = (aid) => { const se = msxSuc && msxSuc.script; return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false); };
 const msxPickLine = (ctx, scene, opt = {}) => {
-  const sc = msxSuc && msxSuc.script; if (!sc) return null;
-  const aid = opt.who || ctx.aid;
-  const pools = [];
-  if (opt.bondLv != null && opt.bondLv <= 2 && Array.isArray(sc.turnBond12)) pools.push(sc.turnBond12);
-  pools.push(sc.turn, sc.issa, sc.mon, sc.cheer, sc.random, sc.scenario);
-  let rows = [];
-  for (const pool of pools) {
-    if (!Array.isArray(pool)) continue;
-    rows = pool.filter((r) => r && typeof r.id === 'string' && r.id.slice(0, r.id.lastIndexOf('.')) === scene && (aid === '*' || r.who === aid));
-    if (rows.length) break;
-  }
-  if (!rows.length) return null;
-  const rng = msxSuc.core.rngOf(ctx.id || 'run', ctx.turn || 0, 'line', scene, opt.salt || '');
-  const r = rows[Math.floor(rng() * rows.length)];
-  return { ...r, t: msxFill(r.t, ctx) };
+  const se = msxSuc && msxSuc.script; if (!se || typeof se.say !== 'function') return null;
+  const c = { ...ctx, bond: opt.bondLv != null ? opt.bondLv : ctx.bond };
+  try {
+    if (opt.who === '*') return se.say(scene, c, { who: 'narr', salt: opt.salt }) || se.say(scene, c, { salt: opt.salt });
+    return se.say(scene, c, { who: opt.who, salt: opt.salt });
+  } catch (e) { return null; }
 };
-const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
-  if (k === 'name') return ctx.callName || 'きみ';
-  if (k === 'mon') return ctx.mon || 'モンスター';
-  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
-  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
-  if (k === 'stat') return ctx.stat || '能力';
-  if (k === 'train') return ctx.train || '訓練';
-  if (k === 'tech') return ctx.tech || '技';
-  if (k === 'cup') return ctx.cup || '大会';
-  if (k === 'cry') { const sc = msxSuc && msxSuc.script; const c = sc && Array.isArray(sc.mon) ? sc.mon.find((r) => r.id === `mon.cry.${ctx.species}`) : null; return c ? c.t : '…'; }
-  return '';
-});
-// ターンのはじめの様子(数字は言わない)
-const msxStartScene = (s) => {
-  if (!s) return 'turn.start.normal';
-  const r = s.hpMax > 0 ? s.hp / s.hpMax : 0;
-  if (r < 0.25) return 'turn.start.worn';
-  if (s.stress >= 60) return 'turn.start.stress';
-  if (r < 0.45) return 'turn.start.tired';
-  if (r >= 0.85 && s.stress < 20) return 'turn.start.great';
-  if (r >= 0.65) return 'turn.start.good';
-  return 'turn.start.normal';
-};
+const msxFill = (t, ctx) => { const se = msxSuc && msxSuc.script; return se && typeof se.fill === 'function' ? se.fill(t, ctx) : String(t || ''); };
+// ターンのはじめの様子(数字は言わない)。場面の決め方はエンジンの SCENE.start
+const msxStartScene = (s) => { const se = msxSuc && msxSuc.script; return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal'; };
 
 // ---- デバッグ設定からの入口(公開の印が偽のあいだの試し口)。60-app.jsx のデバッグの「⭐ よく使う」に置く ----
 // callNameOf(aid) / bondLvOf(aid) は本体から渡す(プレイヤーの呼び方と助手の仲良し度 Lv)
-function MonheroSuccessDebugEntry({ callNameOf, bondLvOf }) {
+function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);
+  // 開いているあいだを本体へ知らせる(裏の周回のバトルの効果音を止めるため・60-app.jsx の successScreenOpen)
+  useEffect(() => { try { if (onOpenChange) onOpenChange(open); } catch (e) {} }, [open]);
   return (
     <>
       <button type="button" data-debug-monhero-success onClick={() => { msxDebugOpened = true; setOpen(true); }}
