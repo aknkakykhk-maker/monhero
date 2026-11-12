@@ -28,6 +28,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/71-screen-battle.jsx`(0.4MB・開かない)
 - `monster-hero/src/parts/78-screen-raid-jack-debug.jsx`
 - `monster-hero/src/parts/79-screen-raid-jack.jsx`
+- `monster-hero/src/parts/56-monhero-success-cup.jsx`
 - `monster-hero/data/enemy-monsters.js`
 - `monster-hero/data/skills.js`
 - `tools/battle/*`
