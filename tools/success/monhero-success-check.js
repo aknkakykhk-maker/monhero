@@ -362,6 +362,11 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mid = play('restore-id', picks);
   const back = SUC.restore(JSON.parse(JSON.stringify(mid)));
   ok(back && JSON.stringify(back.stats) === JSON.stringify(mid.stats) && back.turn === mid.turn && back.hp === mid.hp && JSON.stringify(back.trainXp) === JSON.stringify(mid.trainXp) && JSON.stringify(back.techs) === JSON.stringify(mid.techs), '保存から戻すと中身が変わる');
+  // 編成の育てた子の熟練が残る(総合力・ランク・タッグが変わらない)・途中で足される記録(ごはん・アイテム・再戦・お話)も残る
+  const tm = SUC.newRun({ id: 'rs-team', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: { life: 700, pow: 800, wise: 300, hit: 600, eva: 400, tough: 700 }, lv: 40, masteries: [80, 80, 80, 80, 80], loy: 80, pop: 50 }] });
+  const tb = SUC.restore(JSON.parse(JSON.stringify({ ...tm, log: { ...tm.log, meal: 2, items: 1, rematch: 1, astory: 3 } })));
+  ok(tb.team[0].power === tm.team[0].power && tb.team[0].rank === tm.team[0].rank && tb.team[0].tag === tm.team[0].tag, `保存から戻すと編成の子の総合力が変わる(熟練が消える): ${tm.team[0].power} → ${tb.team[0].power}`);
+  ok(tb.log.meal === 2 && tb.log.items === 1 && tb.log.rematch === 1 && tb.log.astory === 3, '保存から戻すと記録(ごはん・アイテム・再戦・お話)が消える');
   ok(SUC.restore(null) === null && SUC.restore([]) === null && SUC.restore({ id: 'x', species: 'NoSuch' }) === null, '壊れた保存を戻せてしまう');
   const bad = SUC.restore({ ...JSON.parse(JSON.stringify(mid)), hp: 'abc', stats: { pow: 5000 }, turn: -3, bond: 'x', techs: ['nope'] });
   ok(bad && bad.hp === bad.hpMax && bad.stats.pow === 999 && bad.turn === 1 && Array.isArray(bad.bond) && bad.techs.length === 0, '壊れた値が既定に戻らない');

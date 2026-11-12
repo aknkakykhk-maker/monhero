@@ -367,7 +367,7 @@
       const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? ASSISTS.kaketsuke.v[kake - 1] / 100 : 0));
       const hn = lvOf('hitonatsu');
       return {
-        kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, rank, power, top, assists, bonus, fav, techs,
+        kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs,
         tag: base ? TAG_POWER.base : TAG_POWER[rank], bond0: clamp((base ? BOND_START.base : BOND_START[rank]) + (hn ? ASSISTS.hitonatsu.start[hn - 1] : 0), 0, BOND.max),
         startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
       };
@@ -784,7 +784,8 @@
       out.last = raw.last && typeof raw.last === 'object' ? clone(raw.last) : null;
       out.shugyoUsed = raw.shugyoUsed && typeof raw.shugyoUsed === 'object' ? clone(raw.shugyoUsed) : {};
       out.rivals = base.rivals; if (Array.isArray(raw.rivals)) out.rivals = newRun({ id: raw.id, species: raw.species, rivals: raw.rivals }).rivals;
-      if (raw.log && typeof raw.log === 'object') for (const k of Object.keys(out.log)) { if (k === 'tagTurns') { if (Array.isArray(raw.log.tagTurns)) out.log.tagTurns = out.log.tagTurns.map((d, i) => Math.round(n(raw.log.tagTurns[i], d, 0, 99))); } else if (k === 'issa') out.log.issa = strs(raw.log.issa, 9); else out.log[k] = Math.round(n(raw.log[k], 0, 0, 999)); }
+      if (raw.log && typeof raw.log === 'object') for (const k of [...new Set([...Object.keys(out.log), 'meal', 'items', 'rematch', 'astory'])]) {
+        if (k !== 'tagTurns' && k !== 'issa' && raw.log[k] === undefined && out.log[k] === undefined) continue; if (k === 'tagTurns') { if (Array.isArray(raw.log.tagTurns)) out.log.tagTurns = out.log.tagTurns.map((d, i) => Math.round(n(raw.log.tagTurns[i], d, 0, 99))); } else if (k === 'issa') out.log.issa = strs(raw.log.issa, 9); else out.log[k] = Math.round(n(raw.log[k], 0, 0, 999)); }
       return out;
     };
     // 助手の連続イベント(EVENTS ②)。そのターンに出る話(1〜4・'special')か null。画面はターンのはじめに見せる
