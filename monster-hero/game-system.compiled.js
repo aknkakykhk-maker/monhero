@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4b6f02fb52d1cd4
+// source-sha256: 9735ac7171fa80de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149755,11 +149755,12 @@ function AmgpReadOnly({
   }, "カード ", (x.cards || []).reduce((a, c) => a + (Number(c[1]) || 0), 0), "枚"))) : React.createElement("p", {
     className: "mt-3 text-[11.5px] font-bold text-slate-300"
   }, "見せているデッキはありません"));
+  const shown = !!d && !d.off;
   return React.createElement(AmgpShell, {
     ro: true,
     title: `${owner}育成ノート`,
-    sub: `見るだけ ・ 助手のマスモン ${ms.length}体`,
-    tabs: AMGP_RO_TABS,
+    sub: shown ? `見るだけ ・ 助手のマスモン ${ms.length}体` : '見るだけ',
+    tabs: shown ? AMGP_RO_TABS : [],
     tab: tab,
     setTab: setTab,
     onClose: onClose,
@@ -155020,6 +155021,11 @@ const alfMsMonOk = mo => typeof mo === 'string' && typeof ALL_PLAYER_MONSTERS !=
 const alfMsDeckMonOk = no => typeof no === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(no) && !(typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA && CARD_BATTLE_DATA.monsters && !CARD_BATTLE_DATA.monsters[no]);
 const alfMsCardOk = id => typeof id === 'string' && /^[A-Za-z0-9_:-]{1,40}$/.test(id);
 const alfMsText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f{}<>]/g, '').slice(0, max) : '';
+const alfMsKind = v => {
+  const t = alfMsText(v, 16);
+  return t && typeof AMG_POLICY !== 'undefined' && AMG_POLICY && Object.prototype.hasOwnProperty.call(AMG_POLICY, t) ? t : '';
+};
+const alfMsDay = t => typeof alfDay === 'function' ? alfDay(t) : new Date(Number(t) + 5 * 3600000).toISOString().slice(0, 10);
 const alfMsWord = (v, max) => {
   const t = alfMsText(v, max);
   return t && typeof alfNoteShow === 'function' ? alfNoteShow(t) : '';
@@ -155040,11 +155046,11 @@ const alfMsPackMon = t => {
     ...(Number.isFinite(Number(t.lv)) ? {
       lv: alfInt(t.lv, 1, 999)
     } : {}),
-    ...(alfMsText(t.grow, 16) ? {
-      g: alfMsText(t.grow, 16)
+    ...(alfMsKind(t.grow) ? {
+      g: alfMsKind(t.grow)
     } : {}),
-    ...(alfMsText(t.growMine, 16) ? {
-      gm: alfMsText(t.growMine, 16)
+    ...(alfMsKind(t.growMine) ? {
+      gm: alfMsKind(t.growMine)
     } : {}),
     ...(st ? {
       st: ALF_MS_STATS.map(k => alfInt(st[k], 0, 9999))
@@ -155060,7 +155066,7 @@ const alfMsPackDeck = (face, d) => {
   if (!cards.length) return null;
   return {
     f: face,
-    nm: alfMsText(d.name, 24),
+    nm: alfMsWord(d.name, 24),
     ...(alfMsWord(d.line, 40) ? {
       ln: alfMsWord(d.line, 40)
     } : {}),
@@ -155138,8 +155144,8 @@ const alfMsNormalize = raw => {
       lead: t.l === 1,
       slot: Number.isFinite(Number(t.s)) ? alfInt(t.s, 0, 99) : null,
       lv: Number.isFinite(Number(t.lv)) ? alfInt(t.lv, 1, 999) : null,
-      grow: alfMsText(t.g, 16),
-      growMine: alfMsText(t.gm, 16),
+      grow: alfMsKind(t.g),
+      growMine: alfMsKind(t.gm),
       stats: st,
       why: alfMsWord(t.w, 40)
     };
@@ -155149,7 +155155,7 @@ const alfMsNormalize = raw => {
     const cards = (Array.isArray(d.cd) ? d.cd : []).map(x => Array.isArray(x) && alfMsCardOk(x[0]) ? [x[0], alfInt(x[1], 1, 50, 1)] : null).filter(Boolean).slice(0, 50);
     return cards.length ? {
       face: d.f,
-      name: alfMsText(d.nm, 24),
+      name: alfMsWord(d.nm, 24),
       line: alfMsWord(d.ln, 40),
       monsters: (Array.isArray(d.m) ? d.m : []).filter(alfMsDeckMonOk).slice(0, 3),
       ace: alfMsText(d.a, 20),
@@ -155202,7 +155208,7 @@ const alfMsPublish = async (self, ids, show, now = Date.now(), {
     };
     if (!body.off && !body.ms.length) continue;
     const sig = alfSig(JSON.stringify(body));
-    if (sig === sent.sig[aid]) continue;
+    if (sig === sent.sig[aid] && sent.at[aid] && alfMsDay(sent.at[aid]) === alfMsDay(now)) continue;
     const flip = body.off || sent.sig[aid] === alfSig(JSON.stringify({
       v: 1,
       off: 1
