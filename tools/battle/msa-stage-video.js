@@ -13,7 +13,9 @@ const path = require('path');
 const fs = require('fs');
 const ROOT = path.resolve(process.env.SHOT_ROOT || path.join(__dirname, '..', '..'));
 const OUT = process.env.VIDEO_OUT || '';
-if (!OUT) { console.log('VIDEO_OUT を渡してください'); process.exit(0); }
+// STILL_DIR を渡すと録画はせず、同じ試合を流しながら決まった瞬間を縦の2倍で撮る(ライフが減る・ガッツが伸びる・残りが少ない)
+const STILL_DIR = process.env.STILL_DIR || '';
+if (!OUT && !STILL_DIR) { console.log('VIDEO_OUT か STILL_DIR を渡してください'); process.exit(0); }
 const PORT = 8988;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg' };
 const server = http.createServer((req, res) => {
@@ -31,7 +33,7 @@ const server = http.createServer((req, res) => {
   const tmp = path.join(path.dirname(OUT), `.rec-${process.pid}`);
   try {
     // 読み込みは録らない(準備のページ → 準備ができてから録画のページで流す)
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, recordVideo: { dir: tmp, size: { width: 390, height: 844 } } });
+    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 } : { viewport: { width: 390, height: 844 }, recordVideo: { dir: tmp, size: { width: 390, height: 844 } } });
     const page = await ctx.newPage();
     const t0 = Date.now();
     const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
@@ -65,6 +67,37 @@ const server = http.createServer((req, res) => {
     console.log('試合:', JSON.stringify(info));
     // 流す(観戦と同じ1行の長さ・×1)。終わったら勝ち負けの印
     const startSec = (Date.now() - t0) / 1000;
+    // 撮る瞬間: 大きく当たった行(当たって 0.3 秒後=減った分が残っている所)・ためた行・残りが少なくなった行
+    let snaps = [];
+    if (STILL_DIR) {
+      fs.mkdirSync(STILL_DIR, { recursive: true });
+      snaps = await page.evaluate(() => {
+        const { r } = window.__v; const frames = ambwFramesOf(r.log); const out = [];
+        const hitAt = (e) => { const m = ((e.side === 'A' ? window.__v.teamA : window.__v.teamB).members[e.i] || {}); return msaFxOf(r.log, e, false).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(r.log, e))).hit; };
+        const big = r.log.findIndex((e) => e.ev === 'tech' && e.hit && e.dmg >= 150);
+        if (big > 0) { out.push({ pos: big, at: hitAt(r.log[big]) + 300, name: '1-life-drop' }); out.push({ pos: big, at: hitAt(r.log[big]) + 1100, name: '2-life-after' }); }
+        const ch = r.log.findIndex((e) => e.ev === 'charge' && e.why !== 'sulk');
+        if (ch > 0) out.push({ pos: ch, at: 250, name: '3-guts-charge' });
+        const mv = r.log.findIndex((e) => e.ev === 'move');
+        if (mv > 0) out.push({ pos: mv, at: 250, name: '4-guts-move' });
+        const low = frames.findIndex((f, k) => k > 0 && ['A', 'B'].some((s) => { const mx = frames[0].hp[s][f.act[s]]; const v = f.hp[s][f.act[s]]; return v > 0 && v / mx <= 0.25; }));
+        if (low > 0) out.push({ pos: low + 1, at: 600, name: '5-life-low' });
+        return out;
+      });
+      const left = snaps.slice();
+      const poll = async () => {
+        while (left.length) {
+          const row = await page.evaluate(() => (window.__row ? { pos: window.__row.pos, el: performance.now() - window.__row.t } : null)).catch(() => null);
+          if (row) for (let i = left.length - 1; i >= 0; i--) {
+            const sn = left[i];
+            if (row.pos > sn.pos) { left.splice(i, 1); continue; }
+            if (row.pos === sn.pos && row.el >= sn.at) { await page.screenshot({ path: path.join(STILL_DIR, `${sn.name}.png`), clip: { x: 0, y: 100, width: 390, height: 560 } }); left.splice(i, 1); }
+          }
+          await new Promise((res) => setTimeout(res, 40));
+        }
+      };
+      poll();
+    }
     await page.evaluate(() => new Promise((done) => {
       const { r, teamA, teamB } = window.__v;
       const frames = ambwFramesOf(r.log); const last = r.log.length - 1;
@@ -75,21 +108,28 @@ const server = http.createServer((req, res) => {
       const st = r.log[0] || {}; const maxHp = { A: st.aHp || [], B: st.bHp || [] };
       const h = React.createElement;
       const panel = (side, f, e) => (typeof AmbwPanel === 'function' ? h(AmbwPanel, { side, team: side === 'A' ? teamA : teamB, frame: f, maxHp, moves: side === 'A' ? st.aMoves || [] : st.bMoves || [], lastMove: e.side === side && e.ev === 'tech' ? e.move : null, mine: side === 'A' }) : null);
-      const show = (pos, ended) => { const f = frames[Math.min(pos, frames.length - 1)]; const e = r.log[pos] || {};
-        root.render(h('div', { className: 'ambw-in' }, h('style', null, (typeof AMBW_CSS === 'string' ? AMBW_CSS.replace(/\.ambw\{[^}]*\}/, '') : '') + (typeof MSA_CSS === 'string' ? MSA_CSS : '')),
+      const teams = { A: teamA, B: teamB };
+      function Wrap({ pos, ended }) {
+        // 上下の欄は β と同じく、技が当たる瞬間までは前のコマ(前の版には無い)
+        const sh = typeof useMsaShownFrame === 'function' ? useMsaShownFrame(r.log, frames, pos, teams) : null;
+        const f = sh || frames[Math.min(pos, frames.length - 1)]; const e = r.log[pos] || {};
+        return h('div', { className: 'ambw-in' }, h('style', null, (typeof AMBW_CSS === 'string' ? AMBW_CSS.replace(/\.ambw\{[^}]*\}/, '') : '') + (typeof MSA_CSS === 'string' ? MSA_CSS : '')),
           panel('B', f, e),
           h('div', { className: 'msa', style: { marginTop: 8 } }, h(MsaStage, { log: r.log, frames, pos, teams: { A: teamA, B: teamB }, venueImg: typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null, ended, win: ended ? r.winner : null, sound: false, introTitle: 'マスモン対戦' })),
-          panel('A', f, e))); };
-      let pos = 0; show(0, false);
+          panel('A', f, e));
+      }
+      const show = (pos, ended) => root.render(h(Wrap, { pos, ended }));
+      let pos = 0; show(0, false); window.__row = { pos: 0, t: performance.now() };
       const step = () => {
         const cur = r.log[pos] || {};
         const ms = typeof msaStepMs === 'function' ? msaStepMs(cur, cur.side === 'A' ? teamA : teamB, false, r.log) : 900;
         setTimeout(() => {
-          if (pos < last) { pos += 1; show(pos, false); step(); } else { setTimeout(() => { show(pos, true); setTimeout(done, 2600); }, 900); }
+          if (pos < last) { pos += 1; show(pos, false); window.__row = { pos, t: performance.now() }; step(); } else { setTimeout(() => { show(pos, true); setTimeout(done, 2600); }, 900); }
         }, ms);
       };
       step();
     }));
+    if (STILL_DIR) { await ctx.close(); console.log(`撮った: ${snaps.map((x) => x.name).join(' / ')}`); console.log(errs.length ? `実行時エラー: ${errs.slice(0, 2).join(' / ')}` : '実行時エラーなし'); return; }
     const video = page.video();
     await ctx.close();
     const src = await video.path();

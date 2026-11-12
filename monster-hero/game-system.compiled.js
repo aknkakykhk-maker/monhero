@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc8bb09551d12421
+// source-sha256: 16a44f68acdfb7cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147444,6 +147444,10 @@ function AssistantMasmonBattleBeta({
     l: 0,
     d: 0
   };
+  const shownF = typeof useMsaShownFrame === 'function' ? useMsaShownFrame(battle ? battle.r.log : [], battle ? battle.frames : [], pos, battle ? {
+    A: battle.teamA,
+    B: battle.teamB
+  } : {}) : null;
   let body = null;
   if (!ticked || !ready && !loadFailed) {
     body = React.createElement("div", {
@@ -147920,7 +147924,7 @@ function AssistantMasmonBattleBeta({
     }, "🏆 ランキング"))), React.createElement(AmbwPanel, {
       side: "B",
       team: battle.teamB,
-      frame: f,
+      frame: shownF || f,
       maxHp: battle.maxHp,
       moves: battle.moves.B,
       lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
@@ -147969,7 +147973,7 @@ function AssistantMasmonBattleBeta({
     }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), React.createElement(AmbwPanel, {
       side: "A",
       team: battle.teamA,
-      frame: f,
+      frame: shownF || f,
       maxHp: battle.maxHp,
       moves: battle.moves.A,
       lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
@@ -167060,6 +167064,38 @@ const MSA_CSS = `
 @keyframes msaInL{0%{opacity:0;transform:translateX(-120%)}100%{opacity:1;transform:none}}
 @keyframes msaInR{0%{opacity:0;transform:translateX(120%)}100%{opacity:1;transform:none}}
 @keyframes msaWord{0%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}22%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}}
+/* ---- 場の中のライフ・ガッツの棒(2026-11-13 社長「ライフ、ガッツの変動演出とか」) ---- */
+.msa-hud{position:absolute;top:4px;z-index:8;width:39%;pointer-events:none;display:flex;flex-direction:column;gap:2px}
+.msa-hud.A{left:6px}.msa-hud.B{right:6px;align-items:flex-end}
+.msa-hud .nm{font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+.msa-g{display:flex;align-items:center;gap:4px;width:100%}
+.msa-hud.B .msa-g{flex-direction:row-reverse}
+.msa-gbar{position:relative;flex:1;height:10px;border-radius:5px;background:#0f0b22e6;border:1px solid #ffffff66;overflow:hidden}
+.msa-g.gt .msa-gbar{height:6px;border-radius:4px}
+.msa-gbar i{position:absolute;top:0;bottom:0;left:0}
+.msa-hud.B .msa-gbar i{left:auto;right:0}
+.msa-gbar i.lag{background:#fff1f2;transition:width .5s ease-in}
+.msa-gbar i.cur{background:linear-gradient(180deg,#86efac,#16a34a);transition:width .2s ease-out}
+.msa-g.gt .msa-gbar i.cur{background:linear-gradient(180deg,#fde68a,#f59e0b)}
+.msa-g.gt .msa-gbar i.lag{background:#fca5a5}
+.msa-g.low .msa-gbar i.cur{background:linear-gradient(180deg,#fca5a5,#dc2626);animation:msaLow .7s ease-in-out infinite}
+.msa-g b{min-width:28px;font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;font-variant-numeric:tabular-nums;line-height:1}
+.msa-hud.A .msa-g b{text-align:left}.msa-hud.B .msa-g b{text-align:right}
+.msa-g.low b{color:#fca5a5}
+.msa-g.gt b{font-size:10px;color:#fde68a}
+.msa-gbar.hurt{animation:msaBarHit .35s ease-out}
+.msa-gbar.hurt.big{animation:msaBarShake .45s ease-out}
+.msa-gbar.gain{animation:msaBarGlow .7s ease-out}
+.msa-gtags{display:flex;flex-wrap:wrap;gap:3px;min-height:14px}
+.msa-hud.B .msa-gtags{justify-content:flex-end}
+.msa-gt{font-size:9.5px;font-weight:900;line-height:14px;padding:0 5px;border-radius:99px;white-space:nowrap;animation:msaTagIn .35s ease-out both}
+@keyframes msaTagIn{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
+.msa-gt.up{background:#facc15;color:#422006}.msa-gt.down{background:#475569;color:#f1f5f9}
+.msa-bands{top:70px}
+@keyframes msaLow{50%{opacity:.45}}
+@keyframes msaBarShake{0%,100%{transform:none;box-shadow:0 0 10px #ef4444}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,0)}}
+@keyframes msaBarHit{0%{box-shadow:0 0 8px #f87171}100%{box-shadow:0 0 0 #f8717100}}
+@keyframes msaBarGlow{0%{box-shadow:0 0 0 #fde04700}30%{box-shadow:0 0 10px #fde047,inset 0 0 4px #fff}100%{box-shadow:0 0 0 #fde04700}}
 @media (max-height:420px) and (orientation:landscape){.msa-stage{height:180px}.msa-f{height:100px}.msa-f img.msa-img{max-height:92px}}
 @media (prefers-reduced-motion: reduce){
   .msa *,.msa *::before,.msa *::after{animation:none!important;transition:none!important}
@@ -167192,13 +167228,16 @@ const msaDmgTier = (dmg, maxHp, e, fx) => {
   return r >= 0.25 ? 3 : r >= 0.1 ? 2 : 1;
 };
 const MSA_INTRO_MS = 2600;
+const MSA_AFTER_HIT = 1250;
+const MSA_AFTER_MISS = 800;
 const msaStepMs = (e, team, reduce, log) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   if (e.ev === 'tech') {
     const m = team && team.members && team.members[e.i] || {};
     const fx = msaFxOf(log, e, reduce);
-    return msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).ms + 520 + fx.pre + fx.stop + (fx.fin ? 450 : 0);
+    const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
+    return fx.pre + Math.max(mm.ms + 300, mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS)) + fx.stop + (fx.fin ? 450 : 0);
   }
   return {
     start: MSA_INTRO_MS,
@@ -167473,6 +167512,153 @@ function useMsaSfx(log, pos, teams, reduce, on) {
     }
   }, [pos, on]);
 }
+function MsaGauge({
+  value,
+  max,
+  kind,
+  delay = 0,
+  sf = 1,
+  reduce = false
+}) {
+  const v = Math.max(0, Number(value) || 0);
+  const mx = Math.max(1, Number(max) || 1);
+  const [shown, setShown] = useState(v);
+  const [lag, setLag] = useState(v);
+  const [num, setNum] = useState(v);
+  const [fx, setFx] = useState('');
+  const [fk, setFk] = useState(0);
+  const prev = useRef(v);
+  useEffect(() => {
+    const from = prev.current;
+    const to = v;
+    prev.current = to;
+    if (from === to) return undefined;
+    if (reduce) {
+      setShown(to);
+      setLag(to);
+      setNum(to);
+      return undefined;
+    }
+    const timers = [];
+    let raf = 0;
+    timers.push(setTimeout(() => {
+      setShown(to);
+      if (to < from) {
+        setFx(from - to >= mx * 0.15 ? 'hurt big' : 'hurt');
+        timers.push(setTimeout(() => setLag(to), Math.round(420 * sf)));
+      } else {
+        setLag(to);
+        setFx('gain');
+      }
+      setFk(x => x + 1);
+      const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const dur = Math.max(150, Math.round(600 * sf));
+      const tick = t => {
+        const p = Math.min(1, (t - t0) / dur);
+        setNum(Math.round(from + (to - from) * p));
+        if (p < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, Math.max(0, Math.round(delay))));
+    return () => {
+      timers.forEach(clearTimeout);
+      if (raf) cancelAnimationFrame(raf);
+      setShown(to);
+      setLag(to);
+      setNum(to);
+    };
+  }, [v]);
+  const low = kind === 'hp' && shown > 0 && shown / mx <= 0.25;
+  const w = x => `${Math.max(0, Math.min(100, x / mx * 100))}%`;
+  return React.createElement("div", {
+    className: `msa-g ${kind} ${low ? 'low' : ''}`,
+    "data-msa-gauge": kind,
+    "data-msa-gauge-v": v
+  }, React.createElement("div", {
+    key: fk,
+    className: `msa-gbar ${fx}`
+  }, React.createElement("i", {
+    className: "lag",
+    style: {
+      width: w(Math.max(lag, shown))
+    }
+  }), React.createElement("i", {
+    className: "cur",
+    style: {
+      width: w(shown)
+    }
+  })), React.createElement("b", null, num));
+}
+const msaRegenOf = (log, frames) => {
+  const seen = {};
+  for (let k = 1; k < frames.length; k++) {
+    const f = frames[k];
+    const pf = frames[k - 1];
+    const r = log[k] || {};
+    if (!(f.r > pf.r)) continue;
+    ['A', 'B'].forEach(s => {
+      if (r.side === s || f.act[s] !== pf.act[s] || f.g[s] >= 100) return;
+      const d = f.g[s] - pf.g[s] + (r.ev === 'tech' && r.side !== s && r.hit ? Number(r.gd) || 0 : 0);
+      if (d > 0) {
+        const key = `${s}${f.act[s]}`;
+        (seen[key] = seen[key] || {})[d] = (seen[key][d] || 0) + 1;
+      }
+    });
+  }
+  const out = {};
+  Object.keys(seen).forEach(key => {
+    out[key] = Number(Object.entries(seen[key]).sort((a, b) => b[1] - a[1])[0][0]);
+  });
+  return out;
+};
+const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
+  const f = frames[pos];
+  const pf = frames[pos - 1];
+  const r = log[pos] || {};
+  if (!f || !pf || pos < 1 || f.act[side] !== pf.act[side] || !((f.hp[side] || [])[f.act[side]] > 0)) return [];
+  const out = [];
+  const R = f.r > pf.r ? regen[`${side}${f.act[side]}`] || 0 : 0;
+  if (R > 0) out.push({
+    t: `自動 +${R}`,
+    cls: 'up',
+    delay: 0
+  });
+  const d = f.g[side] - pf.g[side];
+  if (r.side === side) {
+    const x = d - R;
+    if (r.ev === 'tech') {
+      const t = msaTechOf(log, r);
+      if (t && t.guts) out.push({
+        t: `技 −${t.guts}`,
+        cls: 'down',
+        delay: 0
+      });
+    } else if (x > 0) out.push({
+      t: `${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'} +${x}`,
+      cls: 'up',
+      delay: 0
+    });
+  } else if (r.ev === 'tech' && r.hit && (Number(r.gd) || 0) > 0) out.push({
+    t: `削られた −${Math.round(Number(r.gd))}`,
+    cls: 'down',
+    delay: hitMs
+  });
+  return out;
+};
+function useMsaShownFrame(log, frames, pos, teams) {
+  const reduce = useMemo(() => msaReduce(), []);
+  const [hitAt, setHitAt] = useState(-1);
+  const e = log && log[pos] || {};
+  const m = e.side && teams && teams[e.side] && teams[e.side].members ? teams[e.side].members[e.i] || {} : {};
+  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit : 0;
+  useEffect(() => {
+    if (!at) return undefined;
+    const t = setTimeout(() => setHitAt(pos), at);
+    return () => clearTimeout(t);
+  }, [pos, at]);
+  const k = Math.min(pos, frames.length - 1);
+  return frames[at && hitAt !== pos && k > 0 ? k - 1 : k] || frames[0];
+}
 const msaBandsOf = (log, frames, k) => {
   const r = log[k];
   const f = frames[k];
@@ -167484,7 +167670,7 @@ const msaBandsOf = (log, frames, k) => {
     t: '🛡 守りの構え'
   });else if (r.ev === 'charge') out.push({
     side: r.side,
-    t: r.why === 'sulk' ? '💢 そっぽを向いた' : `⚡ ガッツ +${Math.max(0, Math.round(f.g[r.side] - pf.g[r.side]))}`
+    t: r.why === 'sulk' ? '💢 そっぽを向いた' : '⚡ ガッツをためた'
   });else if (r.ev === 'move') out.push({
     side: r.side,
     t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
@@ -167662,6 +167848,7 @@ function MsaStage({
       } catch (_) {}
     };
   }, [pos, ended]);
+  const regen = useMemo(() => msaRegenOf(log, frames), [log, frames]);
   if (!f) return null;
   const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
   const hpOf = side => (f.hp[side] || [])[f.act[side]];
@@ -167694,6 +167881,42 @@ function MsaStage({
     });
   }
   const intro = pos === 0 && e.ev === 'start' && !reduce && !ended;
+  const sf = Number(speedF) || 1;
+  const hud = sd => {
+    const m = memberOf(sd);
+    const foe = e.ev === 'tech' && e.side && e.side !== sd;
+    const tags = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    return React.createElement("div", {
+      key: sd,
+      className: `msa-hud ${sd}`,
+      "data-msa-hud": sd
+    }, React.createElement("div", {
+      className: "nm"
+    }, m ? m.name : ''), React.createElement(MsaGauge, {
+      kind: "hp",
+      value: hpOf(sd),
+      max: maxHpOf(sd),
+      delay: foe ? hitMs : 0,
+      sf: sf,
+      reduce: reduce
+    }), React.createElement(MsaGauge, {
+      kind: "gt",
+      value: gutsOf(sd),
+      max: 100,
+      delay: foe ? hitMs : 0,
+      sf: sf,
+      reduce: reduce
+    }), React.createElement("div", {
+      className: "msa-gtags"
+    }, tags.map((t, j) => React.createElement("span", {
+      key: `${pos}-${j}`,
+      className: `msa-gt ${t.cls}`,
+      "data-msa-gtag": t.t,
+      style: {
+        animationDelay: `${t.delay}ms`
+      }
+    }, t.t))));
+  };
   const mA = memberOf('A');
   const mB = memberOf('B');
   return React.createElement("div", {
@@ -167751,7 +167974,7 @@ function MsaStage({
     hpNow: hpOf('A'),
     reduce: reduce,
     idleOk: true,
-    gd: gdOf('A'),
+    gd: null,
     fx: fx,
     motionOn: !fx.pre || preAt === pos,
     maxHp: maxHpOf('A'),
@@ -167768,7 +167991,7 @@ function MsaStage({
     hpNow: hpOf('B'),
     reduce: reduce,
     idleOk: true,
-    gd: gdOf('B'),
+    gd: null,
     fx: fx,
     motionOn: !fx.pre || preAt === pos,
     maxHp: maxHpOf('B'),
@@ -167786,7 +168009,7 @@ function MsaStage({
     style: {
       animationDelay: `${hitMs}ms`
     }
-  }))), !intro && React.createElement("div", {
+  }))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
     className: "msa-rnd",
     "data-msa-round": f.r || 0
   }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, f.r || 1)), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {
@@ -167931,6 +168154,7 @@ function MonsucArena({
     }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
+  const fShowH = useMsaShownFrame(log, frames, pos, teams);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
   }, React.createElement("p", {
@@ -167941,6 +168165,7 @@ function MonsucArena({
     }
   }, "試合の準備をしています…"));
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
+  const fShow = fShowH || f;
   const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = {
@@ -167981,7 +168206,7 @@ function MonsucArena({
   }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement(MscPanel, {
     side: "B",
     team: teams.B,
-    frame: f,
+    frame: fShow,
     maxHp: maxHp,
     info: info,
     s: s
@@ -167998,7 +168223,7 @@ function MonsucArena({
   }), React.createElement(MscPanel, {
     side: "A",
     team: teams.A,
-    frame: f,
+    frame: fShow,
     maxHp: maxHp,
     info: info,
     s: s,
