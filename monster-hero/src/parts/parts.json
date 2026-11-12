@@ -445,6 +445,10 @@
       "role": "部品: マスモンの育成の計算だけ(総合力とランク・合体の上乗せ・成長の型と年齢の伸び・育成方針と寿命・忠誠度と人気の効き・訓練の結果と叱る/褒める・けがの長さ)。助手にも保存にも結びつけない(のちのプレイヤー側の育成からも使う)。年齢は寿命の割合0〜1で受ける"
     },
     {
+      "file": "56-assistant-life-masmon-bond.jsx",
+      "role": "部品: 助手のマスモンの絆(総合力とランク・忠誠度・人気・育成方針7段と叱る/褒める・年齢と寿命・成長の型とピーク・訓練の結果・育ちの速さ×3・けが等の長さ)。計算は MASMON_CALC を呼ぶだけ。育成へは受け口 amgbTick/amgbPre/amgbGainMult/amgbAfter/amgbPace、育成ノートへ amgbSabMult/amgbCondLen、修行へ amgbLifeOver。画面 AmgbPanel(くわしい画面)・AmgbPowerTag(一覧)、対戦の人気の口 assistantMasmonBondBattle。公開の印 assistantMasmonBond。保存は新しいキー mh_assistant_masmon_bond_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/POWER.md"
+    },
+    {
       "file": "56-assistant-life-masmon-grow.jsx",
       "role": "部品: 助手のマスモンの育成基盤(社長の仕様書の第①段階)。6能力・疲労・ストレス・1日3回(朝・昼・夜)の自主育成・相談。保存は mh_assistant_masmon_grow_v1 だけ(mh_assistant_life_masmon_v1 は読むだけ)。公開の印 assistantMasmonGrow が真のときだけ動く。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md"
     },

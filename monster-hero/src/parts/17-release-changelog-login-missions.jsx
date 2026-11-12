@@ -141,7 +141,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長・助手部オトズレ。設計 docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md)。
   //   表 assistant_life_friend_* を流し、画面を撮って確かめ、社長の「この文で」が出たら真にする。偽のあいだは通信もしない(56-assistant-life-friend.jsx)
   assistantLifeFriend: true, // 2026-11-08 社長「この文で」・表を流した(窓口)
-  alfMasmonShareSend: false, // 2026-11-12 フレンドの家で助手のマスモンをくわしく見せる(送る側・56-assistant-life-friend-masmon-share)。表 alf_masmon_share を窓口が流したあと、ミハリの確認を経て真にする(オトズレ)
+  alfMasmonShareSend: true, // 2026-11-12 社長「この文で」・ミハリ最終確認の4件を直してから真にした(#5596)。 フレンドの家で助手のマスモンをくわしく見せる(送る側・56-assistant-life-friend-masmon-share)。表 alf_masmon_share を窓口が流したあと、ミハリの確認を経て真にする(オトズレ)
   assistantLifeFriendBond: true, // 2026-11-11 社長「この文で」・表 assistant_life_friend_likes は窓口が流した・最終確認とミハリ3の確認のあと(フレンドの家の友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳。56-assistant-life-friend-bond)
   // その場面の台詞を Claude API で1日1回まとめて作る(assistant-chat の kind:'friend_scenes')。中継役を配ってから真にする。偽・thin・off・失敗のときは台本だけ
   // 助手のマスモンの名前を Claude API で1人1回まとめて付ける(assistant-chat の kind:'masmon_names'・2026-11-08 社長の選び ❷B)。
@@ -155,6 +155,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonPlan: true, // 2026-11-12 ミハリ5 OK・窓口の最終確認のあと公開。 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSleep: false, // 2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
+  assistantMasmonBond: false, // 2026-11-12 助手のマスモンの総合力とランク・忠誠度・人気・育成方針と叱る/褒める・年齢と寿命・成長の型・育ちの速さ×3(56-assistant-life-masmon-bond.jsx・キズナ・案 masmon-plan/POWER.md 第3版)。保存 mh_assistant_masmon_bond_v1。真にするのは masmon-pvp の配り直し(DAILY_GROWTH_CAP 200)・止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと
   assistantMasmonFuse: false, // 2026-11-12 冬眠中の助手のマスモンどうしの合体(56-assistant-life-masmon-sleep.jsx・キズナ・案 masmon-plan/FUSE.md 第2版)。保存 mh_assistant_masmon_fuse_v1。冬眠の印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
