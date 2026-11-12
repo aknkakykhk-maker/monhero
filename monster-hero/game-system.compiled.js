@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6deeb7325cca0e92
+// source-sha256: 8a95b3cad838a239
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150252,15 +150252,17 @@ const amgsSyncFormer = () => {
   const tr = typeof AMGT_STORE !== 'undefined' && AMGT_STORE.loaded ? AMGT_STORE.state : null;
   for (const [aid, m] of Object.entries(ms && ms.mine || {})) for (const [sl, list] of Object.entries(m && m.former || {})) {
     const slot = Number(sl);
-    for (const x of Array.isArray(list) ? list : []) {
+    const arr = Array.isArray(list) ? list : [];
+    for (const [i, x] of arr.entries()) {
       if (!x || !amgsMonOk(x.monster)) continue;
+      const newest = !arr.slice(i + 1).some(y => y && y.monster === x.monster);
       const sig = amgsFormerSig(aid, slot, x);
       if (st.seen[sig]) continue;
       const row = amgsRowOf(x);
       if (!row) continue;
       const key = `${slot}:${x.monster}`;
       const seq = st.seq + 1;
-      const awake = typeof assistantMasmonRowsOf === 'function' && assistantMasmonRowsOf(ms, aid).some(r => r.slot === slot && r.monster === x.monster);
+      const skip = !newest || typeof assistantMasmonRowsOf === 'function' && assistantMasmonRowsOf(ms, aid).some(r => r.slot === slot && r.monster === x.monster);
       st = {
         ...st,
         seq,
@@ -150276,15 +150278,15 @@ const amgsSyncFormer = () => {
           at: String(x.at || '').slice(0, 10),
           fat: String(x.at || '').slice(0, 20),
           row,
-          g: !awake && g && g.mons[aid] ? g.mons[aid][key] || null : null,
-          t: !awake && tr && tr.mons[aid] ? tr.mons[aid][key] || null : null,
+          g: !skip && g && g.mons[aid] ? g.mons[aid][key] || null : null,
+          t: !skip && tr && tr.mons[aid] ? tr.mons[aid][key] || null : null,
           c: null,
-          ...(!awake && typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? {
+          ...(!skip && typeof amgbCopyOf === 'function' && amgbCopyOf(aid, slot, x.monster) ? {
             bd: amgbCopyOf(aid, slot, x.monster)
           } : {})
         }]
       };
-      if (!awake) (drop[aid] = drop[aid] || []).push(key);
+      if (!skip) (drop[aid] = drop[aid] || []).push(key);
       changed = true;
     }
   }
@@ -150304,6 +150306,7 @@ const amgsSwap = (bedId, slot, now = Date.now()) => {
     void AMGB_STORE.load();
     return '読み込み中です';
   }
+  amgsSyncFormer();
   const st = AMGS_STORE.state;
   const bed = st.beds.find(b => b.id === bedId);
   if (!bed) return 'もういません';
