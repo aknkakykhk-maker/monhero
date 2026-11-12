@@ -6,6 +6,7 @@
 | 置き場所 | 中身 |
 | --- | --- |
 | `monster-hero/data/assistant-masmon-battle.js` | 計算の本体(`ASSISTANT_MASMON_BATTLE`)。画面・時刻・`Math.random` に頼らない。`index.html` ではまだ読み込まない |
+| `tools/masmon-battle/masmon-manual-check.js` | 自分で操作する口の検査(オートの結果が控えと同じ・手の列で同じに再生・選べない手を断る) |
 | `tools/masmon-battle/masmon-battle-check.js` | 検査(同じ種で同じ結果・全滅で決着・上限・距離とガッツ・弱い AI・形・純粋さ・技データ) |
 | `tools/masmon-battle/masmon-battle-sim.js` | 数千戦の集計(先後・性格・能力差・戦術経験・形ごとの手の内わけ) |
 | `tools/masmon-battle/load.js` | Node でゲームのデータと技表と一緒に読み込む部品 |
@@ -116,6 +117,27 @@ ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB,
 - 試合中のけが(0%)は芯の外(サクセスの側で扱う)
 - **サーバ(masmon-pvp)は buffs を受け付けない**: `core.js` は `simulate({ seed, catalog, teamA, teamB, balance })` と項目を名指しで渡す。検査 `tools/masmon-battle/masmon-buffs-check.js` ⑤ が見張る
 - 相手の最初の行動: `ASSISTANT_MASMON_BATTLE.firstAction(r.log, 'B')` → その側の1手目の行(`tech`・`move`・`guard`・`charge`・`swap`。`tech` なら `name`・`hit`・`dmg` など)。無ければ null
+
+## 自分で操作する試合(createMatch・2026-11-12 ジン)
+
+社長「モンサクは自分操作にして」(台帳 #5751)。モンヒロサクセスのバトル用。**オート(`simulate`)の結果は1つも変えない**
+(止まれる形にする前の計算の指紋の控え `tools/masmon-battle/auto-golden.json` 2000戦と、検査 `masmon-manual-check.js` ①が突き合わせる。VERSION は上げていない)。
+
+```js
+const m = ASSISTANT_MASMON_BATTLE.createMatch({ seed, catalog, teamA, teamB, buffs?, control: { A: 'human' } });
+m.pending()   // いまの手番の選べる手。null なら決着(m.result() が simulate と同じ形)
+m.choose({ type: 'tech', key })  // { ok:true } で次の自分の手番まで進む(相手の手番は AI)。選べない手は { ok:false, reason:'invalid' }
+m.auto('A')   // ここからオート(手の列に { type:'auto', side } が残る)
+m.log / m.view() / m.choices() / m.done() / m.result()
+ASSISTANT_MASMON_BATTLE.replay(同じ入力, 手の列) // → { ok, at?, match }。見返し・中断の続き・サーバの確かめに使う
+```
+
+- 中身は1本の試合の流れ(`battleFlow`・ジェネレータ)。`control` の側だけ手番で止まる。`simulate` は両側 AI で最後まで回すだけで、`control` は受け付けない(サーバの masmon-pvp も変わらない)
+- 手の形: `{type:'tech',key}` / `{type:'move',step:-1(前へ=近づく)|1(後ろへ)}` / `{type:'guard'}` / `{type:'charge'}` / `{type:'swap',to}` / 倒れたあと `{type:'enter',to}`
+- `pending()` の中身(帯の4つの見出し用): `tech`(全部の技に `reach` 届くか・`ok` 選べるか・`need` 足りないガッツ・`p` 命中%・`guts`)・`guard`・`move`(`to` 行き先の距離・端では ok:false)・`charge`(満タンで ok:false)・`swap`(`swapWait` の間は ok:false)・`hint`(AI ならこの手。試合の乱数は引かない)・`guts`・`dist`・`hp`
+- 忠誠度の「動かない番」は手を聞く前に決まる(その番は聞かない)。自分で選んだ手番では AI のゆらぎの乱数を引かないので、同じ種でもオートとは違う試合になる
+- 記録: 1行目に `ctl:{A:'human'}`、自分の手の行は `why:'player'`(`WHY.player` = あなたの指示)。オートにしたあとの手は AI の理由
+- 保存は「種+手の列」だけでよい(`replay` で同じ所まで進む)
 
 ## 記録(log)の形(観戦の画面が読む)
 
