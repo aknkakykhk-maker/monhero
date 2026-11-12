@@ -93,6 +93,30 @@ ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB, balance?, roundL
 
 記録の最初の行(`ev:'start'`)と結果に `balance` と計算の版 `v` が残る。
 
+## その試合だけの上乗せ(buffs・2026-11-12 キズナ)
+
+モンヒロサクセスの助手の「特別な1話」(頂への道の1回戦だけに効く)のための入口。**端末だけ**で使う。
+
+```js
+ASSISTANT_MASMON_BATTLE.simulate({ seed, catalog, teamA, teamB,
+  buffs: { A: { guts: 10, hit1: 0.15, crit: 0.10, missCut: 0.5, eva: 0.10, noSulk: true } } });
+```
+
+| 項目 | 効き方 | 範囲 |
+| --- | --- | --- |
+| `guts` | 始まりのガッツに足す(その側の全員) | 0〜50 の整数 |
+| `hit1` | その側の**最初の攻撃**の命中に足す | 0〜0.5 |
+| `crit` | 会心の率に足す | 0〜0.5 |
+| `missCut` | 外れる率をこの割合だけ減らす(0.5 = 技の失敗 −50%) | 0〜1 |
+| `eva` | 相手の命中から引く(回避 +) | 0〜0.5 |
+| `noSulk` | `true` で忠誠度の「動かない番」を出さない | true のみ |
+
+- 命中は もとの率 → `hit1`・`eva` を足し引き → 0.05〜0.99 に切る → `missCut` → もう一度切る。AI の見積もりには入れない(実際の判定だけ)
+- **渡さない・null・空・壊れた値だけ なら今までと1つも変わらない**(乱数の列・記録・指紋も同じ)。効く項目があるときだけ記録の1行目(`start`)に `buffs: { A, B }` が付く
+- 試合中のけが(0%)は芯の外(サクセスの側で扱う)
+- **サーバ(masmon-pvp)は buffs を受け付けない**: `core.js` は `simulate({ seed, catalog, teamA, teamB, balance })` と項目を名指しで渡す。検査 `tools/masmon-battle/masmon-buffs-check.js` ⑤ が見張る
+- 相手の最初の行動: `ASSISTANT_MASMON_BATTLE.firstAction(r.log, 'B')` → その側の1手目の行(`tech`・`move`・`guard`・`charge`・`swap`。`tech` なら `name`・`hit`・`dmg` など)。無ければ null
+
 ## 記録(log)の形(観戦の画面が読む)
 
 | ev | 中身 |
