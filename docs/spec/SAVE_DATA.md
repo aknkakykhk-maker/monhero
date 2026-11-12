@@ -339,6 +339,7 @@
 | `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
 | `mh_rhythm_event_points_v1` | number / `0` | モンヒロビートの共通ビートP残高。プレイヤー向け名称のみ旧「イベントP」から変更し、互換性のため保存キーは維持する。0以上の整数へ正規化し、イベント終了時もリセットせず次回へ持ち越す。2026-10-26 から MFバトルカードの支払い・受け取りもこの残高(書く直前に読み直して差だけ足す)。`docs/spec/RHYTHM_EVENT_POINTS.md` |
+| `mh_rhythm_owned_songs_v1` | string[] / `[]` | モンヒロビートで買った有料の曲の id(2026-11-13・39-rhythm-song-owned.jsx)。有料の印は `RHYTHM_SONG_PRICES`(曲の id → ビートP。いまは空=全曲無料)で、印の付いた曲だけ、持っていなければ演奏できない。買うとビートP(`mh_rhythm_event_points_v1`)と同じ取引で保存する(失敗したら両方戻す)。読みは `normalizeRhythmOwnedSongs`(配列でない・文字でない・重複は捨てる)。マルチの演奏には効かない(持っていない人もその回だけ遊べる)。データ引き継ぎは `mh_` を全部写すので移る。名前・形は変えない |
 | `mh_rhythm_rank_v1` | object / `normalizeBeatRank` | モンヒロビートのビートランク(2026-10-29・18-player-rank.jsx)`{ v:1, xp(経験値の合計), day(その日はじめての1曲を数えた日 JST), dayFirst, got(ごほうびを配り終えたいちばん上のランク), k(全国ランキング rhythm_beat_ranks へ書くときの持ち主の鍵) }`。上限なし・全員ランク1から。壊れた値は0・空として読む。マスモンの「ビートLv」とは別物 |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |

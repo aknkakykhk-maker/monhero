@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eca793fd686f7c77
+// source-sha256: 470596fabd04cc29
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37324,7 +37324,8 @@ const RhythmSongSelect = ({
   playLabel = '決定',
   playDisabled = false,
   hideRandom = false,
-  unlockAll = false
+  unlockAll = false,
+  songLock = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -37366,6 +37367,23 @@ const RhythmSongSelect = ({
   };
   const song = playable.find(entry => entry.songId === songId) || playable[0] || null;
   const available = song ? (difficulties || []).filter(difficulty => rhythmChartPlayable(song, difficulty.id)) : [];
+  const lockedSong = item => !!songLock && !unlockAll && !!item && typeof rhythmSongLocked === 'function' && rhythmSongLocked(item.songId, songLock.owned);
+  const [buyAsk, setBuyAsk] = React.useState(null);
+  const [buyBusy, setBuyBusy] = React.useState(false);
+  const [buyError, setBuyError] = React.useState('');
+  const doBuy = async () => {
+    if (!buyAsk || buyBusy || !songLock || typeof songLock.onBuy !== 'function') return;
+    setBuyBusy(true);
+    setBuyError('');
+    try {
+      const r = await songLock.onBuy(buyAsk);
+      if (r && r.ok) setBuyAsk(null);else setBuyError(rhythmSongBuyReasonText(r && r.reason));
+    } catch (_) {
+      setBuyError(rhythmSongBuyReasonText('save'));
+    } finally {
+      setBuyBusy(false);
+    }
+  };
   const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
   const lockedFitText = song ? available.filter(item => !unlocked(item)).map(item => `${rhythmDifficultyUnlockRequirement(item.id, song.songId)}で解放`).reduce((a, b) => rhythmTitleFitEm(b) > rhythmTitleFitEm(a) ? b : a, '') : '';
@@ -37477,8 +37495,9 @@ const RhythmSongSelect = ({
     if (song && song.songId !== songId) setSongId(song.songId);
   }, [song ? song.songId : '', songId]);
   const pickRandom = () => {
-    if (!list.length) return;
-    const nextSong = list[Math.floor(Math.random() * list.length)];
+    const pool = list.filter(item => !lockedSong(item));
+    if (!pool.length) return;
+    const nextSong = pool[Math.floor(Math.random() * pool.length)];
     const ids = (difficulties || []).filter(item => rhythmChartPlayable(nextSong, item.id) && rhythmDifficultyUnlocked(nextSong.songId, item.id, bestRecords));
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
@@ -37753,7 +37772,11 @@ const RhythmSongSelect = ({
       'data-rhythm-song-first': firstSongId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200"
-    }), "🔰 はじめての1曲"), eventSong && React.createElement("small", _extends({}, main ? {
+    }), "🔰 はじめての1曲"), lockedSong(entry) && React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-locked': entry.songId
+    } : {}, {
+      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
+    }), "🔒 ", rhythmSongPrice(entry.songId).toLocaleString(), "P"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
@@ -37946,7 +37969,15 @@ const RhythmSongSelect = ({
     "data-rhythm-song-random": true,
     onClick: pickRandom,
     className: "min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]"
-  }, "ランダム"), React.createElement("button", {
+  }, "ランダム"), lockedSong(song) ? React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-buy": song.songId,
+    onClick: () => {
+      setBuyError('');
+      setBuyAsk(song);
+    },
+    className: "min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]"
+  }, "🔒 ", rhythmSongPrice(song.songId).toLocaleString(), "ビートPで買う") : React.createElement("button", {
     type: "button",
     "data-rhythm-demo-start": difficulty.id,
     disabled: playDisabled,
@@ -37967,7 +37998,50 @@ const RhythmSongSelect = ({
   }, React.isValidElement(notice) ? React.cloneElement(notice, {
     oneLine: true,
     faceSize: 28
-  }) : notice)), artZoom && song && (() => {
+  }) : notice)), buyAsk && songLock && React.createElement("div", {
+    "data-rhythm-song-buy-modal": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "曲を買う",
+    className: "fixed inset-0 z-[9000] flex items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9000,
+      backgroundColor: 'rgba(0,0,0,0.75)'
+    },
+    onClick: () => {
+      if (!buyBusy) setBuyAsk(null);
+    }
+  }, React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
+    className: "text-sm font-black text-white"
+  }, jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)), React.createElement("p", {
+    style: JA_WRAP_STYLE,
+    className: "mt-1 text-xs font-bold text-slate-300"
+  }, jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。`)), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold tabular-nums text-amber-200"
+  }, "いまのビートP ", songLock.balance == null ? '—' : Number(songLock.balance).toLocaleString()), buyError && React.createElement("p", {
+    "data-rhythm-song-buy-error": true,
+    style: JA_WRAP_STYLE,
+    className: "mt-2 text-[11px] font-black text-red-300"
+  }, jaWrap(buyError)), React.createElement("div", {
+    className: "mt-3 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: buyBusy,
+    onClick: () => setBuyAsk(null),
+    className: "min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40"
+  }, "やめる"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-buy-ok": true,
+    disabled: buyBusy,
+    onClick: doBuy,
+    className: "min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-sm font-black text-slate-950 disabled:opacity-40"
+  }, buyBusy ? '買っています…' : '買う')))), artZoom && song && (() => {
     const reserve = 150 + (song.credit && song.credit.text ? 44 : 0) + (song.credit && changelogSafeLink(song.credit.link) ? 52 : 0);
     return React.createElement("div", {
       "data-rhythm-song-art-modal": true,
@@ -60284,6 +60358,174 @@ const sbPutPlayerRank = async (kind, {
 const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
 const sbFetchBeatRankMine = breederId => sbFetchPlayerRankMine('beat', breederId);
 const sbPutBeatRank = row => sbPutPlayerRank('beat', row);
+const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
+const RHYTHM_SONG_DEFAULT_PRICE = 500;
+const RHYTHM_SONG_PRICES = Object.freeze({});
+const rhythmSongPrice = songId => {
+  const n = Math.floor(Number(RHYTHM_SONG_PRICES[String(songId || '')]));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const rhythmSongIsPaid = songId => rhythmSongPrice(songId) > 0;
+const normalizeRhythmOwnedSongs = value => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id))];
+};
+const rhythmSongLocked = (songId, owned) => rhythmSongIsPaid(songId) && !normalizeRhythmOwnedSongs(owned).includes(String(songId || ''));
+const rhythmPaidSongList = () => (typeof rhythmDemoSongs === 'function' && typeof RHYTHM_SONGS !== 'undefined' ? rhythmDemoSongs(RHYTHM_SONGS) : []).filter(song => song && rhythmSongIsPaid(song.songId));
+const RHYTHM_SONG_OWNED = (() => {
+  let list = [];
+  let loading = null;
+  const subs = new Set();
+  const emit = () => subs.forEach(fn => {
+    try {
+      fn(list);
+    } catch (_) {}
+  });
+  const api = {
+    get: () => list,
+    replace(next) {
+      list = normalizeRhythmOwnedSongs(next);
+      emit();
+    },
+    reload() {
+      if (!loading) {
+        loading = Promise.resolve().then(() => storeGet(RHYTHM_SONG_OWNED_KEY, [], false)).then(v => {
+          list = normalizeRhythmOwnedSongs(v);
+          emit();
+        }).catch(() => {}).then(() => {
+          loading = null;
+          return list;
+        });
+      }
+      return loading;
+    },
+    subscribe(fn) {
+      subs.add(fn);
+      return () => subs.delete(fn);
+    }
+  };
+  return api;
+})();
+const useRhythmOwnedSongs = () => {
+  const [owned, setOwned] = React.useState(() => RHYTHM_SONG_OWNED.get());
+  React.useEffect(() => {
+    const off = RHYTHM_SONG_OWNED.subscribe(setOwned);
+    RHYTHM_SONG_OWNED.reload();
+    return off;
+  }, []);
+  return owned;
+};
+const rhythmSongPickable = songIds => {
+  const ids = Array.isArray(songIds) ? songIds : [];
+  const owned = RHYTHM_SONG_OWNED.get();
+  const kept = ids.filter(id => !rhythmSongLocked(id, owned));
+  return kept.length ? kept : ids;
+};
+const rhythmSongBuy = async songId => {
+  const id = String(songId || '');
+  const price = rhythmSongPrice(id);
+  if (!id || !(typeof RHYTHM_SONGS !== 'undefined' && RHYTHM_SONGS.some(song => song && song.songId === id))) return {
+    ok: false,
+    reason: 'unknown'
+  };
+  if (!price) return {
+    ok: false,
+    reason: 'free'
+  };
+  const beforePoints = await loadRhythmEventPoints();
+  const stored = await storeGet(RHYTHM_SONG_OWNED_KEY, [], false);
+  const cur = normalizeRhythmOwnedSongs(stored);
+  if (cur.includes(id)) return {
+    ok: false,
+    reason: 'owned',
+    eventPoints: beforePoints
+  };
+  if (!(beforePoints >= price)) return {
+    ok: false,
+    reason: 'points',
+    eventPoints: beforePoints,
+    cost: price
+  };
+  const next = [...cur, id];
+  const nextPoints = beforePoints - price;
+  const saved = await saveStoredValuesOrRollback([{
+    key: RHYTHM_EVENT_POINTS_KEY,
+    before: beforePoints,
+    next: nextPoints
+  }, {
+    key: RHYTHM_SONG_OWNED_KEY,
+    before: stored,
+    next
+  }], storeGet, storeSet);
+  if (!saved) return {
+    ok: false,
+    reason: 'save',
+    eventPoints: beforePoints
+  };
+  RHYTHM_SONG_OWNED.replace(next);
+  return {
+    ok: true,
+    eventPoints: nextPoints,
+    cost: price
+  };
+};
+const rhythmSongBuyReasonText = reason => reason === 'points' ? 'ビートPが足りません。' : reason === 'owned' ? 'この曲はもう持っています。' : reason === 'save' ? '買うのを保存できませんでした。ビートPと持っている曲は変わっていません。' : '買えませんでした。';
+function RhythmSongShopList({
+  points = 0,
+  busy = false,
+  disabled = false,
+  openSheet,
+  onExchange,
+  onZoomIcon = null
+}) {
+  const owned = useRhythmOwnedSongs();
+  const songs = rhythmPaidSongList();
+  if (!songs.length) return null;
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    "data-rhythm-song-shop-note": true,
+    className: "col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, "買うと、その曲を全部の難易度で遊べます。みんなで対戦なら、持っていなくてもその回だけ遊べます"), songs.map(song => {
+    const price = rhythmSongPrice(song.songId);
+    const has = owned.includes(song.songId);
+    const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+    const item = {
+      id: `song_${song.songId}`,
+      name: rhythmSongFullName(song),
+      emoji: '🎵',
+      icon: src || undefined,
+      type: 'song',
+      currency: 'beatPoint',
+      cost: price,
+      desc: '新曲(全難易度で遊べます)'
+    };
+    const offer = {
+      id: `song_${song.songId}`,
+      kind: 'song',
+      songId: song.songId,
+      cost: price
+    };
+    return React.createElement(MarketProductCard, {
+      key: song.songId,
+      dataAttrs: {
+        'data-rhythm-song-offer': song.songId
+      },
+      item: item,
+      owned: has,
+      comingSoon: false,
+      canBuy: !has && points >= price && !busy,
+      disabled: disabled,
+      onZoom: () => onZoomIcon && src && onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchange ? onExchange(offer, 1) : false
+      })
+    });
+  }));
+}
 const MULTI_STAMP_KEY = 'mh_multi_stamps_v1';
 const MULTI_STAMP_PREFS_KEY = 'mh_multi_stamp_prefs_v1';
 const MULTI_STAMP_SEND_GAP_MS = 2000;
@@ -68034,7 +68276,10 @@ function BreederMarketScreen({
       }, {
         key: 'stamp',
         label: 'スタンプ'
-      }, ...(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true && RELEASE_FLAGS.assistantLifeFurniture === true ? [{
+      }, ...(typeof rhythmPaidSongList === 'function' && rhythmPaidSongList().length ? [{
+        key: 'song',
+        label: '曲'
+      }] : []), ...(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true && RELEASE_FLAGS.assistantLifeFurniture === true ? [{
         key: 'furniture',
         label: '家具'
       }] : []), {
@@ -68738,6 +68983,13 @@ function BreederMarketScreen({
       detail: teaching,
       onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
     });
+  }), eventTab === 'song' && React.createElement(RhythmSongShopList, {
+    points: safeEventPoints,
+    busy: busy,
+    disabled: purchaseProcessing,
+    openSheet: openSheet,
+    onExchange: onExchangeEventPoints,
+    onZoomIcon: onZoomIcon
   }), eventTab === 'stamp' && React.createElement(MultiStampShopList, {
     points: safeEventPoints,
     busy: busy,
@@ -70898,6 +71150,12 @@ function RhythmSongSelectScreen({
       alive = false;
     };
   }, [beatPointReleased]);
+  const ownedSongs = useRhythmOwnedSongs();
+  const buySong = async song => {
+    const r = await rhythmSongBuy(song.songId);
+    if (r && typeof r.eventPoints === 'number') setBeatPointBalance(r.eventPoints);
+    return r;
+  };
   const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
   const quickRunBandButton = quickRunProgress ? React.createElement("button", {
     type: "button",
@@ -71338,6 +71596,11 @@ function RhythmSongSelectScreen({
     }),
     unlockAll: debugAll,
     playLabel: debugAll ? '決定(記録しない)' : undefined,
+    songLock: debugAll ? null : {
+      owned: ownedSongs,
+      balance: beatPointBalance,
+      onBuy: buySong
+    },
     noticeHidden: foldedNoticeCount,
     toolbarExtra: beatPointSideCard,
     view: rhythmSelectView,
@@ -97790,6 +98053,7 @@ function RhythmMultiScreenBody({
 }) {
   const view = useRhythmMultiView();
   const watchV = useRhythmWatchView();
+  useRhythmOwnedSongs();
   React.useEffect(() => {
     if (!view) {
       const w0 = RHYTHM_WATCH.view();
@@ -102609,7 +102873,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
   },
   pick(catalog, masuId) {
     const aid = rhythmAssistSessionIdOf(masuId);
-    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, catalog) : brain.pick(catalog, masuId);
+    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, typeof rhythmSongPickable === 'function' ? rhythmSongPickable(catalog) : catalog) : brain.pick(catalog, masuId);
   }
 });
 function RhythmAssistSessionPicker({
@@ -159501,6 +159765,7 @@ const MSX_ASSIST_SRC = 'data/monhero-success-assist.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js';
 const MSX_SCENES_SRC = 'data/success-scenes.js';
+const MSX_ARC_SRC = 'data/monhero-success-arc.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 const MSX_SCENARIOS = Object.freeze([{
@@ -159585,7 +159850,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS'), msxLoadScript(MSX_ASSIST_SRC, 'MONHERO_SUCCESS_ASSIST'), msxLoadScript(MSX_ARC_SRC, 'MONHERO_SUCCESS_ARC')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -159604,7 +159869,8 @@ const msxLoad = () => {
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null,
           cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
-          assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null
+          assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null,
+          arc: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ARC || null : null
         });
         msxSuc = {
           core,
@@ -162937,6 +163203,7 @@ function MsxEvent({
   const isStory = run.phase === 'story';
   const o = run.out || {};
   const view = o.ev || null;
+  const isUniq = !isStory && !!view && view.kind === 'uniq';
   const scene = isStory ? se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}` : view && view.lines;
   const c2 = {
     ...ctx,
@@ -163017,7 +163284,7 @@ function MsxEvent({
     after: []
   }).after)) : [];
   const shown = (picked ? afterLines : main.lines).slice(0, 4);
-  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : view && view.head || main.label || '育成イベント';
+  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.head || main.label || '育成イベント';
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = l => l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who);
   return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -163059,7 +163326,7 @@ function MsxEvent({
       bottom: '30%',
       height: '36%'
     }
-  }) : isStory ? React.createElement("img", {
+  }) : isStory || isUniq ? React.createElement("img", {
     src: msxBody(s.aid, 'happy'),
     alt: "",
     style: {
@@ -163072,7 +163339,7 @@ function MsxEvent({
       objectPosition: 'right bottom'
     }
   }) : null, (() => {
-    const cat = isStory ? 'メインのお話' : view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント';
+    const cat = isStory || isUniq ? 'メインのお話' : view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント';
     return React.createElement("div", {
       className: "v-ev-h"
     }, head !== cat ? React.createElement("small", null, cat) : null, head);
@@ -163545,6 +163812,9 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   paid: true,
   over: s.over || 'done',
   assists: (assists || []).slice(0, 4),
+  ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? {
+    ending: s.ending.kind
+  } : {}),
   titles: msxR3FinalTitles(s, ev),
   from: run.from || null
 });
@@ -164124,6 +164394,8 @@ function MsxR3Battle({
   setRun,
   v,
   ev,
+  ctx,
+  bondLv,
   onPause,
   debug
 }) {
@@ -164182,6 +164454,7 @@ function MsxR3Battle({
       phase: 'battle',
       out,
       r3skip: undefined,
+      arcAfter: msxArcAfterOf(SUC, s, b, won, fight && fight.opp) || undefined,
       log: [...(run.log || []), {
         turn: before.turn,
         t: `${name}: ${won ? '優勝' : '負け'}`
@@ -164200,12 +164473,14 @@ function MsxR3Battle({
       turn: before.turn,
       t: `${name}: ${won ? '優勝' : '負け'}`
     }].slice(-20);
+    const arcAfter = msxArcAfterOf(SUC, before, b, won, fight && fight.opp) || undefined;
     if (s2.mealReady && !s2.over) {
       setRun({
         ...run,
         s: s2,
         phase: 'battle',
         r3skip: undefined,
+        arcAfter,
         log,
         out: {
           r3: {
@@ -164228,6 +164503,7 @@ function MsxR3Battle({
       ...run,
       s: s2,
       r3skip: undefined,
+      arcAfter,
       log,
       out: null
     };
@@ -164313,6 +164589,26 @@ function MsxR3Battle({
   useEffect(() => {
     if (step === 'auto' && fight && !showOn) result();
   }, [step, fight]);
+  const actx = ctx || {
+    id: s.id,
+    turn: s.turn,
+    aid: s.aid,
+    mon: run.nick,
+    species: s.species
+  };
+  if (run.arcAfter) return React.createElement(MsxArcAfter, {
+    run: run,
+    v: v,
+    ev: ev,
+    onPause: onPause,
+    ctx: actx,
+    bondLv: bondLv || 1,
+    after: run.arcAfter,
+    onDone: () => setRun({
+      ...run,
+      arcAfter: undefined
+    })
+  });
   if (st3) {
     const d = st3.d || {};
     if (st3.stage === 'prize') {
@@ -164552,6 +164848,21 @@ function MsxR3Battle({
     foot: null
   });
   const opp = fight.opp;
+  const pickKey = b.kind === 'summit' ? `${s.turn}:${b.round}` : null;
+  if (pickKey && msxArcHas(SUC, s.aid) && run.arcPick !== pickKey) return React.createElement(MsxArcPick, {
+    run: run,
+    v: v,
+    ev: ev,
+    onPause: onPause,
+    ctx: actx,
+    bondLv: bondLv || 1,
+    opp: opp,
+    round: b.round,
+    onDone: () => setRun({
+      ...run,
+      arcPick: pickKey
+    })
+  });
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
   const foeName = opp.name || msxMonName(opp.species);
   if (showOn) {
@@ -165380,6 +165691,8 @@ const MSX_R3_AUTO_ORDER = Object.freeze(['sokoji', 'hirameki', 'hitonatsu', 'ato
 function MsxR3Over({
   run,
   setRun,
+  ctx,
+  bondLv,
   onPause,
   debug
 }) {
@@ -165387,6 +165700,39 @@ function MsxR3Over({
     SUC
   } = msxSuc;
   const s = run.s;
+  if (s.over !== 'gameover' && (run.arcAfter || s.ending && !s.ending.seen)) {
+    const v = SUC.peek(s);
+    const ev = SUC.evaluate(s);
+    const c = ctx || {
+      id: s.id,
+      turn: s.turn,
+      aid: s.aid,
+      mon: run.nick,
+      species: s.species
+    };
+    if (run.arcAfter) return React.createElement(MsxArcAfter, {
+      run: run,
+      v: v,
+      ev: ev,
+      onPause: onPause,
+      ctx: c,
+      bondLv: bondLv || 1,
+      after: run.arcAfter,
+      onDone: () => setRun({
+        ...run,
+        arcAfter: undefined
+      })
+    });
+    return React.createElement(MsxArcEnding, {
+      run: run,
+      setRun: setRun,
+      v: v,
+      ev: ev,
+      onPause: onPause,
+      ctx: c,
+      bondLv: bondLv || 1
+    });
+  }
   if (s.over === 'gameover') return React.createElement(MsxR3GameOver, {
     run: run,
     setRun: setRun,
@@ -166481,6 +166827,8 @@ function MsxR3({
   setRun,
   v,
   ev,
+  ctx,
+  bondLv,
   debug,
   onBack,
   onPause,
@@ -166492,12 +166840,16 @@ function MsxR3({
     setRun: setRun,
     v: v,
     ev: ev,
+    ctx: ctx,
+    bondLv: bondLv,
     onPause: onPause,
     debug: debug
   });
   if (kind === 'over') return React.createElement(MsxR3Over, {
     run: run,
     setRun: setRun,
+    ctx: ctx,
+    bondLv: bondLv,
     onPause: onPause,
     debug: debug
   });
@@ -166518,6 +166870,450 @@ function MsxR3({
     onPause: onPause
   });
   return null;
+}
+const MSX_ARC_CSS = `
+.msx .r3 .arc-foe{position:absolute;right:8px;top:40px;width:44%;background:#1e1a36ee;border:2px solid #f472b6;border-radius:14px;padding:6px 8px;text-align:center;box-shadow:0 0 16px #f472b666}
+.msx .r3 .arc-foe img{height:64px;width:64px;object-fit:contain;display:block;margin:0 auto}
+.msx .r3 .arc-foe b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .r3 .arc-foe small{display:block;font-size:10px;color:#fbcfe8;font-weight:800}
+.msx .r3 .arc-foe .why{margin-top:3px;font-size:10.5px;color:#fde047;font-weight:900}
+.msx .r3 .arc-party{position:absolute;left:0;right:0;top:20%;text-align:center}
+.msx .r3 .arc-party b{display:inline-block;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;padding:6px 18px;font-size:20px;font-weight:900;color:#fff;box-shadow:0 0 20px #fb923c99}
+.msx .r3 .arc-party small{display:block;margin-top:6px;font-size:12px;font-weight:900;color:#fde047;text-shadow:0 1px 0 #000}
+.msx .r3 .arc-petal{position:absolute;top:-12%;font-size:20px;animation:arcFall linear infinite;pointer-events:none}
+@keyframes arcFall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(130vh) rotate(540deg)}}
+.msx .r3 .arc-photo{position:absolute;left:50%;top:6%;width:72%;transform:translateX(-50%) rotate(-3deg);background:#fff;padding:8px 8px 26px;border-radius:4px;box-shadow:0 10px 30px #000a;animation:arcPhoto 1.2s ease-out both}
+.msx .r3 .arc-photo .pic{position:relative;height:170px;overflow:hidden;background:linear-gradient(#fde68a,#f9a8d4)}
+.msx .r3 .arc-photo .pic img{position:absolute;bottom:0;object-fit:contain}
+.msx .r3 .arc-photo .cap{position:absolute;left:0;right:0;bottom:5px;text-align:center;color:#be185d;font-size:12px;font-weight:900}
+@keyframes arcPhoto{0%{opacity:0;transform:translateX(-50%) scale(1.4) rotate(6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(-50%) scale(1) rotate(-3deg)}}
+.msx .r3 .arc-flash{position:absolute;inset:0;background:#fff;animation:arcFlash .9s ease-out both;pointer-events:none}
+@keyframes arcFlash{0%{opacity:.95}100%{opacity:0}}
+.msx .r3 .arc-end{position:absolute;left:0;right:0;top:5%;text-align:center;font-size:30px;font-weight:900;letter-spacing:.08em;color:#fde047;-webkit-text-stroke:1.5px #9a3412;text-shadow:0 3px 0 #9a3412,0 0 22px #fb923c}
+.msx .r3 .arc-end.bad{color:#bfdbfe;-webkit-text-stroke:1.5px #1e3a8a;text-shadow:0 3px 0 #1e3a8a,0 0 18px #60a5fa}
+.msx .r3 .arc-end small{display:block;font-size:12px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:4px}
+`;
+const MSX_ARC_END = Object.freeze({
+  bad: {
+    name: 'バッドエンディング',
+    sub: 'くやしさも、いっしょに',
+    bg: 'images/story-bg/monhero_plaza_evening.jpg'
+  },
+  good: {
+    name: 'グッドエンディング',
+    sub: 'てっぺんに届いた',
+    bg: 'images/success/scenes/venue-summit.png'
+  },
+  super: {
+    name: '超グッドエンディング',
+    sub: '最高のチーム',
+    bg: 'images/success/scenes/venue-summit.png'
+  }
+});
+const MSX_ARC_PARTY = Object.freeze({
+  bad: ['おつかれさま会'],
+  good: ['祝勝会', '町のパレード', '助手からの手紙'],
+  super: ['町じゅうのお祝い', 'ヒーローの取材', '3人の打ち上げ']
+});
+const MSX_ARC_PICK_WHY = Object.freeze({
+  pop: '人気がいちばんの相手',
+  rival: 'この育成のライバル',
+  strong: 'いちばん強い常連',
+  champ: '王者',
+  reg: '常連'
+});
+const msxArcLines = (scene, ctx, bondLv, extra) => {
+  const se = msxSuc && msxSuc.script;
+  try {
+    const e = se && typeof se.event === 'function' ? se.event(scene, {
+      ...ctx,
+      bond: bondLv,
+      ...(extra || {})
+    }) : null;
+    return e && Array.isArray(e.lines) ? e.lines.concat(Array.isArray(e.after) ? e.after : []) : [];
+  } catch (e) {
+    return [];
+  }
+};
+const msxArcHas = (SUC, aid) => Boolean(SUC && SUC.ARC && SUC.ARC[aid]);
+const msxArcFullBody = (aid, ex) => {
+  const w = msxWho(aid);
+  const f = w && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(w, ex) : null;
+  return f || msxBody(aid, ex);
+};
+const msxArcAfterOf = (SUC, s, b, won, foe) => b && b.kind === 'summit' && msxArcHas(SUC, s.aid) ? {
+  round: b.round,
+  won: !!won,
+  foe: foe ? foe.name || msxMonName(foe.species) : '',
+  species: foe ? foe.species : null,
+  turn: s.turn
+} : null;
+function MsxArcTalk({
+  run,
+  v,
+  ev,
+  onPause,
+  aid,
+  lines,
+  fallback,
+  head,
+  bg,
+  ex = 'happy',
+  dark = false,
+  top = null,
+  onDone,
+  doneText = 'つぎへ ▶',
+  mon = true
+}) {
+  const [page, setPage] = useState(0);
+  const all = lines && lines.length ? lines : [{
+    who: aid,
+    t: fallback || '……'
+  }];
+  const per = 3;
+  const pages = Math.max(1, Math.ceil(all.length / per));
+  const shown = all.slice(page * per, page * per + per);
+  const lastFace = (shown.slice().reverse().find(l => l.who === aid) || {}).e || ex;
+  const who = l => l.who === 'narr' ? null : l.who === 'mon' ? run.nick : msxAidName(l.who);
+  const next = () => page + 1 < pages ? setPage(page + 1) : onDone();
+  const s = run.s;
+  return React.createElement(MsxR3Frame, {
+    run: run,
+    back: "中断",
+    onBack: onPause,
+    right: "",
+    body: React.createElement(React.Fragment, null, React.createElement("style", null, MSX_ARC_CSS), React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: `v-scene ${dark ? 'dk' : ''}`,
+      style: {
+        flex: '1 1 0',
+        minHeight: 300
+      },
+      "data-msx-arc-talk": true
+    }, React.createElement("img", {
+      className: "bg",
+      src: bg || msxSceneBg(s.turn).bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), mon ? React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "gr",
+      style: {
+        left: '30%',
+        bottom: 'calc(34% - 5px)'
+      }
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        left: '30%',
+        bottom: '34%',
+        height: '24%'
+      },
+      live: true
+    })) : null, React.createElement("img", {
+      src: msxBody(aid, lastFace),
+      alt: "",
+      style: {
+        position: 'absolute',
+        right: '-4%',
+        bottom: 0,
+        height: '70%',
+        width: '46%',
+        objectFit: 'contain',
+        objectPosition: 'right bottom'
+      }
+    }), top, head ? React.createElement("div", {
+      className: "v-ev-h"
+    }, React.createElement("small", null, "メインのお話"), head) : null, React.createElement("div", {
+      className: "v-talk"
+    }, shown.map((l, i) => React.createElement("div", {
+      key: `${page}-${i}`
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t))))),
+    foot: React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: next,
+      "data-msx-arc-next": true
+    }, page + 1 < pages ? 'つぎへ ▶' : doneText))
+  });
+}
+function MsxArcPick({
+  run,
+  v,
+  ev,
+  onPause,
+  ctx,
+  bondLv,
+  opp,
+  round,
+  onDone
+}) {
+  const s = run.s;
+  const foe = opp ? opp.name || msxMonName(opp.species) : '';
+  const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, {
+    rival: foe,
+    owner: opp && opp.breeder ? opp.breeder : ''
+  });
+  const SUM = msxSuc.SUC.SUMMIT || [];
+  const top = opp ? React.createElement("div", {
+    className: "arc-foe",
+    "data-msx-arc-foe": true
+  }, React.createElement("img", {
+    src: msxMonThumb(opp.species),
+    alt: ""
+  }), React.createElement("b", null, foe), React.createElement("small", null, opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)), React.createElement("div", {
+    className: "why"
+  }, msxAidName(s.aid), "のえらび: ", MSX_ARC_PICK_WHY[opp.pick] || '相手')) : null;
+  return React.createElement(MsxArcTalk, {
+    run: run,
+    v: v,
+    ev: ev,
+    onPause: onPause,
+    aid: s.aid,
+    lines: lines,
+    head: `${(SUM[round] || {}).name || '頂への道'}の相手えらび`,
+    bg: "images/success/scenes/venue-summit.png",
+    top: top,
+    fallback: `${foe}と戦うよ。いってらっしゃい！`,
+    doneText: "⚔ 試合へ",
+    onDone: onDone
+  });
+}
+function MsxArcAfter({
+  run,
+  v,
+  ev,
+  onPause,
+  ctx,
+  bondLv,
+  after,
+  onDone
+}) {
+  const s = run.s;
+  const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, {
+    rival: after.foe
+  });
+  return React.createElement(MsxArcTalk, {
+    run: run,
+    v: v,
+    ev: ev,
+    onPause: onPause,
+    aid: s.aid,
+    lines: lines,
+    head: after.won ? '試合のあとで' : 'くやしい夜',
+    dark: !after.won,
+    bg: after.won ? 'images/success/scenes/venue-summit.png' : 'images/story-bg/monhero_plaza_evening.jpg',
+    fallback: after.won ? '勝ったね！' : 'おつかれさま…',
+    onDone: onDone
+  });
+}
+function MsxArcSpecial({
+  run,
+  v,
+  ev,
+  onPause,
+  ctx,
+  bondLv,
+  onDone
+}) {
+  const s = run.s;
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 5500);
+    return () => clearTimeout(t);
+  }, []);
+  const lines = msxArcLines(`scn.${s.aid}.fx.super`, ctx, bondLv);
+  const [page, setPage] = useState(0);
+  const per = 2;
+  const pages = Math.max(1, Math.ceil(lines.length / per));
+  const shown = lines.slice(page * per, page * per + per);
+  const petals = useMemo(() => Array.from({
+    length: 16
+  }, (_, i) => ({
+    left: `${i * 37 % 100}%`,
+    dur: `${4 + i % 5}s`,
+    delay: `${i % 7 * 0.45}s`,
+    ch: i % 3 === 0 ? '🌸' : i % 3 === 1 ? '💖' : '✨'
+  })), []);
+  const title = msxSuc.SUC.ARC && msxSuc.SUC.ARC[s.aid] && msxSuc.SUC.ARC[s.aid].title || '最高のチーム';
+  const who = l => l.who === 'narr' ? null : msxAidName(l.who);
+  const next = () => page + 1 < pages ? setPage(page + 1) : onDone();
+  return React.createElement(MsxR3Frame, {
+    run: run,
+    back: "中断",
+    onBack: onPause,
+    right: "",
+    body: React.createElement(React.Fragment, null, React.createElement("style", null, MSX_ARC_CSS), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0',
+        minHeight: 420
+      },
+      "data-msx-arc-special": true
+    }, React.createElement("img", {
+      className: "bg",
+      src: "images/story-bg/monhero_plaza_evening.jpg",
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "v-burst"
+    }), petals.map((p, i) => React.createElement("span", {
+      key: i,
+      className: "arc-petal",
+      style: {
+        left: p.left,
+        animationDuration: p.dur,
+        animationDelay: p.delay
+      }
+    }, p.ch)), React.createElement("div", {
+      className: "arc-photo"
+    }, React.createElement("div", {
+      className: "pic"
+    }, React.createElement("img", {
+      src: msxArcFullBody(s.aid, 'excited'),
+      alt: "",
+      style: {
+        right: '2%',
+        height: '100%',
+        width: '52%'
+      }
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        left: '32%',
+        bottom: '4%',
+        height: '58%'
+      }
+    })), React.createElement("div", {
+      className: "cap"
+    }, "💖 ", title, " 💖")), React.createElement("div", {
+      className: "arc-flash"
+    }), React.createElement("div", {
+      className: "v-talk"
+    }, shown.map((l, i) => React.createElement("div", {
+      key: `${page}-${i}`
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t))))),
+    foot: React.createElement("div", {
+      className: "v-ft"
+    }, ready || page > 0 ? React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: next,
+      "data-msx-arc-next": true
+    }, page + 1 < pages ? 'つぎへ ▶' : '引退へ ▶') : React.createElement("button", {
+      type: "button",
+      className: "on",
+      style: {
+        flex: 2
+      }
+    }, "…"))
+  });
+}
+function MsxArcEnding({
+  run,
+  setRun,
+  v,
+  ev,
+  onPause,
+  ctx,
+  bondLv
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const end = s.ending;
+  const kind = end.kind;
+  const [step, setStep] = useState(0);
+  useSuccessSound(kind === 'bad' ? 'cupLose' : 'cupWin', {
+    season: msxCalendar(s.turn).season
+  });
+  const parties = Array.isArray(end.parties) ? end.parties : [];
+  const finish = () => {
+    const r = typeof SUC.endingSeen === 'function' ? SUC.endingSeen(s) : {
+      state: {
+        ...s,
+        ending: {
+          ...end,
+          seen: true
+        }
+      }
+    };
+    setRun({
+      ...run,
+      s: r.state,
+      arcAfter: undefined
+    });
+  };
+  const goNext = () => {
+    if (step < parties.length) setStep(step + 1);else if (kind === 'super' && step === parties.length) setStep(step + 1);else finish();
+  };
+  const E = MSX_ARC_END[kind] || MSX_ARC_END.good;
+  if (step === 0) {
+    const lines = msxArcLines(`scn.${s.aid}.end.${kind}`, ctx, bondLv);
+    const top = React.createElement("div", {
+      className: `arc-end ${kind === 'bad' ? 'bad' : ''}`,
+      "data-msx-arc-end": kind
+    }, E.name, React.createElement("small", null, msxAidName(s.aid), "編・", E.sub));
+    return React.createElement(MsxArcTalk, {
+      run: run,
+      v: v,
+      ev: ev,
+      onPause: onPause,
+      aid: s.aid,
+      lines: lines,
+      bg: E.bg,
+      dark: kind === 'bad',
+      top: top,
+      fallback: "ここまで、ほんとにおつかれさま！",
+      doneText: parties.length ? '🎉 お祝いへ ▶' : '引退へ ▶',
+      onDone: goNext
+    });
+  }
+  if (step <= parties.length) {
+    const i = step - 1;
+    const n = parties[i];
+    const lines = msxArcLines(`scn.${s.aid}.party.${kind}${i + 1}`, ctx, bondLv);
+    const top = React.createElement("div", {
+      className: "arc-party",
+      "data-msx-arc-party": `${kind}${i + 1}`
+    }, React.createElement("b", null, "🎉 ", (MSX_ARC_PARTY[kind] || [])[i] || 'お祝い'), React.createElement("small", null, "全能力 +", n));
+    return React.createElement(MsxArcTalk, {
+      key: `p${step}`,
+      run: run,
+      v: v,
+      ev: ev,
+      onPause: onPause,
+      aid: s.aid,
+      lines: lines,
+      bg: "images/story-bg/monhero_plaza_evening.jpg",
+      top: top,
+      fallback: "おめでとう！",
+      doneText: step < parties.length ? '🎉 つぎのお祝い ▶' : kind === 'super' ? '📸 さいごに ▶' : '引退へ ▶',
+      onDone: goNext
+    });
+  }
+  return React.createElement(MsxArcSpecial, {
+    run: run,
+    v: v,
+    ev: ev,
+    onPause: onPause,
+    ctx: ctx,
+    bondLv: bondLv,
+    onDone: finish
+  });
 }
 const MONSUC_LEND_REASON_TEXT = Object.freeze({
   off: 'フレンドからのレンタルは準備中です',
@@ -217950,6 +218746,26 @@ function MonsterHeroGame() {
       ok: false,
       reason: 'busy'
     };
+    if (offer?.kind === 'song') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await rhythmSongBuy(offer.songId);
+        if (r.ok) {
+          setRhythmEventPoints(r.eventPoints);
+          saveMissionProgress('market');
+        } else setMarketExchangeError(rhythmSongBuyReasonText(r.reason));
+        return r;
+      } catch {
+        setMarketExchangeError(rhythmSongBuyReasonText('save'));
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      } finally {
+        marketPurchaseProcessingRef.current = false;
+      }
+    }
     if (offer?.kind === 'stamp') {
       marketPurchaseProcessingRef.current = true;
       setMarketExchangeError('');
@@ -237560,6 +238376,7 @@ function MonsterHeroGame() {
         setGameState('RHYTHM_RANKING');
       },
       onPlaySong: (song, difficulty) => {
+        if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return;
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
         if (raidRhythm) {
           void startRaidJackRhythmPlay(song, difficulty);

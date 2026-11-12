@@ -202,6 +202,8 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
     }
     // 育成中のアイテム(1ターン1個): 体力が3割を切ったらジュース・忠誠50未満ならライセンス
     if (s.bag) { if (s.hp < s.hpMax * 0.3 && s.bag.juice) s = SUC.useItem(s, 'juice').state; else if (SUC.loyalOf(s) < 50 && s.bag.license) s = SUC.useItem(s, 'license').state; }
+    // 助手の連続イベント(ゲームと同じくターンのはじめ・ランダムイベントの前)。2択は a(いい結末への道)
+    if (SUC.storyDue(s) !== null) s = SUC.storyStep(s, 'a').state;
     s = runEvent(s, 'start');
     const v = SUC.peek(s);
     const a = chooseAction(s, v);
@@ -227,6 +229,7 @@ const runVariant = (vr) => {
   const ranks = {}; const powers = []; const sums = []; const loy60 = []; const loys = []; const tags = [0, 0, 0, 0];
   const lg = { rematch: 0, meal: 0, shugyo: 0, learned: 0, taught: 0, train: 0, great: 0, fail: 0, sab: 0, events: 0, story: 0, cond: 0, rest: 0, play: 0, clinic: 0 };
   const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; const techN = []; let rivalCups = 0; let rivalWins = 0; let issaMet = 0; let issaWon = 0; let pts = 0;
+  const endK = {}; const endPow = {}; // エンディング(2026-11-13)の割合と、その子の総合力
   EVT.n = 0; EVT.st = 0; EVT.kinds = {};
   for (let i = 0; i < RUNS; i++) {
     const id = `${vr.key}-${vr.aidLv}-${i}`;
@@ -239,6 +242,7 @@ const runVariant = (vr) => {
     s.log.tagTurns.forEach((n, j) => { tags[j] += n; });
     Object.keys(lg).forEach(k => { lg[k] += s.log[k] || 0; });
     over[s.over] = (over[s.over] || 0) + 1;
+    { const ek = s.ending ? s.ending.kind : 'none'; endK[ek] = (endK[ek] || 0) + 1; (endPow[ek] = endPow[ek] || []).push(ev.power); }
     story3 += s.story.filter(x => x >= 3).length; techN.push(s.techs.length); issaMet += s.issaMet; issaWon += s.issaWon; pts += s.pts + 0;
     Object.entries(trace.periodSums).forEach(([k, v]) => { (per[k] = per[k] || []).push(v); });
     (trace.battles || []).forEach(b => { const key = b.kind === 'summit' ? `summit${b.round + 1}` : b.kind; bt[key] = bt[key] || [0, 0]; bt[key][0] += b.won ? 1 : 0; bt[key][1] += 1; });
@@ -253,6 +257,7 @@ const runVariant = (vr) => {
     perRun: Object.fromEntries(Object.entries(lg).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])),
     story3: Math.round(story3 / RUNS * 10) / 10, techs: mean(techN), rival: rivalCups ? `${Math.round(rivalCups / RUNS * 10) / 10}回出て勝率 ${pct(rivalWins, rivalCups)}%` : null, issa: `${Math.round(issaMet / RUNS * 100) / 100}回(成功 ${Math.round(issaWon / RUNS * 100) / 100})`,
     end: Object.fromEntries(Object.entries(over).map(([k, v]) => [k, pct(v, RUNS)])),
+    ending: Object.fromEntries(['bad', 'good', 'super', 'none'].filter(k => endK[k]).map(k => [k, `${pct(endK[k], RUNS)}%(総合力 ${median(endPow[k])}・${SUC.gradeOf(median(endPow[k])).label})`])),
     randomEvents: { perRun: Math.round(EVT.n / RUNS * 10) / 10, statPerRun: Math.round(EVT.st / RUNS), kinds: Object.fromEntries(Object.entries(EVT.kinds).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])) },
     battles: Object.fromEntries(Object.entries(bt).map(([k, [w, n]]) => [k, `${pct(w, n)}% (${n})`])),
     periodSumMedian: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, median(v)])),
@@ -301,5 +306,6 @@ for (const v of list) {
   if (r.rival) console.log(`  ライバルの大会: ${r.rival}`);
   if (!NO_EVENTS) console.log(`  ランダムイベント: 1回の育成で ${r.randomEvents.perRun}回(${Object.entries(r.randomEvents.kinds).map(([k, v]) => `${k} ${v}`).join('・')})・能力の合計 +${r.randomEvents.statPerRun}`);
   console.log(`  終わり方: ${Object.entries(r.end).map(([k, v]) => `${k} ${v}%`).join('・')}`);
+  console.log(`  エンディング: ${Object.entries(r.ending).map(([k, v]) => `${k} ${v}`).join(' / ')}`);
 }
 if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ runs: RUNS, issa: ISSA_PICK, results }, null, 1));
