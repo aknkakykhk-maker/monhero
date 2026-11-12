@@ -49,7 +49,7 @@
 .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
-.v-scene.dim .sh{background:#0f0d2499}
+.v-scene.dk .sh{background:#0f0d2499}
 .v-scene .mon{position:absolute;left:50%;transform:translateX(-50%);height:44%;aspect-ratio:1;object-fit:contain;bottom:var(--mb,25%);filter:drop-shadow(0 8px 5px #0009)}
 .v-scene .gr{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 5px);width:30%;height:5%;border-radius:50%;background:radial-gradient(ellipse,#000a 0,#0000 70%)}
 .v-chips{position:absolute;right:7px;top:7px;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
@@ -430,3 +430,80 @@
 .v-ml .e{font-size:30px;line-height:1.1}.v-ml b{display:block;font-size:11.5px;white-space:nowrap}
 .v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.v-ml small{display:block;font-size:9px;color:#86efac;font-weight:800}
 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}
+
+/* 助手の一言は帯の下(社長の参考動画3本目)・景色の左下に持ち物の袋・右下にくわしく */
+.v-sayrow{display:flex;align-items:center;gap:6px;margin-top:5px}
+.v-sayrow .fc{width:34px;height:34px;border-color:#f9a8d4}
+.v-sayrow .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:3px 12px 12px 12px}.v-sayrow .bub em{font-style:normal;color:#be185d}
+.v-bagb{position:absolute;left:7px;bottom:7px;width:46px;height:46px;border-radius:14px;background:#0f0d24e0;border:1.5px solid #fde047;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;line-height:1.05}
+.v-bagb small{font-size:8.5px;font-weight:900;white-space:nowrap}
+.v-bagb i{position:absolute;right:-5px;top:-6px;background:#ef4444;border-radius:99px;font-style:normal;font-size:9.5px;font-weight:900;min-width:16px;text-align:center;line-height:16px}
+.v-bagb.r{left:auto;right:7px;border-color:#64748b}
+.v-scene.home{--mb:20%}.v-scene.home .v-side{bottom:60px}
+.phone.s320 .v-scene.home{--mb:24%}.phone.s320 .v-bagb{width:38px;height:38px;font-size:16px;border-radius:11px}.phone.s320 .v-bagb small{font-size:7.5px}
+.phone.s320 .v-scene.home .v-side{bottom:50px}.phone.s320 .v-sayrow .fc{width:28px;height:28px}.phone.s320 .v-sayrow .bub{font-size:10px;padding:3px 7px}
+/* 修行 */
+.v-stg{display:flex;align-items:stretch;gap:4px;margin-top:6px}
+.v-stg div{flex:1;min-width:0;background:#1e1a36;border:1px solid #fb923c;border-radius:11px;padding:4px 4px;text-align:center;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.35}
+.v-stg div small{display:block;font-size:8.5px;color:#fdba74}.v-stg i{align-self:center;font-style:normal;color:#94a3b8;font-size:10px}
+.v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.v-stg div.last small{color:#fde047}
+.v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
+.v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.v-pick2 b{margin-left:auto;color:#fde047}
+.v-tk{display:flex;align-items:center;gap:5px}
+.v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
+.v-tk span b{color:#86efac}.v-tk span.sel{border-color:#fde047;background:#3b2f0b}.v-tk span.sel b{color:#fde047}.v-tk span.got{opacity:.45}.v-tk span.got b{color:#94a3b8}
+
+/* 持ち物の小窓 */
+.v-bagw{position:absolute;left:8px;right:8px;top:8px;bottom:8px;background:#151130f5;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-evenly;box-shadow:0 0 18px #fde04755}
+.v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.v-bagw .t small{display:block;font-size:9.5px;color:#fca5a5;font-weight:800}
+.v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
+.v-bagw .v-item{margin-top:0}
+
+/* 訓練のボタンはすっきり(社長 2026-11-12): 絵・名前・小さな Lv だけ。タッグは光で */
+.v-trs{gap:4px;margin-top:8px;align-items:start}
+.v-tr{padding-top:0}
+.v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
+.v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:9px;font-weight:800;color:#94a3b8;line-height:1.3}
+.v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
+.v-tr.tag .nm{color:#fde047}
+.v-tr.sel .o{transform:scale(1.1)}
+.v-tr.sel .nm{color:#fff}
+.v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.v-lvx b{color:#7dd3fc}.v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
+.v-lvx i u{position:absolute;left:0;top:0;bottom:0;background:#38bdf8}.v-lvx i u.ad{background:#bae6fd}
+.v-lvx span{color:#cbd5e1}.v-lvx em{font-style:normal;color:#fde047}
+.v-lvup{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:10px;padding:4px 10px;margin-bottom:5px;font-size:13px;font-weight:900;line-height:1.35;box-shadow:0 0 12px #fde047}
+.v-lvup small{display:block;font-size:9.5px;font-weight:800}
+.v-p.main small{font-size:10px;margin-top:2px}
+/* 大会: 優勝ずみ・スキップ・再戦 */
+.v-cup.won .tx small{color:#fde047}
+.v-ft span.off{opacity:.45}
+.v-rm{display:grid;grid-template-columns:1.25fr 1fr;gap:6px;margin-top:7px}
+.v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
+.v-rm div small{display:block;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:2px}
+.v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.v-rm div.re small{color:#fff}
+@container (max-width:340px){.v-tr .o{width:42px;height:42px;font-size:19px}.v-tr .nm{font-size:9px}.v-lvx{font-size:8.5px}}
+
+/* 持ち物: 上に選んだ物の名前と説明・下に物の一覧と数 */
+.v-hg{display:inline-block;vertical-align:middle;flex:none}
+.v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
+.v-bsel .e{font-size:34px;line-height:1;flex:none}.v-bsel b{display:block;font-size:13.5px}
+.v-bsel small{display:block;font-size:10px;font-weight:700;color:#e2e8f0;line-height:1.4}.v-bsel small.lim{color:#f9a8d4;font-weight:900}
+.v-bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.v-bgrid div{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:12px;padding:6px 2px 4px;text-align:center;min-width:0}
+.v-bgrid .e{display:block;font-size:28px;line-height:34px;height:34px}
+.v-bgrid i{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
+.v-bgrid small{display:block;font-size:8.5px;font-weight:800;line-height:1.25;min-height:22px;margin-top:2px}
+.v-bgrid div.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
+.v-bgrid div.no{opacity:.6}
+.v-bnote{font-size:10px;font-weight:800;line-height:1.7}.v-bnote .dim2{color:#94a3b8;font-size:9px}
+/* 負けたとき: 砂時計2種類とあきらめる */
+.v-rm3{display:grid;gap:5px;margin-top:7px}
+.v-rm3>div{display:flex;align-items:center;gap:8px;background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left}
+.v-rm3 small{display:block;font-size:9px;font-weight:800;color:#e2e8f0}
+.v-rm3 .re{background:linear-gradient(160deg,#f59e0b,#b45309);border-color:#fde68a;box-shadow:0 0 10px #f59e0b88}
+.v-rm3 .nj{background:linear-gradient(120deg,#be185d,#7c3aed 55%,#2563eb);border-color:#fbcfe8;box-shadow:0 0 10px #a78bfa88}
+.v-rm3 .gv{display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}.v-rm3 .gv small{color:#94a3b8;display:inline;margin-left:6px}
