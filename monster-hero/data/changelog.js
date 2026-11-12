@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-12 22:18", type:'fix', title:'全WAVE詳細で、いちばん下の行が押せないことがあったのを直しました', status:'new', group:'battle',
+    items:[
+      'バトルの難易度の画面で「全WAVE詳細」を開いたとき、下に出ている助手の案内がいちばん下のWAVEの行にかぶって、押せないことがありました。詳細を開いている間は案内を出さないようにしました。',
+    ],
+  },
+  {
     // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
     date: "2026-11-12 21:00", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスが始まりました',
