@@ -368,5 +368,32 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const v = SUC.peek(s0).cards['train:pow']; ok(v.lv === 1 && v.xp === 0 && v.next === 4, `札の訓練Lv・経験・次までがない: ${JSON.stringify({ lv: v.lv, xp: v.xp, next: v.next })}`);
 }
 
+// ---- シナリオの大会(§4b・8人)・助手のお話の結末と特別な1話 ----
+{
+  const at = (aid, turn, extra) => ({ ...SUC.newRun({ id: `sc-${aid}`, species: 'Mocchi', aid }), turn, ...(extra || {}) });
+  const has = (s) => SUC.cupsOf(s).find(c => c.scenario);
+  ok(Object.keys(SUC.SC_CUPS).length === 8, 'シナリオの大会が8人分ない');
+  ok(has(at('mua', 13)) && has(at('mua', 25)) && !has(at('mua', 14)), 'みゅあの笑顔の大会がジュニア・ミドルの8月に並ばない');
+  ok(has(at('atsu', 33)) && SUC.cupsOf(at('atsu', 33)).find(c => c.scenario).star === 3, 'あつの格上への挑戦がプロの4月 ★★★ に並ばない');
+  ok(!has(at('kiki', 27)).entry.ok && has(at('kiki', 27, { stats: { ...at('kiki', 27).stats, wise: 450 } })).entry.ok, 'ききの大会の条件(ちからかかしこさ 400 以上)が効かない');
+  ok(has(at('momosuke', 40, { pop: 60 })).star === 3 && has(at('momosuke', 40, { pop: 10 })).star === 2, 'ももすけの人気投票の大会が人気 50 以上で ★★★ にならない');
+  const er = at('erubin', 10); ok(has(er) && !has(er).entry.ok && has({ ...er, ama: 40, fear: 35 }).entry.ok, 'えるびんの見守りの大会(ジュニア5月・忠誠 70 以上)がずれている');
+  let peaks = 0; for (let t = 2; t <= 46; t++) if (SUC.peakTurn(at('kyuko', t))) peaks += 1; ok(peaks === 1, `きゅうこのピークの大会が1回の育成で1度でない: ${peaks}`);
+  // 格上への挑戦は1つ上の星の強さ・負けても賞金の半分
+  const ab = { ...at('atsu', 33), battle: { kind: 'cup', sys: 'scatsu', star: 3, round: 0 } }; const nb = { ...ab, battle: { kind: 'cup', sys: 'normal', star: 3, round: 0 } };
+  ok(SUC.opponents(ab)[0].sum > SUC.opponents(nb)[0].sum * 1.05, '格上への挑戦の相手が強くない');
+  const al = SUC.settle(ab, false).state; ok(al.fame === Math.round(SUC.CUP_PRIZE[3] * 1.5 * 0.5), '格上への挑戦で負けても賞金の半分にならない');
+  const aw = SUC.settle(ab, true).state; ok(aw.pts === 10 + 15, `格上への挑戦に勝っても能力ポイント +15 が付かない: ${aw.pts}`);
+  const ew = SUC.settle({ ...at('erubin', 10, { ama: 40, fear: 35 }), battle: { kind: 'cup', sys: 'scerubin', star: 1, round: 0 } }, true).state;
+  ok(ew.freeMeal && SUC.meal({ ...ew, fame: 0 }, 'stat').out.ok, '見守りの大会のあと、ごはんが1回ただにならない');
+  // お話の結末
+  const g = SUC.storyEnd(at('kiki', 40), 'good'); ok(g.out.ok && K.every(k => g.state.stats[k] > at('kiki', 40).stats[k]) && g.state.hints[0].name === '静かな一撃', 'いい結末で全能力とひらめきが付かない');
+  ok(!SUC.storyEnd(g.state, 'bitter').out.ok, 'お話の結末が2回付く');
+  const b = SUC.storyEnd(at('atsu', 40), 'bitter').state; ok(b.pts === 10, 'ほろ苦い結末(あつ)で能力ポイント +10 が付かない');
+  // 特別な1話: 頂への道の1回戦だけ
+  const sp = SUC.markSpecial(at('atsu', 44)).state;
+  ok(SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 0 } }).guts === 10 && !SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 1 } }).guts && !SUC.battleMods({ ...at('atsu', 44), battle: { kind: 'summit', round: 0 } }).guts, '特別な1話の効き目が頂への道の1回戦だけになっていない');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話');
