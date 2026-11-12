@@ -138,9 +138,11 @@ const check = (name, ok, extra) => {
     check(`D 同じ日: +${C} は通る・+${C + 1} ははじく`, P(t1(plus(C)), anc).length === 0 && P(t1(plus(C + 1)), anc).length > 0);
     check(`D 3日後: +${C * 4}(=${C}×4) は通る・+${C * 4 + 1} ははじく`, P(t1(plus(C * 4)), anc, null, '2026-11-23').length === 0 && P(t1(plus(C * 4 + 1)), anc, null, '2026-11-23').length > 0);
     check('D 合計も見る(6能力を少しずつ上げて合計で超える)', P(t1((() => { const a = 300 + Math.ceil((C + 1) / 5); return { life: a, pow: a, wise: a, hit: a, eva: a, tough: 300 }; })()), anc).some((p) => p.what === 'total'));
-    check('D Lv は初めて登録した値から1日2つまで(同じ日に +2 は通る・+3 ははじく)', P(t1(st(300), 12), anc).length === 0 && P(t1(st(300), 13), anc).some((p) => p.what === 'lv'));
-    check('D 育てた Lv(31 以上)も日数に見合えば通る(5日後は初めの10から22まで・初めての登録なら 30+2×日数)', P(t1(st(300), 22), anc, null, '2026-11-25').length === 0
-      && P(t1(st(300), 23), anc, null, '2026-11-25').some((p) => p.what === 'lv') && P(t1(st(300), 40)).length === 0);
+    const L = core.LV_DAILY_CAP; // 育成の Lv が1日に上がってよい数(2026-11-12 2→6: 経験 ×3)
+    check(`D Lv は初めて登録した値から1日${L}つまで(同じ日に +${L} は通る・+${L + 1} ははじく)`, P(t1(st(300), 10 + L), anc).length === 0 && P(t1(st(300), 10 + L + 1), anc).some((p) => p.what === 'lv'));
+    check(`D 育てた Lv も日数に見合えば通る(5日後は初めの10から${10 + L * 6}まで)`, P(t1(st(300), Math.min(99, 10 + L * 6)), anc, null, '2026-11-25').length === 0
+      && (10 + L * 6 >= 99 || P(t1(st(300), 10 + L * 6 + 1), anc, null, '2026-11-25').some((p) => p.what === 'lv')) && P(t1(st(300), 40)).length === 0);
+    check('D 上限は ×3 の育ちに合わせて 1日200・Lv 1日6(POWER.md 7章)', core.DAILY_GROWTH_CAP === 200 && L === 6);
     check('D 戦術経験: 初めの登録の基準 + 1日5 まで(同じ日は +5)', P({ ...t1(st(300)), tactics: 10 }, anc, { tactics_first: 5, tactics_day: today }).length === 0
       && P({ ...t1(st(300)), tactics: 11 }, anc, { tactics_first: 5, tactics_day: today }).some((p) => p.what === 'tactics'));
     check('D 能力が下がるのは通す', P(t1(st(100)), anc).length === 0);
@@ -186,7 +188,7 @@ const check = (name, ok, extra) => {
     check('F 端末が送った種・勝ち負けは使わない', m && m.seed !== 'cheat' && /^mptestseed/.test(m.seed));
     const rec = db.s.matches[db.s.matches.length - 1];
     check('F 記録の勝ち負けはサーバの計算と同じ', rec && rec.p_winner === m.winner && rec.p_digest === m.digest && rec.p_seed === m.seed);
-    check('F 記録に計算の版・技表の版・balance が残る', rec && rec.p_engine_version === engine.VERSION && rec.p_tech_version === catalog.techVersion && rec.p_balance === 'A' && m.balance === 'A');
+    check('F 記録に計算の版・技表の版・balance が残る', rec && rec.p_engine_version === (engine.VERSION_PLAIN || engine.VERSION) && rec.p_tech_version === catalog.techVersion && rec.p_balance === 'A' && m.balance === 'A');
     const replay = client.engine.simulate({ seed: m.seed, catalog: client.catalog, teamA: m.teamA, teamB: m.teamB, balance: m.balance });
     check('F 端末が返ってきた種と編成で見返すと同じ指紋', replay.digest === m.digest && replay.winner === m.winner);
     r = await ch({ division: 'fair' });

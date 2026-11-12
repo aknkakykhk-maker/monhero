@@ -49,7 +49,7 @@ const ambbPvpMemberOf = (u) => {
   const mastery = {};
   for (const [k, v] of Object.entries(x.mastery || {})) { const n = Math.round(Number(v)); if (keep.has(k) && Number.isFinite(n) && n > 0) mastery[k] = Math.min(100, n); }
   const name = (typeof x.name === 'string' && x.name.trim()) || ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[x.species] && ALL_PLAYER_MONSTERS[x.species].name) || x.species);
-  return { slot: u.row.slot, species: x.species, name: String(name).slice(0, 24), lv: x.lv, stats: x.stats, ...(techs ? { techs } : {}), mastery };
+  return { slot: u.row.slot, species: x.species, name: String(name).slice(0, 24), lv: x.lv, stats: x.stats, ...(techs ? { techs } : {}), mastery, ...(Number.isInteger(x.loy) ? { loy: x.loy } : {}), ...(Number.isInteger(x.pop) ? { pop: x.pop } : {}) };
 };
 const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonBattleBeta === true && RELEASE_FLAGS.assistantMasmonGrow === true;
 
@@ -118,7 +118,8 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map((row) => {
   const entry = typeof amgEntryOf === 'function' ? amgEntryOf(aid, row) : null;
   let train;
   try { if (typeof amgtBattleOf === 'function') train = amgtBattleOf(aid, row, entry && entry.lv); } catch (_) { train = undefined; }
-  const u = engine.unitFromGrow(row, entry, train);
+  let bond; try { if (typeof amgbOn === 'function' && amgbOn() && typeof amgbEntryOf === 'function') bond = amgbEntryOf(aid, row) || undefined; } catch (_) { bond = undefined; } // 絆の忠誠度・人気(印が偽なら渡さない = 忠誠100・人気0)
+  const u = engine.unitFromGrow(row, entry, train, bond);
   return { row, entry, unit: u, total: entry && entry.st ? Object.values(entry.st).reduce((a, b) => a + (Number(b) || 0), 0) : 0 };
 });
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
