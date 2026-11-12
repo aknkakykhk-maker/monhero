@@ -64,7 +64,8 @@ const PRESETS = {
 const VARIANTS = [
   { key: 'none', aidLv: 1 }, { key: 'C6', aidLv: 3 }, { key: 'B6', aidLv: 3 }, { key: 'B6', aidLv: 5, label: 'B 6体・助手の仲良し Lv5(タッグあり)' },
   { key: 'B6same', aidLv: 3 }, { key: 'B6sokoji', aidLv: 3 }, { key: 'S6', aidLv: 3 }, { key: 'M6', aidLv: 5 }, { key: 'S6aim', aidLv: 5 },
-  { key: 'none', aidLv: 1, rematch: 2, label: '編成なし・再戦の札2枚を持ちこみ' }, { key: 'B6', aidLv: 3, rematch: 2, label: 'B 6体・再戦の札2枚を持ちこみ' },
+  { key: 'none', aidLv: 1, rematch: { sand: 2 }, label: '編成なし・時渡りの砂時計2つを持ちこみ' }, { key: 'B6', aidLv: 3, rematch: { sand: 2 }, label: 'B 6体・時渡りの砂時計2つを持ちこみ' },
+  { key: 'B6', aidLv: 3, rematch: { rainbow: 2 }, label: 'B 6体・虹の時渡りの砂時計2つを持ちこみ' },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
 ];
 
@@ -127,16 +128,18 @@ const chooseReact = (s) => {
 
 const playRun = (id, preset, aidLv, species, aid, rematch) => {
   const rng = SUC.rngOf(id, 'team');
-  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, rematch: rematch || 0 });
+  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {} });
   const trace = { loyal60: null, periodSums: {} };
   let guard = 0;
   while (!s.over && guard++ < 200) {
     if (s.battle) {
       if (CALIBRATE) SNAP.push(JSON.parse(JSON.stringify(s)));
-      const opps = SUC.opponents(s); const wins = [];
+      let opps = SUC.opponents(s); const wins = [];
       for (let j = 0; j < opps.length; j++) {
         let w = fight(s, opps[j], j);
-        while (!w && SUC.canRematch(s)) { s = SUC.rematch(s).state; w = fight(s, opps[j], j); } // 負けたら再戦の札を使う
+        // 負けたら砂時計でやり直す(先に同じ相手の砂時計・無ければ虹で相手を変える)
+        let cur = opps;
+        while (!w && (SUC.canRematch(s, 'sand') || SUC.canRematch(s, 'rainbow'))) { s = SUC.rematch(s, SUC.canRematch(s, 'sand') ? 'sand' : 'rainbow').state; cur = SUC.opponents(s); w = fight(s, cur[j], j); opps = cur; }
         wins.push(w); if (!w) break;
       }
       trace.battles = trace.battles || []; trace.battles.push({ kind: s.battle.kind, round: s.battle.round, won: wins.every(Boolean) && wins.length === opps.length });

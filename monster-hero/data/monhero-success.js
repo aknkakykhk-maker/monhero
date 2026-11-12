@@ -62,9 +62,10 @@
   // 頂への道(最後の期の 3・4・5ターン目の終わりに1戦ずつ・負けたら終わり)
   const SUMMIT = Object.freeze([{ round: 1, name: '頂への道 1回戦', mult: 1.2 }, { round: 2, name: '頂への道 準決勝', mult: 1.3 }, { round: 3, name: '頂への道 決勝', mult: 1.4 }]);
   const SUMMIT_FINAL = Object.freeze({ plain: { all: 8, pts: 30, pop: 10, title: '頂に立った子' }, big: { all: 15, pts: 60, pop: 20, title: 'ヒーローの頂' } });
-  // 再戦(社長 2026-11-12): 大会に負けても、1回の育成で3回まで再戦できる。再戦の札を1枚使う(持ちこみ・出来事・ごほうびでもらえる)
-  //   デビュー戦(案): 再戦に勝てば、その負けは「3回負けたらゲームオーバー」に数えない(札を使って負けを消す)
-  const REMATCH = Object.freeze({ max: 3, carry: 3, crownWin: 1 }); // carry = 持ちこめる札の上限・👑 に勝つと +1 枚
+  // 再戦(社長 2026-11-12・TOURNAMENT.md §14): 大会に負けたとき、アイテムでやり直せる。2種類あわせて1回の育成で3回まで
+  //   時渡りの砂時計(sand)= 同じ相手ともう一度/虹の時渡りの砂時計(rainbow)= 相手を変えてもう一度(組み合わせのくじを引き直す)
+  //   持ちこみ・出来事・大会のごほうびでもらえる。デビュー戦(案): やり直して勝てば、その負けは「3回負けたらゲームオーバー」に数えない
+  const REMATCH = Object.freeze({ max: 3, carry: 3, crownWin: 'sand', items: Object.freeze({ sand: '時渡りの砂時計', rainbow: '虹の時渡りの砂時計' }) });
   const DEBUT_LOSS_MAX = 3;        // デビュー戦に3回負けたらゲームオーバー(§12 E)
   const DEBUT_RETRY_WEAKEN = 0.1;  // 負けるたびに相手が1割ずつ弱く(§12 D)
   const DEBUT_RETRY_FLOOR = 0.6;   // はじめの6割まで
@@ -319,7 +320,7 @@
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? ASSISTS.hitonatsu.start[hn - 1] : 0), 0, BOND.max),
         techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, fame: 0, fameTotal: 0, mealReady: false, trainXp: {},
-        rematch: clamp(Math.round(num(src.rematch)), 0, REMATCH.carry), rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [],
+        items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [],
         cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
         log: { train: 0, great: 0, ok: 0, fail: 0, sab: 0, rest: 0, play: 0, clinic: 0, cond: 0, events: 0, story: 0, lottery: 0, shugyo: 0, learned: 0, taught: 0, tagTurns: [0, 0, 0, 0], wins: 0, losses: 0, issa: [] },
@@ -659,7 +660,7 @@
     const benchOf = (key) => num(BENCH_USE[key], 1500);
     const opponentsOf = (s) => {
       const b = s.battle; if (!b) return [];
-      const rng = rngOf(s.id, s.turn, 'opp', b.kind, b.retry || 0, b.round || 0);
+      const rng = rngOf(s.id, s.turn, 'opp', b.kind, b.retry || 0, b.round || 0, ...(b.reroll ? ['re', b.reroll] : []));
       const list = [];
       let sum; let gear; let n = 1; let star = 1;
       if (b.kind === 'summit') { sum = benchOf('summit') * SUMMIT[b.round].mult; gear = OPP_GEAR.final; }
@@ -677,11 +678,12 @@
     };
 
     // 再戦: 負けた試合の直後(settle の前)に呼ぶ。同じ相手ともう一度(試合の乱数は again で変える)。札を1枚使う
-    const canRematch = (s) => Boolean(s.battle) && s.rematch > 0 && s.rematchUsed < REMATCH.max;
-    const rematch = (s0) => {
-      const s = clone(s0); if (!canRematch(s)) return { state: s0, out: { ok: false } };
-      s.rematch -= 1; s.rematchUsed += 1; s.battle.again = num(s.battle.again) + 1; s.log.rematch = (s.log.rematch || 0) + 1;
-      return { state: s, out: { ok: true, left: s.rematch } };
+    const canRematch = (s, item = 'sand') => Boolean(s.battle) && Boolean(REMATCH.items[item]) && num(s.items && s.items[item]) > 0 && s.rematchUsed < REMATCH.max;
+    const rematch = (s0, item = 'sand') => {
+      const s = clone(s0); if (!canRematch(s, item)) return { state: s0, out: { ok: false } };
+      s.items[item] -= 1; s.rematchUsed += 1; s.battle.again = num(s.battle.again) + 1; s.log.rematch = (s.log.rematch || 0) + 1;
+      if (item === 'rainbow') s.battle.reroll = num(s.battle.reroll) + 1; // 相手を変える
+      return { state: s, out: { ok: true, item, left: s.items[item] } };
     };
     // 一度でも(前の育成も含めて)優勝した大会は、結果だけ見て進める(中で試合は計算する・社長 2026-11-12)
     const battleKey = (b) => (b ? (b.kind === 'summit' ? `summit${b.round + 1}` : b.kind) : '');
@@ -720,7 +722,7 @@
         return { state: s, out };
       }
       const f = FORCED[b.kind];
-      if (won) { KEYS.forEach(k => addStat(s, k, f.all)); gainPts(s, f.pts); s.pop = clamp(s.pop + f.pop, 0, 100); s.titles.push(f.title); if (f.crown) { s.crowns += 1; s.rematch += REMATCH.crownWin; } }
+      if (won) { KEYS.forEach(k => addStat(s, k, f.all)); gainPts(s, f.pts); s.pop = clamp(s.pop + f.pop, 0, 100); s.titles.push(f.title); if (f.crown) { s.crowns += 1; s.items[REMATCH.crownWin] += 1; } }
       s.turn += 1; return { state: s, out };
     };
     const gainPts = (s, v) => { const room = PTS.hold - s.pts; const g = Math.max(0, Math.min(room, v)); s.pts += g; s.ptsLost += v - g; };

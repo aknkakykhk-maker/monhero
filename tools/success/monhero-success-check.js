@@ -273,19 +273,22 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   if (g0.out.result === g1.out.result && g0.out.result === 'ok') ok(g1.out.gain.hit > g0.out.gain.hit && g1.out.stages[0].length > 0 && g1.out.stages[0].length <= SUC.SHUGYO.joinMax, `修行に編成の補正がかからない: ${g0.out.gain.hit} → ${g1.out.gain.hit}`);
 }
 
-// ---- 再戦の札・勝った大会のスキップ(社長 2026-11-12) ----
+// ---- 再戦(時渡りの砂時計・虹の時渡りの砂時計)・勝った大会のスキップ(社長 2026-11-12) ----
 {
-  const s0 = { ...SUC.newRun({ id: 'rem', species: 'Mocchi', aid: 'mua', rematch: 9, wonBefore: ['debut'] }), turn: 5, acted: false, battle: { kind: 'debut', round: 0 } };
-  ok(s0.rematch === SUC.REMATCH.carry, '再戦の札の持ちこみが上限で止まらない');
+  const s0 = { ...SUC.newRun({ id: 'rem', species: 'Mocchi', aid: 'mua', items: { sand: 9, rainbow: 2 }, wonBefore: ['debut'] }), turn: 5, acted: false, battle: { kind: 'debut', round: 0 } };
+  ok(s0.items.sand === SUC.REMATCH.carry && s0.items.rainbow === 2, '砂時計の持ちこみが上限で止まらない');
   ok(SUC.canSkip(s0) && !SUC.canSkip({ ...s0, battle: { kind: 'junior', round: 0 } }), '前に勝った大会だけスキップできる になっていない');
-  let x = s0; let n = 0; while (SUC.canRematch(x)) { x = SUC.rematch(x).state; n += 1; }
-  ok(n === SUC.REMATCH.max && x.rematchUsed === 3 && x.battle.again === 3, `1回の育成で再戦が3回までになっていない: ${n}`);
-  ok(JSON.stringify(SUC.opponents(x)) === JSON.stringify(SUC.opponents(s0)), '再戦の相手が変わる(同じ相手ともう一度のはず)');
-  ok(!SUC.canRematch({ ...s0, rematch: 0 }), '札が無いのに再戦できる');
-  // デビュー戦: 再戦に勝てば負けに数えない
-  const w = SUC.settle(SUC.rematch(s0).state, [true]).state; ok(w.debutLoss === 0 && w.debutWon, '再戦で勝ったデビュー戦が負けに数えられた');
+  const sa = SUC.rematch(s0, 'sand').state;
+  ok(JSON.stringify(SUC.opponents(sa)) === JSON.stringify(SUC.opponents(s0)), '時渡りの砂時計で相手が変わる(同じ相手のはず)');
+  const rb = SUC.rematch(sa, 'rainbow').state;
+  ok(JSON.stringify(SUC.opponents(rb)) !== JSON.stringify(SUC.opponents(s0)), '虹の時渡りの砂時計で相手が変わらない');
+  const r3 = SUC.rematch(rb, 'sand').state;
+  ok(r3.rematchUsed === 3 && !SUC.canRematch(r3, 'sand') && !SUC.canRematch(r3, 'rainbow'), '2種類あわせて1回の育成で3回までになっていない');
+  ok(!SUC.canRematch({ ...s0, items: { sand: 0, rainbow: 0 } }, 'sand'), '砂時計が無いのにやり直せる');
+  // デビュー戦: やり直して勝てば負けに数えない
+  const w = SUC.settle(sa, [true]).state; ok(w.debutLoss === 0 && w.debutWon, 'やり直して勝ったデビュー戦が負けに数えられた');
   const won = SUC.settle({ ...s0, wonBefore: [] }, [true]).state; ok(won.wonNow.includes('debut'), '勝った大会が記録されない(次の育成でスキップに使う)');
-  const crown = SUC.settle({ ...s0, turn: 41, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state; ok(crown.rematch === s0.rematch + SUC.REMATCH.crownWin, '👑 に勝っても再戦の札が増えない');
+  const crown = SUC.settle({ ...s0, turn: 41, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state; ok(crown.items.sand === s0.items.sand + 1, '👑 に勝っても砂時計が増えない');
 }
 
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
