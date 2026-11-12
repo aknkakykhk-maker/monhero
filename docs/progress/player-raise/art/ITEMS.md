@@ -40,7 +40,9 @@
 - 検査の参照元(`tools/image-asset-check.js` の sources)と stamp-version.js の IMAGE_HOST_FILES にはもう足してある
 - 絵は事前ダウンロードの battle 組に入っている(起動時の読み込み core には入らない)
 
-## 新しいアイテムを足す手順(社長「今後新しいアイテムを作るときも同じ見た目で」)
+## 新しいアイテムを足す手順(社長「今後新しいアイテムを作るときも同じ見た目で」・道具側の写しは tools/success/README.md)
+
+参考の画面の絵は切り抜いて使わない(2026-11-12 窓口経由の社長「うまくやれるなら参考の画像そのものを」を試す前に見送った。よそのゲームの絵そのものを公開することになる・数「×44」などや文字・ロゴがアイテムに重なる・1つ約190pxで 512 にするとぼやける)。
 
 1. `monster-hero/data/success-items.js` の `SUCCESS_ITEMS` に1行足す(id は英小文字とハイフン・`image` は `images/success/items/<id>.png`)
 2. `tools/success/item-icons.js` の `ART['<id>']` に絵を1つ足す。そろえ方は次の部品を使えば自然にそろう
