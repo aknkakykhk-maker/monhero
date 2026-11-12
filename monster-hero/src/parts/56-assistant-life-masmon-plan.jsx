@@ -243,15 +243,20 @@ const amgpGainOf = (row, e, code, fat, mult = AMG_CARE.pickMult) => {
   else if (/^H:/.test(code)) { add(code.slice(2), 7, 12); add(AMG_SUB[code.slice(2)], 1, 3); }
   return g;
 };
-// 1日(3回)の見通し。codes は朝昼夜の3つ。まかせる(A)は助手の決め方に近い形で見込む
-const amgpForecastDay = (aid, row, e, codes, fat0, str0) => {
-  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu; let fat = fat0, str = str0; let left = 20; const out = [];
-  for (const c0 of codes) {
+// 1日(3回)の見通し。codes は朝昼夜の3つ(null = もう過ぎた回で数えない)。まかせる(A)は助手の決め方に近い形で見込む
+//   opt.key・opt.slots があれば、けが・病気・家出の回は訓練しない(休み扱い・灰色)。opt.used = その日にもう伸びた分(1日の上限20から引く)
+const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
+  const T = AMG_TRAIT[aid] || AMG_TRAIT.atsu; let fat = fat0, str = str0; let leftHi = Math.max(0, AMG_CARE.viewCap - (opt.used || 0)); let leftLo = leftHi; const out = [];
+  for (let p = 0; p < codes.length; p++) {
+    const c0 = codes[p];
+    if (!c0) { out.push(null); continue; }
+    const cond = opt.key && opt.slots ? amgpCondAt(opt.key, opt.slots[p]) : null;
+    if (cond) { fat = amgClamp(fat - 30, 0, 100); str = amgClamp(str - 5, 0, 100); out.push({ code: c0, as: 'X', cond: cond.k, auto: false, fat, str, sab: 0, hurt: 0, sick: 0, away: 0, g: {} }); continue; }
     let code = c0; let auto = false;
     if (code === 'A') { auto = true; code = fat >= T.rest ? 'R' : str >= 50 ? 'P' : `L:${amgpPolicyKey(row, e)}`; }
     const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
     const g0 = amgpGainOf(row, e, code, fat, auto ? 1 : AMG_CARE.pickMult); const g = {};
-    for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, left); if (bb > 0) g[k] = [Math.min(a, bb), bb]; left -= g[k] ? g[k][0] : 0; }
+    for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, leftHi); if (bb > 0) { const aa = Math.min(a, bb, leftLo); g[k] = [aa, bb]; leftHi -= bb; leftLo -= aa; } }
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100); str = amgClamp(str + ds, 0, 100);
     const a = code[0] === 'H' ? 'heavy' : code[0] === 'S' ? 'shugyo' : code[0] === 'R' ? 'rest' : code[0] === 'P' ? 'play' : 'light';
@@ -268,7 +273,7 @@ const amgpForecastWeek = (aid, row, e, key, now = Date.now()) => {
     const startFat = fat, startStr = str;
     // 今日の、もう過ぎた回は数えない
     const live = codes.map((c, p) => (i === 0 && day * 3 + p <= s0 ? null : c));
-    const f = amgpForecastDay(aid, row, e, live.map(c => c || 'A'), fat, str).map((x, p) => (live[p] ? x : null));
+    const f = amgpForecastDay(aid, row, e, live, fat, str, { key, slots: [0, 1, 2].map(p => day * 3 + p), used: i === 0 && e.dg && e.dg.d === day ? e.dg.n : 0 });
     for (const x of f) if (x) { fat = x.fat; str = x.str; for (const [k, [a, b]] of Object.entries(x.g)) total[k] = [(total[k] ? total[k][0] : 0) + a, (total[k] ? total[k][1] : 0) + b]; }
     days.push({ day, wd: amgpWeekday(day), codes, f, startFat, startStr, fat, str });
   }
@@ -293,7 +298,8 @@ function AssistantMasmonNoteHost({ land = false }) {
 // 家の上に出す札(家の「いま行くと得なこと」の並びの近く)
 function AssistantMasmonNoteBand({ land = false }) {
   const [st, setSt] = React.useState(AMGP_STORE.state);
-  React.useEffect(() => { AMGP_STORE.subs.add(setSt); if (amgpOn()) void amgpLoad(); return () => { AMGP_STORE.subs.delete(setSt); }; }, []);
+  const [, setCs] = React.useState(0); // けが・病気が起きたら札の数をすぐ変える(fable の指摘 11-12)
+  React.useEffect(() => { const f = () => setCs(n => n + 1); AMGP_STORE.subs.add(setSt); AMGP_CSTORE.subs.add(f); if (amgpOn()) void amgpLoad(); return () => { AMGP_STORE.subs.delete(setSt); AMGP_CSTORE.subs.delete(f); }; }, []);
   if (!amgpOn()) return null;
   const sg = amgpStageOf(st.days); const hurt = Object.values(AMGP_CSTORE.state.mons).filter(c => c.until >= amgSlotOf()).length;
   return (
@@ -329,13 +335,15 @@ function AmgpShell({ title, sub, tabs, tab, setTab, onClose, land, children, ro 
   return (
     <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/60" data-amgp-note={ro ? 'readonly' : 'mine'}>
       <div className="flex w-full max-w-md flex-col rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 text-white" style={{ height: land ? '96dvh' : '92dvh' }}>
-        <div className="flex items-center gap-2 px-3 pt-3">
-          <button type="button" onClick={onClose} data-mhl-sheet-close className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black">閉じる</button>
-          <div className="min-w-0 flex-1"><p className="truncate text-[16px] font-black">📒 {title}</p><p className="truncate text-[10.5px] font-bold text-slate-300">{sub}</p></div>
+        {/* 横向きは頭と切り替えを1行にまとめ、予定の見える高さを広げる(fable の指摘 11-12・568×320 で約190px だった) */}
+        <div className={`flex items-center gap-2 px-3 ${land ? 'pt-1.5' : 'pt-3'}`}>
+          <button type="button" onClick={onClose} data-mhl-sheet-close className={`${land ? 'min-h-[40px]' : 'min-h-[44px]'} shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black`}>閉じる</button>
+          <div className="min-w-0 flex-1"><p className={`truncate font-black ${land ? 'text-[14px]' : 'text-[16px]'}`}>📒 {title}</p>{!land && <p className="truncate text-[10.5px] font-bold text-slate-300">{sub}</p>}</div>
+          {land && <div className="flex shrink-0 gap-1" role="tablist">{tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} data-amgp-tab={k} onClick={() => setTab(k)} className={`min-h-[40px] rounded-xl px-2.5 text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>)}</div>}
         </div>
-        <div className="mt-2 flex gap-1 px-3" role="tablist">
+        {!land && <div className="mt-2 flex gap-1 px-3" role="tablist">
           {tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} data-amgp-tab={k} onClick={() => setTab(k)} className={`min-h-[40px] flex-1 rounded-xl text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>)}
-        </div>
+        </div>}
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-2">{children}</div>
       </div>
     </div>);
@@ -487,7 +495,7 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
         <span/>{AMG_PERIOD_NAME.map(p => <span key={p} className="text-center text-[10px] font-black text-slate-400">{p}</span>)}<span className="text-center text-[10px] font-black text-slate-400">疲/ス</span>
         {fw.days.map((dd, i) => (<React.Fragment key={dd.day}>
           <span className={`flex items-center justify-center rounded-lg text-[11px] font-black ${i === 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800'}`}>{AMGP_DAY_NAME[dd.wd]}</span>
-          {dd.codes.map((c, p) => <button key={p} type="button" onClick={() => { setDi(i); setMode('day'); }} data-amgp-cell={dd.wd * 3 + p} className={`min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`}>{amgpCodeIcon(c)}{amgpCodeName(c)}</button>)}
+          {dd.codes.map((c, p) => <button key={p} type="button" onClick={() => { setDi(i); setMode('day'); }} data-amgp-cell={dd.wd * 3 + p} className={`min-h-[34px] truncate rounded-lg px-1 text-[10.5px] font-black ${dd.f[p] && dd.f[p].cond ? 'bg-slate-700 text-slate-300' : c === 'A' ? 'bg-teal-800' : c === 'R' || c === 'P' ? 'bg-slate-600' : c === 'S' ? 'bg-orange-700' : c[0] === 'H' ? 'bg-violet-700' : 'bg-blue-700'} ${!dd.f[p] ? 'opacity-40' : ''}`} data-amgp-cond={dd.f[p] && dd.f[p].cond ? dd.f[p].cond : undefined}>{dd.f[p] && dd.f[p].cond && AMGP_COND[dd.f[p].cond] ? `${AMGP_COND[dd.f[p].cond].icon}${AMGP_COND[dd.f[p].cond].name}` : <>{amgpCodeIcon(c)}{amgpCodeName(c)}</>}</button>)}
           <span className={`flex items-center justify-center rounded-lg text-[10.5px] font-black ${dd.fat >= 70 || dd.str >= 70 ? 'bg-rose-700' : dd.fat >= 60 || dd.str >= 60 ? 'bg-amber-700' : 'bg-slate-800'}`} data-amgp-day-end={dd.wd}>{dd.fat}/{dd.str}</span>
         </React.Fragment>))}
       </div>
@@ -504,7 +512,7 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
         <div key={p} className={`mt-1.5 rounded-xl border p-2 ${f && !f.auto && (f.sab > 0 || f.hurt > 0 || f.sick > 0) ? 'border-rose-300/70' : 'border-white/10'} bg-slate-800/70`} data-amgp-slot={p}>
           <div className="flex items-center gap-2"><b className="w-[64px] shrink-0 text-[12px]">{AMG_PERIOD_NAME[p]} {['4:00', '12:00', '18:00'][p]}</b>
             <span className="min-w-0 flex-1">{sel(code, (c) => amgpSetCells(x.key, { [wd * 3 + p]: c }), { 'data-amgp-slot-select': p })}</span></div>
-          <p className="mt-0.5 text-[10.5px] font-bold text-slate-300">{f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'}</p>
+          <p className="mt-0.5 text-[10.5px] font-bold text-slate-300">{f && f.cond && AMGP_COND[f.cond] ? `${AMGP_COND[f.cond].icon} ${AMGP_COND[f.cond].name}のあいだは訓練しません(休み) ・ ${fsTxt(f)}` : f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'}</p>
         </div>); })}
       <p className="mt-2 text-[11px] font-black text-slate-300">6能力と、この日の見通し(黄=伸びる分)</p>
       {(() => { const g = {}; for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b]; return <div className="mt-1"><AmgpBars st={x.e.st} add={g}/></div>; })()}
