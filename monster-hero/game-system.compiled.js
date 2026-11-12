@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ecd7711d66c0912
+// source-sha256: be84968c7e4ed9d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114026,7 +114026,7 @@ function AssistantLifeHouse({
   const giveGroup = (life.groups || [])[0];
   const giveSoloId = soloOn ? Object.keys(life.solo || {}).find(id => !awayFriend(id)) || giveGroup && giveGroup.ids[0] || null : null;
   const pad = 12;
-  const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
+  const houseW = land ? Math.min(560, Math.round(vw * 0.40) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = React.createElement("div", {
     className: land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5',
     "data-assistant-life-today": true
@@ -117415,7 +117415,7 @@ function AssistantLifePlacePerk({
     }
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
+  }, isImageIconValue(r.icon) ? cardIconNode(r.icon, 16) : r.icon, " "), String(r.text || '').replace(/。押すと[^。]*へ$/, '')), typeof r.go === 'function' && typeof onGo === 'function' && React.createElement("button", {
     type: "button",
     "data-assistant-life-place-perk-go": r.k,
     onClick: () => onGo(r.go),

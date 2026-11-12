@@ -100,7 +100,7 @@ const SAMPLE = (() => {
     check(`${T}③ ▼ で「今日・次のごほうび」が開く`, (await page.locator('[data-assistant-life-benefit-fold="open"]').count()) === 1);
     await page.locator('[data-assistant-life-benefit-fold]').click(); await page.waitForTimeout(300);
     // ④ できごと
-    const bondBefore = await page.evaluate(() => Object.fromEntries(['atsu', 'erubin'].map(id => [id, (JSON.parse(localStorage.getItem(`mh_assistant_bond_${id}_v1`) || localStorage.getItem(`mh_assistant_bond_${id}`) || 'null') || {}).points || 0])));
+    const bondBefore = await page.evaluate(() => Object.fromEntries(['atsu', 'erubin', 'dra', 'sorashido', 'momosuke', 'kiki', 'mua', 'kyuko'].map(id => [id, (JSON.parse(localStorage.getItem(`mh_assistant_bond_${id}_v1`) || localStorage.getItem(`mh_assistant_bond_${id}`) || 'null') || {}).points || 0])));
     const go = page.locator('[data-assistant-life-daily-go]');
     check(`${T}④ できごとの札に「見に行く ▶」`, (await go.count()) === 1);
     if (await go.count()) {
@@ -117,8 +117,8 @@ const SAMPLE = (() => {
         saved: JSON.parse(localStorage.getItem('mh_assistant_life_daily_v1') || 'null'), lines: document.querySelectorAll('[data-assistant-life-daily-line]').length }));
       check(`${T}④ 返事のあと: 結果の札・見た時間帯が保存に入る`, r.phase === 'done' && /ふれあい1回/.test(r.res) && /\+4/.test(r.res) && !!r.saved && Array.isArray(r.saved.heard) && r.saved.heard.length === 1 && r.lines === 3, JSON.stringify(r));
       await shot(page, v, '5-scene-done');
-      const bondAfter = await page.evaluate(() => Object.fromEntries(['atsu', 'erubin'].map(id => [id, (JSON.parse(localStorage.getItem(`mh_assistant_bond_${id}_v1`) || localStorage.getItem(`mh_assistant_bond_${id}`) || 'null') || {}).points || 0])));
-      check(`${T}④ 出てきた2人の 💗 が +4`, bondAfter.atsu - bondBefore.atsu === 4 && bondAfter.erubin - bondBefore.erubin === 4, JSON.stringify({ bondBefore, bondAfter }));
+      const bondAfter = await page.evaluate(() => Object.fromEntries(['atsu', 'erubin', 'dra', 'sorashido', 'momosuke', 'kiki', 'mua', 'kyuko'].map(id => [id, (JSON.parse(localStorage.getItem(`mh_assistant_bond_${id}_v1`) || localStorage.getItem(`mh_assistant_bond_${id}`) || 'null') || {}).points || 0])));
+      check(`${T}④ 出てきた2人の 💗 が +4`, Object.keys(bondAfter).filter(id => bondAfter[id] - bondBefore[id] === 4).length === 2 && Object.keys(bondAfter).every(id => [0, 4].includes(bondAfter[id] - bondBefore[id])), JSON.stringify({ bondBefore, bondAfter }));
       await page.locator('[data-assistant-life-daily-scene-close]').click(); await page.waitForTimeout(500);
       const after = await page.evaluate(() => ({ scene: !!document.querySelector('[data-assistant-life-daily-scene]'), go: !!document.querySelector('[data-assistant-life-daily-go]'), ev: document.querySelectorAll('[data-assistant-life-room-ev]').length }));
       check(`${T}④ 閉じると札は「見ました」・❗ が消える`, !after.scene && !after.go && after.ev === 0, JSON.stringify(after));
