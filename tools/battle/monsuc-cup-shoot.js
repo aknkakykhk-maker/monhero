@@ -1,4 +1,4 @@
-// モンヒロサクセスの大会の「見せる」部品(56-monhero-success-cup.jsx)の止め絵を撮る(2026-11-12 バトル部)
+// モンヒロサクセスの大会の「見せる」部品(56-monhero-success-cup.jsx)と試合の画面(56-monhero-success-arena.jsx)の止め絵を撮る(2026-11-12 バトル部)
 // 使い方: node tools/battle/monsuc-cup-shoot.js [--dsf=1]
 // 出す物: docs/progress/player-raise/cup-show/png/<向き>-<場面>.png(縦 390×844・横 844×390・幅 320×640)と一覧 sheet.png
 // ゲーム本体(index.html)を開き、計算の芯(data/monhero-success.js)を足して本物の育成の状態を作り、部品だけを描く。何も保存しない。
@@ -35,7 +35,9 @@ const SCENES = [
   { id: 'B1-bracket', state: 'rival', startAt: 'bracket', wait: 2600 },
   { id: 'C2-card', state: 'rival', startAt: 'card', wait: 1500 },
   { id: 'Y2-cutin', state: 'summit', startAt: 'cutin', wait: 900 },
-  { id: 'M-match', state: 'rival', startAt: 'match', wait: 3800 },
+  // 試合(MonsucArena・自分操作): 手を選ぶ帯が出たところ / 技を押して動きの途中(click … 押すボタン・after … 押してから撮るまで)
+  { id: 'M1-pick', state: 'rival', startAt: 'match', wait: 4200 },
+  { id: 'M2-attack', state: 'rival', startAt: 'match', wait: 4200, click: '[data-msxm-tech]:not([disabled])', after: 520 },
   { id: 'B2-win', state: 'rival', startAt: 'win', wait: 1400 },
   { id: 'C4-lose', state: 'champ', startAt: 'lose', wait: 900 },
 ];
@@ -87,6 +89,21 @@ const SCENES = [
         }, { sc });
         if (!res) problems.push(`${v.id}/${sc.id}: 描けなかった`);
         await page.waitForTimeout(sc.wait);
+        if (sc.click) {
+          // 届く技が無ければ、前へ詰めて相手の番を見せ終わるのを待ち、もう一度(最大4回)
+          let ok = false;
+          for (let k = 0; k < 4 && !ok; k++) {
+            const r = await page.evaluate((q) => {
+              const b = document.querySelector(q); if (b) { b.click(); return 'tech'; }
+              const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find(x => /前へ/.test(x.textContent)); if (f) { f.click(); return 'move'; }
+              return '';
+            }, sc.click);
+            if (r === 'tech') ok = true;
+            else await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 15000 }).catch(() => {});
+          }
+          if (!ok) problems.push(`${v.id}/${sc.id}: 押す技が無い`);
+          await page.waitForTimeout(sc.after || 400);
+        }
         const chk = await page.evaluate(() => {
           const out = []; const R = document.querySelector('[data-msc-root]');
           if (!R) return ['部品が出ていない'];
@@ -108,8 +125,8 @@ const SCENES = [
       errs.forEach(e => problems.push(`${v.id}: 実行時エラー ${e.slice(0, 160)}`));
       await page.close();
     }
-    // 一覧(縦だけ6枚を横に並べる)
-    const sheet = await browser.newPage({ viewport: { width: 6 * 400 + 20, height: 900 }, deviceScaleFactor: 1 });
+    // 一覧(縦だけを横に並べる)
+    const sheet = await browser.newPage({ viewport: { width: SCENES.length * 400 + 20, height: 900 }, deviceScaleFactor: 1 });
     const imgs = SCENES.map(sc => `<figure style="margin:0;display:inline-block;width:390px;margin-right:10px;vertical-align:top"><img style="width:390px" src="data:image/png;base64,${fs.readFileSync(path.join(OUT, `tate-${sc.id}.png`)).toString('base64')}"><figcaption style="font:bold 14px sans-serif;color:#fff;text-align:center">${sc.id}</figcaption></figure>`).join('');
     await sheet.setContent(`<body style="margin:10px;background:#111">${imgs}</body>`);
     await sheet.screenshot({ path: path.join(OUT, 'sheet.png'), fullPage: true });
