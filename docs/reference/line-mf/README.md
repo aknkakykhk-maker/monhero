@@ -9,6 +9,7 @@
 | `ikusei-video-2-2026-11-12.mp4` | デビュー期の大会までの動画(161秒) | VIDEO-REF.md |
 | `ikusei-video-3-2026-11-12.mp4` | 修行とアイテムの動画(49秒) | VIDEO-REF.md |
 | `item-tokiwatari-sunadokei.png` / `item-niji-tokiwatari-sunadokei.png` | 持ち物の画面(再戦のアイテム「時渡りの砂時計」「虹の時渡りの砂時計」) | TOURNAMENT.md |
+| `mochikomi/item-01〜12.png` | 持ち物の画面(持ちこみアイテム12種類) | ITEMS-REF.md |
 | `assist-card-1〜3.png` | アシストカードの詳細(基本の数値・アシスト効果) | ASSIST-REF.md |
 | `assist-card-4-event.png` | アシストカードのイベントの一覧 | ASSIST-REF.md |
 | `assist-cards.json` / `assist-effects.json` | アシストカード100枚と効果1084件の一覧(攻略サイトのデータ) | ASSIST-REF.md |
