@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f1a30a15dcf28ec
+// source-sha256: 6e7b50db7ef650d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156652,6 +156652,7 @@ const MSX_KEYS = Object.freeze({
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 const MSX_SCENARIOS = Object.freeze([{
   aid: 'mua',
@@ -156707,12 +156708,28 @@ const msxLoadScript = (src, globalName) => new Promise(res => {
   s.onerror = () => res(null);
   document.head.appendChild(s);
 });
+const msxLoadConstScript = (src, check) => new Promise(res => {
+  if (check()) {
+    res(true);
+    return;
+  }
+  if (typeof document === 'undefined') {
+    res(false);
+    return;
+  }
+  const s = document.createElement('script');
+  s.src = src;
+  s.onload = () => res(check());
+  s.onerror = () => res(false);
+  document.head.appendChild(s);
+});
+const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT')]).then(([core, script]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -156725,7 +156742,12 @@ const msxLoad = () => {
         const SUC = core.create({
           calc: MASMON_CALC,
           apt: AMG_APT,
-          init: AMG_INIT
+          init: AMG_INIT,
+          techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
+          types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
+          monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
+          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null,
+          cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null
         });
         msxSuc = {
           core,
@@ -156844,7 +156866,8 @@ const msxNormMeta = raw => {
     },
     items,
     runs: Math.max(0, Math.floor(msxNum(o.runs, 0))),
-    picked: msxIsObj(o.picked) ? o.picked : {}
+    picked: msxIsObj(o.picked) ? o.picked : {},
+    wonCups: Array.isArray(o.wonCups) ? o.wonCups.filter(x => typeof x === 'string').slice(0, 500) : []
   };
 };
 const msxReadAll = async SUC => {
@@ -158078,7 +158101,8 @@ function MonheroSuccessScreen({
       team: cfg.team,
       aidBondLv: cfg.aidBondLv,
       carry,
-      bag
+      bag,
+      wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
     });
     const r = {
       v: 1,
@@ -158408,16 +158432,23 @@ function MsxPlay({
   const phase = run.phase;
   let body = null;
   let foot = null;
-  const R3 = typeof MonsucR3Screen === 'function' ? MonsucR3Screen : null;
-  const r3Kind = phase === 'battle' && s.battle ? 'cup' : phase === 'over' || s.over ? s.over === 'gameover' ? 'gameover' : 'retire' : sub === 'r3:cup' ? 'cup' : sub === 'r3:quest' ? 'quest' : null;
-  if (R3 && r3Kind) return React.createElement(R3, {
-    kind: r3Kind,
+  const r3 = typeof MsxR3 === 'function' ? phase === 'battle' && s.battle ? 'battle' : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
+  if (r3) return React.createElement(MsxR3, {
+    kind: r3,
     run: run,
     setRun: setRun,
-    onClose: () => {
+    v: v,
+    ev: ev,
+    ctx: ctx,
+    bondLv: bondLv,
+    debug: debug,
+    onBack: () => setSub('main'),
+    onPause: onPause,
+    onQuit: onQuit,
+    onActed: next => {
       setSub('main');
-    },
-    onPause: onPause
+      afterAct(next);
+    }
   });
   const bandProps = {};
   if (phase === 'result' && run.out) {
@@ -159145,7 +159176,7 @@ function MsxPlay({
     }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => R3 ? setSub('r3:quest') : setSheet({
+      onClick: () => typeof MsxR3 === 'function' ? setSub('shugyo') : setSheet({
         soon: '⚔ 修行',
         text: '技を覚える修行は、次の回で入ります'
       })
@@ -159156,7 +159187,7 @@ function MsxPlay({
     }, "準備中")), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => R3 ? setSub('r3:cup') : setSheet({
+      onClick: () => typeof MsxR3 === 'function' ? setSub('cup') : setSheet({
         soon: '🏆 大会',
         text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)'
       })

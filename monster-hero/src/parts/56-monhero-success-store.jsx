@@ -8,6 +8,7 @@
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中
 const MSX_SCENARIOS = Object.freeze([
@@ -37,16 +38,32 @@ const msxLoadScript = (src, globalName) => new Promise((res) => {
   s.onerror = () => res(null);
   document.head.appendChild(s);
 });
+// const を置くだけのファイル(window に載らない)。読み終わったら check() で確かめる。2度読まない
+const msxLoadConstScript = (src, check) => new Promise((res) => {
+  if (check()) { res(true); return; }
+  if (typeof document === 'undefined') { res(false); return; }
+  const s = document.createElement('script'); s.src = src;
+  s.onload = () => res(check()); s.onerror = () => res(false);
+  document.head.appendChild(s);
+});
+const msxRegularsOk = () => typeof MONSUC_REGULARS !== 'undefined' && typeof MONSUC_REGULAR_CUPS !== 'undefined';
 let msxLoading = null;
 let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT')]).then(([core, script]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') { msxLoading = null; return null; }
       if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') { msxLoading = null; return null; }
       try {
-        const SUC = core.create({ calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT });
+        // 大会名・相手の名前・技に要る表も渡す(無ければ芯が既定で動く)
+        const SUC = core.create({
+          calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT,
+          techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
+          types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
+          monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
+          regulars: regOk && typeof MONSUC_REGULARS !== 'undefined' ? MONSUC_REGULARS : null, cupNames: regOk && typeof MONSUC_REGULAR_CUPS !== 'undefined' ? MONSUC_REGULAR_CUPS : null,
+        });
         msxSuc = { core, SUC, script: script || null };
         return msxSuc;
       } catch (e) { msxLoading = null; return null; }
@@ -110,6 +127,7 @@ const msxNormMeta = (raw) => {
     seen: msxIsObj(o.seen) ? o.seen : {}, team, lend: typeof o.lend === 'string' ? o.lend.slice(0, 64) : null,
     gift: msxIsObj(o.gift) ? { day: msxStr(o.gift.day, 12), n: msxNum(o.gift.n, 0) } : { day: '', n: 0 },
     items, runs: Math.max(0, Math.floor(msxNum(o.runs, 0))), picked: msxIsObj(o.picked) ? o.picked : {},
+    wonCups: Array.isArray(o.wonCups) ? o.wonCups.filter((x) => typeof x === 'string').slice(0, 500) : [], // 優勝ずみの大会(回3が書く・スキップ用)
   };
 };
 
