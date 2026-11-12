@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c03377c1f64929c
+// source-sha256: 56e86a12f29cc2be
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13913,7 +13913,7 @@ const RELEASE_FLAGS = {
   assistantMasmonRanchTicket: true,
   assistantMasmonPlan: true,
   assistantMasmonSleep: false,
-  assistantMasmonBond: false,
+  assistantMasmonBond: true,
   assistantMasmonFuse: false,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
@@ -146305,7 +146305,7 @@ function AssistantMasmonBattleBeta({
     });
   }, [phase, battle]);
   useEffect(() => {
-    if (phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    if (preview || phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
     try {
       amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A');
     } catch (_) {}
