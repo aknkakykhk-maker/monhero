@@ -16,6 +16,7 @@
 
 `node tools/ctx.js handoff <部> --compact` は NG で止まる(部署の要約の指示文は出さない)。窓口は部署から要約を頼まれても社長に回さず、
 引き継ぎメモ → 新しい会話にさせる。検査は `node tools/team/team-tools-check.js` ③(部署の知らせに要約の勧めが無いこと)。
+台帳の決めごとと、フック・手引きの文が食い違っていないかは `node tools/team/decision-lock-check.js`(決めごとの錠。[`DECISION_LOCKS.md`](DECISION_LOCKS.md))が毎回見張る。
 
 フック `tools/hooks/session-length-nudge.js`(`.claude/settings.json` の UserPromptSubmit)が、目安で1行知らせる(その後は10回ごと)。
 **窓口は替えない**(2026-11-12 社長)。窓口の会話(`routing.json` の「窓口の会話」)では、フックは「替える」を出さず、**文脈のトークン数**(記録に残る返事ごとの usage)が50万を超えたら「AskUserQuestion で要約してよいかを社長に聞く」とだけ知らせる(2026-11-12 社長「トークン数で管理するんじゃないの？」。回数で数えていたので、要約のあと30回・約31万トークンで早すぎる問いが出た)。自動の要約(autoCompactWindow 700000)はそのまま。

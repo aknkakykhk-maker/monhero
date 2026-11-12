@@ -21,6 +21,7 @@ node tools/ctx.js brief               いまの状態
 ## 回す検査
 
 - node tools/rules-index-check.js(決まり・手引きを触ったとき)
+- node tools/team/decision-lock-check.js(台帳の進め方・道具・フックを触ったとき)
 - 公開の前: `node tools/ctx.js gate`(ミハリ確認が要るかを機械が判定。`run-checks.js --changed` の最後にも出る)
 
 ## 関係する決まり
@@ -29,7 +30,9 @@ node tools/ctx.js brief               いまの状態
 - claude-fable-5-2 を使ってよいのは決まりの3つ(道具・仕組みを作る/強化する1回・新機能の公開前の最終確認・2回直しても直らない不具合)だけ。外れるときは社長に選択式で聞いてから
 - 配り直しは node tools/ctx.js redeploy assistant-chat の出力をそのまま deploy_edge_function に渡す
 - 足すだけ・読むだけの SQL は聞かずに流す。消す・書き換えるは先に社長へ(CLAUDE.md ⑦)
-- 社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す
+- 社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す。進め方の決めごとは「<日付> 進め方:」で書き、同じ PR で tools/team/decision-locks.json に錠を足す(docs/rules/DECISION_LOCKS.md)
+- 社長が寝る・離れるときは、相当重要なこと以外は窓口の判断で進める。同時に進める仕事は3〜5つ(優先順位は窓口が決める)
+- 表は画像(PNG)で見せる(送る前に拡大して確かめる)。仕上がりは社長に報告する前にカゲあつくんに見てもらう
 
 ## 資料(要る節だけ `node tools/ctx.js doc <ファイル> <見出し>`)
 
