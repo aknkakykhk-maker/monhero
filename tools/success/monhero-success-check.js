@@ -392,6 +392,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b = SUC.storyEnd(at('atsu', 40), 'bitter').state; ok(b.pts === 10, 'ほろ苦い結末(あつ)で能力ポイント +10 が付かない');
   // 特別な1話: 頂への道の1回戦だけ
   const sp = SUC.markSpecial(at('atsu', 44)).state;
+  ok(JSON.stringify(SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 0 } })) === '{"A":{"guts":10}}' && SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 1 } }) === undefined, '対戦の芯に渡す上乗せ(buffs)の形がずれている');
+  const ky = SUC.markSpecial({ ...SUC.newRun({ id: 'k', species: 'Mocchi', aid: 'kyuko' }), turn: 44 }).state; const kb = SUC.battleBuffs({ ...ky, battle: { kind: 'summit', round: 0 } });
+  ok(kb && kb.A.eva === 0.1 && kb.A.showFirst === undefined, '画面の印(showFirst)が対戦の芯の上乗せに混ざっている');
   ok(SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 0 } }).guts === 10 && !SUC.battleMods({ ...sp, battle: { kind: 'summit', round: 1 } }).guts && !SUC.battleMods({ ...at('atsu', 44), battle: { kind: 'summit', round: 0 } }).guts, '特別な1話の効き目が頂への道の1回戦だけになっていない');
 }
 

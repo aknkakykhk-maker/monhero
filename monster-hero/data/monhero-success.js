@@ -290,14 +290,16 @@
   // 助手のお話(EVENTS ②・台本 scenario.js / asst-*.js・台本の担当の案 2026-11-12。数字は仕組み側の案)
   //   good = 4話のいい結末(全能力 特大 + ひらめき)/ bitter = ほろ苦い結末 / special = 特別な1話を見たとき、頂への道の1回戦だけ効く(重ねがけなし)
   const ASST_STORY = Object.freeze({
+    // special は対戦の芯の buffs の形(guts・hit1・crit・missCut・eva・noSulk。docs/spec/ASSISTANT_MASMON_BATTLE.md「その試合だけの上乗せ」)
+    //   と、画面・サクセス側の印(line = 最後の一言が変わる・showFirst = 相手の1手目を見せる・noInjury = 試合中のけがなし)
     mua: { good: { hint: 'tech', name: 'みんなの声' }, bitter: { pop: 10 }, special: { line: true } },
     atsu: { good: { hint: 'assist', name: '試合のはじめのガッツ' }, bitter: { pts: 10 }, special: { guts: 10 } },
-    kiki: { good: { hint: 'tech', name: '静かな一撃' }, bitter: { stat: 'tough' }, special: { firstHit: 15 } },
-    momosuke: { good: { hint: 'assist', name: '見せ場' }, bitter: { pop: 10 }, special: { crit: 10 } },
-    dra: { good: { hint: 'tech', name: 'ドラ直伝' }, bitter: { mastery: 10 }, special: { techFail: -50 } },
-    kyuko: { good: { hint: 'assist', name: '見立て' }, bitter: { stat: 'wise' }, special: { showFirst: true, eva: 10 } },
+    kiki: { good: { hint: 'tech', name: '静かな一撃' }, bitter: { stat: 'tough' }, special: { hit1: 0.15 } },
+    momosuke: { good: { hint: 'assist', name: '見せ場' }, bitter: { pop: 10 }, special: { crit: 0.10 } },
+    dra: { good: { hint: 'tech', name: 'ドラ直伝' }, bitter: { mastery: 10 }, special: { missCut: 0.5 } },
+    kyuko: { good: { hint: 'assist', name: '見立て' }, bitter: { stat: 'wise' }, special: { showFirst: true, eva: 0.10 } },
     sorashido: { good: { hint: 'assist', name: '検証' }, bitter: { pts: 10 }, special: { noInjury: true, guts: 5 } },
-    erubin: { good: { hint: 'assist', name: '見守り' }, bitter: { loyal: 10 }, special: { noIdle: true } },
+    erubin: { good: { hint: 'assist', name: '見守り' }, bitter: { loyal: 10 }, special: { noSulk: true } },
   });
   // 話の進み方(EVENTS ②: どの助手も同じ形)。bond = 育成中の助手の親密度・lv = 助手ライフの仲良し度の段で見られる話の上限
   const ASTORY = Object.freeze({
@@ -846,6 +848,9 @@
     // 特別な1話を見たら印を付ける。効き目は頂への道の1回戦の試合だけ(battleMods が返す・対戦の芯に渡す)
     const markSpecial = (s0) => { const s = clone(s0); s.special = true; return { state: s, out: { ok: true } }; };
     const battleMods = (s) => (s.special && s.battle && s.battle.kind === 'summit' && s.battle.round === 0 && ASST_STORY[s.aid] ? { ...ASST_STORY[s.aid].special } : {});
+    // 対戦の芯にそのまま渡す上乗せ(育てる子の側 A)。画面・サクセス側の印は外す。何も無ければ undefined(今までと同じ試合)
+    const BUFF_KEYS = ['guts', 'hit1', 'crit', 'missCut', 'eva', 'noSulk'];
+    const battleBuffs = (s) => { const m = battleMods(s); const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
     const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1));
     // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)
     const useItem = (s0, key) => {
@@ -1082,7 +1087,7 @@
       VERSION, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
       ASSISTS, ISSA, PTS, XP, SHUGYO, ITEMS, GOOD, CARRY_MAX, useItem, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
-      act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, peakTurn, ASTORY, storyDue, storyStep, preview, restore, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
+      act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
     });
   };
 
