@@ -419,5 +419,38 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
 }
 
+// ---- 合体(保存枠の育て終えた子どうし・PLAN.md §3) ----
+{
+  const mk = (id, sp, v, extra) => ({ id, species: sp, raised: true, gen: 1, st: { life: v, pow: v, wise: v, hit: v, eva: v, tough: v }, techs: [], gt: 2, rank: 'B', ...(extra || {}) });
+  const p = SUC.fusePlan(mk('a', 'Undine', 999), mk('b', 'Mocchi', 999));
+  ok(p.ok && p.child.species === 'Yaobikuni', 'ウンディーネ + モッチー がヤオビクニにならない');
+  ok(p.child.raised === false && p.child.gen === 2 && p.child.parents.length === 2 && p.child.parents[0].id === 'a', '生まれた子の未育成・世代・親が違う');
+  ok(SUC.KEYS.every(k => p.child.st[k] === p.base[k] + p.add[k] && p.add[k] === 200), '6能力が「生まれた種類の初期値 + 上乗せ(平均999で+200)」になっていない');
+  const q = SUC.fusePlan(mk('a', 'Undine', 999), mk('b', 'Mocchi', 999));
+  ok(JSON.stringify(p) === JSON.stringify(q) && p.child.id === SUC.fuseId('a', 'b') && SUC.fuseId('a', 'b') !== SUC.fuseId('b', 'a'), '同じ2体で見通しと結果が変わる・id が決まらない');
+  const lop = SUC.fusePlan(mk('a', 'Mocchi', 999), mk('b', 'Mocchi', 100));
+  ok(lop.ok && SUC.KEYS.every(k => lop.add[k] < 60), '片方だけ強いのに上乗せが大きい');
+  ok(SUC.fusePlan(mk('a', 'Mocchi', 999), mk('b', 'Mocchi', 999)).child.species === 'Mocchi', '同じ血統どうしで種類が変わる');
+  // 組み合わせのモンスターがいなければ主の親の種類
+  const none = SUC.fuseKinds('Golem', 'Ghost');
+  ok(none.every(x => SUC.speciesList.includes(x.species)), '種類の候補に下書きや無い種類が入る');
+  ok(SUC.fusePlan(mk('a', 'Mocchi', 500), { ...mk('b', 'Mocchi', 500), raised: false }).ok === false, '未育成の子を合体に使える');
+  ok(SUC.fusePlan(mk('a', 'Mocchi', 500), mk('a', 'Mocchi', 500)).ok === false, '同じ子どうしで合体できる');
+  ok(SUC.fusePlan(mk('a', 'Mocchi', 500), mk('b', 'NoSuch', 500)).ok === false, '知らない種類で合体できる');
+  // 技: 親の技のうち生まれた種類で覚えられるもの2つまで・熟練は0
+  const all = SUC.techsOf('Mocchi').filter(t => !(t.learn || {}).start).map(t => t.id);
+  if (all.length >= 3) {
+    const tp = SUC.fusePlan(mk('a', 'Mocchi', 500, { techs: all.slice(0, 2), gen: 3 }), mk('b', 'Mocchi', 500, { techs: [all[2], 'nope'], gen: 5 }));
+    ok(tp.child.techs.length === 2 && tp.child.techs.every(t => all.includes(t) && tp.child.mast[t] === 0), '受け継ぐ技が2つまで・熟練0になっていない');
+    ok(tp.child.gen === 6, '世代が「親の大きい方 + 1」になっていない');
+  }
+  // 型: 主の親の型が多い(くじで少し別)
+  let same = 0; for (let i = 0; i < 200; i++) { const r = SUC.fusePlan(mk('m' + i, 'Mocchi', 500, { gt: 5 }), mk('n' + i, 'Mocchi', 500)); if (r.child.gt === 5) same += 1; }
+  ok(same >= 160 && same < 200, `主の親の型を受け継ぐ割合がおかしい(${same}/200)`);
+  // 壊れた保存値でも落ちない
+  const bad = SUC.fusePlan({ id: 'x', species: 'Mocchi', raised: true, st: { life: 'abc', pow: -5, wise: 1e9 }, techs: 'zz', gen: NaN }, mk('y', 'Mocchi', 500));
+  ok(bad.ok && SUC.KEYS.every(k => Number.isFinite(bad.child.st[k]) && bad.child.st[k] >= 1 && bad.child.st[k] <= 999) && bad.child.gen === 2, '壊れた保存値で合体の値がおかしくなる');
+}
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・合体');

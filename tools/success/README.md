@@ -17,3 +17,4 @@
 5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
 
 対応表: `docs/progress/player-raise/art/ITEMS.md`
+- `monsuc-fuse-check.js` … 合体(56-monsuc-fuse.jsx)の保存の順番・失敗で何も消えない・二重押し / `monsuc-fuse-browser-check.js [--shots]` … 合体の画面を本物のゲームで(止め絵 docs/progress/player-raise/shots/fuse-*.png)

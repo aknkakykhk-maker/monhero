@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ecd7711d66c0912
+// source-sha256: 6c879b5d4d39de99
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13914,6 +13914,7 @@ const RELEASE_FLAGS = {
   assistantMasmonPlan: true,
   assistantMasmonSleep: true,
   assistantMasmonBond: true,
+  monheroSuccess: false,
   assistantMasmonFuse: true,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
@@ -150956,6 +150957,318 @@ function AmgsFuseSheet({
   }, "選び直す")) : React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "このマスモンどうしでは合体できません"), !done && React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "やめる")));
+}
+const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
+const MONSUC_FUSE_LOG = 50;
+const MONSUC_MEMORY_MAX = 100;
+const monsucFuseOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+let monsucFuseCoreCache = null;
+const monsucFuseCore = () => {
+  if (monsucFuseCoreCache) return monsucFuseCoreCache;
+  try {
+    if (typeof MONHERO_SUCCESS === 'undefined' || typeof MASMON_CALC === 'undefined') return null;
+    monsucFuseCoreCache = MONHERO_SUCCESS.create({
+      calc: MASMON_CALC,
+      apt: typeof AMG_APT !== 'undefined' ? AMG_APT : {},
+      init: typeof AMG_INIT !== 'undefined' ? AMG_INIT : {},
+      techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
+      monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {},
+      lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : {},
+      types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : {}
+    });
+  } catch (_) {
+    monsucFuseCoreCache = null;
+  }
+  return monsucFuseCoreCache;
+};
+const normalizeMonsucFuse = raw => {
+  const out = {
+    v: 1,
+    seq: 0,
+    log: []
+  };
+  if (!raw || typeof raw !== 'object') return out;
+  out.seq = Number.isFinite(raw.seq) ? Math.max(0, Math.floor(raw.seq)) : 0;
+  for (const x of (Array.isArray(raw.log) ? raw.log : []).slice(-MONSUC_FUSE_LOG)) {
+    if (!x || typeof x !== 'object' || typeof x.child !== 'string') continue;
+    out.log.push({
+      at: typeof x.at === 'string' ? x.at.slice(0, 16) : '',
+      child: x.child.slice(0, 40),
+      species: typeof x.species === 'string' ? x.species : '',
+      parents: Array.isArray(x.parents) ? x.parents.filter(p => p && typeof p === 'object').slice(0, 2) : []
+    });
+  }
+  return out;
+};
+const monsucFuseNick = m => m && typeof m.nick === 'string' && m.nick || (typeof ALL_PLAYER_MONSTERS !== 'undefined' && m && ALL_PLAYER_MONSTERS[m.species] || {}).name || '';
+const monsucFuseSpName = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] || {}).name || sp || '';
+const monsucBoxMons = box => box && Array.isArray(box.mons) ? box.mons.filter(m => m && typeof m === 'object' && typeof m.id === 'string') : [];
+const monsucFuseApply = (box, plan, at) => {
+  if (!plan || !plan.ok || !box || typeof box !== 'object') return null;
+  const mons = monsucBoxMons(box);
+  if (mons.some(m => m.id === plan.child.id)) return null;
+  const ids = plan.child.parents.map(p => p.id);
+  if (!ids.every(id => mons.some(m => m.id === id))) return null;
+  const gone = mons.filter(m => ids.includes(m.id));
+  const parentAt = id => gone.find(m => m.id === id) || {};
+  const colors = plan.child.species === parentAt(ids[0]).species ? parentAt(ids[0]).colors || null : null;
+  const child = {
+    ...plan.child,
+    colors,
+    rank: null,
+    score: 0,
+    loy: 0,
+    pop: 0,
+    fav: null,
+    coach: null,
+    endAt: null,
+    paid: false,
+    bond: null,
+    titles: [],
+    bornAt: at || ''
+  };
+  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({
+    nick: monsucFuseNick(m),
+    species: m.species,
+    rank: typeof m.rank === 'string' ? m.rank : null,
+    gen: Number.isFinite(m.gen) ? m.gen : 1,
+    at: at || '',
+    why: 'fuse'
+  }))].slice(-MONSUC_MEMORY_MAX);
+  return {
+    ...box,
+    mons: [...mons.filter(m => !ids.includes(m.id)), child],
+    memory
+  };
+};
+let monsucFuseBusy = false;
+const monsucFuse = async ({
+  box,
+  saveBox,
+  mainId,
+  matId,
+  locked,
+  suc,
+  at,
+  io
+}) => {
+  const SUC = suc || monsucFuseCore();
+  if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
+  if (monsucFuseBusy) return '合体しています';
+  const lock = new Set(Array.isArray(locked) ? locked : []);
+  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中の子は合体に使えません';
+  const mons = monsucBoxMons(box);
+  const main = mons.find(m => m.id === mainId);
+  const mat = mons.find(m => m.id === matId);
+  const plan = SUC.fusePlan(main, mat);
+  if (!plan.ok) return plan.why;
+  if (mons.some(m => m.id === plan.child.id)) return 'この2体はもう合体しています';
+  const get = io && io.get || (typeof storeGet === 'function' ? storeGet : null);
+  const set = io && io.set || (typeof storeSet === 'function' ? storeSet : null);
+  if (!get || !set) return 'まだ使えません';
+  monsucFuseBusy = true;
+  try {
+    const day = at || (() => {
+      try {
+        const d = new Date(Date.now() + 9 * 3600 * 1000);
+        return d.toISOString().slice(0, 16).replace('T', ' ');
+      } catch (_) {
+        return '';
+      }
+    })();
+    const next = monsucFuseApply(box, plan, day);
+    if (!next) return 'この2体はもう合体しています';
+    let raw = null;
+    try {
+      raw = await get(MONSUC_FUSE_KEY, null, false);
+    } catch (_) {}
+    const fs = normalizeMonsucFuse(raw);
+    const rec = {
+      at: day,
+      child: plan.child.id,
+      species: plan.child.species,
+      parents: [main, mat].map(m => JSON.parse(JSON.stringify(m)))
+    };
+    const logged = await set(MONSUC_FUSE_KEY, {
+      ...fs,
+      seq: fs.seq + 1,
+      log: [...fs.log, rec].slice(-MONSUC_FUSE_LOG)
+    }, false);
+    if (logged !== true) return '保存できませんでした。2体ともそのままです';
+    const saved = await saveBox(next);
+    if (saved !== true) return '保存できませんでした。2体ともそのままです';
+    return true;
+  } finally {
+    monsucFuseBusy = false;
+  }
+};
+function MonsucFuseSheet({
+  box,
+  saveBox,
+  locked = [],
+  onDone,
+  onClose,
+  suc = null
+}) {
+  const SUC = suc || monsucFuseCore();
+  const [mainId, setMain] = React.useState(null);
+  const [matId, setMat] = React.useState(null);
+  const [sure, setSure] = React.useState(0);
+  const [err, setErr] = React.useState('');
+  const [done, setDone] = React.useState(null);
+  const [ready, setReady] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const lock = new Set(Array.isArray(locked) ? locked : []);
+  const mons = monsucBoxMons(box);
+  const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  const main = mons.find(m => m.id === mainId) || null;
+  const mat = mons.find(m => m.id === matId) || null;
+  const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
+  const names = SUC ? SUC.STAT_NAMES : {};
+  const keys = SUC ? SUC.KEYS : [];
+  const sum = st => keys.reduce((a, k) => a + (Number(st && st[k]) || 0), 0);
+  const card = (m, on, tone) => React.createElement("button", {
+    key: m.id,
+    type: "button",
+    onClick: on,
+    "data-monsuc-fuse-pick": m.id,
+    className: `mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-2 text-left ${tone}`
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(m.species) : null, React.createElement("span", {
+    className: "min-w-0 flex-1 text-[12px] font-black"
+  }, monsucFuseNick(m), " ", React.createElement("small", {
+    className: "text-[10px] text-slate-300"
+  }, monsucFuseSpName(m.species), m.rank ? ` ・ ランク ${m.rank}` : '', " ・ ", Number.isFinite(m.gen) ? m.gen : 1, "代目"), React.createElement("small", {
+    className: "block text-[10px] text-slate-300"
+  }, "6能力の合計 ", sum(m.st))));
+  const go = async () => {
+    if (!ready || busy || !plan || !plan.ok) return;
+    if (sure < 1) {
+      setSure(1);
+      setReady(false);
+      setTimeout(() => setReady(true), 800);
+      return;
+    }
+    setBusy(true);
+    const r = await monsucFuse({
+      box,
+      saveBox,
+      mainId: main.id,
+      matId: mat.id,
+      locked,
+      suc: SUC
+    });
+    setBusy(false);
+    if (r === true) {
+      setDone({
+        child: plan.child,
+        lost: [monsucFuseNick(main), monsucFuseNick(mat)]
+      });
+      setErr('');
+      if (typeof onDone === 'function') onDone(plan.child);
+    } else {
+      setErr(r);
+      setSure(0);
+    }
+  };
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[90] flex items-end justify-center bg-black/60",
+    "data-monsuc-fuse": true
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white",
+    style: {
+      maxHeight: '92dvh',
+      overflowY: 'auto'
+    }
+  }, React.createElement("p", {
+    className: "text-[16px] font-black"
+  }, "🧬 合体する"), !SUC ? React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400"
+  }, "まだ使えません") : done ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-2 rounded-xl bg-fuchsia-950 p-3",
+    "data-monsuc-fuse-done": true
+  }, React.createElement("p", {
+    className: "flex items-center gap-2 text-[14px] font-black"
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null, monsucFuseSpName(done.child.species), "が生まれました(", done.child.gen, "代目)"), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200"
+  }, "保存枠に入りました。まだ育てていない子なので、このまま育成を始められます"), React.createElement("small", {
+    className: "mt-1 block text-[11px] font-bold text-slate-300"
+  }, done.lost.join('と'), "は、思い出に名前・ランク・代が残ります")), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "① 主の親を選んでください。生まれる子の主血統と型は、主の親から受け継ぎます"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400",
+    "data-monsuc-fuse-none": true
+  }, "育て終えた子が2体そろうと合体できます(編成・貸し出し中の子は使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "② もう一方の親を選んでください。生まれる子の副血統は、この子の血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "③ 生まれる子の見通し"), React.createElement("div", {
+    className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
+    "data-monsuc-fuse-child": plan.child.species
+  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {
+    className: "text-[13px] font-black"
+  }, monsucFuseSpName(plan.child.species), " ", React.createElement("small", {
+    className: "text-[11px] text-amber-200"
+  }, plan.child.gen, "代目 ・ 未育成"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-300"
+  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', plan.typeChanged ? '(主の親とは別の型になりました)' : '(主の親から)'))), React.createElement("div", {
+    className: "mt-1 rounded-xl bg-slate-800 p-2",
+    "data-monsuc-fuse-plan": true
+  }, React.createElement("p", {
+    className: "mb-1 text-[10.5px] font-bold text-slate-300"
+  }, monsucFuseSpName(plan.child.species), "のはじめの能力に、2体の強さに応じた上乗せが付きます"), keys.map(k => React.createElement("p", {
+    key: k,
+    className: "flex justify-between text-[12px] font-black"
+  }, React.createElement("span", null, names[k]), React.createElement("span", null, plan.base[k], " → ", React.createElement("b", {
+    className: "text-amber-200"
+  }, plan.child.st[k]), " ", React.createElement("small", {
+    className: "text-fuchsia-200"
+  }, "(+", plan.add[k], ")"))))), React.createElement("p", {
+    className: "mt-1 text-[10.5px] font-bold text-slate-300"
+  }, "2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)"), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200",
+    "data-monsuc-fuse-techs": true
+  }, "受け継ぐ技: ", plan.child.techs.length ? plan.child.techs.map(t => {
+    const x = SUC.techsOf(plan.child.species).find(y => y.id === t);
+    return x ? x.name : t;
+  }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("div", {
+    className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
+    "data-monsuc-fuse-lose": true
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-rose-100"
+  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、保存枠からいなくなります。元に戻せません"), React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
+  }, "思い出に名前・ランク・代が残ります")), err && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-rose-200",
+    "data-monsuc-fuse-err": true
+  }, err), React.createElement("button", {
+    type: "button",
+    onClick: go,
+    disabled: !ready || busy,
+    "data-monsuc-fuse-go": sure,
+    "data-monsuc-fuse-ready": ready ? 1 : 0,
+    className: `mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+  }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'), React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setMat(null);
+      setSure(0);
+      setErr('');
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "選び直す")) : React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400",
+    "data-monsuc-fuse-err": true
+  }, plan && plan.why || 'この2体では合体できません'), !done && React.createElement("button", {
     type: "button",
     onClick: onClose,
     "data-mhl-sheet-close": true,
