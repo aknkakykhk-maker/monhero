@@ -37,7 +37,9 @@ for (const a of AS.LIST) {
   ok(a.cost[0] < a.cost[1] && a.cost[1] < a.cost[2], `${a.id} の値段が段の順に上がっていない`);
   ok(a.text.includes('{v}'), `${a.id} の説明に {v} がない`);
   ok(!AS.describe(a.id, 3).includes('{'), `${a.id} の説明に { が残る`);
-  ok(['with', 'self', 'stay'].includes(a.type), `${a.id} の型が知らないもの: ${a.type}`);
+  ok(['with', 'self', 'stay', 'battle'].includes(a.type), `${a.id} の型が知らないもの: ${a.type}`);
+  ok((a.type === 'battle') === (a.from === 'hint'), `${a.id}: お話のひらめきは試合型、第1弾は試合型でない(社長 2026-11-12)`);
+  if (a.type === 'battle') ok(Array.isArray(a.buff) && a.buff.length === 3, `${a.id} に段ごとの buff がない`);
 }
 const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'assist').map(s => s.good.name);
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
@@ -54,6 +56,14 @@ ok(!AS.candidates([]).some(a => a.from === 'hint'), 'ひらめきが無いのに
 const np = AS.normPicks([{ id: 'sokoji', lv: 9 }, { id: 'nai' }, { id: 'sokoji', lv: 1 }, { id: 'hirameki', lv: 3 }, { id: 'itawari', lv: 1 }, { id: 'ochitsuki', lv: 1 }, { id: 'atooshi', lv: 1 }], 400);
 ok(np.picks.length === 4 && np.picks[0].lv === 3 && np.used <= 400, '確かめ方(段の丸め・知らない id・4種類)がおかしい');
 ok(AS.normPicks([{ id: 'sokoji', lv: 3 }], 100).picks.length === 0, 'ポイントを超えた能力が残る');
+
+// 試合型は対戦の芯の buffs に入る形・いちばん高い段だけ・範囲の中
+const BUFF_KEYS = ['guts', 'hit1', 'crit', 'missCut', 'eva', 'noSulk'];
+for (const a of AS.LIST.filter(x => x.type === 'battle')) for (const b of a.buff) ok(Object.keys(b).every(k => BUFF_KEYS.includes(k)), `${a.id} の buff に芯の知らない項目`);
+const bb = AS.battleBuffs([[{ id: 'gatsu', lv: 1 }], [{ id: 'gatsu', lv: 3 }, { id: 'sokoji', lv: 3 }], [{ id: 'mimamori', lv: 3 }]], { guts: 10, crit: 0.1 });
+ok(JSON.stringify(bb) === JSON.stringify({ guts: 18, hit1: 0.1, noSulk: true, crit: 0.1 }), `battleBuffs のまとめ方がおかしい: ${JSON.stringify(bb)}`);
+ok(JSON.stringify(AS.battleBuffs(null, null)) === '{}' && JSON.stringify(AS.battleBuffs([[{ id: 'sokoji', lv: 3 }]])) === '{}', '試合型が無いのに buffs が付く');
+ok(AS.battleBuffs([[{ id: 'kensho', lv: 3 }]], { missCut: 0.9 }).missCut === 1, 'buffs が芯の範囲で切られていない');
 
 // ---- 称号 ----
 const ids = new Set(); const names = new Set();

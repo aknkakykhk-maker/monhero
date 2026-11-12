@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 12a1890461ac4af3
+// source-sha256: 89ebf55d2679be4b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156170,6 +156170,844 @@ const masmonPvpFriends = async () => {
     remaining
   };
 };
+const MONSUC_LEND_REASON_TEXT = Object.freeze({
+  off: 'フレンドからのレンタルは準備中です',
+  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  no_id: 'この端末ではまだ使えません',
+  locked: 'この貸し出しは別の端末で作られています',
+  mon: 'このマスモンは貸し出せません',
+  not_friend: 'フレンドのマスモンだけを借りられます',
+  no_lend: 'そのマスモンはもう貸し出されていません',
+  streak: '同じフレンドのマスモンは、続けて2回までです。ほかのフレンドのマスモンも借りてみよう',
+  self: '自分のマスモンは借りられません',
+  lender: 'そのマスモンは借りられません'
+});
+const monsucLendReasonText = reason => MONSUC_LEND_REASON_TEXT[reason] || MONSUC_LEND_REASON_TEXT.server;
+const monsucLendOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const MONSUC_LEND_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const monsucLendPost = async body => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), 12000) : null;
+  try {
+    const r = await fetch(MASMON_PVP_URL, {
+      method: 'POST',
+      headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: ac ? ac.signal : undefined
+    });
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (_) {
+      j = null;
+    }
+    if (j && j.ok) return j;
+    const e = j && typeof j.error === 'string' ? j.error : r.status >= 500 ? 'server' : 'network';
+    return {
+      ok: false,
+      reason: MONSUC_LEND_REASON_TEXT[e] ? e : 'server'
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const monsucLendPayloadOf = child => {
+  const c = child && typeof child === 'object' ? child : null;
+  if (!c || typeof c.species !== 'string') return null;
+  const st = c.st && typeof c.st === 'object' ? c.st : c.stats && typeof c.stats === 'object' ? c.stats : null;
+  if (!st) return null;
+  const stats = {};
+  for (const k of MONSUC_LEND_STAT_KEYS) {
+    const v = Number(st[k]);
+    if (!Number.isFinite(v)) return null;
+    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+  }
+  const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
+  const assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({
+    id,
+    lv
+  }));
+  const nameRaw = typeof c.nick === 'string' && c.nick.trim() ? c.nick : typeof c.name === 'string' ? c.name : '';
+  const name = [...nameRaw.trim()].slice(0, 12).join('') || c.species.slice(0, 12);
+  const out = {
+    species: c.species,
+    name,
+    stats,
+    assists
+  };
+  const type = Number.isInteger(c.type) ? c.type : Number.isInteger(c.gt) ? c.gt : null;
+  if (type != null && type >= 0 && type <= 5) out.type = type;
+  if (c.colors && typeof c.colors === 'object') out.colors = c.colors;
+  return out;
+};
+const monsucLendMember = (row, SUC) => {
+  const r = row && typeof row === 'object' ? row : null;
+  const m = r && r.lend && typeof r.lend === 'object' ? r.lend : null;
+  if (!m || !SUC || !Array.isArray(SUC.speciesList) || !SUC.speciesList.includes(m.species)) return null;
+  const st = m.stats && typeof m.stats === 'object' ? m.stats : null;
+  if (!st) return null;
+  const stats = {};
+  for (const k of MONSUC_LEND_STAT_KEYS) {
+    const v = Number(st[k]);
+    if (!Number.isFinite(v)) return null;
+    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+  }
+  let assists = [];
+  const list = Array.isArray(m.assists) ? m.assists : [];
+  const known = SUC.ASSISTS && typeof SUC.ASSISTS === 'object' ? SUC.ASSISTS : {};
+  const okShape = list.length <= 4 && list.every(a => a && known[a.id] && Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3) && new Set(list.map(a => a.id)).size === list.length;
+  if (okShape && list.length) {
+    let budget = 0;
+    try {
+      const best = SUC.memberOf({
+        kind: 'raised',
+        species: m.species,
+        stats,
+        lv: 999,
+        loy: 100,
+        pop: 100,
+        masteries: [100, 100, 100, 100, 100, 100, 100, 100]
+      });
+      budget = SUC.assistPointsOf(best.power);
+    } catch (_) {
+      budget = 0;
+    }
+    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[a.lv - 1]) || 0), 0);
+    if (cost <= budget) assists = list.map(a => ({
+      id: a.id,
+      lv: a.lv
+    }));
+  }
+  const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  return {
+    kind: 'raised',
+    species: m.species,
+    name,
+    stats,
+    assists,
+    friend: {
+      id: typeof r.friendId === 'string' ? r.friendId : null,
+      name: typeof r.name === 'string' ? r.name.slice(0, 40) : ''
+    }
+  };
+};
+const monsucLendFriends = async () => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off',
+    rows: []
+  };
+  const self = masmonPvpSafeId(typeof ensureBreederId === 'function' ? await ensureBreederId() : null);
+  if (!self || typeof sbFetchFriendRoster !== 'function') return {
+    ok: false,
+    reason: 'no_id',
+    rows: []
+  };
+  let roster = [];
+  try {
+    roster = await sbFetchFriendRoster(self);
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network',
+      rows: []
+    };
+  }
+  const ids = roster.map(f => masmonPvpSafeId(f.otherId)).filter(Boolean).slice(0, 100);
+  if (!ids.length) return {
+    ok: true,
+    rows: []
+  };
+  const got = await masmonPvpRead(`monsuc_lend?select=owner_id,mon,version,updated_at&active=eq.true&owner_id=in.(${ids.join(',')})`);
+  if (!got) return {
+    ok: false,
+    reason: 'network',
+    rows: []
+  };
+  const rows = roster.map(f => {
+    const e = got.find(x => x.owner_id === f.otherId);
+    if (!e || !e.mon || typeof e.mon !== 'object') return null;
+    const mon = e.mon;
+    return {
+      friendId: f.otherId,
+      name: f.userName,
+      icon: f.icon ?? null,
+      profileFrame: f.profileFrame || null,
+      lend: {
+        species: mon.species,
+        name: mon.name,
+        colors: Array.isArray(mon.colors) && mon.colors.every(c => typeof c === 'string') ? mon.colors.slice(0, 8) : null,
+        type: Number.isInteger(mon.type) ? mon.type : null,
+        stats: mon.stats,
+        assists: Array.isArray(mon.assists) ? mon.assists : [],
+        version: e.version,
+        updatedAt: Date.parse(e.updated_at) || 0
+      }
+    };
+  }).filter(Boolean);
+  return {
+    ok: true,
+    rows
+  };
+};
+const monsucLendSet = async (child, {
+  userName,
+  icon
+} = {}) => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const mon = monsucLendPayloadOf(child);
+  if (!mon) return {
+    ok: false,
+    reason: 'mon'
+  };
+  const me = await masmonPvpSelf(true);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const r = await monsucLendPost({
+    action: 'lend_set',
+    owner: me.owner,
+    key: me.key,
+    mon,
+    name: typeof userName === 'string' ? userName : '',
+    icon: typeof icon === 'string' ? icon : null
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const monsucLendClear = async () => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const r = await monsucLendPost({
+    action: 'lend_clear',
+    owner: me.owner,
+    key: me.key
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const monsucLendUse = async friendId => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off'
+  };
+  const lender = masmonPvpSafeId(friendId);
+  if (!lender) return {
+    ok: false,
+    reason: 'lender'
+  };
+  const me = await masmonPvpSelf(true);
+  if (!me) return {
+    ok: false,
+    reason: 'no_id'
+  };
+  const r = await monsucLendPost({
+    action: 'lend_use',
+    owner: me.owner,
+    key: me.key,
+    lender
+  });
+  return r.ok ? {
+    ok: true
+  } : {
+    ok: false,
+    reason: r.reason
+  };
+};
+const monsucLendClaim = async () => {
+  if (!monsucLendOn()) return {
+    ok: false,
+    reason: 'off',
+    n: 0,
+    fame: 0
+  };
+  const me = await masmonPvpSelf(false);
+  if (!me) return {
+    ok: true,
+    n: 0,
+    paid: 0,
+    fame: 0
+  };
+  const r = await monsucLendPost({
+    action: 'lend_claim',
+    owner: me.owner,
+    key: me.key
+  });
+  if (!r.ok) return {
+    ok: false,
+    reason: r.reason,
+    n: 0,
+    fame: 0
+  };
+  const n = Number.isInteger(r.n) && r.n > 0 ? r.n : 0;
+  const paid = Number.isInteger(r.paid) && r.paid > 0 ? r.paid : 0;
+  const fame = Number.isInteger(r.fame) && r.fame > 0 ? r.fame : 0;
+  return {
+    ok: true,
+    n,
+    paid,
+    fame
+  };
+};
+const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
+const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
+const MONSUC_RANK_SENT_MAX = 50;
+const MONSUC_RANK_QUEUE_MAX = 5;
+const MONSUC_RANK_TIMEOUT_MS = 12000;
+const MONSUC_RANK_LIMIT_ALL = 100;
+const MONSUC_RANK_LIMIT_LINEAGE = 50;
+const MONSUC_RANK_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MONSUC_RANK_STAT_LABEL = {
+  life: '❤️ライフ',
+  pow: '💪ちから',
+  wise: '🧠かしこさ',
+  hit: '🎯命中',
+  eva: '💨回避',
+  tough: '🛡️丈夫さ'
+};
+const MONSUC_RANK_GRADE_COLOR = {
+  M: '#f472b6',
+  SSS: '#f472b6',
+  SS: '#fb923c',
+  S: '#fbbf24',
+  A: '#f472b6',
+  B: '#a78bfa',
+  C: '#38bdf8',
+  D: '#94a3b8',
+  E: '#94a3b8',
+  F: '#94a3b8',
+  G: '#94a3b8'
+};
+const MONSUC_RANK_REASON_TEXT = Object.freeze({
+  off: 'ランキングは準備中です',
+  network: 'つながりませんでした。次に開いたときにもう一度送ります',
+  busy: '少し待ってから送り直します',
+  bad: 'この記録はランキングに載せられませんでした',
+  locked: 'この端末ではランキングに送れません',
+  over_cap: 'この記録はランキングに載せられませんでした',
+  skip: 'この育成はランキングの対象外です',
+  no_id: 'この端末ではまだ送れません'
+});
+const monsucRankReasonText = reason => MONSUC_RANK_REASON_TEXT[reason] || MONSUC_RANK_REASON_TEXT.network;
+const monsucRankOn = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const monsucRankNum = (v, d = 0) => Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d;
+const monsucRankClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const monsucRankLineageOf = species => {
+  const m = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
+  return m && typeof m.main === 'string' ? m.main : 'unknown';
+};
+const monsucRankLineageName = id => {
+  const l = typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES ? MONSTER_LINEAGES[id] : null;
+  return l && l.name ? l.name : '？？？';
+};
+const monsucRankEngineVersion = () => {
+  const S = typeof globalThis !== 'undefined' && globalThis ? globalThis['MONHERO_SUCCESS'] : null;
+  return S && Number.isInteger(S.VERSION) ? S.VERSION : 1;
+};
+const monsucRankMonOf = species => {
+  if (typeof species !== 'string' || typeof ALL_PLAYER_MONSTERS === 'undefined' || !ALL_PLAYER_MONSTERS || typeof ALL_PLAYER_MONSTERS !== 'object') return null;
+  const m = Object.prototype.hasOwnProperty.call(ALL_PLAYER_MONSTERS, species) ? ALL_PLAYER_MONSTERS[species] : null;
+  return m && typeof m === 'object' ? m : null;
+};
+const monsucRankDyeOf = dye => Array.isArray(dye) ? dye.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : null;
+const monsucRankRunId = (owner, rawId) => {
+  let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
+  if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
+  return `${owner}-${tail}`;
+};
+const monsucRankSentList = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_SENT_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-MONSUC_RANK_SENT_MAX) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const monsucRankMarkSent = async runId => {
+  const list = await monsucRankSentList();
+  if (list.includes(runId)) return;
+  try {
+    await storeSet(MONSUC_RANK_SENT_KEY, list.concat([runId]).slice(-MONSUC_RANK_SENT_MAX), false);
+  } catch (_) {}
+};
+const monsucRankQueue = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_QUEUE_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && typeof x.run_id === 'string').slice(-MONSUC_RANK_QUEUE_MAX) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const monsucRankQueueSave = async list => {
+  try {
+    await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false);
+  } catch (_) {}
+};
+const monsucRankRowOf = ({
+  owner,
+  run,
+  ev,
+  name,
+  colors,
+  userName
+}) => {
+  if (!run || typeof run !== 'object') return null;
+  if (!['done', 'lost'].includes(run.over) && run.retired !== true) return null;
+  if (run.over === 'gameover') return null;
+  const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
+  const stats = {};
+  MONSUC_RANK_STAT_KEYS.forEach(k => {
+    stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999);
+  });
+  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
+  if (!species) return null;
+  const e = ev && typeof ev === 'object' ? ev : {};
+  const dyeOk = monsucRankDyeOf(colors) || [];
+  return {
+    run_id: monsucRankRunId(owner, run.id),
+    user_name: String(userName || '').slice(0, 40),
+    child_name: String(name || '').slice(0, 24),
+    species,
+    lineage: monsucRankLineageOf(species),
+    dye: dyeOk,
+    stats,
+    techs,
+    lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
+    loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
+    pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
+    engine_version: monsucRankEngineVersion()
+  };
+};
+const monsucRankPost = async (owner, key, row) => {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), MONSUC_RANK_TIMEOUT_MS) : null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/monsuc_rank_submit`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        p_owner: owner,
+        p_key: key,
+        p_row: row
+      }),
+      signal: ac ? ac.signal : undefined
+    });
+    if (!r.ok) return {
+      ok: false,
+      reason: 'network'
+    };
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (_) {
+      j = null;
+    }
+    if (!j || typeof j !== 'object') return {
+      ok: false,
+      reason: 'network'
+    };
+    return j;
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const monsucRankSendRow = async (me, row) => {
+  const r = await monsucRankPost(me.owner, me.key, row);
+  const queue = (await monsucRankQueue()).filter(x => x.run_id !== row.run_id);
+  if (r.ok) {
+    await monsucRankMarkSent(row.run_id);
+    await monsucRankQueueSave(queue);
+    return {
+      ok: true,
+      power: r.power,
+      grade: r.grade,
+      placeAll: r.place_all || null,
+      placeLineage: r.place_lineage || null,
+      lineage: row.lineage
+    };
+  }
+  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankQueueSave(queue);else await monsucRankQueueSave(queue.concat([row]));
+  return {
+    ok: false,
+    reason: r.reason || 'network'
+  };
+};
+const monsucRankUserName = async () => {
+  try {
+    return String((await storeGet('mh_breeder_name', '', false)) || '');
+  } catch (_) {
+    return '';
+  }
+};
+const monsucRankSubmit = async ({
+  run,
+  ev,
+  name,
+  colors,
+  debug
+} = {}) => {
+  try {
+    if (!monsucRankOn()) return {
+      ok: false,
+      reason: 'off'
+    };
+    if (debug) return {
+      ok: false,
+      reason: 'skip'
+    };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
+    if (!me) return {
+      ok: false,
+      reason: 'no_id'
+    };
+    const row = monsucRankRowOf({
+      owner: me.owner,
+      run,
+      ev,
+      name,
+      colors,
+      userName: await monsucRankUserName()
+    });
+    if (!row) return {
+      ok: false,
+      reason: 'skip'
+    };
+    if ((await monsucRankSentList()).includes(row.run_id)) return {
+      ok: false,
+      reason: 'skip'
+    };
+    return await monsucRankSendRow(me, row);
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  }
+};
+const monsucRankFlush = async () => {
+  try {
+    if (!monsucRankOn()) return {
+      ok: false,
+      reason: 'off'
+    };
+    const queue = await monsucRankQueue();
+    if (queue.length === 0) return {
+      ok: true,
+      left: 0
+    };
+    const sent = await monsucRankSentList();
+    const rest = queue.filter(x => !sent.includes(x.run_id));
+    if (rest.length !== queue.length) await monsucRankQueueSave(rest);
+    if (rest.length === 0) return {
+      ok: true,
+      left: 0
+    };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(false) : null;
+    if (!me || !rest[0].run_id.startsWith(`${me.owner}-`)) return {
+      ok: false,
+      reason: 'no_id'
+    };
+    const r = await monsucRankSendRow(me, rest[0]);
+    return {
+      ...r,
+      left: Math.max(0, rest.length - 1)
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      reason: 'network'
+    };
+  }
+};
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+const monsucRankGet = async (path, withCount) => {
+  try {
+    const headers = withCount ? {
+      ...SB_HEADERS,
+      Prefer: 'count=exact'
+    } : SB_HEADERS;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers,
+      cache: 'no-store'
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return null;
+    let total = null;
+    if (withCount) {
+      const m = /\/(\d+)$/.exec(r.headers.get('content-range') || '');
+      total = m ? Number(m[1]) : null;
+    }
+    return {
+      rows,
+      total
+    };
+  } catch (_) {
+    return null;
+  }
+};
+const monsucRankRead = async ({
+  lineage = null
+} = {}) => {
+  const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
+  const view = lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all';
+  const where = lin ? `&lineage=eq.${lin}` : '';
+  const limit = lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL;
+  const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  if (!top) return null;
+  const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
+  let mine = null;
+  if (sent.length > 0) {
+    const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${sent.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+    mine = m && m.rows[0] ? m.rows[0] : null;
+  }
+  return {
+    rows: top.rows,
+    total: top.total,
+    mine,
+    sent
+  };
+};
+function MonsucRankMonImg({
+  species,
+  dye,
+  size = 36
+}) {
+  const mon = monsucRankMonOf(species);
+  if (!mon) return React.createElement("div", {
+    style: {
+      width: size,
+      height: size
+    },
+    className: "rounded-lg bg-slate-700/60 flex items-center justify-center text-slate-400 text-xs"
+  }, "？");
+  return React.createElement("div", {
+    style: {
+      width: size,
+      height: size
+    },
+    className: "shrink-0 flex items-center justify-center"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.iconUrl || mon.imgUrl,
+    alt: mon.name || '',
+    masuColors: monsucRankDyeOf(dye),
+    className: "w-full h-full object-contain",
+    draggable: false
+  }));
+}
+function MonsucRankGrade({
+  grade
+}) {
+  const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G';
+  const letter = g.replace(/[0-9]+$/, '');
+  return React.createElement("span", {
+    className: "inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900",
+    style: {
+      background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8'
+    }
+  }, g);
+}
+function MonsucRankStats({
+  stats
+}) {
+  const st = stats && typeof stats === 'object' ? stats : {};
+  return React.createElement("div", {
+    className: "grid grid-cols-6 gap-1 mt-2"
+  }, MONSUC_RANK_STAT_KEYS.map(k => React.createElement("div", {
+    key: k,
+    className: "rounded-md bg-slate-950/60 py-1 text-center"
+  }, React.createElement("div", {
+    className: "text-[9px] text-slate-300 whitespace-nowrap"
+  }, MONSUC_RANK_STAT_LABEL[k]), React.createElement("div", {
+    className: "text-[13px] font-black text-white"
+  }, Math.round(monsucRankNum(st[k]))))));
+}
+function MonsucRankRow({
+  row,
+  open,
+  onToggle,
+  mine,
+  pinned
+}) {
+  const top = row.place <= 3;
+  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : open ? 'border-yellow-400/80 bg-yellow-900/30' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
+  return React.createElement("button", {
+    type: "button",
+    onClick: onToggle,
+    className: `w-full text-left rounded-xl border px-3 py-2 ${cls}`,
+    "aria-expanded": !!open
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("div", {
+    className: `w-8 text-center font-black ${top ? 'text-yellow-300 text-lg' : 'text-slate-200 text-base'}`
+  }, row.place), React.createElement(MonsucRankMonImg, {
+    species: row.species,
+    dye: row.dye
+  }), React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white truncate"
+  }, row.child_name || (monsucRankMonOf(row.species) || {}).name || '？？？'), React.createElement("div", {
+    className: "text-[10px] text-slate-300 truncate"
+  }, "育てた人: ", pinned ? 'あなた' : row.user_name || 'ななしのブリーダー')), React.createElement(MonsucRankGrade, {
+    grade: row.grade
+  }), React.createElement("div", {
+    className: "w-[64px] text-right text-[15px] font-black text-yellow-300"
+  }, Math.round(monsucRankNum(row.power)).toLocaleString())), open && React.createElement(MonsucRankStats, {
+    stats: row.stats
+  }));
+}
+const monsucRankLineageTabs = () => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
+  const out = [];
+  Object.keys(map).forEach(sp => {
+    const l = map[sp] && map[sp].main;
+    if (typeof l === 'string' && l !== 'unknown' && !out.includes(l) && monsucRankMonOf(sp)) out.push(l);
+  });
+  return out;
+};
+function MonsucRankScreen({
+  onBack
+}) {
+  const [tab, setTab] = React.useState('all');
+  const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
+  const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [open, setOpen] = React.useState(null);
+  const on = monsucRankOn();
+  React.useEffect(() => {
+    if (on) monsucRankFlush();
+  }, [on]);
+  React.useEffect(() => {
+    let alive = true;
+    if (!on) {
+      setLoading(false);
+      return undefined;
+    }
+    setLoading(true);
+    setOpen(null);
+    monsucRankRead({
+      lineage: tab === 'lineage' ? lineage : null
+    }).then(d => {
+      if (alive) {
+        setData(d);
+        setLoading(false);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [on, tab, lineage]);
+  const rows = data && Array.isArray(data.rows) ? data.rows : [];
+  const sent = data && Array.isArray(data.sent) ? data.sent : [];
+  const mine = data ? data.mine : null;
+  const scopeName = tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全体';
+  const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[60] flex flex-col text-white",
+    style: {
+      background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 px-3 pt-3"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onBack,
+    className: "rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold"
+  }, "← もどる"), React.createElement("div", {
+    className: "text-[13px] font-black text-pink-300"
+  }, "🌱 モンヒロサクセス")), React.createElement("div", {
+    className: "px-3 pt-2"
+  }, React.createElement("div", {
+    className: "text-[18px] font-black"
+  }, "🏆 総合力ランキング"), React.createElement("div", {
+    className: "text-[11px] text-slate-300 leading-snug"
+  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 mt-2"
+  }, [['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    onClick: () => setTab(k),
+    className: `rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
+  }, label))), tab === 'lineage' && React.createElement("div", {
+    className: "flex gap-1.5 overflow-x-auto mt-2 pb-1"
+  }, lineages.map(l => React.createElement("button", {
+    key: l,
+    type: "button",
+    onClick: () => setLineage(l),
+    className: `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
+  }, monsucRankLineageName(l), "系"))), React.createElement("div", {
+    className: "text-[12px] text-slate-200 mt-1.5"
+  }, scopeName, " ", totalText, mine ? React.createElement(React.Fragment, null, " ・ あなたの順位 ", React.createElement("span", {
+    className: "text-yellow-300 font-black"
+  }, mine.place, "位")) : null)), React.createElement("div", {
+    className: "flex-1 overflow-y-auto px-3 py-2 space-y-1.5"
+  }, !on && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, monsucRankReasonText('off')), on && loading && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, "読みこみ中…"), on && !loading && !data && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, "つながりませんでした。少し待ってからもう一度開いてね"), on && !loading && data && rows.length === 0 && React.createElement("div", {
+    className: "text-center text-slate-300 text-[13px] py-8"
+  }, "まだだれも載っていません。育て終えたモンスターが最初に載ります"), rows.map(r => React.createElement(MonsucRankRow, {
+    key: r.run_id,
+    row: r,
+    open: open === r.run_id,
+    mine: sent.includes(r.run_id),
+    onToggle: () => setOpen(o => o === r.run_id ? null : r.run_id)
+  }))), mine && React.createElement("div", {
+    className: "px-3 pb-1"
+  }, React.createElement(MonsucRankRow, {
+    row: mine,
+    pinned: true,
+    open: open === `me:${mine.run_id}`,
+    onToggle: () => setOpen(o => o === `me:${mine.run_id}` ? null : `me:${mine.run_id}`)
+  })), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 px-3 pb-3 pt-1"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onBack,
+    className: "rounded-full bg-slate-700/80 py-2 text-[13px] font-bold"
+  }, "← もどる"), React.createElement("div", {
+    className: "rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center"
+  }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く')));
+}
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
 const CARD_BATTLE_SETUP_GUTS_MAX = 2;

@@ -9,9 +9,11 @@
 //
 //   id    … 芯の ASSISTS の id(保存枠の子の assists:[{ id, lv }] に入る)
 //   type  … with(いっしょ型: その子が集まった訓練でだけ)/ self(その子自身の集まり方)/ stay(いるだけ型: 編成でいちばん高い段の1つだけ)
+//           battle(試合型: 編成にいると、育てる子の大会の試合で効く。いるだけ型と同じく、編成でいちばん高い段の1つだけ)
 //   v     … 段1〜3の効き目(単位は unit)/ cost … 段1〜3を取るのに要るポイント(段の合計)
 //   text  … 説明の1行。{v} に段の数字が入る
-//   from  … core(第1弾・いつでも取れる)/ hint(お話のひらめきで候補に出る・案。芯はまだ持っていない)
+//   from  … core(第1弾・いつでも取れる)/ hint(お話のひらめきで候補に出る。芯の訓練の計算には入らない・試合の buffs で効く)
+//   buff  … type battle だけ: 段1〜3の対戦の芯の buffs(battleBuffs がまとめる)
 (function (root) {
   'use strict';
 
@@ -37,23 +39,30 @@
     fz({ id: 'hitonatsu', icon: '🤝', name: '人なつっこさ', type: 'stay', unit: '倍', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], from: 'core', start: [5, 10, 15],
       text: '編成にいるだけで、みんなの親密度の上がりが{v}倍(この子のはじめの親密度も +{start})' }),
 
-    // ---- お話のひらめき(案・芯はまだ持っていない)。助手のお話をいい結末で見終えると、引退のときの候補に並ぶ ----
-    //   誰にでも効く形にした(試合の中の効き目は「ガッツ」だけ。芯の battleMods と同じ口で渡す)。値段は安い組(24/48/80)= ひらめきの割引ぶん
-    fz({ id: 'gatsu', icon: '💪', name: '試合のはじめのガッツ', type: 'stay', unit: '', v: [3, 6, 10], cost: [24, 48, 80], from: 'hint', aid: 'atsu',
+    // ---- お話のひらめき(社長 2026-11-12: 名前どおり「試合の中で効く」)。助手のお話をいい結末で見終えると、引退のときの候補に並ぶ ----
+    //   型 battle = いるだけ型の試合版: この子が編成にいると、育てる子の大会の試合で効く(編成でいちばん高い段の1つだけ)。
+    //   buff は対戦の芯 ASSISTANT_MASMON_BATTLE.simulate の buffs.A にそのまま入る形(#5722・docs/spec/ASSISTANT_MASMON_BATTLE.md)。
+    //   どの試合にも効くので、助手の「特別な1話」(頂への道の1回戦だけ)より小さくした。値段は安い組(24/48/80)= ひらめきの割引ぶん
+    fz({ id: 'gatsu', icon: '💪', name: '試合のはじめのガッツ', type: 'battle', unit: '', v: [3, 5, 8], cost: [24, 48, 80], from: 'hint', aid: 'atsu',
+      buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }],
       text: '編成にいるだけで、大会の試合のはじめのガッツが +{v}' }),
-    fz({ id: 'miseba', icon: '🎤', name: '見せ場', type: 'stay', unit: '倍', v: [1.2, 1.35, 1.5], cost: [24, 48, 80], from: 'hint', aid: 'momosuke',
-      text: '編成にいるだけで、人気の上がりが{v}倍' }),
-    fz({ id: 'mitate', icon: '🔍', name: '見立て', type: 'stay', unit: '%', v: [10, 20, 30], cost: [24, 48, 80], from: 'hint', aid: 'kyuko',
-      text: '編成にいるだけで、大会で勝ったときの能力ポイントが{v}%増える' }),
-    fz({ id: 'kensho', icon: '📐', name: '検証', type: 'stay', unit: '%', v: [20, 35, 50], cost: [24, 48, 80], from: 'hint', aid: 'sorashido',
-      text: '編成にいるだけで、訓練に失敗したときにけがや悪いようすになる率が{v}%下がる' }),
-    fz({ id: 'mimamori', icon: '🌙', name: '見守り', type: 'stay', unit: '倍', v: [1.2, 1.4, 1.6], cost: [24, 48, 80], from: 'hint', aid: 'erubin',
-      text: '編成にいるだけで、褒める・叱るで上がる忠誠度が{v}倍' }),
+    fz({ id: 'miseba', icon: '🎤', name: '見せ場', type: 'battle', unit: '%', v: [3, 5, 8], cost: [24, 48, 80], from: 'hint', aid: 'momosuke',
+      buff: [{ crit: 0.03 }, { crit: 0.05 }, { crit: 0.08 }],
+      text: '編成にいるだけで、大会の試合で会心が出やすくなる(+{v}%)' }),
+    fz({ id: 'mitate', icon: '🔍', name: '見立て', type: 'battle', unit: '%', v: [3, 5, 8], cost: [24, 48, 80], from: 'hint', aid: 'kyuko',
+      buff: [{ eva: 0.03 }, { eva: 0.05 }, { eva: 0.08 }],
+      text: '編成にいるだけで、大会の試合で相手の攻撃をよけやすくなる(相手の命中 −{v}%)' }),
+    fz({ id: 'kensho', icon: '📐', name: '検証', type: 'battle', unit: '%', v: [15, 25, 35], cost: [24, 48, 80], from: 'hint', aid: 'sorashido',
+      buff: [{ missCut: 0.15 }, { missCut: 0.25 }, { missCut: 0.35 }],
+      text: '編成にいるだけで、大会の試合で技が外れにくくなる(外れる率 −{v}%)' }),
+    fz({ id: 'mimamori', icon: '🌙', name: '見守り', type: 'battle', unit: '%', v: [5, 10, 10], cost: [24, 48, 80], from: 'hint', aid: 'erubin',
+      buff: [{ hit1: 0.05 }, { hit1: 0.10 }, { hit1: 0.10, noSulk: true }],
+      text: '編成にいるだけで、大会の試合の最初の攻撃が当たりやすくなる(+{v}%)', text3: '編成にいるだけで、大会の試合の最初の攻撃が当たりやすくなり(+{v}%)、言うことを聞かない番も出ない' }),
   ]);
   const LIST = ASSIST_LIST;
 
   const BY_ID = Object.freeze(Object.fromEntries(LIST.map(a => [a.id, a])));
-  const TYPE_NAME = Object.freeze({ with: 'いっしょ', self: '自分', stay: 'いるだけ' });
+  const TYPE_NAME = Object.freeze({ with: 'いっしょ', self: '自分', stay: 'いるだけ', battle: '試合' });
   const MAX_KINDS = 4;          // 1体に4種類まで(芯の ASSIST_MAX)
   const POINTS_MIN = 20, POINTS_MAX = 400, POINTS_DIV = 50; // ポイント = 切り捨て(総合力 ÷ 50)・20〜400(芯の assistPointsOf)
   // 「おまかせ」: この順に段を1つずつ上げて埋める(ASSIST.md §5)。ひらめきの候補があれば先頭に足し、残りは表の順で埋める
@@ -66,7 +75,7 @@
   const describe = (id, lv) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = lvOf(lv) - 1;
-    return a.text.replace('{v}', String(a.v[i])).replace('{start}', a.start ? String(a.start[i]) : '');
+    return ((i === 2 && a.text3) || a.text).replace('{v}', String(a.v[i])).replace('{start}', a.start ? String(a.start[i]) : '');
   };
   const label = (id, lv) => { const a = BY_ID[id]; return a ? `${a.icon} ${a.name} 段${lvOf(lv)}` : ''; };
   const costOf = (id, lv) => { const a = BY_ID[id]; return a ? a.cost[lvOf(lv) - 1] : 0; };
@@ -111,9 +120,30 @@
     return normPicks(order.filter(id => lv[id]).map(id => ({ id, lv: lv[id] })), cap);
   };
 
+  // 試合で効く分(battle 型)を、対戦の芯の buffs.A の形にまとめる。team = 編成の子の assists の配列の配列([[{ id, lv }], …])
+  //   extra(助手の特別な1話の battleMods など)を渡すと足し合わせる。範囲は芯と同じ(guts 0〜50・率 0〜0.5・missCut 0〜1)
+  const BUFF_RANGE = Object.freeze({ guts: [0, 50], hit1: [0, 0.5], crit: [0, 0.5], missCut: [0, 1], eva: [0, 0.5] });
+  const battleBuffs = (team, extra) => {
+    const top = {};
+    for (const list of Array.isArray(team) ? team : []) for (const p of Array.isArray(list) ? list : []) {
+      const a = p && BY_ID[p.id]; if (!a || a.type !== 'battle') continue;
+      top[a.id] = Math.max(top[a.id] || 0, lvOf(p.lv));
+    }
+    const out = {};
+    const put = (b) => Object.keys(b || {}).forEach(k => {
+      if (k === 'noSulk') { if (b[k] === true) out.noSulk = true; return; }
+      const r = BUFF_RANGE[k]; const n = Number(b[k]); if (!r || !Number.isFinite(n)) return;
+      const v = Math.min(r[1], Math.max(r[0], (out[k] || 0) + n));
+      out[k] = k === 'guts' ? Math.round(v) : Math.round(v * 1000) / 1000;
+    });
+    Object.keys(top).forEach(id => put(BY_ID[id].buff[top[id] - 1]));
+    if (extra && typeof extra === 'object') put(extra);
+    return out;
+  };
+
   const pointsOf = (power) => Math.min(POINTS_MAX, Math.max(POINTS_MIN, Math.floor(num(power) / POINTS_DIV)));
 
-  const api = Object.freeze({ LIST, BY_ID, TYPE_NAME, MAX_KINDS, POINTS_MIN, POINTS_MAX, AUTO_ORDER, describe, label, costOf, candidates, normPicks, autoPick, pointsOf });
+  const api = Object.freeze({ LIST, BY_ID, TYPE_NAME, MAX_KINDS, POINTS_MIN, POINTS_MAX, AUTO_ORDER, describe, label, costOf, candidates, normPicks, autoPick, pointsOf, battleBuffs });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.MONHERO_SUCCESS_ASSIST = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
