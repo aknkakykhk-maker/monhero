@@ -6,7 +6,8 @@
 //   SHOT_DIR=<フォルダ> node tools/success/success-fx-shoot.js … 縦390×844・横844×390・幅320×568 で撮る
 //
 // 撮るもの(1つの大きさにつき3枚): 気分8つ(しぐさを出したまま・季節と時間の光をそれぞれ替える)/
-// 訓練の結果・叱る・褒めるの反応7つ(動きの途中で止める)/ 節目の短い演出6つ
+// 訓練の結果・叱る・褒めるの反応7つ(動きの途中で止める)/ 節目の短い演出6つ /
+// ぴょこぴょこ(小さく置いて、小さく弾んだ所と大きく跳ねた所)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -44,6 +45,13 @@ const mount = (sheet) => {
     const bgOf = (t) => (t === '夕方' ? 'images/story-bg/monhero_plaza_evening.jpg' : t === '夜' ? 'images/story-bg/monhero_night.jpg' : 'images/story-bg/monhero_plaza.jpg');
     cells = moods.map(([m, name, season, time], i) => cell(m, bgOf(time), [h(MsxSceneLight, { key: 'l', season, time }), label(`${name}・${season}/${time}`),
       monBox({ key: 'm', species: SP[i], mood: m, season, time, pose: true, seed: 'shot' })]));
+  } else if (sheet === 'pyoko') {
+    // 社長「もっと小さくして、ぴょこぴょこ」: 箱を小さく(高さ38%)置き、小さく弾んだ所(a)と大きく跳ねた所(b)で止める
+    const ps = [['joy', 'ごきげん'], ['hype', '大はしゃぎ'], ['calm', 'ふつう'], ['tired', '疲れ']];
+    cells = [];
+    ps.forEach(([m, name], i) => ['a', 'b'].forEach((t) => cells.push(h('div', { key: `${m}${t}`, 'data-t': t, className: 'fx-pyo', style: { display: 'contents' } },
+      cell(`${m}${t}`, 'images/story-bg/monhero_plaza.jpg', [label(`ぴょこぴょこ・${name}・${t === 'a' ? '小さく弾む' : '大きく跳ねる'}`),
+        h('div', { key: 'm', style: { position: 'absolute', left: 0, right: 0, bottom: '10%', height: '38%', zIndex: 2 } }, h(MsxLiveMon, { species: SP[i], mood: m, pyoko: true, voice: false, seed: 'shot' }))])))));
   } else if (sheet === 'react') {
     const rs = [['great', '🌟大成功'], ['ok', '⭕成功'], ['fail', '❌失敗'], ['sab', '💤サボり'], ['scold', '叱る(合っていた)'], ['scoldBad', '叱る(合っていない)'], ['praise', '褒める'], ['peak', 'ピークに入った']];
     cells = rs.map(([k, name], i) => cell(k, 'images/story-bg/forest_morning.jpg', [label(name),
@@ -74,7 +82,7 @@ const mount = (sheet) => {
       // ふきだしの声は台本 mon.js から(回2の台本の束がまだ無い版でも、正本を読んで本物の鳴き声で撮る)
       await page.addScriptTag({ url: `http://localhost:${PORT}/docs/progress/player-raise/script/mon.js` });
       await page.evaluate(() => msxFxUseScript(MONSUC_SCRIPT_MON)); // eslint-disable-line no-undef
-      for (const sheet of ['moods', 'react', 'moment']) {
+      for (const sheet of ['moods', 'react', 'moment', 'pyoko']) {
         const nm = `${sheet}${tag ? `(${tag})` : ''}`;
         await page.evaluate(() => { const s = document.getElementById('fx-pause'); if (s) s.remove(); });
         await page.evaluate(`(${mount.toString()})(${JSON.stringify(sheet)})`);
@@ -82,6 +90,18 @@ const mount = (sheet) => {
         await page.waitForTimeout(sheet === 'moods' ? 900 : 120);
         await page.evaluate((late) => { const st = document.createElement('style'); st.id = 'fx-pause';
           st.textContent = `.msxfx-live *,.msxfx-moment *{animation-play-state:paused!important;animation-delay:-${late}s!important}`; document.head.appendChild(st); }, sheet === 'moods' ? 0.5 : 0.45);
+        if (sheet === 'pyoko') {
+          // 1周 = 5拍。小さく弾んだ頂上は 10%、大きく跳ねた頂上は 89%(拍の長さは気分で違うので、枠ごとに式で止める)
+          await page.evaluate(() => { const st = document.getElementById('fx-pause'); st.textContent = '';
+            for (const c of document.querySelectorAll('[data-t]')) for (const live of c.querySelectorAll('.msxfx-live')) {
+              const beat = live.classList.contains('msxfx-py-fast') ? 0.46 : live.classList.contains('msxfx-py-slow') ? 1 : 0.62;
+              const at = (c.dataset.t === 'a' ? 0.10 : 0.89) * beat * 5;
+              for (const e of live.querySelectorAll('.msxfx-hop,.msxfx-shadow')) { e.style.animationPlayState = 'paused'; e.style.animationDelay = `-${at}s`; }
+              for (const e of live.querySelectorAll('.msxfx-pose,.msxfx-act,.mon-idle,.mon-idle *')) e.style.animationPlayState = 'paused';
+            } });
+          const mv = await page.evaluate(() => [...document.querySelectorAll('#fx-shot .msxfx-hop')].filter((e) => getComputedStyle(e).animationName === 'msxfx-pyoko').length);
+          check(`${nm}: ぴょこぴょこが付く`, mv >= 8, `${mv}体`);
+        }
         await page.evaluate(() => Promise.all([...document.querySelectorAll('#fx-shot img')].map((i) => (i.complete ? 0 : new Promise((r) => { i.onload = i.onerror = r; })))));
         const m = await page.evaluate(() => {
           const cells = [...document.querySelectorAll('#fx-shot .fx-cell')];
@@ -111,6 +131,10 @@ const mount = (sheet) => {
     await page.waitForTimeout(150);
     const r = await page.evaluate(() => ({ calm: document.querySelectorAll('#fx-shot .msxfx-calm').length, idle: document.querySelectorAll('#fx-shot [data-monster-idle]').length,
       moving: [...document.querySelectorAll('#fx-shot .msxfx-act')].filter((e) => getComputedStyle(e).animationName !== 'none').length }));
+    await page.evaluate(`(${mount.toString()})("pyoko")`);
+    await page.waitForTimeout(150);
+    const py = await page.evaluate(() => [...document.querySelectorAll('#fx-shot .msxfx-hop')].filter((e) => getComputedStyle(e).animationName !== 'none').length);
+    check('動きを減らす: ぴょこぴょこも止まる', py === 0, `${py}体が動いている`);
     check('動きを減らす: 止まった姿で出る', r.calm >= 6 && r.idle === 0 && r.moving === 0, JSON.stringify(r));
     // 反応は1.2秒で終わる・押せばとばせる
     await page.close();

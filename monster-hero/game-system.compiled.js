@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 925bf479b44f7f88
+// source-sha256: 5ae408d848d6446f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108197,6 +108197,7 @@ const MSXFX_GESTURE = Object.freeze({
     fx: 'heart'
   }
 });
+const MSXFX_PYOKO_SLOW = Object.freeze(['tired', 'sad', 'sulky']);
 const MSXFX_FX_CHAR = Object.freeze({
   spark: '✦',
   note: '♪',
@@ -108333,6 +108334,7 @@ function MsxLiveMon({
   voice = true,
   calm,
   pose = false,
+  pyoko = false,
   className = '',
   style,
   alt = ''
@@ -108437,7 +108439,7 @@ function MsxLiveMon({
   }) : img;
   const fxCh = act && act.fx ? MSXFX_FX_CHAR[act.fx] : '';
   return React.createElement("div", {
-    className: `msxfx-live${still ? ' msxfx-calm' : ''} ${className}`,
+    className: `msxfx-live${still ? ' msxfx-calm' : ''}${pyoko ? ` msxfx-pyoko msxfx-py-${MSXFX_PYOKO_SLOW.includes(m) ? 'slow' : m === 'hype' ? 'fast' : 'mid'}${act && act.react ? ' msxfx-py-hold' : ''}` : ''} ${className}`,
     style: style,
     "data-msxfx-mood": m,
     "data-msxfx-act": act ? act.cls : '',
@@ -108446,6 +108448,8 @@ function MsxLiveMon({
     className: "msxfx-shadow",
     "aria-hidden": "true"
   }), React.createElement("div", {
+    className: "msxfx-hop"
+  }, React.createElement("div", {
     className: `msxfx-pose msxfx-m-${m}`
   }, React.createElement("div", {
     key: act ? act.n : 'idle',
@@ -108456,7 +108460,7 @@ function MsxLiveMon({
       filter: `${L.mon === 'none' ? '' : L.mon} drop-shadow(0 6px 5px #0008)`.trim(),
       '--msxfx-rim': L.rim
     }
-  }, art))), fxCh ? React.createElement("div", {
+  }, art)))), fxCh ? React.createElement("div", {
     key: `fx-${act.n}`,
     className: `msxfx-fx msxfx-fx-${act.fx}`,
     "aria-hidden": "true"
@@ -108586,9 +108590,28 @@ const MSXFX_CSS = `
 .msxfx-light{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;z-index:1}
 .msxfx-live{position:relative;height:100%;aspect-ratio:1/1;max-width:100%;margin:0 auto;-webkit-tap-highlight-color:transparent}
 .msxfx-shadow{position:absolute;left:22%;right:22%;bottom:3%;height:7%;border-radius:50%;background:radial-gradient(closest-side,#0008,#0000)}
-.msxfx-pose,.msxfx-act,.msxfx-tint{position:absolute;inset:0;transform-origin:50% 92%}
+.msxfx-hop,.msxfx-pose,.msxfx-act,.msxfx-tint{position:absolute;inset:0;transform-origin:50% 92%}
 .msxfx-tint>*{display:block;width:100%;height:100%}
 .msxfx-emoji{display:flex!important;align-items:center;justify-content:center;font-size:64px}
+.msxfx-hop{position:absolute;inset:0;transform-origin:50% 96%}
+/* ぴょこぴょこ: 小さく4回弾んで、5回目に大きく跳ねる(1周 = 5拍) */
+.msxfx-pyoko{--py-beat:.62s;--py-h:-7%;--py-big:-20%}
+.msxfx-py-fast{--py-beat:.46s;--py-h:-9%;--py-big:-24%}
+.msxfx-py-slow{--py-beat:1s;--py-h:-3%;--py-big:-7%}
+.msxfx-pyoko .msxfx-hop{animation:msxfx-pyoko calc(var(--py-beat)*5) linear infinite}
+.msxfx-pyoko .msxfx-shadow{animation:msxfx-pyshadow calc(var(--py-beat)*5) linear infinite}
+.msxfx-py-hold .msxfx-hop,.msxfx-py-hold .msxfx-shadow{animation:none}
+@keyframes msxfx-pyoko{
+  0%,20%,40%,60%{transform:translateY(0) scale(1.06,.93);animation-timing-function:ease-out}
+  3%,23%,43%,63%{transform:translateY(0) scale(1);animation-timing-function:ease-out}
+  10%,30%,50%,70%{transform:translateY(var(--py-h)) scale(.97,1.04);animation-timing-function:ease-in}
+  17%,37%,57%{transform:translateY(0) scale(1.04,.95);animation-timing-function:ease-out}
+  77%{transform:translateY(0) scale(1.1,.88);animation-timing-function:ease-out}
+  89%{transform:translateY(var(--py-big)) scale(.93,1.08) rotate(-3deg);animation-timing-function:ease-in}
+  98%{transform:translateY(0) scale(1.08,.9)}
+  100%{transform:translateY(0) scale(1.06,.93)}}
+@keyframes msxfx-pyshadow{0%,3%,17%,20%,23%,37%,40%,43%,57%,60%,63%,77%,98%,100%{transform:scale(1);opacity:1}
+  10%,30%,50%,70%{transform:scale(.85);opacity:.8}89%{transform:scale(.6);opacity:.5}}
 /* 気分の姿勢(ずっと) */
 .msxfx-m-joy{animation:msxfx-bob 1.6s ease-in-out infinite}
 .msxfx-m-hype{animation:msxfx-bob .8s ease-in-out infinite}
