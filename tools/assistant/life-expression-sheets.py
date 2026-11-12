@@ -146,12 +146,8 @@ def write_all(key, cfg, cells):
     win = (max(0, ux0 - M), max(0, uy0 - M), min(cells[0].width, ux1 + M), min(cells[0].height, bottom))
     tot_full = tot_stand = 0
     for e, c in zip(EXPR, cells):
-        # 1) 紹介ページ用の全身(体の見える範囲で切り詰め・余白は少し・拡大はしない)
-        x0, y0, x1, y1 = bbox(c)
-        m = 6
-        canvas = Image.new('RGBA', (x1 - x0 + 2 * m, y1 - y0 + 2 * m), (0, 0, 0, 0))
-        canvas.paste(c.crop((x0, y0, x1, y1)), (m, m))
-        tot_full += save_png(canvas, os.path.join(fb.OUT, '%s__%s.png' % (name, e)))
+        # 1) 紹介ページ用の全身(life-fullbody-art.py と同じ作り方: 切り詰め・余白は少し・拡大はしない・ふちの半透明を残して減色)
+        tot_full += fb.save(fb.fit(c), os.path.join(fb.OUT, '%s__%s.png' % (name, e))) // 1024
         # 2) 場面用の立ち絵(胸から上)
         st = smooth2x(c.crop(win))
         tot_stand += save_png(st, os.path.join(ROOT, 'monster-hero/images/assistant', stand, '%s_%s.png' % (prefix, e)))

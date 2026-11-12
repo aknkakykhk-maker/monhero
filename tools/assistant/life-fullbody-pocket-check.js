@@ -13,8 +13,10 @@ const DIR = path.join(__dirname, '..', '..', 'monster-hero', 'images', 'assistan
 const DEFAULT_MAX = 300; // 表に無い絵(新しく足した絵)は、これを超える白の塊があれば止める
 // 絵ごとの許す大きさ(画素)。いまの服の白の最大に、ゆとりを付けたもの
 const ALLOWED = {
-  'kiki': 500, 'sorashido': 500, 'kiki_halloween': 1000, 'kyuko': 2500, 'momosuke': 1500, 'mua': 2000,
+  'kiki': 500, 'sorashido': 500, 'kiki_halloween': 1000, 'kyuko': 2500, 'momosuke': 1500,
   'mua_halloween': 1000, 'mua_card-master': 1400,
+  // 2026-11-12 ふちをなめらかにして、みゅあのストッキング(服の白)が透明に触れなくなった(いまの最大 3030)
+  'mua': 3500,
 };
 
 const nearWhite = (d, i) => d[i + 3] >= 250 && Math.min(d[i], d[i + 1], d[i + 2]) >= 225
@@ -28,10 +30,10 @@ const worstEnclosedWhite = (file) => {
   const ctx = cv.getContext('2d');
   ctx.drawImage(img, 0, 0);
   const d = ctx.getImageData(0, 0, w, h).data;
-  // 透明(アルファ40未満)から2画素以内か
+  // 透明に近い所(アルファ128未満)から3画素以内か。2026-11-12 ふちを半透明でなめらかにしたので、半透明の帯の分だけ広く見る(前は40未満から2画素)
   const near = new Uint8Array(w * h);
-  for (let p = 0; p < w * h; p++) if (d[p * 4 + 3] < 40) near[p] = 1;
-  for (let r = 0; r < 2; r++) {
+  for (let p = 0; p < w * h; p++) if (d[p * 4 + 3] < 128) near[p] = 1;
+  for (let r = 0; r < 3; r++) {
     const prev = near.slice();
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const p = y * w + x;
