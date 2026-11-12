@@ -208,7 +208,7 @@ for (const f of ASST_FILES) {
     check('ソラシドの段ごとの版(Lv1〜3 版がそろっている)', missB.length === 0, missB.length ? `足りない ${missB.length}本: ${missB.slice(0, 3).map(r => r.id).join(', ')}` : `Lv1〜3 版 ${sora.filter(r => Array.isArray(r.bond) && r.bond.join() === '1,3').length}本`);
  
     // Lv9〜15 版(id の最後に c・bond:[9,15])と Lv16〜 版(d・bond:16)は、bond の無い行すべてに要る(rival-owner.js のソラシドの行も)
-    //   Lv9〜 の版の一人称は「俺」(「自分」は使わない)。Lv9〜15 版は「っす」「んす」がたいてい入る
+    //   Lv9〜 の版の一人称は「俺」(「自分」は使わない)。Lv9〜15 版は「っす」「んす」がたいてい入る。Lv16〜 版は半分以上の行にタメ口が混ざる
     const soraAll = rows.filter(r => r.who === 'sorashido');
     const allIds = new Set(soraAll.map(r => r.id));
     const TIERS = [['c', '9,15', 'Lv9〜15'], ['d', '16', 'Lv16〜']].filter(([k]) => soraAll.some(r => r.id.endsWith(k) && r.bond));
@@ -218,8 +218,11 @@ for (const f of ASST_FILES) {
       for (const r of soraAll) if (r.bond && r.id.endsWith(k) && String(r.bond) !== b) bad(`ソラシドの ${name} 版(${k})は bond:${b.includes(',') ? `[${b}]` : b}`, r);
       for (const r of mine) if (/自分/.test(r.t)) bad(`ソラシドの ${name} 版の一人称は「俺」`, r);
       const ssu = mine.filter(r => /っす|んす/.test(r.t)).length;
-      const ok = miss.length === 0 && (k !== 'c' || ssu >= mine.length * 0.8);
-      check(`ソラシドの段ごとの版(${name} 版がそろっている)`, ok, miss.length ? `足りない ${miss.length}本: ${miss.slice(0, 3).map(r => r.id).join(', ')}` : `${mine.length}本${k === 'c' ? ` /「っす」${Math.round(ssu / Math.max(1, mine.length) * 100)}%` : ''}`);
+      // Lv16〜 版は丁寧語とタメ口が半々: タメ口の言い切り(〜だ・〜な・〜かな・〜なきゃ・〜ちゃう…)が半分以上の行に入る
+      const TAME = /(?:だ|な|なー|かな|なきゃ|よな|ちゃう?|しよう|ぞ|か)(?=[笑！。！？・\s👀💦]|$)|そうだ|よし、/u;
+      const tame = mine.filter(r => TAME.test(r.t)).length;
+      const ok = miss.length === 0 && (k !== 'c' || ssu >= mine.length * 0.8) && (k !== 'd' || tame >= mine.length * 0.5);
+      check(`ソラシドの段ごとの版(${name} 版がそろっている)`, ok, miss.length ? `足りない ${miss.length}本: ${miss.slice(0, 3).map(r => r.id).join(', ')}` : `${mine.length}本${k === 'c' ? ` /「っす」${Math.round(ssu / Math.max(1, mine.length) * 100)}%` : ` / タメ口まじり ${Math.round(tame / Math.max(1, mine.length) * 100)}%`}`);
     }
   }
 }
