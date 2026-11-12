@@ -2,9 +2,12 @@
 
 - `success-sound-check.js` … 音の割り当て表(`data/success-sounds.js`)と鳴らす口の見張り
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
+- `success-soak-check.js` … 芯の通し検査。いろいろな編成・助手・持ちこみ・作戦で 46ターンを最後まで回し、値の範囲・デビュー戦3回負け・砂時計のやり直しの数え・同じ id で同じ結果・中断と再開(restore)で結果が変わらないことを見る(数秒・`--runs 200` で増やせる)。芯の既知の不具合は表 `KNOWN` で警告にとどめ、直ると「✓ 直った」と出る
+- `success-screen-browser-check.js` … 画面の通し検査(本物のブラウザ・数分)。デバッグの入口 → はじめる6段 → 数ターン → 中断 → 読み直して再開 → 続き を縦390・横844・幅320 で通し、真っ白・エラー・はみ出しを見る。印が偽のとき通常プレイに何も出ず mh_monsuc_* を書かないことも。画面(回2)が無いときは見送り。`SHOT_DIR=<フォルダ>` で止め絵も撮る
 - `monhero-success-events-check.js` … ランダムイベント(`monster-hero/data/monhero-success-events.js`)の表の形・台本との突き合わせ・決まった乱数・1回の育成の回数。試算は `success-sim.js --no-events` で出来事なしと比べられる
 - `build-script.js` … 台本(docs の正本)→ ゲームが読む `data/monhero-success-script-*.js`。`success-script-engine-check.js` が台本エンジンを見張る
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
+- `success-r3-shoot.js` … 回3の画面(大会・修行・引退・ゲームオーバー・保存枠へしまう)を本物のブラウザで開き、真っ白・はみ出し・エラー・「保存枠に1回だけ入る」を見る(`SHOT_DIR=<フォルダ>` で撮る)
 
 ## 新しいアイテムの絵を1つ足す手順
 
@@ -20,8 +23,3 @@
 5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
 
 対応表: `docs/progress/player-raise/art/ITEMS.md`
-
-## 景色の絵(住む場所・大会の会場・修行の段)
-
-- `scene-art.js` … 景色(1080×1920)を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/scenes/`・表は `monster-hero/data/success-scenes.js`)
-- 足し方・画面の決まり・一覧の絵: `docs/progress/player-raise/art/SCENES.md`

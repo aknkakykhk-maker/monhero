@@ -26,6 +26,8 @@ const __mod = { exports: {} };
 //     guts 始まりのガッツ+ / hit1 最初の攻撃の命中+ / crit 会心+ / missCut 外れる率を何割減らすか / eva 相手の命中− / noSulk 「動かない番」なし
 //     渡さない(または空)なら今までと1つも変わらない。サーバ(masmon-pvp)は buffs を渡さない=受け付けない
 //   1手目: ASSISTANT_MASMON_BATTLE.firstAction(r.log, 'B') → 相手の最初の行動の行(tech・move・guard・charge・swap)
+//   自分で操作する試合(モンヒロサクセス): createMatch({ ..., control:{ A:'human' } }) → pending()/choose(手)/auto()/replay(入力, 手の列)
+//     オート(simulate)の結果は変えない(検査 tools/masmon-battle/masmon-manual-check.js)
 (function (root) {
   'use strict';
 
@@ -485,10 +487,13 @@ const __mod = { exports: {} };
   const firstAction = (log, side) => (Array.isArray(log) ? log : []).find(e => e && ACTION_EVS.includes(e.ev) && (!side || e.side === side)) || null;
 
   // ── 本体 ──
-  const simulate = (input) => {
-    const inp = input && typeof input === 'object' ? input : {};
-    const catalog = inp.catalog;
-    if (!catalog || !catalog.species || !Object.keys(catalog.species).length) throw new Error('assistant-masmon-battle: catalog が無い');
+  // 試合の流れ(ジェネレータ)。ctl[side] が真の側は、手番ごとに手を聞く(yield)。
+  //   聞かれる形: { kind:'act', side } → 返す手 { type:'tech', key } / { type:'move', step:-1|1 } / { type:'guard' } / { type:'charge' } / { type:'swap', to }
+  //              { kind:'enter', side }(3体で倒れたあとの次の子)→ 返す手 { type:'enter', to }
+  //   ctl が両方偽なら一度も止まらない = simulate(オート)。乱数の引き方も記録も、止まれる形にする前と1つも変わらない
+  //   (検査 tools/masmon-battle/masmon-manual-check.js が、直す前の計算の指紋の控え auto-golden.json と突き合わせる)。
+  //   自分で選んだ手番では AI の見積もりの乱数(ゆらぎ)を引かない。忠誠度の「動かない番」は手を聞く前に決まる(選べない)
+  function* battleFlow(inp, catalog, ctl) {
     const rng = makeRng(inp.seed);
     const roundLimit = toInt(inp.roundLimit, 1, 1000, ROUND_LIMIT);
     const state = setupState(inp, catalog);
@@ -502,7 +507,7 @@ const __mod = { exports: {} };
       if (buffs[side] && buffs[side].guts) for (const x of state.teams[side].units) x.guts = Math.min(GUTS_MAX, x.guts + buffs[side].guts);
     }
     state.dist = 1 + Math.floor(rng() * 2);
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null };
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -512,19 +517,22 @@ const __mod = { exports: {} };
       if (ctx.trace && ctx.lastCands && ACTION_EVS.includes(e.ev)) { row.cands = ctx.lastCands; ctx.lastCands = null; }
       log.push(row);
     };
+    const flow = { state, log, ctx, buffs, usedFirst, done: false, result: null };
+    yield { kind: 'init', flow };   // 外から状態を見られるように最初に1回だけ渡す(simulate は読み捨てる)
 
     const movesOf = (side) => state.teams[side].units.map(x => x.moves.map(m => ({ id: m.key, name: m.name, kind: m.kind, guts: m.guts, dist: m.dist })));
     const ver = [...state.teams.A.units, ...state.teams.B.units].some(x => x.loy < 100 || x.pop > 0) ? VERSION : VERSION_PLAIN;
+    const ctlRow = ctl.A || ctl.B ? { ctl: Object.assign({}, ctl.A ? { A: 'human' } : {}, ctl.B ? { B: 'human' } : {}) } : {};
     push({ ev: 'start', v: ver, balance,
       plan: { A: state.teams.A.plan, B: state.teams.B.plan }, swapPace: { A: state.teams.A.swapPace, B: state.teams.B.swapPace }, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
       aMoves: movesOf('A'), bMoves: movesOf('B'),
       aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp),
-      ...(buffs.A || buffs.B ? { buffs: { A: buffs.A, B: buffs.B } } : {}) });
+      ...(buffs.A || buffs.B ? { buffs: { A: buffs.A, B: buffs.B } } : {}), ...ctlRow });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
     let winner = null, reason = null;
-    const act = (side) => {
+    function* act(side) {
       const foeSide = side === 'A' ? 'B' : 'A';
       const me = state.teams[side];
       const u = unitOf(side);
@@ -537,7 +545,9 @@ const __mod = { exports: {} };
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; // 「ためる」と同じあと始末
         return;
       }
-      const c = chooseAction(ctx, side);
+      let c;
+      if (ctl[side]) { const got = yield { kind: 'act', side }; c = Object.assign({}, got, { why: got.aiWhy || 'player' }); }
+      else c = chooseAction(ctx, side);
       if (c.type === 'tech') {
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
@@ -584,7 +594,7 @@ const __mod = { exports: {} };
       if (f.hp <= 0) {
         push({ ev: 'ko', side: foeSide, i: state.teams[foeSide].active, name: f.name });
         if (!alive(foeSide)) { winner = side; reason = 'wipe'; return; }
-        const next = chooseReplacement(ctx, foeSide);
+        const next = ctl[foeSide] ? (yield { kind: 'enter', side: foeSide }).to : chooseReplacement(ctx, foeSide);
         state.teams[foeSide].active = next;
         const n = unitOf(foeSide);
         n.guts = Math.max(n.guts, GUTS_SWAP_IN);
@@ -592,7 +602,7 @@ const __mod = { exports: {} };
         n.swapCooldown = SWAP_COOLDOWN;
         push({ ev: 'enter', side: foeSide, i: next, name: n.name, guts: n.guts });
       }
-    };
+    }
 
     while (!winner && state.round < roundLimit) {
       state.round++;
@@ -607,7 +617,7 @@ const __mod = { exports: {} };
       const order = sa >= sb ? ['A', 'B'] : ['B', 'A'];
       for (const side of order) {
         if (winner) break;
-        act(side);
+        yield* act(side);
       }
     }
     if (!winner) {
@@ -624,7 +634,151 @@ const __mod = { exports: {} };
     push({ ev: 'end', winner, reason });
     const final = {};
     for (const side of ['A', 'B']) final[side] = state.teams[side].units.map(x => ({ name: x.name, hp: x.hp, maxHp: x.maxHp, guts: x.guts }));
-    return { version: ver, balance, winner, reason, rounds: state.round, log, final, digest: digestOf(log) };
+    flow.done = true;
+    flow.result = { version: ver, balance, winner, reason, rounds: state.round, log, final, digest: digestOf(log) };
+    return flow.result;
+  }
+
+  const catalogOf = (inp) => {
+    const catalog = inp.catalog;
+    if (!catalog || !catalog.species || !Object.keys(catalog.species).length) throw new Error('assistant-masmon-battle: catalog が無い');
+    return catalog;
+  };
+
+  // オート(両側 AI)で最後まで。サーバ(masmon-pvp)もこれを呼ぶ。control は受け付けない
+  const simulate = (input) => {
+    const inp = input && typeof input === 'object' ? input : {};
+    const g = battleFlow(inp, catalogOf(inp), { A: false, B: false });
+    g.next();                                  // init
+    const last = g.next();
+    if (!last.done) throw new Error('assistant-masmon-battle: オートの試合が手を聞いた');
+    return last.value;
+  };
+
+  // ── 自分で操作する試合(モンヒロサクセス・2026-11-12 社長「モンサクは自分操作にして」) ──
+  //   const m = createMatch({ simulate と同じ入力, control:{ A:'human' } });
+  //   m.pending() → いまの手番の選べる手(無ければ null=決着)。m.choose(手) → { ok, reason? } で次の手番まで進む
+  //   m.log(伸びていく記録)・m.view()(場の様子)・m.choices()(選んだ手の列)・m.result()(決着したら simulate と同じ形)
+  //   m.auto(side) … その側をここからオートにする(列に { type:'auto' } が残る)
+  //   見返し・中断の続き: replay(同じ入力, 手の列) で全く同じ所まで進む
+  const PLAYER_ACTS = ['tech', 'move', 'guard', 'charge', 'swap'];
+  const createMatch = (input) => {
+    const inp = input && typeof input === 'object' ? input : {};
+    const catalog = catalogOf(inp);
+    const c0 = inp.control && typeof inp.control === 'object' ? inp.control : {};
+    const ctl = { A: c0.A === 'human', B: c0.B === 'human' };
+    const g = battleFlow(inp, catalog, ctl);
+    const flow = g.next().value.flow;
+    const st = flow.state;
+    const picks = [];
+    let req = null;
+    const advance = (val) => {
+      const r = g.next(val);
+      req = r.done ? null : r.value;
+    };
+    advance(undefined);
+    const foeOf = (side) => (side === 'A' ? 'B' : 'A');
+    const unitOf = (side) => st.teams[side].units[st.teams[side].active];
+    // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
+    const hintOf = (side) => {
+      try {
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null }, side);
+        return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
+      } catch (_) { return null; }
+    };
+    const optionsOf = (rq) => {
+      const side = rq.side;
+      const me = st.teams[side];
+      if (rq.kind === 'enter') {
+        return { kind: 'enter', side, enter: me.units.map((x, i) => ({ type: 'enter', to: i, name: x.name, hp: x.hp, maxHp: x.maxHp, ok: x.hp > 0 })) };
+      }
+      const u = unitOf(side), f = unitOf(foeOf(side));
+      const d = st.dist;
+      const first = !flow.usedFirst[side];
+      const tech = u.moves.map(mv => {
+        const reach = inRange(mv, d);
+        const p = buffedHit(hitChance(u, f, mv), flow.buffs[side], flow.buffs[foeOf(side)], first);
+        return { type: 'tech', key: mv.key, name: mv.name, kind: mv.kind, guts: mv.guts, dist: mv.dist.slice(), reach,
+          ok: reach && u.guts >= mv.guts, need: Math.max(0, mv.guts - u.guts), p: Math.round(p * 1000) / 10, gd: mv.gd, crit: mv.crit };
+      });
+      const move = [-1, 1].map(step => ({ type: 'move', step, to: d + step, ok: d + step >= 0 && d + step <= 3 }));
+      const swap = me.units.map((x, i) => ({ type: 'swap', to: i, name: x.name, hp: x.hp, maxHp: x.maxHp,
+        ok: i !== me.active && x.hp > 0 && u.swapCooldown <= 0 })).filter(x => x.to !== me.active);
+      return { kind: 'act', side, round: st.round, dist: d, guts: u.guts, hp: u.hp, maxHp: u.maxHp,
+        tech, guard: { type: 'guard', ok: true }, move, charge: { type: 'charge', ok: u.guts < GUTS_MAX }, swap,
+        swapWait: Math.max(0, u.swapCooldown), hint: hintOf(side) };
+    };
+    // 渡された手が、いまの手番で選べるか(選べない手は進めない)
+    const valid = (rq, c) => {
+      const o = optionsOf(rq);
+      if (rq.kind === 'enter') return c.type === 'enter' && o.enter.some(x => x.ok && x.to === c.to);
+      if (!PLAYER_ACTS.includes(c.type)) return false;
+      if (c.type === 'tech') return o.tech.some(x => x.ok && x.key === c.key);
+      if (c.type === 'move') return o.move.some(x => x.ok && x.step === c.step);
+      if (c.type === 'guard') return true;
+      if (c.type === 'charge') return o.charge.ok;
+      return o.swap.some(x => x.ok && x.to === c.to);
+    };
+    const clean = (c) => {
+      const o = { type: c.type };
+      if (c.type === 'tech') o.key = String(c.key);
+      if (c.type === 'move') o.step = c.step;
+      if (c.type === 'swap' || c.type === 'enter') o.to = c.to;
+      return o;
+    };
+    // ある側をオートに切り替えたら、その側の手番は AI が選ぶ(いま止まっている手番も)
+    const aiPick = (rq) => {
+      if (rq.kind === 'enter') return { type: 'enter', to: chooseReplacement(flow.ctx, rq.side) };
+      const c = chooseAction(flow.ctx, rq.side);
+      return { type: c.type, key: c.key, step: c.step, to: c.to, aiWhy: c.why };
+    };
+    const runAuto = () => {
+      while (req && !ctl[req.side]) {
+        const c = aiPick(req);
+        advance(c);
+      }
+    };
+    const m = {
+      get log() { return flow.log; },
+      pending: () => (req && ctl[req.side] ? optionsOf(req) : null),
+      choose: (choice) => {
+        if (!req) return { ok: false, reason: 'end' };
+        const c = choice && typeof choice === 'object' ? choice : {};
+        if (c.type === 'auto') return m.auto(req.side);
+        if (!valid(req, c)) return { ok: false, reason: 'invalid' };
+        const cc = clean(c);
+        picks.push(cc);
+        advance(cc);
+        runAuto();
+        return { ok: true };
+      },
+      auto: (side) => {
+        const s = side === 'B' ? 'B' : 'A';
+        if (!ctl[s]) return { ok: true };
+        ctl[s] = false;
+        picks.push({ type: 'auto', side: s });
+        runAuto();
+        return { ok: true };
+      },
+      choices: () => picks.map(x => Object.assign({}, x)),
+      done: () => flow.done,
+      result: () => flow.result,
+      view: () => ({ round: st.round, dist: st.dist,
+        teams: { A: viewTeam(st.teams.A), B: viewTeam(st.teams.B) } }),
+    };
+    return m;
+  };
+  const viewTeam = (t) => ({ active: t.active, units: t.units.map(x => ({ name: x.name, species: x.species, hp: x.hp, maxHp: x.maxHp, guts: x.guts, guarding: x.guarding, swapCooldown: x.swapCooldown })) });
+  // 同じ入力と手の列から、同じ所まで進めた試合を返す(列のどこかで選べない手があれば ok:false とその位置)
+  const replay = (input, choices) => {
+    const m = createMatch(input);
+    const list = Array.isArray(choices) ? choices : [];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      const r = c && c.type === 'auto' ? m.auto(c.side) : m.choose(c);
+      if (!r.ok) return { ok: false, at: i, match: m };
+    }
+    return { ok: true, match: m };
   };
 
   // 結果の指紋(同じ種・同じ編成なら同じ値。端末とサーバの突き合わせ用)
@@ -639,10 +793,10 @@ const __mod = { exports: {} };
   const api = Object.freeze({
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
-    LV_MAX, BUFF_LIMITS, buildCatalog, simulate, firstAction, unitFromGrow, makeRng, hashSeed,
+    LV_MAX, BUFF_LIMITS, buildCatalog, simulate, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
-      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ' }),
+      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示' }),
     // 検査用(計算の部品)
     _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
