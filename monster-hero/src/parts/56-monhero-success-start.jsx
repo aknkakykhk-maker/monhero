@@ -63,13 +63,23 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
   // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てるモンスターと同じ種 → 解放済みの種の順)
   const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter((t) => t && t.box && raised.some((m) => m.id === t.box)).map((t) => t.box).slice(0, 5));
+  // フレンドから借りた子(回5・オトズレの部品 monsucLendMember の写し)。6枠目に入る
+  const [friend, setFriend] = useState(null);
+  const [lendList, setLendList] = useState(null); // null | 'loading' | { ok, rows, reason }
   const team = useMemo(() => {
     const list = teamBox.map((id) => ({ box: id }));
     const bases = [species, ...unlocked.filter((id) => id !== species)];
-    let bi = 0; while (list.length < 6) { list.push({ base: bases[bi % bases.length] || species }); bi += 1; }
+    const room = friend ? 5 : 6;
+    let bi = 0; while (list.length < room) { list.push({ base: bases[bi % bases.length] || species }); bi += 1; }
+    if (friend) list.push({ friend });
     return list;
-  }, [teamBox, species, unlocked]);
-  const members = useMemo(() => team.map((t) => { const src = msxTeamSrc(t, box); const m = SUC.memberOf(src); return { ...m, name: src.name, boxId: src.boxId || null }; }), [team, box, SUC]);
+  }, [teamBox, species, unlocked, friend]);
+  const members = useMemo(() => team.map((t) => { const src = t.friend ? t.friend : msxTeamSrc(t, box); const m = SUC.memberOf(src); return { ...m, name: src.name, boxId: src.boxId || null, friend: t.friend ? t.friend.friend : null }; }), [team, box, SUC]);
+  const openLend = async () => {
+    if (typeof monsucLendFriends !== 'function') return;
+    setLendList('loading');
+    try { const r = await monsucLendFriends(); setLendList(r && typeof r === 'object' ? r : { ok: false, reason: 'server', rows: [] }); } catch (e) { setLendList({ ok: false, reason: 'network', rows: [] }); }
+  };
   const [aid, setAid] = useState('mua');
   const [items, setItems] = useState([]);
   const [nick, setNick] = useState('');
@@ -83,7 +93,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const start = () => {
     const name = msxNameGuard(nick || msxMonName(species).slice(0, MSX_NAME_MAX));
     if (!name) { setStep(4); setNameErr('その名前は使えません。ほかの名前にしてね'); return; }
-    onStart({ species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => msxTeamSrc(t, box)), teamSlots: team, aid, aidBondLv: aidLv, items, nick: name, colors });
+    onStart({ species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => (t.friend ? t.friend : msxTeamSrc(t, box))), teamSlots: team.filter((t) => !t.friend), aid, aidBondLv: aidLv, items, nick: name, colors,
+      friendId: friend && friend.friend ? friend.friend.id : null, baseFill: [species, ...unlocked.filter((id) => id !== species)][5 % Math.max(1, unlocked.length)] || species });
   };
 
   const apt = msxAptOf(species);
@@ -129,12 +140,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる</small></div>
       <div className="v-slots">
         {members.map((m, i) => (
-          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}`}>
+          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`}>
             <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
             <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
             <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
-            <div className="ic">{m.kind === 'base' ? 'ベースモン' : ''}</div>
+            <div className="ic">{m.kind === 'base' ? 'ベースモン' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : ''}</div>
           </div>
         ))}
       </div>
@@ -149,7 +160,20 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
             <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
           </button>
         )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
-        <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体)<span className="msx-soon">準備中</span></div>
+        <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体){typeof monsucLendFriends !== 'function' ? <span className="msx-soon">準備中</span> : null}</div>
+        {typeof monsucLendFriends === 'function' ? (<>
+          {friend ? <button type="button" className="v-item sel" style={{ padding: '4px 8px', width: '100%' }} onClick={() => setFriend(null)}>
+            <img src={msxMonThumb(friend.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
+            <div>{(friend.friend && friend.friend.name) || 'フレンド'} の {friend.name}<small>{msxMonName(friend.species)}</small></div><span className="pr">✅ 借りている(外す)</span></button> : null}
+          {lendList === null ? <button type="button" className="msx-btn sub" onClick={openLend}>貸してくれるモンスターを見る</button>
+            : lendList === 'loading' ? <div className="msx-note">さがしています…</div>
+            : !lendList.ok ? <div className="msx-note">{typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません'}</div>
+            : !lendList.rows.length ? <div className="msx-note">貸し出しているフレンドはいません</div>
+            : lendList.rows.map((row) => { const m = monsucLendMember(row, SUC); if (!m) return null; const on = friend && friend.friend && friend.friend.id === row.friendId; return (
+              <button type="button" key={row.friendId} className={`v-item${on ? ' sel' : ''}`} style={{ padding: '4px 8px', width: '100%' }} onClick={() => setFriend(on ? null : m)}>
+                <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
+                <div>{row.name} の {m.name}<small>{msxMonName(m.species)}</small></div><span className="pr">{on ? '✅ 借りている' : '借りる'}</span></button>); })}
+        </>) : null}
       </div>
     </>);
     go = 'この編成でいく ▶';

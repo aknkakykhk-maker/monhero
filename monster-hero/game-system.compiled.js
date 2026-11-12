@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5cb5d8f6385a6c01
+// source-sha256: 1573442ebf3f7231
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159202,6 +159202,7 @@ const MSX_KEYS = Object.freeze({
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
+const MSX_EVENTS_SRC = 'data/monhero-success-events.js';
 const MSX_SCENES_SRC = 'data/success-scenes.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
@@ -159287,7 +159288,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT_ENGINE'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene'), msxLoadScript(MSX_EVENTS_SRC, 'MONHERO_SUCCESS_EVENTS')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -159354,7 +159355,7 @@ const msxNormRun = (raw, SUC) => {
     },
     items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0),
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0)
@@ -159741,29 +159742,54 @@ function MsxStart({
   }));
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
   const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter(t => t && t.box && raised.some(m => m.id === t.box)).map(t => t.box).slice(0, 5));
+  const [friend, setFriend] = useState(null);
+  const [lendList, setLendList] = useState(null);
   const team = useMemo(() => {
     const list = teamBox.map(id => ({
       box: id
     }));
     const bases = [species, ...unlocked.filter(id => id !== species)];
+    const room = friend ? 5 : 6;
     let bi = 0;
-    while (list.length < 6) {
+    while (list.length < room) {
       list.push({
         base: bases[bi % bases.length] || species
       });
       bi += 1;
     }
+    if (friend) list.push({
+      friend
+    });
     return list;
-  }, [teamBox, species, unlocked]);
+  }, [teamBox, species, unlocked, friend]);
   const members = useMemo(() => team.map(t => {
-    const src = msxTeamSrc(t, box);
+    const src = t.friend ? t.friend : msxTeamSrc(t, box);
     const m = SUC.memberOf(src);
     return {
       ...m,
       name: src.name,
-      boxId: src.boxId || null
+      boxId: src.boxId || null,
+      friend: t.friend ? t.friend.friend : null
     };
   }), [team, box, SUC]);
+  const openLend = async () => {
+    if (typeof monsucLendFriends !== 'function') return;
+    setLendList('loading');
+    try {
+      const r = await monsucLendFriends();
+      setLendList(r && typeof r === 'object' ? r : {
+        ok: false,
+        reason: 'server',
+        rows: []
+      });
+    } catch (e) {
+      setLendList({
+        ok: false,
+        reason: 'network',
+        rows: []
+      });
+    }
+  };
   const [aid, setAid] = useState('mua');
   const [items, setItems] = useState([]);
   const [nick, setNick] = useState('');
@@ -159787,13 +159813,15 @@ function MsxStart({
       } : {
         base: species
       },
-      team: team.map(t => msxTeamSrc(t, box)),
-      teamSlots: team,
+      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box)),
+      teamSlots: team.filter(t => !t.friend),
       aid,
       aidBondLv: aidLv,
       items,
       nick: name,
-      colors
+      colors,
+      friendId: friend && friend.friend ? friend.friend.id : null,
+      baseFill: [species, ...unlocked.filter(id => id !== species)][5 % Math.max(1, unlocked.length)] || species
     });
   };
   const apt = msxAptOf(species);
@@ -159929,7 +159957,7 @@ function MsxStart({
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", {
       key: i,
-      className: `v-sl${m.kind === 'base' ? ' base' : ''}`
+      className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`
     }, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, React.createElement("img", {
@@ -159943,7 +159971,7 @@ function MsxStart({
       className: "bs"
     }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? 'ベースモン' : '')))), React.createElement("div", {
+    }, m.kind === 'base' ? 'ベースモン' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '')))), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
       className: "sub",
@@ -160004,9 +160032,65 @@ function MsxStart({
         fontWeight: 900,
         marginTop: 8
       }
-    }, "🤝 フレンドから借りる(1体)", React.createElement("span", {
+    }, "🤝 フレンドから借りる(1体)", typeof monsucLendFriends !== 'function' ? React.createElement("span", {
       className: "msx-soon"
-    }, "準備中"))));
+    }, "準備中") : null), typeof monsucLendFriends === 'function' ? React.createElement(React.Fragment, null, friend ? React.createElement("button", {
+      type: "button",
+      className: "v-item sel",
+      style: {
+        padding: '4px 8px',
+        width: '100%'
+      },
+      onClick: () => setFriend(null)
+    }, React.createElement("img", {
+      src: msxMonThumb(friend.species),
+      alt: "",
+      style: {
+        width: 30,
+        height: 30,
+        borderRadius: 9,
+        objectFit: 'contain',
+        background: '#0f172a'
+      }
+    }), React.createElement("div", null, friend.friend && friend.friend.name || 'フレンド', " の ", friend.name, React.createElement("small", null, msxMonName(friend.species))), React.createElement("span", {
+      className: "pr"
+    }, "✅ 借りている(外す)")) : null, lendList === null ? React.createElement("button", {
+      type: "button",
+      className: "msx-btn sub",
+      onClick: openLend
+    }, "貸してくれるモンスターを見る") : lendList === 'loading' ? React.createElement("div", {
+      className: "msx-note"
+    }, "さがしています…") : !lendList.ok ? React.createElement("div", {
+      className: "msx-note"
+    }, typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません') : !lendList.rows.length ? React.createElement("div", {
+      className: "msx-note"
+    }, "貸し出しているフレンドはいません") : lendList.rows.map(row => {
+      const m = monsucLendMember(row, SUC);
+      if (!m) return null;
+      const on = friend && friend.friend && friend.friend.id === row.friendId;
+      return React.createElement("button", {
+        type: "button",
+        key: row.friendId,
+        className: `v-item${on ? ' sel' : ''}`,
+        style: {
+          padding: '4px 8px',
+          width: '100%'
+        },
+        onClick: () => setFriend(on ? null : m)
+      }, React.createElement("img", {
+        src: msxMonThumb(m.species),
+        alt: "",
+        style: {
+          width: 30,
+          height: 30,
+          borderRadius: 9,
+          objectFit: 'contain',
+          background: '#0f172a'
+        }
+      }), React.createElement("div", null, row.name, " の ", m.name, React.createElement("small", null, msxMonName(m.species))), React.createElement("span", {
+        className: "pr"
+      }, on ? '✅ 借りている' : '借りる'));
+    })) : null));
     go = 'この編成でいく ▶';
   } else if (step === 2) {
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
@@ -160695,10 +160779,28 @@ function MonheroSuccessScreen({
     }).catch(() => {});
     setView('home');
   };
-  const startRun = cfg => {
+  const startRun = async cfg => {
     const {
       SUC
     } = msxSuc;
+    if (cfg.friendId && typeof monsucLendUse === 'function') {
+      let r = null;
+      try {
+        r = await monsucLendUse(cfg.friendId);
+      } catch (e) {
+        r = {
+          ok: false,
+          reason: 'network'
+        };
+      }
+      if (!r || !r.ok) cfg = {
+        ...cfg,
+        team: cfg.team.map(m => m && m.friend ? {
+          kind: 'base',
+          species: cfg.baseFill || cfg.species
+        } : m)
+      };
+    }
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
     const known = k => !!(SUC.ITEMS && SUC.ITEMS[k]);
     const carry = cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
@@ -160725,7 +160827,7 @@ function MonheroSuccessScreen({
       from: cfg.from,
       items: cfg.items,
       used: 0,
-      phase: 'main',
+      phase: 'begin',
       out: null,
       log: [],
       startAt: Date.now()
@@ -161040,13 +161142,72 @@ function MsxPlay({
       }
     });
   };
-  const afterAct = r0 => {
+  const afterIssa = r0 => {
     const p = SUC.peek(r0.s);
     if (p.issa) setRun({
       ...r0,
       phase: 'issa',
       out: null
     });else endTurnFlow(r0);
+  };
+  const afterAct = r0 => {
+    if (SUC.events && r0.s.last && r0.s.last.kind === 'train') {
+      const o = SUC.events.open(r0.s, 'after');
+      if (o.out && o.out.ev) {
+        setRun({
+          ...r0,
+          s: o.state,
+          phase: 'event',
+          out: {
+            ev: o.out.ev,
+            slot: 'after'
+          }
+        });
+        return;
+      }
+      r0 = {
+        ...r0,
+        s: o.state
+      };
+    }
+    afterIssa(r0);
+  };
+  const toMain = (r0, skipStory = false) => {
+    const p = SUC.peek(r0.s);
+    if (!skipStory && p.story != null && typeof SUC.storyStep === 'function') {
+      setRun({
+        ...r0,
+        phase: 'story',
+        out: {
+          ep: p.story
+        }
+      });
+      return;
+    }
+    if (SUC.events && !r0.s.over) {
+      const o = SUC.events.open(r0.s, 'start');
+      if (o.out && o.out.ev) {
+        setRun({
+          ...r0,
+          s: o.state,
+          phase: 'event',
+          out: {
+            ev: o.out.ev,
+            slot: 'start'
+          }
+        });
+        return;
+      }
+      r0 = {
+        ...r0,
+        s: o.state
+      };
+    }
+    setRun({
+      ...r0,
+      phase: 'main',
+      out: null
+    });
   };
   const doAct = a => {
     const r = SUC.act(s, a);
@@ -161075,6 +161236,18 @@ function MsxPlay({
   const phase = run.phase;
   let body = null;
   let foot = null;
+  useEffect(() => {
+    if (run.phase === 'begin') toMain({
+      ...run,
+      out: null
+    });
+  }, [run.phase]);
+  if (phase === 'begin') return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "中断",
+    onBack: onPause
+  }), React.createElement("div", {
+    className: "v-body"
+  }));
   const r3 = typeof MsxR3 === 'function' ? phase === 'battle' ? 'battle' : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
   if (r3) return React.createElement(MsxR3, {
     kind: r3,
@@ -161214,6 +161387,26 @@ function MsxPlay({
         phase: 'react'
       }) : afterAct(run)
     }, "つぎへ ▶"));
+  } else if (phase === 'event' && run.out && run.out.ev || phase === 'story' && run.out && run.out.ep != null) {
+    body = React.createElement(MsxEvent, {
+      run: run,
+      setRun: setRun,
+      v: v,
+      ev: ev,
+      ctx: ctx,
+      bondLv: bondLv,
+      onDone: r => {
+        const slot = run.phase === 'event' ? run.out.slot : 'story';
+        const next = {
+          ...r,
+          out: null
+        };
+        if (slot === 'after') afterIssa(next);else if (slot === 'story') toMain(next, true);else setRun({
+          ...next,
+          phase: 'main'
+        });
+      }
+    });
   } else if (phase === 'react') {
     const good = s.last && (s.last.res === 'great' || s.last.res === 'ok');
     const loy = SUC.loyalOf(s);
@@ -161402,9 +161595,8 @@ function MsxPlay({
     }, "← 中断"), React.createElement("button", {
       type: "button",
       className: "go",
-      onClick: () => setRun({
+      onClick: () => toMain({
         ...run,
-        phase: 'main',
         out: null
       })
     }, "つぎへ ▶"));
@@ -161561,16 +161753,16 @@ function MsxPlay({
       className: "gr",
       style: {
         left: '30%',
-        bottom: 'calc(34% - 5px)',
-        width: '20%'
+        bottom: 'calc(38% - 5px)',
+        width: '14%'
       }
     }), React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
       style: {
         left: '30%',
-        bottom: '34%',
-        height: '28%'
+        bottom: '38%',
+        height: '16%'
       },
       live: true
     }), React.createElement("div", {
@@ -161735,7 +161927,10 @@ function MsxPlay({
       className: "v-chip bad"
     }, "😢 ようす: うつ病") : null, s.cond ? React.createElement("span", {
       className: "v-chip bad"
-    }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null), React.createElement("span", {
+    }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map(b => React.createElement("span", {
+      key: b.k,
+      className: "v-chip ylw"
+    }, b.icon, " ", b.name)) : null), React.createElement("span", {
       className: "v-nm"
     }, run.nick, React.createElement("small", null, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3])), React.createElement("div", {
       className: "v-side"
@@ -162420,6 +162615,205 @@ function MsxIssa({
     className: "go",
     onClick: choose
   }, pick === 'none' ? 'ことわる' : `${(MSX_ISSA_KEYS.find(x => x.key === pick) || {}).icon} ${(MSX_ISSA_KEYS.find(x => x.key === pick) || {}).name}を受ける`)));
+}
+const MSX_LOOK = Object.freeze({
+  safe: '',
+  good: '🙂 いけそう',
+  even: '🤔 五分五分',
+  risky: '😰 ちょっとあぶない'
+});
+function MsxEvent({
+  run,
+  setRun,
+  v,
+  ev,
+  ctx,
+  bondLv,
+  onDone
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const se = msxSuc.script;
+  const isStory = run.phase === 'story';
+  const o = run.out || {};
+  const view = o.ev || null;
+  const scene = isStory ? se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}` : view && view.lines;
+  const c2 = {
+    ...ctx,
+    bond: bondLv,
+    cheer: view && view.cheerName,
+    cheer2: view && view.cheer2Name,
+    train: view && view.train ? MSX_STAT_NAME[view.train] : undefined
+  };
+  const evOf = sc => {
+    try {
+      return se && typeof se.event === 'function' && sc ? se.event(sc, c2) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  const main = evOf(scene) || {
+    lines: [],
+    choices: [],
+    after: [],
+    head: null,
+    label: ''
+  };
+  const picked = o.picked || null;
+  const choices = isStory ? main.choices.length ? main.choices : [{
+    c: 'a',
+    t: 'いっしょにがんばる'
+  }, {
+    c: 'b',
+    t: 'ゆっくりいこう'
+  }] : view && view.choices ? view.choices.map(ch => ({
+    ...ch,
+    t: (main.choices.find(x => x.c === ch.c) || {}).t || ch.c
+  })) : [];
+  const choose = c => {
+    if (isStory) {
+      const r = SUC.storyStep(s, c);
+      if (!r.out || !r.out.ok) {
+        onDone(run);
+        return;
+      }
+      const tail = r.out.ep === 4 && r.out.end ? `${scene}.${r.out.end}` : `${scene}.${c}`;
+      setRun({
+        ...run,
+        s: r.state,
+        out: {
+          ...o,
+          picked: {
+            scenes: [tail],
+            before: s.stats
+          }
+        }
+      });
+      return;
+    }
+    const r = SUC.events.pick(s, c);
+    if (!r.out || !r.out.ok) return;
+    setRun({
+      ...run,
+      s: r.state,
+      out: {
+        ...o,
+        picked: {
+          scenes: [r.out.next, r.out.scene].filter(Boolean),
+          before: s.stats,
+          res: r.out.res
+        }
+      }
+    });
+  };
+  const ups = {};
+  if (picked && picked.before) MSX_STATS.forEach(k => {
+    const d = s.stats[k] - picked.before[k];
+    if (d) ups[k] = d;
+  });
+  const afterLines = picked ? picked.scenes.flatMap(sc => (evOf(sc) || {
+    lines: []
+  }).lines.concat((evOf(sc) || {
+    after: []
+  }).after)) : [];
+  const shown = (picked ? afterLines : main.lines).slice(0, 4);
+  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : view && view.head || main.label || '育成イベント';
+  const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
+  const who = l => l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who);
+  return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "v-scene",
+    style: {
+      flex: '1 1 0'
+    }
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg(s.turn).bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      left: '30%',
+      bottom: 'calc(30% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    style: {
+      left: '30%',
+      bottom: '30%',
+      height: '17%'
+    },
+    live: true
+  }), cheerIdx != null && s.team[cheerIdx] ? React.createElement("img", {
+    className: "mon",
+    src: msxMonImg(s.team[cheerIdx].species),
+    alt: "",
+    style: {
+      left: '70%',
+      bottom: '30%',
+      height: '36%'
+    }
+  }) : isStory ? React.createElement("img", {
+    src: msxBody(s.aid, 'happy'),
+    alt: "",
+    style: {
+      position: 'absolute',
+      right: '-4%',
+      bottom: 0,
+      height: '70%',
+      width: '46%',
+      objectFit: 'contain',
+      objectPosition: 'right bottom'
+    }
+  }) : null, (() => {
+    const cat = isStory ? 'メインのお話' : view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント';
+    return React.createElement("div", {
+      className: "v-ev-h"
+    }, head !== cat ? React.createElement("small", null, cat) : null, head);
+  })(), React.createElement("div", {
+    className: "v-talk"
+  }, shown.length ? shown.map((l, i) => React.createElement("div", {
+    key: i
+  }, who(l) ? React.createElement("span", {
+    className: "who"
+  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : React.createElement("div", null, picked ? 'いい時間になった。' : 'なにか起きそうだ…'))), picked ? React.createElement(React.Fragment, null, Object.keys(ups).length ? React.createElement(MsxStRow, {
+    stats: s.stats,
+    ups: ups
+  }) : null, React.createElement("div", {
+    className: "v-ft",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => onDone(run)
+  }, "つぎへ ▶"))) : choices.length ? React.createElement("div", {
+    className: "v-opts"
+  }, choices.map(ch => React.createElement("button", {
+    type: "button",
+    key: ch.c,
+    className: "v-opt",
+    disabled: ch.ok === false,
+    onClick: () => choose(ch.c)
+  }, ch.t, MSX_LOOK[ch.look] ? React.createElement("small", null, MSX_LOOK[ch.look]) : null))) : React.createElement("div", {
+    className: "v-ft",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => isStory ? choose('a') : choose(null)
+  }, "つぎへ ▶")));
 }
 const MSX_R3_CSS = `
 .msx .r3 .v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
