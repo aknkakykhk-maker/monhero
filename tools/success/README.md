@@ -8,6 +8,7 @@
 - `monsuc-fuse-check.js` … 合体(56-monsuc-fuse.jsx)の保存の順番・失敗で何も消えない・二重押し / `monsuc-fuse-browser-check.js [--shots]` … 合体の画面を本物のゲームで(止め絵 docs/progress/player-raise/shots/fuse-*.png)
 - `build-script.js` … 台本(docs の正本)→ ゲームが読む `data/monhero-success-script-*.js`。`success-script-engine-check.js` が台本エンジンを見張る
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
+- `success-r3-shoot.js` … 回3の画面(大会・修行・引退・ゲームオーバー・保存枠へしまう)を本物のブラウザで開き、真っ白・はみ出し・エラー・「保存枠に1回だけ入る」を見る(`SHOT_DIR=<フォルダ>` で撮る)
 
 ## 新しいアイテムの絵を1つ足す手順
 
@@ -23,8 +24,3 @@
 5. `node tools/build.js` → `node tools/image-asset-check.js` → `node tools/run-checks.js --changed`
 
 対応表: `docs/progress/player-raise/art/ITEMS.md`
-
-## 景色の絵(住む場所・大会の会場・修行の段)
-
-- `scene-art.js` … 景色(1080×1920)を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/scenes/`・表は `monster-hero/data/success-scenes.js`)
-- 足し方・画面の決まり・一覧の絵: `docs/progress/player-raise/art/SCENES.md`

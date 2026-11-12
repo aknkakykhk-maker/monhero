@@ -146,3 +146,5 @@ const MONSUC_REGULARS = Object.freeze([
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_REGULAR_CUPS, MONSUC_REGULARS };
+// 画面(開いたときにだけ読む)は window から読む(const はトップレベルでも window に載らないため・2026-11-12 回3)
+if (typeof window !== 'undefined') { window.MONSUC_REGULARS = MONSUC_REGULARS; window.MONSUC_REGULAR_CUPS = MONSUC_REGULAR_CUPS; }
