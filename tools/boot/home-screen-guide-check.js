@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 「ホーム画面に追加」の案内(51-home-screen-guide.jsx・2026-11-11)の見張り。
+// 「ホーム画面に追加」の案内(51-home-install-guide.jsx・2026-11-11)の見張り。
 //
 //   node tools/boot/home-screen-guide-check.js
 //
@@ -15,7 +15,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),http=require('http'
 const ROOT=path.resolve(__dirname,'../..'),PORT=8976;
 let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
-const src=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/51-home-screen-guide.jsx'),'utf8');
+const src=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/51-home-install-guide.jsx'),'utf8');
 const help=fs.readFileSync(path.join(ROOT,'monster-hero/data/help.js'),'utf8');
 const settings=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/51-screen-settings.jsx'),'utf8');
 const app=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
