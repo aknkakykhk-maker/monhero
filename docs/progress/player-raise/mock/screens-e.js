@@ -50,33 +50,59 @@ const mainScene = (yousu) => scene({
   ${yousu ? '<span class="v-yousu">😪 サボりグセ</span>' : ''}
   <span class="v-nm">もちまる<small>方針: 普通</small></span>
   <div class="v-side"><span class="v-mini">🤝 忠誠 <b>72</b></span><span class="v-mini">⭐ 人気 <b>45</b></span></div>
-  ${say(yousu ? '最近サボりがちだね…。一度 <em>🏥 通院</em> で診てもらおっか!' : '今月は <em>ちから</em> に3体! らいがと しずくは <em>友情タッグ</em>だよ!', yousu ? 'troubled' : 'happy')}`,
+  <div class="v-bagb">🎒<small>持ち物</small><i>2</i></div><div class="v-bagb r">🔍<small>くわしく</small></div>`,
 });
-const trainBtn = `<div class="v-p main">💪 訓練<div class="v-gather"><span>💪に</span>${pf('d')}${pf('a')}${pf('c')}<b style="color:#fde047">🤝タッグ×2</b></div><small>ほか ❤️1 🧠1 🎯助手 🛡️1(🤝)</small></div>`;
+const mainSay = (yousu) => `<div class="v-sayrow"><img class="fc" src="${F('myua', yousu ? 'troubled' : 'happy')}"><div class="bub">${yousu ? '最近サボりがちだね…。一度 <em>🏥 通院</em> で診てもらおっか!' : '今月は <em>ちから</em> に3体! らいがと しずくは <em>友情タッグ</em>だよ!'}</div></div>`;
+const trainBtn = `<div class="v-p main">💪 訓練<small>🤝 友情タッグのチャンスあり</small></div>`;
 const acts = (yousu) => `<div class="v-act" style="grid-template-columns:1fr 2.3fr 1fr">
-    ${pnl('🛌', '休む', '体力を回復')}${trainBtn}${pnl('🎈', '遊ぶ', '体力+・甘え+')}
+    ${pnl('🛌', '休む', '体力を回復')}${trainBtn}${pnl('📊', '能力', '技・型・編成', '', '<span class="bd">能力P 21</span>')}
   </div>
-  <div class="v-act" style="grid-template-columns:repeat(${yousu ? 4 : 3},1fr)">
-    ${pnl('⚔', '修行', 'この期 あと1回')}
+  <div class="v-act" style="grid-template-columns:repeat(4,1fr)">
+    ${yousu ? pnl('🏥', '通院', 'ようすを治す', 'hosp', '<span class="bd r">!</span>') : pnl('🏥', '通院', 'ようすなし', 'off')}
+    ${pnl('🎈', '遊ぶ', '体力+・甘え+')}
+    ${pnl('⚔', '修行', '技を覚える', '', '<span class="bd">🎫 3枚</span>')}
     ${pnl('🏆', '大会', '今月は3つ', '', '<span class="bd">★★ 出られる</span>')}
-    ${pnl('📊', '能力', '技・型・編成')}
-    ${yousu ? pnl('🏥', '通院', 'ようすを治す', 'hosp', '<span class="bd r">!</span>') : ''}
   </div>`;
 const mainHtml = (yousu, cls = '') => `${hdr()}<div class="v-body">
   ${band(yousu ? { hp: 48 } : {})}
+  ${mainSay(yousu)}
   ${mainScene(yousu)}
   ${stRow()}
   ${acts(yousu)}
 </div>${foot}`;
 
+// 砂時計のアイコン(この見本のために描いた仮の絵)。niji: 虹の砂時計
+const hg = (niji, size = 34) => `<svg class="v-hg" width="${size}" height="${size}" viewBox="0 0 40 40">${niji ? '<defs><linearGradient id="hgN" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset=".35" stop-color="#fde047"/><stop offset=".65" stop-color="#34d399"/><stop offset="1" stop-color="#60a5fa"/></linearGradient></defs><rect x="1" y="1" width="38" height="38" rx="9" fill="url(#hgN)" opacity=".55"/>' : ''}
+  <rect x="9" y="4" width="22" height="5" rx="2.5" fill="${niji ? '#4338ca' : '#b45309'}"/><rect x="9" y="31" width="22" height="5" rx="2.5" fill="${niji ? '#4338ca' : '#b45309'}"/>
+  <path d="M12 9h16c0 7-5 9-6 11 1 2 6 4 6 11H12c0-7 5-9 6-11-1-2-6-4-6-11z" fill="#f8fafc" fill-opacity=".9" stroke="${niji ? '#312e81' : '#92400e'}" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M15 12h10c-1 4-4 5-5 7-1-2-4-3-5-7z" fill="${niji ? '#a78bfa' : '#fbbf24'}"/><path d="M14.5 30c1-4 4-5 5.5-6 1.500 1 4.500 2 5.500 6z" fill="${niji ? '#f472b6' : '#f59e0b'}"/><rect x="19.400" y="19" width="1.200" height="6" fill="${niji ? '#f472b6' : '#f59e0b'}"/>
+  ${niji ? '<path d="M33 6l1.200 2.800L37 10l-2.800 1.200L33 14l-1.200-2.800L29 10l2.800-1.200z" fill="#fff"/>' : ''}</svg>`;
+// 持ち物: [絵, 名前, 数, 状態]
+const BAG = [['🍱', 'とくせい弁当', 1, 'sel'], ['🧸', 'おもちゃ', 2, ''], ['📕', '技の書', 1, ''], [hg(0), '時渡りの砂時計', 2, 'no'], [hg(1), '虹の時渡りの砂時計', 1, 'no'], ['🎫', '修行チケット', 3, 'no'], ['🧿', '体力のおまもり', 1, 'no']];
+const bagHtml = `${hdr()}<div class="v-body">
+  ${band({ heal: 48 })}
+  ${mainSay(false).replace(/<div class="bub">.*<\/div><\/div>$/, '<div class="bub">体力がへってきたね。<em>とくせい弁当</em>、いま使っちゃう?</div></div>')}
+  ${scene({ cls: 'home dk', noMon: 1, inner: `<div class="v-bagw"><div class="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><i>✕</i></div>
+    <div class="v-bsel"><span class="e">🍱</span><div><b>とくせい弁当 <span class="yel">×1</span></b><small>ほかほかの特別なお弁当。体力を 50 回復する</small><small class="lim">いつ使える: 自分のターン</small></div></div>
+    <div class="v-bgrid">${BAG.map(([e, n, c, st]) => `<div class="${st}"><span class="e">${e}</span><i>×${c}</i><small>${n}</small></div>`).join('')}</div>
+    <div class="v-bnote">${hg(0, 20)} 時渡りの砂時計: バトルに敗北したときにやり直せる<br>${hg(1, 20)} 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br><span class="dim2">(うすい物は、ここでは使わない。負けたとき・修行のボタンなどで使う)</span></div>
+    <div class="v-big" style="font-size:14px;padding:9px;margin-top:0;color:#fff">🍱 とくせい弁当を使う(体力 62 → 110)</div></div>` })}
+  ${stRow()}
+</div>${foot}`;
+
 grp('M', '1. 育成のメイン(案A の描き直し)', '住む場所が大きく、下に行動のボタン。上の帯で「この期の残りターン(最後までの残りは小さく)・総合力とランク・体力のゲージ(数字つき・上限が上がる)・ストレスのゲージ」がひと目。モンスターの絵は前の見本よりずっと小さくし(社長「もっと小さくしてもいい」)、景色と編成の6体が見える広さを残した。', [
   { id: 'M1', label: 'メイン(ふだん)', html: mainHtml(false) },
-  { id: 'M2', label: 'メイン(ようすがあるとき = 🏥通院が出る)', html: mainHtml(true) },
+  { id: 'M2', label: 'メイン(ようすがあるとき = 🏥通院が光る)', html: mainHtml(true) },
+  { id: 'M3', label: '持ち物(🎒を押したとき)', html: bagHtml },
 ], `<h3>どこに何を置いたか</h3><ul>
   <li><b>上の帯</b>: 「ミドル期 残り7ターン」を大きく、その下に「最後まで あと24」。総合力とランク。体力は数字つきのゲージ(62/110▲ = 上限が上がっている。点線が元の100)。ストレスも0〜100のゲージ。いちばん下の細い線は5つの期(デビュー・ジュニア・ミドル・プロ・最後)のどこにいるか</li>
-  <li><b>住む場所</b>: 絵は高さの34%ほど(前の見本は約70%・第3版のはじめは44%)。季節と時間で景色が替わる。左に<b>編成</b>の6体(顔の下が親密度のゲージ・タッグに届いた子は光る枠と🤝)。助手は左下で一言</li>
-  <li><b>行動のボタン</b>: 休む・訓練(大きく・今月どこに集まっているかを顔で先に見せる)・遊ぶ/修行・大会・能力。<b>🏥通院は「ようす」があるときだけ</b> 4つ目に出る(ほかのボタンの場所は動かない)</li>
+  <li><b>住む場所</b>: 絵は高さの34%ほど(前の見本は約70%・第3版のはじめは44%)。季節と時間で景色が替わる。左に<b>編成</b>の6体(顔の下が親密度のゲージ・タッグに届いた子は光る枠と🤝)。助手の一言は帯のすぐ下。景色の左下に🎒持ち物(アイテムは1ターンに1個まで)、右下に🔍くわしく</li>
+  <li><b>行動のボタン</b>(2段): 上は 休む・訓練(大きく・友情タッグがあるときだけ一言)・能力(能力ポイントの数字つき)/下は 通院・遊ぶ・修行(チケットの枚数の印)・大会(出られる星の印)の4つ並び。<b>🏥通院はいつも置き、「ようす」が無いときは薄く</b>、あるときは水色に光って「!」(社長 2026-11-12)</li>
   <li>いちばん下: 中断・早送り・演出を短く・きろく・メニュー</li></ul>
+  <h3>持ち物(M3)</h3><ul>
+  <li>メインの景色の上に小窓で開く。上に選んだ物の名前と説明、下に物の一覧と数、いちばん下に「使う」</li>
+  <li>砂時計2つ(時渡りの砂時計・虹の時渡りの砂時計)もここに並ぶ。使うのは負けたときの画面</li>
+  <li><b>使えるのは1ターンに1個まで</b>(使うと行動は使わない)。使ったターンは残りが薄くなり「このターンはもう使えない」。物と数字は仮</li></ul>
   <h3>動き(ふだんは短く)</h3><ul>
   <li>立ち絵はゆっくり息をする。体力が3割を切るとゲージが赤くなり、立ち絵が少しうつむく</li>
   <li>タッグの子の枠は、ゆっくり明るくなったり暗くなったりする(1.6秒で1往復)</li></ul>`);
@@ -85,10 +111,10 @@ grp('M', '1. 育成のメイン(案A の描き直し)', '住む場所が大き�
 // その月の集まり: [絵文字, 名前, 訓練Lv, 来ている子, 主の上がり幅]
 const TR = [['❤️', 'ライフ', 2, ['e'], 11], ['💪', 'ちから', 3, ['d', 'a', 'c'], 38], ['🧠', 'かしこさ', 1, ['f'], 15], ['🎯', '命中', 2, ['as'], 13], ['💨', '回避', 1, [], 9], ['🛡️', '丈夫さ', 2, ['b'], 19]];
 const tagN = (ks) => ks.filter((k) => AF[k] >= 80).length;
-const trs = (sel, gains) => `<div class="v-trs">${TR.map((t, i) => { const n = tagN(t[3]); return `<div class="v-tr${n ? ' tag' : ''}${i === sel ? ' sel' : ''}">
-  ${n ? `<span class="tgb">🤝タッグ${n > 1 ? '×' + n : ''}</span>` : ''}
-  <div class="fs">${t[3].length ? t[3].map((k) => pf(k)).join('') : '<span class="no">だれも<br>いない</span>'}</div>
-  <div class="o"><i class="lv">Lv${t[2]}</i>${t[0]}<small>${i === sel ? '決定' : t[1]}</small></div><div class="x">+${gains ? gains[i] : t[4]}</div></div>`; }).join('')}</div>`;
+const trs = (sel) => `<div class="v-trs">${TR.map((t, i) => `<div class="v-tr${tagN(t[3]) ? ' tag' : ''}${i === sel ? ' sel' : ''}">
+  <div class="o">${t[0]}</div><b class="nm">${t[1]}</b><i class="lv">Lv.${t[2]}</i></div>`).join('')}</div>`;
+// 選んだ訓練の Lv とトレ経験値(ボタンには載せず、選んだあとに見せる)
+const lvx = (lv, pct, add) => `<div class="v-lvx"><b>訓練Lv.${lv}</b><i><u style="width:${pct}%"></u><u class="ad" style="left:${pct}%;width:${add}%"></u></i><span>トレ経験値 +${add}${pct + add >= 100 ? ' → <em>Lvアップ!</em>' : ''}</span></div>`;
 const cm = (k, name, eff, tagTxt) => `<div class="v-cm${AF[k] >= 80 ? ' tag' : ''}">${pf(k).replace(/<i class="af">.*?<\/i>/, '')}<div class="tx"><b>${name}</b><small>${AF[k] >= 80 ? '🤝 ' + tagTxt : eff}</small><div class="afl">親密度<i><b style="width:${AF[k]}%"></b></i>${AF[k]}</div></div></div>`;
 const trainHeavy = (cls = '') => `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band({ use: 26, stAdd: 8 })}
@@ -96,44 +122,45 @@ const trainHeavy = (cls = '') => `${hdr('💰 名声 320', 'もどる')}<div cla
     <div class="v-chips" style="right:auto;left:7px"><span class="v-chip ylw">💪 ちからの訓練 Lv3</span></div>
     <div class="v-come">${cm('d', 'らいが', '', 'タッグ +24%')}${cm('a', 'しずく', '', 'タッグ +27%')}${cm('c', 'ぴくりん', '編成の効き +14%', '')}</div>
     <div class="v-fx"><div class="t"><span class="big">🤝 友情タッグ ×2</span><span>効果 +51%</span><span class="fl">失敗 <b>6%</b></span></div>
-      <div class="ch"><span>基本 +18</span><i>▶</i><span>編成 +41%</span><i>▶</i><span class="tgx">🤝×2 +51%</span><i>▶</i><span class="res">ちから +38</span></div></div>` })}
-  ${stRow([0, 38, -4, 7, 0, 5], 1)}
-  <div class="v-tabs"><span>💪 軽い訓練</span><span class="on hv">🔥 重い訓練</span></div>
+      <div class="ch"><span>基本 +18</span><i>▶</i><span>編成 +41%</span><i>▶</i><span class="tgx">🤝×2 +51%</span><i>▶</i><span class="res">ちから +38</span></div>${lvx(3, 70, 30)}</div>` })}
+  ${stRow([0, 38, 0, 7, 0, 5], 1)}
   ${trs(1)}
-</div>${footGo('🔥 ちからの重い訓練をする')}`;
+</div>${footGo('💪 ちからの訓練をする')}`;
 const trainLight = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band({ use: 12, stAdd: 3 })}
   ${scene({ monStyle: 'left:30%;bottom:34%;height:40%', grStyle: 'left:30%;bottom:calc(34% - 5px)', inner: `
     <div class="v-chips" style="right:auto;left:7px"><span class="v-chip ylw">🧠 かしこさの訓練 Lv1</span></div>
     <div class="v-come">${cm('f', 'こんこ(借)', '編成の効き +33%', '')}</div>
     <div class="v-fx plain"><div class="t"><span>タッグなし</span><span style="color:#cbd5e1;font-size:10px">こんこ あと8でタッグ</span><span class="fl">失敗 <b>2%</b></span></div>
-      <div class="ch"><span>基本 +8</span><i>▶</i><span>編成 +33%</span><i>▶</i><span class="res">かしこさ +11</span></div></div>` })}
+      <div class="ch"><span>基本 +8</span><i>▶</i><span>編成 +33%</span><i>▶</i><span class="res">かしこさ +11</span></div>${lvx(1, 40, 20)}</div>` })}
   ${stRow([2, 0, 11, 3, 0, 0], 2)}
-  <div class="v-tabs"><span class="on">💪 軽い訓練</span><span>🔥 重い訓練</span></div>
-  ${trs(2, [8, 24, 11, 9, 6, 13])}
-</div>${footGo('🧠 かしこさの軽い訓練をする', '← もどる', 'go2')}`;
+  ${trs(2)}
+</div>${footGo('🧠 かしこさの訓練をする')}`;
 
-grp('T', '2. 訓練を選ぶ', 'メインの「訓練」を押すと、同じ景色のまま下が6つの訓練に替わる。訓練ごとに、来ている編成の子の顔・タッグの目印(光る枠と🤝)。選ぶと、右に来ている子と親密度のゲージ、下の札にタッグで効果が上がる流れ、6能力の上に上がる量・下がる量、上の帯に使う体力(赤いしま)と増えるストレス(紫のしま)を、決める前に見せる。', [
-  { id: 'T1', label: '重い訓練・タッグ2体(ちから)', html: trainHeavy() },
-  { id: 'T2', label: '軽い訓練・タッグなし(かしこさ)', html: trainLight },
-], `<h3>先に見せる物</h3><ul>
-  <li><b>上がる3能力</b>: 主の能力は大きい字(+38)、ほか2つは小さく(+7・+5)。<b>下がる能力</b>は赤い枠(−4。重い訓練だけ)</li>
+grp('T', '2. 訓練を選ぶ', 'メインの「訓練」を押すと、同じ景色のまま下が6つの訓練に替わる。ボタンは絵・名前・小さな Lv だけ(社長「ごちゃついてるから余計な表示はなくして」)。友情タッグがある訓練はボタンが金色に光る。選ぶと、右に来ている子と親密度のゲージ、下の札にタッグで効果が上がる流れと訓練Lv・トレ経験値、6能力の上に上がる量、上の帯に使う体力(赤いしま)と増えるストレス(紫のしま)を、決める前に見せる。訓練でマイナスになる能力はない・軽い/重いの切り替えもない(社長)。', [
+  { id: 'T1', label: 'タッグ2体のとき(ちから)', html: trainHeavy() },
+  { id: 'T2', label: 'タッグなしのとき(かしこさ)', html: trainLight },
+], `<h3>ボタンはすっきり</h3><ul>
+  <li>6つの丸いボタンに出すのは <b>訓練の絵・名前・小さな Lv</b> だけ。来ている子の顔・数字・経験値の棒は載せない</li>
+  <li><b>友情タッグがある訓練はボタンが金色に光る</b>(光で分かるので顔は出さない)</li></ul>
+  <h3>選んだあとに見せる物</h3><ul>
+  <li><b>上がる3能力</b>: 主の能力は大きい字(+38)、ほか2つは小さく(+7・+5)。下がる能力はない</li>
   <li><b>使う体力</b>: 体力のゲージの右はしが赤いしまになり「−26」。ストレスは紫のしまで「+8」。失敗の率も数字で</li>
-  <li><b>来ている子</b>: 顔・名前・親密度のゲージ(白い線 = 80 = タッグ)。タッグの子は金色に光る札で「タッグ +24%」、まだの子は「編成の効き +14%」</li>
-  <li><b>タッグで上がる見え方</b>: 「基本 → 編成 → 🤝×2 → ちから +38」と左から右へ積み上がる。タッグの数だけ🤝の札が大きく光る(2体なら ×2)</li>
-  <li><b>丸いボタン</b>: 訓練のLv・来ている子の顔・主の上がり幅。タッグのいる訓練は金色。助手が来ることもある(🎯命中の丸い顔)</li></ul>
+  <li><b>来ている子</b>(景色の右): 顔・名前・親密度のゲージ(白い線 = 80 = タッグ)。タッグの子は金色に光る札で「タッグ +24%」、まだの子は「編成の効き +14%」</li>
+  <li><b>タッグで上がる見え方</b>: 「基本 → 編成 → 🤝×2 → ちから +38」と左から右へ積み上がる</li>
+  <li><b>訓練Lv とトレ経験値</b>: 訓練は踏むたびに経験値がたまり Lv が上がる(最大5)。今回ふえる分を明るい色で。Lv が上がる回は「Lvアップ!」</li></ul>
   <h3>動き</h3><ul>
-  <li>訓練を選び直すと、数字が 0.2秒で入れ替わる(画面は替わらない)。「決定」の2度押しで決まる</li></ul>`);
+  <li>訓練を選び直すと、数字が 0.2秒で入れ替わる(画面は替わらない)。「決定」の2度押しで決まる。長押しでも中身が見える</li></ul>`);
 
 // ================= 3. 結果 → 叱る/褒める → 連続イベント → ターンが進む =================
-const resBig = `${hdr('💰 名声 320', '中断')}<div class="v-body">
+const resBigF = (lvup) => `${hdr('💰 名声 320', '中断')}<div class="v-body">
   ${band({ hp: 36, st: 42 })}
   ${scene({ bg: 'forest_morning', back: '<div class="v-burst"></div>', monStyle: 'left:62%;bottom:14%;height:46%;transform:translateX(-50%) rotate(6deg)', grStyle: 'left:62%;bottom:calc(14% - 5px)', inner: `
     <span class="v-prop" style="left:12%;bottom:15%">🪵</span><span class="v-prop" style="left:36%;bottom:40%;font-size:40px">💥</span>
     <div class="v-stamp">大成功<small>🤝 友情タッグ ×2・伸び ×1.5</small></div>
     <div class="v-chips" style="top:auto;bottom:8px">${['d', 'a', 'c'].map((k) => `<span class="v-chip">${CH[k].n} 親密度 +8</span>`).join('')}</div>` })}
-  ${stRow([0, 57, -4, 10, 0, 7], 1, [412, 563, 229, 390, 198, 448])}
-  <div class="v-log"><span class="hd2">💪 ちからの重い訓練</span><br>ちからが <b class="gu">57</b> 上がった! 命中 <b class="gu">+10</b>・丈夫さ <b class="gu">+7</b><br>かしこさが <b class="gd">4</b> 下がった/体力が <b class="gd">26</b> 下がった<br>らいが・しずく・ぴくりんの親密度が <b class="ga">8</b> 上がった</div>
+  ${stRow([0, 57, 0, 10, 0, 7], 1, [412, 563, 233, 390, 198, 448])}
+  <div class="v-log">${lvup ? '<div class="v-lvup">⬆ 訓練Lvアップ! 💪 ちから <b>Lv.3 → Lv.4</b><small>次から、ちからの訓練の基本の伸びが上がる</small></div>' : ''}<span class="hd2">💪 ちからの訓練</span><br>ちからが <b class="gu">57</b> 上がった! 命中 <b class="gu">+10</b>・丈夫さ <b class="gu">+7</b><br>体力が <b class="gd">26</b> 下がった<br>らいが・しずく・ぴくりんの親密度が <b class="ga">8</b> 上がった</div>
 </div>${footGo('つぎへ ▶', '⏩ とばす')}`;
 const res3 = (cls, word, sub, bg, mon, cap) => `<div class="v-scene" style="flex:1"><img class="bg" src="${BG(bg)}"><div class="sh"></div>${cls === 'ok' ? '<div class="v-burst b2"></div>' : ''}<img class="mon" src="${M('mocchi.png')}" style="${mon}"><div class="v-stamp ${cls}">${word}</div><div class="cap">${cap}</div></div>`;
 const resOthers = `${hdr('💰 名声 320', '中断')}<div class="v-body">
@@ -145,7 +172,7 @@ const resOthers = `${hdr('💰 名声 320', '中断')}<div class="v-body">
 </div>${footGo('つぎへ ▶', '⏩ とばす')}`;
 const scold = `${hdr('💰 名声 320', '中断')}<div class="v-body">
   ${band({ hp: 36, st: 42 })}
-  ${scene({ bg: 'forest_morning', cls: 'dim', noMon: 1, inner: `
+  ${scene({ bg: 'forest_morning', cls: 'dk', noMon: 1, inner: `
     <div class="v-strip"></div><img class="v-body2" src="${BODY('mua__happy')}">
     <div class="v-chips"><span class="v-chip ylw">🌟 大成功のあと</span></div>
     <div class="v-q"><div class="ask">みゅあ「すっごいぢゃん! もちまる、ほめてあげる?」</div>
@@ -166,7 +193,7 @@ const chain = `${hdr('💰 名声 320', '中断')}<div class="v-body">
     <div class="v-opt">🔥 思いきりやる!<small>ちから 中アップ・体力 少しダウン・親密度 +10</small></div>
     <div class="v-opt">🍃 のんびり付き合う<small>体力 中回復・ストレス 少しダウン・親密度 +10</small></div>
   </div>
-  <div style="font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:6px;text-align:center">第3話は親密度60から(技を教えてもらえるかも)。見た話は「とばす」ができる</div>
+  <div style="font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:6px;text-align:center">第3話は親密度60から(らいがの持つ技「かみなりの爪」を教えてもらえるかも)。見た話は「とばす」ができる</div>
 </div>${footGo('えらんでね', '⏩ とばす', 'on')}`;
 const turn = `${hdr('💰 名声 320', '中断')}<div class="v-body">
   ${band({ hp: 36, st: 42, left: 6, all: 23, ym: '3年目 7月', fill: 50 })}
@@ -180,7 +207,8 @@ const turn = `${hdr('💰 名声 320', '中断')}<div class="v-body">
 </div>${foot}`;
 
 grp('K', '3. 結果 → 叱る/褒める → 編成の子の連続イベント → ターンが進む', '訓練を決めたあとの1ターンの流れ。ふだんは全部で3〜6秒(結果 約1.2秒・ターンが進む 約0.8秒。どれもタップでとばせる)。叱る/褒めると連続イベントだけ、選ぶまで止まる。', [
-  { id: 'K1', label: '結果(🌟大成功)', html: resBig },
+  { id: 'K1', label: '結果(🌟大成功)', html: resBigF(false) },
+  { id: 'K1b', label: '結果(訓練Lvアップのとき)', html: resBigF(true) },
   { id: 'K2', label: '結果のほかの3種類(⭕成功・❌失敗・💤サボり)', html: resOthers },
   { id: 'K3', label: '叱る/褒める', html: scold },
   { id: 'K4', label: '編成の子の連続イベント', html: chain },
@@ -188,12 +216,13 @@ grp('K', '3. 結果 → 叱る/褒める → 編成の子の連続イベント �
 ], `<h3>結果(4種類)</h3><ul>
   <li><b>🌟大成功 ×1.5</b>: 金色の放射と大きな字。<b>⭕成功 ×1</b>: 白とピンクの字。<b>❌失敗 ×0</b>: 灰色・夕方の色・絵が傾く。<b>💤サボり ×0.3</b>: 紫の字・絵が寝ころぶ</li>
   <li>下の白い札に「何が上がった・下がった・だれの親密度が上がった」を文で。6能力の列にも + / − を出す</li>
-  <li>K2 は3種類を1枚に並べた説明用(本番は K1 と同じ1画面ずつ)</li></ul>
+  <li>K2 は3種類を1枚に並べた説明用(本番は K1 と同じ1画面ずつ)</li>
+  <li><b>訓練Lvアップ</b>(K1b): トレ経験値がたまった回は、結果の札のいちばん上に金色の帯で「訓練Lvアップ! Lv.3 → Lv.4」(約0.6秒・結果と同じ画面の中)</li></ul>
   <h3>叱る/褒める</h3><ul>
   <li>助手が斜めの帯で出てきて聞く。褒める(ピンク)・叱る(水色)・なにもしないの3つ。押す前に、甘え度/恐れ度と方針がどちらへ動くかを見せる</li>
   <li>下に育成方針の7段の目盛り(いまどこ)と、甘え度・恐れ度のゲージ</li></ul>
   <h3>編成の子の連続イベント</h3><ul>
-  <li>同じ訓練に来た子が50%で出てくる。子ごとに3話。右上の点で「いま何話目か」。選択肢の下に、もらえる物を先に見せる</li></ul>
+  <li>同じ訓練に来た子が50%で出てくる。子ごとに3話。右上の点で「いま何話目か」。選択肢の下に、もらえる物を先に見せる。3話の技の伝授は<b>その編成の子が持つ技</b>を教わる(社長 2026-11-12)</li></ul>
   <h3>ターンが進む</h3><ul>
   <li>カレンダーが1枚めくれ、「残り 7 → 6」。期の変わり目と大会の前だけ一言が足される。期が変わるとき・昇格・引退は長め(5〜6秒)</li></ul>`);
 
@@ -255,7 +284,7 @@ const s4 = `${sHd(3)}<div class="v-body">${steps(3)}
   <div class="v-item"><span class="e">🧸</span><div>お気に入りのおもちゃ<small>遊ぶと、ストレスがさらに 10 減る</small></div><span class="pr">持っている 2</span></div>
   <div style="flex:1"></div>
   <div class="v-card pk"><div class="sub" style="color:#f9a8d4;font-weight:900">持っていくと</div><div class="v-kv"><b>体力の上限</b><span>100 → <span class="yel">110</span></span></div><div class="v-kv"><b>使える物</b><span>🍱 とくせい弁当 ×1(メニューから)</span></div>
-    <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「おまもりがあると、重い訓練も続けやすいよ!」</div></div></div>
+    <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'happy')}"><div class="bub f1">「おまもりがあると、訓練を続けやすいよ!」</div></div></div>
 </div>${footGo('これでいく ▶')}`;
 const sw = (cols, on) => cols.map((c, i) => `<i class="${i === on ? 'on' : ''}" style="background:${c}"></i>`).join('');
 const s5 = `${sHd(4)}<div class="v-body">${steps(4)}
@@ -364,9 +393,45 @@ grp('E', '6. 引退と、アシスト能力をポイントで取る', '46ター�
   <li>下に「取るもの」のまとめと「決めたあとは変えられない」。おまかせ・やり直す・これで決める</li>
   <li>余りは「なくなる」と先に見せる</li></ul>`);
 
+// ================= 6a. 修行(技を選ぶ → 結果) =================
+// 覚えられる技: 間合いごと [名前, 覚える率, 状態]
+const TECH = [['零', [['もちもちガード', 62, ''], ['ころころタックル', 48, 'sel']]], ['近', [['のびのびパンチ', 55, 'sel'], ['ぺったんプレス', 30, '']]], ['中', [['もっちキャノン', 41, ''], ['はねもち', 0, 'got']]], ['遠', [['おもちの雨', 18, '']]]];
+const shugyo = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
+  ${band({ use: 30 })}
+  ${scene({ bg: 'forest_deep', cls: 'low', noMon: 1, inner: `<img src="${BODY('mua__happy')}" style="position:absolute;left:-2%;bottom:-98%;height:190%">
+    <div class="v-ev-h"><small>🎫 チケット 3枚(1回に1枚)</small>⚔ 修行に出る</div>
+    <div class="v-ibub" style="left:40%;top:auto;bottom:10px">「修行は<b>2段</b>! 能力が上がって、最後に<b>技を覚える</b>チャンスだよ。覚えたい技を2つまで選んでね」</div>` })}
+  <div class="v-stg"><div><small>第1段・火の山</small>🎯 命中 & ❤️ ライフ</div><i>▶</i><div><small>第2段・氷の谷</small>🛡️ 丈夫さ & 💨 回避</div><i>▶</i><div class="last"><small>さいごに</small>✨ 技のくじ</div></div>
+  <div class="v-card pk" style="padding:6px 8px"><div class="sub" style="color:#f9a8d4;font-weight:900">えらんだ技(2つまで)</div>
+    <div class="v-pick2"><div class="on"><small>近</small>のびのびパンチ<b>55%</b></div><div class="on"><small>零</small>ころころタックル<b>48%</b></div></div></div>
+  <div class="v-card" style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly;padding:6px 8px"><div class="sub" style="color:#f9a8d4;font-weight:900">覚えられる技(間合いごと・覚える率)</div>
+    ${TECH.map(([d, ts]) => `<div class="v-tk"><i>${d}</i>${ts.map(([n, p, c]) => `<span class="${c}">${n}<b>${c === 'got' ? '覚えた' : p + '%'}</b></span>`).join('')}</div>`).join('')}
+    <div class="sub">前の修行で覚えられなかった技は、覚える率が上がっている(⬆)。助手がドラだと、さらに覚えやすい</div></div>
+</div><div class="v-ft"><span>← もどる</span><span class="go">⚔ 修行する(🎫 3 → 2)</span></div>`;
+const shugyoRes = `${hdr('💰 名声 320', '中断')}<div class="v-body">
+  ${band({ hp: 32, st: 40 })}
+  ${scene({ bg: 'forest_evening', back: '<div class="v-burst"></div>', monStyle: 'bottom:16%;height:44%', grStyle: 'bottom:calc(16% - 5px)', inner: `
+    <div class="v-stamp" style="top:5%;font-size:40px">技をおぼえた!<small>✨ のびのびパンチ(近い間合い)</small></div>
+    <div class="v-chips" style="top:auto;bottom:8px"><span class="v-chip">第1段 🎯+12 ❤️+9</span><span class="v-chip">第2段 🛡️+10 💨+8</span><span class="v-chip ylw">👥 編成のおかげ +9</span></div>` })}
+  ${stRow([9, 0, 0, 12, 8, 10], -1, [421, 506, 233, 392, 206, 451])}
+  <div class="v-log"><span class="hd2">⚔ 修行のけっか</span><br>命中 <b class="gu">+12</b>・ライフ <b class="gu">+9</b>・丈夫さ <b class="gu">+10</b>・回避 <b class="gu">+8</b>(うち <b class="ga">+9</b> は編成の子のおかげ)<br>体力が <b class="gd">30</b> 下がった/技「<b class="ga">のびのびパンチ</b>」を覚えた! ころころタックルは覚えられなかった</div>
+  <div class="v-card" style="border-color:#94a3b8;padding:6px 9px"><div class="row"><span style="font-size:24px">💭</span><div class="f1 sub"><b style="color:#cbd5e1">どれも覚えられなかったとき</b>: 灰色の字で「おしい…」。能力は同じだけ上がる。<span class="yel">次の修行で、えらんだ技の覚える率が上がる</span>(⬆の印)</div></div></div>
+</div>${footGo('つぎへ ▶(叱る/褒める)', '⏩ とばす')}`;
+grp('Q', '6a. 修行(技を選ぶ → 結果)', '参考動画の3本目の流れ「技を選ぶ → 2段の修行 → 技のくじ → 結果」。修行は1ターンを使い、チケットの数だけ行ける(回数は期ごとに決めない・チケットは大会でもらえて賞金に応じて増える・社長 2026-11-12)。上の帯は出したまま(使う体力も先に見せる)。技の名前・率・段の中身は見た目のための仮。', [
+  { id: 'Q1', label: '修行に出る(覚えたい技を選ぶ)', html: shugyo },
+  { id: 'Q2', label: '修行の結果', html: shugyoRes },
+], `<h3>修行に出る</h3><ul>
+  <li>助手が案内役。上に「2段でどの能力が上がるか → さいごに技のくじ」の流れ</li>
+  <li>えらんだ技(2つまで)の枠と、下に覚えられる技の一覧(零・近・中・遠の間合いごと・それぞれに覚える率)。もう覚えた技は薄く</li>
+  <li>見出しに「🎫 チケット 3枚」、ボタンに使ったあとの数(3 → 2)。チケットが0枚のときは、メインの修行のボタンが薄くなる</li></ul>
+  <h3>結果</h3><ul>
+  <li>2段ぶんの能力の上がりを札と6能力の列で。<b>編成の補正で増えた分</b>は黄色の印「👥 編成のおかげ +9」と文で(修行にも編成の補正がかかる・社長)。技を覚えたら金色の字(節目なので少し長め・約3秒)</li>
+  <li>覚えられなかったときは灰色で短く、「次は覚える率が上がる」を必ず見せる(がっかりで終わらせない)</li>
+  <li>このあと叱る/褒める → ターンが進む(訓練と同じ)</li></ul>`);
+
 // ================= 6b. 大会(受付 → 能力の比べ) =================
 // 札: [絵文字, 名前, 星, 系統, 賞金, ごほうび, 状態, 出る条件]
-const CUPS = [['💪', 'ちから自慢の大会', '★★', '自慢', '312', '人気 +2・ちから +6', 'sel', 'ちから 400 以上 ✔'], ['🌸', '春の大会', '★★★', '四季', '750', '能力ポイント +10・人気 +4', 'rv', 'ライバル: ゆうた の こんこ'], ['🏟', 'ふつうの大会', '★', 'ふつう', '125', 'なし', '', 'だれでも出られる'], ['🧠', 'かしこさ自慢の大会', '★★', '自慢', '312', '人気 +2・かしこさ +6', 'ng', 'かしこさ 400 以上 ✖(いま 233)']];
+const CUPS = [['💪', 'ちから自慢の大会', '★★', '自慢', '312', '人気 +2・ちから +6', 'sel', 'ちから 400 以上 ✔'], ['🌸', '春の大会', '★★★', '四季', '750', '能力ポイント +10・人気 +4', 'rv', 'ライバル: ゆうた の こんこ'], ['🏟', 'ふつうの大会', '★', 'ふつう', '125', 'なし', 'won', '👑 優勝したことがある → ⏩ スキップできる'], ['🧠', 'かしこさ自慢の大会', '★★', '自慢', '312', '人気 +2・かしこさ +6', 'ng', 'かしこさ 400 以上 ✖(いま 233)']];
 const cup = ([e, n, st, kind, g, rw, c, cond]) => `<div class="v-cup ${c}"><div class="e">${e}</div><div class="tx"><b>${n}</b><small>${cond}</small><span class="rw">🎁 ${rw}</span></div><div class="rt"><span class="st">${st}</span><span class="g">💰 ${g}</span><span class="kd">${kind}</span></div>${c === 'rv' ? '<span class="rvb">🔥 ライバルあり・ごほうび大</span>' : ''}</div>`;
 const entry = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   ${band()}
@@ -375,7 +440,7 @@ const entry = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
     <div class="v-ibub" style="left:38%;top:auto;bottom:10px">「今月は3つ出られるよ! 出ると<b>1ターン使う</b>から、訓練とどっちにするか考えてね」</div>` })}
   <div class="v-cups">${CUPS.map(cup).join('')}</div>
   <div class="v-card" style="padding:6px 9px"><div class="v-kv" style="margin:0"><b>出ると</b><span>2試合(準決勝・決勝)・体力 −20 くらい・勝つと賞金と人気。<span class="yel">期末の強制大会まで あと7ターン</span></span></div></div>
-</div><div class="v-ft"><span>← もどる</span><span>📅 予定</span><span class="go">💪 ちから自慢に出る ▶</span></div>`;
+</div><div class="v-ft"><span>← もどる</span><span class="off">⏩ スキップ</span><span class="go">💪 ちから自慢に出る ▶</span></div>`;
 // 比べ: [名前, 自分, 相手]
 const VS = [['❤️ ライフ', 412, 455], ['💪 ちから', 506, 472], ['🧠 かしこさ', 233, 180], ['🎯 命中', 380, 341], ['💨 回避', 198, 260], ['🛡️ 丈夫さ', 441, 498]];
 const vsRow = ([n, a, b]) => `<div class="v-vs1"><b class="${a >= b ? 'w' : ''}">${a}</b><i class="l"><u style="width:${a / 6}%"></u></i><span>${n}</span><i class="r"><u style="width:${b / 6}%"></u></i><b class="${b > a ? 'w' : ''}">${b}</b></div>`;
@@ -391,20 +456,32 @@ const versus = `${hdr('💰 名声 320', 'もどる')}<div class="v-body">
   <div class="v-card pk" style="padding:6px 8px"><div class="row"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「ちからと命中は勝ってる! <em style="font-style:normal;color:#be185d">近い間合い</em>で押しきろ!」</div></div></div>
   <div class="v-bracket">${['もちまる', 'いわお', 'らんぽ', 'ミケ'].map((n, i) => `<span class="${i === 0 ? 'me' : ''}">${n}</span>${i === 1 ? '<u>決勝</u>' : i < 3 ? '<em>vs</em>' : ''}`).join('')}</div>
 </div><div class="v-ft"><span>← やめる</span><span class="on" style="flex:1.6">⏩ 結果だけ見る</span><span class="go">⚔ 準備完了</span></div>`;
+// 負けたとき: 砂時計で、1回の育成に3回までやり直せる(社長 2026-11-12。名前と効果は社長の指示で参考のゲームのものをそのまま・絵は新しく描く)
+const lose = `${hdr('💰 名声 320', '中断')}<div class="v-body">
+  ${band({ hp: 30, st: 52 })}
+  ${scene({ bg: 'monhero_plaza_evening', cls: 'dk', monStyle: 'bottom:44%;height:30%;filter:grayscale(.5) drop-shadow(0 8px 5px #0009);transform:translateX(-50%) rotate(-8deg)', grStyle: 'bottom:calc(44% - 5px)', inner: `
+    <div class="v-stamp ng" style="top:5%">負けた…<small>💪 ちから自慢の大会 ★★ 決勝・いわお に 2−3</small></div>
+    <div class="v-meal" style="border-color:#7dd3fc;box-shadow:0 0 18px #38bdf866"><div class="t">時をもどして、やり直す?<small>やり直せるのは 1回の育成で3回まで・<b style="color:#fde047">のこり 2 / 3</b></small></div>
+      <div class="v-rm3"><div class="re">${hg(0, 30)}<div>時渡りの砂時計で やり直す<small>同じ相手ともう一度(持っている ×2)</small></div></div>
+        <div class="nj">${hg(1, 30)}<div>虹の砂時計で 相手を変えて やり直す<small>ちがう相手と戦える(持っている ×1)</small></div></div>
+        <div class="gv">あきらめる<small>準優勝のごほうびをもらう(賞金 💰125)</small></div></div>
+      <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'troubled')}"><div class="bub f1">「おしかった! 回避で負けてたね…。もう1回いく?」</div></div></div>` })}
+</div><div class="v-ft"><span>⏩ とばす</span><span class="on" style="flex:2">えらんでね</span></div>`;
 // 大会のあとのごほうびのごはん(社長 2026-11-12: ごはんは大会のあとのご褒美であげる)
 const MEAL = [['🍙', 'おにぎり', 'ただ', '体力 +10', ''], ['🍛', 'いつものごはん', '💰 30', '体力 +25・ストレス −5', ''], ['🍖', 'ごちそう', '💰 120', '体力 +40・ストレス −15・忠誠 +3', 'sel']];
 const meal = `${hdr('💰 名声 632', '中断')}<div class="v-body">
   ${band({ hp: 41, st: 40 })}
   ${scene({ bg: 'monhero_plaza_evening', back: '<div class="v-burst"></div>', monStyle: 'bottom:40%;height:34%', grStyle: 'bottom:calc(40% - 5px)', inner: `
-    <div class="v-stamp" style="top:4%;font-size:46px">優勝!<small>💪 ちから自慢の大会 ★★<br>賞金 💰312・人気 +2・ちから +6</small></div>
+    <div class="v-stamp" style="top:4%;font-size:46px">優勝!<small>💪 ちから自慢の大会 ★★<br>賞金 💰312・🎫 修行チケット +1・人気 +2・ちから +6</small></div>
     <div class="v-meal"><div class="t">🍽 がんばったごほうびに、ごはんをあげよう<small>大会のあとだけあげられる(1回)</small></div>
       <div class="ms">${MEAL.map(([e, n, g, fx, c]) => `<div class="v-ml ${c}"><div class="e">${e}</div><b>${n}</b><span class="g">${g}</span><small>${fx}</small></div>`).join('')}</div>
       <div class="row" style="margin-top:6px"><img class="fc" src="${F('myua', 'excited')}"><div class="bub f1">「優勝だもん、今日は ごちそう にしちゃお!」</div></div></div>` })}
 </div><div class="v-ft"><span>あげない</span><span class="go">🍖 ごちそうをあげる(💰120)</span></div>`;
-grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デビュー期の大会まで)の流れ「受付 → 組み合わせ → 能力の比べ → 試合 → 賞品」のうち、受付と能力の比べ、それに大会のあとのごほうびのごはんの3枚。上の帯(期・残りターン・総合力・体力)は大会の間もずっと出したまま。試合そのものは助手マスモン対戦の観戦の画面を使う。', [
+grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デビュー期の大会まで)の流れ「受付 → 組み合わせ → 能力の比べ → 試合 → 賞品」のうち、受付と能力の比べ、大会のあとのごほうびのごはん、負けたときの再戦の4枚。上の帯(期・残りターン・総合力・体力)は大会の間もずっと出したまま。試合そのものは助手マスモン対戦の観戦の画面を使う。', [
   { id: 'C1', label: '大会の受付(今月の大会の札)', html: entry },
   { id: 'C2', label: '試合の前(自分と相手の能力の比べ)', html: versus },
   { id: 'C3', label: '大会のあと(ごほうびのごはん)', html: meal },
+  { id: 'C4', label: '負けたとき(再戦する/あきらめる)', html: lose },
 ], `<h3>受付</h3><ul>
   <li>助手が受付の役。今月出られる大会を札で並べる: 名前・星・系統・賞金(名声)・ごほうび・出る条件(✔/✖)</li>
   <li><b>ライバルがいる大会</b>は赤い帯で「ごほうび大」。条件に届かない大会は薄く、何が足りないかを数字で</li>
@@ -414,6 +491,9 @@ grp('C', '6b. 大会(受付 → 能力の比べ)', '参考動画の2本目(デ�
   <li>間合いの適性(零・近・中・遠)は色の濃さで。地形は作らないので出さない</li>
   <li>助手が「どこで勝っているか」を一言。下に小さな組み合わせ表</li>
   <li>ボタンは「結果だけ見る」と「準備完了」(観戦する)の2つ</li></ul>
+  <h3>スキップと再戦(社長 2026-11-12)</h3><ul>
+  <li><b>スキップ(結果だけ)</b>: 一度でも優勝したことのある大会(前の育成も数える)は、札に「⏩ スキップできる」。選ぶと下の「⏩ スキップ」が押せるようになる。中で試合は計算するので、結果の画面は出る</li>
+  <li><b>負けたとき</b>(C4): 「⏳ 時渡りの砂時計で やり直す」(同じ相手)・「🌈 虹の砂時計で 相手を変えて やり直す」・「あきらめる」と、のこり ◯/3。1回の育成で3回まで。アイテムの名前と効果は社長の指示で参考のゲームのものをそのまま使い、絵は新しく描く(この見本の砂時計は仮の絵)</li></ul>
   <h3>大会のあとのごはん(社長 2026-11-12)</h3><ul>
   <li>ごはんは<b>大会のあとのごほうび</b>であげる。メインのボタンにもターンのはじめにも置かない</li>
   <li>結果(優勝・賞金・ごほうび)の上に小窓が出て、3つから1つ選ぶ(あげなくてもよい)。値段(名声)と効き目を先に見せる。物と数字は仮</li></ul>`);
