@@ -6,7 +6,7 @@
 //     3-tired  … 疲れ・ストレスがたまった助手の予定表(棒・注意の文)
 //     4-picker … 行き先えらび(得の1行・疲れ・ストレスの動き・🏥病院)
 //     5-table / 5-table-who … 横だけ: 8人の表(名前に印)→ 名前を押した1人の表示(体の窓・◀ 8人の表へ)
-//     6-room   … けが・病気の助手の部屋のシート(一言)
+//     7-skip   … 縦・小: 予定でお願いしたのに疲れてサボって家へ帰った回の札(お願いどおりと出さない)
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9286;
 const OUTDIR = path.resolve(process.argv[2] || path.join(root, 'docs/progress/assistant-peer/life-places/release'));
@@ -94,6 +94,20 @@ const OUTDIR = path.resolve(process.argv[2] || path.join(root, 'docs/progress/as
       await page.evaluate(() => assistantLifePlanClose()); await page.waitForTimeout(300);
       const room = page.locator('[data-assistant-life-room-body="kiki"]').first();
       if (v.tag !== 'yoko') await page.evaluate(() => { const D = ASSISTANT_LIFE_BODY_STORE.state.data; ASSISTANT_LIFE_BODY_STORE.set({ data: { ...D, s: { ...D.s, kiki: { ...D.s.kiki, cond: { k: 'hurt', sev: 'light', left: 20, visits: 1 } } } } }); });
+      if (v.tag !== 'yoko') {
+        await page.evaluate(() => {
+          const cur = assistantLifeSlotAt().abs; const k = String(cur);
+          const P = ASSISTANT_LIFE_PLAN_STORE.state.data;
+          ASSISTANT_LIFE_PLAN_STORE.set({ data: { ...P, plan: { ...P.plan, [k]: { ...(P.plan[k] || {}), mua: 'battle' } }, result: { ...P.result, [k]: { ...(P.result[k] || {}), mua: 'ok' } } } });
+          const D = ASSISTANT_LIFE_BODY_STORE.state.data;
+          ASSISTANT_LIFE_BODY_STORE.set({ data: { ...D, log: { ...D.log, mua: [...(D.log.mua || []).filter(r => r.abs !== cur), { abs: cur, place: 'home', ev: '', why: 'skip' }] } } });
+        });
+        await openPlan(page, 'mua');
+        const chip = page.locator('[data-assistant-life-plan-body-why]');
+        report.push(`${v.tag}: サボりの札 ${await chip.count() ? `「${await chip.first().innerText()}」` : 'なし'}`);
+        if (await chip.count()) { await chip.first().scrollIntoViewIfNeeded(); await shot(page, v, '7-skip'); }
+        await page.evaluate(() => assistantLifePlanClose());
+      }
       report.push(`${v.tag}: 家の部屋の印 ${await room.count() ? 'あり' : 'なし(描き直し前)'}`);
       await page.close();
     }

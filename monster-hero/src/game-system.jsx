@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b72ae516ee5ccb5
+// generated-sha256: 7e7640ba96413924
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75175,7 +75175,9 @@ function AssistantLifePlanWho({ id, cur }) {
     const abs = day * 12 + j; const s = assistantLifeSlotOfAbs(abs); const p = assistantLifePlanOf(abs, id); const r = assistantLifePlanResultOf(abs, id);
     const past = abs < cur, now = abs === cur;
     let body;
-    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const ln = assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
+    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{(() => { const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
+          if (bw && bw.why !== 'rest') return <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100" data-assistant-life-plan-body-why={`${id}@${abs}`}>{bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`}</span>;
+          return <>{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}</>; })()}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const bw = typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null; const ln = bw && bw.why !== 'rest' ? null : assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
     else body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? <>📍 {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{assistantLifePlanPerk(p) && <span className="block text-[10.5px] text-emerald-300">{assistantLifePlanPerk(p)}</span>}</> : <span className="text-slate-400">おまかせ<span className="block text-[10.5px]">{assistantLifePlanName(id)}が自分で決める</span></span>}</span>;
     rows.push(
       <div key={abs} data-assistant-life-plan-row={abs} className={`rounded-xl border px-1.5 py-1 ${now ? 'border-amber-300 bg-amber-900/50' : 'border-white/15 bg-white/5'} ${past ? 'opacity-50' : ''}`}>
@@ -75296,7 +75298,8 @@ function AssistantLifePlanBand({ ids = [], land = false }) {
 //   ・決まり方は回ごとの決まった乱数(開き直しても変わらない)
 // 保存(新しいキーだけ。既存のキーは読むだけ・CLAUDE.md ⑦):
 //   mh_assistant_life_body_v1 = { v:1, at: 最後に進めた回(abs), s: { [助手id]: { fat, st, cond: { k:'hurt'|'sick', sev:'light'|'heavy', left: 自然に治るまでの回, visits: あと何回病院 } | null } },
-//                                 log: { [助手id]: [{ abs, place, ev }] }(最近36回) }
+//                                 log: { [助手id]: [{ abs, place, ev, why? }] }(最近36回) }
+//     why … 体のせいで行き先が変わった回だけ: 'skip'(疲れてサボって家へ)/'cond'(けが・病気で家か病院へ)/'rest'(おまかせで自分で休んだ)
 //   読めない・壊れている → はじめの値(疲れ20・ストレス20・何も起きていない)
 // 公開の印 RELEASE_FLAGS.assistantLifeBody の後ろ。偽のあいだは何もしない・何も読まない・何も出さない
 
@@ -75330,6 +75333,7 @@ const ASSISTANT_LIFE_BODY_COND = Object.freeze({
 const ASSISTANT_LIFE_BODY_GAP = Object.freeze({ fat: -8, st: -3, max: 84 }); // 見ていない1回ごと(7日まで)
 const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']); // 休む場所(ここではサボらない)
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
+const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
 // 予定表で出す名前(施設の名前を先に。台詞の {place} は今の ASSISTANT_LIFE_PLACES のまま)
 const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({ studio: ['モンヒロビート', '練習スタジオ'], ranch: ['M/B管理', '育成場'], cardroom: ['MFバトルカード', 'カード部屋'] });
 // 得の1行(町の場所・家・病院)。ビート・カード・M/B管理の文は assistantLifePlacePerkTail(56-assistant-life-ux.jsx)のまま。
@@ -75374,7 +75378,7 @@ const normalizeAssistantLifeBody = (raw) => {
   if (raw.log && typeof raw.log === 'object' && !Array.isArray(raw.log)) {
     for (const [id, list] of Object.entries(raw.log)) {
       if (!assistantLifeBodyOkId(id) || !Array.isArray(list)) continue;
-      const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({ abs: r.abs, place: r.place, ev: typeof r.ev === 'string' ? r.ev : '' }));
+      const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({ abs: r.abs, place: r.place, ev: typeof r.ev === 'string' ? r.ev : '', ...(ASSISTANT_LIFE_BODY_WHY.includes(r.why) ? { why: r.why } : {}) }));
       if (ok.length) out.log[id] = ok.slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
     }
   }
@@ -75481,7 +75485,7 @@ const assistantLifeBodyOnDecide = (decided, salt = '') => {
     const ids = [...new Set([...(decided.groups || []).flatMap(g => g.ids), ...Object.keys(decided.solo || {})])].sort();
     const slot = assistantLifeSlotOfAbs(abs);
     const day = slot.id !== 'late' && slot.id !== 'night';
-    const want = {};
+    const want = {}; const why = {};
     for (const id of ids) {
       const e = assistantLifeBodyGapOne(D.s[id] || assistantLifeBodyFresh(), gap);
       const w = assistantLifeBodyWhere(decided, id); if (!w) continue;
@@ -75490,20 +75494,21 @@ const assistantLifeBodyOnDecide = (decided, salt = '') => {
       if (e.cond) {
         // けが・病気: 予定で病院なら病院。おまかせでも昼のあいだはときどき自分で病院へ。それ以外は家で休む
         if (asked && w.place === 'clinic') continue;
-        want[id] = day && rand() < 0.35 ? 'clinic' : 'home';
+        want[id] = day && rand() < 0.35 ? 'clinic' : 'home'; why[id] = 'cond';
         continue;
       }
-      if (rand() < assistantLifeBodySkipChance(e, w.place)) { want[id] = 'home'; continue; } // サボって家へ帰る
+      if (rand() < assistantLifeBodySkipChance(e, w.place)) { want[id] = 'home'; why[id] = 'skip'; continue; } // サボって家へ帰る
       if (!asked) { // おまかせの回は、疲れ・ストレスがたまっていれば自分で休む所を選びやすい
         // 休みたくなる見込み: 疲れ50・ストレス45から、高いほど強く(最大95%)
         const pf = e.fat >= 50 ? Math.min(0.95, 0.5 + (e.fat - 50) * 0.03) : 0;
         const ps = e.st >= 45 ? Math.min(0.95, 0.5 + (e.st - 45) * 0.03) : 0;
         if (ASSISTANT_LIFE_BODY_REST.includes(w.place)) { /* もう休んでいる */ }
-        else if (pf && rand() < pf) want[id] = 'home';
-        else if (ps && rand() < ps) want[id] = rand() < 0.5 ? 'cafe' : 'hill';
+        else if (pf && rand() < pf) { want[id] = 'home'; why[id] = 'rest'; }
+        else if (ps && rand() < ps) { want[id] = rand() < 0.5 ? 'cafe' : 'hill'; why[id] = 'rest'; }
       }
     }
-    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) delete want[id];
+    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) { delete want[id]; delete why[id]; }
+    ASSISTANT_LIFE_BODY_STORE.why = { abs, m: why }; // 次の assistantLifeBodyOnSlot が記録に書く(予定の保存の形は変えない)
     if (!Object.keys(want).length) return decided;
     const trust = {}; for (const id of Object.keys(want)) trust[id] = 1;
     return assistantLifePlanApply(decided, want, trust, `${salt}|body`).life;
@@ -75524,7 +75529,8 @@ const assistantLifeBodyOnSlot = (life, slot) => {
       const fav = ASSISTANT_LIFE_PREFS[id] && ASSISTANT_LIFE_PREFS[id].fav;
       const r = assistantLifeBodyStepOne(assistantLifeBodyGapOne(s[id] || assistantLifeBodyFresh(), gap), w.place, w.doing, fav, assistantLifeRng(`${life.salt || ''}|body|${slot.abs}|${id}`));
       s[id] = r.e; evs[id] = r.ev;
-      log[id] = [...(log[id] || []), { abs: slot.abs, place: w.place, ev: r.ev }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
+      const W = ASSISTANT_LIFE_BODY_STORE.why; const why = W && W.abs === slot.abs && W.m[id];
+      log[id] = [...(log[id] || []), { abs: slot.abs, place: w.place, ev: r.ev, ...(why ? { why } : {}) }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
     }
     assistantLifeBodySave({ v: 1, at: slot.abs, s, log });
     // おやつ屋さん・広場で一緒にいた2人は、助手どうしのきずなが少し上がる(1日の上限は outing の dailyMax)
@@ -75551,6 +75557,12 @@ const assistantLifeBodyTrustAdj = (id, abs) => {
 const assistantLifePlaceSlotsOf = (aid, place) => {
   if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
+};
+// その回、体のせいで行き先が変わったか(予定表の結果の札が読む)。{ why, place } か null
+const assistantLifeBodyWhyOf = (abs, id) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return null;
+  const r = (ASSISTANT_LIFE_BODY_STORE.state.data.log[id] || []).find(x => x.abs === abs);
+  return r && r.why ? { why: r.why, place: r.place } : null;
 };
 const assistantLifeHospitalSlotsOf = (aid) => assistantLifePlaceSlotsOf(aid, 'clinic');
 // 特別な治療(ビートPの品物)を使った回。記録の ev が 'cure' の回(キズナと合意: その回に助手のマスモンのけが・病気も残り0に)

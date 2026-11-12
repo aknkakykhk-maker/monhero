@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 915dd1841422cbcb
+// source-sha256: 4e1704dc46af7196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -142859,14 +142859,22 @@ function AssistantLifePlanWho({
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
     }, p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : React.createElement("span", {
       className: "text-slate-400"
-    }, "おまかせ"), r === 'ok' && React.createElement("span", {
-      className: "ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100"
-    }, "✓ お願いどおり"), r === 'no' && React.createElement("span", {
-      className: "ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100"
-    }, "🌀 気分で別の場所へ"), now && React.createElement("span", {
+    }, "おまかせ"), (() => {
+      const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
+      if (bw && bw.why !== 'rest') return React.createElement("span", {
+        className: "ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100",
+        "data-assistant-life-plan-body-why": `${id}@${abs}`
+      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`);
+      return React.createElement(React.Fragment, null, r === 'ok' && React.createElement("span", {
+        className: "ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100"
+      }, "✓ お願いどおり"), r === 'no' && React.createElement("span", {
+        className: "ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100"
+      }, "🌀 気分で別の場所へ"));
+    })(), now && React.createElement("span", {
       className: "block text-[10.5px] text-emerald-300"
     }, "いまの時間"), (() => {
-      const ln = assistantLifePlanLineOf(abs, id);
+      const bw = typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
+      const ln = bw && bw.why !== 'rest' ? null : assistantLifePlanLineOf(abs, id);
       return ln ? React.createElement("span", {
         className: "block text-[11px] text-pink-100",
         "data-assistant-life-plan-line": `${id}@${abs}`,
@@ -143227,6 +143235,7 @@ const ASSISTANT_LIFE_BODY_GAP = Object.freeze({
 });
 const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']);
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
+const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
 const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({
   studio: ['モンヒロビート', '練習スタジオ'],
   ranch: ['M/B管理', '育成場'],
@@ -143296,7 +143305,10 @@ const normalizeAssistantLifeBody = raw => {
       const ok = list.filter(r => r && Number.isInteger(r.abs) && typeof r.place === 'string').map(r => ({
         abs: r.abs,
         place: r.place,
-        ev: typeof r.ev === 'string' ? r.ev : ''
+        ev: typeof r.ev === 'string' ? r.ev : '',
+        ...(ASSISTANT_LIFE_BODY_WHY.includes(r.why) ? {
+          why: r.why
+        } : {})
       }));
       if (ok.length) out.log[id] = ok.slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
     }
@@ -143481,6 +143493,7 @@ const assistantLifeBodyOnDecide = (decided, salt = '') => {
     const slot = assistantLifeSlotOfAbs(abs);
     const day = slot.id !== 'late' && slot.id !== 'night';
     const want = {};
+    const why = {};
     for (const id of ids) {
       const e = assistantLifeBodyGapOne(D.s[id] || assistantLifeBodyFresh(), gap);
       const w = assistantLifeBodyWhere(decided, id);
@@ -143490,19 +143503,34 @@ const assistantLifeBodyOnDecide = (decided, salt = '') => {
       if (e.cond) {
         if (asked && w.place === 'clinic') continue;
         want[id] = day && rand() < 0.35 ? 'clinic' : 'home';
+        why[id] = 'cond';
         continue;
       }
       if (rand() < assistantLifeBodySkipChance(e, w.place)) {
         want[id] = 'home';
+        why[id] = 'skip';
         continue;
       }
       if (!asked) {
         const pf = e.fat >= 50 ? Math.min(0.95, 0.5 + (e.fat - 50) * 0.03) : 0;
         const ps = e.st >= 45 ? Math.min(0.95, 0.5 + (e.st - 45) * 0.03) : 0;
-        if (ASSISTANT_LIFE_BODY_REST.includes(w.place)) {} else if (pf && rand() < pf) want[id] = 'home';else if (ps && rand() < ps) want[id] = rand() < 0.5 ? 'cafe' : 'hill';
+        if (ASSISTANT_LIFE_BODY_REST.includes(w.place)) {} else if (pf && rand() < pf) {
+          want[id] = 'home';
+          why[id] = 'rest';
+        } else if (ps && rand() < ps) {
+          want[id] = rand() < 0.5 ? 'cafe' : 'hill';
+          why[id] = 'rest';
+        }
       }
     }
-    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) delete want[id];
+    for (const id of Object.keys(want)) if (assistantLifeBodyWhere(decided, id).place === want[id]) {
+      delete want[id];
+      delete why[id];
+    }
+    ASSISTANT_LIFE_BODY_STORE.why = {
+      abs,
+      m: why
+    };
     if (!Object.keys(want).length) return decided;
     const trust = {};
     for (const id of Object.keys(want)) trust[id] = 1;
@@ -143532,10 +143560,15 @@ const assistantLifeBodyOnSlot = (life, slot) => {
       const r = assistantLifeBodyStepOne(assistantLifeBodyGapOne(s[id] || assistantLifeBodyFresh(), gap), w.place, w.doing, fav, assistantLifeRng(`${life.salt || ''}|body|${slot.abs}|${id}`));
       s[id] = r.e;
       evs[id] = r.ev;
+      const W = ASSISTANT_LIFE_BODY_STORE.why;
+      const why = W && W.abs === slot.abs && W.m[id];
       log[id] = [...(log[id] || []), {
         abs: slot.abs,
         place: w.place,
-        ev: r.ev
+        ev: r.ev,
+        ...(why ? {
+          why
+        } : {})
       }].slice(-ASSISTANT_LIFE_BODY_LOG_MAX);
     }
     assistantLifeBodySave({
@@ -143572,6 +143605,14 @@ const assistantLifeBodyTrustAdj = (id, abs) => {
 const assistantLifePlaceSlotsOf = (aid, place) => {
   if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return [];
   return (ASSISTANT_LIFE_BODY_STORE.state.data.log[aid] || []).filter(r => r.place === place).map(r => r.abs);
+};
+const assistantLifeBodyWhyOf = (abs, id) => {
+  if (!assistantLifeBodyOn() || !ASSISTANT_LIFE_BODY_STORE.state.loaded) return null;
+  const r = (ASSISTANT_LIFE_BODY_STORE.state.data.log[id] || []).find(x => x.abs === abs);
+  return r && r.why ? {
+    why: r.why,
+    place: r.place
+  } : null;
 };
 const assistantLifeHospitalSlotsOf = aid => assistantLifePlaceSlotsOf(aid, 'clinic');
 const assistantLifeHospitalCureSlotsOf = aid => {
