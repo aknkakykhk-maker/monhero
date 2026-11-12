@@ -9,14 +9,15 @@ const ST = [['ライフ', '❤️'], ['ちから', '💪'], ['かしこさ', '�
 const SCREENS = [];
 const scr = (id, name, lead, phones, notes) => SCREENS.push({ id, name, lead, phones, notes });
 
-const rk = (r, big) => `<i class="rk r${r}${big ? ' big' : ''}">${r}</i>`;
+const rl = (r) => String(r).replace(/\d+$/, ''); // 評価の字(C2 → C)。色の名前に使う
+const rk = (r, big) => `<i class="rk r${rl(r)}${big ? ' big' : ''}">${r}</i>`; // 評価は助手マスモンと同じ表(G 0・F 2,000・E 3,000・D 4,500・C 6,000・B 8,000・A 11,000・S 14,000・SS 16,000・SSS 18,000・M 19,500)+500ごとの数字
 const hd = (right, back = 'もどる', title = '🌱 モンヒロサクセス') =>
   `<div class="hd"><span class="bk">← ${back}</span><span class="ti">${title}</span><span class="rt">${right}</span></div>`;
 // 6能力の棒。vals: 数字6つ / up: 上がった数(任意) / apt: 伸びやすさの印(任意)
 const sts = (vals, up, apt) => `<div class="sts">${ST.map((s, i) =>
   `<div class="st1"><span class="nm">${s[1]} ${s[0]}</span>${apt ? `<span class="ap">${apt[i]}</span>` : ''}<span class="bar"><i style="width:${Math.max(3, vals[i] / 9.99)}%"></i></span><b>${vals[i]}</b>${up ? `<em>${up[i] ? '+' + up[i] : ''}</em>` : ''}</div>`).join('')}</div>`;
 // 応援の顔。o: { t:絵, r:ランク, fav:得意, base:ベースモン, fr:フレンド, lg:大きい }
-const cf = (o) => `<span class="cf r${o.r || 'G'}${o.fav ? ' fav' : ''}${o.base ? ' base' : ''}${o.fr ? ' fr' : ''}${o.lg ? ' lg' : ''}"><img src="${T(o.t)}"></span>`;
+const cf = (o) => `<span class="cf r${rl(o.r || 'G')}${o.fav ? ' fav' : ''}${o.base ? ' base' : ''}${o.fr ? ' fr' : ''}${o.lg ? ' lg' : ''}"><img src="${T(o.t)}"></span>`;
 const CH = { // 応援の編成(仮)
   a: { t: 'undine', r: 'A', n: 'しずく' }, b: { t: 'golem', r: 'B', n: 'がんてつ' }, c: { t: 'pixie', r: 'S', n: 'ぴくりん' },
   d: { t: 'tiger', r: 'C', n: 'らいが' }, e: { t: 'suezo', r: 'G', n: 'スエゾー', base: 1 }, f: { t: 'kyubi', r: 'M', n: 'こんこ', fr: 1 },
