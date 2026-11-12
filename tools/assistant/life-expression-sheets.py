@@ -76,9 +76,15 @@ def key_checker(rgb):
             if keep_bg:
                 for y, x in comp:
                     bg[y, x] = True
-    # 境目の1〜2画素も背景にして、白いふちを残さない
-    edge = fb.dil(bg, 1)
-    alpha = np.where(edge, 0, 255).astype(np.uint8)
+    # 境目は、背景のとなりの「色味がまったく無い明るい画素」(市松とのにじみ)だけを背景に足す。色味のある画素(金髪は色味 14 以上)は
+    #   1画素も消さない(2026-11-12 窓口「髪を1本も消さない」。#5793 では境目の透け具合を色の混ざりから計算して、背景に近い色の金髪まで透けた)。
+    #   前(#5772)は境目を一律に1画素広げて 0/255 で切っていたので、ふちがブロック状だった。段は clean のぼかしでならす
+    edge = fb.dil(bg, 1) & ~bg & (mn >= 236) & ((mx - mn) <= 4)
+    alpha = np.where(bg | edge, 0, 255).astype(np.uint8)
+    # 体から離れた記号(びっくり・星・汗など)は、黄色と市松の混ざりが金髪と見分けられずにふちがざらつくので、
+    #   前(#5772)と同じく境目を1画素広げて背景にする(体=いちばん大きい塊には触らないので、髪は消えない)
+    body = fb.label_keep(alpha > 0, 0.5)
+    alpha[(alpha > 0) & ~body & fb.dil(bg, 1)] = 0
     return np.dstack([rgb, alpha])
 
 
@@ -91,7 +97,7 @@ def cut_cells(cfg):
         arr = np.array(c.convert('RGBA'))
         if cfg['bg'] == 'checker':
             arr = key_checker(arr[..., :3])
-        out.append(fb.clean(None, min_frac=0.002, arr=arr, glow_cut=cfg.get('glow_cut', False)))
+        out.append(fb.clean(None, min_frac=0.002, arr=arr, glow_cut=cfg.get('glow_cut', False), soft=0.6 if cfg['bg'] == 'checker' else None))
         # カードマスターの市松(bg='checker')の抜き方は #5772 のまま(2026-11-12 #5793 で抜き直したら髪まで消えた・#5795 で絵を戻した)。
         #   作り直すときは、市松を格子の模様として見分けて抜き、髪を1本も消さないこと(窓口)
     return out
