@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a9e7f416e190501
+// source-sha256: 50e8be260796098e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13914,6 +13914,7 @@ const RELEASE_FLAGS = {
   assistantMasmonPlan: true,
   assistantMasmonSleep: true,
   assistantMasmonBond: true,
+  monheroSuccess: false,
   assistantMasmonFuse: true,
   assistantMasmonSuggest: true,
   assistantMasmonGrow: true,
@@ -156663,6 +156664,3726 @@ const masmonPvpFriends = async () => {
     remaining
   };
 };
+const MSX_CSS = `
+
+.msx{position:relative;overflow:hidden;color:#fff;font-weight:700;font-size:12px;line-height:1.45;
+  background:linear-gradient(180deg,#1d1740 0,#151130 45%,#0f0d24 100%)}
+.msx .in{padding:10px 12px 0}
+.msx .hd{display:flex;align-items:center;justify-content:space-between;gap:8px;height:38px}
+.msx .hd .bk{background:#2b3348;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:900;white-space:nowrap}
+.msx .hd .ti{font-size:13px;font-weight:900;color:#f9a8d4;white-space:nowrap}
+.msx .hd .rt{background:#3b3566;border-radius:99px;padding:4px 11px;font-size:12px;font-weight:900;white-space:nowrap}
+.msx .card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:10px;margin-top:8px;position:relative}
+.msx .card.pk{border-color:#f472b6aa}.msx .card.sk{border-color:#38bdf8aa}.msx .card.yl{border-color:#fde047;box-shadow:0 0 14px #fde04755}
+.msx .card.dash{border-style:dashed;background:#1e1a3680}
+.msx .sub{font-size:11px;color:#cbd5e1;font-weight:500}.msx .dim{color:#94a3b8}.msx .yel{color:#fde047}.msx .pnk{color:#f9a8d4}.msx .sky{color:#7dd3fc}.msx .grn{color:#86efac}
+.msx .h1{font-size:17px;font-weight:900}.msx .h2{font-size:14px;font-weight:900}
+.msx .row{display:flex;align-items:center;gap:8px}.msx .wrap{flex-wrap:wrap}.msx .f1{flex:1;min-width:0}.msx .ctr{text-align:center}.msx .nw{white-space:nowrap}
+.msx .btn,.msx .btn2,.msx .btn3{display:block;border-radius:999px;padding:11px 14px;font-weight:900;font-size:14px;text-align:center;color:#fff;white-space:nowrap}
+.msx .btn{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d66}
+.msx .btn2{background:#334155}.msx .btn3{background:#1e293b;border:1px solid #475569;color:#cbd5e1}
+.msx .btn.sm,.msx .btn2.sm,.msx .btn3.sm{padding:7px 10px;font-size:12px}
+.msx .tabs{display:flex;gap:6px;margin-top:8px}
+.msx .tabs span{flex:1;text-align:center;font-size:12px;font-weight:900;padding:8px 4px;border-radius:99px;background:#1e293b;color:#94a3b8;white-space:nowrap}
+.msx .tabs span.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.msx .tabs.y span{border-radius:10px;border:1px solid #475569}.msx .tabs.y span.on{background:#fde047;color:#422006;border-color:#fde047}
+.msx .chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
+.msx .chip.on{background:#fde047;color:#422006;border-color:#fde047}.msx .chip.p{background:#f472b6;border-color:#f472b6;color:#fff}
+.msx .chip.g{background:#064e3b;border-color:#34d399;color:#a7f3d0}.msx .chip.s{background:#0c4a6e;border-color:#38bdf8;color:#bae6fd}
+.msx .fc{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff3;background:#312e5a;flex:none}
+.msx .bub{background:#fff;color:#1e1b4b;border-radius:12px;padding:7px 10px;font-size:12.5px;font-weight:800;line-height:1.5;position:relative}
+.msx .bar{height:8px;border-radius:9px;background:#334155;overflow:hidden;position:relative}
+.msx .bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.msx .bar.g i{background:linear-gradient(90deg,#34d399,#a3e635)}.msx .bar.p i{background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .sts{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
+.msx .st1{display:flex;align-items:center;gap:5px;font-size:11px}
+.msx .st1 .nm{width:56px;white-space:nowrap;color:#e2e8f0}.msx .st1 .bar{flex:1;height:7px}.msx .st1 b{width:27px;text-align:right;font-size:12px}
+.msx .st1 em{font-style:normal;color:#86efac;font-size:11px;font-weight:900;width:26px}
+.msx .st1 .ap{width:14px;text-align:center;font-size:11px;color:#fde047}
+.msx .rk{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 5px;border-radius:6px;font-size:11px;font-weight:900;color:#0f172a;background:#94a3b8;font-style:normal}
+.msx .rk.rG,.msx .rk.rF{background:#94a3b8}.msx .rk.rE{background:#4ade80}.msx .rk.rD{background:#2dd4bf}.msx .rk.rC{background:#38bdf8}.msx .rk.rB{background:#a78bfa}
+.msx .rk.rA{background:#f472b6}.msx .rk.rS{background:#fbbf24}.msx .rk.rSS{background:#fb923c}.msx .rk.rSSS{background:#f87171}
+.msx .rk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa);color:#1e1b4b}
+.msx .rk.big{height:26px;min-width:34px;font-size:16px;border-radius:8px}
+.msx .cf{position:relative;width:30px;height:30px;flex:none}
+.msx .cf img{width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
+.msx .cf.rE img,.msx .cf.rD img{border-color:#2dd4bf}.msx .cf.rC img{border-color:#38bdf8}.msx .cf.rB img{border-color:#a78bfa}.msx .cf.rA img{border-color:#f472b6}.msx .cf.rS img{border-color:#fbbf24}.msx .cf.rM img{border-color:#fde047}
+.msx .cf.base img{opacity:.55;border-style:dashed}
+.msx .cf.fav::after{content:'★';position:absolute;right:-4px;top:-6px;font-size:11px;color:#fde047;text-shadow:0 1px 0 #422006}
+.msx .cf.fr::before{content:'🤝';position:absolute;left:-5px;bottom:-5px;font-size:10px}
+.msx .cf.lg{width:46px;height:46px}.msx .cf.lg img{width:46px;height:46px;border-radius:12px}
+.msx .tg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.msx .tc{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 5px 5px;text-align:center;position:relative;min-height:82px}
+.msx .tc .ic{font-size:19px;line-height:1.1}.msx .tc .nm{font-size:11.5px;font-weight:900}.msx .tc .ex{font-size:10px;color:#86efac;font-weight:900}
+.msx .tc .fs{display:flex;justify-content:center;gap:2px;margin-top:4px;min-height:24px}
+.msx .tc .fs .cf,.msx .tc .fs .cf img{width:24px;height:24px;border-radius:7px}
+.msx .tc.fav{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04766}
+.msx .tc.party{border-color:#f472b6;background:linear-gradient(160deg,#4a1d5c,#3b2f0b);box-shadow:0 0 14px #f472b699}
+.msx .tc .rib{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;font-size:9.5px;font-weight:900;padding:1px 8px;white-space:nowrap}
+.msx .tc.none .fs{opacity:.5;font-size:10px;color:#64748b;align-items:center}
+.msx .cmd{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.msx .cmd div{background:#334155;border-radius:14px;padding:7px 2px;text-align:center;font-size:12px;font-weight:900;line-height:1.3}
+.msx .cmd div small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .cmd div.off{background:#1e293b;color:#64748b}.msx .cmd div.off small{color:#64748b}.msx .cmd div.hot{background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .stage{position:relative;border-radius:14px;border:1px solid #3b3566;overflow:hidden;margin-top:8px;
+  background:radial-gradient(ellipse at 50% 88%,#4c3f8f 0,#241d4a 55%,#171230 100%)}
+.msx .stage .mon{position:absolute;object-fit:contain;filter:drop-shadow(0 8px 5px #0009)}
+.msx .stage .tag{position:absolute;font-size:10.5px;font-weight:900;background:#0009;border-radius:7px;padding:1px 8px;white-space:nowrap}
+.msx .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.msx .shade{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2455,#0f0d24dd)}
+.msx .cut{position:absolute;left:-6px;right:30px;padding:5px 20px;background:linear-gradient(90deg,#a855f7,#6366f1 70%,#6366f100)}
+.msx .cut.pow{background:linear-gradient(90deg,#f97316,#ef4444 70%,#ef444400)}.msx .cut.gold{background:linear-gradient(90deg,#f59e0b,#fde047 60%,#fde04700);color:#422006}
+.msx .cut.gray{background:linear-gradient(90deg,#475569,#334155 70%,#33415500)}.msx .cut.sky{background:linear-gradient(90deg,#0ea5e9,#2563eb 70%,#2563eb00)}
+.msx .cut b{display:block;font-size:19px;letter-spacing:.05em;text-shadow:0 2px 0 #0005}.msx .cut small{font-size:10.5px;font-weight:900}
+.msx .up{position:absolute;font-size:24px;font-weight:900;color:#fde047;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;white-space:nowrap}
+.msx .up small{font-size:12px;color:#fff;text-shadow:0 1px 0 #0008}
+.msx .modal{position:absolute;inset:0;background:#0b0920d9;display:flex;flex-direction:column;justify-content:center;padding:18px}
+.msx .spark{position:absolute;font-size:18px}
+.msx .ft{position:absolute;left:12px;right:12px;bottom:14px}
+.msx .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.msx .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.msx .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.msx .ph{background:#0f172a;border-radius:12px;object-fit:contain}
+.msx .lk{filter:grayscale(1) brightness(.5)}
+.msx .life{position:relative;height:12px;border-radius:9px;background:#334155;margin-top:5px}
+.msx .life i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#34d399,#a3e635)}
+.msx .life .pk{position:absolute;top:-2px;height:16px;border:1.5px dashed #fde047;border-radius:6px;background:#fde04722}
+.msx .life u{position:absolute;top:-3px;width:2px;height:18px;background:#fff;border-radius:2px}
+.msx .dots{display:flex;gap:5px}.msx .dots i{width:22px;height:8px;border-radius:5px;background:#334155}.msx .dots i.on{background:#fb923c}.msx .dots i.ok{background:#34d399}
+.msx table.t{width:100%;border-collapse:collapse;font-size:11.5px}.msx table.t td{padding:4px 3px;border-bottom:1px solid #fff1;text-align:right}.msx table.t td:first-child{text-align:left}
+@keyframes msx-mkPop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1)}}
+@keyframes msx-mkRise{0%{transform:translateY(14px);opacity:0}25%{opacity:1}100%{transform:translateY(-10px);opacity:1}}
+@keyframes msx-mkHop{0%,100%{transform:translateY(0)}45%{transform:translateY(-12px)}}
+@keyframes msx-mkCut{0%{transform:translateX(-110%)}100%{transform:translateX(0)}}
+@keyframes msx-mkShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}50%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
+@keyframes msx-mkGlow{0%,100%{box-shadow:0 0 6px #fde04755}50%{box-shadow:0 0 18px #fde047cc}}
+@keyframes msx-mkSpin{0%{transform:rotateY(0)}100%{transform:rotateY(720deg)}}
+@keyframes msx-mkMerge{0%{transform:translateX(var(--dx)) scale(1);opacity:1}100%{transform:translateX(0) scale(.2);opacity:0}}
+.msx .tg.tall .tc{min-height:98px;padding-top:9px}.msx .tg.tall .tc .fs{margin-top:7px}
+.msx{display:flex;flex-direction:column;container-type:size;font-size:12px}
+.msx.s320{}
+.msx.land{}
+.msx .v-hd{flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:4px 10px 0}
+.msx .v-hd .bk{background:#2b3348;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-hd .ti{flex:1;min-width:0;font-size:12.5px;font-weight:900;color:#f9a8d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-hd .ti small{color:#cbd5e1;font-size:10px;font-weight:700;margin-left:4px}
+.msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
+.msx .v-body>*{flex:none}
+.msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
+.msx .v-b1{display:flex;align-items:center;gap:6px}
+.msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+.msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
+.msx .v-turn .ph small{display:block;font-size:8.5px;font-weight:700;opacity:.95}
+.msx .v-turn .n{font-size:11px;font-weight:900;white-space:nowrap;line-height:1}
+.msx .v-turn .n b{font-size:30px;color:#fde047;margin:0 2px;letter-spacing:-.02em;text-shadow:0 2px 0 #9a3412,0 0 12px #fde04766}
+.msx .v-turn .n small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;margin-top:3px}
+.msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
+.msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
+.msx .v-pow small{display:block;font-size:8.5px;color:#f9a8d4;font-weight:900;white-space:nowrap}
+.msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
+.msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
+.msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.msx .v-ga{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
+.msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.msx .v-ga.hp .tr i{background:linear-gradient(180deg,#bef264,#22c55e)}
+.msx .v-ga.hp.low .tr i{background:linear-gradient(180deg,#fdba74,#ef4444)}
+.msx .v-ga.st .tr i{background:linear-gradient(180deg,#f9a8d4,#a855f7)}
+.msx .v-ga .tr u{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#ef4444 0 3px,#7f1d1d 3px 6px)}
+.msx .v-ga .tr u.add{background:repeating-linear-gradient(45deg,#e879f9 0 3px,#701a75 3px 6px)}
+.msx .v-ga .tr u.heal{background:repeating-linear-gradient(45deg,#86efac 0 3px,#166534 3px 6px)}
+.msx .v-ga .tr s{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed #fde047}
+.msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:9px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b small.cap{color:#fde047}
+.msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+.msx .v-track{display:flex;gap:2px;margin-top:5px}
+.msx .v-track span{height:5px;border-radius:3px;background:#334155;position:relative;overflow:hidden}
+.msx .v-track span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-track span.now{outline:1px solid #fde047}
+.msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
+.msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
+.msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
+.msx .v-scene.dk .sh{background:#0f0d2499}
+.msx .v-scene .mon{position:absolute;left:50%;transform:translateX(-50%);height:44%;aspect-ratio:1;object-fit:contain;bottom:var(--mb,25%);filter:drop-shadow(0 8px 5px #0009)}
+.msx .v-scene .gr{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 5px);width:30%;height:5%;border-radius:50%;background:radial-gradient(ellipse,#000a 0,#0000 70%)}
+.msx .v-chips{position:absolute;right:7px;top:7px;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.msx .v-chip{background:#0f0d24d0;border:1px solid #ffffff33;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.msx .v-chip.hot{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;box-shadow:0 2px 6px #0006}
+.msx .v-chip.bad{background:#7f1d1d;border-color:#fca5a5;color:#fee2e2}
+.msx .v-chip.ylw{background:#fde047;color:#422006;border-color:#0000}
+.msx .v-nm{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--mb,25%) - 26px);background:#0f0d24d9;border:1px solid #ffffff33;border-radius:99px;padding:2px 12px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.msx .v-nm small{color:#fde047;font-size:9.5px;margin-left:5px}
+.msx .v-yousu{position:absolute;left:50%;bottom:66%;transform:translateX(18%);background:#7f1d1d;border:1.5px solid #fca5a5;border-radius:12px 12px 12px 2px;padding:2px 8px;font-size:11px;font-weight:900;white-space:nowrap;box-shadow:0 0 10px #ef444488}
+.msx .v-party{position:absolute;left:6px;top:6px;background:#0f0d24d0;border:1px solid #ffffff2a;border-radius:12px;padding:4px 5px 5px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.msx .v-party>small{font-size:9px;font-weight:900;color:#f9a8d4;white-space:nowrap;line-height:1.2}
+.msx .v-pf{position:relative;display:block;width:30px;flex:none}
+.msx .v-pf img{display:block;width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
+.msx .v-pf.rD img{border-color:#2dd4bf}.msx .v-pf.rC img{border-color:#38bdf8}.msx .v-pf.rB img{border-color:#a78bfa}.msx .v-pf.rA img{border-color:#f472b6}.msx .v-pf.rS img{border-color:#fbbf24}.msx .v-pf.rM img{border-color:#fde047}
+.msx .v-pf.base img{border-style:dashed;opacity:.7}
+.msx .v-pf.as img{border-radius:50%;border-color:#f9a8d4;object-position:top}
+.msx .v-pf .af{display:block;height:4px;border-radius:3px;background:#334155;margin-top:2px;overflow:hidden;position:relative}
+.msx .v-pf .af b{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#f472b6)}
+.msx .v-pf.tag img{border-color:#fff;box-shadow:0 0 0 2px #fde047,0 0 10px 2px #fde047,0 0 16px 4px #fb923c}
+.msx .v-pf.tag .af b{background:linear-gradient(90deg,#fde047,#fb923c)}
+.msx .v-pf.tag::after{content:'🤝';position:absolute;right:-6px;top:-7px;font-size:11px;filter:drop-shadow(0 1px 0 #000)}
+.msx .v-pf.fr::before{content:'借';position:absolute;left:-4px;top:-5px;z-index:1;background:#38bdf8;color:#0f172a;font-size:8px;font-weight:900;border-radius:5px;padding:0 2px;line-height:1.4}
+.msx .v-pf.sm,.msx .v-pf.sm img{width:24px}.msx .v-pf.sm img{height:24px;border-radius:7px}
+.msx .v-pf.lg,.msx .v-pf.lg img{width:42px}.msx .v-pf.lg img{height:42px;border-radius:12px}
+.msx .v-say{position:absolute;left:7px;right:7px;bottom:6px;display:flex;align-items:center;gap:6px}
+.msx .v-say .fc{width:38px;height:38px;border-color:#f9a8d4}
+.msx .v-say .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:12px 12px 12px 3px}
+.msx .v-say .bub em{font-style:normal;color:#be185d}
+.msx .v-side{position:absolute;right:7px;bottom:54px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.msx .v-mini{background:#0f0d24d9;border:1px solid #475569;border-radius:10px;padding:2px 8px;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.3}
+.msx .v-mini b{color:#fde047}
+.msx .v-st{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px}
+.msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
+.msx .v-st small{display:block;font-size:9px;color:#e2e8f0;white-space:nowrap}
+.msx .v-st b{display:block;font-size:14px}
+.msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
+.msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+.msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
+.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
+.msx .v-st div.up.main em{font-size:13px;color:#fde047}
+.msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
+.msx .v-act{display:grid;gap:5px;margin-top:6px}
+.msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
+.msx .v-p .e{font-size:19px;line-height:1.1}.msx .v-p small{display:block;font-size:8.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.msx .v-p.main{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047;border-bottom-color:#9d174d;box-shadow:0 0 14px #f472b699;font-size:16px}
+.msx .v-p.main small{color:#fff;font-size:9px}
+.msx .v-p.off{background:#1e293b;border-color:#334155;color:#64748b}.msx .v-p.off small{color:#64748b}.msx .v-p.off .e{filter:grayscale(1);opacity:.6}
+.msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
+.msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:8.5px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
+.msx .v-p .bd.r{background:#ef4444;color:#fff}
+.msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:9.5px;white-space:nowrap}
+.msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
+.msx .v-gather .v-pf.tag::after{display:none}
+.msx .v-ft{flex:none;height:40px;background:#0b0920;border-top:1px solid #3b3566;display:flex;align-items:center;gap:5px;padding:0 10px}
+.msx .v-ft span,.msx .v-ft button{flex:1;text-align:center;background:#2b3348;border-radius:99px;padding:5px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.msx .v-ft span.on,.msx .v-ft button.on{background:#fde047;color:#422006}
+.msx .v-ft span.go,.msx .v-ft button.go{flex:2.4;background:linear-gradient(90deg,#f472b6,#fb923c);font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #9d174d}
+.msx .v-ft span.go2,.msx .v-ft button.go2{flex:2.4;background:#fde047;color:#422006;font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #a16207}
+.msx .v-tabs{display:flex;gap:5px;margin-top:6px}
+.msx .v-tabs span,.msx .v-tabs button{flex:1;text-align:center;font-size:11.5px;font-weight:900;padding:5px 2px;border-radius:10px;background:#1e293b;border:1px solid #475569;color:#94a3b8;white-space:nowrap}
+.msx .v-tabs span.on,.msx .v-tabs button.on{background:#fde047;color:#422006;border-color:#fde047}
+.msx .v-tabs span.on.hv,.msx .v-tabs button.on.hv{background:linear-gradient(90deg,#ef4444,#fb923c);color:#fff;border-color:#fecaca}
+.msx .v-trs{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin-top:4px;align-items:end}
+.msx .v-tr{text-align:center;position:relative;min-width:0;padding-top:16px}
+.msx .v-tr .fs{display:flex;justify-content:center;align-items:flex-end;min-height:30px}
+.msx .v-tr .fs .v-pf,.msx .v-tr .fs .v-pf img{width:22px}.msx .v-tr .fs .v-pf img{height:22px;border-radius:6px;border-width:1.5px}
+.msx .v-tr .fs .v-pf+.v-pf{margin-left:-5px}.msx .v-tr .fs .v-pf.tag{z-index:1}
+.msx .v-tr .fs .v-pf.tag::after{font-size:9px;right:-4px;top:-6px}
+.msx .v-tr .fs .no{font-size:8.5px;color:#64748b;font-weight:700;line-height:1.2;padding-bottom:3px}
+.msx .v-tr .o{width:48px;height:48px;max-width:100%;border-radius:50%;margin:3px auto 0;background:linear-gradient(180deg,#3b4a66,#1e293b);border:2px solid #64748b;border-bottom-width:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;line-height:1;position:relative}
+.msx .v-tr .o small{font-size:8.5px;font-weight:900;margin-top:2px;white-space:nowrap}
+.msx .v-tr .o .lv{position:absolute;left:-4px;top:-5px;background:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:8px;font-weight:900;padding:0 3px;line-height:1.4;font-style:normal}
+.msx .v-tr .x{font-size:10px;font-weight:900;color:#86efac;margin-top:1px;white-space:nowrap}
+.msx .v-tr.tag .o{border-color:#fde047;background:linear-gradient(180deg,#6b5310,#3b2f0b);box-shadow:0 0 0 2px #fde04755,0 0 12px #fde047}
+.msx .v-tr.tag .x{color:#fde047}
+.msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
+.msx .v-tr.sel .fs{transform:translateY(-5px)}
+.msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:8.5px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
+.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px}
+.msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
+.msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
+.msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
+.msx .v-cm .tx b{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cm .tx small{display:block;font-size:9px;color:#86efac;font-weight:900;white-space:nowrap}
+.msx .v-cm.tag .tx small{color:#fde047}
+.msx .v-cm .afl{display:flex;align-items:center;gap:3px;font-size:8.5px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-cm .afl i{flex:1;height:5px;border-radius:3px;background:#334155;overflow:hidden;position:relative}
+.msx .v-cm .afl i b{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#f472b6)}
+.msx .v-cm.tag .afl i b{background:linear-gradient(90deg,#fde047,#fb923c)}
+.msx .v-cm .afl i::after{content:'';position:absolute;left:80%;top:0;bottom:0;border-left:1px solid #fff}
+.msx .v-fx{position:absolute;left:6px;bottom:6px;right:6px;background:#0f0d24ee;border:1px solid #fde047;border-radius:13px;padding:5px 8px 6px;box-shadow:0 0 14px #fde04755}
+.msx .v-fx.plain{border-color:#475569;box-shadow:none}
+.msx .v-fx .t{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-fx .t .big{font-size:15px;color:#fde047;text-shadow:0 0 8px #fb923c}
+.msx .v-fx .t .fl{margin-left:auto;font-size:10px;color:#cbd5e1}.msx .v-fx .t .fl b{color:#86efac;font-size:12px}.msx .v-fx .t .fl b.warn{color:#fca5a5}
+.msx .v-fx .ch{display:flex;align-items:center;gap:3px;margin-top:4px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-fx .ch span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:1px 6px;line-height:1.5}
+.msx .v-fx .ch span.tgx{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-color:#0000}
+.msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
+.msx .v-fx .ch i{font-style:normal;color:#94a3b8}
+.msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
+.msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
+.msx .v-stamp{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;line-height:1;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 26px #fb923c,0 0 50px #fde047;transform:rotate(-4deg);white-space:nowrap}
+.msx .v-stamp small{display:block;font-size:13px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:8px;transform:rotate(4deg)}
+.msx .v-stamp.ok{color:#fff;-webkit-text-stroke:2px #be185d;text-shadow:0 4px 0 #9d174d,0 0 18px #f472b6;font-size:46px}
+.msx .v-stamp.ng{color:#cbd5e1;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b;font-size:46px;transform:rotate(3deg)}
+.msx .v-stamp.zz{color:#c4b5fd;-webkit-text-stroke:2px #4c1d95;text-shadow:0 4px 0 #4c1d95;font-size:46px;transform:rotate(-2deg)}
+.msx .v-prop{position:absolute;font-size:64px;line-height:1;filter:drop-shadow(0 6px 4px #0008)}
+.msx .v-log{background:#fff;color:#1e1b4b;border-radius:14px;padding:8px 12px;margin-top:6px;font-size:12.5px;font-weight:800;line-height:1.6;border:2px solid #f9a8d4}
+.msx .v-log b.gu{color:#be185d}.msx .v-log b.gd{color:#1d4ed8}.msx .v-log b.ga{color:#c2410c}
+.msx .v-log .hd2{font-size:10px;color:#be185d;font-weight:900}
+.msx .v-res3{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.msx .v-res3 .v-scene{margin-top:0}
+.msx .v-res3 .v-stamp{top:10%;font-size:34px!important;text-align:left;left:12px}
+.msx .v-res3 .mon{height:70%;bottom:6%;left:76%}
+.msx .v-res3 .cap{position:absolute;left:10px;bottom:7px;right:42%;background:#0f0d24e0;border-radius:10px;padding:4px 8px;font-size:10.5px;font-weight:800;line-height:1.4}
+.msx .v-res3 .cap b{color:#fde047}
+.msx .v-strip{position:absolute;left:-10%;right:-10%;top:16%;height:46%;background:linear-gradient(90deg,#f472b6,#fb923c);transform:rotate(-5deg);box-shadow:0 6px 0 #0005}
+.msx .v-body2{position:absolute;left:50%;transform:translateX(-50%);height:62%;top:6%;object-fit:contain;filter:drop-shadow(0 6px 4px #0008)}
+.msx .v-q{position:absolute;left:8px;right:8px;bottom:8px}
+.msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
+.msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.msx .v-ch{background:linear-gradient(180deg,#fff,#fde7f3);color:#1e1b4b;border:2px solid #f472b6;border-bottom-width:4px;border-radius:13px;padding:6px 6px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.25;min-width:0}
+.msx .v-ch small{display:block;font-size:9.5px;font-weight:800;color:#9d174d;white-space:nowrap}
+.msx .v-ch.b{border-color:#38bdf8;background:linear-gradient(180deg,#fff,#e0f2fe)}.msx .v-ch.b small{color:#075985}
+.msx .v-ch.n{grid-column:1/-1;background:#1e293b;color:#cbd5e1;border-color:#475569;font-size:11.5px;padding:4px}
+.msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
+.msx .v-pol .l{display:flex;justify-content:space-between;font-size:9px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-pol .m{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:3px 0}
+.msx .v-pol .m i{height:9px;border-radius:3px;background:#334155}.msx .v-pol .m i.on{background:#fde047;box-shadow:0 0 8px #fde047}
+.msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
+.msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.msx .v-ev-h small{display:block;font-size:9.5px;font-weight:800}
+.msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
+.msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
+.msx .v-talk .who{position:absolute;left:10px;top:-11px;background:#fb923c;color:#fff;border-radius:8px;padding:1px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-opts{display:grid;gap:6px;margin-top:6px}
+.msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
+.msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
+.msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
+.msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
+.msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
+.msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
+.msx .v-cal .old{font-size:11px;color:#94a3b8;padding-bottom:6px;font-weight:800}
+.msx .v-next{font-size:13px;font-weight:900;white-space:nowrap}.msx .v-next b{font-size:34px;color:#fde047;text-shadow:0 2px 0 #9a3412}.msx .v-next s{color:#94a3b8;font-size:18px;margin-right:4px}
+.msx .v-steps{display:flex;align-items:center;gap:3px;margin-top:5px}
+.msx .v-steps span{flex:none;width:22px;height:22px;border-radius:50%;background:#1e293b;border:1px solid #475569;color:#94a3b8;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.msx .v-steps span.ok{background:#3b3566;border-color:#f472b6;color:#f9a8d4}
+.msx .v-steps span.on{flex:1;width:auto;border-radius:99px;background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;color:#fff;font-size:12px;white-space:nowrap;padding:0 8px}
+.msx .v-steps u{flex:none;width:6px;height:2px;background:#475569;text-decoration:none}
+.msx .v-h{font-size:15px;font-weight:900;margin-top:8px;line-height:1.3}.msx .v-h small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+.msx .v-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;position:relative;min-width:0}
+.msx .v-card.sel{border-color:#fde047;box-shadow:0 0 12px #fde04766}
+.msx .v-card.pk{border-color:#f472b6aa}
+.msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
+.msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
+.msx .v-grid6 img{width:100%;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
+.msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
+.msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:8px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
+.msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:9px;font-weight:900}
+.msx .v-apt div{background:#0f172a;border-radius:8px;padding:3px 0;white-space:nowrap;line-height:1.3}.msx .v-apt b{display:block;font-size:13px;color:#fde047}.msx .v-apt div.lo b{color:#94a3b8}
+.msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.msx .v-sl{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative;min-width:0}
+.msx .v-sl .v-pf{margin:0 auto 3px}
+.msx .v-sl .t3{font-size:9px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:8.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
+.msx .v-sl.fr{border-color:#38bdf8;background:#0c2a4a}.msx .v-sl.base{border-style:dashed}.msx .v-sl.base .t3{color:#94a3b8}
+.msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:9px;font-weight:900}
+.msx .v-heat div{border-radius:8px;padding:3px 0;background:#0f172a;white-space:nowrap;line-height:1.3}
+.msx .v-heat div b{display:block;font-size:12px}
+.msx .v-heat .x3{background:#be185d}.msx .v-heat .x2{background:#7c2d5e}
+.msx .v-sc{display:flex;gap:8px;align-items:stretch}
+.msx .v-sc .pic{flex:none;width:38%;position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#f472b6,#fb923c);min-height:230px}
+.msx .v-sc .pic img{position:absolute;left:50%;transform:translateX(-50%);top:6px;height:150%;max-width:none}
+.msx .v-sc .tx{flex:1;min-width:0;font-size:11px;line-height:1.45;font-weight:700}
+.msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
+.msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
+.msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:9.5px}
+.msx .v-faces{display:flex;gap:5px;margin-top:6px}
+.msx .v-faces span,.msx .v-faces button{flex:1;min-width:0;position:relative}
+.msx .v-faces img{width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #475569;background:#312e5a}
+.msx .v-faces span.on img,.msx .v-faces button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047}
+.msx .v-faces span.lk img,.msx .v-faces button.lk img{filter:grayscale(1) brightness(.4)}
+.msx .v-item{display:flex;align-items:center;gap:8px;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 8px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.3}
+.msx .v-item .e{font-size:22px;flex:none;width:28px;text-align:center}.msx .v-item small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .v-item .pr{margin-left:auto;flex:none;font-size:10.5px;color:#fde047;white-space:nowrap}
+.msx .v-item.sel{border-color:#fde047;background:#3b2f0b}
+.msx .v-bag{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.msx .v-bag div{aspect-ratio:1.5;border-radius:12px;border:2px dashed #64748b;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;line-height:1.1}
+.msx .v-bag div small{font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-bag div.in{border:2px solid #fde047;background:#3b2f0b}
+.msx .v-inp{background:#fff;color:#1e1b4b;border-radius:11px;padding:8px 12px;font-size:16px;font-weight:900;margin-top:5px;display:flex;justify-content:space-between;align-items:center}
+.msx .v-inp small{font-size:10px;color:#94a3b8}
+.msx .v-sw{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:10.5px;font-weight:900}
+.msx .v-sw>b{width:52px;flex:none}
+.msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
+.msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
+.msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
+.msx .v-sum .k{width:46px;font-size:9.5px;color:#f9a8d4;flex:none}
+.msx .v-sum .ed{margin-left:auto;font-size:9.5px;color:#7dd3fc;flex:none}
+.msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
+.msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
+.msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
+.msx .v-machine small{font-size:9px;font-weight:900;color:#a5f3fc;white-space:nowrap}
+.msx .v-machine::before{content:'';position:absolute;left:14%;top:-9px;width:30%;height:10px;background:#d6b36a;transform:rotate(-8deg);border-radius:2px}
+.msx .v-ibub{position:absolute;right:6px;top:8px;left:55%;background:#fff;color:#1e1b4b;border-radius:14px 14px 14px 3px;padding:7px 10px;font-size:12px;font-weight:800;line-height:1.5}
+.msx .v-ibub b{color:#c2410c}
+.msx .v-six{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.msx .v-ix{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:5px 7px 5px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;position:relative}
+.msx .v-ix .ok,.msx .v-ix .ng{display:block;font-size:9.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-ix .ok{color:#86efac}.msx .v-ix .ng{color:#fca5a5}
+.msx .v-ix .pr{display:block;font-size:9px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-ix .pr i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#334155;margin-left:2px}.msx .v-ix .pr i.on{background:#fde047}
+.msx .v-ix.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04777}
+.msx .v-ix.no{border-style:dashed;color:#cbd5e1}
+.msx .v-rank{position:relative;border-radius:16px;overflow:hidden;margin-top:6px;border:1px solid #fde047;background:radial-gradient(circle at 28% 50%,#6b5310 0,#1e1a36 70%);display:flex;align-items:center;gap:8px;padding:8px 10px;min-height:118px}
+.msx .v-rank .mon2{height:104px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 6px 4px #0008)}
+.msx .v-rank .L{font-size:74px;font-weight:900;line-height:.95;color:#f472b6;-webkit-text-stroke:2px #fff;text-shadow:0 5px 0 #9d174d,0 0 30px #f472b6}
+.msx .v-rank .tx{flex:1;min-width:0;line-height:1.3}
+.msx .v-rank .tx small{display:block;font-size:10px;color:#f9a8d4;font-weight:900}
+.msx .v-rank .tx b{font-size:24px;color:#fde047}
+.msx .v-rec{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+.msx .v-rec div{background:#0f172a;border:1px solid #475569;border-radius:11px;padding:5px 8px;font-size:11px;font-weight:900;line-height:1.4;min-width:0}
+.msx .v-rec small{display:block;font-size:9px;color:#f9a8d4}
+.msx .v-pt{display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,#3b2f0b,#1e1a36);border:1px solid #fde047;border-radius:14px;padding:6px 10px;margin-top:6px}
+.msx .v-pt .n{font-size:10px;font-weight:900;color:#fde047;line-height:1.2;white-space:nowrap}.msx .v-pt .n b{display:block;font-size:26px;color:#fff;text-shadow:0 2px 0 #9a3412}
+.msx .v-pt .r{flex:1;min-width:0;font-size:10px;font-weight:800;line-height:1.4}
+.msx .v-pt .r .bar{height:7px;margin-top:3px}
+.msx .v-as{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0}
+.msx .v-a{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:5px 6px 6px;min-width:0;position:relative;display:flex;flex-direction:column;justify-content:center}
+.msx .v-a .nm{font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a .ex{font-size:9px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a .lv{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px}
+.msx .v-a .lv span{background:#0f172a;border:1px solid #64748b;border-radius:8px;text-align:center;font-size:9px;font-weight:900;line-height:1.25;padding:2px 0;white-space:nowrap}
+.msx .v-a .lv span b{display:block;font-size:11px;color:#fde047}
+.msx .v-a .lv span.on{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047}.msx .v-a .lv span.on b{color:#fff}
+.msx .v-a .lv span.no{opacity:.35}
+.msx .v-a.got{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04755}
+.msx .v-a.dim{opacity:.55}
+.msx .v-a.wide{grid-column:1/-1}
+.msx .v-pick{background:#0f172a;border:1px solid #f472b6;border-radius:12px;padding:5px 9px;margin-top:6px;font-size:10.5px;font-weight:800;line-height:1.5}
+.msx .v-pick b{color:#fde047}
+.msx.land .v-body{display:grid;grid-template-columns:40% 1fr;grid-template-rows:repeat(7,min-content) 1fr;column-gap:8px;padding-bottom:6px}
+.msx.land .v-body>*{grid-column:2}
+.msx.land .v-body>.v-scene{grid-column:1;grid-row:1/-1;height:auto;margin-top:5px}
+.msx.land .v-scene .mon{height:48%}
+.msx.land .v-ft{height:34px}
+.msx.land .v-come{width:50%}
+@container (max-width:340px){
+  .msx .v-hd .ti small{display:none}
+  .msx .v-body{padding:0 7px 6px}
+  .msx .v-hd{height:28px;padding:3px 7px 0}
+  .msx .v-band{padding:5px 6px}
+  .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
+  .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
+  .msx .v-ga{font-size:9px;gap:3px}.msx .v-ga b{font-size:11px;min-width:0}.msx .v-ga .tr{height:11px}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:8px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
+  .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:7.5px}.msx .v-p.main{font-size:14px}
+  .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:9px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
+  .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
+  .msx .v-party{gap:2px;padding:3px 4px}.msx .v-party>small{font-size:8px}
+  .msx .v-say .fc{width:32px;height:32px}.msx .v-say .bub{font-size:10.5px;padding:4px 7px}
+  .msx .v-chip,.msx .v-mini{font-size:9.5px;padding:1px 7px}
+  .msx .v-nm{font-size:10.5px}
+  .msx .v-tr .o{width:42px;height:42px;font-size:15px}.msx .v-tr .o small{font-size:7.5px}.msx .v-tr .x{font-size:9px}
+  .msx .v-tr .fs .v-pf,.msx .v-tr .fs .v-pf img{width:19px}.msx .v-tr .fs .v-pf img{height:19px}
+  .msx .v-tabs span,.msx .v-tabs button{font-size:10.5px;padding:4px 2px}
+  .msx .v-cm{padding:3px 5px;gap:4px}.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:22px}.msx .v-cm .v-pf img{height:22px}
+  .msx .v-cm .tx b{font-size:9.5px}.msx .v-cm .tx small{font-size:8px}
+  .msx .v-fx{padding:4px 6px 5px}.msx .v-fx .t{font-size:10px}.msx .v-fx .t .big{font-size:13px}.msx .v-fx .ch{font-size:8.5px;gap:2px}.msx .v-fx .ch span{padding:1px 4px}.msx .v-fx .ch span.res{font-size:10px}
+  .msx .v-a .nm{font-size:10.5px}.msx .v-a .ex{font-size:8px}.msx .v-a .lv span{font-size:8px}.msx .v-a .lv span b{font-size:10px}.msx .v-a{padding:4px 5px 5px}
+  .msx .v-as{gap:4px;margin-top:4px}.msx .v-pt{padding:4px 8px}.msx .v-pt .n b{font-size:21px}.msx .v-pick{font-size:9.5px;padding:4px 7px;margin-top:4px}
+  .msx .v-steps{margin-top:3px}
+}
+.msx .v-phs{display:flex;gap:3px;width:86%;margin-top:6px}
+.msx .v-phs span{position:relative;min-width:46px;height:26px;border-radius:7px;background:#334155;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx .v-phs span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-phs span b{position:relative;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-phs span.now{outline:2px solid #fde047}
+.msx .v-eps{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:2px}
+.msx .v-eps div{background:#0f172a;border:1px solid #475569;border-radius:9px;padding:3px 8px;font-size:10.5px;font-weight:800;white-space:nowrap;overflow:hidden}
+.msx .v-eps div b{color:#fde047;margin-right:5px;font-size:9.5px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
+.msx.land .v-party .v-pf,.msx.land .v-party .v-pf img{width:24px}.msx.land .v-party .v-pf img{height:24px;border-radius:7px}
+.msx.land .v-party{gap:3px}
+.msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
+.msx.s320 .v-party .v-pf,.msx.s320 .v-party .v-pf img{width:22px}.msx.s320 .v-party .v-pf img{height:22px}
+.msx.s320 .v-scene{--mb:37%}.msx.s320 .v-scene .mon{height:42%}
+.msx.s320 .v-chips .bad{display:none}.msx.s320 .v-side{bottom:48px}
+.msx.s320 .v-yousu{bottom:auto;top:52px;left:auto;right:7px;transform:none}
+.msx .v-scene.low{flex:0 0 220px}
+.msx .v-cups{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:space-evenly}
+.msx .v-cup{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-bottom-width:3px;border-radius:14px;padding:6px 9px;position:relative;min-width:0}
+.msx .v-cup .e{font-size:26px;flex:none;width:34px;text-align:center}
+.msx .v-cup .tx{flex:1;min-width:0;line-height:1.3}.msx .v-cup .tx b{display:block;font-size:13.5px;white-space:nowrap}
+.msx .v-cup .tx small{display:block;font-size:9.5px;color:#86efac;font-weight:800;white-space:nowrap}.msx .v-cup .tx .rw{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700;white-space:nowrap}
+.msx .v-cup .rt{flex:none;text-align:right;line-height:1.3}.msx .v-cup .rt span{display:block;white-space:nowrap}
+.msx .v-cup .st{font-size:14px;color:#fde047;text-shadow:0 1px 0 #9a3412}.msx .v-cup .g{font-size:12px;font-weight:900}.msx .v-cup .kd{font-size:9px;color:#f9a8d4;font-weight:900}
+.msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
+.msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
+.msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
+.msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
+.msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
+.msx .v-vsh .sd small{display:block;font-size:9px;color:#fde047;font-weight:900}.msx .v-vsh .sd b{display:block;font-size:14px;white-space:nowrap}.msx .v-vsh .sd span{display:block;font-size:9px;font-weight:800;white-space:nowrap}
+.msx .v-vsh .vsm{flex:none;font-size:26px;font-weight:900;color:#fde047;text-shadow:0 3px 0 #9a3412,0 0 14px #fb923c;text-align:center;line-height:1}.msx .v-vsh .vsm small{display:block;font-size:9px;color:#fff;text-shadow:none;margin-top:3px}
+.msx .v-vs1{display:grid;grid-template-columns:32px 1fr 70px 1fr 32px;align-items:center;gap:5px;font-size:10.5px;font-weight:900}
+.msx .v-vs1 span{text-align:center;white-space:nowrap}.msx .v-vs1 b{font-size:13px;text-align:center;color:#cbd5e1}.msx .v-vs1 b.w{color:#fde047}
+.msx .v-vs1 i{height:10px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
+.msx .v-vs1 i u{position:absolute;top:0;bottom:0;text-decoration:none}
+.msx .v-vs1 i.l u{right:0;background:linear-gradient(270deg,#f472b6,#fb923c)}.msx .v-vs1 i.r u{left:0;background:linear-gradient(90deg,#38bdf8,#6366f1)}
+.msx .v-vs1 i.p{height:7px}
+.msx .v-dist{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:5px;font-size:10.5px;font-weight:900;text-align:center}
+.msx .v-dist div{display:flex;gap:3px;justify-content:center}
+.msx .v-dist i{font-style:normal;width:24px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;background:#1e293b;color:#64748b}
+.msx .v-dist i.a1{background:#3b2a52;color:#cbd5e1}.msx .v-dist i.a2{background:#9d174d;color:#fff}.msx .v-dist i.a3{background:#fde047;color:#422006;box-shadow:0 0 8px #fde047}
+.msx .v-bracket{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-bracket span{background:#1e293b;border:1px solid #475569;border-radius:8px;padding:2px 8px}.msx .v-bracket span.me{border-color:#fde047;color:#fde047}
+.msx .v-bracket em{font-style:normal;color:#94a3b8;font-size:9px}.msx .v-bracket u{text-decoration:none;color:#f9a8d4;font-size:9px;margin:0 4px}
+.msx .v-scene.home .mon{height:34%}.msx .v-scene.home .gr{width:24%}
+.msx.land .v-scene.home .mon{height:40%}.msx.s320 .v-scene.home .mon{height:36%}
+.msx .v-meal{position:absolute;left:8px;right:8px;bottom:8px;background:#151130f2;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;box-shadow:0 0 18px #fde04766}
+.msx .v-meal .t{font-size:13px;font-weight:900;text-align:center;line-height:1.35}.msx .v-meal .t small{display:block;font-size:9.5px;color:#cbd5e1;font-weight:700}
+.msx .v-meal .ms{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.msx .v-ml{background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 3px;text-align:center;line-height:1.3;min-width:0}
+.msx .v-ml .e{font-size:30px;line-height:1.1}.msx .v-ml b{display:block;font-size:11.5px;white-space:nowrap}
+.msx .v-ml .g{display:block;font-size:11px;color:#fde047;font-weight:900}.msx .v-ml small{display:block;font-size:9px;color:#86efac;font-weight:800}
+.msx .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788}
+.msx .v-sayrow{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx .v-sayrow .fc{width:34px;height:34px;border-color:#f9a8d4}
+.msx .v-sayrow .bub{flex:1;min-width:0;font-size:11.5px;padding:5px 9px;line-height:1.35;border-radius:3px 12px 12px 12px}.msx .v-sayrow .bub em{font-style:normal;color:#be185d}
+.msx .v-bagb{position:absolute;left:7px;bottom:7px;width:46px;height:46px;border-radius:14px;background:#0f0d24e0;border:1.5px solid #fde047;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;line-height:1.05}
+.msx .v-bagb small{font-size:8.5px;font-weight:900;white-space:nowrap}
+.msx .v-bagb i{position:absolute;right:-5px;top:-6px;background:#ef4444;border-radius:99px;font-style:normal;font-size:9.5px;font-weight:900;min-width:16px;text-align:center;line-height:16px}
+.msx .v-bagb.r{left:auto;right:7px;border-color:#64748b}
+.msx .v-scene.home{--mb:20%}.msx .v-scene.home .v-side{bottom:60px}
+.msx.s320 .v-scene.home{--mb:24%}.msx.s320 .v-bagb{width:38px;height:38px;font-size:16px;border-radius:11px}.msx.s320 .v-bagb small{font-size:7.5px}
+.msx.s320 .v-scene.home .v-side{bottom:50px}.msx.s320 .v-sayrow .fc{width:28px;height:28px}.msx.s320 .v-sayrow .bub{font-size:10px;padding:3px 7px}
+.msx .v-stg{display:flex;align-items:stretch;gap:4px;margin-top:6px}
+.msx .v-stg div{flex:1;min-width:0;background:#1e1a36;border:1px solid #fb923c;border-radius:11px;padding:4px 4px;text-align:center;font-size:10.5px;font-weight:900;white-space:nowrap;line-height:1.35}
+.msx .v-stg div small{display:block;font-size:8.5px;color:#fdba74}.msx .v-stg i{align-self:center;font-style:normal;color:#94a3b8;font-size:10px}
+.msx .v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.msx .v-stg div.last small{color:#fde047}
+.msx .v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.msx .v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
+.msx .v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.msx .v-pick2 b{margin-left:auto;color:#fde047}
+.msx .v-tk{display:flex;align-items:center;gap:5px}
+.msx .v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.msx .v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
+.msx .v-tk span b{color:#86efac}.msx .v-tk span.sel{border-color:#fde047;background:#3b2f0b}.msx .v-tk span.sel b{color:#fde047}.msx .v-tk span.got{opacity:.45}.msx .v-tk span.got b{color:#94a3b8}
+.msx .v-bagw{position:absolute;left:8px;right:8px;top:8px;bottom:8px;background:#151130f5;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-evenly;box-shadow:0 0 18px #fde04755}
+.msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:9.5px;color:#fca5a5;font-weight:800}
+.msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
+.msx .v-bagw .v-item{margin-top:0}
+.msx .v-trs{gap:4px;margin-top:8px;align-items:start}
+.msx .v-tr{padding-top:0}
+.msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
+.msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:9px;font-weight:800;color:#94a3b8;line-height:1.3}
+.msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
+.msx .v-tr.tag .nm{color:#fde047}
+.msx .v-tr.sel .o{transform:scale(1.1)}
+.msx .v-tr.sel .nm{color:#fff}
+.msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.msx .v-lvx b{color:#7dd3fc}.msx .v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
+.msx .v-lvx i u{position:absolute;left:0;top:0;bottom:0;background:#38bdf8}.msx .v-lvx i u.ad{background:#bae6fd}
+.msx .v-lvx span{color:#cbd5e1}.msx .v-lvx em{font-style:normal;color:#fde047}
+.msx .v-lvup{background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:10px;padding:4px 10px;margin-bottom:5px;font-size:13px;font-weight:900;line-height:1.35;box-shadow:0 0 12px #fde047}
+.msx .v-lvup small{display:block;font-size:9.5px;font-weight:800}
+.msx .v-p.main small{font-size:10px;margin-top:2px}
+.msx .v-cup.won .tx small{color:#fde047}
+.msx .v-ft span.off,.msx .v-ft button.off{opacity:.45}
+.msx .v-rm{display:grid;grid-template-columns:1.25fr 1fr;gap:6px;margin-top:7px}
+.msx .v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
+.msx .v-rm div small{display:block;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:2px}
+.msx .v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.msx .v-rm div.re small{color:#fff}
+@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:9px}.msx .v-lvx{font-size:8.5px}}
+.msx .v-hg{display:inline-block;vertical-align:middle;flex:none}
+.msx .v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
+.msx .v-bsel .e{font-size:34px;line-height:1;flex:none}.msx .v-bsel b{display:block;font-size:13.5px}
+.msx .v-bsel small{display:block;font-size:10px;font-weight:700;color:#e2e8f0;line-height:1.4}.msx .v-bsel small.lim{color:#f9a8d4;font-weight:900}
+.msx .v-bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.msx .v-bgrid div,.msx .v-bgrid button{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:12px;padding:6px 2px 4px;text-align:center;min-width:0}
+.msx .v-bgrid .e{display:block;font-size:28px;line-height:34px;height:34px}
+.msx .v-bgrid i{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
+.msx .v-bgrid small{display:block;font-size:8.5px;font-weight:800;line-height:1.25;min-height:22px;margin-top:2px}
+.msx .v-bgrid div.sel,.msx .v-bgrid button.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
+.msx .v-bgrid div.no,.msx .v-bgrid button.no{opacity:.6}
+.msx .v-bnote{font-size:10px;font-weight:800;line-height:1.7}.msx .v-bnote .dim2{color:#94a3b8;font-size:9px}
+.msx .v-rm3{display:grid;gap:5px;margin-top:7px}
+.msx .v-rm3>div{display:flex;align-items:center;gap:8px;background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left}
+.msx .v-rm3 small{display:block;font-size:9px;font-weight:800;color:#e2e8f0}
+.msx .v-rm3 .re{background:linear-gradient(160deg,#f59e0b,#b45309);border-color:#fde68a;box-shadow:0 0 10px #f59e0b88}
+.msx .v-rm3 .nj{background:linear-gradient(120deg,#be185d,#7c3aed 55%,#2563eb);border-color:#fbcfe8;box-shadow:0 0 10px #a78bfa88}
+.msx .v-rm3 .gv{display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}.msx .v-rm3 .gv small{color:#94a3b8;display:inline;margin-left:6px}
+.msx .v-icw{display:inline-block;width:30px;height:30px;flex:none;vertical-align:middle}.msx .v-icw svg{display:block}
+.msx .v-item .v-icw{width:30px;height:30px}.msx .v-bag .v-icw{width:30px;height:30px}
+.msx .v-bgrid .v-icw{width:34px;height:34px;display:block;margin:0 auto}.msx .v-bsel .v-icw{width:40px;height:40px}
+.msx .v-igrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.msx .v-igrid div,.msx .v-igrid button{position:relative;background:#0f172a;border:1.5px solid #475569;border-radius:11px;padding:5px 1px 3px;text-align:center;min-width:0}
+.msx .v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
+.msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;font-weight:900;color:#fde047}
+.msx .v-igrid small{display:block;font-size:8px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
+.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
+.msx .v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
+.msx .v-ileg{display:flex;gap:10px;font-size:9px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
+.msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
+.msx .v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.msx .v-sum .v-ics .v-icw{width:20px;height:20px}
+.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:9px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
+.msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
+/* ---- 足したもの(ゲームの中で要った分) ---- */
+.msx-wrap{position:fixed;inset:0;z-index:9400;background:#0b0920;display:flex;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.msx.land{max-width:none}
+.msx img{display:block}
+.msx button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;-webkit-appearance:none;appearance:none}
+.msx button:active{transform:scale(.97)}
+.msx button[disabled]{opacity:.45;cursor:default}
+.msx .v-ft span,.msx .v-ft button{flex:1;text-align:center}
+.msx .v-ft button{display:block;border-radius:99px;padding:8px 6px;font-size:12px;font-weight:900;background:#2b3348;white-space:nowrap}
+.msx .v-ft button.go{background:linear-gradient(90deg,#f472b6,#fb923c);flex:2.2;font-size:13.5px;box-shadow:0 2px 0 #9d174d}
+.msx .v-ft button.on{background:#fde047;color:#1e1b4b}
+.msx-scroll{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.msx-ov{position:absolute;inset:0;z-index:40;background:#0b0920cc;display:flex;align-items:center;justify-content:center;padding:14px}
+.msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
+.msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
+.msx-row{display:flex;align-items:center;gap:6px}
+.msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
+.msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
+.msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
+.msx-note{font-size:10px;color:#cbd5e1;font-weight:700;line-height:1.5}
+.msx-soon{display:inline-block;margin-left:4px;padding:0 6px;border-radius:99px;background:#475569;color:#e2e8f0;font-size:9px;font-weight:900;vertical-align:middle}
+.msx-dbg{font-size:9px;color:#a3e635;font-weight:900}
+.msx .v-pf img{object-fit:contain;background:#0f172a}
+.msx .v-scene .mon{animation:msx-breathe 3.2s ease-in-out infinite}
+.msx .v-scene.home .mon.low{filter:drop-shadow(0 8px 5px #0009) saturate(.8);transform:translateX(-50%) rotate(4deg)}
+.msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
+.msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
+.msx-fade{animation:msx-fadein .18s ease-out}
+.msx-pop{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes msx-breathe{0%,100%{scale:1}50%{scale:1.025}}
+@keyframes msx-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+@keyframes msx-fadein{from{opacity:0}to{opacity:1}}
+@keyframes msx-popin{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.msx *{animation:none!important}}
+`;
+const MSX_KEYS = Object.freeze({
+  run: 'mh_monsuc_run_v1',
+  box: 'mh_monsuc_box_v1',
+  meta: 'mh_monsuc_meta_v1'
+});
+const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
+const MSX_ISSA_ART = 'images/success/issa-hakase.png';
+const MSX_SCENARIOS = Object.freeze([{
+  aid: 'mua',
+  no: 1,
+  title: 'いっしょに、てっぺんへ!',
+  lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ',
+  tag: 'やさしい',
+  perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1',
+  eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束']
+}, {
+  aid: 'atsu',
+  no: 2,
+  title: '仕上げて、勝ちに行く',
+  lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語',
+  tag: 'ふつう',
+  perk: '訓練の組み合わせが あつ流(ちから → ライフ・回避 など)',
+  eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束']
+}]);
+const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
+const MSX_STAT_ICON = Object.freeze({
+  life: '❤️',
+  pow: '💪',
+  wise: '🧠',
+  hit: '🎯',
+  eva: '💨',
+  tough: '🛡️'
+});
+const MSX_STAT_NAME = Object.freeze({
+  life: 'ライフ',
+  pow: 'ちから',
+  wise: 'かしこさ',
+  hit: '命中',
+  eva: '回避',
+  tough: '丈夫さ'
+});
+const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
+const MSX_BOX_CAP0 = 30;
+let msxDebugOpened = false;
+const msxReleased = () => typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true;
+const msxOn = () => msxReleased() || msxDebugOpened;
+const msxLoadScript = (src, globalName) => new Promise(res => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    res(null);
+    return;
+  }
+  if (window[globalName]) {
+    res(window[globalName]);
+    return;
+  }
+  const s = document.createElement('script');
+  s.src = src;
+  s.onload = () => res(window[globalName] || null);
+  s.onerror = () => res(null);
+  document.head.appendChild(s);
+});
+const msxLoadConstScript = (src, check) => new Promise(res => {
+  if (check()) {
+    res(true);
+    return;
+  }
+  if (typeof document === 'undefined') {
+    res(false);
+    return;
+  }
+  const s = document.createElement('script');
+  s.src = src;
+  s.onload = () => res(check());
+  s.onerror = () => res(false);
+  document.head.appendChild(s);
+});
+const msxGlobalConst = name => {
+  try {
+    return new Function(`return typeof ${name} !== 'undefined' ? ${name} : null;`)();
+  } catch (e) {
+    return null;
+  }
+};
+const msxRegularsOk = () => !!msxGlobalConst('MONSUC_REGULARS') && !!msxGlobalConst('MONSUC_REGULAR_CUPS');
+let msxLoading = null;
+let msxSuc = null;
+const msxLoad = () => {
+  if (msxSuc) return Promise.resolve(msxSuc);
+  if (!msxLoading) {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
+      if (!core || typeof core.create !== 'function') {
+        msxLoading = null;
+        return null;
+      }
+      if (typeof MASMON_CALC === 'undefined' || typeof AMG_APT === 'undefined' || typeof AMG_INIT === 'undefined') {
+        msxLoading = null;
+        return null;
+      }
+      try {
+        const SUC = core.create({
+          calc: MASMON_CALC,
+          apt: AMG_APT,
+          init: AMG_INIT,
+          techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
+          types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
+          monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
+          regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null,
+          cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null
+        });
+        msxSuc = {
+          core,
+          SUC,
+          script: script || null
+        };
+        return msxSuc;
+      } catch (e) {
+        msxLoading = null;
+        return null;
+      }
+    });
+  }
+  return msxLoading;
+};
+const msxIsObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const msxNum = (v, d = 0) => Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d;
+const msxStr = (v, max = 40, d = '') => typeof v === 'string' ? v.slice(0, max) : d;
+const msxColors = v => Array.isArray(v) ? v.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : [];
+const msxNormRun = (raw, SUC) => {
+  if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
+  let s = raw.s;
+  if (SUC && typeof SUC.restore === 'function') {
+    try {
+      s = SUC.restore(s);
+    } catch (e) {
+      s = null;
+    }
+    if (!s) return null;
+  } else {
+    const okStats = msxIsObj(s.stats) && MSX_STATS.every(k => Number.isFinite(s.stats[k]));
+    const okTeam = Array.isArray(s.team) && s.team.length === 6 && Array.isArray(s.bond) && s.bond.length === 6;
+    if (s.v !== 1 || !Number.isFinite(s.turn) || s.turn < 1 || !okStats || !okTeam || !Number.isFinite(s.hp) || !Number.isFinite(s.hpMax)) return null;
+    if (SUC && Array.isArray(SUC.speciesList) && !SUC.speciesList.includes(s.species)) return null;
+  }
+  return {
+    v: 1,
+    id: msxStr(raw.id, 64, s.id),
+    s,
+    nick: msxStr(raw.nick, 8) || '',
+    colors: msxColors(raw.colors),
+    from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? {
+      box: raw.from.box.slice(0, 64)
+    } : {
+      base: msxStr(raw.from && raw.from.base, 24, s.species)
+    },
+    items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
+    used: msxNum(raw.used, 0),
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over'].includes(raw.phase) ? raw.phase : 'main',
+    out: msxIsObj(raw.out) ? raw.out : null,
+    log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
+    startAt: msxNum(raw.startAt, 0)
+  };
+};
+const msxNormBoxMon = m => {
+  if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
+  const st = {};
+  MSX_STATS.forEach(k => {
+    st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0))));
+  });
+  return {
+    id: m.id.slice(0, 64),
+    species: m.species.slice(0, 24),
+    nick: msxStr(m.nick, 8),
+    colors: msxColors(m.colors),
+    st,
+    loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))),
+    pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))),
+    lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
+    rank: msxStr(m.rank, 4, ''),
+    score: msxNum(m.score, 0),
+    raised: m.raised !== false,
+    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [],
+    masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
+    coach: msxStr(m.coach, 16),
+    endAt: msxNum(m.endAt, 0)
+  };
+};
+const msxNormBox = raw => {
+  const o = msxIsObj(raw) ? raw : {};
+  const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
+  return {
+    v: 1,
+    cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))),
+    mons,
+    memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : []
+  };
+};
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'hourglass', 'hourglass2', 'ticket']);
+const msxNormMeta = raw => {
+  const o = msxIsObj(raw) ? raw : {};
+  const items = {};
+  const src = msxIsObj(o.items) ? o.items : {};
+  MSX_ITEM_IDS.forEach(k => {
+    const n = Math.floor(msxNum(src[k], 0));
+    if (n > 0) items[k] = Math.min(999, n);
+  });
+  const team = (Array.isArray(o.team) ? o.team : []).slice(0, 6).map(t => msxIsObj(t) && typeof t.box === 'string' ? {
+    box: t.box.slice(0, 64)
+  } : msxIsObj(t) && typeof t.base === 'string' ? {
+    base: t.base.slice(0, 24)
+  } : null);
+  return {
+    v: 1,
+    best: msxIsObj(o.best) ? o.best : {},
+    titles: Array.isArray(o.titles) ? o.titles.filter(x => typeof x === 'string').slice(0, 200) : [],
+    seen: msxIsObj(o.seen) ? o.seen : {},
+    team,
+    lend: typeof o.lend === 'string' ? o.lend.slice(0, 64) : null,
+    gift: msxIsObj(o.gift) ? {
+      day: msxStr(o.gift.day, 12),
+      n: msxNum(o.gift.n, 0)
+    } : {
+      day: '',
+      n: 0
+    },
+    items,
+    runs: Math.max(0, Math.floor(msxNum(o.runs, 0))),
+    picked: msxIsObj(o.picked) ? o.picked : {},
+    wonCups: Array.isArray(o.wonCups) ? o.wonCups.filter(x => typeof x === 'string').slice(0, 500) : []
+  };
+};
+const msxReadAll = async SUC => {
+  const [run, box, meta, unlocked] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null)]);
+  const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
+  const un = (Array.isArray(unlocked) ? unlocked : []).filter(id => typeof id === 'string' && all[id] && list.includes(id));
+  return {
+    run: msxNormRun(run, SUC),
+    box: msxNormBox(box),
+    meta: msxNormMeta(meta),
+    unlocked: un.length ? Array.from(new Set(un)) : list.filter(id => all[id]).slice(0, 1)
+  };
+};
+const msxSaveRun = run => storeSet(MSX_KEYS.run, run);
+const msxSaveMeta = meta => storeSet(MSX_KEYS.meta, meta);
+const msxMon = id => typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[id] || null;
+const msxMonName = id => {
+  const m = msxMon(id);
+  return m ? m.name : id;
+};
+const msxMonImg = id => {
+  const m = msxMon(id);
+  return m ? m.imgUrl : '';
+};
+const msxMonThumb = id => {
+  const m = msxMon(id);
+  return m ? m.faceIconUrl || m.iconUrl || m.imgUrl : '';
+};
+const msxWho = aid => typeof assistantById === 'function' ? assistantById(aid) : null;
+const msxFace = (aid, ex = 'normal') => {
+  const w = msxWho(aid);
+  return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : '';
+};
+const msxBody = (aid, ex = 'happy') => {
+  const w = msxWho(aid);
+  return w && typeof assistantFullImage === 'function' ? assistantFullImage(w, ex) || msxFace(aid, ex) : msxFace(aid, ex);
+};
+const msxAidName = aid => {
+  const w = msxWho(aid);
+  return w ? w.name : aid;
+};
+const msxFmt = n => Math.round(msxNum(n, 0)).toLocaleString('ja-JP');
+const msxCalendar = turn => {
+  const k = 7 + Math.max(0, turn - 1);
+  const month = k % 12 + 1;
+  const year = 1 + Math.floor(k / 12);
+  const season = month >= 3 && month <= 5 ? 'spring' : month >= 6 && month <= 8 ? 'summer' : month >= 9 && month <= 11 ? 'autumn' : 'winter';
+  return {
+    year,
+    month,
+    season
+  };
+};
+const MSX_SEASON = Object.freeze({
+  spring: '🌸 春',
+  summer: '🌻 夏',
+  autumn: '🍁 秋',
+  winter: '⛄ 冬'
+});
+const msxSceneBg = () => {
+  let h = 12;
+  try {
+    h = new Date().getHours();
+  } catch (e) {}
+  if (h >= 5 && h < 16) return {
+    bg: 'images/story-bg/monhero_plaza.jpg',
+    time: '昼'
+  };
+  if (h >= 16 && h < 19) return {
+    bg: 'images/story-bg/monhero_plaza_evening.jpg',
+    time: '夕方'
+  };
+  return {
+    bg: 'images/story-bg/monhero_night.jpg',
+    time: '夜'
+  };
+};
+const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
+const msxRankCls = r => `rk r${String(r || 'G').replace(/\+/g, '')}`;
+const msxPickLine = (ctx, scene, opt = {}) => {
+  const sc = msxSuc && msxSuc.script;
+  if (!sc) return null;
+  const aid = opt.who || ctx.aid;
+  const pools = [];
+  if (opt.bondLv != null && opt.bondLv <= 2 && Array.isArray(sc.turnBond12)) pools.push(sc.turnBond12);
+  pools.push(sc.turn, sc.issa, sc.mon, sc.cheer, sc.random, sc.scenario);
+  let rows = [];
+  for (const pool of pools) {
+    if (!Array.isArray(pool)) continue;
+    rows = pool.filter(r => r && typeof r.id === 'string' && r.id.slice(0, r.id.lastIndexOf('.')) === scene && (aid === '*' || r.who === aid));
+    if (rows.length) break;
+  }
+  if (!rows.length) return null;
+  const rng = msxSuc.core.rngOf(ctx.id || 'run', ctx.turn || 0, 'line', scene, opt.salt || '');
+  const r = rows[Math.floor(rng() * rows.length)];
+  return {
+    ...r,
+    t: msxFill(r.t, ctx)
+  };
+};
+const msxFill = (t, ctx) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => {
+  if (k === 'name') return ctx.callName || 'きみ';
+  if (k === 'mon') return ctx.mon || 'モンスター';
+  if (k === 'cheer') return ctx.cheer || '編成のモンスター';
+  if (k === 'cheer2') return ctx.cheer2 || '編成のモンスター';
+  if (k === 'stat') return ctx.stat || '能力';
+  if (k === 'train') return ctx.train || '訓練';
+  if (k === 'tech') return ctx.tech || '技';
+  if (k === 'cup') return ctx.cup || '大会';
+  if (k === 'cry') {
+    const sc = msxSuc && msxSuc.script;
+    const c = sc && Array.isArray(sc.mon) ? sc.mon.find(r => r.id === `mon.cry.${ctx.species}`) : null;
+    return c ? c.t : '…';
+  }
+  return '';
+});
+const msxStartScene = s => {
+  if (!s) return 'turn.start.normal';
+  const r = s.hpMax > 0 ? s.hp / s.hpMax : 0;
+  if (r < 0.25) return 'turn.start.worn';
+  if (s.stress >= 60) return 'turn.start.stress';
+  if (r < 0.45) return 'turn.start.tired';
+  if (r >= 0.85 && s.stress < 20) return 'turn.start.great';
+  if (r >= 0.65) return 'turn.start.good';
+  return 'turn.start.normal';
+};
+function MonheroSuccessDebugEntry({
+  callNameOf,
+  bondLvOf
+}) {
+  const [open, setOpen] = useState(false);
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-debug-monhero-success": true,
+    onClick: () => {
+      msxDebugOpened = true;
+      setOpen(true);
+    },
+    className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/60 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+  }, "🌱 モンヒロサクセス(試す)", React.createElement("small", {
+    className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
+  }, "公開前の育成の画面(回2)。大会・修行・引退・合体の中身はまだ準備中。保存は新しいキー(mh_monsuc_*)だけ")), open && React.createElement(MonheroSuccessScreen, {
+    onClose: () => setOpen(false),
+    callNameOf: callNameOf,
+    bondLvOf: bondLvOf,
+    debug: true
+  }));
+}
+const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
+const MSX_ITEMS = Object.freeze([{
+  id: 'guide',
+  name: '博士の導き書',
+  desc: 'イッサ博士の大事な書類。1度、イッサ博士が現れる',
+  when: 'before',
+  e: '📘'
+}, {
+  id: 'loupe',
+  name: '博士のルーペ',
+  desc: 'イッサ博士のお気に入り。イッサ博士の実験が成功する',
+  when: 'both',
+  e: '🔍'
+}, {
+  id: 'band',
+  name: '出会いのミサンガ',
+  desc: '交流を増やすミサンガ。ようす「イベントメーカー」が付く',
+  when: 'before',
+  e: '🧶'
+}, {
+  id: 'mag',
+  name: '週刊!トレーニング',
+  desc: 'ハウツー雑誌。ようす「トレーニング得意」が付く',
+  when: 'before',
+  e: '📰'
+}, {
+  id: 'hachi',
+  name: '修行のハチマキ',
+  desc: '気合いが入るハチマキ。ようす「修行得意」が付く',
+  when: 'before',
+  e: '🎗️'
+}, {
+  id: 'omamori',
+  name: '縁結びのお守り',
+  desc: '良縁に恵まれるお守り。ようす「スターの素質○」が付く',
+  when: 'before',
+  e: '🧧'
+}, {
+  id: 'dango',
+  name: 'モモのキビダンゴ',
+  desc: '食べるとスタミナがつく。体力の最大値が はじめから上がる',
+  when: 'before',
+  e: '🍡'
+}, {
+  id: 'grass',
+  name: 'うけつぎ草',
+  desc: '伝授でいい結果が出る草。ようす「うけつぐ魂」が付く',
+  when: 'before',
+  e: '🌿'
+}, {
+  id: 'juice',
+  name: 'ガロエ印の野菜ジュース',
+  desc: '体力を完全に回復する',
+  when: 'both',
+  e: '🥤'
+}, {
+  id: 'powder',
+  name: '悪様散',
+  desc: '悪いようすを治して、体力を回復する',
+  when: 'both',
+  e: '💊'
+}, {
+  id: 'license',
+  name: 'ブリーダーライセンス',
+  desc: '忠誠度が一定数 上がる',
+  when: 'both',
+  e: '🪪'
+}, {
+  id: 'pack',
+  name: 'オイリーパック',
+  desc: 'オイル2個と薬草の詰め合わせ',
+  when: 'both',
+  e: '🧴'
+}]);
+const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map(t => [t.id, t])));
+const MSX_NAME_MAX = 8;
+const msxNameGuard = raw => {
+  const t = String(raw == null ? '' : raw).normalize('NFKC').trim();
+  if (!t || /\s|[<>{}\[\]\\`"]/.test(t) || t.length > MSX_NAME_MAX) return null;
+  if (typeof ASSISTANT_CALLNAME_BANNED_RE !== 'undefined' && ASSISTANT_CALLNAME_BANNED_RE.test(t)) return null;
+  if (typeof ASSISTANT_CALLNAME_PERSONAL_RE !== 'undefined' && ASSISTANT_CALLNAME_PERSONAL_RE.test(t)) return null;
+  return t;
+};
+const msxAptOf = sp => {
+  const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC';
+  return a.split('');
+};
+const msxTeamSrc = (slot, box) => {
+  if (slot && slot.box) {
+    const m = box.mons.find(x => x.id === slot.box);
+    if (m) return {
+      kind: 'raised',
+      species: m.species,
+      name: m.nick || msxMonName(m.species),
+      stats: m.st,
+      loy: m.loy,
+      pop: m.pop,
+      lv: m.lv,
+      masteries: m.masteries,
+      assists: m.assists,
+      boxId: m.id
+    };
+  }
+  const sp = slot && slot.base ? slot.base : 'Mocchi';
+  return {
+    kind: 'base',
+    species: sp,
+    name: msxMonName(sp)
+  };
+};
+function MsxSteps({
+  n
+}) {
+  return React.createElement("div", {
+    className: "v-steps"
+  }, MSX_STEP_NAMES.map((s, i) => React.createElement(React.Fragment, {
+    key: s
+  }, i ? React.createElement("u", null) : null, React.createElement("span", {
+    className: i < n ? 'ok' : i === n ? 'on' : ''
+  }, i < n ? '✓' : i === n ? `${i + 1} ${s}` : i + 1))));
+}
+function MsxHd({
+  back,
+  onBack,
+  title = '🌱 モンヒロサクセス',
+  sub,
+  right
+}) {
+  return React.createElement("div", {
+    className: "v-hd"
+  }, React.createElement("button", {
+    type: "button",
+    className: "bk",
+    onClick: onBack
+  }, "← ", back), React.createElement("span", {
+    className: "ti"
+  }, title, sub ? React.createElement("small", null, sub) : null), right != null && React.createElement("span", {
+    className: "rt"
+  }, right));
+}
+function MsxStart({
+  data,
+  SUC,
+  onCancel,
+  onStart,
+  bondLvOf,
+  callNameOf
+}) {
+  const {
+    box,
+    meta,
+    unlocked
+  } = data;
+  const unraised = box.mons.filter(m => !m.raised);
+  const raised = box.mons.filter(m => m.raised);
+  const [step, setStep] = useState(0);
+  const [tab, setTab] = useState('base');
+  const [pick, setPick] = useState(() => ({
+    base: unlocked[0] || 'Mocchi'
+  }));
+  const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
+  const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter(t => t && t.box && raised.some(m => m.id === t.box)).map(t => t.box).slice(0, 5));
+  const team = useMemo(() => {
+    const list = teamBox.map(id => ({
+      box: id
+    }));
+    const bases = [species, ...unlocked.filter(id => id !== species)];
+    let bi = 0;
+    while (list.length < 6) {
+      list.push({
+        base: bases[bi % bases.length] || species
+      });
+      bi += 1;
+    }
+    return list;
+  }, [teamBox, species, unlocked]);
+  const members = useMemo(() => team.map(t => {
+    const src = msxTeamSrc(t, box);
+    const m = SUC.memberOf(src);
+    return {
+      ...m,
+      name: src.name,
+      boxId: src.boxId || null
+    };
+  }), [team, box, SUC]);
+  const [aid, setAid] = useState('mua');
+  const [items, setItems] = useState([]);
+  const [nick, setNick] = useState('');
+  const [colors, setColors] = useState([]);
+  const [nameErr, setNameErr] = useState('');
+  const aidLv = Math.max(1, Math.min(10, Number(bondLvOf && bondLvOf(aid)) || 1));
+  const sc = MSX_SCENARIOS.find(x => x.aid === aid) || MSX_SCENARIOS[0];
+  const next = () => setStep(n => Math.min(5, n + 1));
+  const back = () => step === 0 ? onCancel() : setStep(n => n - 1);
+  const start = () => {
+    const name = msxNameGuard(nick || msxMonName(species).slice(0, MSX_NAME_MAX));
+    if (!name) {
+      setStep(4);
+      setNameErr('その名前は使えません。ほかの名前にしてね');
+      return;
+    }
+    onStart({
+      species,
+      from: pick.box ? {
+        box: pick.box
+      } : {
+        base: species
+      },
+      team: team.map(t => msxTeamSrc(t, box)),
+      teamSlots: team,
+      aid,
+      aidBondLv: aidLv,
+      items,
+      nick: name,
+      colors
+    });
+  };
+  const apt = msxAptOf(species);
+  const heat = MSX_STATS.map(k => members.filter(m => Array.isArray(m.top) && m.top.includes(k)).length);
+  const scene = (style, inner) => React.createElement("div", {
+    className: "v-scene",
+    style: {
+      flex: '1 1 0'
+    }
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg().bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      bottom: `calc(${style.mb} - 5px)`
+    }
+  }), colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+    className: "mon",
+    style: {
+      bottom: style.mb,
+      height: style.h
+    }
+  }, React.createElement(DyedMonsterImage, {
+    baseId: species,
+    src: msxMonImg(species),
+    masuColors: colors,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  })) : React.createElement("img", {
+    className: "mon",
+    src: msxMonImg(species),
+    alt: "",
+    style: {
+      bottom: style.mb,
+      height: style.h
+    }
+  }), inner);
+  let body = null;
+  let go = null;
+  if (step === 0) {
+    const list = tab === 'base' ? unlocked.map(id => ({
+      key: id,
+      sp: id,
+      on: !pick.box && pick.base === id,
+      pick: {
+        base: id
+      }
+    })) : unraised.map(m => ({
+      key: m.id,
+      sp: m.species,
+      on: pick.box === m.id,
+      pick: {
+        box: m.id
+      }
+    }));
+    const picked = meta.picked && meta.picked[species];
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-h"
+    }, "だれを育てる?", React.createElement("small", null, "ベースモンか、合体で生まれた未育成のモンスターから1体")), React.createElement("div", {
+      className: "v-tabs"
+    }, React.createElement("button", {
+      type: "button",
+      className: tab === 'base' ? 'on' : '',
+      onClick: () => setTab('base')
+    }, "🌱 ベースモン ", unlocked.length), React.createElement("button", {
+      type: "button",
+      className: tab === 'fuse' ? 'on' : '',
+      onClick: () => setTab('fuse')
+    }, "🧬 合体で生まれたモンスター ", unraised.length)), React.createElement("div", {
+      className: "v-grid6",
+      style: {
+        maxHeight: 148,
+        overflowY: 'auto'
+      }
+    }, list.length ? list.map(x => React.createElement("button", {
+      type: "button",
+      key: x.key,
+      className: x.on ? 'on' : '',
+      onClick: () => setPick(x.pick)
+    }, React.createElement("img", {
+      src: msxMonThumb(x.sp),
+      alt: msxMonName(x.sp)
+    }))) : React.createElement("span", {
+      className: "msx-note",
+      style: {
+        gridColumn: '1 / -1'
+      }
+    }, "まだいません(合体はこれから作ります)")), scene({
+      mb: '12%',
+      h: '62%'
+    }, React.createElement("div", {
+      className: "v-chips"
+    }, React.createElement("span", {
+      className: "v-chip ylw"
+    }, msxMonName(species)), picked ? React.createElement("span", {
+      className: "v-chip"
+    }, "えらんだ回数 ", picked, "回") : null)), React.createElement("div", {
+      className: "v-card sel"
+    }, React.createElement("div", {
+      className: "h1"
+    }, msxMonName(species)), React.createElement("div", {
+      className: "v-kv"
+    }, React.createElement("b", null, "成長の型"), React.createElement("span", null, "はじめるとくじで決まる ", React.createElement("span", {
+      className: "yel"
+    }, "(早熟〜晩成)"))), React.createElement("div", {
+      className: "sub",
+      style: {
+        marginTop: 6,
+        color: '#f9a8d4',
+        fontWeight: 900
+      }
+    }, "伸びやすさ(素質)"), React.createElement("div", {
+      className: "v-apt"
+    }, MSX_STATS.map((k, i) => React.createElement("div", {
+      key: k,
+      className: apt[i] > 'B' ? 'lo' : ''
+    }, MSX_STAT_NAME[k], React.createElement("b", null, apt[i]))))));
+    go = 'このモンスターにする ▶';
+  } else if (step === 1) {
+    const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-h"
+    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる")), React.createElement("div", {
+      className: "v-slots"
+    }, members.map((m, i) => React.createElement("div", {
+      key: i,
+      className: `v-sl${m.kind === 'base' ? ' base' : ''}`
+    }, React.createElement("span", {
+      className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
+    }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: ""
+    })), m.name, " ", m.kind !== 'base' && React.createElement("i", {
+      className: msxRankCls(m.rank)
+    }, m.rank), React.createElement("div", {
+      className: "t3"
+    }, m.top.slice(0, 2).map(k => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
+      className: "bs"
+    }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
+      className: "ic"
+    }, m.kind === 'base' ? 'ベースモン' : '')))), React.createElement("div", {
+      className: "v-card"
+    }, React.createElement("div", {
+      className: "sub",
+      style: {
+        color: '#f9a8d4',
+        fontWeight: 900
+      }
+    }, "この編成が集まりやすい訓練"), React.createElement("div", {
+      className: "v-heat"
+    }, MSX_STATS.map((k, i) => React.createElement("div", {
+      key: k,
+      className: heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''
+    }, MSX_STAT_NAME[k], React.createElement("b", null, heat[i], "体"))))), React.createElement("div", {
+      className: "v-card",
+      style: {
+        flex: '1 1 0',
+        minHeight: 0,
+        overflowY: 'auto'
+      }
+    }, React.createElement("div", {
+      className: "sub",
+      style: {
+        color: '#f9a8d4',
+        fontWeight: 900
+      }
+    }, "保存枠から選ぶ(", teamBox.length, "/5)"), raised.length ? raised.map(m => React.createElement("button", {
+      type: "button",
+      key: m.id,
+      className: `v-item${teamBox.includes(m.id) ? ' sel' : ''}`,
+      style: {
+        padding: '4px 8px',
+        width: '100%'
+      },
+      onClick: () => toggleBox(m.id)
+    }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: "",
+      style: {
+        width: 30,
+        height: 30,
+        borderRadius: 9,
+        objectFit: 'contain',
+        background: '#0f172a'
+      }
+    }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
+      className: msxRankCls(m.rank)
+    }, m.rank) : null, React.createElement("small", null, msxMonName(m.species))), React.createElement("span", {
+      className: "pr"
+    }, teamBox.includes(m.id) ? '✅ 入れている' : '入れる'))) : React.createElement("div", {
+      className: "msx-note",
+      style: {
+        marginTop: 4
+      }
+    }, "保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
+      className: "sub",
+      style: {
+        color: '#7dd3fc',
+        fontWeight: 900,
+        marginTop: 8
+      }
+    }, "🤝 フレンドから借りる(1体)", React.createElement("span", {
+      className: "msx-soon"
+    }, "準備中"))));
+    go = 'この編成でいく ▶';
+  } else if (step === 2) {
+    const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-h"
+    }, "だれの物語で育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・訓練の組み合わせが変わる")), React.createElement("div", {
+      className: "v-faces"
+    }, MSX_SCENARIOS.map(x => React.createElement("button", {
+      type: "button",
+      key: x.aid,
+      className: aid === x.aid ? 'on' : '',
+      onClick: () => setAid(x.aid)
+    }, React.createElement("img", {
+      src: msxFace(x.aid),
+      alt: msxAidName(x.aid)
+    }))), MSX_SOON_AIDS.map(a => React.createElement("span", {
+      key: a,
+      className: "lk"
+    }, React.createElement("img", {
+      src: msxFace(a),
+      alt: ""
+    })))), React.createElement("div", {
+      className: "v-card sel",
+      style: {
+        flex: '1 1 0',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        overflowY: 'auto'
+      }
+    }, React.createElement("div", {
+      className: "v-sc"
+    }, React.createElement("div", {
+      className: "pic"
+    }, React.createElement("img", {
+      src: msxBody(aid, 'happy'),
+      alt: ""
+    })), React.createElement("div", {
+      className: "tx"
+    }, React.createElement("h4", null, React.createElement("small", null, "シナリオ ", sc.no, "・", msxAidName(aid), "編"), sc.title), React.createElement("div", {
+      style: {
+        marginTop: 4
+      }
+    }, sc.lead), React.createElement("div", {
+      style: {
+        marginTop: 5
+      }
+    }, React.createElement("span", {
+      className: "chip on"
+    }, sc.tag), " ", React.createElement("span", {
+      className: "chip p"
+    }, "仲良し度 Lv", aidLv)))), React.createElement("div", {
+      className: "v-kv"
+    }, React.createElement("b", null, "助手の効き"), React.createElement("span", null, sc.perk)), combo && React.createElement("div", {
+      className: "v-kv"
+    }, React.createElement("b", null, "訓練の組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
+      className: "v-kv"
+    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(100, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 8)), "(仲良し度 Lv", aidLv, ")。助手も訓練に来て、タッグになる")), React.createElement("div", {
+      className: "v-eps"
+    }, sc.eps.map((t, i) => React.createElement("div", {
+      key: i
+    }, React.createElement("b", null, i + 1, "話"), t)), React.createElement("div", {
+      className: "lk"
+    }, React.createElement("b", null, "4話"), "🔒 ？？？")), React.createElement("div", {
+      className: "row",
+      style: {
+        marginTop: 'auto'
+      }
+    }, React.createElement("img", {
+      className: "fc",
+      src: msxFace(aid, 'wink'),
+      alt: ""
+    }), React.createElement("div", {
+      className: "bub f1"
+    }, "「", aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!', "」"))));
+    go = `${msxAidName(aid)}編ではじめる ▶`;
+  } else if (step === 3) {
+    const has = id => meta.items && meta.items[id] || 0;
+    const toggle = id => setItems(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]);
+    const coreItems = id => !!(SUC.ITEMS && SUC.ITEMS[id]);
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-h"
+    }, "持ちこみ(2つまで)", React.createElement("small", null, "名声で手に入れた物を、育成に持っていける。持っていかなくてもよい")), React.createElement("div", {
+      className: "v-bag"
+    }, [0, 1].map(i => items[i] ? React.createElement("div", {
+      key: i,
+      className: "in"
+    }, React.createElement("span", {
+      style: {
+        fontSize: 24
+      }
+    }, MSX_ITEM_BY_ID[items[i]].e), React.createElement("small", null, MSX_ITEM_BY_ID[items[i]].name)) : React.createElement("div", {
+      key: i
+    }, "＋", React.createElement("small", {
+      style: {
+        color: '#94a3b8'
+      }
+    }, "空き")))), React.createElement("div", {
+      className: "v-igrid"
+    }, MSX_ITEMS.map(t => React.createElement("button", {
+      type: "button",
+      key: t.id,
+      className: `${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`,
+      onClick: () => toggle(t.id),
+      disabled: !has(t.id) && !items.includes(t.id)
+    }, React.createElement("span", {
+      style: {
+        fontSize: 22,
+        lineHeight: 1
+      }
+    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", null, t.name.replace('ガロエ印の', '')), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
+      className: "v-ileg"
+    }, React.createElement("span", null, React.createElement("b", {
+      className: "sw1"
+    }), "はじめる前に効く物"), React.createElement("span", null, React.createElement("b", {
+      className: "sw2"
+    }), "育成中にも使える物(1ターン1個まで)")), React.createElement("div", {
+      className: "msx-scroll"
+    }, items.map(id => React.createElement("div", {
+      key: id,
+      className: "v-item sel"
+    }, React.createElement("span", {
+      style: {
+        fontSize: 22
+      }
+    }, MSX_ITEM_BY_ID[id].e), React.createElement("div", null, MSX_ITEM_BY_ID[id].name, React.createElement("small", null, MSX_ITEM_BY_ID[id].desc)), React.createElement("span", {
+      className: "pr"
+    }, "✅ 持っていく・あと", has(id) - 1))), items.some(id => !coreItems(id)) && React.createElement("div", {
+      className: "msx-note",
+      style: {
+        marginTop: 6
+      }
+    }, "まだ効き目が入っていない物があります(その物は持っていっても数は減りません)")));
+    go = 'これでいく ▶';
+  } else if (step === 4) {
+    const onDye = (idx, colorId) => setColors(cur => {
+      const n = cur.slice();
+      while (n.length <= idx) n.push(null);
+      n[idx] = colorId;
+      return n;
+    });
+    const onCustom = idx => {
+      const p = typeof _parseCustomColorId === 'function' ? _parseCustomColorId(colors[idx]) : null;
+      const h = p ? (p.h + 40) % 360 : 200;
+      if (typeof _encodeCustomColorId === 'function') onDye(idx, _encodeCustomColorId(h, 0.7, 0.85));
+    };
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-h"
+    }, "名前と染色", React.createElement("small", null, "あとからいつでも変えられる")), scene({
+      mb: '14%',
+      h: '72%'
+    }, React.createElement("div", {
+      className: "v-chips"
+    }, React.createElement("span", {
+      className: "v-chip"
+    }, "成長の型: はじめるとくじで決まる"))), React.createElement("label", {
+      className: "v-inp",
+      style: {
+        display: 'flex'
+      }
+    }, React.createElement("input", {
+      type: "text",
+      value: nick,
+      maxLength: MSX_NAME_MAX,
+      placeholder: msxMonName(species).slice(0, MSX_NAME_MAX),
+      onChange: e => {
+        setNick(e.target.value.slice(0, MSX_NAME_MAX));
+        setNameErr('');
+      },
+      style: {
+        flex: 1,
+        minWidth: 0,
+        background: 'transparent',
+        border: 0,
+        outline: 'none',
+        color: '#1e1b4b',
+        font: 'inherit',
+        fontSize: 16
+      }
+    }), React.createElement("small", null, (nick || '').length, " / ", MSX_NAME_MAX, "文字")), nameErr && React.createElement("div", {
+      className: "msx-note",
+      style: {
+        color: '#fca5a5'
+      }
+    }, nameErr), React.createElement("div", {
+      className: "v-card",
+      style: {
+        maxHeight: '34%',
+        overflowY: 'auto'
+      }
+    }, typeof DyeRegionColorControls === 'function' ? React.createElement(DyeRegionColorControls, {
+      baseId: species,
+      colors: colors,
+      onChange: onDye,
+      onCustom: onCustom
+    }) : React.createElement("div", {
+      className: "msx-note"
+    }, "染色はこの端末では使えません")));
+    go = 'これで決める ▶';
+  } else {
+    const startAdd = {};
+    members.forEach(m => {
+      if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v;
+    });
+    const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-h"
+    }, "これで はじめる?", React.createElement("small", null, "全46ターン・1回 約8〜15分。いつでも中断して続きから")), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg().bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "gr",
+      style: {
+        left: '36%',
+        bottom: 'calc(16% - 5px)'
+      }
+    }), colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+      className: "mon",
+      style: {
+        left: '36%',
+        bottom: '16%',
+        height: '62%'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: species,
+      src: msxMonImg(species),
+      masuColors: colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
+      className: "mon",
+      src: msxMonImg(species),
+      alt: "",
+      style: {
+        left: '36%',
+        bottom: '16%',
+        height: '62%'
+      }
+    }), React.createElement("span", {
+      className: "v-nm",
+      style: {
+        left: '36%',
+        bottom: 6
+      }
+    }, name, React.createElement("small", null, msxMonName(species))), React.createElement("img", {
+      src: msxBody(aid, 'happy'),
+      alt: "",
+      style: {
+        position: 'absolute',
+        right: '-4%',
+        bottom: 0,
+        width: '50%',
+        height: '78%',
+        objectFit: 'contain',
+        objectPosition: 'right bottom'
+      }
+    })), React.createElement("button", {
+      type: "button",
+      className: "v-sum",
+      onClick: () => setStep(1)
+    }, React.createElement("span", {
+      className: "k"
+    }, "編成"), members.map((m, i) => React.createElement("span", {
+      key: i,
+      className: `v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
+    }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: ""
+    }))), React.createElement("span", {
+      className: "ed"
+    }, "変える")), React.createElement("button", {
+      type: "button",
+      className: "v-sum",
+      onClick: () => setStep(2)
+    }, React.createElement("span", {
+      className: "k"
+    }, "助手"), React.createElement("span", null, msxAidName(aid), "編「", sc.title, "」"), React.createElement("span", {
+      className: "ed"
+    }, "変える")), React.createElement("button", {
+      type: "button",
+      className: "v-sum",
+      onClick: () => setStep(3)
+    }, React.createElement("span", {
+      className: "k"
+    }, "持ちこみ"), React.createElement("span", null, items.length ? items.map(id => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし'), React.createElement("span", {
+      className: "ed"
+    }, "変える")), React.createElement("div", {
+      className: "v-sum"
+    }, React.createElement("span", {
+      className: "k"
+    }, "はじめの上乗せ"), React.createElement("span", null, Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし')), React.createElement("button", {
+      type: "button",
+      className: "v-big",
+      onClick: start
+    }, "🌱 育成をはじめる"));
+  }
+  return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: step ? 'もどる' : 'やめる',
+    onBack: back,
+    right: `${step + 1} / 6`
+  }), React.createElement("div", {
+    className: "v-body"
+  }, React.createElement(MsxSteps, {
+    n: step
+  }), body), go && React.createElement("div", {
+    className: "v-ft"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: back
+  }, step ? '← もどる' : '← やめる'), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: next
+  }, go)));
+}
+const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
+const MSX_RES = Object.freeze({
+  great: {
+    word: '大成功',
+    cls: '',
+    bg: 'forest_morning',
+    icon: '🌟'
+  },
+  ok: {
+    word: '成功',
+    cls: 'ok',
+    bg: 'forest_morning',
+    icon: '⭕'
+  },
+  fail: {
+    word: '失敗…',
+    cls: 'ng',
+    bg: 'forest_evening',
+    icon: '❌'
+  },
+  sab: {
+    word: 'サボった',
+    cls: 'zz',
+    bg: 'monhero_plaza',
+    icon: '💤'
+  }
+});
+const MSX_COND = Object.freeze({
+  injury: 'けが',
+  ill: '病気',
+  away: '家出'
+});
+const MSX_ISSA_KEYS = Object.freeze([{
+  key: 'stat',
+  icon: '💪',
+  name: 'ステータスアップ',
+  ok: '全能力 +50',
+  ng: '全能力 −10・サボりグセ',
+  line: 'stat'
+}, {
+  key: 'hpmax',
+  icon: '🔋',
+  name: '体力上限アップ',
+  ok: '体力の上限 +20',
+  ng: '体力 −20',
+  line: 'cap'
+}, {
+  key: 'hp',
+  icon: '❤️',
+  name: '体力回復',
+  ok: '体力を8割回復',
+  ng: '体力 −30・うつ病',
+  line: 'heal'
+}, {
+  key: 'loyal',
+  icon: '🤝',
+  name: '忠誠度アップ',
+  ok: '忠誠度 +15',
+  ng: '忠誠度 −5',
+  line: 'loy'
+}, {
+  key: 'pop',
+  icon: '⭐',
+  name: '人気アップ',
+  ok: '人気 +15',
+  ng: '人気 −5',
+  line: 'pop'
+}]);
+const MSX_LOT = Object.freeze({
+  self: 'drill',
+  rest: 'rest',
+  talk: 'chat',
+  tip: 'tip',
+  friend: 'friend'
+});
+const msxLayout = () => {
+  if (typeof window === 'undefined') return '';
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  if (w > h && h < 520) return 'land';
+  return w <= 340 ? 's320' : '';
+};
+const msxCardOf = (v, stat) => v && v.cards ? v.cards[`train:${stat}`] || v.cards[`light:${stat}`] || null : null;
+const msxMemberName = m => !m ? '' : m.kind === 'base' || !m.name || m.name === m.species ? msxMonName(m.species) : m.name;
+function MsxBand({
+  s,
+  v,
+  ev,
+  use = 0,
+  stAdd = 0
+}) {
+  const cal = msxCalendar(s.turn);
+  const max = Math.max(1, s.hpMax);
+  const hp = Math.max(0, Math.min(max, s.hp));
+  const after = Math.max(0, hp - use);
+  const P = msxSuc && msxSuc.core.PERIODS || [];
+  const now = v.period.index;
+  return React.createElement("div", {
+    className: "v-band"
+  }, React.createElement("div", {
+    className: "v-b1"
+  }, React.createElement("div", {
+    className: "v-turn"
+  }, React.createElement("span", {
+    className: "ph"
+  }, v.period.name, React.createElement("small", null, cal.year, "年目 ", cal.month, "月")), React.createElement("div", {
+    className: "n"
+  }, "残り", React.createElement("b", null, v.period.left), "ターン", React.createElement("small", null, "最後まで あと ", React.createElement("em", null, v.toEnd)))), React.createElement("div", {
+    className: "v-pow"
+  }, React.createElement("div", null, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(ev.power))), React.createElement("i", {
+    className: `${msxRankCls(ev.rank)} big`
+  }, ev.rank))), React.createElement("div", {
+    className: "v-b2"
+  }, React.createElement("div", {
+    className: `v-ga hp${after < max * 0.3 ? ' low' : ''}`
+  }, React.createElement("span", null, "❤️ 体力"), React.createElement("div", {
+    className: "tr"
+  }, React.createElement("i", {
+    style: {
+      width: `${after / max * 100}%`
+    }
+  }), use ? React.createElement("u", {
+    style: {
+      left: `${after / max * 100}%`,
+      width: `${Math.min(hp, use) / max * 100}%`
+    }
+  }) : null, max > 100 ? React.createElement("s", {
+    style: {
+      left: `${100 / max * 100}%`
+    }
+  }) : null), use ? React.createElement("em", null, "−", use) : null, React.createElement("b", null, hp, React.createElement("small", {
+    className: max > 100 ? 'cap' : ''
+  }, "/", max, max > 100 ? '▲' : ''))), React.createElement("div", {
+    className: "v-ga st"
+  }, React.createElement("span", null, "💢 ストレス"), React.createElement("div", {
+    className: "tr"
+  }, React.createElement("i", {
+    style: {
+      width: `${s.stress}%`
+    }
+  }), stAdd ? React.createElement("u", {
+    className: "add",
+    style: {
+      left: `${s.stress}%`,
+      width: `${Math.min(100 - s.stress, stAdd)}%`
+    }
+  }) : null), stAdd ? React.createElement("em", {
+    className: "pl"
+  }, "+", stAdd) : null, React.createElement("b", null, s.stress, React.createElement("small", null, "/100")))), React.createElement("div", {
+    className: "v-track"
+  }, P.map((p, i) => React.createElement("span", {
+    key: p.key,
+    style: {
+      flex: p.len
+    },
+    className: i === now ? 'now' : ''
+  }, React.createElement("i", {
+    style: {
+      width: `${i < now ? 100 : i === now ? (v.period.at - 1) / p.len * 100 : 0}%`
+    }
+  })))));
+}
+function MsxStRow({
+  stats,
+  ups,
+  main
+}) {
+  return React.createElement("div", {
+    className: "v-st"
+  }, MSX_STATS.map(k => {
+    const u = ups ? ups[k] || 0 : 0;
+    return React.createElement("div", {
+      key: k,
+      className: `${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`
+    }, React.createElement("small", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("b", null, stats[k]), React.createElement("u", null, React.createElement("i", {
+      style: {
+        width: `${stats[k] / 9.99}%`
+      }
+    })), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
+  }));
+}
+function MsxPf({
+  m,
+  bond,
+  tagAt,
+  cls = '',
+  aid
+}) {
+  const tag = bond >= tagAt;
+  if (aid) return React.createElement("span", {
+    className: `v-pf as${tag ? ' tag' : ''} ${cls}`
+  }, React.createElement("img", {
+    src: msxFace(aid, 'happy'),
+    alt: ""
+  }), React.createElement("i", {
+    className: "af"
+  }, React.createElement("b", {
+    style: {
+      width: `${bond}%`
+    }
+  })));
+  const r = m.kind === 'base' ? 'G' : m.rank;
+  return React.createElement("span", {
+    className: `v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`
+  }, React.createElement("img", {
+    src: msxMonThumb(m.species),
+    alt: ""
+  }), React.createElement("i", {
+    className: "af"
+  }, React.createElement("b", {
+    style: {
+      width: `${bond}%`
+    }
+  })));
+}
+function MsxMonArt({
+  run,
+  className,
+  style
+}) {
+  const sp = run.s.species;
+  if (run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
+    return React.createElement("span", {
+      className: className,
+      style: style
+    }, React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      masuColors: run.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    }));
+  }
+  return React.createElement("img", {
+    className: className,
+    style: style,
+    src: msxMonImg(sp),
+    alt: ""
+  });
+}
+function MsxSay({
+  aid,
+  ex = 'happy',
+  text
+}) {
+  return React.createElement("div", {
+    className: "v-sayrow"
+  }, React.createElement("img", {
+    className: "fc",
+    src: msxFace(aid, ex),
+    alt: ""
+  }), React.createElement("div", {
+    className: "bub"
+  }, text));
+}
+function MonheroSuccessScreen({
+  onClose,
+  callNameOf,
+  bondLvOf,
+  debug = false
+}) {
+  const [view, setView] = useState('loading');
+  const [data, setData] = useState(null);
+  const [run, setRunState] = useState(null);
+  const [layout, setLayout] = useState(msxLayout);
+  const [ask, setAsk] = useState(null);
+  useEffect(() => {
+    const on = () => setLayout(msxLayout());
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    return () => {
+      window.removeEventListener('resize', on);
+      window.removeEventListener('orientationchange', on);
+    };
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    msxLoad().then(async L => {
+      if (!alive) return;
+      if (!L) {
+        setView('fail');
+        return;
+      }
+      const d = await msxReadAll(L.SUC);
+      if (!alive) return;
+      setData(d);
+      setRunState(d.run);
+      setView('home');
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const setRun = r => {
+    setRunState(r);
+    if (r) msxSaveRun(r);
+  };
+  const setMeta = meta => {
+    setData(d => ({
+      ...d,
+      meta
+    }));
+    msxSaveMeta(meta);
+  };
+  const startRun = cfg => {
+    const {
+      SUC
+    } = msxSuc;
+    const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+    const known = k => !!(SUC.ITEMS && SUC.ITEMS[k]);
+    const carry = cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
+    const bag = {};
+    cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach(k => {
+      bag[k] = 1;
+    });
+    const s = SUC.newRun({
+      id,
+      species: cfg.species,
+      aid: cfg.aid,
+      team: cfg.team,
+      aidBondLv: cfg.aidBondLv,
+      carry,
+      bag,
+      wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
+    });
+    const r = {
+      v: 1,
+      id,
+      s,
+      nick: cfg.nick,
+      colors: cfg.colors,
+      from: cfg.from,
+      items: cfg.items,
+      used: 0,
+      phase: 'main',
+      out: null,
+      log: [],
+      startAt: Date.now()
+    };
+    const meta = {
+      ...data.meta,
+      team: cfg.teamSlots.map(t => t.box ? {
+        box: t.box
+      } : {
+        base: t.base
+      }),
+      runs: (data.meta.runs || 0) + 1,
+      picked: {
+        ...(data.meta.picked || {}),
+        [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1
+      }
+    };
+    if (cfg.items.some(known)) {
+      const it = {
+        ...meta.items
+      };
+      cfg.items.filter(known).forEach(k => {
+        it[k] = Math.max(0, (it[k] || 0) - 1);
+        if (!it[k]) delete it[k];
+      });
+      meta.items = it;
+    }
+    setMeta(meta);
+    setRun(r);
+    setView('play');
+  };
+  const quit = () => setAsk({
+    text: 'この育成をやめますか? 育てた中身はなくなります(保存枠には入りません)',
+    yes: 'やめる',
+    onYes: async () => {
+      await storeSet(MSX_KEYS.run, null);
+      setRunState(null);
+      setView('home');
+    }
+  });
+  let content = null;
+  if (view === 'loading') content = React.createElement("div", {
+    className: "v-body",
+    style: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      display: 'flex'
+    }
+  }, React.createElement("div", {
+    className: "msx-note"
+  }, "読み込んでいます…"));else if (view === 'fail') content = React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "とじる",
+    onBack: onClose
+  }), React.createElement("div", {
+    className: "v-body"
+  }, React.createElement("div", {
+    className: "v-card"
+  }, "読み込めませんでした。通信のよいところで、もう一度開いてください")));else if (view === 'home') content = React.createElement(MsxHome, {
+    data: data,
+    run: run,
+    debug: debug,
+    onClose: onClose,
+    onContinue: () => setView('play'),
+    onNew: () => run && !run.s.over ? setAsk({
+      text: '途中の育成があります。新しく始めると、いまの育成はなくなります',
+      yes: '新しく始める',
+      onYes: () => setView('start')
+    }) : setView('start'),
+    setMeta: setMeta,
+    onWipe: quit
+  });else if (view === 'start') content = React.createElement(MsxStart, {
+    data: data,
+    SUC: msxSuc.SUC,
+    onCancel: () => setView('home'),
+    onStart: startRun,
+    bondLvOf: bondLvOf,
+    callNameOf: callNameOf
+  });else if (view === 'play' && run) content = React.createElement(MsxPlay, {
+    run: run,
+    setRun: setRun,
+    onPause: () => setView('home'),
+    onQuit: quit,
+    callNameOf: callNameOf,
+    bondLvOf: bondLvOf,
+    debug: debug
+  });
+  const node = React.createElement("div", {
+    className: "msx-wrap",
+    "data-monhero-success": true,
+    role: "dialog",
+    "aria-label": "モンヒロサクセス"
+  }, React.createElement("style", null, MSX_CSS), React.createElement("div", {
+    className: `msx v3 ${layout}`,
+    "data-msx-view": view
+  }, content, ask && React.createElement("div", {
+    className: "msx-ov msx-fade"
+  }, React.createElement("div", {
+    className: "msx-sheet"
+  }, React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 900,
+      lineHeight: 1.6
+    }
+  }, ask.text), React.createElement("button", {
+    type: "button",
+    className: "msx-btn go",
+    onClick: () => {
+      const f = ask.onYes;
+      setAsk(null);
+      f();
+    }
+  }, ask.yes), React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: () => setAsk(null)
+  }, "やめておく")))));
+  return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(node, document.body) : node;
+}
+function MsxHome({
+  data,
+  run,
+  debug,
+  onClose,
+  onContinue,
+  onNew,
+  setMeta,
+  onWipe
+}) {
+  const SUC = msxSuc.SUC;
+  const s = run && run.s;
+  const v = s ? SUC.peek(s) : null;
+  return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "とじる",
+    onBack: onClose,
+    right: `保存枠 ${data.box.mons.length}/${data.box.cap}`
+  }), React.createElement("div", {
+    className: "v-body"
+  }, React.createElement("div", {
+    className: "v-scene",
+    style: {
+      flex: '1 1 0'
+    }
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg().bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), s ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "gr"
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon"
+  }), React.createElement("span", {
+    className: "v-nm"
+  }, run.nick, React.createElement("small", null, msxMonName(s.species)))) : null, React.createElement("div", {
+    className: "v-ev-h"
+  }, React.createElement("small", null, "育成"), "🌱 モンヒロサクセス")), s ? React.createElement("div", {
+    className: "v-card pk"
+  }, React.createElement("div", {
+    className: "h2"
+  }, s.over ? 'この育成は終わりました' : '途中の育成があります'), React.createElement("div", {
+    className: "sub"
+  }, run.nick, "(", msxMonName(s.species), ")・", msxAidName(s.aid), "編・", s.over ? '引退の画面は準備中です' : `${v.period.name} 残り${v.period.left}ターン(最後まで あと${v.toEnd})`), React.createElement("button", {
+    type: "button",
+    className: "msx-btn go",
+    onClick: onContinue
+  }, s.over ? '結果を見る' : '▶ 続きから')) : React.createElement("div", {
+    className: "v-card"
+  }, React.createElement("div", {
+    className: "h2"
+  }, "育てるモンスターを選んで、46ターンの育成をはじめよう"), React.createElement("div", {
+    className: "sub"
+  }, "編成の6体が集まった訓練ほど、よく伸びる")), React.createElement("button", {
+    type: "button",
+    className: "v-big",
+    onClick: onNew
+  }, "🌱 新しく育成をはじめる"), debug && React.createElement("div", {
+    className: "v-card",
+    style: {
+      borderColor: '#a3e63566'
+    }
+  }, React.createElement("div", {
+    className: "msx-dbg"
+  }, "デバッグ(公開の印が偽のあいだだけ・通常のプレイには出ない)"), React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: () => {
+      const it = {
+        ...data.meta.items
+      };
+      MSX_ITEMS.forEach(t => {
+        it[t.id] = Math.min(999, (it[t.id] || 0) + 3);
+      });
+      setMeta({
+        ...data.meta,
+        items: it
+      });
+    }
+  }, "持ちこみの物を3つずつ足す"), s && React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: onWipe
+  }, "途中の育成を消す"))));
+}
+function MsxPlay({
+  run,
+  setRun,
+  onPause,
+  onQuit,
+  callNameOf,
+  bondLvOf,
+  debug
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const v = useMemo(() => SUC.peek(s), [s]);
+  const ev = useMemo(() => SUC.evaluate(s), [s]);
+  const [sub, setSub] = useState('main');
+  const [sel, setSel] = useState(null);
+  const [sheet, setSheet] = useState(null);
+  const tagAt = SUC.BOND && SUC.BOND.tag || 80;
+  const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
+  const ctx = {
+    id: s.id,
+    turn: s.turn,
+    aid: s.aid,
+    mon: run.nick,
+    species: s.species,
+    callName: callNameOf ? callNameOf(s.aid) : ''
+  };
+  const line = (scene, fallback, extra = {}) => {
+    const l = msxPickLine({
+      ...ctx,
+      ...extra
+    }, scene, {
+      bondLv
+    });
+    return l || {
+      t: fallback,
+      e: 'normal'
+    };
+  };
+  const pushLog = (r, text) => ({
+    ...r,
+    log: [...(r.log || []), {
+      turn: s.turn,
+      t: text
+    }].slice(-20)
+  });
+  const endTurnFlow = r0 => {
+    const r = SUC.endTurn(r0.s);
+    if (!r.out.ok) {
+      setRun({
+        ...r0,
+        phase: 'main',
+        out: null
+      });
+      return;
+    }
+    const st = r.state;
+    if (st.battle) setRun({
+      ...r0,
+      s: st,
+      phase: 'battle',
+      out: null
+    });else if (st.over) setRun({
+      ...r0,
+      s: st,
+      phase: 'over',
+      out: null
+    });else setRun({
+      ...r0,
+      s: st,
+      phase: 'turn',
+      out: {
+        from: r0.s.turn
+      }
+    });
+  };
+  const afterAct = r0 => {
+    const p = SUC.peek(r0.s);
+    if (p.issa) setRun({
+      ...r0,
+      phase: 'issa',
+      out: null
+    });else endTurnFlow(r0);
+  };
+  const doAct = a => {
+    const r = SUC.act(s, a);
+    if (!r.out.ok) return;
+    setSub('main');
+    setSel(null);
+    let next = {
+      ...run,
+      s: r.state,
+      out: {
+        ...r.out,
+        kind: a.kind
+      }
+    };
+    if (a.kind === 'retry') {
+      endTurnFlow(next);
+      return;
+    }
+    const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}の訓練: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
+    next = pushLog(next, text);
+    setRun({
+      ...next,
+      phase: 'result'
+    });
+  };
+  const phase = run.phase;
+  let body = null;
+  let foot = null;
+  const r3 = typeof MsxR3 === 'function' ? phase === 'battle' && s.battle ? 'battle' : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
+  if (r3) return React.createElement(MsxR3, {
+    kind: r3,
+    run: run,
+    setRun: setRun,
+    v: v,
+    ev: ev,
+    ctx: ctx,
+    bondLv: bondLv,
+    debug: debug,
+    onBack: () => setSub('main'),
+    onPause: onPause,
+    onQuit: onQuit,
+    onActed: next => {
+      setSub('main');
+      afterAct(next);
+    }
+  });
+  const bandProps = {};
+  if (phase === 'result' && run.out) {
+    const o = run.out;
+    const isTrain = !!o.result;
+    const R = isTrain ? MSX_RES[o.result] : null;
+    const gains = o.gain || {};
+    const members = o.card && Array.isArray(o.card.members) ? o.card.members.map(i => s.team[i]).filter(Boolean) : [];
+    const restName = o.rest && SUC.REST ? (SUC.REST.find(x => x.key === o.rest) || {}).name : null;
+    const say = isTrain ? line(o.result === 'sab' ? 'turn.result.slack' : `turn.result.${o.result}`, '') : o.kind === 'rest' ? line(`turn.rest.${o.rest === 'poor' ? 'little' : o.rest === 'great' ? 'deep' : 'normal'}`, '') : o.kind === 'play' ? line('turn.play', '') : o.kind === 'clinic' ? line((o.cured || []).length ? 'turn.clinic.cured' : 'turn.clinic.again', '') : {
+      t: ''
+    };
+    const evMember = o.event && Number.isInteger(o.event.who) ? s.team[o.event.who] : null;
+    const evLine = o.event ? o.event.story ? msxPickLine({
+      ...ctx,
+      cheer: msxMemberName(evMember)
+    }, `cheer.base.ep${o.event.story}`, {
+      who: 'narr'
+    }) : msxPickLine({
+      ...ctx,
+      cheer: msxMemberName(evMember)
+    }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, {
+      who: '*'
+    }) : null;
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: `images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), isTrain && o.result === 'great' ? React.createElement("div", {
+      className: "v-burst"
+    }) : isTrain && o.result === 'ok' ? React.createElement("div", {
+      className: "v-burst b2"
+    }) : null, React.createElement("div", {
+      className: "gr",
+      style: {
+        left: '62%',
+        bottom: 'calc(14% - 5px)'
+      }
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        left: '62%',
+        bottom: '14%',
+        height: '46%',
+        transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)',
+        filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined
+      }
+    }), React.createElement("div", {
+      className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`
+    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), members.length ? React.createElement("div", {
+      className: "v-chips",
+      style: {
+        top: 'auto',
+        bottom: 8
+      }
+    }, members.map((m, i) => React.createElement("span", {
+      key: i,
+      className: "v-chip"
+    }, msxMemberName(m), " 親密度 +", SUC.BOND && SUC.BOND.train || 8))) : null), isTrain ? React.createElement(MsxStRow, {
+      stats: s.stats,
+      ups: gains,
+      main: o.card && o.card.stat
+    }) : null, React.createElement("div", {
+      className: "v-log"
+    }, isTrain && o.lvUp ? React.createElement("div", {
+      className: "v-lvup"
+    }, "⬆ 訓練Lvアップ! ", MSX_STAT_ICON[o.card.stat], " ", MSX_STAT_NAME[o.card.stat], " ", React.createElement("b", null, "Lv.", o.trainLv - 1, " → Lv.", o.trainLv), React.createElement("small", null, "次から、", MSX_STAT_NAME[o.card.stat], "の訓練の基本の伸びが上がる")) : null, isTrain ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "hd2"
+    }, MSX_STAT_ICON[o.card.stat], " ", MSX_STAT_NAME[o.card.stat], "の訓練"), React.createElement("br", null), Object.keys(gains).length ? React.createElement(React.Fragment, null, Object.entries(gains).map(([k, g], i) => React.createElement("span", {
+      key: k
+    }, i ? '・' : '', MSX_STAT_NAME[k], " ", React.createElement("b", {
+      className: "gu"
+    }, g > 0 ? `+${g}` : g)))) : '能力は上がらなかった') : o.kind === 'rest' || o.kind === 'play' ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "hd2"
+    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), "体力が回復した", (o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "hd2"
+    }, "🏥 通院"), React.createElement("br", null), (o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る') : React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "hd2"
+    }, "🛌 休み"), React.createElement("br", null), MSX_COND[o.cond] || '体調', "のため、このターンは休んだ"), o.event ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
+      className: "ga"
+    }, msxMemberName(evMember)), o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事', evLine ? `: ${evLine.t}` : '') : null, o.cond && isTrain ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
+      style: {
+        color: '#fca5a5'
+      }
+    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), say && say.t ? React.createElement(MsxSay, {
+      aid: s.aid,
+      ex: say.e || 'normal',
+      text: say.t
+    }) : null);
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => isTrain ? afterAct({
+        ...run,
+        phase: 'main'
+      }) : afterAct(run)
+    }, "⏩ とばす"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => isTrain ? setRun({
+        ...run,
+        phase: 'react'
+      }) : afterAct(run)
+    }, "つぎへ ▶"));
+  } else if (phase === 'react') {
+    const good = s.last && (s.last.res === 'great' || s.last.res === 'ok');
+    const loy = SUC.loyalOf(s);
+    const pol = Math.max(-3, Math.min(3, s.pol || 0));
+    const choose = how => {
+      const r = SUC.react(s, how);
+      afterAct({
+        ...run,
+        s: r.state,
+        phase: 'main'
+      });
+    };
+    const ask = line(good ? 'turn.praise.fit' : 'turn.scold.fit', good ? 'ほめてあげる?' : 'どうする?');
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene dk",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: `images/story-bg/${(MSX_RES[s.last && s.last.res] || MSX_RES.ok).bg}.jpg`,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "v-strip"
+    }), React.createElement("img", {
+      className: "v-body2",
+      src: msxBody(s.aid, good ? 'happy' : 'troubled'),
+      alt: ""
+    }), React.createElement("div", {
+      className: "v-chips"
+    }, React.createElement("span", {
+      className: "v-chip ylw"
+    }, (MSX_RES[s.last && s.last.res] || MSX_RES.ok).icon, " ", (MSX_RES[s.last && s.last.res] || MSX_RES.ok).word, "のあと")), React.createElement("div", {
+      className: "v-q"
+    }, React.createElement("div", {
+      className: "ask"
+    }, msxAidName(s.aid), "「", good ? `${run.nick}、ほめてあげる?` : `${run.nick}、どうする?`, "」"), React.createElement("div", {
+      className: "bt"
+    }, React.createElement("button", {
+      type: "button",
+      className: "v-ch",
+      onClick: () => choose('praise')
+    }, "👏 褒める", React.createElement("small", null, "甘え度 +・方針が甘いほうへ")), React.createElement("button", {
+      type: "button",
+      className: "v-ch b",
+      onClick: () => choose('scold')
+    }, "📣 叱る", React.createElement("small", null, "恐れ度 +・方針が厳しいほうへ")), React.createElement("button", {
+      type: "button",
+      className: "v-ch n",
+      onClick: () => choose(null)
+    }, "なにもしない(方針はそのまま)")))), React.createElement("div", {
+      className: "v-pol"
+    }, React.createElement("div", {
+      className: "l"
+    }, React.createElement("span", null, "超溺愛"), React.createElement("span", null, "甘い"), React.createElement("span", {
+      style: {
+        color: '#fde047'
+      }
+    }, "いまの方針: ", MSX_POLICY_SCALE[pol + 3]), React.createElement("span", null, "厳しい"), React.createElement("span", null, "超スパルタ")), React.createElement("div", {
+      className: "m"
+    }, MSX_POLICY_SCALE.map((n, i) => React.createElement("i", {
+      key: n,
+      className: i === pol + 3 ? 'on' : ''
+    }))), React.createElement("div", {
+      className: "two"
+    }, React.createElement("div", {
+      className: "v-ga"
+    }, React.createElement("span", null, "🥰 甘え度"), React.createElement("div", {
+      className: "tr"
+    }, React.createElement("i", {
+      style: {
+        width: `${s.ama * 2}%`,
+        background: 'linear-gradient(180deg,#f9a8d4,#f472b6)'
+      }
+    })), React.createElement("b", null, s.ama)), React.createElement("div", {
+      className: "v-ga"
+    }, React.createElement("span", null, "😨 恐れ度"), React.createElement("div", {
+      className: "tr"
+    }, React.createElement("i", {
+      style: {
+        width: `${s.fear * 2}%`,
+        background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)'
+      }
+    })), React.createElement("b", null, s.fear))), React.createElement("div", {
+      style: {
+        fontSize: 9.5,
+        color: '#cbd5e1',
+        fontWeight: 700,
+        marginTop: 4
+      }
+    }, "忠誠度 ", loy, " = 甘え度 ", s.ama, " + 恐れ度 ", s.fear, "。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい"), ask && ask.t && ask.t !== 'ほめてあげる?' && ask.t !== 'どうする?' ? React.createElement("div", {
+      className: "msx-note",
+      style: {
+        marginTop: 4
+      }
+    }, msxAidName(s.aid), "「", ask.t, "」") : null));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => choose(null)
+    }, "⏩ とばす"), React.createElement("button", {
+      type: "button",
+      className: "on",
+      disabled: true
+    }, "えらんでね"));
+  } else if (phase === 'issa') {
+    body = React.createElement(MsxIssa, {
+      run: run,
+      setRun: setRun,
+      v: v,
+      ev: ev,
+      ctx: ctx,
+      bondLv: bondLv,
+      onDone: r => endTurnFlow({
+        ...r,
+        phase: 'main',
+        out: null
+      })
+    });
+  } else if (phase === 'turn') {
+    const cal = msxCalendar(s.turn);
+    const prev = msxCalendar(Math.max(1, s.turn - 1));
+    const P = msxSuc.core.PERIODS;
+    const seasonChanged = cal.season !== prev.season;
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene msx-fade",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("div", {
+      className: "v-clock"
+    }, React.createElement("div", {
+      className: "v-cal msx-pop"
+    }, React.createElement("div", {
+      className: "y"
+    }, v.period.name, "・", cal.year, "年目"), React.createElement("div", {
+      className: "mth"
+    }, cal.month, React.createElement("small", null, "月")), React.createElement("div", {
+      className: "old"
+    }, prev.month, "月 おつかれさま")), React.createElement("div", {
+      className: "v-next"
+    }, "この期の残り ", React.createElement("b", null, v.period.left), " ターン"), v.period.key !== 'final' ? React.createElement("div", {
+      className: "v-chip hot",
+      style: {
+        position: 'static'
+      }
+    }, "🏆 期末の大会まで あと", v.period.left, "ターン") : React.createElement("div", {
+      className: "v-chip hot",
+      style: {
+        position: 'static'
+      }
+    }, "🏆 頂への道"), seasonChanged ? React.createElement("div", {
+      className: "v-chip",
+      style: {
+        position: 'static'
+      }
+    }, MSX_SEASON[cal.season], "になった") : null, React.createElement("div", {
+      className: "v-phs"
+    }, P.map((p, i) => React.createElement("span", {
+      key: p.key,
+      style: {
+        flex: p.len
+      },
+      className: i === v.period.index ? 'now' : ''
+    }, React.createElement("i", {
+      style: {
+        width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%`
+      }
+    }), React.createElement("b", null, p.name.replace('期', '').replace('最後の', '最後'))))))));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: onPause
+    }, "← 中断"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => setRun({
+        ...run,
+        phase: 'main',
+        out: null
+      })
+    }, "つぎへ ▶"));
+  } else if (phase === 'battle' && s.battle) {
+    const b = s.battle;
+    const opp = SUC.opponents(s);
+    const name = b.kind === 'summit' ? (SUC.SUMMIT[b.round] || {}).name : b.kind === 'debut' ? 'デビュー戦' : (SUC.FORCED[b.kind] || {}).name;
+    const settle = win => {
+      const r = SUC.settle(s, win ? opp.map(() => true) : [false]);
+      const next = pushLog({
+        ...run,
+        s: r.state
+      }, `${name}: ${r.out.won ? '優勝' : '負け'}`);
+      if (r.state.battle) setRun({
+        ...next,
+        phase: 'battle'
+      });else if (r.state.over) setRun({
+        ...next,
+        phase: 'over'
+      });else setRun({
+        ...next,
+        phase: 'turn',
+        out: {
+          from: s.turn
+        }
+      });
+    };
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: "images/story-bg/monhero_town.jpg",
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "v-ev-h"
+    }, React.createElement("small", null, "大会"), "🏆 ", name, b.retry ? `(再挑戦 ${b.retry}回目)` : ''), React.createElement("div", {
+      className: "gr"
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon"
+    })), React.createElement("div", {
+      className: "v-card pk"
+    }, React.createElement("div", {
+      className: "h2"
+    }, name, React.createElement("span", {
+      className: "msx-soon"
+    }, "準備中")), React.createElement("div", {
+      className: "sub"
+    }, "試合(", opp.length, "戦)と観戦の画面は、次の回で入ります。")));
+    foot = debug ? React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => settle(false)
+    }, "負けたことにする"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => settle(true)
+    }, "勝ったことにする(デバッグ)")) : React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: onPause
+    }, "← 中断"));
+  } else if (phase === 'over' || s.over) {
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg().bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "v-burst b2"
+    }), React.createElement("div", {
+      className: "gr"
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon"
+    }), React.createElement("div", {
+      className: "v-stamp ok msx-pop"
+    }, s.over === 'gameover' ? 'ここまで…' : s.over === 'lost' ? 'おつかれさま' : '育成おわり!', React.createElement("small", null, "総合力 ", msxFmt(ev.power), "・ランク ", ev.rank))), React.createElement(MsxStRow, {
+      stats: s.stats
+    }), React.createElement("div", {
+      className: "v-card"
+    }, React.createElement("div", {
+      className: "h2"
+    }, "引退", React.createElement("span", {
+      className: "msx-soon"
+    }, "準備中")), React.createElement("div", {
+      className: "sub"
+    }, "振り返り・育成ランク・保存枠へ入れる画面は次の回で入ります。この育成はこのまま残しておきます")));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: onPause
+    }, "← もどる"), React.createElement("button", {
+      type: "button",
+      onClick: onQuit
+    }, "この育成を消す"));
+  } else if (sub === 'train') {
+    const pull = k => {
+      const c = msxCardOf(v, k);
+      return c ? c.tags.length * 10 + c.members.length + (c.aid ? 1 : 0) : 0;
+    };
+    const stat = sel || MSX_STATS.slice().sort((a, b) => pull(b) - pull(a))[0];
+    const card = msxCardOf(v, stat);
+    const pv = card && typeof SUC.preview === 'function' ? SUC.preview(s, {
+      kind: card.kind,
+      stat
+    }) : null;
+    const lvOf = c => !c ? null : Number.isFinite(c.lv) ? c.lv : typeof SUC.trainLvOf === 'function' && s.trainXp ? SUC.trainLvOf(s.trainXp[`${c.kind}:${c.stat}`]) : null;
+    const tags = card ? card.tags : [];
+    const members = card ? card.members : [];
+    const trainLv = lvOf(card);
+    if (pv) {
+      bandProps.use = Math.round(pv.hp || 0);
+      bandProps.stAdd = Math.round(pv.stress || 0);
+    }
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, _extends({
+      s: s,
+      v: v,
+      ev: ev
+    }, bandProps)), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg().bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "gr",
+      style: {
+        left: '30%',
+        bottom: 'calc(34% - 5px)'
+      }
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        left: '30%',
+        bottom: '34%',
+        height: '40%'
+      }
+    }), React.createElement("div", {
+      className: "v-chips",
+      style: {
+        right: 'auto',
+        left: 7
+      }
+    }, React.createElement("span", {
+      className: "v-chip ylw"
+    }, MSX_STAT_ICON[stat], " ", MSX_STAT_NAME[stat], "の訓練", trainLv ? ` Lv${trainLv}` : '')), React.createElement("div", {
+      className: "v-come"
+    }, members.map(i => {
+      const m = s.team[i];
+      const tag = s.bond[i] >= tagAt;
+      const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s));
+      return React.createElement("div", {
+        key: i,
+        className: `v-cm${tag ? ' tag' : ''}`
+      }, React.createElement(MsxPf, {
+        m: m,
+        bond: s.bond[i],
+        tagAt: 999
+      }), React.createElement("div", {
+        className: "tx"
+      }, React.createElement("b", null, msxMemberName(m)), React.createElement("small", null, tag ? `🤝 タッグ +${m.tag}%` : `編成の効き +${Math.round(eff)}%`), React.createElement("div", {
+        className: "afl"
+      }, "親密度", React.createElement("i", null, React.createElement("b", {
+        style: {
+          width: `${s.bond[i]}%`
+        }
+      })), s.bond[i])));
+    }), card && card.aid ? React.createElement("div", {
+      className: `v-cm${s.aidBond >= tagAt ? ' tag' : ''}`
+    }, React.createElement(MsxPf, {
+      aid: s.aid,
+      bond: s.aidBond,
+      tagAt: 999
+    }), React.createElement("div", {
+      className: "tx"
+    }, React.createElement("b", null, msxAidName(s.aid)), React.createElement("small", null, s.aidBond >= tagAt ? '🤝 タッグ' : '助手も来ている'), React.createElement("div", {
+      className: "afl"
+    }, "親密度", React.createElement("i", null, React.createElement("b", {
+      style: {
+        width: `${s.aidBond}%`
+      }
+    })), s.aidBond))) : null), card && React.createElement("div", {
+      className: `v-fx${tags.length ? '' : ' plain'}`
+    }, React.createElement("div", {
+      className: "t"
+    }, tags.length ? React.createElement("span", {
+      className: "big"
+    }, "🤝 友情タッグ ×", tags.length) : React.createElement("span", null, "タッグなし"), React.createElement("span", null, "効果 ×", card.mult), React.createElement("span", {
+      className: "fl"
+    }, "失敗 ", React.createElement("b", null, Math.round(card.fail * 100), "%"))), React.createElement("div", {
+      className: "ch"
+    }, React.createElement("span", null, "基本"), React.createElement("i", null, "▶"), React.createElement("span", null, "編成 +", Math.round(card.add * 100), "%"), tags.length ? React.createElement(React.Fragment, null, React.createElement("i", null, "▶"), React.createElement("span", {
+      className: "tgx"
+    }, "🤝×", tags.length, " +", Math.round(card.tag * 100), "%")) : null, pv && pv.gain ? React.createElement(React.Fragment, null, React.createElement("i", null, "▶"), React.createElement("span", {
+      className: "res"
+    }, MSX_STAT_NAME[stat], " +", pv.gain[stat] || 0)) : null), trainLv ? React.createElement("div", {
+      className: "v-lvx"
+    }, React.createElement("b", null, "訓練Lv.", trainLv), React.createElement("i", null, React.createElement("u", {
+      style: {
+        width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%`
+      }
+    })), React.createElement("span", null, trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : '')) : null)), React.createElement(MsxStRow, {
+      stats: s.stats,
+      ups: pv ? pv.gain : null,
+      main: stat
+    }), React.createElement("div", {
+      className: "v-trs"
+    }, MSX_STATS.map(k => {
+      const c = msxCardOf(v, k);
+      const lv = lvOf(c);
+      return React.createElement("button", {
+        type: "button",
+        key: k,
+        className: `v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`,
+        onClick: () => setSel(k)
+      }, React.createElement("div", {
+        className: "o"
+      }, MSX_STAT_ICON[k]), React.createElement("b", {
+        className: "nm"
+      }, MSX_STAT_NAME[k]), lv ? React.createElement("i", {
+        className: "lv"
+      }, "Lv.", lv) : null);
+    })));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => {
+        setSub('main');
+        setSel(null);
+      }
+    }, "← もどる"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      disabled: !card,
+      onClick: () => doAct({
+        kind: card.kind,
+        stat
+      })
+    }, MSX_STAT_ICON[stat], " ", MSX_STAT_NAME[stat], "の訓練をする"));
+  } else {
+    const can = v.can || [];
+    const anyTag = MSX_STATS.some(k => {
+      const c = msxCardOf(v, k);
+      return c && c.tags.length;
+    });
+    const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
+    const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const cal = msxCalendar(s.turn);
+    const scn = msxSceneBg();
+    const low = s.hp < s.hpMax * 0.3;
+    const bag = Object.keys(s.bag || {}).filter(k => s.bag[k] > 0);
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement(MsxSay, {
+      aid: s.aid,
+      ex: yosu || low ? 'troubled' : sayL.e || 'happy',
+      text: sayL.t
+    }), React.createElement("div", {
+      className: "v-scene home"
+    }, React.createElement("img", {
+      className: "bg",
+      src: scn.bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "gr"
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: `mon${low ? ' low' : ''}`
+    }), React.createElement("div", {
+      className: "v-party"
+    }, React.createElement("small", null, "編成"), s.team.map((m, i) => React.createElement(MsxPf, {
+      key: i,
+      m: m,
+      bond: s.bond[i],
+      tagAt: tagAt
+    })), React.createElement(MsxPf, {
+      aid: s.aid,
+      bond: s.aidBond,
+      tagAt: tagAt
+    })), React.createElement("div", {
+      className: "v-chips"
+    }, React.createElement("span", {
+      className: "v-chip"
+    }, MSX_SEASON[cal.season], "・", scn.time), v.period.key !== 'final' ? React.createElement("span", {
+      className: "v-chip hot"
+    }, "🏆 期末の大会まで ", v.period.left, "ターン") : React.createElement("span", {
+      className: "v-chip hot"
+    }, "🏆 頂への道"), s.yosu && s.yosu.sabori ? React.createElement("span", {
+      className: "v-chip bad"
+    }, "😪 ようす: サボりグセ") : null, s.yosu && s.yosu.utsu ? React.createElement("span", {
+      className: "v-chip bad"
+    }, "😢 ようす: うつ病") : null, s.cond ? React.createElement("span", {
+      className: "v-chip bad"
+    }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null), React.createElement("span", {
+      className: "v-nm"
+    }, run.nick, React.createElement("small", null, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3])), React.createElement("div", {
+      className: "v-side"
+    }, React.createElement("span", {
+      className: "v-mini"
+    }, "🤝 忠誠 ", React.createElement("b", null, SUC.loyalOf(s))), React.createElement("span", {
+      className: "v-mini"
+    }, "⭐ 人気 ", React.createElement("b", null, s.pop))), React.createElement("button", {
+      type: "button",
+      className: "v-bagb",
+      onClick: () => setSub('bag')
+    }, "🎒", React.createElement("small", null, "持ち物"), bag.length ? React.createElement("i", null, bag.length) : null), React.createElement("button", {
+      type: "button",
+      className: "v-bagb r",
+      onClick: () => setSub('stats')
+    }, "🔍", React.createElement("small", null, "くわしく"))), React.createElement(MsxStRow, {
+      stats: s.stats
+    }), can.includes('retry') ? React.createElement("div", {
+      className: "v-act",
+      style: {
+        gridTemplateColumns: '1fr'
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: "v-p main",
+      onClick: () => doAct({
+        kind: 'retry'
+      })
+    }, "🏆 デビュー戦に再挑戦", React.createElement("small", null, "勝つまで訓練はできない(負けるたび相手が少し弱くなる)"))) : can.includes('cond') ? React.createElement("div", {
+      className: "v-act",
+      style: {
+        gridTemplateColumns: '1fr'
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: "v-p main",
+      onClick: () => doAct({
+        kind: 'cond'
+      })
+    }, "🛌 休む", React.createElement("small", null, MSX_COND[s.cond && s.cond.kind] || '体調', "のため、このターンは休み"))) : React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-act",
+      style: {
+        gridTemplateColumns: '1fr 2.3fr 1fr'
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: "v-p",
+      onClick: () => doAct({
+        kind: 'rest'
+      })
+    }, React.createElement("div", {
+      className: "e"
+    }, "🛌"), "休む", React.createElement("small", null, "体力を回復")), React.createElement("button", {
+      type: "button",
+      className: "v-p main",
+      onClick: () => setSub('train')
+    }, "💪 訓練", React.createElement("small", null, anyTag ? '🤝 友情タッグのチャンスあり' : '6つの訓練から選ぶ')), React.createElement("button", {
+      type: "button",
+      className: "v-p",
+      onClick: () => setSub('stats')
+    }, React.createElement("div", {
+      className: "e"
+    }, "📊"), "能力", React.createElement("small", null, "技・型・編成"), s.pts ? React.createElement("span", {
+      className: "bd"
+    }, "能力P ", s.pts) : null)), React.createElement("div", {
+      className: "v-act",
+      style: {
+        gridTemplateColumns: 'repeat(4,1fr)'
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: `v-p ${yosu ? 'hosp' : 'off'}`,
+      disabled: !can.includes('clinic'),
+      onClick: () => doAct({
+        kind: 'clinic'
+      })
+    }, React.createElement("div", {
+      className: "e"
+    }, "🏥"), "通院", React.createElement("small", null, yosu ? 'ようすを治す' : 'ようすなし'), yosu ? React.createElement("span", {
+      className: "bd r"
+    }, "!") : null), React.createElement("button", {
+      type: "button",
+      className: "v-p",
+      onClick: () => doAct({
+        kind: 'play'
+      })
+    }, React.createElement("div", {
+      className: "e"
+    }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), React.createElement("button", {
+      type: "button",
+      className: "v-p",
+      onClick: () => typeof MsxR3 === 'function' ? setSub('shugyo') : setSheet({
+        soon: '⚔ 修行',
+        text: '技を覚える修行は、次の回で入ります'
+      })
+    }, React.createElement("div", {
+      className: "e"
+    }, "⚔"), "修行", React.createElement("small", null, "技を覚える"), React.createElement("span", {
+      className: "bd"
+    }, "準備中")), React.createElement("button", {
+      type: "button",
+      className: "v-p",
+      onClick: () => typeof MsxR3 === 'function' ? setSub('cup') : setSheet({
+        soon: '🏆 大会',
+        text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)'
+      })
+    }, React.createElement("div", {
+      className: "e"
+    }, "🏆"), "大会", React.createElement("small", null, "今月の大会"), React.createElement("span", {
+      className: "bd"
+    }, "準備中")))));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: onPause
+    }, "← 中断"), React.createElement("button", {
+      type: "button",
+      onClick: () => setSheet('log')
+    }, "📖 きろく"), React.createElement("button", {
+      type: "button",
+      onClick: () => setSheet('menu')
+    }, "☰ メニュー"));
+    if (sub === 'bag') body = React.createElement(MsxBag, {
+      run: run,
+      setRun: setRun,
+      v: v,
+      ev: ev,
+      onClose: () => setSub('main')
+    });
+    if (sub === 'stats') body = React.createElement(MsxStats, {
+      run: run,
+      setRun: setRun,
+      v: v,
+      ev: ev,
+      onClose: () => setSub('main')
+    });
+    if (sub === 'bag' || sub === 'stats') foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => setSub('main')
+    }, "← もどる"));
+  }
+  return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "中断",
+    onBack: onPause,
+    sub: `${msxAidName(s.aid)}編`,
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }), React.createElement("div", {
+    className: "v-body"
+  }, body), foot, sheet && React.createElement("div", {
+    className: "msx-ov msx-fade",
+    onClick: () => setSheet(null)
+  }, React.createElement("div", {
+    className: "msx-sheet",
+    onClick: e => e.stopPropagation()
+  }, sheet === 'log' ? React.createElement(React.Fragment, null, React.createElement("h3", null, "📖 きろく"), (run.log || []).length ? run.log.slice().reverse().map((l, i) => React.createElement("div", {
+    key: i,
+    className: "msx-note"
+  }, l.turn, "ターン目: ", l.t)) : React.createElement("div", {
+    className: "msx-note"
+  }, "まだありません")) : sheet === 'menu' ? React.createElement(React.Fragment, null, React.createElement("h3", null, "☰ メニュー"), React.createElement("div", {
+    className: "msx-note"
+  }, "育成方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "(褒めると甘く・叱ると厳しくなる)"), React.createElement("div", {
+    className: "msx-note"
+  }, "成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'), React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: () => {
+      setSheet(null);
+      onPause();
+    }
+  }, "中断する(続きから遊べる)"), React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: () => {
+      setSheet(null);
+      onQuit();
+    }
+  }, "この育成をやめる")) : React.createElement(React.Fragment, null, React.createElement("h3", null, sheet.soon, React.createElement("span", {
+    className: "msx-soon"
+  }, "準備中")), React.createElement("div", {
+    className: "msx-note"
+  }, sheet.text)), React.createElement("button", {
+    type: "button",
+    className: "msx-btn",
+    onClick: () => setSheet(null)
+  }, "とじる"))));
+}
+const MSX_EXTRA_ITEM = Object.freeze({
+  oil: {
+    e: '🫙',
+    desc: '体力を少し回復する'
+  },
+  herb: {
+    e: '🌱',
+    desc: 'ストレスを下げる'
+  }
+});
+const msxItemView = k => {
+  const base = MSX_ITEM_BY_ID[k];
+  const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null;
+  const ex = MSX_EXTRA_ITEM[k];
+  return {
+    id: k,
+    name: base && base.name || core && core.name || k,
+    desc: base && base.desc || ex && ex.desc || '',
+    e: base && base.e || ex && ex.e || '🎁',
+    during: core ? core.use === 'during' : !!(base && base.when === 'both')
+  };
+};
+function MsxBag({
+  run,
+  setRun,
+  v,
+  ev,
+  onClose
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const bagList = Object.keys(s.bag || {}).filter(k => s.bag[k] > 0).map(k => ({
+    ...msxItemView(k),
+    n: s.bag[k]
+  }));
+  const carryList = (Array.isArray(s.carry) ? s.carry : []).map(k => ({
+    ...msxItemView(k),
+    n: 0,
+    carry: true
+  }));
+  const sand = s.items ? s.items.sand || 0 : 0;
+  const rainbow = s.items ? s.items.rainbow || 0 : 0;
+  const [pick, setPick] = useState(bagList.length ? bagList[0].id : null);
+  const usedNow = s.itemTurn === s.turn;
+  const t = pick ? bagList.find(x => x.id === pick) || carryList.find(x => x.id === pick) : null;
+  const use = () => {
+    if (!t || t.carry || usedNow || typeof SUC.useItem !== 'function') return;
+    const r = SUC.useItem(s, t.id);
+    if (!r || !r.out || !r.out.ok) return;
+    setRun({
+      ...run,
+      s: r.state,
+      log: [...(run.log || []), {
+        turn: s.turn,
+        t: `${t.name}を使った`
+      }].slice(-20)
+    });
+  };
+  return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "v-scene home dk",
+    style: {
+      flex: '1 1 0'
+    }
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg().bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "v-bagw"
+  }, React.createElement("div", {
+    className: "t"
+  }, "🎒 持ち物", React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない"), React.createElement("button", {
+    type: "button",
+    onClick: onClose
+  }, React.createElement("i", null, "✕"))), t ? React.createElement("div", {
+    className: "v-bsel"
+  }, React.createElement("span", {
+    className: "e",
+    style: {
+      fontSize: 26
+    }
+  }, t.e), React.createElement("div", null, React.createElement("b", null, t.name, t.n ? React.createElement("span", {
+    className: "yel"
+  }, " ×", t.n) : null), React.createElement("small", null, t.desc), React.createElement("small", {
+    className: "lim"
+  }, t.carry ? 'はじめる前から効いている' : 'いつ使える: 自分のターン'))) : null, React.createElement("div", {
+    className: "v-bgrid"
+  }, bagList.map(x => React.createElement("button", {
+    type: "button",
+    key: x.id,
+    className: pick === x.id ? 'sel' : '',
+    onClick: () => setPick(x.id)
+  }, React.createElement("span", {
+    className: "e",
+    style: {
+      fontSize: 22
+    }
+  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", null, x.name))), carryList.map(x => React.createElement("button", {
+    type: "button",
+    key: `c-${x.id}`,
+    className: `no${pick === x.id ? ' sel' : ''}`,
+    onClick: () => setPick(x.id)
+  }, React.createElement("span", {
+    className: "e",
+    style: {
+      fontSize: 22
+    }
+  }, x.e), React.createElement("small", null, x.name))), React.createElement("div", {
+    className: "no"
+  }, React.createElement("span", {
+    className: "e"
+  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", null, "時渡りの砂時計")), React.createElement("div", {
+    className: "no"
+  }, React.createElement("span", {
+    className: "e"
+  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", null, "虹の時渡りの砂時計"))), !bagList.length && !carryList.length ? React.createElement("div", {
+    className: "msx-note"
+  }, "持ちこんだ物はありません") : null, React.createElement("div", {
+    className: "v-bnote"
+  }, "⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる", React.createElement("br", null), "🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる", React.createElement("br", null), React.createElement("span", {
+    className: "dim2"
+  }, "(うすい物はここでは使わない。砂時計は大会で負けたときに使う・大会は次の回で入ります)")), React.createElement("button", {
+    type: "button",
+    className: "v-big",
+    style: {
+      fontSize: 14,
+      padding: 9,
+      marginTop: 0,
+      color: '#fff'
+    },
+    disabled: !t || t.carry || usedNow,
+    onClick: use
+  }, usedNow ? 'このターンはもう使った' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
+    stats: s.stats
+  }));
+}
+function MsxStats({
+  run,
+  setRun,
+  v,
+  ev,
+  onClose
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const tagAt = SUC.BOND && SUC.BOND.tag || 80;
+  const spend = k => {
+    const r = SUC.spendPts(s, k, 1);
+    if (r.out.ok) setRun({
+      ...run,
+      s: r.state
+    });
+  };
+  const auto = () => {
+    const r = SUC.autoPts(s);
+    setRun({
+      ...run,
+      s: r.state
+    });
+  };
+  return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "msx-scroll"
+  }, React.createElement("div", {
+    className: "v-card pk"
+  }, React.createElement("div", {
+    className: "msx-row",
+    style: {
+      justifyContent: 'space-between'
+    }
+  }, React.createElement("b", {
+    className: "h2"
+  }, "📊 能力ポイント ", s.pts), s.pts ? React.createElement("button", {
+    type: "button",
+    className: "chip on",
+    onClick: auto
+  }, "おまかせで振る") : null), React.createElement("div", {
+    className: "msx-note"
+  }, "大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)"), MSX_STATS.map(k => React.createElement("div", {
+    key: k,
+    className: "msx-row",
+    style: {
+      marginTop: 5
+    }
+  }, React.createElement("span", {
+    style: {
+      width: 84,
+      fontSize: 12,
+      fontWeight: 900
+    }
+  }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("span", {
+    className: "bar",
+    style: {
+      flex: 1
+    }
+  }, React.createElement("i", {
+    style: {
+      width: `${s.stats[k] / 9.99}%`
+    }
+  })), React.createElement("b", {
+    style: {
+      width: 34,
+      textAlign: 'right'
+    }
+  }, s.stats[k]), React.createElement("button", {
+    type: "button",
+    className: "chip on",
+    style: {
+      minWidth: 52
+    },
+    disabled: !s.pts || s.pts < SUC.ptsCost(s, k),
+    onClick: () => spend(k)
+  }, "+1", React.createElement("small", {
+    style: {
+      fontSize: 8
+    }
+  }, "(", SUC.ptsCost(s, k), "点)"))))), React.createElement("div", {
+    className: "v-card"
+  }, React.createElement("div", {
+    className: "h2"
+  }, "🤝 忠誠度 ", SUC.loyalOf(s), React.createElement("span", {
+    className: "sub"
+  }, "(甘え度 ", s.ama, "+恐れ度 ", s.fear, ")")), React.createElement("div", {
+    className: "sub"
+  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv, "・成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—')), React.createElement("div", {
+    className: "v-card"
+  }, React.createElement("div", {
+    className: "h2"
+  }, "編成の親密度", React.createElement("span", {
+    className: "sub"
+  }, "(80で友情タッグ)")), s.team.map((m, i) => React.createElement("div", {
+    key: i,
+    className: "msx-row",
+    style: {
+      marginTop: 4
+    }
+  }, React.createElement(MsxPf, {
+    m: m,
+    bond: s.bond[i],
+    tagAt: tagAt,
+    cls: "sm"
+  }), React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 11,
+      fontWeight: 900
+    }
+  }, msxMemberName(m), React.createElement("small", {
+    className: "sub"
+  }, m.kind === 'base' ? ' ベースモン' : ` ${m.rank}`, "・得意 ", m.top.map(k => MSX_STAT_NAME[k]).join('・'))), React.createElement("b", null, s.bond[i]))), React.createElement("div", {
+    className: "msx-row",
+    style: {
+      marginTop: 4
+    }
+  }, React.createElement(MsxPf, {
+    aid: s.aid,
+    bond: s.aidBond,
+    tagAt: tagAt,
+    cls: "sm"
+  }), React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 11,
+      fontWeight: 900
+    }
+  }, msxAidName(s.aid), React.createElement("small", {
+    className: "sub"
+  }, " 助手")), React.createElement("b", null, s.aidBond))), React.createElement("div", {
+    className: "v-card"
+  }, React.createElement("div", {
+    className: "h2"
+  }, "技", React.createElement("span", {
+    className: "msx-soon"
+  }, "準備中")), React.createElement("div", {
+    className: "sub"
+  }, "技と修行は次の回で入ります"))));
+}
+function MsxIssa({
+  run,
+  setRun,
+  v,
+  ev,
+  ctx,
+  bondLv,
+  onDone
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const [pick, setPick] = useState('hp');
+  const res = run.out && run.out.issa ? run.out.issa : null;
+  const metScene = s.issaMet > 0 ? 'issa.meet.again' : 'issa.meet.first';
+  const meet = msxPickLine(ctx, metScene, {
+    who: 'issa'
+  });
+  const choose = () => {
+    const r = SUC.issa(s, pick);
+    if (!r.out.ok) {
+      onDone(run);
+      return;
+    }
+    setRun({
+      ...run,
+      s: r.state,
+      out: {
+        issa: r.out,
+        before: s.stats
+      },
+      log: [...(run.log || []), {
+        turn: s.turn,
+        t: `イッサ博士: ${pick === 'none' ? 'ことわった' : r.out.win ? '成功' : '失敗'}`
+      }].slice(-20)
+    });
+  };
+  if (res) {
+    const k = MSX_ISSA_KEYS.find(x => x.key === res.choice);
+    const said = k ? msxPickLine(ctx, `issa.${res.win ? 'ok' : 'ng'}.${k.line}`, {
+      who: 'issa'
+    }) : msxPickLine(ctx, 'issa.bye', {
+      who: 'issa'
+    });
+    const ups = {};
+    if (run.out.before) MSX_STATS.forEach(x => {
+      const d = s.stats[x] - run.out.before[x];
+      if (d) ups[x] = d;
+    });
+    return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: "images/story-bg/monhero_night.jpg",
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh",
+      style: {
+        background: '#0f0d2466'
+      }
+    }), res.win ? React.createElement("div", {
+      className: "v-burst"
+    }) : null, React.createElement("img", {
+      className: "v-issa",
+      src: MSX_ISSA_ART,
+      alt: "イッサ博士",
+      style: res.win ? undefined : {
+        filter: 'grayscale(.4) brightness(.85)'
+      }
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        left: '70%',
+        bottom: '12%',
+        height: '44%'
+      }
+    }), k ? React.createElement("div", {
+      className: `v-stamp msx-pop ${res.win ? '' : 'ng'}`,
+      style: {
+        top: '3%',
+        fontSize: 40
+      }
+    }, res.win ? '大成功!' : '失敗…', React.createElement("small", null, res.win ? '装置がぴかーっと光った' : '装置から煙が…')) : null, said ? React.createElement("div", {
+      className: "v-ibub",
+      style: {
+        top: 'auto',
+        bottom: 8,
+        left: 8,
+        right: '44%'
+      }
+    }, "「", said.t, "」") : null), React.createElement(MsxStRow, {
+      stats: s.stats,
+      ups: ups
+    }), React.createElement("div", {
+      className: "v-log"
+    }, React.createElement("span", {
+      className: "hd2"
+    }, k ? `${k.icon} ${k.name}` : '🙅 何もしない'), React.createElement("br", null), k ? res.win ? `⭕ ${k.ok}` : `❌ ${k.ng}` : 'ことわった'), React.createElement("div", {
+      className: "v-ft",
+      style: {
+        marginTop: 6
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => onDone({
+        ...run,
+        out: null
+      })
+    }, "つぎへ ▶")));
+  }
+  return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "v-scene",
+    style: {
+      flex: '1 1 0'
+    }
+  }, React.createElement("img", {
+    className: "bg",
+    src: "images/story-bg/monhero_night.jpg",
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh",
+    style: {
+      background: '#0f0d2466'
+    }
+  }), React.createElement("img", {
+    className: "v-issa",
+    src: MSX_ISSA_ART,
+    alt: "イッサ博士"
+  }), React.createElement("div", {
+    className: "v-machine"
+  }, "⚙️💡", React.createElement("small", null, "のびのび装置"), React.createElement(MsxMonArt, {
+    run: run,
+    style: {
+      height: '46%',
+      aspectRatio: '1',
+      objectFit: 'contain'
+    }
+  })), React.createElement("div", {
+    className: "v-ev-h",
+    style: {
+      top: 'auto',
+      bottom: 8,
+      borderRadius: '0 99px 99px 0'
+    }
+  }, React.createElement("small", null, "大きな賭け"), "イッサ博士があらわれた!"), React.createElement("div", {
+    className: "v-ibub"
+  }, "「", meet ? meet.t : 'やっほー! ちょっと強くなってみない?', "」")), React.createElement("div", {
+    className: "v-six"
+  }, MSX_ISSA_KEYS.map(x => {
+    const p = SUC.issaRate(s, x.key);
+    const dots = Math.max(1, Math.min(4, Math.round(p * 4)));
+    return React.createElement("button", {
+      type: "button",
+      key: x.key,
+      className: `v-ix${pick === x.key ? ' sel' : ''}`,
+      onClick: () => setPick(x.key)
+    }, x.icon, " ", x.name, React.createElement("span", {
+      className: "pr"
+    }, "成功", [0, 1, 2, 3].map(i => React.createElement("i", {
+      key: i,
+      className: i < dots ? 'on' : ''
+    }))), React.createElement("span", {
+      className: "ok"
+    }, "⭕ ", x.ok), React.createElement("span", {
+      className: "ng"
+    }, "❌ ", x.ng));
+  }), React.createElement("button", {
+    type: "button",
+    className: `v-ix no${pick === 'none' ? ' sel' : ''}`,
+    onClick: () => setPick('none')
+  }, "🙅 何もしない", React.createElement("span", {
+    className: "ok",
+    style: {
+      color: '#cbd5e1'
+    }
+  }, "ことわる。損はない"), React.createElement("span", {
+    className: "ng",
+    style: {
+      color: '#94a3b8'
+    }
+  }, "「えー、ノリ悪いなぁ」"))), React.createElement("div", {
+    className: "v-ft",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: choose
+  }, pick === 'none' ? 'ことわる' : `${(MSX_ISSA_KEYS.find(x => x.key === pick) || {}).icon} ${(MSX_ISSA_KEYS.find(x => x.key === pick) || {}).name}を受ける`)));
+}
 const MONSUC_LEND_REASON_TEXT = Object.freeze({
   off: 'フレンドからのレンタルは準備中です',
   network: 'つながりませんでした。少し待ってからもう一度ためしてね',
@@ -227574,7 +231295,10 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "🖌️ 染色マスク編集", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement(DebugMenuRow, {
+    }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement(MonheroSuccessDebugEntry, {
+      callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
+      bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
+    }), React.createElement(DebugMenuRow, {
       "data-debug-card-battle": true,
       icon: "🃏",
       label: "MFバトルカード",
