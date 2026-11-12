@@ -6,6 +6,7 @@
 | ファイル | 中身 | まとめ |
 | --- | --- | --- |
 | `ikusei-video-2026-11-12.mp4` | 育成中の画面の動画(30秒) | VIDEO-REF.md |
+| `ikusei-video-2-2026-11-12.mp4` | デビュー期の大会までの動画(161秒) | VIDEO-REF.md |
 | `assist-card-1〜3.png` | アシストカードの詳細(基本の数値・アシスト効果) | ASSIST-REF.md |
 | `assist-card-4-event.png` | アシストカードのイベントの一覧 | ASSIST-REF.md |
 | `assist-cards.json` / `assist-effects.json` | アシストカード100枚と効果1084件の一覧(攻略サイトのデータ) | ASSIST-REF.md |
