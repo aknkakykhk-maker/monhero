@@ -36,7 +36,7 @@ const mount = (sheet) => {
   const label = (t) => h('div', { className: 'fx-label', style: { position: 'absolute', left: 6, top: 4, zIndex: 5, color: '#fde047', fontWeight: 900, fontSize: 12, textShadow: '0 1px 2px #000' } }, t);
   const cell = (key, bg, kids) => h('div', { key, className: 'fx-cell', style: { position: 'relative', overflow: 'hidden', borderRadius: 10, border: '1px solid #3b3566', minHeight: 0 } },
     h('img', { src: bg, style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' } }), ...kids);
-  const monBox = (props) => h('div', { style: { position: 'absolute', left: 0, right: 0, bottom: '4%', height: '62%', zIndex: 2 } }, h(MsxLiveMon, props));
+  const monBox = (props) => h('div', { style: { position: 'absolute', left: 0, right: 0, bottom: '4%', height: '56%', zIndex: 2 } }, h(MsxLiveMon, props));
   const SP = ['Mocchi', 'Tiger', 'Pixie', 'Mia', 'Golem', 'Ham', 'Suezo', 'Undine'];
   let cells;
   if (sheet === 'moods') {

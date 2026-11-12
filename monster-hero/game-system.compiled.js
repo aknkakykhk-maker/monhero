@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ae408d848d6446f
+// source-sha256: 4a9e7f416e190501
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108655,7 +108655,8 @@ const MSXFX_CSS = `
 .msxfx-fx-heart i{color:#f472b6}.msxfx-fx-note i{color:#7dd3fc}.msxfx-fx-zzz i{color:#c7d2fe;font-size:18px}.msxfx-fx-puff i,.msxfx-fx-bang i{color:#fb7185}
 @keyframes msxfx-float{0%{opacity:0;transform:translateY(10px) scale(.6)}25%{opacity:1;transform:translateY(-4px) scale(1.1)}100%{opacity:0;transform:translateY(-34px) scale(1)}}
 /* ふきだし */
-.msxfx-bub{position:absolute;left:50%;top:-2%;transform:translateX(-50%);z-index:3;background:#fff;color:#1e1b4b;font-weight:900;font-size:13px;line-height:1.3;
+/* 顔に重ならないよう、箱の上の外に出す(ミハリ5の気づき) */
+.msxfx-bub{position:absolute;left:50%;bottom:100%;margin-bottom:2px;transform:translateX(-50%);z-index:3;background:#fff;color:#1e1b4b;font-weight:900;font-size:13px;line-height:1.3;
   padding:5px 11px;border-radius:14px;white-space:nowrap;max-width:180%;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 8px #0006;
   animation:msxfx-bub 1.7s ease-out forwards;pointer-events:none}
 .msxfx-bub:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}

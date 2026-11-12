@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 88cce7f4c5ac8143
+// generated-sha256: 45ca424513904f26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64891,7 +64891,8 @@ const MSXFX_CSS = `
 .msxfx-fx-heart i{color:#f472b6}.msxfx-fx-note i{color:#7dd3fc}.msxfx-fx-zzz i{color:#c7d2fe;font-size:18px}.msxfx-fx-puff i,.msxfx-fx-bang i{color:#fb7185}
 @keyframes msxfx-float{0%{opacity:0;transform:translateY(10px) scale(.6)}25%{opacity:1;transform:translateY(-4px) scale(1.1)}100%{opacity:0;transform:translateY(-34px) scale(1)}}
 /* ふきだし */
-.msxfx-bub{position:absolute;left:50%;top:-2%;transform:translateX(-50%);z-index:3;background:#fff;color:#1e1b4b;font-weight:900;font-size:13px;line-height:1.3;
+/* 顔に重ならないよう、箱の上の外に出す(ミハリ5の気づき) */
+.msxfx-bub{position:absolute;left:50%;bottom:100%;margin-bottom:2px;transform:translateX(-50%);z-index:3;background:#fff;color:#1e1b4b;font-weight:900;font-size:13px;line-height:1.3;
   padding:5px 11px;border-radius:14px;white-space:nowrap;max-width:180%;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 8px #0006;
   animation:msxfx-bub 1.7s ease-out forwards;pointer-events:none}
 .msxfx-bub:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}
