@@ -161,7 +161,7 @@ const VOICE = {
   kyuko: { must: /笑(?![顔っいわ])|(?<![A-Za-z])w(?![A-Za-z])|ほい|おけ|ありがとん|ぐぬぬ|[ぇぁぉ](?=[！？。w笑…〜\s]|$)|😭|🤣|🥺|🫂|💦/, mustRate: 0.7, mustName: 'きゅうこのくせ(笑・w・ぇぁぉ・ほい・おけ…)', ng: /私|あたし|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|♡|ぢゃん|まぢ|笑(?![顔っいわ]).*(?<![A-Za-z])w(?![A-Za-z])|(?<![A-Za-z])w(?![A-Za-z]).*笑(?![顔っいわ])/, ngName: 'きゅうこは一人称「俺」・1本に「笑」と「w」を両方付けない(ほかの助手の話し方にしない)' },
   erubin: { must: /ね|かな|笑(?![顔っいわ])|(?<![A-Za-z])w(?![A-Za-z])|おけ|いいね|さすが|☺️|😊|🤔|💦/u, mustRate: 0.8, mustName: 'えるびんのくせ(〜ね・〜かな・笑・w・おけ…)', ng: /あたし|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|♡|ぢゃん|まぢ|笑(?![顔っいわ]).*(?<![A-Za-z])w(?![A-Za-z])|(?<![A-Za-z])w(?![A-Za-z]).*笑(?![顔っいわ])/, ngName: 'えるびんは一人称「俺」(丁寧なときは「私」)・1本に「笑」と「w」を両方付けない(ほかの助手の話し方にしない)' },
   // ソラシドは仲良し度で話し方が変わる(Lv1〜3 / Lv4〜8 / Lv9〜15 / Lv16〜)。丁寧語が土台。「俺」「っす」は Lv9〜 の版だけ(下の段ごとの見張り)
-  sorashido: { must: /です|ます|でした|ました|ません|ましょう|ください/, mustRate: 0.85, mustName: '丁寧語', ng: /私|あたし|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|(?<![A-Za-z])w(?![A-Za-z])|♡|ぢゃん|まぢ|だぜ|ぜ(?=[。！？・]|$)/, ngName: 'ソラシドは丁寧語が土台・笑いは全角の「笑」・「〜ぜ」を使わない(ほかの助手の話し方にしない)' },
+  sorashido: { must: /です|ます|でした|ました|ません|ましょう|ください|っす|んす/, mustRate: 0.85, mustName: '丁寧語(Lv9〜 の「っす」も)', ng: /私|あたし|僕|おで(?!こ)|でつ(?!か)|まつ|ｗ|(?<![A-Za-z])w(?![A-Za-z])|♡|ぢゃん|まぢ|だぜ|ぜ(?=[。！？・]|$)/, ngName: 'ソラシドは丁寧語が土台・笑いは全角の「笑」・「〜ぜ」を使わない(ほかの助手の話し方にしない)' },
 };
 // あつの行がある場面(シナリオを除く)= シナリオの助手が話す場面。あつだけの場面(博士のかけ合いの組・受けて立った)は除く
 const sceneOf = id => id.replace(/\.[^.]+$/, '');
@@ -193,6 +193,7 @@ for (const f of ASST_FILES) {
 // ⑫ ソラシドの段ごとの版(窓口 2026-11-12「仲良し度で話し方が変わる子は段ごとに持つ」)
 //   bond の無い行は Lv4〜8 の形。のばし・絵文字・「ほほー」がある行は、Lv1〜3 版(id の最後に b・bond:[1,3])が要る(4話・特別な1話・その大会は Lv5〜 だけなので除く)
 //   Lv1〜3 版はのばし・絵文字・「ほほー」なし。一人称「俺」と「っす」は Lv9〜 の版(bond の下が9以上)だけ
+//   Lv9〜15 版(c)・Lv16〜 版(d)は、bond の無い行すべてに要る(台本に1本でもあれば、その段のそろいを見る)
 {
   const sora = rows.filter(r => r.who === 'sorashido' && r.file.startsWith('asst-'));
   if (sora.length) {
@@ -205,6 +206,24 @@ for (const f of ASST_FILES) {
       if (lowOf(r) < 9 && /俺|っす/.test(r.t)) bad('ソラシドの「俺」「っす」は Lv9〜 の版だけ', r);
     }
     check('ソラシドの段ごとの版(Lv1〜3 版がそろっている)', missB.length === 0, missB.length ? `足りない ${missB.length}本: ${missB.slice(0, 3).map(r => r.id).join(', ')}` : `Lv1〜3 版 ${sora.filter(r => Array.isArray(r.bond) && r.bond.join() === '1,3').length}本`);
+ 
+    // Lv9〜15 版(id の最後に c・bond:[9,15])と Lv16〜 版(d・bond:16)は、bond の無い行すべてに要る(rival-owner.js のソラシドの行も)
+    //   Lv9〜 の版の一人称は「俺」(「自分」は使わない)。Lv9〜15 版は「っす」「んす」がたいてい入る。Lv16〜 版は半分以上の行にタメ口が混ざる
+    const soraAll = rows.filter(r => r.who === 'sorashido');
+    const allIds = new Set(soraAll.map(r => r.id));
+    const TIERS = [['c', '9,15', 'Lv9〜15'], ['d', '16', 'Lv16〜']].filter(([k]) => soraAll.some(r => r.id.endsWith(k) && r.bond));
+    for (const [k, b, name] of TIERS) {
+      const miss = soraAll.filter(r => !r.bond && !allIds.has(r.id + k));
+      const mine = soraAll.filter(r => r.bond && String(r.bond) === b);
+      for (const r of soraAll) if (r.bond && r.id.endsWith(k) && String(r.bond) !== b) bad(`ソラシドの ${name} 版(${k})は bond:${b.includes(',') ? `[${b}]` : b}`, r);
+      for (const r of mine) if (/自分/.test(r.t)) bad(`ソラシドの ${name} 版の一人称は「俺」`, r);
+      const ssu = mine.filter(r => /っす|んす/.test(r.t)).length;
+      // Lv16〜 版は丁寧語とタメ口が半々: タメ口の言い切り(〜だ・〜な・〜かな・〜なきゃ・〜ちゃう…)が半分以上の行に入る
+      const TAME = /(?:だ|な|なー|かな|なきゃ|よな|ちゃう?|しよう|ぞ|か)(?=[笑！。！？・\s👀💦]|$)|そうだ|よし、/u;
+      const tame = mine.filter(r => TAME.test(r.t)).length;
+      const ok = miss.length === 0 && (k !== 'c' || ssu >= mine.length * 0.8) && (k !== 'd' || tame >= mine.length * 0.5);
+      check(`ソラシドの段ごとの版(${name} 版がそろっている)`, ok, miss.length ? `足りない ${miss.length}本: ${miss.slice(0, 3).map(r => r.id).join(', ')}` : `${mine.length}本${k === 'c' ? ` /「っす」${Math.round(ssu / Math.max(1, mine.length) * 100)}%` : ` / タメ口まじり ${Math.round(tame / Math.max(1, mine.length) * 100)}%`}`);
+    }
   }
 }
 
