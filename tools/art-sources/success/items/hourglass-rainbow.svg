@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+<linearGradient id="navy" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#6a7fd6"/><stop offset="0.4" stop-color="#30419a"/><stop offset="1" stop-color="#151d52"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.35" stop-color="#f7c948"/><stop offset="0.75" stop-color="#d99a1e"/><stop offset="1" stop-color="#a8680c"/></linearGradient><linearGradient id="postN" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5468c4"/><stop offset="1" stop-color="#1a2463"/></linearGradient><linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8f4ff" stop-opacity="0.85"/><stop offset="1" stop-color="#dcd6f5" stop-opacity="0.75"/></linearGradient><linearGradient id="rbT" x1="0" y1="0" x2="1" y2="0.3"><stop offset="0" stop-color="#ff6b8b"/><stop offset="0.2" stop-color="#ffb547"/><stop offset="0.4" stop-color="#ffe95c"/><stop offset="0.6" stop-color="#6fe08a"/><stop offset="0.8" stop-color="#5cb8ff"/><stop offset="1" stop-color="#b07cff"/></linearGradient><linearGradient id="rbB" x1="1" y1="0" x2="0" y2="0.4"><stop offset="0" stop-color="#ff6b8b"/><stop offset="0.2" stop-color="#ffb547"/><stop offset="0.4" stop-color="#ffe95c"/><stop offset="0.6" stop-color="#6fe08a"/><stop offset="0.8" stop-color="#5cb8ff"/><stop offset="1" stop-color="#b07cff"/></linearGradient><linearGradient id="rbS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b8b"/><stop offset="0.2" stop-color="#ffb547"/><stop offset="0.4" stop-color="#ffe95c"/><stop offset="0.6" stop-color="#6fe08a"/><stop offset="0.8" stop-color="#5cb8ff"/><stop offset="1" stop-color="#b07cff"/></linearGradient>
+</defs>
+<ellipse cx="256" cy="452" rx="150" ry="18" fill="#2a1a10" opacity="0.22" filter="url(#soft)"/>
+<g filter="url(#glow)"><circle cx="256" cy="256" r="214" fill="none" stroke="#ff6b8b" stroke-width="12" opacity="0.55"/><circle cx="256" cy="256" r="203" fill="none" stroke="#ffb547" stroke-width="12" opacity="0.55"/><circle cx="256" cy="256" r="192" fill="none" stroke="#ffe95c" stroke-width="12" opacity="0.55"/><circle cx="256" cy="256" r="181" fill="none" stroke="#6fe08a" stroke-width="12" opacity="0.55"/><circle cx="256" cy="256" r="170" fill="none" stroke="#5cb8ff" stroke-width="12" opacity="0.55"/><circle cx="256" cy="256" r="159" fill="none" stroke="#b07cff" stroke-width="12" opacity="0.55"/></g>
+  <!-- 柱(うしろ) -->
+  <rect x="152" y="96" width="22" height="320" rx="11" fill="url(#postN)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="338" y="96" width="22" height="320" rx="11" fill="url(#postN)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- ガラス -->
+  <path d="M190 112 C190 192 234 222 247 256 C234 290 190 320 190 400 L322 400 C322 320 278 290 265 256 C278 222 322 192 322 112 Z" fill="url(#glass)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <clipPath id="gc"><path d="M190 112 C190 192 234 222 247 256 C234 290 190 320 190 400 L322 400 C322 320 278 290 265 256 C278 222 322 192 322 112 Z"/></clipPath>
+  <g clip-path="url(#gc)">
+    <path d="M196 176 C214 214 238 232 251 256 L261 256 C274 232 298 214 316 176 Z" fill="url(#rbT)"/>
+    <rect x="252" y="250" width="8" height="96" rx="4" fill="url(#rbS)"/>
+    <path d="M186 404 C192 360 226 342 256 332 C286 342 320 360 326 404 Z" fill="url(#rbB)"/>
+    <path d="M204 126 C204 180 226 210 238 232" stroke="#ffffff" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M208 392 C210 368 222 352 236 340" stroke="#ffffff" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.6"/>
+  </g>
+  <path d="M190 112 C190 192 234 222 247 256 C234 290 190 320 190 400 L322 400 C322 320 278 290 265 256 C278 222 322 192 322 112 Z" fill="none" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- ふた -->
+  <rect x="128" y="62" width="256" height="50" rx="20" fill="url(#navy)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="128" y="400" width="256" height="50" rx="20" fill="url(#navy)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="146" y="74" width="220" height="12" rx="6" fill="url(#gold)" opacity="0.9"/>
+  <rect x="146" y="412" width="220" height="12" rx="6" fill="url(#gold)" opacity="0.9"/>
+  <circle cx="163" cy="87" r="9" fill="#ffffff" opacity="0.7"/>
+  <circle cx="256" cy="87" r="13" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="256" cy="425" r="13" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="163" cy="96" r="13" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="349" cy="96" r="13" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="163" cy="416" r="13" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="349" cy="416" r="13" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><path d="M406 106 Q409.96 124.04 428 128 Q409.96 131.96 406 150 Q402.04 131.96 384 128 Q402.04 124.04 406 106Z" fill="#ffffff" opacity="1"/><path d="M110 314 Q112.88 327.12 126 330 Q112.88 332.88 110 346 Q107.12 332.88 94 330 Q107.12 327.12 110 314Z" fill="#ffffff" opacity="1"/><path d="M300 348 Q302.52 359.48 314 362 Q302.52 364.52 300 376 Q297.48 364.52 286 362 Q297.48 359.48 300 348Z" fill="#ffffff" opacity="1"/><path d="M222 186 Q223.8 194.2 232 196 Q223.8 197.8 222 206 Q220.2 197.8 212 196 Q220.2 194.2 222 186Z" fill="#ffffff" opacity="1"/>
+</svg>

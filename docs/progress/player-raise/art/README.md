@@ -4,3 +4,4 @@
   - 名前は「いさ博士」から「イッサ博士」に変わった(社長 2026-11-12)。白衣の胸の字も「イッサ博士」「Issa Laboratory」に描きかえた(元は「いさ博士」「Isa Laboratery」)
   - 元の絵は `tools/art-sources/success/isa-hakase-received.jpg`(受け取ったまま)
   - ゲームに入れるとき(ランダムイベントの画面を作るとき)に、配信用の場所(`monster-hero/images/`)へ大きさをそろえて移す
+- `items-sheet.png` … アイテムの絵15枚の一覧(2026-11-12)。社長「アイテムの絵はクロードで作ったやつでいい」で、Claude が SVG で描いた。対応表と作り方は [`ITEMS.md`](ITEMS.md)

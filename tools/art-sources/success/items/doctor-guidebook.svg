@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+<linearGradient id="cover" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5d9be0"/><stop offset="0.5" stop-color="#2f6fb8"/><stop offset="1" stop-color="#1d4a86"/></linearGradient><linearGradient id="spine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f4f8f"/><stop offset="1" stop-color="#143766"/></linearGradient><linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#eadfc6"/></linearGradient>
+</defs>
+<ellipse cx="256" cy="452" rx="150" ry="18" fill="#2a1a10" opacity="0.22" filter="url(#soft)"/>
+<g transform="rotate(-7 256 256)">
+    <!-- 紙の束(右と下にのぞく) -->
+    <path d="M150 92 L384 92 Q398 92 398 106 L398 428 Q398 440 386 440 L150 440 Z" fill="url(#paper)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M386 120 L386 424 M374 430 L160 430" stroke="#d6c7a6" stroke-width="4" fill="none"/>
+    <!-- 表紙(右上の角が折れている) -->
+    <path d="M122 78 L340 78 L376 114 L376 412 Q376 424 364 424 L134 424 Q122 424 122 412 Z" fill="url(#cover)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M340 78 L340 114 L376 114 Z" fill="#a9c8ec" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="122" y="78" width="36" height="346" fill="url(#spine)"/>
+    <path d="M122 78 L122 424" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+    <path d="M158 78 L158 424" stroke="#143766" stroke-width="5"/>
+    <!-- 落書きの顔(白い線) -->
+    <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
+      <path d="M200 236 C200 178 246 150 270 150 C300 150 340 176 340 236 C340 300 302 334 270 334 C236 334 200 300 200 236 Z"/>
+      <path d="M206 186 C196 166 212 150 222 162 M238 156 C236 136 258 132 262 150 M290 152 C298 134 318 140 314 160 M328 178 C344 166 352 186 336 196"/>
+      <circle cx="244" cy="236" r="22"/><circle cx="300" cy="236" r="22"/><path d="M266 236 L278 236 M222 232 L204 226 M322 232 L338 226"/>
+      <path d="M240 280 C252 270 262 274 270 282 C278 274 290 270 302 280 C292 296 280 290 270 286 C260 290 248 296 240 280 Z"/>
+    </g>
+    <!-- すり切れ・ひかり -->
+    <path d="M170 104 C220 98 280 96 320 100" stroke="#ffffff" stroke-width="10" stroke-linecap="round" opacity="0.45" fill="none"/>
+    <path d="M330 380 L356 372 M180 396 L210 402" stroke="#8fb7e6" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+  </g>
+</svg>
