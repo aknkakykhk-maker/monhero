@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6f2441169a63515
+// generated-sha256: 68cad2b395844b8a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77260,7 +77260,7 @@ function AssistantMasmonRanchBand() {
 //   病院(ナカヨシ): 口 assistantLifeHospitalSlotsOf(aid) → 病院にいた生活の回(abs)の配列を読む。各回1度だけ、けが・病気を残り1日短く+ストレス−10。家出は戻らない
 const ASSISTANT_MASMON_PLAN_KEY = 'mh_assistant_masmon_plan_v1';
 const ASSISTANT_MASMON_COND_KEY = 'mh_assistant_masmon_cond_v1';
-const AMGP_STAGE_DAYS = Object.freeze([0, 7, 21, 42, 70]); // 段1〜5に届く「計画で育てた日」の延べ(社長 11-12)
+const AMGP_STAGE_DAYS = Object.freeze([0, 5, 12, 20, 30]); // 2026-11-12 社長 7・21・42・70 → 5・12・20・30(寿命 約30日の案に合わせ、1世代のうちに5体)。段1〜5に届く「計画で育てた日」の延べ(社長 11-12)
 const AMGP_MAX = AMGP_STAGE_DAYS.length;
 // 数字は PLAN.md 第4版の表のまま(社長 11-12「案のまま」)
 const AMGP_NUM = Object.freeze({
