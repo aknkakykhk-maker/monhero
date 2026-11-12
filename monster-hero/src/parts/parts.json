@@ -513,6 +513,22 @@
       "role": "部品: 助手のマスモンのフレンド対戦(非同期PvP・第④段階・タイセン)の端末の口。画面は持たない(画面はミセカタ)。サーバの関数 masmon-pvp を呼ぶ masmonPvpRegister/masmonPvpChallenge/masmonPvpUnregister と、表を読む masmonPvpRatings/masmonPvpFriends。保存は新しいキー mh_masmon_pvp_owner_key_v1(持ち主の鍵)だけ。公開の印 assistantMasmonBattlePvp が真のときだけ通信。設計 docs/spec/MASMON_PVP_SERVER.md"
     },
     {
+      "file": "56-monhero-success-css.jsx",
+      "role": "モンヒロサクセス(育成の画面・回2)の見た目 MSX_CSS。見本 docs/progress/player-raise/mock/v3.css・mock.css を .msx の中だけに効くよう切り出したもの"
+    },
+    {
+      "file": "56-monhero-success-store.jsx",
+      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本 data/monhero-success-script.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
+    },
+    {
+      "file": "56-monhero-success-start.jsx",
+      "role": "モンヒロサクセス: 始めるまでの6段(育てる子・編成・助手(シナリオ)・持ちこみ・名前と染色・確認)。計算は芯の memberOf を呼ぶだけ"
+    },
+    {
+      "file": "56-monhero-success-main.jsx",
+      "role": "モンヒロサクセス: 育成の画面の本体 MonheroSuccessScreen(メイン・訓練を選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開)。大会・修行・引退・合体は回3で「準備中」"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true
