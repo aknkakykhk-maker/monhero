@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a720999437508444
+// generated-sha256: 3fa888780211df5c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41268,7 +41268,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   );
 }
 
-// ---- part: 51-home-screen-guide.jsx ----
+// ---- part: 51-home-install-guide.jsx ----
 // ==== 「ホーム画面に追加」の案内(2026-11-11 社長の選択 B・窓口経由・アプリカ) ====
 // 社長「ブラウザだからかたまに画面の挙動がおかしい。ホームに追加しても、それでもブラウザのような挙動がある気がする」
 // → ホーム画面のアプリでは左端スワイプの戻るを出さなくした(#5455)。Safari で遊んでいる人には、ホーム画面に追加する案内を出す。
@@ -133465,7 +133465,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         />
       )}
 
-      {battleSelectHint&&battleTutorialStep==null&&typeof BATTLE_SELECT_HINTS!=='undefined'&&BATTLE_SELECT_HINTS[battleSelectHint]&&activeAssistant&&(
+      {battleSelectHint&&!showWaveDetails&&battleTutorialStep==null&&typeof BATTLE_SELECT_HINTS!=='undefined'&&BATTLE_SELECT_HINTS[battleSelectHint]&&activeAssistant&&(
         <div data-battle-select-hint={battleSelectHint} className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pointer-events-none" style={{paddingBottom:'max(12px, env(safe-area-inset-bottom))'}}>
           <div className="pointer-events-auto w-full max-w-md rounded-2xl border-2 bg-slate-950/95 p-3 shadow-2xl" style={{borderColor:activeAssistant.accent}}>
             <div className="flex items-start gap-2">
