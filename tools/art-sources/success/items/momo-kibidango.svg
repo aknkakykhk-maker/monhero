@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+<radialGradient id="dango" cx="0.35" cy="0.3" r="0.75"><stop offset="0" stop-color="#fff1f0"/><stop offset="0.55" stop-color="#ffc2c4"/><stop offset="1" stop-color="#f08f9b"/></radialGradient><linearGradient id="bag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd6ea" stop-opacity="0.55"/><stop offset="1" stop-color="#ff9cc8" stop-opacity="0.55"/></linearGradient><linearGradient id="bagTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3f1" stop-opacity="0.8"/><stop offset="1" stop-color="#ffb3d6" stop-opacity="0.8"/></linearGradient><linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b6b"/><stop offset="1" stop-color="#c4252a"/></linearGradient>
+</defs>
+<ellipse cx="256" cy="452" rx="150" ry="18" fill="#2a1a10" opacity="0.22" filter="url(#soft)"/>
+<!-- 袋の口(ひらひら) -->
+    <path d="M196 156 L176 76 L208 96 L230 66 L256 92 L282 66 L304 96 L336 76 L316 156 Z" fill="url(#bagTop)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- おだんご(袋の中) -->
+    <circle cx="196" cy="352" r="56" fill="url(#dango)" stroke="#c46a74" stroke-width="5"/><ellipse cx="176.4" cy="329.6" rx="15.680000000000001" ry="10.08" fill="#ffffff" opacity="0.85"/><circle cx="312" cy="352" r="56" fill="url(#dango)" stroke="#c46a74" stroke-width="5"/><ellipse cx="292.4" cy="329.6" rx="15.680000000000001" ry="10.08" fill="#ffffff" opacity="0.85"/><circle cx="254" cy="370" r="58" fill="url(#dango)" stroke="#c46a74" stroke-width="5"/><ellipse cx="233.7" cy="346.8" rx="16.240000000000002" ry="10.44" fill="#ffffff" opacity="0.85"/><circle cx="222" cy="270" r="52" fill="url(#dango)" stroke="#c46a74" stroke-width="5"/><ellipse cx="203.8" cy="249.2" rx="14.560000000000002" ry="9.36" fill="#ffffff" opacity="0.85"/><circle cx="292" cy="268" r="54" fill="url(#dango)" stroke="#c46a74" stroke-width="5"/><ellipse cx="273.1" cy="246.4" rx="15.120000000000001" ry="9.719999999999999" fill="#ffffff" opacity="0.85"/>
+    <!-- 袋 -->
+    <path d="M200 160 C120 200 100 300 118 380 C130 432 190 446 256 446 C322 446 382 432 394 380 C412 300 392 200 312 160 Z" fill="url(#bag)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M150 230 C130 280 128 340 142 392" stroke="#ffffff" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M362 240 C372 270 374 300 370 324" stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.5"/>
+    <path d="M170 196 Q172.52 207.48 184 210 Q172.52 212.52 170 224 Q167.48 212.52 156 210 Q167.48 207.48 170 196Z" fill="#ffffff" opacity="1"/>
+    <!-- 赤いひもと蝶結び -->
+    <rect x="186" y="146" width="140" height="24" rx="12" fill="url(#red)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M256 158 C220 120 186 130 196 160 C204 182 236 170 256 158 Z" fill="url(#red)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M256 158 C292 120 326 130 316 160 C308 182 276 170 256 158 Z" fill="url(#red)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M248 166 C238 196 226 214 214 226 M264 166 C276 196 290 212 304 222" stroke="#3d2618" stroke-width="20" stroke-linecap="round" fill="none"/>
+    <path d="M248 166 C238 196 226 214 214 226 M264 166 C276 196 290 212 304 222" stroke="url(#red)" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <circle cx="256" cy="158" r="15" fill="url(#red)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

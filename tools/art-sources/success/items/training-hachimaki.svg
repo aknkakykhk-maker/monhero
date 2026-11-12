@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+<linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a6b"/><stop offset="0.5" stop-color="#e8382c"/><stop offset="1" stop-color="#a81b17"/></linearGradient><linearGradient id="redD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b52a22"/><stop offset="1" stop-color="#7a1410"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.35" stop-color="#f7c948"/><stop offset="0.75" stop-color="#d99a1e"/><stop offset="1" stop-color="#a8680c"/></linearGradient><linearGradient id="tail" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b5c"/><stop offset="1" stop-color="#b81f19"/></linearGradient>
+</defs>
+<ellipse cx="260" cy="430" rx="170" ry="18" fill="#2a1a10" opacity="0.22" filter="url(#soft)"/>
+<!-- うしろの帯 -->
+    <path d="M86 236 A150 78 0 0 1 386 236" fill="none" stroke="#3d2618" stroke-width="58"/>
+    <path d="M86 236 A150 78 0 0 1 386 236" fill="none" stroke="url(#redD)" stroke-width="42"/>
+    <!-- 結び目からのびる2本の端(ひらり) -->
+    <path d="M384 236 C420 270 404 330 446 376 L412 404 C376 360 384 300 356 262 Z" fill="url(#tail)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M378 232 C438 238 452 300 496 318 L478 356 C430 334 420 276 366 262 Z" fill="url(#tail)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M402 336 L428 330 M452 300 L470 310" stroke="#f7c948" stroke-width="6" stroke-linecap="round"/>
+    <!-- 前の帯 -->
+    <path d="M86 236 A150 78 0 0 0 386 236" fill="none" stroke="#3d2618" stroke-width="58"/>
+    <path d="M86 236 A150 78 0 0 0 386 236" fill="none" stroke="url(#red)" stroke-width="42"/>
+    <path d="M104 266 A140 68 0 0 0 206 310" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" opacity="0.45"/>
+    <path d="M375.5 258.1 L385.6 270.7 L375.5 283.3 L365.4 270.7 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/><path d="M342.7 282.9 L353.8 296.8 L342.7 310.7 L331.6 296.8 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/><path d="M293.0 299.4 L304.7 314.2 L293.0 328.9 L281.2 314.2 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/><path d="M234.1 305.0 L246.1 320.0 L234.1 335.0 L222.1 320.0 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/><path d="M175.6 298.7 L187.3 313.4 L175.6 328.1 L163.8 313.4 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/><path d="M126.7 281.6 L137.7 295.4 L126.7 309.2 L115.6 295.4 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/><path d="M95.2 256.3 L105.2 268.9 L95.2 281.4 L85.2 268.9 Z" fill="url(#gold)" stroke="#3d2618" stroke-width="4"/>
+    <!-- 結び目 -->
+    <ellipse cx="376" cy="248" rx="30" ry="26" fill="url(#red)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M362 238 Q376 230 390 240" stroke="#ffffff" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6"/>
+</svg>
