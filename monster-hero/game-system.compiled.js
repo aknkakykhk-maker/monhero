@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 26cb96337813009d
+// source-sha256: 7fd6f69da780a3da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156652,6 +156652,7 @@ const MSX_KEYS = Object.freeze({
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script.js';
+const MSX_SCENES_SRC = 'data/success-scenes.js';
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js';
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 const MSX_SCENARIOS = Object.freeze([{
@@ -156736,7 +156737,7 @@ let msxSuc = null;
 const msxLoad = () => {
   if (msxSuc) return Promise.resolve(msxSuc);
   if (!msxLoading) {
-    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk)]).then(([core, script, regOk]) => {
+    msxLoading = Promise.all([msxLoadScript(MSX_CORE_SRC, 'MONHERO_SUCCESS'), msxLoadScript(MSX_SCRIPT_SRC, 'MONHERO_SUCCESS_SCRIPT'), msxLoadConstScript(MSX_REGULARS_SRC, msxRegularsOk), msxLoadScript(MSX_SCENES_SRC, 'successHomeScene')]).then(([core, script, regOk]) => {
       if (!core || typeof core.create !== 'function') {
         msxLoading = null;
         return null;
@@ -156935,23 +156936,26 @@ const MSX_SEASON = Object.freeze({
   autumn: '🍁 秋',
   winter: '⛄ 冬'
 });
-const msxSceneBg = () => {
-  let h = 12;
-  try {
-    h = new Date().getHours();
-  } catch (e) {}
-  if (h >= 5 && h < 16) return {
-    bg: 'images/story-bg/monhero_plaza.jpg',
-    time: '昼'
-  };
-  if (h >= 16 && h < 19) return {
-    bg: 'images/story-bg/monhero_plaza_evening.jpg',
-    time: '夕方'
-  };
+const MSX_TIMES = Object.freeze([['day', '昼'], ['evening', '夕方'], ['night', '夜']]);
+const MSX_OLD_BG = Object.freeze({
+  day: 'images/story-bg/monhero_plaza.jpg',
+  evening: 'images/story-bg/monhero_plaza_evening.jpg',
+  night: 'images/story-bg/monhero_night.jpg'
+});
+const msxSceneBg = (turn = 1) => {
+  const t = Math.max(1, Math.round(msxNum(turn, 1)));
+  const [time, label] = MSX_TIMES[(t - 1) % 3];
+  const cal = msxCalendar(t);
+  const pick = typeof window !== 'undefined' && typeof window.successHomeScene === 'function' ? window.successHomeScene(cal.season, time) : null;
   return {
-    bg: 'images/story-bg/monhero_night.jpg',
-    time: '夜'
+    bg: pick && pick.image ? pick.image : MSX_OLD_BG[time],
+    time: label,
+    season: cal.season
   };
+};
+const msxVenueBg = venue => {
+  const f = typeof window !== 'undefined' && typeof window.successSceneById === 'function' ? window.successSceneById(`venue-${venue}`) : null;
+  return f && f.image ? f.image : 'images/story-bg/monhero_town.jpg';
 };
 const MSX_RANK_ORDER = Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'M']);
 const msxRankCls = r => `rk r${String(r || 'G').replace(/\+/g, '')}`;
@@ -157250,7 +157254,7 @@ function MsxStart({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(1).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -157667,7 +157671,7 @@ function MsxStart({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(1).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158190,7 +158194,8 @@ function MonheroSuccessScreen({
       onYes: () => setView('start')
     }) : setView('start'),
     setMeta: setMeta,
-    onWipe: quit
+    onWipe: quit,
+    onRank: () => setView('rank')
   });else if (view === 'start') content = React.createElement(MsxStart, {
     data: data,
     SUC: msxSuc.SUC,
@@ -158212,7 +158217,9 @@ function MonheroSuccessScreen({
     "data-monhero-success": true,
     role: "dialog",
     "aria-label": "モンヒロサクセス"
-  }, React.createElement("style", null, MSX_CSS), React.createElement("div", {
+  }, React.createElement("style", null, MSX_CSS), view === 'rank' && typeof MonsucRankScreen === 'function' ? React.createElement(MonsucRankScreen, {
+    onBack: () => setView('home')
+  }) : null, React.createElement("div", {
     className: `msx v3 ${layout}`,
     "data-msx-view": view
   }, content, ask && React.createElement("div", {
@@ -158248,7 +158255,8 @@ function MsxHome({
   onContinue,
   onNew,
   setMeta,
-  onWipe
+  onWipe,
+  onRank
 }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
@@ -158266,7 +158274,7 @@ function MsxHome({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(s ? s.turn : 1).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
@@ -158299,7 +158307,11 @@ function MsxHome({
     type: "button",
     className: "v-big",
     onClick: onNew
-  }, "🌱 新しく育成をはじめる"), debug && React.createElement("div", {
+  }, "🌱 新しく育成をはじめる"), typeof MonsucRankScreen === 'function' ? React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: onRank
+  }, "🏆 ランキング") : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
@@ -158802,7 +158814,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: "images/story-bg/monhero_town.jpg",
+      src: msxVenueBg(b.kind === 'summit' ? 'summit' : b.kind === 'debut' ? 'debut' : b.kind === 'pro' ? 'hero' : 'cup'),
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158849,7 +158861,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(s.turn).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -158912,7 +158924,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: msxSceneBg().bg,
+      src: msxSceneBg(s.turn).bg,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -159042,7 +159054,7 @@ function MsxPlay({
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
-    const scn = msxSceneBg();
+    const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
     const bag = Object.keys(s.bag || {}).filter(k => s.bag[k] > 0);
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -159353,7 +159365,7 @@ function MsxBag({
     }
   }, React.createElement("img", {
     className: "bg",
-    src: msxSceneBg().bg,
+    src: msxSceneBg(s.turn).bg,
     alt: ""
   }), React.createElement("div", {
     className: "sh"
