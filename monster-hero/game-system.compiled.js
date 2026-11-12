@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90688739c097b223
+// source-sha256: 2fda198046b8fc77
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151013,7 +151013,7 @@ const monsucFuseApply = (box, plan, at) => {
   if (!plan || !plan.ok || !box || typeof box !== 'object') return null;
   const mons = monsucBoxMons(box);
   if (mons.some(m => m.id === plan.child.id)) return null;
-  const ids = plan.child.parents.map(p => p.id);
+  const ids = plan.child.parents.slice();
   if (!ids.every(id => mons.some(m => m.id === id))) return null;
   const gone = mons.filter(m => ids.includes(m.id));
   const parentAt = id => gone.find(m => m.id === id) || {};
@@ -151025,12 +151025,14 @@ const monsucFuseApply = (box, plan, at) => {
     score: 0,
     loy: 0,
     pop: 0,
-    fav: null,
+    fav: [],
     coach: null,
     endAt: null,
     paid: false,
-    bond: null,
+    over: null,
+    assists: [],
     titles: [],
+    from: null,
     bornAt: at || ''
   };
   const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({
@@ -151038,8 +151040,7 @@ const monsucFuseApply = (box, plan, at) => {
     species: m.species,
     rank: typeof m.rank === 'string' ? m.rank : null,
     gen: Number.isFinite(m.gen) ? m.gen : 1,
-    at: at || '',
-    why: 'fuse'
+    at: at || ''
   }))].slice(-MONSUC_MEMORY_MAX);
   return {
     ...box,
@@ -151050,7 +151051,8 @@ const monsucFuseApply = (box, plan, at) => {
 let monsucFuseBusy = false;
 const monsucFuse = async ({
   box,
-  saveBox,
+  saveBox: saveBox0,
+  onSave,
   mainId,
   matId,
   locked,
@@ -151059,6 +151061,7 @@ const monsucFuse = async ({
   io
 }) => {
   const SUC = suc || monsucFuseCore();
+  const saveBox = typeof saveBox0 === 'function' ? saveBox0 : onSave;
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
@@ -151095,13 +151098,23 @@ const monsucFuse = async ({
       species: plan.child.species,
       parents: [main, mat].map(m => JSON.parse(JSON.stringify(m)))
     };
-    const logged = await set(MONSUC_FUSE_KEY, {
-      ...fs,
-      seq: fs.seq + 1,
-      log: [...fs.log, rec].slice(-MONSUC_FUSE_LOG)
-    }, false);
+    let logged = false;
+    try {
+      logged = await set(MONSUC_FUSE_KEY, {
+        ...fs,
+        seq: fs.seq + 1,
+        log: [...fs.log, rec].slice(-MONSUC_FUSE_LOG)
+      }, false);
+    } catch (_) {
+      logged = false;
+    }
     if (logged !== true) return '保存できませんでした。2体ともそのままです';
-    const saved = await saveBox(next);
+    let saved = false;
+    try {
+      saved = await saveBox(next);
+    } catch (_) {
+      saved = false;
+    }
     if (saved !== true) return '保存できませんでした。2体ともそのままです';
     return true;
   } finally {
@@ -151111,6 +151124,7 @@ const monsucFuse = async ({
 function MonsucFuseSheet({
   box,
   saveBox,
+  onSave,
   locked = [],
   onDone,
   onClose,
@@ -151158,6 +151172,7 @@ function MonsucFuseSheet({
     const r = await monsucFuse({
       box,
       saveBox,
+      onSave,
       mainId: main.id,
       matId: mat.id,
       locked,

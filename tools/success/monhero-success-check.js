@@ -424,7 +424,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mk = (id, sp, v, extra) => ({ id, species: sp, raised: true, gen: 1, st: { life: v, pow: v, wise: v, hit: v, eva: v, tough: v }, techs: [], gt: 2, rank: 'B', ...(extra || {}) });
   const p = SUC.fusePlan(mk('a', 'Undine', 999), mk('b', 'Mocchi', 999));
   ok(p.ok && p.child.species === 'Yaobikuni', 'ウンディーネ + モッチー がヤオビクニにならない');
-  ok(p.child.raised === false && p.child.gen === 2 && p.child.parents.length === 2 && p.child.parents[0].id === 'a', '生まれた子の未育成・世代・親が違う');
+  ok(p.child.raised === false && p.child.gen === 2 && p.child.parents.join() === 'a,b' && p.parentInfo[0].id === 'a' && p.parentInfo[0].rank === 'B', '生まれた子の未育成・世代・親が違う');
   ok(SUC.KEYS.every(k => p.child.st[k] === p.base[k] + p.add[k] && p.add[k] === 200), '6能力が「生まれた種類の初期値 + 上乗せ(平均999で+200)」になっていない');
   const q = SUC.fusePlan(mk('a', 'Undine', 999), mk('b', 'Mocchi', 999));
   ok(JSON.stringify(p) === JSON.stringify(q) && p.child.id === SUC.fuseId('a', 'b') && SUC.fuseId('a', 'b') !== SUC.fuseId('b', 'a'), '同じ2体で見通しと結果が変わる・id が決まらない');
@@ -441,7 +441,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const all = SUC.techsOf('Mocchi').filter(t => !(t.learn || {}).start).map(t => t.id);
   if (all.length >= 3) {
     const tp = SUC.fusePlan(mk('a', 'Mocchi', 500, { techs: all.slice(0, 2), gen: 3 }), mk('b', 'Mocchi', 500, { techs: [all[2], 'nope'], gen: 5 }));
-    ok(tp.child.techs.length === 2 && tp.child.techs.every(t => all.includes(t) && tp.child.mast[t] === 0), '受け継ぐ技が2つまで・熟練0になっていない');
+    ok(tp.child.techs.length === 2 && tp.child.techs.every(t => all.includes(t)) && tp.child.mast.length === 2 && tp.child.mast.every(x => x === 0), '受け継ぐ技が2つまで・熟練0になっていない');
     ok(tp.child.gen === 6, '世代が「親の大きい方 + 1」になっていない');
   }
   // 型: 主の親の型が多い(くじで少し別)

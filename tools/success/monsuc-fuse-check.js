@@ -34,7 +34,7 @@ const ioOf = (failLog) => { const mem = {}; const order = []; return { mem, orde
     ok(box.mons.length === 3 && !box.mons.some(m => m.id === 'a' || m.id === 'b'), '親2体が保存枠から外れていない');
     const child = box.mons[box.mons.length - 1];
     ok(child.species === 'Yaobikuni' && child.raised === false && child.gen === 2 && child.id === SUC.fuseId('a', 'b'), '生まれた子が違う');
-    ok(box.memory.length === 2 && box.memory.every(m => m.why === 'fuse' && m.rank === 'A' && m.gen === 1 && m.nick), '思い出に名前・ランク・代が残らない');
+    ok(box.memory.length === 2 && box.memory.every(m => m.rank === 'A' && m.gen === 1 && m.nick), '思い出に名前・ランク・代が残らない');
     const log = F.normalizeMonsucFuse(t.mem[F.MONSUC_FUSE_KEY]);
     ok(log.log.length === 1 && log.log[0].parents.length === 2 && log.log[0].parents[0].st.life === 800, '記録に親2体の中身が残らない');
     ok(JSON.parse(before).mons.length === 4, '元の箱を書き換えている');
@@ -53,6 +53,14 @@ const ioOf = (failLog) => { const mem = {}; const order = []; return { mem, orde
     let box = boxOf(); const t = ioOf(false);
     const r = await F.monsucFuse({ box, saveBox: async () => false, mainId: 'a', matId: 'b', suc: SUC, io: t.io });
     ok(r !== true && box.mons.length === 4 && box.mons.some(m => m.id === 'a') && box.mons.some(m => m.id === 'b'), '箱が書けないのに親が消えた');
+  }
+  // 箱の保存が例外を投げる(回3の storeSet の形) → 親は消えない / onSave の名前でも受ける
+  {
+    const box = boxOf(); const t = ioOf(false);
+    const r = await F.monsucFuse({ box, onSave: async () => { throw new Error('quota'); }, mainId: 'a', matId: 'b', suc: SUC, io: t.io });
+    ok(r !== true && box.mons.length === 4, '箱の保存が例外のときに合体したことになる');
+    let got = null; const r2 = await F.monsucFuse({ box: boxOf(), onSave: async (n) => { got = n; return true; }, mainId: 'a', matId: 'b', suc: SUC, io: ioOf(false).io });
+    ok(r2 === true && got && got.mons.some(m => m.id === SUC.fuseId('a', 'b') && Array.isArray(m.mast) && m.parents.join() === 'a,b'), 'onSave で合体できない・子の形が回3の箱と違う');
   }
   // 使えない子
   {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 06b9e9bd5d77af1e
+// generated-sha256: d42eebdc958c1546
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78800,8 +78800,11 @@ function AmgsFuseSheet({ beds, onClose }) {
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
 // 案: docs/progress/player-raise/PLAN.md §3「合体」・§9。計算は芯 MONHERO_SUCCESS(data/monhero-success.js)の fusePlan だけを使う。
 // ★この部品は保存枠(mh_monsuc_box_v1)の読み書きを持たない。箱は回3の保存枠の部品から受け取る:
-//     <MonsucFuseSheet box={箱} saveBox={async (次の箱) => true/false} locked={[編成・貸し出し・育成中の id]} onDone onClose/>
-//   箱の形は PLAN.md §9: { v:1, cap, mons:[{ id, species, nick, gen, st, techs, mast, gt, rank, raised, parents, ... }], memory:[...] }
+//     <MonsucFuseSheet box={msxR3ReadBox() の箱} onSave={(次の箱) => storeSet(MSX_KEYS.box, 次の箱)} locked={[編成・貸し出し・育成中の id]} onDone onClose/>
+//   (saveBox という名前でも受ける。保存の失敗は false でも例外でもよい)
+//   箱の形は回3(56-monhero-success-r3-store.jsx・PLAN.md §9): { v:1, cap, mons:[{ id, species, nick, colors, gen, parents:[id,id], st, techs, mast:[techs と同じ順],
+//   loy, pop, lv, gt, rank, score, fav, raised, coach, endAt, paid, over, assists, titles, from }], memory:[{ nick, species, rank, gen, at }](新しい100件) }
+//   貸し出し中の子は locked に入れて使えなくする(お別れのように貸し出しを外すことはしない)
 // ★元に戻せない操作なので(CLAUDE.md ⑦):
 //   1. 2回押す(2回目は 0.8 秒待ってから押せる・助手のマスモンの合体と同じ)
 //   2. 先に合体の記録 mh_monsuc_fuse_v1(新しいキー・新しい50件・親2体の中身をそのまま残す)を書く。書けなければ何も変えない
@@ -78844,19 +78847,20 @@ const monsucFuseApply = (box, plan, at) => {
   if (!plan || !plan.ok || !box || typeof box !== 'object') return null;
   const mons = monsucBoxMons(box);
   if (mons.some(m => m.id === plan.child.id)) return null;
-  const ids = plan.child.parents.map(p => p.id);
+  const ids = plan.child.parents.slice();
   if (!ids.every(id => mons.some(m => m.id === id))) return null;
   const gone = mons.filter(m => ids.includes(m.id));
   const parentAt = (id) => gone.find(m => m.id === id) || {};
   const colors = plan.child.species === parentAt(ids[0]).species ? (parentAt(ids[0]).colors || null) : null; // 種類が同じときだけ主の親の色を残す
-  const child = { ...plan.child, colors, rank: null, score: 0, loy: 0, pop: 0, fav: null, coach: null, endAt: null, paid: false, bond: null, titles: [], bornAt: at || '' };
-  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({ nick: monsucFuseNick(m), species: m.species, rank: typeof m.rank === 'string' ? m.rank : null, gen: Number.isFinite(m.gen) ? m.gen : 1, at: at || '', why: 'fuse' }))].slice(-MONSUC_MEMORY_MAX);
+  const child = { ...plan.child, colors, rank: null, score: 0, loy: 0, pop: 0, fav: [], coach: null, endAt: null, paid: false, over: null, assists: [], titles: [], from: null, bornAt: at || '' };
+  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({ nick: monsucFuseNick(m), species: m.species, rank: typeof m.rank === 'string' ? m.rank : null, gen: Number.isFinite(m.gen) ? m.gen : 1, at: at || '' }))].slice(-MONSUC_MEMORY_MAX);
   return { ...box, mons: [...mons.filter(m => !ids.includes(m.id)), child], memory };
 };
 let monsucFuseBusy = false;
 // 合体する: true / 断る理由の文字列。log と storeGet/storeSet は検査で差し替えられるよう引数でも受ける
-const monsucFuse = async ({ box, saveBox, mainId, matId, locked, suc, at, io }) => {
+const monsucFuse = async ({ box, saveBox: saveBox0, onSave, mainId, matId, locked, suc, at, io }) => {
   const SUC = suc || monsucFuseCore();
+  const saveBox = typeof saveBox0 === 'function' ? saveBox0 : onSave;
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
@@ -78877,15 +78881,15 @@ const monsucFuse = async ({ box, saveBox, mainId, matId, locked, suc, at, io }) 
     let raw = null; try { raw = await get(MONSUC_FUSE_KEY, null, false); } catch (_) {}
     const fs = normalizeMonsucFuse(raw);
     const rec = { at: day, child: plan.child.id, species: plan.child.species, parents: [main, mat].map(m => JSON.parse(JSON.stringify(m))) };
-    const logged = await set(MONSUC_FUSE_KEY, { ...fs, seq: fs.seq + 1, log: [...fs.log, rec].slice(-MONSUC_FUSE_LOG) }, false);
+    let logged = false; try { logged = await set(MONSUC_FUSE_KEY, { ...fs, seq: fs.seq + 1, log: [...fs.log, rec].slice(-MONSUC_FUSE_LOG) }, false); } catch (_) { logged = false; }
     if (logged !== true) return '保存できませんでした。2体ともそのままです';
-    const saved = await saveBox(next);
+    let saved = false; try { saved = await saveBox(next); } catch (_) { saved = false; }
     if (saved !== true) return '保存できませんでした。2体ともそのままです';
     return true;
   } finally { monsucFuseBusy = false; }
 };
 
-function MonsucFuseSheet({ box, saveBox, locked = [], onDone, onClose, suc = null }) {
+function MonsucFuseSheet({ box, saveBox, onSave, locked = [], onDone, onClose, suc = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
   const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null); const [ready, setReady] = React.useState(true); const [busy, setBusy] = React.useState(false);
@@ -78907,7 +78911,7 @@ function MonsucFuseSheet({ box, saveBox, locked = [], onDone, onClose, suc = nul
     if (!ready || busy || !plan || !plan.ok) return;
     if (sure < 1) { setSure(1); setReady(false); setTimeout(() => setReady(true), 800); return; }
     setBusy(true);
-    const r = await monsucFuse({ box, saveBox, mainId: main.id, matId: mat.id, locked, suc: SUC });
+    const r = await monsucFuse({ box, saveBox, onSave, mainId: main.id, matId: mat.id, locked, suc: SUC });
     setBusy(false);
     if (r === true) { setDone({ child: plan.child, lost: [monsucFuseNick(main), monsucFuseNick(mat)] }); setErr(''); if (typeof onDone === 'function') onDone(plan.child); }
     else { setErr(r); setSure(0); }

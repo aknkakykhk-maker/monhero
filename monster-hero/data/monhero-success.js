@@ -1074,7 +1074,7 @@
     //   種類: 子の主血統 = 主の親の主血統・子の副血統 = もう一方の親の主血統か副血統(くじ)。その組み合わせのモンスターがいればその種類、
     //         いなければ主の親の種類。血統の正本は data/lineages.js の MONSTER_LINEAGE_MAP(deps.lineage で受け取る・読むだけ)
     //   6能力: 生まれた種類の初期値 + 上乗せ(助手マスモンの合体と同じ MASMON_CALC.fuseBonus。2体の平均を元に・そろいで効く・上限なし)
-    //   技: 親の技のうち生まれた種類でも覚えられる技を2つまで(熟練は0から) / 型: 主の親の型(くじで少し別の型) / 世代: 親の大きい方 + 1
+    //   技: 親の技のうち生まれた種類でも覚えられる技を2つまで(熟練は0から・mast は techs と同じ順の配列。保存枠の形は回3 56-monhero-success-r3-store.jsx) / 型: 主の親の型(くじで少し別の型) / 世代: 親の大きい方 + 1
     //   くじは2体の id から作る決まった乱数なので、見通しと本番が同じになる(押し直しても変わらない)
     const LINEAGE = (deps && deps.lineage) || {};
     const FUSE = Object.freeze({ techs: 2, typeChange: 0.1, genMax: 999 });
@@ -1118,7 +1118,8 @@
       return {
         ok: true, kinds, sub: kind.sub, base, add,
         typeChanged: changed && gt !== t0,
-        child: { id: fuseId(a.id, b.id), species, nick: species === a.species && typeof a.nick === 'string' ? a.nick.slice(0, 16) : '', gen, st, techs, mast: Object.fromEntries(techs.map(t => [t, 0])), gt, raised: false, parents: [parentOf(a), parentOf(b)] },
+        parentInfo: [parentOf(a), parentOf(b)],
+        child: { id: fuseId(a.id, b.id), species, nick: species === a.species && typeof a.nick === 'string' ? a.nick.slice(0, 16) : '', gen, st, techs, mast: techs.map(() => 0), gt, lv: 1, raised: false, parents: [String(a.id), String(b.id)] },
       };
     };
 
