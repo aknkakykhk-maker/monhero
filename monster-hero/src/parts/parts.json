@@ -549,6 +549,14 @@
       "role": "モンヒロサクセス 回3: 引退(E0 評価・E3 能力ポイント・E1 振り返り・E2 アシスト能力 → 保存枠へ)・ゲームオーバー G1・保存枠の一覧 MsxR3Box(お別れ・フレンドへの貸し出し)・回2から呼ぶ入口 MsxR3"
     },
     {
+      "file": "56-assistant-life-friend-monsuc-lend.jsx",
+      "role": "部品: モンヒロサクセスのフレンドからのレンタル(段取りの回5・オトズレ)の端末の口。画面は持たない(編成・保存枠の画面は開発部)。サーバの関数 masmon-pvp の lend_* を呼ぶ monsucLendSet/monsucLendClear/monsucLendUse/monsucLendClaim と、表 monsuc_lend を読む monsucLendFriends、借りた子を編成の1枠にする monsucLendMember(アシストのポイントを確かめる)。持ち主の鍵は masmon-pvp と同じ。新しい保存キーなし。公開の印 monheroSuccess が真のときだけ通信"
+    },
+    {
+      "file": "56-monsuc-rank.jsx",
+      "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120003)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true

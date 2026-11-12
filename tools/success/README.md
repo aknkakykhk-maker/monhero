@@ -1,6 +1,7 @@
 # tools/success/ (モンヒロサクセスの道具)
 
 - `success-sim.js` / `success-sim-check.js` / `success-script-check.js` / `monhero-success-check.js` / `load.js` … 計算の芯の試算と検査
+- `build-script.js` … 台本(docs の正本)→ ゲームが読む `data/monhero-success-script-*.js`。`success-script-engine-check.js` が台本エンジンを見張る
 - `item-icons.js` … アイテムの絵を SVG で描いて PNG にする(元の SVG は `tools/art-sources/success/items/`)
 - `success-r3-shoot.js` … 回3の画面(大会・修行・引退・ゲームオーバー・保存枠へしまう)を本物のブラウザで開き、真っ白・はみ出し・エラー・「保存枠に1回だけ入る」を見る(`SHOT_DIR=<フォルダ>` で撮る)
 
