@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9a4241fdd858c5b
+// source-sha256: 262ee36c3d486b31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163391,7 +163391,7 @@ function MsxEvent({
   }) : null, picked.apt ? React.createElement("div", {
     className: "v-log",
     "data-msx-ev-apt": true
-  }, "📏 「", ['零', '近', '中', '遠'][picked.apt.dist], "」の間合いの適性が ", React.createElement("b", {
+  }, "📏 「", ['零', '近', '中', '遠'][picked.apt.dist], "」の間合い適性が ", React.createElement("b", {
     className: "ga"
   }, picked.apt.from, " → ", picked.apt.grade), " に上がった!") : null, React.createElement("div", {
     className: "v-ft",
@@ -164429,7 +164429,7 @@ const msxR3Diff = (a, b) => {
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
   (d.titles || []).forEach(t => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
-  (d.apt || []).forEach(i => rows.push(['📏', '間合いの適性', `「${['零', '近', '中', '遠'][i]}」の間合いが1段上がった!`, 'new', 'UP']));
+  (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}(名声 ${msxFmt(s.fame - d.fame)} → ${msxFmt(s.fame)})`, '', '']);
@@ -165542,7 +165542,7 @@ function MsxR3Shugyo({
       className: "gd"
     }, Math.max(0, res.hp0 - s.hp)), " 下がった", learned ? React.createElement(React.Fragment, null, "/技「", React.createElement("b", {
       className: "ga"
-    }, learned.name), "」を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合いの適性が ", React.createElement("b", {
+    }, learned.name), "」を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合い適性が ", React.createElement("b", {
       className: "ga"
     }, o.aptUp.grade), " に上がった!") : null), !learned && want.length ? React.createElement("div", {
       className: "v-card",
@@ -165653,7 +165653,7 @@ function MsxR3Shugyo({
       padding: '0 4px'
     },
     "data-msx-r3-qapt": true
-  }, "📏 ", cur.name, "は「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合いの適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null, React.createElement("div", {
+  }, "📏 ", cur.name, "は「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合い適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null, React.createElement("div", {
     className: "v-card pk",
     style: {
       padding: '6px 8px'

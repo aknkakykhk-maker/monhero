@@ -61,7 +61,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.daily.arm.atsu1', who:'atsu', e:'excited', t:'力くらべか。上等、受けて立つ？笑' },
   { id:'ev.daily.arm.choice.a', who:'choice', c:'a', t:'勝負を受ける' },
   { id:'ev.daily.arm.choice.b', who:'choice', c:'b', t:'ていねいに断る' },
-  // 間合いの稽古(2026-11-13: 距離適性が1段上がる)
+  // 間合いの稽古(2026-11-13: 間合い適性が1段上がる)
   { id:'ev.daily.range.narr1', who:'narr', t:'広場のすみで、{mon}が見えない相手との間合いをはかるように、前へ出たり下がったりしている。' },
   { id:'ev.daily.range.mua1', who:'mua', e:'excited', t:'{mon}、ひとりで間合いの練習してる！ つきあってあげよっか？' },
   { id:'ev.daily.range.atsu1', who:'atsu', e:'normal', t:'間合いの稽古か。得意を伸ばすか、苦手をつぶすか、どっちにする？' },

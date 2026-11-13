@@ -79,7 +79,7 @@
     { id: 'ev.daily.picky', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['st', 'tough', S], ['str', 10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.mirror', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 8), ch: { a: { fx: [['pop', 3], ['loy', 3]] }, b: { fx: [['st', 'hit', S]] } } },
     { id: 'ev.daily.lost', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [] } } },
-    // 間合いの稽古(2026-11-13 社長: 距離適性を出来事の選択肢でも上げる)。上げられる間合いが残っていて、出来事で上げた数が上限より少ないときだけ
+    // 間合いの稽古(2026-11-13 社長: 間合い適性を出来事の選択肢でも上げる)。上げられる間合いが残っていて、出来事で上げた数が上限より少ないときだけ
     { id: 'ev.daily.range', kind: 'daily', slot: 'start', w: 8, when: (s, x) => s.turn >= 3 && x.aptRoom(s), ch: { a: { fx: [['apt', 'best'], ['hp', -10]] }, b: { fx: [['apt', 'low'], ['hp', -10]] } } },
     { id: 'ev.daily.map', kind: 'daily', slot: 'start', w: 6, when: per(...L_OK), ch: { fx: [['buff', 'hirameki']] } },
     { id: 'ev.daily.gift', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 6), ch: { fx: [['hp', 20]] } },
@@ -357,7 +357,7 @@
         else if (op === 'fame') { s.fame = Math.max(0, num(s.fame) + num(a)); if (num(a) > 0) s.fameTotal = num(s.fameTotal) + num(a); delta.fame = (delta.fame || 0) + num(a); }
         else if (op === 'pts') { gainPts(s, num(a)); delta.pts = (delta.pts || 0) + num(a); }
         else if (op === 'apt' && typeof h.addAptUp === 'function') {
-          // 距離適性を1段(芯の上限の中で)。a = 'best' いちばん得意な間合い / 'low' いちばん苦手な間合い / 0〜3
+          // 間合い適性を1段(芯の上限の中で)。a = 'best' いちばん得意な間合い / 'low' いちばん苦手な間合い / 0〜3
           const g = h.aptGradesOf(s); const R = h.DIST_UP_GRADES;
           const can = [0, 1, 2, 3].filter(d => h.aptUpRoom(s, d, 'event'));
           const d = Number.isInteger(a) ? a : can.slice().sort((x, y) => (a === 'low' ? R.indexOf(g[x]) - R.indexOf(g[y]) : R.indexOf(g[y]) - R.indexOf(g[x])) || x - y)[0];
