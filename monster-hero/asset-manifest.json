@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "04f0ff6fbd23",
-  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":152491341,"count":962},"card":{"bytes":37779758,"count":1048},"all":{"bytes":340059686,"count":2123},"core":{"bytes":21599446,"count":24}},
+  "id": "011d1610d3ce",
+  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":152491341,"count":962},"card":{"bytes":37779758,"count":1048},"all":{"bytes":340059686,"count":2123},"core":{"bytes":21601341,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -2128,7 +2128,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"50b293cb7c3e","size":304665,"pack":"core"},
+    "tailwind.css": {"v":"150ff3c5a250","size":304665,"pack":"core"},
     "data/images/images-ally.js": {"v":"cfbdb3b899b2","size":81504,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2141,14 +2141,14 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"54980ffcb59f","size":96654,"pack":"core"},
-    "data/changelog.js": {"v":"a79d5231c789","size":1715881,"pack":"core"},
-    "data/help.js": {"v":"d5c8bdec5504","size":827634,"pack":"core"},
+    "data/changelog.js": {"v":"cf793697e54b","size":1716263,"pack":"core"},
+    "data/help.js": {"v":"af352c1944c7","size":827664,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"9e428bb5464a","size":2147125,"pack":"core"},
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"132f5a9f3d34","size":47444,"pack":"core"},
     "data/success-sounds.js": {"v":"14cc928341aa","size":3695,"pack":"core"},
-    "game-system.compiled.js": {"v":"442283e3a69d","size":11034767,"pack":"core"}
+    "game-system.compiled.js": {"v":"03d42c666661","size":11036250,"pack":"core"}
   }
 }

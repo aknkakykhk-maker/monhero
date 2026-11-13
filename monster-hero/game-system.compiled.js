@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 470596fabd04cc29
+// source-sha256: 04dcb83e41fd1920
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146417,7 +146417,7 @@ const AMBW_CSS = `
 .ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
 .ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
-.ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
+.ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
 .ambw-dist{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
 .ambw-dist span{font-size:11px;font-weight:900;color:#94a3b8;background:#0f172a;border-radius:6px;padding:1px 10px}.ambw-dist .cur{background:#fde047;color:#422006}
@@ -146459,6 +146459,36 @@ const AMBW_CSS = `
 .ambw-tbl .A{color:#f9a8d4}.ambw-tbl .B{color:#7dd3fc}.ambw-tbl tr.cur td{background:#fde04718}
 .ambw-k{display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0}.ambw-k span:first-child{width:150px;white-space:nowrap}.ambw-k b{width:46px;text-align:right;color:#fcd34d}.ambw-k .ambw-bar{flex:1}
 `;
+const ambwHitCache = new WeakMap();
+const ambwHitPct = (catalog, teams, side, frame, id) => {
+  const eng = typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE : null;
+  if (!eng || !eng._internal || !catalog || !teams || !teams.A || !teams.B) return null;
+  let st = ambwHitCache.get(teams.A);
+  if (!st || st.b !== teams.B) {
+    try {
+      st = {
+        b: teams.B,
+        s: eng._internal.setupState({
+          teamA: teams.A,
+          teamB: teams.B
+        }, catalog)
+      };
+    } catch (_) {
+      return null;
+    }
+    ambwHitCache.set(teams.A, st);
+  }
+  const foe = side === 'A' ? 'B' : 'A';
+  const au = st.s.teams[side].units[frame.act[side]];
+  const du = st.s.teams[foe].units[frame.act[foe]];
+  const m = au && du ? au.moves.find(x => x.key === id) : null;
+  if (!m) return null;
+  try {
+    return Math.round(eng._internal.hitChance(au, du, m, frame.g[side]) * 100);
+  } catch (_) {
+    return null;
+  }
+};
 function AmbwPanel({
   side,
   team,
@@ -146466,7 +146496,9 @@ function AmbwPanel({
   maxHp,
   moves,
   lastMove,
-  mine
+  mine,
+  catalog = null,
+  teams = null
 }) {
   const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
   const style = (window.ASSISTANT_MASMON_BATTLE.STYLES[team.assistantId] || {}).label || '';
@@ -146550,10 +146582,14 @@ function AmbwPanel({
     const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d),
       ok = g >= mv.guts;
     const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
+    const hp = ambwHitPct(catalog, teams, side, frame, mv.id);
     return React.createElement("span", {
       key: mv.id,
       className: `ambw-chip ${cls}`
-    }, mv.kind === 'pow' ? '💪' : '🧠', mv.name, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
+    }, mv.kind === 'pow' ? '💪' : '🧠', mv.name, hp != null ? React.createElement("small", {
+      className: "ambw-hit",
+      "data-ambw-hit": hp
+    }, "命中 ", hp, "%") : null, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
   })));
 }
 function AssistantMasmonBattleWatch({
@@ -148299,6 +148335,11 @@ function AssistantMasmonBattleBeta({
       onClick: () => setPhase('rank')
     }, "🏆 ランキング"))), React.createElement(AmbwPanel, {
       side: "B",
+      catalog: catalog,
+      teams: {
+        A: battle.teamA,
+        B: battle.teamB
+      },
       team: battle.teamB,
       frame: f,
       maxHp: battle.maxHp,
@@ -148342,6 +148383,11 @@ function AssistantMasmonBattleBeta({
       className: `ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`
     }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), React.createElement(AmbwPanel, {
       side: "A",
+      catalog: catalog,
+      teams: {
+        A: battle.teamA,
+        B: battle.teamB
+      },
       team: battle.teamA,
       frame: f,
       maxHp: battle.maxHp,
