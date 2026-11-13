@@ -66,11 +66,11 @@
   const L_OK = ['junior', 'middle', 'pro'];
   const EVENTS = [
     // ═══ ① ふだん(16) ═══
-    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 30]] }, b: { fx: [['hp', 20], ['loy', -3]] } } },
+    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 240]] }, b: { fx: [['hp', 20], ['loy', -3]] } } },
     { id: 'ev.daily.rain', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S]] }, b: { p: 0.5, ok: [['st', 'life', M]], ng: [['hp', -10]] } } },
     { id: 'ev.daily.night', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 2 : 10), ch: { a: { fx: [] }, b: { fx: [['str', -20], ['buff', 'neboke']] } } },
     { id: 'ev.daily.kids', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 18 : 10), ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [['pop', 6], ['popHi', 4]] } } },
-    { id: 'ev.daily.sweets', kind: 'daily', slot: 'start', w: 10, ch: { a: { need: { fame: 50 }, fx: [['fame', -50], ['buff', 'gokigen']] }, b: { fx: [['loy', 3]] } } },
+    { id: 'ev.daily.sweets', kind: 'daily', slot: 'start', w: 10, ch: { a: { need: { fame: 400 }, fx: [['fame', -400], ['buff', 'gokigen']] }, b: { fx: [['loy', 3]] } } },
     { id: 'ev.daily.book', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S], ['buff', 'hirameki']] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.daily.chase', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 3 : 10), ch: { a: { fx: [['st', 'eva', S]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.juggler', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'hit', S]] }, b: { fx: [['str', -10]] } } },
@@ -128,7 +128,7 @@
     { id: 'ev.season.aug2', kind: 'season', slot: 'fixed', ch: { a: { p: 0.6, ok: [['st', 'pow', M], ['pop', 3]], ng: [['hp', -10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.season.aug3', kind: 'season', slot: 'fixed', ch: { fx: [['str', -30]] } },
     { id: 'ev.season.oct1', kind: 'season', slot: 'fixed', ch: { a: { fx: [['pop', 6]] }, b: { fx: [['pop', 3], ['loy', 3]] } } },
-    { id: 'ev.season.oct2', kind: 'season', slot: 'fixed', ch: { a: { fx: [['fame', 100], ['hp', -10]] }, b: { fx: [['fame', 40]] } } },
+    { id: 'ev.season.oct2', kind: 'season', slot: 'fixed', ch: { a: { fx: [['fame', 800], ['hp', -10]] }, b: { fx: [['fame', 320]] } } },
     { id: 'ev.season.oct3', kind: 'season', slot: 'fixed', ch: { fx: [['buff', 'hirameki']] } },
     { id: 'ev.season.dec1', kind: 'season', slot: 'fixed', ch: { a: { fx: [['st', 'life', S], ['hp', -10]] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.season.dec2', kind: 'season', slot: 'fixed', ch: { a: { fx: [['loy', 6]] }, b: { fx: [['buff', 'yaruki']] } } },
@@ -139,7 +139,7 @@
     // ═══ ⑥ 小さな賭け(2)。おみくじは 1月の初もうで(1年目)の a から ═══
     { id: 'ev.small.omikuji', kind: 'small', slot: 'none', ch: { fx: [] } },
     { id: 'ev.small.nut', kind: 'small', slot: 'start', w: 6, when: per(...L_OK),
-      ch: { a: { need: { fame: 80 }, p: 0.6, pay: 80, ok: [['st', 'rand', M]], ng: [['hp', -20]], scene: { ok: 'ev.small.nut.ok', ng: 'ev.small.nut.ng' } }, b: { fx: [] } } },
+      ch: { a: { need: { fame: 640 }, p: 0.6, pay: 640, ok: [['st', 'rand', M]], ng: [['hp', -20]], scene: { ok: 'ev.small.nut.ok', ng: 'ev.small.nut.ng' } }, b: { fx: [] } } },
 
     // ═══ ⑦ 体調(3+帰ってきた) ═══
     { id: 'ev.body.injury', kind: 'body', slot: 'start', w: 60, when: (s, x) => x.hpRatio(s) <= 0.2 && !s.cond, ch: { a: { fx: [['hp', 30]] }, b: { fx: [['flag', 'injRisk']] } } },
