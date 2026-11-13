@@ -60,11 +60,13 @@ ORIG.rows.forEach((r) => {
 //   ② 零・近の技が1つも無い種類は、いちばん近い間合いの技を1つずつ広げる(届かない間合いで何もできない時間を減らす)
 //   ③ 種類ごとの威力の倍率を、試算の勝率から少しずつ決める(0.8〜1.25)。直した所は FIX に残して一覧に出す
 const TUNE = process.argv.includes('--tune');
+const ORIG_SET = new Set(Object.keys(ORIG.species));
 const SHRINK = 0.5;
-const BAND = [0.38, 0.70]; // 勝率をこの中へ(社長「いまと同じくらいの幅」・ゴースト系は70%前後)
+const BAND = [0.38, 0.70];
+const BAND_ORIG = [0.48, 0.52]; // オリジナル5種は50%前後(社長 2026-11-13) // 勝率をこの中へ(社長「いまと同じくらいの幅」・ゴースト系は70%前後)
 const SHRINK_HIT = 0.7; // 命中だけ7割寄せる(社長 2026-11-13「ゴースト系はもう少し下げる。削りの強さは個性として残す」)
 const FIX = {};
-const N_TUNE = Number((process.argv.find(a => a.startsWith('--tn=')) || '--tn=4').slice(5));
+const N_TUNE = Number((process.argv.find(a => a.startsWith('--tn=')) || '--tn=6').slice(5));
 const meanOf = (list, f) => list.reduce((a, t) => a + f(t), 0) / Math.max(1, list.length);
 const LIM = engine.TECH_LIMITS;
 const clampK = (k, v) => Math.max(LIM[k][0], Math.min(LIM[k][1], Math.round(v)));
@@ -115,14 +117,22 @@ if (TUNE) {
     for (const sp of Object.keys(table)) {
       const fx = FIX[sp]; const w = r1[sp] / 100;
       // 帯(BAND)の外に出た種類だけ、帯の端へ戻す(真ん中へ寄せきらない=強い・弱いの順は残す)
-      const tgt = Math.max(BAND[0], Math.min(BAND[1], w));
-      fx.mul = Math.max(0.8, Math.min(1.25, fx.mul * (1 + (tgt - w) * 0.8)));
+      const isOrig = ORIG_SET.has(sp), band = isOrig ? BAND_ORIG : BAND;
+      const tgt = Math.max(band[0], Math.min(band[1], w));
+      const want = fx.mul * (1 + (tgt - w) * 0.8);
+      fx.mul = Math.max(0.8, Math.min(1.25, want));
+      // オリジナル5種は倍率が上限・下限に当たったら、命中とガッツの重さで足りない分を足す(社長「オリジナル5種をまん中へ」)
+      if (isOrig && want !== fx.mul) {
+        const up = want > fx.mul ? 1 : -1;
+        table[sp].forEach(t => { t.hit = clampK('hit', t.hit + 2 * up); t.guts = clampK('guts', t.guts * (1 - 0.04 * up)); });
+        fx.hitAdd = (fx.hitAdd || 0) + 2 * up; fx.gutsMul = (fx.gutsMul || 1) * (1 - 0.04 * up);
+      }
       table[sp].forEach((t, i) => { t.power = clampK('power', base[sp][i] * fx.mul); });
     }
     r1 = rate(table);
     const v = Object.values(r1); console.log(`  調整 ${it + 1}回目: ${Math.min(...v)}〜${Math.max(...v)}%`);
   }
-  for (const fx of Object.values(FIX)) if (Math.abs(fx.mul - 1) >= 0.02) fx.notes.push(`威力 ×${Math.round(fx.mul * 100) / 100}`);
+  for (const fx of Object.values(FIX)) { if (Math.abs(fx.mul - 1) >= 0.02) fx.notes.push(`威力 ×${Math.round(fx.mul * 100) / 100}`); if (fx.hitAdd) fx.notes.push(`命中 ${fx.hitAdd > 0 ? '+' : ''}${fx.hitAdd}(上乗せ)`); if (fx.gutsMul && Math.abs(fx.gutsMul - 1) >= 0.02) fx.notes.push(`ガッツ ×${Math.round(fx.gutsMul * 100) / 100}(上乗せ)`); }
 }
 if (jsonArg && TUNE) fs.writeFileSync(jsonArg.slice(7), JSON.stringify({ map: MAP, fix: FIX, species: table }, null, 1));
 const P = (k, list) => `${k}: ` + GR.filter(x => all.some(s => s[Object.keys(ATTR).find(a => ATTR[a] === list)] === x)).map(x => `${x}=${MAP[list][x]}`).join(' ');
