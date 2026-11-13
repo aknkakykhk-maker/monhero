@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 041017b6a484fda5
+// source-sha256: 62be83173a865c60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152494,6 +152494,7 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
         leftLo -= aa;
       }
     }
+    const capped = Object.entries(g0).some(([k, [, b]]) => !g[k] || g[k][1] < b);
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100);
     str = amgClamp(str + ds, 0, 100);
@@ -152502,6 +152503,7 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
       code: c0,
       as: code,
       auto,
+      capped,
       fat,
       str,
       sab,
@@ -152788,6 +152790,7 @@ const AMGP_FS_LINES = Object.freeze({
   str: Object.freeze([[50, '#fbbf24', 'サボりやすい'], [60, '#fb923c', '病気'], [80, '#f43f5e', '家出']])
 });
 const amgpOptionSub = c => c === 'A' ? '助手が決める' : c === 'R' ? '疲れがとれる' : c === 'P' ? 'ストレスがとれる' : c === 'S' ? 'いなければ軽い訓練' : `${amgpStatName(c.slice(2))}・${c[0] === 'H' ? '重い' : '軽い'}`;
+const amgpDayCapNow = () => Math.round(AMG_CARE.viewCap * (typeof amgbPace === 'function' ? amgbPace() : 1));
 const amgpRiskOf = f => f && !f.auto && !f.cond ? [['サボり', f.sab], ['けが', f.hurt], ['病気', f.sick], ['家出', f.away]].filter(([, v]) => v > 0) : [];
 function AmgpFsGauge({
   kind,
@@ -152906,7 +152909,7 @@ function AmgpDayPlan({
   }, "？")), help && React.createElement("div", {
     className: "mt-1 space-y-1 rounded-xl bg-slate-800 p-2 text-left text-[10.5px] font-bold text-slate-200",
     "data-amgp-help": true
-  }, React.createElement("p", null, "朝(4:00)・昼(12:00)・夜(18:00)に何をするかを決めます。決めた予定は毎週くり返します。"), React.createElement("p", null, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます。"), React.createElement("p", null, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休まないので、「😴 休み」「🎈 遊び」を入れてください。")), React.createElement("div", {
+  }, React.createElement("p", null, "朝(4:00)・昼(12:00)・夜(18:00)に何をするかを決めます。決めた予定は毎週くり返します。"), React.createElement("p", null, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは", amgpDayCapNow(), "までで、こえる分は伸びません。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます。"), React.createElement("p", null, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休まないので、「😴 休み」「🎈 遊び」を入れてください。")), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-3 gap-1.5",
     "data-amgp-slots": true
   }, [0, 1, 2].map(p => {
@@ -152929,7 +152932,10 @@ function AmgpDayPlan({
       className: "mt-1 whitespace-nowrap text-[11.5px] font-black"
     }, cond ? cond.name : amgpCodeName(code)), React.createElement("span", {
       className: "whitespace-nowrap text-[9.5px] font-bold text-slate-300"
-    }, !f ? 'もう過ぎた' : cond ? '休みになる' : amgpOptionSub(code)), rk.length > 0 && React.createElement("span", {
+    }, !f ? 'もう過ぎた' : cond ? '休みになる' : amgpOptionSub(code)), f && f.capped && React.createElement("span", {
+      className: "mt-0.5 whitespace-nowrap rounded bg-amber-700 px-1 text-[9px] font-black",
+      "data-amgp-slot-capped": true
+    }, "⏸ 上限で止まる"), rk.length > 0 && React.createElement("span", {
       className: "mt-0.5 rounded bg-rose-700 px-1 text-[9px] font-black",
       "data-amgp-slot-risk": true
     }, "⚠ ", rk[0][0], " ", amgpPct(rk[0][1])));
@@ -152972,7 +152978,10 @@ function AmgpDayPlan({
   }, React.createElement(AmgpBars, {
     st: x.e.st,
     add: g
-  })), React.createElement("p", {
+  })), d.f.some(f => f && f.capped) && React.createElement("p", {
+    className: "mt-1 rounded-xl bg-amber-950/70 p-2 text-left text-[10.5px] font-bold text-amber-100",
+    "data-amgp-capped": true
+  }, "⏸ 1日に伸びるのは", amgpDayCapNow(), "まで。", [0, 1, 2].filter(p => d.f[p] && d.f[p].capped).map(p => AMG_PERIOD_NAME[p]).join('・'), "の訓練は、上限で伸びが止まります(疲れ・ストレスはたまります)"), React.createElement("p", {
     className: "mt-3 text-left text-[11px] font-black text-slate-200"
   }, "🔋 疲れとストレスの見通し(色が、この日に増える分)"), React.createElement("div", {
     "data-amgp-fs": true
@@ -153381,7 +153390,7 @@ function AmgpPlanTab({
     w: w
   }), mode === 'week' && React.createElement("p", {
     className: "mt-2 text-[10px] font-bold text-slate-400"
-  }, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます"));
+  }, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは", amgpDayCapNow(), "まで。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます"));
 }
 function AmgpLogTab({
   x,

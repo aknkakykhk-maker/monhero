@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3e1b2571e869a803
+// generated-sha256: 88bf5c7b74de2fed
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79803,10 +79803,11 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
     const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
     const g0 = bm > 0 ? amgpGainOf(row, e, code, fat, (auto ? 1 : AMG_CARE.pickMult) * bm) : {}; const g = {}; // 絆: 育ちの速さ・型と年齢・方針(印が偽なら ×1)
     for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, leftHi); if (bb > 0) { const aa = Math.min(a, bb, leftLo); g[k] = [aa, bb]; leftHi -= bb; leftLo -= aa; } }
+    const capped = Object.entries(g0).some(([k, [, b]]) => !g[k] || g[k][1] < b); // 1日の上限で伸びが削られた回(画面で「上限で止まる」と出す)
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100); str = amgClamp(str + ds, 0, 100);
     const a = code[0] === 'H' ? 'heavy' : code[0] === 'S' ? 'shugyo' : code[0] === 'R' ? 'rest' : code[0] === 'P' ? 'play' : 'light';
-    out.push({ code: c0, as: code, auto, fat, str, sab, hurt: auto ? 0 : amgpHurtChance(a, fat), sick: auto ? 0 : amgpSickChance(a, str), away: auto ? 0 : amgpAwayChance(str), g });
+    out.push({ code: c0, as: code, auto, capped, fat, str, sab, hurt: auto ? 0 : amgpHurtChance(a, fat), sick: auto ? 0 : amgpSickChance(a, str), away: auto ? 0 : amgpAwayChance(str), g });
   }
   return out;
 };
@@ -79912,6 +79913,7 @@ function AmgpBars({ st, add = null }) {
 //   長い説明は「？」で開く。保存の形・計算は変えない(見せ方だけ)
 const AMGP_FS_LINES = Object.freeze({ fat: Object.freeze([[60, '#fbbf24', 'サボりやすい'], [70, '#fb7185', 'けが']]), str: Object.freeze([[50, '#fbbf24', 'サボりやすい'], [60, '#fb923c', '病気'], [80, '#f43f5e', '家出']]) });
 const amgpOptionSub = (c) => (c === 'A' ? '助手が決める' : c === 'R' ? '疲れがとれる' : c === 'P' ? 'ストレスがとれる' : c === 'S' ? 'いなければ軽い訓練' : `${amgpStatName(c.slice(2))}・${c[0] === 'H' ? '重い' : '軽い'}`);
+const amgpDayCapNow = () => Math.round(AMG_CARE.viewCap * (typeof amgbPace === 'function' ? amgbPace() : 1)); // 計画の回の1日の伸びの上限(育成の計算と同じ)
 const amgpRiskOf = (f) => (f && !f.auto && !f.cond ? [['サボり', f.sab], ['けが', f.hurt], ['病気', f.sick], ['家出', f.away]].filter(([, v]) => v > 0) : []);
 function AmgpFsGauge({ kind, start, ends }) {
   const label = kind === 'fat' ? '疲れ' : 'ストレス';
@@ -79958,7 +79960,7 @@ function AmgpDayPlan({ x, d, di, setDi, w }) {
     </div>
     {help && <div className="mt-1 space-y-1 rounded-xl bg-slate-800 p-2 text-left text-[10.5px] font-bold text-slate-200" data-amgp-help>
       <p>朝(4:00)・昼(12:00)・夜(18:00)に何をするかを決めます。決めた予定は毎週くり返します。</p>
-      <p>計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます。</p>
+      <p>計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは{amgpDayCapNow()}までで、こえる分は伸びません。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます。</p>
       <p>疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休まないので、「😴 休み」「🎈 遊び」を入れてください。</p>
     </div>}
     <div className="mt-1.5 grid grid-cols-3 gap-1.5" data-amgp-slots>
@@ -79969,6 +79971,7 @@ function AmgpDayPlan({ x, d, di, setDi, w }) {
           <span className="mt-0.5 text-[24px] leading-none">{cond ? cond.icon : amgpCodeIcon(code)}</span>
           <span className="mt-1 whitespace-nowrap text-[11.5px] font-black">{cond ? cond.name : amgpCodeName(code)}</span>
           <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{!f ? 'もう過ぎた' : cond ? '休みになる' : amgpOptionSub(code)}</span>
+          {f && f.capped && <span className="mt-0.5 whitespace-nowrap rounded bg-amber-700 px-1 text-[9px] font-black" data-amgp-slot-capped>⏸ 上限で止まる</span>}
           {rk.length > 0 && <span className="mt-0.5 rounded bg-rose-700 px-1 text-[9px] font-black" data-amgp-slot-risk>⚠ {rk[0][0]} {amgpPct(rk[0][1])}</span>}
         </button>); })}
     </div>
@@ -79985,6 +79988,7 @@ function AmgpDayPlan({ x, d, di, setDi, w }) {
     </div>}
     <p className="mt-3 text-left text-[11px] font-black text-slate-200">📈 この日で伸びる見通し(黄色が伸びる分)</p>
     <div className="mt-1"><AmgpBars st={x.e.st} add={g}/></div>
+    {d.f.some(f => f && f.capped) && <p className="mt-1 rounded-xl bg-amber-950/70 p-2 text-left text-[10.5px] font-bold text-amber-100" data-amgp-capped>⏸ 1日に伸びるのは{amgpDayCapNow()}まで。{[0, 1, 2].filter(p => d.f[p] && d.f[p].capped).map(p => AMG_PERIOD_NAME[p]).join('・')}の訓練は、上限で伸びが止まります(疲れ・ストレスはたまります)</p>}
     <p className="mt-3 text-left text-[11px] font-black text-slate-200">🔋 疲れとストレスの見通し(色が、この日に増える分)</p>
     <div data-amgp-fs>
       <AmgpFsGauge kind="fat" start={d.startFat} ends={d.f.map(f => (f ? f.fat : NaN))}/>
@@ -80141,7 +80145,7 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
       <p className="mt-1 text-[10px] font-bold text-slate-400">疲/ス = その日の終わりの疲れ/ストレス(60で黄・70で赤)。マスを押すとその日の「1日」の画面へ。7日でくり返します</p>
       <p className="mt-2 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-100" data-amgp-week-total>見通し(この7日): {Object.entries(fw.total).map(([k, [a, b]]) => `${amgpStatName(k)} +${a}〜${b}`).join(' ・ ') || '伸びなし'}</p>
     </>) : <AmgpDayPlan x={x} d={d} di={di} setDi={setDi} w={w}/>}
-    {mode === 'week' && <p className="mt-2 text-[10px] font-bold text-slate-400">計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます</p>}
+    {mode === 'week' && <p className="mt-2 text-[10px] font-bold text-slate-400">計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは{amgpDayCapNow()}まで。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます</p>}
   </>);
 }
 function AmgpLogTab({ x, nameOf, pickSel }) {
