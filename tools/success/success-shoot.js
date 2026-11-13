@@ -101,7 +101,7 @@ const makeRun = async (kind) => {
             if (st === 'bag') return click(/持ち物/);
             if (st === 'stats') return click(/^📊/);
             if (st === 'train') return click(/^💪 訓練/);
-            if (st === 'go') return click(/の訓練をする$/);
+            if (st === 'go') return click(/をする$/); // 2026-11-14 訓練のボタンは「丸太割りをする」のように訓練の名前になった
             if (st === 'praise') return click(/褒める/);
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
