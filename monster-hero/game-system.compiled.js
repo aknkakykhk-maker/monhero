@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5686825fcdba70f2
+// source-sha256: 7231c42db7d1a5cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160385,8 +160385,8 @@ const msxNormBoxMon = m => {
   return {
     ...m,
     gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))),
-    techs: Array.isArray(m.techs) ? m.techs.filter(x => typeof x === 'string').slice(0, 8) : [],
-    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
+    techs: Array.isArray(m.techs) ? m.techs.filter(x => typeof x === 'string').slice(0, 99) : [],
+    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
     fav: Array.isArray(m.fav) ? m.fav.filter(k => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter(x => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64),
@@ -160401,7 +160401,7 @@ const msxNormBoxMon = m => {
     score: msxNum(m.score, 0),
     raised: m.raised !== false,
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [],
-    masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
+    masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
     coach: msxStr(m.coach, 16),
     endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
@@ -164262,8 +164262,8 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   st: {
     ...s.stats
   },
-  techs: Array.isArray(s.techs) ? s.techs.slice(0, 8) : [],
-  mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 8).map(t => Math.round(s.mastery && s.mastery[t] || 0)),
+  techs: Array.isArray(s.techs) ? s.techs.slice(0, 99) : [],
+  mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 99).map(t => Math.round(s.mastery && s.mastery[t] || 0)),
   loy: ev.loyal,
   pop: s.pop,
   lv: s.lv,
@@ -165856,12 +165856,20 @@ function MsxR3Shugyo({
     season: msxCalendar(s0.turn).season
   });
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s0.species) : [];
+  const superLeft = typeof SUC.superLeft === 'function' ? SUC.superLeft(s0) : 0;
+  const isSuper = want.length >= 2;
+  const list = typeof SUC.learnable === 'function' ? SUC.learnable(s0, course) : v.shugyo && v.shugyo.techs || [];
   const rateOf = {};
-  (v.shugyo && v.shugyo.techs || []).forEach(t => {
-    rateOf[t.id] = t.rate;
+  const rankOf = {};
+  list.forEach(t => {
+    rateOf[t.id] = isSuper && t.superRate != null ? t.superRate : t.rate;
+    rankOf[t.id] = t.rank;
   });
   const tickets = v.shugyo && v.shugyo.tickets || s0.tickets || 0;
-  const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length >= (SH.pick || 2) ? w : [...w, id]);
+  const superTk = SH.superTickets || 2;
+  const tk0 = v.shugyo && v.shugyo.tickets || s0.tickets || 0;
+  const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : '';
+  const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]);
   const go = () => {
     const r = SUC.act(s0, {
       kind: 'shugyo',
@@ -165869,7 +165877,7 @@ function MsxR3Shugyo({
       techs: want
     });
     if (!r.out.ok) return;
-    const learned = r.out.learned ? (all.find(t => t.id === r.out.learned) || {}).name : null;
+    const names = (r.out.learnedAll || (r.out.learned ? [r.out.learned] : [])).map(id => (all.find(t => t.id === id) || {}).name).filter(Boolean);
     const next = {
       ...run,
       s: r.state,
@@ -165880,7 +165888,7 @@ function MsxR3Shugyo({
       },
       log: [...(run.log || []), {
         turn: s0.turn,
-        t: `修行(${(SH.courses[course] || {}).name || ''}): ${learned ? `「${learned}」を覚えた` : '能力が上がった'}`
+        t: `${r.out.super ? '超修行' : '修行'}(${(SH.courses[course] || {}).name || ''}): ${names.length ? names.map(n => `「${n}」`).join('と') + 'を覚えた' : '能力が上がった'}`
       }].slice(-20)
     };
     setRun(next);
@@ -165896,6 +165904,7 @@ function MsxR3Shugyo({
     const s = res.s;
     const gains = o.gain || {};
     const learned = o.learned ? all.find(t => t.id === o.learned) : null;
+    const learnedAll = (o.learnedAll || (o.learned ? [o.learned] : [])).map(id => all.find(t => t.id === id)).filter(Boolean);
     const missed = (o.tries || []).filter(t => !t.hit).map(t => (all.find(x => x.id === t.id) || {}).name).filter(Boolean);
     const stg = (SH.courses[o.course] || {}).stages || [];
     const helpers = Array.from(new Set((o.stages || []).flat()));
@@ -165939,7 +165948,7 @@ function MsxR3Shugyo({
         top: '5%',
         fontSize: learned ? 38 : 32
       }
-    }, learned ? '技をおぼえた!' : o.result === 'sab' ? 'サボった…' : o.result === 'fail' ? '修行は失敗…' : '修行おわり!', React.createElement("small", null, learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : R.word)), React.createElement("div", {
+    }, learned ? '技をおぼえた!' : o.result === 'sab' ? 'サボった…' : o.result === 'fail' ? '修行は失敗…' : '修行おわり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : R.word)), React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
@@ -165965,9 +165974,11 @@ function MsxR3Shugyo({
       className: "ga"
     }, helpers.length, "体"), " がいっしょに修行した)") : null, React.createElement("br", null), "体力が ", React.createElement("b", {
       className: "gd"
-    }, Math.max(0, res.hp0 - s.hp)), " 下がった", learned ? React.createElement(React.Fragment, null, "/技「", React.createElement("b", {
+    }, Math.max(0, res.hp0 - s.hp)), " 下がった", learnedAll.length ? React.createElement(React.Fragment, null, "/技", learnedAll.map((x, i) => React.createElement(React.Fragment, {
+      key: x.id
+    }, i ? 'と' : '', "「", React.createElement("b", {
       className: "ga"
-    }, learned.name), "」を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合い適性が ", React.createElement("b", {
+    }, x.name), "」")), "を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合い適性が ", React.createElement("b", {
       className: "ga"
     }, o.aptUp.grade), " に上がった!") : null), !learned && want.length ? React.createElement("div", {
       className: "v-card",
@@ -166017,15 +166028,16 @@ function MsxR3Shugyo({
   const cur = SH.courses[course] || {
     stages: []
   };
+  const tkOrder = t => ((s0.techs || []).includes(t.id) ? 2 : rateOf[t.id] != null ? 0 : 1) * 10 + (rankOf[t.id] || 5);
   const groups = MSX_R3_DIST.map((dn, d) => ({
     dn,
-    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d)
+    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => tkOrder(x) - tkOrder(y))
   }));
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s0,
     v: v,
     ev: ev,
-    use: SH.hp || 30
+    use: (SH.hp || 30) * (isSuper ? 2 : 1)
   }), React.createElement("div", {
     className: "v-scene low",
     style: {
@@ -166049,14 +166061,14 @@ function MsxR3Shugyo({
     }
   }), React.createElement("div", {
     className: "v-ev-h"
-  }, React.createElement("small", null, "🎫 チケット ", tickets, "枚(1回に1枚)"), "⚔ 修行に出る"), React.createElement("div", {
+  }, React.createElement("small", null, "🎫 チケット ", tickets, "枚(修行1枚・超修行", superTk, "枚)"), "⚔ 修行に出る"), React.createElement("div", {
     className: "v-ibub",
     style: {
       left: '40%',
       top: 'auto',
       bottom: 10
     }
-  }, "「修行は", React.createElement("b", null, "2段"), "! 能力が上がって、最後に", React.createElement("b", null, "技を覚える"), "チャンスだよ。覚えたい技を", SH.pick || 2, "つまで選んでね」")), React.createElement("div", {
+  }, "「修行は", React.createElement("b", null, "2段"), "! 能力が上がって、最後に", React.createElement("b", null, "技を覚える"), "チャンスだよ。覚えたい技を1つか2つ選んでね。2つなら", React.createElement("b", null, "超修行"), "!」")), React.createElement("div", {
     className: "r3-bar"
   }, courses.map(k => React.createElement("button", {
     type: "button",
@@ -166089,7 +166101,21 @@ function MsxR3Shugyo({
       color: '#f9a8d4',
       fontWeight: 900
     }
-  }, "えらんだ技(", SH.pick || 2, "つまで・上から順にくじ)"), React.createElement("div", {
+  }, "えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり", superLeft, "回・🎫", superTk, "枚)"), superWhy && want.length ? React.createElement("div", {
+    className: "sub",
+    style: {
+      fontSize: 11,
+      color: '#cbd5e1'
+    },
+    "data-msx-r3-superwhy": true
+  }, "🔥 ", superWhy, "ので、技は1つだけ選べる(別の技を押すと入れ替わる)") : null, isSuper ? React.createElement("div", {
+    className: "sub",
+    style: {
+      fontSize: 11,
+      color: '#fde047'
+    },
+    "data-msx-r3-super": true
+  }, "🔥 超修行: チケット", superTk, "枚・2つとも覚えることがある・覚える率 +", SH.superAdd || 15, "%・能力の上がりと疲れは2回分") : null, React.createElement("div", {
     className: "v-pick2"
   }, want.length ? want.map(id => {
     const t = all.find(x => x.id === id) || {};
@@ -166097,7 +166123,7 @@ function MsxR3Shugyo({
       key: id,
       className: "on",
       onClick: () => toggle(id)
-    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))]), t.name, React.createElement("b", null, Math.round((rateOf[id] || 0) * 100), "%"));
+    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・ランク", rankOf[id] || '-'), t.name, React.createElement("b", null, Math.round((rateOf[id] || 0) * 100), "%"));
   }) : React.createElement("div", null, "技をえらばなくても、能力は上がる"))), React.createElement("div", {
     className: "v-card",
     style: {
@@ -166105,19 +166131,32 @@ function MsxR3Shugyo({
       minHeight: 0,
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-evenly',
+      gap: 6,
+      overflowY: 'auto',
       padding: '6px 8px'
-    }
+    },
+    "data-msx-r3-techlist": true
   }, React.createElement("div", {
     className: "sub",
     style: {
       color: '#f9a8d4',
       fontWeight: 900
     }
-  }, "覚えられる技(間合いごと・覚える率)"), all.length ? groups.filter(g => g.list.length).map(g => React.createElement("div", {
+  }, "覚えられる技(間合いごと・ランク・覚える率)"), all.length ? groups.filter(g => g.list.length).map(g => React.createElement("div", {
     key: g.dn,
-    className: "v-tk"
-  }, React.createElement("i", null, g.dn), g.list.map(t => {
+    className: "v-tk",
+    style: {
+      alignItems: 'flex-start'
+    }
+  }, React.createElement("i", null, g.dn), React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 4
+    }
+  }, g.list.map(t => {
     const got = (s0.techs || []).includes(t.id);
     const ok = rateOf[t.id] != null;
     return React.createElement("span", {
@@ -166128,12 +166167,18 @@ function MsxR3Shugyo({
         opacity: got || ok ? 1 : 0.45
       },
       "data-msx-r3-tech": t.id
-    }, t.name, React.createElement("b", null, got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'));
-  }))) : React.createElement("div", {
+    }, ok && !got && rankOf[t.id] ? React.createElement("small", {
+      style: {
+        fontSize: 9,
+        opacity: 0.8,
+        marginRight: 2
+      }
+    }, "R", rankOf[t.id]) : null, t.name, React.createElement("b", null, got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'));
+  })))) : React.createElement("div", {
     className: "sub"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "sub"
-  }, "前の修行で覚えられなかった技は、覚える率が上がっている。助手がドラだと、さらに覚えやすい")));
+  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい")));
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -166145,7 +166190,7 @@ function MsxR3Shugyo({
     disabled: tickets <= 0,
     onClick: go,
     "data-msx-r3-shugyo": true
-  }, "⚔ 修行する(🎫 ", tickets, " → ", Math.max(0, tickets - 1), ")"));
+  }, isSuper ? '🔥 超修行する' : '⚔ 修行する', "(🎫 ", tickets, " → ", Math.max(0, tickets - (isSuper ? superTk : 1)), ")"));
   return React.createElement(MsxR3Frame, {
     run: run,
     onBack: onBack,

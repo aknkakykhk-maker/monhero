@@ -151,7 +151,7 @@ const chooseAction = (s, v) => {
     const avg0 = K.reduce((x, k) => x + s.stats[k], 0) / 6;
     let course = null; let cs = -1;
     for (const [key, c] of Object.entries(SUC.SHUGYO.courses)) { const sc = c.stages.flat().reduce((x, k) => x + SUC.aptMult(s.species, k) * Math.sqrt((avg0 + 50) / (s.stats[k] + 50)), 0); if (sc > cs) { cs = sc; course = key; } }
-    const techs = v.shugyo.techs.slice().sort((x, y) => y.power * y.rate - x.power * x.rate).slice(0, 2).map(t => t.id);
+    const techs = v.shugyo.techs.slice().sort((x, y) => y.power * y.rate - x.power * x.rate).slice(0, v.shugyo.superLeft > 0 && v.shugyo.tickets >= 2 && v.shugyo.techs.length >= 2 ? 2 : 1).map(t => t.id); // 超修行が残っていれば2つ(2026-11-13)
     return { kind: 'shugyo', course, techs };
   }
   if (ratio < 0.45) return (s.stress >= 40) ? { kind: 'play' } : { kind: 'rest' };
