@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3287a7c503c29d0d
+// source-sha256: d33c4cfc174f0178
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147757,7 +147757,7 @@ function AssistantMasmonBattleBeta({
       x2: 0.55,
       x4: 0.3
     }[speed];
-    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, typeof msaReduce === 'function' && msaReduce(), log) * f) : sp.ms;
+    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, typeof msaReduce === 'function' && msaReduce(), log, f) * f) : sp.ms;
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
@@ -147845,6 +147845,14 @@ function AssistantMasmonBattleBeta({
     l: 0,
     d: 0
   };
+  const shownF = typeof useMsaShownFrame === 'function' ? useMsaShownFrame(battle ? battle.r.log : [], battle ? battle.frames : [], pos, battle ? {
+    A: battle.teamA,
+    B: battle.teamB
+  } : {}, {
+    x1: 1,
+    x2: 0.55,
+    x4: 0.3
+  }[speed] || 1) : null;
   let body = null;
   if (!ticked || !ready && !loadFailed) {
     body = React.createElement("div", {
@@ -148326,7 +148334,7 @@ function AssistantMasmonBattleBeta({
         B: battle.teamB
       },
       team: battle.teamB,
-      frame: f,
+      frame: shownF || f,
       maxHp: battle.maxHp,
       moves: battle.moves.B,
       lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
@@ -148348,7 +148356,13 @@ function AssistantMasmonBattleBeta({
       ended: review,
       win: battle.r.winner,
       endSub: review ? `${battle.r.rounds} ラウンド` : '',
-      sound: phase === 'watch' && !paused
+      sound: phase === 'watch' && !paused,
+      introTitle: battle.pvp ? 'フレンド対戦' : 'マスモン対戦',
+      speedF: {
+        x1: 1,
+        x2: 0.55,
+        x4: 0.3
+      }[speed] || 1
     })) : React.createElement("div", {
       className: "ambw-ring"
     }, React.createElement("div", {
@@ -148374,7 +148388,7 @@ function AssistantMasmonBattleBeta({
         B: battle.teamB
       },
       team: battle.teamA,
-      frame: f,
+      frame: shownF || f,
       maxHp: battle.maxHp,
       moves: battle.moves.A,
       lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
@@ -167855,7 +167869,6 @@ const MSA_SPEEDS = Object.freeze([{
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
-.msa-stage::after{content:'';position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5));pointer-events:none}
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
@@ -167865,7 +167878,8 @@ const MSA_CSS = `
 .msa-f .msa-flip{transform:scaleX(-1)}
 .msa-f .msa-shadow{position:absolute;bottom:-5px;left:50%;width:62px;height:11px;margin-left:-31px;border-radius:50%;background:#0008;z-index:-1}
 .msa-f.down img.msa-img{filter:grayscale(1) brightness(.6)}
-.msa-dmg{position:absolute;z-index:8;top:24%;left:50%;width:130px;margin-left:-65px;text-align:center;font-size:30px;font-weight:900;color:#fde047;line-height:.95;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;animation:msaPop .55s ease-out both;pointer-events:none}
+.msa-dmgwrap{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;z-index:9;pointer-events:none}
+.msa-dmg{position:absolute;z-index:8;top:4%;left:50%;width:130px;margin-left:-65px;text-align:center;font-size:30px;font-weight:900;color:#fde047;line-height:.95;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;animation:msaPop .55s ease-out both;pointer-events:none}
 .msa-dmg small{display:block;font-size:12px;color:#fff;margin-bottom:2px}
 .msa-dmg.miss{color:#e2e8f0;font-size:20px;text-shadow:0 2px 0 #0f172a}
 .msa-tag{position:absolute;z-index:8;top:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:900;background:#0f172acc;border:1px solid #fde04788;color:#fde68a;animation:msaPop .4s ease-out both}
@@ -167891,13 +167905,52 @@ const MSA_CSS = `
 .msa-flash{position:absolute;inset:0;z-index:7;background:#fff;opacity:0;pointer-events:none;animation:msaFlash .32s ease-out both}
 .ambw-cut.big{top:6px;left:-6px;right:-6px;padding:6px 18px;background:linear-gradient(90deg,#f59e0b00,#f59e0b 12%,#b45309 50%,#f59e0b 88%,#f59e0b00)!important;text-align:center;border-top:2px solid #fde68a;border-bottom:2px solid #fde68a}
 .ambw-cut.big b{font-size:24px;color:#fff;-webkit-text-stroke:1px #78350f}
-.msa-end{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#0008,#0000 70%);pointer-events:none}
+.msa-end{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#000b,#0004 75%);pointer-events:none}
 .msa-end b{font-size:46px;font-weight:900;letter-spacing:.08em;animation:msaStamp .55s cubic-bezier(.2,1.6,.4,1) both}
-.msa-end.w b{color:#fde047;-webkit-text-stroke:2px #92400e;text-shadow:0 0 18px #fde047aa,0 4px 0 #92400e}
-.msa-end.l b{color:#e2e8f0;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b}
+.msa-end.w b{color:#fde047;text-shadow:2px 0 0 #92400e,-2px 0 0 #92400e,0 -2px 0 #92400e,0 4px 0 #92400e,0 0 18px #fde047aa}
+.msa-end.l b{color:#e2e8f0;text-shadow:2px 0 0 #334155,-2px 0 0 #334155,0 -2px 0 #334155,0 4px 0 #1e293b}
 .msa-end small{margin-top:4px;font-size:12px;font-weight:900;color:#fff;background:#0f172acc;border-radius:99px;padding:2px 10px}
+/* ---- アクセント(2026-11-12 社長「迫力とか見ごたえとか」) ---- */
+.msa-dim{position:absolute;inset:0;z-index:2;background:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0,#0003 16%,#000d 55%);pointer-events:none;animation:msaDim var(--msa-pre,420ms) ease-out both}
+.msa-aura.big{width:150px;height:150px;margin-left:-75px;background:radial-gradient(circle,#fff7 0,#fde047aa 22%,#f97316 45%,#f9731600 70%);animation:msaAuraBig var(--msa-pre,420ms) ease-in both}
+.msa-chargebig{animation:msaChargeBig var(--msa-pre,420ms) ease-in both}
+.msa-dmg.t1{font-size:22px}.msa-dmg.t2{font-size:30px}.msa-dmg.t3{font-size:40px;animation-name:msaPopBig}
+.msa-dmg.t4{font-size:52px;color:#fff;text-shadow:0 3px 0 #b91c1c,0 0 14px #f97316,0 0 26px #fde047;animation-name:msaPopBig}
+.msa-dmg.t4 small{font-size:14px;color:#fde047}
+.msa-shk.shake.s1{animation-name:msaShake1}.msa-shk.shake.s3{animation:msaShake3 .6s ease-out both}
+.msa-critcut{position:absolute;z-index:8;left:-10%;right:-10%;top:38%;height:46px;display:flex;align-items:center;justify-content:center;transform:rotate(-7deg);background:linear-gradient(90deg,#fff0,#fff 18%,#fef08a 50%,#fff 82%,#fff0);pointer-events:none;animation:msaCritCut .75s cubic-bezier(.2,.9,.3,1) both}
+.msa-critcut b{font-size:28px;font-weight:900;color:#b91c1c;letter-spacing:.12em;text-shadow:0 2px 0 #fff,0 0 1px #7f1d1d}
+.msa-flash.big{animation:msaFlashBig .38s ease-out both}
+.msa-flash.fin{animation:msaFlashFin .45s ease-out both}
+@keyframes msaFlashFin{0%{opacity:0}1%{opacity:.55}100%{opacity:0}}
+.msa-fin{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle,#fff0 30%,#7f1d1d66 100%);animation:msaFin .9s ease-out both}
+.msa-ko.big{font-size:54px;top:22%;-webkit-text-stroke:3px #b91c1c;text-shadow:0 4px 0 #7f1d1d,0 0 22px #f97316}
+.msa-burst{position:absolute;z-index:7;left:50%;top:44%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 7deg,#fde04799 7deg 10deg);-webkit-mask:radial-gradient(circle,#0000 22%,#000 30%,#0000 70%);mask:radial-gradient(circle,#0000 22%,#000 30%,#0000 70%);pointer-events:none;animation:msaBurst .8s ease-out both}
+.msa-f.slowko .mh-card-ko{animation-duration:1.5s!important}
+.msa-dust{position:absolute;z-index:4;bottom:-4px;width:34px;height:18px;border-radius:50%;background:radial-gradient(circle,#e7d7b8cc,#e7d7b800 70%);pointer-events:none;animation:msaDust .6s ease-out both}
+.msa-pant{position:absolute;z-index:7;top:6px;right:-6px;font-size:10.5px;font-weight:900;color:#bae6fd;background:#0f172acc;border-radius:99px;padding:0 6px;line-height:16px;white-space:nowrap;animation:msaPant 1.2s ease-in-out infinite}
+.msa-f.tired img.msa-img{animation:msaTired 1.4s ease-in-out infinite}
+.msa-end b{font-size:64px}
+.msa-end .msa-rays{position:absolute;left:50%;top:50%;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04733 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 20%,#0000 68%);mask:radial-gradient(circle,#000 20%,#0000 68%);animation:msaRays 6s linear infinite;z-index:-1}
+.msa-end.l .msa-rays{display:none}
+.msa-end .msa-ribbon{margin-top:2px;font-size:13px;font-weight:900;letter-spacing:.3em;color:#422006;background:linear-gradient(90deg,#fde04700,#fde047 20%,#fde047 80%,#fde04700);padding:2px 40px;animation:msaIn .5s .25s ease-out both}
+.msa-end.l .msa-ribbon{color:#e2e8f0;background:linear-gradient(90deg,#33415500,#334155 20%,#334155 80%,#33415500)}
+@keyframes msaDim{0%{opacity:0}35%{opacity:1}85%{opacity:1}100%{opacity:0}}
+@keyframes msaAuraBig{0%{opacity:0;transform:scale(1.6)}70%{opacity:1;transform:scale(.8)}88%{opacity:1;transform:scale(.8)}100%{opacity:0;transform:scale(1.9)}}
+@keyframes msaChargeBig{0%{transform:none}60%{transform:translateY(5px) scale(1.08,.9)}85%{transform:translateY(5px) scale(1.08,.9)}100%{transform:none}}
+@keyframes msaPopBig{0%{opacity:0;transform:translateY(14px) scale(.4)}30%{opacity:1;transform:translateY(-10px) scale(1.35)}50%{transform:translateY(-4px) scale(.95)}70%{transform:translateY(-12px) scale(1.06)}100%{opacity:1;transform:translateY(-14px) scale(1)}}
+@keyframes msaShake1{0%,100%{transform:none}30%{transform:translate(-3px,1px)}60%{transform:translate(2px,-1px)}}
+@keyframes msaShake3{0%,100%{transform:none}10%{transform:translate(-12px,5px) scale(1.03)}25%{transform:translate(10px,-5px) scale(1.03)}40%{transform:translate(-8px,3px)}55%{transform:translate(6px,-2px)}70%{transform:translate(-4px,1px)}85%{transform:translate(2px,0)}}
+@keyframes msaCritCut{0%{opacity:0;transform:rotate(-7deg) scaleY(0)}18%{opacity:1;transform:rotate(-7deg) scaleY(1.15)}30%{transform:rotate(-7deg) scaleY(1)}80%{opacity:1}100%{opacity:0;transform:rotate(-7deg) translateX(30px)}}
+@keyframes msaFlashBig{0%{opacity:0}1%{opacity:.6}25%{opacity:.35}100%{opacity:0}}
+@keyframes msaFin{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+@keyframes msaBurst{0%{opacity:0;transform:scale(.3) rotate(0)}30%{opacity:1}100%{opacity:0;transform:scale(1.3) rotate(25deg)}}
+@keyframes msaDust{0%{opacity:0;transform:translateX(0) scale(.4)}25%{opacity:1}100%{opacity:0;transform:translateX(var(--msa-dx,-18px)) translateY(-6px) scale(1.5)}}
+@keyframes msaPant{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes msaTired{0%,100%{transform:none}50%{transform:translateY(2px) scale(1.02,.97)}}
+@keyframes msaRays{to{transform:rotate(360deg)}}
 @keyframes msaStamp{0%{opacity:0;transform:translateX(var(--msa-tx,0)) scale(2.2) rotate(var(--msa-r,0deg))}100%{opacity:1;transform:translateX(var(--msa-tx,0)) scale(1) rotate(var(--msa-r,0deg))}}
-@keyframes msaFlash{0%{opacity:.85}100%{opacity:0}}
+@keyframes msaFlash{0%{opacity:0}1%{opacity:.85}100%{opacity:0}}
 @keyframes msaShake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(2px,0)}}
 @keyframes msaPop{0%{opacity:0;transform:translateY(10px) scale(.7)}35%{opacity:1;transform:translateY(-4px) scale(1.12)}100%{opacity:1;transform:translateY(-12px) scale(1)}}
 @keyframes msaCharge{0%,100%{transform:none}30%{transform:translateY(4px) scale(1.05,.92)}60%{transform:translateY(-6px) scale(.97,1.06)}}
@@ -167905,6 +167958,107 @@ const MSA_CSS = `
 @keyframes msaSulk{0%,100%{transform:none}30%,70%{transform:rotate(-8deg) translateX(-4px)}}
 @keyframes msaStep{0%{transform:none}45%{transform:translateY(-14px)}100%{transform:none}}
 @keyframes msaIn{0%{opacity:0;transform:translateY(16px) scale(.8)}100%{opacity:1;transform:none}}
+/* ---- 2026-11-13 社長「参考動画を見てもっと改良して」: 入り・カメラ・技の札・効果の帯・DAMAGE ---- */
+/* 白飛びの直し: 閃光(msa-flash)は animation-delay の待ちの間も 0% のコマが当たる(fill both)。0% を透明にして当たる瞬間から光らせる */
+.msa-stage{background-color:#2a2147}
+.msa-cam{position:absolute;inset:0;transform-origin:50% 78%;will-change:transform}
+.msa-bg{position:absolute;inset:0;z-index:0;background:#2a2147 center/cover no-repeat}
+.msa-rnd{position:absolute;left:50%;top:3px;transform:translateX(-50%);z-index:8;display:flex;flex-direction:column;align-items:center;line-height:1;pointer-events:none}
+.msa-rnd small{font-size:9px;font-weight:900;color:#fde68a;letter-spacing:.12em;background:#0f0b22aa;border-radius:99px;padding:1px 7px}
+.msa-rnd b{font-size:25px;font-weight:900;color:#fff;-webkit-text-stroke:1px #1e1b4b;text-shadow:0 2px 0 #1e1b4b}
+.msa-bands{position:absolute;top:6px;z-index:8;display:flex;flex-direction:column;gap:3px;max-width:38%;pointer-events:none}
+.msa-bands.A{left:0;align-items:flex-start}.msa-bands.B{right:0;align-items:flex-end}
+.msa-band{font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:16px}
+.msa-bands.A .msa-band{padding:1px 14px 1px 6px;background:linear-gradient(90deg,#1d4ed8f0,#1d4ed8b0 75%,#1d4ed800);border-left:3px solid #93c5fd;animation:msaBandL .34s ease-out both}
+.msa-bands.B .msa-band{padding:1px 6px 1px 14px;background:linear-gradient(270deg,#b91c1cf0,#b91c1cb0 75%,#b91c1c00);border-right:3px solid #fca5a5;animation:msaBandR .34s ease-out both}
+.msa-band.old{opacity:.62}
+.msa-plate{position:absolute;bottom:3px;z-index:8;max-width:74%;padding:3px 18px 4px;background:linear-gradient(90deg,#0f172af2,#1e293be8);border:1.5px solid #94a3b8;pointer-events:none}
+.msa-plate>div{transform:skewX(12deg)}
+.msa-plate.A{left:5px;padding-left:22px;border-left:none;transform:skewX(-12deg);animation:msaPlateL .3s cubic-bezier(.2,.9,.3,1) both}
+.msa-plate.B{right:5px;padding-right:22px;border-right:none;text-align:right;transform:skewX(-12deg);animation:msaPlateR .3s cubic-bezier(.2,.9,.3,1) both}
+.msa-plate.pow{border-color:#fb923c}.msa-plate.wise{border-color:#67e8f9}
+.msa-plate small{display:block;font-size:10px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.msa-plate b{display:block;font-size:19px;font-weight:900;color:#fff;letter-spacing:.04em;white-space:nowrap;line-height:1.1}
+.msa-plate.big{background:linear-gradient(90deg,#78350ff4,#b45309ee 60%,#f59e0be0);border-color:#fde68a}
+.msa-plate.big.B{background:linear-gradient(270deg,#78350ff4,#b45309ee 60%,#f59e0be0)}
+.msa-plate.big b{font-size:24px;text-shadow:0 2px 0 #78350f,0 0 6px #78350f}
+.msa-plate.big small{color:#fef3c7}
+.msa-plate .msa-bigtag{display:inline-block;margin:0 5px;font-size:10px;line-height:14px;padding:0 5px;border-radius:4px;background:#fde047;color:#78350f;vertical-align:4px;-webkit-text-stroke:0;letter-spacing:0}
+.msa-dmg{width:150px;margin-left:-75px}
+.msa-dmg em{display:block;font-style:normal;font-size:11px;line-height:1.25;letter-spacing:.24em;color:#fff;margin-top:2px;text-shadow:0 1px 0 #7f1d1d,0 0 4px #000}
+.msa-dmg i{display:block;font-style:normal;font-size:11px;line-height:1.3;color:#bae6fd;text-shadow:0 1px 0 #0f172a,0 0 4px #000}
+.msa-dmg.miss{font-size:13px}
+.msa-dmg.miss b{display:block;font-size:34px;letter-spacing:.08em;color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 3px 0 #1e293b}
+.msa-intro{position:absolute;inset:0;z-index:10;overflow:hidden;pointer-events:none;background:radial-gradient(circle at 50% 55%,#312e81e0,#0b0820f5 75%);animation:msaFadeOut .3s 2.3s ease-in both}
+.msa-intro .ph1{position:absolute;inset:0;animation:msaPh1 1.2s ease-in both}
+.msa-intro .ttl{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:32px;font-weight:900;color:#fde047;letter-spacing:.06em;text-shadow:0 3px 0 #7c2d12,0 -1px 0 #7c2d12,2px 0 0 #7c2d12,-2px 0 0 #7c2d12,0 0 18px #f59e0b;animation:msaTtl .55s cubic-bezier(.2,1.5,.4,1) both}
+.msa-intro .pa,.msa-intro .pb{position:absolute;bottom:8%;width:40%;display:flex;flex-direction:column;align-items:center}
+.msa-intro .pa{left:3%;animation:msaInL .45s .2s ease-out both}.msa-intro .pb{right:3%;animation:msaInR .45s .2s ease-out both}
+.msa-intro .pa img,.msa-intro .pb img{height:min(110px,34vh);max-width:100%;object-fit:contain;filter:drop-shadow(0 4px 6px #000a)}
+.msa-intro .pa img{transform:scaleX(-1)}
+.msa-intro .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:900;color:#fff;background:#0f172acc;border-radius:99px;padding:1px 10px;margin-top:3px}
+.msa-intro .pa .nm{border:1.5px solid #93c5fd}.msa-intro .pb .nm{border:1.5px solid #fca5a5}
+.msa-intro .vs{--msa-tx:-50%;position:absolute;left:50%;bottom:30%;transform:translateX(-50%);font-size:42px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d,0 0 16px #ef4444aa;animation:msaStamp .4s .5s cubic-bezier(.2,1.6,.4,1) both}
+.msa-word{position:absolute;left:50%;top:50%;font-size:50px;font-weight:900;letter-spacing:.08em;white-space:nowrap;color:#fff;-webkit-text-stroke:2px #1e3a8a;text-shadow:0 4px 0 #1e3a8a,0 0 20px #60a5fa;transform:translate(-50%,-50%);opacity:0;animation:msaWord .7s 1.1s ease-out both}
+.msa-word.go{color:#fde047;-webkit-text-stroke-color:#9a3412;text-shadow:0 4px 0 #9a3412,0 0 24px #f97316;animation:msaWord .7s 1.75s ease-out both}
+@keyframes msaBandL{0%{transform:translateX(-105%)}100%{transform:none}}
+@keyframes msaBandR{0%{transform:translateX(105%)}100%{transform:none}}
+@keyframes msaPlateL{0%{opacity:0;transform:skewX(-12deg) translateX(-70%)}100%{opacity:1;transform:skewX(-12deg)}}
+@keyframes msaPlateR{0%{opacity:0;transform:skewX(-12deg) translateX(70%)}100%{opacity:1;transform:skewX(-12deg)}}
+@keyframes msaFadeOut{0%{opacity:1}100%{opacity:0}}
+@keyframes msaPh1{0%,82%{opacity:1}100%{opacity:0}}
+@keyframes msaTtl{0%{opacity:0;transform:scale(2.6)}100%{opacity:1;transform:none}}
+@keyframes msaInL{0%{opacity:0;transform:translateX(-120%)}100%{opacity:1;transform:none}}
+@keyframes msaInR{0%{opacity:0;transform:translateX(120%)}100%{opacity:1;transform:none}}
+@keyframes msaWord{0%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}22%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}}
+/* ---- 場の中のライフ・ガッツの棒(2026-11-13 社長「ライフ、ガッツの変動演出とか」) ---- */
+.msa-hud{position:absolute;top:4px;z-index:8;width:39%;pointer-events:none;display:flex;flex-direction:column;gap:2px}
+.msa-hud.A{left:6px}.msa-hud.B{right:6px;align-items:flex-end}
+.msa-hud .nm{font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+.msa-g{display:flex;align-items:center;gap:4px;width:100%}
+.msa-hud.B .msa-g{flex-direction:row-reverse}
+.msa-gbar{position:relative;flex:1;height:10px;border-radius:5px;background:#0f0b22e6;border:1px solid #ffffff66;overflow:hidden}
+.msa-g.gt .msa-gbar{height:6px;border-radius:4px}
+.msa-gbar i{position:absolute;top:0;bottom:0;left:0}
+.msa-hud.B .msa-gbar i{left:auto;right:0}
+.msa-gbar i.lag{background:#fff1f2;transition:width .5s ease-in}
+.msa-gbar i.cur{background:linear-gradient(180deg,#86efac,#16a34a);transition:width .2s ease-out}
+.msa-g.gt .msa-gbar i.cur{background:linear-gradient(180deg,#fde68a,#f59e0b)}
+.msa-g.gt .msa-gbar i.lag{background:#fca5a5}
+.msa-g.low .msa-gbar i.cur{background:linear-gradient(180deg,#fca5a5,#dc2626);animation:msaLow .7s ease-in-out infinite}
+.msa-g b{min-width:28px;font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;font-variant-numeric:tabular-nums;line-height:1}
+.msa-hud.A .msa-g b{text-align:left}.msa-hud.B .msa-g b{text-align:right}
+.msa-g.low b{color:#fca5a5}
+.msa-g.gt b{font-size:10px;color:#fde68a}
+.msa-gbar.hurt{animation:msaBarHit .35s ease-out}
+.msa-gbar.hurt.big{animation:msaBarShake .45s ease-out}
+.msa-gbar.gain{animation:msaBarGlow .7s ease-out}
+.msa-gtags{display:flex;flex-wrap:wrap;gap:3px;min-height:14px}
+.msa-hud.B .msa-gtags{justify-content:flex-end}
+.msa-gt{font-size:9.5px;font-weight:900;line-height:14px;padding:0 5px;border-radius:99px;white-space:nowrap;animation:msaTagIn .35s ease-out both}
+@keyframes msaTagIn{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
+.msa-gt.up{background:#facc15;color:#422006}.msa-gt.down{background:#475569;color:#f1f5f9}
+.msa-bands{top:70px}
+@keyframes msaLow{50%{opacity:.45}}
+@keyframes msaBarShake{0%,100%{transform:none;box-shadow:0 0 10px #ef4444}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,0)}}
+@keyframes msaBarHit{0%{box-shadow:0 0 8px #f87171}100%{box-shadow:0 0 0 #f8717100}}
+@keyframes msaBarGlow{0%{box-shadow:0 0 0 #fde04700}30%{box-shadow:0 0 10px #fde047,inset 0 0 4px #fff}100%{box-shadow:0 0 0 #fde04700}}
+/* ---- 撃つ前の構えの一拍(2026-11-13 社長「攻撃前にもう1アクセントほしいね」) ---- */
+.msa-wind{animation:msaWind var(--msa-pre,380ms) ease-in both}
+.msa-aura.wind{width:130px;height:130px;margin-left:-65px;bottom:-6px;animation:msaAuraWind var(--msa-pre,380ms) ease-out both}
+@keyframes msaAuraWind{0%{opacity:0;transform:scale(1.5)}25%{opacity:1;transform:scale(.95)}85%{opacity:1;transform:scale(.85)}100%{opacity:0;transform:scale(1.7)}}
+.msa-aura.wind.pow{background:radial-gradient(circle,#fff6 0,#fb923caa 25%,#ef444455 50%,#ef444400 70%)}
+.msa-aura.wind.wise{background:radial-gradient(circle,#fff6 0,#67e8f9aa 25%,#818cf855 50%,#818cf800 70%)}
+.msa-aura.big.wise{background:radial-gradient(circle,#fff7 0,#a5f3fcaa 22%,#6366f1 45%,#6366f100 70%)}
+.msa-focus{position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-conic-gradient(from 0deg at var(--msa-cx,30%) 70%,#fff0 0 5deg,var(--msa-fc,#fde68a) 5deg 6deg);-webkit-mask:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0 16%,#000 34%);mask:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0 16%,#000 34%);animation:msaFocus var(--msa-pre,380ms) ease-out both}
+.msa-focus.pow{--msa-fc:#fdba7499}.msa-focus.wise{--msa-fc:#a5f3fc99}
+.msa-aim{position:absolute;bottom:58px;width:58px;height:58px;margin-left:-29px;z-index:5;border-radius:50%;border:2px solid var(--msa-ac,#fb923c);box-shadow:0 0 8px var(--msa-ac,#fb923c),inset 0 0 6px var(--msa-ac,#fb923c);pointer-events:none;animation:msaAim calc(var(--msa-pre,380ms) + 260ms) ease-out both}
+.msa-aim::before,.msa-aim::after{content:'';position:absolute;left:50%;top:50%;background:var(--msa-ac,#fb923c)}
+.msa-aim::before{width:76px;height:2px;margin:-1px 0 0 -38px}.msa-aim::after{width:2px;height:76px;margin:-38px 0 0 -1px}
+.msa-aim.pow{--msa-ac:#fb923c}.msa-aim.wise{--msa-ac:#22d3ee}
+@keyframes msaWind{0%{transform:none;filter:none}55%{transform:translateY(4px) scale(1.06,.9);filter:brightness(1.25)}85%{transform:translateY(4px) scale(1.06,.9);filter:brightness(1.35)}100%{transform:none;filter:none}}
+@keyframes msaFocus{0%{opacity:0;transform:scale(1.25)}40%{opacity:1}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@keyframes msaAim{0%{opacity:0;transform:scale(2.2) rotate(-60deg)}45%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(.6)}}
 @media (max-height:420px) and (orientation:landscape){.msa-stage{height:180px}.msa-f{height:100px}.msa-f img.msa-img{max-height:92px}}
 @media (prefers-reduced-motion: reduce){
   .msa *,.msa *::before,.msa *::after{animation:none!important;transition:none!important}
@@ -168005,24 +168159,100 @@ const msaMotionMs = kind => {
     hit: sp && sp.hit || 300
   };
 };
-const msaStepMs = (e, team, reduce, log) => {
+const MSA_GUTS_TIRED = 10;
+const MSA_WIND_MS = 380;
+const MSA_WIND_BIG_MS = 620;
+const msaFxOf = (log, e, reduce, sf = 1) => {
+  const z = {
+    pre: 0,
+    stop: 0,
+    fin: false,
+    big: false
+  };
+  if (!e || e.ev !== 'tech') return z;
+  const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40;
+  const idx = Array.isArray(log) ? log.indexOf(e) : -1;
+  const nx = idx >= 0 ? log[idx + 1] : null;
+  const fin = Boolean(e.hit && nx && nx.ev === 'ko' && nx.side && nx.side !== e.side);
+  if (reduce) return {
+    ...z,
+    fin,
+    big
+  };
+  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
+  const f = Number(sf) || 1;
+  const pre = big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f);
+  return {
+    pre,
+    stop,
+    fin,
+    big
+  };
+};
+const msaDmgTier = (dmg, maxHp, e, fx) => {
+  if (e.crit || fx.big || fx.fin) return 4;
+  const r = maxHp > 0 ? (Number(dmg) || 0) / maxHp : 0;
+  return r >= 0.25 ? 3 : r >= 0.1 ? 2 : 1;
+};
+const MSA_INTRO_MS = 2600;
+const MSA_AFTER_HIT = 1250;
+const MSA_AFTER_MISS = 800;
+const MSA_FAST_F = 0.35;
+const msaStepMs = (e, team, reduce, log, sf = 1) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
+  if (e.ev === 'start' && (Number(sf) || 1) <= MSA_FAST_F) return 700;
   if (e.ev === 'tech') {
+    const f = Number(sf) || 1;
     const m = team && team.members && team.members[e.i] || {};
-    return msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).ms + 520;
+    const fx = msaFxOf(log, e, reduce, f);
+    const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
+    const real = f <= MSA_FAST_F ? fx.pre + mm.hit + (e.hit ? 90 : 60) + (fx.fin ? 150 : 0) : fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
+    return real / f;
   }
   return {
-    start: 700,
+    start: MSA_INTRO_MS,
     enter: 350,
     move: 650,
     guard: 750,
     charge: 800,
     swap: 700,
-    ko: 1100,
+    ko: 1500,
     end: 600
   }[e.ev] || 500;
 };
+function MsaDmgLayer({
+  e,
+  x,
+  delay,
+  tier
+}) {
+  if (!e || e.ev !== 'tech') return null;
+  return React.createElement("div", {
+    className: "msa-dmgwrap",
+    style: {
+      left: `${x * 100}%`
+    },
+    "aria-hidden": "true"
+  }, e.hit ? React.createElement("div", {
+    key: `d-${e.k}`,
+    className: `msa-dmg t${tier}`,
+    "data-msa-dmg": e.dmg,
+    "data-msa-tier": tier,
+    style: {
+      animationDelay: `${delay}ms`
+    }
+  }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, e.dmg, React.createElement("em", null, "DAMAGE"), (Number(e.gd) || 0) > 0 ? React.createElement("i", {
+    "data-msa-gd": Math.round(Number(e.gd))
+  }, "ガッツ −", Math.round(Number(e.gd))) : null) : React.createElement("div", {
+    key: `d-${e.k}`,
+    className: "msa-dmg miss",
+    "data-msa-miss": true,
+    style: {
+      animationDelay: `${delay}ms`
+    }
+  }, React.createElement("b", null, "MISS"), "よけた!"));
+}
 const msaSay = (e, nm) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
@@ -168043,8 +168273,18 @@ function MsaFighter({
   hpNow,
   reduce,
   idleOk,
-  gd
+  gd,
+  fx,
+  motionOn = true,
+  maxHp = 0,
+  gutsNow = null
 }) {
+  fx = fx || {
+    pre: 0,
+    stop: 0,
+    fin: false,
+    big: false
+  };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
   const img = React.createElement("img", {
@@ -168063,7 +168303,24 @@ function MsaFighter({
   let style = {
     left: `${x * 100}%`
   };
-  if (tech && me && !reduce) {
+  if (tech && me && !reduce && !motionOn) {
+    const kd = e.tech && e.tech.kind === 'wise' ? 'wise' : 'pow';
+    body = React.createElement("div", {
+      key: `pre-${e.k}`,
+      className: `flex items-end justify-center ${fx.big ? 'msa-chargebig' : 'msa-wind'}`,
+      style: {
+        '--msa-pre': `${fx.pre}ms`
+      }
+    }, img);
+    extra.push(React.createElement("span", {
+      key: `ab-${e.k}`,
+      className: `msa-aura ${fx.big ? 'big' : 'wind'} ${kd}`,
+      "aria-hidden": "true",
+      style: {
+        '--msa-pre': `${fx.pre}ms`
+      }
+    }));
+  } else if (tech && me && !reduce) {
     const kind = msaMotionKind(sp, e.tech);
     if (kind) {
       const w = foeX.w;
@@ -168082,7 +168339,7 @@ function MsaFighter({
       });
     }
   }
-  const delay = tech ? reduce ? 0 : msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const delay = tech ? reduce ? 0 : fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   if (tech && foe) {
     const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
     body = React.createElement("div", {
@@ -168108,20 +168365,6 @@ function MsaFighter({
         animationDelay: `${delay}ms`
       }
     }));
-    extra.push(e.hit ? React.createElement("div", {
-      key: `d-${e.k}`,
-      className: "msa-dmg",
-      "data-msa-dmg": e.dmg,
-      style: {
-        animationDelay: `${delay}ms`
-      }
-    }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
-      key: `d-${e.k}`,
-      className: "msa-dmg miss",
-      style: {
-        animationDelay: `${delay}ms`
-      }
-    }, "よけた!"));
   }
   if (me && e.ev === 'guard') {
     cls = 'mh-card-guard';
@@ -168147,15 +168390,40 @@ function MsaFighter({
       }));
     }
   }
-  if (me && e.ev === 'move') cls = 'msa-step';
+  if (me && e.ev === 'move') {
+    cls = 'msa-step';
+    if (!reduce) [0, 1, 2].forEach(j => extra.push(React.createElement("i", {
+      key: `du-${e.k}-${j}`,
+      className: "msa-dust",
+      "aria-hidden": "true",
+      style: {
+        left: `${18 + j * 22}%`,
+        animationDelay: `${j * 60}ms`,
+        '--msa-dx': `${(j - 1) * 16}px`
+      }
+    })));
+  }
   if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
   const koNow = e && e.ev === 'ko' && e.side === side;
   if (down) cls = koNow ? 'mh-card-ko' : '';
-  if (koNow) extra.push(React.createElement("div", {
-    key: `k-${e.k}`,
-    className: "msa-ko",
-    "data-msa-ko": side
-  }, "KO!"));
+  if (koNow) {
+    extra.push(React.createElement("div", {
+      key: `k-${e.k}`,
+      className: "msa-ko big",
+      "data-msa-ko": side
+    }, "K.O.!"));
+    if (!reduce) extra.push(React.createElement("i", {
+      key: `bu-${e.k}`,
+      className: "msa-burst",
+      "aria-hidden": "true"
+    }));
+  }
+  const tired = !down && Number.isFinite(gutsNow) && gutsNow < MSA_GUTS_TIRED && !(me && e.ev === 'charge');
+  if (tired) extra.push(React.createElement("span", {
+    key: "pant",
+    className: "msa-pant",
+    "data-msa-tired": side
+  }, "💦 息切れ"));
   if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
     const n = Math.round(gd);
     extra.push(React.createElement("span", {
@@ -168175,7 +168443,7 @@ function MsaFighter({
     }, still);
   }
   return React.createElement("div", {
-    className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''}`,
+    className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`,
     style: style,
     "data-msa-fighter": side
   }, React.createElement("span", {
@@ -168183,7 +168451,7 @@ function MsaFighter({
     "aria-hidden": "true"
   }), body, extra);
 }
-function useMsaSfx(log, pos, teams, reduce, on) {
+function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
   const lastRef = useRef(-1);
   const timers = useRef([]);
   useEffect(() => () => {
@@ -168205,12 +168473,225 @@ function useMsaSfx(log, pos, teams, reduce, on) {
     };
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
-      const hitMs = reduce ? 0 : msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
       if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
       later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
-    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') msaSe('trainingDecide');
+    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
+      if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide');else {
+        msaSe('card');
+        later(1750, 'trainingDecide');
+      }
+    }
   }, [pos, on]);
 }
+function MsaGauge({
+  value,
+  max,
+  kind,
+  delay = 0,
+  sf = 1,
+  reduce = false
+}) {
+  const v = Math.max(0, Number(value) || 0);
+  const mx = Math.max(1, Number(max) || 1);
+  const [shown, setShown] = useState(v);
+  const [lag, setLag] = useState(v);
+  const [num, setNum] = useState(v);
+  const [fx, setFx] = useState('');
+  const [fk, setFk] = useState(0);
+  const prev = useRef(v);
+  useEffect(() => {
+    const from = prev.current;
+    const to = v;
+    prev.current = to;
+    if (from === to) return undefined;
+    if (reduce) {
+      setShown(to);
+      setLag(to);
+      setNum(to);
+      return undefined;
+    }
+    const timers = [];
+    let raf = 0;
+    timers.push(setTimeout(() => {
+      setShown(to);
+      if (to < from) {
+        setFx(from - to >= mx * 0.15 ? 'hurt big' : 'hurt');
+        timers.push(setTimeout(() => setLag(to), Math.round(420 * sf)));
+      } else {
+        setLag(to);
+        setFx('gain');
+      }
+      setFk(x => x + 1);
+      const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const dur = Math.max(150, Math.round(600 * sf));
+      const tick = t => {
+        const p = Math.min(1, (t - t0) / dur);
+        setNum(Math.round(from + (to - from) * p));
+        if (p < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, Math.max(0, Math.round(delay))));
+    return () => {
+      timers.forEach(clearTimeout);
+      if (raf) cancelAnimationFrame(raf);
+      setShown(to);
+      setLag(to);
+      setNum(to);
+    };
+  }, [v]);
+  const low = kind === 'hp' && shown > 0 && shown / mx <= 0.25;
+  const w = x => `${Math.max(0, Math.min(100, x / mx * 100))}%`;
+  return React.createElement("div", {
+    className: `msa-g ${kind} ${low ? 'low' : ''}`,
+    "data-msa-gauge": kind,
+    "data-msa-gauge-v": v
+  }, React.createElement("div", {
+    key: fk,
+    className: `msa-gbar ${fx}`
+  }, React.createElement("i", {
+    className: "lag",
+    style: {
+      width: w(Math.max(lag, shown))
+    }
+  }), React.createElement("i", {
+    className: "cur",
+    style: {
+      width: w(shown)
+    }
+  })), React.createElement("b", null, num));
+}
+const msaRegenOf = (log, frames) => {
+  const seen = {};
+  for (let k = 1; k < frames.length; k++) {
+    const f = frames[k];
+    const pf = frames[k - 1];
+    const r = log[k] || {};
+    if (!(f.r > pf.r)) continue;
+    ['A', 'B'].forEach(s => {
+      if (r.side === s || f.act[s] !== pf.act[s] || f.g[s] >= 100) return;
+      const d = f.g[s] - pf.g[s] + (r.ev === 'tech' && r.side !== s && r.hit ? Number(r.gd) || 0 : 0);
+      if (d > 0) {
+        const key = `${s}${f.act[s]}`;
+        (seen[key] = seen[key] || {})[d] = (seen[key][d] || 0) + 1;
+      }
+    });
+  }
+  const out = {};
+  Object.keys(seen).forEach(key => {
+    out[key] = Number(Object.entries(seen[key]).sort((a, b) => b[1] - a[1])[0][0]);
+  });
+  return out;
+};
+const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
+  const f = frames[pos];
+  const pf = frames[pos - 1];
+  const r = log[pos] || {};
+  if (!f || !pf || pos < 1 || f.act[side] !== pf.act[side] || !((f.hp[side] || [])[f.act[side]] > 0)) return [];
+  const out = [];
+  const R = f.r > pf.r ? regen[`${side}${f.act[side]}`] || 0 : 0;
+  if (R > 0) out.push({
+    t: `自動 +${R}`,
+    cls: 'up',
+    delay: 0
+  });
+  const d = f.g[side] - pf.g[side];
+  if (r.side === side) {
+    const x = d - R;
+    if (r.ev === 'tech') {
+      const t = msaTechOf(log, r);
+      if (t && t.guts) out.push({
+        t: `技 −${t.guts}`,
+        cls: 'down',
+        delay: 0
+      });
+    } else if (x > 0) out.push({
+      t: `${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'} +${x}`,
+      cls: 'up',
+      delay: 0
+    });
+  } else if (r.ev === 'tech' && r.hit && (Number(r.gd) || 0) > 0) out.push({
+    t: `削られた −${Math.round(Number(r.gd))}`,
+    cls: 'down',
+    delay: hitMs
+  });
+  return out;
+};
+function useMsaShownFrame(log, frames, pos, teams, sf = 1) {
+  const reduce = useMemo(() => msaReduce(), []);
+  const [hitAt, setHitAt] = useState(-1);
+  const e = log && log[pos] || {};
+  const m = e.side && teams && teams[e.side] && teams[e.side].members ? teams[e.side].members[e.i] || {} : {};
+  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit : 0;
+  useEffect(() => {
+    if (!at) return undefined;
+    const t = setTimeout(() => setHitAt(pos), at);
+    return () => clearTimeout(t);
+  }, [pos, at]);
+  const k = Math.min(pos, frames.length - 1);
+  return frames[at && hitAt !== pos && k > 0 ? k - 1 : k] || frames[0];
+}
+const msaBandsOf = (log, frames, k) => {
+  const r = log[k];
+  const f = frames[k];
+  const pf = frames[k - 1];
+  if (!r || !f || !pf || k < 1) return [];
+  const out = [];
+  if (r.ev === 'guard') out.push({
+    side: r.side,
+    t: '🛡 守りの構え'
+  });else if (r.ev === 'charge') out.push({
+    side: r.side,
+    t: r.why === 'sulk' ? '💢 そっぽを向いた' : '⚡ ガッツをためた'
+  });else if (r.ev === 'move') out.push({
+    side: r.side,
+    t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
+  });else if (r.ev === 'swap') out.push({
+    side: r.side,
+    t: `🔁 ${r.name || ''} に交代`
+  });else if (r.ev === 'tech' && r.hit && r.guarded) out.push({
+    side: r.side === 'A' ? 'B' : 'A',
+    t: '🛡 ガードで軽減'
+  });
+  ['A', 'B'].forEach(sd => {
+    if (Number(f.g[sd]) < MSA_GUTS_TIRED && Number(pf.g[sd]) >= MSA_GUTS_TIRED && (f.hp[sd] || [])[f.act[sd]] > 0) out.push({
+      side: sd,
+      t: '💦 息切れ'
+    });
+  });
+  return out.map((b, j) => ({
+    ...b,
+    k,
+    j
+  }));
+};
+const msaCamAt = (x, s, w) => {
+  const lim = Math.max(0, (s - 1) * w * 0.5 - 2);
+  const t = Math.max(-lim, Math.min(lim, (0.5 - x) * w * s * 0.55));
+  return `translate(${Math.round(t)}px,0px) scale(${s})`;
+};
+const msaCamFrames = (pts, total) => {
+  const out = [{
+    offset: 0,
+    transform: 'none'
+  }];
+  let last = 0;
+  pts.forEach(([ms, tf]) => {
+    const o = Math.min(0.96, Math.max(last + 0.02, ms / total));
+    if (o <= last || o >= 0.98) return;
+    out.push({
+      offset: o,
+      transform: tf,
+      easing: 'cubic-bezier(.25,.8,.35,1)'
+    });
+    last = o;
+  });
+  out.push({
+    offset: 1,
+    transform: 'none'
+  });
+  return out;
+};
 function MsaStage({
   log,
   frames,
@@ -168220,11 +168701,14 @@ function MsaStage({
   ended = false,
   win = null,
   endSub = '',
-  sound = true
+  sound = true,
+  introTitle = '',
+  speedF = 1
 }) {
   const reduce = useMemo(() => msaReduce(), []);
   const [stageW, setStageW] = useState(340);
   const stageRef = useRef(null);
+  const camRef = useRef(null);
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return undefined;
@@ -168238,21 +168722,61 @@ function MsaStage({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useMsaSfx(log, pos, teams, reduce, sound);
+  useMsaSfx(log, pos, teams, reduce, sound, Number(speedF) || 1);
   const endSaid = useRef(false);
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
     if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
   }, [ended]);
+  const [preAt, setPreAt] = useState(-1);
+  const fxNow = msaFxOf(log, log[pos], reduce, Number(speedF) || 1);
+  useEffect(() => {
+    if (!fxNow.pre) return undefined;
+    const t = setTimeout(() => setPreAt(pos), fxNow.pre);
+    return () => clearTimeout(t);
+  }, [pos, fxNow.pre]);
+  useEffect(() => {
+    const e1 = log[pos];
+    const el = stageRef.current;
+    if (!e1 || e1.ev !== 'tech' || !e1.hit || !fxNow.stop || !el || typeof el.getAnimations !== 'function') return undefined;
+    const m = teams[e1.side] && teams[e1.side].members && teams[e1.side].members[e1.i] || {};
+    const at = fxNow.pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e1))).hit;
+    let back = null;
+    const t = setTimeout(() => {
+      const inFighter = a => {
+        const t = a.effect && a.effect.target;
+        return !!(t && t.closest && (t.closest('.msa-f') || t.classList.contains('msa-shk')));
+      };
+      let list = [];
+      try {
+        list = el.getAnimations({
+          subtree: true
+        }).filter(a => a.playState === 'running' && inFighter(a));
+      } catch (_) {}
+      list.forEach(a => {
+        try {
+          a.pause();
+        } catch (_) {}
+      });
+      back = setTimeout(() => list.forEach(a => {
+        try {
+          a.play();
+        } catch (_) {}
+      }), fxNow.stop);
+    }, at);
+    return () => {
+      clearTimeout(t);
+      if (back) clearTimeout(back);
+    };
+  }, [pos]);
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
-  if (!f) return null;
-  const pf = frames[Math.max(0, Math.min(pos, frames.length - 1) - 1)] || f;
+  const pf = f ? frames[Math.max(0, Math.min(pos, frames.length - 1) - 1)] || f : null;
   const e0 = log[pos] || {};
   const memberOf = (side, i) => {
     const t = teams[side];
     const ms = t && t.members || [];
-    return ms[Number.isFinite(i) ? i : f.act[side]] || ms[0] || null;
+    return ms[Number.isFinite(i) ? i : f ? f.act[side] : 0] || ms[0] || null;
   };
   const e = {
     ...e0,
@@ -168260,38 +168784,139 @@ function MsaStage({
     atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '',
     tech: msaTechInfo(log, e0)
   };
-  const gap = MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
+  const gap = f && MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
   const xA = 0.5 - gap / 2;
   const xB = 0.5 + gap / 2;
+  const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
+  const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  useEffect(() => {
+    const el = camRef.current;
+    const e1 = log[pos];
+    if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
+    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
+    const w = el.clientWidth || stageW;
+    const sx = sd => sd === 'A' ? xA : xB;
+    let kf = null;
+    if (e1.ev === 'tech' && e1.side) {
+      if (total < hitMs + 300) return undefined;
+      const s1 = fx.big ? 1.34 : 1.2;
+      const ax = sx(e1.side);
+      const dx = sx(e1.side === 'A' ? 'B' : 'A');
+      const sw = fx.big ? 1.5 : 1.36;
+      kf = msaCamFrames([...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []), [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)], [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)], [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)], [total - 280, msaCamAt(dx, s1 - 0.04, w)]], total);
+    } else if (e1.ev === 'ko' && e1.side) {
+      kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'move' || e1.ev === 'swap') && e1.side) {
+      kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
+    }
+    if (!kf) return undefined;
+    let a = null;
+    try {
+      a = el.animate(kf, {
+        duration: total,
+        fill: 'none'
+      });
+    } catch (_) {
+      a = null;
+    }
+    return () => {
+      try {
+        if (a) a.cancel();
+      } catch (_) {}
+    };
+  }, [pos, ended]);
+  const regen = useMemo(() => msaRegenOf(log, frames), [log, frames]);
+  if (!f) return null;
   const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
   const hpOf = side => (f.hp[side] || [])[f.act[side]];
   const gdOf = side => {
     if (!pos || !e.side) return null;
-    if (e.side === side && e.ev === 'tech') return e.tech.guts ? -e.tech.guts : null;
     if (e.side === side && e.ev === 'charge' && e.why !== 'sulk') return f.g[side] - pf.g[side];
-    if (e.side !== side && e.ev === 'tech' && e.hit && (Number(e.gd) || 0) > 0) return -Math.round(Number(e.gd));
     return null;
   };
   const big = e.ev === 'tech' && (Number(e.tech.guts) || 0) >= 40;
-  const hitMs = e.ev === 'tech' && !reduce ? msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
-  const shake = e.ev === 'tech' && e.hit && (e.crit || big) && !reduce;
+  const foeSide = e.side === 'A' ? 'B' : 'A';
+  const maxHpOf = side => {
+    const f0 = frames[0];
+    return f0 && f0.hp && f0.hp[side] ? Number(f0.hp[side][f.act[side]]) || 0 : 0;
+  };
+  const tier = e.ev === 'tech' && e.hit ? msaDmgTier(e.dmg, maxHpOf(foeSide), e, fx) : 0;
+  const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0;
+  const shake = shakeLv > 0;
   const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
+  const gutsOf = side => f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null;
+  const bands = {
+    A: [],
+    B: []
+  };
+  if (pos > 0 && !ended) {
+    for (let k = Math.max(1, pos - 3); k <= pos; k++) if ((frames[k] || {}).r === f.r) msaBandsOf(log, frames, k).forEach(b => {
+      if (bands[b.side]) bands[b.side].push(b);
+    });
+    ['A', 'B'].forEach(sd => {
+      bands[sd] = bands[sd].slice(-2).reverse();
+    });
+  }
+  const intro = pos === 0 && e.ev === 'start' && !reduce && !ended && (Number(speedF) || 1) > MSA_FAST_F;
+  const sf = Number(speedF) || 1;
+  const hud = sd => {
+    const m = memberOf(sd);
+    const foe = e.ev === 'tech' && e.side && e.side !== sd;
+    const tags = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    return React.createElement("div", {
+      key: sd,
+      className: `msa-hud ${sd}`,
+      "data-msa-hud": sd
+    }, React.createElement("div", {
+      className: "nm"
+    }, m ? m.name : ''), React.createElement(MsaGauge, {
+      kind: "hp",
+      value: hpOf(sd),
+      max: maxHpOf(sd),
+      delay: foe ? hitMs : 0,
+      sf: sf,
+      reduce: reduce
+    }), React.createElement(MsaGauge, {
+      kind: "gt",
+      value: gutsOf(sd),
+      max: 100,
+      delay: foe ? hitMs : 0,
+      sf: sf,
+      reduce: reduce
+    }), React.createElement("div", {
+      className: "msa-gtags"
+    }, tags.map((t, j) => React.createElement("span", {
+      key: `${pos}-${j}`,
+      className: `msa-gt ${t.cls}`,
+      "data-msa-gtag": t.t,
+      style: {
+        animationDelay: `${t.delay}ms`
+      }
+    }, t.t))));
+  };
+  const mA = memberOf('A');
+  const mB = memberOf('B');
   return React.createElement("div", {
     className: "msa-stage",
     ref: stageRef,
-    "data-msa-stage": true,
-    style: {
-      backgroundImage: venueImg ? `url(${venueImg})` : undefined
-    }
+    "data-msa-stage": true
   }, React.createElement("div", {
-    className: `msa-shk ${shake ? 'shake' : ''}`,
+    className: `msa-shk ${shake ? `shake s${shakeLv}` : ''}`,
     key: shake ? `sh-${pos}` : 'st',
     style: shake ? {
       animationDelay: `${hitMs}ms`
     } : undefined
-  }, e.ev !== 'tech' ? React.createElement("div", {
-    className: "msa-round"
-  }, "ラウンド ", f.r || 1) : null, React.createElement("div", {
+  }, React.createElement("div", {
+    className: "msa-cam",
+    ref: camRef,
+    "data-msa-cam": true
+  }, React.createElement("div", {
+    className: "msa-bg",
+    "aria-hidden": "true",
+    style: {
+      backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined
+    }
+  }), React.createElement("div", {
     className: "msa-floor",
     "aria-hidden": "true"
   }), spots.map(([a, b], d) => React.createElement(React.Fragment, {
@@ -168306,9 +168931,34 @@ function MsaStage({
     style: {
       left: `${b * 100}%`
     }
-  }))), React.createElement(MsaFighter, {
+  }))), e.ev === 'tech' && fx.pre > 0 && preAt !== pos && React.createElement("i", {
+    key: `fo-${pos}`,
+    className: `msa-focus ${e.kind}`,
+    "aria-hidden": "true",
+    "data-msa-wind": true,
+    style: {
+      '--msa-pre': `${fx.pre}ms`,
+      '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%`
+    }
+  }), e.ev === 'tech' && fx.pre > 0 && React.createElement("i", {
+    key: `aim-${pos}`,
+    className: `msa-aim ${e.kind}`,
+    "aria-hidden": "true",
+    style: {
+      left: `${(e.side === 'A' ? xB : xA) * 100}%`,
+      '--msa-pre': `${fx.pre}ms`
+    }
+  }), e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && React.createElement("i", {
+    key: `dim-${pos}`,
+    className: "msa-dim",
+    "aria-hidden": "true",
+    style: {
+      '--msa-pre': `${fx.pre}ms`,
+      '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%`
+    }
+  }), React.createElement(MsaFighter, {
     side: "A",
-    member: memberOf('A'),
+    member: mA,
     x: xA,
     e: e,
     foeX: {
@@ -168318,10 +168968,14 @@ function MsaStage({
     hpNow: hpOf('A'),
     reduce: reduce,
     idleOk: true,
-    gd: gdOf('A')
+    gd: null,
+    fx: fx,
+    motionOn: !fx.pre || preAt === pos,
+    maxHp: maxHpOf('A'),
+    gutsNow: gutsOf('A')
   }), React.createElement(MsaFighter, {
     side: "B",
-    member: memberOf('B'),
+    member: mB,
     x: xB,
     e: e,
     foeX: {
@@ -168331,30 +168985,98 @@ function MsaStage({
     hpNow: hpOf('B'),
     reduce: reduce,
     idleOk: true,
-    gd: gdOf('B')
-  }), React.createElement("div", {
+    gd: null,
+    fx: fx,
+    motionOn: !fx.pre || preAt === pos,
+    maxHp: maxHpOf('B'),
+    gutsNow: gutsOf('B')
+  }), e.ev === 'tech' && React.createElement(MsaDmgLayer, {
+    key: `dl-${pos}`,
+    e: e,
+    x: e.side === 'A' ? xB : xA,
+    delay: hitMs,
+    tier: tier || 1
+  }), e.ev === 'tech' && fx.fin && !reduce && React.createElement("i", {
+    key: `fin-${pos}`,
+    className: "msa-fin",
+    "aria-hidden": "true",
+    style: {
+      animationDelay: `${hitMs}ms`
+    }
+  }))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
+    className: "msa-rnd",
+    "data-msa-round": f.r || 0
+  }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, f.r || 1)), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {
+    key: sd,
+    className: `msa-bands ${sd}`
+  }, bands[sd].map((b, j) => React.createElement("span", {
+    key: `${b.k}-${b.j}`,
+    className: `msa-band ${j ? 'old' : ''}`,
+    "data-msa-band": sd
+  }, b.t))) : null), e.ev !== 'tech' && React.createElement("div", {
     className: "msa-dist"
   }, AMBW_DIST.map((n, d) => React.createElement("span", {
     key: d,
     className: d === f.d ? 'cur' : ''
   }, n))), e.ev === 'tech' && React.createElement("div", {
     key: `c-${pos}`,
-    className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''} ${big ? 'big' : ''}`,
-    style: {
-      zIndex: 7
-    },
+    className: `msa-plate ${e.side === 'B' ? 'B' : 'A'} ${e.kind} ${big ? 'big' : ''}`,
     "data-msa-cut": p == null ? '' : p
-  }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技', p != null ? `・命中 ${p}%` : '', big ? '・大技!' : ''), React.createElement("b", null, e.name)), e.ev === 'tech' && e.hit && e.crit && !reduce && React.createElement("i", {
+  }, React.createElement("div", null, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技', p != null ? `・命中 ${p}%` : '', e.tech.guts ? `・ガッツ −${e.tech.guts}` : ''), React.createElement("b", null, big && e.side === 'B' ? React.createElement("span", {
+    className: "msa-bigtag"
+  }, "大技") : null, e.name, big && e.side !== 'B' ? React.createElement("span", {
+    className: "msa-bigtag"
+  }, "大技") : null))), e.ev === 'tech' && e.hit && (e.crit || fx.fin) && !reduce && React.createElement("i", {
     key: `fl-${pos}`,
-    className: "msa-flash",
+    className: `msa-flash ${e.crit ? 'big' : 'fin'}`,
     "aria-hidden": "true",
     style: {
       animationDelay: `${hitMs}ms`
     }
-  })), ended && React.createElement("div", {
+  }), e.ev === 'tech' && e.hit && e.crit && !reduce && React.createElement("div", {
+    key: `cc-${pos}`,
+    className: "msa-critcut",
+    "data-msa-critcut": true,
+    style: {
+      animationDelay: `${hitMs + fx.stop}ms`
+    }
+  }, React.createElement("b", null, "会心の一撃!")), intro && React.createElement("div", {
+    className: "msa-intro",
+    "data-msa-intro": true,
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "ph1"
+  }, React.createElement("div", {
+    className: "ttl"
+  }, introTitle || '試合開始'), React.createElement("div", {
+    className: "pa"
+  }, mA ? React.createElement("img", {
+    src: mscMonImg(mA.species),
+    alt: ""
+  }) : null, React.createElement("span", {
+    className: "nm"
+  }, mA ? mA.name : '')), React.createElement("div", {
+    className: "pb"
+  }, mB ? React.createElement("img", {
+    src: mscMonImg(mB.species),
+    alt: ""
+  }) : null, React.createElement("span", {
+    className: "nm"
+  }, mB ? mB.name : '')), React.createElement("div", {
+    className: "vs"
+  }, "VS")), React.createElement("div", {
+    className: "msa-word"
+  }, "READY"), React.createElement("div", {
+    className: "msa-word go"
+  }, "FIGHT!")), ended && React.createElement("div", {
     className: `msa-end ${win === 'A' ? 'w' : 'l'}`,
     "data-msc-end": win === 'A' ? 'win' : win === 'draw' ? 'draw' : 'lose'
-  }, React.createElement("b", null, win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'), endSub ? React.createElement("small", null, endSub) : null));
+  }, !reduce && React.createElement("i", {
+    className: "msa-rays",
+    "aria-hidden": "true"
+  }), React.createElement("b", null, win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'), React.createElement("span", {
+    className: "msa-ribbon"
+  }, win === 'A' ? 'WIN' : win === 'draw' ? 'DRAW' : 'LOSE'), endSub ? React.createElement("small", null, endSub) : null));
 }
 function MonsucArena({
   s,
@@ -168391,7 +169113,7 @@ function MonsucArena({
     if (pos < last) {
       const cur = log[pos] || {};
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
-      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log) * sp.f));
+      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
       return () => clearTimeout(t);
     }
     if (done) {
@@ -168426,6 +169148,7 @@ function MonsucArena({
     }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
+  const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
   }, React.createElement("p", {
@@ -168436,6 +169159,7 @@ function MonsucArena({
     }
   }, "試合の準備をしています…"));
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
+  const fShow = fShowH || f;
   const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = {
@@ -168476,7 +169200,7 @@ function MonsucArena({
   }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement(MscPanel, {
     side: "B",
     team: teams.B,
-    frame: f,
+    frame: fShow,
     maxHp: maxHp,
     info: info,
     s: s
@@ -168487,11 +169211,13 @@ function MonsucArena({
     teams: teams,
     venueImg: MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup,
     ended: ended,
-    win: result ? result.winner : null
+    win: result ? result.winner : null,
+    introTitle: info.title,
+    speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f
   }), React.createElement(MscPanel, {
     side: "A",
     team: teams.A,
-    frame: f,
+    frame: fShow,
     maxHp: maxHp,
     info: info,
     s: s,
