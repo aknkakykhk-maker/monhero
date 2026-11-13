@@ -21,6 +21,9 @@
 //   その試合だけの上乗せ(モンヒロサクセスの特別な1話など・端末だけ): simulate({ ..., buffs:{ A:{ guts:10, hit1:0.15 } } })
 //     guts 始まりのガッツ+ / hit1 最初の攻撃の命中+ / crit 会心+ / missCut 外れる率を何割減らすか / eva 相手の命中− / noSulk 「動かない番」なし
 //     渡さない(または空)なら今までと1つも変わらない。サーバ(masmon-pvp)は buffs を渡さない=受け付けない
+//   試合の決まり(助手マスモン対戦 β の練習だけ・端末だけ): simulate({ ..., rules:{ distStart:0〜3, gutsStart:0〜100, noSwap:true } })
+//     distStart 最初の間合い(零・近・中・遠)/ gutsStart 始まりのガッツ / noSwap 勝ち抜き(交代なし・倒れたら次が出る)
+//     渡さない(または空)なら今までと1つも変わらない(乱数の引き方も同じ)。サーバ(masmon-pvp)は rules を渡さない=受け付けない
 //   1手目: ASSISTANT_MASMON_BATTLE.firstAction(r.log, 'B') → 相手の最初の行動の行(tech・move・guard・charge・swap)
 //   自分で操作する試合(モンヒロサクセス): createMatch({ ..., control:{ A:'human' } }) → pending()/choose(手)/auto()/replay(入力, 手の列)
 //     オート(simulate)の結果は変えない(検査 tools/masmon-battle/masmon-manual-check.js)
@@ -438,8 +441,8 @@
       if (nowBest === 0 && laterBest > 0) score += 8;
       cands.push({ type: 'charge', score, why: nowBest === 0 ? 'noGuts' : 'saveUp' });
     }
-    // 交代
-    if (u.swapCooldown <= 0) {
+    // 交代(勝ち抜きの決まりでは出さない)
+    if (u.swapCooldown <= 0 && !ctx.noSwap) {
       const cur = matchup(u, f, dist);
       for (let i = 0; i < me.units.length; i++) {
         const b = me.units[i];
@@ -558,6 +561,20 @@
     if (bAtk && bAtk.missCut) q = 1 - (1 - q) * (1 - bAtk.missCut);
     return clamp(q, 0.05, 0.99);
   };
+  // ── 試合の決まり(rules・β の練習だけ) ──
+  //   壊れた値・範囲外は切る。効くものが1つも無ければ null(= 今までと同じ計算の道)
+  const RULE_LIMITS = Object.freeze({ distStart: [0, 3], gutsStart: [0, GUTS_MAX] });
+  const normalizeRules = (r) => {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+    const out = {};
+    for (const k of Object.keys(RULE_LIMITS)) {
+      if (r[k] === undefined || r[k] === null || r[k] === '') continue;
+      const n = Number(r[k]);
+      if (Number.isFinite(n)) out[k] = Math.round(clamp(n, RULE_LIMITS[k][0], RULE_LIMITS[k][1]));
+    }
+    if (r.noSwap === true) out.noSwap = true;
+    return Object.keys(out).length ? out : null;
+  };
   // 試合の記録から、最初の行動(tech・move・guard・charge・swap)の行を取り出す。side を渡すとその側の1手目
   const firstAction = (log, side) => (Array.isArray(log) ? log : []).find(e => e && ACTION_EVS.includes(e.ev) && (!side || e.side === side)) || null;
 
@@ -578,11 +595,14 @@
     const buffs = { A: null, B: null };
     if (inp.buffs && typeof inp.buffs === 'object') { buffs.A = normalizeBuffs(inp.buffs.A); buffs.B = normalizeBuffs(inp.buffs.B); }
     const usedFirst = { A: false, B: false };
+    const rules = normalizeRules(inp.rules);
+    if (rules && rules.gutsStart !== undefined) for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.guts = rules.gutsStart;
     for (const side of ['A', 'B']) {
       if (buffs[side] && buffs[side].guts) for (const x of state.teams[side].units) x.guts = Math.min(GUTS_MAX, x.guts + buffs[side].guts);
     }
     state.dist = 1 + Math.floor(rng() * 2);
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs };
+    if (rules && rules.distStart !== undefined) state.dist = rules.distStart;   // 乱数は上で引いたまま(ほかの流れをずらさない)
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -592,7 +612,7 @@
       if (ctx.trace && ctx.lastCands && ACTION_EVS.includes(e.ev)) { row.cands = ctx.lastCands; ctx.lastCands = null; }
       log.push(row);
     };
-    const flow = { state, log, ctx, buffs, usedFirst, done: false, result: null };
+    const flow = { state, log, ctx, buffs, rules, usedFirst, done: false, result: null };
     yield { kind: 'init', flow };   // 外から状態を見られるように最初に1回だけ渡す(simulate は読み捨てる)
 
     const movesOf = (side) => state.teams[side].units.map(x => x.moves.map(m => ({ id: m.key, name: m.name, kind: m.kind, guts: m.guts, dist: m.dist })));
@@ -602,7 +622,7 @@
       plan: { A: state.teams.A.plan, B: state.teams.B.plan }, swapPace: { A: state.teams.A.swapPace, B: state.teams.B.swapPace }, a: state.teams.A.units.map(x => x.name), b: state.teams.B.units.map(x => x.name),
       aMoves: movesOf('A'), bMoves: movesOf('B'),
       aHp: state.teams.A.units.map(x => x.maxHp), bHp: state.teams.B.units.map(x => x.maxHp),
-      ...(buffs.A || buffs.B ? { buffs: { A: buffs.A, B: buffs.B } } : {}), ...ctlRow });
+      ...(buffs.A || buffs.B ? { buffs: { A: buffs.A, B: buffs.B } } : {}), ...(rules ? { rules } : {}), ...ctlRow });
     push({ ev: 'enter', side: 'A', i: 0, name: unitOf('A').name });
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
@@ -736,6 +756,17 @@
     };
   };
 
+  // 試合前の比べっこ(画面が読むだけ・計算は変えない): 1体の種類の等級と、子ごとに上げた分を足した間合い適性
+  //   unitTraits(catalog, { species, aptUp }) → { regen, regenGrade, move, size, apt:['C',…] } / 種が無ければ null
+  const unitTraits = (catalog, unit) => {
+    const u = unit && typeof unit === 'object' ? unit : {};
+    const sp = catalog && catalog.species && catalog.species[u.species];
+    if (!sp) return null;
+    const tr = SPECIES_TRAITS[u.species] || {};
+    return { regen: sp.regen, regenGrade: typeof tr.g === 'string' ? tr.g : '', move: typeof tr.m === 'string' ? tr.m : 'D', size: sp.size || 'M',
+      apt: applyAptUp(sp.apt, normAptUp(u.aptUp)) };
+  };
+
   const simulate = (input) => {
     const inp = input && typeof input === 'object' ? input : {};
     const g = battleFlow(inp, catalogOf(inp), { A: false, B: false });
@@ -772,7 +803,7 @@
     // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
     const hintOf = (side) => {
       try {
-        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null }, side);
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap }, side);
         return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
       } catch (_) { return null; }
     };
@@ -793,7 +824,7 @@
       });
       const move = [-1, 1].map(step => ({ type: 'move', step, to: d + step, ok: d + step >= 0 && d + step <= 3 }));
       const swap = me.units.map((x, i) => ({ type: 'swap', to: i, name: x.name, hp: x.hp, maxHp: x.maxHp,
-        ok: i !== me.active && x.hp > 0 && u.swapCooldown <= 0 })).filter(x => x.to !== me.active);
+        ok: i !== me.active && x.hp > 0 && u.swapCooldown <= 0 && !flow.ctx.noSwap })).filter(x => x.to !== me.active);
       return { kind: 'act', side, round: st.round, dist: d, guts: u.guts, hp: u.hp, maxHp: u.maxHp,
         tech, guard: { type: 'guard', ok: true }, move, charge: { type: 'charge', ok: u.guts < GUTS_MAX }, swap,
         swapWait: Math.max(0, u.swapCooldown), hint: hintOf(side) };
@@ -883,7 +914,7 @@
   const api = Object.freeze({
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
-    LV_MAX, BUFF_LIMITS, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
+    LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示' }),

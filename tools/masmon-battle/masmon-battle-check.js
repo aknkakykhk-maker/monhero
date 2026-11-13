@@ -413,5 +413,31 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
     r0.digest === rz.digest && r0.digest !== ru.digest && rx.digest === rc.digest, `${r0.digest}/${ru.digest}`);
 }
 
+// ⑰ 試合の決まり(rules・β の練習だけ): 無い・空の試合は今と同じ/最初の間合い・始まりのガッツ・勝ち抜き(交代なし)が効く/壊れた値は切る
+{
+  const sps = Object.keys(catalog.species).slice(0, 3);
+  const mem = (sp, i) => ({ species: sp, name: `m${i}`, stats: { life: 380 + i * 20, pow: 400, wise: 360, hit: 400, eva: 380, tough: 400 } });
+  const team = () => ({ assistantId: 'sorashido', members: sps.map(mem) });
+  const run = (rules, seed = 'rules') => engine.simulate({ seed, catalog, teamA: team(), teamB: { ...team(), assistantId: 'kiki' }, ...(rules !== undefined ? { rules } : {}) });
+  const r0 = run(undefined), re = run({}), rb = run({ distStart: 'x', gutsStart: null, noSwap: 'yes' });
+  check('⑰ rules: 無い・空・効かない値だけの試合は同じ(記録に rules を残さない)', r0.digest === re.digest && r0.digest === rb.digest && !r0.log[0].rules, `${r0.digest}/${re.digest}/${rb.digest}`);
+  const firstMove = (r) => r.log.find((e) => ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev));
+  const d0 = run({ distStart: 0 }), d3 = run({ distStart: 9 });
+  check('⑰ rules: 最初の間合い(範囲外は 0〜3 に切る)', firstMove(d0).d === 0 || (firstMove(d0).ev === 'move' && Math.abs(firstMove(d0).to - 0) === 1), `${JSON.stringify(d3.log[0].rules)}`);
+  check('⑰ rules: 最初の間合い 9 → 3 に切る', d3.log[0].rules && d3.log[0].rules.distStart === 3);
+  const g100 = run({ gutsStart: 100 });
+  const ga = firstMove(g100);
+  check('⑰ rules: 始まりのガッツ 100(毎ラウンドの回復で上限を超えない)', g100.log[0].rules.gutsStart === 100 && ga && ga.ga <= engine.GUTS_MAX, JSON.stringify(g100.log[0].rules));
+  let swaps = 0, swapsFree = 0;
+  for (let k = 0; k < 40; k++) { swaps += run({ noSwap: true }, `ns${k}`).log.filter((e) => e.ev === 'swap').length; swapsFree += run(undefined, `ns${k}`).log.filter((e) => e.ev === 'swap').length; }
+  check('⑰ rules: 勝ち抜きでは交代しない(交代ありでは起きる)', swaps === 0 && swapsFree > 0, `勝ち抜き ${swaps}・交代あり ${swapsFree}`);
+  const m = engine.createMatch({ seed: 'ns-m', catalog, teamA: team(), teamB: { ...team(), assistantId: 'kiki' }, rules: { noSwap: true }, control: { A: 'human' } });
+  let ok = true;
+  for (let n = 0; n < 60 && m.pending(); n++) { const p = m.pending(); if (p.kind === 'act') { if (p.swap.some((x) => x.ok)) ok = false; const t = p.tech.find((x) => x.ok); m.choose(t ? { type: 'tech', key: t.key } : { type: 'charge' }); } else m.choose({ type: 'enter', to: p.enter.find((x) => x.ok).to }); }
+  check('⑰ rules: 手動でも勝ち抜きでは交代を選べない', ok);
+  const tr = engine.unitTraits(catalog, { species: sps[0], aptUp: [0, 2, 0, 0] });
+  check('⑰ unitTraits: 比べっこ用の等級(間合い適性は上げた分を足す)', tr && tr.apt.length === 4 && ['S', 'M', 'L'].includes(tr.size) && engine.unitTraits(catalog, { species: 'nope' }) === null, JSON.stringify(tr));
+}
+
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
