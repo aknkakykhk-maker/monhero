@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ab091cf0036e453
+// source-sha256: 3765f14ec6d5532a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161983,7 +161983,7 @@ const msxNormBox = raw => {
     memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : []
   };
 };
-const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'hourglass', 'hourglass2', 'ticket']);
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = raw => {
   const o = msxIsObj(raw) ? raw : {};
   const items = {};
@@ -162256,7 +162256,52 @@ const MSX_ITEMS = Object.freeze([{
   desc: 'オイル2個と薬草の詰め合わせ',
   when: 'both',
   e: '🧴'
+}, {
+  id: 'oil',
+  name: 'オイル',
+  desc: '疲れた体にぬるオイル',
+  when: 'both',
+  e: '🫙'
+}, {
+  id: 'herb',
+  name: '薬草',
+  desc: '気持ちが落ち着く草',
+  when: 'both',
+  e: '🌱'
 }]);
+const msxItemFx = id => {
+  const S = typeof msxSuc !== 'undefined' && msxSuc ? msxSuc.SUC : null;
+  const it = S && S.ITEMS ? S.ITEMS[id] : null;
+  if (!it) return '';
+  const G = S.GOOD || {};
+  const pc = v => `${Math.round(v * 100)}%`;
+  if (it.good === 'eventMaker' && G.eventMaker) {
+    const b = S.BOND && S.BOND.eventRate || 0.5;
+    return `編成のモンスターとの出来事 ${pc(b)}→${pc(b + G.eventMaker.eventRate)}`;
+  }
+  if (it.good === 'trainGood' && G.trainGood) return `訓練の伸び +${pc(G.trainGood.train)}`;
+  if (it.good === 'shugyoGood' && G.shugyoGood) return `修行の伸び +${pc(G.shugyoGood.shugyo)}・技を覚える率 +${G.shugyoGood.techRate}`;
+  if (it.good === 'star' && G.star) return `人気の上がり ×${G.star.pop}・親密度の上がり ×${G.star.bond}`;
+  if (it.good === 'uketsugu' && G.uketsugu) return `連続の話が進む率 +${pc(G.uketsugu.story)}・伝授の能力 ×${G.uketsugu.teach}`;
+  if (it.issaForce) return 'イッサ博士が1度かならず来る';
+  if (it.issaSure) return 'その回の博士の実験がかならず成功';
+  if (it.hpMax) return `体力の上限 +${it.hpMax}`;
+  if (it.hpFull) return '体力を上限まで回復';
+  if (it.cure) return `悪いようす(サボり癖・うつなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
+  if (it.loyal) return `忠誠度 +${it.loyal}`;
+  if (it.gives) {
+    const g = it.gives;
+    return Object.keys(g).map(k => `${S.ITEMS[k] && S.ITEMS[k].name || k}${g[k]}個(${msxItemFx(k)})`).join('・');
+  }
+  if (it.hp) return `体力を上限の${pc(it.hp)}回復`;
+  if (it.stress) return `ストレス ${it.stress}`;
+  return '';
+};
+const msxItemDesc = id => {
+  const t = MSX_ITEM_BY_ID[id];
+  const fx = msxItemFx(id);
+  return `${t ? t.desc : ''}${fx ? `。効き目: ${fx}` : ''}`;
+};
 const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map(t => [t.id, t])));
 const MSX_NAME_MAX = 8;
 const msxNameGuard = raw => {
@@ -162844,7 +162889,7 @@ function MsxStart({
       style: {
         fontSize: 22
       }
-    }, MSX_ITEM_BY_ID[id].e), React.createElement("div", null, MSX_ITEM_BY_ID[id].name, React.createElement("small", null, MSX_ITEM_BY_ID[id].desc)), React.createElement("span", {
+    }, MSX_ITEM_BY_ID[id].e), React.createElement("div", null, MSX_ITEM_BY_ID[id].name, React.createElement("small", null, msxItemDesc(id))), React.createElement("span", {
       className: "pr"
     }, "✅ 持っていく・あと", has(id) - 1))), items.some(id => !coreItems(id)) && React.createElement("div", {
       className: "msx-note",
@@ -165087,7 +165132,7 @@ const msxItemView = k => {
   return {
     id: k,
     name: base && base.name || core && core.name || k,
-    desc: base && base.desc || ex && ex.desc || '',
+    desc: base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : base && base.desc || ex && ex.desc || '',
     e: base && base.e || ex && ex.e || '🎁',
     during: core ? core.use === 'during' : !!(base && base.when === 'both')
   };
