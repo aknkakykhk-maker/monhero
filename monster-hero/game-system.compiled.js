@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f42fba7bc1813cc8
+// source-sha256: d33c4cfc174f0178
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168179,7 +168179,7 @@ const msaFxOf = (log, e, reduce, sf = 1) => {
     fin,
     big
   };
-  const stop = !e.hit ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
+  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
   const f = Number(sf) || 1;
   const pre = big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f);
   return {
@@ -168197,15 +168197,17 @@ const msaDmgTier = (dmg, maxHp, e, fx) => {
 const MSA_INTRO_MS = 2600;
 const MSA_AFTER_HIT = 1250;
 const MSA_AFTER_MISS = 800;
+const MSA_FAST_F = 0.35;
 const msaStepMs = (e, team, reduce, log, sf = 1) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
+  if (e.ev === 'start' && (Number(sf) || 1) <= MSA_FAST_F) return 700;
   if (e.ev === 'tech') {
     const f = Number(sf) || 1;
     const m = team && team.members && team.members[e.i] || {};
     const fx = msaFxOf(log, e, reduce, f);
     const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
-    const real = fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
+    const real = f <= MSA_FAST_F ? fx.pre + mm.hit + (e.hit ? 90 : 60) + (fx.fin ? 150 : 0) : fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
     return real / f;
   }
   return {
@@ -168475,7 +168477,7 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
       if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
       later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
     } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
-      if (reduce) msaSe('trainingDecide');else {
+      if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide');else {
         msaSe('card');
         later(1750, 'trainingDecide');
       }
@@ -168855,7 +168857,7 @@ function MsaStage({
       bands[sd] = bands[sd].slice(-2).reverse();
     });
   }
-  const intro = pos === 0 && e.ev === 'start' && !reduce && !ended;
+  const intro = pos === 0 && e.ev === 'start' && !reduce && !ended && (Number(speedF) || 1) > MSA_FAST_F;
   const sf = Number(speedF) || 1;
   const hud = sd => {
     const m = memberOf(sd);

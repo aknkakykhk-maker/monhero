@@ -280,7 +280,7 @@ const msaFxOf = (log, e, reduce, sf = 1) => {
   const nx = idx >= 0 ? log[idx + 1] : null;
   const fin = Boolean(e.hit && nx && nx.ev === 'ko' && nx.side && nx.side !== e.side);
   if (reduce) return { ...z, fin, big };
-  const stop = !e.hit ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
+  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
   const f = Number(sf) || 1;
   const pre = big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f);
   return { pre, stop, fin, big };
@@ -296,14 +296,18 @@ const msaDmgTier = (dmg, maxHp, e, fx) => {
 const MSA_INTRO_MS = 2600;
 const MSA_AFTER_HIT = 1250;  // 当たってから次の手まで(×1)
 const MSA_AFTER_MISS = 800;
+const MSA_FAST_F = 0.35;     // これ以下の速さ(×4)は早送り: 当たったあとの間と入りの演出を省く
 const msaStepMs = (e, team, reduce, log, sf = 1) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   // 技: 当たってから、数字が出てライフの棒が減りきるまでの間(MSA_AFTER_HIT)をとってから次の手へ(2026-11-13 社長「相手がすぐ動き出す」)
   //   sf を渡すと、その速さで実際にかかる長さ ÷ sf を返す(呼ぶ側が sf を掛ける)。技の動きそのものは縮まないので、当たるところまでは必ず見せる
+  if (e.ev === 'start' && (Number(sf) || 1) <= MSA_FAST_F) return 700; // ×4 は入りの VS・READY・FIGHT を省く
   if (e.ev === 'tech') {
     const f = Number(sf) || 1; const m = (team && team.members && team.members[e.i]) || {}; const fx = msaFxOf(log, e, reduce, f); const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
-    const real = fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
+    // ×4(早送り): 技の動きの終わりを待たず、当たって数字が見えたらすぐ次へ(main の 1.3倍以内。窓口 2026-11-13)
+    const real = f <= MSA_FAST_F ? fx.pre + mm.hit + (e.hit ? 90 : 60) + (fx.fin ? 150 : 0)
+      : fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
     return real / f;
   }
   return { start: MSA_INTRO_MS, enter: 350, move: 650, guard: 750, charge: 800, swap: 700, ko: 1500, end: 600 }[e.ev] || 500;
@@ -428,7 +432,7 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
     else if (e.ev === 'move') msaSe('trainingMove');
     else if (e.ev === 'swap') msaSe('join');
     else if (e.ev === 'ko') msaSe('enemyCharge');
-    else if (e.ev === 'start') { if (reduce) msaSe('trainingDecide'); else { msaSe('card'); later(1750, 'trainingDecide'); } }
+    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide'); else { msaSe('card'); later(1750, 'trainingDecide'); } }
   }, [pos, on]);
 }
 
@@ -652,7 +656,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     for (let k = Math.max(1, pos - 3); k <= pos; k++) if ((frames[k] || {}).r === f.r) msaBandsOf(log, frames, k).forEach((b) => { if (bands[b.side]) bands[b.side].push(b); });
     ['A', 'B'].forEach((sd) => { bands[sd] = bands[sd].slice(-2).reverse(); });
   }
-  const intro = pos === 0 && e.ev === 'start' && !reduce && !ended;
+  const intro = pos === 0 && e.ev === 'start' && !reduce && !ended && (Number(speedF) || 1) > MSA_FAST_F;
   const sf = Number(speedF) || 1;
   const hud = (sd) => {
     const m = memberOf(sd); const foe = e.ev === 'tech' && e.side && e.side !== sd;
