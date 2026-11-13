@@ -213,6 +213,10 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-rhythm-song-owned.jsx",
+      "role": "モンヒロビートの新曲をビートPで1曲ずつ買う仕組み。有料の曲の表(RHYTHM_SONG_PRICES・いまは空)・持っている曲(mh_rhythm_owned_songs_v1)・買う処理・交換所の「曲」の売り場・助手が選べる曲"
+    },
+    {
       "file": "39-multi-stamp.jsx",
       "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
     },
@@ -563,6 +567,10 @@
     {
       "file": "56-monhero-success-r3-retire.jsx",
       "role": "モンヒロサクセス 回3: 引退(E0 評価・E3 能力ポイント・E1 振り返り・E2 アシスト能力 → 保存枠へ)・ゲームオーバー G1・保存枠の一覧 MsxR3Box(お別れ・フレンドへの貸し出し)・回2から呼ぶ入口 MsxR3"
+    },
+    {
+      "file": "56-monhero-success-arc.jsx",
+      "role": "モンヒロサクセス: 助手1人分のストーリーの画面(頂への道の相手えらび MsxArcPick・試合のあとの掛け合い MsxArcAfter・エンディングとお祝いと特別演出 MsxArcEnding)。表は data/monhero-success-arc.js・計算は芯。保存は芯の s.ending だけ。公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-assistant-life-friend-monsuc-lend.jsx",

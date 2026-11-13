@@ -1,0 +1,857 @@
+{
+  "blood": "アーク",
+  "counts": {
+    "skills": 20
+  },
+  "skills": [
+    {
+      "skillId": "sk-0110",
+      "name": "世界を揺らせ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D+",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0145",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3321",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 1,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0111",
+      "name": "我が瞳の真理を見よ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "零",
+      "rank": 1,
+      "moveTo": "遠",
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "G",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0146",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0147",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3314",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 2,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0112",
+      "name": "神光よ汚れを祓え",
+      "version": 1,
+      "blood": "アーク",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "D+",
+      "gutsDown": "C",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0148",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3314",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 3,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0113",
+      "name": "翔べ震律の刃よ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0149",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0150",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3317",
+          "rarity": 3
+        },
+        {
+          "monsterId": "3380",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 4,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0114",
+      "name": "白き誓い切なる願い",
+      "version": 1,
+      "blood": "アーク",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0151",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3350",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 5,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0115",
+      "name": "今こそ真なる目醒め",
+      "version": 1,
+      "blood": "アーク",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0152",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0153",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3350",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 6,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0116",
+      "name": "裁きの光よ下れ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0148",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0154",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3321",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 7,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0117",
+      "name": "導け神光の道標",
+      "version": 1,
+      "blood": "アーク",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 33,
+      "damage": "A",
+      "accuracy": "D+",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0151",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0155",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3333",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 8,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0118",
+      "name": "蒼き荊よ咎を穿て",
+      "version": 1,
+      "blood": "アーク",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 31,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0149",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0156",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3317",
+          "rarity": 4
+        },
+        {
+          "monsterId": "3380",
+          "rarity": 4
+        },
+        {
+          "monsterId": "3351",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 9,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0119",
+      "name": "祈れ輪廻の環よ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0149",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0157",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3333",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 10,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0120",
+      "name": "熾天の剣よ降り立て",
+      "version": 1,
+      "blood": "アーク",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 42,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0158",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0159",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "3321",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "3321",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3321",
+          "rarity": 5
+        },
+        {
+          "monsterId": "3380",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 11,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0121",
+      "name": "終焉に救いを与えよ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 50,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0160",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0161",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3317",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3317",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3317",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 12,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0122",
+      "name": "聖光よ奇跡を灯せ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 42,
+      "damage": "B+",
+      "accuracy": "S+",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0162",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0163",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3350",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3350",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3350",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 13,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0123",
+      "name": "天の慈悲よ示されよ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 48,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0164",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0165",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3333",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3333",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3333",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 14,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0124",
+      "name": "灰よ還りて聖火となれ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 44,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "B+",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0166",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0167",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3314",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3314",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3314",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 15,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0125",
+      "name": "神剣よ断罪を下せ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 16,
+      "damage": "E+",
+      "accuracy": "C+",
+      "gutsDown": "D",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0151",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3351",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 16,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0126",
+      "name": "聖夜の鐘よ鳴響け",
+      "version": 1,
+      "blood": "アーク",
+      "range": "零",
+      "rank": 4,
+      "moveTo": "中",
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "B+",
+      "accuracy": "C+",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0145",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0168",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3350"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 17,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0127",
+      "name": "絶望の時間",
+      "version": 1,
+      "blood": "アーク",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "S+",
+      "accuracy": "C+",
+      "gutsDown": "A+",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0169",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3380",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3380",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3380"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 18,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0128",
+      "name": "裂け聖炎の刃よ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 21,
+      "damage": "C",
+      "accuracy": "D+",
+      "gutsDown": "E",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0158",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0170",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3314"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 19,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0129",
+      "name": "黎明よ終焉を照らせ",
+      "version": 1,
+      "blood": "アーク",
+      "range": "遠",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 50,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0171",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0172",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0173",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0174",
+          "unlock": {
+            "monsterId": "3351",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3351",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3351",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 20,
+      "status": "verified"
+    }
+  ]
+}

@@ -119,6 +119,9 @@ function RhythmSongSelectScreen({
         loadRhythmEventPoints().then(value=>{if(alive)setBeatPointBalance(value);}).catch(()=>{});
         return ()=>{alive=false;};
       },[beatPointReleased]);
+      // 持っている有料の曲(2026-11-13)。買うとビートPの表示も減らす。デバッグの全解放では何も止めない
+      const ownedSongs=useRhythmOwnedSongs();
+      const buySong=async song=>{const r=await rhythmSongBuy(song.songId);if(r&&typeof r.eventPoints==='number')setBeatPointBalance(r.eventPoints);return r;};
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -444,6 +447,7 @@ function RhythmSongSelectScreen({
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
           playLabel={debugAll?'決定(記録しない)':undefined}
+          songLock={debugAll?null:{owned:ownedSongs,balance:beatPointBalance,onBuy:buySong}}
           noticeHidden={foldedNoticeCount}
           toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}

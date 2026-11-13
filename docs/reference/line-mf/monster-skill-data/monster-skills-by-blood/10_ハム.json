@@ -1,0 +1,799 @@
+{
+  "blood": "ハム",
+  "counts": {
+    "skills": 22
+  },
+  "skills": [
+    {
+      "skillId": "sk-0338",
+      "name": "飛び蹴り",
+      "version": 1,
+      "blood": "ハム",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1010",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1011",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1019",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 252,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0339",
+      "name": "ワン・ツー",
+      "version": 1,
+      "blood": "ハム",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1006",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1021",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 253,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0340",
+      "name": "正拳",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1001",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1015",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1022",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1051",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1050",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1080",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 254,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0341",
+      "name": "バックナックル",
+      "version": 1,
+      "blood": "ハム",
+      "range": "近",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "C",
+      "accuracy": "F",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1015",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1022",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1023",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 255,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0342",
+      "name": "後ろ蹴り",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1011",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 256,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0343",
+      "name": "おなら",
+      "version": 1,
+      "blood": "ハム",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 13,
+      "damage": "G",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1019",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1021",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 257,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0344",
+      "name": "超飛び蹴り",
+      "version": 1,
+      "blood": "ハム",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "B",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1001",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 258,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0345",
+      "name": "回し蹴り",
+      "version": 1,
+      "blood": "ハム",
+      "range": "近",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1011",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1050",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 259,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0346",
+      "name": "ドラゴンパンチ",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1023",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 260,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0347",
+      "name": "大砲屁",
+      "version": 1,
+      "blood": "ハム",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 24,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0370",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1051",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1080",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 261,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0348",
+      "name": "瞬撃",
+      "version": 1,
+      "blood": "ハム",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0371",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1050",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "1050",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1050",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 262,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0349",
+      "name": "ドラゴンキック",
+      "version": 1,
+      "blood": "ハム",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 44,
+      "damage": "A",
+      "accuracy": "D",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0372",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1051",
+          "rarity": 5
+        },
+        {
+          "monsterId": "1080",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 263,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0350",
+      "name": "超バックナックル",
+      "version": 1,
+      "blood": "ハム",
+      "range": "近",
+      "rank": 4,
+      "moveTo": "零",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "A",
+      "accuracy": "G",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0373",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1001",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 264,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0351",
+      "name": "暗けい",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0303",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1011",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 265,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0682",
+      "name": "X’マスキャロル",
+      "version": 1,
+      "blood": "ハム",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "F",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1051",
+        "1080"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 266,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0683",
+      "name": "X’マスプレゼンツ",
+      "version": 1,
+      "blood": "ハム",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1051",
+        "1080"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 267,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0684",
+      "name": "清しこの夜",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1051",
+        "1080"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 268,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0685",
+      "name": "ドラゴンパッチ",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0622",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1001"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 269,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0686",
+      "name": "飛び蹴り・腐",
+      "version": 1,
+      "blood": "ハム",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "D+",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 270,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0687",
+      "name": "包帯パンチ",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0100",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 271,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0688",
+      "name": "フラフラダンス",
+      "version": 1,
+      "blood": "ハム",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "B+",
+      "accuracy": "E",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0623",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0624",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 272,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0689",
+      "name": "正拳・聖",
+      "version": 1,
+      "blood": "ハム",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1011"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 273,
+      "status": "verified"
+    }
+  ]
+}
