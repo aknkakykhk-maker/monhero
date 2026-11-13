@@ -21,6 +21,11 @@ const { ROOT, PARTS, DATA, GENERATED, git, cut } = require('./lib');
 const SAVE_FILES = [PARTS + '25-storage.jsx', DATA + 'mhsave-backup.js'];
 const KEY_RE = /['"`](mh_[A-Za-z0-9_]+)/g;
 const SAVE_LINE_RE = /localStorage\.(removeItem|clear)\(|_migrated_v\d|indexedDB\.deleteDatabase/;
+// 既存のキーの値に項目を足す・形を変える変更(2026-11-13 ミハリ6: #5866 の aptUp・aptBase を見落とした穴)。誤報が少し出てもよい
+//   ・保存の入れ物の部品(名前に store・storage・backup・save・record を含む本体・データのファイル)の増えた行
+//   ・保存値を読み戻す行(raw.〜 を読む・restore / normalize〜 / msxNorm〜 / 〜Norm( を呼ぶ・storeSet で書く)
+const SAVE_SHAPE_FILE_RE = /(^|\/)[^/]*(store|storage|backup|save|record)[^/]*\.(jsx|js)$/i;
+const SAVE_SHAPE_LINE_RE = /\braw\??\.[A-Za-z_]\w*|\b(restore|normalize[A-Z]\w*|msxNorm\w*|\w+Norm)\s*\(|\bstoreSet\(/;
 const RANK_LINE_RE = /\.rpc\(\s*['"`]|\.from\(\s*['"`][a-z_]+['"`]\s*\)\s*\.\s*(insert|upsert|update|delete)|\.(upsert|insert)\(\s*[\[{]|submit[A-Z]\w*(Score|Rank|Record|Result)\w*\s*[=(]/;
 const FLAG_FILE = PARTS + '17-release-changelog-login-missions.jsx';
 const FLAG_LINE_RE = /^\s*[A-Za-z]\w*:\s*true\s*,|_RELEASE\w*\s*=\s*true\b/;
@@ -70,6 +75,11 @@ function judge({ base } = {}) {
   const existsAt = (key, where) => !!git(['grep', '-l', '-F', key, ...(where ? [where] : []), '--', PARTS, DATA]).trim();
   for (const [key, f] of addedKeys) if (!existsAt(key, ref)) save.push(`新しい保存キー ${key}(${path.basename(f)})`);
   for (const [key, f] of removedKeys) if (!addedKeys.has(key) && !existsAt(key, '')) save.push(`★保存キー ${key} を使う行がすべて消えた(${path.basename(f)})。既存のキーは消さない決まり`);
+  {
+    const code = (line) => line.trim() && !/^\s*(\/\/|\*|\/\*)/.test(line);
+    const shape = added.filter(([f, line]) => code(line) && (SAVE_SHAPE_FILE_RE.test(f) || SAVE_SHAPE_LINE_RE.test(line)) && !SAVE_FILES.includes(f));
+    if (shape.length) save.push(`保存の形に項目を足している/変えている(既存のキーの値)${shape.length} 行(${[...new Set(shape.map(r => path.basename(r[0])))].slice(0, 4).join('・')})`);
+  }
   for (const [f, line] of [...added, ...removed]) if (SAVE_LINE_RE.test(line)) { save.push(`保存を消す・移す行に触れている(${path.basename(f)}): ${cut(line.trim(), 70)}`); break; }
 
   // ② ランキング・Supabase

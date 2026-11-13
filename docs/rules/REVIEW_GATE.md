@@ -21,7 +21,7 @@ node tools/ctx.js gate --base <版>  その版との差で判定(ミハリが見
 
 | 「要る」になるもの | 何を見ているか |
 | --- | --- |
-| 保存データ | `25-storage.jsx`・`mhsave-backup.js` を変えた / 新しい保存キー(`mh_…`)が増えた / 保存キーを使う行がすべて消えた / 保存を消す・移す行(`localStorage.removeItem`・`_migrated_v…`)に触れた |
+| 保存データ | `25-storage.jsx`・`mhsave-backup.js` を変えた / 新しい保存キー(`mh_…`)が増えた / 保存キーを使う行がすべて消えた / 保存を消す・移す行(`localStorage.removeItem`・`_migrated_v…`)に触れた / **既存のキーの値に項目を足す・形を変えた**(名前に store・storage・backup・save・record を含む本体・データのファイルの増えた行、または `raw.〜` を読む・`restore`・`normalize〜`・`msxNorm〜`・`〜Norm(`・`storeSet(` の増えた行。2026-11-13 ミハリ6: #5866 の `aptUp` を見落とした穴。誤報が少し出てもよい) |
 | ランキング・Supabase | `supabase/migrations/`・`docs/sql/`(SQL)を変えた / 本体で `.rpc(`・`.insert(`・`.upsert(`・`submit…Score` などの送り方の行に触れた |
 | Edge Function | `supabase/functions/` を変えた(★下の「Edge Function だけのとき」) |
 | 新機能 | 新しい部品(`src/parts/*.jsx`)を足した / 公開の印を真にした / 更新履歴に3行以上足した |
