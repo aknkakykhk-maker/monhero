@@ -271,6 +271,24 @@ const __mod = { exports: {} };
   };
 
   // ── 入力の正規化(壊れた値は既定値で補う) ──
+  // 子ごとに上げた間合い適性の段数(モンサクの育成・合体円盤石で継いだ分の合計。2026-11-13 社長の決め・開発部と同じ形)
+  //   aptUp … [零, 近, 中, 遠] の整数。端末から来た値をそのまま信じず、ここで切りそろえる(サーバも同じ芯なので同じ結果):
+  //   数の型の整数でないもの(文字列・小数)・負は 0/1つの間合いは per まで/合計が total を超えたら後ろの間合いから削る/M の数が mMax を超えたら、超えた分を(後ろから)SS+ に
+  const APT_UP_LIMITS = Object.freeze({ total: 18, per: 11, mMax: 4 });
+  const normAptUp = (a) => {
+    const out = [0, 0, 0, 0];
+    if (!Array.isArray(a)) return out;
+    for (let i = 0; i < 4; i++) { const v = a[i]; out[i] = typeof v === 'number' && Number.isInteger(v) && v > 0 ? Math.min(APT_UP_LIMITS.per, v) : 0; }
+    let over = out.reduce((x, y) => x + y, 0) - APT_UP_LIMITS.total;
+    for (let i = 3; i >= 0 && over > 0; i--) { const cut = Math.min(out[i], over); out[i] -= cut; over -= cut; }
+    return out;
+  };
+  const applyAptUp = (apt, up) => {
+    const res = apt.map((g, i) => { const b = GRADES.indexOf(g); return GRADES[Math.min(GRADES.length - 1, (b < 0 ? GRADES.indexOf('C') : b) + (up[i] || 0))]; });
+    let ms = res.filter((g) => g === 'M').length;
+    for (let i = 3; i >= 0 && ms > APT_UP_LIMITS.mMax; i--) if (res[i] === 'M' && (up[i] || 0) > 0) { res[i] = 'SS+'; ms--; }
+    return res;
+  };
   const normalizeUnit = (u, catalog) => {
     const src = u && typeof u === 'object' ? u : {};
     const ids = Object.keys(catalog.species);
@@ -288,7 +306,8 @@ const __mod = { exports: {} };
     for (const k of [...catalog.species[species].techs.map(t => t.id), 'guard', 'dist', 'swap']) mastery[k] = toInt(ms[k], 0, 100, 0);
     const loy = toInt(src.loy, 0, 100, 100); // 忠誠度(無ければ100)
     const pop = toInt(src.pop, 0, 100, 0);   // 人気(無ければ0)
-    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop };
+    const aptUp = normAptUp(src.aptUp);        // 上げた間合い適性(無ければ 0 段)
+    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp };
   };
   const normalizeTeam = (t, catalog) => {
     const src = t && typeof t === 'object' ? t : {};
@@ -490,7 +509,7 @@ const __mod = { exports: {} };
         assistantId: nt.assistantId, tactics: nt.tactics, plan: nt.plan, swapPace: nt.swapPace, style: nt.style, active: 0,
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
-          return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: catalog.species[m.species].apt,
+          return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: applyAptUp(catalog.species[m.species].apt, m.aptUp || [0, 0, 0, 0]),
             moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, loy: m.loy, pop: m.pop };
         }),
@@ -866,14 +885,14 @@ const __mod = { exports: {} };
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示' }),
     // 検査用(計算の部品)
-    _internal: Object.freeze({ setupState, aptMult, aptSteps, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
+    _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ASSISTANT_MASMON_BATTLE = api;
