@@ -76,7 +76,8 @@
   const DEBUT_RETRY_FLOOR = 0.6;   // はじめの6割まで
   // 技表の第2版(2026-11-13)で、種によって初めの技の威力が2倍ちがい、能力に合わない種類の技しか届かない間合いもできた。
   //   デビュー戦が技の差だけで決まらないよう、相手は「初めの技の強さ」の差のぶん能力を下げる(下げるだけ・この割合まで)
-  const DEBUT_TECH_FLOOR = 0.6;
+  const DEBUT_TECH_FLOOR = 0.4;
+  const DEBUT_TECH_EXP = 2; // 差の効かせ方(比の2乗)。社長 2026-11-13「少しやさしくする」: ピクシー・イルミネもデビュー戦を越えられるように
   // 初めの技がその子の能力に合わない(その種類の能力が、もう一方の攻撃の能力のこの割合より低い)ときは、
   //   同じ間合いに届く別の種類の技(はじめから覚える条件を満たしているもの)を1つ足して始める
   const START_TECH_FIT = 0.6;
@@ -317,7 +318,7 @@
   // ---- 大会の相手(TOURNAMENT §9) ----
   // 基準の強さ B(6能力の合計)。試算(success-sim.js --calibrate)で「ふつうに育てた子」の勝率が
   // ★ 約80%・★★ 約60%・★★★ 約45%・👑 約30%・頂への道の決勝 約25% になるよう求めた値(TOURNAMENT §9 の 8)
-  const BENCH = Object.freeze({ debut: 620, junior: 1230, middle: 1820, pro: 2020, summit: 2050 });
+  const BENCH = Object.freeze({ debut: 620, junior: 1080, middle: 1820, pro: 2020, summit: 2050 });
   const STAR_MULT = Object.freeze({ 1: 0.75, 2: 0.95, 3: 1.1, 4: 1.25 });
   // ---- 月ごとの大会(TOURNAMENT §4: ジュニア・ミドル・プロは同じ月の並び。最後の期の1・2月はプロと同じ) ----
   //   系統の id は台本の常連の表(MONSUC_REGULAR_CUPS)と同じ。シナリオの大会(§4b)はあとで足す
@@ -1072,7 +1073,7 @@
     // デビュー戦の相手の手かげん(相手は表の先頭から n 個の技で戦う。試合の画面と同じ)
     const debutEase = (s, sp, n) => {
       const mine = techPunch(s.species, s.techs); const foe = techPunch(sp, techsOf(sp).slice(0, n).map(t => t.id));
-      return mine > 0 && foe > 0 ? clamp(mine / foe, DEBUT_TECH_FLOOR, 1) : 1;
+      return mine > 0 && foe > 0 ? clamp(Math.pow(mine / foe, DEBUT_TECH_EXP), DEBUT_TECH_FLOOR, 1) : 1;
     };
     // ---- 助手1人分のストーリー(data/monhero-success-arc.js・STORY-ARC.md) ----
     const ARCX = (deps && deps.arc) || (root && root.MONHERO_SUCCESS_ARC) || null;
