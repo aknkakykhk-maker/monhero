@@ -298,6 +298,9 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'turn.awake.omen2.kyuko1', who:'kyuko', e:'surprise', t:'また光ってる。虹色…これは見立て以上かもねぇ' },
   { id:'turn.awake.fire.kyuko1', who:'kyuko', e:'surprise', t:'ちょ、まぶしっ！ {mon}、なにが起きてるのぉ！？' },
   { id:'turn.awake.fire2.kyuko1', who:'kyuko', e:'excited', t:'虹色の光、まだ強くなる…見立て、超えてきたねぇ笑' },
+
+  // 成長のピークの予告(2026-11-13): 始まる2〜3ターン前
+  { id:'turn.peak.soon.kyuko1', who:'kyuko', e:'normal', t:'見立てだと、もうすぐ伸びどき。今は体をととのえとこぉ' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_KYUKO };

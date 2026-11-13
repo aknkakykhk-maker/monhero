@@ -39,6 +39,15 @@ function MsxOmenFx({ k }) {
   );
 }
 
+// 成長のピーク中: 足もとの炎のオーラと火の粉(キラと重なっても両方見える。キラは中・炎は外側の後ろと前)。「動きを減らす」では静かな形
+function MsxPeakFx({ layer }) {
+  msxAwEnsureCss();
+  const calm = msxAwCalm();
+  if (layer === 'back') return <span className={`msx-peakfx back${calm ? ' calm' : ''}`} aria-hidden="true" data-msx-peak="back">{[0, 1, 2, 3, 4].map((i) => <i key={i} className="fl" style={{ '--i': i }}/>)}<i className="base"/></span>;
+  if (calm) return null;
+  return <span className="msx-peakfx front" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} className="em" style={{ '--i': i }}/>)}</span>;
+}
+
 // fire = 芯の awakeOpen の out.fire { kind, add, ups, apt:[{ dist, from, to }] }。run.s はもう起きたあと(能力・印)
 function MsxAwakeShow({ run, fire, v, ev, line }) {
   msxAwEnsureCss();
@@ -120,7 +129,24 @@ const MSX_AW_CSS = `
 @keyframes msxAwRay{0%{opacity:0;transform:translateX(-50%) scaleX(.2)}100%{opacity:1;transform:translateX(-50%) scaleX(1)}}
 @keyframes msxAwHold2{from{opacity:.7}to{opacity:1}}
 @keyframes msxAwFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.msx-peakfx{position:absolute;pointer-events:none}
+.msx-peakfx.back{left:-24%;right:-24%;bottom:-6%;height:96%;z-index:0}
+.msx-peakfx.front{left:-8%;right:-8%;bottom:0;height:90%;z-index:4}
+.msx-peakfx>i{position:absolute;font-style:normal}
+.msx-peakfx .base{left:10%;right:10%;bottom:0;height:22%;border-radius:50%;background:radial-gradient(ellipse at 50% 60%,rgba(255,220,90,.85),rgba(255,120,30,.55) 45%,rgba(255,60,0,0) 72%);animation:msxPeakBase 1.2s ease-in-out infinite alternate}
+.msx-peakfx .fl{bottom:4%;left:calc(14% + var(--i) * 15%);width:22%;height:72%;border-radius:50% 50% 35% 35% / 70% 70% 30% 30%;transform-origin:50% 100%;background:radial-gradient(ellipse 50% 62% at 50% 74%,rgba(255,250,190,1),rgba(255,180,40,.95) 30%,rgba(255,90,10,.75) 55%,rgba(230,40,0,0) 80%);animation:msxPeakFlame calc(.9s + var(--i) * .13s) ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.37s)}
+.msx-peakfx .fl:nth-child(1),.msx-peakfx .fl:nth-child(5){height:52%}
+.msx-peakfx .fl:nth-child(2),.msx-peakfx .fl:nth-child(4){height:80%}
+.msx-peakfx .fl:nth-child(3){height:100%}
+.msx-peakfx .em{bottom:8%;left:calc(10% + var(--i) * 15%);width:5px;height:5px;border-radius:50%;background:#ffe08a;box-shadow:0 0 6px 2px rgba(255,140,30,.95);opacity:0;animation:msxPeakEmber 2.2s linear infinite;animation-delay:calc(var(--i) * .37s)}
+.msx-peakfx.calm .fl,.msx-peakfx.calm .base{animation:none}
+@keyframes msxPeakFlame{0%{transform:scaleY(.82) scaleX(1.04) skewX(-3deg);opacity:.75}100%{transform:scaleY(1.08) scaleX(.94) skewX(3deg);opacity:1}}
+@keyframes msxPeakBase{from{opacity:.7}to{opacity:1}}
+@keyframes msxPeakEmber{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(calc((var(--i) - 2.5) * 6px),-150px)}}
+.msx-peakon>.msx-kira{position:relative;z-index:1;filter:drop-shadow(0 0 3px rgba(255,170,40,.95)) drop-shadow(0 0 9px rgba(255,90,10,.7))}
+.msx-peak-card{position:absolute;left:0;right:0;top:12%;z-index:5;text-align:center;font-size:26px;font-weight:900;font-style:italic;color:#fff7cc;-webkit-text-stroke:3px #c2410c;paint-order:stroke fill;text-shadow:0 0 14px #fb923c,0 3px 0 #7c2d12;white-space:nowrap}
 @media (prefers-reduced-motion: reduce){
+  .msx-peakfx .fl,.msx-peakfx .base{animation:none}.msx-peakfx.front{display:none}
   .msx-omen .g,.msx-omen .p,.msx-omen-on>.msx-kira,.msx-aw .msx-aw-wrap,.msx-aw-flash{animation:none}
   .msx-omen .p,.msx-aw-flash{display:none}
   .msx-aw .msx-aw-ray{animation:none}

@@ -38,8 +38,10 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
   const after = Math.max(0, hp - use);
   const P = (msxSuc && msxSuc.core.PERIODS) || [];
   const now = v.period.index;
+  const pk = msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !s.over ? msxSuc.SUC.peakInfo(s) : { state: null };
   return (
-    <div className="v-band">
+    <div className="v-band" style={pk.state === 'in' ? { position: 'relative' } : undefined}>
+      {pk.state === 'in' ? <span className="v-peakb" data-msx-peak-band={pk.left} style={{ position: 'absolute', left: '50%', top: -7, transform: 'translateX(-50%)', zIndex: 2, whiteSpace: 'nowrap', padding: '1px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 900, color: '#fff7cc', background: 'linear-gradient(90deg,#ea580c,#f59e0b)', boxShadow: '0 0 8px #fb923c' }}>🔥 ピーク中(あと{pk.left}ターン)</span> : null}
       <div className="v-b1">
         <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
           <div className="n">残り<b>{v.period.left}</b>ターン<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
@@ -57,13 +59,30 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
     </div>
   );
 }
-function MsxStRow({ stats, ups, main }) {
+// ups … 上がった(下がった)分。stats は変わったあとの値。preview … 訓練を選ぶ画面の見込み(まだ上がっていない)
+//   結果の画面では、上がる前の長さからゲージが伸び、伸びた分が光る(下がるときは縮み、減った分が赤く消える。2026-11-13 社長)。
+//   「動きを減らす」設定では、はじめから変わったあとの長さで出す
+function MsxStRow({ stats, ups, main, preview = false }) {
+  const grow = Boolean(ups) && !preview && MSX_STATS.some((k) => ups[k]);
+  const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  const sig = grow ? MSX_STATS.map((k) => `${stats[k]}:${ups[k] || 0}`).join('|') : '';
+  const [on, setOn] = useState(!grow || calm);
+  useEffect(() => {
+    if (!grow || calm) { setOn(true); return undefined; }
+    setOn(false); let a = 0; let b = 0;
+    a = requestAnimationFrame(() => { b = requestAnimationFrame(() => setOn(true)); });
+    return () => { cancelAnimationFrame(a); cancelAnimationFrame(b); };
+  }, [sig]);
+  const pct = (n) => `${Math.max(0, Math.min(100, n / 9.99))}%`;
   return (
-    <div className="v-st">
+    <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
       {MSX_STATS.map((k) => {
         const u = ups ? (ups[k] || 0) : 0;
+        const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
-          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{stats[k]}</b><u><i style={{ width: `${stats[k] / 9.99}%` }}/></u>
+          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{stats[k]}</b>
+          {grow && u ? <u className="g"><i style={{ width: pct(on ? after : before) }}/>{u > 0 ? <s className="gu" style={{ left: pct(before), width: on ? `max(4px, calc(${pct(after)} - ${pct(before)}))` : 0 }}/> : <s className="gd" style={{ left: pct(after), width: `max(4px, calc(${pct(before)} - ${pct(after)}))` }}/>}</u>
+            : <u><i style={{ width: pct(after) }}/></u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
     </div>
@@ -92,15 +111,17 @@ function MsxMonArt({ run, className, style, live = false, react = null }) {
   // 覚醒・超覚醒のキラ(56-monsuc-awake.jsx)と前触れの光。どちらも無ければ前と同じ形のまま
   const kira = typeof msxKiraOf === 'function' ? msxKiraOf(run.s.awake) : null;
   const omen = run.s.omen && typeof MsxOmenFx === 'function' ? run.s.omen.k : 0;
-  if ((kira || omen) && typeof MsxKira === 'function') {
+  // 成長のピーク中は燃え上がる(56-monsuc-awake.jsx の MsxPeakFx。キラと重なっても両方見える)
+  const peak = typeof MsxPeakFx === 'function' && msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in';
+  if ((kira || omen || peak) && typeof MsxKira === 'function') {
     const scn = msxSceneBg(run.s.turn);
     const inner = live && typeof MsxLiveMon === 'function'
       ? <MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/>
       : run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
         ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
         : <img src={msxMonImg(sp)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>;
-    return <span className={`${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}`} style={style} data-msx-mon-kira={kira || ''}>
-      <MsxKira kind={kira} src={msxMonImg(sp)} fill>{inner}</MsxKira><MsxOmenFx k={omen}/></span>;
+    return <span className={`${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}${peak ? ' msx-peakon' : ''}`} style={style} data-msx-mon-kira={kira || ''}>
+      {peak ? <MsxPeakFx layer="back"/> : null}<MsxKira kind={kira} src={msxMonImg(sp)} fill>{inner}</MsxKira><MsxOmenFx k={omen}/>{peak ? <MsxPeakFx layer="front"/> : null}</span>;
   }
   if (live && typeof MsxLiveMon === 'function') {
     const scn = msxSceneBg(run.s.turn);
@@ -473,7 +494,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
           {trainLv ? <div className="v-lvx"><b>訓練Lv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
         </div>}
       </div>
-      <MsxStRow stats={s.stats} ups={pv ? pv.gain : null} main={stat}/>
+      <MsxStRow stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
       <div className="v-trs">
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
           <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
@@ -488,7 +509,9 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
     const anyTag = MSX_STATS.some((k) => { const c = msxCardOf(v, k); return c && c.tags.length; });
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0; // 覚醒の前触れ(助手が気づく)
-    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const pkI = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; // 成長のピーク(予告は2〜3ターン前)
+    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？')
+      : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn); const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
     const bag = Object.keys(s.bag || {}).filter((k) => s.bag[k] > 0);
@@ -501,6 +524,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
         <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
+          {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
@@ -625,6 +649,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
       </div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
         <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}・成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div></div>
+      {(() => { const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; return pk.state ? <div className="v-card" data-msx-peak-stats><div className="h2">🔥 成長のピーク</div><div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。訓練がよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`}</div></div> : null; })()}
       {s.omen || s.awake ? <div className="v-card" data-msx-yosu><div className="h2">🔎 様子</div>
         {s.omen ? <div className="sub">様子: <b style={{ color: '#fde047' }}>なにか起きそう</b>(体がうっすら{s.omen.k === 2 ? '虹色に' : ''}光っている)</div> : null}
         {s.awake ? <div className="sub">{s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)'}</div> : null}</div> : null}
@@ -737,6 +762,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
       {cheerIdx != null && s.team[cheerIdx] ? <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>
         : isStory || isUniq ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
+      {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
       {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
       <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? 'いい時間になった。' : 'なにか起きそうだ…'}</div>}</div>
     </div>

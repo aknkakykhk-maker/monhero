@@ -250,6 +250,7 @@
     {"id":"turn.awake.omen2.atsu1","who":"atsu","e":"surprise","t":"また光ってる。しかも虹色…これ、前より大きいの来るよ笑"},
     {"id":"turn.awake.fire.atsu1","who":"atsu","e":"surprise","t":"うわっ、まぶし！ {mon}、なにが起きてんの！？"},
     {"id":"turn.awake.fire2.atsu1","who":"atsu","e":"excited","t":"まじか…虹色の光、止まらないんだけど笑"},
+    {"id":"turn.peak.soon.atsu1","who":"atsu","e":"normal","t":"そろそろ伸びどきが来るよ。今のうちに体ととのえとこ笑"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

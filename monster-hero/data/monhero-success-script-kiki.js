@@ -251,6 +251,7 @@
     {"id":"turn.awake.omen2.kiki1","who":"kiki","e":"surprise","t":"また光っていまつ。今度は虹色……ただごとじゃないでつ"},
     {"id":"turn.awake.fire.kiki1","who":"kiki","e":"surprise","t":"あれま……{mon}が光に包まれていきまつ！？"},
     {"id":"turn.awake.fire2.kiki1","who":"kiki","e":"excited","t":"あれまあれま……虹の光が、どんどん強くなっていきまつ！"},
+    {"id":"turn.peak.soon.kiki1","who":"kiki","e":"normal","t":"もうすぐ伸びどきが来まつ。今のうちに体をととのえておきましょ"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

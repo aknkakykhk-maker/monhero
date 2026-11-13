@@ -250,6 +250,7 @@
     {"id":"turn.awake.omen2.momosuke1","who":"momosuke","e":"surprise","t":"{mon}がまた光ってる！！ しかも虹色だよ♡"},
     {"id":"turn.awake.fire.momosuke1","who":"momosuke","e":"surprise","t":"わわわっ！！ {mon}がピカーってなってる！！"},
     {"id":"turn.awake.fire2.momosuke1","who":"momosuke","e":"excited","t":"すごいすごい！！ 虹色がとまらないよ♡"},
+    {"id":"turn.peak.soon.momosuke1","who":"momosuke","e":"excited","t":"もうすぐ伸びどきだよ！！ わくわくするね♡"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

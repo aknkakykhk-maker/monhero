@@ -1258,6 +1258,22 @@
       return { state: s, out: {} };
     };
 
+    // ---- 成長のピーク(C.peakOf の区間。2026-11-13 社長: 予告・始まり・終わりを助手が教える・ピーク中は燃え上がる演出) ----
+    //   ピークのターン = 区間に入るターン(デビュー期・最後の期は除く。出来事 ev.self.peakin / peakout と同じ数え方)
+    //   peakInfo(s) → { state: 'soon'(あと1〜3ターンで始まる)|'in'(ピーク中)|null, left(ピーク中の残りターン・このターンを含む), in(始まるまでのターン), from, to }
+    const peakTurnsOf = (s) => {
+      const pk = C.peakOf(s.type); const out = [];
+      for (let t = 2; t <= TOTAL_TURNS; t++) { const k = periodOf(t).key; if (k === 'debut' || k === 'final') continue; const f = (t - 1) / TOTAL_TURNS; if (f >= pk.from && f < pk.to) out.push(t); }
+      return out;
+    };
+    const peakInfo = (s) => {
+      const T = s && Number.isInteger(s.type) ? peakTurnsOf(s) : []; if (!T.length) return { state: null };
+      const from = T[0]; const to = T[T.length - 1];
+      if (s.turn >= from && s.turn <= to) return { state: 'in', left: to - s.turn + 1, from, to };
+      if (s.turn < from && from - s.turn <= 3) return { state: 'soon', in: from - s.turn, from, to };
+      return { state: null, from, to };
+    };
+
     // その月の大会の並び(札)。ライバルは月のはじめ(並びを見せる時)に決まる
     const monthOf = (turn) => { const p = periodOf(turn); return p.key === 'debut' ? 7 + p.at : p.at; }; // 1ターン = 1か月(デビューは8〜12月)
     // きゅうこのピークの大会: 成長のピーク(いちばん伸びる区間)に入った最初のターン(1回の育成に1度)
@@ -1538,7 +1554,7 @@
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
       DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
-      AWAKE, aptAwakeNorm, awakeOpen, awakePick,
+      AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo,
     });
   };
 
