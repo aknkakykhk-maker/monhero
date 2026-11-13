@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a1ef7331e66d2706
+// generated-sha256: 967ac327dfd381bb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48777,6 +48777,8 @@ function HomeScreen({
   cardTourVisible = false, onOpenCardTour = null,
   // はじめての人の「つぎにやること」(2026-11-11 案4)。{ n:1〜3, title, sub, onTap }。null なら出さない
   nextStep = null,
+  // モンヒロサクセス β の札(2026-11-13 社長「HOMEにβの札」)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry(公開の印が偽なら何も出さない)
+  successEntry = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -48948,6 +48950,7 @@ function HomeScreen({
         {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
             公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
         {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
+        {successEntry}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
@@ -68093,7 +68096,7 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
 // HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
-const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
+const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-success,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
@@ -81027,7 +81030,7 @@ const MSX_EV_TITLE = Object.freeze({
   'ev.small.omikuji': 'おみくじ', 'ev.small.nut': 'あやしい木の実',
   'ev.team.selfdrill': '編成のモンスターの自主練', 'ev.team.senpai': '先輩の背中', 'ev.team.fight': '編成どうしのケンカ', 'ev.team.base': 'ベースモンのがんばり', 'ev.team.friend': 'フレンドのモンスターが来た',
   'ev.team.typeskill': '得意技を教わる', 'ev.team.sync': '息ぴったり', 'ev.team.tagwake': '心がつながった',
-  'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きな訓練', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
+  'ev.self.anniv': 'はじめての育成記念日', 'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きな訓練', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
   'ev.goal.pick': '期の目標を決める', 'ev.goal.done': '目標達成', 'ev.goal.miss': '目標に届かなかった',
   'ev.body.injury': 'けがの手前', 'ev.body.runaway': '元気がない', 'ev.body.healed': '治った', 'ev.body.home': '帰ってきた',
   'ev.season.jan1': '初もうで', 'ev.season.jan2': '書きぞめ', 'ev.season.jan3': '新年の願い事', 'ev.season.apr1': 'お花見', 'ev.season.apr2': '春の町', 'ev.season.apr3': '1年前の写真',
@@ -81146,6 +81149,116 @@ const msxDexEnsureCss = () => {
   msxDexCssDone = true;
   const el = document.createElement('style'); el.setAttribute('data-msx-dex-css', '1'); el.textContent = MSX_DEX_CSS; document.head.appendChild(el);
 };
+
+// ---- part: 56-monsuc-beta.jsx ----
+// ===== モンヒロサクセスのβ版(2026-11-13 社長「みゅあだけ解放・β版の始まりの話とチュートリアルを入れる」・台帳 #5964・#5977) =====
+// 台本: docs/progress/player-raise/script/beta-mua.js(キズナ・社長「このまま入れる」)。場面:
+//   scn.mua.beta.open … はじめて開いたとき(2択)/ scn.mua.beta.firstend … はじめての育成を終えてホームへ戻ったとき
+//   tut.lock … 準備中の助手を押したとき(毎回)/ tut.<場面> … 最初の1回だけのみゅあの説明(MSX_BETA_TUT)
+// 保存: 新しいキー mh_monsuc_beta_v1 = { v:1, seen:{ 場面の名前: 1 } }(育成をまたぐ・足すだけ。ほかのキーは触らない)
+//   読み込みは msxBetaNorm を通す。書けなくても遊びは止めない(次に開いたときにもう一度出るだけ)。
+// 公開の印は持たない(モンサクの画面の中からだけ呼ぶ)。公開の印 monheroSuccess はここでは開けない。
+
+const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
+// β版で選べる助手(ほかは「準備中」)
+const MSX_BETA_AIDS = Object.freeze(['mua']);
+const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
+// 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
+const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
+const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
+const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
+const msxBetaNorm = (raw) => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const src = o.seen && typeof o.seen === 'object' && !Array.isArray(o.seen) ? o.seen : {};
+  const seen = {}; Object.keys(src).forEach((k) => { if (msxBetaKnown(k) && src[k]) seen[k] = 1; });
+  return { v: 1, seen };
+};
+let msxBetaCache = null; let msxBetaLoading = null; const msxBetaSubs = new Set();
+const msxBetaNotify = () => msxBetaSubs.forEach((f) => { try { f((n) => n + 1); } catch (e) { /* 消えた画面 */ } });
+const msxBetaLoad = () => {
+  if (msxBetaLoading) return msxBetaLoading;
+  msxBetaLoading = Promise.resolve(typeof storeGet === 'function' ? storeGet(MSX_BETA_KEY, null) : null)
+    .catch(() => null).then((raw) => { msxBetaCache = msxBetaNorm(raw); msxBetaNotify(); return msxBetaCache; });
+  return msxBetaLoading;
+};
+const msxBetaSeen = (k) => !!(msxBetaCache && msxBetaCache.seen[k]);
+const msxBetaMark = (k) => {
+  if (!msxBetaKnown(k)) return;
+  if (!msxBetaCache) { msxBetaLoad().then(() => msxBetaMark(k)); return; }
+  if (msxBetaCache.seen[k]) return;
+  msxBetaCache = { v: 1, seen: { ...msxBetaCache.seen, [k]: 1 } };
+  try { if (typeof storeSet === 'function') Promise.resolve(storeSet(MSX_BETA_KEY, msxBetaCache)).catch(() => {}); } catch (e) { /* 書けなくても遊びは止めない */ }
+  msxBetaNotify();
+};
+// 読み終わったら描き直す(画面を開いた直後はまだ読めていない)
+const useMsxBeta = () => {
+  const [, setTick] = useState(0);
+  useEffect(() => { msxBetaSubs.add(setTick); msxBetaLoad(); return () => { msxBetaSubs.delete(setTick); }; }, []);
+  return msxBetaCache;
+};
+
+// ---- みゅあの説明の重ね窓 ----
+// keys: 出す候補の名前(上から順に、まだ見ていない最初の1つ)。false・null は飛ばす。always: 見た印を見ずに毎回出す(tut.lock)
+// ctx: 台本エンジンの差しこみ(callName・mon・bond)。onDone: 閉じたとき
+function MsxBetaTalk({ keys, ctx = {}, always = false, onDone }) {
+  const beta = useMsxBeta();
+  const k = (Array.isArray(keys) ? keys : [keys]).filter(Boolean).find((x) => always || (beta && !beta.seen[x])) || null;
+  const [loaded, setLoaded] = useState(false);
+  const [i, setI] = useState(0);
+  const [picked, setPicked] = useState(null); // 2択で選んだ記号
+  useEffect(() => { let alive = true; if (typeof msxScriptLoad === 'function') msxScriptLoad('mua').then(() => { if (alive) setLoaded(true); }); return () => { alive = false; }; }, []);
+  useEffect(() => { setI(0); setPicked(null); }, [k]);
+  if (!k || (!always && !beta) || !loaded) return null;
+  const se = msxSuc && msxSuc.script;
+  const c = { ...ctx, aid: 'mua' };
+  const evOf = (sc) => { try { return se && typeof se.event === 'function' ? se.event(sc, c) : null; } catch (e) { return null; } };
+  const main = evOf(msxBetaScene(k));
+  if (!main || !main.lines || !main.lines.length) return null;
+  const tail = picked ? evOf(`${msxBetaScene(k)}.${picked}`) : null;
+  const lines = main.lines.concat(tail ? tail.lines : [], main.after || []);
+  const choices = Array.isArray(main.choices) ? main.choices : [];
+  const atChoice = !picked && choices.length > 0 && i >= main.lines.length - 1;
+  const l = lines[Math.min(i, lines.length - 1)];
+  const close = () => { if (!always) msxBetaMark(k); if (onDone) onDone(k); };
+  const next = () => { if (i + 1 >= lines.length) close(); else setI(i + 1); };
+  const choose = (cc) => { setPicked(cc); setI(main.lines.length); };
+  const narr = l.who === 'narr';
+  return (
+    <div className="msx-ov msx-fade msx-beta-ov" data-msx-beta={k} onClick={atChoice ? undefined : next}>
+      <div className="msx-beta-card" onClick={(e) => { e.stopPropagation(); if (!atChoice) next(); }}>
+        <div className="msx-beta-tag">{MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあの説明'}</div>
+        {narr ? <div className="msx-beta-narr">{l.t}</div> : (
+          <div className="msx-beta-say"><img className="fc" src={msxFace('mua', l.e || 'happy')} alt=""/><div className="bub"><span className="who">みゅあ</span>{l.t}</div></div>
+        )}
+        {atChoice ? (
+          <div className="msx-beta-opts">{choices.map((ch) => <button type="button" key={ch.c} className="msx-btn go" onClick={(e) => { e.stopPropagation(); choose(ch.c); }}>{ch.t}</button>)}</div>
+        ) : <div className="msx-beta-nx">{i + 1 >= lines.length ? 'とじる ▶' : 'つぎへ ▶'}<small>{Math.min(i, lines.length - 1) + 1}/{lines.length}</small></div>}
+      </div>
+    </div>
+  );
+}
+
+// タイトルの横の「β」
+function MsxBetaMark() { return <span className="msx-beta-mk" data-msx-beta-mark>β</span>; }
+
+const MSX_BETA_CSS = `
+.msx .msx-beta-mk{display:inline-block;margin-left:5px;padding:0 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;font-weight:900;line-height:17px;vertical-align:2px;letter-spacing:0}
+.msx .msx-beta-ov{z-index:60;align-items:flex-end;padding:14px 12px 22px}
+.msx .msx-beta-card{width:100%;max-width:420px;background:#1e1b3a;border:2px solid #f9a8d4;border-radius:14px;padding:10px 12px 8px;box-shadow:0 6px 24px #0008;cursor:pointer}
+.msx .msx-beta-tag{display:inline-block;font-size:10px;font-weight:900;color:#1e1b3a;background:#f9a8d4;border-radius:5px;padding:1px 7px;margin-bottom:6px}
+.msx .msx-beta-say{display:flex;gap:8px;align-items:flex-start}
+.msx .msx-beta-say .fc{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#fff2;flex:0 0 auto}
+.msx .msx-beta-say .bub{flex:1 1 0;font-size:13px;font-weight:700;line-height:1.6;text-align:left}
+.msx .msx-beta-say .who{display:block;font-size:10px;color:#f9a8d4;font-weight:900}
+.msx .msx-beta-narr{font-size:13px;line-height:1.7;color:#e9e5ff;text-align:left;padding:4px 2px}
+.msx .msx-beta-nx{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:900;color:#fde68a}
+.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700;font-size:12px}
+.msx .msx-beta-opts{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.msx .msx-beta-opts .msx-btn{text-align:center}
+.msx .v-faces .lk.soon{position:relative}
+.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-3px;font-size:10px;color:#fde68a;text-align:center;font-weight:900}
+`;
 
 // ---- part: 56-monsuc-tevent.jsx ----
 // ===== モンヒロサクセスの「訓練のあとの出来事」を1枚の場面で見せる(2026-11-13 社長「ターン後のイベントが下部にぽつんとで地味」) =====
@@ -84605,7 +84718,7 @@ const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節
 const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・頂への道の相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
-// シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中
+// シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中。β版で選べるのはみゅあだけ(56-monsuc-beta.jsx の MSX_BETA_AIDS)
 const MSX_SCENARIOS = Object.freeze([
   { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
     perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
@@ -84855,6 +84968,34 @@ const msxFill = (t, ctx) => { const se = msxSuc && msxSuc.script; return se && t
 // ターンのはじめの様子(数字は言わない)。場面の決め方はエンジンの SCENE.start
 const msxStartScene = (s) => { const se = msxSuc && msxSuc.script; return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal'; };
 
+// ---- HOMEの入口「モンヒロサクセス β」の札(2026-11-13 社長「HOMEにβの札」)。公開の印 monheroSuccess が真のときだけ出る ----
+// 置き場所: 縦持ちは左の列の「MFバトルカード」の札のすぐ下(その札が上がる・下がるのに合わせる)、横持ちはその札の右。
+// 69-screen-home.jsx の HomeScreen へ 60-app.jsx が successEntry として渡す。見た目はここに閉じる(HOMEの CSS は触らない)
+const MSX_HOME_CSS = `
+.mh-home-success{position:absolute;z-index:5;left:9px;bottom:calc(min(calc(33% - 40px),calc(44.75% - 126px)) - 60px);padding:0;translate:0 var(--mh-home-left-push,0px)}
+.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success{bottom:calc(min(calc(33% + 4px),calc(44.75% - 82px)) - 60px)}
+.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{bottom:calc(min(calc(33% - 84px),calc(44.75% - 170px)) - 60px)}
+.mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
+.mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
+.mh-home-success:active>span{transform:scale(.96)}
+@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
+.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
+`;
+function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => { try { if (onOpenChange) onOpenChange(open); } catch (e) {} }, [open]);
+  if (!msxReleased()) return null;
+  return (
+    <>
+      <style>{MSX_HOME_CSS}</style>
+      <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
+        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b></span>
+      </button>
+      {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
+    </>
+  );
+}
+
 // ---- デバッグ設定からの入口(公開の印が偽のあいだの試し口)。60-app.jsx のデバッグの「⭐ よく使う」に置く ----
 // callNameOf(aid) / bondLvOf(aid) は本体から渡す(プレイヤーの呼び方と助手の仲良し度 Lv)
 function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
@@ -84865,7 +85006,7 @@ function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
     <>
       <button type="button" data-debug-monhero-success onClick={() => { msxDebugOpened = true; setOpen(true); }}
         className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/60 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">
-        🌱 モンヒロサクセス(試す)
+        🌱 モンヒロサクセス β(試す)
         <small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の育成の画面(回2)。大会・修行・引退・合体の中身はまだ準備中。保存は新しいキー(mh_monsuc_*)だけ</small>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf} debug/>}
@@ -84923,7 +85064,7 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   return (
     <div className="v-hd">
       <button type="button" className="bk" onClick={onBack}>← {back}</button>
-      <span className="ti">{title}{sub ? <small>{sub}</small> : null}</span>
+      <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>
       {right != null && <span className="rt">{right}</span>}
     </div>
   );
@@ -84957,6 +85098,10 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     try { const r = await monsucLendFriends(); setLendList(r && typeof r === 'object' ? r : { ok: false, reason: 'server', rows: [] }); } catch (e) { setLendList({ ok: false, reason: 'network', rows: [] }); }
   };
   const [aid, setAid] = useState('mua');
+  // β版(56-monsuc-beta.jsx): 選べる助手はみゅあだけ。準備中の助手を押すとみゅあの一言(tut.lock)
+  const msxAidOpen = (a) => typeof msxBetaAidOk !== 'function' || msxBetaAidOk(a);
+  const [lockTalk, setLockTalk] = useState(0);
+  const betaCtx = { callName: callNameOf ? callNameOf('mua') : '', bond: Math.max(1, Number(bondLvOf && bondLvOf('mua')) || 1), mon: msxMonName(species) };
   const [items, setItems] = useState([]);
   const [nick, setNick] = useState('');
   const [colors, setColors] = useState([]);
@@ -85059,8 +85204,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     body = (<>
       <div className="v-h">だれの物語で育てる?<small>助手ごとに、筋書き・出来事・訓練の組み合わせが変わる</small></div>
       <div className="v-faces">
-        {MSX_SCENARIOS.map((x) => <button type="button" key={x.aid} className={aid === x.aid ? 'on' : ''} onClick={() => setAid(x.aid)}><img src={msxFace(x.aid)} alt={msxAidName(x.aid)}/></button>)}
-        {MSX_SOON_AIDS.map((a) => <span key={a} className="lk"><img src={msxFace(a)} alt=""/></span>)}
+        {MSX_SCENARIOS.filter((x) => msxAidOpen(x.aid)).map((x) => <button type="button" key={x.aid} className={aid === x.aid ? 'on' : ''} onClick={() => setAid(x.aid)}><img src={msxFace(x.aid)} alt={msxAidName(x.aid)}/></button>)}
+        {[...MSX_SCENARIOS.filter((x) => !msxAidOpen(x.aid)).map((x) => x.aid), ...MSX_SOON_AIDS].map((a) => <span key={a} className="lk soon" role="button" tabIndex={0} aria-label={`${msxAidName(a)}(準備中)`} data-msx-soon={a} onClick={() => setLockTalk((n) => n + 1)}><img src={msxFace(a)} alt=""/><b>準備中</b></span>)}
       </div>
       <div className="v-card sel" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
         <div className="v-sc"><div className="pic"><img src={msxBody(aid, 'happy')} alt=""/></div><div className="tx">
@@ -85142,6 +85287,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         {body}
       </div>
       {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← もどる' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
+      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={['prep']} ctx={betaCtx}/>) : null}
     </>
   );
 }
@@ -85314,6 +85460,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null); // 確かめの小窓 { text, yes, onYes }
+  const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
@@ -85363,15 +85510,31 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
   else if (view === 'start') content = <MsxStart data={data} SUC={msxSuc.SUC} onCancel={() => setView('home')} onStart={startRun} bondLvOf={bondLvOf} callNameOf={callNameOf}/>;
   else if (view === 'box' && typeof MsxR3Box === 'function') content = <MsxR3Box onClose={toHome}/>;
-  else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={toHome} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug}/>;
+  else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={toHome} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug} onSub={setPlaySub}/>;
+  // β版(56-monsuc-beta.jsx): はじめて開いたときの話・はじめての育成を終えたときの話・育成中の最初の1回だけのみゅあの説明
+  const betaCtx = { callName: callNameOf ? callNameOf('mua') : '', bond: Math.max(1, Number(bondLvOf && bondLvOf('mua')) || 1) };
+  let betaKeys = null;
+  if (view === 'home' && data) {
+    const raisedMons = data.box.mons.filter((m) => m && m.raised);
+    const lastRaised = raisedMons[raisedMons.length - 1];
+    betaKeys = { keys: ['open', raisedMons.length > 0 && !(run && run.s && !run.s.over) && 'firstend'], ctx: { ...betaCtx, mon: lastRaised ? (lastRaised.nick || msxMonName(lastRaised.species)) : undefined } };
+  } else if (view === 'play' && run && run.s) {
+    const s = run.s; const ph = run.phase;
+    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? ['match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
+      : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result']
+        : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
+    if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick } };
+  }
 
   const node = (
     <div className="msx-wrap" data-monhero-success role="dialog" aria-label="モンヒロサクセス">
       <style>{MSX_CSS}</style>
+      {typeof MSX_BETA_CSS === 'string' ? <style>{MSX_BETA_CSS}</style> : null}
       {/* ランキングの画面は Tailwind で組まれているので、.msx(ボタンの見た目を初期化している)の外に重ねる */}
       {view === 'rank' && typeof MonsucRankScreen === 'function' ? <MonsucRankScreen onBack={() => setView('home')}/> : null}
       <div className={`msx v3 ${layout}`} data-msx-view={view}>
         {content}
+        {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx}/> : null}
         {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
           <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>やめておく</button></div></div>}
@@ -85395,7 +85558,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         <div className="v-scene" style={{ flex: '1 1 0' }}>
           <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
           {s ? <><div className="gr"/><MsxMonArt run={run} className="mon"/><span className="v-nm">{run.nick}<small>{msxMonName(s.species)}</small></span></> : null}
-          <div className="v-ev-h"><small>育成</small>🌱 モンヒロサクセス</div>
+          <div className="v-ev-h"><small>育成</small>🌱 モンヒロサクセス{typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}</div>
         </div>
         {s ? (
           <div className="v-card pk">
@@ -85421,13 +85584,15 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
 }
 
 // ---- 育成の1ターン ----
-function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) {
+function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, onSub }) {
   const { SUC } = msxSuc;
   const s = run.s;
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
+  useEffect(() => { if (onSub) onSub(sub); }, [sub]);
+  useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
   const [kiAt, setKiAt] = useState(null);
   // 訓練している場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
@@ -85943,7 +86108,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
   const shown = (picked ? afterLines : main.lines).slice(0, 4);
-  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : (view && view.head) || main.label || '育成イベント';
+  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.id === 'ev.self.anniv' ? 'はじめての育成記念日' : (view && view.head) || main.label || '育成イベント';
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who));
   return (<>
@@ -85953,7 +86118,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
       {cheerIdx != null && s.team[cheerIdx] ? <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>
-        : isStory || isUniq ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
+        : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
       {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
       <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? 'いい時間になった。' : 'なにか起きそうだ…'}</div>}</div>
@@ -86693,6 +86858,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
           <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: name, rival: b.rival ? b.rival.name : '' }, '「おしかった! もう1回いく?」').t}</div></div>
         </div>
       </div>
+      {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['rematch']} ctx={{ ...actx, bond: bondLv || 1 }}/> : null}
     </>);
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="on" style={{ flex: 2 }}>えらんでね</button></div>}/>;
   }
@@ -131043,6 +131209,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             /* 公式杯の札(2026-10-31 社長・案A)。MFバトルカードに入れる人に、大会があるあいだだけ出る(大会の行を足すだけで出る)。押すと大会のトップを開き、戻ると HOME */
             cardTourVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome}
             onOpenCardTour={(tourId)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet({kind:'tour',tourId});setCardOrigin('home');setGameState('CARD_TOP');}}
+            /* モンヒロサクセス β の札(2026-11-13 社長)。公開の印 monheroSuccess が偽のあいだは中で null を返す */
+            successEntry={typeof MonheroSuccessHomeEntry==='function'?<MonheroSuccessHomeEntry onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>:null}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}

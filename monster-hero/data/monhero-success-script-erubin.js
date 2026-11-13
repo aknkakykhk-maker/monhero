@@ -154,6 +154,7 @@
     {"id":"ev.team.tagwake.erubin1","who":"erubin","e":"excited","t":"友情タッグだね！ いいね"},
     {"id":"ev.self.peakin.erubin1","who":"erubin","e":"excited","t":"伸びどきに入ったみたいだね。今がんばると、よく伸びるかな"},
     {"id":"ev.self.peakout.erubin1","who":"erubin","e":"normal","t":"少し落ち着いてきたね。休ませてあげるのもいいかもね"},
+    {"id":"ev.self.anniv.erubin1","who":"erubin","e":"happy","t":"{mon}、1年おめでとう。今日はゆっくりしよっか笑"},
     {"id":"ev.self.slump.erubin1","who":"erubin","e":"normal","t":"元気ないね。気分を変えてみるのもいいかな"},
     {"id":"ev.self.favtrain.erubin1","who":"erubin","e":"happy","t":"好きなことだと、伸びるのも早いよね☺️"},
     {"id":"ev.self.selfish.erubin1","who":"erubin","e":"troubled","t":"今日はやる気ないみたいだね。俺は合わせてあげたくなっちゃうけど……どうしよっか"},

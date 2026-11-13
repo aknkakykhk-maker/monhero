@@ -154,6 +154,7 @@
     {"id":"ev.team.tagwake.kyuko1","who":"kyuko","e":"excited","t":"友情タッグきたね。ここから伸び方の計算、変わるよw"},
     {"id":"ev.self.peakin.kyuko1","who":"kyuko","e":"excited","t":"見立てどおり、伸びどきに入った。今は攻めよぉ笑"},
     {"id":"ev.self.peakout.kyuko1","who":"kyuko","e":"normal","t":"山はこえたね。休ませるか、まだやるか。俺はどっちも正解だと思うw"},
+    {"id":"ev.self.anniv.kyuko1","who":"kyuko","e":"happy","t":"{mon}、1年おめでとう。ここまでの道、ちゃんと見てたよw"},
     {"id":"ev.self.slump.kyuko1","who":"kyuko","e":"normal","t":"こういうときは、流れを変えるのがいいと思う。気分転換、大事笑"},
     {"id":"ev.self.favtrain.kyuko1","who":"kyuko","e":"happy","t":"好きな訓練は伸びがいいんだよねぇ。いい傾向w"},
     {"id":"ev.self.selfish.kyuko1","who":"kyuko","e":"troubled","t":"わがままだねぇ。合わせるか、叱るか……どっちもアリ笑"},
