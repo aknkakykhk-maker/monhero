@@ -29,7 +29,7 @@ h2{font-size:20px;margin:0 0 6px;color:#fbbf24}p.n{font-size:13px;color:#aab;mar
 .cmp{display:grid;grid-template-columns:62px 1fr 1fr 40px;gap:4px;font-size:12px;margin:5px 0;align-items:center}
 .up{color:#34d399;font-weight:800}.hdr{color:#8b95c9;font-size:11px}
 .door{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.door div{background:#2a356c;border:2px solid #4a5cb0;border-radius:14px;padding:18px 6px;text-align:center;font-weight:800;font-size:14px}
-.door .dim{opacity:.55}.door3{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.door3 div{border-radius:14px;padding:22px 6px;text-align:center;font-weight:800;font-size:15px;border:2px solid #4a5cb0;background:#2a356c}.door3 .m{background:#7c3a6b;border-color:#f472b6}.door3 .b{background:#1d4e7a;border-color:#7dd3fc}.door3 .dim{grid-column:1/3;opacity:.55;padding:12px}.upl{font-size:10px;color:#8b95c9;text-align:right;margin:-2px 0 4px}
+.door .dim{opacity:.55}.door3{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.door3 div{border-radius:14px;padding:22px 6px;text-align:center;font-weight:800;font-size:15px;border:2px solid #4a5cb0;background:#2a356c}.door3 .m{background:#7c3a6b;border-color:#f472b6}.door3 .b{background:#1d4e7a;border-color:#7dd3fc}.door3 .f{background:#5b2a8a;border-color:#c084fc}.cd.fuse{border-color:#a855f7}.door3 .f{background:#5b2a8a;border-color:#c084fc}.cd.fuse{border-color:#a855f7}.upl{font-size:10px;color:#8b95c9;text-align:right;margin:-2px 0 4px}.door3 .dim{grid-column:1/3;opacity:.55;padding:12px}.upl{font-size:10px;color:#8b95c9;text-align:right;margin:-2px 0 4px}
 .bub{margin:10px;background:#f5ead0;color:#3b2a10;border-radius:12px;padding:10px;font-size:13px}
 .foot{margin-top:auto;padding:10px;text-align:center;background:#1d2650;font-size:13px}
 .tag{font-size:10px;background:#7c3aed;border-radius:6px;padding:1px 5px;margin-left:4px}
@@ -44,24 +44,36 @@ const mons=[['pixie','ぴくりん','A',50],['tiger','らいが','B',42],['golem
 const bases=['pixie','tiger','golem','undine','kyubi','mocchi','ham','suezo'].map(t=>({t,n:{pixie:'ピクシー',tiger:'ライガー',golem:'ゴーレム',undine:'ウンディーネ',kyubi:'キュービ',mocchi:'モッチー',ham:'ハム',suezo:'スエゾー'}[t],b:1}));
 const apt=(d)=>{const a=[...d].reverse();return `<div class="box"><h4>間合い適性</h4><div style="display:flex;justify-content:space-around">${['遠','中','近','零'].map((l,i)=>`<div style="text-align:center"><span class="chip ${['far','mid','near','zero'][i]}">${l}</span><br><span class="g" style="font-size:22px">${a[i]}</span></div>`).join('')}</div></div>`};
 const tech=`<div class="box"><h4>技(血統の技+オリジナル技)　<span class="wait">資料待ち</span></h4><div class="tech">${'<div>技1</div><div>技2</div><div>技3</div><div>技4</div><div>技5</div><div>技6</div><div class="x">×</div><div class="x">×</div>'}</div></div>`;
-const feat=(extra='')=>`<div class="box"><h4>特徴</h4><div class="kv"><div>ガッツ回復力<b class="wait">資料待ち</b></div><div>移動速度<b class="wait">資料待ち</b></div><div>サイズ<b class="wait">資料待ち</b></div><div>血統<b>ピクシー系</b></div>${extra}</div></div>`;
+const feat=(extra='')=>`<div class="box"><h4>特徴</h4><div class="kv"><div>ガッツ回復力<b class="wait">資料待ち</b></div><div>移動速度<b class="wait">資料待ち</b></div><div>サイズ<b class="wait">資料待ち</b></div><div>血統<b>ピクシー(純血)</b></div>${extra}</div></div>`;
 const ph=(t,body,foot='')=>`<div class="ph"><div class="hd"><span>${t}</span><i>●</i></div>${body}${foot}</div>`;
 
-const door=()=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door3"><div class="m">マスモン<br><small>育成を終えて保存枠に入った1体</small></div><div class="b">ベースモン<br><small>種類ごとのもとの値</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
-const zero=['G','F','B','A'];/* 保存の並び=零・近・中・遠 */
-const upl=(n,v,base,g)=>`<div class="st"><span>${n}</span><span class="bar"><i style="width:${v/9.99}%"></i><u style="left:${base/9.99}%"></u></span><b>${v}</b><span class="g">${g}</span></div><div class="upl">ベースモン ${base} → <b class="up">▲${v-base}</b></div>`;
+
+
+const zero=['G','F','B','A'];
+const door4=(n)=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door3"><div class="m">マスモン<br><small>育成を終えた1体</small></div>${n==4?'<div class="f">合体円盤石<br><small>合体で生まれた1体</small></div>':''}<div class="b">ベースモン<br><small>種類ごとのもとの値</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
+const fuse=[{t:'mocchi',n:'モッチー'},{t:'tiger',n:'ライガー'}];
+const gridF=(items)=>`<div class="grid">${items.map(i=>`<div class="cd fuse"><span class="bd" style="background:#a855f7">合体</span><img src="${T(i.t)}"><span>${i.n}</span><span class="lv">未育成</span></div>`).join('')}</div>`;
+const sect=(t)=>`<div style="margin:8px 12px 0;font-size:12px;font-weight:800;color:#fbbf24">${t}</div>`;
 const detTabs=(on)=>['基礎','特徴','適性'].map((t,i)=>`<b class="${i==on?'on':''}">${t}</b>`).join('');
-const sub=`<div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>経歴</b></div>`;
+const detBase=(name,sub,tab)=>`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">${name}</div><div class="wait">${sub}</div><div class="tabs" style="padding:6px 0">${detTabs(tab)}</div></div></div>`;
 const subB=`<div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>イベント</b></div>`;
+const sub=`<div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>経歴</b></div>`;
+const upl=(n,v,base,g)=>`<div class="st"><span>${n}</span><span class="bar"><i style="width:${v/9.99}%"></i><u style="left:${base/9.99}%"></u></span><b>${v}</b><span class="g">${g}</span></div><div class="upl">ベースモン ${base} → <b class="up">▲${v-base}</b></div>`;
+const R1=[
+ ph('研究所(案イ: 3つ)',door4(3)),
+ ph('マスモン一覧(案イ: 区切り)',`<div class="tabs"><b class="on">全部</b><b>血統</b><b>評価順</b></div>${sect('マスモン (8)')}${grid(mons.slice(0,4))}${sect('合体円盤石 (2)')}${gridF(fuse)}<div class="foot">保存枠 10 / 20</div>`),
+ ph('合体円盤石詳細(ベースモンと同じ形)',`${detBase('ピクシー','合体円盤石 / 未育成<span class="tag">合体</span>',0)}<div class="box"><h4>基礎ステータス</h4>${stat('ライフ',50,0,'E')}${stat('ちから',80,0,'D')}${stat('かしこさ',170,0,'A')}${stat('命中',150,0,'B')}${stat('回避',140,0,'B')}${stat('丈夫さ',60,0,'E')}</div>${subB}${tech}`)];
+const R2=[
+ ph('研究所(案ア: 4つ・別の枠)',door4(4)),
+ ph('合体円盤石一覧(別の枠)',`<div class="tabs"><b class="on">全部 (2)</b><b>血統</b></div>${gridF(fuse)}<div class="foot">保存枠 10 / 20</div>`),
+ ph('ベースモン詳細(特徴)',`${detBase('ピクシー','種類ごとのもとの値<span class="tag">ベース</span>',1)}${feat('')}${apt(zero)}${subB}`)];
 const P=[
- ph('研究所',door()),
+ ph('研究所',door4(3)),
  ph('マスモン一覧',`<div class="tabs"><b class="on">全部 (8)</b><b>血統</b><b>評価順</b></div>${grid(mons)}${grid(mons.slice(0,4))}<div class="foot">保存枠 8 / 20</div>`),
- ph('ベースモン一覧',`<div class="tabs"><b class="on">全部 (30)</b><b>血統</b><b>等級順</b></div>${grid(bases)}${grid(bases.slice(0,4))}<div class="foot">図鑑とは別。ベースモンは種類ごとのもとの値です</div>`),
-];
+ ph('ベースモン一覧',`<div class="tabs"><b class="on">全部 (30)</b><b>血統</b><b>等級順</b></div>${grid(bases)}${grid(bases.slice(0,4))}<div class="foot">図鑑とは別。ベースモンは種類ごとのもとの値です</div>`)];
 const Q=[
- ph('マスモン詳細 (基礎)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A / 総合 14,200</div><div class="tabs" style="padding:6px 0">${detTabs(0)}</div></div></div><div class="box"><h4>基礎ステータス (青い線=ベースモン)</h4>${upl('ライフ',640,250,'D')}${upl('ちから',512,160,'E')}${upl('かしこさ',802,50,'B')}${upl('命中',455,100,'E')}${upl('回避',590,90,'D')}${upl('丈夫さ',210,50,'G')}</div>`,`<div style="margin-top:auto">${sub}</div>`),
- ph('マスモン詳細 (適性)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A</div><div class="tabs" style="padding:6px 0">${detTabs(2)}</div></div></div>${apt(zero)}<div class="box"><h4>地形適性</h4><div class="wait">資料待ち</div></div>${sub}${tech}`),
- ph('ベースモン詳細 (特徴)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ピクシー</div><div class="wait">種類ごとのもとの値<span class="tag">ベース</span></div><div class="tabs" style="padding:6px 0">${detTabs(1)}</div></div></div>${feat()}${apt(zero)}${subB}${tech}`),
-];
-document.body.innerHTML=`<h2>案A改: 入口で「マスモン」「ベースモン」「図鑑」の3つに分ける</h2><p class="n">社長の指示「ベースモンとマスモンは別枠」。研究所の入口が3つのボタン。マスモンの詳細は能力の横にベースモンからの伸び▲。間合い適性は遠・中・近・零の順(ピクシーは 遠A・中B・近F・零G)。資料待ちの値は枠だけ。</p><div class="row">${P.join('')}</div><div class="row">${Q.join('')}</div>`;
+ ph('マスモン詳細 (基礎)',`${detBase('ぴくりん','ピクシー / ランク A / 総合力 14,200',0)}<div class="box"><h4>基礎ステータス (青い線=ベースモン)</h4>${upl('ライフ',640,50,'E')}${upl('ちから',512,80,'D')}${upl('かしこさ',802,170,'A')}${upl('命中',455,150,'B')}${upl('回避',590,140,'B')}${upl('丈夫さ',210,60,'E')}</div>`,`<div style="margin-top:auto">${sub}</div>`),
+ ph('マスモン詳細 (適性)',`${detBase('ぴくりん','ピクシー / ランク A',2)}${apt(zero)}<div class="box"><h4>地形適性</h4><div class="wait">資料待ち</div></div>${sub}${tech}`),
+ ph('ベースモン詳細 (特徴)',`${detBase('ピクシー','種類ごとのもとの値<span class="tag">ベース</span>',1)}${feat('')}${apt(zero)}${subB}${tech}`)];
+document.body.innerHTML=`<h2>合体円盤石の置き場所の案</h2><p class="n">案イ(おすすめ): 入口は3つのまま。マスモン一覧の中を「マスモン」と「合体円盤石」の2つの区切りに分ける。案ア: 入口を4つにして、合体円盤石を別の枠にする。どちらも詳細はベースモンと同じ形(伸び▲は出さない)。</p><div class="row">${R1.join('')}</div><div class="row">${R2.join('')}</div><h2>基本の画面(入口・一覧・詳細)</h2><div class="row">${P.join('')}</div><div class="row">${Q.join('')}</div>`;
 </script>
