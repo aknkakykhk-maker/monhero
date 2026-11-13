@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd9f726eb2803135
+// source-sha256: 4f2f9e86836cfbe5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169835,6 +169835,422 @@ function MonsucRankScreen({
     className: "rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center"
   }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く')));
 }
+const MLAB_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
+const MLAB_DIST = Object.freeze([['遠', 3, 'bg-blue-500'], ['中', 2, 'bg-green-500'], ['近', 1, 'bg-amber-500'], ['零', 0, 'bg-red-500']]);
+const MLAB_SIZE = Object.freeze({
+  S: '小さい',
+  M: 'ふつう',
+  L: '大きい'
+});
+const MLAB_WAIT = '資料待ち';
+const mlabMon = id => typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[id] || null;
+const mlabThumb = id => {
+  const m = mlabMon(id);
+  return m ? m.faceIconUrl || m.iconUrl || m.imgUrl || '' : '';
+};
+const mlabFull = id => {
+  const m = mlabMon(id);
+  return m ? m.imgUrl || m.iconUrl || '' : '';
+};
+const mlabSpeciesList = () => {
+  const init = typeof AMG_INIT === 'object' && AMG_INIT ? AMG_INIT : {};
+  return Object.keys(init).filter(id => {
+    const m = mlabMon(id);
+    return m && !m.debugOnly && Array.isArray(init[id]) && init[id].length === 6;
+  });
+};
+const mlabBaseStats = sp => {
+  const a = typeof AMG_INIT === 'object' && AMG_INIT && AMG_INIT[sp];
+  return Array.isArray(a) && a.length === 6 ? a.map(n => Number.isFinite(n) ? n : 0) : null;
+};
+const mlabApt = sp => {
+  const s = typeof AMG_APT === 'object' && AMG_APT && AMG_APT[sp];
+  return typeof s === 'string' && s.length === 6 ? s.split('') : null;
+};
+const mlabTraits = (engine, sp) => {
+  if (!engine) return null;
+  const t = engine.SPECIES_TRAITS && engine.SPECIES_TRAITS[sp];
+  return t && typeof t === 'object' ? {
+    g: t.g,
+    m: t.m,
+    z: t.z
+  } : null;
+};
+const mlabTechs = sp => {
+  const t = typeof ASSISTANT_MASMON_TECHS === 'object' && ASSISTANT_MASMON_TECHS && ASSISTANT_MASMON_TECHS.species;
+  return t && Array.isArray(t[sp]) ? t[sp] : [];
+};
+const mlabLineageName = sp => {
+  const m = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP && MONSTER_LINEAGE_MAP[sp];
+  if (!m) return null;
+  const nm = k => {
+    const mm = mlabMon(k.charAt(0).toUpperCase() + k.slice(1));
+    return mm ? mm.name : k;
+  };
+  return m.main === m.sub ? `${nm(m.main)}(純血)` : `${nm(m.main)} × ${nm(m.sub)}`;
+};
+const mlabReadMasmon = async () => {
+  try {
+    if (typeof msxR3ReadBox !== 'function') return [];
+    const box = await msxR3ReadBox();
+    const all = (box.mons || []).filter(m => m && typeof m.species === 'string' && mlabMon(m.species));
+    return {
+      mas: all.filter(m => m.raised !== false).sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0)),
+      fuse: all.filter(m => m.raised === false)
+    };
+  } catch (_) {
+    return {
+      mas: [],
+      fuse: []
+    };
+  }
+};
+const MlabBtn = ({
+  on,
+  onClick,
+  children,
+  cls = ''
+}) => React.createElement("button", {
+  type: "button",
+  onClick: onClick,
+  className: `flex-1 rounded-xl px-2 py-1.5 text-[12px] font-black active:scale-95 ${on ? 'bg-amber-500 text-amber-950' : 'bg-indigo-900/70 text-indigo-200'} ${cls}`
+}, children);
+const MlabBox = ({
+  title,
+  children
+}) => React.createElement("div", {
+  className: "mx-2.5 my-2 rounded-xl bg-indigo-950/80 p-2.5 text-[12px]"
+}, title && React.createElement("div", {
+  className: "mb-1.5 text-[11px] font-black text-amber-300"
+}, title), children);
+const MlabWait = () => React.createElement("span", {
+  className: "text-[11px] font-bold text-indigo-300/70"
+}, MLAB_WAIT);
+function MlabCard({
+  sp,
+  mon,
+  fuse,
+  onClick
+}) {
+  const m = mlabMon(sp);
+  return React.createElement("button", {
+    type: "button",
+    onClick: onClick,
+    className: `relative rounded-xl border-2 bg-indigo-900/60 p-1 text-center active:scale-95 ${fuse ? 'border-purple-400/80' : mon ? 'border-indigo-400/60' : 'border-dashed border-sky-300/70'}`
+  }, fuse ? React.createElement("span", {
+    className: "absolute left-0.5 top-0.5 rounded bg-purple-500 px-1 text-[9px] font-black text-white"
+  }, "合体") : mon ? React.createElement("span", {
+    className: "absolute right-1 top-0.5 text-[11px] font-black text-pink-300"
+  }, mon.rank || '') : React.createElement("span", {
+    className: "absolute left-0.5 top-0.5 rounded bg-sky-500 px-1 text-[9px] font-black text-white"
+  }, "ベース"), React.createElement("img", {
+    src: mlabThumb(sp),
+    alt: "",
+    className: "mx-auto h-16 w-full object-contain",
+    draggable: false
+  }), React.createElement("div", {
+    className: "truncate text-[10px] font-bold text-white"
+  }, mon ? mon.nick || m && m.name : m && m.name), React.createElement("div", {
+    className: "text-[9px] font-bold text-amber-200"
+  }, fuse ? '育成前' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'));
+}
+function MlabDetail({
+  sp,
+  mon,
+  fuse,
+  engine,
+  onBack
+}) {
+  const [tab, setTab] = useState('basic');
+  const [sub, setSub] = useState('tech');
+  const m = mlabMon(sp);
+  const base = mlabBaseStats(sp);
+  const apt = mlabApt(sp);
+  const tr = mlabTraits(engine, sp);
+  const dist = m && Array.isArray(m.distAptitude) && m.distAptitude.length === 4 ? m.distAptitude : null;
+  const techs = mlabTechs(sp);
+  const own = mon && !fuse && Array.isArray(mon.techs) ? mon.techs : null;
+  const mine = mon && !fuse ? MLAB_STATS.map(([k]) => Number(mon.st && mon.st[k]) || 0) : null;
+  const fuseVals = fuse && mon && mon.st && MLAB_STATS.some(([k]) => Number(mon.st[k]) > 0) ? MLAB_STATS.map(([k]) => Number(mon.st[k]) || 0) : null;
+  const vals = mine || fuseVals || base;
+  return React.createElement("div", {
+    className: "flex h-full flex-col overflow-y-auto"
+  }, React.createElement("div", {
+    className: "flex gap-2 px-2.5 pt-2"
+  }, React.createElement("img", {
+    src: mlabFull(sp),
+    alt: "",
+    className: "h-32 w-28 shrink-0 rounded-xl bg-indigo-800/60 object-contain",
+    draggable: false
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "truncate text-[15px] font-black text-white"
+  }, mon ? mon.nick || m && m.name : m && m.name), React.createElement("div", {
+    className: "mb-1.5 text-[10px] font-bold text-indigo-300"
+  }, fuse ? `${m && m.name} / 合体円盤石(育成前)` : mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'), React.createElement("div", {
+    className: "flex gap-1"
+  }, [['basic', '基礎'], ['feature', '特徴'], ['apt', '適性']].map(([id, t]) => React.createElement(MlabBtn, {
+    key: id,
+    on: tab === id,
+    onClick: () => setTab(id)
+  }, t))))), tab === 'basic' && React.createElement(MlabBox, {
+    title: mine ? '基礎ステータス(青い線 = ベースモン)' : '基礎ステータス'
+  }, !vals ? React.createElement(MlabWait, null) : MLAB_STATS.map(([k, label], i) => React.createElement("div", {
+    key: k,
+    className: "my-1"
+  }, React.createElement("div", {
+    className: "grid grid-cols-[62px_1fr_40px_20px] items-center gap-1.5"
+  }, React.createElement("span", null, label), React.createElement("span", {
+    className: "relative h-[7px] overflow-hidden rounded bg-indigo-950"
+  }, React.createElement("i", {
+    className: "block h-full bg-emerald-400",
+    style: {
+      width: `${Math.min(100, vals[i] / 9.99)}%`
+    }
+  }), mine && base && React.createElement("u", {
+    className: "absolute top-0 h-full w-[2px] bg-sky-300",
+    style: {
+      left: `${Math.min(100, base[i] / 9.99)}%`
+    }
+  })), React.createElement("b", {
+    className: "text-right"
+  }, vals[i]), React.createElement("span", {
+    className: "text-center font-black text-pink-300",
+    title: "素質"
+  }, apt ? apt[i] : '')), mine && base && React.createElement("div", {
+    className: "text-right text-[10px] text-indigo-300"
+  }, "ベースモン ", base[i], " → ", React.createElement("b", {
+    className: vals[i] >= base[i] ? 'text-emerald-300' : 'text-rose-300'
+  }, vals[i] >= base[i] ? '▲' : '▼', Math.abs(vals[i] - base[i]))))), React.createElement("div", {
+    className: "mt-1 text-[10px] text-indigo-300/80"
+  }, "右の文字は素質(種類ごとの伸びやすさ)")), tab === 'feature' && React.createElement(MlabBox, {
+    title: "特徴"
+  }, React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, React.createElement("div", {
+    className: "flex justify-between rounded-lg bg-indigo-900/70 px-2 py-1"
+  }, React.createElement("span", null, "ガッツ回復力"), tr ? React.createElement("b", {
+    className: "text-pink-300"
+  }, tr.g) : React.createElement(MlabWait, null)), React.createElement("div", {
+    className: "flex justify-between rounded-lg bg-indigo-900/70 px-2 py-1"
+  }, React.createElement("span", null, "移動速度"), tr ? React.createElement("b", {
+    className: "text-pink-300"
+  }, tr.m) : React.createElement(MlabWait, null)), React.createElement("div", {
+    className: "flex justify-between rounded-lg bg-indigo-900/70 px-2 py-1"
+  }, React.createElement("span", null, "サイズ"), tr ? React.createElement("b", null, MLAB_SIZE[tr.z] || tr.z) : React.createElement(MlabWait, null)), React.createElement("div", {
+    className: "flex justify-between rounded-lg bg-indigo-900/70 px-2 py-1"
+  }, React.createElement("span", null, "血統"), React.createElement("b", {
+    className: "truncate"
+  }, mlabLineageName(sp) || '—')))), tab === 'apt' && React.createElement(React.Fragment, null, React.createElement(MlabBox, {
+    title: "間合い適性"
+  }, !dist ? React.createElement(MlabWait, null) : React.createElement("div", {
+    className: "flex justify-around"
+  }, MLAB_DIST.map(([l, di, bg]) => React.createElement("div", {
+    key: l,
+    className: "text-center"
+  }, React.createElement("span", {
+    className: `rounded-full px-2.5 py-0.5 text-[11px] font-black text-white ${bg}`
+  }, l), React.createElement("div", {
+    className: "text-[22px] font-black text-pink-300"
+  }, dist[di]))))), React.createElement(MlabBox, {
+    title: "地形適性"
+  }, React.createElement(MlabWait, null))), React.createElement("div", {
+    className: "mx-2.5 mt-1 flex gap-1"
+  }, (mon && !fuse ? [['tech', '技'], ['skill', '能力'], ['nature', '性格'], ['history', '経歴']] : [['tech', '技'], ['skill', '能力'], ['nature', '性格'], ['event', 'イベント']]).map(([id, t]) => React.createElement(MlabBtn, {
+    key: id,
+    on: sub === id,
+    onClick: () => setSub(id)
+  }, t))), sub === 'tech' && React.createElement(MlabBox, {
+    title: mon && !fuse ? '技(覚えている技に ● )' : '技'
+  }, !techs.length ? React.createElement(MlabWait, null) : React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, techs.map(t => React.createElement("div", {
+    key: t.id,
+    className: "rounded-lg bg-indigo-900/70 px-2 py-1 text-[11px]"
+  }, React.createElement("b", null, own && own.includes(t.id) ? '● ' : '', t.name), React.createElement("div", {
+    className: "text-[10px] text-indigo-300"
+  }, t.kind === 'wise' ? 'かしこさ' : 'ちから', " / ガッツ ", t.guts)))), React.createElement("div", {
+    className: "mt-1.5 text-[10px] text-indigo-300/80"
+  }, "血統ごとの技とオリジナル技・技能力は", MLAB_WAIT, "(技表の作り直しのあと)")), sub === 'skill' && React.createElement(MlabBox, {
+    title: "アシスト能力"
+  }, mon && Array.isArray(mon.assists) && mon.assists.length ? mon.assists.map((a, i) => React.createElement("div", {
+    key: i,
+    className: "text-[12px]"
+  }, a.name || a.id || a.kind || '—')) : React.createElement(MlabWait, null)), sub === 'nature' && React.createElement(MlabBox, {
+    title: "性格"
+  }, React.createElement(MlabWait, null)), sub === 'event' && React.createElement(MlabBox, {
+    title: "イベント"
+  }, React.createElement(MlabWait, null)), sub === 'history' && React.createElement(MlabBox, {
+    title: "経歴"
+  }, React.createElement("div", null, "世代: ", mon && mon.gen ? `${mon.gen}代目` : '—'), React.createElement("div", null, "引退した日: ", mon && mon.endAt ? new Date(mon.endAt).toLocaleDateString('ja-JP') : '—'), React.createElement("div", null, "称号: ", mon && Array.isArray(mon.titles) && mon.titles.length ? `${mon.titles.length}個` : 'なし')), React.createElement("div", {
+    className: "mt-auto p-2.5 text-center"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onBack,
+    className: "rounded-xl bg-amber-400 px-8 py-2 text-[13px] font-black text-amber-950 active:scale-95"
+  }, "もどる")));
+}
+function MonsterLabScreen({
+  onClose,
+  onOpenDex
+}) {
+  const [view, setView] = useState('door');
+  const [from, setFrom] = useState('door');
+  const [sel, setSel] = useState(null);
+  const [box, setBox] = useState(null);
+  const [engine, setEngine] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    mlabReadMasmon().then(l => {
+      if (alive) setBox(l);
+    });
+    if (typeof ambwLoadEngine === 'function') ambwLoadEngine().then(e => {
+      if (alive && e) setEngine(e);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'fuse' ? '合体円盤石一覧' : view === 'base' ? 'ベースモン一覧' : sel && sel.fuse ? '合体円盤石詳細' : sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細';
+  const back = () => {
+    if (view === 'detail') setView(from);else if (view === 'door') onClose();else setView('door');
+  };
+  const species = mlabSpeciesList();
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[300] flex flex-col bg-[#141a33] text-white",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    },
+    "data-monster-lab": true
+  }, React.createElement("div", {
+    className: "flex items-center justify-between border-b-2 border-indigo-500/60 bg-indigo-950 px-3 py-2.5"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: back,
+    className: "text-[13px] font-black text-pink-200 active:scale-95"
+  }, "← もどる"), React.createElement("span", {
+    className: "text-[15px] font-black"
+  }, title), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "text-[13px] font-black text-indigo-200 active:scale-95"
+  }, "✕")), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto"
+  }, view === 'door' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "m-2.5 rounded-xl bg-[#f5ead0] p-2.5 text-[13px] font-bold text-[#3b2a10]"
+  }, "研究所へようこそ。どちらを見ますか?"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-2.5 px-2.5"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setView('mas'),
+    className: "rounded-2xl border-2 border-pink-400 bg-[#7c3a6b] px-2 py-5 text-[15px] font-black active:scale-95"
+  }, "マスモン", React.createElement("small", {
+    className: "mt-1 block text-[11px] font-bold"
+  }, "育成を終えた1体")), React.createElement("button", {
+    type: "button",
+    onClick: () => setView('fuse'),
+    className: "rounded-2xl border-2 border-purple-300 bg-[#5b2a8a] px-2 py-5 text-[15px] font-black active:scale-95"
+  }, "合体円盤石", React.createElement("small", {
+    className: "mt-1 block text-[11px] font-bold"
+  }, "合体で生まれた円盤石")), React.createElement("button", {
+    type: "button",
+    onClick: () => setView('base'),
+    className: "col-span-2 rounded-2xl border-2 border-sky-300 bg-[#1d4e7a] px-2 py-5 text-[15px] font-black active:scale-95"
+  }, "ベースモン", React.createElement("small", {
+    className: "mt-1 block text-[11px] font-bold"
+  }, "種類ごとのもとの値")), React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      if (onOpenDex) onOpenDex();
+    },
+    disabled: !onOpenDex,
+    className: "col-span-2 rounded-2xl border-2 border-indigo-400/70 bg-indigo-900/70 px-2 py-3 text-[14px] font-black opacity-70 active:scale-95"
+  }, "図鑑", React.createElement("small", {
+    className: "ml-2 text-[11px] font-bold"
+  }, "いまのまま")))), view === 'mas' && (box === null ? React.createElement("div", {
+    className: "p-6 text-center text-[12px] text-indigo-300"
+  }, "読み込み中…") : !box.mas.length ? React.createElement("div", {
+    className: "p-6 text-center text-[12px] font-bold text-indigo-300"
+  }, "まだマスモンがいません。モンヒロサクセスで育成を終えると、ここに並びます。") : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "grid grid-cols-4 gap-2 p-2.5"
+  }, box.mas.map(mm => React.createElement(MlabCard, {
+    key: mm.id,
+    sp: mm.species,
+    mon: mm,
+    onClick: () => {
+      setSel({
+        sp: mm.species,
+        mon: mm,
+        fuse: false
+      });
+      setFrom('mas');
+      setView('detail');
+    }
+  }))), React.createElement("div", {
+    className: "p-2 text-center text-[11px] text-indigo-300"
+  }, "保存枠 ", box.mas.length + box.fuse.length, "体のうち マスモン ", box.mas.length, "体"))), view === 'fuse' && (box === null ? React.createElement("div", {
+    className: "p-6 text-center text-[12px] text-indigo-300"
+  }, "読み込み中…") : !box.fuse.length ? React.createElement("div", {
+    className: "p-6 text-center text-[12px] font-bold text-indigo-300"
+  }, "合体円盤石はまだありません。保存枠のマスモン2体を合体させると生まれます。") : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "grid grid-cols-4 gap-2 p-2.5"
+  }, box.fuse.map(mm => React.createElement(MlabCard, {
+    key: mm.id,
+    sp: mm.species,
+    mon: mm,
+    fuse: true,
+    onClick: () => {
+      setSel({
+        sp: mm.species,
+        mon: mm,
+        fuse: true
+      });
+      setFrom('fuse');
+      setView('detail');
+    }
+  }))), React.createElement("div", {
+    className: "p-2 text-center text-[11px] text-indigo-300"
+  }, "保存枠 ", box.mas.length + box.fuse.length, "体のうち 合体円盤石 ", box.fuse.length, "体"))), view === 'base' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "grid grid-cols-4 gap-2 p-2.5"
+  }, species.map(sp => React.createElement(MlabCard, {
+    key: sp,
+    sp: sp,
+    onClick: () => {
+      setSel({
+        sp,
+        mon: null
+      });
+      setFrom('base');
+      setView('detail');
+    }
+  }))), React.createElement("div", {
+    className: "p-2 text-center text-[11px] text-indigo-300"
+  }, "図鑑とは別。ベースモンは種類ごとのもとの値です")), view === 'detail' && sel && React.createElement(MlabDetail, {
+    sp: sel.sp,
+    mon: sel.mon,
+    fuse: sel.fuse,
+    engine: engine,
+    onBack: back
+  })));
+}
+function MonsterLabDebugEntry({
+  onOpenDex
+}) {
+  const [open, setOpen] = useState(false);
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    "data-debug-monster-lab": true,
+    onClick: () => setOpen(true),
+    className: "w-full min-h-[58px] rounded-2xl border-2 border-sky-400/60 bg-sky-950/40 px-3 py-2 text-left text-[12px] font-black text-sky-50 active:scale-95"
+  }, "🔬 モンスター(試す)", React.createElement("small", {
+    className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-sky-200/80"
+  }, "公開前のモンスター画面。マスモンとベースモンの値を見る。読むだけで何も保存しない")), open && React.createElement(MonsterLabScreen, {
+    onClose: () => setOpen(false),
+    onOpenDex: onOpenDex
+  }));
+}
 const CARD_BATTLE_HAND_MAX = 5;
 const CARD_BATTLE_DECK_SIZE = 50;
 const CARD_BATTLE_SETUP_GUTS_MAX = 2;
@@ -239954,7 +240370,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "🖌️ 染色マスク編集", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement(MonheroSuccessDebugEntry, {
+    }, "全ベースモンを選択して直接描画・PNG出力")), typeof MonsterLabDebugEntry === 'function' && React.createElement(MonsterLabDebugEntry, null), React.createElement(MonheroSuccessDebugEntry, {
       onOpenChange: setSuccessScreenOpen,
       callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
       bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
