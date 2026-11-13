@@ -37,6 +37,9 @@ for (const [g, k] of Object.entries(ATTR)) {
   // 資料に無い段(数 0)は前後の間を埋めたまま。並びが逆にならないように前の段以上にそろえる
   let prev = -Infinity; for (const x of GR) { MAP[k][x] = Math.max(prev, MAP[k][x]); prev = MAP[k][x]; }
 }
+// 威力の上の段は、30 を超える分を ×0.75 に縮める(資料のまま写すと一撃でライフ6割以上が 3.7%→6.0% に増え、1ラウンドで決着しやすい。縮めると 3.6%・ラウンドの中央 7 でいまと同じ。2026-11-13)
+const POWER_KNEE = 30, POWER_TOP = 0.75;
+for (const g of Object.keys(MAP.power)) if (MAP.power[g] > POWER_KNEE) MAP.power[g] = Math.round(POWER_KNEE + (MAP.power[g] - POWER_KNEE) * POWER_TOP);
 const gv = (k, g) => { const x = String(g || '').trim(); return MAP[k][x] != null ? MAP[k][x] : MAP[k].C; };
 const techOf = (s, id) => ({ id, name: s.name, kind: s.kind, dist: [s.dist], power: gv('power', s.dmg), hit: gv('hit', s.acc), guts: s.guts, crit: gv('crit', s.cri), gd: gv('gd', s.gd), ...(s.rank ? { rank: s.rank } : {}), ...(s.moveTo != null ? { moveTo: s.moveTo } : {}), ...(s.start ? { learn: { start: true } } : {}) });
 
