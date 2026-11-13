@@ -295,6 +295,9 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'turn.awake.omen2.momosuke1', who:'momosuke', e:'surprise', t:'{mon}がまた光ってる！！ しかも虹色だよ♡' },
   { id:'turn.awake.fire.momosuke1', who:'momosuke', e:'surprise', t:'わわわっ！！ {mon}がピカーってなってる！！' },
   { id:'turn.awake.fire2.momosuke1', who:'momosuke', e:'excited', t:'すごいすごい！！ 虹色がとまらないよ♡' },
+
+  // 成長のピークの予告(2026-11-13): 始まる2〜3ターン前
+  { id:'turn.peak.soon.momosuke1', who:'momosuke', e:'excited', t:'もうすぐ伸びどきだよ！！ わくわくするね♡' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_MOMOSUKE };

@@ -295,6 +295,9 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'turn.awake.omen2.kiki1', who:'kiki', e:'surprise', t:'また光っていまつ。今度は虹色……ただごとじゃないでつ' },
   { id:'turn.awake.fire.kiki1', who:'kiki', e:'surprise', t:'あれま……{mon}が光に包まれていきまつ！？' },
   { id:'turn.awake.fire2.kiki1', who:'kiki', e:'excited', t:'あれまあれま……虹の光が、どんどん強くなっていきまつ！' },
+
+  // 成長のピークの予告(2026-11-13): 始まる2〜3ターン前
+  { id:'turn.peak.soon.kiki1', who:'kiki', e:'normal', t:'もうすぐ伸びどきが来まつ。今のうちに体をととのえておきましょ' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_KIKI };

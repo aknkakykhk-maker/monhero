@@ -71,12 +71,20 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
   const row = body ? body.p_row : {};
   check('③ 育成の id', row.run_id === 'self-0001-run1234abcd' && /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(row.run_id), row.run_id);
   check('③ 6能力は 0〜999 の整数', JSON.stringify(row.stats) === JSON.stringify({ life: 500, pow: 999, wise: 0, hit: 300, eva: 0, tough: 400 }), JSON.stringify(row.stats));
-  check('③ 技は8つまで・熟練 0〜100', Array.isArray(row.techs) && row.techs.length === 8 && row.techs[0] === 100 && row.techs[1] === 20 && row.techs[7] === 0, JSON.stringify(row.techs));
+  check('③ 古い形(芯が techRows を返さない): 技は8つまで・熟練 0〜100', Array.isArray(row.techs) && row.techs.length === 8 && row.techs[0] === 100 && row.techs[1] === 20 && row.techs[7] === 0, JSON.stringify(row.techs));
   check('③ 血統・忠誠・名前', row.lineage === 'mocchi' && row.loyal === 70 && row.child_name === 'もちまる' && row.species === 'Mocchi');
   check('③ 色は配列だけ・文字でない所は null', JSON.stringify(row.dye) === JSON.stringify(['red', 'blue', null]), JSON.stringify(row.dye));
   check('⑧ 絵: 種族名で引ける', ctx.monsucRankMonOf('Golem') && ctx.monsucRankMonOf('Golem').name === 'ゴーレム' && ctx.monsucRankMonOf('toString') === null);
   check('⑧ ほかの人の色が配列でなければ null(画面が落ちない)', ctx.monsucRankDyeOf({}) === null && ctx.monsucRankDyeOf('x') === null && JSON.stringify(ctx.monsucRankDyeOf(['a', 3, 'x'.repeat(41), 'b', 'c', 'd', 'e'])) === JSON.stringify(['a', null, null, 'b', 'c', 'd']));
   check('③ 端末の総合力は送らない', !('power' in row) && !('grade' in row));
+
+  // ③b 新しい形(2026-11-13): 技ごとに { r, a }。r は 1〜5・a は段の名前(知らない段は C)・数は 99 まで
+  {
+    const rows = [{ r: 3, a: 'A' }, { r: 9, a: 'SS+' }, { r: 0, a: 'Z' }, { r: 2.4, a: 'G' }];
+    const r2 = await S({ run: runOf({ id: 'runtech2abc' }), ev: { ...ev, techRows: rows }, name: 'わざ' });
+    const row2 = calls[calls.length - 1].body.p_row;
+    check('③b 新しい形で送る', r2.ok === true && JSON.stringify(row2.techs) === JSON.stringify([{ r: 3, a: 'A' }, { r: 5, a: 'SS+' }, { r: 1, a: 'C' }, { r: 2, a: 'G' }]), JSON.stringify(row2.techs));
+  }
 
   // ④ 二重に送らない
   const n = calls.length;
@@ -111,6 +119,18 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
   check('⑦ SQL の式', sql.includes('* 2.5') && sql.includes('sum(100 + least(') && sql.includes('limit 8') && sql.includes('* 15 +') && /least\(greatest\(p_loyal, 0\), 100\) \* 10/.test(sql));
   const apply = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_APPLY.sql'), 'utf8');
   check('⑦ docs/sql と migrations が同じ', apply === sql);
+
+  // ⑦b 新しい式(モンサクの芯 TECH_POWER)とサーバの SQL(MONSUC_RANK_V2_TECHS.sql)がそろっている
+  {
+    const v2 = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_V2_TECHS.sql'), 'utf8');
+    const v2m = fs.readFileSync(path.join(root, 'supabase/migrations/202611130001_monsuc_rank_v2_techs.sql'), 'utf8');
+    check('⑦b docs/sql と migrations が同じ(V2)', v2 === v2m);
+    const core = fs.readFileSync(path.join(root, 'monster-hero/data/monhero-success.js'), 'utf8');
+    check('⑦b 芯のランクの値と段の補正', /TECH_POWER = Object\.freeze\(\{ rank: Object\.freeze\(\[40, 80, 160, 320, 640\]\), aptStep: 0\.1, aptMid: 'C' \}\)/.test(core), '式を変えたら SQL の monsuc_rank_power2 も直す');
+    check('⑦b 芯の段の並び', core.includes("grades: Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'])"));
+    check('⑦b SQL の式', v2.includes('array[40, 80, 160, 320, 640]') && v2.includes("array['G','F','E','D','C','B','A','S','S+','SS','SS+','M'], e->>'a'), 5) - 5) * 0.1") && v2.includes('* 2.5'));
+    check('⑦b 端末の段の並びと SQL', JSON.stringify(ctx.MONSUC_RANK_APT) === JSON.stringify(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']));
+  }
 
   console.log(failed ? `NG ${failed}件` : 'OK: モンヒロサクセスの総合力ランキングの端末の口');
   process.exit(failed ? 1 : 0);

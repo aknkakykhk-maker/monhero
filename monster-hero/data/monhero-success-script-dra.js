@@ -251,6 +251,7 @@
     {"id":"turn.awake.omen2.dra1","who":"dra","e":"surprise","t":"また光っているな。今度は虹色だ……これは大きいぞ"},
     {"id":"turn.awake.fire.dra1","who":"dra","e":"surprise","t":"なんだ、この光は……！？ {mon}、大丈夫か！"},
     {"id":"turn.awake.fire2.dra1","who":"dra","e":"excited","t":"まだ強くなるのか……！ 見届けるぞ、{mon}"},
+    {"id":"turn.peak.soon.dra1","who":"dra","e":"normal","t":"そろそろ伸びどきが来るぞ。体をととのえておけ"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });
