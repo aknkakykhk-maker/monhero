@@ -2902,6 +2902,7 @@ const HELP_CATEGORIES = [
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚔ マスモンで対戦(β)', text:'助手が育てているマスモンを、ほかの助手のマスモンと対戦させて観戦できます。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'💪 能力の効き方', text:'ちからはちから技、かしこさはかしこさ技のダメージを上げます。相手から同じ種類の技を受けたときは、そのダメージを少し減らします。丈夫さは、どちらの技のダメージも減らします。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚡ ガッツのたまり方', text:'ガッツは毎ラウンド少しずつたまります。たまる速さはモンスターの種類ごとに違い、たまるのが速い種類ほど与えるダメージが控えめで、遅い種類ほど大きめです。間合いを動く・守るでもいくらかたまり、「ためる」ではいちばん多くたまります。' },
+          { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'📏 間合いの得手', text:'モンスターには間合い(零・近・中・遠)ごとの得手・不得手があります。いまの間合いが得意なほど、与えるダメージと命中が上がり、受けるダメージと相手の命中が下がります。苦手な間合いではその逆です。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'🐾 種類ごとの個性', text:'身のこなしの速い種類ほど、ラウンドのはじめに先に動きやすくなります。体の小さい種類は技が少し当たりにくく、大きい種類は受けるダメージが少し減ります。' },
           { t:'list', releaseFlag:'assistantMasmonBattleBeta', items:[
             'じゅんび: 「おまかせ」なら助手が3体と順番を決めます。「自分で決める」では、対戦の形(1対1〜3対3)・出す順番・作戦・交代の早さを選べます',

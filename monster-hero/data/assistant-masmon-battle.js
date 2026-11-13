@@ -27,8 +27,8 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 6;           // 計算を変えたら上げる(6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
-  const VERSION_PLAIN = 6;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
+  const VERSION = 7;           // 計算を変えたら上げる(7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION_PLAIN = 7;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
@@ -221,10 +221,15 @@
   };
 
   const LV_MAX = 99;   // 育成の Lv 1〜99(キズナ4の AMG_LV_MAX)。いまは強さに効かない(強さは6能力と熟練が持つ)
-  const aptMult = (grade) => {
-    const i = GRADES.indexOf(grade);
-    return clamp(1 + ((i < 0 ? 4 : i) - 4) * 0.05, 0.8, 1.25);
-  };
+  // 距離適性(2026-11-13 社長「距離適性はモンサク用に効果調整して。与ダメや被ダメ・命中・回避等に影響。C を 0% として増減」)
+  //   G〜M の12段。C が 0 段・上は B +1 … M +7・下は D −1 … G −4。いまいる間合いの段で、次の4つが増減する(止めない。M まで効く)
+  const APT_DMG = 0.04;  // 与えるダメージ: 1段ごとに ±4%
+  const APT_DEF = 0.02;  // 受けるダメージ: 1段ごとに ∓2%(得手の間合いでは受けるダメージが減る)
+  const APT_HIT = 0.015; // 命中: 1段ごとに ±1.5%
+  const APT_EVA = 0.015; // 回避: 1段ごとに ±1.5%(得手の間合いでは相手の命中が下がる)
+  const APT_ABOVE_A = 0.5; // A より上(S〜M)の1段の効き目の割合(1 なら同じ刻み。0.5 なら半分の刻みでゆるやかに伸びる)
+  const aptSteps = (grade) => { const i = GRADES.indexOf(grade); if (i < 0) return 0; const st = i - GRADES.indexOf('C'); const a = GRADES.indexOf('A') - GRADES.indexOf('C'); return st > a ? a + (st - a) * APT_ABOVE_A : st; };
+  const aptMult = (grade) => Math.max(0.5, 1 + aptSteps(grade) * APT_DMG);
 
   // 1体ぶんの技の表。覚えている技(techs)だけ・熟練で命中とガッツ消費を直す。
   // 覚えた技の記録が無い(古い入れ物)ときは、はじめから覚えている技(learn.start)だけ。それも無い種は全部。
@@ -300,20 +305,23 @@
   //   撃つときのガッツが多いほど当たりやすく(±5%)・重い(×0.9〜1.1)。g は撃つ前のガッツ(省くといまのガッツ)
   const gutsHit = (g) => (clamp(g, 0, GUTS_MAX) - 50) / 50 * 0.05;
   const gutsPow = (g) => 0.9 + clamp(g, 0, GUTS_MAX) / GUTS_MAX * 0.2;
-  const hitChance = (atkU, defU, mv, g) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit - (defU.size === 'S' ? SIZE_SMALL_EVADE : 0)
-    + gutsHit(g == null ? atkU.guts : g), 0.15, 0.97);
+  //   dist … いまの間合い(渡したときだけ距離適性が命中・回避に効く)
+  const hitChance = (atkU, defU, mv, g, dist) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit - (defU.size === 'S' ? SIZE_SMALL_EVADE : 0)
+    + gutsHit(g == null ? atkU.guts : g)
+    + (Number.isInteger(dist) && atkU.apt && defU.apt ? aptSteps(atkU.apt[dist]) * APT_HIT - aptSteps(defU.apt[dist]) * APT_EVA : 0), 0.15, 0.97);
   const rawDamage = (atkU, defU, mv, dist, g) => {
     const a = atkU.stats[mv.kind];
     const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g) * (atkU.dmgMul || 1);
     // 受ける側: 丈夫さ(×0.9)に、受ける技と同じ種類の能力(ちから技ならちから・かしこさ技ならかしこさ)を丈夫さの半分の効き目(×0.45)で足す
     //   (2026-11-12 社長「ちから技のダメージが増加する/相手のちから技によるダメージを軽減する。かしこさも同じ。被ダメにも影響ある」)
-    return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND) * (defU.size === 'L' ? 1 - SIZE_LARGE_CUT : 1);
+    return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND) * (defU.size === 'L' ? 1 - SIZE_LARGE_CUT : 1)
+      * Math.max(0.5, 1 - aptSteps(defU.apt ? defU.apt[dist] : 'C') * APT_DEF); // 受ける側の距離適性
   };
   const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
   const inRange = (mv, dist) => mv.dist.includes(dist);
   const expected = (atkU, defU, mv, dist, guarded, g) => {
-    const p = hitChance(atkU, defU, mv, g);
+    const p = hitChance(atkU, defU, mv, g, dist);
     const crit = critWithPop(mv.crit, atkU.pop || 0);
     return p * rawDamage(atkU, defU, mv, dist, g) * (1 + crit * (CRIT_MULT - 1)) * (guarded ? 1 - guardCut(defU) : 1);
   };
@@ -364,7 +372,7 @@
     for (const mv of u.moves) {
       if (!canUse(u, mv, dist)) continue;
       const e = expected(u, f, mv, dist, f.guarding);
-      const p = hitChance(u, f, mv);
+      const p = hitChance(u, f, mv, undefined, dist);
       let score = Math.min(e, f.hp) / f.maxHp * 100 * sty.aggr;
       if (e >= f.hp) score += 35 * p * sty.aggr;                    // 倒しきれそう
       // ガッツの節約: 使ったあと次の手で撃てなくなる分(危ないときは気にしない)
@@ -429,7 +437,7 @@
       if (!canUse(u, mv, dist)) continue;
       const minDmg = rawDamage(u, f, mv, dist) * 0.9 * (f.guarding ? 1 - guardCut(f) : 1);
       if (minDmg < f.hp) continue;
-      const p = hitChance(u, f, mv);
+      const p = hitChance(u, f, mv, undefined, dist);
       if (!sure || p > sure.p || (p === sure.p && mv.guts < sure.guts)) sure = { key: mv.key, p, guts: mv.guts };
     }
     if (sure) {
@@ -597,7 +605,7 @@
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
         u.guts -= mv.guts;
-        const p = buffedHit(hitChance(u, f, mv, g0), buffs[side], buffs[foeSide], !usedFirst[side]);
+        const p = buffedHit(hitChance(u, f, mv, g0, state.dist), buffs[side], buffs[foeSide], !usedFirst[side]);
         usedFirst[side] = true;
         const hit = rng() < p;
         let dmg = 0, crit = false;
@@ -742,7 +750,7 @@
       const first = !flow.usedFirst[side];
       const tech = u.moves.map(mv => {
         const reach = inRange(mv, d);
-        const p = buffedHit(hitChance(u, f, mv), flow.buffs[side], flow.buffs[foeOf(side)], first);
+        const p = buffedHit(hitChance(u, f, mv, undefined, d), flow.buffs[side], flow.buffs[foeOf(side)], first);
         return { type: 'tech', key: mv.key, name: mv.name, kind: mv.kind, guts: mv.guts, dist: mv.dist.slice(), reach,
           ok: reach && u.guts >= mv.guts, need: Math.max(0, mv.guts - u.guts), p: Math.round(p * 1000) / 10, gd: mv.gd, crit: mv.crit };
       });
@@ -836,14 +844,14 @@
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, SIZE_SMALL_EVADE, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, buildCatalog, simulate, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示' }),
     // 検査用(計算の部品)
-    _internal: Object.freeze({ setupState, aptMult, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
+    _internal: Object.freeze({ setupState, aptMult, aptSteps, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ASSISTANT_MASMON_BATTLE = api;
