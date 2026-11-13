@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c80b4a29833a6e26
+// source-sha256: 244aa3c359b4c63b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165471,7 +165471,10 @@ function MsxR3Shugyo({
     rankOf[t.id] = t.rank;
   });
   const tickets = v.shugyo && v.shugyo.tickets || s0.tickets || 0;
-  const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length === 0 ? [id] : w.length === 1 && superLeft > 0 ? [...w, id] : [id]);
+  const superTk = SH.superTickets || 2;
+  const tk0 = v.shugyo && v.shugyo.tickets || s0.tickets || 0;
+  const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : '';
+  const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]);
   const go = () => {
     const r = SUC.act(s0, {
       kind: 'shugyo',
@@ -165663,7 +165666,7 @@ function MsxR3Shugyo({
     }
   }), React.createElement("div", {
     className: "v-ev-h"
-  }, React.createElement("small", null, "🎫 チケット ", tickets, "枚(1回に1枚)"), "⚔ 修行に出る"), React.createElement("div", {
+  }, React.createElement("small", null, "🎫 チケット ", tickets, "枚(修行1枚・超修行", superTk, "枚)"), "⚔ 修行に出る"), React.createElement("div", {
     className: "v-ibub",
     style: {
       left: '40%',
@@ -165703,14 +165706,21 @@ function MsxR3Shugyo({
       color: '#f9a8d4',
       fontWeight: 900
     }
-  }, "えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり", superLeft, "回)"), isSuper ? React.createElement("div", {
+  }, "えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり", superLeft, "回・🎫", superTk, "枚)"), superWhy && want.length ? React.createElement("div", {
+    className: "sub",
+    style: {
+      fontSize: 11,
+      color: '#cbd5e1'
+    },
+    "data-msx-r3-superwhy": true
+  }, "🔥 ", superWhy, "ので、技は1つだけ選べる(別の技を押すと入れ替わる)") : null, isSuper ? React.createElement("div", {
     className: "sub",
     style: {
       fontSize: 11,
       color: '#fde047'
     },
     "data-msx-r3-super": true
-  }, "🔥 超修行: 2つとも覚えることがある・覚える率 +", SH.superAdd || 15, "%・能力の上がりと疲れは2回分") : null, React.createElement("div", {
+  }, "🔥 超修行: チケット", superTk, "枚・2つとも覚えることがある・覚える率 +", SH.superAdd || 15, "%・能力の上がりと疲れは2回分") : null, React.createElement("div", {
     className: "v-pick2"
   }, want.length ? want.map(id => {
     const t = all.find(x => x.id === id) || {};
@@ -165785,7 +165795,7 @@ function MsxR3Shugyo({
     disabled: tickets <= 0,
     onClick: go,
     "data-msx-r3-shugyo": true
-  }, isSuper ? '🔥 超修行する' : '⚔ 修行する', "(🎫 ", tickets, " → ", Math.max(0, tickets - 1), ")"));
+  }, isSuper ? '🔥 超修行する' : '⚔ 修行する', "(🎫 ", tickets, " → ", Math.max(0, tickets - (isSuper ? superTk : 1)), ")"));
   return React.createElement(MsxR3Frame, {
     run: run,
     onBack: onBack,
