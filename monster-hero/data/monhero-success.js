@@ -308,7 +308,7 @@
     trainGood: { name: 'トレーニング得意', train: 0.10 },                  // 訓練の伸び +10%
     shugyoGood: { name: '修行得意', shugyo: 0.20, techRate: 10 },          // 修行の伸び +20%・技を覚える率 +10
     star: { name: 'スターの素質○', pop: 1.5, bond: 1.2 },                // 人気の上がり ×1.5・親密度の上がり ×1.2(良縁)
-    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2 },               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
+    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
   });
   const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
@@ -553,10 +553,12 @@
       const team = raw.map(memberOf);
       const typeIdx = Number.isInteger(src.type) ? clamp(src.type, 0, 5) : C.typeFromApt(aptStr(species), rngOf(id, 'type')());
       const stats = initStats(species);
-      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v, 0, STAT_MAX); });
-      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       // 持ちこみ: carry = 始める前に使う物(3つまで)・bag = 育成中に使う物の数
       const carry = (Array.isArray(src.carry) ? src.carry : []).filter(k => ITEMS[k] && ITEMS[k].use === 'before').filter((k, i, a) => a.indexOf(k) === i).slice(0, CARRY_MAX);
+      // うけつぎ草(うけつぐ魂): 編成から受け継ぐはじめの能力が2倍(2026-11-13 社長)
+      const startMul = carry.some(k => ITEMS[k].good === 'uketsugu') ? GOOD.uketsugu.start : 1;
+      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v * startMul, 0, STAT_MAX); });
+      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       const bag = {}; let room = CARRY_MAX - carry.length;
       if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { bag[k] = n; room -= n; } }
       const good = {}; let hpMax = HP_MAX0; let issaForce = false;
