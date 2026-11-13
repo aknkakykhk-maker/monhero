@@ -287,8 +287,8 @@ function MsxR3Box({ onClose }) {
     <div className="r3-box">{box.mons.length ? box.mons.slice().reverse().map((m) => (
       <button type="button" key={m.id} className={`r3-bm ${m.id === sel ? 'on' : ''}`} onClick={() => { setSel(m.id === sel ? null : m.id); setBye(0); setEdit(null); }} data-msx-r3-boxmon={m.id}>
         {Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
-          ? <span style={{ width: 38, height: 38, flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
-          : <img src={msxMonThumb(m.species)} alt=""/>}<div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
+          ? (() => { const dy = <span style={{ width: 38, height: 38, flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>; return m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small>{dy}</MsxKira> : dy; })()
+          : m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small><img src={msxMonThumb(m.species)} alt=""/></MsxKira> : <img src={msxMonThumb(m.species)} alt=""/>}<div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{m.awake ? (m.awake >= 2 ? '🌈 超覚醒・' : '✨ 覚醒・') : ''}{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
         <span className="pw">{m.raised === false ? '' : msxFmt(m.score || 0)}</span></button>)) : <div className="msx-note">まだ誰もいません。育成を最後まで終えると、ここに入ります</div>}</div>
     {cur && edit ? <div className="v-card" data-msx-r3-editbox>
       <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>✏ 名前と染色を変える</div>
@@ -311,6 +311,11 @@ function MsxR3Box({ onClose }) {
         : <div className="msx-note">染色はこの端末では使えません</div>}
       <div className="r3-bar"><button type="button" className="r3-chip" onClick={() => setEdit(null)}>やめる</button><button type="button" className="r3-chip on" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>
     </div> : cur ? <div className="v-card">
+      {cur.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <div style={{ display: 'flex', justifyContent: 'center', height: 110, margin: '4px 0 8px' }} data-msx-r3-boxkira={cur.awake}>
+        <MsxKira kind={msxKiraOf(cur.awake)} src={msxMonImg(cur.species)}>{Array.isArray(cur.colors) && cur.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+          ? <DyedMonsterImage baseId={cur.species} src={msxMonImg(cur.species)} masuColors={cur.colors} alt="" draggable={false} style={{ height: 110, objectFit: 'contain' }}/>
+          : <img src={msxMonImg(cur.species)} alt="" style={{ height: 110, objectFit: 'contain' }}/>}</MsxKira></div> : null}
+      {cur.awake ? <div className="v-kv"><b>覚醒</b><span>{cur.awake >= 2 ? '🌈 超覚醒(全能力 +70・レアキラ)' : '✨ 覚醒(全能力 +30・キラ)'}</span></div> : null}
       <button type="button" className="msx-btn sub" onClick={() => setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' })} data-msx-r3-edit>✏ 名前と染色を変える</button>
       <MsxStRow stats={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}/>
       <div className="v-kv"><b>忠誠 / 人気</b><span>{Math.round(cur.loy || 0)} / {Math.round(cur.pop || 0)}</span></div>

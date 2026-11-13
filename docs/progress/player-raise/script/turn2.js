@@ -30,6 +30,20 @@ const MONSUC_SCRIPT_TURN2 = Object.freeze([
   { id:'turn.cup.rivalcard.mua2b', who:'mua', e:'wink', bond:[1,2], t:'ライバルがいる大会は、勝つとごほうびが多いそうですよ♪' },
   { id:'turn.cup.rivalcard.atsu1', who:'atsu', e:'excited', t:'{rival}が出る大会な。勝てばでかい、行くしかないかー笑' },
   { id:'turn.cup.rivalcard.atsu2', who:'atsu', e:'normal', t:'ライバルの札か。今の{mon}なら、いい勝負になると思うよ笑' },
+
+  // 覚醒・超覚醒(2026-11-13): turn.awake.omen 前触れ(覚醒)/ omen2 前触れ(超覚醒)/ fire 覚醒した瞬間 / fire2 超覚醒した瞬間
+  { id:'turn.awake.omen.mua1', who:'mua', e:'surprise', t:'{mon}、体がうっすら光ってない！？ なんか起きそうな予感…✨' },
+  { id:'turn.awake.omen.mua1b', who:'mua', e:'surprise', bond:[1,2], t:'{mon}の体が、うっすら光っていませんか…？ なにか起きそうです' },
+  { id:'turn.awake.omen2.mua1', who:'mua', e:'surprise', t:'{mon}がまた光ってる…今度は虹色ぢゃん！ もしかして…' },
+  { id:'turn.awake.omen2.mua1b', who:'mua', e:'surprise', bond:[1,2], t:'{mon}がまた光っています…今度は虹色です。もしかして…' },
+  { id:'turn.awake.fire.mua1', who:'mua', e:'surprise', t:'えっ待って、{mon}がまぶしすぎて見えないんだけど！？' },
+  { id:'turn.awake.fire.mua1b', who:'mua', e:'surprise', bond:[1,2], t:'えっ…{mon}がまぶしくて、見えません…！' },
+  { id:'turn.awake.fire2.mua1', who:'mua', e:'excited', t:'うそでしょ…虹色の光、まだ強くなってる！ {mon}すごすぎｗ' },
+  { id:'turn.awake.fire2.mua1b', who:'mua', e:'excited', bond:[1,2], t:'うそ…虹色の光が、まだ強くなっています…！ {mon}、すごいです！' },
+  { id:'turn.awake.omen.atsu1', who:'atsu', e:'surprise', t:'{mon}、なんか光ってない？ 気のせい…じゃないよな笑' },
+  { id:'turn.awake.omen2.atsu1', who:'atsu', e:'surprise', t:'また光ってる。しかも虹色…これ、前より大きいの来るよ笑' },
+  { id:'turn.awake.fire.atsu1', who:'atsu', e:'surprise', t:'うわっ、まぶし！ {mon}、なにが起きてんの！？' },
+  { id:'turn.awake.fire2.atsu1', who:'atsu', e:'excited', t:'まじか…虹色の光、止まらないんだけど笑' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_TURN2 };

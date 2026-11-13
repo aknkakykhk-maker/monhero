@@ -246,6 +246,10 @@
     {"id":"turn.retry.rainbow.atsu1","who":"atsu","e":"normal","t":"相手が変わったか。仕切り直しだな、いけるいける笑"},
     {"id":"turn.cup.rivalcard.atsu1","who":"atsu","e":"excited","t":"{rival}が出る大会な。勝てばでかい、行くしかないかー笑"},
     {"id":"turn.cup.rivalcard.atsu2","who":"atsu","e":"normal","t":"ライバルの札か。今の{mon}なら、いい勝負になると思うよ笑"},
+    {"id":"turn.awake.omen.atsu1","who":"atsu","e":"surprise","t":"{mon}、なんか光ってない？ 気のせい…じゃないよな笑"},
+    {"id":"turn.awake.omen2.atsu1","who":"atsu","e":"surprise","t":"また光ってる。しかも虹色…これ、前より大きいの来るよ笑"},
+    {"id":"turn.awake.fire.atsu1","who":"atsu","e":"surprise","t":"うわっ、まぶし！ {mon}、なにが起きてんの！？"},
+    {"id":"turn.awake.fire2.atsu1","who":"atsu","e":"excited","t":"まじか…虹色の光、止まらないんだけど笑"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

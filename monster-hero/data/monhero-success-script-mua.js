@@ -603,6 +603,14 @@
     {"id":"turn.cup.rivalcard.mua1b","who":"mua","e":"surprise","bond":[1,2],"t":"この大会、{owner}の{rival}が出るそうです！ どうしますか？"},
     {"id":"turn.cup.rivalcard.mua2","who":"mua","e":"wink","t":"ライバルがいる大会、勝ったらごほうびすごいんだって♪"},
     {"id":"turn.cup.rivalcard.mua2b","who":"mua","e":"wink","bond":[1,2],"t":"ライバルがいる大会は、勝つとごほうびが多いそうですよ♪"},
+    {"id":"turn.awake.omen.mua1","who":"mua","e":"surprise","t":"{mon}、体がうっすら光ってない！？ なんか起きそうな予感…✨"},
+    {"id":"turn.awake.omen.mua1b","who":"mua","e":"surprise","bond":[1,2],"t":"{mon}の体が、うっすら光っていませんか…？ なにか起きそうです"},
+    {"id":"turn.awake.omen2.mua1","who":"mua","e":"surprise","t":"{mon}がまた光ってる…今度は虹色ぢゃん！ もしかして…"},
+    {"id":"turn.awake.omen2.mua1b","who":"mua","e":"surprise","bond":[1,2],"t":"{mon}がまた光っています…今度は虹色です。もしかして…"},
+    {"id":"turn.awake.fire.mua1","who":"mua","e":"surprise","t":"えっ待って、{mon}がまぶしすぎて見えないんだけど！？"},
+    {"id":"turn.awake.fire.mua1b","who":"mua","e":"surprise","bond":[1,2],"t":"えっ…{mon}がまぶしくて、見えません…！"},
+    {"id":"turn.awake.fire2.mua1","who":"mua","e":"excited","t":"うそでしょ…虹色の光、まだ強くなってる！ {mon}すごすぎｗ"},
+    {"id":"turn.awake.fire2.mua1b","who":"mua","e":"excited","bond":[1,2],"t":"うそ…虹色の光が、まだ強くなっています…！ {mon}、すごいです！"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

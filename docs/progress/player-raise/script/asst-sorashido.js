@@ -779,6 +779,20 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'item.oily.sorashido1', who:'sorashido', e:'normal', t:'オイリーパックですね。中身は大事に使いましょう' },
   { id:'item.oily.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'オイリーパックっすね。中身は大事に使うっす' },
   { id:'item.oily.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'オイリーパックか。中身は大事に使いましょうね' },
+
+  // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
+  { id:'turn.awake.omen.sorashido1', who:'sorashido', e:'surprise', t:'{mon}の体、ほんのり光っていますね……何か起きそうです' },
+  { id:'turn.awake.omen.sorashido1c', who:'sorashido', e:'surprise', bond:[9,15], t:'{mon}の体、うっすら光ってるっす……何か起きそうっす' },
+  { id:'turn.awake.omen.sorashido1d', who:'sorashido', e:'surprise', bond:16, t:'{mon}の体、うっすら光ってるな……何か起きそうだ' },
+  { id:'turn.awake.omen2.sorashido1', who:'sorashido', e:'surprise', t:'また光っています。今度は虹色……ただごとじゃないですね' },
+  { id:'turn.awake.omen2.sorashido1c', who:'sorashido', e:'surprise', bond:[9,15], t:'また光ってるっす。今度は虹色……ただごとじゃないっす' },
+  { id:'turn.awake.omen2.sorashido1d', who:'sorashido', e:'surprise', bond:16, t:'また光ってる。今度は虹色……ただごとじゃないな' },
+  { id:'turn.awake.fire.sorashido1', who:'sorashido', e:'surprise', t:'うわっ、まぶしい！ {mon}、何が起きているんですか！？' },
+  { id:'turn.awake.fire.sorashido1c', who:'sorashido', e:'surprise', bond:[9,15], t:'うわっ、まぶしいっす！ {mon}、何が起きてるんすか！？' },
+  { id:'turn.awake.fire.sorashido1d', who:'sorashido', e:'surprise', bond:16, t:'うわっ、まぶしい！ {mon}、何が起きてるんだ！？' },
+  { id:'turn.awake.fire2.sorashido1', who:'sorashido', e:'excited', t:'虹色の光が、まだ強くなっていきます……！' },
+  { id:'turn.awake.fire2.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'虹色の光が、まだ強くなってくっす……！' },
+  { id:'turn.awake.fire2.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'虹色の光が、まだ強くなっていく……！' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_SORASHIDO };

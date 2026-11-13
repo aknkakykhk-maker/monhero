@@ -141,7 +141,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-slots">
         {members.map((m, i) => (
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`}>
-            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>
+            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
             <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
             <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
@@ -155,8 +155,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>保存枠から選ぶ({teamBox.length}/5)</div>
         {raised.length ? raised.map((m) => (
           <button type="button" key={m.id} className={`v-item${teamBox.includes(m.id) ? ' sel' : ''}`} style={{ padding: '4px 8px', width: '100%' }} onClick={() => toggleBox(m.id)}>
-            <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
-            <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}</small></div>
+            {m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small><img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/></MsxKira>
+              : <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>}
+            <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}{m.awake ? (m.awake >= 2 ? '・超覚醒' : '・覚醒') : ''}</small></div>
             <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
           </button>
         )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
