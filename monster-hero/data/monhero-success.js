@@ -22,7 +22,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 7;   // 計算を変えたら上げる(ランキングの行に残る)。7 = 間合い適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
+  const VERSION = 8;   // 計算を変えたら上げる(ランキングの行に残る)。8 = 修行の作り直し(技のランク1〜5・仕上がりで率・技ごとの外した回数・超修行。2026-11-13)/7 = 間合い適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
   const STAT_MAX = 999;
@@ -243,13 +243,20 @@
     gain: 0.9,                 // 1段で2つの能力に「軽い訓練1回ぶん」× 0.9 ずつ(2段で4能力ぶん)
     hp: 30, stress: 8,         // 体力を多めに使う
     ticket0: 1,                // はじめのチケット。期ごとの回数は決めず、チケットの数だけ行ける(社長 2026-11-12)
-    pick: 2,                   // 覚えたい技を2つまで選ぶ(上から順にくじ・1回の修行で覚えるのは1つまで)
-    rate: Object.freeze({ light: 60, mid: 50, skill: 40, gdown: 40, heavy: 35, far: 35, big: 25, ult: 15 }),
-    pity: 15,                  // 外すたびに次の率 +15(覚えたら0に戻る)
+    pick: 2,                   // 覚えたい技は1つか2つ。2つ選ぶと「超修行」(2026-11-13 社長: 育成中2回まで・修行1回分の時間・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)
+    // 技を覚える率(2026-11-13 社長の決め。数字はこの表だけで変える)
+    //   率 = ランクのもとの率 + 仕上がり q(0〜1)× ランクの幅 + ドラ・修行得意・超修行・その技を外した回数×15・出来事(上限 99)
+    //   q = 能力(総合力)60% + 忠誠度 20% + 人気 10% + 時期(その行き先の旬)10%。幅は q=1 でちょうど 99 に届く大きさ(ランクが高い技ほど仕上がりが効く)
+    rank: Object.freeze({ base: Object.freeze([70, 55, 40, 25, 15]), spread: Object.freeze([29, 44, 59, 74, 84]) }),
+    roleRank: Object.freeze({ light: 1, mid: 2, skill: 3, gdown: 3, heavy: 4, far: 4, big: 5, ult: 5 }), // 技表にランク(rank 1〜5)が無い技は、技の種類から
+    q: Object.freeze({ stat: 0.6, loyal: 0.2, pop: 0.1, season: 0.1, powerFull: 14000 }), // 能力は総合力 ÷ powerFull(評価 S の入り口 14,000 で 1)
+    season: Object.freeze({ star: [3, 4, 5], fire: [6, 7, 8], wind: [9, 10, 11], ice: [12, 1, 2] }), // 行き先の旬の月(星の湖=春・炎の谷=夏・風の森=秋・氷の峰=冬)
+    miss: 15,                  // その技を外すたびに、その技だけ次から +15(技ごとに持つ)
+    superAdd: 15, superMax: 2, // 超修行: 率 +15・育成中2回まで
     draAdd: 10,                // ドラ: 修行で技を覚えやすい
     mastery: 10,               // 修行するたびに覚えている技の熟練 +10
     joinMax: 3,                // 1段に付いてくる編成の子の数の上限
-    rateTop: 95,
+    rateTop: 99,
   });
   const TECH_MAX = 8;
 
@@ -493,7 +500,7 @@
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
-        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase),
+        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase),
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
@@ -578,8 +585,24 @@
       if (L.need && Object.entries(L.need).some(([id, v]) => num(s.mastery[id]) < num(v))) return false;
       return true;
     };
-    const techRate = (s, t) => clamp((SHUGYO.rate[t.role] || 30) + s.pity + (s.aid === 'dra' ? SHUGYO.draAdd : 0) + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.techRate : 0) + evMod(s, 'tech') * 100, 0, SHUGYO.rateTop) / 100;
-    const learnable = (s) => techsOf(s.species).filter(t => canLearn(s, t)).map(t => ({ id: t.id, name: t.name, role: t.role, power: t.power, rate: r2(techRate(s, t)) }));
+    // 技のランク(1〜5)。技表の rank が無ければ技の種類から
+    const techRank = (t) => (t && Number.isInteger(t.rank) && t.rank >= 1 && t.rank <= 5 ? t.rank : (SHUGYO.roleRank[t && t.role] || 3));
+    // 仕上がりの度合い q(0〜1)。course は行き先(時期の旬を見る。省くと時期は 0)
+    const shugyoQ = (s, course) => {
+      const Q = SHUGYO.q; const power = C.power({ stats: s.stats, masteries: (s.techs || []).map(t => num(s.mastery && s.mastery[t])), lv: s.lv, loyal: loyalOf(s), pop: s.pop });
+      const inSeason = course && SHUGYO.season[course] && SHUGYO.season[course].includes(monthOf(s.turn)) ? 1 : 0;
+      return r2(clamp(Q.stat * clamp(power / Q.powerFull, 0, 1) + Q.loyal * clamp(loyalOf(s) / 100, 0, 1) + Q.pop * clamp(num(s.pop) / 100, 0, 1) + Q.season * inSeason, 0, 1));
+    };
+    const techMissOf = (s, id) => clamp(Math.round(num(s.techMiss && s.techMiss[id])), 0, 20);
+    // 覚える率(0〜0.99)。o.course … 行き先 / o.super … 超修行
+    const techRate = (s, t, o) => {
+      const opt = o || {}; const k = techRank(t) - 1;
+      const v = SHUGYO.rank.base[k] + shugyoQ(s, opt.course) * SHUGYO.rank.spread[k] + techMissOf(s, t.id) * SHUGYO.miss + (opt.super ? SHUGYO.superAdd : 0)
+        + (s.aid === 'dra' ? SHUGYO.draAdd : 0) + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.techRate : 0) + evMod(s, 'tech') * 100;
+      return clamp(v, 0, SHUGYO.rateTop) / 100;
+    };
+    const superLeft = (s) => clamp(Math.round(num(s && s.superLeft, SHUGYO.superMax)), 0, SHUGYO.superMax);
+    const learnable = (s, course) => techsOf(s.species).filter(t => canLearn(s, t)).map(t => ({ id: t.id, name: t.name, role: t.role, power: t.power, rank: techRank(t), miss: techMissOf(s, t.id), rate: r2(techRate(s, t, { course })), superRate: r2(techRate(s, t, { course, super: true })) }));
     const learnTech = (s, id) => { s.techs.push(id); s.mastery[id] = 0; };
     const shugyoLeft = (s) => Math.max(0, num(s.tickets));
     // 連続イベントの3話「受け継ぐもの」: その編成の子が持つ技を伝授する。育てる子の種がその技を持てないときは、
@@ -603,7 +626,7 @@
       for (const [key, c] of Object.entries(cards)) { const xp = num(s.trainXp && s.trainXp[key]); const lv = trainLvOf(xp); view[key] = { ...c, ...cardMult(s, c), fail: r2(failRateOf(s, c)), great: r2(greatRateOf(s, c)), sab: r2(sabRateOf(s, c)), lv, xp, next: lv >= TRAIN_LV.max ? 0 : TRAIN_LV.need[lv] - xp }; }
       const retry = s.debutLoss > 0 && !s.debutWon;
       const can = s.over ? [] : s.cond ? ['cond'] : retry ? ['retry'] : ['train', 'rest', 'play'].concat(cupsOf(s).some(c => c.entry.ok) ? ['cup'] : [], shugyoLeft(s) > 0 ? ['shugyo'] : [], s.yosu.sabori || s.yosu.utsu ? ['clinic'] : []);
-      return { turn: s.turn, period: p, toEnd: TOTAL_TURNS - s.turn + 1, cards: view, sab: r2(sabRateOf(s)), can, shugyo: { left: shugyoLeft(s), tickets: s.tickets, techs: learnable(s) }, cups: cupsOf(s), issa: !s.acted ? false : (!s.issaDone && issaComes(s)), story: s.acted ? null : storyDue(s), retry, cond: s.cond };
+      return { turn: s.turn, period: p, toEnd: TOTAL_TURNS - s.turn + 1, cards: view, sab: r2(sabRateOf(s)), can, shugyo: { left: shugyoLeft(s), tickets: s.tickets, techs: learnable(s), superLeft: superLeft(s) }, cups: cupsOf(s), issa: !s.acted ? false : (!s.issaDone && issaComes(s)), story: s.acted ? null : storyDue(s), retry, cond: s.cond };
     };
 
     // ---- 伸び(ASSIST §4 の1本の式) ----
@@ -725,6 +748,12 @@
         const pk = periodOf(s.turn).key;
         if (shugyoLeft(s) <= 0) return { state: s0, out: { ok: false, why: 'no-shugyo' } };
         const course = SHUGYO.courses[a.course] ? a.course : 'fire';
+        // 選んだ技(1つか2つ)。2つなら超修行(育成中 SHUGYO.superMax 回まで)。率は修行の前の仕上がりで決める(画面に出した率と同じ)
+        const want = (Array.isArray(a.techs) ? a.techs : []).filter((id, i, arr) => arr.indexOf(id) === i).slice(0, SHUGYO.pick).map(id => techById(s.species, id)).filter(t => canLearn(s, t));
+        const sup = want.length >= 2;
+        if (sup && superLeft(s) <= 0) return { state: s0, out: { ok: false, why: 'no-super' } };
+        const rates = want.map(t => techRate(s, t, { course, super: sup }));
+        if (sup) s.superLeft = superLeft(s) - 1;
         s.tickets -= 1; s.shugyoUsed[pk] = num(s.shugyoUsed[pk]) + 1;
         const pS = sabRateOf(s); const pF = failRateOf(s, null); const pG = greatRateOf(s, null);
         const x = rng(); const res = x < pS ? 'sab' : x < pS + pF ? 'fail' : x < pS + pF + pG ? 'great' : 'ok';
@@ -733,10 +762,10 @@
         const before = { ...s.stats };
         // 編成の補正も訓練と同じ考え方でかける(社長 2026-11-12): 段ごとに、その段の能力が上位3つにある子が付いてくる(多いときは補正の大きい3体まで)
         const stages = [];
-        SHUGYO.courses[course].stages.forEach((pair, si) => {
+        for (let round = 0; round < (sup ? 2 : 1); round++) SHUGYO.courses[course].stages.forEach((pair, si) => { // 超修行は能力の上がりが2回分
           const who = s.team.map((m, i) => ({ i, v: Math.max(memberEffect(m, pair[0], loyalOf(s)) * (m.top.includes(pair[0]) ? 1 : 0), memberEffect(m, pair[1], loyalOf(s)) * (m.top.includes(pair[1]) ? 1 : 0)) }))
             .filter(x => x.v > 0).sort((p, q) => q.v - p.v || p.i - q.i).slice(0, SHUGYO.joinMax).map(x => x.i);
-          stages.push(who);
+          if (!round) stages.push(who);
           pair.forEach(k => {
             const card = { kind: 'shugyo', stat: k, members: who, aid: false };
             const cm = cardMult(s, card);
@@ -745,18 +774,19 @@
           who.forEach(i => addBond(s, i, BOND.train / 2));
         });
         out.stages = stages;
-        s.hp = clamp(Math.round(s.hp - SHUGYO.hp * R.hp), 0, s.hpMax); addStress(s, SHUGYO.stress * pol.stress + R.stress);
+        const tired = sup ? 2 : 1; // 超修行は疲れも2回分
+        s.hp = clamp(Math.round(s.hp - SHUGYO.hp * R.hp * tired), 0, s.hpMax); addStress(s, (SHUGYO.stress * pol.stress + R.stress) * tired);
         s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + Math.round(SHUGYO.mastery * boost), 0, 100); });
-        // 技のくじ: 選んだ技(2つまで)を上から順に。1回で覚えるのは1つまで。外したら次の率が上がる
-        const want = (Array.isArray(a.techs) ? a.techs : []).slice(0, SHUGYO.pick).map(id => techById(s.species, id)).filter(t => canLearn(s, t));
-        let got = null; const tries = [];
-        if (res !== 'sab') for (const t of want) { const p = techRate(s, t); const hit = rng() < p; tries.push({ id: t.id, rate: r2(p), hit }); if (hit) { got = t.id; break; } }
-        if (got) { learnTech(s, got); s.pity = 0; s.log.learned += 1; } else if (want.length) s.pity += SHUGYO.pity;
+        // 技のくじ: 選んだ技それぞれ(超修行なら2つとも覚えることがある)。外した技は、その技だけ次から +SHUGYO.miss(技ごと)
+        const tries = []; const got = [];
+        if (res !== 'sab') want.forEach((t, i) => { const hit = rng() < rates[i]; tries.push({ id: t.id, rate: r2(rates[i]), hit }); if (hit) got.push(t.id); });
+        got.forEach(id => { learnTech(s, id); s.log.learned += 1; if (s.techMiss) delete s.techMiss[id]; });
+        if (res !== 'sab') tries.filter(x => !x.hit).forEach(x => { s.techMiss = { ...(s.techMiss || {}), [x.id]: techMissOf(s, x.id) + 1 }; });
         addXp(s, XP.shugyo); s.log.shugyo += 1; s.log.train += 1; s.log[res] += 1;
         // 間合いのくじ: 行き先の間合いが1割で1段上がる(サボりは無し・別の乱数で並びを変えない)
         const qd = DIST_UP.course[course];
         if (res !== 'sab' && rngOf(s.id, s.turn, 'aptq')() < DIST_UP.questRate && addAptUp(s, qd, 'quest')) out.aptUp = { dist: qd, grade: aptGradesOf(s)[qd] };
-        out.result = res; out.course = course; out.learned = got; out.tries = tries;
+        out.result = res; out.course = course; out.learned = got[0] || null; out.learnedAll = got; out.tries = tries; out.super = sup;
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         s.last = { kind: 'shugyo', res }; s.acted = true; s.reacted = false;
         return { state: s, out };
@@ -886,6 +916,9 @@
       out.battle = raw.battle && typeof raw.battle === 'object' && ['debut', 'junior', 'middle', 'pro', 'summit', 'cup'].includes(raw.battle.kind) ? clone(raw.battle) : null;
       out.last = raw.last && typeof raw.last === 'object' ? clone(raw.last) : null;
       out.shugyoUsed = raw.shugyoUsed && typeof raw.shugyoUsed === 'object' ? clone(raw.shugyoUsed) : {};
+      // 修行の作り直し(2026-11-13): 技ごとの外した回数(無い → 0 回)・超修行の残り(無い → SHUGYO.superMax 回)
+      out.techMiss = {}; if (raw.techMiss && typeof raw.techMiss === 'object' && !Array.isArray(raw.techMiss)) for (const [id, v] of Object.entries(raw.techMiss)) if (okTech.includes(id) && Number.isFinite(Number(v)) && Number(v) > 0) out.techMiss[id] = Math.min(20, Math.round(Number(v)));
+      out.superLeft = Math.round(n(raw.superLeft, SHUGYO.superMax, 0, SHUGYO.superMax));
       if (EV) out.ev = EV.norm(raw.ev); // ランダムイベント(monhero-success-events.js)。読めなければ「出来事なし・状態なし」
       out.rivals = base.rivals; if (Array.isArray(raw.rivals)) out.rivals = newRun({ id: raw.id, species: raw.species, rivals: raw.rivals }).rivals;
       if (raw.log && typeof raw.log === 'object') for (const k of [...new Set([...Object.keys(out.log), 'meal', 'items', 'rematch', 'astory'])]) {
@@ -1356,7 +1389,7 @@
     return Object.freeze({
       events: EV,
       VERSION, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      ASSISTS, ISSA, PTS, XP, SHUGYO, ITEMS, GOOD, CARRY_MAX, useItem, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
+      ASSISTS, ISSA, PTS, XP, SHUGYO, ITEMS, GOOD, CARRY_MAX, useItem, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,

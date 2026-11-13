@@ -83,7 +83,7 @@ const chooseAction = (s, v, style) => {
     if (v.can.includes('cup') && r() < 0.35) { const ok = v.cups.filter(c => c.entry.ok); if (ok.length) return { kind: 'cup', id: pick(r, ok).id }; }
     if (v.can.includes('shugyo') && r() < 0.4) {
       const course = pick(r, Object.keys(SUC.SHUGYO.courses));
-      const techs = v.shugyo.techs.slice(0, 2).map(t => t.id);
+      const techs = v.shugyo.techs.slice(0, v.shugyo.superLeft > 0 ? 2 : 1).map(t => t.id);
       return { kind: 'shugyo', course, techs };
     }
   }
