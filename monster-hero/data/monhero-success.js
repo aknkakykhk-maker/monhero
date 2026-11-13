@@ -252,7 +252,7 @@
     q: Object.freeze({ stat: 0.6, loyal: 0.2, pop: 0.1, season: 0.1, powerFull: 14000 }), // 能力は総合力 ÷ powerFull(評価 S の入り口 14,000 で 1)
     season: Object.freeze({ star: [3, 4, 5], fire: [6, 7, 8], wind: [9, 10, 11], ice: [12, 1, 2] }), // 行き先の旬の月(星の湖=春・炎の谷=夏・風の森=秋・氷の峰=冬)
     miss: 15,                  // その技を外すたびに、その技だけ次から +15(技ごとに持つ)
-    superAdd: 15, superMax: 2, // 超修行: 率 +15・育成中2回まで
+    superAdd: 15, superMax: 2, superTickets: 2, // 超修行: 率 +15・育成中2回まで・チケット2枚(2026-11-13 社長)
     draAdd: 10,                // ドラ: 修行で技を覚えやすい
     mastery: 10,               // 修行するたびに覚えている技の熟練 +10
     joinMax: 3,                // 1段に付いてくる編成の子の数の上限
@@ -757,9 +757,10 @@
         const want = (Array.isArray(a.techs) ? a.techs : []).filter((id, i, arr) => arr.indexOf(id) === i).slice(0, SHUGYO.pick).map(id => techById(s.species, id)).filter(t => canLearn(s, t));
         const sup = want.length >= 2;
         if (sup && superLeft(s) <= 0) return { state: s0, out: { ok: false, why: 'no-super' } };
+        if (sup && num(s.tickets) < SHUGYO.superTickets) return { state: s0, out: { ok: false, why: 'no-ticket2' } };
         const rates = want.map(t => techRate(s, t, { course, super: sup }));
         if (sup) s.superLeft = superLeft(s) - 1;
-        s.tickets -= 1; s.shugyoUsed[pk] = num(s.shugyoUsed[pk]) + 1;
+        s.tickets -= sup ? SHUGYO.superTickets : 1; s.shugyoUsed[pk] = num(s.shugyoUsed[pk]) + 1;
         const pS = sabRateOf(s); const pF = failRateOf(s, null); const pG = greatRateOf(s, null);
         const x = rng(); const res = x < pS ? 'sab' : x < pS + pF ? 'fail' : x < pS + pF + pG ? 'great' : 'ok';
         const R = RESULTS[res]; const pol = C.policyOf(s.pol);

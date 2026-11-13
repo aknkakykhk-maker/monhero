@@ -83,7 +83,7 @@ const chooseAction = (s, v, style) => {
     if (v.can.includes('cup') && r() < 0.35) { const ok = v.cups.filter(c => c.entry.ok); if (ok.length) return { kind: 'cup', id: pick(r, ok).id }; }
     if (v.can.includes('shugyo') && r() < 0.4) {
       const course = pick(r, Object.keys(SUC.SHUGYO.courses));
-      const techs = v.shugyo.techs.slice(0, v.shugyo.superLeft > 0 ? 2 : 1).map(t => t.id);
+      const techs = v.shugyo.techs.slice(0, v.shugyo.superLeft > 0 && v.shugyo.tickets >= 2 ? 2 : 1).map(t => t.id);
       return { kind: 'shugyo', course, techs };
     }
   }
@@ -232,7 +232,7 @@ const step = (s, c, st) => {
   if (!r.out.ok && !['cond', 'retry'].includes(a.kind)) { r = SUC.act(s, { kind: 'rest' }); }
   if (!r.out.ok) { fail(`${where}: 何もできないターンになった(${a.kind}: ${r.out.why})`); return null; }
   s = r.state; st.acts[s.last ? s.last.kind : a.kind] = (st.acts[s.last ? s.last.kind : a.kind] || 0) + 1;
-  if (a.kind === 'shugyo' && s.last && s.last.kind === 'shugyo' && s.tickets !== tickets0 - 1) fail(`${where}: 修行でチケットが1枚減らない`);
+  if (a.kind === 'shugyo' && s.last && s.last.kind === 'shugyo' && s.tickets !== tickets0 - ((a.techs || []).length >= 2 ? SUC.SHUGYO.superTickets : 1)) fail(`${where}: 修行でチケットが1枚(超修行は2枚)減らない`);
   if (SUC.act(s, { kind: 'rest' }).out.ok) fail(`${where}: 1ターンに2回動けた`);
   checkState(s, `${where} act:${a.kind}`);
   if (s.last && ['train', 'shugyo'].includes(s.last.kind)) {

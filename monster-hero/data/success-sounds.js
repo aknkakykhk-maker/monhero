@@ -10,8 +10,8 @@
 (function (root) {
   'use strict';
   const SUCCESS_SOUND_SCENES = Object.freeze([
-    // メイン(住む場所)。季節で替える
-    { id: 'main', name: 'メイン(住む場所)', bgmBySeason: { spring: 'original_home', summer: 'ichika_home', autumn: 'original_profile', winter: 'original_enhance' }, se: null },
+    // メイン(住む場所)。2026-11-13 社長の「モンサク ホームBGM」(original_home_2)に4季節とも替えた。季節で曲を替えたいときはここを戻す(前: 春 original_home / 夏 ichika_home / 秋 original_profile / 冬 original_enhance)
+    { id: 'main', name: 'メイン(住む場所)', bgmBySeason: { spring: 'original_home_2', summer: 'original_home_2', autumn: 'original_home_2', winter: 'original_home_2' }, se: null },
     // 訓練の結果4種(曲は替えない)
     { id: 'trainGreat', name: '訓練: 大成功', se: 'trainingGoal' },
     { id: 'trainOk', name: '訓練: 成功', se: 'trainingGood' },

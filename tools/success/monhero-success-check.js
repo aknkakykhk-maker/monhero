@@ -241,7 +241,8 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(two.length === 2, '超修行を試す技が2つ見つからない');
     const one = SUC.act(base, { kind: 'shugyo', course: 'fire', techs: [two[0]] }); const sup = SUC.act(base, { kind: 'shugyo', course: 'fire', techs: two });
     ok(one.out.ok && !one.out.super && one.state.superLeft === SUC.SHUGYO.superMax, '技1つの修行で超修行の回数が減る');
-    ok(sup.out.ok && sup.out.super && sup.state.superLeft === SUC.SHUGYO.superMax - 1 && sup.state.tickets === base.tickets - 1, '超修行で回数・チケットがずれている');
+    ok(sup.out.ok && sup.out.super && sup.state.superLeft === SUC.SHUGYO.superMax - 1 && sup.state.tickets === base.tickets - SUC.SHUGYO.superTickets, '超修行で回数・チケット(2枚)がずれている');
+    ok(!SUC.act({ ...base, tickets: 1 }, { kind: 'shugyo', course: 'fire', techs: two }).out.ok && SUC.act({ ...base, tickets: 1 }, { kind: 'shugyo', course: 'fire', techs: [two[0]] }).out.ok, 'チケット1枚で超修行が選べる/ふつうの修行ができない');
     ok(sup.state.hp < one.state.hp, '超修行の疲れが2回分になっていない');
     ok(!SUC.act({ ...base, superLeft: 0 }, { kind: 'shugyo', course: 'fire', techs: two }).out.ok, '超修行の残りが0なのに2つ選べる');
     const old = SUC.restore(JSON.parse(JSON.stringify({ ...base, techMiss: undefined, superLeft: undefined })));

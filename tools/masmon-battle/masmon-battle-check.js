@@ -413,5 +413,49 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
     r0.digest === rz.digest && r0.digest !== ru.digest && rx.digest === rc.digest, `${r0.digest}/${ru.digest}`);
 }
 
+// ⑰ 試合の決まり(rules・β の練習だけ): 無い・空の試合は今と同じ/最初の間合い・始まりのガッツ・勝ち抜き(交代なし)が効く/壊れた値は切る
+{
+  const sps = Object.keys(catalog.species).slice(0, 3);
+  const mem = (sp, i) => ({ species: sp, name: `m${i}`, stats: { life: 380 + i * 20, pow: 400, wise: 360, hit: 400, eva: 380, tough: 400 } });
+  const team = () => ({ assistantId: 'sorashido', members: sps.map(mem) });
+  const run = (rules, seed = 'rules') => engine.simulate({ seed, catalog, teamA: team(), teamB: { ...team(), assistantId: 'kiki' }, ...(rules !== undefined ? { rules } : {}) });
+  const r0 = run(undefined), re = run({}), rb = run({ distStart: 'x', gutsStart: null, noSwap: 'yes' });
+  check('⑰ rules: 無い・空・効かない値だけの試合は同じ(記録に rules を残さない)', r0.digest === re.digest && r0.digest === rb.digest && !r0.log[0].rules, `${r0.digest}/${re.digest}/${rb.digest}`);
+  const firstMove = (r) => r.log.find((e) => ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev));
+  const d0 = run({ distStart: 0 }), d3 = run({ distStart: 9 });
+  check('⑰ rules: 最初の間合い(範囲外は 0〜3 に切る)', firstMove(d0).d === 0 || (firstMove(d0).ev === 'move' && Math.abs(firstMove(d0).to - 0) === 1), `${JSON.stringify(d3.log[0].rules)}`);
+  check('⑰ rules: 最初の間合い 9 → 3 に切る', d3.log[0].rules && d3.log[0].rules.distStart === 3);
+  const g100 = run({ gutsStart: 100 });
+  const ga = firstMove(g100);
+  check('⑰ rules: 始まりのガッツ 100(毎ラウンドの回復で上限を超えない)', g100.log[0].rules.gutsStart === 100 && ga && ga.ga <= engine.GUTS_MAX, JSON.stringify(g100.log[0].rules));
+  let swaps = 0, swapsFree = 0;
+  for (let k = 0; k < 40; k++) { swaps += run({ noSwap: true }, `ns${k}`).log.filter((e) => e.ev === 'swap').length; swapsFree += run(undefined, `ns${k}`).log.filter((e) => e.ev === 'swap').length; }
+  check('⑰ rules: 勝ち抜きでは交代しない(交代ありでは起きる)', swaps === 0 && swapsFree > 0, `勝ち抜き ${swaps}・交代あり ${swapsFree}`);
+  const m = engine.createMatch({ seed: 'ns-m', catalog, teamA: team(), teamB: { ...team(), assistantId: 'kiki' }, rules: { noSwap: true }, control: { A: 'human' } });
+  let ok = true;
+  for (let n = 0; n < 60 && m.pending(); n++) { const p = m.pending(); if (p.kind === 'act') { if (p.swap.some((x) => x.ok)) ok = false; const t = p.tech.find((x) => x.ok); m.choose(t ? { type: 'tech', key: t.key } : { type: 'charge' }); } else m.choose({ type: 'enter', to: p.enter.find((x) => x.ok).to }); }
+  check('⑰ rules: 手動でも勝ち抜きでは交代を選べない', ok);
+  const tr = engine.unitTraits(catalog, { species: sps[0], aptUp: [0, 2, 0, 0] });
+  check('⑰ unitTraits: 比べっこ用の等級(間合い適性は上げた分を足す)', tr && tr.apt.length === 4 && ['S', 'M', 'L'].includes(tr.size) && engine.unitTraits(catalog, { species: 'nope' }) === null, JSON.stringify(tr));
+}
+
+// ⑱ 技の移動先(moveTo・資料の血統別の技): 使ったあと、その間合いへ移る(移動の行 why=techMove)/無い・壊れた値は今と同じ
+{
+  const sp0 = Object.keys(catalog.species)[0];
+  const withMove = (mt) => {
+    const c = JSON.parse(JSON.stringify(catalog));
+    c.species[sp0].techs = c.species[sp0].techs.map((t) => { const x = { ...t }; delete x.moveTo; if (mt !== undefined) x.moveTo = mt; return x; });
+    return c;
+  };
+  check('⑱ moveTo: 技表の 0〜3 の整数だけ写しに入る(-1・"2"・9 は持たない)', engine._internal.normTech({ moveTo: 3 }, 0).moveTo === 3 && !('moveTo' in engine._internal.normTech({ moveTo: '2' }, 0)) && !('moveTo' in engine._internal.normTech({ moveTo: 9 }, 0)) && !('moveTo' in engine._internal.normTech({ moveTo: -1 }, 0)));
+  const mem = { species: sp0, name: 'x', stats: { life: 400, pow: 400, wise: 400, hit: 400, eva: 400, tough: 400 } };
+  const run = (c) => engine.simulate({ seed: 'mt', catalog: c, teamA: { assistantId: 'atsu', members: [mem] }, teamB: { assistantId: 'atsu', members: [mem] } });
+  const r0 = run(catalog), rn = run(withMove(undefined)), r3 = run(withMove(3));
+  const tm = r3.log.filter((e) => e.why === 'techMove');
+  check('⑱ moveTo: 無い技表は今と同じ試合', r0.digest === rn.digest, `${r0.digest}/${rn.digest}`);
+  check('⑱ moveTo: 遠へ移る技を使うと、その直後に移動の行(why=techMove・to=3)が残る', tm.length > 0 && tm.every((e) => e.to === 3 && e.byTech), `${tm.length} 回`);
+  check('⑱ moveTo: 手動の試合でも同じ(オートとそろう)', (() => { const m = engine.createMatch({ seed: 'mt', catalog: withMove(3), teamA: { assistantId: 'atsu', members: [mem] }, teamB: { assistantId: 'atsu', members: [mem] }, control: {} }); return m.result() && m.result().digest === r3.digest; })());
+}
+
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
