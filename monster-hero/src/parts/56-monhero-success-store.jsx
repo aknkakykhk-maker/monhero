@@ -103,7 +103,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -138,7 +138,9 @@ const msxNormBoxMon = (m) => {
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [], masteries: tm.mast,
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
-    aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))), // 合体で継いだ間合い適性(無いマスモンは 0) // 育成中に上げた間合い適性(無いマスモンは 0)
+    aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))),
+    awake: Math.max(0, Math.min(2, Math.round(msxNum(m.awake, 0)))), // 覚醒の印(無いマスモンは 0)
+    aptAwake: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(3, Math.round(msxNum(Array.isArray(m.aptAwake) ? m.aptAwake[i] : 0, 0))))), // 覚醒で上げた間合い適性(無いマスモンは 0) // 合体で継いだ間合い適性(無いマスモンは 0) // 育成中に上げた間合い適性(無いマスモンは 0)
   };
 };
 const msxNormBox = (raw) => {

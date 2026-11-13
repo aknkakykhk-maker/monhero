@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a1eab01e387d71d1
+// generated-sha256: a7203930a41c1320
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78411,7 +78411,7 @@ const monsucCupInfo = (suc, s, me) => {
 // 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
 const monsucTeams = (catalog, suc, s, info) => {
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
-  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptSendOf === 'function' ? { aptUp: suc.aptSendOf(s) } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop) };
+  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptSendOf === 'function' ? { aptUp: suc.aptSendOf(s) } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop), ...(s.awake ? { awake: s.awake } : {}) }; // awake … 覚醒の印(見せる側のキラだけ。試合の芯は読まない)
   const o = info.opp || { species: s.species, stats: s.stats, techs: 2, mastery: 20, tactics: 10 };
   const all = (catalog && catalog.species[o.species] && catalog.species[o.species].techs) || [];
   const n = Math.max(1, mscNum(o.techs, 2));
@@ -78709,7 +78709,7 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
         <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
-        <div className="mon a"><img src={mscMonImg(s.species)} alt=""/></div>
+        <div className="mon a">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
@@ -78816,7 +78816,7 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
         <div className="msc-rays"/>
         <div className="big">優勝!</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match && match.r ? `(${match.r.rounds} ラウンド)` : ''}</div>
-        <div className="who"><img src={mscMonImg(s.species)} alt=""/></div>
+        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
@@ -78845,7 +78845,7 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       <div className="msc-hero lose" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="big">負けた…</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・{o.name || mscMonName(o.species)} に 負け</div>
-        <div className="who"><img src={mscMonImg(s.species)} alt=""/></div>
+        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
       </div>
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
@@ -80641,6 +80641,362 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
       </div>
     </div>);
 }
+
+// ---- part: 56-monsuc-awake.jsx ----
+// ===== モンヒロサクセスの覚醒・超覚醒(2026-11-13 社長「この形で作る」) =====
+// 計算は芯 MONHERO_SUCCESS の awakeOpen(くじ・前触れ・起きる中身)。ここは見せる部分だけ。何も保存しない・公開の印は持たない(モンサクの印の後ろ)。
+//   msxKiraOf(awake) … 印 0/1/2 → null / 'kira'(覚醒)/ 'rare'(超覚醒)
+//   MsxKira          … バトルカードのキラ(84 の CardKiraAura・ふちの光)で絵を包む。fill = 箱いっぱい(場面のモンスター)/ small = 小さい札(ふちの光と印だけ)
+//   MsxOmenFx        … 前触れ: 体がうっすら光る(覚醒は白・超覚醒は虹色)・ときどき震える(震えは包む側の CSS)
+//   MsxAwakeShow     … 起きたときの演出(覚醒 4〜5秒・超覚醒 5〜6秒)。光に包まれる → 助手が驚く → 閃光と札・全能力と適性 → キラをまとった姿
+//   「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では、動く光を出さず静かな形にする
+
+const MSX_AW_DIST = Object.freeze(['零', '近', '中', '遠']);
+const MSX_AW_NAME = Object.freeze({ 1: '覚醒', 2: '超覚醒' });
+// 演出の段の切り替え(ミリ秒): 0 光に包まれる → 1 助手が驚く → 2 閃光と札 → 3 キラをまとった姿
+const MSX_AW_STEPS = Object.freeze({ 1: Object.freeze([1300, 2500, 4000]), 2: Object.freeze([1600, 3000, 4700]) });
+const msxKiraOf = (awake) => (Number(awake) >= 2 ? 'rare' : Number(awake) >= 1 ? 'kira' : null);
+const msxAwCalm = () => (typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false);
+
+function MsxKira({ kind, src = '', fill = false, small = false, className = '', style = null, children }) {
+  msxAwEnsureCss();
+  const box = `msx-kira${fill ? ' fill' : ''}${className ? ` ${className}` : ''}`;
+  if (!kind) return fill || className ? <span className={box} style={style || undefined}><span className="msx-kira-in">{children}</span></span> : children;
+  const rim = kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim';
+  const aura = !small && !msxAwCalm() && typeof CardKiraAura === 'function';
+  return (
+    <span className={box} style={style || undefined} data-msx-kira={kind}>
+      {aura ? <CardKiraAura kind={kind} src={src} layer="back" style={{ inset: 0 }}/> : null}
+      <span className={`msx-kira-in ${rim}`} data-card-kira={kind}>{children}</span>
+      {aura ? <CardKiraAura kind={kind} src={src} layer="front" style={{ inset: 0 }}/> : null}
+      {small ? <i className={`msx-kira-badge ${kind}`} aria-hidden="true">{kind === 'rare' ? '🌈' : '✨'}</i> : null}
+    </span>
+  );
+}
+
+function MsxOmenFx({ k }) {
+  if (k !== 1 && k !== 2) return null;
+  msxAwEnsureCss();
+  return (
+    <span className={`msx-omen k${k}${msxAwCalm() ? ' calm' : ''}`} aria-hidden="true" data-msx-omen={k}>
+      <i className="g"/>{[0, 1, 2, 3].map((i) => <i key={i} className="p" style={{ '--i': i }}/>)}
+    </span>
+  );
+}
+
+// fire = 芯の awakeOpen の out.fire { kind, add, ups, apt:[{ dist, from, to }] }。run.s はもう起きたあと(能力・印)
+function MsxAwakeShow({ run, fire, v, ev, line }) {
+  msxAwEnsureCss();
+  const k = fire && fire.kind === 2 ? 2 : 1;
+  const calm = msxAwCalm();
+  const [st, setSt] = React.useState(calm ? 3 : 0);
+  React.useEffect(() => {
+    if (calm) return undefined;
+    const ids = MSX_AW_STEPS[k].map((ms, i) => setTimeout(() => setSt((n) => Math.max(n, i + 1)), ms));
+    return () => ids.forEach(clearTimeout);
+  }, []);
+  const s = run.s;
+  const shown = { ...run, s: { ...s, awake: st >= 3 ? k : k - 1, omen: null } };
+  const say = line(k === 2 ? 'turn.awake.fire2' : 'turn.awake.fire', k === 2 ? 'うそ…まだ光が強くなっていく！' : 'えっ…この光、なに！？');
+  const apt = Array.isArray(fire && fire.apt) ? fire.apt : [];
+  return (<>
+    {typeof MsxBand === 'function' ? <MsxBand s={s} v={v} ev={ev}/> : null}
+    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} onClick={() => setSt(3)} data-msx-awake={k} data-msx-awake-step={st}>
+      <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+      {st < 3 ? <><span className="msx-aw-ray" aria-hidden="true"/><span className="msx-aw-wrap" aria-hidden="true"/></> : <span className="msx-aw-after" aria-hidden="true"/>}
+      <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/>
+      <MsxMonArt run={shown} className="mon" style={{ bottom: '16%', height: '40%' }} live={st >= 3}/>
+      {st === 2 ? <span className="msx-aw-flash" aria-hidden="true"/> : null}
+      {st >= 2 ? <div className={`msx-aw-stamp k${k} msx-pop`}>{k === 2 ? '超覚醒!!' : '覚醒!'}<small>全能力 +{fire.add}</small></div> : null}
+    </div>
+    {st >= 2 ? <MsxStRow stats={s.stats} ups={fire.ups}/> : null}
+    <div className="v-log">
+      {st < 2 ? <>{run.nick}の体が、{k === 2 ? '虹色の' : 'まぶしい'}光に包まれていく…</> : <>
+        <span className="hd2">{k === 2 ? '🌈 超覚醒' : '✨ 覚醒'}</span><br/>
+        全能力 <b className="gu">+{fire.add}</b>
+        {apt.map((a) => <span key={a.dist}><br/>📏 「{MSX_AW_DIST[a.dist]}」の間合い適性が {a.from} → <b className="ga">{a.to}</b> に上がった!</span>)}
+        {st >= 3 ? <><br/>{run.nick}は{k === 2 ? 'レアキラ' : 'キラ'}の光をまとった!</> : null}</>}
+    </div>
+    {st >= 1 && say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'surprise'} text={say.t}/> : null}
+  </>);
+}
+
+const MSX_AW_CSS = `
+.msx-kira{position:relative;display:inline-flex;align-items:flex-end;justify-content:center;isolation:isolate}
+.msx-kira.fill{display:block;width:100%;height:100%}
+.msx-kira-in{display:inline-flex;align-items:flex-end;justify-content:center}
+.msx-kira.fill>.msx-kira-in{display:block;width:100%;height:100%}
+.msx-kira.fill>.msx-kira-in>img{width:100%;height:100%;object-fit:contain}
+.msx-kira-badge{position:absolute;right:-5px;top:-5px;font-style:normal;font-size:11px;line-height:1;z-index:3;filter:drop-shadow(0 1px 1px #0009)}
+.msx-omen{position:absolute;inset:-14% -14% -4%;pointer-events:none;z-index:3}
+.msx-omen>i{position:absolute;font-style:normal}
+.msx-omen .g{inset:6% 6% 0;border-radius:50%;mix-blend-mode:screen;animation:msxOmenPulse 2.6s ease-in-out infinite;background:radial-gradient(ellipse 50% 52% at 50% 58%,rgba(255,255,255,.62),rgba(255,255,255,.22) 48%,rgba(255,255,255,0) 72%)}
+.msx-omen.k2 .g{background:conic-gradient(from 0deg,rgba(255,110,210,.55),rgba(110,210,255,.55),rgba(255,235,110,.55),rgba(150,255,170,.5),rgba(255,110,210,.55));-webkit-mask:radial-gradient(ellipse 50% 52% at 50% 58%,#000 30%,transparent 72%);mask:radial-gradient(ellipse 50% 52% at 50% 58%,#000 30%,transparent 72%);animation:msxOmenPulse 2.6s ease-in-out infinite,msxOmenSpin 8s linear infinite}
+.msx-omen .p{width:6px;height:6px;border-radius:50%;bottom:16%;left:calc(26% + var(--i) * 16%);background:#fff;box-shadow:0 0 6px 2px rgba(255,255,255,.9);opacity:0;animation:msxOmenMote 3s linear infinite;animation-delay:calc(var(--i) * .75s)}
+.msx-omen.k2 .p:nth-child(2){background:#ffd6f4;box-shadow:0 0 6px 2px rgba(255,120,220,.9)}
+.msx-omen.k2 .p:nth-child(3){background:#d6f4ff;box-shadow:0 0 6px 2px rgba(120,210,255,.9)}
+.msx-omen.k2 .p:nth-child(4){background:#fff6c8;box-shadow:0 0 6px 2px rgba(255,214,102,.95)}
+.msx-omen.k2 .p:nth-child(5){background:#d9ffe0;box-shadow:0 0 6px 2px rgba(130,255,160,.9)}
+.msx-omen-on>.msx-kira{animation:msxOmenShake 4.6s ease-in-out infinite}
+.msx-omen-on.k1>.msx-kira>.msx-kira-in{filter:drop-shadow(0 0 4px rgba(255,255,255,.9)) drop-shadow(0 0 10px rgba(255,255,255,.55))}
+@keyframes msxOmenPulse{0%,100%{opacity:.45}50%{opacity:.95}}
+@keyframes msxOmenSpin{to{transform:rotate(360deg)}}
+@keyframes msxOmenMote{0%{opacity:0;transform:translateY(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-120px)}}
+@keyframes msxOmenShake{0%,82%,100%{transform:none}84%{transform:translateX(-2px) rotate(-2deg)}86%{transform:translateX(2px) rotate(2deg)}88%{transform:translateX(-2px) rotate(-1.5deg)}90%{transform:translateX(1px) rotate(1deg)}92%{transform:none}}
+.msx-omen.calm .g,.msx-omen.calm .p{animation:none}.msx-omen.calm .g{opacity:.7}.msx-omen.calm .p{display:none}
+.msx-aw .msx-aw-ray{position:absolute;left:50%;top:-5%;bottom:12%;width:46%;transform:translateX(-50%);pointer-events:none;z-index:3;mix-blend-mode:screen;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.55) 40%,rgba(255,250,215,.85));-webkit-mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);animation:msxAwRay 1.3s ease-out both}
+.msx-aw.k2 .msx-aw-ray{background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,160,230,.5) 30%,rgba(150,220,255,.6) 60%,rgba(255,240,150,.85))}
+.msx-aw.st1 .msx-aw-ray,.msx-aw.st2 .msx-aw-ray{animation:msxAwHold2 .8s ease-in-out infinite alternate}
+.msx-aw .msx-aw-wrap{position:absolute;left:50%;bottom:8%;width:92%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;pointer-events:none;z-index:3;mix-blend-mode:screen;animation:msxAwWrap 1.3s ease-out both;background:radial-gradient(circle at 50% 58%,rgba(255,255,255,.95),rgba(255,250,220,.6) 30%,rgba(255,255,255,0) 66%)}
+.msx-aw.k2 .msx-aw-wrap{animation-duration:1.6s;z-index:1;mix-blend-mode:normal;background:conic-gradient(rgba(255,80,200,.62),rgba(80,190,255,.62),rgba(255,225,70,.62),rgba(110,240,140,.58),rgba(170,110,255,.62),rgba(255,80,200,.62));-webkit-mask:radial-gradient(circle,transparent 14%,#000 26%,#000 44%,transparent 68%);mask:radial-gradient(circle,transparent 14%,#000 26%,#000 44%,transparent 68%)}
+.msx-aw.st1 .msx-aw-wrap,.msx-aw.st2 .msx-aw-wrap{animation:msxAwHold 1s ease-in-out infinite alternate}
+.msx-aw.k2.st1 .msx-aw-wrap,.msx-aw.k2.st2 .msx-aw-wrap{animation:msxAwHold 1s ease-in-out infinite alternate,msxOmenSpin 3s linear infinite}
+.msx-aw.st0 .mon,.msx-aw.st1 .mon,.msx-aw.st2 .mon{filter:brightness(1.5) drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px rgba(255,255,255,.9))}
+.msx-aw.k2.st0 .mon,.msx-aw.k2.st1 .mon,.msx-aw.k2.st2 .mon{filter:brightness(1.12) drop-shadow(0 0 6px #ff7ad9) drop-shadow(0 0 14px rgba(110,200,255,.95)) drop-shadow(0 0 26px rgba(255,220,90,.85))}
+.msx-aw .msx-aw-after{position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(circle at 50% 62%,rgba(255,240,200,.35),transparent 60%)}
+.msx-aw.k2 .msx-aw-after{background:radial-gradient(circle at 50% 62%,rgba(255,180,240,.32),rgba(150,220,255,.18) 40%,transparent 64%)}
+.msx-aw-flash{position:absolute;inset:0;z-index:4;pointer-events:none;background:#fff;animation:msxAwFlash .9s ease-out both}
+.msx-aw.k2 .msx-aw-flash{background:linear-gradient(120deg,#ffd1f2,#fff 30%,#d1f1ff 55%,#fff7c2 80%,#d9ffe0)}
+.msx-aw-stamp{position:absolute;left:0;right:0;top:9%;z-index:5;text-align:center;white-space:nowrap;font-size:34px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 14px #fff,0 4px 0 #78350f}
+.msx-aw-stamp.k2{font-size:36px;-webkit-text-stroke:3px #9d174d;text-shadow:0 0 14px #fff,0 0 26px rgba(255,120,220,.9),0 4px 0 #581c87}
+.msx-aw-stamp small{display:table;margin:2px auto 0;font-size:15px;font-style:normal;-webkit-text-stroke:0;color:#7c2d12;background:#fff;border-radius:999px;padding:1px 12px;text-shadow:none}
+@keyframes msxAwWrap{0%{opacity:0;transform:translateX(-50%) scale(.4)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
+@keyframes msxAwHold{from{opacity:.75;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.06)}}
+@keyframes msxAwRay{0%{opacity:0;transform:translateX(-50%) scaleX(.2)}100%{opacity:1;transform:translateX(-50%) scaleX(1)}}
+@keyframes msxAwHold2{from{opacity:.7}to{opacity:1}}
+@keyframes msxAwFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .msx-omen .g,.msx-omen .p,.msx-omen-on>.msx-kira,.msx-aw .msx-aw-wrap,.msx-aw-flash{animation:none}
+  .msx-omen .p,.msx-aw-flash{display:none}
+  .msx-aw .msx-aw-ray{animation:none}
+}
+`;
+let msxAwCssDone = false;
+const msxAwEnsureCss = () => {
+  if (msxAwCssDone || typeof document === 'undefined') return;
+  msxAwCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-awake-css', '1'); el.textContent = MSX_AW_CSS; document.head.appendChild(el);
+};
+
+// ---- part: 56-monsuc-dex.jsx ----
+// ===== モンヒロサクセスの「見た出来事」・選択肢の詳細ボタン・イベント図鑑(2026-11-13 社長「この形で作る」) =====
+// 保存: 新しいキー mh_monsuc_event_seen_v1 = { v:1, ch:{ 選択肢id: 1 }, ev:{ 出来事id: 1 } }(育成をまたぐ・足すだけ。ほかのキーは触らない)
+//   出来事id … ランダムイベント・固有イベントは表の id(ev.daily.nut / scn.mua.uq.*)/ 助手のお話 story.<助手>.ep1〜4・story.<助手>.special /
+//              イッサ博士 issa / 覚醒 aw.awake・超覚醒 aw.super。選択肢id = 出来事id + '.' + 選択肢(a・b・c、博士は stat など)
+//   msxSeenMark(evId, c) … 見た・選んだを書く(読み終わる前に呼ばれても、読んでから足す。書けなくても遊びは止めない)
+//   MsxChoiceInfo        … 選択肢の札の「ℹ」で開く効果の行(芯の表から自動。まだ選んだことのない選択肢は「？？？」)
+//   MsxDex               … イベント図鑑(上に全体の ◯/◯・タブで種類ごと。見たものは題と中身を読める・まだは題も「？？？」)
+// 公開の印は持たない(モンサクの画面の中からだけ呼ぶ)。
+
+const MSX_SEEN_KEY = 'mh_monsuc_event_seen_v1';
+const MSX_SEEN_MAX = 4000;
+const msxSeenId = (k) => typeof k === 'string' && k.length > 0 && k.length <= 72 && /^[A-Za-z0-9._-]+$/.test(k);
+const msxSeenNorm = (raw) => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const map = (m) => { const out = {}; if (m && typeof m === 'object' && !Array.isArray(m)) Object.keys(m).slice(0, MSX_SEEN_MAX).forEach((k) => { if (msxSeenId(k) && m[k]) out[k] = 1; }); return out; };
+  return { v: 1, ch: map(o.ch), ev: map(o.ev) };
+};
+let msxSeenCache = null; let msxSeenLoading = null; const msxSeenSubs = new Set();
+const msxSeenNotify = () => msxSeenSubs.forEach((f) => { try { f((n) => n + 1); } catch (e) { /* 消えた画面 */ } });
+const msxSeenLoad = () => {
+  if (msxSeenLoading) return msxSeenLoading;
+  msxSeenLoading = Promise.resolve(typeof storeGet === 'function' ? storeGet(MSX_SEEN_KEY, null) : null)
+    .catch(() => null).then((raw) => { msxSeenCache = msxSeenNorm(raw); msxSeenNotify(); return msxSeenCache; });
+  return msxSeenLoading;
+};
+const msxSeenMark = (evId, c = null) => {
+  if (!msxSeenId(evId)) return;
+  if (!msxSeenCache) { msxSeenLoad().then(() => msxSeenMark(evId, c)); return; }
+  const chId = c != null && c !== '' ? `${evId}.${c}` : null;
+  const addEv = !msxSeenCache.ev[evId]; const addCh = chId && msxSeenId(chId) && !msxSeenCache.ch[chId];
+  if (!addEv && !addCh) return;
+  msxSeenCache = { v: 1, ev: addEv ? { ...msxSeenCache.ev, [evId]: 1 } : msxSeenCache.ev, ch: addCh ? { ...msxSeenCache.ch, [chId]: 1 } : msxSeenCache.ch };
+  try { if (typeof storeSet === 'function') Promise.resolve(storeSet(MSX_SEEN_KEY, msxSeenCache)).catch(() => {}); } catch (e) { /* 書けなくても遊びは止めない */ }
+  msxSeenNotify();
+};
+const useMsxSeen = () => {
+  const [, tick] = React.useState(0);
+  React.useEffect(() => { msxSeenSubs.add(tick); msxSeenLoad(); return () => { msxSeenSubs.delete(tick); }; }, []);
+  return msxSeenCache || msxSeenNorm(null);
+};
+
+// ---- 効果の文(芯の出来事の表 fx から作る。数は表のまま・能力は小/中/大) ----
+const MSX_FX_SIZE = (n) => (n >= 2 ? '大' : n >= 1 ? '中' : '小');
+const MSX_FX_TARGET = Object.freeze({ main: '得意の能力', all: '全能力', rand: 'どれかの能力', cheer: '編成のモンスターの得意な能力', type: 'タイプの得意な能力' });
+const MSX_FX_FLAG = Object.freeze({ guts: '次の大会でガッツ +', goalPlus: '期の目標のごほうびアップ', baseBoost: 'ベースモンの効きアップ', injRisk: 'けがをしやすくなる', fav: '好きな訓練ができる', tagSeen: '友情タッグに目ざめる' });
+const MSX_FX_GOAL = Object.freeze({ star: '目標「スター」', toku: '目標「得意をのばす」', naka: '目標「みんなと仲良く」' });
+const msxSigned = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+const msxFxText = (f) => {
+  if (!Array.isArray(f)) return '';
+  const [k, a, b] = f; const BUFFS = msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
+  if (k === 'st') return `${(typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a]) || MSX_FX_TARGET[a] || '能力'} ${MSX_FX_SIZE(Number(b) || 0)}アップ`;
+  if (k === 'loy') return `忠誠 ${a > 0 ? '+' : '−'}`;
+  if (k === 'fear') return '恐れ度 +';
+  if (k === 'pop') return `人気 ${msxSigned(a)}`;
+  if (k === 'popHi') return `人気 ${msxSigned(a)}(人気60〜のとき)`;
+  if (k === 'hp') return `体力 ${msxSigned(a)}`;
+  if (k === 'str') return `ストレス ${msxSigned(a)}`;
+  if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
+  if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
+  if (k === 'fame') return `名声 ${msxSigned(a)}`;
+  if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
+  if (k === 'mas') return '技の熟練 +';
+  if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
+  if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
+  if (k === 'apt') return a === 'low' ? 'いちばん低い間合い適性 +1段' : 'いちばん高い間合い適性 +1段';
+  return '';
+};
+const msxFxLine = (list) => { const t = (Array.isArray(list) ? list : []).map(msxFxText).filter(Boolean); return t.length ? t.join('・') : 'なにも変わらない'; };
+// 1つの選択肢の効果(行の並び)。ch = 芯の表の選択肢 { fx } か { p, ok, ng } か { lottery }
+const msxChoiceLines = (ch) => {
+  if (!ch || typeof ch !== 'object') return ['お話の続きが変わる'];
+  const out = [];
+  if (ch.need && ch.need.fame) out.push(`名声 ${ch.need.fame} が要る`);
+  if (ch.pay) out.push(`名声 −${ch.pay}`);
+  if (ch.lottery) out.push('おみくじを引く(大吉・吉・…)');
+  if (ch.p) { out.push(`成功 ${Math.round(ch.p * 100)}%: ${msxFxLine(ch.ok)}`); out.push(`失敗: ${msxFxLine(ch.ng)}`); }
+  else if (ch.fx) out.push(msxFxLine(ch.fx));
+  return out.length ? out : ['なにも変わらない'];
+};
+// 表の出来事の選択肢(無ければ null)
+const msxEvChoice = (evId, c) => { const E = msxSuc && msxSuc.SUC && msxSuc.SUC.events; const e = E && E.BY_ID ? E.BY_ID[evId] : null; return e && e.ch ? (e.ch[c] || (c === 'a' && e.ch.fx ? e.ch : null)) : null; };
+
+function MsxChoiceInfo({ evId, c, open }) {
+  msxDexEnsureCss();
+  const seen = useMsxSeen();
+  if (!open) return null;
+  const known = Boolean(seen.ch[`${evId}.${c}`]);
+  const lines = known ? (String(evId).startsWith('story.') ? ['お話の続きが変わる'] : msxChoiceLines(msxEvChoice(evId, c))) : ['？？？'];
+  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度えらぶと、効果がわかるようになる</small>}</div>;
+}
+
+// ---- 図鑑の中身(タブと出来事の並び) ----
+const MSX_EV_TITLE = Object.freeze({
+  'ev.daily.nut': '道ばたの木の実', 'ev.daily.rain': '雨の日の訓練', 'ev.daily.night': '星のきれいな夜', 'ev.daily.kids': '子どもたちが集まってきた', 'ev.daily.sweets': '新作スイーツ',
+  'ev.daily.book': '古い本', 'ev.daily.chase': '追いかけっこ', 'ev.daily.juggler': '大道芸人', 'ev.daily.arm': '腕ずもう', 'ev.daily.dream': 'こわい夢', 'ev.daily.picky': '好ききらい',
+  'ev.daily.mirror': '鏡の前の決めポーズ', 'ev.daily.lost': '迷子', 'ev.daily.range': 'ひとりで間合いの稽古', 'ev.daily.map': '宝の地図', 'ev.daily.gift': 'ファンからの贈り物', 'ev.daily.alone': 'ひとりで自主練',
+  'ev.small.omikuji': 'おみくじ', 'ev.small.nut': 'あやしい木の実',
+  'ev.team.selfdrill': '編成のモンスターの自主練', 'ev.team.senpai': '先輩の背中', 'ev.team.fight': '編成どうしのケンカ', 'ev.team.base': 'ベースモンのがんばり', 'ev.team.friend': 'フレンドのモンスターが来た',
+  'ev.team.typeskill': '得意技を教わる', 'ev.team.sync': '息ぴったり', 'ev.team.tagwake': '心がつながった',
+  'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きな訓練', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
+  'ev.goal.pick': '期の目標を決める', 'ev.goal.done': '目標達成', 'ev.goal.miss': '目標に届かなかった',
+  'ev.body.injury': 'けがの手前', 'ev.body.runaway': '元気がない', 'ev.body.healed': '治った', 'ev.body.home': '帰ってきた',
+  'ev.season.jan1': '初もうで', 'ev.season.jan2': '書きぞめ', 'ev.season.jan3': '新年の願い事', 'ev.season.apr1': 'お花見', 'ev.season.apr2': '春の町', 'ev.season.apr3': '1年前の写真',
+  'ev.season.aug1': '夏祭りの金魚すくい', 'ev.season.aug2': '夏祭りの力くらべ', 'ev.season.aug3': '花火', 'ev.season.oct1': 'ハロウィンの仮装', 'ev.season.oct2': 'ハロウィンのお菓子', 'ev.season.oct3': 'ハロウィンのきもだめし',
+  'ev.season.dec1': '大そうじ', 'ev.season.dec2': '1年のふりかえり', 'ev.season.dec3': '最後の年に向けて', 'ev.season.finaljan': '最後のお正月', 'ev.season.finalapr': '最後のお花見',
+  'ev.cup.eve': '大会の前の晩', 'ev.cup.interview': '取材', 'ev.cup.after': '負けたあと',
+  issa: 'イッサ博士があらわれた', 'aw.awake': '覚醒', 'aw.super': '超覚醒',
+});
+const MSX_DEX_TABS = Object.freeze([
+  { key: 'story', name: '助手のお話' }, { key: 'daily', name: 'ふだん', kinds: ['daily', 'small'] }, { key: 'team', name: '編成のモンスター', kinds: ['team'] },
+  { key: 'self', name: '育成モンスター', kinds: ['self', 'body', 'goal'] }, { key: 'season', name: '季節の行事', kinds: ['season'] }, { key: 'cup', name: '大会まわり', kinds: ['cup'] },
+  { key: 'issa', name: 'イッサ博士' }, { key: 'awake', name: '覚醒・超覚醒' },
+]);
+// 図鑑に並べる出来事 { id, title, aid?, scene, ep? }。表から作る(足された出来事も自動で入る)
+const msxDexList = () => {
+  const SUC = msxSuc && msxSuc.SUC; const E = SUC && SUC.events; const out = {};
+  MSX_DEX_TABS.forEach((t) => { out[t.key] = []; });
+  if (E && Array.isArray(E.LIST)) E.LIST.forEach((e) => { const t = MSX_DEX_TABS.find((x) => x.kinds && x.kinds.includes(e.kind)); if (t) out[t.key].push({ id: e.id, title: MSX_EV_TITLE[e.id] || '出来事', scene: e.id }); });
+  const aids = SUC && Array.isArray(SUC.AIDS) ? SUC.AIDS : [];
+  aids.forEach((aid) => {
+    [1, 2, 3, 4].forEach((n) => out.story.push({ id: `story.${aid}.ep${n}`, aid, title: `第${n}話`, ep: n }));
+    out.story.push({ id: `story.${aid}.special`, aid, title: '特別な1話', ep: 'special' });
+    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter((u) => u.aid === aid).forEach((u) => out.story.push({ id: u.id, aid, title: u.title || 'お話', scene: u.id }));
+  });
+  out.issa.push({ id: 'issa', title: MSX_EV_TITLE.issa, scene: 'issa' });
+  out.awake.push({ id: 'aw.awake', title: '覚醒', scene: 'turn.awake.fire', awake: 1 }, { id: 'aw.super', title: '超覚醒', scene: 'turn.awake.fire2', awake: 2 });
+  return out;
+};
+
+function MsxDex({ aid = 'mua', nick = '', onClose }) {
+  msxDexEnsureCss();
+  const seen = useMsxSeen();
+  const list = React.useMemo(() => msxDexList(), []);
+  const [tab, setTab] = React.useState('story');
+  const [pickAid, setPickAid] = React.useState(aid);
+  const [open, setOpen] = React.useState(null);
+  const [, setTick] = React.useState(0);
+  const all = Object.values(list).flat();
+  const got = all.filter((x) => seen.ev[x.id]).length;
+  const rows = tab === 'story' ? list.story.filter((x) => x.aid === pickAid) : list[tab] || [];
+  const readAid = open && open.aid ? open.aid : aid;
+  React.useEffect(() => { if (typeof msxScriptLoad === 'function') { let alive = true; msxScriptLoad(readAid).then(() => { if (alive) setTick((n) => n + 1); }); return () => { alive = false; }; } return undefined; }, [readAid]);
+  const se = msxSuc && msxSuc.script;
+  const scene = open ? (open.ep != null ? (se && se.SCENE ? se.SCENE.story(open.aid, open.ep) : `scn.${open.aid}.ep${open.ep}`) : open.scene) : null;
+  const c2 = { aid: readAid, mon: nick || 'モンスター', name: 'あなた', callName: '', bond: 10, cheer: '編成のモンスター', cheer2: '編成のモンスター', train: '訓練', id: 'dex', turn: 10 };
+  let ev0 = null; try { ev0 = open && se && typeof se.event === 'function' && !open.awake ? se.event(scene, c2) : null; } catch (e) { ev0 = null; }
+  const aw = open && open.awake && typeof msxPickLine === 'function' ? msxPickLine({ ...c2 }, scene, { bondLv: 10 }) : null;
+  const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? (nick || 'モンスター') : (typeof msxAidName === 'function' ? msxAidName(l.who) : l.who));
+  const chOf = (x) => { const E = msxSuc && msxSuc.SUC && msxSuc.SUC.events; const e = E && E.BY_ID ? E.BY_ID[x.id] : null; return e && e.ch && (e.ch.a || e.ch.b) ? Object.keys(e.ch) : x.ep ? ['a', 'b'] : x.id === 'issa' && typeof MSX_ISSA_KEYS !== 'undefined' ? MSX_ISSA_KEYS.map((k) => k.key) : []; };
+  return (
+    <div className="msx-ov msx-fade msx-dex" onClick={onClose} data-msx-dex>
+      <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
+        <h3>📖 イベント図鑑<span className="msx-dex-all">{got} / {all.length}</span></h3>
+        <div className="msx-dex-bar"><i style={{ width: `${all.length ? (got / all.length) * 100 : 0}%` }}/></div>
+        <div className="msx-dex-tabs">{MSX_DEX_TABS.map((t) => { const L = list[t.key] || []; const n = L.filter((x) => seen.ev[x.id]).length; return (
+          <button type="button" key={t.key} className={t.key === tab ? 'on' : ''} onClick={() => { setTab(t.key); setOpen(null); }} data-msx-dex-tab={t.key}>{t.name}<small>{n}/{L.length}</small></button>); })}</div>
+        {tab === 'story' ? <div className="msx-dex-aids">{[...new Set(list.story.map((x) => x.aid))].map((a) => { const L = list.story.filter((x) => x.aid === a); return (
+          <button type="button" key={a} className={a === pickAid ? 'on' : ''} onClick={() => { setPickAid(a); setOpen(null); }}>{typeof msxFace === 'function' ? <img src={msxFace(a, 'normal')} alt=""/> : null}{typeof msxAidName === 'function' ? msxAidName(a) : a}<small>{L.filter((x) => seen.ev[x.id]).length}/{L.length}</small></button>); })}</div> : null}
+        {open ? (
+          <div className="msx-dex-read" data-msx-dex-read={open.id}>
+            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)}>← 一覧へ</button></div>
+            {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・いちばん高い間合い適性が上がった。'}</div> : null}
+            {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
+            {open.id === 'issa' ? <div className="ln">夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。</div> : null}
+            {ev0 ? ev0.lines.slice(0, 8).map((l, i) => <div key={i} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}
+            {chOf(open).length ? <div className="chs">{chOf(open).map((c) => { const t = ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === c) || {}).t : open.id === 'issa' ? ((MSX_ISSA_KEYS.find((k) => k.key === c) || {}).name || c) : c; const known = Boolean(seen.ch[`${open.id}.${c}`]); return (
+              <div key={c} className="ch"><b>{known ? t : '？？？'}</b><span>{known ? (open.id === 'issa' ? (() => { const k = MSX_ISSA_KEYS.find((x) => x.key === c) || {}; return `⭕ ${k.ok} / ❌ ${k.ng}`; })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ')) : 'まだ選んだことがない'}</span></div>); })}</div> : null}
+          </div>
+        ) : (
+          <div className="msx-dex-list">{rows.length ? rows.map((x) => { const known = Boolean(seen.ev[x.id]); return (
+            <button type="button" key={x.id} className={`msx-dex-row${known ? '' : ' no'}`} disabled={!known} onClick={() => setOpen(x)} data-msx-dex-row={x.id}>
+              <span>{known ? x.title : '？？？'}</span><small>{known ? '読む ▶' : 'まだ見ていない'}</small></button>); }) : <div className="msx-note">まだありません</div>}</div>
+        )}
+        <button type="button" className="msx-btn" onClick={onClose}>とじる</button>
+      </div>
+    </div>
+  );
+}
+
+const MSX_DEX_CSS = `
+.msx .msx-optrow{display:flex;gap:6px;align-items:stretch}
+.msx .msx-optrow>.v-opt{flex:1;min-width:0}
+.msx .msx-info{flex:none;width:38px;border-radius:13px;background:#1e1a36;border:1.5px solid #7dd3fc;border-bottom-width:3px;color:#7dd3fc;font-size:16px;font-weight:900}
+.msx .msx-info.on{background:#0c4a6e;color:#fff}
+.msx .msx-chinfo{margin:-2px 2px 2px;padding:6px 10px;border-radius:10px;background:#0f172acc;border:1px solid #334155;font-size:11.5px;font-weight:800;line-height:1.5;color:#e0f2fe}
+.msx .msx-chinfo small{display:block;color:#94a3b8;font-size:10px}
+.msx .msx-dex .msx-sheet{max-height:92vh;display:flex;flex-direction:column}
+.msx .msx-dex h3{display:flex;align-items:center;justify-content:space-between}
+.msx .msx-dex-all{font-size:15px;color:#fde047}
+.msx .msx-dex-bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;margin:4px 0 8px}
+.msx .msx-dex-bar i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
+.msx .msx-dex-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.msx .msx-dex-tabs button,.msx .msx-dex-aids button{border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
+.msx .msx-dex-tabs button small,.msx .msx-dex-aids button small{margin-left:4px;color:#94a3b8;font-size:10px}
+.msx .msx-dex-tabs button.on,.msx .msx-dex-aids button.on{border-color:#f472b6;background:#3b0d2e;color:#fff}
+.msx .msx-dex-aids{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.msx .msx-dex-aids img{width:18px;height:18px;border-radius:50%;margin-right:3px;vertical-align:-4px;object-fit:cover}
+.msx .msx-dex-list,.msx .msx-dex-read{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+.msx .msx-dex-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:11px;background:#1e1a36;border:1.5px solid #6d28d9;font-size:12.5px;font-weight:900;text-align:left;color:#fff}
+.msx .msx-dex-row small{color:#c4b5fd;font-size:10.5px;flex:none}
+.msx .msx-dex-row.no{border-color:#334155;color:#64748b}
+.msx .msx-dex-row.no small{color:#475569}
+.msx .msx-dex-read .h{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.msx .msx-dex-read .ln{font-size:12px;line-height:1.55;font-weight:700;color:#e2e8f0}
+.msx .msx-dex-read .who{color:#f9a8d4;font-weight:900;margin-right:2px}
+.msx .msx-dex-read .chs{display:grid;gap:4px;margin-top:4px}
+.msx .msx-dex-read .ch{padding:5px 9px;border-radius:10px;background:#0f172a;border:1px solid #334155;font-size:11.5px;line-height:1.45}
+.msx .msx-dex-read .ch b{display:block;color:#fde047}
+.msx .msx-dex-read .ch span{color:#cbd5e1;font-weight:700}
+.msx .msx-dex .msx-sheet>.msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
+.msx .msx-dex-read .h .chip{border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;border:1.5px solid #475569;background:#1e1a36}
+`;
+let msxDexCssDone = false;
+const msxDexEnsureCss = () => {
+  if (msxDexCssDone || typeof document === 'undefined') return;
+  msxDexCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-dex-css', '1'); el.textContent = MSX_DEX_CSS; document.head.appendChild(el);
+};
 
 // ---- part: 56-assistant-life-friend.jsx ----
 // ===== 助手ライフ: フレンドの家との行き来(2026-11-08 社長・助手部オトズレ) =====
@@ -83738,7 +84094,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -83773,7 +84129,9 @@ const msxNormBoxMon = (m) => {
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [], masteries: tm.mast,
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
-    aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))), // 合体で継いだ間合い適性(無いマスモンは 0) // 育成中に上げた間合い適性(無いマスモンは 0)
+    aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))),
+    awake: Math.max(0, Math.min(2, Math.round(msxNum(m.awake, 0)))), // 覚醒の印(無いマスモンは 0)
+    aptAwake: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(3, Math.round(msxNum(Array.isArray(m.aptAwake) ? m.aptAwake[i] : 0, 0))))), // 覚醒で上げた間合い適性(無いマスモンは 0) // 合体で継いだ間合い適性(無いマスモンは 0) // 育成中に上げた間合い適性(無いマスモンは 0)
   };
 };
 const msxNormBox = (raw) => {
@@ -83926,7 +84284,7 @@ const msxNameGuard = (raw) => {
 const msxAptOf = (sp) => { const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC'; return a.split(''); };
 // 編成の1体の元 → 芯の memberOf に渡す形
 const msxTeamSrc = (slot, box) => {
-  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, assists: m.assists, boxId: m.id }; }
+  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, techs: m.techs, aptUp: m.aptUp, aptBase: m.aptBase, aptAwake: m.aptAwake, assists: m.assists, boxId: m.id }; }
   const sp = slot && slot.base ? slot.base : 'Mocchi';
   return { kind: 'base', species: sp, name: msxMonName(sp) };
 };
@@ -84038,7 +84396,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-slots">
         {members.map((m, i) => (
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`}>
-            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>
+            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
             <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
             <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
@@ -84052,8 +84410,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>保存枠から選ぶ({teamBox.length}/5)</div>
         {raised.length ? raised.map((m) => (
           <button type="button" key={m.id} className={`v-item${teamBox.includes(m.id) ? ' sel' : ''}`} style={{ padding: '4px 8px', width: '100%' }} onClick={() => toggleBox(m.id)}>
-            <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
-            <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}</small></div>
+            {m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small><img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/></MsxKira>
+              : <img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>}
+            <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}{m.awake ? (m.awake >= 2 ? '・超覚醒' : '・覚醒') : ''}</small></div>
             <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
           </button>
         )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)</div>}
@@ -84258,6 +84617,19 @@ const msxMoodOf = (s) => {
 };
 function MsxMonArt({ run, className, style, live = false, react = null }) {
   const sp = run.s.species;
+  // 覚醒・超覚醒のキラ(56-monsuc-awake.jsx)と前触れの光。どちらも無ければ前と同じ形のまま
+  const kira = typeof msxKiraOf === 'function' ? msxKiraOf(run.s.awake) : null;
+  const omen = run.s.omen && typeof MsxOmenFx === 'function' ? run.s.omen.k : 0;
+  if ((kira || omen) && typeof MsxKira === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    const inner = live && typeof MsxLiveMon === 'function'
+      ? <MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/>
+      : run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+        ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+        : <img src={msxMonImg(sp)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>;
+    return <span className={`${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}`} style={style} data-msx-mon-kira={kira || ''}>
+      <MsxKira kind={kira} src={msxMonImg(sp)} fill>{inner}</MsxKira><MsxOmenFx k={omen}/></span>;
+  }
   if (live && typeof MsxLiveMon === 'function') {
     const scn = msxSceneBg(run.s.turn);
     return <span className={`${className || ''} msx-live`} style={style}><MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/></span>;
@@ -84351,8 +84723,10 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   const SUC = msxSuc.SUC;
   const s = run && run.s;
   const v = s ? SUC.peek(s) : null;
+  const [dex, setDex] = useState(false);
   return (
     <>
+      {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
       <MsxHd back="とじる" onBack={onClose} right={`保存枠 ${data.box.mons.length}/${data.box.cap}`}/>
       <div className="v-body">
         <div className="v-scene" style={{ flex: '1 1 0' }}>
@@ -84370,6 +84744,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         <button type="button" className="v-big" onClick={onNew}>🌱 新しく育成をはじめる</button>
         {onBox ? <button type="button" className="msx-btn sub" onClick={onBox} data-msx-r3-openbox>📦 保存枠({data.box.mons.length}/{data.box.cap})</button> : null}
         {typeof MonsucRankScreen === 'function' ? <button type="button" className="msx-btn sub" onClick={onRank}>🏆 ランキング</button> : null}
+        {typeof MsxDex === 'function' ? <button type="button" className="msx-btn sub" onClick={() => setDex(true)} data-msx-dex-home>📖 イベント図鑑</button> : null}
         {debug && (
           <div className="v-card" style={{ borderColor: '#a3e63566' }}>
             <div className="msx-dbg">デバッグ(公開の印が偽のあいだだけ・通常のプレイには出ない)</div>
@@ -84394,7 +84769,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
   useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
-  const soundId = run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  const soundId = run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseSound(soundId, { season: msxCalendar(s.turn).season });
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
@@ -84404,6 +84779,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
 
   // 次の段へ
   const endTurnFlow = (r0) => {
+    // 最後の期に当たった覚醒の前触れは、ターンを閉じる前に起きる(芯の awakeOpen 'end')
+    if (typeof SUC.awakeOpen === 'function') { const a = SUC.awakeOpen(r0.s, 'end'); if (a.out.fire) { setRun({ ...r0, s: a.state, phase: 'awake', out: { fire: a.out.fire, then: 'end' } }); return; } }
     const r = SUC.endTurn(r0.s);
     if (!r.out.ok) { setRun({ ...r0, phase: 'main', out: null }); return; }
     const st = r.state;
@@ -84423,6 +84800,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   };
   // ターンのはじめ: 助手の連続イベント(芯の peek().story)→ ランダムイベント('start')→ メイン
   const toMain = (r0, skipStory = false) => {
+    // 覚醒・超覚醒: 前のターンの前触れならここで起きる・このターンのくじを引く(前触れは保存に残る。芯の awakeOpen 'start')
+    if (typeof SUC.awakeOpen === 'function' && !r0.s.over) {
+      const a = SUC.awakeOpen(r0.s, 'start');
+      if (a.out.fire) { setRun({ ...r0, s: a.state, phase: 'awake', out: { fire: a.out.fire, then: 'main' } }); return; }
+      r0 = { ...r0, s: a.state };
+    }
     const p = SUC.peek(r0.s);
     if (!skipStory && p.story != null && typeof SUC.storyStep === 'function') { setRun({ ...r0, phase: 'story', out: { ep: p.story } }); return; }
     if (SUC.events && !r0.s.over) {
@@ -84491,6 +84874,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       {say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+  }
+  // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
+  else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
+    const f = run.out.fire; const then = run.out.then;
+    const done = () => { if (typeof msxSeenMark === 'function') msxSeenMark(f.kind === 2 ? 'aw.super' : 'aw.awake'); const next = pushLog({ ...run, out: null }, f.kind === 2 ? '超覚醒した!' : '覚醒した!'); if (then === 'end') endTurnFlow({ ...next, phase: 'main' }); else toMain(next); };
+    body = <MsxAwakeShow key={`${s.turn}-${f.kind}`} run={run} fire={f} v={v} ev={ev} line={line}/>;
+    foot = <div className="v-ft"><button type="button" className="go" onClick={done} data-msx-awake-next>つぎへ ▶</button></div>;
   }
   // ---- 出来事(ランダムイベント・助手の連続イベント) ----
   else if ((phase === 'event' && run.out && run.out.ev) || (phase === 'story' && run.out && run.out.ep != null)) {
@@ -84625,13 +85015,14 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
     const can = v.can || [];
     const anyTag = MSX_STATS.some((k) => { const c = msxCardOf(v, k); return c && c.tags.length; });
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
-    const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0; // 覚醒の前触れ(助手が気づく)
+    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn); const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
     const bag = Object.keys(s.bag || {}).filter((k) => s.bag[k] > 0);
     body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
-      <MsxSay aid={s.aid} ex={yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
+      <MsxSay aid={s.aid} ex={omenK ? (sayL.e || 'surprise') : yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
         <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
@@ -84677,13 +85068,15 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
       <div className="v-body">{body}</div>
       {foot}
-      {sheet && (
+      {sheet === 'dex' && typeof MsxDex === 'function' ? <MsxDex aid={s.aid} nick={run.nick} onClose={() => setSheet(null)}/> : null}
+      {sheet && sheet !== 'dex' && (
         <div className="msx-ov msx-fade" onClick={() => setSheet(null)}>
           <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
             {sheet === 'log' ? <><h3>📖 きろく</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
               : sheet === 'menu' ? <><h3>☰ メニュー</h3>
                 <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(褒めると甘く・叱ると厳しくなる)</div>
                 <div className="msx-note">成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
+                {typeof MsxDex === 'function' ? <button type="button" className="msx-btn sub" onClick={() => setSheet('dex')} data-msx-dex-open>📖 イベント図鑑</button> : null}
                 <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onPause(); }}>中断する(続きから遊べる)</button>
                 <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onQuit(); }}>この育成をやめる</button></>
               : <><h3>{sheet.soon}<span className="msx-soon">準備中</span></h3><div className="msx-note">{sheet.text}</div></>}
@@ -84760,6 +85153,9 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
       </div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
         <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}・成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div></div>
+      {s.omen || s.awake ? <div className="v-card" data-msx-yosu><div className="h2">🔎 様子</div>
+        {s.omen ? <div className="sub">様子: <b style={{ color: '#fde047' }}>なにか起きそう</b>(体がうっすら{s.omen.k === 2 ? '虹色に' : ''}光っている)</div> : null}
+        {s.awake ? <div className="sub">{s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)'}</div> : null}</div> : null}
       <div className="v-card"><div className="h2">編成の親密度<span className="sub">(80で友情タッグ)</span></div>
         {s.team.map((m, i) => (
           <div key={i} className="msx-row" style={{ marginTop: 4 }}><MsxPf m={m} bond={s.bond[i]} tagAt={tagAt} cls="sm"/><span style={{ flex: 1, fontSize: 11, fontWeight: 900 }}>{msxMemberName(m)}<small className="sub">{m.kind === 'base' ? ' ベースモン' : ` ${m.rank}`}・得意 {m.top.map((k) => MSX_STAT_NAME[k]).join('・')}</small></span><b>{s.bond[i]}</b></div>
@@ -84774,12 +85170,14 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
 // ---- イッサ博士(6つから1つ・結果) ----
 function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const { SUC } = msxSuc;
+  useEffect(() => { if (typeof msxSeenMark === 'function') msxSeenMark('issa'); }, []);
   const s = run.s;
   const [pick, setPick] = useState('hp');
   const res = run.out && run.out.issa ? run.out.issa : null;
   const metScene = s.issaMet > 0 ? 'issa.meet.again' : 'issa.meet.first';
   const meet = msxPickLine(ctx, metScene, { who: 'issa' });
   const choose = () => {
+    if (typeof msxSeenMark === 'function') msxSeenMark('issa', pick);
     const r = SUC.issa(s, pick);
     if (!r.out.ok) { onDone(run); return; }
     setRun({ ...run, s: r.state, out: { issa: r.out, before: s.stats }, log: [...(run.log || []), { turn: s.turn, t: `イッサ博士: ${pick === 'none' ? 'ことわった' : r.out.win ? '成功' : '失敗'}` }].slice(-20) });
@@ -84830,6 +85228,10 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const isStory = run.phase === 'story';
   const o = run.out || {};
   const view = o.ev || null;
+  // 図鑑の id(56-monsuc-dex.jsx): 助手のお話は story.<助手>.ep1〜4 / special、ほかは表の id
+  const seenId = isStory ? `story.${s.aid}.${o.ep === 'special' ? 'special' : `ep${o.ep}`}` : view ? view.id : null;
+  const [info, setInfo] = useState(null); // 「ℹ」で開いている選択肢
+  useEffect(() => { if (seenId && typeof msxSeenMark === 'function') msxSeenMark(seenId); }, [seenId]);
   const isUniq = !isStory && !!view && view.kind === 'uniq'; // 助手の固有イベント(56-monhero-success-arc.jsx・data/monhero-success-arc.js)
   const scene = isStory ? (se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}`) : view && view.lines;
   const c2 = { ...ctx, bond: bondLv, cheer: view && view.cheerName, cheer2: view && view.cheer2Name, train: view && view.train ? MSX_STAT_NAME[view.train] : undefined };
@@ -84839,6 +85241,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const choices = isStory ? (main.choices.length ? main.choices : [{ c: 'a', t: 'いっしょにがんばる' }, { c: 'b', t: 'ゆっくりいこう' }])
     : (view && view.choices ? view.choices.map((ch) => ({ ...ch, t: (main.choices.find((x) => x.c === ch.c) || {}).t || ch.c })) : []);
   const choose = (c) => {
+    if (seenId && c && typeof msxSeenMark === 'function') msxSeenMark(seenId, c);
     if (isStory) {
       const r = SUC.storyStep(s, c); if (!r.out || !r.out.ok) { onDone(run); return; }
       const tail = r.out.ep === 4 && r.out.end ? `${scene}.${r.out.end}` : `${scene}.${c}`;
@@ -84870,7 +85273,11 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
     </>) : choices.length ? (
-      <div className="v-opts">{choices.map((ch) => <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>)}</div>
+      <div className="v-opts">{choices.map((ch) => (typeof MsxChoiceInfo === 'function' && seenId ? <React.Fragment key={ch.c}>
+        <div className="msx-optrow"><button type="button" className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>
+          <button type="button" className={`msx-info${info === ch.c ? ' on' : ''}`} aria-label="詳細" onClick={() => setInfo(info === ch.c ? null : ch.c)} data-msx-info={ch.c}>ℹ</button></div>
+        <MsxChoiceInfo evId={seenId} c={ch.c} open={info === ch.c}/></React.Fragment>
+        : <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>))}</div>
     ) : (
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => (isStory ? choose('a') : choose(null))}>つぎへ ▶</button></div>
     )}
@@ -85102,6 +85509,12 @@ const msxR3Catalog = (engine) => {
   return msxR3CatCache;
 };
 const msxR3LoadEngine = () => (typeof ambwLoadEngine === 'function' ? ambwLoadEngine() : Promise.resolve(null));
+// 熟練の効き目の渡し方(2026-11-13 社長): 芯に techBoost の口があれば、熟練から作った補正をそこへ渡し、芯の熟練は空にする(二重にしない)。
+//   口がまだ無い芯なら今までどおり mastery で渡す
+const msxR3BoostOn = (engine) => Boolean(engine && (engine.TECH_BOOST || (engine.FEATURES && engine.FEATURES.techBoost)));
+const msxR3TechGear = (engine, SUC, s, ts) => (msxR3BoostOn(engine) && typeof SUC.techBoostOf === 'function'
+  ? { mastery: {}, techBoost: SUC.techBoostOf({ techs: ts, mastery: s.mastery }) }
+  : { mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) });
 const msxR3Fight = (engine, SUC, run) => {
   const s = run.s; const b = s.battle; if (!engine || !b) return null;
   const cat = msxR3Catalog(engine); if (!cat || !cat.species) return null;
@@ -85110,8 +85523,8 @@ const msxR3Fight = (engine, SUC, run) => {
   const sp = spOf(s.species); const own = (cat.species[sp].techs || []).map((t) => t.id);
   const ts = (Array.isArray(s.techs) ? s.techs : []).filter((t) => own.includes(t));
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
-  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
-    ...(ts.length ? { techs: ts, mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) } : {}) };
+  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
+    ...(ts.length ? { techs: ts, ...msxR3TechGear(engine, SUC, s, ts) } : {}) };
   const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
@@ -85124,7 +85537,8 @@ const msxR3Fight = (engine, SUC, run) => {
   let r = null;
   try { r = engine.simulate({ ...input, trace: true }); } catch (e) { return null; }
   const st = (r.log && r.log[0]) || {};
-  return { r, input, opp, teamA, teamB, won: r.winner === 'A', frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [], maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] } };
+  const use = typeof SUC.techUseOf === 'function' ? SUC.techUseOf(r.log, 'A') : null; // 熟練: この試合で技ごとに使った回数(settle へ渡す)
+  return { r, input, opp, teamA, teamB, use, won: r.winner === 'A', frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [], maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] } };
 };
 
 // ---- 保存(足すだけ) ----
@@ -85159,9 +85573,12 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   st: { ...s.stats }, techs: Array.isArray(s.techs) ? s.techs.slice(0, 99) : [], mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 99).map((t) => Math.round((s.mastery && s.mastery[t]) || 0)),
   loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: (assists || []).slice(0, 4),
+  ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some((t) => s.masterySpent[t] > 0) ? { mastSpent: s.techs.slice(0, 99).map((t) => Math.round(s.masterySpent[t] || 0)) } : {}), // 熟練の使った量(techs と同じ並び・あとでポイントに変える分。2026-11-13・足すだけ)
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
   ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}),
-  ...(Array.isArray(s.aptBase) && s.aptBase.some((n) => n > 0) ? { aptBase: s.aptBase.slice(0, 4) } : {}), // 合体円盤石から継いだ段数(2026-11-13・足すだけ) // 育成中に上げた間合い適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
+  ...(Array.isArray(s.aptBase) && s.aptBase.some((n) => n > 0) ? { aptBase: s.aptBase.slice(0, 4) } : {}),
+  ...(s.awake ? { awake: Math.max(0, Math.min(2, Math.round(s.awake))) } : {}), // 覚醒の印 1 覚醒・2 超覚醒(2026-11-13・足すだけ。合体円盤石には継がない・ランキングの行には送らない)
+  ...(Array.isArray(s.aptAwake) && s.aptAwake.some((n) => n > 0) ? { aptAwake: s.aptAwake.slice(0, 4) } : {}), // 覚醒で上げた間合い適性の段数(合体で継ぐ段数を数えるときに入る) // 合体円盤石から継いだ段数(2026-11-13・足すだけ) // 育成中に上げた間合い適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)
@@ -85471,7 +85888,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const name = b ? msxR3BattleName(SUC, b) : st3 ? st3.name : '';
   // 勝ち負けを付ける(負けのときは、やり直さないと決めたあと)
   const settle = (won) => {
-    const before = s; const r = SUC.settle(s, won);
+    const before = s; const r = SUC.settle(s, won, fight && fight.use);
     const d = msxR3Diff(before, r.state);
     const out = { r3: { stage: won ? 'prize' : 'meal', won, name, icon: msxR3BattleIcon(b), d, foe: fight ? fight.opp : null, rival: !!(b && b.rival), rivalName: b && b.rival ? b.rival.name : null, from: before.turn, gameover: !!r.out.gameover } };
     setRun({ ...run, s: r.state, phase: 'battle', out, r3skip: undefined, arcAfter: msxArcAfterOf(SUC, s, b, won, fight && fight.opp) || undefined, log: [...(run.log || []), { turn: before.turn, t: `${name}: ${won ? '優勝' : '負け'}` }].slice(-20) });
@@ -85486,7 +85903,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const base = { ...run, s: s2, r3skip: undefined, arcAfter, log, out: null };
     if (s2.battle) setRun({ ...base, phase: 'battle' }); else if (s2.over) setRun({ ...base, phase: 'over' }); else setRun({ ...base, phase: 'turn', out: { from: before.turn } });
   };
-  const settleShow = (won) => { const before = s; const r = SUC.settle(s, won); const d = msxR3Diff(before, r.state); pendRef.current = { r, d, won, before }; return { rows: msxR3PrizeRows(d, r.state).map(([i, k, vv, c]) => ({ i, k, v: vv, big: c === 'new' })), prize: d.fame, tickets: d.tickets }; };
+  const settleShow = (won, use) => { const before = s; const r = SUC.settle(s, won, use || (fight && fight.use)); /* use: 自分で操作した試合なら、その試合の技ごとの使った回数 */ const d = msxR3Diff(before, r.state); pendRef.current = { r, d, won, before }; return { rows: msxR3PrizeRows(d, r.state).map(([i, k, vv, c]) => ({ i, k, v: vv, big: c === 'new' })), prize: d.fame, tickets: d.tickets }; };
   const nextShow = () => { const p = pendRef.current; if (!p) return; pendRef.current = null; commitSettle(p); };
   const rematchWith = (item) => { const r = SUC.rematch(s, item); if (!r.out.ok) return; setRun({ ...run, s: r.state, log: [...(run.log || []), { turn: s.turn, t: `${item === 'rainbow' ? '虹の時渡りの砂時計' : '時渡りの砂時計'}でやり直した` }].slice(-20) }); setStep('card'); };
   // 次へ(ごはんのあと): 続けて強制大会 → もう一度 / 終わり → 引退 / ふつう → ターンが進む
@@ -85610,7 +86027,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-bcs"><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/>
         <div className="ttl">{name} ・ 1戦</div>
-        <img className="ml" src={msxMonImg(s.species)} alt=""/><img className="mr" src={msxMonImg(opp.species)} alt=""/><div className="vsw">VS</div>
+        {s.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(s.awake)} src={msxMonImg(s.species)} className="ml"><img src={msxMonImg(s.species)} alt="" style={{ height: '100%', objectFit: 'contain' }}/></MsxKira> : <img className="ml" src={msxMonImg(s.species)} alt=""/>}<img className="mr" src={msxMonImg(opp.species)} alt=""/><div className="vsw">VS</div>
         <div className="nb l"><b>{run.nick}</b><small><i className={msxRankCls(ev.rank)}>{ev.rank}</i> {msxFmt(ev.power)}</small></div>
         <div className="nb r"><b>{foeName}</b><small>{opp.champ ? '👑王者' : opp.rival ? 'ライバル' : msxMonName(opp.species)}</small></div></div>
       <div className="v-tabs t3">{[['st', 'ステータス'], ['tech', '技'], ['etc', '能力']].map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} style={{ textAlign: 'center', background: tab === k ? '#3b2f0b' : '#1e1a36', border: `1.5px solid ${tab === k ? '#fde047' : '#475569'}`, borderRadius: 99, padding: 4, fontSize: 12, fontWeight: 900, color: tab === k ? '#fde047' : '#cbd5e1' }}>{n}</button>)}</div>
@@ -85918,7 +86335,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   }
 
   // ---- E1 振り返り ----
-  const mem = typeof SUC.memberOf === 'function' ? SUC.memberOf({ kind: 'raised', species: ws.species, stats: ws.stats, loy: ev.loyal, pop: ws.pop, lv: ws.lv, masteries: (ws.techs || []).map((t) => (ws.mastery && ws.mastery[t]) || 0), techs: ws.techs }) : null;
+  const mem = typeof SUC.memberOf === 'function' ? SUC.memberOf({ kind: 'raised', species: ws.species, stats: ws.stats, loy: ev.loyal, pop: ws.pop, lv: ws.lv, masteries: (ws.techs || []).map((t) => (ws.mastery && ws.mastery[t]) || 0), techs: ws.techs, aptUp: ws.aptUp, aptBase: ws.aptBase, aptAwake: ws.aptAwake }) : null;
   if (step === 'e1') {
     const cupWins = (ws.log && ws.log.wins) || 0; const cupLoss = (ws.log && ws.log.losses) || 0;
     const sc = (typeof MSX_SCENARIOS !== 'undefined' ? MSX_SCENARIOS : []).find((x) => x.aid === ws.aid);
@@ -86070,8 +86487,8 @@ function MsxR3Box({ onClose }) {
     <div className="r3-box">{box.mons.length ? box.mons.slice().reverse().map((m) => (
       <button type="button" key={m.id} className={`r3-bm ${m.id === sel ? 'on' : ''}`} onClick={() => { setSel(m.id === sel ? null : m.id); setBye(0); setEdit(null); }} data-msx-r3-boxmon={m.id}>
         {Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
-          ? <span style={{ width: 38, height: 38, flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
-          : <img src={msxMonThumb(m.species)} alt=""/>}<div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
+          ? (() => { const dy = <span style={{ width: 38, height: 38, flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>; return m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small>{dy}</MsxKira> : dy; })()
+          : m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small><img src={msxMonThumb(m.species)} alt=""/></MsxKira> : <img src={msxMonThumb(m.species)} alt=""/>}<div className="nm"><b>{m.nick || msxMonName(m.species)}</b><small>{m.awake ? (m.awake >= 2 ? '🌈 超覚醒・' : '✨ 覚醒・') : ''}{msxMonName(m.species)}・{m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`}{m.gen > 1 ? `・${m.gen}代目` : ''}</small></div>
         <span className="pw">{m.raised === false ? '' : msxFmt(m.score || 0)}</span></button>)) : <div className="msx-note">まだ誰もいません。育成を最後まで終えると、ここに入ります</div>}</div>
     {cur && edit ? <div className="v-card" data-msx-r3-editbox>
       <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>✏ 名前と染色を変える</div>
@@ -86094,6 +86511,11 @@ function MsxR3Box({ onClose }) {
         : <div className="msx-note">染色はこの端末では使えません</div>}
       <div className="r3-bar"><button type="button" className="r3-chip" onClick={() => setEdit(null)}>やめる</button><button type="button" className="r3-chip on" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>
     </div> : cur ? <div className="v-card">
+      {cur.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <div style={{ display: 'flex', justifyContent: 'center', height: 110, margin: '4px 0 8px' }} data-msx-r3-boxkira={cur.awake}>
+        <MsxKira kind={msxKiraOf(cur.awake)} src={msxMonImg(cur.species)}>{Array.isArray(cur.colors) && cur.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+          ? <DyedMonsterImage baseId={cur.species} src={msxMonImg(cur.species)} masuColors={cur.colors} alt="" draggable={false} style={{ height: 110, objectFit: 'contain' }}/>
+          : <img src={msxMonImg(cur.species)} alt="" style={{ height: 110, objectFit: 'contain' }}/>}</MsxKira></div> : null}
+      {cur.awake ? <div className="v-kv"><b>覚醒</b><span>{cur.awake >= 2 ? '🌈 超覚醒(全能力 +70・レアキラ)' : '✨ 覚醒(全能力 +30・キラ)'}</span></div> : null}
       <button type="button" className="msx-btn sub" onClick={() => setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' })} data-msx-r3-edit>✏ 名前と染色を変える</button>
       <MsxStRow stats={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}/>
       <div className="v-kv"><b>忠誠 / 人気</b><span>{Math.round(cur.loy || 0)} / {Math.round(cur.pop || 0)}</span></div>
@@ -86989,7 +87411,10 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
     extra.push(<span key={`g-${e ? e.k : 0}`} className={`msa-gtag ${n > 0 ? 'up' : 'down'}`} data-msa-guts={n} style={{ animationDelay: `${tech && foe ? delay : 0}ms` }}>ガッツ {n > 0 ? `+${n}` : `−${-n}`}</span>);
   }
   if (!body) {
-    const still = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
+    const still0 = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
+    // 覚醒した自分の側はキラ(超覚醒はレアキラ)をまとう。バトルカードと同じ光(84 の cardKiraWrap)
+    const kira = side === 'A' && member && member.awake && !down && typeof msxKiraOf === 'function' ? msxKiraOf(member.awake) : null;
+    const still = kira && typeof cardKiraWrap === 'function' ? cardKiraWrap(kira, still0, { src, calm: reduce }) : still0;
     body = <div key={`b-${e ? e.k : 0}-${cls}`} className={`flex items-end justify-center ${cls}`}>{still}</div>;
   }
   return (
@@ -87471,6 +87896,7 @@ const monsucRankQueue = async () => {
 const monsucRankQueueSave = async (list) => { try { await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false); } catch (_) {} };
 
 // 送る中身(サーバの monsuc_rank_submit の p_row の形)。送らない育成は null
+const MONSUC_RANK_APT = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']; // 間合い適性の段(サーバの式と同じ並び)
 const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   if (!run || typeof run !== 'object') return null;
   if (!['done', 'lost'].includes(run.over) && run.retired !== true) return null; // まだ終わっていない・デビュー戦のゲームオーバーは送らない
@@ -87478,7 +87904,12 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
   const stats = {};
   MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999); });
-  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  // 技(2026-11-13 社長): 技ごとに { r: ランク 1〜5, a: 届く間合いのいちばん高い適性の段 }。サーバが同じ式で総合力を出し直す(MONSUC_RANK_V2_TECHS.sql)。
+  //   芯の evaluate が techRows を返さない古い形なら、今までどおり熟練の並び(8つまで)
+  const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;
+  const techs = rows
+    ? rows.slice(0, 99).map(x => ({ r: monsucRankClamp(Math.round(monsucRankNum(x && x.r, 1)), 1, 5), a: MONSUC_RANK_APT.includes(x && x.a) ? x.a : 'C' }))
+    : (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
   const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
