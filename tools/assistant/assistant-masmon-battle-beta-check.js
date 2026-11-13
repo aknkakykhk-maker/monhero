@@ -284,8 +284,10 @@ const seed = () => {
     //   試合の種は時刻から作るので、先に決着して振り返りになっていたら、手動の試合をやり直して帯を待つ(ミハリ6: 5回中2回落ちた)。
     //   帯が出ても相手の手を見せている間に描き直されて押せないことがある(ミハリ6: 6回中2回)ので、押して一覧が出たかを確かめ、出なければ帯を待って押し直す
     let allOpened = false;
-    for (let k = 0; k < 8 && !allOpened; k++) {
-      await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm-all]') || !!document.querySelector('[data-ambb-review]'), { timeout: 30000 }).catch(() => {});
+    for (let k = 0; k < 12 && !allOpened; k++) {
+      await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm-all]') || !!document.querySelector('[data-ambb-manual] [data-msxm="enter"]') || !!document.querySelector('[data-ambb-review]'), { timeout: 30000 }).catch(() => {});
+      // 自分の子が倒れたあとは「次に出すモンスター」の帯(全部の技のボタンは無い)。次の子を選んで進める
+      if (await page.evaluate(() => { const b = [...document.querySelectorAll('[data-ambb-manual] [data-msxm="enter"] button')].find((x) => !x.disabled); if (b) { b.click(); return true; } return false; })) { await page.waitForTimeout(300); continue; }
       if (!(await page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msxm-all]')))) {
         await clickSel('[data-ambb-again]'); await page.waitForTimeout(300);
         await clickSel('[data-ambb-start]');
