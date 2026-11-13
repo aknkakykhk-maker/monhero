@@ -157,6 +157,11 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.self.peakout.choice.a', who:'choice', c:'a', t:'しっかり休ませる' },
   { id:'ev.self.peakout.choice.b', who:'choice', c:'b', t:'まだまだやる' },
 
+  // 育成の記念日(ジュニア期8月・一度きり。体力 +50%・ストレス −10)
+  { id:'ev.self.anniv.narr1', who:'narr', t:'{mon}を育て始めて、ちょうど1年。今日は、はじめての育成記念日だ。' },
+  { id:'ev.self.anniv.mua1', who:'mua', e:'excited', t:'{mon}、育成記念日おめでと〜🎉 1年でこんなに強くなったぢゃん！ もっともっと強くなろ✨' },
+  { id:'ev.self.anniv.atsu1', who:'atsu', e:'happy', t:'{mon}、1年おめでとう。ここまでよくやったな。次の1年はもっと強くなれよ笑' },
+
   { id:'ev.self.slump.narr1', who:'narr', t:'このところ、{mon}は訓練がうまくいかずにしょんぼりしている。' },
   { id:'ev.self.slump.mua1', who:'mua', e:'troubled', t:'最近うまくいかないね…。気分変えに遊びいこっか？' },
   { id:'ev.self.slump.atsu1', who:'atsu', e:'normal', t:'こういうときは、流れを変えるか、我慢して続けるか笑' },

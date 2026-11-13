@@ -517,6 +517,10 @@
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-beta.jsx",
+      "role": "部品: モンヒロサクセスのβ版(選べる助手はみゅあだけ msxBetaAidOk・はじめて開いたとき/はじめての育成を終えたときのβ版の話・最初の1回だけのみゅあの説明の重ね窓 MsxBetaTalk・タイトルの「β」MsxBetaMark)。台本は script/beta-mua.js。新しいキー mh_monsuc_beta_v1 = { v:1, seen }(見た印だけ・足すだけ)。公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-tevent.jsx",
       "role": "部品: モンヒロサクセスの訓練のあとの出来事(編成のモンスターとのお話・小さな出来事)を1枚の場面で見せる MsxTrainEvent(背景・2体の立ち絵・見出し・台詞・変わった数字・入り方)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },

@@ -155,6 +155,7 @@
     {"id":"ev.team.tagwake.kiki1","who":"kiki","e":"excited","t":"友情タッグでつ。ここから、火力がぐっと上がりまつよ"},
     {"id":"ev.self.peakin.kiki1","who":"kiki","e":"excited","t":"伸びどきに入りました。今は押すときでつ"},
     {"id":"ev.self.peakout.kiki1","who":"kiki","e":"normal","t":"少し落ち着いてきましたね。休むか続けるか、{name}にお任せしまつ"},
+    {"id":"ev.self.anniv.kiki1","who":"kiki","e":"happy","t":"{mon}、育成記念日おめでとうございまつ。1年でずいぶん頼もしくなりました。もっと強くなりまつよ"},
     {"id":"ev.self.slump.kiki1","who":"kiki","e":"normal","t":"こういうときは、気分を変えるのもひとつでつね"},
     {"id":"ev.self.favtrain.kiki1","who":"kiki","e":"happy","t":"好きなことは、伸びるのも早いでつ♪♪"},
     {"id":"ev.self.selfish.kiki1","who":"kiki","e":"troubled","t":"そっぽを向いてまつね……。合わせるか、きちんと言うか、でつ"},
