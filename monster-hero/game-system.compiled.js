@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c80b4a29833a6e26
+// source-sha256: 8ef8058063fa813d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159981,17 +159981,43 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0)
   };
 };
+const msxTechCanon = id => {
+  try {
+    return typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id;
+  } catch (e) {
+    return id;
+  }
+};
+const msxCanonTechs = (techs, mast) => {
+  const ids = [];
+  const ms = [];
+  (Array.isArray(techs) ? techs : []).forEach((id0, i) => {
+    if (typeof id0 !== 'string') return;
+    const id = msxTechCanon(id0);
+    const m = Array.isArray(mast) && Number.isFinite(Number(mast[i])) ? Number(mast[i]) : null;
+    const at = ids.indexOf(id);
+    if (at < 0) {
+      ids.push(id);
+      ms.push(m);
+    } else if (m != null && (ms[at] == null || m > ms[at])) ms[at] = m;
+  });
+  return {
+    techs: ids.slice(0, 99),
+    mast: ms.slice(0, 99).map(m => m == null ? 0 : m)
+  };
+};
 const msxNormBoxMon = m => {
   if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
   const st = {};
   MSX_STATS.forEach(k => {
     st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0))));
   });
+  const tm = msxCanonTechs(m.techs, m.mast);
   return {
     ...m,
     gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))),
-    techs: Array.isArray(m.techs) ? m.techs.filter(x => typeof x === 'string').slice(0, 99) : [],
-    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
+    techs: tm.techs,
+    mast: tm.mast,
     fav: Array.isArray(m.fav) ? m.fav.filter(k => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter(x => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64),
@@ -160006,7 +160032,7 @@ const msxNormBoxMon = m => {
     score: msxNum(m.score, 0),
     raised: m.raised !== false,
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [],
-    masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
+    masteries: tm.mast,
     coach: msxStr(m.coach, 16),
     endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
@@ -160059,8 +160085,30 @@ const msxNormMeta = raw => {
     wonCups: Array.isArray(o.wonCups) ? o.wonCups.filter(x => typeof x === 'string').slice(0, 500) : []
   };
 };
+const MSX_TECH2_FLAG = 'mh_monsuc_tech2_migrated_v1';
+const msxTech2Backup = async (run, box) => {
+  try {
+    const T = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
+    if (!T || typeof T.canon !== 'function' || !T.idmap) return false;
+    if (await storeGet(MSX_TECH2_FLAG, null)) return false;
+    const old = ids => Array.isArray(ids) && ids.some(id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(T.idmap, id));
+    const runOld = msxIsObj(run) && msxIsObj(run.s) && (old(run.s.techs) || msxIsObj(run.s.mastery) && old(Object.keys(run.s.mastery)));
+    const boxOld = msxIsObj(box) && Array.isArray(box.mons) && box.mons.some(m => msxIsObj(m) && old(m.techs));
+    if (runOld) await storeSet(MSX_KEYS.run + '_pre_tech2', run);
+    if (boxOld) await storeSet(MSX_KEYS.box + '_pre_tech2', box);
+    await storeSet(MSX_TECH2_FLAG, {
+      at: Date.now(),
+      run: !!runOld,
+      box: !!boxOld
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
 const msxReadAll = async SUC => {
   const [run, box, meta, unlocked] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null)]);
+  await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
   const un = (Array.isArray(unlocked) ? unlocked : []).filter(id => typeof id === 'string' && all[id] && list.includes(id));

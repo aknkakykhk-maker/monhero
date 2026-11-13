@@ -216,16 +216,18 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 技の条件と、外したときの救い
   const big = SUC.techsOf('Mocchi').find(t => t.role === 'big');
   ok(!SUC.canLearn(j, big), '能力・熟練の条件を満たさない技が覚えられる');
-  const light = SUC.techsOf('Mocchi').find(t => t.role === 'skill');
-  ok(SUC.canLearn({ ...j, stats: { ...j.stats, wise: 999 } }, light), '条件を満たした技が覚えられない');
+  // 試す技: 初めからではなく、ほかの技の熟練を要らない技(技表の第1版でも第2版でも同じ選び方。2026-11-13)
+  const full = { life: 999, pow: 999, wise: 999, hit: 999, eva: 999, tough: 999 };
+  const light = SUC.techsOf('Mocchi').find(t => !(t.learn && (t.learn.start || t.learn.need)) && t.role === 'skill') || SUC.techsOf('Mocchi').find(t => !(t.learn && (t.learn.start || t.learn.need)));
+  ok(SUC.canLearn({ ...j, stats: full }, light), '条件を満たした技が覚えられない');
   // 修行の作り直し(2026-11-13 社長): 技ごとに外した回数 ×15・ランク1〜5 のもとの率と仕上がりの幅(q=1 でちょうど 99)・上限 99・超修行 +15
-  ok(near(SUC.techRate({ ...j, techMiss: { [light.id]: 2 } }, light) - SUC.techRate(j, light), 0.30, 1e-9), '外した分だけ、その技の次の率が上がらない');
+  ok(near(SUC.techRate({ ...j, techMiss: { [light.id]: 2 } }, light), Math.min(SUC.SHUGYO.rateTop / 100, SUC.techRate(j, light) + 0.30), 1e-9), '外した分だけ、その技の次の率が上がらない(上限 99%)');
   ok(near(SUC.techRate({ ...j, techMiss: { other: 2 } }, light), SUC.techRate(j, light), 1e-9), 'ほかの技を外した分が、この技の率に入っている');
   ok(SUC.SHUGYO.rank.base.every((b, i) => b + SUC.SHUGYO.rank.spread[i] === SUC.SHUGYO.rateTop) && SUC.SHUGYO.rateTop === 99, 'ランクごとの幅が、仕上がり q=1 でちょうど 99 に届かない');
   ok(near(SUC.techRate(j, light, { course: 'star', super: true }) - SUC.techRate(j, light, { course: 'star' }), 0.15, 1e-9), '超修行の率 +15 が効いていない');
   let missSeen = false; let hitSeen = false;
   for (let i = 0; i < 300 && !(missSeen && hitSeen); i++) {
-    const t = { ...j, id: `shu-${i}`, stats: { ...j.stats, wise: 999 }, techMiss: {} };
+    const t = { ...j, id: `shu-${i}`, stats: { ...j.stats, wise: 999, pow: 999 }, techMiss: {} };
     const x = SUC.act(t, { kind: 'shugyo', course: 'star', techs: [light.id] });
     if (x.out.result === 'sab') continue;
     if (x.out.learned) { hitSeen = true; ok(x.state.techs.includes(light.id) && !(x.state.techMiss || {})[light.id] && x.state.mastery[light.id] === 0, '技を覚えたのに一覧・外した回数・熟練がずれている'); }
@@ -234,7 +236,6 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(missSeen && hitSeen, '修行の技のくじで、当たり・外れの両方が出ない');
   // 超修行: 2つ選ぶと育成中2回まで・残り0なら断る・能力の上がりは2回分
   {
-    const full = { life: 999, pow: 999, wise: 999, hit: 999, eva: 999, tough: 999 };
     const base = { ...j, stats: full, tickets: 5 };
     const two = SUC.techsOf('Mocchi').filter(x => SUC.canLearn(base, x)).slice(0, 2).map(x => x.id);
     ok(two.length === 2, '超修行を試す技が2つ見つからない');
