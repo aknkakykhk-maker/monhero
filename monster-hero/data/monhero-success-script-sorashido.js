@@ -740,6 +740,9 @@
     {"id":"turn.awake.fire2.sorashido1","who":"sorashido","e":"excited","t":"虹色の光が、まだ強くなっていきます……！"},
     {"id":"turn.awake.fire2.sorashido1c","who":"sorashido","e":"excited","bond":[9,15],"t":"虹色の光が、まだ強くなってくっす……！"},
     {"id":"turn.awake.fire2.sorashido1d","who":"sorashido","e":"excited","bond":16,"t":"虹色の光が、まだ強くなっていく……！"},
+    {"id":"turn.peak.soon.sorashido1","who":"sorashido","e":"normal","t":"もうすぐ伸びどきが来ますね。今のうちに体をととのえましょう"},
+    {"id":"turn.peak.soon.sorashido1c","who":"sorashido","e":"normal","bond":[9,15],"t":"もうすぐ伸びどきが来るっす。今のうちに体をととのえるっす"},
+    {"id":"turn.peak.soon.sorashido1d","who":"sorashido","e":"normal","bond":16,"t":"もうすぐ伸びどきが来る。今のうちに体をととのえとこう"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

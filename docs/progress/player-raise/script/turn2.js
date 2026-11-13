@@ -44,6 +44,11 @@ const MONSUC_SCRIPT_TURN2 = Object.freeze([
   { id:'turn.awake.omen2.atsu1', who:'atsu', e:'surprise', t:'また光ってる。しかも虹色…これ、前より大きいの来るよ笑' },
   { id:'turn.awake.fire.atsu1', who:'atsu', e:'surprise', t:'うわっ、まぶし！ {mon}、なにが起きてんの！？' },
   { id:'turn.awake.fire2.atsu1', who:'atsu', e:'excited', t:'まじか…虹色の光、止まらないんだけど笑' },
+
+  // 成長のピークの予告(2026-11-13): turn.peak.soon 始まる2〜3ターン前
+  { id:'turn.peak.soon.mua1', who:'mua', e:'wink', t:'{mon}、最近なんかいい感じ！ もうすぐ伸びどき来そうな予感♪' },
+  { id:'turn.peak.soon.mua1b', who:'mua', e:'wink', bond:[1,2], t:'{mon}、最近いい感じです！ もうすぐ伸びどきが来そうですよ' },
+  { id:'turn.peak.soon.atsu1', who:'atsu', e:'normal', t:'そろそろ伸びどきが来るよ。今のうちに体ととのえとこ笑' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_TURN2 };

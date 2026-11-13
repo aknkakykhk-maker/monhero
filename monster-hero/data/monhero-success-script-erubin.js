@@ -250,6 +250,7 @@
     {"id":"turn.awake.omen2.erubin1","who":"erubin","e":"surprise","t":"また光ってるね。今度は虹色……すごいことが起きそうかな"},
     {"id":"turn.awake.fire.erubin1","who":"erubin","e":"surprise","t":"えっ……{mon}が光に包まれてる！？ だいじょうぶかな……"},
     {"id":"turn.awake.fire2.erubin1","who":"erubin","e":"excited","t":"虹色の光……まだ強くなるんだね。すごい……"},
+    {"id":"turn.peak.soon.erubin1","who":"erubin","e":"normal","t":"もうすぐ伸びどきが来そうかな。今のうちに体をととのえておこうね"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });
