@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11c3f446391c0607
+// source-sha256: 3925ce1b09beb687
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161874,6 +161874,7 @@ const msxColors = v => Array.isArray(v) ? v.slice(0, 6).map(c => typeof c === 's
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
+  const kiFameMul = SUC && Number.isFinite(SUC.FAME_SCALE) && SUC.FAME_V != null && raw.s.fameV !== SUC.FAME_V ? SUC.FAME_SCALE : 1;
   if (SUC && typeof SUC.restore === 'function') {
     try {
       s = SUC.restore(s);
@@ -161906,7 +161907,7 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? {
       p: Math.max(0, Math.min(9, raw.ki.p)),
-      fame: raw.ki.fame,
+      fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)),
       power: raw.ki.power
     } : null
   };
