@@ -318,7 +318,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const T = engine.SPECIES_TRAITS; const stepD = (engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 6;
   const traitBad = Object.keys(catalog.species).filter((k) => { const t = T[k]; const v = catalog.species[k]; if (!t) return true;
     const gi = engine.GUTS_REGEN_GRADES.indexOf(t.g); const mi = engine.GUTS_REGEN_GRADES.indexOf(t.m);
-    return v.regen !== Math.round(engine.GUTS_REGEN_MIN + gi * stepD) || v.first !== (mi - 3) * engine.MOVE_SPEED_FIRST || v.size !== t.z; });
+    return v.regen !== Math.round(engine.GUTS_REGEN_MIN + gi * stepD) || v.first !== (mi - 3) * engine.MOVE_SPEED_FIRST || v.size !== t.z
+      || Math.abs(v.taken - (1 + (mi - 3) * engine.MOVE_SPEED_TAKEN)) > 0.002; });
   check('⑫ 種ごとの等級の表(ガッツ回復力・移動速度・サイズ)が全種にあり、回復・先手・サイズに写っている', !traitBad.length && catalog.species.Pixie.regen === engine.GUTS_REGEN_MAX && engine.SIZE_SMALL_EVADE > 0 && engine.SIZE_LARGE_CUT > 0, traitBad.join(' '));
   check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜A の表が幅の両端へ等間隔・S は外へ伸びる(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
 }
@@ -374,6 +375,23 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑭ 知らない作戦は渡さないときと同じ結果', same === 300, `${same}/300`);
   check('⑭ 作戦と交代の早さが記録の最初の行に残る', rec === 900, `${rec}/900`);
   check('⑭ 交代の回数が 早め > ふつう > ねばる', sw.early > sw.none && sw.none > sw.late, `早め ${sw.early}・ふつう ${sw.none}・ねばる ${sw.late}`);
+}
+
+// ⑮ 距離適性(2026-11-13 社長「C を 0% として増減」「M まで効く」): 与ダメ・被ダメ・命中・回避に、いまの間合いの段で効く
+{
+  const st = I.aptSteps;
+  const steps = engine.STAT_KEYS ? ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'].map(st) : [];
+  const rising = steps.every((v, k) => k === 0 || v > steps[k - 1]);
+  const sp = Object.keys(catalog.species)[0];
+  const mk = (apt) => { const s0 = I.setupState({ teamA: { assistantId: 'atsu', members: [{ species: sp, name: 'a', stats: { life: 400, pow: 400, wise: 400, hit: 400, eva: 400, tough: 400 } }] }, teamB: { assistantId: 'atsu', members: [{ species: sp, name: 'b', stats: { life: 400, pow: 400, wise: 400, hit: 400, eva: 400, tough: 400 } }] } }, catalog);
+    const a = s0.teams.A.units[0]; const b = s0.teams.B.units[0]; a.apt = apt.slice(); b.apt = ['C', 'C', 'C', 'C']; return { a, b, mv: a.moves[0] }; };
+  const c = mk(['C', 'C', 'C', 'C']); const m = mk(['M', 'M', 'M', 'M']); const g = mk(['G', 'G', 'G', 'G']);
+  const hit = (x, d) => I.hitChance(x.a, x.b, x.mv, 50, d); const eva = (x) => I.hitChance(x.b, x.a, x.b.moves[0], 50, 0);
+  const dmg = (x) => I.rawDamage(x.a, x.b, x.mv, 0, 50); const taken = (x) => I.rawDamage(x.b, x.a, x.b.moves[0], 0, 50);
+  check('⑮ 距離適性: C が 0 段・G〜M で段が上がり続ける(M で止まらない)', st('C') === 0 && rising && st('M') > st('A'), steps.join(' '));
+  check('⑮ 距離適性: M は C より与ダメ・命中が上がり、受けるダメージ・相手の命中が下がる/G は逆', dmg(m) > dmg(c) && dmg(g) < dmg(c) && hit(m, 0) > hit(c, 0) && taken(m) < taken(c) && eva(m) < eva(c) && taken(g) > taken(c),
+    `与ダメ ${Math.round(dmg(g))}/${Math.round(dmg(c))}/${Math.round(dmg(m))}`);
+  check('⑮ 距離適性: 間合いを渡さない命中の見積もりには効かない(画面の古い呼び方)', I.hitChance(m.a, m.b, m.mv, 50) === I.hitChance(c.a, c.b, c.mv, 50));
 }
 
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');
