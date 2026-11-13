@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c1c6403218d0e9f0
+// generated-sha256: 6c91aecf1446e1d3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81187,6 +81187,8 @@ const MSX_QSTAGE_BG = Object.freeze({
   star: [['monhero_night', 'rgba(150,120,255,.3)'], ['dark_void', 'rgba(200,170,255,.3)']],
 });
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
+// 修行の段の背景(行き先ごとの表 MSX_QSTAGE_BG の名前から作る。どれも story-bg の絵)
+const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
 
 function MsxTrainAct({ run, o, onDone }) {
   msxActEnsureCss();
@@ -81236,7 +81238,7 @@ function MsxShugyoStages({ run, o, line, onDone }) {
   const [bg, tint] = bgs[Math.max(0, st - 1)] || bgs[0];
   return (
     <div className={`msx-qst st${st}`} onClick={finish} data-msx-qstage={st}>
-      <img key={`bg${st}`} className="bg" src={`images/story-bg/${bg}.jpg`} alt=""/>
+      <img key={`bg${st}`} className="bg" src={msxQstageBgUrl(bg)} alt=""/>
       <span className="tint" style={{ background: st ? tint : 'rgba(15,13,36,.55)' }}/>
       {st === 0 ? (<div className="say">
         {typeof msxFace === 'function' ? <img className="fc" src={msxFace(s.aid, 'excited')} alt=""/> : null}
@@ -84017,9 +84019,9 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zin u.g i,.msx .v-st.gs-a.zin u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zin) u.g i,.msx .v-st.gs-a:not(.zin) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
 .msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
-.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 9px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
 .msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
-.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:7.5px;font-weight:800;color:#fde68a;line-height:9px;pointer-events:none}
+.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}

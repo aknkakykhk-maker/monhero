@@ -12,6 +12,8 @@ const MSX_QSTAGE_BG = Object.freeze({
   star: [['monhero_night', 'rgba(150,120,255,.3)'], ['dark_void', 'rgba(200,170,255,.3)']],
 });
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
+// 修行の段の背景(行き先ごとの表 MSX_QSTAGE_BG の名前から作る。どれも story-bg の絵)
+const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
 
 function MsxTrainAct({ run, o, onDone }) {
   msxActEnsureCss();
@@ -61,7 +63,7 @@ function MsxShugyoStages({ run, o, line, onDone }) {
   const [bg, tint] = bgs[Math.max(0, st - 1)] || bgs[0];
   return (
     <div className={`msx-qst st${st}`} onClick={finish} data-msx-qstage={st}>
-      <img key={`bg${st}`} className="bg" src={`images/story-bg/${bg}.jpg`} alt=""/>
+      <img key={`bg${st}`} className="bg" src={msxQstageBgUrl(bg)} alt=""/>
       <span className="tint" style={{ background: st ? tint : 'rgba(15,13,36,.55)' }}/>
       {st === 0 ? (<div className="say">
         {typeof msxFace === 'function' ? <img className="fc" src={msxFace(s.aid, 'excited')} alt=""/> : null}
