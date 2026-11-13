@@ -55,6 +55,7 @@
     {"id":"ev.daily.chase.atsu1","who":"atsu","e":"happy","t":"追いかけっこか。本気出す？笑"},
     {"id":"ev.daily.juggler.atsu1","who":"atsu","e":"normal","t":"あの手元、見てるだけでも勉強になるな笑"},
     {"id":"ev.daily.arm.atsu1","who":"atsu","e":"excited","t":"力くらべか。上等、受けて立つ？笑"},
+    {"id":"ev.daily.range.atsu1","who":"atsu","e":"normal","t":"間合いの稽古か。得意を伸ばすか、苦手をつぶすか、どっちにする？"},
     {"id":"ev.daily.dream.atsu1","who":"atsu","e":"normal","t":"平気だよ、ここにいるから。…どうする？"},
     {"id":"ev.daily.picky.atsu1","who":"atsu","e":"normal","t":"好き嫌いか。直すなら今だけど笑"},
     {"id":"ev.daily.mirror.atsu1","who":"atsu","e":"happy","t":"大会の入場用か？ 気合い入ってんな笑"},

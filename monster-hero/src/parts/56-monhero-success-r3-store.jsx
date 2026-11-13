@@ -60,7 +60,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const sp = spOf(s.species); const own = (cat.species[sp].techs || []).map((t) => t.id);
   const ts = (Array.isArray(s.techs) ? s.techs : []).filter((t) => own.includes(t));
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
-  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop,
+  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(typeof SUC.aptUpOf === 'function' ? { aptUp: SUC.aptUpOf(s) } : {}),
     ...(ts.length ? { techs: ts, mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) } : {}) };
   const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
@@ -110,6 +110,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: (assists || []).slice(0, 4),
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
+  ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}), // 育成中に上げた距離適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)

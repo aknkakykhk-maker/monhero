@@ -137,6 +137,7 @@
     {"id":"ev.daily.chase.kiki1","who":"kiki","e":"happy","t":"ちょうちょでつね。追いかけるのも、いい運動でつ"},
     {"id":"ev.daily.juggler.kiki1","who":"kiki","e":"normal","t":"あの手さばき、見ているだけで勉強になりまつ"},
     {"id":"ev.daily.arm.kiki1","who":"kiki","e":"excited","t":"力くらべでつか。……受けて立ちましょ ( ˘ω˘)9グッ!"},
+    {"id":"ev.daily.range.kiki1","who":"kiki","e":"normal","t":"間合いのお稽古でつね。立つ場所ひとつで、勝ち負けが変わりまつ"},
     {"id":"ev.daily.dream.kiki1","who":"kiki","e":"normal","t":"大丈夫でつよ、ここにいまつから。どうしまつか？"},
     {"id":"ev.daily.picky.kiki1","who":"kiki","e":"normal","t":"{food}だけ残ってまつね。少しずつ慣れていきましょうか"},
     {"id":"ev.daily.mirror.kiki1","who":"kiki","e":"happy","t":"あれま、かっこいいでつ。大会の入場で使えそうでつね"},

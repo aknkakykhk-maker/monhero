@@ -22,7 +22,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 6;   // 計算を変えたら上げる(ランキングの行に残る)。6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
+  const VERSION = 7;   // 計算を変えたら上げる(ランキングの行に残る)。7 = 距離適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
   const STAT_MAX = 999;
@@ -214,6 +214,17 @@
     }),
     rate: 0.03, maxMeet: 3, stressNo: 70, // 出会う: ジュニア期の7ターン目〜プロ期の終わり・1ターン約3%・3回まで・ストレス70〜は来ない
     upLoyal: 80, upHp: 0.7, upAgain: 0.05, up: 0.05, downHp: 0.3, downHpV: -0.10, downStress: 50, downStressV: -0.05, band: 0.10, top: 0.95,
+  });
+
+  // ---- 距離適性を育成中に上げる上限(2026-11-13。案 A: 合計 +6・1つの間合い +3・M にできる数 0。窓口の答えで差し替える) ----
+  //   src … 上げ方ごとの上限(quest 修行のくじ・cup 間合いの自慢の大会の優勝・event 出来事の選択肢)
+  //   questRate … 修行1回で、その行き先の間合いが1段上がる率。course … 修行の行き先 → 間合い(0 零・1 近・2 中・3 遠)
+  const DIST_UP = Object.freeze({
+    grades: Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']),
+    total: 6, per: 3, mMax: 0,
+    src: Object.freeze({ quest: 3, cup: 2, event: 1 }),
+    questRate: 0.1,
+    course: Object.freeze({ fire: 1, ice: 2, wind: 3, star: 0 }),
   });
 
   // ---- 修行(社長 2026-11-12: 参考と同じ形。チケット・2段で能力2つずつ・最後に技を覚えるくじ・外すと次の率が上がる) ----
@@ -473,7 +484,7 @@
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
-        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null,
+        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 },
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
@@ -733,6 +744,9 @@
         if (res !== 'sab') for (const t of want) { const p = techRate(s, t); const hit = rng() < p; tries.push({ id: t.id, rate: r2(p), hit }); if (hit) { got = t.id; break; } }
         if (got) { learnTech(s, got); s.pity = 0; s.log.learned += 1; } else if (want.length) s.pity += SHUGYO.pity;
         addXp(s, XP.shugyo); s.log.shugyo += 1; s.log.train += 1; s.log[res] += 1;
+        // 間合いのくじ: 行き先の間合いが1割で1段上がる(サボりは無し・別の乱数で並びを変えない)
+        const qd = DIST_UP.course[course];
+        if (res !== 'sab' && rngOf(s.id, s.turn, 'aptq')() < DIST_UP.questRate && addAptUp(s, qd, 'quest')) out.aptUp = { dist: qd, grade: aptGradesOf(s)[qd] };
         out.result = res; out.course = course; out.learned = got; out.tries = tries;
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         s.last = { kind: 'shugyo', res }; s.acted = true; s.reacted = false;
@@ -855,6 +869,8 @@
       out.rivalMet = typeof raw.rivalMet === 'string' ? raw.rivalMet.slice(0, 24) : null;
       out.ending = raw.ending && typeof raw.ending === 'object' && ['bad', 'good', 'super'].includes(raw.ending.kind) ? { kind: raw.ending.kind, parties: partiesOf(raw.ending.kind), seen: raw.ending.seen === true } : null;
       out.aidLv = Math.round(n(raw.aidLv, out.aidLv, 1, 10));
+      out.aptUp = aptUpOf({ aptUp: raw.aptUp }); // 上げた段数(無い・壊れている → 0)。上げ方ごとの数も上限で切りそろえる
+      out.aptLog = Object.fromEntries(Object.keys(DIST_UP.src).map(k => [k, Math.round(n(raw.aptLog && raw.aptLog[k], 0, 0, DIST_UP.src[k]))]));
       out.astory = raw.astory && typeof raw.astory === 'object' ? { ep: Math.round(n(raw.astory.ep, 0, 0, 4)), path: ['good', 'bitter'].includes(raw.astory.path) ? raw.astory.path : null, done: raw.astory.done === true } : out.astory;
       out.hints = Array.isArray(raw.hints) ? raw.hints.filter(h => h && typeof h === 'object' && typeof h.name === 'string').slice(0, 8).map(h => ({ aid: String(h.aid || ''), type: h.type === 'tech' ? 'tech' : 'assist', name: h.name.slice(0, 24) })) : [];
       out.battle = raw.battle && typeof raw.battle === 'object' && ['debut', 'junior', 'middle', 'pro', 'summit', 'cup'].includes(raw.battle.kind) ? clone(raw.battle) : null;
@@ -1008,7 +1024,43 @@
     const endingSeen = (s0) => { if (!s0 || !s0.ending) return { state: s0, out: { ok: false } }; const s = clone(s0); s.ending.seen = true; return { state: s, out: { ok: true } }; };
     const TYPE_OF = (deps && deps.types) || {};
     const DIST_OF = (sp) => { const m = deps && deps.monsters && deps.monsters[sp]; return m && Array.isArray(m.distAptitude) ? m.distAptitude : null; };
-    const APT_RANK = { S: 6, A: 5, B: 4, C: 3, D: 2, E: 1, F: 0, G: 0 };
+    const APT_RANK = Object.fromEntries(DIST_UP.grades.map((g, i) => [g, i]));
+
+    // ---- 距離適性を育成中に上げる(2026-11-13 社長: 修行のくじ・大会のごほうび・出来事の選択肢の全部) ----
+    //   種の表は書き換えず、その子に「上げた段数」s.aptUp = [零, 近, 中, 遠] を持たせる。試合と大会の出る条件は種の段 + 上げた段数で見る
+    //   上限は DIST_UP(1回の育成の合計・1つの間合い・M にできる数・上げ方ごと)。端末の値はそのまま信じず、ここと芯で切りそろえる
+    const aptUpNorm = (v) => [0, 1, 2, 3].map(i => clamp(Math.round(num(Array.isArray(v) ? v[i] : 0)), 0, DIST_UP.per));
+    const aptUpOf = (s) => {
+      const up = aptUpNorm(s && s.aptUp); let over = up.reduce((a, b) => a + b, 0) - DIST_UP.total;
+      for (let i = 3; i >= 0 && over > 0; i--) { const cut = Math.min(up[i], over); up[i] -= cut; over -= cut; } // 合計が上限を超えたら後ろの間合いから削る
+      return up;
+    };
+    // その子のいまの適性(G〜M の4つ)。M にできる数を超えた分は M の1つ下
+    const aptGradesOf = (s) => {
+      const G = DIST_UP.grades; const base = DIST_OF(s.species) || ['C', 'C', 'C', 'C']; const up = aptUpOf(s); let m = 0;
+      return [0, 1, 2, 3].map(i => {
+        const b = G.indexOf(base[i]); let k = Math.min(G.length - 1, (b < 0 ? G.indexOf('C') : b) + up[i]);
+        if (k === G.length - 1 && up[i] > 0) { if (m >= DIST_UP.mMax) k -= 1; else m += 1; }
+        return G[k];
+      });
+    };
+    // 1段上げられるか(上げ方 src = 'quest' | 'cup' | 'event' ごとの上限も見る)
+    const aptUpRoom = (s, d, src) => {
+      if (!Number.isInteger(d) || d < 0 || d > 3) return false;
+      const up = aptUpOf(s); const log = s.aptLog || {}; const G = DIST_UP.grades;
+      if (up.reduce((a, b) => a + b, 0) >= DIST_UP.total || up[d] >= DIST_UP.per) return false;
+      if (DIST_UP.src[src] != null && num(log[src]) >= DIST_UP.src[src]) return false;
+      const now = aptGradesOf(s)[d]; if (now === 'M') return false;
+      if (G.indexOf(now) === G.length - 2 && aptGradesOf(s).filter(g => g === 'M').length >= DIST_UP.mMax) return false;
+      return true;
+    };
+    // 1段上げる(上げたら true)。s を直接変える(act・settle・出来事の中で使う)
+    const addAptUp = (s, d, src) => {
+      if (!aptUpRoom(s, d, src)) return false;
+      const up = aptUpOf(s); up[d] += 1; s.aptUp = up;
+      s.aptLog = { ...(s.aptLog || {}), [src]: num((s.aptLog || {})[src]) + 1 };
+      return true;
+    };
 
     // その月の大会の並び(札)。ライバルは月のはじめ(並びを見せる時)に決まる
     const monthOf = (turn) => { const p = periodOf(turn); return p.key === 'debut' ? 7 + p.at : p.at; }; // 1ターン = 1か月(デビューは8〜12月)
@@ -1046,7 +1098,7 @@
       const sy = CUP_SYS[c.sys] || {};
       if (sy.stat && s.stats[sy.stat] < (CUP_NEED.stat[c.star] || 0)) return { ok: false, why: 'stat', need: CUP_NEED.stat[c.star] };
       if ((sy.stat || sy.dist !== undefined) && c.star >= 2 && !s.wonNow.includes(`${c.sys}:${c.star - 1}`)) return { ok: false, why: 'chain' };
-      if (sy.dist !== undefined && c.star >= 2) { const d = DIST_OF(s.species); if (d && (APT_RANK[d[sy.dist]] || 0) < APT_RANK.C) return { ok: false, why: 'dist' }; }
+      if (sy.dist !== undefined && c.star >= 2) { const d = aptGradesOf(s); if ((APT_RANK[d[sy.dist]] || 0) < APT_RANK.C) return { ok: false, why: 'dist' }; }
       if (sy.type) { const t = TYPE_OF[s.species]; if (t && t.main !== sy.type && t.sub !== sy.type) return { ok: false, why: 'type' }; if (c.star >= 3 && !s.wonNow.includes(`${c.sys}:2`)) return { ok: false, why: 'chain' }; }
       if (c.scenario) {
         if (s.aid === 'kiki' && s.stats.pow < 400 && s.stats.wise < 400) return { ok: false, why: 'stat', need: 400 };
@@ -1178,6 +1230,7 @@
           if (CUP_REWARD.pts[b.star]) gainWinPts(s, CUP_REWARD.pts[b.star]);
           if (CUP_REWARD.pop[b.star]) s.pop = clamp(s.pop + popGain(s, CUP_REWARD.pop[b.star]), 0, 100);
           if (sy.stat && CUP_REWARD.statUp[b.star]) addStat(s, sy.stat, CUP_REWARD.statUp[b.star]);
+          if (sy.dist !== undefined && addAptUp(s, sy.dist, 'cup')) out.aptUp = { dist: sy.dist, grade: aptGradesOf(s)[sy.dist] }; // 間合いの自慢の大会: その間合いが1段上がる
           if (b.star === 4) { KEYS.forEach(k => addStat(s, k, CUP_REWARD.crownAll)); s.crowns += 1; }
           if (b.sys && b.sys.startsWith('sc')) scenarioReward(s, b, out);
           if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all * (1 + stayNum(s, 'rivaldamashii') / 100))); /* 🏁ライバル魂 */ if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; }
@@ -1276,7 +1329,7 @@
 
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
     EV = EVX && typeof EVX.create === 'function' ? EVX.create({
-      KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat, addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain,
+      KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat, addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
       typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC,
     }) : null;
 
@@ -1287,6 +1340,7 @@
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
+      DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp,
     });
   };
 

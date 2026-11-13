@@ -140,7 +140,7 @@ function MsxR3Watch({ fight, onDone }) {
 
 // ---- 試合のまわり ----
 const msxR3Diff = (a, b) => {
-  const d = { fame: b.fame - a.fame, pts: b.pts - a.pts, tickets: b.tickets - a.tickets, pop: b.pop - a.pop, stats: {}, titles: (b.titles || []).filter((t) => !(a.titles || []).includes(t)), sand: ((b.items || {}).sand || 0) - ((a.items || {}).sand || 0) };
+  const d = { apt: [0, 1, 2, 3].filter((i) => ((b.aptUp || [])[i] || 0) > ((a.aptUp || [])[i] || 0)), fame: b.fame - a.fame, pts: b.pts - a.pts, tickets: b.tickets - a.tickets, pop: b.pop - a.pop, stats: {}, titles: (b.titles || []).filter((t) => !(a.titles || []).includes(t)), sand: ((b.items || {}).sand || 0) - ((a.items || {}).sand || 0) };
   MSX_STATS.forEach((k) => { const g = b.stats[k] - a.stats[k]; if (g) d.stats[k] = g; });
   return d;
 };
@@ -148,6 +148,7 @@ const msxR3Diff = (a, b) => {
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
   (d.titles || []).forEach((t) => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
+  (d.apt || []).forEach((i) => rows.push(['📏', '間合いの適性', `「${['零', '近', '中', '遠'][i]}」の間合いが1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}(名声 ${msxFmt(s.fame - d.fame)} → ${msxFmt(s.fame)})`, '', '']);
@@ -311,8 +312,8 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const loyA = SUC.loyalOf(s);
     const rowsSt = MSX_STATS.map((k) => [`${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`, s.stats[k], opp.stats[k]]);
     const better = MSX_STATS.filter((k) => s.stats[k] >= opp.stats[k]).map((k) => MSX_STAT_NAME[k]);
-    const distA = (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
-    const lvA = (g) => ({ S: 3, A: 3, B: 2, C: 1 }[g] || 0);
+    const distA = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
+    const lvA = (g) => ({ M: 3, 'SS+': 3, SS: 3, 'S+': 3, S: 3, A: 3, B: 2, C: 1 }[g] || 0);
     const techA = (Array.isArray(s.techs) ? s.techs : []).map((id) => { const t = (SUC.techsOf(s.species) || []).find((x) => x.id === id); return t ? t.name : null; }).filter(Boolean);
     const body = (<>
       <MsxBand s={s} v={v} ev={ev}/>

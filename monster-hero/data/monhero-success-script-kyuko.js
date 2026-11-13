@@ -136,6 +136,7 @@
     {"id":"ev.daily.chase.kyuko1","who":"kyuko","e":"happy","t":"ちょうちょかぁ。本気出す？w"},
     {"id":"ev.daily.juggler.kyuko1","who":"kyuko","e":"normal","t":"あの手元、リズムがいいね。音楽みたい笑"},
     {"id":"ev.daily.arm.kyuko1","who":"kyuko","e":"normal","t":"力くらべかぁ。受けてもいいけど、体力と相談ねw"},
+    {"id":"ev.daily.range.kyuko1","who":"kyuko","e":"normal","t":"間合いの練習かぁ。得意を伸ばす？ 苦手つぶす？w"},
     {"id":"ev.daily.dream.kyuko1","who":"kyuko","e":"normal","t":"こわかったねぇ🫂 大丈夫、ここにいるよ。どうする？"},
     {"id":"ev.daily.picky.kyuko1","who":"kyuko","e":"normal","t":"{food}だけ残してる笑 直すなら今だけど、むりはしなくていいよ"},
     {"id":"ev.daily.mirror.kyuko1","who":"kyuko","e":"happy","t":"決めポーズの練習？ 入場で目立つと、人気ちょっと上がるよw"},

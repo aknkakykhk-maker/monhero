@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a154a288e045162
+// generated-sha256: 677ef2d50b68232f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78214,7 +78214,7 @@ const monsucCupInfo = (suc, s, me) => {
 // 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
 const monsucTeams = (catalog, suc, s, info) => {
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
-  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop) };
+  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptUpOf === 'function' ? { aptUp: suc.aptUpOf(s) } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop) };
   const o = info.opp || { species: s.species, stats: s.stats, techs: 2, mastery: 20, tactics: 10 };
   const all = (catalog && catalog.species[o.species] && catalog.species[o.species].techs) || [];
   const n = Math.max(1, mscNum(o.techs, 2));
@@ -78487,7 +78487,7 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
   const me = s.stats || {}; const op = o.stats || {};
   const mx = Math.max(1, ...MSC_STAT_KEYS.map(k => Math.max(mscNum(me[k]), mscNum(op[k])))) * 1.08;
   const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
-  const aptOf = (sp) => (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C'];
+  const aptOf = (sp, me) => (me && typeof suc.aptGradesOf === 'function' ? suc.aptGradesOf(s) : (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C']);
   const techsOf = (sp, ids) => { const all = (catalog && catalog.species[sp] && catalog.species[sp].techs) || []; return ids.map(id => all.find(t => t.id === id)).filter(Boolean); };
   const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
   const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
@@ -78495,13 +78495,13 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
   // 勝っている能力の上位2つと、いちばん得意な間合い(コーチの一言)
   const ahead = MSC_STAT_KEYS.map(k => ({ k, d: mscNum(me[k]) - mscNum(op[k]) })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
-  const apt = aptOf(s.species); const rankOf = (g) => ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g) < 0 ? 9 : ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g);
+  const apt = aptOf(s.species, true); const rankOf = (g) => ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g) < 0 ? 99 : ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g);
   const bestD = apt.map((g, d) => ({ g, d })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || { d: 1 };
   const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
   const hint = ahead.length
     ? <>{ahead.map(x => MSC_STAT_JP[x.k]).join('と')}は 勝ってる! <em>{distWord}</em> で押していこう!</>
     : <>能力は 相手が上…。<em>{distWord}</em> で 技を当てていこう!</>;
-  const aptRow = (sp) => <div className="msc-apt">{aptOf(sp).map((g, d) => <span key={d} className={g}>{AMBW_DIST[d]}</span>)}</div>;
+  const aptRow = (sp, me) => <div className="msc-apt">{aptOf(sp, me).map((g, d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(g) ? 'S' : g}>{AMBW_DIST[d]}</span>)}</div>;
   return (
     <div className="msc-wrap" data-msc-card>
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
@@ -78529,14 +78529,14 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
           })}
           <div className="msc-st"><b>{mscNum(s.pop)}</b><div className="msc-bar l"><i style={{ width: `${mscNum(s.pop)}%`, animationDelay: '.45s' }}/></div><span className="lab">⭐ 人気</span>{Number.isFinite(o.pop) ? <><div className="msc-bar r"><i style={{ width: `${o.pop}%`, animationDelay: '.45s' }}/></div><b className={o.pop > mscNum(s.pop) ? 'up' : ''}>{o.pop}</b></> : <><div/><b/></>}</div>
           <div className="msc-st"><b>{loy}</b><div className="msc-bar l"><i style={{ width: `${loy}%`, animationDelay: '.5s' }}/></div><span className="lab">🤝 忠誠</span>{Number.isFinite(o.loy) ? <><div className="msc-bar r"><i style={{ width: `${o.loy}%`, animationDelay: '.5s' }}/></div><b className={o.loy > loy ? 'up' : ''}>{o.loy}</b></> : <><div/><b/></>}</div>
-          <div className="msc-aptrow">{aptRow(s.species)}<span className="lab">間合いの適性</span>{aptRow(o.species)}</div>
+          <div className="msc-aptrow">{aptRow(s.species, true)}<span className="lab">間合いの適性</span>{aptRow(o.species)}</div>
         </>}
         {tab === 'tech' && <div className="msc-tl">
           <div>{myTechs.length ? myTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
           <div>{foeTechs.length ? foeTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
         </div>}
         {tab === 'abl' && <div className="msc-tl">
-          <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species)}</div>
+          <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
           <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
       </div>
@@ -83555,6 +83555,7 @@ const msxNormBoxMon = (m) => {
     rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [], masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
+    aptUp: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))), // 育成中に上げた距離適性(無い子は 0)
   };
 };
 const msxNormBox = (raw) => {
@@ -84608,7 +84609,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       return;
     }
     const r = SUC.events.pick(s, c); if (!r.out || !r.out.ok) return;
-    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res } } });
+    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
   };
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
@@ -84629,6 +84630,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合いの適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
     </>) : choices.length ? (
       <div className="v-opts">{choices.map((ch) => <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>)}</div>
@@ -84871,7 +84873,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const sp = spOf(s.species); const own = (cat.species[sp].techs || []).map((t) => t.id);
   const ts = (Array.isArray(s.techs) ? s.techs : []).filter((t) => own.includes(t));
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
-  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop,
+  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(typeof SUC.aptUpOf === 'function' ? { aptUp: SUC.aptUpOf(s) } : {}),
     ...(ts.length ? { techs: ts, mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) } : {}) };
   const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
@@ -84921,6 +84923,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: (assists || []).slice(0, 4),
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
+  ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}), // 育成中に上げた距離適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)
@@ -85190,7 +85193,7 @@ function MsxR3Watch({ fight, onDone }) {
 
 // ---- 試合のまわり ----
 const msxR3Diff = (a, b) => {
-  const d = { fame: b.fame - a.fame, pts: b.pts - a.pts, tickets: b.tickets - a.tickets, pop: b.pop - a.pop, stats: {}, titles: (b.titles || []).filter((t) => !(a.titles || []).includes(t)), sand: ((b.items || {}).sand || 0) - ((a.items || {}).sand || 0) };
+  const d = { apt: [0, 1, 2, 3].filter((i) => ((b.aptUp || [])[i] || 0) > ((a.aptUp || [])[i] || 0)), fame: b.fame - a.fame, pts: b.pts - a.pts, tickets: b.tickets - a.tickets, pop: b.pop - a.pop, stats: {}, titles: (b.titles || []).filter((t) => !(a.titles || []).includes(t)), sand: ((b.items || {}).sand || 0) - ((a.items || {}).sand || 0) };
   MSX_STATS.forEach((k) => { const g = b.stats[k] - a.stats[k]; if (g) d.stats[k] = g; });
   return d;
 };
@@ -85198,6 +85201,7 @@ const msxR3Diff = (a, b) => {
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
   (d.titles || []).forEach((t) => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
+  (d.apt || []).forEach((i) => rows.push(['📏', '間合いの適性', `「${['零', '近', '中', '遠'][i]}」の間合いが1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}(名声 ${msxFmt(s.fame - d.fame)} → ${msxFmt(s.fame)})`, '', '']);
@@ -85361,8 +85365,8 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const loyA = SUC.loyalOf(s);
     const rowsSt = MSX_STATS.map((k) => [`${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`, s.stats[k], opp.stats[k]]);
     const better = MSX_STATS.filter((k) => s.stats[k] >= opp.stats[k]).map((k) => MSX_STAT_NAME[k]);
-    const distA = (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
-    const lvA = (g) => ({ S: 3, A: 3, B: 2, C: 1 }[g] || 0);
+    const distA = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
+    const lvA = (g) => ({ M: 3, 'SS+': 3, SS: 3, 'S+': 3, S: 3, A: 3, B: 2, C: 1 }[g] || 0);
     const techA = (Array.isArray(s.techs) ? s.techs : []).map((id) => { const t = (SUC.techsOf(s.species) || []).find((x) => x.id === id); return t ? t.name : null; }).filter(Boolean);
     const body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
@@ -85486,7 +85490,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         {helpers.length ? <>(編成のモンスター <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>
         体力が <b className="gd">{Math.max(0, res.hp0 - s.hp)}</b> 下がった
         {learned ? <>/技「<b className="ga">{learned.name}</b>」を覚えた!</> : null}
-        {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}</div>
+        {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}
+        {o.aptUp ? <><br/>📏 「{MSX_R3_DIST[o.aptUp.dist]}」の間合いの適性が <b className="ga">{o.aptUp.grade}</b> に上がった!</> : null}</div>
       {!learned && want.length ? <div className="v-card" style={{ borderColor: '#94a3b8', padding: '6px 9px' }}><div className="sub"><b style={{ color: '#cbd5e1' }}>おしい…</b> <span className="yel">次の修行で、えらんだ技の覚える率が上がる</span>(⬆)</div></div> : null}
     </>);
     // 技を覚えたら節目の演出(覚えた技の動き・押せばとばせる)
@@ -85507,6 +85512,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     </div>
     <div className="r3-bar">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
     <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段・{cur.name}</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技のくじ</div></div>
+    {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="sub" style={{ fontSize: 11, color: '#cbd5e1', padding: '0 4px' }} data-msx-r3-qapt>📏 {cur.name}は「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合いの適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
     <div className="v-card pk" style={{ padding: '6px 8px' }}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>えらんだ技({SH.pick || 2}つまで・上から順にくじ)</div>
       <div className="v-pick2">{want.length ? want.map((id) => { const t = all.find((x) => x.id === id) || {}; return <div key={id} className="on" onClick={() => toggle(id)}><small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}</small>{t.name}<b>{Math.round((rateOf[id] || 0) * 100)}%</b></div>; }) : <div>技をえらばなくても、能力は上がる</div>}</div></div>
     <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', padding: '6px 8px' }}>

@@ -102,7 +102,7 @@ const monsucCupInfo = (suc, s, me) => {
 // 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
 const monsucTeams = (catalog, suc, s, info) => {
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
-  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop) };
+  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptUpOf === 'function' ? { aptUp: suc.aptUpOf(s) } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop) };
   const o = info.opp || { species: s.species, stats: s.stats, techs: 2, mastery: 20, tactics: 10 };
   const all = (catalog && catalog.species[o.species] && catalog.species[o.species].techs) || [];
   const n = Math.max(1, mscNum(o.techs, 2));
@@ -375,7 +375,7 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
   const me = s.stats || {}; const op = o.stats || {};
   const mx = Math.max(1, ...MSC_STAT_KEYS.map(k => Math.max(mscNum(me[k]), mscNum(op[k])))) * 1.08;
   const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
-  const aptOf = (sp) => (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C'];
+  const aptOf = (sp, me) => (me && typeof suc.aptGradesOf === 'function' ? suc.aptGradesOf(s) : (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C']);
   const techsOf = (sp, ids) => { const all = (catalog && catalog.species[sp] && catalog.species[sp].techs) || []; return ids.map(id => all.find(t => t.id === id)).filter(Boolean); };
   const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
   const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
@@ -383,13 +383,13 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
   // 勝っている能力の上位2つと、いちばん得意な間合い(コーチの一言)
   const ahead = MSC_STAT_KEYS.map(k => ({ k, d: mscNum(me[k]) - mscNum(op[k]) })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
-  const apt = aptOf(s.species); const rankOf = (g) => ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g) < 0 ? 9 : ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g);
+  const apt = aptOf(s.species, true); const rankOf = (g) => ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g) < 0 ? 99 : ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g);
   const bestD = apt.map((g, d) => ({ g, d })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || { d: 1 };
   const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
   const hint = ahead.length
     ? <>{ahead.map(x => MSC_STAT_JP[x.k]).join('と')}は 勝ってる! <em>{distWord}</em> で押していこう!</>
     : <>能力は 相手が上…。<em>{distWord}</em> で 技を当てていこう!</>;
-  const aptRow = (sp) => <div className="msc-apt">{aptOf(sp).map((g, d) => <span key={d} className={g}>{AMBW_DIST[d]}</span>)}</div>;
+  const aptRow = (sp, me) => <div className="msc-apt">{aptOf(sp, me).map((g, d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(g) ? 'S' : g}>{AMBW_DIST[d]}</span>)}</div>;
   return (
     <div className="msc-wrap" data-msc-card>
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
@@ -417,14 +417,14 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
           })}
           <div className="msc-st"><b>{mscNum(s.pop)}</b><div className="msc-bar l"><i style={{ width: `${mscNum(s.pop)}%`, animationDelay: '.45s' }}/></div><span className="lab">⭐ 人気</span>{Number.isFinite(o.pop) ? <><div className="msc-bar r"><i style={{ width: `${o.pop}%`, animationDelay: '.45s' }}/></div><b className={o.pop > mscNum(s.pop) ? 'up' : ''}>{o.pop}</b></> : <><div/><b/></>}</div>
           <div className="msc-st"><b>{loy}</b><div className="msc-bar l"><i style={{ width: `${loy}%`, animationDelay: '.5s' }}/></div><span className="lab">🤝 忠誠</span>{Number.isFinite(o.loy) ? <><div className="msc-bar r"><i style={{ width: `${o.loy}%`, animationDelay: '.5s' }}/></div><b className={o.loy > loy ? 'up' : ''}>{o.loy}</b></> : <><div/><b/></>}</div>
-          <div className="msc-aptrow">{aptRow(s.species)}<span className="lab">間合いの適性</span>{aptRow(o.species)}</div>
+          <div className="msc-aptrow">{aptRow(s.species, true)}<span className="lab">間合いの適性</span>{aptRow(o.species)}</div>
         </>}
         {tab === 'tech' && <div className="msc-tl">
           <div>{myTechs.length ? myTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
           <div>{foeTechs.length ? foeTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
         </div>}
         {tab === 'abl' && <div className="msc-tl">
-          <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species)}</div>
+          <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
           <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
       </div>

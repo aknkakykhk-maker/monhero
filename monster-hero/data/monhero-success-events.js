@@ -79,6 +79,8 @@
     { id: 'ev.daily.picky', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['st', 'tough', S], ['str', 10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.mirror', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 8), ch: { a: { fx: [['pop', 3], ['loy', 3]] }, b: { fx: [['st', 'hit', S]] } } },
     { id: 'ev.daily.lost', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [] } } },
+    // 間合いの稽古(2026-11-13 社長: 距離適性を出来事の選択肢でも上げる)。上げられる間合いが残っていて、出来事で上げた数が上限より少ないときだけ
+    { id: 'ev.daily.range', kind: 'daily', slot: 'start', w: 8, when: (s, x) => s.turn >= 3 && x.aptRoom(s), ch: { a: { fx: [['apt', 'best'], ['hp', -10]] }, b: { fx: [['apt', 'low'], ['hp', -10]] } } },
     { id: 'ev.daily.map', kind: 'daily', slot: 'start', w: 6, when: per(...L_OK), ch: { fx: [['buff', 'hirameki']] } },
     { id: 'ev.daily.gift', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 6), ch: { fx: [['hp', 20]] } },
     { id: 'ev.daily.alone', kind: 'daily', slot: 'start', w: (s, x) => (x.loyal(s) >= 70 ? 14 : 4), when: (s, x) => x.loyal(s) >= 50, ch: { fx: [['st', 'main', S]] } },
@@ -222,7 +224,7 @@
     const favCand = (s) => { const k = KEYS.find(k => num(s.trainXp && s.trainXp[`train:${k}`]) >= 4); return evOf(s).fav ? null : (k || null); };
     // ★★★・👑 の前の晩: 期の最後のターン(強制大会が星3以上)か、最後の期の頂への道の前
     const bigCupTonight = (s) => { const p = periodOf(s.turn); if (p.left !== 1) return false; if (p.key === 'final') return true; const f = FORCED[p.key]; return Boolean(f && f.star >= 3); };
-    const X = { hpRatio, loyal: loyalOf, period: (s) => periodOf(s.turn), team, pair, rankAtLeast, typeOf: tOf, peakEdge, favCand, bigCupTonight, BOND };
+    const X = { aptRoom: (s) => typeof h.aptUpRoom === 'function' && [0, 1, 2, 3].some(d => h.aptUpRoom(s, d, 'event')), hpRatio, loyal: loyalOf, period: (s) => periodOf(s.turn), team, pair, rankAtLeast, typeOf: tOf, peakEdge, favCand, bigCupTonight, BOND };
 
     // ---- 何年目か(ジュニア=1・ミドル=2・プロ=3)と、その年に出る季節の行事 ----
     const yearOf = (s) => ({ junior: 1, middle: 2, pro: 3 })[periodOf(s.turn).key] || 0;
@@ -354,6 +356,13 @@
         } else if (op === 'buff') addBuff(s, a, ctx, delta);
         else if (op === 'fame') { s.fame = Math.max(0, num(s.fame) + num(a)); if (num(a) > 0) s.fameTotal = num(s.fameTotal) + num(a); delta.fame = (delta.fame || 0) + num(a); }
         else if (op === 'pts') { gainPts(s, num(a)); delta.pts = (delta.pts || 0) + num(a); }
+        else if (op === 'apt' && typeof h.addAptUp === 'function') {
+          // 距離適性を1段(芯の上限の中で)。a = 'best' いちばん得意な間合い / 'low' いちばん苦手な間合い / 0〜3
+          const g = h.aptGradesOf(s); const R = h.DIST_UP_GRADES;
+          const can = [0, 1, 2, 3].filter(d => h.aptUpRoom(s, d, 'event'));
+          const d = Number.isInteger(a) ? a : can.slice().sort((x, y) => (a === 'low' ? R.indexOf(g[x]) - R.indexOf(g[y]) : R.indexOf(g[y]) - R.indexOf(g[x])) || x - y)[0];
+          if (Number.isInteger(d) && h.addAptUp(s, d, 'event')) delta.apt = { dist: d, from: g[d], grade: h.aptGradesOf(s)[d] };
+        }
         else if (op === 'mas') { (s.techs || []).forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + num(a), 0, 100); }); delta.mastery = num(a); }
         else if (op === 'goal') { const pk = periodOf(s.turn).key; ev.goal[pk] = a; delta.goal = a; }
         else if (op === 'flag') {

@@ -676,7 +676,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       return;
     }
     const r = SUC.events.pick(s, c); if (!r.out || !r.out.ok) return;
-    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res } } });
+    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
   };
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
@@ -697,6 +697,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合いの適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
     </>) : choices.length ? (
       <div className="v-opts">{choices.map((ch) => <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>)}</div>
