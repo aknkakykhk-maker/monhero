@@ -81,7 +81,7 @@ const seed = () => {
     await still('2-compare');
     if (await clickSel('[data-ambb-cmp-pair="1"]')) { await page.waitForTimeout(OUT ? 1200 : 700); await still('2b-compare-pair2'); await clickSel('[data-ambb-cmp-pair="0"]'); }
     await scrollTo('[data-ambb-settings]'); await page.waitForTimeout(OUT ? 900 : 300);
-    for (const s of MANUAL ? ['[data-ambb-set="ctl:manual"]', '[data-ambb-set="size:1"]', '[data-ambb-size="1"]'] : ['[data-ambb-set="team:ko"]', '[data-ambb-set="dist:0"]', '[data-ambb-set="guts:70"]', '[data-ambb-set="rounds:50"]']) { await clickSel(s); await page.waitForTimeout(OUT ? 600 : 100); }
+    for (const s of MANUAL ? ['[data-ambb-set="ctl:manual"]', '[data-ambb-size="2"]'] : ['[data-ambb-set="team:ko"]', '[data-ambb-set="dist:0"]', '[data-ambb-set="guts:70"]', '[data-ambb-set="rounds:50"]']) { await clickSel(s); await page.waitForTimeout(OUT ? 600 : 100); }
     await page.evaluate(() => { const d = document.querySelector('[data-ambb-tune]'); if (d) d.open = true; });
     await page.waitForTimeout(OUT ? 900 : 300);
     await still('3-settings');
@@ -89,7 +89,7 @@ const seed = () => {
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch] [data-msa-stage]'), { timeout: 10000 });
     if (MANUAL) {
       // 手動: 帯が出るまで待つ → 撮る → 届く技を1つ選ぶ → 全部の技を開く → 上の欄の「全部の技」の一覧
-      const waitBar = () => page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 30000 });
+      const waitBar = () => page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 15000 });
       await waitBar(); await page.waitForTimeout(400); await still('8-manual-bar');
       const fit = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { stageH: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, techs: document.querySelectorAll('[data-msxm-tech]').length, chipsA: document.querySelectorAll('[data-ambw-panel="A"] .ambw-chip:not(.ambw-chip-all)').length }; });
       console.log('手動の帯:', JSON.stringify(fit));
@@ -100,7 +100,16 @@ const seed = () => {
       await waitBar().catch(() => {});
       await clickSel('[data-ambw-all="B"]'); await page.waitForTimeout(OUT ? 1500 : 400); await still('11-techlist');
       await page.evaluate(() => { const b = [...document.querySelectorAll('[data-ambb-techlist] button')].find((x) => /閉じる/.test(x.textContent)); if (b) b.click(); });
-      if (OUT) { for (let k = 0; k < 4; k++) { await waitBar().catch(() => {}); await page.waitForTimeout(800); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-tech]')].find((x) => !x.disabled) || [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); await page.waitForTimeout(2500); } }
+      if (OUT) {
+        // もう1手選んでから「オートにする」で進むところまで(終わっていたら待たない)
+        const hasBar = () => page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'));
+        await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]') || !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
+        if (await hasBar()) { await page.waitForTimeout(700); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-tech]')].find((x) => !x.disabled) || [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); }
+        await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] .msxm-auto') || !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(700);
+        await page.evaluate(() => { const b = document.querySelector('[data-ambb-manual] .msxm-auto'); if (b) b.click(); });
+        await page.waitForTimeout(9000);
+      }
     } else if (STILL_DIR) {
       // 構え・当たり・その先(ラウンドが進んだ所)
       for (const [name, ms] of [['4-watch-intro', 1200], ['5-watch-fight', 3200], ['6-watch-mid', 6000]]) { await page.waitForTimeout(ms); await still(name); }
