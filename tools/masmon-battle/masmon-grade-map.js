@@ -36,7 +36,7 @@ for (const [g, k] of Object.entries(ATTR)) {
   let prev = -Infinity; for (const x of GR) { MAP[k][x] = Math.max(prev, MAP[k][x]); prev = MAP[k][x]; }
 }
 const gv = (k, g) => { const x = String(g || '').trim(); return MAP[k][x] != null ? MAP[k][x] : MAP[k].C; };
-const techOf = (s, id) => ({ id, name: s.name, kind: s.kind, dist: [s.dist], power: gv('power', s.dmg), hit: gv('hit', s.acc), guts: s.guts, crit: gv('crit', s.cri), gd: gv('gd', s.gd), ...(s.moveTo != null ? { moveTo: s.moveTo } : {}), ...(s.start ? { learn: { start: true } } : {}) });
+const techOf = (s, id) => ({ id, name: s.name, kind: s.kind, dist: [s.dist], power: gv('power', s.dmg), hit: gv('hit', s.acc), guts: s.guts, crit: gv('crit', s.cri), gd: gv('gd', s.gd), ...(s.rank ? { rank: s.rank } : {}), ...(s.moveTo != null ? { moveTo: s.moveTo } : {}), ...(s.start ? { learn: { start: true } } : {}) });
 
 // 仮の技表
 const ORIG = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/progress/msa-tech/originals-draft.json'), 'utf8'));
@@ -47,9 +47,10 @@ for (const [sp, m] of Object.entries(A)) {
   const mo = mons.find(x => x.name === m.name);
   if (mo) {
     const list = all.filter(s => (s.blood === mo.mainBlood && !s.unique && !(s.owners || []).length) || (s.owners || []).includes(mo.id)).sort((a, b) => a.rank - b.rank || a.guts - b.guts);
-    table[sp] = list.map((s, i) => techOf({ name: s.name, kind: s.skillType === 'かしこさ' ? 'wise' : 'pow', dist: DIST[s.range] ?? 1, guts: s.guts, dmg: s.damage, acc: s.accuracy, gd: s.gutsDown, cri: s.critical, moveTo: s.moveTo != null ? DIST[s.moveTo] : null, start: i < 2 }, s.skillId));
+    table[sp] = list.map((s, i) => techOf({ name: s.name, kind: s.skillType === 'かしこさ' ? 'wise' : 'pow', dist: DIST[s.range] ?? 1, guts: s.guts, dmg: s.damage, acc: s.accuracy, gd: s.gutsDown, cri: s.critical, moveTo: s.moveTo != null ? DIST[s.moveTo] : null, rank: Math.max(1, Math.min(5, Number(s.rank) || 1)), start: i < 2 }, s.skillId));
   }
 }
+// 技のランク 1〜5(モンサクの修行の覚えやすさ・開発部 SHUGYO)。資料はそのまま(6 は 5 にそろえる)。オリジナル5種は資料に無いので、種類の中で消費ガッツの軽い順に5段
 ORIG.rows.forEach((r) => {
   const sp = ORIG_ID[r.sp]; table[sp] = table[sp] || [];
   table[sp].push(techOf({ name: r.nm, kind: r.kind === 'かしこさ' ? 'wise' : 'pow', dist: DIST[r.range] ?? 1, guts: r.guts, dmg: r.dmg, acc: r.acc, gd: r.gd, cri: r.cri, moveTo: r.moveTo ? DIST[r.moveTo] : null, start: table[sp].length < 2 }, `${sp.toLowerCase()}_o${String(table[sp].length + 1).padStart(2, '0')}`));
@@ -89,6 +90,10 @@ if (TUNE) {
     }
     fx.mul = 1;
   }
+}
+for (const sp of Object.keys(ORIG.species)) {
+  const list = table[sp] || [], order = list.slice().sort((a, b) => a.guts - b.guts);
+  order.forEach((t, i) => { t.rank = 1 + Math.min(4, Math.floor(i * 5 / list.length)); });
 }
 const jsonArg = process.argv.find(a => a.startsWith('--json='));
 if (jsonArg) { fs.writeFileSync(jsonArg.slice(7), JSON.stringify({ map: MAP, species: table }, null, 1)); console.log('書き出し:', jsonArg.slice(7)); }

@@ -1,4 +1,4 @@
-書き出し: /tmp/claude-0/-home-user-monhero/37acf71f-d2e6-557a-a10a-7a23e660e2e0/scratchpad/tuned.json
+書き出し: docs/progress/msa-tech/tuned-draft.json
   調整 1回目: 34.5〜71.8%
   調整 2回目: 34.2〜71.6%
   調整 3回目: 37.1〜69.3%
