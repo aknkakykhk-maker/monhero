@@ -182,6 +182,8 @@ const __mod = { exports: {} };
       power: num(x.power, 'power', 10), hit: num(x.hit, 'hit', 0), guts: num(x.guts, 'guts', 20),
       crit: num(x.crit, 'crit', 5), gd: num(x.gd, 'gd', 0),
       start: !!(x.learn && x.learn.start),        // はじめから覚えている技(覚えた技の記録が無いときはこれだけ)
+      // 技を使ったあとに移る間合い(資料の moveTo。0零〜3遠)。無い技は持たない(写しの形を今のままにする)
+      ...(Number.isInteger(x.moveTo) && x.moveTo >= 0 && x.moveTo <= 3 ? { moveTo: x.moveTo } : {}),
     };
   };
   const buildCatalog = (src) => {
@@ -252,7 +254,7 @@ const __mod = { exports: {} };
       const m = clamp(Number(mastery && mastery[t.id]) || 0, 0, 100);
       return { key: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power / 20,
         hit: t.hit / 100 + m / 100 * MASTERY_HIT_MAX, guts: Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT)),
-        crit: t.crit / 100, gd: t.gd, big: t.power >= 30 };
+        crit: t.crit / 100, gd: t.gd, big: t.power >= 30, ...(t.moveTo != null ? { moveTo: t.moveTo } : {}) };
     });
   };
 
@@ -667,6 +669,12 @@ const __mod = { exports: {} };
         f.guts -= gd;
         push({ ev: 'tech', side, i: me.active, ti: state.teams[foeSide].active, p: Math.round(p * 1000) / 10, why: c.why, move: mv.key, name: mv.name, kind: mv.kind, hit, crit, dmg,
           guarded: !!(hit && f.guarding), guts: u.guts, foeHp: f.hp, gd, foeGuts: f.guts });
+        // 移動先のある技(資料の moveTo): 使ったあと、当たり外れに関係なくその間合いへ移る(移動の行を1つ残す。ガッツは増えない)。
+        //   相手が倒れたときは移らない(次のモンスターは今の間合いで出る)
+        if (mv.moveTo != null && mv.moveTo !== state.dist && f.hp > 0) {
+          const from = state.dist; state.dist = mv.moveTo;
+          push({ ev: 'move', side, i: me.active, why: 'techMove', step: mv.moveTo > from ? 1 : -1, to: state.dist, guts: u.guts, byTech: mv.key });
+        }
       } else if (c.type === 'move') {
         state.dist = clamp(state.dist + c.step, 0, 3);
         u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
@@ -921,7 +929,7 @@ const __mod = { exports: {} };
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
-      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示' }),
+      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示', techMove: '技の勢いで間合いが変わった' }),
     // 検査用(計算の部品)
     _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
