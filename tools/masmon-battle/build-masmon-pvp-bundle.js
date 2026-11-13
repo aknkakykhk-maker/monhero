@@ -18,11 +18,14 @@ const OUT = path.join(ROOT, 'supabase', 'functions', 'masmon-pvp', 'engine.js');
 const make = () => {
   if (!fs.existsSync(SRC)) return { ok: false, reason: 'monster-hero/data/assistant-masmon-battle.js が無い' };
   const { catalog, data } = require('./load.js').load();
-  // 技の習得条件(learn)。対戦の計算は読まないが、登録の見張り(技の習得条件)に使う。技 id → learn
+  // 技の習得条件(learn)。対戦の計算は読まないが、登録の見張り(技の習得条件)に使う。種類 → 技 id → learn
+  //   (第2版: 同じ技 id が種類ごとに違う覚え方になるので、種類ごとに持つ)
   const learn = {};
-  for (const sp of Object.values((data.ASSISTANT_MASMON_TECHS || {}).species || {})) {
-    for (const t of (Array.isArray(sp) ? sp : sp.techs || [])) if (t && t.id && t.learn) learn[t.id] = t.learn;
+  for (const [spName, sp] of Object.entries((data.ASSISTANT_MASMON_TECHS || {}).species || {})) {
+    for (const t of (Array.isArray(sp) ? sp : sp.techs || [])) if (t && t.id && t.learn) (learn[spName] = learn[spName] || {})[t.id] = t.learn;
   }
+  // 第1版の技 id → 第2版の技 id(古い端末・登録ずみの編成に残る古い id を、サーバが読み替えるため)
+  const idmap = (data.ASSISTANT_MASMON_TECHS || {}).idmap || {};
   const src = fs.readFileSync(SRC, 'utf8');
   const body = [
     '// 自動で作った写し(tools/masmon-battle/build-masmon-pvp-bundle.js)。手で直さない。直すのは monster-hero/data/assistant-masmon-battle.js と技データ',
@@ -32,7 +35,7 @@ const make = () => {
     src,
     '})(__mod);',
     'export const ASSISTANT_MASMON_BATTLE = __mod.exports;',
-    `export const MASMON_PVP_CATALOG = ${JSON.stringify(catalog)};`,
+    `export const MASMON_PVP_CATALOG = ${JSON.stringify({ ...catalog, idmap })};`,
     `export const MASMON_PVP_LEARN = ${JSON.stringify(learn)};`,
     '',
   ].join('\n');
