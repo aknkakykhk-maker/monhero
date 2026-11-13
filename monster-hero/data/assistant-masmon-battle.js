@@ -699,6 +699,21 @@
   };
 
   // オート(両側 AI)で最後まで。サーバ(masmon-pvp)もこれを呼ぶ。control は受け付けない
+  // 画面の技の札に出す命中率の見込み(2026-11-13 社長「命中表記は技のコマンドのところにも出してほしい」)。計算は変えない・読むだけ
+  //   hitPreviewer(catalog, teamA, teamB) → (side, actA, actB, guts, dist) => { 技のid: 命中%(整数) }
+  const hitPreviewer = (catalog, teamA, teamB) => {
+    let st = null;
+    try { st = setupState({ teamA, teamB }, catalog); } catch (_) { return () => ({}); }
+    return (side, actA, actB, guts, dist) => {
+      const foe = side === 'A' ? 'B' : 'A';
+      const au = st.teams[side].units[side === 'A' ? actA : actB]; const du = st.teams[foe].units[foe === 'A' ? actA : actB];
+      const out = {};
+      if (!au || !du) return out;
+      for (const mv of au.moves) out[mv.key] = Math.round(hitChance(au, du, mv, Number.isFinite(guts) ? guts : au.guts, dist) * 100);
+      return out;
+    };
+  };
+
   const simulate = (input) => {
     const inp = input && typeof input === 'object' ? input : {};
     const g = battleFlow(inp, catalogOf(inp), { A: false, B: false });
@@ -846,7 +861,7 @@
   const api = Object.freeze({
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
-    LV_MAX, BUFF_LIMITS, buildCatalog, simulate, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
+    LV_MAX, BUFF_LIMITS, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示' }),
