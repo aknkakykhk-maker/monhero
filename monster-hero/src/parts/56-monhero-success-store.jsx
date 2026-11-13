@@ -103,28 +103,44 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
   };
 };
+// 技表の第2版(2026-11-13): 古い技 id を新しい id へ読み替える(表に canon が無ければそのまま)。techs と mast は同じ並びなので、
+//   2つの古い技が1つの新しい技に当たるときは1つにまとめ、熟練は大きい方を残す。保存そのものは書き換えない
+const msxTechCanon = (id) => { try { return typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id; } catch (e) { return id; } };
+const msxCanonTechs = (techs, mast) => {
+  const ids = []; const ms = [];
+  (Array.isArray(techs) ? techs : []).forEach((id0, i) => {
+    if (typeof id0 !== 'string') return;
+    const id = msxTechCanon(id0); const m = Array.isArray(mast) && Number.isFinite(Number(mast[i])) ? Number(mast[i]) : null;
+    const at = ids.indexOf(id);
+    if (at < 0) { ids.push(id); ms.push(m); } else if (m != null && (ms[at] == null || m > ms[at])) ms[at] = m;
+  });
+  return { techs: ids.slice(0, 99), mast: ms.slice(0, 99).map((m) => (m == null ? 0 : m)) };
+};
 const msxNormBoxMon = (m) => {
   if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
   const st = {}; MSX_STATS.forEach((k) => { st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0)))); });
   // 回3・合体・レンタルが足す項目(gen・techs・mast・gt・fav・titles・paid・parents ほか)も消さずに持つ(...m)
+  const tm = msxCanonTechs(m.techs, m.mast); // 技の上限 8 はなくした・古い技 id は読み替える(2026-11-13)
   return {
     ...m,
-    gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))), techs: Array.isArray(m.techs) ? m.techs.filter((x) => typeof x === 'string').slice(0, 99) : [], // 技の上限 8 はなくした(2026-11-13)
-    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [], fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
+    gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))), techs: tm.techs,
+    mast: tm.mast, fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter((x) => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
     st, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
     rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
-    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [], masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
+    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [], masteries: tm.mast,
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
-    aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))), // 合体で継いだ間合い適性(無いマスモンは 0) // 育成中に上げた間合い適性(無いマスモンは 0)
+    aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))),
+    awake: Math.max(0, Math.min(2, Math.round(msxNum(m.awake, 0)))), // 覚醒の印(無いマスモンは 0)
+    aptAwake: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(3, Math.round(msxNum(Array.isArray(m.aptAwake) ? m.aptAwake[i] : 0, 0))))), // 覚醒で上げた間合い適性(無いマスモンは 0) // 合体で継いだ間合い適性(無いマスモンは 0) // 育成中に上げた間合い適性(無いマスモンは 0)
   };
 };
 const msxNormBox = (raw) => {
@@ -148,10 +164,28 @@ const msxNormMeta = (raw) => {
   };
 };
 
+// 技表の第2版(古い技 id → 新しい id)が入って初めて読むとき、1回だけ元の保存を新しいキーへそのまま写す(CLAUDE.md ⑦。元のキーは書き換えない)
+//   写すのは古い技 id を含むときだけ。印 mh_monsuc_tech2_migrated_v1 で二度は写さない。写せなくても読み込みは止めない
+const MSX_TECH2_FLAG = 'mh_monsuc_tech2_migrated_v1';
+const msxTech2Backup = async (run, box) => {
+  try {
+    const T = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
+    if (!T || typeof T.canon !== 'function' || !T.idmap) return false;
+    if (await storeGet(MSX_TECH2_FLAG, null)) return false;
+    const old = (ids) => Array.isArray(ids) && ids.some((id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(T.idmap, id));
+    const runOld = msxIsObj(run) && msxIsObj(run.s) && (old(run.s.techs) || (msxIsObj(run.s.mastery) && old(Object.keys(run.s.mastery))));
+    const boxOld = msxIsObj(box) && Array.isArray(box.mons) && box.mons.some((m) => msxIsObj(m) && old(m.techs));
+    if (runOld) await storeSet(MSX_KEYS.run + '_pre_tech2', run);
+    if (boxOld) await storeSet(MSX_KEYS.box + '_pre_tech2', box);
+    await storeSet(MSX_TECH2_FLAG, { at: Date.now(), run: !!runOld, box: !!boxOld });
+    return true;
+  } catch (e) { return false; }
+};
 const msxReadAll = async (SUC) => {
   const [run, box, meta, unlocked] = await Promise.all([
     storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null),
   ]);
+  await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
   const un = (Array.isArray(unlocked) ? unlocked : []).filter((id) => typeof id === 'string' && all[id] && list.includes(id));

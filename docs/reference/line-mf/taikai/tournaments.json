@@ -10,7 +10,7 @@
    "prize": 1000,
    "rewards": [
     {
-     "item": "洋なし",
+     "item": "カララギマンゴー",
      "count": 1
     }
    ],
@@ -309,6 +309,91 @@
    "terrain": "★火山",
    "weather": "晴れ",
    "images": "3-IMG_0564"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "ノーブル杯",
+   "en": "NOBLE CUP",
+   "grade": "金",
+   "prize": 5000,
+   "rewards": [
+    {
+     "item": "虹の結晶",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0566,0567"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaバクレツ杯",
+   "en": "IMa BAKURETSU CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "セメールの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "くもり",
+   "images": "4-IMG_0566,0568"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaシャープネス杯",
+   "en": "IMa SHARPNESS CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "テキパキの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0566,0570"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaパワフル杯",
+   "en": "IMa POWERFUL CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "セメールの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0566,0572"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaブレーン杯",
+   "en": "IMa BRAIN CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "テキパキの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0573"
   }
  ]
 }

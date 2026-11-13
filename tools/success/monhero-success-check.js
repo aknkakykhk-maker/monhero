@@ -216,16 +216,18 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 技の条件と、外したときの救い
   const big = SUC.techsOf('Mocchi').find(t => t.role === 'big');
   ok(!SUC.canLearn(j, big), '能力・熟練の条件を満たさない技が覚えられる');
-  const light = SUC.techsOf('Mocchi').find(t => t.role === 'skill');
-  ok(SUC.canLearn({ ...j, stats: { ...j.stats, wise: 999 } }, light), '条件を満たした技が覚えられない');
+  // 試す技: 初めからではなく、ほかの技の熟練を要らない技(技表の第1版でも第2版でも同じ選び方。2026-11-13)
+  const full = { life: 999, pow: 999, wise: 999, hit: 999, eva: 999, tough: 999 };
+  const light = SUC.techsOf('Mocchi').find(t => !(t.learn && (t.learn.start || t.learn.need)) && t.role === 'skill') || SUC.techsOf('Mocchi').find(t => !(t.learn && (t.learn.start || t.learn.need)));
+  ok(SUC.canLearn({ ...j, stats: full }, light), '条件を満たした技が覚えられない');
   // 修行の作り直し(2026-11-13 社長): 技ごとに外した回数 ×15・ランク1〜5 のもとの率と仕上がりの幅(q=1 でちょうど 99)・上限 99・超修行 +15
-  ok(near(SUC.techRate({ ...j, techMiss: { [light.id]: 2 } }, light) - SUC.techRate(j, light), 0.30, 1e-9), '外した分だけ、その技の次の率が上がらない');
+  ok(near(SUC.techRate({ ...j, techMiss: { [light.id]: 2 } }, light), Math.min(SUC.SHUGYO.rateTop / 100, SUC.techRate(j, light) + 0.30), 1e-9), '外した分だけ、その技の次の率が上がらない(上限 99%)');
   ok(near(SUC.techRate({ ...j, techMiss: { other: 2 } }, light), SUC.techRate(j, light), 1e-9), 'ほかの技を外した分が、この技の率に入っている');
   ok(SUC.SHUGYO.rank.base.every((b, i) => b + SUC.SHUGYO.rank.spread[i] === SUC.SHUGYO.rateTop) && SUC.SHUGYO.rateTop === 99, 'ランクごとの幅が、仕上がり q=1 でちょうど 99 に届かない');
   ok(near(SUC.techRate(j, light, { course: 'star', super: true }) - SUC.techRate(j, light, { course: 'star' }), 0.15, 1e-9), '超修行の率 +15 が効いていない');
   let missSeen = false; let hitSeen = false;
   for (let i = 0; i < 300 && !(missSeen && hitSeen); i++) {
-    const t = { ...j, id: `shu-${i}`, stats: { ...j.stats, wise: 999 }, techMiss: {} };
+    const t = { ...j, id: `shu-${i}`, stats: { ...j.stats, wise: 999, pow: 999 }, techMiss: {} };
     const x = SUC.act(t, { kind: 'shugyo', course: 'star', techs: [light.id] });
     if (x.out.result === 'sab') continue;
     if (x.out.learned) { hitSeen = true; ok(x.state.techs.includes(light.id) && !(x.state.techMiss || {})[light.id] && x.state.mastery[light.id] === 0, '技を覚えたのに一覧・外した回数・熟練がずれている'); }
@@ -234,7 +236,6 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(missSeen && hitSeen, '修行の技のくじで、当たり・外れの両方が出ない');
   // 超修行: 2つ選ぶと育成中2回まで・残り0なら断る・能力の上がりは2回分
   {
-    const full = { life: 999, pow: 999, wise: 999, hit: 999, eva: 999, tough: 999 };
     const base = { ...j, stats: full, tickets: 5 };
     const two = SUC.techsOf('Mocchi').filter(x => SUC.canLearn(base, x)).slice(0, 2).map(x => x.id);
     ok(two.length === 2, '超修行を試す技が2つ見つからない');
@@ -535,6 +536,50 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 壊れた保存値でも落ちない
   const bad = SUC.fusePlan({ id: 'x', species: 'Mocchi', raised: true, st: { life: 'abc', pow: -5, wise: 1e9 }, techs: 'zz', gen: NaN }, mk('y', 'Mocchi', 500));
   ok(bad.ok && SUC.KEYS.every(k => Number.isFinite(bad.child.st[k]) && bad.child.st[k] >= 1 && bad.child.st[k] <= 999) && bad.child.gen === 2, '壊れた保存値で合体の値がおかしくなる');
+}
+
+// ---- 覚醒・超覚醒(2026-11-13): くじの率・前触れ → 次のターンに起きる・最後の期は同じターンの終わり・適性の上がり方・上限・保存の読み直し ----
+if (typeof SUC.awakeOpen === 'function') {
+  const N = 3000; let a1 = 0; let a2 = 0;
+  for (let r = 0; r < N; r++) {
+    let s = SUC.newRun({ id: 'aw' + r, species: 'Mocchi', aid: 'mua' });
+    for (let t = 1; t <= SUC.TOTAL_TURNS; t++) { s.turn = t; s = SUC.awakeOpen(s, 'start').state; s = SUC.awakeOpen(s, 'end').state; }
+    if (s.awake >= 1) a1++; if (s.awake >= 2) a2++;
+  }
+  ok(a1 / N > 0.12 && a1 / N < 0.21, `覚醒の率がおかしい(${a1}/${N}・目安 16%)`);
+  ok(a2 / N > 0.02 && a2 / N < 0.09, `超覚醒の率がおかしい(${a2}/${N})`);
+  // デビュー期はくじを引かない・1回の育成で1回まで
+  let d = SUC.newRun({ id: 'awd', species: 'Mocchi', aid: 'mua' }); let hit = 0;
+  for (let t = 1; t <= 5; t++) { d.turn = t; const o = SUC.awakeOpen(d, 'start'); if (o.out.omen || o.out.fire) hit++; d = o.state; }
+  ok(hit === 0 && d.omen === null, 'デビュー期に覚醒のくじを引いている');
+  // 前触れのターンは起きない → 次のターンのはじめに起きる
+  let s = SUC.newRun({ id: 'aw-x', species: 'Mocchi', aid: 'mua' }); s.turn = 10; s.omen = { k: 1, turn: 10 };
+  let o = SUC.awakeOpen(s, 'start'); ok(o.out.omen === 1 && !o.out.fire && o.state.awake === 0, '前触れのターンに覚醒が起きている');
+  o = SUC.awakeOpen(o.state, 'end'); ok(!o.out.fire, '最後の期でないのにターンの終わりに覚醒が起きる');
+  s = o.state; s.turn = 11; const before = { ...s.stats };
+  o = SUC.awakeOpen(s, 'start');
+  ok(o.out.fire && o.out.fire.kind === 1 && o.state.awake === 1 && o.state.omen === null && SUC.KEYS.every(k => o.state.stats[k] === Math.min(999, before[k] + 30)), '覚醒で全能力 +30 にならない');
+  ok(o.out.fire.apt.length === 1 && o.state.aptAwake.reduce((a, b) => a + b, 0) === 1, '覚醒で間合い適性が1つ上がらない');
+  ok(SUC.awakeOpen(o.state, 'start').state.omen === null, '覚醒したターンに超覚醒のくじを引いている');
+  // 超覚醒: 2つ +1・合計 3 まで・M は飛ばす
+  let s2 = o.state; s2.turn = 12; s2.omen = { k: 2, turn: 11 };
+  const o2 = SUC.awakeOpen(s2, 'start');
+  ok(o2.out.fire && o2.out.fire.kind === 2 && o2.out.fire.add === 40 && o2.out.fire.apt.length === 2 && o2.state.awake === 2, '超覚醒で全能力 +40・適性2つにならない');
+  ok(o2.state.aptAwake.reduce((a, b) => a + b, 0) === 3 && SUC.aptSendOf(o2.state).reduce((a, b) => a + b, 0) === 3, '覚醒の段が試合へ渡す段数に入らない');
+  ok(!SUC.awakeOpen({ ...o2.state, turn: 13 }, 'start').out.omen, '超覚醒のあともくじを引いている');
+  const m = SUC.newRun({ id: 'aw-m', species: 'Mocchi', aid: 'mua' }); m.aptUp = [0, 11, 0, 0];
+  ok(!SUC.awakePick(m, 1).includes(1), 'M の間合いを覚醒で上げようとしている');
+  // 最後の期: 当たったターンの終わりに起きる
+  let f = SUC.newRun({ id: 'aw-f', species: 'Mocchi', aid: 'mua' }); f.awake = 1; f.awakeTurn = 20; f.turn = 44; f.omen = { k: 2, turn: 44 };
+  ok(SUC.awakeOpen(f, 'end').out.fire, '最後の期の前触れが同じターンの終わりに起きない');
+  // 保存の読み直し(壊れた値 → 起きていない)
+  const rs = SUC.restore(JSON.parse(JSON.stringify(o2.state)));
+  ok(rs.awake === 2 && rs.aptAwake.join() === o2.state.aptAwake.join(), '覚醒の印が読み直しで消える');
+  const bad = SUC.restore({ ...JSON.parse(JSON.stringify(s)), awake: 'x', aptAwake: [9, 9, 9, 9], omen: { k: 7 } });
+  ok(bad.awake === 0 && bad.aptAwake.reduce((a, b) => a + b, 0) <= 3 && bad.omen === null, '壊れた覚醒の値を読み直せない');
+  // 合体で継ぐ段数に親の覚醒の分が入る(印そのものは継がない)
+  const p = { aptUp: [0, 0, 0, 0], aptBase: [0, 0, 0, 0], aptAwake: [0, 3, 0, 0], awake: 2 };
+  ok(SUC.aptInherit(p, p)[1] >= 3, '合体で継ぐ段数に親の覚醒の分が入らない');
 }
 
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }

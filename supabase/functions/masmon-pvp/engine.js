@@ -279,7 +279,7 @@ const __mod = { exports: {} };
   // 子ごとに上げた間合い適性の段数(モンサクの育成・合体円盤石で継いだ分の合計。2026-11-13 社長の決め・開発部と同じ形)
   //   aptUp … [零, 近, 中, 遠] の整数。端末から来た値をそのまま信じず、ここで切りそろえる(サーバも同じ芯なので同じ結果):
   //   数の型の整数でないもの(文字列・小数)・負は 0/1つの間合いは per まで/合計が total を超えたら後ろの間合いから削る/M の数が mMax を超えたら、超えた分を(後ろから)SS+ に
-  const APT_UP_LIMITS = Object.freeze({ total: 18, per: 11, mMax: 4 });
+  const APT_UP_LIMITS = Object.freeze({ total: 21, per: 11, mMax: 4 }); // total: 育成 +12・合体で継ぐ +6・覚醒と超覚醒 +3(2026-11-13 社長・開発部)
   const normAptUp = (a) => {
     const out = [0, 0, 0, 0];
     if (!Array.isArray(a)) return out;
