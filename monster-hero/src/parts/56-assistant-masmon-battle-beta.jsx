@@ -93,7 +93,7 @@ const ambbOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assis
 // ---------- 保存(新しいキーだけ。版の番号つき・壊れていたら既定値) ----------
 const normalizeAssistantMasmonBattleSave = (raw) => {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
-  const out = { v: AMBB_V, speed: 'x1', mode: {}, last: {}, rec: {}, done: [], reg: {}, set: normalizeAmbbSet(src.set) };
+  const out = { v: AMBB_V, speed: 'x1', mode: {}, last: {}, rec: {}, done: [], reg: {}, rep: {}, set: normalizeAmbbSet(src.set) };
   if (typeof src.speed === 'string' && typeof AMBW_SPEEDS !== 'undefined' && AMBW_SPEEDS.some(s => s.id === src.speed)) out.speed = src.speed;
   const obj = (o) => (o && typeof o === 'object' && !Array.isArray(o) ? o : {});
   for (const [aid, m] of Object.entries(obj(src.mode))) if (m === 'auto' || m === 'self') out.mode[aid] = m;
@@ -110,6 +110,18 @@ const normalizeAssistantMasmonBattleSave = (raw) => {
   for (const [aid, r] of Object.entries(obj(src.rec))) { const x = obj(r); out.rec[aid] = { w: ambbInt(x.w, 0, 1e7, 0), l: ambbInt(x.l, 0, 1e7, 0), d: ambbInt(x.d, 0, 1e7, 0) }; }
   // 同じ1戦を二度数えないための印(新しい40件だけ)
   out.done = (Array.isArray(src.done) ? src.done : []).filter(x => typeof x === 'string').slice(-40);
+  // 段3: 技の札の代表(2026-11-13 社長)。rep[助手 id][保存枠:種類] = [零, 近, 中, 遠] の技 id(決めていない所は null)。
+  //   覚えていない・届かない技 id は、使うときに自動(命中×威力)に戻す(ここでは消さない)。助手ごとに60体まで
+  out.rep = {};
+  for (const [aid, r] of Object.entries(obj(src.rep))) {
+    const o = {};
+    for (const [k, v] of Object.entries(obj(r)).slice(0, 60)) {
+      if (!Array.isArray(v)) continue;
+      const ids = [0, 1, 2, 3].map(i => (typeof v[i] === 'string' && v[i] && v[i].length <= 40 ? v[i] : null));
+      if (ids.some(Boolean)) o[k] = ids;
+    }
+    if (Object.keys(o).length) out.rep[aid] = o;
+  }
   // β その2: フレンドに見せる編成を登録した時刻(画面の案内に使うだけ。登録の正本はサーバ)
   for (const [aid, r] of Object.entries(obj(src.reg))) { const x = obj(r); const at = ambbInt(x.at, 0, 9e15, 0); if (at) out.reg[aid] = { at, size: ambbInt(x.size, 1, 3, 3) }; }
   return out;
@@ -158,6 +170,20 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map((row) => {
   const u = engine.unitFromGrow(row, entry, train, bond);
   return { row, entry, unit: u, total: entry && entry.st ? Object.values(entry.st).reduce((a, b) => a + (Number(b) || 0), 0) : 0 };
 });
+// 1体の覚えている技を、技の札の形に(芯の buildMoves と同じ選び方: 覚えた技・記録が無ければはじめの技。熟練で命中とガッツを直す)
+//   計算の中身(_internal)は使わず、公開の定数 MASTERY_HIT_MAX・MASTERY_GUTS_CUT で同じ直しをする(見せるだけ・試合の計算は芯)
+const ambbUnitTechItems = (engine, catalog, unit) => {
+  const sp = catalog && unit && catalog.species && catalog.species[unit.species];
+  if (!sp || !Array.isArray(sp.techs) || !sp.techs.length) return [];
+  const st = sp.techs.filter(t => t.start), start = st.length ? st : sp.techs.slice();
+  const known = Array.isArray(unit.techs) ? sp.techs.filter(t => unit.techs.includes(t.id)) : start;
+  const list = known.length ? known : (st.length ? start : [sp.techs[0]]);
+  const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0, cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
+  return list.map(t => {
+    const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: Math.round((t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+  });
+};
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
 // 助手ライフの順番のまま、マスモンを持っている助手
 const ambbAssistantsWithRows = () => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST : []).filter(a => (typeof assistantReleased !== 'function' || assistantReleased(a.id)) && ambbRowsOf(a.id).length > 0);
@@ -260,25 +286,16 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambw-top{min-height:34px}
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 30%}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk:not(.far) small:not(.p){display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
-.ambb-sheet{position:fixed;inset:0;z-index:9600;background:#000a;display:flex;align-items:flex-end;justify-content:center}
-.ambb-sheet-in{width:100%;max-width:460px;max-height:78vh;overflow-y:auto;background:#1e1a36;border-radius:16px 16px 0 0;padding:12px 12px max(14px,env(safe-area-inset-bottom));color:#fff;font-weight:700}
-.ambb-tl{margin-top:6px}
-.ambb-tl-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-top:1px dashed rgba(255,255,255,.12);font-size:12.5px;color:#94a3b8}
-.ambb-tl-row.on{color:#fff}
-.ambb-tl-row small{font-size:10.5px;color:#cbd5e1;white-space:nowrap}
 .ambw.ambb-full [data-ambw-panel]{padding:6px 8px;margin-top:6px}
 .ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
-.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 30%;font-size:10.5px}
 /* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
 @media (max-height:740px){
   .ambw.ambb-full{overflow-y:auto}
@@ -292,7 +309,6 @@ const AMBB_CSS = `
 }
 @media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
-@media (max-width:360px){.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 45%}.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 45%}}
 `;
 
 function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
@@ -495,7 +511,29 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const r = m.choose(c); if (r && r.ok) { syncManual(m); setPos(p => p + 1); setPaused(false); }
   };
   const manualAuto = () => { const m = battle && battle.match; if (!m) return; m.auto('A'); syncManual(m); setPaused(false); };
-  const [techList, setTechList] = useState(null);
+  const [techList, setTechList] = useState(null);   // 札を押して開いた一覧 { side, d }(d が null なら全部の技)
+  // 技の札の代表(段3・2026-11-13 社長)。保存は mh_assistant_masmon_battle_v1 の rep。確かめ(印が偽)では開いているあいだだけ覚える
+  const [repEdit, setRepEdit] = useState(null);     // 準備画面の「技の札を決める」で開いている子の鍵
+  const [repSheet, setRepSheet] = useState(null);   // その子の間合いの一覧
+  const repOf = (k) => (k && save.rep && save.rep[meId] && save.rep[meId][k]) || null;
+  const putRep = (k, ids) => {
+    const fn = (s) => { const mine = { ...((s.rep || {})[meId] || {}) }; if (ids) mine[k] = ids; else delete mine[k]; return { ...s, rep: { ...(s.rep || {}), [meId]: mine } }; };
+    if (!ambbSave(fn)) AMBB_STORE.set(normalizeAssistantMasmonBattleSave(fn(AMBB_STORE.state)));
+  };
+  const setRep = (k, d, id) => { if (!k) return; const nx = (repOf(k) || [null, null, null, null]).slice(); nx[d] = id; putRep(k, nx); };
+  // 試合の自分の側の i 番目の子の保存の鍵(この端末の試合は同じ入れ物・フレンド対戦は種類と名前で探す)
+  const repKeyOf = (i) => {
+    const m = battle && battle.teamA && battle.teamA.members[i];
+    if (!m || !Array.isArray(battle.units)) return null;
+    const u = battle.units.find(x => x.unit === m) || battle.units.find(x => x.unit && x.unit.species === m.species && x.unit.name === m.name);
+    return u ? ambbRowKey(u.row) : null;
+  };
+  const repIdsAt = (side, fr) => {
+    const i = fr.act[side], t = side === 'A' ? battle.teamA : battle.teamB;
+    const items = ambwTechItems(catalog, t.members[i], (battle.moves[side] || [])[i]);
+    const k = side === 'A' ? repKeyOf(i) : null;
+    return { k, items, ids: msaRepIds(items, side === 'A' ? repOf(k) : null), name: (t.members[i] || {}).name || '' };
+  };
   useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   // 手番の帯が出たら、帯が見える所まで(画面がスクロールできるときだけ)縦に送る
   const manualNow = !!(battle && battle.match && !battle.match.done() && pos >= battle.r.log.length - 1 && phase === 'watch');
@@ -579,6 +617,14 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           </div>
         )}
         {srcNow === 'local' && foeId && foeUnits.length > 0 && <AmbbCompare engine={engine} catalog={catalog} mine={chosen} foes={foeUnits.slice(0, size)} meName={me.name} foeName={nameOf(foeId)}/>}
+        {chosen.length > 0 && typeof MsaDistCards === 'function' && (
+          <div className="ambw-card" data-ambb-rep-card>
+            <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <span>技の札は、間合いごとに代表の技を1つずつ出します</span>
+              <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技の札を決める</button>
+            </div>
+          </div>
+        )}
         <AmbbSettings set={set} onSet={setSet} local={srcNow === 'local'} size={size} sizeMax={sizeMax} onSize={(n) => setSel({ size: n, order: picked.slice(0, n) })} speed={speed} onSpeed={setSpeed} engine={engine}/>
         {srcNow === 'friend' && <AmbbFriendPanel me={me} meId={meId} engine={engine} catalog={catalog} units={chosen} size={size} plan={modeNow === 'auto' ? 'omakase' : sel.plan} swap={modeNow === 'auto' ? 'omakase' : sel.swap} tactics={ambbTacticsOf(meId, chosen.map(u => u.row))} reg={save.reg[meId]} onBattle={startPvp}/>}
         <div className="ambw-ctl">
@@ -711,7 +757,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             </div>
           </div>
         )}
-        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false} reachOnly={!review} onAll={review ? null : setTechList}/>
+        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false} cards onOpen={(sd, d) => setTechList({ side: sd, d })}/>
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
         {typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
@@ -728,9 +774,9 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           )}
         </div>
         )}
-        {!manualWait && <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine reachOnly={!review} onAll={review ? null : setTechList}/>}
+        {!manualWait && <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine cards rep={repIdsAt('A', shownF || f).ids} onOpen={(sd, d) => setTechList({ side: sd, d })}/>}
         {!review && manualWait && typeof MsxManualBar === 'function' && (
-          <div className="ambb-bar-wrap" data-ambb-manual><MsxManualBar opt={battle.match.pending()} onPick={manualPick} onAuto={manualAuto} busy={false}/></div>
+          <div className="ambb-bar-wrap" data-ambb-manual>{(() => { const ra = repIdsAt('A', f); return <MsxManualBar opt={battle.match.pending()} onPick={manualPick} onAuto={manualAuto} busy={false} rep={ra.ids} title={ra.name} onRep={ra.k ? (d, id) => setRep(ra.k, d, id) : null}/>; })()}</div>
         )}
         {!review && !manualWait && (
           <div className="ambw-card ambw-log">
@@ -771,19 +817,39 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         {body}
       </div>
       {techList && battle && phase !== 'prep' && (() => {
-        const side = techList, t = side === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[Math.min(pos, battle.frames.length - 1)] || battle.frames[0];
-        const i = fr.act[side], list = (battle.moves[side] && battle.moves[side][i]) || [], m = t.members[i] || {};
+        const side = techList.side, d = techList.d, fr = battle.frames[Math.min(pos, battle.frames.length - 1)] || battle.frames[0];
+        const r = repIdsAt(side, fr), teams = { A: battle.teamA, B: battle.teamB };
+        const hitAt = (x, dd) => { const v = ambwHitPct(catalog, teams, side, { ...fr, d: dd }, x.id); return v != null ? v : x.hit; };
         return (
-          <div className="ambb-sheet" data-ambb-techlist={side} onClick={() => setTechList(null)}>
-            <div className="ambb-sheet-in" onClick={(ev) => ev.stopPropagation()}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b>{m.name} の技({list.length})</b><button className="ambw-btn2" onClick={() => setTechList(null)}>閉じる</button></div>
-              <p className="ambw-small">いまの間合い: {AMBW_DIST[fr.d]}・届く技に ● が付いています</p>
-              <div className="ambb-tl">{list.map((mv) => {
-                const reach = Array.isArray(mv.dist) && mv.dist.includes(fr.d), hp = ambwHitPct(catalog, { A: battle.teamA, B: battle.teamB }, side, fr, mv.id);
-                return <div key={mv.id} className={`ambb-tl-row ${reach ? 'on' : ''}`}><span style={{ flex: 1, minWidth: 0 }}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={`${reach ? '●' : '○'} ${mv.kind === 'pow' ? '💪' : '🧠'} `}/> : `${mv.name}`}</span><small>{hp != null ? `命中 ${hp}%・` : ''}ガッツ {mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></div>;
-              })}</div>
-            </div>
+          <div data-ambb-techlist={side}>
+            <MsaTechSheet title={`${r.name} の${d == null ? `技(${r.items.length})` : `${AMBW_DIST[d]}の技`}`} list={r.items} d={d} dist={fr.d} rep={r.ids} hitAt={hitAt}
+              onRep={r.k && d != null ? (dd, id) => setRep(r.k, dd, id) : null} onClose={() => setTechList(null)}/>
           </div>
+        );
+      })()}
+      {repEdit && phase === 'prep' && catalog && (() => {
+        // 準備画面の「🃏 技の札を決める」: 出る子を先に、ほかの子も決められる
+        const units = chosen.concat(myUnits.filter(u => !chosen.includes(u)));
+        const u = units.find(x => ambbRowKey(x.row) === repEdit) || units[0];
+        if (!u) return null;
+        const k = ambbRowKey(u.row), items = ambbUnitTechItems(engine, catalog, u.unit), ids = msaRepIds(items, repOf(k));
+        const nm = (x) => x.row.nick || ALL_PLAYER_MONSTERS[x.row.monster].name;
+        const close = () => { setRepEdit(null); setRepSheet(null); };
+        return (
+          <>
+            <div className="msa-sh" data-ambb-rep-edit onClick={close}><style>{MSA_DC_CSS}</style>
+              <div className="msa-sh-in" onClick={(ev) => ev.stopPropagation()}>
+                <div className="msa-sh-top"><b>🃏 技の札を決める</b><button type="button" className="msa-sh-x" onClick={close}>閉じる</button></div>
+                <p className="msa-sh-note">試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。</p>
+                <div className="ambb-tabs" style={{ flexWrap: 'wrap', marginTop: 6 }}>{units.map(x => (
+                  <button key={ambbRowKey(x.row)} type="button" data-ambb-rep-unit={ambbRowKey(x.row)} className={ambbRowKey(x.row) === k ? 'on' : ''} onClick={() => { setRepEdit(ambbRowKey(x.row)); setRepSheet(null); }}>{chosen.includes(x) ? '⚔ ' : ''}{nm(x)}</button>
+                ))}</div>
+                <div style={{ marginTop: 8 }}><MsaDistCards list={items} rep={ids} onOpen={(d) => setRepSheet(d)} dataSide="prep"/></div>
+                {repOf(k) ? <div style={{ textAlign: 'right', marginTop: 8 }}><button type="button" className="ambw-btn2" data-ambb-rep-reset style={{ minHeight: 30, padding: '2px 12px', fontSize: 12 }} onClick={() => putRep(k, null)}>このモンスターをおまかせに戻す</button></div> : null}
+              </div>
+            </div>
+            {repSheet != null && <MsaTechSheet title={`${nm(u)} の${AMBW_DIST[repSheet]}の技`} list={items} d={repSheet} rep={ids} onRep={(d, id) => setRep(k, d, id)} onClose={() => setRepSheet(null)}/>}
+          </>
         );
       })()}
       {ask && me && <AssistantMasmonAskSheet who={me} from="masmon" t={ask.t} initialText={ask.text} onClose={() => setAsk(null)}/>}

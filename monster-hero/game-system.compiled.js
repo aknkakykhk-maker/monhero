@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c730657b2892cba6
+// source-sha256: 051b1782d2a77c84
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146427,7 +146427,7 @@ const AMBW_CSS = `
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
 .ambw-chip .msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15}.ambw-chip .msa-tn-s{white-space:nowrap}
 .ambw-chip{white-space:normal!important;text-overflow:clip!important}
-.ambw-chip-all{flex:0 0 auto;color:#c4b5fd;border-style:dashed;background:#1e1b4b;font-family:inherit}
+[data-ambw-cards]{display:block}
 .ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
 .ambw-dist{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
@@ -146485,6 +146485,17 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   const v = st.f(side, frame.act.A, frame.act.B, frame.g[side], frame.d)[id];
   return Number.isFinite(v) ? v : null;
 };
+const ambwTechItems = (catalog, member, list) => {
+  const sp = catalog && member && catalog.species && catalog.species[member.species];
+  const byId = {};
+  if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
+  return (Array.isArray(list) ? list : []).map(mv => ({
+    ...mv,
+    dist: Array.isArray(mv.dist) ? mv.dist : [],
+    hit: Number((byId[mv.id] || {}).hit) || 0,
+    power: Number((byId[mv.id] || {}).power) || 0
+  }));
+};
 function AmbwPanel({
   side,
   team,
@@ -146495,8 +146506,9 @@ function AmbwPanel({
   mine,
   catalog = null,
   teams = null,
-  reachOnly = false,
-  onAll = null
+  cards = false,
+  rep = null,
+  onOpen = null
 }) {
   const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
   const style = (window.ASSISTANT_MASMON_BATTLE.STYLES[team.assistantId] || {}).label || '';
@@ -146577,9 +146589,27 @@ function AmbwPanel({
     className: "ambw-num"
   }, React.createElement("span", {
     "data-ambw-hp": side
-  }, hp), React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("em", null, "ガッツ ", Math.round(g)))), React.createElement("div", {
+  }, hp), React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("em", null, "ガッツ ", Math.round(g)))), cards && typeof MsaDistCards === 'function' ? React.createElement("div", {
+    className: "ambw-chips",
+    "data-ambw-cards": side
+  }, React.createElement(MsaDistCards, {
+    list: ambwTechItems(catalog, team.members && team.members[i], list),
+    rep: rep,
+    dist: frame.d,
+    guts: g,
+    lastMove: lastMove,
+    dataSide: side,
+    hitAt: (t, d) => {
+      const v = ambwHitPct(catalog, teams, side, {
+        ...frame,
+        d
+      }, t.id);
+      return v != null ? v : t.hit;
+    },
+    onOpen: onOpen ? d => onOpen(side, d) : null
+  })) : React.createElement("div", {
     className: "ambw-chips"
-  }, list.filter(mv => !reachOnly || lastMove === mv.id || Array.isArray(mv.dist) && mv.dist.includes(frame.d)).map(mv => {
+  }, list.map(mv => {
     const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d),
       ok = g >= mv.guts;
     const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
@@ -146594,12 +146624,7 @@ function AmbwPanel({
       className: "ambw-hit",
       "data-ambw-hit": hp
     }, "命中 ", hp, "%") : null, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
-  }), onAll && list.length ? React.createElement("button", {
-    type: "button",
-    className: "ambw-chip ambw-chip-all",
-    "data-ambw-all": side,
-    onClick: () => onAll(side)
-  }, "📜 全部の技", React.createElement("small", null, list.length, "こ")) : null));
+  })));
 }
 function AssistantMasmonBattleWatch({
   onClose
@@ -147355,6 +147380,7 @@ const normalizeAssistantMasmonBattleSave = raw => {
     rec: {},
     done: [],
     reg: {},
+    rep: {},
     set: normalizeAmbbSet(src.set)
   };
   if (typeof src.speed === 'string' && typeof AMBW_SPEEDS !== 'undefined' && AMBW_SPEEDS.some(s => s.id === src.speed)) out.speed = src.speed;
@@ -147379,6 +147405,16 @@ const normalizeAssistantMasmonBattleSave = raw => {
     };
   }
   out.done = (Array.isArray(src.done) ? src.done : []).filter(x => typeof x === 'string').slice(-40);
+  out.rep = {};
+  for (const [aid, r] of Object.entries(obj(src.rep))) {
+    const o = {};
+    for (const [k, v] of Object.entries(obj(r)).slice(0, 60)) {
+      if (!Array.isArray(v)) continue;
+      const ids = [0, 1, 2, 3].map(i => typeof v[i] === 'string' && v[i] && v[i].length <= 40 ? v[i] : null);
+      if (ids.some(Boolean)) o[k] = ids;
+    }
+    if (Object.keys(o).length) out.rep[aid] = o;
+  }
   for (const [aid, r] of Object.entries(obj(src.reg))) {
     const x = obj(r);
     const at = ambbInt(x.at, 0, 9e15, 0);
@@ -147469,6 +147505,28 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map(row => {
     total: entry && entry.st ? Object.values(entry.st).reduce((a, b) => a + (Number(b) || 0), 0) : 0
   };
 });
+const ambbUnitTechItems = (engine, catalog, unit) => {
+  const sp = catalog && unit && catalog.species && catalog.species[unit.species];
+  if (!sp || !Array.isArray(sp.techs) || !sp.techs.length) return [];
+  const st = sp.techs.filter(t => t.start),
+    start = st.length ? st : sp.techs.slice();
+  const known = Array.isArray(unit.techs) ? sp.techs.filter(t => unit.techs.includes(t.id)) : start;
+  const list = known.length ? known : st.length ? start : [sp.techs[0]];
+  const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0,
+    cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
+  return list.map(t => {
+    const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
+    return {
+      id: t.id,
+      name: t.name,
+      kind: t.kind,
+      dist: t.dist,
+      power: t.power,
+      hit: Math.round((t.hit + m * hitMax) * 10) / 10,
+      guts: Math.round(t.guts * (1 - m / 100 * cut))
+    };
+  });
+};
 const ambbTacticsOf = (aid, rows) => {
   try {
     return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40;
@@ -147622,25 +147680,16 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambw-top{min-height:34px}
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 30%}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk:not(.far) small:not(.p){display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
-.ambb-sheet{position:fixed;inset:0;z-index:9600;background:#000a;display:flex;align-items:flex-end;justify-content:center}
-.ambb-sheet-in{width:100%;max-width:460px;max-height:78vh;overflow-y:auto;background:#1e1a36;border-radius:16px 16px 0 0;padding:12px 12px max(14px,env(safe-area-inset-bottom));color:#fff;font-weight:700}
-.ambb-tl{margin-top:6px}
-.ambb-tl-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-top:1px dashed rgba(255,255,255,.12);font-size:12.5px;color:#94a3b8}
-.ambb-tl-row.on{color:#fff}
-.ambb-tl-row small{font-size:10.5px;color:#cbd5e1;white-space:nowrap}
 .ambw.ambb-full [data-ambw-panel]{padding:6px 8px;margin-top:6px}
 .ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
-.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 30%;font-size:10.5px}
 /* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
 @media (max-height:740px){
   .ambw.ambb-full{overflow-y:auto}
@@ -147654,7 +147703,6 @@ const AMBB_CSS = `
 }
 @media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
-@media (max-width:360px){.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 45%}.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 45%}}
 `;
 function AssistantMasmonBattleBeta({
   assistantId,
@@ -148088,6 +148136,49 @@ function AssistantMasmonBattleBeta({
     setPaused(false);
   };
   const [techList, setTechList] = useState(null);
+  const [repEdit, setRepEdit] = useState(null);
+  const [repSheet, setRepSheet] = useState(null);
+  const repOf = k => k && save.rep && save.rep[meId] && save.rep[meId][k] || null;
+  const putRep = (k, ids) => {
+    const fn = s => {
+      const mine = {
+        ...((s.rep || {})[meId] || {})
+      };
+      if (ids) mine[k] = ids;else delete mine[k];
+      return {
+        ...s,
+        rep: {
+          ...(s.rep || {}),
+          [meId]: mine
+        }
+      };
+    };
+    if (!ambbSave(fn)) AMBB_STORE.set(normalizeAssistantMasmonBattleSave(fn(AMBB_STORE.state)));
+  };
+  const setRep = (k, d, id) => {
+    if (!k) return;
+    const nx = (repOf(k) || [null, null, null, null]).slice();
+    nx[d] = id;
+    putRep(k, nx);
+  };
+  const repKeyOf = i => {
+    const m = battle && battle.teamA && battle.teamA.members[i];
+    if (!m || !Array.isArray(battle.units)) return null;
+    const u = battle.units.find(x => x.unit === m) || battle.units.find(x => x.unit && x.unit.species === m.species && x.unit.name === m.name);
+    return u ? ambbRowKey(u.row) : null;
+  };
+  const repIdsAt = (side, fr) => {
+    const i = fr.act[side],
+      t = side === 'A' ? battle.teamA : battle.teamB;
+    const items = ambwTechItems(catalog, t.members[i], (battle.moves[side] || [])[i]);
+    const k = side === 'A' ? repKeyOf(i) : null;
+    return {
+      k,
+      items,
+      ids: msaRepIds(items, side === 'A' ? repOf(k) : null),
+      name: (t.members[i] || {}).name || ''
+    };
+  };
   useEffect(() => {
     if (typeof msaFitTechNames === 'function') msaFitTechNames();
   });
@@ -148296,7 +148387,29 @@ function AssistantMasmonBattleBeta({
       foes: foeUnits.slice(0, size),
       meName: me.name,
       foeName: nameOf(foeId)
-    }), React.createElement(AmbbSettings, {
+    }), chosen.length > 0 && typeof MsaDistCards === 'function' && React.createElement("div", {
+      className: "ambw-card",
+      "data-ambb-rep-card": true
+    }, React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, React.createElement("span", null, "技の札は、間合いごとに代表の技を1つずつ出します"), React.createElement("button", {
+      type: "button",
+      className: "ambw-btn2",
+      "data-ambb-rep-open": true,
+      style: {
+        minHeight: 32,
+        padding: '2px 12px',
+        fontSize: 12,
+        flex: 'none'
+      },
+      onClick: () => setRepEdit(ambbRowKey(chosen[0].row))
+    }, "🃏 技の札を決める"))), React.createElement(AmbbSettings, {
       set: set,
       onSet: setSet,
       local: srcNow === 'local',
@@ -148611,8 +148724,11 @@ function AssistantMasmonBattleBeta({
       moves: battle.moves.B,
       lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
       mine: false,
-      reachOnly: !review,
-      onAll: review ? null : setTechList
+      cards: true,
+      onOpen: (sd, d) => setTechList({
+        side: sd,
+        d
+      })
     }), typeof MsaStage === 'function' ? React.createElement("div", {
       className: "msa ambb-stagewrap",
       style: {
@@ -148669,17 +148785,27 @@ function AssistantMasmonBattleBeta({
       moves: battle.moves.A,
       lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
       mine: true,
-      reachOnly: !review,
-      onAll: review ? null : setTechList
+      cards: true,
+      rep: repIdsAt('A', shownF || f).ids,
+      onOpen: (sd, d) => setTechList({
+        side: sd,
+        d
+      })
     }), !review && manualWait && typeof MsxManualBar === 'function' && React.createElement("div", {
       className: "ambb-bar-wrap",
       "data-ambb-manual": true
-    }, React.createElement(MsxManualBar, {
-      opt: battle.match.pending(),
-      onPick: manualPick,
-      onAuto: manualAuto,
-      busy: false
-    })), !review && !manualWait && React.createElement("div", {
+    }, (() => {
+      const ra = repIdsAt('A', f);
+      return React.createElement(MsxManualBar, {
+        opt: battle.match.pending(),
+        onPick: manualPick,
+        onAuto: manualAuto,
+        busy: false,
+        rep: ra.ids,
+        title: ra.name,
+        onRep: ra.k ? (d, id) => setRep(ra.k, d, id) : null
+      });
+    })()), !review && !manualWait && React.createElement("div", {
       className: "ambw-card ambw-log"
     }, recent.map(x => React.createElement("p", {
       key: x.k,
@@ -148752,51 +148878,107 @@ function AssistantMasmonBattleBeta({
   }, "← ", phase === 'prep' ? 'もどる' : 'じゅんびへ'), React.createElement("span", null, "⚔ マスモンで対戦", React.createElement("span", {
     className: "ambb-beta"
   }, "β")), React.createElement("b", null, phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '')), body), techList && battle && phase !== 'prep' && (() => {
-    const side = techList,
-      t = side === 'A' ? battle.teamA : battle.teamB,
+    const side = techList.side,
+      d = techList.d,
       fr = battle.frames[Math.min(pos, battle.frames.length - 1)] || battle.frames[0];
-    const i = fr.act[side],
-      list = battle.moves[side] && battle.moves[side][i] || [],
-      m = t.members[i] || {};
+    const r = repIdsAt(side, fr),
+      teams = {
+        A: battle.teamA,
+        B: battle.teamB
+      };
+    const hitAt = (x, dd) => {
+      const v = ambwHitPct(catalog, teams, side, {
+        ...fr,
+        d: dd
+      }, x.id);
+      return v != null ? v : x.hit;
+    };
     return React.createElement("div", {
-      className: "ambb-sheet",
-      "data-ambb-techlist": side,
-      onClick: () => setTechList(null)
-    }, React.createElement("div", {
-      className: "ambb-sheet-in",
+      "data-ambb-techlist": side
+    }, React.createElement(MsaTechSheet, {
+      title: `${r.name} の${d == null ? `技(${r.items.length})` : `${AMBW_DIST[d]}の技`}`,
+      list: r.items,
+      d: d,
+      dist: fr.d,
+      rep: r.ids,
+      hitAt: hitAt,
+      onRep: r.k && d != null ? (dd, id) => setRep(r.k, dd, id) : null,
+      onClose: () => setTechList(null)
+    }));
+  })(), repEdit && phase === 'prep' && catalog && (() => {
+    const units = chosen.concat(myUnits.filter(u => !chosen.includes(u)));
+    const u = units.find(x => ambbRowKey(x.row) === repEdit) || units[0];
+    if (!u) return null;
+    const k = ambbRowKey(u.row),
+      items = ambbUnitTechItems(engine, catalog, u.unit),
+      ids = msaRepIds(items, repOf(k));
+    const nm = x => x.row.nick || ALL_PLAYER_MONSTERS[x.row.monster].name;
+    const close = () => {
+      setRepEdit(null);
+      setRepSheet(null);
+    };
+    return React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "msa-sh",
+      "data-ambb-rep-edit": true,
+      onClick: close
+    }, React.createElement("style", null, MSA_DC_CSS), React.createElement("div", {
+      className: "msa-sh-in",
       onClick: ev => ev.stopPropagation()
     }, React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }
-    }, React.createElement("b", null, m.name, " の技(", list.length, ")"), React.createElement("button", {
-      className: "ambw-btn2",
-      onClick: () => setTechList(null)
+      className: "msa-sh-top"
+    }, React.createElement("b", null, "🃏 技の札を決める"), React.createElement("button", {
+      type: "button",
+      className: "msa-sh-x",
+      onClick: close
     }, "閉じる")), React.createElement("p", {
-      className: "ambw-small"
-    }, "いまの間合い: ", AMBW_DIST[fr.d], "・届く技に ● が付いています"), React.createElement("div", {
-      className: "ambb-tl"
-    }, list.map(mv => {
-      const reach = Array.isArray(mv.dist) && mv.dist.includes(fr.d),
-        hp = ambwHitPct(catalog, {
-          A: battle.teamA,
-          B: battle.teamB
-        }, side, fr, mv.id);
-      return React.createElement("div", {
-        key: mv.id,
-        className: `ambb-tl-row ${reach ? 'on' : ''}`
-      }, React.createElement("span", {
-        style: {
-          flex: 1,
-          minWidth: 0
-        }
-      }, typeof MsaTechName === 'function' ? React.createElement(MsaTechName, {
-        name: mv.name,
-        icon: `${reach ? '●' : '○'} ${mv.kind === 'pow' ? '💪' : '🧠'} `
-      }) : `${mv.name}`), React.createElement("small", null, hp != null ? `命中 ${hp}%・` : '', "ガッツ ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
-    }))));
+      className: "msa-sh-note"
+    }, "試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。"), React.createElement("div", {
+      className: "ambb-tabs",
+      style: {
+        flexWrap: 'wrap',
+        marginTop: 6
+      }
+    }, units.map(x => React.createElement("button", {
+      key: ambbRowKey(x.row),
+      type: "button",
+      "data-ambb-rep-unit": ambbRowKey(x.row),
+      className: ambbRowKey(x.row) === k ? 'on' : '',
+      onClick: () => {
+        setRepEdit(ambbRowKey(x.row));
+        setRepSheet(null);
+      }
+    }, chosen.includes(x) ? '⚔ ' : '', nm(x)))), React.createElement("div", {
+      style: {
+        marginTop: 8
+      }
+    }, React.createElement(MsaDistCards, {
+      list: items,
+      rep: ids,
+      onOpen: d => setRepSheet(d),
+      dataSide: "prep"
+    })), repOf(k) ? React.createElement("div", {
+      style: {
+        textAlign: 'right',
+        marginTop: 8
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: "ambw-btn2",
+      "data-ambb-rep-reset": true,
+      style: {
+        minHeight: 30,
+        padding: '2px 12px',
+        fontSize: 12
+      },
+      onClick: () => putRep(k, null)
+    }, "このモンスターをおまかせに戻す")) : null)), repSheet != null && React.createElement(MsaTechSheet, {
+      title: `${nm(u)} の${AMBW_DIST[repSheet]}の技`,
+      list: items,
+      d: repSheet,
+      rep: ids,
+      onRep: (d, id) => setRep(k, d, id),
+      onClose: () => setRepSheet(null)
+    }));
   })(), ask && me && React.createElement(AssistantMasmonAskSheet, {
     who: me,
     from: "masmon",
@@ -168416,6 +168598,179 @@ const msaFitTechNames = () => {
     });
   } catch (_) {}
 };
+const MSA_DC_DIST = ['零', '近', '中', '遠'];
+const msaTechsAt = (list, d) => (Array.isArray(list) ? list : []).filter(t => t && Array.isArray(t.dist) && t.dist.includes(d));
+const msaRepScore = t => (Number(t.hit) || 0) * (Number(t.power) || 0);
+const msaRepOf = (list, d, chosenId) => {
+  const at = msaTechsAt(list, d);
+  if (!at.length) return null;
+  const c = typeof chosenId === 'string' ? at.find(t => t.id === chosenId) : null;
+  if (c) return c;
+  let best = at[0];
+  for (const t of at) {
+    const a = msaRepScore(t),
+      b = msaRepScore(best);
+    if (a > b || a === b && (Number(t.guts) || 0) < (Number(best.guts) || 0)) best = t;
+  }
+  return best;
+};
+const msaRepIds = (list, chosen) => [0, 1, 2, 3].map(d => {
+  const t = msaRepOf(list, d, Array.isArray(chosen) ? chosen[d] : null);
+  return t ? t.id : null;
+});
+const msaSheetOrder = (list, d, repId) => msaTechsAt(list, d).slice().sort((a, b) => a.id === repId ? -1 : b.id === repId ? 1 : msaRepScore(b) - msaRepScore(a) || a.guts - b.guts);
+const MSA_DC_CSS = `
+.msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.msa-dc-c{position:relative;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+.msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
+.msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
+.msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
+.msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
+.msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
+.msa-dc-c.far{opacity:.55}
+.msa-dc-c.ng small.p{color:#fca5a5}
+.msa-dc-c.use{background:#fde047;color:#422006;border-color:#fde047;opacity:1}
+.msa-dc-c.use small,.msa-dc-c.use small.p,.msa-dc-c.use .msa-dc-h{color:#422006}
+.msa-dc-c.hint{outline:2px solid #fde047;outline-offset:1px}
+.msa-dc-c:disabled{opacity:.35}
+.msa-dc-none{font-size:10px;color:#64748b}
+.msa-sh{position:fixed;inset:0;z-index:9650;background:#000a;display:flex;align-items:flex-end;justify-content:center}
+.msa-sh-in{width:100%;max-width:460px;max-height:78vh;overflow-y:auto;background:#1e1a36;border-radius:16px 16px 0 0;padding:12px 12px max(14px,env(safe-area-inset-bottom));color:#fff;font-weight:700}
+.msa-sh-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.msa-sh-top b{font-size:14px;min-width:0}
+.msa-sh-x{flex:none;border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:5px 14px;font-weight:900;font-family:inherit}
+.msa-sh-note{font-size:11px;color:#cbd5e1;margin:4px 0 2px}
+.msa-sh-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px dashed rgba(255,255,255,.12)}
+.msa-sh-row.rep{background:#fde04712;border-radius:8px}
+.msa-sh-use{flex:1;min-width:0;text-align:left;border:1px solid #4c4680;background:#2b2650;color:#fff;border-radius:10px;padding:5px 8px;font-weight:900;font-size:12.5px;font-family:inherit;line-height:1.25}
+.msa-sh-use.view{background:transparent;border-color:transparent;padding-left:2px}
+.msa-sh-use.hint{border-color:#fde047}
+.msa-sh-use:disabled{opacity:.45}
+.msa-sh-use small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+.msa-sh-use small.p{color:#fde68a}
+.msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}
+.msa-sh-rep.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
+${MSA_TN_CSS}
+`;
+const msaKindIcon = t => t && t.kind === 'pow' ? '💪' : '🧠';
+function MsaDistCards({
+  list,
+  rep,
+  dist = null,
+  guts = null,
+  hitAt = null,
+  lastMove = null,
+  hintId = null,
+  onOpen = null,
+  busy = false,
+  dataSide = ''
+}) {
+  const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
+  return React.createElement("div", {
+    className: "msa-dc",
+    "data-msa-dc": dataSide || ''
+  }, React.createElement("style", null, MSA_DC_CSS), [0, 1, 2, 3].map(d => {
+    const at = msaTechsAt(list, d);
+    const used = lastMove && d === dist ? at.find(t => t.id === lastMove) : null;
+    const t = used || at.find(x => x.id === ids[d]) || msaRepOf(list, d, null);
+    const now = dist === d,
+      hp = t ? hitAt ? hitAt(t, d) : t.hit : null;
+    const ng = t && Number.isFinite(guts) && guts < t.guts;
+    const cls = `msa-dc-c ${now ? 'now' : dist == null ? '' : 'far'} ${used ? 'use' : ''} ${ng ? 'ng' : ''} ${t && now && hintId && at.some(x => x.id === hintId) ? 'hint' : ''}`;
+    return React.createElement("button", {
+      key: d,
+      type: "button",
+      className: cls,
+      "data-msa-dc-card": d,
+      "data-msa-dc-rep": t ? t.id : '',
+      disabled: !t || busy || !onOpen,
+      onClick: () => {
+        if (onOpen && t && !busy) onOpen(d);
+      }
+    }, React.createElement("span", {
+      className: "msa-dc-h"
+    }, MSA_DC_DIST[d], now ? React.createElement("em", null, "いま") : null, React.createElement("i", null, at.length ? `${at.length}技` : '')), t ? React.createElement(MsaTechName, {
+      name: t.name,
+      icon: msaKindIcon(t)
+    }) : React.createElement("span", {
+      className: "msa-dc-none"
+    }, "届く技なし"), t ? React.createElement("small", {
+      className: "p"
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —') : null, t ? React.createElement("small", null, "ガッツ ", t.guts) : null);
+  }));
+}
+function MsaTechSheet({
+  title,
+  list,
+  d = null,
+  dist = null,
+  rep = null,
+  hitAt = null,
+  onUse = null,
+  usable = null,
+  useNote = null,
+  onRep = null,
+  hintId = null,
+  onClose
+}) {
+  useEffect(() => {
+    if (typeof msaFitTechNames === 'function') msaFitTechNames();
+  });
+  const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
+  const repId = d == null ? null : ids[d];
+  const rows = d == null ? (Array.isArray(list) ? list.slice() : []).sort((a, b) => dist != null ? (b.dist.includes(dist) ? 1 : 0) - (a.dist.includes(dist) ? 1 : 0) : 0) : msaSheetOrder(list, d, repId);
+  const distOf = t => Array.isArray(t.dist) ? t.dist.map(x => MSA_DC_DIST[x]).join('・') : '';
+  const note = d == null ? dist != null ? `いまの間合い: ${MSA_DC_DIST[dist]}・届く技を先に並べています` : 'このモンスターの技' : onUse ? 'いちばん上が代表の技。押した技を使います' : `いちばん上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
+  return React.createElement("div", {
+    className: "msa-sh",
+    "data-msa-sheet": d == null ? 'all' : d,
+    onClick: onClose
+  }, React.createElement("style", null, MSA_DC_CSS), React.createElement("div", {
+    className: "msa-sh-in",
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("div", {
+    className: "msa-sh-top"
+  }, React.createElement("b", null, title), React.createElement("button", {
+    type: "button",
+    className: "msa-sh-x",
+    "data-msa-sheet-close": true,
+    onClick: onClose
+  }, "閉じる")), React.createElement("p", {
+    className: "msa-sh-note"
+  }, note), rows.map(t => {
+    const hd = d == null ? dist != null && t.dist.includes(dist) ? dist : t.dist[0] : d;
+    const hp = hitAt ? hitAt(t, hd) : t.hit;
+    const can = !!onUse && (!usable || usable(t));
+    const isRep = d != null && t.id === repId;
+    return React.createElement("div", {
+      key: t.id,
+      className: `msa-sh-row ${isRep ? 'rep' : ''}`,
+      "data-msa-sheet-row": t.id
+    }, React.createElement("button", {
+      type: "button",
+      className: `msa-sh-use ${onUse ? '' : 'view'} ${hintId === t.id ? 'hint' : ''}`,
+      disabled: !can,
+      "data-msxm-tech": onUse ? t.id : undefined,
+      onClick: () => {
+        if (can) onUse(t);
+      }
+    }, React.createElement(MsaTechName, {
+      name: t.name,
+      icon: `${isRep ? '★ ' : ''}${msaKindIcon(t)}`
+    }), React.createElement("small", {
+      className: "p"
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —', "・ガッツ ", t.guts, Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : '', onUse && useNote && !can ? useNote(t) : ''), React.createElement("small", null, "届く ", distOf(t))), onRep && d != null ? isRep ? React.createElement("span", {
+      className: "msa-sh-rep on",
+      "data-msa-rep-on": t.id
+    }, "★ 代表") : React.createElement("button", {
+      type: "button",
+      className: "msa-sh-rep",
+      "data-msa-rep": t.id,
+      onClick: () => onRep(d, t.id)
+    }, "☆ 代表にする") : null);
+  })));
+}
 const msxManualOpen = (engine, input, choices) => {
   if (!engine || typeof engine.createMatch !== 'function' || !input) return null;
   try {
@@ -168465,14 +168820,23 @@ function useMsxManualMatch(engine, input, choices, key) {
     toAuto
   };
 }
+const msxTechItems = opt => (opt && Array.isArray(opt.tech) ? opt.tech : []).map(t => ({
+  ...t,
+  id: t.key,
+  hit: Number.isFinite(t.p) ? t.p : 0,
+  power: Number.isFinite(t.power) ? t.power : 1
+}));
 function MsxManualBar({
   opt,
   onPick,
   onAuto,
   busy,
-  allInit = false
+  rep = null,
+  onRep = null,
+  title = '',
+  sheetInit = null
 }) {
-  const [allOpen, setAllOpen] = useState(!!allInit);
+  const [sheet, setSheet] = useState(sheetInit);
   useEffect(() => {
     msaFitTechNames();
   });
@@ -168500,9 +168864,14 @@ function MsxManualBar({
       })
     }, x.name, React.createElement("small", null, "ライフ ", x.hp, "/", x.maxHp)))));
   }
-  const reachN = opt.tech.filter(t => t.reach).length;
-  const techs = allOpen ? opt.tech.filter(t => t.reach).concat(opt.tech.filter(t => !t.reach)) : opt.tech.filter(t => t.reach);
-  const distOf = t => Array.isArray(t.dist) ? t.dist.map(d => MSX_MANUAL_DIST[d]).join('・') : '';
+  const items = msxTechItems(opt);
+  const ids = msaRepIds(items, rep);
+  const hitAt = (t, d) => Array.isArray(t.pd) && Number.isFinite(t.pd[d]) ? t.pd[d] : t.hit;
+  const hintId = opt.hint && opt.hint.type === 'tech' ? opt.hint.key : null;
+  const reachN = items.filter(t => t.reach).length;
+  const sheetOn = sheet != null && (sheet === 'all' || msaTechsAt(items, sheet).length > 0);
+  const sd = sheet === 'all' ? null : sheet;
+  const useHere = !busy && (sd == null || sd === opt.dist);
   return React.createElement("div", {
     className: "msxm",
     "data-msxm": "act"
@@ -168524,31 +168893,41 @@ function MsxManualBar({
       alignItems: 'center',
       gap: 6
     }
-  }, React.createElement("span", null, "⚔ 攻撃", reachN ? `(届く技 ${reachN})` : '(この間合いでは届く技がありません)'), opt.tech.length > reachN ? React.createElement("button", {
+  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(札を押して技を選ぶ)' : '(この間合いでは届く技がありません)'), items.length ? React.createElement("button", {
     type: "button",
     className: "msxm-all",
     "data-msxm-all": true,
-    onClick: () => setAllOpen(v => !v)
-  }, allOpen ? '届く技だけ' : `全部の技(${opt.tech.length})`) : null), React.createElement("div", {
-    className: "msxm-row"
-  }, techs.map(t => React.createElement("button", {
-    key: t.key,
-    type: "button",
-    className: `msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`,
-    disabled: !t.ok || busy,
-    "data-msxm-tech": t.key,
-    "data-msxm-reach": t.reach ? '1' : '0',
-    onClick: () => go({
-      type: 'tech',
-      key: t.key
-    })
-  }, React.createElement(MsaTechName, {
-    name: t.name,
-    icon: t.kind === 'pow' ? '💪' : '🧠',
-    className: "msxm-nm"
-  }), React.createElement("small", {
-    className: "p"
-  }, "命中 ", Math.round(t.p), "%・ガッツ ", t.guts, t.reach && !t.ok ? `(あと${t.need})` : ''), React.createElement("small", null, "届く ", distOf(t), t.reach ? '' : '(いまは届かない)'))))), React.createElement("div", {
+    onClick: () => setSheet('all')
+  }, "📜 全部の技(", items.length, ")") : null), React.createElement(MsaDistCards, {
+    list: items,
+    rep: ids,
+    dist: opt.dist,
+    guts: opt.guts,
+    hitAt: hitAt,
+    hintId: hintId,
+    busy: busy,
+    onOpen: d => setSheet(d),
+    dataSide: "manual"
+  })), sheetOn ? React.createElement(MsaTechSheet, {
+    title: `${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`,
+    list: items,
+    d: sd,
+    dist: opt.dist,
+    rep: ids,
+    hitAt: hitAt,
+    hintId: hintId,
+    onUse: useHere ? t => {
+      setSheet(null);
+      go({
+        type: 'tech',
+        key: t.id
+      });
+    } : null,
+    usable: t => t.ok,
+    useNote: t => !t.reach ? '(いまは届かない)' : `(あと${t.need})`,
+    onRep: onRep && sd != null ? (d, id) => onRep(d, id) : null,
+    onClose: () => setSheet(null)
+  }) : null, React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"

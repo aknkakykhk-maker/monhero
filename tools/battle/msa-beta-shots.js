@@ -95,31 +95,53 @@ const seed = () => {
     await page.evaluate(() => { const d = document.querySelector('[data-ambb-tune]'); if (d) d.open = true; });
     await page.waitForTimeout(OUT ? 900 : 300);
     await still('3-settings');
+    if (MANUAL) {
+      // 準備画面の「🃏 技の札を決める」→ 札を押して一覧 →「☆ 代表にする」
+      if (await clickSel('[data-ambb-rep-open]')) {
+        await page.waitForTimeout(OUT ? 1400 : 300); await still('7a-prep-rep');
+        for (let d = 0; d < 4; d++) {
+          await page.evaluate((k) => { const c = document.querySelector(`[data-ambb-rep-edit] [data-msa-dc-card="${k}"]`); if (c && !c.disabled) c.click(); }, d);
+          await page.waitForTimeout(OUT ? 1200 : 250);
+          if (await page.evaluate(() => !!document.querySelector('[data-msa-sheet] [data-msa-rep]'))) { await still('7b-prep-rep-list'); await clickSel('[data-msa-sheet] [data-msa-rep]'); await page.waitForTimeout(OUT ? 1200 : 300); await still('7c-prep-rep-set'); break; }
+          await page.evaluate(() => { const x = document.querySelector('[data-msa-sheet] [data-msa-sheet-close]'); if (x) x.click(); });
+        }
+        await page.evaluate(() => { document.querySelectorAll('[data-msa-sheet-close]').forEach((b) => b.click()); const b = [...document.querySelectorAll('[data-ambb-rep-edit] button')].find((x) => /閉じる/.test(x.textContent)); if (b) b.click(); });
+        await page.waitForTimeout(300);
+      }
+    }
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch] [data-msa-stage]'), { timeout: 10000 });
     if (MANUAL) {
-      // 手動: 帯が出るまで待つ → 撮る → 届く技を1つ選ぶ → 全部の技を開く → 上の欄の「全部の技」の一覧
+      // 手動(段3・技の札は間合いごとの4枚): 帯 → いまの間合いの札を押して一覧 → ☆ 代表にする → 一覧の技を使う → 全部の技 → 相手の札の一覧
       const waitBar = () => page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 15000 });
-      await waitBar(); await page.waitForTimeout(400); await still('8-manual-bar');
-      const fit = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { stageH: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, techs: document.querySelectorAll('[data-msxm-tech]').length, chipsA: document.querySelectorAll('[data-ambw-panel="A"] .ambw-chip:not(.ambw-chip-all)').length }; });
+      const closeSheet = () => page.evaluate(() => { document.querySelectorAll('[data-msa-sheet-close]').forEach((b) => b.click()); });
+      await waitBar(); await page.waitForTimeout(400); await still('8-manual-cards');
+      const fit = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { stageH: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, cards: document.querySelectorAll('[data-msa-dc-card]').length }; });
       console.log('手動の帯:', JSON.stringify(fit));
-      await clickSel('[data-msxm-all]'); await page.waitForTimeout(OUT ? 1200 : 300); await still('9-manual-all');
-      await clickSel('[data-msxm-all]');
-      await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-tech]')].find((x) => !x.disabled); if (b) b.click(); });
+      await clickSel('[data-msa-dc="manual"] [data-msa-dc-card].now'); await page.waitForTimeout(OUT ? 1400 : 300); await still('9-manual-list');
+      if (await clickSel('[data-msa-sheet] [data-msa-rep]')) { await page.waitForTimeout(OUT ? 1400 : 300); await still('9b-manual-rep'); }
+      const used = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msa-sheet] [data-msxm-tech]')].find((x) => !x.disabled); if (b) { b.click(); return true; } return false; });
+      if (!used) { await closeSheet(); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); }
       await page.waitForTimeout(OUT ? 3500 : 2500); await still('10-manual-after');
       await waitBar().catch(() => {});
-      // 技名が切れていないか(枠からはみ出さない・言葉の途中で折れない・字が 7px 以上)を、帯・上下の欄・一覧で数える
-      const fitOf = () => page.evaluate(() => { const els = [...document.querySelectorAll('[data-msa-tn]')]; const bad = els.filter((el) => el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('.msa-tn-s')].some((s) => s.getClientRects().length > 1) || parseFloat(getComputedStyle(el).fontSize) < 7).map((el) => `${el.textContent}@${(el.closest('[data-ambw-panel],[data-msxm],[data-ambb-techlist]') || {}).className || ''}`.slice(0, 40)); return { n: els.length, bad: bad.slice(0, 5), badN: bad.length, minFont: Math.min(...els.map((el) => parseFloat(getComputedStyle(el).fontSize))) }; });
-      await clickSel('[data-msxm-all]'); await page.waitForTimeout(300); const fitBar = await fitOf(); await clickSel('[data-msxm-all]');
-      await clickSel('[data-ambw-all="B"]'); await page.waitForTimeout(OUT ? 1500 : 400); await still('11-techlist');
+      // 技名が切れていないか(枠からはみ出さない・言葉の途中で折れない・字が 7px 以上)を、札・一覧で数える
+      const fitOf = () => page.evaluate(() => { const els = [...document.querySelectorAll('[data-msa-tn]')]; const bad = els.filter((el) => el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('.msa-tn-s')].some((s) => s.getClientRects().length > 1) || parseFloat(getComputedStyle(el).fontSize) < 7).map((el) => el.textContent); return { n: els.length, bad: bad.length, ex: bad.slice(0, 3) }; });
+      const fitCards = await fitOf();
+      await clickSel('[data-msxm-all]'); await page.waitForTimeout(OUT ? 1400 : 300); await still('11-manual-all'); const fitAll = await fitOf(); await closeSheet();
+      await page.evaluate(() => { const c = [...document.querySelectorAll('[data-ambw-cards="B"] [data-msa-dc-card]')].find((x) => !x.disabled); if (c) c.click(); });
+      await page.waitForTimeout(OUT ? 1500 : 400); await still('12-foe-list');
       const fitList = await fitOf();
-      console.log(`技名(幅 ${WIDTH}): 帯+欄 ${JSON.stringify(fitBar)} / 一覧 ${JSON.stringify(fitList)}`);
-      await page.evaluate(() => { const b = [...document.querySelectorAll('[data-ambb-techlist] button')].find((x) => /閉じる/.test(x.textContent)); if (b) b.click(); });
+      console.log(`技名(幅 ${WIDTH}): 札 ${JSON.stringify(fitCards)} / 全部 ${JSON.stringify(fitAll)} / 相手の一覧 ${JSON.stringify(fitList)}`);
+      await closeSheet();
       if (OUT) {
-        // もう1手選んでから「オートにする」で進むところまで(終わっていたら待たない)
+        // もう1手(札 → 一覧の技)選んでから「オートにする」で進むところまで(終わっていたら待たない)
         const hasBar = () => page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'));
         await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]') || !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
-        if (await hasBar()) { await page.waitForTimeout(700); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-tech]')].find((x) => !x.disabled) || [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); }
+        if (await hasBar()) {
+          await page.waitForTimeout(700); await clickSel('[data-msa-dc="manual"] [data-msa-dc-card].now'); await page.waitForTimeout(1200);
+          const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msa-sheet] [data-msxm-tech]')].find((x) => !x.disabled); if (b) { b.click(); return true; } return false; });
+          if (!ok) { await closeSheet(); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); }
+        }
         await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] .msxm-auto') || !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(700);
         await page.evaluate(() => { const b = document.querySelector('[data-ambb-manual] .msxm-auto'); if (b) b.click(); });

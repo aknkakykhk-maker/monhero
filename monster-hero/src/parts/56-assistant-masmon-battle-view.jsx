@@ -136,7 +136,7 @@ const AMBW_CSS = `
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
 .ambw-chip .msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15}.ambw-chip .msa-tn-s{white-space:nowrap}
 .ambw-chip{white-space:normal!important;text-overflow:clip!important}
-.ambw-chip-all{flex:0 0 auto;color:#c4b5fd;border-style:dashed;background:#1e1b4b;font-family:inherit}
+[data-ambw-cards]{display:block}
 .ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
 .ambw-dist{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
@@ -192,8 +192,15 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   const v = st.f(side, frame.act.A, frame.act.B, frame.g[side], frame.d)[id];
   return Number.isFinite(v) ? v : null;
 };
-// reachOnly … 技の札は、いまの間合いで届く技だけ(使った技は残す)。onAll があれば「全部の技」の札を足す(押すと onAll(side))。2026-11-13 段3
-function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = null, teams = null, reachOnly = false, onAll = null }) {
+// 技の札の形にそろえる(56-monhero-success-manual.jsx の MsaDistCards・MsaTechSheet が読む形)。
+//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。技表に無い技は 0
+const ambwTechItems = (catalog, member, list) => {
+  const sp = catalog && member && catalog.species && catalog.species[member.species];
+  const byId = {}; if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
+  return (Array.isArray(list) ? list : []).map((mv) => ({ ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: Number((byId[mv.id] || {}).hit) || 0, power: Number((byId[mv.id] || {}).power) || 0 }));
+};
+// cards … 技の札を間合いごとの4枚にする(2026-11-13 社長)。rep … [零,近,中,遠] の代表の技 id/onOpen(side, d) … 札を押すと一覧
+function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = null, teams = null, cards = false, rep = null, onOpen = null }) {
   const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
   const style = (window.ASSISTANT_MASMON_BATTLE.STYLES[team.assistantId] || {}).label || '';
   const i = frame.act[side];
@@ -217,12 +224,17 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
         </div>
         <div className="ambw-num"><span data-ambw-hp={side}>{hp}</span><small>/{mx}</small><br/><em>ガッツ {Math.round(g)}</em></div>
       </div>
-      <div className="ambw-chips">{list.filter((mv) => !reachOnly || lastMove === mv.id || (Array.isArray(mv.dist) && mv.dist.includes(frame.d))).map((mv) => {
+      {cards && typeof MsaDistCards === 'function' ? (
+        <div className="ambw-chips" data-ambw-cards={side}>
+          <MsaDistCards list={ambwTechItems(catalog, team.members && team.members[i], list)} rep={rep} dist={frame.d} guts={g} lastMove={lastMove} dataSide={side}
+            hitAt={(t, d) => { const v = ambwHitPct(catalog, teams, side, { ...frame, d }, t.id); return v != null ? v : t.hit; }} onOpen={onOpen ? (d) => onOpen(side, d) : null}/>
+        </div>
+      ) : <div className="ambw-chips">{list.map((mv) => {
         const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d), ok = g >= mv.guts;
         const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
         const hp = ambwHitPct(catalog, teams, side, frame, mv.id);
         return <span key={mv.id} className={`ambw-chip ${cls}`}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={mv.kind === 'pow' ? '💪' : '🧠'}/> : <>{mv.kind === 'pow' ? '💪' : '🧠'}{mv.name}</>}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
-      })}{onAll && list.length ? <button type="button" className="ambw-chip ambw-chip-all" data-ambw-all={side} onClick={() => onAll(side)}>📜 全部の技<small>{list.length}こ</small></button> : null}</div>
+      })}</div>}
     </div>
   );
 }
