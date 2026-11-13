@@ -318,7 +318,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const T = engine.SPECIES_TRAITS; const stepD = (engine.GUTS_REGEN_MAX - engine.GUTS_REGEN_MIN) / 6;
   const traitBad = Object.keys(catalog.species).filter((k) => { const t = T[k]; const v = catalog.species[k]; if (!t) return true;
     const gi = engine.GUTS_REGEN_GRADES.indexOf(t.g); const mi = engine.GUTS_REGEN_GRADES.indexOf(t.m);
-    return v.regen !== Math.round(engine.GUTS_REGEN_MIN + gi * stepD) || v.first !== (mi - 3) * engine.MOVE_SPEED_FIRST || v.size !== t.z; });
+    return v.regen !== Math.round(engine.GUTS_REGEN_MIN + gi * stepD) || v.first !== (mi - 3) * engine.MOVE_SPEED_FIRST || v.size !== t.z
+      || Math.abs(v.taken - (1 + (mi - 3) * engine.MOVE_SPEED_TAKEN)) > 0.002; });
   check('⑫ 種ごとの等級の表(ガッツ回復力・移動速度・サイズ)が全種にあり、回復・先手・サイズに写っている', !traitBad.length && catalog.species.Pixie.regen === engine.GUTS_REGEN_MAX && engine.SIZE_SMALL_EVADE > 0 && engine.SIZE_LARGE_CUT > 0, traitBad.join(' '));
   check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜A の表が幅の両端へ等間隔・S は外へ伸びる(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
 }

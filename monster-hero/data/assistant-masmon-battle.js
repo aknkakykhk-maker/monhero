@@ -27,7 +27,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 7;           // 計算を変えたら上げる(7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION = 7;           // 計算を変えたら上げる(7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
   const VERSION_PLAIN = 7;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
@@ -48,6 +48,7 @@
   const GUTS_REGEN_GRADES_UP = ['S', 'SS'];
   // 移動速度(先手)とサイズ(2026-11-13 社長「移動速度・サイズ・移動間合い・技能力の4つを、すべて入れます」「大きいほど受けるダメージを少し減らす」)
   const MOVE_SPEED_FIRST = 6;    // 移動速度の1段ごとに、先手の決め方へ足す分(D が 0。A は +18・G は −18。能力と運の合計は数百。試算で速い側の得が +1〜2 ポイントに収まる量)
+  const MOVE_SPEED_TAKEN = 0.03; // 移動速度の1段ごとに受けるダメージを増減(D が ×1。速いほど多く受け、遅いほど少なく受ける。2026-11-13 社長「被ダメに影響。速いほど被ダメが上がる」)
   const SIZE_SMALL_EVADE = 0.02; // 小さい: 受ける技の命中 −2%(よける型)
   const SIZE_LARGE_CUT = 0.05;   // 大きい: 受けるダメージ −5%(耐える型。試算で小さい・大きいのどちらにも偏らない組)
   // 種ごとの等級(参考の資料の評価。gutsRecovery・moveSpeed・size)。資料に無いうちのオリジナルの5種は近い子からの案(社長に確認する)。
@@ -213,6 +214,7 @@
       const tr = SPECIES_TRAITS[id] || {};
       const mi = gradeIdx(tr.m);
       v.first = mi >= 0 ? (mi - GUTS_REGEN_GRADES.indexOf('D')) * MOVE_SPEED_FIRST : 0;
+      v.taken = mi >= 0 ? Math.round(Math.max(0.5, 1 + (mi - GUTS_REGEN_GRADES.indexOf('D')) * MOVE_SPEED_TAKEN) * 1000) / 1000 : 1;
       v.size = tr.z === 'S' || tr.z === 'L' ? tr.z : 'M';
       delete v.baseGuts;
     }
@@ -315,7 +317,8 @@
     // 受ける側: 丈夫さ(×0.9)に、受ける技と同じ種類の能力(ちから技ならちから・かしこさ技ならかしこさ)を丈夫さの半分の効き目(×0.45)で足す
     //   (2026-11-12 社長「ちから技のダメージが増加する/相手のちから技によるダメージを軽減する。かしこさも同じ。被ダメにも影響ある」)
     return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND) * (defU.size === 'L' ? 1 - SIZE_LARGE_CUT : 1)
-      * Math.max(0.5, 1 - aptSteps(defU.apt ? defU.apt[dist] : 'C') * APT_DEF); // 受ける側の距離適性
+      * Math.max(0.5, 1 - aptSteps(defU.apt ? defU.apt[dist] : 'C') * APT_DEF) // 受ける側の距離適性
+      * (defU.taken || 1); // 受ける側の移動速度(速いほど多く受ける)
   };
   const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
@@ -484,7 +487,7 @@
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: catalog.species[m.species].apt,
-            moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, size: catalog.species[m.species].size || 'M',
+            moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, loy: m.loy, pop: m.pop };
         }),
       };
@@ -859,7 +862,7 @@
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
