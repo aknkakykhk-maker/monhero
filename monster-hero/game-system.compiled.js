@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8875b2ac60324b7
+// source-sha256: 0ab091cf0036e453
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165991,6 +165991,8 @@ const MSX_R3_CSS = `
 .msx .r3 .v-rm3>button{display:flex;align-items:center;gap:8px;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left;color:#fff;font-family:inherit;width:100%}
 .msx .r3 .v-rm3>button.gv{background:#1e293b;display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}
 .msx .r3 .v-ml{color:#fff;font-family:inherit}
+/* ごはん9種(2026-11-13 社長)。3列×3段に収める */
+.msx .r3 .v-meal .ms{gap:4px}.msx .r3 .v-ml{padding:4px 2px}.msx .r3 .v-ml .e{font-size:20px}.msx .r3 .v-ml b{font-size:10.5px;overflow:hidden;text-overflow:clip}.msx .r3 .v-ml .g{font-size:10.5px}.msx .r3 .v-ml small{font-size:10px;line-height:1.25}
 .msx .r3 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
 .msx .v-ft button:disabled{opacity:.45}
 `;
@@ -167205,27 +167207,57 @@ function MsxR3Battle({
       }
     };
     const loyOf = x => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
-    const fx = k => {
+    const effOf = k => {
       const m = M[k];
       const t = tryMeal(k);
-      if (!t) return '';
-      if (m.hp) {
-        const d = t.hp - s.hp;
-        return d > 0 ? `体力 +${d}(上限の${Math.round(m.hp * 100)}%)` : '体力はもう満タン';
-      }
-      if (m.ama || m.fear) {
-        const a = loyOf(s);
-        const b = loyOf(t);
-        return b > a ? `忠誠 +${b - a}(いま ${a}→${b})` : '忠誠はもう上がらない';
-      }
-      if (m.all) {
-        const ds = MSX_STATS.map(x => (t.stats[x] || 0) - (s.stats[x] || 0));
-        const lo = Math.min(...ds);
-        const hi = Math.max(...ds);
-        const sum = ds.reduce((p, q) => p + q, 0);
-        return `全能力 +${lo === hi ? lo : `${lo}〜${hi}`}(合計 +${sum})`;
-      }
-      return '';
+      if (!m || !t) return null;
+      const hp = t.hp - s.hp;
+      const ama = (Number(t.ama) || 0) - (Number(s.ama) || 0);
+      const fear = (Number(t.fear) || 0) - (Number(s.fear) || 0);
+      const st = m.stat ? (t.stats[m.stat] || 0) - (s.stats[m.stat] || 0) : 0;
+      const pop = (Number(t.pop) || 0) - (Number(s.pop) || 0);
+      const pts = (Number(t.pts) || 0) - (Number(s.pts) || 0);
+      return {
+        m,
+        hp,
+        ama,
+        fear,
+        st,
+        pop,
+        pts,
+        loy0: loyOf(s),
+        loy1: loyOf(t)
+      };
+    };
+    const fx = k => {
+      const e = effOf(k);
+      if (!e) return '';
+      const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
+      if (e.m.stat) return `${MSX_STAT_NAME[e.m.stat]}+${e.st}・${hp}`;
+      if (e.m.pop || e.m.pts) return `人気+${e.pop}・能力P+${e.pts}・${hp}`;
+      return `${e.m.fear ? `恐れ+${e.fear}` : `甘え+${e.ama}`}・${hp}`;
+    };
+    const fxLong = k => {
+      const e = effOf(k);
+      if (!e) return '';
+      const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
+      const parts = [hp];
+      if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
+      if (e.m.fear || e.m.ama) parts.push(`${e.m.fear ? '恐れ度' : '甘え度'} +${e.m.fear ? e.fear : e.ama}(忠誠度 ${e.loy0}→${e.loy1})`);
+      if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
+      if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
+      return parts.join('・');
+    };
+    const MEAL_ICON = {
+      vitamin: '💊',
+      gochiso: '🍱',
+      f_life: '🥕',
+      f_pow: '🍖',
+      f_wise: '🌰',
+      f_hit: '🫐',
+      f_eva: '🍎',
+      f_tough: '🥔',
+      prune: '⭐'
     };
     const LY = SUC.LOYAL || {};
     const RT = SUC.RATE || {};
@@ -167292,11 +167324,21 @@ function MsxR3Battle({
       "data-msx-r3-meal": k
     }, React.createElement("div", {
       className: "e"
-    }, k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'), React.createElement("b", null, M[k].name), React.createElement("span", {
+    }, MEAL_ICON[k] || '🍙'), React.createElement("b", null, M[k].name), React.createElement("span", {
       className: "g"
     }, free ? 'ただ' : `💰 ${msxFmt(M[k].cost)}G`), React.createElement("small", {
       "data-msx-r3-mealfx": k
     }, fx(k))))), React.createElement("div", {
+      className: "msx-note",
+      "data-msx-r3-mealdetail": true,
+      style: {
+        marginTop: 5,
+        fontSize: 11,
+        lineHeight: 1.5,
+        textAlign: 'left',
+        color: '#fde68a'
+      }
+    }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}` : '札を押すと、くわしい効き目が出ます'), React.createElement("div", {
       className: "msx-note",
       "data-msx-r3-loynote": true,
       style: {
@@ -167316,8 +167358,28 @@ function MsxR3Battle({
       alt: ""
     }), React.createElement("div", {
       className: "bub f1"
-    }, st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'))) : null));
-    const foot = React.createElement("div", {
+    }, st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'))) : !st3.won && !s.over ? React.createElement("div", {
+      className: "v-meal",
+      "data-msx-r3-lostnote": true
+    }, React.createElement("div", {
+      className: "row"
+    }, React.createElement("img", {
+      className: "fc",
+      src: msxFace(s.aid, 'troubled'),
+      alt: ""
+    }), React.createElement("div", {
+      className: "bub f1"
+    }, msxR3Line('turn.cup.lose', run, {
+      cup: st3.name
+    }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」')))) : null));
+    const foot = !(s.mealReady && !s.over) ? React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => finish(s),
+      "data-msx-r3-nomeal": true
+    }, "つぎへ ▶")) : React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",

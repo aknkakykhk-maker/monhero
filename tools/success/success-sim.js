@@ -198,9 +198,10 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
       const st = SUC.settle(s, wins, LAST_USE); s = st.state;
       s = runEvent(s, 'cup', { won: st.out.won, kind: bk });
       if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
-      // 大会のあとのごはん: 名声があれば 能力 → 体力(少ないとき)→ 忠誠(60未満)の順
+      // 大会のあとのごはん(9種): 忠誠60未満 → ごちそう、体力が少ない → ビタミン、賞金があれば いちばん高い能力の餌
       if (s.mealReady && !s.over) {
-        const pick = s.fame >= SUC.MEALS.stat.cost ? 'stat' : (s.hp < s.hpMax * 0.6 && s.fame >= SUC.MEALS.hp.cost) ? 'hp' : (SUC.loyalOf(s) < 60 && s.fame >= SUC.MEALS.loyal.cost) ? 'loyal' : null;
+        const topK = Object.keys(s.stats).sort((x, y) => s.stats[y] - s.stats[x])[0]; const can = (k) => SUC.MEALS[k] && s.fame >= SUC.MEALS[k].cost;
+        const pick = SUC.loyalOf(s) < 60 && can('gochiso') ? 'gochiso' : s.hp < s.hpMax * 0.6 && can('vitamin') ? 'vitamin' : can(`f_${topK}`) ? `f_${topK}` : null;
         if (pick) s = SUC.meal(s, pick).state;
       }
       continue;
