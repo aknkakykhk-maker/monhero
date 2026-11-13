@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4c7d848ec25d8ac
+// source-sha256: d6d165f904c15046
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169837,7 +169837,6 @@ function MonsucRankScreen({
 }
 const MLAB_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
 const MLAB_DIST = Object.freeze([['遠', 3, 'bg-blue-500'], ['中', 2, 'bg-green-500'], ['近', 1, 'bg-amber-500'], ['零', 0, 'bg-red-500']]);
-const MLAB_NO_DATA = Object.freeze(['Eiki', 'KenshiMocchi', 'Pandora', 'Melody', 'Kuromy']);
 const MLAB_SIZE = Object.freeze({
   S: '小さい',
   M: 'ふつう',
@@ -169869,7 +169868,7 @@ const mlabApt = sp => {
   return typeof s === 'string' && s.length === 6 ? s.split('') : null;
 };
 const mlabTraits = (engine, sp) => {
-  if (!engine || MLAB_NO_DATA.includes(sp)) return null;
+  if (!engine) return null;
   const t = engine.SPECIES_TRAITS && engine.SPECIES_TRAITS[sp];
   return t && typeof t === 'object' ? {
     g: t.g,
@@ -170113,7 +170112,7 @@ function MonsterLabScreen({
       alive = false;
     };
   }, []);
-  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'base' ? 'ベースモン一覧' : sel && sel.fuse ? '合体円盤石詳細' : sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細';
+  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'fuse' ? '合体円盤石一覧' : view === 'base' ? 'ベースモン一覧' : sel && sel.fuse ? '合体円盤石詳細' : sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細';
   const back = () => {
     if (view === 'detail') setView(from);else if (view === 'door') onClose();else setView('door');
   };
@@ -170151,8 +170150,14 @@ function MonsterLabScreen({
     className: "mt-1 block text-[11px] font-bold"
   }, "育成を終えた1体")), React.createElement("button", {
     type: "button",
+    onClick: () => setView('fuse'),
+    className: "rounded-2xl border-2 border-purple-300 bg-[#5b2a8a] px-2 py-5 text-[15px] font-black active:scale-95"
+  }, "合体円盤石", React.createElement("small", {
+    className: "mt-1 block text-[11px] font-bold"
+  }, "合体で生まれた円盤石")), React.createElement("button", {
+    type: "button",
     onClick: () => setView('base'),
-    className: "rounded-2xl border-2 border-sky-300 bg-[#1d4e7a] px-2 py-5 text-[15px] font-black active:scale-95"
+    className: "col-span-2 rounded-2xl border-2 border-sky-300 bg-[#1d4e7a] px-2 py-5 text-[15px] font-black active:scale-95"
   }, "ベースモン", React.createElement("small", {
     className: "mt-1 block text-[11px] font-bold"
   }, "種類ごとのもとの値")), React.createElement("button", {
@@ -170166,11 +170171,9 @@ function MonsterLabScreen({
     className: "ml-2 text-[11px] font-bold"
   }, "いまのまま")))), view === 'mas' && (box === null ? React.createElement("div", {
     className: "p-6 text-center text-[12px] text-indigo-300"
-  }, "読み込み中…") : !box.mas.length && !box.fuse.length ? React.createElement("div", {
+  }, "読み込み中…") : !box.mas.length ? React.createElement("div", {
     className: "p-6 text-center text-[12px] font-bold text-indigo-300"
   }, "まだマスモンがいません。モンヒロサクセスで育成を終えると、ここに並びます。") : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "px-3 pt-2.5 text-[12px] font-black text-amber-300"
-  }, "マスモン (", box.mas.length, ")"), box.mas.length ? React.createElement("div", {
     className: "grid grid-cols-4 gap-2 p-2.5"
   }, box.mas.map(mm => React.createElement(MlabCard, {
     key: mm.id,
@@ -170185,11 +170188,13 @@ function MonsterLabScreen({
       setFrom('mas');
       setView('detail');
     }
-  }))) : React.createElement("div", {
-    className: "px-3 py-2 text-[11px] text-indigo-300"
-  }, "まだいません"), box.fuse.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "px-3 pt-2 text-[12px] font-black text-amber-300"
-  }, "合体円盤石 (", box.fuse.length, ")"), React.createElement("div", {
+  }))), React.createElement("div", {
+    className: "p-2 text-center text-[11px] text-indigo-300"
+  }, "保存枠 ", box.mas.length + box.fuse.length, "体のうち マスモン ", box.mas.length, "体"))), view === 'fuse' && (box === null ? React.createElement("div", {
+    className: "p-6 text-center text-[12px] text-indigo-300"
+  }, "読み込み中…") : !box.fuse.length ? React.createElement("div", {
+    className: "p-6 text-center text-[12px] font-bold text-indigo-300"
+  }, "合体円盤石はまだありません。保存枠のマスモン2体を合体させると生まれます。") : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "grid grid-cols-4 gap-2 p-2.5"
   }, box.fuse.map(mm => React.createElement(MlabCard, {
     key: mm.id,
@@ -170202,12 +170207,12 @@ function MonsterLabScreen({
         mon: mm,
         fuse: true
       });
-      setFrom('mas');
+      setFrom('fuse');
       setView('detail');
     }
-  })))), React.createElement("div", {
+  }))), React.createElement("div", {
     className: "p-2 text-center text-[11px] text-indigo-300"
-  }, "保存枠 ", box.mas.length + box.fuse.length, "体"))), view === 'base' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "保存枠 ", box.mas.length + box.fuse.length, "体のうち 合体円盤石 ", box.fuse.length, "体"))), view === 'base' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "grid grid-cols-4 gap-2 p-2.5"
   }, species.map(sp => React.createElement(MlabCard, {
     key: sp,

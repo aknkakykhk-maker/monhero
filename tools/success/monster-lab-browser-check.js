@@ -3,7 +3,7 @@
 //   node tools/success/monster-lab-browser-check.js
 //   SHOT_DIR=<フォルダ> node tools/success/monster-lab-browser-check.js   … 場面ごとに止め絵も撮る
 // 見るもの(縦390×844・幅320×568):
-//   ① 入口に「マスモン」「ベースモン」「図鑑」の3つ(「育てた子」の言い方が画面に出ない)
+//   ① 入口に「マスモン」「合体円盤石」「ベースモン」「図鑑」の4つ(「育てた子」の言い方が画面に出ない)
 //   ② マスモン一覧に保存枠の子が並び、詳細に「ベースモン ○ → ▲○」が出る(読むだけ・mh_monsuc_* を書き換えない)
 //   ③ ベースモン一覧 → 詳細の特徴・適性(ピクシー: 遠A・中B・近F・零G の並び)。オリジナル5種は「資料待ち」
 //   ④ 真っ白・ページのエラーが出ない
@@ -100,16 +100,16 @@ const openEntry = async (page) => {
     const text = () => page.locator('[data-monster-lab]').innerText();
     const press = (name) => page.locator('[data-monster-lab] button', { hasText: name }).first().click();
     let t = await text();
-    check(`${tag} 入口に3つ`, /マスモン/.test(t) && /ベースモン/.test(t) && /図鑑/.test(t)); await shot('door');
+    check(`${tag} 入口に4つ`, /マスモン/.test(t) && /合体円盤石/.test(t) && /ベースモン/.test(t) && /図鑑/.test(t)); await shot('door');
     check(`${tag} 「育てた子」の言い方が出ない`, !/育てた子|育て終えた子/.test(t));
     await press('マスモン'); await page.waitForTimeout(500); t = await text();
-    check(`${tag} マスモン一覧に保存枠の1体と合体円盤石の区切り`, /ぴくりん/.test(t) && /Lv\.50/.test(t) && /合体円盤石 \(1\)/.test(t)); await shot('mas');
+    check(`${tag} マスモン一覧に保存枠の1体と合体円盤石の区切り`, /ぴくりん/.test(t) && /Lv\.50/.test(t) && !/合体円盤石/.test(t.split('保存枠')[0])); await shot('mas');
     await press('ぴくりん'); await page.waitForTimeout(400); t = await text();
     // 言葉の途中で折り返さない: 入口と一覧の見出し・説明が1行に収まる(札・ボタンの中の文字の高さが1行ぶん)
     check(`${tag} 詳細にベースモンからの伸び ▲`, /ベースモン 50 → ▲590/.test(t) || /ベースモン \d+ → ▲\d+/.test(t), t.replace(/\s+/g, ' ').slice(0, 160)); await shot('mas-detail');
-    await press('もどる'); await page.waitForTimeout(200); await press('ベースモン詳細'.slice(0, 0) || 'ライガー'); await page.waitForTimeout(300); t = await text();
+    await press('もどる'); await page.waitForTimeout(200); await press('もどる'); await page.waitForTimeout(200); await press('合体円盤石'); await page.waitForTimeout(300); await shot('fuse'); await press('ライガー'); await page.waitForTimeout(300); t = await text();
     check(`${tag} 合体円盤石の詳細に ▲ が出ない`, /合体円盤石詳細/.test(t) && !/▲/.test(t)); await shot('fuse-detail');
-    await press('もどる'); await page.waitForTimeout(200); await press('ぴくりん'); await page.waitForTimeout(300);
+    await press('もどる'); await page.waitForTimeout(200); await press('もどる'); await page.waitForTimeout(200); await press('マスモン'); await page.waitForTimeout(300); await press('ぴくりん'); await page.waitForTimeout(300);
     await press('適性'); await page.waitForTimeout(200); t = await text();
     check(`${tag} 間合い適性は 遠A・中B・近F・零G`, /遠\s*A\s*中\s*B\s*近\s*F\s*零\s*G/.test(t.replace(/\s+/g, ' ').replace(/\s/g, '')) || /遠A中B近F零G/.test(t.replace(/\s/g, '')), t.replace(/\s+/g, ' ').slice(0, 200)); await shot('apt');
     await press('特徴'); await page.waitForTimeout(200); t = await text();

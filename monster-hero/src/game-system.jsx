@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 38550ec13761193a
+// generated-sha256: 0b952b87862acb99
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87452,11 +87452,10 @@ function MonsucRankScreen({ onBack }) {
 //   ベースモンの6能力 … AMG_INIT(56-assistant-life-masmon-grow.jsx)/ 素質 … AMG_APT / 間合い適性 … ALL_PLAYER_MONSTERS.distAptitude(零・近・中・遠の順)
 //   ガッツ回復力・移動速度・サイズ … 対戦の芯 ASSISTANT_MASMON_BATTLE.SPECIES_TRAITS(バトル部)/ 技 … ASSISTANT_MASMON_TECHS(技表)
 //   マスモン … 保存枠 mh_monsuc_box_v1(msxR3ReadBox・読むだけ。何も書かない)
-// ★資料が無い値は「資料待ち」。うちのオリジナル5種(エイキ・剣士モッチー・パンドラ・メロディ・クロミー)は等級が案なので「資料待ち」のまま
+// ★資料が無い値は「資料待ち」(地形適性・性格・イベント・技能力など)。ガッツ回復力・移動速度・サイズは、オリジナル5種も対戦の芯の表に入っている(社長が決めた値)
 // ★公開の印 monsterLab が偽のあいだは、デバッグ設定の「🔬 モンスター(試す)」からだけ開く。保存には何も書かない
 const MLAB_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
 const MLAB_DIST = Object.freeze([['遠', 3, 'bg-blue-500'], ['中', 2, 'bg-green-500'], ['近', 1, 'bg-amber-500'], ['零', 0, 'bg-red-500']]);
-const MLAB_NO_DATA = Object.freeze(['Eiki', 'KenshiMocchi', 'Pandora', 'Melody', 'Kuromy']);
 const MLAB_SIZE = Object.freeze({ S: '小さい', M: 'ふつう', L: '大きい' });
 const MLAB_WAIT = '資料待ち';
 
@@ -87470,9 +87469,9 @@ const mlabSpeciesList = () => {
 };
 const mlabBaseStats = (sp) => { const a = typeof AMG_INIT === 'object' && AMG_INIT && AMG_INIT[sp]; return Array.isArray(a) && a.length === 6 ? a.map((n) => (Number.isFinite(n) ? n : 0)) : null; };
 const mlabApt = (sp) => { const s = typeof AMG_APT === 'object' && AMG_APT && AMG_APT[sp]; return typeof s === 'string' && s.length === 6 ? s.split('') : null; };
-// 種類ごとの等級(対戦の芯の表を読むだけ。無い・オリジナル5種は null)
+// 種類ごとの等級(対戦の芯の表を読むだけ。表に無ければ null)
 const mlabTraits = (engine, sp) => {
-  if (!engine || MLAB_NO_DATA.includes(sp)) return null;
+  if (!engine) return null;
   const t = engine.SPECIES_TRAITS && engine.SPECIES_TRAITS[sp];
   return t && typeof t === 'object' ? { g: t.g, m: t.m, z: t.z } : null;
 };
@@ -87602,7 +87601,7 @@ function MlabDetail({ sp, mon, fuse, engine, onBack }) {
 
 // 研究所(入口 → 一覧 → 詳細)。onOpenDex があれば「図鑑」を押せる(図鑑はいまのまま)
 function MonsterLabScreen({ onClose, onOpenDex }) {
-  const [view, setView] = useState('door'); // door | mas | base | detail
+  const [view, setView] = useState('door'); // door | mas | fuse | base | detail
   const [from, setFrom] = useState('door');
   const [sel, setSel] = useState(null);     // { sp, mon }
   const [box, setBox] = useState(null); // { mas, fuse }
@@ -87613,7 +87612,7 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
     if (typeof ambwLoadEngine === 'function') ambwLoadEngine().then((e) => { if (alive && e) setEngine(e); }).catch(() => {});
     return () => { alive = false; };
   }, []);
-  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'base' ? 'ベースモン一覧' : (sel && sel.fuse ? '合体円盤石詳細' : sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細');
+  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'fuse' ? '合体円盤石一覧' : view === 'base' ? 'ベースモン一覧' : (sel && sel.fuse ? '合体円盤石詳細' : sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細');
   const back = () => { if (view === 'detail') setView(from); else if (view === 'door') onClose(); else setView('door'); };
   const species = mlabSpeciesList();
   return (
@@ -87629,22 +87628,18 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
             <div className="m-2.5 rounded-xl bg-[#f5ead0] p-2.5 text-[13px] font-bold text-[#3b2a10]">研究所へようこそ。どちらを見ますか?</div>
             <div className="grid grid-cols-2 gap-2.5 px-2.5">
               <button type="button" onClick={() => setView('mas')} className="rounded-2xl border-2 border-pink-400 bg-[#7c3a6b] px-2 py-5 text-[15px] font-black active:scale-95">マスモン<small className="mt-1 block text-[11px] font-bold">育成を終えた1体</small></button>
-              <button type="button" onClick={() => setView('base')} className="rounded-2xl border-2 border-sky-300 bg-[#1d4e7a] px-2 py-5 text-[15px] font-black active:scale-95">ベースモン<small className="mt-1 block text-[11px] font-bold">種類ごとのもとの値</small></button>
+              <button type="button" onClick={() => setView('fuse')} className="rounded-2xl border-2 border-purple-300 bg-[#5b2a8a] px-2 py-5 text-[15px] font-black active:scale-95">合体円盤石<small className="mt-1 block text-[11px] font-bold">合体で生まれた円盤石</small></button>
+              <button type="button" onClick={() => setView('base')} className="col-span-2 rounded-2xl border-2 border-sky-300 bg-[#1d4e7a] px-2 py-5 text-[15px] font-black active:scale-95">ベースモン<small className="mt-1 block text-[11px] font-bold">種類ごとのもとの値</small></button>
               <button type="button" onClick={() => { if (onOpenDex) onOpenDex(); }} disabled={!onOpenDex} className="col-span-2 rounded-2xl border-2 border-indigo-400/70 bg-indigo-900/70 px-2 py-3 text-[14px] font-black opacity-70 active:scale-95">図鑑<small className="ml-2 text-[11px] font-bold">いまのまま</small></button>
             </div>
           </>
         )}
-        {view === 'mas' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.mas.length && !box.fuse.length
+        {view === 'mas' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.mas.length
           ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">まだマスモンがいません。モンヒロサクセスで育成を終えると、ここに並びます。</div>
-          : <>
-            <div className="px-3 pt-2.5 text-[12px] font-black text-amber-300">マスモン ({box.mas.length})</div>
-            {box.mas.length ? <div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div> : <div className="px-3 py-2 text-[11px] text-indigo-300">まだいません</div>}
-            {box.fuse.length > 0 && <>
-              <div className="px-3 pt-2 text-[12px] font-black text-amber-300">合体円盤石 ({box.fuse.length})</div>
-              <div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('mas'); setView('detail'); }}/>)}</div>
-            </>}
-            <div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体</div>
-          </>)}
+          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体のうち マスモン {box.mas.length}体</div></>)}
+        {view === 'fuse' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.fuse.length
+          ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">合体円盤石はまだありません。保存枠のマスモン2体を合体させると生まれます。</div>
+          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('fuse'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体のうち 合体円盤石 {box.fuse.length}体</div></>)}
         {view === 'base' && (
           <><div className="grid grid-cols-4 gap-2 p-2.5">{species.map((sp) => <MlabCard key={sp} sp={sp} onClick={() => { setSel({ sp, mon: null }); setFrom('base'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">図鑑とは別。ベースモンは種類ごとのもとの値です</div></>
         )}
