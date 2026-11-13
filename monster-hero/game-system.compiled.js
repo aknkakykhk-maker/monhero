@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 30a5855ec12d9069
+// source-sha256: 2cbc3aca2eacf7cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149584,6 +149584,7 @@ const MSC_CSS = `
 .msc-tabs{display:flex;gap:6px}
 .msc-tabs button{flex:1;border:2px solid #475569;border-radius:999px;background:transparent;color:#e2e8f0;font-weight:900;font-size:13px;padding:7px 0;cursor:pointer;min-height:36px}
 .msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
+.msx .msc-tabs button{text-align:center}
 .msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
 .msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
 .msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
@@ -150164,7 +150165,7 @@ function MonsucCupWin({
   const rows = Array.isArray(out && out.rows) ? out.rows : [...(out && out.prize ? [{
     i: '💰',
     k: '賞金',
-    v: `+${out.prize}${info.rival ? '(ライバルに勝って ×1.5)' : ''}`,
+    v: `+${out.prize}G${info.rival ? '(ライバルに勝って ×1.5)' : ''}`,
     big: info.rival
   }] : []), ...(out && out.tickets ? [{
     i: '🎫',
@@ -154992,7 +154993,7 @@ const msxFxText = f => {
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
-  if (k === 'fame') return `名声 ${msxSigned(a)}`;
+  if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
   if (k === 'mas') return '技の熟練 +';
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
@@ -155007,8 +155008,8 @@ const msxFxLine = list => {
 const msxChoiceLines = ch => {
   if (!ch || typeof ch !== 'object') return ['お話の続きが変わる'];
   const out = [];
-  if (ch.need && ch.need.fame) out.push(`名声 ${ch.need.fame} が要る`);
-  if (ch.pay) out.push(`名声 −${ch.pay}`);
+  if (ch.need && ch.need.fame) out.push(`賞金 ${ch.need.fame}G が要る`);
+  if (ch.pay) out.push(`賞金 −${ch.pay}G`);
   if (ch.lottery) out.push('おみくじを引く(大吉・吉・…)');
   if (ch.p) {
     out.push(`成功 ${Math.round(ch.p * 100)}%: ${msxFxLine(ch.ok)}`);
@@ -161488,7 +161489,7 @@ const MSX_CSS = `
 .msx.s320 .v-chips .bad{display:none}.msx.s320 .v-side{bottom:48px}
 .msx.s320 .v-yousu{bottom:auto;top:52px;left:auto;right:7px;transform:none}
 .msx .v-scene.low{flex:0 0 220px}
-.msx .v-cups{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:space-evenly}
+.msx .v-cups{display:flex;flex-direction:column;gap:6px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:flex-start;overflow-y:auto}
 .msx .v-cup{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-bottom-width:3px;border-radius:14px;padding:6px 9px;position:relative;min-width:0}
 .msx .v-cup .e{font-size:26px;flex:none;width:34px;text-align:center}
 .msx .v-cup .tx{flex:1;min-width:0;line-height:1.3}.msx .v-cup .tx b{display:block;font-size:13.5px;white-space:nowrap}
@@ -161542,7 +161543,7 @@ const MSX_CSS = `
 .msx .v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.msx .v-stg div.last small{color:#fde047}
 .msx .v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .msx .v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
-.msx .v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.msx .v-pick2 b{margin-left:auto;color:#fde047}
+.msx .v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.msx .v-pick2 b{margin-left:auto;color:#fde047}.v-pick2 div.none{grid-column:1/-1;justify-content:center;background:#1e1a36;border-style:dashed;border-color:#64748b;color:#cbd5e1;font-size:11px}
 .msx .v-tk{display:flex;align-items:center;gap:5px}
 .msx .v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .msx .v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
@@ -162725,7 +162726,7 @@ function MsxStart({
     const coreItems = id => !!(SUC.ITEMS && SUC.ITEMS[id]);
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "持ちこみ(2つまで)", React.createElement("small", null, "名声で手に入れた物を、育成に持っていける。持っていかなくてもよい")), React.createElement("div", {
+    }, "持ちこみ(2つまで)", React.createElement("small", null, "手に入れた物を、育成に持っていける。持っていかなくてもよい")), React.createElement("div", {
       className: "v-bag"
     }, [0, 1].map(i => items[i] ? React.createElement("div", {
       key: i,
@@ -165919,6 +165920,7 @@ const MSX_R3_CSS = `
 .msx .r3 .r3-chip{flex:1 1 auto;min-height:36px;border-radius:99px;background:#1e1a36;border:1.5px solid #475569;color:#cbd5e1;font-size:11.5px;font-weight:900;padding:4px 10px;white-space:nowrap}
 .msx .r3 .r3-chip.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
 .msx .r3 .r3-chip:disabled{opacity:.4}
+.msx .r3-chip{text-align:center} /* .msx button の text-align:inherit に負けて左へ寄るのを止める(札・タブは中央) */
 .msx .r3 .v-cup{cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
 .msx .r3 .v-cup.ng{cursor:default}
 .msx .r3 .v-pa button{width:26px;height:26px;border-radius:50%;background:#334155;color:#fff;font-weight:900;border:0}
@@ -166502,7 +166504,7 @@ function MsxR3Frame({
     back: back,
     onBack: onBack,
     sub: `${msxAidName(s.aid)}編`,
-    right: right != null ? right : `💰 名声 ${msxFmt(s.fame)}`
+    right: right != null ? right : `💰 賞金 ${msxFmt(s.fame)}G`
   }), React.createElement("div", {
     className: "v-body r3"
   }, body), foot);
@@ -166516,7 +166518,7 @@ const msxR3WhyText = (e, s) => {
   if (e.why === 'techs') return `技を ${e.need}つ以上 覚えていると出られる`;
   if (e.why === 'cond') return '体調が悪いと出られない';
   if (e.why === 'loyal') return `忠誠が ${e.need} 以上 要る`;
-  if (e.why === 'fame') return `名声の合計が ${msxFmt(e.need)} 以上 要る(いま ${msxFmt(s.fameTotal)})`;
+  if (e.why === 'fame') return `これまでの賞金の合計が ${msxFmt(e.need)}G 以上で出られる(いま ${msxFmt(s.fameTotal)}G)`;
   return '出られない';
 };
 const msxR3CupReward = (SUC, c) => {
@@ -166649,7 +166651,7 @@ function MsxR3Cup({
       className: "st"
     }, msxR3Stars(c.star)), React.createElement("span", {
       className: "g"
-    }, "💰 ", msxFmt(c.prize)), React.createElement("span", {
+    }, "💰 ", msxFmt(c.prize), "G"), React.createElement("span", {
       className: "kd"
     }, c.scenario ? 'シナリオ' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう')), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "rvi"
@@ -166671,7 +166673,7 @@ function MsxR3Cup({
     style: {
       margin: 0
     }
-  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金(名声)と修行チケット。", toForced ? React.createElement("span", {
+  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金(G)と修行チケット。", toForced ? React.createElement("span", {
     className: "yel"
   }, ` 期末の大会まで あと${toForced}ターン`) : null))));
   const foot = React.createElement("div", {
@@ -166813,7 +166815,7 @@ const msxR3PrizeRows = (d, s) => {
   (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
-  if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}(名声 ${msxFmt(s.fame - d.fame)} → ${msxFmt(s.fame)})`, '', '']);
+  if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}G(所持 ${msxFmt(s.fame - d.fame)}G → ${msxFmt(s.fame)}G)`, '', '']);
   if (d.pop) rows.push(['⭐', '人気', `+${d.pop}(${s.pop - d.pop} → ${s.pop})`, '', '']);
   if (d.sand) rows.push(['⏳', '時渡りの砂時計', `+${d.sand}`, '', '']);
   Object.entries(d.stats || {}).forEach(([k, g]) => rows.push([MSX_STAT_ICON[k], MSX_STAT_NAME[k], `+${g}`, '', '']));
@@ -167206,7 +167208,7 @@ function MsxR3Battle({
       className: "e"
     }, k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'), React.createElement("b", null, M[k].name), React.createElement("span", {
       className: "g"
-    }, free ? 'ただ' : `💰 ${M[k].cost}`), React.createElement("small", null, fx(k))))), React.createElement("div", {
+    }, free ? 'ただ' : `💰 ${M[k].cost}G`), React.createElement("small", null, fx(k))))), React.createElement("div", {
       className: "row",
       style: {
         marginTop: 6
@@ -168132,16 +168134,18 @@ function MsxR3Shugyo({
       className: "on",
       onClick: () => toggle(id)
     }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・ランク", rankOf[id] || '-'), t.name, React.createElement("b", null, Math.round((rateOf[id] || 0) * 100), "%"));
-  }) : React.createElement("div", null, "技をえらばなくても、能力は上がる"))), React.createElement("div", {
+  }) : React.createElement("div", {
+    className: "none"
+  }, "技をえらばなくても、能力は上がる"))), React.createElement("div", {
     className: "v-card",
     style: {
       flex: 1,
       minHeight: 0,
       display: 'flex',
       flexDirection: 'column',
-      gap: 6,
+      gap: 4,
       overflowY: 'auto',
-      padding: '6px 8px'
+      padding: '4px 8px 6px'
     },
     "data-msx-r3-techlist": true
   }, React.createElement("div", {
@@ -168724,7 +168728,7 @@ function MsxR3Retire({
       }
     }, "🏅 この育成で手に入れたもの"), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "名声"), React.createElement("span", null, "合計 ", msxFmt(ws.fameTotal || 0))), React.createElement("div", {
+    }, React.createElement("b", null, "賞金"), React.createElement("span", null, "合計 ", msxFmt(ws.fameTotal || 0), "G")), React.createElement("div", {
       className: "v-kv"
     }, React.createElement("b", null, "称号"), React.createElement("span", null, (ws.titles || []).length ? ws.titles.slice(0, 6).map(t => `「${msxR3TitleName(t)}」`).join('') : 'なし')), React.createElement("div", {
       className: "v-kv"
@@ -170437,6 +170441,7 @@ const MSA_CSS = `
 .msa-tools{display:flex;gap:5px;align-items:center}
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
+.msx .msa-tools button{text-align:center}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}

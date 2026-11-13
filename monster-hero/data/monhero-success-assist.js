@@ -90,7 +90,7 @@
 
   // ---- 大会 ----
   add({ id: 'shokin', icon: '💰', name: '賞金かせぎ', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [5, 10, 15, 20, 25],
-    text: '編成にいるだけで、大会の賞金(名声)が{v}%増える' });
+    text: '編成にいるだけで、大会の賞金が{v}%増える' });
   add({ id: 'kokoroe', icon: '📜', name: '勝負の心得', type: 'stay', scene: 'cup', cls: 'mid', unit: '%', v: [5, 10, 15, 20, 25],
     text: '編成にいるだけで、大会で勝ったときの能力ポイントが{v}%増える' });
   add({ id: 'ticket', icon: '🎫', name: 'チケット運', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],

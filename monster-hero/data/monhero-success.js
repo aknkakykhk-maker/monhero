@@ -199,7 +199,7 @@
     shitsuke: { type: 'stay' }, gussuri: { type: 'stay' }, asobi: { type: 'stay' }, kuishinbo: { type: 'stay' },
     tsukisoi: { type: 'stay' }, genki: { type: 'stay' }, tairyoku: { type: 'stay' },
     // いるだけ型(大会・出来事の8つ・依頼③の2つ目)
-    //   shokin: 大会の賞金(名声)+v%/kokoroe: 大会に勝ったときの能力ポイント +v%/ticket: 大会に勝ったとき v% で修行チケット +1/
+    //   shokin: 大会の賞金(保存は fame)+v%/kokoroe: 大会に勝ったときの能力ポイント +v%/ticket: 大会に勝ったとき v% で修行チケット +1/
     //   rivaldamashii: ライバルに勝ったときの全能力 +v%/ninki: 人気の上がり +v%/yobimizu: 編成の子との出来事 +v点/
     //   mejirushi: イッサ博士が来る率 1ターン +v点/joshu: イッサ博士の実験の成功 +v点(博士の上下の幅の外で足す)
     shokin: { type: 'stay' }, kokoroe: { type: 'stay' }, ticket: { type: 'stay' }, rivaldamashii: { type: 'stay' },
@@ -311,12 +311,12 @@
   });
   const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
-  // ---- 賞金(名声)と修行チケット(社長 2026-11-12: チケットは大会でもらい、賞金が大きい大会ほど多い) ----
+  // ---- 賞金(保存は fame)と修行チケット(社長 2026-11-12: チケットは大会でもらい、賞金が大きい大会ほど多い) ----
   // 賞金は TOURNAMENT §2 の星の賞金 × 期の倍率(ジュニア ×1・ミドル ×1.25・プロ ×1.5)。頂への道は 800/1500/3000
   const PRIZE = Object.freeze({ debut: 100, junior: 250, middle: 750, pro: 2250, summit: [800, 1500, 3000] });
   const ticketsOfPrize = (prize) => Math.min(4, 1 + Math.floor(num(prize) / 700)); // 勝ったときだけ: 100→1・750→2・1500→3・2250→4
 
-  // ---- 大会のあとのごほうびのごはん(社長 2026-11-12: 体力・忠誠度・能力の3種類・値段は名声) ----
+  // ---- 大会のあとのごほうびのごはん(社長 2026-11-12: 体力・忠誠度・能力の3種類・値段は賞金) ----
   // 大会が終わるたびに1回だけ選べる(選ばなくてもよい)。次の行動かターンの区切りで消える
   const MEALS = Object.freeze({
     hp: { name: 'スタミナごはん', cost: 150, hp: 0.4 },              // 体力を上限の40%ぶん回復
@@ -906,7 +906,7 @@
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
     const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + ama, 0, LOYAL.half); s.fear = clamp(s.fear + fear, 0, LOYAL.half); };
 
-    // 大会のあとのごほうびのごはん(1回だけ・名声を使う)
+    // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
     const meal = (s0, key) => {
       const s = clone(s0); const m = MEALS[key];
       const free = s.freeMeal === true; // えるびんの見守りの大会: 次のごはんが1回ただ
@@ -1406,7 +1406,7 @@
       addXp(s, XP.match);
       if (b.rival && b.rival.name) s.rivalMet = String(b.rival.name).slice(0, 24); // 頂への道で助手が選ぶ「この育成のライバル」
       if (won) { s.log.wins += 1; addLoyal(s, LOYAL.win[0], LOYAL.win[1]); const bk = battleKey(b); if (!s.wonNow.includes(bk)) s.wonNow.push(bk); } else s.log.losses += 1;
-      // 賞金(名声)とチケット。負けたら準優勝の扱い(★★ 以上)
+      // 賞金(保存は fame)とチケット。負けたら準優勝の扱い(★★ 以上)
       const pk = periodOf(s.turn).key;
       const star = b.kind === 'cup' ? b.star : b.kind === 'summit' ? 4 : FORCED[b.kind].star;
       let full = b.kind === 'summit' ? PRIZE.summit[b.round] : b.kind === 'cup' ? Math.round(CUP_PRIZE[b.star] * PERIOD_PRIZE[pk]) : num(PRIZE[b.kind]);

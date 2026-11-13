@@ -99,8 +99,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     <div className="v-card pk" style={{ padding: '6px 8px' }}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり{superLeft}回・🎫{superTk}枚)</div>
       {superWhy && want.length ? <div className="sub" style={{ fontSize: 11, color: '#cbd5e1' }} data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
       {isSuper ? <div className="sub" style={{ fontSize: 11, color: '#fde047' }} data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
-      <div className="v-pick2">{want.length ? want.map((id) => { const t = all.find((x) => x.id === id) || {}; return <div key={id} className="on" onClick={() => toggle(id)}><small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・ランク{rankOf[id] || '-'}</small>{t.name}<b>{Math.round((rateOf[id] || 0) * 100)}%</b></div>; }) : <div>技をえらばなくても、能力は上がる</div>}</div></div>
-    <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', padding: '6px 8px' }} data-msx-r3-techlist>
+      <div className="v-pick2">{want.length ? want.map((id) => { const t = all.find((x) => x.id === id) || {}; return <div key={id} className="on" onClick={() => toggle(id)}><small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・ランク{rankOf[id] || '-'}</small>{t.name}<b>{Math.round((rateOf[id] || 0) * 100)}%</b></div>; }) : <div className="none">技をえらばなくても、能力は上がる</div>}</div></div>
+    <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', padding: '4px 8px 6px' }} data-msx-r3-techlist>
       <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>覚えられる技(間合いごと・ランク・覚える率)</div>
       {all.length ? groups.filter((g) => g.list.length).map((g) => (
         <div key={g.dn} className="v-tk" style={{ alignItems: 'flex-start' }}><i>{g.dn}</i><div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>{g.list.map((t) => {
