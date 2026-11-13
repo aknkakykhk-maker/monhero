@@ -34,7 +34,7 @@ for (const r of MONSUC_SCRIPT_RANDOM) {
   scenes.add(scene); scenes.add(parts.slice(0, 3).join('.'));
   if (r.who === 'choice') (choiceRows[parts.slice(0, 3).join('.')] = choiceRows[parts.slice(0, 3).join('.')] || []).push(r.c);
 }
-const OPS = ['st', 'loy', 'fear', 'pop', 'popHi', 'hp', 'str', 'bond', 'buff', 'fame', 'pts', 'mas', 'flag', 'goal'];
+const OPS = ['st', 'loy', 'fear', 'pop', 'popHi', 'hp', 'str', 'bond', 'buff', 'fame', 'pts', 'mas', 'flag', 'goal', 'apt']; // apt = 間合い適性を1段(2026-11-13)
 const ids = new Set();
 const checkFx = (id, fx, where) => {
   if (!Array.isArray(fx)) { errors.push(`${id} ${where}: 結果が並びでない`); return; }
