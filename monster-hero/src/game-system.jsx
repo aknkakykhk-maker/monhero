@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bd344cf50c34126f
+// generated-sha256: 866fd96e711f1888
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81178,11 +81178,11 @@ const MSX_BETA_CSS = `
 .msx .msx-beta-say .who{display:block;font-size:10px;color:#f9a8d4;font-weight:900}
 .msx .msx-beta-narr{font-size:13px;line-height:1.7;color:#e9e5ff;text-align:left;padding:4px 2px}
 .msx .msx-beta-nx{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:900;color:#fde68a}
-.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700}
+.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700;font-size:12px}
 .msx .msx-beta-opts{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .msx .msx-beta-opts .msx-btn{text-align:center}
 .msx .v-faces .lk.soon{position:relative}
-.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-2px;font-size:8px;color:#fde68a;text-align:center;font-weight:900}
+.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-3px;font-size:10px;color:#fde68a;text-align:center;font-weight:900}
 `;
 
 // ---- part: 56-monsuc-tevent.jsx ----

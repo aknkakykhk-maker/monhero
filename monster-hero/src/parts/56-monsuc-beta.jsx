@@ -100,9 +100,9 @@ const MSX_BETA_CSS = `
 .msx .msx-beta-say .who{display:block;font-size:10px;color:#f9a8d4;font-weight:900}
 .msx .msx-beta-narr{font-size:13px;line-height:1.7;color:#e9e5ff;text-align:left;padding:4px 2px}
 .msx .msx-beta-nx{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:900;color:#fde68a}
-.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700}
+.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700;font-size:12px}
 .msx .msx-beta-opts{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .msx .msx-beta-opts .msx-btn{text-align:center}
 .msx .v-faces .lk.soon{position:relative}
-.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-2px;font-size:8px;color:#fde68a;text-align:center;font-weight:900}
+.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-3px;font-size:10px;color:#fde68a;text-align:center;font-weight:900}
 `;

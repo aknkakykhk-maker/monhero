@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0eb46c2c3192453e
+// source-sha256: 64e40c59c3b57b51
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155568,11 +155568,11 @@ const MSX_BETA_CSS = `
 .msx .msx-beta-say .who{display:block;font-size:10px;color:#f9a8d4;font-weight:900}
 .msx .msx-beta-narr{font-size:13px;line-height:1.7;color:#e9e5ff;text-align:left;padding:4px 2px}
 .msx .msx-beta-nx{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px;font-size:12px;font-weight:900;color:#fde68a}
-.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700}
+.msx .msx-beta-nx small{color:#a5a3c8;font-weight:700;font-size:12px}
 .msx .msx-beta-opts{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .msx .msx-beta-opts .msx-btn{text-align:center}
 .msx .v-faces .lk.soon{position:relative}
-.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-2px;font-size:8px;color:#fde68a;text-align:center;font-weight:900}
+.msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-3px;font-size:10px;color:#fde68a;text-align:center;font-weight:900}
 `;
 const MSX_TEV_STYLE = 'b';
 const MSX_TEV_LOT = Object.freeze({
