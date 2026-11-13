@@ -192,6 +192,22 @@ const MSX_CSS = `
 .msx .v-st.grow:not(.on) u.g s.gd{opacity:.9}
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
+.msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+.msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
+.msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
+.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 9px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
+.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:7.5px;font-weight:800;color:#fde68a;line-height:9px;pointer-events:none}
+.msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
+.msx .v-st.gs-b div.up u.g{height:8px;margin:4px 4px 6px}
+.msx .v-st.gs-b div.up em{font-size:13px}
+.msx .v-st.gs-b u.g s.gu{top:-3px;bottom:-3px;border-radius:5px;background:linear-gradient(90deg,#fff,#fef08a 35%,#fb923c);box-shadow:0 0 8px 3px #fde047,0 0 20px 7px #fbbf24aa;overflow:hidden}
+.msx .v-st.gs-b u.g s.gu::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:60%;background:linear-gradient(90deg,transparent,#fff,transparent)}
+.msx .v-st.gs-b.on u.g s.gu::after{animation:msxGbSweep .65s ease-out 1.15s 3}
+.msx .v-st.gs-b.on div.up b{animation:msxGbPop .5s cubic-bezier(.2,.9,.3,1.4) 1.1s}
+@keyframes msxGbSweep{to{left:100%}}
+@keyframes msxGbPop{50%{transform:scale(1.25);text-shadow:0 0 10px #fde047}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}

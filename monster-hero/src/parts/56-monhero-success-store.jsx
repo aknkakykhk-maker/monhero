@@ -107,6 +107,8 @@ const msxNormRun = (raw, SUC) => {
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
+    // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
+    ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: raw.ki.fame, power: raw.ki.power } : null,
   };
 };
 // 技表の第2版(2026-11-13): 古い技 id を新しい id へ読み替える(表に canon が無ければそのまま)。techs と mast は同じ並びなので、

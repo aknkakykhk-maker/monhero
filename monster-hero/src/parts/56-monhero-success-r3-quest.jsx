@@ -14,6 +14,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [want, setWant] = useState([]);
   const [res, setRes] = useState(null); // { out, before, after }
   const [fxDone, setFxDone] = useState(false);
+  // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
+  const [stOn, setStOn] = useState(false);
   useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s0.species) : [];
   const superLeft = typeof SUC.superLeft === 'function' ? SUC.superLeft(s0) : 0;
@@ -32,9 +34,17 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const names = (r.out.learnedAll || (r.out.learned ? [r.out.learned] : [])).map((id) => (all.find((t) => t.id === id) || {}).name).filter(Boolean);
     const next = { ...run, s: r.state, phase: 'react', out: { ...r.out, kind: 'shugyo' }, log: [...(run.log || []), { turn: s0.turn, t: `${r.out.super ? '超修行' : '修行'}(${(SH.courses[course] || {}).name || ''}): ${names.length ? names.map((n) => `「${n}」`).join('と') + 'を覚えた' : '能力が上がった'}` }].slice(-20) };
     setRun(next);
+    setStOn(typeof MsxShugyoStages === 'function');
     setRes({ out: r.out, before: s0.stats, hp0: s0.hp, s: r.state });
   };
 
+  // ---- 結果の前の段 ----
+  if (res && stOn) {
+    const s = res.s;
+    const body = (<><MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)}/>
+      <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><MsxShugyoStages key={`qs-${s0.turn}`} run={{ ...run, s }} o={res.out} onDone={() => setStOn(false)}/></div></>);
+    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStOn(false)} data-msx-r3-qskip>⏩ 結果へ</button></div>}/>;
+  }
   // ---- 結果(Q2) ----
   if (res) {
     const o = res.out; const s = res.s; const gains = o.gain || {};
