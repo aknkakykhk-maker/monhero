@@ -87,7 +87,7 @@ const last = () => calls.splice(0).map((c) => c.join(':'));
 const eq = (name, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) ng(`${name}: ${JSON.stringify(got)} のはずが ${JSON.stringify(want)} ではない`); };
 
 S.scene('main', { season: 'summer' });
-eq('入る→メイン(夏)', last(), ['quiet:true', 'play:ichika_home']);
+eq('入る→メイン(夏・4季節とも同じ曲)', last(), ['quiet:true', 'play:original_home_2']);
 S.scene('main', { season: 'summer' });
 eq('同じ曲は鳴らし直さない', last(), []);
 S.scene('trainGreat');

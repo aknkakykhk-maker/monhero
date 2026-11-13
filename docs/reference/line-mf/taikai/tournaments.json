@@ -1,0 +1,399 @@
+{
+ "note": "社長と友達でまとめた大会の参考資料(LINEモンスターファーム)。terrain の★は地形の印に星が付くもの。weather の注意は⚠の印",
+ "tournaments": [
+  {
+   "period": "1年目6月後半",
+   "phase": "デビュー期",
+   "name": "デビュー戦",
+   "en": "DEBUT MATCH",
+   "grade": "デビュー",
+   "prize": 1000,
+   "rewards": [
+    {
+     "item": "カララギマンゴー",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "くもり",
+   "images": "1-IMG_0535,0536"
+  },
+  {
+   "period": "1年目7月前半",
+   "phase": "ジュニア期",
+   "name": "マーキュリー杯",
+   "en": "MERCURY CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "コイン",
+     "count": 100
+    },
+    {
+     "item": "さくらんぼ",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "1-IMG_0537,0538"
+  },
+  {
+   "period": "1年目7月前半",
+   "phase": "ジュニア期",
+   "name": "あらなみ杯",
+   "en": "ROUGH WAVES CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "オイリーオイル(小瓶)",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "くもり",
+   "images": "1-IMG_0537,0539"
+  },
+  {
+   "period": "1年目7月後半",
+   "phase": "ジュニア期",
+   "name": "ホップ杯",
+   "en": "HOP CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "アルタケーキ(ピース)",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "注意",
+   "images": "1-IMG_0540,0541"
+  },
+  {
+   "period": "1年目7月後半",
+   "phase": "ジュニア期",
+   "name": "ひまわり杯",
+   "en": "SUNFLOWER CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "1-IMG_0540,0542"
+  },
+  {
+   "period": "1年目8月前半",
+   "phase": "ジュニア期",
+   "name": "雪月花賞(夏)",
+   "en": "",
+   "grade": "金(季節の賞)",
+   "prize": 5500,
+   "rewards": [
+    {
+     "item": "虹の結晶",
+     "count": 1
+    },
+    {
+     "item": "カチコチソース",
+     "count": 1
+    }
+   ],
+   "terrain": "山",
+   "weather": "くもり",
+   "images": "1-IMG_0543,0545"
+  },
+  {
+   "period": "1年目8月前半",
+   "phase": "ジュニア期",
+   "name": "花水木賞(夏)",
+   "en": "",
+   "grade": "金(季節の賞)",
+   "prize": 5500,
+   "rewards": [
+    {
+     "item": "虹の結晶",
+     "count": 1
+    },
+    {
+     "item": "カチコチソース",
+     "count": 1
+    }
+   ],
+   "terrain": "★海",
+   "weather": "晴れ",
+   "images": "1-IMG_0543,0546"
+  },
+  {
+   "period": "1年目8月前半",
+   "phase": "ジュニア期",
+   "name": "桔梗賞(夏)",
+   "en": "",
+   "grade": "金(季節の賞)",
+   "prize": 5500,
+   "rewards": [
+    {
+     "item": "虹の結晶",
+     "count": 1
+    },
+    {
+     "item": "カチコチソース",
+     "count": 1
+    }
+   ],
+   "terrain": "森",
+   "weather": "晴れ",
+   "images": "1-IMG_0543,0547"
+  },
+  {
+   "period": "1年目8月前半",
+   "phase": "ジュニア期",
+   "name": "ミス・マーメイド杯",
+   "en": "MISS MERMAID CUP",
+   "grade": "金",
+   "prize": 3500,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    },
+    {
+     "item": "サケールの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "注意",
+   "images": "1-IMG_0543,0548"
+  },
+  {
+   "period": "1年目8月前半",
+   "phase": "ジュニア期",
+   "name": "なないろ杯",
+   "en": "RAINBOW CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "アルタケーキ(ピース)",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "注意",
+   "images": "1-IMG_0544,2-IMG_0551"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "ヴィーナス杯",
+   "en": "VENUS CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "ホッカイイラブ(半身)",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "3-IMG_0553〜0555"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "あさがお杯",
+   "en": "MORNING GLORY CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "オイリーオイル(小瓶)",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "くもり",
+   "images": "3-IMG_0556,0557"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "デザート杯",
+   "en": "DESERT CUP",
+   "grade": "青緑(地形)",
+   "prize": 3000,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    }
+   ],
+   "terrain": "★砂漠",
+   "weather": "晴れ",
+   "images": "3-IMG_0558,0559"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "フォレスト杯",
+   "en": "FOREST CUP",
+   "grade": "青緑(地形)",
+   "prize": 3000,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    }
+   ],
+   "terrain": "森",
+   "weather": "注意",
+   "images": "3-IMG_0560,0561"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "コースト杯",
+   "en": "COAST CUP",
+   "grade": "青緑(地形)",
+   "prize": 3000,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    }
+   ],
+   "terrain": "★海",
+   "weather": "晴れ",
+   "images": "3-IMG_0562"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "ブリザード杯",
+   "en": "BLIZZARD CUP",
+   "grade": "青緑(地形)",
+   "prize": 3000,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    }
+   ],
+   "terrain": "雪山",
+   "weather": "晴れ",
+   "images": "3-IMG_0563"
+  },
+  {
+   "period": "1年目8月後半",
+   "phase": "ジュニア期",
+   "name": "マグマ杯",
+   "en": "MAGMA CUP",
+   "grade": "青緑(地形)",
+   "prize": 3000,
+   "rewards": [
+    {
+     "item": "スタープルーン",
+     "count": 1
+    }
+   ],
+   "terrain": "★火山",
+   "weather": "晴れ",
+   "images": "3-IMG_0564"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "ノーブル杯",
+   "en": "NOBLE CUP",
+   "grade": "金",
+   "prize": 5000,
+   "rewards": [
+    {
+     "item": "虹の結晶",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0566,0567"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaバクレツ杯",
+   "en": "IMa BAKURETSU CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "セメールの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "くもり",
+   "images": "4-IMG_0566,0568"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaシャープネス杯",
+   "en": "IMa SHARPNESS CUP",
+   "grade": "銀",
+   "prize": 2500,
+   "rewards": [
+    {
+     "item": "テキパキの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0566,0570"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaパワフル杯",
+   "en": "IMa POWERFUL CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "セメールの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0566,0572"
+  },
+  {
+   "period": "1年目9月前半",
+   "phase": "ジュニア期",
+   "name": "IMaブレーン杯",
+   "en": "IMa BRAIN CUP",
+   "grade": "銅",
+   "prize": 1250,
+   "rewards": [
+    {
+     "item": "テキパキの果実",
+     "count": 1
+    }
+   ],
+   "terrain": "なし",
+   "weather": "晴れ",
+   "images": "4-IMG_0573"
+  }
+ ]
+}
