@@ -113,5 +113,15 @@ for (const d of loadDepts()) {
   ok(boot < 60000, `⑦ ${d.id}: 立ち上がりで読む量は 60KB 未満のはずが ${boot}`);
 }
 
+// ⑧ 公開前の判定(gate)が、既存のキーの値に項目を足す変更を見落とさない(2026-11-13 ミハリ6: #5866 の aptUp)
+{
+  const src = fs.readFileSync(path.join(ROOT, 'tools', 'team', 'review-gate.js'), 'utf8');
+  const fileRe = new Function(`${src.match(/const SAVE_SHAPE_FILE_RE = [^\n]+/)[0]}; return SAVE_SHAPE_FILE_RE;`)();
+  const lineRe = new Function(`${src.match(/const SAVE_SHAPE_LINE_RE = [^\n]+/)[0]}; return SAVE_SHAPE_LINE_RE;`)();
+  ok(fileRe.test('monster-hero/src/parts/56-monhero-success-store.jsx') && fileRe.test('monster-hero/src/parts/56-monhero-success-r3-store.jsx'), '⑧ gate: 保存の入れ物の部品(〜-store.jsx)を見張ること');
+  ok(lineRe.test("      out.aptBase = aptBaseNorm(raw.aptBase);") && lineRe.test("await storeSet(MSX_KEYS.box, next);"), '⑧ gate: 保存値を読み戻す行(raw.〜・〜Norm(・storeSet)を見張ること');
+  ok(!lineRe.test("const hp = Math.round(s.hp * 0.5);") && !fileRe.test('monster-hero/src/parts/42-screen-battle.jsx'), '⑧ gate: 関係ない行・ファイルは当たらないこと');
+}
+
 if (problems.length) { console.error(`NG: トークン節約の仕組みの道具に ${problems.length} 件の問題`); for (const p of problems) console.error(`  - ${p}`); process.exit(1); }
 console.log(`OK: モデルの表 ${CASES.length + 7} 例・会話の区切りのフック・依頼文・台帳の絞り込み・手引き(${loadDepts().length} 部)・立ち上がりで読む量 最大 ${(maxBoot / 1024).toFixed(0)}KB`);
