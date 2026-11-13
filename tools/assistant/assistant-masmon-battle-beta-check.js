@@ -210,6 +210,31 @@ const seed = () => {
     await page.waitForTimeout(200);
     const back = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_masmon_battle_v1')).set);
     check('段2: 「いつもの決まりに戻す」(演出の量は残す)', back.team === 'team' && back.rounds === 150 && back.dist === 'auto' && back.guts === 50 && back.fx === 'lite', JSON.stringify(back));
+    // 段3(バトル部 2026-11-13): 手動(自分の手番で選ぶ)・技の札は届く技だけ+全部の技の一覧・「結果へ」は残りをオートで
+    await clickSel('[data-ambb-set="ctl:manual"]');
+    await page.waitForTimeout(150);
+    await clickSel('[data-ambb-start]');
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 30000 }).catch(() => {});
+    const man = await page.evaluate(() => {
+      const d = document.querySelector('.msa-dist span.cur'), cur = d ? d.textContent : '';
+      const chips = [...document.querySelectorAll('[data-ambw-panel="B"] .ambw-chip:not(.ambw-chip-all) small:last-child')].map((x) => x.textContent);
+      return { bar: !!document.querySelector('[data-ambb-manual]'), techs: document.querySelectorAll('[data-msxm-tech]').length, far: document.querySelectorAll('[data-msxm-tech][data-msxm-reach="0"]').length, all: !!document.querySelector('[data-ambw-all="B"]'), chipsReach: chips.every((t) => t.includes(cur)), pos: Number(document.querySelector('[data-ambb-watch]').dataset.ambwPos) };
+    });
+    check('段3: 手動では自分の手番で帯が出る・攻撃の札は届く技だけ・上の欄も届く技だけ+「全部の技」', man.bar && man.far === 0 && man.all && man.chipsReach, JSON.stringify(man));
+    const picked = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); return !!b; });
+    await page.waitForTimeout(1500);
+    const pos2 = await page.evaluate(() => Number(document.querySelector('[data-ambb-watch]').dataset.ambwPos));
+    check('段3: 手を選ぶと試合が進む', picked && pos2 > man.pos, `${man.pos}→${pos2}`);
+    await clickSel('[data-ambw-all="B"]');
+    await page.waitForTimeout(300);
+    check('段3: 「全部の技」で、届く印つきの一覧が開く', await page.evaluate(() => document.querySelectorAll('[data-ambb-techlist] .ambb-tl-row').length > 0));
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[data-ambb-techlist] button')].find((x) => /閉じる/.test(x.textContent)); if (b) b.click(); });
+    await clickSel('[data-ambb-skip]');
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
+    check('段3: 「結果へ」で残りをオートで進めて振り返りへ', await page.evaluate(() => !!document.querySelector('[data-ambb-review] .ambw-res') && !/画面の表示でエラー/.test(document.body.innerText)));
+    await clickSel('[data-ambb-again]');
+    await page.waitForTimeout(300);
+    await clickSel('[data-ambb-set="ctl:auto"]');
     await clickSel('[data-ambb-set="fx:full"]');
     await clickSel('[data-ambb-close]');
     await page.waitForTimeout(300);

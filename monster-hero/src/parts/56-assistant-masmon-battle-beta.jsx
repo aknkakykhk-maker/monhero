@@ -29,13 +29,14 @@ const AMBB_SWAPS = Object.freeze([
 // 試合の設定(2026-11-13 段2・社長「バトルも試合前に設定とか選べて色々調整させてほしい」)。
 //   この端末の練習の対戦だけに効く(芯の rules・roundLimit・balance へ渡す)。フレンド対戦・ランキングはサーバの決まりのまま(渡さない)
 //   既定のままなら芯へ何も渡さない = 今までと同じ試合
-const AMBB_SET_DEF = Object.freeze({ team: 'team', rounds: 150, dist: 'auto', guts: 50, fx: 'full', balance: 'A', seedLock: false });
+const AMBB_SET_DEF = Object.freeze({ team: 'team', rounds: 150, dist: 'auto', guts: 50, fx: 'full', balance: 'A', seedLock: false, ctl: 'auto' });
 const AMBB_SET_OPTS = Object.freeze({
   team: [{ id: 'team', label: 'チーム', note: '交代あり' }, { id: 'ko', label: '勝ち抜き', note: '交代なし・倒れたら次' }],
   rounds: [30, 50, 100, 150],
   dist: ['auto', 0, 1, 2, 3],
   guts: [30, 50, 70, 100],
   fx: [{ id: 'full', label: 'たっぷり' }, { id: 'lite', label: '少なめ' }],
+  ctl: [{ id: 'auto', label: 'オートで観戦' }, { id: 'manual', label: '手動', note: '手番ごとに自分で選ぶ' }],
   balance: [{ id: 'A', label: 'そのまま' }, { id: 'B', label: '差を縮める' }, { id: 'C', label: '差を広げる' }],
 });
 const normalizeAmbbSet = (raw) => {
@@ -48,6 +49,7 @@ const normalizeAmbbSet = (raw) => {
     fx: x.fx === 'lite' ? 'lite' : 'full',
     balance: ['A', 'B', 'C'].includes(x.balance) ? x.balance : 'A',
     seedLock: x.seedLock === true,
+    ctl: x.ctl === 'manual' ? 'manual' : 'auto',
   };
 };
 // 芯へ渡す分(既定と同じ所は渡さない)
@@ -58,7 +60,7 @@ const ambbMatchOpts = (set) => {
   if (set.team === 'ko') rules.noSwap = true;
   return { ...(Object.keys(rules).length ? { rules } : {}), ...(set.rounds !== AMBB_SET_DEF.rounds ? { roundLimit: set.rounds } : {}), balance: set.balance };
 };
-const ambbSetDiff = (set) => Object.keys(AMBB_SET_DEF).filter(k => k !== 'fx' && set[k] !== AMBB_SET_DEF[k]).length;
+const ambbSetDiff = (set) => Object.keys(AMBB_SET_DEF).filter(k => k !== 'fx' && k !== 'ctl' && set[k] !== AMBB_SET_DEF[k]).length;
 // ランキングの段(台帳 2026-11-11・はじめ 1500)。その2で rating から出す
 const AMBB_TIERS = Object.freeze([
   { id: 'bronze', label: 'ブロンズ', icon: '🥉', min: -Infinity },
@@ -249,12 +251,28 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
+.ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
 .ambw.ambb-full .ambw-log{margin-top:6px;padding:5px 8px;min-height:44px}
 .ambw.ambb-full .ambw-log p:nth-last-child(n+3){display:none}
 .ambw.ambb-full .ambw-seek{margin-top:8px}
 .ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:5px}
 .ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 10px;font-size:12.5px;white-space:nowrap}
 .ambw.ambb-full .ambw-top{min-height:34px}
+.ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 30%}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk:not(.far) small:not(.p){display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
+.ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
+.ambb-sheet{position:fixed;inset:0;z-index:9600;background:#000a;display:flex;align-items:flex-end;justify-content:center}
+.ambb-sheet-in{width:100%;max-width:460px;max-height:78vh;overflow-y:auto;background:#1e1a36;border-radius:16px 16px 0 0;padding:12px 12px max(14px,env(safe-area-inset-bottom));color:#fff;font-weight:700}
+.ambb-tl{margin-top:6px}
+.ambb-tl-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-top:1px dashed rgba(255,255,255,.12);font-size:12.5px;color:#94a3b8}
+.ambb-tl-row.on{color:#fff}
+.ambb-tl-row small{font-size:10.5px;color:#cbd5e1;white-space:nowrap}
 .ambw.ambb-full [data-ambw-panel]{padding:6px 8px;margin-top:6px}
 .ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
@@ -356,10 +374,14 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const seed = set.seedLock && lastSeedRef.current ? lastSeedRef.current : `ambb-${meId}-${fb.assistantId}-${Date.now()}`;
     lastSeedRef.current = seed;
     const opts = ambbMatchOpts(set);
-    let r;
-    try { r = engine.simulate({ seed, catalog, teamA, teamB, ...opts, trace: true }); } catch (e) { return; }
+    let r, match = null;
+    // 手動(2026-11-13 段3・社長「手動も作ってほしい。色々見ながら調整したい」): 芯の createMatch で自分の側だけ手番ごとに聞く。計算はオートと同じ
+    try {
+      if (set.ctl === 'manual' && typeof engine.createMatch === 'function') { match = engine.createMatch({ seed, catalog, teamA, teamB, ...opts, trace: true, control: { A: 'human' } }); r = match.result() || { log: match.log.slice(), winner: null, rounds: 0 }; }
+      else r = engine.simulate({ seed, catalog, teamA, teamB, ...opts, trace: true });
+    } catch (e) { return; }
     const st = r.log[0] || {};
-    setBattle({ id: `${seed}-${Date.now()}`, seed, opts, r, frames: ambwFramesOf(r.log), teamA, teamB, units: chosen, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, plan, swap });
+    setBattle({ id: `${seed}-${Date.now()}`, seed, opts, r, match, frames: ambwFramesOf(r.log), teamA, teamB, units: chosen, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, plan, swap });
     setPos(0); setPaused(false); setIfs(null); setPhase('watch');
     ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.assistantId } } }));
   };
@@ -392,7 +414,10 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   useEffect(() => {
     if (phase !== 'watch' || !battle || paused) return undefined;
     const log = battle.r.log;
-    if (pos >= log.length - 1) { const t = setTimeout(() => setPhase('review'), 900); return () => clearTimeout(t); }
+    if (pos >= log.length - 1) {
+      if (battle.match && !battle.match.done()) return undefined;   // 手動: あなたの手番を待つ
+      const t = setTimeout(() => setPhase('review'), 900); return () => clearTimeout(t);
+    }
     const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
     // 1行の長さは技の動きの長さに合わせる(試合の画面 MsaStage と同じ。×2・×4 は縮める。見せ場だけは今までどおり)
     const cur = log[pos] || {};
@@ -441,6 +466,21 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     return () => clearTimeout(t);
   }, [phase, battle, ifs]);
 
+  // 手動の試合: 選んだ手で芯を進め、記録を写し直す(決着したら結果に置きかえる)
+  const syncManual = (m) => {
+    const res = m.result();
+    const log = res ? res.log : m.log.slice();
+    setBattle(b => (b && b.match === m ? { ...b, r: res || { ...b.r, log }, frames: ambwFramesOf(log) } : b));
+    return log.length;
+  };
+  const manualPick = (c) => {
+    const m = battle && battle.match; if (!m) return;
+    const busy = pos < battle.r.log.length - 1; if (busy) return;
+    if (typeof msaSe === 'function') msaSe('tap');
+    const r = m.choose(c); if (r && r.ok) { syncManual(m); setPos(p => p + 1); setPaused(false); }
+  };
+  const manualAuto = () => { const m = battle && battle.match; if (!m) return; m.auto('A'); syncManual(m); setPaused(false); };
+  const [techList, setTechList] = useState(null);
   const nameOf = (id) => ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id)) || {}).name || id;
   const faceOf = (id) => { const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id); return a ? assistantFaceSrc(a, 'normal') : ''; };
   const rec = save.rec[meId] || { w: 0, l: 0, d: 0 };
@@ -545,6 +585,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   } else if (battle) {
     const log = battle.r.log, e = log[pos] || {}, f = battle.frames[pos] || battle.frames[0];
     const review = phase === 'review';
+    const manualWait = !!(battle.match && !battle.match.done() && pos >= log.length - 1 && battle.match.pending());
     const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
     const who = (side, i) => (mem(side, i) || {}).name || '';
     const WHY = engine.WHY || {};
@@ -644,7 +685,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             </div>
           </div>
         )}
-        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
+        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false} reachOnly={!review} onAll={review ? null : setTechList}/>
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
         {typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
@@ -661,8 +702,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           )}
         </div>
         )}
-        <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
-        {!review && (
+        {!manualWait && <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine reachOnly={!review} onAll={review ? null : setTechList}/>}
+        {!review && manualWait && typeof MsxManualBar === 'function' && (
+          <div className="ambb-bar-wrap" data-ambb-manual><MsxManualBar opt={battle.match.pending()} onPick={manualPick} onAuto={manualAuto} busy={false}/></div>
+        )}
+        {!review && !manualWait && (
           <div className="ambw-card ambw-log">
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
             {actor && e.why && WHY[e.why] && (
@@ -677,7 +721,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           <div className="ambw-ctl">
             <button className="ambw-btn2" data-ambb-pause onClick={() => setPaused(p => !p)}>{paused ? '▶' : '⏸'}</button>
             {AMBW_SPEEDS.map(s => <button key={s.id} className={`ambw-sp ${speed === s.id ? 'on' : ''}`} data-ambb-speed={s.id} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
-            <button className="ambw-btn2" data-ambb-skip onClick={() => { setPos(log.length - 1); setPhase('review'); }}>⏭ 結果へ</button>
+            <button className="ambw-btn2" data-ambb-skip onClick={() => {
+              // 手動のときは残りをオートで進めてから結果へ
+              const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
+              setPos(n - 1); setPhase('review');
+            }}>⏭ 結果へ</button>
           </div>
         )}
       </div>
@@ -696,6 +744,22 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         </div>
         {body}
       </div>
+      {techList && battle && phase !== 'prep' && (() => {
+        const side = techList, t = side === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[Math.min(pos, battle.frames.length - 1)] || battle.frames[0];
+        const i = fr.act[side], list = (battle.moves[side] && battle.moves[side][i]) || [], m = t.members[i] || {};
+        return (
+          <div className="ambb-sheet" data-ambb-techlist={side} onClick={() => setTechList(null)}>
+            <div className="ambb-sheet-in" onClick={(ev) => ev.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><b>{m.name} の技({list.length})</b><button className="ambw-btn2" onClick={() => setTechList(null)}>閉じる</button></div>
+              <p className="ambw-small">いまの間合い: {AMBW_DIST[fr.d]}・届く技に ● が付いています</p>
+              <div className="ambb-tl">{list.map((mv) => {
+                const reach = Array.isArray(mv.dist) && mv.dist.includes(fr.d), hp = ambwHitPct(catalog, { A: battle.teamA, B: battle.teamB }, side, fr, mv.id);
+                return <div key={mv.id} className={`ambb-tl-row ${reach ? 'on' : ''}`}><span>{reach ? '●' : '○'} {mv.kind === 'pow' ? '💪' : '🧠'} {mv.name}</span><small>{hp != null ? `命中 ${hp}%・` : ''}ガッツ {mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></div>;
+              })}</div>
+            </div>
+          </div>
+        );
+      })()}
       {ask && me && <AssistantMasmonAskSheet who={me} from="masmon" t={ask.t} initialText={ask.text} onClose={() => setAsk(null)}/>}
     </div>
   );
@@ -772,12 +836,13 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
     <div className="ambw-card" data-ambb-settings>
       <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>⚙ 試合の設定</span>
-        {local && diff > 0 && <button className="ambw-btn2" style={{ minHeight: 28, padding: '2px 10px', fontSize: 11 }} data-ambb-set-reset onClick={() => onSet({ ...AMBB_SET_DEF, fx: set.fx })}>いつもの決まりに戻す</button>}
+        {local && diff > 0 && <button className="ambw-btn2" style={{ minHeight: 28, padding: '2px 10px', fontSize: 11 }} data-ambb-set-reset onClick={() => onSet({ ...AMBB_SET_DEF, fx: set.fx, ctl: set.ctl })}>いつもの決まりに戻す</button>}
       </div>
       <div className="ambb-set-row"><span>人数</span>
         <div className="ambb-tabs">{[1, 2, 3].map(k => <button key={k} data-ambb-size={k} disabled={k > sizeMax} className={size === k ? 'on' : ''} onClick={() => onSize(k)}>{k}対{k}</button>)}</div>
       </div>
       {local && <>
+        <div className="ambb-set-row"><span>操作</span>{chips('ctl', AMBB_SET_OPTS.ctl, o => o.label, o => o.note)}</div>
         <div className="ambb-set-row"><span>形式</span>{chips('team', AMBB_SET_OPTS.team, o => o.label, o => o.note)}</div>
         <div className="ambb-set-row"><span>ラウンド上限</span>{chips('rounds', AMBB_SET_OPTS.rounds, o => `${o}`)}</div>
         <div className="ambb-set-row"><span>最初の間合い</span>{chips('dist', AMBB_SET_OPTS.dist, o => (o === 'auto' ? 'おまかせ' : AMBW_DIST[o]))}</div>
