@@ -37,8 +37,8 @@ const CHANGELOG = [
   {
     // 2026-11-13 社長「第3弾のモンサク紹介告知で育成中の動画とかあげれない？開発中のくだりは忘れずに」。動画は実際の画面を本物のブラウザで録った(訓練 → 修行 → 大会)
     date: "2026-11-13 12:42", type:'content', title:'新コンテンツ「モンヒロサクセス」開発中・第3弾', status:'new', group:'success',
-    video: 'movies/monsaku-teaser3.mp4?v=b038529e70a2',
-    videoPoster: 'images/events/monsaku-teaser3-poster.jpg?v=97a0c54c0486',
+    video: 'movies/monsaku-teaser3.mp4?v=350f97c0c020',
+    videoPoster: 'images/events/monsaku-teaser3-poster.jpg?v=0925455f1a62',
     items:[
       '開発中の新コンテンツ「モンヒロサクセス」の、育てている途中の様子を動画でお見せします。',
       '訓練では、選んだ能力のほかに、関わりのある能力もいっしょに伸びます。編成のモンスターが集まると「友情タッグ」になり、伸びがさらに大きくなります。',
