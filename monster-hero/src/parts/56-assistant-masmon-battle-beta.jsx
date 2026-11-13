@@ -312,7 +312,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const cur = log[pos] || {};
     const team = cur.side === 'A' ? battle.teamA : cur.side === 'B' ? battle.teamB : null;
     const f = { x1: 1, x2: 0.55, x4: 0.3 }[speed];
-    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, typeof msaReduce === 'function' && msaReduce(), log) * f) : sp.ms;
+    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, typeof msaReduce === 'function' && msaReduce(), log, f) * f) : sp.ms;
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
@@ -358,6 +358,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   const nameOf = (id) => ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id)) || {}).name || id;
   const faceOf = (id) => { const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id); return a ? assistantFaceSrc(a, 'normal') : ''; };
   const rec = save.rec[meId] || { w: 0, l: 0, d: 0 };
+  // 上下の欄のライフ・ガッツは、技が当たる瞬間までは前の値(場の棒と同じ時に減る。56-monhero-success-arena.jsx)
+  const shownF = typeof useMsaShownFrame === 'function' ? useMsaShownFrame(battle ? battle.r.log : [], battle ? battle.frames : [], pos, battle ? { A: battle.teamA, B: battle.teamB } : {}, { x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1) : null;
 
   let body = null;
   if (!ticked || (!ready && !loadFailed)) {
@@ -556,12 +558,13 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             </div>
           </div>
         )}
-        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
+        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
         {typeof MsaStage === 'function' ? (
           <div className="msa" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
             <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null}
-              ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}/>
+              ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}
+              introTitle={battle.pvp ? 'フレンド対戦' : 'マスモン対戦'} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1}/>
           </div>
         ) : (
         <div className="ambw-ring">
@@ -572,7 +575,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           )}
         </div>
         )}
-        <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
+        <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
         {!review && (
           <div className="ambw-card ambw-log">
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
