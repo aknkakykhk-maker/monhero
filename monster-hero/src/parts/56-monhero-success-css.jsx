@@ -184,14 +184,24 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
-.msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
+.msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
-.msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
+.msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st.grow.on u.g s.gu{animation:msxStGlow 1.1s ease-in-out 1.15s 3 alternate}
 .msx .v-st u.g s.gd{background:#f87171;box-shadow:0 0 6px #f87171;opacity:0}
 .msx .v-st.grow:not(.on) u.g s.gd{opacity:.9}
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
+.msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+.msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
+.msx .v-st.gs-a.zin u.g i,.msx .v-st.gs-a.zin u.g s.gu{transition:none}
+.msx .v-st.gs-a:not(.zin) u.g i,.msx .v-st.gs-a:not(.zin) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
+.msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
+.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
+.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
+.msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -511,6 +521,7 @@ const MSX_CSS = `
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
 .msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.msx .v-tr .tn{display:block;font-size:8.5px;font-weight:800;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.2;letter-spacing:-.02em}
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
@@ -529,7 +540,7 @@ const MSX_CSS = `
 .msx .v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
 .msx .v-rm div small{display:block;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:2px}
 .msx .v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.msx .v-rm div.re small{color:#fff}
-@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:10px}.msx .v-lvx{font-size:10px}}
+@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:10px}.msx .v-tr .tn{font-size:7.5px}.msx .v-lvx{font-size:10px}}
 .msx .v-hg{display:inline-block;vertical-align:middle;flex:none}
 .msx .v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
 .msx .v-bsel .e{font-size:34px;line-height:1;flex:none}.msx .v-bsel b{display:block;font-size:13.5px}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 88bf5c7b74de2fed
+// generated-sha256: 0e44986a1344e1ec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80749,7 +80749,7 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
 const MSX_AW_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_AW_NAME = Object.freeze({ 1: '覚醒', 2: '超覚醒' });
 // 演出の段の切り替え(ミリ秒): 0 光に包まれる → 1 助手が驚く → 2 閃光と札 → 3 キラをまとった姿
-const MSX_AW_STEPS = Object.freeze({ 1: Object.freeze([1300, 2500, 4000]), 2: Object.freeze([1600, 3000, 4700]) });
+const MSX_AW_STEPS = Object.freeze({ 1: Object.freeze([1400, 2800, 4200]), 2: Object.freeze([1700, 3500, 5000]) }); // 0 溜め → 1 気が噴き出す → 2 閃光と札 → 3 キラ
 const msxKiraOf = (awake) => (Number(awake) >= 2 ? 'rare' : Number(awake) >= 1 ? 'kira' : null);
 const msxAwCalm = () => (typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false);
 
@@ -80789,33 +80789,40 @@ function MsxPeakFx({ layer }) {
 }
 
 // fire = 芯の awakeOpen の out.fire { kind, add, ups, apt:[{ dist, from, to }] }。run.s はもう起きたあと(能力・印)
+// 段(2026-11-13 社長の参考画像に寄せる): 0 見出しの帯「育成イベント/◯◯覚醒!!」と画面いっぱいの姿(溜め) → 1 体から気が噴き出し、筋が走る
+//   → 2 閃光と「覚醒!」の札・全能力・ゲージが伸びる → 3 キラをまとった姿。下の「早送り」で次の段へ・「短縮」で結果へ
 function MsxAwakeShow({ run, fire, v, ev, line }) {
   msxAwEnsureCss();
   const k = fire && fire.kind === 2 ? 2 : 1;
   const calm = msxAwCalm();
   const [st, setSt] = React.useState(calm ? 3 : 0);
   React.useEffect(() => {
-    if (calm) return undefined;
-    const ids = MSX_AW_STEPS[k].map((ms, i) => setTimeout(() => setSt((n) => Math.max(n, i + 1)), ms));
-    return () => ids.forEach(clearTimeout);
-  }, []);
+    if (calm || st >= 3) return undefined;
+    const id = setTimeout(() => setSt((n) => Math.min(3, n + 1)), MSX_AW_STEPS[k][st] - (st ? MSX_AW_STEPS[k][st - 1] : 0));
+    return () => clearTimeout(id);
+  }, [st]);
   const s = run.s;
   const shown = { ...run, s: { ...s, awake: st >= 3 ? k : k - 1, omen: null } };
   const say = line(k === 2 ? 'turn.awake.fire2' : 'turn.awake.fire', k === 2 ? 'うそ…まだ光が強くなっていく！' : 'えっ…この光、なに！？');
   const apt = Array.isArray(fire && fire.apt) ? fire.apt : [];
+  const big = st < 2;
   return (<>
     {typeof MsxBand === 'function' ? <MsxBand s={s} v={v} ev={ev}/> : null}
-    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} onClick={() => setSt(3)} data-msx-awake={k} data-msx-awake-step={st}>
+    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} data-msx-awake={k} data-msx-awake-step={st}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
-      {st < 3 ? <><span className="msx-aw-ray" aria-hidden="true"/><span className="msx-aw-wrap" aria-hidden="true"/></> : <span className="msx-aw-after" aria-hidden="true"/>}
-      <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/>
-      <MsxMonArt run={shown} className="mon" style={{ bottom: '16%', height: '40%' }} live={st >= 3}/>
+      {st < 3 ? <span className="msx-aw-dim" aria-hidden="true"/> : <span className="msx-aw-after" aria-hidden="true"/>}
+      {st === 1 || st === 2 ? <span className="msx-aw-qi" aria-hidden="true">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <i key={i} style={{ '--i': i }}/>)}</span> : null}
+      <div className="gr" style={{ bottom: big ? 'calc(4% - 5px)' : 'calc(16% - 5px)' }}/>
+      <MsxMonArt run={shown} className={`mon${big ? ' aw-big' : ''}`} style={big ? { bottom: '4%', height: '78%' } : { bottom: '16%', height: '40%' }} live={st >= 3}/>
+      {st === 1 || st === 2 ? <span className="msx-aw-slash" aria-hidden="true">{(k === 2 ? [0, 1, 2] : [0, 1]).map((i) => <i key={i} style={{ '--i': i }}/>)}</span> : null}
+      {st < 2 ? <div className={`msx-aw-head k${k}`}><small>育成イベント</small>{run.nick}{k === 2 ? '超覚醒!!' : '覚醒!!'}</div> : null}
       {st === 2 ? <span className="msx-aw-flash" aria-hidden="true"/> : null}
       {st >= 2 ? <div className={`msx-aw-stamp k${k} msx-pop`}>{k === 2 ? '超覚醒!!' : '覚醒!'}<small>全能力 +{fire.add}</small></div> : null}
+      {st < 3 && !calm ? <div className="msx-aw-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-msx-awake-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-msx-awake-skip>短縮 ⏭</button></div> : null}
     </div>
     {st >= 2 ? <MsxStRow stats={s.stats} ups={fire.ups}/> : null}
     <div className="v-log">
-      {st < 2 ? <>{run.nick}の体が、{k === 2 ? '虹色の' : 'まぶしい'}光に包まれていく…</> : <>
+      {st < 2 ? <>{run.nick}の体から、{k === 2 ? '虹色の' : 'まばゆい'}気があふれ出す…</> : <>
         <span className="hd2">{k === 2 ? '🌈 超覚醒' : '✨ 覚醒'}</span><br/>
         全能力 <b className="gu">+{fire.add}</b>
         {apt.map((a) => <span key={a.dist}><br/>📏 「{MSX_AW_DIST[a.dist]}」の間合い適性が {a.from} → <b className="ga">{a.to}</b> に上がった!</span>)}
@@ -80864,6 +80871,26 @@ const MSX_AW_CSS = `
 .msx-aw-stamp{position:absolute;left:0;right:0;top:9%;z-index:5;text-align:center;white-space:nowrap;font-size:34px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 14px #fff,0 4px 0 #78350f}
 .msx-aw-stamp.k2{font-size:36px;-webkit-text-stroke:3px #9d174d;text-shadow:0 0 14px #fff,0 0 26px rgba(255,120,220,.9),0 4px 0 #581c87}
 .msx-aw-stamp small{display:table;margin:2px auto 0;font-size:15px;font-style:normal;-webkit-text-stroke:0;color:#7c2d12;background:#fff;border-radius:999px;padding:1px 12px;text-shadow:none}
+.msx .msx-aw .msx-aw-dim{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 50% 55%,rgba(15,13,36,0) 30%,rgba(15,13,36,.55))}
+.msx .msx-aw.k2 .msx-aw-dim{background:radial-gradient(circle at 50% 55%,rgba(40,10,60,0) 30%,rgba(40,10,60,.65))}
+.msx .msx-aw .mon.aw-big{animation:msxAwTame 1.4s ease-out both;z-index:2}
+.msx .msx-aw.st1 .mon.aw-big{animation:msxAwShake .12s linear infinite}
+.msx .msx-aw-head{position:absolute;left:0;top:10px;z-index:6;padding:4px 18px 5px 12px;font-size:16px;font-weight:900;color:#fff;text-align:left;background:linear-gradient(90deg,#be123c,#e11d48cc 70%,transparent);clip-path:polygon(0 0,100% 0,92% 100%,0 100%);animation:msxAwHead .4s ease-out both}
+.msx .msx-aw-head small{display:block;font-size:10px;color:#fecdd3}
+.msx .msx-aw-head.k2{background:linear-gradient(90deg,#7c3aed,#db2777 55%,#f59e0bcc 80%,transparent)}
+.msx .msx-aw-qi{position:absolute;inset:0;z-index:1;pointer-events:none}
+.msx .msx-aw-qi i{position:absolute;left:50%;bottom:8%;width:34%;height:70%;margin-left:-17%;border-radius:50% 50% 40% 40%/70% 70% 30% 30%;transform-origin:50% 100%;transform:rotate(calc((var(--i) - 3.5) * 22deg));background:radial-gradient(ellipse 50% 60% at 50% 70%,rgba(255,255,255,.95),rgba(255,230,140,.75) 35%,rgba(255,170,40,.35) 60%,transparent 78%);mix-blend-mode:screen;animation:msxAwQi .55s ease-out infinite alternate;animation-delay:calc(var(--i) * -.13s)}
+.msx .msx-aw.k2 .msx-aw-qi i{background:radial-gradient(ellipse 50% 60% at 50% 70%,rgba(255,255,255,.95),hsla(calc(var(--i) * 45),95%,70%,.85) 35%,hsla(calc(var(--i) * 45 + 40),95%,60%,.4) 62%,transparent 80%)}
+.msx .msx-aw-slash{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.msx .msx-aw-slash i{position:absolute;left:-20%;width:140%;height:7px;top:calc(48% + var(--i) * 14%);border-radius:7px;transform:rotate(-14deg);background:linear-gradient(90deg,transparent,#fff 30%,#fde047 60%,transparent);box-shadow:0 0 14px #fde047;animation:msxAwSlash .5s ease-out both;animation-delay:calc(.15s + var(--i) * .22s)}
+.msx .msx-aw.k2 .msx-aw-slash i{background:linear-gradient(90deg,transparent,#fff 20%,#f472b6 45%,#60a5fa 65%,#fde047 80%,transparent);box-shadow:0 0 16px #f472b6}
+.msx .msx-aw-ctl{position:absolute;left:0;right:0;bottom:8px;z-index:7;display:flex;justify-content:center;gap:10px}
+.msx .msx-aw-ctl button{min-width:92px;padding:5px 12px;border-radius:999px;background:#0f0d24cc;border:1.5px solid #fde047;color:#fde047;font-size:12px;font-weight:900;text-align:center}
+@keyframes msxAwTame{from{transform:translateX(-50%) scale(.82)}to{transform:translateX(-50%) scale(1)}}
+@keyframes msxAwShake{0%{transform:translateX(-50%) translate(0,0)}25%{transform:translateX(-50%) translate(-2px,1px)}50%{transform:translateX(-50%) translate(2px,-1px)}75%{transform:translateX(-50%) translate(-1px,-1px)}100%{transform:translateX(-50%) translate(0,0)}}
+@keyframes msxAwHead{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+@keyframes msxAwQi{from{opacity:.55;transform:rotate(calc((var(--i) - 3.5) * 22deg)) scaleY(.85)}to{opacity:1;transform:rotate(calc((var(--i) - 3.5) * 22deg)) scaleY(1.12)}}
+@keyframes msxAwSlash{0%{opacity:0;transform:rotate(-14deg) translateX(-60%)}30%{opacity:1}100%{opacity:0;transform:rotate(-14deg) translateX(40%)}}
 @keyframes msxAwWrap{0%{opacity:0;transform:translateX(-50%) scale(.4)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
 @keyframes msxAwHold{from{opacity:.75;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.06)}}
 @keyframes msxAwRay{0%{opacity:0;transform:translateX(-50%) scaleX(.2)}100%{opacity:1;transform:translateX(-50%) scaleX(1)}}
@@ -80886,6 +80913,7 @@ const MSX_AW_CSS = `
 .msx-peakon>.msx-kira{position:relative;z-index:1;filter:drop-shadow(0 0 3px rgba(255,170,40,.95)) drop-shadow(0 0 9px rgba(255,90,10,.7))}
 .msx-peak-card{position:absolute;left:0;right:0;top:12%;z-index:5;text-align:center;font-size:26px;font-weight:900;font-style:italic;color:#fff7cc;-webkit-text-stroke:3px #c2410c;paint-order:stroke fill;text-shadow:0 0 14px #fb923c,0 3px 0 #7c2d12;white-space:nowrap}
 @media (prefers-reduced-motion: reduce){
+  .msx .msx-aw-qi,.msx .msx-aw-slash{display:none}.msx .msx-aw .mon.aw-big{animation:none}
   .msx-peakfx .fl,.msx-peakfx .base{animation:none}.msx-peakfx.front{display:none}
   .msx-omen .g,.msx-omen .p,.msx-omen-on>.msx-kira,.msx-aw .msx-aw-wrap,.msx-aw-flash{animation:none}
   .msx-omen .p,.msx-aw-flash{display:none}
@@ -81214,6 +81242,273 @@ const msxTevEnsureCss = () => {
   if (msxTevCssDone || typeof document === 'undefined') return;
   msxTevCssDone = true;
   const el = document.createElement('style'); el.setAttribute('data-msx-tev-css', '1'); el.textContent = MSX_TEV_CSS; document.head.appendChild(el);
+};
+
+// ---- part: 56-monsuc-actfx.jsx ----
+// ===== モンヒロサクセスの訓練・修行の演出(2026-11-13 社長「トレーニングも修行も演出が入っていない」・参考動画の流れだけを取り入れる) =====
+// 何も保存しない・公開の印は持たない(モンサクの画面の中からだけ呼ぶ)。押すと飛ばせる。「動きを減らす」設定では出さない(すぐ結果)
+//   MsxTrainAct({ run, o, style, onDone }) … 訓練の結果の字の前に、訓練している場面(約1.3秒)。style: 'a' その場で動く / 'b' 集中線のカットイン
+//   MsxShugyoStages({ run, o, line, onDone }) … 修行の結果の前に、助手の一言 →「STAGE 1 ◯◯&◯◯」→「STAGE 2 ◯◯&◯◯」(段ごとに景色が替わる・いっしょに修行した編成のモンスターの顔)
+
+const MSX_ACT_MS = 1700;
+// 修行の段ごとの景色(背景の絵 + 色のかぶせ)
+const MSX_QSTAGE_BG = Object.freeze({
+  fire: [['forest_evening', 'rgba(255,90,20,.35)'], ['desert_oilfield', 'rgba(255,40,0,.38)']],
+  ice: [['forest_morning', 'rgba(120,200,255,.35)'], ['forest_night', 'rgba(150,220,255,.4)']],
+  wind: [['forest_deep', 'rgba(120,255,170,.25)'], ['desert_hall', 'rgba(200,255,220,.25)']],
+  star: [['monhero_night', 'rgba(150,120,255,.3)'], ['dark_void', 'rgba(200,170,255,.3)']],
+});
+const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
+// 修行の段の背景(行き先ごとの表 MSX_QSTAGE_BG の名前から作る。どれも story-bg の絵)
+const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
+
+function MsxTrainAct({ run, o, onDone }) {
+  msxActEnsureCss();
+  const k = o && o.card && MSX_TRAIN_NAME[o.card.stat] ? o.card.stat : 'pow';
+  const done = React.useRef(false);
+  const finish = () => { if (done.current) return; done.current = true; onDone(); };
+  React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, MSX_ACT_MS); return () => clearTimeout(id); }, []);
+  if (msxActCalm()) return null;
+  const n = (c) => Array.from({ length: c }, (_, i) => i);
+  // 訓練ごとの小物(絵は使わず CSS と絵文字で描く)
+  const prop = k === 'pow' ? <div className="pr logs">{n(3).map((i) => <i key={i} style={{ '--i': i }}><b/></i>)}<em className="boom">💥</em></div>
+    : k === 'tough' ? <div className="pr rock"><i>🪨</i><em className="ring"/></div>
+    : k === 'hit' ? <div className="pr tgt"><i/><em className="shot">⭐</em><em className="boom">💥</em></div>
+    : k === 'eva' ? <div className="pr leaves">{n(8).map((i) => <i key={i} style={{ '--i': i }}>{i % 3 === 1 ? '🍃' : '🍂'}</i>)}</div>
+    : k === 'wise' ? <div className="pr blocks">{n(5).map((i) => <i key={i} style={{ '--i': i }}/>)}<em className="idea">💡</em></div>
+    : <div className="pr run"><span className="spd"/>{n(3).map((i) => <i key={i} style={{ '--i': i }}>💨</i>)}</div>;
+  return (
+    <div className={`msx-act t-${k}`} onClick={finish} data-msx-act={k}>
+      <span className={k === 'life' ? 'lines h' : 'lines'} aria-hidden="true"/>
+      {k === 'tough' || k === 'eva' ? null : prop}
+      <div className="me"><MsxMonArt run={run} className="mon" live/></div>
+      {k === 'tough' || k === 'eva' ? prop : null}
+      <div className="ban"><small>{MSX_STAT_NAME[k]}の訓練</small>{MSX_TRAIN_ICON[k]} {MSX_TRAIN_NAME[k]}!</div>
+    </div>
+  );
+}
+
+function MsxShugyoStages({ run, o, line, onDone }) {
+  msxActEnsureCss();
+  const SH = msxSuc && msxSuc.SUC ? msxSuc.SUC.SHUGYO : null;
+  const course = SH && SH.courses ? SH.courses[o.course] : null;
+  const stages = course && Array.isArray(course.stages) ? course.stages : [];
+  const bgs = MSX_QSTAGE_BG[o.course] || MSX_QSTAGE_BG.fire;
+  const [st, setSt] = React.useState(0); // 0 助手の一言 / 1 STAGE 1 / 2 STAGE 2
+  const done = React.useRef(false);
+  const finish = () => { if (done.current) return; done.current = true; onDone(); };
+  React.useEffect(() => {
+    if (msxActCalm()) { finish(); return undefined; }
+    const ids = [setTimeout(() => setSt(1), 1000), setTimeout(() => setSt(2), 2300), setTimeout(finish, 3600)];
+    return () => ids.forEach(clearTimeout);
+  }, []);
+  if (msxActCalm()) return null;
+  const s = run.s;
+  const say = line ? line('turn.drill.start', 'よし、集中していこう！') : { t: 'よし、集中していこう！' };
+  const helpers = Array.isArray(o.stages) && o.stages[st - 1] ? o.stages[st - 1] : [];
+  const pair = stages[st - 1] || [];
+  const [bg, tint] = bgs[Math.max(0, st - 1)] || bgs[0];
+  return (
+    <div className={`msx-qst st${st}`} onClick={finish} data-msx-qstage={st}>
+      <img key={`bg${st}`} className="bg" src={msxQstageBgUrl(bg)} alt=""/>
+      <span className="tint" style={{ background: st ? tint : 'rgba(15,13,36,.55)' }}/>
+      {st === 0 ? (<div className="say">
+        {typeof msxFace === 'function' ? <img className="fc" src={msxFace(s.aid, 'excited')} alt=""/> : null}
+        <div className="bub"><b>{course ? `${course.name}の修行` : '修行'}</b>{say && say.t}</div></div>) : (<>
+        <div key={`ban${st}`} className="ban"><small>STAGE {st}</small>{pair.map((x) => `${MSX_STAT_ICON[x]} ${MSX_STAT_NAME[x]}`).join(' & ')}</div>
+        <div key={`me${st}`} className="me"><MsxMonArt run={run} className="mon" live react={{ kind: 'great', id: `qs-${st}` }}/></div>
+        {helpers.length ? <div className="faces">{helpers.map((i) => s.team[i]).filter(Boolean).map((m, j) => <img key={j} src={msxMonThumb(m.species)} alt=""/>)}<small>いっしょに修行</small></div> : null}
+      </>)}
+      <div className="skip">タップでとばす</div>
+    </div>
+  );
+}
+
+const MSX_ACT_CSS = `
+.msx .msx-act{position:absolute;inset:0;z-index:8;overflow:hidden;cursor:pointer;background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.05),rgba(10,8,30,.72))}
+.msx .msx-act .lines{position:absolute;inset:-20%;background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(255,255,255,.5) 0 1.2deg,transparent 1.2deg 9deg);-webkit-mask:radial-gradient(circle at 50% 55%,transparent 26%,#000 48%);mask:radial-gradient(circle at 50% 55%,transparent 26%,#000 48%);animation:msxActLines .35s linear infinite}
+.msx .msx-act .lines.h{inset:0;background:repeating-linear-gradient(180deg,transparent 0 13px,rgba(255,255,255,.45) 13px 15px,transparent 15px 31px);-webkit-mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);animation:msxActRunL .25s linear infinite}
+.msx .msx-act .me{position:absolute;inset:0;z-index:2}
+.msx .msx-act .me .mon{left:50%;bottom:12%;height:56%}
+.msx .msx-act .ban{position:absolute;left:0;right:0;bottom:4%;z-index:6;text-align:center;font-size:28px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12;background:linear-gradient(90deg,transparent,#7c2d12cc 18%,#7c2d12cc 82%,transparent);padding:2px 0 4px;animation:msxActBan .4s cubic-bezier(.2,1.4,.4,1) both}
+.msx .msx-act .ban small{display:block;font-size:12px;font-style:normal;-webkit-text-stroke:0;text-shadow:0 1px 0 #000;color:#fde68a}
+.msx .msx-act .pr{position:absolute;inset:0;z-index:3;pointer-events:none}
+.msx .msx-act .pr em{position:absolute;font-style:normal}
+.msx .msx-act.t-pow .me{animation:msxActLunge .7s cubic-bezier(.3,1.4,.5,1) .3s both}
+.msx .msx-act.t-pow .me .mon{left:70%}
+.msx .msx-act .logs{left:3%;right:auto;width:33%;top:auto;bottom:16%;height:50%;display:flex;gap:4px;align-items:flex-end}
+.msx .msx-act .logs i{position:relative;flex:1;height:100%;border-radius:6px;background:repeating-linear-gradient(90deg,#b45309 0 3px,#d97706 3px 9px,#c2410c 9px 11px);border:2px solid #78350f;box-shadow:inset 0 0 0 2px #f59e0b55;animation:msxActLog .6s ease-in .75s both;--dx:calc((var(--i) - 1) * 40px)}
+.msx .msx-act .logs i b{position:absolute;left:10%;right:10%;top:20%;bottom:20%;opacity:0;background:linear-gradient(115deg,transparent 46%,#1c0a00 47% 50%,transparent 51%),linear-gradient(65deg,transparent 46%,#1c0a00 47% 50%,transparent 51%);animation:msxActOn .05s linear .55s both}
+.msx .msx-act .logs .boom{left:70%;top:24%;font-size:56px;animation:msxActHit .5s ease-out .52s both}
+.msx .msx-act.t-tough .me{animation:msxActSquash .5s ease-out .55s both}
+.msx .msx-act .rock i{position:absolute;left:50%;top:6%;font-style:normal;font-size:130px;line-height:1;transform:translateX(-50%);animation:msxActDrop .55s cubic-bezier(.5,0,1,.6) .1s both;filter:drop-shadow(0 8px 6px #0008)}
+.msx .msx-act .rock .ring{left:50%;top:22%;width:60%;height:14%;margin-left:-30%;border:4px solid #fde68a;border-radius:50%;opacity:0;animation:msxActRing .5s ease-out .62s both}
+.msx .msx-act.t-tough .lines{animation:msxActLines .35s linear infinite,msxActShake .3s linear .62s 1}
+.msx .msx-act.t-hit .me .mon{left:32%}
+.msx .msx-act .tgt i{position:absolute;right:6%;top:30%;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,#dc2626 0 12%,#fff 12% 26%,#dc2626 26% 40%,#fff 40% 55%,#dc2626 55% 70%,#fff 70%);border:3px solid #7f1d1d;box-shadow:0 6px 0 #0006;animation:msxActTgt .3s ease-out .78s both}
+.msx .msx-act .tgt .shot{left:36%;top:46%;font-size:34px;animation:msxActShot .4s cubic-bezier(.4,0,.8,.6) .35s both}
+.msx .msx-act .tgt .boom{right:9%;top:32%;font-size:48px;animation:msxActHit .5s ease-out .74s both}
+.msx .msx-act.t-eva .me{animation:msxActDodge .9s ease-in-out .2s both}
+.msx .msx-act .leaves i{position:absolute;font-style:normal;font-size:30px;top:-12%;left:calc(4% + var(--i) * 12%);animation:msxActLeaf 1.1s linear both;animation-delay:calc(var(--i) * .09s)}
+.msx .msx-act.t-wise .me .mon{left:64%}
+.msx .msx-act .blocks i{position:absolute;left:12%;width:52px;height:40px;border-radius:6px;border:2px solid #0006;bottom:calc(14% + var(--i) * 40px);margin-left:calc((var(--i) % 2) * 10px);background:hsl(calc(var(--i) * 62 + 10),85%,60%);box-shadow:inset 0 -6px 0 #0002;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.15s + var(--i) * .18s)}
+.msx .msx-act .blocks .idea{left:56%;top:12%;font-size:46px;animation:msxActHit .6s ease-out 1.1s both}
+.msx .msx-act.t-life .me{animation:msxActBob .22s ease-in-out infinite alternate}
+.msx .msx-act .run i{position:absolute;font-style:normal;font-size:34px;left:56%;bottom:12%;animation:msxActPuff .5s linear infinite;animation-delay:calc(var(--i) * .17s)}
+@keyframes msxActLines{to{transform:rotate(9deg)}}
+@keyframes msxActRunL{to{background-position:0 31px}}
+@keyframes msxActOn{to{opacity:1}}
+@keyframes msxActHit{0%{opacity:0;transform:scale(.3)}35%{opacity:1;transform:scale(1.35)}100%{opacity:0;transform:scale(1.1)}}
+@keyframes msxActLunge{0%{transform:none}35%{transform:translateX(-22%)}60%{transform:translateX(-18%)}100%{transform:translateX(-6%)}}
+@keyframes msxActLog{to{opacity:0;transform:translate(var(--dx),40px) rotate(calc((var(--i) - 1) * 35deg))}}
+@keyframes msxActDrop{from{transform:translate(-50%,-140%)}to{transform:translate(-50%,0)}}
+@keyframes msxActSquash{0%{transform:none}30%{transform:translateY(4%) scaleY(.92)}100%{transform:none}}
+@keyframes msxActRing{0%{opacity:1;transform:scale(.3)}100%{opacity:0;transform:scale(1.6)}}
+@keyframes msxActShake{25%{transform:translate(-6px,3px)}50%{transform:translate(6px,-3px)}75%{transform:translate(-3px,2px)}}
+@keyframes msxActShot{from{transform:none;opacity:1}to{transform:translate(170px,-24px) rotate(360deg);opacity:.9}}
+@keyframes msxActTgt{0%{transform:none}40%{transform:scale(1.15)}100%{transform:none}}
+@keyframes msxActDodge{0%,100%{transform:none}25%{transform:translateX(-18%)}55%{transform:translateX(16%)}80%{transform:translateX(-8%)}}
+@keyframes msxActLeaf{from{transform:translate(0,0) rotate(0)}to{transform:translate(70px,620px) rotate(320deg)}}
+@keyframes msxActBlock{from{opacity:0;transform:translateY(-60px)}to{opacity:1;transform:none}}
+@keyframes msxActBob{from{transform:translateY(0)}to{transform:translateY(-3%)}}
+@keyframes msxActPuff{0%{opacity:0;transform:translateX(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateX(-170px) scale(1.3)}}
+@keyframes msxActBan{from{opacity:0;transform:translateY(-14px) scale(.8)}to{opacity:1;transform:none}}
+.msx .msx-qst{position:absolute;inset:0;z-index:9;overflow:hidden;cursor:pointer;background:#0f0d24}
+.msx .msx-qst .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxQbg .5s ease-out both}
+.msx .msx-qst .tint{position:absolute;inset:0;mix-blend-mode:multiply}
+.msx .msx-qst.st0 .tint{mix-blend-mode:normal}
+.msx .msx-qst .say{position:absolute;left:12px;right:12px;bottom:18%;display:flex;gap:8px;align-items:flex-end;animation:msxActBan .4s ease-out both}
+.msx .msx-qst .say .fc{width:64px;height:64px;border-radius:50%;border:3px solid #fff;object-fit:cover;background:#fff}
+.msx .msx-qst .say .bub{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:14px;padding:8px 12px;font-size:13px;font-weight:800;line-height:1.5;text-align:left}
+.msx .msx-qst .say .bub b{display:block;color:#c2410c;font-size:12px}
+.msx .msx-qst .ban{position:absolute;left:0;right:0;top:10%;text-align:center;font-size:20px;font-weight:900;color:#fff;-webkit-text-stroke:2px #1e1b4b;paint-order:stroke fill;text-shadow:0 3px 0 #1e1b4b;background:linear-gradient(90deg,transparent,#0f0d24cc 15%,#0f0d24cc 85%,transparent);padding:6px 0;animation:msxQban .45s cubic-bezier(.2,1.2,.3,1) both}
+.msx .msx-qst .ban small{display:block;font-size:30px;font-style:italic;letter-spacing:.12em;color:#fde047;-webkit-text-stroke:2px #92400e}
+.msx .msx-qst .me{position:absolute;inset:0}
+.msx .msx-qst .me .mon{left:50%;bottom:18%;height:40%}
+.msx .msx-qst .faces{position:absolute;left:0;right:0;bottom:6%;display:flex;justify-content:center;align-items:center;gap:6px}
+.msx .msx-qst .faces img{width:40px;height:40px;border-radius:50%;background:#fff;border:2px solid #fde047;object-fit:contain;animation:msxActBan .4s ease-out both}
+.msx .msx-qst .faces small{font-size:11px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}
+.msx .msx-qst .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0aa}
+@keyframes msxQbg{from{opacity:0;transform:scale(1.08)}to{opacity:1;transform:none}}
+@keyframes msxQban{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.msx .msx-act,.msx .msx-qst{display:none}}
+`;
+let msxActCssDone = false;
+const msxActEnsureCss = () => {
+  if (msxActCssDone || typeof document === 'undefined') return;
+  msxActCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-act-css', '1'); el.textContent = MSX_ACT_CSS; document.head.appendChild(el);
+};
+
+// ---- part: 56-monsuc-kifx.jsx ----
+// ===== モンヒロサクセスの期の区切りの演出(2026-11-13 窓口の頼み・参考画像 40・41・112・113・173・176 の流れだけを取り入れる) =====
+// 新しい期の1ターン目のターンの区切りで、ふだんの「◯月」の画面の前に1回だけ出す。押すと次の段・とばすで終わり
+//   段 0「第◯章 終了/◯◯期」の大きな字・子が大きく立つ(覚醒なら気をまとう)・下に獲得賞金と総合力(期のはじめからの増えた分)
+//   段 1「NEXT あと◯ターン」と期のはしご(終わった期 ✓・次 ▶・最上段は最後の大会「頂への道」で金色)
+// ki = 期のはじめの控え { p, fame, power }(run.ki・無ければ増えた分を出さない)。何も保存しない(控えの書きかえは呼ぶ側)
+// 「動きを減らす」設定では動かさず、段は押して進める
+const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
+const MSX_KI_MS = Object.freeze([2600, 2600]);
+const msxKiCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
+
+function MsxKiShow({ run, v, ev, ki, onDone }) {
+  msxKiEnsureCss();
+  const calm = msxKiCalm();
+  const P = msxSuc.core.PERIODS;
+  const now = v.period.index; const prev = Math.max(0, now - 1);
+  const [st, setSt] = React.useState(0);
+  const done = React.useRef(false);
+  const finish = () => { if (done.current) return; done.current = true; onDone(); };
+  const step = () => { if (st >= 1) finish(); else setSt(1); };
+  React.useEffect(() => {
+    if (calm) return undefined;
+    const id = setTimeout(step, MSX_KI_MS[st] || 2600);
+    return () => clearTimeout(id);
+  }, [st]);
+  const s = run.s;
+  const fame = Number.isFinite(s.fameTotal) ? s.fameTotal : 0;
+  const has = ki && ki.p === prev && Number.isFinite(ki.fame) && Number.isFinite(ki.power);
+  const dFame = has ? fame - ki.fame : null; const dPow = has ? ev.power - ki.power : null;
+  const isFinal = P[now] && P[now].key === 'final';
+  // 次の段までのターン: ふつうの期は期の長さ・最後の期は頂への道(3ターン目から)まで
+  const left = isFinal ? 2 : v.period.left;
+  const sign = (n) => (n >= 0 ? `+${msxFmt(n)}` : `−${msxFmt(-n)}`);
+  // はしご: 上から 頂への道(金)→ プロ期 → … → デビュー期
+  const rungs = P.map((p, i) => ({ i, name: p.key === 'final' ? '頂への道' : p.name, gold: p.key === 'final', state: i < now ? 'done' : i === now ? 'next' : 'later' })).reverse();
+  return (
+    <div className={`v-scene msx-ki st${st}`} style={{ flex: '1 1 0' }} onClick={step} data-msx-ki={st}>
+      <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+      <span className="msx-ki-dim" aria-hidden="true"/>
+      {s.awake ? <span className={`msx-ki-aura k${s.awake}`} aria-hidden="true"/> : null}
+      <MsxMonArt run={run} className="mon msx-ki-mon" style={st === 0 ? { bottom: '25%', height: '52%' } : { bottom: '2%', height: '62%' }} live/>
+      {st === 0 ? (<>
+        <div className="msx-ki-ttl" key="t0"><b>{MSX_KI_CHAPTER[prev]} 終了</b><span>{P[prev].name}</span></div>
+        <div className="msx-ki-sum" key="s0">
+          <div className="h">獲得賞金</div>
+          <div className="r"><b>{msxFmt(fame)}<small>G</small></b>{dFame != null ? <em>{sign(dFame)}<small>G</small></em> : <em/>}</div>
+          <div className="h">総合力</div>
+          <div className="r"><b>{msxFmt(ev.power)}</b>{dPow != null ? <em>{sign(dPow)}</em> : <em/>}</div>
+        </div>
+      </>) : (<>
+        <div className="msx-ki-next" key="t1"><small>NEXT</small><div><span>あと</span><b>{left}</b><span className="tn">ターン</span></div></div>
+        <div className="msx-ki-lad" key="l1">
+          {rungs.map((r, j) => (<React.Fragment key={r.i}>
+            {j ? <i className="up" aria-hidden="true">▲</i> : null}
+            <div className={`rg ${r.state}${r.gold ? ' gold' : ''}`} style={{ '--j': rungs.length - 1 - j }}>
+              <span className="mk">{r.state === 'done' ? '✓' : r.state === 'next' ? '▶' : ''}</span>{r.name}
+            </div>
+          </React.Fragment>))}
+        </div>
+      </>)}
+      <div className="msx-ki-tap">TAP</div>
+    </div>
+  );
+}
+
+const MSX_KI_CSS = `
+.msx .msx-ki{cursor:pointer;overflow:hidden}
+.msx .msx-ki-dim{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(15,13,36,.35),rgba(15,13,36,0) 30%,rgba(15,13,36,0) 60%,rgba(15,13,36,.55))}
+.msx .msx-ki.st1 .msx-ki-dim{background:rgba(15,13,36,.55)}
+.msx .msx-ki .msx-ki-mon{z-index:2;transition:bottom .4s,height .4s}
+.msx .msx-ki.st1 .msx-ki-mon{opacity:.45;filter:blur(1px)}
+.msx .msx-ki-aura{position:absolute;left:50%;bottom:20%;width:86%;height:66%;transform:translateX(-50%);z-index:1;border-radius:50%;background:radial-gradient(ellipse at 50% 60%,rgba(253,224,71,.55),rgba(251,146,60,.25) 45%,transparent 70%);animation:msxKiAura 1.2s ease-in-out infinite alternate;pointer-events:none}
+.msx .msx-ki-aura.k2{background:radial-gradient(ellipse at 50% 60%,rgba(244,114,182,.55),rgba(96,165,250,.3) 45%,transparent 70%)}
+.msx .msx-ki-ttl{position:absolute;left:0;right:0;top:5%;z-index:4;text-align:center;animation:msxKiDrop .45s cubic-bezier(.2,1.3,.4,1) both}
+.msx .msx-ki-ttl b{display:inline-block;font-size:40px;font-weight:900;letter-spacing:.06em;line-height:1.1;color:#fde047;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 4px 0 #7c2d12,0 0 18px #fb923c88;padding:2px 14px;border-radius:10px;background:linear-gradient(180deg,#fff7c288,#f59e0b33);border:2px solid #fde68a}
+.msx .msx-ki-ttl span{display:block;margin:6px auto 0;width:78%;font-size:15px;font-weight:900;color:#fff;background:linear-gradient(90deg,transparent,#0f0d24dd 15%,#0f0d24dd 85%,transparent);padding:3px 0}
+.msx .msx-ki-sum{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;background:#0f0d24e6;border:1.5px solid #64748b;border-radius:12px;padding:6px 14px 8px;animation:msxKiUp .45s ease-out .35s both}
+.msx .msx-ki-sum .h{font-size:11px;font-weight:900;color:#e2e8f0;text-align:center;display:flex;align-items:center;gap:8px}
+.msx .msx-ki-sum .h::before,.msx .msx-ki-sum .h::after{content:'';flex:1;border-top:1px dashed #94a3b8}
+.msx .msx-ki-sum .r{display:grid;grid-template-columns:1fr 6.5em;align-items:baseline;gap:8px;margin:1px 0 3px}
+.msx .msx-ki-sum .r b{font-size:24px;font-weight:900;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+.msx .msx-ki-sum .r em{font-style:normal;font-size:14px;font-weight:900;color:#fde047;text-align:right;font-variant-numeric:tabular-nums}
+.msx .msx-ki-sum small{font-size:.6em;margin-left:2px}
+.msx .msx-ki-next{position:absolute;left:0;right:0;top:4%;z-index:4;text-align:center;color:#fde047;font-weight:900;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 4px 0 #7c2d12;animation:msxKiDrop .45s cubic-bezier(.2,1.3,.4,1) both}
+.msx .msx-ki-next small{display:block;font-size:34px;font-style:italic;letter-spacing:.08em;line-height:1}
+.msx .msx-ki .msx-ki-next div{display:flex;justify-content:center;align-items:baseline;gap:8px;font-size:22px;line-height:1.1;margin-top:2px}
+.msx .msx-ki .msx-ki-next div b{display:block;font-size:64px;line-height:1;letter-spacing:0;margin:0}
+.msx .msx-ki .msx-ki-next div span.tn{margin-left:10px}
+.msx .msx-ki-lad{position:absolute;left:0;right:0;top:36%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:1px}
+.msx .msx-ki-lad .up{font-style:normal;font-size:9px;line-height:10px;color:#e2e8f0aa}
+.msx .msx-ki-lad .rg{position:relative;width:62%;min-height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#e2e8f0;background:#334155e6;border:1.5px solid #64748b;border-radius:8px;text-align:center;animation:msxKiUp .35s ease-out both;animation-delay:calc(.15s + var(--j) * .08s)}
+.msx .msx-ki-lad .rg .mk{position:absolute;left:10px;font-size:14px;color:#f87171}
+.msx .msx-ki-lad .rg.done{opacity:.85}
+.msx .msx-ki-lad .rg.next{background:#e0f2fe;color:#0f172a;border-color:#7dd3fc;box-shadow:0 0 12px #7dd3fc}
+.msx .msx-ki-lad .rg.next .mk{left:-18px;color:#fde047;text-shadow:0 0 6px #000}
+.msx .msx-ki-lad .rg.gold{min-height:36px;background:linear-gradient(180deg,#fde68a,#d97706);color:#3b1d05;border-color:#fef3c7;box-shadow:0 0 14px #fbbf2499}
+.msx .msx-ki-lad .rg.gold.next{box-shadow:0 0 18px #fde047,0 0 4px #fff}
+.msx .msx-ki-tap{position:absolute;right:10px;bottom:4px;z-index:5;font-size:11px;font-weight:900;color:#e2e8f0aa;letter-spacing:.1em}
+.msx .msx-ki.st0 .msx-ki-tap{bottom:auto;top:6px}
+@keyframes msxKiDrop{from{opacity:0;transform:translateY(-18px) scale(.85)}to{opacity:1;transform:none}}
+@keyframes msxKiUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes msxKiAura{from{opacity:.6;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.04)}}
+@media (prefers-reduced-motion: reduce){.msx .msx-ki *{animation:none!important;transition:none!important}}
+`;
+let msxKiCssDone = false;
+const msxKiEnsureCss = () => {
+  if (msxKiCssDone || typeof document === 'undefined') return;
+  msxKiCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-ki-css', '1'); el.textContent = MSX_KI_CSS; document.head.appendChild(el);
 };
 
 // ---- part: 56-assistant-life-friend.jsx ----
@@ -83782,14 +84077,24 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
-.msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
+.msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
-.msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
+.msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st.grow.on u.g s.gu{animation:msxStGlow 1.1s ease-in-out 1.15s 3 alternate}
 .msx .v-st u.g s.gd{background:#f87171;box-shadow:0 0 6px #f87171;opacity:0}
 .msx .v-st.grow:not(.on) u.g s.gd{opacity:.9}
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
+.msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+.msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
+.msx .v-st.gs-a.zin u.g i,.msx .v-st.gs-a.zin u.g s.gu{transition:none}
+.msx .v-st.gs-a:not(.zin) u.g i,.msx .v-st.gs-a:not(.zin) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
+.msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
+.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
+.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
+.msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -84109,6 +84414,7 @@ const MSX_CSS = `
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
 .msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.msx .v-tr .tn{display:block;font-size:8.5px;font-weight:800;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.2;letter-spacing:-.02em}
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
@@ -84127,7 +84433,7 @@ const MSX_CSS = `
 .msx .v-rm div{background:#1e293b;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:8px 5px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.3;min-width:0}
 .msx .v-rm div small{display:block;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:2px}
 .msx .v-rm div.re{background:linear-gradient(160deg,#38bdf8,#6366f1);border-color:#bae6fd;box-shadow:0 0 12px #38bdf888}.msx .v-rm div.re small{color:#fff}
-@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:10px}.msx .v-lvx{font-size:10px}}
+@container (max-width:340px){.msx .v-tr .o{width:42px;height:42px;font-size:19px}.msx .v-tr .nm{font-size:10px}.msx .v-tr .tn{font-size:7.5px}.msx .v-lvx{font-size:10px}}
 .msx .v-hg{display:inline-block;vertical-align:middle;flex:none}
 .msx .v-bsel{display:flex;align-items:center;gap:9px;background:#1e1a36;border:1.5px solid #fde047;border-radius:13px;padding:7px 9px}
 .msx .v-bsel .e{font-size:34px;line-height:1;flex:none}.msx .v-bsel b{display:block;font-size:13.5px}
@@ -84244,6 +84550,9 @@ const MSX_SCENARIOS = Object.freeze([
 const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
 const MSX_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
 const MSX_STAT_NAME = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
+// 訓練の名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
+const MSX_TRAIN_NAME = Object.freeze({ life: '坂道ダッシュ', pow: '丸太割り', wise: '積み木パズル', hit: '的当て', eva: '落ち葉よけ', tough: '岩受け止め' });
+const MSX_TRAIN_ICON = Object.freeze({ life: '🏃', pow: '🪵', wise: '🧩', hit: '🎯', eva: '🍂', tough: '🪨' });
 const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
 const MSX_BOX_CAP0 = 30;
 
@@ -84309,6 +84618,8 @@ const msxColors = (v) => (Array.isArray(v) ? v.slice(0, 6).map((c) => (typeof c 
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
+  // 賞金の桁を上げる前(印 fameV が芯の FAME_V と違う)の途中の育成は、芯が賞金を ×FAME_SCALE する。期のはじめの控え ki の賞金にも同じ倍率を掛けてそろえる
+  const kiFameMul = SUC && Number.isFinite(SUC.FAME_SCALE) && SUC.FAME_V != null && raw.s.fameV !== SUC.FAME_V ? SUC.FAME_SCALE : 1;
   if (SUC && typeof SUC.restore === 'function') { try { s = SUC.restore(s); } catch (e) { s = null; } if (!s) return null; }
   else {
     const okStats = msxIsObj(s.stats) && MSX_STATS.every((k) => Number.isFinite(s.stats[k]));
@@ -84326,6 +84637,8 @@ const msxNormRun = (raw, SUC) => {
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
+    // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
+    ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)), power: raw.ki.power } : null,
   };
 };
 // 技表の第2版(2026-11-13): 古い技 id を新しい id へ読み替える(表に canon が無ければそのまま)。techs と mast は同じ並びなので、
@@ -84823,11 +85136,13 @@ function MsxStRow({ stats, ups, main, preview = false }) {
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const sig = grow ? MSX_STATS.map((k) => `${stats[k]}:${ups[k] || 0}`).join('|') : '';
   const [on, setOn] = useState(!grow || calm);
+  const [zout, setZout] = useState(!grow || calm);
   useEffect(() => {
-    if (!grow || calm) { setOn(true); return undefined; }
-    setOn(false); let a = 0; let b = 0;
+    if (!grow || calm) { setOn(true); setZout(true); return undefined; }
+    setOn(false); setZout(false); let a = 0; let b = 0;
     a = requestAnimationFrame(() => { b = requestAnimationFrame(() => setOn(true)); });
-    return () => { cancelAnimationFrame(a); cancelAnimationFrame(b); };
+    const z = setTimeout(() => setZout(true), 2600);
+    return () => { cancelAnimationFrame(a); cancelAnimationFrame(b); clearTimeout(z); };
   }, [sig]);
   // 数字も上がる前から数え上げる(0.25秒待って0.9秒で)
   const [t, setT] = useState(grow && !calm ? 0 : 1);
@@ -84840,14 +85155,23 @@ function MsxStRow({ stats, ups, main, preview = false }) {
   }, [sig]);
   const ease = (x) => 1 - Math.pow(1 - x, 3);
   const pct = (n) => `${Math.max(0, Math.min(100, n / 9.99))}%`;
+  // 伸びる間だけ札を拡大し、上がる前の値の近くから拡大した目盛りで伸ばす(2026-11-13 社長 A 案)。約2.6秒で 0〜999 の目盛りへ戻す
+  const zoomA = grow && !calm && !zout;
   return (
-    <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
+    <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
       {MSX_STATS.map((k) => {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
+        // 案A: 上がる前の値の近くから、拡大した目盛り(1目盛り=10)で伸ばす
+        const span = Math.max(60, Math.ceil(Math.abs(u) * 2.6 / 10) * 10);
+        const lo = Math.max(0, Math.min(999 - span, Math.floor((Math.max(after, before) - span * 0.82) / 10) * 10));
+        const zp = (n) => (zoomA && u ? `${Math.max(0, Math.min(100, (n - lo) / span * 100))}%` : pct(n));
+        const tick = zoomA && u ? { backgroundSize: `${1000 / span}% 100%` } : undefined;
+        // 棒も数字と同じ値(数え上げの途中の値)から描く。数字と長さがいつも合う
+        const cur = grow && u ? before + (after - before) * ease(t) : after;
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
           <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
-          {grow && u ? <u className="g"><i style={{ width: pct(on ? after : before) }}/>{u > 0 ? <s className="gu" style={{ left: pct(before), width: on ? `max(7px, calc(${pct(after)} - ${pct(before)}))` : 0 }}/> : <s className="gd" style={{ left: pct(after), width: `max(4px, calc(${pct(before)} - ${pct(after)}))` }}/>}</u>
+          {grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomA ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
             : <u><i style={{ width: pct(after) }}/></u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
@@ -85024,6 +85348,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
+  // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
+  const [kiAt, setKiAt] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
@@ -85088,7 +85414,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const phase = run.phase;
   let body = null; let foot = null;
   // はじめたばかりの育成は、1ターン目のはじめの出来事を立ててからメインへ(描いている途中で保存を書き換えないよう、あとで1回だけ)
-  useEffect(() => { if (run.phase === 'begin') toMain({ ...run, out: null }); }, [run.phase]);
+  // 期のはじめの控え run.ki(期の区切りの演出で、期のあいだに増えた賞金と総合力を出す)もここで1回だけ取る
+  useEffect(() => { if (run.phase === 'begin') toMain({ ...run, out: null, ki: run.ki || { p: 0, fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0, power: SUC.evaluate(run.s).power } }); }, [run.phase]);
   if (phase === 'begin') return <><MsxHd back="中断" onBack={onPause}/><div className="v-body"/></>;
   // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
   //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
@@ -85188,6 +85515,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
     body = <MsxIssa run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} onDone={(r) => endTurnFlow({ ...r, phase: 'main', out: null })}/>;
   }
   // ---- ターンが進む ----
+  else if (phase === 'turn' && typeof MsxKiShow === 'function' && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn) {
+    const doneKi = () => { setKiAt(s.turn); setRun({ ...run, ki: { p: v.period.index, fame: Number.isFinite(s.fameTotal) ? s.fameTotal : 0, power: ev.power } }); };
+    body = <><MsxBand s={s} v={v} ev={ev}/><MsxKiShow key={`ki-${s.turn}`} run={run} v={v} ev={ev} ki={run.ki} onDone={doneKi}/></>;
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={doneKi} data-msx-ki-skip>⏩ とばす</button></div>;
+  }
   else if (phase === 'turn') {
     const cal = msxCalendar(s.turn); const prev = msxCalendar(Math.max(1, s.turn - 1));
     const P = msxSuc.core.PERIODS;
@@ -86379,6 +86711,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [want, setWant] = useState([]);
   const [res, setRes] = useState(null); // { out, before, after }
   const [fxDone, setFxDone] = useState(false);
+  // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
+  const [stOn, setStOn] = useState(false);
   useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s0.species) : [];
   const superLeft = typeof SUC.superLeft === 'function' ? SUC.superLeft(s0) : 0;
@@ -86397,9 +86731,17 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const names = (r.out.learnedAll || (r.out.learned ? [r.out.learned] : [])).map((id) => (all.find((t) => t.id === id) || {}).name).filter(Boolean);
     const next = { ...run, s: r.state, phase: 'react', out: { ...r.out, kind: 'shugyo' }, log: [...(run.log || []), { turn: s0.turn, t: `${r.out.super ? '超修行' : '修行'}(${(SH.courses[course] || {}).name || ''}): ${names.length ? names.map((n) => `「${n}」`).join('と') + 'を覚えた' : '能力が上がった'}` }].slice(-20) };
     setRun(next);
+    setStOn(typeof MsxShugyoStages === 'function');
     setRes({ out: r.out, before: s0.stats, hp0: s0.hp, s: r.state });
   };
 
+  // ---- 結果の前の段 ----
+  if (res && stOn) {
+    const s = res.s;
+    const body = (<><MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)}/>
+      <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><MsxShugyoStages key={`qs-${s0.turn}`} run={{ ...run, s }} o={res.out} onDone={() => setStOn(false)}/></div></>);
+    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStOn(false)} data-msx-r3-qskip>⏩ 結果へ</button></div>}/>;
+  }
   // ---- 結果(Q2) ----
   if (res) {
     const o = res.out; const s = res.s; const gains = o.gain || {};

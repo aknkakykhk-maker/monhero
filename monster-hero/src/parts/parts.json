@@ -521,6 +521,14 @@
       "role": "部品: モンヒロサクセスの訓練のあとの出来事(編成のモンスターとのお話・小さな出来事)を1枚の場面で見せる MsxTrainEvent(背景・2体の立ち絵・見出し・台詞・変わった数字・入り方)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-actfx.jsx",
+      "role": "部品: モンヒロサクセスの訓練・修行の演出。訓練の結果の前に訓練している場面 MsxTrainAct(約1.3秒・押すと飛ばせる)と、修行の結果の前の段 MsxShugyoStages(助手の一言→STAGE 1→STAGE 2)。何も保存しない・動きを減らす設定では出さない。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-kifx.jsx",
+      "role": "部品: モンヒロサクセスの期の区切りの演出 MsxKiShow(「第◯章 終了/◯◯期」と獲得賞金・総合力の増えた分 →「NEXT あと◯ターン」と期のはしご・最上段は頂への道)。新しい期の1ターン目の区切りで1回。何も保存しない(控え run.ki の書きかえは呼ぶ側)。公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },

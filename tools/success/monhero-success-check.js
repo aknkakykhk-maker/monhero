@@ -405,6 +405,12 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   if (r.out.result === 'ok') ok(Math.abs(pv.gain.pow - r.out.gain.pow) <= 1, `見通しと成功の伸びが合わない: ${pv.gain.pow} / ${r.out.gain.pow}`);
   const mid = play('restore-id', picks);
   const back = SUC.restore(JSON.parse(JSON.stringify(mid)));
+  // 賞金の桁(2026-11-13): 印 fameV の無い古い途中の育成は一度だけ ×FAME_SCALE。いまの形は掛からない・二度読んでも同じ
+  { const f0 = { ...JSON.parse(JSON.stringify(mid)), fame: 350, fameTotal: 600 }; delete f0.fameV;
+    const f1 = SUC.restore(f0); const f2 = SUC.restore(JSON.parse(JSON.stringify(f1)));
+    ok(f1.fame === 350 * SUC.FAME_SCALE && f1.fameTotal === 600 * SUC.FAME_SCALE && f1.fameV === SUC.FAME_V, `古い途中の育成の賞金が換算されない: ${f1.fame}/${f1.fameTotal}`);
+    ok(f2.fame === f1.fame && f2.fameTotal === f1.fameTotal, `賞金の換算が二度かかる: ${f2.fame}`);
+    ok(back.fame === mid.fame && back.fameTotal === mid.fameTotal, `いまの形の賞金が読み直しで変わる: ${mid.fame} → ${back.fame}`); }
   ok(back && JSON.stringify(back.stats) === JSON.stringify(mid.stats) && back.turn === mid.turn && back.hp === mid.hp && JSON.stringify(back.trainXp) === JSON.stringify(mid.trainXp) && JSON.stringify(back.techs) === JSON.stringify(mid.techs), '保存から戻すと中身が変わる');
   // 編成の育てた子の熟練が残る(総合力・ランク・タッグが変わらない)・途中で足される記録(ごはん・アイテム・再戦・お話)も残る
   const tm = SUC.newRun({ id: 'rs-team', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: { life: 700, pow: 800, wise: 300, hit: 600, eva: 400, tough: 700 }, lv: 40, masteries: [80, 80, 80, 80, 80], loy: 80, pop: 50 }] });
