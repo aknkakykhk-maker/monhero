@@ -406,6 +406,11 @@
     const BENCH_USE = Object.freeze({ ...BENCH, ...((deps && deps.bench) || {}) }); // 試算で基準を探すときだけ外から渡す
     const INIT = (deps && deps.init) || {};
     const TECHS = (deps && deps.techs && deps.techs.species) || {}; // 助手マスモンの技表(無ければ技なしで動く)
+    // 技表の第2版(2026-11-13 キズナ): 技 id が変わる。古い id は canon で新しい id へ読み替える(無い表では読み替えない)。保存は書き換えない
+    const techCanon = (id) => { try { return deps && deps.techs && typeof deps.techs.canon === 'function' ? deps.techs.canon(id) : id; } catch (e) { return id; } };
+    // 技の並び(と熟練)を読み替える。2つの古い技が1つの新しい技に当たるときは、重ねず・熟練は大きい方
+    const canonTechList = (ids) => (Array.isArray(ids) ? ids : []).filter(t => typeof t === 'string').map(techCanon).filter((t, i, a) => a.indexOf(t) === i);
+    const canonMastery = (m) => { const o = {}; if (m && typeof m === 'object' && !Array.isArray(m)) for (const [k, v] of Object.entries(m)) { const c = techCanon(k); const x = Number(v); if (Number.isFinite(x)) o[c] = Math.max(o[c] == null ? -Infinity : o[c], x); } return o; };
     const techsOf = (sp) => (Array.isArray(TECHS[sp]) ? TECHS[sp] : []);
     const startTechs = (sp) => techsOf(sp).filter(t => t && t.learn && t.learn.start).map(t => t.id);
     const APT_MULT = Object.freeze({ A: 1.3, B: 1.15, C: 1, D: 0.85, E: 0.7 }); // AMG_APT_MULT と同じ値
@@ -451,7 +456,7 @@
       const top = base ? aptTop3(sp) : top3Of(stats, sp);
       const assists = base ? [] : normAssists(o.assists);
       const own = techsOf(sp).map(t => t.id);
-      const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? o.techs.filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
+      const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
       const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
       const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[rank])); });
       const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0));
@@ -893,7 +898,7 @@
       if (Array.isArray(raw.bond)) out.bond = out.bond.map((d, i) => Math.round(n(raw.bond[i], d, 0, BOND.max)));
       if (Array.isArray(raw.story)) out.story = out.story.map((d, i) => Math.round(n(raw.story[i], d, 0, 3)));
       const okTech = techsOf(raw.species).map(t => t.id);
-      if (Array.isArray(raw.techs)) { out.techs = raw.techs.filter(t => okTech.includes(t)).slice(0, TECH_MAX); out.mastery = Object.fromEntries(out.techs.map(t => [t, Math.round(n(raw.mastery && raw.mastery[t], 0, 0, 100))])); }
+      if (Array.isArray(raw.techs)) { const rm = canonMastery(raw.mastery); out.techs = canonTechList(raw.techs).filter(t => okTech.includes(t)).slice(0, TECH_MAX); out.mastery = Object.fromEntries(out.techs.map(t => [t, Math.round(n(rm[t], 0, 0, 100))])); }
       out.trainXp = {}; if (raw.trainXp && typeof raw.trainXp === 'object') Object.keys(raw.trainXp).forEach(key => { if (KEYS.some(k => key === `train:${k}`)) out.trainXp[key] = Math.round(n(raw.trainXp[key], 0, 0, 999)); });
       out.items = { sand: Math.round(n(raw.items && raw.items.sand, 0, 0, 99)), rainbow: Math.round(n(raw.items && raw.items.rainbow, 0, 0, 99)) };
       out.bag = {}; if (raw.bag && typeof raw.bag === 'object') for (const [k, v] of Object.entries(raw.bag)) if (ITEMS[k] && ITEMS[k].use === 'during') out.bag[k] = Math.round(n(v, 0, 0, 99));
@@ -918,7 +923,7 @@
       out.last = raw.last && typeof raw.last === 'object' ? clone(raw.last) : null;
       out.shugyoUsed = raw.shugyoUsed && typeof raw.shugyoUsed === 'object' ? clone(raw.shugyoUsed) : {};
       // 修行の作り直し(2026-11-13): 技ごとの外した回数(無い → 0 回)・超修行の残り(無い → SHUGYO.superMax 回)
-      out.techMiss = {}; if (raw.techMiss && typeof raw.techMiss === 'object' && !Array.isArray(raw.techMiss)) for (const [id, v] of Object.entries(raw.techMiss)) if (okTech.includes(id) && Number.isFinite(Number(v)) && Number(v) > 0) out.techMiss[id] = Math.min(20, Math.round(Number(v)));
+      out.techMiss = {}; if (raw.techMiss && typeof raw.techMiss === 'object' && !Array.isArray(raw.techMiss)) for (const [id0, v] of Object.entries(raw.techMiss)) { const id = techCanon(id0); if (okTech.includes(id) && Number.isFinite(Number(v)) && Number(v) > 0) out.techMiss[id] = Math.max(out.techMiss[id] || 0, Math.min(20, Math.round(Number(v)))); }
       out.superLeft = Math.round(n(raw.superLeft, SHUGYO.superMax, 0, SHUGYO.superMax));
       if (EV) out.ev = EV.norm(raw.ev); // ランダムイベント(monhero-success-events.js)。読めなければ「出来事なし・状態なし」
       out.rivals = base.rivals; if (Array.isArray(raw.rivals)) out.rivals = newRun({ id: raw.id, species: raw.species, rivals: raw.rivals }).rivals;
@@ -1354,7 +1359,7 @@
       const base = initStats(species);
       const sa = boxSt(a); const sb = boxSt(b); const st = {}; const add = {};
       KEYS.forEach(k => { add[k] = C.fuseBonus(sa[k], sb[k]); st[k] = clamp(base[k] + add[k], 1, STAT_MAX); });
-      const own = (m) => (Array.isArray(m.techs) ? m.techs.filter(t => typeof t === 'string') : []);
+      const own = (m) => canonTechList(m.techs);
       const techs = [...own(a), ...own(b)].filter((t, i, arr) => arr.indexOf(t) === i).filter(t => techById(species, t) && !(techById(species, t).learn || {}).start).slice(0, FUSE.techs);
       const t0 = Number.isInteger(a.gt) ? clamp(a.gt, 0, 5) : C.typeFromApt(aptStr(species), r());
       const typeRoll = r(); const changed = typeRoll < FUSE.typeChange;
@@ -1390,7 +1395,7 @@
     return Object.freeze({
       events: EV,
       VERSION, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      ASSISTS, ISSA, PTS, XP, SHUGYO, ITEMS, GOOD, CARRY_MAX, useItem, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
+      ASSISTS, ISSA, PTS, XP, SHUGYO, ITEMS, GOOD, CARRY_MAX, useItem, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
