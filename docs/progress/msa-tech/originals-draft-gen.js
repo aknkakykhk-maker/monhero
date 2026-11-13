@@ -37,9 +37,9 @@ const WISE=/レイ|ライト|サンダー|ライトニング|ビッグバン|コ
 const NEAR=/頭突き|キック|スラップ|キッス|爪|牙|鼻|耳|プレス|エッジ|もんた|撃/;
 const FAR=/レイ$|メテオ|大雨|レイン|オーロラ|コズミック|ノヴァ|アーチ|ライト$/;
 const MOVE=[[/リープ|突撃|転がし|空中落下|ソニック|レイド|花霞斬|絶影/,'零'],[/ムーンサルト|ウィング/,'遠']];
-// 社長が1つずつ決めた技種(台帳 2026-11-13「オリジナル5種の技種」)。動きの点より優先する
+// 社長が1つずつ決めた技種(台帳 2026-11-13「オリジナル5種の技種」。90技すべてを社長が確かめ、案から変えたのは黒桜吹雪・枝垂れクロス・キャンディレイン)。動きの点より優先する
 const OVERRIDE={'アビスレイド':'ちから','デュアルキッス':'かしこさ','ダークライトニング':'かしこさ','桜嵐刃':'かしこさ','千華氷嵐':'かしこさ',
-  'ヴォーパル・ストライク':'ちから','ブラック・テンペスト':'かしこさ','ムーンサルトメロディー':'ちから','ドリームパワー':'かしこさ','キャンディレイン':'かしこさ'};
+  'ヴォーパル・ストライク':'ちから','ブラック・テンペスト':'かしこさ','黒桜吹雪':'かしこさ','枝垂れクロス':'かしこさ','ムーンサルトメロディー':'ちから','ドリームパワー':'かしこさ','キャンディレイン':'かしこさ'};
 const rows=[];
 for(const [id,sp] of Object.entries(SP)){
   const list=[...sp.n.map((nm,i)=>({nm,i,u:false,mo:MOT[id].n[i]})),...sp.u.map((nm,i)=>({nm,i,u:true,mo:MOT[id].u[i]}))];
@@ -65,7 +65,7 @@ for(const [id,sp] of Object.entries(SP)){
     const gdBase = /ボム|メテオ|バースト|ハート|クッキー|ワルツ|キャンディ|パレード|スプラッシュ|ノート|耳|鼻/.test(t.nm)?3.6:1.4;
     const gd = gr(gdBase + lv*0.15 + sp.gd);
     const cri = gr(2.6 + (/閃|爪|牙|刃|斬|クロス|キッス|ストライク/.test(t.nm)?1:0) + lv*0.2 + sp.cri);
-    rows.push({sp:sp.jp,blood:sp.blood,nm:t.nm,u:t.u?'固有':'',kind,why,motion:t.mo,range,moveTo:moveTo||'',guts,dmg,acc,gd,cri});
+    rows.push({sp:sp.jp,blood:sp.blood,nm:t.nm,src:t.u?'unique':'normal',kind,why,motion:t.mo,range,moveTo:moveTo||'',guts,dmg,acc,gd,cri});
   }
 }
 require('fs').writeFileSync(process.argv[2], JSON.stringify({species:Object.fromEntries(Object.entries(SP).map(([k,v])=>[k,{jp:v.jp,blood:v.blood,flavor:v.flavor,ratio:v.ratio}])),rows},null,1));
