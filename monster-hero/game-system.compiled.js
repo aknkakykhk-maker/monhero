@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 673dba52bb301bba
+// source-sha256: c730657b2892cba6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147641,6 +147641,18 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
 .ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 30%;font-size:10.5px}
+/* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
+@media (max-height:740px){
+  .ambw.ambb-full{overflow-y:auto}
+  .ambw.ambb-full .ambw-in{height:auto;display:block}
+  .ambw.ambb-full [data-ambb-watch]{display:block}
+  .ambw.ambb-full .ambb-stagewrap{display:flex}
+  .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(160px,34vh,260px);min-height:0}
+  .ambw.ambb-full .ambb-bar-wrap .msxm{max-height:none;overflow:visible}
+  .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:96px;margin-left:-48px;height:120px}
+  .msa-stage.fill .msa-f img.msa-img{max-width:96px;max-height:112px}
+}
+@media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
 @media (max-width:360px){.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 45%}.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 45%}}
 `;
@@ -148079,6 +148091,17 @@ function AssistantMasmonBattleBeta({
   useEffect(() => {
     if (typeof msaFitTechNames === 'function') msaFitTechNames();
   });
+  const manualNow = !!(battle && battle.match && !battle.match.done() && pos >= battle.r.log.length - 1 && phase === 'watch');
+  useEffect(() => {
+    if (!manualNow) return;
+    const box = rootRef.current,
+      el = box && box.querySelector('[data-ambb-manual]');
+    if (!box || !el || box.scrollHeight <= box.clientHeight) return;
+    const r = el.getBoundingClientRect(),
+      b = box.getBoundingClientRect();
+    const over = r.bottom - b.bottom + 8;
+    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
+  }, [manualNow, pos]);
   const nameOf = id => (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id) || {}).name || id;
   const faceOf = id => {
     const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id);

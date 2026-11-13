@@ -21,6 +21,7 @@ const MANUAL = process.env.MANUAL === '1';
 // LONGEST=1 … TECHS_JSON の中で名前の長い技24個を、どの種類にも全部の間合いで持たせる(技名が切れないかの確かめ)。WIDTH=<幅> … 画面の幅
 const LONGEST = process.env.LONGEST === '1';
 const WIDTH = Number(process.env.WIDTH) || 390;
+const HEIGHT = Number(process.env.HEIGHT) || 844;
 let TECHS_USE = TECHS;
 if (TECHS && LONGEST) {
   const all = Object.values(TECHS).flat().sort((a, b) => [...b.name].length - [...a.name].length);
@@ -43,7 +44,7 @@ const seed = () => {
   const tmp = OUT ? path.join(path.dirname(OUT), `.rec-${process.pid}`) : '';
   const errs = [];
   try {
-    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: WIDTH, height: 844 }, deviceScaleFactor: 2 } : { viewport: { width: WIDTH, height: 844 }, recordVideo: { dir: tmp, size: { width: WIDTH, height: 844 } } });
+    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 2 } : { viewport: { width: WIDTH, height: HEIGHT }, recordVideo: { dir: tmp, size: { width: WIDTH, height: HEIGHT } } });
     const page = await ctx.newPage();
     const t0 = Date.now(); let tPrep = 0;
     page.on('pageerror', (e) => errs.push(String(e)));

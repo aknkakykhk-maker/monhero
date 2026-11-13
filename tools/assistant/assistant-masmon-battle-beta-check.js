@@ -235,6 +235,31 @@ const seed = () => {
     check('段3: 「結果へ」で残りをオートで進めて振り返りへ', await page.evaluate(() => !!document.querySelector('[data-ambb-review] .ambw-res') && !/画面の表示でエラー/.test(document.body.innerText)));
     await clickSel('[data-ambb-again]');
     await page.waitForTimeout(300);
+    // 背の低い画面でも、場が手番の帯に重ならず技のボタンを押せる(ミハリ6 #5891)。幅320では下のボタンが切れない
+    for (const [w, h] of [[375, 667], [320, 568]]) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.waitForTimeout(200);
+      await clickSel('[data-ambb-start]');
+      await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(500);
+      const lay = await page.evaluate(() => {
+        const st = document.querySelector('[data-msa-stage]'), bar = document.querySelector('[data-ambb-manual]');
+        if (!st || !bar) return { ok: false, why: 'なし' };
+        const b = [...bar.querySelectorAll('.msxm-btn')].find((x) => !x.disabled);
+        if (b) b.scrollIntoView({ block: 'center' });
+        const sr = st.getBoundingClientRect(), br = bar.getBoundingClientRect();
+        const r = b ? b.getBoundingClientRect() : null;
+        const hitEl = r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+        const skip = document.querySelector('[data-ambb-skip]'), kr = skip ? skip.getBoundingClientRect() : null;
+        return { ok: true, stageBottom: Math.round(sr.bottom), barTop: Math.round(br.top), btnOwn: !!(hitEl && b && (hitEl === b || b.contains(hitEl))), skipIn: !kr || kr.right <= innerWidth + 1 };
+      });
+      check(`段3: ${w}×${h} で場が手番の帯に重ならず、技のボタンを押せる・「結果へ」が切れない`, lay.ok && lay.stageBottom <= lay.barTop + 1 && lay.btnOwn && lay.skipIn, JSON.stringify(lay));
+      await clickSel('[data-ambb-skip]');
+      await page.waitForFunction(() => !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
+      await clickSel('[data-ambb-again]');
+      await page.waitForTimeout(300);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
     await clickSel('[data-ambb-set="ctl:auto"]');
     await clickSel('[data-ambb-set="fx:full"]');
     await clickSel('[data-ambb-close]');
