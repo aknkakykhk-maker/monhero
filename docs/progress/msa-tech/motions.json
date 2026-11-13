@@ -1,0 +1,162 @@
+{
+ "Pandora": {
+  "pow": 180,
+  "stats": {
+   "hp": 130,
+   "atk": 35,
+   "def": 25,
+   "guts": 40
+  },
+  "n": [
+   "bash",
+   "cast/ray",
+   "SIG(pandoraDualThunder)",
+   "kick/:feather",
+   "warp/shadow",
+   "cast/bolt/cross",
+   "cast/ray/boom",
+   "cast/:heart",
+   "warp/:heart/boom"
+  ],
+  "u": [
+   "SIG(pandoraDualThunder)",
+   "gather/ray/:feather/pillar",
+   "gather/:orb/thunder",
+   "float/:orb/boom",
+   "warp/bolt/:bolt/thunder",
+   "spin/:star/aurora",
+   "gather/ray/:cross/cross/slash",
+   "gather/:orb/eclipse",
+   "split/bolt/twinThunder"
+  ],
+  "techKinds": "powwisepowwisepowwisewisewise"
+ },
+ "Eiki": {
+  "pow": 165,
+  "stats": {
+   "hp": 150,
+   "atk": 50,
+   "def": 20,
+   "guts": 45
+  },
+  "n": [
+   "SIG(eikiSakuraCombo)",
+   "dash/slash",
+   "cast/:sakura/slash",
+   "warp/xslash",
+   "flip/:sakura/slash",
+   "spin/:sakura/tornado",
+   "dash/:sakura/claw",
+   "dash/claw",
+   "dash/:sakura/claw"
+  ],
+  "u": [
+   "warp/slash",
+   "dash/ice",
+   "flip/:sakura/xslash",
+   "spin/:snow/claw",
+   "dash/xslash",
+   "spin/:snow/tornado",
+   "dash/:sakura/claw",
+   "warp/:sakura/xslash",
+   "SIG(eikiSakuraCombo)"
+  ],
+  "techKinds": "powpowwisewisepowwisepowpow"
+ },
+ "KenshiMocchi": {
+  "pow": 135,
+  "stats": {
+   "hp": 200,
+   "atk": 55,
+   "def": 20,
+   "guts": 25
+  },
+  "n": [
+   "dash/slash",
+   "jump/slash",
+   "dash/slash",
+   "flip/slash",
+   "SIG(kenshiTwinBlade)",
+   "spin/:sakura/xslash",
+   "spin/claw",
+   "jump/:sakura/xslash",
+   "dash/boom"
+  ],
+  "u": [
+   "dash/slash",
+   "dash/claw",
+   "dash/ray/boom",
+   "spin/xslash",
+   "spin/tornado",
+   "dash/claw",
+   "warp/:blade/xslash",
+   "dash/:spark/xslash",
+   "SIG(kenshiTwinBlade)"
+  ],
+  "techKinds": "powpowpowwisepowpowpowpow"
+ },
+ "Melody": {
+  "pow": 105,
+  "stats": {
+   "hp": 360,
+   "atk": 15,
+   "def": 60,
+   "guts": 25
+  },
+  "n": [
+   "bash/fist",
+   "parasol/boom",
+   "cast/ray/:note",
+   "lick/tongue/:water",
+   "roll/:petal",
+   "flip/:note",
+   "toss/:candy/boom",
+   "toss/:cookie/bloom",
+   "parasol/:heart/rainbow"
+  ],
+  "u": [
+   "cast/:heart/bloom",
+   "spin/:note/aurora",
+   "float/:ribbon/bloom",
+   "cast/:cake/boom/rubble",
+   "gather/:heart/bloom",
+   "parasol/:candy/wave/psy",
+   "float/arc/rainbow/light",
+   "cast/ray/:note/aurora/psy",
+   "gather/:cookie/rainbow/bloom"
+  ],
+  "techKinds": "powpowwisewisepowwisepowwise"
+ },
+ "Kuromy": {
+  "pow": 175,
+  "stats": {
+   "hp": 320,
+   "atk": 45,
+   "def": 30,
+   "guts": 15
+  },
+  "n": [
+   "gallop/fist",
+   "jump/boom",
+   "cast/ray/:bnote",
+   "jab/fist",
+   "roll/:snow/ice",
+   "gallop/:skull/xslash",
+   "toss/:rakkyo/boom",
+   "cast/:berry",
+   "cast/:skull/nightmare"
+  ],
+  "u": [
+   "toss/:skull/boom/void",
+   "gallop/:skull/cross",
+   "float/:bnote/bite",
+   "cast/:book/boom/rubble",
+   "gather/:bnote/eclipse",
+   "cast/:rakkyo/wave/thorn",
+   "gather/arc/nightmare",
+   "float/ray/aurora/psy",
+   "gather/:skull/nightmare"
+  ],
+  "techKinds": "powpowwisewisepowwisepowwise"
+ }
+}
