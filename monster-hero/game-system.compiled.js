@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04dcb83e41fd1920
+// source-sha256: 3287a7c503c29d0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146462,32 +146462,17 @@ const AMBW_CSS = `
 const ambwHitCache = new WeakMap();
 const ambwHitPct = (catalog, teams, side, frame, id) => {
   const eng = typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE : null;
-  if (!eng || !eng._internal || !catalog || !teams || !teams.A || !teams.B) return null;
+  if (!eng || typeof eng.hitPreviewer !== 'function' || !catalog || !teams || !teams.A || !teams.B) return null;
   let st = ambwHitCache.get(teams.A);
   if (!st || st.b !== teams.B) {
-    try {
-      st = {
-        b: teams.B,
-        s: eng._internal.setupState({
-          teamA: teams.A,
-          teamB: teams.B
-        }, catalog)
-      };
-    } catch (_) {
-      return null;
-    }
+    st = {
+      b: teams.B,
+      f: eng.hitPreviewer(catalog, teams.A, teams.B)
+    };
     ambwHitCache.set(teams.A, st);
   }
-  const foe = side === 'A' ? 'B' : 'A';
-  const au = st.s.teams[side].units[frame.act[side]];
-  const du = st.s.teams[foe].units[frame.act[foe]];
-  const m = au && du ? au.moves.find(x => x.key === id) : null;
-  if (!m) return null;
-  try {
-    return Math.round(eng._internal.hitChance(au, du, m, frame.g[side]) * 100);
-  } catch (_) {
-    return null;
-  }
+  const v = st.f(side, frame.act.A, frame.act.B, frame.g[side], frame.d)[id];
+  return Number.isFinite(v) ? v : null;
 };
 function AmbwPanel({
   side,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6071c1c974222da
+// generated-sha256: 7a154a288e045162
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77077,19 +77077,16 @@ const AMBW_CSS = `
 `;
 
 // 片方の陣営の札(助手・場の1体のライフとガッツ・控え・技の札)
-// 技の札の命中率(2026-11-13 社長「命中表記は技のコマンドのところにも出してほしい」)。芯の部品で、いまのガッツ・能力・サイズから出す(計算は変えない)
+// 技の札の命中率(2026-11-13 社長「命中表記は技のコマンドのところにも出してほしい」)。芯の公開の口 hitPreviewer で、いまのガッツ・能力・サイズから出す(計算は変えない)
 //   catalog と teams を渡したときだけ出す。編成ごとに1回だけ組み立てて使い回す
 const ambwHitCache = new WeakMap();
 const ambwHitPct = (catalog, teams, side, frame, id) => {
   const eng = typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE : null;
-  if (!eng || !eng._internal || !catalog || !teams || !teams.A || !teams.B) return null;
+  if (!eng || typeof eng.hitPreviewer !== 'function' || !catalog || !teams || !teams.A || !teams.B) return null;
   let st = ambwHitCache.get(teams.A);
-  if (!st || st.b !== teams.B) { try { st = { b: teams.B, s: eng._internal.setupState({ teamA: teams.A, teamB: teams.B }, catalog) }; } catch (_) { return null; } ambwHitCache.set(teams.A, st); }
-  const foe = side === 'A' ? 'B' : 'A';
-  const au = st.s.teams[side].units[frame.act[side]]; const du = st.s.teams[foe].units[frame.act[foe]];
-  const m = au && du ? au.moves.find((x) => x.key === id) : null;
-  if (!m) return null;
-  try { return Math.round(eng._internal.hitChance(au, du, m, frame.g[side]) * 100); } catch (_) { return null; }
+  if (!st || st.b !== teams.B) { st = { b: teams.B, f: eng.hitPreviewer(catalog, teams.A, teams.B) }; ambwHitCache.set(teams.A, st); }
+  const v = st.f(side, frame.act.A, frame.act.B, frame.g[side], frame.d)[id];
+  return Number.isFinite(v) ? v : null;
 };
 function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = null, teams = null }) {
   const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
