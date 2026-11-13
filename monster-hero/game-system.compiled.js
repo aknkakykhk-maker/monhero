@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3765f14ec6d5532a
+// source-sha256: a57eb2cf016b79d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161983,7 +161983,7 @@ const msxNormBox = raw => {
     memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : []
   };
 };
-const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = raw => {
   const o = msxIsObj(raw) ? raw : {};
   const items = {};
@@ -162263,6 +162263,12 @@ const MSX_ITEMS = Object.freeze([{
   when: 'both',
   e: '🫙'
 }, {
+  id: 'oilyoil',
+  name: 'オイリーオイル',
+  desc: 'たっぷり効く大きいオイル',
+  when: 'both',
+  e: '🛢️'
+}, {
   id: 'herb',
   name: '薬草',
   desc: '気持ちが落ち着く草',
@@ -162282,13 +162288,22 @@ const msxItemFx = id => {
   if (it.good === 'trainGood' && G.trainGood) return `訓練の伸び +${pc(G.trainGood.train)}`;
   if (it.good === 'shugyoGood' && G.shugyoGood) return `修行の伸び +${pc(G.shugyoGood.shugyo)}・技を覚える率 +${G.shugyoGood.techRate}`;
   if (it.good === 'star' && G.star) return `人気の上がり ×${G.star.pop}・親密度の上がり ×${G.star.bond}`;
-  if (it.good === 'uketsugu' && G.uketsugu) return `連続の話が進む率 +${pc(G.uketsugu.story)}・伝授の能力 ×${G.uketsugu.teach}`;
+  if (it.good === 'uketsugu' && G.uketsugu) {
+    const st = Array.isArray(S.STORY) ? S.STORY : [{}, {
+      p: 0.7
+    }, {
+      p: 0.5
+    }];
+    const up = G.uketsugu.story;
+    return `編成のモンスターとの連続の話が進みやすくなる(2話目 ${pc(st[1].p)}→${pc(Math.min(1, st[1].p + up))}・3話目 ${pc(st[2].p)}→${pc(Math.min(1, st[2].p + up))})。3話目の伝授で、そのモンスターの得意な能力の上がりが${G.uketsugu.teach}倍`;
+  }
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
   if (it.hpFull) return '体力を上限まで回復';
   if (it.cure) return `悪いようす(サボり癖・うつなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
   if (it.loyal) return `忠誠度 +${it.loyal}`;
+  if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
   if (it.gives) {
     const g = it.gives;
     return Object.keys(g).map(k => `${S.ITEMS[k] && S.ITEMS[k].name || k}${g[k]}個(${msxItemFx(k)})`).join('・');
@@ -165120,6 +165135,10 @@ const MSX_EXTRA_ITEM = Object.freeze({
     e: '🫙',
     desc: '体力を少し回復する'
   },
+  oilyoil: {
+    e: '🛢️',
+    desc: '体力をたっぷり回復する'
+  },
   herb: {
     e: '🌱',
     desc: 'ストレスを下げる'
@@ -165132,7 +165151,7 @@ const msxItemView = k => {
   return {
     id: k,
     name: base && base.name || core && core.name || k,
-    desc: base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : base && base.desc || ex && ex.desc || '',
+    desc: typeof msxItemFx === 'function' && msxItemFx(k) ? `${base && base.desc || ex && ex.desc || ''}。効き目: ${msxItemFx(k)}` : base && base.desc || ex && ex.desc || '',
     e: base && base.e || ex && ex.e || '🎁',
     during: core ? core.use === 'during' : !!(base && base.when === 'both')
   };
